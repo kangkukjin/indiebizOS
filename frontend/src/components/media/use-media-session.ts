@@ -4,6 +4,7 @@
  * `reconnecting` is surfaced separately so a frozen frame never looks live.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { api } from '../../lib/api';
 import { MediaEngine, type EngineState } from '../../lib/media/engine';
 import { MediaSessionClient, localRole, remoteParticipant } from '../../lib/media/session-client';
 import { captureLocal, capturePlayback, planTracks, stopStream, type TrackPlan } from '../../lib/media/tracks';
@@ -66,6 +67,8 @@ export function useMediaSession(sessionId: string): MediaSessionView {
   const engine = useRef<MediaEngine | null>(null);
   const local = useRef<MediaStream | null>(null);
   const pendingOffer = useRef<{ payload: OfferPayload; generation: number } | null>(null);
+  const earlySignals = useRef<SignalFrame[]>([]);
+  const appliedOffer = useRef('');
   const planRef = useRef<TrackPlan | null>(null);
   const starting = useRef(false);
   const [session, setSession] = useState<MediaSession | null>(null);
@@ -110,6 +113,7 @@ export function useMediaSession(sessionId: string): MediaSessionView {
       if (plan.sendPlayback && !extraStream) { starting.current = false; return; }  // speaker purpose waits for a source
       const eng = new MediaEngine({
         iceServers: current.ice_servers ?? [],
+        refreshIceServers: async () => (await api.request<{ ice_servers: RTCIceServer[] }>(`/media/ice-config?session_id=${encodeURIComponent(current.session_id)}`)).ice_servers,
         trickle: current.signaling?.route !== 'nostr',
         reconnectS: current.lease?.reconnect_s ?? 30,
         qualityProfile: profile,
@@ -138,7 +142,12 @@ export function useMediaSession(sessionId: string): MediaSessionView {
       if (isOfferer && plan.recvVideo && !stream?.getVideoTracks().length) eng.addReceiver('video');
       setEngineState(eng.state);
       if (isOfferer) await eng.createOffer();
-      else if (pendingOffer.current) { const p = pendingOffer.current; pendingOffer.current = null; await eng.receive('offer', { ...p.payload }, p.generation); }
+      else if (pendingOffer.current) {
+        const p = pendingOffer.current; pendingOffer.current = null;
+        appliedOffer.current = `${p.generation}:${p.payload.sdp}`;
+        await eng.receive('offer', { ...p.payload }, p.generation);
+      }
+      for (const frame of earlySignals.current.splice(0)) await eng.receive(frame.type as 'candidate' | 'candidates_done' | 'answer', frame.payload, frame.generation);
     } catch (e) {
       fail(e instanceof Error ? e.message : '미디어를 시작하지 못했습니다.');
       teardown();
@@ -158,8 +167,8 @@ export function useMediaSession(sessionId: string): MediaSessionView {
     setSession(s);
     if (s.state === 'ended') { teardown(); setEndReason(s.end_reason || s.error?.message || ''); setUiState('ended'); return; }
     setUiState(s.state);
-    if (s.signaling?.pending_offer && !pendingOffer.current && !engine.current) {
-      pendingOffer.current = { payload: s.signaling.pending_offer, generation: s.generation ?? 0 };
+    if (s.pending_offer && !pendingOffer.current && !engine.current) {
+      pendingOffer.current = { payload: s.pending_offer, generation: s.generation ?? 0 };
     }
     const role = localRole(s);
     const offererNow = role === 'caller' || role === 'hub';
@@ -171,12 +180,17 @@ export function useMediaSession(sessionId: string): MediaSessionView {
   const onSignal = useCallback((frame: SignalFrame) => {
     const eng = engine.current;
     switch (frame.type) {
-      case 'offer':
+      case 'offer': {
+        const key = `${frame.generation}:${String(frame.payload.sdp)}`;
+        if (key === appliedOffer.current) break;
+        if (eng) appliedOffer.current = key;
         if (eng) void eng.receive('offer', frame.payload, frame.generation).catch(e => fail(e instanceof Error ? e.message : '협상 실패'));
         else pendingOffer.current = { payload: frame.payload as unknown as OfferPayload, generation: frame.generation };
         break;
+      }
       case 'answer': case 'candidate': case 'candidates_done': case 'renegotiate':
         if (eng) void eng.receive(frame.type, frame.payload, frame.generation).catch(() => { /* stale negotiation */ });
+        else if (earlySignals.current.length < 128) earlySignals.current.push(frame);
         break;
       case 'end':
         teardown(); setEndReason(String((frame.payload as { reason?: string }).reason ?? 'remote_end')); setUiState('ended');

@@ -1,9 +1,9 @@
 /**
  * Global incoming-call banner. Listens for `indiebiz:media-event` (dispatched where chat WS messages arrive
- * with `{type:'media_event', event, session}`) and offers 수락/거절. Accepting only opens the call window —
- * the real accept (and any sensor capture) happens inside it.
+ * with `{type:'media_event', event, session}`) and offers 수락/거절. Acceptance is recorded once; the call window then starts its engine.
  */
 import { useEffect, useState } from 'react';
+import { WEBSOCKET_ORIGIN } from '../../lib/backend-origin';
 import { Phone, PhoneOff } from 'lucide-react';
 import type { MediaSession } from '../../lib/media/types';
 import { localRole, remoteParticipant, sessions } from '../../lib/media/session-client';
@@ -20,21 +20,36 @@ export function IncomingCallBanner() {
   const [ringing, setRinging] = useState<MediaSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
+    const opened = new Set<string>();
     const onEvent = (event: Event) => {
       const detail = (event as CustomEvent<MediaEventDetail>).detail;
       const session = detail?.session;
       if (!session) return;
-      if (detail.event === 'ringing' && session.kind === 'call' && localRole(session) === 'callee' && session.state === 'ringing') { setRinging(session); setError(null); return; }
+      if ((detail.event === 'created' || detail.event === 'snapshot') && session.state !== 'ended' &&
+          localRole(session) !== 'callee' && !opened.has(session.session_id) && window.electron?.openMediaCall) {
+        opened.add(session.session_id); void openCallWindow(session.session_id);
+      }
+      if ((detail.event === 'ringing' || detail.event === 'snapshot') && session.kind === 'call' && localRole(session) === 'callee' && session.state === 'ringing') { setRinging(session); setError(null); return; }
       if (session.state === 'ended' || detail.event === 'ended' || detail.event === 'accepted') setRinging(previous => (previous?.session_id === session.session_id ? null : previous));
     };
     window.addEventListener(MEDIA_EVENT, onEvent);
-    return () => window.removeEventListener(MEDIA_EVENT, onEvent);
+    let stopped = false;
+    let socket: WebSocket | null = null;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const connect = () => {
+      if (stopped) return;
+      socket = new WebSocket(`${WEBSOCKET_ORIGIN}/media/events`);
+      socket.onmessage = event => { try { dispatchMediaEvent(JSON.parse(event.data)); } catch { /* malformed */ } };
+      socket.onclose = () => { if (!stopped) retry = setTimeout(connect, 1500); };
+    };
+    connect();
+    return () => { stopped = true; clearTimeout(retry); socket?.close(); window.removeEventListener(MEDIA_EVENT, onEvent); };
   }, []);
   if (!ringing) return null;
   const caller = remoteParticipant(ringing);
   const name = caller?.user?.name || caller?.user?.id || '알 수 없는 상대';
   const accept = async () => {
-    try { await openCallWindow(ringing.session_id); setRinging(null); }
+    try { await sessions.accept(ringing.session_id); await openCallWindow(ringing.session_id); setRinging(null); }
     catch (e) { setError(e instanceof Error ? e.message : '통화 창을 열지 못했습니다.'); }
   };
   const reject = async () => {

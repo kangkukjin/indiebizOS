@@ -1,3 +1,4 @@
+import { PlaybackHandoff } from './media/PlaybackHandoff';
 /**
  * GenericInstrument — 매니페스트 해석 계기 (앱 표면 제네릭 렌더러의 데스크탑판)
  *
@@ -377,6 +378,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
                            : <video controls preload={m.preload} src={src} poster={poster} playsInline className={VIDEO_CLS} />)
                        : <audio controls preload={m.preload} src={src} className="w-full" onEnded={onEnded} />)
                    : <div className="text-xs text-stone-400">재생할 오디오가 없습니다.</div>}
+              <PlaybackHandoff />
             </div>
           );
         })}

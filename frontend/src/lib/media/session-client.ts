@@ -40,11 +40,9 @@ export const sessions = {
   list: () => api.request<{ success?: boolean; items?: MediaSession[]; sessions?: MediaSession[] }>('/media/sessions?active=1'),
 };
 
-/** The participant whose device is this browser: `device.id === 'local'` (or `user.id === 'self'`). */
+/** Roles are relative to this hub; a remote hub can also call its device "local". */
 export function localRole(session: MediaSession): ParticipantRole {
-  const mine = session.participants?.find(p => p.device?.id === 'local') ?? session.participants?.find(p => p.user?.id === 'self');
-  if (mine) return mine.role;
-  return session.kind === 'extension' ? 'hub' : 'caller';
+  return session.local_role;
 }
 
 export function remoteRole(session: MediaSession, mine = localRole(session)): ParticipantRole {

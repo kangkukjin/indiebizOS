@@ -122,6 +122,7 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
         }
         reportState(lastPlayback)
     }
+    override fun onIceServers(servers: org.json.JSONArray) { engine?.updateIce(servers) }
     override fun onOffer(sdp: String, generation: Int) { engine?.handleOffer(sdp) }
     override fun onCandidate(candidate: JSONObject) { engine?.addRemoteCandidate(candidate) }
     override fun onCandidatesDone() {}

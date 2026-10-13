@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS media_blocks (pubkey TEXT PRIMARY KEY, created REAL N
 
 
 def _root() -> Path:
+    media_state = os.environ.get("INDIEBIZ_MEDIA_STATE_DIR")
+    if media_state:
+        return Path(media_state)
     state = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
     if state:
         return Path(state) / "media"

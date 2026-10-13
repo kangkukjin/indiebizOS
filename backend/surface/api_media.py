@@ -56,7 +56,7 @@ def health():
 @router.get("/media/ice-config")
 def ice_config(session_id: str = ""):
     import media_signaling as sig
-    return {"success": True, "ice_servers": sig.ice_servers(session_id)}
+    return {"success": True, "ice_servers": ms.refresh_ice(session_id) if session_id else sig.ice_servers()}
 
 
 @router.get("/media/sessions")
@@ -202,7 +202,7 @@ async def _pump(ws: WebSocket, box, on_frame, *, heartbeat: float = 5.0, close_f
                 await ws.send_json(message)
             if box.closed:
                 if close_frame:
-                    await ws.send_json(close_frame)
+                    await ws.send_json(close_frame() if callable(close_frame) else close_frame)
                 return
             try:
                 await asyncio.wait_for(wake.wait(), heartbeat)
@@ -226,6 +226,30 @@ async def _close(ws: WebSocket):
         await ws.close()
     except (RuntimeError, WebSocketDisconnect):
         pass
+
+
+@router.websocket("/media/events")
+async def session_events(ws: WebSocket):
+    """Always-on media notifications, independent of any open chat."""
+    from api_websocket import _authorize_websocket
+    from media_signaling import Outbox
+    if not await _authorize_websocket(ws):
+        return
+    await ws.accept()
+    box = Outbox()
+    def changed(event, session):
+        box.push({"type": "media_event", "event": event, "session": session})
+    ms.subscribe(changed)
+    try:
+        for session in ms.list_sessions():
+            changed("snapshot", session)
+        await _pump(ws, box, lambda frame: None, heartbeat=15)
+    except (WebSocketDisconnect, RuntimeError, ValueError):
+        pass
+    finally:
+        ms.unsubscribe(changed)
+        box.close()
+        await _close(ws)
 
 
 # ── 브라우저 엔진 WS ─────────────────────────────────────────────────────────────
@@ -255,7 +279,7 @@ async def local_socket(ws: WebSocket, sid: str):
             return {"type": "rejected", "reason": why, "msg_id": frame.get("msg_id")}
         return None
     try:
-        await _pump(ws, s.local_box, on_frame, close_frame={"type": "session", "event": "ended", "session": ms.status(sid)})
+        await _pump(ws, s.local_box, on_frame, close_frame=lambda: {"type": "session", "event": "ended", "session": ms.status(sid)})
     except (WebSocketDisconnect, asyncio.TimeoutError, RuntimeError, ValueError, KeyError, TypeError):
         pass
     finally:
@@ -297,11 +321,11 @@ async def device_socket(ws: WebSocket, sid: str):
             except ValueError:
                 ms.end(sid, "relation_revoked", error={"code": "relation_revoked", "message": "확장관계가 유효하지 않습니다"})
                 return None
-            why = ms.receive_remote(frame, source="device")
+            why = ms.receive_remote(frame, source="device", device_session=sid, device_id=rec["device_id"])
             if why and why != "session_ended":
                 return {"type": "rejected", "reason": why, "msg_id": frame.get("msg_id")}
             return None
-        await _pump(ws, s.remote_box, on_frame, close_frame={"type": "end", "payload": {"reason": ms.status(sid).get("end_reason")}})
+        await _pump(ws, s.remote_box, on_frame, close_frame=lambda: {"type": "end", "payload": {"reason": ms.status(sid).get("end_reason")}})
     except (WebSocketDisconnect, asyncio.TimeoutError, RuntimeError, ValueError, KeyError, TypeError, ms.MediaError):
         pass
     finally:

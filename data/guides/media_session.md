@@ -43,3 +43,29 @@ $s = [self:script]{op:"run", id:"미디어세션", args:{op:"create", kind:"exte
 - `data/media_policy.yaml` — 시그널링 경로(auto|nostr|relay)·ICE/TURN·품질 프로필(phone32/phone64/helper)·한도.
 - `data/session_lease_policy.yaml` — 임대(20초)·생존 확인(5초)·복구(30초)·초대(45초). 화면 공유·터미널과 같은 정책 파일.
 - 이력은 `data/media/state.db`(시작·종료·경로·품질·오류만). 원본 영상·음성·토큰·SDP 는 저장하지 않는다.
+
+## 폰의 일반 통화와 이어 듣기
+
+폰 런처의 **음성·영상 통화**에서 상대 npub·공개키·주소록 이름을 입력합니다. 수신은 알림을
+눌러 수락하거나 거절합니다. 수락 전에는 카메라/마이크를 열지 않으며, 일반 통화는 USB
+확장관계 등록과 무관합니다. 진행 중인 통화는 알림에서 다시 열거나 종료할 수 있습니다.
+통화 중에는 기존 확장 카메라/마이크 세션을 동시에 시작할 수 없습니다.
+
+앱모드 음악·영상 플레이어의 **다른 장치에서 이어 듣기**는 재생 위치와 볼륨을 함께 보냅니다.
+장치가 실제 재생을 확인하면 원본을 자동으로 멈추며, 실패·취소 시에는 원본을 유지합니다.
+로컬 URL 전달에는 허브 공개 주소가 필요하고, 인증된 원본 서버의 접근이 거절되면 파일 경로
+전달을 사용합니다. blob/DRM 소스를 일반 파일 URL로 바꿀 수 있다고 가정하지 않습니다.
+
+## TURN 운영 준비
+
+Linux 서버의 직접 DNS 이름, 공인 IP, TLS 인증서와 확인한 coturn 이미지 digest를 준비한 뒤
+저장소의 `.venv/bin/python3 scripts/media_turn_setup.py --help`를 확인합니다.
+`--host`, `--public-ip`, `--image coturn/coturn@sha256:...`로 배포 파일을 생성하고,
+`--apply`를 함께 주면 이 허브의 정책과 루트 `.env`도 설정합니다. 출력 경로인
+`data/media_turn_private/`에는 비밀이 있으므로 Git이나 채팅에 올리지 않습니다.
+서버에서 인증서 두 파일을 `certs/`에 배치하고 `docker compose up -d`로 시작합니다.
+방화벽은 3478 UDP/TCP, 5349 TCP, 49160–49260 UDP를 허용합니다. HTTP 터널 주소는
+TURN 서버 주소로 사용할 수 없습니다. 인증서 갱신 후 컨테이너를 재시작합니다.
+
+허브 재시작 후 `/media/health`와 실제 강제 TURN 통화를 모두 확인해야 합니다.
+`configured=true`만으로 휴대망·UDP 차단 환경의 영상 출력까지 검증된 것은 아닙니다.

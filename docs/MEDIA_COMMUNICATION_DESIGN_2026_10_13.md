@@ -358,3 +358,83 @@ Android ABI별 WebRTC 조달·업데이트 방식, 헬퍼 미디어 모듈, 공�
 - **Nostr 시그널링 품질 평가**(§8): 실제 릴레이 지연으로 초대→첫 출력 p95 를 재지 않았다. `signaling.route: auto` 는 공개 주소가 있으면 릴레이, 없으면 Nostr(비-trickle)이다.
 - 다자 통화·녹화·가상 장치·중앙의 A↔B 지휘는 §1 대로 범위 밖.
 
+
+## 15. 구현 보강 및 인수 경계 (2026-10-13)
+
+§14의 컴파일·엔진 루프백만으로 일반 통화 완성을 판정할 수 없었습니다. 실제 세션 API와
+통화 화면을 연결한 시험에서 수신자 역할 오인, 초대 동봉 offer 누락, 지연된 offer 소실,
+순번 0 제어 프레임 누락, 종료 후 낡은 스냅샷 복원이 확인되어 수정했습니다.
+완료 기준은 §12 그대로이며, 아래 코드 반영을 실기기·외부망 인수 완료로 간주하지 않습니다.
+
+### 반영한 동작
+
+- 로컬 역할은 서버의 `local_role`이 정본입니다. 상대 장치도 `device.id=local`일 수 있으므로
+  장치 이름으로 역할을 추측하지 않습니다. `pending_offer`는 최상위 필드이며 늦게 열린
+  수신 화면에도 남습니다. 수락 전 도착한 ICE 후보는 엔진 시작까지 보관합니다.
+- 초대·수락과 후속 SDP/ICE는 발신 큐에서 순서를 보장합니다. 동봉 대기 시간이 지나면
+  새 offer는 별도 전송합니다. 품질 보고는 자기 허브에만 보내며 Nostr DM을 계속 만들지 않습니다.
+- 장치 WS의 인증 세션·장치 ID·역할과 매 프레임을 결속합니다. A의 자격으로 B를 종료할 수
+  없습니다. 일반 통화의 상대 상태 보고는 로컬 수락을 대신하지 못합니다.
+- `/media/events`가 채팅 창과 독립적으로 수신 알림과 세션 생성을 전달합니다. Electron은
+  AI가 만든 발신·확장 세션도 통화 창을 엽니다. 기존 세션은 재접속 때 복원 표시합니다.
+- 안드로이드는 `phone_media.py`에서 공통 API·세션 관리자를 조립합니다. `CallInbox`가
+  NIP-17 수신을 계속 구독하고, `CallActivity`가 발신·수락·거절·음소거·카메라 전환·출력 전환을
+  제공합니다. `CallService`는 사용자가 보이는 화면에서 시작한 통화의 수명을 유지합니다.
+  `CallSession`은 확장관계 키 없이 로컬 API와 기존 `MediaEngine`을 사용합니다.
+  카메라·마이크는 수락/발신 및 OS 권한 확인 뒤에만 켭니다. 확장 미디어와 일반 통화는
+  같은 폰에서 동시에 센서를 차지하지 않습니다. 이력은 번들 재추출 밖의 userdata에 둡니다.
+- 브라우저의 active 판정은 ICE 연결에 더해 미디어 흐름을 검사합니다. 수신 트랙이 있으면
+  디코딩 프레임/오디오 샘플을 기다리고, 송신 전용이면 실제 전송 바이트를 확인합니다.
+  수신 출력이 없는 연결은 15초 후 실패합니다. 폰도 통계에서 수신 디코딩/송신 바이트를 확인합니다.
+  송신 전용 장치의 물리 스피커 출력까지 증명하는 것은 이 통계의 범위 밖입니다.
+- 앱모드 `media_player`의 **다른 장치에서 이어 듣기**는 현재 URL·재생 위치·볼륨을 전달합니다.
+  대상의 `content.playing=true` 뒤에만 원본을 멈춥니다. 실패·시간 초과·취소 시 대상 세션을
+  정리하고 원본은 유지합니다. 직접 전달할 수 없는 blob/DRM 소스는 오류로 안내합니다.
+- 헬퍼의 로컬 설치 화면에서 ffmpeg·ffplay·mpv 설치를 선택할 수 있습니다. 이미 갖춘 경우
+  재설치하지 않습니다. Mac은 Homebrew, Windows는 winget, Linux는 시스템 패키지 관리자와
+  로컬 관리자 인증을 사용합니다. 패키지 관리자 자체가 없는 PC는 그 설치가 필요합니다.
+- `scripts/media_turn_setup.py`가 고정 digest의 coturn 배포 구성과 TLS/UDP/TCP 주소를 생성합니다.
+  비밀 파일은 `data/media_turn_private/`에 권한 0600으로 두며 Git에서 제외합니다.
+  `--apply`는 이 허브의 정책과 루트 `.env`를 설정합니다. 서버 생성·과금·원격 배포는 하지 않습니다.
+
+### 검증 방법과 남은 인수
+
+`backend/test_media_browser.py`는 실제 백엔드 두 개, 실제 React 통화 훅, Chromium 가상
+카메라를 결합합니다. 수락 전 캡처 금지, 양쪽 영상 디코딩, 지연된 캡처, 상대방 종료를
+확인합니다. Nostr 배달만 메모리 전송으로 대체하므로 외부 릴레이 성능 시험은 아닙니다.
+추가 회귀는 장치 간 세션 침범 거절, 상대 상태 보고를 통한 수락 우회 거절, 독립 알림 WS,
+폰 신원/주소 해석, 재생 이동의 확인·실패 복구를 다룹니다.
+
+실기기 연결은 현재 0대이며 TURN의 실제 서버 주소·접속 정보도 제공되지 않았습니다.
+따라서 J7/64비트 폰의 설치 후 라이브러리 로딩·수신 알림·잠금/백그라운드·카메라·오디오,
+Windows/Linux 실제 캡처, 외부망·UDP 차단·망 전환, TURN 강제 경로, 100회 성공률과
+1시간 통화·충전 중 8시간 CCTV는 미검증입니다. 빌드 성공으로 이 항목들을 통과 처리하지 않습니다.
+
+운영 근거: [coturn 공식 Docker 구성](https://github.com/coturn/coturn/blob/master/docker/coturn/README.md),
+[TURN REST 인증 설정](https://github.com/coturn/coturn/wiki/turnserver),
+[Android의 센서 FGS 시작 제약](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start).
+
+재연결 보강: 허브의 미디어 신호·제어·keepalive는 하나의 발신 순번을 공유합니다.
+ICE 재협상 시 `/media/ice-config?session_id=...`에서 TURN 단기 자격을 새로 받고,
+서명한 offer에 실어 브라우저·폰·헬퍼의 ICE 설정도 갱신합니다. 다른 사용자의 허브에는
+TURN 공유 비밀을 보내지 않고 세션용 자격만 전달합니다.
+
+### 이번 보강의 검증 기록
+
+- 미디어·폰 확장·화면/터미널 관련 회귀와 브라우저 종단 묶음: 49 통과.
+- 후속 TURN 구성 생성·세션 계약·문서 일치 묶음: 42 통과(위 묶음과 중복 포함).
+- `npx tsc -p tsconfig.app.json`: 통과. Node 미디어/Electron/재생 이동 시험: 11 통과.
+- `go test -race ./...`: 통과. `helper/build.sh`: Windows 2종·Mac 3종·Linux 1종 빌드.
+  Mac legacy는 기존과 같이 미디어 엔진 미지원 스텁이며 이를 지원 완료로 세지 않습니다.
+- `:app:assembleArm32Debug :app:assembleArm64Debug`: 통과. APK는 각각
+  `phone-companion/app/build/outputs/apk/arm32/debug/`, `arm64/debug/`에 있습니다.
+- 종합 백엔드 회귀: 10,187 통과, 1 건너뜀, 4 실패. 실패는 이번 미디어 변경 밖의
+  `test_ibl_rank_12_20_repairs::test_summarize_accepts_video_id`와
+  `test_package_boundary_repairs::test_youtube_supported_modes_compile_and_dispatch`의 세 경우입니다.
+  종합 회귀 뒤 추가한 순번·TURN 갱신 수정은 위 관련 묶음으로 재검증했습니다.
+- 실물 부재·운영 서버 미지정으로 남은 인수 항목은 위 절과 같습니다. 이 기록은 외부망 품질
+  또는 설치된 폰에서의 성공을 주장하지 않습니다.
+
+AI 경계 보강: `미디어세션.py` 결과에서 SDP·TURN 자격·grant·토큰과 URL 질의 문자열을
+제거합니다. 통화 상태·품질·콘텐츠 참조는 유지하며, 엔진용 원문은 사용자 인증 API 안에서만
+사용합니다. 해당 출력 경계 회귀시험과 문서 일치 검사도 통과했습니다.

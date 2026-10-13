@@ -38,7 +38,12 @@ class MediaEnvelope private constructor(val raw: JSONObject) {
     val grantToken: String = grant.optString("token")
     val purpose: String = raw.optString("purpose")
     val delivery: String = raw.optString("delivery", if (raw.has("content")) "content" else "realtime")
-    val tracks: List<TrackSpec> = parseTracks(raw.optJSONArray("tracks"))
+    val localRole: String = raw.optString("local_role", "device")
+    val tracks: List<TrackSpec> = parseTracks(raw.optJSONArray("tracks")).map {
+        if (localRole == "device") it else it.copy(
+            from = if (it.from == localRole) "device" else "hub",
+            to = if (it.to == localRole) "device" else "hub")
+    }
     val iceServers: JSONArray = raw.optJSONArray("ice_servers") ?: JSONArray()
     val lease: LeaseSpec = parseLease(raw.optJSONObject("lease"))
     val streamUrl: String = raw.optJSONObject("stream")?.optString("url") ?: ""
@@ -89,7 +94,7 @@ class MediaEnvelope private constructor(val raw: JSONObject) {
     /** 계약 §1 에 없는 트랙 조합 — 폰엔 표시면이 없고(영상 수신 불가) 화면 캡처는 세션별 동의가 필요(미지원). */
     fun unsupportedTrack(): TrackSpec? = tracks.firstOrNull {
         (it.kind != "audio" && it.kind != "video") ||
-            (it.toDevice && it.kind == "video") ||
+            (localRole == "device" && it.toDevice && it.kind == "video") ||
             (it.fromDevice && it.source == "screen") ||
             (it.fromDevice && it.kind == "video" && it.source != "camera") ||
             (it.fromDevice && it.kind == "audio" && it.source != "mic" && it.source != "playback")
@@ -97,6 +102,13 @@ class MediaEnvelope private constructor(val raw: JSONObject) {
 
     companion object {
         private val PURPOSES = setOf("voice_call", "video_call", "camera", "microphone", "speaker", "playback")
+
+        /** Local authenticated call API snapshot, not an extension enrollment envelope. */
+        fun call(session: JSONObject): MediaEnvelope {
+            require(session.optString("kind") == "call")
+            require(session.optString("local_role") in setOf("caller", "callee"))
+            return MediaEnvelope(session)
+        }
 
         fun parse(json: String): MediaEnvelope {
             val obj = try { JSONObject(json) } catch (e: Exception) {
@@ -106,7 +118,7 @@ class MediaEnvelope private constructor(val raw: JSONObject) {
             if (env.sessionId.length < 8) throw EnvelopeError("invalid_envelope", "session_id 없음")
             if (env.grantToken.isEmpty()) throw EnvelopeError("invalid_envelope", "grant.token 없음")
             if (env.purpose !in PURPOSES) throw EnvelopeError("invalid_envelope", "purpose 모름: ${env.purpose}")
-            if (!env.streamUrl.startsWith("ws://") && !env.streamUrl.startsWith("wss://"))
+            if (!env.streamUrl.startsWith("ws://") && !env.streamUrl.startsWith("wss://") && env.lan == null)
                 throw EnvelopeError("invalid_envelope", "stream.url 이 ws(s):// 가 아닙니다")
             if (env.authKey.isEmpty() || env.installationId.isEmpty())
                 throw EnvelopeError("invalid_envelope", "auth(key, installation_id) 없음")

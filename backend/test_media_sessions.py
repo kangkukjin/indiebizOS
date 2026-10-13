@@ -364,3 +364,75 @@ def test_health_and_capabilities_report_honestly(hub):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_device_websocket_is_bound_to_its_authenticated_session(hub):
+    one, two = _device(alias='one'), _device(alias='two')
+    sid = ms.create('extension', 'camera', 'one')['session_id']
+    other = ms.create('extension', 'camera', 'two')['session_id']
+    with hub.websocket_connect(f'/limb/resident/media/{sid}') as dev:
+        dev.send_json({'key': one['key'], 'installation_id': one['registration']['installation_id'],
+                       'grant': ms.get(sid).grants['device']})
+        assert dev.receive_json()['type'] == 'ready'
+        dev.send_json(sig.new_frame(other, 'device', 'hub', 'end', {}, seq=1))
+        assert dev.receive_json()['reason'] == 'wrong_session'
+        assert ms.status(other)['state'] == 'connecting'
+        dev.send_json(sig.new_frame(sid, 'callee', 'caller', 'end', {}, seq=2))
+        assert dev.receive_json()['reason'] == 'wrong_role'
+        assert ms.status(sid)['state'] == 'connecting'
+    assert ms.receive_remote(sig.new_frame(other, 'device', 'hub', 'end', {}), source='device') == 'wrong_session'
+
+
+def test_media_events_work_without_a_chat_socket(hub):
+    _device()
+    with hub.websocket_connect('/media/events', headers={'host': 'localhost'}) as events:
+        s = ms.create('extension', 'camera', 'cam-pc')
+        frame = events.receive_json()
+        assert frame['type'] == 'media_event' and frame['session']['session_id'] == s['session_id']
+        ms.end(s['session_id'])
+        while frame.get('session', {}).get('state') != 'ended':
+            frame = events.receive_json()
+        assert frame['event'] == 'ended'
+
+
+def test_phone_identity_and_public_role_do_not_need_pynostr(hub, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import indienet
+    monkeypatch.setattr(indienet, 'get_indienet', lambda: SimpleNamespace(
+        identity=SimpleNamespace(public_key_hex='a' * 64, public_key=None)))
+    assert sig.NostrTransport().my_pubkey_hex() == 'a' * 64
+    # npub decoding must remain independent of the desktop-only crypto dependency.
+    from pynostr import bech32
+    monkeypatch.setitem(sys.modules, "bech32", bech32)
+    npub = bech32.bech32_encode('npub', bech32.convertbits(bytes.fromhex('b' * 64), 8, 5), bech32.Encoding.BECH32)
+    monkeypatch.setitem(sys.modules, 'nip17', None)
+    assert ms.resolve_contact(npub) == 'b' * 64
+
+
+def test_hub_keepalive_and_controls_follow_engine_signals(hub):
+    rec = _device()
+    sid = ms.create('extension', 'camera', 'cam-pc')['session_id']
+    s = ms.attach_device(sid, rec['device_id'], ms.get(sid).grants['device'])
+    assert ms.signal(sid, sig.new_frame(sid, 'hub', 'device', 'offer', {'sdp': 'v=0'}, seq=20)) is None
+    first = s.remote_box.take()[-1]
+    ms.sweep()
+    alive = s.remote_box.take()[-1]
+    assert alive['type'] == 'keepalive' and alive['seq'] > first['seq']
+    ms.update(sid, s.revision, {'mute': True})
+    update = s.remote_box.take()[-1]
+    assert update['seq'] > alive['seq']
+    ms.end(sid)
+    assert s.remote_box.take()[-1]['seq'] > update['seq']
+
+
+def test_ice_restart_refreshes_credentials_and_forwards_them(hub, monkeypatch):
+    _device()
+    sid = ms.create('extension', 'camera', 'cam-pc')['session_id']
+    fresh = [{'urls': ['turn:relay.example:3478'], 'username': 'later:session', 'credential': 'new'}]
+    monkeypatch.setattr(sig, 'turn_configured', lambda: (True, 'ok'))
+    monkeypatch.setattr(sig, 'ice_servers', lambda session_id='': fresh)
+    assert hub.get('/media/ice-config', params={'session_id': sid}).json()['ice_servers'] == fresh
+    assert ms.signal(sid, sig.new_frame(sid, 'hub', 'device', 'offer', {'sdp': 'v=0'}, generation=1, seq=1)) is None
+    frame = ms.get(sid).remote_box.take()[-1]
+    assert frame['payload']['ice_servers'] == fresh and sig.verify(frame, ms.get(sid).secret)

@@ -56,9 +56,9 @@ export class SignalSequencer {
     if (typeof frame.expires_at === 'number' && frame.expires_at < this.now()) return 'expired';
     if (frame.generation < this.seenGeneration) return 'stale_generation';
     if (frame.msg_id && this.seenIds.has(frame.msg_id)) return 'duplicate';
-    if (frame.generation === this.seenGeneration && frame.seq <= this.seenSeq) return 'stale_seq';
+    if (frame.generation === this.seenGeneration && frame.seq > 0 && frame.seq <= this.seenSeq) return 'stale_seq';
     if (frame.generation > this.seenGeneration) { this.seenGeneration = frame.generation; this.seenSeq = -1; this.seenIds.clear(); }
-    this.seenSeq = frame.seq;
+    if (frame.seq > 0) this.seenSeq = frame.seq;
     if (frame.msg_id) this.seenIds.add(frame.msg_id);
     // A remote negotiation at a newer generation moves our own outgoing generation forward too.
     if (frame.generation > this.generation) { this.generation = frame.generation; this.seq = 0; }

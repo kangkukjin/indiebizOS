@@ -115,7 +115,20 @@ class LauncherActivity : Activity() {
         }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
             gravity = Gravity.BOTTOM or Gravity.END; setMargins(0, 0, 16, 16)
         })
+        root.addView(Button(this).apply {
+            text = "음성·영상 통화"
+            setOnClickListener { startActivity(Intent(this@LauncherActivity, com.indiebiz.phoneagent.media.CallActivity::class.java)) }
+        }, FrameLayout.LayoutParams(-2, -2).apply { gravity = Gravity.BOTTOM or Gravity.START })
         setContentView(root)
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            val preferences = getSharedPreferences("media_setup", MODE_PRIVATE)
+            if (!preferences.getBoolean("notification_asked", false)) {
+                preferences.edit().putBoolean("notification_asked", true).apply()
+                Toast.makeText(this, "수신 통화를 받으려면 알림을 허용해 주세요.", Toast.LENGTH_LONG).show()
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1002)
+            }
+        }
         loadWhenReady()
     }
 

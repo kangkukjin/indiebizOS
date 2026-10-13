@@ -487,3 +487,6 @@ data/resident_files/
 
 # Local Electron bridge connection metadata (never commit tokens).
 data/runtime/embedded-browser.json*
+
+# Private TURN deployment and authentication secret
+data/media_turn_private/

@@ -43,7 +43,7 @@ def hubs(tmp_path, monkeypatch):
             frame = json.loads(content)
             delivered.append((src_pub[:1], frame['type']))
             why = dst.receive_remote(frame, source='nostr', sender_hex=src_pub)
-            assert why in (None,), f'{src_pub[:1]}→ {frame["type"]} 거절: {why}'
+            assert why is None or (why == 'session_ended' and frame['type'] == 'end'), f'{src_pub[:1]}→ {frame["type"]} 거절: {why}'
             return True
         monkeypatch.setattr(src, 'nostr', sig.NostrTransport(sender=sender))
         monkeypatch.setattr(src.nostr, 'my_pubkey_hex', lambda: src_pub)
@@ -55,6 +55,9 @@ def hubs(tmp_path, monkeypatch):
     hub_a.reset_for_tests()
     hub_b.reset_for_tests()
     yield hub_a, hub_b, delivered
+    hub_a.nostr._queue.join()
+    hub_b.nostr._queue.join()
+    hub_a.nostr._queue.join()
     hub_a.reset_for_tests()
     hub_b.reset_for_tests()
 
@@ -90,7 +93,7 @@ def test_call_control_plane_end_to_end(hubs):
     assert _wait(lambda: a.status(sid)['state'] == 'connecting')
     assert delivered[-1] == ('b', 'accept')
     answers = _frames(a.get(sid).local_box, 'answer')
-    assert len(answers) == 1 and answers[0]['payload']['fingerprint'] == 'sha-256 BB' and 'mac' not in answers[0] or True
+    assert len(answers) == 1 and answers[0]['payload']['fingerprint'] == 'sha-256 BB' and 'mac' not in answers[0]
     assert b.status(sid)['state'] == 'connecting'
     # trickle candidate 양방향(서명·순번 검사 통과)
     assert a.signal(sid, sig.new_frame(sid, 'caller', 'callee', 'candidate', {'candidate': 'c-a'}, seq=2)) is None
@@ -102,7 +105,7 @@ def test_call_control_plane_end_to_end(hubs):
     assert b.signal(sid, sig.new_frame(sid, 'callee', 'caller', 'state', {'state': 'active', 'path': 'relay', 'quality': {'rtt_ms': 80}}, seq=3)) is None
     assert a.signal(sid, sig.new_frame(sid, 'caller', 'callee', 'state', {'state': 'active', 'path': 'relay'}, seq=3)) is None
     assert _wait(lambda: a.status(sid)['state'] == 'active' and b.status(sid)['state'] == 'active')
-    assert a.status(sid)['quality']['rtt_ms'] == 80 and a.status(sid)['path'] == 'relay'
+    assert b.status(sid)['quality']['rtt_ms'] == 80 and a.status(sid)['path'] == 'relay'
     # 임대 갱신: 브라우저가 DataChannel 로 상대 생존을 확인한 keepalive(peer_alive)만 갱신한다 — 로컬 keepalive 는 Nostr 로 나가지 않는다
     a.get(sid).lease.rewind(10)
     assert a.signal(sid, sig.new_frame(sid, 'caller', 'callee', 'keepalive', {'peer_alive': False}, seq=4)) is None
@@ -168,3 +171,40 @@ def test_wrong_sender_cannot_hijack_session(hubs):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_offer_after_invitation_timeout_is_delivered_and_retained(hubs):
+    a, b, delivered = hubs
+    sid = a.create('call', 'video_call', '친구')['session_id']
+    assert _wait(lambda: sid in b._sessions)
+    assert b.status(sid)['pending_offer'] is None
+    offer = {'sdp': 'v=0\r\na=fingerprint:sha-256 AA'}
+    assert a.signal(sid, sig.new_frame(sid, 'caller', 'callee', 'offer', offer, seq=1)) is None
+    assert _wait(lambda: b.status(sid)['pending_offer'] is not None)
+    assert ('a', 'offer') in delivered
+    b.accept(sid)
+    assert _wait(lambda: b.status(sid)['state'] == 'connecting')
+    # A callee which opens its window after accept still receives the offer in its snapshot.
+    assert b.status(sid)['pending_offer']['sdp'] == offer['sdp']
+
+
+def test_repeated_disconnect_gets_a_fresh_reconnect_deadline(hubs):
+    a, b, _ = hubs
+    sid = a.create('call', 'voice_call', '친구')['session_id']
+    s = a.get(sid)
+    a._apply_state_report(s, {'state': 'reconnecting'})
+    s.disconnected_at -= 60
+    a._apply_state_report(s, {'state': 'active'})
+    assert s.disconnected_at is None
+    a._apply_state_report(s, {'state': 'reconnecting'})
+    assert time.time() - s.disconnected_at < 1
+    assert a.sweep() == 0
+
+
+def test_remote_state_cannot_accept_a_call_or_enable_capture(hubs):
+    a, b, _ = hubs
+    sid = a.create('call', 'video_call', '친구')['session_id']
+    assert _wait(lambda: sid in b._sessions)
+    frame = sig.sign(sig.new_frame(sid, 'caller', 'callee', 'state', {'state': 'active'}, seq=1), a.get(sid).secret)
+    assert b.receive_remote(frame, source='nostr', sender_hex=A_PUB) is None
+    assert b.status(sid)['state'] == 'ringing'

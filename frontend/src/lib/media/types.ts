@@ -46,6 +46,8 @@ export interface MediaSession {
   protocol_version: number;
   kind: SessionKind;
   purpose: SessionPurpose;
+  local_role: ParticipantRole;
+  pending_offer?: OfferPayload | null;
   authorization_basis?: 'accepted_call' | 'extension_grant';
   participants: Participant[];
   tracks: SessionTrack[];
@@ -58,7 +60,7 @@ export interface MediaSession {
   lease: Lease;
   expires_at?: number;
   ice_servers?: RTCIceServer[];
-  signaling: { route: SignalRoute; relay?: string | null; pending_offer?: OfferPayload | null };
+  signaling: { route: SignalRoute; relay?: string | null };
   path: MediaPath;
   quality?: Quality | null;
   content?: SessionContent | null;
@@ -71,7 +73,7 @@ export type SignalType =
   | 'invite' | 'accept' | 'reject' | 'offer' | 'answer' | 'candidate' | 'candidates_done'
   | 'keepalive' | 'ack' | 'state' | 'renegotiate' | 'end';
 
-export interface OfferPayload { sdp: string; fingerprint: string }
+export interface OfferPayload { sdp: string; fingerprint: string; ice_servers?: RTCIceServer[] }
 export interface CandidatePayload { candidate: string; sdpMid?: string | null; sdpMLineIndex?: number | null }
 
 export interface SignalFrame<P = Record<string, unknown>> {

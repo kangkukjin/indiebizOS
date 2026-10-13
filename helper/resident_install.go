@@ -217,6 +217,12 @@ func residentSetupHandler(cfg *Config, install func(*Config) (string, error), do
 				http.Error(w, "PC 이름을 1~80자로 입력하세요.", 400)
 				return
 			}
+			if r.FormValue("media") == "on" {
+				if err := residentInstallMedia(); err != nil {
+					http.Error(w, err.Error(), 500)
+					return
+				}
+			}
 			candidate := *cfg
 			candidate.Alias = alias
 			outcome, e := install(&candidate)
@@ -231,7 +237,7 @@ func residentSetupHandler(cfg *Config, install func(*Config) (string, error), do
 			}
 			return
 		}
-		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>AI 작업과 화면 공유를 준비하고 로그인 시 자동 시작합니다. 요청되는 화면·입력 접근 권한을 허용하세요. 관리자 작업은 필요할 때 이 PC에서 인증합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
+		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>AI 작업과 화면 공유를 준비하고 로그인 시 자동 시작합니다. 요청되는 화면·입력 접근 권한을 허용하세요. 관리자 작업은 필요할 때 이 PC에서 인증합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><label><input type="checkbox" name="media" checked style="width:auto"> 음성·영상 구성요소도 설치(ffmpeg·mpv)</label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
 	})
 	return mux
 }

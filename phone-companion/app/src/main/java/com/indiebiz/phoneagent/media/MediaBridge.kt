@@ -26,6 +26,12 @@ object MediaBridge {
     @JvmStatic
     fun init(ctx: Context) { appContext = ctx.applicationContext }
 
+    @JvmStatic
+    fun callEvent(event: String, sessionJson: String) {
+        val ctx = appContext ?: return
+        CallActivity.notifySession(ctx, event, JSONObject(sessionJson))
+    }
+
     private fun err(code: String, message: String?, extra: ((JSONObject) -> Unit)? = null): String {
         val o = JSONObject().put("error", code).put("message", message ?: code)
         extra?.invoke(o)
@@ -41,6 +47,7 @@ object MediaBridge {
         val env = try { MediaEnvelope.parse(envelopeJson) } catch (e: EnvelopeError) {
             return err(e.code, e.message)
         }
+        if (CallService.session != null) return err("device_busy", "통화가 진행 중입니다")
         val current = MediaSessionService.currentSessionId()
         if (current != null && current == env.sessionId) {
             return JSONObject().put("accepted", true).put("session_id", current).put("already_active", true).toString()
@@ -96,7 +103,7 @@ object MediaBridge {
         val mic = ctx?.packageManager?.hasSystemFeature(PackageManager.FEATURE_MICROPHONE) ?: false
         val camPerm = ctx?.let { granted(it, Manifest.permission.CAMERA) } ?: false
         val micPerm = ctx?.let { granted(it, Manifest.permission.RECORD_AUDIO) } ?: false
-        val is64 = Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
+        val is64 = android.os.Process.is64Bit()
         val profile = if (is64) JSONObject().put("width", 1280).put("height", 720).put("fps", 24)
                       else JSONObject().put("width", 640).put("height", 480).put("fps", 15)
         return JSONObject()

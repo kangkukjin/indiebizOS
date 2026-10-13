@@ -34,6 +34,7 @@ import javax.net.ssl.X509TrustManager
 class SignalingClient(private val env: MediaEnvelope, private val listener: Listener) {
     interface Listener {
         fun onReady(reconnected: Boolean)
+        fun onIceServers(servers: org.json.JSONArray) {}
         fun onOffer(sdp: String, generation: Int)
         fun onCandidate(candidate: JSONObject)
         fun onCandidatesDone()
@@ -114,6 +115,7 @@ class SignalingClient(private val env: MediaEnvelope, private val listener: List
                 if (client != null) { open(url, client, "lan"); return }
             }
         }
+        if (env.streamUrl.isEmpty()) { listener.onLost("signaling_unavailable"); return }
         open(env.streamUrl, hubClient, "hub")
     }
 
@@ -191,7 +193,8 @@ class SignalingClient(private val env: MediaEnvelope, private val listener: List
         val wasOurs = ws === sock
         if (!wasOurs && !connected && via == "lan") {           // LAN 시도 실패 → 허브 주소
             Log.i(TAG, "LAN 시그널링 실패($why) — 허브 주소로")
-            open(env.streamUrl, hubClient, "hub"); return
+            if (env.streamUrl.isEmpty()) { listener.onLost("signaling_unavailable"); return }
+        open(env.streamUrl, hubClient, "hub"); return
         }
         if (!wasOurs && ws != null) return                        // 옛 소켓의 늦은 종료
         ws = null; connected = false
@@ -236,6 +239,7 @@ class SignalingClient(private val env: MediaEnvelope, private val listener: List
         if (gen < generation && type != "end") return             // 낮은 세대는 버린다(§3)
         if (gen > generation) { generation = gen; seq.set(0) }
         val payload = f.optJSONObject("payload") ?: JSONObject()
+        payload.optJSONArray("ice_servers")?.let { listener.onIceServers(it) }
         when (type) {
             "offer" -> payload.optString("sdp").takeIf { it.isNotEmpty() }?.let { listener.onOffer(it, gen) }
             "candidate" -> listener.onCandidate(payload)

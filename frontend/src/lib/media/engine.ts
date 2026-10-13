@@ -14,6 +14,7 @@ export type EngineSignalType = 'offer' | 'answer' | 'candidate' | 'candidates_do
 
 export interface EngineOptions {
   iceServers?: RTCIceServer[];
+  refreshIceServers?: () => Promise<RTCIceServer[]>;
   /** false = non-trickle (contract §5 nostr route): one complete SDP after gathering. */
   trickle?: boolean;
   /** Seconds allowed in `reconnecting` before the engine gives up (lease.reconnect_s). */
@@ -49,6 +50,8 @@ export class MediaEngine {
   private liveness: RTCDataChannel | null = null;
   private livenessTimer: ReturnType<typeof setInterval> | null = null;
   private lastPong = 0;
+  private mediaCheck: ReturnType<typeof setTimeout> | null = null;
+  private mediaDeadline = 0;
 
   constructor(options: EngineOptions) {
     this.options = options;
@@ -163,6 +166,10 @@ export class MediaEngine {
   async createOffer(restart = false): Promise<OfferPayload> {
     if (this._state === 'closed') throw new Error('engine closed');
     this.applyCodecPreferences();
+    if (restart && this.options.refreshIceServers) {
+      const iceServers = await this.options.refreshIceServers();
+      this.pc.setConfiguration({ ...this.pc.getConfiguration(), iceServers });
+    }
     if (restart) { this.generation += 1; this.pc.restartIce?.(); }
     const offer = await this.pc.createOffer(restart ? { iceRestart: true } : undefined);
     await this.pc.setLocalDescription(offer);
@@ -176,6 +183,7 @@ export class MediaEngine {
   /** Apply a remote offer (answerer) and emit the answer. Fingerprint mismatch is refused. */
   async acceptOffer(payload: OfferPayload, generation = this.generation): Promise<OfferPayload> {
     if (!fingerprintsMatch(payload.sdp, payload.fingerprint)) throw new Error('fingerprint_mismatch');
+    if (payload.ice_servers) this.pc.setConfiguration({ ...this.pc.getConfiguration(), iceServers: payload.ice_servers });
     if (generation > this.generation) this.generation = generation;
     this.remoteApplied = false;
     await this.pc.setRemoteDescription({ type: 'offer', sdp: payload.sdp });
@@ -269,6 +277,7 @@ export class MediaEngine {
   }
 
   private clearTimers(): void {
+    if (this.mediaCheck) { clearTimeout(this.mediaCheck); this.mediaCheck = null; }
     if (this.reconnectDeadline) { clearTimeout(this.reconnectDeadline); this.reconnectDeadline = null; }
     if (this.disconnectTimer) { clearTimeout(this.disconnectTimer); this.disconnectTimer = null; }
   }
@@ -283,7 +292,8 @@ export class MediaEngine {
     const state = forced ?? this.pc.iceConnectionState;
     if (this._state === 'closed') return;
     if (state === 'connected' || state === 'completed') {
-      this.clearTimers(); this.restarting = false; this.setState('active'); return;
+      if (this._state !== 'active' && !this.mediaCheck) { this.mediaDeadline = Date.now() + 15000; void this.confirmMediaFlow(); }
+      return;
     }
     if (state === 'failed') { void this.restart(); return; }
     if (state === 'disconnected') {
@@ -294,6 +304,24 @@ export class MediaEngine {
         if (this.pc.iceConnectionState === 'disconnected') void this.restart();
       }, this.options.disconnectGraceMs ?? 3000);
     }
+  }
+
+  /** ICE connectivity alone does not prove that a camera or decoder is producing media. */
+  private async confirmMediaFlow(): Promise<void> {
+    if (this._state === 'closed' || this._state === 'failed') return;
+    const receives = this.pc.getTransceivers().some(t => ['recvonly', 'sendrecv'].includes(t.currentDirection ?? ''));
+    let flowing = false;
+    try {
+      const report = await this.pc.getStats();
+      report.forEach(s => {
+        if (receives && s.type === 'inbound-rtp' && (s.framesDecoded > 0 || s.totalSamplesReceived > 0 || s.totalSamplesDuration > 0)) flowing = true;
+        if (!receives && s.type === 'outbound-rtp' && s.bytesSent > 0) flowing = true;
+      });
+    } catch { /* retry until the output deadline */ }
+    if (this.state === 'closed') return;
+    if (flowing) { this.clearTimers(); this.restarting = false; this.setState('active'); return; }
+    if (Date.now() >= this.mediaDeadline) { this.setState('failed', 'media_output_timeout'); return; }
+    this.mediaCheck = setTimeout(() => { this.mediaCheck = null; void this.confirmMediaFlow(); }, 100);
   }
 
   // ── observation ──

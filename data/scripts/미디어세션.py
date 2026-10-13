@@ -48,6 +48,20 @@ def _norm(body, status):
     return {"success": False, "error": {"code": f"http_{status}", "message": msg}}
 
 
+def _safe_result(value):
+    """AI receives intent/status, never SDP, TURN credentials or session bearer tokens."""
+    if isinstance(value, list):
+        return [_safe_result(item) for item in value]
+    if isinstance(value, dict):
+        private = {"pending_offer", "ice_servers", "sdp", "secret", "token", "credential", "grant", "mac"}
+        return {key: _safe_result(item) for key, item in value.items() if key not in private}
+    if isinstance(value, str) and value.startswith(("http://", "https://", "ws://", "wss://")):
+        from urllib.parse import urlsplit, urlunsplit
+        url = urlsplit(value)
+        return urlunsplit((url.scheme, url.netloc.rsplit("@", 1)[-1], url.path, "", ""))
+    return value
+
+
 def main():
     try:
         args = json.loads(sys.stdin.read() or "{}")
@@ -73,6 +87,8 @@ def main():
         res = {"success": out.get("success", False), "items": out.get("items") or [], "error": out.get("error")}
     elif op == "create":
         body = {k: args[k] for k in ("kind", "purpose", "target", "tracks", "delivery", "request_id", "content", "want_mic") if k in args}
+        if args.get("camera"):
+            body["camera"] = args["camera"]
         if body.get("purpose") == "playback":
             body.setdefault("delivery", "content")
         out = _http("POST", "/media/sessions", body)
@@ -95,7 +111,7 @@ def main():
         res.pop("error", None)
     elif isinstance(res["error"], dict):
         res["error"] = f"{res['error'].get('code')}: {res['error'].get('message') or ''}".strip(": ")
-    print(json.dumps(res, ensure_ascii=False))
+    print(json.dumps(_safe_result(res), ensure_ascii=False))
 
 
 if __name__ == "__main__":

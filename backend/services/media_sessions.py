@@ -98,6 +98,9 @@ class Session:
     pending_offer: Optional[Dict] = None     # 초대에 동봉할/동봉된 offer
     pending_answer: Optional[Dict] = None
     bundle_event: threading.Event = field(default_factory=threading.Event)
+    accept_sent: bool = False
+    invite_sent: bool = False
+    early_signals: List[Dict] = field(default_factory=list)
     remote_attached: bool = False
     local_attached: bool = False
     content_state: Dict = field(default_factory=dict)
@@ -120,7 +123,7 @@ class Session:
                       "remaining_s": round(self.lease.remaining(), 3)},
             "expires_at": self.expires_at, "ice_servers": list(self.ice_servers),
             "signaling": {k: v for k, v in self.signaling.items() if k != "token"},
-            "pending_offer": self.pending_offer if self.local_role == "callee" and self.state in ("ringing", "accepted") else None,
+            "pending_offer": self.pending_offer if self.local_role == "callee" and self.state != "ended" else None,
             "path": self.path, "quality": dict(self.quality), "quality_profile": dict(self.quality_profile),
             "content": _public_content(self),
             "needs_local_action": self.needs_local_action, "error": self.error,
@@ -134,6 +137,11 @@ class Session:
 def subscribe(fn: Callable) -> None:
     if fn not in _on_change:
         _on_change.append(fn)
+
+
+def unsubscribe(fn: Callable) -> None:
+    if fn in _on_change:
+        _on_change.remove(fn)
 
 
 def _changed(s: Session, event: str = "update") -> None:
@@ -169,6 +177,16 @@ def get(sid: str) -> Session:
 def status(sid: str) -> Dict:
     with _lock:
         return _get(sid).public()
+
+
+def refresh_ice(sid: str) -> List[Dict]:
+    with _lock:
+        s = _get(sid)
+        if s.state == "ended":
+            raise MediaError("session_ended")
+        if sig.turn_configured()[0]:
+            s.ice_servers = sig.ice_servers(sid)
+        return list(s.ice_servers)
 
 
 def list_sessions(active_only: bool = True) -> List[Dict]:
@@ -273,7 +291,7 @@ def create(kind: str, purpose: str, target: str, *, tracks: Optional[List[Dict]]
     if camera is not None and camera not in ("front", "back"):
         raise MediaError("invalid_request", "camera 는 front 또는 back")
     spec = {"kind": kind, "purpose": purpose, "target": target, "tracks": tracks, "delivery": delivery, "content": content,
-            "camera": camera}
+            "camera": camera, "want_mic": want_mic}
     with _lock:
         if request_id:
             prev = _requests.get(request_id)
@@ -301,6 +319,7 @@ def create(kind: str, purpose: str, target: str, *, tracks: Optional[List[Dict]]
     except MediaError as exc:
         end(s.id, exc.code, error={"code": exc.code, "message": exc.message})
         raise
+    _changed(s, "created")
     return status(s.id)
 
 
@@ -351,6 +370,20 @@ def _create_extension(purpose, target, tracks, delivery, content, want_mic) -> S
     return s
 
 
+def _local_device(device_id="local"):
+    from runtime_utils import detect_body
+    phone = detect_body().get("profile") == "phone"
+    return {"id": device_id, "name": "이 폰" if phone else "이 PC", "body": "phone" if phone else "pc"}
+
+
+def _local_quality_profile():
+    from runtime_utils import detect_body
+    if detect_body().get("profile") == "phone":
+        import struct
+        return sig.quality_profile("phone64" if struct.calcsize("P") == 8 else "phone32")
+    return sig.quality_profile("default")
+
+
 def _create_call(purpose, target) -> Session:
     ok, why = nostr.available()
     if not ok:
@@ -362,10 +395,10 @@ def _create_call(purpose, target) -> Session:
     sid = secrets.token_hex(16)
     s = Session(id=sid, kind="call", purpose=purpose, basis="accepted_call", local_role="caller", tracks=rows,
                 peer=peer, state="inviting", secret=secrets.token_hex(32))
-    s.participants = [{"role": "caller", "user": {"id": nostr.my_pubkey_hex(), "name": "나"}, "device": {"id": "local", "name": "이 PC", "body": "pc"}},
+    s.participants = [{"role": "caller", "user": {"id": nostr.my_pubkey_hex(), "name": "나"}, "device": _local_device()},
                       {"role": "callee", "user": {"id": peer, "name": _contact_name(peer)}, "device": {"id": "?", "name": "", "body": ""}}]
     s.consent = _consent(rows, "caller")
-    s.quality_profile = sig.quality_profile("default")
+    s.quality_profile = _local_quality_profile()
     s.ice_servers = sig.ice_servers(sid)
     s.expires_at = round(_now() + float(session_lease.profile("media").get("invite_s") or 45), 3)
     route = str((sig.policy().get("signaling") or {}).get("route") or "auto")
@@ -381,9 +414,19 @@ def _create_call(purpose, target) -> Session:
 def resolve_contact(target: str) -> str:
     """이름·npub·hex → pubkey hex. 주소록(business.db nostr 연락처)만 신뢰한다."""
     t = (target or "").strip()
-    import nip17
     if t.startswith("npub1"):
-        return nip17.npub_to_hex(t)
+        try:
+            from bech32 import bech32_decode, convertbits
+        except ImportError:
+            from pynostr.bech32 import bech32_decode, convertbits
+        parts = bech32_decode(t)
+        hrp, data = parts[:2]
+        if len(parts) == 3 and getattr(parts[2], "name", "") != "BECH32":
+            data = None
+        decoded = convertbits(data, 5, 8, False) if data is not None and hrp == "npub" else None
+        if decoded is None or len(decoded) != 32:
+            raise MediaError("invalid_target", "올바른 npub 주소가 아닙니다")
+        return bytes(decoded).hex()
     if len(t) == 64 and all(c in "0123456789abcdef" for c in t.lower()):
         return t.lower()
     try:
@@ -396,7 +439,7 @@ def resolve_contact(target: str) -> str:
             for c in bm.get_contacts(n["id"]) or []:
                 if c.get("contact_type") == "nostr" and c.get("contact_value"):
                     v = str(c["contact_value"]).strip()
-                    hits.append(nip17.npub_to_hex(v) if v.startswith("npub1") else v.lower())
+                    hits.append(resolve_contact(v) if v.startswith("npub1") else v.lower())
         hits = sorted(set(hits))
         if len(hits) == 1:
             return hits[0]
@@ -439,6 +482,13 @@ def _content_ref(s: Session, content: Dict) -> Dict:
         url = str(content["url"]).strip()
         if not url.startswith(("http://", "https://")):
             raise MediaError("content_unavailable", "http(s) 주소만 전달합니다")
+        from urllib.parse import urlsplit, urlunsplit
+        parsed = urlsplit(url)
+        if parsed.hostname in ("localhost", "127.0.0.1", "::1"):
+            base = urlsplit(sig.relay_base())
+            if not base.netloc:
+                raise MediaError("content_unavailable", "로컬 재생 주소를 전달할 공개 주소가 없습니다. 파일 경로로 보내 주세요")
+            url = urlunsplit((base.scheme, base.netloc, parsed.path, parsed.query, ""))
         out.update(kind="url", url=url)
     return out
 
@@ -466,7 +516,7 @@ def _device_envelope(s: Session) -> Dict:
     stream = {"url": "", "lan": {}}
     base = sig.relay_base()
     if base:
-        stream["url"] = "wss://" + base[len("https://"):] + f"/limb/resident/media/{s.id}" if base.startswith("https://") else base
+        stream["url"] = base.replace("https://", "wss://", 1).replace("http://", "ws://", 1) + f"/limb/resident/media/{s.id}"
     try:
         # 장치 WS 핸들러는 표면(api_media)이 등록한다 — 서비스가 표면을 import 하지 않는다(층 규율, 의존 역전)
         stream["lan"] = lan.offer(device_socket_handler, channel="media") if device_socket_handler else {}
@@ -510,6 +560,10 @@ def _send_invite(s: Session) -> None:
     wait = float((sig.policy().get("signaling") or {}).get("bundle_wait_s") or 0)
     if wait > 0:
         s.bundle_event.wait(wait)
+    def done(ok, err):
+        if not ok:
+            end(s.id, "signaling_unavailable", error={"code": "signaling_unavailable", "message": err or "초대 전송 실패"})
+
     with _lock:
         if s.state != "inviting":
             return
@@ -526,10 +580,14 @@ def _send_invite(s: Session) -> None:
                                        ttl_s=max(5.0, s.expires_at - _now())), s.secret)
         peer = s.peer
 
-    def done(ok, err):
-        if not ok:
-            end(s.id, "signaling_unavailable", error={"code": "signaling_unavailable", "message": err or "초대 전송 실패"})
-    nostr.send(peer, frame, done=done)
+        # Queue the invitation before any late offer/ICE. NostrTransport preserves send order.
+        if s.state == "ended":
+            return
+        nostr.send(peer, frame, done=done)
+        s.invite_sent = True
+        for queued in s.early_signals:
+            _deliver_remote(s, queued)
+        s.early_signals.clear()
 
 
 # ── 수신 측(초대 받음) ──────────────────────────────────────────────────────────────
@@ -559,10 +617,11 @@ def receive_invite(frame: Dict, sender_hex: str) -> Optional[Dict]:
                                                       "name": _contact_name(sender_hex)},
                            "device": payload.get("from_device") or {}},
                           {"role": "callee", "user": {"id": nostr.my_pubkey_hex(), "name": "나"},
-                           "device": {"id": "local", "name": "이 PC", "body": "pc"}}]
+                           "device": _local_device()}]
         s.consent = _consent(rows, "callee")
-        s.quality_profile = sig.quality_profile("default")
-        s.ice_servers = sig.ice_servers(sid) or list(payload.get("ice_servers") or [])
+        s.quality_profile = _local_quality_profile()
+        local_ice = sig.ice_servers(sid)
+        s.ice_servers = local_ice if sig.turn_configured()[0] else list(payload.get("ice_servers") or local_ice)
         s.expires_at = exp or round(_now() + 45, 3)
         signaling = payload.get("signaling") or {}
         s.signaling = {"route": "relay" if signaling.get("relay") else "nostr", "relay": signaling.get("relay"),
@@ -608,9 +667,10 @@ def accept(sid: str, device: str = "local") -> Dict:
         if s.expires_at and _now() > s.expires_at:
             end_locked(s, "invite_expired")
             raise MediaError("invite_expired", "초대가 만료됐습니다")
-        s.participants[1]["device"] = {"id": device, "name": "이 PC", "body": "pc"}
+        s.participants[1]["device"] = _local_device(device)
         s.expires_at = None
         s.lease = session_lease.Lease("media")
+        s.lease.generation = s.generation
         _set_state(s, "accepted")
         if s.signaling.get("relay") and s.signaling.get("token"):
             s.relay_client = sig.RelayClient(s.signaling["relay"], s.signaling["token"],
@@ -624,6 +684,10 @@ def _send_accept(s: Session) -> None:
     wait = float((sig.policy().get("signaling") or {}).get("bundle_wait_s") or 0)
     if wait > 0:
         s.bundle_event.wait(wait)
+    def done(ok, err):
+        if not ok:
+            end(s.id, "signaling_unavailable", error={"code": "signaling_unavailable", "message": err or "수락 전송 실패"})
+
     with _lock:
         if s.state == "ended":
             return
@@ -635,10 +699,11 @@ def _send_accept(s: Session) -> None:
         peer = s.peer
         _set_state(s, "connecting")
 
-    def done(ok, err):
-        if not ok:
-            end(s.id, "signaling_unavailable", error={"code": "signaling_unavailable", "message": err or "수락 전송 실패"})
-    nostr.send(peer, frame, done=done)
+        nostr.send(peer, frame, done=done)
+        s.accept_sent = True
+        for queued in s.early_signals:
+            _deliver_remote(s, queued)
+        s.early_signals.clear()
 
 
 def reject(sid: str, reason: str = "rejected", *, block: bool = False) -> Dict:
@@ -655,12 +720,13 @@ def reject(sid: str, reason: str = "rejected", *, block: bool = False) -> Dict:
     if s.kind == "call" and peer:
         nostr.send(peer, frame)
     elif s.kind == "extension":
-        s.remote_box.push(frame)
+        _deliver_remote(s, frame)
     return status(sid)
 
 
 # ── 원격 프레임 수신(장치 WS·Nostr·릴레이) ──────────────────────────────────────────
-def receive_remote(frame: Dict, *, source: str, sender_hex: Optional[str] = None) -> Optional[str]:
+def receive_remote(frame: Dict, *, source: str, sender_hex: Optional[str] = None,
+                   device_session: Optional[str] = None, device_id: Optional[str] = None) -> Optional[str]:
     """장치·상대 허브에서 온 프레임. 질서·서명·세션 상태를 확인하고 로컬 엔진으로 넘긴다. 반환=거절 사유."""
     try:
         frame = sig.validate_frame(frame)
@@ -676,6 +742,16 @@ def receive_remote(frame: Dict, *, source: str, sender_hex: Optional[str] = None
         s = _sessions.get(sid)
         if not s:
             return "session_not_found"
+        if source == "device":
+            if device_session != sid or s.kind != "extension" or device_id != s.device:
+                return "wrong_session"
+            if not _relation_still_valid(s):
+                end_locked(s, "relation_revoked")
+                return "relation_revoked"
+        elif source not in ("nostr", "relay"):
+            return "invalid_source"
+        if frame["from"] != _remote_role(s) or frame["to"] != s.local_role:
+            return "wrong_role"
         if source in ("nostr", "relay"):
             if not sig.verify(frame, s.secret):
                 return "bad_signature"
@@ -713,6 +789,7 @@ def _apply_remote_locked(s: Session, frame: Dict) -> Optional[str]:
         s.participants[1]["device"] = payload.get("device") or {}
         s.expires_at = None
         s.lease = session_lease.Lease("media")
+        s.lease.generation = s.generation
         _set_state(s, "connecting", "accepted")
         if isinstance(payload.get("answer"), dict):
             inner = sig.new_frame(s.id, "callee", "caller", "answer", payload["answer"], generation=frame["generation"])
@@ -733,7 +810,9 @@ def _apply_remote_locked(s: Session, frame: Dict) -> Optional[str]:
             return "relation_revoked"
         return None
     if kind == "state":
-        _apply_state_report(s, payload)
+        # A peer's report is never local consent. In particular it cannot turn ringing into active.
+        if s.kind == "extension":
+            _apply_state_report(s, payload)
         return None
     if kind in ("offer", "answer"):
         sdp = payload.get("sdp")
@@ -745,6 +824,12 @@ def _apply_remote_locked(s: Session, frame: Dict) -> Optional[str]:
         if frame["generation"] > s.generation:
             s.generation = frame["generation"]
             s.lease.advance_generation()
+            s.lease.generation = s.generation
+        if isinstance(payload.get("ice_servers"), list):
+            s.ice_servers = list(payload["ice_servers"])
+        if kind == "offer" and s.local_role == "callee":
+            s.pending_offer = dict(payload)
+            _changed(s, "offer")
     # offer/answer/candidate/candidates_done/renegotiate/update → 로컬 엔진으로(선도착 candidate 는 버퍼)
     buf = s.buffers.setdefault("remote", sig.CandidateBuffer())
     for f in buf.observe(frame):
@@ -764,6 +849,7 @@ def _relation_still_valid(s: Session) -> bool:
 
 
 def _apply_state_report(s: Session, payload: Dict) -> None:
+    revision = s.revision
     state = payload.get("state")
     if isinstance(payload.get("quality"), dict):
         s.quality = {k: payload["quality"].get(k) for k in ("rtt_ms", "loss", "jitter_ms", "bitrate_kbps", "fps", "width", "height", "dropped")}
@@ -778,6 +864,7 @@ def _apply_state_report(s: Session, payload: Dict) -> None:
         s.needs_local_action = {"code": payload.get("code") or "needs_local_action", "message": payload.get("message") or "장치에서 필요한 행동을 해 주세요"}
         _set_state(s, "needs_local_action")
     elif state == "active":
+        s.disconnected_at = None
         s.needs_local_action = None
         if s.state != "active":
             media_store.record_connected(s.id, s.path)
@@ -789,6 +876,8 @@ def _apply_state_report(s: Session, payload: Dict) -> None:
         end_locked(s, payload.get("reason") or "remote_ended", notify_remote=False)
         return
     else:
+        _changed(s, "state")
+    if s.revision == revision:
         _changed(s, "state")
     if s.quality:
         media_store.record_quality(s.id, s.quality, s.path)
@@ -820,8 +909,6 @@ def signal(sid: str, frame: Dict) -> Optional[str]:
             return None
         if kind == "state":
             _apply_state_report(s, payload)
-            if s.kind == "call":
-                _deliver_remote(s, sig.sign(frame, s.secret))
             return None
         if kind in ("offer", "answer"):
             sdp = payload.get("sdp")
@@ -833,13 +920,15 @@ def signal(sid: str, frame: Dict) -> Optional[str]:
             if frame["generation"] > s.generation:
                 s.generation = frame["generation"]
                 s.lease.advance_generation()
+                s.lease.generation = s.generation
+            payload["ice_servers"] = refresh_ice(sid)
             # 통화: 초대/수락에 동봉할 수 있으면 보관하고 신호는 보내지 않는다
-            if s.kind == "call" and kind == "offer" and s.local_role == "caller" and s.state == "inviting":
-                s.pending_offer = {"sdp": sdp, "fingerprint": payload.get("fingerprint", "")}
+            if s.kind == "call" and kind == "offer" and s.local_role == "caller" and s.state == "inviting" and not s.invite_sent:
+                s.pending_offer = dict(payload)
                 s.bundle_event.set()
                 return None
             if s.kind == "call" and kind == "answer" and s.local_role == "callee" and s.state in ("accepted",):
-                s.pending_answer = {"sdp": sdp, "fingerprint": payload.get("fingerprint", "")}
+                s.pending_answer = dict(payload)
                 s.bundle_event.set()
                 return None
         if kind == "update" and s.content:
@@ -850,8 +939,15 @@ def signal(sid: str, frame: Dict) -> Optional[str]:
 
 def _deliver_remote(s: Session, frame: Dict) -> None:
     """상대/장치로. 확장=장치 WS Outbox, 통화=릴레이(있고 붙었으면) 아니면 Nostr DM."""
+    # Engine signals and hub keepalive/control share one outgoing sequence.
+    # Separate counters cause helpers to discard liveness after the first offer/candidates.
+    s.out_seq += 1
+    frame = sig.sign({**frame, "seq": s.out_seq}, s.secret)
     if s.kind == "extension":
         s.remote_box.push(frame)
+        return
+    if (s.local_role == "caller" and not s.invite_sent) or (s.local_role == "callee" and not s.accept_sent and frame["type"] not in ("end", "reject")):
+        s.early_signals.append(frame)
         return
     route = s.signaling.get("route")
     if route == "relay":
@@ -1064,9 +1160,8 @@ def sweep(now: Optional[float] = None) -> int:
         # 허브 → 확장 장치 keepalive(장치 WS). 장치는 이 순번으로 자기 임대를 갱신한다(계약 §3). 통화는 DataChannel 이 맡는다.
         for s in _sessions.values():
             if s.kind == "extension" and s.remote_attached and s.state != "ended" and now - s.keepalive_sent_at >= s.lease.keepalive_s:
-                s.out_seq += 1
                 s.keepalive_sent_at = now
-                s.remote_box.push(sig.sign(sig.new_frame(s.id, "hub", "device", "keepalive", {}, generation=s.generation, seq=s.out_seq), s.secret))
+                _deliver_remote(s, sig.new_frame(s.id, "hub", "device", "keepalive", {}, generation=s.generation))
         session_lease.sweep(_sessions, lambda s: None, profile_name="media")
         for rid, (_, sid) in list(_requests.items()):
             if sid not in _sessions:

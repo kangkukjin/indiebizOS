@@ -40,6 +40,8 @@ import java.math.BigInteger
 class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, private val listener: Listener) {
     interface Listener {
         fun onLocalCandidate(c: IceCandidate)
+        fun onOffer(sdp: String, fingerprint: String) {}
+        fun onVideo(track: VideoTrack, local: Boolean) {}
         fun onAnswer(sdp: String, fingerprint: String)
         fun onConnectionState(state: String)          // connecting | active | reconnecting | failed
         fun onPath(path: String)                      // direct | relay
@@ -61,6 +63,28 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
     @Volatile private var closed = false
     @Volatile var path: String = "direct"
         private set
+    val eglContext get() = egl.eglBaseContext
+    private var channel: DataChannel? = null
+    @Volatile private var lastPong = 0L
+    val peerAlive get() = System.currentTimeMillis() - lastPong < 10000
+    fun ping() { sendData("ping") }
+    private fun sendData(text: String) {
+        channel?.takeIf { it.state() == DataChannel.State.OPEN }?.send(
+            DataChannel.Buffer(java.nio.ByteBuffer.wrap(text.toByteArray()), false))
+    }
+    private fun liveness(d: DataChannel) {
+        if (d.label() != "liveness") return
+        channel = d
+        d.registerObserver(object : DataChannel.Observer {
+            override fun onBufferedAmountChange(previous: Long) {}
+            override fun onStateChange() {}
+            override fun onMessage(buffer: DataChannel.Buffer) {
+                val bytes = ByteArray(buffer.data.remaining()); buffer.data.get(bytes)
+                when (String(bytes)) { "ping" -> sendData("pong"); "pong" -> lastPong = System.currentTimeMillis() }
+            }
+        })
+    }
+    @Volatile private var awaitingMedia = true
     private var lastBytes = 0.0
     private var lastStatsTs = 0.0
     var width = if (is64()) 1280 else 640; private set
@@ -68,6 +92,9 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
     var fps = if (is64()) 24 else 15; private set
 
     fun start() {
+        env.raw.optJSONObject("quality_profile")?.let { q ->
+            width = q.optInt("width", width); height = q.optInt("height", height); fps = q.optInt("fps", fps)
+        }
         ensureInit(ctx)
         val music = env.sendsPlaybackAudio()
         val attrs = AudioAttributes.Builder()
@@ -91,6 +118,7 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
         }
         pc = f.createPeerConnection(cfg, observer) ?: throw IllegalStateException("PeerConnection 생성 실패")
+        if (env.localRole == "caller") liveness(pc!!.createDataChannel("liveness", DataChannel.Init()))
         if (env.sendsAudio()) addAudio(f, music)
         if (env.sendsVideo()) addVideo(f)
         if (env.receivesAudio() && !env.sendsAudio()) {
@@ -100,10 +128,17 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
         listener.onConnectionState("connecting")
     }
 
+    fun updateIce(servers: org.json.JSONArray) {
+        env.raw.put("ice_servers", servers)
+        pc?.setConfiguration(PeerConnection.RTCConfiguration(iceServers()).apply {
+            sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+            continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+        })
+    }
     private fun iceServers(): List<PeerConnection.IceServer> {
         val out = ArrayList<PeerConnection.IceServer>()
-        for (i in 0 until env.iceServers.length()) {
-            val s = env.iceServers.optJSONObject(i) ?: continue
+        for (i in 0 until (env.raw.optJSONArray("ice_servers") ?: env.iceServers).length()) {
+            val s = (env.raw.optJSONArray("ice_servers") ?: env.iceServers).optJSONObject(i) ?: continue
             val urls = ArrayList<String>()
             s.optJSONArray("urls")?.let { a -> for (j in 0 until a.length()) a.optString(j).takeIf { it.isNotEmpty() }?.let { urls.add(it) } }
             s.optString("urls").takeIf { it.isNotEmpty() && s.optJSONArray("urls") == null }?.let { urls.add(it) }
@@ -148,6 +183,7 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
         videoSource = src; capturer = cap
         videoTrack = f.createVideoTrack("v0", src)
         pc?.addTrack(videoTrack, listOf("indiebiz"))
+        videoTrack?.let { listener.onVideo(it, true) }
     }
 
     // ── 협상(answerer) ──────────────────────────────────────────────────────────
@@ -167,6 +203,29 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
                 }, MediaConstraints())
             }
         }, SessionDescription(SessionDescription.Type.OFFER, sdp))
+    }
+
+    fun createOffer(restart: Boolean = false) {
+        val p = pc ?: return
+        val constraints = MediaConstraints()
+        if (restart) constraints.mandatory.add(MediaConstraints.KeyValuePair("IceRestart", "true"))
+        p.createOffer(object : Sdp() {
+            override fun onCreateSuccess(desc: SessionDescription) {
+                p.setLocalDescription(object : Sdp() {
+                    override fun onSetSuccess() { listener.onOffer(desc.description, fingerprint(desc.description)) }
+                }, desc)
+            }
+        }, constraints)
+    }
+
+    fun handleAnswer(sdp: String) {
+        val p = pc ?: return
+        p.setRemoteDescription(object : Sdp() {
+            override fun onSetSuccess() {
+                remoteSet = true
+                synchronized(pendingCandidates) { pendingCandidates.forEach { p.addIceCandidate(it) }; pendingCandidates.clear() }
+            }
+        }, SessionDescription(SessionDescription.Type.ANSWER, sdp))
     }
 
     fun addRemoteCandidate(json: JSONObject) {
@@ -194,6 +253,7 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
             val q = JSONObject()
             var bytes = 0.0; var rtt = 0.0; var lost = 0.0; var jitter = 0.0
             var fpsV = 0.0; var w = 0.0; var h = 0.0; var frames = 0.0; var encoded = 0.0
+            var decoded = false
             var relay = false
             val all = report.statsMap.values
             for (s in all) {
@@ -206,7 +266,7 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
                             encoded = num(m["framesEncoded"])
                         }
                     }
-                    "inbound-rtp" -> { bytes += num(m["bytesReceived"]); lost += num(m["packetsLost"]); jitter = maxOf(jitter, num(m["jitter"])) }
+                    "inbound-rtp" -> { decoded = decoded || num(m["framesDecoded"]) > 0 || num(m["totalSamplesReceived"]) > 0 || num(m["totalSamplesDuration"]) > 0; bytes += num(m["bytesReceived"]); lost += num(m["packetsLost"]); jitter = maxOf(jitter, num(m["jitter"])) }
                     "remote-inbound-rtp" -> { lost += num(m["packetsLost"]); jitter = maxOf(jitter, num(m["jitter"])); rtt = maxOf(rtt, num(m["roundTripTime"])) }
                     "media-source" -> if (m["kind"] == "video") frames = num(m["frames"])
                     "candidate-pair" -> if (m["nominated"] == true || m["state"] == "succeeded") {
@@ -225,6 +285,10 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
             q.put("rtt_ms", Math.round(rtt * 1000)).put("loss", lost.toLong()).put("jitter_ms", Math.round(jitter * 1000))
                 .put("bitrate_kbps", Math.round(kbps)).put("fps", Math.round(fpsV)).put("width", w.toLong()).put("height", h.toLong())
                 .put("dropped", maxOf(0.0, frames - encoded).toLong())
+            val receives = env.receivesAudio() || env.tracks.any { it.toDevice && it.kind == "video" }
+            if (awaitingMedia && (if (receives) decoded else bytes > 0)) {
+                awaitingMedia = false; listener.onConnectionState("active")
+            }
             cb(q)
         }
     }
@@ -235,6 +299,7 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
         try { capturer?.stopCapture() } catch (_: Throwable) {}
         try { capturer?.dispose() } catch (_: Throwable) {}
         try { textureHelper?.dispose() } catch (_: Throwable) {}
+        try { channel?.close(); channel?.dispose() } catch (_: Throwable) {}
         try { pc?.close() } catch (_: Throwable) {}
         try { pc?.dispose() } catch (_: Throwable) {}
         for (d in listOf<(() -> Unit)?>({ videoTrack?.dispose() }, { videoSource?.dispose() }, { audioTrack?.dispose() },
@@ -253,12 +318,12 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
         override fun onIceCandidatesRemoved(cs: Array<out IceCandidate>) {}
         override fun onAddStream(s: MediaStream) {}
         override fun onRemoveStream(s: MediaStream) {}
-        override fun onDataChannel(d: DataChannel) {}
+        override fun onDataChannel(d: DataChannel) { liveness(d) }
         override fun onRenegotiationNeeded() {}                   // answerer — 허브가 재협상을 연다
         override fun onConnectionChange(s: PeerConnection.PeerConnectionState) {
             when (s) {
-                PeerConnection.PeerConnectionState.CONNECTED -> listener.onConnectionState("active")
-                PeerConnection.PeerConnectionState.DISCONNECTED -> listener.onConnectionState("reconnecting")
+                PeerConnection.PeerConnectionState.CONNECTED -> { awaitingMedia = true; listener.onConnectionState("connecting") }
+                PeerConnection.PeerConnectionState.DISCONNECTED -> { awaitingMedia = true; listener.onConnectionState("reconnecting") }
                 PeerConnection.PeerConnectionState.FAILED -> listener.onConnectionState("failed")
                 else -> {}
             }
@@ -268,7 +333,10 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
             val newPath = if (relay) "relay" else "direct"
             if (newPath != path) { path = newPath; listener.onPath(path) }
         }
-        override fun onAddTrack(r: RtpReceiver, streams: Array<out MediaStream>) { (r.track() as? AudioTrack)?.setEnabled(true) }
+        override fun onAddTrack(r: RtpReceiver, streams: Array<out MediaStream>) {
+            (r.track() as? AudioTrack)?.setEnabled(true)
+            (r.track() as? VideoTrack)?.let { listener.onVideo(it, false) }
+        }
     }
 
     private abstract class Sdp : SdpObserver {
@@ -289,7 +357,7 @@ class MediaEngine(private val ctx: Context, private val env: MediaEnvelope, priv
             initialized = true
         }
 
-        fun is64(): Boolean = Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
+        fun is64(): Boolean = android.os.Process.is64Bit()
 
         /** SDP 의 a=fingerprint 를 봉투에도 적는다(계약 §3) — 수신 측이 둘을 대조. */
         fun fingerprint(sdp: String): String =

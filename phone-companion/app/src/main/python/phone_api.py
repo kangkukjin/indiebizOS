@@ -1386,6 +1386,8 @@ def serve(port=8765, base_path=None):
     if _serving:
         return
     _init_base(base_path)
+    from phone_media import install as install_media
+    install_media(app)
 
     # 몸 독립 부팅 배선 — 에피소드 로거 등(맥 api.py 와 같은 공유 함수). 폰도 자기 실행을
     # (성공·실패 모두) world_pulse.db 에 에피소드로 기록해 회고할 수 있어야 한다. 몸 종속

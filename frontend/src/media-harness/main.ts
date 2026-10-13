@@ -1,3 +1,4 @@
+import './session';
 /**
  * Loopback harness: two MediaEngines in one page wired through the contract's offer/answer/candidate
  * vocabulary (no hub). Proves real decode: the answerer's <video> gets frames (videoWidth > 0, framesDecoded > 0).

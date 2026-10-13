@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import json
 import os
+import queue
 import secrets
 import socket
 import struct
@@ -322,6 +323,9 @@ class NostrTransport:
     def __init__(self, sender: Optional[Callable] = None, log: Callable = print):
         self._sender = sender
         self.log = log
+        self._queue = queue.Queue()
+        self._worker_lock = threading.Lock()
+        self._worker = None
 
     def available(self) -> Tuple[bool, str]:
         if self._sender:
@@ -338,7 +342,10 @@ class NostrTransport:
     def my_pubkey_hex(self) -> str:
         try:
             from indienet import get_indienet
-            key = get_indienet().identity.public_key
+            identity = get_indienet().identity
+            if getattr(identity, "public_key_hex", None):
+                return identity.public_key_hex
+            key = identity.public_key
             return key.hex() if hasattr(key, "hex") else str(key or "")
         except Exception:  # noqa: BLE001
             return ""
@@ -360,7 +367,27 @@ class NostrTransport:
                 self.log(f"[media] Nostr 시그널 발송 실패({frame.get('type')}): {exc.__class__.__name__}")
             if done:
                 done(ok, err)
-        threading.Thread(target=_run, name="media-nostr-send", daemon=True).start()
+        with self._worker_lock:
+            self._queue.put(_run)
+            if self._worker is None or not self._worker.is_alive():
+                self._worker = threading.Thread(target=self._drain, name="media-nostr-send", daemon=True)
+                self._worker.start()
+
+    def _drain(self):
+        # A relay must receive invite/accept before subsequent SDP and ICE frames.
+        while True:
+            try:
+                send = self._queue.get(timeout=30)
+            except queue.Empty:
+                with self._worker_lock:
+                    if self._queue.empty():
+                        self._worker = None
+                        return
+                continue
+            try:
+                send()
+            finally:
+                self._queue.task_done()
 
 
 def is_call_frame_tags(tags) -> bool:

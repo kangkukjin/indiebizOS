@@ -28,6 +28,7 @@ android {
                 install "requests"
                 install "httpx"
                 install "websocket-client"
+                install "wsproto"
                 install "bech32"
                 install "beautifulsoup4"
                 install "feedparser"
@@ -192,6 +193,8 @@ tasks.register('bundleIndiebizBase', Zip) {
         into 'data'
         rename { 'ibl_nodes.yaml' }
     }
+    from("${_ROOT}/data/media_policy.yaml") { into 'data' }
+    from("${_ROOT}/data/session_lease_policy.yaml") { into 'data' }
     from("${_ROOT}/data/vocabulary_policy.yaml") { into 'data' }
     from("${_ROOT}/data/model_context_windows.yaml") { into 'data' }
     from("${_ROOT}/data/phone_manifest.json") { into 'data' }

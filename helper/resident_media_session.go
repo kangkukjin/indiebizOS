@@ -178,8 +178,9 @@ func (s *mediaSession) handleFrame(f mediaSignal) map[string]interface{} {
 			return nil // playback carries no WebRTC leg
 		}
 		var offer struct {
-			SDP         string `json:"sdp"`
-			Fingerprint string `json:"fingerprint"`
+			SDP         string           `json:"sdp"`
+			Fingerprint string           `json:"fingerprint"`
+			ICEServers  []mediaICEServer `json:"ice_servers"`
 		}
 		if json.Unmarshal(f.Payload, &offer) != nil || offer.SDP == "" || !s.out.setGeneration(f.Generation) {
 			return nil
@@ -187,6 +188,11 @@ func (s *mediaSession) handleFrame(f mediaSignal) map[string]interface{} {
 		if !mediaFingerprintMatches(offer.SDP, offer.Fingerprint) {
 			s.finish("fingerprint_mismatch")
 			return errResult("connectivity_failed", "offer fingerprint mismatch")
+		}
+		if offer.ICEServers != nil {
+			if err := s.peer.updateICE(offer.ICEServers); err != nil {
+				return errResult("connectivity_failed", "ICE configuration rejected")
+			}
 		}
 		answer, err := s.peer.handleOffer(offer.SDP)
 		if err != nil {

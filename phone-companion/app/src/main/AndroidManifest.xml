@@ -101,6 +101,9 @@
             android:foregroundServiceType="camera|microphone|mediaPlayback"
             android:exported="false" />
 
+        <service android:name=".media.CallService" android:foregroundServiceType="camera|microphone|mediaPlayback" android:exported="false" />
+        <activity android:name=".media.CallActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
+
         <!-- 카메라 대기 모드(사용자가 폰에서 직접 켜 두는 화면) — 허브 카메라/마이크 세션의 while-in-use 요건 -->
         <activity
             android:name=".media.CctvModeActivity"

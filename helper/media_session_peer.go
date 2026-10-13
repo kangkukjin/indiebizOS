@@ -224,6 +224,15 @@ func (p *mediaPeer) openInput(kind string) (int, error) {
 	return conn.LocalAddr().(*net.UDPAddr).Port, nil
 }
 
+func (p *mediaPeer) updateICE(servers []mediaICEServer) error {
+	config := p.pc.GetConfiguration()
+	config.ICEServers = nil
+	for _, server := range servers {
+		config.ICEServers = append(config.ICEServers, webrtc.ICEServer{URLs: server.URLs, Username: server.Username, Credential: server.Credential})
+	}
+	return p.pc.SetConfiguration(config)
+}
+
 // handleOffer applies the hub's offer and returns the local answer SDP.
 func (p *mediaPeer) handleOffer(sdp string) (string, error) {
 	if err := p.pc.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdp}); err != nil {

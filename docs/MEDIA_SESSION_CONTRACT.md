@@ -134,3 +134,16 @@ IBL 로 묶을 때는 `{items:[session]}`.
 - `data/session_lease_policy.yaml` — 임대 프로필(screen/terminal/media).
 - `data/media_policy.yaml` — ice_servers(STUN/TURN, TURN 은 `secret_env` 로 단기 자격), signaling(route auto|nostr|relay, relay_base), 품질 프로필(장치 종류별 해상도·fps·bitrate 상한), 수신 알림.
 - TURN 비밀은 `.env`(`MEDIA_TURN_SECRET`)에. 코드에 세계의 명사(주소·주체) 고정 금지.
+
+### 구현 보강: 로컬 투영과 인증 경계
+
+- 공개 세션의 `local_role`은 필수이며, `pending_offer`는 `signaling` 안이 아닌 최상위입니다.
+  수신 화면이 늦게 붙어도 마지막 offer를 읽을 수 있습니다.
+- `/media/events` WS는 로컬 통화 API와 같은 사용자 인증을 사용하고
+  `{type:"media_event",event,session}`을 전달합니다. 첫 연결에서는 활성 세션 snapshot을 보냅니다.
+- 확장 장치 WS는 URL의 sid·인증된 device_id·grant를 프레임의 세션과 결속합니다.
+  일반 통화의 원격 `state`는 로컬 수락 또는 센서 활성화의 근거가 아닙니다.
+- `seq=0`은 서버가 생성한 순서 독립 제어 프레임입니다. 중복·세대·만료 검사는 그대로 적용하고,
+  양수 seq의 최댓값을 0으로 되돌리지 않습니다. 브라우저·장치의 순번은 양수로 증가합니다.
+- `content.playing`은 대상 플레이어의 재생 보고입니다. 현재 원본 플레이어를 붙잡고 있는
+  호출자가 그 확인 뒤에 원본을 정지합니다. 일반 경로/URL 재생 요청 자체는 원본을 정지시키지 않습니다.

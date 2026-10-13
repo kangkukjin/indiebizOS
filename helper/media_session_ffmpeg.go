@@ -27,9 +27,11 @@ func mediaFFmpegCandidates(goos, root, home string) []string {
 	case "darwin":
 		return []string{sys("/opt/homebrew/bin"), sys("/usr/local/bin"), sys("/opt/local/bin")}
 	case "windows":
-		c := []string{sys(`C:\ffmpeg\bin`), sys(`C:\Program Files\ffmpeg\bin`), sys(`C:\ProgramData\chocolatey\bin`)}
+		c := []string{sys(`C:/ffmpeg/bin`), sys(`C:/Program Files/ffmpeg/bin`), sys(`C:/ProgramData/chocolatey/bin`),
+			sys(`C:/Program Files/WinGet/Links`), sys(`C:/Program Files/WinGet/Packages/Gyan.FFmpeg_*/*/bin`)}
 		if home != "" {
-			c = append(c, filepath.Join(home, `scoop\shims`), filepath.Join(home, `AppData\Local\Microsoft\WinGet\Links`))
+			c = append(c, filepath.Join(home, `scoop/shims`), filepath.Join(home, `AppData/Local/Microsoft/WinGet/Links`))
+			c = append(c, filepath.Join(home, `AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_*/*/bin`))
 		}
 		return c
 	default:
@@ -70,8 +72,11 @@ func mediaFindBinary(name, override, dataDir, goos, pathEnv string, candidates [
 		}
 	}
 	for _, dir := range candidates {
-		if p := filepath.Join(dir, exe); isExecutableFile(goos, p) {
-			return p
+		matches, _ := filepath.Glob(filepath.Join(dir, exe))
+		for _, p := range matches {
+			if isExecutableFile(goos, p) {
+				return p
+			}
 		}
 	}
 	return ""
@@ -338,7 +343,15 @@ var mediaCapsCache struct {
 }
 
 func mediaProbe(ctx context.Context, override, dataDir string) mediaCaps {
-	key := override + "\x00" + dataDir
+	home, _ := os.UserHomeDir()
+	goos := runtime.GOOS
+	cand := mediaFFmpegCandidates(goos, "", home)
+	c := mediaCaps{Encoders: map[string]bool{}}
+	c.FFmpegPath = mediaFindBinary("ffmpeg", override, dataDir, goos, os.Getenv("PATH"), cand)
+	c.FFplayPath = mediaFindBinary("ffplay", override, dataDir, goos, os.Getenv("PATH"), cand)
+	// Cheap discovery stays live; expensive device/encoder probing is cached.
+	// An install (also in a separate setup process) or removal invalidates it.
+	key := override + "\x00" + dataDir + "\x00" + c.FFmpegPath + "\x00" + c.FFplayPath
 	mediaCapsCache.mu.Lock()
 	if mediaCapsCache.key == key && time.Since(mediaCapsCache.at) < 10*time.Minute {
 		c := mediaCapsCache.caps
@@ -346,12 +359,6 @@ func mediaProbe(ctx context.Context, override, dataDir string) mediaCaps {
 		return c
 	}
 	mediaCapsCache.mu.Unlock()
-	home, _ := os.UserHomeDir()
-	goos := runtime.GOOS
-	cand := mediaFFmpegCandidates(goos, "", home)
-	c := mediaCaps{Encoders: map[string]bool{}}
-	c.FFmpegPath = mediaFindBinary("ffmpeg", override, dataDir, goos, os.Getenv("PATH"), cand)
-	c.FFplayPath = mediaFindBinary("ffplay", override, dataDir, goos, os.Getenv("PATH"), cand)
 	if c.FFmpegPath != "" {
 		c.FFmpeg = true
 		c.Encoders = mediaEncoders(ctx, c.FFmpegPath)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -164,5 +165,52 @@ func TestMediaCapsReportShape(t *testing.T) {
 	}
 	if rep["engine"] != "pion/v4.2.23" || rep["camera"] != true || rep["speaker"] != false {
 		t.Fatal(rep)
+	}
+}
+
+func TestMediaFindWindowsWingetWithoutPathOrLink(t *testing.T) {
+	root, home := t.TempDir(), t.TempDir()
+	candidates := mediaFFmpegCandidates("windows", root, home)
+	var pattern string
+	for _, p := range candidates {
+		if strings.HasPrefix(p, home) && strings.Contains(p, "Packages") {
+			pattern = p
+		}
+	}
+	if pattern == "" {
+		t.Fatal("no user winget package location")
+	}
+	dir := strings.ReplaceAll(pattern, "Gyan.FFmpeg_*", "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe")
+	dir = strings.ReplaceAll(dir, "*", "ffmpeg-8.0-full_build")
+	for _, name := range []string{"ffmpeg", "ffplay"} {
+		want := fakeExecutable(t, filepath.Join(dir, name+".exe"))
+		if got := mediaFindBinary(name, "", "", "windows", "", candidates); got != want {
+			t.Fatalf("%s got %q want %q", name, got, want)
+		}
+	}
+}
+
+func TestMediaProbeRefreshesWhenInstalledBinaryAppearsOrDisappears(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell fixture")
+	}
+	data := t.TempDir()
+	fakeExecutable(t, filepath.Join(data, "bin", "ffmpeg"))
+	player := fakeExecutable(t, filepath.Join(data, "bin", "ffplay"))
+	initial := mediaProbe(context.Background(), "", data)
+	if initial.FFplayPath != player {
+		t.Fatal(initial)
+	}
+	if err := os.Remove(player); err != nil {
+		t.Fatal(err)
+	}
+	removed := mediaProbe(context.Background(), "", data)
+	if removed.FFplayPath == player {
+		t.Fatal("removed executable cached", removed)
+	}
+	fakeExecutable(t, player)
+	installed := mediaProbe(context.Background(), "", data)
+	if installed.FFplayPath != player {
+		t.Fatal("new executable ignored", installed)
 	}
 }

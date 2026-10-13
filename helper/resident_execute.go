@@ -242,7 +242,7 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 			return errResult("invalid_media_source", "")
 		}
 		home, _ := os.UserHomeDir()
-		mpv, missing := residentSelectMediaPlayer(source, extra.Mode, runtime.GOOS, os.Getenv("PATH"), mediaPlayerCandidates(runtime.GOOS, "", home))
+		mpv, missing := residentSelectMediaPlayer(source, extra.Mode, runtime.GOOS, r.cfg.DataDir, os.Getenv("PATH"), mediaPlayerCandidates(runtime.GOOS, "", home))
 		if missing != nil {
 			return missing
 		}

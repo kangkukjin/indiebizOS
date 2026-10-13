@@ -240,7 +240,7 @@ func TestUSBSetupNamesAtRemoteAndDoesNotMutateSharedConfig(t *testing.T) {
 	cfg := &Config{Mode: "enroll", Base: "https://central.example", Key: "usb-registration"}
 	done := make(chan error, 1)
 	var installed []Config
-	handler := residentSetupHandler(cfg, func(c *Config) (string, error) { installed = append(installed, *c); return "enrolled", nil }, done, "secret")
+	handler := residentSetupHandler(cfg, func(c *Config) (string, error) { installed = append(installed, *c); return "enrolled", nil }, func(*Config) mediaInstallReport { t.Fatal("media not requested"); return mediaInstallReport{} }, done, "secret")
 	request := func(method, token, body string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(method, "/?token="+token, strings.NewReader(body))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")

@@ -20,7 +20,7 @@ func TestFindMediaPlayerHomeAppBundleWithEmptyPath(t *testing.T) {
 	root, home := t.TempDir(), t.TempDir()
 	want := filepath.Join(home, "Applications/mpv-dl-0.37.0/mpv.app/Contents/MacOS/mpv")
 	writeFakePlayer(t, want, 0o755)
-	got, searched := findMediaPlayerIn("darwin", "", mediaPlayerCandidates("darwin", root, home))
+	got, searched := findMediaPlayerIn("darwin", "", "", mediaPlayerCandidates("darwin", root, home))
 	if got != want {
 		t.Fatalf("got %q want %q (searched %v)", got, want, searched)
 	}
@@ -32,12 +32,12 @@ func TestFindMediaPlayerPrefersPathThenFixedLocations(t *testing.T) {
 	writeFakePlayer(t, brew, 0o755)
 	writeFakePlayer(t, filepath.Join(home, "Applications/mpv.app/Contents/MacOS/mpv"), 0o755)
 	cands := mediaPlayerCandidates("darwin", root, home)
-	if got, _ := findMediaPlayerIn("darwin", "/usr/bin", cands); got != brew {
+	if got, _ := findMediaPlayerIn("darwin", "", "/usr/bin", cands); got != brew {
 		t.Fatalf("fixed location: got %q want %q", got, brew)
 	}
 	onPath := filepath.Join(bin, "mpv")
 	writeFakePlayer(t, onPath, 0o755)
-	if got, searched := findMediaPlayerIn("darwin", bin, cands); got != onPath || searched[0] != onPath {
+	if got, searched := findMediaPlayerIn("darwin", "", bin, cands); got != onPath || searched[0] != onPath {
 		t.Fatalf("PATH first: got %q searched %v", got, searched)
 	}
 }
@@ -48,7 +48,7 @@ func TestFindMediaPlayerRejectsNonExecutableAndReportsSearch(t *testing.T) {
 	if e := os.MkdirAll(filepath.Join(root, "/usr/local/bin/mpv"), 0o755); e != nil {
 		t.Fatal(e)
 	}
-	got, searched := findMediaPlayerIn("darwin", "", mediaPlayerCandidates("darwin", root, home))
+	got, searched := findMediaPlayerIn("darwin", "", "", mediaPlayerCandidates("darwin", root, home))
 	if got != "" {
 		t.Fatalf("non-executable/dir accepted: %q", got)
 	}
@@ -59,14 +59,14 @@ func TestFindMediaPlayerRejectsNonExecutableAndReportsSearch(t *testing.T) {
 
 func TestResidentMediaWithoutPlayerReportsSearch(t *testing.T) {
 	root, home := t.TempDir(), t.TempDir()
-	_, res := residentSelectMediaPlayer("https://example.com/stream", "background", "darwin", "", mediaPlayerCandidates("darwin", root, home))
+	_, res := residentSelectMediaPlayer("https://example.com/stream", "background", "darwin", "", "", mediaPlayerCandidates("darwin", root, home))
 	if res == nil || res["error"] != "needs_media_player" {
 		t.Fatalf("want needs_media_player, got %v", res)
 	}
 	if s, _ := res["searched"].([]string); len(s) == 0 {
 		t.Fatalf("missing search trail: %v", res)
 	}
-	mpv, local := residentSelectMediaPlayer("/tmp/a.mp3", "background", "darwin", "", mediaPlayerCandidates("darwin", root, home))
+	mpv, local := residentSelectMediaPlayer("/tmp/a.mp3", "background", "darwin", "", "", mediaPlayerCandidates("darwin", root, home))
 	if mpv != "" || local != nil {
 		t.Fatalf("local darwin audio should fall back to afplay, got %v", local)
 	}

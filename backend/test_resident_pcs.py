@@ -264,6 +264,9 @@ def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
     worker.mkdir()
     cfg = {'mode': 'resident', 'base': url, 'key': rec['key'], 'installation_id': 'b' * 32, 'generation': rec['registration']['generation'], 'data_dir': str(worker), 'alias': '맥12-테스트'}
     (worker / 'indiebiz-helper.json').write_text(json.dumps(cfg))
+    # Optional setup failure remains diagnosable after the minimal helper connects.
+    warning = 'test fixture: login autostart unavailable; current connection remains usable'
+    (worker / 'installation_warnings.json').write_text(json.dumps([warning]))
     binary = root / 'helper/dist' / binary_name
     proc = None
 
@@ -286,6 +289,10 @@ def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
         got = wait(job['job_id'])
         assert got['state'] == 'succeeded', got
         assert got['result']['output'] == 'resident-ok', got
+        caps = limb_keys.get_by_device(rec['device_id'])['registration']['capabilities']
+        assert caps['installation_warnings'] == [warning]
+        assert set(caps['media_components']['components']) == {'ffmpeg', 'ffplay', 'mpv'}
+        assert isinstance(caps['media_components']['missing'], list)
         latency = round((time.monotonic() - start) * 1000)
         assert pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'printf resident-ok', 'timeout': 10}, 'smoke-once')['job_id'] == job['job_id']
         inherited = pcs.submit(rec['device_id'], {'op': 'shell',

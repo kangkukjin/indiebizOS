@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -27,10 +26,13 @@ func mediaPlayerCandidates(goos, root, home string) []string {
 				filepath.Join(home, "Applications/*/mpv.app/Contents/MacOS/mpv"))
 		}
 	case "windows":
-		c = []string{sys(`C:\Program Files\mpv\mpv.exe`), sys(`C:\ProgramData\chocolatey\bin\mpv.exe`)}
+		c = []string{sys(`C:/Program Files/mpv/mpv.exe`), sys(`C:/ProgramData/chocolatey/bin/mpv.exe`),
+			sys(`C:/Program Files/WinGet/Links/mpv.exe`)}
 		if home != "" {
-			c = append(c, filepath.Join(home, `scoop\shims\mpv.exe`),
-				filepath.Join(home, `AppData\Local\Microsoft\WinGet\Links\mpv.exe`))
+			// winget may leave the portable shinchiro.mpv without a Links shim.
+			c = append(c, filepath.Join(home, `scoop/shims/mpv.exe`),
+				filepath.Join(home, `AppData/Local/Microsoft/WinGet/Links/mpv.exe`),
+				filepath.Join(home, `AppData/Local/Microsoft/WinGet/Packages/shinchiro.mpv_*/mpv.exe`))
 		}
 	default:
 		c = []string{sys("/usr/bin/mpv"), sys("/usr/local/bin/mpv"), sys("/snap/bin/mpv")}
@@ -50,13 +52,21 @@ func isExecutableFile(goos, p string) bool {
 }
 
 // findMediaPlayerIn returns the first executable mpv and every location examined
-// (PATH entries first), so a miss can be diagnosed from the job result.
-func findMediaPlayerIn(goos, pathEnv string, candidates []string) (string, []string) {
+// (the helper data dir bin/, then PATH entries), so a miss can be diagnosed from
+// the job result. The installer and capabilities use the same lookup.
+func findMediaPlayerIn(goos, dataDir, pathEnv string, candidates []string) (string, []string) {
 	name := "mpv"
 	if goos == "windows" {
 		name = "mpv.exe"
 	}
 	var searched []string
+	if dataDir != "" {
+		p := filepath.Join(dataDir, "bin", name)
+		searched = append(searched, p)
+		if isExecutableFile(goos, p) {
+			return p, searched
+		}
+	}
 	for _, dir := range filepath.SplitList(pathEnv) {
 		if dir == "" || !filepath.IsAbs(dir) {
 			continue
@@ -81,8 +91,8 @@ func findMediaPlayerIn(goos, pathEnv string, candidates []string) (string, []str
 
 // residentSelectMediaPlayer picks mpv, or afplay ("" and nil) for local macOS
 // audio, or returns needs_media_player with the locations examined.
-func residentSelectMediaPlayer(source, mode, goos, pathEnv string, candidates []string) (string, map[string]interface{}) {
-	mpv, searched := findMediaPlayerIn(goos, pathEnv, candidates)
+func residentSelectMediaPlayer(source, mode, goos, dataDir, pathEnv string, candidates []string) (string, map[string]interface{}) {
+	mpv, searched := findMediaPlayerIn(goos, dataDir, pathEnv, candidates)
 	if mpv != "" {
 		return mpv, nil
 	}
@@ -92,9 +102,4 @@ func residentSelectMediaPlayer(source, mode, goos, pathEnv string, candidates []
 	res := errResult("needs_media_player", "mpv 설치 및 로그인한 사용자의 오디오 세션이 필요합니다")
 	res["searched"] = searched
 	return "", res
-}
-
-func findMediaPlayer() (string, []string) {
-	home, _ := os.UserHomeDir()
-	return findMediaPlayerIn(runtime.GOOS, os.Getenv("PATH"), mediaPlayerCandidates(runtime.GOOS, "", home))
 }

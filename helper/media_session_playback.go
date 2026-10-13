@@ -59,7 +59,7 @@ func mediaIPCPath(_ string, sid string) string {
 // (when not under test) reaps the player if the helper dies.
 func startMediaPlayback(ctx context.Context, r *residentRuntime, jid, dir, source string, content mediaContent, mode string) (*mediaPlayback, map[string]interface{}) {
 	home, _ := os.UserHomeDir()
-	mpv, missing := residentSelectMediaPlayer(source, mode, runtime.GOOS, os.Getenv("PATH"), mediaPlayerCandidates(runtime.GOOS, "", home))
+	mpv, missing := residentSelectMediaPlayer(source, mode, runtime.GOOS, r.cfg.DataDir, os.Getenv("PATH"), mediaPlayerCandidates(runtime.GOOS, "", home))
 	if missing != nil {
 		return nil, missing
 	}

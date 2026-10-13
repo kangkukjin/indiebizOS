@@ -55,7 +55,8 @@ func (r *residentRuntime) record(v residentRecord) error {
 }
 func (r *residentRuntime) capabilities() map[string]interface{} {
 	hostname, _ := os.Hostname()
-	mpv, _ := findMediaPlayer()
+	media := newMediaLookup(r.cfg.DataDir).status()
+	mpv := media.Components["mpv"]
 	_, afplay := exec.LookPath("afplay")
 	caps := map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv != "" || afplay == nil, "media_player": mpv, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
 	caps["desktop_stream"] = 1
@@ -63,6 +64,8 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	caps["terminal"] = terminalAvailable()
 	caps["terminal_lan"] = true
 	caps["media_session"] = r.mediaSessionCapabilities()
+	caps["media_components"] = media // ffmpeg·ffplay·mpv paths, missing and how to add them
+	caps["installation_warnings"] = residentInstallWarnings(r.cfg.DataDir)
 	caps["helper_sha256"], caps["go"], caps["self_update"] = residentSelfDigest(), runtime.Version(), residentCanSelfUpdate(r.cfg)
 	if st, e := residentLoadUpdate(r.cfg.DataDir); e == nil && st.Outcome != "" {
 		caps["helper_update"] = map[string]interface{}{"outcome": st.Outcome, "to": st.To, "started": st.Started}
@@ -295,6 +298,7 @@ func (r *residentRuntime) localControl(listener net.Listener) {
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if req.Method == "POST" {
 			action := req.FormValue("action")
 			if action == "screen" {
@@ -303,6 +307,14 @@ func (r *residentRuntime) localControl(listener net.Listener) {
 					return
 				}
 				fmt.Fprint(w, "OS에서 요청한 화면·입력 접근 권한을 허용한 뒤 중앙에서 화면 공유를 여세요.")
+				return
+			}
+			if action == "media" {
+				fmt.Fprint(w, `<p>음성·영상 구성요소를확인·설치하고 있습니다.</p>`)
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+				fmt.Fprint(w, residentMediaReportHTML(newMediaInstaller(r.cfg.DataDir).install()))
 				return
 			}
 			if action == "remove" {
@@ -325,7 +337,7 @@ func (r *residentRuntime) localControl(listener net.Listener) {
 			r.mu.Unlock()
 
 		}
-		fmt.Fprint(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz PC 관리</title><h1>상주 헬퍼 실행 중</h1><p>중앙 기록에 AI 작업 내역이 저장됩니다. 화면 공유 영상과 키 입력은 저장하지 않습니다. 제거해도 작업 폴더는 보존합니다.</p><form method="post"><button name="action" value="screen">화면 공유 권한 설정</button><button name="action" value="pause">새 작업 중지</button><button name="action" value="resume">재개</button><button name="action" value="remove">이 PC 등록 해제 및 제거</button></form>`+residentPermissionHelp())
+		fmt.Fprint(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz PC 관리</title><h1>상주 헬퍼 실행 중</h1><p>중앙 기록에 AI 작업 내역이 저장됩니다. 화면 공유 영상과 키 입력은 저장하지 않습니다. 제거해도 작업 폴더는 보존합니다.</p><form method="post"><button name="action" value="screen">화면 공유 권한 설정</button><button name="action" value="media">미디어 구성요소 다시 설치</button><button name="action" value="pause">새 작업 중지</button><button name="action" value="resume">재개</button><button name="action" value="remove">이 PC 등록 해제 및 제거</button></form>`+residentMediaReportHTML(newMediaLookup(r.cfg.DataDir).status())+residentInstallWarningsHTML(r.cfg.DataDir)+residentPermissionHelp())
 	})
 	go (&http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}).Serve(listener)
 }

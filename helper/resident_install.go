@@ -164,7 +164,7 @@ func residentSetup(cfg *Config) error {
 	defer listener.Close()
 	token := residentID()
 	done := make(chan error, 1)
-	mux := residentSetupHandler(cfg, residentInstall, done, token)
+	mux := residentSetupHandler(cfg, residentInstall, residentSetupMedia, done, token)
 	server := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go server.Serve(listener)
 	url := "http://" + listener.Addr().String() + "/?token=" + token
@@ -188,7 +188,23 @@ func residentPermissionHelp() string {
 	return `<p>Mac: 화면 기록·손쉬운 사용에서 IndieBiz Screen을 허용하세요. 모든 폴더와 외장 드라이브를 쓰려면 설치된 indiebiz-helper에 <a href="x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles">전체 디스크 접근 권한</a>도 허용하세요. 권한 변경 후 다시 연결하면 됩니다.</p><p>` + template.HTMLEscapeString(filepath.Dir(exe)) + `</p>`
 }
 
-func residentSetupHandler(cfg *Config, install func(*Config) (string, error), done chan error, token string) http.Handler {
+// residentMediaReportHTML shows the media step's outcome; missing components
+// stay a warning with how to add them.
+func residentMediaReportHTML(rep mediaInstallReport) string {
+	if len(rep.Missing) == 0 {
+		if rep.Error != "" {
+			return `<p>` + template.HTMLEscapeString(rep.Error) + `</p>`
+		}
+		return `<p>음성·영상 구성요소(ffmpeg·ffplay·mpv)가 준비되었습니다.</p>`
+	}
+	note := `<p><strong>경고:</strong> 음성·영상 구성요소 중 ` + template.HTMLEscapeString(strings.Join(rep.Missing, "·")) + `이(가) 없습니다. 이 기능 없이도 AI 작업과 화면 공유는 쓸 수 있습니다.</p>`
+	if rep.Error != "" {
+		note += `<p>원인: ` + template.HTMLEscapeString(rep.Error) + `</p>`
+	}
+	return note + `<p>` + template.HTMLEscapeString(rep.Hint) + `</p>`
+}
+
+func residentSetupHandler(cfg *Config, install func(*Config) (string, error), media func(*Config) mediaInstallReport, done chan error, token string) http.Handler {
 	mux := http.NewServeMux()
 	var installing sync.Mutex
 	name := cfg.Alias
@@ -209,12 +225,6 @@ func residentSetupHandler(cfg *Config, install func(*Config) (string, error), do
 				http.Error(w, "PC 이름을 1~80자로 입력하세요.", 400)
 				return
 			}
-			if r.FormValue("media") == "on" {
-				if err := residentInstallMedia(); err != nil {
-					http.Error(w, err.Error(), 500)
-					return
-				}
-			}
 			candidate := *cfg
 			candidate.Alias = alias
 			outcome, e := install(&candidate)
@@ -222,14 +232,30 @@ func residentSetupHandler(cfg *Config, install func(*Config) (string, error), do
 				http.Error(w, e.Error(), 500)
 				return
 			}
-			fmt.Fprint(w, residentSetupMessages[outcome]+residentPermissionHelp())
+			// Optional media components come after the registration is saved; their
+			// failure is a warning on this page, never a failed enrollment.
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			fmt.Fprint(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz PC 등록</title><p>`+residentSetupMessages[outcome]+`</p>`+residentPermissionHelp())
+			if root, err := residentDataRoot(&candidate); err == nil {
+				fmt.Fprint(w, residentInstallWarningsHTML(root))
+			}
+			if r.FormValue("media") == "on" {
+				fmt.Fprint(w, `<p>등록 처리는 끝났습니다. 선택한 음성·영상 구성요소를 확인·설치하고 있습니다. 완료 결과가 이 아래에 표시됩니다.</p>`)
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+				fmt.Fprint(w, residentMediaReportHTML(media(&candidate)))
+			}
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
 			select {
 			case done <- nil:
 			default:
 			}
 			return
 		}
-		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>AI 작업과 화면 공유를 준비하고 로그인 시 자동 시작합니다. 요청되는 화면·입력 접근 권한을 허용하세요. 관리자 작업은 필요할 때 이 PC에서 인증합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><label><input type="checkbox" name="media" checked style="width:auto"> 음성·영상 구성요소도 설치(ffmpeg·mpv)</label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
+		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>AI 작업과 화면 공유를 준비하고 로그인 시 자동 시작합니다. 요청되는 화면·입력 접근 권한을 허용하세요. 관리자 작업은 필요할 때 이 PC에서 인증합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><label><input type="checkbox" name="media" style="width:auto"> 음성·영상 구성요소도 설치(ffmpeg·mpv, 나중에 관리 화면에서도 설치 가능)</label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
 	})
 	return mux
 }
@@ -285,15 +311,36 @@ func residentReplaceInstalled(cfg *Config, src, dest string) error {
 	return nil
 }
 
-// residentInstall reports what it did: "enrolled", "updated" (an installed helper
-// was replaced by this build) or "running" (already installed, same build).
-func residentInstall(invite *Config) (string, error) {
+// residentDataRoot is the installation's data dir (DataDir), derived from the
+// registration key the USB carries.
+func residentDataRoot(invite *Config) (string, error) {
 	base, e := os.UserConfigDir()
 	if e != nil {
 		return "", e
 	}
 	sum := sha256.Sum256([]byte(invite.Key))
-	root := filepath.Join(base, "IndieBiz", "resident-"+hex.EncodeToString(sum[:8]))
+	return filepath.Join(base, "IndieBiz", "resident-"+hex.EncodeToString(sum[:8])), nil
+}
+
+// residentSetupMedia installs the optional media components into reach of the
+// installed helper, whose bin/ the lookup includes.
+func residentSetupMedia(invite *Config) mediaInstallReport {
+	root, e := residentDataRoot(invite)
+	if e != nil {
+		rep := newMediaLookup("").status()
+		rep.Error = e.Error()
+		return rep
+	}
+	return newMediaInstaller(root).install()
+}
+
+// residentInstall reports what it did: "enrolled", "updated" (an installed helper
+// was replaced by this build) or "running" (already installed, same build).
+func residentInstall(invite *Config) (string, error) {
+	root, e := residentDataRoot(invite)
+	if e != nil {
+		return "", e
+	}
 	if e = os.MkdirAll(root, 0700); e != nil {
 		return "", e
 	}
@@ -358,23 +405,62 @@ func residentInstall(invite *Config) (string, error) {
 			outcome = "updated"
 		}
 	}
+	e = residentStartInstalled(&cfg, dest, residentAutostart, func() error {
+		// A service manager that owns this installation may start the new build.
+		if outcome == "updated" && runtime.GOOS != "windows" && residentServiceRestart(&cfg) == nil {
+			return nil
+		}
+		cmd := exec.Command(dest)
+		cmd.Dir = root
+		configureResidentDetached(cmd)
+		return cmd.Start()
+	})
+	if e != nil {
+		return "", e
+	}
+	// Start the connection before asking about optional desktop permissions.
 	// Permissions belong to the installed executable, not the USB copy.
 	if outcome != "running" {
 		permission := exec.Command(dest, "--screen-permissions", root)
 		configureResidentDetached(permission)
-		_ = permission.Run() // AI commands remain available if a user declines screen access.
+		if permission.Start() == nil {
+			go permission.Wait()
+		}
 	}
-	if e = residentAutostart(&cfg, dest, false); e != nil {
-		return "", fmt.Errorf("로그인 자동 시작 설정 실패 (autostart): %w", e)
+	return outcome, nil
+}
+
+// A login service is useful for the next login, but is not required for the
+// current connection. Preserve its failure for the local page and hub/AI.
+func residentStartInstalled(cfg *Config, exe string, autostart func(*Config, string, bool) error, start func() error) error {
+	warnings := []string{}
+	if err := autostart(cfg, exe, false); err != nil {
+		detail := []rune(err.Error())
+		if len(detail) > 800 {
+			detail = append([]rune("…"), detail[len(detail)-800:]...)
+		}
+		warnings = append(warnings, "로그인 자동 시작 설정 실패: "+string(detail)+". 현재 실행은 계속합니다. 다음 로그인 후 연결되지 않으면 설치된 헬퍼를 직접 실행하세요.")
 	}
-	// A service manager that owns this installation starts the new executable itself.
-	if outcome == "updated" && runtime.GOOS != "windows" && residentServiceRestart(&cfg) == nil {
-		return outcome, nil
+	if err := residentSave(filepath.Join(cfg.DataDir, "installation_warnings.json"), warnings); err != nil {
+		fmt.Fprintln(os.Stderr, "설치 경고 기록 실패:", err)
 	}
-	cmd := exec.Command(dest)
-	cmd.Dir = root
-	configureResidentDetached(cmd)
-	return outcome, cmd.Start()
+	return start()
+}
+
+func residentInstallWarnings(root string) []string {
+	warnings := []string{}
+	if b, err := os.ReadFile(filepath.Join(root, "installation_warnings.json")); err == nil {
+		_ = json.Unmarshal(b, &warnings)
+	}
+	return warnings
+}
+
+func residentInstallWarningsHTML(root string) string {
+	var note string
+	for _, warning := range residentInstallWarnings(root) {
+		note += `<p><strong>설치 경고:</strong> ` + template.HTMLEscapeString(warning) + `</p>`
+	}
+	return note
 }
 
 // A separate cleanup process survives the worker and deletes only owned program files.

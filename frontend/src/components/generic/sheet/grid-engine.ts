@@ -2,7 +2,7 @@
  * docs/SPREADSHEET_APP_ON_IBL_PLAN_2026_10_07.md §2·§4. Univer 의 자체 도구줄·머리·꼬리는 숨기고
  * 우리 엑셀 얼굴(ExcelFrame)이 Facade 로 명령한다. 파일 I/O 는 grid.v1 통화(grid-schema.ts)로만 — 이 파일 밖에서는
  * Univer 타입이 새지 않는다. */
-import { createUniver, LocaleType, mergeLocales, type FUniver, type ICellData, type IRange, type IStyleData } from '@univerjs/presets';
+import { createUniver, LifecycleService, LifecycleStages, LocaleType, mergeLocales, type FUniver, type ICellData, type IRange, type IStyleData } from '@univerjs/presets';
 import type { FWorkbook, FWorksheet, FRange } from '@univerjs/preset-sheets-core';
 import { greenTheme } from '@univerjs/themes';
 import { UniverSheetsCorePreset, FormulaDataModel, SetHorizontalTextAlignCommand, SetVerticalTextAlignCommand } from '@univerjs/preset-sheets-core';
@@ -30,6 +30,8 @@ const DEFAULT_COL_W = 73, DEFAULT_ROW_H = 20;
 
 export class GridEngine {
   private api: FUniver;
+  private lifecycle: LifecycleService;
+  private ready = false;
   private wb: FWorkbook | null = null;
   private disposers: Array<{ dispose: () => void }> = [];
   private changeListeners = new Set<Listener>();
@@ -39,7 +41,7 @@ export class GridEngine {
   readonly unitId = 'wb-' + Math.random().toString(36).slice(2, 10);
 
   constructor(container: HTMLElement) {
-    const { univerAPI } = createUniver({
+    const { univer, univerAPI } = createUniver({
       locale: LocaleType.KO_KR,
       locales: { [LocaleType.KO_KR]: mergeLocales(coreKo, filterKo, sortKo, findKo) },
       theme: greenTheme,
@@ -49,13 +51,19 @@ export class GridEngine {
       ],
     });
     this.api = univerAPI;
+    this.lifecycle = univer.__getInjector().get(LifecycleService);
   }
 
   /* ── 수명 ── */
-  load(grid: GridWorkbook) {
+  async load(grid: GridWorkbook) {
     this.unload();
     const wb = this.api.createWorkbook(toUniver(grid, this.unitId));
     this.wb = wb;
+    // 통합문서 생성만으로 스크롤·선택 컨트롤러가 등록되지는 않는다.
+    // 첫 렌더가 끝난 뒤에만 이름 상자 등 편집 명령을 허용한다.
+    await this.lifecycle.onStage(LifecycleStages.Rendered);
+    if (this.wb !== wb) return;
+    this.ready = true;
     this.disposers.push(wb.onCommandExecuted((cmd) => {
       if (cmd.type === 2 && !SILENT_MUTATIONS.test(cmd.id)) this.changeListeners.forEach((l) => l());  // 2 = MUTATION
       if (/set-worksheet-active|insert-sheet|remove-sheet|set-worksheet-name|set-worksheet-order|set-worksheet-hide/.test(cmd.id)) this.sheetListeners.forEach((l) => l());
@@ -65,12 +73,13 @@ export class GridEngine {
     this.selectionListeners.forEach((l) => l());
   }
   unload() {
+    this.ready = false;
     this.highlight?.dispose(); this.highlight = null;
     this.disposers.forEach((d) => d.dispose()); this.disposers = [];
     if (this.wb) { this.api.disposeUnit(this.wb.getId()); this.wb = null; }
   }
   dispose() { this.unload(); try { this.api.dispose(); } catch { /* 이미 내려간 엔진 */ } }
-  get loaded() { return !!this.wb; }
+  get loaded() { return this.ready && !!this.wb; }
   onChange(l: Listener) { this.changeListeners.add(l); return () => { this.changeListeners.delete(l); }; }
   onSelection(l: Listener) { this.selectionListeners.add(l); return () => { this.selectionListeners.delete(l); }; }
   onSheets(l: Listener) { this.sheetListeners.add(l); return () => { this.sheetListeners.delete(l); }; }
@@ -223,6 +232,7 @@ export class GridEngine {
     return { sheet: ws.getSheetName(), range: rangeA1(g.startRow, g.startColumn, g.endRow, g.endColumn), rows: u.getHeight(), cols: u.getWidth(), r1: g.startRow, c1: g.startColumn, r2: g.endRow, c2: g.endColumn };
   }
   goTo(address: string) {
+    if (!this.loaded) return false;
     const ws = this.sheet(); const p = parseRange(address); if (!ws || !p) return false;
     ws.getRange(p.r1, p.c1, p.r2 - p.r1 + 1, p.c2 - p.c1 + 1).activate();
     ws.scrollToCell(p.r1, p.c1);

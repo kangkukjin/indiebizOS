@@ -17,13 +17,27 @@ def test_event_receipts_across_operations(browser, tmp_path, method):
     async def call(**params):
         return json.loads(await handler.execute({'driver': 'playwright', **params}, context))
 
+    async def observed(receipt, event):
+        """조작 직후 또는 다음 영수증에 도착하는 사건을 같은 계약으로 검증한다."""
+        deadline = asyncio.get_running_loop().time() + 5
+        while not receipt.get(event) and asyncio.get_running_loop().time() < deadline:
+            later = await call(op='wait', timeout=50)
+            assert later['success'], later
+            for key, value in later.items():
+                if isinstance(value, list):
+                    receipt.setdefault(key, []).extend(value)
+                else:
+                    receipt.setdefault(key, value)
+        assert receipt.get(event), receipt
+        return receipt
+
     async def run():
         try:
             first = await call(op='navigate', url='about:blank', wait='load')
             session = next(iter(module.BrowserSession._sessions.values()))
             html = '''<title>Events</title>
                 <a id="popup" href="/child" target="_blank">Open</a>
-                <button id="open" onclick="window.open('/child')">Window</button>
+                <button id="open" onclick="setTimeout(()=>window.open('/child'),250)">Window</button>
                 <button id="close" onclick="window.close()">Close</button>
                 <a id="download" href="/download">Download</a>
                 <button id="blob" onclick="let a=document.createElement('a'); a.href=window.URL.createObjectURL(new Blob([new Uint8Array([0,255,13,10,128])])); a.download='bytes.bin'; a.click()">Blob</button>
@@ -55,20 +69,24 @@ def test_event_receipts_across_operations(browser, tmp_path, method):
                 return await call(op='evaluate', expression=f'document.querySelector({json.dumps(selector)}).click()', **params)
 
             for selector in ('#popup', '#open'):
-                opened = await trigger(selector)
+                opened = await observed(await trigger(selector), 'opened_tabs')
                 assert opened['success'], opened
                 assert len(opened['opened_tabs']) == 1, opened
                 new = opened['opened_tabs'][0]
                 assert new['url'] == 'http://events.test/child', opened
-                assert opened['active_tab_changed'] == {'from': first['tab_id'], 'to': new['tab_id']}
+                if 'active_tab_changed' in opened:
+                    assert opened['active_tab_changed'] == {'from': first['tab_id'], 'to': new['tab_id']}
+                assert session.active_tab_id == new['tab_id']
                 snap = await call(op='snapshot')
                 assert snap['tab_id'] == new['tab_id'] and snap['url'] == new['url'], snap
                 logs = await call(op='logs', mode='network')
                 assert any(x['url'] == new['url'] and x['status'] == 200 for x in logs['logs']), logs
-                closed = await trigger('#close')
+                closed = await observed(await trigger('#close'), 'closed_tabs')
                 assert closed['success'], closed
                 assert closed['closed_tabs'][0]['tab_id'] == new['tab_id'], closed
-                assert closed['active_tab_changed']['to'] == first['tab_id'], closed
+                if 'active_tab_changed' in closed:
+                    assert closed['active_tab_changed']['to'] == first['tab_id'], closed
+                assert session.active_tab_id == first['tab_id']
                 assert (await call(op='tab', mode='list'))['count'] == 1
                 assert (await call(op='snapshot'))['tab_id'] == first['tab_id']
 

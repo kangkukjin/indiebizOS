@@ -75,7 +75,10 @@ def test_grid_app_edit_save_queue_and_ai(tmp_path, monkeypatch):
             try:
                 page = browser.new_page(viewport={"width": 1440, "height": 1000})
                 failures = []
-                page.on("pageerror", lambda error: failures.append(str(error)))
+                page.on("pageerror", lambda error: failures.append(error.stack or str(error)))
+                # 느린 CPU에서는 통합문서 생성 뒤 렌더 컨트롤러 등록이 늦는다.
+                cdp = page.context.new_cdp_session(page)
+                cdp.send("Emulation.setCPUThrottlingRate", {"rate": 6})
                 page.goto(f"http://127.0.0.1:{port}/#/spreadsheets")
                 status = page.get_by_role("status").first
                 try:
@@ -86,7 +89,9 @@ def test_grid_app_edit_save_queue_and_ai(tmp_path, monkeypatch):
                 assert book.exists()
                 doc = workspace.open(book)["document"]
                 # ── 입력 → 자동 초안(원본은 그대로) → 저장 ──
-                set_cell(page, "A1", "매출"); set_cell(page, "B2", "1200"); set_cell(page, "B3", "800"); set_cell(page, "B4", "=SUM(B2:B3)")
+                set_cell(page, "A1", "매출")
+                cdp.send("Emulation.setCPUThrottlingRate", {"rate": 1})
+                set_cell(page, "B2", "1200"); set_cell(page, "B3", "800"); set_cell(page, "B4", "=SUM(B2:B3)")
                 expect(status).to_contain_text("작업 저장됨", timeout=10000)
                 assert load_workbook(book).active["B2"].value is None
                 page.get_by_role("button", name="저장", exact=True).first.click()

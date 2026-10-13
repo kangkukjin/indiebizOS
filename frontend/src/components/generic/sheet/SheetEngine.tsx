@@ -146,7 +146,8 @@ function GridSheet({ detail, onChange, emit, host, onOffice }: { detail: SheetDe
       try {
         const r = await sheetCommand<{ grid: GridWorkbook }>(detail.document.id, 'grid', {});
         if (dead) return;
-        engine.load(r.grid);
+        await engine.load(r.grid);
+        if (dead) return;
         dirtyRef.current = false; setDirty(detail.session?.state === 'draft');
         setOverlay(null); setStatus(detail.session?.state === 'draft' ? '작업 초안을 읽었습니다 · 원본에는 저장되지 않음' : '원본을 읽었습니다');
         setTick((t) => t + 1);

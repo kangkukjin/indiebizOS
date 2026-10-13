@@ -168,3 +168,29 @@ def test_cli_returns_failure_and_accepts_literal_empty_argument(tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+@pytest.mark.parametrize("locale", ["cp949", "cp1252"])
+def test_unicode_journal_resumes_without_repeating_work(tmp_path, monkeypatch, locale):
+    root = tmp_path / "한글 日本語 😀"
+    root.mkdir()
+    p = plan(root, [{"id": "once", "argv": command("open('count','a').write('x')")}])
+    assert runner.run(p)["status"] == "succeeded"
+    original = Path.read_text
+    monkeypatch.setattr(Path, "read_text", lambda self, encoding=None, errors=None: original(self, encoding=encoding or locale, errors=errors))
+    assert runner.run(p, inspect=True)["status"] == "succeeded"
+    assert runner.run(p)["status"] == "succeeded"
+    assert (root / "count").read_text(encoding="utf-8") == "x"
+
+@pytest.mark.parametrize("locale", ["cp949", "cp1252"])
+def test_unicode_plan_cli_uses_declared_utf8(tmp_path, monkeypatch, locale):
+    root = tmp_path / "한글 日本語 😀"
+    root.mkdir()
+    p = plan(root, [{"id": "once", "argv": command("open('count','a').write('x')")}])
+    path = root / "plan.json"
+    path.write_text(json.dumps(p, ensure_ascii=False), encoding="utf-8")
+    original = Path.read_text
+    monkeypatch.setattr(Path, "read_text", lambda self, encoding=None, errors=None: original(self, encoding=encoding or locale, errors=errors))
+    monkeypatch.setattr(sys, "argv", ["remote_steps.py", str(path)])
+    assert runner.main() == 0
+    assert (root / "count").read_text(encoding="utf-8") == "x"

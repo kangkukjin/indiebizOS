@@ -16,7 +16,7 @@ if os.environ.get("INDIEBIZ_MANAGED_WORKER") == "1":
         _generation = os.environ["INDIEBIZ_RUNTIME_GENERATION"]
         _receipt_path = (Path(os.environ["INDIEBIZ_BASE_PATH"]) / "data/restart_control/workers"
                          / (_generation + ".json"))
-        _receipt = json.loads(_receipt_path.read_text())
+        _receipt = json.loads(_receipt_path.read_text(encoding="utf-8"))
         _managed_entry = _receipt.get("pid") == os.getpid() and _receipt.get("nonce") == _generation
     except (OSError, ValueError, KeyError):
         pass

@@ -107,3 +107,35 @@ def test_concurrent_registry_load_publishes_only_filtered_dictionary(box, monkey
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize("locale", ["cp949", "cp1252"])
+@pytest.mark.parametrize("kind", ["manifest", "tool", "actions", "activation"])
+def test_utf8_definitions_and_activation_ignore_windows_locale(box, monkeypatch, locale, kind):
+    package = box / "data/packages/installed/tools/base"
+    value = "한글 日本語 😀"
+    files = {
+        "manifest": (package / "manifest.json", json.dumps({"name": value}, ensure_ascii=False)),
+        "tool": (package / "tool.json", json.dumps({"tools": [{"name": value}]}, ensure_ascii=False)),
+        "actions": (package / "ibl_actions.yaml", "node: sense\nactions:\n  '" + value + "': {}\n"),
+        "activation": (state.state_path(box), json.dumps({"version": 1, "revision": 0, "active": {"base": True}, "note": value}, ensure_ascii=False)),
+    }
+    path, content = files[kind]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    original = Path.read_text
+    def read(self, encoding=None, errors=None, **kwargs):
+        return original(self, encoding=encoding or locale, errors=errors, **kwargs)
+    monkeypatch.setattr(Path, "read_text", read)
+    state.invalidate_inventory()
+    state._state_cache.clear()
+    if kind == "activation":
+        assert state.read_state(box)["note"] == value
+    else:
+        inv = state.inventory(box)
+        if kind == "manifest":
+            assert inv["packages"]["base"]["manifest"]["name"] == value
+        elif kind == "tool":
+            assert inv["tools"][value] == "base"
+        else:
+            assert inv["actions"]["sense:" + value] == "base"

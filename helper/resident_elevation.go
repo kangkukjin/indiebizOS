@@ -90,6 +90,7 @@ func (r *residentRuntime) elevated(ctx context.Context, jid string, cmd *exec.Cm
 		}
 	}()
 	log := &residentLog{r: r, jid: jid}
+	stream := &residentLogStream{log: log}
 	decoder := json.NewDecoder(conn)
 	for {
 		var m struct {
@@ -97,14 +98,19 @@ func (r *residentRuntime) elevated(ctx context.Context, jid string, cmd *exec.Cm
 			Exit *int
 		}
 		if e = decoder.Decode(&m); e != nil {
+			stream.Flush()
 			return map[string]interface{}{"error": "관리자 작업 연결이 종료됐습니다.", "cancelled": ctx.Err() != nil, "output": string(log.tail)}
 		}
 		if len(m.Data) > 0 {
-			if _, e = log.Write(m.Data); e != nil {
+			if _, e = stream.Write(m.Data); e != nil {
 				return errResult("elevation_output", e.Error())
 			}
 		}
 		if m.Exit != nil {
+			stream.Flush()
+			if log.failure != nil {
+				return errResult("elevation_output", log.failure.Error())
+			}
 			return map[string]interface{}{"exit": *m.Exit, "output": string(log.tail), "elevated": true, "cwd": cmd.Dir}
 		}
 	}

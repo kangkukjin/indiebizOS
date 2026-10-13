@@ -212,6 +212,7 @@ def test_history_filters_before_sampling_and_does_not_overlay_today(monkeypatch)
 def test_summarize_accepts_video_id(monkeypatch):
     handler = load("youtube")
     monkeypatch.setattr(handler, "load_tool_youtube", lambda: SimpleNamespace(
+        _phone=SimpleNamespace(is_phone=lambda: False),
         summarize_youtube=lambda **kw: {"success": True, **kw}))
     out = handler.execute({"op": "summarize", "video_id": "jNQXAC9IVRw"},
                           SimpleNamespace(tool_name="video_op"))

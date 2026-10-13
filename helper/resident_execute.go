@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 type residentHTTPError struct {
@@ -62,6 +63,7 @@ func residentPostContext(ctx context.Context, url string, body interface{}) (map
 
 var residentHTTP = &http.Client{Timeout: 45 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
 
+// Each pipe decodes independently; one shared log preserves arrival order.
 type residentLog struct {
 	r       *residentRuntime
 	jid     string
@@ -71,19 +73,52 @@ type residentLog struct {
 	gap     bool
 	failure error
 }
+type residentLogStream struct {
+	log     *residentLog
+	pending []byte
+}
 
-func (w *residentLog) Write(b []byte) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+func (s *residentLogStream) Write(b []byte) (int, error) {
+	s.log.mu.Lock()
+	defer s.log.mu.Unlock()
 	n := len(b)
+	s.pending = append(s.pending, b...)
+	end := 0
+	for end < len(s.pending) && utf8.FullRune(s.pending[end:]) {
+		_, size := utf8.DecodeRune(s.pending[end:])
+		end += size
+	}
+	complete := append([]byte(nil), s.pending[:end]...)
+	s.pending = append(s.pending[:0], s.pending[end:]...)
+	if err := s.log.writeLocked([]byte(strings.ToValidUTF8(string(complete), "�"))); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+func (s *residentLogStream) Flush() {
+	s.log.mu.Lock()
+	defer s.log.mu.Unlock()
+	if len(s.pending) > 0 {
+		_ = s.log.writeLocked([]byte(strings.ToValidUTF8(string(s.pending), "�")))
+		s.pending = nil
+	}
+}
+func (w *residentLog) writeLocked(b []byte) error {
 	w.tail = append(w.tail, b...)
 	if len(w.tail) > 32768 {
-		w.tail = w.tail[len(w.tail)-32768:]
+		start := len(w.tail) - 32768
+		for start < len(w.tail) && !utf8.RuneStart(w.tail[start]) {
+			start++
+		}
+		w.tail = w.tail[start:]
 	}
 	for len(b) > 0 {
 		size := len(b)
 		if size > 16384 {
 			size = 16384
+			for size > 0 && !utf8.RuneStart(b[size]) {
+				size--
+			}
 		}
 		piece := b[:size]
 		b = b[size:]
@@ -96,11 +131,11 @@ func (w *residentLog) Write(b []byte) (int, error) {
 		}
 		if e := w.r.event(w.jid, "log", map[string]interface{}{"text": string(piece)}); e != nil {
 			w.failure = e
-			return 0, e
+			return e
 		}
 		w.written += size
 	}
-	return n, nil
+	return nil
 }
 func (r *residentRuntime) execute(parent context.Context, j Job) map[string]interface{} {
 	var c Command
@@ -170,15 +205,18 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		var cmd *exec.Cmd
 		if runtime.GOOS == "windows" {
 			if c.Shell == "powershell" || c.Shell == "pwsh" || c.Shell == "ps" {
-				cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", c.Cmd)
+				cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); "+c.Cmd)
 			} else {
-				cmd = exec.CommandContext(ctx, "cmd", "/D", "/S", "/C", c.Cmd)
+				cmd = exec.CommandContext(ctx, "cmd", "/D", "/S", "/C", "chcp 65001>nul & "+c.Cmd)
 			}
 		} else {
 			cmd = exec.CommandContext(ctx, "/bin/sh", "-c", c.Cmd)
 		}
 		cmd.Dir = dir
 		cmd.Env = os.Environ()
+		if runtime.GOOS == "windows" {
+			cmd.Env = append(cmd.Env, "PYTHONIOENCODING=utf-8")
+		}
 		for k, v := range extra.Env {
 			if strings.ContainsAny(k, "=\x00") {
 				return errResult("invalid_env", "")
@@ -302,9 +340,12 @@ func (r *residentRuntime) process(ctx context.Context, jid string, cmd *exec.Cmd
 		configureResidentProcess(cmd)
 	}
 	log := &residentLog{r: r, jid: jid}
-	cmd.Stdout = log
-	cmd.Stderr = log
+	stdout, stderr := &residentLogStream{log: log}, &residentLogStream{log: log}
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	e := cmd.Run()
+	stdout.Flush()
+	stderr.Flush()
 	result := map[string]interface{}{"exit": exitCode(e), "output": string(log.tail), "log_truncated": log.gap, "cwd": workingDir}
 	// ErrWaitDelay means the command exited successfully, but inherited output
 	// pipes never closed. Re-running it could duplicate an already running server.

@@ -197,7 +197,9 @@ def test_youtube_supported_modes_compile_and_dispatch(op, mode, registry, monkey
     def yt_call(**kwargs):
         calls.append(kwargs)
         return {'success': True}
-    monkeypatch.setattr(handler, 'load_tool_youtube', lambda: NS(play_youtube=yt_call, download_youtube_music=yt_call))
+    monkeypatch.setattr(handler, 'load_tool_youtube', lambda: NS(
+        _phone=NS(is_phone=lambda: False),
+        play_youtube=yt_call, download_youtube_music=yt_call))
     assert handler.execute({'op': op, 'mode': mode, 'query': 'fixture'}, ToolContext(str(tmp_path), 'music_op'))['success']
     assert calls[-1]['mode'] == mode
 

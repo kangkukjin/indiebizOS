@@ -140,7 +140,7 @@ def run(plan, *, retry=None, inspect=False):
     if inspect:
         if not journal.exists():
             return {"status": "not_started", "run_id": plan["run_id"]}
-        state = json.loads(journal.read_text())
+        state = json.loads(journal.read_text(encoding="utf-8"))
         if state["identity"] != identity:
             raise ValueError("plan or target changed; use a new run_id")
         return {**state, "observation": "last_persisted_state", "process_liveness": "not_checked"}
@@ -148,7 +148,7 @@ def run(plan, *, retry=None, inspect=False):
     # All plans against this checkout share one lock, not just one run_id.
     with exclusive(home / "execution.lock"):
         if journal.exists():
-            state = json.loads(journal.read_text())
+            state = json.loads(journal.read_text(encoding="utf-8"))
             if state["identity"] != identity:
                 raise ValueError("plan or target changed; use a new run_id")
         else:
@@ -230,7 +230,7 @@ def main():
     parser.add_argument("--retry", help="Retry only this terminal failed step; never an interrupted step")
     args = parser.parse_args()
     try:
-        state = run(json.loads(args.plan.read_text()), retry=args.retry, inspect=args.status)
+        state = run(json.loads(args.plan.read_text(encoding="utf-8")), retry=args.retry, inspect=args.status)
         print(json.dumps(state, ensure_ascii=False))
         return 0 if args.status or state["status"] == "succeeded" else 1
     except (OSError, ValueError) as exc:

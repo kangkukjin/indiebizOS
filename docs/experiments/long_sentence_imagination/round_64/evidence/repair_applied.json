@@ -1,0 +1,91 @@
+{
+  "applied_date": "2026-10-14",
+  "canonical_root": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+  "branch": "main",
+  "authorization": "사용자: 그냥 수리해 — 원격 티켓 종료 대기를 중앙 수리의 선행 조건에서 제외",
+  "selector": {
+    "changed_files": 5,
+    "backend_modules": 2,
+    "test_files": 619,
+    "total_test_files": 673,
+    "hub": "vocabulary_state"
+  },
+  "first_full": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "5",
+    "skipped": "13",
+    "tests": "10424",
+    "time": "238.909",
+    "timestamp": "2026-10-14T00:51:26.184550+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "related": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "115",
+    "time": "6.868",
+    "timestamp": "2026-10-14T00:58:35.921330+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "final_full": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "13",
+    "tests": "10424",
+    "time": "227.456",
+    "timestamp": "2026-10-14T00:59:57.843034+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "go": {
+    "command": "go test ./...",
+    "passed": true,
+    "seconds": 19.004,
+    "windows_amd64_cross_compile": true,
+    "windows_execution": false
+  },
+  "checks": {
+    "android_bundle": "regenerated; tracked output unchanged",
+    "ibl_build_check": "passed",
+    "backend_layers": "passed",
+    "windows_portability": "passed"
+  },
+  "central_boot": {
+    "generation": "d694acd32409a71cec1e197585afa47d",
+    "worker_pid": 51654,
+    "status": "succeeded",
+    "readiness": "ready"
+  },
+  "remote": {
+    "khjoffice_unsettled_task": "3f940b7cd55f4d0eaab253937d8b6ea8",
+    "last_observation": "cancel_requested; terminal unconfirmed",
+    "tv1_cleanup": {
+      "task_id": "e827de48c7844130bcdea8809e332f0d",
+      "state": "cancelled",
+      "terminal": true
+    },
+    "helper_deployed": false,
+    "post_repair_full_training_replayed": false
+  },
+  "sha256": {
+    "backend/api.py": "33abe278339220780c64eda3048be325ef491ee021860bb279d852da9ec5e0f6",
+    "backend/datastore/vocabulary_state.py": "c50e894014517bcde2d7a0874a1216d29cccd2a01d168d6f1aefebd8dce3dfe8",
+    "backend/test_vocabulary_state.py": "47e4ecbf536203f188e5653e7594c5e9a1e022cdf15466ca622579aa64a16c06",
+    "backend/test_remote_steps.py": "c7f72836044b57bf5a36f5c7e1181b4c058c9a0d9d5e0de79713535a90e7d225",
+    "backend/test_remote_boot.py": "da05766a4cd4c29b2b8c429ac925712a108df2ae8b1064b6592fa1a85f37c239",
+    "scripts/remote_steps.py": "707acb6234b63bcea2ed819e30ce3f186ef009850610909a8132265b7722e033",
+    "scripts/remote_boot.py": "a13e019312c0c85423dad5729dcc8c58188f8463245316f950a0f4b90d69d7c4",
+    "scripts/ci_boot_smoke.py": "cf6b175bee01a468c672270e09a1c503dafab47fbec002972c5f4866767f91e1",
+    "helper/resident_execute.go": "3cc733aada3d0587125201acdf3e8116646cfa8f38f1e7f09c9fca7c258bb212",
+    "helper/resident_elevation.go": "5b515a433c1625440d3dc8e3ce304d0251c54c4d52af81cb645f59bd4f20e8de",
+    "helper/resident_log_test.go": "08846b7d569f2ace3d5a0a4e053d624788c2add63fc456bea2def71160ca2c49",
+    "data/guides/guest_helper.md": "15c81db0876dc0286838f3fa8724ac83b3d56d9615c2e6c8c0fd98013e7f80bf",
+    ".github/workflows/portability.yml": "33843fb2f68aaf4967ba539adace791149d6ab65f0475e6c21c915c17cc4f329",
+    "backend/test_ibl_rank_12_20_repairs.py": "6a178c175d07771338ac512d94c2148f93d0f75eb43dbd274b0e25bd3f25a8a5",
+    "backend/test_package_boundary_repairs.py": "1c913c6c67a7c118e3dfa2d9e871249d9a77133834887e6472c6674fae5db7d8",
+    "docs/REMOTE_PC_SETUP_VERIFICATION.md": "961896224b872479d48140d13b4e3c2f0e12a2b7d611fadfb1a54ae7d8e0a6e1"
+  }
+}

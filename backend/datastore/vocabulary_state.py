@@ -78,9 +78,9 @@ def inventory(root: Path = None) -> dict:
             pid = valid_id(path.name)
             if pid in packages:
                 raise ValueError(f"묶음 ID 충돌: {pid} (두 보관 폴더)")
-            meta = json.loads((path / "manifest.json").read_text()) if (path / "manifest.json").exists() else {}
+            meta = json.loads((path / "manifest.json").read_text(encoding="utf-8")) if (path / "manifest.json").exists() else {}
             packages[pid] = {"path": path, "initial_active": location == "installed", "manifest": meta}
-            td = json.loads((path / "tool.json").read_text()) if (path / "tool.json").exists() else {}
+            td = json.loads((path / "tool.json").read_text(encoding="utf-8")) if (path / "tool.json").exists() else {}
             definitions = td if isinstance(td, list) else td.get("tools", [td] if td.get("input_schema") else [])
             for tool in definitions:
                 name = tool.get("name")
@@ -90,7 +90,7 @@ def inventory(root: Path = None) -> dict:
                     tools[name] = pid
             fp = path / "ibl_actions.yaml"
             if fp.exists():
-                doc = yaml.safe_load(fp.read_text()) or {}
+                doc = yaml.safe_load(fp.read_text(encoding="utf-8")) or {}
                 nodes = doc.get("nodes") or {doc.get("node"): {"actions": doc.get("actions", {})}}
                 for node, cfg in nodes.items():
                     for action in (cfg or {}).get("actions", {}):
@@ -144,7 +144,7 @@ def read_state(root: Path = None) -> dict:
             state = cached[1]
         else:
             try:
-                state = json.loads(path.read_text())
+                state = json.loads(path.read_text(encoding="utf-8"))
                 assert state["version"] == 1 and type(state["revision"]) is int
                 assert isinstance(state["active"], dict)
                 assert all(type(v) is bool for v in state["active"].values())

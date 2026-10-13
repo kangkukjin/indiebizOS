@@ -148,23 +148,11 @@ return [fn:외부PC작업실행]{PC:$준비.limb,준비:$준비,명령:"python3 
 - 실행기 시간제한은 단계별 제한이다. guestpc의 전체 실행제한도 별도로 넉넉히 둔다.
   로그·계획에는 비밀을 넣지 않는다. 각 단계의 성공은 선언한 명령·검증에 한정된다.
 
-**IndieBiz 업데이트 조리법** `scripts/remote_install.py`는 이미 존재하는 소스 저장소와
-Git·지원 Python·Node/npm을 사용한다. 없는 런타임은 OS·아키텍처를 확인하고 먼저 설치한다.
-스크립트가 없는 구판 PC에는 이 두 스크립트를 원격 전송한 뒤 사용한다(backend/boot_paths.py가
-있는 저장소의 scripts/ 위치). 현재 돌고 있는 설치와 중복 실행하지 않는다.
-
-```sh
-/absolute/python3 scripts/remote_install.py plan --root /work/indiebizOS --npm /opt/node/bin/npm --run-id update-1 --output /work/update-plan.json
-/absolute/python3 scripts/remote_steps.py /work/update-plan.json
-/absolute/python3 scripts/remote_steps.py /work/update-plan.json --status
-```
-
-조리법은 추적 변경·분기 이탈을 거절하고 fetch→fast-forward, 충돌하는 비추적/무시 파일 보존,
-Git 추적 위치가 유일한 중복 패키지의 잔재 보존, venv·core/tools/ml·브라우저·npm·native rebuild·빌드,
-import coverage·pip check·HEAD 일치를 확인한다. 백업은 `data/_backups/YYYY-MM-DD_이름/`다.
-추적 변경을 버리거나 강제 reset/clean하지 않고, 기존 venv·API 키도 교체하지 않는다.
-완료 후 앱을 실제로 시작하고 필요한 기능을 확인하는 것은 별도 검증이며 이 조리법은
-실행 중인 앱을 자동 재기동하지 않는다. 최초 설치의 인증 설정·훈련용 선택 의존성은 포함하지 않는다.
+**IndieBiz 설치·업데이트·부팅 검증**: 기존 저장소 업데이트는 `scripts/remote_install.py`로
+계획을 만들고 `scripts/remote_steps.py`로 실행한다. 새 설치는 `scripts/bootstrap.py`를 사용한다.
+실행 중인 앱과 중복 기동하지 않으며, 설정·키·기존 결과를 보존한다.
+설치 종료와 실제 부팅·모델·Electron 검증을 구분한다. 명령 예시와 세대·루트·UTF-8 검증은
+[원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다.
 
 현지 AI에 위임할 수 있으면 같은 목표·절대 저장소 경로·계획·검증 조건을 전달하고, 허브는
 그 결과와 로그를 확인한다. 이미 연결된 위임 채널을 사용하며 새 에이전트 설치·인증은 가정하지 않는다.

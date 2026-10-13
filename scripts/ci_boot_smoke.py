@@ -5,10 +5,10 @@ import 스모크(ci_import_smoke.py)의 다음 층: import 성공 ≠ 부팅 성
 실증 2026-08-10 — backend 층 물리 이동 후 폰 번들이 import 는 전부 초록인데
 부팅 첫 줄(__file__ 상대경로)에서 죽었다. import 는 이름만 보고, 부팅은 파일
 배치·데이터 로드·라우터 조립까지 본다. 그래서 이 스크립트는 실제로 서버를
-띄우고 /health 200 을 받을 때까지 기다린다.
+띄우고 제어자·세대·준비 상태와 /health 의 저장소 루트를 함께 확인한다.
 
 동작: `python backend/api.py` 를 자식 프로세스로 스폰(INDIEBIZ_PRODUCTION=1
-= reload 비활성) → /health 를 폴링 → 200 + status:"healthy" 확인 → 종료.
+= reload 비활성) → remote_boot 의 검증된 부팅 관측 → 종료.
 3 OS 공용(bash 없음, stdlib 만) — portability.yml 의 boot-smoke 매트릭스가 실행.
 
 ★자식 stdout 은 PIPE 가 아니라 파일로 받는다 — 부팅 로그가 파이프 버퍼(윈도우
@@ -21,7 +21,8 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.request
+from remote_boot import wait_for_boot
+from restart_process import identity
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API_PY = os.path.join(ROOT, "backend", "api.py")
@@ -34,7 +35,6 @@ def _python() -> str:
             else os.path.join(ROOT, ".venv", "bin", "python3"))
     return cand if os.path.exists(cand) else sys.executable
 PORT = int(os.environ.get("INDIEBIZ_API_PORT", "8799"))  # 기본 8765 를 피해 로컬 실행과 충돌 없음
-HEALTH = f"http://127.0.0.1:{PORT}/health"
 DEADLINE_S = int(os.environ.get("BOOT_SMOKE_DEADLINE", "240"))  # 첫 부팅은 임포트가 무거움(윈도우 러너 여유)
 
 
@@ -81,35 +81,16 @@ def main() -> int:
         )
         try:
             t0 = time.monotonic()
-            payload = None
-            while time.monotonic() - t0 < DEADLINE_S:
-                if proc.poll() is not None:
-                    print(f"[boot-smoke] FAILED — 서버 프로세스가 부팅 중 죽음 (exit {proc.returncode})", flush=True)
-                    print(boot_diagnostics(base, log_path), flush=True)
-                    return 1
-                state = controller_state(base)
-                if state.get("phase") == "FAILED" and (state.get("controller") or {}).get("pid") == proc.pid:
-                    print("[boot-smoke] FAILED — 제어자가 부팅 실패를 확정함", flush=True)
-                    print(boot_diagnostics(base, log_path), flush=True)
-                    return 1
-                try:
-                    with urllib.request.urlopen(HEALTH, timeout=3) as r:
-                        payload = json.loads(r.read().decode("utf-8"))
-                        break
-                except Exception:
-                    time.sleep(2)
-
-            if payload is None:
-                print(f"[boot-smoke] FAILED — {DEADLINE_S}s 안에 /health 응답 없음", flush=True)
+            result = wait_for_boot(base, ROOT, identity(proc.pid), port=PORT,
+                                   timeout=DEADLINE_S, interval=2)
+            if result["status"] != "succeeded":
+                print("[boot-smoke] FAILED — " + json.dumps(result), flush=True)
                 print(boot_diagnostics(base, log_path), flush=True)
                 return 1
-            if payload.get("status") != "healthy":
-                print(f"[boot-smoke] FAILED — /health 페이로드 비정상: {payload}", flush=True)
-                return 1
-
             took = time.monotonic() - t0
-            print(f"[boot-smoke] OK — /health 200 in {took:.1f}s: {payload}", flush=True)
+            print(f"[boot-smoke] OK — verified backend in {took:.1f}s: {result}", flush=True)
             return 0
+
         finally:
             proc.terminate()
             try:

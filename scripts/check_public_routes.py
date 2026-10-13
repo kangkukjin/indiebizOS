@@ -47,6 +47,7 @@ AUTH_PRIMITIVES = {
 _VALIDATE_OK_MODULES = {"api_limb", "api_member"}
 
 MAX_DEPTH = 3
+QUALIFIED_AUTH = {("limb_keys", "resident_auth"), ("limb_keys", "resident_enroll")}
 
 # 공허한 통과 방지용 하한 — 앱이 온전히 로드되면 훨씬 크다(2026-07-25 실측: 전체 400+,
 # 공개 72). 넉넉히 낮게 잡아 정상 변동에는 안 걸리되, "라우트가 거의 안 실렸다"는
@@ -156,6 +157,21 @@ def _auth_reachable(fn_src: str, funcs: dict, mod_name: str, depth: int = 0) -> 
     except SyntaxError:
         return False
     for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            target = node.func
+            # checked(fn, ...)는 인증 예외를 HTTP 오류로 바꾸며 fn을 실제 호출한다.
+            if (mod_name == "api_resident_pcs" and isinstance(target, ast.Name)
+                    and target.id == "checked" and node.args):
+                target = node.args[0]
+            if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name):
+                owner = getattr(sys.modules.get(mod_name), target.value.id, None)
+                owner_name = getattr(owner, "__name__", "")
+                if (owner_name, target.attr) in QUALIFIED_AUTH:
+                    return True
+                imported = _loaded_module_funcs(owner_name)
+                sub = imported.get(target.attr)
+                if sub and _auth_reachable(sub, imported, owner_name, depth + 1):
+                    return True
         if not isinstance(node, ast.ImportFrom) or node.level or not node.module:
             continue
         for alias in node.names:
@@ -250,10 +266,32 @@ def self_test() -> int:
         ok = got == expect and not too_deep
         bad += not ok
         print(f"  [{'PASS' if ok else 'FAIL'}] {name:22} 기대={expect} 실제={got}")
+    from types import ModuleType
+    resident = ModuleType("api_resident_pcs")
+    resident.limb_keys = ModuleType("limb_keys")
+    resident.pcs = ModuleType("resident_pcs")
+    attribute_cases = [
+        ("상주 초대 인증", "checked(limb_keys.resident_enroll, key, identity)", True),
+        ("상주 설치 인증", "checked(limb_keys.resident_auth, key, identity)", True),
+        ("상주 서비스 경유", "checked(pcs.sync, key, identity)", True),
+        ("인증 참조만 반환", "limb_keys.resident_auth", False),
+        ("동명이인 모듈 거부", "pcs.resident_auth(key, identity)", False),
+        ("미호출 인자 거부", "other(limb_keys.resident_auth, key, identity)", False),
+    ]
+    service = {"sync": "def sync(key, identity):\n    return limb_keys.resident_auth(key, identity)"}
+    resident.pcs.limb_keys = resident.limb_keys
+    with patch.dict(sys.modules, {"api_resident_pcs": resident, "resident_pcs": resident.pcs}):
+        for name, expression, expect in attribute_cases:
+            with patch(__name__ + "._loaded_module_funcs",
+                       side_effect=lambda mod: service if mod == "resident_pcs" else {}):
+                got = _auth_reachable("def endpoint(key, identity):\n    return " + expression,
+                                      {}, "api_resident_pcs")
+            bad += got != expect
+            print(f"  [{'PASS' if got == expect else 'FAIL'}] {name:22} 기대={expect} 실제={got}")
     if bad:
         print(f"\n[FAIL] 자체 회귀 {bad}건 — 간접 추적이 퇴화하면 대량 오탐으로 가드가 꺼진다.")
         return 1
-    print(f"[OK] 자체 회귀 {len(cases) + len(imported_cases)}건 통과")
+    print(f"[OK] 자체 회귀 {len(cases) + len(imported_cases) + len(attribute_cases)}건 통과")
     return 0
 
 

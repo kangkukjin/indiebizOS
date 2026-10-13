@@ -197,9 +197,9 @@ def test_manifest_hides_apps_of_sleeping_packages(monkeypatch):
 
 # ── @노드 지정(판본 1 문법의 이월) ───────────────────────────────────────────
 
-def test_node_annotation_parses_compiles_and_reaches_the_engine(monkeypatch):
-    from project_manager import ProjectManager
-    pp = str(ProjectManager().get_project_path("앱모드"))
+def test_node_annotation_parses_compiles_and_reaches_the_engine(monkeypatch, tmp_path):
+    pp = str(tmp_path)
+    (tmp_path / "outputs").mkdir()
     ok = _run({"code": '[self:list]{path: "."}@hub', "inputs": {}, "check": True})
     assert ok["ok"] is True, ok.get("issues")
     bad = _run({"code": "[fn:없음]{}@hub", "inputs": {}, "check": True})

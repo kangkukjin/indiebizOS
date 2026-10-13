@@ -20,6 +20,8 @@ spec.loader.exec_module(replay)
 
 @pytest.fixture(scope='module')
 def registry():
+    # 원장 쓰기는 저장소 안으로 제한된다. 새 checkout에는 outputs가 아직 없다.
+    (ROOT / 'outputs').mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='ibl-replay-test-', dir=ROOT / 'outputs') as tmp:
         yield load_registry(tmp), tmp
 

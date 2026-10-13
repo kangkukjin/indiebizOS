@@ -6,6 +6,7 @@ import boot_paths  # noqa: F401
 import pytest
 from ibl_v2_entry import handle_request
 from model_result_view import describe_actions
+from test_ibl_v2_assets import memory  # noqa: F401 — 격리한 관용구 DB
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,9 +46,12 @@ return map([{k:"a",v:2}],($r)=>[fn:f]{rows:[$r]})'''})
 
 
 @pytest.mark.system
-def test_full_scheduling_program_and_new_policy_preserve_all_results(tmp_path, monkeypatch):
+def test_full_scheduling_program_and_new_policy_preserve_all_results(tmp_path, monkeypatch, memory):
     import csv
     import runpy
+    seeds = json.loads((ROOT / 'data/idioms/ibl_v2_seeds.json').read_text())
+    seed = next(item for item in seeds if item.get('alias') == '정렬해추리기')
+    assert memory.add_examples_batch([seed]) == 1
     fixture = ROOT / 'docs/experiments/long_sentence_imagination/round_17'
     generated = tmp_path / 'generated.json'
     monkeypatch.setenv('INDIEBIZ_SCRIPT_RESULT', str(generated))

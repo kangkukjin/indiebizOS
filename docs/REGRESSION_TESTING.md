@@ -195,6 +195,18 @@ cut -f3 /tmp/sweep.log | grep '^data/' | sed -E 's#^(data/[^/]+).*#\1#' | sort |
 경계를 보호한다. 본문이 같은 숫자 순서 테스트도 작은 숫자 표기와 정밀도 경계라는
 다른 입력을 보호하므로 중복으로 삭제하지 않았다. 이번에는 수집 마커만 추가했다.
 
+## GitHub Actions 실행 환경
+
+`Seam Guards`의 전체 pytest는 macOS에서 실행한다. 실제 자기수리·코딩 쓰기 검사는
+Seatbelt를 사용하고, 문서 변환 회귀에는 macOS의 textutil 경로가 포함된다. Linux에서
+이 검사를 성공한 것으로 흉내 내거나 제외하지 않는다. AST·공개 라우트 등 나머지
+관문은 Ubuntu에서, `Portability (3 OS)`는 Windows·Linux·macOS에서 계속 실행한다.
+브라우저·PDF·차트 회귀에는 Playwright와 Chromium, matplotlib·plotly·kaleido를 설치한다.
+
+새 checkout에는 개인 프로젝트의 outputs, 반환 모양 관측, 관용구 DB가 없다. 회귀는
+필요한 디렉터리와 관측을 fixture로 만들고, 관용구는 추적된 시드를 격리 DB에 넣는다.
+`Fresh Clone Check`의 최소 빌드 의존성은 PyYAML과 실행 영수증 모듈의 filelock이다.
+
 ## 시간과 보고
 
 pytest는 기본으로 느린 setup/call/teardown 상위 항목과 전체 시간을 표시한다.

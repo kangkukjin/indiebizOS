@@ -166,9 +166,13 @@ def test_all_literal_fault_codes_have_nonsyntax_fallback_and_unknown_future_code
             assert syntax_report(Fault(code, 'test', kind=kind), '')['diagnostic']['hint'] != HINTS['SYNTAX']
 
 
-@pytest.fixture(scope='module')
-def actual_registry():
-    return load_registry(str(ROOT / 'projects/컨텐츠'), None)
+@pytest.fixture
+def actual_registry(monkeypatch, tmp_path):
+    import ibl_access
+    # 관측은 개인 런타임 데이터다. 경고 검사는 알려진 관측을 직접 제공한다.
+    monkeypatch.setattr(ibl_access, '_return_shapes', lambda: {
+        'self:list': {'kind': 'items', 'keys': ['name', 'path', 'type', 'size']}})
+    return load_registry(str(tmp_path), None)
 
 
 @pytest.mark.parametrize('expression', [

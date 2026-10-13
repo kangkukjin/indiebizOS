@@ -155,9 +155,10 @@ def helper():
     good = hits_of(src_good)
     assert len(bad) == 2, f"bad 소스에서 2건 탐지돼야 함 (실제 {len(bad)})"
     assert len(good) == 0, f"good 소스에서 0건이어야 함 (실제 {len(good)}) — 중첩 def/비대상 함수 제외 실패"
-    # 래칫: BASELINE 초과만 실패
-    assert BASELINE.get("system_essentials", 0) >= 1
-    print("[check_string_returns] self-test OK (탐지 2 / 제외 0 / 래칫 상수 존재)")
+    # 부채가 0이 된 패키지는 다시 예외로 들어갈 수 없다.
+    assert "system_essentials" not in BASELINE
+    assert len(bad) > BASELINE.get("system_essentials", 0)
+    print("[check_string_returns] self-test OK (탐지 2 / 제외 0 / 재진입 차단)")
     return 0
 
 

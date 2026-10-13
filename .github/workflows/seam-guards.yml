@@ -153,14 +153,18 @@ jobs:
   # 의존성은 public-routes 와 같은 requirements-core.txt — `import api` 스모크가
   # 이미 이 조합으로 초록이므로 테스트의 import 체인(그 부분집합)도 돈다.
   pytest:
-    runs-on: ubuntu-latest
+    # 실제 Seatbelt 자기수리 검사는 macOS에서 실행한다. OS 공통 가드는 Ubuntu,
+    # 3 OS 이식성 검사는 portability.yml에서 계속 실행한다.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: 파일 오디오·한글 자막 회귀의 시스템 의존성 설치
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-cjk
+        run: |
+          brew install ffmpeg
+          brew install --cask font-noto-sans-cjk-kr
       - name: 코어 의존성 + pytest 설치
         # openpyxl·xlrd: [self:sheet] 및 test_episode3388_repairs의 xls 읽기 실의존 —
         # requirements-tools.txt 소속이라 core 만으로는 빠진다.
@@ -169,7 +173,10 @@ jobs:
         # python-docx: 문서↔시트 변환 회귀가 실제 DOCX 파일을 생성한다.
         # pillow·python-pptx·olefile: 화면 캡처·이미지·PPTX·HWP 읽기 회귀의 실의존.
         # pandas: Python 라이브러리 호출 및 소수 입력 열의 실제 집계 회귀.
-        run: pip install -r backend/requirements-core.txt -r backend/requirements-dev.txt openpyxl xlrd numpy pandas markdown tqdm python-docx pillow python-pptx olefile
+        # playwright·matplotlib·plotly·kaleido: 브라우저와 차트 산출물 실검사.
+        run: pip install -r backend/requirements-core.txt -r backend/requirements-dev.txt openpyxl xlrd numpy pandas markdown tqdm python-docx pillow python-pptx olefile playwright matplotlib plotly kaleido
+      - name: 실제 브라우저·PDF·차트 회귀의 Chromium 설치
+        run: python -m playwright install chromium
       - name: pytest (backend/test_*.py, 로컬 데이터 필요분 제외)
         run: python -m pytest -m "not local" -n auto --dist loadfile
       - name: IBL 작성 지원의 효과 없는 기준선 재현

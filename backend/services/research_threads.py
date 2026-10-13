@@ -7,6 +7,7 @@ import task_receipts
 import thread_context
 from project_manager import ProjectManager
 from research_store import ResearchStore, identifier
+from conversation_db import ConversationDB
 from research_library import ResearchLibrary
 from research_capture import schedule_index
 from research_context import scope
@@ -185,7 +186,7 @@ def project_operation(params):
                               "FROM messages m JOIN research_threads t ON t.id=m.thread_id "
                               "WHERE m.content LIKE ? AND m.id<? ORDER BY m.id DESC LIMIT ?",
                               ('%' + str(params.get('query') or '') + '%', cursor or 9223372036854775807, limit)).fetchall()
-        return {'items': [dict(r) for r in rows]}
+        return {'items': [{**dict(r), 'message_time': ConversationDB.message_timestamp(r['message_time'])} for r in rows]}
     thread = store.thread(tid)
     if op == 'thread_messages':
         if params.get('questions_only'):

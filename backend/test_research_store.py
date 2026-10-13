@@ -180,3 +180,15 @@ def test_legacy_unassigned_materials_preserved_in_separate_thread(tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_messages_emit_timezone_explicit_message_time(tmp_path):
+    """message_time 은 UTC CURRENT_TIMESTAMP(표식 없음)로 저장된다. 읽기 경계에서 'Z' 가 붙어야
+    브라우저가 현지 시각으로 오해하지 않는다(연구 대화창 9시간 어긋남 사건, 2026-10-13)."""
+    store = ResearchStore(tmp_path, project_uid='tz')
+    tid = store.create_thread('시간대')['id']
+    store.begin_run(tid, '질문', 'req-tz')
+    with store.connect(True) as db:
+        db.execute("UPDATE messages SET message_time='2026-10-13 03:17:32' WHERE thread_id=?", (tid,))
+    times = {m['message_time'] for m in store.messages(tid)['items']}
+    assert times == {'2026-10-13T03:17:32Z'}

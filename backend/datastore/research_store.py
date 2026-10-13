@@ -232,6 +232,9 @@ class ResearchStore:
             result = []
             for row in reversed(rows[:limit]):
                 item = dict(row)
+                # message_time 은 SQLite CURRENT_TIMESTAMP(UTC, 표식 없음). 일반 대화와 같은
+                # 계약으로 읽기 경계에서 시간대를 명시한다 — 그대로 보내면 브라우저가 현지 시각으로 오해.
+                item['message_time'] = ConversationDB.message_timestamp(item['message_time'])
                 item['attachments'] = json.loads(item.pop('research_attachments') or '[]')
                 # 실행 중 추가 지시는 assistant 초안보다 나중 ID로 저장된다.
                 # 최종 응답을 그 실행의 마지막 사용자 입력 뒤에 배치한다.

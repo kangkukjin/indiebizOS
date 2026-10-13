@@ -12,7 +12,7 @@ def direct_framing(message):
             "achievement_criteria": message,
             "criteria": [{"text": message, "user_quote": message, "verification_phase": "workspace"}],
             "capability_focus": {"hint": "같은 사본에서 요청을 수정하고 관련 검사를 실행하세요. "
-                "apply에 verification_plan:[{criterion_id:'C1', command:'단일 pytest 또는 node --test 명령', "
+                "apply에 verification_plan:[{criterion_id:'C1', command:'단일 pytest, node --test 또는 go test 명령', "
                 "method:'test'}]를 전달하면 같은 후보의 검사 결과를 재사용하거나 검사 후 적용합니다. "
                 "판단이 필요한 조건은 method:'semantic'으로 지정합니다. 생성/빌드는 검사 전에 끝내세요. "
                 "설계 판단이 필요하면 기존 reframe을 사용하세요. 실제 적재 확인은 active_verify_cmd입니다."}}
@@ -102,6 +102,17 @@ def prepare(controller, repo, session, verify, candidate):
         observations = [r for r in session.get("execution_checks", [])
                         if r.get("candidate_hash") == r.get("before_hash") == current_hash
                         and r.get("environment_hash") == env]
+        anchors = [r["id"] for r in observations if r.get("status") == "passed"]
+        if not anchors:
+            return finish(failure("semantic", "현재 사본의 통과 검사 영수증이 없습니다. "
+                                  "단일 pytest, node --test 또는 go test를 파이프 없이 실행한 뒤 의미 검토를 요청하세요. "
+                                  "일반 셸의 종료 코드 0이나 과거 사본의 검사는 통과 근거가 아닙니다.",
+                                  missing_criteria=sorted({c["id"] for c in semantic}),
+                                  invalid_evidence=[{"criterion_id": c["id"], "missing_current_check": True}
+                                                    for c in semantic],
+                                  allowed_evidence_ids=[],
+                                  checks=[{k: r.get(k) for k in ("id", "status", "command", "test_report")}
+                                          for r in observations]))
         decision = semantic_review(controller, contract, semantic, session, observations)
         covered, invalid = normalize_coverage(decision, observations, supporting)
         missing = sorted({c["id"] for c in semantic} - covered)
@@ -110,7 +121,7 @@ def prepare(controller, repo, session, verify, candidate):
                        if decision.get("status") == "APPROVED" else decision.get("reason", "의미 조건 미확인"))
             return finish(failure("semantic", message, decision=decision,
                                   missing_criteria=missing, invalid_evidence=invalid,
-                                  allowed_evidence_ids=[e["id"] for e in observations]))
+                                  allowed_evidence_ids=anchors))
         decision.update(method="mixed" if coverage else "semantic",
                         workspace_coverage=coverage + decision.get("workspace_coverage", []))
     if controller.cancelled() or before != candidate.collect(repo, session) or env != candidate.environment(wt):

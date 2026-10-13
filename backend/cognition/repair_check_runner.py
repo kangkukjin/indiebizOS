@@ -45,7 +45,8 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
 def check(repo, session, candidate, command, controller):
     wt = Path(repo) / session["worktree"]
     if not isinstance(command, str) or len(command) > 4000 or invocation(command, wt) is None:
-        return {"status": "unverified", "error": "기능 검사는 단일 pytest 또는 node --test 명령으로 지정하세요. 일반 명령은 의미 검토 자료입니다."}
+        return {"status": "unverified", "error": "기능 검사는 단일 pytest, node --test 또는 go test 명령으로 지정하세요. "
+                "파이프·복합 셸·빌드는 검사 영수증이 아닙니다. 빌드 뒤 검사를 별도 실행하세요."}
     current = candidate.digest(candidate.collect(repo, session))
     env = candidate.environment(wt)
     prior = next((r for r in reversed(session.get("execution_checks", []))

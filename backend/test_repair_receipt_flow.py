@@ -39,6 +39,15 @@ def command(wt, source='assert __import__("pathlib").Path("a.txt").read_text() =
     return shlex.quote(sys.executable) + ' -m pytest test_change.py'
 
 
+def semantic_anchor(repair):
+    """의미 평가 서비스 시험의 전제인 현재 사본 검사 영수증."""
+    root, wt, st, session, _ = repair
+    stamp = st._candidate.digest(st._candidate.collect(str(root), session))
+    session['execution_checks'] = [{'id': 'current-check', 'status': 'passed',
+        'candidate_hash': stamp, 'before_hash': stamp,
+        'environment_hash': st._candidate.environment(wt), 'output': 'verified fixture'}]
+
+
 def test_real_test_apply_and_completion_without_ai(repair, monkeypatch):
     root, wt, st, session, controller = repair
     (wt / 'a.txt').write_text('fixed')
@@ -122,6 +131,7 @@ def test_failure_details_survive_adapter():
 def test_semantic_approval_without_coverage_is_not_enough(repair, monkeypatch):
     root, wt, st, session, controller = repair
     (wt / 'a.txt').write_text('fixed')
+    semantic_anchor(repair)
     session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'semantic'}]
     monkeypatch.setattr(policy, 'semantic_review', lambda *a: {'status': 'APPROVED'})
     result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
@@ -210,6 +220,7 @@ def test_v2_build_gate_checks_without_generating(repair, monkeypatch):
 def test_same_semantic_service_failure_has_bounded_retries(repair, monkeypatch):
     root, wt, st, session, controller = repair
     (wt / 'a.txt').write_text('fixed')
+    semantic_anchor(repair)
     session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'semantic'}]
     calls = []
     def unavailable(*args):

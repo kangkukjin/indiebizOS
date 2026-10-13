@@ -62,6 +62,7 @@ def test_semantic_invalid_evidence_never_looks_achieved(repair, monkeypatch, cas
 
 def test_new_supporting_evidence_invalidates_cached_semantic_failure(repair, monkeypatch):
     root, wt, st, session, controller = repair
+    session['execution_checks'] = [observation(st, root, wt, session)]
     session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'semantic'}]
     rows, calls = [], []
     monkeypatch.setattr(controller.store, 'tool_index', lambda **kw: rows)

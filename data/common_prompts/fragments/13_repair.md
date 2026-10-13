@@ -24,7 +24,7 @@
 - 긴 셸 출력은 `result_ref.read_args`를 execute_ibl의 `read_result`로 회수한다. 결과 파일 경로를 추측하거나 같은 명령을 재실행하지 않는다.
 - 런처 브라우저 검사는 `frontend/scripts/launcher_browser.py`의 준비·전환 완료 관측·언어 선택을 재사용한다. 실제 인수는 `test_japanese_ui.py`와 `test_remote_language_picker.py`에 있다. 데스크톱은 `cd frontend && npm run build` 뒤 검사한다. 안내창·로그인 fixture·CSS 전환 대기를 매번 새로 만들지 않는다.
 - 새 수리는 apply의 `verification_plan`에 기준별 검사 계획을 전달한다. 직접 수리의 `C1`은 사용자 요청 전체다. 예: `[self:patch]{op:"apply", verification_plan:[{criterion_id:"C1",method:"test",command:"cd frontend && node --test scripts/ui-status.test.mjs"}]}`. 검사 명령에는 출력 폐기·파이프를 넣지 않는다. 여러 조건을 한 검사에 연결할 수 있다. 구문 검사·exit 0만으로 기능 통과를 주장하지 않는다.
-- 단일 pytest 또는 node --test의 실제 보고서가 지원된다. 다른 검사·화면의 의미 판단은 해당 기준을 `method:"semantic"`으로 연결하고 격리 셸 관측을 남긴다. 모든 수리에 AI 심사를 요구하지 않는다.
+- 단일 pytest, node --test, go test의 실제 보고서가 지원된다. Go 예: `cd helper && go test -run 'TestInstall|TestLookup' ./...` (JSON 보고서는 호스트가 지정). 생성·빌드는 별도 실행하고 출력은 기존 파일을 덮어쓰지 않는 경로로 지정한다. 다른 검사·화면의 의미 판단은 `method:"semantic"`으로 연결하되 현재 사본의 통과 검사 영수증과 보충 관측을 함께 남긴다. 통과 영수증이 없으면 AI 평가 전에 거절한다. 모든 수리에 AI 심사를 요구하지 않는다.
 - 동일한 후보와 환경의 통과 결과는 재사용한다. 검사 0건·건너뜀·실패·검사 중 변경은 통과가 아니다. apply 실패의 `stage`, `checks`, `missing_criteria`, `decision`을 읽고 해당 단계만 보완한다. 동일 입력의 실패를 반복 호출하지 않는다. 원문은 반환된 evidence_ref로 회수한다.
 - 이전에 진행 중인 수리는 저장된 정책을 유지한다. status의 repair_policy=1이면 기존 사본 준비 심사를 따른다.
 - 미완료 뒤 명시적 `#repair` 후속 요청이 같은 작업으로 판정되면 보존된 전체 기준과 사본을 이어 쓴다. 과거 사본을 새 사본으로 복사하거나 완료 기준을 후속 문장 하나로 줄이지 않는다. 추가 조건 때문에 기준 변경이 필요하면 reframe으로 명시한다.

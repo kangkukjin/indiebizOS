@@ -218,7 +218,9 @@
     "datastore/red_watchdog",
     "datastore/repair_context",
     "datastore/repair_continuation",
+    "datastore/research_evidence",
     "datastore/research_lifecycle",
+    "datastore/research_questions",
     "datastore/research_store",
     "datastore/schema_migrations",
     "datastore/service_status",
@@ -582,8 +584,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 507,
-    "engine": 481,
+    "total": 509,
+    "engine": 483,
     "blocklist": 26
   }
 }

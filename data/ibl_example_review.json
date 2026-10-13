@@ -1398,17 +1398,17 @@
   "self:project": {
    "fields": {
     "description": "fa88e1ef5fae",
-    "target_description": "7c26a61bfb07",
+    "target_description": "7691aa3e1f9e",
     "implementation": "e209c3b0dbe9",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "5e6b3287a8fd",
+    "params": "a0d671bf5f96",
     "aliases": "a6dbc1fbf73f",
-    "ops": "11ea1e2a0d28",
+    "ops": "230ce5879fcf",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-10",
+   "reviewed": "2026-10-13",
    "examples": 8
   },
   "self:read": {

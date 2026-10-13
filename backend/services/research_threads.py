@@ -188,6 +188,10 @@ def project_operation(params):
         return {'items': [dict(r) for r in rows]}
     thread = store.thread(tid)
     if op == 'thread_messages':
+        if params.get('questions_only'):
+            from research_questions import ResearchQuestions
+            return ResearchQuestions(store, tid).read(question_id=params.get('question_id'), cursor=cursor,
+                limit=limit, query=params.get('query') or '', history=bool(params.get('question_history')))
         out = store.messages(tid, cursor or None, limit)
         lib = ResearchLibrary(store)
         with store.connect() as db:
@@ -208,6 +212,12 @@ def project_operation(params):
                 'controls': [{'title': '', 'thread_ref': tid}] if thread['active_run'] else [],
                 'run_status': '조사 중 — 확보한 자료는 순서대로 저장됩니다' if thread['active_run'] else '질문을 이어갈 수 있습니다'}
     if op == 'thread_update':
+        if 'questions' in params:
+            if any(k in params for k in ('notes', 'title', 'mode')):
+                raise ValueError('질문 변경은 대화 메모·설정 변경과 별도로 요청하세요')
+            from research_questions import ResearchQuestions
+            return ResearchQuestions(store, tid).apply(params['questions'],
+                origin='agent' if context else 'user', run=context.get('run_id'))
         changes = {k: params[k] for k in ('title', 'mode', 'notes') if k in params}
         if 'notes' in changes:
             notes = changes['notes']

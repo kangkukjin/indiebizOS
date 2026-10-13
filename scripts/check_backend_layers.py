@@ -54,7 +54,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
-        "research_store", "notebook_store", "research_lifecycle",
+        "research_store", "research_questions", "research_evidence", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context",
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",

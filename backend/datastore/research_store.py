@@ -38,7 +38,8 @@ class ResearchStore:
         self.conversations = ConversationDB(str(self.db_path))
         self.root.mkdir(exist_ok=True)
         with self.connect() as db:
-            db.executescript(SCHEMA)
+            from research_questions import SCHEMA as QUESTIONS_SCHEMA
+            db.executescript(SCHEMA + QUESTIONS_SCHEMA)
             if project_uid:
                 db.execute('INSERT OR IGNORE INTO research_project(uid) VALUES (?)', (project_uid,))
             row = db.execute('SELECT * FROM research_project').fetchone()

@@ -61,11 +61,14 @@ def before(config, params):
     if config.get('group') == 'delegation' or config.get('func') == 'delegate':
         raise PermissionError('연구 대화는 독립 실행합니다. 다른 에이전트에게 위임하지 않습니다')
     if context.get('mode') == 'library':
-        # 사용자 관점 정리는 외부 획득이 아니다. 같은 대화의 문서만 갱신할 수 있다.
+        # 사용자 관점·연구 질문 정리는 외부 획득이 아니다. 같은 대화의 기록만 갱신한다.
         notes_only = (params.get('op') == 'thread_update' and 'notes' in params
                       and params.get('thread_ref') == context.get('thread_id')
                       and set(params) <= {'op', 'project_ref', 'thread_ref', 'expected_revision', 'notes'})
-        if config.get('research_local') and notes_only:
+        questions_only = (params.get('op') == 'thread_update' and 'questions' in params
+                          and params.get('thread_ref') == context.get('thread_id')
+                          and set(params) <= {'op', 'project_ref', 'thread_ref', 'questions'})
+        if config.get('research_local') and (notes_only or questions_only):
             return
         if not config.get('research_local') or params.get('op') not in {'search', 'sources', 'read', 'versions', 'thread_messages', 'thread_search'}:
             raise PermissionError('저장 자료만 사용 모드입니다. 추가 조사를 허용하려면 대화 설정에서 변경하세요')

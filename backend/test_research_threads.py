@@ -26,6 +26,10 @@ def test_research_public_ibl_roundtrip(world, monkeypatch):
     result = _run('[self:project]{op:"thread_messages",project_ref:$project,thread_ref:$thread}', pp, {'project':uid,'thread':thread['id']})
     assert result.get('success') is not False, result
     assert 'active_run' in json.dumps(result), result
+    saved = _run('[self:project]{op:"thread_update",project_ref:$project,thread_ref:$thread,questions:[{expected_revision:0,text:"지속 조사할 질문"}]}', pp, {'project':uid,'thread':thread['id']})
+    assert saved.get('success') is not False and 'question_id' in json.dumps(saved), saved
+    questions = _run('[self:project]{op:"thread_messages",project_ref:$project,thread_ref:$thread,questions_only:true}', pp, {'project':uid,'thread':thread['id']})
+    assert questions.get('success') is not False and '지속 조사할 질문' in json.dumps(questions, ensure_ascii=False), questions
     manifest = _run('[self:project]{op:"research_view",project_ref:$project,thread_ref:$thread}', pp, {'project':uid,'thread':thread['id']})
     assert manifest.get('success') is not False and 'manifest' in json.dumps(manifest), manifest
 

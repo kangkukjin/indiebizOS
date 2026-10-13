@@ -62,6 +62,7 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	caps["elevation"] = true
 	caps["terminal"] = terminalAvailable()
 	caps["terminal_lan"] = true
+	caps["media_session"] = r.mediaSessionCapabilities()
 	caps["helper_sha256"], caps["go"], caps["self_update"] = residentSelfDigest(), runtime.Version(), residentCanSelfUpdate(r.cfg)
 	if st, e := residentLoadUpdate(r.cfg.DataDir); e == nil && st.Outcome != "" {
 		caps["helper_update"] = map[string]interface{}{"outcome": st.Outcome, "to": st.To, "started": st.Started}

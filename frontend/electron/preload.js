@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('electron', {
   // 외부 URL 열기
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   openRemoteDesktop: (device, route) => ipcRenderer.invoke('remote-desktop:open', device, route),
+  // 미디어 세션(통화·확장 장치 카메라/마이크/스피커) 창 — 세션당 창 하나 (media-call.js)
+  openMediaCall: (sessionId) => ipcRenderer.invoke('media-call:open', sessionId),
 
   // 메시지 등의 URL 을 런처의 인앱 브라우저(포식 브라우저)로 열기 — 창을 넘어 런처로 전달
   openInLauncherBrowser: (url) => ipcRenderer.invoke('open-in-launcher-browser', url),

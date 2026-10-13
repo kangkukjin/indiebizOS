@@ -125,6 +125,37 @@ USB 등록 키는 등록 전용이며 각 설치에 별도 실행 자격을 발�
 셸이 정상 종료해도 백그라운드 자식이 출력 파이프를 잡고 있으면 2초 뒤 수집을 끝내고 exit:0과 output_incomplete·warning을 돌려준다. 다시 실행하지 말고 자식 상태를 확인한다. 장기 자식은 `nohup command >server.log 2>&1 </dev/null &`로 입출력을 분리한다.
 
 
+## 미디어 세션 (카메라·마이크·스피커·재생)
+
+허브가 `op: media_session` 봉투(docs/MEDIA_SESSION_CONTRACT.md §6)를 내려보내면 헬퍼는 그 세션에만 유효한
+grant 로 WS `/limb/resident/media/{sid}` 에 붙고(첫 프레임 `{key, installation_id, grant}` — grant 토큰은 이 소켓에만
+실린다), 허브의 `offer` 에 pion/webrtc(v4) 로 `answer` 한다. 작업은 `desktop` 처럼 세션이 사는 동안 실행 중이며
+취소 = 종료다. `keepalive` 는 `lease.keepalive_s` 마다 같은 세대·증가 순번으로, `state` 는 5초(재생은 2초)마다
+`{state, path, quality}` 로 보고한다. WS 가 끊기면 `lease.reconnect_s` 안에 다시 붙고(WebRTC 는 유지), 넘기면
+`signaling_unavailable` 로 끝난다. ICE 실패는 `connectivity_failed`.
+
+캡처·출력은 **ffmpeg/ffplay 하위 프로세스**(cgo 없음)로 한다 — 카메라 → H.264(맥 `h264_videotoolbox`, 없으면
+`libx264 -tune zerolatency`) · 마이크 → Opus 를 RTP 로 로컬 UDP 에 쏘고 헬퍼가 WebRTC 트랙에 싣는다. 스피커는
+수신 RTP 를 로컬 UDP 로 넘기고 ffplay 가 생성된 .sdp 로 재생한다(영상 표시는 `display` 능력일 때 창). 재생(콘텐츠
+전달)은 기존 `media` 와 같은 플레이어(mpv, 맥 오디오는 afplay)를 세션 범위로 띄우고 mpv IPC 로 위치·일시정지·볼륨을
+실제로 읽고 `update` 프레임을 적용한다(afplay 는 상태만 대략 보고).
+
+| OS | 카메라 입력 | 마이크 입력 | 필요한 실행파일 |
+|----|------------|------------|----------------|
+| macOS | `-f avfoundation` | `-f avfoundation` | ffmpeg·ffplay (`brew install ffmpeg`) |
+| Windows | `-f dshow` | `-f dshow` | ffmpeg.exe·ffplay.exe (`C:\ffmpeg\bin`, winget/scoop 도 탐색) |
+| Linux | `-f v4l2` | `-f pulse` | ffmpeg·ffplay (배포판 패키지), 영상 표시는 DISPLAY 필요 |
+
+탐색 순서: 봉투 `ffmpeg_path` → 헬퍼 데이터 폴더 `bin/ffmpeg` (허브가 transfer 로 밀어 넣을 수 있다) → PATH →
+OS 별 설치 위치. 없으면 능력 `media_session.ffmpeg=false` 로 신고하고 시작은 `needs_local_action{code:
+ffmpeg_missing}` 으로 거절한다(카메라/마이크 장치가 없으면 `camera_missing`/`microphone_missing`). 능력
+`media_session = {camera, microphone, speaker, playback, display, ffmpeg, engine:"pion/<ver>"}` 은 실행파일과
+`ffmpeg -list_devices` 결과로 계산해 10분 캐시한다.
+
+구형 인텔 맥용 legacy 빌드(Go 1.22, `-tags legacy`)는 pion/webrtc v4 가 Go 1.24 를 요구해 미디어 엔진이 없다 —
+`engine:""` 으로 신고하고 봉투는 `needs_local_action{code: engine_unsupported}` 로 거절한다.
+검사: `go test -race ./...` (pion 루프백·가짜 허브 WS 협상 포함; ffmpeg 가 있으면 lavfi 가짜 카메라 시험도 돈다).
+
 ## 사람용 화면 공유
 
 조종실 → 손발 (USB) → 등록된 PC의 **화면 공유**를 누르면 별도 제어 창이 열린다.

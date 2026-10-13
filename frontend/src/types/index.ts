@@ -228,6 +228,8 @@ export interface ElectronAPI {
   getApiPort: () => Promise<number>;
   openExternal: (url: string) => Promise<void>;
   openRemoteDesktop?: (device: string, route: 'auto' | 'tunnel') => Promise<{ route: 'direct' | 'tunnel' | 'helper' }>;
+  // 미디어 세션 창(통화·확장 장치 카메라/마이크/스피커) — 세션당 하나, media-call.js
+  openMediaCall?: (sessionId: string) => Promise<{ opened: boolean }>;
   // 메시지 등의 URL 을 런처의 인앱 브라우저(포식 브라우저) 탭으로 열기
   openInLauncherBrowser?: (url: string) => Promise<void>;
   onOpenForageUrl?: (callback: (url: string) => void) => void;

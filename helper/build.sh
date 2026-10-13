@@ -22,7 +22,8 @@ GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/indiebiz-helper-mac-a
 # 마지막 툴체인(Go 1.22)과 그것이 받는 의존성(go.legacy.mod)으로 따로 굽는다.
 # GOTOOLCHAIN 이 1.22.12 를 모듈 캐시에 자동으로 받는다(전역 go 교체 없음).
 echo "▶ darwin/amd64 legacy (macOS 10.15+, Go 1.22)"
-GOTOOLCHAIN=go1.22.12 GOOS=darwin GOARCH=amd64 go build -modfile=go.legacy.mod -ldflags="-s -w" -o dist/indiebiz-helper-mac-amd64-legacy .
+# 미디어 엔진(pion/webrtc v4, Go 1.24+)은 legacy 태그로 제외 — 능력에 engine 없음으로 신고한다.
+GOTOOLCHAIN=go1.22.12 GOOS=darwin GOARCH=amd64 go build -modfile=go.legacy.mod -tags legacy -ldflags="-s -w" -o dist/indiebiz-helper-mac-amd64-legacy .
 echo "▶ linux/amd64"
 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/indiebiz-helper-linux .
 

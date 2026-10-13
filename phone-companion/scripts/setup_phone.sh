@@ -67,6 +67,16 @@ adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null \
   && echo "✓ 알림 표시 권한(POST_NOTIFICATIONS) 부여" \
   || echo "⚠ POST_NOTIFICATIONS 부여 실패 — 폰 설정에서 수동 허용"
 
+# 2c) 미디어 세션 센서 권한(카메라·마이크) — best effort. 설치 자동 부여돼도 Android 10+ 는 백그라운드
+#     카메라를 막으므로(while-in-use) 허브가 카메라 세션을 열려면 폰에서 '카메라 대기 모드' 를 켜 둬야 한다.
+say "미디어 세션 권한(CAMERA·RECORD_AUDIO) 부여"
+for PERM in android.permission.CAMERA android.permission.RECORD_AUDIO; do
+  adb shell pm grant "$PKG" "$PERM" 2>/dev/null \
+    && echo "✓ $PERM 부여" \
+    || echo "⚠ $PERM 부여 실패 — 폰 설정 또는 앱의 '카메라 대기 모드' 화면에서 허용"
+done
+echo "※ Android 10+ 에서 중앙 PC 가 이 폰의 카메라를 열려면 폰에서 '카메라 대기 모드'(런처 우하단 버튼)를 켜 두어야 합니다."
+
 # 3) API 키 주입 (.env 부분집합 → app-private)
 say "API 키 주입"
 python3 "$HERE/provision_phone_keys.py" || echo "⚠ 키 주입 건너뜀(.env 확인)"

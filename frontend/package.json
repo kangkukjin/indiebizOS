@@ -255,6 +255,10 @@
     "mac": {
       "category": "public.app-category.productivity",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "extendInfo": {
+        "NSCameraUsageDescription": "영상 통화와 확장 장치 카메라 보기에 카메라를 사용합니다.",
+        "NSMicrophoneUsageDescription": "음성·영상 통화와 소리 보내기에 마이크를 사용합니다."
+      },
       "target": [
         "dmg",
         "zip"

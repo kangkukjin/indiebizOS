@@ -5,6 +5,8 @@ import android.app.Application
 import android.os.Bundle
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import com.indiebiz.phoneagent.media.CctvState
+import com.indiebiz.phoneagent.media.MediaBridge
 
 /**
  * Chaquopy 파이썬 부팅 + 폰 백엔드(:8765) 생명주기.
@@ -26,6 +28,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
             Python.start(AndroidPlatform(this))
         }
         PhoneActions.init(this)   // 송신측(폰→동작) effector 다리 초기화 — [limbs:phone] 가 호출
+        MediaBridge.init(this)    // 미디어 세션 다리(limb_client `media` 봉투) — 프레임은 네이티브에만
         registerActivityLifecycleCallbacks(this)
     }
 
@@ -48,6 +51,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityStarted(activity: Activity) {
+        CctvState.activityStarted()   // 센서 FGS 가능 판정(while-in-use) 근거
         if (startedCount == 0) {
             // 앱이 포그라운드 진입 — 상주 서비스 + 백엔드 기동
             AgentForegroundService.start(this)
@@ -57,6 +61,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityStopped(activity: Activity) {
+        CctvState.activityStopped()
         startedCount--
         if (startedCount < 0) startedCount = 0
         // 백엔드는 중지하지 않는다 — 상주 포그라운드 서비스와 함께 계속 살려둔다(폰=상시 닿는 몸).

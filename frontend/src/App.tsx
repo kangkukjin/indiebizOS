@@ -24,6 +24,7 @@ import { DocumentApp } from './components/DocumentApp';
 import { ExternalUsersView } from './components/ExternalUsersView';
 import { VocabularyView } from './components/VocabularyView';
 import { installVocabularySync } from './components/vocabulary/window-sync';
+import { IncomingCallBanner } from './components/media/IncomingCallBanner';
 import { api } from './lib/api';
 import { useRetryingLoad } from './lib/use-retrying-load';
 
@@ -341,6 +342,7 @@ function App() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+      <IncomingCallBanner />
       <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
         {currentView === 'launcher' && <Launcher />}
         {currentView === 'manager' && (currentProject?.project_kind === 'research' ? <ResearchProjectView project={currentProject} /> : <Manager />)}

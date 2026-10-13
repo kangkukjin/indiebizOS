@@ -20,6 +20,11 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import com.chaquo.python.Python
+import android.graphics.Color
+import android.view.Gravity
+import android.widget.Button
+import android.widget.FrameLayout
+import com.indiebiz.phoneagent.media.CctvModeActivity
 
 /**
  * indiebizOS 런처 3표면(자율주행/수동/앱)을 폰 안에 띄우는 WebView.
@@ -99,7 +104,18 @@ class LauncherActivity : Activity() {
                 downloadToPhone(url, contentDisposition, mimeType)
             }
         }
-        setContentView(web)
+        // 미디어 세션(카메라·마이크) 대기 모드 진입 — 런처 위 작은 반투명 버튼(앱의 유일한 네이티브 진입점).
+        val root = FrameLayout(this).apply { addView(web) }
+        root.addView(Button(this).apply {
+            text = "카메라 대기 모드"
+            textSize = 11f
+            alpha = 0.55f
+            setBackgroundColor(Color.parseColor("#263238")); setTextColor(Color.WHITE)
+            setOnClickListener { CctvModeActivity.launch(this@LauncherActivity) }
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+            gravity = Gravity.BOTTOM or Gravity.END; setMargins(0, 0, 16, 16)
+        })
+        setContentView(root)
         loadWhenReady()
     }
 

@@ -2,13 +2,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Usb, Loader2, Check, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen, RefreshCw, ArrowUpCircle } from 'lucide-react';
 import { api } from '../../lib/api';
+import { startExtension } from '../media/CallButtons';
+import { PlaybackPicker } from '../media/PlaybackPicker';
 
+/** 장치가 신고한 미디어 세션 능력 — 버튼은 키마다 따로 연다(카메라만 되는 장치도 있다). */
+type MediaCapability = { camera?: boolean; microphone?: boolean; speaker?: boolean; playback?: boolean };
 type Registration = {
   state: 'active' | 'removal_pending' | 'removed';
   kind?: 'pc' | 'phone';          // phone = IndieBiz OS 를 설치하며 등록한 폰(헬퍼 없음, 봉투=IBL) — 2026-10-13
   adapter?: string;
   paused?: boolean;
-  capabilities?: { os?: string; hostname?: string; desktop_stream?: number };
+  capabilities?: { os?: string; hostname?: string; desktop_stream?: number; media_session?: MediaCapability };
 };
 type Helper = { state: 'unknown' | 'current' | 'manual' | 'available' | 'updating'; rolled_back?: boolean };
 type PC = { alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration; helper?: Helper };
@@ -24,6 +28,16 @@ export function LimbSwitch() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [mediaOpening, setMediaOpening] = useState<string | null>(null);
+  const [playbackFor, setPlaybackFor] = useState<string | null>(null);
+
+  // 확장 장치 미디어: 세션을 만들고 그 세션의 통화 창을 연다(엔진은 창이 소유). 등록·통화 초대와 같은 버튼이 아니다.
+  const openMedia = async (pc: PC, purpose: 'camera' | 'microphone' | 'speaker') => {
+    setMediaOpening(`${pc.device_id}:${purpose}`); setErr(null);
+    try { await startExtension(purpose, pc.device_id); }
+    catch (e) { setErr(e instanceof Error ? e.message : `${pc.alias} 미디어 세션을 열지 못했습니다.`); }
+    finally { setMediaOpening(null); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -136,7 +150,8 @@ export function LimbSwitch() {
         </div>
         {!active.length && <p className="py-2 text-[11px] text-stone-400">아직 등록된 PC가 없습니다. 대상 PC에서 등록하면 여기에 표시됩니다.</p>}
         <ul className="mt-1 space-y-1">
-          {active.map((pc) => <li key={pc.device_id} className="flex items-center gap-2 rounded border border-stone-100 bg-white px-2 py-2">
+          {active.map((pc) => { const media = pc.registration.capabilities?.media_session; const mediaOk = pc.registration.state === 'active' && pc.connected && !pc.registration.paused; return <li key={pc.device_id} className="rounded border border-stone-100 bg-white px-2 py-2">
+          <div className="flex items-center gap-2">
             <span className={`h-2 w-2 shrink-0 rounded-full ${pc.connected && pc.registration.state === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
             <div className="min-w-0 flex-1">
               <div className="break-all font-medium text-stone-700">{pc.alias}</div>
@@ -153,7 +168,22 @@ export function LimbSwitch() {
               title={isPhone(pc) ? "등록 해제 — 폰은 설치만 된 상태로 돌아갑니다" : "등록 해제 및 원격 헬퍼 제거"} className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
               {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제
             </button>
-          </li>)}
+          </div>
+          {media && (media.camera || media.microphone || media.speaker || media.playback) && <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-4">
+            {media.camera && <button onClick={() => void openMedia(pc, 'camera')} disabled={!mediaOk || mediaOpening !== null}
+              title="이 장치의 카메라 영상을 여기서 봅니다" className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">
+              {mediaOpening === `${pc.device_id}:camera` ? '여는 중…' : '카메라 보기'}</button>}
+            {media.microphone && <button onClick={() => void openMedia(pc, 'microphone')} disabled={!mediaOk || mediaOpening !== null}
+              title="이 장치의 마이크 소리를 여기서 듣습니다" className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">
+              {mediaOpening === `${pc.device_id}:microphone` ? '여는 중…' : '소리 듣기'}</button>}
+            {media.speaker && <button onClick={() => void openMedia(pc, 'speaker')} disabled={!mediaOk || mediaOpening !== null}
+              title="이 PC 의 재생음을 이 장치의 스피커로 보냅니다" className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">
+              {mediaOpening === `${pc.device_id}:speaker` ? '여는 중…' : '소리 보내기'}</button>}
+            {media.playback && <button onClick={() => setPlaybackFor(playbackFor === pc.device_id ? null : pc.device_id)} disabled={!mediaOk}
+              title="파일이나 주소를 넘겨 이 장치의 플레이어로 재생합니다" className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">이 장치에서 재생</button>}
+          </div>}
+          {playbackFor === pc.device_id && <PlaybackPicker deviceId={pc.device_id} deviceName={pc.alias} onClose={() => setPlaybackFor(null)} onError={setErr} />}
+          </li>; })}
         </ul>
         <p className="mt-3 text-[11px] leading-relaxed text-stone-500">해제하면 헬퍼와 자동 시작 설정이 제거되며 작업 파일은 남습니다. 폰은 자격만 지워져 설치만 된 상태로 돌아갑니다.</p>
         <details className="mt-2 text-[11px] text-stone-400">

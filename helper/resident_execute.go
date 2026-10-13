@@ -105,6 +105,7 @@ func (w *residentLog) Write(b []byte) (int, error) {
 func (r *residentRuntime) execute(parent context.Context, j Job) map[string]interface{} {
 	var c Command
 	var extra struct {
+		Op         string            `json:"op"`
 		Elevate    bool              `json:"elevate"`
 		Resident   bool              `json:"resident"`
 		Generation string            `json:"generation"`
@@ -115,11 +116,20 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		MAC        string            `json:"mac"`
 		Broadcast  string            `json:"broadcast"`
 	}
-	if json.Unmarshal([]byte(j.Code), &c) != nil || json.Unmarshal([]byte(j.Code), &extra) != nil {
+	if json.Unmarshal([]byte(j.Code), &extra) != nil {
 		return errResult("invalid_command", "")
 	}
 	if !extra.Resident || extra.Generation != r.cfg.Generation {
 		return errResult("stale_registration", "")
+	}
+	// The media envelope (contract §6) carries object-valued fields such as
+	// `content` that the generic Command shape does not share; it keeps the
+	// same resident/generation gate and parses itself.
+	if extra.Op == "media_session" {
+		return r.mediaSession(parent, j)
+	}
+	if json.Unmarshal([]byte(j.Code), &c) != nil {
+		return errResult("invalid_command", "")
 	}
 	if extra.Mode == "observe" && (c.Op != "shell" || c.Timeout < 1 || c.Timeout > 10) {
 		return errResult("invalid_observation", "mode:observe requires shell with explicit timeout:1..10")

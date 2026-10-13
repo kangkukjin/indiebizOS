@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- 미디어 세션(WebRTC 카메라·마이크 송신, 수신 음성·콘텐츠 재생) — Android 14 유형별 FGS 권한 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 송신측([limbs:phone]{op:vibrate}) — 설치시 자동 부여되는 일반 권한 -->
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -89,6 +94,19 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="indiebiz_phone_agent_relay" />
         </service>
+
+        <!-- 미디어 세션 FGS — 용도별 유형(camera|microphone|mediaPlayback). specialUse 상주 서비스와 별개(설계 §9). -->
+        <service
+            android:name=".media.MediaSessionService"
+            android:foregroundServiceType="camera|microphone|mediaPlayback"
+            android:exported="false" />
+
+        <!-- 카메라 대기 모드(사용자가 폰에서 직접 켜 두는 화면) — 허브 카메라/마이크 세션의 while-in-use 요건 -->
+        <activity
+            android:name=".media.CctvModeActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <!-- 재부팅 후 상주 복원 -->
         <receiver

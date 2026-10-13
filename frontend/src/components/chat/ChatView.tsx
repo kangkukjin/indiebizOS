@@ -428,6 +428,11 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           setLoading(false);
           resetStreamingState();
           break;
+
+        case 'media_event':
+          // 수신 통화 등 미디어 세션 사건 → 전역 배너(IncomingCallBanner)로 넘긴다. 채팅 상태와 무관.
+          window.dispatchEvent(new CustomEvent('indiebiz:media-event', { detail: data }));
+          break;
       }
     };
 

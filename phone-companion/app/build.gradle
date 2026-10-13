@@ -243,4 +243,7 @@ dependencies {
     implementation 'fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.15.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
+    // WebRTC 네이티브 엔진(미디어 세션, docs/MEDIA_SESSION_CONTRACT.md) — AAR 에 armeabi-v7a·arm64-v8a·x86·x86_64 jni 동봉,
+    // minSdk 21, BSD-3. 각 flavor 의 abiFilters 가 자기 ABI 만 싣는다. 조달 기록: phone-companion/MEDIA_ENGINE.md
+    implementation 'io.github.webrtc-sdk:android:144.7559.15'
 }

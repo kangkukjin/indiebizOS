@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ScreenShare } from './components/remote-pc/ScreenShare'
+import { CallWindow } from './components/media/CallWindow'
 import { IS_WEB_SURFACE } from './lib/backend-origin'
 import { RemoteSession } from './components/RemoteSession'
 
@@ -27,7 +28,9 @@ if (bridge?.dialogPing && bridge?.dialogAlert && bridge?.dialogConfirm) {
 }
 
 const screenDevice = window.location.hash.match(/^#\/remote-screen\/(guestpc-[a-f0-9]+)$/)?.[1];
-const content = screenDevice ? <ScreenShare device={screenDevice} /> : <App />;
+const mediaSession = window.location.hash.match(/^#\/media-call\/([a-f0-9]{16,64})$/)?.[1];
+const content = screenDevice ? <ScreenShare device={screenDevice} />
+  : mediaSession ? <CallWindow sessionId={mediaSession} /> : <App />;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

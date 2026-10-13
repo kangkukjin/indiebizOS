@@ -35,6 +35,7 @@ import {
 import { setTray, bumpBadge } from './badge.js';
 import { installDevServerRecovery } from './window-recovery.js';
 import { installRemoteDesktop } from './remote-desktop.js';
+import { installMediaCall, mediaPermissionDecision } from './media-call.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,7 @@ app.on('browser-window-created', (_event, win) => {
 });
 
 let mainWindow = null;
+let mediaCall = null; // 통화 창 관리자 (media-call.js) — whenReady 에서 설치
 let tray = null; // 트레이 (win/linux — 실행 중 빠른 열기·종료 편의)
 
 // API 포트
@@ -589,6 +591,12 @@ function handleLauncherCommand(command, params) {
       // 백엔드 발신 사용자 알림 (새 메시지·notify_user 등) → OS 네이티브 알림 + 배지
       showNativeNotification(params || {});
       break;
+    case 'open_call_window':
+      // 수신 통화·확장 장치 미디어 세션 창 (알림 클릭 또는 백엔드 직접 명령). 세션 id 만 받는다.
+      if (mediaCall && params?.session_id) {
+        mediaCall.open(String(params.session_id)).catch(e => console.error('[Launcher WS] 통화 창 열기 실패:', e.message));
+      }
+      break;
     default:
       console.warn('[Launcher WS] 알 수 없는 명령:', command);
   }
@@ -811,6 +819,12 @@ app.whenReady().then(async () => {
   });
   installUILocale();
   installRemoteDesktop({ app, ipcMain, BrowserWindow });
+  mediaCall = installMediaCall({ app, ipcMain, BrowserWindow });
+  // 카메라·마이크·화면 캡처 권한은 우리 창(dist index / 개발 서버 / 백엔드 주소)에만. 다른 권한은 기존대로 허용.
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const url = details?.requestingUrl || webContents?.getURL?.() || '';
+    callback(mediaPermissionDecision(app, permission, url, true));
+  });
   // IPC 설정
   setupIPC();
 

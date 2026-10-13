@@ -1,0 +1,81 @@
+/** Extension-purpose layouts: speaker (send a local audio source) and playback (drive the target player). */
+import { useEffect, useRef, useState } from 'react';
+import { Pause, Play } from 'lucide-react';
+import type { SessionContent } from '../../lib/media/types';
+
+/** Speaker purpose: pick a local file or URL, play it through an <audio>, hand the element to the engine. */
+export function SpeakerSourcePane({ sending, onSource }: { sending: boolean; onSource: (element: HTMLMediaElement) => void }) {
+  const audio = useRef<HTMLAudioElement>(null);
+  const [url, setUrl] = useState('');
+  const [name, setName] = useState('');
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  useEffect(() => () => { if (objectUrl) URL.revokeObjectURL(objectUrl); }, [objectUrl]);
+  const load = (src: string, label: string) => {
+    const el = audio.current; if (!el) return;
+    el.src = src; setName(label);
+    void el.play().catch(() => { /* autoplay may need the user's click on the element */ });
+  };
+  return (
+    <section aria-label="재생음 보내기" className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
+      <p className="text-sm text-stone-300">이 PC 에서 재생하는 소리를 장치의 스피커로 보냅니다.</p>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <label className="cursor-pointer rounded border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10">
+          파일 고르기
+          <input type="file" accept="audio/*,video/*" className="hidden" onChange={e => {
+            const file = e.target.files?.[0]; if (!file) return;
+            const next = URL.createObjectURL(file);
+            setObjectUrl(previous => { if (previous) URL.revokeObjectURL(previous); return next; });
+            load(next, file.name);
+          }} />
+        </label>
+        <input className="w-72 rounded border border-white/20 bg-stone-900 px-2 py-1.5 text-sm" placeholder="또는 주소(URL)" aria-label="재생 주소" value={url} onChange={e => setUrl(e.target.value)} />
+        <button className="rounded border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-40" disabled={!url.trim()} onClick={() => load(url.trim(), url.trim())}>불러오기</button>
+      </div>
+      <audio ref={audio} controls muted className="w-96" aria-label="보낼 소리" />
+      {name && <p className="max-w-md truncate text-xs text-stone-400">{name}</p>}
+      <button className="rounded bg-emerald-600 px-4 py-2 text-sm hover:bg-emerald-500 disabled:opacity-40" disabled={!name || sending}
+        onClick={() => { if (audio.current) onSource(audio.current); }}>
+        {sending ? '보내는 중' : '이 소리를 장치로 보내기'}
+      </button>
+      <p className="text-[11px] text-stone-500">여기서는 소리가 나지 않고 장치에서만 납니다. 통화용 잡음 억제는 적용하지 않습니다.</p>
+    </section>
+  );
+}
+
+function clock(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Playback purpose (content delivery): the target reports position/paused; controls go through `update`. */
+export function PlaybackControlPane({ content, disabled, onUpdate }: {
+  content: SessionContent | null | undefined; disabled: boolean; onUpdate: (changes: Record<string, unknown>) => void;
+}) {
+  const [seek, setSeek] = useState('');
+  const paused = content?.paused ?? true;
+  const position = content?.position_s ?? 0;
+  const volume = content?.volume ?? 80;
+  return (
+    <section aria-label="장치 재생 제어" className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
+      <p className="text-sm text-stone-300">장치에서 재생 중인 콘텐츠</p>
+      <p className="max-w-md truncate text-xs text-stone-400">{content?.url || content?.path || content?.ref || '아직 보고된 콘텐츠가 없습니다'}</p>
+      <p className="text-3xl tabular-nums">{clock(position)}{content?.duration_s ? ` / ${clock(content.duration_s)}` : ''}</p>
+      <p className="text-xs text-stone-400">{content?.playing ? '장치가 재생을 확인했습니다' : paused ? '일시정지' : '재생 요청됨 · 장치 확인 대기'}</p>
+      <div className="flex items-center gap-3">
+        <button className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40" disabled={disabled}
+          aria-label={paused ? '재생' : '일시정지'} onClick={() => onUpdate({ content: { paused: !paused } })}>
+          {paused ? <Play size={20} /> : <Pause size={20} />}
+        </button>
+        <label className="flex items-center gap-2 text-xs text-stone-300">볼륨
+          <input type="range" min={0} max={100} value={volume} disabled={disabled} aria-label="볼륨" onChange={e => onUpdate({ content: { volume: Number(e.target.value) } })} />
+          <span className="w-8 tabular-nums">{volume}</span>
+        </label>
+      </div>
+      <form className="flex items-center gap-2 text-xs" onSubmit={e => { e.preventDefault(); const n = Number(seek); if (Number.isFinite(n) && n >= 0) onUpdate({ content: { position_s: n } }); }}>
+        <input className="w-24 rounded border border-white/20 bg-stone-900 px-2 py-1" placeholder="초" aria-label="이동할 위치(초)" value={seek} onChange={e => setSeek(e.target.value)} />
+        <button className="rounded border border-white/20 px-3 py-1 hover:bg-white/10 disabled:opacity-40" disabled={disabled}>위치 이동</button>
+      </form>
+      <p className="text-[11px] text-stone-500">원본 재생은 장치가 재생을 확인한 뒤에 직접 멈추세요. 이 창은 원본을 멈추지 않습니다.</p>
+    </section>
+  );
+}

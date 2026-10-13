@@ -39,6 +39,18 @@ def test_historical_rewrite(registry, name, variant):
     assert result['passed'], result.get('error')
 
 
+def test_frozen_leaves_do_not_observe_historical_files():
+    contract = {'version': 1, 'params': {}, 'result': 'Record',
+                'effects': ['read_external'],
+                'read_resources': [{'realm': 'file', 'param': 'path'}]}
+    original = Adapter(contract, lambda *_: None)
+    frozen = replay.registry_for({'self:read': original}, replay.Leaves('rotation', 'normal'), 'rotation')
+    assert 'read_resources' not in frozen['self:read'].contract
+    assert 'read_resources' in original.contract
+    actual = replay.registry_for({'self:ledger': original}, replay.Leaves('ledger', 'normal'), 'ledger')
+    assert actual['self:ledger'] is original
+
+
 def failure_registry(effect, exception, calls):
     def fail(rt, args):
         calls.append('call')

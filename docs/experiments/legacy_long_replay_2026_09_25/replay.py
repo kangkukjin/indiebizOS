@@ -95,7 +95,12 @@ def registry_for(base,leaves,name):
    if key in ('self:read','self:time'):return raw
    value,evidence=decode_envelope(raw,contract['adapter'],args)
    return Adapted(value,evidence)
-  registry[key]=Adapter(adapter.contract,run)
+  # 대역은 역사 속 파일을 읽지 않는다. 실제 파일 관측 계약을 물려주면
+  # 개인 파일이 없는 CI에서 성공한 대역을 불완전한 원천으로 오판한다.
+  contract=copy.deepcopy(adapter.contract)
+  contract.pop('read_resources',None)
+  contract.pop('write_resources',None)
+  registry[key]=Adapter(contract,run)
  return registry
 
 def validate(name,variant,result,leaves,inputs):

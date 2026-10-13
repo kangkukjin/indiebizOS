@@ -18,8 +18,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401
 
 
+# 실제 스레드를 유지하되 CI 스케줄러 지연보다 충분히 큰 시간 단위를 쓴다.
+# 작업/단계/대기 예산 비율은 동일하므로 옛 전역 타임아웃 회귀는 계속 실패한다.
+TIME_SCALE = 20
+
+
 def _patch_budget(monkeypatch, wp, seconds):
-    monkeypatch.setattr(wp, "_action_timeout_budget", lambda: seconds)
+    monkeypatch.setattr(wp, "_action_timeout_budget", lambda: seconds * TIME_SCALE)
     monkeypatch.setattr(wp, "PARALLEL_TIMEOUT_GRACE", 0.0, raising=False)
 
 
@@ -30,7 +35,7 @@ def test_R1_괄호_파이프는_단계별_예산을_합산한다(monkeypatch):
     _patch_budget(monkeypatch, wp, 0.05)
 
     def _step(tool_input, project_path=None):
-        time.sleep(0.035)
+        time.sleep(0.035 * TIME_SCALE)
         return {"items": [{"action": tool_input["action"]}]}
 
     monkeypatch.setattr(ibl_engine, "execute_ibl", _step)
@@ -52,7 +57,7 @@ def test_R2_워커_상한_뒤_가지가_대기시간을_예산으로_쓰지_않�
     _patch_budget(monkeypatch, wp, 0.06)
 
     def _step(tool_input, project_path=None):
-        time.sleep(0.04)
+        time.sleep(0.04 * TIME_SCALE)
         return {"items": [{"action": tool_input["action"]}]}
 
     monkeypatch.setattr(ibl_engine, "execute_ibl", _step)
@@ -71,7 +76,7 @@ def test_R3_느린_가지_하나만_현재_하위단계로_실패한다(monkeypa
 
     def _step(tool_input, project_path=None):
         action = tool_input["action"]
-        time.sleep(0.08 if action == "struct" else 0.005)
+        time.sleep((0.08 if action == "struct" else 0.005) * TIME_SCALE)
         return {"items": [{"action": action}]}
 
     monkeypatch.setattr(ibl_engine, "execute_ibl", _step)
@@ -87,8 +92,8 @@ def test_R3_느린_가지_하나만_현재_하위단계로_실패한다(monkeypa
     assert "error" not in out[0], out
     assert "self:struct" in out[1]["error"], out
     assert out[1]["_branch_step_failed"] == "2/2"
-    assert out[1]["budget_s"] == 0.06
-    assert out[1]["elapsed_s"] >= 0.06
+    assert out[1]["budget_s"] == 0.06 * TIME_SCALE
+    assert out[1]["elapsed_s"] >= 0.06 * TIME_SCALE
 
 
 def test_R4_파이프_봉투도_괄호_가지의_현재_단계를_이름붙인다(monkeypatch):
@@ -100,7 +105,7 @@ def test_R4_파이프_봉투도_괄호_가지의_현재_단계를_이름붙인�
 
     def _step(tool_input, project_path=None):
         action = tool_input["action"]
-        time.sleep(0.06 if action == "struct" else 0.005)
+        time.sleep((0.06 if action == "struct" else 0.005) * TIME_SCALE)
         return {"items": [{"action": action}]}
 
     monkeypatch.setattr(ibl_engine, "execute_ibl", _step)

@@ -202,6 +202,8 @@ Seatbelt를 사용하고, 문서 변환 회귀에는 macOS의 textutil 경로가
 이 검사를 성공한 것으로 흉내 내거나 제외하지 않는다. AST·공개 라우트 등 나머지
 관문은 Ubuntu에서, `Portability (3 OS)`는 Windows·Linux·macOS에서 계속 실행한다.
 브라우저·PDF·차트 회귀에는 Playwright와 Chromium, matplotlib·plotly·kaleido를 설치한다.
+브라우저는 설치·실행 모두 저장소의 ms-playwright를 쓰며 전체 검사 전 실제 PNG 렌더로
+확인한다. 문서·시트 인수 검사를 위해 npm 의존성과 프론트엔드 빌드도 먼저 준비한다.
 
 새 checkout에는 개인 프로젝트의 outputs, 반환 모양 관측, 관용구 DB가 없다. 회귀는
 필요한 디렉터리와 관측을 fixture로 만들고, 관용구는 추적된 시드를 격리 DB에 넣는다.

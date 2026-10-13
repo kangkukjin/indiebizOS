@@ -6,7 +6,7 @@ import { startExtension } from '../media/CallButtons';
 import { PlaybackPicker } from '../media/PlaybackPicker';
 
 /** 장치가 신고한 미디어 세션 능력 — 버튼은 키마다 따로 연다(카메라만 되는 장치도 있다). */
-type MediaCapability = { camera?: boolean; microphone?: boolean; speaker?: boolean; playback?: boolean };
+type MediaCapability = { camera?: boolean; microphone?: boolean; speaker?: boolean; playback?: boolean; video_receive?: boolean };
 type Registration = {
   state: 'active' | 'removal_pending' | 'removed';
   kind?: 'pc' | 'phone';          // phone = IndieBiz OS 를 설치하며 등록한 폰(헬퍼 없음, 봉투=IBL) — 2026-10-13
@@ -32,7 +32,7 @@ export function LimbSwitch() {
   const [playbackFor, setPlaybackFor] = useState<string | null>(null);
 
   // 확장 장치 미디어: 세션을 만들고 그 세션의 통화 창을 연다(엔진은 창이 소유). 등록·통화 초대와 같은 버튼이 아니다.
-  const openMedia = async (pc: PC, purpose: 'camera' | 'microphone' | 'speaker') => {
+  const openMedia = async (pc: PC, purpose: 'camera' | 'microphone' | 'speaker' | 'playback') => {
     setMediaOpening(`${pc.device_id}:${purpose}`); setErr(null);
     try { await startExtension(purpose, pc.device_id); }
     catch (e) { setErr(e instanceof Error ? e.message : `${pc.alias} 미디어 세션을 열지 못했습니다.`); }
@@ -179,6 +179,8 @@ export function LimbSwitch() {
             {media.speaker && <button onClick={() => void openMedia(pc, 'speaker')} disabled={!mediaOk || mediaOpening !== null}
               title="이 PC 의 재생음을 이 장치의 스피커로 보냅니다" className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">
               {mediaOpening === `${pc.device_id}:speaker` ? '여는 중…' : '소리 보내기'}</button>}
+            {media.video_receive && <button disabled={!mediaOk || mediaOpening !== null} onClick={() => void openMedia(pc, 'playback')}
+              className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">영상 보내기</button>}
             {media.playback && <button onClick={() => setPlaybackFor(playbackFor === pc.device_id ? null : pc.device_id)} disabled={!mediaOk}
               title="파일이나 주소를 넘겨 이 장치의 플레이어로 재생합니다" className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">이 장치에서 재생</button>}
           </div>}

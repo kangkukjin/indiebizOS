@@ -63,11 +63,11 @@ export function CallWindow({ sessionId }: { sessionId: string }) {
   let stage: React.ReactNode;
   if (ringingCallee && session) {
     stage = <IncomingCallPane session={session} busy={busy} onAccept={() => void act(m.accept)} onReject={() => void act(m.reject)} />;
-  } else if (purpose === 'playback' || session?.delivery === 'content') {
+  } else if (session?.delivery === 'content') {
     stage = <PlaybackControlPane content={session?.content} disabled={ended || busy} onUpdate={changes => void act(() => m.update(changes))} />;
-  } else if (purpose === 'speaker' && m.isHub) {
+  } else if ((purpose === 'speaker' || purpose === 'playback') && m.isHub) {
     stage = <div className="flex flex-1 flex-col">
-      <SpeakerSourcePane sending={!!m.localStream} onSource={el => void m.sendPlayback(el)} />
+      <SpeakerSourcePane video={purpose === 'playback'} sending={!!m.localStream} onSource={el => void m.sendPlayback(el)} />
       {m.localStream && <div className="flex justify-center pb-4"><LevelMeter stream={m.localStream} label="보내는 소리" /></div>}
     </div>;
   } else if (purpose === 'microphone' && m.isHub) {

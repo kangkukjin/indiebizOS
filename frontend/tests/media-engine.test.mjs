@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { extractFingerprint, fingerprintsMatch, qualityFromStats, pathFromStats, orderCodecs, encodingForProfile, waitForGathering, audioConstraints } from '../src/lib/media/sdp.ts';
 import { SignalSequencer, isSignalFrame } from '../src/lib/media/signal.ts';
-import { planTracks } from '../src/lib/media/tracks.ts';
+import { planTracks, capturePlayback } from '../src/lib/media/tracks.ts';
 
 const SDP = [
   'v=0', 'o=- 1 2 IN IP4 127.0.0.1', 's=-', 't=0 0',
@@ -110,4 +110,25 @@ test('track plan follows session tracks for this role, with purpose fallback', (
   assert.deepEqual(planTracks({ ...session, tracks: [] }, 'hub'), { sendMic: false, sendCamera: false, sendPlayback: false, recvAudio: true, recvVideo: true });
   assert.deepEqual(planTracks({ kind: 'call', purpose: 'voice_call', participants: [], tracks: [] }, 'callee'), { sendMic: true, sendCamera: false, sendPlayback: false, recvAudio: true, recvVideo: false });
   assert.deepEqual(planTracks({ kind: 'extension', purpose: 'speaker', participants: [], tracks: [] }, 'hub'), { sendMic: false, sendCamera: false, sendPlayback: true, recvAudio: false, recvVideo: false });
+});
+
+
+test('video playback sends rendered media without opening camera or microphone', () => {
+  const session = { purpose: 'playback', tracks: [
+    { kind: 'video', source: 'playback', from: 'hub', to: 'device', state: 'requested' },
+    { kind: 'audio', source: 'playback', from: 'hub', to: 'device', state: 'requested' },
+  ] };
+  assert.deepEqual(planTracks(session, 'hub'), { sendMic: false, sendCamera: false, sendPlayback: true, recvAudio: false, recvVideo: false });
+  assert.equal(planTracks(session, 'device').recvVideo, true);
+  let stopped = false;
+  const v = { stop() { stopped = true; } };
+  const a = { contentHint: '' };
+  let videos = [v];
+  const stream = { getAudioTracks: () => [a], getVideoTracks: () => videos, getTracks: () => [...videos, a], removeTrack() { videos = []; } };
+  assert.equal(capturePlayback({ captureStream: () => stream }, true), stream);
+  assert.equal(stopped, false);
+  assert.equal(a.contentHint, 'music');
+  capturePlayback({ captureStream: () => stream }, false);
+  assert.equal(stopped, true, 'speaker-only session must not accidentally transmit video');
+  assert.equal(videos.length, 0);
 });

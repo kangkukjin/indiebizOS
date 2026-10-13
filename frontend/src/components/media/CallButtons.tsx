@@ -29,7 +29,7 @@ export function startCall(purpose: 'voice_call' | 'video_call', npub: string): P
 }
 
 /** Extension session with a registered device (camera | microphone | speaker). */
-export function startExtension(purpose: Extract<SessionPurpose, 'camera' | 'microphone' | 'speaker'>, deviceId: string): Promise<MediaSession> {
+export function startExtension(purpose: Extract<SessionPurpose, 'camera' | 'microphone' | 'speaker' | 'playback'>, deviceId: string): Promise<MediaSession> {
   return createAndOpen({ kind: 'extension', purpose, target: deviceId, request_id: crypto.randomUUID() });
 }
 

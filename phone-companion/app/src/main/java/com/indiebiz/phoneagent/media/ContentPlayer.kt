@@ -4,119 +4,137 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
-import android.net.wifi.WifiManager
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
-import android.util.Log
+import android.view.Surface
 import org.json.JSONObject
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
 
-/**
- * 콘텐츠 전달(purpose=playback, delivery=content, 계약 §7) — 허브가 발급한 세션 소유 참조
- * `/media/content/<ref>?token=` 을 폰이 직접 디코딩한다. PhoneActions.playStream 과 같은 MediaPlayer
- * 쓰임이지만 **세션에 묶인다**: 2초마다 state{playing, position_s, paused, volume} 보고, update 로
- * pause/resume/seek/volume, 세션 종료 = 재생 종료. (Media3 는 필요가 생길 때 — 지금은 MediaPlayer 로 충분.)
- */
+/** A session-owned audio/video player. All MediaPlayer operations run on the main looper. */
 class ContentPlayer(private val ctx: Context, private val env: MediaEnvelope, private val listener: Listener) {
     interface Listener {
-        fun onPlayback(report: JSONObject)                 // {playing, position_s, paused, volume, duration_s, ended?}
+        fun onPlayback(report: JSONObject)
         fun onContentError(code: String, message: String)
     }
-
-    private val exec = Executors.newSingleThreadScheduledExecutor()
-    private var reporter: ScheduledFuture<*>? = null
+    private val main = Handler(Looper.getMainLooper())
     private var mp: MediaPlayer? = null
-    private var wifiLock: WifiManager.WifiLock? = null
-    @Volatile private var prepared = false
-    @Volatile private var paused = env.content?.paused ?: false
-    @Volatile private var volume = env.content?.volume ?: 80
-    @Volatile private var ended = false
-    private var pendingSeekS: Double = env.content?.positionS ?: 0.0
+    private var surface: Surface? = null
+    private var prepared = false
+    private var closed = false
+    private var pendingSeekS = env.content?.positionS ?: 0.0
+    private var volume = env.content?.volume ?: 80
+    private val output = PlaybackOutputState().apply { paused = env.content?.paused ?: false }
+    private var width = 0
+    private var height = 0
+    @Volatile private var latest = JSONObject()
+    private val tick = object : Runnable {
+        override fun run() { if (!closed) { report(); main.postDelayed(this, 1000) } }
+    }
+    private fun onMain(action: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) action() else main.post { if (!closed) action() }
+    }
 
-    fun start() {
+    fun start() = onMain {
         val url = env.contentUrl()
-        if (url == null) { listener.onContentError("content_unavailable", "content.url/ref 없음"); return }
+        if (url == null) { listener.onContentError("content_unavailable", "재생 주소가 없습니다"); return@onMain }
         val p = MediaPlayer()
         mp = p
         try {
             p.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build())
             p.setWakeMode(ctx, PowerManager.PARTIAL_WAKE_LOCK)
+            p.setSurface(surface)
+            p.setOnVideoSizeChangedListener { _, w, h ->
+                width = w; height = h
+                if (w > 0 && h > 0) output.hasVideo = true
+                reconcile(); report()
+            }
             p.setOnPreparedListener {
-                prepared = true
-                try {
-                    if (pendingSeekS > 0) it.seekTo((pendingSeekS * 1000).toInt())
-                    applyVolume(it, volume)
-                    if (!paused) it.start()
-                } catch (t: Throwable) { listener.onContentError("content_unavailable", "재생 시작 실패: ${t.message}") }
-                report()
-                reporter = exec.scheduleAtFixedRate({ report() }, 2000, 2000, TimeUnit.MILLISECONDS)
+                if (!closed) {
+                    prepared = true
+                    output.hasVideo = p.videoWidth > 0 || p.trackInfo.any { it.trackType == MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_VIDEO }
+                    width = p.videoWidth; height = p.videoHeight
+                    applyVolume()
+                    if (pendingSeekS > 0) seek(pendingSeekS) else reconcile()
+                    report(); main.post(tick)
+                }
+            }
+            p.setOnSeekCompleteListener { output.seeking = false; reconcile(); report() }
+            p.setOnInfoListener { _, what, _ ->
+                if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) { output.rendered = output.visible; report() }
+                false
             }
             p.setOnErrorListener { _, what, extra ->
-                listener.onContentError("content_unavailable", "MediaPlayer 오류 $what/$extra"); true
+                listener.onContentError("content_unavailable", "동영상을 재생하지 못했습니다 ($what/$extra)"); true
             }
-            p.setOnCompletionListener { ended = true; report() }
-            try {
-                val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "indiebiz_media_content").apply { acquire() }
-            } catch (_: Throwable) {}
+            p.setOnCompletionListener { output.ended = true; report() }
             p.setDataSource(url)
             p.prepareAsync()
-        } catch (t: Throwable) {
-            listener.onContentError("content_unavailable", "콘텐츠 열기 실패: ${t.message}")
+        } catch (t: Throwable) { listener.onContentError("content_unavailable", "콘텐츠 열기 실패: ${t.message}") }
+    }
+
+    /** Detaching/locking pauses video without changing the owner's requested pause state. Audio continues. */
+    fun setSurface(next: Surface?) = onMain {
+        surface = next
+        output.visible = next?.isValid == true
+        try {
+            mp?.setSurface(next)
+            reconcile()
+            report()
+        } catch (t: Throwable) { listener.onContentError("display_unavailable", "영상 화면 연결 실패: ${t.message}") }
+    }
+
+    fun frameRendered() = onMain {
+        if (prepared && output.hasVideo && output.visible && !output.seeking && !output.rendered) { output.rendered = true; report() }
+    }
+
+    private fun seek(seconds: Double) {
+        pendingSeekS = seconds.coerceAtLeast(0.0)
+        output.seeking = true; output.ended = false
+        mp?.seekTo((pendingSeekS * 1000).toLong(), MediaPlayer.SEEK_CLOSEST)
+    }
+    private fun reconcile() {
+        if (!prepared || closed) return
+        try {
+            val p = mp ?: return
+            if (output.canPlay) { if (!p.isPlaying) p.start() }
+            else if (p.isPlaying) p.pause()
+        } catch (t: Throwable) { listener.onContentError("content_unavailable", "재생 제어 실패: ${t.message}") }
+    }
+    fun apply(changes: JSONObject) = onMain {
+        val c = changes.optJSONObject("content") ?: changes
+        try {
+            if (c.has("volume")) { volume = c.optInt("volume", volume).coerceIn(0, 100); applyVolume() }
+            if (c.has("paused")) { output.paused = c.optBoolean("paused"); if (!output.paused) output.ended = false }
+            if (c.has("position_s")) {
+                pendingSeekS = c.optDouble("position_s", 0.0).coerceAtLeast(0.0)
+                if (prepared) seek(pendingSeekS)
+            }
+            reconcile(); report()
+        } catch (t: Throwable) { listener.onContentError("content_unavailable", "재생 제어 실패: ${t.message}") }
+    }
+    fun snapshot(): JSONObject = latest
+    private fun report() {
+        if (closed) return
+        val p = mp
+        val running = try { prepared && p?.isPlaying == true } catch (_: Throwable) { false }
+        val pos = try { if (prepared) p!!.currentPosition / 1000.0 else pendingSeekS } catch (_: Throwable) { pendingSeekS }
+        val duration = try { if (prepared) (p!!.duration / 1000.0).coerceAtLeast(0.0) else 0.0 } catch (_: Throwable) { 0.0 }
+        latest = JSONObject().put("playing", output.playing(running)).put("position_s", pos)
+            .put("paused", output.paused).put("volume", volume).put("duration_s", duration).put("ended", output.ended)
+            .put("has_video", output.hasVideo).put("video_visible", output.visible && output.rendered)
+            .put("needs_display", output.needsDisplay).put("width", width).put("height", height)
+        listener.onPlayback(latest)
+    }
+    private fun applyVolume() {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * volume / 100f), 0)
+        mp?.setVolume(1f, 1f)
+    }
+    fun stop() = onMain {
+        if (!closed) {
+            closed = true; main.removeCallbacksAndMessages(null)
+            mp?.release(); mp = null; surface = null
         }
     }
-
-    /** 허브 update changes{content{paused, position_s, volume}} — 반영 뒤 즉시 보고(조작 반영 p95 300ms 목표). */
-    fun apply(changes: JSONObject) {
-        val c = changes.optJSONObject("content") ?: changes
-        val p = mp
-        try {
-            if (c.has("volume")) { volume = c.optInt("volume", volume).coerceIn(0, 100); p?.let { applyVolume(it, volume) } }
-            if (c.has("position_s")) {
-                val pos = c.optDouble("position_s", 0.0).coerceAtLeast(0.0)
-                if (prepared && p != null) p.seekTo((pos * 1000).toInt()) else pendingSeekS = pos
-            }
-            if (c.has("paused")) {
-                paused = c.optBoolean("paused", paused)
-                if (prepared && p != null) { if (paused) { if (p.isPlaying) p.pause() } else { ended = false; p.start() } }
-            }
-        } catch (t: Throwable) { Log.w(TAG, "update 반영 실패: $t") }
-        report()
-    }
-
-    fun snapshot(): JSONObject {
-        val p = mp
-        val playing = try { prepared && p?.isPlaying == true } catch (_: Throwable) { false }
-        val pos = try { if (prepared && p != null) p.currentPosition / 1000.0 else pendingSeekS } catch (_: Throwable) { 0.0 }
-        val dur = try { if (prepared && p != null && p.duration > 0) p.duration / 1000.0 else 0.0 } catch (_: Throwable) { 0.0 }
-        return JSONObject().put("playing", playing).put("position_s", pos).put("paused", paused)
-            .put("volume", volume).put("duration_s", dur).put("ended", ended)
-    }
-
-    private fun report() { try { listener.onPlayback(snapshot()) } catch (_: Throwable) {} }
-
-    private fun applyVolume(p: MediaPlayer, vol: Int) {
-        // 무인 폰은 미디어 볼륨이 0 일 수 있다 — PhoneActions.playStream 과 같은 규칙으로 스트림 볼륨을 퍼센트로.
-        try {
-            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(max * vol / 100f), 0)
-        } catch (_: Throwable) {}
-        try { p.setVolume(1f, 1f) } catch (_: Throwable) {}
-    }
-
-    fun stop() {
-        reporter?.cancel(false)
-        exec.shutdown()
-        val p = mp ?: return
-        mp = null
-        try { if (p.isPlaying) p.stop() } catch (_: Throwable) {}
-        try { p.release() } catch (_: Throwable) {}
-        try { wifiLock?.let { if (it.isHeld) it.release() } } catch (_: Throwable) {}
-        wifiLock = null
-    }
-
-    companion object { private const val TAG = "IndieBizMediaContent" }
 }

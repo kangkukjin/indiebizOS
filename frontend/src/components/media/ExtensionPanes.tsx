@@ -4,38 +4,41 @@ import { Pause, Play } from 'lucide-react';
 import type { SessionContent } from '../../lib/media/types';
 
 /** Speaker purpose: pick a local file or URL, play it through an <audio>, hand the element to the engine. */
-export function SpeakerSourcePane({ sending, onSource }: { sending: boolean; onSource: (element: HTMLMediaElement) => void }) {
-  const audio = useRef<HTMLAudioElement>(null);
+export function SpeakerSourcePane({ sending, video = false, onSource }: { sending: boolean; video?: boolean; onSource: (element: HTMLMediaElement) => void }) {
+  const audio = useRef<HTMLMediaElement>(null);
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
+  const [sourceError, setSourceError] = useState('');
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   useEffect(() => () => { if (objectUrl) URL.revokeObjectURL(objectUrl); }, [objectUrl]);
   const load = (src: string, label: string) => {
     const el = audio.current; if (!el) return;
-    el.src = src; setName(label);
+    setSourceError(''); el.src = src; setName(label);
     void el.play().catch(() => { /* autoplay may need the user's click on the element */ });
   };
   return (
     <section aria-label="재생음 보내기" className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-      <p className="text-sm text-stone-300">이 PC 에서 재생하는 소리를 장치의 스피커로 보냅니다.</p>
+      <p className="text-sm text-stone-300">{video ? '이 PC에서 재생하는 영상과 소리를 장치로 보냅니다. 폰에서 미디어 화면을 열어 주세요.' : '이 PC에서 재생하는 소리를 장치의 스피커로 보냅니다.'}</p>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <label className="cursor-pointer rounded border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10">
           파일 고르기
-          <input type="file" accept="audio/*,video/*" className="hidden" onChange={e => {
+          <input type="file" disabled={sending} accept={video ? "video/*" : "audio/*,video/*"} className="hidden" onChange={e => {
             const file = e.target.files?.[0]; if (!file) return;
             const next = URL.createObjectURL(file);
             setObjectUrl(previous => { if (previous) URL.revokeObjectURL(previous); return next; });
             load(next, file.name);
           }} />
         </label>
-        <input className="w-72 rounded border border-white/20 bg-stone-900 px-2 py-1.5 text-sm" placeholder="또는 주소(URL)" aria-label="재생 주소" value={url} onChange={e => setUrl(e.target.value)} />
-        <button className="rounded border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-40" disabled={!url.trim()} onClick={() => load(url.trim(), url.trim())}>불러오기</button>
+        <input className="w-72 rounded border border-white/20 bg-stone-900 px-2 py-1.5 text-sm" placeholder="또는 주소(URL)" aria-label="재생 주소" disabled={sending} value={url} onChange={e => setUrl(e.target.value)} />
+        <button className="rounded border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-40" disabled={sending || !url.trim()} onClick={() => load(url.trim(), url.trim())}>불러오기</button>
       </div>
-      <audio ref={audio} controls muted className="w-96" aria-label="보낼 소리" />
+      {video ? <video ref={audio as React.RefObject<HTMLVideoElement>} crossOrigin="anonymous" onError={() => setSourceError('파일을 재생할 수 없습니다. 코덱이나 URL의 접근·CORS 허용 여부를 확인해 주세요.')} controls muted playsInline className="max-h-72 w-full" aria-label="보낼 영상" />
+        : <audio ref={audio as React.RefObject<HTMLAudioElement>} crossOrigin="anonymous" onError={() => setSourceError('파일을 재생할 수 없습니다. 코덱이나 URL의 접근·CORS 허용 여부를 확인해 주세요.')} controls muted className="w-96" aria-label="보낼 소리" />}
+      {sourceError && <p role="alert" className="text-sm text-red-300">{sourceError}</p>}
       {name && <p className="max-w-md truncate text-xs text-stone-400">{name}</p>}
       <button className="rounded bg-emerald-600 px-4 py-2 text-sm hover:bg-emerald-500 disabled:opacity-40" disabled={!name || sending}
         onClick={() => { if (audio.current) onSource(audio.current); }}>
-        {sending ? '보내는 중' : '이 소리를 장치로 보내기'}
+        {sending ? '보내는 중' : video ? '이 영상을 장치로 보내기' : '이 소리를 장치로 보내기'}
       </button>
       <p className="text-[11px] text-stone-500">여기서는 소리가 나지 않고 장치에서만 납니다. 통화용 잡음 억제는 적용하지 않습니다.</p>
     </section>

@@ -129,6 +129,22 @@ IBL 로 묶을 때는 `{items:[session]}`.
 - 주소: 대상이 접근 가능한지 허브가 HEAD 로 확인 못 하면 그대로 전달하되 실패는 `content_unavailable`.
 - 재생 이동: 대상 `state{playing:true}` 확인 전에는 원본을 멈추지 않는다(원본 정지는 UI 의 별도 조작).
 
+### 7.1 폰의 영상 출력과 실시간 재생
+
+`playback`은 `delivery:"content"` 외에 `delivery:"realtime"`도 받습니다. 실시간은
+`video_receive:true` 장치만 허용하며 기본 트랙은 `hub→device`, `source:"playback"`인
+video와 audio입니다. 반대 방향이나 센서 소스로 바꾼 트랙은 거절합니다. 콘텐츠 전달에는
+`content.path|url`이 필요하고, 실시간 소스는 중앙 통화 창의 재생 요소가 제공합니다.
+
+폰은 `video_receive`와 `video_playback` 능력을 신고합니다. 미디어 화면은 등록 권한을
+바꾸지 않으며 카메라·마이크를 열지 않습니다. 콘텐츠의 실제 비디오 트랙을 확인해 영상이면
+표시 Surface를 기다립니다. `content` 보고에는 `has_video, video_visible, needs_display,
+width, height`가 추가됩니다. 표시 전에는 `playing:false`; 미표시는
+`state:"needs_local_action", needs_local_action:{code:"display_required", message:…}`입니다.
+첫 표시 프레임 이후 재생 성공을 보고합니다. 실시간 영상도 장치의 표시 보고가 성공을 결정하며
+중앙 송신 엔진의 `active`만으로 대체하지 않습니다. 화면 제거 시 영상은 표시 대기로 돌아가고,
+콘텐츠 동영상은 위치를 보존하여 멈춥니다. 오디오 전용 콘텐츠는 계속 재생합니다.
+
 ## 8. 정책 데이터
 
 - `data/session_lease_policy.yaml` — 임대 프로필(screen/terminal/media).

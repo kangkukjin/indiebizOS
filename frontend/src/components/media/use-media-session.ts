@@ -291,8 +291,11 @@ export function useMediaSession(sessionId: string): MediaSessionView {
   const sendPlayback = useCallback(async (element: HTMLMediaElement) => {
     const s = client.current?.session; if (!s) return;
     try {
-      const stream = capturePlayback(element);
-      if (engine.current) { const track = stream.getAudioTracks()[0]; if (track) await engine.current.replaceTrack('audio', track); local.current = stream; setLocalStream(stream); }
+      const stream = capturePlayback(element, s.purpose === 'playback' && s.delivery === 'realtime');
+      if (engine.current) {
+        for (const track of stream.getTracks()) await engine.current.replaceTrack(track.kind as 'audio' | 'video', track);
+        stopStream(local.current); local.current = stream; setLocalStream(stream);
+      }
       else await startEngine(s, stream);
     } catch (e) { fail(e instanceof Error ? e.message : '재생음을 보내지 못했습니다.'); }
   }, [fail, startEngine]);

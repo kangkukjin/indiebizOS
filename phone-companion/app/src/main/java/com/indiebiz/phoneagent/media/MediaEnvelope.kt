@@ -81,6 +81,7 @@ class MediaEnvelope private constructor(val raw: JSONObject) {
 
     fun sendsVideo(): Boolean = tracks.any { it.fromDevice && it.kind == "video" }
     fun sendsAudio(): Boolean = tracks.any { it.fromDevice && it.kind == "audio" }
+    fun receivesVideo(): Boolean = tracks.any { it.toDevice && it.kind == "video" }
     fun receivesAudio(): Boolean = tracks.any { it.toDevice && it.kind == "audio" }
     /** 음악 전송(playback 소스) — 음성용 AEC/NS 를 끈다(설계 §7). */
     fun sendsPlaybackAudio(): Boolean = tracks.any { it.fromDevice && it.kind == "audio" && it.source == "playback" }
@@ -91,10 +92,9 @@ class MediaEnvelope private constructor(val raw: JSONObject) {
     /** WebRTC 피어가 필요한가(폰이 보내거나 받는 실시간 트랙이 하나라도). */
     fun needsPeer(): Boolean = !isContentDelivery() && tracks.any { it.fromDevice || it.toDevice }
 
-    /** 계약 §1 에 없는 트랙 조합 — 폰엔 표시면이 없고(영상 수신 불가) 화면 캡처는 세션별 동의가 필요(미지원). */
+    /** 수신 영상은 미디어 화면에 표시한다. 폰 화면 송출은 아직 지원하지 않는다. */
     fun unsupportedTrack(): TrackSpec? = tracks.firstOrNull {
         (it.kind != "audio" && it.kind != "video") ||
-            (localRole == "device" && it.toDevice && it.kind == "video") ||
             (it.fromDevice && it.source == "screen") ||
             (it.fromDevice && it.kind == "video" && it.source != "camera") ||
             (it.fromDevice && it.kind == "audio" && it.source != "mic" && it.source != "playback")

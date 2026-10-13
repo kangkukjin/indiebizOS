@@ -25,7 +25,8 @@ Maven 해석 성공은 통과 조건이 아니다 — 설계 §12 의 실기기 
 - `SessionRunner` — 세션 수명·오디오 포커스·WakeLock·종료 멱등.
 - `SignalingClient` — OkHttp WS `/limb/resident/media/<sid>`(LAN 핀 우선), keepalive·세대·재접속.
 - `MediaEngine` — WebRTC answerer. 프로필: 32비트 640x480@15, 64비트 1280x720@24. getStats → 계약 quality.
-- `ContentPlayer` — purpose=playback/delivery=content 의 MediaPlayer(세션 범위, 2초 보고, update 반영).
+- `ContentPlayer` — purpose=playback/delivery=content 의 MediaPlayer(세션 범위, 메인 루퍼 직렬화, 1초 보고, update 반영).
+- `MediaDisplayActivity` — 파일·URL 영상(TextureView)과 실시간 수신 영상(SurfaceViewRenderer), 재생·탐색·볼륨·종료. 표시되지 않은 영상은 재생 성공으로 보고하지 않는다.
 - `CctvModeActivity`/`CctvState` — 사용자가 켜 두는 카메라 대기 모드(Android 10+ while-in-use 요건).
 
 ## 실기기 미검증 (adb 기기 0대 — 2026-10-13 시점)

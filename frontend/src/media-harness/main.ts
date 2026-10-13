@@ -5,15 +5,16 @@ import './session';
  * Driven by scripts/test_media_loopback.py with Chromium's fake camera.
  */
 import { MediaEngine, type EngineSignalType } from '../lib/media/engine';
+import { capturePlayback } from '../lib/media/tracks';
 import { SignalSequencer } from '../lib/media/signal';
 import type { QualityProfile } from '../lib/media/types';
 
-interface Pair { a: MediaEngine; b: MediaEngine; log: string[]; sequencerA: SignalSequencer; sequencerB: SignalSequencer; frames: unknown[] }
+interface Pair { a: MediaEngine; b: MediaEngine; log: string[]; sequencerA: SignalSequencer; sequencerB: SignalSequencer; frames: unknown[]; cleanup?: () => void }
 
 declare global {
   interface Window {
     harness: {
-      run(options: { trickle: boolean; profile?: QualityProfile }): Promise<{ generation: number; path: string | null; quality: Record<string, number>; width: number; framesDecoded: number; states: string[]; peerAlive: boolean[] }>;
+      run(options: { trickle: boolean; profile?: QualityProfile; playback?: boolean }): Promise<{ generation: number; path: string | null; quality: Record<string, number>; width: number; framesDecoded: number; states: string[]; peerAlive: boolean[] }>;
       restart(): Promise<{ generation: number; state: string; frameGenerations: number[] }>;
       close(): void;
       pair: Pair | null;
@@ -45,7 +46,7 @@ function waitFor(check: () => boolean, timeoutMs: number, what: string): Promise
   });
 }
 
-async function run({ trickle, profile }: { trickle: boolean; profile?: QualityProfile }) {
+async function run({ trickle, profile, playback }: { trickle: boolean; profile?: QualityProfile; playback?: boolean }) {
   window.harness.close();
   const states: string[] = [];
   const log: string[] = [];
@@ -76,7 +77,25 @@ async function run({ trickle, profile }: { trickle: boolean; profile?: QualityPr
   current = { a, b, log, sequencerA, sequencerB, frames };
   window.harness.pair = current;
   const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
-  a.addStream(stream, 'speech');  // the answerer's transceiver comes from the offer
+  if (playback) {
+    const chunks: Blob[] = [];
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8' });
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const recorded = new Promise<void>(resolve => { recorder.onstop = () => resolve(); });
+    recorder.start();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    recorder.stop(); await recorded;
+    stream.getTracks().forEach(t => t.stop());
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    video.src = url; video.loop = true; video.muted = true;
+    document.body.appendChild(video); await video.play();
+    a.addStream(capturePlayback(video, true), 'music');
+    current.cleanup = () => { video.pause(); video.remove(); URL.revokeObjectURL(url); };
+  } else {
+    a.addStream(stream, 'speech');
+    current.cleanup = () => stream.getTracks().forEach(t => t.stop());
+  }
   await a.createOffer();
   await waitFor(() => a.state === 'active' && b.state === 'active', 15000, 'both engines active');
   await waitFor(() => remote.videoWidth > 0, 15000, 'remote video has dimensions');
@@ -99,7 +118,7 @@ async function restart() {
 }
 
 function close() {
-  current?.a.close(); current?.b.close(); current = null; window.harness.pair = null;
+  current?.cleanup?.(); current?.a.close(); current?.b.close(); current = null; window.harness.pair = null;
 }
 
 window.harness = { run, restart, close, pair: null };

@@ -61,9 +61,9 @@ class MediaSessionService : Service() {
             // Android 12+: 백그라운드 FGS 시작 제한 / Android 14: 유형별 권한·while-in-use → 정직한 로컬 행동 요청
             Log.w(TAG, "포그라운드 전환 실패: $t")
             lastError = JSONObject().put("code", "needs_local_action").put("message", t.toString())
-            deliver(JSONObject().put("error", "needs_local_action").put("message", "폰에서 카메라 대기 모드를 시작해 주세요")
+            deliver(JSONObject().put("error", "needs_local_action").put("message", localActionMessage(env))
                 .put("needs_local_action", JSONObject().put("code", "permission_required").put("reason", t.javaClass.simpleName)
-                    .put("message", "폰에서 카메라 대기 모드를 시작해 주세요")))
+                    .put("message", localActionMessage(env))))
             finish(); return
         }
         val r = SessionRunner(applicationContext, env) { reason ->
@@ -97,7 +97,7 @@ class MediaSessionService : Service() {
     /** API 30+: 용도별 비트. API 29: mediaPlayback 또는 매니페스트 전체. API 28(J7·Android 9): 유형 없음. */
     private fun fgsType(env: MediaEnvelope): Int {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return 0
-        val playback = env.receivesAudio() || env.isContentDelivery()
+        val playback = env.receivesAudio() || env.receivesVideo() || env.isContentDelivery()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return if (playback && !env.sendsVideo() && !env.sendsAudio()) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                    else ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
@@ -121,7 +121,8 @@ class MediaSessionService : Service() {
             "video_call" -> "영상 통화 중"
             else -> "미디어 세션"
         }
-        val tap = PendingIntent.getActivity(this, 0, Intent(this, CctvModeActivity::class.java),
+        val display = env.isContentDelivery() || env.receivesVideo()
+        val tap = PendingIntent.getActivity(this, 0, Intent(this, if (display) MediaDisplayActivity::class.java else CctvModeActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return Notification.Builder(this, CH_ID)
             .setContentTitle("IndieBiz 미디어 세션").setContentText(what)
@@ -144,6 +145,12 @@ class MediaSessionService : Service() {
         @Volatile private var lastError: JSONObject? = null
         @Volatile private var lastEnd: JSONObject? = null
 
+        private fun localActionMessage(env: MediaEnvelope): String =
+            if (env.isContentDelivery() || env.receivesVideo()) "폰에서 미디어 화면을 열고 다시 시도해 주세요"
+            else "폰에서 카메라 대기 모드를 시작해 주세요"
+
+        fun currentRunner(): SessionRunner? = runner?.takeIf { !it.ended }
+
         fun currentSessionId(): String? = runner?.takeIf { !it.ended }?.sessionId
 
         private fun deliver(result: JSONObject) { pendingResult = result; pending?.countDown() }
@@ -164,12 +171,12 @@ class MediaSessionService : Service() {
             try { ContextCompat.startForegroundService(ctx, intent) } catch (t: Throwable) {
                 pending = null
                 return JSONObject().put("error", "needs_local_action").put("message", "서비스 시작 거부: $t")
-                    .put("needs_local_action", JSONObject().put("code", "permission_required").put("message", "폰에서 카메라 대기 모드를 시작해 주세요"))
+                    .put("needs_local_action", JSONObject().put("code", "permission_required").put("message", localActionMessage(env)))
             }
             try { latch.await(3, TimeUnit.SECONDS) } catch (_: InterruptedException) {}
             pending = null
             val r = pendingResult ?: return JSONObject().put("error", "needs_local_action").put("message", "서비스 접수 응답 없음(3초)")
-                .put("needs_local_action", JSONObject().put("code", "permission_required").put("message", "폰에서 카메라 대기 모드를 시작해 주세요"))
+                .put("needs_local_action", JSONObject().put("code", "permission_required").put("message", localActionMessage(env)))
             if (r.optString("error") == "accepted") return JSONObject().put("accepted", true).put("session_id", r.optString("active_session")).put("already_active", true)
             return r
         }

@@ -6,6 +6,10 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.net.wifi.WifiManager
 import android.os.PowerManager
+import android.os.Handler
+import android.os.Looper
+import android.view.Surface
+import org.webrtc.VideoTrack
 import android.util.Log
 import org.json.JSONObject
 import org.webrtc.IceCandidate
@@ -27,6 +31,39 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
     @Volatile private var needsLocalAction: JSONObject? = null
     @Volatile private var lastQuality: JSONObject? = null
     @Volatile private var lastPlayback: JSONObject? = null
+
+    private val main = Handler(Looper.getMainLooper())
+    @Volatile var remoteVideo: VideoTrack? = null; private set
+    val eglContext get() = engine?.eglContext
+    var releaseDisplay: (() -> Unit)? = null
+    private var videoVisible = false
+    private var videoRendered = false
+    private var peerActive = false
+    fun setOutputSurface(surface: Surface?) { player?.setSurface(surface) }
+    fun contentFrameRendered() { player?.frameRendered() }
+    fun playbackSnapshot(): JSONObject = player?.snapshot() ?: JSONObject()
+    fun setVideoVisible(visible: Boolean) {
+        videoVisible = visible
+        if (!visible) videoRendered = false
+        if (env.receivesVideo()) displayState()
+    }
+    fun videoFrameRendered() {
+        if (!ended && videoVisible) { videoRendered = true; displayState() }
+    }
+    private fun displayState() {
+        if (ended) return
+        if (!videoVisible) {
+            state = "needs_local_action"
+            needsLocalAction = JSONObject().put("code", "display_required").put("message", "폰에서 미디어 화면을 열어 주세요")
+        } else {
+            needsLocalAction = null
+            state = if (peerActive && videoRendered) "active" else "connecting"
+        }
+        reportState()
+    }
+    override fun onVideo(track: VideoTrack, local: Boolean) {
+        if (!local) main.post { if (!ended) remoteVideo = track }
+    }
 
     private val signaling = SignalingClient(env, this)
     private var engine: MediaEngine? = null
@@ -120,7 +157,7 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
             signaling.send("renegotiate", JSONObject().put("reason", "signaling_reconnected").put("ice_restart", true))
             if (state == "active") state = "reconnecting"
         }
-        reportState(lastPlayback)
+        if (env.receivesVideo()) displayState() else reportState(lastPlayback)
     }
     override fun onIceServers(servers: org.json.JSONArray) { engine?.updateIce(servers) }
     override fun onOffer(sdp: String, generation: Int) { engine?.handleOffer(sdp) }
@@ -150,8 +187,8 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
     override fun onAnswer(sdp: String, fingerprint: String) { signaling.sendAnswer(sdp, fingerprint) }
     override fun onConnectionState(s: String) {
         when (s) {
-            "active" -> { state = "active"; needsLocalAction = null; reportState() }
-            "reconnecting", "connecting" -> { state = s; reportState() }
+            "active" -> { peerActive = true; if (env.receivesVideo()) main.post { displayState() } else { state = "active"; needsLocalAction = null; reportState() } }
+            "reconnecting", "connecting" -> { peerActive = false; state = s; reportState() }
             "failed" -> {
                 state = "reconnecting"
                 signaling.bumpGeneration()
@@ -171,7 +208,13 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
     // ── ContentPlayer.Listener ─────────────────────────────────────────────────
     override fun onPlayback(report: JSONObject) {
         lastPlayback = report
-        if (state != "active" && report.optBoolean("playing")) state = "active"
+        if (report.optBoolean("needs_display")) {
+            state = "needs_local_action"
+            needsLocalAction = JSONObject().put("code", "display_required").put("message", "폰에서 미디어 화면을 열어 주세요")
+        } else {
+            needsLocalAction = null
+            state = if (report.optBoolean("playing") || report.optBoolean("paused") || report.optBoolean("ended")) "active" else "connecting"
+        }
         reportState(report)
     }
     override fun onContentError(code: String, message: String) {
@@ -182,12 +225,14 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
     // ── 종료(멱등) ─────────────────────────────────────────────────────────────
     @Synchronized
     fun end(reason: String, notifyHub: Boolean) {
+        if (Looper.myLooper() != Looper.getMainLooper()) { main.post { end(reason, notifyHub) }; return }
         if (ended) return
         ended = true; endReason = reason; state = "ended"
         Log.i(TAG, "세션 종료 ${sessionId.take(8)}… ($reason)")
         statsTask?.cancel(false); timeoutTask?.cancel(false)
         if (notifyHub) { try { signaling.sendEnd(reason) } catch (_: Throwable) {} }
         try { signaling.close() } catch (_: Throwable) {}
+        releaseDisplay?.invoke(); releaseDisplay = null; remoteVideo = null
         try { engine?.close() } catch (t: Throwable) { Log.w(TAG, "엔진 정리 실패: $t") }
         try { player?.stop() } catch (_: Throwable) {}
         releaseAudio()

@@ -119,6 +119,10 @@ class LauncherActivity : Activity() {
             text = "음성·영상 통화"
             setOnClickListener { startActivity(Intent(this@LauncherActivity, com.indiebiz.phoneagent.media.CallActivity::class.java)) }
         }, FrameLayout.LayoutParams(-2, -2).apply { gravity = Gravity.BOTTOM or Gravity.START })
+        root.addView(Button(this).apply {
+            text = "미디어 화면"
+            setOnClickListener { startActivity(Intent(this@LauncherActivity, com.indiebiz.phoneagent.media.MediaDisplayActivity::class.java)) }
+        }, FrameLayout.LayoutParams(-2, -2).apply { gravity = Gravity.TOP or Gravity.END })
         setContentView(root)
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {

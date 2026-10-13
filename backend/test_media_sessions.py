@@ -362,6 +362,46 @@ def test_health_and_capabilities_report_honestly(hub):
     assert hub.get('/media/capabilities', params={'target': 'nobody'}).json()['error']['code'] == 'device_not_found'
 
 
+
+def test_realtime_playback_requires_display_and_device_acknowledgement(hub):
+    _device('old-phone', kind='phone', adapter='indiebiz-v1')
+    body = {'kind': 'extension', 'purpose': 'playback', 'delivery': 'realtime', 'target': 'old-phone'}
+    assert hub.post('/media/sessions', json=body).json()['error']['code'] == 'unsupported_track'
+    rec = _device('display-phone', kind='phone', adapter='indiebiz-v1',
+                  caps={'playback': True, 'video_receive': True})
+    body['target'] = 'display-phone'
+    result = hub.post('/media/sessions', json=body).json()
+    assert result['success'], result
+    sid = result['session']['session_id']
+    session = ms._sessions[sid]
+    assert {t['kind'] for t in session.tracks} == {'video', 'audio'}
+    assert all(t['from'] == 'hub' and t['to'] == 'device' and t['source'] == 'playback' for t in session.tracks)
+    frame = sig.new_frame(sid, 'device', 'hub', 'state', {
+        'state': 'needs_local_action', 'needs_local_action': {'code': 'display_required', 'message': '폰에서 미디어 화면을 열어 주세요'}}, seq=1)
+    assert ms.receive_remote(frame, source='device', device_session=sid, device_id=rec['device_id']) is None
+    assert ms.status(sid)['needs_local_action']['code'] == 'display_required'
+    assert ms.signal(sid, sig.new_frame(sid, 'hub', 'device', 'state', {'state': 'active'}, seq=1)) is None
+    assert ms.status(sid)['state'] == 'needs_local_action', 'sender bytes must not claim remote rendering'
+    frame = sig.new_frame(sid, 'device', 'hub', 'state', {'state': 'active'}, seq=2)
+    assert ms.receive_remote(frame, source='device', device_session=sid, device_id=rec['device_id']) is None
+    assert ms.status(sid)['state'] == 'active'
+    ms.end(sid, 'done')
+    body['tracks'] = [{'id': 'bad', 'kind': 'video', 'source': 'camera', 'from': 'device', 'to': 'hub'}]
+    assert hub.post('/media/sessions', json=body).json()['error']['code'] == 'unsupported_track'
+
+
+def test_content_display_status_survives_contract(hub, tmp_path):
+    _device('video-phone')
+    video = tmp_path / 'movie.mp4'
+    video.write_bytes(b'fake-content')
+    sid = ms.create('extension', 'playback', 'video-phone', delivery='content', content={'path': str(video)})['session_id']
+    ms._apply_state_report(ms._sessions[sid], {'state': 'needs_local_action', 'content': {
+        'playing': False, 'has_video': True, 'needs_display': True, 'video_visible': False}})
+    assert ms.status(sid)['content']['needs_display'] is True
+    ms._apply_state_report(ms._sessions[sid], {'state': 'active', 'content': {
+        'playing': True, 'video_visible': True, 'needs_display': False}})
+    assert ms.status(sid)['content']['video_visible'] is True
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
 

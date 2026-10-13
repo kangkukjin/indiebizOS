@@ -17,7 +17,7 @@ export function planTracks(session: MediaSession, mine: ParticipantRole): TrackP
     return {
       sendMic: out.some(t => t.kind === 'audio' && t.source === 'mic'),
       sendCamera: out.some(t => t.kind === 'video' && (t.source === 'camera' || t.source === 'screen')),
-      sendPlayback: out.some(t => t.kind === 'audio' && t.source === 'playback'),
+      sendPlayback: out.some(t => t.source === 'playback'),
       recvAudio: inn.some(t => t.kind === 'audio'),
       recvVideo: inn.some(t => t.kind === 'video'),
     };
@@ -54,11 +54,16 @@ export async function captureLocal(plan: TrackPlan, choice: CaptureChoice, profi
 }
 
 /** Capture an `<audio>` element (local file or URL) as the `playback` track — no voice processing. */
-export function capturePlayback(element: HTMLMediaElement): MediaStream {
+export function capturePlayback(element: HTMLMediaElement, video = false): MediaStream {
   const capture = (element as HTMLMediaElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream });
   const fn = capture.captureStream ?? capture.mozCaptureStream;
   if (!fn) throw new Error('이 환경에서는 재생음을 보낼 수 없습니다.');
   const stream = fn.call(element);
+  if (video && !stream.getVideoTracks().length) {
+    stopStream(stream); throw new Error('재생 중인 영상이 없습니다. 동영상을 재생한 뒤 보내 주세요.');
+  }
+  if (!video) for (const track of stream.getVideoTracks()) { stream.removeTrack(track); track.stop(); }
+  if (!stream.getTracks().length) throw new Error('보낼 미디어가 없습니다. 재생 상태와 주소의 접근 권한을 확인해 주세요.');
   for (const track of stream.getAudioTracks()) if ('contentHint' in track) track.contentHint = 'music';
   return stream;
 }

@@ -109,6 +109,7 @@ object MediaBridge {
         return JSONObject()
             .put("media_session", JSONObject()
                 .put("camera", cam).put("microphone", mic).put("speaker", true).put("playback", true)
+                .put("video_receive", true).put("video_playback", true)
                 .put("screen", false)
                 .put("camera_ready", cam && camPerm && CctvState.cameraReady())
                 .put("microphone_ready", mic && micPerm && CctvState.microphoneReady())

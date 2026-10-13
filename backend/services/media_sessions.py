@@ -282,8 +282,10 @@ def create(kind: str, purpose: str, target: str, *, tracks: Optional[List[Dict]]
         raise MediaError("invalid_purpose", "목적이 종류와 맞지 않습니다")
     if delivery not in ("realtime", "content"):
         raise MediaError("invalid_delivery")
-    if purpose == "playback" and delivery != "content":
-        raise MediaError("invalid_delivery", "playback 은 delivery:content")
+    if purpose == "playback" and delivery == "content" and not content:
+        raise MediaError("content_unavailable", "content 에 path 또는 url 이 필요합니다")
+    if purpose == "playback" and delivery == "realtime" and content:
+        raise MediaError("invalid_delivery", "실시간 재생은 통화 창에서 재생 소스를 선택합니다")
     if purpose != "playback" and delivery == "content":
         raise MediaError("invalid_delivery", "실시간 목적에 content 전달은 쓸 수 없습니다")
     if not isinstance(target, str) or not target.strip():
@@ -347,6 +349,16 @@ def _create_extension(purpose, target, tracks, delivery, content, want_mic) -> S
         if active_for_device(rec["device_id"]):
             raise MediaError("device_busy", "이 장치에 열린 미디어 세션을 먼저 닫으세요")
     rows = tracks or _tracks_for(purpose, "extension", want_mic)
+    if purpose == "playback" and delivery == "realtime":
+        if not media_caps.get("video_receive"):
+            raise MediaError("unsupported_track", "이 장치는 실시간 영상 수신을 지원하지 않습니다")
+        rows = tracks or [
+            {"id": "v0", "kind": "video", "source": "playback", "from": "hub", "to": "device", "state": "requested"},
+            {"id": "a0", "kind": "audio", "source": "playback", "from": "hub", "to": "device", "state": "requested"},
+        ]
+        if not any(t.get("kind") == "video" for t in rows) or any(
+                t.get("from") != "hub" or t.get("to") != "device" or t.get("source") != "playback" for t in rows):
+            raise MediaError("unsupported_track", "실시간 재생은 중앙에서 장치로 보내는 재생 영상·소리입니다")
     for t in rows:
         if t.get("kind") not in ("audio", "video") or t.get("from") not in ("hub", "device") or t.get("to") not in ("hub", "device"):
             raise MediaError("unsupported_track")
@@ -855,13 +867,15 @@ def _apply_state_report(s: Session, payload: Dict) -> None:
         s.quality = {k: payload["quality"].get(k) for k in ("rtt_ms", "loss", "jitter_ms", "bitrate_kbps", "fps", "width", "height", "dropped")}
     if payload.get("path") in ("direct", "relay"):
         s.path = payload["path"]
-    _CONTENT_KEYS = ("playing", "position_s", "paused", "volume", "duration_s", "ended", "control")
+    _CONTENT_KEYS = ("playing", "position_s", "paused", "volume", "duration_s", "ended", "control", "has_video", "video_visible", "needs_display", "width", "height")
     if isinstance(payload.get("content"), dict):
         s.content_state.update({k: v for k, v in payload["content"].items() if k in _CONTENT_KEYS})
     if s.content and any(k in payload for k in _CONTENT_KEYS):   # 장치가 최상위에 실어 보내는 모양도 받는다
         s.content_state.update({k: payload[k] for k in _CONTENT_KEYS if k in payload})
     if state == "needs_local_action":
-        s.needs_local_action = {"code": payload.get("code") or "needs_local_action", "message": payload.get("message") or "장치에서 필요한 행동을 해 주세요"}
+        action = payload.get("needs_local_action")
+        action = action if isinstance(action, dict) else payload
+        s.needs_local_action = {"code": action.get("code") or "needs_local_action", "message": action.get("message") or "장치에서 필요한 행동을 해 주세요"}
         _set_state(s, "needs_local_action")
     elif state == "active":
         s.disconnected_at = None
@@ -908,7 +922,9 @@ def signal(sid: str, frame: Dict) -> Optional[str]:
                 s.lease.renew()
             return None
         if kind == "state":
-            _apply_state_report(s, payload)
+            # For a remote display, only its rendered output can acknowledge success.
+            if not (s.kind == "extension" and any(t.get("to") == "device" and t.get("kind") == "video" for t in s.tracks)):
+                _apply_state_report(s, payload)
             return None
         if kind in ("offer", "answer"):
             sdp = payload.get("sdp")

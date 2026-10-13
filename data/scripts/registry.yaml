@@ -56,7 +56,7 @@ github저장소메타:
 미디어세션:
   description: '미디어 세션 제어(docs/MEDIA_SESSION_CONTRACT.md) — args: op(capabilities|create|status|accept|reject|end|update|list|history|health)·
     target(장치 이름·device_id 또는 통화 상대 이름/npub)·kind(call|extension)·purpose(voice_call|video_call|camera|microphone|speaker|playback)·
-    session_id·content(파일 경로 또는 URL과 재생 위치 객체)·want_mic·camera·changes·expected_revision·reason·block·active·limit. 세션 한 행을 items 로 돌려주며 통화 창은
+    session_id·delivery(content|realtime, playback 기본 content)·content(파일 경로 또는 URL과 재생 위치 객체)·want_mic·camera·changes·expected_revision·reason·block·active·limit. 세션 한 행을 items 로 돌려주며 통화 창은
     조종실·연락처 버튼이 연다(이 스크립트는 제어만). 실패는 error 코드(device_offline·device_busy·unsupported_track·relation_revoked·
     content_unavailable·signaling_unavailable 등)로 정직하게. 토큰·SDP 는 다루지 않는다.'
   file: 미디어세션.py

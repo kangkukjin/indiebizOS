@@ -81,6 +81,21 @@ def test_call_accepts_before_capture_and_decodes_on_both_hubs(servers, delay_cap
         browser.close()
 
 
+
+def test_recorded_video_element_stream_decodes_at_receiver(servers):
+    _, _, urls = servers
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(args=['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
+                                          '--allow-loopback-in-peer-connection', '--autoplay-policy=no-user-gesture-required'])
+        page = browser.new_page()
+        page.goto(urls[0])
+        page.wait_for_function('window.harness != null')
+        result = page.evaluate('window.harness.run({trickle: true, playback: true})')
+        assert result['framesDecoded'] > 0 and result['width'] > 0
+        assert result['peerAlive'] == [True, True]
+        page.evaluate('window.harness.close()')
+        browser.close()
+
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

@@ -26,7 +26,9 @@ DATA_PATH = _get_base_path() / "data"
 # 재추출에 안 지워짐 — business.db 선례). 없으면 data/(맥 기본, 회귀 0). 대화는 동기화가 없어
 # wipe=영구손실이라 폰에선 영속 위치 필수.
 _USERDATA = (_os.environ.get("INDIEBIZ_USERDATA") or "").strip()
-_PERSIST_DIR = Path(_USERDATA) if _USERDATA else DATA_PATH
+_RUNTIME_STATE = (_os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR") or "").strip()
+# 회귀/격리 실행은 모듈 import 시점의 초기화도 자기 런타임 저장소 안에서 한다.
+_PERSIST_DIR = Path(_RUNTIME_STATE or _USERDATA) if (_RUNTIME_STATE or _USERDATA) else DATA_PATH
 _PERSIST_DIR.mkdir(parents=True, exist_ok=True)
 MEMORY_DB_PATH = _PERSIST_DIR / "system_ai_memory.db"
 

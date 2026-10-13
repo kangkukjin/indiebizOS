@@ -130,9 +130,12 @@ def pytest_configure(config):
     등)가 시험이 끝난 뒤에 써도 실 저장소가 아니라 여기로 와야 한다. 덮는 저장소: completion_wait·
     script 실행 원장·ibl_runs·write_ledger·system_ai_state(각 모듈의 루트 함수가 읽는다)·회상 색인."""
     import tempfile
-    if os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR_TEST_OWNED"):
+    if getattr(config, "_runtime_state_root", None):
         return
+    # xdist 워커는 부모 환경을 상속한다. 부모의 표식을 자기 소유로 읽으면
+    # 초기 SQLite 생성과 세션 정리가 같은 디렉터리에서 경쟁한다.
     root = tempfile.mkdtemp(prefix="indiebiz-test-state-")
+    config._runtime_state_root = root
     os.environ["INDIEBIZ_RUNTIME_STATE_DIR"] = root
     os.environ["INDIEBIZ_RECALL_INDEX_DIR"] = os.path.join(root, "recall_index")
     os.environ["INDIEBIZ_RUNTIME_STATE_DIR_TEST_OWNED"] = root

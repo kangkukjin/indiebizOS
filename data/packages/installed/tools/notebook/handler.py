@@ -1026,6 +1026,7 @@ def _op_research(tool_input, context):
         "title": tool_input.get("title"), "query": tool_input.get("query"), "top_k": tool_input.get("top_k"),
         "source_ref": tool_input.get("source_ref"), "version_ref": tool_input.get("version_ref"),
         "cursor": tool_input.get("cursor"), "extraction_revision": tool_input.get("extraction_revision"),
+        "max_chars": tool_input.get("max_chars"),
         "excluded": tool_input.get("excluded", True), "include_excluded": tool_input.get("include_excluded", False),
     }))
 

@@ -69,6 +69,10 @@
             "type": "integer",
             "description": "옵션 — ask 발췌 수(기본 12) / search 결과 수(기본 8)"
           },
+          "max_chars": {
+            "type": "integer",
+            "description": "연구 read의 반환 문자 수(인용 표식 포함), 1~12000 정수·기본 12000. next_cursor와 extraction_revision으로 이어 읽기"
+          },
           "project_ref": {
             "type": "string",
             "description": "self:notebook 파라미터"

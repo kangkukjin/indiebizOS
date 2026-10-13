@@ -2568,3 +2568,4 @@
 2026-10-12 UX: 조종실 손발에서 작업창 버튼과 전용 터미널·파일·로그 UI 제거. 사람의 원격 조작은 화면 공유로 통합.
 
 2026-10-13 FEATURE: 연구 대화의 지속 질문·잠정 답변·지지/반박·남은 확인·다음 조사를 불변 판본으로 저장. 기존 self:project thread_update/questions 및 thread_messages/questions_only를 사용하며 새 액션·op·질문 추출 모델 호출은 없음. 대화창 연구 질문 화면, 원문 페이지·이력 비교·충돌 시 초안 보존, 다음 턴의 예산 제한 질문 회수. 근거는 보존 추출 판본·위치·인용·AI 실제 읽기를 검사하고 과거 영수증을 새 읽기로 승격하지 않음. 종결은 answered/withdrawn/out_of_scope 판단이며 자동 verified 없음. 내용 변경 시 다시 열림, 대화 격리·낙관적 갱신·배치 원자성 유지. backend 비system 종합 회귀 10092 통과·1 건너뜀, 관련 어휘 system 23 통과, 타입·프론트 빌드·Chromium 화면 동작·IBL 파생·층 가드 통과. 실제 모델의 장기 연구 품질 개선 효과는 미측정. 정본 설계 docs/RESEARCH_QUESTION_EVIDENCE_CONTRACT_2026_10_13.md, 사용법 guides/research_questions.md.
+2026-10-13 FIX: 긴문장63 잔여 L63-4 판정·수리. 연구 notebook read에 선택적 max_chars(1~12000, 기본 12000)를 연결하고 커서·추출 판본·분량을 이어 읽기에 보존. 부분 문단도 실제 반환 구간만 인용 근거로 기록. 실자료 9편×3500자 성공·arXiv 제목 검색 20건 확인. 관련 선택 회귀 1486 통과·1 건너뜀, backend 전수·독립 AI 새 인자 선택 및 비용 개선 미검증. 보고서 round_63/report.md §8.

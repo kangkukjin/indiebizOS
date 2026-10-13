@@ -219,5 +219,51 @@ def test_explicit_add_in_agent_turn_inherits_capture_run(lib, tmp_path):
     assert [r[0] for r in rows] == [run, 'manual']
 
 
+def test_small_pages_preserve_text_revision_and_only_visible_evidence(lib):
+    body = '가나다라마바사0123456789' * 100
+    vid = lib.capture(body, title='긴 문단')['version_ref']
+    paras, revision = lib.paragraphs(vid)
+    loc = paras[0][0]
+    expected = '\n\n'.join(f'[자료:{vid}:{place}] {text}' for place, text in paras)
+    with scope({'project_uid': lib.store.uid, 'run_id': 'small-page'}):
+        first = lib.read(vid, limit=80)
+    citation = lib.citations(f'[자료:{vid}:{loc}]', 'small-page')[0]
+    assert citation['quote'] in first['text']
+    assert 0 < len(citation['quote']) < len(body)
+    assert citation['extraction_revision'] == revision
+    lib._extraction(vid, [(loc, '바뀐 추출 내용')])
+    parts = [first['text']]
+    page = first
+    while page['next_cursor'] is not None:
+        params = page['pages'][0]
+        assert params['max_chars'] == 80 and params['extraction_revision'] == revision
+        page = lib.read(vid, offset=int(params['cursor']), limit=params['max_chars'],
+                        revision=params['extraction_revision'])
+        assert len(page['text']) <= 80
+        parts.append(page['text'])
+    assert ''.join(parts) == expected
+    assert page['total_chars'] == len(expected)
+    assert page['pages'] == []
+    assert lib.read(vid)['extraction_revision'] == revision + 1
+
+
+@pytest.mark.parametrize('limit', [0, -1, 12001, True, 3.5, '3500'])
+def test_read_rejects_invalid_character_budget(lib, limit):
+    vid = lib.capture('원문', title='검사')['version_ref']
+    with pytest.raises(ValueError, match='max_chars'):
+        lib.read(vid, limit=limit)
+
+
+def test_read_default_page_and_end_cursor(lib):
+    vid = lib.capture('본문' * 7000, title='기본 분량')['version_ref']
+    page = lib.read(vid)
+    assert len(page['text']) == 12000 and page['next_cursor'] == '12000'
+    assert page['max_chars'] == 12000
+    end = lib.read(vid, offset=page['total_chars'])
+    assert end['text'] == '' and end['next_cursor'] is None
+    with pytest.raises(ValueError, match='cursor'):
+        lib.read(vid, offset=-1)
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

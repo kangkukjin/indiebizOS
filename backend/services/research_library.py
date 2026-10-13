@@ -273,6 +273,11 @@ class ResearchLibrary:
         return {'items': [self._receipt(dict(r)) | {'created_at': r['created_at']} for r in rows]}
 
     def read(self, version, offset=0, limit=12000, revision=None):
+        """고정 추출 판본을 문자 단위로 읽고 실제 반환한 본문만 근거로 남긴다."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 12000:
+            raise ValueError('max_chars는 1~12000 사이의 정수여야 합니다')
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError('cursor는 0 이상의 문자 위치여야 합니다')
         v = self.version(version)
         try:
             paras, revision = self.paragraphs(version, revision)
@@ -283,14 +288,19 @@ class ResearchLibrary:
         text = '\n\n'.join(f'[자료:{version}:{loc}] {body}' for loc, body in paras)
         visible = text[offset:offset + limit]
         # 실제 반환한 문장만 근거 원장에 남긴다. 전체 문서를 읽었다고 승격하지 않는다.
+        position = 0
         for loc, body in paras:
-            if body and body in visible:
-                self.access(version, revision, loc, body)
+            body_start = position + len(f'[자료:{version}:{loc}] ')
+            start = max(offset, body_start) - body_start
+            end = min(offset + limit, body_start + len(body)) - body_start
+            if start < end:
+                self.access(version, revision, loc, body[start:end])
+            position = body_start + len(body) + 2
         return {**self._receipt(v), 'title': v['title'], 'origin': v['origin'], 'excluded': bool(v['excluded']), 'extraction_revision': revision,
                 'text': visible, 'next_cursor': str(offset + limit) if len(text) > offset + limit else None,
-                'total_chars': len(text), 'offset': offset,
+                'total_chars': len(text), 'offset': offset, 'max_chars': limit,
                 'controls': [{**self._receipt(v), 'title': '자료 관리'}],
-                'pages': [{'title': '다음 부분 읽기', 'version_ref': version, 'cursor': str(offset + limit), 'extraction_revision': revision}] if len(text) > offset + limit else [],
+                'pages': [{'title': '다음 부분 읽기', 'version_ref': version, 'cursor': str(offset + limit), 'extraction_revision': revision, 'max_chars': limit}] if len(text) > offset + limit else [],
                 'blocks': [{'type': 'paragraph', 'text': visible}]}
 
     def search(self, query, limit=12):

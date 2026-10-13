@@ -72,11 +72,18 @@ AI나 외부 자료의 주장을 사용자 입장으로 바꾸지 않는다. 질
 [self:project]{op:"thread_send",project_ref:"project_uid",thread_ref:"thread_ref",message:"학급 규모와 학습 효과를 조사해줘",request_id:"클라이언트의 고유 요청 ID"}
 [self:notebook]{op:"search",project_ref:"project_uid",thread_ref:"thread_ref",query:"학급 규모"}
 [self:notebook]{op:"read",project_ref:"project_uid",thread_ref:"thread_ref",version_ref:"version_ref"}
+[self:notebook]{op:"read",project_ref:"project_uid",thread_ref:"thread_ref",version_ref:"version_ref",max_chars:3500}
 [self:notebook]{op:"add",project_ref:"project_uid",thread_ref:"thread_ref",version_ref:"version_ref"}
 ```
 
 thread_send의 task_ref는 기존 self:task로 조회·취소한다. 같은 request_id와 같은 내용의
 재전송은 새 턴을 만들지 않는다. project_ref가 있는 notebook은 전역 name과 함께 쓸 수 없고 thread_ref가 필요하다. 연구 실행 중에는 생략하면 현재 대화를 사용한다. thread_send는 attachments:[{path,name}]도 받는다.
+
+read의 `max_chars`는 반환 본문의 문자 수(인용 표식 포함)로 1~12,000의 정수이며 기본은 12,000이다.
+여러 자료를 table:ai 등에 묶어 전달할 때 자료별 분량을 줄이고 필요한 부분을 이어 읽을 수 있다.
+`total_chars`는 전체 길이, `next_cursor`는 다음 문자 위치다. 다음 요청에는 같은 `version_ref`와
+반환된 `extraction_revision`, `next_cursor`를 `cursor`로 전달한다. `pages`에도 판본과 분량이 보존된다.
+작은 페이지는 전체 문서 검토가 아니며, 인용 근거에는 실제 반환된 본문 부분만 기록된다.
 
 ## 저장과 복구
 

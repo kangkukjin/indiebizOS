@@ -274,7 +274,10 @@ def notebook_operation(params):
             raise ValueError('versions 에는 source_ref 가 필요합니다 — sources 로 먼저 자료를 고르세요')
         return lib.versions(params.get('source_ref'))
     if op == 'read':
-        return lib.read(params.get('version_ref'), int(params.get('cursor') or 0), revision=params.get('extraction_revision'))
+        max_chars = params.get('max_chars')
+        return lib.read(params.get('version_ref'), int(params.get('cursor') or 0),
+                        limit=12000 if max_chars is None else max_chars,
+                        revision=params.get('extraction_revision'))
     if op == 'remove':
         return lib.exclude(params.get('source_ref'), params.get('excluded', True))
     if op == 'add':

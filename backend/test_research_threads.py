@@ -8,6 +8,35 @@ import pytest
 from test_lifecycle_vocab_2026_10_05 import world, _run
 
 
+def test_notebook_read_character_budget_through_public_ibl(world, monkeypatch):
+    import research_threads as service
+    import notebook_store
+    from research_library import ResearchLibrary
+    from research_store import ResearchStore
+    from project_manager import ProjectManager
+    monkeypatch.setattr(notebook_store, 'semantic_available', lambda: False)
+    row = ProjectManager().create_project('분량 연구', project_kind='research')
+    store = ResearchStore(row['path'])
+    tid = store.create_thread('분량')['id']
+    lib = ResearchLibrary(store, tid)
+    vid = lib.capture('확보한 연구 본문입니다. ' * 1000, title='근거')['version_ref']
+    inputs = {'project': store.uid, 'thread': tid, 'version': vid}
+    result = _run('[self:notebook]{op:"read",project_ref:$project,thread_ref:$thread,'
+                  'version_ref:$version,max_chars:3500}', row['path'], inputs)
+    assert result.get('success') is not False, result
+    # 실제 핸들러→연구 서비스→자료실의 반환값을 검사한다.
+    assert '"max_chars": 3500' in json.dumps(result), result
+    assert '"next_cursor": "3500"' in json.dumps(result), result
+    params = {'op': 'read', 'project_ref': store.uid, 'thread_ref': tid, 'version_ref': vid}
+    page = service.notebook_operation({**params, 'max_chars': 3500})
+    assert len(page['text']) == 3500
+    next_page = service.notebook_operation({**params, **page['pages'][0]})
+    assert next_page['offset'] == 3500 and next_page['max_chars'] == 3500
+    assert len(service.notebook_operation(params)['text']) == 12000
+    with pytest.raises(ValueError, match='max_chars'):
+        service.notebook_operation({**params, 'max_chars': 0})
+
+
 def test_research_public_ibl_roundtrip(world, monkeypatch):
     import research_threads as service
     import launcher_ops

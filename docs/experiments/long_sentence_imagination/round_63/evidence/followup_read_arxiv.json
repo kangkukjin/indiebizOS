@@ -1,0 +1,87 @@
+{
+  "read": {
+    "success": true,
+    "pages": [
+      {
+        "version_ref": "f2794cc0522b48d9a6294113fa1ebd6f",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 98848,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "a9e4ef959e354a8d81c73af116d245cf",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 50086,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "1f73bd59d3594236abed275d792dc441",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 51035,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "2ba679e0fa584ff0bddaa73ddf8850c5",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 96295,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "43dde141ea134f4fb85c8daa5d5a73ce",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 85941,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "4b86c16b8c64471f9f47cc891d731cec",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 18028,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "4fb5a0b167b94c0e9896b187335d9d8d",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 81833,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "2779f0441cde47a8b5ad07932e9a90f7",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 61041,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      },
+      {
+        "version_ref": "46292dc07c894f3eaeb9e7686c70d0d3",
+        "chars": 3500,
+        "max_chars": 3500,
+        "total_chars": 66177,
+        "next_cursor": "3500",
+        "extraction_revision": 1
+      }
+    ],
+    "body_chars": 31500,
+    "model_calls": 0
+  },
+  "arxiv": {
+    "http_status": 200,
+    "total_results": 20,
+    "first_title": "Lost in the Middle: How Language Models Use Long Contexts",
+    "query": "all:Lost AND all:Middle AND all:Language AND all:Models AND all:Use AND all:Long AND all:Contexts"
+  }
+}

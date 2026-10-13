@@ -1,0 +1,26 @@
+{
+  "python": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "38",
+    "time": "1.385",
+    "timestamp": "2026-10-14T00:32:29.971236+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "baseline_unicode": {
+    "tests": 8,
+    "failed": 8
+  },
+  "go_suite": "passed",
+  "go_unicode_baseline": "failed: split output ���글😀",
+  "windows_amd64_test_binary": "cross-compiled; not executed",
+  "live_backend_observation": {
+    "status": "succeeded",
+    "readiness": "ready",
+    "generation": "cb26b986925e03dc7815b4e737e29644"
+  },
+  "apply_check": "passed",
+  "live_applied": false
+}

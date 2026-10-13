@@ -1,0 +1,688 @@
+diff --git a/backend/api.py b/backend/api.py
+--- a/backend/api.py
++++ b/backend/api.py
+@@ -16,7 +16,7 @@
+         _generation = os.environ["INDIEBIZ_RUNTIME_GENERATION"]
+         _receipt_path = (Path(os.environ["INDIEBIZ_BASE_PATH"]) / "data/restart_control/workers"
+                          / (_generation + ".json"))
+-        _receipt = json.loads(_receipt_path.read_text())
++        _receipt = json.loads(_receipt_path.read_text(encoding="utf-8"))
+         _managed_entry = _receipt.get("pid") == os.getpid() and _receipt.get("nonce") == _generation
+     except (OSError, ValueError, KeyError):
+         pass
+diff --git a/backend/datastore/vocabulary_state.py b/backend/datastore/vocabulary_state.py
+--- a/backend/datastore/vocabulary_state.py
++++ b/backend/datastore/vocabulary_state.py
+@@ -78,9 +78,9 @@
+             pid = valid_id(path.name)
+             if pid in packages:
+                 raise ValueError(f"묶음 ID 충돌: {pid} (두 보관 폴더)")
+-            meta = json.loads((path / "manifest.json").read_text()) if (path / "manifest.json").exists() else {}
++            meta = json.loads((path / "manifest.json").read_text(encoding="utf-8")) if (path / "manifest.json").exists() else {}
+             packages[pid] = {"path": path, "initial_active": location == "installed", "manifest": meta}
+-            td = json.loads((path / "tool.json").read_text()) if (path / "tool.json").exists() else {}
++            td = json.loads((path / "tool.json").read_text(encoding="utf-8")) if (path / "tool.json").exists() else {}
+             definitions = td if isinstance(td, list) else td.get("tools", [td] if td.get("input_schema") else [])
+             for tool in definitions:
+                 name = tool.get("name")
+@@ -90,7 +90,7 @@
+                     tools[name] = pid
+             fp = path / "ibl_actions.yaml"
+             if fp.exists():
+-                doc = yaml.safe_load(fp.read_text()) or {}
++                doc = yaml.safe_load(fp.read_text(encoding="utf-8")) or {}
+                 nodes = doc.get("nodes") or {doc.get("node"): {"actions": doc.get("actions", {})}}
+                 for node, cfg in nodes.items():
+                     for action in (cfg or {}).get("actions", {}):
+@@ -144,7 +144,7 @@
+             state = cached[1]
+         else:
+             try:
+-                state = json.loads(path.read_text())
++                state = json.loads(path.read_text(encoding="utf-8"))
+                 assert state["version"] == 1 and type(state["revision"]) is int
+                 assert isinstance(state["active"], dict)
+                 assert all(type(v) is bool for v in state["active"].values())
+diff --git a/backend/test_vocabulary_state.py b/backend/test_vocabulary_state.py
+--- a/backend/test_vocabulary_state.py
++++ b/backend/test_vocabulary_state.py
+@@ -107,3 +107,35 @@
+ 
+ if __name__ == "__main__":
+     raise SystemExit(pytest.main([__file__]))
++
++
++@pytest.mark.parametrize("locale", ["cp949", "cp1252"])
++@pytest.mark.parametrize("kind", ["manifest", "tool", "actions", "activation"])
++def test_utf8_definitions_and_activation_ignore_windows_locale(box, monkeypatch, locale, kind):
++    package = box / "data/packages/installed/tools/base"
++    value = "한글 日本語 😀"
++    files = {
++        "manifest": (package / "manifest.json", json.dumps({"name": value}, ensure_ascii=False)),
++        "tool": (package / "tool.json", json.dumps({"tools": [{"name": value}]}, ensure_ascii=False)),
++        "actions": (package / "ibl_actions.yaml", "node: sense\nactions:\n  '" + value + "': {}\n"),
++        "activation": (state.state_path(box), json.dumps({"version": 1, "revision": 0, "active": {"base": True}, "note": value}, ensure_ascii=False)),
++    }
++    path, content = files[kind]
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(content, encoding="utf-8")
++    original = Path.read_text
++    def read(self, encoding=None, errors=None, **kwargs):
++        return original(self, encoding=encoding or locale, errors=errors, **kwargs)
++    monkeypatch.setattr(Path, "read_text", read)
++    state.invalidate_inventory()
++    state._state_cache.clear()
++    if kind == "activation":
++        assert state.read_state(box)["note"] == value
++    else:
++        inv = state.inventory(box)
++        if kind == "manifest":
++            assert inv["packages"]["base"]["manifest"]["name"] == value
++        elif kind == "tool":
++            assert inv["tools"][value] == "base"
++        else:
++            assert inv["actions"]["sense:" + value] == "base"
+diff --git a/backend/test_remote_steps.py b/backend/test_remote_steps.py
+--- a/backend/test_remote_steps.py
++++ b/backend/test_remote_steps.py
+@@ -168,3 +168,29 @@
+ 
+ if __name__ == "__main__":
+     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
++
++
++@pytest.mark.parametrize("locale", ["cp949", "cp1252"])
++def test_unicode_journal_resumes_without_repeating_work(tmp_path, monkeypatch, locale):
++    root = tmp_path / "한글 日本語 😀"
++    root.mkdir()
++    p = plan(root, [{"id": "once", "argv": command("open('count','a').write('x')")}])
++    assert runner.run(p)["status"] == "succeeded"
++    original = Path.read_text
++    monkeypatch.setattr(Path, "read_text", lambda self, encoding=None, errors=None: original(self, encoding=encoding or locale, errors=errors))
++    assert runner.run(p, inspect=True)["status"] == "succeeded"
++    assert runner.run(p)["status"] == "succeeded"
++    assert (root / "count").read_text(encoding="utf-8") == "x"
++
++@pytest.mark.parametrize("locale", ["cp949", "cp1252"])
++def test_unicode_plan_cli_uses_declared_utf8(tmp_path, monkeypatch, locale):
++    root = tmp_path / "한글 日本語 😀"
++    root.mkdir()
++    p = plan(root, [{"id": "once", "argv": command("open('count','a').write('x')")}])
++    path = root / "plan.json"
++    path.write_text(json.dumps(p, ensure_ascii=False), encoding="utf-8")
++    original = Path.read_text
++    monkeypatch.setattr(Path, "read_text", lambda self, encoding=None, errors=None: original(self, encoding=encoding or locale, errors=errors))
++    monkeypatch.setattr(sys, "argv", ["remote_steps.py", str(path)])
++    assert runner.main() == 0
++    assert (root / "count").read_text(encoding="utf-8") == "x"
+diff --git a/backend/test_remote_boot.py b/backend/test_remote_boot.py
+new file mode 100644
+--- /dev/null
++++ b/backend/test_remote_boot.py
+@@ -0,0 +1,98 @@
++"""Boot observations are bound to controller birth, generation and target root."""
++import boot_paths  # noqa: F401
++import importlib.util
++import io
++import json
++from pathlib import Path
++
++import pytest
++
++ROOT = Path(__file__).resolve().parents[1]
++spec = importlib.util.spec_from_file_location("remote_boot", ROOT / "scripts/remote_boot.py")
++probe = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(probe)
++
++
++def receipt(tmp_path, phase="ACTIVE"):
++    return {"controller": {"pid": 42, "born": 100}, "generation": "new", "phase": phase,
++            "worker": {"pid": 43, "born": 101}, "code_digest": "digest"}
++
++
++def test_old_failed_receipt_cannot_fail_new_boot(tmp_path):
++    state = receipt(tmp_path, "FAILED")
++    expected = {"pid": 42, "born": 200}  # PID reused by the OS
++    assert probe.classify(state, expected, None)["status"] == "waiting"
++    assert probe.classify(state, state["controller"], "other")["status"] == "waiting"
++    assert probe.classify(state, state["controller"], "new")["status"] == "failed"
++
++
++@pytest.mark.parametrize("change", ["root", "generation", "digest", "ownership", "readiness"])
++def test_health_200_alone_cannot_certify_boot(tmp_path, change):
++    state = receipt(tmp_path)
++    runtime = {"generation": "new", "code_digest": "digest", "ownership": "known", "readiness": "ready"}
++    health = {"status": "healthy", "base_path": str(tmp_path)}
++    assert probe.classify(state, state["controller"], "new", runtime, health, tmp_path)["status"] == "succeeded"
++    if change == "root":
++        health["base_path"] = str(tmp_path / "another")
++    else:
++        runtime[{"digest": "code_digest"}.get(change, change)] = "wrong"
++    assert probe.classify(state, state["controller"], "new", runtime, health, tmp_path)["status"] == "waiting"
++
++
++class Adapter:
++    def __init__(self, root, state):
++        self.root, self.state, self.calls = root, state, 0
++        self.opener = self
++
++    def alive(self, ident):
++        return bool(ident)
++
++    def status(self, state):
++        self.calls += 1
++        return {"generation": "new", "code_digest": "digest", "ownership": "known", "readiness": "ready"}
++
++    def open(self, *args, **kwargs):
++        return io.BytesIO(json.dumps({"status": "healthy", "base_path": str(self.root)}).encode())
++
++
++def persist(root, state):
++    p = root / "data/restart_control/state.json"
++    p.parent.mkdir(parents=True, exist_ok=True)
++    p.write_text(json.dumps(state), encoding="utf-8")
++
++
++def test_current_failure_stops_without_health_poll_or_sleep(tmp_path):
++    state = receipt(tmp_path, "FAILED")
++    persist(tmp_path, state)
++    adapter = Adapter(tmp_path, state)
++    result = probe.wait_for_boot(tmp_path, ROOT, state["controller"], adapter=adapter,
++                                 sleep=lambda _: pytest.fail("waited after definite failure"))
++    assert result["status"] == "failed" and adapter.calls == 0
++
++
++def test_new_starting_after_old_failure_then_verified_active(tmp_path):
++    state = receipt(tmp_path)
++    old = {**state, "phase": "FAILED", "controller": {"pid": 41, "born": 1}}
++    persist(tmp_path, old)
++    tick = [0]
++    def sleep(_):
++        tick[0] += 1
++        persist(tmp_path, {**state, "phase": "STARTING" if tick[0] == 1 else "ACTIVE"})
++    result = probe.wait_for_boot(tmp_path, ROOT, state["controller"], adapter=Adapter(tmp_path, state),
++                                 clock=lambda: tick[0], sleep=sleep, timeout=10)
++    assert result["status"] == "succeeded" and tick[0] == 2
++
++
++def test_restart_during_http_observation_invalidates_success(tmp_path):
++    state = receipt(tmp_path)
++    persist(tmp_path, state)
++    adapter = Adapter(tmp_path, state)
++    original = adapter.open
++    def opening(*args, **kwargs):
++        persist(tmp_path, {**state, "generation": "next", "phase": "STARTING"})
++        return original(*args, **kwargs)
++    adapter.open = opening
++    tick = [0]
++    result = probe.wait_for_boot(tmp_path, ROOT, state["controller"], adapter=adapter, timeout=1,
++                                 clock=lambda: tick[0], sleep=lambda _: tick.__setitem__(0, 2))
++    assert result["status"] == "timeout" and result["reason"] == "state_changed_during_probe"
+diff --git a/scripts/remote_steps.py b/scripts/remote_steps.py
+--- a/scripts/remote_steps.py
++++ b/scripts/remote_steps.py
+@@ -140,7 +140,7 @@
+     if inspect:
+         if not journal.exists():
+             return {"status": "not_started", "run_id": plan["run_id"]}
+-        state = json.loads(journal.read_text())
++        state = json.loads(journal.read_text(encoding="utf-8"))
+         if state["identity"] != identity:
+             raise ValueError("plan or target changed; use a new run_id")
+         return {**state, "observation": "last_persisted_state", "process_liveness": "not_checked"}
+@@ -148,7 +148,7 @@
+     # All plans against this checkout share one lock, not just one run_id.
+     with exclusive(home / "execution.lock"):
+         if journal.exists():
+-            state = json.loads(journal.read_text())
++            state = json.loads(journal.read_text(encoding="utf-8"))
+             if state["identity"] != identity:
+                 raise ValueError("plan or target changed; use a new run_id")
+         else:
+@@ -230,7 +230,7 @@
+     parser.add_argument("--retry", help="Retry only this terminal failed step; never an interrupted step")
+     args = parser.parse_args()
+     try:
+-        state = run(json.loads(args.plan.read_text()), retry=args.retry, inspect=args.status)
++        state = run(json.loads(args.plan.read_text(encoding="utf-8")), retry=args.retry, inspect=args.status)
+         print(json.dumps(state, ensure_ascii=False))
+         return 0 if args.status or state["status"] == "succeeded" else 1
+     except (OSError, ValueError) as exc:
+diff --git a/scripts/remote_boot.py b/scripts/remote_boot.py
+new file mode 100644
+--- /dev/null
++++ b/scripts/remote_boot.py
+@@ -0,0 +1,95 @@
++#!/usr/bin/env python3
++"""Observe one controller identity/generation; never launch, stop or retry it."""
++import sys
++from pathlib import Path
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
++import boot_paths  # noqa: F401,E402
++
++import argparse
++import json
++import time
++
++from restart_process import ProcessAdapter, identity
++from restart_protocol import control_dir, read_json
++
++
++def classify(state, controller, generation, runtime=None, health=None, base=None):
++    """Old receipts cannot fail or certify a new boot. No credentials in output."""
++    if state.get("controller") != controller:
++        return {"status": "waiting", "reason": "different_controller"}
++    if generation and state.get("generation") != generation:
++        return {"status": "waiting", "reason": "different_generation"}
++    phase = state.get("phase")
++    observed = {"phase": phase, "generation": state.get("generation"),
++                "controller": controller, "worker": state.get("worker")}
++    if phase in {"FAILED", "STOPPED"}:
++        return {**observed, "status": "failed", "reason": "controller_" + phase.lower()}
++    if phase != "ACTIVE":
++        return {**observed, "status": "waiting", "reason": "not_active"}
++    runtime = runtime or {}
++    if (not state.get("generation") or runtime.get("generation") != state["generation"]
++            or runtime.get("code_digest") != state.get("code_digest")
++            or runtime.get("ownership") != "known"
++            or runtime.get("readiness") not in {"ready", "degraded"}):
++        return {**observed, "status": "waiting", "reason": "runtime_not_verified"}
++    health = health or {}
++    if (health.get("status") != "healthy" or not health.get("base_path")
++            or Path(health["base_path"]).resolve() != Path(base).resolve()):
++        return {**observed, "status": "waiting", "reason": "health_root_not_verified"}
++    return {**observed, "status": "succeeded", "readiness": runtime["readiness"],
++            "scope": "backend boot; models and Electron require separate checks"}
++
++
++def wait_for_boot(base, code_root, controller, *, generation=None, port=8765, timeout=300,
++                  interval=1, adapter=None, clock=time.monotonic, sleep=time.sleep):
++    base = Path(base)
++    adapter = adapter or ProcessAdapter(base, code_root, port)
++    start = clock()
++    last = {"status": "waiting", "reason": "no_state"}
++    while clock() - start < timeout:
++        if not adapter.alive(controller):
++            return {"status": "failed", "reason": "controller_exited", "controller": controller}
++        state = read_json(control_dir(base) / "state.json", {})
++        last = classify(state, controller, generation)
++        if last["status"] == "failed":
++            return last
++        if last["reason"] == "runtime_not_verified":
++            runtime = adapter.status(state)
++            try:
++                with adapter.opener.open(f"http://127.0.0.1:{port}/health", timeout=3) as response:
++                    health = json.load(response)
++            except (OSError, ValueError):
++                health = {}
++            last = classify(state, controller, generation, runtime, health, base)
++            # Re-read after the HTTP calls: a concurrent restart invalidates this observation.
++            latest = read_json(control_dir(base) / "state.json", {})
++            if any(latest.get(k) != state.get(k) for k in ("controller", "generation", "phase", "worker")):
++                last = {"status": "waiting", "reason": "state_changed_during_probe"}
++            elif last["status"] == "succeeded" and adapter.alive(controller) and adapter.alive(state.get("worker")):
++                return last
++        sleep(interval)
++    return {**last, "status": "timeout", "seconds": clock() - start}
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--root", type=Path, required=True)
++    parser.add_argument("--controller-pid", type=int, required=True)
++    parser.add_argument("--generation")
++    parser.add_argument("--port", type=int, default=8765)
++    parser.add_argument("--timeout", type=float, default=300)
++    args = parser.parse_args()
++    if args.timeout <= 0 or not 1 <= args.port <= 65535:
++        parser.error("positive timeout and port 1..65535 required")
++    try:
++        result = wait_for_boot(args.root, args.root, identity(args.controller_pid),
++                               generation=args.generation, port=args.port, timeout=args.timeout)
++    except Exception as exc:
++        result = {"status": "failed", "reason": type(exc).__name__}
++    print(json.dumps(result, ensure_ascii=True))
++    return 0 if result["status"] == "succeeded" else 2
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/scripts/ci_boot_smoke.py b/scripts/ci_boot_smoke.py
+--- a/scripts/ci_boot_smoke.py
++++ b/scripts/ci_boot_smoke.py
+@@ -21,7 +21,8 @@
+ import sys
+ import tempfile
+ import time
+-import urllib.request
++from remote_boot import wait_for_boot
++from restart_process import identity
+ 
+ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ API_PY = os.path.join(ROOT, "backend", "api.py")
+@@ -81,35 +82,16 @@
+         )
+         try:
+             t0 = time.monotonic()
+-            payload = None
+-            while time.monotonic() - t0 < DEADLINE_S:
+-                if proc.poll() is not None:
+-                    print(f"[boot-smoke] FAILED — 서버 프로세스가 부팅 중 죽음 (exit {proc.returncode})", flush=True)
+-                    print(boot_diagnostics(base, log_path), flush=True)
+-                    return 1
+-                state = controller_state(base)
+-                if state.get("phase") == "FAILED" and (state.get("controller") or {}).get("pid") == proc.pid:
+-                    print("[boot-smoke] FAILED — 제어자가 부팅 실패를 확정함", flush=True)
+-                    print(boot_diagnostics(base, log_path), flush=True)
+-                    return 1
+-                try:
+-                    with urllib.request.urlopen(HEALTH, timeout=3) as r:
+-                        payload = json.loads(r.read().decode("utf-8"))
+-                        break
+-                except Exception:
+-                    time.sleep(2)
+-
+-            if payload is None:
+-                print(f"[boot-smoke] FAILED — {DEADLINE_S}s 안에 /health 응답 없음", flush=True)
++            result = wait_for_boot(base, ROOT, identity(proc.pid), port=PORT,
++                                   timeout=DEADLINE_S, interval=2)
++            if result["status"] != "succeeded":
++                print("[boot-smoke] FAILED — " + json.dumps(result), flush=True)
+                 print(boot_diagnostics(base, log_path), flush=True)
+                 return 1
+-            if payload.get("status") != "healthy":
+-                print(f"[boot-smoke] FAILED — /health 페이로드 비정상: {payload}", flush=True)
+-                return 1
++            took = time.monotonic() - t0
++            print(f"[boot-smoke] OK — verified backend in {took:.1f}s: {result}", flush=True)
++            return 0
+ 
+-            took = time.monotonic() - t0
+-            print(f"[boot-smoke] OK — /health 200 in {took:.1f}s: {payload}", flush=True)
+-            return 0
+         finally:
+             proc.terminate()
+             try:
+diff --git a/helper/resident_execute.go b/helper/resident_execute.go
+--- a/helper/resident_execute.go
++++ b/helper/resident_execute.go
+@@ -18,6 +18,7 @@
+ 	"strings"
+ 	"sync"
+ 	"time"
++	"unicode/utf8"
+ )
+ 
+ type residentHTTPError struct {
+@@ -62,6 +63,7 @@
+ 
+ var residentHTTP = &http.Client{Timeout: 45 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
+ 
++// Each pipe decodes independently; one shared log preserves arrival order.
+ type residentLog struct {
+ 	r       *residentRuntime
+ 	jid     string
+@@ -71,19 +73,52 @@
+ 	gap     bool
+ 	failure error
+ }
+-
+-func (w *residentLog) Write(b []byte) (int, error) {
+-	w.mu.Lock()
+-	defer w.mu.Unlock()
++type residentLogStream struct {
++	log     *residentLog
++	pending []byte
++}
++
++func (s *residentLogStream) Write(b []byte) (int, error) {
++	s.log.mu.Lock()
++	defer s.log.mu.Unlock()
+ 	n := len(b)
++	s.pending = append(s.pending, b...)
++	end := 0
++	for end < len(s.pending) && utf8.FullRune(s.pending[end:]) {
++		_, size := utf8.DecodeRune(s.pending[end:])
++		end += size
++	}
++	complete := append([]byte(nil), s.pending[:end]...)
++	s.pending = append(s.pending[:0], s.pending[end:]...)
++	if err := s.log.writeLocked([]byte(strings.ToValidUTF8(string(complete), "�"))); err != nil {
++		return 0, err
++	}
++	return n, nil
++}
++func (s *residentLogStream) Flush() {
++	s.log.mu.Lock()
++	defer s.log.mu.Unlock()
++	if len(s.pending) > 0 {
++		_ = s.log.writeLocked([]byte(strings.ToValidUTF8(string(s.pending), "�")))
++		s.pending = nil
++	}
++}
++func (w *residentLog) writeLocked(b []byte) error {
+ 	w.tail = append(w.tail, b...)
+ 	if len(w.tail) > 32768 {
+-		w.tail = w.tail[len(w.tail)-32768:]
++		start := len(w.tail) - 32768
++		for start < len(w.tail) && !utf8.RuneStart(w.tail[start]) {
++			start++
++		}
++		w.tail = w.tail[start:]
+ 	}
+ 	for len(b) > 0 {
+ 		size := len(b)
+ 		if size > 16384 {
+ 			size = 16384
++			for size > 0 && !utf8.RuneStart(b[size]) {
++				size--
++			}
+ 		}
+ 		piece := b[:size]
+ 		b = b[size:]
+@@ -96,11 +131,11 @@
+ 		}
+ 		if e := w.r.event(w.jid, "log", map[string]interface{}{"text": string(piece)}); e != nil {
+ 			w.failure = e
+-			return 0, e
++			return e
+ 		}
+ 		w.written += size
+ 	}
+-	return n, nil
++	return nil
+ }
+ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]interface{} {
+ 	var c Command
+@@ -170,15 +205,18 @@
+ 		var cmd *exec.Cmd
+ 		if runtime.GOOS == "windows" {
+ 			if c.Shell == "powershell" || c.Shell == "pwsh" || c.Shell == "ps" {
+-				cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", c.Cmd)
++				cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); "+c.Cmd)
+ 			} else {
+-				cmd = exec.CommandContext(ctx, "cmd", "/D", "/S", "/C", c.Cmd)
++				cmd = exec.CommandContext(ctx, "cmd", "/D", "/S", "/C", "chcp 65001>nul & "+c.Cmd)
+ 			}
+ 		} else {
+ 			cmd = exec.CommandContext(ctx, "/bin/sh", "-c", c.Cmd)
+ 		}
+ 		cmd.Dir = dir
+ 		cmd.Env = os.Environ()
++		if runtime.GOOS == "windows" {
++			cmd.Env = append(cmd.Env, "PYTHONIOENCODING=utf-8")
++		}
+ 		for k, v := range extra.Env {
+ 			if strings.ContainsAny(k, "=\x00") {
+ 				return errResult("invalid_env", "")
+@@ -302,9 +340,12 @@
+ 		configureResidentProcess(cmd)
+ 	}
+ 	log := &residentLog{r: r, jid: jid}
+-	cmd.Stdout = log
+-	cmd.Stderr = log
++	stdout, stderr := &residentLogStream{log: log}, &residentLogStream{log: log}
++	cmd.Stdout = stdout
++	cmd.Stderr = stderr
+ 	e := cmd.Run()
++	stdout.Flush()
++	stderr.Flush()
+ 	result := map[string]interface{}{"exit": exitCode(e), "output": string(log.tail), "log_truncated": log.gap, "cwd": workingDir}
+ 	// ErrWaitDelay means the command exited successfully, but inherited output
+ 	// pipes never closed. Re-running it could duplicate an already running server.
+diff --git a/helper/resident_elevation.go b/helper/resident_elevation.go
+--- a/helper/resident_elevation.go
++++ b/helper/resident_elevation.go
+@@ -90,6 +90,7 @@
+ 		}
+ 	}()
+ 	log := &residentLog{r: r, jid: jid}
++	stream := &residentLogStream{log: log}
+ 	decoder := json.NewDecoder(conn)
+ 	for {
+ 		var m struct {
+@@ -97,14 +98,19 @@
+ 			Exit *int
+ 		}
+ 		if e = decoder.Decode(&m); e != nil {
++			stream.Flush()
+ 			return map[string]interface{}{"error": "관리자 작업 연결이 종료됐습니다.", "cancelled": ctx.Err() != nil, "output": string(log.tail)}
+ 		}
+ 		if len(m.Data) > 0 {
+-			if _, e = log.Write(m.Data); e != nil {
++			if _, e = stream.Write(m.Data); e != nil {
+ 				return errResult("elevation_output", e.Error())
+ 			}
+ 		}
+ 		if m.Exit != nil {
++			stream.Flush()
++			if log.failure != nil {
++				return errResult("elevation_output", log.failure.Error())
++			}
+ 			return map[string]interface{}{"exit": *m.Exit, "output": string(log.tail), "elevated": true, "cwd": cmd.Dir}
+ 		}
+ 	}
+diff --git a/helper/resident_log_test.go b/helper/resident_log_test.go
+new file mode 100644
+--- /dev/null
++++ b/helper/resident_log_test.go
+@@ -0,0 +1,82 @@
++package main
++
++import (
++	"context"
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"runtime"
++	"strings"
++	"testing"
++	"unicode/utf8"
++)
++
++func readResidentLog(t *testing.T, r *residentRuntime) string {
++	t.Helper()
++	paths, _ := filepath.Glob(filepath.Join(r.cfg.DataDir, "spool", "events", "*.json"))
++	var result strings.Builder
++	for _, path := range paths {
++		data, err := os.ReadFile(path)
++		if err != nil {
++			t.Fatal(err)
++		}
++		var e residentEvent
++		if err := json.Unmarshal(data, &e); err != nil {
++			t.Fatal(err)
++		}
++		if e.Kind == "log" {
++			result.WriteString(e.Payload["text"].(string))
++		}
++	}
++	return result.String()
++}
++func TestResidentLogUTF8AcrossWritesAndChunkBoundary(t *testing.T) {
++	r := residentTestRuntime(t)
++	log := &residentLog{r: r, jid: "unicode"}
++	stream := &residentLogStream{log: log}
++	text := strings.Repeat("a", 16383) + strings.Repeat("한글 日本語 😀", 3000)
++	b := []byte(text)
++	for _, span := range [][2]int{{0, 16384}, {16384, 16385}, {16385, len(b)}} {
++		if n, err := stream.Write(b[span[0]:span[1]]); err != nil || n != span[1]-span[0] {
++			t.Fatal(n, err)
++		}
++	}
++	stream.Flush()
++	if got := readResidentLog(t, r); got != text {
++		t.Fatalf("stream corrupted: got %d bytes, want %d", len(got), len(text))
++	}
++	if !utf8.Valid(log.tail) || !strings.HasSuffix(text, string(log.tail)) || len(log.tail) > 32768 {
++		t.Fatal("invalid tail")
++	}
++}
++func TestResidentLogIndependentPipesAndIncompleteEOF(t *testing.T) {
++	r := residentTestRuntime(t)
++	log := &residentLog{r: r, jid: "pipes"}
++	stdout, stderr := &residentLogStream{log: log}, &residentLogStream{log: log}
++	b := []byte("😀")
++	stdout.Write(b[:2])
++	stderr.Write([]byte("한글"))
++	stdout.Write(b[2:])
++	stdout.Flush()
++	stderr.Flush()
++	if got := readResidentLog(t, r); got != "한글😀" {
++		t.Fatal(got)
++	}
++	stdout.Write([]byte{0xe3})
++	stdout.Flush()
++	if got := readResidentLog(t, r); got != "한글😀�" {
++		t.Fatal(got)
++	}
++}
++
++func TestResidentWindowsShellUnicodeOutputAndExit(t *testing.T) {
++	if runtime.GOOS != "windows" {
++		t.Skip("Windows PowerShell transport")
++	}
++	r := residentTestRuntime(t)
++	job := residentTestJob(t, map[string]interface{}{"op": "shell", "shell": "powershell", "cmd": "[Console]::Write('한글 日本語 😀'); exit 7"})
++	got := r.execute(context.Background(), job)
++	if got["exit"] != 7 || got["output"] != "한글 日本語 😀" {
++		t.Fatal(got)
++	}
++}
+diff --git a/data/guides/guest_helper.md b/data/guides/guest_helper.md
+--- a/data/guides/guest_helper.md
++++ b/data/guides/guest_helper.md
+@@ -165,6 +165,32 @@
+ 추적 변경을 버리거나 강제 reset/clean하지 않고, 기존 venv·API 키도 교체하지 않는다.
+ 완료 후 앱을 실제로 시작하고 필요한 기능을 확인하는 것은 별도 검증이며 이 조리법은
+ 실행 중인 앱을 자동 재기동하지 않는다. 최초 설치의 인증 설정·훈련용 선택 의존성은 포함하지 않는다.
++
++**최초 설치와 실제 부팅 확인**: `remote_install.py`는 기존 저장소 업데이트다. 새 설치는
++저장소의 `scripts/bootstrap.py` 절차를 사용하고 설치 명령과 검증 명령을 각각 기록한다.
++PowerShell에서 외부 명령 뒤 로그를 출력해야 하면 `$code=$LASTEXITCODE`로 즉시 보존하고
++마지막에 `exit $code`로 반환한다. 로그 출력 성공을 설치 성공으로 바꾸지 않는다.
++
++백엔드를 시작했다면 시작한 제어자의 PID를 보존하고 다음 관측기를 호출한다.
++기존 제어자를 재사용한 재시작이라면 해당 요청에서 받은 `--generation`도 지정한다.
++
++```sh
++/absolute/python3 scripts/remote_boot.py --root /work/indiebizOS --controller-pid 1234 --generation REQUEST_GENERATION --port 8765 --timeout 300
++```
++
++이 명령은 프로세스 생성 시각까지 대조하고, 현재 제어자의 FAILED/STOPPED면 즉시 실패한다.
++다른 제어자·다른 세대의 옛 FAILED는 새 실패로 쓰지 않는다. ACTIVE, 인증된 runtime의
++세대·코드 지문·준비 상태, health의 저장소 루트와 프로세스 생존을 모두 확인한 뒤 성공한다.
++관측 중 세대가 바뀌면 다시 확인한다. 자체적으로 시작·종료·재설치하지 않는다.
++`ci_boot_smoke.py`도 같은 판정기를 사용한다. `/runtime/status`를 인증 없이 호출한 403은
++기능 실패 증거가 아니며, 관측기는 해당 PC의 로컬 제어자 인증 계약을 따른다.
++
++완료 보고는 소스 확보 / 의존성 설치 / backend 부팅 / 샘플 작업 / 실제 모델 질의 /
++Electron 화면을 구분한다. `find_spec`와 디렉터리 존재는 설치 흔적이며 실행 증명이 아니다.
++UTF-8 JSON·YAML은 명시 인코딩으로 읽는다. Windows 기본 인코딩이 cp1252이면 예외 없이
++손상된 글자를 얻을 수도 있으므로, 종료 코드뿐 아니라 한글·일본어·이모지 원문도 대조한다.
++새 헬퍼의 Windows 셸은 PowerShell 출력·native 파이프와 Python 표준출력을 UTF-8로 맞춘다
++(`env.PYTHONIOENCODING`을 지정하면 명시값 우선). 바이너리는 셸 텍스트 대신 파일 전송을 쓴다.
+ 
+ 현지 AI에 위임할 수 있으면 같은 목표·절대 저장소 경로·계획·검증 조건을 전달하고, 허브는
+ 그 결과와 로그를 확인한다. 이미 연결된 위임 채널을 사용하며 새 에이전트 설치·인증은 가정하지 않는다.

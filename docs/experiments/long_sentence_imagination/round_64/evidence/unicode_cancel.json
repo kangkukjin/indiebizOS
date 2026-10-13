@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "task_ref": {
+    "kind": "guestpc",
+    "task_id": "ba7d360ca99e4c9892b3b8363a4b0525"
+  },
+  "state": "cancelled",
+  "terminal": true,
+  "timed_out": false,
+  "result": null,
+  "failure": null,
+  "progress": [
+    {
+      "cursor": 6595,
+      "kind": "queued",
+      "occurred": 1791904687.0196831
+    },
+    {
+      "cursor": 6599,
+      "kind": "cancel_requested",
+      "occurred": 1791904894.367779
+    }
+  ],
+  "accepted_at": "2026-10-14T00:18:07+0900",
+  "elapsed_s": null,
+  "limb": "guestpc-7da97e970821",
+  "helper_mode": "resident",
+  "op": "shell",
+  "request_id": "r64-unicode-output",
+  "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+  "shell": "powershell",
+  "progress_scope": "recent_5_events",
+  "history_cursor": 6599,
+  "history_args": {
+    "op": "history",
+    "limb": "guestpc-7da97e970821",
+    "job": "ba7d360ca99e4c9892b3b8363a4b0525",
+    "cursor": 0
+  },
+  "started_at": null,
+  "seconds": null,
+  "outcome": "cancelled",
+  "execution_result": null,
+  "ended_at": null
+}

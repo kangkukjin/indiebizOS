@@ -1,0 +1,499 @@
+{
+  "seconds": 85.54279685020447,
+  "run_status": "completed",
+  "usage": {
+    "steps": 11204,
+    "rows": 19,
+    "elapsed_ms": 85258,
+    "limits": {
+      "steps": 100000,
+      "rows": 10000
+    },
+    "steps_by_span": [
+      {
+        "node_id": "record:8134:8250",
+        "steps": 477,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 8134,
+          "end": 8250,
+          "line": 124,
+          "column": 9
+        }
+      },
+      {
+        "node_id": "record:9176:9651",
+        "steps": 477,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 9176,
+          "end": 9651,
+          "line": 146,
+          "column": 10
+        }
+      },
+      {
+        "node_id": "record:7167:7226",
+        "steps": 135,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7167,
+          "end": 7226,
+          "line": 103,
+          "column": 10
+        }
+      },
+      {
+        "node_id": "record:7052:7120",
+        "steps": 126,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7052,
+          "end": 7120,
+          "line": 101,
+          "column": 9
+        }
+      },
+      {
+        "node_id": "pure_call:7281:7303",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7281,
+          "end": 7303,
+          "line": 107,
+          "column": 9
+        }
+      },
+      {
+        "node_id": "pure_call:7310:7328",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7310,
+          "end": 7328,
+          "line": 108,
+          "column": 7
+        }
+      },
+      {
+        "node_id": "pure_call:7343:7369",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7343,
+          "end": 7369,
+          "line": 108,
+          "column": 40
+        }
+      },
+      {
+        "node_id": "pure_call:7347:7368",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7347,
+          "end": 7368,
+          "line": 108,
+          "column": 44
+        }
+      },
+      {
+        "node_id": "pure_call:7377:7392",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7377,
+          "end": 7392,
+          "line": 108,
+          "column": 74
+        }
+      },
+      {
+        "node_id": "pure_call:7397:7420",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7397,
+          "end": 7420,
+          "line": 108,
+          "column": 94
+        }
+      },
+      {
+        "node_id": "pure_call:7401:7419",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7401,
+          "end": 7419,
+          "line": 108,
+          "column": 98
+        }
+      },
+      {
+        "node_id": "pure_call:7934:7968",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7934,
+          "end": 7968,
+          "line": 120,
+          "column": 9
+        }
+      },
+      {
+        "node_id": "pure_call:7949:7967",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7949,
+          "end": 7967,
+          "line": 120,
+          "column": 24
+        }
+      },
+      {
+        "node_id": "pure_call:7975:7998",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7975,
+          "end": 7998,
+          "line": 121,
+          "column": 7
+        }
+      },
+      {
+        "node_id": "pure_call:7979:7997",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 7979,
+          "end": 7997,
+          "line": 121,
+          "column": 11
+        }
+      },
+      {
+        "node_id": "pure_call:8005:8023",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 8005,
+          "end": 8023,
+          "line": 121,
+          "column": 37
+        }
+      },
+      {
+        "node_id": "pure_call:8162:8210",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 8162,
+          "end": 8210,
+          "line": 124,
+          "column": 37
+        }
+      },
+      {
+        "node_id": "pure_call:8184:8209",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 8184,
+          "end": 8209,
+          "line": 124,
+          "column": 59
+        }
+      },
+      {
+        "node_id": "pure_call:8214:8249",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 8214,
+          "end": 8249,
+          "line": 124,
+          "column": 89
+        }
+      },
+      {
+        "node_id": "pure_call:8227:8248",
+        "steps": 56,
+        "location": {
+          "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709",
+          "start": 8227,
+          "end": 8248,
+          "line": 124,
+          "column": 102
+        }
+      }
+    ],
+    "steps_other": 9093,
+    "steps_by_line": [
+      {
+        "line": 108,
+        "steps": 1316,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 124,
+        "steps": 1177,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 146,
+        "steps": 785,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 121,
+        "steps": 588,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 142,
+        "steps": 540,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 148,
+        "steps": 504,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 82,
+        "steps": 370,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 120,
+        "steps": 336,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 149,
+        "steps": 336,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 147,
+        "steps": 252,
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      }
+    ],
+    "tool_ms_by_line": [
+      {
+        "line": 112,
+        "ms": 47409,
+        "calls": 28,
+        "actions": [
+          "self:task"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 19,
+        "ms": 31678,
+        "calls": 10,
+        "actions": [
+          "limbs:guestpc"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 73,
+        "ms": 4986,
+        "calls": 1,
+        "actions": [
+          "limbs:guestpc"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 99,
+        "ms": 135,
+        "calls": 9,
+        "actions": [
+          "limbs:guestpc"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 36,
+        "ms": 22,
+        "calls": 1,
+        "actions": [
+          "self:write"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 53,
+        "ms": 20,
+        "calls": 1,
+        "actions": [
+          "self:limb"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 46,
+        "ms": 15,
+        "calls": 1,
+        "actions": [
+          "self:write"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      },
+      {
+        "line": 54,
+        "ms": 7,
+        "calls": 1,
+        "actions": [
+          "table:filter"
+        ],
+        "source_hash": "52a7d0b50675798767b490a6f6e5a73a4e4624b208eb50ed162f32eea2743709"
+      }
+    ]
+  },
+  "source_hash": "d083e075c4161ab599ecb917808fc2a12232f30db2e6b9607d6cdc2398b9566a",
+  "stages": {
+    "native": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "cf3d240555904d60bb01f1bf4c3481d7"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 0.9096338748931885,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "{\"encoding\": \"cp1252\", \"utf8_mode\": 0}\r\n{\"packages\": [\"sample\"], \"tools\": {\"sample\": \"sample\"}, \"actions\": {\"sample:run\": \"sample\"}}\r\n"
+      }
+    },
+    "inventory": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "cf3d240555904d60bb01f1bf4c3481d7"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 0.9096338748931885,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "{\"encoding\": \"cp1252\", \"utf8_mode\": 0}\r\n{\"packages\": [\"sample\"], \"tools\": {\"sample\": \"sample\"}, \"actions\": {\"sample:run\": \"sample\"}}\r\n"
+      }
+    },
+    "process": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "4d7821f912bf47f3b0d0c4b5ff52c75d"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 0.8433718681335449,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "{\"count\": 12, \"output\": \"out\", \"note\": \"preserve-me\"}\r\n"
+      }
+    },
+    "health": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "f517ea189c8b4c70b6cff6f76db0b6f3"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 1.8534619808197021,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "{\"status\":\"healthy\",\"pid\":15756,\"root\":\"C:\\\\Users\\\\kkukj\\\\indiebiz-training\\\\remote-setup\\\\r64\\\\trainer\"}\r\n"
+      }
+    },
+    "service": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "d1d0e1942a2d40c1b3b809c26ea1d9dd"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 1.8400580883026123,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "127.0.0.1 - - [14/Oct/2026 00:12:26] \"GET /health HTTP/1.1\" 200 -\r\n"
+      }
+    },
+    "verification": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "00a434c1afe844febb644484d5b52929"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 0.9527280330657959,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "{\"verified\": true, \"count\": 12, \"runs\": [\"out\"], \"old_preserved\": true}\r\n"
+      }
+    },
+    "variant": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "b02028218fe4436d8996473182b9bdbb"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 0.9216189384460449,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "{\"count\": 12, \"output\": \"out2\", \"note\": \"preserve-me\"}\r\n"
+      }
+    },
+    "variant_verify": {
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "1b69a5ec28f24bb08ba0a5d618a69492"
+      },
+      "status": "succeeded",
+      "settled": true,
+      "exit": 0,
+      "seconds": 0.8325557708740234,
+      "result": {
+        "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+        "exit": 0,
+        "log_truncated": false,
+        "output": "{\"verified\": true, \"count\": 12, \"runs\": [\"out\", \"out2\"], \"old_preserved\": true}\r\n"
+      }
+    }
+  },
+  "receipt_reuse_same_job": true,
+  "limits": [
+    "native cp1252 inventory process exited 0 but descriptions were not verified by original probe",
+    "port fallback branch not activated",
+    "no real IndieBiz full boot/model/Electron on Windows"
+  ]
+}

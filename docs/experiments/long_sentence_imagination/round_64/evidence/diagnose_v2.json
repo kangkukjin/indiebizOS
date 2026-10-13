@@ -1,0 +1,18 @@
+{
+  "limb": "guestpc-7da97e970821",
+  "limb_name": "KHJoffice",
+  "job_id": "08f0195e1b65446d8ab646ee0b48c4d4",
+  "helper_mode": "resident",
+  "op": "shell",
+  "success": true,
+  "result": {
+    "cwd": "C:/Users/kkukj/indiebiz-training/remote-setup/r64/trainer",
+    "exit": 0,
+    "log_truncated": false,
+    "output": "{\"encoding\": \"cp1252\", \"same\": false, \"got\": \"\\u00ec\\u2039\\u0153\\u00ed\\u2014\\u02dc \\u00f0\\u0178\\u02dc\\u20ac\"}\r\n{\"encoding\": \"cp949\", \"error\": \"UnicodeDecodeError\", \"detail\": \"'cp949' codec can't decode byte 0xec in position 10: illegal multibyte sequence\"}\r\n"
+  },
+  "task_ref": {
+    "kind": "guestpc",
+    "task_id": "08f0195e1b65446d8ab646ee0b48c4d4"
+  }
+}

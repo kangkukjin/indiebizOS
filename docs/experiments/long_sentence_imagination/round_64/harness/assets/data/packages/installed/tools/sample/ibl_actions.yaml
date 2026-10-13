@@ -1,0 +1,4 @@
+node: sample
+actions:
+  run:
+    description: 한글 日本語 😀

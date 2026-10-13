@@ -1,0 +1,50 @@
+{
+  "backend/api.py": {
+    "before_sha256": "76e51d43b96fa230a1e806aa280ab90c01cc853f94c09a982f59809a55cb6a7b",
+    "after_sha256": "33abe278339220780c64eda3048be325ef491ee021860bb279d852da9ec5e0f6"
+  },
+  "backend/datastore/vocabulary_state.py": {
+    "before_sha256": "a3894bb2768aa7deea4e7bae50d9f002a6d5176bfedb7c4758ea7d35acdeb19f",
+    "after_sha256": "c50e894014517bcde2d7a0874a1216d29cccd2a01d168d6f1aefebd8dce3dfe8"
+  },
+  "backend/test_vocabulary_state.py": {
+    "before_sha256": "32c077dcedd7cb648977096256110883572d9cee6e4743ce2d86711276cbb8be",
+    "after_sha256": "47e4ecbf536203f188e5653e7594c5e9a1e022cdf15466ca622579aa64a16c06"
+  },
+  "backend/test_remote_steps.py": {
+    "before_sha256": "b1a53f02c42cf908ded5a7c9540577a600c5a20ede5fe89baa17595f1515d46b",
+    "after_sha256": "c7f72836044b57bf5a36f5c7e1181b4c058c9a0d9d5e0de79713535a90e7d225"
+  },
+  "backend/test_remote_boot.py": {
+    "before_sha256": null,
+    "after_sha256": "d964df2b113309401b2a23d1aa57f0661779ca2cc34e6155b468ce56daf36626"
+  },
+  "scripts/remote_steps.py": {
+    "before_sha256": "7b12e0ba72c4f39ace08ffdaede30558c6343650cc2e77b77fe5fc398192197e",
+    "after_sha256": "707acb6234b63bcea2ed819e30ce3f186ef009850610909a8132265b7722e033"
+  },
+  "scripts/remote_boot.py": {
+    "before_sha256": null,
+    "after_sha256": "a13e019312c0c85423dad5729dcc8c58188f8463245316f950a0f4b90d69d7c4"
+  },
+  "scripts/ci_boot_smoke.py": {
+    "before_sha256": "d2c43f1e9b6b72b02232c5ae612de7542d8613e69d90ff597085300f7a0cbf5d",
+    "after_sha256": "86ca4a92f08d161035849cb5595ff4d10264658d27190e90c7345ed310fa74a4"
+  },
+  "helper/resident_execute.go": {
+    "before_sha256": "a6dae582409c3856cf2fce359187e09cb3240f5ad352b8425e928873dbdbabd0",
+    "after_sha256": "3cc733aada3d0587125201acdf3e8116646cfa8f38f1e7f09c9fca7c258bb212"
+  },
+  "helper/resident_elevation.go": {
+    "before_sha256": "cefce1bc1e26efa306c9e72bc155dae273fd4d1cb91a87f8c96572197854be9d",
+    "after_sha256": "5b515a433c1625440d3dc8e3ce304d0251c54c4d52af81cb645f59bd4f20e8de"
+  },
+  "helper/resident_log_test.go": {
+    "before_sha256": null,
+    "after_sha256": "08846b7d569f2ace3d5a0a4e053d624788c2add63fc456bea2def71160ca2c49"
+  },
+  "data/guides/guest_helper.md": {
+    "before_sha256": "355bc959cbfba48eb4923d37aca732d197fff23b00f56fc77587a99452bed416",
+    "after_sha256": "cf1144122417380eb97db007811f86990a27d1c6105a308f538623891eeee380"
+  }
+}

@@ -1,0 +1,48 @@
+#!ibl edition=2
+[def:완료]($receipt) {
+  $r = [fn:외부PC작업확인]{작업:$receipt,대기:20}
+  $n = 1
+  [repeat:until $r.settled or $n >= 9] {
+    $r = [fn:외부PC작업확인]{작업:$receipt,대기:20}
+    $n = $n + 1
+  }
+  assert $r.settled, "미종료 작업 — 같은 영수증 회수 필요", $receipt
+  return $r
+}
+[def:실행]($pc,$rd,$cmd,$id,$env) {
+  $t = [fn:외부PC작업실행]{PC:$pc,명령:$cmd,작업폴더:$rd,셸:"powershell",요청ID:$id,환경:$env,실행제한:180,대기:0}
+  return [fn:완료]{receipt:$t}
+}
+$ready = [fn:외부PC준비]{PC:$pc}
+assert $ready.ok, "PC 미연결", $ready
+$writes = $assets >> [table:each] {
+  return [limbs:guestpc]{op:"write",limb:$pc,path:f"${rd}/${it.path}",content:$it.content}
+}
+$venv = [fn:실행]{pc:$pc,rd:$rd,cmd:"if (!(Test-Path .venv/Scripts/python.exe)) { py -3.13 -m venv --system-site-packages .venv; exit $LASTEXITCODE }",id:"r64-trainer-env",env:{}}
+assert $venv.command_ok==true, "가상환경 준비 실패", $venv
+$native = [fn:실행]{pc:$pc,rd:$rd,cmd:"& ./.venv/Scripts/python.exe probe_inventory.py; exit $LASTEXITCODE",id:"r64-trainer-native",env:{PYTHONUTF8:"0",PYTHONIOENCODING:"utf-8"}}
+$inventory = $native
+[if:$native.command_ok != true] {
+  $inventory = [fn:실행]{pc:$pc,rd:$rd,cmd:"& ./.venv/Scripts/python.exe probe_inventory.py; exit $LASTEXITCODE",id:"r64-trainer-utf8",env:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"}}
+}
+assert $inventory.command_ok==true, "어휘 로더 우회 후에도 실패", $inventory
+$process = [fn:실행]{pc:$pc,rd:$rd,cmd:"& ./.venv/Scripts/python.exe sample_app.py process; exit $LASTEXITCODE",id:"r64-trainer-base-process",env:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"}}
+assert $process.command_ok==true, "입력 처리 실패", $process
+$serve = [fn:외부PC작업실행]{PC:$pc,명령:"& ./.venv/Scripts/python.exe sample_app.py serve; exit $LASTEXITCODE",작업폴더:$rd,셸:"powershell",요청ID:"r64-trainer-service",환경:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"},실행제한:60,대기:0}
+$health = [fn:실행]{pc:$pc,rd:$rd,cmd:"$deadline=(Get-Date).AddSeconds(25); while (!(Test-Path service.json) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 300 }; $s=Get-Content service.json -Raw | ConvertFrom-Json; $h=Invoke-RestMethod ('http://127.0.0.1:'+$s.port+'/health'); if ($h.pid -ne $s.pid -or $h.root -ne $s.root) { exit 9 }; $h | ConvertTo-Json -Compress",id:"r64-trainer-health",env:{}}
+$stopped = [fn:완료]{receipt:$serve}
+$verify = [fn:실행]{pc:$pc,rd:$rd,cmd:"& ./.venv/Scripts/python.exe verify.py; exit $LASTEXITCODE",id:"r64-trainer-verify-base",env:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"}}
+$base = {native:$native,inventory:$inventory,process:$process,health:$health,service:$stopped,verification:$verify}
+$save = [self:write]{path:f"${out}/base.json",content:json($base)}
+assert $health.command_ok==true and $stopped.command_ok==true and $verify.command_ok==true, "서비스 또는 결과 검증 실패", $base
+# 변형: 설정의 사용자 필드를 보존하며 출력만 바꾸고, 같은 접수로 재관측한다.
+$change = [fn:실행]{pc:$pc,rd:$rd,cmd:"& ./.venv/Scripts/python.exe -c \"import json; from pathlib import Path; p=Path('config.json'); c=json.loads(p.read_text(encoding='utf-8')); c['output']='out2'; p.write_text(json.dumps(c),encoding='utf-8')\"; exit $LASTEXITCODE",id:"r64-trainer-config-variant",env:{PYTHONUTF8:"1"}}
+assert $change.command_ok==true, "설정 변경 실패", $change
+$receipt = [fn:외부PC작업실행]{PC:$pc,명령:"& ./.venv/Scripts/python.exe sample_app.py process; exit $LASTEXITCODE",작업폴더:$rd,셸:"powershell",요청ID:"r64-trainer-variant-process",환경:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"},실행제한:60,대기:0}
+$variant = [fn:완료]{receipt:$receipt}
+$recovered = [fn:외부PC작업실행]{PC:$pc,명령:"& ./.venv/Scripts/python.exe sample_app.py process; exit $LASTEXITCODE",작업폴더:$rd,셸:"powershell",요청ID:"r64-trainer-variant-process",환경:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"},작업:$receipt,실행제한:60,대기:0}
+$vcheck = [fn:실행]{pc:$pc,rd:$rd,cmd:"& ./.venv/Scripts/python.exe verify.py; exit $LASTEXITCODE",id:"r64-trainer-verify-variant",env:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"}}
+$result = {base:$base,variant:$variant,recovered:$recovered,verification:$vcheck,scope:"시험 앱·제품 어휘 로더; 전체 IndieBiz 부팅·모델·Electron 미검증"}
+$save2 = [self:write]{path:f"${out}/result.json",content:json($result)}
+assert $variant.command_ok==true and $vcheck.command_ok==true, "변형 실패", $result
+return $result

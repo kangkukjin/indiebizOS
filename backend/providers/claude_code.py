@@ -490,19 +490,18 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         ]
         supervisor_role = getattr(self, "agent_role", "execution") == "consciousness"
         response_repair = getattr(self, "restricted_response_repair", False)
-        context_update = getattr(self, "context_update_only", False)
         from research_context import library_only
         research_library = library_only()
         from repair_context import active as repair_active
         repair_mode = bool(repair_active())
-        repair_executor = repair_mode and not (supervisor_role or response_repair or context_update or research_library)
+        repair_executor = repair_mode and not (supervisor_role or response_repair or research_library)
         if repair_executor and not tools_mode:
             cmd += ["--strict-mcp-config"]
             cmd += ["--tools", "", "--allowed-tools", ",".join(
                     [t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")]
                     + [self.REPAIR_COMMAND_TOOL]),
                     "--disallowed-tools", ",".join(self.EAGER_BUILTIN_TOOLS)]
-        elif (context_update or research_library) and not response_repair:
+        elif research_library and not response_repair:
             names = [t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")]
             cmd += ["--tools", "", "--allowed-tools", ",".join(names),
                     "--disallowed-tools", ",".join(t for t in self.EAGER_TOOLS if t not in names)]
@@ -516,7 +515,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             cmd += ["--tools", ""]                  # 원샷: 도구 스키마 0
         elif tools_mode == "read":
             cmd += ["--tools", "Read"]              # 원샷+이미지: 파일 읽기만
-        if tools_mode or supervisor_role or response_repair or context_update or repair_mode or research_library:
+        if tools_mode or supervisor_role or response_repair or repair_mode or research_library:
             # 원샷은 CLAUDE.md·settings 도 안 읽는다(모델·권한은 인자로 명시됨) — cwd 의
             # 프로젝트 지침 ~3.4K 가 "2문장 요약해" 에 따라붙던 것(실측 8.5K→5.1K).
             cmd += ["--setting-sources", ""]

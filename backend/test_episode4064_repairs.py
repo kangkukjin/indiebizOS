@@ -126,13 +126,11 @@ def test_check_with_describe_never_executes_and_failure_is_preserved(tmp_path):
     assert request(tmp_path, code="", describe=["self:read"])["executed"] is False
 
 
-def test_combined_execution_cannot_bypass_context_or_runtime_gates(tmp_path, monkeypatch):
+def test_combined_execution_cannot_bypass_runtime_gates(tmp_path, monkeypatch):
     import runtime_work
     from system_tools_ibl import _execute_ibl_unified
-    from turn_scope import allows_context_tool
     payload = {"edition": 2, "code": "return 1", "describe": ["self:read"]}
     assert not is_observation_request(payload)
-    assert not allows_context_tool("execute_ibl", payload)
     work = runtime_work.WorkRegistry("ep4064")  # 접수 닫힘
     monkeypatch.setattr(runtime_work, "_registry", work)
     with pytest.raises(runtime_work.AdmissionClosed):

@@ -1130,8 +1130,9 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
                 fb = tc.get("quality_feedback")
                 retry_notes.append(f"  - {code[:200]}" + (f" — 첫 미달 사유: {fb}" if fb else ""))
 
-    from turn_scope import context_program
-    if not ibl_calls or (_ge is None and all(context_program(code) for code in ibl_calls)):
+    from ibl_distill_gates import memory_only_program
+    if not ibl_calls or (_ge is None and all(memory_only_program(code, (tc.get("input") or {}).get("edition"))
+                                           for code, (_, tc) in zip(ibl_calls, accepted_calls))):
         return False
 
     if (top_score or 0.0) >= DISTILL_THRESHOLD:

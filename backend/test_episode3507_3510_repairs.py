@@ -146,16 +146,14 @@ def test_calculator_bounds_resource_use(expr):
         calculate(expr)
 
 
-def test_context_update_cannot_start_weather_or_route_queries(supervisor, monkeypatch):
-    from turn_scope import context_program
-    nodes = {"nodes": {"self": {"actions": {"memory": {"context_update_ops": ["read", "recall", "save"]}}}}}
-    monkeypatch.setattr("ibl_access.load_nodes_raw", lambda: nodes)
+def test_context_update_instruction_keeps_notification_scope_without_permission_list(supervisor):
+    from turn_scope import CONTEXT_UPDATE
+    assert "요청하지 않은 경로·날씨·상품 등의 새 조사를 시작하지 않는다" in CONTEXT_UPDATE
+    assert "현재 대화의 기록 갱신과 제공된 자료 판독은 새 조사가 아니다" in CONTEXT_UPDATE
     supervisor.request_intent = "context_update"
-    assert context_program('[self:memory]{op:"recall",node:"여행"}')
-    assert not context_program('[self:memory]{op:"delete",memory_id:1}')
-    out = supervisor.run_tool("execute_ibl", {"code": '[sense:weather]{city:"속초"}'}, lambda: pytest.fail("요청 밖 조회"))
-    assert json.loads(out)["not_executed"]
-    assert supervisor.run_tool("execute_ibl", {"code": '[self:memory]{op:"recall",node:"여행"}'}, lambda: "기억") == "기억"
+    assert supervisor.run_tool("execute_ibl", {"code": 'return [self:memory]{op:"recall",node:"여행"}'},
+                               lambda: "기억") == "기억"
+    assert supervisor.recent[-1]["kind"] == "tool.finished"
 
 
 def test_context_classification_uses_existing_single_call(monkeypatch):

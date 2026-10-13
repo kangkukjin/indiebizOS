@@ -138,10 +138,6 @@ class Supervisor:
 
     def close(self):
         self.stopped.set()
-        state = getattr(self, "_scope_provider_state", None)
-        if state:
-            provider, previous = state
-            provider.context_update_only = previous
         unregister(self)
         self.log("turn.closed", role="harness", reviews=self.reviews, tools=self.tools_used)
         # 모델/원격 도구를 기다리느라 사용자 턴 종료를 붙잡지 않는다. 늦은 판정은 폐기된다.
@@ -271,11 +267,6 @@ class Supervisor:
         self.enabled = bool(framing)
         self.phase = "execute"
         self.executor_paused = False
-        provider = getattr(self.runner.ai, "_provider", None)
-        if (provider and self.request_intent == "context_update"
-                and not getattr(self, "_scope_provider_state", None)):
-            self._scope_provider_state = (provider, getattr(provider, "context_update_only", False))
-            provider.context_update_only = True
         self.context = __import__("thread_context").snapshot()
         from pursuit_bind import current as pursuit_current
         binding = pursuit_current()
@@ -337,17 +328,13 @@ class Supervisor:
             self.phase = "execute"
 
     def _revise_request_intent(self, framing):
-        """의식의 명시적 오분류 정정만 적용한다. 실행자 주장·산문은 권한이 아니다."""
+        """의식의 명시적 정정을 실행 의도·관측에 반영한다. 도구 권한은 바꾸지 않는다."""
         reason = framing.get("request_intent_reason")
         if (self.request_intent != "context_update" or framing.get("request_intent") != "task"
                 or not isinstance(reason, str) or not reason.strip()
                 or framing.get("_salvaged") or framing.get("needs_clarification")):
             return
         self.request_intent = "task"
-        state = getattr(self, "_scope_provider_state", None)
-        if state:
-            provider, previous = state
-            provider.context_update_only = previous
         self.log("scope.revised", role="consciousness", previous="context_update",
                  request_intent="task", reason=reason.strip())
         return True
@@ -485,12 +472,8 @@ class Supervisor:
         if notice:
             # 아직 실행하지 않았다. 새 지시를 읽은 모델이 다시 선택한 호출만 실행한다.
             return json.dumps({"success": False, "not_executed": True, "supervisor_instruction": notice}, ensure_ascii=False)
-        if self.request_intent == "context_update":
-            from turn_scope import allows_context_tool
-            if not allows_context_tool(name, payload):
-                self.log("scope.blocked", role="harness", name=name, request_intent=self.request_intent)
-                return json.dumps({"success": False, "not_executed": True,
-                                   "error": "이번 턴은 새 사실의 통보입니다. 관련 기억 확인·갱신만 하고 새 조사는 시작하지 마세요."}, ensure_ascii=False)
+        # 대화 분류는 실행 지침이다. 실제 권한·대상 범위는 도구의 실행 경계가
+        # 검사하며, 거절도 아래 공통 관측을 지나 복구 가능한 실패로 남긴다.
         # 모델 관찰 잠금은 실행을 막지 않는다. 지시 전달과 실제 작업 등록만 원자적으로 한다.
         with self.lock:
             if self.pending:
@@ -771,10 +754,6 @@ class Supervisor:
                     result = self.store.manifest()
             elif op == "execute":
                 name, args = payload.get("name"), payload.get("input", {})
-                if self.request_intent == "context_update":
-                    from turn_scope import allows_context_tool
-                    if not allows_context_tool(name, args):
-                        raise ValueError("사실 통보 턴에서는 관련 기억 확인·갱신만 실행합니다")
                 if name not in self.catalog or name in {"reframe", "pursuit", "supervision"}:
                     raise ValueError("실행자에게 부여된 실제 작업 도구만 사용할 수 있습니다")
                 # 도구는 임의 코드/워크플로우를 품을 수 있다. 이름 추측으로 read-only 판정하지 않고

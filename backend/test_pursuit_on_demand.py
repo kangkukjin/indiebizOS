@@ -162,13 +162,14 @@ def test_mcp_transports_bind_and_original_turn_read(monkeypatch):
     assert packets[1]['payload']['task_id'] == 'previous-turn' and packets[1]['payload']['detail'] is True
 
 
-@pytest.mark.parametrize('prefix', ['', 'mcp__indiebizos__'])
-def test_context_update_can_record_existing_pursuit_without_starting_new_work(prefix):
-    from turn_scope import allows_context_tool
-    for op in ['read', 'bind', 'note', 'goal', 'detach']:
-        assert allows_context_tool(prefix + 'pursuit', {'op': op})
-    for op in ['open', 'done', 'resume', 'abandon', 'park', 'wait']:
-        assert not allows_context_tool(prefix + 'pursuit', {'op': op})
+@pytest.mark.parametrize('intent', ['context_update', 'task'])
+def test_context_classification_does_not_change_pursuit_binding(context, monkeypatch, intent):
+    b, row = context
+    controller = SimpleNamespace(pursuit=b, original_pursuit=None, request_intent=intent)
+    monkeypatch.setattr('supervision_bus.current', lambda *a: controller)
+    assert bind(b, row)['success']
+    assert b.row['id'] == row['id']
+    assert len(b.ledger.turns(row['id'])) == 1
 
 
 def test_busy_replacement_is_rejected_before_detaching_current(context):

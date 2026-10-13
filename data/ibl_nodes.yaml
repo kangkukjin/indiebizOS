@@ -5221,7 +5221,7 @@ nodes:
         - 나레이션 동영상
         scope: workspace
       memory:
-        context_update_ops:
+        experience_skip_ops:
         - search
         - read
         - recall

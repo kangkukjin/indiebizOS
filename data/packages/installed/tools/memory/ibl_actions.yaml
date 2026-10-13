@@ -1,7 +1,7 @@
 node: self
 actions:
   memory:
-    context_update_ops: [search, read, recall, save]
+    experience_skip_ops: [search, read, recall, save]
     returns: items
     side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:memory]{op: "search", query: "test"}'

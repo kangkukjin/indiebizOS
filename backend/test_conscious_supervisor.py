@@ -61,14 +61,16 @@ def manager_tool(controller, payload):
     'return [engines:image_read]{op:"read",path:"/tmp/attachment.jpg",question:"숫자"}',
     'return [self:health]{op:"save",category:"혈압",systolic:117,diastolic:72}',
 ])
-def test_reframe_corrects_context_scope_at_execution_boundary(supervisor, monkeypatch, code):
-    provider = SimpleNamespace(context_update_only=False)
+def test_reframe_corrects_intent_without_changing_execution_authority(supervisor, monkeypatch, code):
+    provider = SimpleNamespace(marker="original")
     supervisor.runner.ai._provider = provider
     supervisor.request_intent = "context_update"
     supervisor.configure(None)
-    assert provider.context_update_only
+    assert provider.marker == "original"
     payload = {"code": code}
-    assert json.loads(supervisor.run_tool("execute_ibl", payload, lambda: pytest.fail("blocked")))["not_executed"]
+    denial = {"success": False, "error": "actual resource permission"}
+    assert supervisor.run_tool("execute_ibl", payload, lambda: denial) == denial
+    assert supervisor.failures == 1
     revisions = []
 
     def revise(*args, **kwargs):
@@ -80,13 +82,14 @@ def test_reframe_corrects_context_scope_at_execution_boundary(supervisor, monkey
     supervisor.runner._run_consciousness = revise
     result = json.loads(supervisor.reframe({"broken_assumption": "기록 요청을 통보로 분류",
                                            "evidence": "첨부 판독·저장이 실행 전에 거절됨"}))
-    assert result["revised"] and "하네스가 사실 통보 전용 제한을 해제" in result["content"]
+    assert result["revised"] and "실행 의도를 작업 요청으로 정정" in result["content"]
     assert revisions[0]["previous_request_intent"] == "context_update"
-    assert supervisor.request_intent == "task" and not provider.context_update_only
+    assert supervisor.request_intent == "task" and provider.marker == "original"
     assert not supervisor.repair_granted and not supervisor.framing["needs_repair"]
-    assert supervisor.run_tool("execute_ibl", payload, lambda: "completed") == "completed"
+    assert supervisor.run_tool("execute_ibl", payload, lambda: denial) == denial
+    assert supervisor.failures == 2  # 재규정이 실제 자원의 거절을 해제하지 않는다.
     supervisor.close()
-    assert not provider.context_update_only
+    assert provider.marker == "original"
 
 
 @pytest.mark.parametrize("fields", [
@@ -96,8 +99,8 @@ def test_reframe_corrects_context_scope_at_execution_boundary(supervisor, monkey
     {"request_intent": "task", "request_intent_reason": "x", "_salvaged": True},
     {"request_intent": "task", "request_intent_reason": "x", "needs_clarification": True},
 ])
-def test_reframe_does_not_relax_notification_scope_without_valid_decision(supervisor, fields):
-    provider = SimpleNamespace(context_update_only=False)
+def test_reframe_keeps_intent_without_valid_decision_and_preserves_resource_denial(supervisor, fields):
+    provider = SimpleNamespace(marker="original")
     supervisor.runner.ai._provider = provider
     supervisor.request_intent = "context_update"
     supervisor.configure(None)
@@ -105,12 +108,13 @@ def test_reframe_does_not_relax_notification_scope_without_valid_decision(superv
     supervisor.runner._run_consciousness = lambda *a, **kw: {"task_framing": "새 조사 금지", **fields}
     result = json.loads(supervisor.reframe({"broken_assumption": "검색 필요", "evidence": "주장"}))
     assert result["revised"]
-    assert supervisor.request_intent == "context_update" and provider.context_update_only
+    assert supervisor.request_intent == "context_update" and provider.marker == "original"
     reply = supervisor.run_tool("execute_ibl", {"code": '[sense:weather]{city:"서울"}'},
-                                lambda: pytest.fail("unrequested query"))
-    assert json.loads(reply)["not_executed"]
+                                lambda: {"success": False, "error": "stored materials only"})
+    assert reply == {"success": False, "error": "stored materials only"}
+    assert supervisor.failures == 1
     supervisor.close()
-    assert not provider.context_update_only
+    assert provider.marker == "original"
 
 
 def test_approval_delivers_exact_bytes_without_executor_call(supervisor, monkeypatch):

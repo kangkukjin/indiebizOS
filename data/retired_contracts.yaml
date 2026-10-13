@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: context-classification-as-tool-permission
+    retired: 2026-10-13
+    reason: 대화 분류의 좁은 허용 목록과 구형 파서가 의료기록·연구 관점 갱신을 새 조사로 오인해 차단했다.
+    instead: 사실 통보는 실행 지침으로 사용하고 도구 권한·대상 범위는 실제 자원의 기존 관문에서 검사한다. 기억 전용 경험 선별은 experience_skip_ops로 분리한다.
+    phrases: ['context_update_ops', 'context_update_only', 'allows_context_tool', '이번 턴은 새 사실의 통보입니다. 관련 기억 확인·갱신만 하고 새 조사는 시작하지 마세요.', '하네스가 사실 통보 전용 제한을 해제했다']
   - id: guestpc-synchronous-reply-success
     retired: 2026-10-13
     reason: 동기 원격 명령의 비정상 종료를 회신 도착만으로 성공 반환하던 계약을 수정했다.

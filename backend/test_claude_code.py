@@ -17,7 +17,7 @@ def test_image_instruction_matches_execution_and_oneshot_tools(no_tools):
 
 
 @pytest.mark.parametrize('repair', [False, True])
-@pytest.mark.parametrize('mode', ['supervisor', 'response', 'context', 'library', 'normal'])
+@pytest.mark.parametrize('mode', ['supervisor', 'response', 'library', 'normal'])
 def test_repair_command_is_not_exposed_to_other_roles(monkeypatch, repair, mode):
     monkeypatch.setattr('repair_context.active', lambda: repair)
     monkeypatch.setattr('research_context.library_only', lambda: mode == 'library')
@@ -25,7 +25,6 @@ def test_repair_command_is_not_exposed_to_other_roles(monkeypatch, repair, mode)
     provider._binary_path = 'claude'
     provider.agent_role = 'consciousness' if mode == 'supervisor' else 'execution'
     provider.restricted_response_repair = mode == 'response'
-    provider.context_update_only = mode == 'context'
     cmd = provider._build_command(mcp_config_path='/tmp/example.json')
     allowed = cmd[cmd.index('--allowed-tools') + 1].split(',')
     denied = cmd[cmd.index('--disallowed-tools') + 1].split(',')

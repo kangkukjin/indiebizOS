@@ -13,6 +13,56 @@
 import re
 
 
+def memory_only_program(code, edition=None):
+    """기억 확인만 한 실행은 해결 절차로 배우지 않는다. 실행 권한 판정이 아니다.
+
+    실제 호출 판본의 파서를 사용한다. 동적 op·외부 함수 등 확인하지 못한
+    호출은 기억 전용이라고 추측하지 않고 기존 경험 선별로 넘긴다.
+    """
+    from ibl_edition import source_edition
+    from common.expression_ir import Fault
+    from ibl_access import load_nodes_raw
+    from ibl_ops import resolve_op
+    try:
+        if source_edition(code, edition) == 2:
+            from common.expression_ir import Node, record_fields
+            from ibl_v2_parser import parse
+            steps = []
+
+            def walk(value):
+                if isinstance(value, Node):
+                    if value.kind == "call":
+                        data = value.data
+                        fields = record_fields(data["params"])
+                        op = fields.get("op")
+                        params = {"op": op.data["value"]} if op and op.kind == "literal" else {}
+                        if op and op.kind != "literal":
+                            raise ValueError("동적 op는 기억 전용으로 단정하지 않는다")
+                        steps.append((data["node"], data["action"], params))
+                    walk(value.data)
+                elif isinstance(value, dict):
+                    for child in value.values():
+                        walk(child)
+                elif isinstance(value, (list, tuple)):
+                    for child in value:
+                        walk(child)
+
+            walk(parse(code))
+        else:
+            from cognitive_trace import _ibl_steps
+            steps = _ibl_steps(code)
+        if not steps:
+            return False
+        nodes = load_nodes_raw().get("nodes", {})
+        for node, action, params in steps:
+            spec = nodes.get(node, {}).get("actions", {}).get(action, {})
+            if resolve_op(spec, params) not in spec.get("experience_skip_ops", []):
+                return False
+        return True
+    except (ValueError, TypeError, KeyError, Fault):
+        return False
+
+
 def empty_final_items(result):
     """정상 종료한 빈 조회를 해결 절차의 성공 증거로 학습하지 않는다."""
     import json

@@ -219,6 +219,11 @@ def test_complete_shop_program(browser, shop_site, monkeypatch, tmp_path, mode, 
     def browser_call(runtime, args):
         result = loop.run_until_complete(handler.execute({'driver':'playwright', **args}, context))
         receipts.append({'op':args['op'], 'result':json.loads(result)})
+        if repaired and mode == 'b' and args['op'] == 'click':
+            # 사건이 다음 영수증에 도착하는 계약도 강제로 실행한다. 실제 탭은 유지된다.
+            raw = json.loads(result)
+            raw.pop('opened_tabs', None)
+            result = json.dumps(raw)
         value, evidence = decode_envelope(result, registry['limbs:browser'].contract['adapter'])
         return Adapted(value, evidence)
     registry['limbs:browser'] = replace(registry['limbs:browser'], run=browser_call)

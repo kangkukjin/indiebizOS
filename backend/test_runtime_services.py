@@ -132,23 +132,28 @@ def test_tool_loop_stays_idle_but_timed_out_coroutine_remains_owned(work, monkey
     monkeypatch.setattr(tools, "_async_loop", None)
     monkeypatch.setattr(tools, "_async_thread", None)
     started, done = threading.Event(), threading.Event()
+    finish = asyncio.Event()
     async def slow():
         started.set()
-        await asyncio.sleep(0.15)
+        # 호출 스레드가 늦게 스케줄돼도 검증 전에 저절로 끝나지 않는다.
+        await finish.wait()
         done.set()
         return 1
     try:
         with rw.scope("tool-request"):
             with pytest.raises(TimeoutError):
                 tools._run_coroutine(slow(), timeout=0.02)
-        assert started.is_set() and count(work) == 1
+        assert started.wait(5) and count(work) == 1
         assert all(e["label"] != "thread:tool-async-loop" for e in work.snapshot()["owners"])
-        assert done.wait(2)
+        tools._async_loop.call_soon_threadsafe(finish.set)
+        assert done.wait(5)
         # 결과 완료 콜백까지 loop를 한 번 통과시킨다.
         tools._run_coroutine(asyncio.sleep(0))
         assert count(work) == 0 and tools._async_thread.is_alive()
     finally:
         if tools._async_loop:
+            tools._async_loop.call_soon_threadsafe(finish.set)
+            tools._run_coroutine(asyncio.sleep(0))
             tools._async_loop.call_soon_threadsafe(tools._async_loop.stop)
             tools._async_thread.join(2)
             tools._async_loop.close()

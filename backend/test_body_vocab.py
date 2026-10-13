@@ -40,6 +40,9 @@ def _make_repo():
     """임시 저장소: 커밋 3개(생성→이동→수정) + 미커밋 1건."""
     root = tempfile.mkdtemp(prefix="body_vocab_")
     _git(root, "init", "-q")
+    # 시험 저장소를 지울 때 Git의 비동기 maintenance.lock 정리와 경합하지 않는다.
+    _git(root, "config", "maintenance.auto", "false")
+    _git(root, "config", "gc.auto", "0")
     os.makedirs(os.path.join(root, "backend", "old"))
     with open(os.path.join(root, "backend", "old", "mod.py"), "w") as f:
         f.write("v1\n" * 30)

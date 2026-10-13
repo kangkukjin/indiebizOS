@@ -33,8 +33,15 @@
   $lk = [fn:참조]{snap:$s3, role:"link", name:f"${e.name} 편집"}
   assert $lk != "none", "편집 링크를 찾지 못함", {name:$e.name}
   $ck2 = [limbs:browser]{op:"click", ref:$lk}
-  # 조작의 공통 영수증에서 열린 탭을 바로 사용한다.
-  $새탭 = filter($ck2.opened_tabs, ($x)=>contains($x.url, f"/edit/${id}"))
+  # IPC가 늦으면 클릭 영수증에 아직 탭이 없다. 실제 탭 목록으로 한정 재관측한다.
+  $새탭 = filter(get($ck2,"opened_tabs",[]), ($x)=>contains($x.url, f"/edit/${id}"))
+  $탭확인 = 0
+  [repeat:until len($새탭)>0 or $탭확인>=20] {
+    $대기 = [limbs:browser]{op:"wait", timeout:250}
+    $목록 = [limbs:browser]{op:"tab", mode:"list"}
+    $새탭 = filter($목록.tabs, ($x)=>contains($x.url, f"/edit/${id}"))
+    $탭확인 = $탭확인 + 1
+  }
   assert len($새탭)==1, "편집 새 탭을 확인하지 못함", {receipt:$ck2}
   $sw = [limbs:browser]{op:"tab", mode:"switch", tab_id:$새탭[0].tab_id}
   $s4 = [limbs:browser]{op:"snapshot"}

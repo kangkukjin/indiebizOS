@@ -122,15 +122,7 @@ func residentAutostart(cfg *Config, exe string, remove bool) error {
 		_, e = residentWriteIfChanged(path, []byte(residentLaunchAgentBody(name, cfg.InstallationID, exe)))
 		return e
 	case "windows":
-		args := []string{"/Create", "/F", "/IT", "/SC", "ONLOGON", "/TN", name, "/TR", `"` + exe + `"`}
-		if remove {
-			args = []string{"/Delete", "/F", "/TN", name}
-		}
-		b, e := exec.Command("schtasks", args...).CombinedOutput()
-		if e != nil {
-			return fmt.Errorf("autostart: %s: %w", b, e)
-		}
-		return nil
+		return residentWindowsAutostart(cfg, exe, remove)
 	default:
 		home, e := os.UserHomeDir()
 		if e != nil {
@@ -373,7 +365,7 @@ func residentInstall(invite *Config) (string, error) {
 		_ = permission.Run() // AI commands remain available if a user declines screen access.
 	}
 	if e = residentAutostart(&cfg, dest, false); e != nil {
-		return "", e
+		return "", fmt.Errorf("로그인 자동 시작 설정 실패 (autostart): %w", e)
 	}
 	// A service manager that owns this installation starts the new executable itself.
 	if outcome == "updated" && runtime.GOOS != "windows" && residentServiceRestart(&cfg) == nil {

@@ -16,6 +16,11 @@ func configureResidentDetached(c *exec.Cmd) { c.SysProcAttr = &syscall.SysProcAt
 func configureResidentProcess(c *exec.Cmd)  { configureMemberProcess(c) }
 func residentDeleteSelf(path string) error  { return os.Remove(path) }
 
+// Windows-only branches in the shared installer/update state machine.
+func residentWindowsAutostart(*Config, string, bool) error { return os.ErrInvalid }
+func residentWindowsCanRestart(*Config) bool               { return false }
+func residentWindowsRestart(*Config) error                 { return os.ErrInvalid }
+
 // residentExecutablePIDs lists the processes running one executable file.
 func residentExecutablePIDs(exe string) []int {
 	var pids []int

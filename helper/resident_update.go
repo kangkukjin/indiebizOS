@@ -22,7 +22,7 @@ import (
 // a process that survives both: a watcher run from a copy of the old executable.
 // The new helper confirms by deleting update.json after its first good sync; if
 // that does not happen in time the watcher restores the old executable and asks
-// the service manager to restart. Windows uses its existing login task to launch it.
+// the service manager to restart. Windows starts the installed file directly, or uses an existing legacy login task.
 
 type residentUpdateState struct {
 	From     string  `json:"from"`
@@ -64,13 +64,13 @@ func residentSelfDigest() string {
 	return selfDigestValue
 }
 
-// residentWatchStarts: on Windows the logon task does not restart an exited
+// residentWatchStarts: on Windows logon startup does not restart an exited
 // helper, so the update watcher starts the new one itself once the old one let go
 // of the control port (a var so tests can exercise that path on any OS).
 var residentWatchStarts = runtime.GOOS == "windows"
 
 // Only an instance something restarts can replace itself by exiting: the service
-// manager on macOS/Linux; on Windows the watcher, through the installation's task.
+// manager on macOS/Linux; on Windows the watcher, through the installation's Run entry or legacy task.
 func residentCanSelfUpdate(cfg *Config) bool {
 	if runtime.GOOS != "windows" {
 		return residentServiceStarted(cfg)
@@ -81,9 +81,7 @@ func residentCanSelfUpdate(cfg *Config) bool {
 	if e != nil || e1 != nil || e2 != nil || !os.SameFile(self, installed) {
 		return false
 	}
-	query := exec.Command("schtasks", "/Query", "/TN", residentServiceName(cfg))
-	configureResidentDetached(query)
-	return query.Run() == nil
+	return residentWindowsCanRestart(cfg)
 }
 
 // residentPlaceExecutable renames src over dest. Windows will not replace a
@@ -170,9 +168,7 @@ func residentServiceRestart(cfg *Config) error {
 	case "darwin":
 		return exec.Command("launchctl", "kickstart", "-k", "gui/"+strconv.Itoa(os.Getuid())+"/"+name).Run()
 	case "windows":
-		run := exec.Command("schtasks", "/Run", "/TN", name)
-		configureResidentDetached(run)
-		return run.Run()
+		return residentWindowsRestart(cfg)
 	}
 	return exec.Command("systemctl", "--user", "restart", name).Run()
 }

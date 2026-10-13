@@ -356,7 +356,7 @@ PC 등록·원장·런처·IBL·Go 헬퍼를 연결했다. 새 모드는 `enroll
 
 | 영역 | 구현 |
 | --- | --- |
-| 설치 | 전 OS 공용 USB 폴더, 대상 PC에서 이름 입력·등록 확인, 사용자 폴더 복사, Mac LaunchAgent / Windows 로그인 예약 작업 / Linux systemd 사용자 서비스 |
+| 설치 | 전 OS 공용 USB 폴더, 대상 PC에서 이름 입력·등록 확인, 사용자 폴더 복사, Mac LaunchAgent / Windows 사용자 HKCU Run(기존 예약 작업 유지) / Linux systemd 사용자 서비스 |
 | 연결 | WSS 지속 연결, HTTPS 롱폴 대체, 상세 환경 조사를 최초 연결에서 분리하고 info 요청 때 실행 |
 | 실행 | 작업별 폴더·환경, 동시 2개, 제한시간, 취소, worker 사망 시 감독 프로세스가 자식 종료, 재기동 뒤 불명 결과는 unknown |
 | 파일 | 양방향 바이너리 청크·offset 재개·SHA-256·덮어쓰기 충돌 거절, IBL 중앙 파일 회수 |

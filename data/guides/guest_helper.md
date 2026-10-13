@@ -15,7 +15,7 @@
 | 계약 | 상주 PC (새 기본 경로) | 휴대 USB (기존 issue 경로) |
 | --- | --- | --- |
 | 준비 | `self:limb register` → 공용 폴더를 USB에 복사 → 대상 PC에서 이름을 정해 등록 | `self:limb issue` → 이름별 발급 폴더를 USB에 복사 → 실행 |
-| 수명 | 사용자 로그인 시 자동 시작, 비정상 종료 시 OS 서비스 관리자가 재기동(macOS launchd·Linux systemd; Windows는 로그인 때만 — 헬퍼 교체 때는 감시자가 새 판을 띄움). 등록 후 USB 제거 가능 | 대상 PC에서 직접 실행한 헬퍼의 수명 |
+| 수명 | 사용자 로그인 시 자동 시작, 비정상 종료 시 OS 서비스 관리자가 재기동(macOS launchd·Linux systemd; Windows HKCU Run(기존 설치는 예약 작업)은 로그인 때만 — 헬퍼 교체 때는 감시자가 새 판을 띄움). 등록 후 USB 제거 가능 | 대상 PC에서 직접 실행한 헬퍼의 수명 |
 | 명령 환경 | 작업마다 cwd·env 분리. 절대 cwd·venv 실행파일 경로·env 명시 | 직전 cwd·환경변수 유지. 함수·별칭은 유지하지 않음. reset으로 초기화 |
 | 화면·입력 | `mode:"interactive"` 필수 | 기존 screen·입력 호출 |
 | 중복 방지 | 같은 `request_id` + 같은 명령은 기존 접수증. 내용이 다르면 충돌 | 접수증으로 관측. 같은 명령 재전송 금지 |
@@ -38,7 +38,7 @@
 별도로 발급된다. USB 등록 키 폐기는 이미 등록된 PC를 끊지 않는다. 기존 발급 폴더·키는
 자동으로 상주형으로 바뀌지 않는다.
 
-상주형은 macOS LaunchAgent, Windows 현재 사용자 로그인 예약 작업, Linux systemd 사용자
+상주형은 macOS LaunchAgent, Windows 현재 사용자 로그인 자동 실행(HKCU Run, 기존 예약 작업 유지), Linux systemd 사용자
 서비스다. 로그인 전 실행·관리자 서비스는 아니다. 중앙 주소는 `/limb/*`와 `/remote-pcs/*`를
 직접 전달하는 HTTPS 터널이어야 한다. 지속 WebSocket이 막히면 HTTPS 롱폴로 돌아간다.
 설치·OS 권한은 대상 PC에서 허용한다. Android/iPhone/iPad 신규 등록은 지원하지 않는다.

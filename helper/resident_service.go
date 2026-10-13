@@ -61,7 +61,7 @@ func launchdJobPID(printed string) int {
 }
 
 // residentAutostartEntry is the autostart file of this installation ("" where
-// the OS keeps it elsewhere, i.e. the Windows scheduled task).
+// the OS keeps it elsewhere, i.e. the Windows Run key or legacy scheduled task).
 func residentAutostartEntry(cfg *Config) string {
 	home, e := os.UserHomeDir()
 	if e != nil {

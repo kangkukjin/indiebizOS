@@ -114,10 +114,16 @@ function reorganizeNodeDir(nodeWinDir, nodeVersion) {
 
     if (process.platform === 'win32') {
       // Windows: robocopy 사용
-      execSync(`robocopy "${extractedDir}" "${nodeWinDir}" /E /MOVE /NFL /NDL /NJH /NJS`, {
-        stdio: 'pipe',
-        // robocopy는 성공해도 0이 아닌 exit code를 반환할 수 있음
-      });
+      try {
+        execSync(`robocopy "${extractedDir}" "${nodeWinDir}" /E /MOVE /NFL /NDL /NJH /NJS`, {
+          stdio: 'pipe',
+        });
+      } catch (error) {
+        // robocopy의 1~7은 복사 실패가 아님. 8 이상과 실행 오류는 전파한다.
+        if (!Number.isInteger(error.status) || error.status < 1 || error.status >= 8) {
+          throw error;
+        }
+      }
     } else {
       // macOS/Linux: mv 사용
       execSync(`mv "${extractedDir}"/* "${nodeWinDir}"/`, { stdio: 'inherit', shell: true });

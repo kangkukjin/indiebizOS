@@ -2,6 +2,8 @@
 
 **현재 웹앱 계약은 §14를 함께 읽는다.** 초기 네이티브 설계와 달리 기본 진입은 설치 없는 브라우저이며 회원 지원 기능은 기본 제공된다.
 
+**후속 설계:** [중앙 관리형 회원 데스크톱](MEMBER_DESKTOP_DESIGN_2026_10_15.md)은 회원의 로컬 작업을 기본 경험으로 삼아 웹 화면과 PC 실행부를 하나의 설치 앱으로 통합한다. 설계안이며, 아래의 현재 웹앱 구현 상태를 대체하지 않는다.
+
 다음 세션 구현용. 이 판은 **최종 규칙만** 싣는다(정정 덧붙이기 없음). 정본 서열: git 커밋 > 이 문서 > system_docs.
 관련 정본: `data/system_docs/remote_access.md`(표면 분리) · `communication.md`("몸 사이 소통 — 명함과 부탁", "USB 손발", "행위자 봉투") · `memory.md`(8종 기억·"다중 자아와 기억의 두 부류") · `docs/NO_PRIVILEGED_RAILS_HANDOFF.md` · `docs/PORTAL_HANDOFF.md`.
 

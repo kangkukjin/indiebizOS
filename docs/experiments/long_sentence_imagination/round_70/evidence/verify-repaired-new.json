@@ -1,0 +1,18 @@
+{
+  "label": "repaired-new",
+  "phase": "new",
+  "passed": true,
+  "errors": [],
+  "counts": {
+    "past": 13,
+    "cancelled": 4,
+    "included": 10,
+    "outside": 6,
+    "undated": 2,
+    "conflict": 1
+  },
+  "events": 36,
+  "notices": 54,
+  "fresh_reused": 53,
+  "stale_preserved": 0
+}

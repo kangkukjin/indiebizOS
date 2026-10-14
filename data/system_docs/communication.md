@@ -170,6 +170,10 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - **읽는 쪽(이웃 피드)**: `warehouse_feed.py` 폴러가 등록된 이웃 창고 매니페스트를 30분마다 가져와 경로·mtime
   diff → `seed`(팔로우 직후 지난 것) / `new` / `changed` 타임라인. **모델 호출 0·토큰 0의 순수 기계층**이고,
   보존 스냅샷은 곧 **동네 전체 파일명 색인**(검색 한 번이 이웃 창고 전부를 쓸어본다).
+  `browse`는 이 로컬 목록과 `source`의 마지막 폴링/성공 시각·실패·절단 상태를 함께 돌려준다.
+  미수집·실패·부분/완전성 미상 목록은 `source_complete:false`이며 IBL에서는 `PARTIAL_SOURCE`와
+  partial 목록으로 전달된다. 파인더도 경고를 표시한다. 성공적으로 읽은 빈 창고와 구분하며,
+  최신 확인은 별도 폴링이 필요하다. 개별 폴링 실패를 성공으로 감싸지 않는다.
 - **방언 어댑터**: 이웃이 indiebizOS 가 아니어도 된다 — nginx/Apache 디렉터리 색인, RSS/Atom(HTML `<link rel=alternate>`
   자동발견), Nextcloud 공개 공유, 일반 웹페이지의 파일 링크를 전부 같은 매니페스트 통화로 정규화(`warehouse_adapters.py`).
   **콜드 스타트 우회** — 블로그 RSS 하나로 첫 이웃이 생긴다.

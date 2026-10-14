@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "links": 54,
+  "json_sha256": {
+    "collected.json": "b72e8e8ff8469a89005c74522bc11263f436dff56a40d732c686b6ceaac0af82",
+    "decisions.json": "5f7b31ace5569e3f3e27002f9f00bb1fc313c287679f9612524fab9f4e6b0707"
+  },
+  "other_markdown_unchanged": true
+}

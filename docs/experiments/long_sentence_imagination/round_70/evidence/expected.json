@@ -1,0 +1,14 @@
+{
+  "notices": 54,
+  "unique_events": 36,
+  "variant_failed_warehouse": "b",
+  "conflict": [
+    "E05"
+  ],
+  "undated": [
+    "E10",
+    "E20"
+  ],
+  "variant_cancel": "E08",
+  "variant_moved": "E09"
+}

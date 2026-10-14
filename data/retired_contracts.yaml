@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: warehouse-snapshot-unconditional-current
+    retired: 2026-10-15
+    reason: L70-1/2 — 미수집·실패·절단 목록과 실제 빈 창고를 구분하지 못해 완전 확인으로 오보고했다.
+    instead: browse는 마지막 폴링의 source 상태·시각을 보존하고 불완전 목록은 PARTIAL_SOURCE로, 단일 poll 실패는 오류로 전달한다.
+    phrases: ['스냅샷은 매니페스트의 현재 상태이므로', '이웃 창고 폴링은 실패해도 항상 성공']
   - id: phone-always-ibl-only
     retired: 2026-10-15
     reason: 등록한 새 폰에 앱 UID의 격리 shell/Python 실행과 기존 파일 전송을 연결했다.

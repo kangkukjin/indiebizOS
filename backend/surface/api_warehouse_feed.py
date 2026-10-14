@@ -305,9 +305,9 @@ async def feed(limit: int = 100, min_level: int = 0, favorites: int = 0,
 
 @router.get("/browse")
 async def browse(url: str, path: str = ""):
-    """이웃 창고 인앱 파인더 — 폴러 스냅샷(현재 색인)을 폴더 단위로 서빙.
-    피드가 '변화의 강'이라면 이건 '현재의 창고' — 전체를 보러 외부 브라우저로
-    이탈하지 않아도 된다. 데이터는 이미 로컬 DB, 왕복 0."""
+    """이웃 창고 인앱 파인더 — 로컬 폴러 스냅샷을 폴더 단위로 서빙.
+    원천 왕복 없이 source의 확인 시각·상태를 함께 내며, 미수집/실패/부분 목록도
+    보존해 표시한다. 현재 원천을 확인하려면 별도 poll이 필요하다."""
     base = wf.normalize_base(url)
     if not base:
         raise HTTPException(400, "창고 주소(url)가 필요합니다")

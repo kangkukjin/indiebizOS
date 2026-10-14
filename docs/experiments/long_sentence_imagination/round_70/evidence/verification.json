@@ -1,0 +1,21 @@
+{
+  "backend_full": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "13",
+    "tests": "10522",
+    "time": "235.077",
+    "timestamp": "2026-10-15T08:31:48.035575+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "command": ".venv/bin/python -m pytest backend/ -n auto --dist loadfile --ff",
+  "targeted_passed": 47,
+  "typescript": "passed",
+  "vocabulary_check": "passed",
+  "backend_layers": "passed",
+  "android_bundle": "generated; no manifest delta",
+  "browser_recheck_passed": 11,
+  "all_ai_tasks_terminal": true,
+  "fixture_server_stopped": true
+}

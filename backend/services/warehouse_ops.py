@@ -187,7 +187,12 @@ def _limit(params: dict, default: int = 50) -> tuple:
 
 
 def warehouse_op(params: dict) -> Any:
-    """[others:warehouse] — 이웃 창고 피드의 읽기·소통."""
+    """[others:warehouse] — 이웃 창고 피드의 읽기·소통.
+
+    browse는 로컬 스냅샷 읽기다. source의 폴링 시각·상태를 함께 보존하고,
+    미확인/실패/부분 목록은 source_complete:false로 IBL의 PARTIAL_SOURCE에 연결한다.
+    poll은 캐시를 갱신하며 개별 실패를 성공으로 감싸지 않는다.
+    """
     op = (params.get("op") or "feed").strip()
     try:
         if op == "neighbors":
@@ -201,9 +206,15 @@ def warehouse_op(params: dict) -> Any:
         if op == "poll":
             url = (params.get("url") or "").strip()
             if url:
-                return {"success": True, "result": wf.poll_warehouse(url)}
+                result = wf.poll_warehouse(url)
+                if not result.get("ok"):
+                    return {"success": False, "error": result.get("error") or "창고 읽기 실패",
+                            "url": result.get("url") or url, "result": result}
+                return {"success": True, "result": result,
+                        "source_complete": result.get("source_complete", not result.get("truncated", False))}
             rows = wf.poll_all()
-            return {"success": True, "items": rows, "count": len(rows)}
+            complete = all(r.get("ok") and r.get("source_complete", not r.get("truncated", False)) for r in rows)
+            return {"success": True, "items": rows, "count": len(rows), "source_complete": complete}
         if op == "feed":
             urls = allowed_urls(_int(params.get("min_level")), bool(params.get("favorites")), _int(params.get("min_score")))
             limit, note = _limit(params, 50)

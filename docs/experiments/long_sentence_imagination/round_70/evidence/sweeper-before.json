@@ -1,0 +1,8 @@
+{
+  "phase": "ACTIVE",
+  "active_roots": 0,
+  "active_children": 1,
+  "labels": [
+    "thread:media-sweeper"
+  ]
+}

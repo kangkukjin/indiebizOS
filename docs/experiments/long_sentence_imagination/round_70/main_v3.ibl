@@ -1,0 +1,86 @@
+#!ibl edition=2
+[def:파일읽기]($f,$w,$out,$old) {
+  $prior=filter($old,($r)=>$r.wh_id==$w.id and $r.path==$f.name and $r.mtime==$f.mtime)
+  [if:len($prior)>0] {
+    return {**$prior[0],source_url:$f.url,wh_name:$w.name,stale:false,reused:true}
+  }
+  $saved=[self:download]{url:$f.url,path:f"${out}/raw/${w.id}-${f.name}"}
+  $doc=[self:read]{path:$saved.path,format:"json"}
+  return {**$doc.data,wh_id:$w.id,wh_name:$w.name,path:$f.name,mtime:$f.mtime,source_url:$f.url,stale:false,reused:false}
+}
+[def:창고읽기]($w,$out,$old) {
+  [try] {
+    $manifest=[self:download]{url:f"${$w.url}/manifest",path:f"${out}/raw/${$w.id}-manifest.json"}
+    $manifestdoc=[self:read]{path:$manifest.path,format:"json"}
+    $listing=$manifestdoc.data
+    $attempts=$listing.files >> [table:each]{parallel:4,on_error:"collect"} {
+      [fn:파일읽기]{f:$it,w:$w,out:$out,old:$old}
+    }
+    $ok=filter($attempts,($r)=>is_ok($r))
+    $bad=filter($attempts,($r)=>not is_ok($r))
+    return {wh_id:$w.id,url:$w.url,failed:false,rows:map($ok,($r)=>unwrap($r)),errors:map($bad,($r)=>error_of($r)),listed:len($listing.files)}
+  } [catch] {
+    $past=filter($old,($r)=>$r.wh_id==$w.id)
+    return {wh_id:$w.id,url:$w.url,failed:true,rows:map($past,($r)=>{**$r,stale:true,reused:true}),errors:[$error.message],listed:0}
+  }
+}
+[def:행사판정]($id,$rows,$start,$end) {
+  $all=filter($rows,($r)=>$r.event_id==$id)
+  $fresh=filter($all,($r)=>not $r.stale)
+  $pool=len($fresh)>0 ? $fresh : $all
+  $versions=sorted($pool,"updated_at",true)
+  $chosen=$versions[0]
+  $latest=filter($pool,($r)=>$r.updated_at==$chosen.updated_at)
+  $forms=unique(map($latest,($r)=>json([$r.title,$r.region,$r.date,$r.status])))
+  $reason=len($fresh)==0 ? "unverified" : len($forms)>1 ? "conflict" : $chosen.status=="cancelled" ? "cancelled" : $chosen.date==null ? "undated" : $chosen.date<$start ? "past" : $chosen.date>$end ? "outside" : "included"
+  return {event_id:$id,title:$chosen.title,region:$chosen.region,date:$chosen.date,status:$chosen.status,updated_at:$chosen.updated_at,reason:$reason,
+    sources:map($all,($r)=>{url:$r.source_url,warehouse:$r.wh_id,name:get($r,"wh_name",$r.wh_id),stale:$r.stale}),versions:$latest}
+}
+[def:출처]($s) {
+  $label=get($s,"name",$s.warehouse)+($s.stale ? " 과거자료" : "")
+  return f"[${label}](${$s.url})"
+}
+[def:記事]($rows) {
+  $labels={included:"추천",unverified:"최신 확인 실패·과거 자료",conflict:"같은 시각의 공지 충돌·확인 필요",cancelled:"취소",undated:"날짜 확인 필요",past:"지난 일정",outside:"대상 기간 밖"}
+  $lines=$rows >> [table:each] {
+    $dates=unique(map($it.versions,($v)=>$v.date==null ? "날짜 미상" : $v.date))
+    $date=$it.reason=="conflict" ? join(" / ",$dates) : $it.date==null ? "날짜 미상" : $it.date
+    $reason=get($labels,$it.reason,$it.reason)
+    $links=map($it.sources,($s)=>[fn:출처]{s:$s})
+    $sources=join(" · ",$links)
+    return f"- ${date} · ${$it.title} (${$it.event_id}) — ${reason}\n  출처: ${sources}"
+  }
+  return join("\n",$lines)
+}
+$cfgdoc=[self:read]{path:$input,format:"json"}
+$cfg=$cfgdoc.data
+$old=[]
+[if:$previous!=""] { $prev=[self:read]{path:$previous,format:"json"};$old=$prev.data.rows }
+$warehouses=$cfg.warehouses >> [table:each]{parallel:3} { [fn:창고읽기]{w:$it,out:$out,old:$old} }
+$rows=reduce($warehouses,[],($acc,$w)=>$acc+$w.rows)
+$ids=unique(map($rows,($r)=>$r.event_id))
+$decisions=$ids >> [table:each] { [fn:행사판정]{id:$it,rows:$rows,start:$cfg.start,end:$cfg.end} }
+$decisions=$decisions >> [table:sort]{by:["region","date","event_id"]}
+$included=filter($decisions,($r)=>$r.reason=="included")
+$excluded=filter($decisions,($r)=>$r.reason!="included")
+$regions=unique(map($included,($r)=>$r.region))
+$sections=$regions >> [table:each] {
+  $body=[fn:記事]{rows:filter($included,($r)=>$r.region==$it)}
+  return f"## ${it}\n\n${body}"
+}
+$other=[fn:記事]{rows:$excluded}
+$failed=filter($warehouses,($w)=>$w.failed or len($w.errors)>0)
+$failuretext=join("\n",map($failed,($w)=>f"- ${$w.wh_id}: ${$w.url} — ${json($w.errors)}"))
+$text=f"# 주간 동네 소식지\n\n기간: ${$cfg.start}~${$cfg.end}\n\n확인된 추천 ${len($included)}건 · 전체 행사 ${len($decisions)}건 · 읽은/보존한 공지 ${len($rows)}건\n\n${join('\n\n',$sections)}\n\n## 제외·확인 필요\n\n${other}\n\n## 수집 실패와 확인 범위\n\n${len($failed)==0 ? '모든 창고 목록과 파일 확인 완료' : $failuretext}\n"
+$collected={rows:$rows,warehouses:$warehouses}
+$decisionpack={start:$cfg.start,end:$cfg.end,decisions:$decisions,warehouses:$warehouses}
+[self:write]{path:f"${out}/collected.json",content:json($collected)}
+[self:write]{path:f"${out}/decisions.json",content:json($decisionpack)}
+[self:write]{path:f"${out}/newsletter.md",content:$text}
+$saved_collected=[self:read]{path:f"${out}/collected.json",format:"json"}
+$saved_decisions=[self:read]{path:f"${out}/decisions.json",format:"json"}
+assert len($saved_collected.data.rows)==len($rows),"수집 자료 저장 건수 불일치"
+assert len($saved_decisions.data.decisions)==len($decisions),"판정 저장 건수 불일치"
+$readback=[self:read]{path:f"${out}/newsletter.md"}
+assert $readback.text==$text,"소식지 저장 내용 불일치"
+return {events:len($decisions),included:len($included),notices:len($rows),failed:len($failed),reused:len(filter($rows,($r)=>$r.reused)),newsletter:f"${out}/newsletter.md"}

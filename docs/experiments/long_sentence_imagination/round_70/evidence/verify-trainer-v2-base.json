@@ -1,0 +1,18 @@
+{
+  "label": "trainer-v2-base",
+  "phase": "base",
+  "passed": true,
+  "errors": [],
+  "counts": {
+    "past": 13,
+    "cancelled": 3,
+    "included": 11,
+    "outside": 6,
+    "undated": 2,
+    "conflict": 1
+  },
+  "events": 36,
+  "notices": 54,
+  "fresh_reused": 0,
+  "stale_preserved": 0
+}

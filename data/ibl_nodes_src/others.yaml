@@ -190,7 +190,7 @@
             forget: {principal: [owner], human_confirm: true}
         fixture: '[others:warehouse]{op: "neighbors"}'
         description: 이웃 창고 피드 (op 분기) — 내 창고 관리는 [self:warehouse]. neighbors/poll(새로 읽기)/feed/browse(한 창고 안)/search/like/retweet(내 창고로 소개)/score(0~3)/memo/forget(사람 승인). 이웃 등급은 [others:neighbor]{op:save, info_level}.
-        target_description: 'neighbors — 파라미터 없음(상태·점수 동반). poll — url(없으면 전부). feed — limit·min_level·min_score·favorites(필터). browse — url + path. search — query(+limit·sort·필터). like — url(창고) + path(파일). retweet — url(파일 주소) + name + level(0~4) + mode(link|copy). score — url + score(0~3). memo — neighbor_id + memo. forget — url(이웃 창고를 등기부·캐시에서 제거, 사람 승인).'
+        target_description: 'neighbors — 파라미터 없음(상태·점수 동반). poll — url(없으면 전부), 실제로 읽어 캐시 갱신; 개별 실패는 오류, 전체 중 일부 실패·절단은 PARTIAL_SOURCE. feed — limit·min_level·min_score·favorites(필터). browse — url + path, 로컬 스냅샷의 직계 dirs/files(path·url·mtime), 네트워크 조회 아님. source.state·last_poll·last_success로 확인 범위를 구분한다. 미수집·실패·부분/완전성 미상 목록은 PARTIAL_SOURCE이며 $error.partial에 목록·상태를 보존한다. 최신 자료는 먼저 poll; 등록 없는 공개 창고의 직접 읽기는 /manifest와 파일 URL을 사용한다. search — query(+limit·sort·필터). like — url(창고) + path(파일). retweet — url(파일 주소) + name + level(0~4) + mode(link|copy). score — url + score(0~3). memo — neighbor_id + memo. forget — url(이웃 창고를 등기부·캐시에서 제거, 사람 승인).'
         group: community
         target_key: op
         router: system

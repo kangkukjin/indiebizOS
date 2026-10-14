@@ -1,0 +1,48 @@
+{
+  "at": "2026-10-15T08:09:49.953445",
+  "head": "dd2e6eba2a8f3c65820bfc8be99832b3cedd2cc6",
+  "all_training_terminal": true,
+  "jobs": [
+    {
+      "label": "trainer-v1-base",
+      "state": "completed",
+      "run_id": "771b9a23ba3844e386425e1d9d066d6a",
+      "task_id": null
+    },
+    {
+      "label": "trainer-v1-variant",
+      "state": "completed",
+      "run_id": "2e7cfea8b06849c1863f3673b5d9e455",
+      "task_id": null
+    },
+    {
+      "label": "trainer-v2-base",
+      "state": "completed",
+      "run_id": "4bec16dc17f745bb9ad2c00550e05afd",
+      "task_id": null
+    },
+    {
+      "label": "trainer-v2-variant",
+      "state": "completed",
+      "run_id": "6afedd2d08454fd28d7ac83a5f7172b9",
+      "task_id": null
+    },
+    {
+      "label": "ai-base-terminal-2",
+      "state": "succeeded",
+      "run_id": null,
+      "task_id": null
+    },
+    {
+      "label": "ai-variant-terminal",
+      "state": "succeeded",
+      "run_id": null,
+      "task_id": null
+    }
+  ],
+  "source_hashes": {
+    "backend/services/warehouse_feed.py": "ea96a0a865e212b75dcd08cb6390390a8eb93712fa3341eb111950085ff148a9",
+    "backend/services/warehouse_ops.py": "a1ea9c93931b75f6b578dd9d2d6ecd64654d0cc5d240b887d64c66a8dbf1edf3",
+    "backend/services/media_sessions.py": "46b9f27844cae3e2f627e76842bf0642104f493e01617cd52656d516b49f35c6"
+  }
+}

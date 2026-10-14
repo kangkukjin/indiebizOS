@@ -513,3 +513,57 @@ def test_explicit_initial_volume_is_distinct_from_default(hub, tmp_path):
     assert session['content']['volume_explicit'] is True
     assert session['content']['volume'] == 0
     hub.post(f"/media/sessions/{session['session_id']}/end")
+
+
+def test_sweeper_lifetime_does_not_hold_the_starting_request(monkeypatch):
+    import threading
+    from types import SimpleNamespace
+    import runtime_work as rw
+
+    reg = rw.WorkRegistry("media-service-test")
+    reg.gate("ACTIVE")
+    monkeypatch.setattr(rw, "_registry", reg)
+    rw.install_worker_tracking()
+    stop = threading.Event()
+    thread_class = threading.Thread
+    # 실 스레드 추적 경계를 쓰되 미디어 효과 없는 유한 대기로 바꾼다.
+    monkeypatch.setattr(ms, "threading", SimpleNamespace(Thread=lambda **kw: thread_class(
+        target=lambda: stop.wait(3), name=kw["name"], daemon=True)))
+    monkeypatch.setattr(ms, "_sweeper", None)
+    monkeypatch.delenv("INDIEBIZ_MEDIA_NO_SWEEPER", raising=False)
+    try:
+        with rw.scope("media-request"):
+            ms._ensure_sweeper()
+        assert ms._sweeper.is_alive()
+        assert reg.snapshot()["owners"] == []
+        reg.gate("DRAINING")
+        assert reg.snapshot()["active_children"] == 0
+    finally:
+        stop.set()
+        if ms._sweeper is not None:
+            ms._sweeper.join(3)
+
+
+def test_each_sweep_is_tracked_and_new_sweeps_defer_during_drain(monkeypatch):
+    import runtime_work as rw
+
+    reg = rw.WorkRegistry("media-sweep-test")
+    reg.gate("ACTIVE")
+    monkeypatch.setattr(rw, "_registry", reg)
+    monkeypatch.setattr(ms, "_sessions", {})
+    monkeypatch.setattr(ms, "_requests", {})
+    seen = []
+
+    def profile(_):
+        seen.append(reg.snapshot())
+        return {}
+
+    monkeypatch.setattr(ms.session_lease, "profile", profile)
+    assert ms.sweep(now=1) == 0
+    assert seen[0]["active_roots"] == 1
+    assert seen[0]["owners"][0]["label"] == "media-sweep"
+    assert reg.snapshot()["owners"] == []
+    observations = len(seen)
+    reg.gate("DRAINING")
+    assert ms.sweep(now=2) is None
+    assert len(seen) == observations and reg.snapshot()["owners"] == []

@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Optional
 
 import media_signaling as sig
 import media_store
+import runtime_work
 import session_lease
 
 PURPOSES = {"voice_call", "video_call", "camera", "microphone", "speaker", "playback"}
@@ -1163,6 +1164,7 @@ def health() -> Dict:
 
 
 # ── 청소기 ───────────────────────────────────────────────────────────────────────
+@runtime_work.tracked("media-sweep", defer=True)
 def sweep(now: Optional[float] = None) -> int:
     now = now or _now()
     reconnect_s = float(session_lease.profile("media").get("reconnect_s") or 30)
@@ -1210,8 +1212,10 @@ def _ensure_sweeper() -> None:
                 sweep()
             except Exception as exc:  # noqa: BLE001
                 _log(f"[media] sweep 실패: {exc.__class__.__name__}")
-    _sweeper = threading.Thread(target=_run, name="media-sweeper", daemon=True)
-    _sweeper.start()
+    # 상주 스레드는 첫 미디어 요청의 자식이 아니다. 각 sweep의 유한 작업만 등록한다.
+    with runtime_work.service_scope():
+        _sweeper = threading.Thread(target=_run, name="media-sweeper", daemon=True)
+        _sweeper.start()
 
 
 def reset_for_tests() -> None:

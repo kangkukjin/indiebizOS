@@ -779,7 +779,7 @@
   "others:warehouse": {
    "fields": {
     "description": "6473b72323a3",
-    "target_description": "4b2ba320d86f",
+    "target_description": "4175905c1a31",
     "implementation": "1e503a1e8745",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -789,8 +789,8 @@
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-05",
-   "examples": 0
+   "reviewed": "2026-10-15",
+   "examples": 3
   },
   "self:ask": {
    "fields": {

@@ -42,7 +42,7 @@ export function NeighborBrowser({ url, name, initialPath, score, onScore, onDm, 
       setDirs(d.dirs || []);
       setFiles(d.files || []);
       setTotal(d.total || 0);
-      setError(null);
+      setError(d.source_complete === false ? d.warning : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

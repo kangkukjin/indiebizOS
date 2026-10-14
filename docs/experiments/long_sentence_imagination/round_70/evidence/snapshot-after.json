@@ -1,0 +1,173 @@
+{
+  "scope": "production cache and warehouse_op, temporary DB, synthetic fetch",
+  "unpolled": {
+    "success": true,
+    "path": "",
+    "dirs": [],
+    "files": [],
+    "total": 0,
+    "source": {
+      "kind": "snapshot",
+      "state": "unpolled",
+      "last_poll": null,
+      "last_success": null,
+      "error": null,
+      "truncated": null
+    },
+    "source_complete": false,
+    "warning": "아직 이 창고를 읽지 않았습니다. 새로고침(poll) 후 목록을 확인하세요."
+  },
+  "empty_poll": {
+    "success": true,
+    "result": {
+      "ok": true,
+      "url": "https://synthetic.invalid",
+      "file_count": 0,
+      "adapter": "native",
+      "new_events": 0,
+      "title": "",
+      "npub": "",
+      "truncated": false,
+      "source_complete": true
+    },
+    "source_complete": true
+  },
+  "confirmed_empty": {
+    "success": true,
+    "path": "",
+    "dirs": [],
+    "files": [],
+    "total": 0,
+    "source": {
+      "kind": "snapshot",
+      "state": "ready",
+      "last_poll": "2026-10-15T08:11:36",
+      "last_success": "2026-10-15T08:11:36",
+      "error": null,
+      "truncated": false
+    },
+    "source_complete": true,
+    "warning": ""
+  },
+  "seed_poll": {
+    "success": true,
+    "result": {
+      "ok": true,
+      "url": "https://synthetic.invalid",
+      "file_count": 1,
+      "adapter": "native",
+      "new_events": 1,
+      "title": "",
+      "npub": "",
+      "truncated": false,
+      "source_complete": true
+    },
+    "source_complete": true
+  },
+  "seed_browse": {
+    "success": true,
+    "path": "folder",
+    "dirs": [],
+    "files": [
+      {
+        "wh_url": "https://synthetic.invalid",
+        "path": "folder/event.json",
+        "mtime": "2026-10-15",
+        "bytes": 12,
+        "url": "https://synthetic.invalid/f?path=folder/event.json",
+        "seen_at": "2026-10-15T08:11:36",
+        "likes": 0
+      }
+    ],
+    "total": 1,
+    "source": {
+      "kind": "snapshot",
+      "state": "ready",
+      "last_poll": "2026-10-15T08:11:36",
+      "last_success": "2026-10-15T08:11:36",
+      "error": null,
+      "truncated": false
+    },
+    "source_complete": true,
+    "warning": ""
+  },
+  "failed_poll": {
+    "success": false,
+    "error": "503 synthetic unavailable",
+    "url": "https://synthetic.invalid",
+    "result": {
+      "ok": false,
+      "error": "503 synthetic unavailable",
+      "url": "https://synthetic.invalid"
+    }
+  },
+  "stale_browse": {
+    "success": true,
+    "path": "folder",
+    "dirs": [],
+    "files": [
+      {
+        "wh_url": "https://synthetic.invalid",
+        "path": "folder/event.json",
+        "mtime": "2026-10-15",
+        "bytes": 12,
+        "url": "https://synthetic.invalid/f?path=folder/event.json",
+        "seen_at": "2026-10-15T08:11:36",
+        "likes": 0
+      }
+    ],
+    "total": 1,
+    "source": {
+      "kind": "snapshot",
+      "state": "stale",
+      "last_poll": "2026-10-15T08:11:36",
+      "last_success": "2026-10-15T08:11:36",
+      "error": "503 synthetic unavailable",
+      "truncated": false
+    },
+    "source_complete": false,
+    "warning": "최근 창고 읽기에 실패했습니다. 남아 있는 목록은 과거 자료입니다: 503 synthetic unavailable"
+  },
+  "partial_poll": {
+    "success": true,
+    "result": {
+      "ok": true,
+      "url": "https://synthetic.invalid",
+      "file_count": 0,
+      "adapter": "native",
+      "new_events": 0,
+      "title": "",
+      "npub": "",
+      "truncated": true,
+      "source_complete": false
+    },
+    "source_complete": false
+  },
+  "partial_browse": {
+    "success": true,
+    "path": "folder",
+    "dirs": [],
+    "files": [
+      {
+        "wh_url": "https://synthetic.invalid",
+        "path": "folder/event.json",
+        "mtime": "2026-10-15",
+        "bytes": 12,
+        "url": "https://synthetic.invalid/f?path=folder/event.json",
+        "seen_at": "2026-10-15T08:11:36",
+        "likes": 0
+      }
+    ],
+    "total": 1,
+    "source": {
+      "kind": "snapshot",
+      "state": "partial",
+      "last_poll": "2026-10-15T08:11:36",
+      "last_success": "2026-10-15T08:11:36",
+      "error": null,
+      "truncated": true
+    },
+    "source_complete": false,
+    "warning": "창고가 목록 일부만 반환했습니다. 보존된 과거 항목이 섞여 있을 수 있습니다."
+  }
+}

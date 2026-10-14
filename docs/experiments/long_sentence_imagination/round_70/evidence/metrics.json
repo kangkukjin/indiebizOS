@@ -1,0 +1,469 @@
+{
+  "token_note": "Input includes cache where provider reports it; cache_read/create shown separately, never added to input. Trainer author tokens unmeasured.",
+  "ai": [
+    {
+      "id": 4784,
+      "source": "training",
+      "total_ms": 167007,
+      "started_at": "2026-10-15T08:02:22.504209",
+      "ended_at": "2026-10-15T08:05:09.511811",
+      "task_id": "task_sysai_87f75841",
+      "tools": {
+        "Bash": 3,
+        "execute_ibl": 8
+      },
+      "usage": {
+        "input": 1847813,
+        "output": 14548,
+        "cache_read": 1547470,
+        "cache_create": 296790
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 6595,
+          "output": 3,
+          "cache_read": 3072,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 126479,
+          "output": 3082,
+          "cache_read": 61103,
+          "cache_create": 65372
+        },
+        "execution": {
+          "input": 1643172,
+          "output": 11257,
+          "cache_read": 1482751,
+          "cache_create": 160397
+        },
+        "oneshot:evaluate": {
+          "input": 71567,
+          "output": 206,
+          "cache_read": 544,
+          "cache_create": 71021
+        }
+      },
+      "recall_presented": 1,
+      "recall_used": 1,
+      "compactions": 0,
+      "cost": [
+        {
+          "cost": {
+            "check_rejections": 2,
+            "evaluation_calls": 1,
+            "evaluation_checkpoint_s": 0.00127,
+            "evaluation_model_s": 4.792,
+            "evaluation_prepare_s": 0.071647,
+            "evaluation_visual_s": 0.003072,
+            "evaluation_wait_s": 0.000974,
+            "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/b73356ad8fb74d059453b8c325ed79c2/events.jsonl",
+            "execution_calls": 11,
+            "execution_failures": 1,
+            "execution_tool_s": 8.398,
+            "internal_tool_failures": 0,
+            "request_intent": "task",
+            "source_failures": 0,
+            "supervisor_cache_read": 61103,
+            "supervisor_calls": 1,
+            "supervisor_input": 126479,
+            "supervisor_model_s": 31.44,
+            "supervisor_output": 3082,
+            "supervisor_tool_failures": 0,
+            "supervisor_tools": 1,
+            "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+            "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+            "wall_s": 166.928
+          },
+          "kind": "cost.summary",
+          "phase": "final",
+          "role": "harness",
+          "seq": 58,
+          "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/b73356ad8fb74d059453b8c325ed79c2",
+          "task_id": "task_sysai_87f75841",
+          "time": 1792019109.451763
+        }
+      ]
+    },
+    {
+      "id": 4785,
+      "source": "training",
+      "total_ms": 194904,
+      "started_at": "2026-10-15T08:05:57.843471",
+      "ended_at": "2026-10-15T08:09:12.748647",
+      "task_id": "task_sysai_f5fc67c3",
+      "tools": {
+        "Bash": 5,
+        "execute_ibl": 9
+      },
+      "usage": {
+        "input": 3652292,
+        "output": 18504,
+        "cache_read": 3456531,
+        "cache_create": 186029
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 10471,
+          "output": 82,
+          "cache_read": 3584,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 3837,
+          "output": 2042,
+          "cache_read": 1024,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 3550000,
+          "output": 15935,
+          "cache_read": 3446392,
+          "cache_create": 103578
+        },
+        "oneshot:evaluate": {
+          "input": 87984,
+          "output": 445,
+          "cache_read": 5531,
+          "cache_create": 82451
+        }
+      },
+      "recall_presented": 1,
+      "recall_used": 1,
+      "compactions": 0,
+      "cost": [
+        {
+          "cost": {
+            "check_rejections": 4,
+            "evaluation_calls": 1,
+            "evaluation_checkpoint_s": 0.000927,
+            "evaluation_model_s": 8.386,
+            "evaluation_prepare_s": 0.078767,
+            "evaluation_visual_s": 0.003435,
+            "evaluation_wait_s": 0.000921,
+            "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/27d78a8fbe6142c48d80416bbab479be/events.jsonl",
+            "execution_calls": 14,
+            "execution_failures": 2,
+            "execution_tool_s": 8.393,
+            "internal_tool_failures": 0,
+            "request_intent": "task",
+            "source_failures": 0,
+            "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+            "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+            "wall_s": 194.877
+          },
+          "kind": "cost.summary",
+          "phase": "final",
+          "role": "harness",
+          "seq": 59,
+          "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/27d78a8fbe6142c48d80416bbab479be",
+          "task_id": "task_sysai_f5fc67c3",
+          "time": 1792019352.726719
+        }
+      ]
+    },
+    {
+      "id": 4786,
+      "source": "training",
+      "total_ms": 179085,
+      "started_at": "2026-10-15T08:21:14.109880",
+      "ended_at": "2026-10-15T08:24:13.196626",
+      "task_id": "task_sysai_90394faa",
+      "tools": {
+        "Bash": 7,
+        "execute_ibl": 7,
+        "Write": 1
+      },
+      "usage": {
+        "input": 2055573,
+        "output": 16420,
+        "cache_read": 1758370,
+        "cache_create": 290074
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 10677,
+          "output": 72,
+          "cache_read": 3584,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 58775,
+          "output": 3257,
+          "cache_read": 2265,
+          "cache_create": 56508
+        },
+        "execution": {
+          "input": 1875078,
+          "output": 12889,
+          "cache_read": 1746990,
+          "cache_create": 128056
+        },
+        "oneshot:evaluate": {
+          "input": 111043,
+          "output": 202,
+          "cache_read": 5531,
+          "cache_create": 105510
+        }
+      },
+      "recall_presented": 1,
+      "recall_used": 1,
+      "compactions": 0,
+      "cost": [
+        {
+          "cost": {
+            "check_rejections": 2,
+            "evaluation_calls": 1,
+            "evaluation_checkpoint_s": 0.003657,
+            "evaluation_model_s": 4.865,
+            "evaluation_prepare_s": 0.143026,
+            "evaluation_visual_s": 0.009562,
+            "evaluation_wait_s": 0.00381,
+            "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/9965bc70b3e04cb28cd920c331a11111/events.jsonl",
+            "execution_calls": 15,
+            "execution_failures": 0,
+            "execution_tool_s": 11.746,
+            "internal_tool_failures": 0,
+            "request_intent": "task",
+            "source_failures": 0,
+            "supervisor_cache_read": 2265,
+            "supervisor_calls": 1,
+            "supervisor_input": 58775,
+            "supervisor_model_s": 32.935,
+            "supervisor_output": 3257,
+            "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+            "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+            "wall_s": 178.38
+          },
+          "kind": "cost.summary",
+          "phase": "final",
+          "role": "harness",
+          "seq": 63,
+          "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/9965bc70b3e04cb28cd920c331a11111",
+          "task_id": "task_sysai_90394faa",
+          "time": 1792020253.061464
+        }
+      ]
+    },
+    {
+      "id": 4787,
+      "source": "training",
+      "total_ms": 26390,
+      "started_at": "2026-10-15T08:25:14.703300",
+      "ended_at": "2026-10-15T08:25:41.093818",
+      "task_id": "task_sysai_e918dbb8",
+      "tools": {
+        "Bash": 2
+      },
+      "usage": {
+        "input": 463998,
+        "output": 2299,
+        "cache_read": 447825,
+        "cache_create": 14427
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 4556,
+          "output": 3,
+          "cache_read": 2816,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 459442,
+          "output": 2296,
+          "cache_read": 445009,
+          "cache_create": 14427
+        }
+      },
+      "recall_presented": 1,
+      "recall_used": 1,
+      "compactions": 0,
+      "cost": [
+        {
+          "cost": {
+            "check_rejections": 0,
+            "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c5b2381ce17f46c69fca464c762188d1/events.jsonl",
+            "execution_calls": 2,
+            "execution_failures": 0,
+            "execution_tool_s": 1.181,
+            "internal_tool_failures": 0,
+            "request_intent": "task",
+            "source_failures": 0,
+            "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+            "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+            "wall_s": 26.338
+          },
+          "kind": "cost.summary",
+          "phase": "execute",
+          "role": "harness",
+          "seq": 23,
+          "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c5b2381ce17f46c69fca464c762188d1",
+          "task_id": "task_sysai_e918dbb8",
+          "time": 1792020341.062948
+        }
+      ]
+    }
+  ],
+  "trainer": [
+    {
+      "label": "repaired-base",
+      "wall_s": 5.136944770812988,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "908f82bc8ce94ec3be1b9085391accda",
+      "usage": {
+        "steps": 25909,
+        "rows": 135,
+        "elapsed_ms": 4950
+      },
+      "result": {
+        "events": 36,
+        "included": 11,
+        "notices": 54,
+        "failed": 0,
+        "reused": 0,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/repaired-base/newsletter.md"
+      }
+    },
+    {
+      "label": "repaired-new",
+      "wall_s": 2.105659008026123,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "1f47720da5414b439e3df63e4e7d913d",
+      "usage": {
+        "steps": 53545,
+        "rows": 135,
+        "elapsed_ms": 1978
+      },
+      "result": {
+        "events": 36,
+        "included": 10,
+        "notices": 54,
+        "failed": 0,
+        "reused": 53,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/repaired-new/newsletter.md"
+      }
+    },
+    {
+      "label": "repaired-original-v1",
+      "wall_s": 2.304635763168335,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "2c58b16c98624ce98053a10de7772bfb",
+      "usage": {
+        "steps": 407,
+        "rows": 6,
+        "elapsed_ms": 2248
+      },
+      "result": {
+        "events": 0,
+        "included": 0,
+        "notices": 0,
+        "failed": 3,
+        "reused": 0,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/repaired-original-v1/newsletter.md"
+      }
+    },
+    {
+      "label": "repaired-variant",
+      "wall_s": 3.1172449588775635,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "fecbfc98ef4b4385b0e86e195953146a",
+      "usage": {
+        "steps": 42926,
+        "rows": 116,
+        "elapsed_ms": 2944
+      },
+      "result": {
+        "events": 36,
+        "included": 3,
+        "notices": 54,
+        "failed": 1,
+        "reused": 52,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/repaired-variant/newsletter.md"
+      }
+    },
+    {
+      "label": "trainer-v1-base",
+      "wall_s": 1.3136022090911865,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "771b9a23ba3844e386425e1d9d066d6a",
+      "usage": {
+        "steps": 449,
+        "rows": 6,
+        "elapsed_ms": 1275
+      },
+      "result": {
+        "events": 0,
+        "included": 0,
+        "notices": 0,
+        "failed": 0,
+        "reused": 0,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/trainer-v1-base/newsletter.md"
+      }
+    },
+    {
+      "label": "trainer-v1-variant",
+      "wall_s": 0.9431619644165039,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "2e7cfea8b06849c1863f3673b5d9e455",
+      "usage": {
+        "steps": 449,
+        "rows": 6,
+        "elapsed_ms": 906
+      },
+      "result": {
+        "events": 0,
+        "included": 0,
+        "notices": 0,
+        "failed": 0,
+        "reused": 0,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/trainer-v1-variant/newsletter.md"
+      }
+    },
+    {
+      "label": "trainer-v2-base",
+      "wall_s": 2.0904181003570557,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "4bec16dc17f745bb9ad2c00550e05afd",
+      "usage": {
+        "steps": 23672,
+        "rows": 135,
+        "elapsed_ms": 2000
+      },
+      "result": {
+        "events": 36,
+        "included": 11,
+        "notices": 54,
+        "failed": 0,
+        "reused": 0,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/trainer-v2-base/newsletter.md"
+      }
+    },
+    {
+      "label": "trainer-v2-variant",
+      "wall_s": 0.7495510578155518,
+      "success": true,
+      "run_status": "completed",
+      "run_id": "6afedd2d08454fd28d7ac83a5f7172b9",
+      "usage": {
+        "steps": 40704,
+        "rows": 116,
+        "elapsed_ms": 681
+      },
+      "result": {
+        "events": 36,
+        "included": 3,
+        "notices": 54,
+        "failed": 1,
+        "reused": 52,
+        "newsletter": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_70회차/trainer-v2-variant/newsletter.md"
+      }
+    }
+  ]
+}

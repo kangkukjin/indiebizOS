@@ -91,6 +91,14 @@ def _init_db() -> None:
             c.execute("ALTER TABLE poll_status ADD COLUMN adapter TEXT")
         except Exception:
             pass  # 이미 있음
+        # 실패 뒤에도 마지막 성공 시각과 그 목록의 완전성을 보존한다.
+        # 옛 캐시는 절단 여부를 기록하지 않았으므로 NULL=미확인, 다음 폴링에서 확정.
+        columns = {r["name"] for r in c.execute("PRAGMA table_info(poll_status)")}
+        if "last_success" not in columns:
+            c.execute("ALTER TABLE poll_status ADD COLUMN last_success TEXT")
+            c.execute("UPDATE poll_status SET last_success=last_poll WHERE ok=1")
+        if "truncated" not in columns:
+            c.execute("ALTER TABLE poll_status ADD COLUMN truncated INTEGER")
         # 회원 로그인(2026-07-20) — 상대 창고에 내가 가입한 계정으로 폴링해 내 레벨의
         # 매니페스트를 받는다(익명 폴링=항상 레벨 0 이던 갭 해소). 저장하는 자격은
         # *내가 만든* 발신용 계정 — 브라우저 비밀번호 관리자와 같은 부류. 맥 로컬 DB
@@ -496,16 +504,18 @@ def poll_warehouse(url: str, _hop: int = 0, hint: str = "") -> Dict:
             c.execute("DELETE FROM snapshots WHERE wh_url=? AND path=?", (base, p))
         c.execute("""
             INSERT INTO poll_status(wh_url, last_poll, ok, error, file_count, title,
-                                    has_restricted, adapter, viewer_level)
-            VALUES(?, ?, 1, NULL, ?, ?, ?, ?, ?)
+                                    has_restricted, adapter, viewer_level, last_success, truncated)
+            VALUES(?, ?, 1, NULL, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(wh_url) DO UPDATE SET
                 last_poll=?, ok=1, error=NULL, file_count=?, title=?, has_restricted=?,
-                adapter=?, viewer_level=?
+                adapter=?, viewer_level=?, last_success=?, truncated=?
         """, (base, now, len(files), title, has_restricted, adapter, viewer_level,
-              now, len(files), title, has_restricted, adapter, viewer_level))
+              now, int(truncated),
+              now, len(files), title, has_restricted, adapter, viewer_level, now, int(truncated)))
     _reconcile_identity(base, npub)
     return {"ok": True, "url": base, "file_count": len(files), "adapter": adapter,
-            "new_events": new_events, "title": title, "npub": npub}
+            "new_events": new_events, "title": title, "npub": npub,
+            "truncated": truncated, "source_complete": not truncated}
 
 
 def _reconcile_identity(base: str, npub: str) -> None:
@@ -698,15 +708,30 @@ def get_feed(limit: int = 100, wh_url: Optional[str] = None,
 
 
 def browse_snapshots(url: str, path: str = "") -> Dict:
-    """이웃 창고 스냅샷을 폴더 단위로 열람(인앱 파인더) — 폴러가 모아둔 현재 색인을
+    """이웃 창고 스냅샷을 폴더 단위로 열람(인앱 파인더) — 폴러가 모아둔 색인을
     그대로 서빙하므로 릴레이·창고 왕복 0. dirs=직계 하위 폴더(집계), files=직계 파일.
-    스냅샷은 매니페스트의 현재 상태이므로 '지금 그 창고에 있는 전부'다(truncated 방언 제외)."""
+    source는 마지막 폴링의 상태·시각이다. 아직 읽지 않음/실패/부분 목록은 빈 창고나
+    최신 전건 확인과 다르다. 오래된 행도 보존하되 source_complete:false로 함께 알린다."""
     _init_db()
     base = normalize_base(url)
     prefix = (path or "").strip("/")
     with _db_lock, _conn() as c:
         rows = [dict(r) for r in c.execute(
             "SELECT * FROM snapshots WHERE wh_url=?", (base,)).fetchall()]
+        record = c.execute("SELECT * FROM poll_status WHERE wh_url=?", (base,)).fetchone()
+        status = dict(record) if record else {}
+    last_success = status.get("last_success")
+    if not status:
+        state, warning = "unpolled", "아직 이 창고를 읽지 않았습니다. 새로고침(poll) 후 목록을 확인하세요."
+    elif not status.get("ok"):
+        state = "stale" if last_success or rows else "failed"
+        warning = "최근 창고 읽기에 실패했습니다. 남아 있는 목록은 과거 자료입니다: " + str(status.get("error") or "원인 미상")
+    elif status.get("truncated") is None:
+        state, warning = "unknown", "이전 목록의 완전성을 확인할 수 없습니다. 새로고침(poll) 후 확인하세요."
+    elif status["truncated"]:
+        state, warning = "partial", "창고가 목록 일부만 반환했습니다. 보존된 과거 항목이 섞여 있을 수 있습니다."
+    else:
+        state, warning = "ready", ""
     dirs: Dict[str, Dict] = {}
     files: List[Dict] = []
     for r in rows:
@@ -731,6 +756,11 @@ def browse_snapshots(url: str, path: str = "") -> Dict:
         "dirs": sorted(dirs.values(), key=lambda d: str(d["name"]).lower()),
         "files": files,
         "total": len(rows),
+        "source": {"kind": "snapshot", "state": state, "last_poll": status.get("last_poll"),
+                   "last_success": last_success, "error": status.get("error"),
+                   "truncated": None if status.get("truncated") is None else bool(status["truncated"])},
+        "source_complete": state == "ready",
+        "warning": warning,
     }
 
 

@@ -1,0 +1,13 @@
+{
+  "request_id": "long70-activate",
+  "outcome": "restarted",
+  "finished_at": 1792019747.112633,
+  "generation": "3331ab5bd255788a9416426666076c85",
+  "effect_unknown": true,
+  "interrupted": [
+    {
+      "kind": "child",
+      "label": "thread:media-sweeper"
+    }
+  ]
+}

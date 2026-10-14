@@ -1,0 +1,1484 @@
+{
+  "base": {
+    "a": [
+      {
+        "event_id": "E01",
+        "title": "모집 소식 01",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 01. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E02",
+        "title": "나눔 소식 02",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 02. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E03",
+        "title": "행사 소식 03",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 03. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E04",
+        "title": "모집 소식 04",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 04. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E05",
+        "title": "나눔 소식 05",
+        "region": "중앙동",
+        "date": "2026-10-15",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 05. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E06",
+        "title": "행사 소식 06",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 06. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E07",
+        "title": "모집 소식 07",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 07. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E08",
+        "title": "나눔 소식 08",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 08. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E09",
+        "title": "행사 소식 09",
+        "region": "동쪽동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 09. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E10",
+        "title": "모집 소식 10",
+        "region": "서쪽동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 10. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E11",
+        "title": "나눔 소식 11",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 11. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E12",
+        "title": "행사 소식 12",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 12. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E13",
+        "title": "모집 소식 13",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 13. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E14",
+        "title": "나눔 소식 14",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 14. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E15",
+        "title": "행사 소식 15",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 15. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E16",
+        "title": "모집 소식 16",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 16. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E17",
+        "title": "나눔 소식 17",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 17. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E18",
+        "title": "행사 소식 18",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 18. 참가 조건은 원문을 확인하세요."
+      }
+    ],
+    "b": [
+      {
+        "event_id": "E19",
+        "title": "모집 소식 19",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 19. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E20",
+        "title": "나눔 소식 20",
+        "region": "중앙동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 20. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E21",
+        "title": "행사 소식 21",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 21. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E22",
+        "title": "모집 소식 22",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 22. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E23",
+        "title": "나눔 소식 23",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 23. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E24",
+        "title": "행사 소식 24",
+        "region": "동쪽동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 24. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E25",
+        "title": "모집 소식 25",
+        "region": "서쪽동",
+        "date": "2026-10-20",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 25. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E26",
+        "title": "나눔 소식 26",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 26. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E27",
+        "title": "행사 소식 27",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 27. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E28",
+        "title": "모집 소식 28",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 28. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E29",
+        "title": "나눔 소식 29",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 29. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E30",
+        "title": "행사 소식 30",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 30. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E31",
+        "title": "모집 소식 31",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 31. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E32",
+        "title": "나눔 소식 32",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 32. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E33",
+        "title": "행사 소식 33",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 33. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E34",
+        "title": "모집 소식 34",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 34. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E35",
+        "title": "나눔 소식 35",
+        "region": "중앙동",
+        "date": "2026-10-15",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 35. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E36",
+        "title": "행사 소식 36",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 36. 참가 조건은 원문을 확인하세요."
+      }
+    ],
+    "c": [
+      {
+        "event_id": "E01",
+        "title": "모집 소식 01",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 01. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E02",
+        "title": "나눔 소식 02",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 02. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E03",
+        "title": "행사 소식 03",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 03. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E04",
+        "title": "모집 소식 04",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 04. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E05",
+        "title": "나눔 소식 05",
+        "region": "중앙동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 05. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E06",
+        "title": "행사 소식 06",
+        "region": "동쪽동",
+        "date": "2026-10-20",
+        "status": "active",
+        "updated_at": "2026-10-14T10:00:00+09:00",
+        "description": "합성 동네 공지 06. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E07",
+        "title": "모집 소식 07",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 07. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E08",
+        "title": "나눔 소식 08",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 08. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E09",
+        "title": "행사 소식 09",
+        "region": "동쪽동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 09. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E10",
+        "title": "모집 소식 10",
+        "region": "서쪽동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 10. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E11",
+        "title": "나눔 소식 11",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 11. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E12",
+        "title": "행사 소식 12",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 12. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E13",
+        "title": "모집 소식 13",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 13. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E14",
+        "title": "나눔 소식 14",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 14. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E15",
+        "title": "행사 소식 15",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 15. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E16",
+        "title": "모집 소식 16",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 16. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E17",
+        "title": "나눔 소식 17",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 17. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E18",
+        "title": "행사 소식 18",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 18. 참가 조건은 원문을 확인하세요."
+      }
+    ]
+  },
+  "variant": {
+    "a": [
+      {
+        "event_id": "E01",
+        "title": "모집 소식 01",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 01. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E02",
+        "title": "나눔 소식 02",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 02. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E03",
+        "title": "행사 소식 03",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 03. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E04",
+        "title": "모집 소식 04",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 04. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E05",
+        "title": "나눔 소식 05",
+        "region": "중앙동",
+        "date": "2026-10-15",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 05. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E06",
+        "title": "행사 소식 06",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 06. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E07",
+        "title": "모집 소식 07",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 07. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E08",
+        "title": "나눔 소식 08",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "cancelled",
+        "updated_at": "2026-10-15T10:00:00+09:00",
+        "description": "합성 동네 공지 08. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E09",
+        "title": "행사 소식 09",
+        "region": "동쪽동",
+        "date": "2026-10-21",
+        "status": "active",
+        "updated_at": "2026-10-15T10:00:00+09:00",
+        "description": "합성 동네 공지 09. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E10",
+        "title": "모집 소식 10",
+        "region": "서쪽동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 10. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E11",
+        "title": "나눔 소식 11",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 11. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E12",
+        "title": "행사 소식 12",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 12. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E13",
+        "title": "모집 소식 13",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 13. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E14",
+        "title": "나눔 소식 14",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 14. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E15",
+        "title": "행사 소식 15",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 15. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E16",
+        "title": "모집 소식 16",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 16. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E17",
+        "title": "나눔 소식 17",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 17. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E18",
+        "title": "행사 소식 18",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 18. 참가 조건은 원문을 확인하세요."
+      }
+    ],
+    "b": [
+      {
+        "event_id": "E19",
+        "title": "모집 소식 19",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 19. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E20",
+        "title": "나눔 소식 20",
+        "region": "중앙동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 20. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E21",
+        "title": "행사 소식 21",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 21. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E22",
+        "title": "모집 소식 22",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 22. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E23",
+        "title": "나눔 소식 23",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 23. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E24",
+        "title": "행사 소식 24",
+        "region": "동쪽동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 24. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E25",
+        "title": "모집 소식 25",
+        "region": "서쪽동",
+        "date": "2026-10-20",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 25. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E26",
+        "title": "나눔 소식 26",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 26. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E27",
+        "title": "행사 소식 27",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 27. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E28",
+        "title": "모집 소식 28",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 28. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E29",
+        "title": "나눔 소식 29",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 29. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E30",
+        "title": "행사 소식 30",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 30. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E31",
+        "title": "모집 소식 31",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 31. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E32",
+        "title": "나눔 소식 32",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 32. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E33",
+        "title": "행사 소식 33",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 33. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E34",
+        "title": "모집 소식 34",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 34. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E35",
+        "title": "나눔 소식 35",
+        "region": "중앙동",
+        "date": "2026-10-15",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 35. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E36",
+        "title": "행사 소식 36",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 36. 참가 조건은 원문을 확인하세요."
+      }
+    ],
+    "c": [
+      {
+        "event_id": "E01",
+        "title": "모집 소식 01",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 01. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E02",
+        "title": "나눔 소식 02",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 02. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E03",
+        "title": "행사 소식 03",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 03. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E04",
+        "title": "모집 소식 04",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 04. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E05",
+        "title": "나눔 소식 05",
+        "region": "중앙동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 05. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E06",
+        "title": "행사 소식 06",
+        "region": "동쪽동",
+        "date": "2026-10-20",
+        "status": "active",
+        "updated_at": "2026-10-14T10:00:00+09:00",
+        "description": "합성 동네 공지 06. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E07",
+        "title": "모집 소식 07",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 07. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E08",
+        "title": "나눔 소식 08",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 08. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E09",
+        "title": "행사 소식 09",
+        "region": "동쪽동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 09. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E10",
+        "title": "모집 소식 10",
+        "region": "서쪽동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 10. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E11",
+        "title": "나눔 소식 11",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 11. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E12",
+        "title": "행사 소식 12",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 12. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E13",
+        "title": "모집 소식 13",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 13. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E14",
+        "title": "나눔 소식 14",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 14. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E15",
+        "title": "행사 소식 15",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 15. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E16",
+        "title": "모집 소식 16",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 16. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E17",
+        "title": "나눔 소식 17",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 17. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E18",
+        "title": "행사 소식 18",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 18. 참가 조건은 원문을 확인하세요."
+      }
+    ]
+  },
+  "new": {
+    "a": [
+      {
+        "event_id": "E01",
+        "title": "모집 소식 01",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 01. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E02",
+        "title": "나눔 소식 02",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 02. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E03",
+        "title": "행사 소식 03",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 03. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E04",
+        "title": "모집 소식 04",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 04. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E05",
+        "title": "나눔 소식 05",
+        "region": "중앙동",
+        "date": "2026-10-15",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 05. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E06",
+        "title": "행사 소식 06",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 06. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E07",
+        "title": "모집 소식 07",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 07. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E08",
+        "title": "나눔 소식 08",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "cancelled",
+        "updated_at": "2026-10-15T10:00:00+09:00",
+        "description": "합성 동네 공지 08. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E09",
+        "title": "행사 소식 09",
+        "region": "동쪽동",
+        "date": "2026-10-21",
+        "status": "active",
+        "updated_at": "2026-10-15T10:00:00+09:00",
+        "description": "합성 동네 공지 09. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E10",
+        "title": "모집 소식 10",
+        "region": "서쪽동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 10. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E11",
+        "title": "나눔 소식 11",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 11. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E12",
+        "title": "행사 소식 12",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 12. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E13",
+        "title": "모집 소식 13",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 13. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E14",
+        "title": "나눔 소식 14",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 14. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E15",
+        "title": "행사 소식 15",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 15. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E16",
+        "title": "모집 소식 16",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 16. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E17",
+        "title": "나눔 소식 17",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 17. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E18",
+        "title": "행사 소식 18",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 18. 참가 조건은 원문을 확인하세요."
+      }
+    ],
+    "b": [
+      {
+        "event_id": "E19",
+        "title": "모집 소식 19",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 19. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E20",
+        "title": "나눔 소식 20",
+        "region": "중앙동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 20. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E21",
+        "title": "행사 소식 21",
+        "region": "동쪽동",
+        "date": "2026-10-17",
+        "status": "active",
+        "updated_at": "2026-10-15T11:00:00+09:00",
+        "description": "합성 동네 공지 21. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E22",
+        "title": "모집 소식 22",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 22. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E23",
+        "title": "나눔 소식 23",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 23. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E24",
+        "title": "행사 소식 24",
+        "region": "동쪽동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 24. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E25",
+        "title": "모집 소식 25",
+        "region": "서쪽동",
+        "date": "2026-10-20",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 25. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E26",
+        "title": "나눔 소식 26",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 26. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E27",
+        "title": "행사 소식 27",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 27. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E28",
+        "title": "모집 소식 28",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 28. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E29",
+        "title": "나눔 소식 29",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 29. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E30",
+        "title": "행사 소식 30",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 30. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E31",
+        "title": "모집 소식 31",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 31. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E32",
+        "title": "나눔 소식 32",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 32. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E33",
+        "title": "행사 소식 33",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 33. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E34",
+        "title": "모집 소식 34",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 34. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E35",
+        "title": "나눔 소식 35",
+        "region": "중앙동",
+        "date": "2026-10-15",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 35. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E36",
+        "title": "행사 소식 36",
+        "region": "동쪽동",
+        "date": "2026-10-16",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 36. 참가 조건은 원문을 확인하세요."
+      }
+    ],
+    "c": [
+      {
+        "event_id": "E01",
+        "title": "모집 소식 01",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 01. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E02",
+        "title": "나눔 소식 02",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 02. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E03",
+        "title": "행사 소식 03",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 03. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E04",
+        "title": "모집 소식 04",
+        "region": "서쪽동",
+        "date": "2026-10-14",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 04. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E05",
+        "title": "나눔 소식 05",
+        "region": "중앙동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 05. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E06",
+        "title": "행사 소식 06",
+        "region": "동쪽동",
+        "date": "2026-10-20",
+        "status": "active",
+        "updated_at": "2026-10-14T10:00:00+09:00",
+        "description": "합성 동네 공지 06. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E07",
+        "title": "모집 소식 07",
+        "region": "서쪽동",
+        "date": "2026-10-17",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 07. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E08",
+        "title": "나눔 소식 08",
+        "region": "중앙동",
+        "date": "2026-10-18",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 08. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E09",
+        "title": "행사 소식 09",
+        "region": "동쪽동",
+        "date": "2026-10-19",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 09. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E10",
+        "title": "모집 소식 10",
+        "region": "서쪽동",
+        "date": null,
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 10. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E11",
+        "title": "나눔 소식 11",
+        "region": "중앙동",
+        "date": "2026-10-21",
+        "status": "cancelled",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 11. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E12",
+        "title": "행사 소식 12",
+        "region": "동쪽동",
+        "date": "2026-10-22",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 12. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E13",
+        "title": "모집 소식 13",
+        "region": "서쪽동",
+        "date": "2026-10-23",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 13. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E14",
+        "title": "나눔 소식 14",
+        "region": "중앙동",
+        "date": "2026-10-24",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 14. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E15",
+        "title": "행사 소식 15",
+        "region": "동쪽동",
+        "date": "2026-10-10",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 15. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E16",
+        "title": "모집 소식 16",
+        "region": "서쪽동",
+        "date": "2026-10-11",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 16. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E17",
+        "title": "나눔 소식 17",
+        "region": "중앙동",
+        "date": "2026-10-12",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 17. 참가 조건은 원문을 확인하세요."
+      },
+      {
+        "event_id": "E18",
+        "title": "행사 소식 18",
+        "region": "동쪽동",
+        "date": "2026-10-13",
+        "status": "active",
+        "updated_at": "2026-10-14T09:00:00+09:00",
+        "description": "합성 동네 공지 18. 참가 조건은 원문을 확인하세요."
+      }
+    ]
+  }
+}

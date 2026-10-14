@@ -1,0 +1,112 @@
+{
+  "scope": "production cache and warehouse_op, temporary DB, synthetic fetch",
+  "unpolled": {
+    "success": true,
+    "path": "",
+    "dirs": [],
+    "files": [],
+    "total": 0
+  },
+  "empty_poll": {
+    "success": true,
+    "result": {
+      "ok": true,
+      "url": "https://synthetic.invalid",
+      "file_count": 0,
+      "adapter": "native",
+      "new_events": 0,
+      "title": "",
+      "npub": ""
+    }
+  },
+  "confirmed_empty": {
+    "success": true,
+    "path": "",
+    "dirs": [],
+    "files": [],
+    "total": 0
+  },
+  "seed_poll": {
+    "success": true,
+    "result": {
+      "ok": true,
+      "url": "https://synthetic.invalid",
+      "file_count": 1,
+      "adapter": "native",
+      "new_events": 1,
+      "title": "",
+      "npub": ""
+    }
+  },
+  "seed_browse": {
+    "success": true,
+    "path": "folder",
+    "dirs": [],
+    "files": [
+      {
+        "wh_url": "https://synthetic.invalid",
+        "path": "folder/event.json",
+        "mtime": "2026-10-15",
+        "bytes": 12,
+        "url": "https://synthetic.invalid/f?path=folder/event.json",
+        "seen_at": "2026-10-15T08:05:35",
+        "likes": 0
+      }
+    ],
+    "total": 1
+  },
+  "failed_poll": {
+    "success": true,
+    "result": {
+      "ok": false,
+      "error": "503 synthetic unavailable",
+      "url": "https://synthetic.invalid"
+    }
+  },
+  "stale_browse": {
+    "success": true,
+    "path": "folder",
+    "dirs": [],
+    "files": [
+      {
+        "wh_url": "https://synthetic.invalid",
+        "path": "folder/event.json",
+        "mtime": "2026-10-15",
+        "bytes": 12,
+        "url": "https://synthetic.invalid/f?path=folder/event.json",
+        "seen_at": "2026-10-15T08:05:35",
+        "likes": 0
+      }
+    ],
+    "total": 1
+  },
+  "partial_poll": {
+    "success": true,
+    "result": {
+      "ok": true,
+      "url": "https://synthetic.invalid",
+      "file_count": 0,
+      "adapter": "native",
+      "new_events": 0,
+      "title": "",
+      "npub": ""
+    }
+  },
+  "partial_browse": {
+    "success": true,
+    "path": "folder",
+    "dirs": [],
+    "files": [
+      {
+        "wh_url": "https://synthetic.invalid",
+        "path": "folder/event.json",
+        "mtime": "2026-10-15",
+        "bytes": 12,
+        "url": "https://synthetic.invalid/f?path=folder/event.json",
+        "seen_at": "2026-10-15T08:05:35",
+        "likes": 0
+      }
+    ],
+    "total": 1
+  }
+}

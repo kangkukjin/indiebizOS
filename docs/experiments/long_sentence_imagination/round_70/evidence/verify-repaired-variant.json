@@ -1,0 +1,19 @@
+{
+  "label": "repaired-variant",
+  "phase": "variant",
+  "passed": true,
+  "errors": [],
+  "counts": {
+    "past": 8,
+    "unverified": 18,
+    "included": 3,
+    "outside": 3,
+    "undated": 1,
+    "conflict": 1,
+    "cancelled": 2
+  },
+  "events": 36,
+  "notices": 54,
+  "fresh_reused": 34,
+  "stale_preserved": 18
+}

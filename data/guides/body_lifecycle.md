@@ -25,6 +25,21 @@
 - **에이전트 지정**: `agent_id: "프로젝트/에이전트id"` 또는 `project_id` + `agent_id`. 스위치 `create` 는 그 프로젝트의 역할·허용 노드를 복사해 얼린다(모델은 얼리지 않음).
 - **회원 주체**: 이 낱말들의 쓰기 op 는 전부 주인 전용(`requires.principal: owner`). 프로젝트·휴지통·내 창고·채널은 읽기도 주인 전용.
 
+
+## 이웃 창고를 읽을 때
+
+`others:warehouse`의 `browse`는 폴러가 저장한 **로컬 목록**이다. `dirs`는 직계 폴더,
+`files`는 직계 파일(`path`·`url`·`mtime`)이며 하위 폴더의 본문까지 자동으로 읽지 않는다.
+`source`에는 `state`·`last_poll`·`last_success`·`error`·`truncated`가 있다.
+`ready`도 마지막 폴링 시점의 목록이다. 현재 자료가 필요하면 `poll`로 새로 읽는다.
+
+아직 수집하지 않은 `unpolled`, 실패한 `failed`/`stale`, 잘린 `partial`, 옛 캐시의
+완전성 미확인 `unknown`은 빈 창고가 아니다. IBL은 `PARTIAL_SOURCE`를 반환하고
+`$error.partial`에 목록과 상태를 보존한다. 과거 목록을 쓰면 최신 확인 실패를 산출물에 남긴다.
+개별 `poll` 실패는 실행 오류이며, 전체 폴링의 일부 실패는 성공한 원천을 포함한 partial이다.
+이웃 등록이나 캐시 변경 없이 공개 창고를 직접 읽을 때는 `/manifest`와 그 파일 URL을 사용한다.
+목록 수집·본문 읽기·최신 확인은 별개이며, 하나가 성공했다고 나머지를 완료로 쓰지 않는다.
+
 ## 예
 ```
 $p = [self:project]{op: "create", name: "시장조사"}

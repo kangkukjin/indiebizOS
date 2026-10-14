@@ -2,7 +2,7 @@
 title: 도구 패키지 시스템
 scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘는 코어 `ibl_nodes_src`와 패키지 `ibl_actions.yaml`이 소유권별 정본이며, op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-09-13
+last_updated: 2026-10-14
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -318,7 +318,7 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 | family-news | Family News | 가족신문 `[others:family_news]` — 폰(USB) 사진으로 판 조판→`/n/<5자>` 누적 발행, 방명록·가족 사진 업로드 |
 | finance-record | Finance Record | 재무 원장 `[self:finance]{op}` — 소비(지출·수입 거래)와 소유(자산·부채)를 **주체(owner) 축**(개인/회사)으로 한 원장에. 폰 결제 알림 수거(`op:sync`)·다형 입력 적재(`ingest_engine` 공용). 2026-08-14 `[self:spend]` 흡수 |
 | freelance-services | 외주 서비스 | 외주 서비스 상품과 프리랜서 전문가를 검색합니다. |
-| guest-helper | Guest Helper | USB 손발 — 발급 `[self:limb]{op}`(USB 페이로드 생성·승인·폐기) + 조작 `[limbs:guestpc]{op}`(셸/파일). 헬퍼=Go 단일파일, 허브로 아웃바운드(그 PC 방화벽 무설정). 눈 없음(셸·파일만) |
+| guest-helper | Guest Helper | 등록 손발 — `[self:limb]{op}`로 발급·등록 관리, `[limbs:guestpc]{op}`로 실행. PC 헬퍼는 셸·파일·화면 공유·작업, Android 어댑터는 폰 IBL 실행. 장치가 허브로 아웃바운드 연결 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
 | house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중 지붕, 필로티, 건물 프로파일, 계단(직선/L자/U턴/나선형/Winder |
 | ibl-core | IBL Core | IBL 핵심 도구 |
@@ -360,6 +360,20 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 **참고**: cloudflare 패키지의 `cf_tunnel` 도구는 원격 Finder 시스템의 Cloudflare Tunnel 설정을 자동화합니다. → [remote_access.md](remote_access.md)
 
 ---
+
+## 최근 연결 기능의 소유 위치
+
+| 기능 | 기존 어휘·구현 | 상세 계약 |
+| --- | --- | --- |
+| 연구 자료실·질문 | `notebook`의 `self:notebook` + 코어 `self:project`의 대화 연산 | [연구](../guides/research_project.md) · [질문](../guides/research_questions.md) |
+| 내장 브라우저 | `browser-action`의 `limbs:browser`, `driver:embedded` | [브라우저](../guides/browser_action.md) |
+| 상주 PC·폰 손발 | `guest-helper`의 `limbs:guestpc`, PC 명령/폰 `op:ibl` 어댑터 | [헬퍼](../guides/guest_helper.md) · [폰](../guides/remote_phone.md) |
+| 미디어 세션 | backend 세션 서비스 + 기존 `self:script`의 `미디어세션` | [미디어](../guides/media_session.md) |
+| 폰 단독 유튜브·음악 | 기존 `sense:search_youtube`·`limbs:music`·`self:music`의 Android 경로 | [폰 재생](../guides/youtube_relay.md) |
+
+이 기능 목록은 새 패키지 수나 새 액션 수가 아니다. 실제 어휘·op·몸별 사용 가능성은
+빌드 레지스트리, 활성 원장, 기기 능력·권한을 함께 확인한다. 헬퍼 바이너리나 폰 APK의
+업데이트가 필요한 변경은 패키지 reload만으로 대상 장치에 반영되지 않는다.
 
 <!-- EXT_COUNT:START -->
 ## 백엔드 코어 모듈 (extensions/) — 5개
@@ -419,7 +433,7 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 - `POST /packages/install-from-text` - 공유 텍스트(옛 형식 포함)를 `.iblpack` 등록 관문으로
 
 ---
-*최근 변경(2026-08-28): web 패키지 검색 통화 계약 둘(발행일 `date` ISO 8601 · `queries` 유니온 선언) 반영. 패키지 표의 행 집합은 빌드가, 설명 산문은 문서가 소유한다. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*
 
 
 ### 내 어휘의 아이콘 데스크톱

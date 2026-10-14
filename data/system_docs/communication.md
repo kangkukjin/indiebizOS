@@ -2,7 +2,7 @@
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
 owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py, chat_streams.py, chat_runs.py, execution_workers.py, vocabulary_state.py, vocabulary_lifecycle.py
-last_updated: 2026-09-14
+last_updated: 2026-10-14
 see_also: [architecture.md, scheduler_guide.md, technical.md]
 ---
 
@@ -211,23 +211,23 @@ Nostr 키는 IndieNet identity와 연동 가능:
   캐시 세대가 바뀐다. 카탈로그와 해마 회상이 활성-필터를 지나 **"잠든(남의) 어휘를 학습하지 않는다"**(미지 어휘=남의 것).
 - **컴파일러 능력 축은 해마 유무**: 용례가 있으면 조종실 경로로, 없으면 사전-동봉 경량 모델로 컴파일한다.
 - **`delegate` 와의 구별**: `[others:delegate]`=**인격**(에이전트)에게 일을 맡김 / `[others:ask]`=**몸**에게 능력을 부탁함.
-- **표면 분리**: 원격 런처(=PC 의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 갈랐다
+- **표면 분리**: 원격 런처(=PC의 일부)와 폰 네이티브(=독립 시스템)를 조립 모듈로 갈랐다
   (`launcher_surface_remote.py` / `launcher_surface_phone.py`). 폰 조종실은 로컬 완결(translate·validate·distill·catalog).
 - **클립보드**: 몸 사이 특권 배관 대신 표면 축을 태우려 원격 런처 수신면(clipbox)을 뒀다가 2026-07-28 **철회** — '폰으로'는 종전 푸시 큐를 그대로 쓴다.
 
-### USB 손발 — 낯선 PC 에 꽂는 얇은 몸 (2026-07-23)
+### 등록 손발 — PC 헬퍼와 Android 폰
 
-- **발급** `[self:limb]{op: issue/list/revoke}` → `outputs/limb_issue/<이름>/`(허브 주소 + limb key + 헬퍼 실행파일 + 사용법).
-  USB 에 실리는 것은 허브 비밀번호가 아니라 **limb key 하나**이고, 분실 시 그 키만 폐기한다.
-- **조작** `[limbs:guestpc]{op: shell/read/write/list/info}` — 허브에서 하달. 눈은 없다(셸·파일만).
-- **연결 방향**: 헬퍼(Go 단일파일)가 그 PC 에서 허브로 **아웃바운드** 접속 → 폰 푸시 큐(`phone_jobs`)를 그대로
-  재사용해 셸 봉투를 당겨가 실행·회신. 그 PC 방화벽을 건드리지 않는다. 큐에 흐르는 것은 IBL 이 아니라
-  **셸 봉투 JSON**(손발=IBL 엔진 없는 얇은 몸).
-- 헬퍼 콘솔은 실행 봉투를 생중계하고, 허브는 작업 시작 시 원 요청을 `note` 봉투로 한 번 하달한다(무슨 일로 움직이는지 보이게).
+- **PC**: 휴대 헬퍼는 `[self:limb]`로 발급한다. 상주 PC는 조종실의 공용 USB 폴더에서 등록하고 장치별 실행 자격을 받는다. 이후 USB 없이 사용자 로그인 범위에서 실행하며 중앙에서 화면 공유·헬퍼 교체·등록 해제를 관리한다.
+- **폰**: `phone-companion/scripts/setup_phone.sh --limb <이름>`으로 USB 최초 등록한다. `adapter:indiebiz-v1`은 폰의 IBL 엔진에 `op:ibl`을 전달한다. PC용 셸·read/write 봉투와 구분하며 작은 파일 왕복도 폰 IBL 안에서 수행한다.
+- **허가와 연결**: 허브가 만든 등록 자격과 USB 물리 접근으로 연결한다. 상주 기기는 허브로 아웃바운드 연결하고 기기별 방화벽 포트 개방을 요구하지 않는다. 일반 이웃의 자연어 부탁·회원 로컬 승인·등록 손발은 각자의 권한 경계를 유지한다.
+- **작업 수명**: 긴 작업은 접수증으로 조회·대기·결과를 회수한다. 재기동 뒤 전달 여부·실행 불명·늦은 결과를 구분하며 이미 전달한 부작용을 자동 반복하지 않는다. 폰 IBL은 전달 전 취소만 지원한다.
+- **실행 문맥**: 지원 설치본은 `training`·`test` 출처를 허브→폰으로 전달하고 실행 뒤 복원한다. 원격 프로그램의 판본과 결과 참조는 그 몸에 속한다. 중앙의 참조 저장소와 혼용하지 않는다.
+
+구체적인 설치·권한·파일 전송 범위는 [헬퍼](../../helper/README.md), [원격폰](../guides/remote_phone.md), [기기 작업 전달과 재기동](technical.md#기기-작업-전달과-재기동)을 따른다.
 
 ### 미디어 통신 — 통화와 확장관계의 카메라·마이크·스피커 (2026-10-13)
 
-설계 `docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md`, 와이어 계약 `docs/MEDIA_SESSION_CONTRACT.md`, 가이드 `guides/media_session.md`.
+설계 [미디어 통신](../../docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md), 와이어 계약 [미디어 세션](../../docs/MEDIA_SESSION_CONTRACT.md), [사용 가이드](../guides/media_session.md).
 
 - **두 허가, 한 엔진.** 일반 통화는 상대의 **수락**(`accepted_call`), 확장관계는 **등록 자격**(`extension_grant`, limb_keys 등록 세대)이
   허가 근거다. 허가 뒤에는 같은 세션 관리자(`media_sessions`)·같은 임대(`session_lease`, 프로필 media)·같은 시그널 질서(`media_signaling`)를
@@ -238,7 +238,8 @@ Nostr 키는 IndieNet identity와 연동 가능:
   시작 봉투 `op:media_session`/폰 `op:media`) · 상대 허브↔이 허브 NIP-17 DM(rumor 태그 `indiebiz-call`, 채널 폴러가 채팅·자동응답 앞에서 갈라낸다)
   또는 이 허브 공개 주소의 릴레이 방 `WS /media/relay/{room}`.
 - **콘텐츠 전달.** `purpose:playback` 은 세션 소유 참조 `GET /media/content/{ref}?token=`(Range, 세션 종료 시 무효)로 대상이 디코딩한다.
-  대상이 재생을 보고한 뒤에만 원본을 멈춘다.
+  대상이 재생을 보고하기 전에는 원본을 멈추지 않는다. 원본 정지는 UI의 별도 조작이다. 폰은 콘텐츠 재생과 실시간 수신(`delivery:realtime`)을 지원하며, 영상 표시 화면이 없으면 `display_required`로 대기하고 첫 프레임이 표시된 뒤 재생 성공을 보고한다.
+- **검증 경계.** 브라우저·폰·헬퍼 엔진은 구현되어 있으나 실제 장치 조합, 외부망/TURN 배치, 장시간 품질의 인수 상태는 설계서에 따로 기록한다. 능력 신고·세션 접수·중앙 송신 성공을 실제 장치 출력으로 간주하지 않는다.
 - **세계의 명사는 데이터.** TURN·릴레이 주소·품질 프로필은 `data/media_policy.yaml`, 임대 수치는 `data/session_lease_policy.yaml`,
   TURN 비밀은 `.env`(`MEDIA_TURN_SECRET`). 이력은 `data/media/state.db`(토큰·SDP·원본 없음). 진단 `GET /media/health`.
 - **AI 는 의도만.** 새 낱말 없이 `[self:script]{op:"run", id:"미디어세션", args:{op:"create", kind:"extension", purpose:"camera", target:"삼성1"}}`.
@@ -1266,7 +1267,7 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 > - 시스템 AI용: `delegation_system_ai.md`
 > - 작업계획서 작성: `work_plan_writing.md`
 
-*최근 변경(2026-08-22): 행위자 봉투(agent·task·origin) 절 신설 — 무태스크 위임 태스크 발급·3중 조인. 모듈 경로를 층 구조로. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*
 
 
 ### 회원 손발 실행 연결 (2026-09-14 후속 구현)

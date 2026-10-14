@@ -2,7 +2,7 @@
 title: 스케줄러 가이드
 scope: 정기 작업 스케줄, 트리거 엔진, 워크플로우, 캘린더 연동
 owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, workflow_contract.py, calendar_actions.py, calendar_manager.py
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 see_also: [architecture.md, communication.md, memory.md]
 ---
 
@@ -58,7 +58,9 @@ see_also: [architecture.md, communication.md, memory.md]
 
 **재기동 중 보류(2026-09-11 R1)**: 발화(`calendar_manager._execute_task`)는 `runtime_work.tracked("schedule", defer=True)` 로 재기동 제어자의 실작업으로 등록된다 — 접수가 닫힌(drain 중) 틱에는 실행하지 않고 `last_run` 도 찍지 않아 다음 틱(60초)에 다시 시도한다. 스케줄러 루프 자체는 작업이 아니다.
 
-**평가 경계(2026-09-12)**: 발화된 `run_pipeline`/위임 턴은 채팅과 같은 인지 경로(WS 주입)를 타므로 의식 규정이 없는 EXECUTE/반사 실행에는 중간 감독·최종 평가·자기반성이 없고 최종 판정은 NULL, 알림은 직접 전달된다. 예약 시각엔 사람이 없으므로 검수가 필요한 정기 작업은 의식이 달성 기준을 규정하는 턴(THINK)이어야 평가가 붙는다(memory.md '파이프라인 흐름').
+**실행·평가 경계**: 소유 에이전트 없는 `run_pipeline`은 IBL을 직접 실행하므로 그 자체에 인지 평가를 붙이지 않는다. 소유자 대화 실행이나 위임으로 인지 경로에 진입한 턴은 채팅과 같은 기준을 쓴다. 의식 규정이 없는 EXECUTE/반사에는 중간 감독·최종 평가·자기반성을 추가하지 않으며 최종 판정은 NULL이다. 검수가 필요한 정기 작업은 의식이 달성 기준을 규정하는 THINK 경로가 필요하다. 직접 실행·위임 접수·위임 결과·평가 완료를 서로 구분한다.
+
+**원격 실행을 예약할 때**: 저장할 IBL 원문과 원격으로 하달할 `code` 문자열 각각에 현재 판본을 고정한다. 긴 기기 작업은 접수증을 받아 같은 작업의 상태·결과를 회수한다. 스케줄 발화, 기기 접수, 실제 출력 완료는 다른 사건이며 응답 지연만으로 새 실행을 예약하지 않는다. 폰 영상·음성은 장치의 권한·준비·실제 출력 상태를 확인한다. [원격폰](../guides/remote_phone.md) · [미디어 세션](../guides/media_session.md).
 
 ### 3. 요일 코드 (weekdays)
 weekly 타입에서 사용합니다. 리스트로 여러 요일 지정 가능:
@@ -399,4 +401,4 @@ GET /scheduler/calendar/events/by-agent?project_id=투자&agent_id=researcher
 - **신문 발행은 결정론 액션 `[engines:newspaper]{}`** 를 직접 스케줄에 건다(기본 백그라운드, `wait:true`=동기). 정기보고 '작성'은 본질이 LLM 글쓰기라 `[others:delegate]{scope:"system"}` 위임 유지.
 
 ---
-*최근 변경(2026-09-24): 스케줄의 저장 함수 설명을 edition 2 명시 시그니처·return·반복 계약으로 갱신하고 옛 params 계약은 호환 경계로 분리. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*

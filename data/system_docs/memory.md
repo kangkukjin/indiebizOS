@@ -8,7 +8,7 @@ owner_code: >
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
   catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -96,6 +96,16 @@ see_also: [architecture.md, ibl.md]
   `_history_replacement:true`를 받으면 새 세션에 선별 맥락을 싣는다. 대화 DB·체크포인트를
   삭제하는 동작은 아니다. [수리와 검증](../../docs/HISTORY_RELEVANCE_REPAIR_2026_09_14.md).
 - **삭제 의미** (2026-09-02): 대화 삭제 = 원문 + 체크포인트 **한 트랜잭션** + 대화 이미지 파일(`system_ai_images/`) (`system_ai_memory.clear_conversations`). 요약만 남기면 지운 대화가 다음 대화 머리에 되살아난다. 체크포인트 갱신 스레드는 요약(LLM) 뒤 **IMMEDIATE 잠금 안에서 요약한 행이 아직 있는지 재확인**하고 저장한다 — 요약 도중 삭제가 끼면 버린다(`stale:deleted`).
+
+### 연구 대화의 자료·질문 영속층
+
+연구 프로젝트는 각 대화의 실행 신원과 자료실을 분리한다. 정본은 프로젝트의 `conversations.db`와 `research/objects`이며 검색 색인은 재생성 가능하다. 첨부·도구 반환·파일에서 실제로 확보한 원문을 판본으로 보존한다. 검색 snippet을 페이지 전문으로, 부분 읽기를 전체 읽기로 승격하지 않는다.
+
+질문에는 안정된 ID와 판본, 잠정 답변, 지지·반박 근거, 남은 확인·다음 조사를 저장한다. 근거는 현재 실행에서 읽은 `version_ref`·`extraction_revision`·문단 locator·정확한 quote에 묶는다. 다른 대화의 자료나 AI의 이전 답변은 새 외부 근거로 채택하지 않는다. 과거 근거의 보존과 이번 턴의 새 관측도 구분한다.
+
+`self:project`의 `thread_update`·`thread_messages`로 질문을 갱신·조회하고, `self:notebook`으로 해당 대화의 자료를 검색·이어 읽는다. 낡은 `expected_revision`은 충돌로 반환하며 이력을 덮어쓰지 않는다. 질문의 `answered` 종결에는 잠정 답변·지지 근거·빈 gaps와 반박별 검토 판단이 필요하다. 종결은 참 인증이 아니며 새 발견을 반영하면 다시 열린다. 다음 턴에는 작은 질문 요약만 자동 회수하고 세부 근거는 필요할 때 읽는다.
+
+이는 모든 대화의 심층 기억에 자료 전문을 쌓는 경로가 아니다. 연구의 자료 모드·대화 경계와 최종 응답 후 장기 기억 선별은 각각 유지한다. [연구 프로젝트](../guides/research_project.md) · [질문 사용법](../guides/research_questions.md) · [근거 계약](../../docs/RESEARCH_QUESTION_EVIDENCE_CONTRACT_2026_10_13.md).
 
 ### 과제 영속층 (2026-09-09)
 
@@ -196,7 +206,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 
 ## 5. 관계 기억 — 심층메모리 (사용자 지식 자동 흡수)
 
-**출처 경계(2026-09-12)**: 메시지 전달자와 글의 저자는 다르다. 명시 인용·코드 펜스·출처가 불분명한 긴 답변형 문서는 개인 사실 후보에서 보류한다. 나머지도 추출기가 사용자 자신의 지속 진술인지 확인한다. 포식의 주인 모델 역시 선택한 사용자 근거 원문을 저장하며 AI 평가를 성향으로 바꾸지 않는다. 표지 없는 붙여넣기의 완전한 저자 판별을 보장하지는 않는다. 정정된 타인 의견은 `external_record`이며 사용자 결정이 아니다.
+**출처 경계(2026-09-12)**: 메시지 전달자와 글의 저자는 다르다. 명시 인용·코드 펜스·출처가 불분명한 긴 답변형 문서는 개인 사실 후보에서 보류한다. 나머지도 추출기가 사용자 자신의 지속 진술인지 확인한다. 사용자 사실은 심층메모리에 보존하며, 은퇴한 포식 주인 모델에 다시 저장하지 않는다. AI 평가를 사용자 성향으로 바꾸지 않는다. 표지 없는 붙여넣기의 완전한 저자 판별을 보장하지는 않는다. 정정된 타인 의견은 `external_record`이며 사용자 결정이 아니다.
 
 **입구 관문 둘(2026-09-17 기억 재고 감사)**: ①**발화자 축** — 인지 파이프라인의 모든 진입점은 `utterance_author` 를 명시하고(`owner`/`agent`/`schedule`/`member`), `owner`(주인이 직접 친 말)일 때만 심층 증류가 돈다(fail-closed, `agent_pipeline` → `_after_response_async(write_deep=)` → 증류 큐 payload). 에이전트 위임문·보고 회수·예약 주입문(`calendar_actions` 가 WS 주입 dict 에 `schedule` 을 싣는다)은 기계가 짠 글이라 재료가 아니다 — 실측: 시스템 AI 위임문의 하네스 안내문이 프로젝트 에이전트의 `사용자선호` 로 저장됐다(건축 #7). 해마·포식 증류는 이 축과 무관하게 종전대로 돈다. ②**지시 대상 관문** — 원문 문장 단위 저장의 그림자는 떼어 놓으면 무엇에 관한 말인지 모르는 조각이다("그런데 나는 그 차이가…"). 추출 모델에게 가리키는 앞 단위를 `source_ids` 에 함께 고르게 하고, 기계는 셀 수 있는 것만 거절한다(`memory_evidence.unresolved_reference`: 첫 단위의 의존 머리 · 단독 단위 속 지시 관형사). 거절은 `memory.distill.rejected` 궤적 사건으로 남는다. 실저장 42건 재생: 16건 거절(전부 문맥 의존 조각). 진입점 전수 AST 관문 = `backend/test_deep_memory_entrance_2026_09_17.py`. 작업일지·`[보충]` 오병합은 09-12 개편(원문 단위·분리 저장·"작업 진행 내역 제외")이 이미 막았고 남은 것은 그 이전 재고다.
 
@@ -965,7 +975,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 ---
 
-*최근 변경(2026-08-28): 증류 게이트 셋째 신호(품질) — quality 실패의 학습 배제와 재시도-통과 신호가 반성 프롬프트로 들어가는 통로 명문화. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*
 
 ### 여행 턴 회상·증류 정합성 (2026-09-11)
 

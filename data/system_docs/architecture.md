@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -82,7 +82,7 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
 
 **생애주기**: 새 일은 자율주행이 탐색 → IBL 흔적이 조종실 초안으로 → 검증된 고빈도 워크플로가 앱으로 결정화. *굳히는 건 증명된 것만.*
 
-★**결정화는 절반이다 — 가이드가 통로를 지정해야 실제로 쓰인다**(2026-08-28 실측). 같은 세 일간 보고서의 셸 사용이 0/5/13회로 갈렸는데 셸 몫은 세 편 모두 같은 부류(JSON 원장 갱신·md→HTML 변환)였다. 원인은 능력이 아니라 통로 지정이었다 — "셸은 IBL 등가물이 없는 일에만" 조항을 둔 편만 0회였고, 조항 없는 두 편은 이미 등록돼 있는 스크립트를 놔두고 매 호 히어독을 새로 썼다. 같은 부류가 계기 쪽에서도 나왔다: `criteria` 품질 계약이 살아 있는데 세 보고서 주행에서 한 번도 불리지 않았다. **등록·출하만으로는 부족하고, 정본 가이드가 그 통로를 명시해야 한다**(반대로 가이드에 구체 IBL 문장을 적는 것은 금지 — 원리·낱말 이름·경계만. 좋은 조합의 정본 통로는 해마다).
+★**결정화는 절반이다 — 가이드가 통로를 지정해야 실제로 쓰인다**(2026-08-28 실측). 같은 세 일간 보고서의 셸 사용이 0/5/13회로 갈렸는데 셸 몫은 세 편 모두 같은 부류(JSON 원장 갱신·md→HTML 변환)였다. 원인은 능력이 아니라 통로 지정이었다 — "셸은 IBL 등가물이 없는 일에만" 조항을 둔 편만 0회였고, 조항 없는 두 편은 이미 등록돼 있는 스크립트를 놔두고 매 호 히어독을 새로 썼다. 같은 부류가 계기 쪽에서도 나왔다: `criteria` 품질 계약이 살아 있는데 세 보고서 주행에서 한 번도 불리지 않았다. **등록·출하만으로는 부족하고, 정본 가이드가 그 통로를 명시해야 한다**(현재 작성 교재는 실행 가능한 IBL 예제를 제공하고, 검증된 재사용 용례는 해마로 회수한다).
 
 - 조종실: `backend/surface/api_ibl.py` (`/ibl/translate`·`/ibl/validate`(dry-run)·`/ibl/execute`·`/ibl/distill`) + `frontend/src/components/ManualMode.tsx`. 부작용 step은 명시적 확인 게이팅, 해마 증류는 사용자 승인 시에만.
 - 앱: **선언 기반 단일소스**. 각 계기는 IBL 액션의 `app:` 블록(`data/ibl_nodes_src/`)이고 `/launcher/instruments`로 자동 파생 → **데스크탑(`GenericInstrument.tsx`)·원격 런처·폰이 같은 선언을 같은 어휘로 렌더**(app 블록 1개 = 전 표면 동시 등장). 어휘: modes 탭, view 프리미티브 12종(metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action/thread/form/editable_list/map(인터랙티브 leaflet)/calendar), `on:` 뷰-이벤트(지도 moveend→재조회·marker_click→IBL 액션 또는 `{stream:true}`→HLS 영상), filter 필터칩(정적 단일선택 재조회 + 동적 `from_field`=결과-필드 distinct 칩, 클라이언트 측 거르기), 표시 템플릿 `{path|filter}`. 0토큰 IBL 직접 실행. escape hatch 2층: OVERRIDES(photo 풍부창·네이티브 창 등 손제작 풍부판) + STATIC_DOMAINS(부동산 실거래가·길찾기 등 렌더 어휘 밖 — 2026-06-29 상권은 인터랙티브 map+동적필터+드릴로 흡수돼 은퇴). `build_ibl_nodes --check`에 app 블록 정합성 합류.
@@ -363,12 +363,19 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **신뢰 = 이웃 등급**(`body_trust.py`): 특별함은 배관이 아니라 레벨. 낯선 몸의 부탁은 거절되고, 폰-맥도 "최고 레벨 이웃"일 뿐이다 — **몸 사이 특권 배관을 두지 않는다**가 설계 원칙.
 - **표면 분리**: 원격 런처(=PC의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 가름(`backend/surface/launcher_surface_remote.py`·`backend/surface/launcher_surface_phone.py`). 폰 조종실은 로컬 완결(translate/validate/distill/catalog).
 
-### USB 손발 (게스트 PC 헬퍼, 2026-07-23)
+### 등록 손발 — PC 헬퍼와 폰 IBL 엔진
 
-낯선 PC 에 USB 로 꽂아 셸·파일 작업을 시키는 **얇은 몸**. 두뇌·신원은 허브에 남고 USB 엔 limb key 하나(맥 비밀번호가 아니다).
-- 어휘 2: `[self:limb]{op: issue/list/revoke}`(발급=USB 페이로드 생성) + `[limbs:guestpc]{op: shell/read/write/list/info}`(허브에서 하달).
-- 연결=헬퍼(Go 단일파일)가 그 PC 에서 허브로 **아웃바운드** 접속 → 폰 푸시 큐(`phone_jobs`)를 재사용해 셸 봉투를 당겨가 실행·회신. 그 PC 방화벽 설정 불필요.
-- 눈 없음(셸·파일만). 발급은 이름 명시가 원칙이고(오배송 방어), 폐기(revoke)는 그 키만 죽인다.
+PC의 휴대 헬퍼는 `[self:limb]`로 발급하고, 상주 PC는 조종실 **손발 (USB) → 폴더 준비**로 만든 공용 USB에서 등록한다. 등록 뒤 장치별 자격을 사용하며 USB를 제거해도 사용자 로그인 범위에서 연결한다. 최소 연결과 선택 미디어 설치를 분리하고, 화면 공유·헬퍼 교체는 같은 조종실에서 수행한다.
+
+PC에는 `[limbs:guestpc]`의 셸·파일·작업 명령을 보내고, Android 폰에는 `adapter:indiebiz-v1`의 `op:ibl`로 폰 사전의 프로그램을 보낸다. 폰은 `phone-companion/scripts/setup_phone.sh --limb <이름>`으로 최초 등록한다. 폰의 셸·헬퍼용 파일 op는 지원하지 않는다. 중첩 프로그램에도 판본 헤더를 명시하며 동기 실행의 업무 값은 `.result.value`다.
+
+긴 작업은 접수증을 보존해 조회·대기하고, 연결 단절이나 대기 시간 초과를 새 실행의 근거로 삼지 않는다. `training`·`test` 출처는 지원 설치본에서 허브→폰 실행 문맥으로 전달·복원한다. 이는 기기 부작용을 차단하는 샌드박스가 아니다. [헬퍼](../../helper/README.md) · [원격폰](../guides/remote_phone.md) · [원격 실행의 연속성](../../docs/REMOTE_EXECUTION_CONTINUITY_2026_10_13.md).
+
+### 미디어 세션
+
+일반 통화는 상대 수락, 확장관계는 등록 자격을 허가 근거로 사용한다. `media_sessions`가 세션·참가 자격·상태를, `session_lease`가 수명을, `media_signaling`이 협상·순번·재연결을 맡는다. 음성·영상은 WebRTC로 전달하며 IBL 결과나 AI 대화에 미디어 프레임을 싣지 않는다. 제어는 기존 등록 스크립트 `미디어세션`을 사용한다.
+
+브라우저·폰·헬퍼 엔진의 구현과 실기기·외부망 인수 완료는 구분한다. 폰 영상 재생은 표시 화면과 실제 프레임 확인이 필요하며, 중앙 송신 상태만으로 성공을 기록하지 않는다. [통신 계약](communication.md) · [API](technical.md) · [구현·검증 범위](../../docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md).
 
 ### 웹앱 등기부 (몸이 낳은 웹앱들, 2026-08-01)
 
@@ -394,13 +401,14 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 → 상세 문서: [remote_access.md](remote_access.md)
 
 ### 브라우저 자동화 (browser-action 패키지)
-두 가지 드라이버를 통한 브라우저 제어:
 
-- **Playwright 드라이버**: 별도 Chromium 인스턴스를 띄워 자동화. 항상 사용 가능.
-- **Chrome MCP 드라이버** (계획): 사용자의 실제 Chrome 브라우저를 MCP 프로토콜로 제어. Chrome 확장 프로그램(MCP 서버)이 `localhost`에서 SSE/HTTP로 노출, IndieBiz OS가 MCP 클라이언트로 연결.
-  - 수동 연결: 에이전트가 필요할 때 `[limbs:browser]{op: "chrome"}`로 연결
-  - Chrome 미실행 시 Playwright로 자동 폴백
-  - 같은 IBL 액션(`limbs:browser_*`)을 사용, 내부 드라이버만 다름
+기존 `[limbs:browser]`의 `driver`로 같은 도구 계약을 세 드라이버에 연결한다.
+
+- **embedded**: Electron 포식 브라우저의 실제 탭·로그인 상태를 사용한다. 저장 계정은 로컬 금고에서 채우고 추가 인증·계정 선택은 사람에게 인계한다. 데스크톱 소유자 전용이며 HTML·임의 evaluate·쿠키 내보내기는 지원하지 않는다.
+- **Chrome MCP**: 연결된 실제 Chrome을 제어한다. `op:chrome`의 connect·disconnect·status로 연결을 관리한다.
+- **Playwright**: 별도 Chromium을 작업·주체별 세션으로 제어한다. 필요한 브라우저 실행 환경이 설치되어 있어야 한다.
+
+`auto`는 연결된 내장 브라우저를 우선하고 없으면 Chrome MCP/Playwright 경로를 선택한다. 작업 시작 뒤 드라이버는 고정하며 미지원 동작을 다른 드라이버로 몰래 실행하지 않는다. DOM 이어 읽기에는 출처·범위·다음 cursor가 따른다. [브라우저 가이드](../guides/browser_action.md) · [내장 브라우저 설계](../../docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md).
 
 ## 프로젝트 & 에이전트 (데스크탑 3오브젝트)
 
@@ -408,6 +416,8 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 - **프로젝트(Project)**: AI 에이전트들의 팀. 역할별 에이전트를 담고, 통째로 복사·템플릿화 가능. 대화DB·에이전트·심층메모리가 프로젝트별로 물리 격리(공간에 맥락 경계 위탁). 모델·API 키는 에이전트별이 아니라 시스템 전체 모델 기어가 결정.
 - **스위치(Switch)**: 자연어 명령을 저장해 한 번의 클릭으로 실행하는 자동화 오브젝트.
 - **폴더(Folder)**: 프로젝트·스위치를 정리하는 컨테이너(중첩 가능).
+
+**연구 프로젝트**는 주제별 독립 대화와 자료실을 제공한다. 대화마다 안정된 실행 신원을 갖고 현재 기어의 API·CLI 에이전트를 사용한다. 실제로 확보한 자료·첨부의 원문과 판본은 프로젝트의 `conversations.db`와 `research/objects`에 보존하며 검색 색인은 재생성할 수 있다. 지속 질문·잠정 답변·지지/반박·남은 확인은 별도 판본으로 남기고 다음 턴에 작은 요약을 회수한다. 저장 자료만 모드와 다른 대화 자료 접근 차단은 자원 경계에서 적용한다. [연구 사용법](../guides/research_project.md) · [질문·근거 계약](../../docs/RESEARCH_QUESTION_EVIDENCE_CONTRACT_2026_10_13.md).
 
 에이전트 유형:
 - **외부 에이전트(External)**: Nostr/Gmail/Telegram 채널을 가져 원격에서 명령을 받고 IndieNet으로 타 노드와 소통.
@@ -522,4 +532,4 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*최근 변경(2026-09-24): IBL 현재 명시 값·함수·검사·실패·증거·재개 계약으로 본문을 통일하고 옛 작성 문법은 호환성 문서로 돌림. 라우팅 분포·수치는 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*

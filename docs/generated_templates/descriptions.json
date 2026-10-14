@@ -98,7 +98,7 @@
     },
     "guest-helper": {
       "name": "Guest Helper",
-      "description": "USB 손발 — 발급 `[self:limb]{op}`(USB 페이로드 생성·승인·폐기) + 조작 `[limbs:guestpc]{op}`(셸/파일). 헬퍼=Go 단일파일, 허브로 아웃바운드(그 PC 방화벽 무설정). 눈 없음(셸·파일만)"
+      "description": "등록 손발 — `[self:limb]{op}`로 발급·등록 관리, `[limbs:guestpc]{op}`로 실행. PC 헬퍼는 셸·파일·화면 공유·작업, Android 어댑터는 폰 IBL 실행. 장치가 허브로 아웃바운드 연결"
     },
     "health-record": {
       "name": "Health Record Manager",

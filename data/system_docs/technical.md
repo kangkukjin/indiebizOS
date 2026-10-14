@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -167,11 +167,12 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `POST /nodes/ask` - 이웃 몸의 **자연어 부탁** 수신 → 자기 사전으로 컴파일→실행→통화 회신(1회 자가교정, 어휘 밖=정직 거절). 어휘 진입점은 `[others:ask]`
 - 신뢰=이웃 등급(`body_trust`) 게이트. 몸 사이 전용 특권 배관은 두지 않는다.
 
-### USB 손발 (/limb) — api_limb.py
-- `POST /limb/connect` - 헬퍼 등록(limb key 인증, device 단위)
-- `GET /limb/poll` - 셸 봉투 롱폴(아웃바운드 — 게스트 PC 방화벽 무설정)
-- `POST /limb/result` - 실행 결과 회신
-- 발급·폐기는 `[self:limb]{op: issue/list/revoke}`, 하달은 `[limbs:guestpc]{op}`. 큐는 폰 푸시 큐(`phone_jobs`) 재사용.
+### 등록 손발 (/limb · /remote-pcs)
+
+- 휴대 헬퍼: `POST /limb/connect` 등록 · `POST /limb/poll` 봉투 롱폴 · `POST /limb/result` 결과 회신. 휴대 발급·폐기는 `[self:limb]`, 실행은 `[limbs:guestpc]`를 사용한다.
+- 상주 PC: 공용 USB 등록 후 장치별 자격·설치 신원을 사용한다. 조종실은 화면 공유·헬퍼 교체·등록 해제를 제공한다. 사용자 로그인 범위로 실행하며 최소 연결과 미디어 구성요소 설치를 분리한다. [헬퍼 계약](../../helper/README.md).
+- Android: USB 최초 등록 뒤 `adapter:indiebiz-v1`의 `op:ibl`로 폰 실행기를 호출한다. `info`는 장치 정보, 판본 2 IBL의 동기 `.result.value`는 업무 값이다. `code` 문자열 안에도 `#!ibl edition=2`를 기록한다. [원격폰 교재](../guides/remote_phone.md).
+- 원격 장기 작업은 준비 결과의 device_id·workspace와 접수증을 이어 쓴다. 동기 실행도 실제 실패와 대기 종료를 구분한다. 대상 PC의 `scripts/remote_steps.py`는 argv 단계·검증·실패 원문·재개를 보존하고 `remote_install.py`는 IndieBiz 업데이트 계획을 만든다. 부팅은 `scripts/remote_boot.py`가 종료까지 소유하는 제한 시간 검사로 확인한다. [원격 실행](../../docs/REMOTE_EXECUTION_CONTINUITY_2026_10_13.md) · [설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md).
 
 ### 미디어 세션 (/media) — api_media.py (2026-10-13, docs/MEDIA_SESSION_CONTRACT.md)
 - `GET /media/capabilities?target=` - 허브(통화·TURN·릴레이 준비) 또는 장치(camera/microphone/speaker/playback 지원·온라인·바쁨)
@@ -181,7 +182,8 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `GET /media/ice-config` · `GET /media/health` - TURN 단기 자격·시그널링/TURN 탐침 진단
 - `WS /media/sessions/{id}/ws` - 브라우저 엔진(런처 세션 인증) · `WS /limb/resident/media/{id}` - 확장 장치(등록 자격+grant) · `WS /media/relay/{room}?token=` - 릴레이 방(중계만)
 - `GET /media/content/{ref}?token=` - 콘텐츠 전달(Range, 세션 grant 토큰, 세션 종료 시 무효; is_public_remote_path 등록)
-- 원격 장기 작업은 준비 결과의 device_id·workspace와 접수증을 이어 쓴다. 동기 실행도 실제 실패와 대기 종료를 구분한다. 대상 PC의 `scripts/remote_steps.py`는 argv 단계·검증·실패 원문·재개를 보존하고 `remote_install.py`는 IndieBiz 업데이트 계획을 만든다. [설계·검증 범위](../../docs/REMOTE_EXECUTION_CONTINUITY_2026_10_13.md), [사용법](../guides/guest_helper.md#대상-고정과-단계-실행).
+
+폰 영상은 `video_receive`·`video_playback` 능력을 신고한다. 콘텐츠/실시간 영상 모두 실제 표시 화면이 없으면 `display_required`로 대기하고 첫 프레임 표시 뒤에만 성공을 보고한다. 재생 이동에서 원본 정지는 대상 확인 후 UI의 별도 조작이다. AI용 `미디어세션` 스크립트 반환에는 SDP·grant·TURN 자격·토큰을 싣지 않는다. 엔진 계약과 검증 범위는 [미디어 세션](../../docs/MEDIA_SESSION_CONTRACT.md)·[구현 상태](../../docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md)를 따른다.
 
 ### 공개 표면 서빙 (브라우저 → Cloudflare Worker → 터널 → 허브)
 공유 `X-Showcase-Secret` + `is_public_remote_path` 화이트리스트.
@@ -211,6 +213,12 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 런타임 데이터(git 제외): `data/document_workspace/`(엔진 JWT 설정 `engine.json` 은 0600 — 출력·커밋 금지), `data/coding/`(과제·사건 DB·과제별 작업 공간). 문서·시트의 편집 엔진은 로컬 ONLYOFFICE 로 loopback 에만 게시되며 원격 브라우저에는 제공하지 않는다. 운영은 `python3 scripts/manage_document_engine.py start|status|stop`(문서 앱의 **편집 서버 시작** 버튼과 같은 동작. Docker/Colima 최초 설치는 별도). HWP/HWPX 는 로컬 RHWP 엔진(`backend/static/document_hwp/`, 재현 빌드 `scripts/prepare_document_hwp.py`)이 외부 글꼴 요청 없이 편집하고, 암호·배포용·DRM 파일은 거절한다.
 
 IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 부른다(교재 `data/guides/document_edit.md`·`sheet.md`). 기존 `self:sheet` 의 append/update 는 공통 잠금과 읽은 파일 해시를 검사해 열려 있는 편집 창이나 낡은 읽기 위에 덮어쓰지 않는다. 형식별 지원 계약과 미완료 범위는 `docs/{DOCUMENT,SPREADSHEET,CODING}_APP_DESIGN_2026_10_02.md` 의 '구현 상태'.
+
+### 연구 프로젝트와 내장 브라우저
+
+연구 대화·질문은 기존 `self:project`의 `thread_*` 연산, 자료실은 `self:notebook`의 `project_ref`·`thread_ref` 범위를 사용한다. 실행 신원은 `base/research_context.py`, 실행은 `cognition/research_runner.py`, 자료 획득은 `services/research_capture.py`·`research_library.py`, 원문·질문·근거 원장은 `datastore/research_store.py`·`research_questions.py`·`research_evidence.py`가 맡는다. 정본은 각 프로젝트의 `conversations.db`와 `research/objects`이며 FTS 색인은 복구 가능하다. [연구 사용·복구](../guides/research_project.md) · [질문 판본](../guides/research_questions.md).
+
+내장 브라우저는 기존 `limbs:browser`의 `driver:embedded`다. Electron main이 등록한 포식 탭만 제어하며 로컬 연결·계정 금고·인증 인계를 담당한다. DOM 본문은 cursor로 이어 읽고 수집 범위와 출처를 보존한다. 변경 적용에는 Electron 재시작이 필요하다. [브라우저 설계와 지원 연산](../../docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md).
 
 ### 알림 도달 (notify_dispatch)
 - 수신 단일 관문(`channel_poller._save_message_to_db`) 직후 `notify_dispatch.notify_user()` — ①알림함 기록 ②런처 연결 시 `/ws/launcher` `show_notification`(`api_websocket.send_launcher_command_sync`, 워커 스레드 안전) → Electron OS 네이티브 알림+배지 ③미연결이면 `desktop_notify.py`(의존성 0 — osascript / PowerShell WinRT / notify-send). `[self:notify_user]` 도 같은 관문을 쓴다.
@@ -261,7 +269,7 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 # 고차 문장 — 목록의 각 행은 $it, 인덱스는 $i
 execute_ibl(code='$r=[sense:search]{query:"AI"}; $r.items >> [table:each]{mode:"effect"} { [self:notify_user]{message:$it.title} }')
 
-# 도구 결과를 먼저 값에 담고 Bool 식으로 분기한다. 인자 안에 도구 호출을 넣지 않는다.
+# 도구 결과를 값에 담아 Bool 식으로 분기하는 예. 인자·보간 안의 호출도 현재 식 규칙으로 조합할 수 있다.
 execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:notify_user]{message:"CPU 과부하"} }')
 ```
 
@@ -425,7 +433,7 @@ execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:n
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*최근 변경(2026-08-28): `/ibl/recover` 표면 티켓 회수 규약, 비전 슬롯(`modality.image`)의 벤더 중립화, Tool Result 절삭 절에 '결과천자' 계기 추가. 모델명·수치는 슬롯 설정과 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*
 
 ### 파일 듣기 (2026-09-10)
 

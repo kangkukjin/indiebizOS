@@ -1,8 +1,8 @@
 ---
 title: 시스템 구조 가이드
-scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행·평가에 자동 주입)
+scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행에 주입, 평가자는 기준·증거 입력 사용)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-09-24
+last_updated: 2026-10-14
 see_also: [architecture.md, memory.md, ibl.md]
 ---
 
@@ -17,7 +17,7 @@ see_also: [architecture.md, memory.md, ibl.md]
 
 ### 주요 기능
 - **런처 3표면 (트릴레마)**: 같은 IBL 위 세 모드 — **자율주행**(의도→AI 다단계, 구 '프로젝트') / **조종실**(구 '수동'→'계기판'→2026-07-03 개명. 경량모델이 자연어→IBL 번역→dry-run 검수→실행하는 컴파일러 프론트엔드 + 시스템 상태·모델 기어·프레즌스·주행기록 — 자율주행 포함 전체를 감독·개입하는 주권 기관. `api_ibl.py`+`ManualMode.tsx`, 내부 탭 키는 `manual` 유지) / **앱**(아이콘 GUI로 직접 조작, `ActionDesktop`+계기 — 부동산·도서검색). {속도·표현력·주권} 중 둘.
-- **다중 프로젝트 관리**: 목적에 따른 독립적인 작업 공간
+- **다중 프로젝트 관리**: 목적에 따른 독립적인 작업 공간. **연구 프로젝트**는 대화별 독립 자료실·원문 판본·지속 질문과 지지/반박 근거를 보존하고 현재 기어의 API·CLI 에이전트로 이어 간다. → [연구 가이드](../guides/research_project.md)
 - **에이전트 팀**: 역할이 정의된 여러 AI 에이전트 간의 협업
 - **도구 패키지**: 에이전트가 동적으로 로딩하여 사용하는 확장 기능
 - **어휘 레고박스**: 보유 사전집(installed/not_installed 합집합) 위에 **몸별 활성 원장** `data/vocabulary/activation.json` — 잠든 묶음은 소개·회상·실행에서 빠지고 파일·용례·기록은 보존, 필수 공급자는 `data/vocabulary_policy.yaml`이 보호. 묶음은 `.iblpack` 파일로 교환(런처 안경 메뉴 → **내 어휘**, 가져온 묶음은 잠든 채 보관→깨우기). → packages.md '보유와 활성' · docs/IBLPACK_FORMAT.md
@@ -32,7 +32,9 @@ see_also: [architecture.md, memory.md, ibl.md]
 - **IndieNet**: 외부 메신저/이메일 연동 (Gmail, Nostr)
 - **공유창고**: 몸(노드)의 공개 얼굴 — `공유창고/0..4/` 폴더가 노드 주소에서 그대로 서빙(색인·변환 없음, 파일시스템이 진실). 사람은 브라우저로, 남의 AI는 `/manifest`(JSON)로 읽는다. 레벨 0~4 = 이웃 CRM 등급과 같은 자(등급 위 파일은 403 아닌 **404**). 읽는 쪽=이웃 창고 폴러(30분, 방언 어댑터로 nginx 색인·RSS·Nextcloud·일반 웹페이지까지 같은 통화로 정규화) + 리트윗(`.url` 포인터 파일). → communication.md
 - **몸 사이 소통(명함·부탁)**: 공유 사전 RPC 대신 **명함**(`GET /nodes/card`)+**자연어 부탁**(`POST /nodes/ask`, 어휘 `[others:ask]`) — 받는 몸이 *자기 사전*으로 컴파일·실행해 통화로 돌려준다. 신뢰=이웃 등급(body_trust), 특권 배관 없음. → communication.md
-- **USB 손발**: 낯선 PC 에 USB 로 꽂는 얇은 몸(`[self:limb]` 발급 / `[limbs:guestpc]` 조작). 두뇌·신원은 허브에 남고 USB 엔 limb key 하나. 헬퍼가 허브로 아웃바운드 접속(폰 푸시 큐 재사용).
+- **등록 손발**: PC는 상주 헬퍼로 셸·파일·화면 공유·작업을 수행하고, Android 폰은 USB 최초 등록 뒤 자기 IBL 엔진으로 프로그램을 실행한다. 장기 작업은 접수증을 회수하며 중복 실행하지 않는다. → [remote_access.md](remote_access.md) · [원격폰](../guides/remote_phone.md)
+- **미디어 통신**: 상대 수락 통화와 등록 기기의 카메라·마이크·스피커·재생을 같은 세션 기반으로 연결. 기존 `미디어세션` 스크립트를 사용하며 실제 장치 출력과 능력 신고를 구분한다. → [communication.md](communication.md)
+- **내장 브라우저 제어**: `limbs:browser`의 embedded 드라이버로 기존 탭·로그인 상태·저장 계정을 사용하고 추가 인증은 사람에게 인계한다. Chrome MCP·Playwright 경로도 유지한다. → [architecture.md](architecture.md)
 - **NAS 연동**: 음악 스트리밍, 자막 관리, 웹앱 호스팅 (내 음악 라이브러리는 별도 `[self:music]`)
 
 ---
@@ -42,7 +44,7 @@ see_also: [architecture.md, memory.md, ibl.md]
 - 시스템 AI가 장기 기억으로 참조하는 문서들
 - **문서 신뢰 규약**: 정본 서열 = git 커밋(사건) > docs/(설계) > system_docs/(장기기억). 문서 속 수치·파일명·함수명은 *쓰인 당시의 기록*일 수 있다 — 행동 전 `[self:body]`·`[self:grep]` 로 실재를 확인하라. `<!-- …:START/END -->` 마커 구간은 빌드가 재생성하는 기계 소유(손 수정 금지).
 - **파일 목록** (13 문서 + changelog):
-  - `system_structure.md` - 시스템 구조 가이드 (**항상 프롬프트에 포함** — 의식/실행/평가 에이전트)
+  - `system_structure.md` - 시스템 구조 가이드 (의식·실행 프롬프트의 구조 참조 — 평가자는 달성 기준과 증거만 사용)
   - `anatomy.md` - **해부도(정문)** — 신참용 전체 지도(철학→3표면→IBL→인지→메모리→검색브라우저→몸), 각 상세 문서 허브
   - `vision.md` - **비전: 인지 외골격** — 목표(자율 아닌 융합)·개발 북극성=착용감. 모든 설계 결정의 최상위 기준
   - `harness_haerye.md` - **하네스 해례** — 구현·파일명 없이 읽히는 코드 독립 아홉 원리(자기 하네스를 지으려는 사람용). 공개면 후보
@@ -80,6 +82,7 @@ indiebizOS/
 │   │   ├── episode_logger.py # 에피소드(주행기록) 로깅 — 채팅·HTTP·위임·외부채널 전 경로
 │   │   ├── thumbnails.py / hls_ladder.py # 썸네일·스트리밍 트랜스코드 · HLS 적응형 사다리
 │   │   ├── desktop_notify.py # OS 네이티브 알림 폴백(의존성 0 — osascript/PowerShell/notify-send)
+│   │   ├── research_context.py # 연구 실행 신원
 │   │   ├── phone_jobs.py     # 푸시 큐(폰·USB 손발 공용 아웃바운드 큐)
 │   │   ├── limb_keys.py / device_registry.py # 손발 자격 원장 · 몸 등록부(capability)
 │   │   ├── window_requests.py # 창 열기 pending-queue (층 역전 방지용 단일 저장소)
@@ -88,8 +91,9 @@ indiebizOS/
 │   │
 │   ├── datastore/       # 원장·DB(층 이름은 'data' 지만 런타임 폴더와 충돌해 디렉토리는 datastore)
 │   │   ├── ibl_usage_db.py   # IBL 해마 DB (벡터 검색 + FTS5)
-│   │   ├── forage_memory.py  # 포식 기억(공간 지도 + 주인 모델)
+│   │   ├── forage_memory.py  # 포식 기억(장소 문서의 색인·탐색 경험)
 │   │   ├── business_manager.py / calendar_manager.py / conversation_db.py / multi_chat_db.py
+│   │   ├── research_store.py / research_questions.py / research_evidence.py / media_store.py # 연구·미디어 원장
 │   │   ├── project_manager.py / agent_registry.py / package 원장 · system_docs.py
 │   │   ├── notify_dispatch.py # 알림 도달 단일 관문(알림함→런처 WS→데스크탑 폴백)
 │   │   ├── red_grant.py / red_report.py / red_watchdog.py # 자기수정(REPAIR) 한도·원장·회수 워치독
@@ -120,6 +124,7 @@ indiebizOS/
 │   │   #     패키지 tool_*.py(서브모듈)       → **reload 밖** — 워커 재기동해야 반영
 │   │
 │   ├── cognition/       # 인지(분류→의식→실행→평가→증류)
+│   │   ├── research_runner.py # 연구 대화 실행 — 현재 API·CLI 기어
 │   │   ├── agent_runner.py   # 에이전트 실행 엔진 (파이프라인 오케스트레이션)
 │   │   ├── agent_cognitive.py # 인지 믹스인 합성 지점 + 코어
 │   │   ├── associative_recall.py # 0단계 연상 회상의 공통 흐름 — 정책 표(SOURCES/CHANNELS)·주체 관문·조립·제시 기록 (2026-09-18)
@@ -137,6 +142,9 @@ indiebizOS/
 │   │   └── world_pulse.py / world_pulse_health.py / world_pulse_collectors.py # 자의식·면역 순찰
 │   │
 │   ├── services/        # 바깥 세계(스케줄·채널·NAS·발급)
+│   │   ├── research_capture.py / research_library.py / research_threads.py # 자료 보존·회수·대화
+│   │   ├── media_sessions.py / media_signaling.py / session_lease.py # 미디어·기기 세션 공통 임대
+│   │   ├── resident_pcs.py / limb_client.py # 상주 PC·폰 등록 기기
 │   │   ├── scheduler.py / channel_poller.py # 스케줄러 · 채널 폴링(수신 단일 관문)
 │   │   ├── indienet*.py      # IndieNet(Nostr) 코어·발행·릴레이·소셜
 │   │   ├── warehouse_feed.py # 이웃 창고 폴러(30분 diff, seed/new/changed) + 자격 로그인
@@ -153,6 +161,7 @@ indiebizOS/
 │   │   ├── api_agents.py / api_projects.py / api_packages.py / api_models.py / api_config.py
 │   │   ├── api_nodes.py         # 몸 명함·부탁(/nodes/card·/nodes/ask)
 │   │   ├── api_limb.py          # USB 손발 수신(/limb/connect·poll·result·progress)
+│   │   ├── api_media.py / api_resident_pcs.py # 미디어 세션 · 상주 PC
 │   │   ├── api_phone.py         # 폰 컴패니언/푸시 큐
 │   │   ├── api_music.py / api_ytrelay.py # 내 음악 스트리밍 · 유튜브 릴레이(HLS)
 │   │   ├── api_nas.py / api_nas_hls.py / api_nas_lite.py # NAS 서빙·적응형·경량
@@ -221,7 +230,7 @@ indiebizOS/
 │   ├── music/           # 내 음악 라이브러리 (library.db — 트랙·앨범아트·폴더. 관련곡 간선 edges 는 2026-07-28 폐기)
 │   ├── webapps.json     # 웹앱 등기부의 수동 보충분(본체는 진실 소스 7곳에서 매 호출 파생)
 │   ├── warehouse_directory.json # 창고 둘러보기 시드(사용자 편집 가능)
-│   ├── forage_memory.db # 포식 기억 (공간 지도 + 주인 모델)
+│   ├── forage_memory.db # 포식 기억 (장소 문서의 색인·탐색 경험)
 │   └── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │
 ├── projects/            # 사용자 프로젝트
@@ -311,4 +320,4 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 <!-- SELF_IMAGE:START -->**현 상태 = 6노드 178 액션(sense 43·self 59·limbs 14·others 20·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 581(test 제외)**<!-- SELF_IMAGE:END -->
 
-*최근 변경(2026-09-24): 프롬프트 자기상의 IBL 설명을 현재 명시 값·함수·검사·실패 문법으로 교체. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*

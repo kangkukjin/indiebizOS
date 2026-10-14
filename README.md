@@ -195,15 +195,25 @@ Frequency moves a task between surfaces. Autopilot explores it once → its IBL 
 
 ### → The place you work is an app too — documents, spreadsheets, code
 
-Frozen IBL calls are not the only thing on the App surface. Three workspaces open as their own windows, where **you and the AI handle the same file or repository in the same place**:
+Frozen IBL calls are not the only thing on the App surface. Three workspaces let **you and the AI handle the same file or repository in the same place**. Documents use a declarative instrument, including when opened in a separate window:
 
 - **Documents** — edit DOCX, ODT, RTF and PDF in their original format (a local ONLYOFFICE editing server), and HWP/HWPX in theirs (a local open-source engine that makes no external font requests). Rotate, delete and reorder PDF pages; correct OCR and save a searchable copy; preview and export Markdown and source documents.
 - **Spreadsheets** — workbook editing, CSV/TSV import that doesn't mangle identifiers, phone numbers or text that merely looks like a formula, format-conversion copies, printable forms, and tables that flow from a pinned sheet snapshot into a document report.
 - **Coding** — open a repository and each task gets its own isolated workspace; an executor (a native CLI such as Codex, or a plain API model — swappable) makes the change, then it closes through verification command → diff review → approval → apply and commit.
 
-One rule ties the three together: **the engine only writes drafts; only your explicit save replaces the original.** If the original changed underneath you, the save is refused; a late save from an editor window you already closed is dropped; versions and drafts can be restored. An AI proposal is bound to the selection you saw on screen and arrives as a **tracked change** — it never quietly rewrites the file. And no new vocabulary was added for any of it: agents join the same editing session through the `self:document` and `self:sheet` actions that already existed.
+For documents and spreadsheets, **the engine only writes drafts; only your explicit save replaces the original.** If the original changed underneath you, the save is refused; a late save from an editor window you already closed is dropped; versions and drafts can be restored. An AI proposal is bound to the selection you saw on screen and arrives as a **tracked change** — it never quietly rewrites the file. And no new vocabulary was added for any of it: agents join the same editing session through the `self:document` and `self:sheet` actions that already existed. Coding uses its own task review, approval, and apply flow.
 
 (The honest scope: the editing engines listen only inside your own PC, so original-format editing is desktop-only, and the Coding app's write boundary is currently guaranteed on macOS only. What is still unfinished — full fidelity on complex Hancom documents, for one — is written down as-is under "implementation status" in `docs/DOCUMENT_APP_DESIGN_2026_10_02.md`, `SPREADSHEET_APP_DESIGN_2026_10_02.md` and `CODING_APP_DESIGN_2026_10_02.md`.)
+
+### → Research projects — keep sources and questions with each conversation
+
+Create a **research project** in the launcher to give each topic conversation its own source library. Attachments and material actually read during research retain their originals and versions. The current gear's API or CLI agent retrieves them in later turns; a saved-sources-only mode is also available.
+
+Persistent questions carry provisional answers, supporting and contradicting evidence, and remaining checks. Evidence points to a source version, paragraph, and quotation actually read. Editing or closing a question preserves its earlier revisions; closure records a reasoned decision, not a certificate of truth. → [Research projects](data/guides/research_project.md) · [Questions and evidence](data/guides/research_questions.md)
+
+### → Share the embedded browser's tabs with your AI
+
+The existing `limbs:browser` action can open embedded browser tabs and read material using an existing login or a saved account. The local vault fills credentials without sending passwords to the model. Extra authentication or an unresolved account choice returns the tab to the person; human interaction also returns control. Separate Chrome MCP and Playwright drivers remain available. Site compatibility and supported operations are recorded in the [embedded browser design](docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md).
 
 ### → A currency algebra
 
@@ -280,6 +290,14 @@ The third question is the surface, and it is genuinely separate. Press play in t
 
 The seam also splits memory cleanly: your world-data (contacts, business, calendar, health) is shared and synced (CRDT union merge), while each body's subjective memory (conversations, hippocampus, self-state) stays private.
 
+### → Resident PCs, phone extensions, and media connections
+
+A **resident PC helper** registered over USB stays connected after the USB drive is removed and starts at user login. The cockpit can update the helper and share the current Mac, Windows, or Linux desktop; the AI can address work to the registered PC by name. Minimal connectivity is separate from optional media installation, and long jobs return receipts for retrieving progress and results. → [Helper guide and OS requirements](helper/README.md)
+
+An **Android phone** can also register over USB once and then connect remotely as an extension. It receives programs for its own IBL engine instead of PC shell commands. Standalone YouTube search and music playback paths run without a PC proxy; opening a YouTube video in an external app is distinct from confirming playback. → [Remote phones](data/guides/remote_phone.md) · [Standalone playback](data/guides/youtube_relay.md)
+
+**Media sessions** connect accepted voice/video calls and registered devices' cameras, microphones, speakers, and playback through a shared session layer. The existing registered script `미디어세션` controls them. Phone video playback is successful only after the display and first frame are observed. Remaining device, external-network, TURN deployment, and long-duration acceptance checks are documented in the [media implementation status](docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md).
+
 ---
 
 ## The split mind — define the problem, then execute it
@@ -316,7 +334,7 @@ Several memories learn from you automatically and keep themselves clean:
 
 - **Hippocampus (procedural)** — a fine-tuned 768-dim embedding model maps your natural language to past IBL code (retrained locally on Apple Silicon whenever the corpus grows; the current generation's Top-5 scores and corpus size live in the hippocampus table of `data/system_docs/memory.md`). Successful runs distill into reusable examples, so the system gets faster at *your* recurring tasks. A closed loop records whether a recalled example actually worked, so proven patterns rise and bad ones sink.
 - **Deep memory (relational)** — after each conversation a lightweight pass extracts durable facts about you (preferences, decisions, key dates) and recalls them, with their last-seen date, when relevant.
-- **Forager memory (spatial)** — every time the AI *forages* the disk, web, or codebase, it accumulates what it learned about that space across sessions: folder identities, search conventions, dead ends, and an owner-model of whose files live where. A model built foraging the disk disambiguates a web search, and vice versa — a compounding loop. It borrows the vocabulary of Information Foraging Theory; what's new is treating it as the *persistent* faculty a stateless model lacks, and adding only that memory — no controller, no stopping-formula. (`[self:forage]`, the Mac self.)
+- **Foraging memory (spatial)** — Remembers a location’s contents, search conventions, dead ends, and source locations under file paths or web addresses. Recall includes the location’s document, inherited parent memories, and child structure. Facts about the user belong in deep memory; the foraging browser searches without personalized memory. → [Spatial memory boundaries](data/system_docs/memory.md)
 - **World map (knowledge cues)** — a structured vocabulary catalog pointing toward what the AI already knows and what it can look up. It supplies a small set of relevant fields, names, and problem–method–tool relations while leaving the knowledge itself in models and primary sources. Every working agent selects one relevant fragment, surfacing otherwise unmentioned methods without forcing alternatives that change the user's goal.
 
 A periodic consolidation pass (part of the immune patrol below) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions, so memory stays sharp instead of bloating. Long-term writes happen **after the final response is delivered**, in one pass that selects only durable value from the user's original words; saving nothing is a normal outcome.
@@ -366,7 +384,7 @@ You define *who* an agent is, not *which model* runs it — model and API key ar
 | **engines** | 19 | Pure media generation — images (generate + vision read/critique), icons, the morning newspaper, websites, web components, TTS. Slides and video moved to `self` in the 2026-08 consolidation |
 | **table** | 23 | Currency algebra — transformers (filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten), the higher-order **`each`**, and emitters (chart/spreadsheet/document/structure). Split out of `engines` so the grammar survives even when heavy media generation is off |
 
-IBL's definition lives in a single source of truth (`data/ibl_nodes_src/`, built to `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), and a commit-time check matches source ↔ tool schema ↔ handler three ways. Tool **packages** (51 installed, plus 5 backend core modules) are folders — drop one in and it's recognized, independent of the language; an AI agent can build, install, or modify them for you. Per-agent `allowed_nodes` restricts what each agent can reach.
+IBL's definition lives in a single source of truth (`data/ibl_nodes_src/` plus each package’s `ibl_actions.yaml`, built to `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), and a commit-time check matches source ↔ tool schema ↔ handler three ways. Tool **packages** (51 in the held catalog, plus 5 backend core modules; activation is per body) are folders — drop one in and it's recognized, independent of the language; an AI agent can build, install, or modify them for you. Per-agent `allowed_nodes` restricts what each agent can reach.
 <!-- IBL_STATS:END -->
 (The numbers in this section are regenerated from the registry by `scripts/build_ibl_nodes.py` — don't edit them by hand.)
 
@@ -401,7 +419,7 @@ Get it from the [**app-latest** release](https://github.com/kangkukjin/indiebizO
 
 Open the `.dmg` and drag IndieBiz into Applications (macOS), or run the installer (Windows). The apps aren't code-signed yet, so the first launch may need **right-click → Open** on macOS, or **More info → Run anyway** on Windows SmartScreen.
 
-**Language:** the AI replies in whatever language you write to it, so no setting is needed. The interface language is chosen in the launcher (한국어 · English · 日本語). Korean is the source and the others are **generated at build time** and shown offline — interface text is never sent anywhere for translation at runtime, and your conversations, file names and inputs are not translated at all. Adding a language is one line in `frontend/i18n/languages.json`. (The bundled guide documents are currently Korean.)
+**Language:** the AI replies in whatever language you write to it, so no setting is needed. The interface language is chosen in the launcher (한국어 · English · 日本語). Korean is the source and the others are **generated at build time** and shown offline — interface text is never sent anywhere for translation at runtime, and your conversations, file names and inputs are not translated at all. Adding a language requires registering it in `frontend/i18n/languages.json`, filling the translation memory, and building the interface. (The bundled guide documents are currently Korean.)
 
 </details>
 
@@ -438,7 +456,7 @@ IndieBiz OS ships a **standard core** — the IBL grammar, the function-word nod
 
 Two guarantees follow:
 
-- **Install doesn't dump everything on you.** Many packages need their own API keys; installing them all would bury you in things you can't use. The whole catalog ships, but only a curated set is *active* by default — the rest sit available, ready to switch on when you want them. Since 2026-09 that switch is a **per-body activation ledger** over the full dictionary you hold: waking or putting a word bundle to sleep changes the ledger and the prompt cache, never a folder or a rebuild, and a sleeping bundle keeps its files, settings, examples and vectors. You do it in **My vocabulary** (launcher glasses menu, right under Settings) — an icon desktop where bundles sit in folders, a storage vault, and a trash — and a bundle travels as a single `.iblpack` file: import through the vault, export from the bundle's own menu; an imported bundle arrives asleep and runs only once you wake it (format: `docs/IBLPACK_FORMAT.md`). Every package carries an `origin` (core / user), and the desktop-app packaging is built from the manifest, so your own committed apps and personal files never leak into a distribution. (Committing a personal package for backup? Mark it `origin: user` and it stays out of the core.)
+- **Install doesn't dump everything on you.** Many packages need their own API keys; installing them all would bury you in things you can't use. The whole catalog ships, but only a curated set is *active* by default — the rest sit available, ready to switch on when you want them. Since 2026-09 that switch is a **per-body activation ledger** over the full dictionary you hold: waking or putting a word bundle to sleep changes the ledger and the prompt cache, never a folder or a rebuild, and a sleeping bundle keeps its files, settings, examples and vectors. You do it in **My vocabulary** (launcher glasses menu, below External User Management) — an icon desktop where bundles sit in folders, a storage vault, and a trash — and a bundle travels as a single `.iblpack` file: import through the vault, export from the bundle's own menu; an imported bundle arrives asleep and runs only once you wake it (format: `docs/IBLPACK_FORMAT.md`). Every package carries an `origin` (core / user), and the desktop-app packaging is built from the manifest, so your own committed apps and personal files never leak into a distribution. (Committing a personal package for backup? Mark it `origin: user` and it stays out of the core.)
 - **Updates never overwrite what's yours.** A reinstall or update refreshes only core-owned files. Which packages you've turned on or off, the vocabulary and apps you authored, your settings, and your conversation history all survive untouched — the updater respects the folder placement *you* chose rather than re-imposing the bundle's defaults.
 
 This is the same substrate/superstructure seam that separates the standard grammar from your personal dictionary — pushed all the way out to packages, apps, install, and update.
@@ -463,7 +481,8 @@ This is the same substrate/superstructure seam that separates the standard gramm
 ./start.sh
 
 # Or separately
-cd backend && python3 api.py        # Backend (port 8765)
+.venv/bin/python3 backend/api.py     # Backend from the repository root (port 8765)
+# In another terminal, from the repository root:
 cd frontend && npm run electron:dev  # Frontend (Electron)
 ```
 

@@ -1,8 +1,8 @@
 ---
 title: 원격 접속
-scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, NAS 연동
+scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, 상주 PC·폰 손발, 미디어 연결, NAS 연동
 owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_surface_remote.py, launcher_react.py, nas_*.py
-last_updated: 2026-09-14
+last_updated: 2026-10-14
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 
@@ -47,6 +47,26 @@ Electron 창 연결 코드를 바꾼 경우 앱 재시작이 필요하다.
 > 있다 — 개인 포털 `/h/`·공개 파일 `/s/`·가족신문 `/n/`·게시판 `/b/`·정기보고 `/r/`. 이들은
 > `public-files` Cloudflare Worker가 경로 접두로 분기해 터널로 맥에 서빙하며(레벨/로그인 기반),
 > 별도 문서는 [communication.md](communication.md) "공개 표면 — 커뮤니티당 노드 하나" 참조.
+
+### 원격 PC·폰을 실행 대상으로 쓰기
+
+브라우저에서 내 시스템을 조종하는 원격 런처와, 내 시스템이 등록 기기에 작업을 보내는 손발 연결은 방향이 다르다.
+
+| 연결 | 실행 위치 | 시작 방법 |
+| --- | --- | --- |
+| 원격 런처/Finder | 허브 PC | 브라우저에서 소유자 세션 로그인 |
+| 상주 PC 손발 | 등록 PC의 사용자 세션 | 조종실에서 준비한 USB 폴더로 헬퍼 최초 설치·등록 |
+| Android 손발 | 폰의 자체 IBL 엔진 | `phone-companion/scripts/setup_phone.sh --limb <이름>`으로 USB 최초 등록 |
+
+상주 PC는 USB를 빼도 사용자 로그인 때 다시 연결한다. Windows 신규 설치는 HKCU Run을 쓰고 기존 예약 작업 설치는 유지한다. 최소 연결에는 선택 미디어 설치가 필요하지 않다. 미디어 도구 누락이나 자동 시작 설정 경고는 현재 연결과 구분해 로컬 관리 화면·중앙의 능력 보고에서 확인한다. 구형 설치는 헬퍼 교체가 필요하다. [설치와 OS별 조건](../../helper/README.md).
+
+AI의 원격 실행은 대상 device_id·workspace·작업 접수증을 보존한다. 시간 초과는 실행 실패와 다르므로 같은 접수증으로 회수한다. Windows 출력은 새 헬퍼에서 UTF-8 경로를 사용하고, 셸 인용·종료 코드·부팅 확인은 [원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다. 폰에는 PC 셸 봉투 대신 `op:ibl`을 보내며, 원격 참조를 중앙 참조처럼 읽지 않는다. [원격폰 기능 범위](../guides/remote_phone.md).
+
+### 미디어와 폰 단독 재생
+
+일반 음성·영상 통화는 상대 수락, 등록 손발의 카메라·마이크·스피커·재생은 확장관계 자격을 사용한다. 제어는 기존 `미디어세션` 스크립트와 통화 창·장치 패널을 거치고, 영상·음성은 WebRTC로 전달한다. 폰 영상은 화면이 준비되지 않으면 로컬 조작을 요청하고 실제 첫 프레임 전에는 재생 성공으로 처리하지 않는다. 원격 화면 공유 권한과 미디어 통화 자격을 혼용하지 않는다. [미디어 가이드](../guides/media_session.md) · [구현·인수 상태](../../docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md).
+
+폰 네이티브의 유튜브 검색·음악 재생은 폰 자체에서 실행하는 별도 경로다. 영상은 외부 유튜브 앱/브라우저에 열며 재생 확인·정지 제어를 제공하지 않는다. 원격 런처의 PC 릴레이와 구분한다. [폰 단독 재생과 PC 릴레이](../guides/youtube_relay.md).
 
 ### 핵심 특징
 - **Cloudflare Tunnel**: 포트 포워딩/DDNS 없이 안전한 외부 접근
@@ -661,7 +681,7 @@ cloudflared tunnel login
 
 ---
 
-*최근 변경(2026-08-22): 모듈 경로를 층 구조·실경로로 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*
 
 
 ### 회원 앱 표면 (2026-09-14)

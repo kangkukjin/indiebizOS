@@ -22,6 +22,7 @@ indiebizOS/
 │   │   ├── episode_logger.py # 에피소드(주행기록) 로깅 — 채팅·HTTP·위임·외부채널 전 경로
 │   │   ├── thumbnails.py / hls_ladder.py # 썸네일·스트리밍 트랜스코드 · HLS 적응형 사다리
 │   │   ├── desktop_notify.py # OS 네이티브 알림 폴백(의존성 0 — osascript/PowerShell/notify-send)
+│   │   ├── research_context.py # 연구 실행 신원
 │   │   ├── phone_jobs.py     # 푸시 큐(폰·USB 손발 공용 아웃바운드 큐)
 │   │   ├── limb_keys.py / device_registry.py # 손발 자격 원장 · 몸 등록부(capability)
 │   │   ├── window_requests.py # 창 열기 pending-queue (층 역전 방지용 단일 저장소)
@@ -30,8 +31,9 @@ indiebizOS/
 │   │
 │   ├── datastore/       # 원장·DB(층 이름은 'data' 지만 런타임 폴더와 충돌해 디렉토리는 datastore)
 │   │   ├── ibl_usage_db.py   # IBL 해마 DB (벡터 검색 + FTS5)
-│   │   ├── forage_memory.py  # 포식 기억(공간 지도 + 주인 모델)
+│   │   ├── forage_memory.py  # 포식 기억(장소 문서의 색인·탐색 경험)
 │   │   ├── business_manager.py / calendar_manager.py / conversation_db.py / multi_chat_db.py
+│   │   ├── research_store.py / research_questions.py / research_evidence.py / media_store.py # 연구·미디어 원장
 │   │   ├── project_manager.py / agent_registry.py / package 원장 · system_docs.py
 │   │   ├── notify_dispatch.py # 알림 도달 단일 관문(알림함→런처 WS→데스크탑 폴백)
 │   │   ├── red_grant.py / red_report.py / red_watchdog.py # 자기수정(REPAIR) 한도·원장·회수 워치독
@@ -62,6 +64,7 @@ indiebizOS/
 │   │   #     패키지 tool_*.py(서브모듈)       → **reload 밖** — 워커 재기동해야 반영
 │   │
 │   ├── cognition/       # 인지(분류→의식→실행→평가→증류)
+│   │   ├── research_runner.py # 연구 대화 실행 — 현재 API·CLI 기어
 │   │   ├── agent_runner.py   # 에이전트 실행 엔진 (파이프라인 오케스트레이션)
 │   │   ├── agent_cognitive.py # 인지 믹스인 합성 지점 + 코어
 │   │   ├── associative_recall.py # 0단계 연상 회상의 공통 흐름 — 정책 표(SOURCES/CHANNELS)·주체 관문·조립·제시 기록 (2026-09-18)
@@ -79,6 +82,9 @@ indiebizOS/
 │   │   └── world_pulse.py / world_pulse_health.py / world_pulse_collectors.py # 자의식·면역 순찰
 │   │
 │   ├── services/        # 바깥 세계(스케줄·채널·NAS·발급)
+│   │   ├── research_capture.py / research_library.py / research_threads.py # 자료 보존·회수·대화
+│   │   ├── media_sessions.py / media_signaling.py / session_lease.py # 미디어·기기 세션 공통 임대
+│   │   ├── resident_pcs.py / limb_client.py # 상주 PC·폰 등록 기기
 │   │   ├── scheduler.py / channel_poller.py # 스케줄러 · 채널 폴링(수신 단일 관문)
 │   │   ├── indienet*.py      # IndieNet(Nostr) 코어·발행·릴레이·소셜
 │   │   ├── warehouse_feed.py # 이웃 창고 폴러(30분 diff, seed/new/changed) + 자격 로그인
@@ -95,6 +101,7 @@ indiebizOS/
 │   │   ├── api_agents.py / api_projects.py / api_packages.py / api_models.py / api_config.py
 │   │   ├── api_nodes.py         # 몸 명함·부탁(/nodes/card·/nodes/ask)
 │   │   ├── api_limb.py          # USB 손발 수신(/limb/connect·poll·result·progress)
+│   │   ├── api_media.py / api_resident_pcs.py # 미디어 세션 · 상주 PC
 │   │   ├── api_phone.py         # 폰 컴패니언/푸시 큐
 │   │   ├── api_music.py / api_ytrelay.py # 내 음악 스트리밍 · 유튜브 릴레이(HLS)
 │   │   ├── api_nas.py / api_nas_hls.py / api_nas_lite.py # NAS 서빙·적응형·경량
@@ -163,7 +170,7 @@ indiebizOS/
 │   ├── music/           # 내 음악 라이브러리 (library.db — 트랙·앨범아트·폴더. 관련곡 간선 edges 는 2026-07-28 폐기)
 │   ├── webapps.json     # 웹앱 등기부의 수동 보충분(본체는 진실 소스 7곳에서 매 호출 파생)
 │   ├── warehouse_directory.json # 창고 둘러보기 시드(사용자 편집 가능)
-│   ├── forage_memory.db # 포식 기억 (공간 지도 + 주인 모델)
+│   ├── forage_memory.db # 포식 기억 (장소 문서의 색인·탐색 경험)
 │   └── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │
 ├── projects/            # 사용자 프로젝트

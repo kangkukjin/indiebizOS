@@ -27,9 +27,8 @@ KHJoffice는 서로 다른 구형 헬퍼를 사용 중이었고 오프라인이�
 그 방법이 불가능하면 기존 등록 USB 폴더의 Windows 실행파일을 새 GUI 판으로 바꾸고
 기존 `indiebiz-helper.json`을 유지한 채 실행해 기존 설치를 교체한다.
 
-보관 ZIP: `outputs/windows-helper-recovery-2026-10-14.zip`.
 `indiebiz-helper-win-resident.exe`는 창 없는 상주/USB 교체용, `indiebiz-helper-win.exe`는
-콘솔형이다. 등록 설정은 ZIP에 넣지 않았다. Windows 등록 정보·전원 설정·현재 실행 중
+콘솔형이다. Windows 등록 정보·전원 설정·현재 실행 중
 헬퍼는 이번 준비 작업에서 변경하지 않았다. 직전 중앙 배포본은
 `data/_backups/2026-10-14_windows_helper_before_recovery/`에 보존한다.
 

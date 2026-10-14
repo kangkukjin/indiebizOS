@@ -71,3 +71,13 @@ func TestResidentMediaWithoutPlayerReportsSearch(t *testing.T) {
 		t.Fatalf("local darwin audio should fall back to afplay, got %v", local)
 	}
 }
+
+func TestFindMediaPlayerWingetInstallerLocation(t *testing.T) {
+	root, home := t.TempDir(), t.TempDir()
+	want := filepath.Join(root, `C:/Program Files/MPV Player/mpv.exe`)
+	writeFakePlayer(t, want, 0o644)
+	got, searched := findMediaPlayerIn("windows", "", "", mediaPlayerCandidates("windows", root, home))
+	if got != want {
+		t.Fatalf("got %q want %q (searched %v)", got, want, searched)
+	}
+}

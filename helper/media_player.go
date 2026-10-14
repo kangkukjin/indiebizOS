@@ -26,7 +26,9 @@ func mediaPlayerCandidates(goos, root, home string) []string {
 				filepath.Join(home, "Applications/*/mpv.app/Contents/MacOS/mpv"))
 		}
 	case "windows":
-		c = []string{sys(`C:/Program Files/mpv/mpv.exe`), sys(`C:/ProgramData/chocolatey/bin/mpv.exe`),
+		// winget's shinchiro.mpv installer (v0.41+) installs to "MPV Player".
+		c = []string{sys(`C:/Program Files/mpv/mpv.exe`), sys(`C:/Program Files/MPV Player/mpv.exe`),
+			sys(`C:/ProgramData/chocolatey/bin/mpv.exe`),
 			sys(`C:/Program Files/WinGet/Links/mpv.exe`)}
 		if home != "" {
 			// winget may leave the portable shinchiro.mpv without a Links shim.

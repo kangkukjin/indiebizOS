@@ -114,6 +114,80 @@ def test_manifest_reconciliation_preserves_original_notes(tmp_path, variant):
         assert {row['path']: row['note'] for row in csv.DictReader(stream)} == expected
 
 
+@pytest.mark.parametrize('value', [
+    {'note': '줄\r\n다음\ufeff본문', 'zero': 0, 'empty': '', 'missing': None},
+    [{'id': 'V01', 'n': 23000}], '일반 문자열', 123, True, None,
+])
+def test_json_bom_is_encoding_marker_without_changing_values(value):
+    import json
+    body = '\ufeff' + json.dumps(value, ensure_ascii=False)
+    assert module('essentials_file_io').structured_data(body, 'json', 'phone.json') == value
+
+
+@pytest.mark.parametrize('content', [
+    '{"x":1,"x":2}', '{"nested":{"x":1,"x":2}}',
+    '{"n":NaN}', '[Infinity]', 'NaN', '1e999',
+    '{"text":"ok",}', '\ufeff{}',
+])
+def test_json_bom_does_not_hide_invalid_source(content):
+    with pytest.raises(ValueError, match='JSON 원문 오류'):
+        module('essentials_file_io').structured_data('\ufeff' + content, 'json', 'phone.json')
+
+
+def test_json_structure_is_decoded_once(monkeypatch):
+    import json
+    file_io = module('essentials_file_io')
+    loads = json.loads
+    calls = []
+    def counted(body, *args, **kwargs):
+        calls.append(body)
+        return loads(body, *args, **kwargs)
+    monkeypatch.setattr(json, 'loads', counted)
+    body = '[{"id":"V01","amount":23000}]'
+    assert file_io.structured_data(body, 'json', 'costs.json') == [{'id': 'V01', 'amount': 23000}]
+    assert calls == [body]
+
+
+def test_json_bom_full_ibl_read_preserves_raw_text_and_structure(tmp_path):
+    import json
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from thread_context import actor_context
+
+    value = {'note': '본문\ufeff표식\r\n원문', 'count': 0, 'items': []}
+    body = '\ufeff' + json.dumps(value, ensure_ascii=False, indent=2).replace('\n', '\r\n')
+    source_path = tmp_path / 'phone.json'
+    source_path.write_bytes(body.encode('utf-8'))
+    inputs = {'source': str(source_path), 'copy': str(tmp_path / 'copy.txt')}
+    code = ('$d=[self:read]{path:$source};'
+            '[self:write]{path:$copy,content:$d.text}; return $d')
+    plan = compile_program(code, load_registry(str(ROOT)), inputs)
+    assert not plan.issues, plan.issues
+    with actor_context(origin='training'):
+        result = Runtime(plan, inputs).run()
+    assert result['success'], result.get('diagnostic')
+    assert result['value']['text'] == body
+    assert result['value']['data'] == value
+    assert Path(inputs['copy']).read_bytes() == source_path.read_bytes()
+
+
+def test_member_json_bom_uses_same_parser_and_preserves_source(tmp_path):
+    import base64
+    import json
+    member = module('member_documents')
+    value = [{'id': 'V01', 'note': '그대로\ufeff보존'}]
+    body = '\ufeff' + json.dumps(value, ensure_ascii=False)
+    calls = []
+    def exchange(command):
+        calls.append(command)
+        return {'success': True, 'content': base64.b64encode(body.encode()).decode()}
+    result = member.read_document({'path': 'phone.json', 'blocks': True}, {}, exchange, tmp_path)
+    assert result['structured_data'] == value
+    assert result['text'] == body
+    assert len(calls) == 1
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

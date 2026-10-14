@@ -1,0 +1,186 @@
+[
+  {
+    "label": "base",
+    "episode": 4759,
+    "seconds": 161.086,
+    "usage": {
+      "input": 1132766,
+      "output": 15363,
+      "cache_read": 912078,
+      "cache_create": 216805
+    },
+    "by_role": {
+      "oneshot:classify": {
+        "input": 6931,
+        "output": 3,
+        "cache_read": 3072,
+        "cache_create": 0
+      },
+      "consciousness": {
+        "input": 192520,
+        "output": 3419,
+        "cache_read": 125516,
+        "cache_create": 66998
+      },
+      "execution": {
+        "input": 903090,
+        "output": 11127,
+        "cache_read": 782946,
+        "cache_create": 120128
+      },
+      "oneshot:evaluate": {
+        "input": 30225,
+        "output": 814,
+        "cache_read": 544,
+        "cache_create": 29679
+      }
+    },
+    "tool_calls": {
+      "consciousness:Read": 3,
+      "Bash": 6,
+      "execute_ibl": 1
+    },
+    "failures": []
+  },
+  {
+    "label": "variant",
+    "episode": 4760,
+    "seconds": 101.942,
+    "usage": {
+      "input": 1504680,
+      "output": 11048,
+      "cache_read": 1424387,
+      "cache_create": 74059
+    },
+    "by_role": {
+      "oneshot:classify": {
+        "input": 6273,
+        "output": 5,
+        "cache_read": 3072,
+        "cache_create": 0
+      },
+      "oneshot:background": {
+        "input": 3909,
+        "output": 2046,
+        "cache_read": 896,
+        "cache_create": 0
+      },
+      "execution": {
+        "input": 1464847,
+        "output": 8108,
+        "cache_read": 1414888,
+        "cache_create": 49941
+      },
+      "oneshot:evaluate": {
+        "input": 29651,
+        "output": 889,
+        "cache_read": 5531,
+        "cache_create": 24118
+      }
+    },
+    "tool_calls": {
+      "Bash": 8,
+      "execute_ibl": 1
+    },
+    "failures": [
+      {
+        "name": "Bash",
+        "observation": ""
+      }
+    ]
+  },
+  {
+    "label": "repair_base",
+    "episode": 4761,
+    "seconds": 143.005,
+    "usage": {
+      "input": 1144844,
+      "output": 11419,
+      "cache_read": 991865,
+      "cache_create": 149579
+    },
+    "by_role": {
+      "oneshot:classify": {
+        "input": 6450,
+        "output": 3,
+        "cache_read": 3072,
+        "cache_create": 0
+      },
+      "consciousness": {
+        "input": 59507,
+        "output": 3737,
+        "cache_read": 30056,
+        "cache_create": 29449
+      },
+      "execution": {
+        "input": 1027711,
+        "output": 7123,
+        "cache_read": 953206,
+        "cache_create": 74487
+      },
+      "oneshot:evaluate": {
+        "input": 51176,
+        "output": 556,
+        "cache_read": 5531,
+        "cache_create": 45643
+      }
+    },
+    "tool_calls": {
+      "Bash": 7,
+      "execute_ibl": 1
+    },
+    "failures": [
+      {
+        "name": "Bash",
+        "observation": ""
+      }
+    ]
+  },
+  {
+    "label": "repair_variant",
+    "episode": 4762,
+    "seconds": 100.421,
+    "usage": {
+      "input": 1287234,
+      "output": 8974,
+      "cache_read": 1182204,
+      "cache_create": 98426
+    },
+    "by_role": {
+      "oneshot:classify": {
+        "input": 6649,
+        "output": 5,
+        "cache_read": 3584,
+        "cache_create": 0
+      },
+      "oneshot:background": {
+        "input": 4163,
+        "output": 2010,
+        "cache_read": 640,
+        "cache_create": 0
+      },
+      "execution": {
+        "input": 1226326,
+        "output": 6525,
+        "cache_read": 1172449,
+        "cache_create": 53863
+      },
+      "oneshot:evaluate": {
+        "input": 50096,
+        "output": 434,
+        "cache_read": 5531,
+        "cache_create": 44563
+      }
+    },
+    "tool_calls": {
+      "Bash": 4,
+      "execute_ibl": 2
+    },
+    "failures": [
+      {
+        "name": "execute_ibl",
+        "observation": ""
+      }
+    ]
+  }
+]

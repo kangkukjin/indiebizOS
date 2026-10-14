@@ -1,0 +1,12 @@
+{
+  "folder": "outputs/long_sentence_imagination/2026-10-14_67회차/agent/repair_variant",
+  "cases": 8,
+  "drafts": 13,
+  "passed": true,
+  "errors": [],
+  "output_hashes": {
+    "plan.json": "ab6211aa3eafbbedb11cd625b20a4646ba6543acbc57054b1b652e98172a7b61",
+    "report.md": "00814f5fd1055883bba747629b0d165b5ac9b8b08e19a3126441f6c0bfa507a4",
+    "outbox.json": "b4b66a268b8258de98727f49d540a537951d1db68a821d444ab2781202525c71"
+  }
+}

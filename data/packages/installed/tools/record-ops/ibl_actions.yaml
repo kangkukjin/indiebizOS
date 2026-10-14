@@ -25,7 +25,7 @@ actions:
         backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
         backend/common/row_conditions.py: 154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce
         backend/common/safe_expr.py: 393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360
-        backend/common/value_semantics.py: e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755 # 재감사 2026-10-09: 순수 문자열 원문 보존·공백 검색 수리. 값 식만 변경, I/O·인증·주체·경로 접근 추가 없음.
+        backend/common/value_semantics.py: 98e0ccec8506b70ddc1fd2612f8b26fba78da74525b325644147396c2f777756 # 재감사 2026-10-14: 순수 JSON 파싱 함수 추가. 기존 값 판정·I/O·인증·주체·경로 불변.
         backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
         backend/datastore/record_assets.py: b2271b04ac857ba746e8d883b756b7219d4ac0e4367f6a8ee718bc7d6caf5da9   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변
         backend/datastore/record_commands.py: 294276901dfa8bc052ae82cbfdeb460e5c2a555c60c75477a6d37093cc832c53   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변

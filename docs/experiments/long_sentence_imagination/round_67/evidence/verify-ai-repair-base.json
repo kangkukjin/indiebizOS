@@ -1,0 +1,19 @@
+{
+  "folder": "outputs/long_sentence_imagination/2026-10-14_67회차/agent/repair_base",
+  "cases": 8,
+  "drafts": 9,
+  "passed": false,
+  "errors": [
+    {
+      "id": "V06",
+      "field": "next_appointment",
+      "actual": null,
+      "expected": "2026-11-18T10:00:00+09:00"
+    }
+  ],
+  "output_hashes": {
+    "plan.json": "5bd5784fbd7648bc1625209909246003a1e7ffa8321c28ec899aace2580610f7",
+    "report.md": "c05bb83a35a745deec51ca4f440050b85a8e36a7e30bba6a52a493eb5a54d98c",
+    "outbox.json": "0758cb07ec979a3568aa284aef07ea5b5e3427a45ea8d0fd2cde40475f2ef52d"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "folder": "outputs/long_sentence_imagination/2026-10-14_67회차/trainer/new",
+  "cases": 8,
+  "drafts": 13,
+  "passed": true,
+  "errors": [],
+  "output_hashes": {
+    "plan.json": "6102b15e60c4dfdd45551d9afe37fe267f04dc9420dc8abe8439499c24227455",
+    "report.md": "58fa8d5bdc179fa090b304bec677e8c1d10191d907643de916ac83f0cefe20bf",
+    "outbox.json": "4059f2ba2e8bc31ad4ecd39947f617e64a7e1db5ace0daf29f3266cec831ad24"
+  }
+}

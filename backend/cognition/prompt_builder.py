@@ -816,6 +816,9 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     from supervisor_handoff import criteria_contract
     if co.get("achievement_criteria") or co.get("criteria"):
         aug.append("기준의 출처: " + json.dumps(criteria_contract(user_message, co), ensure_ascii=False))
+        aug.append("사용자가 정한 판정 조건을 임의로 강화하거나 완화하지 않는다. 추가 품질 우려는 "
+                   "근거와 함께 별도 표시하고, 새 자격 조건으로 삼아 요청된 결과를 누락하지 않는다. "
+                   "실제 실행 권한·안전 경계는 유지한다.")
 
     # 전문가의 선택 — 규정 산문에 묻히지 않도록 제 이름의 섹션으로. 실행자가 요청의 낱말에서
     # 출발하는 것을 막는 자리다(09-07 사용자 설계). 여러 줄로 오면 한 줄로 눕힌다 — 이 자리가

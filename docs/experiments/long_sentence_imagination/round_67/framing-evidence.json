@@ -1,0 +1,89 @@
+{
+  "4762": {
+    "task_framing": "문제: 원래 과제의 입력 중 context.json을 context_variant.json으로 바꿔 8개 가상 사례의 병원 방문~귀가 계획을 갱신 판정한다. 결과 세 파일(plan.json·report.md·outbox.json)을 새 출력 폴더 agent/repair_variant/에 만들고 다시 읽어 내용을 확인한다.\n제약: messages.json과 receipts.json은 원본 그대로이고 context만 변형본이다. base 결과(agent/repair_base)와 입력 원본은 읽기 전용이며 덮어쓰지 않는다. 실제 계정·폰·캘린더·스케줄러는 조회하지 않고 발송·예약도 하지 않는다. 모든 메시지는 초안(sent:false)으로만 남긴다. 다른 실행자의 trainer/harness/drafts와 정답은 보지 않는다. 자기 직전 결과·코드 재사용은 허용한다.\n세상의 방식: 결정 규칙을 사례별로 차례대로 적용하는 결정적 스크립트(write→run)로 처리한다.\n- 문자 선택: received_at을 UTC로 바꿔 비교한다. 가장 늦은 문자가 취소이면 취소로 확정하고 이전 예약으로 되돌아가지 않는다.\n- 질문: 지난 기록의 질문을 보존한다.\n- 동행: 사용자가 바쁠 때 누나 응답이 yes면 확정, 응답이 없으면 대기로 둔다.\n- 이동편: 보행 한도와 예산을 모두 만족하는 것 중에서 요금, 이동시간, ID 순으로 하나를 고른다. 후보가 없으면 '이동편 없음'으로 둔다.\n- 출발: 예약 분에서 도착 여유, 이동시간, 비 올 때 추가시간을 뺀다. 결과가 음수이면 날짜를 하루씩 앞당기고 1440을 더해 보정한다.\n- 전날 안내 날짜: 예약일의 하루 전으로 확정한다(출발일 기준 아님). 동행·이동편이 없더라도 예약이 유효하면 남긴다.\n- 안내 일치: 두 원문이 다르면 두 원문과 출처를 남기고 확인 대기로 둔다.\n- 공유: 안내가 일치하고 엄마가 확인했을 때만 준비 상태로 한다.\n- 귀가: 귀가가 확인됐을 때만 비용 합계와 다음 예약을 넣고 완료로 표시한다. 미확인이면 마무리 대기로 두되 이미 주어진 다음 예약 정보는 보존하고 비용 정산만 대기로 남긴다.\n- 취소 사례: 이동·안내·공유·마무리를 모두 취소하고 비용은 정산하지 않는다.\n- outbox: key는 사례ID:종류:예약날짜:예약분이다. receipts에서 succeeded인 영수증만 억제하고, failed는 초안이 생길 때만 재시도 후보로 표시한다. reminder 초안은 동행·이동편 확정 시에만, share 초안은 공유 준비 시에만 만든다.\n무게·멈춤선: 규칙 적용형 리허설이다. 변형 context로 8개 사례 전부와 모든 필드를 채우고 다시 읽어 대조하면 끝이다. 이전 입력(context.json)에서 나온 대상별 값·판정은 복사하지 않고 새 입력에서 다시 계산한다. report.md는 전부 한국어로 쓰고, 상태 라벨에 영어가 남지 않게 한다.",
+    "assumptions": [
+      "inputs 폴더에 messages.json, context_variant.json, receipts.json이 있다",
+      "messages.json과 receipts.json은 원본이고 context만 변형본이다",
+      "agent/repair_variant 폴더는 비어 있거나 없어서 덮어쓸 기존 결과가 없다",
+      "receipts.json의 상태값이 succeeded/failed로 구분된다"
+    ],
+    "criteria": [
+      {
+        "fallback": "",
+        "text": "context_variant.json 기준으로 8개 사례 모두 요청 필드(문자ID, 날짜/분, 동행, 이동편, 출발 날짜/분, 전날 안내 날짜, 질문, 두 원문/출처, 공유, 귀가/정산, 비용, 다음 예약)를 plan.json과 report.md에 기록",
+        "user_quote": "context_variant.json을 사용해서 8개 사례를 갱신해 줘"
+      },
+      {
+        "fallback": "",
+        "text": "전날 안내 날짜를 예약일의 하루 전으로 계산하고, 동행·이동편이 없더라도 예약이 유효하면 남김",
+        "user_quote": "전날 안내 날짜는 출발일이 아니라 예약일의 하루 전으로 확정할게. 동행·교통편이 아직 없더라도 예약 자체가 유효하면 계획에는 예약일 기준 전날 날짜를 남기되"
+      },
+      {
+        "fallback": "",
+        "text": "귀가 미확인 시에도 이미 주어진 다음 예약 정보를 보존하고 비용 정산만 대기로 남김",
+        "user_quote": "귀가 미확인 때도 이미 주어진 다음 예약 정보는 보존하고 비용 정산만 대기로 남겨 줘"
+      },
+      {
+        "fallback": "",
+        "text": "가장 늦게 받은 문자를 UTC 기준으로 선택하고, 취소 문자이면 모든 단계를 취소하고 비용을 정산하지 않음",
+        "user_quote": "시각의 시간대가 달라도 실제 받은 순서로 비교해 줘"
+      },
+      {
+        "fallback": "",
+        "text": "reminder·share 초안의 생성 조건, key 형식, succeeded 억제·failed 재시도 후보 규칙 준수",
+        "user_quote": "이미 succeeded인 영수증만 중복 억제하고 failed는 재시도 후보로 남겨 줘"
+      },
+      {
+        "fallback": "",
+        "text": "원자료 미변경, 외부 조회·발송 없음, 세 파일을 agent/repair_variant에 생성 후 다시 읽어 확인, base 결과 덮어쓰지 않음",
+        "user_quote": "출력은 .../agent/repair_variant의 plan.json, outbox.json, report.md로 저장하고 확인해 줘. 기본 결과를 덮어쓰지 마."
+      }
+    ]
+  },
+  "4760": {
+    "task_framing": "문제: 가상 사례 8개(V01~V08)로 병원 방문부터 귀가까지의 판정을 리허설한다. 입력은 messages.json, context_variant.json(기존 context.json 대체), receipts.json 세 파일이며, 결정 규칙대로 처리해 agent/variant/에 plan.json, report.md, outbox.json을 만들고 다시 읽어 내용까지 대조한다. 실제 발송·조회·예약은 하지 않는다. 기존 agent/base/ 결과는 덮어쓰지 않는다.\n제약: 쓰기는 출력 폴더 agent/variant/에만 하고 inputs는 읽기만 한다. 실제 계정·폰·캘린더·스케줄러·알림 어휘(self:notify_user, schedule, manage_events, others:* 발송)는 호출하지 않는다. 다른 실행자의 trainer/harness/drafts와 정답은 보지 않는다. 자기 직전 결과·중간 참조·작성 코드는 재사용해도 된다.\n세상의 방식: 입력에서 확인한 결정 사실은 다음과 같다.\n- 문자 선택: received_at의 시간대가 섞여 있다. UTC로 바꿔 비교하면 각 사례의 *-new가 가장 늦다.\n- V07: new가 cancelled다. old로 되돌아가지 않고 취소로 표시하며, 이동·안내·공유·마무리를 모두 취소하고 정산하지 않는다.\n- 이동편: 보행 한도 이하·예산 이하 후보만 남긴 뒤 (요금, 이동시간, ID) 순으로 고른다. V03은 bus뿐이라 이동편이 없다.\n- 동행: self_busy가 true일 때 sister_reply=='yes'면 확정, null이면 대기(V02)로 둔다.\n- 공유: 처방전과 진료 메모 원문이 다르면(V04) 두 원문과 출처를 남기고 확인 대기, mother_confirmed가 false면(V05) 가족 공유 대기. 둘 다 만족할 때만 공유 준비다.\n- 귀가: home_confirmed가 false면(V06) 마무리 대기이며, 이때도 이미 주어진 다음 예약 정보는 plan에 보존하고 비용 정산만 대기로 남긴다. 확인됐을 때만 비용 합계와 다음 예약을 넣어 완료로 둔다.\n- outbox: reminder는 동행과 이동편이 모두 확정된 사례만, share는 공유가 준비된 사례만 만든다. key는 사례ID:종류:예약날짜:예약분이다. receipts에서 succeeded인 key만 억제하고 failed는 재시도 후보로 남긴다.\n- 전날 안내 날짜: 출발일이 아니라 예약일의 하루 전으로 확정한다. 동행·이동편이 아직 없어도 예약이 유효하면 계획에 이 날짜를 남기되, reminder 초안 생성 조건은 그대로 지킨다.\n무게·멈춤선: 규칙 적용 리허설이다. 8사례를 모두 판정하고 세 파일을 다시 읽어 대조하면 끝난다.",
+    "assumptions": [
+      "inputs 세 파일은 8사례이며 사례마다 문자가 old/new 2건이다",
+      "receipts에는 V01 reminder(succeeded)와 V03 reminder(failed) 2건만 있다",
+      "context_variant.json은 context.json과 같은 스키마이며 일부 사례 값이 달라졌다",
+      "출력 폴더 agent/variant/에 쓰기 권한이 있고 기존 결과가 없다(쓰기 전 확인)"
+    ],
+    "criteria": [
+      {
+        "fallback": "",
+        "text": "context_variant.json으로 8사례를 갱신하고 messages.json·receipts.json은 그대로 사용",
+        "user_quote": "context.json 대신 …context_variant.json을 사용해서 8개 사례를 갱신해 줘. messages.json과 receipts.json은 그대로야"
+      },
+      {
+        "fallback": "",
+        "text": "받은 시각을 실제 순서(시간대 보정)로 비교해 사례마다 최신 문자 선택, 취소는 취소로 표시",
+        "user_quote": "시각의 시간대가 달라도 실제 받은 순서로 비교해 줘"
+      },
+      {
+        "fallback": "",
+        "text": "전날 안내 날짜를 예약일 하루 전으로 확정하고, 동행·이동편이 없어도 유효 예약이면 plan에 남기되 reminder 초안 조건은 유지",
+        "user_quote": "전날 안내 날짜는 출발일이 아니라 예약일의 하루 전으로 확정할게. 동행·교통편이 아직 없더라도 예약 자체가 유효하면 계획에는 예약일 기준 전날 날짜를 남기되 reminder 초안 생성 조건은 그대로 지켜 줘"
+      },
+      {
+        "fallback": "",
+        "text": "귀가 미확인이어도 다음 예약 정보는 보존하고 비용 정산만 대기로 둔다",
+        "user_quote": "귀가 미확인 때도 이미 주어진 다음 예약 정보는 보존하고 비용 정산만 대기로 남겨 줘"
+      },
+      {
+        "fallback": "",
+        "text": "8사례 전 필드를 plan.json과 report.md에 기록",
+        "user_quote": "report.md에도 8개 사례를 빠짐없이 적어 줘"
+      },
+      {
+        "fallback": "",
+        "text": "outbox 초안의 조건·key 형식과 succeeded만 억제·failed는 재시도 후보 처리",
+        "user_quote": "이미 succeeded인 영수증만 중복 억제하고 failed는 재시도 후보로 남겨 줘"
+      },
+      {
+        "fallback": "",
+        "text": "agent/variant/에 세 파일 생성 후 실제 내용까지 다시 읽어 확인, agent/base/ 덮어쓰지 않고 원자료 무수정",
+        "user_quote": "출력은 …agent/variant의 plan.json, outbox.json, report.md로 저장하고 확인해 줘. 기본 결과를 덮어쓰지 마"
+      }
+    ]
+  }
+}

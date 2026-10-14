@@ -1,0 +1,65 @@
+[
+  {
+    "label": "base_v0",
+    "run_id": "031d344ff01c49bd823455206e7c9766",
+    "success": false,
+    "error": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_67회차/inputs/messages.json: JSON 원문 오류: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)",
+    "source_complete": false,
+    "steps": 22,
+    "elapsed_ms": 349
+  },
+  {
+    "label": "base_v1",
+    "run_id": "14c92fdc092b4e7cbc4cf55b89e6fb64",
+    "success": true,
+    "error": null,
+    "source_complete": true,
+    "steps": 3340,
+    "elapsed_ms": 673
+  },
+  {
+    "label": "variant_v1",
+    "run_id": "7a7b8eecc29e471ca7acede411635383",
+    "success": true,
+    "error": null,
+    "source_complete": true,
+    "steps": 3512,
+    "elapsed_ms": 553
+  },
+  {
+    "label": "repair_original",
+    "run_id": "3c1e6439c892486788c8f585f1fcf373",
+    "success": true,
+    "error": null,
+    "source_complete": true,
+    "steps": 3340,
+    "elapsed_ms": 1338
+  },
+  {
+    "label": "repair_optimized",
+    "run_id": "cb42b897d6c64948b75d378807ceba6e",
+    "success": true,
+    "error": null,
+    "source_complete": true,
+    "steps": 2930,
+    "elapsed_ms": 3919
+  },
+  {
+    "label": "repair_variant",
+    "run_id": "8b6215872a504c178d86a7cedb46f0fb",
+    "success": true,
+    "error": null,
+    "source_complete": true,
+    "steps": 3102,
+    "elapsed_ms": 941
+  },
+  {
+    "label": "repair_new",
+    "run_id": "5103b1be2a2e440ebb8ee2b5804dfa47",
+    "success": true,
+    "error": null,
+    "source_complete": true,
+    "steps": 3028,
+    "elapsed_ms": 543
+  }
+]

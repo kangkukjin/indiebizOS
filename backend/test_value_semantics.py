@@ -92,5 +92,25 @@ def test_text_view_normalized_positions_and_verbatim_fragments(source):
             assert values.normalized_text(view.fragment(start, end)) == view.normalized[start:end]
 
 
+@pytest.mark.parametrize('body', [
+    '{"x":1,"x":2}', '[{"x":1,"x":2}]', 'NaN', 'Infinity', '-Infinity',
+    '1e999', '{"x":1e999}', 'not JSON', '\ufeff{}',
+])
+def test_explicit_json_parser_rejects_lossy_or_invalid_source(body):
+    with pytest.raises(ValueError):
+        values.parse_public_json(body)
+
+
+@pytest.mark.parametrize('body,expected', [
+    ('{"n":23000,"s":"007","x":null,"b":false}', {'n':23000,'s':'007','x':None,'b':False}),
+    ('[1,2.5,"본문\\ufeff보존"]', [1,2.5,'본문\ufeff보존']),
+    ('"NaN"', 'NaN'), ('0', 0), ('null', None), ('true', True),
+])
+def test_explicit_json_parser_preserves_json_types(body, expected):
+    actual = values.parse_public_json(body)
+    assert actual == expected
+    assert type(actual) is type(expected)
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

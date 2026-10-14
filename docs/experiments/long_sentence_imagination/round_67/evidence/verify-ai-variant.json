@@ -1,0 +1,50 @@
+{
+  "folder": "outputs/long_sentence_imagination/2026-10-14_67회차/agent/variant",
+  "cases": 8,
+  "drafts": 12,
+  "passed": false,
+  "errors": [
+    {
+      "id": "V04",
+      "field": "share",
+      "actual": "원문 충돌 확인 대기",
+      "expected": "공유 초안 준비"
+    },
+    {
+      "drafts_actual": [
+        "V01:share:2026-11-01:540",
+        "V02:reminder:2026-11-01:540",
+        "V02:share:2026-11-01:540",
+        "V03:reminder:2026-11-01:540",
+        "V03:share:2026-11-01:540",
+        "V04:reminder:2026-11-01:540",
+        "V05:reminder:2026-11-01:540",
+        "V05:share:2026-11-01:540",
+        "V06:reminder:2026-11-01:540",
+        "V06:share:2026-11-01:540",
+        "V08:reminder:2026-11-01:20",
+        "V08:share:2026-11-01:20"
+      ],
+      "drafts_expected": [
+        "V08:reminder:2026-11-01:20",
+        "V08:share:2026-11-01:20",
+        "V06:reminder:2026-11-01:540",
+        "V06:share:2026-11-01:540",
+        "V05:reminder:2026-11-01:540",
+        "V05:share:2026-11-01:540",
+        "V04:reminder:2026-11-01:540",
+        "V04:share:2026-11-01:540",
+        "V03:reminder:2026-11-01:540",
+        "V03:share:2026-11-01:540",
+        "V02:reminder:2026-11-01:540",
+        "V02:share:2026-11-01:540",
+        "V01:share:2026-11-01:540"
+      ]
+    }
+  ],
+  "output_hashes": {
+    "plan.json": "b68c41af82fe81f7e5201435c7cce0a9504aac9eeedf617c00ca7dbb7906c2e9",
+    "report.md": "4718f6191af9b50a2f7371730cddada6647d7a7cdb27fd102e0a371d6cc048e7",
+    "outbox.json": "87cd10b21b8c6ecf94ebcc15c119cb6e91e53505364a3fa2208b4ae110604da3"
+  }
+}

@@ -2,7 +2,6 @@
 from collections import deque
 from contextlib import contextmanager
 import hashlib
-import json
 import os
 from pathlib import Path
 import stat
@@ -106,10 +105,11 @@ def structured_data(content, data_format, path):
     """전체 원문만 받는다. 주인/회원 읽기가 같은 원천 검증과 구조를 쓴다."""
     if data_format != 'json':
         return delimited_data(content, '\t' if data_format == 'tsv' else ',')
-    from common.value_semantics import public_result
+    from common.value_semantics import parse_public_json
     try:
-        public_result(content, strict=True)
-        return json.loads(content)
+        # 파일 첫 표식 하나만 인코딩으로 취급한다. Document.text와 문자열 안
+        # U+FEFF는 원문 그대로 유지하며 중복 표식/손상 JSON은 여전히 실패한다.
+        return parse_public_json(content.removeprefix("\ufeff"))
     except ValueError as exc:
         raise ValueError(f"{path}: JSON 원문 오류: {exc}") from exc
 

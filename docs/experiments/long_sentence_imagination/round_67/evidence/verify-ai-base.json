@@ -1,0 +1,31 @@
+{
+  "folder": "outputs/long_sentence_imagination/2026-10-14_67회차/agent/base",
+  "cases": 8,
+  "drafts": 9,
+  "passed": false,
+  "errors": [
+    {
+      "id": "V03",
+      "field": "reminder_date",
+      "actual": null,
+      "expected": "2026-10-31"
+    },
+    {
+      "id": "V06",
+      "field": "next_appointment",
+      "actual": null,
+      "expected": "2026-11-18T10:00:00+09:00"
+    },
+    {
+      "id": "V08",
+      "field": "reminder_date",
+      "actual": "2026-10-30",
+      "expected": "2026-10-31"
+    }
+  ],
+  "output_hashes": {
+    "plan.json": "3114c74572f47f5428a0acdb3ec3a7014228e587916c12f6f625d4b3ea843393",
+    "report.md": "d44bf6e22190bce8cac105a586078c42d7f669c26ac6e5c3eae06a13520819dc",
+    "outbox.json": "8c1bc7621e200b2013b253a31560b2880936302721c64fe043605f2c72e681cc"
+  }
+}

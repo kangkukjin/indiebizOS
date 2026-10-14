@@ -1,0 +1,51 @@
+{
+  "parser-before": {
+    "tests": "17",
+    "failures": "9",
+    "errors": "0",
+    "skipped": "0",
+    "time": "2.336"
+  },
+  "targeted": {
+    "tests": "71",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "19.886"
+  },
+  "related": {
+    "tests": "60",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "3.094"
+  },
+  "prompt-gates": {
+    "tests": "70",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "8.626"
+  },
+  "regression": {
+    "tests": "10296",
+    "failures": "1",
+    "errors": "0",
+    "skipped": "1",
+    "time": "166.429"
+  },
+  "regression-final": {
+    "tests": "10296",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "1",
+    "time": "152.046"
+  },
+  "system-related": {
+    "tests": "79",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "50.211"
+  }
+}

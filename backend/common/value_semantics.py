@@ -736,6 +736,16 @@ def _normalize_public_value(value: Any, *, path: str = "$", active=None) -> Any:
         active.remove(marker)
 
 
+def parse_public_json(content: str) -> Any:
+    """JSON 원문을 한 번 해석해 중복 키·비유한 수를 검사한 값을 반환한다.
+
+    public_result의 문자열 입력은 원문을 반환하므로 구조가 필요한 소비자가
+    다시 파싱해야 했다. 명시 JSON 입력은 스칼라도 같은 공개 값 검증을 거친다.
+    인코딩 표식 처리는 파일 경계의 몫이며 이 함수는 JSON 문법을 완화하지 않는다.
+    """
+    return public_result(json.loads(content, object_pairs_hook=_json_object), strict=True)
+
+
 def public_result(value: Any, *, producer: str = "", strict: bool = False) -> Any:
     """공개 결과의 유한 JSON 수 계약을 적용하고 위반을 정직한 오류 봉투로 바꾼다.
 

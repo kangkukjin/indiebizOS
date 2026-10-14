@@ -194,6 +194,7 @@ return {complete:len($미완료)==0,checked:len($확인),missing:$미완료,chec
 `self:read`는 확장자/`format`에 따라 `.text`·`.blocks`·`.data`를 반환한다.
 본문만 필요하면 `format:"text"`의 `.text`만 반환한다. 위치 탐색은 `output_mode:"files_with_matches"`로 좁힌다.
 JSON은 `.data`(배열은 `.data.items`), CSV/TSV는 `.data.items`·`.data.table`(문자열 셀), XLSX/XLS는 `.data.table.rows`를 쓴다.
+JSON 파일 첫 UTF-8 BOM 하나는 구조 파싱에서 인코딩 표식으로 처리하며 `.text`에는 그대로 남는다. 본문 안의 표식·줄바꿈도 보존하고, 중복 키·비유한 수·손상 JSON은 오류로 남긴다. 파일을 다시 인코딩하거나 원본을 덮어쓸 필요가 없다.
 구조화 파일·오피스는 기본 전체 읽기다. XLSX/XLS의 `max_rows`(헤더 포함)와 문서의 `max_blocks`는 생략·0=전체, 양수=선택이다. 원문은 보존하고 표시만 제한하며 큰 값은 `result_ref`로 잇는다.
 `.data.sheets`는 시트명이다. 부분 추출을 확인하며, 파일 부재는 `NOT_FOUND`다.
 회원 AI도 같은 문법을 사용하며, 회원 기기에서 받은 자료와 정의만 사용한다.

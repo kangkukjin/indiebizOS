@@ -1,0 +1,55 @@
+#!ibl edition=2
+[def:날짜분]($date,$minute) {
+  [if:$minute<0] {return {date:date_add($date,-1),minute:1440+$minute}}
+  return {date:$date,minute:$minute}
+}
+[def:방문계획]($case,$messages) {
+  $history=filter($messages,($m)=>$m.visit_id==$case.id)
+  assert len($history)>0,"예약 자료 누락",{id:$case.id}
+  $latest=sorted($history,"received_at",true)[0]
+  $cancel=$latest.state=="cancelled"
+  $companion=$case.self_busy ? ($case.sister_reply=="yes" ? "누나 확정" : "동행 대기") : "본인 확정"
+  $routes=filter($case.routes,($r)=>$r.walk<=$case.max_walk and $r.cost<=$case.budget)
+  $routes=$routes >> [table:sort]{by:["cost","minutes","id"]}
+  $route=null; $departure=null
+  [if:len($routes)>0 and not $cancel] {
+    $route=$routes[0]
+    $departure=[fn:날짜분]{date:$latest.date,minute:$latest.minute-$case.arrival_buffer-$route.minutes-($case.weather.rain ? $case.weather.extra_minutes : 0)}
+  }
+  $same=$case.prescription.text==$case.visit_note.text
+  $share=not $same ? "원문 충돌 확인 대기" : not $case.mother_confirmed ? "엄마 확인 대기" : "공유 초안 준비"
+  $finish=$case.home_confirmed ? "완료" : "귀가 확인 대기"
+  return {id:$case.id,message_id:$latest.id,date:$latest.date,minute:$latest.minute,place:$latest.place,cancelled:$cancel,
+    companion:$cancel ? "취소" : $companion,route:$route,departure:$departure,
+    reminder_date:$cancel ? null : date_add($latest.date,-1),questions:$case.questions,
+    prescription:$case.prescription,visit_note:$case.visit_note,share:$cancel ? "취소" : $share,
+    finish:$cancel ? "취소" : $finish,cost:$cancel or not $case.home_confirmed ? null : sum($case.expenses),
+    next_appointment:$cancel ? null : $case.next_appointment,weather:$case.weather}
+}
+[def:초안]($plan,$receipts) {
+  $rows=[]
+  [if:not $plan.cancelled] {
+    [if:$plan.companion!="동행 대기" and $plan.route!=null] {
+      $rows=$rows+[{key:f"${plan.id}:reminder:${plan.date}:${plan.minute}",id:$plan.id,kind:"reminder",status:"draft",recipient:"엄마",date:$plan.reminder_date,departure:$plan.departure}]
+    }
+    [if:$plan.share=="공유 초안 준비"] {
+      $rows=$rows+[{key:f"${plan.id}:share:${plan.date}:${plan.minute}",id:$plan.id,kind:"share",status:"draft",recipient:"가족",text:$plan.prescription.text,source:$plan.prescription.source}]
+    }
+  }
+  $done=map(filter($receipts,($r)=>$r.status=="succeeded"),($r)=>$r.key)
+  return filter($rows,($r)=>not ($r.key in $done))
+}
+$documents=[self:read]{path:f"${input}/messages_plain.json"} & [self:read]{path:f"${input}/${context_file}"} & [self:read]{path:f"${input}/receipts.json"}
+$messages=$documents[0].data.items
+$cases=$documents[1].data.items
+$receipts=$documents[2].data.items
+$plans=$cases >> [table:each] {return [fn:방문계획]{case:$it,messages:$messages}}
+$drafts=$plans >> [table:each]{mode:"flat_map"} {return [fn:초안]{plan:$it,receipts:$receipts}}
+$lines=map($plans,($p)=>f"## ${p.id}\n${json($p)}\n")
+$body="# 부모님 병원 방문·귀가 리허설\n\n모든 메시지는 로컬 초안이며 실제 발송·예약은 하지 않았습니다.\n\n"+join("\n",$lines)+f"\n초안 ${len($drafts)}건. 성공 영수증이 있는 초안은 제외했습니다."
+$saved=[self:write]{path:f"${out}/plan.json",content:json($plans)} & [self:write]{path:f"${out}/outbox.json",content:json($drafts)} & [self:write]{path:f"${out}/report.md",content:$body}
+$reads=[self:read]{path:$saved[0].path} & [self:read]{path:$saved[1].path} & [self:read]{path:$saved[2].path}
+assert $reads[0].data.items==$plans,"계획 저장 불일치"
+assert $reads[1].data.items==$drafts,"초안 저장 불일치"
+assert $reads[2].text==$body,"보고서 저장 불일치"
+return {count:len($plans),draft_count:len($drafts),out:$out,plans:$plans,drafts:$drafts}

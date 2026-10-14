@@ -1,0 +1,49 @@
+{
+  "at": "2026-10-14T21:23:21.297623+09:00",
+  "tasks": [
+    {
+      "label": "ai_base",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_935445b8"
+      },
+      "run_id": "run_8bede62612ed9e16d401",
+      "state": "succeeded",
+      "completed_at": "2026-10-14 12:06:55"
+    },
+    {
+      "label": "ai_variant",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_8675b58b"
+      },
+      "run_id": "run_f931f9cf79883492d31b",
+      "state": "succeeded",
+      "completed_at": "2026-10-14 12:09:16"
+    },
+    {
+      "label": "ai_repair_base",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_5b9bf090"
+      },
+      "run_id": "run_8e24ca2261572dc127c0",
+      "state": "succeeded",
+      "completed_at": "2026-10-14 12:17:39"
+    },
+    {
+      "label": "ai_repair_variant",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_ec571308"
+      },
+      "run_id": "run_8704373a45fd8b4eb55e",
+      "state": "succeeded",
+      "completed_at": "2026-10-14 12:20:18"
+    }
+  ]
+}

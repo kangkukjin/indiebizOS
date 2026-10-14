@@ -1,0 +1,139 @@
+{
+ "label": "after6-base",
+ "passed": 23,
+ "total": 23,
+ "checks": [
+  {
+   "check": "목록 행수 = 입력 파일 수",
+   "ok": true,
+   "detail": "18 vs 18"
+  },
+  {
+   "check": "모든 입력이 목록에 있음",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "지문 = sha256 일치",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "날짜(EXIF 우선, PNG·음성은 파일 시각)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "PNG 날짜 출처 표시",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "정확 중복 집합",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "중복 행의 새경로가 중복 폴더에 실존",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "유사 중복 후보 = IMG_0003_edit",
+   "ok": true,
+   "detail": [
+    "IMG_0003_edit.jpg"
+   ]
+  },
+  {
+   "check": "손상 파일 읽기실패·제자리",
+   "ok": true,
+   "detail": "읽기실패"
+  },
+  {
+   "check": "기타 파일 손대지 않음",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "앨범 날짜 집합",
+   "ok": true,
+   "detail": [
+    "2026-10-01_생신모임약속",
+    "2026-10-03_할머니생신",
+    "2026-10-04_호수공원산책",
+    "2026-10-10_동네식당"
+   ]
+  },
+  {
+   "check": "앨범 주제 2~6글자",
+   "ok": true,
+   "detail": [
+    "생신모임약속",
+    "할머니생신",
+    "호수공원산책",
+    "동네식당"
+   ]
+  },
+  {
+   "check": "앨범별 파일수",
+   "ok": true,
+   "detail": {
+    "2026-10-01": 1,
+    "2026-10-03": 5,
+    "2026-10-04": 3,
+    "2026-10-10": 2
+   }
+  },
+  {
+   "check": "파일 이름 YYYYMMDD_HHMMSS_원래이름",
+   "ok": true,
+   "detail": 11
+  },
+  {
+   "check": "EXIF 시각으로 이름 붙음(표본 3)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "음성 3+변형",
+   "ok": true,
+   "detail": 3
+  },
+  {
+   "check": "memo_01→2026-10-03 폴더",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "memo_02→2026-10-10 폴더",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "memo_03 무음→미분류+사유",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "보고서: 전사→앨범 연결",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "보고서: 유사 중복 후보 쌍",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "보고서: 재확인 절",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "전사문 내용(생신·산책)",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

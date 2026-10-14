@@ -1,0 +1,17 @@
+[
+  {
+    "name": "IMG_0010.jpg",
+    "sha256": "14c4ba2952b89019a043448b0fc3cbfa39a6de6e259f614d31aaf95794386296",
+    "expect": "album 2026-10-04 (topic kept)"
+  },
+  {
+    "name": "IMG_0005 (1).jpg",
+    "sha256": "dbfa372490ddc1355ef1349ef3fbf3f572a6d7023da6fb463c5995a0b2bfe810",
+    "expect": "duplicate of organized IMG_0005.jpg"
+  },
+  {
+    "name": "memo_04.m4a",
+    "sha256": "228c9d078f79950727767f48f89443451d46e2cb7833ff00be27ca7cc931ef92",
+    "expect": "음성/2026-10-04 + link album 2026-10-04"
+  }
+]

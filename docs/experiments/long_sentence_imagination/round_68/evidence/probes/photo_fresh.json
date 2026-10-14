@@ -1,0 +1,6 @@
+{
+ "elapsed": 0.5,
+ "success": true,
+ "error": null,
+ "value_preview": "{\"success\": true, \"count\": 1, \"items\": [{\"title\": \"IMG_0010.jpg\", \"meta\": \"2026-10-04 16:12 · iPhone 12 · 사진\", \"summary\": \"\", \"url\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68회차/inputs/variant_add/IMG_0010.jpg\", \"image\": \"/photo/thumbnail?path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68%ED%9A%8C%EC%B0%A8/inputs/variant_add/IMG_0010.jpg&size=512\", \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68회차/inputs/variant_add/IMG_0010.jpg\", \"taken_at\": \"2026-10-04T16:12:00+09:00\", \"month\": \"2026-10\", \"kind\": \"image\", \"size\": 24863, \"camera\": \"iPhone 12\", \"source\": \"self\", \"origin\": \"camera\", \"lat\": null, \"lng\": null}]}"
+}

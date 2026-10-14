@@ -1,0 +1,6 @@
+{
+ "elapsed": 5.07,
+ "success": true,
+ "error": null,
+ "value_preview": "{\"success\": true, \"status\": \"completed\", \"source\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68회차/inputs/dump/memo_01.m4a\", \"source_hash\": \"8ccea861609e8f642f353da504e73919bca50b3432cfe640dc3d6b298697b5ba\", \"op\": \"transcribe\", \"metadata\": {\"duration\": 9.705941, \"sample_rate\": 22050, \"channels\": 1, \"codec\": \"aac\"}, \"requested_ranges\": [[0.0, 9.705941]], \"completed_ranges\": [[0.0, 9.705941]], \"coverage\": \"whole_file\", \"items\": [{\"start\": 0.0, \"end\": 9.705941, \"text\": \"오늘 10월 3일 할머니 생신 모임. 케이크 촛불 끄고 사진 여러 장 찍었고 점심 먹고 공원 산책했다. 선물은 꽃다발과 스카프.\", \"kind\": \"unknown\", \"timing\": \"chunk\"}], \"result_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/audio_cache/8ccea861609e8f642f353da504e73919bca50b3432cfe640dc3d6b298697b5ba/7d5841cd59bd68efb50158c161f5db5b6bf053a869068dd6809efc795800a143.result.json\", \"cached_chunks\": 0, \"model_calls\": 1, \"usage_this_call\": {\"input\": 242, \"output\": 48}, \"elapsed_s\": 2.539, \"transcript_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드/outputs/transcripts/memo_01.7d5841cd59bd.txt\", \"chars\": 71, \"total_items\": 1, \"truncated\": false}"
+}

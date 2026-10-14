@@ -106,9 +106,13 @@ def _fs_meta_query(tool_input: dict, project_path: str) -> str:
         # 합계·정렬용 정밀값이 절단되는 items 에만 남아 모델이 계산할 재료를 잃는다.
         "table": {"columns": ["이름", "크기(B)", "크기(MB)", "경로", "수정일"], "rows": rows},
     }
-    for key in ("total", "truncated", "warning", "index_error"):
+    for key in ("total", "warning", "index_error"):
         if key in res:
             out[key] = res[key]
+    # 정직 표지(truncated·truncations 등)는 정본 목록으로 전파 — 손으로 적은 목록은 뒤처진다(68회차 L68-7:
+    # truncations 가 빠져 명시 limit 의 선택 절단이 "사유 없는 절단" PARTIAL_SOURCE 로 읽혔다).
+    from ibl_honesty import merge_into
+    merge_into(res, out)
     if res.get("fallback"):
         out["fallback"] = res["fallback"]
     return json.dumps(out, ensure_ascii=False)

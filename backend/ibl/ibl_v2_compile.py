@@ -18,7 +18,7 @@ from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
                              assigned_names, location, access_type, HINTS)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL, rows_type,
                           infer, join, declared, compatible, alternatives,
-                          ordered_list, concat_lists, static_text)
+                          ordered_list, concat_lists, static_text, NEVER)
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
@@ -804,7 +804,7 @@ class Compiler:
 
     def each(self, node, args, env, names, piped):
         self.arguments(node, args, {"items": None, "mode": UNIT, "on_error": UNIT, "parallel": UNIT}, "items", piped)
-        items = rows_type(args.get("items", UNKNOWN))
+        items = _rows_of(args.get("items", UNKNOWN))
         self.need(node, items, Type("List", item=UNKNOWN))
         fields = record_fields(node.data["params"])
         options = {}
@@ -859,6 +859,27 @@ class Compiler:
             self.merge_env(merged, merged.copy(), env)
         target.clear()
         target.update(merged)
+
+
+def _rows_of(typ):
+    """each 입력의 행 목록 타입. Union(`$x=[]` 뒤 분기에서 `{items:[…]}` 봉투로 재대입 등)은 갈래마다
+    행 목록으로 읽고 원소 타입을 합류한다. 68회차 L68-1: Union.item(멤버 tuple)이 그대로 `$it` 타입이 되어
+    검사기가 AttributeError 로 죽었다 — 진단도 트레이스백도 없이."""
+    typ = rows_type(typ)
+    if typ.kind != "Union":
+        return typ
+    element, positions = NEVER, ()
+    for member in alternatives(typ):
+        rows = rows_type(member)
+        if rows.kind == "List":
+            if rows.positions == ():
+                continue  # 정적으로 빈 갈래는 원소를 보태지 않는다(join 의 빈 목록 규칙과 같음)
+            element = join(element, rows.item or UNKNOWN)
+            positions = None
+        else:
+            element = join(element, UNKNOWN)
+            positions = None
+    return Type("List", item=element if element != NEVER else UNKNOWN, positions=positions)
 
 
 def compile_program(source, registry=None, inputs=None, definitions=None, *, declared_inputs=None, input_types=None):

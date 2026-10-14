@@ -1,0 +1,151 @@
+[
+  {
+    "name": "IMG_0001.jpg",
+    "kind": "photo",
+    "taken": "2026:10:03 11:05:12",
+    "title": "할머니 생신 케이크",
+    "expect": "album",
+    "sha256": "9148da694cfb491fcaf63625b61612555b6c2edcaffee732eb184dd0c758d334",
+    "size": 37161
+  },
+  {
+    "name": "IMG_0002.jpg",
+    "kind": "photo",
+    "taken": "2026:10:03 11:08:40",
+    "title": "촛불 끄기 전",
+    "expect": "album",
+    "sha256": "b7afbb6560d321a767045d988d5b2500cfe4dfa733c573ee7939b63e88fff8af",
+    "size": 36117
+  },
+  {
+    "name": "IMG_0003.jpg",
+    "kind": "photo",
+    "taken": "2026:10:03 12:30:05",
+    "title": "선물 상자와 꽃다발",
+    "expect": "album",
+    "sha256": "e4c069b1bad526f098890837312a21af5d511da2f494a983e6c8e3b57b7bf15f",
+    "size": 38011
+  },
+  {
+    "name": "IMG_0004.jpg",
+    "kind": "photo",
+    "taken": "2026:10:03 14:10:00",
+    "title": "점심 뒤 산책",
+    "expect": "album",
+    "sha256": "c9970e37b60ee85e79a0f2352d0fb2ac084d3b2face55b546465fc5c92a20f4a",
+    "size": 25091
+  },
+  {
+    "name": "IMG_0005.jpg",
+    "kind": "photo",
+    "taken": "2026:10:04 15:20:33",
+    "title": "호수공원 벤치",
+    "expect": "album",
+    "sha256": "dbfa372490ddc1355ef1349ef3fbf3f572a6d7023da6fb463c5995a0b2bfe810",
+    "size": 25268
+  },
+  {
+    "name": "IMG_0006.jpg",
+    "kind": "photo",
+    "taken": "2026:10:04 15:41:10",
+    "title": "단풍 든 나무",
+    "expect": "album",
+    "sha256": "e3dc1d9b24a9a823b91812565a95a60f70f9238d79e4200eb86abaa674df7c5a",
+    "size": 23959
+  },
+  {
+    "name": "IMG_0007.jpg",
+    "kind": "photo",
+    "taken": "2026:10:04 17:05:59",
+    "title": "산책로 끝",
+    "expect": "album",
+    "sha256": "852eb4319a94657e72f20698b0fd2ecceb127b40ea12de7be9708db9ecf2da59",
+    "size": 23739
+  },
+  {
+    "name": "IMG_0008.jpg",
+    "kind": "photo",
+    "taken": "2026:10:10 18:32:14",
+    "title": "동네 식당 메뉴판",
+    "expect": "album",
+    "sha256": "7e7cca74695a90e879d75f60699d78f7ce9278bb94f155f05ebcd49f3eaa070a",
+    "size": 49702
+  },
+  {
+    "name": "IMG_0009.jpg",
+    "kind": "photo",
+    "taken": "2026:10:10 19:02:47",
+    "title": "저녁 바다",
+    "expect": "album",
+    "sha256": "ce15d4713821cd6dcf8bbe326b63c0639c66e5aa41ee96b9682eb99d900e5b38",
+    "size": 18655
+  },
+  {
+    "name": "IMG_0002 복사본.jpg",
+    "kind": "photo",
+    "expect": "exact_duplicate_of IMG_0002.jpg",
+    "sha256": "b7afbb6560d321a767045d988d5b2500cfe4dfa733c573ee7939b63e88fff8af",
+    "size": 36117
+  },
+  {
+    "name": "KakaoTalk_20261004_154110.jpg",
+    "kind": "photo",
+    "expect": "exact_duplicate_of IMG_0006.jpg",
+    "sha256": "e3dc1d9b24a9a823b91812565a95a60f70f9238d79e4200eb86abaa674df7c5a",
+    "size": 23959
+  },
+  {
+    "name": "IMG_0003_edit.jpg",
+    "kind": "photo",
+    "taken": "2026:10:03 12:30:05",
+    "expect": "near_duplicate_candidate_of IMG_0003.jpg (not moved)",
+    "sha256": "4f093359cc01d05bc29fdf74e4dd8dc0fca1922134d541c8d4f4941b9af8adb8",
+    "size": 27325
+  },
+  {
+    "name": "Screenshot_2026-10-01.png",
+    "kind": "photo",
+    "taken": null,
+    "expect": "date_from_file_time 2026-10-01 flagged",
+    "sha256": "afc6ce9d8efd751e868369f1413c8857a72f26f2736339be3243aea193424305",
+    "size": 16718
+  },
+  {
+    "name": "IMG_0099.jpg",
+    "kind": "photo",
+    "expect": "unreadable (truncated) — reported, left in place",
+    "sha256": "048b465864c477025b03a572ffb192aab9c195240eea3c5470ffdc5f0b165882",
+    "size": 2048
+  },
+  {
+    "name": "notes.txt",
+    "kind": "other",
+    "expect": "ignored but listed",
+    "sha256": "52fa83e1cb64f2e692894aea4e6df9a9ffff657de16beaf71fa8db7eb3444f4e",
+    "size": 48
+  },
+  {
+    "name": "memo_01.m4a",
+    "kind": "audio",
+    "text": "오늘 10월 3일 할머니 생신 모임. 케이크 촛불 끄고 사진 여러 장 찍었고 점심 먹고 공원 산책했다. 선물은 꽃다발과 스카프.",
+    "expect": "transcribed → 음성/<date>",
+    "sha256": "8ccea861609e8f642f353da504e73919bca50b3432cfe640dc3d6b298697b5ba",
+    "size": 42742
+  },
+  {
+    "name": "memo_02.m4a",
+    "kind": "audio",
+    "text": "10월 10일 저녁, 동네 식당에서 메뉴판 찍어 뒀다. 김치찌개 구천 원, 제육볶음 만 천 원. 창밖으로 바다가 보였다.",
+    "expect": "transcribed → 음성/<date>",
+    "sha256": "8a922d6259b016f341e8c785630076f8b1d26b83d44113d209df37379a4178ba",
+    "size": 41168
+  },
+  {
+    "name": "memo_03.m4a",
+    "kind": "audio",
+    "text": "",
+    "expect": "no speech → 음성/미분류 with reason",
+    "sha256": "6002d0e31914ea4c91bf256ff43bdbf26a82c304c35f2f16454acd9b91267dc7",
+    "size": 1208
+  }
+]

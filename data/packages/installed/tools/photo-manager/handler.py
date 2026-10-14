@@ -149,6 +149,9 @@ def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
         "origin": "camera" if camera else "unknown",
         "lat": float(lat) if lat is not None else None,
         "lng": float(lng) if lng is not None else None,
+        # 픽셀 크기(색인 또는 파일 EXIF) — 같은 촬영 시각·크기의 유사 중복 판정 재료(68회차). 미상이면 null.
+        "width": it.get("width"),
+        "height": it.get("height"),
     }
     return rec
 

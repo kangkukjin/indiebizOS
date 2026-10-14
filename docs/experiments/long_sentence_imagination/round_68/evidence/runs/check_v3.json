@@ -1,0 +1,18 @@
+{
+ "elapsed": 0.48,
+ "ok": false,
+ "status": "invalid",
+ "success": null,
+ "error": "",
+ "issues": [
+  {
+   "code": "FORMAT_TYPE",
+   "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Text | Text입니다."
+  }
+ ],
+ "steps": null,
+ "model_calls": 0,
+ "model_input": 0,
+ "model_output": 0,
+ "value": null
+}

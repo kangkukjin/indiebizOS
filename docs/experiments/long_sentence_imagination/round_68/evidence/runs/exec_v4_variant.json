@@ -1,0 +1,13 @@
+{
+ "elapsed": 21.89,
+ "ok": null,
+ "status": null,
+ "success": false,
+ "error": "number(): 유한 숫자로 해석할 수 없습니다: ''. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+ "issues": [],
+ "steps": 2530,
+ "model_calls": 3,
+ "model_input": 17906,
+ "model_output": 430,
+ "value": null
+}

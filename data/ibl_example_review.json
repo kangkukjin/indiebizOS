@@ -1382,7 +1382,7 @@
   "self:photo": {
    "fields": {
     "description": "b21f2d57359d",
-    "target_description": "682372ad6bf6",
+    "target_description": "ba994a7890ef",
     "implementation": "acab82ced2e5",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
@@ -1392,7 +1392,7 @@
     "router": "ebbb1532efbc",
     "tool": "96086f4c0621"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-10-14",
    "examples": 33
   },
   "self:project": {
@@ -1979,7 +1979,7 @@
   "sense:listen": {
    "fields": {
     "description": "a4e356899809",
-    "target_description": "8d131a3b9fcb",
+    "target_description": "824abf0a5301",
     "implementation": "3d2a89586dee",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1989,8 +1989,8 @@
     "router": "ebbb1532efbc",
     "tool": "6abb0e2d6bd4"
    },
-   "reviewed": "2026-09-30",
-   "examples": 32
+   "reviewed": "2026-10-14",
+   "examples": 34
   },
   "sense:navigate_route": {
    "fields": {

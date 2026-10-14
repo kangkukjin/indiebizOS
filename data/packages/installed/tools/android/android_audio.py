@@ -186,7 +186,8 @@ def _listen_file(args, context, op):
         temporary = transcript_file.with_name(transcript_file.name + "." + uuid.uuid4().hex + ".tmp")
         temporary.write_text(full, encoding="utf-8")
         os.replace(temporary, transcript_file)
-        result.update(transcript_path=str(transcript_file), chars=len(full))
+        result.update(transcript_path=str(transcript_file), chars=len(full),
+                      no_speech=not full.strip())  # 전 구간 말 없음(무음 포함) — 실패가 아니라 값
     _atomic(result_file, result)
     _progress(result["status"], result_path=str(result_file), completed_chunks=len(complete),
               model_calls=calls, cached_chunks=cached_count)

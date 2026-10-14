@@ -1,0 +1,206 @@
+#!ibl edition=2
+# 68회차 v6(v5 수정: 수리 뒤 생긴 width/height 로 유사 중복의 "가로세로 크기 같음"을 실제 판정) (v4 수정: 사진 메타의 빈 taken_at → 파일 시각으로 되돌리는 보호; 변형 1차 실패 뒤) (v3 수정: null 가능 텍스트를 빈 문자열로 — 보간 타입) (v2 수정: 주제정하기 두 분기 모두 List 반환으로 Union 회피) (v1 수정: if 재대입 타입 합류 결함 우회=함수 분기, 텍스트 목록 filter→레코드) — 사진·음성 묶음 정리. 입력: $dump(원본 폴더), $out(정리 루트)
+
+[def:확장자]($이름) {
+  $조각 = split(lower($이름), ".")
+  return len($조각) > 1 ? $조각[-1] : ""
+}
+[def:종류]($이름) {
+  $확 = [fn:확장자]{이름:$이름}
+  return ($확 in ["jpg","jpeg","png"]) ? "사진" : (($확 in ["m4a","mp3","wav","aac"]) ? "음성" : "기타")
+}
+# ISO 시각 "2026-10-03T11:05:12+09:00" 또는 "2026-10-01 20:15" → 날짜·파일명 접두
+[def:시각조각]($t) {
+  $d = $t[0:10]
+  $h = len($t) >= 19 ? $t[11:19] : f"${t[11:16]}:00"
+  $d2 = replace($d, "-", "")
+  $h2 = replace($h, ":", "")
+  return {날짜:$d, 접두:f"${d2}_${h2}"}
+}
+[def:지문찾기]($본,$지문) {
+  return reduce($본, null, ($f,$b)=> ($b.지문 == $지문) ? $b.이름 : $f)
+}
+[def:짝찾기]($본,$시각,$카메라,$크기,$지문) {
+  return reduce($본, null, ($f,$b)=> ($b.시각 == $시각 and $b.카메라 == $카메라 and $b.크기 == $크기 and $b.지문 != $지문) ? $b.이름 : $f)
+}
+[def:주제검사]($주제) {
+  $s = strip($주제)
+  return (len($s) >= 2 and len($s) <= 6 and contains($s, "/") == false) ? $s : "사진"
+}
+
+# ---------- 0. 폴더·기존 상태 ----------
+[self:mkdir]{path:$out}
+[self:mkdir]{path:f"${out}/앨범"}
+[self:mkdir]{path:f"${out}/중복"}
+[self:mkdir]{path:f"${out}/음성/미분류"}
+$목록경로 = f"${out}/목록.csv"
+[def:기존목록]($경로,$파일들) {
+  [if:len($파일들) == 0] { return [] }
+  [else] { $csv = [self:read]{path:$경로}; return $csv.data.items }
+}
+[def:주제정하기]($입력) {
+  [if:len($입력) == 0] { return [] }
+  [else] { $ai = $입력 >> [table:ai]{instruction:"각 행의 묘사들을 보고 그날 사진 묶음의 주제를 2~6글자 한국어 명사구 하나로 정한다(공백·특수문자·슬래시 없이).", schema:"주제(Text)", preserve_rows:true}; return $ai.items }
+}
+$기존파일 = [self:list]{path:$out, pattern:"목록.csv"}
+$기존행 = [fn:기존목록]{경로:$목록경로, 파일들:$기존파일}
+$처리이름 = $기존행 >> [table:each]{ return $it.원래이름 }
+$기존본 = ($기존행 >> [table:filter]{where:($r)=>$r.분류 in ["앨범","유사중복후보","음성"]}) >> [table:each]{ return {지문:$it.지문, 이름:$it.원래이름} }
+$앨범폴더 = [self:list]{path:f"${out}/앨범"} >> [table:filter]{where:($r)=>$r.is_dir}
+$기존앨범 = from_entries($앨범폴더 >> [table:each]{ return [$it.name[0:10], $it.name] })
+
+# ---------- 1. 파일 목록·지문·사진 메타 ----------
+$전부 = [self:list]{path:$dump, hash:true} >> [table:filter]{where:($r)=>$r.is_dir == false}
+$새파일 = $전부 >> [table:filter]{where:($r)=>($r.name in $처리이름) == false}
+$메타 = [self:photo]{path:$dump, limit:500}
+$메타표 = from_entries($메타.items >> [table:each]{ return [$it.title, $it] })
+$분류됨 = $새파일 >> [table:each] {
+  $종 = [fn:종류]{이름:$it.name}
+  $m = get($메타표, $it.name, null)
+  $origin = $m == null ? "" : get($m, "origin", "")
+  $카메라 = $m == null ? "" : get($m, "camera", "")
+  $폭 = $m == null ? null : get($m, "width", null)
+  $높이 = $m == null ? null : get($m, "height", null)
+  $크기 = ($폭 == null or $높이 == null) ? "" : f"${폭}x${높이}"
+  $메타시각 = $m == null ? "" : get($m, "taken_at", "")
+  $메타있음 = $메타시각 != null and len($메타시각) >= 16
+  $exif = $종 == "사진" and $origin == "camera" and $메타있음
+  $시각 = $메타있음 ? $메타시각 : $it.mtime
+  $출처 = $exif ? "촬영 정보(EXIF)" : ($메타있음 ? "파일 시각" : "파일 시각(분 단위)")
+  return {원래이름:$it.name, 경로:$it.path, 지문:$it.sha256, 종류:$종, 시각:$시각, 날짜출처:$출처, 카메라:$카메라, 크기:$크기, exif:$exif}
+}
+$기타 = $분류됨 >> [table:filter]{where:($r)=>$r.종류 == "기타"}
+$음성 = $분류됨 >> [table:filter]{where:($r)=>$r.종류 == "음성"}
+$사진 = sorted($분류됨 >> [table:filter]{where:($r)=>$r.종류 == "사진"}, "원래이름")
+
+# ---------- 2. 정확 중복(지문 동일) — 사전순 앞선 것·이미 정리된 것이 남는다 ----------
+$중복누적 = reduce($사진, {본:$기존본, 행:[]}, ($누,$r)=>
+  ([fn:지문찾기]{본:$누.본, 지문:$r.지문} != null)
+    ? {본:$누.본, 행:$누.행 + [{**$r, 중복대상:[fn:지문찾기]{본:$누.본, 지문:$r.지문}}]}
+    : {본:$누.본 + [{지문:$r.지문, 이름:$r.원래이름}], 행:$누.행 + [{**$r, 중복대상:null}]})
+$사진판정 = $중복누적.행
+$중복 = $사진판정 >> [table:filter]{where:($r)=>$r.중복대상 != null}
+$남은 = $사진판정 >> [table:filter]{where:($r)=>$r.중복대상 == null}
+
+# ---------- 3. 유사 중복 후보(같은 촬영 시각·같은 기종, 다른 지문). 가로세로 크기는 결정론 낱말이 없어 미확인 ----------
+$유사누적 = reduce($남은, {본:[], 행:[]}, ($누,$r)=>
+  {본:$누.본 + [{시각:$r.시각, 카메라:$r.카메라, 크기:$r.크기, 지문:$r.지문, 이름:$r.원래이름}],
+   행:$누.행 + [{**$r, 유사대상: ($r.exif and $r.크기 != "") ? [fn:짝찾기]{본:$누.본, 시각:$r.시각, 카메라:$r.카메라, 크기:$r.크기, 지문:$r.지문} : null}]})
+$남은2 = $유사누적.행
+
+# ---------- 4. 사진 읽기(묘사·핵심어) — 실패는 항목별로 모은다 ----------
+$묘사 = $남은2 >> [table:each]{parallel:3, on_error:"collect"} {
+  $s = [self:struct]{file:$it.경로, schema:"desc(Text) 사진 내용을 한국어 한 문장으로 묘사, keywords(Text) 핵심어 정확히 3개를 쉼표로 구분"}
+  return {desc:$s.items[0].desc, keywords:$s.items[0].keywords}
+}
+$읽힘 = $남은2 >> [table:each] {
+  [if:is_ok($묘사[$i])] { $d = unwrap($묘사[$i]); return {**$it, 읽기:true, 묘사:$d.desc, 핵심어:$d.keywords, 오류:""} }
+  [else] { return {**$it, 읽기:false, 묘사:"", 핵심어:"", 오류:error_of($묘사[$i]).message} }
+}
+$읽기실패 = $읽힘 >> [table:filter]{where:($r)=>$r.읽기 == false}
+$앨범대상 = $읽힘 >> [table:filter]{where:($r)=>$r.읽기}
+
+# ---------- 5. 날짜별 주제 — 기존 앨범 이름 유지, 새 날짜만 AI ----------
+$날짜목록 = unique($앨범대상 >> [table:each]{ $c = [fn:시각조각]{t:$it.시각}; return $c.날짜 })
+$새날짜 = ($날짜목록 >> [table:each]{ return {날짜:$it} }) >> [table:filter]{where:($r)=>has($기존앨범, $r.날짜) == false}
+$주제입력 = $새날짜 >> [table:each] {
+  $d = $it.날짜
+  $그날 = $앨범대상 >> [table:filter]{where:($r)=>[fn:시각조각]{t:$r.시각}.날짜 == $d}
+  return {날짜:$d, 묘사들: join(" / ", $그날 >> [table:each]{ return $it.묘사 })}
+}
+$주제결과 = [fn:주제정하기]{입력:$주제입력}
+$새앨범 = from_entries($주제결과 >> [table:each]{ $j = [fn:주제검사]{주제:$it.주제}; return [$it.날짜, f"${it.날짜}_${j}"] })
+$앨범이름 = {**$기존앨범, **$새앨범}
+
+# ---------- 6. 이동(순차) ----------
+$중복행 = $중복 >> [table:each] {
+  $dest = f"${out}/중복/${it.원래이름}"
+  $m = [self:move]{src:$it.경로, dest:$dest}
+  return {원래이름:$it.원래이름, 새경로:get($m,"path",$dest), 날짜:[fn:시각조각]{t:$it.시각}.날짜, 날짜출처:$it.날짜출처, 지문:$it.지문, 분류:"중복", 핵심어:"", 비고:f"내용 동일: ${it.중복대상}"}
+}
+$앨범행 = $앨범대상 >> [table:each] {
+  $c = [fn:시각조각]{t:$it.시각}
+  $폴더 = f"${out}/앨범/${앨범이름[$c.날짜]}"
+  [self:mkdir]{path:$폴더}
+  $dest = f"${폴더}/${c.접두}_${it.원래이름}"
+  $m = [self:move]{src:$it.경로, dest:$dest}
+  $분류 = $it.유사대상 == null ? "앨범" : "유사중복후보"
+  $비고 = $it.유사대상 == null ? "" : f"유사 중복 후보(같은 촬영 시각·기종·크기 ${it.크기}): ${it.유사대상}"
+  return {원래이름:$it.원래이름, 새경로:get($m,"path",$dest), 날짜:$c.날짜, 날짜출처:$it.날짜출처, 지문:$it.지문, 분류:$분류, 핵심어:$it.핵심어, 비고:$비고, 묘사:$it.묘사}
+}
+$실패행 = $읽기실패 >> [table:each] {
+  return {원래이름:$it.원래이름, 새경로:$it.경로, 날짜:[fn:시각조각]{t:$it.시각}.날짜, 날짜출처:$it.날짜출처, 지문:$it.지문, 분류:"읽기실패", 핵심어:"", 비고:f"제자리에 둠: ${it.오류}"}
+}
+$기타행 = $기타 >> [table:each] {
+  return {원래이름:$it.원래이름, 새경로:$it.경로, 날짜:[fn:시각조각]{t:$it.시각}.날짜, 날짜출처:$it.날짜출처, 지문:$it.지문, 분류:"기타", 핵심어:"", 비고:"사진·음성 아님, 손대지 않음"}
+}
+
+# ---------- 7. 음성: 신호 검사 → 받아쓰기 → 이동·전사문 ----------
+$앨범날짜전부 = unique(keys($앨범이름)) >> [table:each]{ return {날짜:$it} }
+$음성행 = $음성 >> [table:each] {
+  $c = [fn:시각조각]{t:$it.시각}
+  $검사 = [sense:listen]{path:$it.경로, op:"inspect"}
+  $길이 = $검사.metadata.duration
+  $무음합 = sum($검사.items[0].silences >> [table:each]{ return $it.end - $it.start })
+  $전사 = null
+  $이유 = ""
+  [if:$무음합 >= $길이 - 0.2] { $이유 = "무음(신호 검사: 전체 구간 무음)" }
+  [else] {
+    [try] { $t = [sense:listen]{path:$it.경로}; $전사 = join(" ", $t.items >> [table:each]{ return $it.text }) }
+    [catch] { $이유 = f"받아쓰기 실패: ${error.message}" }
+  }
+  $폴더 = $전사 == null ? f"${out}/음성/미분류" : f"${out}/음성/${c.날짜}"
+  [self:mkdir]{path:$폴더}
+  $dest = f"${폴더}/${it.원래이름}"
+  $m = [self:move]{src:$it.경로, dest:$dest}
+  $새경로 = get($m, "path", $dest)
+  $기본이름 = split($it.원래이름, ".")[0]
+  $txt = f"${폴더}/${기본이름}.txt"
+  [self:write]{path:$txt, content:($전사 == null ? f"미분류 사유: ${이유}" : $전사)}
+  $본문 = $전사 == null ? "" : $전사
+  $연결 = ($앨범날짜전부 >> [table:filter]{where:($r)=>contains($본문, f"${number(r.날짜[5:7])}월 ${number(r.날짜[8:10])}일")}) >> [table:each]{ return $it.날짜 }
+  $연결문 = join(", ", $연결)
+  $비고 = $전사 == null ? $이유 : f"전사문 ${txt}; 연결 앨범: ${연결문}"
+  return {원래이름:$it.원래이름, 새경로:$새경로, 날짜:$c.날짜, 날짜출처:$it.날짜출처, 지문:$it.지문, 분류:($전사 == null ? "미분류" : "음성"), 핵심어:"", 비고:$비고, 전사:$전사, 연결:$연결}
+}
+
+# ---------- 8. 목록.csv (기존 행 유지 + 새 행) ----------
+$열 = ["원래이름","새경로","날짜","날짜출처","지문","분류","핵심어","비고"]
+$새행 = $앨범행 + $중복행 + $음성행 + $실패행 + $기타행
+$전체행 = $기존행 + ($새행 >> [table:select]{columns:$열})
+$전체행 >> [self:write]{path:$목록경로, format:"csv", columns:$열}
+
+# ---------- 9. 재확인: 폴더를 다시 읽어 건수 대조 ----------
+$앨범폴더2 = [self:list]{path:f"${out}/앨범"} >> [table:filter]{where:($r)=>$r.is_dir}
+$앨범실제 = $앨범폴더2 >> [table:each] { $f = [self:list]{path:$it.path}; return {앨범:$it.name, 파일수:len($f)} }
+$앨범기대 = $앨범폴더2 >> [table:each] {
+  $n = $it.name
+  return {앨범:$n, 목록수: len($전체행 >> [table:filter]{where:($r)=>contains($r.새경로, f"/앨범/${n}/")})}
+}
+$음성폴더 = [self:list]{path:f"${out}/음성"} >> [table:filter]{where:($r)=>$r.is_dir}
+$음성실제 = $음성폴더 >> [table:each] { $f = [self:list]{path:$it.path, pattern:"*.m4a"}; return {폴더:$it.name, 파일수:len($f)} }
+$음성목록수 = len($전체행 >> [table:filter]{where:($r)=>$r.분류 in ["음성","미분류"]})
+$잔여행 = [self:list]{path:$dump} >> [table:filter]{where:($r)=>$r.is_dir == false}
+$잔여 = $잔여행 >> [table:each]{ return $it.name }
+$잔여허용 = ($전체행 >> [table:filter]{where:($r)=>$r.분류 in ["읽기실패","기타"]}) >> [table:each]{ return $it.원래이름 }
+$잔여이상 = ($잔여행 >> [table:filter]{where:($r)=>($r.name in $잔여허용) == false}) >> [table:each]{ return $it.name }
+$앨범일치 = all(zip($앨범실제, $앨범기대) >> [table:each]{ return $it[0].파일수 == $it[1].목록수 })
+$음성일치 = sum($음성실제 >> [table:each]{ return $it.파일수 }) == $음성목록수
+
+# ---------- 10. 보고서.md ----------
+$앨범표 = $앨범실제 >> [table:each] {
+  $n = $it.앨범
+  $행들 = $전체행 >> [table:filter]{where:($r)=>contains($r.새경로, f"/앨범/${n}/")}
+  $이름들 = join(", ", $행들 >> [table:each]{ return $it.원래이름 })
+  return f"| ${n} | ${it.파일수} | ${이름들} |"
+}
+$중복표 = ($전체행 >> [table:filter]{where:($r)=>$r.분류 == "중복"}) >> [table:each]{ return f"- ${it.원래이름} → ${it.비고}" }
+$유사표 = ($전체행 >> [table:filter]{where:($r)=>$r.분류 == "유사중복후보"}) >> [table:each]{ return f"- ${it.원래이름}: ${it.비고}" }
+$음성표 = $음성행 >> [table:each]{ $본문 = $it.전사 == null ? $it.비고 : $it.전사; $링크 = len($it.연결) == 0 ? "없음" : join(", ", $it.연결); return f"- ${it.원래이름} (${it.날짜}, ${it.분류}) — ${본문} / 연결 앨범: ${링크}" }
+$실패표 = ($전체행 >> [table:filter]{where:($r)=>$r.분류 == "읽기실패"}) >> [table:each]{ return f"- ${it.원래이름}: ${it.비고}" }
+$묘사표 = $앨범행 >> [table:each]{ return f"- ${it.원래이름} (${it.날짜}): ${it.묘사} [${it.핵심어}]" }
+$건수 = f"이번 실행 처리 ${len($새행)}건 (앨범 ${len($앨범행)}, 중복 ${len($중복행)}, 음성 ${len($음성행)}, 읽기실패 ${len($실패행)}, 기타 ${len($기타행)}) · 목록 누적 ${len($전체행)}행"
+$확인 = f"재확인 — 앨범 폴더 파일수=목록 일치: ${앨범일치} · 음성 파일수=목록 일치: ${음성일치} · 원본 폴더 잔여 이상: ${json($잔여이상)} · 잔여 파일: ${json($잔여)}"
+$보고 = join("\n", ["# 사진·음성 정리 보고서", "", $건수, "", "## 앨범", "| 앨범 | 파일수 | 파일 |", "| --- | --- | --- |"] + $앨범표 + ["", "## 사진 묘사"] + $묘사표 + ["", "## 중복(옮김)"] + $중복표 + ["", "## 유사 중복 후보(앨범으로 옮김, 보고만)"] + $유사표 + ["", "## 음성 메모"] + $음성표 + ["", "## 읽기 실패(제자리)"] + $실패표 + ["", "## 재확인", $확인])
+[self:write]{path:f"${out}/보고서.md", content:$보고}
+return {처리:len($새행), 앨범:$앨범실제, 앨범일치:$앨범일치, 음성일치:$음성일치, 잔여:$잔여, 잔여이상:$잔여이상, 목록행:len($전체행)}

@@ -55,7 +55,8 @@ def _parse_interaction(data, duration, timestamps):
         # 일부 API 버전은 최종 텍스트를 outputs에 제공한다.
         contents = [c for c in data.get("outputs", []) if c.get("type") == "text"]
     if not contents:
-        raise ValueError("오디오 전사의 텍스트 결과가 없습니다")
+        # 무음·말 없음은 전사 실패가 아니다(68회차 L68-5). 빈 전사문을 값으로 돌려 호출자가 분기하게 한다.
+        return {"text": "", "answer": "", "events": [], "timing": "chunk", "uncertain": False, "no_speech": True}
     text = "\n".join(c.get("text", "") for c in contents).strip()
     words = [{"start": _seconds(a["start_offset"]), "end": _seconds(a["end_offset"]),
               "text": a["text"], "kind": "speech", **({"speaker": a["speaker"]} if a.get("speaker") else {})}

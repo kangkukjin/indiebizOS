@@ -1,0 +1,6 @@
+{
+ "elapsed": 6.21,
+ "success": true,
+ "error": null,
+ "value_preview": "{\"source\": \"IMG_0008.jpg\", \"model_axis\": \"execution\", \"items\": [{\"desc\": \"동네 식당 메뉴판(가격 참고용): 김치찌개 9,000원, 된장찌개 9,000원, 제육볶음 11,000원, 비빔밥 10,000원, 공기밥 추가 1,000원\", \"keywords\": \"동네 식당, 메뉴판, 가격\", \"_ai\": true}], \"count\": 1, \"success\": true}"
+}

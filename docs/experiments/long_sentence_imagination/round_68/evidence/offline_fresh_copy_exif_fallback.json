@@ -1,0 +1,128 @@
+[
+ {
+  "name": "IMG_0001.jpg",
+  "mdls_has_creation": true,
+  "mdls_has_model": true,
+  "taken_at": "2026-10-03T11:05:12",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0002 복사본.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-03T11:08:40",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0002.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-03T11:08:40",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0003.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-03T12:30:05",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0003_edit.jpg",
+  "mdls_has_creation": true,
+  "mdls_has_model": true,
+  "taken_at": "2026-10-03T12:30:05",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0004.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-03T14:10:00",
+  "camera": "iPhone 12",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0005.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-04T15:20:33",
+  "camera": "iPhone 12",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0006.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-04T15:41:10",
+  "camera": "iPhone 12",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0007.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-04T17:05:59",
+  "camera": "iPhone 12",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0008.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-10T18:32:14",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0009.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-10T19:02:47",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "IMG_0099.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-10T19:02:47",
+  "camera": "SM-J700F",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "KakaoTalk_20261004_154110.jpg",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "2026-10-04T15:41:10",
+  "camera": "iPhone 12",
+  "w": 960,
+  "h": 720
+ },
+ {
+  "name": "Screenshot_2026-10-01.png",
+  "mdls_has_creation": false,
+  "mdls_has_model": false,
+  "taken_at": "",
+  "camera": null,
+  "w": 800,
+  "h": 500
+ }
+]

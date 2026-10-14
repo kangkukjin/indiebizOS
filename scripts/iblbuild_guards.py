@@ -104,6 +104,7 @@ def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
 OS_SEAM_ALLOWLIST = {
     "backend/test_resident_terminal.py",  # 격리 통합 시험에서 현재 OS/아키텍처의 PTY 헬퍼 바이너리를 선택
     "backend/test_long_sentence_round49_repairs.py",  # macOS sips 전체 프로그램과 해당 아키텍처 헬퍼의 격리 재생
+    "backend/test_long_sentence_round68_repairs.py",  # 맥 Spotlight 이음매(file_index)의 NFC·EXIF 폴백 회귀 — 색인 호출은 monkeypatch
     "backend/test_resident_pcs.py",  # 실기기 설치 없이 현재 OS/아키텍처의 네이티브 헬퍼를 선택하는 통합 시험
     "backend/base/python_environment_lock.py",  # POSIX 공유 설치 잠금과 Windows 배타 잠금
 

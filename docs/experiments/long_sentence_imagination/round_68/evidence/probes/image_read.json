@@ -1,0 +1,6 @@
+{
+ "elapsed": 8.8,
+ "success": true,
+ "error": null,
+ "value_preview": "{\"answer\": \"```json\\n{\\\"desc\\\": \\\"크림색 배경 위에 'HAPPY BIRTHDAY' 문구와 촛불 5개가 꽂힌 케이크가 그려진 일러스트로, 하단에 '할머니 생신 케이크', '거실 식탁'이라고 적혀 있다.\\\", \\\"keywords\\\": [\\\"생일 케이크\\\", \\\"할머니 생신\\\", \\\"HAPPY BIRTHDAY\\\"]}\\n```\", \"success\": true, \"message\": \"```json\\n{\\\"desc\\\": \\\"크림색 배경 위에 'HAPPY BIRTHDAY' 문구와 촛불 5개가 꽂힌 케이크가 그려진 일러스트로, 하단에 '할머니 생신 케이크', '거실 식탁'이라고 적혀 있다.\\\", \\\"keywords\\\": [\\\"생일 케이크\\\", \\\"할머니 생신\\\", \\\"HAPPY BIRTHDAY\\\"]}\\n```\"}"
+}

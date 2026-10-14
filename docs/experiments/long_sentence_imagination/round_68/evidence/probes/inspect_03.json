@@ -1,0 +1,6 @@
+{
+ "elapsed": 0.97,
+ "success": true,
+ "error": null,
+ "value_preview": "{\"success\": true, \"status\": \"completed\", \"source\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68회차/inputs/dump/memo_03.m4a\", \"source_hash\": \"6002d0e31914ea4c91bf256ff43bdbf26a82c304c35f2f16454acd9b91267dc7\", \"op\": \"inspect\", \"metadata\": {\"duration\": 3.0, \"sample_rate\": 16000, \"channels\": 1, \"codec\": \"aac\"}, \"requested_ranges\": [[0.0, 3.0]], \"completed_ranges\": [[0.0, 3.0]], \"coverage\": \"whole_file\", \"items\": [{\"start\": 0.0, \"end\": 3.0, \"kind\": \"signal\", \"channels\": [{\"channel\": 1, \"max_sample_difference\": 0.0, \"peak_dbfs\": null, \"rms_dbfs\": null}], \"silences\": [{\"start\": 0.0, \"end\": 3.0}], \"silence_threshold_dbfs\": -50, \"silence_min_s\": 0.3, \"note\": \"무음은 신호 임계값 판정입니다. 대화 유무·음악의 자연스러움은 판정하지 않습니다.\"}], \"result_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/audio_cache/6002d0e31914ea4c91bf256ff43bdbf26a82c304c35f2f16454acd9b91267dc7/d0d5dec0bd0a8145aa231f12961195ab65ddb77902847dafec10df6c322e5854.result.json\", \"cached_chunks\": 0, \"model_calls\": 0, \"usage_this_call\": {\"input\": 0, \"output\": 0}, \"elapsed_s\": 0.071, \"total_items\": 1, \"truncated\": false}"
+}

@@ -140,7 +140,7 @@ nodes:
         exempt: 마이크 하드웨어/오디오 파일·모델 키 필요 — 자동 호출 금지
         description: 소리를 듣는다. path가 있으면 오디오/영상 파일을 전사하거나 질문에 답한다. question은 내용 분석, op=inspect는 로컬 신호 검사. path가 없으면 이 몸의 마이크로 기존 받아쓰기/녹음. 파일 청취에는 마이크가 필요 없다.
         group: device
-        target_description: '파일: path, 선택 start/end(초) 또는 ranges:[{start,end}], question. question에 쓴 시간 표현은 구간을 자르지 않는다. 일부만 들을 때는 start/end 또는 ranges를 반드시 전달한다. transcribe(기본)=전사문 저장, analyze=대화·노래 등 내용 질문, inspect=무음·채널별 음량(모델 0회). question이 있으면 기본 transcribe도 analyze로 해석한다. 긴 원문은 result_path/transcript_path에서 읽는다. 마이크: path 생략, transcribe/record.'
+        target_description: '파일: path, 선택 start/end(초) 또는 ranges:[{start,end}], question. question에 쓴 시간 표현은 구간을 자르지 않는다. 일부만 들을 때는 start/end 또는 ranges를 반드시 전달한다. transcribe(기본)=전사문 저장(말이 없으면 실패가 아니라 chars:0·no_speech:true 의 빈 전사문), analyze=대화·노래 등 내용 질문, inspect=무음·채널별 음량(모델 0회). question이 있으면 기본 transcribe도 analyze로 해석한다. 긴 원문은 result_path/transcript_path에서 읽는다. 마이크: path 생략, transcribe/record.'
         target_key: op
         router: handler
         tool: phone_listen
@@ -5882,7 +5882,7 @@ nodes:
         fixture: '[self:photo]{op: "stats"}'
         runs_on: anywhere
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
-        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트; 생략 시 PC는 ~/Pictures 사진 보관 폴더, 폰은 MediaStore; 다른 폴더는 path로 명시), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng(미상이면 null)/taken_at/month/kind/camera/size/source/origin(camera 또는 unknown) 구조 필드 포함 → groupby·지도와 직결.'
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트; 생략 시 PC는 ~/Pictures 사진 보관 폴더, 폰은 MediaStore; 다른 폴더는 path로 명시), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng(미상이면 null)/taken_at/month/kind/camera/size/source/origin(camera 또는 unknown)/width/height(픽셀, 미상이면 null) 구조 필드 포함 → groupby·지도와 직결. 색인(Spotlight)이 아직 모르는 막 복사된 사진은 파일의 EXIF·픽셀 크기를 직접 읽어 채운다. 이름(title)은 NFC 표기라 [self:list]의 name 과 같은 글자로 맞춰진다.'
         group: photo
         target_key: query
         router: handler
@@ -6225,7 +6225,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-14'
-          impl: 677435266dbeda44
+          impl: b14e86a2ab10b26c
         target_key: path
         aliases:
           offset:
@@ -6243,7 +6243,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-14'
-          impl: 677435266dbeda44
+          impl: b14e86a2ab10b26c
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6320,7 +6320,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-14'
-          impl: 677435266dbeda44
+          impl: b14e86a2ab10b26c
         target_key: path
       list:
         callable_contract:
@@ -7184,7 +7184,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-14'
-          impl: 677435266dbeda44
+          impl: b14e86a2ab10b26c
         pipe_in: true
         lands_on: body
         limb_op:

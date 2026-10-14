@@ -1,0 +1,6 @@
+{
+ "elapsed": 0,
+ "success": true,
+ "error": null,
+ "value_preview": "{\"success\": true, \"count\": 1, \"items\": [{\"title\": \"IMG_0004.jpg\", \"meta\": \"2026-10-03 14:10 · iPhone 12 · 사진 · 📍37.55,126.9667\", \"summary\": \"\", \"url\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68회차/inputs/dump/IMG_0004.jpg\", \"image\": \"/photo/thumbnail?path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68%ED%9A%8C%EC%B0%A8/inputs/dump/IMG_0004.jpg&size=512\", \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68회차/inputs/dump/IMG_0004.jpg\", \"taken_at\": \"2026-10-03T14:10:00+09:00\", \"month\": \"2026-10\", \"kind\": \"image\", \"size\": 25091, \"camera\": \"iPhone 12\", \"source\": \"self\", \"origin\": \"camera\", \"lat\": 37.55, \"lng\": 126.96666666666667}]}"
+}

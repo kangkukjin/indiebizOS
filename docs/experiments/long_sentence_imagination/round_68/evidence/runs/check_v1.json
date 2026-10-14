@@ -1,0 +1,13 @@
+{
+ "elapsed": 0.36,
+ "ok": false,
+ "status": "failed",
+ "success": false,
+ "error": "판본 2 검사/실행 기반 오류: AttributeError: 'tuple' object has no attribute 'kind'",
+ "issues": [],
+ "steps": null,
+ "model_calls": 0,
+ "model_input": 0,
+ "model_output": 0,
+ "value": null
+}

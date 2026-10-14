@@ -119,6 +119,14 @@ def extract_source(path: str = None, text: str = None) -> dict:
     label = os.path.basename(path)
 
     if ext in _IMG_MIME:
+        # 68회차 L68-3: 잘린 JPEG 를 그대로 모델에 보내면 모델이 없는 그림을 묘사한다(성공 응답).
+        # image_read 와 같은 기준 — 디코드되지 않는 파일은 입력 단계에서 거절한다.
+        try:
+            from PIL import Image
+            with Image.open(path) as im:
+                im.load()
+        except Exception as e:
+            return {"ok": False, "error": f"이미지를 열 수 없습니다(손상·잘림 또는 미지원 형식): {label}: {e}"}
         try:
             with open(path, 'rb') as f:
                 b64 = base64.b64encode(f.read()).decode('ascii')

@@ -118,6 +118,9 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
         return projection(syntax_report(exc, source))
     except Exception as exc:
         # A compiler/infrastructure exception is never an affirmative check.
+        # 68회차: 응답엔 한 줄만 남고 로그엔 아무것도 없어 어느 구문이 죽였는지 이분 탐색해야 했다 — 스택을 남긴다.
+        import logging
+        logging.getLogger("ibl_v2_entry").exception("판본 2 검사/실행 기반 오류: %s: %s", type(exc).__name__, exc)
         return {"edition": 2, "ok": False, "success": False, "executed": False,
                 "status": "failed", "error": f"판본 2 검사/실행 기반 오류: {type(exc).__name__}: {exc}"}
 

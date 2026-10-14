@@ -28,6 +28,7 @@ import calendar
 import plistlib
 import subprocess
 import sys
+import unicodedata
 from datetime import datetime
 from typing import Tuple, Any, Dict, List, Optional, Sequence
 
@@ -207,7 +208,9 @@ def _run_mdfind(query: str, onlyin: Optional[str]) -> List[str]:
         raise RuntimeError(f"Spotlight 실행 실패 (exit {out.returncode})")
     paths = []
     for line in out.stdout.splitlines():
-        p = line.strip()
+        # Spotlight 는 분해형(NFD)으로 낸다. 같은 파일을 self:list(파일 시스템 그대로, 보통 NFC)와
+        # 이름으로 맞추려면 한 표기여야 한다 — 68회차 L68-2(“IMG_0002 복사본.jpg” 가 두 낱말에서 다른 글자).
+        p = unicodedata.normalize("NFC", line.strip())
         if p and not any(n in p for n in _NOISE_SUBSTR):
             paths.append(p)
     return paths
@@ -261,7 +264,54 @@ def _item_from_meta(path: str, facets: Sequence[str]) -> Dict[str, Any]:
     if item.get("lat") == 0 and item.get("lng") == 0:
         item.pop("lat", None)
         item.pop("lng", None)
+    if item["ext"] in _EXIF_EXTS and any(f in facets for f in ("taken_at", "camera", "width", "height")):
+        _fill_from_exif(item, path, facets)
     return item
+
+
+_EXIF_EXTS = {"jpg", "jpeg", "tif", "tiff", "png", "webp", "heic", "heif"}
+
+
+def _fill_from_exif(item: Dict[str, Any], path: str, facets: Sequence[str]) -> None:
+    """사진 파일의 EXIF·픽셀 크기를 직접 읽는다 — 68회차 L68-4.
+    막 복사된 폴더는 Spotlight 가 EXIF 를 아직 안 뽑아 kMDItemContentCreationDate 에 *파일 생성일*이,
+    기종엔 빈 값이 온다(수리 뒤 재실행에서 사진 13장 중 10장이 복사일로 분류됨). 촬영 시각의 정본은 파일 안의
+    EXIF DateTimeOriginal 이므로 그것이 있으면 색인 값보다 우선한다. 기종·크기는 색인이 비운 칸만 채운다.
+    열 수 없는 파일은 조용히 둔다(읽기 가능 판정은 호출자 몫)."""
+    try:
+        from PIL import Image, ExifTags
+        with Image.open(path) as im:
+            width, height = im.size
+            exif = im.getexif()
+            sub = exif.get_ifd(ExifTags.IFD.Exif) if exif else {}
+            make, model = exif.get(0x010F), exif.get(0x0110)
+            stamp = sub.get(0x9003) or sub.get(0x9004) or exif.get(0x0132)
+    except Exception:
+        return
+    if "width" in facets and item.get("width") is None:
+        item["width"] = width
+    if "height" in facets and item.get("height") is None:
+        item["height"] = height
+    if "camera" in facets and item.get("camera") is None and (model or make):
+        item["camera"] = str(model or make).strip()
+    if "taken_at" in facets and isinstance(stamp, str):
+        try:
+            iso = datetime.strptime(stamp.strip()[:19], "%Y:%m:%d %H:%M:%S").astimezone().isoformat()
+        except ValueError:
+            iso = None
+        if iso:
+            item["taken_at"] = iso
+            item["month"] = iso[:7]
+    if "taken_at" in facets and item.get("taken_at") is None:
+        # EXIF 없는 그림(스크린샷 등)은 색인이 주던 것과 같은 값 — 파일 생성 시각(없으면 수정 시각). origin 은 unknown 그대로.
+        try:
+            st = os.stat(path)
+            born = getattr(st, "st_birthtime", None) or st.st_mtime
+            iso = datetime.fromtimestamp(born).astimezone().isoformat()
+            item["taken_at"] = iso
+            item["month"] = iso[:7]
+        except OSError:
+            pass
 
 
 def _excluded_path(path, exclude_paths):
@@ -293,10 +343,26 @@ def _spotlight_query(kind, q, start, end, has_gps, ext, path, limit, sort, facet
     if failure:
         return {"success": False, "error": failure, "items": []}
 
+    unindexed = 0
+    if path and os.path.isdir(onlyin) and not (start or end or has_gps):
+        # 막 복사된 폴더는 Spotlight 가 일부만 안다(68회차: 14장 중 2장). 명시 폴더 질의는 같은 조건의
+        # 파일 순회(mdls 0회)와 합쳐 색인 밖 파일을 빠뜨리지 않는다. 촬영일·GPS 조건은 순회로 검증 못 하므로 제외.
+        seen = {unicodedata.normalize("NFC", p) for p in paths}
+        ext_low = ext.lower().lstrip(".") if ext else None
+        min_sz = min_size if isinstance(min_size, int) and min_size > 0 else None
+        extra = [unicodedata.normalize("NFC", p) for p, _ in
+                 _walk_candidates(onlyin, _walk_kinds(kind), q, ext_low, min_sz, exclude_paths)]
+        extra = [p for p in _drop_pseudo_media(extra, kind) if p not in seen]
+        if extra:
+            paths = paths + extra
+            unindexed = len(extra)
+
     total = len(paths)
     items = _ranked_items(paths[:_MAX_CANDIDATES], sort, limit, facets)
     result = {"success": True, "count": total, "total": total, "shown": len(items),
               "truncated": total > len(items), "scope": onlyin, "items": items}
+    if unindexed:
+        result["unindexed"] = unindexed  # 색인 밖(순회로 보탠) 파일 수 — 신선도 신호
     if total > _MAX_CANDIDATES:
         result["warning"] = "색인 후보 상한에 도달해 일부 후보 안에서 정렬했습니다. path/조건을 좁혀 재조회하세요."
     if result.get("truncated"):
@@ -801,28 +867,17 @@ def disk_skeleton(roots: Sequence[str], *, maxdepth: int = 3,
     return "\n".join(blocks)
 
 
-def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None,
-                exclude_paths=()):
-    """비-맥(윈도우/리눅스) 파일 질의 — Spotlight(mdfind) 없이 os.walk 로 사용자 roots 순회.
-
-    맥의 _spotlight_query 와 같은 필터 의미를 stdlib 만으로 재현:
-      q=파일명 부분일치 / kind·ext=확장자 / 시간=mtime 창 / min_size=바이트.
-    한계: has_gps·EXIF facet(taken_at/lat/lng)은 색인이 없어 미지원(기본 파일 검색만).
-    """
-    if has_gps:
-        return {"success": False, "items": [], "error": "파일 순회는 GPS 조건을 지원하지 않습니다."}
-    root = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
-    want = None
+def _walk_kinds(kind: Optional[str]):
     if kind and kind.lower() not in ("any", "media"):
-        want = {"image" if kind.lower() == "photo" else kind.lower()}
-    elif (kind or "").lower() == "media":
-        want = {"image", "video"}
-    q_low = (q or "").strip().lower() or None
-    ext_low = ext.lower().lstrip(".") if ext else None
-    start_ep = (_epoch_ms(start, False) or 0) / 1000 if start else 0
-    end_ep = (_epoch_ms(end, True) or 0) / 1000 if end else 0
-    min_sz = min_size if isinstance(min_size, int) and min_size > 0 else None
+        return {"image" if kind.lower() == "photo" else kind.lower()}
+    if (kind or "").lower() == "media":
+        return {"image", "video"}
+    return None
 
+
+def _walk_candidates(root, want, q, ext_low, min_sz, exclude_paths, start_ep=0, end_ep=0) -> List[tuple]:
+    """파일 시스템 순회 후보 (경로, kind) — 메타 없이 파일 필드만 본다(mdls 0회)."""
+    q_low = (q or "").strip().lower() or None
     found: List[tuple] = []
     if os.path.isdir(root):
         for dp, dirs, files in os.walk(root):
@@ -851,6 +906,27 @@ def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, mi
                 found.append((fp, ek))
             if len(found) > _MAX_CANDIDATES:
                 break
+    return found
+
+
+def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None,
+                exclude_paths=()):
+    """비-맥(윈도우/리눅스) 파일 질의 — Spotlight(mdfind) 없이 os.walk 로 사용자 roots 순회.
+
+    맥의 _spotlight_query 와 같은 필터 의미를 stdlib 만으로 재현:
+      q=파일명 부분일치 / kind·ext=확장자 / 시간=mtime 창 / min_size=바이트.
+    한계: has_gps·EXIF facet(taken_at/lat/lng)은 색인이 없어 미지원(기본 파일 검색만).
+    """
+    if has_gps:
+        return {"success": False, "items": [], "error": "파일 순회는 GPS 조건을 지원하지 않습니다."}
+    root = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
+    want = _walk_kinds(kind)
+    ext_low = ext.lower().lstrip(".") if ext else None
+    start_ep = (_epoch_ms(start, False) or 0) / 1000 if start else 0
+    end_ep = (_epoch_ms(end, True) or 0) / 1000 if end else 0
+    min_sz = min_size if isinstance(min_size, int) and min_size > 0 else None
+
+    found = _walk_candidates(root, want, q, ext_low, min_sz, exclude_paths, start_ep, end_ep)
 
     items = _ranked_items([p for p, _ in found[:_MAX_CANDIDATES]], sort, limit,
                           facets, from_walk=True)

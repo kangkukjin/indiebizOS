@@ -225,6 +225,8 @@ grep과 search/crawl의 결과는 Record이므로 목록 조합에는 `.items`, 
 | `self:sheet` calculate·range_write, `self:document` edit | `output`이 있으면 거절 | 새 경로를 주거나 먼저 지운다 |
 | `self:fill`·`self:write` | 덮어쓴다(`fill`은 `replaced_existing:true`) | 바꿔도 되는 산출물에만 |
 
+이동(`move`)을 동반한 정리는 목록·영수증을 **항목마다** 또는 이동 전에 기록한다. 마지막에 한 번 쓰면 중간 실패 뒤 이미 옮긴 파일이 목록에 없어 다음 실행이 그 파일을 잃는다(68회차: 음성 절의 실패 뒤 앨범·중복으로 옮긴 3건이 목록 밖). 막 복사된 사진 폴더는 `[self:photo]`가 파일의 EXIF 를 직접 읽어 `taken_at`·`width`·`height` 를 채우며, `[sense:listen]` 은 말 없는 파일을 `chars:0`·`no_speech:true` 로 돌려준다(둘 다 실패가 아니라 값).
+
 ## 후보·본문 미리보기와 전체 값
 
 작은 결과는 그대로, 큰 결과는 예산 내 짧은 필드·여러 행을 표시한다. 여러 문자열이 함께

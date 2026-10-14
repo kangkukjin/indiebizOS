@@ -1,0 +1,1 @@
+{"code": "#!ibl edition=2\n$x = []\n[if:1 > 0] { $x = [{묘사들:\"a\"}] >> [table:ai]{instruction:\"주제\", schema:\"주제(Text)\", preserve_rows:true} }\nreturn $x >> [table:each]{ return $it.주제 }", "edition": 2, "origin": "training", "project_id": "수동모드", "check": true}

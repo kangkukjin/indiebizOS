@@ -1,0 +1,6 @@
+{
+ "elapsed": 2.1,
+ "success": true,
+ "error": null,
+ "value_preview": "{\"success\": true, \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-14_68회차/inputs/dump/IMG_0003_edit.jpg\", \"video_codec\": \"mjpeg\", \"audio_codec\": null, \"container\": \"jpg\", \"duration\": 0.04, \"needs_transcode\": true, \"video_compatible\": false, \"audio_compatible\": true, \"container_compatible\": false, \"subtitle_tracks\": []}"
+}

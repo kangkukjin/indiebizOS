@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- WebRTC 네트워크 감시: 누락 시 ConnectivityManager 호출이 예외를 내고 네이티브 엔진이 종료된다. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- 미디어 세션(WebRTC 카메라·마이크 송신, 수신 음성·콘텐츠 재생) — Android 14 유형별 FGS 권한 -->

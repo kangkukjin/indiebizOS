@@ -481,3 +481,24 @@ TypeScript 검사 통과. Android 표시 상태 시험 2건과 arm32·arm64 APK 
 공유창고의 통화 버튼·폰 런처의 별도 통화 버튼·주소 입력 및 복사 화면은 제거한다.
 카메라 대기·미디어 재생·수신/진행 중 통화 알림은 유지한다. 실물 통화·외부망 인수 경계는
 15절과 같다. 새 폰 UI 연결은 APK 업데이트가 필요하다.
+
+
+## 18. 삼성1 카메라 시작·종료 실기기 수리 (2026-10-14)
+
+SM-J730K(Android 9, arm32)의 카메라 보기는 요청 접수까지 성공했으나 WebRTC 네트워크
+스레드가 `ACCESS_NETWORK_STATE` 누락으로 `SecurityException`을 내고 JNI의 SIGABRT로
+앱 전체를 종료했다. 허브에는 영상 0프레임과 `lease_expired`만 남았다. 앱 매니페스트에
+네트워크 상태 조회 권한을 명시해 정상 설치 권한으로 받도록 했다.
+
+영상이 흐른 뒤 창을 닫을 때에는 종료된 SignalingClient executor에 OkHttp의 늦은
+onFailure/onClosed 콜백을 접수하여 `RejectedExecutionException`으로 앱이 다시 죽었다.
+콜백·재접속·keepalive 접수의 executor 종료 경합만 흡수하며, 늦게 열린 소켓은 닫고
+종료 뒤 메시지를 처리하지 않는다. 다른 예외는 숨기지 않는다.
+
+검증: `:app:testArm32DebugUnitTest` 5건(종료 경합 3건·기존 표시 상태 2건)과
+`:app:assembleArm32Debug` 통과. 삼성1에 데이터 유지 업데이트 설치 후
+`ACCESS_NETWORK_STATE: granted=true` 확인. 중앙 카메라 세션 두 차례에서 실제 영상
+품질 보고(640×480, 적응 후 480×360, 관측 3~10fps)와 active 상태, 종료·재열기를
+확인했다. 두 종료 뒤 폰 프로세스 PID가 유지되었다. 검증 세션은 모두 종료했다.
+외부망 TURN·장시간 안정성·일반 음성/영상 통화 및 arm64 실기기는 이번 검증 범위가 아니다.
+백엔드·프런트엔드 코드는 변경하지 않았으며 백엔드 전수 회귀는 실행하지 않았다.

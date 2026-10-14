@@ -62,7 +62,7 @@ class SignalingClient(private val env: MediaEnvelope, private val listener: List
     private val hubClient = OkHttpClient.Builder().pingInterval(15, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.MILLISECONDS).connectTimeout(10, TimeUnit.SECONDS).build()
 
-    fun connect() { exec.execute { dial(preferLan = true) } }
+    fun connect() { submitMediaWork { exec.execute { dial(preferLan = true) } } }
 
     fun bumpGeneration(): Int { generation += 1; seq.set(0); return generation }
 
@@ -160,7 +160,7 @@ class SignalingClient(private val env: MediaEnvelope, private val listener: List
         Log.i(TAG, "시그널링 접속 시도($via)")
         client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                exec.execute {
+                val submitted = submitMediaWork { exec.execute {
                     if (closedByUs) { webSocket.close(1000, null); return@execute }
                     ws = webSocket; transport = via; connected = true
                     lostSinceMs = 0L; backoffS = 1.0
@@ -175,15 +175,18 @@ class SignalingClient(private val env: MediaEnvelope, private val listener: List
                     val re = everConnected
                     everConnected = true
                     listener.onReady(re)
-                }
+                } }
+                if (submitted == null) webSocket.close(1000, "session_closed")
             }
-            override fun onMessage(webSocket: WebSocket, text: String) { exec.execute { handle(text) } }
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                submitMediaWork { exec.execute { if (!closedByUs) handle(text) } }
+            }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { webSocket.close(1000, null) }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                exec.execute { onDown(webSocket, via, "closed:$code:$reason") }
+                submitMediaWork { exec.execute { onDown(webSocket, via, "closed:$code:$reason") } }
             }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                exec.execute { onDown(webSocket, via, "failure:${t.javaClass.simpleName}:${t.message}") }
+                submitMediaWork { exec.execute { onDown(webSocket, via, "failure:${t.javaClass.simpleName}:${t.message}") } }
             }
         })
     }
@@ -208,13 +211,15 @@ class SignalingClient(private val env: MediaEnvelope, private val listener: List
         Log.i(TAG, "시그널링 끊김($why) — ${backoffS}s 뒤 재시도")
         val delay = (backoffS * 1000).toLong()
         backoffS = (backoffS * 2).coerceAtMost(8.0)
-        exec.schedule({ dial(preferLan = true) }, delay, TimeUnit.MILLISECONDS)
+        submitMediaWork { exec.schedule({ dial(preferLan = true) }, delay, TimeUnit.MILLISECONDS) }
     }
 
     private fun startKeepalive() {
         keepalive?.cancel(false)
         val period = (env.lease.keepaliveS * 1000).toLong()
-        keepalive = exec.scheduleAtFixedRate({ send("keepalive", JSONObject()) }, period, period, TimeUnit.MILLISECONDS)
+        keepalive = submitMediaWork {
+            exec.scheduleAtFixedRate({ send("keepalive", JSONObject()) }, period, period, TimeUnit.MILLISECONDS)
+        }
     }
 
     // ── 수신 ────────────────────────────────────────────────────────────────────

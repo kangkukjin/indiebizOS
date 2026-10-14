@@ -328,3 +328,10 @@
 - 인증 미들웨어: `api.py:remote_access_guard` + `api_launcher_web.is_external_request/is_public_remote_path/verify_session`. 새 데이터 엔드포인트는 화이트리스트에 넣지 말 것(로그인 요구가 맞음).
 - **1단계 첫 행동:** `data/instruments.json` 작성(§4.6 시드) → `GET /launcher/instruments` 추가 → webapp 앱 표면 JS를 제네릭 렌더러로 교체 → 6개 렌더 검증 → "코드 0줄 새 앱" 실증.
 - 운영 주의: 백엔드 dev `reload=True` — `backend/*.py` 저장이 reload 유발(과거 1회 전체 다운 경험, 그땐 `cd backend && python3 api.py` + .env 로드로 재기동).
+
+### 메신저 통화 버튼 (2026-10-14)
+
+`card_list.media_call`은 해당 행의 저장된 Nostr 주소 필드 이름이다. 공용 `mediaCallTarget`이
+주소가 있는 행에만 음성·영상 버튼을 표시하도록 PC·폰 렌더러가 함께 사용한다. 메신저는
+`nostr_target`을 지정한다. 통화 클릭은 카드의 상세 열기로 전파되지 않으며, 폰은 로컬
+런처의 사용자 클릭을 네이티브 통화 화면으로 전달한다. 주소를 직접 입력하는 발신 UI는 없다.

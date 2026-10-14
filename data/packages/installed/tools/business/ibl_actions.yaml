@@ -382,6 +382,7 @@ nodes:
           - type: card_list
             from: items
             master_detail: true
+            media_call: nostr_target
             empty_from: message
             item_click:
               action: '[others:messages]{op: "thread", neighbor_id: $item.id, pubkey: $item.pubkey}'

@@ -25,7 +25,7 @@ import {
   composeChannelOptions, isSlowNet, preloadOf, mediaModel, shuffleNext,
   isBackendRoute, resolveMediaUrl,
   hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
-  RECURRENCE_OPTS, dateInputType,
+  RECURRENCE_OPTS, dateInputType, mediaCallTarget,
 } from '../../../../backend/static/app_render_core.js';
 
 // 공용 코어 재수출 — 소비자(프리미티브들)는 종전처럼 './generic/manifest' 에서 가져간다.
@@ -37,7 +37,7 @@ export {
   composeChannelOptions, isSlowNet, preloadOf, mediaModel, shuffleNext,
   isBackendRoute, resolveMediaUrl,
   hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
-  RECURRENCE_OPTS, dateInputType,
+  RECURRENCE_OPTS, dateInputType, mediaCallTarget,
 };
 
 export const IBL_ENDPOINT = `${BACKEND_ORIGIN}/ibl/execute`;

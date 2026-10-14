@@ -432,6 +432,13 @@ function parseImagePaths(v) {
   return [s];
 }
 
+/** card_list의 통화 대상은 명시된 데이터 필드에서만 읽는다(일반 연락처 폴백 금지). */
+function mediaCallTarget(prim, item) {
+  if (!prim.media_call) return '';
+  var target = String(jget(item, prim.media_call) || '').trim();
+  return /^(npub1[023456789acdefghjklmnpqrstuvwxyz]{58}|[0-9a-fA-F]{64})$/.test(target) ? target : '';
+}
+
 /* ===== 폼 필드 공용 어휘 ===== */
 
 /** 반복 주기 표준 어휘 — recurrence 필드 타입의 baked 옵션(manage_events repeat 값과 일치) */
@@ -449,5 +456,5 @@ export {
   composeChannelOptions, isSlowNet, preloadOf, mediaModel, shuffleNext,
   BACKEND_MEDIA_ROUTES, isBackendRoute, resolveMediaUrl,
   hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
-  RECURRENCE_OPTS, dateInputType,
+  RECURRENCE_OPTS, dateInputType, mediaCallTarget,
 };

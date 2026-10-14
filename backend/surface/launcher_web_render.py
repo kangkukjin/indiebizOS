@@ -297,6 +297,12 @@ function renderPrim(p,vi,data){
     return wideOpen+arr.map((it,ri)=>{
       const click=p.item_click?' onclick="rowDrill('+vi+','+ri+','+(SPLIT&&VIEW_CTX&&data===VIEW_CTX.data?'true':'false')+')" style="cursor:pointer"':'';
       let body='<div class="t">'+tpl(c.title,it)+'</div><div class="m">'+(c.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div>';
+      const callTarget=mediaCallTarget(p,it);
+      if(callTarget){
+        body+='<div style="display:flex;gap:8px;margin-top:8px">'+
+          '<button class="btn2" data-call-target="'+callTarget+'" data-call-purpose="voice_call" onclick="event.stopPropagation();messengerCall(this)">음성 통화</button>'+
+          '<button class="btn2" data-call-target="'+callTarget+'" data-call-purpose="video_call" onclick="event.stopPropagation();messengerCall(this)">영상 통화</button></div>';
+      }
       if(c.link&&c.link.href){
         const href=tpl(c.link.href,it);
         // 인앱 뷰어로 — href 는 남긴다(길게 누르기/가운데 클릭으로 새 탭도 그대로).
@@ -713,6 +719,27 @@ async function elDelete(vi,ri){
   const p=activeView()[vi]; if(!p) return;
   const arr=viewList(VIEW_CTX.data,p.from); const item=arr[ri]; if(item==null) return;
   try{ await dispatchAction(p.delete_action,{},item); }catch(e){ alert('삭제 실패: '+e.message); }
+}
+async function messengerCall(btn){
+  const target=btn.dataset.callTarget, purpose=btn.dataset.callPurpose;
+  if(!target || !['voice_call','video_call'].includes(purpose)) return;
+  if(typeof IS_PHONE!=='undefined' && IS_PHONE){
+    location.href='/launcher/native-call?'+new URLSearchParams({target:target,purpose:purpose});
+    return;
+  }
+  const buttons=btn.parentElement.querySelectorAll('button');
+  buttons.forEach(b=>b.disabled=true);
+  const tab=window.open('about:blank','_blank');
+  if(tab) tab.opener=null;
+  try{
+    const response=await fetch('/media/sessions',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind:'call',purpose:purpose,target:target,request_id:crypto.randomUUID()})});
+    const result=await response.json();
+    if(!response.ok || !result.success || !result.session) throw new Error(result.error?.message || result.detail || '통화를 시작하지 못했습니다.');
+    const url='/launcher/ui/#/media-call/'+encodeURIComponent(result.session.session_id);
+    if(tab) tab.location.href=url; else location.href=url;
+  }catch(e){ if(tab) tab.close(); alert(e.message); }
+  finally{ buttons.forEach(b=>b.disabled=false); }
 }
 function rowItem(vi,ri){
   if(!VIEW_CTX) return null;

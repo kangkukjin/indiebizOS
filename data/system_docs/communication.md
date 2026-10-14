@@ -243,7 +243,8 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - **세계의 명사는 데이터.** TURN·릴레이 주소·품질 프로필은 `data/media_policy.yaml`, 임대 수치는 `data/session_lease_policy.yaml`,
   TURN 비밀은 `.env`(`MEDIA_TURN_SECRET`). 이력은 `data/media/state.db`(토큰·SDP·원본 없음). 진단 `GET /media/health`.
 - **AI 는 의도만.** 새 낱말 없이 `[self:script]{op:"run", id:"미디어세션", args:{op:"create", kind:"extension", purpose:"camera", target:"삼성1"}}`.
-  화면(통화 창·장치 패널 버튼)은 조종실·연락처가 연다.
+  일반 통화는 PC·폰 모두 메신저 이웃 목록에서 저장된 Nostr 연락처가 있는 상대의 음성·영상 버튼으로 연다.
+  주소 직접 입력·공유창고 통화 버튼·폰 런처의 별도 통화 버튼은 없다. 확장 장치 미디어는 조종실 손발 목록에서 연다.
 
 ---
 

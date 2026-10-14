@@ -10,8 +10,6 @@ import android.view.WindowManager
 import android.widget.*
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
-import com.indiebiz.phoneagent.NostrCrypto
-import com.indiebiz.phoneagent.Sender
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
 import java.util.concurrent.Executors
@@ -22,7 +20,6 @@ class CallActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var root: LinearLayout
     private lateinit var status: TextView
-    private lateinit var target: EditText
     private var id = ""
     private var video = false
     private var pending: (() -> Unit)? = null
@@ -38,7 +35,12 @@ class CallActivity : Activity() {
         root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(20, 32, 20, 20) }
         status = TextView(this).apply { text = "IndieBiz 통화"; textSize = 20f }; root.addView(status)
         setContentView(root)
-        id = intent.getStringExtra("session_id") ?: CallService.session?.id ?: ""
+        id = savedInstanceState?.getString("session_id") ?: intent.getStringExtra("session_id") ?: ""
+        if (id.isEmpty() && intent.hasExtra("target")) {
+            startOutgoing()
+            return
+        }
+        if (id.isEmpty()) id = CallService.session?.id ?: ""
         if (id.isEmpty()) worker.execute {
             try {
                 val items = CallSession.request("/media/sessions").getJSONArray("items")
@@ -47,27 +49,32 @@ class CallActivity : Activity() {
                     if (s.optString("state") == "ringing") { id = s.getString("session_id"); break }
                 }
             } catch (_: Exception) { }
-            runOnUiThread { if (id.isEmpty()) dialScreen() else showSession() }
+            runOnUiThread { if (id.isEmpty()) status.text = "메신저에서 이웃을 선택해 통화하세요." else showSession() }
         } else showSession()
     }
     private fun button(label: String, action: () -> Unit) { root.addView(Button(this).apply { text = label; setOnClickListener { action() } }) }
     private fun error(t: Throwable) { runOnUiThread { status.text = t.message ?: "통화 오류" } }
-    private fun dialScreen() {
-        button("내 통화 주소 복사") {
-            val pub = NostrCrypto.toHex(NostrCrypto.xonlyPub(NostrCrypto.fromHex(Sender.phonePrivHex(this))))
-            getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("IndieBiz 통화 주소", pub))
-            status.text = "공개 통화 주소를 복사했습니다."
+    private fun startOutgoing() {
+        val target = intent.getStringExtra("target") ?: ""
+        val purpose = intent.getStringExtra("purpose") ?: ""
+        if (!target.matches(Regex("(npub1[023456789acdefghjklmnpqrstuvwxyz]{58}|[0-9a-fA-F]{64})")) ||
+            purpose !in listOf("voice_call", "video_call")) {
+            status.text = "통화할 이웃의 연락처를 확인해 주세요."; return
         }
-        target = EditText(this).apply { hint = "상대의 npub / 공개키 / 이웃 이름" }; root.addView(target)
-        for ((label, v) in listOf("음성 통화" to false, "영상 통화" to true)) button(label) {
-            video = v
-            permissions { worker.execute { try {
-                val s = CallSession.request("/media/sessions", JSONObject().put("kind", "call")
-                    .put("purpose", if (video) "video_call" else "voice_call").put("target", target.text.toString())
-                    .put("request_id", java.util.UUID.randomUUID().toString())).getJSONObject("session")
-                id = s.getString("session_id"); runOnUiThread { begin() }
-            } catch (e: Exception) { error(e) } } }
+        if (CallService.session != null || MediaSessionService.currentSessionId() != null) {
+            status.text = "진행 중인 통화나 미디어 세션을 먼저 종료해 주세요."; return
         }
+        video = purpose == "video_call"
+        permissions { worker.execute { try {
+            val s = CallSession.request("/media/sessions", JSONObject().put("kind", "call")
+                .put("purpose", purpose).put("target", target)
+                .put("request_id", java.util.UUID.randomUUID().toString())).getJSONObject("session")
+            id = s.getString("session_id"); runOnUiThread { begin() }
+        } catch (e: Exception) { error(e) } } }
+    }
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("session_id", id)
+        super.onSaveInstanceState(outState)
     }
     private fun showSession() { worker.execute { try {
         val s = CallSession.request("/media/sessions/$id").getJSONObject("session")

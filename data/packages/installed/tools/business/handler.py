@@ -353,6 +353,7 @@ def _msg_inbox(bm, tool_input: dict) -> str:
         peer = _int_or(n.get("is_indiebiz_peer", 0), 0)
         convs.append({
             "id": n["id"], "pubkey": "", "name": n.get("name", ""), "channel": channel,
+            "nostr_target": next((v.strip() for t, v in ch_contacts if t == "nostr" and v and v.strip()), ""),
             "to": to, "preview": preview, "time": time_s, "unread": unread, "unreplied": unread, "created_at": sort or None, "_sort": sort,
             "info_level": n.get("info_level", 0), "rating": n.get("rating", 0),
             "favorite": n.get("favorite", 0), "is_neighbor": 1,

@@ -1,3 +1,4 @@
+if (new URLSearchParams(location.search).has('messenger')) void import('./messenger');
 import './session';
 /**
  * Loopback harness: two MediaEngines in one page wired through the contract's offer/answer/candidate

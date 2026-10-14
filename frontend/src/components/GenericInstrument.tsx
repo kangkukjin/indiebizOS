@@ -1,3 +1,4 @@
+import { CallButtons } from './media/CallButtons';
 import { PlaybackHandoff } from './media/PlaybackHandoff';
 /**
  * GenericInstrument — 매니페스트 해석 계기 (앱 표면 제네릭 렌더러의 데스크탑판)
@@ -38,7 +39,7 @@ import {
   type AppInstrument, type Json, type Dispatch, type ViewEvent, type ActionReq,
   runIBL, jget, tpl, actionRequest, trendClass, asList,
   composeChannelOptions, mediaSrc, audioUrl, statusGlyph, IMAGE_BASE,
-  groupPartition, mediaModel, isSlowNet, shuffleNext, hasMasterDetail, dynFilterCats, applyDynFilter,
+  mediaCallTarget, groupPartition, mediaModel, isSlowNet, shuffleNext, hasMasterDetail, dynFilterCats, applyDynFilter,
   InstrumentMenuContext, type InstrumentMenu,
 } from './generic/manifest';
 import { linkify, Card, EmptyMsg, KvRow, Sparkline, DocBlock } from './generic/prims-basic';
@@ -183,6 +184,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
               <div className="text-xs text-stone-500 leading-relaxed">
                 {((c.lines as string[]) || []).map((l, j) => <div key={j}>{linkify(tpl(l, it))}</div>)}
               </div>
+              {mediaCallTarget(p, it) && <CallButtons target={mediaCallTarget(p, it)} name={String(it.name || '')} compact={false} />}
               {link?.href && tpl(link.href, it) && (
                 <a href={tpl(link.href, it)} target="_blank" rel="noreferrer"
                   onClick={(e) => e.stopPropagation()} className="text-xs text-blue-600 hover:underline">

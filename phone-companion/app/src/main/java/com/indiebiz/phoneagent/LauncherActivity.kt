@@ -61,6 +61,20 @@ class LauncherActivity : Activity() {
                 // 런처 자신(127.0.0.1)만 WebView 안에서. 외부 사이트(즐겨찾기 등)는 시스템 브라우저로
                 // → 런처 SPA 가 안 깨지고 뒤로가기도 정상(외부는 별도 앱).
                 override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
+                    if (req.url.path == "/launcher/native-call") {
+                        val source = Uri.parse(view.url ?: "")
+                        val local = { uri: Uri -> uri.scheme == "http" && uri.host == "127.0.0.1" && uri.port == 8765 }
+                        if (req.isForMainFrame && req.hasGesture() && local(source) && local(req.url)) {
+                            val target = req.url.getQueryParameter("target") ?: ""
+                            val purpose = req.url.getQueryParameter("purpose") ?: ""
+                            if (target.matches(Regex("(npub1[023456789acdefghjklmnpqrstuvwxyz]{58}|[0-9a-fA-F]{64})")) &&
+                                purpose in listOf("voice_call", "video_call")) {
+                                startActivity(Intent(this@LauncherActivity, com.indiebiz.phoneagent.media.CallActivity::class.java)
+                                    .putExtra("target", target).putExtra("purpose", purpose))
+                            }
+                        }
+                        return true
+                    }
                     val host = req.url.host ?: ""
                     if (host == "127.0.0.1" || host == "localhost") return false
                     return try {
@@ -115,10 +129,6 @@ class LauncherActivity : Activity() {
         }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
             gravity = Gravity.BOTTOM or Gravity.END; setMargins(0, 0, 16, 16)
         })
-        root.addView(Button(this).apply {
-            text = "음성·영상 통화"
-            setOnClickListener { startActivity(Intent(this@LauncherActivity, com.indiebiz.phoneagent.media.CallActivity::class.java)) }
-        }, FrameLayout.LayoutParams(-2, -2).apply { gravity = Gravity.BOTTOM or Gravity.START })
         root.addView(Button(this).apply {
             text = "미디어 화면"
             setOnClickListener { startActivity(Intent(this@LauncherActivity, com.indiebiz.phoneagent.media.MediaDisplayActivity::class.java)) }

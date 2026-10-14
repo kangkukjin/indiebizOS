@@ -15,7 +15,6 @@ import { API, fmtBytes, fileIcon, openNeighborFile, openWarehouseInBrowser } fro
 import type { WfNeighbor, WfFeedItem, WfCard } from './shared';
 import { FeedCard } from './FeedCard';
 import { NeighborBrowser } from './NeighborBrowser';
-import { CallButtons } from '../media/CallButtons';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
 
 /** 이웃 창고의 파일 한 줄 — 검색 결과가 쓴다(행마다 이웃이 달라 행 단위가 맞다).
@@ -666,8 +665,6 @@ export function NeighborsPane() {
                       >
                         <MessageCircle className="w-4 h-4" />
                       </button>
-                      {/* 음성·영상 통화 — nostr 신원(npub)이 있는 이웃만. 통화 요청이지 확장관계 등록이 아니다. */}
-                      <CallButtons neighborId={n.neighbor_id} name={n.name} onError={setError} />
                       <button
                         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
                         title={n.warehouse_memo ? `창고 메모: ${n.warehouse_memo}` : '창고 메모 쓰기'}

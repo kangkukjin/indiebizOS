@@ -168,7 +168,7 @@ func main() {
 		if cfg.Mode == "enroll" {
 			e = residentSetup(cfg)
 		} else {
-			e = startResident(cfg)
+			e = startResidentManaged(cfg)
 		}
 		if e != nil {
 			fmt.Fprintln(os.Stderr, e)

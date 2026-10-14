@@ -3,9 +3,16 @@
 # 산출물은 dist/ 에. 발급기([self:limb]{op:issue})가 이 중 대상 OS 것을 USB 에 복사한다.
 set -euo pipefail
 cd "$(dirname "$0")"
+sign_mode=--adhoc
+case "${1:-}" in
+  "") ;;
+  --sign) sign_mode=--interactive; bash sign_mac.sh --check-interactive ;;
+  *) echo "사용법: build.sh [--sign]" >&2; exit 64 ;;
+esac
+[ "$#" -le 1 ] || exit 64
 mkdir -p dist
 # Embed signed native capture/input workers for both Mac architectures.
-bash desktop_native/build_mac.sh
+bash desktop_native/build_mac.sh "$sign_mode"
 python3 ../scripts/build_member_shell.py
 
 echo "▶ windows/amd64"
@@ -24,6 +31,7 @@ GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/indiebiz-helper-mac-a
 echo "▶ darwin/amd64 legacy (macOS 10.15+, Go 1.22)"
 # 미디어 엔진(pion/webrtc v4, Go 1.24+)은 legacy 태그로 제외 — 능력에 engine 없음으로 신고한다.
 GOTOOLCHAIN=go1.22.12 GOOS=darwin GOARCH=amd64 go build -modfile=go.legacy.mod -tags legacy -ldflags="-s -w" -o dist/indiebiz-helper-mac-amd64-legacy .
+bash sign_mac.sh "$sign_mode" com.indiebiz.helper dist/indiebiz-helper-mac-arm64 dist/indiebiz-helper-mac-amd64 dist/indiebiz-helper-mac-amd64-legacy
 echo "▶ linux/amd64"
 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/indiebiz-helper-linux .
 

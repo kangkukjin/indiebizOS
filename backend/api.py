@@ -686,6 +686,8 @@ app.include_router(records_router, tags=["records"])
 app.include_router(nodes_router, tags=["nodes"])
 app.include_router(limb_router, tags=["limb"])  # /limb/* 는 자체 limb key 인증 (is_public_remote_path 등록)
 app.include_router(media_router, tags=["media"])  # /media/* 세션 게이트, /limb/resident/media/* 등록 자격+grant, /media/content/* grant 토큰
+from api_member_pcs import router as member_pcs_router
+app.include_router(member_pcs_router)
 from api_external_users import router as external_users_router
 app.include_router(external_users_router)  # 주인 전용 관리창 — 공개 경로 등록 금지
 from api_member import router as member_router

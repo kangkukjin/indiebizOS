@@ -1,4 +1,4 @@
-import { openSystemAI, openPromptComposition, openGuides, openVocabulary, openExternalUsers } from '../lib/surface-navigation';
+import { openSystemAI, openPromptComposition, openGuides, openVocabulary, openExternalUsers, openMemberPCs } from '../lib/surface-navigation';
 /**
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
@@ -6,7 +6,7 @@ import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
 import { LanguagePicker, UiText, uiMessage, useLocale } from '../i18n/ui';
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Zap, Boxes, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone, Layers, FileText } from 'lucide-react';
+import { Laptop, Zap, Boxes, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone, Layers, FileText } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -832,6 +832,13 @@ export function Launcher() {
                 >
                   <Settings size={16} className="text-stone-500" />
                   <span className="text-sm">설정</span>
+                </button>
+                <button
+                  onClick={() => { openMemberPCs(); setShowMainMenu(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
+                >
+                  <Laptop size={16} className="text-stone-500" />
+                  <span className="text-sm">회원 PC 관리</span>
                 </button>
                 <button
                   onClick={() => { openExternalUsers(); setShowMainMenu(false); }}

@@ -30,6 +30,12 @@ from typing import Dict, List, Optional
 # (ibl_engine._resolve_and_maybe_forward)은 이 클래스를 요구하는 액션이 없으므로 절대
 # 자동으로 손발을 대상으로 고르지 않는다 — 손발엔 오직 [limbs:guestpc] 만 명시적으로 닿는다.
 GUEST_PC_CLASS = "guest-pc-class"
+MEMBER_PC_CLASS = "member-pc-class"
+
+
+def is_member(rec: Dict) -> bool:
+    """회원 PC 등록과 구형 이웃 결합 자격을 일반 손발과 구분한다."""
+    return bool(rec.get("member_id")) or rec.get("neighbor_id") not in (None, "")
 
 # 발급 시 기본 유효기간(일). 0=무기한 — 휴대 USB 는 오래 들고 다니므로 기본을 무기한으로
 # 둔다. 폐기가 필요하면 revoke 로 명시적으로 한다. 특정 기간을 원하면 ttl_days 로 준다.
@@ -137,6 +143,8 @@ def _public(rec: Dict, now: Optional[float] = None) -> Dict:
         # (키 원문과 달리 민감하지 않고, 이게 없으면 프로브를 저장해둔 뜻이 없다.)
         "env": rec.get("env") or (rec.get("registration") or {}).get("capabilities"),
         "neighbor_id": rec.get("neighbor_id"),
+        "member_id": rec.get("member_id"),
+        "member_pc": rec.get("member_pc"),
         "registration": rec.get("registration"),
         "invitation": bool(rec.get("invitation")),
     }
@@ -144,14 +152,17 @@ def _public(rec: Dict, now: Optional[float] = None) -> Dict:
 
 # === 발급 / 폐기 ===
 
-def mint(alias: str = "", ttl_days: float = DEFAULT_TTL_DAYS, neighbor_id=None) -> Dict:
+def mint(alias: str = "", ttl_days: float = DEFAULT_TTL_DAYS, neighbor_id=None,
+         *, member_pc: Optional[Dict] = None) -> Dict:
     """새 손발 키 발급. 반환 = {key, device_id, alias, expires_at} (key 는 이때만 원문 노출).
 
     key 는 USB 페이로드에 박혀 나가고, 원장엔 같은 값이 남아 검증·폐기에 쓰인다.
     device_id 는 이 손발의 안정 식별자 — 승인이 device 단위로 붙는다.
     """
     key = "limb_" + secrets.token_urlsafe(24)
-    device_id = "guestpc-" + secrets.token_hex(6)
+    if member_pc is not None and neighbor_id is not None:
+        raise ValueError("회원 PC 등록은 이웃과 결합하지 않습니다")
+    device_id = ("memberpc-" if member_pc is not None else "guestpc-") + secrets.token_hex(6)
     now = _now()
     expires_at = (now + float(ttl_days) * 86400.0) if ttl_days and ttl_days > 0 else None
     rec = {
@@ -167,6 +178,11 @@ def mint(alias: str = "", ttl_days: float = DEFAULT_TTL_DAYS, neighbor_id=None) 
         # 회원 열쇠(2026-09-14): 기존 이웃에 결합된 손발 — /m/chat 의 주체·레벨이 이 사람에게서 온다.
         "neighbor_id": neighbor_id,
     }
+    if member_pc is not None:
+        rec.update(member_id=device_id, approved=True,
+                   member_pc={"user_label": str(member_pc.get("user_label", "")),
+                              "note": str(member_pc.get("note", "")), "enabled": True,
+                              "ttl_days": ttl_days})
     with _lock:
         data = _load()
         data["keys"][key] = rec
@@ -187,7 +203,8 @@ def validate(key: str) -> Optional[Dict]:
         rec = _load()["keys"].get(key)
         if not rec:
             return None
-        if rec.get("revoked") or _expired(rec) or rec.get("invitation") or rec.get("registration"):
+        if (rec.get("revoked") or _expired(rec) or rec.get("invitation") or rec.get("registration")
+                or (rec.get("member_pc") or {}).get("enabled") is False):
             return None
         return dict(rec)
 
@@ -282,6 +299,41 @@ def invalidate():
     global _cache
     with _lock:
         _cache = None
+
+
+def update_member_pc(device_id: str, *, alias=None, user_label=None, note=None,
+                     enabled=None, revoke_key=False, rotate_key=False) -> Optional[Dict]:
+    """PC 등록 메타데이터·자격을 원자 갱신. 재발급도 기기와 사용량 ID는 유지한다."""
+    with _lock:
+        data = _load()
+        rec = next((r for r in data["keys"].values() if r.get("device_id") == device_id
+                    and r.get("member_id") and isinstance(r.get("member_pc"), dict)), None)
+        if not rec or rec.get("revoked"):
+            return None
+        if alias is not None:
+            rec["alias"] = alias
+        for name, value in (("user_label", user_label), ("note", note), ("enabled", enabled)):
+            if value is not None:
+                rec["member_pc"][name] = value
+        if enabled is not None or revoke_key or rotate_key:
+            rec["session"] = secrets.token_hex(8)
+            rec["env"] = {}
+        if revoke_key:
+            rec["revoked"] = True
+        if rotate_key:
+            del data["keys"][rec["key"]]
+            rec["key"] = "limb_" + secrets.token_urlsafe(24)
+            days = rec["member_pc"].get("ttl_days", 0)
+            rec["expires_at"] = _now() + days * 86400 if days else None
+            rec["last_used"] = None
+            rec["last_host"] = None
+            rec["env"] = {}
+        data["keys"][rec["key"]] = rec
+        _save()
+        out = _public(rec)
+        if rotate_key:
+            out["key"] = rec["key"]
+        return out
 
 
 def resident_invite(alias, ttl_days=0):

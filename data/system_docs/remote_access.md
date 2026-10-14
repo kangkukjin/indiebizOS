@@ -690,9 +690,9 @@ cloudflared tunnel login
 |---|---|---|---|
 | 원격 런처 | owner 세션 | 허브 주인 | 기존 런처 |
 | 폰 네이티브 | 독립 몸 | 폰의 자아 | 기존 :app |
-| 외부 서비스 회원 | member:<이웃 ID> | 회원 기기 | 웹앱 /m/app (기본), helper mode:member / Android :member (선택) |
+| 등록 회원 PC / 기존 이웃 회원 | member:<PC ID> / member:<이웃 ID> | 회원 기기 | 웹앱 /m/app (기본), helper mode:member / Android :member (선택) |
 
-회원 키는 limb 원장의 neighbor_id와 이웃 명부의 기기 결합을 함께 확인한다. /m/chat은 HTTP/WS 자체 인증,
+새 회원 PC 키는 limb 원장의 독립 member_id·member_pc 등록을 인증하며 이웃 명부를 사용하지 않는다. 런처 안경 메뉴의 회원 PC 관리에서 등록·현황·중지·재발급·해제를 다룬다. 기존 이웃 연결 키만 neighbor_id와 이웃 명부의 기기 결합을 함께 확인한다. /m/chat은 HTTP/WS 자체 인증,
 /m/profile·/m/session/close는 POST다. 회원 키는 런처 세션을 만들지 않으며 프로젝트·설정 API 인증에 통하지 않는다.
 PC는 loopback 셸과 한시 토큰, Android는 WebView 네이티브 다리를 쓴다. 대화 HTTP 연결 종료는 회원 턴을 취소한다.
 발급·설정과 현재 제한은 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11, guides/member_start.md 참조.

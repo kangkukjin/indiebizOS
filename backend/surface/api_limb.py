@@ -100,7 +100,7 @@ async def limb_connect(req: ConnectRequest):
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
 
-    if rec.get("neighbor_id") not in (None, "") and req.mode != "member":
+    if limb_keys.is_member(rec) and req.mode != "member":
         return {"success": False, "error": "member_mode_required"}
     env = {**(req.env or {}), "mode": req.mode}
 
@@ -113,8 +113,9 @@ async def limb_connect(req: ConnectRequest):
 
     # 손발을 프레즌스 레지스트리에 등록 — url="" (인바운드 주소 없음, 폰 푸시 모델과 동일).
     # auth="limb_key" 로 표식해 ibl_engine 이 이 노드에 인바운드 포워드를 시도하지 않게 한다.
-    dr.register(rec["device_id"], rec["alias"], [limb_keys.GUEST_PC_CLASS], "",
-                auth="limb_key", owner="self", primary=False)
+    dr.register(rec["device_id"], rec["alias"],
+                [limb_keys.MEMBER_PC_CLASS if rec.get("member_id") else limb_keys.GUEST_PC_CLASS], "",
+                auth="limb_key", owner="member" if rec.get("member_id") else "self", primary=False)
 
     if was_pending:
         _notify_new_limb(rec, req.host)          # 첫 자동승인
@@ -130,7 +131,9 @@ async def limb_connect(req: ConnectRequest):
         "poll_wait": MAX_POLL_WAIT,
     }
     # 회원 열쇠(neighbor_id 결합)면 회원 프로파일을 동봉 — 헬퍼 mode:member 가 /m/chat 을 연다.
-    if rec.get("neighbor_id") is not None:
+    if rec.get("member_id"):
+        out["member"] = {"member_id": rec["member_id"], "level": None}
+    elif rec.get("neighbor_id") is not None:
         try:
             from body_trust import get_body_level
             out["member"] = {"neighbor_id": rec.get("neighbor_id"),
@@ -157,7 +160,7 @@ async def limb_poll(req: PollRequest):
     # 어느 PC 에서 도는지 비결정적이 된다(실측: 헬퍼 4개가 명령을 번갈아 집어감).
     # heartbeat 도 찍지 않는다 — 낡은 세션이 프레즌스를 살려두면 안 된다.
     current = rec.get("session") or ""
-    if current and (req.session or rec.get("neighbor_id") not in (None, "")) and req.session != current:
+    if current and (req.session or limb_keys.is_member(rec)) and req.session != current:
         return {"success": True, "approved": True, "jobs": [], "stale": True,
                 "message": "이 손발이 다른 곳에서 다시 연결됐습니다."}
 
@@ -168,7 +171,7 @@ async def limb_poll(req: PollRequest):
         return {"success": True, "approved": False, "jobs": []}
 
     wait = min(max(0.0, float(req.wait)), MAX_POLL_WAIT)
-    if rec.get('neighbor_id') not in (None, '') and (rec.get('env') or {}).get('client') == 'web':
+    if rec.get('member_id') or (limb_keys.is_member(rec) and (rec.get('env') or {}).get('client') == 'web'):
         jobs = await anyio.to_thread.run_sync(phone_jobs.pull_blocking, device_id, wait, req.session)
         latest = limb_keys.validate(req.key)
         if not latest or latest.get('session') != req.session:

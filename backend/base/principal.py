@@ -47,7 +47,7 @@ class Principal:
         return self.kind == KIND_OWNER
 
     def key(self) -> str:
-        """캐시 키·원장 표기용 안정 문자열. 같은 사람의 다른 기기는 같은 키(기억은 사람에 붙는다)."""
+        """캐시·원장의 안정 신원. 새 회원은 등록 PC별 ID, 기존 이웃 회원은 이웃 ID를 쓴다."""
         return self.kind if self.kind in (KIND_OWNER, KIND_ANONYMOUS) else f"{self.kind}:{self.id}"
 
     def __str__(self) -> str:

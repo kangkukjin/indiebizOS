@@ -135,3 +135,7 @@ export function openResultImage(path: string) {
   if (window.electron?.openExternal) window.electron.openExternal(`file://${path}`);
   else window.open(`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(path)}`, '_blank', 'noopener');
 }
+
+export function openMemberPCs() {
+  openPage('/member-pcs', window.electron?.openToolWindow?.bind(window.electron, 'member-pcs'));
+}

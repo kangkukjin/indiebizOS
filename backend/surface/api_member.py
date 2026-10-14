@@ -1,4 +1,4 @@
-"""api_member.py — 외부 서비스 앱 회원 표면(/m/*): 회원 열쇠(limb key + neighbor_id) 자체 인증.
+"""api_member.py — 외부 서비스 앱 회원 표면(/m/*): PC별 회원 자격(기존 이웃 연결 키도 호환) 자체 인증.
 
 정본: docs/EXTERNAL_SERVICE_APP_HANDOFF.md §3-3·§3-8 (2026-09-14, 1단계 — HTTP 턴. WS·로컬 셸은 2단계).
 - 인증 = limb key 원장의 `neighbor_id` 결합 + body_trust 레벨. 런처 세션·허브 비밀번호 없음.
@@ -29,14 +29,18 @@ class MemberKey(BaseModel):
 
 
 def _member_of(key: str):
-    """회원 열쇠 → (rec, neighbor_id, level) 또는 (None, 오류 봉투)."""
+    """회원 열쇠 → (rec, member_id, level) 또는 (None, 오류 봉투)."""
     rec = limb_keys.validate(key)
     if not rec:
         return None, {"success": False, "error": "invalid_or_expired_key"}
+    if rec.get("member_id"):
+        if not isinstance(rec.get("member_pc"), dict) or not rec.get("approved"):
+            return None, {"success": False, "error": "device_not_approved"}
+        return (rec, rec["member_id"], None), None
     nid = rec.get("neighbor_id")
     if nid in (None, ""):
         return None, {"success": False, "error": "not_member_key",
-                      "message": "이 열쇠는 손발 키이지 회원 열쇠가 아닙니다 — [self:limb]{op:issue, neighbor_id} 로 발급하세요."}
+                      "message": "회원 PC 관리에서 발급한 등록 키가 필요합니다."}
     from body_trust import get_body_level, get_body_neighbor_id
     level = get_body_level(rec["device_id"])
     if level is None or str(get_body_neighbor_id(rec["device_id"])) != str(nid):
@@ -108,7 +112,7 @@ def member_profile(req: MemberKey):
                 open_words.append(f"{node}:{action}")
     mgr = MemberSessionManager.instance()
     from client_agent import EPOCH, TTL, VERSION
-    return {"success": True, "client_protocol": {"version": VERSION, "epoch": EPOCH, "retry_window_s": TTL}, "neighbor_id": nid, "level": level, "device_id": rec["device_id"],
+    return {"success": True, "client_protocol": {"version": VERSION, "epoch": EPOCH, "retry_window_s": TTL}, "member_id": nid, "neighbor_id": rec.get("neighbor_id"), "level": level, "device_id": rec["device_id"],
             "open_words": sorted(open_words), "turns_today": mgr.turns_today(nid),
             "policy": {k: load_policy().get(k) for k in ("daily_turns", "max_sessions_per_member")},
             "notice": load_policy().get("notice", "")}
@@ -143,7 +147,7 @@ async def member_socket(ws: WebSocket):
             return
         from member_session import MemberSessionManager
         mgr = MemberSessionManager.instance()
-        await ws.send_json({"type": "ready", "neighbor_id": nid})
+        await ws.send_json({"type": "ready", "member_id": nid, "neighbor_id": rec.get("neighbor_id")})
         while True:
             payload = await ws.receive_json()
             refreshed, error = _member_of(key)

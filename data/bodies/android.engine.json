@@ -432,6 +432,7 @@
     "surface/api_limb",
     "surface/api_media",
     "surface/api_member",
+    "surface/api_member_pcs",
     "surface/api_models",
     "surface/api_multi_chat",
     "surface/api_music",
@@ -593,8 +594,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 518,
-    "engine": 492,
+    "total": 519,
+    "engine": 493,
     "blocklist": 26
   }
 }

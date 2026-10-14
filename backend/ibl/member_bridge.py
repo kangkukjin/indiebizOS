@@ -10,7 +10,7 @@ import phone_jobs
 def connected(device_id):
     import limb_keys
     rec = limb_keys.get_by_device(device_id)
-    if not rec or rec.get("revoked") or (rec.get("expires_at") and time.time() >= rec["expires_at"]) or not rec.get("approved"):
+    if not rec or rec.get("revoked") or (rec.get("expires_at") and time.time() >= rec["expires_at"]) or not rec.get("approved") or (rec.get("member_pc") or {}).get("enabled") is False:
         return False
     import device_registry
     entry = next((e for e in device_registry.list_live() if e.get("device_id") == device_id), None)
@@ -21,6 +21,10 @@ def request(command, timeout=None):
     p, state = principal.current(), member_runtime.current()
     if p.kind != principal.KIND_MEMBER or not state or state["device_id"] != p.device_id:
         return {"success": False, "error_type": "permission", "error": "회원 기기 바인딩 없음"}
+    import limb_keys
+    rec = limb_keys.get_by_device(p.device_id) or {}
+    if rec.get("member_id") and not state.get("body_session"):
+        state["body_session"] = rec.get("session", "")
     if state.get("body_session"):
         import limb_keys
         if (limb_keys.get_by_device(p.device_id) or {}).get("session") != state["body_session"]:

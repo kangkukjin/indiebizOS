@@ -21,6 +21,7 @@ import { LectureWorkspace } from './components/LectureWorkspace';
 import { PromptCompositionView } from './components/PromptCompositionView';
 import { GuidesView } from './components/GuidesView';
 import { DocumentApp } from './components/DocumentApp';
+import { MemberPCsView } from './components/MemberPCsView';
 import { ExternalUsersView } from './components/ExternalUsersView';
 import { VocabularyView } from './components/VocabularyView';
 import { installVocabularySync } from './components/vocabulary/window-sync';
@@ -53,6 +54,7 @@ interface HashRoute {
   isCoding: boolean;
   isDocuments: boolean;
   isSpreadsheets: boolean;
+  isMemberPCs: boolean;
   isExternalUsers: boolean;
   vocabularyFolder: string | null;
 }
@@ -64,7 +66,7 @@ const EMPTY_ROUTE: HashRoute = {
   isPCManager: false, pcManagerPath: null,
   isPhotoManager: false, photoManagerPath: null,
   isSystemAI: false, isLectureWorkspace: false, lectureId: null,
-  isPromptComposition: false, isGuides: false, isExternalUsers: false, isCoding: false, isDocuments: false, isSpreadsheets: false,
+  isPromptComposition: false, isGuides: false, isExternalUsers: false, isMemberPCs: false, isCoding: false, isDocuments: false, isSpreadsheets: false,
   vocabularyFolder: null,
 };
 
@@ -82,6 +84,7 @@ function parseHash(hash: string): HashRoute {
   if (hash === '#/system-ai') return { ...EMPTY_ROUTE, isSystemAI: true };
   // 안경 메뉴 도구 창 — 프롬프트 구성 · 가이드 파일
   if (hash === '#/prompt-composition') return { ...EMPTY_ROUTE, isPromptComposition: true };
+  if (hash === '#/member-pcs') return { ...EMPTY_ROUTE, isMemberPCs: true };
   if (hash === '#/external-users') return { ...EMPTY_ROUTE, isExternalUsers: true };
   if (hash === '#/guides') return { ...EMPTY_ROUTE, isGuides: true };
   if (hash === '#/coding') return { ...EMPTY_ROUTE, isCoding: true };
@@ -138,7 +141,7 @@ function App() {
     isCommunity, isMessenger, isBusiness,
     isPCManager, pcManagerPath, isPhotoManager, photoManagerPath,
     isSystemAI, isLectureWorkspace, lectureId,
-    isPromptComposition, isGuides, isExternalUsers, vocabularyFolder, isCoding, isDocuments, isSpreadsheets,
+    isPromptComposition, isGuides, isExternalUsers, isMemberPCs, vocabularyFolder, isCoding, isDocuments, isSpreadsheets,
   } = route;
 
   useEffect(installVocabularySync, []);
@@ -231,6 +234,7 @@ function App() {
 
   // 안경 메뉴 도구 창 — 프롬프트 구성 / 가이드 파일 (Electron 독립 창 · 웹은 같은 창 라우트)
   if (isPromptComposition) return <PromptCompositionView />;
+  if (isMemberPCs) return <MemberPCsView />;
   if (isExternalUsers) return <ExternalUsersView />;
   if (isGuides) return <GuidesView />;
   if (vocabularyFolder) return <VocabularyView key={vocabularyFolder} folderId={vocabularyFolder} />;

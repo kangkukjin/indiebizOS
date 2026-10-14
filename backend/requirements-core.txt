@@ -31,6 +31,7 @@ google-genai
 
 # Nostr / IndieNet
 pynostr
+bech32  # PC·폰 공통 npub 주소 해석(media_sessions)
 # ★websocket-client 만 정확 핀 (2026-08-30 `91244333` 의 사유). 이 저장소의 기본은 무핀이고
 #   핀은 근거를 남기는 예외다(위 fastapi 주석·mcp<2 참조) — 여기 근거는 **실제 오보**다.
 #   핀이 없던 동안 로컬은 1.9.0, 새로 설치하는 몸(CI·신규 사용자)은 1.9.1 을 받았다. 1.9.0 은

@@ -1042,6 +1042,16 @@ def update(sid: str, expected_revision: int, changes: Dict) -> Dict:
         if not isinstance(changes, dict):
             raise MediaError("invalid_changes")
         payload = {}
+        if "audio_source" in changes:
+            source = changes["audio_source"]
+            if (s.kind != "extension" or s.purpose != "speaker" or s.local_role != "hub"
+                    or source not in ("mic", "playback")):
+                raise MediaError("invalid_changes", "audio_source 는 스피커 전송의 mic 또는 playback")
+            for track in s.tracks:
+                if track["from"] == "hub" and track["to"] == "device" and track["kind"] == "audio":
+                    track["source"] = source
+            s.consent = _consent(s.tracks, s.local_role)
+            payload["audio_source"] = source
         for key in ("mute", "camera"):
             if key in changes:
                 if not isinstance(changes[key], bool):

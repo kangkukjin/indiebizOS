@@ -67,7 +67,7 @@ export function CallWindow({ sessionId }: { sessionId: string }) {
     stage = <PlaybackControlPane content={session?.content} disabled={ended || busy} onUpdate={changes => void act(() => m.update(changes))} />;
   } else if ((purpose === 'speaker' || purpose === 'playback') && m.isHub) {
     stage = <div className="flex flex-1 flex-col">
-      <SpeakerSourcePane video={purpose === 'playback'} sending={!!m.localStream} onSource={el => void m.sendPlayback(el)} />
+      <SpeakerSourcePane video={purpose === 'playback'} sending={!!m.localStream} disabled={ended || busy} onSource={el => void act(() => m.sendPlayback(el))} onMicrophone={() => void act(m.sendMicrophone)} />
       {m.localStream && <div className="flex justify-center pb-4"><LevelMeter stream={m.localStream} label="보내는 소리" /></div>}
     </div>;
   } else if (purpose === 'microphone' && m.isHub) {

@@ -9,7 +9,7 @@ import { MediaEngine, type EngineState } from '../../lib/media/engine';
 import { MediaSessionClient, localRole, remoteParticipant } from '../../lib/media/session-client';
 import { captureLocal, capturePlayback, planTracks, stopStream, type TrackPlan } from '../../lib/media/tracks';
 import { listDevices, loadChoice, nextCamera, rememberChoice, resolveChoice, type DeviceChoice, type DeviceList } from '../../lib/media/devices';
-import { videoConstraints } from '../../lib/media/sdp';
+import { audioConstraints, videoConstraints } from '../../lib/media/sdp';
 import type { MediaPath, MediaSession, OfferPayload, Quality, QualityProfile, SessionState, SignalFrame } from '../../lib/media/types';
 import { EMPTY_QUALITY } from '../../lib/media/types';
 
@@ -60,6 +60,7 @@ export interface MediaSessionView {
   update: (changes: Record<string, unknown>) => Promise<void>;
   /** Speaker purpose: start sending the given `<audio>` element as the playback track. */
   sendPlayback: (element: HTMLMediaElement) => Promise<void>;
+  sendMicrophone: () => Promise<void>;
 }
 
 export function useMediaSession(sessionId: string): MediaSessionView {
@@ -71,6 +72,8 @@ export function useMediaSession(sessionId: string): MediaSessionView {
   const appliedOffer = useRef('');
   const planRef = useRef<TrackPlan | null>(null);
   const starting = useRef(false);
+  const captureEpoch = useRef(0);
+  const sourcePending = useRef(false);
   const [session, setSession] = useState<MediaSession | null>(null);
   const [uiState, setUiState] = useState<UiState>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +94,7 @@ export function useMediaSession(sessionId: string): MediaSessionView {
   const isHub = mine === 'hub';
 
   const teardown = useCallback(() => {
+    captureEpoch.current += 1;
     engine.current?.close(); engine.current = null;
     stopStream(local.current); local.current = null;
     setLocalStream(null); setRemoteStream(null);
@@ -100,7 +104,10 @@ export function useMediaSession(sessionId: string): MediaSessionView {
 
   /** Build the engine for the current session (offerer creates the offer; answerer applies a pending one). */
   const startEngine = useCallback(async (current: MediaSession, extraStream?: MediaStream) => {
-    if (engine.current || starting.current) return;
+    if (engine.current || starting.current) { stopStream(extraStream); return; }
+    // Speaker inputs are opened only by the user's send button, including after source updates.
+    if (current.purpose === 'speaker' && localRole(current) === 'hub' && !extraStream) return;
+    const epoch = captureEpoch.current;
     starting.current = true;
     try {
       const role = localRole(current);
@@ -110,6 +117,7 @@ export function useMediaSession(sessionId: string): MediaSessionView {
       const isOfferer = role === 'caller' || role === 'hub';
       let stream = extraStream ?? null;
       if (!stream) stream = await captureLocal(plan, { microphone: choice.microphone, camera: choice.camera }, profile);
+      if (epoch !== captureEpoch.current) { stopStream(stream); return; }
       if (plan.sendPlayback && !extraStream) { starting.current = false; return; }  // speaker purpose waits for a source
       const eng = new MediaEngine({
         iceServers: current.ice_servers ?? [],
@@ -149,8 +157,11 @@ export function useMediaSession(sessionId: string): MediaSessionView {
       }
       for (const frame of earlySignals.current.splice(0)) await eng.receive(frame.type as 'candidate' | 'candidates_done' | 'answer', frame.payload, frame.generation);
     } catch (e) {
-      fail(e instanceof Error ? e.message : '미디어를 시작하지 못했습니다.');
-      teardown();
+      stopStream(extraStream);
+      if (epoch === captureEpoch.current) {
+        fail(e instanceof Error ? e.message : '미디어를 시작하지 못했습니다.');
+        teardown();
+      }
     } finally { starting.current = false; }
   }, [choice.camera, choice.microphone, fail, teardown]);
 
@@ -261,19 +272,27 @@ export function useMediaSession(sessionId: string): MediaSessionView {
   const chooseDevice = useCallback(async (kind: 'camera' | 'microphone' | 'speaker', id: string) => {
     setChoice(rememberChoice(kind, id));
     const eng = engine.current; if (!eng || kind === 'speaker') return;
+    const epoch = captureEpoch.current;
+    let fresh: MediaStream | null = null;
     try {
       const constraints: MediaStreamConstraints = kind === 'camera'
-        ? { video: videoConstraints(PC_PROFILE, id) } : { audio: { deviceId: { exact: id }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
-      const fresh = await navigator.mediaDevices.getUserMedia(constraints);
+        ? { video: videoConstraints(PC_PROFILE, id) } : { audio: audioConstraints('mic', id || undefined), video: false };
+      fresh = await navigator.mediaDevices.getUserMedia(constraints);
+      if (epoch !== captureEpoch.current || eng !== engine.current) { stopStream(fresh); return; }
       const track = kind === 'camera' ? fresh.getVideoTracks()[0] : fresh.getAudioTracks()[0];
-      if (!track) return;
+      if (!track) { stopStream(fresh); return; }
       track.enabled = kind === 'camera' ? !cameraOff : !micMuted;
+      if (kind === 'microphone') track.contentHint = 'speech';
       const old = local.current;
       await eng.replaceTrack(kind === 'camera' ? 'video' : 'audio', track);
+      if (epoch !== captureEpoch.current || eng !== engine.current) { stopStream(fresh); return; }
       const stream = new MediaStream([...(old?.getTracks().filter(t => t.kind !== track.kind) ?? []), track]);
       old?.getTracks().filter(t => t.kind === track.kind).forEach(t => t.stop());
       local.current = stream; setLocalStream(stream);
-    } catch (e) { setError(e instanceof Error ? e.message : '장치를 바꾸지 못했습니다.'); }
+    } catch (e) {
+      stopStream(fresh);
+      if (epoch === captureEpoch.current) setError(e instanceof Error ? e.message : '장치를 바꾸지 못했습니다.');
+    }
   }, [cameraOff, micMuted]);
 
   const switchCamera = useCallback(async () => {
@@ -288,22 +307,36 @@ export function useMediaSession(sessionId: string): MediaSessionView {
     catch (e) { setError(e instanceof Error ? e.message : '변경을 보내지 못했습니다.'); }
   }, []);
 
-  const sendPlayback = useCallback(async (element: HTMLMediaElement) => {
-    const s = client.current?.session; if (!s) return;
+  const sendSource = useCallback(async (element?: HTMLMediaElement) => {
+    const c = client.current; const s = c?.session;
+    if (!c || !s || s.state === 'ended' || sourcePending.current || engine.current) return;
+    const epoch = captureEpoch.current;
+    sourcePending.current = true;
+    let stream: MediaStream | null = null;
+    setError(null);
     try {
-      const stream = capturePlayback(element, s.purpose === 'playback' && s.delivery === 'realtime');
-      if (engine.current) {
-        for (const track of stream.getTracks()) await engine.current.replaceTrack(track.kind as 'audio' | 'video', track);
-        stopStream(local.current); local.current = stream; setLocalStream(stream);
-      }
-      else await startEngine(s, stream);
-    } catch (e) { fail(e instanceof Error ? e.message : '재생음을 보내지 못했습니다.'); }
-  }, [fail, startEngine]);
+      if (!element && (s.purpose !== 'speaker' || localRole(s) !== 'hub')) return;
+      const current = s.purpose === 'speaker'
+        ? await c.update(s.revision, { audio_source: element ? 'playback' : 'mic' }) : s;
+      if (epoch !== captureEpoch.current) return;
+      stream = element ? capturePlayback(element, s.purpose === 'playback' && s.delivery === 'realtime')
+        : await captureLocal(planTracks(current, localRole(current)), { microphone: choice.microphone });
+      if (epoch !== captureEpoch.current) { stopStream(stream); return; }
+      if (!stream) throw new Error('보낼 소리가 없습니다.');
+      await startEngine(current, stream);
+      if (!element && epoch === captureEpoch.current) setDevices(await listDevices());
+    } catch (e) {
+      stopStream(stream);
+      if (epoch === captureEpoch.current) setError(e instanceof Error ? e.message : '소리를 보내지 못했습니다.');
+    } finally { sourcePending.current = false; }
+  }, [choice.microphone, startEngine]);
+  const sendPlayback = useCallback((element: HTMLMediaElement) => sendSource(element), [sendSource]);
+  const sendMicrophone = useCallback(() => sendSource(), [sendSource]);
 
   return {
     session, uiState, error, engineState, path, quality, remoteStream, localStream, plan: planRef.current,
     isCallee, isHub, remoteName: session ? (remoteParticipant(session)?.user?.name || remoteParticipant(session)?.device?.name || remoteParticipant(session)?.user?.id || '') : '',
     micMuted, cameraOff, devices, choice, socketOpen, endReason,
-    accept, reject, hangUp, toggleMic, toggleCamera, switchCamera, chooseDevice, update, sendPlayback,
+    accept, reject, hangUp, toggleMic, toggleCamera, switchCamera, chooseDevice, update, sendPlayback, sendMicrophone,
   };
 }

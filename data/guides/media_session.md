@@ -9,7 +9,7 @@
 |---|---|---|
 | 허가 근거 | 상대의 **수락**(`accepted_call`) — 벨이 울리고 상대가 받아야 센서가 켜진다 | **등록 자격**(`extension_grant`) — 헬퍼 설치 PC·USB 로 각인한 폰만. 벨 없음 |
 | 대상 | 주소록의 nostr 연락처 이름 또는 npub | 손발 이름(`[self:limb]{op:"list"}` 의 alias) |
-| 목적 | `voice_call` `video_call` | `camera`(장치 카메라→중앙 화면) `microphone` `speaker`(중앙 재생음→장치) `playback`(파일·주소 재생 전달) |
+| 목적 | `voice_call` `video_call` | `camera`(장치 카메라→중앙 화면) `microphone` `speaker`(중앙 재생음 또는 마이크→장치) `playback`(파일·주소 재생 전달) |
 | 할 수 없는 것 | 통화 자격으로 명령·파일·등록 불가 | 통화 화면·네트워크 초대로 확장관계를 만들 수 없음 |
 
 세션 한 행 = `session_id`·`state`·`tracks`·`path`(direct|relay)·`quality`·`error`. 상태 흐름: 통화 `inviting→ringing→accepted→connecting→active→ended`,
@@ -97,3 +97,12 @@ IBL 제어는 기존 미디어세션 스크립트입니다. 파일 전달은 `pu
 
 코덱·컨테이너는 폰의 MediaPlayer/WebRTC가 지원해야 합니다. URL을 브라우저에서 실시간
 전송할 때는 원본 서버의 CORS 허용이 필요합니다. 접근 불가·DRM 자료는 자동 변환하지 않습니다.
+
+
+## 이 PC의 마이크 소리 보내기
+
+손발 목록에서 대상 PC의 **재생음 보내기 → 마이크 입력 → 마이크 소리 보내기**를 누릅니다.
+처음에는 macOS 마이크 접근을 허용해야 합니다. 보내는 소리 크기와 마이크 음소거·장치 선택을
+확인할 수 있으며 **종료**하거나 창을 닫으면 마이크를 해제합니다. 파일·주소 재생도 그대로
+선택할 수 있습니다. 전송 중 다른 입력 종류로 바꾸려면 종료한 뒤 다시 엽니다.
+대상은 스피커 수신만 지원하면 되므로 카메라와 마이크가 없어도 됩니다.

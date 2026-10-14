@@ -50,7 +50,7 @@
 | accept | POST /media/sessions/{id}/accept | device(수락 장치) | 첫 수락이 원자적으로 이김, 나머지 초대 닫힘 |
 | reject | POST /media/sessions/{id}/reject | reason | |
 | signal | POST /media/sessions/{id}/signal 또는 WS 프레임 | 시그널 메시지(§3) | |
-| update | POST /media/sessions/{id}/update | expected_revision, changes{mute, camera, content{paused,position_s,volume}} | 낡은 판본=stale_revision |
+| update | POST /media/sessions/{id}/update | expected_revision, changes{mute, camera, audio_source, content{paused,position_s,volume}} | 낡은 판본=stale_revision |
 | status | GET /media/sessions/{id} | | |
 | list | GET /media/sessions?active=1 | | |
 | end | POST /media/sessions/{id}/end | reason | 멱등(두 번째도 성공) |
@@ -117,7 +117,7 @@ IBL 로 묶을 때는 `{items:[session]}`.
 폰(adapter indiebiz-v1)은 같은 내용을 `{"op":"media","action":"start","session":{...위 칸...}}` 로 받는다.
 장치 WS 에서 허브가 보내는 비-시그널 프레임: `{"type":"ready","session_id","lease"}`(붙은 직후), `{"type":"rejected","reason","msg_id"}`(프레임 거절),
 `{"type":"error","error":{"code","message"}}`(붙기 실패: `invalid_registration`·`permission_required`·`device_busy`·`session_ended` → 닫힘; `session_ended` 면 재접속하지 않는다), `{"type":"heartbeat"}`.
-허브 → 장치 `update` payload: `{"mute"?:bool,"camera"?:bool,"content"?:{paused,position_s,volume},"quality"?:{width,height,fps}}`. 장치 → 허브 `renegotiate` payload `{"reason","ice_restart":true}` 는 허브가 로컬 엔진으로 그대로 넘긴다.
+허브 → 장치 `update` payload: `{"mute"?:bool,"camera"?:bool,"audio_source"?:"mic"|"playback","content"?:{paused,position_s,volume},"quality"?:{width,height,fps}}`. 장치 → 허브 `renegotiate` payload `{"reason","ice_restart":true}` 는 허브가 로컬 엔진으로 그대로 넘긴다.
 장치는 WS 로 붙어 `{"type":"ready","capabilities":{...}}` 를 보내고, 허브가 `offer`(장치가 송신자일 때는 허브가 `offer` 를 보내고 장치가 `answer`) — 방향: **허브(브라우저 엔진)가 항상 offerer**, 장치는 answerer. 장치는 `state` 로 `needs_local_action`/`active`/`quality` 를 보고한다.
 종료: 허브 `end` 프레임, 장치 로컬 중지(`end` 프레임 + 보고), 등록 pause/revoke/remove, 임대 만료 — 전부 캡처·전송 해제.
 
@@ -163,3 +163,12 @@ width, height`가 추가됩니다. 표시 전에는 `playing:false`; 미표시�
   양수 seq의 최댓값을 0으로 되돌리지 않습니다. 브라우저·장치의 순번은 양수로 증가합니다.
 - `content.playing`은 대상 플레이어의 재생 보고입니다. 현재 원본 플레이어를 붙잡고 있는
   호출자가 그 확인 뒤에 원본을 정지합니다. 일반 경로/URL 재생 요청 자체는 원본을 정지시키지 않습니다.
+
+
+### 스피커 전송의 로컬 입력 선택 (2026-10-14)
+
+`purpose:"speaker"`의 허브는 `update`에 `audio_source:"mic"|"playback"`을 보낼 수 있다.
+허브→장치 오디오 트랙의 source와 consent_scope를 함께 갱신하며 방향·트랙 ID는 유지한다.
+수신 장치는 같은 오디오 수신 경로를 사용하고 카메라·마이크 능력을 요구하지 않는다.
+이 갱신 자체는 센서를 열지 않는다. 송신 창에서 사람이 보내기를 누른 뒤 OS 권한을 받아
+입력을 열며, 종료·창 닫기 뒤 도착한 캡처 결과도 즉시 정리한다.

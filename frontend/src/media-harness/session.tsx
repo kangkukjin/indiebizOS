@@ -1,6 +1,7 @@
 /** Real session hook harness; REST/WebSocket and authorization stay in the actual backend. */
 import { createElement, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { CallWindow } from '../components/media/CallWindow';
 import { useMediaSession } from '../components/media/use-media-session';
 
 function Session({ id }: { id: string }) {
@@ -19,5 +20,6 @@ function Session({ id }: { id: string }) {
 const id = new URLSearchParams(location.search).get('session');
 if (id) {
   const root = document.createElement('div'); document.body.append(root);
-  createRoot(root).render(createElement(Session, { id }));
+  createRoot(root).render(new URLSearchParams(location.search).has('ui')
+    ? createElement(CallWindow, { sessionId: id }) : createElement(Session, { id }));
 }

@@ -2592,3 +2592,5 @@
 2026-10-14 FIX: 조종실 의존성 커버리지 bech32 결손 해소. media_sessions의 PC·폰 공통 npub 해석 경로가 사용하던 bech32를 requirements-core에 선언하고 정본 .venv에 1.2.0 설치. 기존 pynostr 폴백은 유지. 실제 bech32 주소 왕복·손상 체크섬·길이 오류 거절, 통화 회귀18 통과, 전체 import 커버리지 정상 확인 후 동일 검사 결과를 self_checks에 저장해 조종실 상태 갱신. 실행 코드 변경 없음, backend 전수 재실행·타 기기 설치는 미실행.
 
 2026-10-14 FIX: 삼성1 카메라 보기의 WebRTC 시작 SIGABRT(ACCESS_NETWORK_STATE 누락)와 종료 시 OkHttp 콜백의 RejectedExecutionException 수정. Android 매니페스트 권한·시그널링 executor 종료 경합 처리. arm32 단위5·APK 빌드 통과, 삼성1 재설치 후 영상 수신 두 세션·종료/재열기·동일 PID 유지 실증. 외부망/장시간/arm64 및 backend 전수 미실행. docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md §18.
+
+[2026-10-14] FEATURE: 재생음 보내기에 로컬 마이크 입력 추가. 스피커 전송의 입력 선택을 트랙·동의 범위에 반영하고, 명시적 보내기 뒤 오디오만 캡처한다. 음소거·마이크 선택·종료 및 지연 권한 응답 정리 지원. 카메라 없는 수신 장치의 WebRTC 오디오 수신·권한 거부 후 재시도 검사 통과. 관련 26건, 전체 기본 백엔드 회귀 10263 passed/1 skipped, JS 미디어 12건, TypeScript·화면 빌드 통과. KHJoffice 실스피커 청취는 미검증.

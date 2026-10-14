@@ -476,3 +476,26 @@ def test_ice_restart_refreshes_credentials_and_forwards_them(hub, monkeypatch):
     assert ms.signal(sid, sig.new_frame(sid, 'hub', 'device', 'offer', {'sdp': 'v=0'}, generation=1, seq=1)) is None
     frame = ms.get(sid).remote_box.take()[-1]
     assert frame['payload']['ice_servers'] == fresh and sig.verify(frame, ms.get(sid).secret)
+
+
+def test_speaker_microphone_source_needs_no_remote_camera(hub):
+    _device('speaker-only', caps={'speaker': True})
+    session = ms.create('extension', 'speaker', 'speaker-only')
+    sid = session['session_id']
+    changed = ms.update(sid, session['revision'], {'audio_source': 'mic'})
+    assert changed['tracks'] == [dict(session['tracks'][0], source='mic')]
+    assert changed['consent_scope'] == {'inputs': ['mic'], 'outputs': [], 'record': False}
+    with pytest.raises(ms.MediaError, match='invalid_changes'):
+        ms.update(sid, changed['revision'], {'audio_source': 'camera'})
+    restored = ms.update(sid, changed['revision'], {'audio_source': 'playback'})
+    assert restored['consent_scope']['inputs'] == []
+    ms.end(sid)
+    with pytest.raises(ms.MediaError, match='session_ended'):
+        ms.update(sid, ms.get(sid).revision, {'audio_source': 'mic'})
+
+
+def test_audio_source_update_cannot_change_other_session_purposes(hub):
+    _device()
+    session = ms.create('extension', 'microphone', 'cam-pc')
+    with pytest.raises(ms.MediaError, match='invalid_changes'):
+        ms.update(session['session_id'], session['revision'], {'audio_source': 'mic'})

@@ -1,3 +1,4 @@
+import { usesDevServer } from './renderer-mode.js';
 /**
  * windows.js — 보조 창 생성기 (main.js 에서 분리, 2026-08-06 1500줄 규칙)
  *
@@ -15,7 +16,7 @@ import { clearBadge } from './badge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDev = usesDevServer(app);
 const API_PORT = 8765;
 
 let projectWindows = new Map(); // 프로젝트 창 관리

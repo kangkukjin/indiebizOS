@@ -8,14 +8,9 @@ import pytest
 import boot_paths  # noqa: F401
 
 
-def test_multiple_shell_paths_translate_to_scalar_ibl_sentences():
-    from shell_shadow_gate import _render, load_table
-    from ibl_parser import parse
-    spec = load_table()["shadows"]["self:list"]
-    sentence = _render("self:list", {"path": ["/first", "/second"]}, spec)
-    assert sentence == '[self:list]{path: "/first"} & [self:list]{path: "/second"}'
-    program = parse(sentence)
-    assert [b["params"]["path"] for b in program[0]["branches"]] == ["/first", "/second"]
+def test_multiple_shell_paths_keep_original_shell_semantics():
+    from shell_shadow_gate import judge_shell
+    assert judge_shell("ls /first /second") is None
 
 
 @pytest.fixture

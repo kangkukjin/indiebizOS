@@ -82,7 +82,7 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
 
 **생애주기**: 새 일은 자율주행이 탐색 → IBL 흔적이 조종실 초안으로 → 검증된 고빈도 워크플로가 앱으로 결정화. *굳히는 건 증명된 것만.*
 
-★**결정화는 절반이다 — 가이드가 통로를 지정해야 실제로 쓰인다**(2026-08-28 실측). 같은 세 일간 보고서의 셸 사용이 0/5/13회로 갈렸는데 셸 몫은 세 편 모두 같은 부류(JSON 원장 갱신·md→HTML 변환)였다. 원인은 능력이 아니라 통로 지정이었다 — "셸은 IBL 등가물이 없는 일에만" 조항을 둔 편만 0회였고, 조항 없는 두 편은 이미 등록돼 있는 스크립트를 놔두고 매 호 히어독을 새로 썼다. 같은 부류가 계기 쪽에서도 나왔다: `criteria` 품질 계약이 살아 있는데 세 보고서 주행에서 한 번도 불리지 않았다. **등록·출하만으로는 부족하고, 정본 가이드가 그 통로를 명시해야 한다**(현재 작성 교재는 실행 가능한 IBL 예제를 제공하고, 검증된 재사용 용례는 해마로 회수한다).
+**결정화는 사용 가능한 연결로 전달해야 한다.** 검증된 함수·스크립트와 현재 반환 계약을 가이드·회상에서 찾기 쉽게 제공한다. 사용률이나 셸 호출 감소를 성과로 삼지 않으며, 같은 품질에서 전체 왕복·시간·토큰이 줄었는지 판단한다. 셸을 막아 사용을 강제하는 대신 도구 사이의 값 전달·실패·재개를 IBL 조합이 줄이게 한다.
 
 - 조종실: `backend/surface/api_ibl.py` (`/ibl/translate`·`/ibl/validate`(dry-run)·`/ibl/execute`·`/ibl/distill`) + `frontend/src/components/ManualMode.tsx`. 부작용 step은 명시적 확인 게이팅, 해마 증류는 사용자 승인 시에만.
 - 앱: **선언 기반 단일소스**. 각 계기는 IBL 액션의 `app:` 블록(`data/ibl_nodes_src/`)이고 `/launcher/instruments`로 자동 파생 → **데스크탑(`GenericInstrument.tsx`)·원격 런처·폰이 같은 선언을 같은 어휘로 렌더**(app 블록 1개 = 전 표면 동시 등장). 어휘: modes 탭, view 프리미티브 12종(metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action/thread/form/editable_list/map(인터랙티브 leaflet)/calendar), `on:` 뷰-이벤트(지도 moveend→재조회·marker_click→IBL 액션 또는 `{stream:true}`→HLS 영상), filter 필터칩(정적 단일선택 재조회 + 동적 `from_field`=결과-필드 distinct 칩, 클라이언트 측 거르기), 표시 템플릿 `{path|filter}`. 0토큰 IBL 직접 실행. escape hatch 2층: OVERRIDES(photo 풍부창·네이티브 창 등 손제작 풍부판) + STATIC_DOMAINS(부동산 실거래가·길찾기 등 렌더 어휘 밖 — 2026-06-29 상권은 인터랙티브 map+동적필터+드릴로 흡수돼 은퇴). `build_ibl_nodes --check`에 app 블록 정합성 합류.

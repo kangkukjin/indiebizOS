@@ -48,9 +48,10 @@ def test_keeper_refuses_without_venv():
     assert "exit 1" in t[guard_at:launch_at], "신고만 하고 그대로 되살린다"
 
 
-def test_electron_dev_pins_venv():
+def test_electron_source_dev_and_preview_pin_venv():
     t = _read("frontend/electron/backend-process.js")
-    dev = t[t.index("if (isDev)"):t.index("// 프로덕션")]
+    assert "const isSource = !app.isPackaged" in t
+    dev = t[t.index("if (isSource)"):t.index("// 프로덕션")]
     assert ".venv" in dev, "개발 분기가 .venv 를 보지 않는다"
     assert "throw new Error" in dev, "개발 분기에 거절 경로가 없다"
     assert not re.search(r"pythonPath = process\.platform === 'win32' \? 'python' : 'python3';", dev), \

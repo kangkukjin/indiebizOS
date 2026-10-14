@@ -25,7 +25,7 @@
     "electron:build:win": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder --win",
     "electron:build:mac": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder --mac",
     "electron:build:linux": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder --linux",
-    "electron:preview": "vite build && electron .",
+    "electron:preview": "vite build && electron . --preview",
     "prepare:python:win": "node scripts/prepare-python-win.js",
     "prepare:python:mac": "node scripts/prepare-python-mac.js",
     "prepare:node:win": "node scripts/prepare-node-win.js",

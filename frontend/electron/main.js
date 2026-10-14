@@ -1,3 +1,4 @@
+import { usesDevServer } from './renderer-mode.js';
 /**
  * Electron 메인 프로세스
  * 앱 생명주기·메인 창·IPC·트레이·런처 WebSocket
@@ -41,7 +42,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 개발 모드 확인
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDev = usesDevServer(app);
 
 // 모든 앱 창(시스템 AI·프로젝트 포함)의 로컬 개발 서버 재기동을 복구한다.
 app.on('browser-window-created', (_event, win) => {

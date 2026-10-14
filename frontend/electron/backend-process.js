@@ -15,7 +15,8 @@ import { initUserData } from './bootstrap.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+// 화면의 --preview와 무관하게 소스 실행은 저장소 .venv·data를 사용한다.
+const isSource = !app.isPackaged;
 const API_PORT = Number(process.env.INDIEBIZ_API_PORT || 8765);
 
 // 이 창이 시작한 제어자 프로세스와 공통 요청 명령. 워커 상태는 제어자가 소유한다.
@@ -32,7 +33,7 @@ async function startPythonBackend() {
   let pythonArgs;
   let basePath; // 데이터가 저장될 기본 경로
 
-  if (isDev) {
+  if (isSource) {
     // 개발 모드: 상대 경로
     backendPath = path.join(__dirname, '..', '..', 'backend');
     basePath = path.join(__dirname, '..', '..'); // indiebizOS root
@@ -107,7 +108,7 @@ async function startPythonBackend() {
   console.log(`[Python] ===========================================`);
 
   // 런타임 경로 (번들된 Python/Node 위치)
-  const runtimePath = isDev
+  const runtimePath = isSource
     ? path.join(__dirname, '..', '..', 'runtime')  // 개발: indiebizOS/runtime
     : path.join(process.resourcesPath, 'runtime');  // 프로덕션: resources/runtime
 
@@ -153,7 +154,7 @@ async function startPythonBackend() {
       INDIEBIZ_RUNTIME_PATH: runtimePath,  // 도구 핸들러가 번들 런타임 찾을 때 사용
       INDIEBIZ_PYTHON_PATH: pythonPath,    // 직접 Python 경로 전달
       INDIEBIZ_NODE_PATH: nodePath,        // 직접 Node.js 경로 전달
-      INDIEBIZ_PRODUCTION: isDev ? '' : '1',
+      INDIEBIZ_PRODUCTION: isSource ? '' : '1',
       PYTHONUNBUFFERED: '1',
       PYTHONIOENCODING: 'utf-8',
       PYTHONUTF8: '1'
@@ -274,7 +275,7 @@ function stopPythonBackend() {
  * 데이터 기본 경로 (백엔드 미스폰 시에도 필요 — keeper·로그·정리)
  */
 function getBasePath() {
-  return isDev ? path.join(__dirname, '..', '..') : initUserData();
+  return isSource ? path.join(__dirname, '..', '..') : initUserData();
 }
 
 /**

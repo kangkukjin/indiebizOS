@@ -158,12 +158,13 @@ def test_purified_transforms_still_run(code, expected):
 
 
 # ---------------------------------------------------------------- L18-4
-def test_tool_policy_routes_task_python_to_script_not_shell():
+def test_tool_policy_bridges_script_values_without_forcing_shell_translation():
     from providers.codex import CodexProvider
     from providers.claude_code import ClaudeCodeProvider
     for policy in (CodexProvider.TOOL_POLICY, ClaudeCodeProvider.TOOL_POLICY):
         assert "[self:script]" in policy and "~turn/" in policy
-        assert "임의 Python" not in policy
+        assert "직접 처리해도 된다" in policy
+        assert "다시 번역하지 않는다" in policy
 
 
 def test_codex_session_key_follows_tool_policy(monkeypatch):

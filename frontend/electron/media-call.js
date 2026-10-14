@@ -1,3 +1,4 @@
+import { usesDevServer } from './renderer-mode.js';
 /** Media call windows: one sandboxed BrowserWindow per session at `#/media-call/<session_id>`. */
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -11,7 +12,7 @@ export function trustedMediaOrigin(app, url, backendOrigin = 'http://127.0.0.1:8
   let parsed;
   try { parsed = new URL(url); } catch { return false; }
   if (parsed.protocol === 'file:') { try { return fileURLToPath(parsed) === fileURLToPath(DIST_INDEX); } catch { return false; } }
-  if (!app.isPackaged && parsed.origin === 'http://localhost:5173') return true;
+  if (usesDevServer(app) && parsed.origin === 'http://localhost:5173') return true;
   return parsed.origin === backendOrigin;
 }
 
@@ -40,7 +41,7 @@ export function installMediaCall({ app, ipcMain, BrowserWindow }) {
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.on('closed', () => { if (windows.get(sessionId) === win) windows.delete(sessionId); });
     const hash = `/media-call/${sessionId}`;
-    if (!app.isPackaged) await win.loadURL(`http://localhost:5173/#${hash}`);
+    if (usesDevServer(app)) await win.loadURL(`http://localhost:5173/#${hash}`);
     else await win.loadFile(fileURLToPath(DIST_INDEX), { hash });
     return { opened: true };
   }

@@ -485,7 +485,7 @@ def test_cli_profiles_limit_manager_and_install_execution_boundary():
     cmd = claude._build_command(mcp_config_path="/tmp/mcp.json")
     assert cmd[cmd.index("--tools") + 1] == "Read"
     assert "mcp__indiebizos__supervision" in cmd[cmd.index("--allowed-tools") + 1]
-    hooks = claude.shadow_hook_settings()["hooks"]["PreToolUse"]
+    hooks = claude.native_hook_settings()["hooks"]["PreToolUse"]
     assert any("supervision_hook.py" in h["hooks"][0]["command"] for h in hooks)
     codex = CodexProvider(api_key="", model="test", system_prompt="supervision")
     codex._binary_path = "codex"

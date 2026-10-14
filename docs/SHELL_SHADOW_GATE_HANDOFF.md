@@ -1,3 +1,5 @@
+> 2026-10-14 은퇴: 아래는 과거 설계 기록이다. 셸·네이티브를 IBL로 강제하는 관문은 제거됐다. 현재 계약은 `IBL_EVOLUTION_PURPOSE.md`와 `data/system_docs/technical.md`를 따른다.
+
 # 셸 그림자 관문 — 설계 핸드오프 (2026-09-05)
 
 ## 뿌리

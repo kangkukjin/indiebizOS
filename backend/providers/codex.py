@@ -18,13 +18,8 @@ OpenAI Codex CLI 를 indiebizOS 의 provider 로 노출. `claude_code` 와 같�
    그래서 fresh 턴의 프롬프트 머리에 실어 보내고, resume 턴에는 안 보낸다 — 스레드가
    이미 갖고 있다. 시스템 프롬프트가 바뀌면 세션 키가 바뀌어(_get_session_key 의 해시
    접미) 자동으로 fresh 로 끊긴다. 안 그러면 옛 지침을 문 스레드가 영영 이어진다.
-2. **네이티브 도구를 골라 끌 수 없다.** Claude Code 는 `--disallowed-tools` 로 Read·Grep·
-   WebSearch 를 막아 IBL 등가물을 강제하지만, Codex 의 파일 읽기·검색은 전부 shell 하나로
-   들어온다 — shell 을 막으면 Codex 가 아무것도 못 한다. 그래서 여기서 하드 차단은
-   web_search(설정으로 끔) 하나뿐이고, 나머지는 TOOL_POLICY 의 **문장**이 감당한다.
-   즉 어휘 누수(IBL 대신 셸로 파일을 읽는 것) 방어가 claude_code 보다 구조적으로 약하다.
-   누수가 실측되면 처방은 프롬프트 강화가 아니라 `[self:*]` 쪽 관측(episode_log) 으로 센 뒤
-   판정할 것 — 여기 문장을 계속 붙이는 건 no_temporary_patches 위반이다.
+2. **로컬 셸·파일 도구와 IBL을 함께 쓴다.** IBL의 조합이 왕복을 줄이는 곳에서 사용하며,
+   단독 셸 명령을 어휘 중복 때문에 막지 않는다. 웹 자료는 기존 검색·원문 획득 통로를 사용한다.
 
 config 예시 (data/system_ai_config.json 등):
   {
@@ -480,10 +475,8 @@ class CodexProvider(CliSubprocessProvider):
     CODEX_DISABLED_FEATURES = ("plugins", "apps", "goals", "image_generation",
                                "browser_use", "computer_use", "in_app_browser")
 
-    # ★Claude Code 의 DISALLOWED_TOOLS 에 해당하는 하드 차단이 Codex 엔 거의 없다.
-    #   Codex 의 파일 읽기·검색·편집은 전부 shell/apply_patch 로 들어오고, 그 둘을 끄면
-    #   Codex 는 아무 일도 못 한다. 설정으로 끌 수 있는 건 web_search 하나 —
-    #   그건 IBL `[sense:search]` 와 1:1 중복이라 끈다(어휘 일관성·해마 학습 보존).
+    # 로컬 shell/apply_patch 와 IBL 조합을 함께 제공한다.
+    # 웹 획득은 기존 검색·원문 보존 연결을 사용한다.
     TOOL_POLICY = (
         "\n\n# 도구 정책\n"
         f"IBL 실행 도구의 정확한 이름은 `{MCP_TOOL_PREFIX}execute_ibl` 다 — 이 이름 그대로 호출하라. "
@@ -492,15 +485,13 @@ class CodexProvider(CliSubprocessProvider):
         f"가이드 읽기 도구의 정확한 이름은 `{MCP_TOOL_PREFIX}read_guide` 다(맨이름 `read_guide` 아님). "
         "공용 프롬프트·IBL 액션 설명이 `read_guide(query=...)` 로 가르치는 곳은 모두 이 도구를 뜻한다 "
         "(셸로 data/guides 를 뒤지지 말 것 — 이 도구가 가이드 DB를 검색해 본문까지 준다).\n"
-        "★파일 읽기·쓰기·편집·검색·웹은 셸이 아니라 IBL 로 하라. 이 CLI 에서는 셸이 유일한 "
-        "파일 접근 통로라 기술적으로는 `cat`·`rg`·`sed` 가 되지만, **그렇게 하면 그 주행은 "
-        "경험증류에 접지되지 않아 해마에 아무것도 남지 않는다**(실측 2026-08-18). 대신 "
-        f"`{MCP_TOOL_PREFIX}execute_ibl` 로 "
-        "`[self:read]`(파일 읽기)·`[self:write]`/`[self:edit]`(쓰기·편집)·`[self:grep]`(코드검색)·"
-        "`[sense:search]`(웹검색 — source: ddg/naver/gnews)·`[sense:crawl]`(웹페이지) 을 호출하라.\n"
-        "셸은 **IBL 에 등가물이 없는 일에만** 쓰는 탈출구다: `git`·프로세스 조회·AST 검사·빌드와 시험 실행·파일로 남겨 둔 스크립트 실행. "
-        "이번 턴에만 쓰는 계산 스크립트는 본문을 `[self:write]{path:\"~turn/이름.py\"}` 로 쓰고 `[self:script]{path, args}` 로 돌리면 결과가 값과 참조로 남아 다음 프로그램이 잇는다(셸로 돌린 계산은 실행 기록·결과 참조 밖이라 파일로만 이어진다). "
-        "등가물이 있는 일을 셸로 하지 마라."
+        "IBL과 셸은 함께 쓰는 실행 수단이다. 도구 사이의 값 전달·실패 처리·재개·반복을 묶어 "
+        "모델 왕복을 줄일 때 IBL을 사용한다. 파일 읽기·검색·가공·편집·빌드는 셸이나 네이티브 도구로 "
+        "직접 처리해도 된다. 비슷한 IBL 어휘가 있다는 이유로 실행을 나누거나 다시 번역하지 않는다. "
+        "셸의 인용·필터·종료 코드·파이프 의미를 보존하고 결과를 확인한다. "
+        "자기수리 사본·대상 권한·위험 명령 승인과 작업별 완료 조건은 실행 수단과 무관하게 지킨다. "
+        "계산 결과를 IBL 값·참조로 이어야 하면 `~turn/`에 작업 스크립트를 두고 `[self:script]{path,args}`로 잇는다.\n"
+        "웹 자료는 `[sense:search]`·`[sense:crawl]`로 획득한다."
     )
 
     # ================= 모델·추론강도 =================
@@ -610,7 +601,7 @@ class CodexProvider(CliSubprocessProvider):
         # 사용자의 config.toml 에 있는 notify 훅(데스크톱 알림 클라이언트)은 백엔드 호출마다
         # 튀어나오면 안 된다 — 우리 서브프로세스에서만 끈다(사용자 파일은 안 건드림).
         cmd += ["-c", "notify=[]"]
-        # web_search 는 IBL [sense:search] 와 1:1 중복 → 끄고 IBL 로 강제 (TOOL_POLICY 참조)
+        # web_search 는 기존 검색·원문 보존 연결을 사용하도록 비활성화 (TOOL_POLICY 참조)
         # ★키가 두 벌이다(2026-09-13 실측): 옛 codex 는 `tools.web_search`, 0.153.4(ChatGPT.app 동봉,
         #   09-09 갱신)는 최상위 `web_search="disabled"` 만 읽고 옛 키는 --strict-config 에서도 말없이
         #   무시한다 — 그래서 09-12~13 네 에피소드에서 네이티브 web_search 가 되살아났다. 모르는 키는

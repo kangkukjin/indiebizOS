@@ -1,3 +1,4 @@
+import { usesDevServer } from './renderer-mode.js';
 /** A registered helper owns capture and input; the cockpit opens only its viewer. */
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -7,7 +8,7 @@ export function trustedDesktopFrame(app, event) {
   if (!frame || frame !== event.sender.mainFrame) return false;
   let url;
   try { url = new URL(frame.url); } catch { return false; }
-  return (!app.isPackaged && url.origin === 'http://localhost:5173') ||
+  return (usesDevServer(app) && url.origin === 'http://localhost:5173') ||
     (url.protocol === 'file:' && fileURLToPath(url) === fileURLToPath(new URL('../dist/index.html', import.meta.url)));
 }
 
@@ -36,7 +37,7 @@ export function installRemoteDesktop({ app, ipcMain, BrowserWindow }) {
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.on('closed', () => windows.delete(device));
     const hash = `/remote-screen/${device}`;
-    if (!app.isPackaged) await win.loadURL(`http://localhost:5173/#${hash}`);
+    if (usesDevServer(app)) await win.loadURL(`http://localhost:5173/#${hash}`);
     else await win.loadFile(fileURLToPath(new URL('../dist/index.html', import.meta.url)), { hash });
     return { route: 'helper' };
   });

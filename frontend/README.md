@@ -71,3 +71,10 @@ export default defineConfig([
   },
 ])
 ```
+
+### Electron 소스 미리보기
+
+`npm run electron:dev`는 Vite 개발 서버와 Electron을 함께 실행합니다.
+`npm run electron:preview`는 화면을 빌드하고 `electron . --preview`로 `dist/index.html`을 엽니다.
+미리보기는 Vite 서버를 요구하지 않으며, Python 백엔드와 데이터는 저장소의 `.venv`·`data`를 그대로 사용합니다.
+패키징 앱의 번들 런타임·사용자 데이터 경로는 이 옵션과 별개입니다.

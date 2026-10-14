@@ -1,3 +1,4 @@
+import { usesDevServer } from './renderer-mode.js';
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -39,7 +40,7 @@ function trusted(event) {
   const frame = event.senderFrame;
   if (!frame || frame !== event.sender.mainFrame) return false;
   const url = new URL(frame.url);
-  if (!app.isPackaged && url.origin === 'http://localhost:5173') return true;
+  if (usesDevServer(app) && url.origin === 'http://localhost:5173') return true;
   if (url.protocol !== 'file:') return false;
   return fileURLToPath(url) === fileURLToPath(new URL('../dist/index.html', import.meta.url));
 }

@@ -1130,17 +1130,6 @@ def _execute(tool_input: dict, context) -> str:
             if _rf:
                 return json.dumps({"success": False, "error": _rf}, ensure_ascii=False)
 
-            # 셸 그림자 관문(2026-09-05) — IBL 낱말이 있는 일(grep·cat·sed·ls·find·rm·리다이렉션·파일 쓰는 파이썬)은
-            # 거절하고 옮긴 IBL 문장을 돌려준다. 표=어휘 빌드 파생 data/shell_shadow.json, 판정=backend/base 잎 모듈
-            # (Claude Code 훅과 같은 판정기 — 프로바이더가 바뀌어도 관문은 같다).
-            try:
-                from shell_shadow_gate import judge_shell as _judge_shell
-                _shadow = _judge_shell(command, cwd=project_path)
-            except Exception:  # noqa: BLE001 — 관문 고장은 셸을 막지 않는다(판정 오류는 통과)
-                _shadow = None
-            if _shadow and not _red_grant_active():
-                return json.dumps({"success": False, "error": _shadow, "error_type": "shell_shadow"}, ensure_ascii=False)
-
             # 위험한 명령어 감지 - 승인되지 않았으면 승인 요청
             if not approved and is_dangerous_command(command):
                 return f"__REQUIRES_APPROVAL__:{command}"

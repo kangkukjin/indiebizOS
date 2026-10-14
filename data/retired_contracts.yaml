@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: shell-ibl-forced-translation
+    retired: 2026-10-14
+    reason: 셸의 제외 필터·파이프 의미를 보존하지 못하는 IBL 강제가 추가 실행과 모델 왕복을 만들었다.
+    instead: 셸·네이티브와 IBL을 함께 사용하며 어휘 중복은 실행 거절 사유가 아니다. 조합의 가치로 선택하고 실제 권한·격리 관문은 유지한다.
+    phrases: ['셸은 IBL 등가물이 없는 일에만', '등가물이 있는 일을 셸로 하지 마라.', '셸은 **IBL 에 등가물이 없는 일에만**', '셸 그림자 거절 —', '네이티브 경로는 경험 증류에 접지되지 않는다']
   - id: context-classification-as-tool-permission
     retired: 2026-10-13
     reason: 대화 분류의 좁은 허용 목록과 구형 파서가 의료기록·연구 관점 갱신을 새 조사로 오인해 차단했다.

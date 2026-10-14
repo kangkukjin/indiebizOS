@@ -477,7 +477,8 @@ def _contact_name(pubkey_hex: str) -> str:
 def _content_ref(s: Session, content: Dict) -> Dict:
     ref = secrets.token_hex(16)
     out = {"ref": ref, "position_s": float(content.get("position_s") or 0), "paused": False,
-           "volume": content.get("volume") if content.get("volume") is not None else 80}
+           "volume": content.get("volume") if content.get("volume") is not None else 80,
+           "volume_explicit": content.get("volume") is not None}
     if content.get("path"):
         p = os.path.expanduser(str(content["path"]))
         if not os.path.isfile(p):
@@ -867,7 +868,7 @@ def _apply_state_report(s: Session, payload: Dict) -> None:
         s.quality = {k: payload["quality"].get(k) for k in ("rtt_ms", "loss", "jitter_ms", "bitrate_kbps", "fps", "width", "height", "dropped")}
     if payload.get("path") in ("direct", "relay"):
         s.path = payload["path"]
-    _CONTENT_KEYS = ("playing", "position_s", "paused", "volume", "duration_s", "ended", "control", "has_video", "video_visible", "needs_display", "width", "height")
+    _CONTENT_KEYS = ("playing", "position_s", "paused", "volume", "duration_s", "ended", "control", "has_video", "video_visible", "needs_display", "width", "height", "requested_volume", "player_gain")
     if isinstance(payload.get("content"), dict):
         s.content_state.update({k: v for k, v in payload["content"].items() if k in _CONTENT_KEYS})
     if s.content and any(k in payload for k in _CONTENT_KEYS):   # 장치가 최상위에 실어 보내는 모양도 받는다

@@ -65,7 +65,7 @@ class Playback:
         self._bridge = bridge()
         self.returncode = None
         self.replaced = False
-        result = json.loads(str(self._bridge.playStream(url, 70)))
+        result = json.loads(str(self._bridge.playStream(url, -1)))
         if result.get("error") or not result.get("playing"):
             raise RuntimeError(result.get("error") or "폰 재생기가 시작되지 않았습니다")
         self.playback_id = result["playback_id"]

@@ -348,7 +348,9 @@ Go 1.22와 `go.legacy.mod`를 쓰는 `mac-amd64-legacy`를 사용한다. 일반 
 ## IndieBiz OS 폰 손발
 
 등록된 Android 폰은 USB 없이 원격으로 연결된다. `op:"info"`로 능력·권한을 조회하고
-`op:"ibl"`로 폰 자체 엔진에 하달한다. PC의 셸·파일 전송과 지원 범위가 다르다.
+`op:"ibl"`로 폰 자체 엔진에 하달한다. execution_contract:1을 신고한 새 폰은 앱 UID의
+`op:shell`, 내장 `op:python`(code·inputs → result), transfer도 지원한다.
+폰 실행 제한은 기본120초·최대3600초이며 PC의 관리자/observe 모드를 지원하지 않는다.
 설치·판본·결과 봉투·중첩 JSON·파일 회수·미디어 사용법은
 [원격폰 기능 활용 가이드](remote_phone.md)를 따른다.
 

@@ -1119,6 +1119,16 @@ def _execute(tool_input: dict, context) -> str:
             if not command:
                 return "Error: 명령어가 비어있습니다."
 
+            runtime = tool_input.get("runtime", "shell")
+            from phone_remote_execution import capabilities, run_local
+            native_execution = capabilities().get("execution_contract") == 1
+            if runtime != "shell" or native_execution:
+                if not native_execution:
+                    return json.dumps({"success": False, "error": "embedded_runtime_requires_phone"})
+                if runtime == "shell" and not approved and is_dangerous_command(command):
+                    return f"__REQUIRES_APPROVAL__:{command}"
+                return json.dumps(run_local(tool_input), ensure_ascii=False)
+
             # 리로드 강제 금지 — touch/kill 로 자기 몸을 재기동하면 그 리로드가 **이 턴을
             # 실행 중인 워커를 죽인다**(에피소드 미종료·화면 작업표시 영구 정지, 08-18 실측).
             # 반영은 [self:patch]{op:"apply"}, 판정은 워치독이 다음 턴에. 로직=repair_staging.

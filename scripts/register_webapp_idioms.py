@@ -61,7 +61,8 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
              'ai_trend_seeds.json': 'AI동향관용구',
              'legacy_port_seeds.json': '판본2이식관용구',
              'workspace_seeds.json': '작업공간관용구',
-             'guestpc_seeds.json': '외부PC관용구'}.get(seed_file, '웹앱관용구')
+             'guestpc_seeds.json': '외부PC관용구',
+             'phone_execution_seeds.json': '폰범용실행용례'}.get(seed_file, '웹앱관용구')
     backup = ROOT / 'data/_backups' / (datetime.now().strftime('%Y-%m-%d_%H%M%S') + '_' + label)
     backup.mkdir(parents=True, exist_ok=False)
     with sqlite3.connect(ROOT / 'data/ibl_usage.db') as src, sqlite3.connect(backup / 'ibl_usage.db') as dst:
@@ -126,6 +127,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed-file', default='webapp_seeds.json',
                         choices=['webapp_seeds.json', 'homepage_seeds.json', 'housing_seeds.json',
                                  'ai_trend_seeds.json', 'code_read_seeds.json', 'legacy_port_seeds.json',
-                                 'workspace_seeds.json', 'guestpc_seeds.json'])
+                                 'workspace_seeds.json', 'guestpc_seeds.json', 'phone_execution_seeds.json'])
     args = parser.parse_args()
     print(json.dumps(register(args.apply, args.local_encoder, args.seed_file, args.revise_reason), ensure_ascii=False, indent=2))

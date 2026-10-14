@@ -314,7 +314,7 @@ def _job_result(tool_input: dict) -> dict:
 def _execution_response(result, **metadata):
     """회신 수신과 원격 명령 성공을 구분하고 실패 원문·재관측 참조를 보존한다."""
     import task_receipts
-    failed = bool(result.get("error") or result.get("timeout") or result.get("cancelled")
+    failed = bool(result.get("success") is False or result.get("exit_code") not in (None, 0) or result.get("error") or result.get("timeout") or result.get("cancelled")
                   or result.get("unknown") or result.get("exit", 0) != 0)
     out = {**metadata, "success": not failed, "result": result}
     if metadata.get("job_id"):
@@ -348,7 +348,7 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
         try:
             envelope.update({k: tool_input[k] for k in ("mode", "env") if k in tool_input})
             receipt = resident_pcs.submit(device_id, envelope, tool_input.get("request_id"))
-        except ValueError as exc:
+        except (ValueError, PermissionError) as exc:
             return {"success": False, "error": str(exc)}
         if tool_input.get("background"):
             return receipt
@@ -388,7 +388,7 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
         import task_receipts
         observation = task_status(task_receipts.ref(TASK_KIND, job_id))
         pending = observation["state"] in task_receipts.LIVE
-        return {**observation, "success": (op == "shell" and pending)
+        return {**observation, "success": (op in {"shell", "python"} and pending)
                                          or observation["state"] == task_receipts.SUCCEEDED,
                 "queued": observation["state"] == task_receipts.QUEUED,
                 "accepted": True, "job_id": job_id, "limb": device_id, "limb_name": alias,
@@ -451,11 +451,42 @@ def _op_shell(tool_input: dict) -> dict:
         if previous:
             # Preserve defaults captured before upgrade when recovering an old request.
             to = previous["summary"].get("timeout")
-    to = int(to) if to else (1800 if background or resident else 120)
+    reg = (limb_keys.get_by_device(device_id) or {}).get("registration") or {}
+    phone = reg.get("adapter") == "indiebiz-v1"
+    to = (to if to is not None else 120) if phone else (int(to) if to else (1800 if background or resident else 120))
+    for key in ("env", "mode"):
+        if key in tool_input:
+            envelope[key] = tool_input[key]
     envelope["timeout"] = to
+    if phone:
+        for key in ("inputs", "code", "reset", "stdin", "cwd", "shell"):
+            if key in tool_input:
+                envelope[key] = tool_input[key]
     # 명령 실행시간 + 왕복 여유 — 단, MCP 층이 120s 에 먼저 끊으므로 상한을 둔다.
     wait = min(float(to) + 25.0, _SYNC_WAIT_CAP)
     return _send_wait(tool_input, device_id, alias, "shell", envelope, wait)
+
+
+def _op_python(tool_input: dict) -> dict:
+    """Explicit embedded runtime; never translate this into a different machine's shell."""
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    import limb_keys
+    reg = (limb_keys.get_by_device(device_id) or {}).get("registration") or {}
+    if reg.get("adapter") != "indiebiz-v1":
+        return {"success": False, "error": "embedded_python_requires_registered_phone"}
+    from phone_execution_contract import validate
+    envelope = {"op": "python"}
+    for key in ("code", "inputs", "cwd", "timeout", "mode", "env", "stdin", "shell", "reset", "elevate", "cmd"):
+        if key in tool_input:
+            envelope[key] = tool_input[key]
+    try:
+        envelope = validate(envelope)
+    except (ValueError, TypeError) as error:
+        return {"success": False, "error": str(error)}
+    return _send_wait(tool_input, device_id, alias, "python", envelope,
+                      min(envelope["timeout"] + 25.0, _SYNC_WAIT_CAP))
 
 
 def _op_ibl(tool_input: dict) -> dict:
@@ -859,6 +890,7 @@ def _resident_registration(tool_input):
 _OP_DISPATCHERS = {
     "guestpc_op": {
         "shell": _op_shell,
+        "python": _op_python,
         "ibl": _op_ibl,      # IndieBiz OS 손발(adapter=indiebiz-v1)에 IBL 하달 — 2026-10-13
         "read": _op_read,
         "write": _op_write,

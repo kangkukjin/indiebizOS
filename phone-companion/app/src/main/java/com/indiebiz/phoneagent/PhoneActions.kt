@@ -21,7 +21,6 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.location.Geocoder
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.ImageReader
 import android.media.MediaPlayer
 import android.net.wifi.WifiManager
@@ -582,13 +581,16 @@ object PhoneActions {
         val previewSurface = Surface(previewTex)
 
         var camera: CameraDevice? = null
+        val finished = java.util.concurrent.atomic.AtomicBoolean(false)
         try {
             cm.openCamera(useId, object : CameraDevice.StateCallback() {
                 override fun onOpened(device: CameraDevice) {
+                    if (finished.get()) { device.close(); return }
                     camera = device
                     try {
                         device.createCaptureSession(listOf(previewSurface, reader.surface), object : CameraCaptureSession.StateCallback() {
                             override fun onConfigured(session: CameraCaptureSession) {
+                                if (finished.get()) { session.close(); device.close(); return }
                                 try {
                                     // 1) 프리뷰 반복요청으로 노출/초점 수렴
                                     val preview = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
@@ -598,6 +600,7 @@ object PhoneActions {
                                     session.setRepeatingRequest(preview.build(), null, handler)
                                     // 2) 수렴 시간(1.5초) 뒤 정지 캡처
                                     handler.postDelayed({
+                                        if (finished.get()) return@postDelayed
                                         try {
                                             val still = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                                             still.addTarget(reader.surface)
@@ -621,11 +624,15 @@ object PhoneActions {
                 }
             }, handler)
         } catch (t: Throwable) {
-            thread.quitSafely(); previewSurface.release(); previewTex.release()
+            finished.set(true); reader.close(); thread.quitSafely(); previewSurface.release(); previewTex.release()
             return errJson("openCamera 실패: ${t.message}")
         }
 
-        val ok = latch.await(15, TimeUnit.SECONDS)
+        val ok = try { latch.await(15, TimeUnit.SECONDS) } catch (_: InterruptedException) {
+            err[0] = "촬영 취소됨"; false
+        }
+        finished.set(true)
+        handler.removeCallbacksAndMessages(null)
         try { camera?.close() } catch (_: Throwable) {}
         try { reader.close() } catch (_: Throwable) {}
         try { previewSurface.release() } catch (_: Throwable) {}
@@ -669,7 +676,7 @@ object PhoneActions {
     @Volatile private var player: MediaPlayer? = null
     @Volatile private var playerUrl: String? = null
     @Volatile private var playerStartedAt: Long = 0L
-    @Volatile private var playerVolume: Int = 70
+    @Volatile private var playerVolume: Int? = null
     @Volatile private var playerId: String? = null
     @Volatile private var playerError: String? = null
     @Volatile private var wifiLock: WifiManager.WifiLock? = null
@@ -680,7 +687,7 @@ object PhoneActions {
     fun playStream(url: String, volume: Int): String {
         val ctx = appContext ?: return errJson("context 미초기화")
         if (url.isBlank()) return errJson("stream url 없음")
-        val vol = volume.coerceIn(0, 100)
+        val vol = if (volume < 0) null else volume.coerceIn(0, 100)
         synchronized(playerLock) {
             stopStreamLocked()
             val mp = MediaPlayer()
@@ -720,7 +727,8 @@ object PhoneActions {
                     try { mp.release() } catch (_: Throwable) {}
                     errJson(err!!)
                 } else {
-                    applyVolumeLocked(ctx, mp, vol)
+                    if (vol != null) applyVolumeLocked(ctx, mp, vol) else mp.setVolume(1f, 1f)
+                    val actualVolume = DeviceAudio.state(ctx).getInt("volume")
                     try {
                         val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                         wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "indiebiz_stream").apply { acquire() }
@@ -728,7 +736,7 @@ object PhoneActions {
                     player = mp; playerUrl = url; playerStartedAt = System.currentTimeMillis(); playerVolume = vol
                     playerId = java.util.UUID.randomUUID().toString()
                     playerError = null
-                    JSONObject().put("playing", true).put("url", url).put("volume", vol)
+                    JSONObject().put("playing", true).put("url", url).put("volume", actualVolume)
                         .put("playback_id", playerId).toString()
                 }
             } catch (t: Throwable) {
@@ -739,13 +747,8 @@ object PhoneActions {
     }
 
     private fun applyVolumeLocked(ctx: Context, mp: MediaPlayer, vol: Int) {
-        // 기기 미디어 볼륨을 퍼센트로 맞춘다(무인 폰은 볼륨이 0 일 수 있다) + 플레이어 상대 볼륨 1.0.
-        try {
-            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(max * vol / 100f), 0)
-        } catch (_: Throwable) {}
-        try { mp.setVolume(1f, 1f) } catch (_: Throwable) {}
+        check(DeviceAudio.setPercent(ctx, vol).getBoolean("applied")) { "volume_not_applied" }
+        mp.setVolume(1f, 1f)
     }
 
     private fun stopStreamLocked(): Boolean {
@@ -772,7 +775,8 @@ object PhoneActions {
         val o = JSONObject().put("playing", playing).put("playback_id", playerId)
         playerError?.let { o.put("error", it) }
         if (playing) {
-            o.put("url", playerUrl).put("volume", playerVolume)
+            o.put("url", playerUrl).put("volume", DeviceAudio.state(appContext!!).getInt("volume"))
+                .put("requested_volume", playerVolume ?: JSONObject.NULL).put("player_gain", 1.0)
                 .put("elapsed_seconds", (System.currentTimeMillis() - playerStartedAt) / 1000)
             try { o.put("position_seconds", mp!!.currentPosition / 1000.0) } catch (_: Throwable) {}
         }
@@ -785,9 +789,11 @@ object PhoneActions {
         val ctx = appContext ?: return errJson("context 미초기화")
         val mp = player ?: return errJson("재생 중인 스트림이 없습니다")
         val vol = volume.coerceIn(0, 100)
-        applyVolumeLocked(ctx, mp, vol)
-        playerVolume = vol
-        JSONObject().put("volume", vol).put("playing", true).toString()
+        try {
+            applyVolumeLocked(ctx, mp, vol)
+            playerVolume = vol
+            DeviceAudio.state(ctx).put("requested_volume", vol).put("playing", true).toString()
+        } catch (t: Throwable) { errJson("음량 변경 실패: ${t.message}") }
     }
 
     /** An old queue must never stop a newer radio/music playback. */

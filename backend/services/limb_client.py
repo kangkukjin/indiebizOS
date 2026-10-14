@@ -3,9 +3,8 @@
 설계 정본: docs/INDIEBIZ_BODY_AS_LIMB_DESIGN_2026_10_13.md
 
 역할
-- 허브가 상주 PC 헬퍼에 쓰는 계약(resident-v1: enroll → `/limb/resident/sync` 롱폴 → 사건 회신)을
-  Go 헬퍼 대신 IndieBiz OS 백엔드 안에서 맡는다. 봉투는 셸이 아니라 **IBL**(`{op:"ibl", ibl:"[...]"}`)이고
-  이 몸의 `/ibl/execute` 로 돌린다 — 하드웨어 차이는 이 몸의 사전(runs_on·몸별 프로브)이 푼다.
+- 기존 resident 작업 계약으로 IBL, 준비된 앱 UID shell/Python, 파일 전송을 수행한다.
+  IBL은 로컬 엔진, 범용 프로그램은 별도 Android worker에 전달한다.
 - 허브 쪽 어휘 = `[limbs:guestpc]{op:"ibl", limb:"<이름>", code:"[...]"}`. 접수증·history·취소·전송은
   상주 PC 와 같은 원장(resident_store)을 쓴다.
 
@@ -15,8 +14,7 @@
   다른 허브를 입력할 화면도 없다 — 심긴 허브 하나에만 아웃바운드로 붙는다. 등록 자격은 허브에서
   `provision_phone_limb.py` 가 허브의 1회용 자격을 USB 물리 접근으로 전달한다.
 - 인바운드 명령 통로 없음(폰 /ibl/execute 는 localhost). 허브가 remove/revoke 하면 자격을 지우고 멈춘다.
-- `shell` 봉투는 실행하지 않는다(ibl·info 만). 허브도 adapter=indiebiz-v1 에는 그 둘만 하달한다
-  (resident_pcs.submit). 미지원 op 는 정직하게 `unsupported_on_this_body` 로 돌려준다.
+- 실제 준비된 실행 경로만 신고한다. 구형 설치의 미지원 op는 `unsupported_on_this_body`다.
 - `media` 봉투(docs/MEDIA_SESSION_CONTRACT.md §6, 2026-10-13): Kotlin MediaBridge 가 import 될 때만
   지원 op 에 든다(지연 판정 — PC 시험에서도 이 모듈을 쓴다). start 는 서비스 **접수**까지만 기다리고
   (워커 스레드를 붙들지 않음) 협상·상태·품질은 폰이 시그널링 WS 로 허브에 직접 보고한다.
@@ -80,6 +78,9 @@ def supported_ops() -> List[str]:
     ops = list(SUPPORTED_OPS)
     if _media_bridge() is not None:
         ops.append("media")
+    from phone_remote_execution import capabilities
+    if capabilities():
+        ops.extend(("shell", "python", "transfer"))
     return ops
 
 
@@ -172,6 +173,8 @@ class LimbClient:
         self._queue: List[Dict] = []          # 접수 순서(큐 순서 = 허브 응답 순서)
         self._running: Optional[str] = None
         self._cancelled = set()
+        self._active_cancel = {}
+        self._controls = set()
         self._worker: Optional[threading.Thread] = None
         self._card_cache = (0.0, None)
         self.spool = spool_dir()
@@ -241,6 +244,8 @@ class LimbClient:
         caps = {"adapter": ADAPTER, "body": _body_profile() or "unknown",
                 "ops": supported_ops(), "ibl": True, "shell": False,
                 "python": platform.python_version(), "alias": self.cfg.get("alias")}
+        from phone_remote_execution import capabilities
+        caps.update(capabilities())
         bridge = _media_bridge()
         if bridge is not None:
             try:
@@ -345,6 +350,11 @@ class LimbClient:
     def _wipe(self, reason: str) -> None:
         """허브가 이 자격을 더 인정하지 않는다 — 자격을 지우고 멈춘다(자가 제거)."""
         self.stop_reason = reason
+        from phone_remote_execution import cancel
+        with self._lock:
+            for jid, event in self._active_cancel.items():
+                event.set()
+                cancel(jid)
         try:
             config_path().unlink()
         except OSError:
@@ -373,6 +383,11 @@ class LimbClient:
 
     def _cancel(self, jid: str) -> None:
         with self._lock:
+            if jid in self._active_cancel:
+                self._active_cancel[jid].set()
+                from phone_remote_execution import cancel
+                cancel(jid)
+                return
             idx = next((i for i, j in enumerate(self._queue) if j.get("id") == jid), None)
             if idx is not None:
                 self._queue.pop(idx)
@@ -392,6 +407,26 @@ class LimbClient:
         if not isinstance(env, dict):
             env = {}
         op = env.get("op") or "shell"
+        if op in {"shell", "python", "transfer"}:
+            if op not in supported_ops():
+                return {"success": False, "error": "unsupported_on_this_body", "op": op}
+            jid = str(job["id"])
+            with self._lock:
+                event = self._active_cancel.setdefault(jid, threading.Event())
+            if event.is_set() or self.stopped.is_set():
+                return {"success": False, "cancelled": True, "error": "cancelled"}
+            if op == "transfer":
+                from phone_limb_transfer import execute
+                try:
+                    return execute(self, env, event)
+                except InterruptedError:
+                    return {"success": False, "cancelled": True, "error": "transfer_cancelled"}
+            from phone_remote_execution import execute
+            from thread_context import ISOLATED_ORIGINS, actor_context
+            origin = env.get("origin")
+            with actor_context(agent_id=job.get("agent_id") or "limb",
+                               origin=origin if isinstance(origin, str) and origin in ISOLATED_ORIGINS else None):
+                return execute(jid, env, event)
         if op == "ibl":
             code = env.get("ibl") or env.get("code") or ""
             if not isinstance(code, str) or not code.strip():
@@ -444,10 +479,12 @@ class LimbClient:
         except Exception as e:  # noqa: BLE001 — 다리 예외는 결과로(루프는 산다)
             return {"success": False, "error": f"media_bridge_exception: {e.__class__.__name__}: {e}"}
 
-    def _run_job(self, job: Dict) -> None:
+    def _run_job(self, job: Dict, control: bool = False) -> None:
         jid = str(job.get("id"))
         with self._lock:
-            self._running = jid
+            if not control:
+                self._running = jid
+            self._active_cancel.setdefault(jid, threading.Event())
         self._record(jid, state="running")
         self._event(jid, "started", {})
         try:
@@ -459,7 +496,10 @@ class LimbClient:
         self._event(jid, "result", result)
         self._record(jid, state="done", result=result)
         with self._lock:
-            self._running = None
+            self._active_cancel.pop(jid, None)
+            self._controls.discard(jid)
+            if not control:
+                self._running = None
 
     def _drain(self) -> None:
         while not self.stopped.is_set():
@@ -467,12 +507,25 @@ class LimbClient:
                 if not self._queue:
                     return
                 job = self._queue.pop(0)
+                self._active_cancel.setdefault(str(job["id"]), threading.Event())
             self._run_job(job)
 
     def _schedule(self, inline: bool = False) -> None:
         with self._lock:
             if not self._queue:
                 return
+            if not inline:
+                # Readiness and transfers must not wait behind a long program.
+                for job in list(self._queue):
+                    try:
+                        op = json.loads(job.get("code") or "{}").get("op")
+                    except (ValueError, AttributeError):
+                        op = None
+                    if op in {"info", "transfer", "media", "media_session"} and len(self._controls) < 4:
+                        self._queue.remove(job)
+                        self._controls.add(str(job["id"]))
+                        self._active_cancel.setdefault(str(job["id"]), threading.Event())
+                        threading.Thread(target=self._run_job, args=(job, True), daemon=True).start()
             if inline:
                 pass
             elif self._worker and self._worker.is_alive():
@@ -485,7 +538,7 @@ class LimbClient:
 
     def _busy(self) -> bool:
         with self._lock:
-            return bool(self._queue) or self._running is not None
+            return bool(self._queue) or self._running is not None or bool(self._controls)
 
     # ── sync 한 바퀴 ────────────────────────────────────────────────────────────
     def step(self, *, inline: bool = False, wait: Optional[float] = None) -> Optional[Dict]:
@@ -540,6 +593,11 @@ class LimbClient:
 
     def stop(self) -> None:
         self.stopped.set()
+        from phone_remote_execution import cancel
+        with self._lock:
+            for jid, event in self._active_cancel.items():
+                event.set()
+                cancel(jid)
 
 
 def start(port: int, *, log: Callable = print) -> bool:

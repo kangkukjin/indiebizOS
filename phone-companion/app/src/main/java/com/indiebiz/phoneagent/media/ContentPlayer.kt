@@ -2,7 +2,7 @@ package com.indiebiz.phoneagent.media
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.AudioManager
+import com.indiebiz.phoneagent.DeviceAudio
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
@@ -23,6 +23,7 @@ class ContentPlayer(private val ctx: Context, private val env: MediaEnvelope, pr
     private var closed = false
     private var pendingSeekS = env.content?.positionS ?: 0.0
     private var volume = env.content?.volume ?: 80
+    private var requestedVolume: Int? = env.content?.takeIf { it.volumeExplicit }?.volume
     private val output = PlaybackOutputState().apply { paused = env.content?.paused ?: false }
     private var width = 0
     private var height = 0
@@ -54,7 +55,13 @@ class ContentPlayer(private val ctx: Context, private val env: MediaEnvelope, pr
                     prepared = true
                     output.hasVideo = p.videoWidth > 0 || p.trackInfo.any { it.trackType == MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_VIDEO }
                     width = p.videoWidth; height = p.videoHeight
-                    applyVolume()
+                    try {
+                        DeviceAudio.startSession(ctx, env.sessionId, volume.takeIf { env.content?.volumeExplicit == true })
+                        p.setVolume(1f, 1f)
+                    } catch (t: Throwable) {
+                        listener.onContentError("volume_failed", "음량 설정 실패: ${t.message}")
+                        return@setOnPreparedListener
+                    }
                     if (pendingSeekS > 0) seek(pendingSeekS) else reconcile()
                     report(); main.post(tick)
                 }
@@ -104,7 +111,7 @@ class ContentPlayer(private val ctx: Context, private val env: MediaEnvelope, pr
     fun apply(changes: JSONObject) = onMain {
         val c = changes.optJSONObject("content") ?: changes
         try {
-            if (c.has("volume")) { volume = c.optInt("volume", volume).coerceIn(0, 100); applyVolume() }
+            if (c.has("volume")) { volume = c.optInt("volume", volume).coerceIn(0, 100); requestedVolume = volume; applyVolume() }
             if (c.has("paused")) { output.paused = c.optBoolean("paused"); if (!output.paused) output.ended = false }
             if (c.has("position_s")) {
                 pendingSeekS = c.optDouble("position_s", 0.0).coerceAtLeast(0.0)
@@ -121,14 +128,14 @@ class ContentPlayer(private val ctx: Context, private val env: MediaEnvelope, pr
         val pos = try { if (prepared) p!!.currentPosition / 1000.0 else pendingSeekS } catch (_: Throwable) { pendingSeekS }
         val duration = try { if (prepared) (p!!.duration / 1000.0).coerceAtLeast(0.0) else 0.0 } catch (_: Throwable) { 0.0 }
         latest = JSONObject().put("playing", output.playing(running)).put("position_s", pos)
-            .put("paused", output.paused).put("volume", volume).put("duration_s", duration).put("ended", output.ended)
+            .put("paused", output.paused).put("volume", DeviceAudio.state(ctx).getInt("volume"))
+            .put("requested_volume", requestedVolume ?: JSONObject.NULL).put("player_gain", 1.0).put("duration_s", duration).put("ended", output.ended)
             .put("has_video", output.hasVideo).put("video_visible", output.visible && output.rendered)
             .put("needs_display", output.needsDisplay).put("width", width).put("height", height)
         listener.onPlayback(latest)
     }
     private fun applyVolume() {
-        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * volume / 100f), 0)
+        check(DeviceAudio.setPercent(ctx, volume).getBoolean("applied")) { "volume_not_applied" }
         mp?.setVolume(1f, 1f)
     }
     fun stop() = onMain {

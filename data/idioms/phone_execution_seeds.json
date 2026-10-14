@@ -1,0 +1,82 @@
+[
+  {
+    "intent": "등록한 안드로이드폰의 범용 실행 계약과 실제 지원 연산을 조회한다",
+    "ibl_code": "#!ibl edition=2\nreturn [limbs:guestpc]{\"op\": \"info\", \"limb\": \"삼성1\"}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "등록한 폰에서 앱 UID를 셸로 확인한다",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"shell\", \"limb\": \"삼성1\", \"cmd\": \"id\", \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "Get the Android phone OS version through its registered shell",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"shell\", \"limb\": \"삼성1\", \"cmd\": \"getprop ro.build.version.release\", \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "폰 내장 Python으로 입력 객체를 계산하고 구조화된 결과를 돌려받는다",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"python\", \"limb\": \"삼성1\", \"code\": \"result = {\\\"sum\\\": sum(inputs[\\\"values\\\"])}\", \"inputs\": {\"values\": [1, 2, 3]}, \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "재생 여부와 무관하게 폰의 현재 미디어 음량 단계를 조회한다",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"python\", \"limb\": \"삼성1\", \"code\": \"from indiebiz_android import context\\na = context.getSystemService(\\\"audio\\\")\\nresult = {\\\"actual\\\": a.getStreamVolume(3), \\\"max\\\": a.getStreamMaxVolume(3), \\\"fixed\\\": a.isVolumeFixed()}\", \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "삼성1의 현재 기기 미디어 음량을 OS 단계 기준 절반으로 줄이고 실제 적용을 확인한다",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"python\", \"limb\": \"삼성1\", \"code\": \"from indiebiz_android import context\\na = context.getSystemService(\\\"audio\\\")\\nif a.isVolumeFixed():\\n    raise RuntimeError(\\\"fixed_volume\\\")\\nbefore = a.getStreamVolume(3)\\ntarget = before // 2\\na.setStreamVolume(3, target, 0)\\nactual = a.getStreamVolume(3)\\nresult = {\\\"before\\\": before, \\\"requested\\\": target, \\\"actual\\\": actual, \\\"applied\\\": actual == target}\", \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "Increase this Android phone media volume by one OS step and verify it",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"python\", \"limb\": \"삼성1\", \"code\": \"from indiebiz_android import context\\na = context.getSystemService(\\\"audio\\\")\\nif a.isVolumeFixed():\\n    raise RuntimeError(\\\"fixed_volume\\\")\\nbefore = a.getStreamVolume(3)\\ntarget = min(before + 1, a.getStreamMaxVolume(3))\\na.setStreamVolume(3, target, 0)\\nactual = a.getStreamVolume(3)\\nresult = {\\\"before\\\": before, \\\"requested\\\": target, \\\"actual\\\": actual, \\\"applied\\\": actual == target}\", \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "폰 접근성 서비스에서 현재 화면을 관측한다",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"python\", \"limb\": \"삼성1\", \"code\": \"from indiebiz_android import call\\nresult = call(\\\"snapshot\\\")\", \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "폰의 배터리 API를 Python에서 조회한다",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"python\", \"limb\": \"삼성1\", \"code\": \"from indiebiz_android import context\\nfrom java import jclass\\nBatteryManager = jclass(\\\"android.os.BatteryManager\\\")\\nb = context.getSystemService(\\\"batterymanager\\\")\\nresult = {\\\"capacity\\\": b.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)}\", \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  },
+  {
+    "intent": "폰에서 Unicode 입력을 JSON으로 보존하고 파일 지문을 반환한다. 경로 반환은 중앙 회수 완료가 아니다",
+    "ibl_code": "#!ibl edition=2\n$기기정보=[limbs:guestpc]{op:\"info\",limb:\"삼성1\"}\n[if:get($기기정보.result.capabilities,\"execution_contract\",0)!=1] { return {success:false,error:\"폰 실행 계약1 업데이트 필요\"} }\nreturn [limbs:guestpc]{\"op\": \"python\", \"limb\": \"삼성1\", \"code\": \"from pathlib import Path\\nimport json, hashlib\\np = Path(\\\"phone-input.json\\\")\\np.write_text(json.dumps(inputs, ensure_ascii=False), encoding=\\\"utf-8\\\")\\nresult = {\\\"path\\\": str(p.resolve()), \\\"sha256\\\": hashlib.sha256(p.read_bytes()).hexdigest()}\", \"inputs\": {\"메시지\": \"안녕하세요\"}, \"timeout\": 60}",
+    "nodes": "limbs",
+    "source": "synthetic",
+    "tags": "guest-helper,phone-execution",
+    "topic": "기기제어"
+  }
+]

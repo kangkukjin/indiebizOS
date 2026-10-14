@@ -209,6 +209,7 @@ def test_playback_content_delivery_with_range_and_token(hub, tmp_path):
     media.write_bytes(b'0123456789' * 100)
     s = hub.post('/media/sessions', json={'kind': 'extension', 'purpose': 'playback', 'delivery': 'content', 'target': 'spk',
                                           'content': {'path': str(media), 'position_s': 12.5}}).json()['session']
+    assert s['content']['volume_explicit'] is False
     assert s['content']['kind'] == 'file' and s['content']['position_s'] == 12.5 and s['content']['name'] == 'song.mp3'
     assert '/media/content/' in s['content']['url'] and str(media) not in json.dumps(s), '전체 경로는 노출하지 않는다'
     url = s['content']['url'][s['content']['url'].index('/media/content/'):]
@@ -499,3 +500,16 @@ def test_audio_source_update_cannot_change_other_session_purposes(hub):
     session = ms.create('extension', 'microphone', 'cam-pc')
     with pytest.raises(ms.MediaError, match='invalid_changes'):
         ms.update(session['session_id'], session['revision'], {'audio_source': 'mic'})
+
+
+def test_explicit_initial_volume_is_distinct_from_default(hub, tmp_path):
+    _device('initial-volume')
+    media = tmp_path / 'audio.mp3'
+    media.write_bytes(b'audio')
+    response = hub.post('/media/sessions', json={
+        'kind': 'extension', 'purpose': 'playback', 'delivery': 'content', 'target': 'initial-volume',
+        'content': {'path': str(media), 'volume': 0}})
+    session = response.json()['session']
+    assert session['content']['volume_explicit'] is True
+    assert session['content']['volume'] == 0
+    hub.post(f"/media/sessions/{session['session_id']}/end")

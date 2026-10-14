@@ -123,16 +123,24 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     if allow_terminal:
         allowed = allowed | {"terminal"}
     op = command.get("op", "shell")
-    # IndieBiz OS 손발(폰, adapter=indiebiz-v1, 2026-10-13): 셸 없는 몸 — ibl·info 만. 신고한 ops 가 있으면
-    # 그 안으로 더 좁힌다. 헬퍼 PC 에 ibl 을 보내면 거절(IBL 엔진이 없다). 조용히 대체 실행하지 않는다.
+    # New phone runtimes require an explicit versioned capability declaration.
     adapter = rec["registration"].get("adapter") or "resident-v1"
     if adapter == "indiebiz-v1":
         body_ops = {"ibl", "info"} | ({"media"} if allow_media else set())
-        declared = (rec["registration"].get("capabilities") or {}).get("ops")
+        capabilities = rec["registration"].get("capabilities") or {}
+        declared = capabilities.get("ops")
+        if capabilities.get("execution_contract") == 1 and isinstance(declared, list):
+            body_ops |= {"shell", "python", "transfer"} & {x for x in declared if isinstance(x, str)}
         if isinstance(declared, list):
             body_ops &= {str(x) for x in declared}
         if op not in body_ops:
             raise ValueError("unsupported_on_this_body")
+        if op in {"shell", "python", "transfer"}:
+            from phone_remote_execution import require_owner
+            require_owner()
+        if op in {"shell", "python"}:
+            from phone_execution_contract import validate
+            command = validate(command)
         if op == "ibl":
             code = command.get("ibl")
             if not isinstance(code, str) or not code.strip():
@@ -162,7 +170,7 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
             or not math.isfinite(volume) or not 0 <= volume <= 100):
         raise ValueError("volume must be 0..100")
     command = {**command, "op": op, "mode": command.get("mode", "background")}
-    if adapter == "indiebiz-v1" and op == "ibl":
+    if adapter == "indiebiz-v1" and op in {"ibl", "shell", "python"}:
         # 실행 출처는 언어 인자가 아닌 전송 메타데이터다. 격리 표식만 전달하며
         # 임의 봉투의 user 값으로 폰의 주인 수리 권한을 만들지 않는다.
         from thread_context import ISOLATED_ORIGINS, get_isolated_origin

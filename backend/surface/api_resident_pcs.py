@@ -31,6 +31,8 @@ class DeviceMessage(BaseModel):
 def checked(fn, *args, **kwargs):
     try:
         return fn(*args, **kwargs)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
     except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(400, str(exc)) from exc
 

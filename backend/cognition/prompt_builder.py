@@ -239,8 +239,10 @@ class PromptBuilder:
                 micros = cap.get("micros") or {}
                 esc = micros.get("escape")
                 if esc == "python":
-                    lines.append("- 내 만능 실행 탈출구 = **python**(인-프로세스). 고정 IBL 너머는 execute_python 으로 "
-                                 "직접 — 약한 셸도 subprocess 로 포섭, `from java import jclass` 로 안드로이드 SDK 도달.")
+                    lines.append("- 폰의 범용 실행은 run_command(runtime=python, command=본문, inputs=객체). "
+                                 "격리된 Chaquopy 프로세스에서 result에 JSON 값을 넣는다. "
+                                 "`from indiebiz_android import context, call`과 `java.jclass`로 Android API에 접근한다. "
+                                 "셸은 run_command 기본 runtime이며 앱 권한으로 실행한다.")
                 elif esc == "shell":
                     lines.append("- 내 만능 실행 탈출구 = **shell**(run_command). 셸로 python·node 등을 띄워 직접 해결.")
                 if micros.get("local"):

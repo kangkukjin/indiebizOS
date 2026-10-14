@@ -37,6 +37,7 @@
     "base/model_context",
     "base/model_resolver",
     "base/output_publish",
+    "base/phone_execution_contract",
     "base/phone_jobs",
     "base/principal",
     "base/python_environment_lock",
@@ -380,7 +381,9 @@
     "services/office_resources",
     "services/office_sessions",
     "services/oneshot_facade",
+    "services/phone_limb_transfer",
     "services/phone_notifications",
+    "services/phone_remote_execution",
     "services/record_adapters",
     "services/record_dispatch",
     "services/report_html",
@@ -590,8 +593,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 515,
-    "engine": 489,
+    "total": 518,
+    "engine": 492,
     "blocklist": 26
   }
 }

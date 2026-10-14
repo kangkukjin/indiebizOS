@@ -30,7 +30,7 @@ data class LanSpec(val urls: List<String>, val certSha256: String?)
 data class LeaseSpec(val leaseS: Double, val keepaliveS: Double, val reconnectS: Double)
 
 data class ContentSpec(val ref: String, val url: String, val positionS: Double,
-                       val paused: Boolean, val volume: Int)
+                       val paused: Boolean, val volume: Int, val volumeExplicit: Boolean = false)
 
 class MediaEnvelope private constructor(val raw: JSONObject) {
     val sessionId: String = raw.optString("session_id")
@@ -156,7 +156,8 @@ class MediaEnvelope private constructor(val raw: JSONObject) {
         private fun parseContent(o: JSONObject?): ContentSpec? {
             o ?: return null
             return ContentSpec(o.optString("ref"), o.optString("url"), o.optDouble("position_s", 0.0),
-                o.optBoolean("paused", false), o.optInt("volume", 80).coerceIn(0, 100))
+                o.optBoolean("paused", false), o.optInt("volume", 80).coerceIn(0, 100),
+                o.optBoolean("volume_explicit", o.has("volume")))
         }
     }
 }

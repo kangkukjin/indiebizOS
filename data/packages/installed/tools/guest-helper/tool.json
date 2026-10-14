@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "guestpc_op",
-      "description": "원격 PC 디스패처. shell/read/write/list/info·screen/입력·transfer/media/wake/history/cancel·result/detach. 상주형은 작업별 환경 분리와 request_id 중복 방지, GUI mode:interactive 필수. 확인 셸은 mode:observe와 timeout:1..10으로 별도 자리에서 실행한다. 긴 작업은 background:true 접수증→self:task 관측. detach는 휴대형만. 상세는 guest_helper.md.",
+      "description": "원격 PC·폰 디스패처. python/ibl/shell/read/write/list/info·screen/입력·transfer/media/wake/history/cancel·result/detach. 상주형은 작업별 환경 분리와 request_id 중복 방지, GUI mode:interactive 필수. 확인 셸은 mode:observe와 timeout:1..10으로 별도 자리에서 실행한다. 긴 작업은 background:true 접수증→self:task 관측. detach는 휴대형만. 상세는 guest_helper.md.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -16,6 +16,7 @@
             "description": "수행할 동작",
             "enum": [
               "shell",
+              "python",
               "ibl",
               "read",
               "write",
@@ -56,7 +57,7 @@
           },
           "timeout": {
             "type": "integer",
-            "description": "셸 실행 제한 초 (op=shell, 상주형 기본 1800; 휴대형 동기 120·background 1800)"
+            "description": "실행 제한 초 (폰 shell/python 기본120·최대3600; PC 상주형 기본 1800; 휴대형 동기 120·background 1800)"
           },
           "shell": {
             "type": "string",
@@ -160,6 +161,10 @@
           },
           "code": {
             "type": "string",
+            "description": "limbs:guestpc 파라미터"
+          },
+          "inputs": {
+            "type": "object",
             "description": "limbs:guestpc 파라미터"
           },
           "env": {

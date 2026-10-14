@@ -215,3 +215,10 @@ def test_android_ejs_provider_is_discovered_and_propagates_js_errors(monkeypatch
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_every_new_track_preserves_device_volume(phone):
+    module, _, calls = phone
+    module.Playback('https://example.test/first.m4a')
+    module.Playback('https://example.test/second.m4a')
+    assert [call[2] for call in calls if call[0] == 'play'] == [-1, -1]

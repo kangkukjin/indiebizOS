@@ -162,6 +162,15 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
             or not math.isfinite(volume) or not 0 <= volume <= 100):
         raise ValueError("volume must be 0..100")
     command = {**command, "op": op, "mode": command.get("mode", "background")}
+    if adapter == "indiebiz-v1" and op == "ibl":
+        # 실행 출처는 언어 인자가 아닌 전송 메타데이터다. 격리 표식만 전달하며
+        # 임의 봉투의 user 값으로 폰의 주인 수리 권한을 만들지 않는다.
+        from thread_context import ISOLATED_ORIGINS, get_isolated_origin
+        origin = get_isolated_origin() or command.get("origin")
+        if isinstance(origin, str) and origin in ISOLATED_ORIGINS:
+            command["origin"] = origin
+        else:
+            command.pop("origin", None)
     if len(json.dumps(command).encode()) > 256 * 1024:
         raise ValueError("command_too_large_use_transfer")
     with limb_keys._lock:

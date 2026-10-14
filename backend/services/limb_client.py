@@ -13,7 +13,7 @@
 - **폰 전용.** PC 는 헬퍼 설치로만 손발이 된다 — 이 모듈은 몸 감지(detect_body)가 폰일 때만 기동한다.
 - 자격은 설치 때 USB 로 심긴 **실행 키 하나**(secrets/limb_client.json). 폰에는 초대 키·등록 키가 없고
   다른 허브를 입력할 화면도 없다 — 심긴 허브 하나에만 아웃바운드로 붙는다. 등록 자격은 허브에서
-  `provision_phone_limb.py` 가 허브 비밀번호를 확인한 뒤 1회용 초대로 만든다.
+  `provision_phone_limb.py` 가 허브의 1회용 자격을 USB 물리 접근으로 전달한다.
 - 인바운드 명령 통로 없음(폰 /ibl/execute 는 localhost). 허브가 remove/revoke 하면 자격을 지우고 멈춘다.
 - `shell` 봉투는 실행하지 않는다(ibl·info 만). 허브도 adapter=indiebiz-v1 에는 그 둘만 하달한다
   (resident_pcs.submit). 미지원 op 는 정직하게 `unsupported_on_this_body` 로 돌려준다.
@@ -199,9 +199,14 @@ class LimbClient:
     def _execute_local(self, code: str, agent_id: str, timeout: float) -> Dict:
         """이 몸의 /ibl/execute 로 — localhost 는 인증 통과, 실행 경로 단일(폰 push job 과 동일)."""
         import requests
+        from thread_context import get_isolated_origin
+        payload = {"code": code, "agent_id": agent_id or "limb"}
+        origin = get_isolated_origin()
+        if origin:
+            payload["origin"] = origin
         try:
             r = requests.post(f"http://127.0.0.1:{self.port}/ibl/execute",
-                              json={"code": code, "agent_id": agent_id or "limb"},
+                              json=payload,
                               timeout=(5, float(timeout) + 30))
         except Exception as e:  # noqa: BLE001 — 실행 실패는 결과로 돌려준다(루프는 산다)
             return {"success": False, "error": f"로컬 IBL 실행 실패: {e.__class__.__name__}: {e}"}
@@ -396,7 +401,12 @@ class LimbClient:
             except (TypeError, ValueError):
                 timeout = 1800.0
             agent_id = env.get("agent_id") or job.get("agent_id") or "limb"
-            return self._execute(code, agent_id, timeout)
+            from thread_context import ISOLATED_ORIGINS, actor_context
+            origin = env.get("origin")
+            if not isinstance(origin, str) or origin not in ISOLATED_ORIGINS:
+                origin = None
+            with actor_context(origin=origin):
+                return self._execute(code, agent_id, timeout)
         if op == "info":
             return {"success": True, **self.info()}
         if op in MEDIA_OPS:

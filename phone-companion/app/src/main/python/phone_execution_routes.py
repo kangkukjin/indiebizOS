@@ -53,14 +53,16 @@ def install(app, get_scratch, _save_audio_to_phone):
             for key in ("edition", "inputs", "check", "resume", "files", "files_from"):
                 if key in body:
                     request[key] = body[key]
-            try:
-                from thread_context import set_current_surface, get_current_surface
-            except Exception:
-                return _execute_ibl_unified(request, get_scratch(), agent_id=agent_id)
+            from thread_context import (ISOLATED_ORIGINS, actor_context,
+                                        set_current_surface, get_current_surface)
+            origin = body.get("origin")
+            if not isinstance(origin, str) or origin not in ISOLATED_ORIGINS:
+                origin = None
             prev = get_current_surface()
             set_current_surface(surface)
             try:
-                return _execute_ibl_unified(request, get_scratch(), agent_id=agent_id)
+                with actor_context(agent_id=agent_id, origin=origin):
+                    return _execute_ibl_unified(request, get_scratch(), agent_id=agent_id)
             finally:
                 set_current_surface(prev)   # to_thread 풀 스레드 재사용 — 반드시 복원
 

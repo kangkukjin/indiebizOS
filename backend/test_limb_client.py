@@ -272,5 +272,43 @@ def test_media_bridge_failure_codes_project_to_failed_result(phone_env, monkeypa
     assert c._dispatch(_media_job(session=_media_session()))['error'].startswith('media_bridge_exception')
 
 
+@pytest.mark.parametrize("origin", ["training", "test"])
+def test_phone_ibl_preserves_isolated_origin_across_transport(hub, phone_env, monkeypatch, origin):
+    from types import SimpleNamespace
+    import requests
+    from thread_context import actor_context, get_task_origin
+
+    rec = _enroll_phone()
+    sent = []
+    def post(url, json, timeout):
+        sent.append(json)
+        return SimpleNamespace(status_code=200, json=lambda: {"success": True, "value": 3})
+    monkeypatch.setattr(requests, "post", post)
+    client = _client(hub, rec, None)
+    before = get_task_origin()
+    with actor_context(origin=origin):
+        receipt = pcs.submit(rec["device_id"], {"op": "ibl", "ibl": "return 3"})
+    client.step(inline=True, wait=0)
+    client.step(inline=True, wait=0)
+    assert sent == [{"code": "return 3", "agent_id": "limb", "origin": origin}]
+    assert get_task_origin() == before
+    assert resident_store.history(job=receipt["job_id"])["tasks"][0]["state"] == "succeeded"
+
+
+def test_phone_ibl_cannot_turn_transport_metadata_into_user_grant(hub, phone_env, monkeypatch):
+    from types import SimpleNamespace
+    import requests
+    rec = _enroll_phone()
+    sent = []
+    def post(url, json, timeout):
+        sent.append(json)
+        return SimpleNamespace(status_code=200, json=lambda: {"success": True})
+    monkeypatch.setattr(requests, "post", post)
+    client = _client(hub, rec, None)
+    pcs.submit(rec["device_id"], {"op": "ibl", "ibl": "return 3", "origin": "user"})
+    client.step(inline=True, wait=0)
+    assert "origin" not in sent[0]
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

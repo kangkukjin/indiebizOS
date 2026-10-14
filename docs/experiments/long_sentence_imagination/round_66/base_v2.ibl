@@ -1,0 +1,60 @@
+#!ibl edition=2
+[def:관측]($device,$probe) {
+  [try] {
+    $ticket=[limbs:guestpc]{op:$probe.op,limb:$device,code:$probe.code,background:true,timeout:60}
+    $done=[self:task]{op:"wait",ref:$ticket.task_ref,timeout:60}
+    assert $done.terminal,"원격 작업 미종료: 같은 접수증으로 회수",$ticket
+    return {id:$probe.id,ok:true,device:$device,task_ref:$ticket.task_ref,data:$done.result}
+  } [catch] {return {id:$probe.id,ok:false,device:$device,error:$error.message,details:$error.details}}
+}
+[def:장치점검]($device,$probes) {
+  $observed=$probes >> [table:each]{on_error:"collect"} {return [fn:관측]{device:$device,probe:$it}}
+  return $observed >> [table:each] {return unwrap($it)}
+}
+$observations=$devices >> [table:each] {return {device:$it,observations:[fn:장치점검]{device:$it,probes:$probes}}}
+$main=$observations[0].observations
+$info=$main[0]
+$caps={}
+[if:$info.ok] {$caps=get(get($info.data,"capabilities",{}),"media_session",{})}
+$matrix=$rows >> [table:each] {
+  $key=get($capmap,$it.id,"")
+  $declared=get($caps,$key,null)
+  $status="미확인: 기능 신고 없음"
+  [if:$declared==true] {$status="관련 장치 능력 신고 확인·이 용도의 실동작 미검증"}
+  [if:$declared==false] {$status="설치본에서 미지원으로 신고"}
+  return {id:$it.id,purpose:$it.purpose,note:$it.note,capability:$key,declared:$declared,status:$status,evidence:"원격 info",remaining:"실제 동작과 장시간 안정성은 별도 확인"}
+}
+$roundtrip=$main[2]
+$verified=false
+[if:$roundtrip.ok] {
+  $remote=get($roundtrip.data,"value",{})
+  $verified=get($remote,"rows",[])==$rows
+}
+$result={devices:$observations,matrix:$matrix,roundtrip_verified:$verified,rows:$rows,scope:"읽기 전용 상태·전용 시험 파일 왕복; 센서 활성화·재생 변경 없음"}
+$saved=[self:write]{path:f"${out}/result.json",content:json($result)}
+$device_details=json($info)
+$playback_details=json($main[1])
+$failures=json($observations >> [table:each] {return {device:$it.device,failures:($it.observations >> [table:filter]{where:($r)=>not $r.ok})}})
+$lines=$matrix >> [table:each] {return f"- ${it.id} ${it.purpose}: ${it.status}. 근거 ${it.evidence}의 ${it.capability}. ${it.remaining}"}
+$body=f"""# 삼성1 원격 기능 점검
+${join("\n",$lines)}
+
+## 기기·권한 원문
+${device_details}
+
+## 현재 재생 상태(조회)
+${playback_details}
+
+## 실패·미확인 근거
+${failures}
+
+시험 파일 전건 일치: ${json($verified)}.
+원격 정보/음악·라디오 조회/파일 왕복의 원문·오류·작업 참조는 result.json에 보존.
+기능 신고는 실제 촬영·녹음·출력의 성공 증명이 아니다. 현재 재생 상태를 조회했으며 변경하지 않았다.
+"""
+$report=[self:write]{path:f"${out}/report.md",content:$body}
+$read=[self:read]{path:$saved.path}
+$read_report=[self:read]{path:$report.path}
+assert $read.data==$result,"중앙 JSON 재독 불일치"
+assert $read_report.text==$body,"보고서 재독 불일치"
+return {out:$out,roundtrip_verified:$verified,result:$result}

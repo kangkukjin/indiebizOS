@@ -1,0 +1,555 @@
+{
+  "members": [
+    {
+      "id": "P01",
+      "name": "참가자01",
+      "interests": [
+        "사회",
+        "과학"
+      ],
+      "slots": [
+        "S2",
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P02",
+      "name": "참가자02",
+      "interests": [
+        "과학",
+        "문학"
+      ],
+      "slots": [
+        "S1",
+        "S2",
+        "S3",
+        "S5",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P03",
+      "name": "참가자03",
+      "interests": [
+        "문학",
+        "역사"
+      ],
+      "slots": [
+        "S1",
+        "S2",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "wheelchair": true
+    },
+    {
+      "id": "P04",
+      "name": "참가자04",
+      "interests": [
+        "역사",
+        "사회"
+      ],
+      "slots": [
+        "S1",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P05",
+      "name": "참가자05",
+      "interests": [
+        "사회",
+        "과학"
+      ],
+      "slots": [
+        "S2",
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P06",
+      "name": "참가자06",
+      "interests": [
+        "과학",
+        "문학"
+      ],
+      "slots": [
+        "S1",
+        "S2",
+        "S3",
+        "S5",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P07",
+      "name": "참가자07",
+      "interests": [
+        "문학",
+        "역사"
+      ],
+      "slots": [
+        "S1",
+        "S2",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P08",
+      "name": "참가자08",
+      "interests": [
+        "역사",
+        "사회"
+      ],
+      "slots": [
+        "S1",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P09",
+      "name": "참가자09",
+      "interests": [
+        "사회",
+        "과학"
+      ],
+      "slots": [
+        "S2",
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P10",
+      "name": "참가자10",
+      "interests": [
+        "과학",
+        "문학"
+      ],
+      "slots": [
+        "S1",
+        "S2",
+        "S3",
+        "S5",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P11",
+      "name": "참가자11",
+      "interests": [
+        "문학",
+        "역사"
+      ],
+      "slots": [
+        "S1",
+        "S2",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "wheelchair": false
+    },
+    {
+      "id": "P12",
+      "name": "참가자12",
+      "interests": [
+        "역사",
+        "사회"
+      ],
+      "slots": null,
+      "wheelchair": false
+    }
+  ],
+  "books": [
+    {
+      "id": "B01",
+      "title": "시험도서01",
+      "tags": [
+        "사회",
+        "문학"
+      ],
+      "pages": 180
+    },
+    {
+      "id": "B02",
+      "title": "시험도서02",
+      "tags": [
+        "과학",
+        "역사"
+      ],
+      "pages": 210
+    },
+    {
+      "id": "B03",
+      "title": "시험도서03",
+      "tags": [
+        "문학",
+        "사회"
+      ],
+      "pages": 240
+    },
+    {
+      "id": "B04",
+      "title": "시험도서04",
+      "tags": [
+        "역사",
+        "과학"
+      ],
+      "pages": 270
+    },
+    {
+      "id": "B05",
+      "title": "시험도서05",
+      "tags": [
+        "사회",
+        "문학"
+      ],
+      "pages": 300
+    },
+    {
+      "id": "B06",
+      "title": "시험도서06",
+      "tags": [
+        "과학",
+        "역사"
+      ],
+      "pages": 330
+    }
+  ],
+  "slots": [
+    {
+      "id": "S1",
+      "date": "2026-11-07",
+      "start": "14:00",
+      "end": "16:00"
+    },
+    {
+      "id": "S2",
+      "date": "2026-11-08",
+      "start": "14:00",
+      "end": "16:00"
+    },
+    {
+      "id": "S3",
+      "date": "2026-11-09",
+      "start": "14:00",
+      "end": "16:00"
+    },
+    {
+      "id": "S4",
+      "date": "2026-11-10",
+      "start": "14:00",
+      "end": "16:00"
+    },
+    {
+      "id": "S5",
+      "date": "2026-11-11",
+      "start": "14:00",
+      "end": "16:00"
+    },
+    {
+      "id": "S6",
+      "date": "2026-11-12",
+      "start": "14:00",
+      "end": "16:00"
+    }
+  ],
+  "venues": [
+    {
+      "id": "V01",
+      "name": "동네책방",
+      "slots": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "capacity": 12,
+      "fee": 45000,
+      "accessible": false
+    },
+    {
+      "id": "V02",
+      "name": "마을도서관",
+      "slots": [
+        "S1",
+        "S3",
+        "S5"
+      ],
+      "capacity": 10,
+      "fee": 50000,
+      "accessible": true
+    },
+    {
+      "id": "V03",
+      "name": "커뮤니티실",
+      "slots": [
+        "S2",
+        "S4",
+        "S6"
+      ],
+      "capacity": 12,
+      "fee": 65000,
+      "accessible": true
+    },
+    {
+      "id": "V04",
+      "name": "작은카페",
+      "slots": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "capacity": 8,
+      "fee": null,
+      "accessible": true
+    }
+  ],
+  "history": [
+    {
+      "member_id": "P01",
+      "book_id": "B01",
+      "record_id": "H00-00"
+    },
+    {
+      "member_id": "P01",
+      "book_id": "B04",
+      "record_id": "H00-03"
+    },
+    {
+      "member_id": "P02",
+      "book_id": "B03",
+      "record_id": "H01-02"
+    },
+    {
+      "member_id": "P02",
+      "book_id": "B06",
+      "record_id": "H01-05"
+    },
+    {
+      "member_id": "P03",
+      "book_id": "B02",
+      "record_id": "H02-01"
+    },
+    {
+      "member_id": "P03",
+      "book_id": "B05",
+      "record_id": "H02-04"
+    },
+    {
+      "member_id": "P04",
+      "book_id": "B01",
+      "record_id": "H03-00"
+    },
+    {
+      "member_id": "P04",
+      "book_id": "B04",
+      "record_id": "H03-03"
+    },
+    {
+      "member_id": "P05",
+      "book_id": "B03",
+      "record_id": "H04-02"
+    },
+    {
+      "member_id": "P05",
+      "book_id": "B06",
+      "record_id": "H04-05"
+    },
+    {
+      "member_id": "P06",
+      "book_id": "B02",
+      "record_id": "H05-01"
+    },
+    {
+      "member_id": "P06",
+      "book_id": "B05",
+      "record_id": "H05-04"
+    },
+    {
+      "member_id": "P07",
+      "book_id": "B01",
+      "record_id": "H06-00"
+    },
+    {
+      "member_id": "P07",
+      "book_id": "B04",
+      "record_id": "H06-03"
+    },
+    {
+      "member_id": "P08",
+      "book_id": "B03",
+      "record_id": "H07-02"
+    },
+    {
+      "member_id": "P08",
+      "book_id": "B06",
+      "record_id": "H07-05"
+    },
+    {
+      "member_id": "P09",
+      "book_id": "B02",
+      "record_id": "H08-01"
+    },
+    {
+      "member_id": "P09",
+      "book_id": "B05",
+      "record_id": "H08-04"
+    },
+    {
+      "member_id": "P10",
+      "book_id": "B01",
+      "record_id": "H09-00"
+    },
+    {
+      "member_id": "P10",
+      "book_id": "B04",
+      "record_id": "H09-03"
+    },
+    {
+      "member_id": "P11",
+      "book_id": "B03",
+      "record_id": "H10-02"
+    },
+    {
+      "member_id": "P11",
+      "book_id": "B06",
+      "record_id": "H10-05"
+    },
+    {
+      "member_id": "P12",
+      "book_id": "B02",
+      "record_id": "H11-01"
+    },
+    {
+      "member_id": "P12",
+      "book_id": "B05",
+      "record_id": "H11-04"
+    },
+    {
+      "member_id": "P01",
+      "book_id": "B01",
+      "record_id": "H00-00R"
+    },
+    {
+      "member_id": "P01",
+      "book_id": "B04",
+      "record_id": "H00-03R"
+    },
+    {
+      "member_id": "P02",
+      "book_id": "B03",
+      "record_id": "H01-02R"
+    },
+    {
+      "member_id": "P02",
+      "book_id": "B06",
+      "record_id": "H01-05R"
+    },
+    {
+      "member_id": "P03",
+      "book_id": "B02",
+      "record_id": "H02-01R"
+    },
+    {
+      "member_id": "P03",
+      "book_id": "B05",
+      "record_id": "H02-04R"
+    },
+    {
+      "member_id": "P04",
+      "book_id": "B01",
+      "record_id": "H03-00R"
+    },
+    {
+      "member_id": "P04",
+      "book_id": "B04",
+      "record_id": "H03-03R"
+    }
+  ],
+  "notes": [
+    {
+      "id": "N01",
+      "topic": "접근성",
+      "speaker": "P03",
+      "text": "누구나 참여할 수 있다는 원칙과 실제로 문턱이 낮다는 것은 다른 것 같아요. 공간 접근성은 어떻게 확인하죠?"
+    },
+    {
+      "id": "N02",
+      "topic": "접근성",
+      "speaker": "P04",
+      "text": "휠체어 진입 정보만으로 충분한지, 화장실과 대중교통 접근도 확인할지 다음 모임에서 조사해 보죠. 아직 결정하지 않았습니다."
+    },
+    {
+      "id": "N03",
+      "topic": "독서속도",
+      "speaker": "P01",
+      "text": "책을 다 읽지 못해도 토론에 참여할 수 있도록 어떤 진행 방식이 좋을까요?"
+    },
+    {
+      "id": "N04",
+      "topic": "독서속도",
+      "speaker": "P02",
+      "text": "요약 발제를 해보자는 제안은 있지만 동의가 모이지 않았어요. 다른 방식과 비교해 보고 싶습니다."
+    },
+    {
+      "id": "N05",
+      "topic": "진행시간",
+      "speaker": "P05",
+      "text": "발언 시간을 제한할까요?"
+    },
+    {
+      "id": "N06",
+      "topic": "진행시간",
+      "speaker": "P06",
+      "text": "전원 동의로 이번에는 한 차례 발언을 3분으로 제한하기로 확정했습니다."
+    },
+    {
+      "id": "N07",
+      "topic": "경험과근거",
+      "speaker": "P07",
+      "text": "개인의 경험과 통계가 충돌할 때 어떤 근거를 더 믿어야 할까요?"
+    },
+    {
+      "id": "N08",
+      "topic": "경험과근거",
+      "speaker": "P08",
+      "text": "단순히 통계를 우선하자는 데에는 반대가 있었습니다. 서로 다른 근거를 함께 검토할 방법을 다음에 찾아봅시다."
+    }
+  ],
+  "policy": {
+    "budget": 90000,
+    "snack_per_person": 1500,
+    "minimum": 5,
+    "max_pages": 300
+  },
+  "cancelled": [],
+  "revision": "base"
+}

@@ -1,0 +1,27 @@
+{
+  "input_sha256": "659005e1902db319b3eeec3d6a52407464ad9515037001e30a3068ac95f724e1",
+  "output_sha256": "7fd106e946c0cc8f4d51da5aef7118b2ff4df58a292f6fad3dbf6b8e8a4fa675",
+  "candidates": 144,
+  "selected": {
+    "slot_id": "S4",
+    "date": "2026-11-10",
+    "book_id": "B02",
+    "venue_id": "V01",
+    "attendees": [
+      "P01",
+      "P04",
+      "P05",
+      "P07",
+      "P08",
+      "P09",
+      "P11"
+    ],
+    "count": 7,
+    "interest": 7,
+    "unread": 6,
+    "cost": 55500,
+    "reasons": []
+  },
+  "errors": [],
+  "passed": true
+}

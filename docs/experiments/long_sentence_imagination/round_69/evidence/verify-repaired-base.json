@@ -1,0 +1,29 @@
+{
+  "input_sha256": "9498a5e056f30b958a2070ef147f6a12347edb52136ff38455591d92eb1a38ec",
+  "output_sha256": "ffe6231db47ec6ead03f14b893ddc6566a0eaa172ed4f1ddfbe7fdd0a66c48d5",
+  "candidates": 144,
+  "selected": {
+    "slot_id": "S2",
+    "date": "2026-11-08",
+    "book_id": "B01",
+    "venue_id": "V03",
+    "attendees": [
+      "P01",
+      "P02",
+      "P03",
+      "P05",
+      "P06",
+      "P07",
+      "P09",
+      "P10",
+      "P11"
+    ],
+    "count": 9,
+    "interest": 9,
+    "unread": 6,
+    "cost": 78500,
+    "reasons": []
+  },
+  "errors": [],
+  "passed": true
+}

@@ -1,0 +1,74 @@
+#!ibl edition=2
+[def:후보만들기]($data) {
+  $members=filter($data.members,($p)=>not ($p.id in $data.cancelled) and $p.slots != null)
+  $read_index=from_entries(map($data.books,($b)=>[$b.id,unique(map(filter($data.history,($h)=>$h.book_id==$b.id),($h)=>$h.member_id))]))
+  return $data.slots >> [table:each]{mode:"flat_map"} {
+    $slot=$it
+    $attendees=filter($members,($p)=>$slot.id in $p.slots)
+    $ids=map($attendees,($p)=>$p.id)
+    $n=len($attendees)
+    $needs_access=any(map($attendees,($p)=>$p.wheelchair))
+    return $data.books >> [table:each]{mode:"flat_map"} {
+      $book=$it
+      $score=sum(map($attendees,($p)=>len(intersection($p.interests,$book.tags))))
+      $readers=intersection($ids,$read_index[$book.id])
+      $unread=$n-len($readers)
+      return $data.venues >> [table:each] {
+        $v=$it
+        $cost=$v.fee==null ? null : $v.fee+$n*$data.policy.snack_per_person
+        $reasons=[]
+        [if:$n<$data.policy.minimum] {$reasons=$reasons+["인원부족"]}
+        [if:$book.pages>$data.policy.max_pages] {$reasons=$reasons+["분량초과"]}
+        [if:$n>$v.capacity] {$reasons=$reasons+["정원초과"]}
+        [if:not ($slot.id in $v.slots)] {$reasons=$reasons+["장소시간불가"]}
+        [if:$needs_access and not $v.accessible] {$reasons=$reasons+["접근성불가"]}
+        [if:$cost==null] {$reasons=$reasons+["비용미확인"]}
+        [else] {[if:$cost>$data.policy.budget] {$reasons=$reasons+["예산초과"]}}
+        return {slot_id:$slot.id,date:$slot.date,start:$slot.start,end:$slot.end,book_id:$book.id,title:$book.title,venue_id:$v.id,venue:$v.name,attendees:$ids,count:$n,interest:$score,unread:$unread,cost:$cost,reasons:$reasons,neg_count:0-$n,neg_interest:0-$score,neg_unread:0-$unread}
+      }
+    }
+  }
+}
+[def:토론정리]($notes) {
+  $topics=unique(map($notes,($r)=>$r.topic))
+  $groups=map($topics,($topic)=>{topic:$topic,notes:filter($notes,($r)=>$r.topic==$topic)})
+  $judged=$groups >> [table:ai]{instruction:"각 주제의 발언 전부를 읽고 아직 미해결 질문이 남아 있으면 open=true, 이미 전원 합의로 확정된 주제는 false. question에는 열린 질문 또는 확정 규칙을 하나로 종합하고 이번 모임 같은 적용 범위를 보존해. next_step에는 열린 질문의 확인 방법을 제안. 원문에 없는 합의를 만들지 마. closed 주제의 next_step만 빈 문자열. 원래 topic과 notes는 바꾸지 마.",schema:"open(불리언), question(문자열), next_step(문자열)",input_fields:["topic","notes"],preserve_rows:true}
+  $rows=$judged.items >> [table:each] {
+    assert $it.open!=null and $it.question!=null and $it.next_step!=null, "토론 판정이나 본문 누락"
+    return {open:$it.open,topic:$it.topic,question:$it.question,next_step:$it.next_step,evidence_ids:map($it.notes,($n)=>$n.id)}
+  }
+  return {questions:filter($rows,($r)=>$r.open),confirmed_rules:filter($rows,($r)=>not $r.open)}
+}
+[def:저장검수]($plan,$out) {
+  $chosen=$plan.selected
+  $summary="선택 보류: 가능한 후보 없음"
+  [if:$chosen!=null] {
+    $summary="- 일정: "+$chosen.date+" "+$chosen.start+"–"+$chosen.end+" ("+$chosen.slot_id+")\n- 책: "+$chosen.title+" ("+$chosen.book_id+")\n- 장소: "+$chosen.venue+" ("+$chosen.venue_id+")\n- 참석: "+text($chosen.count)+"명 — "+join(", ",$chosen.attendees)+"\n- 관심 점수: "+text($chosen.interest)+" / 미독자: "+text($chosen.unread)+"명\n- 총비용: "+format_number($chosen.cost,",.0f")+"원 ("+text($chosen.cost)+"원)"
+  }
+  $questions=join("\n\n",map($plan.questions,($q)=>"### "+$q.topic+"\n"+$q.question+"\n\n확인 제안: "+$q.next_step+"\n근거: "+join(", ",$q.evidence_ids)))
+  $rules=join("\n",map($plan.confirmed_rules,($r)=>"- "+$r.question+" (근거: "+join(", ",$r.evidence_ids)+")"))
+  $draft_text=$chosen==null ? "선택 보류로 예약·안내 초안을 만들지 않았습니다." : "장소 예약 요청과 참가자 안내 초안을 plan.json에 보존했습니다. 모두 draft 상태입니다."
+  $report="# 독서 모임 계획\n\n"+$summary+"\n\n## 가능 시간 미확인\n"+join(", ",$plan.unknown_members)+"\n\n## 확정 규칙\n"+$rules+"\n\n## 후속 질문\n"+$questions+"\n\n## 예약·안내 초안\n"+$draft_text+"\n\n전체 "+text(len($plan.candidates))+"개 후보의 계산과 탈락 사유는 plan.json의 candidates에서 확인할 수 있습니다. 실제 예약·발송은 하지 않았습니다.\n"
+  [self:write]{path:$out+"/plan.json",content:json($plan)}
+  [self:write]{path:$out+"/report.md",content:$report}
+  $again=[self:read]{path:$out+"/plan.json"}
+  $md=[self:read]{path:$out+"/report.md"}
+  assert $again.data==$plan, "저장 JSON 재독 불일치"
+  assert $md.text==$report, "보고서 재독 불일치"
+  return {candidate_count:len($plan.candidates),selected:$plan.selected,questions:$plan.questions,confirmed_rules:$plan.confirmed_rules,unknown_members:$plan.unknown_members,drafts:$plan.drafts,verified:true}
+}
+$doc=[self:read]{path:$input}
+$data=$doc.data
+$parts=([fn:후보만들기]{data:$data}) & ([fn:토론정리]{notes:$data.notes})
+$candidates=$parts[0]
+$discussion=$parts[1]
+$questions=$discussion.questions
+$eligible=$candidates >> [table:filter]{where:($r)=>len($r.reasons)==0} >> [table:sort]{by:["neg_count","neg_interest","neg_unread","cost","date","book_id","venue_id"]}
+$selected=len($eligible)==0 ? null : $eligible[0]
+$drafts=[]
+[if:$selected!=null] {
+  $drafts=[{kind:"reservation",status:"draft",revision:$data.revision,details:$selected},{kind:"notice",status:"draft",revision:$data.revision,recipients:$selected.attendees,details:$selected}]
+}
+$unknown=map(filter($data.members,($p)=>$p.slots==null and not ($p.id in $data.cancelled)),($p)=>$p.id)
+$plan={revision:$data.revision,candidates:$candidates,selected:$selected,unknown_members:$unknown,questions:$questions,confirmed_rules:$discussion.confirmed_rules,drafts:$drafts}
+return [fn:저장검수]{plan:$plan,out:$out}

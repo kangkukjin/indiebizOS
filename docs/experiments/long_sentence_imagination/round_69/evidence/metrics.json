@@ -1,0 +1,1289 @@
+{
+  "execute-v0": {
+    "success": true,
+    "errors": [],
+    "run_id": "58fddb26b0d74ff9b640c72219947644",
+    "steps": 33744,
+    "elapsed_ms": 7244,
+    "model": {
+      "requests": 1,
+      "measured_requests": 1,
+      "unmeasured_requests": 0,
+      "input": 6040,
+      "output": 444,
+      "cache_read": 544,
+      "cache_create": 5494,
+      "reasoning": 0,
+      "calls": [
+        {
+          "call_id": "17a73543f7b34ede8b73e005e29db729",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "ClaudeCode",
+          "model": "opus",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|실행→고급",
+          "measured": true,
+          "elapsed_ms": 5660,
+          "input": 6040,
+          "output": 444,
+          "cache_read": 544,
+          "cache_create": 5494,
+          "reasoning": 0
+        }
+      ]
+    },
+    "reuse": null
+  },
+  "variant-v0": {
+    "success": true,
+    "errors": [],
+    "run_id": "b5b15b5fab2742d69c7c648af90248e6",
+    "steps": 30240,
+    "elapsed_ms": 6858,
+    "model": {
+      "requests": 1,
+      "measured_requests": 1,
+      "unmeasured_requests": 0,
+      "input": 6040,
+      "output": 402,
+      "cache_read": 544,
+      "cache_create": 5494,
+      "reasoning": 0,
+      "calls": [
+        {
+          "call_id": "40e2e319861949c7bf42bdbcb649c047",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "ClaudeCode",
+          "model": "opus",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|실행→고급",
+          "measured": true,
+          "elapsed_ms": 4933,
+          "input": 6040,
+          "output": 402,
+          "cache_read": 544,
+          "cache_create": 5494,
+          "reasoning": 0
+        }
+      ]
+    },
+    "reuse": null
+  },
+  "execute-v1": {
+    "success": false,
+    "errors": [
+      {
+        "code": "TYPE",
+        "message": "Bool가 필요하지만 Bool | Null입니다.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 2536,
+          "end": 2543,
+          "line": 40,
+          "column": 40
+        },
+        "call_path": [
+          {
+            "function": "토론정리",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 4350,
+              "end": 4378,
+              "line": 62,
+              "column": 36,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 62,
+              "end_column": 64,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 1701,
+              "end": 2595,
+              "line": 32,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 41,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Bool",
+        "actual": "Bool | Null",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 2536,
+          "end": 2543,
+          "line": 40,
+          "column": 40,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 40,
+          "end_column": 47,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error",
+        "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+      },
+      {
+        "code": "TYPE",
+        "message": "Bool가 필요하지만 Bool | Null입니다.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 2580,
+          "end": 2591,
+          "line": 40,
+          "column": 84
+        },
+        "call_path": [
+          {
+            "function": "토론정리",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 4350,
+              "end": 4378,
+              "line": 62,
+              "column": 36,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 62,
+              "end_column": 64,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 1701,
+              "end": 2595,
+              "line": 32,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 41,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Bool",
+        "actual": "Bool | Null",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 2580,
+          "end": 2591,
+          "line": 40,
+          "column": 84,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 40,
+          "end_column": 95,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error",
+        "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+      },
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3174,
+          "end": 3185,
+          "line": 48,
+          "column": 73
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Null",
+        "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3174,
+          "end": 3185,
+          "line": 48,
+          "column": 73,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 48,
+          "end_column": 84,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARITHMETIC",
+        "severity": "error"
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: '\\n\\n확인 제안: '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3186,
+          "end": 3199,
+          "line": 48,
+          "column": 85
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Text",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3186,
+          "end": 3199,
+          "line": 48,
+          "column": 85,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 48,
+          "end_column": 98,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "NUMBER_REQUIRED",
+        "severity": "error",
+        "hint": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다."
+      },
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3200,
+          "end": 3212,
+          "line": 48,
+          "column": 99
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Null",
+        "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3200,
+          "end": 3212,
+          "line": 48,
+          "column": 99,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 48,
+          "end_column": 111,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARITHMETIC",
+        "severity": "error"
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: '\\n근거: '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3213,
+          "end": 3221,
+          "line": 48,
+          "column": 112
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Text",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3213,
+          "end": 3221,
+          "line": 48,
+          "column": 112,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 48,
+          "end_column": 120,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "NUMBER_REQUIRED",
+        "severity": "error",
+        "hint": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다."
+      },
+      {
+        "code": "TYPE",
+        "message": "List<Text>가 필요하지만 List<Number>입니다.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3127,
+          "end": 3249,
+          "line": 48,
+          "column": 26
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "List<Text>",
+        "actual": "List<Number>",
+        "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 2번째는 List<Text>입니다. join(구분자, 문자열목록) 순서입니다. 예: join(\", \", [\"가\", \"나\"]).",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3127,
+          "end": 3249,
+          "line": 48,
+          "column": 26,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 48,
+          "end_column": 148,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error"
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: '- '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3302,
+          "end": 3306,
+          "line": 49,
+          "column": 52
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Text",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3302,
+          "end": 3306,
+          "line": 49,
+          "column": 52,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 49,
+          "end_column": 56,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "NUMBER_REQUIRED",
+        "severity": "error",
+        "hint": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다."
+      },
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3307,
+          "end": 3318,
+          "line": 49,
+          "column": 57
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Null",
+        "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3307,
+          "end": 3318,
+          "line": 49,
+          "column": 57,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 49,
+          "end_column": 68,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARITHMETIC",
+        "severity": "error"
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: ' (근거: '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3319,
+          "end": 3327,
+          "line": 49,
+          "column": 69
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Text",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3319,
+          "end": 3327,
+          "line": 49,
+          "column": 69,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 49,
+          "end_column": 77,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "NUMBER_REQUIRED",
+        "severity": "error",
+        "hint": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다."
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: ')'. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3355,
+          "end": 3358,
+          "line": 49,
+          "column": 105
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Text",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3355,
+          "end": 3358,
+          "line": 49,
+          "column": 105,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 49,
+          "end_column": 108,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "NUMBER_REQUIRED",
+        "severity": "error",
+        "hint": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다."
+      },
+      {
+        "code": "TYPE",
+        "message": "List<Text>가 필요하지만 List<Number>입니다.",
+        "source_span": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3270,
+          "end": 3359,
+          "line": 49,
+          "column": 20
+        },
+        "call_path": [
+          {
+            "function": "저장검수",
+            "call": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 5196,
+              "end": 5226,
+              "line": 74,
+              "column": 8,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 74,
+              "end_column": 38,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+              "start": 2596,
+              "end": 4268,
+              "line": 42,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 59,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "List<Text>",
+        "actual": "List<Number>",
+        "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 2번째는 List<Text>입니다. join(구분자, 문자열목록) 순서입니다. 예: join(\", \", [\"가\", \"나\"]).",
+        "location": {
+          "source_hash": "6092bfa815f83e458886ddbfb6f8a0ae5a20df9652ea53ab31508a7b8d2b7671",
+          "start": 3270,
+          "end": 3359,
+          "line": 49,
+          "column": 20,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 49,
+          "end_column": 109,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error"
+      }
+    ],
+    "run_id": null,
+    "steps": null,
+    "elapsed_ms": null,
+    "model": null,
+    "reuse": null
+  },
+  "execute-v2": {
+    "success": true,
+    "errors": [],
+    "run_id": "42f21b11ba8448f2aa173b8279d4001a",
+    "steps": 27366,
+    "elapsed_ms": 7173,
+    "model": {
+      "requests": 1,
+      "measured_requests": 1,
+      "unmeasured_requests": 0,
+      "input": 6077,
+      "output": 532,
+      "cache_read": 2795,
+      "cache_create": 3280,
+      "reasoning": 0,
+      "calls": [
+        {
+          "call_id": "7c1808120a78469f9b7d5d1458778057",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "ClaudeCode",
+          "model": "opus",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|실행→고급",
+          "measured": true,
+          "elapsed_ms": 6092,
+          "input": 6077,
+          "output": 532,
+          "cache_read": 2795,
+          "cache_create": 3280,
+          "reasoning": 0
+        }
+      ]
+    },
+    "reuse": null
+  },
+  "variant-v2": {
+    "success": true,
+    "errors": [],
+    "run_id": "bf167b112e3d478fa37127e324da2155",
+    "steps": 23860,
+    "elapsed_ms": 1029,
+    "model": null,
+    "reuse": {
+      "run_id": "42f21b11ba8448f2aa173b8279d4001a",
+      "reused_calls": 1,
+      "candidates": 4,
+      "skipped": [
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "64e2f4b663c0df1a243e65831935d7b0d38fc53783009e36414091aa0a2cc446",
+            "start": 4333,
+            "end": 4357,
+            "line": 60,
+            "column": 6
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [
+            {
+              "receipt": "4d2a7797a263915480e992095b1076975ef29d2c48c683571431b87a9092a600",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "bd644b0092a0bb9af7f91d6dbc13c6969d437495c4ac8d9f8ab7716748518697",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "1d3990cdb8d54e78889c51c4d676aa4786452befaff85458e644aaa44369c11b",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "64e2f4b663c0df1a243e65831935d7b0d38fc53783009e36414091aa0a2cc446",
+            "start": 3952,
+            "end": 3987,
+            "line": 54,
+            "column": 10
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "4d2a7797a263915480e992095b1076975ef29d2c48c683571431b87a9092a600",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "bd644b0092a0bb9af7f91d6dbc13c6969d437495c4ac8d9f8ab7716748518697",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "1d3990cdb8d54e78889c51c4d676aa4786452befaff85458e644aaa44369c11b",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "64e2f4b663c0df1a243e65831935d7b0d38fc53783009e36414091aa0a2cc446",
+            "start": 3994,
+            "end": 4029,
+            "line": 55,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "4d2a7797a263915480e992095b1076975ef29d2c48c683571431b87a9092a600",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "bd644b0092a0bb9af7f91d6dbc13c6969d437495c4ac8d9f8ab7716748518697",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "1d3990cdb8d54e78889c51c4d676aa4786452befaff85458e644aaa44369c11b",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        }
+      ],
+      "skipped_total": 3,
+      "model_calls": 1
+    }
+  },
+  "new-v2": {
+    "success": true,
+    "errors": [],
+    "run_id": "81d7c85e85f44efa81559090107d6b54",
+    "steps": 24389,
+    "elapsed_ms": 21711,
+    "model": {
+      "requests": 1,
+      "measured_requests": 1,
+      "unmeasured_requests": 0,
+      "input": 6077,
+      "output": 511,
+      "cache_read": 2795,
+      "cache_create": 3280,
+      "reasoning": 0,
+      "calls": [
+        {
+          "call_id": "9003ad5e6c5d4d86831140c72b8f9674",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "ClaudeCode",
+          "model": "opus",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|실행→고급",
+          "measured": true,
+          "elapsed_ms": 20350,
+          "input": 6077,
+          "output": 511,
+          "cache_read": 2795,
+          "cache_create": 3280,
+          "reasoning": 0
+        }
+      ]
+    },
+    "reuse": {
+      "run_id": "42f21b11ba8448f2aa173b8279d4001a",
+      "reused_calls": 0,
+      "candidates": 4,
+      "skipped": [
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "64e2f4b663c0df1a243e65831935d7b0d38fc53783009e36414091aa0a2cc446",
+            "start": 4333,
+            "end": 4357,
+            "line": 60,
+            "column": 6
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [
+            {
+              "receipt": "4d2a7797a263915480e992095b1076975ef29d2c48c683571431b87a9092a600",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "bd644b0092a0bb9af7f91d6dbc13c6969d437495c4ac8d9f8ab7716748518697",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "1d3990cdb8d54e78889c51c4d676aa4786452befaff85458e644aaa44369c11b",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        },
+        {
+          "action": "table:ai",
+          "location": {
+            "source_hash": "64e2f4b663c0df1a243e65831935d7b0d38fc53783009e36414091aa0a2cc446",
+            "start": 1880,
+            "end": 2233,
+            "line": 35,
+            "column": 22
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [
+            {
+              "receipt": "96d849ff278a6abf4790b986e96c5e02e2a01c1dff657112e4ea285615e31814",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 1
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "64e2f4b663c0df1a243e65831935d7b0d38fc53783009e36414091aa0a2cc446",
+            "start": 3952,
+            "end": 3987,
+            "line": 54,
+            "column": 10
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "4d2a7797a263915480e992095b1076975ef29d2c48c683571431b87a9092a600",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "bd644b0092a0bb9af7f91d6dbc13c6969d437495c4ac8d9f8ab7716748518697",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "1d3990cdb8d54e78889c51c4d676aa4786452befaff85458e644aaa44369c11b",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "64e2f4b663c0df1a243e65831935d7b0d38fc53783009e36414091aa0a2cc446",
+            "start": 3994,
+            "end": 4029,
+            "line": 55,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "4d2a7797a263915480e992095b1076975ef29d2c48c683571431b87a9092a600",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "bd644b0092a0bb9af7f91d6dbc13c6969d437495c4ac8d9f8ab7716748518697",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "1d3990cdb8d54e78889c51c4d676aa4786452befaff85458e644aaa44369c11b",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        }
+      ],
+      "skipped_total": 4
+    }
+  },
+  "check-v0": {
+    "ok": true,
+    "issues": []
+  },
+  "check-v1": {
+    "ok": false,
+    "issues": [
+      {
+        "code": "TYPE",
+        "message": "Bool가 필요하지만 Bool | Null입니다.",
+        "line": 40
+      },
+      {
+        "code": "TYPE",
+        "message": "Bool가 필요하지만 Bool | Null입니다.",
+        "line": 40
+      },
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "line": 48
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: '\\n\\n확인 제안: '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "line": 48
+      },
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "line": 48
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: '\\n근거: '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "line": 48
+      },
+      {
+        "code": "TYPE",
+        "message": "List<Text>가 필요하지만 List<Number>입니다.",
+        "line": 48
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: '- '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "line": 49
+      },
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "line": 49
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: ' (근거: '. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "line": 49
+      },
+      {
+        "code": "NUMBER_REQUIRED",
+        "message": "number(): 유한 숫자로 해석할 수 없습니다: ')'. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
+        "line": 49
+      },
+      {
+        "code": "TYPE",
+        "message": "List<Text>가 필요하지만 List<Number>입니다.",
+        "line": 49
+      }
+    ]
+  },
+  "check-v2": {
+    "ok": true,
+    "issues": []
+  },
+  "ai": {
+    "episode": 4774,
+    "task_id": "task_sysai_5c4103db",
+    "elapsed_ms": 136955,
+    "usage": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 2816,
+        "call_id": "0670f160d43d4f90b64d75c7e0c3c1e7",
+        "event": "usage",
+        "input": 5582,
+        "latency_ms": 939,
+        "model": "deepseek-flash",
+        "output": 2,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 896,
+        "call_id": "0a2ed24b31ad445c8eca2c6e34a7d2c9",
+        "event": "usage",
+        "input": 2236,
+        "latency_ms": 868,
+        "model": "deepseek-flash",
+        "output": 1,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 65988,
+        "cache_read": 60352,
+        "call_id": "d03433875e5e4ab7ad6125ae55038d60",
+        "event": "usage",
+        "input": 126344,
+        "latency_ms": 38191,
+        "model": "opus",
+        "output": 3713,
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "ClaudeCode",
+        "reasoning": 629,
+        "role": "consciousness",
+        "round_index": 2,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 98996,
+        "cache_read": 428232,
+        "call_id": "39b3b7c6e34b4fdc9eaf178ab3125c01",
+        "event": "usage",
+        "input": 527238,
+        "latency_ms": 84228,
+        "model": "opus",
+        "output": 8375,
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "ClaudeCode",
+        "reasoning": 657,
+        "role": "execution",
+        "round_index": 5,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 512,
+        "call_id": "2b987cff23b24f6e8be543968a3e8d93",
+        "event": "usage",
+        "input": 4452,
+        "latency_ms": 943,
+        "model": "deepseek-flash",
+        "output": 5,
+        "parent_call_id": null,
+        "phase": "capability_guard",
+        "provider": "DeepSeekProvider",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 72431,
+        "cache_read": 544,
+        "call_id": "455c8df769b14ff8a40570ae7b41b189",
+        "event": "usage",
+        "input": 72977,
+        "latency_ms": 7372,
+        "model": "opus",
+        "output": 478,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "ClaudeCode",
+        "reasoning": 469,
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      }
+    ],
+    "totals": {
+      "input": 738829,
+      "output": 12574,
+      "cache_read": 493352,
+      "cache_create": 237415
+    },
+    "tools": [
+      "Bash",
+      "Bash",
+      "execute_ibl",
+      "Bash"
+    ],
+    "recall_used": 1,
+    "compactions": 0
+  }
+}

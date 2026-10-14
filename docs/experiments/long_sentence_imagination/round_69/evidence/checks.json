@@ -1,0 +1,9 @@
+{
+  "selected_test_files": "1/679",
+  "pytest": "backend/test_ibl_composition_teaching.py",
+  "passed": 67,
+  "seconds": 18.28,
+  "backend_full_suite": false,
+  "python_harness_syntax": "pass",
+  "build_ibl_nodes_check": "pass (기존 비활성 액션 컴파일 생략·비차단 압축 경고 포함)"
+}

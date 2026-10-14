@@ -1,5 +1,9 @@
 # IndieBiz OS 몸을 손발로 — 설치본이 상주 원격 하드웨어가 되는 길 (2026-10-13)
 
+> 2026-10-15 후속 설계: [등록된 폰의 범용 원격 실행](PHONE_REMOTE_EXECUTION_DESIGN_2026_10_15.md).
+> 설치와 USB 등록의 분리는 유지하고, 등록된 폰에 shell·Python 실행을 추가하는 설계다.
+> 아래의 IBL 중심 실행 제한을 확장하는 **구현 전 제안**이며, 현재 지원 범위는 코드·가이드를 따른다.
+
 > 설계 핸드오프. 코드 변경은 아직 없다(빌드 설정 실험 1건 제외, 아래 §7).
 > 정본 서열: git 커밋 > 이 문서 > system_docs. 구현이 끝나면 communication.md "USB 손발" 절과
 > remote_access.md 에 요지를 옮기고 이 문서는 이력으로 남긴다.
@@ -173,4 +177,3 @@ adb run-as 로 폰 `files/secrets/limb_client.json` → 앱 재시작. 초대는
 | E2E 등록·명령 | J7 을 `삼성1` 로 등록(USB `adb reverse tcp:8766 tcp:8765`, 허브=http://127.0.0.1:8766) | ✅ 허브 `[self:limb]{op:list}` 에 adapter indiebiz-v1·live. `op:ibl` 진동 **왕복 0.69초**, `op:info` 명함, `background:true` 5초 녹음 → `[self:task]{op:wait}` succeeded(파일 경로), `op:shell` → `unsupported_on_this_body`, `[limbs:radio]{op:status}` ok, `op:play` → Wi-Fi 없어 "인터넷 연결 실패" 정직 실패. `/ibl/translate "삼성1에게 라디오 틀라고 해"` → 심은 용례 #5037 회상 |
 
 후속: ① J7 Wi-Fi 연결 뒤 `--replace --hub https://finder.kukjinkang.uk`(또는 LAN http://192.168.0.32:8765) 로 재등록 → 라디오 실소리·화면 끈 채 하룻밤 ② 녹음·사진 파일 회수(transfer collect 의 폰 구현) ③ 릴리스 빌드(run-as 차단) ④ API 29+ 무가드 2곳 ⑤ 높은 레벨 이웃의 ask 범위에 limbs:guestpc 가 드는지 확인(손발 명령=허브 주인 전용 권고) ⑥ communication.md·remote_access.md 요지 이전.
-

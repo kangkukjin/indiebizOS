@@ -1,0 +1,169 @@
+{
+ "out": "outputs/long_sentence_imagination/2026-10-15_73회차/trainer",
+ "devices": 6,
+ "reachable": 6,
+ "jobs": [
+  {
+   "device_id": "guestpc-3fd796167b18",
+   "method": "pc_shell_python",
+   "reused": false,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-3fd796167b18",
+    "hostname": "kang-old-MacBook-Air.local",
+    "platform": "macOS-15.7.9-x86_64-i386-64bit",
+    "python": "3.9.6",
+    "processed_at": "2026-10-15T16:08:42+09:00"
+   },
+   "status_keys": [
+    "DISK_FREE",
+    "HOST",
+    "PLAYBACK",
+    "POWER",
+    "VOLUME"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "guestpc-7da97e970821",
+   "method": "pc_shell_python",
+   "reused": false,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-7da97e970821",
+    "hostname": "KHJoffice",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.1",
+    "processed_at": "2026-10-15T16:08:45+09:00"
+   },
+   "status_keys": [
+    "DISK_FREE",
+    "HOST",
+    "PLAYBACK",
+    "POWER",
+    "VOLUME"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "?",
+   "method": null,
+   "reused": false,
+   "sum_ok": false,
+   "rows_exact": false,
+   "count": 0,
+   "identity_has_device": false,
+   "identity": {},
+   "status_keys": null,
+   "skipped": null,
+   "failed": true,
+   "reason": "손발 '맥26' 의 응답을 30초 안에 못 받았습니다 — 명령이 오래 걸리는 중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 [self:task]{op: \"wait\", ref: {kind: \"guestpc\", task_id: \"d559c2c903734487a0f017a9602d52be\"}} 로 결과를 확인하세요. 포기하려면 같은 task_ref로 self:task cancel을 요청하고 종료를 확인하세요. 오래 걸릴 명령은 처음부터 background: true 로 보내는 게 좋습니다."
+  },
+  {
+   "device_id": "guestpc-4e51c614b25b",
+   "method": "phone_ibl",
+   "reused": false,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-4e51c614b25b",
+    "body": "phone"
+   },
+   "status_keys": [
+    "device",
+    "disk",
+    "os",
+    "playback",
+    "power",
+    "volume"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "guestpc-70e163471313",
+   "method": "pc_shell_python",
+   "reused": false,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-70e163471313",
+    "hostname": "DESKTOP-VQJGB71",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python": "3.12.10",
+    "processed_at": "2026-10-15T16:09:20+09:00"
+   },
+   "status_keys": [
+    "DISK_FREE",
+    "HOST",
+    "PLAYBACK",
+    "POWER",
+    "VOLUME"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "guestpc-fc7b12fba936",
+   "method": "phone_ibl",
+   "reused": false,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-fc7b12fba936",
+    "body": "phone"
+   },
+   "status_keys": [
+    "device",
+    "disk",
+    "os",
+    "playback",
+    "power",
+    "volume"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  }
+ ],
+ "photo_chain": {
+  "executed": null,
+  "captured": false,
+  "phone_sha256": null,
+  "phone_size": null,
+  "blocked_at": "capture",
+  "blocked_reason": "'맥12' 은(는) IndieBiz OS 손발이 아닙니다(헬퍼 PC) — IBL 대신 shell 을 쓰세요.",
+  "hub_sha256": null,
+  "pc_sha256": null,
+  "all_equal": null,
+  "reused": null,
+  "reason": null
+ },
+ "blocked": [
+  {
+   "device_id": "?",
+   "what": "처리",
+   "why": "손발 '맥26' 의 응답을 30초 안에 못 받았습니다 — 명령이 오래 걸리는 중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 [self:task]{op: \"wait\", ref: {kind: \"guestpc\", task_id: \"d559c2c903734487a0f017a9602d52be\"}} 로 결과를 확인하세요. 포기하려면 같은 task_ref로 self:task cancel을 요청하고 종료를 확인하세요. 오래 걸릴 명령은 처음부터 background: true 로 보내는 게 좋습니다."
+  }
+ ],
+ "report_md_exists": true,
+ "result_sha256": "6ed79f0120ecb63d65ee8d4307aa4f726600f156019ece8080d040fd14caf46b"
+}

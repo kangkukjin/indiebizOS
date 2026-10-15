@@ -1,0 +1,340 @@
+{
+ "round": 73,
+ "variant": true,
+ "origin": "training",
+ "checked_at": "2026-10-15T16:30~16:33+09:00",
+ "input": {
+  "sample_sha256": "ad7b5e0a04ff4820adccfaffededaf224f285171af08b6be5956c1b9d9a09ae1",
+  "manifest_match": true,
+  "unchanged": true
+ },
+ "registry_total": 24,
+ "responding_now": [
+  "맥12",
+  "tv1",
+  "삼성1",
+  "삼성0"
+ ],
+ "connected_but_blocked": [
+  "KHJoffice"
+ ],
+ "device_table": [
+  {
+   "alias": "맥12",
+   "device_id": "guestpc-3fd796167b18",
+   "kind": "pc",
+   "registration": "상주 active, paused:false",
+   "response": "응답",
+   "observed_this_turn": true,
+   "info_task": "32dfc44770de420880782c3d5a1257ae",
+   "status_task": "0ab92fbd029a41d1b8e641a037db98f5",
+   "status_request_id": "r73v-status-맥12",
+   "read_at": "2026-10-15T16:31:15+09:00",
+   "os": "macOS 15.7.9 (24G830), darwin/amd64, 호스트 kang-old-MacBook-Air.local",
+   "connection": "연결됨(상주 헬퍼 resident-v1, transfer 신고)",
+   "power": "AC 전원, 내장 배터리 100% 충전 완료(pmset)",
+   "storage_free": "약 114.0 GiB 여유 / 233.6 GiB (df 119,530,040 KiB 가용)",
+   "playback": "재생 없음 — 재생기 프로세스 없음, 오디오 assertion 없음",
+   "volume": "출력 50, 음소거 아님 (osascript get volume settings, 읽기 전용)"
+  },
+  {
+   "alias": "KHJoffice",
+   "device_id": "guestpc-7da97e970821",
+   "kind": "pc",
+   "registration": "상주 active, paused:true (앞 턴 16:17 목록에는 일시 중지 표시 없음)",
+   "response": "연결은 됨(connected:true) — 작업 수신 불가",
+   "observed_this_turn": true,
+   "info_task": null,
+   "info_error": "registration_unavailable",
+   "read_at": "2026-10-15T16:30~16:31+09:00",
+   "os": "미확인(이번 턴) — 일시 중지로 info 작업 거절(registration_unavailable). 앞 턴 값: Windows 11 Pro 10.0.26200, 호스트 KHJOFFICE",
+   "connection": "연결됨이지만 일시 중지(paused:true) — 새 작업 차단",
+   "power": "미확인(이번 턴) — 같은 이유",
+   "storage_free": "미확인(이번 턴) — 같은 이유",
+   "playback": "미확인(이번 턴) — 같은 이유",
+   "volume": "미확인(이번 턴) — 같은 이유",
+   "note": "일시 중지 해제는 설정 변경이라 하지 않음. 누가 언제 일시 중지했는지는 확인하지 않음(이번 실행의 호출 중 pause 없음)"
+  },
+  {
+   "alias": "tv1",
+   "device_id": "guestpc-70e163471313",
+   "kind": "pc",
+   "registration": "상주 active, paused:false",
+   "response": "응답",
+   "observed_this_turn": true,
+   "info_task": "f7c01b64788046599c5be73d4ec22744",
+   "status_task": "699a68eed7404cc7be44c832bf95f8fd",
+   "status_request_id": "r73v-status-tv1",
+   "read_at": "2026-10-15T16:31:17+09:00",
+   "os": "Microsoft Windows 10 Home 10.0.19045, 호스트 DESKTOP-VQJGB71",
+   "connection": "연결됨(상주 헬퍼)",
+   "power": "배터리 신고 없음(상시 전원 추정). 전원 계획 미확인 — 원격 세션 관리자 권한 오류, 권한 상승 안 함",
+   "storage_free": "C: 9.9/110.8 GB 여유",
+   "playback": "재생 신호 없음 — 기본 출력 피크 0, 재생기 프로세스 없음",
+   "volume": "29%, 음소거 아님 (Core Audio Get 메서드만, 앞 턴에 보낸 status2.ps1 재사용)"
+  },
+  {
+   "alias": "삼성1",
+   "device_id": "guestpc-4e51c614b25b",
+   "kind": "phone",
+   "registration": "상주 active (indiebiz-v1)",
+   "response": "응답",
+   "observed_this_turn": true,
+   "info_task": "abc134daa3874fbcb7dcb39f7e973ca7",
+   "status_task": "3559110a943d4950b613fddc99cc82f3",
+   "status_request_id": "r73v-status-삼성1",
+   "read_at": "2026-10-15T16:31:33+09:00",
+   "os": "Android 9, samsung SM-J730K (앞 턴 info 값; 이번 info 신고 ops 동일)",
+   "connection": "연결됨(원격 등록)",
+   "power": "미확인 — 이번 info 에서도 신고 ops=[ibl,info,media], execution_contract·shell 미신고. 폰 IBL에 배터리·저장공간·음량 읽기 전용 낱말 없음(앞 턴 sense:host 거절로 확인). 설정 동작인 음량 명령은 쓰지 않음",
+   "storage_free": "미확인 — 이번 info 에서도 신고 ops=[ibl,info,media], execution_contract·shell 미신고. 폰 IBL에 배터리·저장공간·음량 읽기 전용 낱말 없음(앞 턴 sense:host 거절로 확인). 설정 동작인 음량 명령은 쓰지 않음",
+   "playback": "재생 없음 — limbs:radio status 재생 없음, limbs:music queue 0곡",
+   "volume": "미확인 — 이번 info 에서도 신고 ops=[ibl,info,media], execution_contract·shell 미신고. 폰 IBL에 배터리·저장공간·음량 읽기 전용 낱말 없음(앞 턴 sense:host 거절로 확인). 설정 동작인 음량 명령은 쓰지 않음"
+  },
+  {
+   "alias": "삼성0",
+   "device_id": "guestpc-fc7b12fba936",
+   "kind": "phone",
+   "registration": "상주 active (indiebiz-v1)",
+   "response": "응답",
+   "observed_this_turn": true,
+   "info_task": "1ce0fe32a70f472abb4c76ce71158536",
+   "status_task": "4b4c4fefa5bb46168bf2f4a7c92d2a3d",
+   "status_request_id": "r73v-status-삼성0",
+   "read_at": "2026-10-15T16:31:25+09:00",
+   "os": "Android 16, samsung SM-A366N (arm64-v8a, SDK 36 — 이번 info)",
+   "connection": "연결됨(원격 등록)",
+   "power": "미확인 — 이번 info 에서도 신고 ops=[ibl,info,media], execution_contract·shell 미신고. 폰 IBL에 배터리·저장공간·음량 읽기 전용 낱말 없음(앞 턴 sense:host 거절로 확인). 설정 동작인 음량 명령은 쓰지 않음",
+   "storage_free": "미확인 — 이번 info 에서도 신고 ops=[ibl,info,media], execution_contract·shell 미신고. 폰 IBL에 배터리·저장공간·음량 읽기 전용 낱말 없음(앞 턴 sense:host 거절로 확인). 설정 동작인 음량 명령은 쓰지 않음",
+   "playback": "재생 없음 — limbs:radio status 재생 없음, limbs:music queue 0곡",
+   "volume": "미확인 — 이번 info 에서도 신고 ops=[ibl,info,media], execution_contract·shell 미신고. 폰 IBL에 배터리·저장공간·음량 읽기 전용 낱말 없음(앞 턴 sense:host 거절로 확인). 설정 동작인 음량 명령은 쓰지 않음"
+  },
+  {
+   "alias": "맥26",
+   "device_id": "guestpc-9dc41d53987d",
+   "kind": "pc",
+   "registration": "상주 active",
+   "response": "무응답",
+   "observed_this_turn": true,
+   "reason": "connected:false(오프라인). 앞 턴 info 작업 f8e651a8…은 응답 없이 만료(state failed, outcome expired). 새 info 는 접수하지 않음"
+  },
+  {
+   "alias": "p0",
+   "device_id": "guestpc-0cf0e5150587",
+   "kind": "pc(휴대형)",
+   "response": "무응답",
+   "reason": "휴대형 헬퍼 미연결(connected:false)"
+  }
+ ],
+ "other_registrations": {
+  "removed_registrations": [
+   "맥12 guestpc-7a440e9daf61",
+   "tv1 guestpc-ec89e5f574e8",
+   "삼성1 guestpc-bf79a72df35b"
+  ],
+  "removal_pending_revoked": [
+   "삼성1 guestpc-f082d51d4252"
+  ],
+  "revoked_count": 14,
+  "why": "등록 해제·폐기 자격이라 작업을 받을 수 없음. 호출하지 않음"
+ },
+ "job_table": [
+  {
+   "alias": "맥12",
+   "this_turn": "재사용(재접수·재계산 안 함)",
+   "previous_status": "완료",
+   "method": "shell(sh): shasum 입력 확인 → python3 -I process.py sample.json result.json <device_id> → shasum 결과; transfer receive→collect 로 회수",
+   "request_id": "r73-process-맥12",
+   "task_id": "497fbab211ff47df98e6956be2b8528f",
+   "device_identity": {
+    "device_id": "guestpc-3fd796167b18",
+    "hostname": "kang-old-MacBook-Air.local",
+    "platform": "macOS-15.7.9-x86_64-i386-64bit",
+    "python": "3.9.6",
+    "processed_at": "2026-10-15T16:23:44+09:00"
+   },
+   "device_sum": 156,
+   "result_file": "agent/맥12-result.json",
+   "result_file_sha256": "9e8472cdf211b2a00c11c6824c0ca39d45ff6aff4c0d4d4d7b2a7d9d7926cc72",
+   "file_unchanged_since_previous": true,
+   "rows_recheck_vs_input": true,
+   "device_now": "응답"
+  },
+  {
+   "alias": "KHJoffice",
+   "this_turn": "재사용(재접수·재계산 안 함)",
+   "previous_status": "완료",
+   "method": "shell(cmd): certutil 입력 해시 → python -I process.py … → certutil 결과 해시; transfer receive→collect",
+   "request_id": "r73-process-KHJoffice",
+   "task_id": "d7024356ff5e4723a7b19abbe0df3dad",
+   "device_identity": {
+    "device_id": "guestpc-7da97e970821",
+    "hostname": "KHJoffice",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.1",
+    "processed_at": "2026-10-15T16:23:46+09:00"
+   },
+   "device_sum": 156,
+   "result_file": "agent/KHJoffice-result.json",
+   "result_file_sha256": "78832f59d11c74a8a922626d11951817de1faf91ad732f00c26cf7db4baec2ef",
+   "file_unchanged_since_previous": true,
+   "rows_recheck_vs_input": true,
+   "device_now": "일시 중지로 이번 턴 새 작업 불가 — 앞 결과는 유지"
+  },
+  {
+   "alias": "tv1",
+   "this_turn": "재사용(재접수·재계산 안 함)",
+   "previous_status": "완료",
+   "method": "shell(cmd): certutil 입력 해시 → python -I process.py … → certutil 결과 해시; transfer receive→collect",
+   "request_id": "r73-process-tv1",
+   "task_id": "48bacae7ff124fc69c0dc486aee0f4ec",
+   "device_identity": {
+    "device_id": "guestpc-70e163471313",
+    "hostname": "DESKTOP-VQJGB71",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python": "3.12.10",
+    "processed_at": "2026-10-15T16:23:51+09:00"
+   },
+   "device_sum": 156,
+   "result_file": "agent/tv1-result.json",
+   "result_file_sha256": "85ebcd031e15330f67fc33cd7fdebedd7c953fc679a1e3a74b825b5516f18dcc",
+   "file_unchanged_since_previous": true,
+   "rows_recheck_vs_input": true,
+   "device_now": "응답"
+  },
+  {
+   "alias": "삼성1",
+   "this_turn": "재사용(재접수·재계산 안 함)",
+   "previous_status": "완료",
+   "method": "폰 IBL(op:ibl, edition 2): self:write 입력 → self:read → table:each(값×2, 이름 원문) → table:reduce 합계 → self:write result.json → self:read 재독; 결과 본문을 IBL 반환값으로 회수해 중앙 저장",
+   "request_id": "r73-process2-삼성1",
+   "task_id": "f4b1aec6547a4632b77c2fbe05a7895d",
+   "device_identity": {
+    "device_id": "guestpc-4e51c614b25b",
+    "hostname": null,
+    "hostname_note": "phone IBL has no hostname action; /proc/sys/kernel/hostname permission denied",
+    "processed_at": "2026-10-15 16:24:43 KST+0900",
+    "method": "phone IBL (limbs:guestpc op:ibl, edition 2)"
+   },
+   "device_sum": {
+    "success": true,
+    "value": 156,
+    "message": "156",
+    "items": [
+     {
+      "sum": 156
+     }
+    ],
+    "count": 1,
+    "reduced_rows": 12
+   },
+   "result_file": "agent/삼성1-result.json",
+   "result_file_sha256": "0aeaf0166f1e70fbb205903251f3d7023b7714d66c79584bf48c23235ee59dbb",
+   "file_unchanged_since_previous": true,
+   "rows_recheck_vs_input": true,
+   "device_now": "응답"
+  },
+  {
+   "alias": "삼성0",
+   "this_turn": "재사용(재접수·재계산 안 함)",
+   "previous_status": "완료",
+   "method": "폰 IBL — 삼성1과 같음",
+   "request_id": "r73-process2-삼성0",
+   "task_id": "9fb51a841b2e45b19377639fa462e9a9",
+   "device_identity": {
+    "device_id": "guestpc-fc7b12fba936",
+    "hostname": null,
+    "hostname_note": "phone IBL has no hostname action; /proc/sys/kernel/hostname permission denied",
+    "processed_at": "2026-10-15 16:24:41 KST+0900",
+    "method": "phone IBL (limbs:guestpc op:ibl, edition 2)"
+   },
+   "device_sum": {
+    "success": true,
+    "value": 156,
+    "message": "156",
+    "items": [
+     {
+      "sum": 156
+     }
+    ],
+    "count": 1,
+    "reduced_rows": 12
+   },
+   "result_file": "agent/삼성0-result.json",
+   "result_file_sha256": "60d7ca8e57918e89a0fc2039f4aeb9aa4cecd4acd3384efac0f33251819b3d0a",
+   "file_unchanged_since_previous": true,
+   "rows_recheck_vs_input": true,
+   "device_now": "응답"
+  }
+ ],
+ "photo_chain": {
+  "recapture": "하지 않음",
+  "phone_point": {
+   "device": "삼성1",
+   "path": "/data/user/0/com.indiebiz.phoneagent/files/photos/photo_1792049117346.jpg",
+   "size_bytes_now": 1852429,
+   "sha256_now": "fe69470ac7304aed578955270bc8801dd397c6b0aa6fcdfe197fcddbc6341d96",
+   "mtime": "2026-10-15 16:25",
+   "matches_previous": true,
+   "method": "폰 IBL self:file_find hash:true (request_id r73v-photohash-삼성1, task 212e8a90980143748565efbfcead216a, 16:31:43)"
+  },
+  "central_point": null,
+  "pc_point": null,
+  "three_way_match": "미확인 — 폰 한 지점만 확인(앞 값과 일치)",
+  "blocked_at": "폰→중앙 회수",
+  "blocked_reason": "삼성1 이번 info 신고 ops 여전히 [ibl,info,media], execution_contract·transfer 미신고 — 앞 턴과 같은 이유로 멈춤",
+  "content": "사진 내용은 열어 보지도 설명하지도 않음"
+ },
+ "reused": [
+  "점검 입력(해시 동일 확인 후) — 다시 보내지 않음",
+  "기기 5대의 처리 결과 12행·합계·신원(앞 턴 16:23~16:24 기기 작성) — 재접수·재계산 없음, 중앙 파일 해시가 앞 기록과 같음을 확인",
+  "tv1 원격 시험 폴더의 status2.ps1(앞 턴에 보낸 읽기 전용 스크립트) — 다시 보내지 않음",
+  "사진 파일과 앞 해시 — 새 촬영 없음"
+ ],
+ "new_this_turn": [
+  "self:limb list(등록 24건) 재조회",
+  "맥26 앞 info 작업 상태 확인(만료)",
+  "info 5건(맥12·tv1·삼성1·삼성0 성공, KHJoffice 거절)",
+  "상태 조회 4건(맥12 셸, tv1 셸, 폰 2대 IBL radio/music)",
+  "삼성1 사진 파일 해시 재계산(폰에서)",
+  "중앙에서 결과 파일 해시·행 대조(검증만)"
+ ],
+ "not_done": [
+  {
+   "what": "KHJoffice 이번 상태표 6항목",
+   "why": "self:limb list 에서 paused:true, info 거절 registration_unavailable. 일시 중지 해제는 설정 변경이라 하지 않음"
+  },
+  {
+   "what": "맥26 기기표·처리",
+   "why": "오프라인. 앞 info 작업 만료"
+  },
+  {
+   "what": "p0",
+   "why": "휴대형 헬퍼 미연결"
+  },
+  {
+   "what": "폰 2대 배터리·저장공간·음량",
+   "why": "미확인 — 이번 info 에서도 신고 ops=[ibl,info,media], execution_contract·shell 미신고. 폰 IBL에 배터리·저장공간·음량 읽기 전용 낱말 없음(앞 턴 sense:host 거절로 확인). 설정 동작인 음량 명령은 쓰지 않음"
+  },
+  {
+   "what": "Windows 전원 계획(tv1)",
+   "why": "원격 세션 관리자 권한 오류, 권한 상승 안 함"
+  },
+  {
+   "what": "사진 중앙 회수·PC 전송·세 곳 해시 대조",
+   "why": "폰 transfer 미신고 — 회수 단계에서 멈춤"
+  }
+ ],
+ "incidents": [
+  "소리 재생·화면 캡처·설정 변경 호출 없음",
+  "쓰기: 중앙 agent/variant/ 의 이 JSON·보고서만. 원격 쓰기 없음(상태 조회 셸은 기존 시험 폴더를 cwd 로만 사용)"
+ ],
+ "resume": {
+  "photo_next": "폰 앱을 transfer 지원판으로 업데이트한 뒤 receive→collect→PC send→shasum 대조. 기대 1,852,429 B, sha256 fe69470a…1d96",
+  "KHJoffice": "사용자가 일시 중지를 해제하면 상태표만 다시 읽으면 됨(처리 결과는 이미 있음)",
+  "run_ids": {
+   "list": "a5d2585c34124201bb1ccde6c1d1d664",
+   "status": "fcaaf0a5a4d54e03b9c7567285008db4"
+  }
+ }
+}

@@ -1,0 +1,3678 @@
+{
+ "request": {
+  "edition": 2,
+  "origin": "training",
+  "project_id": "study",
+  "inputs": {
+   "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_73회차/inputs/sample.json",
+   "script": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_73회차/inputs/process.py",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_73회차/base-check",
+   "tag": "r73-trainer-base-check",
+   "remote_rel": "indiebiz-training/fleet/73/trainer",
+   "phone_rel": "outputs/long_sentence_imagination/round73/trainer",
+   "previous": ""
+  },
+  "check": true
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1792048092.156689,
+ "ended": 1792048093.273328,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards_total": 1176,
+  "guards_inner": 972,
+  "guards_omitted": 1176,
+  "result_type": "{out: Text, devices: Number, reachable: Number, jobs_ok: Number, photo: {device_id: Unknown, captured: Bool, blocked_at: Unknown, blocked_reason: Unknown, details: Unknown, phone_sha256: Null, hub_sha256: Null, pc_sha256: Null, all_equal: Null} | {device_id: Unknown, captured: Bool, phone_path: Unknown, phone_sha256: Unknown, phone_size: Unknown, blocked_at: Text, blocked_reason: Text, hub_sha256: Null, pc_sha256: Null, all_equal: Null, receipts: {photo: Unknown}} | {device_id: Unknown, captured: Bool, phone_path: Unknown, phone_sha256: Unknown, phone_size: Unknown, blocked_at: Text, blocked_reason: Text, hub_sha256: Null, pc_sha256: Null, all_equal: Null, receipts: {photo: Unknown}} | {device_id: Unknown, captured: Bool, phone_path: Unknown, phone_sha256: Unknown, phone_size: Unknown, blocked_at: Unknown, blocked_reason: Unknown, hub_sha256: Null, pc_sha256: Null, all_equal: Null, receipts: Unknown, reused: Bool, reuse_note: Text} | {executed: Bool, reason: Text}, saved: Unknown}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:827:1695": {
+    "name": "문진",
+    "params": {
+     "dev": "Record"
+    },
+    "required": [
+     "dev"
+    ],
+    "pipe_input": "dev",
+    "default_expressions": {},
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "limbs:guestpc"
+    ],
+    "source_hash": "6cfd55b84259b9c649cae286509630ba247f394c0186ab46400cbc6225b80728",
+    "result": "{alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Unknown} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Unknown, info: Null}",
+    "specializations": [
+     {
+      "params": {
+       "dev": "Record"
+      },
+      "result": "{alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Unknown} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Unknown, info: Null}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 827,
+     "end": 1695,
+     "line": 19,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 29,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1766:3028": {
+    "name": "능력",
+    "params": {
+     "d": "{alias: Text, device_id: Text, kind: Text, adapter: Text, paused: Null, connected: Null, reachable: Bool, reason: Unknown, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Unknown} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Unknown, info: Null}"
+    },
+    "required": [
+     "d"
+    ],
+    "pipe_input": "d",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "460de2ed61a8413fb4770142aad6f25667a916c4618bb132d2fd07a9efd4e809",
+    "result": "{alias: Unknown, device_id: Unknown, kind: Unknown, method: Text, note: Unknown, os: Unknown, transfer: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "d": "{alias: Text, device_id: Text, kind: Text, adapter: Text, paused: Null, connected: Null, reachable: Bool, reason: Unknown, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Unknown} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Unknown, info: Null}"
+      },
+      "result": "{alias: Unknown, device_id: Unknown, kind: Unknown, method: Text, note: Unknown, os: Unknown, transfer: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 1766,
+     "end": 3028,
+     "line": 32,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 46,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:10790:10929": {
+    "name": "이전결과",
+    "params": {
+     "jobs": "Unknown",
+     "id": "Unknown"
+    },
+    "required": [
+     "jobs",
+     "id"
+    ],
+    "pipe_input": "jobs",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "3feadc75679ee314370aee741e55ecc21e40803edecc3fcfbb48788720f9cb85",
+    "result": "Null | Record",
+    "specializations": [
+     {
+      "params": {
+       "jobs": "Unknown",
+       "id": "Unknown"
+      },
+      "result": "Null | Record"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 10790,
+     "end": 10929,
+     "line": 160,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 163,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:14903:16484": {
+    "name": "외부PC준비",
+    "params": {
+     "PC": "Unknown",
+     "환경조회": "Bool",
+     "작업폴더": "Unknown",
+     "환경": "Record"
+    },
+    "required": [
+     "PC"
+    ],
+    "pipe_input": "PC",
+    "default_expressions": {
+     "환경조회": "true",
+     "작업폴더": "\"\"",
+     "환경": "{}"
+    },
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:limb",
+     "table:filter"
+    ],
+    "source_hash": "3e8620997dac81c599a0f6deb0377ca1e1c813adab943c0571360d79a73b693a",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "PC": "Unknown",
+       "환경조회": "Bool",
+       "작업폴더": "Unknown",
+       "환경": "Record"
+      },
+      "result": "{limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Unknown, env: Record}, env: Unknown, ok: Bool, status: Text, reason: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Unknown, env: Record}, env: Unknown, ok: Bool, status: Text, reason: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Unknown, env: Record}, env: Unknown, ok: Bool, status: Text, reason: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Unknown, env: Record}, env: Unknown, ok: Bool, status: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Unknown, env: Record}, env: Unknown, ok: Bool, status: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Unknown, env: Record}, env: Unknown, ok: Bool, status: Text} | {ok: Bool, status: Text, reason: Text, items: List<Record⟨관측: alias·device_id·key_hint·created_at·expires_at·revoked·expired·approved·last_used·last_host·env·neighbor_id·registration·invitation·connected·payload_dir⟩>} | {ok: Bool, status: Text, reason: Text}"
+     },
+     {
+      "params": {
+       "PC": "Unknown",
+       "환경조회": "Bool",
+       "작업폴더": "Text",
+       "환경": "Record"
+      },
+      "result": "{limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Text, env: Record}, env: Unknown, ok: Bool, status: Text, reason: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Text, env: Record}, env: Unknown, ok: Bool, status: Text, reason: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Text, env: Record}, env: Unknown, ok: Bool, status: Text, reason: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Text, env: Record}, env: Unknown, ok: Bool, status: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Text, env: Record}, env: Unknown, ok: Bool, status: Text} | {limb: Unknown, limb_name: Unknown, helper_mode: Text, registration: Unknown, workspace: {cwd: Text, env: Record}, env: Unknown, ok: Bool, status: Text} | {ok: Bool, status: Text, reason: Text, items: List<Record⟨관측: alias·device_id·key_hint·created_at·expires_at·revoked·expired·approved·last_used·last_host·env·neighbor_id·registration·invitation·connected·payload_dir⟩>} | {ok: Bool, status: Text, reason: Text}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "01ac26ca3c32fc5d9cb7f011c0130bd0d7828def1f9ea401a9710375954db3cf",
+     "start": 16,
+     "end": 1597,
+     "line": 2,
+     "column": 1,
+     "source": "외부PC준비",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%A4%80%EB%B9%84",
+     "end_line": 27,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:18039:20447": {
+    "name": "외부PC작업확인",
+    "params": {
+     "작업": "Unknown",
+     "대기": "Number"
+    },
+    "required": [
+     "작업"
+    ],
+    "pipe_input": "작업",
+    "default_expressions": {
+     "대기": "0"
+    },
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:task"
+    ],
+    "source_hash": "d5f6e8eeb431f505425b39846f8ba14fa76a9dd00913cec567d8c3a178d3fc2e",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "작업": "Record",
+       "대기": "Number"
+      },
+      "result": "{limb: Unknown, helper_mode: Unknown, op: Unknown, ok: Bool, status: Unknown, limb_name: Unknown, settled: Bool, command_ok: Bool | Bool | Null, exit: Unknown, started_at: Unknown, ended_at: Unknown, seconds: Unknown, history_args: Unknown, progress_scope: Unknown, outcome: Unknown, timed_out: Unknown, progress: Unknown, result: Unknown, failure: Unknown} | {ok: Bool, status: Text, settled: Bool, command_ok: Null, reason: Unknown} | {ok: Bool, status: Text, settled: Bool, command_ok: Null, task_ref: Unknown} | {ok: Bool, status: Text, task: Record, reason: Text, settled: Bool, command_ok: Null}"
+     },
+     {
+      "params": {
+       "작업": "{limb_name: Unknown, op: Text, invocation: {pc: Unknown, cmd: Text, cwd: Unknown, shell: Text, timeout: Number, mode: Text, elevate: Bool, reset: Bool, request_id: Text}}",
+       "대기": "Number"
+      },
+      "result": "{command_ok: Bool | Bool | Null, ok: Bool, settled: Bool, status: Unknown}"
+     },
+     {
+      "params": {
+       "작업": "Record",
+       "대기": "Number"
+      },
+      "result": "{command_ok: Bool | Bool | Null, ok: Bool, settled: Bool, status: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+     "start": 16,
+     "end": 2424,
+     "line": 2,
+     "column": 1,
+     "source": "외부PC작업확인",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+     "end_line": 48,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:16501:18022": {
+    "name": "외부PC작업실행",
+    "params": {
+     "PC": "Unknown",
+     "명령": "Text",
+     "작업폴더": "Unknown",
+     "셸": "Text",
+     "실행제한": "Number",
+     "대기": "Number",
+     "입력": "Text",
+     "환경초기화": "Bool",
+     "요청ID": "Text",
+     "환경": "{PYTHONUTF8: Text, PYTHONIOENCODING: Text}",
+     "모드": "Text",
+     "관리자": "Bool",
+     "준비": "Record",
+     "작업": "Record"
+    },
+    "required": [
+     "PC",
+     "명령"
+    ],
+    "pipe_input": "PC",
+    "default_expressions": {
+     "작업폴더": "\"\"",
+     "셸": "\"\"",
+     "실행제한": "1800",
+     "대기": "0",
+     "입력": "\"\"",
+     "환경초기화": "false",
+     "요청ID": "\"\"",
+     "환경": "{}",
+     "모드": "\"background\"",
+     "관리자": "false",
+     "준비": "{}",
+     "작업": "{}"
+    },
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:task"
+    ],
+    "source_hash": "3b7053e6f29d3524a09a303bf697a114f5b770194c7b7616325cc01596db7a7e",
+    "result": "Record",
+    "specializations": [
+     {
+      "params": {
+       "PC": "Unknown",
+       "명령": "Text",
+       "작업폴더": "Unknown",
+       "셸": "Text",
+       "실행제한": "Number",
+       "대기": "Number",
+       "입력": "Text",
+       "환경초기화": "Bool",
+       "요청ID": "Text",
+       "환경": "{PYTHONUTF8: Text, PYTHONIOENCODING: Text}",
+       "모드": "Text",
+       "관리자": "Bool",
+       "준비": "Record",
+       "작업": "Record"
+      },
+      "result": "Record"
+     },
+     {
+      "params": {
+       "PC": "Unknown",
+       "명령": "Text",
+       "작업폴더": "Text",
+       "셸": "Text",
+       "실행제한": "Number",
+       "대기": "Number",
+       "입력": "Text",
+       "환경초기화": "Bool",
+       "요청ID": "Text",
+       "환경": "{PYTHONUTF8: Text, PYTHONIOENCODING: Text}",
+       "모드": "Text",
+       "관리자": "Bool",
+       "준비": "Record",
+       "작업": "Record"
+      },
+      "result": "Record"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+     "start": 16,
+     "end": 1537,
+     "line": 2,
+     "column": 1,
+     "source": "외부PC작업실행",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+     "end_line": 28,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:3079:3368": {
+    "name": "실행",
+    "params": {
+     "pc": "Unknown",
+     "rd": "Unknown",
+     "cmd": "Text",
+     "shell": "Text",
+     "id": "Text"
+    },
+    "required": [
+     "pc",
+     "rd",
+     "cmd",
+     "shell",
+     "id"
+    ],
+    "pipe_input": "pc",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:task"
+    ],
+    "source_hash": "1f0c31d4bcb1c9ab6422664b30db324679c4afa3d7dec18d29133bc4dea40d66",
+    "result": "{command_ok: Bool | Bool | Null, ok: Bool, settled: Bool, status: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "pc": "Unknown",
+       "rd": "Unknown",
+       "cmd": "Text",
+       "shell": "Text",
+       "id": "Text"
+      },
+      "result": "{command_ok: Bool | Bool | Null, ok: Bool, settled: Bool, status: Unknown}"
+     },
+     {
+      "params": {
+       "pc": "Unknown",
+       "rd": "Text",
+       "cmd": "Text",
+       "shell": "Text",
+       "id": "Text"
+      },
+      "result": "{command_ok: Bool | Bool | Null, ok: Bool, settled: Bool, status: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 3079,
+     "end": 3368,
+     "line": 49,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 55,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:3369:3541": {
+    "name": "KV",
+    "params": {
+     "text": "Unknown"
+    },
+    "required": [
+     "text"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "b121abaf8bb06e6825f8087ec3ebd20c1a57cd8fe2eefd066e8b8be9cf4489cd",
+    "result": "Record",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown"
+      },
+      "result": "Record"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 3369,
+     "end": 3541,
+     "line": 56,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 59,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:20464:21858": {
+    "name": "외부PC파일보내기",
+    "params": {
+     "PC": "Unknown",
+     "중앙경로": "Text",
+     "원격경로": "Text",
+     "요청ID": "Text",
+     "대기": "Number",
+     "작업": "Unknown",
+     "전송ID": "Text"
+    },
+    "required": [
+     "PC",
+     "중앙경로",
+     "원격경로",
+     "요청ID"
+    ],
+    "pipe_input": "PC",
+    "default_expressions": {
+     "대기": "0",
+     "작업": "{}",
+     "전송ID": "\"\""
+    },
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:limb",
+     "self:task",
+     "table:filter"
+    ],
+    "source_hash": "24b03e3d16eb0c3a6be0706f1367508e2e0d995be8c78bdc99b5cf4babdf6679",
+    "result": "{ok: Bool, status: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "PC": "Unknown",
+       "중앙경로": "Text",
+       "원격경로": "Text",
+       "요청ID": "Text",
+       "대기": "Number",
+       "작업": "Record",
+       "전송ID": "Text"
+      },
+      "result": "{ok: Bool, status: Unknown}"
+     },
+     {
+      "params": {
+       "PC": "Unknown",
+       "중앙경로": "Text",
+       "원격경로": "Text",
+       "요청ID": "Text",
+       "대기": "Number",
+       "작업": "{ok: Bool, status: Unknown}",
+       "전송ID": "Text"
+      },
+      "result": "{ok: Bool, status: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+     "start": 16,
+     "end": 1410,
+     "line": 2,
+     "column": 1,
+     "source": "외부PC파일보내기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+     "end_line": 18,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:21875:23388": {
+    "name": "외부PC파일가져오기",
+    "params": {
+     "PC": "Unknown",
+     "중앙경로": "Text",
+     "원격경로": "Text",
+     "요청ID": "Text",
+     "대기": "Number",
+     "작업": "Unknown",
+     "전송ID": "Text"
+    },
+    "required": [
+     "PC",
+     "중앙경로",
+     "원격경로",
+     "요청ID"
+    ],
+    "pipe_input": "PC",
+    "default_expressions": {
+     "대기": "0",
+     "작업": "{}",
+     "전송ID": "\"\""
+    },
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:limb",
+     "self:task",
+     "table:filter"
+    ],
+    "source_hash": "924dd8c12cbb043c63fcd1230f914ada892a607d106aa41ee60b9fb63f06a926",
+    "result": "{ok: Bool, status: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "PC": "Unknown",
+       "중앙경로": "Text",
+       "원격경로": "Text",
+       "요청ID": "Text",
+       "대기": "Number",
+       "작업": "Record",
+       "전송ID": "Text"
+      },
+      "result": "{ok: Bool, status: Unknown}"
+     },
+     {
+      "params": {
+       "PC": "Unknown",
+       "중앙경로": "Text",
+       "원격경로": "Text",
+       "요청ID": "Text",
+       "대기": "Number",
+       "작업": "{ok: Bool, status: Unknown, collected: Unknown}",
+       "전송ID": "Text"
+      },
+      "result": "{ok: Bool, status: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "0cfdff64ef0ba8e2727254ed28b613137c12d22aad71bfa6d7ff1e5e4384aa9b",
+     "start": 16,
+     "end": 1529,
+     "line": 2,
+     "column": 1,
+     "source": "외부PC파일가져오기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0",
+     "end_line": 21,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:3614:6977": {
+    "name": "PC점검",
+    "params": {
+     "d": "Unknown",
+     "cap": "Unknown",
+     "rows_path": "Text",
+     "script_path": "Text",
+     "out": "Text",
+     "tag": "Text",
+     "remote_rel": "Text",
+     "expected_sum": "Unknown"
+    },
+    "required": [
+     "d",
+     "cap",
+     "rows_path",
+     "script_path",
+     "out",
+     "tag",
+     "remote_rel",
+     "expected_sum"
+    ],
+    "pipe_input": "d",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:limb",
+     "self:read",
+     "self:task",
+     "table:filter"
+    ],
+    "source_hash": "60fdf547b9992e9139be651f91ba34434b7ea3a4b960947f01ff51404b95176e",
+    "result": "{alias: Unknown, device_id: Unknown, method: Text, status: Record, status_raw: Unknown, remote_dir: Text, result: {sum: Unknown, count: Unknown, identity: Unknown, rows: Unknown}, sum_ok: Bool, local_result: Text, receipts: {status: Unknown, mkdir: Unknown, send_sample: Unknown, send_script: Unknown, process: Unknown, fetch: Unknown}, reused: Bool}",
+    "specializations": [
+     {
+      "params": {
+       "d": "Unknown",
+       "cap": "Unknown",
+       "rows_path": "Text",
+       "script_path": "Text",
+       "out": "Text",
+       "tag": "Text",
+       "remote_rel": "Text",
+       "expected_sum": "Unknown"
+      },
+      "result": "{alias: Unknown, device_id: Unknown, method: Text, status: Record, status_raw: Unknown, remote_dir: Text, result: {sum: Unknown, count: Unknown, identity: Unknown, rows: Unknown}, sum_ok: Bool, local_result: Text, receipts: {status: Unknown, mkdir: Unknown, send_sample: Unknown, send_script: Unknown, process: Unknown, fetch: Unknown}, reused: Bool}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 3614,
+     "end": 6977,
+     "line": 62,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 95,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:7043:8616": {
+    "name": "폰점검",
+    "params": {
+     "d": "Unknown",
+     "cap": "Unknown",
+     "rows": "Unknown",
+     "phone_rel": "Text",
+     "tag": "Text",
+     "expected_sum": "Unknown"
+    },
+    "required": [
+     "d",
+     "cap",
+     "rows",
+     "phone_rel",
+     "tag",
+     "expected_sum"
+    ],
+    "pipe_input": "d",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:task"
+    ],
+    "source_hash": "8b43d803c8720a7058df5d0076ed2dc32729f0edd8bf49ec668f516dad976fa4",
+    "result": "{alias: Unknown, device_id: Unknown, method: Unknown, status: {os: Unknown, device: Unknown, playback: Text, power: Text, disk: Text, volume: Text}, result: {sum: Unknown, count: Unknown, identity: Unknown, rows: Unknown}, sum_ok: Bool, remote_path: Unknown, receipts: {process: Unknown}, reused: Bool}",
+    "specializations": [
+     {
+      "params": {
+       "d": "Unknown",
+       "cap": "Unknown",
+       "rows": "Unknown",
+       "phone_rel": "Text",
+       "tag": "Text",
+       "expected_sum": "Unknown"
+      },
+      "result": "{alias: Unknown, device_id: Unknown, method: Unknown, status: {os: Unknown, device: Unknown, playback: Text, power: Text, disk: Text, volume: Text}, result: {sum: Unknown, count: Unknown, identity: Unknown, rows: Unknown}, sum_ok: Bool, remote_path: Unknown, receipts: {process: Unknown}, reused: Bool}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 7043,
+     "end": 8616,
+     "line": 98,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 122,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:8690:10350": {
+    "name": "사진연쇄",
+    "params": {
+     "d": "{alias: Text, device_id: Text, kind: Text, adapter: Text, paused: Null, connected: Null, reachable: Bool, reason: Unknown, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Unknown} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Unknown, info: Null}",
+     "cap": "{alias: Unknown, device_id: Unknown, kind: Unknown, method: Text, note: Unknown, os: Unknown, transfer: Unknown}",
+     "phone_rel": "Text",
+     "tag": "Text"
+    },
+    "required": [
+     "d",
+     "cap",
+     "phone_rel",
+     "tag"
+    ],
+    "pipe_input": "d",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:guestpc",
+     "self:task"
+    ],
+    "source_hash": "d429ce2ec26bf9624fa9fc5eb4cdaa20f569d53d3f57418725a9077f3e245896",
+    "result": "{device_id: Unknown, captured: Bool, blocked_at: Unknown, blocked_reason: Unknown, details: Unknown, phone_sha256: Null, hub_sha256: Null, pc_sha256: Null, all_equal: Null} | {device_id: Unknown, captured: Bool, phone_path: Unknown, phone_sha256: Unknown, phone_size: Unknown, blocked_at: Text, blocked_reason: Text, hub_sha256: Null, pc_sha256: Null, all_equal: Null, receipts: {photo: Unknown}} | {device_id: Unknown, captured: Bool, phone_path: Unknown, phone_sha256: Unknown, phone_size: Unknown, blocked_at: Text, blocked_reason: Text, hub_sha256: Null, pc_sha256: Null, all_equal: Null, receipts: {photo: Unknown}}",
+    "specializations": [
+     {
+      "params": {
+       "d": "{alias: Text, device_id: Text, kind: Text, adapter: Text, paused: Null, connected: Null, reachable: Bool, reason: Unknown, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Null} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Text, info: Unknown} | {alias: Unknown, device_id: Unknown, kind: Unknown, adapter: Unknown, paused: Unknown, connected: Unknown, reachable: Bool, reason: Unknown, info: Null}",
+       "cap": "{alias: Unknown, device_id: Unknown, kind: Unknown, method: Text, note: Unknown, os: Unknown, transfer: Unknown}",
+       "phone_rel": "Text",
+       "tag": "Text"
+      },
+      "result": "{device_id: Unknown, captured: Bool, blocked_at: Unknown, blocked_reason: Unknown, details: Unknown, phone_sha256: Null, hub_sha256: Null, pc_sha256: Null, all_equal: Null} | {device_id: Unknown, captured: Bool, phone_path: Unknown, phone_sha256: Unknown, phone_size: Unknown, blocked_at: Text, blocked_reason: Text, hub_sha256: Null, pc_sha256: Null, all_equal: Null, receipts: {photo: Unknown}} | {device_id: Unknown, captured: Bool, phone_path: Unknown, phone_sha256: Unknown, phone_size: Unknown, blocked_at: Text, blocked_reason: Text, hub_sha256: Null, pc_sha256: Null, all_equal: Null, receipts: {photo: Unknown}}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 8690,
+     "end": 10350,
+     "line": 125,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 152,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "4223f32bce7aeafc044c3f8f74fe7cce535e02c2aa3452bc624b901051f83035",
+  "dependencies": {
+   "source": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+   "libraries": "c2abe989864ed87af4980ffe0a5592c6dd9707b52841ae92fdba459449e2aefd",
+   "calls": {},
+   "input_types": {
+    "input": "Text",
+    "script": "Text",
+    "out": "Text",
+    "tag": "Text",
+    "remote_rel": "Text",
+    "phone_rel": "Text",
+    "previous": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 14886
+    },
+    {
+     "name": "외부PC준비",
+     "start": 14887,
+     "end": 16484
+    },
+    {
+     "name": "외부PC작업실행",
+     "start": 16485,
+     "end": 18022
+    },
+    {
+     "name": "외부PC작업확인",
+     "start": 18023,
+     "end": 20447
+    },
+    {
+     "name": "외부PC파일보내기",
+     "start": 20448,
+     "end": 21858
+    },
+    {
+     "name": "외부PC파일가져오기",
+     "start": 21859,
+     "end": 23388
+    }
+   ],
+   "contracts": "d0715587d684cf18811528204015952d4599a10b6b482dd4238454a08984f7da",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "98e0ccec8506b70ddc1fd2612f8b26fba78da74525b325644147396c2f777756",
+   "expressions": "5976e5f2ab3e4d11f3e954c118121c01e42ea4b47af18001dfe03644916449b0",
+   "core": "921d11f7096feff105705a3ec3c296ca8dc3172791e41c82cfb4264c9b74fa7e"
+  },
+  "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 10425,
+      "end": 10496,
+      "line": 155,
+      "column": 13,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 155,
+      "end_column": 84,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 10509,
+      "end": 10688,
+      "line": 156,
+      "column": 13,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 156,
+      "end_column": 192,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 10701,
+      "end": 10739,
+      "line": 157,
+      "column": 13,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 157,
+      "end_column": 51,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 10953,
+      "end": 11919,
+      "line": 165,
+      "column": 23,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 173,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 959,
+      "end": 962,
+      "line": 20,
+      "column": 63,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 20,
+      "end_column": 66,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 963,
+      "end": 976,
+      "line": 20,
+      "column": 67,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 20,
+      "end_column": 80,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 977,
+      "end": 979,
+      "line": 20,
+      "column": 81,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 20,
+      "end_column": 83,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 985,
+      "end": 1020,
+      "line": 20,
+      "column": 89,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 20,
+      "end_column": 124,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1024,
+      "end": 1039,
+      "line": 21,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 21,
+      "end_column": 18,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1042,
+      "end": 1070,
+      "line": 22,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 22,
+      "end_column": 31,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1073,
+      "end": 1130,
+      "line": 23,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 23,
+      "end_column": 60,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1133,
+      "end": 1163,
+      "line": 24,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 24,
+      "end_column": 33,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1166,
+      "end": 1195,
+      "line": 25,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 25,
+      "end_column": 32,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1198,
+      "end": 1535,
+      "line": 26,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 31,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1538,
+      "end": 1548,
+      "line": 32,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 32,
+      "end_column": 13,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1551,
+      "end": 1561,
+      "line": 33,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 33,
+      "end_column": 13,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1564,
+      "end": 1628,
+      "line": 34,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 34,
+      "end_column": 67,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1631,
+      "end": 1937,
+      "line": 35,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 41,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "4efed730d5d38f9b481e2f22cdb4bd887fea47370a3d858a782405af8d6e9fbc",
+      "start": 1940,
+      "end": 2422,
+      "line": 42,
+      "column": 3,
+      "source": "외부PC작업확인",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%ED%99%95%EC%9D%B8",
+      "end_line": 47,
+      "end_column": 78,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+      "start": 1469,
+      "end": 1535,
+      "line": 27,
+      "column": 3,
+      "source": "외부PC작업실행",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+      "end_line": 27,
+      "end_column": 69,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 3238,
+      "end": 3267,
+      "line": 51,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 51,
+      "end_column": 32,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 3270,
+      "end": 3274,
+      "line": 52,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 52,
+      "end_column": 7,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 3277,
+      "end": 3354,
+      "line": 53,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 53,
+      "end_column": 80,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 3357,
+      "end": 3366,
+      "line": 54,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 54,
+      "end_column": 12,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 4709,
+      "end": 4817,
+      "line": 72,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 72,
+      "end_column": 111,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 4820,
+      "end": 4924,
+      "line": 73,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 73,
+      "end_column": 107,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 4927,
+      "end": 5022,
+      "line": 74,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 74,
+      "end_column": 98,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 5025,
+      "end": 5068,
+      "line": 75,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 75,
+      "end_column": 46,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 5071,
+      "end": 5196,
+      "line": 76,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 76,
+      "end_column": 128,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 5199,
+      "end": 5353,
+      "line": 77,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 77,
+      "end_column": 157,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 5356,
+      "end": 5482,
+      "line": 78,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 78,
+      "end_column": 129,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    },
+    {
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 5485,
+      "end": 5640,
+      "line": 79,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 79,
+      "end_column": 158,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "분석 예산 초과"
+    }
+   ],
+   "warnings": [
+    {
+     "code": "LITERAL_DOLLAR",
+     "rule": "LITERAL_DOLLAR",
+     "severity": "warning",
+     "message": "이 문자열의 $변수.필드는 판본 2에서 문자 그대로입니다. 값 참조나 f 문자열의 ${표현식}을 사용하세요.",
+     "source_span": {
+      "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+      "start": 3967,
+      "end": 4273,
+      "line": 69,
+      "column": 27
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "일반 문자열은 치환하지 않습니다. 값 참조 또는 f 문자열의 ${표현식}으로 옮기거나, 문자 그대로 의도했다면 경고를 무시하세요.",
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 3967,
+      "end": 4273,
+      "line": 69,
+      "column": 27,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 69,
+      "end_column": 333,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+      "start": 17098,
+      "end": 17106,
+      "line": 253,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "실행",
+       "call": {
+        "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+        "start": 4605,
+        "end": 4706,
+        "line": 71,
+        "column": 7
+       },
+       "definition": {
+        "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+        "start": 3079,
+        "end": 3368,
+        "line": 49,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC작업실행",
+       "call": {
+        "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+        "start": 3120,
+        "end": 3235,
+        "line": 50,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+        "start": 16501,
+        "end": 18022,
+        "line": 244,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+      "start": 613,
+      "end": 621,
+      "line": 11,
+      "column": 7,
+      "source": "외부PC작업실행",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+      "end_line": 11,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+      "start": 17474,
+      "end": 17482,
+      "line": 260,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "실행",
+       "call": {
+        "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+        "start": 4605,
+        "end": 4706,
+        "line": 71,
+        "column": 7
+       },
+       "definition": {
+        "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+        "start": 3079,
+        "end": 3368,
+        "line": 49,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC작업실행",
+       "call": {
+        "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+        "start": 3120,
+        "end": 3235,
+        "line": 50,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+        "start": 16501,
+        "end": 18022,
+        "line": 244,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+      "start": 989,
+      "end": 997,
+      "line": 18,
+      "column": 7,
+      "source": "외부PC작업실행",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+      "end_line": 18,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+      "start": 17098,
+      "end": 17106,
+      "line": 253,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "실행",
+       "call": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 4930,
+        "end": 5022,
+        "line": 74,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 3079,
+        "end": 3368,
+        "line": 49,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC작업실행",
+       "call": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 3120,
+        "end": 3235,
+        "line": 50,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 16501,
+        "end": 18022,
+        "line": 244,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+      "start": 613,
+      "end": 621,
+      "line": 11,
+      "column": 7,
+      "source": "외부PC작업실행",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+      "end_line": 11,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+      "start": 17474,
+      "end": 17482,
+      "line": 260,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "실행",
+       "call": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 4930,
+        "end": 5022,
+        "line": 74,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 3079,
+        "end": 3368,
+        "line": 49,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC작업실행",
+       "call": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 3120,
+        "end": 3235,
+        "line": 50,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+        "start": 16501,
+        "end": 18022,
+        "line": 244,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+      "start": 989,
+      "end": 997,
+      "line": 18,
+      "column": 7,
+      "source": "외부PC작업실행",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+      "end_line": 18,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+      "start": 20725,
+      "end": 20733,
+      "line": 323,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC파일보내기",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 5075,
+        "end": 5196,
+        "line": 76,
+        "column": 7
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 20464,
+        "end": 21858,
+        "line": 320,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+      "start": 277,
+      "end": 285,
+      "line": 5,
+      "column": 7,
+      "source": "외부PC파일보내기",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+      "end_line": 5,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+      "start": 20725,
+      "end": 20733,
+      "line": 323,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC파일보내기",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 5223,
+        "end": 5351,
+        "line": 77,
+        "column": 27
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 20464,
+        "end": 21858,
+        "line": 320,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+      "start": 277,
+      "end": 285,
+      "line": 5,
+      "column": 7,
+      "source": "외부PC파일보내기",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+      "end_line": 5,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+      "start": 20725,
+      "end": 20733,
+      "line": 323,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC파일보내기",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 5360,
+        "end": 5482,
+        "line": 78,
+        "column": 7
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 20464,
+        "end": 21858,
+        "line": 320,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+      "start": 277,
+      "end": 285,
+      "line": 5,
+      "column": 7,
+      "source": "외부PC파일보내기",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+      "end_line": 5,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+      "start": 20725,
+      "end": 20733,
+      "line": 323,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC파일보내기",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 5509,
+        "end": 5638,
+        "line": 79,
+        "column": 27
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 20464,
+        "end": 21858,
+        "line": 320,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+      "start": 277,
+      "end": 285,
+      "line": 5,
+      "column": 7,
+      "source": "외부PC파일보내기",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+      "end_line": 5,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "FORMAT_UNINTERPOLATED",
+     "rule": "FORMAT_UNINTERPOLATED",
+     "severity": "warning",
+     "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+     "source_span": {
+      "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+      "start": 5754,
+      "end": 5859,
+      "line": 82,
+      "column": 24
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {
+      "text": "$LASTEXITCODE"
+     },
+     "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 5754,
+      "end": 5859,
+      "line": 82,
+      "column": 24,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 82,
+      "end_column": 129,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+      "start": 17098,
+      "end": 17106,
+      "line": 253,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "실행",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 5966,
+        "end": 6059,
+        "line": 84,
+        "column": 8
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 3079,
+        "end": 3368,
+        "line": 49,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC작업실행",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 3120,
+        "end": 3235,
+        "line": 50,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 16501,
+        "end": 18022,
+        "line": 244,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+      "start": 613,
+      "end": 621,
+      "line": 11,
+      "column": 7,
+      "source": "외부PC작업실행",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+      "end_line": 11,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+      "start": 17474,
+      "end": 17482,
+      "line": 260,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "실행",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 5966,
+        "end": 6059,
+        "line": 84,
+        "column": 8
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 3079,
+        "end": 3368,
+        "line": 49,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC작업실행",
+       "call": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 3120,
+        "end": 3235,
+        "line": 50,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+        "start": 16501,
+        "end": 18022,
+        "line": 244,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+      "start": 989,
+      "end": 997,
+      "line": 18,
+      "column": 7,
+      "source": "외부PC작업실행",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+      "end_line": 18,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+      "start": 22137,
+      "end": 22145,
+      "line": 341,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC파일가져오기",
+       "call": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 6154,
+        "end": 6266,
+        "line": 87,
+        "column": 6
+       },
+       "definition": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 21875,
+        "end": 23388,
+        "line": 338,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "0cfdff64ef0ba8e2727254ed28b613137c12d22aad71bfa6d7ff1e5e4384aa9b",
+      "start": 278,
+      "end": 286,
+      "line": 5,
+      "column": 7,
+      "source": "외부PC파일가져오기",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0",
+      "end_line": 5,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "RECORD_LENGTH",
+     "rule": "RECORD_LENGTH",
+     "severity": "warning",
+     "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+     "source_span": {
+      "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+      "start": 22137,
+      "end": 22145,
+      "line": 341,
+      "column": 7
+     },
+     "call_path": [
+      {
+       "function": "PC점검",
+       "call": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 11433,
+        "end": 11562,
+        "line": 170,
+        "column": 48
+       },
+       "definition": {
+        "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+        "start": 3614,
+        "end": 6977,
+        "line": 62,
+        "column": 1
+       }
+      },
+      {
+       "function": "외부PC파일가져오기",
+       "call": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 6298,
+        "end": 6416,
+        "line": 88,
+        "column": 32
+       },
+       "definition": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 21875,
+        "end": 23388,
+        "line": 338,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {},
+     "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+     "location": {
+      "source_hash": "0cfdff64ef0ba8e2727254ed28b613137c12d22aad71bfa6d7ff1e5e4384aa9b",
+      "start": 278,
+      "end": 286,
+      "line": 5,
+      "column": 7,
+      "source": "외부PC파일가져오기",
+      "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0",
+      "end_line": 5,
+      "end_column": 15,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "FORMAT_UNINTERPOLATED",
+     "rule": "FORMAT_UNINTERPOLATED",
+     "severity": "warning",
+     "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+     "source_span": {
+      "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+      "start": 7254,
+      "end": 7830,
+      "line": 103,
+      "column": 10
+     },
+     "call_path": [
+      {
+       "function": "폰점검",
+       "call": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 11606,
+        "end": 11697,
+        "line": 171,
+        "column": 42
+       },
+       "definition": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 7043,
+        "end": 8616,
+        "line": 98,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {
+      "text": "$in"
+     },
+     "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 7254,
+      "end": 7830,
+      "line": 103,
+      "column": 10,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 113,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "FORMAT_UNINTERPOLATED",
+     "rule": "FORMAT_UNINTERPOLATED",
+     "severity": "warning",
+     "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+     "source_span": {
+      "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+      "start": 7254,
+      "end": 7830,
+      "line": 103,
+      "column": 10
+     },
+     "call_path": [
+      {
+       "function": "폰점검",
+       "call": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 11606,
+        "end": 11697,
+        "line": 171,
+        "column": 42
+       },
+       "definition": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 7043,
+        "end": 8616,
+        "line": 98,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {
+      "text": "$d"
+     },
+     "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 7254,
+      "end": 7830,
+      "line": 103,
+      "column": 10,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 113,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "FORMAT_UNINTERPOLATED",
+     "rule": "FORMAT_UNINTERPOLATED",
+     "severity": "warning",
+     "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+     "source_span": {
+      "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+      "start": 7254,
+      "end": 7830,
+      "line": 103,
+      "column": 10
+     },
+     "call_path": [
+      {
+       "function": "폰점검",
+       "call": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 11606,
+        "end": 11697,
+        "line": 171,
+        "column": 42
+       },
+       "definition": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 7043,
+        "end": 8616,
+        "line": 98,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {
+      "text": "$sum"
+     },
+     "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 7254,
+      "end": 7830,
+      "line": 103,
+      "column": 10,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 113,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "FORMAT_UNINTERPOLATED",
+     "rule": "FORMAT_UNINTERPOLATED",
+     "severity": "warning",
+     "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+     "source_span": {
+      "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+      "start": 8737,
+      "end": 8985,
+      "line": 126,
+      "column": 10
+     },
+     "call_path": [
+      {
+       "function": "사진연쇄",
+       "call": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 12861,
+        "end": 12921,
+        "line": 181,
+        "column": 32
+       },
+       "definition": {
+        "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+        "start": 8690,
+        "end": 10350,
+        "line": 125,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {
+      "text": "$shot"
+     },
+     "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+     "location": {
+      "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+      "start": 8737,
+      "end": 8985,
+      "line": 126,
+      "column": 10,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 132,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     }
+    }
+   ],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:guestpc",
+    "self:limb",
+    "self:read",
+    "self:task",
+    "self:write",
+    "table:filter"
+   ]
+  },
+  "warnings": [
+   {
+    "code": "LITERAL_DOLLAR",
+    "rule": "LITERAL_DOLLAR",
+    "severity": "warning",
+    "message": "이 문자열의 $변수.필드는 판본 2에서 문자 그대로입니다. 값 참조나 f 문자열의 ${표현식}을 사용하세요.",
+    "source_span": {
+     "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+     "start": 3967,
+     "end": 4273,
+     "line": 69,
+     "column": 27
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "일반 문자열은 치환하지 않습니다. 값 참조 또는 f 문자열의 ${표현식}으로 옮기거나, 문자 그대로 의도했다면 경고를 무시하세요.",
+    "location": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 3967,
+     "end": 4273,
+     "line": 69,
+     "column": 27,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 69,
+     "end_column": 333,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+     "start": 17098,
+     "end": 17106,
+     "line": 253,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "실행",
+      "call": {
+       "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+       "start": 4605,
+       "end": 4706,
+       "line": 71,
+       "column": 7
+      },
+      "definition": {
+       "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+       "start": 3079,
+       "end": 3368,
+       "line": 49,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC작업실행",
+      "call": {
+       "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+       "start": 3120,
+       "end": 3235,
+       "line": 50,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+       "start": 16501,
+       "end": 18022,
+       "line": 244,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+     "start": 613,
+     "end": 621,
+     "line": 11,
+     "column": 7,
+     "source": "외부PC작업실행",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+     "end_line": 11,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+     "start": 17474,
+     "end": 17482,
+     "line": 260,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "실행",
+      "call": {
+       "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+       "start": 4605,
+       "end": 4706,
+       "line": 71,
+       "column": 7
+      },
+      "definition": {
+       "source_hash": "520611b5938767efc22afd5b99a03fe7e01b0ae0adaa4fd71bd5ce51385e76db",
+       "start": 3079,
+       "end": 3368,
+       "line": 49,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC작업실행",
+      "call": {
+       "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+       "start": 3120,
+       "end": 3235,
+       "line": 50,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "21e56c0caeeb58db355467a24600b69bd083cc680f3c95ab1265e9d2af25e07e",
+       "start": 16501,
+       "end": 18022,
+       "line": 244,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+     "start": 989,
+     "end": 997,
+     "line": 18,
+     "column": 7,
+     "source": "외부PC작업실행",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+     "end_line": 18,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+     "start": 17098,
+     "end": 17106,
+     "line": 253,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "실행",
+      "call": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 4930,
+       "end": 5022,
+       "line": 74,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 3079,
+       "end": 3368,
+       "line": 49,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC작업실행",
+      "call": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 3120,
+       "end": 3235,
+       "line": 50,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 16501,
+       "end": 18022,
+       "line": 244,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+     "start": 613,
+     "end": 621,
+     "line": 11,
+     "column": 7,
+     "source": "외부PC작업실행",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+     "end_line": 11,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+     "start": 17474,
+     "end": 17482,
+     "line": 260,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "실행",
+      "call": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 4930,
+       "end": 5022,
+       "line": 74,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 3079,
+       "end": 3368,
+       "line": 49,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC작업실행",
+      "call": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 3120,
+       "end": 3235,
+       "line": 50,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "ab9a4b263873c7cbf0392e5b269179f2b668a1f2d26eebc629a18f5d8c4f5a80",
+       "start": 16501,
+       "end": 18022,
+       "line": 244,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+     "start": 989,
+     "end": 997,
+     "line": 18,
+     "column": 7,
+     "source": "외부PC작업실행",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+     "end_line": 18,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+     "start": 20725,
+     "end": 20733,
+     "line": 323,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC파일보내기",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 5075,
+       "end": 5196,
+       "line": 76,
+       "column": 7
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 20464,
+       "end": 21858,
+       "line": 320,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+     "start": 277,
+     "end": 285,
+     "line": 5,
+     "column": 7,
+     "source": "외부PC파일보내기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+     "end_line": 5,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+     "start": 20725,
+     "end": 20733,
+     "line": 323,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC파일보내기",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 5223,
+       "end": 5351,
+       "line": 77,
+       "column": 27
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 20464,
+       "end": 21858,
+       "line": 320,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+     "start": 277,
+     "end": 285,
+     "line": 5,
+     "column": 7,
+     "source": "외부PC파일보내기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+     "end_line": 5,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+     "start": 20725,
+     "end": 20733,
+     "line": 323,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC파일보내기",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 5360,
+       "end": 5482,
+       "line": 78,
+       "column": 7
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 20464,
+       "end": 21858,
+       "line": 320,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+     "start": 277,
+     "end": 285,
+     "line": 5,
+     "column": 7,
+     "source": "외부PC파일보내기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+     "end_line": 5,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+     "start": 20725,
+     "end": 20733,
+     "line": 323,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC파일보내기",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 5509,
+       "end": 5638,
+       "line": 79,
+       "column": 27
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 20464,
+       "end": 21858,
+       "line": 320,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "80eede29ba58e508c6c38dac24572c886b869483901fbd546a9555526c202bc3",
+     "start": 277,
+     "end": 285,
+     "line": 5,
+     "column": 7,
+     "source": "외부PC파일보내기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EB%B3%B4%EB%82%B4%EA%B8%B0",
+     "end_line": 5,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "FORMAT_UNINTERPOLATED",
+    "rule": "FORMAT_UNINTERPOLATED",
+    "severity": "warning",
+    "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+    "source_span": {
+     "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+     "start": 5754,
+     "end": 5859,
+     "line": 82,
+     "column": 24
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "text": "$LASTEXITCODE"
+    },
+    "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+    "location": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 5754,
+     "end": 5859,
+     "line": 82,
+     "column": 24,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 82,
+     "end_column": 129,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+     "start": 17098,
+     "end": 17106,
+     "line": 253,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "실행",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 5966,
+       "end": 6059,
+       "line": 84,
+       "column": 8
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 3079,
+       "end": 3368,
+       "line": 49,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC작업실행",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 3120,
+       "end": 3235,
+       "line": 50,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 16501,
+       "end": 18022,
+       "line": 244,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+     "start": 613,
+     "end": 621,
+     "line": 11,
+     "column": 7,
+     "source": "외부PC작업실행",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+     "end_line": 11,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+     "start": 17474,
+     "end": 17482,
+     "line": 260,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "실행",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 5966,
+       "end": 6059,
+       "line": 84,
+       "column": 8
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 3079,
+       "end": 3368,
+       "line": 49,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC작업실행",
+      "call": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 3120,
+       "end": 3235,
+       "line": 50,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "0c7f53dac845d9fdc991d6a2b380a01c35c90b58a3151c95a312d7c413f001cb",
+       "start": 16501,
+       "end": 18022,
+       "line": 244,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "845cc32ea307a0d50dcab2af32b292ccc9d6984210b3b1106c283b3af232867e",
+     "start": 989,
+     "end": 997,
+     "line": 18,
+     "column": 7,
+     "source": "외부PC작업실행",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%9E%91%EC%97%85%EC%8B%A4%ED%96%89",
+     "end_line": 18,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+     "start": 22137,
+     "end": 22145,
+     "line": 341,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC파일가져오기",
+      "call": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 6154,
+       "end": 6266,
+       "line": 87,
+       "column": 6
+      },
+      "definition": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 21875,
+       "end": 23388,
+       "line": 338,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "0cfdff64ef0ba8e2727254ed28b613137c12d22aad71bfa6d7ff1e5e4384aa9b",
+     "start": 278,
+     "end": 286,
+     "line": 5,
+     "column": 7,
+     "source": "외부PC파일가져오기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0",
+     "end_line": 5,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "RECORD_LENGTH",
+    "rule": "RECORD_LENGTH",
+    "severity": "warning",
+    "message": "Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.",
+    "source_span": {
+     "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+     "start": 22137,
+     "end": 22145,
+     "line": 341,
+     "column": 7
+    },
+    "call_path": [
+     {
+      "function": "PC점검",
+      "call": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 11433,
+       "end": 11562,
+       "line": 170,
+       "column": 48
+      },
+      "definition": {
+       "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+       "start": 3614,
+       "end": 6977,
+       "line": 62,
+       "column": 1
+      }
+     },
+     {
+      "function": "외부PC파일가져오기",
+      "call": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 6298,
+       "end": 6416,
+       "line": 88,
+       "column": 32
+      },
+      "definition": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 21875,
+       "end": 23388,
+       "line": 338,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {},
+    "hint": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
+    "location": {
+     "source_hash": "0cfdff64ef0ba8e2727254ed28b613137c12d22aad71bfa6d7ff1e5e4384aa9b",
+     "start": 278,
+     "end": 286,
+     "line": 5,
+     "column": 7,
+     "source": "외부PC파일가져오기",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%ED%8C%8C%EC%9D%BC%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0",
+     "end_line": 5,
+     "end_column": 15,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "FORMAT_UNINTERPOLATED",
+    "rule": "FORMAT_UNINTERPOLATED",
+    "severity": "warning",
+    "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+    "source_span": {
+     "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+     "start": 7254,
+     "end": 7830,
+     "line": 103,
+     "column": 10
+    },
+    "call_path": [
+     {
+      "function": "폰점검",
+      "call": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 11606,
+       "end": 11697,
+       "line": 171,
+       "column": 42
+      },
+      "definition": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 7043,
+       "end": 8616,
+       "line": 98,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "text": "$in"
+    },
+    "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+    "location": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 7254,
+     "end": 7830,
+     "line": 103,
+     "column": 10,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 113,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "FORMAT_UNINTERPOLATED",
+    "rule": "FORMAT_UNINTERPOLATED",
+    "severity": "warning",
+    "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+    "source_span": {
+     "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+     "start": 7254,
+     "end": 7830,
+     "line": 103,
+     "column": 10
+    },
+    "call_path": [
+     {
+      "function": "폰점검",
+      "call": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 11606,
+       "end": 11697,
+       "line": 171,
+       "column": 42
+      },
+      "definition": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 7043,
+       "end": 8616,
+       "line": 98,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "text": "$d"
+    },
+    "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+    "location": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 7254,
+     "end": 7830,
+     "line": 103,
+     "column": 10,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 113,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "FORMAT_UNINTERPOLATED",
+    "rule": "FORMAT_UNINTERPOLATED",
+    "severity": "warning",
+    "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+    "source_span": {
+     "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+     "start": 7254,
+     "end": 7830,
+     "line": 103,
+     "column": 10
+    },
+    "call_path": [
+     {
+      "function": "폰점검",
+      "call": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 11606,
+       "end": 11697,
+       "line": 171,
+       "column": 42
+      },
+      "definition": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 7043,
+       "end": 8616,
+       "line": 98,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "text": "$sum"
+    },
+    "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+    "location": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 7254,
+     "end": 7830,
+     "line": 103,
+     "column": 10,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 113,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "FORMAT_UNINTERPOLATED",
+    "rule": "FORMAT_UNINTERPOLATED",
+    "severity": "warning",
+    "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+    "source_span": {
+     "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+     "start": 8737,
+     "end": 8985,
+     "line": 126,
+     "column": 10
+    },
+    "call_path": [
+     {
+      "function": "사진연쇄",
+      "call": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 12861,
+       "end": 12921,
+       "line": 181,
+       "column": 32
+      },
+      "definition": {
+       "source_hash": "ad2453ad839a2ef09a94fb4021ce66decde6231323a060da0c53f7bbdb3c40c1",
+       "start": 8690,
+       "end": 10350,
+       "line": 125,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "text": "$shot"
+    },
+    "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+    "location": {
+     "source_hash": "baadd003e4d3b9e3472a76d721b5e7f5176bf6d4a0b44ecca1a96ff501909d66",
+     "start": 8737,
+     "end": 8985,
+     "line": 126,
+     "column": 10,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 132,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "실행하려면 execute_args 를 그대로 check 없이 호출하세요 — 프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. 바꿀 인자만 명시하면 그 인자 전체를 교체합니다. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+  "runtime_checks": {
+   "total": 1176,
+   "informative": 937
+  },
+  "guards_ref": {
+   "id": "fc0a8e0e20c8c982ce1e399a8e9be2fdba952e6840eaebc11ece6472bbef05b1",
+   "chars": 2699710,
+   "read_args": {
+    "id": "fc0a8e0e20c8c982ce1e399a8e9be2fdba952e6840eaebc11ece6472bbef05b1",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 100000,
+   "rows": 10000
+  },
+  "execute_args": {
+   "code": "$checked:3f31f08db3a6708e51b0513fe8b3d5a146e795a65da0a684ab2e9776d37a55f1"
+  }
+ }
+}

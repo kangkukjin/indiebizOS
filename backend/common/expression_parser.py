@@ -333,7 +333,7 @@ class Parser:
                     cursor += 1
                 continue
             if literal:
-                parts.append(ast.literal_eval(delimiter + literal + delimiter))
+                parts.append(self._format_literal(literal, delimiter))
                 literal = ""
             begin, cursor, depth, quote = cursor + 2, cursor + 2, 1, None
             while cursor < len(raw) and depth:
@@ -361,8 +361,23 @@ class Parser:
             parser.pop("<eof>")
             parts.append(value)
         if literal:
-            parts.append(ast.literal_eval(delimiter + literal + delimiter))
+            parts.append(self._format_literal(literal, delimiter))
         return Node("format", token.start, token.end, {"parts": parts})
+
+    def _format_literal(self, literal, delimiter):
+        """f 문자열의 리터럴 조각을 해석한다. 조각이 바깥 따옴표로 끝나거나 삼중 따옴표를 품으면
+        delimiter 로 다시 감싼 원문이 Python 구문 오류가 되므로(73회차 L73-1), 이스케이프되지 않은
+        큰따옴표·줄바꿈만 이스케이프해 한 줄 큰따옴표 리터럴로 해석한다. 그래도 실패하면 IBL 위치가 있는 SYNTAX."""
+        try:
+            return ast.literal_eval(delimiter + literal + delimiter)
+        except SyntaxError:
+            pass
+        escaped = re.sub(r'(?<!\\)((?:\\\\)*)"', r'\1\\"', literal)
+        escaped = escaped.replace("\n", "\\n").replace("\r", "\\r")
+        try:
+            return ast.literal_eval('"' + escaped + '"')
+        except SyntaxError:
+            self.fail("f 문자열의 리터럴 조각을 해석할 수 없습니다. 이스케이프(\\)와 따옴표 짝을 확인하세요.")
 
     def call_or_control(self):
         start = self.pop("[").start

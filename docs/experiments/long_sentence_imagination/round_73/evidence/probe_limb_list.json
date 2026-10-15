@@ -1,0 +1,2193 @@
+{
+ "request": {
+  "edition": 2,
+  "origin": "training"
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1792047454.593268,
+ "ended": 1792047455.027201,
+ "response": {
+  "success": true,
+  "value": {
+   "success": true,
+   "op": "list",
+   "limbs": [
+    {
+     "alias": "휴대용",
+     "device_id": "guestpc-3b30e8afd4b4",
+     "key_hint": "limb_5…",
+     "created_at": 1784757104.313617,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "휴대용",
+     "device_id": "guestpc-6c0531639d37",
+     "key_hint": "limb_f…",
+     "created_at": 1784757174.819988,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1784770583.623198,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "테스트2",
+     "device_id": "guestpc-041a4c6b0eef",
+     "key_hint": "limb_n…",
+     "created_at": 1784770614.839193,
+     "expires_at": 1784857014.839193,
+     "revoked": true,
+     "expired": true,
+     "approved": true,
+     "last_used": 1784770624.752759,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "휴대용",
+     "device_id": "guestpc-3d6fe5ada44a",
+     "key_hint": "limb_c…",
+     "created_at": 1784770694.4533608,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "기본값테스트",
+     "device_id": "guestpc-0a2fa003ec3e",
+     "key_hint": "limb_4…",
+     "created_at": 1784771318.349937,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "p0",
+     "device_id": "guestpc-0cf0e5150587",
+     "key_hint": "limb_8…",
+     "created_at": 1784771417.022827,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": 1784833930.804278,
+     "last_host": "DESKTOP-VQJGB71 (windows/amd64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue/p0"
+    },
+    {
+     "alias": "삭제테스트",
+     "device_id": "guestpc-0d9656caa47a",
+     "key_hint": "limb__…",
+     "created_at": 1784771675.2505112,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "공유테스트",
+     "device_id": "guestpc-d8bf0f27fd31",
+     "key_hint": "limb_W…",
+     "created_at": 1784771688.0330691,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "공유테스트",
+     "device_id": "guestpc-0c0f14d3b9bf",
+     "key_hint": "limb_u…",
+     "created_at": 1784771688.080322,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "측정손발",
+     "device_id": "guestpc-6d9de21d26d6",
+     "key_hint": "limb_G…",
+     "created_at": 1784809831.27546,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1784836399.364608,
+     "last_host": "측정 (linux/amd64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "눈검증",
+     "device_id": "guestpc-a00367aed41e",
+     "key_hint": "limb_r…",
+     "created_at": 1785750111.5628622,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1785751657.036959,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "정밀검증",
+     "device_id": "guestpc-a38aabe001d8",
+     "key_hint": "limb_6…",
+     "created_at": 1785753100.715452,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1785753775.989258,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": {
+      "os": "darwin",
+      "os_version": "macOS 26.5.2",
+      "hostname": "Mac-mini.local",
+      "user": "kangkukjin",
+      "admin": false,
+      "gui": {
+       "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+       "resolution": "1920x1080",
+       "screen": "screencapture"
+      }
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "김희정 테스트",
+     "device_id": "guestpc-cf04e5ce8f67",
+     "key_hint": "limb_V…",
+     "created_at": 1789396740.301779,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": 36,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "맥12",
+     "device_id": "guestpc-9b01f0848912",
+     "key_hint": "limb_F…",
+     "created_at": 1791530401.911241,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1791560224.8509052,
+     "last_host": "kang-old-MacBook-Air.local (darwin/amd64)",
+     "env": {
+      "os": "darwin",
+      "os_version": "macOS 10.15.8",
+      "hostname": "kang-old-MacBook-Air.local",
+      "user": "kangkukjin",
+      "admin": false,
+      "gui": {
+       "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+       "resolution": "1920x1080",
+       "screen": "screencapture"
+      }
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "맥12",
+     "device_id": "guestpc-7a440e9daf61",
+     "key_hint": "limb_4…",
+     "created_at": 1791614149.852257,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "darwin",
+      "hostname": "kang-old-MacBook-Air.local"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "45e1e7d030124b7afd1cab2078ce887d",
+      "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "removed",
+      "paused": false,
+      "wake": {
+       "mac": "00886539637c",
+       "broadcast": "192.168.0.255",
+       "relay": "central",
+       "tested": false
+      },
+      "last_seen": 1791679804.001085,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+       "hostname": "kang-old-MacBook-Air.local",
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "darwin",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "transfer": true,
+       "wake_relay": true
+      },
+      "removal_receipt": {
+       "installation_id": "45e1e7d030124b7afd1cab2078ce887d"
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "맥12",
+     "device_id": "guestpc-3fd796167b18",
+     "key_hint": "limb_s…",
+     "created_at": 1791679834.924881,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "darwin",
+      "hostname": "kang-old-MacBook-Air.local"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "a7a15d21cbda8073f94dc3e663493c28",
+      "generation": "48e28060cb31ab48accbe8d1afa3f535",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047448.851897,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "48e28060cb31ab48accbe8d1afa3f535",
+       "go": "go1.26.5",
+       "helper_sha256": "a1634f86821d49645fc3ebc4668a84f9448774642cfb6ec55e63cd5e159f95e2",
+       "hostname": "kang-old-MacBook-Air.local",
+       "installation_warnings": [],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_components": {
+        "components": {
+         "ffmpeg": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/bin/ffmpeg",
+         "ffplay": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/bin/ffplay",
+         "mpv": "/Users/kangkukjin/Applications/mpv-dl-0.37.0/mpv.app/Contents/MacOS/mpv"
+        },
+        "missing": []
+       },
+       "media_player": "/Users/kangkukjin/Applications/mpv-dl-0.37.0/mpv.app/Contents/MacOS/mpv",
+       "media_session": {
+        "camera": true,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "darwin",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": true
+    },
+    {
+     "alias": "KHJoffice",
+     "device_id": "guestpc-7da97e970821",
+     "key_hint": "limb_2…",
+     "created_at": 1791688491.2073212,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "windows",
+      "hostname": "KHJoffice"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "63c58e9aa143c63a07ebb1d698223b3d",
+      "generation": "5ed6e00390e587c4403abb7003a7c5f6",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047444.837569,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "5ed6e00390e587c4403abb7003a7c5f6",
+       "go": "go1.26.5",
+       "helper_sha256": "087b75045a457ef7554ffa3bbe9fb61cc2e101f63029043169a5fbd15e6fac93",
+       "hostname": "KHJoffice",
+       "installation_warnings": [
+        "로그인 자동 시작 설정 실패: schtasks: ERROR: Access is denied.: exit status 1. 현재 실행은 계속합니다. 다음 로그인 후 연결되지 않으면 설치된 헬퍼를 직접 실행하세요."
+       ],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": false,
+       "media_components": {
+        "components": {
+         "ffmpeg": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffmpeg.exe",
+         "ffplay": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffplay.exe",
+         "mpv": ""
+        },
+        "missing": [
+         "mpv"
+        ],
+        "hint": "mpv 보완: 명령 프롬프트에서 winget install --exact --id Gyan.FFmpeg 및 winget install --exact --id shinchiro.mpv (winget이 없으면 Microsoft Store의 '앱 설치 관리자'를 먼저 설치) — 또는 실행 파일을 C:\\Users\\kkukj\\AppData\\Roaming\\IndieBiz\\resident-bea793f6b0acaba4\\bin 에 넣으세요. 그다음 이 PC의 관리 화면에서 '미디어 구성요소 다시 설치'를 누르면 다시 확인합니다."
+       },
+       "media_player": "",
+       "media_session": {
+        "camera": false,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "windows",
+       "process_recovery": true,
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": true
+    },
+    {
+     "alias": "맥26",
+     "device_id": "guestpc-9dc41d53987d",
+     "key_hint": "limb_c…",
+     "created_at": 1791859956.132853,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "darwin",
+      "hostname": "MacBook-Air.local"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "c8bf39dce36a77913768863f2087218b",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792040924.691627,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "arm64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+       "go": "go1.26.5",
+       "helper_sha256": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+       "hostname": "MacBook-Air.local",
+       "installation_warnings": [],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_components": {
+        "components": {
+         "ffmpeg": "/opt/homebrew/bin/ffmpeg",
+         "ffplay": "/opt/homebrew/bin/ffplay",
+         "mpv": "/opt/homebrew/bin/mpv"
+        },
+        "missing": []
+       },
+       "media_player": "/opt/homebrew/bin/mpv",
+       "media_session": {
+        "camera": true,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "darwin",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "tv1",
+     "device_id": "guestpc-ec89e5f574e8",
+     "key_hint": "limb_X…",
+     "created_at": 1791875951.56538,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "windows",
+      "hostname": "DESKTOP-VQJGB71"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "2a3bccdfa7895e79cbd75b554a5a234f",
+      "generation": "65d79c3a2b2d6df7d7e632a4c54202ba",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "removed",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1791898265.0727391,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "65d79c3a2b2d6df7d7e632a4c54202ba",
+       "go": "go1.26.5",
+       "helper_sha256": "7d6ef9837cae828713aca925c1714639fe331e1d4bce1126c8676edb513adbd2",
+       "hostname": "DESKTOP-VQJGB71",
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": false,
+       "media_player": "",
+       "media_session": {
+        "camera": false,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "windows",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      },
+      "removal_receipt": {
+       "installation_id": "2a3bccdfa7895e79cbd75b554a5a234f"
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성1",
+     "device_id": "guestpc-bf79a72df35b",
+     "key_hint": "limb_C…",
+     "created_at": 1791877637.3487449,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {},
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "43f5b3ac6b4b0682a8fd967a20b062d8",
+      "generation": "ca9f2de471868969adaebafdd9fde50b",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "removed",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1791878242.5185332,
+      "capabilities": {
+       "adapter": "indiebiz-v1",
+       "body": "phone",
+       "ops": [
+        "ibl",
+        "info"
+       ],
+       "ibl": true,
+       "shell": false,
+       "python": "3.11.10",
+       "alias": "삼성1"
+      },
+      "removal_receipt": {
+       "installation_id": "43f5b3ac6b4b0682a8fd967a20b062d8"
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성1",
+     "device_id": "guestpc-f082d51d4252",
+     "key_hint": "limb_f…",
+     "created_at": 1791879013.328205,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "ed8999e4731ad55eab2d326a60dd99ec",
+      "generation": "bb69ea3ea46b744b2a06ba68a6ca0a5f",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "removal_pending",
+      "paused": false,
+      "wake": null
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성1",
+     "device_id": "guestpc-4e51c614b25b",
+     "key_hint": "limb_1…",
+     "created_at": 1791879105.8360589,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {},
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "3a6f78faee28c67f747456fbf616211f",
+      "generation": "f2d1fd0ff7d020d928fa42e60882bde9",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047118.609731,
+      "capabilities": {
+       "adapter": "indiebiz-v1",
+       "body": "phone",
+       "ops": [
+        "ibl",
+        "info",
+        "media"
+       ],
+       "ibl": true,
+       "shell": false,
+       "python": "3.11.10",
+       "alias": "삼성1",
+       "media_session": {
+        "camera": true,
+        "microphone": true,
+        "speaker": true,
+        "playback": true,
+        "video_receive": true,
+        "video_playback": true,
+        "screen": false,
+        "camera_ready": true,
+        "microphone_ready": true,
+        "armed": false,
+        "video_profile": {
+         "width": 640,
+         "height": 480,
+         "fps": 15
+        },
+        "abi": "armeabi-v7a",
+        "sdk": 28,
+        "permissions": {
+         "camera": true,
+         "record_audio": true
+        },
+        "engine": {
+         "library": "io.github.webrtc-sdk:android",
+         "version": "144.7559.15"
+        }
+       },
+       "card": {
+        "kind": "indiebiz-capability-card",
+        "version": 1,
+        "body": {
+         "profile": "phone",
+         "kind": "phone",
+         "device": "samsung SM-J730K",
+         "os": "Android 9",
+         "arch": "armeabi-v7a",
+         "label": "안드로이드 폰 · samsung SM-J730K · Android 9"
+        },
+        "identity": {
+         "device_id": "cff32a4ea8f0"
+        },
+        "standard": {
+         "core_nodes": [
+          "others",
+          "self",
+          "table"
+         ],
+         "grammar": "[node:action]{params} · 파이프 >> · 병렬 & · 폴백 ??"
+        },
+        "dictionary_hash": "00258f961722",
+        "generated_at": "2026-10-15T15:50:47",
+        "action_count": 52
+       }
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "tv1",
+     "device_id": "guestpc-70e163471313",
+     "key_hint": "limb_T…",
+     "created_at": 1791898355.6395142,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "windows",
+      "hostname": "DESKTOP-VQJGB71"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "ab8d312e371614574747c53b9b27aa86",
+      "generation": "f74b412c29e07da219e879d58c0e2d46",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": {
+       "mac": "E4029B5549C0",
+       "broadcast": "192.168.0.255",
+       "relay": "central",
+       "tested": false
+      },
+      "last_seen": 1792047116.5684328,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "f74b412c29e07da219e879d58c0e2d46",
+       "go": "go1.26.5",
+       "helper_sha256": "0bce113d761c65dd909a24f9a33cd8b78ee0b9ef594f982e777bf6297a017924",
+       "hostname": "DESKTOP-VQJGB71",
+       "installation_warnings": [],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_components": {
+        "components": {
+         "ffmpeg": "C:\\Users\\kyungho\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-9.0.2-full_build\\bin\\ffmpeg.exe",
+         "ffplay": "C:\\Users\\kyungho\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-9.0.2-full_build\\bin\\ffplay.exe",
+         "mpv": "C:\\Program Files\\MPV Player\\mpv.exe"
+        },
+        "missing": []
+       },
+       "media_player": "C:\\Program Files\\MPV Player\\mpv.exe",
+       "media_session": {
+        "camera": false,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "windows",
+       "process_recovery": true,
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성0",
+     "device_id": "guestpc-fc7b12fba936",
+     "key_hint": "limb_R…",
+     "created_at": 1791966117.888632,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {},
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "013292c0cf66ce4b9201fb4a4fee9d24",
+      "generation": "2321bc147fe45e4df3bd72f793cb8555",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047440.99125,
+      "capabilities": {
+       "adapter": "indiebiz-v1",
+       "body": "phone",
+       "ops": [
+        "ibl",
+        "info",
+        "media"
+       ],
+       "ibl": true,
+       "shell": false,
+       "python": "3.12.7",
+       "alias": "삼성0",
+       "media_session": {
+        "camera": true,
+        "microphone": true,
+        "speaker": true,
+        "playback": true,
+        "video_receive": true,
+        "video_playback": true,
+        "screen": false,
+        "camera_ready": false,
+        "microphone_ready": false,
+        "armed": false,
+        "video_profile": {
+         "width": 1280,
+         "height": 720,
+         "fps": 24
+        },
+        "abi": "arm64-v8a",
+        "sdk": 36,
+        "permissions": {
+         "camera": true,
+         "record_audio": true
+        },
+        "engine": {
+         "library": "io.github.webrtc-sdk:android",
+         "version": "144.7559.15"
+        }
+       },
+       "card": {
+        "kind": "indiebiz-capability-card",
+        "version": 1,
+        "body": {
+         "profile": "phone",
+         "kind": "phone",
+         "device": "samsung SM-A366N",
+         "os": "Android 16",
+         "arch": "arm64-v8a",
+         "label": "안드로이드 폰 · samsung SM-A366N · Android 16"
+        },
+        "identity": {
+         "device_id": "b129f35f9f2b"
+        },
+        "standard": {
+         "core_nodes": [
+          "others",
+          "self",
+          "table"
+         ],
+         "grammar": "[node:action]{params} · 파이프 >> · 병렬 & · 폴백 ??"
+        },
+        "dictionary_hash": "00258f961722",
+        "generated_at": "2026-10-15T15:55:18",
+        "action_count": 52
+       }
+      }
+     },
+     "invitation": false,
+     "connected": true
+    }
+   ],
+   "items": [
+    {
+     "alias": "휴대용",
+     "device_id": "guestpc-3b30e8afd4b4",
+     "key_hint": "limb_5…",
+     "created_at": 1784757104.313617,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "휴대용",
+     "device_id": "guestpc-6c0531639d37",
+     "key_hint": "limb_f…",
+     "created_at": 1784757174.819988,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1784770583.623198,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "테스트2",
+     "device_id": "guestpc-041a4c6b0eef",
+     "key_hint": "limb_n…",
+     "created_at": 1784770614.839193,
+     "expires_at": 1784857014.839193,
+     "revoked": true,
+     "expired": true,
+     "approved": true,
+     "last_used": 1784770624.752759,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "휴대용",
+     "device_id": "guestpc-3d6fe5ada44a",
+     "key_hint": "limb_c…",
+     "created_at": 1784770694.4533608,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "기본값테스트",
+     "device_id": "guestpc-0a2fa003ec3e",
+     "key_hint": "limb_4…",
+     "created_at": 1784771318.349937,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "p0",
+     "device_id": "guestpc-0cf0e5150587",
+     "key_hint": "limb_8…",
+     "created_at": 1784771417.022827,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": 1784833930.804278,
+     "last_host": "DESKTOP-VQJGB71 (windows/amd64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue/p0"
+    },
+    {
+     "alias": "삭제테스트",
+     "device_id": "guestpc-0d9656caa47a",
+     "key_hint": "limb__…",
+     "created_at": 1784771675.2505112,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "공유테스트",
+     "device_id": "guestpc-d8bf0f27fd31",
+     "key_hint": "limb_W…",
+     "created_at": 1784771688.0330691,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "공유테스트",
+     "device_id": "guestpc-0c0f14d3b9bf",
+     "key_hint": "limb_u…",
+     "created_at": 1784771688.080322,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": false,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "측정손발",
+     "device_id": "guestpc-6d9de21d26d6",
+     "key_hint": "limb_G…",
+     "created_at": 1784809831.27546,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1784836399.364608,
+     "last_host": "측정 (linux/amd64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "눈검증",
+     "device_id": "guestpc-a00367aed41e",
+     "key_hint": "limb_r…",
+     "created_at": 1785750111.5628622,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1785751657.036959,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "정밀검증",
+     "device_id": "guestpc-a38aabe001d8",
+     "key_hint": "limb_6…",
+     "created_at": 1785753100.715452,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1785753775.989258,
+     "last_host": "Mac-mini.local (darwin/arm64)",
+     "env": {
+      "os": "darwin",
+      "os_version": "macOS 26.5.2",
+      "hostname": "Mac-mini.local",
+      "user": "kangkukjin",
+      "admin": false,
+      "gui": {
+       "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+       "resolution": "1920x1080",
+       "screen": "screencapture"
+      }
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "김희정 테스트",
+     "device_id": "guestpc-cf04e5ce8f67",
+     "key_hint": "limb_V…",
+     "created_at": 1789396740.301779,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": 36,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "맥12",
+     "device_id": "guestpc-9b01f0848912",
+     "key_hint": "limb_F…",
+     "created_at": 1791530401.911241,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": 1791560224.8509052,
+     "last_host": "kang-old-MacBook-Air.local (darwin/amd64)",
+     "env": {
+      "os": "darwin",
+      "os_version": "macOS 10.15.8",
+      "hostname": "kang-old-MacBook-Air.local",
+      "user": "kangkukjin",
+      "admin": false,
+      "gui": {
+       "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+       "resolution": "1920x1080",
+       "screen": "screencapture"
+      }
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": null,
+     "invitation": false,
+     "connected": false,
+     "payload_dir": null
+    },
+    {
+     "alias": "맥12",
+     "device_id": "guestpc-7a440e9daf61",
+     "key_hint": "limb_4…",
+     "created_at": 1791614149.852257,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "darwin",
+      "hostname": "kang-old-MacBook-Air.local"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "45e1e7d030124b7afd1cab2078ce887d",
+      "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "removed",
+      "paused": false,
+      "wake": {
+       "mac": "00886539637c",
+       "broadcast": "192.168.0.255",
+       "relay": "central",
+       "tested": false
+      },
+      "last_seen": 1791679804.001085,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+       "hostname": "kang-old-MacBook-Air.local",
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "darwin",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "transfer": true,
+       "wake_relay": true
+      },
+      "removal_receipt": {
+       "installation_id": "45e1e7d030124b7afd1cab2078ce887d"
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "맥12",
+     "device_id": "guestpc-3fd796167b18",
+     "key_hint": "limb_s…",
+     "created_at": 1791679834.924881,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "darwin",
+      "hostname": "kang-old-MacBook-Air.local"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "a7a15d21cbda8073f94dc3e663493c28",
+      "generation": "48e28060cb31ab48accbe8d1afa3f535",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047448.851897,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "48e28060cb31ab48accbe8d1afa3f535",
+       "go": "go1.26.5",
+       "helper_sha256": "a1634f86821d49645fc3ebc4668a84f9448774642cfb6ec55e63cd5e159f95e2",
+       "hostname": "kang-old-MacBook-Air.local",
+       "installation_warnings": [],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_components": {
+        "components": {
+         "ffmpeg": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/bin/ffmpeg",
+         "ffplay": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/bin/ffplay",
+         "mpv": "/Users/kangkukjin/Applications/mpv-dl-0.37.0/mpv.app/Contents/MacOS/mpv"
+        },
+        "missing": []
+       },
+       "media_player": "/Users/kangkukjin/Applications/mpv-dl-0.37.0/mpv.app/Contents/MacOS/mpv",
+       "media_session": {
+        "camera": true,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "darwin",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": true
+    },
+    {
+     "alias": "KHJoffice",
+     "device_id": "guestpc-7da97e970821",
+     "key_hint": "limb_2…",
+     "created_at": 1791688491.2073212,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "windows",
+      "hostname": "KHJoffice"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "63c58e9aa143c63a07ebb1d698223b3d",
+      "generation": "5ed6e00390e587c4403abb7003a7c5f6",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047444.837569,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "5ed6e00390e587c4403abb7003a7c5f6",
+       "go": "go1.26.5",
+       "helper_sha256": "087b75045a457ef7554ffa3bbe9fb61cc2e101f63029043169a5fbd15e6fac93",
+       "hostname": "KHJoffice",
+       "installation_warnings": [
+        "로그인 자동 시작 설정 실패: schtasks: ERROR: Access is denied.: exit status 1. 현재 실행은 계속합니다. 다음 로그인 후 연결되지 않으면 설치된 헬퍼를 직접 실행하세요."
+       ],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": false,
+       "media_components": {
+        "components": {
+         "ffmpeg": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffmpeg.exe",
+         "ffplay": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffplay.exe",
+         "mpv": ""
+        },
+        "missing": [
+         "mpv"
+        ],
+        "hint": "mpv 보완: 명령 프롬프트에서 winget install --exact --id Gyan.FFmpeg 및 winget install --exact --id shinchiro.mpv (winget이 없으면 Microsoft Store의 '앱 설치 관리자'를 먼저 설치) — 또는 실행 파일을 C:\\Users\\kkukj\\AppData\\Roaming\\IndieBiz\\resident-bea793f6b0acaba4\\bin 에 넣으세요. 그다음 이 PC의 관리 화면에서 '미디어 구성요소 다시 설치'를 누르면 다시 확인합니다."
+       },
+       "media_player": "",
+       "media_session": {
+        "camera": false,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "windows",
+       "process_recovery": true,
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": true
+    },
+    {
+     "alias": "맥26",
+     "device_id": "guestpc-9dc41d53987d",
+     "key_hint": "limb_c…",
+     "created_at": 1791859956.132853,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "darwin",
+      "hostname": "MacBook-Air.local"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "c8bf39dce36a77913768863f2087218b",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792040924.691627,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "arm64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+       "go": "go1.26.5",
+       "helper_sha256": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+       "hostname": "MacBook-Air.local",
+       "installation_warnings": [],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_components": {
+        "components": {
+         "ffmpeg": "/opt/homebrew/bin/ffmpeg",
+         "ffplay": "/opt/homebrew/bin/ffplay",
+         "mpv": "/opt/homebrew/bin/mpv"
+        },
+        "missing": []
+       },
+       "media_player": "/opt/homebrew/bin/mpv",
+       "media_session": {
+        "camera": true,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "darwin",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "tv1",
+     "device_id": "guestpc-ec89e5f574e8",
+     "key_hint": "limb_X…",
+     "created_at": 1791875951.56538,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "windows",
+      "hostname": "DESKTOP-VQJGB71"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "2a3bccdfa7895e79cbd75b554a5a234f",
+      "generation": "65d79c3a2b2d6df7d7e632a4c54202ba",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "removed",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1791898265.0727391,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "65d79c3a2b2d6df7d7e632a4c54202ba",
+       "go": "go1.26.5",
+       "helper_sha256": "7d6ef9837cae828713aca925c1714639fe331e1d4bce1126c8676edb513adbd2",
+       "hostname": "DESKTOP-VQJGB71",
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": false,
+       "media_player": "",
+       "media_session": {
+        "camera": false,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "windows",
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      },
+      "removal_receipt": {
+       "installation_id": "2a3bccdfa7895e79cbd75b554a5a234f"
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성1",
+     "device_id": "guestpc-bf79a72df35b",
+     "key_hint": "limb_C…",
+     "created_at": 1791877637.3487449,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {},
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "43f5b3ac6b4b0682a8fd967a20b062d8",
+      "generation": "ca9f2de471868969adaebafdd9fde50b",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "removed",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1791878242.5185332,
+      "capabilities": {
+       "adapter": "indiebiz-v1",
+       "body": "phone",
+       "ops": [
+        "ibl",
+        "info"
+       ],
+       "ibl": true,
+       "shell": false,
+       "python": "3.11.10",
+       "alias": "삼성1"
+      },
+      "removal_receipt": {
+       "installation_id": "43f5b3ac6b4b0682a8fd967a20b062d8"
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성1",
+     "device_id": "guestpc-f082d51d4252",
+     "key_hint": "limb_f…",
+     "created_at": 1791879013.328205,
+     "expires_at": null,
+     "revoked": true,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": null,
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "ed8999e4731ad55eab2d326a60dd99ec",
+      "generation": "bb69ea3ea46b744b2a06ba68a6ca0a5f",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "removal_pending",
+      "paused": false,
+      "wake": null
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성1",
+     "device_id": "guestpc-4e51c614b25b",
+     "key_hint": "limb_1…",
+     "created_at": 1791879105.8360589,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {},
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "3a6f78faee28c67f747456fbf616211f",
+      "generation": "f2d1fd0ff7d020d928fa42e60882bde9",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047118.609731,
+      "capabilities": {
+       "adapter": "indiebiz-v1",
+       "body": "phone",
+       "ops": [
+        "ibl",
+        "info",
+        "media"
+       ],
+       "ibl": true,
+       "shell": false,
+       "python": "3.11.10",
+       "alias": "삼성1",
+       "media_session": {
+        "camera": true,
+        "microphone": true,
+        "speaker": true,
+        "playback": true,
+        "video_receive": true,
+        "video_playback": true,
+        "screen": false,
+        "camera_ready": true,
+        "microphone_ready": true,
+        "armed": false,
+        "video_profile": {
+         "width": 640,
+         "height": 480,
+         "fps": 15
+        },
+        "abi": "armeabi-v7a",
+        "sdk": 28,
+        "permissions": {
+         "camera": true,
+         "record_audio": true
+        },
+        "engine": {
+         "library": "io.github.webrtc-sdk:android",
+         "version": "144.7559.15"
+        }
+       },
+       "card": {
+        "kind": "indiebiz-capability-card",
+        "version": 1,
+        "body": {
+         "profile": "phone",
+         "kind": "phone",
+         "device": "samsung SM-J730K",
+         "os": "Android 9",
+         "arch": "armeabi-v7a",
+         "label": "안드로이드 폰 · samsung SM-J730K · Android 9"
+        },
+        "identity": {
+         "device_id": "cff32a4ea8f0"
+        },
+        "standard": {
+         "core_nodes": [
+          "others",
+          "self",
+          "table"
+         ],
+         "grammar": "[node:action]{params} · 파이프 >> · 병렬 & · 폴백 ??"
+        },
+        "dictionary_hash": "00258f961722",
+        "generated_at": "2026-10-15T15:50:47",
+        "action_count": 52
+       }
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "tv1",
+     "device_id": "guestpc-70e163471313",
+     "key_hint": "limb_T…",
+     "created_at": 1791898355.6395142,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {
+      "os": "windows",
+      "hostname": "DESKTOP-VQJGB71"
+     },
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "ab8d312e371614574747c53b9b27aa86",
+      "generation": "f74b412c29e07da219e879d58c0e2d46",
+      "kind": "pc",
+      "adapter": "resident-v1",
+      "state": "active",
+      "paused": false,
+      "wake": {
+       "mac": "E4029B5549C0",
+       "broadcast": "192.168.0.255",
+       "relay": "central",
+       "tested": false
+      },
+      "last_seen": 1792047116.5684328,
+      "capabilities": {
+       "adapter": "resident-v1",
+       "arch": "amd64",
+       "cpu_hard_limit": false,
+       "desktop_stream": 1,
+       "elevation": true,
+       "generation": "f74b412c29e07da219e879d58c0e2d46",
+       "go": "go1.26.5",
+       "helper_sha256": "0bce113d761c65dd909a24f9a33cd8b78ee0b9ef594f982e777bf6297a017924",
+       "hostname": "DESKTOP-VQJGB71",
+       "installation_warnings": [],
+       "interactive": true,
+       "kind": "pc",
+       "max_parallel": 2,
+       "media": true,
+       "media_components": {
+        "components": {
+         "ffmpeg": "C:\\Users\\kyungho\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-9.0.2-full_build\\bin\\ffmpeg.exe",
+         "ffplay": "C:\\Users\\kyungho\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-9.0.2-full_build\\bin\\ffplay.exe",
+         "mpv": "C:\\Program Files\\MPV Player\\mpv.exe"
+        },
+        "missing": []
+       },
+       "media_player": "C:\\Program Files\\MPV Player\\mpv.exe",
+       "media_session": {
+        "camera": false,
+        "display": true,
+        "engine": "pion/v4.2.23",
+        "ffmpeg": true,
+        "microphone": true,
+        "playback": true,
+        "speaker": true
+       },
+       "media_volume": true,
+       "memory_hard_limit": false,
+       "observation_parallel": 1,
+       "observation_shell_timeout": 10,
+       "os": "windows",
+       "process_recovery": true,
+       "screen_cancel": true,
+       "screen_observation": true,
+       "self_update": true,
+       "service_scope": "user_login",
+       "shell": true,
+       "terminal": true,
+       "terminal_lan": true,
+       "transfer": true,
+       "wake_relay": true
+      }
+     },
+     "invitation": false,
+     "connected": false
+    },
+    {
+     "alias": "삼성0",
+     "device_id": "guestpc-fc7b12fba936",
+     "key_hint": "limb_R…",
+     "created_at": 1791966117.888632,
+     "expires_at": null,
+     "revoked": false,
+     "expired": false,
+     "approved": true,
+     "last_used": null,
+     "last_host": null,
+     "env": {},
+     "neighbor_id": null,
+     "member_id": null,
+     "member_pc": null,
+     "registration": {
+      "installation_id": "013292c0cf66ce4b9201fb4a4fee9d24",
+      "generation": "2321bc147fe45e4df3bd72f793cb8555",
+      "kind": "phone",
+      "adapter": "indiebiz-v1",
+      "state": "active",
+      "paused": false,
+      "wake": null,
+      "last_seen": 1792047440.99125,
+      "capabilities": {
+       "adapter": "indiebiz-v1",
+       "body": "phone",
+       "ops": [
+        "ibl",
+        "info",
+        "media"
+       ],
+       "ibl": true,
+       "shell": false,
+       "python": "3.12.7",
+       "alias": "삼성0",
+       "media_session": {
+        "camera": true,
+        "microphone": true,
+        "speaker": true,
+        "playback": true,
+        "video_receive": true,
+        "video_playback": true,
+        "screen": false,
+        "camera_ready": false,
+        "microphone_ready": false,
+        "armed": false,
+        "video_profile": {
+         "width": 1280,
+         "height": 720,
+         "fps": 24
+        },
+        "abi": "arm64-v8a",
+        "sdk": 36,
+        "permissions": {
+         "camera": true,
+         "record_audio": true
+        },
+        "engine": {
+         "library": "io.github.webrtc-sdk:android",
+         "version": "144.7559.15"
+        }
+       },
+       "card": {
+        "kind": "indiebiz-capability-card",
+        "version": 1,
+        "body": {
+         "profile": "phone",
+         "kind": "phone",
+         "device": "samsung SM-A366N",
+         "os": "Android 16",
+         "arch": "arm64-v8a",
+         "label": "안드로이드 폰 · samsung SM-A366N · Android 16"
+        },
+        "identity": {
+         "device_id": "b129f35f9f2b"
+        },
+        "standard": {
+         "core_nodes": [
+          "others",
+          "self",
+          "table"
+         ],
+         "grammar": "[node:action]{params} · 파이프 >> · 병렬 & · 폴백 ??"
+        },
+        "dictionary_hash": "00258f961722",
+        "generated_at": "2026-10-15T15:55:18",
+        "action_count": 52
+       }
+      }
+     },
+     "invitation": false,
+     "connected": true
+    }
+   ],
+   "connected_count": 3,
+   "helper_dist_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/helper/dist",
+   "issue_parent_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue"
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "8549a046ef18f99092c02e568718c69626d69cb3a6cc351370ca7e050e7b0170",
+  "usage": {
+   "steps": 5,
+   "rows": 0,
+   "elapsed_ms": 324,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "call:23:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3",
+      "start": 23,
+      "end": 45,
+      "line": 2,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "literal:38:44",
+     "steps": 1,
+     "location": {
+      "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3",
+      "start": 38,
+      "end": 44,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "record:34:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3",
+      "start": 34,
+      "end": 45,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "return:16:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3",
+      "start": 16,
+      "end": 45,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3",
+      "start": 15,
+      "end": 45,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 4,
+     "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 17,
+     "calls": 1,
+     "actions": [
+      "self:limb"
+     ],
+     "source_hash": "10c53564f09167021a46a50d47b3477c016ff1f6f11f61a1499ef060cf96f8e3"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "7b3d24b4106a4f599d7426d800598e61"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "7b3d24b4106a4f599d7426d800598e61"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "7b3d24b4106a4f599d7426d800598e61",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/backend"
+  },
+  "recordings_ref": {
+   "items": [],
+   "ref": {
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/20261015_155735_recordings_b5b306.json",
+    "kind": "list",
+    "count": 1,
+    "bytes": 70266,
+    "expires_at": "2026-10-16T15:57:35"
+   },
+   "_spilled": true
+  },
+  "recordings_count": 1,
+  "recordings_note": "실행 영수증 원문은 recordings_ref에 보존했습니다. 재생 시 원문 목록을 읽으세요."
+ }
+}

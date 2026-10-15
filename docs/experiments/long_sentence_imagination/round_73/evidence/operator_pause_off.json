@@ -1,0 +1,279 @@
+{
+ "request": {
+  "edition": 2,
+  "origin": "training"
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1792048525.914238,
+ "ended": 1792048526.1973739,
+ "response": {
+  "success": true,
+  "value": {
+   "success": true,
+   "registration": {
+    "alias": "KHJoffice",
+    "device_id": "guestpc-7da97e970821",
+    "key_hint": "limb_2…",
+    "created_at": 1791688491.2073212,
+    "expires_at": null,
+    "revoked": false,
+    "expired": false,
+    "approved": true,
+    "last_used": null,
+    "last_host": null,
+    "env": {
+     "adapter": "resident-v1",
+     "arch": "amd64",
+     "cpu_hard_limit": false,
+     "desktop_stream": 1,
+     "elevation": true,
+     "generation": "5ed6e00390e587c4403abb7003a7c5f6",
+     "go": "go1.26.5",
+     "helper_sha256": "087b75045a457ef7554ffa3bbe9fb61cc2e101f63029043169a5fbd15e6fac93",
+     "hostname": "KHJoffice",
+     "installation_warnings": [
+      "로그인 자동 시작 설정 실패: schtasks: ERROR: Access is denied.: exit status 1. 현재 실행은 계속합니다. 다음 로그인 후 연결되지 않으면 설치된 헬퍼를 직접 실행하세요."
+     ],
+     "interactive": true,
+     "kind": "pc",
+     "max_parallel": 2,
+     "media": false,
+     "media_components": {
+      "components": {
+       "ffmpeg": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffmpeg.exe",
+       "ffplay": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffplay.exe",
+       "mpv": ""
+      },
+      "missing": [
+       "mpv"
+      ],
+      "hint": "mpv 보완: 명령 프롬프트에서 winget install --exact --id Gyan.FFmpeg 및 winget install --exact --id shinchiro.mpv (winget이 없으면 Microsoft Store의 '앱 설치 관리자'를 먼저 설치) — 또는 실행 파일을 C:\\Users\\kkukj\\AppData\\Roaming\\IndieBiz\\resident-bea793f6b0acaba4\\bin 에 넣으세요. 그다음 이 PC의 관리 화면에서 '미디어 구성요소 다시 설치'를 누르면 다시 확인합니다."
+     },
+     "media_player": "",
+     "media_session": {
+      "camera": false,
+      "display": true,
+      "engine": "pion/v4.2.23",
+      "ffmpeg": true,
+      "microphone": true,
+      "playback": true,
+      "speaker": true
+     },
+     "media_volume": true,
+     "memory_hard_limit": false,
+     "observation_parallel": 1,
+     "observation_shell_timeout": 10,
+     "os": "windows",
+     "process_recovery": true,
+     "screen_cancel": true,
+     "screen_observation": true,
+     "self_update": true,
+     "service_scope": "user_login",
+     "shell": true,
+     "terminal": true,
+     "terminal_lan": true,
+     "transfer": true,
+     "wake_relay": true
+    },
+    "neighbor_id": null,
+    "member_id": null,
+    "member_pc": null,
+    "registration": {
+     "installation_id": "63c58e9aa143c63a07ebb1d698223b3d",
+     "generation": "5ed6e00390e587c4403abb7003a7c5f6",
+     "kind": "pc",
+     "adapter": "resident-v1",
+     "state": "active",
+     "paused": false,
+     "wake": null,
+     "last_seen": 1792048525.428792,
+     "capabilities": {
+      "adapter": "resident-v1",
+      "arch": "amd64",
+      "cpu_hard_limit": false,
+      "desktop_stream": 1,
+      "elevation": true,
+      "generation": "5ed6e00390e587c4403abb7003a7c5f6",
+      "go": "go1.26.5",
+      "helper_sha256": "087b75045a457ef7554ffa3bbe9fb61cc2e101f63029043169a5fbd15e6fac93",
+      "hostname": "KHJoffice",
+      "installation_warnings": [
+       "로그인 자동 시작 설정 실패: schtasks: ERROR: Access is denied.: exit status 1. 현재 실행은 계속합니다. 다음 로그인 후 연결되지 않으면 설치된 헬퍼를 직접 실행하세요."
+      ],
+      "interactive": true,
+      "kind": "pc",
+      "max_parallel": 2,
+      "media": false,
+      "media_components": {
+       "components": {
+        "ffmpeg": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffmpeg.exe",
+        "ffplay": "C:\\ffmpeg\\ffmpeg-8.0.1-essentials_build\\bin\\ffplay.exe",
+        "mpv": ""
+       },
+       "missing": [
+        "mpv"
+       ],
+       "hint": "mpv 보완: 명령 프롬프트에서 winget install --exact --id Gyan.FFmpeg 및 winget install --exact --id shinchiro.mpv (winget이 없으면 Microsoft Store의 '앱 설치 관리자'를 먼저 설치) — 또는 실행 파일을 C:\\Users\\kkukj\\AppData\\Roaming\\IndieBiz\\resident-bea793f6b0acaba4\\bin 에 넣으세요. 그다음 이 PC의 관리 화면에서 '미디어 구성요소 다시 설치'를 누르면 다시 확인합니다."
+      },
+      "media_player": "",
+      "media_session": {
+       "camera": false,
+       "display": true,
+       "engine": "pion/v4.2.23",
+       "ffmpeg": true,
+       "microphone": true,
+       "playback": true,
+       "speaker": true
+      },
+      "media_volume": true,
+      "memory_hard_limit": false,
+      "observation_parallel": 1,
+      "observation_shell_timeout": 10,
+      "os": "windows",
+      "process_recovery": true,
+      "screen_cancel": true,
+      "screen_observation": true,
+      "self_update": true,
+      "service_scope": "user_login",
+      "shell": true,
+      "terminal": true,
+      "terminal_lan": true,
+      "transfer": true,
+      "wake_relay": true
+     }
+    },
+    "invitation": false
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "233c81c829c6e66413091f3f8c98d18c8fbd9c510fb15399a410660310c8a189",
+  "usage": {
+   "steps": 7,
+   "rows": 0,
+   "elapsed_ms": 267,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "call:23:89",
+     "steps": 1,
+     "location": {
+      "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980",
+      "start": 23,
+      "end": 89,
+      "line": 2,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "literal:38:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980",
+      "start": 38,
+      "end": 45,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:53:75",
+     "steps": 1,
+     "location": {
+      "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980",
+      "start": 53,
+      "end": 75,
+      "line": 2,
+      "column": 38
+     }
+    },
+    {
+     "node_id": "literal:83:88",
+     "steps": 1,
+     "location": {
+      "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980",
+      "start": 83,
+      "end": 88,
+      "line": 2,
+      "column": 68
+     }
+    },
+    {
+     "node_id": "record:34:89",
+     "steps": 1,
+     "location": {
+      "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980",
+      "start": 34,
+      "end": 89,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "return:16:89",
+     "steps": 1,
+     "location": {
+      "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980",
+      "start": 16,
+      "end": 89,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:89",
+     "steps": 1,
+     "location": {
+      "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980",
+      "start": 15,
+      "end": 89,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 6,
+     "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 12,
+     "calls": 1,
+     "actions": [
+      "self:limb"
+     ],
+     "source_hash": "bfb8c7ef2cc1cc1d8c077393cb5bd6d05d91aef620094af1cdf0c68dbc5c3980"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "cbdee5cdd19248aebcabf109d7c6a4d8"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "cbdee5cdd19248aebcabf109d7c6a4d8",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/backend"
+  }
+ }
+}

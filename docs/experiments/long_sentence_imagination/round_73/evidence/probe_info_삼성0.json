@@ -1,0 +1,237 @@
+{
+ "request": {
+  "edition": 2,
+  "origin": "training"
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1792047501.846517,
+ "ended": 1792047504.116178,
+ "response": {
+  "success": true,
+  "value": {
+   "limb": "guestpc-fc7b12fba936",
+   "limb_name": "삼성0",
+   "job_id": "ba63fae5d41b4edfb70127b49d735173",
+   "helper_mode": "resident",
+   "op": "info",
+   "success": true,
+   "result": {
+    "success": true,
+    "body": "phone",
+    "adapter": "indiebiz-v1",
+    "alias": "삼성0",
+    "device_id": "guestpc-fc7b12fba936",
+    "ops": [
+     "ibl",
+     "info",
+     "media"
+    ],
+    "capabilities": {
+     "adapter": "indiebiz-v1",
+     "body": "phone",
+     "ops": [
+      "ibl",
+      "info",
+      "media"
+     ],
+     "ibl": true,
+     "shell": false,
+     "python": "3.12.7",
+     "alias": "삼성0",
+     "media_session": {
+      "camera": true,
+      "microphone": true,
+      "speaker": true,
+      "playback": true,
+      "video_receive": true,
+      "video_playback": true,
+      "screen": false,
+      "camera_ready": false,
+      "microphone_ready": false,
+      "armed": false,
+      "video_profile": {
+       "width": 1280,
+       "height": 720,
+       "fps": 24
+      },
+      "abi": "arm64-v8a",
+      "sdk": 36,
+      "permissions": {
+       "camera": true,
+       "record_audio": true
+      },
+      "engine": {
+       "library": "io.github.webrtc-sdk:android",
+       "version": "144.7559.15"
+      }
+     },
+     "card": {
+      "kind": "indiebiz-capability-card",
+      "version": 1,
+      "body": {
+       "profile": "phone",
+       "kind": "phone",
+       "device": "samsung SM-A366N",
+       "os": "Android 16",
+       "arch": "arm64-v8a",
+       "label": "안드로이드 폰 · samsung SM-A366N · Android 16"
+      },
+      "identity": {
+       "device_id": "b129f35f9f2b"
+      },
+      "standard": {
+       "core_nodes": [
+        "others",
+        "self",
+        "table"
+       ],
+       "grammar": "[node:action]{params} · 파이프 >> · 병렬 & · 폴백 ??"
+      },
+      "dictionary_hash": "00258f961722",
+      "generated_at": "2026-10-15T15:55:18",
+      "action_count": 52
+     }
+    }
+   },
+   "task_ref": {
+    "kind": "guestpc",
+    "task_id": "ba63fae5d41b4edfb70127b49d735173"
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "afbc29b0ee59124ae1cfb1c5a60c17ec4e0f17c7d2d01350a7a993fce8744e91",
+  "usage": {
+   "steps": 7,
+   "rows": 0,
+   "elapsed_ms": 2246,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "call:23:88",
+     "steps": 1,
+     "location": {
+      "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093",
+      "start": 23,
+      "end": 88,
+      "line": 2,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "literal:42:48",
+     "steps": 1,
+     "location": {
+      "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093",
+      "start": 42,
+      "end": 48,
+      "line": 2,
+      "column": 27
+     }
+    },
+    {
+     "node_id": "literal:54:76",
+     "steps": 1,
+     "location": {
+      "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093",
+      "start": 54,
+      "end": 76,
+      "line": 2,
+      "column": 39
+     }
+    },
+    {
+     "node_id": "literal:85:87",
+     "steps": 1,
+     "location": {
+      "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093",
+      "start": 85,
+      "end": 87,
+      "line": 2,
+      "column": 70
+     }
+    },
+    {
+     "node_id": "record:38:88",
+     "steps": 1,
+     "location": {
+      "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093",
+      "start": 38,
+      "end": 88,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "return:16:88",
+     "steps": 1,
+     "location": {
+      "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093",
+      "start": 16,
+      "end": 88,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:88",
+     "steps": 1,
+     "location": {
+      "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093",
+      "start": 15,
+      "end": 88,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 6,
+     "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 1562,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "d8d37a535a437ed9c3362c304ad4507f348be6d90a1e1c2423d647fee6885093"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "3219446876dc4cd5aea5092a978470e3"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "3219446876dc4cd5aea5092a978470e3"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "3219446876dc4cd5aea5092a978470e3",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/backend"
+  }
+ }
+}

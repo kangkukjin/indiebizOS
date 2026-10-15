@@ -1,0 +1,768 @@
+{
+ "round": 73,
+ "checked_at": "2026-10-15T16:17~16:27+09:00",
+ "origin": "training",
+ "registry_total": 24,
+ "responding": 5,
+ "device_table": [
+  {
+   "alias": "맥12",
+   "device_id": "guestpc-3fd796167b18",
+   "kind": "pc",
+   "registration": "상주 active",
+   "response": "응답",
+   "info_task": "091d6803a9d54f18ba1766ca1915daba",
+   "os": "macOS 15.7.9 (24G830), darwin/amd64, 호스트 kang-old-MacBook-Air.local",
+   "connection": "연결됨(상주 헬퍼 resident-v1)",
+   "power": "AC 전원, 내장 배터리 100% 충전 완료(pmset)",
+   "storage_free": "약 114.0 GiB 여유 / 233.6 GiB (데이터 볼륨, df 119,532,284 KiB 가용)",
+   "playback": "재생 없음 — 재생기 프로세스(mpv·afplay·Music·Spotify·VLC·QuickTime) 없음, 오디오 전원 assertion 없음",
+   "volume": "출력 50, 음소거 아님 (osascript get volume settings, 읽기 전용)",
+   "status_task": "7a74ab590e8e4c4e9057b92b3ff3d7f2"
+  },
+  {
+   "alias": "KHJoffice",
+   "device_id": "guestpc-7da97e970821",
+   "kind": "pc",
+   "registration": "상주 active",
+   "response": "응답",
+   "info_task": "3017aedd798449398cd25839216502e5",
+   "os": "Microsoft Windows 11 Pro 10.0.26200, 호스트 KHJOFFICE",
+   "connection": "연결됨(상주 헬퍼)",
+   "power": "배터리 신고 없음(Win32_Battery 없음 → 상시 전원 추정). 전원 계획은 미확인 — 조회 오류: 원격 세션에서 관리자 권한 필요",
+   "storage_free": "C: 200.1/475 GB, D: 0.5/0.5 GB, E: 56.7/231.9 GB 여유",
+   "playback": "재생 신호 없음 — 기본 출력 장치 피크 0, 재생기 프로세스 없음",
+   "volume": "44%, 음소거 아님 (Core Audio 읽기 전용)",
+   "status_task": "r73-status2-KHJoffice (1차 r73-status-KHJoffice 는 음량 조회 오류)"
+  },
+  {
+   "alias": "tv1",
+   "device_id": "guestpc-70e163471313",
+   "kind": "pc",
+   "registration": "상주 active",
+   "response": "응답",
+   "info_task": "6f1d3cf51b6d436ba35a388b7edac4ac",
+   "os": "Microsoft Windows 10 Home 10.0.19045, 호스트 DESKTOP-VQJGB71",
+   "connection": "연결됨(상주 헬퍼)",
+   "power": "배터리 신고 없음(상시 전원 추정). 전원 계획 미확인 — 같은 관리자 권한 오류",
+   "storage_free": "C: 9.9/110.8 GB 여유",
+   "playback": "재생 신호 없음 — 피크 0, 재생기 프로세스 없음",
+   "volume": "29%, 음소거 아님 (Core Audio 읽기 전용)",
+   "status_task": "r73-status2-tv1"
+  },
+  {
+   "alias": "삼성1",
+   "device_id": "guestpc-4e51c614b25b",
+   "kind": "phone",
+   "registration": "상주 active (indiebiz-v1)",
+   "response": "응답",
+   "info_task": "d9d2c9b673254ce383b2541348790738",
+   "os": "Android 9, samsung SM-J730K (armeabi-v7a, SDK 28)",
+   "connection": "연결됨(원격 등록, USB 불필요)",
+   "power": "미확인 — 이 폰이 신고한 ops는 ibl·info·media뿐(execution_contract 없음, python/shell 미신고). 폰 IBL에 배터리·저장공간·음량을 읽기 전용으로 조회하는 낱말이 없음(sense:host 없음, self:storage는 사전 스캔 필요). limbs:radio volume 은 설정 동작이라 쓰지 않음",
+   "storage_free": "미확인 — 이 폰이 신고한 ops는 ibl·info·media뿐(execution_contract 없음, python/shell 미신고). 폰 IBL에 배터리·저장공간·음량을 읽기 전용으로 조회하는 낱말이 없음(sense:host 없음, self:storage는 사전 스캔 필요). limbs:radio volume 은 설정 동작이라 쓰지 않음",
+   "playback": "재생 없음 — limbs:radio status: 재생 중인 라디오 없음, limbs:music queue: 재생 중 없음·대기열 0곡",
+   "volume": "미확인 — 이 폰이 신고한 ops는 ibl·info·media뿐(execution_contract 없음, python/shell 미신고). 폰 IBL에 배터리·저장공간·음량을 읽기 전용으로 조회하는 낱말이 없음(sense:host 없음, self:storage는 사전 스캔 필요). limbs:radio volume 은 설정 동작이라 쓰지 않음"
+  },
+  {
+   "alias": "삼성0",
+   "device_id": "guestpc-fc7b12fba936",
+   "kind": "phone",
+   "registration": "상주 active (indiebiz-v1)",
+   "response": "응답",
+   "info_task": "faa7fc73fa9146a5b174e09979f12070",
+   "os": "Android 16, samsung SM-A366N (arm64-v8a, SDK 36)",
+   "connection": "연결됨(원격 등록)",
+   "power": "미확인 — 이 폰이 신고한 ops는 ibl·info·media뿐(execution_contract 없음, python/shell 미신고). 폰 IBL에 배터리·저장공간·음량을 읽기 전용으로 조회하는 낱말이 없음(sense:host 없음, self:storage는 사전 스캔 필요). limbs:radio volume 은 설정 동작이라 쓰지 않음",
+   "storage_free": "미확인 — 이 폰이 신고한 ops는 ibl·info·media뿐(execution_contract 없음, python/shell 미신고). 폰 IBL에 배터리·저장공간·음량을 읽기 전용으로 조회하는 낱말이 없음(sense:host 없음, self:storage는 사전 스캔 필요). limbs:radio volume 은 설정 동작이라 쓰지 않음",
+   "playback": "재생 없음 — radio status: 없음, music queue: 재생 중 없음·0곡",
+   "volume": "미확인 — 이 폰이 신고한 ops는 ibl·info·media뿐(execution_contract 없음, python/shell 미신고). 폰 IBL에 배터리·저장공간·음량을 읽기 전용으로 조회하는 낱말이 없음(sense:host 없음, self:storage는 사전 스캔 필요). limbs:radio volume 은 설정 동작이라 쓰지 않음"
+  },
+  {
+   "alias": "맥26",
+   "device_id": "guestpc-9dc41d53987d",
+   "kind": "pc",
+   "registration": "상주 active",
+   "response": "무응답",
+   "reason": "원장 connected:false. info 작업이 30초 안에 응답받지 못하고 queued 상태로 남음(오프라인). 다른 기기로 대체하지 않음",
+   "pending_task": {
+    "kind": "guestpc",
+    "task_id": "f8e651a8e43c4d869c0cc0bd7c36733a",
+    "state_at_16:26": "queued",
+    "op": "info"
+   }
+  },
+  {
+   "alias": "p0",
+   "device_id": "guestpc-0cf0e5150587",
+   "kind": "pc(휴대형)",
+   "registration": "휴대형(registration 없음), 키 유효",
+   "response": "무응답",
+   "reason": "오류 원문: \"'guestpc-0cf0e5150587' 손발이 지금 연결돼 있지 않습니다.\""
+  },
+  {
+   "alias": "맥12(옛 등록)",
+   "device_id": "guestpc-7a440e9daf61",
+   "kind": "pc",
+   "registration": "removed",
+   "response": "작업 불가",
+   "reason": "오류 원문: invalid_registration (등록 해제됨)"
+  },
+  {
+   "alias": "tv1(옛 등록)",
+   "device_id": "guestpc-ec89e5f574e8",
+   "kind": "pc",
+   "registration": "removed",
+   "response": "작업 불가",
+   "reason": "invalid_registration (등록 해제됨)"
+  },
+  {
+   "alias": "삼성1(옛 등록)",
+   "device_id": "guestpc-bf79a72df35b",
+   "kind": "phone",
+   "registration": "removed",
+   "response": "작업 불가",
+   "reason": "invalid_registration (등록 해제됨)"
+  },
+  {
+   "alias": "삼성1(옛 등록)",
+   "device_id": "guestpc-f082d51d4252",
+   "kind": "phone",
+   "registration": "revoked, removal_pending",
+   "response": "호출 안 함",
+   "reason": "키 폐기(revoked) — 영구 차단된 자격"
+  },
+  {
+   "alias": "휴대용",
+   "device_id": "guestpc-3b30e8afd4b4",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "휴대용",
+   "device_id": "guestpc-6c0531639d37",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "테스트2",
+   "device_id": "guestpc-041a4c6b0eef (만료)",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "휴대용",
+   "device_id": "guestpc-3d6fe5ada44a",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "기본값테스트",
+   "device_id": "guestpc-0a2fa003ec3e",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "삭제테스트",
+   "device_id": "guestpc-0d9656caa47a",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "공유테스트",
+   "device_id": "guestpc-d8bf0f27fd31",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "공유테스트",
+   "device_id": "guestpc-0c0f14d3b9bf",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "측정손발",
+   "device_id": "guestpc-6d9de21d26d6",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "눈검증",
+   "device_id": "guestpc-a00367aed41e",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "정밀검증",
+   "device_id": "guestpc-a38aabe001d8",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "김희정 테스트",
+   "device_id": "guestpc-cf04e5ce8f67 (이웃 36 결합)",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  },
+  {
+   "alias": "맥12(옛)",
+   "device_id": "guestpc-9b01f0848912",
+   "registration": "revoked",
+   "response": "호출 안 함",
+   "reason": "키 폐기된 과거 자격(원장 revoked:true, connected:false)"
+  }
+ ],
+ "job_table": [
+  {
+   "alias": "맥12",
+   "status": "완료",
+   "method": "shell(sh): shasum 입력 확인 → python3 -I process.py sample.json result.json <device_id> → shasum 결과; transfer receive→collect 로 회수",
+   "request_id": "r73-process-맥12",
+   "task_id": "497fbab211ff47df98e6956be2b8528f",
+   "remote_folder": "/Users/kangkukjin/indiebiz-training/fleet/73/agent/",
+   "input_check_on_device": "sha256 ad7b5e0a…9ae1 일치(기기에서 계산)",
+   "device_identity": {
+    "device_id": "guestpc-3fd796167b18",
+    "hostname": "kang-old-MacBook-Air.local",
+    "platform": "macOS-15.7.9-x86_64-i386-64bit",
+    "python": "3.9.6",
+    "processed_at": "2026-10-15T16:23:44+09:00"
+   },
+   "device_sum": 156,
+   "rows": [
+    {
+     "id": "01",
+     "result": 2,
+     "name": "서울 본점 점검"
+    },
+    {
+     "id": "02",
+     "result": 4,
+     "name": "부산 \"지점\" 창고"
+    },
+    {
+     "id": "03",
+     "result": 6,
+     "name": "東京オフィス 備品"
+    },
+    {
+     "id": "04",
+     "result": 8,
+     "name": "이모지 🚀 테스트 📦"
+    },
+    {
+     "id": "05",
+     "result": 10,
+     "name": "줄바꿈\r\n포함 행"
+    },
+    {
+     "id": "06",
+     "result": 12,
+     "name": "조합형 서울 한글"
+    },
+    {
+     "id": "07",
+     "result": 14,
+     "name": "백슬래시 \\ 와 탭\t기호"
+    },
+    {
+     "id": "08",
+     "result": 16,
+     "name": "빈 이름 다음 행"
+    },
+    {
+     "id": "09",
+     "result": 18,
+     "name": ""
+    },
+    {
+     "id": "10",
+     "result": 20,
+     "name": "큰따옴표 포함 \"OK\""
+    },
+    {
+     "id": "11",
+     "result": 22,
+     "name": "공백  두 개  연속"
+    },
+    {
+     "id": "12",
+     "result": 24,
+     "name": "마지막 行 — 다시 확인"
+    }
+   ],
+   "central_verification": {
+    "rows": 12,
+    "rows_ok": true,
+    "mismatched_ids": [],
+    "device_sum": 156,
+    "sum_matches_rows": true,
+    "expected_sum": 156,
+    "central_file": "agent/맥12-result.json",
+    "central_sha256": "9e8472cdf211b2a00c11c6824c0ca39d45ff6aff4c0d4d4d7b2a7d9d7926cc72"
+   }
+  },
+  {
+   "alias": "KHJoffice",
+   "status": "완료",
+   "method": "shell(cmd): certutil 입력 해시 → python -I process.py … → certutil 결과 해시; transfer receive→collect",
+   "request_id": "r73-process-KHJoffice",
+   "task_id": "d7024356ff5e4723a7b19abbe0df3dad",
+   "remote_folder": "C:/Users/kkukj/indiebiz-training/fleet/73/agent/",
+   "input_check_on_device": "sha256 ad7b5e0a…9ae1 일치(기기에서 계산)",
+   "device_identity": {
+    "device_id": "guestpc-7da97e970821",
+    "hostname": "KHJoffice",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.1",
+    "processed_at": "2026-10-15T16:23:46+09:00"
+   },
+   "device_sum": 156,
+   "rows": [
+    {
+     "id": "01",
+     "result": 2,
+     "name": "서울 본점 점검"
+    },
+    {
+     "id": "02",
+     "result": 4,
+     "name": "부산 \"지점\" 창고"
+    },
+    {
+     "id": "03",
+     "result": 6,
+     "name": "東京オフィス 備品"
+    },
+    {
+     "id": "04",
+     "result": 8,
+     "name": "이모지 🚀 테스트 📦"
+    },
+    {
+     "id": "05",
+     "result": 10,
+     "name": "줄바꿈\r\n포함 행"
+    },
+    {
+     "id": "06",
+     "result": 12,
+     "name": "조합형 서울 한글"
+    },
+    {
+     "id": "07",
+     "result": 14,
+     "name": "백슬래시 \\ 와 탭\t기호"
+    },
+    {
+     "id": "08",
+     "result": 16,
+     "name": "빈 이름 다음 행"
+    },
+    {
+     "id": "09",
+     "result": 18,
+     "name": ""
+    },
+    {
+     "id": "10",
+     "result": 20,
+     "name": "큰따옴표 포함 \"OK\""
+    },
+    {
+     "id": "11",
+     "result": 22,
+     "name": "공백  두 개  연속"
+    },
+    {
+     "id": "12",
+     "result": 24,
+     "name": "마지막 行 — 다시 확인"
+    }
+   ],
+   "central_verification": {
+    "rows": 12,
+    "rows_ok": true,
+    "mismatched_ids": [],
+    "device_sum": 156,
+    "sum_matches_rows": true,
+    "expected_sum": 156,
+    "central_file": "agent/KHJoffice-result.json",
+    "central_sha256": "78832f59d11c74a8a922626d11951817de1faf91ad732f00c26cf7db4baec2ef"
+   }
+  },
+  {
+   "alias": "tv1",
+   "status": "완료",
+   "method": "shell(cmd): certutil 입력 해시 → python -I process.py … → certutil 결과 해시; transfer receive→collect",
+   "request_id": "r73-process-tv1",
+   "task_id": "48bacae7ff124fc69c0dc486aee0f4ec",
+   "remote_folder": "C:/Users/kyungho/indiebiz-training/fleet/73/agent/",
+   "input_check_on_device": "sha256 ad7b5e0a…9ae1 일치(기기에서 계산)",
+   "device_identity": {
+    "device_id": "guestpc-70e163471313",
+    "hostname": "DESKTOP-VQJGB71",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python": "3.12.10",
+    "processed_at": "2026-10-15T16:23:51+09:00"
+   },
+   "device_sum": 156,
+   "rows": [
+    {
+     "id": "01",
+     "result": 2,
+     "name": "서울 본점 점검"
+    },
+    {
+     "id": "02",
+     "result": 4,
+     "name": "부산 \"지점\" 창고"
+    },
+    {
+     "id": "03",
+     "result": 6,
+     "name": "東京オフィス 備品"
+    },
+    {
+     "id": "04",
+     "result": 8,
+     "name": "이모지 🚀 테스트 📦"
+    },
+    {
+     "id": "05",
+     "result": 10,
+     "name": "줄바꿈\r\n포함 행"
+    },
+    {
+     "id": "06",
+     "result": 12,
+     "name": "조합형 서울 한글"
+    },
+    {
+     "id": "07",
+     "result": 14,
+     "name": "백슬래시 \\ 와 탭\t기호"
+    },
+    {
+     "id": "08",
+     "result": 16,
+     "name": "빈 이름 다음 행"
+    },
+    {
+     "id": "09",
+     "result": 18,
+     "name": ""
+    },
+    {
+     "id": "10",
+     "result": 20,
+     "name": "큰따옴표 포함 \"OK\""
+    },
+    {
+     "id": "11",
+     "result": 22,
+     "name": "공백  두 개  연속"
+    },
+    {
+     "id": "12",
+     "result": 24,
+     "name": "마지막 行 — 다시 확인"
+    }
+   ],
+   "central_verification": {
+    "rows": 12,
+    "rows_ok": true,
+    "mismatched_ids": [],
+    "device_sum": 156,
+    "sum_matches_rows": true,
+    "expected_sum": 156,
+    "central_file": "agent/tv1-result.json",
+    "central_sha256": "85ebcd031e15330f67fc33cd7fdebedd7c953fc679a1e3a74b825b5516f18dcc"
+   }
+  },
+  {
+   "alias": "삼성1",
+   "status": "완료",
+   "method": "폰 IBL(op:ibl, edition 2): self:write 입력 → self:read → table:each(값×2, 이름 원문) → table:reduce 합계 → self:write result.json → self:read 재독; 결과 본문을 IBL 반환값으로 회수해 중앙 저장",
+   "request_id": "r73-process2-삼성1",
+   "task_id": "f4b1aec6547a4632b77c2fbe05a7895d",
+   "remote_folder": "(앱 scratch)/outputs/long_sentence_imagination/round73/agent/",
+   "input_check_on_device": "기기에서 다시 읽은 입력 본문 == 보낸 원문 (input_text_equal:true). 폰 IBL에 해시 낱말이 없어 해시는 미계산",
+   "device_identity": {
+    "device_id": "guestpc-4e51c614b25b",
+    "hostname": null,
+    "hostname_note": "phone IBL has no hostname action; /proc/sys/kernel/hostname permission denied",
+    "processed_at": "2026-10-15 16:24:43 KST+0900",
+    "method": "phone IBL (limbs:guestpc op:ibl, edition 2)"
+   },
+   "device_sum": 156,
+   "rows": [
+    {
+     "id": "01",
+     "result": 2,
+     "name": "서울 본점 점검"
+    },
+    {
+     "id": "02",
+     "result": 4,
+     "name": "부산 \"지점\" 창고"
+    },
+    {
+     "id": "03",
+     "result": 6,
+     "name": "東京オフィス 備品"
+    },
+    {
+     "id": "04",
+     "result": 8,
+     "name": "이모지 🚀 테스트 📦"
+    },
+    {
+     "id": "05",
+     "result": 10,
+     "name": "줄바꿈\r\n포함 행"
+    },
+    {
+     "id": "06",
+     "result": 12,
+     "name": "조합형 서울 한글"
+    },
+    {
+     "id": "07",
+     "result": 14,
+     "name": "백슬래시 \\ 와 탭\t기호"
+    },
+    {
+     "id": "08",
+     "result": 16,
+     "name": "빈 이름 다음 행"
+    },
+    {
+     "id": "09",
+     "result": 18,
+     "name": ""
+    },
+    {
+     "id": "10",
+     "result": 20,
+     "name": "큰따옴표 포함 \"OK\""
+    },
+    {
+     "id": "11",
+     "result": 22,
+     "name": "공백  두 개  연속"
+    },
+    {
+     "id": "12",
+     "result": 24,
+     "name": "마지막 行 — 다시 확인"
+    }
+   ],
+   "central_verification": {
+    "rows": 12,
+    "rows_ok": true,
+    "mismatched_ids": [],
+    "device_sum": 156,
+    "sum_matches_rows": true,
+    "expected_sum": 156,
+    "central_file": "agent/삼성1-result.json",
+    "central_sha256": "0aeaf0166f1e70fbb205903251f3d7023b7714d66c79584bf48c23235ee59dbb"
+   },
+   "note": "첫 시도(r73-process-삼성1/삼성0)는 호스트명 읽기 /proc/sys/kernel/hostname 권한 거부(Errno 13)로 실패 종료. 원인 제거 후 새 요청ID로 1회 재실행(실패 종료 확인 뒤)."
+  },
+  {
+   "alias": "삼성0",
+   "status": "완료",
+   "method": "폰 IBL — 삼성1과 같음",
+   "request_id": "r73-process2-삼성0",
+   "task_id": "9fb51a841b2e45b19377639fa462e9a9",
+   "remote_folder": "(앱 scratch)/outputs/long_sentence_imagination/round73/agent/",
+   "input_check_on_device": "기기에서 다시 읽은 입력 본문 == 보낸 원문 (input_text_equal:true). 폰 IBL에 해시 낱말이 없어 해시는 미계산",
+   "device_identity": {
+    "device_id": "guestpc-fc7b12fba936",
+    "hostname": null,
+    "hostname_note": "phone IBL has no hostname action; /proc/sys/kernel/hostname permission denied",
+    "processed_at": "2026-10-15 16:24:41 KST+0900",
+    "method": "phone IBL (limbs:guestpc op:ibl, edition 2)"
+   },
+   "device_sum": 156,
+   "rows": [
+    {
+     "id": "01",
+     "result": 2,
+     "name": "서울 본점 점검"
+    },
+    {
+     "id": "02",
+     "result": 4,
+     "name": "부산 \"지점\" 창고"
+    },
+    {
+     "id": "03",
+     "result": 6,
+     "name": "東京オフィス 備品"
+    },
+    {
+     "id": "04",
+     "result": 8,
+     "name": "이모지 🚀 테스트 📦"
+    },
+    {
+     "id": "05",
+     "result": 10,
+     "name": "줄바꿈\r\n포함 행"
+    },
+    {
+     "id": "06",
+     "result": 12,
+     "name": "조합형 서울 한글"
+    },
+    {
+     "id": "07",
+     "result": 14,
+     "name": "백슬래시 \\ 와 탭\t기호"
+    },
+    {
+     "id": "08",
+     "result": 16,
+     "name": "빈 이름 다음 행"
+    },
+    {
+     "id": "09",
+     "result": 18,
+     "name": ""
+    },
+    {
+     "id": "10",
+     "result": 20,
+     "name": "큰따옴표 포함 \"OK\""
+    },
+    {
+     "id": "11",
+     "result": 22,
+     "name": "공백  두 개  연속"
+    },
+    {
+     "id": "12",
+     "result": 24,
+     "name": "마지막 行 — 다시 확인"
+    }
+   ],
+   "central_verification": {
+    "rows": 12,
+    "rows_ok": true,
+    "mismatched_ids": [],
+    "device_sum": 156,
+    "sum_matches_rows": true,
+    "expected_sum": 156,
+    "central_file": "agent/삼성0-result.json",
+    "central_sha256": "60d7ca8e57918e89a0fc2039f4aeb9aa4cecd4acd3384efac0f33251819b3d0a"
+   },
+   "note": "첫 시도(r73-process-삼성1/삼성0)는 호스트명 읽기 /proc/sys/kernel/hostname 권한 거부(Errno 13)로 실패 종료. 원인 제거 후 새 요청ID로 1회 재실행(실패 종료 확인 뒤)."
+  }
+ ],
+ "photo_chain": {
+  "phone": "삼성1 (guestpc-4e51c614b25b) — camera_ready:true. 삼성0은 camera_ready:false라 선택 안 함",
+  "silence": "무음 판단 근거: 폰 앱의 [sense:see]는 Camera2+ImageReader 정지 캡처이며 셔터음(MediaActionSound) 재생 코드가 없음(앱 소스 PhoneActions.kt capturePhoto 확인 — 공개 문서에는 명시 없음). 실제 무음 여부는 현장 청취로 확인하지 않음",
+  "capture": {
+   "request_id": "r73-photo-삼성1-1",
+   "result": "촬영 파일 생성됨(폰 앱 사진 저장소). 같은 프로그램의 다음 단계 self:copy(시험 폴더로 복사)가 실패해 프로그램 전체는 오류로 끝남",
+   "copy_error": "[Errno 13] Permission denied: '/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/agent/.publish-065mtxv6.jpg'",
+   "recapture": "하지 않음"
+  },
+  "phone_point": {
+   "path": "/data/user/0/com.indiebiz.phoneagent/files/photos/photo_1792049117346.jpg",
+   "size_bytes": 1852429,
+   "sha256": "fe69470ac7304aed578955270bc8801dd397c6b0aa6fcdfe197fcddbc6341d96",
+   "mtime": "2026-10-15 16:25",
+   "method": "폰 IBL self:file_find hash:true (request_id r73-photohash-삼성1-1, task e00a8189fb74448badc6938a162b0765)",
+   "identification": "16:25 촬영 파일(이번 촬영 시각과 일치). 같은 폴더의 16:12 파일 photo_1792048343627.jpg 는 이 작업 이전 것이라 대상 아님"
+  },
+  "central_point": null,
+  "pc_point": null,
+  "three_way_match": "미확인 — 회수 단계에서 멈춤",
+  "blocked_at": "폰→중앙 회수",
+  "blocked_reason": "삼성1 info 신고 ops = [ibl, info, media], execution_contract 없음 → transfer(receive/collect) 미지원. 사용자 조건에 따라 여기서 멈춤. PC 전송·PC 해시 단계는 수행하지 않음",
+  "content": "사진 내용은 열어 보지도 설명하지도 않음(크기·해시만 다룸)"
+ },
+ "not_done": [
+  {
+   "what": "맥26 기기표·처리",
+   "why": "오프라인(connected:false), info 작업 queued로 무응답",
+   "resume": "task f8e651a8e43c4d869c0cc0bd7c36733a 를 [self:task]{op:\"status\"} 로 관측. 재접수하지 않음"
+  },
+  {
+   "what": "p0 기기표·처리",
+   "why": "휴대형 헬퍼 미연결"
+  },
+  {
+   "what": "옛 등록(removed 3건)·폐기 자격(14건) 작업",
+   "why": "invalid_registration / revoked — 작업 받을 수 없는 자격"
+  },
+  {
+   "what": "폰 2대의 배터리·저장공간 여유·음량",
+   "why": "미확인 — 이 폰이 신고한 ops는 ibl·info·media뿐(execution_contract 없음, python/shell 미신고). 폰 IBL에 배터리·저장공간·음량을 읽기 전용으로 조회하는 낱말이 없음(sense:host 없음, self:storage는 사전 스캔 필요). limbs:radio volume 은 설정 동작이라 쓰지 않음"
+  },
+  {
+   "what": "폰 호스트명",
+   "why": "폰 IBL에 호스트명 낱말 없음, /proc/sys/kernel/hostname 읽기 권한 거부(Errno 13). 기기 ID는 처리 프로그램 인자로 전달된 등록 device_id를 폰이 결과 파일에 기록"
+  },
+  {
+   "what": "Windows 2대 전원 계획",
+   "why": "Win32_PowerPlan 조회가 원격 세션에서 관리자 권한을 요구하는 오류. 권한 상승은 하지 않음"
+  },
+  {
+   "what": "사진 중앙 회수·PC 전송·3지점 해시 대조",
+   "why": "폰 transfer 미지원 — 회수 단계에서 멈춤"
+  },
+  {
+   "what": "사진을 폰 시험 폴더로 복사",
+   "why": "self:copy 가 시험 폴더 안 임시 게시 파일 생성에서 권한 거부. 원본은 sense:see 고정 위치(앱 files/photos)에 남음"
+  }
+ ],
+ "incidents": [
+  "쓰기 범위 예외: [sense:see] 는 저장 위치 인자가 없어 촬영 파일이 폰 앱 사진 폴더(files/photos)에 생김 — 지정 시험 폴더 밖. 삭제·이동하지 않고 그대로 둠",
+  "Windows 음량 1차 조회(status.ps1)에서 COM 메서드 순서 오류로 IAudioEndpointVolume 의 7번째 메서드(SetChannelVolumeLevel)가 잘못된 인자로 호출되어 E_INVALIDARG 로 거절됨. 설정 변경은 일어나지 않은 것으로 판단(인자 거절). 2차(status2.ps1)는 Get 메서드만 정확한 위치로 호출. 사후 음량 44%·29% 관측",
+  "1차 PC 처리 프로그램은 제 IBL 오류(if 블록 안 return)로 처리 단계가 실행되지 않음 — 원격에 접수되지 않았으므로 중복 아님",
+  "소리 재생·화면 캡처·설정 변경 호출 없음(media·screen·click·type·volume 미사용)"
+ ],
+ "resume": {
+  "result_files": {
+   "맥12": "agent/맥12-result.json",
+   "KHJoffice": "agent/KHJoffice-result.json",
+   "tv1": "agent/tv1-result.json",
+   "삼성1": "agent/삼성1-result.json",
+   "삼성0": "agent/삼성0-result.json"
+  },
+  "device_test_folders": {
+   "맥12": "/Users/kangkukjin/indiebiz-training/fleet/73/agent/",
+   "KHJoffice": "C:/Users/kkukj/indiebiz-training/fleet/73/agent/",
+   "tv1": "C:/Users/kyungho/indiebiz-training/fleet/73/agent/",
+   "삼성1": "(앱 scratch)/outputs/long_sentence_imagination/round73/agent/",
+   "삼성0": "(앱 scratch)/outputs/long_sentence_imagination/round73/agent/"
+  },
+  "pending": [
+   {
+    "device": "맥26",
+    "task_ref": {
+     "kind": "guestpc",
+     "task_id": "f8e651a8e43c4d869c0cc0bd7c36733a"
+    }
+   }
+  ],
+  "photo_next": "폰 APK 를 execution_contract 1(transfer 지원)판으로 업데이트한 뒤 transfer receive path=…/photos/photo_1792049117346.jpg → collect 로 중앙 agent/ 에 받고, PC(예: 맥12) 시험 폴더로 transfer send 후 shasum -a 256 으로 대조. 기대 sha256 fe69470a…1d96, 1,852,429 B",
+  "central_input_sha256": "ad7b5e0a04ff4820adccfaffededaf224f285171af08b6be5956c1b9d9a09ae1 (manifest 일치)"
+ }
+}

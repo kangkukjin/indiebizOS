@@ -1,0 +1,7 @@
+내 이름으로 등록된 원격 기기들(PC와 폰) 전부를 대상으로 저녁 점검을 해 줘. 먼저 지금 실제로 응답하는 기기만 가려서, 기기마다 운영체제·연결 상태·전원이나 배터리·저장공간 여유·현재 재생 상태·음량을 한 표로 모아 줘. 응답하지 않거나 작업을 받지 못하는 기기는 다른 기기로 대신하지 말고 그 사실과 이유만 적어 줘. 그다음 제공한 점검 입력 12행을 응답한 모든 기기에 각각 보내서, 그 기기 안에서 처리(값을 2배로, 이름은 원문 그대로)하고 결과 12행과 합계, 그 기기의 신원(기기 ID·호스트 이름·처리 시각)을 함께 돌려받아 줘. 기기마다 할 수 있는 방식이 다르면 그 기기가 지원한다고 신고한 방식으로 하고, 어떤 방식으로 했는지 적어 줘. 지원하지 않는 기기는 못 했다고 남기고 중앙에서 대신 계산하지 마. 폰 중 하나로 사진 한 장을 찍어 폰에서 파일 크기와 해시를 확인하고 중앙으로 가져온 뒤, 응답한 PC 한 대에 보내 저장하고, 그 PC 에서 해시를 다시 계산해 세 곳의 값이 같은지 확인해 줘. 폰이 파일 회수를 지원하지 않으면 그 단계에서 멈추고 무엇이 막혔는지 적어 줘. 사진 내용은 보지도 설명하지도 마. 소리를 내거나 화면을 찍거나 설정을 바꾸는 일은 하지 말고, 쓰기는 지정한 회차 폴더와 각 기기의 전용 시험 폴더에만 해. 오래 걸리는 작업은 접수 정보를 남기고 같은 작업을 다시 접수하지 마. 끝나면 기기표·작업표·사진 연쇄 결과·못 한 일과 이유·이어갈 정보를 JSON 과 한글 보고서로 저장해 줘.
+
+[자료와 위치]
+- 점검 입력 12행: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_73회차/agent-input/sample.json (manifest.json 에 해시). 원격 기기에서 쓸 수 있는 표준 라이브러리 처리 부품 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_73회차/agent-input/process.py 도 제공한다(사용은 선택: python3 process.py <입력> <출력> <기기ID>).
+- 중앙 결과 저장 위치: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-15_73회차/agent/ (JSON 과 한글 보고서, 기기별 결과 파일).
+- 기기 전용 시험 폴더: PC 는 그 PC 홈 아래 indiebiz-training/fleet/73/agent/, 폰은 outputs/long_sentence_imagination/round73/agent/.
+- 다른 실행자의 프로그램·산출물·정답은 참조하지 마. 이 요청의 호출은 훈련(origin training) 이다.

@@ -1,0 +1,384 @@
+{
+ "token_note": "input 은 공급자 보고값. cache_read/create 는 별도 표시, input 에 더하지 않음. 훈련자(작성자) 토큰 미측정.",
+ "ai": [
+  {
+   "id": 4788,
+   "source": "training",
+   "task_id": "task_sysai_64c3ae35",
+   "total_ms": 779674,
+   "started_at": "2026-10-15T16:15:52.104251",
+   "ended_at": "2026-10-15T16:28:51.778675",
+   "tools": {
+    "execute_ibl": 17,
+    "Bash": 15,
+    "TaskStop": 1
+   },
+   "usage": {
+    "input": 6280950,
+    "output": 47931,
+    "cache_read": 5896114,
+    "cache_create": 373848
+   },
+   "roles": {
+    "oneshot:classify": {
+     "input": 16162,
+     "output": 121,
+     "cache_read": 5248,
+     "cache_create": 0
+    },
+    "consciousness": {
+     "input": 120216,
+     "output": 4271,
+     "cache_read": 56870,
+     "cache_create": 63342
+    },
+    "execution": {
+     "input": 6101728,
+     "output": 43112,
+     "cache_read": 5833452,
+     "cache_create": 268208
+    },
+    "oneshot:evaluate": {
+     "input": 42844,
+     "output": 427,
+     "cache_read": 544,
+     "cache_create": 42298
+    }
+   },
+   "recall_presented": 1,
+   "recall_used": 1,
+   "compactions": 0,
+   "ibl_heads": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ]
+  },
+  {
+   "id": 4789,
+   "source": "training",
+   "task_id": "task_sysai_ca94f8c8",
+   "total_ms": 231014,
+   "started_at": "2026-10-15T16:29:57.539663",
+   "ended_at": "2026-10-15T16:33:48.554473",
+   "tools": {
+    "Bash": 5,
+    "execute_ibl": 11
+   },
+   "usage": {
+    "input": 2165235,
+    "output": 18980,
+    "cache_read": 2018489,
+    "cache_create": 139821
+   },
+   "roles": {
+    "oneshot:classify": {
+     "input": 6432,
+     "output": 5,
+     "cache_read": 3072,
+     "cache_create": 0
+    },
+    "oneshot:background": {
+     "input": 4561,
+     "output": 1812,
+     "cache_read": 1024,
+     "cache_create": 0
+    },
+    "execution": {
+     "input": 2122352,
+     "output": 16544,
+     "cache_read": 2008862,
+     "cache_create": 113464
+    },
+    "oneshot:evaluate": {
+     "input": 31890,
+     "output": 619,
+     "cache_read": 5531,
+     "cache_create": 26357
+    }
+   },
+   "recall_presented": 1,
+   "recall_used": 1,
+   "compactions": 0,
+   "ibl_heads": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ]
+  }
+ ],
+ "trainer": [
+  {
+   "label": "bisect_c2_inner_json_path",
+   "wall_s": 0.552,
+   "success": true,
+   "usage": {
+    "steps": 37,
+    "rows": 0,
+    "elapsed_ms": 528
+   }
+  },
+  {
+   "label": "bisect_e2_kv_pure",
+   "wall_s": 0.555,
+   "success": true,
+   "usage": {
+    "steps": 105,
+    "rows": 0,
+    "elapsed_ms": 537
+   }
+  },
+  {
+   "label": "cleanup_terminal_check",
+   "wall_s": 1.35,
+   "success": true,
+   "usage": {
+    "steps": 104,
+    "rows": 6,
+    "elapsed_ms": 737
+   }
+  },
+  {
+   "label": "final_terminal_check",
+   "wall_s": 1.27,
+   "success": true,
+   "usage": {
+    "steps": 69,
+    "rows": 6,
+    "elapsed_ms": 656
+   }
+  },
+  {
+   "label": "operator_pause_off",
+   "wall_s": 0.283,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 267
+   }
+  },
+  {
+   "label": "operator_pause_off2",
+   "wall_s": 0.292,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 275
+   }
+  },
+  {
+   "label": "operator_pause_off3",
+   "wall_s": 0.295,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 279
+   }
+  },
+  {
+   "label": "operator_pause_on",
+   "wall_s": 0.289,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 273
+   }
+  },
+  {
+   "label": "operator_pause_on2",
+   "wall_s": 0.287,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 270
+   }
+  },
+  {
+   "label": "operator_pause_on3",
+   "wall_s": 0.299,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 284
+   }
+  },
+  {
+   "label": "probe_hist_KHJoffice",
+   "wall_s": 0.511,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 314
+   }
+  },
+  {
+   "label": "probe_hist_맥12",
+   "wall_s": 0.412,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 334
+   }
+  },
+  {
+   "label": "probe_hist_삼성0",
+   "wall_s": 0.324,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 297
+   }
+  },
+  {
+   "label": "probe_info_KHJoffice",
+   "wall_s": 7.588,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 7554
+   }
+  },
+  {
+   "label": "probe_info_맥12",
+   "wall_s": 4.556,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 4529
+   }
+  },
+  {
+   "label": "probe_info_삼성0",
+   "wall_s": 2.27,
+   "success": true,
+   "usage": {
+    "steps": 7,
+    "rows": 0,
+    "elapsed_ms": 2246
+   }
+  },
+  {
+   "label": "probe_limb_list",
+   "wall_s": 0.434,
+   "success": true,
+   "usage": {
+    "steps": 5,
+    "rows": 0,
+    "elapsed_ms": 324
+   }
+  },
+  {
+   "label": "probe_mac26_after_base",
+   "wall_s": 0.348,
+   "success": true,
+   "usage": {
+    "steps": 18,
+    "rows": 0,
+    "elapsed_ms": 298
+   }
+  },
+  {
+   "label": "probe_photo_task",
+   "wall_s": 0.283,
+   "success": true,
+   "usage": {
+    "steps": 8,
+    "rows": 0,
+    "elapsed_ms": 265
+   }
+  },
+  {
+   "label": "trainer_base",
+   "wall_s": 73.498,
+   "success": true,
+   "usage": {
+    "steps": 22763,
+    "rows": 76,
+    "elapsed_ms": 72859
+   }
+  },
+  {
+   "label": "trainer_base2",
+   "wall_s": 71.494,
+   "success": true,
+   "usage": {
+    "steps": 22545,
+    "rows": 77,
+    "elapsed_ms": 70889
+   }
+  },
+  {
+   "label": "trainer_base3",
+   "wall_s": 75.352,
+   "success": true,
+   "usage": {
+    "steps": 22810,
+    "rows": 85,
+    "elapsed_ms": 74734
+   }
+  },
+  {
+   "label": "trainer_variant",
+   "wall_s": 12.98,
+   "success": true,
+   "usage": {
+    "steps": 3378,
+    "rows": 77,
+    "elapsed_ms": 12911
+   }
+  },
+  {
+   "label": "trainer_variant2",
+   "wall_s": 13.864,
+   "success": true,
+   "usage": {
+    "steps": 3378,
+    "rows": 77,
+    "elapsed_ms": 13798
+   }
+  },
+  {
+   "label": "variant_evidence",
+   "wall_s": 0.594,
+   "success": true,
+   "usage": {
+    "steps": 23,
+    "rows": 0,
+    "elapsed_ms": 494
+   }
+  }
+ ]
+}

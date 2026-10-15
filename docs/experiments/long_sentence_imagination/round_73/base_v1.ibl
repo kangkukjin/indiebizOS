@@ -1,0 +1,209 @@
+#!ibl edition=2
+# 73회차 훈련자 v1 (v0 검사 SYNTAX 1건 수정: 보간 중첩 중괄호·레코드 + 병합·줄 첫 ? 삼항) — 여러 원격 몸에 같은 점검을 나눠 맡기고 한 곳에 모은다.
+# inputs: input(중앙 sample.json) script(중앙 process.py) out(중앙 출력 폴더) tag(요청ID 접두)
+#         remote_rel(PC 전용 폴더 상대경로) phone_rel(폰 전용 폴더 상대경로) previous(이전 result.json 경로 또는 "")
+
+$sample=[self:read]{path:$input}
+$rows=$sample.data.rows
+$expected_sum=reduce($rows,0,($a,$r)=>$a+$r.value*2)
+$prev={}
+$has_prev=$previous!=""
+[if:$has_prev] { $p=[self:read]{path:$previous}; $prev=$p.data }
+
+# ---------- 1. 명부 → 활성 등록만, device_id 로 고정 ----------
+$명부=[self:limb]{op:"list"}
+$등록=$명부.limbs >> [table:filter]{where:($r)=>$r.revoked==false and $r.registration!=null}
+$활성=$등록 >> [table:filter]{where:($r)=>$r.registration.state=="active"}
+
+# ---------- 2. 문진: 연결된 몸에만 info, 멈춘 몸·안 붙은 몸은 이유만 ----------
+[def:문진]($dev) {
+  $k=$dev.registration.kind
+  $ad=$dev.registration.adapter
+  $pz=$dev.registration.paused
+  [if:$pz==true] { return {alias:$dev.alias,device_id:$dev.device_id,kind:$k,adapter:$ad,paused:$pz,connected:$dev.connected,reachable:false,reason:"paused",info:null} }
+  [if:$dev.connected!=true] { return {alias:$dev.alias,device_id:$dev.device_id,kind:$k,adapter:$ad,paused:$pz,connected:$dev.connected,reachable:false,reason:"not_connected",info:null} }
+  [try] {
+    $i=[limbs:guestpc]{op:"info",limb:$dev.device_id,timeout:30}
+    return {alias:$dev.alias,device_id:$dev.device_id,kind:$k,adapter:$ad,paused:$pz,connected:$dev.connected,reachable:true,reason:"",info:$i.result}
+  } [catch] { return {alias:$dev.alias,device_id:$dev.device_id,kind:$k,adapter:$ad,paused:$pz,connected:$dev.connected,reachable:false,reason:$error.message,info:null} }
+}
+
+# ---------- 3. 능력표: 신고한 데이터로 방식을 고른다 (어휘 이름이 아니라 info 값) ----------
+[def:능력]($d) {
+  [if:$d.reachable!=true] { return {alias:$d.alias,device_id:$d.device_id,kind:$d.kind,os:null,method:"unavailable",transfer:false,note:$d.reason} }
+  [if:$d.kind=="pc"] {
+    $tools=join(",",get($d.info,"tools",[]))
+    $res=get($d.info,"resident",{})
+    $py=contains($tools,"python3") or contains($tools,"python,") or contains($tools,",python")
+    return {alias:$d.alias,device_id:$d.device_id,kind:"pc",os:get($d.info,"os",null),home:get($d.info,"home",""),hostname:get($d.info,"hostname",""),method:$py ? "pc_shell_python" : "unsupported",transfer:get($res,"transfer",false),max_parallel:get($res,"max_parallel",null),note:$py ? "" : "python 도구 미신고"}
+  }
+  $ops=join(",",get($d.info,"ops",[]))
+  $caps=get($d.info,"capabilities",{})
+  $card=get($caps,"card",{})
+  $body=get($card,"body",{})
+  $method=contains($ops,"python") ? "phone_python" : (contains($ops,"ibl") ? "phone_ibl" : "unsupported")
+  return {alias:$d.alias,device_id:$d.device_id,kind:"phone",os:get($body,"os",null),device:get($body,"device",null),arch:get($body,"arch",null),ops:$ops,execution_contract:get($caps,"execution_contract",null),method:$method,transfer:contains($ops,"transfer"),note:contains($ops,"transfer") ? "" : "ops 에 transfer 없음 — 바이너리 회수 미지원(계약 1 미설치)"}
+}
+
+# ---------- 4. PC 셸 공통: 접수 → 종료까지 확인 ----------
+[def:실행]($pc,$rd,$cmd,$shell,$id) {
+  $t=[fn:외부PC작업실행]{PC:$pc,명령:$cmd,작업폴더:$rd,셸:$shell,요청ID:$id,환경:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"},실행제한:120,대기:0}
+  $r=[fn:외부PC작업확인]{작업:$t,대기:20}
+  $n=1
+  [repeat:until $r.settled or $n>=5] { $r=[fn:외부PC작업확인]{작업:$t,대기:20}; $n=$n+1 }
+  return $r
+}
+[def:KV]($text) {
+  $lines=split($text,"\n") >> [table:filter]{where:($l)=>contains($l,"=")}
+  return from_entries($lines >> [table:each] { $p=split($it,"=",1); return [strip($p[0]),strip($p[1])] })
+}
+
+# ---------- 5. PC 상태표 + 처리 (파일 보내기 → 그 기기에서 python → 가져오기) ----------
+[def:PC점검]($d,$cap,$rows_path,$script_path,$out,$tag,$remote_rel,$expected_sum) {
+  $win=$cap.os=="windows"
+  $shell=$win ? "powershell" : ""
+  $rd=f"${cap.home}/${remote_rel}"
+  $ready=[fn:외부PC준비]{PC:$d.device_id,작업폴더:$cap.home}
+  assert $ready.ok==true and $ready.limb==$d.device_id,"대상 불일치 또는 준비 실패",$ready
+  $status_cmd=""
+  [if:$win] { $status_cmd="$b=(Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue); if($b){'POWER=battery ' + $b.EstimatedChargeRemaining + '%'}else{'POWER=ac_or_no_battery'}; 'DISK_FREE=' + [math]::Round((Get-PSDrive C).Free/1GB,1) + 'GB'; 'VOLUME=unavailable'; 'PLAYBACK=unavailable'; 'HOST=' + $env:COMPUTERNAME; exit 0" }
+  [else] { $status_cmd="echo \"POWER=$(pmset -g batt | tail -1 | tr -s ' ' | cut -d';' -f1,2)\"; echo \"DISK_FREE=$(df -h / | tail -1 | awk '{print $4}')\"; echo \"VOLUME=$(osascript -e 'output volume of (get volume settings)' 2>/dev/null || echo unavailable)\"; echo \"PLAYBACK=unavailable\"; echo \"HOST=$(hostname)\"" }
+  $st=[fn:실행]{pc:$d.device_id,rd:$cap.home,cmd:$status_cmd,shell:$shell,id:f"${tag}-${d.device_id}-status"}
+  $status=$st.command_ok==true ? [fn:KV]{text:get(get($st,"result",{}),"output","")} : {error:"status_failed"}
+  $mk=$win ? f"New-Item -ItemType Directory -Force -Path '${rd}' | Out-Null; exit 0" : f"mkdir -p '${rd}'"
+  $m=[fn:실행]{pc:$d.device_id,rd:$cap.home,cmd:$mk,shell:$shell,id:f"${tag}-${d.device_id}-mkdir"}
+  assert $m.command_ok==true,"전용 폴더 준비 실패",$m
+  $s1=[fn:외부PC파일보내기]{PC:$d.device_id,중앙경로:$rows_path,원격경로:f"${rd}/sample.json",요청ID:f"${tag}-${d.device_id}-send-sample",대기:60}
+  [if:$s1.ok!=true] { $s1=[fn:외부PC파일보내기]{PC:$d.device_id,중앙경로:$rows_path,원격경로:f"${rd}/sample.json",요청ID:f"${tag}-${d.device_id}-send-sample",대기:60,작업:$s1} }
+  $s2=[fn:외부PC파일보내기]{PC:$d.device_id,중앙경로:$script_path,원격경로:f"${rd}/process.py",요청ID:f"${tag}-${d.device_id}-send-script",대기:60}
+  [if:$s2.ok!=true] { $s2=[fn:외부PC파일보내기]{PC:$d.device_id,중앙경로:$script_path,원격경로:f"${rd}/process.py",요청ID:f"${tag}-${d.device_id}-send-script",대기:60,작업:$s2} }
+  assert $s1.ok==true and $s2.ok==true,"파일 보내기 미완료",{sample:$s1,script:$s2}
+  $run_cmd=""
+  [if:$win] { $run_cmd=f"& python '${rd}/process.py' '${rd}/sample.json' '${rd}/result.json' ${d.device_id}; exit $LASTEXITCODE" }
+  [else] { $run_cmd=f"cd '${rd}' && python3 process.py sample.json result.json ${d.device_id}" }
+  $run=[fn:실행]{pc:$d.device_id,rd:$rd,cmd:$run_cmd,shell:$shell,id:f"${tag}-${d.device_id}-process"}
+  assert $run.command_ok==true,"원격 처리 실패",$run
+  $local=f"${out}/${d.alias}_result.json"
+  $g=[fn:외부PC파일가져오기]{PC:$d.device_id,중앙경로:$local,원격경로:f"${rd}/result.json",요청ID:f"${tag}-${d.device_id}-fetch",대기:60}
+  [if:$g.collected!=true] { $g=[fn:외부PC파일가져오기]{PC:$d.device_id,중앙경로:$local,원격경로:f"${rd}/result.json",요청ID:f"${tag}-${d.device_id}-fetch",대기:60,작업:$g} }
+  assert $g.collected==true,"결과 가져오기 미완료",$g
+  $back=[self:read]{path:$local}
+  $data=$back.data
+  return {alias:$d.alias,device_id:$d.device_id,method:"pc_shell_python",status:$status,status_raw:get(get($st,"result",{}),"output",""),remote_dir:$rd,
+          result:{sum:$data.sum,count:$data.count,identity:$data.identity,rows:$data.rows},sum_ok:$data.sum==$expected_sum,local_result:$local,
+          receipts:{status:$st.task_ref,mkdir:$m.task_ref,send_sample:$s1.task_ref,send_script:$s2.task_ref,process:$run.task_ref,fetch:$g.task_ref},reused:false}
+}
+
+# ---------- 6. 폰(IBL 하달): 파일 왕복 안에서 처리, 라디오 상태는 읽기만 ----------
+[def:폰점검]($d,$cap,$rows,$phone_rel,$tag,$expected_sum) {
+  $payload=json(json({rows:$rows}))
+  $inner=f"""#!ibl edition=2
+$in=[self:write]{path:"${phone_rel}/sample.json",content:${payload}}
+$d=[self:read]{path:$in.path}
+$res=$d.data.rows >> [table:each] { return {id:$it.id,result:$it.value*2,name:$it.name} }
+$sum=reduce($res,0,($a,$r)=>$a+$r.result)
+$st=[self:write]{path:"${phone_rel}/result.json",content:json({identity:{device_id:"${d.device_id}",body:"phone"},sum:$sum,count:len($res),rows:$res})}
+$back=[self:read]{path:$st.path}
+$radio={status:"unavailable"}
+[try] { $radio=[limbs:radio]{op:"status"} } [catch] { $radio={status:"error",message:$error.message} }
+return {value:$back.data,radio:$radio,path:$st.path}
+"""
+  $t=[limbs:guestpc]{op:"ibl",limb:$d.device_id,code:$inner,background:true,timeout:120,request_id:f"${tag}-${d.device_id}-process"}
+  $done=[self:task]{op:"wait",ref:$t.task_ref,timeout:120}
+  assert $done.terminal,"폰 작업 미종료: 같은 접수증으로 회수",$t
+  $v=get(get($done,"result",{}),"value",{})
+  $data=get($v,"value",{})
+  return {alias:$d.alias,device_id:$d.device_id,method:$cap.method,status:{os:$cap.os,device:$cap.device,playback:json(get($v,"radio",{})),power:"unavailable",disk:"unavailable",volume:"unavailable"},
+          result:{sum:get($data,"sum",null),count:get($data,"count",null),identity:get($data,"identity",null),rows:get($data,"rows",[])},sum_ok:get($data,"sum",null)==$expected_sum,
+          remote_path:get($v,"path",null),receipts:{process:$t.task_ref},reused:false}
+}
+
+# ---------- 7. 사진 연쇄: 폰 촬영 → 폰 해시 → (회수 가능할 때만) 허브 → PC 재계산 ----------
+[def:사진연쇄]($d,$cap,$phone_rel,$tag) {
+  $inner=f"""#!ibl edition=2
+$shot=[sense:see]{facing:'back'}
+$fp=get($shot,"path",get($shot,"file",""))
+$l=[]
+[try] { $l=[self:list]{path:$fp,hash:true} } [catch] { $l=[{error:$error.message,path:$fp}] }
+return {shot_keys:keys($shot),path:$fp,files:$l}
+"""
+  $step="capture"
+  [try] {
+    $t=[limbs:guestpc]{op:"ibl",limb:$d.device_id,code:$inner,background:true,timeout:120,request_id:f"${tag}-${d.device_id}-photo"}
+    $done=[self:task]{op:"wait",ref:$t.task_ref,timeout:120}
+    assert $done.terminal,"촬영 작업 미종료",$t
+    $v=get(get($done,"result",{}),"value",{})
+    $step="phone_hash"
+    $files=get($v,"files",[])
+    $phone_hash=len($files)>0 ? get($files[0],"sha256",null) : null
+    $phone_size=len($files)>0 ? get($files[0],"size",null) : null
+    $step="collect"
+    [if:$cap.transfer!=true] {
+      return {device_id:$d.device_id,captured:true,phone_path:get($v,"path",null),phone_sha256:$phone_hash,phone_size:$phone_size,
+              blocked_at:"collect",blocked_reason:"폰 ops 에 transfer 없음(실행 계약 1 미설치) — 허브 회수·PC 재계산 미실행",hub_sha256:null,pc_sha256:null,all_equal:null,receipts:{photo:$t.task_ref}}
+    }
+    return {device_id:$d.device_id,captured:true,phone_path:get($v,"path",null),phone_sha256:$phone_hash,phone_size:$phone_size,blocked_at:"collect",blocked_reason:"transfer 신고됐으나 이 프로그램은 폰 transfer 경로를 아직 조합하지 않음(미검증)",hub_sha256:null,pc_sha256:null,all_equal:null,receipts:{photo:$t.task_ref}}
+  } [catch] {
+    return {device_id:$d.device_id,captured:false,blocked_at:$step,blocked_reason:$error.message,details:$error.details,phone_sha256:null,hub_sha256:null,pc_sha256:null,all_equal:null}
+  }
+}
+
+# ---------- 8. 몸마다 독립 가지 (한 몸의 실패가 다른 몸을 지우지 않음) ----------
+$문진표=$활성 >> [table:each]{parallel:3,on_error:"collect"} { return [fn:문진]{dev:$it} }
+$기기=$문진표 >> [table:each] { return is_ok($it) ? unwrap($it) : {alias:"?",device_id:"?",kind:"?",reachable:false,reason:error_of($it).message,info:null} }
+$능력표=$기기 >> [table:each] { return [fn:능력]{d:$it} }
+$prev_jobs=$has_prev ? get($prev,"jobs",[]) : []
+
+[def:이전결과]($jobs,$id) {
+  $m=$jobs >> [table:filter]{where:($j)=>$j.device_id==$id and $j.sum_ok==true}
+  return len($m)>0 ? $m[0] : null
+}
+
+$작업표=zip($기기,$능력표) >> [table:each]{parallel:3,on_error:"collect"} {
+  $d=$it[0]
+  $cap=$it[1]
+  $old=[fn:이전결과]{jobs:$prev_jobs,id:$d.device_id}
+  [if:$old!=null] { return {alias:$old.alias,device_id:$old.device_id,method:$old.method,status:get($old,"status",null),result:$old.result,sum_ok:$old.sum_ok,receipts:get($old,"receipts",null),remote_dir:get($old,"remote_dir",get($old,"remote_path",null)),reused:true,reuse_note:"이전 실행의 성공 결과 재사용 — 이번 접수 0"} }
+  [if:$cap.method=="pc_shell_python"] { return [fn:PC점검]{d:$d,cap:$cap,rows_path:$input,script_path:$script,out:$out,tag:$tag,remote_rel:$remote_rel,expected_sum:$expected_sum} }
+  [if:$cap.method=="phone_ibl"] { return [fn:폰점검]{d:$d,cap:$cap,rows:$rows,phone_rel:$phone_rel,tag:$tag,expected_sum:$expected_sum} }
+  return {alias:$d.alias,device_id:$d.device_id,method:$cap.method,status:null,result:null,sum_ok:false,skipped:true,reason:$cap.method=="unavailable" ? $cap.note : f"미지원 방식 ${cap.method} — 중앙 대신 계산 안 함",reused:false}
+}
+$작업=$작업표 >> [table:each] { return is_ok($it) ? unwrap($it) : {device_id:"?",sum_ok:false,failed:true,reason:error_of($it).message,details:error_of($it).details,reused:false} }
+
+# ---------- 9. 사진 연쇄 — 응답한 폰 하나 ----------
+$폰들=$능력표 >> [table:filter]{where:($c)=>$c.kind=="phone" and $c.method!="unavailable"}
+$prev_chain=$has_prev ? get($prev,"photo_chain",null) : null
+$연쇄={executed:false,reason:"응답한 폰 없음"}
+[if:$prev_chain!=null and get($prev_chain,"captured",false)==true] { $연쇄={device_id:$prev_chain.device_id,captured:true,phone_path:get($prev_chain,"phone_path",null),phone_sha256:get($prev_chain,"phone_sha256",null),phone_size:get($prev_chain,"phone_size",null),blocked_at:get($prev_chain,"blocked_at",null),blocked_reason:get($prev_chain,"blocked_reason",null),hub_sha256:null,pc_sha256:null,all_equal:null,receipts:get($prev_chain,"receipts",null),reused:true,reuse_note:"재촬영 0 — 이전 촬영 결과·해시 재확인만"} }
+[else] { [if:len($폰들)>0] { $연쇄=[fn:사진연쇄]{d:$기기[0],cap:$폰들[0],phone_rel:$phone_rel,tag:$tag} } }
+
+# ---------- 10. 보고 ----------
+$못함=($기기 >> [table:filter]{where:($d)=>$d.reachable!=true} >> [table:each] { return {device_id:$it.device_id,alias:$it.alias,what:"문진·처리",why:$it.reason} }) +
+      ($작업 >> [table:filter]{where:($j)=>$j.sum_ok!=true} >> [table:each] { return {device_id:$it.device_id,what:"처리",why:get($it,"reason",get($it,"error","결과 불일치 또는 미실행"))} })
+$result={round:73,devices:$기기 >> [table:each] { return {alias:$it.alias,device_id:$it.device_id,kind:$it.kind,adapter:$it.adapter,connected:$it.connected,paused:$it.paused,reachable:$it.reachable,reason:$it.reason} },
+         capabilities:$능력표,jobs:$작업,photo_chain:$연쇄,blocked:$못함,expected_sum:$expected_sum,
+         resume:$작업 >> [table:each] { return {device_id:$it.device_id,receipts:get($it,"receipts",null),remote:get($it,"remote_dir",get($it,"remote_path",null))} }}
+$saved=[self:write]{path:f"${out}/result.json",content:json($result)}
+$lines=$작업 >> [table:each] { return f"- ${get($it,"alias","?")} (${it.device_id}): 방식 ${get($it,"method","?")}, 합계 일치 ${json($it.sum_ok)}, 재사용 ${json($it.reused)}" }
+$dev_lines=$기기 >> [table:each] { return f"- ${it.alias} ${it.device_id} ${it.kind}/${it.adapter}: 연결 ${json($it.connected)} 멈춤 ${json($it.paused)} 응답 ${json($it.reachable)} ${it.reason}" }
+$body=f"""# 73회차 저녁 점검 — 원격 기기 ${len($기기)}대 중 응답 ${len($기기 >> [table:filter]{where:($d)=>$d.reachable==true})}대
+
+## 기기표
+${join("\n",$dev_lines)}
+
+## 작업표 (12행×2, 기대 합계 ${expected_sum})
+${join("\n",$lines)}
+
+## 사진 연쇄
+${json($연쇄)}
+
+## 못 한 일
+${json($못함)}
+
+상태표·신원·접수증·원격 경로 전문은 result.json. 사진 내용은 보지도 저장하지도 않았다(크기·해시만).
+소리·화면·설정 변경 0. 응답하지 않은 기기는 다른 기기로 대신하지 않았다.
+"""
+$rep=[self:write]{path:f"${out}/report.md",content:$body}
+$back=[self:read]{path:$saved.path}
+assert $back.data==$result,"중앙 JSON 재독 불일치"
+return {out:$out,devices:len($기기),reachable:len($기기 >> [table:filter]{where:($d)=>$d.reachable==true}),jobs_ok:len($작업 >> [table:filter]{where:($j)=>$j.sum_ok==true}),photo:$연쇄,saved:$saved.path}

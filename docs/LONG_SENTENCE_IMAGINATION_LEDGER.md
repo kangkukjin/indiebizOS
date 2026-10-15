@@ -4,6 +4,21 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 73회차 — 원격 하드웨어들의 사용: 여섯 몸에 같은 점검을 나눠 맡기고 한 곳에 모으기 (2026-10-15, 훈련·수리 완료 / 사진 연쇄는 설계 예측대로 회수 단계 정지)
+
+15:56~16:34 KST(38분). 시작 `4e89fcc5`. 실기기 6(맥12·KHJoffice·tv1·맥26 PC, 삼성1·삼성0 폰, 전부 계약 1 미설치)·합성 12행.
+한 프로그램이 명부를 읽어 기기마다 독립 가지(`each parallel·on_error:collect`)로 문진→**info 데이터로 방식 선택**(PC 셸 python / 폰 IBL 하달)→상태표→처리→회수→보고.
+훈련자 v0→v4 검사 4주기(L73-1 때문에 2판 낭비), 실행 뒤 2주기(사진 대상 오답·외부PC준비 중복 info). 기본 71.5초 응답 5/5 전건(이름 바이트·합계 156·신원),
+변형(KHJoffice `pause`) 12.9초 재사용 5·재접수 0·재촬영 0·해시 재확인. 맥26 은 세 실행 모두 응답 못 함(연결 깜빡임, info 작업 queued→expired).
+독립 AI 기본 ep4788 779.7초(IBL 17·Bash 15) 5/5 전건·상태표 더 넓음(Windows 음량·재생 피크), 변형 ep4789 231.0초 재사용 5·`registration_unavailable` 관측.
+AI 가 지시 밖 행동 둘을 자진 보고(Windows 음량 Set 메서드 오호출 1회 — 거절됨, `sense:see` 가 앱 사진 폴더에 저장). 사진 3장(삼성1) 내용 비열람.
+
+**L73-1** 삼중 f문자열 리터럴 조각이 `"` 로 끝나면 Python SyntaxError 원문·위치 없음 → `_format_literal` 재해석+IBL SYNTAX. **L73-2** `외부PC준비` 중복 동기 info 30초 → 가이드 `환경조회:false`.
+**L73-3** `connected:true` 인데 info 미응답(맥26) — 기록. **L73-4** 폰 `self:copy` 하드링크 EPERM → `_link_or_reserve`(O_EXCL 예약+replace), 폰 실기 검증은 APK 재빌드 뒤.
+L73-5 폰 읽기 전용 상태 어휘 부재(기록) · L73-6 `sense:see` 저장 위치 인자 없음(가이드) · L73-7 `$i` 재발. 새 어휘 0. 회귀 `backend/test_long_sentence_round73_repairs.py` 8건 + 관련 묶음 통과.
+수리 후 전체 재실행 기본 3 75.4초·변형 2 13.9초 통과. AI 되먹임 미실행(L73-4 는 APK 전엔 AI 경로에 안 닿음).
+[설계](LONG_SENTENCE_REMOTE_HARDWARE_FLEET_DESIGN_2026_10_15.md) · [보고서·프로그램·증거](experiments/long_sentence_imagination/round_73/report.md).
+
 ## 72회차 — 회원 데스크톱 출하 대사·응답 복구 (2026-10-15, 훈련·수리 완료 / 독립 AI 미달)
 
 시작 babeb8ee, 합성24품목·4출하원천을 실제 IBL·서명 HTTP·Go 두 회원 폴더에서 대사.
@@ -571,6 +586,12 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L73-1 | 구현 결함(컴파일러) — 삼중 f문자열 리터럴 조각이 바깥 따옴표로 끝나면 Python SyntaxError 원문, IBL 위치 없음 | `f"""say "${x}"""` · round_73/evidence/base_v0_check.json | 수리 완료 — `_format_literal` 재해석, 실패 시 위치 있는 SYNTAX | 73회차 커밋 · v0 재검사(위치 184 로 바뀜)·기본 3·변형 2 통과 |
+| L73-2 | 관용구 계약·낭비 — `외부PC준비` 기본 환경조회가 문진 info 를 동기 30초로 중복 조회, 느린 몸에서 가지 실패(작업은 뒤에 성공) | round_73/evidence/probe_mac26_after_base.json | 가이드 문장(환경조회:false) — 관용구 자체는 미변경 | 73회차 커밋 · 훈련자 v6 로 재발 0 |
+| L73-3 | 외부 전제·상태 신선도 — `connected:true` 인 PC(맥26)가 info 미응답, 작업 queued→expired, 10분 사이 연결 깜빡임 | round_73/evidence/variant_evidence.json | 기록만 — 헬퍼 쪽 원인(롱폴/절전)과 `connected` 신선도 표기는 후속 | — |
+| L73-4 | 구현 결함(폰 파일 발행) — `publish_file` 의 `os.link` 가 Android 샌드박스에서 EPERM → 폰 `self:copy` 실패(AI 발견) | round_73/evidence/agent_fleet_check_73.json incidents | 수리 완료(허브 코드) — `_link_or_reserve` 폴백. **폰 실기는 APK 재빌드 뒤 미검증** | 73회차 커밋 · 시험 2케이스 |
+| L73-5 | 어휘 공백(기록) — 폰 IBL 에 배터리·저장공간·음량·호스트명 읽기 전용 어휘 없음(두 실행자 모두 unavailable) | 훈련자·AI 상태표 | 기록만 — 계약 1 Python 용례로 해소 가능한지 후속. 새 낱말 추가 대상 아님 | — |
+| L73-6 | 계약(기록) — `sense:see` 저장 위치 인자 없음 → 전용 폴더 조건과 충돌 | AI incidents | 가이드에 사실 명시(remote_phone.md) | 73회차 커밋 |
 | L70-1 | 구현·계약: 미수집/실패/부분 캐시가 완전 목록으로 보임 | v1 기본·변형 모두 0공지·실패0·전체 확인 오보고, 네트워크0 | 수리 완료: source 상태·시각·절단, PARTIAL_SOURCE와 과거 행 보존, 파인더 경고 | 캐시 경계 회귀·원래 v1의 미확인3창고·v3 세 변형. [70회차](experiments/long_sentence_imagination/round_70/report.md) |
 | L70-2 | 구현: poll 내부 실패를 success:true로 감쌈 | 503 결과 ok:false에도 외부 성공 | 수리 완료: 개별 실패 전파·전체 일부 실패의 partial 보존 | 단일·전체 폴링 회귀·실행기 봉투 검사 |
 | L70-3 | 구현: 상주 media-sweeper가 첫 요청의 자식으로 남음 | 유일한 active child가 재기동 drain 지속 차단, 격리 재현1→0 | 수리 완료: service_scope 생성·유한 sweep 추적/defer | 실 스레드 수명·drain 회귀. 활성화 강제 재기동은 effect_unknown:true로 보존 |

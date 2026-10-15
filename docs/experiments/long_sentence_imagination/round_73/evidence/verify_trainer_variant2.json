@@ -1,0 +1,181 @@
+{
+ "out": "outputs/long_sentence_imagination/2026-10-15_73회차/trainer_variant2",
+ "devices": 6,
+ "reachable": 4,
+ "jobs": [
+  {
+   "device_id": "guestpc-3fd796167b18",
+   "method": "pc_shell_python",
+   "reused": true,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-3fd796167b18",
+    "hostname": "kang-old-MacBook-Air.local",
+    "platform": "macOS-15.7.9-x86_64-i386-64bit",
+    "python": "3.9.6",
+    "processed_at": "2026-10-15T16:37:08+09:00"
+   },
+   "status_keys": [
+    "DISK_FREE",
+    "HOST",
+    "PLAYBACK",
+    "POWER",
+    "VOLUME"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "guestpc-7da97e970821",
+   "method": "pc_shell_python",
+   "reused": true,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-7da97e970821",
+    "hostname": "KHJoffice",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.1",
+    "processed_at": "2026-10-15T16:37:08+09:00"
+   },
+   "status_keys": [
+    "DISK_FREE",
+    "HOST",
+    "PLAYBACK",
+    "POWER",
+    "VOLUME"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "guestpc-9dc41d53987d",
+   "method": "unavailable",
+   "reused": false,
+   "sum_ok": false,
+   "rows_exact": false,
+   "count": 0,
+   "identity_has_device": false,
+   "identity": {},
+   "status_keys": null,
+   "skipped": true,
+   "failed": null,
+   "reason": "not_connected"
+  },
+  {
+   "device_id": "guestpc-4e51c614b25b",
+   "method": "phone_ibl",
+   "reused": true,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-4e51c614b25b",
+    "body": "phone"
+   },
+   "status_keys": [
+    "device",
+    "disk",
+    "os",
+    "playback",
+    "power",
+    "volume"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "guestpc-70e163471313",
+   "method": "pc_shell_python",
+   "reused": true,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-70e163471313",
+    "hostname": "DESKTOP-VQJGB71",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python": "3.12.10",
+    "processed_at": "2026-10-15T16:37:26+09:00"
+   },
+   "status_keys": [
+    "DISK_FREE",
+    "HOST",
+    "PLAYBACK",
+    "POWER",
+    "VOLUME"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  },
+  {
+   "device_id": "guestpc-fc7b12fba936",
+   "method": "phone_ibl",
+   "reused": true,
+   "sum_ok": true,
+   "rows_exact": true,
+   "count": 12,
+   "identity_has_device": true,
+   "identity": {
+    "device_id": "guestpc-fc7b12fba936",
+    "body": "phone"
+   },
+   "status_keys": [
+    "device",
+    "disk",
+    "os",
+    "playback",
+    "power",
+    "volume"
+   ],
+   "skipped": null,
+   "failed": null,
+   "reason": null
+  }
+ ],
+ "photo_chain": {
+  "executed": null,
+  "captured": true,
+  "phone_sha256": "fec8a3e8384faa044331cd2c089671dffdf5cc10ae4e86f356528993712f3e59",
+  "phone_size": 2008788,
+  "blocked_at": "collect",
+  "blocked_reason": "폰 ops 에 transfer 없음(실행 계약 1 미설치) — 허브 회수·PC 재계산 미실행",
+  "hub_sha256": null,
+  "pc_sha256": null,
+  "all_equal": null,
+  "reused": true,
+  "reason": null
+ },
+ "blocked": [
+  {
+   "device_id": "guestpc-7da97e970821",
+   "alias": "KHJoffice",
+   "what": "문진·처리",
+   "why": "paused"
+  },
+  {
+   "device_id": "guestpc-9dc41d53987d",
+   "alias": "맥26",
+   "what": "문진·처리",
+   "why": "not_connected"
+  },
+  {
+   "device_id": "guestpc-9dc41d53987d",
+   "what": "처리",
+   "why": "not_connected"
+  }
+ ],
+ "report_md_exists": true,
+ "result_sha256": "fc031c46815c9ad7eba8c9fa0825f4ffdaceb190348953135ad6e9c7a325c57e"
+}

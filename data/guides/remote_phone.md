@@ -47,7 +47,7 @@ return $r.result.value
 
 폰의 `result_ref`·`resume`는 **그 폰 저장소의 참조**다. 중앙 실행기의 read_result에 그대로
 넣지 않는다. 필요한 값·원문을 원격 프로그램에서 반환하고 중앙의 `self:write`로 보존한다.
-큰 사진·녹음 파일은 경로만으로 회수된 것이 아니다. 현재 폰 손발이 신고하는 ops에 transfer가
+`[sense:see]`는 저장 위치 인자가 없고 앱 사진 폴더(`files/photos/`)에 jpg 경로만 돌려준다. 크기·해시는 그 폴더를 `[self:list]{path:폴더,pattern:파일이름,hash:true}`로 읽는다(파일 경로를 path에 주면 `Not a directory`). 큰 사진·녹음 파일은 경로만으로 회수된 것이 아니다. 현재 폰 손발이 신고하는 ops에 transfer가
 없으면 헬퍼용 `transfer collect`를 호출해도 해결되지 않는다. 작은 텍스트 왕복과 바이너리
 파일 전송의 지원 범위를 구분한다.
 

@@ -1,0 +1,3111 @@
+{
+ "request": {
+  "edition": 2,
+  "origin": "training"
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1792048241.5838652,
+ "ended": 1792048241.931659,
+ "response": {
+  "success": true,
+  "value": {
+   "history": {
+    "success": true,
+    "tasks": [
+     {
+      "id": "d559c2c903734487a0f017a9602d52be",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "8b6087c8d5f042348a34d08c770b0674",
+      "summary": {
+       "op": "info",
+       "mode": "background"
+      },
+      "created": 1792048102.025126,
+      "state": "succeeded",
+      "result": {
+       "admin": false,
+       "arch": "arm64",
+       "cwd": "/",
+       "gui": {
+        "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+        "resolution": "2560x1664",
+        "screen": "screencapture"
+       },
+       "home": "/Users/kangkukjin",
+       "hostname": "MacBook-Air.local",
+       "op": "info",
+       "os": "darwin",
+       "os_version": "macOS 26.5.2",
+       "package_managers": null,
+       "path": "/usr/bin:/bin:/usr/sbin:/sbin",
+       "resident": {
+        "adapter": "resident-v1",
+        "arch": "arm64",
+        "cpu_hard_limit": false,
+        "desktop_stream": 1,
+        "elevation": true,
+        "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+        "go": "go1.26.5",
+        "helper_sha256": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+        "hostname": "MacBook-Air.local",
+        "installation_warnings": [],
+        "interactive": true,
+        "kind": "pc",
+        "max_parallel": 2,
+        "media": true,
+        "media_components": {
+         "components": {
+          "ffmpeg": "/opt/homebrew/bin/ffmpeg",
+          "ffplay": "/opt/homebrew/bin/ffplay",
+          "mpv": "/opt/homebrew/bin/mpv"
+         },
+         "missing": []
+        },
+        "media_player": "/opt/homebrew/bin/mpv",
+        "media_session": {
+         "camera": true,
+         "display": true,
+         "engine": "pion/v4.2.23",
+         "ffmpeg": true,
+         "microphone": true,
+         "playback": true,
+         "speaker": true
+        },
+        "media_volume": true,
+        "memory_hard_limit": false,
+        "observation_parallel": 1,
+        "observation_shell_timeout": 10,
+        "os": "darwin",
+        "screen_cancel": true,
+        "screen_observation": true,
+        "self_update": true,
+        "service_scope": "user_login",
+        "shell": true,
+        "terminal": true,
+        "terminal_lan": true,
+        "transfer": true,
+        "wake_relay": true
+       },
+       "shells": [
+        "bash",
+        "zsh",
+        "sh"
+       ],
+       "tools": [
+        "git",
+        "python3",
+        "curl",
+        "zip",
+        "unzip",
+        "tar",
+        "shasum",
+        "sha256sum",
+        "sips",
+        "ditto"
+       ],
+       "user": "kangkukjin"
+      },
+      "cancel_requested": 0,
+      "started_at": 1792048235.4179049,
+      "ended_at": 1792048235.471264,
+      "seconds": 0.053359031677246094,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "17ae8a595c5444529c859f551412b1ba",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "08dd7cafbe154e93acc7595aa044b07c",
+      "summary": {
+       "op": "info",
+       "mode": "background"
+      },
+      "created": 1792048094.3760939,
+      "state": "succeeded",
+      "result": {
+       "admin": false,
+       "arch": "arm64",
+       "cwd": "/",
+       "gui": {
+        "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+        "resolution": "2560x1664",
+        "screen": "screencapture"
+       },
+       "home": "/Users/kangkukjin",
+       "hostname": "MacBook-Air.local",
+       "op": "info",
+       "os": "darwin",
+       "os_version": "macOS 26.5.2",
+       "package_managers": null,
+       "path": "/usr/bin:/bin:/usr/sbin:/sbin",
+       "resident": {
+        "adapter": "resident-v1",
+        "arch": "arm64",
+        "cpu_hard_limit": false,
+        "desktop_stream": 1,
+        "elevation": true,
+        "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+        "go": "go1.26.5",
+        "helper_sha256": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+        "hostname": "MacBook-Air.local",
+        "installation_warnings": [],
+        "interactive": true,
+        "kind": "pc",
+        "max_parallel": 2,
+        "media": true,
+        "media_components": {
+         "components": {
+          "ffmpeg": "/opt/homebrew/bin/ffmpeg",
+          "ffplay": "/opt/homebrew/bin/ffplay",
+          "mpv": "/opt/homebrew/bin/mpv"
+         },
+         "missing": []
+        },
+        "media_player": "/opt/homebrew/bin/mpv",
+        "media_session": {
+         "camera": true,
+         "display": true,
+         "engine": "pion/v4.2.23",
+         "ffmpeg": true,
+         "microphone": true,
+         "playback": true,
+         "speaker": true
+        },
+        "media_volume": true,
+        "memory_hard_limit": false,
+        "observation_parallel": 1,
+        "observation_shell_timeout": 10,
+        "os": "darwin",
+        "screen_cancel": true,
+        "screen_observation": true,
+        "self_update": true,
+        "service_scope": "user_login",
+        "shell": true,
+        "terminal": true,
+        "terminal_lan": true,
+        "transfer": true,
+        "wake_relay": true
+       },
+       "shells": [
+        "bash",
+        "zsh",
+        "sh"
+       ],
+       "tools": [
+        "git",
+        "python3",
+        "curl",
+        "zip",
+        "unzip",
+        "tar",
+        "shasum",
+        "sha256sum",
+        "sips",
+        "ditto"
+       ],
+       "user": "kangkukjin"
+      },
+      "cancel_requested": 0,
+      "started_at": 1792048094.862918,
+      "ended_at": 1792048096.429342,
+      "seconds": 1.5664241313934326,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "723822ea9ef34b3586670b6407827249",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "media-7f63a91a581eef1749f4ee4b96717d64",
+      "summary": {
+       "op": "media_session",
+       "session_id": "7f63a91a581eef1749f4ee4b96717d64",
+       "grant": {
+        "session_id": "7f63a91a581eef1749f4ee4b96717d64",
+        "role": "device",
+        "device": "guestpc-9dc41d53987d",
+        "tracks": [
+         "v0"
+        ],
+        "expires_at": 1792052863.643,
+        "token": "b746be30277eeba245bbdbd47a0d9ff16cce465b49e7eb6753d16f57b35b7b5d"
+       },
+       "purpose": "camera",
+       "tracks": [
+        {
+         "id": "v0",
+         "kind": "video",
+         "source": "camera",
+         "from": "device",
+         "to": "hub",
+         "state": "requested"
+        }
+       ],
+       "ice_servers": [
+        {
+         "urls": [
+          "stun:stun.l.google.com:19302"
+         ]
+        }
+       ],
+       "lease": {
+        "lease_s": 20.0,
+        "keepalive_s": 5.0,
+        "reconnect_s": 30.0
+       },
+       "quality_profile": {
+        "width": 1280,
+        "height": 720,
+        "fps": 20,
+        "max_bitrate_kbps": 1200,
+        "audio_kbps": 32
+       },
+       "stream": {
+        "url": "wss://finder.kukjinkang.uk/limb/resident/media/7f63a91a581eef1749f4ee4b96717d64",
+        "lan": {
+         "urls": [
+          "https://192.168.0.32:62559"
+         ],
+         "sha256": "cc561a586701e7f3f835b022d160e294bb3c31de4d4c5831ab3f483178b916ee"
+        }
+       },
+       "content": null,
+       "delivery": "realtime",
+       "camera": null,
+       "timeout": 86400,
+       "mode": "background"
+      },
+      "created": 1791966463.6472561,
+      "state": "succeeded",
+      "result": {
+       "closed": true,
+       "generation": 0,
+       "path": "direct",
+       "quality": {
+        "bitrate_kbps": 1504.3,
+        "dropped": 160,
+        "fps": 30,
+        "height": 720,
+        "jitter_ms": 45.2,
+        "loss": 0.027,
+        "rtt_ms": 18.5,
+        "width": 1280
+       },
+       "reason": "local_end",
+       "session_id": "7f63a91a581eef1749f4ee4b96717d64"
+      },
+      "cancel_requested": 1,
+      "started_at": 1791966461.904625,
+      "ended_at": 1791966565.13234,
+      "seconds": 103.22771501541138,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "37dc6e18823b49a8873a205f85ad6160",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "media-ba3b289c36d0cd505f0ebaad0d690b02",
+      "summary": {
+       "op": "media_session",
+       "session_id": "ba3b289c36d0cd505f0ebaad0d690b02",
+       "grant": {
+        "session_id": "ba3b289c36d0cd505f0ebaad0d690b02",
+        "role": "device",
+        "device": "guestpc-9dc41d53987d",
+        "tracks": [
+         "v0"
+        ],
+        "expires_at": 1792052578.841,
+        "token": "46a548f8464bfc0161c310cd776e67b1954b23a0938f702748ddcbcf2de1f6e3"
+       },
+       "purpose": "camera",
+       "tracks": [
+        {
+         "id": "v0",
+         "kind": "video",
+         "source": "camera",
+         "from": "device",
+         "to": "hub",
+         "state": "requested"
+        }
+       ],
+       "ice_servers": [
+        {
+         "urls": [
+          "stun:stun.l.google.com:19302"
+         ]
+        }
+       ],
+       "lease": {
+        "lease_s": 20.0,
+        "keepalive_s": 5.0,
+        "reconnect_s": 30.0
+       },
+       "quality_profile": {
+        "width": 1280,
+        "height": 720,
+        "fps": 20,
+        "max_bitrate_kbps": 1200,
+        "audio_kbps": 32
+       },
+       "stream": {
+        "url": "wss://finder.kukjinkang.uk/limb/resident/media/ba3b289c36d0cd505f0ebaad0d690b02",
+        "lan": {
+         "urls": [
+          "https://192.168.0.32:62559"
+         ],
+         "sha256": "cc561a586701e7f3f835b022d160e294bb3c31de4d4c5831ab3f483178b916ee"
+        }
+       },
+       "content": null,
+       "delivery": "realtime",
+       "camera": null,
+       "timeout": 86400,
+       "mode": "background"
+      },
+      "created": 1791966178.845633,
+      "state": "succeeded",
+      "result": {
+       "closed": true,
+       "generation": 0,
+       "path": "",
+       "quality": {
+        "bitrate_kbps": 0,
+        "dropped": 0,
+        "fps": 30,
+        "height": 720,
+        "jitter_ms": 0,
+        "loss": 0,
+        "rtt_ms": 0,
+        "width": 1280
+       },
+       "reason": "local_end",
+       "session_id": "ba3b289c36d0cd505f0ebaad0d690b02"
+      },
+      "cancel_requested": 1,
+      "started_at": 1791966179.097336,
+      "ended_at": 1791966298.951615,
+      "seconds": 119.85427904129028,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "c1662b3eb46f4f9397ca3f39d3119cc0",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "8c12c0b93a89405aaabb1eae0ebbfdad",
+      "summary": {
+       "op": "update",
+       "transfer_id": "444e75d791484c50a029f3f3cf79d3f6",
+       "sha256": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+       "timeout": 900,
+       "mode": "background"
+      },
+      "created": 1791965554.439044,
+      "state": "succeeded",
+      "result": {
+       "from": "1c9d4618287b080b3462c87c9d3872a8ce77c52a573c273ed70c579a4c3b7842",
+       "restarting": true,
+       "to": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+       "updated": true
+      },
+      "cancel_requested": 0,
+      "started_at": 1791965554.6253319,
+      "ended_at": 1791965632.936181,
+      "seconds": 78.3108491897583,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "4dc3e477c272404aa6cc6c5fac064406",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-i18n-restore-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "git diff --stat frontend/i18n | tail -2; git checkout -- frontend/i18n/catalog.json frontend/i18n/remote.json frontend/i18n/translations.json frontend/i18n/xray.json; git status --porcelain; echo HEAD=$(git rev-parse HEAD)",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 60,
+       "mode": "background"
+      },
+      "created": 1791862912.0784059,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": " frontend/i18n/xray.json         | 2 +-\n 4 files changed, 4 insertions(+), 4 deletions(-)\n?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\nHEAD=36cc663ab757348c9096ac2b265b40c81a9607ab\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862914.5570638,
+      "ended_at": 1791862915.6375418,
+      "seconds": 1.0804779529571533,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "eb67c0fce08b409d954643736d2b3175",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-verify-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "echo TEMP_RUN_TRACKED=$(git ls-files data/packages/installed/tools/web/_temp_run.py | wc -l); ls -la data/packages/installed/tools/web/_temp_run.py; git check-ignore -v data/packages/installed/tools/web/_temp_run.py; echo ---PIPCHECK; .venv/bin/python3 -m pip check; echo PIPCHECK_EXIT=$?; .venv/bin/python3 -c 'import sys,torch,sentence_transformers,fastapi;print(sys.version.split()[0],torch.__version__,sentence_transformers.__version__,fastapi.__version__)'; echo ---COV; .venv/bin/python3 scripts/check_import_coverage.py 2>&1 | grep -E '결손|✗|IMPORT_COVERAGE_JSON|통과|OK' | head; echo COV_EXIT=$?; echo ---NODE; $HOME/opt/node/bin/node -v; PATH=$HOME/opt/node/bin:$PATH npm -v; ls -la $HOME/opt/node; ls frontend/dist | head -3; echo ---GIT; git rev-parse HEAD origin/main; git status --porcelain | head",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 900,
+       "mode": "background"
+      },
+      "created": 1791862813.3735979,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "TEMP_RUN_TRACKED= 0\n-rw-r--r--@ 1 kangkukjin  staff  3456 Jan 27  2026 data/packages/installed/tools/web/_temp_run.py\n.gitignore:53:data/packages/installed/tools/**/_temp_*\tdata/packages/installed/tools/web/_temp_run.py\n---PIPCHECK\nNo broken requirements found.\nPIPCHECK_EXIT=0\n3.12.4 2.14.1 6.1.0 0.143.0\n---COV\n✗ 의존성 결손 2건 — .venv 에 없는/깨진 서드파티:\n  ✗ browser_use — ModuleNotFoundError: No module named 'browser_use'\n  ✗ langchain_google_genai — ModuleNotFoundError: No module named 'langchain_google_genai'\n@@IMPORT_COVERAGE_JSON@@ {\"ok\": false, \"tested\": 66, \"skipped\": 3, \"failures\": [{\"name\": \"browser_use\", \"error\": \"ModuleNotFoundError: No module named 'browser_use'\", \"files\": [\"data/packages/installed/tools/web/_temp_run.py:4\"]}, {\"name\": \"langchain_google_genai\", \"error\": \"ModuleNotFoundError: No module named 'langchain_google_genai'\", \"files\": [\"data/packages/installed/tools/web/_temp_run.py:5\"]}], \"warnings\": [], \"zombies\": []}\nCOV_EXIT=0\n---NODE\nv22.23.3\n10.9.9\nlrwxr-xr-x  1 kangkukjin  staff  48 Oct 13 12:14 /Users/kangkukjin/opt/node -> /Users/kangkukjin/opt/node-v22.23.3-darwin-arm64\nassets\nexample1.jpg\nindex.html\n---GIT\n36cc663ab757348c9096ac2b265b40c81a9607ab\n36cc663ab757348c9096ac2b265b40c81a9607ab\n M frontend/i18n/catalog.json\n M frontend/i18n/remote.json\n M frontend/i18n/translations.json\n M frontend/i18n/xray.json\n?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862815.679924,
+      "ended_at": 1791862898.949922,
+      "seconds": 83.26999807357788,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "2fc11ff0617d449b8b3cef4b360966f4",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-peek-6",
+      "summary": {
+       "op": "shell",
+       "cmd": "grep -v 'Cache entry' ~/ibz_deps_py.log | tail -6",
+       "cwd": "/tmp",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862657.774973,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "  ✓ chromium-headless-shell-1243\n  ✓ ffmpeg-1011\n@@PLAYWRIGHT_BROWSERS_JSON@@ {\"ok\": true, \"status\": \"ok\", \"browsers_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/ms-playwright\", \"playwright_version\": \"1.63.0\", \"missing\": [], \"stale\": [], \"note\": \"\"}\n\n▶ 시맨틱 메모리 — requirements-ml.txt (해마 벡터 회상, ~2GB — 실패 시 키워드 회상으로 저하)\n  $ /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pip install --quiet -r /Users/kangkukjin/Desktop/AI/indiebizOS/backend/requirements-ml.txt\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862658.817951,
+      "ended_at": 1791862659.0312378,
+      "seconds": 0.2132868766784668,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "8381812a9e7843538bed658c1461bbc8",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-build-2",
+      "summary": {
+       "op": "shell",
+       "cmd": "export PATH=$HOME/opt/node/bin:/usr/bin:/bin:/usr/sbin:/sbin; { date; npm run build; echo BUILD_EXIT=$?; date; } > $HOME/ibz_deps_build.log 2>&1; grep -v '^\\s*$' $HOME/ibz_deps_build.log | tail -25",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/frontend",
+       "timeout": 1800,
+       "mode": "background"
+      },
+      "created": 1791862234.0750809,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/frontend",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "dist/assets/grc-DOlGgO8T-C7K_Bcib.js                71.61 kB │ gzip:     8.92 kB\ndist/assets/cy-BBPa6z2x-BONU7bVJ.js                 80.20 kB │ gzip:    19.05 kB\ndist/assets/ga-Cn6LkudM-WsF4_z3Y.js                 82.15 kB │ gzip:    20.04 kB\ndist/assets/ru-v4l-ayaq-BZkHNr9F.js                 85.31 kB │ gzip:    16.94 kB\ndist/assets/en-gb-B7Al27b_-BFFr9zKP.js             105.38 kB │ gzip:    26.11 kB\ndist/assets/lv-Q2BBHnzp-DRPSUjhQ.js                112.68 kB │ gzip:    16.09 kB\ndist/assets/nl-BHQJ6Gvn-BMWl-SdQ.js                138.51 kB │ gzip:    36.10 kB\ndist/assets/cu-CBUlrW6Y-BrxB2kb-.js                168.80 kB │ gzip:    26.17 kB\ndist/assets/af-DK_CjRn6-C81U6qP1.js                179.89 kB │ gzip:    38.97 kB\ndist/assets/de-ch-1901-hVThVHVb-CC5Yf8hX.js        264.34 kB │ gzip:    70.50 kB\ndist/assets/de-1996-BL6awyxG-BSuIomZy.js           266.94 kB │ gzip:    71.07 kB\ndist/assets/de-1901-CWoAOigE-yOXirf_M.js           270.04 kB │ gzip:    71.86 kB\ndist/assets/no-B8ItS0F3-BlrHaK3Z.js                341.90 kB │ gzip:    87.84 kB\ndist/assets/nb-DI8u59ch-S2a9vUN_.js                341.92 kB │ gzip:    87.85 kB\ndist/assets/nn-ntZvarUK-cMBifkqM.js                341.92 kB │ gzip:    87.85 kB\ndist/assets/hu-DVk7Y_ka-CCTZJfqn.js                765.41 kB │ gzip:   172.84 kB\ndist/assets/index-DPokvnBj.js                    4,157.77 kB │ gzip: 1,302.28 kB\ndist/assets/SheetEngine-CJZ0HOB5.js              6,910.99 kB │ gzip: 1,826.33 kB\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n✓ built in 3m 31s\nBUILD_EXIT=0\nTue Oct 13 12:37:36 KST 2026\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862235.621823,
+      "ended_at": 1791862656.229416,
+      "seconds": 420.6075928211212,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "8ad62762b3be4fa58a4f8efa721f50b8",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-residue-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "set -e; B=$HOME/ibz_untracked_backup/2026-10-13_premerge/data_packages; for p in not_installed/tools/android not_installed/tools/house-designer installed/tools/nodejs installed/tools/publishing installed/tools/python-exec installed/tools/remotion-video; do test $(git ls-files $p | wc -l) -eq 0 || { echo REFUSE_TRACKED $p; exit 3; }; mkdir -p $B/$(dirname $p); mv $p $B/$p; echo moved $p; done; ls installed/tools | sort > /tmp/a; ls not_installed/tools | sort > /tmp/b; echo DUPS_LEFT=$(comm -12 /tmp/a /tmp/b | wc -l); git status --porcelain . | head",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "timeout": 120,
+       "mode": "background"
+      },
+      "created": 1791862222.607764,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "moved not_installed/tools/android\nmoved not_installed/tools/house-designer\nmoved installed/tools/nodejs\nmoved installed/tools/publishing\nmoved installed/tools/python-exec\nmoved installed/tools/remotion-video\nDUPS_LEFT= 0\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862223.9793239,
+      "ended_at": 1791862225.8909838,
+      "seconds": 1.9116599559783936,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "cd1b14c4d8904e32a1aa416515387380",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-dup-5",
+      "summary": {
+       "op": "shell",
+       "cmd": "for n in android house-designer nodejs publishing python-exec remotion-video; do for s in installed not_installed; do printf '%-40s tracked=%-4s other=' $s/$n $(git ls-files $s/tools/$n | wc -l); find $s/tools/$n -type f -not -path '*__pycache__*' -not -path '*node_modules*' -not -name .DS_Store | sed \"s#$s/tools/$n/##\" | head -6 | tr '\\n' ' '; du -sh $s/tools/$n | cut -f1; done; done",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862208.399022,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "installed/android                        tracked=18   other=ibl_actions.yaml apk/cliphelper.apk apk/TextReceiver.java apk/method.xml apk/IndieBizIME.java apk/AndroidManifest.xml 300K\nnot_installed/android                    tracked=0    other=.install_info.json ibl_usage_backup.json 320K\ninstalled/house-designer                 tracked=32   other=render_gate.py design_model_stairs.py design_transforms.py renderer_2d.py ibl_actions.yaml handler.py 524K\nnot_installed/house-designer             tracked=0    other=ibl_usage_backup.json 364K\ninstalled/nodejs                         tracked=0    other=.install_info.json  20K\nnot_installed/nodejs                     tracked=3    other=handler.py tool.json README.md  12K\ninstalled/publishing                     tracked=0    other=manifest.json  28K\nnot_installed/publishing                 tracked=6    other=tools/registry.py ibl_actions.yaml handler.py tool.json __init__.py manifest.json  28K\ninstalled/python-exec                    tracked=0    other= 28K\nnot_installed/python-exec                tracked=3    other=handler.py tool.json README.md  24K\ninstalled/remotion-video                 tracked=0    other=remotion_project/.install_done remotion_project/package-lock.json 491M\nnot_installed/remotion-video             tracked=9    other=ibl_actions.yaml handler.py remotion_project/tailwind.config.js remotion_project/.install_done remotion_project/package.json remotion_project/tsconfig.json  76K\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862209.67536,
+      "ended_at": 1791862212.14677,
+      "seconds": 2.471410036087036,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "83ed58c7e8ae4896b9d5aa1364e4151e",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-dup-4",
+      "summary": {
+       "op": "shell",
+       "cmd": "for n in android house-designer nodejs publishing python-exec remotion-video; do for s in installed not_installed; do printf '%s/%s tracked=%s nonpyc_files=' $s $n $(git ls-files $s/tools/$n | wc -l); find $s/tools/$n -type f -not -path '*__pycache__*' -not -name .DS_Store | tr '\\n' ' '; echo; done; done",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862193.5470772,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "d-image/canvas.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/animated-image/decode-image.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/animated-image/AnimatedImage.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/animated-image/props.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/animated-image/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/animated-image/AnimatedImage.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/_check-rsc.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-buffer-state.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/watch-static-file.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/SequenceContext.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/prefetch-state.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/EditorProps.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/get-asset-file-name.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Still.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/play-and-handle-not-allowed-error.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/download-behavior.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/volume-prop.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/log.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-remotion-environment.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/index.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/CompositionManagerContext.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/get-remotion-environment.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-current-scale.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/render-types.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/interpolate-colors.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/nonce.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/bezier.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Clipper.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/random.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/version.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Artifact.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/AbsoluteFill.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-tag.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/internals.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/CompositionManagerProvider.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/ResolveCompositionConfig.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/EditorProps.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/get-remotion-environment.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/TimelineContext.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-delay-render.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/input-props-serialization.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-lazy-component.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/warn-about-non-seekable-media.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/absolute-src.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/multiple-versions-warning.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-video.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-buffering.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/asset-types.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/media-tag-current-time-timestamp.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/RenderAssetManager.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/get-static-files.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/codec.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/absolute-src.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-buffering.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/use-audio-context.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/AudioForPreview.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/use-audio-context.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/use-audio-frame.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/AudioForRendering.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/index.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/shared-element-source-node.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/use-audio-frame.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/shared-audio-tags.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/props.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/Audio.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/AudioForRendering.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/props.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/shared-element-source-node.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/Audio.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/AudioForPreview.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/audio/shared-audio-tags.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/no-react.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/setup-env-variables.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-in-timeline.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/render-types.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/remotion-environment-context.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/wrap-remotion-context.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/loading-indicator.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/interpolate.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/CompositionManager.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Composition.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/volume-position-state.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/volume-safeguard.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/static-file.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-request-video-callback-time.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/get-preview-dom-element.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-lazy-component.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/internals.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/wrap-remotion-context.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/multiple-versions-warning.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/loading-indicator.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Null.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/timeline-position-state.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/CanUseRemotionHooks.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-current-scale.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/resolve-video-config.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-remotion-environment.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/seek.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-delay-render.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/nonce.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/AbsoluteFill.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Still.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/IFrame.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/buffer-until-first-frame.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/buffering.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/SequenceContext.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/prores-profile.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/enable-sequence-stack-traces.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/buffer-until-first-frame.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/truthy.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/download-behavior.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Img.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/props-if-has-props.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/get-static-files.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/CompositionManagerContext.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-video-config.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/portal-node.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/video-config.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/buffering.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/CompositionManagerProvider.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/warn-about-non-seekable-media.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/ResolveCompositionConfig.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/get-cross-origin-value.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/static-file.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/is-player.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/calculate-media-duration.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/input-props-override.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Composition.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/playback-logging.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/_check-rsc.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/asset-types.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/default-css.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/play-and-handle-not-allowed-error.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/SequenceManager.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-tag.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/log-level-context.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/timeline-position-state.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Img.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/portal-node.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-playback.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/prefetch-state.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/prefetch.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/freeze.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/props-if-has-props.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/interpolate.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-amplification.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Sequence.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/enable-sequence-stack-traces.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-in-timeline.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/calculate-media-duration.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/volume-position-state.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-unsafe-video-config.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/log-level-context.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/register-root.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/loop/index.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/loop/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/v5-flag.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/register-root.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/v5-flag.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/volume-safeguard.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/cancel-render.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-fps.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-default-props.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-artifact.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-folder-name.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validation-spring-duration.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-dimensions.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-duration-in-frames.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-dimensions.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validation-spring-duration.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-composition-id.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-duration-in-frames.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-fps.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-composition-id.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-default-codec.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-folder-name.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-default-props.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-artifact.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/validation/validate-default-codec.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/is-approximately-the-same.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/freeze.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/Artifact.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/spring/spring-utils.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/spring/measure-spring.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/spring/index.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/spring/spring-utils.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/spring/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/spring/measure-spring.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-buffer-state.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-enabled.js installed/tools/remotion-video/remotion_project/node_modules/remotion/dist/cjs/use-media-enabled.d.ts installed/tools/remotion-video/remotion_project/node_modules/remotion/version.js installed/tools/remotion-video/remotion_project/node_modules/remotion/README.md installed/tools/remotion-video/remotion_project/node_modules/remotion/no-react.js installed/tools/remotion-video/remotion_project/node_modules/remotion/package.json installed/tools/remotion-video/remotion_project/node_modules/graceful-fs/LICENSE installed/tools/remotion-video/remotion_project/node_modules/graceful-fs/polyfills.js installed/tools/remotion-video/remotion_project/node_modules/graceful-fs/README.md installed/tools/remotion-video/remotion_project/node_modules/graceful-fs/graceful-fs.js installed/tools/remotion-video/remotion_project/node_modules/graceful-fs/package.json installed/tools/remotion-video/remotion_project/node_modules/graceful-fs/clone.js installed/tools/remotion-video/remotion_project/node_modules/graceful-fs/legacy-streams.js installed/tools/remotion-video/remotion_project/node_modules/loader-runner/LICENSE installed/tools/remotion-video/remotion_project/node_modules/loader-runner/README.md installed/tools/remotion-video/remotion_project/node_modules/loader-runner/package.json installed/tools/remotion-video/remotion_project/node_modules/loader-runner/lib/loadLoader.js installed/tools/remotion-video/remotion_project/node_modules/loader-runner/lib/LoaderRunner.js installed/tools/remotion-video/remotion_project/node_modules/loader-runner/lib/LoaderLoadingError.js installed/tools/remotion-video/remotion_project/node_modules/human-signals/LICENSE installed/tools/remotion-video/remotion_project/node_modules/human-signals/CHANGELOG.md installed/tools/remotion-video/remotion_project/node_modules/human-signals/README.md installed/tools/remotion-video/remotion_project/node_modules/human-signals/package.json installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/core.js installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/main.js.map installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/signals.js.map installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/signals.js installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/main.d.ts installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/realtime.js installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/core.js.map installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/realtime.js.map installed/tools/remotion-video/remotion_project/node_modules/human-signals/build/src/main.js installed/tools/remotion-video/remotion_project/node_modules/normalize-path/LICENSE installed/tools/remotion-video/remotion_project/node_modules/normalize-path/index.js installed/tools/remotion-video/remotion_project/node_modules/normalize-path/README.md installed/tools/remotion-video/remotion_project/node_modules/normalize-path/package.json installed/tools/remotion-video/remotion_project/node_modules/ws/LICENSE installed/tools/remotion-video/remotion_project/node_modules/ws/wrapper.mjs installed/tools/remotion-video/remotion_project/node_modules/ws/index.js installed/tools/remotion-video/remotion_project/node_modules/ws/README.md installed/tools/remotion-video/remotion_project/node_modules/ws/package.json installed/tools/remotion-video/remotion_project/node_modules/ws/lib/constants.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/websocket-server.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/stream.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/event-target.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/permessage-deflate.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/receiver.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/sender.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/subprotocol.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/limiter.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/websocket.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/validation.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/buffer-util.js installed/tools/remotion-video/remotion_project/node_modules/ws/lib/extension.js installed/tools/remotion-video/remotion_project/node_modules/ws/browser.js installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/LICENSE installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/react.js installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/index.js installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/react.d.ts installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/README.md installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/package.json installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/es6/react.js installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/es6/index.js installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/es6/react.d.ts installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/es6/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/fast-deep-equal/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/shebang-command/license installed/tools/remotion-video/remotion_project/node_modules/shebang-command/index.js installed/tools/remotion-video/remotion_project/node_modules/shebang-command/readme.md installed/tools/remotion-video/remotion_project/node_modules/shebang-command/package.json installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/full-versions.json installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/LICENSE installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/full-chromium-versions.js installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/versions.json installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/index.js installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/full-chromium-versions.json installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/README.md installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/versions.js installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/chromium-versions.json installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/package.json installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/chromium-versions.js installed/tools/remotion-video/remotion_project/node_modules/electron-to-chromium/full-versions.js installed/tools/remotion-video/remotion_project/node_modules/require-from-string/license installed/tools/remotion-video/remotion_project/node_modules/require-from-string/index.js installed/tools/remotion-video/remotion_project/node_modules/require-from-string/readme.md installed/tools/remotion-video/remotion_project/node_modules/require-from-string/package.json installed/tools/remotion-video/remotion_project/node_modules/emojis-list/LICENSE.md installed/tools/remotion-video/remotion_project/node_modules/emojis-list/CHANGELOG.md installed/tools/remotion-video/remotion_project/node_modules/emojis-list/index.js installed/tools/remotion-video/remotion_project/node_modules/emojis-list/README.md installed/tools/remotion-video/remotion_project/node_modules/emojis-list/package.json installed/tools/remotion-video/remotion_project/node_modules/debug/LICENSE installed/tools/remotion-video/remotion_project/node_modules/debug/README.md installed/tools/remotion-video/remotion_project/node_modules/debug/package.json installed/tools/remotion-video/remotion_project/node_modules/debug/src/index.js installed/tools/remotion-video/remotion_project/node_modules/debug/src/node.js installed/tools/remotion-video/remotion_project/node_modules/debug/src/common.js installed/tools/remotion-video/remotion_project/node_modules/debug/src/browser.js installed/tools/remotion-video/remotion_project/node_modules/glob-parent/LICENSE installed/tools/remotion-video/remotion_project/node_modules/glob-parent/index.js installed/tools/remotion-video/remotion_project/node_modules/glob-parent/README.md installed/tools/remotion-video/remotion_project/node_modules/glob-parent/package.json installed/tools/remotion-video/remotion_project/node_modules/source-map-js/LICENSE installed/tools/remotion-video/remotion_project/node_modules/source-map-js/README.md installed/tools/remotion-video/remotion_project/node_modules/source-map-js/package.json installed/tools/remotion-video/remotion_project/node_modules/source-map-js/source-map.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/source-map-generator.d.ts installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/source-map-consumer.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/quick-sort.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/util.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/source-node.d.ts installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/source-map-consumer.d.ts installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/base64-vlq.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/mapping-list.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/binary-search.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/base64.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/array-set.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/source-node.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/lib/source-map-generator.js installed/tools/remotion-video/remotion_project/node_modules/source-map-js/source-map.d.ts installed/tools/remotion-video/remotion_project/node_modules/mime-db/db.json installed/tools/remotion-video/remotion_project/node_modules/mime-db/LICENSE installed/tools/remotion-video/remotion_project/node_modules/mime-db/HISTORY.md installed/tools/remotion-video/remotion_project/node_modules/mime-db/index.js installed/tools/remotion-video/remotion_project/node_modules/mime-db/README.md installed/tools/remotion-video/remotion_project/node_modules/mime-db/package.json installed/tools/remotion-video/remotion_project/node_modules/isexe/.npmignore installed/tools/remotion-video/remotion_project/node_modules/isexe/LICENSE installed/tools/remotion-video/remotion_project/node_modules/isexe/test/basic.js installed/tools/remotion-video/remotion_project/node_modules/isexe/index.js installed/tools/remotion-video/remotion_project/node_modules/isexe/README.md installed/tools/remotion-video/remotion_project/node_modules/isexe/package.json installed/tools/remotion-video/remotion_project/node_modules/isexe/windows.js installed/tools/remotion-video/remotion_project/node_modules/isexe/mode.js installed/tools/remotion-video/remotion_project/node_modules/@esbuild/darwin-arm64/bin/esbuild installed/tools/remotion-video/remotion_project/node_modules/@esbuild/darwin-arm64/README.md installed/tools/remotion-video/remotion_project/node_modules/@esbuild/darwin-arm64/package.json installed/tools/remotion-video/remotion_project/node_modules/postcss-custom-properties/LICENSE.md installed/tools/remotion-video/remotion_project/node_modules/postcss-custom-properties/CHANGELOG.md installed/tools/remotion-video/remotion_project/node_modules/postcss-custom-properties/dist/index.cjs installed/tools/remotion-video/remotion_project/node_modules/postcss-custom-properties/dist/index.mjs installed/tools/remotion-video/remotion_project/node_modules/postcss-custom-properties/dist/index.d.ts installed/tools/remotion-video/remotion_project/node_modules/postcss-custom-properties/README.md installed/tools/remotion-video/remotion_project/node_modules/postcss-custom-properties/package.json installed/tools/remotion-video/remotion_project/.install_done installed/tools/remotion-video/remotion_project/package-lock.json \nnot_installed/remotion-video tracked=9 nonpyc_files=not_installed/tools/remotion-video/ibl_actions.yaml not_installed/tools/remotion-video/handler.py not_installed/tools/remotion-video/remotion_project/tailwind.config.js not_installed/tools/remotion-video/remotion_project/.install_done not_installed/tools/remotion-video/remotion_project/package.json not_installed/tools/remotion-video/remotion_project/tsconfig.json not_installed/tools/remotion-video/remotion_project/postcss.config.js not_installed/tools/remotion-video/remotion_project/src/style.css not_installed/tools/remotion-video/tool.json \n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862194.173814,
+      "ended_at": 1791862196.840972,
+      "seconds": 2.6671578884124756,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "abae8384b62a416298ad2d9afea0b87c",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-dup-3",
+      "summary": {
+       "op": "shell",
+       "cmd": "ls installed/tools | sort > /tmp/a; ls not_installed/tools | sort > /tmp/b; echo DUPS:; comm -12 /tmp/a /tmp/b; echo ---; for d in not_installed/tools/*; do printf '%s tracked=%s files=%s\\n' $d $(git ls-files $d | wc -l) $(find $d -type f -not -path '*__pycache__*' | wc -l); done; echo ---; find installed/tools/publishing -maxdepth 2 | head; git ls-files installed/tools/publishing | wc -l; cat not_installed/tools/android/.install_info.json",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862181.245627,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "DUPS:\nandroid\nhouse-designer\nnodejs\npublishing\npython-exec\nremotion-video\n---\nnot_installed/tools/android tracked=0 files=3\nnot_installed/tools/house-designer tracked=0 files=2\nnot_installed/tools/nodejs tracked=3 files=3\nnot_installed/tools/publishing tracked=6 files=6\nnot_installed/tools/python-exec tracked=3 files=3\nnot_installed/tools/remotion-video tracked=9 files=9\n---\ninstalled/tools/publishing\ninstalled/tools/publishing/tools\ninstalled/tools/publishing/tools/__pycache__\ninstalled/tools/publishing/__pycache__\ninstalled/tools/publishing/__pycache__/handler.cpython-314.pyc\ninstalled/tools/publishing/manifest.json\n       0\n{\n  \"installed_at\": \"2026-01-02T09:39:43.956903\",\n  \"from\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/available/tools/android\",\n  \"ai_installed\": true,\n  \"provider\": \"google\",\n  \"pip_packages\": [],\n  \"installation_log\": [\n    \"handler.py 생성됨\",\n    \"tool.json 생성됨\"\n  ],\n  \"ai_analysis\": \"이 패키지는 ADB(Android Debug Bridge)를 사용하여 안드로이드 기기를 제어하는 도구 모음입니다. 시스템에 ADB가 설치되어 있어야 하며, 기기에서 USB 디버깅이 활성화되어야 합니다. Python의 subprocess를 통해 CLI 명령을 실행하는 방식으로 구현됩니다.\"\n}"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862182.320815,
+      "ended_at": 1791862182.989206,
+      "seconds": 0.6683909893035889,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "fd421d6c0f8648aab9686aebd49e6753",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-dup-2",
+      "summary": {
+       "op": "shell",
+       "cmd": "comm -12 <(ls installed/tools | sort) <(ls not_installed/tools | sort) 2>&1; echo ---; ls not_installed/tools; echo ---; for d in not_installed/tools/*; do printf '%s tracked=%s files=%s\\n' $d $(git ls-files $d | wc -l) $(find $d -type f -not -path '*__pycache__*' | wc -l); done; echo ---; find installed/tools/publishing -maxdepth 2 | head; cat not_installed/tools/android/.install_info.json",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862175.750933,
+      "state": "failed",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages",
+       "error": "exit status 2",
+       "exit": 2,
+       "log_truncated": false,
+       "output": "/bin/sh: -c: line 0: syntax error near unexpected token `('\n/bin/sh: -c: line 0: `comm -12 <(ls installed/tools | sort) <(ls not_installed/tools | sort) 2>&1; echo ---; ls not_installed/tools; echo ---; for d in not_installed/tools/*; do printf '%s tracked=%s files=%s\\n' $d $(git ls-files $d | wc -l) $(find $d -type f -not -path '*__pycache__*' | wc -l); done; echo ---; find installed/tools/publishing -maxdepth 2 | head; cat not_installed/tools/android/.install_info.json'\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862176.434554,
+      "ended_at": 1791862176.5266838,
+      "seconds": 0.09212970733642578,
+      "outcome": "failed"
+     },
+     {
+      "id": "7a25bd71581f452e82d746f8d5d6599c",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-dup-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "sed -n 55,82p backend/datastore/vocabulary_state.py; echo ====; ls -d data/packages/*/*/android* 2>&1; for d in data/packages/*/*/android; do echo \"== $d\"; git ls-files $d | head -3; git check-ignore -v $d/ 2>&1 | head -2; ls -la $d | head -8; done; git status --porcelain data/packages | head",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862161.123049,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "    held = _scope.get()\n    if held is not None:\n        seen = held.get(str(root))\n        if seen and time.monotonic() - seen[0] < _SCOPE_WINDOW_S:\n            return seen[1]\n    with LOCK:\n        paths = []\n        for location in (\"installed\", \"not_installed\"):\n            base = root / \"data\" / \"packages\" / location / \"tools\"\n            if base.exists():\n                paths.extend((p, location) for p in sorted(base.iterdir())\n                             if p.is_dir() and not p.name.startswith(\".\"))\n        stamps = tuple((str(p), tuple((name, (p / name).stat().st_mtime_ns,\n                                      (p / name).stat().st_size)\n                                     for name in (\"tool.json\", \"ibl_actions.yaml\", \"manifest.json\")\n                                     if (p / name).is_file())) for p, _ in paths)\n        cached = _inventory_cache.get(str(root))\n        if cached and cached[0] == stamps:\n            if held is not None:\n                held[str(root)] = (time.monotonic(), cached[1])\n            return cached[1]\n        packages, tools, actions = {}, {}, {}\n        for path, location in paths:\n            pid = valid_id(path.name)\n            if pid in packages:\n                raise ValueError(f\"묶음 ID 충돌: {pid} (두 보관 폴더)\")\n            meta = json.loads((path / \"manifest.json\").read_text()) if (path / \"manifest.json\").exists() else {}\n            packages[pid] = {\"path\": path, \"initial_active\": location == \"installed\", \"manifest\": meta}\n====\ndata/packages/installed/tools/android\ndata/packages/not_installed/tools/android\n== data/packages/installed/tools/android\ndata/packages/installed/tools/android/README.md\ndata/packages/installed/tools/android/__init__.py\ndata/packages/installed/tools/android/adb_core.py\ntotal 368\ndrwxr-xr-x@ 17 kangkukjin  staff    544 Oct 13 12:12 .\ndrwxr-xr-x@ 58 kangkukjin  staff   1856 Oct 13 12:12 ..\n-rwxr-xr-x@  1 kangkukjin  staff   3938 Jun 30 14:12 README.md\n-rw-r--r--@  1 kangkukjin  staff    381 Jun 30 14:12 __init__.py\ndrwxr-xr-x@  5 kangkukjin  staff    160 Jul 26 09:24 __pycache__\n-rwxr-xr-x@  1 kangkukjin  staff   4556 Jun 30 14:12 adb_core.py\n-rw-r--r--   1 kangkukjin  staff  11799 Oct 13 12:12 android_audio.py\n== data/packages/not_installed/tools/android\ntotal 56\ndrwxr-xr-x@  6 kangkukjin  staff    192 Jun 30 14:12 .\ndrwxr-xr-x@  8 kangkukjin  staff    256 Oct 13 12:12 ..\n-rw-r--r--@  1 kangkukjin  staff   6148 Apr 13  2026 .DS_Store\n-rw-r--r--@  1 kangkukjin  staff    635 Apr 13  2026 .install_info.json\ndrwxr-xr-x@ 22 kangkukjin  staff    704 Apr 13  2026 __pycache__\n-rw-r--r--@  1 kangkukjin  staff  13020 Apr 13  2026 ibl_usage_backup.json\n?? data/packages/installed/tools/publishing/\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862162.469609,
+      "ended_at": 1791862163.24078,
+      "seconds": 0.7711710929870605,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "dc5907be4be9490991df682b508d3df7",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-nodelog-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "grep -v 'npm warn deprecated' ~/ibz_deps_node.log | grep -n 'EXIT\\|error\\|Error' | head -30; echo ====; grep -v 'npm warn deprecated' ~/ibz_deps_node.log | tail -40",
+       "cwd": "/tmp",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862153.404585,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "14:NPM_CI_EXIT=0\n33:REBUILD_EXIT=0\n56:    raise ValueError(f\"묶음 ID 충돌: {pid} (두 보관 폴더)\")\n57:ValueError: 묶음 ID 충돌: android (두 보관 폴더)\n60:error during build:\n79:    raise ValueError(f\"묶음 ID 충돌: {pid} (두 보관 폴더)\")\n80:ValueError: 묶음 ID 충돌: android (두 보관 폴더)\n82:    at genericNodeError (node:internal/errors:983:15)\n83:    at wrappedFn (node:internal/errors:537:14)\n84:    at checkExecSyncError (node:child_process:916:11)\n====\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/datastore/vocabulary_state.py\", line 256, in action_owner\n    inv = inventory(root)\n          ^^^^^^^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/datastore/vocabulary_state.py\", line 80, in inventory\n    raise ValueError(f\"묶음 ID 충돌: {pid} (두 보관 폴더)\")\nValueError: 묶음 ID 충돌: android (두 보관 폴더)\n✓ 0 modules transformed.\n✗ Build failed in 17.22s\nerror during build:\n[indiebiz-ui-catalog] Command failed: /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 /Users/kangkukjin/Desktop/AI/indiebizOS/frontend/scripts/ui-system-sources.py\nTraceback (most recent call last):\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/frontend/scripts/ui-system-sources.py\", line 144, in <module>\n    print(json.dumps(sources(), ensure_ascii=False))\n                     ^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/frontend/scripts/ui-system-sources.py\", line 116, in sources\n    instruments = launcher._derive_instruments()['instruments']\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/surface/api_launcher_web.py\", line 336, in _derive_instruments\n    if _asleep(node_name, action_name, action):\n       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/surface/api_launcher_web.py\", line 319, in _asleep\n    owner = _vs.action_owner(node_name, action_name, action_cfg)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/datastore/vocabulary_state.py\", line 256, in action_owner\n    inv = inventory(root)\n          ^^^^^^^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/datastore/vocabulary_state.py\", line 80, in inventory\n    raise ValueError(f\"묶음 ID 충돌: {pid} (두 보관 폴더)\")\nValueError: 묶음 ID 충돌: android (두 보관 폴더)\n\n    at genericNodeError (node:internal/errors:983:15)\n    at wrappedFn (node:internal/errors:537:14)\n    at checkExecSyncError (node:child_process:916:11)\n    at execFileSync (node:child_process:952:15)\n    at buildCatalog (file:///Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1791862126835-01df5796ab46b.mjs:971:36)\n    at file:///Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1791862126835-01df5796ab46b.mjs:1037:15\n    at build (file:///Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1791862126835-01df5796ab46b.mjs:1039:7)\n    at Object.buildStart (file:///Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1791862126835-01df5796ab46b.mjs:1047:13)\n    at Object.handler (file:///Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/vite/dist/node/chunks/config.js:33742:13)\n    at file:///Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/rollup/dist/es/shared/node-entry.js:22522:40\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862154.1418061,
+      "ended_at": 1791862154.295636,
+      "seconds": 0.15382981300354004,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "3b7b6907500547bfbdc73490a8e67e61",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-ps-5",
+      "summary": {
+       "op": "shell",
+       "cmd": "grep -v 'npm warn deprecated' ~/ibz_deps_node.log | tail -6; echo ====; grep -v 'Cache entry' ~/ibz_deps_py.log | tail -4; ls /Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules | wc -l; ls /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.12/site-packages | wc -l; pgrep -lf 'npm|git|node-gyp|pip' | cut -c1-120",
+       "cwd": "/tmp",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791862087.610466,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "rebuilt dependencies successfully\nREBUILD_EXIT=0\n\n> indiebiz-os@1.5.2 build\n> tsc -b && vite build\n\n====\n  $ /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pip install --quiet -r /Users/kangkukjin/Desktop/AI/indiebizOS/backend/requirements-core.txt\n\n▶ 도구 의존성 — requirements-tools.txt (실패해도 코어는 동작)\n  $ /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pip install --quiet -r /Users/kangkukjin/Desktop/AI/indiebizOS/backend/requirements-tools.txt\n     545\n     174\n21785 /bin/sh -c { set -e; date; mkdir -p $HOME/opt/dl; cd $HOME/opt/dl; curl -fsSLO https://nodejs.org/dist/latest-v22.\n25972 /Library/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m pip install --qui\n26001 npm run build SHELL=/bin/zsh TMPDIR=/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ OLDPWD=/Users/kangkukjin/opt\n26025 /Library/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python /Users/kangkukjin/De\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791862088.630506,
+      "ended_at": 1791862088.9403079,
+      "seconds": 0.3098018169403076,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "0ca1b4cae2424094b2d67770ba31f63a",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-ps-4",
+      "summary": {
+       "op": "shell",
+       "cmd": "pgrep -lf 'pip|bootstrap|python' | cut -c1-160; ls /Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules 2>/dev/null | wc -l; ls /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.12/site-packages | wc -l; echo DONE",
+       "cwd": "/tmp",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791861833.092042,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "21780 /bin/sh -c P=/Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12; { date; ls -la .env 2>&1; $P -c 'import sys,platform;print(sys.version,pla\n21789 /Library/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python scripts/bootstrap.py\n21886 /Library/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m pip install --quiet -r /Users/kangkukjin/Desktop/AI/indie\n     555\n       2\nDONE\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861833.9473238,
+      "ended_at": 1791861836.8308969,
+      "seconds": 2.883573055267334,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "4de31c68f7674fea809c0430b619f204",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-ps-3",
+      "summary": {
+       "op": "shell",
+       "cmd": "pgrep -lf 'git|ssh|npm' | cut -c1-200; echo PS_DONE",
+       "cwd": "/tmp",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791861817.588801,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "21785 /bin/sh -c { set -e; date; mkdir -p $HOME/opt/dl; cd $HOME/opt/dl; curl -fsSLO https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt; F=$(grep 'darwin-arm64.tar.gz$' SHASUMS256.txt | awk '{print $\n21889 npm ci SHELL=/bin/zsh TMPDIR=/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ OLDPWD=/Users/kangkukjin/opt/dl USER=kangkukjin\nPS_DONE\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861819.3520799,
+      "ended_at": 1791861827.207272,
+      "seconds": 7.855192184448242,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "5c2e66dfe1034c10bb48095675dee25c",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-ps-2",
+      "summary": {
+       "op": "shell",
+       "cmd": "ps -axo pid,ppid,etime,command 2>&1 | grep -E 'npm|git-|ssh|pip|bin/node' | grep -v grep | cut -c1-200; echo; ls ~/.ssh 2>&1; echo PS_DONE",
+       "cwd": "/tmp",
+       "timeout": 8,
+       "mode": "observe"
+      },
+      "created": 1791861801.725562,
+      "state": "failed",
+      "result": {
+       "cancelled": false,
+       "cwd": "/tmp",
+       "error": "context deadline exceeded",
+       "exit": 125,
+       "log_truncated": false,
+       "output": "",
+       "timeout": true
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861804.1736991,
+      "ended_at": 1791861812.7499578,
+      "seconds": 8.576258659362793,
+      "outcome": "timeout"
+     },
+     {
+      "id": "136794f7476a481dabef6a32f4eac92b",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-ps-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "ps -axo pid,ppid,etime,%cpu,command | egrep 'npm|git|ssh|pip|node ' | grep -v egrep | cut -c1-220; ls ~/.ssh 2>&1; grep -n 'node-gyp' /Users/kangkukjin/Desktop/AI/indiebizOS/frontend/package-lock.json | head -5",
+       "cwd": "/tmp",
+       "timeout": 8,
+       "mode": "observe"
+      },
+      "created": 1791861784.461658,
+      "state": "failed",
+      "result": {
+       "cancelled": false,
+       "cwd": "/tmp",
+       "error": "context deadline exceeded",
+       "exit": 125,
+       "log_truncated": false,
+       "output": "",
+       "timeout": true
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861787.646183,
+      "ended_at": 1791861795.995038,
+      "seconds": 8.348855018615723,
+      "outcome": "timeout"
+     },
+     {
+      "id": "f317d2a52958478799fc50c57d9f60cb",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-peek-3",
+      "summary": {
+       "op": "shell",
+       "cmd": "grep -v 'npm warn deprecated' ~/ibz_deps_node.log | tail -15; echo =====; grep -v 'Cache entry' ~/ibz_deps_py.log | tail -15",
+       "cwd": "/tmp",
+       "timeout": 5,
+       "mode": "observe"
+      },
+      "created": 1791861771.876569,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "Tue Oct 13 12:14:06 KST 2026\nF=node-v22.23.3-darwin-arm64.tar.gz\nnode-v22.23.3-darwin-arm64.tar.gz: OK\nv22.23.3\n10.9.9\nnpm warn skipping integrity check for git dependency ssh://git@github.com/electron/node-gyp.git\n=====\nTue Oct 13 12:14:06 KST 2026\n-rw-------@ 1 kangkukjin  staff  2637 Jul 26 09:25 .env\n3.12.4 (v3.12.4:8e8a4baf65, Jun  6 2024, 17:33:18) [Clang 13.0.0 (clang-1300.0.29.30)] arm64\n\n▶ 가상환경 (.venv)\n  $ /Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12 -m venv /Users/kangkukjin/Desktop/AI/indiebizOS/.venv\n\n▶ 백엔드 의존성 — requirements-core.txt\n  $ /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pip install --quiet --upgrade pip\n  $ /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pip install --quiet -r /Users/kangkukjin/Desktop/AI/indiebizOS/backend/requirements-core.txt\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861776.294015,
+      "ended_at": 1791861778.299993,
+      "seconds": 2.0059781074523926,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "d0b2f26bfe0240c3b7dbee9c83cb8da7",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-peek-2",
+      "summary": {
+       "op": "shell",
+       "cmd": "grep -v 'npm warn deprecated' ~/ibz_deps_node.log | tail -15; echo =====; grep -v 'Cache entry' ~/ibz_deps_py.log | tail -15",
+       "cwd": "/tmp",
+       "timeout": 5,
+       "mode": "observe"
+      },
+      "created": 1791861755.7568681,
+      "state": "failed",
+      "result": {
+       "cancelled": false,
+       "cwd": "/tmp",
+       "error": "context deadline exceeded",
+       "exit": 125,
+       "log_truncated": false,
+       "output": "open /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/spool/process-d0b2f26bfe0240c3b7dbee9c83cb8da7.json: no such file or directory\n",
+       "timeout": true
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861759.479769,
+      "ended_at": 1791861766.874648,
+      "seconds": 7.394879102706909,
+      "outcome": "timeout"
+     },
+     {
+      "id": "55332f5a0b7e4b069a4e53590200eb4f",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-peek-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "tail -8 ~/ibz_deps_node.log; echo =====; tail -12 ~/ibz_deps_py.log",
+       "cwd": "/tmp",
+       "timeout": 5,
+       "mode": "observe"
+      },
+      "created": 1791861493.199957,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.\nnpm warn deprecated @npmcli/move-file@2.0.1: This functionality has been moved to @npmcli/fs\nnpm warn deprecated rimraf@2.6.3: Rimraf versions prior to v4 are no longer supported\nnpm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported\nnpm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported\nnpm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported\nnpm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported\nnpm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.\n=====\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\nWARNING: Cache entry deserialization failed, entry ignored\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861498.026757,
+      "ended_at": 1791861498.375649,
+      "seconds": 0.3488919734954834,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "f7cc1e8922fa4e12aa387438c2fac073",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-node-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "{ set -e; date; mkdir -p $HOME/opt/dl; cd $HOME/opt/dl; curl -fsSLO https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt; F=$(grep 'darwin-arm64.tar.gz$' SHASUMS256.txt | awk '{print $2}'); echo F=$F; curl -fsSLO https://nodejs.org/dist/latest-v22.x/$F; grep \" $F$\" SHASUMS256.txt | shasum -a 256 -c -; D=${F%.tar.gz}; tar -xzf $F -C $HOME/opt; ln -sfn $HOME/opt/$D $HOME/opt/node; export PATH=$HOME/opt/node/bin:/usr/bin:/bin:/usr/sbin:/sbin; node -v; npm -v; cd /Users/kangkukjin/Desktop/AI/indiebizOS/frontend; npm ci --no-audit --no-fund; echo NPM_CI_EXIT=$?; npm run rebuild-trusted; echo REBUILD_EXIT=$?; npm run build; echo BUILD_EXIT=$?; date; } > $HOME/ibz_deps_node.log 2>&1; echo EXIT=$?; tail -40 $HOME/ibz_deps_node.log",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/frontend",
+       "timeout": 5400,
+       "mode": "background"
+      },
+      "created": 1791861245.7699919,
+      "state": "failed",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS/frontend",
+       "error": "exit status 1",
+       "exit": 1,
+       "log_truncated": false,
+       "output": ""
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861246.541574,
+      "ended_at": 1791862146.496918,
+      "seconds": 899.9553439617157,
+      "outcome": "failed"
+     },
+     {
+      "id": "285f3df219734b9b92c6b529244108c9",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-py-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "P=/Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12; { date; ls -la .env 2>&1; $P -c 'import sys,platform;print(sys.version,platform.machine())'; PATH=/usr/bin:/bin:/usr/sbin:/sbin $P scripts/bootstrap.py; echo BOOTSTRAP_EXIT=$?; date; } > $HOME/ibz_deps_py.log 2>&1; tail -40 $HOME/ibz_deps_py.log",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 7200,
+       "mode": "background"
+      },
+      "created": 1791861245.756206,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 94.3 MiB\n|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 94.3 MiB\n|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 94.3 MiB\nChrome Headless Shell 153.0.8010.12 (playwright chromium-headless-shell v1243) downloaded to /Users/kangkukjin/Desktop/AI/indiebizOS/ms-playwright/chromium_headless_shell-1243\nplaywright 1.63.0 / 주소 /Users/kangkukjin/Desktop/AI/indiebizOS/ms-playwright\n  ✓ chromium-1243\n  ✓ chromium-headless-shell-1243\n  ✓ ffmpeg-1011\n@@PLAYWRIGHT_BROWSERS_JSON@@ {\"ok\": true, \"status\": \"ok\", \"browsers_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/ms-playwright\", \"playwright_version\": \"1.63.0\", \"missing\": [], \"stale\": [], \"note\": \"\"}\n\n▶ 시맨틱 메모리 — requirements-ml.txt (해마 벡터 회상, ~2GB — 실패 시 키워드 회상으로 저하)\n  $ /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pip install --quiet -r /Users/kangkukjin/Desktop/AI/indiebizOS/backend/requirements-ml.txt\n\n▶ .env — API 키 자리\n  이미 있음 — 그대로 둠\n\n▶ 프론트엔드 (Electron 데스크탑 UI — 선택)\n  npm 없음 — 백엔드 전용 설치(데스크탑 UI 는 Node ≥ 18 설치 후 재실행)\n\n▶ 의존성 커버리지 감사 — 코드가 import 하는 서드파티가 방금 만든 .venv 에 실재하는가\n대상 파일 스캔 → import 이름 744개 (로컬 제외 후 시험 66, 스킵 3)\n  · 스킵 com — 폰(Chaquopy) 전용 Java 네임스페이스\n  · 스킵 java — 폰(Chaquopy) 전용 — 데스크탑엔 원리적으로 없음\n  · 스킵 msvcrt — win32 전용 (현재 darwin)\n\n✗ 의존성 결손 2건 — .venv 에 없는/깨진 서드파티:\n  ✗ browser_use — ModuleNotFoundError: No module named 'browser_use'\n      data/packages/installed/tools/web/_temp_run.py:4\n  ✗ langchain_google_genai — ModuleNotFoundError: No module named 'langchain_google_genai'\n      data/packages/installed/tools/web/_temp_run.py:5\n\n처방: backend/requirements-{core,tools,ml,dev}.txt 의 해당 티어에 선언 후 `.venv/bin/python3 -m pip install -r …` (또는 scripts/bootstrap.py 재실행). 폰/타OS 전용이 확실하면 이 스크립트의 허용목록에 사유와 함께 등재.\n@@IMPORT_COVERAGE_JSON@@ {\"ok\": false, \"tested\": 66, \"skipped\": 3, \"failures\": [{\"name\": \"browser_use\", \"error\": \"ModuleNotFoundError: No module named 'browser_use'\", \"files\": [\"data/packages/installed/tools/web/_temp_run.py:4\"]}, {\"name\": \"langchain_google_genai\", \"error\": \"ModuleNotFoundError: No module named 'langchain_google_genai'\", \"files\": [\"data/packages/installed/tools/web/_temp_run.py:5\"]}], \"warnings\": [], \"zombies\": []}\n  ⚠ 위 결손 의존성은 해당 기능이 돌 때 터집니다 — requirements 선언/설치 후 재실행 권장\n\n▶ 완료\n  실행:  ./start.sh   (또는 .venv/bin/python3 backend/api.py)\n  데스크탑 UI:  cd frontend && npm run electron:dev\nBOOTSTRAP_EXIT=0\nTue Oct 13 12:40:02 KST 2026\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861246.034432,
+      "ended_at": 1791862802.920463,
+      "seconds": 1556.8860311508179,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "99ea62ca72b341b6b93cf322748a25f1",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-conv-3",
+      "summary": {
+       "op": "shell",
+       "cmd": "grep -n 'standalone\\|3\\.11\\|runtime\\|aarch64\\|https://\\|RELEASE\\|sha256' frontend/scripts/build-python.mjs frontend/scripts/prepare-python-mac.js | head -40; ls -d ~/opt/* 2>&1; ls /Library/Frameworks/Python.framework/Versions 2>&1; which python3.11 python3.12 python3.13",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 60,
+       "mode": "background"
+      },
+      "created": 1791861223.717531,
+      "state": "failed",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "error": "exit status 1",
+       "exit": 1,
+       "log_truncated": false,
+       "output": "frontend/scripts/prepare-python-mac.js:5: * Homebrew나 pyenv의 Python을 사용하여 standalone 환경을 만듭니다.\nls: /Users/kangkukjin/opt/*: No such file or directory\n3.12\nCurrent\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861224.0165708,
+      "ended_at": 1791861224.166185,
+      "seconds": 0.1496140956878662,
+      "outcome": "failed"
+     },
+     {
+      "id": "683e5a84d5a94740be704df6db6e40d3",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-conv-2",
+      "summary": {
+       "op": "shell",
+       "cmd": "sed -n 20,200p scripts/bootstrap.py; echo ======; ls frontend/scripts 2>&1; grep -n 'python-build-standalone\\|PYTHON_VERSION\\|3\\.11\\|runtime\\|aarch64\\|tar.gz\\|url' frontend/scripts/prepare-python-mac.js | head -30",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 60,
+       "mode": "background"
+      },
+      "created": 1791861216.366428,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "import shutil\nimport subprocess\nimport sys\n\nROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\nVENV = os.path.join(ROOT, \".venv\")\n\n# venv 를 만들 파이썬의 지원 범위. 상한이 있는 이유(2026-08-10 실측): 3.14 는\n# coincurve(pynostr 의존, Nostr 통신)가 휠을 아직 안 내놔 소스빌드가 죽는다 —\n# 최신 파이썬만 가진 낯선 기계가 첫 pip 에서 막히는 부류. 휠이 따라오면 상한을 올린다.\nPY_MIN, PY_MAX_EXCL = (3, 10), (3, 14)\n\n\ndef pick_base_python() -> str:\n    \"\"\"venv 의 밑 파이썬 선택 — 현재 인터프리터가 지원 범위면 그대로, 아니면 PATH 에서\n    범위 안 파이썬을 찾는다(윈도우는 py 런처 경유도). 못 찾으면 현재 것 + 경고.\"\"\"\n    cur = sys.version_info[:2]\n    if PY_MIN <= cur < PY_MAX_EXCL:\n        return sys.executable\n\n    def _version_of(argv):\n        try:\n            out = subprocess.run(argv + [\"-c\", \"import sys;print(sys.version_info[0],sys.version_info[1]);print(sys.executable)\"],\n                                 capture_output=True, text=True, timeout=15)\n            if out.returncode != 0:\n                return None\n            ver_line, exe_line = out.stdout.strip().splitlines()[:2]\n            major, minor = (int(x) for x in ver_line.split())\n            return ((major, minor), exe_line)\n        except Exception:\n            return None\n\n    candidates = []\n    for minor in range(PY_MAX_EXCL[1] - 1, PY_MIN[1] - 1, -1):  # 3.13 → 3.10 (높은 쪽 선호)\n        candidates.append([f\"python3.{minor}\"])\n        if os.name == \"nt\":\n            candidates.append([\"py\", f\"-3.{minor}\"])\n    for argv in candidates:\n        if argv[0] != \"py\" and not shutil.which(argv[0]):\n            continue\n        got = _version_of(argv)\n        if got and PY_MIN <= got[0] < PY_MAX_EXCL:\n            print(f\"  현재 파이썬 {sys.version.split()[0]} 은 지원 범위 밖 — {got[1]} 사용\", flush=True)\n            return got[1]\n\n    print(f\"  ⚠ 지원 범위(3.{PY_MIN[1]}~3.{PY_MAX_EXCL[1]-1}) 파이썬을 못 찾음 — 현재 \"\n          f\"{sys.version.split()[0]} 로 진행. 일부 코어 의존성(coincurve 등)이 빌드 실패할 수 \"\n          f\"있습니다. 막히면 Python 3.12 나 3.13 설치 후 재실행하세요.\", flush=True)\n    return sys.executable\n\n\ndef venv_python() -> str:\n    \"\"\"이 저장소 관례(.venv — start.sh 도 이 경로를 본다)의 파이썬 경로.\"\"\"\n    if os.name == \"nt\":\n        return os.path.join(VENV, \"Scripts\", \"python.exe\")\n    p = os.path.join(VENV, \"bin\", \"python3\")\n    return p if os.path.exists(p) else os.path.join(VENV, \"bin\", \"python\")\n\n\ndef step(title: str):\n    print(f\"\\n▶ {title}\", flush=True)\n\n\ndef run(cmd, **kw) -> None:\n    print(f\"  $ {' '.join(str(c) for c in cmd)}\", flush=True)\n    subprocess.check_call(cmd, **kw)\n\n\ndef main() -> int:\n    ap = argparse.ArgumentParser(description=\"IndieBiz OS 소스 설치 부트스트랩 (3 OS)\")\n    ap.add_argument(\"--core-only\", action=\"store_true\",\n                    help=\"백엔드 코어 의존성만 (requirements-tools·프론트엔드 생략 — CI·최소 설치)\")\n    ap.add_argument(\"--run\", action=\"store_true\", help=\"설치 후 백엔드를 바로 실행\")\n    ap.add_argument(\"--recreate\", action=\"store_true\", help=\".venv 를 지우고 새로 만든다\")\n    args = ap.parse_args()\n\n    if sys.version_info < (3, 10):\n        print(f\"Python 3.10 이상이 필요합니다 (현재 {sys.version.split()[0]}).\")\n        return 1\n\n    step(\"가상환경 (.venv)\")\n    if os.path.exists(venv_python()):\n        # 기존 venv 의 파이썬이 지원 범위 밖이면 알린다 (사용자 데이터가 아니라 재생성 가능물이지만,\n        # 조용히 갈아엎지는 않는다 — --recreate 로 명시).\n        got = subprocess.run([venv_python(), \"-c\", \"import sys;print(sys.version_info[0],sys.version_info[1])\"],\n                             capture_output=True, text=True)\n        ver = tuple(int(x) for x in got.stdout.split()) if got.returncode == 0 else None\n        if args.recreate or ver is None or not (PY_MIN <= ver < PY_MAX_EXCL):\n            print(f\"  기존 .venv 재생성 (버전 {ver} → 지원 범위 파이썬)\", flush=True)\n            shutil.rmtree(VENV)\n            run([pick_base_python(), \"-m\", \"venv\", VENV])\n        else:\n            print(\"  이미 있음 — 재사용\", flush=True)\n    else:\n        run([pick_base_python(), \"-m\", \"venv\", VENV])\n    vpy = venv_python()\n\n    step(\"백엔드 의존성 — requirements-core.txt\")\n    run([vpy, \"-m\", \"pip\", \"install\", \"--quiet\", \"--upgrade\", \"pip\"])\n    run([vpy, \"-m\", \"pip\", \"install\", \"--quiet\", \"-r\",\n         os.path.join(ROOT, \"backend\", \"requirements-core.txt\")])\n\n    if not args.core_only:\n        step(\"도구 의존성 — requirements-tools.txt (실패해도 코어는 동작)\")\n        try:\n            run([vpy, \"-m\", \"pip\", \"install\", \"--quiet\", \"-r\",\n                 os.path.join(ROOT, \"backend\", \"requirements-tools.txt\")])\n        except subprocess.CalledProcessError:\n            print(\"  ⚠ 일부 도구 의존성 설치 실패 — 해당 도구만 비활성, 나중에 재시도 가능\", flush=True)\n\n        step(\"브라우저 바이너리 — playwright chromium (~550MB, 슬라이드·영상 렌더의 손)\")\n        # 왜 조리법 안에 있나(2026-08-15): pip 로 playwright 를 올려도 브라우저 바이너리는\n        # 따로 받아야 하고, 그때 PLAYWRIGHT_BROWSERS_PATH 를 안 주면 기본 캐시로 가는데\n        # 백엔드는 base_path/ms-playwright 를 본다 → 어긋난 채로 조용히 있다가 렌더할 때\n        # 터진다. 설치가 레시피의 일부가 아니면 이 어긋남은 playwright 를 올릴 때마다 난다.\n        # 주소는 check_playwright_browsers.py 가 runtime_utils(단일 소스)에서 가져온다.\n        try:\n            run([vpy, os.path.join(ROOT, \"scripts\", \"check_playwright_browsers.py\"), \"--install\"])\n        except subprocess.CalledProcessError:\n            print(\"  ⚠ 브라우저 다운로드 실패 — 슬라이드/영상 렌더·browser-action 만 비활성. \"\n                  \"나중에 `python scripts/check_playwright_browsers.py --install` 로 재시도\", flush=True)\n\n        step(\"시맨틱 메모리 — requirements-ml.txt (해마 벡터 회상, ~2GB — 실패 시 키워드 회상으로 저하)\")\n        try:\n            run([vpy, \"-m\", \"pip\", \"install\", \"--quiet\", \"-r\",\n                 os.path.join(ROOT, \"backend\", \"requirements-ml.txt\")])\n        except subprocess.CalledProcessError:\n            print(\"  ⚠ 시맨틱 메모리 설치 실패 — 해마가 키워드(FTS) 회상으로 동작. \"\n                  \"나중에 이 스크립트 재실행으로 재시도 가능\", flush=True)\n\n    step(\".env — API 키 자리\")\n    env_path = os.path.join(ROOT, \".env\")\n    if not os.path.exists(env_path):\n        shutil.copyfile(os.path.join(ROOT, \".env.example\"), env_path)\n        print(\"  .env.example → .env 생성. LLM API 키(Anthropic/Google/OpenAI 중 하나)를 채우세요.\", flush=True)\n    else:\n        print(\"  이미 있음 — 그대로 둠\", flush=True)\n\n    if not args.core_only:\n        step(\"프론트엔드 (Electron 데스크탑 UI — 선택)\")\n        npm = shutil.which(\"npm\")\n        if npm:\n            try:\n                run([npm, \"install\", \"--no-audit\", \"--no-fund\"],\n                    cwd=os.path.join(ROOT, \"frontend\"))\n            except subprocess.CalledProcessError:\n                print(\"  ⚠ npm install 실패 — 백엔드 전용으로 계속(원격 런처/REST 사용 가능)\", flush=True)\n        else:\n            print(\"  npm 없음 — 백엔드 전용 설치(데스크탑 UI 는 Node ≥ 18 설치 후 재실행)\", flush=True)\n\n    if not args.core_only:\n        step(\"의존성 커버리지 감사 — 코드가 import 하는 서드파티가 방금 만든 .venv 에 실재하는가\")\n        # fresh 설치의 누락(requirements 선언 빠짐·설치 실패·ABI 파손)을 지금 잡는다 —\n        # 안 잡으면 그 코드가 도는 순간(며칠 뒤)에야 터진다(.venv 전환 잔재 부류, 2026-08-13).\n        # --core-only 는 tools/ml 이 의도적으로 빠져 있어 감사 대상이 아니다(CI 는\n        # portability.yml 의 import-coverage 잡이 core+tools 로 따로 검사한다).\n        # 실패해도 부트스트랩은 계속 — 코어 서버는 뜨고, 무엇이 빠졌는지는 위에 찍혔다.\n        try:\n            rc = subprocess.run([vpy, os.path.join(ROOT, \"scripts\", \"check_import_coverage.py\")],\n                                cwd=ROOT, timeout=600).returncode\n            if rc == 1:\n                print(\"  ⚠ 위 결손 의존성은 해당 기능이 돌 때 터집니다 — requirements 선언/설치 후 재실행 권장\", flush=True)\n            elif rc != 0:\n                print(\"  ⚠ 감사 스크립트 자체 문제 (무시하고 계속)\", flush=True)\n        except Exception as e:\n            print(f\"  ⚠ 의존성 감사 실행 실패 (무시하고 계속): {e}\", flush=True)\n\n    step(\"완료\")\n    if os.name == \"nt\":\n        print(\"  실행:  .venv\\\\Scripts\\\\python.exe backend\\\\api.py\", flush=True)\n    else:\n        print(\"  실행:  ./start.sh   (또는 .venv/bin/python3 backend/api.py)\", flush=True)\n    print(\"  데스크탑 UI:  cd frontend && npm run electron:dev\", flush=True)\n\n    if args.run:\n        step(\"백엔드 실행 (Ctrl-C 로 종료)\")\n        os.chdir(os.path.join(ROOT, \"backend\"))\n        os.execv(vpy, [vpy, \"api.py\"])\n    return 0\n\n\n======\nbuild-python.mjs\nbuild-python.test.mjs\nembedded-browser-live.mjs\nlauncher_browser.py\nprepare-node-win.js\nprepare-python-mac.js\nprepare-python-win.js\ntest-capability-chat.mjs\ntest-vocabulary-windows.mjs\ntest_coding_registration.py\ntest_coding_run.py\ntest_japanese_ui.py\ntest_remote_language_picker.py\ntest_remote_pc_desktop.py\ntest_screen_share.py\ntest_xray_ui.py\nui-boundaries.test.mjs\nui-browser-check.py\nui-catalog.d.mts\nui-catalog.mjs\nui-catalog.test.mjs\nui-compiler.mjs\nui-electron-check.mjs\nui-electron-fixture.mjs\nui-i18n.test.mjs\nui-japanese-active.mjs\nui-japanese.test.mjs\nui-live-check.py\nui-post-apply.py\nui-server-check.py\nui-source-check.mjs\nui-static-values.mjs\nui-status.test.mjs\nui-system-sources.py\nui-translate.py\nui-xray.mjs\nui-xray.test.mjs\nverify-window-recovery.mjs\nvocabulary-window-fixture.mjs\nwindow-recovery.test.mjs\n13:import { fileURLToPath } from 'url';\n15:const __filename = fileURLToPath(import.meta.url);\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861216.640757,
+      "ended_at": 1791861216.7703512,
+      "seconds": 0.129594087600708,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "8f611d45d8e446a4b769bd6b88bf0fe8",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-conv-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "ls backend/requirements* scripts/*bootstrap* scripts/*runtime* 2>&1; echo ---; grep -n 'runtime\\|python3\\.1\\|requirements\\|def main\\|argparse\\|add_argument\\|PYTHON_VERSION\\|standalone' scripts/bootstrap.py | head -80; echo ---; grep -n '\"engines\"' -A4 frontend/package.json; grep -n 'rebuild-trusted\\|\"build\"\\|\"electron\":\\|\"vite\":\\|\"esbuild\"' frontend/package.json; echo ---; sed -n 1,80p INSTALL_DEPENDENCIES.md",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 60,
+       "mode": "background"
+      },
+      "created": 1791861208.876149,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "backend/requirements-core.txt\nbackend/requirements-dev.txt\nbackend/requirements-ml.txt\nbackend/requirements-tools.txt\nbackend/requirements-train.txt\nscripts/bootstrap.py\nscripts/reset_runtime_state.py\n---\n18:import argparse\n88:def main() -> int:\n89:    ap = argparse.ArgumentParser(description=\"IndieBiz OS 소스 설치 부트스트랩 (3 OS)\")\n90:    ap.add_argument(\"--core-only\", action=\"store_true\",\n91:                    help=\"백엔드 코어 의존성만 (requirements-tools·프론트엔드 생략 — CI·최소 설치)\")\n92:    ap.add_argument(\"--run\", action=\"store_true\", help=\"설치 후 백엔드를 바로 실행\")\n93:    ap.add_argument(\"--recreate\", action=\"store_true\", help=\".venv 를 지우고 새로 만든다\")\n117:    step(\"백엔드 의존성 — requirements-core.txt\")\n120:         os.path.join(ROOT, \"backend\", \"requirements-core.txt\")])\n123:        step(\"도구 의존성 — requirements-tools.txt (실패해도 코어는 동작)\")\n126:                 os.path.join(ROOT, \"backend\", \"requirements-tools.txt\")])\n135:        # 주소는 check_playwright_browsers.py 가 runtime_utils(단일 소스)에서 가져온다.\n142:        step(\"시맨틱 메모리 — requirements-ml.txt (해마 벡터 회상, ~2GB — 실패 시 키워드 회상으로 저하)\")\n145:                 os.path.join(ROOT, \"backend\", \"requirements-ml.txt\")])\n172:        # fresh 설치의 누락(requirements 선언 빠짐·설치 실패·ABI 파손)을 지금 잡는다 —\n181:                print(\"  ⚠ 위 결손 의존성은 해당 기능이 돌 때 터집니다 — requirements 선언/설치 후 재실행 권장\", flush=True)\n---\n18:    \"build\": \"tsc -b && vite build\",\n33:    \"rebuild-trusted\": \"npm rebuild --ignore-scripts=false --foreground-scripts electron esbuild electron-winstaller\"\n66:    \"electron\": \"^39.2.7\",\n75:    \"vite\": \"^7.2.4\",\n78:  \"build\": {\n---\n# IndieBiz OS 의존성 설치 가이드\n\n다른 PC에 IndieBiz를 설치할 때 필요한 라이브러리들입니다.\n\n---\n\n## 1. 필수 설치 (Core)\n\n### Python 3.10 이상\n- 다운로드: https://www.python.org/downloads/\n- **Windows 설치 시 \"Add Python to PATH\" 반드시 체크!**\n\n### Node.js 18 이상\n- 다운로드: https://nodejs.org/\n- LTS 버전 권장\n\n### 백엔드 핵심 패키지\n```bash\npip install fastapi \"uvicorn[standard]\" pydantic python-dotenv python-multipart pyyaml\npip install anthropic openai google-genai\npip install pynostr websocket-client\npip install yt-dlp youtube-transcript-api\n```\n\n또는 한 줄로:\n```bash\npip install fastapi \"uvicorn[standard]\" pydantic python-dotenv python-multipart pyyaml anthropic openai google-genai pynostr websocket-client yt-dlp youtube-transcript-api\n```\n\n또는 requirements 파일로:\n```bash\npip install -r backend/requirements-core.txt\npip install -r backend/requirements-tools.txt\n```\n\n> **참고**: 빌드 배포판은 `prepare-python-win.js` / `prepare-python-mac.js`가 두 파일 모두 자동 설치합니다.\n\n---\n\n## 2. 도구별 의존성\n\n### 🌐 웹/브라우저 관련\n\n**browser-action** (브라우저 자동화)\n```bash\npip install playwright\npython scripts/check_playwright_browsers.py --install\n```\n> ★맨손 `playwright install chromium` 을 쓰지 말 것 — 브라우저가 기본 캐시로 가는데\n> 백엔드는 `<base_path>/ms-playwright` 를 본다(설치본 이식성). 위 스크립트가 그 주소로\n> 받는다. 정본 설치(`scripts/bootstrap.py`)는 이미 이 단계를 포함한다.\n\n**web** (웹 검색/크롤링) — ★검색은 `ddgs`(신규 패키지). 구 `duckduckgo-search`는 `ddgs` 모듈을 제공하지 않으니 주의.\n```bash\npip install ddgs beautifulsoup4 requests nest-asyncio\npip install browser-use langchain-google-genai\n```\n\n**shopping-assistant** (쇼핑 도우미)\n```bash\npip install playwright requests\npython scripts/check_playwright_browsers.py --install\n```\n\n---\n\n### 📊 데이터/시각화\n\n**visualization** (차트 생성)\n```bash\npip install matplotlib plotly kaleido numpy\n```\n\n**investment** (투자/주식)\n```bash\npip install finance-datareader yfinance\n```\n\n---\n\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861209.161622,
+      "ended_at": 1791861209.633676,
+      "seconds": 0.47205400466918945,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-merge-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "set -e; B=$HOME/ibz_untracked_backup/2026-10-13_premerge; mkdir -p $B/cloud_training; for f in cloud_training/ibl_embedding_trainer_cloud.py cloud_training/make_bundle.sh; do cp -p $f $B/$f; echo \"$f local=$(shasum < $f | cut -c1-12) origin=$(git show origin/main:$f | shasum | cut -c1-12)\"; done; ls -la $B/cloud_training; echo OLD_HEAD=$(git rev-parse HEAD); git merge --ff-only origin/main 2>&1 | tail -5; echo NEW_HEAD=$(git rev-parse HEAD); echo ORIGIN=$(git rev-parse origin/main); git status --porcelain | head",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 600,
+       "mode": "background"
+      },
+      "created": 1791861170.531148,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "cloud_training/ibl_embedding_trainer_cloud.py local=372e63b0f65d origin=5d3c7f07d9b5\ncloud_training/make_bundle.sh local=d0ed9a3cdc83 origin=94d6c915bf6b\ntotal 56\ndrwxr-xr-x  4 kangkukjin  staff    128 Oct 13 12:12 .\ndrwxr-xr-x  3 kangkukjin  staff     96 Oct 13 12:12 ..\n-rw-r--r--@ 1 kangkukjin  staff  22098 May 31 15:04 ibl_embedding_trainer_cloud.py\n-rw-r--r--@ 1 kangkukjin  staff   2073 May 31 15:04 make_bundle.sh\nOLD_HEAD=7d80fb85eb3afcdcb883a5d5d3c589723f9fcc32\n create mode 100644 scripts/verify_spreadsheet_followup.py\n create mode 100644 scripts/verify_spreadsheet_links.py\n create mode 100644 scripts/verify_spreadsheet_print.py\n create mode 100644 scripts/verify_spreadsheet_recovery.py\n create mode 100644 scripts/vocab_composition_metrics.py\nNEW_HEAD=36cc663ab757348c9096ac2b265b40c81a9607ab\nORIGIN=36cc663ab757348c9096ac2b265b40c81a9607ab\n?? data/packages/installed/tools/publishing/\n?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861170.7738051,
+      "ended_at": 1791861199.134292,
+      "seconds": 28.36048674583435,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-collide-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "git ls-files -o --exclude-standard > /tmp/ibz_untr.txt; git ls-files -o -i --exclude-standard > /tmp/ibz_ign.txt; git ls-tree -r --name-only origin/main | sort > /tmp/ibz_new.txt; wc -l /tmp/ibz_untr.txt /tmp/ibz_ign.txt; echo '--- collisions:'; sort -u /tmp/ibz_untr.txt /tmp/ibz_ign.txt | comm -12 - /tmp/ibz_new.txt > /tmp/ibz_coll.txt; wc -l < /tmp/ibz_coll.txt; head -50 /tmp/ibz_coll.txt",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 300,
+       "mode": "background"
+      },
+      "created": 1791861158.946265,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "       2 /tmp/ibz_untr.txt\n   66496 /tmp/ibz_ign.txt\n   66498 total\n--- collisions:\n       2\ncloud_training/ibl_embedding_trainer_cloud.py\ncloud_training/make_bundle.sh\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861159.242995,
+      "ended_at": 1791861162.4933052,
+      "seconds": 3.250310182571411,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-fetch-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "git fetch origin 2>&1 | tail -5; git rev-parse origin/main; git log -1 --format='%h %ci %s' origin/main; git rev-list --count HEAD..origin/main; git rev-list --count origin/main..HEAD; for f in frontend/src/components/CommercialInstrument.tsx frontend/src/components/RealtyInstrument.tsx; do echo \"== $f\"; git cat-file -e origin/main:$f 2>/dev/null && (git show origin/main:$f | shasum; shasum < $f) || echo 'not in origin/main'; done; git ls-tree --name-only origin/main | head -80; git show origin/main:start.sh | head -120",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 600,
+       "mode": "background"
+      },
+      "created": 1791861029.762625,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "From https://github.com/kangkukjin/indiebizOS\n   7d80fb85..36cc663a  main       -> origin/main\n * [new tag]           v1.5.0     -> v1.5.0\n * [new tag]           v1.5.1     -> v1.5.1\n * [new tag]           v1.5.2     -> v1.5.2\n36cc663ab757348c9096ac2b265b40c81a9607ab\n36cc663a 2026-10-13 11:24:20 +0900 격자 첫 렌더 완료 뒤 편집을 열고 지연 브라우저 사건 검증\n1574\n0\n== frontend/src/components/CommercialInstrument.tsx\nnot in origin/main\n== frontend/src/components/RealtyInstrument.tsx\nnot in origin/main\n.env.example\n.gitattributes\n.github\n.gitignore\n.metadata_never_index\nAGENTS.md\nBUILD.md\nGUIDE.md\nGUIDE_EN.md\nHANDOFF_hippocampus_training.md\nINSTALL_DEPENDENCIES.md\nLICENSE\nREADME.ko.md\nREADME.md\nREMOTE_FINDER_SETUP.md\nTOOL_SDK_FOLLOWUPS.md\nUSER_MANUAL.md\nWHITEPAPER.md\nbackend\ncloud_training\ndata\ndocs\nfrontend\nhelper\nmcp_server.py\nphone-companion\npytest.ini\nscripts\nstart.sh\ntemplates\ntest_tunnel.sh\ntranslate-extension\n\"\\352\\267\\270\\353\\246\\274\"\n#!/bin/bash\n# IndieBiz OS 시작 스크립트\n\ncd \"$(dirname \"$0\")\"\n\n# .env 파일 로드\nif [ -f .env ]; then\n    export $(cat .env | grep -v '^#' | xargs)\n    echo \"✅ 환경변수 로드 완료\"\nelse\n    echo \"⚠️  .env 파일이 없습니다. .env.example을 참고하여 생성하세요.\"\nfi\n\necho \"🚀 IndieBiz OS 시작...\"\n\n# 파이썬 선택: 소스 경로의 몸은 .venv 하나로 고정한다 (2026-08-22).\n# 예전엔 .venv 가 없으면 조용히 시스템 파이썬으로 떨어졌다. 그건 \"다른 몸으로\n# 도는데 아무도 모르는\" 상태다 — fastapi/dotenv 부재는 그나마 시끄럽게 죽지만,\n# playwright 처럼 *버전이 다르게* 깔린 의존은 조용히 반쪽으로 돈다(시스템 파이썬의\n# playwright 1.58 은 이 저장소가 받아 둔 크로미움 빌드를 못 찾는다). 조용한 폴백 대신\n# 정직하게 거절하고 처방을 준다. bootstrap 이 .venv 를 만든다.\nif [ ! -x \".venv/bin/python3\" ]; then\n    echo \"❌ .venv 가 없습니다 — 소스 경로는 저장소 가상환경 하나로 고정입니다.\"\n    echo \"   python3 scripts/bootstrap.py   # venv + 의존성 + .env 시드\"\n    exit 1\nfi\nPY=\"$(pwd)/.venv/bin/python3\"\necho \"✅ 가상환경 파이썬 사용 (.venv)\"\n\n# 단일 제어자 시작. 커널 잠금으로 기존 현역을 채택하며 포트의 다른 앱을 죽이지 않는다.\n\"$PY\" backend/api.py start &\nBACKEND_PID=$!\necho \"✅ 재기동 제어자 PID: $BACKEND_PID\"\n\n# 프론트엔드 시작 (electron:dev) — 선택 사항: Node/npm과 node_modules가 있을 때만.\n# 없으면 백엔드 전용(헤드리스)으로 계속 실행 — 원격 런처/REST로 사용 가능.\nFRONTEND_PID=\"\"\nif command -v npm >/dev/null 2>&1 && [ -d \"frontend/node_modules\" ]; then\n    cd frontend\n    npm run electron:dev &\n    FRONTEND_PID=$!\n    cd ..\n    echo \"✅ 프론트엔드 PID: $FRONTEND_PID\"\nelse\n    echo \"ℹ️  프론트엔드 스킵 (npm 또는 frontend/node_modules 없음) — 백엔드 전용으로 실행\"\n    echo \"   데스크탑 UI가 필요하면 Node ≥ 18 설치 후: cd frontend && npm install && npm run rebuild-trusted\"\nfi\n\n# 의도적 종료는 같은 제어자에게 전달한다. 실제 자식의 정리는 제어자가 끝낸다.\nCLEANED=0\ncleanup() {\n    [ \"$CLEANED\" -eq 1 ] && return\n    CLEANED=1\n    echo \"🛑 IndieBiz OS 종료 중...\"\n    \"$PY\" backend/api.py shutdown --wait\n    if [ -n \"$FRONTEND_PID\" ]; then\n        kill -TERM \"$FRONTEND_PID\" 2>/dev/null\n    fi\n    echo \"👋 IndieBiz OS 종료 완료\"\n}\ntrap cleanup EXIT INT TERM\n# 중복 시작의 요청 프로세스는 즉시 끝난다. 그 종료를 시스템 종료로 읽지 않는다.\n\"$PY\" backend/api.py wait\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861030.063853,
+      "ended_at": 1791861139.3771179,
+      "seconds": 109.31326484680176,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "mac26-upd-status-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "git status --porcelain | head -50; echo ---; git remote -v; echo ---; git rev-parse HEAD; git log -1 --format='%h %ci %s'; echo ---; ls; echo ---; ls runtime 2>&1 | head; ls -la .venv 2>&1 | head -3; echo ---; ls requirements* 2>&1; uname -m; sw_vers -productVersion",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 60,
+       "mode": "background"
+      },
+      "created": 1791861004.894131,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\n---\norigin\thttps://github.com/kangkukjin/indiebizOS.git (fetch)\norigin\thttps://github.com/kangkukjin/indiebizOS.git (push)\n---\n7d80fb85eb3afcdcb883a5d5d3c589723f9fcc32\n7d80fb8 2026-07-29 22:25:37 +0900 감각·기억층 3수정 — 에피소드 881·882 분석 산물\n---\nBUILD.md\nGUIDE.md\nGUIDE_EN.md\nHANDOFF_hippocampus_training.md\nINSTALL_DEPENDENCIES.md\nLICENSE\nREADME.ko.md\nREADME.md\nREMOTE_FINDER_SETUP.md\nTOOL_SDK_FOLLOWUPS.md\nUSER_MANUAL.md\nWHITEPAPER.md\n__pycache__\nbackend\ncheckpoints\ncloud_training\ndata\ndocs\nfrontend\nhelper\nimage-1.png\nlogs\nmcp_server.py\noutputs\nphone-companion\nprojects\nscripts\nstart.sh\ntemplates\ntest_tunnel.sh\ntokens\ntranslate-extension\n그림\n공유창고\n---\nls: runtime: No such file or directory\nls: .venv: No such file or directory\n---\nls: requirements*: No such file or directory\narm64\n26.5.2\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791861005.183313,
+      "ended_at": 1791861022.683872,
+      "seconds": 17.500559091567993,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "a911f02186c048ffabbc4363e0e2ead6",
+      "summary": {
+       "op": "shell",
+       "cmd": "cd ~; ls -d ~/Desktop/AI/indiebizOS ~/indiebizOS ~/Desktop/indiebizOS 2>&1; mdfind -name indiebizOS -onlyin ~ 2>/dev/null | head -5; which git python3 node npm brew; python3 --version; node --version; df -h ~ | tail -1",
+       "timeout": 1800,
+       "mode": "background"
+      },
+      "created": 1791860968.619912,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/workspaces/2f5834e461984d91b9363f7b90e0cfb3",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "ls: /Users/kangkukjin/Desktop/indiebizOS: No such file or directory\nls: /Users/kangkukjin/indiebizOS: No such file or directory\n/Users/kangkukjin/Desktop/AI/indiebizOS\n/usr/bin/git\n/usr/bin/python3\nPython 3.9.6\n/bin/sh: node: command not found\n/dev/disk3s1   228Gi   164Gi    39Gi    81%    2.1M  412M    1%   /System/Volumes/Data\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791860968.928019,
+      "ended_at": 1791860969.835504,
+      "seconds": 0.9074850082397461,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "5236dc7883b7432bb8d71b1ad7847b9e",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "b4a734c4f0ec405193e918936acf159d",
+      "summary": {
+       "op": "screen",
+       "max_width": 800,
+       "mode": "interactive"
+      },
+      "created": 1791860795.176713,
+      "state": "succeeded",
+      "result": {
+       "bytes": 85859,
+       "height": 520,
+       "image_observation": "non_uniform",
+       "media_type": "image/jpeg",
+       "op": "screen",
+       "orig_height": 1912,
+       "orig_width": 2940,
+       "tool": "screencapture",
+       "width": 800,
+       "image_omitted": true,
+       "image_task_ref": {
+        "kind": "guestpc",
+        "task_id": "5236dc7883b7432bb8d71b1ad7847b9e"
+       }
+      },
+      "cancel_requested": 0,
+      "started_at": 1791860796.4858391,
+      "ended_at": 1791860798.900237,
+      "seconds": 2.414397954940796,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "m26-diag2-1206",
+      "summary": {
+       "op": "shell",
+       "cmd": "echo ==CAP; screencapture -x /tmp/ibz_cap2.png; echo cap_rc=$?; ls -la /tmp/ibz_cap2.png 2>&1; echo ==SIGN; codesign -dv '/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper' 2>&1 | head -8; echo ==BATT; pmset -g batt; echo ==ADAPTER; pmset -g adapter; echo ==CLAM; ioreg -r -k AppleClamshellState -d 4 | grep -E 'AppleClamshellState|AppleClamshellCausesSleep'; echo ==DISP; system_profiler SPDisplaysDataType 2>/dev/null | grep -E 'Resolution|Display Type|Connection|Main|Online|:$' | head -20; echo ==ASSERT; pmset -g assertions | grep -iE 'display|sleep' | head -8",
+       "cwd": "/tmp",
+       "timeout": 10,
+       "mode": "observe"
+      },
+      "created": 1791860791.3270159,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "==CAP\ncap_rc=0\n-rw-r--r--@ 1 kangkukjin  wheel  6450079 Oct 13 12:06 /tmp/ibz_cap2.png\n==SIGN\nExecutable=/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper\nIdentifier=a.out\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20400 size=93374 flags=0x20002(adhoc,linker-signed) hashes=2915+0 location=embedded\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nSealed Resources=none\n==BATT\nNow drawing from 'AC Power'\n -InternalBattery-0 (id=22610019)\t92%; charging; 1:19 remaining present: true\n==ADAPTER\n Wattage = 15W\n Current = 3000mA\n Voltage = 5000mV\n AdapterID = 0\n Family Code = 0xe000400a\n Serial String = ���\u0013H\u000b�\u0012ܾ?Z�l/\t\n==CLAM\n  |   \"AppleClamshellCausesSleep\" = No\n  |   \"AppleClamshellState\" = No\n==DISP\nGraphics/Displays:\n    Apple M2:\n      Displays:\n        Color LCD:\n          Display Type: Built-in Liquid Retina Display\n          Resolution: 2560 x 1664 Retina\n          Main Display: Yes\n          Online: Yes\n          Connection Type: Internal\n==ASSERT\n   PreventUserIdleDisplaySleep    0\n   PreventSystemSleep             0\n   PreventUserIdleSystemSleep     1\n   pid 633(sharingd): [0x00009c51000195a8] 00:01:37 PreventUserIdleSystemSleep named: \"Handoff\"  \n   pid 345(powerd): [0x00009c360001957b] 00:02:04 PreventUserIdleSystemSleep named: \"Powerd - Prevent sleep while display is on\"  \n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791860791.667,
+      "ended_at": 1791860794.2184389,
+      "seconds": 2.551438808441162,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "m26-screen-diag-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "echo ==PROC; ps -axo pid,etime,command | grep -i indiebiz-helper | grep -v grep; echo ==CAP; ( screencapture -x /tmp/ibz_cap_test.png & P=$!; sleep 8; if kill -0 $P 2>/dev/null; then echo 'screencapture HANG(8s)'; kill $P; else wait $P; echo cap_rc=$?; fi ); ls -la /tmp/ibz_cap_test.png 2>&1; echo ==CONSOLE; who; stat -f '%Su' /dev/console; echo ==LAUNCHD; launchctl print gui/$(id -u) 2>/dev/null | grep -i -E 'indiebiz|helper' | head; echo ==HELPERLOG; ls -d ~/Library/Logs/indiebiz* ~/Library/Application\\ Support/indiebiz* 2>&1 | head",
+       "cwd": "/tmp",
+       "timeout": 60,
+       "mode": "background"
+      },
+      "created": 1791860252.841377,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "==PROC\n20662       11:29 /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper\n20913       00:00 /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper --resident-process /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/spool/process-0c75b7cd847e4c85946bf4ead14bfe9d.json\n==CAP\ncould not create image from display\ncap_rc=1\nls: /tmp/ibz_cap_test.png: No such file or directory\n==CONSOLE\nkangkukjin       console      Sep 25 06:41 \nkangkukjin\n==LAUNCHD\n\t\t   20662      - \tindiebiz-resident-c8bf39dce36a77913768863f2087218b\n\t\t       0      - \tcom.apple.CallHistorySyncHelper\n\t\t       0      - \tcom.apple.AquaAppearanceHelper\n\t\t       0      - \tcom.apple.OSDUIHelper\n\t\t       0      - \tcom.apple.CallHistoryPluginHelper\n\t\t       0      - \tcom.apple.mbproximityhelper\n\t\t       0      - \tcom.apple.menuextra.battery.helper\n\t\t       0      - \tcom.apple.STMUIHelper\n\t\t       0      0 \tcom.apple.quicklook.ui.helper\n\t\t       0      - \tcom.apple.TMHelperAgent\n==HELPERLOG\nls: /Users/kangkukjin/Library/Application Support/indiebiz*: No such file or directory\nls: /Users/kangkukjin/Library/Logs/indiebiz*: No such file or directory\n"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791860646.06628,
+      "ended_at": 1791860655.346307,
+      "seconds": 9.280027151107788,
+      "outcome": "succeeded"
+     },
+     {
+      "id": "4c63dc91f8bf4bd19b6e60fa218025c5",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "8828ce741fd746ecbe078603b6a04b8f",
+      "summary": {
+       "op": "screen",
+       "max_width": 800,
+       "mode": "interactive"
+      },
+      "created": 1791860173.691686,
+      "state": "cancelled",
+      "result": null,
+      "cancel_requested": 1,
+      "started_at": null,
+      "ended_at": null,
+      "seconds": null,
+      "outcome": "cancelled"
+     },
+     {
+      "id": "7a4daa3b37234faab948134ef90440b7",
+      "device": "guestpc-9dc41d53987d",
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "request_id": "371b32dcc34a465da036f208a40234f2",
+      "summary": {
+       "op": "info",
+       "mode": "background"
+      },
+      "created": 1791860111.050807,
+      "state": "succeeded",
+      "result": {
+       "admin": false,
+       "arch": "arm64",
+       "cwd": "/",
+       "gui": {
+        "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+        "resolution": "2560x1664",
+        "screen": "screencapture"
+       },
+       "home": "/Users/kangkukjin",
+       "hostname": "MacBook-Air.local",
+       "op": "info",
+       "os": "darwin",
+       "os_version": "macOS 26.5.2",
+       "package_managers": null,
+       "path": "/usr/bin:/bin:/usr/sbin:/sbin",
+       "resident": {
+        "adapter": "resident-v1",
+        "arch": "arm64",
+        "cpu_hard_limit": false,
+        "desktop_stream": 1,
+        "elevation": true,
+        "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+        "go": "go1.26.5",
+        "helper_sha256": "1c9d4618287b080b3462c87c9d3872a8ce77c52a573c273ed70c579a4c3b7842",
+        "hostname": "MacBook-Air.local",
+        "interactive": true,
+        "kind": "pc",
+        "max_parallel": 2,
+        "media": true,
+        "media_player": "/opt/homebrew/bin/mpv",
+        "media_volume": true,
+        "memory_hard_limit": false,
+        "observation_parallel": 1,
+        "observation_shell_timeout": 10,
+        "os": "darwin",
+        "screen_cancel": true,
+        "screen_observation": true,
+        "self_update": true,
+        "service_scope": "user_login",
+        "shell": true,
+        "terminal": true,
+        "terminal_lan": true,
+        "transfer": true,
+        "wake_relay": true
+       },
+       "shells": [
+        "bash",
+        "zsh",
+        "sh"
+       ],
+       "tools": [
+        "git",
+        "python3",
+        "curl",
+        "zip",
+        "unzip",
+        "tar",
+        "shasum",
+        "sha256sum",
+        "sips",
+        "ditto"
+       ],
+       "user": "kangkukjin"
+      },
+      "cancel_requested": 0,
+      "started_at": 1791860111.475772,
+      "ended_at": 1791860113.224113,
+      "seconds": 1.7483410835266113,
+      "outcome": "succeeded"
+     }
+    ],
+    "events": [
+     {
+      "cursor": 4236,
+      "job": "7a4daa3b37234faab948134ef90440b7",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:7a4daa3b37234faab948134ef90440b7",
+      "kind": "queued",
+      "occurred": 1791860111.0510159,
+      "received": 1791860111.0510159,
+      "payload": {
+       "op": "info",
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 4237,
+      "job": "7a4daa3b37234faab948134ef90440b7",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "b8c53ebc061073a4037d98792a8da043",
+      "kind": "started",
+      "occurred": 1791860111.475772,
+      "received": 1791860111.7299562,
+      "payload": {}
+     },
+     {
+      "cursor": 4238,
+      "job": "7a4daa3b37234faab948134ef90440b7",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "a800975c704e0b9ce8353e1312a4dfa5",
+      "kind": "result",
+      "occurred": 1791860113.224113,
+      "received": 1791860114.042041,
+      "payload": {
+       "admin": false,
+       "arch": "arm64",
+       "cwd": "/",
+       "gui": {
+        "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+        "resolution": "2560x1664",
+        "screen": "screencapture"
+       },
+       "home": "/Users/kangkukjin",
+       "hostname": "MacBook-Air.local",
+       "op": "info",
+       "os": "darwin",
+       "os_version": "macOS 26.5.2",
+       "package_managers": null,
+       "path": "/usr/bin:/bin:/usr/sbin:/sbin",
+       "resident": {
+        "adapter": "resident-v1",
+        "arch": "arm64",
+        "cpu_hard_limit": false,
+        "desktop_stream": 1,
+        "elevation": true,
+        "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+        "go": "go1.26.5",
+        "helper_sha256": "1c9d4618287b080b3462c87c9d3872a8ce77c52a573c273ed70c579a4c3b7842",
+        "hostname": "MacBook-Air.local",
+        "interactive": true,
+        "kind": "pc",
+        "max_parallel": 2,
+        "media": true,
+        "media_player": "/opt/homebrew/bin/mpv",
+        "media_volume": true,
+        "memory_hard_limit": false,
+        "observation_parallel": 1,
+        "observation_shell_timeout": 10,
+        "os": "darwin",
+        "screen_cancel": true,
+        "screen_observation": true,
+        "self_update": true,
+        "service_scope": "user_login",
+        "shell": true,
+        "terminal": true,
+        "terminal_lan": true,
+        "transfer": true,
+        "wake_relay": true
+       },
+       "shells": [
+        "bash",
+        "zsh",
+        "sh"
+       ],
+       "tools": [
+        "git",
+        "python3",
+        "curl",
+        "zip",
+        "unzip",
+        "tar",
+        "shasum",
+        "sha256sum",
+        "sips",
+        "ditto"
+       ],
+       "user": "kangkukjin"
+      }
+     },
+     {
+      "cursor": 4239,
+      "job": "4c63dc91f8bf4bd19b6e60fa218025c5",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:4c63dc91f8bf4bd19b6e60fa218025c5",
+      "kind": "queued",
+      "occurred": 1791860173.692008,
+      "received": 1791860173.692008,
+      "payload": {
+       "op": "screen",
+       "max_width": 800,
+       "mode": "interactive"
+      }
+     },
+     {
+      "cursor": 4240,
+      "job": "4c63dc91f8bf4bd19b6e60fa218025c5",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "cancel:4c63dc91f8bf4bd19b6e60fa218025c5",
+      "kind": "cancel_requested",
+      "occurred": 1791860233.695256,
+      "received": 1791860233.695256,
+      "payload": {
+       "before_delivery": true
+      }
+     },
+     {
+      "cursor": 4241,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:0c75b7cd847e4c85946bf4ead14bfe9d",
+      "kind": "queued",
+      "occurred": 1791860252.841409,
+      "received": 1791860252.841409,
+      "payload": {
+       "op": "shell",
+       "cmd": "echo ==PROC; ps -axo pid,etime,command | grep -i indiebiz-helper | grep -v grep; echo ==CAP; ( screencapture -x /tmp/ibz_cap_test.png & P=$!; sleep 8; if kill -0 $P 2>/dev/null; then echo 'screencapture HANG(8s)'; kill $P; else wait $P; echo cap_rc=$?; fi ); ls -la /tmp/ibz_cap_test.png 2>&1; echo ==CONSOLE; who; stat -f '%Su' /dev/console; echo ==LAUNCHD; launchctl print gui/$(id -u) 2>/dev/null | grep -i -E 'indiebiz|helper' | head; echo ==HELPERLOG; ls -d ~/Library/Logs/indiebiz* ~/Library/Application\\ Support/indiebiz* 2>&1 | head",
+       "cwd": "/tmp",
+       "timeout": 60,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 4253,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "126333a2d0cf0524365ac2ebaf7ec261",
+      "kind": "started",
+      "occurred": 1791860646.06628,
+      "received": 1791860646.4412959,
+      "payload": {}
+     },
+     {
+      "cursor": 4254,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "26e5bf0783433dcb8ff1e27959f7f212",
+      "kind": "log",
+      "occurred": 1791860646.2269282,
+      "received": 1791860647.51564,
+      "payload": {
+       "text": "==PROC\n"
+      }
+     },
+     {
+      "cursor": 4255,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "c9c0147254ea850a51c0460f3d48cd3a",
+      "kind": "log",
+      "occurred": 1791860646.402737,
+      "received": 1791860647.515699,
+      "payload": {
+       "text": "20662       11:29 /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper\n20913       00:00 /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper --resident-process /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/spool/process-0c75b7cd847e4c85946bf4ead14bfe9d.json\n"
+      }
+     },
+     {
+      "cursor": 4256,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "b3bb53ff1e631f4035895c7e1f1d5888",
+      "kind": "log",
+      "occurred": 1791860646.408797,
+      "received": 1791860647.5157151,
+      "payload": {
+       "text": "==CAP\n"
+      }
+     },
+     {
+      "cursor": 4257,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "c77209e05380d37112b198880a040c5d",
+      "kind": "log",
+      "occurred": 1791860646.980766,
+      "received": 1791860647.5157251,
+      "payload": {
+       "text": "could not create image from display\n"
+      }
+     },
+     {
+      "cursor": 4258,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "07dd7308e347555bc8e22bcc7975903a",
+      "kind": "log",
+      "occurred": 1791860654.644167,
+      "received": 1791860655.047441,
+      "payload": {
+       "text": "cap_rc=1\n"
+      }
+     },
+     {
+      "cursor": 4259,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "127b15ec287f54b836be5ac5320b56d2",
+      "kind": "log",
+      "occurred": 1791860654.742497,
+      "received": 1791860655.047717,
+      "payload": {
+       "text": "ls: /tmp/ibz_cap_test.png: No such file or directory\n"
+      }
+     },
+     {
+      "cursor": 4260,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "806f2d260f25f93102196e93ebd8c8b7",
+      "kind": "log",
+      "occurred": 1791860654.78814,
+      "received": 1791860655.047859,
+      "payload": {
+       "text": "==CONSOLE\n"
+      }
+     },
+     {
+      "cursor": 4261,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "f81e6c09ac1ba1bc942d05f7335891ed",
+      "kind": "log",
+      "occurred": 1791860654.9318871,
+      "received": 1791860656.1551511,
+      "payload": {
+       "text": "kangkukjin       console      Sep 25 06:41 \n"
+      }
+     },
+     {
+      "cursor": 4262,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "a2624199729d34a7cab3e38cd6613287",
+      "kind": "log",
+      "occurred": 1791860655.067997,
+      "received": 1791860656.155183,
+      "payload": {
+       "text": "kangkukjin\n"
+      }
+     },
+     {
+      "cursor": 4263,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "dbe4126262a1ec080f8d60a14c43974f",
+      "kind": "log",
+      "occurred": 1791860655.073958,
+      "received": 1791860656.1552022,
+      "payload": {
+       "text": "==LAUNCHD\n"
+      }
+     },
+     {
+      "cursor": 4264,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "985cf04f5279b75c1e73f99c54bea83a",
+      "kind": "log",
+      "occurred": 1791860655.282061,
+      "received": 1791860656.155213,
+      "payload": {
+       "text": "\t\t   20662      - \tindiebiz-resident-c8bf39dce36a77913768863f2087218b\n\t\t       0      - \tcom.apple.CallHistorySyncHelper\n\t\t       0      - \tcom.apple.AquaAppearanceHelper\n\t\t       0      - \tcom.apple.OSDUIHelper\n\t\t       0      - \tcom.apple.CallHistoryPluginHelper\n\t\t       0      - \tcom.apple.mbproximityhelper\n\t\t       0      - \tcom.apple.menuextra.battery.helper\n\t\t       0      - \tcom.apple.STMUIHelper\n\t\t       0      0 \tcom.apple.quicklook.ui.helper\n\t\t       0      - \tcom.apple.TMHelperAgent\n"
+      }
+     },
+     {
+      "cursor": 4265,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "e0c575e63c6a2398a66796e087b5479d",
+      "kind": "log",
+      "occurred": 1791860655.287646,
+      "received": 1791860656.155227,
+      "payload": {
+       "text": "==HELPERLOG\n"
+      }
+     },
+     {
+      "cursor": 4266,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "07386b28e8f325f475cb4ab2121c6865",
+      "kind": "log",
+      "occurred": 1791860655.3407428,
+      "received": 1791860656.155235,
+      "payload": {
+       "text": "ls: /Users/kangkukjin/Library/Application Support/indiebiz*: No such file or directory\nls: /Users/kangkukjin/Library/Logs/indiebiz*: No such file or directory\n"
+      }
+     },
+     {
+      "cursor": 4267,
+      "job": "0c75b7cd847e4c85946bf4ead14bfe9d",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "e39f870534bdd2cdb850bb366292ceb3",
+      "kind": "result",
+      "occurred": 1791860655.346307,
+      "received": 1791860656.155252,
+      "payload": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "==PROC\n20662       11:29 /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper\n20913       00:00 /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper --resident-process /Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/spool/process-0c75b7cd847e4c85946bf4ead14bfe9d.json\n==CAP\ncould not create image from display\ncap_rc=1\nls: /tmp/ibz_cap_test.png: No such file or directory\n==CONSOLE\nkangkukjin       console      Sep 25 06:41 \nkangkukjin\n==LAUNCHD\n\t\t   20662      - \tindiebiz-resident-c8bf39dce36a77913768863f2087218b\n\t\t       0      - \tcom.apple.CallHistorySyncHelper\n\t\t       0      - \tcom.apple.AquaAppearanceHelper\n\t\t       0      - \tcom.apple.OSDUIHelper\n\t\t       0      - \tcom.apple.CallHistoryPluginHelper\n\t\t       0      - \tcom.apple.mbproximityhelper\n\t\t       0      - \tcom.apple.menuextra.battery.helper\n\t\t       0      - \tcom.apple.STMUIHelper\n\t\t       0      0 \tcom.apple.quicklook.ui.helper\n\t\t       0      - \tcom.apple.TMHelperAgent\n==HELPERLOG\nls: /Users/kangkukjin/Library/Application Support/indiebiz*: No such file or directory\nls: /Users/kangkukjin/Library/Logs/indiebiz*: No such file or directory\n"
+      }
+     },
+     {
+      "cursor": 4268,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:e90ee9e6208443e9abc4a8b2a9d18c91",
+      "kind": "queued",
+      "occurred": 1791860791.327053,
+      "received": 1791860791.327053,
+      "payload": {
+       "op": "shell",
+       "cmd": "echo ==CAP; screencapture -x /tmp/ibz_cap2.png; echo cap_rc=$?; ls -la /tmp/ibz_cap2.png 2>&1; echo ==SIGN; codesign -dv '/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper' 2>&1 | head -8; echo ==BATT; pmset -g batt; echo ==ADAPTER; pmset -g adapter; echo ==CLAM; ioreg -r -k AppleClamshellState -d 4 | grep -E 'AppleClamshellState|AppleClamshellCausesSleep'; echo ==DISP; system_profiler SPDisplaysDataType 2>/dev/null | grep -E 'Resolution|Display Type|Connection|Main|Online|:$' | head -20; echo ==ASSERT; pmset -g assertions | grep -iE 'display|sleep' | head -8",
+       "cwd": "/tmp",
+       "timeout": 10,
+       "mode": "observe"
+      }
+     },
+     {
+      "cursor": 4269,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "6c50a6054751e3eeb6734d85edd49853",
+      "kind": "started",
+      "occurred": 1791860791.667,
+      "received": 1791860791.9452648,
+      "payload": {}
+     },
+     {
+      "cursor": 4270,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "fe1314636cba7a067c61337a381fafea",
+      "kind": "log",
+      "occurred": 1791860791.7725859,
+      "received": 1791860793.522343,
+      "payload": {
+       "text": "==CAP\n"
+      }
+     },
+     {
+      "cursor": 4271,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "b9c44f669cc2b2bb5ae9d65629d0fbeb",
+      "kind": "log",
+      "occurred": 1791860793.102656,
+      "received": 1791860795.160362,
+      "payload": {
+       "text": "cap_rc=0\n"
+      }
+     },
+     {
+      "cursor": 4272,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "15d49f8ce3eef0e92a2a7b716c48981c",
+      "kind": "log",
+      "occurred": 1791860793.117603,
+      "received": 1791860795.160393,
+      "payload": {
+       "text": "-rw-r--r--@ 1 kangkukjin  wheel  6450079 Oct 13 12:06 /tmp/ibz_cap2.png\n"
+      }
+     },
+     {
+      "cursor": 4273,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "829e6d199967ba0d900f2f8b9f76e6a5",
+      "kind": "log",
+      "occurred": 1791860793.1289642,
+      "received": 1791860795.1613922,
+      "payload": {
+       "text": "==SIGN\n"
+      }
+     },
+     {
+      "cursor": 4274,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "f19bc62291761961b5acb2543b5b0032",
+      "kind": "log",
+      "occurred": 1791860793.1592162,
+      "received": 1791860795.1614022,
+      "payload": {
+       "text": "Executable=/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper\nIdentifier=a.out\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20400 size=93374 flags=0x20002(adhoc,linker-signed) hashes=2915+0 location=embedded\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nSealed Resources=none\n"
+      }
+     },
+     {
+      "cursor": 4275,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "94d2ad482c900260b7914fb8a32b3488",
+      "kind": "log",
+      "occurred": 1791860793.1653602,
+      "received": 1791860795.161411,
+      "payload": {
+       "text": "==BATT\n"
+      }
+     },
+     {
+      "cursor": 4276,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "b4efce293b47d4f7fa933073589867ea",
+      "kind": "log",
+      "occurred": 1791860793.2017012,
+      "received": 1791860795.161418,
+      "payload": {
+       "text": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=22610019)\t92%; charging; 1:19 remaining present: true\n"
+      }
+     },
+     {
+      "cursor": 4277,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "d223ffd3568b370813ba25dfd7b8632b",
+      "kind": "log",
+      "occurred": 1791860793.207294,
+      "received": 1791860795.1614249,
+      "payload": {
+       "text": "==ADAPTER\n"
+      }
+     },
+     {
+      "cursor": 4278,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "6131af30780dbce89c5c7f70a2aa4b09",
+      "kind": "log",
+      "occurred": 1791860793.238739,
+      "received": 1791860795.161433,
+      "payload": {
+       "text": " Wattage = 15W\n Current = 3000mA\n Voltage = 5000mV\n AdapterID = 0\n Family Code = 0xe000400a\n Serial String = ���\u0013H\u000b�\u0012ܾ?Z�l/\t\n"
+      }
+     },
+     {
+      "cursor": 4279,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "a531773431f4f23a4b2bb06dc1d1d518",
+      "kind": "log",
+      "occurred": 1791860793.245176,
+      "received": 1791860795.161442,
+      "payload": {
+       "text": "==CLAM\n"
+      }
+     },
+     {
+      "cursor": 4280,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "bf09ebdc51ded7d8b2ee74b7ff016f3e",
+      "kind": "log",
+      "occurred": 1791860793.293524,
+      "received": 1791860795.161451,
+      "payload": {
+       "text": "  |   \"AppleClamshellCausesSleep\" = No\n  |   \"AppleClamshellState\" = No\n"
+      }
+     },
+     {
+      "cursor": 4281,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "8fba80d1c5d632da43edfe97b78fd05b",
+      "kind": "log",
+      "occurred": 1791860793.299962,
+      "received": 1791860795.16146,
+      "payload": {
+       "text": "==DISP\n"
+      }
+     },
+     {
+      "cursor": 4282,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "3a4b6202223a0cc1843dff22fb94d075",
+      "kind": "log",
+      "occurred": 1791860794.147257,
+      "received": 1791860795.1614752,
+      "payload": {
+       "text": "Graphics/Displays:\n    Apple M2:\n      Displays:\n        Color LCD:\n          Display Type: Built-in Liquid Retina Display\n          Resolution: 2560 x 1664 Retina\n          Main Display: Yes\n          Online: Yes\n          Connection Type: Internal\n"
+      }
+     },
+     {
+      "cursor": 4283,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "2d466161bee858b090f79b6e81a923d5",
+      "kind": "log",
+      "occurred": 1791860794.154193,
+      "received": 1791860795.161483,
+      "payload": {
+       "text": "==ASSERT\n"
+      }
+     },
+     {
+      "cursor": 4284,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "661332eafc708ed2cd2896fb91c0db26",
+      "kind": "log",
+      "occurred": 1791860794.210667,
+      "received": 1791860795.16149,
+      "payload": {
+       "text": "   PreventUserIdleDisplaySleep    0\n   PreventSystemSleep             0\n   PreventUserIdleSystemSleep     1\n   pid 633(sharingd): [0x00009c51000195a8] 00:01:37 PreventUserIdleSystemSleep named: \"Handoff\"  \n   pid 345(powerd): [0x00009c360001957b] 00:02:04 PreventUserIdleSystemSleep named: \"Powerd - Prevent sleep while display is on\"  \n"
+      }
+     },
+     {
+      "cursor": 4285,
+      "job": "e90ee9e6208443e9abc4a8b2a9d18c91",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "7c532946d6093e738a65a975cc3fdb16",
+      "kind": "result",
+      "occurred": 1791860794.2184389,
+      "received": 1791860795.161502,
+      "payload": {
+       "cwd": "/tmp",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "==CAP\ncap_rc=0\n-rw-r--r--@ 1 kangkukjin  wheel  6450079 Oct 13 12:06 /tmp/ibz_cap2.png\n==SIGN\nExecutable=/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/indiebiz-helper\nIdentifier=a.out\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20400 size=93374 flags=0x20002(adhoc,linker-signed) hashes=2915+0 location=embedded\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nSealed Resources=none\n==BATT\nNow drawing from 'AC Power'\n -InternalBattery-0 (id=22610019)\t92%; charging; 1:19 remaining present: true\n==ADAPTER\n Wattage = 15W\n Current = 3000mA\n Voltage = 5000mV\n AdapterID = 0\n Family Code = 0xe000400a\n Serial String = ���\u0013H\u000b�\u0012ܾ?Z�l/\t\n==CLAM\n  |   \"AppleClamshellCausesSleep\" = No\n  |   \"AppleClamshellState\" = No\n==DISP\nGraphics/Displays:\n    Apple M2:\n      Displays:\n        Color LCD:\n          Display Type: Built-in Liquid Retina Display\n          Resolution: 2560 x 1664 Retina\n          Main Display: Yes\n          Online: Yes\n          Connection Type: Internal\n==ASSERT\n   PreventUserIdleDisplaySleep    0\n   PreventSystemSleep             0\n   PreventUserIdleSystemSleep     1\n   pid 633(sharingd): [0x00009c51000195a8] 00:01:37 PreventUserIdleSystemSleep named: \"Handoff\"  \n   pid 345(powerd): [0x00009c360001957b] 00:02:04 PreventUserIdleSystemSleep named: \"Powerd - Prevent sleep while display is on\"  \n"
+      }
+     },
+     {
+      "cursor": 4286,
+      "job": "5236dc7883b7432bb8d71b1ad7847b9e",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:5236dc7883b7432bb8d71b1ad7847b9e",
+      "kind": "queued",
+      "occurred": 1791860795.177001,
+      "received": 1791860795.177001,
+      "payload": {
+       "op": "screen",
+       "max_width": 800,
+       "mode": "interactive"
+      }
+     },
+     {
+      "cursor": 4287,
+      "job": "5236dc7883b7432bb8d71b1ad7847b9e",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "84fb035899e7601157a75349abd01a32",
+      "kind": "started",
+      "occurred": 1791860796.4858391,
+      "received": 1791860796.755209,
+      "payload": {}
+     },
+     {
+      "cursor": 4288,
+      "job": "5236dc7883b7432bb8d71b1ad7847b9e",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "e01f4d1f70e80e46034cfd114d195cb6",
+      "kind": "result",
+      "occurred": 1791860798.900237,
+      "received": 1791860801.673899,
+      "payload": {
+       "bytes": 85859,
+       "height": 520,
+       "image_observation": "non_uniform",
+       "media_type": "image/jpeg",
+       "op": "screen",
+       "orig_height": 1912,
+       "orig_width": 2940,
+       "tool": "screencapture",
+       "width": 800,
+       "image_omitted": true,
+       "image_task_ref": {
+        "kind": "guestpc",
+        "task_id": "5236dc7883b7432bb8d71b1ad7847b9e"
+       }
+      }
+     },
+     {
+      "cursor": 4289,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:2f5834e461984d91b9363f7b90e0cfb3",
+      "kind": "queued",
+      "occurred": 1791860968.620254,
+      "received": 1791860968.620254,
+      "payload": {
+       "op": "shell",
+       "cmd": "cd ~; ls -d ~/Desktop/AI/indiebizOS ~/indiebizOS ~/Desktop/indiebizOS 2>&1; mdfind -name indiebizOS -onlyin ~ 2>/dev/null | head -5; which git python3 node npm brew; python3 --version; node --version; df -h ~ | tail -1",
+       "timeout": 1800,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 4290,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "6ab0c4a84b6112304302afb2c4e10242",
+      "kind": "started",
+      "occurred": 1791860968.928019,
+      "received": 1791860969.202249,
+      "payload": {}
+     },
+     {
+      "cursor": 4291,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "ac270bc588584d3758a7d5cb56ad3d90",
+      "kind": "log",
+      "occurred": 1791860969.035962,
+      "received": 1791860970.582308,
+      "payload": {
+       "text": "ls: /Users/kangkukjin/Desktop/indiebizOS: No such file or directory\nls: /Users/kangkukjin/indiebizOS: No such file or directory\n"
+      }
+     },
+     {
+      "cursor": 4292,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "1505e21060c35f10ee1aef7efd7cbdbf",
+      "kind": "log",
+      "occurred": 1791860969.039556,
+      "received": 1791860970.58234,
+      "payload": {
+       "text": "/Users/kangkukjin/Desktop/AI/indiebizOS\n"
+      }
+     },
+     {
+      "cursor": 4293,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "93e319014b6ef19db6310f4efb698ee3",
+      "kind": "log",
+      "occurred": 1791860969.389215,
+      "received": 1791860970.5823581,
+      "payload": {
+       "text": "/usr/bin/git\n/usr/bin/python3\n"
+      }
+     },
+     {
+      "cursor": 4294,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "1e87220a9c55af45878035d8f0359e3a",
+      "kind": "log",
+      "occurred": 1791860969.813323,
+      "received": 1791860970.582369,
+      "payload": {
+       "text": "Python 3.9.6\n"
+      }
+     },
+     {
+      "cursor": 4295,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "2ebda25c350b7f0b391261a29a02958b",
+      "kind": "log",
+      "occurred": 1791860969.818326,
+      "received": 1791860970.582377,
+      "payload": {
+       "text": "/bin/sh: node: command not found\n"
+      }
+     },
+     {
+      "cursor": 4296,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "e371c79a131659b5dfc514a2c9c3357a",
+      "kind": "log",
+      "occurred": 1791860969.8300538,
+      "received": 1791860970.5823848,
+      "payload": {
+       "text": "/dev/disk3s1   228Gi   164Gi    39Gi    81%    2.1M  412M    1%   /System/Volumes/Data\n"
+      }
+     },
+     {
+      "cursor": 4297,
+      "job": "2f5834e461984d91b9363f7b90e0cfb3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "7cdcc6fc3628c4d50d81ed14e3006f89",
+      "kind": "result",
+      "occurred": 1791860969.835504,
+      "received": 1791860970.582643,
+      "payload": {
+       "cwd": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/workspaces/2f5834e461984d91b9363f7b90e0cfb3",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "ls: /Users/kangkukjin/Desktop/indiebizOS: No such file or directory\nls: /Users/kangkukjin/indiebizOS: No such file or directory\n/Users/kangkukjin/Desktop/AI/indiebizOS\n/usr/bin/git\n/usr/bin/python3\nPython 3.9.6\n/bin/sh: node: command not found\n/dev/disk3s1   228Gi   164Gi    39Gi    81%    2.1M  412M    1%   /System/Volumes/Data\n"
+      }
+     },
+     {
+      "cursor": 4298,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:14bb5774563c46e5a5519c94eeb6f9cf",
+      "kind": "queued",
+      "occurred": 1791861004.894295,
+      "received": 1791861004.894295,
+      "payload": {
+       "op": "shell",
+       "cmd": "git status --porcelain | head -50; echo ---; git remote -v; echo ---; git rev-parse HEAD; git log -1 --format='%h %ci %s'; echo ---; ls; echo ---; ls runtime 2>&1 | head; ls -la .venv 2>&1 | head -3; echo ---; ls requirements* 2>&1; uname -m; sw_vers -productVersion",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 60,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 4299,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "12bcda18a9f62fc053fa543e26bce3ad",
+      "kind": "started",
+      "occurred": 1791861005.183313,
+      "received": 1791861005.45173,
+      "payload": {}
+     },
+     {
+      "cursor": 4300,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "479f853ab2163c6e0363f36ab215456c",
+      "kind": "log",
+      "occurred": 1791861022.390018,
+      "received": 1791861023.8122618,
+      "payload": {
+       "text": "?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\n"
+      }
+     },
+     {
+      "cursor": 4301,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "639c819e020d8c4597271d23fc08c29a",
+      "kind": "log",
+      "occurred": 1791861022.4077692,
+      "received": 1791861023.812292,
+      "payload": {
+       "text": "---\n"
+      }
+     },
+     {
+      "cursor": 4302,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "07e78b2a65f60c9704b95f0dc2c43c43",
+      "kind": "log",
+      "occurred": 1791861022.44467,
+      "received": 1791861023.812307,
+      "payload": {
+       "text": "origin\thttps://github.com/kangkukjin/indiebizOS.git (fetch)\norigin\thttps://github.com/kangkukjin/indiebizOS.git (push)\n"
+      }
+     },
+     {
+      "cursor": 4303,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "f3844ff301bb86f7b2b79f04ab2d8adb",
+      "kind": "log",
+      "occurred": 1791861022.4538891,
+      "received": 1791861023.812316,
+      "payload": {
+       "text": "---\n"
+      }
+     },
+     {
+      "cursor": 4304,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "5cb9faea6aad7ac92f5b2785740f755c",
+      "kind": "log",
+      "occurred": 1791861022.5012422,
+      "received": 1791861023.8123252,
+      "payload": {
+       "text": "7d80fb85eb3afcdcb883a5d5d3c589723f9fcc32\n"
+      }
+     },
+     {
+      "cursor": 4305,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "c1967480a8c055fd83e281d80da81298",
+      "kind": "log",
+      "occurred": 1791861022.566545,
+      "received": 1791861023.812333,
+      "payload": {
+       "text": "7d80fb8 2026-07-29 22:25:37 +0900 감각·기억층 3수정 — 에피소드 881·882 분석 산물\n"
+      }
+     },
+     {
+      "cursor": 4306,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "3b6a5b2a66be4fce94b3dbdb4e4e64e3",
+      "kind": "log",
+      "occurred": 1791861022.571497,
+      "received": 1791861023.812341,
+      "payload": {
+       "text": "---\n"
+      }
+     },
+     {
+      "cursor": 4307,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "428a5b65c1940d325ff9b04a148a8bc9",
+      "kind": "log",
+      "occurred": 1791861022.585521,
+      "received": 1791861023.8123531,
+      "payload": {
+       "text": "BUILD.md\nGUIDE.md\nGUIDE_EN.md\nHANDOFF_hippocampus_training.md\nINSTALL_DEPENDENCIES.md\nLICENSE\nREADME.ko.md\nREADME.md\nREMOTE_FINDER_SETUP.md\nTOOL_SDK_FOLLOWUPS.md\nUSER_MANUAL.md\nWHITEPAPER.md\n__pycache__\nbackend\ncheckpoints\ncloud_training\ndata\ndocs\nfrontend\nhelper\nimage-1.png\nlogs\nmcp_server.py\noutputs\nphone-companion\nprojects\nscripts\nstart.sh\ntemplates\ntest_tunnel.sh\ntokens\ntranslate-extension\n그림\n공유창고\n"
+      }
+     },
+     {
+      "cursor": 4308,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "fe475759f4ff886e73c26378e64986b5",
+      "kind": "log",
+      "occurred": 1791861022.5913222,
+      "received": 1791861023.812364,
+      "payload": {
+       "text": "---\n"
+      }
+     },
+     {
+      "cursor": 4309,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "9863c48899200d2f59c4dde1fe5e7be8",
+      "kind": "log",
+      "occurred": 1791861022.59703,
+      "received": 1791861023.812374,
+      "payload": {
+       "text": "ls: runtime: No such file or directory\n"
+      }
+     },
+     {
+      "cursor": 4310,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "5e76c124aea3c25efaaf6757a7bec482",
+      "kind": "log",
+      "occurred": 1791861022.612272,
+      "received": 1791861023.812381,
+      "payload": {
+       "text": "ls: .venv: No such file or directory\n"
+      }
+     },
+     {
+      "cursor": 4311,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "65aced2724711712ed89ad7a8f5e48f1",
+      "kind": "log",
+      "occurred": 1791861022.6166568,
+      "received": 1791861023.8126369,
+      "payload": {
+       "text": "---\n"
+      }
+     },
+     {
+      "cursor": 4312,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "2dba7ef8cec9f9b1f2697bb832da9ec9",
+      "kind": "log",
+      "occurred": 1791861022.6216588,
+      "received": 1791861023.812654,
+      "payload": {
+       "text": "ls: requirements*: No such file or directory\n"
+      }
+     },
+     {
+      "cursor": 4313,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "5404b65aeff8ecf605c0bffabe3b12d3",
+      "kind": "log",
+      "occurred": 1791861022.63423,
+      "received": 1791861023.812664,
+      "payload": {
+       "text": "arm64\n"
+      }
+     },
+     {
+      "cursor": 4314,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "80334012e9861b3fb24a224f9c42a9fd",
+      "kind": "log",
+      "occurred": 1791861022.6749592,
+      "received": 1791861023.812674,
+      "payload": {
+       "text": "26.5.2\n"
+      }
+     },
+     {
+      "cursor": 4315,
+      "job": "14bb5774563c46e5a5519c94eeb6f9cf",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "52e7e9e5f46f9bc7fc469f034d41fa63",
+      "kind": "result",
+      "occurred": 1791861022.683872,
+      "received": 1791861023.8126872,
+      "payload": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\n---\norigin\thttps://github.com/kangkukjin/indiebizOS.git (fetch)\norigin\thttps://github.com/kangkukjin/indiebizOS.git (push)\n---\n7d80fb85eb3afcdcb883a5d5d3c589723f9fcc32\n7d80fb8 2026-07-29 22:25:37 +0900 감각·기억층 3수정 — 에피소드 881·882 분석 산물\n---\nBUILD.md\nGUIDE.md\nGUIDE_EN.md\nHANDOFF_hippocampus_training.md\nINSTALL_DEPENDENCIES.md\nLICENSE\nREADME.ko.md\nREADME.md\nREMOTE_FINDER_SETUP.md\nTOOL_SDK_FOLLOWUPS.md\nUSER_MANUAL.md\nWHITEPAPER.md\n__pycache__\nbackend\ncheckpoints\ncloud_training\ndata\ndocs\nfrontend\nhelper\nimage-1.png\nlogs\nmcp_server.py\noutputs\nphone-companion\nprojects\nscripts\nstart.sh\ntemplates\ntest_tunnel.sh\ntokens\ntranslate-extension\n그림\n공유창고\n---\nls: runtime: No such file or directory\nls: .venv: No such file or directory\n---\nls: requirements*: No such file or directory\narm64\n26.5.2\n"
+      }
+     },
+     {
+      "cursor": 4316,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:9bb864f7762f4266b1fc30c799d857b3",
+      "kind": "queued",
+      "occurred": 1791861029.7629812,
+      "received": 1791861029.7629812,
+      "payload": {
+       "op": "shell",
+       "cmd": "git fetch origin 2>&1 | tail -5; git rev-parse origin/main; git log -1 --format='%h %ci %s' origin/main; git rev-list --count HEAD..origin/main; git rev-list --count origin/main..HEAD; for f in frontend/src/components/CommercialInstrument.tsx frontend/src/components/RealtyInstrument.tsx; do echo \"== $f\"; git cat-file -e origin/main:$f 2>/dev/null && (git show origin/main:$f | shasum; shasum < $f) || echo 'not in origin/main'; done; git ls-tree --name-only origin/main | head -80; git show origin/main:start.sh | head -120",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 600,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 4317,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "2acdcc25f52f77e742d8d46b0fa70aec",
+      "kind": "started",
+      "occurred": 1791861030.063853,
+      "received": 1791861030.331302,
+      "payload": {}
+     },
+     {
+      "cursor": 4318,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "9bf2125e5820d3ccd851c72b77a8f35b",
+      "kind": "log",
+      "occurred": 1791861138.6627588,
+      "received": 1791861139.645568,
+      "payload": {
+       "text": "From https://github.com/kangkukjin/indiebizOS\n   7d80fb85..36cc663a  main       -> origin/main\n * [new tag]           v1.5.0     -> v1.5.0\n * [new tag]           v1.5.1     -> v1.5.1\n * [new tag]           v1.5.2     -> v1.5.2\n"
+      }
+     },
+     {
+      "cursor": 4319,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "55e9aaaaeb26a922294a4d0a5ad7718e",
+      "kind": "log",
+      "occurred": 1791861138.778582,
+      "received": 1791861139.64576,
+      "payload": {
+       "text": "36cc663ab757348c9096ac2b265b40c81a9607ab\n"
+      }
+     },
+     {
+      "cursor": 4320,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "460257aba425870029c678b32f18421f",
+      "kind": "log",
+      "occurred": 1791861138.848097,
+      "received": 1791861139.645941,
+      "payload": {
+       "text": "36cc663a 2026-10-13 11:24:20 +0900 격자 첫 렌더 완료 뒤 편집을 열고 지연 브라우저 사건 검증\n"
+      }
+     },
+     {
+      "cursor": 4321,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "8ac545b234c3cc6f922cdae37db051cd",
+      "kind": "log",
+      "occurred": 1791861138.969001,
+      "received": 1791861141.680059,
+      "payload": {
+       "text": "1574\n"
+      }
+     },
+     {
+      "cursor": 4322,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "e1a67c7224af2a06f4d8d6b174a04692",
+      "kind": "log",
+      "occurred": 1791861139.089694,
+      "received": 1791861141.680096,
+      "payload": {
+       "text": "0\n"
+      }
+     },
+     {
+      "cursor": 4323,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "3116f18a36185038ff95b27b77b02206",
+      "kind": "log",
+      "occurred": 1791861139.0936372,
+      "received": 1791861141.6801112,
+      "payload": {
+       "text": "== frontend/src/components/CommercialInstrument.tsx\n"
+      }
+     },
+     {
+      "cursor": 4324,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "0ee8811f91c489fd0ee30154ff1d3a37",
+      "kind": "log",
+      "occurred": 1791861139.163342,
+      "received": 1791861141.68012,
+      "payload": {
+       "text": "not in origin/main\n== frontend/src/components/RealtyInstrument.tsx\n"
+      }
+     },
+     {
+      "cursor": 4325,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "f7e7ca6ad88b4cc86631b1ed05c93cfa",
+      "kind": "log",
+      "occurred": 1791861139.231968,
+      "received": 1791861141.680128,
+      "payload": {
+       "text": "not in origin/main\n"
+      }
+     },
+     {
+      "cursor": 4326,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "47a5ed416968971f68ce588331791484",
+      "kind": "log",
+      "occurred": 1791861139.2993221,
+      "received": 1791861141.6801379,
+      "payload": {
+       "text": ".env.example\n.gitattributes\n.github\n.gitignore\n.metadata_never_index\nAGENTS.md\nBUILD.md\nGUIDE.md\nGUIDE_EN.md\nHANDOFF_hippocampus_training.md\nINSTALL_DEPENDENCIES.md\nLICENSE\nREADME.ko.md\nREADME.md\nREMOTE_FINDER_SETUP.md\nTOOL_SDK_FOLLOWUPS.md\nUSER_MANUAL.md\nWHITEPAPER.md\nbackend\ncloud_training\ndata\ndocs\nfrontend\nhelper\nmcp_server.py\nphone-companion\npytest.ini\nscripts\nstart.sh\ntemplates\ntest_tunnel.sh\ntranslate-extension\n\"\\352\\267\\270\\353\\246\\274\"\n"
+      }
+     },
+     {
+      "cursor": 4327,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "87986b590aa8516330631f0c68acd57f",
+      "kind": "log",
+      "occurred": 1791861139.368195,
+      "received": 1791861141.6801548,
+      "payload": {
+       "text": "#!/bin/bash\n# IndieBiz OS 시작 스크립트\n\ncd \"$(dirname \"$0\")\"\n\n# .env 파일 로드\nif [ -f .env ]; then\n    export $(cat .env | grep -v '^#' | xargs)\n    echo \"✅ 환경변수 로드 완료\"\nelse\n    echo \"⚠️  .env 파일이 없습니다. .env.example을 참고하여 생성하세요.\"\nfi\n\necho \"🚀 IndieBiz OS 시작...\"\n\n# 파이썬 선택: 소스 경로의 몸은 .venv 하나로 고정한다 (2026-08-22).\n# 예전엔 .venv 가 없으면 조용히 시스템 파이썬으로 떨어졌다. 그건 \"다른 몸으로\n# 도는데 아무도 모르는\" 상태다 — fastapi/dotenv 부재는 그나마 시끄럽게 죽지만,\n# playwright 처럼 *버전이 다르게* 깔린 의존은 조용히 반쪽으로 돈다(시스템 파이썬의\n# playwright 1.58 은 이 저장소가 받아 둔 크로미움 빌드를 못 찾는다). 조용한 폴백 대신\n# 정직하게 거절하고 처방을 준다. bootstrap 이 .venv 를 만든다.\nif [ ! -x \".venv/bin/python3\" ]; then\n    echo \"❌ .venv 가 없습니다 — 소스 경로는 저장소 가상환경 하나로 고정입니다.\"\n    echo \"   python3 scripts/bootstrap.py   # venv + 의존성 + .env 시드\"\n    exit 1\nfi\nPY=\"$(pwd)/.venv/bin/python3\"\necho \"✅ 가상환경 파이썬 사용 (.venv)\"\n\n# 단일 제어자 시작. 커널 잠금으로 기존 현역을 채택하며 포트의 다른 앱을 죽이지 않는다.\n\"$PY\" backend/api.py start &\nBACKEND_PID=$!\necho \"✅ 재기동 제어자 PID: $BACKEND_PID\"\n\n# 프론트엔드 시작 (electron:dev) — 선택 사항: Node/npm과 node_modules가 있을 때만.\n# 없으면 백엔드 전용(헤드리스)으로 계속 실행 — 원격 런처/REST로 사용 가능.\nFRONTEND_PID=\"\"\nif command -v npm >/dev/null 2>&1 && [ -d \"frontend/node_modules\" ]; then\n    cd frontend\n    npm run electron:dev &\n    FRONTEND_PID=$!\n    cd ..\n    echo \"✅ 프론트엔드 PID: $FRONTEND_PID\"\nelse\n    echo \"ℹ️  프론트엔드 스킵 (npm 또는 frontend/node_modules 없음) — 백엔드 전용으로 실행\"\n    echo \"   데스크탑 UI가 필요하면 Node ≥ 18 설치 후: cd frontend && npm install && npm run rebuild-trusted\"\nfi\n\n# 의도적 종료는 같은 제어자에게 전달한다. 실제 자식의 정리는 제어자가 끝낸다.\nCLEANED=0\ncleanup() {\n    [ \"$CLEANED\" -eq 1 ] && return\n    CLEANED=1\n    echo \"🛑 IndieBiz OS 종료 중...\"\n    \"$PY\" backend/api.py shutdown --wait\n    if [ -n \"$FRONTEND_PID\" ]; then\n        kill -TERM \"$FRONTEND_PID\" 2>/dev/null\n    fi\n    echo \"👋 IndieBiz OS 종료 완료\"\n}\ntrap cleanup EXIT INT TERM\n# 중복 시작의 요청 프로세스는 즉시 끝난다. 그 종료를 시스템 종료로 읽지 않는다.\n\"$PY\" backend/api.py wait\n"
+      }
+     },
+     {
+      "cursor": 4328,
+      "job": "9bb864f7762f4266b1fc30c799d857b3",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "0deca19976b062e0dba8fd6ba5560adf",
+      "kind": "result",
+      "occurred": 1791861139.3771179,
+      "received": 1791861141.680186,
+      "payload": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "From https://github.com/kangkukjin/indiebizOS\n   7d80fb85..36cc663a  main       -> origin/main\n * [new tag]           v1.5.0     -> v1.5.0\n * [new tag]           v1.5.1     -> v1.5.1\n * [new tag]           v1.5.2     -> v1.5.2\n36cc663ab757348c9096ac2b265b40c81a9607ab\n36cc663a 2026-10-13 11:24:20 +0900 격자 첫 렌더 완료 뒤 편집을 열고 지연 브라우저 사건 검증\n1574\n0\n== frontend/src/components/CommercialInstrument.tsx\nnot in origin/main\n== frontend/src/components/RealtyInstrument.tsx\nnot in origin/main\n.env.example\n.gitattributes\n.github\n.gitignore\n.metadata_never_index\nAGENTS.md\nBUILD.md\nGUIDE.md\nGUIDE_EN.md\nHANDOFF_hippocampus_training.md\nINSTALL_DEPENDENCIES.md\nLICENSE\nREADME.ko.md\nREADME.md\nREMOTE_FINDER_SETUP.md\nTOOL_SDK_FOLLOWUPS.md\nUSER_MANUAL.md\nWHITEPAPER.md\nbackend\ncloud_training\ndata\ndocs\nfrontend\nhelper\nmcp_server.py\nphone-companion\npytest.ini\nscripts\nstart.sh\ntemplates\ntest_tunnel.sh\ntranslate-extension\n\"\\352\\267\\270\\353\\246\\274\"\n#!/bin/bash\n# IndieBiz OS 시작 스크립트\n\ncd \"$(dirname \"$0\")\"\n\n# .env 파일 로드\nif [ -f .env ]; then\n    export $(cat .env | grep -v '^#' | xargs)\n    echo \"✅ 환경변수 로드 완료\"\nelse\n    echo \"⚠️  .env 파일이 없습니다. .env.example을 참고하여 생성하세요.\"\nfi\n\necho \"🚀 IndieBiz OS 시작...\"\n\n# 파이썬 선택: 소스 경로의 몸은 .venv 하나로 고정한다 (2026-08-22).\n# 예전엔 .venv 가 없으면 조용히 시스템 파이썬으로 떨어졌다. 그건 \"다른 몸으로\n# 도는데 아무도 모르는\" 상태다 — fastapi/dotenv 부재는 그나마 시끄럽게 죽지만,\n# playwright 처럼 *버전이 다르게* 깔린 의존은 조용히 반쪽으로 돈다(시스템 파이썬의\n# playwright 1.58 은 이 저장소가 받아 둔 크로미움 빌드를 못 찾는다). 조용한 폴백 대신\n# 정직하게 거절하고 처방을 준다. bootstrap 이 .venv 를 만든다.\nif [ ! -x \".venv/bin/python3\" ]; then\n    echo \"❌ .venv 가 없습니다 — 소스 경로는 저장소 가상환경 하나로 고정입니다.\"\n    echo \"   python3 scripts/bootstrap.py   # venv + 의존성 + .env 시드\"\n    exit 1\nfi\nPY=\"$(pwd)/.venv/bin/python3\"\necho \"✅ 가상환경 파이썬 사용 (.venv)\"\n\n# 단일 제어자 시작. 커널 잠금으로 기존 현역을 채택하며 포트의 다른 앱을 죽이지 않는다.\n\"$PY\" backend/api.py start &\nBACKEND_PID=$!\necho \"✅ 재기동 제어자 PID: $BACKEND_PID\"\n\n# 프론트엔드 시작 (electron:dev) — 선택 사항: Node/npm과 node_modules가 있을 때만.\n# 없으면 백엔드 전용(헤드리스)으로 계속 실행 — 원격 런처/REST로 사용 가능.\nFRONTEND_PID=\"\"\nif command -v npm >/dev/null 2>&1 && [ -d \"frontend/node_modules\" ]; then\n    cd frontend\n    npm run electron:dev &\n    FRONTEND_PID=$!\n    cd ..\n    echo \"✅ 프론트엔드 PID: $FRONTEND_PID\"\nelse\n    echo \"ℹ️  프론트엔드 스킵 (npm 또는 frontend/node_modules 없음) — 백엔드 전용으로 실행\"\n    echo \"   데스크탑 UI가 필요하면 Node ≥ 18 설치 후: cd frontend && npm install && npm run rebuild-trusted\"\nfi\n\n# 의도적 종료는 같은 제어자에게 전달한다. 실제 자식의 정리는 제어자가 끝낸다.\nCLEANED=0\ncleanup() {\n    [ \"$CLEANED\" -eq 1 ] && return\n    CLEANED=1\n    echo \"🛑 IndieBiz OS 종료 중...\"\n    \"$PY\" backend/api.py shutdown --wait\n    if [ -n \"$FRONTEND_PID\" ]; then\n        kill -TERM \"$FRONTEND_PID\" 2>/dev/null\n    fi\n    echo \"👋 IndieBiz OS 종료 완료\"\n}\ntrap cleanup EXIT INT TERM\n# 중복 시작의 요청 프로세스는 즉시 끝난다. 그 종료를 시스템 종료로 읽지 않는다.\n\"$PY\" backend/api.py wait\n"
+      }
+     },
+     {
+      "cursor": 4329,
+      "job": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:5d89af559b40479794a6b6ba0be08aba",
+      "kind": "queued",
+      "occurred": 1791861158.946403,
+      "received": 1791861158.946403,
+      "payload": {
+       "op": "shell",
+       "cmd": "git ls-files -o --exclude-standard > /tmp/ibz_untr.txt; git ls-files -o -i --exclude-standard > /tmp/ibz_ign.txt; git ls-tree -r --name-only origin/main | sort > /tmp/ibz_new.txt; wc -l /tmp/ibz_untr.txt /tmp/ibz_ign.txt; echo '--- collisions:'; sort -u /tmp/ibz_untr.txt /tmp/ibz_ign.txt | comm -12 - /tmp/ibz_new.txt > /tmp/ibz_coll.txt; wc -l < /tmp/ibz_coll.txt; head -50 /tmp/ibz_coll.txt",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 300,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 4330,
+      "job": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "1ef7e7afde72e72ab28c01011b08ebf3",
+      "kind": "started",
+      "occurred": 1791861159.242995,
+      "received": 1791861159.514766,
+      "payload": {}
+     },
+     {
+      "cursor": 4331,
+      "job": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "b99424e63ad966f17c7ad69ce32c5f8d",
+      "kind": "log",
+      "occurred": 1791861162.3198369,
+      "received": 1791861163.583325,
+      "payload": {
+       "text": "       2 /tmp/ibz_untr.txt\n   66496 /tmp/ibz_ign.txt\n   66498 total\n"
+      }
+     },
+     {
+      "cursor": 4332,
+      "job": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "8fbbf20c38af0eee95941d7499cf2a01",
+      "kind": "log",
+      "occurred": 1791861162.3342059,
+      "received": 1791861163.58336,
+      "payload": {
+       "text": "--- collisions:\n"
+      }
+     },
+     {
+      "cursor": 4333,
+      "job": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "39efa17fa2b6c9ff0698b4b49adfb13f",
+      "kind": "log",
+      "occurred": 1791861162.478397,
+      "received": 1791861163.583371,
+      "payload": {
+       "text": "       2\n"
+      }
+     },
+     {
+      "cursor": 4334,
+      "job": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "7be2d4a3ea7240955ff56844fb36c410",
+      "kind": "log",
+      "occurred": 1791861162.487202,
+      "received": 1791861163.584092,
+      "payload": {
+       "text": "cloud_training/ibl_embedding_trainer_cloud.py\ncloud_training/make_bundle.sh\n"
+      }
+     },
+     {
+      "cursor": 4335,
+      "job": "5d89af559b40479794a6b6ba0be08aba",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "276a0c1b8d696dd9b122e9856e6ead48",
+      "kind": "result",
+      "occurred": 1791861162.4933052,
+      "received": 1791861163.58411,
+      "payload": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "       2 /tmp/ibz_untr.txt\n   66496 /tmp/ibz_ign.txt\n   66498 total\n--- collisions:\n       2\ncloud_training/ibl_embedding_trainer_cloud.py\ncloud_training/make_bundle.sh\n"
+      }
+     },
+     {
+      "cursor": 4336,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "submitted:7bf655b43fd241349199880b6e145e30",
+      "kind": "queued",
+      "occurred": 1791861170.531472,
+      "received": 1791861170.531472,
+      "payload": {
+       "op": "shell",
+       "cmd": "set -e; B=$HOME/ibz_untracked_backup/2026-10-13_premerge; mkdir -p $B/cloud_training; for f in cloud_training/ibl_embedding_trainer_cloud.py cloud_training/make_bundle.sh; do cp -p $f $B/$f; echo \"$f local=$(shasum < $f | cut -c1-12) origin=$(git show origin/main:$f | shasum | cut -c1-12)\"; done; ls -la $B/cloud_training; echo OLD_HEAD=$(git rev-parse HEAD); git merge --ff-only origin/main 2>&1 | tail -5; echo NEW_HEAD=$(git rev-parse HEAD); echo ORIGIN=$(git rev-parse origin/main); git status --porcelain | head",
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "timeout": 600,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 4337,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "e7e8fabd2a518f5fd54ab175a3cd58d8",
+      "kind": "started",
+      "occurred": 1791861170.7738051,
+      "received": 1791861171.0427809,
+      "payload": {}
+     },
+     {
+      "cursor": 4338,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "bdc8a9444a044cbf1be58b52663d1eea",
+      "kind": "log",
+      "occurred": 1791861171.072475,
+      "received": 1791861172.163022,
+      "payload": {
+       "text": "cloud_training/ibl_embedding_trainer_cloud.py local=372e63b0f65d origin=5d3c7f07d9b5\n"
+      }
+     },
+     {
+      "cursor": 4339,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "927493dbc74128deb0a4f3277aeece3e",
+      "kind": "log",
+      "occurred": 1791861171.208104,
+      "received": 1791861172.163053,
+      "payload": {
+       "text": "cloud_training/make_bundle.sh local=d0ed9a3cdc83 origin=94d6c915bf6b\n"
+      }
+     },
+     {
+      "cursor": 4340,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "b185e2f379631d1ed17646e0f08984a2",
+      "kind": "log",
+      "occurred": 1791861171.222354,
+      "received": 1791861172.163072,
+      "payload": {
+       "text": "total 56\ndrwxr-xr-x  4 kangkukjin  staff    128 Oct 13 12:12 .\ndrwxr-xr-x  3 kangkukjin  staff     96 Oct 13 12:12 ..\n-rw-r--r--@ 1 kangkukjin  staff  22098 May 31 15:04 ibl_embedding_trainer_cloud.py\n-rw-r--r--@ 1 kangkukjin  staff   2073 May 31 15:04 make_bundle.sh\n"
+      }
+     },
+     {
+      "cursor": 4341,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "1b4ce89e9750232fac270a24814023f7",
+      "kind": "log",
+      "occurred": 1791861171.2754822,
+      "received": 1791861172.16309,
+      "payload": {
+       "text": "OLD_HEAD=7d80fb85eb3afcdcb883a5d5d3c589723f9fcc32\n"
+      }
+     },
+     {
+      "cursor": 4342,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "415608c48f75f7c531f88e19dbd99d20",
+      "kind": "log",
+      "occurred": 1791861198.249741,
+      "received": 1791861199.361035,
+      "payload": {
+       "text": " create mode 100644 scripts/verify_spreadsheet_followup.py\n create mode 100644 scripts/verify_spreadsheet_links.py\n create mode 100644 scripts/verify_spreadsheet_print.py\n create mode 100644 scripts/verify_spreadsheet_recovery.py\n create mode 100644 scripts/vocab_composition_metrics.py\n"
+      }
+     },
+     {
+      "cursor": 4343,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "a34abd51bf9d5dd38ceda5b7f913bc48",
+      "kind": "log",
+      "occurred": 1791861198.393037,
+      "received": 1791861199.361092,
+      "payload": {
+       "text": "NEW_HEAD=36cc663ab757348c9096ac2b265b40c81a9607ab\n"
+      }
+     },
+     {
+      "cursor": 4344,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "74c1de2856710cea7ecac2ac33fc2639",
+      "kind": "log",
+      "occurred": 1791861198.4575648,
+      "received": 1791861199.361217,
+      "payload": {
+       "text": "ORIGIN=36cc663ab757348c9096ac2b265b40c81a9607ab\n"
+      }
+     },
+     {
+      "cursor": 4345,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "f7ed7e481f4de072437272172864d297",
+      "kind": "log",
+      "occurred": 1791861199.123539,
+      "received": 1791861200.829671,
+      "payload": {
+       "text": "?? data/packages/installed/tools/publishing/\n?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\n"
+      }
+     },
+     {
+      "cursor": 4346,
+      "job": "7bf655b43fd241349199880b6e145e30",
+      "device": "guestpc-9dc41d53987d",
+      "event_id": "9c9187f40727505d673008dd1a0a16d0",
+      "kind": "result",
+      "occurred": 1791861199.134292,
+      "received": 1791861200.8298628,
+      "payload": {
+       "cwd": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "cloud_training/ibl_embedding_trainer_cloud.py local=372e63b0f65d origin=5d3c7f07d9b5\ncloud_training/make_bundle.sh local=d0ed9a3cdc83 origin=94d6c915bf6b\ntotal 56\ndrwxr-xr-x  4 kangkukjin  staff    128 Oct 13 12:12 .\ndrwxr-xr-x  3 kangkukjin  staff     96 Oct 13 12:12 ..\n-rw-r--r--@ 1 kangkukjin  staff  22098 May 31 15:04 ibl_embedding_trainer_cloud.py\n-rw-r--r--@ 1 kangkukjin  staff   2073 May 31 15:04 make_bundle.sh\nOLD_HEAD=7d80fb85eb3afcdcb883a5d5d3c589723f9fcc32\n create mode 100644 scripts/verify_spreadsheet_followup.py\n create mode 100644 scripts/verify_spreadsheet_links.py\n create mode 100644 scripts/verify_spreadsheet_print.py\n create mode 100644 scripts/verify_spreadsheet_recovery.py\n create mode 100644 scripts/vocab_composition_metrics.py\nNEW_HEAD=36cc663ab757348c9096ac2b265b40c81a9607ab\nORIGIN=36cc663ab757348c9096ac2b265b40c81a9607ab\n?? data/packages/installed/tools/publishing/\n?? frontend/src/components/CommercialInstrument.tsx\n?? frontend/src/components/RealtyInstrument.tsx\n"
+      }
+     }
+    ],
+    "cursor": 4346
+   },
+   "task": {
+    "success": true,
+    "task_ref": {
+     "kind": "guestpc",
+     "task_id": "d559c2c903734487a0f017a9602d52be"
+    },
+    "state": "succeeded",
+    "terminal": true,
+    "timed_out": false,
+    "result": {
+     "admin": false,
+     "arch": "arm64",
+     "cwd": "/",
+     "gui": {
+      "input": "osascript(System Events) — 손쉬운 사용 권한 필요",
+      "resolution": "2560x1664",
+      "screen": "screencapture"
+     },
+     "home": "/Users/kangkukjin",
+     "hostname": "MacBook-Air.local",
+     "op": "info",
+     "os": "darwin",
+     "os_version": "macOS 26.5.2",
+     "package_managers": null,
+     "path": "/usr/bin:/bin:/usr/sbin:/sbin",
+     "resident": {
+      "adapter": "resident-v1",
+      "arch": "arm64",
+      "cpu_hard_limit": false,
+      "desktop_stream": 1,
+      "elevation": true,
+      "generation": "c07edfd54683774dd04a97bfec2ec3b8",
+      "go": "go1.26.5",
+      "helper_sha256": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+      "hostname": "MacBook-Air.local",
+      "installation_warnings": [],
+      "interactive": true,
+      "kind": "pc",
+      "max_parallel": 2,
+      "media": true,
+      "media_components": {
+       "components": {
+        "ffmpeg": "/opt/homebrew/bin/ffmpeg",
+        "ffplay": "/opt/homebrew/bin/ffplay",
+        "mpv": "/opt/homebrew/bin/mpv"
+       },
+       "missing": []
+      },
+      "media_player": "/opt/homebrew/bin/mpv",
+      "media_session": {
+       "camera": true,
+       "display": true,
+       "engine": "pion/v4.2.23",
+       "ffmpeg": true,
+       "microphone": true,
+       "playback": true,
+       "speaker": true
+      },
+      "media_volume": true,
+      "memory_hard_limit": false,
+      "observation_parallel": 1,
+      "observation_shell_timeout": 10,
+      "os": "darwin",
+      "screen_cancel": true,
+      "screen_observation": true,
+      "self_update": true,
+      "service_scope": "user_login",
+      "shell": true,
+      "terminal": true,
+      "terminal_lan": true,
+      "transfer": true,
+      "wake_relay": true
+     },
+     "shells": [
+      "bash",
+      "zsh",
+      "sh"
+     ],
+     "tools": [
+      "git",
+      "python3",
+      "curl",
+      "zip",
+      "unzip",
+      "tar",
+      "shasum",
+      "sha256sum",
+      "sips",
+      "ditto"
+     ],
+     "user": "kangkukjin"
+    },
+    "failure": null,
+    "progress": [
+     {
+      "cursor": 9979,
+      "kind": "queued",
+      "occurred": 1792048102.02611
+     },
+     {
+      "cursor": 10066,
+      "kind": "redelivered",
+      "occurred": 1792048235.2489479
+     },
+     {
+      "cursor": 10067,
+      "kind": "started",
+      "occurred": 1792048235.4179049
+     },
+     {
+      "cursor": 10068,
+      "kind": "result",
+      "occurred": 1792048235.471264
+     }
+    ],
+    "accepted_at": "2026-10-15T16:08:22+0900",
+    "elapsed_s": 133.4,
+    "limb": "guestpc-9dc41d53987d",
+    "helper_mode": "resident",
+    "op": "info",
+    "request_id": "8b6087c8d5f042348a34d08c770b0674",
+    "cwd": null,
+    "shell": null,
+    "progress_scope": "recent_5_events",
+    "history_cursor": 10068,
+    "history_args": {
+     "op": "history",
+     "limb": "guestpc-9dc41d53987d",
+     "job": "d559c2c903734487a0f017a9602d52be",
+     "cursor": 0
+    },
+    "started_at": 1792048235.4179049,
+    "seconds": 0.053359031677246094,
+    "outcome": "succeeded",
+    "execution_result": null,
+    "ended_at": 1792048235.471264
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "25248c85b492db0c9cfcef40213e5f5e1b0eacadd1eb09ab2897ef5f3100f254",
+  "usage": {
+   "steps": 18,
+   "rows": 0,
+   "elapsed_ms": 298,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:85",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 16,
+      "end": 85,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:86:177",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 86,
+      "end": 177,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:85",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 19,
+      "end": 85,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:89:177",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 89,
+      "end": 177,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "literal:104:112",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 104,
+      "end": 112,
+      "line": 3,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "literal:123:132",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 123,
+      "end": 132,
+      "line": 3,
+      "column": 38
+     }
+    },
+    {
+     "node_id": "literal:141:175",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 141,
+      "end": 175,
+      "line": 3,
+      "column": 56
+     }
+    },
+    {
+     "node_id": "literal:38:47",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 38,
+      "end": 47,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:53:75",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 53,
+      "end": 75,
+      "line": 2,
+      "column": 38
+     }
+    },
+    {
+     "node_id": "literal:82:84",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 82,
+      "end": 84,
+      "line": 2,
+      "column": 67
+     }
+    },
+    {
+     "node_id": "record:100:177",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 100,
+      "end": 177,
+      "line": 3,
+      "column": 15
+     }
+    },
+    {
+     "node_id": "record:117:176",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 117,
+      "end": 176,
+      "line": 3,
+      "column": 32
+     }
+    },
+    {
+     "node_id": "record:185:205",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 185,
+      "end": 205,
+      "line": 4,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "record:34:85",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 34,
+      "end": 85,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "ref:194:196",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 194,
+      "end": 196,
+      "line": 4,
+      "column": 17
+     }
+    },
+    {
+     "node_id": "ref:202:204",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 202,
+      "end": 204,
+      "line": 4,
+      "column": 25
+     }
+    },
+    {
+     "node_id": "return:178:205",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 178,
+      "end": 205,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:205",
+     "steps": 1,
+     "location": {
+      "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2",
+      "start": 15,
+      "end": 205,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 3,
+     "steps": 7,
+     "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2"
+    },
+    {
+     "line": 2,
+     "steps": 6,
+     "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2"
+    },
+    {
+     "line": 4,
+     "steps": 4,
+     "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 27,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2"
+    },
+    {
+     "line": 3,
+     "ms": 8,
+     "calls": 1,
+     "actions": [
+      "self:task"
+     ],
+     "source_hash": "78761288b1dfd073d88fd4a0e4e27c31f47595e0c448fd3292b39957dc7b32c2"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "111bf697b9c64a00a23923bd7adaf393"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "111bf697b9c64a00a23923bd7adaf393"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "111bf697b9c64a00a23923bd7adaf393",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/backend"
+  },
+  "recordings_ref": {
+   "items": [],
+   "ref": {
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/20261015_161041_recordings_106bde.json",
+    "kind": "list",
+    "count": 2,
+    "bytes": 198205,
+    "expires_at": "2026-10-16T16:10:41"
+   },
+   "_spilled": true
+  },
+  "recordings_count": 2,
+  "recordings_note": "실행 영수증 원문은 recordings_ref에 보존했습니다. 재생 시 원문 목록을 읽으세요."
+ }
+}

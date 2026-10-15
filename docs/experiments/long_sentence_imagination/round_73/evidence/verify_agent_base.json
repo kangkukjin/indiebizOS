@@ -1,0 +1,89 @@
+{
+ "per_device": {
+  "KHJoffice-result.json": {
+   "rows_exact": true,
+   "sum_ok": true,
+   "identity": {
+    "device_id": "guestpc-7da97e970821",
+    "hostname": "KHJoffice",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.1",
+    "processed_at": "2026-10-15T16:23:46+09:00"
+   },
+   "keys": [
+    "identity",
+    "sum",
+    "count",
+    "rows"
+   ]
+  },
+  "tv1-result.json": {
+   "rows_exact": true,
+   "sum_ok": true,
+   "identity": {
+    "device_id": "guestpc-70e163471313",
+    "hostname": "DESKTOP-VQJGB71",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python": "3.12.10",
+    "processed_at": "2026-10-15T16:23:51+09:00"
+   },
+   "keys": [
+    "identity",
+    "sum",
+    "count",
+    "rows"
+   ]
+  },
+  "맥12-result.json": {
+   "rows_exact": true,
+   "sum_ok": true,
+   "identity": {
+    "device_id": "guestpc-3fd796167b18",
+    "hostname": "kang-old-MacBook-Air.local",
+    "platform": "macOS-15.7.9-x86_64-i386-64bit",
+    "python": "3.9.6",
+    "processed_at": "2026-10-15T16:23:44+09:00"
+   },
+   "keys": [
+    "identity",
+    "sum",
+    "count",
+    "rows"
+   ]
+  },
+  "삼성0-result.json": {
+   "rows_exact": true,
+   "sum_ok": false,
+   "identity": {
+    "device_id": "guestpc-fc7b12fba936",
+    "hostname": null,
+    "hostname_note": "phone IBL has no hostname action; /proc/sys/kernel/hostname permission denied",
+    "processed_at": "2026-10-15 16:24:41 KST+0900",
+    "method": "phone IBL (limbs:guestpc op:ibl, edition 2)"
+   },
+   "keys": [
+    "identity",
+    "sum",
+    "count",
+    "rows"
+   ]
+  },
+  "삼성1-result.json": {
+   "rows_exact": true,
+   "sum_ok": false,
+   "identity": {
+    "device_id": "guestpc-4e51c614b25b",
+    "hostname": null,
+    "hostname_note": "phone IBL has no hostname action; /proc/sys/kernel/hostname permission denied",
+    "processed_at": "2026-10-15 16:24:43 KST+0900",
+    "method": "phone IBL (limbs:guestpc op:ibl, edition 2)"
+   },
+   "keys": [
+    "identity",
+    "sum",
+    "count",
+    "rows"
+   ]
+  }
+ }
+}

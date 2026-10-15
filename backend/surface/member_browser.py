@@ -16,8 +16,6 @@ def browser_html():
     html = html.replace('내 컴퓨터', '내 기기')
     html = html.replace("'task_id'].includes", "'task_id','body_session'].includes")
     html = html.replace("shell:'명령 실행'", "javascript:'브라우저 계산',shell:'명령 실행'")
-    html = html.replace("document.getElementById('gearLever').contains",
-                        "document.getElementById('gearLever')?.contains")
     html = html.replace("if('serviceWorker' in navigator){", "if(false){")
     login = '''<main id="memberLogin"><small>INDIEBIZ · MEMBER WORKSPACE</small>
 <h1>내 기기에서 바로 시작하세요</h1>

@@ -71,7 +71,7 @@ def test_catalogue_drops_owner_targets_and_empty_modes(monkeypatch, tmp_path):
 def test_browser_has_two_surfaces_and_no_owner_controls():
     from member_browser import browser_html
     html = browser_html()
-    nav = re.search(r'<nav id="memberNav">(.*?)</nav>', html).group(1)
+    nav = re.search(r'<nav id="memberNav"[^>]*>(.*?)</nav>', html).group(1)
     assert re.findall(r'data-view="(.*?)"', nav) == ['drive', 'apps']
     assert 'id="openMemberFiles"' in html and 'id="memberArtifacts"' in html
     assert 'id="gearLever"' not in html and 'data-view="settings"' not in html

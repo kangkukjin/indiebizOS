@@ -343,7 +343,7 @@ async function setConsciousness(enabled){
 }
 /* 위임 핸들러 — 인라인 onclick 없이 data-속성으로(따옴표 함정 회피) */
 document.addEventListener('click',function(ev){
-  const t=ev.target.closest('[data-act]'); if(!t||!document.getElementById('gearLever').contains(t)) return;
+  const t=ev.target.closest('[data-act]'); if(!t||!document.getElementById('gearLever')?.contains(t)) return;
   const act=t.getAttribute('data-act');
   if(act==='toggle') gearToggle();
   else if(act==='gear') setGearTo(t.getAttribute('data-g'));
@@ -351,7 +351,7 @@ document.addEventListener('click',function(ev){
   else if(act==='mind') setConsciousness(!(gearState&&gearState.consciousness_enabled!==false));
 });
 document.addEventListener('change',function(ev){
-  const t=ev.target; if(!t.getAttribute||!document.getElementById('gearLever').contains(t)) return;
+  const t=ev.target; if(!t.getAttribute||!document.getElementById('gearLever')?.contains(t)) return;
   const act=t.getAttribute('data-act');
   if(act==='cell'){ const gn=t.getAttribute('data-gn'),ax=t.getAttribute('data-ax'); if(!gearPresetDraft[gn])gearPresetDraft[gn]={}; gearPresetDraft[gn][ax]=t.value; }
   else if(act==='pin') setGearPin(t.getAttribute('data-id'),t.value);

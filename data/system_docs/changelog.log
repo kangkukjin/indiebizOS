@@ -2618,3 +2618,5 @@
 2026-10-15 FIX: 회원 앱의 비동기 before-quit 취소 직후 microtask에서 app.quit을 재호출하던 경합 수리. 실행부 정리 후 setImmediate로 다음 이벤트 루프에서 종료하며 정리 예외도 처리. lifecycle 5건 포함 npm test 18 통과·선택 helper 2 제외. Mac 로컬 앱/zip 재빌드, 실제 Cmd+Q 후 프로세스 0개와 macOS 앱 목록 isRunning=false 확인. backend 전수·Windows 미실행.
 
 2026-10-15 FIX: 긴문장74 회원 데스크톱 범위 발췌 훈련. Document 읽기의 numbered 소실과 회원 splitlines의 U+2028/수직 탭 행 오판정 수리. 주인/회원 CR/LF/CRLF 행 좌표 통합, 줄번호·줄끝·공백 보존. 전체 IBL 18재실행·독립 회원 AI 기본/누락 전건 통과, 관련471통과·1건너뜀. docs/experiments/long_sentence_imagination/round_74/report.md
+
+2026-10-15 FIX: 회원 작업 공간의 한국어/일본어 혼용 중단 버튼을 한국어로 정정. 세션 목록·대화 2컬럼, 최근/진행 세션 자동 열기, 기존 기록을 보존하는 새 세션 시작, 빈 화면 안내·대화 스크롤·앱/파일 표면 전환 정리. 늦은 조회·접수의 선택 덮어쓰기와 공통 기어 DOM 부재 예외 방지. 관련 80/697 파일(11%) 일반 회귀 1190통과, Node18통과·실행부 선택2제외, TypeScript·frontend 빌드·층 가드·Mac arm64 앱/ZIP 재빌드 완료. 예시 대화의 실제 Chromium 표시 검증, 전체 backend·Windows·실제 모델 호출 미실행. docs/MEMBER_DESKTOP_DESIGN_2026_10_15.md.

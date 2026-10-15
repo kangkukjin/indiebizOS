@@ -74,6 +74,14 @@ func (m *MemberRuntime) serve() error {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		if r.Method == "GET" && r.URL.Path == "/member/changes" {
+			json.NewEncoder(w).Encode(m.changes(r.URL.Query().Get("id")))
+			return
+		}
+		if r.Method == "GET" && r.URL.Path == "/member/connection" {
+			json.NewEncoder(w).Encode(m.diagnostics())
+			return
+		}
 		if r.Method == "GET" && r.URL.Path == "/member/tasks" {
 			json.NewEncoder(w).Encode(m.tasks())
 			return
@@ -119,7 +127,7 @@ func (m *MemberRuntime) serve() error {
 			return
 		}
 		var body map[string]interface{}
-		if err := json.NewDecoder(io.LimitReader(r.Body, 1024*1024)).Decode(&body); err != nil {
+		if err := json.NewDecoder(io.LimitReader(r.Body, 47*1024*1024)).Decode(&body); err != nil {
 			http.Error(w, "json", 400)
 			return
 		}
@@ -135,6 +143,10 @@ func (m *MemberRuntime) serve() error {
 				return
 			}
 			json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		case "/member/restore":
+			json.NewEncoder(w).Encode(m.restoreArchive(body))
+		case "/member/permissions":
+			json.NewEncoder(w).Encode(m.permissions(body))
 		case "/member/file":
 			json.NewEncoder(w).Encode(m.localFile(body))
 		case "/member/task/start":
@@ -160,6 +172,10 @@ func (m *MemberRuntime) serve() error {
 		case "/member/chat", "/member/close", "/member/profile", "/member/apps":
 			if r.URL.Path == "/member/close" {
 				m.stopLocalWork()
+				if m.cfg.Desktop {
+					json.NewEncoder(w).Encode(map[string]bool{"success": true})
+					return
+				}
 			}
 			target := map[string]string{"/member/chat": "/m/chat", "/member/close": "/m/session/close", "/member/profile": "/m/profile", "/member/apps": "/m/apps"}[r.URL.Path]
 			// 키와 신원은 로컬 설정만 소유한다. 브라우저 입력은 메시지뿐이다.
@@ -173,6 +189,7 @@ func (m *MemberRuntime) serve() error {
 			raw, _ := json.Marshal(request)
 			req, _ := http.NewRequestWithContext(r.Context(), "POST", m.cfg.Base+target, strings.NewReader(string(raw)))
 			req.Header.Set("Content-Type", "application/json")
+			_ = signMember(req, raw, m.cfg)
 			resp, err := c.Do(req)
 			if err != nil {
 				json.NewEncoder(w).Encode(errResult("connection", "연결이 끊겼습니다. 결과 목록에서 상태를 확인하세요"))
@@ -196,7 +213,9 @@ func (m *MemberRuntime) serve() error {
 	})
 	m.server = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	go func() { _ = m.server.Serve(ln) }()
-	fmt.Printf("회원 화면: %s/#%s\n", origin, m.token)
+	if !m.cfg.Desktop {
+		fmt.Printf("회원 화면: %s/#%s\n", origin, m.token)
+	}
 	// 브라우저에는 로컬 한시 토큰만 전달한다. limb key는 URL·HTML에 넣지 않는다.
 	if os.Getenv("INDIEBIZ_MEMBER_NO_BROWSER") != "1" {
 		go memberOpen(Command{Op: "open", URL: origin + "/#" + m.token})

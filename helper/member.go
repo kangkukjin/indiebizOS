@@ -24,19 +24,24 @@ type Approval struct {
 	answer  chan bool
 }
 type MemberRuntime struct {
-	activeCancel context.CancelFunc
-	taskMu       sync.Mutex
-	runningTask  string
-	mediaPending *MemberMedia
-	localURL     string
-	server       *http.Server
-	store        *MemberStore
-	cfg          *Config
-	dir          string
-	execMu       sync.Mutex
-	mu           sync.Mutex
-	approvals    map[string]*Approval
-	token        string
+	transportOnline bool
+	lastContact     time.Time
+	taskStopped     bool
+	requestID       string
+	fileMu          sync.Mutex
+	activeCancel    context.CancelFunc
+	taskMu          sync.Mutex
+	runningTask     string
+	mediaPending    *MemberMedia
+	localURL        string
+	server          *http.Server
+	store           *MemberStore
+	cfg             *Config
+	dir             string
+	execMu          sync.Mutex
+	mu              sync.Mutex
+	approvals       map[string]*Approval
+	token           string
 }
 
 var memberRuntime *MemberRuntime
@@ -101,8 +106,12 @@ func (m *MemberRuntime) run(j Job) map[string]interface{} {
 	if err := json.Unmarshal([]byte(j.Code), &c); err != nil {
 		return errResult("bad_command", "봉투 파싱 실패")
 	}
+	c.JobID = j.ID
 	if !c.Member || c.RequestKey == "" {
 		return errResult("member_envelope_required", "회원 작업 봉투가 필요합니다")
+	}
+	if !m.desktopValid(c) {
+		return errResult("expired_task", "작업 또는 연결 승인이 만료되었습니다")
 	}
 	if c.Op == "result_query" {
 		return m.store.query(c.QueryKey)
@@ -126,7 +135,7 @@ func (m *MemberRuntime) run(j Job) map[string]interface{} {
 		return errResult("storage", err.Error())
 	}
 	var result map[string]interface{}
-	if !m.approve(c) {
+	if !m.approve(c) || !m.desktopValid(c) {
 		result = errResult("permission_denied", "회원이 승인하지 않았습니다")
 	} else {
 		if err = m.store.running(c.RequestKey); err != nil {
@@ -137,7 +146,11 @@ func (m *MemberRuntime) run(j Job) map[string]interface{} {
 		m.activeCancel = cancel
 		m.mu.Unlock()
 		c.ctx = ctx
-		result = m.execute(c)
+		if checked, err := m.scopeCommand(c); err != nil {
+			result = errResult("workspace", err.Error())
+		} else {
+			result = m.execute(checked)
+		}
 		cancel()
 		m.mu.Lock()
 		m.activeCancel = nil
@@ -216,7 +229,7 @@ func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 			}
 			return map[string]interface{}{"success": true, "content": base64.StdEncoding.EncodeToString(b), "encoding": "base64", "path": c.Path}
 		}
-		return doRead(c)
+		return memberRead(c)
 	case "write":
 		if c.Encoding == "base64" {
 			b, err := base64.StdEncoding.DecodeString(c.Content)
@@ -225,7 +238,7 @@ func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 			}
 			c.Content = string(b)
 		}
-		return memberWrite(c)
+		return m.safeWrite(c)
 	case "list":
 		return doList(c)
 	case "shell":
@@ -235,7 +248,15 @@ func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 	case "info":
 		return doInfo()
 	case "screen":
+		if m.cfg.Desktop && !m.screenAllowed() {
+			return errResult("permission_denied", "설정에서 화면 접근을 켜세요")
+		}
 		return doScreen(c)
+	case "click", "move", "type", "key", "scroll", "drag":
+		if !m.cfg.Desktop || !m.screenAllowed() {
+			return errResult("permission_denied", "설정에서 화면 접근을 켜세요")
+		}
+		return doInput(c)
 	case "media":
 		return m.media(c)
 	case "play", "open":
@@ -257,6 +278,12 @@ func memberWrite(c Command) map[string]interface{} {
 		return errResult("write_failed", err.Error())
 	}
 	defer os.Remove(f.Name())
+	if info, e := os.Stat(c.Path); e == nil {
+		if e = f.Chmod(info.Mode().Perm()); e != nil {
+			f.Close()
+			return errResult("write_failed", e.Error())
+		}
+	}
 	if _, err = f.Write([]byte(c.Content)); err == nil {
 		err = f.Sync()
 	}
@@ -325,8 +352,10 @@ func runMemberProgramContext(parent context.Context, path, interpreter string, a
 }
 
 func (m *MemberRuntime) stopLocalWork() {
+	m.cancelDesktop()
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.taskStopped = true
 	if m.activeCancel != nil {
 		m.activeCancel()
 	}

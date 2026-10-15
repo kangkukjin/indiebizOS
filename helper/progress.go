@@ -23,16 +23,22 @@ const (
 )
 
 type progressReporter struct {
-	jobID string
-	mu    sync.Mutex
-	buf   []byte
-	total int
-	done  chan struct{}
-	once  sync.Once
+	jobID  string
+	taskID string
+	mu     sync.Mutex
+	buf    []byte
+	total  int
+	done   chan struct{}
+	once   sync.Once
 }
 
 func newProgressReporter(jobID string) *progressReporter {
 	p := &progressReporter{jobID: jobID, done: make(chan struct{})}
+	if memberRuntime != nil && memberRuntime.cfg.Desktop {
+		memberRuntime.taskMu.Lock()
+		p.taskID = memberRuntime.runningTask
+		memberRuntime.taskMu.Unlock()
+	}
 	if jobID != "" && hubCfg != nil {
 		go p.loop()
 	}
@@ -90,6 +96,10 @@ func (p *progressReporter) send() {
 	}
 	tail = trimBrokenUTF8Prefix(tail)
 
+	if p.taskID != "" && memberRuntime != nil {
+		memberRuntime.taskEvent(p.taskID, "progress", map[string]interface{}{"type": "command_output", "tail": tail})
+		return
+	}
 	body := map[string]interface{}{
 		"key": hubCfg.Key, "job_id": p.jobID,
 		"tail": tail, "bytes": total, "running": true,

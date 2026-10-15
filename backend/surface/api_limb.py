@@ -29,7 +29,9 @@ import device_registry as dr
 import limb_keys
 import phone_jobs
 
-router = APIRouter()
+from member_device_auth import MemberRoute
+
+router = APIRouter(route_class=MemberRoute)
 
 # 헬퍼가 물어보는 롱폴 최대 hold(초). heartbeat 상한(50)과 맞춘다.
 MAX_POLL_WAIT = 50.0
@@ -153,6 +155,8 @@ async def limb_poll(req: PollRequest):
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
 
+    if rec.get("desktop") and req.env and req.env.get("protocol") != 2:
+        return {"success": False, "error": "unsupported_desktop_protocol"}
     device_id = rec["device_id"]
 
     # ★최신 헬퍼가 이긴다 — 같은 키로 새 헬퍼가 붙으면 세션 id 가 갈리고, 낡은 쪽은
@@ -172,7 +176,11 @@ async def limb_poll(req: PollRequest):
 
     wait = min(max(0.0, float(req.wait)), MAX_POLL_WAIT)
     if rec.get('member_id') or (limb_keys.is_member(rec) and (rec.get('env') or {}).get('client') == 'web'):
-        jobs = await anyio.to_thread.run_sync(phone_jobs.pull_blocking, device_id, wait, req.session)
+        queue = phone_jobs
+        if rec.get("desktop"):
+            import member_jobs
+            queue = member_jobs
+        jobs = await anyio.to_thread.run_sync(queue.pull_blocking, device_id, wait, req.session)
         latest = limb_keys.validate(req.key)
         if not latest or latest.get('session') != req.session:
             return {"success": True, "approved": True, "jobs": [], "stale": True}
@@ -193,7 +201,8 @@ async def limb_progress(req: ProgressRequest):
         return {"success": False, "error": "invalid_or_expired_key"}
     if not await anyio.to_thread.run_sync(_job_owned, req.job_id, rec):
         return {"success": False, "error": "job_not_owned"}
-    await anyio.to_thread.run_sync(phone_jobs.set_partial, req.job_id, {
+    queue = _job_queue(req.job_id)
+    await anyio.to_thread.run_sync(queue.set_partial, req.job_id, {
         "tail": req.tail, "bytes": req.bytes, "running": req.running})
     return {"success": True}
 
@@ -208,16 +217,23 @@ async def limb_result(req: ResultRequest):
         return {"success": False, "error": "stale_browser_session"}
     if not await anyio.to_thread.run_sync(_job_owned, req.job_id, rec):
         return {"success": False, "error": "job_not_owned"}
-    await anyio.to_thread.run_sync(phone_jobs.set_result, req.job_id, req.result)
+    await anyio.to_thread.run_sync(_job_queue(req.job_id).set_result, req.job_id, req.result)
     return {"success": True}
 
 
 def _job_owned(job_id: str, rec: dict) -> bool:
     """회신 귀속(2026-09-14, docs/EXTERNAL_SERVICE_APP_HANDOFF.md §3-3): 그 키의 기기에 발급된 작업만 회신할
     수 있다 — 회원 B 의 헬퍼가 회원 A 의 결과를 덮어쓰지 못한다. 모르는 작업도 거절(귀속 불명=거절)."""
-    owner = phone_jobs.owner_of(job_id)
+    owner = _job_queue(job_id).owner_of(job_id)
     return bool(owner) and owner == rec.get("device_id")
 
 
 from api_resident_pcs import router as resident_router
 router.include_router(resident_router)
+
+
+def _job_queue(job_id):
+    if job_id.startswith('md-'):
+        import member_jobs
+        return member_jobs
+    return phone_jobs

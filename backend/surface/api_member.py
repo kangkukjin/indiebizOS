@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field
 
 import limb_keys
 
-router = APIRouter()
+from member_device_auth import MemberRoute
+
+router = APIRouter(route_class=MemberRoute)
 
 
 class MemberChat(BaseModel):
@@ -137,8 +139,8 @@ async def member_socket(ws: WebSocket):
         hello = await asyncio.wait_for(ws.receive_json(), timeout=10)
         key = hello.get("key", "")
         ident, error = _member_of(key)
-        if error:
-            await ws.send_json(error)
+        if error or (ident and ident[0].get("desktop")):
+            await ws.send_json(error or {"success": False, "error": "desktop_http_required"})
             await ws.close(code=4401)
             return
         rec, nid, level = ident

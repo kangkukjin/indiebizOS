@@ -15,6 +15,8 @@ import (
 func (m *MemberRuntime) initTasks() error {
 	_, err := m.store.db.Exec(`CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,title TEXT,workspace TEXT,state TEXT,result TEXT,created INTEGER,updated INTEGER);
  CREATE TABLE IF NOT EXISTS task_events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT,kind TEXT,content TEXT);
+ CREATE TABLE IF NOT EXISTS desktop_requests(request TEXT PRIMARY KEY,task TEXT,cursor INTEGER,state TEXT);
+ CREATE TABLE IF NOT EXISTS file_changes(id TEXT PRIMARY KEY,task TEXT,path TEXT,before BLOB,existed INTEGER,after_hash TEXT,created INTEGER);
  CREATE TABLE IF NOT EXISTS member_settings(key TEXT PRIMARY KEY,value TEXT);
  UPDATE tasks SET state='unknown' WHERE state='running';`)
 	_, _ = m.store.db.Exec("ALTER TABLE conversations ADD COLUMN task_id TEXT NOT NULL DEFAULT ''")
@@ -107,7 +109,8 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 	message, _ := body["message"].(string)
 	code, _ := body["code"].(string)
 	id, _ := body["task_id"].(string)
-	if strings.TrimSpace(message) == "" && code == "" {
+	action, _ := body["action_id"].(string)
+	if strings.TrimSpace(message) == "" && code == "" && !(m.cfg.Desktop && action != "") {
 		return errResult("input", "요청을 입력하세요")
 	}
 	m.taskMu.Lock()
@@ -143,11 +146,22 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 	}
 	m.runningTask = id
 	m.taskEvent(id, "user", message)
-	go m.runTask(id, message, code)
+	if m.cfg.Desktop {
+		go func() {
+			defer func() { m.taskMu.Lock(); m.runningTask = ""; m.taskMu.Unlock() }()
+			m.desktopTaskBody(id, body)
+		}()
+	} else {
+		go m.runTask(id, message, code)
+	}
 	return map[string]interface{}{"success": true, "queued": true, "task_id": id}
 }
 func (m *MemberRuntime) runTask(id, message, code string) {
 	defer func() { m.taskMu.Lock(); m.runningTask = ""; m.taskMu.Unlock() }()
+	if m.cfg.Desktop {
+		m.desktopTask(id, message, code)
+		return
+	}
 	body := map[string]interface{}{"key": m.cfg.Key, "task_id": id, "message": message}
 	if code != "" {
 		body["code"] = code
@@ -220,6 +234,9 @@ func (m *MemberRuntime) recallTask(c Command) map[string]interface{} {
 	out["history"] = history
 	out["workspace"] = root
 	out["shell_available"] = true
+	out["files_available"] = m.cfg.Desktop
+	out["screen_available"] = m.cfg.Desktop && m.screenAllowed()
+	out["environment"] = doInfo()
 	return out
 }
 func (m *MemberRuntime) scopeCommand(c Command) (Command, error) {

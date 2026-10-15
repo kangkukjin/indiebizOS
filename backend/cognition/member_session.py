@@ -253,6 +253,8 @@ class MemberSessionManager:
                     recalled = request({"op": "memory_recall", "query": message, "limit": 40})
                     if recalled.get("success") is False:
                         return recalled
+                mr.current()["files_available"] = bool(local_task_id and recalled.get("files_available"))
+                mr.current()["screen_available"] = bool(local_task_id and recalled.get("screen_available"))
                 mr.current()["shell_available"] = bool(local_task_id and recalled.get("shell_available"))
                 mr.current()["javascript_available"] = bool(local_task_id and recalled.get("javascript_available"))
                 if code is None:
@@ -270,7 +272,7 @@ class MemberSessionManager:
                     s.runner.config["_member_memory"] = json.dumps({"memories": recalled.get("memories", []), "recent_results": recalled.get("recent_results", [])}, ensure_ascii=False)
                     if recalled.get("context_truncated"):
                         s.runner.config["_member_memory"] += "\n기기 회상 용량 제한으로 일부 이전 맥락이 생략됐습니다. 필요한 자료는 직접 읽거나 질문하세요."
-                    s.runner.config["_member_memory"] += "\n회원 작업 폴더: " + str(recalled.get("workspace", ""))
+                    s.runner.config["_member_memory"] += "\n회원 작업 폴더: " + str(recalled.get("workspace", "")) + "\n회원 PC 환경: " + json.dumps(recalled.get("environment", {}), ensure_ascii=False)
                     s.runner.config["_member_libraries"] = [str(x.get("code", "")) for x in recalled.get("sentences", [])]
                     s.runner.config["_member_sentences"] = "\n".join(str(x.get("code", "")) for x in recalled.get("sentences", []))
                 model_message = message

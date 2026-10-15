@@ -30,6 +30,7 @@
     "base/korean_utils",
     "base/limb_keys",
     "base/logging_utils",
+    "base/member_jobs",
     "base/member_runtime",
     "base/memory_provenance",
     "base/mime_compat",
@@ -124,6 +125,7 @@
     "cognition/ibl_usage_rag",
     "cognition/ibl_v2_experience",
     "cognition/legacy_example_projection",
+    "cognition/member_local_tools",
     "cognition/member_runner",
     "cognition/member_session",
     "cognition/memory_consolidation",
@@ -372,6 +374,7 @@
     "services/media_ops",
     "services/media_sessions",
     "services/media_signaling",
+    "services/member_desktop_requests",
     "services/model_settings_view",
     "services/multi_chat_manager",
     "services/nas_music",
@@ -429,9 +432,7 @@
     "surface/api_health",
     "surface/api_ibl",
     "surface/api_launcher_web",
-    "surface/api_limb",
     "surface/api_media",
-    "surface/api_member",
     "surface/api_member_pcs",
     "surface/api_models",
     "surface/api_multi_chat",
@@ -449,7 +450,6 @@
     "surface/api_projects",
     "surface/api_prompt_composition",
     "surface/api_pursuits",
-    "surface/api_records",
     "surface/api_repair_continuation",
     "surface/api_report",
     "surface/api_resident_pcs",
@@ -566,7 +566,11 @@
     "api_config": "force_exclude (프로파일 명시)",
     "api_env": "via api_config",
     "api_lecture_workspace": "force_exclude (프로파일 명시)",
+    "api_limb": "via member_device_auth",
+    "api_member": "via member_device_auth",
+    "api_member_desktop": "via member_device_auth",
     "api_nas_hls": "force_exclude (프로파일 명시)",
+    "api_records": "via member_device_auth",
     "api_runtime": "force_exclude (프로파일 명시)",
     "api_showcase": "via hls_ladder",
     "api_ytrelay": "force_exclude (프로파일 명시)",
@@ -577,6 +581,8 @@
     "hls_ladder": "force_exclude (프로파일 명시)",
     "ibl_opus_bulk_gen": "force_exclude (프로파일 명시)",
     "ibl_synthetic_generator": "top-level import: google",
+    "member_device_auth": "top-level import: cryptography",
+    "member_enrollment": "top-level import: cryptography",
     "nip17": "top-level import: pynostr",
     "nip44": "top-level import: cryptography",
     "red_apply": "force_exclude (프로파일 명시)",
@@ -594,8 +600,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 519,
+    "total": 525,
     "engine": 493,
-    "blocklist": 26
+    "blocklist": 32
   }
 }

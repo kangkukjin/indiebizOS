@@ -93,7 +93,8 @@ def overview():
                      "created_at": rec["created_at"], "expires_at": rec["expires_at"],
                      "last_seen": presence.get("last_seen") or rec["last_used"],
                      "host": rec["last_host"] or "", "os": str(env.get("os", "")),
-                     "client": "web" if env.get("client") == "web" else "native" if rec["last_used"] else "",
+                     "client_version": env.get("client_version", ""),
+                     "client": "desktop" if env.get("client") == "desktop" else "web" if env.get("client") == "web" else "native" if rec["last_used"] else "",
                      "turns_today": used.get("turns", 0), "tokens_today": used.get("tokens", 0),
                      "active_tasks": active, "daily_limit": policy["daily_turns"]})
     return {"address": member_address(), "pcs": rows,
@@ -138,3 +139,19 @@ def unregister(device_id: str):
     limb_keys.update_member_pc(device_id, revoke_key=True)
     _stop(device_id, rec["member_id"])
     return {"success": True}
+
+
+@router.post("/{device_id}/invite")
+def invite(device_id: str):
+    from member_enrollment import issue
+    from urllib.parse import urlencode, urlsplit
+    _require(device_id)
+    try:
+        result = issue(device_id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    address = member_address()
+    parsed = urlsplit(address["url"])
+    hub = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else ""
+    return {**result, "address": address, "hub": hub,
+            "link": "indiebiz-member://enroll?" + urlencode({"hub": hub, "code": result["code"]})}

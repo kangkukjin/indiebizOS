@@ -15,7 +15,9 @@ from record_policy import from_principal, require_owner
 from record_facade import execute, spaces
 from record_store import create_space, transaction, definition, uid
 
-class RecordRoute(APIRoute):
+from member_device_auth import MemberRoute
+
+class RecordRoute(MemberRoute):
     def get_route_handler(self):
         handler = super().get_route_handler()
         async def guarded(request):

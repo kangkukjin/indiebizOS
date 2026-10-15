@@ -40,16 +40,20 @@ def request(command, timeout=None):
     emit = state.get("on_event")
     if emit and command.get("op") not in {"memory_recall", "memory_save"}:
         emit({"type": "client_action_required", "op": command.get("op"), "request_key": key})
-    job = phone_jobs.enqueue(p.device_id, json.dumps(envelope, ensure_ascii=False), p.key())
+    queue = phone_jobs
+    if rec.get("desktop"):
+        import member_jobs
+        queue = member_jobs
+    job = queue.enqueue(p.device_id, json.dumps(envelope, ensure_ascii=False), p.key())
     state["jobs"].add(job)
     deadline = min(state["deadline"], time.monotonic() + float(timeout or state["policy"].get("command_timeout_s", 120)))
     result = None
     while time.monotonic() < deadline and not state["cancel"].is_set():
-        result = phone_jobs.wait_result(job, timeout=min(1, max(0, deadline-time.monotonic())))
+        result = queue.wait_result(job, timeout=min(1, max(0, deadline-time.monotonic())))
         if result is not None:
             break
     if result is None:
-        phone_jobs.cancel_pending(job)
+        queue.cancel_pending(job)
         return {"success": False, "error_type": "result_unknown", "request_key": key,
                 "error": "결과를 아직 확인하지 못했습니다. 같은 작업을 다시 실행하지 말고 결과를 조회하세요."}
     if not isinstance(result, dict):

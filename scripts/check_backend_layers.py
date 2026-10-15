@@ -46,7 +46,7 @@ LAYERS = {
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
-        "member_runtime", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
+        "member_jobs", "member_enrollment", "member_runtime", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "imap_reader", "logging_utils", "mime_compat", "model_resolver", "model_context", "nip17", "nip44",
         "resident_store", "phone_jobs", "principal", "approval_tokens", "action_requires", "task_receipts", "warehouse_paths", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "selfbuild_gate", "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
@@ -98,7 +98,7 @@ LAYERS = {
         "unified_distill", "distill_memory_adapters",
         "catalog_recall", "world_context", "associative_recall",
         "capability_guard", "capability_guard_runtime",
-        "member_runner", "member_session", "client_workflows",
+        "member_local_tools", "member_runner", "member_session", "client_workflows",
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
         "weekly_audits",
         "agent_pipeline", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view", "model_value_preview",
@@ -123,7 +123,7 @@ LAYERS = {
         "launcher_ops", "chat_room_ops", "warehouse_ops", "warehouse_admin", "channel_settings_ops", "media_ops",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "spreadsheet_grid", "spreadsheet_templates", "spreadsheet_conversion_types", "spreadsheet_formats", "spreadsheet_changes", "spreadsheet_imports", "spreadsheet_workspace", "spreadsheet_files", "document_hwp", "document_pdf", "document_formats", "document_pages", "document_imports", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_projects", "workspace_sessions",
         "record_dispatch", "record_adapters",
-        "client_agent",
+        "member_desktop_requests", "client_agent",
         "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper",
         "calendar_actions", "calendar_html", "cdn_provision",
         "channel_poller", "ffmpeg_provision", "gen_newspaper",
@@ -137,7 +137,7 @@ LAYERS = {
     },
     # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한
     # portal_warehouse 와의 상호 순환도 같은 층 안이 맞다)
-    "surface": {"api_member_pcs", "record_app_page", "api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
+    "surface": {"member_device_auth", "api_member_desktop","api_member_pcs", "record_app_page", "api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
 }
 SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common", "file_script_cli"}

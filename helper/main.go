@@ -32,6 +32,8 @@ import (
 
 // 옆에 놓인 설정 파일 — 발급기([self:limb]{op:issue})가 USB 에 써 넣는다.
 type Config struct {
+	Desktop        bool     `json:"desktop,omitempty"`
+	PrivateKey     string   `json:"private_key,omitempty"`
 	InstallationID string   `json:"installation_id,omitempty"`
 	Generation     string   `json:"generation,omitempty"`
 	ExpiresAt      float64  `json:"expires_at,omitempty"`
@@ -50,6 +52,8 @@ type Job struct {
 }
 
 type Command struct {
+	BodySession      string                 `json:"body_session,omitempty"`
+	ExpectedHash     string                 `json:"expected_hash,omitempty"`
 	ScriptProtocol   string                 `json:"script_protocol,omitempty"`
 	CallableContract map[string]interface{} `json:"callable_contract,omitempty"`
 	ctx              context.Context
@@ -117,6 +121,9 @@ const (
 var client = &http.Client{Timeout: 90 * time.Second}
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--member-desktop" {
+		os.Exit(memberDesktopMain())
+	}
 	if len(os.Args) == 4 && os.Args[1] == "--resident-elevated" {
 		os.Exit(residentElevatedMain(os.Args[2], os.Args[3]))
 	}
@@ -249,7 +256,13 @@ var hubCfg *Config
 func connect(cfg *Config, host string) error {
 	// ★환경 프로브를 **접속 때 함께** 올린다 — 허브가 왕복 없이 그 PC 신상을 갖게 해서,
 	// AI 가 낯선 PC 에서 명령 문법·패키지매니저를 추측하다 실패하는 왕복을 없앤다.
-	body := map[string]interface{}{"key": cfg.Key, "host": host, "env": doInfo(), "mode": cfg.Mode}
+	env := doInfo()
+	if cfg.Desktop {
+		env["client"] = "desktop"
+		env["client_version"] = "0.1.0"
+		env["protocol"] = 2
+	}
+	body := map[string]interface{}{"key": cfg.Key, "host": host, "env": env, "mode": cfg.Mode}
 	var resp struct {
 		Success  bool   `json:"success"`
 		Error    string `json:"error"`
@@ -266,7 +279,7 @@ func connect(cfg *Config, host string) error {
 	if !resp.Approved {
 		fmt.Println("아직 승인 대기 중입니다 — 허브에서 이 손발을 승인하면 명령이 시작됩니다.")
 	}
-	sessionID = resp.Session
+	setBodySession(resp.Session)
 	return nil
 }
 
@@ -305,13 +318,27 @@ func loop(cfg *Config) {
 		if err != nil {
 			// 네트워크 흔들림 — 회원은 재접속해 허브 재시작 뒤 프레즌스도 다시 세운다.
 			if cfg.Mode == "member" {
-				_ = connect(cfg, hostLabel())
+				if cfg.Desktop {
+					memberRuntime.mu.Lock()
+					memberRuntime.transportOnline = false
+					expired := time.Since(memberRuntime.lastContact) > 90*time.Second
+					memberRuntime.mu.Unlock()
+					if expired {
+						memberRuntime.stopLocalWork()
+						_ = connect(cfg, hostLabel())
+					}
+				} else {
+					_ = connect(cfg, hostLabel())
+				}
 			}
 			time.Sleep(backoff)
 			if backoff < 30*time.Second {
 				backoff *= 2
 			}
 			continue
+		}
+		if cfg.Desktop {
+			memberRuntime.contact()
 		}
 		backoff = time.Second
 		if !approved {
@@ -357,7 +384,7 @@ func loop(cfg *Config) {
 var errStale = fmt.Errorf("stale")
 
 func poll(cfg *Config) ([]Job, bool, error) {
-	body := map[string]interface{}{"key": cfg.Key, "wait": pollWait, "session": sessionID}
+	body := map[string]interface{}{"key": cfg.Key, "wait": pollWait, "session": bodySession()}
 	var resp struct {
 		Success  bool  `json:"success"`
 		Approved bool  `json:"approved"`
@@ -569,12 +596,19 @@ func postJSON(url string, body interface{}, out interface{}) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if err := signMember(req, b, hubCfg); err != nil {
+		return err
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	data, _ := io.ReadAll(io.LimitReader(resp.Body, maxOutput+64*1024))
+	limit := int64(maxOutput + 64*1024)
+	if hubCfg != nil && hubCfg.Desktop {
+		limit = 8 * 1024 * 1024
+	}
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, limit))
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
 	}

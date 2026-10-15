@@ -35,11 +35,14 @@ class MemberRunner(AgentRunner):
         if (member_runtime.current() or {}).get("javascript_available", False):
             tools.append({"name": "run_javascript", "description": "회원 브라우저에서 JavaScript를 실행해 입력 데이터를 계산/변환한다. input 인자, return 값. 네트워크·DOM·OS 파일 접근 없음. 파일은 IBL로 읽고 결과를 IBL로 저장한다. 회원 승인 필요.",
                           "input_schema": {"type": "object", "properties": {"code": {"type": "string"}, "input": {}}, "required": ["code"]}})
+        from member_local_tools import definitions
+        tools.extend(definitions(member_runtime.current() or {}))
         return tools
 
     def _get_available_tools(self):
         import member_runtime
-        return ["execute_ibl", "ask_user_question"] + (["run_command"] if (member_runtime.current() or {}).get("shell_available", False) else []) + (["run_javascript"] if (member_runtime.current() or {}).get("javascript_available", False) else [])
+        from member_local_tools import definitions
+        return [t["name"] for t in definitions(member_runtime.current() or {})] + ["execute_ibl", "ask_user_question"] + (["run_command"] if (member_runtime.current() or {}).get("shell_available", False) else []) + (["run_javascript"] if (member_runtime.current() or {}).get("javascript_available", False) else [])
 
     def _build_agent_prompt_split(self, role, consciousness_output=None, execution_memory=""):
         from ibl_access import build_environment
@@ -70,6 +73,17 @@ class MemberRunner(AgentRunner):
             self.ai._provider.agent_id = self.ai.agent_id
 
     def _member_tool(self, tool_name, tool_input, work_dir=None, agent_id=None, **kwargs):
+        from member_local_tools import execute, NAMES
+        if tool_name in NAMES:
+            result = execute(tool_name, tool_input)
+            if tool_name == 'computer':
+                from image_envelopes import harvest_images
+                if result.get('b64'):
+                    result['image_data'] = {'b64': result.pop('b64'), 'media_type': result.get('media_type', 'image/png')}
+                text, images = harvest_images(json.dumps(result, ensure_ascii=False))
+                return {'content': text,
+                        'images': [{'base64': i['b64'], 'media_type': i.get('media_type', 'image/png')} for i in images]}
+            return json.dumps(result, ensure_ascii=False)
         if tool_name == "ask_user_question":
             import member_runtime
             question = str(tool_input.get("question") or "").strip()

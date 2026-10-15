@@ -690,11 +690,13 @@ cloudflared tunnel login
 |---|---|---|---|
 | 원격 런처 | owner 세션 | 허브 주인 | 기존 런처 |
 | 폰 네이티브 | 독립 몸 | 폰의 자아 | 기존 :app |
-| 등록 회원 PC / 기존 이웃 회원 | member:<PC ID> / member:<이웃 ID> | 회원 기기 | 웹앱 /m/app (기본), helper mode:member / Android :member (선택) |
+| 등록 회원 PC / 기존 이웃 회원 | member:<PC ID> / member:<이웃 ID> | 회원 기기 | 회원 데스크톱(PC 로컬 작업), 웹앱 /m/app, 기존 helper / Android :member |
+
+회원 데스크톱(`member-desktop/`)은 중앙 관리자가 발급한 일회 등록 코드로 설치를 연결한다. 승인 화면과 Go 실행부를 함께 번들하고 OS 암호화 보관소에 자격을 저장한다. 실제 폴더 선택·조건부 파일 편집·셸 실행·로컬 승인·중단·변경 되돌리기·백업 가져오기를 제공한다. 화면 조작은 로컬 설정과 OS 권한을 추가로 요구한다. 창 닫기는 트레이 숨김이며 앱 종료는 실행부 중단이다. 설치·검증·출시 제한의 정본: `docs/MEMBER_DESKTOP_DESIGN_2026_10_15.md` §14.
 
 새 회원 PC 키는 limb 원장의 독립 member_id·member_pc 등록을 인증하며 이웃 명부를 사용하지 않는다. 런처 안경 메뉴의 회원 PC 관리에서 등록·현황·중지·재발급·해제를 다룬다. 기존 이웃 연결 키만 neighbor_id와 이웃 명부의 기기 결합을 함께 확인한다. /m/chat은 HTTP/WS 자체 인증,
 /m/profile·/m/session/close는 POST다. 회원 키는 런처 세션을 만들지 않으며 프로젝트·설정 API 인증에 통하지 않는다.
-PC는 loopback 셸과 한시 토큰, Android는 WebView 네이티브 다리를 쓴다. 대화 HTTP 연결 종료는 회원 턴을 취소한다.
+PC는 loopback 셸과 한시 토큰, Android는 WebView 네이티브 다리를 쓴다. 기존 대화 HTTP 연결 종료는 회원 턴을 취소한다. 설치 데스크톱 v2는 `/m/desktop/submit` 접수 후 상태 조회로 진행하며 일시 HTTP 종료가 작업을 즉시 취소하지 않는다. 90초 임대와 설치 서명·연결 세대를 확인하고, 중앙 재시작의 결과 불명은 자동 재실행하지 않는다.
 발급·설정과 현재 제한은 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11, guides/member_start.md 참조.
 
 `/m/app`은 PC·폰 공통의 설치 없는 HTTPS 웹앱이다. 로그인·자율주행·앱·파일·승인 화면을 허브가 제공하며 재접속/새로고침으로 업데이트된다. 작업·파일·기억·결과 원장은 회원 브라우저 IndexedDB에 저장한다. 파일은 선택하여 가져온 사본을 편집하고 내려받는다. 임의 OS 경로나 셸에는 접근하지 않는다. 격리된 JavaScript Worker의 계산 결과만 허브에 반환한다. 회원별 저장소와 탭 잠금, 연결 세대 검사로 중복 실행과 이전 연결의 명령을 차단한다. 탭 종료나 폰 백그라운드에서 계속 실행된다는 보장은 없다. 백업 JSON 내보내기/복원과 지속 보관 요청을 제공한다.

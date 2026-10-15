@@ -321,6 +321,8 @@ def update_member_pc(device_id: str, *, alias=None, user_label=None, note=None,
         if revoke_key:
             rec["revoked"] = True
         if rotate_key:
+            rec.pop("desktop", None)
+            rec.pop("desktop_invite", None)
             del data["keys"][rec["key"]]
             rec["key"] = "limb_" + secrets.token_urlsafe(24)
             days = rec["member_pc"].get("ttl_days", 0)

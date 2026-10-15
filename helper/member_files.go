@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,28 +13,53 @@ func (m *MemberRuntime) localFile(body map[string]interface{}) map[string]interf
 	raw, _ := body["path"].(string)
 	op, _ := body["op"].(string)
 	content, _ := body["content"].(string)
+	if body["encoding"] == "base64" {
+		b, e := base64.StdEncoding.DecodeString(content)
+		if e != nil {
+			return errResult("encoding", e.Error())
+		}
+		content = string(b)
+	}
 	id, _ := body["task_id"].(string)
-	if op != "read" && op != "write" && op != "list" {
+	if op != "read" && op != "write" && op != "list" && op != "resolve" && op != "undo" && op != "diff" {
 		return errResult("op", "지원하지 않는 파일 작업")
 	}
 	if id == "" {
 		id = "local-browser"
 		_, _ = m.store.db.Exec("INSERT OR REPLACE INTO tasks VALUES(?, '파일 탐색',?,'idle','{}',0,0)", id, m.workspace())
 	}
-	c, err := m.scopeCommand(Command{Op: op, Path: raw, Content: content, TaskID: id})
+	if op == "diff" {
+		return m.gitDiff(id)
+	}
+	if op == "undo" {
+		change, _ := body["change_id"].(string)
+		return m.undoChange(change, id)
+	}
+	scopeOp := op
+	if op == "resolve" {
+		scopeOp = "read"
+	}
+	expected, _ := body["expected_hash"].(string)
+	c, err := m.scopeCommand(Command{Op: scopeOp, Path: raw, Content: content, TaskID: id, ExpectedHash: expected})
 	if err != nil {
 		return errResult("workspace", err.Error())
 	}
 	switch op {
+	case "resolve":
+		return map[string]interface{}{"success": true, "path": c.Path}
 	case "list":
 		return doList(c)
 	case "read":
-		return doRead(c)
+		return memberRead(c)
 	default:
-		return memberWrite(c)
+		return m.safeWrite(c)
 	}
 }
 func (m *MemberRuntime) editFile(c Command) map[string]interface{} {
+	info, e := os.Stat(c.Path)
+	if e != nil || !info.Mode().IsRegular() || info.Size() > 32*1024*1024 {
+		return errResult("read_limit", "32MB 이하 일반 파일만 편집합니다")
+	}
 	b, err := os.ReadFile(c.Path)
 	if err != nil {
 		return errResult("read", err.Error())
@@ -47,8 +73,9 @@ func (m *MemberRuntime) editFile(c Command) map[string]interface{} {
 	if c.ReplaceAll {
 		count = -1
 	}
+	c.ExpectedHash = memberDigest(b)
 	c.Content = strings.Replace(text, c.OldString, c.NewString, count)
-	return memberWrite(c)
+	return m.safeWrite(c)
 }
 func (m *MemberRuntime) findFiles(c Command) map[string]interface{} {
 	items := []map[string]interface{}{}

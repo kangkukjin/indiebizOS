@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Copy, ExternalLink, Laptop, Plus, RefreshCw, X } from 'lucide-react';
 import { api } from '../lib/api';
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { openExternalLink } from '../lib/surface-navigation';
 import { ToolWindowFrame } from './ToolWindowFrame';
 
@@ -8,11 +9,12 @@ type PCStatus = 'pending' | 'online' | 'offline' | 'disabled' | 'expired' | 'rev
 type PC = {
   device_id: string; name: string; user_label: string; note: string; enabled: boolean;
   status: PCStatus; created_at: number; expires_at: number | null; last_seen: number | null;
-  host: string; os: string; client: string; turns_today: number; tokens_today: number;
+  host: string; os: string; client: string; client_version?: string; turns_today: number; tokens_today: number;
   active_tasks: number; daily_limit: number;
 };
 type Address = { url: string; warning: string };
 type Overview = { address: Address; pcs: PC[]; daily_limit: number; global_daily_limit: number };
+type Invite = {code: string; expires_at: number; hub: string; link: string; name: string};
 type Issued = { key: string; alias: string; device_id: string; expires_at: number | null; address: Address };
 const statuses: Record<PCStatus, string> = {
   pending: '연결 대기', online: '연결됨', offline: '오프라인', disabled: '사용 중지', expired: '키 만료', revoked: '등록 해제',
@@ -34,6 +36,12 @@ export function MemberPCsView() {
   const [ttl, setTtl] = useState('0');
   const [issued, setIssued] = useState<Issued | null>(null);
   const [showKey, setShowKey] = useState(false);
+  const [installers, setInstallers] = useState<{label: string; url: string}[]>([]);
+  const [invite, setInvite] = useState<Invite | null>(null);
+  const invitePC = async (device: string, label: string) => {
+    const value = await api.request<Invite>(`/member-pcs/${encodeURIComponent(device)}/invite`, {method: 'POST'});
+    setInvite({...value, name: label});
+  };
   const [query, setQuery] = useState('');
   const [showRevoked, setShowRevoked] = useState(false);
   const [confirm, setConfirm] = useState<{ pc: PC; action: 'disable' | 'rotate' | 'revoke' } | null>(null);
@@ -47,6 +55,7 @@ export function MemberPCsView() {
     let alive = true;
     const refresh = () => { if (!document.hidden) void load().catch(e => { if (alive) setError(String(e)); }); };
     refresh();
+    void api.request<{installers: {label: string; url: string}[]}>('/m/desktop/installers').then(r => setInstallers(r.installers)).catch(() => {});
     const timer = window.setInterval(refresh, 15000);
     document.addEventListener('visibilitychange', refresh);
     return () => { alive = false; sequence.current++; clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
@@ -71,7 +80,7 @@ export function MemberPCsView() {
       const value = await api.request<Issued>('/member-pcs', { method: 'POST',
         body: JSON.stringify({ name: name.trim(), user_label: userLabel.trim(), note: note.trim(), ttl_days: Number(ttl) }),
       });
-      setIssued(value); setShowKey(false); setMessage('회원 PC를 등록했습니다. 등록 키로 해당 PC를 연결하세요.');
+      await invitePC(value.device_id, value.alias); setIssued(null); setMessage('회원 PC를 등록했습니다. 설치 앱에 등록 코드를 입력하세요.');
     }
     setEditing(null); await load();
   };
@@ -117,9 +126,10 @@ export function MemberPCsView() {
           <label className="grid gap-1 text-xs">사용자 표시명 (선택)<input maxLength={100} className={input} value={userLabel} onChange={e => setUserLabel(e.target.value)} placeholder="이웃 명부에 추가되지 않습니다" /></label>
           <label className="grid gap-1 text-xs sm:col-span-2">메모 (선택)<textarea maxLength={1000} className={input} value={note} onChange={e => setNote(e.target.value)} /></label>
           {!editing && <label className="grid gap-1 text-xs">등록 키 유효기간<select className={input} value={ttl} onChange={e => setTtl(e.target.value)}><option value="0">무기한</option><option value="7">7일</option><option value="30">30일</option><option value="90">90일</option><option value="365">1년</option></select></label>}
-          <div className="flex items-end gap-2"><button className={`${button} !bg-stone-800 !text-white`} disabled={busy || !name.trim()}>{editing ? '변경 저장' : '등록하고 키 발급'}</button><button type="button" className={button} disabled={busy} onClick={() => setEditing(null)}>취소</button></div>
+          <div className="flex items-end gap-2"><button className={`${button} !bg-stone-800 !text-white`} disabled={busy || !name.trim()}>{editing ? '변경 저장' : '등록하고 설치 초대'}</button><button type="button" className={button} disabled={busy} onClick={() => setEditing(null)}>취소</button></div>
         </form>
       </section>}
+      {invite && <section className={`${panel} space-y-3 border-emerald-200`}><div className="flex justify-between"><h2 className="font-semibold">{invite.name} · 데스크톱 설치 초대</h2><button aria-label="초대 닫기" onClick={() => setInvite(null)}><X size={18} /></button></div><p className="text-sm">회원 PC에 IndieBiz Member를 설치하고 중앙 주소와 등록 코드를 입력하세요. 코드는 한 설치에서만 사용할 수 있습니다.</p><p className="font-mono text-2xl tracking-widest">{invite.code}</p><p className="text-xs">만료: {date(invite.expires_at)} · 중앙 주소: {invite.hub || '외부 접속 주소 설정 필요'}</p><div className="flex gap-2"><button className={button} onClick={() => void run(() => copy(invite.code))}>코드 복사</button><button className={button} disabled={!invite.hub} onClick={() => void run(() => copy(invite.link))}>앱 등록 링크 복사</button><button className={button} disabled={!invite.hub} onClick={() => void run(() => copy(`IndieBiz Member 설치 후 연결하세요.\n중앙 주소: ${invite.hub}\n등록 코드: ${invite.code}\n만료: ${date(invite.expires_at)}\n앱 등록 링크: ${invite.link}`))}>설치 안내 복사</button></div><div className="flex gap-2">{installers.map(item => <button key={item.url} className={button} onClick={() => openExternalLink(new URL(item.url, invite.hub || BACKEND_ORIGIN).href)}>{item.label} 설치물 받기</button>)}</div><p className="text-xs text-amber-800">개발 미리보기입니다. 외부 배포용 서명·공증은 별도 인수가 필요합니다.</p><p className="text-xs text-stone-500">새 코드를 발급하면 이전 미사용 코드는 취소됩니다. 설치 등록 시 기존 연결 키도 교체합니다.</p></section>}
       {issued && <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
         <div className="flex justify-between"><h2 className="font-semibold">{issued.alias} 연결 준비</h2><button aria-label="발급 정보 닫기" onClick={() => setIssued(null)}><X size={18} /></button></div>
         <p className="text-sm">이 등록 키는 해당 PC에만 전달하세요. 키를 닫은 뒤에는 다시 볼 수 없으며 재발급할 수 있습니다.</p>
@@ -135,15 +145,16 @@ export function MemberPCsView() {
           <div className="flex flex-wrap items-center gap-3"><input aria-label="회원 PC 검색" className={input} value={query} onChange={e => setQuery(e.target.value)} placeholder="PC · 사용자 · 호스트 검색" />
             <label className="flex gap-2 text-xs"><input type="checkbox" checked={showRevoked} onChange={e => setShowRevoked(e.target.checked)} />해제한 PC 포함</label></div></div>
         <p className="text-xs text-stone-500">15초마다 갱신합니다. 사용량은 등록 PC별로 집계합니다. 중앙 전체 일일 한도: {data?.global_daily_limit ?? '—'}회.</p>
-        {!data ? <p className="py-8 text-center text-sm">{error ? '새로고침으로 다시 시도하세요.' : '등록 정보를 불러오는 중…'}</p> : !rows.length ? <div className="py-10 text-center"><Laptop className="mx-auto mb-3 text-stone-400" size={30} /><p>{query ? '검색 결과가 없습니다.' : '등록된 회원 PC가 없습니다.'}</p><p className="mt-2 text-sm text-stone-500">PC 등록으로 기기 이름을 정하고 연결 키를 발급하세요.</p></div> :
+        {!data ? <p className="py-8 text-center text-sm">{error ? '새로고침으로 다시 시도하세요.' : '등록 정보를 불러오는 중…'}</p> : !rows.length ? <div className="py-10 text-center"><Laptop className="mx-auto mb-3 text-stone-400" size={30} /><p>{query ? '검색 결과가 없습니다.' : '등록된 회원 PC가 없습니다.'}</p><p className="mt-2 text-sm text-stone-500">PC 등록으로 기기 이름을 정하고 설치 초대를 발급하세요.</p></div> :
           <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b text-xs text-stone-500"><tr>{['PC / 사용자', '연결 상태', '최근 접속', '오늘 사용', '관리'].map(label => <th key={label} className="pb-3 pr-4 font-medium">{label}</th>)}</tr></thead>
             <tbody>{rows.map(pc => <tr key={pc.device_id} className="border-b last:border-0">
               <td className="py-4 pr-4 min-w-44"><p className="font-medium">{pc.name}</p><p className="text-xs text-stone-500">{pc.user_label || '사용자 표시명 없음'}</p>{pc.note && <p className="mt-1 max-w-64 break-words text-xs text-stone-500">{pc.note}</p>}<p className="mt-1 text-xs text-stone-400">{pc.device_id}</p></td>
               <td className="pr-4"><span className={`inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs ${pc.status === 'online' ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600'}`}>{statuses[pc.status]}</span>
-                <p className="mt-2 text-xs text-stone-500">{pc.host || '기기 연결 전'}{pc.os && ` · ${pc.os}`}</p><p className="text-xs text-stone-500">{pc.client === 'web' ? '브라우저' : pc.client === 'native' ? 'PC 연결 프로그램' : ''}</p></td>
+                <p className="mt-2 text-xs text-stone-500">{pc.host || '기기 연결 전'}{pc.os && ` · ${pc.os}`}</p><p className="text-xs text-stone-500">{pc.client === 'desktop' ? `회원 데스크톱 ${pc.client_version || ''}` : pc.client === 'web' ? '브라우저' : pc.client === 'native' ? 'PC 연결 프로그램' : ''}</p></td>
               <td className="pr-4 whitespace-nowrap text-xs"><p>{date(pc.last_seen)}</p><p className="mt-2 text-stone-500">{pc.expires_at ? `만료 ${new Date(pc.expires_at * 1000).toLocaleDateString()}` : '만료 없음'}</p></td>
               <td className="pr-4 whitespace-nowrap"><p>{pc.turns_today} / {pc.daily_limit}회</p><p className="mt-1 text-xs text-stone-500">처리 중 {pc.active_tasks}건</p></td>
               <td className="py-3 min-w-40">{pc.status !== 'revoked' && <div className="flex flex-wrap gap-1.5">
+                <button className={button} disabled={busy || !pc.enabled} onClick={() => void run(() => invitePC(pc.device_id, pc.name))}>설치 초대</button>
                 <button className={button} disabled={busy} onClick={() => edit(pc)}>수정</button>
                 {pc.enabled ? <button className={button} disabled={busy} onClick={() => setConfirm({ pc, action: 'disable' })}>사용 중지</button> :
                   <button className={button} disabled={busy} onClick={() => void run(async () => { await api.request(`/member-pcs/${encodeURIComponent(pc.device_id)}`, { method: 'PATCH', body: JSON.stringify({ enabled: true }) }); await load(); setMessage('사용을 재개했습니다. 회원 PC에서 다시 연결하세요.'); })}>사용 재개</button>}

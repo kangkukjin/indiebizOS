@@ -128,7 +128,7 @@
           "backend/services/record_adapters.py": "b6889645d10621d529c9a22db66657cc7c76c6b6f3fe1a94fb762962035b9b19",
           "backend/services/record_dispatch.py": "7fb7cad5be40924f1e665187f870468b2bec0fc2903073cc5a61cbff3202510d",
           "backend/static/record_app.html": "cef6f1e74df5d03819b55be833e874d6a3b4eb8c623a7b6a5cafba314afd1be2",
-          "backend/surface/api_records.py": "50df7120036bed7b72e0832f36e935f66a516945ee08deb1e390448d13c49dfb",
+          "backend/surface/api_records.py": "bec8c544990c9ebd548a5740e8bb480c6e4a1156df71b21cbb22750ecbf213a2",
           "backend/surface/record_app_page.py": "9359437a7c2af9b70eb2be1ffe6e22314c2bb76fffb0fb51dcf24c040677a987"
         }
       },

@@ -1,0 +1,64 @@
+{
+  "name": "indiebiz-member",
+  "version": "0.1.0",
+  "private": true,
+  "description": "IndieBiz centrally managed member desktop",
+  "author": "IndieBiz",
+  "main": "main.cjs",
+  "scripts": {
+    "test": "node --test test/*.test.cjs",
+    "prepare": "python3 ../scripts/build_member_desktop.py",
+    "build": "node build.cjs"
+  },
+  "build": {
+    "appId": "com.indiebiz.member",
+    "productName": "IndieBiz Member",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "*.cjs",
+      "*.html",
+      "package.json",
+      "release.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "member",
+        "filter": [
+          "indiebiz-member*"
+        ]
+      }
+    ],
+    "protocols": [
+      {
+        "name": "IndieBiz Member registration",
+        "schemes": [
+          "indiebiz-member"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true,
+      "identity": null
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "artifactName": "IndieBizMember-${os}-${arch}.${ext}"
+  }
+}

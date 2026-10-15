@@ -1305,8 +1305,6 @@ def output_file(name: str):
     return JSONResponse({"error": "파일을 찾을 수 없습니다."}, status_code=404)
 
 
-from phone_execution_routes import install as _install_execution_routes
-_install_execution_routes(app, lambda: _scratch, lambda obj: _save_audio_to_phone(obj))
 
 
 # ============================================================================
@@ -1374,6 +1372,31 @@ def is_serving() -> bool:
     return _serving
 
 
+def _hold_limb_link(client):
+    """손발 등록 수명 동안 와이파이·CPU 잠금(PhoneActions.holdLimbLink)을 쥐고, 손발 루프가
+    멈추면(등록 해제·자격 삭제·stop) 즉시 놓는다. 재생용 잠금과 별개라 음악을 멈춰도 유지된다."""
+    if client is None:
+        return
+    import threading
+
+    def _hold(on):
+        try:
+            from java import jclass  # Chaquopy
+            print(f"[phone_api] 손발 연결 잠금 {'획득' if on else '해제'}: "
+                  f"{jclass('com.indiebiz.phoneagent.PhoneActions').holdLimbLink(on)}")
+        except Exception as e:
+            print(f"[phone_api] 손발 연결 잠금 {'획득' if on else '해제'} 실패: {e}")
+
+    def _watch():
+        _hold(True)
+        try:
+            client.stopped.wait()
+        finally:
+            _hold(False)
+
+    threading.Thread(target=_watch, name="limb-link-lock", daemon=True).start()
+
+
 def serve(port=8765, base_path=None):
     """비-메인 스레드에서 호출 → 시그널 핸들러 금지.
 
@@ -1386,6 +1409,10 @@ def serve(port=8765, base_path=None):
     if _serving:
         return
     _init_base(base_path)
+    # 실행·음악 라우트는 트리 모듈(api_music 등)을 물므로 sys.path 가 준비된 _init_base 뒤에 단다.
+    # install_media 앞에 둬야 그쪽이 catch-all 을 맨 뒤로 다시 옮겨 이 라우트들을 가리지 않는다.
+    from phone_execution_routes import install as install_execution_routes
+    install_execution_routes(app, lambda: _scratch, lambda obj: _save_audio_to_phone(obj))
     from phone_media import install as install_media
     install_media(app)
 
@@ -1435,6 +1462,7 @@ def serve(port=8765, base_path=None):
         import limb_client
         if limb_client.start(int(port), log=print):
             print("[phone_api] 손발 모드 기동 — 허브 명령 대기(limb_client)")
+            _hold_limb_link(limb_client._client)
     except Exception as e:
         print(f"[phone_api] 손발 모드 기동 스킵: {e}")
     # 재무: 결제 알림 포획 → 폰 원장 수거 → PC 원장과 머지(포획소가 /finance/sync/run 을 부른다).

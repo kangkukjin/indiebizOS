@@ -704,12 +704,14 @@ class CalendarManagerBase:
         try:
             result = action_func(task)
 
+            failed = isinstance(result, dict) and result.get("success") is False
+            outcome = f"실패 — {result.get('error') or '알 수 없는 오류'}" if failed else "완료"
             if task.get("repeat") == "none":
                 task["enabled"] = False
-                self._log(f"1회 작업 완료, 비활성화됨: {task.get('title')}")
+                self._log(f"1회 작업 {outcome}, 비활성화됨: {task.get('title')}")
 
             self._save_config()
-            self._log(f"작업 완료: {task.get('title')}")
+            self._log(f"작업 {outcome}: {task.get('title')}")
             return result
 
         except Exception as e:

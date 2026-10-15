@@ -29,6 +29,12 @@ class AgentForegroundService : Service() {
         return START_STICKY
     }
 
+    override fun onDestroy() {
+        // 상주 서비스가 끝나면 손발 연결 잠금도 놓는다(limb_client 가 놓지 못한 경우의 안전판).
+        PhoneActions.holdLimbLink(false)
+        super.onDestroy()
+    }
+
     private fun buildNotification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
         val ch = NotificationChannel(CH_ID, "IndieBiz Agent", NotificationManager.IMPORTANCE_MIN)

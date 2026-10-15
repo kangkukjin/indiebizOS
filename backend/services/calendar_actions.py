@@ -213,12 +213,21 @@ class CalendarActionsMixin:
         try:
             start = _time.time()
 
-            if is_system_ai:
-                result = self._execute_visible_system_ai(user_message, task)
-            elif owner_project_id and owner_agent_id:
-                result = self._execute_visible_agent(
-                    owner_project_id, owner_agent_id, user_message, task
-                )
+            if is_system_ai or (owner_project_id and owner_agent_id):
+                result = (self._execute_visible_system_ai(user_message, task) if is_system_ai
+                          else self._execute_visible_agent(owner_project_id, owner_agent_id,
+                                                           user_message, task))
+                # 창·WS·에이전트를 못 띄웠으면 아무것도 실행되지 않은 것이다(2026-10-14: 창 없는
+                # 데스크탑에서 시스템 AI 예약 정지가 30초 대기 뒤 그대로 사라져 폰 음악이 계속 났다).
+                # "보이는 실행"은 표시 방식일 뿐이므로 같은 문장을 소유자 신원으로 직접 실행한다.
+                if not result.get("success") and result.get("not_started"):
+                    reason = result.get("error")
+                    self._log(f"[직접 실행] 보이는 실행 불가({reason}) → 파이프라인: {pipeline[:60]}...")
+                    result = self._execute_scheduled_pipeline(
+                        pipeline, self._owner_run_path(owner_project_id), owner_agent_id,
+                        edition=params.get("edition"), inputs=params.get("inputs"))
+                    if isinstance(result, dict):
+                        result["visible_unavailable"] = reason
             else:
                 # ── 소유 에이전트 없는 스케줄: 파이프라인 직접 실행 ──
                 # ★B54-1 (2026-09-02 54회차): 옛 판은 project_path "." 고정이라 발화한 문장의
@@ -597,12 +606,12 @@ class CalendarActionsMixin:
         client_id = self._open_window_and_wait_ws(project_id, agent_id, agent_name, False)
         if not client_id:
             self._log("창/WS 연결 실패 → 보이는 실행 불가")
-            return {"success": False, "error": "프로젝트 창/WS 연결 실패"}
+            return {"success": False, "error": "프로젝트 창/WS 연결 실패", "not_started": True}
 
         # 2. 에이전트가 agent_runners에 등록되기 대기
         if not self._ensure_agent_running(project_id, agent_id):
             self._log("에이전트 시작 실패")
-            return {"success": False, "error": "에이전트 시작 실패"}
+            return {"success": False, "error": "에이전트 시작 실패", "not_started": True}
 
         # 3. WS로 메시지 주입 → 채팅창에 실시간 표시
         return self._inject_message_via_ws(client_id, project_id, agent_id, agent_name, message, False)
@@ -616,7 +625,7 @@ class CalendarActionsMixin:
         client_id = self._open_window_and_wait_ws("__system_ai__", "system_ai", "시스템 AI", True)
         if not client_id:
             self._log("시스템 AI 창/WS 연결 실패")
-            return {"success": False, "error": "시스템 AI 창/WS 연결 실패"}
+            return {"success": False, "error": "시스템 AI 창/WS 연결 실패", "not_started": True}
 
         # 2. WS로 메시지 주입 → 채팅창에 실시간 표시
         return self._inject_message_via_ws(client_id, "__system_ai__", "system_ai", "시스템 AI", message, True)

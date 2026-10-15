@@ -767,6 +767,49 @@ object PhoneActions {
         JSONObject().put("stopped", stopStreamLocked()).toString()
     }
 
+    // ── 손발 연결 유지 (2026-10-13) ─────────────────────────────────────────────
+    // 허브에 손발로 등록돼 있는 동안 재생 여부와 무관하게 와이파이·CPU 를 깨워 둔다
+    // (화면 꺼진 무인 폰에서 와이파이가 끊겨 허브 롱폴이 멈추던 문제). 재생용 wifiLock 과
+    // 다른 객체라 음악을 멈춰도 이 잠금은 풀리지 않는다. limb_client 의 run() 수명이 쥐고
+    // 해제·자격 삭제·종료 때 놓는다. 서비스 파괴 때도 AgentForegroundService 가 놓는다.
+    @Volatile private var limbWifiLock: WifiManager.WifiLock? = null
+    @Volatile private var limbWakeLock: android.os.PowerManager.WakeLock? = null
+    private val limbLinkLock = Any()
+
+    /** 손발 연결 잠금 쥐기/놓기 (멱등). 반환 JSON: {wifi_held, wake_held} 또는 {error}. */
+    @JvmStatic
+    fun holdLimbLink(on: Boolean): String {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        return synchronized(limbLinkLock) { holdLimbLinkLocked(ctx, on) }
+    }
+
+    private fun holdLimbLinkLocked(ctx: Context, on: Boolean): String {
+        if (on) {
+            try {
+                if (limbWifiLock?.isHeld != true) {
+                    val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                    limbWifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "indiebiz_limb").apply {
+                        setReferenceCounted(false); acquire()
+                    }
+                }
+            } catch (_: Throwable) {}
+            try {
+                if (limbWakeLock?.isHeld != true) {
+                    val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                    limbWakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "indiebiz:limb").apply {
+                        setReferenceCounted(false); acquire()
+                    }
+                }
+            } catch (_: Throwable) {}
+        } else {
+            try { limbWifiLock?.let { if (it.isHeld) it.release() } } catch (_: Throwable) {}
+            try { limbWakeLock?.let { if (it.isHeld) it.release() } } catch (_: Throwable) {}
+            limbWifiLock = null; limbWakeLock = null
+        }
+        return JSONObject().put("wifi_held", limbWifiLock?.isHeld == true)
+            .put("wake_held", limbWakeLock?.isHeld == true).toString()
+    }
+
     /** 재생 상태. 반환 JSON: {playing, url, volume, elapsed_seconds}. */
     @JvmStatic
     fun streamStatus(): String = synchronized(playerLock) {

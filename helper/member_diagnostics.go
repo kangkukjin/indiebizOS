@@ -25,7 +25,7 @@ func (m *MemberRuntime) diagnostics() map[string]interface{} {
 			size += info.Size()
 		}
 	}
-	return map[string]interface{}{"version": "0.1.0", "protocol": 2, "os": runtime.GOOS, "arch": runtime.GOARCH, "online": online, "last_contact": last.Unix(), "tasks": tasks, "unknown_tasks": unknown, "database_bytes": size, "screen": m.screenAllowed()}
+	return map[string]interface{}{"version": memberVersion, "protocol": 2, "os": runtime.GOOS, "arch": runtime.GOARCH, "online": online, "last_contact": last.Unix(), "tasks": tasks, "unknown_tasks": unknown, "database_bytes": size, "screen": m.screenAllowed()}
 }
 func (m *MemberRuntime) gitDiff(task string) map[string]interface{} {
 	root, err := m.taskRoot(task)

@@ -1,6 +1,6 @@
 {
   "name": "indiebiz-member",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "IndieBiz centrally managed member desktop",
   "author": "IndieBiz",
@@ -18,10 +18,16 @@
       "output": "dist"
     },
     "files": [
-      "*.cjs",
+      "main.cjs",
+      "session.cjs",
+      "security.cjs",
+      "preload.cjs",
+      "updates.cjs",
+      "workspace.cjs",
+      "setup.cjs",
       "*.html",
       "package.json",
-      "release.json"
+      "update-trust.json"
     ],
     "extraResources": [
       {

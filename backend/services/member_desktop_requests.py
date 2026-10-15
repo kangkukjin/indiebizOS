@@ -17,6 +17,13 @@ LIVE = {}
 LEASE_SECONDS = 90
 
 
+def _sweep():
+    now = time.monotonic()
+    for key, row in list(LIVE.items()):
+        if row.get('finished') is not None and now - row['finished'] > 1800:
+            del LIVE[key]
+
+
 @contextmanager
 def _db():
     path = limb_keys._store_path().parent / 'member_requests.sqlite3'
@@ -43,6 +50,7 @@ def submit(rec, envelope, resolved):
     digest = hashlib.sha256(json.dumps(envelope, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     key = (device, rid)
     with LOCK, _db() as db:
+        _sweep()
         old = db.execute('SELECT digest,epoch,state FROM requests WHERE device=? AND request=?', key).fetchone()
         if old:
             if old[0] != digest:
@@ -99,9 +107,7 @@ def _watch(rec, rid, row):
 def status(rec, rid, after=0):
     key = (rec['device_id'], rid)
     with LOCK:
-        for old_key, old in list(LIVE.items()):
-            if old.get('finished') and time.monotonic() - old['finished'] > 1800:
-                del LIVE[old_key]
+        _sweep()
         row = LIVE.get(key)
         if row:
             if row['session'] != rec.get('session') and row['state'] in ('accepted', 'running'):

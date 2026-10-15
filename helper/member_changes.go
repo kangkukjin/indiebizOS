@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"time"
 	"unicode/utf8"
 )
 
@@ -30,45 +29,10 @@ func (m *MemberRuntime) safeWrite(c Command) map[string]interface{} {
 	if !m.cfg.Desktop {
 		return memberWrite(c)
 	}
-	m.fileMu.Lock()
-	defer m.fileMu.Unlock()
-	if info, e := os.Stat(c.Path); e == nil && (!info.Mode().IsRegular() || info.Size() > 32*1024*1024) {
-		return errResult("size_limit", "32MB 이하 일반 파일만 편집합니다")
-	}
-	old, err := os.ReadFile(c.Path)
-	exists := err == nil
-	if err != nil && !os.IsNotExist(err) {
-		return errResult("read", err.Error())
-	}
-	if len(old) > 32*1024*1024 {
-		return errResult("size_limit", "편집 가능한 파일 크기는 32MB입니다")
-	}
-	if exists && (c.ExpectedHash == "" || c.ExpectedHash != memberDigest(old)) {
-		return errResult("file_changed", "파일을 다시 읽은 뒤 해당 sha256으로 저장하세요")
-	}
-	if !exists && c.ExpectedHash != "" && c.ExpectedHash != "missing" {
-		return errResult("file_changed", "파일이 삭제되었습니다")
-	}
-	id := randomToken()[:24]
-	hash := memberDigest([]byte(c.Content))
-	present := 0
-	if exists {
-		present = 1
-	}
-	if _, err = m.store.db.Exec("INSERT INTO file_changes VALUES(?,?,?,?,?,?,?)", id, c.TaskID, c.Path, old, present, hash, time.Now().Unix()); err != nil {
-		return errResult("backup", err.Error())
-	}
-	result := memberWrite(c)
-	if result["success"] == true {
-		result["change_id"] = id
-		result["sha256"] = hash
-		result["saved"] = true
-		result["size"] = len(c.Content)
-	} else {
-		_, _ = m.store.db.Exec("DELETE FROM file_changes WHERE id=?", id)
-	}
+	result, _ := m.desktopFileOp(c)
 	return result
 }
+
 func (m *MemberRuntime) changes(task string) []map[string]interface{} {
 	rows, err := m.store.db.Query("SELECT id,task,path,created FROM file_changes WHERE task=? ORDER BY created DESC LIMIT 100", task)
 	if err != nil {
@@ -97,6 +61,11 @@ func (m *MemberRuntime) undoChange(id, task string) map[string]interface{} {
 	}
 	if existed == 1 {
 		return m.safeWrite(c)
+	}
+	if m.cfg.Desktop {
+		c.Op = "undo_new"
+		result, _ := m.desktopFileOp(c)
+		return result
 	}
 	m.fileMu.Lock()
 	defer m.fileMu.Unlock()

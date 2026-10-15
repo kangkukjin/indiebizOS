@@ -32,7 +32,7 @@ async function memberBoot(){
 }
 async function refreshApps(){try{const r=await memberRequest('apps',{task_id:currentTask});memberApps=r.instruments||[];document.getElementById('appStatus').textContent=r.local_error||r.error||(!memberApps.length?'현재 이 기기에서 사용할 수 있는 앱이 없습니다.':'');if(frameReady)sendApps()}catch(e){document.getElementById('appStatus').textContent=e.message}}
 function sendApps(){document.getElementById('appFrame').contentWindow.postMessage({memberFrame:'apps',instruments:memberApps},'*')}
-let memberAppGeneration=0;let memberAppQueue=Promise.resolve();const memberAppTasks=new Map();
+let memberAppGeneration=0;let memberAppQueue=Promise.resolve();
 window.addEventListener('message',e=>{
  const frame=document.getElementById('appFrame');if(!frame||e.source!==frame.contentWindow)return;
  const m=e.data||{};if(m.memberFrame==='ready'){frameReady=true;sendApps();return}
@@ -43,13 +43,13 @@ window.addEventListener('message',e=>{
  const writing=m.memberFrame==='request';
  if(writing?(typeof m.action_id!=='string'||!m.args||typeof m.args!=='object'):(typeof m.code!=='string'||m.code.length>64000))return;
  if(!writing&&typeof memberBrowser!=='undefined'&&memberBrowser){frame.contentWindow.postMessage({memberFrame:'result',id:m.id,error:'앱을 새로고침한 뒤 다시 실행하세요'},'*');return}
- const generation=memberAppGeneration;
+ const generation=memberAppGeneration,requestedTask=currentTask;
  memberAppQueue=memberAppQueue.then(async()=>{try{
   if(generation!==memberAppGeneration)throw Error('작업을 중단했습니다');
   const app=m.app_id||m.action_id?.split(':')[0];
-  const r=await memberRequest('task/start',writing?{task_id:memberAppTasks.get(app)||'',message:'',action_id:m.action_id,args:m.args,title:m.title,app_id:app}:{task_id:currentTask,message:'앱 실행',code:m.code});
+  const r=await memberRequest('task/start',writing?{task_id:requestedTask,message:'',action_id:m.action_id,args:m.args,title:m.title,app_id:app}:{task_id:requestedTask,message:'앱 실행',code:m.code});
   if(!r.success)throw Error(r.message||r.error);
-  if(app)memberAppTasks.set(app,r.task_id);currentTask=r.task_id;taskSignature='';await refreshTasks();
+  if(currentTask===requestedTask)currentTask=r.task_id;taskSignature='';await refreshTasks();
   const result=await waitMemberTask(r.task_id);
   frame.contentWindow.postMessage({memberFrame:'result',id:m.id,result:result.app_result||result,error:result.success===false?result.error:null},'*');
   if(typeof showMemberArtifacts==='function')showMemberArtifacts(result);await refreshTasks();

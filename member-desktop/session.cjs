@@ -21,13 +21,13 @@ class MemberSession {
     await this.stop();this.save(config);await this.start(config);return this.publicState();
   }
   publicState(){return {connected:!!this.bridge,hub:this.config?.base||'',name:this.config?.alias||'',device_id:this.config?.device_id||''};}
-  async start(config=this.read()){
+  async start(config=this.read(),{maintenance=false}={}){
     if(!config?.key)return false;if(this.child)return true;this.config=config;
     const namespace=crypto.createHash('sha256').update(config.hub_id+'\0'+config.device_id+'\0'+config.installation_id).digest('hex');
     const dir=path.join(this.root,'workspaces',namespace);fs.mkdirSync(dir,{recursive:true,mode:0o700});
     this.child=spawn(this.executable,['--member-desktop'],{stdio:['pipe','pipe','ignore'],windowsHide:true,env:{...process.env,INDIEBIZ_MEMBER_NO_BROWSER:'1'}});
     const child=this.child;
-    child.once('exit',()=>{if(this.child===child){this.child=null;this.bridge=null;this.onExit?.();}});
+    child.once('exit',()=>{if(this.child===child){this.child=null;this.bridge=null;if(!this.stopping)this.onExit?.();}});
     try {
       const ready=new Promise((resolve,reject)=>{
         let text='';const timer=setTimeout(()=>reject(Error('로컬 실행부를 시작하지 못했습니다.')),20000);
@@ -35,16 +35,28 @@ class MemberSession {
         child.once('error',e=>finish(e));child.once('exit',()=>finish(Error('로컬 실행부가 종료됐습니다.')));
         child.stdout.on('data',data=>{text+=data.toString();if(text.length>4096)return finish(Error('실행부 응답 오류'));if(text.includes('\n')){try{const r=JSON.parse(text.split('\n')[0]);const u=new URL(r.origin);if(u.hostname!=='127.0.0.1'||u.protocol!=='http:'||!r.token||r.protocol!==2)throw Error();child.stdout.removeAllListeners('data');child.stdout.resume();finish(null,r);}catch{finish(Error('실행부 응답 오류'));}}});
       });
-      child.stdin.write(JSON.stringify({...config,mode:'member',desktop:true,data_dir:dir})+'\n');
+      child.stdin.write(JSON.stringify({...config,mode:'member',desktop:true,data_dir:dir,maintenance})+'\n');
       this.bridge=await ready;return true;
     }catch(e){await this.stop();throw e;}
   }
   async request(raw,body){
-    const endpoint=safeEndpoint(raw,body);if(!this.bridge)throw Error('로컬 실행부가 연결되지 않았습니다. 앱을 다시 여세요.');
-    const r=await fetch(this.bridge.origin+'/member/'+endpoint,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-Member-Token':this.bridge.token},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(300000),redirect:'error'});
+    const endpoint=safeEndpoint(raw,body);if(this.updating && body!==undefined && (this.updateTrial || !['close','approve','media-claim','media-result'].includes(endpoint)))throw Error('업데이트 준비 중입니다. 현재 작업이 끝난 뒤 다시 시도하세요.');return this.internalRequest(endpoint,body);
+  }
+  async internalRequest(endpoint,body,timeout=300000){if(!this.bridge)throw Error('로컬 실행부가 연결되지 않았습니다. 앱을 다시 여세요.');
+    const r=await fetch(this.bridge.origin+'/member/'+endpoint,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-Member-Token':this.bridge.token},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(timeout),redirect:'error'});
     if(!r.ok)throw Error('로컬 요청을 처리하지 못했습니다 ('+r.status+').');return r.json();
   }
-  async stop(){const child=this.child;if(!child)return;try{await this.request('close',{});}catch{}child.stdin.end();await new Promise(resolve=>{if(child.exitCode!==null)return resolve();const timer=setTimeout(()=>{child.kill();resolve();},5000);child.once('exit',()=>{clearTimeout(timer);resolve();});});this.child=null;this.bridge=null;}
+  async maintenance(pause){return this.internalRequest('maintenance',{pause},5000);}
+  async stop(){
+    const child=this.child;if(!child)return;if(!child.pid){this.child=null;this.bridge=null;return;}this.stopping=true;
+    try{try{await this.internalRequest('close',{},3000);}catch{}child.stdin.end();
+      await new Promise((resolve,reject)=>{if(child.exitCode!==null||child.signalCode!==null)return resolve();
+        const kill=setTimeout(()=>child.kill('SIGKILL'),5000);
+        const timeout=setTimeout(()=>reject(Error('실행부 종료를 확인하지 못했습니다.')),10000);
+        child.once('exit',()=>{clearTimeout(kill);clearTimeout(timeout);resolve();});});
+      this.child=null;this.bridge=null;
+    }finally{this.stopping=false;}
+  }
   async disconnect(){await this.stop();fs.rmSync(this.file(),{force:true});this.config=null;}
 }
 module.exports={MemberSession};

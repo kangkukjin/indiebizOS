@@ -104,6 +104,8 @@ async def limb_connect(req: ConnectRequest):
 
     if limb_keys.is_member(rec) and req.mode != "member":
         return {"success": False, "error": "member_mode_required"}
+    if rec.get("desktop") and (req.env or {}).get("protocol") != 2:
+        return {"success": False, "error": "unsupported_desktop_protocol"}
     env = {**(req.env or {}), "mode": req.mode}
 
     # 자동승인 — 붙는 즉시 승인(approve_if_pending). 방어는 명령 시 이름 명시로(위 모듈 주석).
@@ -155,7 +157,7 @@ async def limb_poll(req: PollRequest):
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
 
-    if rec.get("desktop") and req.env and req.env.get("protocol") != 2:
+    if rec.get("desktop") and (rec.get("env") or {}).get("protocol") != 2:
         return {"success": False, "error": "unsupported_desktop_protocol"}
     device_id = rec["device_id"]
 

@@ -65,6 +65,18 @@ def test_cancel_is_terminal_and_late_success_does_not_reopen(state, monkeypatch)
     assert service.status(state, 'one')['state'] == 'cancelled'
 
 
+def test_submit_sweeps_expired_results_before_capacity(state, monkeypatch):
+    service.LIVE.update({('old', str(i)): {'state': 'completed', 'finished': time.monotonic()-1801} for i in range(512)})
+    monkeypatch.setattr(client_agent, 'run', lambda *a, **kw: {'success': True})
+    result = service.submit(state, {'request_id': 'new', 'conversation_id': 'task'}, {})
+    assert result['state'] == 'accepted'
+    assert all(k[0] != 'old' for k in service.LIVE)
+    for _ in range(100):
+        if service.status(state, 'new')['state'] == 'completed':
+            break
+        time.sleep(.01)
+    assert service.status(state, 'new')['state'] == 'completed'
+
+
 if __name__ == "__main__":
-    import pytest
     raise SystemExit(pytest.main([__file__]))

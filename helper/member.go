@@ -32,6 +32,7 @@ type MemberRuntime struct {
 	activeCancel    context.CancelFunc
 	taskMu          sync.Mutex
 	runningTask     string
+	maintenance     bool
 	mediaPending    *MemberMedia
 	localURL        string
 	server          *http.Server
@@ -60,7 +61,7 @@ func startMember(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	memberRuntime = &MemberRuntime{store: store, cfg: cfg, dir: dir, approvals: map[string]*Approval{}, token: randomToken()}
+	memberRuntime = &MemberRuntime{store: store, cfg: cfg, dir: dir, maintenance: cfg.Maintenance, approvals: map[string]*Approval{}, token: randomToken()}
 	if err := memberRuntime.initTasks(); err != nil {
 		return err
 	}
@@ -163,6 +164,11 @@ func (m *MemberRuntime) run(j Job) map[string]interface{} {
 	return result
 }
 func (m *MemberRuntime) execute(c Command) map[string]interface{} {
+	if m.cfg.Desktop {
+		if result, handled := m.desktopFileOp(c); handled {
+			return result
+		}
+	}
 	switch c.Op {
 	case "file_edit":
 		return m.editFile(c)

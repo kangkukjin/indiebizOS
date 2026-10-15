@@ -1,0 +1,66 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
+const {RuntimeUpdates,verify,digest}=require('../updates.cjs');
+const keys=crypto.generateKeyPairSync('ed25519');
+const trust={publicKey:keys.publicKey.export({type:'spki',format:'pem'}),feed:'https://updates.example/member/current.json'};
+function release(sequence=1){
+ const names=['workspace.html','workspace.cjs','indiebiz-member'+(process.platform==='win32'?'.exe':'')];
+ const bytes=new Map(names.map(n=>['https://updates.example/member/'+n,Buffer.from('release-'+sequence+'-'+n)]));
+ const manifest={format:'indiebiz-member-runtime',version:'0.1.1',sequence,platform:process.platform,arch:process.arch,protocol:2,shell:1,expires:Date.now()/1000+600,files:names.map(name=>({name,url:'https://updates.example/member/'+name,size:bytes.get('https://updates.example/member/'+name).length,sha256:digest(bytes.get('https://updates.example/member/'+name))}))};
+ return {manifest,bytes,envelope:()=>sign(manifest)};
+}
+function sign(m){const raw=Buffer.from(JSON.stringify(m));return {manifest:raw.toString('base64'),signature:crypto.sign(null,raw,keys.privateKey).toString('base64')};}
+function fixture(t){
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'member-update-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const namespace='a'.repeat(64),dir=path.join(root,'workspaces',namespace);fs.mkdirSync(dir,{recursive:true});const db=path.join(dir,'member.db');fs.writeFileSync(db,'original-database');
+ const r=release();const events=[];
+ const session={config:{key:'synthetic'},executable:'old-helper',bridge:{},maintenance:async pause=>{events.push(['maintenance',pause]);return {idle:true}},stop:async()=>{events.push(['stop']);session.bridge=null},start:async(_,options)=>{events.push(['start',session.executable,options]);session.bridge={}},internalRequest:async()=>({success:true,protocol:2})};
+ const options={root,trust,session,baseline:{version:'0.1.0',workspace:'old-ui',executable:'old-helper'},show:async(file,trial)=>events.push(['show',trial,session.updating]),backup:async(exe,source,target)=>fs.copyFileSync(source,target),fetcher:async(url)=>new Response(url===trust.feed?JSON.stringify(r.envelope()):r.bytes.get(url))};
+ return {root,db,r,events,session,options,u:new RuntimeUpdates(options)};
+}
+test('signed manifest rejects tamper, wrong platform, expired release and foreign artifact origin',()=>{
+ const r=release();assert.equal(verify(r.envelope(),trust).sequence,1);
+ const tampered=r.envelope();tampered.manifest=Buffer.from('{}').toString('base64');assert.throws(()=>verify(tampered,trust));
+ for(const change of [{platform:'other'},{expires:0},{shell:999},{protocol:1},{files:[...r.manifest.files,r.manifest.files[0]]}])assert.throws(()=>verify(sign({...r.manifest,...change}),trust));
+ r.manifest.files[0].url='https://untrusted.example/file';assert.throws(()=>verify(r.envelope(),trust));
+});
+test('downloaded file digest is checked before making a release available',async t=>{
+ const f=fixture(t);f.r.bytes.set(f.r.manifest.files[0].url,Buffer.from('tampered'));await assert.rejects(()=>f.u.check());assert.equal(f.u.staged,undefined);assert.equal(f.u.state.active,null);
+});
+test('apply pauses admissions, snapshots DB, verifies helper and UI before opening admissions',async t=>{
+ const f=fixture(t);await f.u.check();const result=await f.u.apply();assert.equal(result.state,'updated');assert.equal(f.u.state.active,1);assert.equal(f.u.state.highest,1);assert.equal(f.session.updating,false);
+ assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert.deepEqual(f.events[0],['maintenance',true]);assert(f.events.some(e=>e[0]==='show'&&e[1]&&e[2]));assert.deepEqual(f.events.at(-1),['maintenance',false]);
+ await f.u.check();assert.equal(f.u.status.state,'current');
+});
+test('failed renderer boot restores pre-migration DB and previous binary',async t=>{
+ const f=fixture(t);f.u.show=async(file,trial)=>{if(trial){fs.writeFileSync(f.db,'migrated-database');fs.writeFileSync(f.db+'-wal','candidate WAL');throw Error('renderer failed')}};
+ await f.u.check();const result=await f.u.apply();assert.equal(result.state,'rolled_back');assert.equal(f.session.executable,'old-helper');assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert(!fs.existsSync(f.db+'-wal'));assert.equal(f.u.state.active,null);assert.deepEqual(f.u.state.rejected,[1]);
+ await f.u.check();assert.equal(f.u.status.state,'current');
+});
+test('crash during trial is recovered before any executor is started',async t=>{
+ const f=fixture(t);const snapshot=await f.u.snapshot();f.u.state.pending={candidate:2,previous:null,snapshot};f.u.save();fs.writeFileSync(f.db,'unconfirmed-migration');
+ const next=new RuntimeUpdates(f.options);assert.equal(next.recover().executable,'old-helper');assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert(!next.state.pending);assert.deepEqual(f.events,[]);
+});
+test('busy task keeps running while new admissions stay paused',async t=>{
+ const f=fixture(t);let polls=0;f.session.maintenance=async pause=>({idle:!pause||++polls>1});await f.u.check();await f.u.apply();assert.equal(polls,2);assert.equal(f.u.status.state,'updated');
+});
+test('renderer cannot request maintenance or health through general IPC proxy',()=>{
+ const {safeEndpoint}=require('../security.cjs');assert.throws(()=>safeEndpoint('maintenance',{pause:false}));assert.throws(()=>safeEndpoint('health'));
+});
+test('offline publisher emits a verifiable release and never copies the private key',()=>{
+ const {publish}=require('../publish-runtime.cjs');
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'member-publish-'));
+ try{
+  const pair=crypto.generateKeyPairSync('ed25519');
+  const source=path.join(root,'source'),out=path.join(root,'public');fs.mkdirSync(source);
+  for(const name of ['workspace.html','workspace.cjs','helper'])fs.writeFileSync(path.join(source,name),'synthetic '+name);
+  const key=path.join(root,'private.pem');fs.writeFileSync(key,pair.privateKey.export({type:'pkcs8',format:'pem'}));
+  const args={source,helper:path.join(source,'helper'),out,base:'https://release.example/mac-arm64/',version:'0.1.2',sequence:2,platform:'darwin',arch:'arm64',key,expires:Date.now()/1000+60};
+  const result=publish(args);const envelope=JSON.parse(fs.readFileSync(path.join(out,'current.json')));
+  assert.equal(verify(envelope,result,{platform:'darwin',arch:'arm64'}).sequence,2);
+  assert.deepEqual(fs.readdirSync(out).sort(),['2','current.json']);
+  assert.deepEqual(fs.readdirSync(path.join(out,'2')).sort(),['indiebiz-member','workspace.cjs','workspace.html']);
+  assert.throws(()=>publish(args));
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

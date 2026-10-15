@@ -144,5 +144,8 @@ func (m *MemberRuntime) restoreArchive(body map[string]interface{}) map[string]i
 	if err = tx.Commit(); err != nil {
 		return errResult("archive", err.Error())
 	}
+	if err = m.migrateTaskRoots(); err != nil {
+		return errResult("archive", err.Error())
+	}
 	return map[string]interface{}{"success": true, "path": root, "records": count, "files": len(files), "notice": "새 폴더에 보존했습니다. 프로그램과 과거 실행은 자동 등록하거나 재실행하지 않습니다."}
 }

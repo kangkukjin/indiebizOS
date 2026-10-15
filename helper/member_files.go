@@ -27,6 +27,9 @@ func (m *MemberRuntime) localFile(body map[string]interface{}) map[string]interf
 	if id == "" {
 		id = "local-browser"
 		_, _ = m.store.db.Exec("INSERT OR REPLACE INTO tasks VALUES(?, '파일 탐색',?,'idle','{}',0,0)", id, m.workspace())
+		if e := m.bindTaskRoot(id, m.workspace()); e != nil {
+			return errResult("workspace", e.Error())
+		}
 	}
 	if op == "diff" {
 		return m.gitDiff(id)
@@ -48,14 +51,18 @@ func (m *MemberRuntime) localFile(body map[string]interface{}) map[string]interf
 	case "resolve":
 		return map[string]interface{}{"success": true, "path": c.Path}
 	case "list":
-		return doList(c)
+		return m.execute(c)
 	case "read":
-		return memberRead(c)
+		return m.execute(c)
 	default:
 		return m.safeWrite(c)
 	}
 }
 func (m *MemberRuntime) editFile(c Command) map[string]interface{} {
+	if m.cfg.Desktop {
+		result, _ := m.desktopFileOp(c)
+		return result
+	}
 	info, e := os.Stat(c.Path)
 	if e != nil || !info.Mode().IsRegular() || info.Size() > 32*1024*1024 {
 		return errResult("read_limit", "32MB 이하 일반 파일만 편집합니다")
@@ -139,6 +146,10 @@ func (m *MemberRuntime) localApps(remote map[string]interface{}, id string) map[
 	if id == "" {
 		id = "local-browser"
 		_, _ = m.store.db.Exec("INSERT OR REPLACE INTO tasks VALUES('local-browser','파일 탐색',?,'idle','{}',0,0)", m.workspace())
+		if e := m.bindTaskRoot(id, m.workspace()); e != nil {
+			remote["local_error"] = e.Error()
+			return remote
+		}
 	}
 	c, err := m.scopeCommand(Command{Op: "read", Path: "apps.json", TaskID: id})
 	if err != nil {
@@ -152,8 +163,23 @@ func (m *MemberRuntime) localApps(remote map[string]interface{}, id string) map[
 		remote["local_error"] = "apps.json은 512KB 이하 파일이어야 합니다"
 		return remote
 	}
-	data, err := os.ReadFile(c.Path)
-	if err != nil {
+	var data []byte
+	if m.cfg.Desktop {
+		result := m.execute(c)
+		content, ok := result["content"].(string)
+		if !ok || result["success"] != true {
+			remote["local_error"] = "앱 선언을 읽지 못했습니다"
+			return remote
+		}
+		data = []byte(content)
+	} else {
+		data, err = os.ReadFile(c.Path)
+		if err != nil {
+			return remote
+		}
+	}
+	if len(data) > 512*1024 {
+		remote["local_error"] = "apps.json 크기 제한"
 		return remote
 	}
 	var apps []map[string]interface{}

@@ -74,6 +74,12 @@ func (m *MemberRuntime) serve() error {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		if r.Method == "GET" && r.URL.Path == "/member/health" {
+			var check string
+			err := m.store.db.QueryRow("PRAGMA quick_check").Scan(&check)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": err == nil && check == "ok", "protocol": 2})
+			return
+		}
 		if r.Method == "GET" && r.URL.Path == "/member/changes" {
 			json.NewEncoder(w).Encode(m.changes(r.URL.Query().Get("id")))
 			return
@@ -132,6 +138,18 @@ func (m *MemberRuntime) serve() error {
 			return
 		}
 		switch r.URL.Path {
+		case "/member/maintenance":
+			m.taskMu.Lock()
+			m.maintenance = body["pause"] == true
+			idle := m.runningTask == ""
+			m.taskMu.Unlock()
+			if idle {
+				idle = m.execMu.TryLock()
+				if idle {
+					m.execMu.Unlock()
+				}
+			}
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "idle": idle})
 		case "/member/media-claim":
 			key, _ := body["key"].(string)
 			json.NewEncoder(w).Encode(m.claimMedia(key))

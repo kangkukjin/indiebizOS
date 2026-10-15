@@ -494,3 +494,6 @@ data/media_turn_private/
 
 # Member desktop request receipts (metadata; runtime state).
 data/member_requests.sqlite3*
+
+# Build-local public update trust (private signing keys must stay outside the repository).
+member-desktop/update-trust.json

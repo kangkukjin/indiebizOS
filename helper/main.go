@@ -32,6 +32,7 @@ import (
 
 // 옆에 놓인 설정 파일 — 발급기([self:limb]{op:issue})가 USB 에 써 넣는다.
 type Config struct {
+	Maintenance    bool     `json:"maintenance,omitempty"`
 	Desktop        bool     `json:"desktop,omitempty"`
 	PrivateKey     string   `json:"private_key,omitempty"`
 	InstallationID string   `json:"installation_id,omitempty"`
@@ -121,6 +122,13 @@ const (
 var client = &http.Client{Timeout: 90 * time.Second}
 
 func main() {
+	if len(os.Args) == 4 && os.Args[1] == "--member-db-backup" {
+		if err := memberDatabaseBackup(os.Args[2], os.Args[3]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--member-desktop" {
 		os.Exit(memberDesktopMain())
 	}
@@ -259,7 +267,7 @@ func connect(cfg *Config, host string) error {
 	env := doInfo()
 	if cfg.Desktop {
 		env["client"] = "desktop"
-		env["client_version"] = "0.1.0"
+		env["client_version"] = memberVersion
 		env["protocol"] = 2
 	}
 	body := map[string]interface{}{"key": cfg.Key, "host": host, "env": env, "mode": cfg.Mode}

@@ -17,6 +17,8 @@ import (
 	"time"
 )
 
+var memberVersion = "0.1.1"
+
 var bodySessionMu sync.RWMutex
 
 func bodySession() string         { bodySessionMu.RLock(); defer bodySessionMu.RUnlock(); return sessionID }
@@ -39,7 +41,7 @@ func memberDesktopMain() int {
 		return 1
 	}
 	m := memberRuntime
-	_ = json.NewEncoder(os.Stdout).Encode(map[string]interface{}{"origin": m.localURL, "token": m.token, "protocol": 2, "version": "0.1.0"})
+	_ = json.NewEncoder(os.Stdout).Encode(map[string]interface{}{"origin": m.localURL, "token": m.token, "protocol": 2, "version": memberVersion})
 	// Only the first stdout line is read by Electron. No secret is sent to a renderer.
 	go func() {
 		_, _ = io.Copy(io.Discard, reader)

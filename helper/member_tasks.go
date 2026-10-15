@@ -13,14 +13,18 @@ import (
 )
 
 func (m *MemberRuntime) initTasks() error {
-	_, err := m.store.db.Exec(`CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,title TEXT,workspace TEXT,state TEXT,result TEXT,created INTEGER,updated INTEGER);
+	_, err := m.store.db.Exec(`CREATE TABLE IF NOT EXISTS task_roots(task TEXT PRIMARY KEY,path TEXT,identity TEXT);
+ CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,title TEXT,workspace TEXT,state TEXT,result TEXT,created INTEGER,updated INTEGER);
  CREATE TABLE IF NOT EXISTS task_events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT,kind TEXT,content TEXT);
  CREATE TABLE IF NOT EXISTS desktop_requests(request TEXT PRIMARY KEY,task TEXT,cursor INTEGER,state TEXT);
  CREATE TABLE IF NOT EXISTS file_changes(id TEXT PRIMARY KEY,task TEXT,path TEXT,before BLOB,existed INTEGER,after_hash TEXT,created INTEGER);
  CREATE TABLE IF NOT EXISTS member_settings(key TEXT PRIMARY KEY,value TEXT);
  UPDATE tasks SET state='unknown' WHERE state='running';`)
 	_, _ = m.store.db.Exec("ALTER TABLE conversations ADD COLUMN task_id TEXT NOT NULL DEFAULT ''")
-	return err
+	if err != nil {
+		return err
+	}
+	return m.migrateTaskRoots()
 }
 func (m *MemberRuntime) workspace() string {
 	var root string
@@ -28,9 +32,17 @@ func (m *MemberRuntime) workspace() string {
 	if root == "" {
 		root = filepath.Join(m.dir, "workspace")
 		_ = os.MkdirAll(root, 0755)
+		if resolved, e := filepath.EvalSymlinks(root); e == nil {
+			m.setWorkspace(resolved)
+			return resolved
+		}
 	}
-	if resolved, err := filepath.EvalSymlinks(root); err == nil {
-		return resolved
+	var identity string
+	_ = m.store.db.QueryRow("SELECT value FROM member_settings WHERE key='workspace_identity'").Scan(&identity)
+	if identity == "" {
+		if _, e := workspaceIdentity(root); e == nil {
+			m.setWorkspace(root)
+		}
 	}
 	return root
 }
@@ -47,7 +59,22 @@ func (m *MemberRuntime) setWorkspace(raw string) map[string]interface{} {
 	if err != nil || !info.IsDir() {
 		return errResult("workspace", "폴더가 아닙니다")
 	}
-	_, err = m.store.db.Exec("INSERT OR REPLACE INTO member_settings VALUES('workspace',?)", root)
+	identity, err := workspaceIdentity(root)
+	if err != nil {
+		return errResult("workspace", err.Error())
+	}
+	tx, err := m.store.db.Begin()
+	if err != nil {
+		return errResult("storage", err.Error())
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec("INSERT OR REPLACE INTO member_settings VALUES('workspace',?)", root); err != nil {
+		return errResult("storage", err.Error())
+	}
+	if _, err = tx.Exec("INSERT OR REPLACE INTO member_settings VALUES('workspace_identity',?)", identity); err != nil {
+		return errResult("storage", err.Error())
+	}
+	err = tx.Commit()
 	if err != nil {
 		return errResult("storage", err.Error())
 	}
@@ -62,7 +89,21 @@ func (m *MemberRuntime) taskRoot(id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.EvalSymlinks(root)
+	resolved, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", err
+	}
+	if filepath.Clean(resolved) != filepath.Clean(root) {
+		return "", fmt.Errorf("작업 폴더가 교체되었습니다. 폴더를 다시 선택하고 새 작업을 시작하세요")
+	}
+	identity, err := workspaceIdentity(root)
+	if err != nil {
+		return "", err
+	}
+	if err = m.checkTaskIdentity(id, identity); err != nil {
+		return "", err
+	}
+	return root, nil
 }
 func (m *MemberRuntime) taskEvent(id, kind string, value interface{}) {
 	b, _ := json.Marshal(value)
@@ -115,6 +156,9 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 	}
 	m.taskMu.Lock()
 	defer m.taskMu.Unlock()
+	if m.maintenance {
+		return errResult("updating", "업데이트 준비 중입니다. 완료 후 새 작업을 시작하세요")
+	}
 	if m.runningTask != "" {
 		return errResult("busy", "진행 중인 작업을 완료하거나 중단하세요")
 	}
@@ -131,6 +175,9 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 		}
 		if _, err := m.store.db.Exec("INSERT INTO tasks VALUES(?,?,?,'idle','{}',?,?)", id, title, m.workspace(), now, now); err != nil {
 			return errResult("storage", err.Error())
+		}
+		if err := m.bindTaskRoot(id, m.workspace()); err != nil {
+			return errResult("workspace", err.Error())
 		}
 	}
 	if _, err := m.taskRoot(id); err != nil {

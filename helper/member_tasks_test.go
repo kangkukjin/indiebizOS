@@ -18,6 +18,9 @@ func addLocalTask(t *testing.T, m *MemberRuntime, id, root string) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	if e = m.bindTaskRoot(id, root); e != nil {
+		t.Fatal(e)
+	}
 }
 func TestMemberWorkspaceScopesRelativeAndSymlinkPaths(t *testing.T) {
 	m := testMember(t)

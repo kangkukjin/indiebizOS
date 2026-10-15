@@ -4,21 +4,31 @@ const fs=require('node:fs');
 const {fileURLToPath}=require('node:url');
 const {MemberSession}=require('./session.cjs');
 const {invitation}=require('./security.cjs');
-let win,tray,session,quitting=false,pending={},error='';
-const setupFile=path.join(__dirname,'setup.html'),workspaceFile=path.join(__dirname,'workspace.html');
-function acceptLink(raw){try{pending=invitation(raw);if(win){win.show();if(!session?.config)win.loadFile(setupFile);}}catch{error='등록 링크를 확인하세요.';}}
+const {RuntimeUpdates}=require('./updates.cjs');
+let win,tray,session,updates,bootReady,quitting=false,pending={},error='';
+const setupFile=path.join(__dirname,'setup.html');let workspaceFile=path.join(__dirname,'workspace.html');
+function acceptLink(raw){try{pending=invitation(raw);if(win){win.show();win.loadFile(setupFile);}}catch{error='등록 링크를 확인하세요.';}}
 if(!app.requestSingleInstanceLock())app.quit();
 else {
 app.setName('IndieBiz Member');
 app.on('second-instance',(_,argv)=>{const link=argv.find(a=>a.startsWith('indiebiz-member:'));if(link)acceptLink(link);win?.show();});
 app.on('open-url',(e,url)=>{e.preventDefault();acceptLink(url);});
-app.on('before-quit',e=>{if(!quitting){e.preventDefault();quitting=true;session?.stop().finally(()=>app.quit());}});
+app.on('before-quit',e=>{if(!quitting){e.preventDefault();quitting=true;Promise.resolve(session?.stop()).finally(()=>app.quit());}});
 app.on('window-all-closed',()=>{});
 app.on('activate',()=>win?.show());
 app.whenReady().then(async()=>{
   const root=app.getPath('userData');
   const executable=app.isPackaged?path.join(process.resourcesPath,'member','indiebiz-member'+(process.platform==='win32'?'.exe':'')):path.join(__dirname,'resources','indiebiz-member'+(process.platform==='win32'?'.exe':''));
   session=new MemberSession({root,safeStorage,executable,onExit:()=>{error='로컬 실행부가 종료됐습니다. 기록은 보존되며 작업은 자동 재실행하지 않습니다.';win?.webContents.send('member:disconnected');}});
+  let trust={};const trustFile=path.join(__dirname,'update-trust.json');if(fs.existsSync(trustFile))trust=JSON.parse(fs.readFileSync(trustFile,'utf8'));
+  const show=async(file,trial)=>{
+    workspaceFile=file;
+    if(!trial){await win.loadFile(file);return;}
+    let timer;const ready=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(Error('새 화면을 시작하지 못했습니다.')),25000);bootReady=resolve;});
+    try{await win.loadFile(file);await ready;}finally{clearTimeout(timer);bootReady=null;}
+  };
+  updates=new RuntimeUpdates({root,trust,session,show,baseline:{workspace:workspaceFile,executable,version:require('./package.json').version}});
+  try{const runtime=updates.recover();workspaceFile=runtime.workspace;session.executable=runtime.executable;}catch(e){dialog.showErrorBox('업데이트 복구 필요',e.message);quitting=true;app.quit();return;}
   win=new BrowserWindow({width:1280,height:900,minWidth:760,minHeight:560,title:'IndieBiz Member',webPreferences:{preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
   win.on('close',e=>{if(!quitting){e.preventDefault();win.hide();}});
   win.webContents.on('will-navigate',(e,url)=>{try{if(![setupFile,workspaceFile].includes(fileURLToPath(url)))e.preventDefault();}catch{e.preventDefault();}});
@@ -31,7 +41,12 @@ app.whenReady().then(async()=>{
   Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'IndieBiz Member',submenu:[{role:'about'},{label:'작업 공간 열기',click:()=>void win.loadFile(session.bridge?workspaceFile:setupFile)},{role:'quit'}]},{role:'editMenu'},{role:'viewMenu'},{role:'windowMenu'}]));
   app.setAsDefaultProtocolClient('indiebiz-member');
   function trusted(event,setupOnly=false){if(event.sender!==win.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('허용되지 않은 창');const filename=fileURLToPath(event.senderFrame.url);if(![setupFile,...(setupOnly?[]:[workspaceFile])].includes(filename))throw Error('허용되지 않은 화면');}
-  function handle(name,fn,setupOnly=false){ipcMain.handle('member:'+name,async(e,arg)=>{trusted(e,setupOnly);return fn(arg);});}
+  function handle(name,fn,setupOnly=false){ipcMain.handle('member:'+name,async(e,arg)=>{trusted(e,setupOnly);if(session.updating&&!['request','ready','setup','settings','updateStatus'].includes(name))throw Error('업데이트 중입니다. 완료 후 다시 시도하세요.');return fn(arg);});}
+  handle('ready',()=>{bootReady?.();return {success:true};});
+  handle('updateStatus',()=>updates.publicState());
+  handle('updateCheck',()=>updates.check());
+  handle('updateApply',()=>updates.apply());
+  handle('updateAuto',enabled=>updates.setAuto(Boolean(enabled)));
   handle('setup',()=>({...session.publicState(),...pending,error}));
   handle('enroll',async({hub,code})=>{const existing=session.config;if(existing){const answer=await dialog.showMessageBox(win,{type:'question',buttons:['취소','새 PC 등록으로 전환'],defaultId:0,message:'진행 중 작업을 중단하고 다른 등록으로 연결할까요?',detail:'기존 파일과 로컬 기록은 보존합니다.'});if(answer.response!==1)throw Error('연결 변경을 취소했습니다.');}const state=await session.enroll(hub,code);pending={};error='';await win.loadFile(workspaceFile);return state;},true);
   handle('request',({path,body})=>session.request(path,body));
@@ -44,5 +59,7 @@ app.whenReady().then(async()=>{
   handle('import',async()=>{const r=await dialog.showOpenDialog(win,{properties:['openFile'],filters:[{name:'회원 백업',extensions:['json','zip']}]});if(r.canceled)return {cancelled:true};const stat=fs.statSync(r.filePaths[0]);if(stat.size>32*1024*1024)throw Error('백업은 32MB 이하여야 합니다.');return session.request('restore',path.extname(r.filePaths[0]).toLowerCase()==='.zip'?{zip_base64:fs.readFileSync(r.filePaths[0]).toString('base64')}:{archive:JSON.parse(fs.readFileSync(r.filePaths[0],'utf8'))});});
   try{await session.start();}catch(e){error=e.message;}
   const link=process.argv.find(a=>a.startsWith('indiebiz-member:'));if(link)acceptLink(link);
-  await win.loadFile(session.bridge?workspaceFile:setupFile);
+  await win.loadFile(Object.keys(pending).length?setupFile:session.bridge?workspaceFile:setupFile);
+  const automatic=async()=>{if(!updates.state.auto||!session.config)return;try{await updates.check();if(updates.staged)await updates.apply();}catch(e){error=e.message;}};
+  setTimeout(automatic,60000).unref();setInterval(automatic,6*60*60*1000).unref();
 });}

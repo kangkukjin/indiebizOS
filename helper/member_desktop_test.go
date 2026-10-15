@@ -145,3 +145,48 @@ func TestDesktopReadHashAlwaysCoversCompleteEditableText(t *testing.T) {
 		t.Fatal(r)
 	}
 }
+
+func TestDesktopWorkspaceRootCannotBeReboundBySymlink(t *testing.T) {
+	m := testMember(t)
+	m.cfg.Desktop = true
+	base := t.TempDir()
+	root := filepath.Join(base, "selected")
+	outside := filepath.Join(base, "outside")
+	os.Mkdir(root, 0700)
+	os.Mkdir(outside, 0700)
+	os.WriteFile(filepath.Join(outside, "private.txt"), []byte("outside"), 0600)
+	addLocalTask(t, m, "task", root)
+	os.Rename(root, root+"-original")
+	os.Symlink(outside, root)
+	for _, op := range []string{"read", "write", "list"} {
+		result := m.localFile(map[string]interface{}{"op": op, "task_id": "task", "path": "private.txt", "content": "changed"})
+		if result["error"] == nil {
+			t.Fatalf("%s escaped: %#v", op, result)
+		}
+	}
+	b, _ := os.ReadFile(filepath.Join(outside, "private.txt"))
+	if string(b) != "outside" {
+		t.Fatal("outside modified")
+	}
+}
+
+func TestDesktopFileHandleRejectsLateSymlinkReplacement(t *testing.T) {
+	m := testMember(t)
+	m.cfg.Desktop = true
+	root := m.workspace()
+	addLocalTask(t, m, "task", root)
+	os.Mkdir(filepath.Join(root, "sub"), 0700)
+	c, e := m.scopeCommand(Command{Op: "write", TaskID: "task", Path: "sub/file.txt", Content: "changed", ExpectedHash: "missing"})
+	if e != nil {
+		t.Fatal(e)
+	}
+	outside := t.TempDir()
+	os.Rename(filepath.Join(root, "sub"), filepath.Join(root, "old"))
+	os.Symlink(outside, filepath.Join(root, "sub"))
+	if out := m.execute(c); out["error"] == nil {
+		t.Fatal("late symlink accepted", out)
+	}
+	if _, e = os.Stat(filepath.Join(outside, "file.txt")); !os.IsNotExist(e) {
+		t.Fatal("outside file created")
+	}
+}

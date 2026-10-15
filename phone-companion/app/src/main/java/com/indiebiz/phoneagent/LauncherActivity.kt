@@ -42,8 +42,15 @@ class LauncherActivity : Activity() {
     private companion object { const val FILE_CHOOSER_REQUEST = 1001 }
 
     @SuppressLint("SetJavaScriptEnabled")
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 시스템 홈·뒤로·최근 앱 버튼은 밝은 배경에 어두운 아이콘으로 표시한다.
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.navigationBarColor = Color.WHITE
+        window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         web = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(

@@ -15,8 +15,14 @@ class MemberActivity:Activity() {
     private var web:WebView?=null
     private var pendingExport:java.io.File?=null
     private val generation=AtomicInteger()
+    @Suppress("DEPRECATION")
     override fun onCreate(state:Bundle?) {
         super.onCreate(state); runtime=MemberRuntime.get(this)
+        // 시스템 홈·뒤로·최근 앱 버튼은 밝은 배경에 어두운 아이콘으로 표시한다.
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.navigationBarColor = android.graphics.Color.WHITE
+        window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         if(Build.VERSION.SDK_INT>=33) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),1)
         if(runtime.base().isEmpty() || runtime.key().isEmpty()) setup() else showChat()
     }

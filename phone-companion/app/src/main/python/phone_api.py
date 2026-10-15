@@ -26,12 +26,7 @@ _lw = None
 _scratch = None
 _base = None
 
-# === 분산 IBL: 자율주행 표면 → 맥 백엔드 위임 ===
-# 두뇌=맥(claude_code, 단일 설정·프로젝트·스위치), 몸=폰. 폰의 자율주행 표면
-# (프로젝트/스위치/시스템AI 채팅)은 맥 백엔드(:8765)로 프록시한다 — 번들 아님.
-# 도달=LAN IP 또는 터널 URL(INDIEBIZ_MAC_URL). 인증=맥 원격 런처 세션
-# (비번 INDIEBIZ_MAC_PASSWORD → 로그인 → X-Launcher-Session). 둘 다 keys.json/env 로.
-# 미설정(오프라인) 시 자율주행은 빈 목록 graceful — 앱모드(폰 로컬 IBL)는 무관히 동작.
+# 맥 능력 대여 연결. 폰의 AI 대화와 기록은 폰 로컬 실행자가 소유한다.
 _mac_url = None
 _mac_password = None
 _mac_session = None
@@ -1130,7 +1125,7 @@ async def switch_execute(switch_id: str, request: Request):
 # 남는 경로 호출은 catch-all 이 census 에 적고 404 — 잔존 UI 가 있으면 거기서 드러난다.
 
 
-def _run_local_harness(message: str, images: list):
+def _run_local_harness(message: str, images: list, cancel_check=None):
     """폰-자아 로컬 하네스 추론 (process_system_ai_message). 폰이 자기 정체성(world_pulse
     폴백=detect_body)으로 추론하고, 모델은 3티어(경량 gemini_http 직접 / 중급·본격 claude_code_remote
     맥 렌트)로 빌리며, IBL 실행은 폰 로컬(빌린 액션만 맥 위임), 해마는 렌트 인덱스. 실패 시 None."""
@@ -1151,9 +1146,9 @@ def _run_local_harness(message: str, images: list):
                            for i in images if i.get("base64")]
         # 직전 대화 로드 → AI 가 turn 사이를 기억(맥 GUI 와 동형). 그리고 이번 사용자 메시지 저장.
         history = get_history_for_ai(limit=7)
-        save_conversation("user", message, source="phone")
+        save_conversation("user", message, source="phone", images=images_data)
         response_text, _tool_images = process_system_ai_message(
-            message=message, history=history, images=images_data
+            message=message, history=history, images=images_data, cancel_check=cancel_check
         )
         # AI 응답 저장 → 과거 대화 뷰 + 다음 turn 기억의 소스.
         if response_text:
@@ -1169,8 +1164,7 @@ def _run_local_harness(message: str, images: list):
 
 @app.post("/system-ai/chat")
 async def system_ai_chat(request: Request):
-    """폰-자아 호스팅 step7: 로컬 하네스 실행이 1순위(폰이 자기 몸 위에서 추론=자기-모델 참).
-    로컬 하네스 미가용/실패 시 맥 프록시 폴백(전환 안전). LLM 왕복이라 긴 타임아웃."""
+    """기존 단발 호출도 폰 로컬 하네스에서 실행한다."""
     try:
         body = await request.json()
     except Exception:
@@ -1185,14 +1179,12 @@ async def system_ai_chat(request: Request):
             result = await asyncio.to_thread(_run_local_harness, message, images)
             if result and result.get("response"):
                 return JSONResponse(result)
-            print("[phone_api] 로컬 하네스 빈 응답 → 맥 프록시 폴백")
+            print("[phone_api] 로컬 하네스 빈 응답")
         except Exception as e:
             import traceback
-            print(f"[phone_api] 로컬 하네스 실패 → 맥 프록시 폴백: {e}\n{traceback.format_exc()[-500:]}")
+            print(f"[phone_api] 로컬 하네스 실패: {e}\n{traceback.format_exc()[-500:]}")
 
-    # 몸 독립 원칙(2026-07-22): 맥 프록시 폴백 은퇴 — 이 몸의 하네스가 실패했는데
-    # 맥-자아가 변장 대답하는 것은 정체성 위반(맥 시스템 AI = 다른 기억·다른 자아).
-    # 맥의 시스템 AI 와 대화하려면 원격 런처(리모컨), 맥의 능력이 필요하면 [others:ask].
+    # 폰의 실패를 다른 몸의 응답으로 감추지 않는다.
     return JSONResponse({"response": "이 몸의 하네스가 응답하지 못했습니다 — 폰 AI 설정(모델·키)과 "
                                      "네트워크를 확인하세요. 맥의 시스템 AI 와 대화하려면 원격 런처를 여세요."})
 
@@ -1213,14 +1205,12 @@ async def system_ai_conversations(limit: int = 40):
 _phone_agent_runners = {}
 
 
-def _run_phone_agent(project_id: str, agent_id: str, command: str) -> dict:
+def _run_phone_agent(project_id: str, agent_id: str, command: str, history=None, images=None, cancel_check=None) -> dict:
     """폰-로컬 프로젝트 에이전트 실행 (번들 AgentRunner, 폰 두뇌). 맥 위임 아님.
     에이전트는 폰의 몸에서 돌고, IBL 은 runs_on 대로 라우팅(anywhere 로컬·mac_only 포워드)."""
     import yaml
     from agent_runner import AgentRunner
-    # 에피소드 기록 — 프로젝트 에이전트 1턴을 world_pulse.db 에 남긴다(맥 api_websocket 동형).
-    # 부동산 같은 다단계 에이전트가 "뭘 했는지/어디서 느린지" 를 회고할 수 있게. finally 로
-    # 조기 반환·예외·포기 모두에서 end → 실패한 실행도 기록된다.
+    # 성공·예외·중단 모두 에피소드로 보존한다.
     try:
         from episode_logger import EpisodeLogger
         EpisodeLogger.start_episode(f"{project_id}:{agent_id}", command)
@@ -1249,18 +1239,34 @@ def _run_phone_agent(project_id: str, agent_id: str, command: str) -> dict:
         }
         common_config = data.get("common", {})
 
+        from conversation_sessions import current
+        binding = current()
         key = f"{project_id}/{agent_id}"
-        rec = _phone_agent_runners.get(key)
-        runner = rec.get("runner") if rec else None
-        if not (runner and getattr(runner, "running", False)):
+        runner = None if binding else (_phone_agent_runners.get(key) or {}).get("runner")
+        if binding:
+            agent_config["_conversation_session"] = binding.session_id
+            runner = AgentRunner(agent_config, common_config)
+            runner._init_ai()
+        elif not (runner and getattr(runner, "running", False)):
             runner = AgentRunner(agent_config, common_config)
             runner.start()
             _phone_agent_runners[key] = {"runner": runner}
         if not getattr(runner, "ai", None):
             return {"response": "에이전트 AI 초기화 실패 — 폰에 해당 제공자 키가 없을 수 있습니다."}
-        resp = runner.ai.process_message_with_history(message_content=command, history=[])
+        from conversation_sessions import record_event
+        resp = ""
+        for event in runner.ai.process_message_stream(message_content=command, history=history or [], images=images, cancel_check=cancel_check):
+            kind = event.get("type")
+            if kind == "error":
+                raise RuntimeError(event.get("content", "AI 응답 실패"))
+            if kind == "text":
+                record_event({"type": "stream_chunk", "content": event.get("content", "")})
+            if kind == "final":
+                resp = event.get("content", "")
         return {"response": resp}
     finally:
+        if "binding" in locals() and binding and "runner" in locals() and runner:
+            runner.stop()
         try:
             from episode_logger import EpisodeLogger
             EpisodeLogger.end_episode()
@@ -1293,6 +1299,10 @@ async def agent_command(project_id: str, agent_id: str, request: Request):
         return JSONResponse({"response": f"에이전트 실행 오류: {e}"})
 
 
+from phone_chat_sessions import create_router as _chat_router
+app.include_router(_chat_router(_phone_pm, _run_local_harness, _run_phone_agent))
+
+
 @app.get("/output/{name}")
 def output_file(name: str):
     """폰 로컬 생성물(신문 등 HTML)을 런처 오버레이가 띄우도록 서빙.
@@ -1303,8 +1313,6 @@ def output_file(name: str):
     if os.path.exists(path):
         return FileResponse(path, media_type="text/html")
     return JSONResponse({"error": "파일을 찾을 수 없습니다."}, status_code=404)
-
-
 
 
 # ============================================================================

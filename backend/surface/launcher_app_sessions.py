@@ -2,8 +2,18 @@
 
 LAUNCHER_SESSIONS_JS = r'''
 let apSessionContext=null;
-function apSessionsEnabled(){return !IS_PHONE && ['system','agent'].includes(apChat.type)}
-function apStopSessions(){if(apSessionContext)clearTimeout(apSessionContext.timer);apSessionContext=null}
+async function apResearchHistory(){
+ const d=document.getElementById('apSessionHistory'),box=document.getElementById('apSessionList');
+ document.getElementById('apSessionSearch').hidden=true;box.replaceChildren();
+ for(const [i,t] of apThreads.entries()){
+  const button=document.createElement('button');button.className='ap-session-row';button.textContent=t.title+' · '+(t.updated_label||'');
+  button.onclick=()=>{d.close();apPickThread(i)};box.append(button);
+ }d.showModal();
+}
+function apSessionsEnabled(){return ['system','agent'].includes(apChat.type)}
+function apOpenSessionHistory(){if(apChat.type==='research'){apResearchHistory();return}const d=document.getElementById('apSessionHistory');d.showModal();document.getElementById('apSessionSearch').focus()}
+function apCloseSessionHistory(){document.getElementById('apSessionHistory').close()}
+function apStopSessions(){apCloseSessionHistory();if(apSessionContext)clearTimeout(apSessionContext.timer);apSessionContext=null}
 function apSessionLive(s,id){return apSessionContext===s&&(id===undefined||s.id===id)}
 function apSessionDay(value){const d=new Date(value||'');return isNaN(d)?'':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 async function apSessionRequest(s,path='',method='GET',body={}){
@@ -74,13 +84,14 @@ async function apSessionSnapshot(s,id,before){
 }
 async function apSelectSession(id,preserveDraft=false){
  const s=apSessionContext;if(!s)return;
- s.generation=(s.generation||0)+1;s.id=id;s.messages=[];s.loaded=false;s.running=false;s.older=false;s.reading=false;s.snapshot=null;s.signature='';s.rendered=false;
+ apCloseSessionHistory();s.generation=(s.generation||0)+1;s.id=id;s.messages=[];s.loaded=false;s.running=false;s.older=false;s.reading=false;s.snapshot=null;s.signature='';s.rendered=false;
  try{localStorage.setItem(s.key,id)}catch(e){}
  if(!preserveDraft){document.getElementById('apInput').value='';apImages=[];apRenderChips();}document.getElementById('apMsgs').replaceChildren();
  apRenderSessionList();apSessionControls(s);apSessionError(s,null);
  try{await apSessionSnapshot(s,id)}catch(e){if(apSessionLive(s,id))apSessionError(s,e)}
 }
 async function apNewSession(){
+ if(apChat.type==='research'){await apThreadCreate();return}
  const s=apSessionContext;if(!s||s.creating)return;s.creating=true;apSessionControls(s);
  const previous=s.id,generation=s.generation;
  try{const row=await apSessionRequest(s,'','POST');if(!apSessionLive(s))return;s.items.unshift(row);apRenderSessionList();if(s.id===previous&&s.generation===generation)await apSelectSession(row.id)}
@@ -111,7 +122,7 @@ async function apStartSessions(){
  apStopSessions();
  const target=apChat.type==='agent'?{target:'agent',project_id:apChat.projectId,agent_id:String(apChat.agentId)}:{target:'system_ai'};
  const s={target,key:'remote-conversation:'+JSON.stringify(target),id:'',items:[],messages:[],pending:new Set(),loaded:false,running:false,older:false};apSessionContext=s;
- document.getElementById('apSessionSearch').value='';document.getElementById('apSessionDetails').open=window.innerWidth>=720;
+ document.getElementById('apSessionSearch').hidden=false;document.getElementById('apSessionSearch').value='';
  apSessionError(s,null);apSessionControls(s);apRenderSessionList();
  try{await apSessionList(s);if(!apSessionLive(s))return;
   let saved='';try{saved=localStorage.getItem(s.key)||''}catch(e){}

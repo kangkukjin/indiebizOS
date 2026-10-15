@@ -111,9 +111,12 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
             expect(page.locator('#taskTitle')).to_have_text('회의 준비')
             expect(page.locator('#chatEmpty')).to_be_hidden()
             expect(page.locator('#chat .assistant b')).to_have_text('일정')
-            sidebar = page.locator('#taskSidebar').bounding_box()
+            expect(page.locator('#taskSidebar')).to_have_count(0)
+            menu = page.locator('#taskSessionMenu').bounding_box()
             chat = page.locator('#chat').bounding_box()
-            assert sidebar['x'] + sidebar['width'] < chat['x']
+            assert menu['y'] + menu['height'] < chat['y']
+            assert chat['width'] > 1000
+            expect(page.locator('#taskHistory')).not_to_be_visible()
             composer = page.locator('#send').bounding_box()
             assert composer['y'] + composer['height'] <= 900
             page.screenshot(path=str(tmp_path / 'sessions.png'))
@@ -140,7 +143,9 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
             expect(page.locator('#chat')).not_to_contain_text('회의에서')
             expect(page.locator('#chat .bubble')).to_have_count(2)
             expect(page.locator('#taskList button')).to_have_count(2)
+            page.locator('#taskHistoryOpen').click()
             page.get_by_role('button', name='회의 준비 완료').click()
+            expect(page.locator('#taskHistory')).not_to_be_visible()
             expect(page.locator('#chat')).to_contain_text('회의에서')
             assert page.evaluate('fixtureTasks.find(t=>t.id==="old").events.length') == 2
 

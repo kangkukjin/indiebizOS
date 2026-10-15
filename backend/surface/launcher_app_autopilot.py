@@ -120,7 +120,7 @@ async function apBrowseResearch(p){
 async function apThreadCreate(){
   const p=apThreadProject; if(!p) return;
   const title=(prompt('새 주제 이름:')||'').trim(); if(!title) return;
-  try{ await apResearch(p.project_uid||p.id,'thread_create',{title:title}); apBrowseResearch(p); }
+  try{ const d=await apResearch(p.project_uid||p.id,'thread_create',{title:title});const t=(d.items||[])[0];if(t){apThreads.unshift(t);apPickThread(0)}else await apBrowseResearch(p); }
   catch(e){ alert('생성 실패: '+e.message); }
 }
 function apPickThread(i){
@@ -263,10 +263,10 @@ function apOpenChat(title,sub){
   apImages=[]; apRenderChips();
   apShowChat();
   const sessions=apSessionsEnabled();
-  document.getElementById('apSessions').hidden=!sessions;
+  document.getElementById('apSessions').hidden=!sessions&&apChat.type!=='research';
   document.getElementById('apSessionBar').hidden=!sessions;
   document.getElementById('apSessionError').textContent='';
-  if(sessions)void apStartSessions();else{apStopSessions();document.getElementById('apSend').disabled=false;apLoadHistory();}  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
+  if(sessions)void apStartSessions();else{apStopSessions();document.getElementById('apSessionNew').disabled=false;document.getElementById('apSend').disabled=false;apLoadHistory();}  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
   setTimeout(()=>{ try{ document.getElementById('apInput').focus(); }catch(e){} },50);
 }
 /* ── 사진 첨부: 갤러리 선택(input file) → canvas 긴 변 1600px 다운스케일(JPEG q0.85 —

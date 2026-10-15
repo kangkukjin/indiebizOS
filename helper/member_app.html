@@ -5,11 +5,12 @@
 [hidden]{display:none!important}
 main{max-width:1500px;height:100dvh;display:flex;flex-direction:column;padding:22px 28px}
 header{gap:16px;flex-shrink:0}header h1{margin:0;font-size:22px}#notice{margin:12px 0 6px}
-#workspaceLayout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;margin-top:20px;flex:1;min-height:0}
-#workArea,#taskSidebar{min-width:0;min-height:0}#workArea{display:flex;flex-direction:column}
-#taskSidebar{display:flex;flex-direction:column;border-right:1px solid #d4ded7;padding-right:20px}
-#newTask{width:100%}#taskSidebar h3{font-size:13px;color:#62716d;margin:24px 10px 10px}
-#taskList{flex:1;overflow:auto}#taskList button{display:block;background:transparent;color:#355548;text-align:left;width:100%;margin:4px 0;padding:12px}
+#workspaceLayout{display:flex;flex-direction:column;margin-top:20px;flex:1;min-height:0}
+#workArea{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+#taskSessionMenu{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px;flex-shrink:0}
+#taskHistory{margin:auto;padding:20px;width:560px;max-width:92vw;max-height:85dvh;border:1px solid #d4ded7;border-radius:16px;background:#f7f8f2;color:#284f3e}
+#taskHistory::backdrop{background:rgba(0,0,0,.35)}#taskHistoryHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+#taskList{max-height:60dvh;overflow:auto}#taskList button{display:block;background:transparent;color:#355548;text-align:left;width:100%;margin:4px 0;padding:12px}
 #taskList button:hover{background:#edf0e9}#taskList button.active{background:#e2eee7}
 .sessionTitle{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .sessionState{display:block;font-size:12px;color:#62716d;margin-top:5px}.sessionEmpty{color:#62716d;font-size:14px;line-height:1.7;padding:10px}
@@ -29,13 +30,13 @@ header{gap:16px;flex-shrink:0}header h1{margin:0;font-size:22px}#notice{margin:1
 #appsPanel,#filesPanel{flex:1;min-height:0;overflow:auto}#appsPanel h2{margin:4px 0 16px;font-size:22px}#appFrame{width:100%;height:calc(100% - 125px);min-height:360px;border:0}
 #fileEditor{width:100%;min-height:300px;font:14px ui-monospace,monospace}#fileRows button{margin:5px;background:#e7eee8;color:#264b37}#filePath{width:70%;padding:12px;border:1px solid #b9c9c0;border-radius:8px}.fileActions{display:flex;gap:10px;margin:12px 0}
 #approvals{max-height:35vh;overflow:auto;flex-shrink:0}
-@media(max-width:700px){main{height:auto;min-height:100dvh;padding:16px}#workspaceLayout{grid-template-columns:minmax(0,1fr);gap:16px}#taskSidebar{border-right:0;border-bottom:1px solid #d4ded7;padding:0 0 15px}#taskList{display:flex;overflow:auto;max-height:110px}#taskList button{min-width:150px;max-width:220px}#workspaceSettings{margin-top:8px;padding-top:8px}#conversationScroll{max-height:60vh}#chatEmpty{min-height:200px}header h1{font-size:18px}#send{position:sticky;bottom:0}#appFrame{height:70vh}.user{margin-left:20px}.assistant{margin-right:0}}
+@media(max-width:700px){main{height:auto;min-height:100dvh;padding:16px}#workspaceLayout{margin-top:12px}#workspaceSettings{margin-top:8px;padding-top:8px}#conversationScroll{max-height:60vh}#chatEmpty{min-height:200px}header h1{font-size:18px}#send{position:sticky;bottom:0}#appFrame{height:70vh}.user{margin-left:20px}.assistant{margin-right:0}}
 </style><main><header><h1>IndieBiz · 내 작업 공간</h1><button class="secondary" id="export">기억 내보내기</button></header>
 <p id="notice">대화와 기억은 이 기기에 저장됩니다. 요청 내용은 허브와 모델 제공자를 거쳐 처리됩니다.</p><small id="status">연결 확인 중</small>
 <audio id="memberAudio" hidden controls style="width:100%;margin-top:16px" aria-label="이 기기의 라디오"></audio>
-<section id="approvals" aria-live="polite"></section><div id="workspaceLayout"><aside id="taskSidebar" aria-label="세션 목록"><button id="newTask">＋ 새로운 세션 시작</button><h3>세션</h3><div id="taskList"></div><details id="workspaceSettings"><summary>내 작업 폴더</summary><small id="workspacePath"></small><input id="workspacePicker" aria-label="작업 폴더" placeholder="이 컴퓨터의 폴더 경로"><button id="setWorkspace" class="secondary">폴더 선택</button></details></aside><div id="workArea"><nav id="memberNav" aria-label="작업 표면"><button data-view="drive" class="active" aria-pressed="true">자율주행</button><button data-view="apps" aria-pressed="false">앱</button></nav><div id="taskControls"><span id="taskStateLabel" role="status"></span><button type="button" class="secondary" id="taskStop" hidden>작업 중단</button></div><section id="drivePanel"><h2 id="taskTitle">새 세션</h2><div id="conversationScroll"><div id="chatEmpty"><h3>어떤 일을 함께 할까요?</h3><p>메시지를 보내면 이곳에 나의 요청과 AI의 답변이 차례로 표시됩니다.</p><p>왼쪽에서 이전 세션을 다시 열거나 새로운 세션을 시작할 수 있습니다.</p></div><div id="taskQuestion" aria-live="polite"></div><div id="taskProgress" aria-live="polite"></div><section id="chat" aria-live="polite"></section>
+<section id="approvals" aria-live="polite"></section><div id="workspaceLayout"><div id="workArea"><div id="taskSessionMenu" aria-label="대화 세션 메뉴"><button id="taskHistoryOpen" class="secondary">히스토리</button><button id="newTask">＋ 새 세션</button></div><dialog id="taskHistory" aria-label="대화 히스토리"><div id="taskHistoryHead"><strong>대화 히스토리</strong><button id="taskHistoryClose" class="secondary">닫기</button></div><div id="taskList"></div></dialog><nav id="memberNav" aria-label="작업 표면"><button data-view="drive" class="active" aria-pressed="true">자율주행</button><button data-view="apps" aria-pressed="false">앱</button></nav><div id="taskControls"><span id="taskStateLabel" role="status"></span><button type="button" class="secondary" id="taskStop" hidden>작업 중단</button></div><section id="drivePanel"><h2 id="taskTitle">새 세션</h2><div id="conversationScroll"><div id="chatEmpty"><h3>어떤 일을 함께 할까요?</h3><p>메시지를 보내면 이곳에 나의 요청과 AI의 답변이 차례로 표시됩니다.</p><p>위의 히스토리에서 이전 대화를 열거나 새 세션을 시작할 수 있습니다.</p></div><div id="taskQuestion" aria-live="polite"></div><div id="taskProgress" aria-live="polite"></div><section id="chat" aria-live="polite"></section>
 </div><form id="send"><textarea id="message" placeholder="이 기기에서 할 일을 말해주세요" aria-label="메시지"></textarea><button id="sendButton">보내기</button><button type="button" class="secondary" id="cancel">중단</button></form>
-<p id="sessionHint">새 세션은 대화 화면을 새로 시작합니다. 이전 대화와 기억은 이 기기에 보존됩니다.</p><details><summary>최근 작업 결과</summary><div id="results"></div></details></section><section id="appsPanel" hidden><h2>내 앱</h2><button id="reloadApps" class="secondary">앱 새로고침</button><button id="openMemberFiles" class="secondary">내 파일 · 가져오기 · 내려받기</button><p id="appStatus"></p><iframe id="appFrame" title="내 기기에서 쓰는 앱" sandbox="allow-scripts"></iframe></section><section id="filesPanel" hidden><button id="backToApps" class="secondary">앱으로 돌아가기</button><input id="filePath" value="." aria-label="파일 경로"><div class="fileActions"><button id="browseFiles">폴더 열기</button><button id="readFile">파일 읽기</button><button id="saveFile">저장</button><input id="importFile" type="file" aria-label="파일 가져오기"></div><div id="fileRows"></div><textarea id="fileEditor" aria-label="파일 내용" placeholder="파일을 열거나 새 내용을 쓰세요"></textarea><p id="fileStatus"></p></section></div></div></main><script>window.__MEMBER=true;</script><script>
+<p id="sessionHint">새 세션은 대화 화면을 새로 시작합니다. 이전 대화와 기억은 이 기기에 보존됩니다.</p><details><summary>최근 작업 결과</summary><div id="results"></div></details></section><section id="appsPanel" hidden><h2>내 앱</h2><details id="workspaceSettings"><summary>내 작업 폴더</summary><small id="workspacePath"></small><input id="workspacePicker" aria-label="작업 폴더" placeholder="이 컴퓨터의 폴더 경로"><button id="setWorkspace" class="secondary">폴더 선택</button></details><button id="reloadApps" class="secondary">앱 새로고침</button><button id="openMemberFiles" class="secondary">내 파일 · 가져오기 · 내려받기</button><p id="appStatus"></p><iframe id="appFrame" title="내 기기에서 쓰는 앱" sandbox="allow-scripts"></iframe></section><section id="filesPanel" hidden><button id="backToApps" class="secondary">앱으로 돌아가기</button><input id="filePath" value="." aria-label="파일 경로"><div class="fileActions"><button id="browseFiles">폴더 열기</button><button id="readFile">파일 읽기</button><button id="saveFile">저장</button><input id="importFile" type="file" aria-label="파일 가져오기"></div><div id="fileRows"></div><textarea id="fileEditor" aria-label="파일 내용" placeholder="파일을 열거나 새 내용을 쓰세요"></textarea><p id="fileStatus"></p></section></div></div></main><script>window.__MEMBER=true;</script><script>
 const API='';
 let surface='autopilot';
 let apChat={ type:'system', projectId:null, agentId:null, agentName:null };
@@ -424,6 +425,7 @@ function setMemberView(view){
  if(view==='apps')refreshApps();
 }
 function selectMemberSession(id=''){
+ document.getElementById('taskHistory').close();
  memberDrafts.set(currentTask,document.getElementById('message').value);
  currentTask=id;taskSelectionReady=true;taskSelectionVersion++;taskSignature='';taskListSignature='';
  if(!id)memberDrafts.delete('');
@@ -436,6 +438,10 @@ function selectMemberSession(id=''){
  setMemberView('drive');refreshTasks();refreshApps();document.getElementById('message').focus();
 }
 async function memberBoot(){
+ const history=document.getElementById('taskHistory');
+ document.getElementById('taskHistoryOpen').onclick=()=>history.showModal();
+ document.getElementById('taskHistoryClose').onclick=()=>history.close();
+ history.onclick=e=>{if(e.target===history)history.close()};
  if(window.MemberBridge){document.getElementById('importFile').hidden=true}
  document.getElementById('appFrame').srcdoc=MEMBER_FRAME_HTML;
  document.querySelectorAll('#memberNav button').forEach(b=>b.onclick=()=>setMemberView(b.dataset.view));
@@ -499,7 +505,11 @@ async function refreshTasks(){
   if(listSignature!==taskListSignature){
    taskListSignature=listSignature;list.replaceChildren();
    if(!tasks.length){const p=document.createElement('p');p.className='sessionEmpty';p.textContent='첫 대화를 시작하면 세션이 여기에 남습니다.';list.append(p)}
+   let previousDay='';
    for(const t of tasks){
+    const stamp=t.updated||t.created;const date=new Date(typeof stamp==='number'&&stamp<1e12?stamp*1000:stamp);
+    const day=isNaN(date)?'날짜 미상':date.toLocaleDateString();
+    if(day!==previousDay){previousDay=day;const heading=document.createElement('h3');heading.textContent=day;list.append(heading)}
     const b=document.createElement('button');b.className=t.id===currentTask?'active':'';b.setAttribute('aria-current',String(t.id===currentTask));
     const title=document.createElement('span');title.className='sessionTitle';title.textContent=t.title||'이름 없는 세션';b.title=title.textContent;
     const state=document.createElement('span');state.className='sessionState';state.textContent=memberTaskStates[t.state]||t.state;

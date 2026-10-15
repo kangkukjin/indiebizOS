@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { X, Pencil, Archive } from 'lucide-react';
 import { ui, useLocale } from '../../i18n/ui';
 import type { SavedSession } from './useConversationSession';
 
@@ -23,7 +23,7 @@ export function DatedSessions({ items, render }: { items: SavedSession[]; render
     {rows.map(item => <div key={item.id}>{render(item)}</div>)}
   </section>)}</>;
 }
-export function SessionHistory({ items, onSelect, onClose }: { items: SavedSession[]; onSelect: (item: SavedSession) => void; onClose: () => void }) {
+export function SessionHistory({ items, selected, onChange, onSelect, onClose }: { selected: string; onChange: (item: SavedSession, body: object) => Promise<void>; items: SavedSession[]; onSelect: (item: SavedSession) => void; onClose: () => void }) {
   const [search, setSearch] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -39,9 +39,10 @@ export function SessionHistory({ items, onSelect, onClose }: { items: SavedSessi
       <input autoFocus type="search" value={search} onChange={event => setSearch(event.target.value)} aria-label="세션 검색" placeholder="제목 또는 날짜 검색 (YYYY-MM-DD)" className="w-full p-2 border border-[#D8D0C5] rounded-lg bg-white"/>
     </div>
     <div className="p-4 overflow-y-auto max-h-[60vh]">
-      <DatedSessions items={filtered} render={item => <button type="button" onClick={() => onSelect(item)} className="w-full p-3 text-left rounded-lg hover:bg-white flex justify-between gap-3">
-        <span className="min-w-0 break-words">{item.title}</span>{Boolean(item.archived) && <span className="text-xs shrink-0 text-[#8B7355]">보관됨</span>}
-      </button>}/>
+      <DatedSessions items={filtered} render={item => <div className="flex items-center gap-1"><button type="button" aria-current={item.id === selected} onClick={() => onSelect(item)} className="w-full p-3 text-left rounded-lg hover:bg-white flex justify-between gap-3">
+        <span className="min-w-0 break-words">{item.title}</span>{item.running ? <span className="text-xs shrink-0 text-[#8B7355]">진행 중</span> : Boolean(item.archived) && <span className="text-xs shrink-0 text-[#8B7355]">보관됨</span>}
+      </button><button type="button" title="세션 이름 변경" className="p-2" onClick={() => {const title = prompt('세션 이름',item.title);if (title?.trim()) void onChange(item,{title});}}><Pencil size={15}/></button>
+        <button type="button" title={item.archived ? '세션 복원' : '세션 보관'} className="p-2" onClick={() => void onChange(item,{archived:!item.archived})}><Archive size={15}/></button></div>}/>
       {!filtered.length && <p className="text-center text-sm text-[#8B7355] py-8">표시할 세션이 없습니다.</p>}
     </div>
   </dialog>;

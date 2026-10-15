@@ -79,8 +79,11 @@ def test_research_project_shows_topics_and_chats_by_topic():
         expect(browse).to_contain_text('주제 2')
         page.once('dialog', lambda d: d.accept('경제'))
         browse.get_by_text('＋ 새 주제').click()
-        expect(browse).to_contain_text('주제 3')
-        expect(browse.get_by_text('경제', exact=True)).to_be_visible()
+        expect(page.locator('#apTitle')).to_contain_text('경제')
+        page.locator('#apHistory').click()
+        page.locator('#apSessionList').get_by_role('button', name='교육', exact=False).click()
+        expect(page.locator('#apTitle')).to_contain_text('교육')
+        expect(page.locator('#apSessionHistory')).not_to_be_visible()
         assert errors == []
         browser.close()
 

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Plus, Archive, Pencil, X, History } from 'lucide-react';
+import { Plus, X, History } from 'lucide-react';
 import { ChatPane, type ChatViewProps } from './ChatView';
 import { sessionCall, sessionQuery, useConversationSession, type SavedSession, type SessionTarget } from './useConversationSession';
-import { DatedSessions, SessionHistory } from './SessionHistory';
+import { SessionHistory } from './SessionHistory';
 function SessionPane({ item,target,active,initialMessage,...props }: ChatViewProps & {item:SavedSession;target:SessionTarget}) {
  const session = useConversationSession(item.id,target,active !== false); const sent = useRef<string | undefined>(undefined);
  useEffect(() => {
@@ -19,13 +18,11 @@ export function SessionWorkspace(props:ChatViewProps) {
  const query = sessionQuery(target), stableTarget = useMemo(() => target,[query]);
  const [items,setItems] = useState<SavedSession[]>([]), [selected,setSelected] = useState(''), [visited,setVisited] = useState<string[]>([]);
  const [showHistory,setShowHistory] = useState(false);
- const [error,setError] = useState(''), [busy,setBusy] = useState(false), [archived,setArchived] = useState(false);
+ const [error,setError] = useState(''), [busy,setBusy] = useState(false);
  const initialRecipient = useRef<{message?:string;id:string}>({id:''});
  if (props.initialMessage !== initialRecipient.current.message) initialRecipient.current = {message:props.initialMessage,id:''};
  if (selected && !initialRecipient.current.id) initialRecipient.current.id = selected;
- const [sidebarHost,setSidebarHost] = useState<HTMLElement|null>(null);
  const select = (id:string) => { setSelected(id);setVisited(prev => prev.includes(id) ? prev : [...prev,id]);localStorage.setItem(`conversation-selection:${query}`,id); };
- useEffect(() => {setSidebarHost(c.type === 'agent' && props.layout !== 'dialog' ? document.getElementById('project-sessions') : null);},[query,props.layout]);
  useEffect(() => {
   let disposed = false;
   const refresh = async () => {
@@ -41,34 +38,26 @@ export function SessionWorkspace(props:ChatViewProps) {
   void refresh();const timer = setInterval(refresh,2500);return () => {disposed = true;clearInterval(timer);};
  },[query]);
  const create = async () => {if (busy) return;setBusy(true);
-  try { const row = await sessionCall<SavedSession>('',target,'POST',{});setItems(prev => [row,...prev]);setArchived(false);select(row.id);setError(''); }
+  try { const row = await sessionCall<SavedSession>('',target,'POST',{});setItems(prev => [row,...prev]);select(row.id);setShowHistory(false);setError(''); }
   catch(e) {setError((e as Error).message);} finally {setBusy(false);}
  };
  const change = async (item:SavedSession,body:object) => {
   try { const row = await sessionCall<SavedSession>(`/${item.id}`,target,'PATCH',body);setItems(prev => prev.map(s => s.id === row.id ? row : s));
-   if (row.archived && row.id === selected) {setSelected('');setVisited(prev => prev.filter(id => id !== row.id));} if (!row.archived) select(row.id);setError('');
+   if (row.archived && row.id === selected) {setSelected('');setVisited(prev => prev.filter(id => id !== row.id));} if (!row.archived) select(row.id);setShowHistory(false);setError('');
   } catch(e) {setError((e as Error).message);}
  };
- const sidebar = <aside className="flex flex-col min-h-0 h-full bg-[#EAE4DA] text-[#4A4035]" aria-label="대화 세션">
-  <div className="p-3 border-b border-[#D8D0C5] flex items-center justify-between gap-2"><span className="font-semibold text-sm">{c.type === 'agent' ? `${c.agent.name}의 세션` : '대화 세션'}</span><Plus size={18}/></div>
-  <button type="button" disabled={busy} onClick={create} className="mx-3 my-2 p-2 text-sm border border-[#C8BBAA] rounded-lg text-left">＋ 새 세션 시작</button>
-  <button type="button" onClick={() => setShowHistory(true)} className="mx-3 mb-2 p-2 text-sm flex items-center gap-2"><History size={15}/>대화 히스토리</button>
-  <div className="flex-1 overflow-auto p-2 space-y-1"><DatedSessions items={items.filter(s => Boolean(s.archived) === archived)} render={s => <div key={s.id} className={`rounded-lg p-2 ${selected === s.id ? 'bg-white shadow-sm' : 'hover:bg-white/50'}`}>
-   <button type="button" onClick={() => select(s.id)} className="text-left w-full" aria-current={selected === s.id}><div className="text-sm truncate">{s.title}</div><div className="text-xs text-[#8B7355] mt-1">{s.running ? '● 진행 중' : s.archived ? '보관됨' : '이어서 대화하기'}</div></button>
-   <div className="flex justify-end gap-2 mt-1"><button type="button" title="세션 이름 변경" onClick={() => {const title = prompt('세션 이름',s.title);if (title?.trim()) void change(s,{title});}}><Pencil size={13}/></button>
-    <button type="button" title={s.archived ? '세션 복원' : '세션 보관'} onClick={() => void change(s,{archived:!s.archived})}><Archive size={13}/></button></div>
-  </div>}/></div>
-  <button type="button" onClick={() => setArchived(v => !v)} className="p-3 border-t border-[#D8D0C5] text-xs text-left">{archived ? '현재 세션 보기' : '보관한 세션 보기'}</button>
- </aside>;
  if (props.layout === 'dialog' && props.show === false) return null;
- const content = <div className="flex flex-1 min-w-0 min-h-0 h-full overflow-hidden">
-  {sidebarHost ? createPortal(sidebar,sidebarHost) : <div className="w-56 min-w-40 border-r border-[#D8D0C5] shrink-0">{sidebar}</div>}
+ const content = <div className="flex flex-col flex-1 min-w-0 min-h-0 h-full overflow-hidden">
+  <div className="flex justify-end gap-2 px-4 py-2 border-b border-[#D8D0C5] bg-[#F5F1EB] shrink-0" aria-label="대화 세션 메뉴">
+   <button type="button" onClick={() => setShowHistory(true)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-[#EAE4DA]"><History size={16}/>히스토리</button>
+   <button type="button" disabled={busy} onClick={create} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-[#EAE4DA] disabled:opacity-50"><Plus size={16}/>새 세션</button>
+  </div>
   <div className="flex flex-col flex-1 min-w-0 min-h-0">{error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
    {Boolean(items.find(s => s.id === selected)?.archived) && <p className="p-2 text-sm">보관된 세션입니다. 복원 후 이어갈 수 있습니다.</p>}
-   {visited.map(id => {const item = items.find(s => s.id === id);return item && <div key={id} className={id === selected ? 'flex flex-1 min-h-0' : 'hidden'}><SessionPane {...props} onOpenHistory={() => setShowHistory(true)} item={item} target={stableTarget} active={id === selected && props.show !== false} initialMessage={id === initialRecipient.current.id ? props.initialMessage : undefined}/></div>;})}
-   {!selected && <div className="m-auto text-[#8B7355]">새 세션을 시작하거나 왼쪽에서 대화를 선택하세요.</div>}
+   {visited.map(id => {const item = items.find(s => s.id === id);return item && <div key={id} className={id === selected ? 'flex flex-1 min-h-0' : 'hidden'}><SessionPane {...props} datedHistory item={item} target={stableTarget} active={id === selected && props.show !== false} initialMessage={id === initialRecipient.current.id ? props.initialMessage : undefined}/></div>;})}
+   {!selected && <div className="m-auto text-[#8B7355]">새 세션을 시작하거나 히스토리에서 대화를 선택하세요.</div>}
   </div>
-  {showHistory && <SessionHistory items={items} onClose={() => setShowHistory(false)} onSelect={item => {setArchived(Boolean(item.archived));select(item.id);setShowHistory(false);}}/>}
+  {showHistory && <SessionHistory items={items} selected={selected} onChange={change} onClose={() => setShowHistory(false)} onSelect={item => {select(item.id);setShowHistory(false);}}/>}
  </div>;
  return props.layout === 'dialog' ? <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center"><div className="w-[1000px] max-w-[95vw] h-[85vh] bg-[#F5F1EB] shadow-xl rounded-xl overflow-hidden flex flex-col"><div className="flex justify-end p-2"><button onClick={props.onClose} aria-label="닫기"><X size={20}/></button></div>{content}</div></div> : content;
 }

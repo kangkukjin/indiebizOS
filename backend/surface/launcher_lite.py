@@ -5,9 +5,7 @@
 # 전혀 안 쓰고 순수 ES5 + XMLHttpRequest + 구식 블록 레이아웃만 쓴다.
 #
 # 기능 3탭 (본판 5탭의 핵심만):
-#   자율주행 — 시스템 AI 대화. POST /system-ai/chat {background:true} 로 즉시 반환받고
-#              (터널 524 타임아웃 회피, 본판 자율주행 탭과 동일 경로) 대화 로그를
-#              폴링해 응답을 받는다.
+#   자율주행 — 공통 /chat-sessions API로 세션 목록·새 대화·기록·실행 상태를 조회한다.
 #   조종실   — 자연어 → /ibl/translate 번역 → /ibl/validate dry-run 검수 → /ibl/execute
 #              실행 (project_id='수동모드', 본판 조종실과 동일 계약).
 #   창고     — ★읽기 전용. 내 창고 = /portal/warehouse-admin/list?level=N 목록 + /file 로 열기,
@@ -52,6 +50,10 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   .login input { width:80%; max-width:280px; margin:12px 0; }
   .err { color:#ff6b6b; font-size:14px; min-height:18px; }
   /* 자율주행(채팅) */
+  #chatMenu { padding:8px 10px; text-align:right; }
+  #chatHistory { position:fixed; z-index:10; top:8%; left:5%; right:5%; bottom:8%; padding:16px; background:#222; border:1px solid #555; border-radius:12px; overflow:auto; }
+  #chatHistory button.session { display:block; text-align:left; width:100%; margin:8px 0; }
+  #chatTitle, #chatError { padding:0 12px; word-wrap:break-word; }
   #chatlog { padding:6px 10px 120px; }
   .msg { margin:7px 0; }
   .msg .bub { display:inline-block; max-width:86%; padding:9px 12px; border-radius:14px; white-space:pre-wrap; word-wrap:break-word; text-align:left; line-height:1.5; }
@@ -106,6 +108,12 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   </div>
 
   <div id="chat" class="page">
+    <div id="chatMenu"><button id="chatHistoryOpen">히스토리</button> <button id="chatNew">＋ 새 세션</button></div>
+    <div id="chatTitle"></div><div id="chatError" class="err" role="alert"></div>
+    <div id="chatHistory" class="hide" role="dialog" aria-label="대화 히스토리">
+      <button id="chatHistoryClose">닫기</button><h3>대화 히스토리</h3><div id="chatSessions"></div>
+    </div>
+    <button id="chatOlder" class="hide">이전 대화 읽기</button>
     <div id="chatlog"></div>
     <div class="composer">
       <textarea id="cmsg" placeholder="시스템 AI에게 말하기"></textarea><button id="csend" class="pri">보내기</button>
@@ -200,95 +208,96 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   });
 
   // ── 자율주행 (시스템 AI 대화) ──────────────────────────
-  var lastId = 0, pollTimer = null, pollUntil = 0;
-
-  function renderRows(rows, append){
-    var log = $("chatlog");
-    if (!append) log.innerHTML = "";
-    for (var i = 0; i < rows.length; i++){
-      var r = rows[i];
-      if (r.id && r.id <= lastId) continue;
-      if (r.id && r.id > lastId) lastId = r.id;
-      if (r.role !== "user" && r.role !== "assistant") continue;
-      var div = document.createElement("div");
-      div.className = "msg " + (r.role === "user" ? "user" : "ai");
-      var who = (r.role === "user" ? "나" : "시스템 AI") + (r.timestamp ? " · " + String(r.timestamp).slice(5, 16) : "");
-      div.innerHTML = '<div class="who">' + esc(who) + '</div><div class="bub">' + esc(r.content) + '</div>';
-      log.appendChild(div);
-    }
-    window.scrollTo(0, document.body.scrollHeight);
+  var chatId = "", chatItems = [], chatRows = [], chatGeneration = 0, chatLoaded = false;
+  var chatRunning = false, chatArchived = false, chatPending = {}, chatTimer = null, chatSignature = "";
+  function sessionApi(method, path, data, done){
+    api(method, "/chat-sessions" + path + (method === "GET" ? (path.indexOf("?") < 0 ? "?" : "&") + "target=system_ai" : ""), data, function(st,d){
+      if (st === 401) showLogin();
+      done(st,d);
+    });
   }
-
+  function chatError(st,d){ $("chatError").textContent = (d && (d.detail || d.error)) || ("대화를 불러오지 못했습니다 ("+st+")"); }
+  function chatControls(){
+    $("csend").disabled = !chatLoaded || chatRunning || chatArchived || !!chatPending[chatId];
+    for(var i=0;i<chatItems.length;i++) if(chatItems[i].id===chatId){
+      $("chatTitle").textContent=chatItems[i].title+(chatItems[i].archived?" · 보관됨":"");
+      chatArchived=!!chatItems[i].archived;
+    }
+    $("csend").disabled = !chatLoaded || chatRunning || chatArchived || !!chatPending[chatId];
+  }
+  function renderSessionList(){
+    var box=$("chatSessions"), day="";box.innerHTML="";
+    for(var i=0;i<chatItems.length;i++){
+      var row=chatItems[i],next=String(row.updated_at||row.created_at||"").slice(0,10);
+      if(next!==day){day=next;var h=document.createElement("h4");h.textContent=day;box.appendChild(h);}
+      var button=document.createElement("button");button.className="session";button.textContent=row.title+(row.running?" · 진행 중":row.archived?" · 보관됨":"");
+      button.setAttribute("aria-current",String(row.id===chatId));
+      button.onclick=(function(id){return function(){selectChat(id);};})(row.id);box.appendChild(button);
+    }
+    if(!chatItems.length)box.textContent="표시할 세션이 없습니다.";
+    chatControls();
+  }
   function loadChat(){
-    api("GET", "/system-ai/conversations?limit=30", null, function(st, d){
-      if (st === 401){ showLogin(); return; }
-      if (st !== 200 || !d) return;
-      lastId = 0;
-      renderRows(d.conversations || [], false);
+    sessionApi("GET","",null,function(st,d){
+      if(st!==200||!d){chatError(st,d);return;}chatItems=d.sessions||[];renderSessionList();
+      if(!chatId && !$("chatNew").disabled){
+        var saved="",id="";try{saved=localStorage.getItem("launcher-chat-session")||"";}catch(e){}
+        for(var i=0;i<chatItems.length;i++){if(chatItems[i].id===saved){id=saved;break;}if(!id&&!chatItems[i].archived)id=chatItems[i].id;}
+        if(id)selectChat(id);
+      }else if(chatId)readChat();
     });
+    if(!chatTimer)chatTimer=setInterval(function(){if(TAB==="chat")loadChat();},4000);
   }
-
-  function setWait(on){
-    var w = $("waitline");
-    if (on && !w){
-      w = document.createElement("div");
-      w.id = "waitline"; w.className = "wait";
-      w.textContent = "시스템 AI가 생각하는 중…";
-      $("chatlog").appendChild(w);
-      window.scrollTo(0, document.body.scrollHeight);
-    } else if (!on && w){
-      w.parentNode.removeChild(w);
-    }
+  function selectChat(id){
+    chatId=id;chatGeneration++;chatRows=[];chatLoaded=false;chatRunning=false;chatArchived=false;chatSignature="";
+    $("chatHistory").className="hide";$("chatlog").innerHTML="";$("cmsg").value="";$("chatError").textContent="";$("chatOlder").className="hide";
+    try{localStorage.setItem("launcher-chat-session",id);}catch(e){}
+    chatControls();readChat();$("cmsg").focus();
   }
-
-  var pollStatusUrl = null;
-  function pollOnce(){
-    if (pollStatusUrl){
-      api("GET", pollStatusUrl, null, function(st, v){
-        if (st === 401){ showLogin(); return; }
-        if (st !== 200 || !v) return;
-        if (v.state === "succeeded" || v.state === "failed" || v.state === "cancelled"){
-          clearInterval(pollTimer); pollTimer = null; setWait(false); pollStatusUrl = null;
-          loadChat();
-        }
-      });
-      if (new Date().getTime() > pollUntil){ clearInterval(pollTimer); pollTimer = null; setWait(false); pollStatusUrl = null; }
-      return;
-    }
-    api("GET", "/system-ai/conversations?limit=10", null, function(st, d){
-      if (st !== 200 || !d) return;
-      var rows = d.conversations || [], gotAi = false;
-      for (var i = 0; i < rows.length; i++){
-        if (rows[i].id > lastId && rows[i].role === "assistant") gotAi = true;
+  function readChat(before){
+    var id=chatId,generation=chatGeneration;if(!id)return;
+    sessionApi("GET","/"+encodeURIComponent(id)+(before?"?before="+before:""),null,function(st,d){
+      if(id!==chatId||generation!==chatGeneration)return;
+      if(st!==200||!d){chatError(st,d);return;}
+      if(before||!chatLoaded)$("chatOlder").className=d.has_older?"":"hide";
+      var rows=d.messages||[],seen={},merged=[],i;
+      for(i=0;i<chatRows.length;i++){seen[chatRows[i].id]=true;merged.push(chatRows[i]);}
+      for(i=0;i<rows.length;i++)if(!seen[rows[i].id])merged.push(rows[i]);
+      merged.sort(function(a,b){return Number(a.id)-Number(b.id);});chatRows=merged;
+      if(!before)chatRunning=!!(d.turn&&d.turn.state==="running");
+      chatLoaded=true;chatControls();
+      var signature=JSON.stringify([chatRows,chatRunning,d.turn]);if(signature===chatSignature)return;chatSignature=signature;
+      var top=window.pageYOffset||0,height=document.body.scrollHeight,follow=height-top-window.innerHeight<160;
+      var log=$("chatlog");log.innerHTML="";
+      for(i=0;i<chatRows.length;i++){
+        var r=chatRows[i],div=document.createElement("div");div.className="msg "+(r.role==="user"?"user":"ai");
+        div.innerHTML='<div class="who">'+esc((r.role==="user"?"나":"시스템 AI")+" · "+String(r.timestamp||"").slice(0,16))+'</div><div class="bub">'+esc(r.content)+'</div>';log.appendChild(div);
       }
-      renderRows(rows, true);
-      if (gotAi || new Date().getTime() > pollUntil){
-        clearInterval(pollTimer); pollTimer = null; setWait(false);
-        if (!gotAi) loadChat();
-      }
+      if(chatRunning){var w=document.createElement("div");w.className="wait";w.textContent=(d.turn&&d.turn.stream_content)||"시스템 AI가 생각하는 중…";log.appendChild(w);}
+      if(!chatRows.length&&!chatRunning)log.textContent="메시지를 입력해 시작하세요.";
+      if(before)window.scrollTo(0,top+document.body.scrollHeight-height);else if(follow)window.scrollTo(0,document.body.scrollHeight);
     });
   }
-
-  $("csend").addEventListener("click", sendChat);
-  function sendChat(){
-    var msg = $("cmsg").value;
-    if (!msg || !msg.replace(/\s/g, "").length) return;
-    $("cmsg").value = "";
-    // 본판 자율주행과 동일: background:true 즉시 반환 → 대화 로그 폴링으로 응답 수신
-    api("POST", "/system-ai/chat", { message: msg, background: true }, function(st, d){
-      if (st === 401){ showLogin(); return; }
-      // 접수증의 status_url 로 그 작업의 종료를 판정한다(구버전 서버면 메시지 폴링 폴백).
-      pollStatusUrl = (st === 200 && d && d.status_url) ? d.status_url : null;
+  $("chatHistoryOpen").onclick=function(){$("chatHistory").className="";loadChat();$("chatHistoryClose").focus();};
+  $("chatHistoryClose").onclick=function(){$("chatHistory").className="hide";$("chatHistoryOpen").focus();};
+  $("chatOlder").onclick=function(){if(chatRows.length)readChat(chatRows[0].id);};
+  $("chatNew").onclick=function(){
+    var generation=chatGeneration;$("chatNew").disabled=true;
+    sessionApi("POST","",{target:"system_ai"},function(st,d){
+      $("chatNew").disabled=false;if(st<200||st>=300||!d){chatError(st,d);return;}
+      chatItems.unshift(d);renderSessionList();if(generation===chatGeneration)selectChat(d.id);
     });
-    var div = document.createElement("div");
-    div.className = "msg user";
-    div.innerHTML = '<div class="who">나</div><div class="bub">' + esc(msg) + '</div>';
-    $("chatlog").appendChild(div);
-    setWait(true);
-    pollUntil = new Date().getTime() + 10 * 60 * 1000;  // 최대 10분 대기
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(pollOnce, 4000);
-  }
+  };
+  $("csend").addEventListener("click",function(){
+    var msg=$("cmsg").value,id=chatId,generation=chatGeneration;
+    if(!msg||!msg.replace(/\s/g,"").length||!chatLoaded||chatRunning||chatArchived||chatPending[id])return;
+    chatPending[id]=true;chatControls();
+    sessionApi("POST","/"+encodeURIComponent(id)+"/messages",{target:"system_ai",message:msg},function(st,d){
+      delete chatPending[id];if(id!==chatId||generation!==chatGeneration)return;chatControls();
+      if(st<200||st>=300){chatError(st,d);return;}
+      if($("cmsg").value===msg)$("cmsg").value="";readChat();loadChat();
+    });
+  });
 
   // ── 조종실 (번역 → 검수 → 실행) ────────────────────────
   $("btnTr").addEventListener("click", function(){

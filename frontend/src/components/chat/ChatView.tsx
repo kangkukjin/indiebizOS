@@ -52,7 +52,7 @@ export interface ChatViewProps {
   layout?: ChatLayout;
   session?: ChatSession;
   headerActions?: ReactNode;
-  onOpenHistory?: () => void;
+  datedHistory?: boolean;
   active?: boolean;
   // dialog 모드 전용
   show?: boolean;
@@ -85,7 +85,7 @@ export function ChatView(props: ChatViewProps) {
   return <SessionWorkspace key={key} {...props} />;
 }
 
-export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel, session, headerActions, onOpenHistory, active = true }: ChatViewProps) {
+export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel, session, headerActions, datedHistory, active = true }: ChatViewProps) {
   const isAgent = chatTarget.type === 'agent';
   const isAppMaker = chatTarget.type === 'appmaker';  // system_ai 분기(!isAgent)를 공유하되 스레드/타이틀만 분기
   const isDialog = layout === 'dialog';
@@ -995,7 +995,6 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
             </button>
           )}
           {/* 히스토리/초기화 (시스템 AI일 때) */}
-          {onOpenHistory && <button onClick={onOpenHistory} className="p-1.5 rounded-lg hover:bg-[#DDD5C8]" title="대화 히스토리"><History size={16}/></button>}
           {!isAgent && !session && (
             <>
               <button onClick={() => setShowHistory(true)} className={`p-1.5 rounded-lg transition-colors ${isDialog ? 'hover:bg-gray-200' : 'hover:bg-[#DDD5C8]'}`} title="대화 히스토리">
@@ -1055,7 +1054,7 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
         ) : (
           messages.map((msg, idx) => (
             <Fragment key={msg.id || idx}>
-              {onOpenHistory && (idx === 0 || historyDay(messages[idx - 1].timestamp) !== historyDay(msg.timestamp)) &&
+              {datedHistory && (idx === 0 || historyDay(messages[idx - 1].timestamp) !== historyDay(msg.timestamp)) &&
                 <div data-message-day={historyDay(msg.timestamp)} className="flex items-center gap-3 py-2 text-xs text-[#8B7355]"><span className="h-px flex-1 bg-[#D8D0C5]"/><HistoryDate day={historyDay(msg.timestamp)}/><span className="h-px flex-1 bg-[#D8D0C5]"/></div>}
               <MessageBubble message={msg} variant={variant} />
             </Fragment>

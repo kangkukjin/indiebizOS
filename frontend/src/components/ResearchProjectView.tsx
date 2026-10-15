@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Plus, History, X } from 'lucide-react';
 import type { Project } from '../types';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 import { ResearchConversation } from './research/ResearchConversation';
@@ -12,6 +12,8 @@ export function ResearchProjectView({ project }: { project: Project }) {
   const [threads, setThreads] = useState<ResearchThread[]>([]);
   const [selected, setSelected] = useState(() => localStorage.getItem(key) || '');
   const [opened, setOpened] = useState<string[]>([]);
+  const history = useRef<HTMLDialogElement>(null);
+  const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
@@ -46,21 +48,25 @@ export function ResearchProjectView({ project }: { project: Project }) {
   return <div className="h-full flex flex-col bg-[#F5F1EB] text-[#4A4035]">
     <div className="drag select-none shrink-0 h-12 flex items-center pl-20 pr-5 border-b border-[#E5DFD5] bg-[#EAE4DA] font-semibold">📚 {project.name}<span className="ml-3 text-xs text-[#6B5B4F]">연구 프로젝트</span></div>
     {error && <p role="alert" className="px-4 py-2 text-sm text-red-600">{error}</p>}
+    <div className="flex justify-end gap-2 px-4 py-2 border-b border-[#E5DFD5]">
+      <button onClick={() => {history.current?.showModal(); void load();}} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/60 text-sm"><History size={16}/>히스토리</button>
+      <button onClick={() => setCreating(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/60 text-sm"><Plus size={16}/>새 세션</button>
+    </div>
+    <dialog ref={history} aria-label="대화 히스토리" onClick={e => {if (e.target === e.currentTarget) history.current?.close();}} className="m-auto p-4 rounded-xl bg-[#F5F1EB] text-[#4A4035] w-[600px] max-w-[92vw] backdrop:bg-black/30">
+      <div className="flex justify-between items-center mb-3"><h2 className="font-semibold">대화 히스토리</h2><button onClick={() => history.current?.close()} aria-label="닫기"><X size={20}/></button></div>
+      <input aria-label="세션 검색" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="제목 또는 날짜 검색" className="w-full p-2 border rounded-lg mb-3"/>
+      <div className="max-h-[60vh] overflow-auto">
+        {threads.filter(t => `${t.title} ${t.updated_label}`.includes(search)).map(thread => <button key={thread.id} onClick={() => {setSelected(thread.id);history.current?.close();setCreating(false);}} aria-current={selected === thread.id} className="block w-full text-left px-3 py-3 rounded-xl hover:bg-white/60">
+          <span className="block font-medium">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}{thread.archived ? ' · 보관됨' : ''}</span>
+        </button>)}
+        {!threads.length && <p className="p-3 text-sm text-[#A09080]">새 대화를 만들어 시작하세요.</p>}
+      </div>
+    </dialog>
+    {creating && <form onSubmit={e => {e.preventDefault(); void create();}} className="p-4 border-b border-[#E5DFD5] flex flex-wrap gap-2">
+      <input autoFocus aria-label="새 대화 이름" placeholder="연구 주제 이름" value={title} onChange={e => setTitle(e.target.value)} className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-[#E5DFD5]"/>
+      <button disabled={!title.trim()} className="px-3 py-2 rounded-lg bg-[#D97706] text-white disabled:opacity-50">만들기</button><button type="button" onClick={() => setCreating(false)}>취소</button>
+    </form>}
     <div className="flex flex-1 min-h-0">
-      <aside className="w-64 max-w-[32%] shrink-0 flex flex-col border-r border-[#E5DFD5] bg-[#F0EBE3]">
-        <div className="flex-1 overflow-y-auto p-3">
-          {threads.map(thread => <button key={thread.id} onClick={() => setSelected(thread.id)} className={`block w-full text-left px-3 py-3 rounded-xl mb-1 ${selected === thread.id ? 'bg-white border border-[#D97706]/40 shadow-sm' : 'hover:bg-white/60 border border-transparent'}`}>
-            <span className="block font-medium truncate">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}{thread.archived ? ' · 보관됨' : ''}</span>
-          </button>)}
-          {!threads.length && <p className="p-3 text-sm text-[#A09080]">새 대화를 만들어 시작하세요.</p>}
-        </div>
-        <div className="px-4 pb-3 pt-1">
-          {creating ? <form onSubmit={e => { e.preventDefault(); void create(); }} className="mb-2">
-            <input autoFocus aria-label="새 대화 이름" placeholder="예: 교육" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#E5DFD5] outline-none focus:border-[#D97706]" />
-            <div className="flex gap-2 mt-2"><button disabled={!title.trim()} className="px-3 py-2 rounded-lg bg-[#D97706] text-white disabled:opacity-50">만들기</button><button type="button" onClick={() => setCreating(false)}>취소</button></div>
-          </form> : <button onClick={() => setCreating(true)} className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs text-[#8B7D6B] hover:bg-white/40 hover:text-[#4A4035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8B7D6B]"><Plus size={14} />새 대화</button>}
-        </div>
-      </aside>
       {threads.filter(t => opened.includes(t.id)).map(thread => <ResearchConversation key={thread.id} project={uid} thread={thread} visible={selected === thread.id} onChange={refresh} />)}
       {!threads.length && <div className="flex-1 flex items-center justify-center text-[#A09080]">대화를 선택하거나 새로 만드세요.</div>}
     </div>

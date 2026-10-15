@@ -124,10 +124,12 @@ def test_sessions_create_resume_reload_and_responsive_layout(browser_chat, tmp_p
     page.locator('#apInput').fill('새 세션의 질문');page.locator('#apSend').click()
     expect(page.locator('#apMsgs')).to_contain_text('응답 완료')
     assert [path for path,_ in sent]==['/chat-sessions/a/messages','/chat-sessions/a1/messages']
-    page.locator('#apSessionDetails summary').click()
+    page.locator('#apHistory').click()
     page.locator('#apSessionList').get_by_role('button',name='기존 대화',exact=True).click()
     expect(page.locator('#apMsgs')).to_contain_text('이전 세션의 질문')
     expect(page.locator('#apMsgs')).not_to_contain_text('새 세션의 질문')
+    expect(page.locator('#apSessionHistory')).not_to_be_visible()
+    page.locator('#apHistory').click()
     page.locator('#apSessionList').get_by_role('button',name='새 세션',exact=True).click()
     page.reload()
     expect(page.locator('#apBrowse')).to_contain_text('프로젝트')
@@ -137,9 +139,12 @@ def test_sessions_create_resume_reload_and_responsive_layout(browser_chat, tmp_p
     page.set_viewport_size({'width':1280,'height':850})
     page.evaluate('apPickAgent(0)')
     expect(page.locator('#apSessionList')).to_contain_text('2026-10-16')
-    sidebar=page.locator('#apSessions').bounding_box();chat=page.locator('#apMsgs').bounding_box()
-    assert sidebar['x']+sidebar['width']<=chat['x']+1
+    menu=page.locator('#apSessions').bounding_box();chat=page.locator('#apMsgs').bounding_box()
+    assert menu['y']+menu['height']<=chat['y']
+    assert chat['width']>1100
+    expect(page.locator('#apSessionHistory')).not_to_be_visible()
     page.screenshot(path=str(tmp_path/'remote-wide-sessions.png'))
+    page.locator('#apHistory').click()
     page.locator('#apSessionSearch').fill('2026-10-16')
     expect(page.locator('#apSessionList button')).to_have_count(1)
 
@@ -168,7 +173,7 @@ def test_switching_running_session_keeps_run_and_cancel_scoped(browser_chat):
     expect(page.locator('#apSessionTitle')).to_have_text('새 세션')
     expect(page.locator('#apSessionStop')).to_be_hidden()
     expect(page.locator('#apSend')).to_be_enabled()
-    page.locator('#apSessionDetails summary').click()
+    page.locator('#apHistory').click()
     page.locator('#apSessionList').get_by_role('button',name='기존 대화',exact=True).click()
     expect(page.locator('#apMsgs')).to_contain_text('진행 중인 답변')
     page.locator('#apSessionStop').click()

@@ -975,6 +975,16 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
           </div>
         </div>
         <div className={`flex items-center gap-1 shrink-0 whitespace-nowrap${isDialog ? '' : ' no-drag'}`}>
+          {session?.hasOlder && <button disabled={readingOlder} onClick={async () => {
+            if (readingOlder) return;
+            setReadingOlder(true);
+            const el = messagesScrollRef.current;
+            const height = el?.scrollHeight || 0;
+            const top = el?.scrollTop || 0;
+            followRef.current = false;
+            try { await session.loadOlder(); }
+            finally { setReadingOlder(false); requestAnimationFrame(() => { if (el) el.scrollTop = top + el.scrollHeight - height; }); }
+          }} className={`px-2 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}>{readingOlder ? '불러오는 중…' : '이전 대화 읽기'}</button>}
           {headerActions}
           {/* 마법책 — IBL 액션 사전 */}
           <button
@@ -1029,16 +1039,7 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
 
       {/* 메시지 영역 */}
       <div ref={messagesScrollRef} onScroll={e => { const el = e.currentTarget; followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }} className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text dialog-messages-scroll' : ''}`}>
-        {session?.hasOlder && <button disabled={readingOlder} onClick={async () => {
-          if (readingOlder) return;
-          setReadingOlder(true);
-          const el = messagesScrollRef.current;
-          const height = el?.scrollHeight || 0;
-          const top = el?.scrollTop || 0;
-          followRef.current = false;
-          try { await session.loadOlder(); }
-          finally { setReadingOlder(false); requestAnimationFrame(() => { if (el) el.scrollTop = top + el.scrollHeight - height; }); }
-        }} className="block mx-auto text-sm text-[#9A6A30]">{readingOlder ? '불러오는 중…' : '이전 대화 읽기'}</button>}
+
         {messages.length === 0 && !isLoading ? (
           <div className={`h-full flex items-center justify-center ${isDialog ? 'text-gray-400' : 'text-[#A09080]'}`}>
             <div className="text-center">

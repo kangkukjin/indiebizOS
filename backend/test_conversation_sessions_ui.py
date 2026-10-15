@@ -89,7 +89,7 @@ def test_session_workspace_in_browser(tmp_path):
                     header=page.locator('.chat-header:visible')
                     expect(header).not_to_contain_text('IndieBiz OS 도우미')
                     assert header.bounding_box()['height'] <= 44
-                    controls=[header.get_by_text('회의 준비',exact=True),header.get_by_role('button',name='히스토리',exact=True),header.get_by_role('button',name='새 세션',exact=True),header.get_by_role('button',name='IBL 사전',exact=True)]
+                    controls=[header.get_by_text('회의 준비',exact=True),header.get_by_role('button',name='이전 대화 읽기',exact=True),header.get_by_role('button',name='히스토리',exact=True),header.get_by_role('button',name='새 세션',exact=True),header.get_by_role('button',name='IBL 사전',exact=True)]
                     boxes=[control.bounding_box() for control in controls]
                     assert max(b['y'] for b in boxes) < min(b['y']+b['height'] for b in boxes)
                     assert all(b['x'] >= 0 and b['x']+b['width'] <= width for b in boxes)

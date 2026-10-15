@@ -81,11 +81,19 @@ def _run(rec, envelope, resolved, row):
             return
         row['state'] = 'running'
         _set(rec['device_id'], envelope['request_id'], 'running')
-    result = client_agent.run({**envelope, 'version': 1}, resolved,
-                              name=rec.get('alias', ''), body_session=rec.get('session', ''), on_event=event)
+    try:
+        result = client_agent.run({**envelope, 'version': 1}, resolved,
+                                  name=rec.get('alias', ''), body_session=rec.get('session', ''), on_event=event)
+        terminal = 'completed' if result.get('success') else 'failed'
+    except Exception:
+        # A worker can fail after local effects. Do not leak exception text or
+        # leave a dead worker running forever while status renews its lease.
+        terminal = 'unknown'
+        result = {'success': False, 'error_type': 'result_unknown',
+                  'error': '최종 결과를 확인하지 못했습니다. 저장된 파일과 로컬 기록을 확인하세요. 자동 재실행하지 않습니다.'}
     with LOCK:
         if row['state'] != 'cancelled':
-            row['state'] = 'completed' if result.get('success') else 'failed'
+            row['state'] = terminal
         row['result'] = result
         row['finished'] = time.monotonic()
         _set(rec['device_id'], envelope['request_id'], row['state'])
@@ -113,8 +121,11 @@ def status(rec, rid, after=0):
             if row['session'] != rec.get('session') and row['state'] in ('accepted', 'running'):
                 cancel(rec, rid)
             row['lease'] = time.monotonic()
+            first = row['events'][0]['seq'] if row['events'] else row['seq'] + 1
+            gap = {'from': after + 1, 'to': first - 1} if after + 1 < first else None
             return {'success': True, 'version': 2, 'request_id': rid, 'state': row['state'],
                     'events': [e for e in row['events'] if e['seq'] > after],
+                    'events_gap': gap,
                     'cursor': row['seq'], 'result': row['result'], 'epoch': client_agent.EPOCH}
         with _db() as db:
             old = db.execute('SELECT epoch,state FROM requests WHERE device=? AND request=?', key).fetchone()

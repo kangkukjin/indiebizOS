@@ -2,11 +2,48 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestDesktopMissingProgressRemainsInHistoryAndUnknownDoesNotReplay(t *testing.T) {
+	m := testMember(t)
+	addLocalTask(t, m, "task", m.workspace())
+	m.store.db.Exec("INSERT INTO desktop_requests VALUES('request','task',0,'pending')")
+	calls := 0
+	hub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.URL.Path != "/m/desktop/status" {
+			t.Error("unexpected replay", r.URL.Path)
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true, "state": "unknown", "cursor": 300,
+			"events_gap": map[string]int{"from": 1, "to": 44},
+			"result":     map[string]interface{}{"success": false, "error": "final result unknown"},
+		})
+	}))
+	defer hub.Close()
+	m.cfg.Base = hub.URL
+	m.watchDesktop("task", "request")
+	row := m.task("task")
+	if row["state"] != "unknown" || calls != 1 {
+		t.Fatal(row, calls)
+	}
+	events := row["events"].([]map[string]interface{})
+	if len(events) != 2 || events[0]["kind"] != "assistant" || !strings.Contains(events[0]["value"].(string), "1–44") {
+		t.Fatal("missing permanent gap notice", events)
+	}
+	var cursor int
+	m.store.db.QueryRow("SELECT cursor FROM desktop_requests WHERE request='request'").Scan(&cursor)
+	if cursor != 300 {
+		t.Fatal(cursor)
+	}
+}
 
 func TestDesktopWriteConflictUndoAndScope(t *testing.T) {
 	m := testMember(t)

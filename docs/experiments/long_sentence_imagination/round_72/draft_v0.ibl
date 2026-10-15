@@ -1,0 +1,32 @@
+#!ibl edition=2
+[def:읽기]($파일) {
+  $문서 = [self:read]{path:$파일}
+  return {file:$파일,ok:true,rows:$문서.data.items}
+}
+[def:저장]($경로,$본문) {
+  [self:read]{path:$경로} ?? null
+  return [self:write]{path:$경로,content:$본문}
+}
+$주문 = [self:read]{path:"orders.json"}
+$명세 = [self:read]{path:"manifest.json"}
+$파일 = $명세.data.files >> [table:each] {
+  [fn:읽기]{파일:$it} ?? {file:$it,ok:false,rows:[]}
+}
+$누락 = map(filter($파일,($x)=>not $x.ok),($x)=>$x.file)
+$출하 = $파일 >> [table:each]{mode:"flat_map"} {return $it.rows}
+$대사 = $주문.data.items >> [table:each] {
+  $품목 = $it
+  $수량 = reduce(filter($출하,($x)=>$x.sku==$품목.sku),0,($합,$x)=>$합+$x.qty)
+  return {sku:$품목.sku,ordered:$품목.qty,shipped:$수량,
+    shortage:len($누락)>0 ? null : max(0,$품목.qty-$수량),
+    status:len($누락)>0 ? "unknown" : ($수량<$품목.qty ? "shortage" : "fulfilled")}
+}
+$주문합 = reduce($대사,0,($n,$x)=>$n+$x.ordered)
+$출하합 = reduce($대사,0,($n,$x)=>$n+$x.shipped)
+$보고서 = {rows:$대사,total_ordered:$주문합,total_shipped:$출하합,missing_files:$누락}
+$요약 = f"총 주문 ${$주문합} / 확인된 출하 ${$출하합} / 미확인 ${len($누락)}파일"
+[fn:저장]{경로:"reconciliation.json",본문:json($보고서)}
+[fn:저장]{경로:"summary.txt",본문:$요약}
+$재독 = [self:read]{path:"reconciliation.json"}
+$본문 = [self:read]{path:"summary.txt"}
+return {report:$재독.data,report_equal:$재독.data==$보고서,summary_equal:$본문.text==$요약}

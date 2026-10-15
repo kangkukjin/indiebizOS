@@ -80,3 +80,46 @@ def test_submit_sweeps_expired_results_before_capacity(state, monkeypatch):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_worker_exception_becomes_unknown_without_retry_or_private_error(state, monkeypatch):
+    calls = []
+    def run(*args, **kwargs):
+        calls.append(1)
+        raise RuntimeError('PRIVATE PATH AND CONTENT')
+    monkeypatch.setattr(client_agent, 'run', run)
+    envelope = {'request_id': 'crash', 'conversation_id': 'task'}
+    service.submit(state, envelope, {})
+    for _ in range(100):
+        result = service.status(state, 'crash')
+        if result['state'] not in ('accepted', 'running'):
+            break
+        time.sleep(.01)
+    assert result['state'] == 'unknown'
+    assert result['result']['error_type'] == 'result_unknown'
+    assert 'PRIVATE' not in str(result)
+    assert service.submit(state, envelope, {})['state'] == 'unknown'
+    assert len(calls) == 1
+    assert service.LIVE[('device', 'crash')]['finished'] > 0
+    with service._db() as db:
+        assert db.execute("SELECT state FROM requests WHERE request='crash'").fetchone() == ('unknown',)
+
+
+def test_event_window_reports_exact_missing_range_and_cursor_boundary(state, monkeypatch):
+    def run(*args, **kwargs):
+        for n in range(300):
+            kwargs['on_event']({'type': 'progress', 'n': n})
+        return {'success': True}
+    monkeypatch.setattr(client_agent, 'run', run)
+    service.submit(state, {'request_id': 'burst', 'conversation_id': 'task'}, {})
+    for _ in range(100):
+        result = service.status(state, 'burst')
+        if result['state'] == 'completed':
+            break
+        time.sleep(.01)
+    assert result['events_gap'] == {'from': 1, 'to': 44}
+    assert [e['seq'] for e in result['events']] == list(range(45, 301))
+    assert service.status(state, 'burst', after=20)['events_gap'] == {'from': 21, 'to': 44}
+    assert service.status(state, 'burst', after=44)['events_gap'] is None
+    tail = service.status(state, 'burst', after=300)
+    assert tail['events_gap'] is None and tail['events'] == []

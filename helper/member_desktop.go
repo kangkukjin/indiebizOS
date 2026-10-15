@@ -173,6 +173,10 @@ func (m *MemberRuntime) watchDesktop(id, rid string) {
 			m.finishDesktop(id, "unknown", out)
 			return
 		}
+		if gap, ok := out["events_gap"].(map[string]interface{}); ok {
+			// Keep this notice in the task history after progress is cleared.
+			m.taskEvent(id, "assistant", fmt.Sprintf("진행 기록 일부가 중앙 보관 범위를 벗어났습니다(순번 %v–%v). 저장된 파일과 로컬 작업 기록을 확인하세요. 작업을 다시 실행하지 않았습니다.", gap["from"], gap["to"]))
+		}
 		if events, ok := out["events"].([]interface{}); ok {
 			for _, v := range events {
 				e, _ := v.(map[string]interface{})

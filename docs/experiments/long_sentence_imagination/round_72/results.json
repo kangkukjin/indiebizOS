@@ -1,0 +1,541 @@
+{
+  "baseline": [
+    {
+      "member": "A",
+      "variant": "base",
+      "state": "completed",
+      "seconds": 1.087,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        282
+      ],
+      "request_id": "f3772f8d0ac2069e02fbb23584711fa6",
+      "task_id": "4d271404ee797c87c56fd5df"
+    },
+    {
+      "member": "B",
+      "variant": "base",
+      "state": "completed",
+      "seconds": 1.087,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        378
+      ],
+      "request_id": "7214f5ea8e00cb9c799e031674756ac0",
+      "task_id": "d36536579926871f7b6b866e"
+    },
+    {
+      "member": "A",
+      "variant": "broken",
+      "state": "completed",
+      "seconds": 1.079,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        213
+      ],
+      "request_id": "71c71bcc18866df58c5515e9342461ac",
+      "task_id": "fb8fca110225899abe531def"
+    },
+    {
+      "member": "B",
+      "variant": "broken",
+      "state": "completed",
+      "seconds": 1.079,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        285
+      ],
+      "request_id": "0a010ef100e3938a220ac7e05c9b2fec",
+      "task_id": "dc9e9b806db05ced52a11039"
+    },
+    {
+      "member": "A",
+      "variant": "burst",
+      "state": "completed",
+      "seconds": 1.094,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 61,
+      "cursor": 316,
+      "events_gap": null,
+      "totals": [
+        516,
+        213
+      ],
+      "request_id": "9ee1dd1b0e9fe0e22bfcaefe0c3b5aee",
+      "task_id": "1a848fe9e1038e5708f6e47c"
+    },
+    {
+      "member": "B",
+      "variant": "burst",
+      "state": "completed",
+      "seconds": 1.102,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 61,
+      "cursor": 316,
+      "events_gap": null,
+      "totals": [
+        516,
+        285
+      ],
+      "request_id": "54971807618777a23c7f26bd8bdf7c82",
+      "task_id": "2796ecc18e143f50ca8c4c3f"
+    },
+    {
+      "member": "A",
+      "variant": "fault",
+      "state": "cancelled",
+      "seconds": 8.111,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        213
+      ],
+      "request_id": "db96b2c7fcaee7adaa96c80925d0bd98",
+      "task_id": "6248670ac3630e5ee2c973f5"
+    },
+    {
+      "member": "B",
+      "variant": "fault",
+      "state": "cancelled",
+      "seconds": 9.071,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        285
+      ],
+      "request_id": "8b0754a48b3a77e2020fb5de754d64d7",
+      "task_id": "5542016059ccd8be3fb37c34"
+    }
+  ],
+  "repair": [
+    {
+      "member": "A",
+      "variant": "base",
+      "state": "completed",
+      "seconds": 1.106,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        282
+      ],
+      "request_id": "7fef9b1a51e59252cc2cf0700ed140d1",
+      "task_id": "2655d19767dd9a989793149c"
+    },
+    {
+      "member": "B",
+      "variant": "base",
+      "state": "completed",
+      "seconds": 1.043,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        378
+      ],
+      "request_id": "dcbd45a55a7564e43592d692213e505c",
+      "task_id": "4881a8d10c3dfcf949f1e965"
+    },
+    {
+      "member": "A",
+      "variant": "broken",
+      "state": "completed",
+      "seconds": 1.053,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        213
+      ],
+      "request_id": "91f2200652d18d9a7018b91d9c20e77c",
+      "task_id": "03f7fd68bb04d9808e55e48d"
+    },
+    {
+      "member": "B",
+      "variant": "broken",
+      "state": "completed",
+      "seconds": 1.051,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        285
+      ],
+      "request_id": "4196ff34e1ccf93f6a7f7c52dfee5822",
+      "task_id": "0643288e010b3d404bdc030c"
+    },
+    {
+      "member": "A",
+      "variant": "recovered",
+      "state": "completed",
+      "seconds": 1.061,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        282
+      ],
+      "request_id": "04ef0339cd6aed261f04d3f8f6a92e49",
+      "task_id": "d0479d668f81dde1d69d0c05"
+    },
+    {
+      "member": "B",
+      "variant": "recovered",
+      "state": "completed",
+      "seconds": 1.122,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        378
+      ],
+      "request_id": "734b4366f70b1d2b30c97dedea8d6ae0",
+      "task_id": "29d6ead256135314e9cff065"
+    },
+    {
+      "member": "A",
+      "variant": "burst",
+      "state": "completed",
+      "seconds": 1.062,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 61,
+      "cursor": 316,
+      "events_gap": {
+        "from": 1,
+        "to": 60
+      },
+      "totals": [
+        506,
+        282
+      ],
+      "request_id": "994776917d77d0733c6d761c0a387d7a",
+      "task_id": "52996320f28211b6a69ac53a"
+    },
+    {
+      "member": "B",
+      "variant": "burst",
+      "state": "completed",
+      "seconds": 1.117,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 61,
+      "cursor": 316,
+      "events_gap": {
+        "from": 1,
+        "to": 60
+      },
+      "totals": [
+        506,
+        378
+      ],
+      "request_id": "e585f7ebb22faa641532f62a5261b4c7",
+      "task_id": "3897203ffb9fe27d87acb1b7"
+    },
+    {
+      "member": "A",
+      "variant": "fault",
+      "state": "unknown",
+      "seconds": 1.061,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        282
+      ],
+      "request_id": "414445af4b43a13f926d6b92cd5f50be",
+      "task_id": "233864fa225aeca131a6448a"
+    },
+    {
+      "member": "B",
+      "variant": "fault",
+      "state": "unknown",
+      "seconds": 1.114,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        378
+      ],
+      "request_id": "73265c120cb5cb8ccd17bb1e4ef82e7a",
+      "task_id": "0016b68c153ed56d4292ea06"
+    }
+  ],
+  "repair-final": [
+    {
+      "member": "A",
+      "variant": "base",
+      "state": "completed",
+      "seconds": 1.111,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        282
+      ],
+      "request_id": "2d7ea15eaa7ace9cc9e31905a191ce59",
+      "task_id": "e1b4ff167601397f55a7108f"
+    },
+    {
+      "member": "B",
+      "variant": "base",
+      "state": "completed",
+      "seconds": 1.081,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        378
+      ],
+      "request_id": "ada390354aa3e25e74b153fc808a627f",
+      "task_id": "fca2f8640ddbc06909c9f02b"
+    },
+    {
+      "member": "A",
+      "variant": "broken",
+      "state": "completed",
+      "seconds": 1.073,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        213
+      ],
+      "request_id": "38e01c25467d290886f64a5baec666ab",
+      "task_id": "2c00e0c1dbad7ea4e712a200"
+    },
+    {
+      "member": "B",
+      "variant": "broken",
+      "state": "completed",
+      "seconds": 1.079,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        516,
+        285
+      ],
+      "request_id": "5409b922d0cb644698a536ad00b43c85",
+      "task_id": "8aed1b072fa411508f879ec6"
+    },
+    {
+      "member": "A",
+      "variant": "recovered",
+      "state": "completed",
+      "seconds": 1.087,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        282
+      ],
+      "request_id": "3434de3197a439a97511f6711aeb3f57",
+      "task_id": "369dbb342b85e84a662af4ea"
+    },
+    {
+      "member": "B",
+      "variant": "recovered",
+      "state": "completed",
+      "seconds": 1.095,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        378
+      ],
+      "request_id": "125c4f0a2e8a6a2ee7a3b4c5270cfd45",
+      "task_id": "8d26cfdcb99aec60408ccf84"
+    },
+    {
+      "member": "A",
+      "variant": "burst",
+      "state": "completed",
+      "seconds": 1.101,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 61,
+      "cursor": 316,
+      "events_gap": {
+        "from": 1,
+        "to": 60
+      },
+      "totals": [
+        506,
+        282
+      ],
+      "request_id": "f2975c52e834d9c3ff49b9c8a4c6eef5",
+      "task_id": "bad19f04029306201404e29e"
+    },
+    {
+      "member": "B",
+      "variant": "burst",
+      "state": "completed",
+      "seconds": 1.102,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 61,
+      "cursor": 316,
+      "events_gap": {
+        "from": 1,
+        "to": 60
+      },
+      "totals": [
+        506,
+        378
+      ],
+      "request_id": "6338050897caaf6157e50450fa560d75",
+      "task_id": "47158853b17e87a7cbf69926"
+    },
+    {
+      "member": "A",
+      "variant": "fault",
+      "state": "unknown",
+      "seconds": 1.099,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        282
+      ],
+      "request_id": "a06451967b78edba692ad10ce18af7c4",
+      "task_id": "0fba25d1f829c96140855658"
+    },
+    {
+      "member": "B",
+      "variant": "fault",
+      "state": "unknown",
+      "seconds": 1.095,
+      "artifacts_correct": true,
+      "reexecuted": 0,
+      "events_first": 1,
+      "cursor": 16,
+      "events_gap": null,
+      "totals": [
+        506,
+        378
+      ],
+      "request_id": "83b497e6da3a558fbf20f4c62f8ce150",
+      "task_id": "d71886590091294cd8b965b9"
+    }
+  ],
+  "independent": [
+    {
+      "label": "independent",
+      "task_id": "8be107ed480a3419409c2c1c",
+      "request_id": "1626d54d8708af77b6c3380024ea1d37",
+      "state": "failed",
+      "seconds": 34.234630823135376,
+      "tokens": 75217,
+      "error": "설정된 전체 작업 토큰 한도에 도달했습니다",
+      "response": "사용자가 작업을 중단했습니다.",
+      "artifacts": [],
+      "inputs_unchanged": null,
+      "reexecuted": 0
+    },
+    {
+      "label": "repair-independent",
+      "task_id": "1a62a492b5da76f0f5168dd1",
+      "request_id": "5bece71fe65d4af4d1c3c80e3e968917",
+      "state": "failed",
+      "seconds": 56.26657795906067,
+      "tokens": 84672,
+      "error": "설정된 전체 작업 토큰 한도에 도달했습니다",
+      "response": "설정된 전체 작업 토큰 한도에 도달했습니다",
+      "artifacts": [
+        "reconciliation.json",
+        "summary.txt"
+      ],
+      "inputs_unchanged": null,
+      "reexecuted": 0
+    },
+    {
+      "label": "qualified-independent",
+      "task_id": "20aaff505833fa85cd3444df",
+      "request_id": "677b2ed8471e79986109aaacd9f45015",
+      "state": "failed",
+      "seconds": 46.21170401573181,
+      "tokens": 83846,
+      "error": "설정된 전체 작업 토큰 한도에 도달했습니다",
+      "response": "설정된 전체 작업 토큰 한도에 도달했습니다",
+      "artifacts": [],
+      "inputs_unchanged": true,
+      "reexecuted": 0
+    }
+  ],
+  "final_input_checks": true
+}

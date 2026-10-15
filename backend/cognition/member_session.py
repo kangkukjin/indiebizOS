@@ -304,8 +304,12 @@ class MemberSessionManager:
                             for event in stream:
                                 from providers.base import turn_limit_reason
                                 limited = turn_limit_reason()
-                                if limited and event.get('type') == 'final' and not mr.current().get('delivered_files'):
+                                if limited and event.get('type') == 'final':
                                     yield {"type": "error", "content": limited['reason']}
+                                    # A saved intermediate file is not completion.
+                                    # Providers may label a budget stop as user
+                                    # cancellation; preserve the actual reason.
+                                    event = {**event, "content": limited['reason']}
                                 question = mr.current().get("input_required")
                                 if question:
                                     from providers.base import read_turn_tokens

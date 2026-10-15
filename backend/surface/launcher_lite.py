@@ -52,8 +52,8 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   /* 자율주행(채팅) */
   #chatMenu { display:table;table-layout:fixed;width:100%;padding:8px;box-sizing:border-box; }
   #chatTitle { display:table-cell;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px; }
-  #chatMenuActions { display:table-cell;vertical-align:middle;width:150px;text-align:right;white-space:nowrap; }
-  #chatMenu button { padding:7px;font-size:12px; }
+  #chatMenuActions { display:table-cell;vertical-align:middle;width:228px;text-align:right;white-space:nowrap; }
+  #chatMenu button { padding:7px 4px;font-size:11px; }
   #chatHistory { position:fixed; z-index:10; top:9%; left:3%; right:3%; bottom:9%; padding:16px; background:#222; border:1px solid #555; border-radius:12px; overflow:auto; }
   #chatHistory button.session { display:block; text-align:left; width:100%; margin:8px 0; }
   #chatError { padding:0 12px; word-wrap:break-word; }
@@ -111,12 +111,11 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   </div>
 
   <div id="chat" class="page">
-    <div id="chatMenu"><div id="chatTitle"></div><div id="chatMenuActions"><button id="chatHistoryOpen">히스토리</button> <button id="chatNew">＋ 새 세션</button></div></div>
+    <div id="chatMenu"><div id="chatTitle"></div><div id="chatMenuActions"><button id="chatOlder" class="hide">이전 대화 읽기</button> <button id="chatHistoryOpen">히스토리</button> <button id="chatNew">＋ 새 세션</button></div></div>
     <div id="chatError" class="err" role="alert"></div>
     <div id="chatHistory" class="hide" role="dialog" aria-label="대화 히스토리">
       <button id="chatHistoryClose">닫기</button><h3>대화 히스토리</h3><div id="chatSessions"></div>
     </div>
-    <button id="chatOlder" class="hide">이전 대화 읽기</button>
     <div id="chatlog"></div>
     <div class="composer">
       <textarea id="cmsg" placeholder="시스템 AI에게 말하기"></textarea><button id="csend" class="pri">보내기</button>

@@ -114,6 +114,7 @@ input,textarea,select{ font-family:inherit; }
 .ap-session-conversation{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 #apSessions{display:flex;align-items:center;flex-wrap:nowrap;gap:4px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--bg2)}
 #apSessions .btn2{flex-shrink:0;white-space:nowrap;padding:7px 8px;font-size:12px}
+@media(max-width:480px){#apSessions{gap:2px;padding:4px}#apSessions .btn2{padding:7px 4px;font-size:11px}}
 #apSessions[hidden],#apSessionBar[hidden],#apSessionStop[hidden],#apSessionOlder[hidden]{display:none!important}
 #apDictionaryDialog{margin:auto;width:680px;max-width:92vw;max-height:85dvh;overflow:auto;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}#apDictionaryDialog::backdrop{background:rgba(0,0,0,.35)}
 #apSessionHistory{margin:auto;width:1040px;max-width:94vw;height:82dvh;max-height:90dvh;box-sizing:border-box;padding:20px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}
@@ -507,6 +508,7 @@ SHELL_PANEL_AUTOPILOT_HTML = """
       </div>
       <div id="apSessions" aria-label="대화 세션 메뉴" hidden>
         <strong id="apSessionTitle"></strong>
+        <button class="btn2" id="apSessionOlder" onclick="apSessionOlder()" hidden>이전 대화 읽기</button>
         <button class="btn2" id="apHistory" onclick="apOpenSessionHistory()">히스토리</button>
         <button class="btn2" id="apSessionNew" onclick="apNewSession()">＋ 새 세션</button>
         <button class="btn2" id="apDictionary" onclick="apOpenDictionary()">IBL 사전</button>
@@ -519,7 +521,6 @@ SHELL_PANEL_AUTOPILOT_HTML = """
       <div class="ap-session-workspace">
         <div class="ap-session-conversation">
           <div id="apSessionBar" hidden>
-            <button class="btn2" id="apSessionOlder" onclick="apSessionOlder()" hidden>이전 대화 읽기</button>
             <button class="btn2" id="apSessionStop" onclick="apSessionCancel()" hidden>작업 중단</button>
           </div>
           <p id="apSessionError" role="alert"></p>

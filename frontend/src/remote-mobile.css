@@ -233,3 +233,10 @@
     overflow-y: auto;
   }
 }
+
+/* 작은 데스크톱 창과 폰에서도 이전 기록·세션 메뉴를 한 줄로 유지한다. */
+@media (max-width: 480px) {
+  .chat-header > div:last-child,
+  .chat-header [aria-label="대화 세션 메뉴"] { gap: 2px; }
+  .chat-header button { padding-inline: 4px; font-size: 11px; }
+}

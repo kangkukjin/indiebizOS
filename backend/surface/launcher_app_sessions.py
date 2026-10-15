@@ -32,7 +32,7 @@ function apSessionControls(s){
  document.getElementById('apSessionNew').disabled=s.creating;
  const title=item?.title||'새 세션을 시작하세요';
  document.getElementById('apSessionTitle').textContent=title;document.getElementById('apSessionTitle').title=title;
- document.getElementById('apSessionBar').hidden=!s.running&&!s.older;
+ document.getElementById('apSessionBar').hidden=!s.running;
 }
 function apRenderSessionList(){
  const s=apSessionContext;if(!s)return;

@@ -118,9 +118,12 @@ def test_analysis_has_no_delayed_write_into_next_chat(browser_chat):
 def test_sessions_create_resume_reload_and_responsive_layout(browser_chat, tmp_path):
     page,sent,_=browser_chat
     expect(page.locator('#apSessions')).to_be_visible()
+    expect(page.locator('#apSend')).to_be_enabled()
+    page.evaluate('apSessionContext.older=true;apSessionControls(apSessionContext)')
+    expect(page.locator('#apSessionBar')).not_to_be_visible()
     for width in (390, 320):
         page.set_viewport_size({'width':width,'height':844})
-        boxes=[page.locator(selector).bounding_box() for selector in ('#apSessionTitle','#apHistory','#apSessionNew','#apDictionary')]
+        boxes=[page.locator(selector).bounding_box() for selector in ('#apSessionTitle','#apSessionOlder','#apHistory','#apSessionNew','#apDictionary')]
         assert max(b['y'] for b in boxes) < min(b['y']+b['height'] for b in boxes)
         assert all(b['x'] >= 0 and b['x']+b['width'] <= width for b in boxes)
     page.locator('#apDictionary').click()

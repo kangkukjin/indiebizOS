@@ -74,7 +74,7 @@ def test_one_turn_per_session_and_cross_session_cancellation(project):
     assert store.begin(a)
 
 
-def test_owner_validation_archive_and_pagination(project):
+def test_owner_validation_and_pagination(project):
     db,user,agent,store = project
     sid = store.create()['id']
     other = sessions.SessionStore(db.db_path,'messages',sessions.pair_owner(user,db.get_or_create_agent('other')))
@@ -86,10 +86,29 @@ def test_owner_validation_archive_and_pagination(project):
     assert latest['has_older'] and len(latest['messages']) == 50
     earlier = store.history(sid,int(latest['messages'][0]['id']))
     assert len(earlier['messages']) == 15 and not earlier['has_older']
-    store.update(sid,archived=True)
-    with pytest.raises(ValueError,match='보관'): store.begin(sid)
-    store.update(sid,title='renamed',archived=False)
+    store.update(sid,title='renamed')
     assert store.begin(sid)
+
+
+def test_old_archive_flag_does_not_hide_or_lock_saved_conversations(project):
+    db, user, agent, store = project
+    sid = store.create()['id']
+    with sessions.scope(sessions.Binding(store.path, sid, store.owner)):
+        db.save_message(user, agent, 'original question')
+        db.save_message(agent, user, 'original answer')
+    # 과거 DB를 그대로 열어도 원문·선택·재개를 보존한다. 복원 작업은 없다.
+    with sessions.connection(store.path) as conn:
+        conn.execute('ALTER TABLE conversation_sessions ADD COLUMN archived INTEGER NOT NULL DEFAULT 0')
+        conn.execute('UPDATE conversation_sessions SET archived=1 WHERE id=?', (sid,))
+    reopened = sessions.SessionStore(store.path, 'messages', store.owner)
+    row = next(item for item in reopened.list() if item['id'] == sid)
+    assert 'archived' not in row
+    binding = reopened.begin(sid)
+    with sessions.scope(binding):
+        db.save_message(user, agent, 'continue here')
+    reopened.finish(binding)
+    assert [m['content'] for m in reopened.history(sid)['messages']] == [
+        'original question', 'original answer', 'continue here']
 
 
 def test_migrate_original_rows_idempotently(project):

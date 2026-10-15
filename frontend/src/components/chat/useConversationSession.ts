@@ -5,7 +5,7 @@ import type { ChatSession } from './ChatSession';
 import type { ChatMessage, ToolActivity, TodoItem, QuestionItem, PlanModeState } from './types';
 import { fileToBase64, isTextFile } from './chatUtils';
 export interface SessionTarget { target: string; project_id?: string; agent_id?: string; before?: string }
-export interface SavedSession { id: string; title: string; archived: number; running?: boolean; created_at?: string; updated_at?: string }
+export interface SavedSession { id: string; title: string; running?: boolean; created_at?: string; updated_at?: string }
 interface Event { type: string; id?: string; name?: string; input?: Record<string, unknown>; result?: string;
  content?: string; message?: string; is_error?: boolean; todos?: TodoItem[]; questions?: QuestionItem[] }
 interface Snapshot {

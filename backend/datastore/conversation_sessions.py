@@ -88,7 +88,7 @@ def ensure_schema(conn, table):
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_sessions (
         id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT NOT NULL,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-        archived INTEGER NOT NULL DEFAULT 0, legacy INTEGER NOT NULL DEFAULT 0)""")
+        legacy INTEGER NOT NULL DEFAULT 0)""")
     conn.execute("CREATE INDEX IF NOT EXISTS session_owner ON conversation_sessions(owner, updated_at)")
     cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
     if "session_id" not in cols:
@@ -174,14 +174,16 @@ class SessionStore:
                 WHERE state='running' AND process!=?""", (now(), _PROCESS))
 
     def require(self, conn, sid):
-        row = conn.execute("SELECT * FROM conversation_sessions WHERE id=? AND owner=?", (sid, self.owner)).fetchone()
+        # 이전 DB의 archived 열은 읽거나 갱신하지 않는다. 모든 대화는 항상 재개할 수 있다.
+        row = conn.execute("""SELECT id,owner,title,created_at,updated_at,legacy
+            FROM conversation_sessions WHERE id=? AND owner=?""", (sid, self.owner)).fetchone()
         if not row:
             raise ValueError("이 대상에 속한 세션이 아닙니다")
         return dict(row)
 
     def list(self):
         with connection(self.path) as conn:
-            return [dict(r) for r in conn.execute("""SELECT s.*,
+            return [dict(r) for r in conn.execute("""SELECT s.id,s.owner,s.title,s.created_at,s.updated_at,s.legacy,
                 EXISTS(SELECT 1 FROM conversation_turns t WHERE t.session_id=s.id AND t.state='running') AS running
                 FROM conversation_sessions s WHERE owner=? ORDER BY updated_at DESC,id""", (self.owner,))]
 
@@ -193,15 +195,13 @@ class SessionStore:
                 (sid, self.owner, title.strip()[:120] or "새 세션", stamp, stamp))
             return self.require(conn, sid)
 
-    def update(self, sid, title=None, archived=None):
+    def update(self, sid, title=None):
         with connection(self.path) as conn:
             self.require(conn, sid)
             if title is not None:
                 if not title.strip():
                     raise ValueError("세션 이름을 입력해주세요")
                 conn.execute("UPDATE conversation_sessions SET title=? WHERE id=?", (title.strip()[:120], sid))
-            if archived is not None:
-                conn.execute("UPDATE conversation_sessions SET archived=? WHERE id=?", (int(archived), sid))
             return self.require(conn, sid)
 
     def history(self, sid, before=None, limit=50):
@@ -233,9 +233,7 @@ class SessionStore:
     def begin(self, sid):
         tid = uuid.uuid4().hex
         with connection(self.path) as conn:
-            session = self.require(conn, sid)
-            if session["archived"]:
-                raise ValueError("보관한 세션은 복원한 뒤 이어갈 수 있습니다")
+            self.require(conn, sid)
             try:
                 conn.execute("INSERT INTO conversation_turns(id,session_id,state,process,started_at,finished_at,error) VALUES (?,?,?,?,?,?,?)",
                              (tid, sid, "running", _PROCESS, now(), None, None))

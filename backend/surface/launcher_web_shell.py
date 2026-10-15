@@ -114,15 +114,15 @@ input,textarea,select{ font-family:inherit; }
 .ap-session-conversation{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 #apSessions{display:flex;align-items:center;flex-wrap:nowrap;gap:4px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--bg2)}
 #apSessions .btn2{flex-shrink:0;white-space:nowrap;padding:7px 8px;font-size:12px}
-#apSessions[hidden],#apSessionBar[hidden],#apSessionStop[hidden],#apSessionOlder[hidden],#apSessionArchived[hidden]{display:none!important}
+#apSessions[hidden],#apSessionBar[hidden],#apSessionStop[hidden],#apSessionOlder[hidden]{display:none!important}
 #apDictionaryDialog{margin:auto;width:680px;max-width:92vw;max-height:85dvh;overflow:auto;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}#apDictionaryDialog::backdrop{background:rgba(0,0,0,.35)}
-#apSessionHistory{margin:auto;width:560px;max-width:92vw;max-height:85dvh;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}
-#apSessionHistory::backdrop{background:rgba(0,0,0,.35)}.ap-history-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-#apSessionList{overflow:auto;max-height:60dvh}#apSessionList h3{font-size:12px;color:var(--dim);padding:12px 4px 6px}
+#apSessionHistory{margin:auto;width:1040px;max-width:94vw;height:82dvh;max-height:90dvh;box-sizing:border-box;padding:20px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}
+#apSessionHistory[open]{display:flex;flex-direction:column}#apSessionHistory::backdrop{background:rgba(0,0,0,.35)}.ap-history-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+#apSessionList{overflow:auto;flex:1;min-height:0}#apSessionList h3{font-size:12px;color:var(--dim);padding:12px 4px 6px}
 .ap-session-row{display:block;text-align:left;width:100%;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--txt);cursor:pointer}
 .ap-session-row span{display:block;overflow-wrap:anywhere}.ap-session-row small{color:var(--dim)}.ap-session-row[aria-current="true"]{background:var(--bg3,var(--bg))}
 #apSessionBar{padding:8px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line)}#apSessionTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
-#apSessionError{color:var(--down);padding:0 12px}#apSessionError:empty{display:none}#apSessionArchived{font-size:12px;color:var(--dim)}
+#apSessionError{color:var(--down);padding:0 12px}#apSessionError:empty{display:none}
 .ap-head{ padding:11px 14px; background:var(--bg2); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
 .ap-head .ap-head-t{ min-width:0; flex:1; }
 .ap-head h2{ font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -518,7 +518,7 @@ SHELL_PANEL_AUTOPILOT_HTML = """
       <dialog id="apDictionaryDialog" aria-label="IBL 사전" onclose="apRestoreDictionary()" onclick="if(event.target===this)this.close()"><div class="ap-history-head"><strong>IBL 사전</strong><button class="btn2" onclick="this.closest('dialog').close()" aria-label="닫기">닫기</button></div></dialog>
       <div class="ap-session-workspace">
         <div class="ap-session-conversation">
-          <div id="apSessionBar" hidden><span id="apSessionArchived" hidden>보관된 세션입니다.</span>
+          <div id="apSessionBar" hidden>
             <button class="btn2" id="apSessionOlder" onclick="apSessionOlder()" hidden>이전 대화 읽기</button>
             <button class="btn2" id="apSessionStop" onclick="apSessionCancel()" hidden>작업 중단</button>
           </div>

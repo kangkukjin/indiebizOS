@@ -10,9 +10,9 @@ header{gap:16px;flex-shrink:0}header h1{margin:0;font-size:22px}#notice{margin:1
 #workArea{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 #taskSessionMenu{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:12px;flex-shrink:0}
 #taskSessionMenu button{flex-shrink:0;white-space:nowrap;font-size:12px;padding:8px}
-#taskHistory{margin:auto;padding:20px;width:560px;max-width:92vw;max-height:85dvh;border:1px solid #d4ded7;border-radius:16px;background:#f7f8f2;color:#284f3e}
-#taskHistory::backdrop{background:rgba(0,0,0,.35)}#taskHistoryHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-#taskList{max-height:60dvh;overflow:auto}#taskList button{display:block;background:transparent;color:#355548;text-align:left;width:100%;margin:4px 0;padding:12px}
+#taskHistory{margin:auto;padding:20px;width:1040px;max-width:94vw;height:82dvh;max-height:90dvh;box-sizing:border-box;border:1px solid #d4ded7;border-radius:16px;background:#f7f8f2;color:#284f3e}
+#taskHistory[open]{display:flex;flex-direction:column}#taskHistory::backdrop{background:rgba(0,0,0,.35)}#taskHistoryHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+#taskList{flex:1;min-height:0;overflow:auto}#taskList button{display:block;background:transparent;color:#355548;text-align:left;width:100%;margin:4px 0;padding:12px}
 #taskList button:hover{background:#edf0e9}#taskList button.active{background:#e2eee7}
 .sessionTitle{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .sessionState{display:block;font-size:12px;color:#62716d;margin-top:5px}.sessionEmpty{color:#62716d;font-size:14px;line-height:1.7;padding:10px}

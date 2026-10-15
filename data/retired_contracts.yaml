@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: conversation-session-archive-lifecycle
+    retired: 2026-10-16
+    reason: 대화는 항상 자동 저장되므로 별도 보관·복원 상태와 재개 제한은 불필요하다.
+    instead: 모든 저장 세션을 히스토리에서 열어 바로 이어간다. 이름 옆 편집·보관 버튼 없이 제목 선택만 제공한다.
+    phrases: ['보관된 세션입니다', '보관한 세션은 복원한 뒤', '세션 이름 변경', '세션 복원', '세션 보관']
   - id: warehouse-snapshot-unconditional-current
     retired: 2026-10-15
     reason: L70-1/2 — 미수집·실패·절단 목록과 실제 빈 창고를 구분하지 못해 완전 확인으로 오보고했다.

@@ -54,7 +54,7 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   #chatTitle { display:table-cell;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px; }
   #chatMenuActions { display:table-cell;vertical-align:middle;width:150px;text-align:right;white-space:nowrap; }
   #chatMenu button { padding:7px;font-size:12px; }
-  #chatHistory { position:fixed; z-index:10; top:8%; left:5%; right:5%; bottom:8%; padding:16px; background:#222; border:1px solid #555; border-radius:12px; overflow:auto; }
+  #chatHistory { position:fixed; z-index:10; top:9%; left:3%; right:3%; bottom:9%; padding:16px; background:#222; border:1px solid #555; border-radius:12px; overflow:auto; }
   #chatHistory button.session { display:block; text-align:left; width:100%; margin:8px 0; }
   #chatError { padding:0 12px; word-wrap:break-word; }
   #chatlog { padding:6px 10px 120px; }
@@ -212,7 +212,7 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
 
   // ── 자율주행 (시스템 AI 대화) ──────────────────────────
   var chatId = "", chatItems = [], chatRows = [], chatGeneration = 0, chatLoaded = false;
-  var chatRunning = false, chatArchived = false, chatPending = {}, chatTimer = null, chatSignature = "";
+  var chatRunning = false, chatPending = {}, chatTimer = null, chatSignature = "";
   function sessionApi(method, path, data, done){
     api(method, "/chat-sessions" + path + (method === "GET" ? (path.indexOf("?") < 0 ? "?" : "&") + "target=system_ai" : ""), data, function(st,d){
       if (st === 401) showLogin();
@@ -221,19 +221,18 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   }
   function chatError(st,d){ $("chatError").textContent = (d && (d.detail || d.error)) || ("대화를 불러오지 못했습니다 ("+st+")"); }
   function chatControls(){
-    $("csend").disabled = !chatLoaded || chatRunning || chatArchived || !!chatPending[chatId];
+    $("csend").disabled = !chatLoaded || chatRunning || !!chatPending[chatId];
     for(var i=0;i<chatItems.length;i++) if(chatItems[i].id===chatId){
-      $("chatTitle").textContent=chatItems[i].title+(chatItems[i].archived?" · 보관됨":"");
-      chatArchived=!!chatItems[i].archived;
+      $("chatTitle").textContent=chatItems[i].title;
     }
-    $("csend").disabled = !chatLoaded || chatRunning || chatArchived || !!chatPending[chatId];
+    $("csend").disabled = !chatLoaded || chatRunning || !!chatPending[chatId];
   }
   function renderSessionList(){
     var box=$("chatSessions"), day="";box.innerHTML="";
     for(var i=0;i<chatItems.length;i++){
       var row=chatItems[i],next=String(row.updated_at||row.created_at||"").slice(0,10);
       if(next!==day){day=next;var h=document.createElement("h4");h.textContent=day;box.appendChild(h);}
-      var button=document.createElement("button");button.className="session";button.textContent=row.title+(row.running?" · 진행 중":row.archived?" · 보관됨":"");
+      var button=document.createElement("button");button.className="session";button.textContent=row.title+(row.running?" · 진행 중":"");
       button.setAttribute("aria-current",String(row.id===chatId));
       button.onclick=(function(id){return function(){selectChat(id);};})(row.id);box.appendChild(button);
     }
@@ -245,14 +244,14 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
       if(st!==200||!d){chatError(st,d);return;}chatItems=d.sessions||[];renderSessionList();
       if(!chatId && !$("chatNew").disabled){
         var saved="",id="";try{saved=localStorage.getItem("launcher-chat-session")||"";}catch(e){}
-        for(var i=0;i<chatItems.length;i++){if(chatItems[i].id===saved){id=saved;break;}if(!id&&!chatItems[i].archived)id=chatItems[i].id;}
+        for(var i=0;i<chatItems.length;i++){if(chatItems[i].id===saved){id=saved;break;}if(!id)id=chatItems[i].id;}
         if(id)selectChat(id);
       }else if(chatId)readChat();
     });
     if(!chatTimer)chatTimer=setInterval(function(){if(TAB==="chat")loadChat();},4000);
   }
   function selectChat(id){
-    chatId=id;chatGeneration++;chatRows=[];chatLoaded=false;chatRunning=false;chatArchived=false;chatSignature="";
+    chatId=id;chatGeneration++;chatRows=[];chatLoaded=false;chatRunning=false;chatSignature="";
     $("chatHistory").className="hide";$("chatlog").innerHTML="";$("cmsg").value="";$("chatError").textContent="";$("chatOlder").className="hide";
     try{localStorage.setItem("launcher-chat-session",id);}catch(e){}
     chatControls();readChat();$("cmsg").focus();
@@ -293,7 +292,7 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   };
   $("csend").addEventListener("click",function(){
     var msg=$("cmsg").value,id=chatId,generation=chatGeneration;
-    if(!msg||!msg.replace(/\s/g,"").length||!chatLoaded||chatRunning||chatArchived||chatPending[id])return;
+    if(!msg||!msg.replace(/\s/g,"").length||!chatLoaded||chatRunning||chatPending[id])return;
     chatPending[id]=true;chatControls();
     sessionApi("POST","/"+encodeURIComponent(id)+"/messages",{target:"system_ai",message:msg},function(st,d){
       delete chatPending[id];if(id!==chatId||generation!==chatGeneration)return;chatControls();

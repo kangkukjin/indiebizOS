@@ -52,11 +52,11 @@ export function ResearchProjectView({ project }: { project: Project }) {
     <div className="drag select-none shrink-0 h-12 flex items-center pl-20 pr-5 border-b border-[#E5DFD5] bg-[#EAE4DA] font-semibold">📚 {project.name}<span className="ml-3 text-xs text-[#6B5B4F]">연구 프로젝트</span></div>
     {error && <p role="alert" className="px-4 py-2 text-sm text-red-600">{error}</p>}
     {!selected && <div className="flex justify-end p-2">{sessionMenu}</div>}
-    <dialog ref={history} aria-label="대화 히스토리" onClick={e => {if (e.target === e.currentTarget) history.current?.close();}} className="m-auto p-4 rounded-xl bg-[#F5F1EB] text-[#4A4035] w-[600px] max-w-[92vw] backdrop:bg-black/30">
+    <dialog ref={history} aria-label="대화 히스토리" onClick={e => {if (e.target === e.currentTarget) history.current?.close();}} className="m-auto p-4 rounded-xl bg-[#F5F1EB] text-[#4A4035] w-[1040px] max-w-[94vw] h-[82vh] max-h-[90vh] open:flex open:flex-col backdrop:bg-black/30">
       <div className="flex justify-between items-center mb-3"><h2 className="font-semibold">대화 히스토리</h2><button onClick={() => history.current?.close()} aria-label="닫기"><X size={20}/></button></div>
-      <div className="max-h-[60vh] overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto">
         {threads.map(thread => <button key={thread.id} onClick={() => {setSelected(thread.id);history.current?.close();setCreating(false);}} aria-current={selected === thread.id} className="block w-full text-left px-3 py-3 rounded-xl hover:bg-white/60">
-          <span className="block font-medium">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}{thread.archived ? ' · 보관됨' : ''}</span>
+          <span className="block font-medium">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}</span>
         </button>)}
         {!threads.length && <p className="p-3 text-sm text-[#A09080]">새 대화를 만들어 시작하세요.</p>}
       </div>

@@ -36,7 +36,7 @@ def browser_chat():
             body = r.request.post_data_json if r.request.method == 'POST' else {k:v[0] for k,v in parse_qs(urlsplit(r.request.url).query).items()}
             key=body.get('agent_id','system')
             if key not in sessions:
-                sessions[key]=[{'id':key,'title':'기존 대화','archived':0,'updated_at':'2026-10-15T00:00:00Z'}]
+                sessions[key]=[{'id':key,'title':'기존 대화','archived':1,'updated_at':'2026-10-15T00:00:00Z'}]
                 messages[key]=[]
             if r.request.method == 'POST':
                 row={'id':key+str(len(sessions[key])),'title':'새 세션','archived':0,'updated_at':'2026-10-16T00:00:00Z'}
@@ -160,6 +160,9 @@ def test_sessions_create_resume_reload_and_responsive_layout(browser_chat, tmp_p
     page.locator('#apHistory').click()
     expect(page.locator('#apSessionHistory').get_by_role('searchbox')).to_have_count(0)
     expect(page.locator('#apSessionList button')).to_have_count(2)
+    box=page.locator('#apSessionHistory').bounding_box()
+    assert box['width'] >= 1000 and box['height'] >= 650
+    expect(page.locator('#apSessionArchived')).to_have_count(0)
 
 
 def test_late_snapshot_does_not_replace_new_session(browser_chat):

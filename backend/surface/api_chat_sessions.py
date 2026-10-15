@@ -17,7 +17,6 @@ class Target(BaseModel):
 
 class Change(Target):
     title: str | None = Field(default=None, max_length=120)
-    archived: bool | None = None
 
 
 class Message(Target):
@@ -48,7 +47,7 @@ def create_session(req: Change):
 @router.patch("/{sid}")
 def update_session(sid: str, req: Change):
     try:
-        return get_store(req.target, req.project_id, req.agent_id)[0].update(sid, req.title, req.archived)
+        return get_store(req.target, req.project_id, req.agent_id)[0].update(sid, req.title)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
 

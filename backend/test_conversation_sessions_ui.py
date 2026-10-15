@@ -25,7 +25,7 @@ def test_session_workspace_in_browser(tmp_path):
     log = (tmp_path/'vite.log').open('w')
     server = subprocess.Popen([str(vite), '--host', '127.0.0.1', '--port', str(port)],
                               cwd=root/'frontend', stdout=log, stderr=subprocess.STDOUT)
-    items = [{'id':'old','title':'회의 준비','archived':0,'running':False,'updated_at':'2026-10-15T01:00:01Z'}]
+    items = [{'id':'old','title':'회의 준비','archived':0,'running':0,'updated_at':'2026-10-15T01:00:01Z'}]
     records = {'old':[{'id':'51','role':'user','content':'지난 회의의 결정은 보존해줘.', 'timestamp':'2026-10-14T17:00:00Z','images':[]},
                       {'id':'52','role':'assistant','content':'**결정 사항**을 보존했습니다.', 'timestamp':'2026-10-15T01:00:01Z','images':[]}]}
     records['old'] = [{'id':str(i),'role':'user','content':f'오래된 대화 {i}',
@@ -123,15 +123,27 @@ def test_session_workspace_in_browser(tmp_path):
                 page.get_by_role('button',name='히스토리',exact=True).first.click()
                 history=page.get_by_role('dialog',name='대화 히스토리')
                 expect(history.locator('[data-session-day="2026-10-10"]')).to_be_visible()
-                box=history.bounding_box()
-                assert abs(box['x'] + box['width']/2 - 640) < 2
+                for width in (1280, 390, 320):
+                    page.set_viewport_size({'width':width,'height':850})
+                    box=history.bounding_box()
+                    assert abs(box['x'] + box['width']/2 - width/2) < 2
+                    assert min(1000, width * .90) <= box['width'] <= width
+                    assert 650 <= box['height'] <= 850
+                page.set_viewport_size({'width':1280,'height':850})
+                expect(history.locator('button[title]')).to_have_count(0)
+                expect(history.get_by_text('0', exact=True)).to_have_count(0)
                 expect(history.get_by_role('searchbox')).to_have_count(0)
                 page.screenshot(path=str(tmp_path/'session-history.png'))
                 expect(history.get_by_role('button',name='회의 준비')).to_be_visible()
-                history.get_by_role('button',name='과거 기록 보관됨').click()
+                history.get_by_role('button',name='과거 기록',exact=True).click()
                 expect(history).to_have_count(0)
                 expect(page.get_by_text('보관한 대화 원문',exact=True)).to_be_visible()
-                expect(page.get_by_text('보관된 세션입니다. 복원 후 이어갈 수 있습니다.')).to_be_visible()
+                expect(page.get_by_text('보관된 세션입니다. 복원 후 이어갈 수 있습니다.')).to_have_count(0)
+                page.reload()
+                expect(page.get_by_text('보관한 대화 원문',exact=True)).to_be_visible()
+                textbox.fill('이 대화에서 계속');textbox.press('Enter')
+                expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
+                assert sent[-1] == ('archived', '이 대화에서 계속')
                 page.get_by_role('button',name='히스토리',exact=True).first.click()
                 history.get_by_role('button',name='회의 준비',exact=True).click()
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).to_be_visible()

@@ -25,15 +25,14 @@ function apSessionError(s,error){if(apSessionLive(s))document.getElementById('ap
 function apSessionControls(s){
  if(!apSessionLive(s))return;
  const item=s.items.find(x=>x.id===s.id),pending=s.pending.has(s.id);
- document.getElementById('apSend').disabled=!s.id||!s.loaded||Boolean(item?.archived)||s.running||pending;
+ document.getElementById('apSend').disabled=!s.id||!s.loaded||s.running||pending;
  document.getElementById('apSessionStop').hidden=!s.running;
  document.getElementById('apSessionOlder').hidden=!s.older;
  document.getElementById('apSessionOlder').disabled=s.reading;
  document.getElementById('apSessionNew').disabled=s.creating;
  const title=item?.title||'새 세션을 시작하세요';
  document.getElementById('apSessionTitle').textContent=title;document.getElementById('apSessionTitle').title=title;
- document.getElementById('apSessionBar').hidden=!item?.archived&&!s.running&&!s.older;
- document.getElementById('apSessionArchived').hidden=!item?.archived;
+ document.getElementById('apSessionBar').hidden=!s.running&&!s.older;
 }
 function apRenderSessionList(){
  const s=apSessionContext;if(!s)return;
@@ -45,7 +44,7 @@ function apRenderSessionList(){
   if(next!==day){day=next;const heading=document.createElement('h3');heading.textContent=day||'날짜 미상';box.append(heading)}
   const button=document.createElement('button');button.type='button';button.className='ap-session-row';button.setAttribute('aria-current',String(row.id===s.id));
   const title=document.createElement('span');title.textContent=row.title;button.append(title);
-  if(row.running||row.archived){const status=document.createElement('small');status.textContent=row.running?'진행 중':'보관됨';button.append(status)}
+  if(row.running){const status=document.createElement('small');status.textContent='진행 중';button.append(status)}
   button.onclick=()=>apSelectSession(row.id);box.append(button);
  }
  if(!rows.length){const empty=document.createElement('p');empty.textContent='표시할 세션이 없습니다.';box.append(empty)}
@@ -105,7 +104,7 @@ async function apSessionOlder(){
  finally{if(apSessionLive(s,id)){s.reading=false;apSessionControls(s)}}
 }
 async function apSessionSend(){
- const s=apSessionContext;if(!s||!s.id||!s.loaded||s.running||s.pending.has(s.id)||s.items.find(x=>x.id===s.id)?.archived)return;
+ const s=apSessionContext;if(!s||!s.id||!s.loaded||s.running||s.pending.has(s.id))return;
  const generation=s.generation,id=s.id,input=document.getElementById('apInput'),text=input.value,photos=apImages.slice();if(!text.trim()&&!photos.length)return;
  s.pending.add(id);apSessionControls(s);apSessionError(s,null);
  try{
@@ -126,7 +125,7 @@ async function apStartSessions(){
  apSessionError(s,null);apSessionControls(s);apRenderSessionList();
  try{await apSessionList(s);if(!apSessionLive(s))return;
   let saved='';try{saved=localStorage.getItem(s.key)||''}catch(e){}
-  const row=s.items.find(x=>x.id===saved)||s.items.find(x=>!x.archived);
+  const row=s.items.find(x=>x.id===saved)||s.items[0];
   if(row&&!s.id&&!s.creating)await apSelectSession(row.id,true);
  }catch(e){apSessionError(s,e)}
  const poll=async()=>{if(!apSessionLive(s))return;

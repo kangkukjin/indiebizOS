@@ -5,7 +5,7 @@ import type { ChatSession } from './ChatSession';
 import type { ChatMessage, ToolActivity, TodoItem, QuestionItem, PlanModeState } from './types';
 import { fileToBase64, isTextFile } from './chatUtils';
 export interface SessionTarget { target: string; project_id?: string; agent_id?: string; before?: string }
-export interface SavedSession { id: string; title: string; archived: number; running?: boolean }
+export interface SavedSession { id: string; title: string; archived: number; running?: boolean; created_at?: string; updated_at?: string }
 interface Event { type: string; id?: string; name?: string; input?: Record<string, unknown>; result?: string;
  content?: string; message?: string; is_error?: boolean; todos?: TodoItem[]; questions?: QuestionItem[] }
 interface Snapshot {
@@ -63,7 +63,10 @@ export function useConversationSession(id: string, target: SessionTarget, active
   loading:sending || running, canSteer:false, streamingContent:running ? snapshot?.turn?.stream_content : '',
   toolHistory:running ? tools : [], thinkingText:running ? thinking : '', todos, questions, planMode:snapshot?.panels?.plan_mode,
   error:error || failure?.message || failure?.content || (snapshot?.turn?.state === 'interrupted' ? '앱 재시작으로 실행이 중단됐습니다. 기록을 확인하고 이어서 요청하세요.' : undefined),
-  hasOlder, loadOlder:async () => { if (messages[0]) await load(messages[0].id); },
+  hasOlder, loadOlder:async () => {
+   try { if (messages[0]) await load(messages[0].id); }
+   catch(e) { setError((e as Error).message); }
+  },
   send:async (text,files,actionHint) => {
    if (pending.current || running) return false;
    pending.current = true; setSending(true); setError('');

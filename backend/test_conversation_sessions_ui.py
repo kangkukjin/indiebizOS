@@ -5,7 +5,7 @@ from pathlib import Path
 import socket
 import subprocess
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from urllib.request import urlopen
 
 import pytest
@@ -25,9 +25,11 @@ def test_session_workspace_in_browser(tmp_path):
     log = (tmp_path/'vite.log').open('w')
     server = subprocess.Popen([str(vite), '--host', '127.0.0.1', '--port', str(port)],
                               cwd=root/'frontend', stdout=log, stderr=subprocess.STDOUT)
-    items = [{'id':'old','title':'회의 준비','archived':0,'running':False}]
-    records = {'old':[{'id':'1','role':'user','content':'지난 회의의 결정은 보존해줘.', 'timestamp':'2026-10-15T01:00:00Z','images':[]},
-                      {'id':'2','role':'assistant','content':'**결정 사항**을 보존했습니다.', 'timestamp':'2026-10-15T01:00:01Z','images':[]}]}
+    items = [{'id':'old','title':'회의 준비','archived':0,'running':False,'updated_at':'2026-10-15T01:00:01Z'}]
+    records = {'old':[{'id':'51','role':'user','content':'지난 회의의 결정은 보존해줘.', 'timestamp':'2026-10-14T17:00:00Z','images':[]},
+                      {'id':'52','role':'assistant','content':'**결정 사항**을 보존했습니다.', 'timestamp':'2026-10-15T01:00:01Z','images':[]}]}
+    records['old'] = [{'id':str(i),'role':'user','content':f'오래된 대화 {i}',
+        'timestamp':f'2026-10-{13 if i <= 2 else 14}T01:00:00Z','images':[]} for i in range(1,51)] + records['old']
     turns, sent = {}, []
     def api(route):
         request = route.request
@@ -36,7 +38,7 @@ def test_session_workspace_in_browser(tmp_path):
         result = {}
         if path == '/chat-sessions':
             if request.method == 'POST':
-                item = {'id':f'new{len(items)}','title':'새 세션','archived':0,'running':False}
+                item = {'id':f'new{len(items)}','title':'새 세션','archived':0,'running':False,'updated_at':'2026-10-16T01:00:00Z'}
                 items.insert(0,item); records[item['id']] = []; result = item
             else: result = {'sessions':items}
         elif path.startswith('/chat-sessions/'):
@@ -52,7 +54,10 @@ def test_session_workspace_in_browser(tmp_path):
                 result={'cancelled':True}
             elif request.method == 'PATCH':
                 item=next(i for i in items if i['id']==sid); item.update({k:v for k,v in body.items() if k in ('title','archived')});result=item
-            else: result={'messages':records[sid],'has_older':False,'events':[], 'turn':turns.get(sid),'panels':{}}
+            else:
+                before=int(parse_qs(urlparse(request.url).query).get('before',['999999'])[0])
+                rows=[r for r in records[sid] if int(r['id']) < before]
+                result={'messages':rows[-50:],'has_older':len(rows)>50,'events':[], 'turn':turns.get(sid),'panels':{}}
         route.fulfill(status=200,content_type='application/json',body=json.dumps(result),headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*'})
     try:
         for _ in range(100):
@@ -64,13 +69,13 @@ def test_session_workspace_in_browser(tmp_path):
         with sync_playwright() as pw:
             browser=pw.chromium.launch(headless=True)
             try:
-                page=browser.new_page(viewport={'width':1280,'height':900})
+                page=browser.new_page(viewport={'width':1280,'height':900},timezone_id='Asia/Seoul')
                 errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
                 page.route('http://127.0.0.1:8765/**',api)
                 # Reproduce a long-lived Vite server serving the pre-session catalog.
                 stale_catalog=json.loads((root/'frontend/i18n/catalog.json').read_text())
                 stale_catalog['messages']={k:v for k,v in stale_catalog['messages'].items()
-                    if 'SessionWorkspace.tsx' not in v.get('context','')}
+                    if not any(name in v.get('context','') for name in ('SessionWorkspace.tsx','SessionHistory.tsx'))}
                 page.route('**/i18n/catalog.json*',lambda route:route.fulfill(
                     content_type='application/javascript',body='export default '+json.dumps(stale_catalog)))
                 page.goto(url+'/#/system-ai')
@@ -93,6 +98,32 @@ def test_session_workspace_in_browser(tmp_path):
                 page.get_by_role('button',name='회의 준비 이어서 대화하기').click()
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).to_be_visible()
                 expect(page.get_by_text('0',exact=True)).to_have_count(0)
+                expect(page.locator('[data-session-day="2026-10-15"]')).to_be_visible()
+                expect(page.locator('[data-message-day="2026-10-14"]')).to_be_visible()
+                expect(page.locator('[data-message-day="2026-10-15"]:visible')).to_have_count(1)
+                expect(page.locator('[data-message-day="2026-10-13"]')).to_have_count(0)
+                page.get_by_role('button',name='이전 대화 읽기',exact=True).click()
+                expect(page.get_by_text('오래된 대화 1',exact=True)).to_be_visible()
+                expect(page.locator('[data-message-day="2026-10-13"]')).to_be_visible()
+                expect(page.get_by_role('button',name='이전 대화 읽기',exact=True)).to_have_count(0)
+                items.append({'id':'archived','title':'과거 기록','archived':1,'updated_at':'2026-10-10T01:00:00Z'})
+                records['archived']=[{'id':'100','role':'user','content':'보관한 대화 원문','timestamp':'2026-10-10T01:00:00Z','images':[]}]
+                page.get_by_role('button',name='대화 히스토리',exact=True).first.click()
+                history=page.get_by_role('dialog',name='대화 히스토리')
+                expect(history.locator('[data-session-day="2026-10-10"]')).to_be_visible()
+                box=history.bounding_box()
+                assert abs(box['x'] + box['width']/2 - 640) < 2
+                expect(history.get_by_role('searchbox',name='세션 검색')).to_be_focused()
+                page.screenshot(path=str(tmp_path/'session-history.png'))
+                history.get_by_role('searchbox',name='세션 검색').fill('2026-10-10')
+                expect(history.get_by_role('button',name='회의 준비')).to_have_count(0)
+                history.get_by_role('button',name='과거 기록 보관됨').click()
+                expect(history).to_have_count(0)
+                expect(page.get_by_text('보관한 대화 원문',exact=True)).to_be_visible()
+                expect(page.get_by_text('보관된 세션입니다. 복원 후 이어갈 수 있습니다.')).to_be_visible()
+                page.get_by_role('button',name='대화 히스토리',exact=True).first.click()
+                history.get_by_role('button',name='회의 준비',exact=True).click()
+                expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).to_be_visible()
                 page.screenshot(path=str(tmp_path/'system-ai-sessions.png'))
                 # Reuse the real React component with project/research adapters, not a copied UI.
                 page.evaluate("""async () => {

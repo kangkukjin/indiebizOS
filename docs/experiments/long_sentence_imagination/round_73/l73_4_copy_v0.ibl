@@ -1,0 +1,30 @@
+#!ibl edition=2
+# 73회차 되먹임 — L73-4 실기 검증: 폰 안 `[self:copy]` 가 폰 전용 폴더로 사진을 복사하는지(수리 전엔 `.publish-*` Permission denied)
+# inputs: phone(폰 device_id) photo_path(폰 사진 절대경로, 연쇄가 찍은 것) phone_rel(폰 전용 폴더 상대경로) tag(요청ID 접두)
+# 사진 내용은 읽지 않는다 — 복사 결과의 경로·크기·해시만.
+
+$parts=split($photo_path,"/")
+$name=$parts[len($parts)-1]
+$jsrc=json($photo_path)
+$jdir=json($phone_rel)
+$jdest=json(f"${phone_rel}/${name}")
+$jname=json($name)
+$inner=f"""#!ibl edition=2
+[try] {
+  $c=[self:copy]{src:${jsrc},dest:${jdest},if_exists:"fail"}
+  $l=[self:list]{path:${jdir},pattern:${jname},hash:true}
+  return {copied:true,copy:$c,listed:$l}
+} [catch] {
+  return {copied:false,error:$error.message,details:$error.details}
+}
+"""
+$t=[limbs:guestpc]{op:"ibl",limb:$phone,code:$inner,background:true,timeout:120,request_id:f"${tag}-copy"}
+$d=[self:task]{op:"wait",ref:$t.task_ref,timeout:120}
+assert $d.terminal,"복사 작업 미종료",$t
+$v=get(get($d,"result",{}),"value",{})
+$files=get($v,"listed",[])
+return {phone:$phone,source:$photo_path,dest_rel:f"${phone_rel}/${name}",copied:get($v,"copied",false),
+        error:get($v,"error",null),details:get($v,"details",null),copy_result:get($v,"copy",null),
+        copy_sha256:len($files)>0 ? get($files[0],"sha256",null) : null,
+        copy_size:len($files)>0 ? get($files[0],"size",null) : null,
+        receipt:$t.task_ref}

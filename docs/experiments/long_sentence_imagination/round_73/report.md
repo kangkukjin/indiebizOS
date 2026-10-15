@@ -121,3 +121,27 @@ AI 가 Python/셸을 고른 이음새: 입력 해시 대조·결과 대조(`pyth
 | python 실증 | `[limbs:guestpc]{op:"python",code:"result={'ok':True}"}` → `.result.value` = `{ok:true}`, exit_code null, 2,178 ms, 정리 확인 둘 다 true | [evidence/hub_python_samsung1.json](evidence/hub_python_samsung1.json) |
 
 **미검증**: shell·transfer 의 실제 호출(사진 회수 연쇄), L73-4 발행 수리의 폰 실기(`self:copy`), 폰 자체 `/launcher/instruments` 응답(6초 안에 안 와서 확인 생략 — 백엔드 응답 자체는 로그캣으로 확인). 사진 연쇄 끝까지 재실행은 삼성0 검증 세션의 몫이거나 다음 회차.
+
+## 7. 되먹임(APK 설치 뒤) — 사진 연쇄 끝까지·L73-4 실기
+
+17:42 삼성0(Galaxy A36, SM-A366N, `guestpc-fc7b12fba936`)에 폰 실행 계약 1 APK(`dd2e6eba` + §5 수리 번들)를 USB 로 설치([setup 로그](evidence/feedback_setup_phone_samsung0.log)). 설치만으로는 실행 중 앱이 옛 번들을 쓰므로(`.version` 마커=APK lastUpdateTime, 폰 `output_publish.py` 2,637 B ≠ 레포 3,426 B) `am force-stop` 뒤 런처로 다시 열었고 17:46:49 `BaseBundle` 재추출(3,426 B 일치). 허브 `[self:limb]{op:"list"}` 삼성0·맥12 `connected:true`, 삼성0 info `ops=ibl,info,media,shell,python,transfer`·`execution_contract:1`·python 3.12.7(chaquopy). 삼성1(J7)도 USB 에 있었으나 대상 아님 — adb 는 전부 시리얼 지정.
+
+| 단계 | 프로그램 | 결과 |
+| --- | --- | --- |
+| 검사 | [chain_v0.ibl](chain_v0.ibl) `check:true` | 통과 0.8초, issues 0(경고 RECORD_LENGTH 는 등록 관용구 안) — **수정 0회** [증거](evidence/feedback_chain_v0_check.json) |
+| 실행 | chain_v0 그대로, 입력 phone/pc/out/tag=`r73-chain-1`/remote_rel | **196.4초 완료 `all_equal:true`** [chain.json](evidence/feedback_chain.json) · [원문](evidence/feedback_chain_v0_run1.json) |
+| L73-4 실기 | [l73_4_copy_v0.ibl](l73_4_copy_v0.ibl) — 폰 하달 IBL 안 `[self:copy]{src:사진,dest:전용폴더,if_exists:"fail"}` | **통과** 4.4초(폰 작업 1.8초): `files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg` 복사, 같은 해시·크기. 수리 전 `.publish-*` Permission denied 재발 0 [원문](evidence/feedback_l73_4_copy_run1.json) |
+
+사진 연쇄 세 값(내용 비열람, 크기·해시만):
+
+| 자리 | 계산 주체 | 크기 | SHA-256 |
+| --- | --- | --- | --- |
+| 폰 | 계약 1 `op:python` hashlib(1.1초) | 11,400,091 | `998b6d21c6c547a3571641017e35fd832aec6fce531f8165b2e97cf861159f91` |
+| 허브 | `외부PC파일가져오기`(transfer receive→collect 88.9초) 뒤 `[self:list]{hash:true}` + 검토자 `shasum` 독립 재계산 | 11,400,091 | 같음 |
+| 맥12 | `외부PC파일보내기`(83.4초) 뒤 원격 셸 `shasum -a 256` | — | 같음 |
+
+전송 영수증 `transfer_sha256` 도 같은 값. 원격 작업 7건(폰 shot·phonehash·collect·copy, 맥12 mkdir·send·hash) 전부 `[limbs:guestpc]{op:"history"}` 에서 succeeded·terminal([증거](evidence/feedback_history.json)). 촬영은 삼성0 1장(앱 사진 폴더 `files/photos/`, L73-6 그대로)과 전용 폴더 복사본 1, 허브·맥12 사본 각 1 — 어느 실행자도 내용을 보지 않았다. 소리·화면 캡처·설정 변경 0.
+
+**판정**: 73회차 T6(사진 연쇄)가 "collect 정지" 에서 **끝까지 통과**로 바뀌었고, L73-4 는 허브 시험 2케이스에 더해 **폰 실기 통과**. 훈련자 프로그램은 미검사 초안이 검사·실행 모두 수정 0회였다(계약 1 교재 remote_phone.md 의 `.result.value`·background→wait·transfer 관용구 재사용이 그대로 맞았다).
+
+**미검증·남김**: ① AI 되먹임(같은 자연어를 독립 AI 에 다시 주어 L73-4 경로 선택이 바뀌는지)은 이 절에서 **하지 않았다** ② 삼성1(J7)·맥26 등 다른 몸의 계약 1 미설치·연결 깜빡임은 그대로 ③ 11.4 MB 전송 속도(폰→허브 ≈128 KB/s, 허브→맥12 ≈137 KB/s)는 관측치일 뿐 상한·원인 미조사 ④ `[self:copy]` 의 `if_exists:"rename"/"overwrite"` 폰 경로는 미실행(fail 만) ⑤ 폰 사진 4장(삼성1 3·삼성0 1)+전용 폴더 복사본 정리는 사용자 결정.

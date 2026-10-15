@@ -1,0 +1,36 @@
+
+[1m▶ 디바이스 확인[0m
+520044bbf0979425	device
+ABI=arm64-v8a → flavor=arm64
+
+[1m▶ APK 빌드 (./gradlew :app:assembleArm64Debug)[0m
+BUILD SUCCESSFUL in 18s
+47 actionable tasks: 5 executed, 42 up-to-date
+
+[1m▶ APK 설치[0m
+Success
+
+[1m▶ 알림 접근 권한 부여[0m
+✓ 알림 리스너 활성
+✓ 알림 표시 권한(POST_NOTIFICATIONS) 부여
+
+[1m▶ 미디어 세션 권한(CAMERA·RECORD_AUDIO) 부여[0m
+✓ android.permission.CAMERA 부여
+✓ android.permission.RECORD_AUDIO 부여
+※ Android 10+ 에서 중앙 PC 가 이 폰의 카메라를 열려면 폰에서 '카메라 대기 모드'(런처 우하단 버튼)를 켜 두어야 합니다.
+
+[1m▶ API 키 주입[0m
+[provision] ✅ 폰에 데이터 키 15개 주입: DART_API_KEY, DATA4LIBRARY_API_KEY, DATA_GO_KR_API_KEY, DEEPSEEK_API_KEY, FINNHUB_API_KEY, FMP_API_KEY, GEMINI_API_KEY, GUARDIAN_API_KEY, KAGGLE_API_TOKEN, KAKAO_REST_API_KEY, KOPIS_API_KEY, MOLIT_API_KEY, NANET_API_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
+[provision] ✅ 맥 위임: https://launcher.kukjinkang.uk (비번 동봉) — 자율주행이 맥으로 프록시됩니다.
+[provision] (.env 에 없어 건너뜀: AMADEUS_API_KEY, AMADEUS_API_SECRET)
+[provision] 폰 백엔드 재기동(앱 force-stop 후 '폰 백엔드 시작')하면 반영됩니다.
+
+[1m▶ 완료[0m
+폰에서 'IndieBiz Phone Agent' 앱을 열기만 하면 됩니다.
+앱이 포그라운드로 뜨면 백엔드(:8765)가 자동 기동되어, 폰이 자체 IBL 엔진으로
+앱모드·실제 액션·[sense:phone] 알림을 서빙합니다. (별도 '시작' 버튼 없음)
+※ 키를 새로 주입했다면, 앱 force-stop 후 다시 열어야 새 키가 로드됩니다.
+
+확인:  adb forward tcp:8788 tcp:8765 \
+       && curl -s 127.0.0.1:8788/launcher/instruments | head -c 200 \
+       && adb forward --remove tcp:8788

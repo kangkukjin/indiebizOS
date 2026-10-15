@@ -1,0 +1,4329 @@
+{
+  "request": {
+    "code": "#!ibl edition=2\n# 73회차 되먹임 — L73-4 실기 검증: 폰 안 `[self:copy]` 가 폰 전용 폴더로 사진을 복사하는지(수리 전엔 `.publish-*` Permission denied)\n# inputs: phone(폰 device_id) photo_path(폰 사진 절대경로, 연쇄가 찍은 것) phone_rel(폰 전용 폴더 상대경로) tag(요청ID 접두)\n# 사진 내용은 읽지 않는다 — 복사 결과의 경로·크기·해시만.\n\n$parts=split($photo_path,\"/\")\n$name=$parts[len($parts)-1]\n$jsrc=json($photo_path)\n$jdir=json($phone_rel)\n$jdest=json(f\"${phone_rel}/${name}\")\n$jname=json($name)\n$inner=f\"\"\"#!ibl edition=2\n[try] {\n  $c=[self:copy]{src:${jsrc},dest:${jdest},if_exists:\"fail\"}\n  $l=[self:list]{path:${jdir},pattern:${jname},hash:true}\n  return {copied:true,copy:$c,listed:$l}\n} [catch] {\n  return {copied:false,error:$error.message,details:$error.details}\n}\n\"\"\"\n$t=[limbs:guestpc]{op:\"ibl\",limb:$phone,code:$inner,background:true,timeout:120,request_id:f\"${tag}-copy\"}\n$d=[self:task]{op:\"wait\",ref:$t.task_ref,timeout:120}\nassert $d.terminal,\"복사 작업 미종료\",$t\n$v=get(get($d,\"result\",{}),\"value\",{})\n$files=get($v,\"listed\",[])\nreturn {phone:$phone,source:$photo_path,dest_rel:f\"${phone_rel}/${name}\",copied:get($v,\"copied\",false),\n        error:get($v,\"error\",null),details:get($v,\"details\",null),copy_result:get($v,\"copy\",null),\n        copy_sha256:len($files)>0 ? get($files[0],\"sha256\",null) : null,\n        copy_size:len($files)>0 ? get($files[0],\"size\",null) : null,\n        receipt:$t.task_ref}\n",
+    "edition": 2,
+    "origin": "training",
+    "project_id": "study",
+    "inputs": {
+      "phone": "guestpc-fc7b12fba936",
+      "photo_path": "/data/user/0/com.indiebiz.phoneagent/files/photos/photo_1792054098165.jpg",
+      "phone_rel": "outputs/long_sentence_imagination/round73/trainer",
+      "tag": "r73-l734-1"
+    }
+  },
+  "endpoint": "/ibl/execute",
+  "started": 1792054314.4802072,
+  "ended": 1792054318.873533,
+  "response": {
+    "success": true,
+    "value": {
+      "phone": "guestpc-fc7b12fba936",
+      "source": "/data/user/0/com.indiebiz.phoneagent/files/photos/photo_1792054098165.jpg",
+      "dest_rel": "outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg",
+      "copied": true,
+      "error": null,
+      "details": null,
+      "copy_result": {
+        "success": true,
+        "path": "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg",
+        "items": [
+          {
+            "path": "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+          }
+        ],
+        "count": 1,
+        "renamed": [],
+        "if_exists": "fail",
+        "replaced": [],
+        "message": "복사 완료: /data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg (1개 파일)"
+      },
+      "copy_sha256": "998b6d21c6c547a3571641017e35fd832aec6fce531f8165b2e97cf861159f91",
+      "copy_size": 11400091,
+      "receipt": {
+        "kind": "guestpc",
+        "task_id": "7bb8352f88974d82aece934f63a6e3e5"
+      }
+    },
+    "value_wire": {
+      "protocol": "ibl-value/1",
+      "data": [
+        "record",
+        [
+          [
+            "phone",
+            [
+              "scalar",
+              "guestpc-fc7b12fba936"
+            ]
+          ],
+          [
+            "source",
+            [
+              "scalar",
+              "/data/user/0/com.indiebiz.phoneagent/files/photos/photo_1792054098165.jpg"
+            ]
+          ],
+          [
+            "dest_rel",
+            [
+              "scalar",
+              "outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+            ]
+          ],
+          [
+            "copied",
+            [
+              "scalar",
+              true
+            ]
+          ],
+          [
+            "error",
+            [
+              "scalar",
+              null
+            ]
+          ],
+          [
+            "details",
+            [
+              "scalar",
+              null
+            ]
+          ],
+          [
+            "copy_result",
+            [
+              "record",
+              [
+                [
+                  "success",
+                  [
+                    "scalar",
+                    true
+                  ]
+                ],
+                [
+                  "path",
+                  [
+                    "scalar",
+                    "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                  ]
+                ],
+                [
+                  "items",
+                  [
+                    "list",
+                    [
+                      [
+                        "record",
+                        [
+                          [
+                            "path",
+                            [
+                              "scalar",
+                              "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "count",
+                  [
+                    "scalar",
+                    1
+                  ]
+                ],
+                [
+                  "renamed",
+                  [
+                    "list",
+                    []
+                  ]
+                ],
+                [
+                  "if_exists",
+                  [
+                    "scalar",
+                    "fail"
+                  ]
+                ],
+                [
+                  "replaced",
+                  [
+                    "list",
+                    []
+                  ]
+                ],
+                [
+                  "message",
+                  [
+                    "scalar",
+                    "복사 완료: /data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg (1개 파일)"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "copy_sha256",
+            [
+              "scalar",
+              "998b6d21c6c547a3571641017e35fd832aec6fce531f8165b2e97cf861159f91"
+            ]
+          ],
+          [
+            "copy_size",
+            [
+              "scalar",
+              11400091
+            ]
+          ],
+          [
+            "receipt",
+            [
+              "record",
+              [
+                [
+                  "kind",
+                  [
+                    "scalar",
+                    "guestpc"
+                  ]
+                ],
+                [
+                  "task_id",
+                  [
+                    "scalar",
+                    "7bb8352f88974d82aece934f63a6e3e5"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "a43fa4f52d24e6f1960169b65618e0edcca9662bf012f220c52074f913b0d97f",
+    "source_complete": true,
+    "evidence": [
+      {
+        "id": 1,
+        "node_id": "ref:267:278",
+        "invocation_id": 1,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 2,
+        "node_id": "literal:279:282",
+        "invocation_id": 2,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 3,
+        "node_id": "builtin:261:266",
+        "invocation_id": 3,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 4,
+        "node_id": "pure_call:261:283",
+        "invocation_id": 4,
+        "kind": "pure_call",
+        "parents": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "id": 5,
+        "node_id": "bind:254:283",
+        "invocation_id": 5,
+        "kind": "bind",
+        "parents": [
+          4
+        ]
+      },
+      {
+        "id": 6,
+        "node_id": "ref:290:296",
+        "invocation_id": 6,
+        "kind": "ref",
+        "parents": [
+          4
+        ]
+      },
+      {
+        "id": 7,
+        "node_id": "ref:301:307",
+        "invocation_id": 7,
+        "kind": "ref",
+        "parents": [
+          4
+        ]
+      },
+      {
+        "id": 8,
+        "node_id": "builtin:297:300",
+        "invocation_id": 8,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 9,
+        "node_id": "pure_call:297:308",
+        "invocation_id": 9,
+        "kind": "pure_call",
+        "parents": [
+          7,
+          8
+        ]
+      },
+      {
+        "id": 10,
+        "node_id": "literal:309:310",
+        "invocation_id": 10,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 11,
+        "node_id": "binary:297:310",
+        "invocation_id": 11,
+        "kind": "binary",
+        "parents": [
+          9,
+          10
+        ]
+      },
+      {
+        "id": 12,
+        "node_id": "index:290:311",
+        "invocation_id": 12,
+        "kind": "index",
+        "parents": [
+          6,
+          11
+        ]
+      },
+      {
+        "id": 13,
+        "node_id": "bind:284:311",
+        "invocation_id": 13,
+        "kind": "bind",
+        "parents": [
+          12
+        ]
+      },
+      {
+        "id": 14,
+        "node_id": "ref:323:334",
+        "invocation_id": 14,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 15,
+        "node_id": "builtin:318:322",
+        "invocation_id": 15,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 16,
+        "node_id": "pure_call:318:335",
+        "invocation_id": 16,
+        "kind": "pure_call",
+        "parents": [
+          14,
+          15
+        ]
+      },
+      {
+        "id": 17,
+        "node_id": "bind:312:335",
+        "invocation_id": 17,
+        "kind": "bind",
+        "parents": [
+          16
+        ]
+      },
+      {
+        "id": 18,
+        "node_id": "ref:347:357",
+        "invocation_id": 18,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 19,
+        "node_id": "builtin:342:346",
+        "invocation_id": 19,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 20,
+        "node_id": "pure_call:342:358",
+        "invocation_id": 20,
+        "kind": "pure_call",
+        "parents": [
+          18,
+          19
+        ]
+      },
+      {
+        "id": 21,
+        "node_id": "bind:336:358",
+        "invocation_id": 21,
+        "kind": "bind",
+        "parents": [
+          20
+        ]
+      },
+      {
+        "id": 22,
+        "node_id": "ref:375:384",
+        "invocation_id": 22,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 23,
+        "node_id": "ref:388:392",
+        "invocation_id": 23,
+        "kind": "ref",
+        "parents": [
+          12
+        ]
+      },
+      {
+        "id": 24,
+        "node_id": "format:371:394",
+        "invocation_id": 24,
+        "kind": "format",
+        "parents": [
+          22,
+          23
+        ]
+      },
+      {
+        "id": 25,
+        "node_id": "builtin:366:370",
+        "invocation_id": 25,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 26,
+        "node_id": "pure_call:366:395",
+        "invocation_id": 26,
+        "kind": "pure_call",
+        "parents": [
+          24,
+          25
+        ]
+      },
+      {
+        "id": 27,
+        "node_id": "bind:359:395",
+        "invocation_id": 27,
+        "kind": "bind",
+        "parents": [
+          26
+        ]
+      },
+      {
+        "id": 28,
+        "node_id": "ref:408:413",
+        "invocation_id": 28,
+        "kind": "ref",
+        "parents": [
+          12
+        ]
+      },
+      {
+        "id": 29,
+        "node_id": "builtin:403:407",
+        "invocation_id": 29,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 30,
+        "node_id": "pure_call:403:414",
+        "invocation_id": 30,
+        "kind": "pure_call",
+        "parents": [
+          28,
+          29
+        ]
+      },
+      {
+        "id": 31,
+        "node_id": "bind:396:414",
+        "invocation_id": 31,
+        "kind": "bind",
+        "parents": [
+          30
+        ]
+      },
+      {
+        "id": 32,
+        "node_id": "ref:473:477",
+        "invocation_id": 32,
+        "kind": "ref",
+        "parents": [
+          16
+        ]
+      },
+      {
+        "id": 33,
+        "node_id": "ref:486:491",
+        "invocation_id": 33,
+        "kind": "ref",
+        "parents": [
+          26
+        ]
+      },
+      {
+        "id": 34,
+        "node_id": "ref:535:539",
+        "invocation_id": 34,
+        "kind": "ref",
+        "parents": [
+          20
+        ]
+      },
+      {
+        "id": 35,
+        "node_id": "ref:551:556",
+        "invocation_id": 35,
+        "kind": "ref",
+        "parents": [
+          30
+        ]
+      },
+      {
+        "id": 36,
+        "node_id": "format:422:695",
+        "invocation_id": 36,
+        "kind": "format",
+        "parents": [
+          32,
+          33,
+          34,
+          35
+        ]
+      },
+      {
+        "id": 37,
+        "node_id": "bind:415:695",
+        "invocation_id": 37,
+        "kind": "bind",
+        "parents": [
+          36
+        ]
+      },
+      {
+        "id": 38,
+        "node_id": "literal:718:723",
+        "invocation_id": 38,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 39,
+        "node_id": "ref:729:735",
+        "invocation_id": 39,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 40,
+        "node_id": "ref:741:747",
+        "invocation_id": 40,
+        "kind": "ref",
+        "parents": [
+          36
+        ]
+      },
+      {
+        "id": 41,
+        "node_id": "literal:759:763",
+        "invocation_id": 41,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 42,
+        "node_id": "literal:772:775",
+        "invocation_id": 42,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 43,
+        "node_id": "ref:791:794",
+        "invocation_id": 43,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 44,
+        "node_id": "format:787:801",
+        "invocation_id": 44,
+        "kind": "format",
+        "parents": [
+          43
+        ]
+      },
+      {
+        "id": 45,
+        "node_id": "record:714:802",
+        "invocation_id": 45,
+        "kind": "record",
+        "parents": [
+          38,
+          39,
+          40,
+          41,
+          42,
+          44
+        ]
+      },
+      {
+        "id": 46,
+        "node_id": "call:699:802",
+        "invocation_id": 46,
+        "kind": "invoke",
+        "parents": [
+          45
+        ],
+        "action": "limbs:guestpc",
+        "effects": [
+          "write_external"
+        ],
+        "request_hash": "d8ba328794d2e19583215d6544a40af7c1ee21fcafec0854c0835699b148d0b7",
+        "targets": {
+          "op": "ibl",
+          "limb": "guestpc-fc7b12fba936",
+          "request_id": "r73-l734-1-copy"
+        }
+      },
+      {
+        "id": 47,
+        "node_id": "call:699:802",
+        "invocation_id": 47,
+        "kind": "tool_evidence",
+        "parents": [
+          46
+        ],
+        "markers": {},
+        "attachments": {}
+      },
+      {
+        "id": 48,
+        "node_id": "call:699:802",
+        "invocation_id": 48,
+        "kind": "call",
+        "parents": [
+          45,
+          46,
+          47
+        ]
+      },
+      {
+        "id": 49,
+        "node_id": "bind:696:802",
+        "invocation_id": 49,
+        "kind": "bind",
+        "parents": [
+          48
+        ]
+      },
+      {
+        "id": 50,
+        "node_id": "literal:821:827",
+        "invocation_id": 50,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 51,
+        "node_id": "ref:832:834",
+        "invocation_id": 51,
+        "kind": "ref",
+        "parents": [
+          48
+        ]
+      },
+      {
+        "id": 52,
+        "node_id": "field:832:843",
+        "invocation_id": 52,
+        "kind": "field",
+        "parents": [
+          51
+        ]
+      },
+      {
+        "id": 53,
+        "node_id": "literal:852:855",
+        "invocation_id": 53,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 54,
+        "node_id": "record:817:856",
+        "invocation_id": 54,
+        "kind": "record",
+        "parents": [
+          50,
+          52,
+          53
+        ]
+      },
+      {
+        "id": 55,
+        "node_id": "call:806:856",
+        "invocation_id": 55,
+        "kind": "invoke",
+        "parents": [
+          54
+        ],
+        "action": "self:task",
+        "effects": [
+          "read_external"
+        ],
+        "request_hash": "4abe4e6aadda4682cd2fd759a0c91a46bac5bda535d451709ea445ea20b8d0e4",
+        "targets": {
+          "op": "wait"
+        }
+      },
+      {
+        "id": 56,
+        "node_id": "call:806:856",
+        "invocation_id": 56,
+        "kind": "tool_evidence",
+        "parents": [
+          55
+        ],
+        "markers": {},
+        "attachments": {}
+      },
+      {
+        "id": 57,
+        "node_id": "call:806:856",
+        "invocation_id": 57,
+        "kind": "call",
+        "parents": [
+          54,
+          55,
+          56
+        ]
+      },
+      {
+        "id": 58,
+        "node_id": "bind:803:856",
+        "invocation_id": 58,
+        "kind": "bind",
+        "parents": [
+          57
+        ]
+      },
+      {
+        "id": 59,
+        "node_id": "ref:864:866",
+        "invocation_id": 59,
+        "kind": "ref",
+        "parents": [
+          57
+        ]
+      },
+      {
+        "id": 60,
+        "node_id": "field:864:875",
+        "invocation_id": 60,
+        "kind": "field",
+        "parents": [
+          59
+        ]
+      },
+      {
+        "id": 61,
+        "node_id": "assert:857:890",
+        "invocation_id": 61,
+        "kind": "assertion",
+        "parents": [
+          60
+        ],
+        "passed": true,
+        "predicate_hash": "f07cd09fbde16e6e09c9ac69b664f4e1bcadfbc3d057778e1f05eae973c57f1f"
+      },
+      {
+        "id": 62,
+        "node_id": "assert:857:890",
+        "invocation_id": 62,
+        "kind": "assert",
+        "parents": [
+          60,
+          61
+        ]
+      },
+      {
+        "id": 63,
+        "node_id": "ref:902:904",
+        "invocation_id": 63,
+        "kind": "ref",
+        "parents": [
+          57
+        ]
+      },
+      {
+        "id": 64,
+        "node_id": "literal:905:913",
+        "invocation_id": 64,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 65,
+        "node_id": "record:914:916",
+        "invocation_id": 65,
+        "kind": "record",
+        "parents": []
+      },
+      {
+        "id": 66,
+        "node_id": "builtin:898:901",
+        "invocation_id": 66,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 67,
+        "node_id": "pure_call:898:917",
+        "invocation_id": 67,
+        "kind": "pure_call",
+        "parents": [
+          63,
+          64,
+          65,
+          66
+        ]
+      },
+      {
+        "id": 68,
+        "node_id": "literal:918:925",
+        "invocation_id": 68,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 69,
+        "node_id": "record:926:928",
+        "invocation_id": 69,
+        "kind": "record",
+        "parents": []
+      },
+      {
+        "id": 70,
+        "node_id": "builtin:894:897",
+        "invocation_id": 70,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 71,
+        "node_id": "pure_call:894:929",
+        "invocation_id": 71,
+        "kind": "pure_call",
+        "parents": [
+          67,
+          68,
+          69,
+          70
+        ]
+      },
+      {
+        "id": 72,
+        "node_id": "bind:891:929",
+        "invocation_id": 72,
+        "kind": "bind",
+        "parents": [
+          71
+        ]
+      },
+      {
+        "id": 73,
+        "node_id": "ref:941:943",
+        "invocation_id": 73,
+        "kind": "ref",
+        "parents": [
+          71
+        ]
+      },
+      {
+        "id": 74,
+        "node_id": "literal:944:952",
+        "invocation_id": 74,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 75,
+        "node_id": "list:953:955",
+        "invocation_id": 75,
+        "kind": "list",
+        "parents": []
+      },
+      {
+        "id": 76,
+        "node_id": "builtin:937:940",
+        "invocation_id": 76,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 77,
+        "node_id": "pure_call:937:956",
+        "invocation_id": 77,
+        "kind": "pure_call",
+        "parents": [
+          73,
+          74,
+          75,
+          76
+        ]
+      },
+      {
+        "id": 78,
+        "node_id": "bind:930:956",
+        "invocation_id": 78,
+        "kind": "bind",
+        "parents": [
+          77
+        ]
+      },
+      {
+        "id": 79,
+        "node_id": "ref:971:977",
+        "invocation_id": 79,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 80,
+        "node_id": "ref:985:996",
+        "invocation_id": 80,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 81,
+        "node_id": "ref:1010:1019",
+        "invocation_id": 81,
+        "kind": "ref",
+        "parents": []
+      },
+      {
+        "id": 82,
+        "node_id": "ref:1023:1027",
+        "invocation_id": 82,
+        "kind": "ref",
+        "parents": [
+          12
+        ]
+      },
+      {
+        "id": 83,
+        "node_id": "format:1006:1029",
+        "invocation_id": 83,
+        "kind": "format",
+        "parents": [
+          81,
+          82
+        ]
+      },
+      {
+        "id": 84,
+        "node_id": "ref:1041:1043",
+        "invocation_id": 84,
+        "kind": "ref",
+        "parents": [
+          71
+        ]
+      },
+      {
+        "id": 85,
+        "node_id": "literal:1044:1052",
+        "invocation_id": 85,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 86,
+        "node_id": "literal:1053:1058",
+        "invocation_id": 86,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 87,
+        "node_id": "builtin:1037:1040",
+        "invocation_id": 87,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 88,
+        "node_id": "pure_call:1037:1059",
+        "invocation_id": 88,
+        "kind": "pure_call",
+        "parents": [
+          84,
+          85,
+          86,
+          87
+        ]
+      },
+      {
+        "id": 89,
+        "node_id": "ref:1079:1081",
+        "invocation_id": 89,
+        "kind": "ref",
+        "parents": [
+          71
+        ]
+      },
+      {
+        "id": 90,
+        "node_id": "literal:1082:1089",
+        "invocation_id": 90,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 91,
+        "node_id": "literal:1090:1094",
+        "invocation_id": 91,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 92,
+        "node_id": "builtin:1075:1078",
+        "invocation_id": 92,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 93,
+        "node_id": "pure_call:1075:1095",
+        "invocation_id": 93,
+        "kind": "pure_call",
+        "parents": [
+          89,
+          90,
+          91,
+          92
+        ]
+      },
+      {
+        "id": 94,
+        "node_id": "ref:1108:1110",
+        "invocation_id": 94,
+        "kind": "ref",
+        "parents": [
+          71
+        ]
+      },
+      {
+        "id": 95,
+        "node_id": "literal:1111:1120",
+        "invocation_id": 95,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 96,
+        "node_id": "literal:1121:1125",
+        "invocation_id": 96,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 97,
+        "node_id": "builtin:1104:1107",
+        "invocation_id": 97,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 98,
+        "node_id": "pure_call:1104:1126",
+        "invocation_id": 98,
+        "kind": "pure_call",
+        "parents": [
+          94,
+          95,
+          96,
+          97
+        ]
+      },
+      {
+        "id": 99,
+        "node_id": "ref:1143:1145",
+        "invocation_id": 99,
+        "kind": "ref",
+        "parents": [
+          71
+        ]
+      },
+      {
+        "id": 100,
+        "node_id": "literal:1146:1152",
+        "invocation_id": 100,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 101,
+        "node_id": "literal:1153:1157",
+        "invocation_id": 101,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 102,
+        "node_id": "builtin:1139:1142",
+        "invocation_id": 102,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 103,
+        "node_id": "pure_call:1139:1158",
+        "invocation_id": 103,
+        "kind": "pure_call",
+        "parents": [
+          99,
+          100,
+          101,
+          102
+        ]
+      },
+      {
+        "id": 104,
+        "node_id": "ref:1184:1190",
+        "invocation_id": 104,
+        "kind": "ref",
+        "parents": [
+          77
+        ]
+      },
+      {
+        "id": 105,
+        "node_id": "builtin:1180:1183",
+        "invocation_id": 105,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 106,
+        "node_id": "pure_call:1180:1191",
+        "invocation_id": 106,
+        "kind": "pure_call",
+        "parents": [
+          104,
+          105
+        ]
+      },
+      {
+        "id": 107,
+        "node_id": "literal:1192:1193",
+        "invocation_id": 107,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 108,
+        "node_id": "binary:1180:1193",
+        "invocation_id": 108,
+        "kind": "binary",
+        "parents": [
+          106,
+          107
+        ]
+      },
+      {
+        "id": 109,
+        "node_id": "ref:1200:1206",
+        "invocation_id": 109,
+        "kind": "ref",
+        "parents": [
+          77
+        ]
+      },
+      {
+        "id": 110,
+        "node_id": "literal:1207:1208",
+        "invocation_id": 110,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 111,
+        "node_id": "index:1200:1209",
+        "invocation_id": 111,
+        "kind": "index",
+        "parents": [
+          109,
+          110
+        ]
+      },
+      {
+        "id": 112,
+        "node_id": "literal:1210:1218",
+        "invocation_id": 112,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 113,
+        "node_id": "literal:1219:1223",
+        "invocation_id": 113,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 114,
+        "node_id": "builtin:1196:1199",
+        "invocation_id": 114,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 115,
+        "node_id": "pure_call:1196:1224",
+        "invocation_id": 115,
+        "kind": "pure_call",
+        "parents": [
+          111,
+          112,
+          113,
+          114
+        ]
+      },
+      {
+        "id": 116,
+        "node_id": "conditional:1180:1231",
+        "invocation_id": 116,
+        "kind": "conditional",
+        "parents": [
+          108,
+          115
+        ]
+      },
+      {
+        "id": 117,
+        "node_id": "ref:1255:1261",
+        "invocation_id": 117,
+        "kind": "ref",
+        "parents": [
+          77
+        ]
+      },
+      {
+        "id": 118,
+        "node_id": "builtin:1251:1254",
+        "invocation_id": 118,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 119,
+        "node_id": "pure_call:1251:1262",
+        "invocation_id": 119,
+        "kind": "pure_call",
+        "parents": [
+          117,
+          118
+        ]
+      },
+      {
+        "id": 120,
+        "node_id": "literal:1263:1264",
+        "invocation_id": 120,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 121,
+        "node_id": "binary:1251:1264",
+        "invocation_id": 121,
+        "kind": "binary",
+        "parents": [
+          119,
+          120
+        ]
+      },
+      {
+        "id": 122,
+        "node_id": "ref:1271:1277",
+        "invocation_id": 122,
+        "kind": "ref",
+        "parents": [
+          77
+        ]
+      },
+      {
+        "id": 123,
+        "node_id": "literal:1278:1279",
+        "invocation_id": 123,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 124,
+        "node_id": "index:1271:1280",
+        "invocation_id": 124,
+        "kind": "index",
+        "parents": [
+          122,
+          123
+        ]
+      },
+      {
+        "id": 125,
+        "node_id": "literal:1281:1287",
+        "invocation_id": 125,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 126,
+        "node_id": "literal:1288:1292",
+        "invocation_id": 126,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 127,
+        "node_id": "builtin:1267:1270",
+        "invocation_id": 127,
+        "kind": "builtin",
+        "parents": []
+      },
+      {
+        "id": 128,
+        "node_id": "pure_call:1267:1293",
+        "invocation_id": 128,
+        "kind": "pure_call",
+        "parents": [
+          124,
+          125,
+          126,
+          127
+        ]
+      },
+      {
+        "id": 129,
+        "node_id": "conditional:1251:1300",
+        "invocation_id": 129,
+        "kind": "conditional",
+        "parents": [
+          121,
+          128
+        ]
+      },
+      {
+        "id": 130,
+        "node_id": "ref:1318:1320",
+        "invocation_id": 130,
+        "kind": "ref",
+        "parents": [
+          48
+        ]
+      },
+      {
+        "id": 131,
+        "node_id": "field:1318:1329",
+        "invocation_id": 131,
+        "kind": "field",
+        "parents": [
+          130
+        ]
+      },
+      {
+        "id": 132,
+        "node_id": "record:964:1330",
+        "invocation_id": 132,
+        "kind": "record",
+        "parents": [
+          79,
+          80,
+          83,
+          88,
+          93,
+          98,
+          103,
+          116,
+          129,
+          131
+        ]
+      }
+    ],
+    "source_map": {
+      "sequence:15:1331": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 15,
+        "end": 1331,
+        "line": 1,
+        "column": 16
+      },
+      "bind:254:283": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 254,
+        "end": 283,
+        "line": 6,
+        "column": 1
+      },
+      "pure_call:261:283": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 261,
+        "end": 283,
+        "line": 6,
+        "column": 8
+      },
+      "ref:267:278": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 267,
+        "end": 278,
+        "line": 6,
+        "column": 14
+      },
+      "literal:279:282": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 279,
+        "end": 282,
+        "line": 6,
+        "column": 26
+      },
+      "builtin:261:266": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 261,
+        "end": 266,
+        "line": 6,
+        "column": 8
+      },
+      "bind:284:311": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 284,
+        "end": 311,
+        "line": 7,
+        "column": 1
+      },
+      "index:290:311": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 290,
+        "end": 311,
+        "line": 7,
+        "column": 7
+      },
+      "ref:290:296": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 290,
+        "end": 296,
+        "line": 7,
+        "column": 7
+      },
+      "binary:297:310": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 297,
+        "end": 310,
+        "line": 7,
+        "column": 14
+      },
+      "pure_call:297:308": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 297,
+        "end": 308,
+        "line": 7,
+        "column": 14
+      },
+      "ref:301:307": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 301,
+        "end": 307,
+        "line": 7,
+        "column": 18
+      },
+      "builtin:297:300": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 297,
+        "end": 300,
+        "line": 7,
+        "column": 14
+      },
+      "literal:309:310": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 309,
+        "end": 310,
+        "line": 7,
+        "column": 26
+      },
+      "bind:312:335": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 312,
+        "end": 335,
+        "line": 8,
+        "column": 1
+      },
+      "pure_call:318:335": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 318,
+        "end": 335,
+        "line": 8,
+        "column": 7
+      },
+      "ref:323:334": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 323,
+        "end": 334,
+        "line": 8,
+        "column": 12
+      },
+      "builtin:318:322": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 318,
+        "end": 322,
+        "line": 8,
+        "column": 7
+      },
+      "bind:336:358": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 336,
+        "end": 358,
+        "line": 9,
+        "column": 1
+      },
+      "pure_call:342:358": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 342,
+        "end": 358,
+        "line": 9,
+        "column": 7
+      },
+      "ref:347:357": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 347,
+        "end": 357,
+        "line": 9,
+        "column": 12
+      },
+      "builtin:342:346": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 342,
+        "end": 346,
+        "line": 9,
+        "column": 7
+      },
+      "bind:359:395": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 359,
+        "end": 395,
+        "line": 10,
+        "column": 1
+      },
+      "pure_call:366:395": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 366,
+        "end": 395,
+        "line": 10,
+        "column": 8
+      },
+      "format:371:394": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 371,
+        "end": 394,
+        "line": 10,
+        "column": 13
+      },
+      "ref:375:384": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 375,
+        "end": 384,
+        "line": 10,
+        "column": 17
+      },
+      "ref:388:392": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 388,
+        "end": 392,
+        "line": 10,
+        "column": 30
+      },
+      "builtin:366:370": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 366,
+        "end": 370,
+        "line": 10,
+        "column": 8
+      },
+      "bind:396:414": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 396,
+        "end": 414,
+        "line": 11,
+        "column": 1
+      },
+      "pure_call:403:414": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 403,
+        "end": 414,
+        "line": 11,
+        "column": 8
+      },
+      "ref:408:413": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 408,
+        "end": 413,
+        "line": 11,
+        "column": 13
+      },
+      "builtin:403:407": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 403,
+        "end": 407,
+        "line": 11,
+        "column": 8
+      },
+      "bind:415:695": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 415,
+        "end": 695,
+        "line": 12,
+        "column": 1
+      },
+      "format:422:695": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 422,
+        "end": 695,
+        "line": 12,
+        "column": 8
+      },
+      "ref:473:477": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 473,
+        "end": 477,
+        "line": 14,
+        "column": 24
+      },
+      "ref:486:491": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 486,
+        "end": 491,
+        "line": 14,
+        "column": 37
+      },
+      "ref:535:539": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 535,
+        "end": 539,
+        "line": 15,
+        "column": 25
+      },
+      "ref:551:556": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 551,
+        "end": 556,
+        "line": 15,
+        "column": 41
+      },
+      "bind:696:802": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 696,
+        "end": 802,
+        "line": 21,
+        "column": 1
+      },
+      "call:699:802": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 699,
+        "end": 802,
+        "line": 21,
+        "column": 4
+      },
+      "record:714:802": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 714,
+        "end": 802,
+        "line": 21,
+        "column": 19
+      },
+      "literal:718:723": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 718,
+        "end": 723,
+        "line": 21,
+        "column": 23
+      },
+      "ref:729:735": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 729,
+        "end": 735,
+        "line": 21,
+        "column": 34
+      },
+      "ref:741:747": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 741,
+        "end": 747,
+        "line": 21,
+        "column": 46
+      },
+      "literal:759:763": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 759,
+        "end": 763,
+        "line": 21,
+        "column": 64
+      },
+      "literal:772:775": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 772,
+        "end": 775,
+        "line": 21,
+        "column": 77
+      },
+      "format:787:801": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 787,
+        "end": 801,
+        "line": 21,
+        "column": 92
+      },
+      "ref:791:794": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 791,
+        "end": 794,
+        "line": 21,
+        "column": 96
+      },
+      "bind:803:856": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 803,
+        "end": 856,
+        "line": 22,
+        "column": 1
+      },
+      "call:806:856": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 806,
+        "end": 856,
+        "line": 22,
+        "column": 4
+      },
+      "record:817:856": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 817,
+        "end": 856,
+        "line": 22,
+        "column": 15
+      },
+      "literal:821:827": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 821,
+        "end": 827,
+        "line": 22,
+        "column": 19
+      },
+      "field:832:843": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 832,
+        "end": 843,
+        "line": 22,
+        "column": 30
+      },
+      "ref:832:834": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 832,
+        "end": 834,
+        "line": 22,
+        "column": 30
+      },
+      "literal:852:855": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 852,
+        "end": 855,
+        "line": 22,
+        "column": 50
+      },
+      "assert:857:890": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 857,
+        "end": 890,
+        "line": 23,
+        "column": 1
+      },
+      "field:864:875": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 864,
+        "end": 875,
+        "line": 23,
+        "column": 8
+      },
+      "ref:864:866": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 864,
+        "end": 866,
+        "line": 23,
+        "column": 8
+      },
+      "bind:891:929": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 891,
+        "end": 929,
+        "line": 24,
+        "column": 1
+      },
+      "pure_call:894:929": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 894,
+        "end": 929,
+        "line": 24,
+        "column": 4
+      },
+      "pure_call:898:917": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 898,
+        "end": 917,
+        "line": 24,
+        "column": 8
+      },
+      "ref:902:904": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 902,
+        "end": 904,
+        "line": 24,
+        "column": 12
+      },
+      "literal:905:913": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 905,
+        "end": 913,
+        "line": 24,
+        "column": 15
+      },
+      "record:914:916": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 914,
+        "end": 916,
+        "line": 24,
+        "column": 24
+      },
+      "builtin:898:901": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 898,
+        "end": 901,
+        "line": 24,
+        "column": 8
+      },
+      "literal:918:925": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 918,
+        "end": 925,
+        "line": 24,
+        "column": 28
+      },
+      "record:926:928": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 926,
+        "end": 928,
+        "line": 24,
+        "column": 36
+      },
+      "builtin:894:897": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 894,
+        "end": 897,
+        "line": 24,
+        "column": 4
+      },
+      "bind:930:956": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 930,
+        "end": 956,
+        "line": 25,
+        "column": 1
+      },
+      "pure_call:937:956": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 937,
+        "end": 956,
+        "line": 25,
+        "column": 8
+      },
+      "ref:941:943": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 941,
+        "end": 943,
+        "line": 25,
+        "column": 12
+      },
+      "literal:944:952": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 944,
+        "end": 952,
+        "line": 25,
+        "column": 15
+      },
+      "list:953:955": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 953,
+        "end": 955,
+        "line": 25,
+        "column": 24
+      },
+      "builtin:937:940": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 937,
+        "end": 940,
+        "line": 25,
+        "column": 8
+      },
+      "return:957:1330": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 957,
+        "end": 1330,
+        "line": 26,
+        "column": 1
+      },
+      "record:964:1330": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 964,
+        "end": 1330,
+        "line": 26,
+        "column": 8
+      },
+      "ref:971:977": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 971,
+        "end": 977,
+        "line": 26,
+        "column": 15
+      },
+      "ref:985:996": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 985,
+        "end": 996,
+        "line": 26,
+        "column": 29
+      },
+      "format:1006:1029": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1006,
+        "end": 1029,
+        "line": 26,
+        "column": 50
+      },
+      "ref:1010:1019": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1010,
+        "end": 1019,
+        "line": 26,
+        "column": 54
+      },
+      "ref:1023:1027": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1023,
+        "end": 1027,
+        "line": 26,
+        "column": 67
+      },
+      "pure_call:1037:1059": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1037,
+        "end": 1059,
+        "line": 26,
+        "column": 81
+      },
+      "ref:1041:1043": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1041,
+        "end": 1043,
+        "line": 26,
+        "column": 85
+      },
+      "literal:1044:1052": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1044,
+        "end": 1052,
+        "line": 26,
+        "column": 88
+      },
+      "literal:1053:1058": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1053,
+        "end": 1058,
+        "line": 26,
+        "column": 97
+      },
+      "builtin:1037:1040": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1037,
+        "end": 1040,
+        "line": 26,
+        "column": 81
+      },
+      "pure_call:1075:1095": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1075,
+        "end": 1095,
+        "line": 27,
+        "column": 15
+      },
+      "ref:1079:1081": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1079,
+        "end": 1081,
+        "line": 27,
+        "column": 19
+      },
+      "literal:1082:1089": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1082,
+        "end": 1089,
+        "line": 27,
+        "column": 22
+      },
+      "literal:1090:1094": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1090,
+        "end": 1094,
+        "line": 27,
+        "column": 30
+      },
+      "builtin:1075:1078": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1075,
+        "end": 1078,
+        "line": 27,
+        "column": 15
+      },
+      "pure_call:1104:1126": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1104,
+        "end": 1126,
+        "line": 27,
+        "column": 44
+      },
+      "ref:1108:1110": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1108,
+        "end": 1110,
+        "line": 27,
+        "column": 48
+      },
+      "literal:1111:1120": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1111,
+        "end": 1120,
+        "line": 27,
+        "column": 51
+      },
+      "literal:1121:1125": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1121,
+        "end": 1125,
+        "line": 27,
+        "column": 61
+      },
+      "builtin:1104:1107": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1104,
+        "end": 1107,
+        "line": 27,
+        "column": 44
+      },
+      "pure_call:1139:1158": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1139,
+        "end": 1158,
+        "line": 27,
+        "column": 79
+      },
+      "ref:1143:1145": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1143,
+        "end": 1145,
+        "line": 27,
+        "column": 83
+      },
+      "literal:1146:1152": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1146,
+        "end": 1152,
+        "line": 27,
+        "column": 86
+      },
+      "literal:1153:1157": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1153,
+        "end": 1157,
+        "line": 27,
+        "column": 93
+      },
+      "builtin:1139:1142": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1139,
+        "end": 1142,
+        "line": 27,
+        "column": 79
+      },
+      "conditional:1180:1231": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1180,
+        "end": 1231,
+        "line": 28,
+        "column": 21
+      },
+      "binary:1180:1193": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1180,
+        "end": 1193,
+        "line": 28,
+        "column": 21
+      },
+      "pure_call:1180:1191": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1180,
+        "end": 1191,
+        "line": 28,
+        "column": 21
+      },
+      "ref:1184:1190": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1184,
+        "end": 1190,
+        "line": 28,
+        "column": 25
+      },
+      "builtin:1180:1183": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1180,
+        "end": 1183,
+        "line": 28,
+        "column": 21
+      },
+      "literal:1192:1193": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1192,
+        "end": 1193,
+        "line": 28,
+        "column": 33
+      },
+      "pure_call:1196:1224": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1196,
+        "end": 1224,
+        "line": 28,
+        "column": 37
+      },
+      "index:1200:1209": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1200,
+        "end": 1209,
+        "line": 28,
+        "column": 41
+      },
+      "ref:1200:1206": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1200,
+        "end": 1206,
+        "line": 28,
+        "column": 41
+      },
+      "literal:1207:1208": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1207,
+        "end": 1208,
+        "line": 28,
+        "column": 48
+      },
+      "literal:1210:1218": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1210,
+        "end": 1218,
+        "line": 28,
+        "column": 51
+      },
+      "literal:1219:1223": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1219,
+        "end": 1223,
+        "line": 28,
+        "column": 60
+      },
+      "builtin:1196:1199": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1196,
+        "end": 1199,
+        "line": 28,
+        "column": 37
+      },
+      "conditional:1251:1300": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1251,
+        "end": 1300,
+        "line": 29,
+        "column": 19
+      },
+      "binary:1251:1264": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1251,
+        "end": 1264,
+        "line": 29,
+        "column": 19
+      },
+      "pure_call:1251:1262": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1251,
+        "end": 1262,
+        "line": 29,
+        "column": 19
+      },
+      "ref:1255:1261": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1255,
+        "end": 1261,
+        "line": 29,
+        "column": 23
+      },
+      "builtin:1251:1254": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1251,
+        "end": 1254,
+        "line": 29,
+        "column": 19
+      },
+      "literal:1263:1264": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1263,
+        "end": 1264,
+        "line": 29,
+        "column": 31
+      },
+      "pure_call:1267:1293": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1267,
+        "end": 1293,
+        "line": 29,
+        "column": 35
+      },
+      "index:1271:1280": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1271,
+        "end": 1280,
+        "line": 29,
+        "column": 39
+      },
+      "ref:1271:1277": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1271,
+        "end": 1277,
+        "line": 29,
+        "column": 39
+      },
+      "literal:1278:1279": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1278,
+        "end": 1279,
+        "line": 29,
+        "column": 46
+      },
+      "literal:1281:1287": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1281,
+        "end": 1287,
+        "line": 29,
+        "column": 49
+      },
+      "literal:1288:1292": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1288,
+        "end": 1292,
+        "line": 29,
+        "column": 56
+      },
+      "builtin:1267:1270": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1267,
+        "end": 1270,
+        "line": 29,
+        "column": 35
+      },
+      "field:1318:1329": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1318,
+        "end": 1329,
+        "line": 30,
+        "column": 17
+      },
+      "ref:1318:1320": {
+        "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+        "start": 1318,
+        "end": 1320,
+        "line": 30,
+        "column": 17
+      }
+    },
+    "recordings": [
+      {
+        "request_hash": "d8ba328794d2e19583215d6544a40af7c1ee21fcafec0854c0835699b148d0b7",
+        "value": [
+          "record",
+          [
+            [
+              "success",
+              [
+                "scalar",
+                true
+              ]
+            ],
+            [
+              "accepted",
+              [
+                "scalar",
+                true
+              ]
+            ],
+            [
+              "task_ref",
+              [
+                "record",
+                [
+                  [
+                    "kind",
+                    [
+                      "scalar",
+                      "guestpc"
+                    ]
+                  ],
+                  [
+                    "task_id",
+                    [
+                      "scalar",
+                      "7bb8352f88974d82aece934f63a6e3e5"
+                    ]
+                  ]
+                ]
+              ]
+            ],
+            [
+              "state",
+              [
+                "scalar",
+                "queued"
+              ]
+            ],
+            [
+              "accepted_at",
+              [
+                "scalar",
+                "2026-10-15T17:51:54+0900"
+              ]
+            ],
+            [
+              "limb",
+              [
+                "scalar",
+                "guestpc-fc7b12fba936"
+              ]
+            ],
+            [
+              "limb_name",
+              [
+                "scalar",
+                "삼성0"
+              ]
+            ],
+            [
+              "helper_mode",
+              [
+                "scalar",
+                "resident"
+              ]
+            ],
+            [
+              "op",
+              [
+                "scalar",
+                "ibl"
+              ]
+            ],
+            [
+              "job_id",
+              [
+                "scalar",
+                "7bb8352f88974d82aece934f63a6e3e5"
+              ]
+            ],
+            [
+              "request_id",
+              [
+                "scalar",
+                "r73-l734-1-copy"
+              ]
+            ],
+            [
+              "cwd",
+              [
+                "scalar",
+                null
+              ]
+            ],
+            [
+              "shell",
+              [
+                "scalar",
+                null
+              ]
+            ]
+          ]
+        ],
+        "evidence": {
+          "markers": {},
+          "attachments": {}
+        },
+        "action": "limbs:guestpc",
+        "reuse_key": "2b44595c5a9c75e0c0068a54ab50cb8623c5e478a31b9b45d661a0838471da54",
+        "reuse_parts": {
+          "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+          "args": "982a87218c7f309fa948ef47217cda320f6912e50446c1211598db96852954ab",
+          "contract": "012fcd8bb14f09a8c2f0c6ece29524922c5b80facc149675c04238c64bb04a03",
+          "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+          "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+          "semantics": "105ee5d90dec1bdea405092f8ed45ee9ba215c0084e95b8bef650597b505e519"
+        }
+      },
+      {
+        "request_hash": "4abe4e6aadda4682cd2fd759a0c91a46bac5bda535d451709ea445ea20b8d0e4",
+        "value": [
+          "record",
+          [
+            [
+              "success",
+              [
+                "scalar",
+                true
+              ]
+            ],
+            [
+              "task_ref",
+              [
+                "record",
+                [
+                  [
+                    "kind",
+                    [
+                      "scalar",
+                      "guestpc"
+                    ]
+                  ],
+                  [
+                    "task_id",
+                    [
+                      "scalar",
+                      "7bb8352f88974d82aece934f63a6e3e5"
+                    ]
+                  ]
+                ]
+              ]
+            ],
+            [
+              "state",
+              [
+                "scalar",
+                "succeeded"
+              ]
+            ],
+            [
+              "terminal",
+              [
+                "scalar",
+                true
+              ]
+            ],
+            [
+              "timed_out",
+              [
+                "scalar",
+                false
+              ]
+            ],
+            [
+              "result",
+              [
+                "record",
+                [
+                  [
+                    "success",
+                    [
+                      "scalar",
+                      true
+                    ]
+                  ],
+                  [
+                    "value",
+                    [
+                      "record",
+                      [
+                        [
+                          "copied",
+                          [
+                            "scalar",
+                            true
+                          ]
+                        ],
+                        [
+                          "copy",
+                          [
+                            "record",
+                            [
+                              [
+                                "success",
+                                [
+                                  "scalar",
+                                  true
+                                ]
+                              ],
+                              [
+                                "path",
+                                [
+                                  "scalar",
+                                  "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                ]
+                              ],
+                              [
+                                "items",
+                                [
+                                  "list",
+                                  [
+                                    [
+                                      "record",
+                                      [
+                                        [
+                                          "path",
+                                          [
+                                            "scalar",
+                                            "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              [
+                                "count",
+                                [
+                                  "scalar",
+                                  1
+                                ]
+                              ],
+                              [
+                                "renamed",
+                                [
+                                  "list",
+                                  []
+                                ]
+                              ],
+                              [
+                                "if_exists",
+                                [
+                                  "scalar",
+                                  "fail"
+                                ]
+                              ],
+                              [
+                                "replaced",
+                                [
+                                  "list",
+                                  []
+                                ]
+                              ],
+                              [
+                                "message",
+                                [
+                                  "scalar",
+                                  "복사 완료: /data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg (1개 파일)"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "listed",
+                          [
+                            "list",
+                            [
+                              [
+                                "record",
+                                [
+                                  [
+                                    "title",
+                                    [
+                                      "scalar",
+                                      "photo_1792054098165.jpg"
+                                    ]
+                                  ],
+                                  [
+                                    "meta",
+                                    [
+                                      "scalar",
+                                      "11,400,091B · 2026-10-15 17:48"
+                                    ]
+                                  ],
+                                  [
+                                    "summary",
+                                    [
+                                      "scalar",
+                                      ""
+                                    ]
+                                  ],
+                                  [
+                                    "url",
+                                    [
+                                      "scalar",
+                                      "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                    ]
+                                  ],
+                                  [
+                                    "name",
+                                    [
+                                      "scalar",
+                                      "photo_1792054098165.jpg"
+                                    ]
+                                  ],
+                                  [
+                                    "size",
+                                    [
+                                      "scalar",
+                                      11400091
+                                    ]
+                                  ],
+                                  [
+                                    "mtime",
+                                    [
+                                      "scalar",
+                                      "2026-10-15 17:48"
+                                    ]
+                                  ],
+                                  [
+                                    "mtime_ns",
+                                    [
+                                      "scalar",
+                                      "1792054100808988080"
+                                    ]
+                                  ],
+                                  [
+                                    "path",
+                                    [
+                                      "scalar",
+                                      "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                    ]
+                                  ],
+                                  [
+                                    "dir",
+                                    [
+                                      "scalar",
+                                      "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer"
+                                    ]
+                                  ],
+                                  [
+                                    "is_dir",
+                                    [
+                                      "scalar",
+                                      false
+                                    ]
+                                  ],
+                                  [
+                                    "sha256",
+                                    [
+                                      "scalar",
+                                      "998b6d21c6c547a3571641017e35fd832aec6fce531f8165b2e97cf861159f91"
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "value_wire",
+                    [
+                      "record",
+                      [
+                        [
+                          "protocol",
+                          [
+                            "scalar",
+                            "ibl-value/1"
+                          ]
+                        ],
+                        [
+                          "data",
+                          [
+                            "list",
+                            [
+                              [
+                                "scalar",
+                                "record"
+                              ],
+                              [
+                                "list",
+                                [
+                                  [
+                                    "list",
+                                    [
+                                      [
+                                        "scalar",
+                                        "copied"
+                                      ],
+                                      [
+                                        "list",
+                                        [
+                                          [
+                                            "scalar",
+                                            "scalar"
+                                          ],
+                                          [
+                                            "scalar",
+                                            true
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "list",
+                                    [
+                                      [
+                                        "scalar",
+                                        "copy"
+                                      ],
+                                      [
+                                        "list",
+                                        [
+                                          [
+                                            "scalar",
+                                            "record"
+                                          ],
+                                          [
+                                            "list",
+                                            [
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "success"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "scalar"
+                                                      ],
+                                                      [
+                                                        "scalar",
+                                                        true
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "path"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "scalar"
+                                                      ],
+                                                      [
+                                                        "scalar",
+                                                        "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "items"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "list"
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "record"
+                                                              ],
+                                                              [
+                                                                "list",
+                                                                [
+                                                                  [
+                                                                    "list",
+                                                                    [
+                                                                      [
+                                                                        "scalar",
+                                                                        "path"
+                                                                      ],
+                                                                      [
+                                                                        "list",
+                                                                        [
+                                                                          [
+                                                                            "scalar",
+                                                                            "scalar"
+                                                                          ],
+                                                                          [
+                                                                            "scalar",
+                                                                            "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                                                          ]
+                                                                        ]
+                                                                      ]
+                                                                    ]
+                                                                  ]
+                                                                ]
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "count"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "scalar"
+                                                      ],
+                                                      [
+                                                        "scalar",
+                                                        1
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "renamed"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "list"
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        []
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "if_exists"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "scalar"
+                                                      ],
+                                                      [
+                                                        "scalar",
+                                                        "fail"
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "replaced"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "list"
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        []
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "message"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "scalar",
+                                                        "scalar"
+                                                      ],
+                                                      [
+                                                        "scalar",
+                                                        "복사 완료: /data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg (1개 파일)"
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ]
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "list",
+                                    [
+                                      [
+                                        "scalar",
+                                        "listed"
+                                      ],
+                                      [
+                                        "list",
+                                        [
+                                          [
+                                            "scalar",
+                                            "list"
+                                          ],
+                                          [
+                                            "list",
+                                            [
+                                              [
+                                                "list",
+                                                [
+                                                  [
+                                                    "scalar",
+                                                    "record"
+                                                  ],
+                                                  [
+                                                    "list",
+                                                    [
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "title"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "photo_1792054098165.jpg"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "meta"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "11,400,091B · 2026-10-15 17:48"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "summary"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                ""
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "url"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "name"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "photo_1792054098165.jpg"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "size"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                11400091
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "mtime"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "2026-10-15 17:48"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "mtime_ns"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "1792054100808988080"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "path"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer/photo_1792054098165.jpg"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "dir"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "/data/user/0/com.indiebiz.phoneagent/files/scratch/outputs/long_sentence_imagination/round73/trainer"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "is_dir"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                false
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      [
+                                                        "list",
+                                                        [
+                                                          [
+                                                            "scalar",
+                                                            "sha256"
+                                                          ],
+                                                          [
+                                                            "list",
+                                                            [
+                                                              [
+                                                                "scalar",
+                                                                "scalar"
+                                                              ],
+                                                              [
+                                                                "scalar",
+                                                                "998b6d21c6c547a3571641017e35fd832aec6fce531f8165b2e97cf861159f91"
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ]
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "edition",
+                    [
+                      "scalar",
+                      2
+                    ]
+                  ],
+                  [
+                    "executed",
+                    [
+                      "scalar",
+                      true
+                    ]
+                  ],
+                  [
+                    "plan_hash",
+                    [
+                      "scalar",
+                      "f16facf729dbacff23708a7ef1182ea487c435272f74c91c0f05bcd213baa49d"
+                    ]
+                  ],
+                  [
+                    "source_complete",
+                    [
+                      "scalar",
+                      true
+                    ]
+                  ],
+                  [
+                    "usage",
+                    [
+                      "record",
+                      [
+                        [
+                          "steps",
+                          [
+                            "scalar",
+                            20
+                          ]
+                        ],
+                        [
+                          "rows",
+                          [
+                            "scalar",
+                            0
+                          ]
+                        ],
+                        [
+                          "elapsed_ms",
+                          [
+                            "scalar",
+                            1663
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "resume",
+                    [
+                      "record",
+                      [
+                        [
+                          "run_id",
+                          [
+                            "scalar",
+                            "380f39c002344c329ff28ccb897cba5e"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "resumed",
+                    [
+                      "scalar",
+                      false
+                    ]
+                  ],
+                  [
+                    "run_status",
+                    [
+                      "scalar",
+                      "completed"
+                    ]
+                  ],
+                  [
+                    "continuation",
+                    [
+                      "record",
+                      [
+                        [
+                          "reuse_args",
+                          [
+                            "record",
+                            [
+                              [
+                                "reuse",
+                                [
+                                  "record",
+                                  [
+                                    [
+                                      "run_id",
+                                      [
+                                        "scalar",
+                                        "380f39c002344c329ff28ccb897cba5e"
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "read_calls",
+                          [
+                            "scalar",
+                            1
+                          ]
+                        ],
+                        [
+                          "state_change_possible",
+                          [
+                            "scalar",
+                            true
+                          ]
+                        ],
+                        [
+                          "hint",
+                          [
+                            "scalar",
+                            "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "task_ref",
+                    [
+                      "record",
+                      [
+                        [
+                          "kind",
+                          [
+                            "scalar",
+                            "ibl_run"
+                          ]
+                        ],
+                        [
+                          "task_id",
+                          [
+                            "scalar",
+                            "380f39c002344c329ff28ccb897cba5e"
+                          ]
+                        ],
+                        [
+                          "owner",
+                          [
+                            "scalar",
+                            "/data/data/com.indiebiz.phoneagent/files/scratch"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "evidence_summary",
+                    [
+                      "record",
+                      [
+                        [
+                          "events",
+                          [
+                            "scalar",
+                            20
+                          ]
+                        ],
+                        [
+                          "source_complete",
+                          [
+                            "scalar",
+                            true
+                          ]
+                        ],
+                        [
+                          "tool_failures",
+                          [
+                            "scalar",
+                            0
+                          ]
+                        ],
+                        [
+                          "source_failures",
+                          [
+                            "scalar",
+                            0
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "result_ref",
+                    [
+                      "record",
+                      [
+                        [
+                          "id",
+                          [
+                            "scalar",
+                            "dd476017a370a5fc5b1dfafa0d6083a93186e857451238c6c277721b6da2812b"
+                          ]
+                        ],
+                        [
+                          "chars",
+                          [
+                            "scalar",
+                            17355
+                          ]
+                        ],
+                        [
+                          "max_limit",
+                          [
+                            "scalar",
+                            60000
+                          ]
+                        ],
+                        [
+                          "paths",
+                          [
+                            "list",
+                            [
+                              [
+                                "record",
+                                [
+                                  [
+                                    "path",
+                                    [
+                                      "list",
+                                      [
+                                        [
+                                          "scalar",
+                                          "value"
+                                        ],
+                                        [
+                                          "scalar",
+                                          "listed"
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "chars",
+                                    [
+                                      "scalar",
+                                      691
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              [
+                                "record",
+                                [
+                                  [
+                                    "path",
+                                    [
+                                      "list",
+                                      [
+                                        [
+                                          "scalar",
+                                          "value"
+                                        ],
+                                        [
+                                          "scalar",
+                                          "copy"
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "chars",
+                                    [
+                                      "scalar",
+                                      522
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "read_args",
+                          [
+                            "record",
+                            [
+                              [
+                                "id",
+                                [
+                                  "scalar",
+                                  "dd476017a370a5fc5b1dfafa0d6083a93186e857451238c6c277721b6da2812b"
+                                ]
+                              ],
+                              [
+                                "offset",
+                                [
+                                  "scalar",
+                                  0
+                                ]
+                              ],
+                              [
+                                "limit",
+                                [
+                                  "scalar",
+                                  60000
+                                ]
+                              ],
+                              [
+                                "path",
+                                [
+                                  "list",
+                                  [
+                                    [
+                                      "scalar",
+                                      "value"
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "read",
+                          [
+                            "scalar",
+                            "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+                          ]
+                        ],
+                        [
+                          "input_args",
+                          [
+                            "record",
+                            [
+                              [
+                                "입력",
+                                [
+                                  "record",
+                                  [
+                                    [
+                                      "$ref",
+                                      [
+                                        "scalar",
+                                        "dd476017a370a5fc5b1dfafa0d6083a93186e857451238c6c277721b6da2812b"
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "input_hint",
+                          [
+                            "scalar",
+                            "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+                          ]
+                        ],
+                        [
+                          "value_chars",
+                          [
+                            "scalar",
+                            1247
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "_hint",
+                    [
+                      "scalar",
+                      "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+                    ]
+                  ],
+                  [
+                    "_display",
+                    [
+                      "record",
+                      [
+                        [
+                          "max_chars",
+                          [
+                            "scalar",
+                            12000
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ],
+            [
+              "failure",
+              [
+                "scalar",
+                null
+              ]
+            ],
+            [
+              "progress",
+              [
+                "list",
+                [
+                  [
+                    "record",
+                    [
+                      [
+                        "cursor",
+                        [
+                          "scalar",
+                          10542
+                        ]
+                      ],
+                      [
+                        "kind",
+                        [
+                          "scalar",
+                          "queued"
+                        ]
+                      ],
+                      [
+                        "occurred",
+                        [
+                          "scalar",
+                          1792054314.762772
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "record",
+                    [
+                      [
+                        "cursor",
+                        [
+                          "scalar",
+                          10543
+                        ]
+                      ],
+                      [
+                        "kind",
+                        [
+                          "scalar",
+                          "started"
+                        ]
+                      ],
+                      [
+                        "occurred",
+                        [
+                          "scalar",
+                          1792054314.959843
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "record",
+                    [
+                      [
+                        "cursor",
+                        [
+                          "scalar",
+                          10544
+                        ]
+                      ],
+                      [
+                        "kind",
+                        [
+                          "scalar",
+                          "result"
+                        ]
+                      ],
+                      [
+                        "occurred",
+                        [
+                          "scalar",
+                          1792054316.7636478
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ],
+            [
+              "accepted_at",
+              [
+                "scalar",
+                "2026-10-15T17:51:54+0900"
+              ]
+            ],
+            [
+              "elapsed_s",
+              [
+                "scalar",
+                2.0
+              ]
+            ],
+            [
+              "limb",
+              [
+                "scalar",
+                "guestpc-fc7b12fba936"
+              ]
+            ],
+            [
+              "helper_mode",
+              [
+                "scalar",
+                "resident"
+              ]
+            ],
+            [
+              "op",
+              [
+                "scalar",
+                "ibl"
+              ]
+            ],
+            [
+              "request_id",
+              [
+                "scalar",
+                "r73-l734-1-copy"
+              ]
+            ],
+            [
+              "cwd",
+              [
+                "scalar",
+                null
+              ]
+            ],
+            [
+              "shell",
+              [
+                "scalar",
+                null
+              ]
+            ],
+            [
+              "progress_scope",
+              [
+                "scalar",
+                "recent_5_events"
+              ]
+            ],
+            [
+              "history_cursor",
+              [
+                "scalar",
+                10544
+              ]
+            ],
+            [
+              "history_args",
+              [
+                "record",
+                [
+                  [
+                    "op",
+                    [
+                      "scalar",
+                      "history"
+                    ]
+                  ],
+                  [
+                    "limb",
+                    [
+                      "scalar",
+                      "guestpc-fc7b12fba936"
+                    ]
+                  ],
+                  [
+                    "job",
+                    [
+                      "scalar",
+                      "7bb8352f88974d82aece934f63a6e3e5"
+                    ]
+                  ],
+                  [
+                    "cursor",
+                    [
+                      "scalar",
+                      0
+                    ]
+                  ]
+                ]
+              ]
+            ],
+            [
+              "started_at",
+              [
+                "scalar",
+                1792054314.959843
+              ]
+            ],
+            [
+              "seconds",
+              [
+                "scalar",
+                1.803804874420166
+              ]
+            ],
+            [
+              "outcome",
+              [
+                "scalar",
+                "succeeded"
+              ]
+            ],
+            [
+              "execution_result",
+              [
+                "scalar",
+                null
+              ]
+            ],
+            [
+              "ended_at",
+              [
+                "scalar",
+                1792054316.7636478
+              ]
+            ]
+          ]
+        ],
+        "evidence": {
+          "markers": {},
+          "attachments": {}
+        },
+        "action": "self:task",
+        "reuse_key": "74d6a0ad669d76dcf91cc5022d5bd9c40fe4fedf0c6b336afcc347f6ccdf0da2",
+        "reuse_parts": {
+          "action": "7183833719e26e5be84885765368aae9a6cc51b803c18bae46c7afd161de9288",
+          "args": "5ac587712f3e4d4ae0e1e90864897d8912edbb553098c0dfd577a9aa23f037e2",
+          "contract": "8f9e24183c1c15d94940392bc79bdba6bf32d8b7aaff06ea9a6b6e6042eec2c9",
+          "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+          "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+          "semantics": "105ee5d90dec1bdea405092f8ed45ee9ba215c0084e95b8bef650597b505e519"
+        }
+      }
+    ],
+    "usage": {
+      "steps": 154,
+      "rows": 0,
+      "elapsed_ms": 4366,
+      "limits": {
+        "steps": 100000,
+        "rows": 10000
+      },
+      "steps_by_span": [
+        {
+          "node_id": "pure_call:261:283",
+          "steps": 10,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 261,
+            "end": 283,
+            "line": 6,
+            "column": 8
+          }
+        },
+        {
+          "node_id": "pure_call:1037:1059",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1037,
+            "end": 1059,
+            "line": 26,
+            "column": 81
+          }
+        },
+        {
+          "node_id": "pure_call:1075:1095",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1075,
+            "end": 1095,
+            "line": 27,
+            "column": 15
+          }
+        },
+        {
+          "node_id": "pure_call:1104:1126",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1104,
+            "end": 1126,
+            "line": 27,
+            "column": 44
+          }
+        },
+        {
+          "node_id": "pure_call:1139:1158",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1139,
+            "end": 1158,
+            "line": 27,
+            "column": 79
+          }
+        },
+        {
+          "node_id": "pure_call:1180:1191",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1180,
+            "end": 1191,
+            "line": 28,
+            "column": 21
+          }
+        },
+        {
+          "node_id": "pure_call:1196:1224",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1196,
+            "end": 1224,
+            "line": 28,
+            "column": 37
+          }
+        },
+        {
+          "node_id": "pure_call:1251:1262",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1251,
+            "end": 1262,
+            "line": 29,
+            "column": 19
+          }
+        },
+        {
+          "node_id": "pure_call:1267:1293",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1267,
+            "end": 1293,
+            "line": 29,
+            "column": 35
+          }
+        },
+        {
+          "node_id": "pure_call:297:308",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 297,
+            "end": 308,
+            "line": 7,
+            "column": 14
+          }
+        },
+        {
+          "node_id": "pure_call:318:335",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 318,
+            "end": 335,
+            "line": 8,
+            "column": 7
+          }
+        },
+        {
+          "node_id": "pure_call:342:358",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 342,
+            "end": 358,
+            "line": 9,
+            "column": 7
+          }
+        },
+        {
+          "node_id": "pure_call:366:395",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 366,
+            "end": 395,
+            "line": 10,
+            "column": 8
+          }
+        },
+        {
+          "node_id": "pure_call:403:414",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 403,
+            "end": 414,
+            "line": 11,
+            "column": 8
+          }
+        },
+        {
+          "node_id": "pure_call:894:929",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 894,
+            "end": 929,
+            "line": 24,
+            "column": 4
+          }
+        },
+        {
+          "node_id": "pure_call:898:917",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 898,
+            "end": 917,
+            "line": 24,
+            "column": 8
+          }
+        },
+        {
+          "node_id": "pure_call:937:956",
+          "steps": 2,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 937,
+            "end": 956,
+            "line": 25,
+            "column": 8
+          }
+        },
+        {
+          "node_id": "assert:857:890",
+          "steps": 1,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 857,
+            "end": 890,
+            "line": 23,
+            "column": 1
+          }
+        },
+        {
+          "node_id": "binary:1180:1193",
+          "steps": 1,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1180,
+            "end": 1193,
+            "line": 28,
+            "column": 21
+          }
+        },
+        {
+          "node_id": "binary:1251:1264",
+          "steps": 1,
+          "location": {
+            "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+            "start": 1251,
+            "end": 1264,
+            "line": 29,
+            "column": 19
+          }
+        }
+      ],
+      "steps_other": 109,
+      "steps_by_line": [
+        {
+          "line": 27,
+          "steps": 18,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 28,
+          "steps": 15,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 29,
+          "steps": 15,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 6,
+          "steps": 14,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 26,
+          "steps": 13,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 24,
+          "steps": 12,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 21,
+          "steps": 10,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 7,
+          "steps": 9,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 10,
+          "steps": 7,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 22,
+          "steps": 7,
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 22,
+          "ms": 4093,
+          "calls": 1,
+          "actions": [
+            "self:task"
+          ],
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        },
+        {
+          "line": 21,
+          "ms": 12,
+          "calls": 1,
+          "actions": [
+            "limbs:guestpc"
+          ],
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122"
+        }
+      ]
+    },
+    "verification": {
+      "plan_hash": "a43fa4f52d24e6f1960169b65618e0edcca9662bf012f220c52074f913b0d97f",
+      "value_hash": "8465839c28ead300a3f17af4383d704cc57e74c80c0ea16bb5139d52d5ec4cbd",
+      "checks": [
+        {
+          "id": 61,
+          "node_id": "assert:857:890",
+          "invocation_id": 61,
+          "kind": "assertion",
+          "parents": [
+            60
+          ],
+          "passed": true,
+          "predicate_hash": "f07cd09fbde16e6e09c9ac69b664f4e1bcadfbc3d057778e1f05eae973c57f1f"
+        }
+      ],
+      "source_snapshots": [],
+      "scope": "declared_assertions",
+      "source_complete": true
+    },
+    "precheck_warnings": [
+      {
+        "code": "FORMAT_UNINTERPOLATED",
+        "rule": "FORMAT_UNINTERPOLATED",
+        "severity": "warning",
+        "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+        "source_span": {
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+          "start": 422,
+          "end": 695,
+          "line": 12,
+          "column": 8
+        },
+        "call_path": [],
+        "facts": {
+          "text": "$c"
+        },
+        "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+        "location": {
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+          "start": 422,
+          "end": 695,
+          "line": 12,
+          "column": 8,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 20,
+          "end_column": 4,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      {
+        "code": "FORMAT_UNINTERPOLATED",
+        "rule": "FORMAT_UNINTERPOLATED",
+        "severity": "warning",
+        "message": "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+        "source_span": {
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+          "start": 422,
+          "end": 695,
+          "line": 12,
+          "column": 8
+        },
+        "call_path": [],
+        "facts": {
+          "text": "$l"
+        },
+        "hint": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+        "location": {
+          "source_hash": "e03779025dc6bdfa39587778515f41f30e210b8512772dda13813e0ef0b24122",
+          "start": 422,
+          "end": 695,
+          "line": 12,
+          "column": 8,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 20,
+          "end_column": 4,
+          "offset_encoding": "unicode-codepoints"
+        }
+      }
+    ],
+    "resume": {
+      "run_id": "ec54db5db4b344cbaad56ceb3b68b695"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+      "read_calls": 0,
+      "state_change_possible": true,
+      "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "ec54db5db4b344cbaad56ceb3b68b695",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+#!ibl edition=2
+# 73회차 되먹임 — 폰 실행 계약 1 설치 뒤 사진 연쇄 끝까지: 폰 촬영 → 폰 해시(python) → 허브 회수(같은 관용구) → PC 보내기 → PC 해시 → 세 값 대조
+# inputs: phone(폰 device_id) pc(PC device_id) out(중앙 출력 폴더) tag(요청ID 접두) remote_rel(PC 전용 폴더 상대경로)
+
+$info=[limbs:guestpc]{op:"info",limb:$phone,timeout:30}
+$caps=get($info.result,"capabilities",{})
+$ops=join(",",get($info.result,"ops",[]))
+$contract=get($caps,"execution_contract",null)
+assert contains($ops,"transfer"),"폰이 transfer 를 신고하지 않음 — 설치본 확인",{ops:$ops,contract:$contract}
+
+# 1) 촬영 + 폰 쪽 해시(계약 1 python, hashlib) — 내용은 읽지 않고 바이트만 해시
+$shot_code="""#!ibl edition=2
+$shot=[sense:see]{facing:'back'}
+return {path:get($shot,"path",""),bytes:get($shot,"bytes",null)}
+"""
+$t1=[limbs:guestpc]{op:"ibl",limb:$phone,code:$shot_code,background:true,timeout:120,request_id:f"${tag}-shot"}
+$d1=[self:task]{op:"wait",ref:$t1.task_ref,timeout:120}
+assert $d1.terminal,"촬영 작업 미종료",$t1
+$shot=get(get($d1,"result",{}),"value",{})
+$ppath=get($shot,"path","")
+assert len($ppath)>0,"촬영 경로 없음",$shot
+$py="""
+import hashlib, os
+p = inputs["path"]
+h = hashlib.sha256()
+with open(p, "rb") as f:
+    for chunk in iter(lambda: f.read(1 << 20), b""):
+        h.update(chunk)
+result = {"sha256": h.hexdigest(), "size": os.path.getsize(p)}
+"""
+$t2=[limbs:guestpc]{op:"python",limb:$phone,code:$py,inputs:{path:$ppath},background:true,timeout:120,request_id:f"${tag}-phonehash"}
+$d2=[self:task]{op:"wait",ref:$t2.task_ref,timeout:120}
+assert $d2.terminal,"폰 해시 작업 미종료",$t2
+$ph=get(get($d2,"result",{}),"value",{})
+$phone_sha=get($ph,"sha256",null)
+$phone_size=get($ph,"size",null)
+
+# 2) 허브 회수 — PC 와 같은 관용구를 폰에 (transfer receive → collect)
+$parts=split($ppath,"/")
+$name=$parts[len($parts)-1]
+$local=f"${out}/${name}"
+$g=[fn:외부PC파일가져오기]{PC:$phone,중앙경로:$local,원격경로:$ppath,요청ID:f"${tag}-collect",대기:120}
+[if:$g.collected!=true] { $g=[fn:외부PC파일가져오기]{PC:$phone,중앙경로:$local,원격경로:$ppath,요청ID:f"${tag}-collect",대기:120,작업:$g} }
+assert $g.collected==true,"허브 회수 미완료",$g
+$hub_list=[self:list]{path:$out,pattern:$name,hash:true}
+$hub_sha=len($hub_list)>0 ? get($hub_list[0],"sha256",null) : null
+$hub_size=len($hub_list)>0 ? get($hub_list[0],"size",null) : null
+
+# 3) PC 로 보내고 PC 에서 해시 재계산
+$pinfo=[limbs:guestpc]{op:"info",limb:$pc,timeout:30}
+$home=get($pinfo.result,"home","")
+$os=get($pinfo.result,"os","")
+$rd=f"${home}/${remote_rel}"
+$win=$os=="windows"
+$shell=$win ? "powershell" : ""
+$mk=$win ? f"New-Item -ItemType Directory -Force -Path '${rd}' | Out-Null; exit 0" : f"mkdir -p '${rd}'"
+$m=[fn:외부PC작업실행]{PC:$pc,명령:$mk,작업폴더:$home,셸:$shell,요청ID:f"${tag}-pc-mkdir",실행제한:60,대기:30}
+$s=[fn:외부PC파일보내기]{PC:$pc,중앙경로:$local,원격경로:f"${rd}/${name}",요청ID:f"${tag}-pc-send",대기:120}
+[if:$s.ok!=true] { $s=[fn:외부PC파일보내기]{PC:$pc,중앙경로:$local,원격경로:f"${rd}/${name}",요청ID:f"${tag}-pc-send",대기:120,작업:$s} }
+assert $s.ok==true,"PC 보내기 미완료",$s
+$hc=$win ? f"(Get-FileHash -Algorithm SHA256 '${rd}/${name}').Hash.ToLower()" : f"shasum -a 256 '${rd}/${name}' | cut -d' ' -f1"
+$h=[fn:외부PC작업실행]{PC:$pc,명령:$hc,작업폴더:$rd,셸:$shell,요청ID:f"${tag}-pc-hash",실행제한:60,대기:30}
+$r=[fn:외부PC작업확인]{작업:$h,대기:30}
+assert $r.command_ok==true,"PC 해시 실패",$r
+$pc_sha=strip(get(get($r,"result",{}),"output",""))
+
+$chain={phone:$phone,pc:$pc,contract:$contract,ops:$ops,phone_path:$ppath,name:$name,
+        phone_sha256:$phone_sha,phone_size:$phone_size,hub_sha256:$hub_sha,hub_size:$hub_size,transfer_sha256:get($s,"sha256",null),pc_sha256:$pc_sha,
+        all_equal:$phone_sha!=null and $phone_sha==$hub_sha and $hub_sha==$pc_sha,
+        receipts:{shot:$t1.task_ref,phonehash:$t2.task_ref,collect:get($g,"task_ref",null),send:get($s,"task_ref",null),pchash:$h.task_ref}}
+$saved=[self:write]{path:f"${out}/chain.json",content:json($chain)}
+$back=[self:read]{path:$saved.path}
+assert $back.data==$chain,"재독 불일치"
+return $chain

@@ -126,7 +126,6 @@ input,textarea,select{ font-family:inherit; }
 .ap-head{ padding:11px 14px; background:var(--bg2); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
 .ap-head .ap-head-t{ min-width:0; flex:1; }
 .ap-head h2{ font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ap-head p{ font-size:11px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .msgs{ flex:1; overflow-y:auto; padding:16px; }
 .msgs .empty{ color:var(--dim); text-align:center; padding:40px 20px; font-size:14px; line-height:1.6; }
 .msg{ margin-bottom:14px; display:flex; gap:10px; }
@@ -504,7 +503,7 @@ SHELL_PANEL_AUTOPILOT_HTML = """
     <div class="ap-chat" id="ap-chat" style="display:none">
       <div class="ap-head">
         <button class="back" onclick="apExitChat()">←</button>
-        <div class="ap-head-t"><h2 id="apTitle">시스템 AI</h2><p id="apSub"></p></div>
+        <div class="ap-head-t"><h2 id="apTitle">시스템 AI</h2></div>
       </div>
       <div id="apSessions" aria-label="대화 세션 메뉴" hidden>
         <strong id="apSessionTitle"></strong>

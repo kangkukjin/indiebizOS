@@ -136,8 +136,8 @@
   .remote-shell .project-agents.mobile-agents-open + * { display: none; }
   .remote-shell .chat-header {
     height: auto;
-    min-height: 60px;
-    padding: 6px 12px;
+    min-height: 44px;
+    padding: 4px 8px;
     gap: 6px;
     flex-wrap: nowrap;
   }

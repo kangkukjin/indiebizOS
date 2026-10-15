@@ -200,7 +200,6 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
   };
 
   const agentLabel = (chatTarget.type === 'session' ? chatTarget.title : agentName) || (isAppMaker ? '앱메이커' : '시스템 AI');
-  const agentModel = isAgent ? chatTarget.agent.ai?.model : null;
 
   // provider 추적 — Claude Code일 때만 세션 재시작 버튼 노출.
   // 시스템 AI는 status API에서, 프로젝트 에이전트는 agent 객체에서 직접.
@@ -957,8 +956,8 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
       {/* 헤더 (다이얼로그 모드에서는 드래그 핸들) */}
       <div
         className={'chat-header ' + (isDialog
-          ? 'flex items-center justify-between gap-2 min-w-0 px-2 py-2 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0 select-none'
-          : 'h-12 px-2 flex items-center justify-between gap-2 min-w-0 border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag'
+          ? 'h-10 flex items-center justify-between gap-2 min-w-0 px-2 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0 select-none'
+          : 'h-10 px-2 flex items-center justify-between gap-2 min-w-0 border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag'
         )}
         style={isDialog ? { cursor: isDragging ? 'grabbing' : 'grab' } : undefined}
         onMouseDown={isDialog ? handleDragStart : undefined}
@@ -972,9 +971,6 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
           <div className="min-w-0">
             <div title={session?.title || agentLabel} className={isDialog ? 'truncate font-bold text-gray-800' : 'truncate font-medium text-[#4A4035]'}>
               {session?.title || agentLabel}
-            </div>
-            <div className={isDialog ? 'truncate text-xs text-gray-500' : 'truncate text-xs text-[#A09080]'}>
-              {agentModel || 'IndieBiz OS 도우미'}
             </div>
           </div>
         </div>

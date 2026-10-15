@@ -165,3 +165,113 @@ def activity(device_id: str):
     from member_session import _base
     rec = _require(device_id)
     return {"tasks": recent(_base(), rec['member_id'])}
+
+
+def _member_gear():
+    import model_resolver as M
+    from model_settings_view import AXIS_INFO
+    return {"axis_info": AXIS_INFO, "current_gear": M.get_gear(), "gears": M.list_gears(),
+            "presets": M.get_presets(), "tiers": M.TIERS, "axis_names": M.AXES,
+            "consciousness_enabled": M.consciousness_enabled(),
+            "axes": {axis: {k: v for k, v in M.resolve(role).items()
+                            if k in ("tier", "provider", "model")}
+                     for axis, role in zip(M.AXES, ("classify", "evaluate", "execution", "consciousness"))}}
+
+
+@router.get("/models")
+def get_models():
+    import member_model_settings as settings
+    from api_config_tiers import _with_provider_memory
+    with settings.scope():
+        return {"models": {tier: _with_provider_memory(config)
+                           for tier, config in settings.load()['models'].items()}}
+
+
+@router.put("/models")
+def put_models(body: dict):
+    import member_model_settings as settings
+    import model_resolver as M
+    from api_config_tiers import _MODEL_PROVIDERS
+    models = body.get('models')
+    if not isinstance(models, dict) or set(models) != set(M.TIERS):
+        raise HTTPException(400, '경량·중급·고급 모델 설정이 필요합니다')
+    for config in models.values():
+        if not isinstance(config, dict) or config.get('provider') not in _MODEL_PROVIDERS:
+            raise HTTPException(400, '지원하는 AI 제공자를 선택하세요')
+        if not isinstance(config.get('model'), str) or not config['model'].strip():
+            raise HTTPException(400, '모델 이름을 입력하세요')
+        if config['provider'] == 'codex':
+            raise HTTPException(400, 'Codex CLI는 아직 회원 작업 격리를 지원하지 않습니다')
+    with settings.scope(), settings.lock:
+        value = settings.load()
+        value['models'] = {tier: M.merge_model_config(config, value['models'][tier], M.default_model_config(tier))
+                           for tier, config in models.items()}
+        settings.save(value)
+        return get_models()
+
+
+@router.get("/model-gear")
+def get_member_gear():
+    import member_model_settings as settings
+    with settings.scope():
+        return _member_gear()
+
+
+@router.put("/model-gear")
+def put_member_gear(body: dict):
+    import member_model_settings as settings
+    import model_resolver as M
+    with settings.scope(), settings.lock:
+        if not M.set_gear(body.get('gear')):
+            raise HTTPException(400, '알 수 없는 기어입니다')
+        return _member_gear()
+
+
+@router.put("/model-gear/presets")
+def put_member_presets(body: dict):
+    import member_model_settings as settings
+    import model_resolver as M
+    with settings.scope(), settings.lock:
+        presets = body.get('presets')
+        if not isinstance(presets, dict) or any(set(v) != set(M.AXES) for v in presets.values() if isinstance(v, dict)):
+            raise HTTPException(400, '각 기어의 네 가지 축을 모두 지정하세요')
+        if not M.set_presets(presets):
+            raise HTTPException(400, '올바른 기어 프리셋을 입력하세요')
+        return _member_gear()
+
+
+@router.put("/model-gear/consciousness")
+def put_member_consciousness(body: dict):
+    import member_model_settings as settings
+    import model_resolver as M
+    if not isinstance(body.get('enabled'), bool):
+        raise HTTPException(400, 'enabled는 참 또는 거짓이어야 합니다')
+    with settings.scope(), settings.lock:
+        M.set_consciousness(body['enabled'])
+        return _member_gear()
+
+
+@router.get("/{device_id}/statistics")
+def statistics(device_id: str, offset: int = 0):
+    from datetime import date, timedelta
+    from member_activity import recent
+    from member_session import _base
+    rec = _require(device_id)
+    if offset < 0:
+        raise HTTPException(400, 'offset은 0 이상이어야 합니다')
+    today = date.today()
+    start = today - timedelta(days=29)
+    try:
+        usage = json.loads((_base() / 'data/member_usage.json').read_text())
+        days = usage.get(rec['member_id'], {})
+        month = [v for day, v in days.items() if start.isoformat() <= day <= today.isoformat()]
+        tokens = sum(int(v.get('tokens', 0)) for v in month)
+        turns = sum(int(v.get('turns', 0)) for v in month)
+    except FileNotFoundError:
+        tokens = turns = 0
+    except (OSError, ValueError, TypeError, AttributeError):
+        raise HTTPException(503, '사용 현황을 읽지 못했습니다')
+    tasks = recent(_base(), rec['member_id'], limit=51, offset=offset, device_id=device_id)
+    return {'period_start': start.isoformat(), 'period_end': today.isoformat(),
+            'tokens_month': tokens, 'turns_month': turns, 'tasks': tasks[:50],
+            'next_offset': offset + 50 if len(tasks) > 50 else None}

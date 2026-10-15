@@ -1,4 +1,4 @@
-import { CodexModelPicker } from '../../CodexModelPicker';
+import { ModelTierSettings } from '../../ModelTierSettings';
 import { SettingsFrame } from '../../SettingsFrame';
 /**
  * SettingsDialog - 시스템 설정 다이얼로그
@@ -10,9 +10,8 @@ import { SettingsFrame } from '../../SettingsFrame';
 import { BACKEND_ORIGIN } from '../../../lib/backend-origin';
 
 import { useCallback, useState, useRef } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, KeyRound } from 'lucide-react';
+import { X, Settings, Brain, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, KeyRound } from 'lucide-react';
 import type { SystemAISettings, LightweightAISettings, MidtierAISettings } from '../types';
-import { isCliProvider, modelPlaceholder, modelFieldHint } from '../../../types';
 import { api } from '../../../lib/api';
 import { useRetryingLoad } from '../../../lib/use-retrying-load';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
@@ -63,29 +62,6 @@ export function SettingsDialog({
   onClose,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<'models' | 'apikeys' | 'persona' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('models');
-
-  type TierSettings = SystemAISettings | LightweightAISettings | MidtierAISettings;
-  const switchProvider = <T extends TierSettings>(current: T, provider: string): T => {
-    const providerModels = { ...(current.providerModels || {}) };
-    if (current.model) providerModels[current.provider] = current.model;
-    const providerApiKeys = { ...(current.providerApiKeys || {}) };
-    if (current.apiKey) providerApiKeys[current.provider] = current.apiKey;
-    return { ...current, provider, model: providerModels[provider] || '',
-      apiKey: providerApiKeys[provider] || '', providerModels, providerApiKeys };
-  };
-  const changeModel = <T extends TierSettings>(current: T, model: string): T => ({
-    ...current, model,
-    providerModels: { ...(current.providerModels || {}), [current.provider]: model },
-  });
-  const changeApiKey = <T extends TierSettings>(current: T, apiKey: string): T => ({
-    ...current, apiKey,
-    providerApiKeys: { ...(current.providerApiKeys || {}), [current.provider]: apiKey },
-  });
-  const keyPlaceholder = (current: TierSettings) => isCliProvider(current.provider)
-    ? 'API 키가 필요하지 않습니다'
-    : current.providerHasApiKey?.[current.provider]
-      ? '저장된 API 키 사용 중 — 새 키를 입력하면 교체됩니다'
-      : 'API 키를 입력하세요';
 
   // 데이터 내보내기/가져오기 상태
   const [isExporting, setIsExporting] = useState(false);
@@ -283,73 +259,9 @@ export function SettingsDialog({
 
         {/* 내용 */}
         <div className="flex-1 overflow-auto p-6 flex flex-col gap-8">
-          {activeTab === 'models' && (
-            <div className="space-y-6" style={{ order: 3 }}>
-              <div>
-                <h2 className="text-base font-bold text-gray-900 mb-1">고급 (실행·의식 — '최대' 기어)</h2>
-                <p className="text-sm text-gray-700 mb-4">
-                  심사숙고·고품질 실행에 쓰는 본격 모델입니다(옛 '시스템 AI'). 기어 '최대'에서 실행·의식 축이 이 모델을 씁니다. 프로젝트 시작 시 도구 배분·자동 프롬프트 생성에도 활용됩니다.
-                </p>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-                {/* 제공자 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
-                  <select
-                    value={settings.provider}
-                    onChange={(e) => onSettingsChange(switchProvider(settings, e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                  >
-                    <option value="google">Google (Gemini)</option>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="openai">OpenAI (GPT)</option>
-                    <option value="openrouter">OpenRouter (650+ 모델)</option>
-                    <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
-                    <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
-                    <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
-                  </select>
-                </div>
-
-                {/* 모델 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">모델</label>
-                  <input
-                    type="text"
-                    value={settings.model}
-                    onChange={(e) => onSettingsChange(changeModel(settings, e.target.value))}
-                    placeholder={modelPlaceholder(settings.provider, 'gemini-2.0-flash-exp')}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
-                  />
-                  <CodexModelPicker provider={settings.provider} value={settings.model}
-                    onChange={(model) => onSettingsChange(changeModel(settings, model))} />
-                  {modelFieldHint(settings.provider) && (
-                    <p className="text-xs text-gray-500 mt-1">{modelFieldHint(settings.provider)}</p>
-                  )}
-                </div>
-
-                {/* API 키 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">API 키</label>
-                  <div className="flex gap-2">
-                    <input
-                      type={showApiKey ? 'text' : 'password'}
-                      value={settings.apiKey}
-                      onChange={(e) => onSettingsChange(changeApiKey(settings, e.target.value))}
-                      placeholder={keyPlaceholder(settings)}
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
-                    />
-                    <button
-                      onClick={onToggleApiKey}
-                      className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
-                    >
-                      {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === 'models' && <div style={{ order: 3 }}><ModelTierSettings
+            title="고급 (실행·의식 — 최대 기어)" description="심사숙고·고품질 실행에 쓰는 모델입니다. 기어 프리셋에서 고급으로 지정한 축에 적용됩니다."
+            settings={settings} showApiKey={showApiKey} onSettingsChange={onSettingsChange} onToggleApiKey={onToggleApiKey} /> </div>}
 
           {/* 역할 프롬프트 편집 모달 */}
           {showRolePromptModal && (
@@ -400,162 +312,14 @@ export function SettingsDialog({
           )}
 
           {/* 경량 — 분류·평가·백그라운드 */}
-          {activeTab === 'models' && (
-            <div className="space-y-6" style={{ order: 1 }}>
-              <div>
-                <h2 className="text-base font-bold text-gray-900 mb-1">경량 (분류·평가·백그라운드)</h2>
-                <p className="text-sm text-gray-700 mb-4">
-                  요청 분류, 달성 기준 평가 등 원샷 판단에 쓰는 가장 싸고 빠른 모델입니다. 모든 기어에서 분류·평가는 이 티어를 권장합니다.
-                </p>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-                {/* 제공자 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
-                  <select
-                    value={lightweightSettings.provider}
-                    onChange={(e) => onLightweightSettingsChange(switchProvider(lightweightSettings, e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                  >
-                    <option value="google">Google (Gemini)</option>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="openai">OpenAI (GPT)</option>
-                    <option value="openrouter">OpenRouter (650+ 모델)</option>
-                    <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
-                    <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
-                    <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
-                  </select>
-                </div>
-
-                {/* 모델 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">모델</label>
-                  <input
-                    type="text"
-                    value={lightweightSettings.model}
-                    onChange={(e) => onLightweightSettingsChange(changeModel(lightweightSettings, e.target.value))}
-                    placeholder={modelPlaceholder(lightweightSettings.provider, 'gemini-2.5-flash-lite')}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
-                  />
-                  <CodexModelPicker provider={lightweightSettings.provider} value={lightweightSettings.model}
-                    onChange={(model) => onLightweightSettingsChange(changeModel(lightweightSettings, model))} />
-                  {modelFieldHint(lightweightSettings.provider) && (
-                    <p className="text-xs text-gray-500 mt-1">{modelFieldHint(lightweightSettings.provider)}</p>
-                  )}
-                </div>
-
-                {/* API 키 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">API 키</label>
-                  <div className="flex gap-2">
-                    <input
-                      type={showLightweightApiKey ? 'text' : 'password'}
-                      value={lightweightSettings.apiKey}
-                      onChange={(e) => onLightweightSettingsChange(changeApiKey(lightweightSettings, e.target.value))}
-                      placeholder={keyPlaceholder(lightweightSettings)}
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
-                    />
-                    <button
-                      onClick={onToggleLightweightApiKey}
-                      className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
-                    >
-                      {showLightweightApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    프로바이더별 키는 한 번 저장하면 다시 전환해도 자동으로 사용됩니다. 새 키를 입력하면 기존 키를 교체합니다.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>경량 AI의 역할:</strong> 사용자 요청이 들어오면 1초 이내에 "실행형(바로 수행)"인지 "판단형(분석 필요)"인지 분류합니다.
-                  또한 실행 결과의 달성 기준 평가에도 사용됩니다.
-                </p>
-              </div>
-            </div>
-          )}
+          {activeTab === 'models' && <div style={{ order: 1 }}><ModelTierSettings
+            title="경량 (분류·평가·백그라운드)" description="요청 분류와 원샷 판단에 쓰는 빠른 모델입니다. 절약 기어의 실행에도 사용합니다."
+            settings={lightweightSettings} showApiKey={showLightweightApiKey} onSettingsChange={onLightweightSettingsChange} onToggleApiKey={onToggleLightweightApiKey} /> </div>}
 
           {/* 중급 — '균형' 기어의 실행·의식 */}
-          {activeTab === 'models' && (
-            <div className="space-y-6" style={{ order: 2 }}>
-              <div>
-                <h2 className="text-base font-bold text-gray-900 mb-1">중급 ('균형' 기어의 실행·의식)</h2>
-                <p className="text-sm text-gray-700 mb-4">
-                  경량과 고급 사이. 기어 '균형'에서 실행·의식 축이 이 모델을 씁니다. 일상 작업을 빠르되 너무 가볍지 않게.
-                </p>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-                {/* 제공자 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
-                  <select
-                    value={midtierSettings.provider}
-                    onChange={(e) => onMidtierSettingsChange(switchProvider(midtierSettings, e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                  >
-                    <option value="google">Google (Gemini)</option>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="openai">OpenAI (GPT)</option>
-                    <option value="openrouter">OpenRouter (650+ 모델)</option>
-                    <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
-                    <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
-                    <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
-                  </select>
-                </div>
-
-                {/* 모델 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">모델</label>
-                  <input
-                    type="text"
-                    value={midtierSettings.model}
-                    onChange={(e) => onMidtierSettingsChange(changeModel(midtierSettings, e.target.value))}
-                    placeholder={modelPlaceholder(midtierSettings.provider, 'gemini-2.5-flash')}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
-                  />
-                  <CodexModelPicker provider={midtierSettings.provider} value={midtierSettings.model}
-                    onChange={(model) => onMidtierSettingsChange(changeModel(midtierSettings, model))} />
-                  {modelFieldHint(midtierSettings.provider) && (
-                    <p className="text-xs text-gray-500 mt-1">{modelFieldHint(midtierSettings.provider)}</p>
-                  )}
-                </div>
-
-                {/* API 키 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">API 키</label>
-                  <div className="flex gap-2">
-                    <input
-                      type={showMidtierApiKey ? 'text' : 'password'}
-                      value={midtierSettings.apiKey}
-                      onChange={(e) => onMidtierSettingsChange(changeApiKey(midtierSettings, e.target.value))}
-                      placeholder={keyPlaceholder(midtierSettings)}
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
-                    />
-                    <button
-                      onClick={onToggleMidtierApiKey}
-                      className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
-                    >
-                      {showMidtierApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    프로바이더별 키는 한 번 저장하면 다시 전환해도 자동으로 사용됩니다. 새 키를 입력하면 기존 키를 교체합니다.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 rounded-lg p-4">
-                <p className="text-sm text-amber-800">
-                  <strong>중급 AI의 역할:</strong> 단순 실행형 요청(음악 재생, 날씨 확인 등)에서 의식 에이전트를 거치지 않고 바로 실행할 때 사용합니다.
-                  복잡한 분석이나 보고서 작성 등 판단형 요청에는 시스템 AI(본격 모델)가 사용됩니다.
-                </p>
-              </div>
-            </div>
-          )}
+          {activeTab === 'models' && <div style={{ order: 2 }}><ModelTierSettings
+            title="중급 (균형 기어의 실행·의식)" description="일상 작업에 쓰는 모델입니다. 기어 프리셋에서 중급으로 지정한 축에 적용됩니다."
+            settings={midtierSettings} showApiKey={showMidtierApiKey} onSettingsChange={onMidtierSettingsChange} onToggleApiKey={onToggleMidtierApiKey} /> </div>}
 
           {/* 시스템 AI 역할 탭 — 프롬프트 템플릿/개별역할 + 시스템 메모 */}
           {activeTab === 'persona' && (

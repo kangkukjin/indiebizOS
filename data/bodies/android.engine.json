@@ -31,6 +31,7 @@
     "base/limb_keys",
     "base/logging_utils",
     "base/member_jobs",
+    "base/member_model_settings",
     "base/member_runtime",
     "base/memory_provenance",
     "base/mime_compat",
@@ -602,8 +603,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 527,
-    "engine": 495,
+    "total": 528,
+    "engine": 496,
     "blocklist": 32
   }
 }

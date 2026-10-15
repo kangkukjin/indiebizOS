@@ -53,10 +53,16 @@ def finish_action(base, action_id, status):
         db.execute('UPDATE actions SET finished=?,status=? WHERE id=?', (time.time(), status, action_id))
 
 
-def recent(base, member_id, limit=50):
+def recent(base, member_id, limit=50, *, offset=0, device_id=None):
     with database(base) as db:
+        where = 'member_id=?'
+        args = [member_id]
+        if device_id is not None:
+            where += ' AND device_id=?'
+            args.append(device_id)
         rows = [dict(row) for row in db.execute(
-            'SELECT * FROM tasks WHERE member_id=? ORDER BY started DESC LIMIT ?', (member_id, limit))]
+            f'SELECT * FROM tasks WHERE {where} ORDER BY started DESC, id DESC LIMIT ? OFFSET ?',
+            (*args, limit, offset))]
         for row in rows:
             row['models'] = json.loads(row['models'])
             row['actions'] = [dict(a) for a in db.execute(

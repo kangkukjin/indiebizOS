@@ -195,6 +195,9 @@ def _gear_path():
 
 def _load_gear() -> dict:
     """model_gear.json 로드 (매 호출 — 핫리로드). 부재/손상 시 기본값."""
+    import member_model_settings as member_models
+    if member_models.selected():
+        return member_models.load()["gear"]
     p = _gear_path()
     if p.exists():
         try:
@@ -312,6 +315,10 @@ def write_model_config(path, config: dict) -> None:
 
 def resolve_compat_model(kind: str) -> dict | None:
     """옛 getter의 기본값/활성 조건을 보존하되 자격증명 해소는 정본 계약을 사용한다."""
+    import member_model_settings as member_models
+    if member_models.selected():
+        tier = {"lightweight": "경량", "midtier": "중급", "system": "고급"}[kind]
+        return _load_tier_config(tier, _load_gear())
     path, fallback, model = {
         "lightweight": (LIGHTWEIGHT_AI_CONFIG_PATH, UNCONSCIOUS_AI_CONFIG_PATH, "gemini-2.5-flash-lite"),
         "midtier": (MIDTIER_AI_CONFIG_PATH, None, "gemini-2.5-flash"),
@@ -337,6 +344,10 @@ def _load_tier_config(tier: str, gear: dict) -> dict:
     """티어(경량/중급/고급) → {provider, model, api_key, tier}.
 
     키는 `.env` 의 프로바이더별 변수에서 온다(티어 json 은 provider/model 만 나른다)."""
+    import member_model_settings as member_models
+    if member_models.selected():
+        cfg = member_models.load()["models"][tier]
+        return {**describe_model_config(cfg, source="member_models"), "tier": tier}
     tiers = _tier_file_map(gear)
     fname = tiers.get(tier) or tiers.get("고급", "system_ai_config.json")
     fallback = _data_path() / "unconscious_ai_config.json" if fname == "lightweight_ai_config.json" else None
@@ -474,6 +485,10 @@ def get_overrides() -> dict:
 
 def _write_gear(gear: dict):
     """gear dict 를 파일에 쓰고 provider 캐시 무효화(핫리로드)."""
+    import member_model_settings as member_models
+    if member_models.selected():
+        member_models.save_gear(gear)
+        return
     _gear_path().write_text(json.dumps(gear, ensure_ascii=False, indent=2), encoding="utf-8")
     clear_provider_cache()
     # 쓰기 관문 원장 — 기어·핀 변경은 실행 모델을 바꾸는 사건(관측, 실패 무해)

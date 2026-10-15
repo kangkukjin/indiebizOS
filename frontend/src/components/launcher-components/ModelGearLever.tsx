@@ -25,11 +25,16 @@ const GEAR_DESC: Record<string, string> = {
 const AXES = ['분류', '평가', '실행', '의식'];
 const TIERS = ['경량', '중급', '고급'];
 
-export function ModelGearLever({ onToggleStruct, structOpen }: {
+export function ModelGearLever({ onToggleStruct, structOpen, member = false, revision = 0 }: {
+  member?: boolean;
+  revision?: number;
   onToggleStruct?: () => void;   // 'indiebizOS의 구조'(anatomy) 토글 — 설정 옆 작은 버튼으로 노출
   structOpen?: boolean;
 } = {}) {
   useLocale(); // Dynamic system attributes also follow language changes.
+  const endpoint = member ? '/member-pcs/model-gear' : '/model-gear';
+  const [error, setError] = useState('');
+  const updateGear = (suffix: string, body: unknown) => api.request<ModelGearState>(endpoint + suffix, {method: 'PUT', body: JSON.stringify(body)});
   const [gear, setGear] = useState<ModelGearState | null>(null);
   const [changing, setChanging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -46,15 +51,16 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
   const [savingPin, setSavingPin] = useState<string | null>(null);
 
   const load = async () => {
-    try { setGear(await api.getModelGear()); } catch (e) { console.error('Failed to load gear:', e); }
+    try { setGear(await api.request<ModelGearState>(endpoint)); setError(''); } catch (e) { setError(String(e)); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [member, revision]);
   useEffect(() => { if (showSettings) load(); }, [showSettings]);
 
   // 설정 패널 열 때 프리셋 드래프트 + 핀 현황 로드
   useEffect(() => {
     if (!showSettings) return;
     if (gear?.presets) setDraftPresets(JSON.parse(JSON.stringify(gear.presets)));
+    if (member) return;
     api.getModelGearOverrides()
       .then((r) => { setAgents(r.agents); setOverrides(r.overrides || {}); })
       .catch((e) => console.error('Failed to load overrides:', e));
@@ -64,13 +70,13 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
   // 프로젝트 창은 별도 Electron 윈도우 → 같은 origin localStorage 의 storage 이벤트로
   // 크로스-윈도우 통지(쓴 창 외 다른 창에서 발화). 실시간 폴링이 아니라 변경-이벤트 기반.
   const signalGearChange = () => {
-    try { localStorage.setItem('__model_gear_rev', String(Date.now())); } catch { /* ignore */ }
+    try { localStorage.setItem(member ? '__member_model_gear_rev' : '__model_gear_rev', String(Date.now())); } catch { /* ignore */ }
   };
 
   const change = async (name: string) => {
     if (changing || gear?.current_gear === name) return;
-    setChanging(true);
-    try { setGear(await api.setModelGear(name)); signalGearChange(); } catch (e) { console.error('Failed to set gear:', e); }
+    setError(''); setChanging(true);
+    try { setGear(await updateGear('', {gear: name})); signalGearChange(); } catch (e) { setError(String(e)); }
     setChanging(false);
   };
 
@@ -78,12 +84,12 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
   const conscious = gear?.consciousness_enabled !== false;
   const toggleConsciousness = async () => {
     if (togglingMind || !gear) return;
-    setTogglingMind(true);
+    setError(''); setTogglingMind(true);
     try {
-      const r = await api.setModelGearConsciousness(!conscious);
+      const r = await updateGear('/consciousness', {enabled: !conscious});
       setGear((prev) => (prev ? { ...prev, consciousness_enabled: r.consciousness_enabled } : prev));
       signalGearChange();
-    } catch (e) { console.error('Failed to toggle consciousness:', e); }
+    } catch (e) { setError(String(e)); }
     setTogglingMind(false);
   };
 
@@ -93,14 +99,14 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
   };
 
   const savePresets = async () => {
-    setSavingPresets(true);
+    setError(''); setSavingPresets(true);
     try {
-      const r = await api.updateModelGearPresets(draftPresets);
+      const r = await updateGear('/presets', {presets: draftPresets});
       setGear(r);
       signalGearChange();
       setPresetsSaved(true);
       setTimeout(() => setPresetsSaved(false), 2000);
-    } catch (e) { console.error('Failed to save presets:', e); }
+    } catch (e) { setError(String(e)); }
     setSavingPresets(false);
   };
 
@@ -143,7 +149,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           )}
           <button
             onClick={() => setShowSettings((v) => !v)}
-            title="기어 프리셋 편집 · 에이전트 핀"
+            title={member ? "회원 기어 프리셋 편집" : "기어 프리셋 편집 · 에이전트 핀"}
             className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 border transition-colors ${
               showSettings ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-200 text-stone-500 hover:border-stone-400'
             }`}
@@ -153,6 +159,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
         </div>
       </div>
 
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       {/* 절약 / 균형 / 최대 레버 */}
       <div className="grid grid-cols-3 gap-2">
         {gears.map((g) => {
@@ -161,7 +168,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
             <button
               key={g}
               onClick={() => change(g)}
-              disabled={changing}
+              disabled={changing || !gear}
               className={`px-3 py-2.5 rounded-lg border text-center transition-colors disabled:opacity-60 ${
                 active
                   ? 'bg-stone-800 border-stone-800 text-white shadow'
@@ -183,11 +190,11 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           {Object.entries(gear.axes).map(([axis, info]) => (
             <span key={axis} className="flex items-center gap-1">
               <span className="text-stone-400" title={ui.system(gear.axis_info?.[axis]?.description ?? '')}>{<UiSystemText value={axisLabel(axis)} />}</span>
-              <span className="text-stone-700 font-medium">{<UiSystemText value={info.tier} />}</span>
+              <span className="text-stone-700 font-medium" title={`${info.provider} / ${info.model}`}>{<UiSystemText value={info.tier} />}{member && ` · ${info.model}`}</span>
             </span>
           ))}
           <span className="text-stone-300">·</span>
-          <span className="text-stone-400">티어별 모델은 설정 → 모델 설정</span>
+          <span className="text-stone-400">{member ? '티어별 모델은 아래 회원 모델 설정' : '티어별 모델은 설정 → 모델 설정'}</span>
         </div>
       )}
 
@@ -272,7 +279,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
             </div>
           </div>
 
-          <div className="space-y-2">
+          {!member && <div className="space-y-2">
             <span className="text-xs font-semibold text-stone-600">시각·청각·기억 모델</span>
             <p className="text-[11px] text-stone-500">현재 선택 경로와 별도 설정입니다. 조회 전용 항목은 이 기어에서 변경하지 않습니다.</p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -286,10 +293,10 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
                 </div>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* 2. 에이전트 핀 */}
-          <div className="space-y-2">
+          {!member && <div className="space-y-2">
             <span className="text-xs font-semibold text-stone-600">에이전트 핀 — 특정 에이전트만 기어 무시·고정</span>
             <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
               {agents.map((a) => (
@@ -323,7 +330,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
               )}
             </div>
             <p className="text-[10.5px] text-stone-400">📌 고정된 에이전트는 기어를 바꿔도 그 티어를 유지합니다.</p>
-          </div>
+          </div>}
         </div>
       )}
     </div>

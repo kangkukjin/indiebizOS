@@ -3,6 +3,8 @@ import { Copy, ExternalLink, Laptop, Plus, RefreshCw, X } from 'lucide-react';
 import { api } from '../lib/api';
 import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { openExternalLink } from '../lib/surface-navigation';
+import { MemberModelSettings } from './MemberModelSettings';
+import { MemberPCStatistics } from './MemberPCStatistics';
 import { ToolWindowFrame } from './ToolWindowFrame';
 
 type PCStatus = 'pending' | 'online' | 'offline' | 'disabled' | 'expired' | 'revoked';
@@ -14,7 +16,7 @@ type PC = {
 };
 type Address = { url: string; warning: string };
 type Overview = { address: Address; pcs: PC[]; daily_limit: number | null; global_daily_limit: number | null };
-type Activity = { id: string; request: string; status: string; started: number; tokens: number | null; models: {role: string; provider: string; model: string}[]; actions: {tool: string; status: string}[] };
+
 type Invite = {code: string; expires_at: number; hub: string; link: string; name: string};
 type Issued = { key: string; alias: string; device_id: string; expires_at: number | null; address: Address };
 const statuses: Record<PCStatus, string> = {
@@ -27,7 +29,7 @@ function date(value: number | null) { return value ? new Date(value * 1000).toLo
 
 export function MemberPCsView() {
   const [data, setData] = useState<Overview | null>(null);
-  const [activity, setActivity] = useState<{name: string; tasks: Activity[]} | null>(null);
+  const [activity, setActivity] = useState<{name: string; deviceId: string} | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -120,6 +122,7 @@ export function MemberPCsView() {
           ['처리 중', pcs.reduce((sum, p) => sum + p.active_tasks, 0)], ['오늘 요청', pcs.reduce((sum, p) => sum + p.turns_today, 0)],
         ].map(([label, value]) => <div key={label} className={panel}><p className="text-xs text-stone-500">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>)}
       </div>}
+      <MemberModelSettings />
       {editing !== null && <section className={panel}>
         <div className="mb-4 flex justify-between"><h2 className="font-semibold">{editing ? 'PC 정보 수정' : '새 회원 PC 등록'}</h2>
           <button aria-label="등록 양식 닫기" disabled={busy} onClick={() => setEditing(null)}><X size={18} /></button></div>
@@ -155,7 +158,7 @@ export function MemberPCsView() {
                 <p className="mt-2 text-xs text-stone-500">{pc.host || '기기 연결 전'}{pc.os && ` · ${pc.os}`}</p><p className="text-xs text-stone-500">{pc.client === 'desktop' ? `회원 데스크톱 ${pc.client_version || ''}` : pc.client === 'web' ? '브라우저' : pc.client === 'native' ? 'PC 연결 프로그램' : ''}</p></td>
               <td className="pr-4 whitespace-nowrap text-xs"><p>{date(pc.last_seen)}</p><p className="mt-2 text-stone-500">{pc.expires_at ? `만료 ${new Date(pc.expires_at * 1000).toLocaleDateString()}` : '만료 없음'}</p></td>
               <td className="pr-4 whitespace-nowrap"><p>{pc.turns_today}회{pc.daily_limit != null ? ` / ${pc.daily_limit}회` : ' · 제한 없음'}</p><p className="mt-1 text-xs text-stone-500">오늘 {pc.tokens_today.toLocaleString()} · 누적 {pc.tokens_total.toLocaleString()} 토큰</p><p className="mt-1 text-xs text-stone-500">처리 중 {pc.active_tasks}건</p></td>
-              <td className="py-3 min-w-40"><button className={button} disabled={busy} onClick={() => void run(async () => { const value = await api.request<{tasks: Activity[]}>(`/member-pcs/${encodeURIComponent(pc.device_id)}/activity`); setActivity({name: pc.name, tasks: value.tasks}); })}>작업 기록</button>{pc.status !== 'revoked' && <div className="flex flex-wrap gap-1.5">
+              <td className="py-3 min-w-40"><button className={button} disabled={busy} onClick={() => setActivity({name: pc.name, deviceId: pc.device_id})}>통계</button>{pc.status !== 'revoked' && <div className="flex flex-wrap gap-1.5">
                 <button className={button} disabled={busy || !pc.enabled} onClick={() => void run(() => invitePC(pc.device_id, pc.name))}>설치 초대</button>
                 <button className={button} disabled={busy} onClick={() => edit(pc)}>수정</button>
                 {pc.enabled ? <button className={button} disabled={busy} onClick={() => setConfirm({ pc, action: 'disable' })}>사용 중지</button> :
@@ -165,15 +168,12 @@ export function MemberPCsView() {
               </div>}</td>
             </tr>)}</tbody></table></div>}
       </section>
-      {activity && <section className={`${panel} space-y-3`}><div className="flex justify-between"><h2 className="font-semibold">{activity.name} · 최근 작업 50건</h2><button onClick={() => setActivity(null)} aria-label="작업 기록 닫기"><X size={18} /></button></div>
-        {!activity.tasks.length && <p className="text-sm text-stone-500">기록된 작업이 없습니다.</p>}
-        {activity.tasks.map(task => <details key={task.id} className="border-b py-2"><summary className="cursor-pointer text-sm">{date(task.started)} · {task.status} · {task.tokens == null ? '토큰 미측정' : `${task.tokens.toLocaleString()} 토큰`}</summary><p className="my-2 whitespace-pre-wrap break-words text-sm">{task.request}</p><p className="text-xs text-stone-500">{task.models.map(m => `${m.role}: ${m.provider}/${m.model}`).join(' · ')}</p><ol className="mt-2 list-inside list-decimal text-xs">{task.actions.map((a, i) => <li key={i}>{a.tool} · {a.status}</li>)}</ol></details>)}
-      </section>}
       {data && <section className={`${panel} space-y-3`}><h2 className="font-semibold">회원 접속 주소</h2>
         {data.address.url ? <div className="flex flex-wrap gap-2"><input aria-label="회원 접속 주소" readOnly value={data.address.url} className={`${input} w-full sm:flex-1`} /><button className={button} disabled={busy} onClick={() => void run(() => copy(data.address.url))}><Copy size={14} />주소 복사</button><button className={button} onClick={() => openExternalLink(data.address.url)}><ExternalLink size={14} />열기</button></div> : <p className="text-sm text-amber-800">{data.address.warning}</p>}
         <p className="text-xs text-stone-500">기존 이웃 기반 외부사용자와 주인용 원격 PC는 이 목록에 자동으로 편입되지 않습니다.</p>
       </section>}
     </div></main>
+    {activity && <MemberPCStatistics key={activity.deviceId} deviceId={activity.deviceId} name={activity.name} onClose={() => setActivity(null)} />}
     {confirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><section role="dialog" aria-modal="true" aria-labelledby="pc-action-title" className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl">
       <h2 id="pc-action-title" className="font-semibold">{confirm.pc.name} · {confirm.action === 'rotate' ? '키 재발급' : confirm.action === 'revoke' ? '등록 해제' : '사용 중지'}</h2>
       <p className="text-sm text-stone-600">{confirm.action === 'rotate' ? '이전 키는 더 이상 사용할 수 없습니다. 기존 유효기간 설정으로 새 키를 발급하며 해당 PC에서 다시 연결해야 합니다.' : confirm.action === 'revoke' ? '이 PC의 중앙 서비스 이용을 해제합니다. 다시 쓰려면 새로 등록해야 합니다. PC의 파일과 로컬 기록은 삭제하지 않습니다.' : '새 요청과 명령 전달을 막고 중앙의 진행 작업에 중단을 요청합니다. 다시 허용하면 재연결할 수 있습니다.'}</p>

@@ -188,6 +188,24 @@ def test_member_json_bom_uses_same_parser_and_preserves_source(tmp_path):
     assert len(calls) == 1
 
 
+@pytest.mark.parametrize('terminator', ['\n', '\r\n', '\r'])
+def test_numbered_read_remains_visible_in_document_contract(tmp_path, terminator):
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from thread_context import actor_context
+
+    source_path = tmp_path / 'manual.txt'
+    source_path.write_bytes((terminator.join(['private', 'public  ', 'tail']) + terminator).encode())
+    code = 'return [self:read]{path:$source,start_line:2,end_line:2,numbered:true}'
+    plan = compile_program(code, load_registry(str(ROOT)), {'source':str(source_path)})
+    assert not plan.issues, plan.issues
+    with actor_context(origin='training'):
+        result = Runtime(plan, {'source':str(source_path)}).run()
+    assert result['success'], result.get('diagnostic')
+    assert result['value']['text'] == '2\tpublic  ' + terminator
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

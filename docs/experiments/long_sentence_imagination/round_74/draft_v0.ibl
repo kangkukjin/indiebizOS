@@ -1,0 +1,21 @@
+#!ibl edition=2
+[def:발췌]($항목) {
+  $문서 = [self:read]{path:$항목.path,start_line:$항목.start_line,end_line:$항목.end_line}
+  return {id:$항목.id,path:$항목.path,start_line:$항목.start_line,end_line:$항목.end_line,status:"ok",text:$문서.text}
+}
+[def:저장]($경로,$본문) {
+  [self:read]{path:$경로} ?? null
+  return [self:write]{path:$경로,content:$본문}
+}
+$명세 = [self:read]{path:"manifest.json"}
+$구간 = $명세.data.sections >> [table:each] {
+  [fn:발췌]{항목:$it} ?? {id:$it.id,path:$it.path,start_line:$it.start_line,end_line:$it.end_line,status:"unavailable",text:null}
+}
+$누락 = map(filter($구간,($x)=>$x.status=="unavailable"),($x)=>$x.path)
+$배포 = reduce($구간,"",($합,$x)=>$합 + f"## ${$x.id}\n" + ($x.status=="ok" ? $x.text : f"[미확인: ${$x.path}]") + "\n") + f"미확인 ${len($누락)}건\n"
+$보고서 = {sections:$구간,missing_files:$누락}
+[fn:저장]{경로:"excerpts.json",본문:json($보고서)}
+[fn:저장]{경로:"handbook.txt",본문:$배포}
+$재독 = [self:read]{path:"excerpts.json"}
+$본문 = [self:read]{path:"handbook.txt"}
+return {report:$재독.data,report_equal:$재독.data==$보고서,handbook_equal:$본문.text==$배포}

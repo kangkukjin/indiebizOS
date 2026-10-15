@@ -78,28 +78,25 @@ def read_document(params, command, exchange, workspace):
             if key in result:
                 result[key] = params['path']
         return result
-    with path.open(encoding='utf-8', newline='') as stream:
-        lines = stream.read().splitlines(keepends=True)
-    start, end, ranged = ranges.text_read_bounds(p, len(lines))
-    text = ''.join(lines[start:end])
+    # 주인/회원은 같은 CR/LF/CRLF 행 좌표와 Document 표시 계약을 쓴다.
+    # splitlines는 U+2028·수직 탭까지 행으로 세어 공개 범위를 바꾼다.
+    file_io = _sibling('essentials_file_io')
+    text, total, start, end, ranged, _ = file_io.read_text_window(
+        path, {**p, 'format': fmt}, ranges.text_read_bounds, max_chars=None)
     # 구조화 전체 읽기는 표시 상한과 분리한다. 수신 바이트 예산은 _receive가 소유한다.
     if p.get('blocks') and not ranged and fmt in ('json', 'csv', 'tsv') and (fmt != 'json' or text.strip()):
-        data = _sibling('essentials_file_io').structured_data(text, fmt, params['path'])
+        data = file_io.structured_data(text, fmt, params['path'])
         return {'success': True, 'text': text, 'blocks': [], 'structured_data': data,
                 'path': params['path']}
     if len(text) > 1000000:
         return {'success': True, 'text': text[:1000000], 'blocks': [], 'truncated': True,  # truncation-scope: source — 회원 문서의 안전캡
-                'total_lines': len(lines)}
+                'total_lines': total}
     if p.get('blocks'):
         from doc_ir import markdown_to_blocks
         items = markdown_to_blocks(text)
         return {'success': True, 'items': items, 'count': len(items), 'message': text,
                 'start_line': start + 1 if text else None, 'end_line': end if text else None,
-                'total_lines': len(lines), 'path': params['path']}
-    if p.get('numbered'):
-        text = ''.join(f'{n}\t{line}' for n, line in enumerate(lines[start:end], start + 1))
-    if len(text) > 1000000:
-        return {'success': True, 'text': text[:1000000], 'truncated': True, 'total_lines': len(lines)}  # truncation-scope: source — 회원 문서 본문 1백만 자 안전캡; 요청 선택 아님
+                'total_lines': total, 'path': params['path']}
     return text
 
 

@@ -1,0 +1,26 @@
+{
+  "review": {
+    "first_section": {
+      "id": "S01",
+      "path": "doc01.txt",
+      "start_line": 3,
+      "end_line": 5,
+      "status": "ok",
+      "text": "A 절차1 첫 줄  \n  한글 🧭 \"인용\"\t1\n마지막 공개 줄 1  \n"
+    },
+    "state": "completed",
+    "reread": true
+  },
+  "unicode": {
+    "first_section": {
+      "id": "S01",
+      "path": "doc01.txt",
+      "start_line": 3,
+      "end_line": 5,
+      "status": "ok",
+      "text": "비공개 구분자\u000b표지 계속\nA 절차1 첫 줄  \n"
+    },
+    "state": "completed",
+    "reread": true
+  }
+}

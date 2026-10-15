@@ -78,7 +78,10 @@ def read_text_window(path, params, bounds, max_chars=TEXT_PREVIEW_CHARS):
     ranged = tail is not None or offset > 0 or limit is not None
     selected = deque(maxlen=tail) if tail is not None else []
     total, chars, truncated = 0, 0, False
-    numbered = bool(params.get('numbered')) and not params.get('blocks')
+    data_format = (params.get('format') or Path(path).suffix.lstrip('.')).lower()
+    # Document도 표시 요청을 보존한다. 전체 구조 파싱용 원문에는 번호를 섞지 않는다.
+    numbered = bool(params.get('numbered')) and (
+        not params.get('blocks') or ranged or data_format not in {'json', 'csv', 'tsv'})
     with open(path, 'r', encoding='utf-8', newline='') as stream:
         for i, line in enumerate(stream):
             total = i + 1

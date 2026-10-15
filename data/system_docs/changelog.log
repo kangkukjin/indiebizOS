@@ -2616,3 +2616,5 @@
 2026-10-15 FIX: 회원 데스크톱의 파괴된 창 재표시(Object has been destroyed)와 창 없는 잔류 프로세스 수리. 활성화·트레이·연결 종료 알림은 생존 창/종료 상태를 검사하고, 마지막 창 파괴 시 정상 종료한다. 일반 닫기의 트레이 숨김은 유지. lifecycle 회귀 4건 포함 npm test 17 통과·실제 helper 선택 검사 2 제외, mac arm64 로컬 앱/zip 재빌드. 실제 Cmd+Q 검증에서는 창만 닫히고 프로세스가 남아 아래 종료 순서 후속 수리로 이어짐. backend 전수·Windows 미실행.
 
 2026-10-15 FIX: 회원 앱의 비동기 before-quit 취소 직후 microtask에서 app.quit을 재호출하던 경합 수리. 실행부 정리 후 setImmediate로 다음 이벤트 루프에서 종료하며 정리 예외도 처리. lifecycle 5건 포함 npm test 18 통과·선택 helper 2 제외. Mac 로컬 앱/zip 재빌드, 실제 Cmd+Q 후 프로세스 0개와 macOS 앱 목록 isRunning=false 확인. backend 전수·Windows 미실행.
+
+2026-10-15 FIX: 긴문장74 회원 데스크톱 범위 발췌 훈련. Document 읽기의 numbered 소실과 회원 splitlines의 U+2028/수직 탭 행 오판정 수리. 주인/회원 CR/LF/CRLF 행 좌표 통합, 줄번호·줄끝·공백 보존. 전체 IBL 18재실행·독립 회원 AI 기본/누락 전건 통과, 관련471통과·1건너뜀. docs/experiments/long_sentence_imagination/round_74/report.md

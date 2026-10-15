@@ -24,6 +24,10 @@ func (m *MemberRuntime) initTasks() error {
 	if err != nil {
 		return err
 	}
+	_, _ = m.store.db.Exec("CREATE INDEX IF NOT EXISTS conversations_task ON conversations(task_id,created)")
+	if err := m.migrateConversationSessions(); err != nil {
+		return err
+	}
 	return m.migrateTaskRoots()
 }
 func (m *MemberRuntime) workspace() string {
@@ -110,7 +114,7 @@ func (m *MemberRuntime) taskEvent(id, kind string, value interface{}) {
 	_, _ = m.store.db.Exec("INSERT INTO task_events(task_id,kind,content) VALUES(?,?,?)", id, kind, string(b))
 }
 func (m *MemberRuntime) tasks() []map[string]interface{} {
-	rows, err := m.store.db.Query("SELECT id,title,workspace,state,updated FROM tasks WHERE id!='local-browser' ORDER BY updated DESC LIMIT 100")
+	rows, err := m.store.db.Query("SELECT id,title,workspace,state,updated FROM tasks WHERE id!='local-browser' ORDER BY updated DESC")
 	if err != nil {
 		return nil
 	}
@@ -129,7 +133,7 @@ func (m *MemberRuntime) task(id string) map[string]interface{} {
 	if err := m.store.db.QueryRow("SELECT state,coalesce(result,'{}'),workspace,title FROM tasks WHERE id=?", id).Scan(&state, &result, &root, &title); err != nil {
 		return errResult("not_found", "작업이 없습니다")
 	}
-	rows, err := m.store.db.Query("SELECT kind,content FROM (SELECT id,kind,content FROM task_events WHERE task_id=? ORDER BY id DESC LIMIT 500) ORDER BY id", id)
+	rows, err := m.store.db.Query("SELECT kind,content FROM task_events WHERE task_id=? ORDER BY id", id)
 	if err != nil {
 		return errResult("storage", err.Error())
 	}
@@ -151,7 +155,8 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 	code, _ := body["code"].(string)
 	id, _ := body["task_id"].(string)
 	action, _ := body["action_id"].(string)
-	if strings.TrimSpace(message) == "" && code == "" && !(m.cfg.Desktop && action != "") {
+	createOnly, _ := body["create_only"].(bool)
+	if !createOnly && strings.TrimSpace(message) == "" && code == "" && !(m.cfg.Desktop && action != "") {
 		return errResult("input", "요청을 입력하세요")
 	}
 	m.taskMu.Lock()
@@ -159,7 +164,7 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 	if m.maintenance {
 		return errResult("updating", "업데이트 준비 중입니다. 완료 후 새 작업을 시작하세요")
 	}
-	if m.runningTask != "" {
+	if !createOnly && m.runningTask != "" {
 		return errResult("busy", "진행 중인 작업을 완료하거나 중단하세요")
 	}
 	now := time.Now().Unix()
@@ -168,6 +173,9 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 		title := message
 		if title == "" {
 			title = "앱 실행"
+			if createOnly {
+				title = "새 세션"
+			}
 		}
 		runes := []rune(title)
 		if len(runes) > 60 {
@@ -182,6 +190,16 @@ func (m *MemberRuntime) startTask(body map[string]interface{}) map[string]interf
 	}
 	if _, err := m.taskRoot(id); err != nil {
 		return errResult("task", err.Error())
+	}
+	if createOnly {
+		return map[string]interface{}{"success": true, "task_id": id}
+	}
+	if message != "" {
+		title := []rune(message)
+		if len(title) > 60 {
+			title = title[:60]
+		}
+		_, _ = m.store.db.Exec("UPDATE tasks SET title=? WHERE id=? AND title='새 세션'", string(title), id)
 	}
 	r, err := m.store.db.Exec("UPDATE tasks SET state='running',updated=? WHERE id=? AND state!='running'", now, id)
 	if err != nil {

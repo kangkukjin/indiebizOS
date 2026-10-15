@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from contextlib import contextmanager
 from typing import Optional, List, Dict
 from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
+import conversation_sessions as sessions
 
 
 # ============ 히스토리 설정 ============
@@ -169,6 +170,7 @@ class ConversationDB:
 
             # 기존 DB 마이그레이션
             self._migrate_tables(cursor)
+            sessions.ensure_schema(conn, "messages")
 
             conn.commit()
 
@@ -375,10 +377,14 @@ class ConversationDB:
         """메시지 저장 (이미지 포함 가능)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            sid = None if contact_type in ('research', 'rehearsal') else sessions.resolve(
+                conn, self.db_path, sessions.pair_owner(from_agent_id, to_agent_id), "messages")
             cursor.execute("""
-                INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type)
-                VALUES (?, ?, ?, ?)
-            """, (from_agent_id, to_agent_id, content, contact_type))
+                INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type, session_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (from_agent_id, to_agent_id, content, contact_type, sid))
+            if sid:
+                sessions.touch(conn, sid, content)
             conn.commit()
             message_id = cursor.lastrowid
 
@@ -407,10 +413,12 @@ class ConversationDB:
         """미전달 메시지 저장 (WS 타임아웃 시 워커 스레드에서 호출)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            sid = sessions.resolve(conn, self.db_path, sessions.pair_owner(from_agent_id, to_agent_id), "messages")
             cursor.execute("""
-                INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type, delivered)
-                VALUES (?, ?, ?, ?, 0)
-            """, (from_agent_id, to_agent_id, content, contact_type))
+                INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type, delivered, session_id)
+                VALUES (?, ?, ?, ?, 0, ?)
+            """, (from_agent_id, to_agent_id, content, contact_type, sid))
+            sessions.touch(conn, sid)
             conn.commit()
             return cursor.lastrowid
 
@@ -513,6 +521,8 @@ class ConversationDB:
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            sid = None if rehearsal else sessions.resolve(conn, self.db_path, sessions.pair_owner(agent_id, user_id), "messages")
+            conn.commit()
             cursor.execute("""
                 SELECT from_agent_id, content, message_time, images
                 FROM messages
@@ -520,9 +530,10 @@ class ConversationDB:
                    OR (from_agent_id = ? AND to_agent_id = ?))
                   AND (COALESCE(contact_type, 'gui') = 'rehearsal') = ?
                   AND COALESCE(contact_type, 'gui') != 'research'
-                ORDER BY message_time DESC
+                  AND session_id IS ?
+                ORDER BY id DESC
                 LIMIT ?
-            """, (agent_id, user_id, user_id, agent_id, int(rehearsal), limit))
+            """, (agent_id, user_id, user_id, agent_id, int(rehearsal), sid, limit))
 
             messages = []
             rows = cursor.fetchall()
@@ -554,6 +565,8 @@ class ConversationDB:
                 messages.append(msg)
 
         history = list(reversed(messages))
+
+        history = sessions.bounded_history(history)
 
         # 하드캡 요약 체크포인트를 머리에 주입 (history_checkpoint — 없으면 무변화, fail-soft)
         if _ckpt_apply and not rehearsal:

@@ -26,6 +26,7 @@
 import json
 import sqlite3
 import threading
+import conversation_sessions as sessions
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, Tuple
 from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
@@ -71,6 +72,11 @@ def _read_ckpt(conn: sqlite3.Connection, key: str) -> Dict:
 
 def _store_ckpt(conn: sqlite3.Connection, key: str, content: str, covered_until: int):
     _ensure_table(conn)
+    conn.execute("""CREATE TABLE IF NOT EXISTS history_checkpoint_versions (
+        id INTEGER PRIMARY KEY, ckpt_key TEXT NOT NULL, content TEXT NOT NULL,
+        covered_until_id INTEGER NOT NULL, created_at TEXT NOT NULL)""")
+    conn.execute("INSERT INTO history_checkpoint_versions(ckpt_key,content,covered_until_id,created_at) VALUES (?,?,?,?)",
+                 (key, content, covered_until, datetime.now().isoformat()))
     conn.execute("""
         INSERT INTO history_checkpoints (ckpt_key, content, covered_until_id, updated_at, last_error, error_at)
         VALUES (?, ?, ?, ?, NULL, NULL)
@@ -163,9 +169,8 @@ def _update(db_path: str, key: str, keep_recent: int,
         new_evicted = [r for r in evicted if r[0] > ckpt["covered_until_id"]]
         if len(new_evicted) < MIN_NEW_EVICTED:
             return "noop"
-        # 첫 따라잡기 폭주 방어: 최근 MAX_ROWS 만 요약, 더 오래된 미커버는 수용 손실
-        # (오늘까지는 전부 잃고 있었다 — 상한 밖까지 소급하면 첫 호출이 폭발한다)
-        batch = new_evicted[-MAX_ROWS_PER_UPDATE:]
+        # 한 번에 정해진 분량만 오래된 순서로 따라잡는다. 중간 구간을 건너뛰지 않는다.
+        batch = new_evicted[:MAX_ROWS_PER_UPDATE]
         summary = _summarize(ckpt["content"], [(who, c) for _id, who, c in batch])
         if summary is None:
             _store_error(conn, key, "요약 실패(빈 응답 또는 형식 비적합)")
@@ -241,61 +246,68 @@ def _system_db_path() -> str:
     return str(MEMORY_DB_PATH)
 
 
-def _fetch_system(thread: str) -> Callable:
-    src_clause = "AND source = 'appmaker'" if thread == "appmaker" \
-        else "AND (source IS NULL OR source != 'appmaker')"
+def _selection(db_path, table, owner):
+    with sessions.connection(db_path) as conn:
+        sessions.ensure_schema(conn, table)
+        sid = sessions.resolve(conn, db_path, owner, table)
+    return sid, owner if sid.startswith("legacy-") else "session:" + sid
 
-    def fetch(conn: sqlite3.Connection) -> List[Tuple[int, str, str]]:
-        rows = conn.execute(f"""
-            SELECT id, role, content FROM conversations
-            WHERE role IN ('user', 'assistant') {src_clause}
-            ORDER BY id ASC
-        """).fetchall()
+
+def _fetch_system(thread: str, sid=None) -> Callable:
+    sid = sid or _selection(_system_db_path(), "conversations", thread)[0]
+    def fetch(conn):
+        key = thread if sid.startswith("legacy-") else "session:" + sid
+        covered = _read_ckpt(conn, key)["covered_until_id"]
+        where, args = "session_id=?", [sid]
+        if sid.startswith("legacy-"):
+            predicate, owner_args = sessions._predicate(thread, "conversations")
+            where = f"({where} OR (session_id IS NULL AND {predicate}))"
+            args.extend(owner_args)
+        rows = conn.execute(f"""SELECT id,role,content FROM conversations
+            WHERE {where} AND role IN ('user','assistant') AND id>? ORDER BY id LIMIT ?""",
+            [*args, covered, MAX_ROWS_PER_UPDATE + KEEP_RECENT_SYSTEM]).fetchall()
         return [(r[0], "사용자" if r[1] == "user" else "AI", r[2] or "") for r in rows]
     return fetch
 
 
 def schedule_system_ai(thread: str = "system_ai"):
-    _schedule(_system_db_path(), thread, KEEP_RECENT_SYSTEM, _fetch_system(thread))
+    sid, key = _selection(_system_db_path(), "conversations", thread)
+    _schedule(_system_db_path(), key, KEEP_RECENT_SYSTEM, _fetch_system(thread, sid))
 
 
-def head_message_system(thread: str = "system_ai") -> Optional[Dict]:
-    return _head_message(_system_db_path(), thread)
+def head_message_system(thread: str = "system_ai"):
+    _, key = _selection(_system_db_path(), "conversations", thread)
+    return _head_message(_system_db_path(), key)
 
-
-# ============ 프로젝트/위임 쌍 (conversations.db) ============
 
 def _pair_key(a: int, b: int) -> str:
-    lo, hi = sorted((int(a), int(b)))
-    return f"pair:{lo}:{hi}"
+    return sessions.pair_owner(a, b)
 
 
-def _fetch_pair(a: int, b: int) -> Callable:
-    def fetch(conn: sqlite3.Connection) -> List[Tuple[int, str, str]]:
-        names = {}
-        try:
-            for row in conn.execute("SELECT id, name FROM agents WHERE id IN (?, ?)", (a, b)):
-                names[row[0]] = row[1]
-        except sqlite3.OperationalError:
-            pass
-        rows = conn.execute("""
-            SELECT id, from_agent_id, content FROM messages
-            WHERE ((from_agent_id = ? AND to_agent_id = ?)
-               OR (from_agent_id = ? AND to_agent_id = ?))
-              AND COALESCE(contact_type, 'gui') NOT IN ('rehearsal', 'research')
-            ORDER BY id ASC
-        """, (a, b, b, a)).fetchall()
+def _fetch_pair(a: int, b: int, sid=None) -> Callable:
+    def fetch(conn):
+        names = dict(conn.execute("SELECT id,name FROM agents WHERE id IN (?,?)", (a,b)))
+        if sid:
+            key = _pair_key(a,b) if sid.startswith("legacy-") else "session:" + sid
+            covered = _read_ckpt(conn, key)["covered_until_id"]
+            rows = conn.execute("SELECT id,from_agent_id,content FROM messages WHERE session_id=? AND id>? ORDER BY id LIMIT ?",
+                                (sid, covered, MAX_ROWS_PER_UPDATE + KEEP_RECENT_PAIR)).fetchall()
+        else:
+            rows = conn.execute("""SELECT id,from_agent_id,content FROM messages
+                WHERE ((from_agent_id=? AND to_agent_id=?) OR (from_agent_id=? AND to_agent_id=?))
+                AND COALESCE(contact_type,'gui') NOT IN ('rehearsal','research') ORDER BY id""", (a,b,b,a)).fetchall()
         return [(r[0], names.get(r[1], f"발화자{r[1]}"), r[2] or "") for r in rows]
     return fetch
 
 
 def schedule_pair(db_path: str, agent_id: int, user_id: int):
-    _schedule(db_path, _pair_key(agent_id, user_id), KEEP_RECENT_PAIR,
-              _fetch_pair(agent_id, user_id))
+    sid, key = _selection(db_path, "messages", _pair_key(agent_id, user_id))
+    _schedule(db_path, key, KEEP_RECENT_PAIR, _fetch_pair(agent_id, user_id, sid))
 
 
-def head_message_pair(db_path: str, agent_id: int, user_id: int) -> Optional[Dict]:
-    return _head_message(db_path, _pair_key(agent_id, user_id))
+def head_message_pair(db_path: str, agent_id: int, user_id: int):
+    _, key = _selection(db_path, "messages", _pair_key(agent_id, user_id))
+    return _head_message(db_path, key)
 
 
 # ============ 주입 (히스토리 머리) ============

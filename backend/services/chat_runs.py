@@ -16,6 +16,8 @@ class ChatRun:
     task: asyncio.Task | None = None
     finished: bool = False
     lease: Any = None
+    session_binding: Any = None
+    workers: list = field(default_factory=list)
 
 
 _current: ContextVar[ChatRun | None] = ContextVar("chat_run", default=None)
@@ -51,10 +53,39 @@ class ChatRuns:
 
     async def invoke(self, run, handler, data, manager):
         token = _current.set(run)
+        store = binding = None
+        from conversation_sessions import Binding, scope
+        import chat_session_service as sessions
         try:
-            with run.lease.activate(), manager.connection_scope(run.client_id, run.connection):
-                return await handler(run.client_id, data)
+            if data.get("session_id"):
+                store = sessions.from_data(data)
+                binding = data.get("_session_binding")
+                if not isinstance(binding, Binding):
+                    binding = store.begin(data["session_id"])
+                sessions.attach(run, binding)
+            with scope(binding), run.lease.activate(), manager.connection_scope(run.client_id, run.connection):
+                try:
+                    return await handler(run.client_id, data)
+                finally:
+                    # 타임아웃 뒤에도 실행기는 살아 있다. 실제 워커가 끝나야 세션 잠금을 푼다.
+                    if binding:
+                        for worker in run.workers:
+                            await asyncio.wrap_future(worker)
+        except Exception as exc:
+            if binding:
+                with scope(binding):
+                    await manager.send_message(run.client_id, {"type": "error", "message": str(exc)})
+            else:
+                await manager.send_message(run.client_id, {"type": "error", "message": str(exc)})
+            raise
         finally:
+            if store and binding:
+                from conversation_sessions import connection
+                with connection(store.path) as conn:
+                    failed = conn.execute("SELECT 1 FROM conversation_events WHERE turn_id=? AND payload LIKE ? LIMIT 1",
+                                          (binding.turn_id, '%"type": "error"%')).fetchone()
+                store.finish(binding, "cancelled" if run.cancelled.is_set() else "failed" if failed else "completed")
+            sessions.detach(run)
             run.finished = True
             if self.active.get(run.client_id) is run:
                 self.active.pop(run.client_id, None)
@@ -99,6 +130,9 @@ class ChatRuns:
         run = self.current(client_id)
         if run is not None:
             run.target = target
+            from conversation_sessions import bind_task
+            if target[2]:
+                bind_task(target[2])
 
     def is_cancelled(self, client_id):
         run = self.current(client_id)

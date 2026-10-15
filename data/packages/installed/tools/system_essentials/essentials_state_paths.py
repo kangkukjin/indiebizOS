@@ -20,6 +20,12 @@ def get_state_paths(project_path: str, agent_id: str = None, system_state_path=N
         # 에이전트별 파일명 접두사 (agent_id가 있으면 사용)
         prefix = f"agent_{agent_id}_" if agent_id else ""
 
+    from conversation_sessions import current, state_directory
+    binding = current()
+    if binding:
+        state_dir = state_directory(binding)
+        prefix = ""
+
     # 폴더 생성
     state_dir.mkdir(parents=True, exist_ok=True)
 

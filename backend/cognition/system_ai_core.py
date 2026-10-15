@@ -93,9 +93,11 @@ def get_system_ai_runner():
     """
     global _system_ai_runner
 
+    from conversation_sessions import current as current_conversation
+    binding = current_conversation()
     resolved = _resolve_system_ai_config()
 
-    if _system_ai_runner is not None and _system_ai_runner.ai is not None:
+    if not binding and _system_ai_runner is not None and _system_ai_runner.ai is not None:
         # 기어/설정 변경 시 재생성 (해소된 provider/model 변경 감지)
         current_ai = _system_ai_runner.config.get("ai", {})
         if (current_ai.get("provider") != resolved["provider"] or
@@ -123,10 +125,13 @@ def get_system_ai_runner():
         }
     }
 
+    if binding:
+        agent_config["_conversation_session"] = binding.session_id
     runner = AgentRunner(agent_config)
     runner._init_ai()
     runner.running = True
-    _system_ai_runner = runner
+    if not binding:
+        _system_ai_runner = runner
     print(f"[시스템AI] AgentRunner 초기화 완료 ({resolved['provider']}/{resolved['model']}, {resolved.get('_source')})")
     return runner
 

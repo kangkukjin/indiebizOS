@@ -27,7 +27,7 @@ func openMemberStore(dir string) (*MemberStore, error) {
 	db.SetMaxOpenConns(1)
 	schema := `PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
  CREATE TABLE IF NOT EXISTS jobs(key TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,state TEXT NOT NULL,result TEXT,updated INTEGER);
- CREATE TABLE IF NOT EXISTS conversations(id TEXT PRIMARY KEY,user TEXT,assistant TEXT,created INTEGER);
+ CREATE TABLE IF NOT EXISTS conversations(id TEXT PRIMARY KEY,user TEXT,assistant TEXT,created INTEGER,task_id TEXT NOT NULL DEFAULT '');
  CREATE TABLE IF NOT EXISTS episodes(id TEXT PRIMARY KEY,data TEXT);
  CREATE TABLE IF NOT EXISTS memories(id TEXT PRIMARY KEY,content TEXT);
  CREATE TABLE IF NOT EXISTS scripts(id TEXT PRIMARY KEY,path TEXT,interpreter TEXT,description TEXT);
@@ -121,7 +121,8 @@ func (s *MemberStore) save(record map[string]interface{}) map[string]interface{}
 	if content, ok := record["content"].(string); ok {
 		_, err = tx.Exec("INSERT OR REPLACE INTO memories VALUES(?,?)", id, content)
 	} else {
-		_, err = tx.Exec("INSERT OR IGNORE INTO conversations(id,user,assistant,created) VALUES(?,?,?,?)", id, record["user"], record["assistant"], time.Now().Unix())
+		taskID, _ := record["task_id"].(string)
+		_, err = tx.Exec("INSERT OR IGNORE INTO conversations(id,user,assistant,created,task_id) VALUES(?,?,?,?,?)", id, record["user"], record["assistant"], time.Now().Unix(), taskID)
 		if err == nil {
 			var b []byte
 			b, err = json.Marshal(record["episode"])

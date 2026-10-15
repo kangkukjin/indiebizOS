@@ -9,6 +9,7 @@ import { WEBSOCKET_ORIGIN } from '../../lib/backend-origin';
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
 import type { ChatSession } from './ChatSession';
+import { SessionWorkspace } from './SessionWorkspace';
 import { Bot, Loader2, X, RefreshCw, History, RotateCw, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -75,7 +76,14 @@ interface DialogPosition { x: number; y: number; }
 
 // ── 메인 컴포넌트 ───────────────────────────────────────
 
-export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel, session, headerActions, active = true }: ChatViewProps) {
+export function ChatView(props: ChatViewProps) {
+  const t = props.chatTarget;
+  if (props.session || t.type === 'session') return <ChatPane {...props} />;
+  const key = t.type === 'agent' ? `${t.projectId}:${t.agent.id}` : t.type;
+  return <SessionWorkspace key={key} {...props} />;
+}
+
+export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel, session, headerActions, active = true }: ChatViewProps) {
   const isAgent = chatTarget.type === 'agent';
   const isAppMaker = chatTarget.type === 'appmaker';  // system_ai 분기(!isAgent)를 공유하되 스레드/타이틀만 분기
   const isDialog = layout === 'dialog';
@@ -514,7 +522,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // 미전달 메시지 폴링 (에이전트 전용) — 마운트 즉시 + 30초 간격
   useEffect(() => {
-    if (!projectId || !agentName) return;
+    if (session || !projectId || !agentName) return;
 
     const fetchUndelivered = async () => {
       try {
@@ -577,7 +585,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   // 이전 대화 스레드를 채팅 뷰에 복원한다. WS 응답 핸들러의 message_id 중복 가드가
   // 이력↔실시간 중복을 막아준다.
   useEffect(() => {
-    if (!isAgent || !projectId || !agentId) return;
+    if (session || !isAgent || !projectId || !agentId) return;
 
     const loadAgentHistory = async () => {
       try {
@@ -881,7 +889,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         return `**${q?.header}**: ${Array.isArray(ans) ? ans.join(', ') : ans}`;
       })
       .join('\n');
-    if (session) { await session.send(`[질문 답변]\n${answerText}`, [], null); return; }
+    if (session) { if (session.respondToPanel) await session.respondToPanel('answer', `[질문 답변]\n${answerText}`); else await session.send(`[질문 답변]\n${answerText}`, [], null); return; }
     try {
       await api.submitSystemAIQuestionAnswer?.(answers);
     } catch (err) {
@@ -895,7 +903,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   };
 
   const handleApprovePlan = async () => {
-    if (session) { await session.send('계획을 승인합니다. 진행해주세요.', [], null); return; }
+    if (session) { if (session.respondToPanel) await session.respondToPanel('approve', '계획을 승인합니다. 진행해주세요.'); else await session.send('계획을 승인합니다. 진행해주세요.', [], null); return; }
     try {
       await api.approveSystemAIPlan?.();
     } catch (err) {
@@ -908,7 +916,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const handleRejectPlan = async () => {
     const reason = prompt('수정이 필요한 이유를 입력하세요:');
     if (reason !== null) {
-      if (session) { await session.send(`계획 수정 요청: ${reason || '다시 검토해주세요.'}`, [], null); return; }
+      if (session) { if (session.respondToPanel) await session.respondToPanel('reject', `계획 수정 요청: ${reason || '다시 검토해주세요.'}`); else await session.send(`계획 수정 요청: ${reason || '다시 검토해주세요.'}`, [], null); return; }
       try {
         await api.rejectSystemAIPlan?.(reason);
       } catch (err) {
@@ -960,7 +968,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           </div>
           <div>
             <div className={isDialog ? 'text-lg font-bold text-gray-800' : 'font-medium text-[#4A4035]'}>
-              {agentLabel}
+              {session?.title || agentLabel}
             </div>
             <div className={isDialog ? 'text-xs text-gray-500' : 'text-xs text-[#A09080]'}>
               {agentModel || 'IndieBiz OS 도우미'}

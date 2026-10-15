@@ -21,7 +21,26 @@ class MemberBrowserStore {
     tx.oncomplete=()=>resolve(value);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('저장하지 못했습니다'));
   })}
   put(table,id,value){return this.change(table,id,()=>value)}
-  async recover(){for(const name of ['tasks','jobs'])for(const r of await this.all(name))if(['received','running'].includes(r.state)){r.state='unknown';await this.put(name,r.id,r)}}
+  async recover(){await this.migrateSessions();for(const name of ['tasks','jobs'])for(const r of await this.all(name))if(['received','running'].includes(r.state)){r.state='unknown';await this.put(name,r.id,r)}}
+  migrateSessions(){return new Promise((resolve,reject)=>{
+    const tx=this.db.transaction(['tasks','conversations'],'readwrite');
+    const conversations=tx.objectStore('conversations'),tasks=tx.objectStore('tasks');
+    const read=conversations.index('space').getAll(this.space);
+    read.onsuccess=()=>{
+      const rows=read.result.filter(r=>!r.value.task_id).sort((a,b)=>a.value.created-b.value.created);
+      if(!rows.length)return;
+      const id='legacy-conversation',get=tasks.get([this.space,id]);
+      get.onsuccess=()=>{
+        const task=get.result?.value||{id,title:'기존 대화',state:'idle',events:[],created:Date.now(),updated:Date.now()};
+        for(const row of rows){
+          for(const [kind,value] of [['user',row.value.user],['assistant',row.value.assistant]])if(value)task.events.push({kind,value});
+          row.value.task_id=id;conversations.put(row);
+        }
+        tasks.put({space:this.space,id,value:task});
+      };
+    };
+    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+  })}
   async backup(){const tables={};for(const t of MEMBER_TABLES)tables[t]=await this.all(t);return {format:'indiebiz-member-browser',version:1,tables}}
   async restore(archive){
     if(archive?.format!=='indiebiz-member-browser'||archive.version!==1||!archive.tables)throw Error('지원하는 회원 백업 파일이 아닙니다');
@@ -32,7 +51,7 @@ class MemberBrowserStore {
         if(!value||typeof value.id!=='string'||!value.id||value.id.length>512)throw Error('잘못된 백업 기록입니다');
         const key=table+'\0'+value.id;if(seen.has(key))throw Error('백업에 중복 ID가 있습니다');seen.add(key);
         if(table==='files'){if(memberPath(value.id)!==value.id||typeof value.data!=='string'||value.data.length>45000000)throw Error('잘못된 파일 기록입니다')}
-        if(table==='tasks'&&(!Array.isArray(value.events)||value.events.length>10000))throw Error('잘못된 작업 기록입니다');
+        if(table==='tasks'&&!Array.isArray(value.events))throw Error('잘못된 작업 기록입니다');
         if(['received','running'].includes(value.state))value.state='unknown';rows.push({table,id:value.id,value});
       }
     }

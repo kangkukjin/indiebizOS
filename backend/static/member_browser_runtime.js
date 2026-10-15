@@ -102,21 +102,23 @@ class MemberBrowserRuntime {
   }
   async program(code,input){this.programAbort=new AbortController();try{return await memberJavascript(code,input,this.programAbort.signal)}finally{this.programAbort=null}}
   async start(body){
-    if(!this.active)throw Error('허브에 다시 연결하세요');if(this.running)throw Error('진행 중인 작업을 완료하거나 중단하세요');
+    if(!this.active)throw Error('허브에 다시 연결하세요');if(this.running&&!body.create_only)throw Error('진행 중인 작업을 완료하거나 중단하세요');
     // 산출물 경로는 기기에서만 해소한다. 허브 요청에는 보내지 않는다.
     if(body.output){const output=memberPath(body.output);if(output==='.')throw Error('산출물 파일 이름이 필요합니다');body={...body,output};}
     let task=body.task_id?await this.store.get('tasks',body.task_id):null;
     if(body.task_id&&!task)throw Error('작업이 없습니다');
-    const message=String(body.message||'').trim();if(!message&&!body.code&&!body.action_id)throw Error('요청을 입력하세요');
+    const message=String(body.message||'').trim();if(!body.create_only&&!message&&!body.code&&!body.action_id)throw Error('요청을 입력하세요');
     const title=typeof body.title==='string'?body.title.slice(0,100):'';
-    if(!task)task={id:crypto.randomUUID(),title:title||message.slice(0,60)||'앱 실행',workspace:'브라우저의 내 작업 공간',events:[],created:Date.now()};
+    if(!task)task={id:crypto.randomUUID(),title:title||message.slice(0,60)||(body.create_only?'새 세션':'앱 실행'),workspace:'브라우저의 내 작업 공간',events:[],created:Date.now()};
+    if(body.create_only){task.state='idle';task.updated=Date.now();await this.store.put('tasks',task.id,task);return {success:true,task_id:task.id}}
+    if(task.title==='새 세션')task.title=message.slice(0,60)||title||'앱 실행';
     if(task.state==='input_required'&&!body.action_id)body={...body,reply_to:task.request_id};
     task.state='running';task.updated=Date.now();task.events.push({kind:'user',value:title||message});this.running=task.id;this.stopped.delete(task.id);
     try{await this.store.put('tasks',task.id,task)}catch(e){this.running='';throw e}
     body={...body,request_id:crypto.randomUUID()};await this.store.change('tasks',task.id,t=>({...t,request_id:body.request_id,origin:body.app_id||t.origin}));
     this.runTask(task.id,body);return {success:true,task_id:task.id,queued:true};
   }
-  async event(id,kind,value){return this.store.change('tasks',id,t=>({...t,events:[...t.events,{kind,value}].slice(-500)}))}
+  async event(id,kind,value){return this.store.change('tasks',id,t=>({...t,events:[...t.events,{kind,value}]}))}
   async runTask(id,body){
     this.abort=new AbortController();let result={success:false,error:'연결이 끊겼습니다. 결과를 확인하세요.'},state='unknown';
     try{

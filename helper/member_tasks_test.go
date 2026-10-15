@@ -185,3 +185,32 @@ func TestMemberCancelStopsShellChildren(t *testing.T) {
 		t.Fatal("child continued", e)
 	}
 }
+
+func TestMemberLegacyConversationMigrationIsIdempotent(t *testing.T) {
+	m := testMember(t)
+	_, err := m.store.db.Exec("INSERT INTO conversations(id,user,assistant,created) VALUES('old','old question','old answer',1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := m.initTasks(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	task := m.task("legacy-conversation")
+	events := task["events"].([]map[string]interface{})
+	if len(events) != 2 || events[0]["value"] != "old question" || events[1]["value"] != "old answer" {
+		t.Fatal(task)
+	}
+	var sid string
+	if err := m.store.db.QueryRow("SELECT task_id FROM conversations WHERE id='old'").Scan(&sid); err != nil || sid != "legacy-conversation" {
+		t.Fatal(sid, err)
+	}
+	m.taskMu.Lock()
+	m.runningTask = "other-running-session"
+	m.taskMu.Unlock()
+	created := m.startTask(map[string]interface{}{"create_only": true})
+	if created["success"] != true || m.task(created["task_id"].(string))["state"] != "idle" {
+		t.Fatal(created)
+	}
+}

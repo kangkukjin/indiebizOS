@@ -123,6 +123,15 @@ def _ensure_agent_runner(project_id: str, agent_id: str, agent_config: dict, age
     from datetime import datetime
     from agent_runner import AgentRunner
 
+    from conversation_sessions import current as current_conversation
+    binding = current_conversation()
+    if binding:
+        cfg = dict(agent_config, _project_path=str(project_manager.get_project_path(project_id)),
+                   _project_id=project_id, _conversation_session=binding.session_id)
+        isolated = AgentRunner(cfg, agents_data.get("common", {}) or {})
+        isolated._init_ai()
+        isolated.running = True
+        return {"runner": isolated}
     agent_runners = get_agent_runners()
     info = (agent_runners.get(project_id) or {}).get(agent_id)
     runner = info.get("runner") if info else None
@@ -613,7 +622,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 현재 컨텍스트(에피소드 contextvar 포함)를 복사해 executor 스레드로 전파 —
         # run_stream 의 로그가 이 요청의 에피소드 버퍼로 모인다(동시 실행 격리). 에피소드가
         # 없으면 None 컨텍스트라 무해.
-        executor.submit(contextvars.copy_context().run, run_stream)
+        future = executor.submit(contextvars.copy_context().run, run_stream)
+        owned = runs.registry.current(client_id)
+        if owned is not None:
+            owned.workers.append(future)
 
         # 이벤트 수신 및 클라이언트 전송
         # 영상 제작 등 오래 걸리는 작업을 위해 타임아웃을 10분으로 설정
@@ -976,7 +988,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         # 현재 컨텍스트(에피소드 contextvar 포함)를 복사해 executor 스레드로 전파 —
         # run_stream 의 로그가 이 요청의 에피소드 버퍼로 모인다(동시 실행 격리). 에피소드가
         # 없으면 None 컨텍스트라 무해.
-        executor.submit(contextvars.copy_context().run, run_stream)
+        future = executor.submit(contextvars.copy_context().run, run_stream)
+        owned = runs.registry.current(client_id)
+        if owned is not None:
+            owned.workers.append(future)
 
         # 이벤트 수신 및 클라이언트 전송
         # 영상 제작 등 오래 걸리는 작업을 위해 타임아웃을 10분으로 설정

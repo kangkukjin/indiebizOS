@@ -78,7 +78,7 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
         # 레지스트리에 등록 (스레드 안전)
         # 키 형식: {project_id}:{agent_id} - 프로젝트 간 충돌 방지
         agent_id = agent_config.get("id")
-        if agent_id:
+        if agent_id and not agent_config.get("_conversation_session"):
             registry_key = f"{self.project_id}:{agent_id}" if self.project_id else agent_id
             self.registry_key = registry_key  # stop()에서 사용
             with AgentRunner._lock:

@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from contextlib import contextmanager
 from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
+import conversation_sessions as sessions
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent.parent
@@ -154,6 +155,7 @@ def init_memory_db():
         except sqlite3.OperationalError:
             pass
 
+    sessions.ensure_schema(conn, "conversations")
     conn.commit()
     conn.close()
 
@@ -229,10 +231,13 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
     conn = _get_connection()
     cursor = conn.cursor()
 
+    owner = source if source in ("appmaker", "rehearsal") else "system_ai"
+    sid = sessions.resolve(conn, MEMORY_DB_PATH, owner, "conversations")
     cursor.execute("""
-        INSERT INTO conversations (timestamp, role, content, importance, source)
-        VALUES (?, ?, ?, ?, ?)
-    """, (datetime.now().isoformat(), role, content, importance, source))
+        INSERT INTO conversations (timestamp, role, content, importance, source, session_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (datetime.now().isoformat(), role, content, importance, source, sid))
+    sessions.touch(conn, sid, content if role == "user" else None)
 
     conversation_id = cursor.lastrowid
 
@@ -276,6 +281,9 @@ def clear_conversations() -> Dict[str, int]:
         cur = conn.cursor()
         cur.execute("BEGIN IMMEDIATE")
         n_conv = cur.execute("DELETE FROM conversations").rowcount
+        for table in ("history_checkpoint_versions", "conversation_events", "conversation_turns"):
+            if cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                cur.execute(f"DELETE FROM {table}")
         n_ckpt = 0
         has_ckpt = cur.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='history_checkpoints'"
@@ -429,14 +437,16 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
 
     # thread 는 코드-제어 상수만(사용자 입력 아님) → 고정 절로 매핑.
     src_clause = _thread_clause(thread, "AND")
+    sid = sessions.resolve(conn, MEMORY_DB_PATH, thread, "conversations")
+    conn.commit()
     cursor.execute(f"""
         SELECT id, timestamp, role, content, summary, importance, images
         FROM conversations
-        WHERE role IN ('user', 'assistant')
+        WHERE role IN ('user', 'assistant') AND session_id=?
         {src_clause}
         ORDER BY id DESC
         LIMIT ?
-    """, (limit,))
+    """, (sid, limit))
 
     rows = cursor.fetchall()
     conn.close()
@@ -470,6 +480,8 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
                 msg["images"] = loaded_images
 
         history.append(msg)
+
+    history = sessions.bounded_history(history)
 
     # 하드캡 요약 체크포인트를 머리에 주입 (history_checkpoint — 없으면 무변화, fail-soft)
     if _ckpt_apply:

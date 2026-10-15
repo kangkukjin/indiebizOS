@@ -68,7 +68,7 @@ LAYERS = {
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
         "red_grant", "red_report", "red_watchdog", "restart_red", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
-        "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
+        "conversation_sessions", "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
         "websocket_manager", "xray_stream", "media_store",
     },
@@ -135,7 +135,7 @@ LAYERS = {
         "indienet_common", "indienet_publish", "indienet_relay",
         "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",
         "nas_webapp", "nostr_phone_bridge", "oneshot_facade",
-        "phone_notifications", "sync_exchange", "chat_streams", "chat_runs",
+        "phone_notifications", "sync_exchange", "chat_streams", "chat_runs", "chat_session_service",
         "report_html", "scheduler", "warehouse_adapters", "warehouse_feed",
     },
     # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한

@@ -36,6 +36,10 @@ def handle_session_reset() -> str:
         from providers import clear_cli_sessions_for_agent
         from thread_context import get_current_registry_key
         key = get_current_registry_key() or "default"
+        from conversation_sessions import current
+        binding = current()
+        if binding:
+            key += "@session:" + binding.session_id
         clear_cli_sessions_for_agent(key)
         print(f"[SESSION_RESET] 세션 매핑 클리어: {key}")
     except Exception as e:

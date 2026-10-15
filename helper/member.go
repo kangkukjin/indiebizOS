@@ -175,11 +175,10 @@ func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 	case "file_find", "grep":
 		return m.findFiles(c)
 	case "memory_save":
-		result := m.store.save(c.Record)
-		if c.TaskID != "" && result["success"] == true {
-			_, _ = m.store.db.Exec("UPDATE conversations SET task_id=? WHERE id=?", c.TaskID, c.Record["id"])
+		if c.Record != nil {
+			c.Record["task_id"] = c.TaskID
 		}
-		return result
+		return m.store.save(c.Record)
 	case "memory_recall":
 		return m.recallTask(c)
 	case "script":

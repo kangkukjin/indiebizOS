@@ -49,8 +49,14 @@ class WebSocketManager:
 
     async def send_message(self, client_id: str, message: dict):
         """특정 클라이언트에 메시지 전송"""
+        from conversation_sessions import current, record_event
+        binding = current()
+        if binding:
+            message = {**message, "session_id": binding.session_id, "turn_id": binding.turn_id}
+            record_event(message)
         if client_id not in self.active_connections:
-            print(f"[WS 경고] 연결 없음: {client_id} - 메시지 전송 건너뜀")
+            if not binding:
+                print(f"[WS 경고] 연결 없음: {client_id} - 메시지 전송 건너뜀")
             return False
 
         websocket = self.active_connections[client_id]

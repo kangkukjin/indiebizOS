@@ -91,6 +91,10 @@ def owner_for(runner):
         if not path:
             return None
         db, owner = Path(path) / "conversations.db", str(agent)
+    from conversation_sessions import current
+    binding = current()
+    if binding:
+        owner += "@session:" + binding.session_id
     return PursuitLedger(db, owner), str(agent), str(task)
 
 

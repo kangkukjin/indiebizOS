@@ -884,7 +884,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
           <div className="p-3 border-b border-[#E5DFD5]">
             <h3 className="text-sm font-semibold text-[#6B5B4F]">에이전트 목록</h3>
           </div>
-          <div className="flex-1 overflow-auto">
+          <div className="max-h-[45%] overflow-auto shrink-0">
             {agents.length === 0 ? (
               <div className="p-4 text-center text-[#A09080]">에이전트가 없습니다</div>
             ) : (
@@ -904,6 +904,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
               ))
             )}
           </div>
+          <div id="project-sessions" className="flex-1 min-h-0 border-t border-[#D8D0C5]" />
         </div>
 
         {/* 오른쪽 - 채팅/로그 */}

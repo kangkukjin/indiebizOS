@@ -178,6 +178,7 @@
     "datastore/calendar_rules",
     "datastore/coding_store",
     "datastore/conversation_db",
+    "datastore/conversation_sessions",
     "datastore/decision_ledger",
     "datastore/distill_ledger",
     "datastore/document_store",
@@ -349,6 +350,7 @@
     "services/channel_settings_ops",
     "services/chat_room_ops",
     "services/chat_runs",
+    "services/chat_session_service",
     "services/chat_streams",
     "services/client_agent",
     "services/coding_git",
@@ -422,6 +424,7 @@
     "services/workspace_sessions",
     "surface/api_agents",
     "surface/api_business",
+    "surface/api_chat_sessions",
     "surface/api_coding",
     "surface/api_config_tiers",
     "surface/api_conversations",
@@ -604,8 +607,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 529,
-    "engine": 497,
+    "total": 532,
+    "engine": 500,
     "blocklist": 32
   }
 }

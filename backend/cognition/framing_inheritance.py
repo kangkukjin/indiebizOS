@@ -80,7 +80,9 @@ def agent_key(runner) -> str:
     config = getattr(runner, "config", {}) or {}
     if not key:
         key = config.get("id") or ("system_ai" if config.get("_is_system_ai") else "")
-    return str(key or "")
+    from conversation_sessions import current
+    binding = current()
+    return str(key or "") + ("@session:" + binding.session_id if binding else "")
 
 
 def _store_path(key: str) -> Path:

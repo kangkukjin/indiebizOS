@@ -12,6 +12,8 @@ from fastapi import APIRouter, HTTPException
 from conversation_db import ConversationDB
 
 router = APIRouter()
+from api_chat_sessions import router as sessions_router
+router.include_router(sessions_router)
 
 # 매니저 인스턴스
 project_manager = None
@@ -21,6 +23,8 @@ def init_manager(pm):
     """매니저 인스턴스 초기화"""
     global project_manager
     project_manager = pm
+    import chat_session_service
+    chat_session_service.project_manager = pm
 
 
 # ============ 대화 API ============

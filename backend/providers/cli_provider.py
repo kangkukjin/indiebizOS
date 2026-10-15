@@ -1229,10 +1229,12 @@ class CliSubprocessProvider(BaseProvider):
         if getattr(self, 'execution_profile', '') == 'coding':
             return self.coding_session_key
         # 리허설 턴은 자기 세션을 쓴다 — 주인의 실제 대화 세션을 이어받거나 지우지 않는다.
-        suffix = ""
+        from conversation_sessions import current as current_conversation
+        binding = current_conversation()
+        suffix = "@session:" + binding.session_id if binding else ""
         try:
             from thread_context import get_current_registry_key, in_rehearsal
-            suffix = "@rehearsal" if in_rehearsal() else ""
+            suffix += "@rehearsal" if in_rehearsal() else ""
             key = get_current_registry_key()
             if key:
                 return key + suffix

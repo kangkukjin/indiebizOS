@@ -79,8 +79,10 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
         return result;
       }
       if(path==='task/start'){
-        const id=body.task_id||'new';let t=fixtureTasks.find(t=>t.id===id);
-        if(!t){t={id,title:body.message,state:'completed',workspace:'/selected',events:[]};fixtureTasks.unshift(t)}
+        const id=body.task_id||('new-'+fixtureTasks.length);let t=fixtureTasks.find(t=>t.id===id);
+        if(!t){t={id,title:body.create_only?'새 세션':body.message,state:'completed',workspace:'/selected',events:[]};fixtureTasks.unshift(t)}
+        if(body.create_only)return {success:true,task_id:id};
+        if(t.title==='새 세션')t.title=body.message;
         t.events.push({kind:'user',value:body.message},{kind:'assistant',value:'새 세션에서 답변합니다.'});
         if(window.delayStart)await new Promise(resolve=>window.releaseStart=resolve);
         return {success:true,task_id:id};
@@ -130,7 +132,7 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
             expect(page.locator('#chat .bubble')).to_have_count(0)
             expect(page.locator('#chatEmpty')).to_be_visible()
             expect(page.locator('#send')).to_be_visible()
-            expect(page.locator('#taskList button')).to_have_count(1)
+            expect(page.locator('#taskList button')).to_have_count(2)
             page.screenshot(path=str(tmp_path / 'new-session.png'))
             page.locator('#message').fill('새 대화의 질문')
             page.locator('#sendButton').click()

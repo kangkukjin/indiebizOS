@@ -84,7 +84,14 @@ def catalogue(local_apps=None):
                     if browser and (button.get('request') or button.get('action')):
                         button['client_action_id'] = f"{action_id}:button:{i}"
             instruments.append(app)
-    return {'success': True, 'instruments': instruments, 'open_words': sorted(allowed)}
+    dictionary = [
+        {'id': f'{node}:{name}', 'description': action.get('description', '')}
+        for node, config in nodes.items() for name, action in config.get('actions', {}).items()
+        if f'{node}:{name}' in allowed
+    ]
+    dictionary.sort(key=lambda word: word['id'])
+    return {'success': True, 'instruments': instruments, 'open_words': sorted(allowed),
+            'dictionary': dictionary}
 
 
 def web_catalogue(local_apps=None):

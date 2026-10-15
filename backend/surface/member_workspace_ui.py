@@ -4,11 +4,12 @@ from member_app_frame import frame_html
 
 WORKSPACE_STYLE = r'''
 [hidden]{display:none!important}
-main{max-width:1500px;height:100dvh;display:flex;flex-direction:column;padding:22px 28px}
+#status:empty{display:none}
+main{max-width:1500px;height:100dvh;display:flex;flex-direction:column;padding:12px 20px}
 header{gap:16px;flex-shrink:0}header h1{margin:0;font-size:22px}#notice{margin:12px 0 6px}
-#workspaceLayout{display:flex;flex-direction:column;margin-top:20px;flex:1;min-height:0}
+#workspaceLayout{display:flex;flex-direction:column;margin-top:8px;flex:1;min-height:0}
 #workArea{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
-#taskSessionMenu{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:12px;flex-shrink:0}
+#taskSessionMenu{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;margin-bottom:8px;flex-shrink:0}
 #taskSessionMenu button{flex-shrink:0;white-space:nowrap;font-size:12px;padding:8px}
 #taskHistory{margin:auto;padding:20px;width:1040px;max-width:94vw;height:82dvh;max-height:90dvh;box-sizing:border-box;border:1px solid #d4ded7;border-radius:16px;background:#f7f8f2;color:#284f3e}
 #taskHistory[open]{display:flex;flex-direction:column}#taskHistory::backdrop{background:rgba(0,0,0,.35)}#taskHistoryHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
@@ -25,17 +26,24 @@ header{gap:16px;flex-shrink:0}header h1{margin:0;font-size:22px}#notice{margin:1
 .bubble.user::before{content:'나'}.bubble.assistant::before{content:'IndieBiz'}
 #chatEmpty{display:flex;min-height:260px;height:100%;align-items:center;justify-content:center;flex-direction:column;text-align:center;color:#62716d;padding:30px}
 #chatEmpty h3{color:#284f3e;font-size:24px;margin:0 0 14px}#chatEmpty p{max-width:440px;line-height:1.8;margin:4px 0}
-#send{position:static;margin:0;padding:14px 0 8px;align-items:flex-end;flex-shrink:0}#message{min-width:0;resize:vertical;max-height:180px}#sessionHint{font-size:12px;color:#62716d;margin:0 0 8px}
-#taskControls{display:flex;gap:12px;align-items:center;justify-content:space-between;min-height:26px;margin-bottom:10px}#taskStateLabel{font-size:13px;color:#5b7266}
+#send{position:static;margin:0;padding:14px 0 8px;align-items:flex-end;flex-shrink:0}#message{min-width:0;resize:vertical;max-height:180px}
+#taskControls{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:4px}#taskStateLabel{font-size:13px;color:#5b7266}
+#taskControls:not(:has(button:not([hidden]))):has(#taskStateLabel:empty){display:none}
 #taskStop{padding:8px 12px}#taskQuestion{padding:16px;background:#fff5dc;border-radius:12px;white-space:pre-wrap}
 #taskProgress{color:#5b7266;font-size:13px;max-height:180px;overflow:auto}#taskQuestion:empty,#taskProgress:empty{display:none}
 #appsPanel,#filesPanel{flex:1;min-height:0;overflow:auto}#appsPanel h2{margin:4px 0 16px;font-size:22px}#appFrame{width:100%;height:calc(100% - 125px);min-height:360px;border:0}
 #fileEditor{width:100%;min-height:300px;font:14px ui-monospace,monospace}#fileRows button{margin:5px;background:#e7eee8;color:#264b37}#filePath{width:70%;padding:12px;border:1px solid #b9c9c0;border-radius:8px}.fileActions{display:flex;gap:10px;margin:12px 0}
 #approvals{max-height:35vh;overflow:auto;flex-shrink:0}
+#memberDictionary{margin:auto;width:680px;max-width:94vw;max-height:85dvh;padding:16px;border:1px solid #d4ded7;border-radius:16px;background:#f7f8f2;color:#284f3e}
+#memberDictionary::backdrop{background:rgba(0,0,0,.35)}#memberDictionaryHead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#memberDictionarySearch{width:100%;padding:10px;margin:12px 0;border:1px solid #bdc9c1;border-radius:8px;font:inherit}
+#memberDictionaryList{max-height:60vh;overflow:auto}#memberDictionaryList button{display:block;width:100%;text-align:left;background:white;color:#203b31;margin:6px 0;padding:12px}
+#memberDictionaryList small{display:block;margin-top:5px;white-space:pre-wrap}#memberSettings{margin:12px 0}#memberSettings #notice{font-size:13px;line-height:1.6}
+@media(max-width:480px){main{padding:8px!important}#taskSessionMenu{gap:2px}#taskSessionMenu button{padding:7px 4px;font-size:11px}#taskTitle{font-size:13px}}
 @media(max-width:700px){main{height:auto;min-height:100dvh;padding:16px}#workspaceLayout{margin-top:12px}#workspaceSettings{margin-top:8px;padding-top:8px}#conversationScroll{max-height:60vh}#chatEmpty{min-height:200px}header h1{font-size:18px}#send{position:sticky;bottom:0}#appFrame{height:70vh}.user{margin-left:20px}.assistant{margin-right:0}}
 '''
-SIDEBAR = '''<div id="workspaceLayout"><div id="workArea"><div id="taskSessionMenu" aria-label="대화 세션 메뉴"><h2 id="taskTitle">새 세션</h2><button id="taskHistoryOpen" class="secondary">히스토리</button><button id="newTask">＋ 새 세션</button></div><dialog id="taskHistory" aria-label="대화 히스토리"><div id="taskHistoryHead"><strong>대화 히스토리</strong><button id="taskHistoryClose" class="secondary">닫기</button></div><div id="taskList"></div></dialog><nav id="memberNav" aria-label="작업 표면"><button data-view="drive" class="active" aria-pressed="true">자율주행</button><button data-view="apps" aria-pressed="false">앱</button></nav><div id="taskControls"><span id="taskStateLabel" role="status"></span><button type="button" class="secondary" id="taskStop" hidden>작업 중단</button></div><section id="drivePanel"><div id="conversationScroll"><div id="chatEmpty"><h3>어떤 일을 함께 할까요?</h3><p>메시지를 보내면 이곳에 나의 요청과 AI의 답변이 차례로 표시됩니다.</p><p>위의 히스토리에서 이전 대화를 열거나 새 세션을 시작할 수 있습니다.</p></div><div id="taskQuestion" aria-live="polite"></div><div id="taskProgress" aria-live="polite"></div>'''
-PANELS = '''</section><section id="appsPanel" hidden><h2>내 앱</h2><details id="workspaceSettings"><summary>내 작업 폴더</summary><small id="workspacePath"></small><input id="workspacePicker" aria-label="작업 폴더" placeholder="이 컴퓨터의 폴더 경로"><button id="setWorkspace" class="secondary">폴더 선택</button></details><button id="reloadApps" class="secondary">앱 새로고침</button><button id="openMemberFiles" class="secondary">내 파일 · 가져오기 · 내려받기</button><p id="appStatus"></p><iframe id="appFrame" title="내 기기에서 쓰는 앱" sandbox="allow-scripts"></iframe></section><section id="filesPanel" hidden><button id="backToApps" class="secondary">앱으로 돌아가기</button><input id="filePath" value="." aria-label="파일 경로"><div class="fileActions"><button id="browseFiles">폴더 열기</button><button id="readFile">파일 읽기</button><button id="saveFile">저장</button><input id="importFile" type="file" aria-label="파일 가져오기"></div><div id="fileRows"></div><textarea id="fileEditor" aria-label="파일 내용" placeholder="파일을 열거나 새 내용을 쓰세요"></textarea><p id="fileStatus"></p></section></div></div>'''
+SIDEBAR = '''<div id="workspaceLayout"><div id="workArea"><nav id="memberNav" aria-label="작업 표면"><button data-view="drive" class="active" aria-pressed="true">자율주행</button><button data-view="apps" aria-pressed="false">앱</button></nav><div id="taskSessionMenu" aria-label="대화 세션 메뉴"><h2 id="taskTitle">새 세션</h2><button id="taskOlder" class="secondary" hidden>이전 대화 읽기</button><button id="taskHistoryOpen" class="secondary">히스토리</button><button id="newTask">＋ 새 세션</button><button id="memberDictionaryOpen" class="secondary">IBL 사전</button></div><dialog id="memberDictionary" aria-label="IBL 사전"><div id="memberDictionaryHead"><strong>IBL 사전</strong><button id="memberDictionaryClose" class="secondary">닫기</button></div><input id="memberDictionarySearch" type="search" placeholder="낱말 찾기" aria-label="IBL 낱말 찾기"><div id="memberDictionaryList"></div></dialog><dialog id="taskHistory" aria-label="대화 히스토리"><div id="taskHistoryHead"><strong>대화 히스토리</strong><button id="taskHistoryClose" class="secondary">닫기</button></div><div id="taskList"></div></dialog><div id="taskControls"><span id="taskStateLabel" role="status"></span><button type="button" class="secondary" id="taskStop" hidden>작업 중단</button></div><section id="drivePanel"><div id="conversationScroll"><div id="chatEmpty"><h3>어떤 일을 함께 할까요?</h3><p>메시지를 보내면 이곳에 나의 요청과 AI의 답변이 차례로 표시됩니다.</p><p>위의 히스토리에서 이전 대화를 열거나 새 세션을 시작할 수 있습니다.</p></div><div id="taskQuestion" aria-live="polite"></div><div id="taskProgress" aria-live="polite"></div>'''
+PANELS = '''</section><section id="appsPanel" hidden><h2>내 앱</h2><details id="memberSettings"><summary>기기 · 연결 · 백업</summary><p id="notice">대화와 기억은 이 기기에 저장됩니다. 요청 내용은 허브와 모델 제공자를 거쳐 처리됩니다.</p><button class="secondary" id="export">기억 내보내기</button></details><details><summary>최근 작업 결과</summary><div id="results"></div></details><details id="workspaceSettings"><summary>내 작업 폴더</summary><small id="workspacePath"></small><input id="workspacePicker" aria-label="작업 폴더" placeholder="이 컴퓨터의 폴더 경로"><button id="setWorkspace" class="secondary">폴더 선택</button></details><button id="reloadApps" class="secondary">앱 새로고침</button><button id="openMemberFiles" class="secondary">내 파일 · 가져오기 · 내려받기</button><p id="appStatus"></p><iframe id="appFrame" title="내 기기에서 쓰는 앱" sandbox="allow-scripts"></iframe></section><section id="filesPanel" hidden><button id="backToApps" class="secondary">앱으로 돌아가기</button><input id="filePath" value="." aria-label="파일 경로"><div class="fileActions"><button id="browseFiles">폴더 열기</button><button id="readFile">파일 읽기</button><button id="saveFile">저장</button><input id="importFile" type="file" aria-label="파일 가져오기"></div><div id="fileRows"></div><textarea id="fileEditor" aria-label="파일 내용" placeholder="파일을 열거나 새 내용을 쓰세요"></textarea><p id="fileStatus"></p></section></div></div>'''
 
 
 def workspace_js():
@@ -49,12 +57,15 @@ function setMemberView(view){
  document.getElementById('appsPanel').hidden=view!=='apps';
  document.getElementById('filesPanel').hidden=view!=='files';
  document.getElementById('drivePanel').hidden=view!=='drive';
+ document.getElementById('taskSessionMenu').hidden=view!=='drive';
+ document.getElementById('send').hidden=view!=='drive';
  document.getElementById('taskStateLabel').hidden=view!=='drive';
  if(view==='apps')refreshApps();
 }
 function selectMemberSession(id=''){
  document.getElementById('taskHistory').close();
  memberDrafts.set(currentTask,document.getElementById('message').value);
+ memberVisibleStart=null;memberCurrentSnapshot=null;document.getElementById('taskOlder').hidden=true;
  currentTask=id;taskSelectionReady=true;taskSelectionVersion++;taskSignature='';taskListSignature='';
  if(!id)memberDrafts.delete('');
  document.getElementById('message').value=memberDrafts.get(id)||'';
@@ -66,6 +77,13 @@ function selectMemberSession(id=''){
  setMemberView('drive');refreshTasks();refreshApps();document.getElementById('message').focus();
 }
 async function memberBoot(){
+ const dictionary=document.getElementById('memberDictionary');
+ document.getElementById('memberDictionaryOpen').onclick=()=>{dictionary.showModal();renderMemberDictionary();refreshApps()};
+ document.getElementById('memberDictionaryClose').onclick=()=>dictionary.close();
+ dictionary.onclick=e=>{if(e.target===dictionary)dictionary.close()};
+ document.getElementById('memberDictionarySearch').oninput=renderMemberDictionary;
+ document.getElementById('taskOlder').onclick=()=>{if(memberCurrentSnapshot){memberVisibleStart=Math.max(0,memberVisibleStart-50);renderMemberConversation(memberCurrentSnapshot,true)}};
+
  const history=document.getElementById('taskHistory');
  document.getElementById('taskHistoryOpen').onclick=()=>history.showModal();
  document.getElementById('taskHistoryClose').onclick=()=>history.close();
@@ -76,7 +94,7 @@ async function memberBoot(){
  document.getElementById('newTask').onclick=async()=>{const button=document.getElementById('newTask');button.disabled=true;try{const r=await memberRequest('task/start',{create_only:true});if(!r.success)throw Error(r.message||r.error);selectMemberSession(r.task_id)}catch(e){document.getElementById('status').textContent=e.message}finally{button.disabled=false}};
  document.getElementById('setWorkspace').onclick=async()=>{const r=await memberRequest('workspace',{path:document.getElementById('workspacePicker').value});if(!r.success)return alert(r.message||r.error);document.getElementById('workspacePath').textContent=r.workspace;document.getElementById('newTask').click();refreshApps()};
  try{const r=await memberRequest('workspace');document.getElementById('workspacePath').textContent=r.workspace;document.getElementById('workspacePicker').value=r.workspace||'';if(r.fixed){document.getElementById('workspacePicker').disabled=true;document.getElementById('setWorkspace').hidden=true}}catch(e){}
- memberRequest('profile',{}).then(r=>document.getElementById('status').textContent=r.success?'연결됨 · 요청을 처리하고 결과를 이 기기로 받습니다':r.error).catch(()=>document.getElementById('status').textContent='오프라인 · 작업 기록은 이 컴퓨터에 보존됩니다');
+ memberRequest('profile',{}).then(r=>document.getElementById('status').textContent=r.success?'':r.error).catch(()=>document.getElementById('status').textContent='오프라인 · 작업 기록은 이 컴퓨터에 보존됩니다');
  document.getElementById('reloadApps').onclick=refreshApps;document.getElementById('openMemberFiles').onclick=()=>{setMemberView('files');memberFiles('list')};document.getElementById('backToApps').onclick=()=>setMemberView('apps');refreshApps();
  document.getElementById('send').onsubmit=async e=>{
   e.preventDefault();const input=document.getElementById('message'),text=input.value.trim();if(!text||taskSubmitting)return;
@@ -95,7 +113,7 @@ async function memberBoot(){
  setInterval(memberApprovals,1000);if(!window.MemberBridge)setInterval(memberMedia,500);setInterval(refreshTasks,1000);setInterval(refreshMemberResults,5000);refreshMemberResults();refreshTasks();
  if(window.memberDesktopBoot)await window.memberDesktopBoot();
 }
-async function refreshApps(){try{const r=await memberRequest('apps',{task_id:currentTask});memberApps=r.instruments||[];document.getElementById('appStatus').textContent=r.local_error||r.error||(!memberApps.length?'현재 이 기기에서 사용할 수 있는 앱이 없습니다.':'');if(frameReady)sendApps()}catch(e){document.getElementById('appStatus').textContent=e.message}}
+async function refreshApps(){try{const r=await memberRequest('apps',{task_id:currentTask});memberApps=r.instruments||[];memberWords=r.dictionary||(r.open_words||[]).map(id=>({id}));memberDictionaryError=r.error||'';renderMemberDictionary();document.getElementById('appStatus').textContent=r.local_error||r.error||(!memberApps.length?'현재 이 기기에서 사용할 수 있는 앱이 없습니다.':'');if(frameReady)sendApps()}catch(e){memberDictionaryError=e.message;renderMemberDictionary();document.getElementById('appStatus').textContent=e.message}}
 function sendApps(){document.getElementById('appFrame').contentWindow.postMessage({memberFrame:'apps',instruments:memberApps},'*')}
 let memberAppGeneration=0;let memberAppQueue=Promise.resolve();
 window.addEventListener('message',e=>{
@@ -154,12 +172,24 @@ async function refreshTasks(){
   document.getElementById('taskTitle').textContent=t.title;
   if(typeof showMemberArtifacts==='function')showMemberArtifacts(t.result);
   document.getElementById('workspacePath').textContent=t.workspace;
-  document.getElementById('taskStateLabel').textContent=({running:window.DesktopMember?'처리 중 · 창을 닫아도 앱은 계속 실행됩니다':'처리 중 · 이 화면을 열어 두세요',input_required:'답변을 기다리고 있습니다',completed:'완료',failed:'작업을 완료하지 못했습니다',cancelled:'중단됨 · 이미 저장한 파일은 유지됩니다',unknown:'최종 결과를 확인하지 못했습니다 · 저장된 결과를 확인하세요'}[t.state]||'');
+  document.getElementById('taskStateLabel').textContent=({running:window.DesktopMember?'처리 중 · 창을 닫아도 앱은 계속 실행됩니다':'처리 중 · 이 화면을 열어 두세요',input_required:'답변을 기다리고 있습니다',completed:'',failed:'작업을 완료하지 못했습니다',cancelled:'중단됨 · 이미 저장한 파일은 유지됩니다',unknown:'최종 결과를 확인하지 못했습니다 · 저장된 결과를 확인하세요'}[t.state]||'');
   document.getElementById('taskQuestion').textContent=t.state==='input_required'?(t.result?.input_required||'추가 내용을 알려주세요'):'';
+  memberCurrentSnapshot=t;renderMemberConversation(t);
+ }catch(e){document.getElementById('status').textContent='대화 목록 확인 실패 · '+e.message}
+ finally{taskBusy=false}
+}
+
+let memberVisibleStart=null,memberCurrentSnapshot=null,memberWords=[],memberDictionaryError='';
+function renderMemberConversation(t,prepend=false){
   const chat=document.getElementById('chat'),scroll=document.getElementById('conversationScroll');
-  const previousTop=scroll.scrollTop,follow=scroll.scrollHeight-scroll.clientHeight-previousTop<80||!chat.childElementCount;
+  const previousHeight=scroll.scrollHeight;
+  const previousTop=scroll.scrollTop,follow=(!prepend)&&(scroll.scrollHeight-scroll.clientHeight-previousTop<80||!chat.childElementCount);
   chat.replaceChildren();const progress=document.getElementById('taskProgress');progress.replaceChildren();
-  for(const event of t.events||[]){
+  const events=t.events||[],messages=events.filter(e=>e.kind==='user'||e.kind==='assistant');
+  if(memberVisibleStart===null)memberVisibleStart=Math.max(0,messages.length-50);
+  const start=messages[memberVisibleStart],offset=start?events.indexOf(start):0;
+  document.getElementById('taskOlder').hidden=memberVisibleStart===0;
+  for(const event of events.slice(offset)){
    if(event.kind==='user'||event.kind==='assistant'){
     if(event.kind==='user')progress.replaceChildren();
     if(event.value)memberBubble(event.kind,event.value,false);
@@ -171,10 +201,21 @@ async function refreshTasks(){
   }
   document.getElementById('chatEmpty').hidden=!!chat.childElementCount;
   if(t.state!=='running')progress.replaceChildren();
-  scroll.scrollTop=follow?scroll.scrollHeight:previousTop;
- }catch(e){document.getElementById('status').textContent='대화 목록 확인 실패 · '+e.message}
- finally{taskBusy=false}
+  scroll.scrollTop=prepend?previousTop+scroll.scrollHeight-previousHeight:follow?scroll.scrollHeight:previousTop;
 }
+function renderMemberDictionary(){
+ const list=document.getElementById('memberDictionaryList');if(!list)return;
+ const query=document.getElementById('memberDictionarySearch').value.trim().toLowerCase();list.replaceChildren();
+ const rows=memberWords.filter(w=>(w.id+' '+(w.description||'')).toLowerCase().includes(query));
+ if(!rows.length){list.textContent=memberDictionaryError|| (query?'찾는 낱말이 없습니다.':'이 회원에게 공개된 낱말이 없습니다.');return}
+ for(const word of rows){
+  const button=document.createElement('button'),title=document.createElement('strong'),description=document.createElement('small');
+  title.textContent='['+word.id+']';description.textContent=word.description||'';button.append(title,description);
+  button.onclick=()=>{const field=document.getElementById('message');field.value+=(field.value&&!/\s$/.test(field.value)?' ':'')+'['+word.id+']{} ';memberDrafts.set(currentTask,field.value);document.getElementById('memberDictionary').close();field.focus()};
+  list.append(button);
+ }
+}
+
 function memberProgressText(v){if(v.type==='command_output')return v.tail||'';const e=v.detail||v;const label={accepted:'요청을 받았습니다',result_ready:'결과를 이 기기로 보내고 있습니다',delivered:'이 기기에 저장했습니다',input_required:'추가 답변이 필요합니다',client_action_required:'이 기기에서 처리하고 있습니다',tool_start:'요청에 필요한 자료와 도구를 확인하고 있습니다',tool_result:'처리 결과를 확인하고 있습니다',thinking:'답변을 준비하고 있습니다',error:'작업을 완료하지 못했습니다'};return label[v.type]||label[e.type]||''}
 async function memberFiles(op){try{const r=await memberRequest('file',{op,path:document.getElementById('filePath').value,task_id:currentTask,content:document.getElementById('fileEditor').value,expected_hash:memberFileHashPath===document.getElementById('filePath').value?memberFileHash:'missing'});if(r.error)throw Error(r.message||r.error);if(op==='read'||op==='write'){memberFileHash=r.sha256||'';memberFileHashPath=document.getElementById('filePath').value}if(op==='read')document.getElementById('fileEditor').value=r.content||'';if(op==='list'){const rows=document.getElementById('fileRows');rows.replaceChildren();for(const f of r.files||r.items||[]){const b=document.createElement('button');b.textContent=f.name;b.onclick=()=>{document.getElementById('filePath').value=f.path||f.name;memberFiles((f.dir||f.is_dir||['directory','dir'].includes(f.type))?'list':'read')};rows.append(b)}}document.getElementById('fileStatus').textContent=op==='write'?'내 컴퓨터에 저장했습니다':r.path||''}catch(e){document.getElementById('fileStatus').textContent=e.message}}
 '''

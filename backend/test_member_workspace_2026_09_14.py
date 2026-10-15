@@ -85,14 +85,18 @@ def test_catalogue_removes_closed_modes_and_never_loads_owner_apps(monkeypatch, 
     import api_launcher_web
     import runtime_utils
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: str(tmp_path))
-    monkeypatch.setattr(member_apps, 'load_nodes_installed', lambda: {'nodes': {'self': {'actions': {'read': {'app': {'instrument': 'files'}}}}}})
-    monkeypatch.setattr(member_apps, 'visible', lambda *args: True)
+    monkeypatch.setattr(member_apps, 'load_nodes_installed', lambda: {'nodes': {'self': {'actions': {
+        'read': {'description': '파일 읽기', 'app': {'instrument': 'files'}},
+        'config': {'description': '비공개 설정'},
+    }}}})
+    monkeypatch.setattr(member_apps, 'visible', lambda node, name, action: name == 'read')
     def derive(include_standalone):
         assert include_standalone is False
         return {'instruments': [{'id':'files', 'modes':[{'name':'read','action':'[self:read]{path:"$path"}'},{'name':'owner','action':'[self:config]{}'}]}]}
     monkeypatch.setattr(api_launcher_web, '_derive_instruments', derive)
     out = member_apps.catalogue()
     assert [m['name'] for m in out['instruments'][0]['modes']] == ['read']
+    assert out['dictionary'] == [{'id': 'self:read', 'description': '파일 읽기'}]
 
 
 def test_app_frame_scripts_parse_and_have_no_local_credentials():

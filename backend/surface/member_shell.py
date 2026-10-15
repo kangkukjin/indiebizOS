@@ -6,12 +6,11 @@ def member_html():
     html = '''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IndieBiz · 회원</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f6f5f1;color:#202a29;font:16px system-ui,sans-serif}main{max-width:840px;margin:0 auto;padding:32px 20px}header{display:flex;justify-content:space-between;align-items:center}h1{font-size:24px}small,#status{color:#62716d}#chat{min-height:45vh;margin:28px 0}.bubble{padding:18px 22px;border-radius:18px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere;background:white}.user{background:#e2eee7;margin-left:60px}.assistant{margin-right:40px}.bubble pre{overflow:auto;background:#f1f3f0;padding:12px}form{display:flex;gap:10px;position:sticky;bottom:0;background:#f6f5f1;padding:12px 0}textarea{flex:1;min-height:64px;border:1px solid #bdc9c1;border-radius:12px;padding:14px;font:inherit}button{background:#245644;color:white;border:0;border-radius:10px;padding:12px 18px;cursor:pointer}button.secondary{background:#e1e6e0;color:#203b31}button:disabled{opacity:.5}.approval{border:2px solid #b7832e;background:#fff8e9;border-radius:12px;padding:18px;margin:15px 0}.approval button{margin-right:8px}.approval pre{max-height:200px;overflow:auto;white-space:pre-wrap}details{margin-top:24px}#notice{font-size:14px;line-height:1.7}#approvals:empty{display:none}
-</style><main><header><h1>내 기기와 함께</h1><button class="secondary" id="export">기억 내보내기</button></header>
-<p id="notice">대화와 기억은 이 기기에 저장됩니다. 요청 내용은 허브와 모델 제공자를 거쳐 처리됩니다.</p><small id="status">연결 확인 중</small>
+</style><main><small id="status" role="status">연결 확인 중</small>
 <audio id="memberAudio" hidden controls style="width:100%;margin-top:16px" aria-label="이 기기의 라디오"></audio>
 <section id="approvals" aria-live="polite"></section><section id="chat" aria-live="polite"></section>
 <form id="send"><textarea id="message" placeholder="이 기기에서 할 일을 말해주세요" aria-label="메시지"></textarea><button id="sendButton">보내기</button><button type="button" class="secondary" id="cancel">중단</button></form>
-<details><summary>최근 작업 결과</summary><div id="results"></div></details></main><script>window.__MEMBER=true;</script>''' + LAUNCHER_COMMON_JS + '''
+</main><script>window.__MEMBER=true;</script>''' + LAUNCHER_COMMON_JS + '''
 const memberToken=location.hash.slice(1)||sessionStorage.getItem('member-token')||'';if(memberToken)sessionStorage.setItem('member-token',memberToken);history.replaceState(null,'',location.pathname);
 const memberNativePending=new Map();let memberNativeId=0;
 window.memberNativeResult=(id,value)=>{const resolve=memberNativePending.get(id);if(resolve){memberNativePending.delete(id);resolve(value)}};
@@ -36,9 +35,7 @@ async function memberMedia(){if(memberMediaBusy)return;memberMediaBusy=true;try{
 
     from member_workspace_ui import WORKSPACE_STYLE, SIDEBAR, PANELS, workspace_js
     html = html.replace('</style>', WORKSPACE_STYLE + '</style>', 1)
-    html = html.replace('<h1>내 기기와 함께</h1>', '<h1>IndieBiz · 내 작업 공간</h1>')
     html = html.replace('<section id="approvals" aria-live="polite"></section>', '<section id="approvals" aria-live="polite"></section>' + SIDEBAR)
     html = html.replace('<form id="send">', '</div><form id="send">', 1)
-    html = html.replace('<details><summary>최근 작업 결과</summary>', '<p id="sessionHint">새 세션은 대화 화면을 새로 시작합니다. 이전 대화와 기억은 이 기기에 보존됩니다.</p><details><summary>최근 작업 결과</summary>', 1)
     html = html.replace('</main><script>', PANELS + '</main><script>', 1)
     return html.replace('</script></html>', workspace_js() + '</script></html>')

@@ -40,7 +40,7 @@ def test_desktop_bundled_ui_reaches_update_health_handshake(tmp_path):
                 settings:async()=>({name:'검증 PC',hub:'https://hub.example',startup:false}),
                 request:async(path)=>{if(['tasks','approvals','results','media','changes'].includes(path))return [];
                     if(path==='workspace')return {success:true,workspace:'/selected'};
-                    if(path==='apps')return {success:true,instruments:[{id:'sample',name:'검증 앱',modes:[]}]};return {success:true,screen:false};},
+                    if(path==='apps')return {success:true,instruments:[{id:'sample',name:'검증 앱',modes:[]}],dictionary:[{id:'sense:weather',description:'지역 날씨 확인'}]};return {success:true,screen:false};},
                 updateStatus:async()=>({state:'unconfigured',configured:false,auto:false}),
                 updateCheck:async()=>{},updateApply:async()=>{},updateAuto:async()=>{},
                 startup:async()=>{},disconnect:async()=>{},importArchive:async()=>{},saveDiagnostics:async()=>{},
@@ -48,6 +48,8 @@ def test_desktop_bundled_ui_reaches_update_health_handshake(tmp_path):
             };''')
             page.goto((tmp_path / 'workspace.html').as_uri())
             page.wait_for_function('window.bootReady===true')
+            page.locator('[data-view="apps"]').click()
+            page.locator('#memberSettings > summary').click()
             page.get_by_text('앱 업데이트', exact=True).click()
             expect(page.locator('#desktopUpdateStatus')).to_contain_text('업데이트 채널')
             expect(page.locator('#desktopUpdateCheck')).to_be_disabled()
@@ -88,7 +90,7 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
         return {success:true,task_id:id};
       }
       if(['approvals','results','media'].includes(path))return [];
-      if(path==='apps')return {success:true,instruments:[{id:'sample',name:'검증 앱',modes:[]}]};
+      if(path==='apps')return {success:true,instruments:[{id:'sample',name:'검증 앱',modes:[]}],dictionary:[{id:'sense:weather',description:'지역 날씨 확인'}]};
       if(path==='workspace')return {success:true,workspace:'/selected'};
       return {success:true};
     };
@@ -122,6 +124,44 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
             composer = page.locator('#send').bounding_box()
             assert composer['y'] + composer['height'] <= 900
             page.screenshot(path=str(tmp_path / 'sessions.png'))
+            expect(page.locator('#notice')).not_to_be_visible()
+            expect(page.locator('#sessionHint')).to_have_count(0)
+            expect(page.locator('#taskHistory input')).to_have_count(0)
+            # Long sessions reveal older messages without losing the scroll anchor.
+            page.evaluate("""() => {
+              window.originalEvents=structuredClone(fixtureTasks[0].events);
+              fixtureTasks[0].events=Array.from({length:124},(_,i)=>({kind:i%2?'assistant':'user',value:'기록 '+i}));
+              selectMemberSession('old');
+            }""")
+            expect(page.locator('#chat .bubble')).to_have_count(50)
+            expect(page.locator('#chat .bubble').first).to_have_text('기록 74')
+            for width in (1280,390,320):
+                page.set_viewport_size({'width':width,'height':900})
+                boxes=[page.locator('#'+name).bounding_box() for name in
+                       ('taskTitle','taskOlder','taskHistoryOpen','newTask','memberDictionaryOpen')]
+                assert all(box and box['x']>=0 and box['x']+box['width']<=width for box in boxes)
+                assert max(box['y'] for box in boxes)<min(box['y']+box['height'] for box in boxes)
+                page.screenshot(path=str(tmp_path / f'member-chat-{bridge}-{width}.png'))
+            page.set_viewport_size({'width':1280,'height':900})
+            page.locator('#conversationScroll').evaluate('(el)=>el.scrollTop=100')
+            anchor=page.locator('#chat .bubble').first.bounding_box()['y']
+            page.locator('#taskOlder').click()
+            expect(page.locator('#chat .bubble')).to_have_count(100)
+            assert abs(page.get_by_text('기록 74',exact=True).bounding_box()['y']-anchor)<2
+            page.locator('#taskOlder').click()
+            expect(page.locator('#chat .bubble')).to_have_count(124)
+            expect(page.locator('#taskOlder')).to_be_hidden()
+            page.locator('#message').fill('작성 중인 내용')
+            page.locator('#memberDictionaryOpen').click()
+            page.locator('#memberDictionarySearch').fill('날씨')
+            page.locator('#memberDictionaryList button').click()
+            expect(page.locator('#message')).to_have_value('작성 중인 내용 [sense:weather]{} ')
+            expect(page.locator('#memberDictionary')).not_to_be_visible()
+            assert not page.evaluate("fixtureRequests.some(r=>r.path==='task/start')")
+            page.locator('#message').fill('')
+            page.evaluate("fixtureTasks[0].events=originalEvents;selectMemberSession('old')")
+            expect(page.locator('#chat .bubble')).to_have_count(2)
+
 
             page.locator('[data-view="apps"]').click()
             expect(page.frame_locator('#appFrame').get_by_role('button', name='검증 앱')).to_be_visible()
@@ -133,6 +173,7 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
             page.locator('#backToApps').click()
             expect(page.locator('#appsPanel')).to_be_visible()
 
+            page.locator('[data-view="drive"]').click()
             page.locator('#newTask').click()
             expect(page.locator('#chat .bubble')).to_have_count(0)
             expect(page.locator('#chatEmpty')).to_be_visible()

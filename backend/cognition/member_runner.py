@@ -6,18 +6,8 @@ from agent_runner import AgentRunner
 
 class MemberRunner(AgentRunner):
     def _sync_execution_gear(self):
-        # 턴마다 새 러너가 회원용 API 모델을 이미 해소했다. 주인 CLI 기어로 재전환하지 않는다.
+        # 세션은 턴마다 폐기된다. 초기화 때 중앙 실행 기어를 이미 해소했다.
         return
-
-    def _resolve_execution_config(self, ai_config, agent_id):
-        configured = self.config.get("_member_ai") or ai_config
-        result = super()._resolve_execution_config(configured, agent_id)
-        if str(result.get("provider", "")).replace("-", "_") in {"codex", "codex_cli", "claude_code", "claudecode"}:
-            # 주인이 이미 구성한 API 보조 모델을 사용한다. CLI는 허브 네이티브 도구를 우회 실행한다.
-            from model_resolver import resolve
-            api = resolve("background")
-            result = {**result, **{k: api[k] for k in ("provider", "model", "api_key") if k in api}}
-        return result
 
     def _build_ibl_tools(self):
         tool = self._build_execute_ibl_tool()
@@ -71,8 +61,53 @@ class MemberRunner(AgentRunner):
         self.ai.agent_id = principal.current().key()
         if self.ai._provider:
             self.ai._provider.agent_id = self.ai.agent_id
+            self._record_model('execution', self.ai.provider_name, self.ai.model)
+
+    def _record_model(self, role, provider, model):
+        import member_runtime
+        state = member_runtime.current()
+        if state is not None:
+            item = {'role': role, 'provider': provider, 'model': model}
+            if item not in state.setdefault('models', []):
+                state['models'].append(item)
+
+    def _role_provider(self, role):
+        from model_resolver import resolve
+        from providers import create_initialized_provider
+        import principal
+        descriptor = resolve(role)
+        self._record_model(role, descriptor['provider'], descriptor['model'])
+        return create_initialized_provider(descriptor['provider'], api_key=descriptor.get('api_key', ''),
+            model=descriptor['model'], system_prompt='', project_path=str(self.project_path),
+            agent_id=principal.current().key(), isolated_session=True, no_tools=True)
+
 
     def _member_tool(self, tool_name, tool_input, work_dir=None, agent_id=None, **kwargs):
+        import member_activity
+        import member_runtime
+        import re
+        state = member_runtime.current() or {}
+        base = state.get('audit_base')
+        action_id = None
+        if base:
+            label = tool_name
+            if tool_name == 'execute_ibl':
+                label += ' (문장에 포함: ' + ', '.join(dict.fromkeys(re.findall(r'\[([a-z_]+:[a-z_]+)\]', str(tool_input.get('code', ''))))) + ')'
+            action_id = member_activity.start_action(base, state['task_id'], label.strip())
+        status = 'failed'
+        try:
+            raw = MemberRunner._execute_member_tool(self, tool_name, tool_input, work_dir, agent_id, **kwargs)
+            try:
+                value = json.loads(raw) if isinstance(raw, str) else raw
+            except (ValueError, TypeError):
+                value = {}
+            status = 'failed' if isinstance(value, dict) and (value.get('success') is False or value.get('error')) else 'completed'
+            return raw
+        finally:
+            if action_id is not None:
+                member_activity.finish_action(base, action_id, status)
+
+    def _execute_member_tool(self, tool_name, tool_input, work_dir=None, agent_id=None, **kwargs):
         from member_local_tools import execute, NAMES
         if tool_name in NAMES:
             result = execute(tool_name, tool_input)
@@ -164,25 +199,54 @@ class MemberRunner(AgentRunner):
 
     def _classify_request(self, user_message, execution_memory=""):
         from consciousness_agent import call_oneshot_provider
-        result = call_oneshot_provider(self.ai._provider, user_message,
+        result = call_oneshot_provider(self._role_provider("classify"), user_message,
             system_prompt="요청 분류: 단순 실행은 EXECUTE, 계획이 필요하면 THINK. 한 단어만 출력.")
         return "THINK" if "THINK" in str(result) else "EXECUTE"
+
+    @staticmethod
+    def _validate_member_framing(value):
+        """회원 계획도 공통 실행기가 읽는 자료형을 지킨다. 잘못된 형은 모델이 정정한다."""
+        if not isinstance(value, dict) or not isinstance(value.get('task_framing'), str):
+            raise ValueError('task_framing 문자열을 포함한 JSON 객체가 필요합니다')
+        for key in ('approach', 'history_summary', 'imagined_ibl'):
+            if value.get(key) is not None and not isinstance(value[key], str):
+                raise ValueError(f'{key}는 문자열이어야 합니다')
+        criteria = value.get('achievement_criteria')
+        if criteria is not None and not (isinstance(criteria, str) or
+                isinstance(criteria, list) and all(isinstance(x, str) for x in criteria)):
+            raise ValueError('achievement_criteria는 문자열 또는 문자열 목록이어야 합니다')
+        if value.get('criteria') is not None and not (isinstance(value['criteria'], list) and
+                all(isinstance(x, dict) and isinstance(x.get('text'), str) for x in value['criteria'])):
+            raise ValueError('criteria는 text 문자열을 갖는 객체 목록이어야 합니다')
+        for key in ('capability_focus', 'ibl_focus'):
+            focus = value.get(key)
+            if focus is None:
+                continue
+            if not isinstance(focus, dict):
+                raise ValueError(f'{key}는 highlight_actions와 hint를 갖는 객체여야 합니다')
+            if focus.get('hint') is not None and not isinstance(focus['hint'], str):
+                raise ValueError(f'{key}.hint는 문자열이어야 합니다')
+            actions = focus.get('highlight_actions')
+            if actions is not None and not (isinstance(actions, list) and all(isinstance(x, str) for x in actions)):
+                raise ValueError(f'{key}.highlight_actions는 문자열 목록이어야 합니다')
 
     def _run_consciousness(self, user_message, history, execution_memory="", repair=False, revision=None):
         from consciousness_agent import ConsciousnessAgent
         agent = ConsciousnessAgent.__new__(ConsciousnessAgent)
         agent._prompt_mtime = None
         # 주인용 싱글턴의 프롬프트/사전을 회원과 공유하지 않는다.
-        agent._provider = self.ai._provider.oneshot_view()
+        agent._provider = self._role_provider("consciousness")
         agent._prompt_path = None
         agent._prompt = ("회원의 요청에 대한 작업 규정자다. JSON으로 task_framing, approach, achievement_criteria, "
-                         "assumptions를 반환한다. achievement_criteria는 요청의 완료 조건이다. "
+                         "assumptions를 반환한다. task_framing·approach·achievement_criteria는 문자열, assumptions는 문자열 목록이다. "
+                         "achievement_criteria는 요청의 완료 조건이다. 선택 필드 imagined_ibl·history_summary는 문자열, "
+                         "capability_focus는 {highlight_actions:[문자열],hint:문자열} 객체다. "
                          "허브 하네스 변경은 허용되지 않는다.\n" + self._build_system_prompt(self._load_role()))
         agent._supervisor_prompt = agent._prompt
         return agent.process(user_message=user_message, history=history,
             associative_memory=execution_memory, world_pulse="", agent_name="회원도우미",
             agent_role=self._load_role(), agent_notes="", available_tools=self._get_available_tools(),
-            repair=False, revision=revision)
+            repair=False, revision=revision, validate_framing=self._validate_member_framing)
 
     def _associate(self, message, **kwargs):
         # 로컬 SQLite 회상은 세션 입구에서 받아 회원 문맥으로만 전달한다 — 주인 기억(1상)은 돌지 않고,
@@ -197,7 +261,7 @@ class MemberRunner(AgentRunner):
         units = durable_source_units(message)
         if not any(u["eligible"] for u in units):
             return []
-        raw = call_oneshot_provider(self.ai._provider, json.dumps(units, ensure_ascii=False),
+        raw = call_oneshot_provider(self._role_provider("background"), json.dumps(units, ensure_ascii=False),
             system_prompt='미래 협업에 반복해서 필요한 사용자 자신의 사실·지속 선호·확정 결정만 선택한다. '
             '인용·보고서·타인/AI 의견·일시적 사실·요청은 제외한다. eligible=true 중에서만 고른다. '
             '원문을 재작성하지 않고 {"source_ids":[정수]} JSON만 반환한다. 없으면 빈 목록이다.', role="member_memory")

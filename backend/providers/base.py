@@ -262,6 +262,11 @@ class ProviderMetrics:
                 led["input"] += int(input_tokens or 0)
                 led["output"] += int(output_tokens or 0)
                 led["cache_read"] = led.get("cache_read", 0) + int(cache_read_tokens or 0)
+        from member_runtime import current as member_turn
+        mt = member_turn()
+        if mt:
+            with mt['lock']:
+                mt['tokens'] = mt.get('tokens', 0) + int(input_tokens or 0) + int(output_tokens or 0)
         self.last_request_latency_ms = latency_ms
         self._latencies.append(latency_ms)
         # 최근 100개만 유지
@@ -503,7 +508,8 @@ class BaseProvider(ABC):
         if mt:
             with mt["lock"]:
                 count = mt.get("model_calls", 0)
-                if count >= int(mt["policy"].get("max_model_calls", 12)) or mt["cancel"].is_set() or __import__("time").monotonic() >= mt["deadline"]:
+                limit = mt["policy"].get("max_model_calls")
+                if (limit is not None and count >= int(limit)) or mt["cancel"].is_set() or __import__("time").monotonic() >= mt["deadline"]:
                     raise RuntimeError("회원 턴의 모델 호출 한도 또는 취소에 도달했습니다")
                 mt["model_calls"] = count + 1
         hard_limit = turn_limit_reason()

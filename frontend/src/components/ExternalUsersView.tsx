@@ -12,11 +12,11 @@ type MemberKey = {
   device_id: string; neighbor_id: number; name: string; alias: string;
   level: number | null; revoked: boolean; expired: boolean; approved: boolean;
   linked: boolean; connected: boolean; expires_at: number | null;
-  turns_today: number; daily_limit: number;
+  turns_today: number; daily_limit: number | null;
 };
 type Overview = {
   address: Address; people: Person[]; keys: MemberKey[];
-  daily_turns: number; global_daily_turns: number; notice: string;
+  daily_turns: number | null; global_daily_turns: number | null; notice: string;
 };
 type Invitation = { key: string; name: string; alias: string; address: Address };
 const button = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm hover:bg-stone-50 disabled:opacity-40';
@@ -125,14 +125,14 @@ export function ExternalUsersView() {
 
           <section className={panel}>
             <div className="flex flex-wrap justify-between gap-2"><h2 className="font-semibold">발급 현황</h2><label className="flex gap-2 text-sm"><input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />폐기·만료 포함</label></div>
-            <p className="text-xs text-stone-500">오늘 사용량은 사람별 대화 횟수입니다. 같은 사람의 키는 사용량을 공유합니다. 전체 회원 일일 한도: {data.global_daily_turns}회.</p>
+            <p className="text-xs text-stone-500">오늘 사용량은 사람별 대화 횟수입니다. 같은 사람의 키는 사용량을 공유합니다. 전체 회원 일일 한도: {data.global_daily_turns == null ? '제한 없음' : `${data.global_daily_turns}회`}.</p>
             {!rows.length ? <p className="text-sm text-stone-500">표시할 초대 키가 없습니다.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm">
               <thead className="border-b text-xs text-stone-500"><tr>{['사용자 / 키', '상태', '만료일', '오늘 사용', '관리'].map(t => <th key={t} className="pb-3 pr-4 font-medium">{t}</th>)}</tr></thead>
               <tbody>{rows.map(row => <tr key={row.device_id} className="border-b last:border-0">
                 <td className="py-3 pr-4"><p className="font-medium">{row.name} <span className="text-xs font-normal text-stone-500">#{row.neighbor_id}</span></p><p className="text-xs text-stone-500">{row.alias}</p></td>
                 <td className="pr-4 whitespace-nowrap">{status(row)}</td>
                 <td className="pr-4 whitespace-nowrap">{row.expires_at ? new Date(row.expires_at * 1000).toLocaleDateString('ko-KR') : '무기한'}</td>
-                <td className="pr-4 whitespace-nowrap">{row.turns_today} / {row.daily_limit}회</td>
+                <td className="pr-4 whitespace-nowrap">{row.turns_today}회{row.daily_limit == null ? ' · 제한 없음' : ` / ${row.daily_limit}회`}</td>
                 <td className="py-3">{!row.revoked && (revokeId === row.device_id ? <div className="flex flex-wrap gap-2">
                   <button className={`${button} text-red-700`} disabled={busy} onClick={() => void run(async () => {
                     await api.request(`/external-users/keys/${encodeURIComponent(row.device_id)}`, { method: 'DELETE' });

@@ -33,3 +33,31 @@ def test_limit_is_not_user_cancel_or_success_even_after_partial_delivery(tmp_pat
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_default_budget_is_unlimited_and_usage_survives_failed_turn(tmp_path, monkeypatch):
+    import json
+    import time
+    import member_activity
+    monkeypatch.setattr(member_session, '_base', lambda: tmp_path)
+    monkeypatch.setattr(member_bridge, 'connected', lambda device: False)
+    manager = member_session.MemberSessionManager(tmp_path)
+    assert all(manager.policy[k] is None for k in ('hard_token_limit', 'deadline_s', 'max_model_calls', 'max_jobs_per_turn', 'daily_turns', 'global_daily_turns'))
+    day = time.strftime('%Y-%m-%d')
+    (tmp_path / 'data').mkdir(exist_ok=True)
+    (tmp_path / 'data/member_usage.json').write_text(json.dumps({'member': {day: {'turns': 500, 'tokens': 12}}}))
+    def stream(*args, **kwargs):
+        assert member_runtime.current()['deadline'] == float('inf')
+        base.ProviderMetrics().record_usage(1, {'input_tokens': 70000, 'output_tokens': 14000})
+        assert base.turn_limit_reason() is None
+        raise RuntimeError('model disconnected')
+        yield
+    monkeypatch.setattr(member_session.MemberSession, '_ensure_runner', lambda session: setattr(session, 'runner', SimpleNamespace(config={}, cognitive_stream=stream)))
+    result = manager.turn('member', 'device', 4, 'name', '월별 매출 비교')
+    assert not result['success']
+    assert manager._usage()['member'][day] == {'turns': 501, 'tokens': 84012}
+    task = member_activity.recent(tmp_path, 'member')[0]
+    assert task['status'] == 'failed' and task['tokens'] == 84000
+    assert task['request'] == '월별 매출 비교'
+    manager.policy['daily_turns'] = 1
+    assert manager.turn('member', 'device', 4, 'name', '다음 작업')['error_type'] == 'limit'

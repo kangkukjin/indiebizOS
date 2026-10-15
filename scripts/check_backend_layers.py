@@ -54,6 +54,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
+        "member_activity",
         "research_store", "research_questions", "research_evidence", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context",
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
@@ -93,6 +94,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
     },
     "cognition": {
+        "member_cli",
         "research_runner",
         "agent_lifecycle",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "unified_distill", "distill_memory_adapters",

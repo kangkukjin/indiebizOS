@@ -10,10 +10,11 @@ type PC = {
   device_id: string; name: string; user_label: string; note: string; enabled: boolean;
   status: PCStatus; created_at: number; expires_at: number | null; last_seen: number | null;
   host: string; os: string; client: string; client_version?: string; turns_today: number; tokens_today: number;
-  active_tasks: number; daily_limit: number;
+  active_tasks: number; daily_limit: number | null; tokens_total: number;
 };
 type Address = { url: string; warning: string };
-type Overview = { address: Address; pcs: PC[]; daily_limit: number; global_daily_limit: number };
+type Overview = { address: Address; pcs: PC[]; daily_limit: number | null; global_daily_limit: number | null };
+type Activity = { id: string; request: string; status: string; started: number; tokens: number | null; models: {role: string; provider: string; model: string}[]; actions: {tool: string; status: string}[] };
 type Invite = {code: string; expires_at: number; hub: string; link: string; name: string};
 type Issued = { key: string; alias: string; device_id: string; expires_at: number | null; address: Address };
 const statuses: Record<PCStatus, string> = {
@@ -26,6 +27,7 @@ function date(value: number | null) { return value ? new Date(value * 1000).toLo
 
 export function MemberPCsView() {
   const [data, setData] = useState<Overview | null>(null);
+  const [activity, setActivity] = useState<{name: string; tasks: Activity[]} | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -144,7 +146,7 @@ export function MemberPCsView() {
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">등록 현황</h2>
           <div className="flex flex-wrap items-center gap-3"><input aria-label="회원 PC 검색" className={input} value={query} onChange={e => setQuery(e.target.value)} placeholder="PC · 사용자 · 호스트 검색" />
             <label className="flex gap-2 text-xs"><input type="checkbox" checked={showRevoked} onChange={e => setShowRevoked(e.target.checked)} />해제한 PC 포함</label></div></div>
-        <p className="text-xs text-stone-500">15초마다 갱신합니다. 사용량은 등록 PC별로 집계합니다. 중앙 전체 일일 한도: {data?.global_daily_limit ?? '—'}회.</p>
+        <p className="text-xs text-stone-500">15초마다 갱신합니다. 사용량은 등록 PC별로 집계합니다. 중앙 전체 일일 한도: {!data ? '—' : data.global_daily_limit == null ? '제한 없음' : `${data.global_daily_limit}회`}.</p>
         {!data ? <p className="py-8 text-center text-sm">{error ? '새로고침으로 다시 시도하세요.' : '등록 정보를 불러오는 중…'}</p> : !rows.length ? <div className="py-10 text-center"><Laptop className="mx-auto mb-3 text-stone-400" size={30} /><p>{query ? '검색 결과가 없습니다.' : '등록된 회원 PC가 없습니다.'}</p><p className="mt-2 text-sm text-stone-500">PC 등록으로 기기 이름을 정하고 설치 초대를 발급하세요.</p></div> :
           <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b text-xs text-stone-500"><tr>{['PC / 사용자', '연결 상태', '최근 접속', '오늘 사용', '관리'].map(label => <th key={label} className="pb-3 pr-4 font-medium">{label}</th>)}</tr></thead>
             <tbody>{rows.map(pc => <tr key={pc.device_id} className="border-b last:border-0">
@@ -152,8 +154,8 @@ export function MemberPCsView() {
               <td className="pr-4"><span className={`inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs ${pc.status === 'online' ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600'}`}>{statuses[pc.status]}</span>
                 <p className="mt-2 text-xs text-stone-500">{pc.host || '기기 연결 전'}{pc.os && ` · ${pc.os}`}</p><p className="text-xs text-stone-500">{pc.client === 'desktop' ? `회원 데스크톱 ${pc.client_version || ''}` : pc.client === 'web' ? '브라우저' : pc.client === 'native' ? 'PC 연결 프로그램' : ''}</p></td>
               <td className="pr-4 whitespace-nowrap text-xs"><p>{date(pc.last_seen)}</p><p className="mt-2 text-stone-500">{pc.expires_at ? `만료 ${new Date(pc.expires_at * 1000).toLocaleDateString()}` : '만료 없음'}</p></td>
-              <td className="pr-4 whitespace-nowrap"><p>{pc.turns_today} / {pc.daily_limit}회</p><p className="mt-1 text-xs text-stone-500">처리 중 {pc.active_tasks}건</p></td>
-              <td className="py-3 min-w-40">{pc.status !== 'revoked' && <div className="flex flex-wrap gap-1.5">
+              <td className="pr-4 whitespace-nowrap"><p>{pc.turns_today}회{pc.daily_limit != null ? ` / ${pc.daily_limit}회` : ' · 제한 없음'}</p><p className="mt-1 text-xs text-stone-500">오늘 {pc.tokens_today.toLocaleString()} · 누적 {pc.tokens_total.toLocaleString()} 토큰</p><p className="mt-1 text-xs text-stone-500">처리 중 {pc.active_tasks}건</p></td>
+              <td className="py-3 min-w-40"><button className={button} disabled={busy} onClick={() => void run(async () => { const value = await api.request<{tasks: Activity[]}>(`/member-pcs/${encodeURIComponent(pc.device_id)}/activity`); setActivity({name: pc.name, tasks: value.tasks}); })}>작업 기록</button>{pc.status !== 'revoked' && <div className="flex flex-wrap gap-1.5">
                 <button className={button} disabled={busy || !pc.enabled} onClick={() => void run(() => invitePC(pc.device_id, pc.name))}>설치 초대</button>
                 <button className={button} disabled={busy} onClick={() => edit(pc)}>수정</button>
                 {pc.enabled ? <button className={button} disabled={busy} onClick={() => setConfirm({ pc, action: 'disable' })}>사용 중지</button> :
@@ -163,6 +165,10 @@ export function MemberPCsView() {
               </div>}</td>
             </tr>)}</tbody></table></div>}
       </section>
+      {activity && <section className={`${panel} space-y-3`}><div className="flex justify-between"><h2 className="font-semibold">{activity.name} · 최근 작업 50건</h2><button onClick={() => setActivity(null)} aria-label="작업 기록 닫기"><X size={18} /></button></div>
+        {!activity.tasks.length && <p className="text-sm text-stone-500">기록된 작업이 없습니다.</p>}
+        {activity.tasks.map(task => <details key={task.id} className="border-b py-2"><summary className="cursor-pointer text-sm">{date(task.started)} · {task.status} · {task.tokens == null ? '토큰 미측정' : `${task.tokens.toLocaleString()} 토큰`}</summary><p className="my-2 whitespace-pre-wrap break-words text-sm">{task.request}</p><p className="text-xs text-stone-500">{task.models.map(m => `${m.role}: ${m.provider}/${m.model}`).join(' · ')}</p><ol className="mt-2 list-inside list-decimal text-xs">{task.actions.map((a, i) => <li key={i}>{a.tool} · {a.status}</li>)}</ol></details>)}
+      </section>}
       {data && <section className={`${panel} space-y-3`}><h2 className="font-semibold">회원 접속 주소</h2>
         {data.address.url ? <div className="flex flex-wrap gap-2"><input aria-label="회원 접속 주소" readOnly value={data.address.url} className={`${input} w-full sm:flex-1`} /><button className={button} disabled={busy} onClick={() => void run(() => copy(data.address.url))}><Copy size={14} />주소 복사</button><button className={button} onClick={() => openExternalLink(data.address.url)}><ExternalLink size={14} />열기</button></div> : <p className="text-sm text-amber-800">{data.address.warning}</p>}
         <p className="text-xs text-stone-500">기존 이웃 기반 외부사용자와 주인용 원격 PC는 이 목록에 자동으로 편입되지 않습니다.</p>

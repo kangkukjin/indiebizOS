@@ -43,7 +43,7 @@ def private_path(name):
 def turn_scope(path, device_id, task_id, cancel, policy):
     state = {"path": str(path), "device_id": device_id, "task_id": task_id,
              "cancel": cancel, "policy": policy, "step": 0, "lock": threading.Lock(),
-             "jobs": set(), "deadline": time.monotonic() + float(policy.get("deadline_s", 180))}
+             "jobs": set(), "deadline": time.monotonic() + float(policy["deadline_s"]) if policy.get("deadline_s") is not None else float("inf")}
     from common.spill import _spill_root
     spill_token = _spill_root.set(str(Path(path) / "spill"))
     token = _turn.set(state)

@@ -1,0 +1,59 @@
+[
+  {
+    "run": "central_gear_unlimited",
+    "provider": {
+      "provider": "MemberClaudeProvider",
+      "model": "opus"
+    },
+    "state": "failed",
+    "seconds": 40.449,
+    "tokens": 17117,
+    "inputs_unchanged": true,
+    "error_type": "AttributeError",
+    "note": "원래 스택은 보관되지 않아 정확한 원인은 확정하지 못함. 진단 재실행에서 재현되지 않음."
+  },
+  {
+    "run": "central_gear_diagnostic",
+    "provider": {
+      "provider": "MemberClaudeProvider",
+      "model": "opus"
+    },
+    "state": "completed",
+    "seconds": 111.763,
+    "tokens": 347500,
+    "inputs_unchanged": true,
+    "verified_rows": 24,
+    "totals": [
+      516,
+      282
+    ],
+    "missing_files": [],
+    "files": [
+      "reconciliation.json",
+      "summary.txt"
+    ],
+    "reexecuted": 0
+  },
+  {
+    "run": "central_gear_final",
+    "provider": {
+      "provider": "MemberClaudeProvider",
+      "model": "opus"
+    },
+    "state": "completed",
+    "seconds": 75.47,
+    "tokens": 302072,
+    "inputs_unchanged": true,
+    "verified_rows": 24,
+    "totals": [
+      516,
+      282
+    ],
+    "missing_files": [],
+    "files": [
+      "reconciliation.json",
+      "summary.txt"
+    ],
+    "reexecuted": 0
+  }
+]

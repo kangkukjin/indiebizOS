@@ -70,7 +70,8 @@ def overview():
         pc = rec["member_pc"]
         online = connected(rec["device_id"])
         presence = device_registry.get(rec["device_id"]) or {}
-        used = usage.get(rec["member_id"], {}).get(today, {})
+        days = usage.get(rec["member_id"], {})
+        used = days.get(today, {})
         if rec["revoked"]:
             state = "revoked"
         elif not pc.get("enabled", True):
@@ -96,6 +97,7 @@ def overview():
                      "client_version": env.get("client_version", ""),
                      "client": "desktop" if env.get("client") == "desktop" else "web" if env.get("client") == "web" else "native" if rec["last_used"] else "",
                      "turns_today": used.get("turns", 0), "tokens_today": used.get("tokens", 0),
+                     "tokens_total": sum(int(d.get("tokens", 0)) for d in days.values()),
                      "active_tasks": active, "daily_limit": policy["daily_turns"]})
     return {"address": member_address(), "pcs": rows,
             "daily_limit": policy["daily_turns"], "global_daily_limit": policy["global_daily_turns"]}
@@ -155,3 +157,11 @@ def invite(device_id: str):
     hub = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else ""
     return {**result, "address": address, "hub": hub,
             "link": "indiebiz-member://enroll?" + urlencode({"hub": hub, "code": result["code"]})}
+
+
+@router.get("/{device_id}/activity")
+def activity(device_id: str):
+    from member_activity import recent
+    from member_session import _base
+    rec = _require(device_id)
+    return {"tasks": recent(_base(), rec['member_id'])}

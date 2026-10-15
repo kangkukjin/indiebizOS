@@ -105,8 +105,13 @@ def test_actual_cognition_has_no_private_files_outside_turn(tmp_path,monkeypatch
     assert result["success"],result
     assert "PRIVATE-FULL-PIPELINE" in result["response"]
     assert not list((tmp_path/'data'/'_member_tmp').iterdir())
+    from member_activity import recent
+    tasks = recent(tmp_path, 'A')
+    assert tasks[0]['request'] == 'PRIVATE-FULL-PIPELINE'
+    assert tasks[0]['status'] == 'completed'
     for p in (tmp_path/'data').rglob('*'):
-        if p.is_file():assert b"PRIVATE-FULL-PIPELINE" not in p.read_bytes(),p
+        if p.is_file() and p.name != 'member_activity.sqlite3':
+            assert b"PRIVATE-FULL-PIPELINE" not in p.read_bytes(), p
 
 
 if __name__ == "__main__":

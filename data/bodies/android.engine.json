@@ -125,6 +125,7 @@
     "cognition/ibl_usage_rag",
     "cognition/ibl_v2_experience",
     "cognition/legacy_example_projection",
+    "cognition/member_cli",
     "cognition/member_local_tools",
     "cognition/member_runner",
     "cognition/member_session",
@@ -198,6 +199,7 @@
     "datastore/knowledge_catalog",
     "datastore/knowledge_graph",
     "datastore/media_store",
+    "datastore/member_activity",
     "datastore/multi_chat_db",
     "datastore/node_registry",
     "datastore/notebook_store",
@@ -600,8 +602,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 525,
-    "engine": 493,
+    "total": 527,
+    "engine": 495,
     "blocklist": 32
   }
 }

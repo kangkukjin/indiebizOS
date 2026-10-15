@@ -580,7 +580,10 @@ def _provider_from_desc(d: dict, system_prompt: str = "", tools=None,
     keyhash = hashlib.md5((d["api_key"] or "").encode()).hexdigest()[:8]
     bucket = "oneshot" if oneshot else "session"
     cache_key = f"{bucket}|{d['provider']}|{d['model']}|{keyhash}"
-    prov = _provider_cache.get(cache_key)
+    from member_runtime import is_member
+    member = is_member()
+    # 회원 제공자는 주인 캐시를 빌리지도, 주인 캐시에 넣지도 않는다.
+    prov = None if member else _provider_cache.get(cache_key)
     if prov is not None and not prov.is_ready:
         _provider_cache.pop(cache_key, None)
         prov = None
@@ -594,7 +597,8 @@ def _provider_from_desc(d: dict, system_prompt: str = "", tools=None,
             if not prov.is_ready:
                 logger.warning("[model_resolver] 초기화되지 않은 provider: %s/%s", d["provider"], d["model"])
                 return None
-            _provider_cache[cache_key] = prov
+            if not member:
+                _provider_cache[cache_key] = prov
         except Exception as e:
             logger.warning(f"[model_resolver] provider 생성 실패 ({d['provider']}/{d['model']}): {e}")
             return None
@@ -615,6 +619,13 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
         import copy
         prov = copy.copy(prov)
         prov.distill_descriptor = freeze_descriptor(d, role=role, pin_key=agent_id)
+        from member_runtime import current as member_turn
+        state = member_turn()
+        if state is not None:
+            item = {'role': role, 'provider': d['provider'], 'model': d['model']}
+            with state['lock']:
+                if item not in state.setdefault('models', []):
+                    state['models'].append(item)
     return prov, d
 
 

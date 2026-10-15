@@ -11,7 +11,7 @@
 - 행위자 봉투: principal member:<id> · agent=member:<id> · task_member_* · origin=member.
 - 임시 파일: data/_member_tmp/<nid>-<device>/ (세션 종료·부팅 시 삭제).
 - 비용·한도: data/member_policy.json — 회원당 세션 수·동시 턴·일일 턴. 메타 원장 data/member_usage.json
-  (주체·날짜·턴 수·토큰만 — 내용 없음).
+  (주체·날짜·턴 수·토큰). 관리자 작업 기록은 data/member_activity.sqlite3에 분리한다.
 """
 import json
 import os
@@ -27,12 +27,12 @@ from client_workflows import ClientWorkflowError
 _DEFAULT_POLICY = {
     "max_sessions_per_member": 2,
     "max_concurrent_turns_per_member": 1,
-    "daily_turns": 40, "daily_turns_by_level": {}, "global_daily_turns": 400,
-    "max_jobs_per_turn": 64,
+    "daily_turns": None, "daily_turns_by_level": {}, "global_daily_turns": None,
+    "max_jobs_per_turn": None,
     "history_turns": 20,
     "allowed_nodes": ["sense", "table", "self", "limbs", "engines"],
-    "notice": "",
-    "hard_token_limit": 64000, "deadline_s": 1800, "max_model_calls": 80,
+    "notice": "중앙 관리자는 회원·기기별 요청, 사용 모델, 도구 실행 상태와 누적 토큰 사용량을 작업 기록으로 확인할 수 있습니다.",
+    "hard_token_limit": None, "deadline_s": None, "max_model_calls": None,
     "command_timeout_s": 120, "max_message_chars": 64000,
 }
 TMP_DIRNAME = "_member_tmp"
@@ -193,7 +193,7 @@ class MemberSessionManager:
         return bool(s)
 
     def turn(self, neighbor_id, device_id, level, name, message: str, *, local_task_id="", code=None, on_event=None, body_session="", client_context=None) -> dict:
-        """회원 한 턴. 접수는 회원별 원자 예약, 내용은 턴 임시 경로와 손발에만 둔다."""
+        """회원 한 턴. 접수는 원자 예약하고 요청·실행 메타데이터는 관리자 원장에 분리한다."""
         import principal
         import thread_context as tc
         import member_runtime as mr
@@ -205,9 +205,9 @@ class MemberSessionManager:
             day = time.strftime("%Y-%m-%d")
             cap = self.policy.get("daily_turns_by_level", {}).get(str(level), self.policy["daily_turns"])
             global_count = sum(int(days.get(day, {}).get("turns", 0)) for days in self._usage().values())
-            if global_count >= int(self.policy["global_daily_turns"]):
+            if self.policy["global_daily_turns"] is not None and global_count >= int(self.policy["global_daily_turns"]):
                 return {"success": False, "error_type": "limit", "error": "오늘의 전체 회원 한도에 닿았습니다"}
-            if self.turns_today(nid) >= int(cap):
+            if cap is not None and self.turns_today(nid) >= int(cap):
                 return {"success": False, "error_type": "limit", "error": "오늘의 대화 한도에 닿았습니다"}
             if self.active.get(nid, 0) >= int(self.policy["max_concurrent_turns_per_member"]):
                 return {"success": False, "error_type": "busy", "error": "이 회원의 이전 작업이 진행 중입니다"}
@@ -227,11 +227,16 @@ class MemberSessionManager:
         task_id = f"task_member_{uuid.uuid4().hex}"
         p = principal.member(nid, level, device_id)
         tokens = None
+        state = {}
+        status = 'failed'
+        import member_activity
         mr.install_output_guard()
         try:
             with principal.narrow(p, "member_session"), tc.actor_context(
                     agent_id=p.key(), task_id=task_id, origin="member"), mr.turn_scope(
-                    s.dir, device_id, task_id, s.cancel, self.policy):
+                    s.dir, device_id, task_id, s.cancel, self.policy) as state:
+                state['audit_base'] = self.base
+                member_activity.begin(self.base, task_id, nid, device_id, name, local_task_id, message)
                 if principal.current() != p:
                     raise PermissionError("전송 관문의 회원 신원 불일치")
                 if s.closed or s.cancel.is_set():
@@ -333,14 +338,19 @@ class MemberSessionManager:
                     if saved and success and code is None:
                         # 선별도 같은 회원 예산 안에서 끝낸다. 저장은 회원 기기의 승인 판을 지난다.
                         from providers.base import turn_token_scope, read_turn_tokens
-                        remaining = max(1, int(self.policy["hard_token_limit"]) - int(tokens or 0))
+                        limit = self.policy["hard_token_limit"]
+                        remaining = max(1, int(limit) - int(tokens or 0)) if limit is not None else None
                         try:
-                            with turn_token_scope(p.key(), task_id, (), hard_token_limit=remaining, deadline_s=20):
+                            with turn_token_scope(p.key(), task_id, (), hard_token_limit=remaining):
                                 for index, content in enumerate(s.runner.select_local_memory(message)):
                                     request({"op": "memory_save", "record": {"id": f"{task_id}:memory:{index}", "content": content}})
                                 tokens = int(tokens or 0) + int(read_turn_tokens() or 0)
                         except Exception:
                             pass  # 대화 저장 성공과 장기 기억 선별 실패는 다른 결과다.
+                tokens = state.get('tokens') or tokens
+                status = 'cancelled' if s.cancel.is_set() else ('completed' if success else 'failed')
+                if state.get('input_required'):
+                    status = 'waiting_input'
                 s.history.append({"role": "user", "content": message})
                 s.history.append({"role": "assistant", "content": response})
                 s.turns += 1
@@ -357,6 +367,14 @@ class MemberSessionManager:
             return {"success": False, "error_type": type(exc).__name__,
                     "error": "회원 작업을 완료하지 못했습니다. 모델 설정과 기기 연결을 확인하세요."}
         finally:
+            tokens = state.get('tokens') or tokens
+            if s.cancel.is_set():
+                status = 'cancelled'
+            try:
+                member_activity.finish(self.base, task_id, status, tokens, state.get('models', []))
+            except Exception:
+                # 원장 장애가 세션 잠금 해제를 건너뛰어 다음 작업까지 막아서는 안 된다.
+                pass
             # 인지 생성기가 반환한 뒤에만 삭제. close()는 진행 중인 작업의 경로를 먼저 지우지 않는다.
             remembered = list(s.history) if not s.closed else []
             s.cleanup()
@@ -366,7 +384,6 @@ class MemberSessionManager:
                 self.active[nid] = max(0, self.active.get(nid, 1) - 1)
                 if tokens:
                     u = self._usage()
-                    day = time.strftime("%Y-%m-%d")
                     rec = u[nid][day]
                     rec["tokens"] = int(rec.get("tokens", 0)) + int(tokens)
                     path = self._usage_path()

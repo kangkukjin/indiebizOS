@@ -893,7 +893,9 @@ def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, 
     from member_runtime import is_member
     from providers.cli_provider import CliSubprocessProvider
     if is_member() and isinstance(provider, CliSubprocessProvider):
-        raise PermissionError("회원 턴에는 네이티브 CLI 모델을 쓸 수 없습니다")
+        from member_cli import MemberClaudeProvider
+        if not isinstance(provider, MemberClaudeProvider):
+            raise PermissionError("회원 턴에는 주인용 네이티브 CLI 모델을 쓸 수 없습니다")
     from episode_logger import _current_role
     from model_call_context import set_purpose, reset_purpose
     with _oneshot_lock_for(provider).held(background=is_oneshot_background()):

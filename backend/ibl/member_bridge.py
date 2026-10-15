@@ -32,7 +32,8 @@ def request(command, timeout=None):
     if state["cancel"].is_set() or time.monotonic() >= state["deadline"] or not connected(p.device_id):
         return {"success": False, "error_type": "no_body", "error": "회원 기기가 연결되어 있지 않습니다"}
     with state["lock"]:
-        if state["step"] >= int(state["policy"].get("max_jobs_per_turn", 64)):
+        limit = state["policy"].get("max_jobs_per_turn")
+        if limit is not None and state["step"] >= int(limit):
             return {"success": False, "error_type": "limit", "error": "이 턴의 기기 작업 한도에 닿았습니다"}
         state["step"] += 1
         key = f'{p.key()}:{state["task_id"]}:{state["step"]}'

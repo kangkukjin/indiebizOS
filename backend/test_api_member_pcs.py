@@ -199,3 +199,25 @@ def test_native_turn_envelope_keeps_connection_generation(client, tmp_path, monk
             limb_keys.touch(issued['key'], new_session=True)
             assert member_bridge.request({'op': 'read', 'path': 'a.txt'})['error_type'] == 'no_body'
             assert len(sent) == 1
+
+
+def test_owner_activity_and_cumulative_tokens(client, tmp_path):
+    import member_activity
+    issued = register(client)
+    device = issued['device_id']
+    member_activity.begin(tmp_path, 'task', device, device, 'name', 'local', '분기 매출 비교')
+    action = member_activity.start_action(tmp_path, 'task', 'execute_ibl sense:search')
+    member_activity.finish_action(tmp_path, action, 'completed')
+    member_activity.finish(tmp_path, 'task', 'completed', 84000, [{'role': 'execution', 'provider': 'claude_code', 'model': 'opus'}])
+    path = '/member-pcs/' + device + '/activity'
+    assert client.get(path).status_code == 403
+    with principal.narrow(principal.member('other', 4, 'other-device')):
+        assert client.get(path, headers=HEADERS).status_code == 403
+    task = client.get(path, headers=HEADERS).json()['tasks'][0]
+    assert task['request'] == '분기 매출 비교'
+    assert task['tokens'] == 84000 and len(task['actions']) == 1
+    day = time.strftime('%Y-%m-%d')
+    (tmp_path / 'data/member_usage.json').write_text(json.dumps({device: {'2020-01-01': {'tokens': 30}, day: {'turns': 1, 'tokens': 84000}}}))
+    row = client.get('/member-pcs', headers=HEADERS).json()['pcs'][0]
+    assert row['tokens_total'] == 84030 and row['tokens_today'] == 84000
+    assert row['daily_limit'] is None

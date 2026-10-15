@@ -77,7 +77,11 @@ def get_provider(provider_name: str, **kwargs):
 
     from member_runtime import is_member
     if is_member() and issubclass(provider_class, CliSubprocessProvider):
-        raise PermissionError("회원 세션은 로컬 도구·영속 로그를 갖는 CLI 제공자를 사용할 수 없습니다. API 모델을 지정하세요.")
+        if provider_class is ClaudeCodeProvider:
+            from member_cli import MemberClaudeProvider
+            provider_class = MemberClaudeProvider
+        else:
+            raise PermissionError("현재 중앙 CLI 모델의 회원 격리를 지원하지 않습니다. 중앙 기어를 지원 모델로 바꾸세요.")
     return provider_class(**kwargs)
 
 

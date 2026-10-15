@@ -9,6 +9,23 @@ from fastapi.testclient import TestClient
 import pytest
 
 
+@pytest.mark.parametrize('version', ['pydantic', 'pydantic.v1'])
+def test_phone_request_import_and_image_limit(version, monkeypatch):
+    """맥 테스트 환경과 Android의 Pydantic 1.x 모두 부팅·개수 제한을 지킨다."""
+    import importlib
+    import sys
+    pydantic = importlib.import_module(version)
+    monkeypatch.setitem(sys.modules, 'pydantic', pydantic)
+    path = Path(__file__).resolve().parents[1] / 'phone-companion/app/src/main/python/phone_chat_sessions.py'
+    spec = importlib.util.spec_from_file_location('phone_request_compat', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.SessionRequest().images == []
+    assert len(module.SessionRequest(images=['image'] * 20).images) == 20
+    with pytest.raises(pydantic.ValidationError):
+        module.SessionRequest(images=['image'] * 21)
+
+
 @pytest.fixture
 def phone(tmp_path, monkeypatch):
     import system_ai_memory as memory

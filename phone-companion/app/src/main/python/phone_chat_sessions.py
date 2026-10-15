@@ -1,5 +1,6 @@
 """폰 자체 AI도 공통 세션 저장 계약을 쓴다. 추론은 폰의 기존 실행자를 유지한다."""
 import threading
+from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -9,7 +10,8 @@ class SessionRequest(BaseModel):
     project_id: str = ""
     agent_id: str = ""
     message: str = Field(default="", max_length=200000)
-    images: list = Field(default_factory=list, max_length=20)
+    # Android는 Pydantic 1.x: 목록 길이는 max_items로 제한해야 부팅 가능하다.
+    images: list[Any] = Field(default_factory=list, max_items=20)
     title: str = Field(default="새 세션", max_length=120)
 
 

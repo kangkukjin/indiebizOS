@@ -2613,4 +2613,6 @@
 2026-10-15 | 긴문장72 회원 데스크톱: 중앙 작업자 예외를 unknown으로 닫고 재접수 중복 실행 방지 유지; 진행 사건 보관창 누락을 로컬 기록에 안내; 토큰/시간 한도 중단의 사용자 취소 오표시와 중간 저장의 성공 오판정 수리. 전체 IBL 출하 대사·손상/복구/응답실패 검증, 자연어 독립 실행은 한도 미달. docs/experiments/long_sentence_imagination/round_72/report.md
 2026-10-15 FEATURE: 회원 Codex 어댑터와 관리창 선택·저장 활성화. 중앙 구독·모델을 유지하고 회원 전용 모델 카탈로그/임시 설정/인증 MCP로 내장 셸·파일 수정·하위 에이전트와 주인 설정을 격리. 분류·보조 모델, 회원 도구 결과 왕복·토큰 원장 연결. 실제 gpt-6.1-sol:low+서명 Go 회원 실행부에서 파일 읽기·로컬 승인 셸·두 결과 저장/재독·원본 불변·중복 실행0, 35.309초/48,392토큰 완료. 최종 backend 전수10555통과/14건너뜀·TypeScript·층 관문 통과. docs/MEMBER_DESKTOP_DESIGN_2026_10_15.md.
 
-2026-10-15 FIX: 회원 데스크톱의 파괴된 창 재표시(Object has been destroyed)와 창 없는 잔류 프로세스 수리. 활성화·트레이·연결 종료 알림은 생존 창/종료 상태를 검사하고, 마지막 창 파괴 시 정상 종료한다. 일반 닫기의 트레이 숨김은 유지. lifecycle 회귀 4건 포함 npm test 17 통과·실제 helper 선택 검사 2 제외, mac arm64 로컬 앱/zip 재빌드 및 실행·Cmd+Q 종료 확인. backend 전수·Windows 미실행.
+2026-10-15 FIX: 회원 데스크톱의 파괴된 창 재표시(Object has been destroyed)와 창 없는 잔류 프로세스 수리. 활성화·트레이·연결 종료 알림은 생존 창/종료 상태를 검사하고, 마지막 창 파괴 시 정상 종료한다. 일반 닫기의 트레이 숨김은 유지. lifecycle 회귀 4건 포함 npm test 17 통과·실제 helper 선택 검사 2 제외, mac arm64 로컬 앱/zip 재빌드. 실제 Cmd+Q 검증에서는 창만 닫히고 프로세스가 남아 아래 종료 순서 후속 수리로 이어짐. backend 전수·Windows 미실행.
+
+2026-10-15 FIX: 회원 앱의 비동기 before-quit 취소 직후 microtask에서 app.quit을 재호출하던 경합 수리. 실행부 정리 후 setImmediate로 다음 이벤트 루프에서 종료하며 정리 예외도 처리. lifecycle 5건 포함 npm test 18 통과·선택 helper 2 제외. Mac 로컬 앱/zip 재빌드, 실제 Cmd+Q 후 프로세스 0개와 macOS 앱 목록 isRunning=false 확인. backend 전수·Windows 미실행.

@@ -15,7 +15,8 @@ else {
 app.setName('IndieBiz Member');
 app.on('second-instance',(_,argv)=>{const link=argv.find(a=>a.startsWith('indiebiz-member:'));if(link)acceptLink(link);showWindow();});
 app.on('open-url',(e,url)=>{e.preventDefault();acceptLink(url);});
-app.on('before-quit',e=>{if(!quitting){e.preventDefault();quitting=true;Promise.resolve(session?.stop()).finally(()=>app.quit());}});
+// Resume quit on the next event-loop turn, after Electron unwinds the cancelled quit.
+app.on('before-quit',e=>{if(!quitting){e.preventDefault();quitting=true;Promise.resolve().then(()=>session?.stop()).catch(e=>{console.error('회원 실행부 종료 실패:',e);}).finally(()=>setImmediate(()=>app.quit()));}});
 // Closing normally hides to the tray; a destroyed last window must not strand the app.
 app.on('window-all-closed',()=>{if(!quitting)app.quit();});
 app.on('activate',()=>showWindow());

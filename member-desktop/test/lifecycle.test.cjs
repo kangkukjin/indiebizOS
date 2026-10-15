@@ -50,7 +50,7 @@ async function boot() {
     nativeImage: {createFromDataURL() {}},
   };
   vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
-    __dirname: path.dirname(filename), process: {...process, argv: ['node']},
+    __dirname: path.dirname(filename), process: {...process, argv: ['node']}, console, setImmediate,
     setTimeout: () => ({unref() {}}), setInterval: () => ({unref() {}}), clearTimeout() {},
     require(name) {
       if (name === 'electron') return electron;
@@ -104,7 +104,19 @@ test('activation during graceful shutdown cannot reopen the window', async () =>
   assert.equal(app.quitCount, 0);
   app.emit('activate');
   assert.equal(win.shown, 0);
+  await Promise.resolve();
   finishStop();
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(app.quitCount, 1);
+});
+
+test('an already stopped helper resumes quit after the cancelled native quit unwinds', async () => {
+  const {app, session} = await boot();
+  session.stop = async () => {};
+  app.emit('before-quit', {preventDefault() {}});
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  assert.equal(app.quitCount, 0, 'microtasks still run inside the native quit callback');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(app.quitCount, 1);
 });

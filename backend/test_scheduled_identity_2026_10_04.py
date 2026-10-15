@@ -27,9 +27,11 @@ def _system_ai_is_repairing():
     assert rg.active_grant(task_id="task_sysai_repair01", agent_id="system_ai")
 
 
-def test_scheduled_pipeline_runs_outside_the_repair_grant(monkeypatch, tmp_path):
+@pytest.mark.parametrize('caller_task', [None, 'research_test_parent'])
+def test_scheduled_pipeline_runs_outside_the_repair_grant(monkeypatch, tmp_path, caller_task):
     import ibl_v2_entry
     from ibl_scheduled import execute_scheduled
+    tc.set_current_task_id(caller_task)
     _system_ai_is_repairing()
     # 종전 사고 신원도 이제 닫힌다 — 실행 ID 누락은 권한 공유가 아니다.
     with tc.actor_context(agent_id="system_ai", task_id="", origin="scheduler"):
@@ -46,7 +48,7 @@ def test_scheduled_pipeline_runs_outside_the_repair_grant(monkeypatch, tmp_path)
     assert [s[0] for s in seen] == ["system_ai", "system_ai"]
     assert all(s[1].startswith("task_schedule_") and s[2] is None for s in seen)
     assert seen[0][1] != seen[1][1]
-    assert not tc.get_current_task_id()
+    assert tc.get_current_task_id() == caller_task
 
 
 def test_scheduled_workflow_run_gets_its_own_task(monkeypatch):

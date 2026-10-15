@@ -16,23 +16,28 @@ spec.loader.exec_module(work)
 
 
 def test_history_keeps_over_100_commits_and_pins_head(tmp_path):
+    # Runtime fixtures may write below tmp_path from a late background thread.
+    # The history under test owns a separate repository and one explicit file.
+    tmp_path = tmp_path / 'repo'
+    tmp_path.mkdir()
     def git(*args, date='2026-09-24T12:00:00+09:00'):
         env = {**os.environ, 'GIT_AUTHOR_DATE': date, 'GIT_COMMITTER_DATE': date}
         return subprocess.check_output(['git', '-C', str(tmp_path), *args], env=env, text=True).strip()
     git('init', '-q')
     git('config', 'user.name', 'Fixture')
     git('config', 'user.email', 'fixture@example.invalid')
+    git('config', 'gc.auto', '0')
     p = tmp_path / 'source.txt'
     p.write_text('old')
-    git('add', '.')
+    git('add', 'source.txt')
     git('commit', '-qm', 'old', date='2026-09-17T00:00:00+09:00')
     for i in range(104):
         p.write_text(str(i))
-        git('add', '.')
+        git('add', 'source.txt')
         git('commit', '-qm', f'change {i}')
     # 날짜가 역전된 tip 뒤의 최신 커밋도 빠뜨리지 않는다.
     p.write_text('older date at tip')
-    git('add', '.')
+    git('add', 'source.txt')
     git('commit', '-qm', 'out of order', date='2026-09-17T00:00:00+09:00')
     out = work.history(tmp_path, '2026-09-18T00:00:00+09:00')
     assert out['count'] == len(out['items']) == 104

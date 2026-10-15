@@ -77,10 +77,13 @@ def test_l68_4_exif_original_time_wins_over_index_file_date(tmp_path, monkeypatc
     assert item["camera"] == "SM-J700F" and item["height"] == 48  # 색인이 비운 칸만 EXIF 로
 
 
-def test_l68_4_photo_record_carries_width_height():
-    sys.path.insert(0, str(ROOT.parent / "data/packages/installed/tools/photo-manager"))
-    import importlib
-    handler = importlib.import_module("handler")
+def test_l68_4_photo_record_carries_width_height(monkeypatch):
+    import importlib.util
+    package = ROOT.parent / "data/packages/installed/tools/photo-manager"
+    monkeypatch.syspath_prepend(str(package))
+    spec = importlib.util.spec_from_file_location("l68_photo_handler", package / "handler.py")
+    handler = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(handler)
     rec = handler._photo_record({"path": "/tmp/a.jpg", "name": "a.jpg", "taken_at": "", "width": 10, "height": 7})
     assert rec["width"] == 10 and rec["height"] == 7 and rec["origin"] == "unknown"
 

@@ -90,6 +90,35 @@ def translate(mapping, params):
     return mapping
 
 
+def _ibl_exchange(command):
+    """Carry this turn's observed file version across IBL read → write.
+
+    The device remains the conditional-write authority. Never fetch a fresh hash
+    at write time: that would authorize overwriting an intervening human edit.
+    Paths are exact request paths; changing aliases requires another read.
+    """
+    import re
+    state = member_runtime.current()
+    if not state:
+        return request(command)
+    path = command.get('path')
+    key = (state.get('local_task_id'), state.get('body_session'), path)
+    if not isinstance(path, str):
+        return request(command)
+    with state['lock']:
+        observed = state.setdefault('ibl_file_versions', {})
+        digest = observed.get(key)
+    if command.get('op') == 'write' and 'expected_hash' not in command and digest:
+        command = {**command, 'expected_hash': digest}
+    result = request(command)
+    if (command.get('op') == 'read' and result.get('success') is True
+            and isinstance(result.get('sha256'), str)
+            and re.fullmatch(r'[0-9a-f]{64}', result['sha256'])):
+        with state['lock']:
+            observed[key] = result['sha256']
+    return result
+
+
 def execute(entry, params):
     from member_files import resolve_references
     try:
@@ -99,13 +128,13 @@ def execute(entry, params):
     command = translate(entry["limb_op"], params)
     if entry.get("member_transform"):
         from member_files import transform
-        return transform(entry, params, command, request)
+        return transform(entry, params, command, _ibl_exchange)
     if command["op"] == "write" and "content" not in command:
         content = params.get("_prev_result")
         if content is None:
             return {"success": False, "error_type": "input", "error": "content 또는 직전 파이프 결과가 필요합니다"}
         command["content"] = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
-    result = request(command)
+    result = _ibl_exchange(command)
     if result.get("success") is False:
         return result
     if command["op"] == "read" and "content" in result:

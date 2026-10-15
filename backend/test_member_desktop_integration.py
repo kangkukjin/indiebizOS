@@ -26,8 +26,11 @@ def test_real_executor_signed_roundtrip_files_shell_and_cancel(tmp_path, monkeyp
         pytest.skip('set MEMBER_DESKTOP_TEST_BINARY to the built Go executor')
     import api_limb, api_member_desktop, member_session, member_runtime, member_bridge
     import limb_keys, device_registry, member_desktop_requests, member_jobs
-    monkeypatch.setenv('INDIEBIZ_BASE_PATH', str(tmp_path))
+    # Keep the real read-only vocabulary, while isolating hub identity/receipts.
+    monkeypatch.delenv('INDIEBIZ_BASE_PATH', raising=False)
     monkeypatch.delenv('INDIEBIZ_USERDATA', raising=False)
+    monkeypatch.setattr(limb_keys, '_store_path', lambda: tmp_path / 'data/limb_keys.json')
+    monkeypatch.setattr(device_registry, '_store_path', lambda: tmp_path / 'data/device_registry.json')
     monkeypatch.setattr(limb_keys, '_cache', None)
     monkeypatch.setattr(device_registry, '_cache', None)
     monkeypatch.setattr(api_limb, '_notify_new_limb', lambda *a: None)
@@ -41,6 +44,17 @@ def test_real_executor_signed_roundtrip_files_shell_and_cancel(tmp_path, monkeyp
             member_runtime.current().update(local_task_id=kwargs['local_task_id'], body_session=kwargs['body_session'])
             if message == 'write':
                 result = member_bridge.request({'op': 'write', 'path': 'proof.txt', 'content': 'local only'})
+            elif message in ('ibl-update', 'ibl-conflict'):
+                from member_runner import MemberRunner
+                runner = MemberRunner.__new__(MemberRunner)
+                runner.project_path = tmp_path / 'private'
+                runner.config = {}
+                result = json.loads(runner._member_tool('execute_ibl', {
+                    'code': '#!ibl edition=2\n[self:read]{path:"proof.txt"}'}))
+                if message == 'ibl-conflict':
+                    (tmp_path / 'executor/workspace/proof.txt').write_text('human edit')
+                result = json.loads(runner._member_tool('execute_ibl', {
+                    'code': '#!ibl edition=2\n[self:write]{path:"proof.txt",content:"revised"}'}))
             elif message == 'shell':
                 result = member_bridge.request({'op': 'shell', 'cmd': 'printf shell-ok', 'timeout': 10})
             else:
@@ -82,7 +96,7 @@ def test_real_executor_signed_roundtrip_files_shell_and_cancel(tmp_path, monkeyp
             assert time.monotonic() < deadline
             time.sleep(.05)
         assert requests.get(ready['origin'] + '/member/tasks', timeout=5).status_code == 403
-        for message in ('write', 'shell', 'cancel'):
+        for message in ('write', 'ibl-update', 'ibl-conflict', 'shell', 'cancel'):
             queued = local('task/start', {'message': message})
             assert queued.get('success'), queued
             task = queued['task_id']
@@ -99,11 +113,16 @@ def test_real_executor_signed_roundtrip_files_shell_and_cancel(tmp_path, monkeyp
                 if result['state'] != 'running':
                     break
                 time.sleep(.1)
-            assert approved
-            assert result['state'] == ('cancelled' if message == 'cancel' else 'completed'), result
+            assert approved, (message, result)
+            expected = 'cancelled' if message == 'cancel' else 'failed' if message == 'ibl-conflict' else 'completed'
+            assert result['state'] == expected, result
+            if message == 'ibl-update':
+                assert (tmp_path / 'executor/workspace/proof.txt').read_text() == 'revised'
+            if message == 'ibl-conflict':
+                assert 'file_changed' in result['result']['response']
             if message == 'shell':
                 assert 'shell-ok' in result['result']['response']
-        assert (tmp_path / 'executor/workspace/proof.txt').read_text() == 'local only'
+        assert (tmp_path / 'executor/workspace/proof.txt').read_text() == 'human edit'
         assert not (tmp_path / 'proof.txt').exists()
         assert not (tmp_path / 'data/phone_jobs.db').exists(), 'member command persisted at hub'
         assert b'local only' not in (tmp_path / 'data/member_requests.sqlite3').read_bytes()

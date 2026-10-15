@@ -1,0 +1,737 @@
+[
+  {
+    "run": "initial",
+    "member": "A",
+    "variant": "base",
+    "task_id": "cbf2a2392e8bacd4c9acbee8",
+    "state": "completed",
+    "seconds": 3.05,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3000,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6000,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 9000,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 12000,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15000,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18000,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 63000
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 2286,
+      "rows": 48,
+      "steps": 884
+    },
+    "ibl_run_id": "4a13a26882b84d67bfcf7d6b9f169eb9",
+    "approved_commands": 3
+  },
+  {
+    "run": "initial",
+    "member": "B",
+    "variant": "base",
+    "task_id": "cbd8c0118b8911c65718fc2d",
+    "state": "completed",
+    "seconds": 1.075,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3210,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6210,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 9210,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 12210,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15210,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18210,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 64260
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 707,
+      "rows": 48,
+      "steps": 884
+    },
+    "ibl_run_id": "ac7e799120134922aa3398974bc75e91",
+    "approved_commands": 3
+  },
+  {
+    "run": "initial",
+    "member": "A",
+    "variant": "broken",
+    "task_id": "7a2ca545e2b07b38894a85b1",
+    "state": "failed",
+    "seconds": 1.101,
+    "error": "file_changed",
+    "value": null,
+    "usage": {
+      "elapsed_ms": 413,
+      "rows": 41,
+      "steps": 710
+    },
+    "ibl_run_id": "c3fd0adc242d4ef8a3b6084aa7510457",
+    "approved_commands": 1
+  },
+  {
+    "run": "initial",
+    "member": "B",
+    "variant": "broken",
+    "task_id": "f62a64da4693241c21e2d6e1",
+    "state": "failed",
+    "seconds": 1.097,
+    "error": "file_changed",
+    "value": null,
+    "usage": {
+      "elapsed_ms": 415,
+      "rows": 41,
+      "steps": 710
+    },
+    "ibl_run_id": "a53668b692674a6da7cdf1af5fb02e40",
+    "approved_commands": 1
+  },
+  {
+    "run": "prerepair_v1",
+    "member": "A",
+    "variant": "base",
+    "task_id": "6fd8f8cc746d023a5d9d3b2d",
+    "state": "completed",
+    "seconds": 3.091,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3000,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6000,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 9000,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 12000,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15000,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18000,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 63000
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 2332,
+      "rows": 48,
+      "steps": 918
+    },
+    "ibl_run_id": "fc6b579e95574c4d82a6786fd52d8ea4",
+    "approved_commands": 3
+  },
+  {
+    "run": "prerepair_v1",
+    "member": "B",
+    "variant": "base",
+    "task_id": "ac46346b80c68a413fc93049",
+    "state": "completed",
+    "seconds": 1.074,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3210,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6210,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 9210,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 12210,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15210,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18210,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 64260
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 811,
+      "rows": 48,
+      "steps": 918
+    },
+    "ibl_run_id": "287087b20ea24de99b4323c8d8d1cb36",
+    "approved_commands": 3
+  },
+  {
+    "run": "prerepair_v1",
+    "member": "A",
+    "variant": "broken",
+    "task_id": "528ad4598b48df2d7935f8dc",
+    "state": "failed",
+    "seconds": 1.065,
+    "error": "file_changed",
+    "value": null,
+    "usage": {
+      "elapsed_ms": 517,
+      "rows": 41,
+      "steps": 721
+    },
+    "ibl_run_id": "4cc596ce2811430e8c3c08c443bd6be2",
+    "approved_commands": 1
+  },
+  {
+    "run": "prerepair_v1",
+    "member": "B",
+    "variant": "broken",
+    "task_id": "bb6c1814c5e25e62cba8e3a5",
+    "state": "failed",
+    "seconds": 1.098,
+    "error": "file_changed",
+    "value": null,
+    "usage": {
+      "elapsed_ms": 514,
+      "rows": 41,
+      "steps": 721
+    },
+    "ibl_run_id": "48f6fb49c71e4cb094e1c991d52e8a49",
+    "approved_commands": 1
+  },
+  {
+    "run": "repair_v1",
+    "member": "A",
+    "variant": "base",
+    "task_id": "e8a4e08a28ef09a960e2f20d",
+    "state": "completed",
+    "seconds": 1.083,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3000,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6000,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 9000,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 12000,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15000,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18000,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 63000
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 894,
+      "rows": 48,
+      "steps": 918
+    },
+    "ibl_run_id": "0f33bed7b4784565972e9ee758dbf748",
+    "approved_commands": 3
+  },
+  {
+    "run": "repair_v1",
+    "member": "B",
+    "variant": "base",
+    "task_id": "be2f0938c91d5f95b7aa1e4a",
+    "state": "completed",
+    "seconds": 1.074,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3210,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6210,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 9210,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 12210,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15210,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18210,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 64260
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 811,
+      "rows": 48,
+      "steps": 918
+    },
+    "ibl_run_id": "ac2825784e2440fd922cad01d07336e3",
+    "approved_commands": 3
+  },
+  {
+    "run": "repair_v1",
+    "member": "A",
+    "variant": "broken",
+    "task_id": "9d07ac7ab8fddf98259800ef",
+    "state": "completed",
+    "seconds": 1.077,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3000,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6000,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 0,
+            "count": 0,
+            "file": "batch03.json",
+            "ok": false
+          },
+          {
+            "amount": 12000,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15000,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18000,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 1,
+        "total": 54000
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 818,
+      "rows": 41,
+      "steps": 804
+    },
+    "ibl_run_id": "d365867a6e444439a193a2b42b3a1995",
+    "approved_commands": 3
+  },
+  {
+    "run": "repair_v1",
+    "member": "B",
+    "variant": "broken",
+    "task_id": "7fa94853d5a7ca3731853468",
+    "state": "completed",
+    "seconds": 1.094,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 3210,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          },
+          {
+            "amount": 6210,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 0,
+            "count": 0,
+            "file": "batch03.json",
+            "ok": false
+          },
+          {
+            "amount": 12210,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 15210,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 18210,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          }
+        ],
+        "missing": 1,
+        "total": 55050
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 817,
+      "rows": 41,
+      "steps": 804
+    },
+    "ibl_run_id": "a5d5418507c1418b8a9ae34adbccff02",
+    "approved_commands": 3
+  },
+  {
+    "run": "repair_v1",
+    "member": "A",
+    "variant": "recovered",
+    "task_id": "127c97acab3046f043039054",
+    "state": "completed",
+    "seconds": 1.083,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 18000,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          },
+          {
+            "amount": 15000,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 12000,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 9000,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 6000,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 3000,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 63000
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 800,
+      "rows": 48,
+      "steps": 915
+    },
+    "ibl_run_id": "383d455b10a541e6b88a19fbc3b0aabc",
+    "approved_commands": 3
+  },
+  {
+    "run": "repair_v1",
+    "member": "B",
+    "variant": "recovered",
+    "task_id": "ed0b3c6fb04ad4877762adf8",
+    "state": "completed",
+    "seconds": 1.081,
+    "error": null,
+    "value": {
+      "copy_equal": true,
+      "report": {
+        "files": [
+          {
+            "amount": 18210,
+            "count": 6,
+            "file": "batch06.json",
+            "ok": true
+          },
+          {
+            "amount": 15210,
+            "count": 6,
+            "file": "batch05.json",
+            "ok": true
+          },
+          {
+            "amount": 12210,
+            "count": 6,
+            "file": "batch04.json",
+            "ok": true
+          },
+          {
+            "amount": 9210,
+            "count": 6,
+            "file": "batch03.json",
+            "ok": true
+          },
+          {
+            "amount": 6210,
+            "count": 6,
+            "file": "batch02.json",
+            "ok": true
+          },
+          {
+            "amount": 3210,
+            "count": 6,
+            "file": "batch01.json",
+            "ok": true
+          }
+        ],
+        "missing": 0,
+        "total": 64260
+      },
+      "summary_equal": true
+    },
+    "usage": {
+      "elapsed_ms": 803,
+      "rows": 48,
+      "steps": 915
+    },
+    "ibl_run_id": "e66d6a2c064a434882e56ec5193adcf0",
+    "approved_commands": 3
+  },
+  {
+    "run": "repair_v1",
+    "member": "A",
+    "variant": "concurrent",
+    "task_id": "d03fef28e5cba3ba8c4330dc",
+    "state": "failed",
+    "seconds": 1.086,
+    "error": "file_changed",
+    "value": null,
+    "usage": {
+      "elapsed_ms": 514,
+      "rows": 48,
+      "steps": 832
+    },
+    "ibl_run_id": "89dcd3454bd94256aa507344523f4a1a",
+    "approved_commands": 1
+  },
+  {
+    "run": "repair_v1",
+    "member": "B",
+    "variant": "concurrent",
+    "task_id": "0730d5559854162d8bd08c69",
+    "state": "failed",
+    "seconds": 1.082,
+    "error": "file_changed",
+    "value": null,
+    "usage": {
+      "elapsed_ms": 506,
+      "rows": 48,
+      "steps": 832
+    },
+    "ibl_run_id": "47b2bdbf0d524b3d9717f47628a07e1b",
+    "approved_commands": 1
+  },
+  {
+    "run": "ai_diagnosis",
+    "member": "A",
+    "variant": "base",
+    "task_id": "33e3d67dec7113440f224122",
+    "state": "cancelled",
+    "seconds": 120.694,
+    "error": "cancelled",
+    "value": null,
+    "usage": null,
+    "ibl_run_id": null,
+    "approved_commands": 2
+  }
+]

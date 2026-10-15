@@ -1,0 +1,22 @@
+#!ibl edition=2
+[def:집계]($파일) {
+  $문서 = [self:read]{path:$파일}
+  $행 = $문서.data.items
+  $유효 = filter($행,($x)=>not $x.cancelled)
+  return {file:$파일,ok:true,count:len($유효),amount:reduce($유효,0,($n,$x)=>$n + $x.qty * $x.price)}
+}
+$명세 = [self:read]{path:"manifest.json"}
+$결과 = $명세.data.files >> [table:each] {
+  [fn:집계]{파일:$it} ?? {file:$it,ok:false,count:0,amount:0}
+}
+$성공 = filter($결과,($x)=>$x.ok)
+$합계 = reduce($성공,0,($n,$x)=>$n + $x.amount)
+$원문 = [self:read]{path:"source.txt"}
+[self:write]{path:"copy.txt",content:$원문.text}
+[self:write]{path:"summary.json",content:json({files:$결과,total:$합계,missing:len($결과)-len($성공)})}
+$요약 = f"확인 ${len($성공)}파일 / 미확인 ${len($결과)-len($성공)}파일 / 합계 ${$합계}"
+[self:write]{path:"summary.txt",content:$요약}
+$재독 = [self:read]{path:"summary.json"}
+$복사 = [self:read]{path:"copy.txt"}
+$본문 = [self:read]{path:"summary.txt"}
+return {report:$재독.data,copy_equal:$복사.text==$원문.text,summary_equal:$본문.text==$요약}

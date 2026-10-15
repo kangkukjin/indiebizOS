@@ -10,6 +10,11 @@
 - backend/test_member_* 검사는 영속 경로를 모두 임시화한다. 원문·경로가 주인 로그에 남는지 함께 본다.
 - build_ibl_nodes.py로 파생하고 --check, backend 층·파일 크기 검사, 해당 플랫폼 봉투 검사를 통과시킨다.
 
+설치 기기의 IBL 문서 변환과 직접 read/write는 같은 교환 어댑터를 쓴다. 성공한 read의
+SHA-256은 해당 턴·로컬 작업·연결·요청 경로에만 보관하여 후속 write의 조건으로 전달한다.
+쓰기 직전 자동 재독은 하지 않으며, 명시한 expected_hash는 교체하지 않는다. 파일 변경 여부와
+실제 저장은 계속 기기가 판정한다. 지문이 없는 구형 기기의 응답을 조건부 쓰기 증거로 만들지 않는다.
+
 설계와 단계별 잔여 검증: docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11. 회원 시작 예시: member_start.md.
 
 ## 문서·미디어 어댑터

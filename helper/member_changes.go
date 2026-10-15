@@ -6,23 +6,26 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"unicode/utf8"
 )
 
 func memberDigest(data []byte) string { h := sha256.Sum256(data); return hex.EncodeToString(h[:]) }
 func memberRead(c Command) map[string]interface{} {
 	info, err := os.Stat(c.Path)
-	if err != nil || !info.Mode().IsRegular() || info.Size() > 32*1024*1024 {
-		return errResult("read_limit", "32MB 이하 일반 파일을 읽을 수 있습니다")
+	if err != nil || !info.Mode().IsRegular() || info.Size() > 4*1024*1024 {
+		return errResult("read_limit", "텍스트 편집기는 4MB 이하 일반 파일을 읽습니다. 큰 파일은 승인한 명령으로 처리하세요")
 	}
-	r := doRead(c)
-	if r["error"] == nil {
-		b, err := os.ReadFile(c.Path)
-		if err == nil {
-			r["sha256"] = memberDigest(b)
-		}
+	data, err := os.ReadFile(c.Path)
+	if err != nil {
+		return errResult("read_failed", err.Error())
 	}
-	return r
+	if len(data) > 4*1024*1024 || !utf8.Valid(data) {
+		return errResult("text_required", "UTF-8 텍스트 전체를 읽을 수 없습니다. 기본 앱에서 열어 확인하세요")
+	}
+	// Never pair a full-file hash with clipped content: saving that view would truncate the file.
+	return map[string]interface{}{"success": true, "op": "read", "path": c.Path, "content": string(data), "sha256": memberDigest(data)}
 }
+
 func (m *MemberRuntime) safeWrite(c Command) map[string]interface{} {
 	if !m.cfg.Desktop {
 		return memberWrite(c)

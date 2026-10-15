@@ -124,3 +124,24 @@ func TestDesktopArtifactIntegrityAndLocalDelivery(t *testing.T) {
 		t.Fatal("duplicate receipt failed", r)
 	}
 }
+
+func TestDesktopReadHashAlwaysCoversCompleteEditableText(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "large.txt")
+	data := make([]byte, maxOutput+100)
+	for i := range data {
+		data[i] = 'x'
+	}
+	if e := os.WriteFile(path, data, 0600); e != nil {
+		t.Fatal(e)
+	}
+	r := memberRead(Command{Path: path})
+	if r["content"] != string(data) || r["sha256"] != memberDigest(data) {
+		t.Fatal("read content clipped while retaining write hash")
+	}
+	if e := os.WriteFile(path, []byte{0xff, 0xfe}, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if r := memberRead(Command{Path: path}); r["error"] != "text_required" {
+		t.Fatal(r)
+	}
+}

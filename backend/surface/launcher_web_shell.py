@@ -112,14 +112,16 @@ input,textarea,select{ font-family:inherit; }
 .ap-chat{ flex:1; display:flex; flex-direction:column; min-height:0; }
 .ap-session-workspace{display:flex;flex:1;min-height:0;min-width:0}
 .ap-session-conversation{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
-#apSessions{display:flex;justify-content:flex-end;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--bg2)}
+#apSessions{display:flex;align-items:center;flex-wrap:nowrap;gap:4px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--bg2)}
+#apSessions .btn2{flex-shrink:0;white-space:nowrap;padding:7px 8px;font-size:12px}
 #apSessions[hidden],#apSessionBar[hidden],#apSessionStop[hidden],#apSessionOlder[hidden],#apSessionArchived[hidden]{display:none!important}
+#apDictionaryDialog{margin:auto;width:680px;max-width:92vw;max-height:85dvh;overflow:auto;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}#apDictionaryDialog::backdrop{background:rgba(0,0,0,.35)}
 #apSessionHistory{margin:auto;width:560px;max-width:92vw;max-height:85dvh;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}
 #apSessionHistory::backdrop{background:rgba(0,0,0,.35)}.ap-history-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 #apSessionList{overflow:auto;max-height:60dvh}#apSessionList h3{font-size:12px;color:var(--dim);padding:12px 4px 6px}
 .ap-session-row{display:block;text-align:left;width:100%;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--txt);cursor:pointer}
 .ap-session-row span{display:block;overflow-wrap:anywhere}.ap-session-row small{color:var(--dim)}.ap-session-row[aria-current="true"]{background:var(--bg3,var(--bg))}
-#apSessionBar{padding:8px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line)}#apSessionTitle{flex:1;overflow-wrap:anywhere;font-size:14px}
+#apSessionBar{padding:8px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line)}#apSessionTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
 #apSessionError{color:var(--down);padding:0 12px}#apSessionError:empty{display:none}#apSessionArchived{font-size:12px;color:var(--dim)}
 .ap-head{ padding:11px 14px; background:var(--bg2); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
 .ap-head .ap-head-t{ min-width:0; flex:1; }
@@ -505,16 +507,19 @@ SHELL_PANEL_AUTOPILOT_HTML = """
         <div class="ap-head-t"><h2 id="apTitle">시스템 AI</h2><p id="apSub"></p></div>
       </div>
       <div id="apSessions" aria-label="대화 세션 메뉴" hidden>
+        <strong id="apSessionTitle"></strong>
         <button class="btn2" id="apHistory" onclick="apOpenSessionHistory()">히스토리</button>
         <button class="btn2" id="apSessionNew" onclick="apNewSession()">＋ 새 세션</button>
+        <button class="btn2" id="apDictionary" onclick="apOpenDictionary()">IBL 사전</button>
       </div>
       <dialog id="apSessionHistory" aria-label="대화 히스토리" onclick="if(event.target===this)this.close()">
         <div class="ap-history-head"><strong>대화 히스토리</strong><button class="btn2" onclick="apCloseSessionHistory()" aria-label="닫기">닫기</button></div>
         <div id="apSessionList"></div>
       </dialog>
+      <dialog id="apDictionaryDialog" aria-label="IBL 사전" onclose="apRestoreDictionary()" onclick="if(event.target===this)this.close()"><div class="ap-history-head"><strong>IBL 사전</strong><button class="btn2" onclick="this.closest('dialog').close()" aria-label="닫기">닫기</button></div></dialog>
       <div class="ap-session-workspace">
         <div class="ap-session-conversation">
-          <div id="apSessionBar" hidden><strong id="apSessionTitle"></strong><span id="apSessionArchived" hidden>보관된 세션입니다.</span>
+          <div id="apSessionBar" hidden><span id="apSessionArchived" hidden>보관된 세션입니다.</span>
             <button class="btn2" id="apSessionOlder" onclick="apSessionOlder()" hidden>이전 대화 읽기</button>
             <button class="btn2" id="apSessionStop" onclick="apSessionCancel()" hidden>작업 중단</button>
           </div>
@@ -577,7 +582,7 @@ SHELL_PANEL_MANUAL_HTML = """
         <div class="about-code">[sense:realty]{region:"강남구"} &gt;&gt; sort &gt;&gt; take{n:3}</div>
       </div>
       <!-- IBL 사전(액션 팔레트) -->
-      <div id="palette" class="palette" style="display:none"></div>
+      <div id="paletteHome"><div id="palette" class="palette" style="display:none"></div></div>
       <!-- 다른 몸(피어) 연결상태 — 폰이면 맥, 맥-원격이면 폰 -->
       <div id="peerStatus" style="display:none"></div>
       <!-- 모델 기어 — 계기판 변속 레버 (절약/균형/최대) + 설정(프리셋·핀) -->

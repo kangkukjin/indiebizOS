@@ -139,7 +139,7 @@
     min-height: 60px;
     padding: 6px 12px;
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
   .remote-shell .chat-header > div { min-width: 0; gap: 6px; }
   .remote-shell .chat-header > div:first-child { flex: 1; }
@@ -149,7 +149,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .remote-shell .chat-header button { min-width: 44px; display: grid; place-items: center; }
+  .remote-shell .chat-header button { min-width: 0; min-height: 36px; display: flex; align-items: center; justify-content: center; }
   .remote-shell .chat-input-area { padding: 8px 12px; flex-shrink: 0; }
   .remote-shell .chat-composer { display: grid; grid-template-columns: 44px 44px 1fr 48px; gap: 6px; }
   .remote-shell .chat-composer textarea {

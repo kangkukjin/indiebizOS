@@ -81,6 +81,15 @@ async function mDistill(){
 }
 /* 둘러보기 팔레트 */
 let paletteLoaded=false;
+async function apOpenDictionary(){
+  closeAbout();
+  const dialog=document.getElementById('apDictionaryDialog'),palette=document.getElementById('palette');
+  dialog.append(palette);palette.style.display='block';dialog.showModal();
+  if(!paletteLoaded)await loadPalette();
+}
+function apRestoreDictionary(){
+  document.getElementById('paletteHome').append(document.getElementById('palette'));closePalette();
+}
 function closeAbout(){ const a=document.getElementById('mAbout'); if(a) a.style.display='none'; const b=document.getElementById('btnAbout'); if(b) b.classList.remove('on'); }
 function closePalette(){ const p=document.getElementById('palette'); if(p) p.style.display='none'; const b=document.getElementById('btnDict'); if(b) b.classList.remove('on'); }
 async function togglePalette(){
@@ -122,6 +131,10 @@ function filterPalette(q){
   });
 }
 function seedAction(seed){
+  const dialog=document.getElementById('apDictionaryDialog');
+  if(dialog?.open){
+    const input=document.getElementById('apInput');input.value+=(input.value?String.fromCharCode(10):'')+seed+' ';dialog.close();input.focus();return;
+  }
   document.getElementById('mCode').value=seed;
   document.getElementById('mAfterTranslate').style.display='block';
   document.getElementById('mCode').focus();

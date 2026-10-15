@@ -957,36 +957,36 @@ export function ChatPane({ chatTarget, layout = 'fullpage', show = true, onClose
       {/* 헤더 (다이얼로그 모드에서는 드래그 핸들) */}
       <div
         className={'chat-header ' + (isDialog
-          ? 'flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0 select-none'
-          : 'h-14 px-4 flex items-center justify-between border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag'
+          ? 'flex items-center justify-between gap-2 min-w-0 px-2 py-2 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0 select-none'
+          : 'h-12 px-2 flex items-center justify-between gap-2 min-w-0 border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag'
         )}
         style={isDialog ? { cursor: isDragging ? 'grabbing' : 'grab' } : undefined}
         onMouseDown={isDialog ? handleDragStart : undefined}
       >
-        <div className={`flex items-center gap-3${isDialog ? '' : ' no-drag'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${
+        <div className={`flex items-center gap-2 min-w-0 flex-1${isDialog ? '' : ' no-drag'}`}>
+          <div className={`w-8 h-8 shrink-0 rounded-full hidden sm:flex items-center justify-center text-white ${
             isDialog ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-[#D97706] to-[#B45309]'
           }`}>
             <Bot size={18} />
           </div>
-          <div>
-            <div className={isDialog ? 'text-lg font-bold text-gray-800' : 'font-medium text-[#4A4035]'}>
+          <div className="min-w-0">
+            <div title={session?.title || agentLabel} className={isDialog ? 'truncate font-bold text-gray-800' : 'truncate font-medium text-[#4A4035]'}>
               {session?.title || agentLabel}
             </div>
-            <div className={isDialog ? 'text-xs text-gray-500' : 'text-xs text-[#A09080]'}>
+            <div className={isDialog ? 'truncate text-xs text-gray-500' : 'truncate text-xs text-[#A09080]'}>
               {agentModel || 'IndieBiz OS 도우미'}
             </div>
           </div>
         </div>
-        <div className={`flex items-center gap-2${isDialog ? '' : ' no-drag'}`}>
+        <div className={`flex items-center gap-1 shrink-0 whitespace-nowrap${isDialog ? '' : ' no-drag'}`}>
           {headerActions}
           {/* 마법책 — IBL 액션 사전 */}
           <button
             onClick={() => setGrimoireOpen(true)}
-            className={`p-1.5 rounded-lg transition-colors ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}
-            title="마법책 — IBL 액션 사전"
+            className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}
+            title="마법책 — IBL 액션 사전" aria-label="IBL 사전"
           >
-            <BookOpen size={16} />
+            <BookOpen size={14} className="hidden sm:block" />IBL 사전
           </button>
           {/* Claude Code 세션 재시작 (Claude Code provider일 때만) */}
           {showResetSessionButton && (

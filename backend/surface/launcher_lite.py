@@ -50,10 +50,13 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   .login input { width:80%; max-width:280px; margin:12px 0; }
   .err { color:#ff6b6b; font-size:14px; min-height:18px; }
   /* 자율주행(채팅) */
-  #chatMenu { padding:8px 10px; text-align:right; }
+  #chatMenu { display:table;table-layout:fixed;width:100%;padding:8px;box-sizing:border-box; }
+  #chatTitle { display:table-cell;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px; }
+  #chatMenuActions { display:table-cell;vertical-align:middle;width:150px;text-align:right;white-space:nowrap; }
+  #chatMenu button { padding:7px;font-size:12px; }
   #chatHistory { position:fixed; z-index:10; top:8%; left:5%; right:5%; bottom:8%; padding:16px; background:#222; border:1px solid #555; border-radius:12px; overflow:auto; }
   #chatHistory button.session { display:block; text-align:left; width:100%; margin:8px 0; }
-  #chatTitle, #chatError { padding:0 12px; word-wrap:break-word; }
+  #chatError { padding:0 12px; word-wrap:break-word; }
   #chatlog { padding:6px 10px 120px; }
   .msg { margin:7px 0; }
   .msg .bub { display:inline-block; max-width:86%; padding:9px 12px; border-radius:14px; white-space:pre-wrap; word-wrap:break-word; text-align:left; line-height:1.5; }
@@ -108,8 +111,8 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   </div>
 
   <div id="chat" class="page">
-    <div id="chatMenu"><button id="chatHistoryOpen">히스토리</button> <button id="chatNew">＋ 새 세션</button></div>
-    <div id="chatTitle"></div><div id="chatError" class="err" role="alert"></div>
+    <div id="chatMenu"><div id="chatTitle"></div><div id="chatMenuActions"><button id="chatHistoryOpen">히스토리</button> <button id="chatNew">＋ 새 세션</button></div></div>
+    <div id="chatError" class="err" role="alert"></div>
     <div id="chatHistory" class="hide" role="dialog" aria-label="대화 히스토리">
       <button id="chatHistoryClose">닫기</button><h3>대화 히스토리</h3><div id="chatSessions"></div>
     </div>

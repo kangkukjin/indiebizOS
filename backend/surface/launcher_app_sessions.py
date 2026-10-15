@@ -30,7 +30,9 @@ function apSessionControls(s){
  document.getElementById('apSessionOlder').hidden=!s.older;
  document.getElementById('apSessionOlder').disabled=s.reading;
  document.getElementById('apSessionNew').disabled=s.creating;
- document.getElementById('apSessionTitle').textContent=item?.title||'새 세션을 시작하세요';
+ const title=item?.title||'새 세션을 시작하세요';
+ document.getElementById('apSessionTitle').textContent=title;document.getElementById('apSessionTitle').title=title;
+ document.getElementById('apSessionBar').hidden=!item?.archived&&!s.running&&!s.older;
  document.getElementById('apSessionArchived').hidden=!item?.archived;
 }
 function apRenderSessionList(){

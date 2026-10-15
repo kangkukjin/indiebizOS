@@ -25,6 +25,8 @@ def browser_chat():
             return
         if path.endswith('/analysis-prompt'):
             data = {'prompt': prompt}
+        elif path == '/ibl/actions/catalog':
+            data = {'nodes':{'sense':{'actions':{'weather':{}}}}}
         elif path == '/projects':
             data = {'projects': [{'id': 'p', 'name': '프로젝트'}]}
         elif path == '/projects/p/agents':
@@ -116,6 +118,17 @@ def test_analysis_has_no_delayed_write_into_next_chat(browser_chat):
 def test_sessions_create_resume_reload_and_responsive_layout(browser_chat, tmp_path):
     page,sent,_=browser_chat
     expect(page.locator('#apSessions')).to_be_visible()
+    for width in (390, 320):
+        page.set_viewport_size({'width':width,'height':844})
+        boxes=[page.locator(selector).bounding_box() for selector in ('#apSessionTitle','#apHistory','#apSessionNew','#apDictionary')]
+        assert max(b['y'] for b in boxes) < min(b['y']+b['height'] for b in boxes)
+        assert all(b['x'] >= 0 and b['x']+b['width'] <= width for b in boxes)
+    page.locator('#apDictionary').click()
+    expect(page.locator('#apDictionaryDialog')).to_be_visible()
+    page.locator('#palette').get_by_text('weather',exact=True).click()
+    expect(page.locator('#apDictionaryDialog')).not_to_be_visible()
+    expect(page.locator('#apInput')).to_have_value('[sense:weather]{} ')
+    expect(page.locator('#paletteHome #palette')).to_have_count(1)
     page.locator('#apInput').fill('이전 세션의 질문');page.locator('#apSend').click()
     expect(page.locator('#apMsgs')).to_contain_text('응답 완료')
     page.locator('#apSessionNew').click()

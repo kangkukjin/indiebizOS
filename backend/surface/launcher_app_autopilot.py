@@ -257,6 +257,7 @@ function apOpenChat(title,sub){
   // 공유 입력창의 초안(주행 분석 포함)은 이전 대화 상대에게 속한다.
   document.getElementById('apInput').value='';
   document.getElementById('apTitle').textContent=title;
+  document.getElementById('apSessionTitle').textContent=title;document.getElementById('apSessionTitle').title=title;
   document.getElementById('apSub').textContent=sub||'';
   document.getElementById('apMsgs').innerHTML='<div class="empty">메시지를 입력해 시작하세요.</div>';
   document.getElementById('apAttach').style.display='';

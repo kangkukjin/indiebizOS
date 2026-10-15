@@ -113,6 +113,8 @@ def test_sessions_preserve_history_and_switch_surfaces(tmp_path, bridge):
             expect(page.locator('#chat .assistant b')).to_have_text('일정')
             expect(page.locator('#taskSidebar')).to_have_count(0)
             menu = page.locator('#taskSessionMenu').bounding_box()
+            title = page.locator('#taskTitle').bounding_box()
+            assert menu['y'] <= title['y'] < menu['y'] + menu['height']
             chat = page.locator('#chat').bounding_box()
             assert menu['y'] + menu['height'] < chat['y']
             assert chat['width'] > 1000

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { BookOpen, ArrowLeft, FileText } from 'lucide-react';
 import { ChatView } from '../chat/ChatView';
 import { GenericInstrument, type AppInstrument } from '../GenericInstrument';
@@ -8,8 +8,8 @@ import { ResearchPerspective } from './ResearchPerspective';
 import { useResearchSession } from './useResearchSession';
 
 /** 일반 프로젝트의 대화창에 대화별 자료실만 더한다. */
-export function ResearchConversation({ project, thread, visible, onChange }: {
-  project: string; thread: ResearchThread; visible: boolean; onChange: () => void;
+export function ResearchConversation({ project, thread, visible, onChange, sessionActions }: {
+  project: string; thread: ResearchThread; visible: boolean; onChange: () => void; sessionActions?: ReactNode;
 }) {
   const session = useResearchSession(project, thread.id, visible, onChange);
   const [library, setLibrary] = useState<AppInstrument | null>(null);
@@ -26,9 +26,10 @@ export function ResearchConversation({ project, thread, visible, onChange }: {
   return <section className={`${visible ? 'flex' : 'hidden'} flex-col flex-1 min-h-0 min-w-0`}>
     {error && <p role="alert" className="px-4 py-2 text-sm text-red-600">{error}</p>}
     <div className={`${showLibrary || showPerspective || showQuestions ? 'hidden' : 'flex'} flex-col flex-1 min-h-0`}>
+      <div className="flex flex-wrap justify-end border-b border-[#E5DFD5]"><button onClick={() => setShowQuestions(true)} className="px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm">연구 질문</button><button onClick={() => setShowPerspective(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><FileText size={17} />사용자의 관점</button><button onClick={openLibrary} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><BookOpen size={17} />자료실</button></div>
       <ChatView chatTarget={{ type: 'session', id: `${project}:${thread.id}`, title: thread.title }}
         session={session} active={visible && !showLibrary && !showPerspective && !showQuestions}
-        headerActions={<><button onClick={() => setShowQuestions(true)} className="px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm">연구 질문</button><button onClick={() => setShowPerspective(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><FileText size={17} />사용자의 관점</button><button onClick={openLibrary} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><BookOpen size={17} />자료실</button></>} />
+        headerActions={sessionActions} />
     </div>
     {showQuestions && <ResearchQuestions project={project} thread={thread.id} onBack={() => setShowQuestions(false)} />}
     {showPerspective && <ResearchPerspective project={project} thread={thread.id} title={thread.title} onBack={() => setShowPerspective(false)} onChange={onChange} />}

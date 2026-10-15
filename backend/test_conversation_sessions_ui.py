@@ -84,6 +84,14 @@ def test_session_workspace_in_browser(tmp_path):
                 textbox=page.locator('textarea').last
                 menu=page.get_by_label('대화 세션 메뉴').bounding_box()
                 assert menu['y']+menu['height'] <= textbox.bounding_box()['y']
+                for width in (1280, 390, 320):
+                    page.set_viewport_size({'width':width,'height':850})
+                    header=page.locator('.chat-header:visible')
+                    controls=[header.get_by_text('회의 준비',exact=True),header.get_by_role('button',name='히스토리',exact=True),header.get_by_role('button',name='새 세션',exact=True),header.get_by_role('button',name='IBL 사전',exact=True)]
+                    boxes=[control.bounding_box() for control in controls]
+                    assert max(b['y'] for b in boxes) < min(b['y']+b['height'] for b in boxes)
+                    assert all(b['x'] >= 0 and b['x']+b['width'] <= width for b in boxes)
+                page.set_viewport_size({'width':1280,'height':850})
                 page.get_by_role('button',name='새 세션',exact=True).click()
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).not_to_be_visible()
                 textbox.fill('새 주제 조사');textbox.press('Enter')

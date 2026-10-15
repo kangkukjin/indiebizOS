@@ -200,8 +200,6 @@ def put_models(body: dict):
             raise HTTPException(400, '지원하는 AI 제공자를 선택하세요')
         if not isinstance(config.get('model'), str) or not config['model'].strip():
             raise HTTPException(400, '모델 이름을 입력하세요')
-        if config['provider'] == 'codex':
-            raise HTTPException(400, 'Codex CLI는 아직 회원 작업 격리를 지원하지 않습니다')
     with settings.scope(), settings.lock:
         value = settings.load()
         value['models'] = {tier: M.merge_model_config(config, value['models'][tier], M.default_model_config(tier))

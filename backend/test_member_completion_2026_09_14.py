@@ -40,8 +40,14 @@ def test_member_tool_cannot_use_direct_shell():
 
 def test_member_cli_provider_cannot_escape():
     from providers import get_provider
+    from member_codex import MemberCodexProvider
     with P.narrow(P.member("A",4,"devA")):
-        with pytest.raises(PermissionError):get_provider("codex",api_key="",model="test",system_prompt="")
+        provider = get_provider("codex", api_key="", model="test", system_prompt="")
+        assert isinstance(provider, MemberCodexProvider)
+        with pytest.raises(PermissionError):
+            list(provider.process_message_stream("no active member turn"))
+    with pytest.raises(PermissionError):
+        list(provider.process_message_stream("owner must not reuse member provider"))
 
 
 def test_actual_ibl_routes_to_member_without_hub_write(tmp_path,monkeypatch):

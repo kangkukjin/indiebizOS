@@ -127,6 +127,7 @@
     "cognition/ibl_v2_experience",
     "cognition/legacy_example_projection",
     "cognition/member_cli",
+    "cognition/member_codex",
     "cognition/member_local_tools",
     "cognition/member_runner",
     "cognition/member_session",
@@ -603,8 +604,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 528,
-    "engine": 496,
+    "total": 529,
+    "engine": 497,
     "blocklist": 32
   }
 }

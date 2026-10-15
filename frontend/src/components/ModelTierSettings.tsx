@@ -3,9 +3,9 @@ import { CodexModelPicker } from './CodexModelPicker';
 import type { SystemAISettings } from './launcher-components/types';
 import { isCliProvider, modelPlaceholder, modelFieldHint } from '../types';
 
-export function ModelTierSettings({ title, description, settings, showApiKey, onSettingsChange, onToggleApiKey, member = false }: {
+export function ModelTierSettings({ title, description, settings, showApiKey, onSettingsChange, onToggleApiKey }: {
   title: string; description: string; settings: SystemAISettings; showApiKey: boolean;
-  onSettingsChange: (value: SystemAISettings) => void; onToggleApiKey: () => void; member?: boolean;
+  onSettingsChange: (value: SystemAISettings) => void; onToggleApiKey: () => void;
 }) {
   type TierSettings = SystemAISettings;
   const switchProvider = <T extends TierSettings>(current: T, provider: string): T => {
@@ -46,7 +46,7 @@ export function ModelTierSettings({ title, description, settings, showApiKey, on
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
                     <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
-                    <option value="codex" disabled={member}>{member ? 'Codex (회원 작업 지원 준비 중)' : 'Codex (ChatGPT 구독, CLI 호출)'}</option>
+                    <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
                   </select>
                 </div>
 

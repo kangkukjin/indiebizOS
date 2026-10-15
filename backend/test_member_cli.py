@@ -9,14 +9,16 @@ import pytest
 import principal
 import member_runtime
 from member_cli import MemberToolBridge, MemberClaudeProvider
+from member_codex import MemberCodexProvider
 
 
-def test_loopback_only_exposes_member_tools_and_restores_principal(tmp_path):
+@pytest.mark.parametrize('provider_class', [MemberClaudeProvider, MemberCodexProvider])
+def test_loopback_only_exposes_member_tools_and_restores_principal(tmp_path, provider_class):
     seen = []
     def execute(name, args, *rest):
         seen.append((principal.current().key(), member_runtime.current()['task_id'], name, args))
         return json.dumps({'success': True})
-    provider = MemberClaudeProvider(api_key='', model='opus', system_prompt='', tools=[
+    provider = provider_class(api_key='', model='opus', system_prompt='', tools=[
         {'name': 'execute_ibl', 'input_schema': {'type': 'object'}}])
     with principal.narrow(principal.member('a', 4, 'd')), member_runtime.turn_scope(tmp_path, 'd', 'task', threading.Event(), {}):
         bridge = MemberToolBridge(provider, execute, None)
@@ -49,8 +51,8 @@ def test_member_cli_has_no_native_tools_owner_config_or_persistence(tmp_path, mo
     with principal.narrow(principal.member('a', 4, 'd')):
         provider = get_provider('claude_code', api_key='', model='opus', system_prompt='member prompt')
         assert isinstance(provider, MemberClaudeProvider)
-        with pytest.raises(PermissionError):
-            get_provider('codex', api_key='', model='x', system_prompt='')
+        for name in ('codex', 'codex_cli', 'codex-cli'):
+            assert isinstance(get_provider(name, api_key='', model='x', system_prompt=''), MemberCodexProvider)
     provider._binary_path = '/test/claude'
     provider._member_bridge = SimpleNamespace(tools={'execute_ibl': {}})
     provider._member_root = tmp_path
@@ -81,20 +83,21 @@ def test_central_execution_gear_is_not_downgraded(monkeypatch):
     assert (config['provider'], config['model']) == ('claude_code', 'opus')
 
 
-def test_member_oneshot_never_reuses_or_populates_owner_cache(monkeypatch, tmp_path):
+@pytest.mark.parametrize('name,provider_class', [('claude_code', MemberClaudeProvider), ('codex', MemberCodexProvider)])
+def test_member_oneshot_never_reuses_or_populates_owner_cache(monkeypatch, tmp_path, name, provider_class):
     import model_resolver as resolver
     from consciousness_agent import call_oneshot_provider
-    descriptor = {'provider': 'claude_code', 'model': 'opus', 'api_key': ''}
-    monkeypatch.setattr(MemberClaudeProvider, 'init_client', lambda self: setattr(self, '_client', True))
+    descriptor = {'provider': name, 'model': 'test-model', 'api_key': ''}
+    monkeypatch.setattr(provider_class, 'init_client', lambda self: setattr(self, '_client', True))
     # 실제 외부 호출 없이 원샷의 회원 허용과 모델 선택을 검사한다.
-    monkeypatch.setattr(MemberClaudeProvider, 'process_message', lambda self, **kwargs: self.model)
+    monkeypatch.setattr(provider_class, 'process_message', lambda self, **kwargs: self.model)
     monkeypatch.setattr(resolver, '_provider_cache', {})
     owner = resolver._provider_from_desc(descriptor, oneshot=True)
     owner_cache = dict(resolver._provider_cache)
     with principal.narrow(principal.member('a', 4, 'd')), member_runtime.turn_scope(tmp_path, 'd', 'task', threading.Event(), {}):
         member = resolver._provider_from_desc(descriptor, oneshot=True)
-        assert member is not owner and isinstance(member, MemberClaudeProvider)
-        assert call_oneshot_provider(member, 'test', role='evaluate') == 'opus'
+        assert member is not owner and isinstance(member, provider_class)
+        assert call_oneshot_provider(member, 'test', role='evaluate') == 'test-model'
         with pytest.raises(PermissionError):
             call_oneshot_provider(owner, 'test', role='evaluate')
     assert resolver._provider_cache == owner_cache

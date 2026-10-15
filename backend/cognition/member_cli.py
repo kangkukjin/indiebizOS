@@ -1,4 +1,4 @@
-"""중앙 Claude 기어를 회원 도구 관문에 연결한다. 주인 MCP/내장 도구는 공급하지 않는다."""
+"""중앙 CLI 기어를 회원 도구 관문에 연결한다. 주인 MCP/내장 도구는 공급하지 않는다."""
 import contextvars
 import json
 import secrets
@@ -114,7 +114,46 @@ class MemberToolBridge:
         self.thread.join(timeout=2)
 
 
-class MemberClaudeProvider(ClaudeCodeProvider):
+class MemberCliScope:
+    """CLI 종류와 무관한 회원 턴의 신원·첨부·도구·임시 파일 수명."""
+    def _prepare_launch_context(self, tools_mode):
+        env = self._build_env()
+        self._on_launch_environment(env)
+        return env, str(self._member_root)
+
+    def _mcp_bridge_release(self, handle):
+        pass  # TemporaryDirectory가 프롬프트·설정·로그를 함께 회수한다.
+
+    def _write_system_prompt_file(self):
+        path = self._member_root / 'system-prompt.txt'
+        path.write_text(self.system_prompt or '회원의 요청을 처리하세요.', encoding='utf-8')
+        path.chmod(0o600)
+        return str(path)
+
+    def _save_images_to_temp(self, images):
+        return []  # 이미지는 전용 MCP 도구에서만 제공한다.
+
+    def process_message_stream(self, message, history=None, images=None, execute_tool=None, cancel_check=None):
+        import member_runtime
+        if not member_runtime.is_member() or not member_runtime.current():
+            raise PermissionError('회원 턴 안에서만 생성하는 제공자입니다')
+        self._member_images = images or []
+        if images:
+            message += f"\n첨부 이미지 {len(images)}개. read_attached_image(index=0부터)를 사용해 확인하세요."
+        old_path = self.project_path
+        with tempfile.TemporaryDirectory(prefix='indiebiz-member-') as root:
+            self._member_root = Path(root)
+            self.project_path = root
+            self.disable_session_persistence = True
+            self._member_bridge = MemberToolBridge(self, execute_tool, cancel_check)
+            try:
+                yield from super().process_message_stream(message, history, images, execute_tool, cancel_check)
+            finally:
+                self._member_bridge.close()
+                self.project_path = old_path
+
+
+class MemberClaudeProvider(MemberCliScope, ClaudeCodeProvider):
     """같은 모델·usage 번역기를 쓰되 도구/설정/세션은 회원 전용으로 제한한다."""
     TOOL_POLICY = ''
 
@@ -151,34 +190,3 @@ class MemberClaudeProvider(ClaudeCodeProvider):
         path.write_text(json.dumps(self._member_bridge.config()))
         path.chmod(0o600)
         return str(path)
-
-    def _mcp_bridge_release(self, handle):
-        pass  # TemporaryDirectory가 프롬프트·설정·로그를 함께 회수한다.
-
-    def _write_system_prompt_file(self):
-        path = self._member_root / 'system-prompt.txt'
-        path.write_text(self.system_prompt or '회원의 요청을 처리하세요.', encoding='utf-8')
-        path.chmod(0o600)
-        return str(path)
-
-    def _save_images_to_temp(self, images):
-        return []  # 이미지는 전용 MCP 도구에서만 제공한다.
-
-    def process_message_stream(self, message, history=None, images=None, execute_tool=None, cancel_check=None):
-        import member_runtime
-        if not member_runtime.is_member() or not member_runtime.current():
-            raise PermissionError('회원 턴 안에서만 생성하는 제공자입니다')
-        self._member_images = images or []
-        if images:
-            message += f"\n첨부 이미지 {len(images)}개. read_attached_image(index=0부터)를 사용해 확인하세요."
-        old_path = self.project_path
-        with tempfile.TemporaryDirectory(prefix='indiebiz-member-') as root:
-            self._member_root = Path(root)
-            self.project_path = root
-            self.disable_session_persistence = True
-            self._member_bridge = MemberToolBridge(self, execute_tool, cancel_check)
-            try:
-                yield from super().process_message_stream(message, history, images, execute_tool, cancel_check)
-            finally:
-                self._member_bridge.close()
-                self.project_path = old_path

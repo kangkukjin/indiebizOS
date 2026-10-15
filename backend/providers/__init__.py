@@ -80,6 +80,9 @@ def get_provider(provider_name: str, **kwargs):
         if provider_class is ClaudeCodeProvider:
             from member_cli import MemberClaudeProvider
             provider_class = MemberClaudeProvider
+        elif provider_class is CodexProvider:
+            from member_codex import MemberCodexProvider
+            provider_class = MemberCodexProvider
         else:
             raise PermissionError("현재 중앙 CLI 모델의 회원 격리를 지원하지 않습니다. 중앙 기어를 지원 모델로 바꾸세요.")
     return provider_class(**kwargs)

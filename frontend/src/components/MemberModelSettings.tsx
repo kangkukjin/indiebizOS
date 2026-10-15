@@ -36,7 +36,7 @@ export function MemberModelSettings() {
       {error && <p role="alert" className="my-3 text-sm text-red-700">{error}</p>}
       {!models ? <button className="text-sm underline" onClick={() => void load()}>모델 설정 불러오기</button> : <>
         <fieldset disabled={busy} className="min-w-0 grid gap-6 lg:grid-cols-3">
-          {['경량', '중급', '고급'].map(tier => <ModelTierSettings key={tier} member title={tier}
+          {['경량', '중급', '고급'].map(tier => <ModelTierSettings key={tier} title={tier}
             description={tier === '경량' ? '분류·평가·백그라운드에 권장합니다.' : tier === '중급' ? '균형 기어의 실행·의식에 권장합니다.' : '최대 기어의 실행·의식에 권장합니다.'}
             settings={models[tier]} showApiKey={!!visibleKeys[tier]}
             onSettingsChange={value => { setModels(prev => prev ? {...prev, [tier]: value} : prev); setSaved(false); }}

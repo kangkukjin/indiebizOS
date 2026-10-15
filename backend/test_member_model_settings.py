@@ -82,7 +82,9 @@ def test_member_config_owner_gate_validation_and_secret_storage(client, models, 
     assert 'fake-test-key' not in settings.path().read_text()
     assert 'fake-test-key' in (models.parent / '.env').read_text()
     config['models']['고급']['provider'] = 'codex'
-    assert client.put('/member-pcs/models', headers=HEADERS, json=config).status_code == 400
+    response = client.put('/member-pcs/models', headers=HEADERS, json=config)
+    assert response.status_code == 200
+    assert response.json()['models']['고급']['provider'] == 'codex'
     assert client.put('/member-pcs/model-gear', headers=HEADERS, json={'gear': 'bad'}).status_code == 400
     assert client.put('/member-pcs/model-gear/consciousness', headers=HEADERS, json={'enabled': 'false'}).status_code == 400
     assert client.put('/member-pcs/model-gear/presets', headers=HEADERS, json={'presets': {'절약': {'실행': '경량'}}}).status_code == 400

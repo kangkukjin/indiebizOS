@@ -95,6 +95,7 @@ LAYERS = {
     },
     "cognition": {
         "member_cli",
+        "member_codex",
         "research_runner",
         "agent_lifecycle",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "unified_distill", "distill_memory_adapters",

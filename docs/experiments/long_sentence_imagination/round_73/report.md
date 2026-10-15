@@ -104,3 +104,20 @@ AI 가 Python/셸을 고른 이음새: 입력 해시 대조·결과 대조(`pyth
 - **줄일 수 있었던 일**: ① L73-1 이분 탐색 8조각·2판(≈5분) — 컴파일러가 위치를 줬으면 1판 ② 기본 1 의 사진 미시도(훈련자 오답)로 기본을 두 번 돌림(원격 작업 ~30건 중복) ③ 외부PC준비 의 중복 info(L73-2) ④ AI 의 소스 grep 5회(셔터음·계약 1 확인)는 과제 해석엔 기여했지만 공개 교재에 그 사실이 있었다면 불필요 — remote_phone.md 보강으로 일부 해소.
 - **보존한 품질**: 응답/멈춤/미연결의 구별, 중앙 대신 계산 0, 사진 내용 비열람, 재사용 영수증.
 - **잔여·다음 회차 후보**: 폰 계약 1 APK 설치 뒤 같은 요청(사진 연쇄 끝까지 + L73-4 실기 검증 + AI 되먹임) · 맥26 연결 깜빡임의 헬퍼 쪽 원인(롱폴/절전) · `connected` 신선도 표기 · 폰 읽기 전용 상태 어휘의 자리(계약 1 Python 용례로 해소 가능한지) · 사진 3장 정리(사용자 결정).
+
+## 8. 삼성1 업데이트 (17:47~17:52, 별도 세션)
+
+삼성0 설치 직후 사용자 지시로 삼성1(Galaxy J7 SM-J730K, Android 9, armeabi-v7a, `guestpc-4e51c614b25b`)에도 폰 실행 계약 1 APK 를 설치했다. `--limb` 없이(이미 등록된 폰) `ANDROID_SERIAL=520044bbf0979425 setup_phone.sh --build`.
+
+| 항목 | 결과 | 근거 |
+| --- | --- | --- |
+| flavor 선택 | `ABI=armeabi-v7a,armeabi → flavor=arm32`(Python 3.11, buildPython=pyenv 3.11.12) 자동 | [evidence/setup_phone_samsung1.log](evidence/setup_phone_samsung1.log) |
+| 빌드·설치 | `BUILD SUCCESSFUL in 12s`(4 실행·43 up-to-date) → `adb install -r` **Success**. 새 APK 의 `assets/indiebiz_base.zip` 안 `backend/base/output_publish.py` 3,426 B(L73-4 수리본) | 같은 로그 · APK 17:48 |
+| 권한 | 알림 리스너 활성, CAMERA·RECORD_AUDIO 부여, 키 15개 주입. `POST_NOTIFICATIONS` 부여 실패 = Android 9 에 없는 권한(예상된 경고) | 같은 로그 |
+| 번들 재추출 | `force-stop` → 런처 재기동 뒤 3초 만에 `files/indiebiz_base/backend/base/output_publish.py` 2,637 → **3,426 B**(레포와 일치) | adb `run-as … stat` |
+| 폰 백엔드 | 재기동 뒤 5초 안에 :8765 응답(uvicorn 200, 허브 노드 등록 `폰-a8f0`, 신뢰 부여 레벨 4). 로그캣에 `bad magic number`·Traceback 0 | `adb logcat -d -t 600` |
+| 허브 `[self:limb]{op:"list"}` | 삼성1 `connected:true`, registration `state:active`, capabilities.ops = ibl·info·media·**shell·python·transfer** | [evidence/hub_limb_list_samsung1.json](evidence/hub_limb_list_samsung1.json) |
+| 허브 `[limbs:guestpc]{op:"info"}` | `result.ops` 6개(위와 같음), `result.capabilities.execution_contract` = **1**, python `3.11.10`(chaquopy), shell `/system/bin/sh`, identity `app`, cwd `files/userdata/remote_work` | [evidence/hub_info_samsung1.json](evidence/hub_info_samsung1.json) |
+| python 실증 | `[limbs:guestpc]{op:"python",code:"result={'ok':True}"}` → `.result.value` = `{ok:true}`, exit_code null, 2,178 ms, 정리 확인 둘 다 true | [evidence/hub_python_samsung1.json](evidence/hub_python_samsung1.json) |
+
+**미검증**: shell·transfer 의 실제 호출(사진 회수 연쇄), L73-4 발행 수리의 폰 실기(`self:copy`), 폰 자체 `/launcher/instruments` 응답(6초 안에 안 와서 확인 생략 — 백엔드 응답 자체는 로그캣으로 확인). 사진 연쇄 끝까지 재실행은 삼성0 검증 세션의 몫이거나 다음 회차.

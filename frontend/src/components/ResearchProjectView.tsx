@@ -13,7 +13,6 @@ export function ResearchProjectView({ project }: { project: Project }) {
   const [selected, setSelected] = useState(() => localStorage.getItem(key) || '');
   const [opened, setOpened] = useState<string[]>([]);
   const history = useRef<HTMLDialogElement>(null);
-  const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
@@ -54,9 +53,8 @@ export function ResearchProjectView({ project }: { project: Project }) {
     </div>
     <dialog ref={history} aria-label="대화 히스토리" onClick={e => {if (e.target === e.currentTarget) history.current?.close();}} className="m-auto p-4 rounded-xl bg-[#F5F1EB] text-[#4A4035] w-[600px] max-w-[92vw] backdrop:bg-black/30">
       <div className="flex justify-between items-center mb-3"><h2 className="font-semibold">대화 히스토리</h2><button onClick={() => history.current?.close()} aria-label="닫기"><X size={20}/></button></div>
-      <input aria-label="세션 검색" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="제목 또는 날짜 검색" className="w-full p-2 border rounded-lg mb-3"/>
       <div className="max-h-[60vh] overflow-auto">
-        {threads.filter(t => `${t.title} ${t.updated_label}`.includes(search)).map(thread => <button key={thread.id} onClick={() => {setSelected(thread.id);history.current?.close();setCreating(false);}} aria-current={selected === thread.id} className="block w-full text-left px-3 py-3 rounded-xl hover:bg-white/60">
+        {threads.map(thread => <button key={thread.id} onClick={() => {setSelected(thread.id);history.current?.close();setCreating(false);}} aria-current={selected === thread.id} className="block w-full text-left px-3 py-3 rounded-xl hover:bg-white/60">
           <span className="block font-medium">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}{thread.archived ? ' · 보관됨' : ''}</span>
         </button>)}
         {!threads.length && <p className="p-3 text-sm text-[#A09080]">새 대화를 만들어 시작하세요.</p>}

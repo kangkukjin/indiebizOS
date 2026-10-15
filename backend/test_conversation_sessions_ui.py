@@ -115,10 +115,9 @@ def test_session_workspace_in_browser(tmp_path):
                 expect(history.locator('[data-session-day="2026-10-10"]')).to_be_visible()
                 box=history.bounding_box()
                 assert abs(box['x'] + box['width']/2 - 640) < 2
-                expect(history.get_by_role('searchbox',name='세션 검색')).to_be_focused()
+                expect(history.get_by_role('searchbox')).to_have_count(0)
                 page.screenshot(path=str(tmp_path/'session-history.png'))
-                history.get_by_role('searchbox',name='세션 검색').fill('2026-10-10')
-                expect(history.get_by_role('button',name='회의 준비')).to_have_count(0)
+                expect(history.get_by_role('button',name='회의 준비')).to_be_visible()
                 history.get_by_role('button',name='과거 기록 보관됨').click()
                 expect(history).to_have_count(0)
                 expect(page.get_by_text('보관한 대화 원문',exact=True)).to_be_visible()

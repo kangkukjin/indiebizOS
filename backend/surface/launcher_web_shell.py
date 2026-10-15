@@ -116,7 +116,6 @@ input,textarea,select{ font-family:inherit; }
 #apSessions[hidden],#apSessionBar[hidden],#apSessionStop[hidden],#apSessionOlder[hidden],#apSessionArchived[hidden]{display:none!important}
 #apSessionHistory{margin:auto;width:560px;max-width:92vw;max-height:85dvh;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--bg2);color:var(--txt)}
 #apSessionHistory::backdrop{background:rgba(0,0,0,.35)}.ap-history-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-#apSessionSearch{width:100%;padding:8px;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px}
 #apSessionList{overflow:auto;max-height:60dvh}#apSessionList h3{font-size:12px;color:var(--dim);padding:12px 4px 6px}
 .ap-session-row{display:block;text-align:left;width:100%;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--txt);cursor:pointer}
 .ap-session-row span{display:block;overflow-wrap:anywhere}.ap-session-row small{color:var(--dim)}.ap-session-row[aria-current="true"]{background:var(--bg3,var(--bg))}
@@ -511,7 +510,6 @@ SHELL_PANEL_AUTOPILOT_HTML = """
       </div>
       <dialog id="apSessionHistory" aria-label="대화 히스토리" onclick="if(event.target===this)this.close()">
         <div class="ap-history-head"><strong>대화 히스토리</strong><button class="btn2" onclick="apCloseSessionHistory()" aria-label="닫기">닫기</button></div>
-        <input id="apSessionSearch" type="search" placeholder="제목 또는 날짜 검색" aria-label="세션 검색" oninput="apRenderSessionList()">
         <div id="apSessionList"></div>
       </dialog>
       <div class="ap-session-workspace">

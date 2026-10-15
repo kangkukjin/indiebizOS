@@ -145,8 +145,8 @@ def test_sessions_create_resume_reload_and_responsive_layout(browser_chat, tmp_p
     expect(page.locator('#apSessionHistory')).not_to_be_visible()
     page.screenshot(path=str(tmp_path/'remote-wide-sessions.png'))
     page.locator('#apHistory').click()
-    page.locator('#apSessionSearch').fill('2026-10-16')
-    expect(page.locator('#apSessionList button')).to_have_count(1)
+    expect(page.locator('#apSessionHistory').get_by_role('searchbox')).to_have_count(0)
+    expect(page.locator('#apSessionList button')).to_have_count(2)
 
 
 def test_late_snapshot_does_not_replace_new_session(browser_chat):

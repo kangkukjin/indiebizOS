@@ -76,6 +76,42 @@ def test_failed_direct_run_restores_context_and_removes_control_target():
     asyncio.run(scenario())
 
 
+def test_event_storage_failure_cannot_mark_session_completed(tmp_path, monkeypatch):
+    import conversation_sessions as sessions
+    import chat_session_service as service
+    from conversation_db import ConversationDB
+
+    db = ConversationDB(str(tmp_path / 'conversations.db'))
+    user = db.get_or_create_agent('user', 'human')
+    agent = db.get_or_create_agent('assistant')
+    store = sessions.SessionStore(db.db_path, 'messages', sessions.pair_owner(user, agent))
+    sid = store.create()['id']
+    monkeypatch.setattr(service, 'from_data', lambda data: store)
+
+    def broken_record(payload):
+        if payload['type'] == 'error':
+            raise RuntimeError('error notification storage failed')
+        raise ValueError('tool event storage failed')
+
+    monkeypatch.setattr(sessions, 'record_event', broken_record)
+
+    async def scenario():
+        registry, manager = ChatRuns(), WebSocketManager()
+
+        async def handler(client, data):
+            await manager.send_message(client, {'type': 'tool_start', 'name': 'read'})
+
+        with pytest.raises(ValueError, match='tool event storage failed'):
+            await registry.call(handler, 'probe', {'session_id': sid}, manager)
+        turn = service.snapshot(store, sid)['turn']
+        assert turn['state'] == 'failed'
+        assert turn['error'] == 'tool event storage failed'
+        assert registry.current('probe') is None and registry.active == {}
+        assert not service.cancel(store, sid)
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize('route', ['send', 'broadcast', 'agent', 'system', 'launcher'])
 def test_late_send_failure_and_disconnect_preserve_replacement(route, monkeypatch):
     async def scenario():

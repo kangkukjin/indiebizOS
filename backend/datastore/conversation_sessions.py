@@ -105,6 +105,10 @@ def ensure_schema(conn, table):
         id TEXT PRIMARY KEY, session_id TEXT NOT NULL REFERENCES conversation_sessions(id),
         state TEXT NOT NULL, process TEXT NOT NULL, started_at TEXT NOT NULL,
         finished_at TEXT, error TEXT, stream_content TEXT NOT NULL DEFAULT '')""")
+    # CREATE IF NOT EXISTS는 기존 세션 DB의 열을 갱신하지 않는다.
+    turn_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversation_turns)")}
+    if "stream_content" not in turn_cols:
+        conn.execute("ALTER TABLE conversation_turns ADD COLUMN stream_content TEXT NOT NULL DEFAULT ''")
     conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS one_running_conversation_turn
         ON conversation_turns(session_id) WHERE state='running'""")
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_events (

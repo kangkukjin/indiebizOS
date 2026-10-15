@@ -106,6 +106,36 @@ def test_migrate_original_rows_idempotently(project):
         conn.rollback()
 
 
+@pytest.mark.parametrize('table', ['messages', 'conversations'])
+def test_migrate_legacy_turn_schema_preserves_rows_and_events(tmp_path, table):
+    path = tmp_path / 'legacy.db'
+    with sessions.connection(path) as conn:
+        conn.execute(f'CREATE TABLE {table} (id INTEGER PRIMARY KEY, content TEXT)')
+        conn.execute('''CREATE TABLE conversation_turns (
+            id TEXT PRIMARY KEY, session_id TEXT NOT NULL, state TEXT NOT NULL,
+            process TEXT NOT NULL, started_at TEXT NOT NULL, finished_at TEXT, error TEXT)''')
+        original = ('old-turn', 'old-session', 'failed', 'old-process', 'start', 'end', 'old error')
+        conn.execute('INSERT INTO conversation_turns VALUES (?,?,?,?,?,?,?)', original)
+        sessions.ensure_schema(conn, table)
+        conn.execute('INSERT INTO conversation_sessions(id,owner,title,created_at,updated_at) '
+                     'VALUES (?,?,?,?,?)', ('old-session', 'owner', 'original', 'start', 'end'))
+        conn.execute('INSERT INTO conversation_events(session_id,turn_id,created_at,payload) '
+                     'VALUES (?,?,?,?)', ('old-session', 'old-turn', 'start', '{"type":"start"}'))
+        sessions.ensure_schema(conn, table)
+        row = conn.execute('SELECT * FROM conversation_turns').fetchone()
+        assert tuple(row) == (*original, '')
+    with sessions.scope(sessions.Binding(str(path), 'old-session', 'owner', 'old-turn')):
+        sessions.record_event({'type': 'stream_chunk', 'content': 'resumed draft'})
+        with sessions.connection(path) as conn:
+            sessions.ensure_schema(conn, table)
+            assert conn.execute('SELECT stream_content FROM conversation_turns').fetchone()[0] == 'resumed draft'
+        sessions.record_event({'type': 'response', 'content': 'final answer'})
+    with sessions.connection(path) as conn:
+        assert conn.execute('SELECT stream_content FROM conversation_turns').fetchone()[0] == ''
+        events = [json.loads(r[0]) for r in conn.execute('SELECT payload FROM conversation_events ORDER BY id')]
+        assert events == [{'type': 'start'}, {'type': 'response', 'content': 'final answer'}]
+
+
 def test_system_ai_sessions_and_checkpoint_isolation(tmp_path, monkeypatch):
     import system_ai_memory as memory
     import history_checkpoint as hc
@@ -201,7 +231,8 @@ def test_research_messages_are_not_migrated_into_general_sessions(project):
 
 
 @pytest.mark.parametrize('target',['system_ai','agent'])
-def test_real_stream_adapter_preserves_session_history(tmp_path,monkeypatch,target):
+@pytest.mark.parametrize('legacy_schema', [False, True])
+def test_real_stream_adapter_preserves_session_history(tmp_path,monkeypatch,target,legacy_schema):
     import system_ai_memory as memory
     import system_ai_core as core
     import chat_session_service as service
@@ -229,6 +260,9 @@ def test_real_stream_adapter_preserves_session_history(tmp_path,monkeypatch,targ
     params={'target':target,'project_id':'p' if target=='agent' else '', 'agent_id':'writer' if target=='agent' else ''}
     store,_=service.store_for(**params)
     a,b=store.create('A')['id'],store.create('B')['id']
+    if legacy_schema:
+        with sessions.connection(store.path) as conn:
+            conn.execute('ALTER TABLE conversation_turns DROP COLUMN stream_content')
     async def run():
         for sid,text in [(a,'A1'),(b,'B1'),(a,'A2')]:
             await api.send(sid,api.Message(**params,message=text))

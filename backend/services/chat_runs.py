@@ -54,6 +54,7 @@ class ChatRuns:
     async def invoke(self, run, handler, data, manager):
         token = _current.set(run)
         store = binding = None
+        execution_error = None
         from conversation_sessions import Binding, scope
         import chat_session_service as sessions
         try:
@@ -72,11 +73,12 @@ class ChatRuns:
                         for worker in run.workers:
                             await asyncio.wrap_future(worker)
         except Exception as exc:
-            if binding:
+            execution_error = str(exc) or type(exc).__name__
+            try:
                 with scope(binding):
-                    await manager.send_message(run.client_id, {"type": "error", "message": str(exc)})
-            else:
-                await manager.send_message(run.client_id, {"type": "error", "message": str(exc)})
+                    await manager.send_message(run.client_id, {"type": "error", "message": execution_error})
+            except Exception as notify_error:
+                print(f"[채팅 오류 알림 실패] {run.client_id}: {notify_error}")
             raise
         finally:
             if store and binding:
@@ -84,7 +86,8 @@ class ChatRuns:
                 with connection(store.path) as conn:
                     failed = conn.execute("SELECT 1 FROM conversation_events WHERE turn_id=? AND payload LIKE ? LIMIT 1",
                                           (binding.turn_id, '%"type": "error"%')).fetchone()
-                store.finish(binding, "cancelled" if run.cancelled.is_set() else "failed" if failed else "completed")
+                store.finish(binding, "cancelled" if run.cancelled.is_set() else
+                             "failed" if execution_error or failed else "completed", error=execution_error)
             sessions.detach(run)
             run.finished = True
             if self.active.get(run.client_id) is run:

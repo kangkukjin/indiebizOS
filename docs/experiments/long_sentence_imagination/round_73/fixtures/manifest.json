@@ -1,0 +1,8 @@
+{
+ "file": "sample.json",
+ "sha256": "ad7b5e0a04ff4820adccfaffededaf224f285171af08b6be5956c1b9d9a09ae1",
+ "rows": 12,
+ "generated_at": "2026-10-15T15:56:56.954796+09:00",
+ "synthetic": true,
+ "note": "73회차 점검 입력. 값 1~12, 기대 합계(×2)=156. 한글·NFD·일본어·이모지·CRLF·탭·백슬래시·따옴표·빈 이름 포함"
+}

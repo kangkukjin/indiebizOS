@@ -22,7 +22,7 @@ async function apLoadProjects(){
 async function apLoadSwitches(){
   try{ const r=await jfetch('/switches'); if(r.ok){ const d=await r.json(); apSwitches=d.switches||[]; } }catch(e){}
 }
-function apShowBrowse(){ document.getElementById('ap-browse').style.display=''; document.getElementById('ap-chat').style.display='none'; }
+function apShowBrowse(){ apStopSessions(); document.getElementById('ap-browse').style.display=''; document.getElementById('ap-chat').style.display='none'; }
 function apShowChat(){ document.getElementById('ap-browse').style.display='none'; document.getElementById('ap-chat').style.display='flex'; }
 function apCard(ic,nm,ds,onclick,chev){
   return '<div class="ap-card" onclick="'+onclick+'"><span class="ic">'+ic+'</span>'+
@@ -262,7 +262,11 @@ function apOpenChat(title,sub){
   document.getElementById('apAttach').style.display='';
   apImages=[]; apRenderChips();
   apShowChat();
-  apLoadHistory();  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
+  const sessions=apSessionsEnabled();
+  document.getElementById('apSessions').hidden=!sessions;
+  document.getElementById('apSessionBar').hidden=!sessions;
+  document.getElementById('apSessionError').textContent='';
+  if(sessions)void apStartSessions();else{apStopSessions();document.getElementById('apSend').disabled=false;apLoadHistory();}  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
   setTimeout(()=>{ try{ document.getElementById('apInput').focus(); }catch(e){} },50);
 }
 /* ── 사진 첨부: 갤러리 선택(input file) → canvas 긴 변 1600px 다운스케일(JPEG q0.85 —
@@ -434,6 +438,7 @@ async function apResearchSend(message,bub){
   bub.textContent='⏳ 아직 조사 중입니다. 잠시 후 이 주제를 다시 열어 확인해 주세요.';
 }
 async function apSend(){
+  if(apSessionsEnabled()){await apSessionSend();return;}
   const inp=document.getElementById('apInput'); const msg=inp.value.trim();
   if(!msg&&!apImages.length) return;
   const sendImgs=apImages.slice(); apImages=[]; apRenderChips();
@@ -468,3 +473,7 @@ async function apSend(){
 }
 
 """
+
+from launcher_app_sessions import LAUNCHER_SESSIONS_JS
+
+LAUNCHER_AUTOPILOT_JS += LAUNCHER_SESSIONS_JS

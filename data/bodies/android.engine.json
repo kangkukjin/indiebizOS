@@ -476,6 +476,7 @@
     "surface/launcher_app_autopilot",
     "surface/launcher_app_common",
     "surface/launcher_app_manual",
+    "surface/launcher_app_sessions",
     "surface/launcher_app_warehouse",
     "surface/launcher_layout",
     "surface/launcher_lite",
@@ -607,8 +608,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 532,
-    "engine": 500,
+    "total": 533,
+    "engine": 501,
     "blocklist": 32
   }
 }

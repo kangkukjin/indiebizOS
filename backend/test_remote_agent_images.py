@@ -96,7 +96,8 @@ def test_image_missing_and_auth_boundary(chat):
 
 
 @pytest.mark.parametrize('target', ['agent', 'system'])
-def test_browser_select_send_and_reopen(chat, photo, target):
+@pytest.mark.parametrize('transport', ['session', 'legacy'])
+def test_browser_select_send_and_reopen(chat, photo, target, transport):
     from playwright.sync_api import sync_playwright, expect
     from launcher_surface_remote import launcher_html
 
@@ -112,7 +113,24 @@ def test_browser_select_send_and_reopen(chat, photo, target):
         if path == '/launcher/app':
             request_route.fulfill(content_type='text/html', body=launcher_html())
             return
-        if path.endswith('/start'):
+        if path == '/chat-sessions':
+            data={'sessions':[{'id':'photo-session','title':'사진 대화','archived':0,'updated_at':'2026-10-15T00:00:00Z'}]}
+        elif path == '/chat-sessions/photo-session/messages':
+            body=request.post_data_json;sent.append(body)
+            if target=='agent':
+                response=client.post('/projects/p/agents/agent_photo/command',json={'command':body['message'],'images':body['images']})
+                assert response.status_code==200
+            else:
+                system_messages.extend([{'id':1,'role':'user','content':body['message'],'images':['system_ai_images/test.jpg']},
+                                        {'id':2,'role':'assistant','content':'사진을 받았습니다.'}])
+            data={'session_id':'photo-session','turn_id':'turn'}
+        elif path == '/chat-sessions/photo-session':
+            if target=='agent':
+                rows=client.get('/conversations/p/agent_photo/messages').json()['messages'][::-1]
+                rows=[dict(m,role='assistant' if m['is_agent'] else 'user') for m in rows]
+            else: rows=system_messages
+            data={'messages':rows,'has_older':False,'turn':None,'events':[]}
+        elif path.endswith('/start'):
             data = {'status': 'started'}
         elif path == '/system-ai/chat':
             body = request.post_data_json
@@ -150,6 +168,7 @@ def test_browser_select_send_and_reopen(chat, photo, target):
         page.goto('http://repair.test/launcher/app')
         expect(page.locator('#apBrowse')).to_contain_text('사진 프로젝트')
         page.evaluate("apSleep=()=>Promise.resolve()")
+        if transport=='legacy':page.evaluate('IS_PHONE=true')
         if target == 'agent':
             page.evaluate("async()=>{await apBrowseProject('p'); apPickAgent(0);}")
         else:
@@ -165,14 +184,15 @@ def test_browser_select_send_and_reopen(chat, photo, target):
         expect(page.locator('#apMsgs')).to_contain_text('사진을 받았습니다.')
         assert len(sent) == 1 and len(sent[0]['images']) == 3
         assert sent[0].get('command', sent[0].get('message')) == '첨부한 사진을 봐줘.'
-        assert sent[0]['background'] is True
+        if transport=='legacy':assert sent[0]['background'] is True
+        else:assert sent[0]['target']==('agent' if target=='agent' else 'system_ai')
         for image in sent[0]['images']:
             assert image['media_type'] == 'image/jpeg'
             assert Image.open(io.BytesIO(base64.b64decode(image['base64']))).size == (32, 24)
         if target == 'agent':
             assert calls[0]['images'] == sent[0]['images']
         expect(page.locator('#apChips')).to_be_hidden()
-        page.evaluate('apLoadHistory()')
+        page.evaluate('apLoadHistory()' if transport=='legacy' else 'apSessionSnapshot(apSessionContext,apSessionContext.id)')
         expect(page.locator('#apMsgs .bimg')).to_have_count(3 if target == 'agent' else 1)
         page.wait_for_function("Array.from(document.querySelectorAll('#apMsgs .bimg')).every(im=>im.complete && im.naturalWidth>0)")
         expected = '/conversations/p/image?' if target == 'agent' else '/system-ai/image?'

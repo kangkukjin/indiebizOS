@@ -110,6 +110,17 @@ input,textarea,select{ font-family:inherit; }
 .ap-card .tx .ds{ font-size:12px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ap-card .chev{ color:var(--dim); font-size:20px; flex-shrink:0; }
 .ap-chat{ flex:1; display:flex; flex-direction:column; min-height:0; }
+.ap-session-workspace{display:flex;flex:1;min-height:0;min-width:0}
+.ap-session-conversation{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+#apSessions{width:230px;flex-shrink:0;padding:12px;border-right:1px solid var(--line);overflow:auto;background:var(--bg2)}
+#apSessions[hidden],#apSessionBar[hidden],#apSessionStop[hidden],#apSessionOlder[hidden],#apSessionArchived[hidden]{display:none!important}
+#apSessionNew,#apSessionSearch{width:100%;margin-bottom:12px}#apSessionSearch{padding:8px;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px}
+#apSessionDetails summary{cursor:pointer;margin-bottom:10px}#apSessionList h3{font-size:12px;color:var(--dim);padding:12px 4px 6px}
+.ap-session-row{display:block;text-align:left;width:100%;padding:10px;border:0;border-radius:8px;background:transparent;color:var(--txt);cursor:pointer}
+.ap-session-row span{display:block;overflow-wrap:anywhere}.ap-session-row small{color:var(--dim)}.ap-session-row[aria-current="true"]{background:var(--bg3,var(--bg))}
+#apSessionBar{padding:8px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line)}#apSessionTitle{flex:1;overflow-wrap:anywhere;font-size:14px}
+#apSessionError{color:var(--down);padding:0 12px}#apSessionError:empty{display:none}#apSessionArchived{font-size:12px;color:var(--dim)}
+@media(max-width:719px){.ap-session-workspace{flex-direction:column}#apSessions{width:auto;border-right:0;border-bottom:1px solid var(--line);max-height:220px;flex-shrink:0}#apSessionNew{margin-bottom:6px}}
 .ap-head{ padding:11px 14px; background:var(--bg2); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
 .ap-head .ap-head-t{ min-width:0; flex:1; }
 .ap-head h2{ font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -493,6 +504,20 @@ SHELL_PANEL_AUTOPILOT_HTML = """
         <button class="back" onclick="apExitChat()">←</button>
         <div class="ap-head-t"><h2 id="apTitle">시스템 AI</h2><p id="apSub"></p></div>
       </div>
+      <div class="ap-session-workspace">
+        <aside id="apSessions" aria-label="대화 세션" hidden>
+          <button class="btn2" id="apSessionNew" onclick="apNewSession()">＋ 새 세션 시작</button>
+          <details id="apSessionDetails" open><summary>세션 목록</summary>
+            <input id="apSessionSearch" type="search" placeholder="제목 또는 날짜 검색" aria-label="세션 검색" oninput="apRenderSessionList()">
+            <div id="apSessionList"></div>
+          </details>
+        </aside>
+        <div class="ap-session-conversation">
+          <div id="apSessionBar" hidden><strong id="apSessionTitle"></strong><span id="apSessionArchived" hidden>보관된 세션입니다.</span>
+            <button class="btn2" id="apSessionOlder" onclick="apSessionOlder()" hidden>이전 대화 읽기</button>
+            <button class="btn2" id="apSessionStop" onclick="apSessionCancel()" hidden>작업 중단</button>
+          </div>
+          <p id="apSessionError" role="alert"></p>
       <div class="msgs" id="apMsgs"></div>
       <!-- 첨부 사진 미리보기 칩 (전송 전) -->
       <div class="ap-chips" id="apChips" style="display:none"></div>
@@ -502,6 +527,8 @@ SHELL_PANEL_AUTOPILOT_HTML = """
         <button class="go" id="apSend" onclick="apSend()">전송</button>
       </div>
       <input type="file" id="apFile" accept="image/*" multiple style="display:none" onchange="apFileChosen(event)">
+        </div>
+      </div>
     </div>
   </div>
 """

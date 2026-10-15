@@ -15,7 +15,8 @@ SHELL_HEAD_HTML = """<!DOCTYPE html>
 <!-- 홈 화면 설치(안드로이드·아이폰·태블릿 공통) — 브라우저가 이 선언을 읽어야 아이콘·이름·
      주소창 없는 독립 창이 우리가 정한 대로 뜬다. 서비스워커 등록은 앱 셸 JS 말미에 있다. -->
 <link rel="manifest" href="/launcher/manifest.webmanifest">
-<meta name="theme-color" content="#D97706">
+<meta name="theme-color" content="#F5F1EB">
+<meta name="color-scheme" content="light">
 <!-- 아이폰·아이패드는 매니페스트를 부분만 본다 — 홈화면 아이콘·독립 실행은 이 셋이 담당 -->
 <link rel="apple-touch-icon" href="/launcher/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,6 +31,7 @@ SHELL_HEAD_HTML = """<!DOCTYPE html>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 /* 데스크탑 런처(Launcher.tsx)와 같은 크림 라이트 테마 — bg #F5F1EB·텍스트 #4A4035·앰버 강조 */
 :root{
+  color-scheme:only light;
   --bg:#F5F1EB; --bg2:#FFFFFF; --bg3:#EAE4DA; --line:#E5DFD5;
   --txt:#4A4035; --dim:#8A7B6C; --acc:#D97706; --acc2:#B45309;
   --acc-soft:rgba(217,119,6,.12); --acc-grad:linear-gradient(135deg,#F59E0B,#D97706);

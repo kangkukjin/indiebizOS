@@ -995,7 +995,7 @@ async def launcher_manifest():
         "display": "standalone",
         "orientation": "portrait-primary",
         "background_color": "#F5F1EB",
-        "theme_color": "#D97706",
+        "theme_color": "#F5F1EB",
         "lang": "ko",
         "icons": [
             {"src": "/launcher/icon-192.png", "sizes": "192x192", "type": "image/png"},

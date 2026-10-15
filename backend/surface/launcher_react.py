@@ -35,7 +35,9 @@ def react_shell() -> str | None:
                         '<link rel="manifest" href="/launcher/manifest.webmanifest">\n'
                         '<link rel="icon" href="/launcher/icon-192.png">\n'
                         '<link rel="apple-touch-icon" href="/launcher/apple-touch-icon.png">\n'
-                        '<meta name="theme-color" content="#D97706">', 1)
+                        '<meta name="theme-color" content="#F5F1EB">\n'
+                        '<meta name="color-scheme" content="light">\n'
+                        '<style>html{color-scheme:only light;background:#F5F1EB}</style>', 1)
 
 
 def serve_asset(path: str) -> FileResponse:

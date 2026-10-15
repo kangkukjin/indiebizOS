@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { uiCatalogPlugin, compileRemote, root } from './ui-catalog.mjs';
+import { uiCatalogPlugin, compileRemote, reloadUICatalog, root } from './ui-catalog.mjs';
 import { collector } from './ui-compiler.mjs';
 
 test('Windows paths use the same UI transform and exclude runtime and test files', () => {
@@ -38,4 +38,12 @@ test('remote multiline UI messages keep their IDs after CRLF checkout', () => {
   const lf = collector(), crlf = collector();
   assert.equal(compileRemote(html.replaceAll('\n', '\r\n'), crlf), compileRemote(html, lf));
   assert.deepEqual(crlf.messages, lf.messages);
+});
+
+
+test('catalog reload invalidates every cached JSON module before reloading open windows', () => {
+  const calls=[],modules=new Set([{id:'catalog'}, {id:'catalog?import'}]);
+  reloadUICatalog({moduleGraph:{getModulesByFile(file){assert.equal(file,path.join(root,'frontend/i18n/catalog.json'));return modules;},
+    invalidateModule(module){calls.push(module.id);}},ws:{send(event){calls.push(event.type);}}});
+  assert.deepEqual(calls,['catalog','catalog?import','full-reload']);
 });

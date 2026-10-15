@@ -1,3 +1,12 @@
+/** Compiler-owned source fallback for a newly loaded module and an older catalog.
+ * Runtime/user content is never registered here. Existing translations remain authoritative.
+ */
+export function registerUISources(catalog, sources) {
+  for (const [id, source] of Object.entries(sources)) {
+    if (!Object.hasOwn(catalog.messages, id)) catalog.messages[id] = { source, translations: {} };
+  }
+}
+
 /** Shared, offline UI translation runtime. Catalogs contain source-code UI only. */
 export function createUI(catalog, host = globalThis) {
   const key = 'indiebiz.ui.locale';

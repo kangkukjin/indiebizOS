@@ -29,6 +29,13 @@ function jsxText(text) {
   }).filter(Boolean).join(' ');
 }
 export function compileReact(source, file, catalog) {
+  const sources = {};
+  const collected = catalog;
+  catalog = { ...collected, add(context, text) {
+    const id = collected.add(context, text);
+    sources[id] = text;
+    return id;
+  } };
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, /\.[jt]sx$/.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const edits = [];
   const finite = staticValues(ast);
@@ -156,7 +163,7 @@ export function compileReact(source, file, catalog) {
   }
   walk(ast);
   const output = apply(source, edits);
-  return used ? `import { UiText as __UiText, UiChoice as __UiChoice, UiElement as __UiElement, ui as __ui } from '/src/i18n/ui';\n${output}` : output;
+  return used || Object.keys(sources).length ? `import { UiText as __UiText, UiChoice as __UiChoice, UiElement as __UiElement, ui as __ui, registerUiSources as __registerUiSources } from '/src/i18n/ui';\n__registerUiSources(${json(sources)});\n${output}` : output;
 }
 
 // Only source-code HTML text/attributes are annotated. No runtime data enters this compiler.

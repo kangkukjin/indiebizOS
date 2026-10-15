@@ -246,6 +246,12 @@ document.addEventListener('DOMContentLoaded',()=>(${mountRemote.toString()})(win
   console.log('[ui-i18n]', JSON.stringify({ messages: Object.keys(bundle.messages).length, ...stats }));
   return { ...stats, count: Object.keys(bundle.messages).length };
 }
+export function reloadUICatalog(server) {
+  // An external build can replace catalog.json without invalidating Vite's cached JSON module.
+  const modules = server.moduleGraph.getModulesByFile(path.join(i18n, 'catalog.json'));
+  for (const module of modules || []) server.moduleGraph.invalidateModule(module);
+  server.ws.send({ type: 'full-reload' });
+}
 export function uiCatalogPlugin() {
   let running, dirty = false;
   const build = () => {
@@ -261,13 +267,17 @@ export function uiCatalogPlugin() {
       return { code: compileReact(sourceText(source), file, collector()), map: null };
     },
     configureServer(server) {
-      server.watcher.add([path.join(root, 'data/xray/index.html'), path.join(root, 'data/ibl_nodes.yaml'), path.join(root, 'data/instruments'), path.join(root, 'backend/services/model_settings_view.py'), path.join(root, 'backend/base/model_resolver.py'), path.join(root, 'backend/cognition/world_pulse_health.py'), path.join(root, 'backend/cognition/ibl_description_audit.py'), ...files(path.join(root, 'backend/surface')).filter(file => /launcher_[^/]+\.py$/.test(file)), path.join(i18n, 'languages.json'), path.join(i18n, 'native-messages.json'), path.join(i18n, 'system-messages.json'), path.join(i18n, 'translations.json')]);
+      server.watcher.add([path.join(i18n, 'catalog.json'), path.join(root, 'data/xray/index.html'), path.join(root, 'data/ibl_nodes.yaml'), path.join(root, 'data/instruments'), path.join(root, 'backend/services/model_settings_view.py'), path.join(root, 'backend/base/model_resolver.py'), path.join(root, 'backend/cognition/world_pulse_health.py'), path.join(root, 'backend/cognition/ibl_description_audit.py'), ...files(path.join(root, 'backend/surface')).filter(file => /launcher_[^/]+\.py$/.test(file)), path.join(i18n, 'languages.json'), path.join(i18n, 'native-messages.json'), path.join(i18n, 'system-messages.json'), path.join(i18n, 'translations.json')]);
       let timer;
       const queue = file => {
         file = portablePath(file);
+        if (file === portablePath(path.join(i18n, 'catalog.json'))) {
+          if (!running) reloadUICatalog(server);
+          return;
+        }
         if (!(file.includes('/frontend/src/') || file.endsWith('/data/xray/index.html') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/native-messages.json') || file.endsWith('/system-messages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || file.endsWith('/world_pulse_health.py') || file.endsWith('/ibl_description_audit.py') || (file.endsWith('/translations.json') && !running))) return;
         clearTimeout(timer); timer = setTimeout(async () => {
-          try { await build(); server.ws.send({ type: 'full-reload' }); }
+          try { await build(); reloadUICatalog(server); }
           catch (error) { server.config.logger.error(error.message); }
         }, 250);
       };

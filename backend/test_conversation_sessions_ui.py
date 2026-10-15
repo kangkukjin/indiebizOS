@@ -67,6 +67,12 @@ def test_session_workspace_in_browser(tmp_path):
                 page=browser.new_page(viewport={'width':1280,'height':900})
                 errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
                 page.route('http://127.0.0.1:8765/**',api)
+                # Reproduce a long-lived Vite server serving the pre-session catalog.
+                stale_catalog=json.loads((root/'frontend/i18n/catalog.json').read_text())
+                stale_catalog['messages']={k:v for k,v in stale_catalog['messages'].items()
+                    if 'SessionWorkspace.tsx' not in v.get('context','')}
+                page.route('**/i18n/catalog.json*',lambda route:route.fulfill(
+                    content_type='application/javascript',body='export default '+json.dumps(stale_catalog)))
                 page.goto(url+'/#/system-ai')
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).to_be_visible()
                 sidebar=page.get_by_role('complementary',name='대화 세션').bounding_box()

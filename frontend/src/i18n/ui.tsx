@@ -1,10 +1,14 @@
 import { createElement, useSyncExternalStore } from 'react';
 import type { ReactNode, ElementType } from 'react';
 import { Languages, ChevronDown } from 'lucide-react';
-import { createUI } from '../../i18n/runtime.mjs';
+import { createUI, registerUISources } from '../../i18n/runtime.mjs';
 import catalog from '../../i18n/catalog.json';
 
 export const ui = createUI(catalog);
+/** Source strings are emitted by the UI compiler, never taken from user content. */
+export function registerUiSources(sources: Record<string, string>) {
+  registerUISources(catalog, sources);
+}
 export function useLocale() {
   return useSyncExternalStore(ui.subscribe, ui.getLocale, () => 'ko');
 }

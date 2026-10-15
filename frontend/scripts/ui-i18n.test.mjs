@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import ts from 'typescript';
 import { collector, compileReact, compileHTML, compileRemoteJS, messageId } from './ui-compiler.mjs';
 import { refresh, validTranslation, mergeMemoryEdits, maskSource, requireCompleteTranslations } from './ui-catalog.mjs';
-import { createUI } from '../i18n/runtime.mjs';
+import { createUI, registerUISources } from '../i18n/runtime.mjs';
 
 test('provider outage stops queued batches and cannot pass the build boundary', async () => {
   const messages = Object.fromEntries(Array.from({length:265}, (_, i) => [String(i), {source:'미번역 '+i}]));
@@ -181,4 +181,24 @@ test('locale persists, storage unavailable falls back, variables remain literal 
   ui.setLocale('ko'); assert.equal(ui.text('a', [3]), '항목 3개');
   ui.setLocale('ja'); assert.equal(ui.text('a', [3]), '항목 3개');
   assert.equal(createUI(catalog, { get localStorage() { throw new Error('disabled'); } }).getLocale(), 'ko');
+});
+
+
+test('new compiled UI keeps readable source with a stale catalog and preserves translations', () => {
+  const source = 'const App=({name})=><button title="새 세션 시작">{`${name}의 세션`}</button>;';
+  const {code,messages} = compile(source);
+  const catalog = {messages:{},languages:{ko:'한국어',en:'English'}};
+  const ui = createUI(catalog,{localStorage:{getItem:()=> 'en'}});
+  // Execute the actual compiler-emitted registration before rendering a newly imported module.
+  const registration = code.split('\n')[1];
+  Function('__registerUiSources',registration)(sources=>registerUISources(catalog,sources));
+  for (const [id,entry] of Object.entries(messages)) {
+    assert.equal(ui.text(id,['내 에이전트']),entry.source.replace('{0}','내 에이전트'));
+  }
+  const id=Object.keys(messages)[0];
+  catalog.messages[id].translations.en='Reviewed text';
+  Function('__registerUiSources',registration)(sources=>registerUISources(catalog,sources));
+  assert.equal(ui.text(id),'Reviewed text');
+  ui.setLocale('ko');assert.equal(ui.text(id,['내 에이전트']),messages[id].source.replace('{0}','내 에이전트'));
+  assert.ok(!Object.values(messages).some(m=>m.source==='내 에이전트'));
 });

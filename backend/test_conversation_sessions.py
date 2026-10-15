@@ -41,6 +41,20 @@ def test_sessions_alternate_and_resume_without_context_leak(project):
     assert reopened.history(a) == store.history(a)
 
 
+def test_title_uses_first_request_and_keeps_renames(project):
+    db, user, agent, store = project
+    sid = store.create()['id']
+    with sessions.scope(sessions.Binding(store.path, sid, store.owner)):
+        db.save_message(user, agent, '  이번 주\n회의 자료를 정리해줘  ')
+        db.save_message(agent, user, '알겠습니다')
+        db.save_message(user, agent, '지난주 자료도 포함해줘')
+    assert next(s for s in store.list() if s['id'] == sid)['title'] == '이번 주 회의 자료를 정리해줘'
+    store.update(sid, title='주간 회의')
+    with sessions.scope(sessions.Binding(store.path, sid, store.owner)):
+        db.save_message(user, agent, '추가 요청')
+    assert next(s for s in store.list() if s['id'] == sid)['title'] == '주간 회의'
+
+
 def test_one_turn_per_session_and_cross_session_cancellation(project):
     _, _, _, store = project
     a, b = store.create()['id'], store.create()['id']

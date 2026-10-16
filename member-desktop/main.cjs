@@ -50,8 +50,13 @@ app.whenReady().then(async()=>{
   handle('ready',()=>{bootReady?.();return {success:true};});
   handle('updateStatus',()=>updates.publicState());
   handle('updateCheck',()=>updates.check());
-  handle('updateApply',()=>updates.apply());
-  handle('updateAuto',enabled=>updates.setAuto(Boolean(enabled)));
+  handle('updateApply',()=>updates.requestInstall(async state=>{
+    const current=liveWindow();if(!current)return false;
+    const answer=await dialog.showMessageBox(current,{type:'question',buttons:['취소','설치'],defaultId:0,cancelId:0,
+      message:'최신 버전('+state.availableVersion+')을 설치할까요?',
+      detail:'설치를 선택하면 다운로드하고 현재 작업이 끝난 뒤 적용합니다. 대화와 파일은 보존됩니다.'});
+    return !quitting&&answer.response===1;
+  }));
   handle('setup',()=>({...session.publicState(),...pending,error}));
   handle('enroll',async({hub,code})=>{const existing=session.config;if(existing){const answer=await dialog.showMessageBox(win,{type:'question',buttons:['취소','새 PC 등록으로 전환'],defaultId:0,message:'진행 중 작업을 중단하고 다른 등록으로 연결할까요?',detail:'기존 파일과 로컬 기록은 보존합니다.'});if(answer.response!==1)throw Error('연결 변경을 취소했습니다.');}const state=await session.enroll(hub,code);pending={};error='';await win.loadFile(workspaceFile);return state;},true);
   handle('request',({path,body})=>session.request(path,body));
@@ -65,6 +70,9 @@ app.whenReady().then(async()=>{
   try{await session.start();}catch(e){error=e.message;}
   const link=process.argv.find(a=>a.startsWith('indiebiz-member:'));if(link)acceptLink(link);
   await win.loadFile(Object.keys(pending).length?setupFile:session.bridge?workspaceFile:setupFile);
-  const automatic=async()=>{if(!updates.state.auto||!session.config)return;try{await updates.check();if(updates.staged)await updates.apply();}catch(e){error=e.message;}};
-  setTimeout(automatic,60000).unref();setInterval(automatic,6*60*60*1000).unref();
+  const checkForUpdates=async()=>{
+    if(quitting||!session.config)return;
+    try{await updates.check();}catch(e){error=e.message;}
+  };
+  setTimeout(checkForUpdates,60000).unref();setInterval(checkForUpdates,6*60*60*1000).unref();
 });}

@@ -5,7 +5,6 @@ contextBridge.exposeInMainWorld('DesktopMember',Object.freeze({
   updateStatus:()=>ipcRenderer.invoke('member:updateStatus'),
   updateCheck:()=>ipcRenderer.invoke('member:updateCheck'),
   updateApply:()=>ipcRenderer.invoke('member:updateApply'),
-  updateAuto:enabled=>ipcRenderer.invoke('member:updateAuto',Boolean(enabled)),
   setup:()=>ipcRenderer.invoke('member:setup'),
   enroll:(hub,code)=>ipcRenderer.invoke('member:enroll',{hub,code}),
   request:(path,body)=>ipcRenderer.invoke('member:request',{path,body}),

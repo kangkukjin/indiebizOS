@@ -1,6 +1,6 @@
 /* Offline release authoring. The private signing key is read, never copied to an artifact. */
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const {verify,digest}=require('./updates.cjs');
+const {verify,digest,SHELL_VERSION}=require('./updates.cjs');
 function publish({source,helper,out,base,version,sequence,platform,arch,key,expires}){
  const privateKey=crypto.createPrivateKey(fs.readFileSync(key));if(privateKey.asymmetricKeyType!=='ed25519')throw Error('Ed25519 서명 키가 필요합니다.');
  const origin=new URL(base);if(origin.protocol!=='https:'||origin.search||origin.hash||origin.username||origin.password)throw Error('공개 HTTPS 디렉터리가 필요합니다.');
@@ -8,7 +8,7 @@ function publish({source,helper,out,base,version,sequence,platform,arch,key,expi
  const names=['workspace.html','workspace.cjs','indiebiz-member'+(platform==='win32'?'.exe':'')];
  const sources=[path.join(source,'workspace.html'),path.join(source,'workspace.cjs'),helper];
  const files=names.map((name,i)=>{const data=fs.readFileSync(sources[i]);return {name,url:prefix+sequence+'/'+name,size:data.length,sha256:digest(data)}});
- const manifest={format:'indiebiz-member-runtime',version,sequence,platform,arch,protocol:2,shell:1,expires,files};
+ const manifest={format:'indiebiz-member-runtime',version,sequence,platform,arch,protocol:2,shell:SHELL_VERSION,expires,files};
  const raw=Buffer.from(JSON.stringify(manifest));const envelope={manifest:raw.toString('base64'),signature:crypto.sign(null,raw,privateKey).toString('base64')};
  const publicKey=crypto.createPublicKey(privateKey).export({type:'spki',format:'pem'});
  verify(envelope,{publicKey,feed:prefix+'current.json'},{platform,arch});

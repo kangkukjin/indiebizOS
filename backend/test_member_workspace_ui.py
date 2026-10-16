@@ -42,7 +42,7 @@ def test_desktop_bundled_ui_reaches_update_health_handshake(tmp_path):
                     if(path==='workspace')return {success:true,workspace:'/selected'};
                     if(path==='apps')return {success:true,instruments:[{id:'sample',name:'검증 앱',modes:[]}],dictionary:[{id:'sense:weather',description:'지역 날씨 확인'}]};return {success:true,screen:false};},
                 updateStatus:async()=>({state:'unconfigured',configured:false,auto:false}),
-                updateCheck:async()=>{},updateApply:async()=>{},updateAuto:async()=>{},
+                updateCheck:async()=>{},updateApply:async()=>{window.installClicks=(window.installClicks||0)+1},
                 startup:async()=>{},disconnect:async()=>{},importArchive:async()=>{},saveDiagnostics:async()=>{},
                 chooseWorkspace:async()=>({cancelled:true}),openFile:async()=>{}
             };''')
@@ -53,6 +53,32 @@ def test_desktop_bundled_ui_reaches_update_health_handshake(tmp_path):
             page.get_by_text('앱 업데이트', exact=True).click()
             expect(page.locator('#desktopUpdateStatus')).to_contain_text('업데이트 채널')
             expect(page.locator('#desktopUpdateCheck')).to_be_disabled()
+            expect(page.locator('#desktopAutoUpdate')).to_have_count(0)
+            expect(page.locator('#desktopUpdateAvailable')).not_to_be_visible()
+            dialogs = []
+            page.on('dialog', lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
+            page.evaluate("""() => {
+              window.offeredVersion='0.1.2';
+              DesktopMember.updateStatus=async()=>({state:'available',configured:true,version:'0.1.1',availableVersion:window.offeredVersion,sequence:2,canUpdate:true});
+            }""")
+            page.locator('[data-view="drive"]').click()
+            indicator = page.locator('#memberNav #desktopUpdateAvailable')
+            expect(indicator).to_be_visible(timeout=6000)
+            expect(indicator).to_have_text('새 업데이트 있음')
+            expect(indicator).to_have_attribute('title', '최신 버전 0.1.2 · 눌러서 설치')
+            page.evaluate("window.offeredVersion='0.1.3'")
+            expect(indicator).to_have_attribute('title', '최신 버전 0.1.3 · 눌러서 설치', timeout=6000)
+            assert page.evaluate('window.installClicks===undefined')
+            assert not dialogs
+            page.screenshot(path=str(tmp_path / 'update-indicator.png'))
+            indicator.click()
+            page.wait_for_function('window.installClicks===1')
+            expect(indicator).to_be_enabled()
+            page.locator('[data-view="apps"]').click()
+            expect(indicator).to_be_visible()
+            page.locator('#desktopUpdateApply').click()
+            page.wait_for_function('window.installClicks===2')
+
             page.locator('[data-view="apps"]').click()
             expect(page.frame_locator('#appFrame').get_by_role('button', name='검증 앱')).to_be_visible()
             assert not errors, errors

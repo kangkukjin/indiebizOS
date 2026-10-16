@@ -1,13 +1,13 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
-const {RuntimeUpdates,verify,digest}=require('../updates.cjs');
+const {RuntimeUpdates,verify,digest,SHELL_VERSION}=require('../updates.cjs');
 const keys=crypto.generateKeyPairSync('ed25519');
 const trust={publicKey:keys.publicKey.export({type:'spki',format:'pem'}),feed:'https://updates.example/member/current.json'};
 function release(sequence=1){
  const names=['workspace.html','workspace.cjs','indiebiz-member'+(process.platform==='win32'?'.exe':'')];
  const bytes=new Map(names.map(n=>['https://updates.example/member/'+n,Buffer.from('release-'+sequence+'-'+n)]));
- const manifest={format:'indiebiz-member-runtime',version:'0.1.1',sequence,platform:process.platform,arch:process.arch,protocol:2,shell:1,expires:Date.now()/1000+600,files:names.map(name=>({name,url:'https://updates.example/member/'+name,size:bytes.get('https://updates.example/member/'+name).length,sha256:digest(bytes.get('https://updates.example/member/'+name))}))};
+ const manifest={format:'indiebiz-member-runtime',version:'0.1.1',sequence,platform:process.platform,arch:process.arch,protocol:2,shell:SHELL_VERSION,expires:Date.now()/1000+600,files:names.map(name=>({name,url:'https://updates.example/member/'+name,size:bytes.get('https://updates.example/member/'+name).length,sha256:digest(bytes.get('https://updates.example/member/'+name))}))};
  return {manifest,bytes,envelope:()=>sign(manifest)};
 }
 function sign(m){const raw=Buffer.from(JSON.stringify(m));return {manifest:raw.toString('base64'),signature:crypto.sign(null,raw,keys.privateKey).toString('base64')};}
@@ -25,17 +25,17 @@ test('signed manifest rejects tamper, wrong platform, expired release and foreig
  for(const change of [{platform:'other'},{expires:0},{shell:999},{protocol:1},{files:[...r.manifest.files,r.manifest.files[0]]}])assert.throws(()=>verify(sign({...r.manifest,...change}),trust));
  r.manifest.files[0].url='https://untrusted.example/file';assert.throws(()=>verify(r.envelope(),trust));
 });
-test('downloaded file digest is checked before making a release available',async t=>{
- const f=fixture(t);f.r.bytes.set(f.r.manifest.files[0].url,Buffer.from('tampered'));await assert.rejects(()=>f.u.check());assert.equal(f.u.staged,undefined);assert.equal(f.u.state.active,null);
+test('downloaded file digest is checked before applying a release',async t=>{
+ const f=fixture(t);f.r.bytes.set(f.r.manifest.files[0].url,Buffer.from('tampered'));await f.u.check();await assert.rejects(()=>f.u.apply(1));assert.deepEqual(f.events,[]);assert.equal(f.u.state.active,null);
 });
 test('apply pauses admissions, snapshots DB, verifies helper and UI before opening admissions',async t=>{
- const f=fixture(t);await f.u.check();const result=await f.u.apply();assert.equal(result.state,'updated');assert.equal(f.u.state.active,1);assert.equal(f.u.state.highest,1);assert.equal(f.session.updating,false);
+ const f=fixture(t);await f.u.check();const result=await f.u.apply(1);assert.equal(result.state,'updated');assert.equal(f.u.state.active,1);assert.equal(f.u.state.highest,1);assert.equal(f.session.updating,false);
  assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert.deepEqual(f.events[0],['maintenance',true]);assert(f.events.some(e=>e[0]==='show'&&e[1]&&e[2]));assert.deepEqual(f.events.at(-1),['maintenance',false]);
  await f.u.check();assert.equal(f.u.status.state,'current');
 });
 test('failed renderer boot restores pre-migration DB and previous binary',async t=>{
  const f=fixture(t);f.u.show=async(file,trial)=>{if(trial){fs.writeFileSync(f.db,'migrated-database');fs.writeFileSync(f.db+'-wal','candidate WAL');throw Error('renderer failed')}};
- await f.u.check();const result=await f.u.apply();assert.equal(result.state,'rolled_back');assert.equal(f.session.executable,'old-helper');assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert(!fs.existsSync(f.db+'-wal'));assert.equal(f.u.state.active,null);assert.deepEqual(f.u.state.rejected,[1]);
+ await f.u.check();const result=await f.u.apply(1);assert.equal(result.state,'rolled_back');assert.equal(f.session.executable,'old-helper');assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert(!fs.existsSync(f.db+'-wal'));assert.equal(f.u.state.active,null);assert.deepEqual(f.u.state.rejected,[1]);
  await f.u.check();assert.equal(f.u.status.state,'current');
 });
 test('crash during trial is recovered before any executor is started',async t=>{
@@ -43,7 +43,7 @@ test('crash during trial is recovered before any executor is started',async t=>{
  const next=new RuntimeUpdates(f.options);assert.equal(next.recover().executable,'old-helper');assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert(!next.state.pending);assert.deepEqual(f.events,[]);
 });
 test('busy task keeps running while new admissions stay paused',async t=>{
- const f=fixture(t);let polls=0;f.session.maintenance=async pause=>({idle:!pause||++polls>1});await f.u.check();await f.u.apply();assert.equal(polls,2);assert.equal(f.u.status.state,'updated');
+ const f=fixture(t);let polls=0;f.session.maintenance=async pause=>({idle:!pause||++polls>1});await f.u.check();await f.u.apply(1);assert.equal(polls,2);assert.equal(f.u.status.state,'updated');
 });
 test('renderer cannot request maintenance or health through general IPC proxy',()=>{
  const {safeEndpoint}=require('../security.cjs');assert.throws(()=>safeEndpoint('maintenance',{pause:false}));assert.throws(()=>safeEndpoint('health'));
@@ -63,4 +63,51 @@ test('offline publisher emits a verifiable release and never copies the private 
   assert.deepEqual(fs.readdirSync(path.join(out,'2')).sort(),['indiebiz-member','workspace.cjs','workspace.html']);
   assert.throws(()=>publish(args));
  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('repeated discovery only fetches metadata and leaves running work alone',async t=>{
+ const f=fixture(t),urls=[];const fetcher=f.u.fetcher;f.u.fetcher=async url=>{urls.push(url);return fetcher(url)};
+ for(const sequence of [1,1,2,3]){
+  f.r.manifest.sequence=sequence;
+  const state=await f.u.check();assert.equal(state.state,'available');assert.equal(state.canUpdate,true);assert.equal(state.sequence,sequence);
+ }
+ assert.deepEqual(urls,Array(4).fill(trust.feed));assert.deepEqual(f.events,[]);assert.equal(f.u.state.active,null);
+ assert(!fs.existsSync(path.join(f.u.dir,'releases')));
+});
+test('install click refreshes latest offer; cancel downloads nothing and consent installs that offer',async t=>{
+ const f=fixture(t),urls=[];const fetcher=f.u.fetcher;f.u.fetcher=async url=>{urls.push(url);return fetcher(url)};
+ await f.u.check();f.r.manifest.sequence=2;f.r.manifest.version='0.1.2';
+ await f.u.requestInstall(async state=>{
+  assert.equal(state.sequence,2);assert.equal(state.availableVersion,'0.1.2');
+  await f.u.check();await f.u.requestInstall(()=>assert.fail('duplicate prompt'));
+  assert.deepEqual(urls,[trust.feed,trust.feed]);return false;
+ });
+ assert.deepEqual(f.events,[]);assert.equal(f.u.publicState().canUpdate,true);
+ assert(!fs.existsSync(path.join(f.u.dir,'releases')));
+ await f.u.check();assert.deepEqual(f.events,[]);
+ await f.u.requestInstall(async state=>{
+  assert.equal(state.sequence,2);assert(urls.every(url=>url===trust.feed));
+  // A newer publication during the dialog must not replace what the user confirmed.
+  f.r.manifest.sequence=3;await f.u.check();return true;
+ });
+ assert.equal(f.u.state.active,2);assert.equal(urls.filter(url=>url!==trust.feed).length,3);
+});
+test('full shell upgrade retires a verified old overlay while preserving user data and release files',async t=>{
+ const f=fixture(t);await f.u.check();await f.u.apply(1);
+ f.r.manifest.shell=1;const manifest=path.join(f.u.location(1),'manifest.json');fs.writeFileSync(manifest,JSON.stringify(f.r.envelope()));
+ const next=new RuntimeUpdates(f.options);assert.equal(next.recover().workspace,'old-ui');
+ assert.equal(next.state.active,null);assert.equal(next.state.highest,1);
+ assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert(fs.existsSync(manifest));
+ f.u.save();const tampered=f.r.envelope();tampered.signature='invalid';fs.writeFileSync(manifest,JSON.stringify(tampered));
+ assert.throws(()=>new RuntimeUpdates(f.options).recover(),/서명/);
+});
+test('old auto-install preferences are retired and approval binds the displayed release',async t=>{
+ const f=fixture(t);f.u.state.auto=true;f.u.save();const next=new RuntimeUpdates(f.options);
+ assert.equal(Object.hasOwn(next.state,'auto'),false);assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(next.stateFile)),'auto'),false);
+ await next.check();assert.deepEqual(f.events,[]);await assert.rejects(()=>next.apply(2));assert.deepEqual(f.events,[]);
+ f.r.manifest.sequence=2;await next.check();await assert.rejects(()=>next.apply(1));assert.deepEqual(f.events,[]);
+});
+test('an unconfigured installation does not fetch or offer an update',async t=>{
+ const f=fixture(t);const next=new RuntimeUpdates({...f.options,trust:{},fetcher:()=>assert.fail('network access')});
+ const state=await next.check();assert.equal(state.state,'unconfigured');assert.equal(state.canUpdate,false);assert.equal(state.sequence,undefined);
 });

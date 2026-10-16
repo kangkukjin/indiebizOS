@@ -10,6 +10,7 @@ import runtime_work
 import json
 import re
 import threading
+from contextlib import contextmanager, ExitStack
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
@@ -250,8 +251,10 @@ class SystemAIRunner:
               continue
           # 봉투(origin·chain) — 훈련 자식의 완료 보고가 돌아오는 턴도 리허설로 돈다(에피소드·
           # 대화 스레드·CLI 세션). 에피소드 시작보다 먼저 세운다.
-          with _received_envelope(msg_dict):
+          with _received_envelope(msg_dict), ExitStack() as scopes:
             try:
+                if not scopes.enter_context(self._scheduled_conversation(msg_dict)):
+                    continue
                 from_agent = msg_dict.get('from_agent', 'unknown')
                 content = msg_dict.get('content', '')
                 task_id = msg_dict.get('task_id')
@@ -334,6 +337,10 @@ class SystemAIRunner:
                 if self.ai:
                     ai_message = content
                     history = []
+                    from conversation_sessions import current as current_session
+                    if current_session():
+                        from system_ai_memory import get_history_for_ai
+                        history = get_history_for_ai()
 
                     # 컨텍스트 리마인더 및 히스토리 구성
                     if delegation_context:
@@ -449,6 +456,63 @@ class SystemAIRunner:
                 msg_dict['_delivery_retry'] = True
                 print(f"[SystemAIRunner] 메시지 처리 실패: {e}")
                 traceback.print_exc()
+
+    @contextmanager
+    def _scheduled_conversation(self, message):
+        """예약 위임은 최신 생성 세션에서 시작하고, 후속 보고는 작업의 소속을 잇는다."""
+        import conversation_sessions as sessions
+        import system_ai_memory as memory
+        from thread_context import actor_context, in_rehearsal
+
+        task_id = self._message_task_id(message)
+        if not task_id or in_rehearsal() or message.get('from_agent') == '__health_check__':
+            yield True
+            return
+
+        # DB의 영속 연결을 먼저 읽는다. 재기동 뒤 첫 보고도 원래 세션을 찾아야 한다.
+        memory.init_memory_db()
+        store = sessions.SessionStore(memory.MEMORY_DB_PATH, 'conversations', 'system_ai')
+        with sessions.connection(store.path) as conn:
+            row = conn.execute("""SELECT s.id FROM conversation_task_links t
+                JOIN conversation_sessions s ON s.id=t.session_id
+                WHERE t.task_id=? AND s.owner=?""", (task_id, store.owner)).fetchone()
+            if not row and message.get('origin') == 'scheduler':
+                # updated_at은 예약 응답 자체가 갱신한다. 이를 쓰면 옛 대화가 계속 선택된다.
+                row = conn.execute("""SELECT id FROM conversation_sessions WHERE owner=?
+                    ORDER BY legacy ASC, created_at DESC, id DESC LIMIT 1""",
+                                   (store.owner,)).fetchone()
+        if not row:
+            yield True
+            return
+
+        sid = row[0]
+        # 대기 중 새 세션이 생겨도 이 실행의 대상은 바뀌지 않는다.
+        with sessions.scope(sessions.Binding(store.path, sid, store.owner)):
+            sessions.bind_task(task_id)
+        try:
+            binding = store.begin(sid)
+        except ValueError:
+            with sessions.connection(store.path) as conn:
+                busy = conn.execute("""SELECT 1 FROM conversation_turns
+                    WHERE session_id=? AND state='running'""", (sid,)).fetchone()
+            if not busy:
+                raise
+            with SystemAIRunner._lock:
+                message['_delivery_deferred'] = True
+                SystemAIRunner.held_reports.append(message)
+            yield False
+            return
+
+        try:
+            with sessions.scope(binding), actor_context(task_id=task_id):
+                sessions.bind_task(task_id)
+                yield True
+        finally:
+            task = memory.get_task(task_id) or {}
+            state = ('failed' if message.get('_delivery_retry') else
+                     'cancelled' if task.get('status') == 'cancelled' else
+                     'failed' if task.get('status') == 'failed' else 'completed')
+            store.finish(binding, state)
 
     @staticmethod
     def _message_task_id(msg_dict: dict):

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -11,7 +12,10 @@ import (
 
 func configureMemberProcess(cmd *exec.Cmd) {
 	configureShellCommand(cmd)
-	cmd.Cancel = func() error { return exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid)).Run() }
+	configureBackgroundProcess(cmd)
+	cmd.Cancel = func() error {
+		return backgroundCommandContext(context.Background(), "taskkill", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
+	}
 	cmd.WaitDelay = 2 * time.Second
 }
 

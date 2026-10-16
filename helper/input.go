@@ -121,7 +121,7 @@ func hasBin(name string) bool {
 func runIn(bin string, args ...string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), inputTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd := backgroundCommandContext(ctx, bin, args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -140,7 +140,7 @@ func runOut(bin string, args ...string) (string, error) {
 func runOutTimeout(d time.Duration, bin string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), d)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd := backgroundCommandContext(ctx, bin, args...)
 	var out, stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr

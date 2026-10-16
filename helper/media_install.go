@@ -75,7 +75,7 @@ func newMediaInstaller(dataDir string) mediaInstaller {
 	return mediaInstaller{mediaLookup: newMediaLookup(dataDir),
 		has: func(name string) bool { _, err := exec.LookPath(name); return err == nil },
 		run: func(ctx context.Context, argv []string) ([]byte, error) {
-			return exec.CommandContext(ctx, argv[0], argv[1:]...).CombinedOutput()
+			return backgroundCommandContext(ctx, argv[0], argv[1:]...).CombinedOutput()
 		}}
 }
 

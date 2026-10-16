@@ -362,7 +362,7 @@ func captureLinux(ctx context.Context, path string) (string, error) {
 func runCapture(parent context.Context, bin string, args ...string) error {
 	ctx, cancel := context.WithTimeout(parent, captureTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd := backgroundCommandContext(ctx, bin, args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

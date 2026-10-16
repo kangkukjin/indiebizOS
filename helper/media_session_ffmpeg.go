@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -147,10 +146,10 @@ func mediaListDevices(ctx context.Context, ffmpeg, goos string) mediaDevices {
 	defer cancel()
 	switch goos {
 	case "darwin":
-		out, _ := exec.CommandContext(ctx, ffmpeg, "-hide_banner", "-f", "avfoundation", "-list_devices", "true", "-i", "").CombinedOutput()
+		out, _ := backgroundCommandContext(ctx, ffmpeg, "-hide_banner", "-f", "avfoundation", "-list_devices", "true", "-i", "").CombinedOutput()
 		return parseAVFoundationDevices(string(out))
 	case "windows":
-		out, _ := exec.CommandContext(ctx, ffmpeg, "-hide_banner", "-list_devices", "true", "-f", "dshow", "-i", "dummy").CombinedOutput()
+		out, _ := backgroundCommandContext(ctx, ffmpeg, "-hide_banner", "-list_devices", "true", "-f", "dshow", "-i", "dummy").CombinedOutput()
 		return parseDShowDevices(string(out))
 	default:
 		var d mediaDevices
@@ -169,7 +168,7 @@ func mediaListDevices(ctx context.Context, ffmpeg, goos string) mediaDevices {
 func mediaEncoders(ctx context.Context, ffmpeg string) map[string]bool {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	out, _ := exec.CommandContext(ctx, ffmpeg, "-hide_banner", "-encoders").Output()
+	out, _ := backgroundCommandContext(ctx, ffmpeg, "-hide_banner", "-encoders").Output()
 	found := map[string]bool{}
 	for _, name := range []string{"h264_videotoolbox", "libx264", "h264_nvenc", "h264_qsv", "h264_amf", "libopus"} {
 		if strings.Contains(string(out), " "+name+" ") {

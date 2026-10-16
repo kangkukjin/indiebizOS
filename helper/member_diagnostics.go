@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -34,7 +33,7 @@ func (m *MemberRuntime) gitDiff(task string) map[string]interface{} {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", "-C", root, "--no-pager", "diff", "--no-ext-diff", "--no-textconv", "HEAD", "--", ".")
+	cmd := backgroundCommandContext(ctx, "git", "-C", root, "--no-pager", "diff", "--no-ext-diff", "--no-textconv", "HEAD", "--", ".")
 	var out bytes.Buffer
 	cmd.Stdout = &limitedMemberOutput{target: &out, limit: 1024 * 1024}
 	cmd.Stderr = &limitedMemberOutput{target: &out, limit: 1024 * 1024}

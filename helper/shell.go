@@ -317,7 +317,7 @@ func doShell(c Command) map[string]interface{} {
 	defer cancel()
 
 	bin, args := shellFor(c.Shell, wrapScript(c.Shell, c.Cmd, startDir, getSessionEnv()))
-	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd := backgroundCommandContext(ctx, bin, args...)
 	configureShellCommand(cmd)
 	if c.ctx != nil {
 		configureMemberProcess(cmd)

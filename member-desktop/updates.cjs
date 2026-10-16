@@ -2,6 +2,7 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
+const {validateExecutable}=require('./native-signature.cjs');
 const {execFile}=require('node:child_process');
 const {promisify}=require('node:util');
 const execFileAsync=promisify(execFile);
@@ -32,8 +33,8 @@ async function download(url,limit,fetcher=fetch){
  const chunks=[];let size=0;for await(const chunk of r.body){size+=chunk.length;if(size>limit)throw Error('업데이트 크기 제한을 초과했습니다.');chunks.push(Buffer.from(chunk));}return Buffer.concat(chunks);
 }
 class RuntimeUpdates {
- constructor({root,trust,baseline,session,show,showUI,revertUI,fetcher=fetch,backup}){
-  Object.assign(this,{root,trust,baseline,session,show,showUI,revertUI,fetcher});this.dir=path.join(root,'updates');this.stateFile=path.join(this.dir,'state.json');this.state=read(this.stateFile,{active:null,highest:0,rejected:[]});this.status={state:trust?.publicKey&&trust?.feed?'idle':'unconfigured'};this.busy=false;
+ constructor({root,trust,baseline,session,show,showUI,revertUI,fetcher=fetch,backup,verifyExecutable=validateExecutable}){
+  Object.assign(this,{root,trust,baseline,session,show,showUI,revertUI,fetcher,verifyExecutable});this.dir=path.join(root,'updates');this.stateFile=path.join(this.dir,'state.json');this.state=read(this.stateFile,{active:null,highest:0,rejected:[]});this.status={state:trust?.publicKey&&trust?.feed?'idle':'unconfigured'};this.busy=false;
   this.state.ui ||= {active:null,highest:0,rejected:[]};
   // Previous automatic-install preferences never authorize a new update.
   if(Object.hasOwn(this.state,'auto')||Object.hasOwn(this.state,'deferred')){delete this.state.auto;delete this.state.deferred;this.save();}
@@ -47,7 +48,9 @@ class RuntimeUpdates {
   const m=verify(envelope,this.trust,{boot:true,allowOlderShell});if(m.sequence!==sequence||(m.kind||'runtime')!==kind)throw Error('업데이트 판본 불일치');
   for(const f of m.files){const file=path.join(dir,f.name);const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size!==f.size||digest(fs.readFileSync(file))!==f.sha256)throw Error('설치된 업데이트가 변경되었습니다.');}
   if(kind==='ui'){const display=read(path.join(dir,'display.json'));if(display.format!=='indiebiz-display-1'||display.surface!=='desktop'||display.host!==m.host||display.state!==m.state)throw Error('화면 계약 불일치');return {display,version:m.version,shell:m.shell};}
-  return {workspace:path.join(dir,'workspace.html'),executable:path.join(dir,'indiebiz-member'+(process.platform==='win32'?'.exe':'')),version:m.version,shell:m.shell};
+  const executable=path.join(dir,'indiebiz-member'+(process.platform==='win32'?'.exe':''));
+  this.verifyExecutable(executable,this.baseline.executable);
+  return {workspace:path.join(dir,'workspace.html'),executable,version:m.version,shell:m.shell};
  }
  restore(pending){
   // Trial never accepts user writes. Preserve failed DBs for diagnosis before restoring snapshots.

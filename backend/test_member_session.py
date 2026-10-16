@@ -61,3 +61,32 @@ def test_default_budget_is_unlimited_and_usage_survives_failed_turn(tmp_path, mo
     assert task['request'] == '월별 매출 비교'
     manager.policy['daily_turns'] = 1
     assert manager.turn('member', 'device', 4, 'name', '다음 작업')['error_type'] == 'limit'
+
+
+@pytest.mark.parametrize('content', ['Mac12 standalone acceptance', '', '첫째 줄\n둘째 줄'])
+def test_declarative_file_read_accepts_plain_text_result(tmp_path, monkeypatch, content):
+    import base64
+    import member_profile
+    monkeypatch.setattr(member_session, '_base', lambda: tmp_path)
+    monkeypatch.setattr(member_bridge, 'connected', lambda device: True)
+    monkeypatch.setattr(member_profile, '_package_open', lambda *args, **kwargs: True)
+    monkeypatch.setattr(member_session.MemberSession, '_ensure_runner',
+                        lambda self: pytest.fail('선언형 앱에서 모델을 초기화하면 안 됩니다'))
+    sent = []
+    def exchange(command, **kwargs):
+        sent.append(command)
+        if command['op'] == 'memory_recall':
+            return {'success': True, 'history': [], 'workspace': '/member/workspace'}
+        if command['op'] == 'memory_save':
+            return {'success': True, 'saved': True}
+        assert command['op'] == 'read' and command['path'] == 'proof.txt'
+        return {'success': True, 'content': base64.b64encode(content.encode()).decode()}
+    monkeypatch.setattr(member_bridge, 'request', exchange)
+    result = member_session.MemberSessionManager(tmp_path).turn(
+        'member', 'device', 4, 'name', '파일 읽기', local_task_id='local-task',
+        code='[self:read]{path:"proof.txt"}',
+    )
+    assert result['success'], result
+    assert result['app_result'] == content
+    assert result['memory_saved']
+    assert any(command['op'] == 'read' for command in sent)

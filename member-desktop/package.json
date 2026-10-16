@@ -23,6 +23,7 @@
       "security.cjs",
       "preload.cjs",
       "updates.cjs",
+      "native-signature.cjs",
       "workspace.cjs",
       "setup.cjs",
       "*.html",

@@ -19,7 +19,7 @@ test('real executor update failure restores SQLite snapshot before restarting ol
   const files=new Map([['workspace.html',Buffer.from('<html></html>')],['workspace.cjs',Buffer.from('void 0;')],[binaryName,fs.readFileSync(process.env.MEMBER_DESKTOP_TEST_BINARY)]]);
   const manifest={format:'indiebiz-member-runtime',sequence:1,version:'0.1.1',shell:SHELL_VERSION,protocol:2,platform:process.platform,arch:process.arch,expires:Date.now()/1000+60,files:[...files].map(([name,b])=>({name,size:b.length,sha256:digest(b),url:'https://release.example/'+name}))};
   const raw=Buffer.from(JSON.stringify(manifest)),envelope={manifest:raw.toString('base64'),signature:crypto.sign(null,raw,pair.privateKey).toString('base64')};
-  const u=new RuntimeUpdates({root,session,trust:{feed,publicKey:pair.publicKey.export({type:'spki',format:'pem'})},baseline:{executable:session.executable,workspace:'old',version:'0.1.0'},fetcher:async(url)=>new Response(url===feed?JSON.stringify(envelope):files.get(new URL(url).pathname.slice(1))),show:async(file,trial)=>{if(trial){
+  const u=new RuntimeUpdates({root,session,verifyExecutable:()=>{},trust:{feed,publicKey:pair.publicKey.export({type:'spki',format:'pem'})},baseline:{executable:session.executable,workspace:'old',version:'0.1.0'},fetcher:async(url)=>new Response(url===feed?JSON.stringify(envelope):files.get(new URL(url).pathname.slice(1))),show:async(file,trial)=>{if(trial){
    assert.equal((await session.internalRequest('maintenance',{pause:true})).idle,true);
    assert.equal((await session.internalRequest('task/start',{message:'must not start'})).error,'updating');
    await session.internalRequest('permissions',{screen:true});throw Error('failed UI health');

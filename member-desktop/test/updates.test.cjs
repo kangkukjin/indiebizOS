@@ -16,7 +16,7 @@ function fixture(t){
  const namespace='a'.repeat(64),dir=path.join(root,'workspaces',namespace);fs.mkdirSync(dir,{recursive:true});const db=path.join(dir,'member.db');fs.writeFileSync(db,'original-database');
  const r=release();const events=[];
  const session={config:{key:'synthetic'},executable:'old-helper',bridge:{},maintenance:async pause=>{events.push(['maintenance',pause]);return {idle:true}},stop:async()=>{events.push(['stop']);session.bridge=null},start:async(_,options)=>{events.push(['start',session.executable,options]);session.bridge={}},internalRequest:async()=>({success:true,protocol:2})};
- const options={root,trust,session,baseline:{version:'0.1.0',workspace:'old-ui',executable:'old-helper'},show:async(file,trial)=>events.push(['show',trial,session.updating]),backup:async(exe,source,target)=>fs.copyFileSync(source,target),fetcher:async(url)=>new Response(url===trust.feed?JSON.stringify(r.envelope()):r.bytes.get(url))};
+ const options={root,trust,session,verifyExecutable:()=>{},baseline:{version:'0.1.0',workspace:'old-ui',executable:'old-helper'},show:async(file,trial)=>events.push(['show',trial,session.updating]),backup:async(exe,source,target)=>fs.copyFileSync(source,target),fetcher:async(url)=>new Response(url===trust.feed?JSON.stringify(r.envelope()):r.bytes.get(url))};
  return {root,db,r,events,session,options,u:new RuntimeUpdates(options)};
 }
 test('signed manifest rejects tamper, wrong platform, expired release and foreign artifact origin',()=>{
@@ -156,4 +156,18 @@ test('UI persistence failure rolls the renderer back and keeps current DB writes
  await f.u.check();const state=await f.u.apply(1);
  assert.equal(state.state,'rolled_back');assert.equal(f.u.state.ui.active,null);assert.equal(f.u.state.ui.highest,0);
  assert.equal(fs.readFileSync(f.db,'utf8'),'new work during installation');assert.deepEqual(f.events,[['display','candidate'],['revert','candidate']]);assert(!f.u.state.pending);
+});
+
+// These fixtures isolate lifecycle transitions; native-signature.test.cjs runs real codesign.
+test('native identity rejection happens before executor shutdown or DB snapshot',async t=>{
+ const f=fixture(t);f.u.verifyExecutable=()=>{throw Error('native identity rejected')};
+ await f.u.check();await assert.rejects(()=>f.u.apply(1),/native identity rejected/);
+ assert.deepEqual(f.events,[]);assert.equal(f.session.executable,'old-helper');
+ assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');
+ assert(!fs.existsSync(path.join(f.u.dir,'snapshots')));assert.equal(f.u.state.active,null);
+});
+test('UI-only update never checks or changes native executable identity',async t=>{
+ const f=fixture(t);f.u.verifyExecutable=()=>assert.fail('UI must keep the executable');
+ uiOffer(f);await f.u.check();await f.u.apply(1);assert.equal(f.u.publicState().state,'updated');
+ assert.deepEqual(f.events,[['display','candidate']]);
 });

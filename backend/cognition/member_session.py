@@ -297,7 +297,11 @@ class MemberSessionManager:
                     else:
                         payload = {"code": code, "edition": source_edition(code)}
                     raw = s.runner._member_tool("execute_ibl", payload)
-                    value = json.loads(raw) if isinstance(raw, str) else raw
+                    try:
+                        value = json.loads(raw) if isinstance(raw, str) else raw
+                    except json.JSONDecodeError:
+                        # 구형 IBL의 파일 읽기는 JSON 봉투 없이 본문 문자열을 돌려준다.
+                        value = raw
                     result = {"final": json.dumps(value, ensure_ascii=False), "app_result": value,
                               "error": (value.get("error") or ("앱 실행 실패" if value.get("success") is False else None)) if isinstance(value, dict) else None}
                 else:

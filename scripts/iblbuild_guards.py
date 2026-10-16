@@ -102,6 +102,7 @@ def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
 # 주의력이 아니라 실패하는 빌드로 막는다 — IBL --check 삼각검증과 같은 철학).
 # 패키지 핸들러는 이음매-아래(이미 OS 터치 전제)라 이 가드 범위 밖 — docs/OS_PORTABILITY_SEAM.md 가 tier-2 추적.
 OS_SEAM_ALLOWLIST = {
+    "backend/services/phone_limb_transfer.py",  # Android SELinux의 하드링크 거절 시 Linux renameat2로 원자적 무덮어쓰기 전송 완료
     "backend/test_resident_terminal.py",  # 격리 통합 시험에서 현재 OS/아키텍처의 PTY 헬퍼 바이너리를 선택
     "backend/test_long_sentence_round49_repairs.py",  # macOS sips 전체 프로그램과 해당 아키텍처 헬퍼의 격리 재생
     "backend/test_long_sentence_round68_repairs.py",  # 맥 Spotlight 이음매(file_index)의 NFC·EXIF 폴백 회귀 — 색인 호출은 monkeypatch

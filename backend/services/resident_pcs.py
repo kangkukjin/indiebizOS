@@ -29,9 +29,11 @@ def resolve(target, active=True):
 
 
 def devices():
+    from phone_updates import status as phone_update_status
     now = time.time()
     return [{**r, "connected": r["registration"]["state"] != "removed" and now - (r["registration"].get("last_seen") or 0) < 90,
-             "helper": helper_status(r)}
+             "helper": helper_status(r),
+             **({"phone_update": phone_update_status(r)} if r["registration"].get("kind") == "phone" else {})}
             for r in limb_keys.list_keys() if r.get("registration")]
 
 
@@ -110,7 +112,7 @@ def update_helper(target):
 
 
 def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False,
-           allow_media=False):
+           allow_media=False, allow_phone_update=False):
     rec = resolve(target)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
@@ -128,6 +130,10 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     if adapter == "indiebiz-v1":
         body_ops = {"ibl", "info"} | ({"media"} if allow_media else set())
         capabilities = rec["registration"].get("capabilities") or {}
+        if allow_phone_update and (capabilities.get("apk_update") or {}).get("contract") == 1:
+            from phone_remote_execution import require_owner
+            require_owner()
+            body_ops.add("phone_update")
         declared = capabilities.get("ops")
         if capabilities.get("execution_contract") == 1 and isinstance(declared, list):
             body_ops |= {"shell", "python", "transfer"} & {x for x in declared if isinstance(x, str)}

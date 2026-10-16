@@ -81,6 +81,9 @@ def supported_ops() -> List[str]:
     from phone_remote_execution import capabilities
     if capabilities():
         ops.extend(("shell", "python", "transfer"))
+    from phone_updates import capabilities as update_capabilities
+    if update_capabilities():
+        ops.append("phone_update")
     return ops
 
 
@@ -172,6 +175,7 @@ class LimbClient:
         self._lock = threading.Lock()
         self._queue: List[Dict] = []          # 접수 순서(큐 순서 = 허브 응답 순서)
         self._running: Optional[str] = None
+        self._apk_transferring = False
         self._cancelled = set()
         self._active_cancel = {}
         self._controls = set()
@@ -246,6 +250,8 @@ class LimbClient:
                 "python": platform.python_version(), "alias": self.cfg.get("alias")}
         from phone_remote_execution import capabilities
         caps.update(capabilities())
+        from phone_updates import capabilities as update_capabilities
+        caps.update(update_capabilities())
         bridge = _media_bridge()
         if bridge is not None:
             try:
@@ -335,6 +341,12 @@ class LimbClient:
                 continue
             if rec.get("state") == "running":
                 result = {"unknown": True, "error": "limb_restarted_during_execution"}
+                try:
+                    if json.loads(rec["job"].get("code") or "{}").get("op") == "phone_update":
+                        from phone_updates import recovered
+                        result = recovered(rec["job"])
+                except (ValueError, TypeError):
+                    pass
                 self._event(rec["job"]["id"], "result", result)
                 self._record(rec["job"]["id"], state="done", result=result)
             elif rec.get("state") == "queued":
@@ -407,6 +419,18 @@ class LimbClient:
         if not isinstance(env, dict):
             env = {}
         op = env.get("op") or "shell"
+        if op == "phone_update":
+            from phone_updates import execute
+            with self._lock:
+                if self._controls:
+                    return {"success": False, "error": "phone_update_busy"}
+                cancelled = self._active_cancel.setdefault(str(job["id"]), threading.Event())
+                self._apk_transferring = True
+            try:
+                return execute(self, job, env, cancelled)
+            finally:
+                with self._lock:
+                    self._apk_transferring = False
         if op in {"shell", "python", "transfer"}:
             if op not in supported_ops():
                 return {"success": False, "error": "unsupported_on_this_body", "op": op}
@@ -504,6 +528,9 @@ class LimbClient:
 
     def _drain(self) -> None:
         while not self.stopped.is_set():
+            from phone_updates import busy
+            if busy():
+                return
             with self._lock:
                 if not self._queue:
                     return
@@ -512,7 +539,12 @@ class LimbClient:
             self._run_job(job)
 
     def _schedule(self, inline: bool = False) -> None:
+        from phone_updates import busy
+        if busy():
+            return  # sync/capabilities continue; no new work during package replacement.
         with self._lock:
+            if self._apk_transferring:
+                return  # Do not start parallel controls between download and installer commit.
             if not self._queue:
                 return
             if not inline:

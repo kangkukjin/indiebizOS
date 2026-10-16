@@ -1,13 +1,53 @@
 """Registered phone file transfer using the existing resident chunk protocol."""
 import base64
 from contextlib import contextmanager
+import errno
 import hashlib
 import os
 from pathlib import Path
 import re
+import sys
 import time
 
 CHUNK = 512 * 1024
+
+
+def _rename_no_replace(source, destination):
+    """Linux/Android atomic publication when SELinux disallows hardlinks.
+
+    RENAME_NOREPLACE preserves the no-clobber contract including concurrent writers.
+    Old bionic (API 28) has the kernel call but may not export the libc wrapper.
+    Numbers are Linux UAPI __NR_renameat2 for the supported process architectures.
+    """
+    import ctypes
+    import platform
+    libc = ctypes.CDLL(None, use_errno=True)
+    args = (ctypes.c_int(-100), ctypes.c_char_p(os.fsencode(source)),
+            ctypes.c_int(-100), ctypes.c_char_p(os.fsencode(destination)), ctypes.c_uint(1))
+    call = getattr(libc, "renameat2", None)
+    if call is not None:
+        call.restype = ctypes.c_int
+        result = call(*args)
+    else:
+        number = {"aarch64": 276, "armv7l": 382, "armv8l": 382, "x86_64": 316}.get(platform.machine())
+        if number is None:
+            raise OSError(errno.ENOSYS, "atomic_no_replace_unsupported")
+        libc.syscall.restype = ctypes.c_long
+        result = libc.syscall(ctypes.c_long(number), *args)
+    if result != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error), str(destination))
+
+
+def publish_download(partial, path):
+    try:
+        os.link(partial, path)
+    except OSError as error:
+        if sys.platform != "linux" or error.errno not in {errno.EPERM, errno.EACCES, errno.EOPNOTSUPP}:
+            raise
+        _rename_no_replace(partial, path)
+    else:
+        partial.unlink()
 
 
 def digest(path, check=lambda: None):
@@ -111,8 +151,7 @@ def _transfer(client, command, cancelled, tid, path):
         if digest(partial, check) != row["sha256"]:
             raise ValueError("hash_mismatch")
         check()
-        os.link(partial, path)  # No clobber, including a destination created during download.
-        partial.unlink()
+        publish_download(partial, path)
     else:
         raise ValueError("invalid_transfer_direction")
     return {"success": True, "path": str(path), "sha256": row["sha256"],

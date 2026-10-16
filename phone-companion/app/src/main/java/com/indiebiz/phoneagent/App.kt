@@ -28,6 +28,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
             Python.start(AndroidPlatform(this))
         }
         if (Application.getProcessName().endsWith(":remote_exec")) return
+        com.indiebiz.phoneagent.update.ApkUpdater.init(this)
         com.indiebiz.phoneagent.execution.RemoteExecutionBridge.init(this)
         PhoneActions.init(this)   // 송신측(폰→동작) effector 다리 초기화 — [limbs:phone] 가 호출
         MediaBridge.init(this)    // 미디어 세션 다리(limb_client `media` 봉투) — 프레임은 네이티브에만

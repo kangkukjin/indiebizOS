@@ -18,6 +18,8 @@
     <!-- USB로 등록된 원격 손발: 명시 허용 시 세션 전용 화면을 백그라운드에서 연다. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- 위치 ([sense:here] 온디맨드 1회 조회 — 상시/백그라운드 수집 안 함) -->
@@ -124,12 +126,15 @@
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
-        <!-- 재부팅 후 상주 복원 -->
+        <receiver android:name=".update.UpdateResultReceiver" android:exported="false" />
+        <activity android:name=".update.UpdatePermissionActivity" android:exported="false" />
+        <!-- 재부팅·APK 교체 후 상주 복원 -->
         <receiver
             android:name=".BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

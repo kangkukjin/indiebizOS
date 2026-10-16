@@ -22,6 +22,9 @@ def test_remote_pc_desktop(tmp_path):
     requests = []
     device = {'alias': '사무실 Mac', 'device_id': 'test-pc', 'connected': True,
               'registration': {'state': 'active', 'capabilities': {'os': 'darwin', 'desktop_stream': 1}}}
+    phone = {'alias': '검증용 폰', 'device_id': 'test-phone', 'connected': True,
+             'registration': {'state': 'active', 'kind': 'phone'},
+             'phone_update': {'state': 'available', 'current_version': 2, 'latest_version': 3}}
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)
@@ -35,12 +38,21 @@ def test_remote_pc_desktop(tmp_path):
             def api(route):
                 path = urlsplit(route.request.url).path
                 requests.append(path)
-                result = {'items': [device], 'usb': {'ready': True, 'folder': '/work/pc-helper'}} if path == '/remote-pcs' else {}
+                if path == '/remote-pcs/phone-update':
+                    assert route.request.post_data_json == {'target': 'test-phone'}
+                    phone['phone_update']['state'] = 'awaiting_confirmation'
+                result = {'items': [device, phone], 'usb': {'ready': True, 'folder': '/work/pc-helper'}} if path == '/remote-pcs' else {}
                 route.fulfill(status=200, content_type='application/json', body=json.dumps(result), headers={'Access-Control-Allow-Origin': '*'})
 
             page.route('**/remote-pcs**', api)
             page.goto(url)
             page.get_by_role('button', name='손발 (USB)').click()
+            panel = page.get_by_role('button', name='손발 (USB)').locator('..')
+            page.get_by_role('button', name='앱 업데이트', exact=True).click()
+            expect(panel).to_contain_text('폰에서 Android 설치 확인 필요')
+            expect(page.get_by_role('button', name='앱 업데이트', exact=True)).to_have_count(0)
+            assert requests.count('/remote-pcs/phone-update') == 1
+            requests.clear()
             page.get_by_role('button', name='화면 공유', exact=True).click()
             page.wait_for_function('window.desktopCalls.length === 1')
             assert page.evaluate('window.desktopCalls') == [{'device': 'test-pc', 'route': 'auto'}]
@@ -49,11 +61,11 @@ def test_remote_pc_desktop(tmp_path):
             assert all(path == '/remote-pcs' for path in requests)
             page.evaluate('window.desktopFailure = true')
             page.get_by_role('button', name='화면 공유', exact=True).click()
-            expect(page.get_by_role('alert')).to_contain_text('unavailable')
+            expect(panel.get_by_role('alert')).to_contain_text('unavailable')
             page.evaluate('window.desktopFailure = false')
             page.get_by_role('button', name='화면 공유', exact=True).click()
             page.wait_for_function('window.desktopCalls.length === 3')
-            expect(page.get_by_role('alert')).to_have_count(0)
+            expect(panel.get_by_role('alert')).to_have_count(0)
             expect(page.get_by_role('button', name='화면 공유', exact=True)).to_be_enabled()
             expect(page.get_by_role('button', name='작업창', exact=True)).to_have_count(0)
             expect(page.get_by_role('dialog', name='원격 PC 작업창')).to_have_count(0)

@@ -393,6 +393,7 @@
     "services/phone_limb_transfer",
     "services/phone_notifications",
     "services/phone_remote_execution",
+    "services/phone_updates",
     "services/record_adapters",
     "services/record_dispatch",
     "services/report_html",
@@ -610,8 +611,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 535,
-    "engine": 503,
+    "total": 536,
+    "engine": 504,
     "blocklist": 32
   }
 }

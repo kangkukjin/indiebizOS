@@ -15,7 +15,8 @@ type Registration = {
   capabilities?: { os?: string; hostname?: string; desktop_stream?: number; media_session?: MediaCapability };
 };
 type Helper = { state: 'unknown' | 'current' | 'manual' | 'available' | 'updating'; rolled_back?: boolean };
-type PC = { alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration; helper?: Helper };
+type PhoneUpdate = { state: string; current_version?: number; latest_version?: number; message?: string };
+type PC = { phone_update?: PhoneUpdate; alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration; helper?: Helper };
 type USB = { folder: string; ready: boolean };
 type PCList = { items: PC[]; usb: USB };
 
@@ -87,9 +88,9 @@ export function LimbSwitch() {
   const updateHelper = async (pc: PC) => {
     setBusy(pc.device_id); setErr(null);
     try {
-      await api.request('/remote-pcs/helper-update', { method: 'POST', body: JSON.stringify({ target: pc.device_id }) });
+      await api.request(pc.registration.kind === 'phone' ? '/remote-pcs/phone-update' : '/remote-pcs/helper-update', { method: 'POST', body: JSON.stringify({ target: pc.device_id }) });
       await load();
-    } catch (e) { setErr(e instanceof Error ? e.message : '헬퍼 교체 요청 실패'); }
+    } catch (e) { setErr(e instanceof Error ? e.message : '기기 업데이트 요청 실패'); }
     finally { setBusy(null); }
   };
   const revokeUSB = async () => {
@@ -103,6 +104,12 @@ export function LimbSwitch() {
   const status = (pc: PC) => pc.registration.state === 'removal_pending'
     ? (isPhone(pc) ? '해제 요청됨 · 폰이 연결되면 자격 삭제' : '해제 요청됨 · PC가 연결되면 헬퍼 제거')
     : pc.registration.paused ? '작업 중지됨' : pc.connected ? '연결됨' : '오프라인';
+  const phoneNote = (pc: PC) => {
+    const u = pc.phone_update;
+    if (!u) return '';
+    const labels: Record<string, string> = {bootstrap: '업데이트 지원 APK 최초 설치 필요', unpublished: '중앙 APK 미발행', current: '앱 최신', available: '새 앱 있음', updating: 'APK 전송 중', staged: '설치 준비 중', installing: '설치·재접속 확인 중', awaiting_permission: '폰에서 앱 설치 권한 허용 필요', awaiting_confirmation: '폰에서 Android 설치 확인 필요', failed: '업데이트 실패', incompatible: 'APK 호환 확인 필요'};
+    return ` · ${labels[u.state] || u.state}${u.current_version ? ` (v${u.current_version})` : ''}${u.message ? ` · ${u.message}` : ''}`;
+  };
   const helperNote = (pc: PC) => pc.registration.state !== 'active' ? ''
     : pc.helper?.state === 'updating' ? ' · 헬퍼 교체 중'
     : pc.helper?.state === 'current' ? ' · 헬퍼 최신'
@@ -143,7 +150,7 @@ export function LimbSwitch() {
           {usb && !usb.ready && <p className="mt-1 text-[11px] text-amber-700">폴더 준비를 누른 뒤 USB에 복사하세요.</p>}
         </div>
         <div className="mt-3 flex items-center gap-2 font-medium text-stone-700">
-          등록된 PC
+          등록된 원격 기기
           <button title="목록 새로고침" onClick={() => void load()} disabled={loading} className="ml-auto p-1">
             {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
           </button>
@@ -155,8 +162,14 @@ export function LimbSwitch() {
             <span className={`h-2 w-2 shrink-0 rounded-full ${pc.connected && pc.registration.state === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
             <div className="min-w-0 flex-1">
               <div className="break-all font-medium text-stone-700">{pc.alias}</div>
-              <div className="text-[10px] text-stone-400">{status(pc)}{isPhone(pc) ? ' · 폰 (IndieBiz OS)' : ''}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}{helperNote(pc)}</div>
+              <div className="text-[10px] text-stone-400">{status(pc)}{isPhone(pc) ? ' · 폰 (IndieBiz OS)' : ''}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}{isPhone(pc) ? phoneNote(pc) : helperNote(pc)}</div>
             </div>
+            {isPhone(pc) && pc.registration.state === 'active' && ['available', 'failed'].includes(pc.phone_update?.state || '') &&
+              <button onClick={() => void updateHelper(pc)} disabled={busy !== null || !pc.connected || pc.registration.paused}
+                title="중앙의 APK를 폰으로 전송하여 설치합니다. Android가 확인을 요구하면 폰에 표시됩니다."
+                className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-600 disabled:opacity-50">
+                {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}앱 업데이트
+              </button>}
             {pc.registration.state === 'active' && (pc.helper?.state === 'available' || pc.helper?.state === 'updating') &&
               <button onClick={() => void updateHelper(pc)} disabled={busy !== null || !pc.connected || pc.helper.state === 'updating'}
                 title="중앙의 최신 헬퍼로 교체합니다. 다시 연결되지 않으면 이전 헬퍼로 되돌립니다."

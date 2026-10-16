@@ -53,6 +53,12 @@ fi
 say "APK 설치"
 adb install -r "$APK" | tail -1
 
+# 중앙 관리형 APK 업데이트의 최초 설치 권한. 이후 APK 전송·설치는 resident 통신을 쓴다.
+say "중앙 업데이트 설치 권한 준비"
+adb shell appops set "$PKG" REQUEST_INSTALL_PACKAGES allow \
+  && echo "✓ IndieBiz 앱 설치 허용" \
+  || echo "⚠ 폰 설정에서 IndieBiz의 '알 수 없는 앱 설치'를 허용해야 합니다"
+
 # 2) 알림 리스너 권한 (수신 알림 → [sense:phone])
 say "알림 접근 권한 부여"
 adb shell cmd notification allow_listener "$LISTENER" || true

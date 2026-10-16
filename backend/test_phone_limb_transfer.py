@@ -45,5 +45,28 @@ def test_cancel_prevents_transfer_io(hub, phone_env):
         transfer.execute(c, {'transfer_id': 'a' * 32, 'path': 'x'}, event)
 
 
+def test_android_hardlink_denial_uses_atomic_no_replace(tmp_path, monkeypatch):
+    import errno
+    source, target = tmp_path / 'part', tmp_path / 'final'
+    source.write_bytes(b'verified')
+    monkeypatch.setattr(transfer.sys, 'platform', 'linux')
+    monkeypatch.setattr(transfer.os, 'link', lambda *args: (_ for _ in ()).throw(PermissionError(errno.EACCES, 'SELinux')))
+    called = []
+
+    def rename(a, b):
+        called.append((a, b))
+        if b.exists():
+            raise FileExistsError(errno.EEXIST, 'exists')
+        a.rename(b)
+
+    monkeypatch.setattr(transfer, '_rename_no_replace', rename)
+    transfer.publish_download(source, target)
+    assert target.read_bytes() == b'verified' and not source.exists() and called
+    source.write_bytes(b'other')
+    with pytest.raises(FileExistsError):
+        transfer.publish_download(source, target)
+    assert target.read_bytes() == b'verified' and source.read_bytes() == b'other'
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

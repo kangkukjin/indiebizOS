@@ -90,6 +90,7 @@ class Session:
     device_alias: Optional[str] = None
     relation_generation: Optional[str] = None
     device_job: Optional[str] = None
+    device_start_observed: bool = False
     grants: Dict[str, Dict] = field(default_factory=dict)
     local_box: sig.Outbox = field(default_factory=sig.Outbox)      # → 브라우저 엔진
     remote_box: sig.Outbox = field(default_factory=sig.Outbox)     # → 장치 WS(확장) 또는 릴레이 회원
@@ -1164,6 +1165,38 @@ def health() -> Dict:
 
 
 # ── 청소기 ───────────────────────────────────────────────────────────────────────
+def _observe_device_start(s: Session) -> bool:
+    """시그널링 소켓을 열기 전 거절된 시작 결과도 세션 화면으로 전달한다."""
+    if (s.kind != "extension" or not s.device_job or s.device_start_observed
+            or s.remote_attached or s.state != "connecting"):
+        return False
+    import resident_store
+    result = resident_store.wait_result(s.device_job, 0)
+    if result is None:
+        return False
+    s.device_start_observed = True
+    if not isinstance(result, dict):
+        result = {"error": "invalid_device_result", "message": "장치 시작 응답을 읽지 못했습니다"}
+    if result.get("success") is not False and not result.get("error"):
+        return False  # 접수 성공은 영상 연결 성공이 아니다. 이후 WS 보고를 기다린다.
+    raw = result.get("error")
+    code = (raw.get("code") if isinstance(raw, dict) else raw) or "device_start_failed"
+    message = result.get("message") or (raw.get("message") if isinstance(raw, dict) else None) or code
+    error = {"code": str(code), "message": str(message)}
+    if code in {"needs_local_action", "permission_required"}:
+        action = result.get("needs_local_action")
+        action = action if isinstance(action, dict) else {}
+        s.error = error
+        _apply_state_report(s, {"state": "needs_local_action", "needs_local_action": {
+            "code": action.get("code") or code,
+            "message": (action.get("message") or message)
+            + " · 폰에서 준비한 뒤 이 창을 닫고 다시 열어 주세요",
+        }})
+        return False
+    end_locked(s, str(code), error=error)
+    return True
+
+
 @runtime_work.tracked("media-sweep", defer=True)
 def sweep(now: Optional[float] = None) -> int:
     now = now or _now()
@@ -1173,12 +1206,17 @@ def sweep(now: Optional[float] = None) -> int:
         for s in list(_sessions.values()):
             if s.state == "ended":
                 continue
+            if _observe_device_start(s):
+                n += 1
+                continue
             if s.state in ("inviting", "ringing") and s.expires_at and now > s.expires_at:
                 end_locked(s, "invite_expired", error={"code": "invite_expired", "message": "응답이 없어 초대가 만료됐습니다"},
                            notify_remote=s.state == "inviting")
                 n += 1
             elif s.state in ("active", "reconnecting", "needs_local_action") and s.lease.expired():
-                end_locked(s, "lease_expired", error={"code": "connectivity_failed", "message": "연결 확인이 끊겨 세션을 닫았습니다"})
+                error = s.error if s.state == "needs_local_action" and s.error else {
+                    "code": "connectivity_failed", "message": "연결 확인이 끊겨 세션을 닫았습니다"}
+                end_locked(s, "lease_expired", error=error)
                 n += 1
             elif s.state == "connecting" and s.lease.age() > s.lease.lease_s + reconnect_s:
                 end_locked(s, "connect_timeout", error={"code": "connectivity_failed", "message": "연결이 제시간에 성립하지 않았습니다"})

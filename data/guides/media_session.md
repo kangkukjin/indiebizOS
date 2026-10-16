@@ -38,6 +38,13 @@ $s = [self:script]{op:"run", id:"미디어세션", args:{op:"create", kind:"exte
 `signaling_unavailable`(IndieNet 신원 없음 또는 초대 전송 실패) · `invite_expired`/`rejected`/`busy`(상대 쪽 결과) · `connectivity_failed`(임대·복구 시간 만료).
 `health` 가 `turn.configured:false` 면 외부망 통화는 직접 연결만 시도한다 — `data/media_policy.yaml` 에 TURN 주소, `.env` 에 `MEDIA_TURN_SECRET`.
 
+Android 폰은 카메라 권한과 지금 카메라를 시작할 준비 상태를 구분한다. 현재 앱은 Android 9에서는
+백그라운드 시작을 허용하고, Android 10 이상에서는 앱이 화면에 보이거나 **카메라 대기 모드**가
+켜져 있어야 시작한다. 대기 모드는 화면 자동 꺼짐을 막으며, 화면을 끄거나 나가면 해제된다.
+폰이 시그널링 연결 전에 시작을 거절해도 중앙은 작업 결과를 읽어 `needs_local_action`과
+실제 안내를 표시한다. 폰에서 준비한 뒤 기존 창을 닫고 카메라 보기를 다시 연다.
+접수 성공만으로 영상 연결을 성공 처리하지 않으며, 안내 뒤 임대가 끝나도 거절 원인을 보존한다.
+
 ## 운영 데이터(코드가 아니라 파일)
 
 - `data/media_policy.yaml` — 시그널링 경로(auto|nostr|relay)·ICE/TURN·품질 프로필(phone32/phone64/helper)·한도.

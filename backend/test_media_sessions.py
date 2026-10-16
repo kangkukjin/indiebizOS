@@ -334,6 +334,64 @@ def test_sweep_expires_invites_and_leases(hub):
     assert rec
 
 
+@pytest.mark.parametrize('code', ['needs_local_action', 'permission_required', 'device_busy'])
+def test_phone_start_refusal_reaches_session_without_device_socket(hub, code):
+    rec = _device('phone-start', kind='phone', adapter='indiebiz-v1')
+    sid = ms.create('extension', 'camera', 'phone-start')['session_id']
+    session = ms.get(sid)
+    message = '폰에서 카메라 대기 모드를 시작해 주세요'
+    result = {'success': False, 'error': code, 'message': message}
+    if code == 'needs_local_action':
+        result['needs_local_action'] = {'code': 'camera_unavailable', 'message': message}
+    resident_store.observe(rec, [{'job_id': session.device_job, 'event_id': 'start-refused',
+                                 'kind': 'result', 'payload': result}])
+    session.local_box.take()
+    ms.sweep()
+    state = hub.get(f'/media/sessions/{sid}').json()['session']
+    assert state['error'] == {'code': code, 'message': message}
+    assert any(frame.get('session', {}).get('error', {}).get('code') == code
+               for frame in session.local_box.take()), '열린 창에도 세션 갱신을 전송해야 한다'
+    if code == 'device_busy':
+        assert state['state'] == 'ended'
+        assert ms.active_for_device(rec['device_id']) is None
+    else:
+        assert state['state'] == 'needs_local_action'
+        assert message in state['needs_local_action']['message']
+        revision = state['revision']
+        ms.sweep()
+        assert ms.status(sid)['revision'] == revision, '같은 실패를 반복 통지하지 않는다'
+        session.lease.rewind(100)
+        ms.sweep()
+        ended = ms.status(sid)
+        assert ended['state'] == 'ended'
+        assert ended['error']['code'] == code, '임대 종료가 실제 거절 원인을 덮으면 안 된다'
+        assert message in ended['needs_local_action']['message']
+    assert media_store.history()[0]['error']['code'] == code
+
+
+def test_phone_start_acceptance_waits_for_real_media_and_ignores_late_refusal(hub):
+    rec = _device('accepted-phone', kind='phone', adapter='indiebiz-v1')
+    sid = ms.create('extension', 'camera', 'accepted-phone')['session_id']
+    session = ms.get(sid)
+    ms.sweep()
+    assert not session.device_start_observed
+    resident_store.observe(rec, [{'job_id': session.device_job, 'event_id': 'start-ok',
+                                 'kind': 'result', 'payload': {'success': True, 'accepted': True}}])
+    ms.sweep()
+    assert session.device_start_observed and session.state == 'connecting'
+    assert not session.quality, '접수 성공을 영상 수신으로 계산하면 안 된다'
+    ms.end(sid)
+
+    sid = ms.create('extension', 'camera', 'accepted-phone')['session_id']
+    session = ms.get(sid)
+    ms.attach_device(sid, rec['device_id'], session.grants['device'])
+    resident_store.observe(rec, [{'job_id': session.device_job, 'event_id': 'late-refusal',
+                                 'kind': 'result', 'payload': {'error': 'device_busy'}}])
+    ms.sweep()
+    assert session.remote_attached and session.state != 'ended'
+    ms.end(sid)
+
+
 def test_relay_room_token_and_forwarding(hub):
     secret = '11' * 32
     token = ms.rooms.open('room1', secret)

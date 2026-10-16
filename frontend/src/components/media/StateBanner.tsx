@@ -41,6 +41,8 @@ export function StateBanner({ state, session, error, endReason, onRetry }: {
   return (
     <div role="status" aria-live="polite" className={`pointer-events-auto rounded-lg px-5 py-3 text-center text-sm text-white shadow ${tone}`}>
       <p>{text}</p>
+      {state === 'ended' && (needs?.message || session?.error?.message) &&
+        <p className="mt-1 text-xs text-stone-200">{needs?.message || session?.error?.message}</p>}
       {error && state !== 'error' && <p className="mt-1 text-xs text-red-200">{error}</p>}
       {state === 'needs_local_action' && needs?.code && <p className="mt-1 text-xs text-stone-300">코드 {needs.code}</p>}
       {state === 'ended' && onRetry && <button className="mt-2 rounded border border-white/30 px-3 py-1 text-xs" onClick={onRetry}>닫기</button>}

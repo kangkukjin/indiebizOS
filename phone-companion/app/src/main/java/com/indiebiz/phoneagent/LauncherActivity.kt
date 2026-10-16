@@ -2,6 +2,7 @@ package com.indiebiz.phoneagent
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import com.indiebiz.ui.SurfaceUpdates
 import android.app.DownloadManager
 import android.content.Intent
 import android.net.Uri
@@ -32,6 +33,7 @@ import com.indiebiz.phoneagent.media.CctvModeActivity
  * 기다렸다 로드한다(자동시작과의 race 방지). 소켓 바인드 지연은 onReceivedError 재시도로 흡수.
  */
 class LauncherActivity : Activity() {
+    private lateinit var surfaceUpdates: SurfaceUpdates
     private lateinit var web: WebView
     private val handler = Handler(Looper.getMainLooper())
     private var tries = 0
@@ -52,6 +54,7 @@ class LauncherActivity : Activity() {
         window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or
             android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
+        surfaceUpdates = SurfaceUpdates(this,"phone")
         web = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -65,6 +68,7 @@ class LauncherActivity : Activity() {
                 cacheMode = WebSettings.LOAD_DEFAULT
             }
             webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView, url: String?) { surfaceUpdates.pageReady() }
                 // 런처 자신(127.0.0.1)만 WebView 안에서. 외부 사이트(즐겨찾기 등)는 시스템 브라우저로
                 // → 런처 SPA 가 안 깨지고 뒤로가기도 정상(외부는 별도 앱).
                 override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
@@ -126,7 +130,9 @@ class LauncherActivity : Activity() {
             }
         }
         // 미디어 세션(카메라·마이크) 대기 모드 진입 — 런처 위 작은 반투명 버튼(앱의 유일한 네이티브 진입점).
+        surfaceUpdates.bind(web)
         val root = FrameLayout(this).apply { addView(web) }
+        root.addView(surfaceUpdates.button,FrameLayout.LayoutParams(-2,-2).apply { gravity=Gravity.BOTTOM or Gravity.START })
         root.addView(Button(this).apply {
             text = "카메라 대기 모드"
             textSize = 11f
@@ -216,5 +222,10 @@ class LauncherActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         if (web.canGoBack()) web.goBack() else super.onBackPressed()
+    }
+    override fun onDestroy() {
+        surfaceUpdates.close()
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
     }
 }

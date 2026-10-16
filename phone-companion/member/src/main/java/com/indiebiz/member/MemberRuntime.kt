@@ -38,8 +38,9 @@ class MemberRuntime(val context: Context) {
         client.newCall(request).execute().use { r -> check(r.isSuccessful) { "허브 응답 ${r.code}" }; return JSONObject(r.body!!.string()) }
     }
     fun html(): String {
-        // 로컬 승인 UI를 허브가 바꿀 수 없도록 공통 소스의 빌드 번들을 사용한다.
-        return context.assets.open("member_app.html").bufferedReader().use { it.readText() }
+        // APK 기본 실행 호스트 위에 동일 배포자가 서명한 표시 판본만 선택한다.
+        val baseline = context.assets.open("member_app.html").bufferedReader().use { it.readText() }
+        return com.indiebiz.ui.SurfaceUpdates.withActive(context,"member",baseline)
     }
     fun connectLoop() {
         if(active) return

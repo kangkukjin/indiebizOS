@@ -121,7 +121,13 @@ def member_profile(req: MemberKey):
 
 
 @router.get("/m/app", response_class=HTMLResponse)
-def member_app():
+def member_app(display: str = ""):
+    if display:
+        from member_shell import member_html
+        from surface_display import member_display
+        from fastapi.responses import JSONResponse
+        value = member_display(member_html(browser=True, display=False), "browser")
+        return JSONResponse({key: value[key] for key in ("version", "host")} if display == "version" else value, headers={"Cache-Control": "no-store"})
     from member_entry import entry_html
     return HTMLResponse(entry_html(), headers={"Cache-Control": "no-store"})
 

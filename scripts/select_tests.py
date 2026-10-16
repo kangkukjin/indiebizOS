@@ -86,6 +86,31 @@ def closure(seeds, rdeps: dict[str, set[str]]) -> set[str]:
     return seen
 
 
+def frontend_consumers(root: Path, changed):
+    """JS/TS 정적 import도 실제 소비자까지 따라간다. 화면별 시험 원장을 복제하지 않는다."""
+    reverse = collections.defaultdict(set)
+    references = re.compile(r"(?:from\s*|import\s*\(?|require\s*\()\s*['\"]([^'\"]+)['\"]")
+    for directory in ('frontend/src', 'frontend/scripts', 'frontend/surfaces'):
+        for path in (root / directory).rglob('*'):
+            if not path.is_file() or path.suffix not in {'.ts', '.tsx', '.js', '.mjs', '.cjs'}:
+                continue
+            for ref in references.findall(path.read_text(errors='ignore')):
+                if ref.startswith('.'):
+                    base = path.parent / ref
+                elif ref.startswith('/src/'):
+                    base = root / 'frontend' / ref.lstrip('/')
+                elif ref.startswith('@/'):
+                    base = root / 'frontend/src' / ref[2:]
+                else:
+                    continue
+                base = base.resolve()
+                for candidate in [base, *(Path(str(base) + ext) for ext in ('.ts','.tsx','.js','.mjs','.json')), base / 'index.ts', base / 'index.tsx']:
+                    if candidate.is_file() and candidate.is_relative_to(root.resolve()):
+                        reverse[candidate.relative_to(root.resolve()).as_posix()].add(path.relative_to(root).as_posix())
+                        break
+    return closure(changed, reverse)
+
+
 def changed_files(args, root: Path) -> list[str]:
     if args.files:
         return [str(Path(f)) for f in args.files]
@@ -127,14 +152,33 @@ def select(changed: list[str], root: Path = ROOT, threshold: float = 0.4):
                 direct_tests.add(stem)
             else:
                 seeds.append(stem)
-    # ② 문자열 경로 참조
+    # 화면 조립자의 자산 참조도 import와 같은 전이 소비 관계로 취급한다.
+    # 파일별 검사 목록을 별도로 유지하지 않는다.
+    asset_ref = re.compile(r"(?:read_asset|render_template)\(\s*['\"]([^'\"]+)['\"]")
+    for module, path in modules.items():
+        if module.startswith('test_'):
+            continue
+        text = path.read_text(errors='ignore')
+        refs = set(asset_ref.findall(text))
+        for changed_path in changed_norm:
+            asset = (changed_path.removeprefix('frontend/surfaces/')
+                     if changed_path.startswith('frontend/surfaces/') else
+                     'static/' + changed_path.removeprefix('backend/static/')
+                     if changed_path.startswith('backend/static/') else None)
+            if asset and asset in refs:
+                seeds.append(module)
+    if any(p in {'scripts/build_surfaces.py', 'backend/surface/surface_assets.py'} for p in changed_norm):
+        seeds.append('surface_assets')
+    # ② 문자열 경로 참조 + 실제 프런트엔드 import 소비자
+    referenced_changes = frontend_consumers(root, changed_norm)
     for t, p in test_paths.items():
         try:
             text = p.read_text(errors="ignore")
         except OSError:
             continue
         refs = set(PATH_RE.findall(text))
-        for c in changed_norm:
+        refs.update("frontend" + ref for ref in re.findall(r"/src/[\w./-]+", text))
+        for c in referenced_changes:
             if c.startswith("backend/"):
                 continue
             if c in refs or any(r.endswith("/" + Path(c).name) for r in refs):

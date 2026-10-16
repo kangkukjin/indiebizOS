@@ -11,9 +11,9 @@ export 블록만** 떼고 나머지를 그대로 쓴다. 함수 선언은 스크
   적는 순간 우리가 없애려던 이중 구현이 돌아온다(scripts/check_render_core.py 가 감시).
 """
 
-import os
+from surface_assets import read_asset
 
-_CORE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "app_render_core.js")
+
 
 # 파일 맨 끝 ESM export 블록의 시작 마커 — 코어 .js 의 마지막 블록이며 그 위엔 export 가 없다.
 EXPORT_MARKER = "/* --- ESM export"
@@ -31,14 +31,8 @@ def strip_esm_export(text: str) -> str:
 
 
 def load_core_js() -> str:
-    """런처 스크립트에 붙일 코어 JS 본문.
-
-    ★모듈 로드 시점 1회만 읽는다(아래 LAUNCHER_CORE_JS) — 셸 조립이 매 요청 도는 자리라
-      요청마다 디스크를 때리지 않게. 개발 중 코어를 고쳤으면 백엔드 리로드가 반영한다
-      (backend/*.py 변경이 아니어도 이 파일을 touch 하면 uvicorn reload 가 잡는다).
-    """
-    with open(_CORE_PATH, encoding="utf-8") as f:
-        body = strip_esm_export(f.read())
+    """선택된 화면 판본의 코어를 고전 스크립트로 읽는다."""
+    body = strip_esm_export(read_asset('static/app_render_core.js'))
     if "\nexport " in body or body.startswith("export "):
         raise RuntimeError(
             "app_render_core.js 에 맨 끝 블록 밖의 `export` 가 있습니다 — 고전 <script> 에서 "
@@ -47,4 +41,14 @@ def load_core_js() -> str:
     return "\n/* ===== 공용 렌더 코어 (backend/static/app_render_core.js — 데스크탑과 단일 소스) ===== */\n" + body
 
 
-LAUNCHER_CORE_JS = load_core_js()
+def __getattr__(name):
+    if name != "LAUNCHER_CORE_JS":
+        raise AttributeError(name)
+    return load_core_js()
+
+
+def load_conversation_js():
+    """JSON 구성과 순수 동작을 React와 동일한 정본에서 고전 스크립트로 조립."""
+    source = strip_esm_export(read_asset('shared/conversation.js'))
+    return source.replace("import conversationHeader from './conversation.json';",
+                          'var conversationHeader=' + read_asset('shared/conversation.json') + ';', 1)

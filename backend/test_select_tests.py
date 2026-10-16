@@ -82,3 +82,15 @@ def test_live_repo_recent_commit_narrows_or_names_hubs(selector):
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23 규약)
     import sys
     sys.exit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_display_source_selects_browser_consumer_through_typescript_imports(tmp_path, selector):
+    root = _tree(tmp_path, {
+        'frontend/surfaces/shared/menu.json': '{}',
+        'frontend/src/components/View.tsx': 'import menu from "../../surfaces/shared/menu.json";',
+        'frontend/src/components/Host.tsx': 'import {View} from "./View";',
+        'backend/test_ui.py': 'browser_import = "/src/components/Host.tsx"',
+        'backend/test_unrelated.py': '',
+    })
+    result = selector.select(['frontend/surfaces/shared/menu.json'], root, threshold=.9)
+    assert result['selected'] == ['test_ui']

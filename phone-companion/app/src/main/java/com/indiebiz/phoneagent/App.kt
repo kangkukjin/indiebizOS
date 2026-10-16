@@ -46,7 +46,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         backendThread = Thread {
             try {
                 val base = BaseBundle.ensure(ctx)
-                Python.getInstance().getModule("phone_api").callAttr("serve", 8765, base)
+                Python.getInstance().getModule("phone_api").callAttr("serve", 8765, base, ctx)
             } catch (e: Throwable) {
                 android.util.Log.e("PYSERVER", "serve failed: $e")
             }

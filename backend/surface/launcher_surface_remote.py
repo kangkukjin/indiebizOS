@@ -6,38 +6,65 @@
 
 import hashlib
 import json
-import logging
-from pathlib import Path
 
-from launcher_web_shell import LAUNCHER_SHELL_HTML
-from launcher_web_app import LAUNCHER_APP_JS
-from launcher_web_render import LAUNCHER_RENDER_JS
-
-_LOG = logging.getLogger(__name__)
+from surface_assets import asset_snapshot, read_asset
 
 
-def launcher_html() -> str:
+
+def launcher_html(*, display=True) -> str:
     """검증된 번역 셸 또는 한국어 원문. 네트워크·사용자 데이터 전송 없음."""
-    source = LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
-    return localized_html(source, "remote")
+    with asset_snapshot():
+        from launcher_web_shell import LAUNCHER_SHELL_HTML
+        from launcher_web_app import LAUNCHER_APP_JS
+        from launcher_web_render import LAUNCHER_RENDER_JS
+        source = LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
+        html = localized_html(source, "remote")
+        if not display:
+            return html
+        from surface_display import launcher_display, display_bootstrap
+        descriptor = launcher_display(html, 'remote', raw_html=source,
+                                      rendered_code=localized_display(source), messages=display_messages(source))
+        return html.replace('<!--INDIE_DISPLAY-->', '<script>' + display_bootstrap(descriptor, '/launcher/app') + '</script><!--INDIE_ACTIVE_DISPLAY-->', 1)
 
 
 def localized_html(source: str, surface: str) -> str:
     """Serve a compiled UI only when it matches its source, including X-Ray."""
-    root = Path(__file__).resolve().parents[2]
-    candidates = (
-        root / "frontend/i18n" / f"{surface}.json",
-        root / "backend/static/ui_i18n" / f"{surface}.json",
-    )
-    for path in candidates:
-        if not path.is_file():
-            continue
-        try:
-            bundle = json.loads(path.read_text(encoding="utf-8"))
-            expected = hashlib.sha256(source.encode("utf-8")).hexdigest()
-            if isinstance(bundle, dict) and bundle.get("source_hash") == expected and isinstance(bundle.get("html"), str):
-                return bundle["html"]
-            _LOG.warning("UI catalog is stale: run the frontend dev server or build (%s)", path)
-        except (OSError, ValueError, TypeError):
-            _LOG.warning("UI catalog unavailable; using Korean UI (%s)", path)
+    try:
+        bundle = json.loads(read_asset('i18n/' + surface + '.json'))
+        if bundle.get('source_hash') == hashlib.sha256(source.encode()).hexdigest():
+            return bundle['html']
+    except (KeyError, OSError, ValueError, TypeError):
+        pass
     return source
+
+
+def localized_display(source):
+    try:
+        bundle = json.loads(read_asset('i18n/remote.json'))
+        if bundle.get('source_hash') == hashlib.sha256(source.encode()).hexdigest():
+            return bundle.get('display_code')
+    except (KeyError, OSError, ValueError, TypeError):
+        pass
+    return None
+
+
+def display_messages(source):
+    try:
+        bundle = json.loads(read_asset('i18n/remote.json'))
+        if bundle.get('source_hash') == hashlib.sha256(source.encode()).hexdigest():
+            return bundle.get('display_messages', {})
+    except (KeyError, OSError, ValueError, TypeError):
+        pass
+    return {}
+
+
+@asset_snapshot()
+def remote_display():
+    from launcher_web_shell import LAUNCHER_SHELL_HTML
+    from launcher_web_app import LAUNCHER_APP_JS
+    from launcher_web_render import LAUNCHER_RENDER_JS
+    from surface_display import launcher_display
+    with asset_snapshot():
+        source = LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
+        return launcher_display(localized_html(source, 'remote'), 'remote', raw_html=source,
+                                rendered_code=localized_display(source), messages=display_messages(source))

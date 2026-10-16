@@ -140,7 +140,7 @@ LAYERS = {
     },
     # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한
     # portal_warehouse 와의 상호 순환도 같은 층 안이 맞다)
-    "surface": {"launcher_app_sessions", "member_device_auth", "api_member_desktop","api_member_pcs", "record_app_page", "api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
+    "surface": {"surface_assets", "surface_display", "launcher_app_sessions", "member_device_auth", "api_member_desktop","api_member_pcs", "record_app_page", "api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
 }
 SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common", "file_script_cli"}

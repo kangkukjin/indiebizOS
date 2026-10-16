@@ -1,0 +1,10 @@
+{
+  "spreadsheets": {"title": "스프레드시트", "route": "/spreadsheets", "routeFlag": "isSpreadsheets"},
+  "documents": {"title": "문서", "route": "/documents", "routeFlag": "isDocuments"},
+  "coding": {"title": "코딩", "route": "/coding", "routeFlag": "isCoding"},
+  "member-pcs": {"title": "회원 PC 관리", "route": "/member-pcs", "routeFlag": "isMemberPCs", "menuIcon": "Laptop"},
+  "external-users": {"title": "외부사용자 관리", "route": "/external-users", "routeFlag": "isExternalUsers", "menuIcon": "Users"},
+  "vocabulary": {"title": "내 어휘", "route": "/vocabulary", "menuIcon": "Boxes", "parameter": "folder"},
+  "prompt-composition": {"title": "프롬프트 구성", "route": "/prompt-composition", "routeFlag": "isPromptComposition", "menuIcon": "Layers"},
+  "guides": {"title": "가이드 파일", "route": "/guides", "routeFlag": "isGuides", "menuIcon": "FileText"}
+}

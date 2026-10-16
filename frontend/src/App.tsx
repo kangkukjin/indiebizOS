@@ -1,3 +1,4 @@
+import { toolNavigation } from './lib/surface-navigation';
 /**
  * IndieBiz 메인 앱
  */
@@ -83,13 +84,11 @@ function parseHash(hash: string): HashRoute {
   // 시스템 AI
   if (hash === '#/system-ai') return { ...EMPTY_ROUTE, isSystemAI: true };
   // 안경 메뉴 도구 창 — 프롬프트 구성 · 가이드 파일
-  if (hash === '#/prompt-composition') return { ...EMPTY_ROUTE, isPromptComposition: true };
-  if (hash === '#/member-pcs') return { ...EMPTY_ROUTE, isMemberPCs: true };
-  if (hash === '#/external-users') return { ...EMPTY_ROUTE, isExternalUsers: true };
-  if (hash === '#/guides') return { ...EMPTY_ROUTE, isGuides: true };
-  if (hash === '#/coding') return { ...EMPTY_ROUTE, isCoding: true };
-  if (hash === '#/spreadsheets') return { ...EMPTY_ROUTE, isSpreadsheets: true };
-  if (hash === '#/documents') return { ...EMPTY_ROUTE, isDocuments: true };
+  for (const tool of Object.values(toolNavigation)) {
+    if ('routeFlag' in tool && hash === '#' + tool.route) {
+      return { ...EMPTY_ROUTE, [tool.routeFlag]: true };
+    }
+  }
   const vocabularyMatch = hash.match(/^#\/vocabulary(?:\/([A-Za-z0-9_-]{1,128}))?$/);
   if (vocabularyMatch) return { ...EMPTY_ROUTE, vocabularyFolder: vocabularyMatch[1] || 'desktop' };
   // 강의 만들기 워크스페이스

@@ -32,7 +32,7 @@ router = APIRouter()
 # ── 계기 페이지 — 런처 제네릭 렌더러 재사용 (__PORTAL 매개변수화, 포크 금지) ──
 
 @router.get("/inst/{slug}/{iid}")
-async def instrument_page(slug: str, iid: str, request: Request,
+def instrument_page(slug: str, iid: str, request: Request,
                           x_showcase_secret: str = Header(default="")):
     _check_secret(x_showcase_secret)
     core = _core()

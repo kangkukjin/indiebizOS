@@ -1,0 +1,98 @@
+
+  <!-- 조종실 (구 계기판) -->
+  <div class="panel" id="p-manual">
+    <div class="wrap">
+      <!-- 조종실 헤더 — IBL 사전 / IBL이란? -->
+      <div class="dash-head">
+        <div class="dash-titles">
+          <div class="dash-title">조종실</div>
+          <div class="dash-sub">자연어를 IBL로 번역·검수해 실행합니다</div>
+        </div>
+        <div class="dash-btns">
+          <button class="dash-btn" id="btnDict" onclick="togglePalette()">📖 IBL 사전</button>
+          <button class="dash-btn" id="btnAbout" onclick="toggleAbout()">❔ IBL이란?</button>
+        </div>
+      </div>
+      <!-- IBL이란? 설명 -->
+      <div id="mAbout" class="about" style="display:none">
+        <div class="about-h">IBL (IndieBiz Logic)</div>
+        <p>indiebizOS의 <b>신경계 역할을 하는 언어</b>. 세 가지로 이루어집니다 — <b>어휘</b>(조합 가능한 액션) · <b>문법</b>(쓰고 잇는 규칙) · <b>통화</b>(흐르는 데이터).</p>
+        <div class="about-sec">어휘 — 무엇을 할 수 있나</div>
+        <p>액션 하나가 IBL이 할 수 있는 일 하나. 예: <code>[sense:weather]</code>. 대상에 따라 <b>6개 노드</b>로 나뉩니다.</p>
+        <ul>
+          <li><code>sense</code> 감각 — 바깥 정보 수집·검색 (날씨·주가·뉴스·웹)</li>
+          <li><code>self</code> 자기 — 내 기억·파일·설정·일정</li>
+          <li><code>limbs</code> 손발 — 기기·도구 조작 (브라우저·화면·음악·폰)</li>
+          <li><code>others</code> 관계 — 이웃·위임·메시징</li>
+          <li><code>engines</code> 엔진 — 미디어 생성 (문서·슬라이드·영상·이미지)</li>
+          <li><code>table</code> 표 — 통화 변환 문법 (필터·정렬·집계·조인·차트)</li>
+        </ul>
+        <p class="about-dim">액션은 셋 중 하나를 합니다 — <b>생성</b>(통화를 낸다) · <b>변환</b>(통화를 바꾼다) · <b>행동</b>(세상에 작용).</p>
+        <div class="about-sec">문법 — 어떻게 쓰고 잇나</div>
+        <div class="about-code">[node:action]{params}</div>
+        <ul>
+          <li>값은 <code>{key: 값}</code>. 예: <code>[sense:weather]{city:"수원"}</code></li>
+          <li>한 액션 안의 변형은 <code>op</code> 로: <code>{op:"query"}</code></li>
+          <li>잇기 — <code>&gt;&gt;</code> 순차(앞 결과를 뒤로) · <code>&amp;</code> 병렬 · <code>??</code> 폴백</li>
+        </ul>
+        <div class="about-sec">통화 — 무엇이 흐르나</div>
+        <p>통화는 단 하나, <b>items</b> — 열린 항목들의 목록. 한 액션의 결과가 다음으로 <code>&gt;&gt;</code> 흐릅니다. 이게 IBL을 낱말이 아니라 <b>문장</b>으로 만듭니다.</p>
+        <p class="about-dim"><b>변환자</b>(통화를 받아 통화를 냄): <code>filter · sort · take · select · dedup · groupby · join · union · merge</code></p>
+        <div class="about-code">[sense:realty]{region:"강남구"} &gt;&gt; sort &gt;&gt; take{n:3}</div>
+      </div>
+      <!-- IBL 사전(액션 팔레트) -->
+      <div id="paletteHome"><div id="palette" class="palette" style="display:none"></div></div>
+      <!-- 다른 몸(피어) 연결상태 — 폰이면 맥, 맥-원격이면 폰 -->
+      <div id="peerStatus" style="display:none"></div>
+      <!-- 모델 기어 — 계기판 변속 레버 (절약/균형/최대) + 설정(프리셋·핀) -->
+      <div id="gearLever" class="card" style="display:none"></div>
+      <!-- 주행기록계 — 지난 주행 목록 + 전체 로그 + 분석 스위치.
+           PC 조종실(ManualMode 의 EpisodeJournal)과 같은 화면·같은 API 를 이 표면에도 둔다.
+           기본 접힘(지연 로드) — 폰 회선에서 열지도 않은 목록을 받지 않는다. -->
+      <div id="mJournal" class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <button id="jHeadBtn" onclick="jToggle()" style="background:none;border:none;padding:0;font-weight:700;font-size:14px;color:var(--txt);text-align:left">📊 주행기록</button>
+          <button id="jReloadBtn" onclick="jLoad()" style="display:none;font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">새로고침</button>
+        </div>
+        <div id="jBody" style="display:none;margin-top:10px"></div>
+      </div>
+      <div class="step">
+        <div class="step-label">① 의도 (자연어)</div>
+        <div class="row">
+          <input class="field" id="mIntent" placeholder='예: 서울 날씨 알려줘 / 강남구 아파트 실거래가' onkeydown="if(event.key==='Enter')mTranslate()">
+          <button class="go" id="mTransBtn" onclick="mTranslate()">번역</button>
+        </div>
+      </div>
+      <div id="mAfterTranslate" style="display:none">
+        <div class="step">
+          <div class="step-label">② IBL 코드 (수정 가능)</div>
+          <textarea class="codebox" id="mCode"></textarea>
+          <button class="linkbtn" onclick="toggleRefs()">참고 용례 보기/숨기기</button>
+          <div class="refbox" id="mRefs"></div>
+        </div>
+        <div class="btnrow">
+          <button class="btn2 prim" id="mValBtn" onclick="mValidate()">검수 (dry-run)</button>
+        </div>
+      </div>
+      <div id="mAfterValidate" style="display:none">
+        <div class="step" style="margin-top:16px">
+          <div class="step-label">③ 효과 검수 — 코드가 아니라 무슨 일이 일어나는지</div>
+          <div id="mSteps"></div>
+        </div>
+        <div id="mSideWarn"></div>
+        <div class="btnrow">
+          <button class="btn2 prim" id="mExecBtn" onclick="mExecute()">실행</button>
+        </div>
+      </div>
+      <div id="mAfterExecute" style="display:none">
+        <div class="step" style="margin-top:16px">
+          <div class="step-label">④ 결과</div>
+          <div class="result" id="mResult"></div>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn2" id="mDistillBtn" onclick="mDistill()">✓ 이 결과 학습 (해마 증류)</button>
+          </div>
+          <p class="muted" id="mDistillMsg" style="margin-top:8px"></p>
+        </div>
+      </div>
+    </div>
+  </div>

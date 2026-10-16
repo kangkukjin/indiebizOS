@@ -111,3 +111,49 @@ test('an unconfigured installation does not fetch or offer an update',async t=>{
  const f=fixture(t);const next=new RuntimeUpdates({...f.options,trust:{},fetcher:()=>assert.fail('network access')});
  const state=await next.check();assert.equal(state.state,'unconfigured');assert.equal(state.canUpdate,false);assert.equal(state.sequence,undefined);
 });
+
+function uiOffer(f,sequence=1){
+ const display={format:'indiebiz-display-1',surface:'desktop',state:1,host:'a'.repeat(64),version:'candidate',names:[],code:'',styles:[],template:'<main></main>'};
+ const data=Buffer.from(JSON.stringify(display)),url='https://updates.example/member/ui/'+sequence+'/display.json';
+ f.r.manifest={...f.r.manifest,kind:'ui',sequence,host:display.host,state:1,files:[{name:'display.json',url,size:data.length,sha256:digest(data)}]};
+ f.r.envelope=()=>sign(f.r.manifest);f.r.bytes.set(url,data);f.u.showUI=async value=>{f.events.push(['display',value.version]);return {version:value.version}};
+ return display;
+}
+test('UI install preserves executor, admissions and DB with separate monotonic sequence',async t=>{
+ const f=fixture(t);f.u.state.highest=100;uiOffer(f,1);await f.u.check();assert.equal(f.u.publicState().kind,'ui');assert.equal(f.u.publicState().canUpdate,true);
+ await f.u.requestInstall(async offer=>{assert.equal(offer.kind,'ui');assert.equal(offer.sequence,1);return true});
+ assert.deepEqual(f.events,[['display','candidate']]);assert.equal(f.session.executable,'old-helper');assert.equal(f.session.updating,undefined);
+ assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');assert.equal(f.u.state.highest,100);assert.equal(f.u.state.ui.highest,1);assert.equal(f.u.state.active,null);
+ assert(!fs.existsSync(path.join(f.u.dir,'snapshots')));assert(!f.u.state.pending);
+ await f.u.check();assert.equal(f.u.publicState().state,'current');
+ f.r.manifest=release(101).manifest;f.r.bytes=release(101).bytes;await f.u.check();assert.equal(f.u.publicState().canUpdate,true);
+});
+test('UI preparation failure and interrupted UI trial never invoke database recovery',async t=>{
+ const f=fixture(t);uiOffer(f);f.u.showUI=async()=>{throw Error('incompatible display host')};await f.u.check();await f.u.apply(1);
+ assert.equal(f.u.publicState().state,'rolled_back');assert.deepEqual(f.events,[]);assert.equal(f.u.state.ui.active,null);assert.deepEqual(f.u.state.ui.rejected,[1]);
+ f.u.state.pending={kind:'ui',candidate:2,previous:null};f.u.save();fs.writeFileSync(f.db,'new-task-result');
+ const next=new RuntimeUpdates(f.options);next.restore=()=>assert.fail('UI recovery cannot restore a DB');next.recover();
+ assert.equal(fs.readFileSync(f.db,'utf8'),'new-task-result');assert.equal(next.state.ui.active,null);assert.deepEqual(next.state.ui.rejected,[1,2]);assert(!next.state.pending);
+});
+test('UI manifest rejects executable files, unknown kinds and missing compatibility',()=>{
+ const r=release();
+ for(const change of [{kind:'ui',host:'a'.repeat(64),state:1},{kind:'other'},{kind:'ui',files:[]}])assert.throws(()=>verify(sign({...r.manifest,...change}),trust));
+});
+test('UI publisher signs only the display module and separates runtime sequence directory',t=>{
+ const f=fixture(t),{publish}=require('../publish-runtime.cjs'),display=uiOffer(f);
+ const source=path.join(f.root,'source'),out=path.join(f.root,'out');fs.mkdirSync(source);fs.writeFileSync(path.join(source,'display.json'),JSON.stringify(display));
+ const key=path.join(f.root,'private.pem');fs.writeFileSync(key,keys.privateKey.export({type:'pkcs8',format:'pem'}));
+ const result=publish({source,out,kind:'ui',base:'https://updates.example/member/',version:'0.1.3',sequence:1,platform:process.platform,arch:process.arch,key,expires:Date.now()/1000+600});
+ const verified=verify(JSON.parse(fs.readFileSync(path.join(out,'current.json'))),result);
+ assert.equal(verified.kind,'ui');assert.deepEqual(fs.readdirSync(path.join(out,'ui','1')),['display.json']);
+});
+
+test('UI persistence failure rolls the renderer back and keeps current DB writes',async t=>{
+ const f=fixture(t);uiOffer(f);const save=f.u.save.bind(f.u);let fail=true;
+ f.u.save=()=>{if(f.u.state.ui.active===1&&fail){fail=false;throw Error('disk write failed')}return save()};
+ f.u.revertUI=async version=>{assert.equal(version,'candidate');f.events.push(['revert',version])};
+ f.u.showUI=async()=>{fs.writeFileSync(f.db,'new work during installation');f.events.push(['display','candidate'])};
+ await f.u.check();const state=await f.u.apply(1);
+ assert.equal(state.state,'rolled_back');assert.equal(f.u.state.ui.active,null);assert.equal(f.u.state.ui.highest,0);
+ assert.equal(fs.readFileSync(f.db,'utf8'),'new work during installation');assert.deepEqual(f.events,[['display','candidate'],['revert','candidate']]);assert(!f.u.state.pending);
+});

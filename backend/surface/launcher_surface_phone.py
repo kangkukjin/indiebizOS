@@ -13,65 +13,28 @@
 (host=phone-local)로 스스로 참이 되어 그대로 작동한다 — 정적 흡수는 후속 후보.
 """
 
-from launcher_web_shell import (
-    SHELL_HEAD_HTML,
-    SHELL_PANEL_AUTOPILOT_HTML,
-    SHELL_PANEL_MANUAL_HTML,
-    SHELL_PANEL_APP_HTML,
-    SHELL_TAIL_HTML,
-)
-from launcher_app_common import LAUNCHER_COMMON_JS
-from launcher_render_core import LAUNCHER_CORE_JS
-from launcher_app_autopilot import LAUNCHER_AUTOPILOT_JS
-from launcher_app_manual import LAUNCHER_MANUAL_JS
-from launcher_app_appmode import LAUNCHER_APPMODE_HEAD_JS, LAUNCHER_APPMODE_REST_JS
-from launcher_web_render import LAUNCHER_RENDER_JS
+from surface_assets import read_asset, asset_snapshot
 
-# 표면 탭줄 — 폰 3탭 (원격런처 SHELL_SURFACES_HTML 의 부분집합, 창고 버튼 없음)
-PHONE_SURFACES_HTML = """  <div class="surfaces">
-    <button class="surf-tab on" id="t-autopilot" onclick="setSurface('autopilot')">
-      <span class="em">🛰️</span><span>자율주행</span><span class="hint">속도·표현력</span></button>
-    <button class="surf-tab" id="t-manual" onclick="setSurface('manual')">
-      <span class="em">⚙️</span><span>조종실</span><span class="hint">표현력·주권</span></button>
-    <button class="surf-tab" id="t-app" onclick="setSurface('app')">
-      <span class="em">📱</span><span>앱</span><span class="hint">속도·주권</span></button>
-  </div>
-"""
-
-# 표면 토글 — 폰 3탭 변형 (원격런처 LAUNCHER_SETSURFACE_JS 의 짝). 창고·포식 분기 없음.
-PHONE_SETSURFACE_JS = """/* ===== 표면 토글 (폰: 3탭 — 창고·포식 없음, launcher_surface_phone 조립) ===== */
-function setSurface(s){
-  surface=s;
-  ['autopilot','manual','app'].forEach(k=>{
-    const t=document.getElementById('t-'+k); if(t) t.classList.toggle('on',k===s);
-    document.getElementById('p-'+k).classList.toggle('on',k===s);
-  });
-  if(s==='app' && !appHomeRendered) renderAppHome();
-  if(typeof _npSync==='function') _npSync();  /* 미니플레이어=앱모드 전용 — 표면이 바뀌면 다시 판단 */
-}
-
-"""
-
-# 앱 홈 그리드 — 폰 변형 (원격런처 LAUNCHER_APPHOME_JS 의 짝). 검색브라우저 타일·openForage 없음.
-PHONE_APPHOME_JS = """async function renderAppHome(force){
-  const home=document.getElementById('appHome');
-  home.innerHTML='<div class="center"><div class="spin"></div></div>';
-  await loadInstruments(force);
-  if(!INSTRUMENTS.length){ home.innerHTML='<p class="muted">계기 매니페스트를 불러오지 못했습니다</p>'; return; }
-  home.innerHTML=
-    '<p class="muted" style="margin-bottom:12px">직접 조작 — 아이콘을 눌러 바로 실행 (0 토큰)</p>'+
-    '<div class="grid">'+INSTRUMENTS.map((inst,ix)=>
-      '<button class="tile" onclick="openInstrument('+ix+')"><span class="em">'+esc(inst.icon||'🔧')+'</span><span class="nm">'+esc(inst.name)+'</span></button>'
-    ).join('')+
-    '</div>';
-  appHomeRendered=true;
-}
-"""
-
-
-def phone_html() -> str:
+@asset_snapshot()
+def phone_html(*, display=True) -> str:
+    from launcher_web_shell import (
+        SHELL_HEAD_HTML,
+        SHELL_PANEL_AUTOPILOT_HTML,
+        SHELL_PANEL_MANUAL_HTML,
+        SHELL_PANEL_APP_HTML,
+        SHELL_TAIL_HTML,
+    )
+    from launcher_app_common import LAUNCHER_COMMON_JS
+    from launcher_render_core import LAUNCHER_CORE_JS
+    from launcher_app_autopilot import LAUNCHER_AUTOPILOT_JS
+    from launcher_app_manual import LAUNCHER_MANUAL_JS
+    from launcher_app_appmode import LAUNCHER_APPMODE_HEAD_JS, LAUNCHER_APPMODE_REST_JS
+    from launcher_web_render import LAUNCHER_RENDER_JS
+    PHONE_SURFACES_HTML = read_asset('phone/phone_surfaces_html.html')
+    PHONE_SETSURFACE_JS = read_asset('phone/phone_setsurface_js.js')
+    PHONE_APPHOME_JS = read_asset('phone/phone_apphome_js.js')
     """폰네이티브 표면 HTML — 3탭 마크업 + 3탭 JS 조립."""
-    return (
+    html = (
         SHELL_HEAD_HTML
         + PHONE_SURFACES_HTML
         + SHELL_PANEL_AUTOPILOT_HTML
@@ -88,3 +51,17 @@ def phone_html() -> str:
         + LAUNCHER_APPMODE_REST_JS
         + LAUNCHER_RENDER_JS
     )
+    if not display:
+        return html
+    from surface_display import launcher_display, display_bootstrap
+    descriptor = launcher_display(html, 'phone')
+    return html.replace('<!--INDIE_DISPLAY-->', '<script>' + display_bootstrap(descriptor) + '</script><!--INDIE_ACTIVE_DISPLAY-->', 1)
+
+
+def __getattr__(name):
+    if name not in ('PHONE_SURFACES_HTML', 'PHONE_SETSURFACE_JS', 'PHONE_APPHOME_JS'):
+        raise AttributeError(name)
+    PHONE_SURFACES_HTML = read_asset('phone/phone_surfaces_html.html')
+    PHONE_SETSURFACE_JS = read_asset('phone/phone_setsurface_js.js')
+    PHONE_APPHOME_JS = read_asset('phone/phone_apphome_js.js')
+    return {'PHONE_SURFACES_HTML': PHONE_SURFACES_HTML, 'PHONE_SETSURFACE_JS': PHONE_SETSURFACE_JS, 'PHONE_APPHOME_JS': PHONE_APPHOME_JS}[name]

@@ -56,6 +56,17 @@ def test_lite_session_history_and_new_conversation(tmp_path):
         expect(page.locator('#chatlog')).not_to_contain_text('새 요청')
         page.reload()
         expect(page.locator('#chatlog')).to_contain_text('과거 요청')
+        from launcher_lite import lite_display
+        payload = lite_display()
+        payload['code'] = payload['code'].replace('히스토리', '기록 보기')
+        payload['version'] = 'lite-next'
+        page.locator('#cmsg').fill('계속 작성 중')
+        page.evaluate("window.savedInput=document.getElementById('cmsg')")
+        page.evaluate("value => new Promise((resolve,reject)=>IndieLite.apply(value,error=>error?reject(error):resolve()))", payload)
+        expect(page.locator('#chatHistoryOpen')).to_have_text('기록 보기')
+        assert page.evaluate("savedInput===document.getElementById('cmsg')")
+        expect(page.locator('#cmsg')).to_have_value('계속 작성 중')
+        assert sent == [('new', '새 요청')]
         page.screenshot(path=str(tmp_path/'lite-sessions.png'))
         assert not errors
         browser.close()

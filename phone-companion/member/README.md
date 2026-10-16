@@ -30,3 +30,25 @@ MediaPlayer play/stop/status/volume, 위치 1회 측정, accelerometer 내부 �
 
 회원 승인 화면은 접속한 허브에서 받아 실행하지 않는다. scripts/build_member_shell.py가 공통 member_shell/launcher_app_common을
 PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 별도 웹 폴백이다. `build_member_shell.py --check`로 번들 드리프트를 검사한다.
+
+## 화면 전용 업데이트
+
+두 Android 앱은 `shared/src/main/java/com/indiebiz/ui`의 동일 검증기·설치기를 사용한다.
+첫 지원 APK를 빌드할 때 공개키와 기기별 HTTPS 피드를 설정한다.
+
+- `INDIEBIZ_UI_PUBLIC_KEY`: 저장소 밖 Ed25519 PEM **공개키** 파일.
+- `INDIEBIZ_MEMBER_UI_FEED`: 회원 앱의 `current.json`.
+- `INDIEBIZ_PHONE_UI_FEED`: 주인 폰 앱의 `current.json`.
+
+미설정 개발 APK는 내장 화면만 사용한다. 임시 키를 운영 신뢰로 쓰지 않는다.
+`python3 scripts/build_surfaces.py`의 `display/member/display.json`, `display/phone/display.json`을
+각 피드에 `publish-runtime.cjs --kind ui --platform android --arch all`로 서명한다.
+발행 명령은 위 회원 데스크톱 README와 같으며 `--source`에 해당 표시 디렉터리를 준다.
+운영 업로드는 자산 먼저, current.json 마지막 순서다.
+
+사용자는 앱의 **화면 업데이트** 버튼에서 확인한 판본의 설치를 선택한다. 확인 전에는
+매니페스트만 조회한다. 서명·만료·origin·지문·surface·shell 3/protocol 2/state 1·host를
+검사하고 `filesDir/ui-releases/<sequence>`에 불변 자산을 보관한다. `AtomicFile` 활성 기록은
+렌더러 응답 뒤 확정한다. 미확정 종료·실패는 이전 화면을 유지하고 APK 기본 화면이
+최종 복구 기준이다. 이 저장소는 BaseBundle 재추출 대상 밖이다. APK 업데이트로 host가
+달라지면 오래된 UI는 적용하지 않는다. OS 권한·브리지·Python/Go 변경은 UI-only가 아니다.

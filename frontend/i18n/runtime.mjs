@@ -105,6 +105,14 @@ export function createUI(catalog, host = globalThis) {
     if (host.document) host.document.documentElement.lang = locale;
     listeners.forEach(fn => fn());
   }
+  function installMessages(messages) {
+    const before = {};
+    for (const [id, value] of Object.entries(messages)) {
+      before[id] = catalog.messages[id];catalog.messages[id] = value;
+    }
+    announce();
+    return () => { for (const [id,value] of Object.entries(before)) { if(value) catalog.messages[id]=value;else delete catalog.messages[id]; } announce(); };
+  }
   function setLocale(next, propagate = true) {
     if (!supports(next)) return;
     const changed = locale !== next;
@@ -125,7 +133,7 @@ export function createUI(catalog, host = globalThis) {
     if (event.key === key) setLocale(supports(event.newValue) ? event.newValue : sourceLocale, !host.electron?.getUILocale);
   });
   if (host.document) host.document.documentElement.lang = locale;
-  return { text, source, message, error, number, date, system, instrument, languages, getLocale: () => locale, setLocale,
+  return { text, source, message, error, number, date, system, instrument, languages, getLocale: () => locale, setLocale, installMessages,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); } };
 }
 

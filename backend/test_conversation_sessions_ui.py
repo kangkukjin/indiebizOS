@@ -147,6 +147,26 @@ def test_session_workspace_in_browser(tmp_path):
                 page.get_by_role('button',name='히스토리',exact=True).first.click()
                 history.get_by_role('button',name='회의 준비',exact=True).click()
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).to_be_visible()
+                # The production display compiler and live loader preserve the hook owner.
+                payload = json.loads(subprocess.check_output(['node', 'frontend/scripts/owner-display.mjs'], cwd=root))
+                import hashlib
+                payload['code'] = payload['code'].replace('chat-header ', 'chat-header display-updated ').replace('pageSize:50', 'pageSize:25')
+                payload['version'] = hashlib.sha256(json.dumps({k:v for k,v in payload.items() if k != 'version'}, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
+                textbox.fill('모듈 교체 중인 초안')
+                textbox.evaluate("el=>{window.savedInput=el;el.focus();el.setSelectionRange(2,5)}")
+                commands_before = list(sent)
+                page.evaluate("async value => { const m=await import('/src/lib/owner-display.ts');await m.applyOwnerDisplay(value); }", payload)
+                expect(page.locator('.chat-header.display-updated:visible')).to_have_count(1)
+                assert page.evaluate('getConversation().pageSize') == 25
+                assert textbox.evaluate("el=>savedInput===el")
+                expect(textbox).to_have_value('모듈 교체 중인 초안')
+                assert page.evaluate('savedInput.selectionStart') == 2
+                assert sent == commands_before
+                broken = dict(payload, code='throw Error("failed display")')
+                broken['version'] = hashlib.sha256(json.dumps({k:v for k,v in broken.items() if k != 'version'}, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
+                assert page.evaluate("async value => { try { await (await import('/src/lib/owner-display.ts')).applyOwnerDisplay(value); return false; } catch { return true; } }", broken)
+                expect(textbox).to_have_value('모듈 교체 중인 초안')
+                errors[:] = [e for e in errors if 'failed display' not in e]
                 page.screenshot(path=str(tmp_path/'system-ai-sessions.png'))
                 # Reuse the real React component with project/research adapters, not a copied UI.
                 page.evaluate("""async () => {

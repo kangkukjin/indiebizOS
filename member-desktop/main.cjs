@@ -31,7 +31,12 @@ app.whenReady().then(async()=>{
     let timer;const ready=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(Error('새 화면을 시작하지 못했습니다.')),25000);bootReady=resolve;});
     try{await win.loadFile(file);await ready;}finally{clearTimeout(timer);bootReady=null;}
   };
-  updates=new RuntimeUpdates({root,trust,session,show,baseline:{workspace:workspaceFile,executable,version:require('./package.json').version}});
+  const showUI=async display=>{
+    const current=liveWindow();if(!current||fileURLToPath(current.webContents.getURL())!==workspaceFile)throw Error('작업 화면을 연 뒤 적용하세요.');
+    return current.webContents.executeJavaScript('window.IndieDisplay.apply('+JSON.stringify(display).replace(/</g,'\\u003c')+')');
+  };
+  const revertUI=version=>liveWindow()?.webContents.executeJavaScript('window.IndieDisplay.rollback('+JSON.stringify(version)+')');
+  updates=new RuntimeUpdates({root,trust,session,show,showUI,revertUI,baseline:{workspace:workspaceFile,executable,version:require('./package.json').version}});
   try{const runtime=updates.recover();workspaceFile=runtime.workspace;session.executable=runtime.executable;}catch(e){dialog.showErrorBox('업데이트 복구 필요',e.message);quitting=true;app.quit();return;}
   win=new BrowserWindow({width:1280,height:900,minWidth:760,minHeight:560,title:'IndieBiz Member',webPreferences:{preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
   win.on('close',e=>{if(!quitting){e.preventDefault();win.hide();}});
@@ -47,14 +52,14 @@ app.whenReady().then(async()=>{
   app.setAsDefaultProtocolClient('indiebiz-member');
   function trusted(event,setupOnly=false){if(event.sender!==win.webContents||event.senderFrame!==win.webContents.mainFrame)throw Error('허용되지 않은 창');const filename=fileURLToPath(event.senderFrame.url);if(![setupFile,...(setupOnly?[]:[workspaceFile])].includes(filename))throw Error('허용되지 않은 화면');}
   function handle(name,fn,setupOnly=false){ipcMain.handle('member:'+name,async(e,arg)=>{trusted(e,setupOnly);if(session.updating&&!['request','ready','setup','settings','updateStatus'].includes(name))throw Error('업데이트 중입니다. 완료 후 다시 시도하세요.');return fn(arg);});}
-  handle('ready',()=>{bootReady?.();return {success:true};});
+  handle('ready',()=>{if(bootReady)bootReady();else setImmediate(()=>updates.resumeUI().catch(e=>{error=e.message;}));return {success:true};});
   handle('updateStatus',()=>updates.publicState());
   handle('updateCheck',()=>updates.check());
   handle('updateApply',()=>updates.requestInstall(async state=>{
     const current=liveWindow();if(!current)return false;
     const answer=await dialog.showMessageBox(current,{type:'question',buttons:['취소','설치'],defaultId:0,cancelId:0,
       message:'최신 버전('+state.availableVersion+')을 설치할까요?',
-      detail:'설치를 선택하면 다운로드하고 현재 작업이 끝난 뒤 적용합니다. 대화와 파일은 보존됩니다.'});
+      detail:state.kind==='ui'?'화면만 바꿉니다. 진행 중 작업과 작성 중인 내용은 유지됩니다.':'설치를 선택하면 다운로드하고 현재 작업이 끝난 뒤 적용합니다. 대화와 파일은 보존됩니다.'});
     return !quitting&&answer.response===1;
   }));
   handle('setup',()=>({...session.publicState(),...pending,error}));

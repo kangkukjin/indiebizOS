@@ -1,12 +1,11 @@
+import { getConversation } from '../../../surfaces/shared/conversation.js';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { ui, useLocale } from '../../i18n/ui';
 import type { SavedSession } from './useConversationSession';
 
 export function historyDay(value?: string | Date) {
-  const date = value instanceof Date ? value : new Date(value || '');
-  if (Number.isNaN(date.getTime())) return '';
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return getConversation().day(value);
 }
 export function HistoryDate({ day }: { day: string }) {
   useLocale();

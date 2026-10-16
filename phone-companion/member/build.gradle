@@ -25,10 +25,12 @@ tasks.register('copyAccessibility', Copy) {
     into layout.buildDirectory.dir('generated/shared')
 }
 tasks.register('bundleMemberShell', Exec) {
-    inputs.files(fileTree('../../backend/surface') { include 'member*.py'; include 'launcher*.py' },'../../backend/static/app_render_core.js')
+    inputs.files(fileTree('../../frontend/surfaces'), fileTree('../../backend/static') { include 'member*.js' }, '../../backend/surface/surface_assets.py', '../../backend/surface/surface_display.py', fileTree('../../backend/surface') { include 'member*.py'; include 'launcher*.py' },'../../backend/static/app_render_core.js')
     outputs.file(layout.buildDirectory.file('generated/memberAssets/member_app.html'))
     commandLine 'python3', '../../scripts/build_member_shell.py', '--output',
         layout.buildDirectory.file('generated/memberAssets/member_app.html').get().asFile.absolutePath
 }
 tasks.named('preBuild').configure { dependsOn 'copyAccessibility', 'bundleMemberShell' }
 dependencies { implementation 'com.squareup.okhttp3:okhttp:4.12.0' }
+
+apply from: rootProject.file('surface-updates.gradle')

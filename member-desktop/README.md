@@ -91,3 +91,25 @@ MEMBER_DESKTOP_TEST_BINARY=/tmp/indiebiz-member-test .venv/bin/python3 -m pytest
 
 통합 검사는 임시 서버·합성 자격·임시 DB만 사용한다. 모델 호출 대역과 UI 브리지 대역은
 실제 회원 PC 두 대, 실제 API 모델, OS 권한, 운영 인증서와 HTTPS 채널 인수를 대체하지 않는다.
+
+## 화면만 발행하기 (shell 3)
+
+앱 0.1.3 / shell 3부터 `kind: ui`는 `display.json` **한 파일**만 받는다.
+최초 지원 설치물 갱신 후 일반 화면 수정에는 Go·DB·실행부 재기동이 없다.
+`python3 scripts/build_member_desktop.py`가 같은 원본에서 화면과 표시 모듈을 만든다.
+
+```sh
+node member-desktop/publish-runtime.cjs \
+  --kind ui --source member-desktop \
+  --out /absolute/path/to/publication/mac-arm64 \
+  --base https://publisher.example/member/mac-arm64/ \
+  --version 0.1.3 --sequence 1 --platform darwin --arch arm64 \
+  --key /private/release/member-ed25519.pem
+```
+
+화면과 실행부 sequence는 각 종류에서 증가한다. 한 피드의 `current.json`은 지금 제공하는
+종류를 가리키며, 화면 파일은 `ui/<sequence>/display.json`에 남는다. 코드·상태·브리지 호스트
+지문이 다르면 UI-only 적용을 거절한다. 열린 화면과 안쪽 앱 프레임은 자기 표시 함수·스타일·
+정적 DOM만 인계한다. 초안·선택·작업·승인·미디어·iframe과 실행 요청은 기존 소유자에 남는다.
+UI pending 중 종료는 이전 UI로 복구하며, UI 실패로 DB 스냅샷을 복구하지 않는다.
+사용자 설치 확인과 서명 신뢰는 기존 런타임 업데이트와 동일하다.

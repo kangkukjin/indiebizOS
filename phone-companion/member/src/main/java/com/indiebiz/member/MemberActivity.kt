@@ -1,5 +1,6 @@
 package com.indiebiz.member
 import android.app.Activity
+import com.indiebiz.ui.SurfaceUpdates
 import android.content.Intent
 import android.os.Bundle
 import android.os.Build
@@ -11,6 +12,7 @@ import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicInteger
 
 class MemberActivity:Activity() {
+    private var surfaceUpdates:SurfaceUpdates?=null
     private lateinit var runtime:MemberRuntime
     private var web:WebView?=null
     private var pendingExport:java.io.File?=null
@@ -42,7 +44,10 @@ class MemberActivity:Activity() {
     private fun showChat() {
         startForegroundService(Intent(this,AgentForegroundService::class.java))
         val layout=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+        surfaceUpdates?.close()
+        val ui=SurfaceUpdates(this,"member");surfaceUpdates=ui
         val bar=LinearLayout(this)
+        bar.addView(ui.button)
         bar.addView(Button(this).apply { text="파일 가져오기"; setOnClickListener { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE),2) } })
         bar.addView(Button(this).apply { text="파일 내보내기"; setOnClickListener { exportFile() } })
         bar.addView(Button(this).apply { text="접근성 설정"; setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } })
@@ -52,10 +57,12 @@ class MemberActivity:Activity() {
         val scroller=HorizontalScrollView(this).apply { addView(bar) }
         layout.addView(scroller)
         val v=WebView(this);web=v
+        ui.bind(v)
         v.settings.javaScriptEnabled=true
         v.settings.allowFileAccess=false;v.settings.allowContentAccess=false
         v.settings.mixedContentMode=WebSettings.MIXED_CONTENT_NEVER_ALLOW
         v.webViewClient=object:WebViewClient() {
+            override fun onPageFinished(view:WebView?,url:String?) { ui.pageReady() }
             override fun shouldOverrideUrlLoading(view:WebView?,request:WebResourceRequest?):Boolean=true
         }
         val gen=generation.incrementAndGet()
@@ -124,5 +131,5 @@ class MemberActivity:Activity() {
             }
         }
     }
-    override fun onDestroy() { generation.incrementAndGet();web?.removeJavascriptInterface("MemberBridge");web?.destroy();super.onDestroy() }
+    override fun onDestroy() { surfaceUpdates?.close();generation.incrementAndGet();web?.removeJavascriptInterface("MemberBridge");web?.destroy();super.onDestroy() }
 }

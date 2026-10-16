@@ -9,6 +9,11 @@ export const ui = createUI(catalog);
 export function registerUiSources(sources: Record<string, string>) {
   registerUISources(catalog, sources);
 }
+export function installUiMessages(messages: typeof catalog.messages) {
+  const before = { ...catalog.messages };
+  Object.assign(catalog.messages, messages);
+  return () => { for (const id of Object.keys(messages)) { if (id in before) Object.assign(catalog.messages, { [id]: before[id as keyof typeof before] }); else delete (catalog.messages as Record<string, unknown>)[id]; } };
+}
 export function useLocale() {
   return useSyncExternalStore(ui.subscribe, ui.getLocale, () => 'ko');
 }

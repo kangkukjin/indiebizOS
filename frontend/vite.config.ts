@@ -2,11 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
+import { ownerDisplayPlugin } from './scripts/owner-display.mjs'
 import { uiCatalogPlugin } from './scripts/ui-catalog.mjs'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [uiCatalogPlugin(), react(), tailwindcss()],
+  plugins: [ownerDisplayPlugin(), uiCatalogPlugin(), react(), tailwindcss()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

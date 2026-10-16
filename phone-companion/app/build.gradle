@@ -156,6 +156,9 @@ tasks.register('bundleIndiebizBase', Zip) {
         if (missing) throw new GradleException("정본 누락: ${missing.join(', ')} — 폰 엔진 번들을 만들 수 없습니다(드리프트 방지).")
     }
 
+    // 화면 원본은 Python 몸과 분리된 동일 경로에 기본 판본으로 포함한다.
+    from("${_ROOT}/frontend/surfaces") { into 'frontend/surfaces' }
+
     // backend 엔진 모듈 → zip 안 backend/<층>/ (정본 트리와 **같은 모양**)
     //
     // ★평평하게 깔지 말 것 (2026-08-10 실측): 옛 코드는 층 디렉토리를 떼고 backend/ 에 모아
@@ -258,3 +261,5 @@ dependencies {
     // minSdk 21, BSD-3. 각 flavor 의 abiFilters 가 자기 ABI 만 싣는다. 조달 기록: phone-companion/MEDIA_ENGINE.md
     implementation 'io.github.webrtc-sdk:android:144.7559.15'
 }
+
+apply from: rootProject.file('surface-updates.gradle')

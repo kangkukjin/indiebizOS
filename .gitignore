@@ -501,3 +501,8 @@ member-desktop/update-trust.json
 
 # 회원 공통 모델 및 기어 (기기별 운영 설정)
 data/member_models.json
+
+# Immutable generated UI releases; sources are frontend/surfaces.
+frontend/dist-surfaces/
+
+member-desktop/display.json

@@ -154,7 +154,7 @@ export async function refresh(messages, memory, languages, translate = translate
 }
 function rawRemote() {
   const [python, ...prefix] = pythonCommand();
-  return execFileSync(python, [...prefix, '-c', 'import sys; sys.path.insert(0,"backend"); import boot_paths; from launcher_web_shell import LAUNCHER_SHELL_HTML; from launcher_web_app import LAUNCHER_APP_JS; from launcher_web_render import LAUNCHER_RENDER_JS; sys.stdout.write(LAUNCHER_SHELL_HTML+LAUNCHER_APP_JS+LAUNCHER_RENDER_JS)'], { cwd: root, env: pythonEnv(), encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  return execFileSync(python, [...prefix, '-c', 'import sys; sys.path.insert(0,"backend"); import boot_paths; from surface_assets import source_build; ctx=source_build(); ctx.__enter__(); from launcher_web_shell import LAUNCHER_SHELL_HTML; from launcher_web_app import LAUNCHER_APP_JS; from launcher_web_render import LAUNCHER_RENDER_JS; sys.stdout.write(LAUNCHER_SHELL_HTML+LAUNCHER_APP_JS+LAUNCHER_RENDER_JS)'], { cwd: root, env: pythonEnv(), encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
 }
 export function compileRemote(html, catalog) {
   html = sourceText(html);
@@ -186,9 +186,13 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
     compileReact(sourceText(fs.readFileSync(file, 'utf8')), relative, catalog);
   }
   const [python, ...prefix] = pythonCommand();
+  for (const item of readJSON(path.join(root, 'frontend/surfaces/shared/conversation.json'))) catalog.add('conversation', item.label);
+  for (const item of Object.values(readJSON(path.join(root, 'frontend/surfaces/shared/navigation.json')))) catalog.add('navigation', item.title);
   const systemSources = JSON.parse(execFileSync(python, [...prefix, path.join(root, 'frontend/scripts/ui-system-sources.py')], {env:pythonEnv(), encoding:'utf8'}));
   for (const source of systemSources.messages) catalog.add('system:metadata', source);
   for (const source of systemSources.status_messages) catalog.add('system:status', source);
+  const rawDisplay = execFileSync(python, [...prefix, '-c', 'import sys; sys.path.insert(0,"backend"); import boot_paths; from surface_assets import source_build,read_asset; from launcher_render_core import load_conversation_js; ctx=source_build(); ctx.__enter__(); sys.stdout.write(load_conversation_js()+"\\n"+read_asset("remote/conversation-display.js")+read_asset("remote/display.js"))'], {cwd:root,env:pythonEnv(),encoding:'utf8'});
+  const displayCode = compileRemoteJS(rawDisplay, catalog);
   const raw = sourceText(rawRemote());
   const remote = compileRemote(raw, catalog);
   const xrayRaw = sourceText(fs.readFileSync(path.join(root, 'data/xray/index.html'), 'utf8'));
@@ -230,11 +234,11 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
   const bundle = { sourceLocale: 'ko', languages, messages: catalog.messages, instruments: systemSources.instruments };
   writeJSON(path.join(i18n, 'catalog.json'), bundle);
   // Only remote messages are embedded in the remote shell. Escape the script boundary independently of HTML.
-  const remoteBundle = { languages, instruments: bundle.instruments, messages: Object.fromEntries(Object.entries(bundle.messages).filter(([, m]) => m.context.startsWith('remote:') || m.context === 'system:metadata' || m.context === 'system:message')) };
+  const remoteBundle = { languages, instruments: bundle.instruments, messages: Object.fromEntries(Object.entries(bundle.messages).filter(([, m]) => m.context.startsWith('remote:') || m.context === 'system:metadata' || m.context === 'system:message' || m.context === 'conversation')) };
   const encoded = JSON.stringify(remoteBundle).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const bootstrap = `<script>window.__ui=(${createUI.toString()})(${encoded},window);\nwindow.__uiContent=function(value){if(value&&typeof value==='object'&&value.ui){const span=document.createElement('span');span.dataset.uiText=value.ui;span.textContent=window.__ui.text(value.ui);return span.outerHTML;}const span=document.createElement('span');span.textContent=String(value==null?'':value);return span.innerHTML;};window.__uiSetText=function(el,id){const span=document.createElement('span');span.setAttribute('data-ui-text',id);span.textContent=window.__ui.text(id);el.replaceChildren(span);};\ndocument.addEventListener('DOMContentLoaded',function(){(${mountRemote.toString()})(window.__ui,document);});</script>`;
   const html = remote.replace('</head>', () => bootstrap + '</head>');
-  writeJSON(path.join(i18n, 'remote.json'), { source_hash: createHash('sha256').update(raw).digest('hex'), html });
+  writeJSON(path.join(i18n, 'remote.json'), { source_hash: createHash('sha256').update(raw).digest('hex'), html, display_code: displayCode, display_messages: remoteBundle.messages });
   const xrayBundle = { languages, messages: Object.fromEntries(Object.entries(bundle.messages).filter(([, m]) => m.context.startsWith('xray:') || m.context.startsWith('system:'))) };
   const xrayEncoded = JSON.stringify(xrayBundle).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const xrayBootstrap = `<script>window.__ui=(${createUI.toString()})(${xrayEncoded},window);
@@ -275,7 +279,7 @@ export function uiCatalogPlugin() {
           if (!running) reloadUICatalog(server);
           return;
         }
-        if (!(file.includes('/frontend/src/') || file.endsWith('/data/xray/index.html') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/native-messages.json') || file.endsWith('/system-messages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || file.endsWith('/world_pulse_health.py') || file.endsWith('/ibl_description_audit.py') || (file.endsWith('/translations.json') && !running))) return;
+        if (!(file.includes('/frontend/src/') || file.includes('/frontend/surfaces/') || file.endsWith('/data/xray/index.html') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/native-messages.json') || file.endsWith('/system-messages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || file.endsWith('/world_pulse_health.py') || file.endsWith('/ibl_description_audit.py') || (file.endsWith('/translations.json') && !running))) return;
         clearTimeout(timer); timer = setTimeout(async () => {
           try { await build(); reloadUICatalog(server); }
           catch (error) { server.config.logger.error(error.message); }

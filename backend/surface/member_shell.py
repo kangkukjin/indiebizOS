@@ -1,41 +1,43 @@
-"""회원 채팅 표면. mdChat은 원격 런처의 공통 렌더러를 그대로 사용한다."""
-from launcher_app_common import LAUNCHER_COMMON_JS
+"""회원 셸의 명시적 조립. HTML 본문·문구를 검색해서 바꾸지 않는다."""
+from surface_assets import asset_snapshot, read_asset, render_template
+
+BROWSER_ASSETS = ('member_browser_store.js', 'member_browser_files.js',
+                  'member_browser_runtime.js', 'member_browser_boot.js')
+DESKTOP_CSP = ("default-src 'none'; script-src 'self' 'unsafe-inline'; "
+               "style-src 'unsafe-inline'; img-src data: blob:; media-src https: http:; "
+               "frame-src about: blob:; connect-src 'none'")
 
 
-def member_html():
-    html = '''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IndieBiz · 회원</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f6f5f1;color:#202a29;font:16px system-ui,sans-serif}main{max-width:840px;margin:0 auto;padding:32px 20px}header{display:flex;justify-content:space-between;align-items:center}h1{font-size:24px}small,#status{color:#62716d}#chat{min-height:45vh;margin:28px 0}.bubble{padding:18px 22px;border-radius:18px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere;background:white}.user{background:#e2eee7;margin-left:60px}.assistant{margin-right:40px}.bubble pre{overflow:auto;background:#f1f3f0;padding:12px}form{display:flex;gap:10px;position:sticky;bottom:0;background:#f6f5f1;padding:12px 0}textarea{flex:1;min-height:64px;border:1px solid #bdc9c1;border-radius:12px;padding:14px;font:inherit}button{background:#245644;color:white;border:0;border-radius:10px;padding:12px 18px;cursor:pointer}button.secondary{background:#e1e6e0;color:#203b31}button:disabled{opacity:.5}.approval{border:2px solid #b7832e;background:#fff8e9;border-radius:12px;padding:18px;margin:15px 0}.approval button{margin-right:8px}.approval pre{max-height:200px;overflow:auto;white-space:pre-wrap}details{margin-top:24px}#notice{font-size:14px;line-height:1.7}#approvals:empty{display:none}
-</style><main><small id="status" role="status">연결 확인 중</small>
-<audio id="memberAudio" hidden controls style="width:100%;margin-top:16px" aria-label="이 기기의 라디오"></audio>
-<section id="approvals" aria-live="polite"></section><section id="chat" aria-live="polite"></section>
-<form id="send"><textarea id="message" placeholder="이 기기에서 할 일을 말해주세요" aria-label="메시지"></textarea><button id="sendButton">보내기</button><button type="button" class="secondary" id="cancel">중단</button></form>
-</main><script>window.__MEMBER=true;</script>''' + LAUNCHER_COMMON_JS + '''
-const memberToken=location.hash.slice(1)||sessionStorage.getItem('member-token')||'';if(memberToken)sessionStorage.setItem('member-token',memberToken);history.replaceState(null,'',location.pathname);
-const memberNativePending=new Map();let memberNativeId=0;
-window.memberNativeResult=(id,value)=>{const resolve=memberNativePending.get(id);if(resolve){memberNativePending.delete(id);resolve(value)}};
-async function memberRequest(path,body){if(window.DesktopMember)return DesktopMember.request(path,body);if(window.MemberBridge){return new Promise(resolve=>{const id=String(++memberNativeId);memberNativePending.set(id,resolve);MemberBridge.request(id,path,JSON.stringify(body||{}),window.__NATIVE_TOKEN||'')})}const r=await fetch('/member/'+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','X-Member-Token':memberToken},body:body?JSON.stringify(body):undefined});if(!r.ok)throw Error('연결 또는 인증을 확인해주세요');return r.json()}
-function memberBubble(role,text,follow=true){const d=document.createElement('div');d.className='bubble '+role;d.innerHTML=mdChat(text);document.getElementById('chat').append(d);const empty=document.getElementById('chatEmpty');if(empty)empty.hidden=true;if(follow)d.scrollIntoView({block:'nearest'});}
-let memberApprovalSignature='';
-function memberApprovalText(c){const labels={op:'작업',action:'동작',path:'파일',dest:'옮길 곳',content:'내용',cmd:'명령',cwd:'작업 폴더',id:'프로그램',args:'입력',resources:'자원 파일',dependencies:'필요한 패키지',url:'주소',record:'저장할 기억'};const ops={write:'파일 저장',file_move:'파일 이동',mkdir:'폴더 만들기',script:'등록 프로그램',memory_save:'기억 저장',media:'이 기기에서 재생 제어',location:'현재 위치 측정',accessibility:'이 기기 화면 조작',play:'재생',open:'열기',shell:'명령 실행'};return Object.entries(c).filter(([k])=>!['member','request_key','query_key','task_id'].includes(k)).map(([k,v])=>(labels[k]||k)+': '+(k==='op'?(ops[v]||v):k==='content'&&c.encoding==='base64'?'바이너리 파일 · 약 '+Math.floor(v.length*3/4)+'바이트 (저장 경로 확인)':typeof v==='string'?v:JSON.stringify(v,null,2))).join(String.fromCharCode(10))}
-async function memberApprovals(){try{const items=await memberRequest('approvals');const signature=JSON.stringify(items);if(signature===memberApprovalSignature)return;memberApprovalSignature=signature;const box=document.getElementById('approvals');box.replaceChildren();for(const item of items){const d=document.createElement('div');d.className='approval';const label=document.createElement('b');label.textContent='이 기기에서 실행을 허용할까요?';const pre=document.createElement('pre');pre.textContent=memberApprovalText(item.command);d.append(label,pre);for(const [title,allow] of [['허용',true],['거절',false]]){const b=document.createElement('button');b.textContent=title;b.onclick=async()=>{await memberRequest('approve',{key:item.key,allow});await memberApprovals()};d.append(b)}box.append(d)}}catch(e){}}
-async function memberBasicBoot(){
-if(window.MemberBridge)document.getElementById("memberAudio").hidden=true;
-try{const h=await memberRequest('history');for(const row of h.history||[])memberBubble(row.role,row.content)}catch(e){document.getElementById('status').textContent=e.message}
-memberRequest('profile',{}).then(profile=>{document.getElementById('status').textContent=profile.success?'연결됨 · 오늘 '+profile.turns_today+'회 사용':'연결 확인 필요';if(profile.notice)document.getElementById('notice').textContent+=' '+profile.notice}).catch(()=>{document.getElementById('status').textContent='오프라인 · 기억과 결과는 이 기기에 보존됨'});
-document.getElementById('send').onsubmit=async e=>{e.preventDefault();const field=document.getElementById('message'),message=field.value.trim();if(!message)return;field.value='';memberBubble('user',message);document.getElementById('sendButton').disabled=true;document.getElementById('status').textContent='작업 중 · 필요한 실행은 위에서 승인해주세요';try{const r=await memberRequest('chat',{message});memberBubble('assistant',r.response||r.error||'응답 없음');document.getElementById('status').textContent=r.memory_saved?'완료 · 이 기기에 기억 저장됨':'작업 종료 · 기억 저장 상태를 확인하세요'}catch(e){memberBubble('assistant',e.message)}finally{document.getElementById('sendButton').disabled=false;refreshMemberResults()}};
-document.getElementById('cancel').onclick=()=>memberRequest('close',{});
-document.getElementById('export').onclick=async()=>{const r=await memberRequest('export',{});memberBubble('assistant',r.success?'내보내기 완료: '+r.path:r.error)};
-if(!window.MemberBridge)setInterval(memberMedia,500);
-setInterval(memberApprovals,1000);setInterval(refreshMemberResults,5000);refreshMemberResults();}
-async function refreshMemberResults(){try{const rows=await memberRequest('results');const d=document.getElementById('results');d.replaceChildren();for(const row of rows||[]){const p=document.createElement('p');p.textContent=(row.state==='unknown'?'결과 불명 — 자동 재실행하지 않았습니다':'완료')+' · '+row.key+' · '+JSON.stringify(row.command||row.result||{});d.append(p)}}catch(e){}}
-let memberMediaBusy=false;
-async function memberMedia(){if(memberMediaBusy)return;memberMediaBusy=true;try{const pending=await memberRequest('media');for(const job of pending){const claimed=await memberRequest('media-claim',{key:job.key});if(!claimed.success)continue;const c=claimed.command,a=document.getElementById('memberAudio');let result;try{if(c.action==='play'){const u=new URL(c.url);if(!['http:','https:'].includes(u.protocol))throw Error('스트림 주소 오류');a.hidden=false;a.src=u.href;if(c.volume!==undefined)a.volume=c.volume/100;await Promise.race([a.play(),new Promise((_,reject)=>setTimeout(()=>reject(Error('스트림 응답 시간 초과')),20000))])}else if(c.action==='stop'){a.pause();a.removeAttribute('src');a.load();a.hidden=true}else if(c.action==='volume'){if(!a.currentSrc)throw Error('재생 중인 스트림이 없습니다');a.volume=c.volume/100}result={success:true,playing:!a.paused,volume:Math.round(a.volume*100),url:a.currentSrc}}catch(e){a.pause();result={success:false,error:'재생 실패: '+e.message+' · 아래 재생 버튼과 스트림 형식을 확인하세요'}}await memberRequest('media-result',{key:job.key,result})}}catch(e){}finally{memberMediaBusy=false}}
-</script></html>'''
+def member_html(*, browser=False, desktop=False, display=True):
+    if browser and desktop:
+        raise ValueError('회원 표면 어댑터는 하나만 선택해야 합니다')
+    with asset_snapshot():
+        from launcher_app_common import LAUNCHER_COMMON_JS
+        from member_workspace_ui import workspace_js
+        browser_js = ('\n'.join(read_asset('static/' + name) for name in BROWSER_ASSETS)
+                      .replace('</script', '<\\/script') if browser else '')
+        sidebar = render_template('member/sidebar.html', artifacts=read_asset('member/browser_artifacts.html') if browser else '')
+        panels = render_template('member/panels.html',
+            export_tools=read_asset('member/browser_tools.html' if browser else 'member/native_export.html'),
+            storage=read_asset('member/browser_storage.html') if browser else '',
+            download=read_asset('member/browser_download.html') if browser else '')
+        host_js = render_template('member/host.js',
+            approval_hidden=",'body_session'" if browser else '',
+            approval_ops="javascript:'브라우저 계산'," if browser else '')
+        def compose(display_script):
+            return render_template('member/shell.html',
+                meta=f'<meta http-equiv="Content-Security-Policy" content="{DESKTOP_CSP}">' if desktop else '',
+                workspace_style=read_asset('member/workspace_style.css'),
+                browser_style=read_asset('member/browser.css') if browser else '',
+                login=read_asset('member/browser_login.html') if browser else '',
+                main_attrs=' id="memberWorkspace" hidden' if browser else '',
+                sidebar=sidebar, panels=panels, common_js=LAUNCHER_COMMON_JS,
+                host_js=host_js, workspace_js=workspace_js(browser=browser), browser_js=browser_js,
+                desktop_script='<script src="workspace.cjs"></script>' if desktop else '', display_script=display_script)
 
-    from member_workspace_ui import WORKSPACE_STYLE, SIDEBAR, PANELS, workspace_js
-    html = html.replace('</style>', WORKSPACE_STYLE + '</style>', 1)
-    html = html.replace('<section id="approvals" aria-live="polite"></section>', '<section id="approvals" aria-live="polite"></section>' + SIDEBAR)
-    html = html.replace('<form id="send">', '</div><form id="send">', 1)
-    html = html.replace('</main><script>', PANELS + '</main><script>', 1)
-    return html.replace('</script></html>', workspace_js() + '</script></html>')
+        html = compose('')
+        if not display:
+            return html
+        from surface_display import member_display, display_bootstrap
+        descriptor = member_display(html, 'browser' if browser else 'desktop' if desktop else 'member')
+        return compose('<script>' + display_bootstrap(descriptor, '/m/app' if browser else None) + '</script><!--INDIE_ACTIVE_DISPLAY-->')

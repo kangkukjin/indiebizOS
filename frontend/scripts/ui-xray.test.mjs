@@ -80,16 +80,16 @@ test('native tab delivers current locale after readiness and unsubscribes on clo
   const fn=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='NativeBrowserTab').getText(ast);
   const handlers=new Map(), scripts=[], effects=[];
   let url=origin+'/xray/app', refs=0;
-  const el={getURL:()=>url, executeJavaScript:s=>{scripts.push(s);return Promise.resolve()},
+  const el={getURL:()=>url, getWebContentsId:()=>1, executeJavaScript:s=>{scripts.push(s);return Promise.resolve()},
     addEventListener:(name,fn)=>handlers.set(name,fn),removeEventListener:name=>handlers.delete(name)};
   const ui=createUI({languages:{ko:'Korean',en:'English'},messages:{}},{}); ui.setLocale('en');
-  const context={...module.exports,ui,BACKEND_ORIGIN:origin,WebView:'webview',console,
+  const context={...module.exports,ui,BACKEND_ORIGIN:origin,WebView:'webview',EmbeddedTabControl:'control',embeddedAPI:()=>({embeddedBrowserUI:()=>Promise.resolve()}),console,
     useRef:value=>({current:refs++===0?el:value}),useEffect:fn=>effects.push(fn),
-    React:{createElement:(type,props)=>({type,props})}};
+    React:{createElement:(type,props,...children)=>({type,props,children})}};
   vm.runInNewContext(ts.transpileModule(fn+'\nglobalThis.component=NativeBrowserTab;',
     {compilerOptions:{jsx:ts.JsxEmit.React}}).outputText,context);
   const result=context.component({tab:{id:'xray',initialUrl:url,url},onUpdate(){},registerRef(){},onOpenTab(){}});
-  assert(result.props.src.endsWith('?ui_locale=en'));
+  assert(result.children.find(child=>child.type==='webview').props.src.endsWith('?ui_locale=en'));
   const cleanup=effects[0]();
   ui.setLocale('ko'); assert.equal(scripts.length,0);
   handlers.get('dom-ready')(); assert(scripts.at(-1).includes('"ko"'));

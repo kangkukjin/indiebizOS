@@ -1,6 +1,8 @@
+import { startOwnerDisplay } from './lib/owner-display';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
+import baseStyle from './index.css?inline'
+const baselineStyle=document.createElement('style');baselineStyle.id='owner-display-css';baselineStyle.textContent=baseStyle;document.head.appendChild(baselineStyle);
 import App from './App.tsx'
 import { ScreenShare } from './components/remote-pc/ScreenShare'
 import { CallWindow } from './components/media/CallWindow'
@@ -32,8 +34,8 @@ const mediaSession = window.location.hash.match(/^#\/media-call\/([a-f0-9]{16,64
 const content = screenDevice ? <ScreenShare device={screenDevice} />
   : mediaSession ? <CallWindow sessionId={mediaSession} /> : <App />;
 
-createRoot(document.getElementById('root')!).render(
+void startOwnerDisplay().finally(() => createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {IS_WEB_SURFACE ? <RemoteSession>{content}</RemoteSession> : content}
   </StrictMode>,
-)
+));

@@ -65,6 +65,12 @@ _outcomes = importlib.util.module_from_spec(_outcomes_spec)
 _outcomes_spec.loader.exec_module(_outcomes)
 
 
+_surfaces_spec = importlib.util.spec_from_file_location(
+    "system_essentials_repair_surfaces", os.path.join(os.path.dirname(__file__), "repair_surfaces.py"))
+_surfaces = importlib.util.module_from_spec(_surfaces_spec)
+_surfaces_spec.loader.exec_module(_surfaces)
+
+
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
 # ★옛 제안 원장(통합 전 세대). propose 가 여기+selfpatch-* 워크트리를 따로 써서 apply 가
 # 원리적으로 못 봤다(실측 08-18: 제안 7건 누적 / 적용 0건). 지금은 제안도 세션이라
@@ -548,6 +554,8 @@ def verify(repo: str, sess: dict):
             checks.append({"gate": "safety_selftest", "passed": p.returncode == 0,
                            "detail": ((p.stdout or "") + (p.stderr or "")).strip()[-800:]})
 
+    if _surfaces.touched(rels + del_rels, repo):
+        checks.append(_surfaces.build(wt_abs, py, _sandbox_check, _smoke_env(wt_abs)))
     return all(c["passed"] and not c.get("skipped") for c in checks), checks
 
 
@@ -1054,6 +1062,10 @@ def _perform_apply_locked(repo: str, sess: dict, checks: list, prepare, finalize
             removed.append(rec["rel"])
         except OSError as e:
             raise OSError(f"{rec['rel']} 삭제 실패: {e}") from e
+    # Same verified candidate, same receipt. Never activate unrelated concurrent edits.
+    ui_check = next((c for c in checks if c.get('gate') == 'surface_build'), None)
+    if ui_check and ui_check.get('passed'):
+        checks.append(_surfaces.build(repo, sys.executable or 'python3', expected=ui_check['version']))
     if finalize:
         for live_abs in list(staged_contents) + list(to_delete):
             finalize(live_abs)             # backend .py 면 워치독(헬스체크·자동 롤백)

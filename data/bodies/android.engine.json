@@ -502,6 +502,8 @@
     "surface/portal_warehouse",
     "surface/public_face",
     "surface/record_app_page",
+    "surface/surface_assets",
+    "surface/surface_display",
     "surface/warehouse_likes"
   ],
   "world_catalog_files": [
@@ -608,8 +610,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 533,
-    "engine": 501,
+    "total": 535,
+    "engine": 503,
     "blocklist": 32
   }
 }

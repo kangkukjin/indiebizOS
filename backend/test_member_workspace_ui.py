@@ -8,11 +8,11 @@ from member_workspace_ui import workspace_js
 
 def test_app_action_keeps_selected_task_while_queue_waits():
     program = r'''
-const vm=require('node:vm');let listener;const calls=[];
+const vm=require('node:vm');const listeners=[];const calls=[];
 const frame={contentWindow:{postMessage:()=>{}}};
-const c=vm.createContext({window:{addEventListener:(n,f)=>{listener=f}},document:{getElementById:()=>frame},memberRequest:async(p,b)=>{calls.push(b);return {success:false,error:'stop'};}});
+const c=vm.createContext({window:{addEventListener:(n,f)=>{listeners.push(f)}},document:{getElementById:()=>frame},memberRequest:async(p,b)=>{calls.push(b);return {success:false,error:'stop'};}});
 vm.runInContext(SOURCE,c);vm.runInContext("currentTask='selected-task'",c);
-listener({source:frame.contentWindow,data:{memberFrame:'request',action_id:'app:action',app_id:'app',args:{}}});
+listeners.forEach(listener=>listener({source:frame.contentWindow,data:{memberFrame:'request',action_id:'app:action',app_id:'app',args:{}}}));
 vm.runInContext("currentTask='other-task'",c);
 vm.runInContext('memberAppQueue',c).then(()=>{if(calls.length!==1||calls[0].task_id!=='selected-task')throw Error(JSON.stringify(calls));});
 '''.replace('SOURCE', json.dumps(workspace_js()))
@@ -25,8 +25,7 @@ def test_desktop_bundled_ui_reaches_update_health_handshake(tmp_path):
     from playwright.sync_api import sync_playwright, expect
     from member_shell import member_html
     root = Path(__file__).resolve().parents[1]
-    html = member_html().replace('<meta charset="utf-8">', '<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:; media-src https: http:; frame-src about: blob:; connect-src \'none\'">', 1)
-    html = html.replace('</html>', '<script src="workspace.cjs"></script></html>')
+    html = member_html(desktop=True)
     (tmp_path / 'workspace.html').write_text(html)
     (tmp_path / 'workspace.cjs').write_text((root / 'member-desktop/workspace.cjs').read_text())
     with sync_playwright() as pw:

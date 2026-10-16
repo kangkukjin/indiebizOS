@@ -1,0 +1,22 @@
+
+  <!-- 포식(검색) 브라우저 — 앱모드의 앱(표면 탭 아님, 홈 그리드 타일로 진입).
+       검색 → 후보판 → 진입(시스템 브라우저) → 판 유지 + ✕제외/📌담기 -->
+  <div class="panel" id="p-forage">
+    <div class="fg-wrap">
+      <div class="inst-head" style="margin-bottom:0">
+        <button class="back" onclick="history.back()">←</button>
+        <h2>🔍 검색 브라우저</h2>
+      </div>
+      <div class="fg-search">
+        <input id="fgQ" type="text" placeholder="무엇을 찾을까요?" autocomplete="off"
+          onkeydown="if(event.key==='Enter')fgSearch()">
+        <button id="fgGo" onclick="fgSearch()">포식</button>
+      </div>
+      <div class="fg-subnav">
+        <button id="fgnav-board" class="on" onclick="fgNav('board')">판</button>
+        <button id="fgnav-history" onclick="fgNav('history')">방문기록</button>
+        <button id="fgnav-library" onclick="fgNav('library')">도서관</button>
+      </div>
+      <div class="fg-list" id="fgList"></div>
+    </div>
+  </div>

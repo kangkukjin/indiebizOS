@@ -156,6 +156,7 @@ GUARD_INPUT_PATTERNS = [
 
     # ── frontend (2026-07-25 신규) ──
     # 뷰-렌더러 가드(데스크탑 쪽)와 launcher-가드(창 명령 ↔ main.js switch).
+    r"frontend/surfaces/.*\.(js|json|html|css)",
     r"frontend/src/components/GenericInstrument\.tsx",
     r"frontend/src/components/generic/.*\.tsx",
     r"frontend/electron/main\.js",

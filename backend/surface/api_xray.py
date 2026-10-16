@@ -1120,7 +1120,7 @@ async def xray_episode_summaries(limit: int = 50):
 
 
 @router.get("/app", response_class=HTMLResponse)
-async def xray_app():
+def xray_app():
     """System X-Ray 시각화 페이지"""
     html_path = DATA_PATH / "xray" / "index.html"
     if html_path.exists():

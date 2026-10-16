@@ -1,3 +1,6 @@
+import toolNavigation from '../../surfaces/shared/navigation.json';
+export { toolNavigation };
+
 import { BACKEND_ORIGIN } from './backend-origin';
 
 /** 네이티브 창이 없는 웹에서는 같은 창의 라우트로 이동한다. 브라우저 뒤로가기로 돌아온다. */
@@ -7,6 +10,11 @@ function openPage(route: string, nativeOpen?: () => unknown) {
     return;
   }
   window.location.hash = route;
+}
+
+export function openTool(kind: keyof typeof toolNavigation, folderId = 'desktop') {
+  const route = toolNavigation[kind].route + (kind === 'vocabulary' ? '/' + encodeURIComponent(folderId) : '');
+  openPage(route, window.electron?.openToolWindow?.bind(window.electron, kind, folderId));
 }
 
 export function openSystemAI() {
@@ -35,29 +43,28 @@ export function openLecture(id: string | null = null) {
 
 /** 안경 메뉴 도구 창 — 런처 안 모달이 아니라 독립 창(크기 조절). 웹 표면은 같은 창의 라우트. */
 export function openPromptComposition() {
-  openPage('/prompt-composition', window.electron?.openToolWindow?.bind(window.electron, 'prompt-composition'));
+  openTool('prompt-composition');
 }
 
 
 export function openDocuments() {
-  openPage('/documents', window.electron?.openToolWindow?.bind(window.electron, 'documents'));
+  openTool('documents');
 }
 
 export function openCoding() {
-  openPage('/coding', window.electron?.openToolWindow?.bind(window.electron, 'coding'));
+  openTool('coding');
 }
 
 export function openGuides() {
-  openPage('/guides', window.electron?.openToolWindow?.bind(window.electron, 'guides'));
+  openTool('guides');
 }
 
 export function openExternalUsers() {
-  openPage('/external-users', window.electron?.openToolWindow?.bind(window.electron, 'external-users'));
+  openTool('external-users');
 }
 
 export function openVocabulary(folderId = 'desktop') {
-  openPage(`/vocabulary/${encodeURIComponent(folderId)}`,
-    window.electron?.openToolWindow?.bind(window.electron, 'vocabulary', folderId));
+  openTool('vocabulary', folderId);
 }
 
 /** 링크 href 의 목적지 분류 — 순수 함수(openExternalLink 가 쓴다).
@@ -137,5 +144,5 @@ export function openResultImage(path: string) {
 }
 
 export function openMemberPCs() {
-  openPage('/member-pcs', window.electron?.openToolWindow?.bind(window.electron, 'member-pcs'));
+  openTool('member-pcs');
 }

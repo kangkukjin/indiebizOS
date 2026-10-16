@@ -1,43 +1,31 @@
 """회원 앱은 원격 런처 렌더러 그대로, 로컬 승인 토큰이 없는 별도 프레임에서 그린다."""
-from pathlib import Path
 
-from launcher_app_common import LAUNCHER_COMMON_JS
-from launcher_render_core import LAUNCHER_CORE_JS
-from launcher_app_appmode import LAUNCHER_APPMODE_HEAD_JS, LAUNCHER_APPMODE_REST_JS
-from launcher_web_render import LAUNCHER_RENDER_JS
+from surface_assets import read_asset, asset_snapshot
 
 
-def frame_html():
-    head = '''<!doctype html><html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'"><style>
-:root{--bg:#f6f5f1;--bg2:white;--txt:#20372d;--dim:#65766e;--line:#d7dfda;--acc:#245644;--info:#256b95;--up:#23754a;--down:#b43737}body{font:15px system-ui;color:var(--txt);margin:12px}button,input,select,textarea{font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:white}button{cursor:pointer}button.go,.on{background:var(--acc);color:white}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}.tile{min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}.em{font-size:28px}.row,.tabs,.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.inst-head{display:flex;align-items:center;gap:12px}.muted{color:var(--dim)}table{border-collapse:collapse;width:100%}td,th{padding:12px;text-align:left;border-bottom:1px solid var(--line)}pre{white-space:pre-wrap;overflow-wrap:anywhere}.card{padding:15px;background:white;margin:10px 0;border-radius:10px}a{color:var(--info)}#instOut{overflow:auto}
-</style><div id="appHome"></div><div id="appInst" style="display:none"></div><script>window.__MEMBER=true;</script>'''
-    bridge = r'''
-let seq=0;const pending=new Map();
-function memberBoot(){parent.postMessage({memberFrame:'ready'},'*')}
-window.addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data||{};if(m.memberFrame==='apps'){INSTRUMENTS=m.instruments||[];renderAppHome()}if(m.memberFrame==='result'){const p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(m.error)):p.resolve(memberAppResult(m.result))}}});
-function memberAppResult(value){let v=unwrapFinalResult(value);if(typeof v==='string')v={text:v};if(v?.message&&!v.text)v={...v,text:v.message};if(v?.blocks)v={...v,items:v.blocks};else if(v?.text&&!v.items)v={...v,items:[{type:'paragraph',text:v.text}]};return v}
-function ibl(code){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({memberFrame:'execute',id,code},'*')})}
-// 자연어 제작 버튼도 시스템 AI 위임 없이 같은 회원 작업으로 보낸다.
-function memberAppRequest(spec){
- const args=gatherInputs();
- return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({memberFrame:'request',id,action_id:spec.client_action_id,args,title:spec.name||CUR.inst.name},'*')});
-}
-const memberIblRunMode=runMode,memberIblFireButton=fireButton;
-runMode=async function(){
- if(!CUR.mode.client_action_id)return memberIblRunMode();
- const mode=CUR.mode,box=document.getElementById('instOut');box.textContent='요청을 처리하고 있습니다…';
- try{const r=await memberAppRequest(mode);if(CUR.mode!==mode||!box.isConnected)return;box.innerHTML=mode.request?mdChat(r.input_required||r.response||r.error||'작업이 끝났습니다'):(VIEW_CTX={view:mode.view,data:r,compose:mode.compose,refresh:'mode'},renderModeBody(mode,r))}catch(e){box.textContent=e.message}
-};
-fireButton=async function(i,button){
- const spec=(CUR.mode.buttons||[])[i];if(!spec?.client_action_id)return memberIblFireButton(i,button);
- const mode=CUR.mode;button.disabled=true;const box=document.getElementById('instOut');box.textContent='클라이언트 담당 에이전트가 처리 중입니다…';
- try{const r=await memberAppRequest(spec);if(CUR.mode!==mode||!box.isConnected)return;if(spec.refresh)await runMode();else box.innerHTML=(mode.view||[]).some(v=>v.type==='kv')?renderModeBody(mode,r):mdChat(r.input_required||r.response||r.error||r.message||'요청한 동작을 마쳤습니다')}catch(e){box.textContent=e.message}finally{button.disabled=false}
-};
-function jfetch(){return Promise.reject(Error('회원 앱에서 이 네트워크 경로는 사용할 수 없습니다'))}
-async function loadInstruments(){}
-function renderAppHome(){document.getElementById('appInst').style.display='none';const h=document.getElementById('appHome');h.style.display='block';h.innerHTML='<div class="grid">'+INSTRUMENTS.map((i,n)=>'<button class="tile" onclick="openInstrument('+n+')"><span class="em">'+esc(i.icon||'◻')+'</span><span>'+esc(i.name)+'</span></button>').join('')+'</div>'}
-function _upFileObj(){alert('앱의 내 파일에서 파일을 가져오고 그 경로를 입력하세요')}
-window.addEventListener('popstate',appBackHome);
-'''
-    bridge += (Path(__file__).resolve().parents[1] / 'static/member_app_requests.js').read_text()
-    return head + LAUNCHER_COMMON_JS + LAUNCHER_CORE_JS + LAUNCHER_APPMODE_HEAD_JS + LAUNCHER_APPMODE_REST_JS + LAUNCHER_RENDER_JS.split('</script>')[0] + bridge + '</script></html>'
+@asset_snapshot()
+def frame_html(display=True):
+    from surface_assets import render_template
+    LAUNCHER_COMMON_JS = '<script>\n' + read_asset('shared/launcher_common_js.js')
+    from launcher_render_core import LAUNCHER_CORE_JS
+    from launcher_app_appmode import LAUNCHER_APPMODE_HEAD_JS, LAUNCHER_APPMODE_REST_JS
+    LAUNCHER_RENDER_JS = render_template('remote/launcher_render_js.js', display_js=read_asset('remote/display.js'))
+    head = read_asset('member/head.html')
+    bridge = read_asset('member/bridge.js')
+    bridge += read_asset('static/member_app_requests.js')
+    html = head + LAUNCHER_COMMON_JS + LAUNCHER_CORE_JS + LAUNCHER_APPMODE_HEAD_JS + LAUNCHER_APPMODE_REST_JS + LAUNCHER_RENDER_JS.split('</script>')[0] + bridge + '</script><!--INDIE_DISPLAY--></html>'
+
+    if not display:
+        return html
+    import json
+    descriptor = frame_display(html)
+    script = (read_asset('shared/display-host.js') + '\nIndieDisplay.start('
+              + json.dumps(descriptor, ensure_ascii=False).replace('<', '\\u003c')
+              + ',function(){if(!CUR.inst)renderAppHome()});' + read_asset('member/frame-display-bridge.js'))
+    return html.replace('<!--INDIE_DISPLAY-->', '<script>' + script + '</script>')
+
+
+def frame_display(html=None):
+    from surface_display import describe
+    return describe(html if html is not None else frame_html(False), 'frame',
+                    read_asset('remote/display.js'), '')

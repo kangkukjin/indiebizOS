@@ -1,0 +1,31 @@
+// Both Android shells consume the same verifier and the same signed UI contract.
+android.sourceSets.main.java.srcDir("${rootDir}/shared/src/main/java")
+android.sourceSets.main.assets.srcDir(layout.buildDirectory.dir('generated/surfaceTrust'))
+android.sourceSets.test.java.srcDir("${rootDir}/shared/src/test/java")
+dependencies {
+    implementation 'com.google.crypto.tink:tink-android:1.22.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}
+def uiKeyFile = System.getenv('INDIEBIZ_UI_PUBLIC_KEY') ?: ''
+def uiFeed = System.getenv(project.name == 'member' ? 'INDIEBIZ_MEMBER_UI_FEED' : 'INDIEBIZ_PHONE_UI_FEED') ?: ''
+tasks.register('surfaceUpdateTrust') {
+    inputs.property('feed', uiFeed)
+    inputs.property('keyPath', uiKeyFile)
+    if (uiKeyFile) inputs.file(uiKeyFile)
+    outputs.file(layout.buildDirectory.file('generated/surfaceTrust/surface-update-trust.json'))
+    doLast {
+        def trust = [:]
+        if (uiFeed || uiKeyFile) {
+            if (!uiFeed || !uiKeyFile) throw new GradleException('화면 피드와 공개키를 함께 설정하세요')
+            def uri = new URI(uiFeed)
+            if (uri.scheme != 'https' || uri.userInfo || uri.fragment) throw new GradleException('화면 피드는 HTTPS여야 합니다')
+            def pem = file(uiKeyFile).text
+            if (!pem.contains('BEGIN PUBLIC KEY') || pem.contains('PRIVATE KEY')) throw new GradleException('배포 공개키 파일이 필요합니다')
+            trust = [feed: uiFeed, publicKey: pem]
+        }
+        def output = layout.buildDirectory.file('generated/surfaceTrust/surface-update-trust.json').get().asFile
+        output.parentFile.mkdirs(); output.text = groovy.json.JsonOutput.toJson(trust)
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'surfaceUpdateTrust' }

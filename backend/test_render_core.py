@@ -53,10 +53,10 @@ def test_core_has_single_definition_per_name():
     두 번이면 사본이 부활한 것이고(뒤 정의가 이김 = 조용한 드리프트), 0 번이면 코어가
     안 실린 것이다(앱 탭 전체가 undefined 로 죽음).
     """
-    from launcher_render_core import EXPORT_MARKER, _CORE_PATH
+    from launcher_render_core import EXPORT_MARKER
+    from surface_assets import read_asset
 
-    with open(_CORE_PATH, encoding="utf-8") as f:
-        core = f.read()
+    core = read_asset('static/app_render_core.js')
     block = core[core.rfind(EXPORT_MARKER):]
     names = [n.strip() for n in re.search(r"export\s*\{([^}]*)\}", block, re.S).group(1).split(",") if n.strip()]
     assert names, "코어 export 이름을 못 읽음"

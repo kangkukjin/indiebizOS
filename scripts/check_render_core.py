@@ -28,13 +28,16 @@ CONSUMERS = [
     "frontend/src/components/generic/prims-basic.tsx",
     "frontend/src/components/generic/prims-edit.tsx",
     "frontend/src/components/generic/prims-map-calendar.tsx",
-    "backend/launcher_web_render.py",
-    "backend/launcher_app_appmode.py",
-    "backend/launcher_app_common.py",
+    "frontend/surfaces/remote/launcher_render_js.js",
+    "frontend/surfaces/remote/display.js",
+    "frontend/surfaces/remote/conversation-display.js",
+    "frontend/surfaces/remote/launcher_appmode_head_js.js",
+    "frontend/surfaces/remote/launcher_appmode_rest_js.js",
+    "frontend/surfaces/shared/launcher_common_js.js",
 ]
 
 # 코어를 실제로 싣는 표면 조립 파일 (원격런처 / 폰네이티브)
-SURFACES = ["backend/launcher_web_app.py", "backend/launcher_surface_phone.py"]
+SURFACES = ["backend/surface/launcher_web_app.py", "backend/surface/launcher_surface_phone.py"]
 
 
 def core_export_names(text: str) -> list:

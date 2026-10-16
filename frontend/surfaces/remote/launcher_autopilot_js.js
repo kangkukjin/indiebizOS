@@ -1,0 +1,444 @@
+/* ================= 자율주행 (드릴다운) ================= */
+let apAgents=[]; let apAgProject=null;
+let apThreads=[]; let apThreadProject=null;
+/* 첨부 사진 (전송 대기) — {b64, media_type, dataUrl}. 시스템 AI·프로젝트 에이전트 공통. */
+let apImages=[];
+async function apLoad(){
+  try{ await apLoadProjects(); await apLoadSwitches(); apBrowseRoot(); }
+  catch(e){
+    apShowBrowse();
+    document.getElementById('apBrowse').innerHTML='<p role="alert">프로젝트를 불러오지 못했습니다: '+esc(e.message)+'</p><button class="btn2" onclick="apLoad()">다시 시도</button>';
+  }
+}
+async function apLoadProjects(){
+  const r=await jfetch('/projects');
+  if(!r.ok) throw new Error(r.status===401?'다시 로그인해주세요.':'HTTP '+r.status);
+  const d=await r.json(); apProjects=d.projects||[];
+}
+async function apLoadSwitches(){
+  try{ const r=await jfetch('/switches'); if(r.ok){ const d=await r.json(); apSwitches=d.switches||[]; } }catch(e){}
+}
+function apShowBrowse(){ apStopSessions(); document.getElementById('ap-browse').style.display=''; document.getElementById('ap-chat').style.display='none'; }
+function apShowChat(){ document.getElementById('ap-browse').style.display='none'; document.getElementById('ap-chat').style.display='flex'; }
+
+/* ① 루트: 시스템 AI / 스위치 / 프로젝트 */
+function apBrowseRoot(){
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='none';
+  let h='<h3>시스템</h3>';
+  h+=apCard('🤖','시스템 AI','IndieBiz OS 전체를 관리','apPickSystem()',false);
+  // 스위치는 폰-자아엔 불필요(사용자 결정) — 폰에선 숨기고 원격/맥에선 노출.
+  if(!IS_PHONE) h+=apCard('⚡','스위치','원클릭 자동화 실행','apBrowseSwitches()',true);
+  h+=apCard('⏰','스케줄','반복 작업 보기·삭제','apBrowseSchedules()',true);
+  h+='<h3>프로젝트 '+apProjects.length+'</h3>';
+  h+='<button class="ap-newbtn" onclick="apProjectCreate()">＋ 프로젝트 만들기</button>';
+  h+=apProjects.map(p=>
+    '<div class="ap-card" onclick="apBrowseProject(\''+esc(p.id)+'\')"><span class="ic">'+(p.icon||(p.project_kind==='research'?'📚':'📁'))+'</span>'+
+    '<span class="tx"><span class="nm">'+esc(p.name)+'</span><span class="ds">'+(p.project_kind==='research'?'주제별 대화':'에이전트 선택')+'</span></span>'+
+    '<span class="chev">›</span>'+
+    '<button class="btn2 danger" onclick="event.stopPropagation();apProjectDelete(\''+esc(p.id)+'\',\''+esc(p.name)+'\')">🗑</button></div>'
+  ).join('');
+  document.getElementById('apBrowse').innerHTML=h;
+}
+/* 프로젝트 생성/삭제 — POST/DELETE /projects 는 catch-all 로 맥 (패리티) */
+async function apProjectCreate(){
+  const name=(prompt('새 프로젝트 이름:')||'').trim(); if(!name) return;
+  try{ const r=await jfetch('/projects',{method:'POST',body:JSON.stringify({name,template_name:'기본'})});
+    if(r.ok){ await apLoadProjects(); apBrowseRoot(); }
+    else{ const d=await r.json().catch(()=>({})); alert('생성 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function apProjectDelete(id,name){
+  if(!confirm('"'+name+'" 프로젝트를 삭제할까요? (에이전트·대화 모두 삭제)')) return;
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(id),{method:'DELETE'});
+    if(r.ok){ await apLoadProjects(); apBrowseRoot(); }
+    else{ const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+/* ①-b 프로젝트 드릴 → 에이전트 전체 목록 (옛 ags[0] 자동선택 버그 제거) */
+async function apBrowseProject(pid){
+  const p=apProjects.find(x=>x.id===pid); if(!p) return;
+  if(p.project_kind==='research'){ apBrowseResearch(p); return; }
+  try{
+    const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents');
+    if(!r.ok){ alert('에이전트 로드 실패'); return; }
+    const d=await r.json(); apAgents=d.agents||[]; apAgProject=p;
+    if(!apAgents.length){ alert('이 프로젝트에 에이전트가 없습니다.'); return; }
+    apShowBrowse();
+    document.getElementById('ap-bhead').style.display='flex';
+    document.getElementById('apBrowseTitle').textContent=p.name;
+    document.getElementById('apBrowse').innerHTML='<h3>에이전트 '+apAgents.length+'</h3>'+
+      '<button class="ap-newbtn" onclick="apAgentCreate(\''+esc(pid)+'\')">＋ 에이전트 추가</button>'+
+      apAgents.map((a,i)=>
+        '<div class="ap-card" onclick="apPickAgent('+i+')"><span class="ic">👤</span>'+
+        '<span class="tx"><span class="nm">'+esc(a.name)+'</span><span class="ds">'+esc((a.role||'').substring(0,48)||'에이전트')+'</span></span>'+
+        '<button class="btn2 danger" onclick="event.stopPropagation();apAgentDelete(\''+esc(pid)+'\',\''+esc(a.id)+'\',\''+esc(a.name)+'\')">🗑</button></div>'
+      ).join('');
+  }catch(e){ alert('에이전트 로드 실패'); }
+}
+/* ①-b' 연구 프로젝트 → 주제(대화) 목록. 연구 프로젝트는 에이전트가 아니라 주제별 대화를
+   단위로 하므로 데스크톱 ResearchProjectView 와 같은 [self:project] 대화 연산을 쓴다. */
+async function apResearch(uid,op,params){
+  const inputs=Object.assign({project_ref:uid,op:op},params||{});
+  const fields=Object.keys(inputs).map(k=>k+': $'+k).join(', ');
+  const d=await ibl({code:'[self:project]{'+fields+'}',edition:2,inputs:inputs,declared_inputs:Object.keys(inputs)});
+  if(!d||d.success===false||d.error) throw new Error(String((d&&(d.error||d.message))||'요청 실패'));
+  return d;
+}
+async function apBrowseResearch(p){
+  const uid=p.project_uid||p.id;
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='flex';
+  document.getElementById('apBrowseTitle').textContent=p.name;
+  const box=document.getElementById('apBrowse');
+  box.innerHTML='<p class="muted" style="padding:24px;text-align:center">주제를 불러오는 중…</p>';
+  try{
+    const groups=[];
+    for(const archived of [false,true]){
+      let cursor=null; const items=[];
+      do{ const d=await apResearch(uid,'thread_list',Object.assign({limit:100,archived:archived},cursor?{cursor:cursor}:{}));
+        items.push(...(d.items||[])); cursor=d.next_cursor||null; }while(cursor);
+      groups.push(items);
+    }
+    apThreads=groups[0].concat(groups[1]); apThreadProject=p;
+    box.innerHTML='<h3>주제 '+apThreads.length+'</h3>'+
+      '<button class="ap-newbtn" onclick="apThreadCreate()">＋ 새 주제</button>'+
+      (apThreads.length?apThreads.map((t,i)=>apCard('💬',t.title,(t.updated_label||'')+(t.archived?' · 보관됨':''),'apPickThread('+i+')',true)).join('')
+        :'<p class="muted" style="padding:24px;text-align:center">새 주제를 만들어 시작하세요.</p>');
+  }catch(e){
+    box.innerHTML='<p role="alert">주제를 불러오지 못했습니다: '+esc(e.message)+'</p><button class="btn2" onclick="apBrowseProject(\''+esc(p.id)+'\')">다시 시도</button>';
+  }
+}
+async function apThreadCreate(){
+  const p=apThreadProject; if(!p) return;
+  const title=(prompt('새 주제 이름:')||'').trim(); if(!title) return;
+  try{ const d=await apResearch(p.project_uid||p.id,'thread_create',{title:title});const t=(d.items||[])[0];if(t){apThreads.unshift(t);apPickThread(0)}else await apBrowseResearch(p); }
+  catch(e){ alert('생성 실패: '+e.message); }
+}
+function apPickThread(i){
+  const t=apThreads[i], p=apThreadProject; if(!t||!p) return;
+  apChat={ type:'research', projectId:p.project_uid||p.id, threadRef:t.id, projectRowId:p.id, agentId:null, agentName:null };
+  apOpenChat('📚 '+p.name+' · '+t.title, t.mode_label||'주제별 연구 대화');
+  document.getElementById('apAttach').style.display='none';  // 연구 첨부는 자료실 업로드 경로가 따로다
+}
+/* 연구 대화 기록 — 실행 중이면 진행 중 답(running)도 함께 온다. */
+async function apResearchMsgs(){
+  const d=await apResearch(apChat.projectId,'thread_messages',{thread_ref:apChat.threadRef,limit:40});
+  return {items:(d.items||[]).map(m=>({id:m.id,role:m.role==='user'?'user':'assistant',status:m.status,
+    content:(m.content||'')+(m.status_label&&m.status!=='running'?'\n\n*('+m.status_label+')*':'')})), active:!!d.active_run};
+}
+/* 에이전트 생성/삭제 — POST/DELETE /projects/{id}/agents 는 catch-all 로 맥 (패리티) */
+async function apAgentCreate(pid){
+  const name=(prompt('새 에이전트 이름:')||'').trim(); if(!name) return;
+  const role=(prompt('역할 설명 (선택):')||'').trim();
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents',{method:'POST',body:JSON.stringify({name,role})});
+    if(r.ok){ apBrowseProject(pid); }
+    else{ const d=await r.json().catch(()=>({})); alert('생성 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function apAgentDelete(pid,aid,name){
+  if(!confirm('"'+name+'" 에이전트를 삭제할까요?')) return;
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents/'+encodeURIComponent(aid),{method:'DELETE'});
+    if(r.ok){ apBrowseProject(pid); }
+    else{ const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+/* ①-c 스위치 목록 (+ 생성/삭제 — 맥 패리티) */
+function apBrowseSwitches(){
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='flex';
+  document.getElementById('apBrowseTitle').textContent='스위치';
+  const box=document.getElementById('apBrowse');
+  let h='<button class="ap-newbtn" onclick="apSwitchForm()">＋ 스위치 만들기</button>';
+  if(!apSwitches.length){ h+='<p class="muted" style="padding:24px;text-align:center">스위치가 없습니다</p>'; }
+  else { h+='<h3>스위치 '+apSwitches.length+'</h3>'+apSwitches.map(s=>
+    '<div class="ap-card"><span class="ic">⚡</span><span class="tx"><span class="nm">'+esc(s.name)+'</span><span class="ds">'+esc((s.prompt||s.command||'').substring(0,50))+'</span></span>'+
+    '<button class="btn2" onclick="apRunSwitch(\''+esc(s.id)+'\',this)">실행</button>'+
+    '<button class="btn2 danger" onclick="apSwitchDelete(\''+esc(s.id)+'\',\''+esc(s.name)+'\')">🗑</button></div>'
+  ).join(''); }
+  box.innerHTML=h;
+}
+/* 스위치 생성 폼 (이름+명령+프로젝트→에이전트). POST /switches 는 catch-all 로 맥. */
+function apSwitchForm(){
+  const box=document.getElementById('apBrowse');
+  const projOpts=apProjects.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+  box.innerHTML='<h3>새 스위치</h3><div class="ap-form">'+
+    '<label>이름</label><input id="swName" placeholder="예: 아침 뉴스 브리핑">'+
+    '<label>명령 (프롬프트)</label><textarea id="swCmd" rows="3" placeholder="이 스위치가 실행할 지시"></textarea>'+
+    '<label>프로젝트</label><select id="swProj" onchange="apSwitchLoadAgents()">'+projOpts+'</select>'+
+    '<label>에이전트</label><select id="swAgent"><option>로딩…</option></select>'+
+    '<div class="ap-form-row"><button class="btn2" onclick="apBrowseSwitches()">취소</button>'+
+    '<button class="go" onclick="apSwitchCreate()">만들기</button></div></div>';
+  apSwitchLoadAgents();
+}
+async function apSwitchLoadAgents(){
+  const ps=document.getElementById('swProj'); if(!ps) return;
+  const sel=document.getElementById('swAgent'); sel.innerHTML='<option>로딩…</option>';
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(ps.value)+'/agents'); const d=await r.json();
+    sel.innerHTML=(d.agents||[]).map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('')||'<option value="">(에이전트 없음)</option>';
+  }catch(e){ sel.innerHTML='<option value="">(로드 실패)</option>'; }
+}
+async function apSwitchCreate(){
+  const name=(document.getElementById('swName').value||'').trim();
+  const command=(document.getElementById('swCmd').value||'').trim();
+  const projectId=document.getElementById('swProj').value;
+  const agentName=document.getElementById('swAgent').value;
+  if(!name||!command){ alert('이름과 명령을 입력하세요'); return; }
+  try{
+    const r=await jfetch('/switches',{method:'POST',body:JSON.stringify({name,command,config:{projectId,agentName},icon:'⚡'})});
+    if(r.ok){ await apLoadSwitches(); apBrowseSwitches(); }
+    else{ const d=await r.json().catch(()=>({})); alert('생성 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function apSwitchDelete(id,name){
+  if(!confirm('"'+name+'" 스위치를 삭제할까요?')) return;
+  try{
+    const r=await jfetch('/switches/'+encodeURIComponent(id),{method:'DELETE'});
+    if(r.ok){ await apLoadSwitches(); apBrowseSwitches(); }
+    else{ const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+/* ①-d 스케줄 목록 (반복 트리거 보기·삭제 — self:trigger op:list/delete via /ibl/execute).
+   trigger_engine 은 폰 로컬 번들이라 이 자아의 스케줄(대화처럼 자아별 사적)을 보여준다. */
+function apScheduleWhen(cfg){
+  cfg=cfg||{};
+  if(cfg.interval_minutes) return cfg.interval_minutes+'분마다';
+  const rep=cfg.repeat||cfg.frequency||''; const time=cfg.time||'';
+  if(rep==='daily') return '매일 '+time;
+  if(rep==='weekly') return '매주 '+time;
+  if(rep) return rep+' '+time;
+  if(time) return time;
+  try{ return JSON.stringify(cfg); }catch(e){ return '예약'; }
+}
+async function apBrowseSchedules(){
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='flex';
+  document.getElementById('apBrowseTitle').textContent='스케줄';
+  const box=document.getElementById('apBrowse');
+  box.innerHTML='<p class="muted" style="padding:20px;text-align:center">불러오는 중…</p>';
+  try{
+    const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code:'[self:trigger]{op: "list", type: "schedule"}'})});
+    const d=await r.json(); const trigs=d.triggers||[];
+    if(!trigs.length){ box.innerHTML='<p class="muted" style="padding:24px;text-align:center;line-height:1.7">반복 스케줄이 없습니다.<br><span style="font-size:13px">시스템 AI에게 "매일 아침 9시에 뉴스 알려줘"처럼 말해 만들 수 있어요.</span></p>'; return; }
+    box.innerHTML='<h3>반복 스케줄 '+trigs.length+'</h3>'+trigs.map(t=>{
+      const en=t.enabled!==false;
+      return '<div class="ap-card"><span class="ic">'+(en?'⏰':'⏸️')+'</span>'+
+        '<span class="tx"><span class="nm">'+esc(t.name||t.id)+'</span><span class="ds">'+esc(apScheduleWhen(t.config))+' · '+esc((t.pipeline||'').substring(0,38))+'</span></span>'+
+        '<button class="btn2 danger" onclick="apScheduleDelete(\''+esc(t.id)+'\',\''+esc(t.name||t.id)+'\')">🗑</button></div>';
+    }).join('');
+  }catch(e){ box.innerHTML='<p class="muted" style="padding:24px;text-align:center">불러오기 실패: '+esc(e.message)+'</p>'; }
+}
+async function apScheduleDelete(id,name){
+  if(!confirm('"'+name+'" 스케줄을 삭제할까요?')) return;
+  try{
+    const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code:'[self:trigger]{op: "delete", id: "'+id+'"}'})});
+    if(r.ok){ apBrowseSchedules(); } else { const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+/* ② 대상 확정 → 대화/결과 (전체 폭) */
+function apPickSystem(){
+  apChat={ type:'system', projectId:null, agentId:null, agentName:null };
+  apOpenChat('🤖 시스템 AI','IndieBiz OS 전체를 관리합니다');
+}
+function apPickAgent(i){
+  const a=apAgents[i], p=apAgProject; if(!a||!p) return;
+  apChat={ type:'agent', projectId:p.id, agentId:a.id, agentName:a.name };
+  apOpenChat(p.name+' · '+a.name, (a.role||'').substring(0,80));
+}
+function apOpenChat(title,sub){
+  // 공유 입력창의 초안(주행 분석 포함)은 이전 대화 상대에게 속한다.
+  document.getElementById('apInput').value='';
+  document.getElementById('apTitle').textContent=title;
+  document.getElementById('apSessionTitle').textContent=title;document.getElementById('apSessionTitle').title=title;
+  document.getElementById('apMsgs').innerHTML='<div class="empty">메시지를 입력해 시작하세요.</div>';
+  document.getElementById('apAttach').style.display='';
+  apImages=[]; apRenderChips();
+  apShowChat();
+  const sessions=apSessionsEnabled();
+  document.getElementById('apSessions').hidden=!sessions&&apChat.type!=='research';
+  document.getElementById('apSessionBar').hidden=!sessions;
+  document.getElementById('apSessionError').textContent='';
+  if(sessions)void apStartSessions();else{apStopSessions();document.getElementById('apSessionNew').disabled=false;document.getElementById('apSend').disabled=false;apLoadHistory();}  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
+  setTimeout(()=>{ try{ document.getElementById('apInput').focus(); }catch(e){} },50);
+}
+/* ── 사진 첨부: 갤러리 선택(input file) → canvas 긴 변 1600px 다운스케일(JPEG q0.85 —
+   폰 원본 수 MB 를 그대로 보내면 업로드·비전 양쪽이 무겁다) → 미리보기 칩 → 전송 시 base64 동봉 */
+function apPickImage(){ document.getElementById('apFile').click(); }
+function apReadImage(file){
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=()=>{ const img=new Image();
+      img.onload=()=>{
+        try{
+          const MAX=1600; let w=img.naturalWidth,h=img.naturalHeight;
+          const sc=Math.min(1,MAX/Math.max(w,h)); w=Math.round(w*sc)||1; h=Math.round(h*sc)||1;
+          const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+          cv.getContext('2d').drawImage(img,0,0,w,h);
+          const durl=cv.toDataURL('image/jpeg',0.85);
+          res({b64:durl.split(',')[1],media_type:'image/jpeg',dataUrl:durl});
+        }catch(err){ rej(err); }
+      };
+      img.onerror=()=>rej(new Error('이미지 해석 실패'));
+      img.src=rd.result;
+    };
+    rd.onerror=()=>rej(new Error('파일 읽기 실패'));
+    rd.readAsDataURL(file);
+  });
+}
+async function apFileChosen(e){
+  const files=Array.prototype.slice.call(e.target.files||[]); e.target.value='';
+  for(const f of files){
+    if(apImages.length>=4){ alert('사진은 한 번에 4장까지입니다.'); break; }
+    try{ apImages.push(await apReadImage(f)); }catch(err){ alert('사진 처리 실패: '+err.message); }
+  }
+  apRenderChips();
+}
+
+function apRemoveChip(i){ apImages.splice(i,1); apRenderChips(); }
+/* 대화 이력의 이미지 상대 경로 → 렌더/다운로드 URL (dl=1 = Content-Disposition attachment
+   → 폰 브라우저 다운로드 = 폰 저장) */
+
+function apAppendImgs(bub,imgs){
+  (imgs||[]).forEach(im=>{
+    const img=document.createElement('img'); img.className='bimg'; img.loading='lazy'; img.src=im.src;
+    bub.appendChild(img);
+    if(im.dl){ const a=document.createElement('a'); a.className='bdl'; a.href=im.dl; a.textContent='⬇ 저장'; bub.appendChild(a); }
+  });
+}
+/* 과거 대화 로드 — 채팅 진입 시 이전 대화를 버블로 표시.
+   시스템 AI=/system-ai/conversations / 에이전트=/conversations/{pid}/{aid}/messages (맥/폰 공통) */
+async function apLoadHistory(){
+  try{
+    let convs=[];
+    if(apChat.type==='system'){
+      const r=await jfetch('/system-ai/conversations?limit=40'); if(!r.ok) return;
+      convs=((await r.json()).conversations||[]).map(m=>({role:(m.role==='user')?'user':'assistant', content:m.content||'', images:m.images||null}));
+    }else if(apChat.type==='agent'){
+      const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
+      if(!r.ok) return;
+      const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
+      convs=msgs.map(m=>({role:(m.is_agent===true)?'assistant':'user', content:m.content||'', images:m.images||null}));
+    }else if(apChat.type==='research'){
+      convs=(await apResearchMsgs()).items;
+    }else return;
+    if(!convs.length) return;  // 이력 없으면 안내문 유지
+    const c=document.getElementById('apMsgs'); c.innerHTML='';
+    convs.forEach(m=>{ apAddMsg(m.role, m.content, apImgObjs(m.images)); });
+    const sep=document.createElement('div'); sep.className='ap-hist-sep'; sep.textContent='― 여기부터 새 대화 ―';
+    c.appendChild(sep); c.scrollTop=c.scrollHeight;
+  }catch(e){}
+}
+function apExitChat(){
+  if(apChat&&apChat.type==='research'){ const p=apProjects.find(x=>x.id===apChat.projectRowId); if(p){ apBrowseResearch(p); return; } }
+  apBrowseRoot();
+}
+async function apRunSwitch(id,btn){
+  btn.disabled=true; btn.textContent='실행 중...';
+  try{ const r=await jfetch('/switches/'+encodeURIComponent(id)+'/execute',{method:'POST'}); alert(r.ok?'스위치를 실행했습니다':'실행 실패'); }
+  catch(e){ alert('오류: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='실행'; }
+}
+
+function apKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); apSend(); } }
+/* 어시스턴트(에이전트/시스템AI 발신) 메시지를 {id,content} 배열(시간순)로 — 폴링용.
+   시스템 AI=/system-ai/conversations(role==assistant), 에이전트=/conversations/.../messages(from==agent).
+   id 를 마커로 쓰는 이유: limit 윈도가 슬라이딩하면 개수 비교는 신규 메시지를 놓칠 수 있다. */
+async function apAssistantMsgs(){
+  if(apChat.type==='system'){
+    const r=await jfetch('/system-ai/conversations?limit=40');
+    if(!r.ok) return null;
+    return ((await r.json()).conversations||[]).filter(m=>m.role==='assistant').map(m=>({id:m.id,content:m.content||'',images:m.images||null}));
+  }else{
+    const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
+    if(!r.ok) return null;
+    const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
+    return msgs.filter(m=>m.is_agent===true).map(m=>({id:m.id,content:m.content||''}));
+  }
+}
+function apMaxId(arr){ let mx=0; (arr||[]).forEach(m=>{ if(m.id>mx) mx=m.id; }); return mx; }
+function apSleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+/* 백그라운드 명령의 답을 회수. 접수증에 status_url 이 있으면 **그 작업**의 상태를 조회해
+   종료(succeeded/failed/cancelled)를 판정한다 — 다른 작업의 새 메시지를 자기 답으로 집지 않는다.
+   표시 본문은 작업의 result 전문, 이미지는 같은 본문의 어시스턴트 메시지에서 찾는다.
+   status_url 이 없는 구버전 서버에만 메시지 번호 폴링으로 폴백한다(동시 작업 식별은 불가).
+   각 조회는 wait=20 의 제한 대기라 터널 100초 타임아웃에 안 걸린다. 최대 ~10분. */
+async function apPollAssistant(baselineId,bub,statusUrl){
+  const dots=['작업 중…','작업 중… ·','작업 중… · ·','작업 중… · · ·'];
+  if(statusUrl){
+    const deadline=Date.now()+10*60*1000; let i=0, misses=0;
+    while(Date.now()<deadline){
+      if(bub) bub.textContent=dots[(i++)%dots.length];
+      let v; try{ const r=await jfetch(statusUrl+'?wait=20'); if(!r.ok){ if(++misses>5) break; await apSleep(2000); continue; } v=await r.json(); }
+      catch(e){ if(++misses>5) break; await apSleep(2000); continue; }
+      if(!v||!v.state){ break; }  // 상태 투영이 아니다(구버전 서버) → 메시지 폴링 폴백
+      if(v.state==='succeeded'||v.state==='failed'||v.state==='cancelled'){
+        const text=v.state==='succeeded'?(v.result||''):('['+(v.state==='failed'?'실패':'취소')+'] '+(v.error||v.result||''));
+        let images=null;
+        try{ const a=await apAssistantMsgs(); const same=(a||[]).filter(m=>m.id>baselineId&&m.content===(v.result||'')); if(same.length) images=same[same.length-1].images||null; }catch(e){}
+        return {content:text, images, state:v.state};
+      }
+    }
+    if(Date.now()>=deadline) return {content:'⏳ 아직 처리 중입니다. 잠시 후 대화를 다시 열어 확인해 주세요.', images:null, state:'running'};
+  }
+  for(let i=0;i<200;i++){
+    await apSleep(i<6?1500:3000);  // 짧은 답은 빨리, 긴 작업은 느슨하게
+    if(bub) bub.textContent=dots[i%dots.length];
+    let a; try{ a=await apAssistantMsgs(); }catch(e){ continue; }  // 일시 오류는 넘김
+    if(a==null) continue;
+    const fresh=a.filter(m=>m.id>baselineId);
+    if(fresh.length) return fresh[fresh.length-1];
+  }
+  return {content:'⏳ 아직 처리 중입니다. 잠시 후 대화를 다시 열어 확인해 주세요.', images:null};
+}
+/* 연구 대화 전송 — 접수 뒤 대화 기록을 폴링해 실행이 끝나면 마지막 답을 보여 준다(최대 ~10분). */
+async function apResearchSend(message,bub){
+  const before=apMaxId((await apResearchMsgs()).items);
+  const request_id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+Math.random();
+  await apResearch(apChat.projectId,'thread_send',{thread_ref:apChat.threadRef,message:message,request_id:request_id});
+  const dots=['조사 중…','조사 중… ·','조사 중… · ·','조사 중… · · ·'];
+  const deadline=Date.now()+10*60*1000;
+  for(let i=0;Date.now()<deadline;i++){
+    await apSleep(i<6?1500:3000);
+    let v; try{ v=await apResearchMsgs(); }catch(e){ continue; }
+    const fresh=v.items.filter(m=>m.role==='assistant'&&m.id>before);
+    const last=fresh[fresh.length-1];
+    if(!v.active&&last){ bub.innerHTML=mdChat(last.content); const mc=document.getElementById('apMsgs'); mc.scrollTop=mc.scrollHeight; return; }
+    bub.textContent=(last&&last.content)?last.content:dots[i%dots.length];
+  }
+  bub.textContent='⏳ 아직 조사 중입니다. 잠시 후 이 주제를 다시 열어 확인해 주세요.';
+}
+async function apSend(){
+  if(apSessionsEnabled()){await apSessionSend();return;}
+  const inp=document.getElementById('apInput'); const msg=inp.value.trim();
+  if(!msg&&!apImages.length) return;
+  const sendImgs=apImages.slice(); apImages=[]; apRenderChips();
+  apAddMsg('user',msg||'(사진)',sendImgs.map(im=>({src:im.dataUrl}))); inp.value='';
+  const btn=document.getElementById('apSend'); btn.disabled=true;
+  apAddMsg('assistant','…'); const last=document.getElementById('apMsgs').lastChild.querySelector('.bub');
+  if(apChat.type==='research'){ try{ await apResearchSend(msg,last); }catch(e){ last.textContent='오류: '+e.message; } finally{ btn.disabled=false; } return; }
+  try{
+    // 시스템 AI·에이전트 공통: 영상 생성처럼 수 분짜리 작업이 Cloudflare 터널 100초 타임아웃(524)에
+    // 걸려 "실패"로 보이던 문제 해결 — 백그라운드로 보내고(즉시 반환) 대화 DB를 폴링해 답을 받는다.
+    const baselineId=apMaxId(await apAssistantMsgs());
+    const images=sendImgs.map(im=>({base64:im.b64,media_type:im.media_type}));
+    const message=msg||'첨부한 사진을 봐줘.';
+    let r;
+    if(apChat.type==='system'){
+      const body={message,background:true};
+      if(images.length) body.images=images;
+      r=await jfetch('/system-ai/chat',{method:'POST',body:JSON.stringify(body)});
+    }else{
+      await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/start',{method:'POST'});
+      r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:message,background:true,...(images.length?{images}:{})})});
+    }
+    if(!r.ok){ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); return; }
+    const acc=await r.json().catch(()=>({}));
+    last.textContent='작업 중…';
+    const fin=await apPollAssistant(baselineId,last,acc&&acc.status_url);
+    last.innerHTML=mdChat(fin.content||'');
+    apAppendImgs(last,apImgObjs(fin.images));  // AI 생성 이미지(tool_images) 렌더 + ⬇ 저장
+    const mc=document.getElementById('apMsgs'); mc.scrollTop=mc.scrollHeight;
+  }catch(e){ last.textContent='연결 오류: '+e.message; }
+  finally{ btn.disabled=false; }
+}
+

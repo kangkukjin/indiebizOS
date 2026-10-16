@@ -165,7 +165,12 @@ def launcher_app():
     # 폰네이티브 표면(3탭: 자율주행·조종실·앱) — 원격런처(맥 얼굴, 5탭)와 몸별 조립 분리.
     # 창고·포식은 이 몸의 표면이 아니다(창고=숙주 맥의 살림 — 폰에선 원격런처가 리모컨).
     from launcher_surface_phone import phone_html
-    return HTMLResponse(phone_html())
+    html = phone_html()
+    context = globals().get('_android_context')
+    if context is not None:
+        from java import jclass
+        html = str(jclass('com.indiebiz.ui.SurfaceUpdates').withActive(context, 'phone', html))
+    return HTMLResponse(html)
 
 
 @app.get("/launcher/instruments")
@@ -1405,13 +1410,14 @@ def _hold_limb_link(client):
     threading.Thread(target=_watch, name="limb-link-lock", daemon=True).start()
 
 
-def serve(port=8765, base_path=None):
+def serve(port=8765, base_path=None, android_context=None):
     """비-메인 스레드에서 호출 → 시그널 핸들러 금지.
 
     base_path: BaseBundle 이 추출한 정본 엔진 트리 루트(필수).
     이미 서빙 중이면 조기 반환(중복 바인드 방지).
     """
-    global _server, _serving
+    global _server, _serving, _android_context
+    _android_context = android_context
     if not base_path:
         raise RuntimeError("base_path 필요 — BaseBundle.ensure() 결과를 넘기세요.")
     if _serving:

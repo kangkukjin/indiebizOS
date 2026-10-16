@@ -938,11 +938,15 @@ def _launcher_https_redirect(request: Request):
 
 
 @router.get("/app", response_class=HTMLResponse)
-async def get_webapp(request: Request):
+def get_webapp(request: Request, display: str = ""):
     """간결한 원격 전용 런처. 데스크톱 빌드 유무와 무관하게 같은 화면을 제공한다."""
     redirect = _launcher_https_redirect(request)
     if redirect is not None:
         return redirect
+    if display:
+        from launcher_surface_remote import remote_display
+        value = remote_display()
+        return JSONResponse({key: value[key] for key in ('version', 'host')} if display == 'version' else value, headers={"Cache-Control": "no-store"})
     return HTMLResponse(get_launcher_webapp_html(), headers={"Cache-Control": "no-store"})
 
 
@@ -960,7 +964,7 @@ async def react_asset(path: str):
 
 
 @router.get("/lite", response_class=HTMLResponse)
-async def get_webapp_lite(request: Request):
+def get_webapp_lite(request: Request, display: str = ""):
     """구형 기기 호환 경량 런처 (NAS /nas/lite·lite2 의 런처판) — 순수 ES5+XHR.
 
     iOS 10.3 Safari 는 물론 아이패드 1세대(iOS 5.1.1)까지 한 페이지로 덮는다.
@@ -969,6 +973,10 @@ async def get_webapp_lite(request: Request):
     redirect = _launcher_https_redirect(request)
     if redirect is not None:
         return redirect
+    if display:
+        from launcher_lite import lite_display
+        value = lite_display()
+        return JSONResponse({key: value[key] for key in ('version', 'host')} if display == 'version' else value, headers={'Cache-Control': 'no-store'})
     from launcher_lite import LAUNCHER_LITE_HTML
     return HTMLResponse(LAUNCHER_LITE_HTML, headers={"Cache-Control": "no-store"})
 
@@ -1070,3 +1078,16 @@ def get_launcher_webapp_html():
     뷰-렌더러 가드가 그 파일 경로를 스캔한다.
     """
     return _launcher_surface_html()
+
+
+@router.get('/owner-display')
+async def owner_display(metadata: bool = False):
+    """Same authenticated launcher boundary; activation is a local repair operation."""
+    from surface_assets import read_artifact
+    try:
+        value = json.loads(read_artifact('display/owner/display.json'))
+    except (OSError, ValueError, KeyError):
+        raise HTTPException(status_code=404, detail='활성화된 화면 판본이 없습니다')
+    if metadata:
+        value = {key: value[key] for key in ('version', 'host', 'surface', 'state')}
+    return JSONResponse(value, headers={'Cache-Control': 'no-store'})

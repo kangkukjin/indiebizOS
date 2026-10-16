@@ -1,3 +1,4 @@
+import { ConversationActions, conversationLabel } from './ConversationHeader';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, X, History } from 'lucide-react';
 import { ChatPane, type ChatViewProps } from './ChatView';
@@ -42,15 +43,18 @@ export function SessionWorkspace(props:ChatViewProps) {
   catch(e) {setError((e as Error).message);} finally {setBusy(false);}
  };
  if (props.layout === 'dialog' && props.show === false) return null;
+ const sessionItems = {
+  history: <button type="button" onClick={() => setShowHistory(true)} className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-[#EAE4DA]"><History size={14} className="hidden sm:block"/>{conversationLabel('history')}</button>,
+  new: <button type="button" disabled={busy} onClick={create} className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-[#EAE4DA] disabled:opacity-50"><Plus size={14} className="hidden sm:block"/>{conversationLabel('new')}</button>
+ };
  const sessionMenu = <div className="flex items-center gap-1 shrink-0 whitespace-nowrap" aria-label="대화 세션 메뉴">
-   <button type="button" onClick={() => setShowHistory(true)} className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-[#EAE4DA]"><History size={14} className="hidden sm:block"/>히스토리</button>
-   <button type="button" disabled={busy} onClick={create} className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-[#EAE4DA] disabled:opacity-50"><Plus size={14} className="hidden sm:block"/>새 세션</button>
+   <ConversationActions items={sessionItems}/>
   </div>;
  const content = <div className="flex flex-col flex-1 min-w-0 min-h-0 h-full overflow-hidden">
 
   {!selected && <div className="flex justify-end p-2">{sessionMenu}</div>}
   <div className="flex flex-col flex-1 min-w-0 min-h-0">{error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
-   {visited.map(id => {const item = items.find(s => s.id === id);return item && <div key={id} className={id === selected ? 'flex flex-1 min-h-0' : 'hidden'}><SessionPane {...props} headerActions={<>{sessionMenu}{props.headerActions}</>} datedHistory item={item} target={stableTarget} active={id === selected && props.show !== false} initialMessage={id === initialRecipient.current.id ? props.initialMessage : undefined}/></div>;})}
+   {visited.map(id => {const item = items.find(s => s.id === id);return item && <div key={id} className={id === selected ? 'flex flex-1 min-h-0' : 'hidden'}><SessionPane {...props} headerActions={props.headerActions} headerItems={sessionItems} datedHistory item={item} target={stableTarget} active={id === selected && props.show !== false} initialMessage={id === initialRecipient.current.id ? props.initialMessage : undefined}/></div>;})}
    {!selected && <div className="m-auto text-[#8B7355]">새 세션을 시작하거나 히스토리에서 대화를 선택하세요.</div>}
   </div>
   {showHistory && <SessionHistory items={items} selected={selected} onClose={() => setShowHistory(false)} onSelect={item => {select(item.id);setShowHistory(false);}}/>}

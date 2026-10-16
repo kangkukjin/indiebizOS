@@ -1,3 +1,4 @@
+const toolNavigation = require('../surfaces/shared/navigation.json');
 import { usesDevServer } from './renderer-mode.js';
 /**
  * windows.js — 보조 창 생성기 (main.js 에서 분리, 2026-08-06 1500줄 규칙)
@@ -574,14 +575,14 @@ function createLectureWorkspaceWindow(lectureId = null) {
  * 독립 창(크기 조절·OS 제목줄)으로 연다. 도구별(어휘는 폴더별) 하나만, 다시 열면 포커스.
  */
 const TOOL_WINDOWS = {
-  'spreadsheets': { title: '스프레드시트', width: 1600, height: 1000, minWidth: 900, minHeight: 650 },
-  'documents': { title: '문서', width: 1440, height: 940, minWidth: 800, minHeight: 600 },
-  'coding': { title: '코딩', width: 1440, height: 940, minWidth: 800, minHeight: 600 },
-  'member-pcs': { title: '회원 PC 관리', width: 1180, height: 850 },
-  'external-users': { title: '외부사용자 관리', width: 1100, height: 820 },
-  'prompt-composition': { title: '프롬프트 구성', width: 1180, height: 860 },
-  'guides': { title: '가이드 파일', width: 1280, height: 860 },
-  'vocabulary': { title: '내 어휘', width: 1000, height: 760, minWidth: 360, minHeight: 300 },
+  'spreadsheets': { width: 1600, height: 1000, minWidth: 900, minHeight: 650 },
+  'documents': { width: 1440, height: 940, minWidth: 800, minHeight: 600 },
+  'coding': { width: 1440, height: 940, minWidth: 800, minHeight: 600 },
+  'member-pcs': { width: 1180, height: 850 },
+  'external-users': { width: 1100, height: 820 },
+  'prompt-composition': { width: 1180, height: 860 },
+  'guides': { width: 1280, height: 860 },
+  'vocabulary': { width: 1000, height: 760, minWidth: 360, minHeight: 300 },
 };
 
 function createToolWindow(kind, folderId = 'desktop') {
@@ -600,14 +601,14 @@ function createToolWindow(kind, folderId = 'desktop') {
     minWidth: spec.minWidth || 720,
     minHeight: spec.minHeight || 480,
     resizable: true,
-    title: nativeTitle(spec.title),
+    title: nativeTitle(toolNavigation[kind].title),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
-  const hashPath = kind === 'vocabulary' ? `/vocabulary/${encodeURIComponent(folderId)}` : `/${kind}`;
+  const hashPath = toolNavigation[kind].route + (kind === 'vocabulary' ? '/' + encodeURIComponent(folderId) : '');
   if (isDev) {
     win.loadURL(`http://localhost:5173/#${hashPath}`);
   } else {

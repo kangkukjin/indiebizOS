@@ -1,0 +1,78 @@
+
+  <!-- 공유창고 — 레벨(0 손님~4 가족)별 폴더. 원격은 파일을 업로드로 넣고(맥은 드롭/선택),
+       빼기=휴지통 이동(가역). 소유자 리모컨: 로그인 세션으로 warehouse-admin 도달. -->
+  <div class="panel" id="p-warehouse">
+    <div class="wh-head">
+      <span class="wh-title" id="whTitle">공유창고</span>
+      <a class="wh-url" id="whUrl" href="#" target="_blank" rel="noopener" style="display:none"></a>
+      <span class="wh-tabs">
+        <button id="whTabMine" class="on" onclick="whTab('mine')">내 창고</button>
+        <button id="whTabNb" onclick="whTab('nb')">이웃</button>
+        <button id="whTabDs" onclick="whTab('ds')">이웃찾기</button>
+      </span>
+      <button class="wh-add" id="whIntroBtn" onclick="whIntro()"
+        title="나를 알리기 — 공개 인사 프로필과 공개 창고 주소를 #IndieNet 에 발행합니다 (창고이웃을 구하는 첫걸음)">🌐 소개발행</button>
+      <span style="flex:1"></span>
+      <span class="wh-busy" id="whBusy"></span>
+      <label class="wh-add" id="whAddBtn">
+        <input type="file" id="whFile" multiple style="display:none" onchange="whUpload(this.files)">＋ 파일 올리기</label>
+      <!-- 브라우저는 폴더를 통째로 못 보낸다 — webkitdirectory 로 안의 파일을 전부 받아
+           각 파일의 webkitRelativePath(하위 경로)를 붙여 올린다(맥은 add 가 통째 복사). -->
+      <label class="wh-add" id="whAddDirBtn">
+        <input type="file" id="whDir" webkitdirectory directory multiple style="display:none" onchange="whUpload(this.files)">＋ 폴더 올리기</label>
+      <button class="iconbtn" title="새로고침" onclick="whRefresh()">↻</button>
+    </div>
+    <div id="whMine">
+      <div class="wh-levels" id="whLevels"></div>
+      <div class="wh-err" id="whErr" style="display:none"></div>
+      <div class="wh-list" id="whList"></div>
+    </div>
+    <div id="whNb" style="display:none">
+      <div class="wh-nb-bar" id="wfNeighbors"></div>
+      <div class="wf-row" id="wfAddRow" style="display:none">
+        <select id="wfCand"><option value="">새 이웃으로…</option></select>
+        <input id="wfName" placeholder="이웃 이름 (비우면 창고 제목)">
+        <input id="wfUrl" class="grow" placeholder="창고 주소 (https://…)">
+        <button class="wf-go" onclick="wfAdd()">등록</button>
+      </div>
+      <div class="wf-row">
+        <input id="wfQ" class="grow" placeholder="🔍 이웃 창고 전체에서 파일 이름으로 찾기" oninput="wfSearch(this.value)">
+      </div>
+      <!-- 창고 추천 초안 — 공개 발행이라 반드시 사람이 읽고 고칠 자리를 준다(📣 버튼이 연다) -->
+      <div class="wf-row" id="wfRecRow" style="display:none;flex-direction:column;align-items:stretch;gap:6px">
+        <div style="font-size:12px;color:var(--dim)" id="wfRecHead"></div>
+        <textarea id="wfRecText" rows="5"
+          style="width:100%;box-sizing:border-box;resize:vertical;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--txt);font:inherit;font-size:13px"></textarea>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--dim);flex:1"><b>공유창고 Warehouse : 주소</b> 줄은 남겨두세요 — 받는 사람 화면에서 그 자리로 바로 창고이웃 등록이 됩니다.</span>
+          <button class="wf-go" onclick="wfRecCancel()">닫기</button>
+          <button class="wf-go" id="wfRecBtn" onclick="wfRecPost()">공개 추천 발행</button>
+        </div>
+      </div>
+      <div class="wh-err" id="wfErr" style="display:none"></div>
+      <div class="wh-list" id="wfFeed"></div>
+    </div>
+    <!-- 이웃찾기 — 두 갈래. 소개글=#IndieNet 발견 노트(소개발행의 수신면, 나를 알린 사람이
+         오는 쪽) / 둘러보기=아직 나를 모르는 창고를 장르로 훑는 쪽. 방향이 반대다. -->
+    <div id="whDs" style="display:none">
+      <div class="wf-row">
+        <span class="wh-tabs" style="margin-left:0">
+          <button id="wdSubIntro" class="on" onclick="wdSub('intro')" title="#IndieNet 에 자기를 알린 사람들">소개글</button>
+          <button id="wdSubBrowse" onclick="wdSub('browse')" title="장르별 후보 창고 — 아직 관계 없는 곳">둘러보기</button>
+        </span>
+      </div>
+      <div id="wdIntro">
+        <div class="wf-row">
+          <input id="wdDraft" class="grow" placeholder="#IndieNet 게시판에 한마디 — 소개도, 대화도 좋아요 (모두에게 공개)"
+            onkeydown="if(event.key==='Enter')wdPost()">
+          <button class="wf-go" id="wdPostBtn" onclick="wdPost()">게시</button>
+        </div>
+        <div class="wh-list" id="wdList"></div>
+      </div>
+      <div id="wdBrowse" style="display:none">
+        <div class="wh-nb-bar" id="wgGenres"></div>
+        <div class="wh-err" id="wgErr" style="display:none"></div>
+        <div class="wh-list" id="wgList"></div>
+      </div>
+    </div>
+  </div>

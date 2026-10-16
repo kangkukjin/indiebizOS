@@ -86,9 +86,14 @@
       "dist/**/*",
       "electron/**/*",
       "i18n/catalog.json",
-      "i18n/runtime.mjs"
+      "i18n/runtime.mjs",
+      "surfaces/shared/navigation.json"
     ],
     "extraResources": [
+      {
+        "from": "surfaces",
+        "to": "frontend/surfaces"
+      },
       {
         "from": "../helper/dist",
         "to": "helper/dist",

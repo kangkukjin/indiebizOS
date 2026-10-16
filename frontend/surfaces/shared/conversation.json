@@ -1,0 +1,19 @@
+[
+  {
+    "id": "older",
+    "label": "이전 대화 읽기"
+  },
+  {
+    "id": "history",
+    "label": "히스토리"
+  },
+  {
+    "id": "new",
+    "label": "새 세션",
+    "prefix": "＋ "
+  },
+  {
+    "id": "dictionary",
+    "label": "IBL 사전"
+  }
+]

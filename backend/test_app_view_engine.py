@@ -76,7 +76,7 @@ def test_engine_requires_ref_and_rejects_foreign_events():
 
 def test_both_renderers_dispatch_engine():
     desktop = (ROOT / "frontend/src/components/GenericInstrument.tsx").read_text(encoding="utf-8")
-    remote = (ROOT / "backend/surface/launcher_web_render.py").read_text(encoding="utf-8")
+    remote = (ROOT / "frontend/surfaces/remote/display.js").read_text(encoding="utf-8")
     assert "p.type === 'engine'" in desktop and "p.type==='engine'" in remote
     assert (ROOT / "frontend/src/components/generic/prims-engine.tsx").is_file()
     for doc in ("data/system_docs/ibl.md", "data/guides/new_action_checklist.md"):

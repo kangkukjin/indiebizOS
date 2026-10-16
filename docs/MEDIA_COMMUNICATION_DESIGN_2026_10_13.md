@@ -502,3 +502,38 @@ onFailure/onClosed 콜백을 접수하여 `RejectedExecutionException`으로 앱
 확인했다. 두 종료 뒤 폰 프로세스 PID가 유지되었다. 검증 세션은 모두 종료했다.
 외부망 TURN·장시간 안정성·일반 음성/영상 통화 및 arm64 실기기는 이번 검증 범위가 아니다.
 백엔드·프런트엔드 코드는 변경하지 않았으며 백엔드 전수 회귀는 실행하지 않았다.
+
+## 19. 등록된 폰의 잠금 상태 원격 센서 시작 (2026-10-16)
+
+Android 10+ 폰마다 사람이 카메라 대기 모드를 켜 두어야 했던 공백을
+`RemoteMediaStart`와 세션 전용 `RemoteMediaActivity`로 보완한다. USB 손발 설치는
+카메라·마이크와 `SYSTEM_ALERT_WINDOW`를 허용한다. 이 특별 접근은 실제 오버레이를
+띄우려는 용도가 아니라 등록된 중앙의 요청으로 Activity를 시작하는 OS 예외를 사용한다.
+시작 시 앱 비공개 등록 파일의 키·설치 ID를 봉투와 대조한다. 이웃 통화는 이 경로를 쓰지 않는다.
+접근성이나 잠금 해제 권한을 요구하지 않으며, 전용 화면에는 세션 안내와 종료 버튼만 있다.
+
+화면은 `showWhenLocked`·`turnScreenOn`으로 잠금 위에 뜬다. 처음 깨어나는 삼성 AOD는
+resume→stop→resume을 거칠 수 있으므로 첫 onResume을 센서 준비로 간주하지 않는다.
+실제 화면 포커스와 interactive 상태를 확인한 뒤 서비스 시작 대기를 해제한다.
+화면 준비는 5초, 서비스 접수는 3초 한도다. 임시 티켓은 취소·만료된 Activity나 서비스가
+늦게 도착해 센서를 시작하는 것을 막는다. 연결 후 화면을 떠나거나 세션을 종료하면
+카메라와 전용 화면을 함께 정리한다. 원격 시작 능력(`remote_sensor_start`)과 지금의
+가시성·센서 준비 상태(`camera_ready`, `microphone_ready`)는 분리해 신고한다.
+
+`setup_phone.sh --limb 이름`에 최초 설정을 포함하고, `--remote-media`는 기존 등록 폰을
+업데이트할 때 기존 키·노드 별칭을 보존한다. 권한이 없거나 OS가 화면 시작을 거절하면
+기존 `needs_local_action` 경로로 이유를 보여 준다. Android 9의 기존 백그라운드 센서 경로와
+센서를 쓰지 않는 소리 재생은 유지한다.
+
+근거: [Android 백그라운드 Activity 시작 제한](https://developer.android.com/guide/components/activities/background-starts),
+[Activity 잠금·화면 켜기 API](https://developer.android.com/reference/android/app/Activity#setTurnScreenOn(boolean)).
+
+검증: arm64 APK 빌드, arm64·arm32 JVM 각각 13건(취소·만료 경합 4건 포함),
+선택된 백엔드 `test_limb_client`·`test_phone_limb_transfer`·`test_phone_remote_execution`
+24건 통과. Android 번들 매니페스트 재생성, 설치 스크립트 구문 검사 통과.
+SM-A516N(Android 13)에 기존 등록을 유지해 업데이트하고, 잠금·화면 꺼짐 상태에서
+중앙 요청으로 화면을 켜 카메라 촬영과 시그널링 접속을 확인했다. 촬영 중 keyguard는
+showing=true/occluded=true였고, 종료 후 카메라 클라이언트가 비워졌다.
+당시 폰은 PC와 다른 Wi-Fi에 붙어 직접 연결에 실패했으므로 PC의 영상 디코딩 인수는
+아직 완료하지 않았다. 올바른 Wi-Fi 연결 후 추가 검증한다. 백엔드 변경은 다리 대기 시간의
+독스트링뿐이며 이번 커밋에서 백엔드 전수 회귀는 반복하지 않았다.

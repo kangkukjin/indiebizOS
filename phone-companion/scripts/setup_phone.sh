@@ -9,13 +9,14 @@
 #        ./phone-companion/scripts/setup_phone.sh --build  (무조건 재빌드)
 set -euo pipefail
 
-# 인자: --build(무조건 재빌드) · --limb <이름>(이 폰을 중앙 PC 의 손발로 등록 — USB 설치 때 1회,
-#       허브 비밀번호를 묻는다. 설계 docs/INDIEBIZ_BODY_AS_LIMB_DESIGN_2026_10_13.md)
-BUILD=0; LIMB=""
+# 인자: --build · --limb <이름>(USB로 손발 등록, 원격 센서 화면 시작 허용)
+#       --remote-media(기존 등록 폰의 원격 센서 화면 시작 허용)
+BUILD=0; LIMB=""; REMOTE_MEDIA=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build) BUILD=1 ;;
-    --limb) LIMB="${2:-}"; shift ;;
+    --limb) LIMB="${2:-}"; REMOTE_MEDIA=1; BUILD=1; shift ;;
+    --remote-media) REMOTE_MEDIA=1; BUILD=1 ;;
     *) echo "알 수 없는 인자: $1" >&2; exit 2 ;;
   esac
   shift
@@ -47,7 +48,7 @@ echo "ABI=$ABILIST → flavor=$FLAVOR"
 if [[ "$BUILD" == 1 || ! -f "$APK" ]]; then
   TASK=":app:assemble$(tr '[:lower:]' '[:upper:]' <<< "${FLAVOR:0:1}")${FLAVOR:1}Debug"
   say "APK 빌드 (./gradlew $TASK)"
-  ( cd "$PROJ" && ./gradlew "$TASK" --console=plain | tail -2 )
+  ( cd "$PROJ" && ./gradlew "$TASK" --no-watch-fs --console=plain | tail -2 )
 fi
 say "APK 설치"
 adb install -r "$APK" | tail -1
@@ -67,21 +68,32 @@ adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null \
   && echo "✓ 알림 표시 권한(POST_NOTIFICATIONS) 부여" \
   || echo "⚠ POST_NOTIFICATIONS 부여 실패 — 폰 설정에서 수동 허용"
 
-# 2c) 미디어 세션 센서 권한(카메라·마이크) — best effort. 설치 자동 부여돼도 Android 10+ 는 백그라운드
-#     카메라를 막으므로(while-in-use) 허브가 카메라 세션을 열려면 폰에서 '카메라 대기 모드' 를 켜 둬야 한다.
+# 2c) 미디어 세션 센서 권한(카메라·마이크) — best effort.
 say "미디어 세션 권한(CAMERA·RECORD_AUDIO) 부여"
 for PERM in android.permission.CAMERA android.permission.RECORD_AUDIO; do
   adb shell pm grant "$PKG" "$PERM" 2>/dev/null \
     && echo "✓ $PERM 부여" \
     || echo "⚠ $PERM 부여 실패 — 폰 설정 또는 앱의 '카메라 대기 모드' 화면에서 허용"
 done
-echo "※ Android 10+ 에서 중앙 PC 가 이 폰의 카메라를 열려면 폰에서 '카메라 대기 모드'(런처 우하단 버튼)를 켜 두어야 합니다."
+if [[ "$REMOTE_MEDIA" == 1 ]]; then
+  say "등록된 중앙 PC의 원격 센서 화면 시작 허용"
+  adb shell appops set "$PKG" SYSTEM_ALERT_WINDOW allow
+  echo "※ 카메라·마이크 요청 시 잠금 위에 연결 화면을 켭니다. 잠금은 유지하며 연결 종료 시 화면도 닫습니다."
+else
+  echo "※ Android 10+ 원격 카메라는 '카메라 대기 모드' 또는 --remote-media 설치가 필요합니다."
+fi
 
 # 3) API 키 주입 (.env 부분집합 → app-private)
 say "API 키 주입"
-python3 "$HERE/provision_phone_keys.py" || echo "⚠ 키 주입 건너뜀(.env 확인)"
+if [[ "$REMOTE_MEDIA" == 1 && -z "$LIMB" ]] && adb shell run-as "$PKG" test -s files/secrets/keys.json; then
+  echo "✓ 기존 키와 노드 별칭 유지"
+elif [[ -n "$LIMB" ]]; then
+  python3 "$HERE/provision_phone_keys.py" --alias "$LIMB" || echo "⚠ 키 주입 건너뜀(.env 확인)"
+else
+  python3 "$HERE/provision_phone_keys.py" || echo "⚠ 키 주입 건너뜀(.env 확인)"
+fi
 
-# 3b) 손발 등록 (--limb 이름) — 하드웨어(USB) 연결된 폰에만, 허브 비밀번호 확인 뒤 1회용 초대로.
+# 3b) 손발 등록 (--limb 이름) — USB 연결된 폰에 로컬 허브의 1회용 초대로 등록.
 if [[ -n "$LIMB" ]]; then
   say "손발 등록: $LIMB"
   python3 "$HERE/provision_phone_limb.py" --alias "$LIMB" ${INDIEBIZ_LIMB_HUB:+--hub "$INDIEBIZ_LIMB_HUB"}

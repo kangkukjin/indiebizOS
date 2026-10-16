@@ -31,7 +31,7 @@ class MediaSessionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> handleStart(intent.getStringExtra(EXTRA_ENVELOPE) ?: "")
+            ACTION_START -> handleStart(intent.getStringExtra(EXTRA_ENVELOPE) ?: "", intent.getStringExtra(RemoteMediaStart.EXTRA_TOKEN))
             ACTION_STOP -> {
                 val sid = intent.getStringExtra(EXTRA_SESSION)
                 val r = runner
@@ -43,9 +43,13 @@ class MediaSessionService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun handleStart(json: String) {
+    private fun handleStart(json: String, remoteToken: String?) {
         val env = try { MediaEnvelope.parse(json) } catch (e: Throwable) {
             deliver(JSONObject().put("error", "invalid_envelope").put("message", e.message)); finish(); return
+        }
+        if (remoteToken != null && !RemoteMediaStart.ready(env.sessionId, remoteToken)) {
+            deliver(JSONObject().put("error", "needs_local_action").put("message", "원격 카메라 시작 화면이 닫혔습니다"))
+            finish(); return
         }
         synchronized(LOCK) {
             val cur = runner
@@ -70,6 +74,7 @@ class MediaSessionService : Service() {
             Log.i(TAG, "세션 끝남($reason) — 서비스 내림")
             synchronized(LOCK) { if (runner?.sessionId == env.sessionId) runner = null }
             lastEnd = JSONObject().put("session_id", env.sessionId).put("reason", reason)
+            RemoteMediaStart.release(env.sessionId)
             finish()
         }
         synchronized(LOCK) { runner = r }
@@ -156,7 +161,7 @@ class MediaSessionService : Service() {
         private fun deliver(result: JSONObject) { pendingResult = result; pending?.countDown() }
 
         /** MediaBridge.start → 서비스 접수 결과를 동기(≤3초)로. 그 뒤는 시그널링 WS 가 보고한다. */
-        fun request(ctx: Context, env: MediaEnvelope): JSONObject {
+        fun request(ctx: Context, env: MediaEnvelope, remoteToken: String? = null): JSONObject {
             // ★LOCK 은 검사·등록에만 — 서비스 onStartCommand(메인 스레드)도 LOCK 을 잡으므로 대기 중엔 놓는다.
             val latch = CountDownLatch(1)
             synchronized(LOCK) {
@@ -168,6 +173,7 @@ class MediaSessionService : Service() {
                 pending = latch; pendingResult = null
             }
             val intent = Intent(ctx, MediaSessionService::class.java).setAction(ACTION_START).putExtra(EXTRA_ENVELOPE, env.raw.toString())
+                .putExtra(RemoteMediaStart.EXTRA_TOKEN, remoteToken)
             try { ContextCompat.startForegroundService(ctx, intent) } catch (t: Throwable) {
                 pending = null
                 return JSONObject().put("error", "needs_local_action").put("message", "서비스 시작 거부: $t")

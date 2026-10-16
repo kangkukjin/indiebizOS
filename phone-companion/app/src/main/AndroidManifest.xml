@@ -15,6 +15,8 @@
     <!-- 송신측([limbs:phone]{op:vibrate}) — 설치시 자동 부여되는 일반 권한 -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- USB로 등록된 원격 손발: 명시 허용 시 세션 전용 화면을 백그라운드에서 연다. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
@@ -110,7 +112,12 @@
 
         <activity android:name=".media.MediaDisplayActivity" android:exported="false" android:launchMode="singleTask" android:configChanges="orientation|screenSize|keyboardHidden" />
 
-        <!-- 카메라 대기 모드(사용자가 폰에서 직접 켜 두는 화면) — 허브 카메라/마이크 세션의 while-in-use 요건 -->
+        <!-- 등록된 중앙 PC가 요청한 세션 전용 화면. 잠금을 풀지 않고 센서를 가시 상태에서 시작한다. -->
+        <activity android:name=".media.RemoteMediaActivity" android:exported="false"
+            android:taskAffinity="com.indiebiz.phoneagent.remote_media"
+            android:showWhenLocked="true" android:turnScreenOn="true"
+            android:excludeFromRecents="true" android:configChanges="orientation|screenSize|keyboardHidden" />
+        <!-- 사용자가 폰에서 직접 켜 두는 카메라 대기 모드 -->
         <activity
             android:name=".media.CctvModeActivity"
             android:exported="false"

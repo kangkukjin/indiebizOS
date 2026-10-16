@@ -452,7 +452,8 @@ class LimbClient:
     def _media_op(self, env: Dict) -> Dict:
         """허브 미디어 봉투 → Kotlin MediaBridge. 두 모양을 받는다:
         {op:"media", action:start|stop|status, session:{§6 칸}} / {op:"media_session", ...§6 칸 자체}.
-        start 는 서비스 접수(≤3초)까지만 — 그 뒤는 폰이 시그널링 WS 로 보고하므로 작업 결과를 붙들지 않는다."""
+        start 는 화면 준비(≤5초)·서비스 접수(≤3초)까지만 기다린다.
+        그 뒤는 폰이 시그널링 WS 로 보고하므로 작업 결과를 붙들지 않는다."""
         bridge = _media_bridge()
         if bridge is None:
             return {"success": False, "error": "unsupported_on_this_body", "op": env.get("op"),

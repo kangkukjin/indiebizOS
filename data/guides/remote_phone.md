@@ -112,7 +112,10 @@ result = {"before": before, "requested": target, "actual": after,
 `from indiebiz_android import call`로 소유 프로세스에 요청한다:
 `call("snapshot")`, `call("tap",x,y)`, `call("typeText",text)`, `call("pressKey","back")`,
 `call("capturePhoto","back")`, `call("recordAudio",초)`, `call("streamStatus")`.
-접근성·카메라·마이크 권한과 백그라운드 제한은 그대로 적용된다. Wi-Fi/Bluetooth 설정 변경이
+접근성·카메라·마이크 권한과 백그라운드 제한은 그대로 적용된다. USB 등록 시 원격 센서 시작을
+허용하면, 등록된 중앙 PC의 카메라·마이크 요청이 잠금 위에 전용 화면을 연다(잠금 해제 없음).
+이 기능은 접근성 권한 대신 '다른 앱 위에 표시' 허용을 사용하며 종료 시 화면을 닫는다.
+자세한 설치·준비 상태는 [미디어 세션 가이드](media_session.md)를 따른다. Wi-Fi/Bluetooth 설정 변경이
 OS에 거절되면 사용자가 설정 화면에서 조작해야 한다. 실패한 변경을 자동 재실행하지 않는다.
 
 폰 자체 AI는 원격 등록 없이 `run_command`를 사용한다. `runtime:"python"`이면 command가

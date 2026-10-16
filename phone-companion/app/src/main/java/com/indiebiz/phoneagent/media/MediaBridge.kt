@@ -13,7 +13,7 @@ import org.json.JSONObject
  *
  * 모든 메서드는 JSON 문자열을 주고받는다 — 영상·음성 프레임은 절대 이 다리를 지나지 않는다(설계 §9).
  * 실패는 계약 코드로 정직하게: permission_required · device_busy · unsupported_track · needs_local_action.
- * `start` 는 서비스가 세션을 **접수**했는지만 돌려준다(동기 ≤ 2초). 그 뒤의 협상·상태·품질은
+ * `start` 는 화면 준비(최대 5초)와 서비스 접수(최대 3초)를 기다린다. 그 뒤의 협상·상태·품질은
  * 시그널링 WS(SignalingClient) 로 허브에 직접 보고한다 — 작업 결과 통로를 오래 붙들지 않는다.
  */
 object MediaBridge {
@@ -69,26 +69,36 @@ object MediaBridge {
                 it.put("needs_local_action", JSONObject().put("code", "camera_unavailable").put("message", "카메라 없음"))
             }
         }
-        if (env.sendsVideo() && !CctvState.cameraReady()) {
+        val needsScreen = (env.sendsVideo() && !CctvState.cameraReady()) ||
+            (env.sendsAudio() && !CctvState.microphoneReady())
+        val remoteStart = if (needsScreen) RemoteMediaStart.prepare(ctx, env) else null
+        if (needsScreen && remoteStart == null) {
             return err("needs_local_action", "폰에서 카메라 대기 모드를 시작해 주세요") {
                 it.put("needs_local_action", JSONObject().put("code", "camera_unavailable")
-                    .put("reason", "cctv_mode_required").put("message", "폰에서 카메라 대기 모드를 시작해 주세요"))
+                    .put("reason", "remote_start_unavailable").put("message", "원격 화면 시작이 허용되지 않았습니다. 폰에서 카메라 대기 모드를 열거나 IndieBiz의 다른 앱 위에 표시를 허용해 주세요"))
             }
         }
-        if (env.sendsAudio() && !env.sendsVideo() && !CctvState.microphoneReady()) {
-            return err("needs_local_action", "폰에서 카메라 대기 모드(마이크 포함)를 시작해 주세요") {
-                it.put("needs_local_action", JSONObject().put("code", "permission_required")
-                    .put("reason", "cctv_mode_required").put("message", "폰에서 카메라 대기 모드를 시작해 주세요"))
+        val result = MediaSessionService.request(ctx, env, remoteStart?.token)
+        if (remoteStart != null) {
+            if (!result.optBoolean("accepted")) RemoteMediaStart.release(env.sessionId)
+            else if (!RemoteMediaStart.commit(remoteStart)) {
+                MediaSessionService.stop(ctx, env.sessionId, "local_display_closed")
+                RemoteMediaStart.release(env.sessionId)
+                return err("needs_local_action", "폰에서 연결 화면을 닫았습니다. 다시 요청해 주세요")
             }
         }
-        return MediaSessionService.request(ctx, env).toString()
+        return result.toString()
     }
 
     /** 세션 종료(멱등). {"stopped":true|false,"session_id"} */
     @JvmStatic
     fun stop(sessionId: String?, reason: String?): String {
         val ctx = appContext ?: return err("unavailable", "MediaBridge 미초기화")
-        return MediaSessionService.stop(ctx, sessionId?.takeIf { it.isNotEmpty() }, reason ?: "hub_stop").toString()
+        val sid = sessionId?.takeIf { it.isNotEmpty() }
+        val cancelledStart = RemoteMediaStart.release(sid)
+        val result = MediaSessionService.stop(ctx, sid, reason ?: "hub_stop")
+        if (cancelledStart) result.put("stopped", true).put("session_id", sid ?: JSONObject.NULL)
+        return result.toString()
     }
 
     /** 현재 세션 상태 — 없으면 {"session_id":null,"state":"idle"}. */
@@ -114,6 +124,7 @@ object MediaBridge {
                 .put("camera_ready", cam && camPerm && CctvState.cameraReady())
                 .put("microphone_ready", mic && micPerm && CctvState.microphoneReady())
                 .put("armed", CctvState.armed)
+                .put("remote_sensor_start", ctx?.let { RemoteMediaStart.available(it) } ?: false)
                 .put("active_session", MediaSessionService.currentSessionId())
                 .put("video_profile", profile))
             .put("abi", Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown")

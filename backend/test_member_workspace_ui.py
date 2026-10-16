@@ -36,6 +36,7 @@ def test_desktop_bundled_ui_reaches_update_health_handshake(tmp_path):
             page.on('pageerror', lambda error: errors.append(str(error)))
             page.add_init_script('''window.DesktopMember={
                 onDisconnected:()=>{},ready:async()=>{window.bootReady=true},
+                screenPermissions:async(action='status')=>{window.permissionRequests=window.permissionRequests||[];if(action!=='status')window.permissionRequests.push(action);return window.osPermissions||{platform:'darwin',screen:'denied',accessibility:false};},
                 settings:async()=>({name:'검증 PC',hub:'https://hub.example',startup:false}),
                 request:async(path)=>{if(['tasks','approvals','results','media','changes'].includes(path))return [];
                     if(path==='workspace')return {success:true,workspace:'/selected'};
@@ -80,6 +81,17 @@ def test_desktop_bundled_ui_reaches_update_health_handshake(tmp_path):
 
             page.locator('[data-view="apps"]').click()
             expect(page.frame_locator('#appFrame').get_by_role('button', name='검증 앱')).to_be_visible()
+            assert page.evaluate('window.permissionRequests') == []
+            page.locator('#desktopPermissionEntry').click()
+            expect(page.locator('#desktopOSPermissions')).to_contain_text('화면 기록: 허용 필요')
+            page.locator('#desktopScreen').check()
+            page.wait_for_function("window.permissionRequests.includes('screen')")
+            page.locator('#desktopInputPermission').click()
+            page.wait_for_function("window.permissionRequests.includes('accessibility')")
+            page.evaluate("window.osPermissions={platform:'darwin',screen:'granted',accessibility:true}")
+            page.locator('#desktopPermissionRefresh').click()
+            expect(page.locator('#desktopOSPermissions')).to_contain_text('화면 기록: 허용됨')
+            expect(page.locator('#desktopPermissionEntry')).to_have_text('화면 접근 설정')
             assert not errors, errors
         finally:
             browser.close()

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('DesktopMember',Object.freeze({
   chooseWorkspace:()=>ipcRenderer.invoke('member:folder'),
   openFile:(taskId,path,reveal=false)=>ipcRenderer.invoke('member:open',{taskId,path,reveal}),
   saveDiagnostics:()=>ipcRenderer.invoke('member:diagnostics'),
+  screenPermissions:(action='status')=>ipcRenderer.invoke('member:screenPermissions',action),
   settings:()=>ipcRenderer.invoke('member:settings'),
   disconnect:()=>ipcRenderer.invoke('member:disconnect'),
   startup:(enabled)=>ipcRenderer.invoke('member:startup',Boolean(enabled)),

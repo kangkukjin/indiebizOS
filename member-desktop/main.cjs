@@ -1,10 +1,11 @@
-const {app,BrowserWindow,ipcMain,safeStorage,dialog,shell,Tray,Menu,nativeImage}=require('electron');
+const {app,BrowserWindow,ipcMain,safeStorage,dialog,shell,Tray,Menu,nativeImage,systemPreferences,desktopCapturer}=require('electron');
 const path=require('node:path');
 const fs=require('node:fs');
 const {fileURLToPath}=require('node:url');
 const {MemberSession}=require('./session.cjs');
 const {invitation}=require('./security.cjs');
 const {RuntimeUpdates}=require('./updates.cjs');
+const permissions=require('./permissions.cjs').createPermissions({systemPreferences,desktopCapturer,shell});
 let win,tray,session,updates,bootReady,quitting=false,pending={},error='';
 const setupFile=path.join(__dirname,'setup.html');let workspaceFile=path.join(__dirname,'workspace.html');
 function liveWindow(){return !quitting&&win&&!win.isDestroyed()?win:null;}
@@ -67,6 +68,7 @@ app.whenReady().then(async()=>{
   handle('request',({path,body})=>session.request(path,body));
   handle('folder',async()=>{const r=await dialog.showOpenDialog(win,{properties:['openDirectory','createDirectory']});if(r.canceled)return {cancelled:true};return session.request('workspace',{path:r.filePaths[0]});});
   handle('diagnostics',async()=>{const data=await session.request('connection');const r=await dialog.showSaveDialog(win,{defaultPath:'indiebiz-member-diagnostics.json',filters:[{name:'진단 JSON',extensions:['json']}]});if(r.canceled)return {cancelled:true};fs.writeFileSync(r.filePath,JSON.stringify(data,null,2),{mode:0o600});return {success:true};});
+  handle('screenPermissions',action=>permissions.request(action));
   handle('settings',()=>({...session.publicState(),startup:app.getLoginItemSettings().openAtLogin}));
   handle('startup',enabled=>{app.setLoginItemSettings({openAtLogin:enabled});return {success:true};});
   handle('disconnect',async()=>{const r=await dialog.showMessageBox(win,{buttons:['취소','연결 종료'],defaultId:0,message:'작업을 중단하고 이 앱의 연결 자격을 지울까요?',detail:'로컬 파일과 작업 기록은 보존합니다.'});if(r.response!==1)return {cancelled:true};await session.disconnect();await win.loadFile(setupFile);return {success:true};});

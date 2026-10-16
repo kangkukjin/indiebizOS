@@ -1,6 +1,6 @@
 {
   "name": "indiebiz-member",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "IndieBiz centrally managed member desktop",
   "author": "IndieBiz",
@@ -24,6 +24,7 @@
       "preload.cjs",
       "updates.cjs",
       "native-signature.cjs",
+      "permissions.cjs",
       "workspace.cjs",
       "setup.cjs",
       "*.html",

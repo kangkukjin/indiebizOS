@@ -9,7 +9,20 @@ window.memberDesktopBoot=async()=>{
  try{const s=await d.settings();$('desktopInfo').textContent=s.name+' · '+s.hub;$('desktopStartup').checked=s.startup;const c=await d.request('connection');$('desktopScreen').checked=c.screen;$('desktopDiagnosticPreview').textContent=JSON.stringify(c,null,2);}catch(e){report(e)}
  $('desktopDiagnostics').onclick=()=>d.saveDiagnostics().catch(report);
  $('desktopStartup').onchange=e=>d.startup(e.target.checked).catch(report);
- $('desktopScreen').onchange=async e=>{try{await d.request('permissions',{screen:e.target.checked});$('desktopMessage').textContent='다음 작업부터 적용합니다. OS의 화면 기록·접근성 권한도 필요합니다.';}catch(error){report(error)}};
+ const osBox=document.createElement('div');osBox.innerHTML='<p id="desktopOSPermissions" role="status"></p><button id="desktopScreenPermission" class="secondary">화면 기록 권한 설정</button> <button id="desktopInputPermission" class="secondary">마우스·키보드 권한 설정</button> <button id="desktopPermissionRefresh" class="secondary">권한 다시 확인</button><p id="desktopPermissionHelp">macOS 설정에서 IndieBiz Member를 허용하세요. 처음 허용한 뒤 시스템에서 요청하면 앱을 종료하고 다시 여세요. 기존 헬퍼의 권한과는 별개입니다.</p>';
+ settings.append(osBox);
+ const permissionEntry=document.createElement('button');permissionEntry.id='desktopPermissionEntry';permissionEntry.className='secondary';permissionEntry.textContent='화면 접근 설정';$('memberNav').append(permissionEntry);
+ permissionEntry.onclick=()=>{document.querySelector('[data-view="apps"]').click();$('memberSettings').open=true;settings.open=true;osBox.scrollIntoView({block:'center'});};
+ const showPermissions=r=>{const mac=r.platform==='darwin';$('desktopScreenPermission').hidden=!mac;$('desktopInputPermission').hidden=!mac;$('desktopPermissionHelp').hidden=!mac;
+  $('desktopOSPermissions').textContent=mac?'화면 기록: '+(r.screen==='granted'?'허용됨':'허용 필요')+' · 마우스·키보드: '+(r.accessibility?'허용됨':'허용 필요'):'이 운영체제의 화면 접근 설정을 따릅니다.';
+  permissionEntry.textContent=mac&&(r.screen!=='granted'||!r.accessibility)?'화면 작업 권한 필요':'화면 접근 설정';
+  if(r.error)report('화면 접근 확인: '+r.error);
+ };
+ const checkPermissions=async()=>{try{showPermissions(await d.screenPermissions())}catch(e){report(e)}};
+ const requestPermission=async action=>{try{showPermissions(await d.screenPermissions(action))}catch(e){report(e)}};
+ $('desktopScreenPermission').onclick=()=>requestPermission('screen');$('desktopInputPermission').onclick=()=>requestPermission('accessibility');$('desktopPermissionRefresh').onclick=checkPermissions;
+ window.addEventListener('focus',checkPermissions);await checkPermissions();
+ $('desktopScreen').onchange=async e=>{try{const enabled=e.target.checked;await d.request('permissions',{screen:enabled});$('desktopMessage').textContent=enabled?'화면 작업을 켰습니다. 아래 OS 권한 상태도 확인하세요.':'화면 작업을 껐습니다.';if(enabled)await requestPermission('screen');}catch(error){report(error)}};
  $('desktopDisconnect').onclick=()=>d.disconnect().catch(report);
  $('desktopImport').onclick=async()=>{try{const r=await d.importArchive();if(!r.cancelled){if(!r.success)throw Error(r.message||r.error);$('desktopMessage').textContent=`가져온 파일 ${r.files}개 · 기록 ${r.records}개 · ${r.path}`;refreshTasks();}}catch(e){report(e)}};
  $('workspacePicker').hidden=true;

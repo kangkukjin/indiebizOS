@@ -6,7 +6,7 @@ const {validateExecutable}=require('./native-signature.cjs');
 const {execFile}=require('node:child_process');
 const {promisify}=require('node:util');
 const execFileAsync=promisify(execFile);
-const SHELL_VERSION=3;
+const SHELL_VERSION=4;
 const MAX_FILE=128*1024*1024;
 function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700});const temp=file+'.tmp';const fd=fs.openSync(temp,'w',0o600);try{fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd)}finally{fs.closeSync(fd)}fs.renameSync(temp,file);}
 function read(file,fallback){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch(e){if(e.code==='ENOENT')return fallback;throw e;}}
@@ -21,7 +21,7 @@ function verify(envelope,trust,{platform=process.platform,arch=process.arch,now=
  if(!['runtime','ui'].includes(kind))throw Error('알 수 없는 업데이트 종류입니다.');
  const names=kind==='ui'?['display.json']:['workspace.html','workspace.cjs','indiebiz-member'+(platform==='win32'?'.exe':'')];
  if(kind==='ui'&&(!/^[a-f0-9]{64}$/.test(m.host)||m.state!==1))throw Error('화면 호환 계약이 올바르지 않습니다.');
- if(m.format!=='indiebiz-member-runtime'||m.platform!==platform||m.arch!==arch||m.protocol!==2||!(m.shell===SHELL_VERSION||(allowOlderShell&&kind==='runtime'&&[1,2].includes(m.shell)))||!Number.isSafeInteger(m.sequence)||m.sequence<1||!/^\d+\.\d+\.\d+$/.test(m.version)||!Number.isFinite(m.expires)||(!boot&&m.expires<now))throw Error('호환되지 않거나 만료된 업데이트입니다. 설치 앱을 갱신하세요.');
+ if(m.format!=='indiebiz-member-runtime'||m.platform!==platform||m.arch!==arch||m.protocol!==2||!(m.shell===SHELL_VERSION||(allowOlderShell&&[1,2,3].includes(m.shell)))||!Number.isSafeInteger(m.sequence)||m.sequence<1||!/^\d+\.\d+\.\d+$/.test(m.version)||!Number.isFinite(m.expires)||(!boot&&m.expires<now))throw Error('호환되지 않거나 만료된 업데이트입니다. 설치 앱을 갱신하세요.');
  if(!Array.isArray(m.files)||m.files.length!==names.length||new Set(m.files.map(f=>f.name)).size!==names.length)throw Error('업데이트 파일 구성이 올바르지 않습니다.');
  const origin=https(trust.feed).origin;
  for(const f of m.files){if(!names.includes(f.name)||!Number.isSafeInteger(f.size)||f.size<1||f.size>MAX_FILE||!/^[a-f0-9]{64}$/.test(f.sha256)||https(f.url).origin!==origin)throw Error('업데이트 파일 검증 실패');}
@@ -49,7 +49,8 @@ class RuntimeUpdates {
   for(const f of m.files){const file=path.join(dir,f.name);const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size!==f.size||digest(fs.readFileSync(file))!==f.sha256)throw Error('설치된 업데이트가 변경되었습니다.');}
   if(kind==='ui'){const display=read(path.join(dir,'display.json'));if(display.format!=='indiebiz-display-1'||display.surface!=='desktop'||display.host!==m.host||display.state!==m.state)throw Error('화면 계약 불일치');return {display,version:m.version,shell:m.shell};}
   const executable=path.join(dir,'indiebiz-member'+(process.platform==='win32'?'.exe':''));
-  this.verifyExecutable(executable,this.baseline.executable);
+  // Retired overlays are verified as data but never executed by a new shell.
+  if(!allowOlderShell||m.shell===SHELL_VERSION)this.verifyExecutable(executable,this.baseline.executable);
   return {workspace:path.join(dir,'workspace.html'),executable,version:m.version,shell:m.shell};
  }
  restore(pending){
@@ -114,7 +115,8 @@ class RuntimeUpdates {
  async resumeUI(){
   if(this.state.ui.active==null)return;
   if(!this.showUI)throw Error('화면 업데이트를 지원하는 설치 앱이 필요합니다.');
-  const selected=this.release(this.state.ui.active,false,'ui');
+  const selected=this.release(this.state.ui.active,true,'ui');
+  if(selected.shell<SHELL_VERSION){this.state.ui.active=null;delete this.state.ui.version;this.save();return;}
   await this.showUI(selected.display);
  }
  async applyUI(sequence){

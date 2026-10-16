@@ -14,7 +14,8 @@ def test_update_native_signature_and_lifecycle():
     root = Path(__file__).resolve().parent.parent
     result = subprocess.run(
         ['node', '--test', 'member-desktop/test/updates.test.cjs',
-         'member-desktop/test/native-signature.test.cjs'],
+         'member-desktop/test/native-signature.test.cjs',
+         'member-desktop/test/permissions.test.cjs'],
         cwd=root, capture_output=True, text=True, timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr

@@ -171,3 +171,14 @@ test('UI-only update never checks or changes native executable identity',async t
  uiOffer(f);await f.u.check();await f.u.apply(1);assert.equal(f.u.publicState().state,'updated');
  assert.deepEqual(f.events,[['display','candidate']]);
 });
+test('shell 4 installer retires shell 3 native and UI overlays without executing either',async t=>{
+ const f=fixture(t);await f.u.check();await f.u.apply(1);
+ f.r.manifest.shell=3;fs.writeFileSync(path.join(f.u.location(1),'manifest.json'),JSON.stringify(f.r.envelope()));
+ const next=new RuntimeUpdates({...f.options,verifyExecutable:()=>assert.fail('retired executable is never started')});
+ assert.equal(next.recover().workspace,'old-ui');assert.equal(next.state.active,null);
+ uiOffer(f,2);f.r.manifest.shell=SHELL_VERSION;await f.u.check();await f.u.apply(2);
+ f.r.manifest.shell=3;fs.writeFileSync(path.join(f.u.location(2,'ui'),'manifest.json'),JSON.stringify(f.r.envelope()));
+ const upgraded=new RuntimeUpdates({...f.options,showUI:()=>assert.fail('retired UI must not load')});
+ await upgraded.resumeUI();assert.equal(upgraded.state.ui.active,null);assert.equal(upgraded.state.ui.highest,2);
+ assert.equal(fs.readFileSync(f.db,'utf8'),'original-database');
+});

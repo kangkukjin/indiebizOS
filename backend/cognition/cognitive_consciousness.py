@@ -12,7 +12,7 @@ agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 3단 인
 import json
 import re
 from typing import Optional, Dict, Any
-from consciousness_agent import FramingContractError
+from consciousness_agent import FramingContractError, ConsciousnessCallSkipped
 
 
 # ============================================================
@@ -152,7 +152,7 @@ class CognitiveConsciousnessMixin:
                           f"{result.get('task_framing', '')[:60]}")
             return result
 
-        except FramingContractError:
+        except (FramingContractError, ConsciousnessCallSkipped):
             raise
         except Exception as e:
             self._log(f"[의식] 실행 실패 (폴백): {e}")

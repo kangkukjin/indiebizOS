@@ -172,6 +172,8 @@ def _revise(ch: TurnChannel, trigger: str, broken: str, evidence: str, progress:
 
 def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str, progress: str, kind: str) -> dict:
     """의식을 다시 깨워 규정을 갱신. 반환 = 결과 봉투(dict). 상한·실패는 봉투로 정직하게."""
+    from consciousness_agent import ConsciousnessCallSkipped
+
     if ch.revisions >= MAX_REVISIONS:
         return {"revised": False, "reason": f"이 턴의 재규정 상한({MAX_REVISIONS}회)에 닿았다",
                 "directive": ("더는 재규정하지 않는다. 지금까지 확보한 사실로 가능한 만큼만 마무리하고, "
@@ -192,6 +194,12 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
     try:
         out = runner._run_consciousness(ch.message, ch.history, ch.execution_memory,
                                         repair=ch.repair, revision=revision)
+    except ConsciousnessCallSkipped as exc:
+        return {"revised": False, "model_called": False, "stop_kind": exc.kind,
+                "reason": f"의식 재규정 호출 생략: {exc}",
+                "directive": ("새 규정이나 추가 권한은 부여되지 않았다. 기존 목표·권한 안에서 "
+                              "깨진 전제에 의존하지 않는 작업만 마무리하고, 해결하지 못한 제약과 "
+                              "호출 생략 사유를 최종 보고에 적어라.")}
     except TypeError:
         # 옛 서명(시험 대역 등) — revision 없이라도 의식은 깨운다
         out = runner._run_consciousness(ch.message, ch.history, ch.execution_memory)
@@ -238,7 +246,9 @@ def render_for_executor(env: dict) -> str:
     """실행자가 도구 결과로 읽을 본문 — 새 규정을 명령 어조로."""
     if not env.get("revised"):
         return json.dumps({"revised": False, "reason": env.get("reason", ""),
-                           "directive": env.get("directive", "")}, ensure_ascii=False, indent=2)
+                           "directive": env.get("directive", ""),
+                           **{key: env[key] for key in ("model_called", "stop_kind") if key in env}},
+                          ensure_ascii=False, indent=2)
     out = env["output"]
     lines = ["[재규정] 의식이 깨진 전제를 반영해 문제를 다시 규정했다. 지금부터는 아래 규정을 따른다 — "
              "처음부터 다시 시작하지 말고, 이미 확보한 사실은 그대로 쓴다."]

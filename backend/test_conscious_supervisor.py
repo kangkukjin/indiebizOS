@@ -782,5 +782,58 @@ def test_plan_and_reframe_use_planning_contract_without_review_fields(supervisor
     assert calls[0]["phase"] == ("reframe" if revision else "plan")
 
 
+@pytest.mark.parametrize("stop_kind", ["budget", "review_limit", "empty_response"])
+def test_reframe_call_skip_survives_consciousness_pipeline(supervisor, monkeypatch, capsys, stop_kind):
+    """실제 재규정→인지 믹스인→의식→호출 관문 왕복에서 생략과 빈 응답을 구분한다."""
+    import consciousness_agent as consciousness
+    import supervisor_runtime
+    from cognitive_consciousness import CognitiveConsciousnessMixin
+
+    agent = consciousness.ConsciousnessAgent.__new__(consciousness.ConsciousnessAgent)
+    agent._provider = SimpleNamespace(is_ready=True)
+    agent._prompt = agent._supervisor_prompt = "계획 JSON"
+    monkeypatch.setattr(agent, "_reload_prompt_if_changed", lambda: None)
+    monkeypatch.setattr(agent, "_build_input", lambda *a, **kw: "원래 요청과 깨진 전제")
+    monkeypatch.setattr(consciousness, "get_consciousness_agent", lambda: agent)
+    monkeypatch.setattr(consciousness, "get_world_pulse_text", lambda: "")
+    monkeypatch.setattr("supervision_bus.current", lambda *a, **kw: supervisor)
+    # 생략 시험에서는 모델 생성조차 없어야 한다.
+    monkeypatch.setattr("ai_agent.AIAgent", lambda *a, **kw: pytest.fail("생략된 모델을 생성함"))
+    runner = supervisor.runner
+    runner.config = {"name": "worker"}
+    runner._load_role = lambda: ""
+    runner._get_available_tools = lambda: []
+    runner._log = lambda *a: None
+    runner._run_consciousness = CognitiveConsciousnessMixin._run_consciousness.__get__(runner)
+    framing = dict(supervisor.framing)
+    context = tc.snapshot()
+    if stop_kind == "review_limit":
+        supervisor.reviews = supervisor.config["max_reviews"]
+    elif stop_kind == "budget":
+        supervisor.phase_usage["plan"] = {"input": supervisor.config["max_input_tokens"], "output": 0}
+    else:
+        monkeypatch.setattr(supervisor_runtime, "invoke", lambda *a, **kw: "")
+
+    result = json.loads(supervisor.reframe({"broken_assumption": "파일이 존재한다", "evidence": "파일 없음"}))
+
+    assert result["revised"] is False
+    assert supervisor.framing == framing and not supervisor.repair_granted
+    assert tc.snapshot() == context and supervisor.phase == "execute"
+    from episode_logger import _current_role
+    assert _current_role.get("") == ""
+    output = capsys.readouterr().out
+    if stop_kind == "empty_response":
+        assert "새 규정을 내지 못했다" in result["reason"]
+        assert "model_called" not in result and "stop_kind" not in result
+        assert "JSON 파싱 실패" in output
+    else:
+        assert result["model_called"] is False and result["stop_kind"] == stop_kind
+        assert "호출 생략" in result["reason"]
+        assert ("예산" if stop_kind == "budget" else "횟수 상한") in result["reason"]
+        assert "기존 목표·권한" in result["directive"]
+        assert "깨진 전제에 의존하지 않는" in result["directive"]
+        assert "JSON 파싱 실패" not in output and "AI 응답 수신" not in output
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

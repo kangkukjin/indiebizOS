@@ -193,6 +193,9 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         if not controller.model_admitted(phase):
             controller.call_stop = {"kind": "budget", "reason": "의식 호출 토큰 예산을 소진했습니다"}
             controller.log("model.skipped", stop_kind=controller.call_stop["kind"], detail=controller.call_stop["reason"])
+            if phase == "reframe":
+                from consciousness_agent import ConsciousnessCallSkipped
+                raise ConsciousnessCallSkipped(controller.call_stop["kind"], controller.call_stop["reason"])
             return ""
         restore(controller.context)
         set_current_agent_id(controller.supervisor_id)

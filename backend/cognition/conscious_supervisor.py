@@ -254,7 +254,10 @@ class Supervisor:
         with self.review_lock:
             if revision:
                 if self.reviews >= self.config["max_reviews"]:
-                    return ""
+                    from consciousness_agent import ConsciousnessCallSkipped
+                    reason = "이 턴의 의식 검토 횟수 상한에 도달했습니다"
+                    self.log("model.skipped", phase="reframe", stop_kind="review_limit", detail=reason)
+                    raise ConsciousnessCallSkipped("review_limit", reason)
                 self.reviews += 1
             self.enabled = True
             return invoke(self, prompt, planning_prompt=system_prompt + "\n\n" + PLANNING_TOOL_PROMPT,

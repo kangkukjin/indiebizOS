@@ -27,6 +27,14 @@ class FramingContractError(ValueError):
     """의식 출력 정정 실패. 기준을 버린 일반 실행으로 폴백하면 안 된다."""
 
 
+class ConsciousnessCallSkipped(RuntimeError):
+    """하네스가 재규정 호출을 시작하지 않음 — 모델 응답/파싱 실패와 구분한다."""
+
+    def __init__(self, kind: str, reason: str):
+        super().__init__(reason)
+        self.kind = kind
+
+
 class ConsciousnessAgent:
     """의식 에이전트 — 프롬프트의 메타 편집자
 
@@ -289,6 +297,8 @@ class ConsciousnessAgent:
                             role="compatibility_plan", step_role="consciousness")
                         result = self._parse_response(response)
                         validate_framing(result)
+                    except ConsciousnessCallSkipped:
+                        raise
                     except Exception as retry_exc:
                         record_trajectory_event("consciousness.contract_failed", {
                             "error": mask_secrets(str(retry_exc)), "attempts": 2})
@@ -303,6 +313,10 @@ class ConsciousnessAgent:
                 print(f"[ConsciousnessAgent] JSON 파싱 실패")
             return result
 
+        except ConsciousnessCallSkipped:
+            from episode_logger import set_step_role
+            set_step_role("")
+            raise
         except FramingContractError:
             raise
         except Exception as e:

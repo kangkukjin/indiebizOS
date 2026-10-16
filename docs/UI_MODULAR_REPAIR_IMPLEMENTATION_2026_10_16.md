@@ -96,3 +96,13 @@ Android 실기기 설치·표시 교체는 아래 기록대로 확인했다. 모
 macOS Electron 실제 실행 검사: 임시 userData를 사용하고 OS 프로토콜 등록만 시험에서 막은 뒤 실제 main/preload/workspace를 실행했다. 표시 변경과 복구 전후 초안·selection·입력 DOM·DesktopMember 브리지·iframe/window 동일성이 모두 통과했다. 배포용 서명과 다른 OS 설치 인수와는 구분한다.
 
 별도 서버 저장소(`INDIEBIZ_UI_STORE`)를 지정하는 경우 수동 빌더도 같은 위치를 `--store`로 지정한다. 자동 수리 apply는 정본의 기본 저장소를 사용한다. 현재 정본은 기본 저장소다.
+
+### 맥12 실제 연결 재검증 (2026-10-16)
+
+맥12(`guestpc-3fd796167b18`, Intel macOS 15.7.9)는 중앙 앱 기동 뒤 재연결됐으며 실제 `info`·원격 셸 실행을 확인했다. 설치된 `/Applications/IndieBiz.app`는 주인용 0.1.0이고 새 회원 데스크톱 설치물은 확인되지 않았다. 따라서 이 기기의 연결 성공을 회원 앱 UI-only 배포 인수로 계산하지 않는다.
+
+중앙 주인 앱의 실제 기동에서 `windows.js`의 공통 메뉴 JSON 로딩이 `require is not defined`로 실패했다. ESM에서 `createRequire(import.meta.url)`로 읽도록 수정했다. 실제 Electron에서 격리된 userData로 창 모듈을 import하고 IPC 등록까지 실행하는 `frontend/electron/windows.test.mjs`를 추가하고, 기본 회귀 경로 `backend/test_electron_windows.py`에 연결했다. 관련 Node 5개·pytest 진입 1개가 통과했고 중앙 앱의 정상 부팅과 health를 확인했다. 앞선 회원 Electron 검사만으로 주인 앱 시작까지 검증했다고 볼 수 없었다.
+
+실제 ScreenShare 화면에서 맥12로 연결했지만 시작 직후 종료됐고 수신 영상은 0장이었다. 맥12의 같은 네이티브 실행부에 frame 요청을 보내 확인한 오류는 `screen permission required`다. 이 실행부는 손쉬운 사용 검사 다음에 화면 기록을 검사하므로, 현재 실패 지점은 화면 기록 권한이다. 시스템 캡처도 실패했다. 사용자에게 맥12의 화면 기록 허용을 요청하고 해당 설정 화면을 열었다. 권한 허용 후 영상·입력 재검증이 필요하며 현재 화면 공유 성공이나 화면 교체 인수 완료로 기록하지 않는다.
+
+중앙 서버는 loopback에서 수신하므로 맥12에서 중앙 LAN 주소로 직접 원격 런처를 여는 시도는 성립하지 않았다. 이 검사 때문에 서버 바인딩이나 인증 설정을 바꾸지 않았다. 화면 공유 시험 창과 세션은 닫았고 기존 기기 등록·사용자 앱 데이터는 유지했다. 운영 서명 피드 및 회원 설치형 앱의 UI-only 실제 배포 인수는 여전히 별도 미완료 항목이다.

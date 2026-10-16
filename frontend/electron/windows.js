@@ -1,4 +1,5 @@
-const toolNavigation = require('../surfaces/shared/navigation.json');
+import { createRequire } from 'node:module';
+const toolNavigation = createRequire(import.meta.url)('../surfaces/shared/navigation.json');
 import { usesDevServer } from './renderer-mode.js';
 /**
  * windows.js — 보조 창 생성기 (main.js 에서 분리, 2026-08-06 1500줄 규칙)

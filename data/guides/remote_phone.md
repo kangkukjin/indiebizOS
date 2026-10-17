@@ -136,10 +136,14 @@ SHA-256 일치(`41813657b8f336a7b2602dd1cb62931f0295dc4b78469fadefd546814182b588
 삼성0(Android 16)은 0.7의 자체 업데이트에서
 `INSTALL_FAILED_ABORTED: Self update is blocked by unknown source package`로 거절됐다.
 알 수 없는 앱 설치 권한은 이미 허용됐고, 사용자가 보안 위험 자동 차단도 꺼져 있음을
-확인했다. 기기의 설치 출처는 `com.android.shell`이며, 제조사 PackageInstaller의 별도
-unknown-source 검사에서 나온 거절이다. 자동 차단을 끄면 해결된다고 안내하거나 기존
-ADB 설치를 무인 원격 업데이트 성공으로 세지 않는다. 새 APK의 최초 설치와 그 이후
-자체 업데이트 가능 여부를 각각 다시 확인해야 한다.
+확인했다. 제조사 PackageInstaller의 별도 unknown-source 검사에서 나온 거절이다.
+후속 0.9 요청은 지연 뒤 실제 설치·재접속했고, 설치 출처가 기존 `com.android.shell`에서
+`com.indiebiz.phoneagent` 자체 설치자로 바뀐 것도 확인했다. 그러나 이어 보낸 0.13은
+같은 거절이 재현됐다. 따라서 자동 차단이나 최초 ADB 설치 출처만으로 원인을 단정하거나,
+한 번의 0.9 성공을 안정적인 무인 업데이트 완료로 보지 않는다. 시스템 설치 화면으로
+최신 APK를 교체하는 최초 준비와 그 이후 자체 업데이트 성공은 각각 확인해야 한다.
+삼성0에는 해시를 검증한 0.13 APK를 `다운로드/IndieBiz/IndieBiz-0.13.apk`에 준비했다.
+이 파일의 존재·전송 완료를 앱 설치 완료로 표시하지 않는다.
 
 ## 범용 실행 계약 1 (새 APK 필요)
 

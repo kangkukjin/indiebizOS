@@ -1,0 +1,1253 @@
+{
+  "method": "Sequential alternating direct streaming API calls, reused HTTP sessions; no retries; no tools/STT/TTS/full harness; first content excludes reasoning; no separate warmup; provider cache state is uncontrolled and usage is recorded.",
+  "system_prompt": "너는 스마트스피커의 한국어 명령 해석기다. 실제 실행은 하지 않는다.\n오직 JSON 객체 하나를 출력한다: {\"action\":문자열,\"args\":객체,\"say\":짧은 한국어 문장}.\n지원 action은 timer_start(args.seconds 정수), calendar_update(args.id, args.datetime),\nclarify(args는 빈 객체)다. 필요한 대상이나 값이 불명확하면 clarify로 질문한다.\n실행 전이므로 완료했다고 말하지 않는다. say는 40자 이내로 쓴다.\n현재 날짜는 2026-10-17, 시간대 Asia/Seoul이다. JSON 밖 설명은 쓰지 않는다.",
+  "cases": [
+    {
+      "id": "timer",
+      "text": "15분 타이머 맞춰줘.",
+      "action": "timer_start",
+      "args": {
+        "seconds": 900
+      }
+    },
+    {
+      "id": "correction",
+      "text": "방금 선택한 일정은 id=meeting-42, 제목=치과, 시작=2026-10-18T14:00:00+09:00야. 그거 내일 오후 세 시로 바꿔줘.",
+      "action": "calendar_update",
+      "args": {
+        "id": "meeting-42",
+        "datetime": "2026-10-18T15:00:00+09:00"
+      }
+    },
+    {
+      "id": "ambiguous",
+      "text": "그거 취소해줘. (이 대화에는 이전 요청이나 선택된 대상이 없다.)",
+      "action": "clarify",
+      "args": {}
+    }
+  ],
+  "rows": [
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:12.268327+00:00",
+      "first_content_s": 1.0526,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 38,
+        "total_tokens": 241,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 10
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.1301,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:13.398843+00:00",
+      "first_content_s": 2.8916,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 374,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "thoughtsTokenCount": 176,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 3.003,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:16.403957+00:00",
+      "first_content_s": 1.1574,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 123,
+        "total_tokens": 326,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 95
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.2222,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:17.626440+00:00",
+      "first_content_s": 2.2485,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 맞출게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 275,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "thoughtsTokenCount": 77,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.3673,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:19.994467+00:00",
+      "first_content_s": 2.9901,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"치과 일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "promptTokenCount": 219,
+        "candidatesTokenCount": 63,
+        "totalTokenCount": 547,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 219
+          }
+        ],
+        "thoughtsTokenCount": 265,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 3.3288,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:23.324159+00:00",
+      "first_content_s": 1.927,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "prompt_tokens": 248,
+        "completion_tokens": 269,
+        "total_tokens": 517,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 214
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 248
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 2.0689,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:25.393545+00:00",
+      "first_content_s": 2.5296,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"치과 일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "promptTokenCount": 219,
+        "candidatesTokenCount": 63,
+        "totalTokenCount": 431,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 219
+          }
+        ],
+        "thoughtsTokenCount": 149,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.825,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:28.218892+00:00",
+      "first_content_s": 1.8998,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"내일 오후 3시로 변경하도록 할게요.\"}",
+      "usage": {
+        "prompt_tokens": 248,
+        "completion_tokens": 278,
+        "total_tokens": 526,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 224
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 248
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 2.0372,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:21:30.256475+00:00",
+      "first_content_s": 0.6683,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"무엇을 취소할까요? 대상을 말씀해 주세요.\"}",
+      "usage": {
+        "prompt_tokens": 216,
+        "completion_tokens": 41,
+        "total_tokens": 257,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 9
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 216
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 0.7742,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:21:31.031140+00:00",
+      "first_content_s": 2.3861,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"어떤 작업을 취소할지 말씀해 주세요.\"}",
+      "usage": {
+        "promptTokenCount": 183,
+        "candidatesTokenCount": 24,
+        "totalTokenCount": 303,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 183
+          }
+        ],
+        "thoughtsTokenCount": 96,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.4382,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:21:33.470401+00:00",
+      "first_content_s": 0.7584,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"무엇을 취소할까요? 대상을 알려주세요.\"}",
+      "usage": {
+        "prompt_tokens": 216,
+        "completion_tokens": 50,
+        "total_tokens": 266,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 20
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 216
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 0.8396,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:21:34.310772+00:00",
+      "first_content_s": 2.3383,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"어떤 작업을 취소할까요?\"}",
+      "usage": {
+        "promptTokenCount": 183,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 365,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 183
+          }
+        ],
+        "thoughtsTokenCount": 161,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.451,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:36.762368+00:00",
+      "first_content_s": 2.6299,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 시작할게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 303,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "thoughtsTokenCount": 105,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.7997,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:39.562737+00:00",
+      "first_content_s": 1.0996,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 104,
+        "total_tokens": 307,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 76
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.157,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:40.720319+00:00",
+      "first_content_s": 1.8057,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 맞출게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 198,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 1.9525,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:42.673475+00:00",
+      "first_content_s": 1.2822,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 110,
+        "total_tokens": 313,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 82
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.3531,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:44.027142+00:00",
+      "first_content_s": 1.4798,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "prompt_tokens": 248,
+        "completion_tokens": 175,
+        "total_tokens": 423,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 120
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 248
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.6166,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:45.644243+00:00",
+      "first_content_s": 2.8338,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"치과 일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "promptTokenCount": 219,
+        "candidatesTokenCount": 63,
+        "totalTokenCount": 461,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 219
+          }
+        ],
+        "thoughtsTokenCount": 179,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 3.1446,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:48.790125+00:00",
+      "first_content_s": 2.4556,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "prompt_tokens": 248,
+        "completion_tokens": 388,
+        "total_tokens": 636,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 336
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 248
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 2.577,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:21:51.367594+00:00",
+      "first_content_s": 2.9196,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"치과 일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "promptTokenCount": 219,
+        "candidatesTokenCount": 63,
+        "totalTokenCount": 491,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 219
+          }
+        ],
+        "thoughtsTokenCount": 209,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 3.2172,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:21:54.585751+00:00",
+      "first_content_s": 1.7423,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"어떤 작업을 취소할지 말씀해 주세요.\"}",
+      "usage": {
+        "promptTokenCount": 183,
+        "candidatesTokenCount": 24,
+        "totalTokenCount": 244,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 183
+          }
+        ],
+        "thoughtsTokenCount": 37,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 1.9103,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:21:56.497442+00:00",
+      "first_content_s": 1.0273,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"무엇을 취소할까요? 대상을 말씀해 주세요.\"}",
+      "usage": {
+        "prompt_tokens": 216,
+        "completion_tokens": 41,
+        "total_tokens": 257,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 9
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 216
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.1314,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:21:57.629303+00:00",
+      "first_content_s": 4.1572,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"어떤 작업을 취소할까요?\"}",
+      "usage": {
+        "promptTokenCount": 183,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 628,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 183
+          }
+        ],
+        "thoughtsTokenCount": 424,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 4.3206,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:22:01.950441+00:00",
+      "first_content_s": 0.9156,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"무엇을 취소할까요? 대상이 불분명해요.\"}",
+      "usage": {
+        "prompt_tokens": 216,
+        "completion_tokens": 41,
+        "total_tokens": 257,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 10
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 216
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.0372,
+      "correct": true,
+      "success": true,
+      "repeat": 2
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:22:02.988194+00:00",
+      "first_content_s": 1.0013,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 85,
+        "total_tokens": 288,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 57
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.1018,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:22:04.090389+00:00",
+      "first_content_s": 1.7105,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 시작할게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 198,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 1.8213,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:22:05.912351+00:00",
+      "first_content_s": 0.8995,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 28,
+        "total_tokens": 231,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.0003,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:22:06.913204+00:00",
+      "first_content_s": 2.4876,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 시작할게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 317,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "thoughtsTokenCount": 119,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.5802,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:22:09.494264+00:00",
+      "first_content_s": 2.2279,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"치과 일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "promptTokenCount": 219,
+        "candidatesTokenCount": 63,
+        "totalTokenCount": 434,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 219
+          }
+        ],
+        "thoughtsTokenCount": 152,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.5286,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:22:12.023447+00:00",
+      "first_content_s": 1.6322,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "prompt_tokens": 248,
+        "completion_tokens": 281,
+        "total_tokens": 529,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 226
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 248
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.7749,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:22:13.798902+00:00",
+      "first_content_s": 3.7803,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"치과 일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "promptTokenCount": 219,
+        "candidatesTokenCount": 63,
+        "totalTokenCount": 653,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 219
+          }
+        ],
+        "thoughtsTokenCount": 371,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 4.1675,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "correction",
+      "started_at_utc": "2026-10-17T07:22:17.968176+00:00",
+      "first_content_s": 1.2468,
+      "text": "{\"action\":\"calendar_update\",\"args\":{\"id\":\"meeting-42\",\"datetime\":\"2026-10-18T15:00:00+09:00\"},\"say\":\"일정을 내일 오후 3시로 변경할게요.\"}",
+      "usage": {
+        "prompt_tokens": 248,
+        "completion_tokens": 185,
+        "total_tokens": 433,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 130
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 248
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.3617,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:22:19.330374+00:00",
+      "first_content_s": 0.9668,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"무엇을 취소할지 알려주시겠어요?\"}",
+      "usage": {
+        "prompt_tokens": 216,
+        "completion_tokens": 38,
+        "total_tokens": 254,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 9
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 216
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.0539,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:22:20.384743+00:00",
+      "first_content_s": 3.4975,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"어떤 작업을 취소할까요?\"}",
+      "usage": {
+        "promptTokenCount": 183,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 416,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 183
+          }
+        ],
+        "thoughtsTokenCount": 212,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 3.6075,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:22:23.992960+00:00",
+      "first_content_s": 0.9802,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"무엇을 취소할까요? 대상을 말씀해 주세요.\"}",
+      "usage": {
+        "prompt_tokens": 216,
+        "completion_tokens": 49,
+        "total_tokens": 265,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 17
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 216
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.0933,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "ambiguous",
+      "started_at_utc": "2026-10-17T07:22:25.086818+00:00",
+      "first_content_s": 2.1371,
+      "text": "{\"action\":\"clarify\",\"args\":{},\"say\":\"어떤 것을 취소할까요?\"}",
+      "usage": {
+        "promptTokenCount": 183,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 249,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 183
+          }
+        ],
+        "thoughtsTokenCount": 45,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.1897,
+      "correct": true,
+      "success": true,
+      "repeat": 3
+    }
+  ],
+  "summary": [
+    {
+      "model": "deepseek-flash",
+      "effort": "default",
+      "attempts": 9,
+      "successes": 9,
+      "correct": 9,
+      "first_content_s": {
+        "median": 1.053,
+        "min": 0.7584,
+        "max": 2.4556
+      },
+      "total_s": {
+        "median": 1.131,
+        "min": 0.8396,
+        "max": 2.577
+      },
+      "estimated_model_usd": 0.00105135,
+      "estimated_usd_per_1000_same_calls": 0.116817
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "attempts": 9,
+      "successes": 9,
+      "correct": 9,
+      "first_content_s": {
+        "median": 2.92,
+        "min": 2.3383,
+        "max": 4.1572
+      },
+      "total_s": {
+        "median": 3.217,
+        "min": 2.451,
+        "max": 4.3206
+      },
+      "estimated_model_usd": 0.0102045,
+      "estimated_usd_per_1000_same_calls": 1.133833
+    },
+    {
+      "model": "deepseek-flash",
+      "effort": "low",
+      "attempts": 9,
+      "successes": 9,
+      "correct": 9,
+      "first_content_s": {
+        "median": 1.1,
+        "min": 0.6683,
+        "max": 1.927
+      },
+      "total_s": {
+        "median": 1.157,
+        "min": 0.7742,
+        "max": 2.0689
+      },
+      "estimated_model_usd": 0.00094335,
+      "estimated_usd_per_1000_same_calls": 0.104817
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "attempts": 9,
+      "successes": 9,
+      "correct": 9,
+      "first_content_s": {
+        "median": 2.228,
+        "min": 1.7105,
+        "max": 2.8338
+      },
+      "total_s": {
+        "median": 2.367,
+        "min": 1.8213,
+        "max": 3.1446
+      },
+      "estimated_model_usd": 0.00532575,
+      "estimated_usd_per_1000_same_calls": 0.59175
+    }
+  ],
+  "preflight": [
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:20:59.683371+00:00",
+      "first_content_s": 1.2528,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 109,
+        "total_tokens": 312,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 81
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.3241,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "default",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:01.008524+00:00",
+      "first_content_s": 2.5866,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 시작할게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 319,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "thoughtsTokenCount": 121,
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.6991,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:03.708727+00:00",
+      "first_content_s": 1.2415,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 설정할게요.\"}",
+      "usage": {
+        "prompt_tokens": 203,
+        "completion_tokens": 120,
+        "total_tokens": 323,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 92
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 203
+      },
+      "finish": "stop",
+      "http_status": 200,
+      "total_s": 1.3114,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "effort": "low",
+      "case": "timer",
+      "started_at_utc": "2026-10-17T07:21:05.020450+00:00",
+      "first_content_s": 2.0912,
+      "text": "{\"action\":\"timer_start\",\"args\":{\"seconds\":900},\"say\":\"15분 타이머를 맞출게요.\"}",
+      "usage": {
+        "promptTokenCount": 170,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 198,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 170
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "finish": "STOP",
+      "http_status": 200,
+      "total_s": 2.222,
+      "correct": true,
+      "success": true,
+      "repeat": 1
+    }
+  ],
+  "notes": [
+    "본측정 36회, 별도 사전 연결 확인 4회. 본측정에서 HTTP 세션은 새로 생성했으나 제공자 캐시는 통제하지 않았다.",
+    "짧은 합성 한국어 입력의 구조화 명령 해석 시험이다. 실제 IBL 도구 실행·전체 에이전트 프롬프트·음성 전사·TTS·오인식·장시간 대화는 측정하지 않았다.",
+    "correct는 action, args의 정확한 일치 및 say 길이를 검사한다. 일반적인 한국어 품질 동등성을 입증하지 않는다.",
+    "모델별 default/low 추론 수준은 제공자별 의미가 다르다. 시간은 네트워크 포함, 첫 출력은 reasoning을 제외한 JSON 본문의 첫 조각이다."
+  ],
+  "pricing_snapshot": {
+    "date": "2026-10-17",
+    "unit": "USD per million tokens",
+    "sources": [
+      "https://api-docs.deepseek.com/quick_start/pricing/",
+      "https://ai.google.dev/gemini-api/docs/pricing#gemini-3.8-flash"
+    ],
+    "deepseek_off_peak": {
+      "input_miss": 0.15,
+      "input_hit": 0.003,
+      "output": 0.6
+    },
+    "deepseek_peak_multiplier": 2,
+    "gemini_standard_through_2026_12_31": {
+      "input_miss": 0.75,
+      "input_hit": 0.075,
+      "output_including_thoughts": 3.75
+    }
+  }
+}

@@ -1,5 +1,6 @@
 /* ================= 수동 ================= */
 let mLastIntent='', mLastScore=0;
+const cpHistory=[];
 function resetManualFrom(stage){
   if(stage<=3) document.getElementById('mAfterValidate').style.display='none';
   if(stage<=4) document.getElementById('mAfterExecute').style.display='none';
@@ -58,6 +59,9 @@ async function mExecute(){
   try{
     const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'수동모드',project_path:'.'})});
     const d=await r.json();
+    cpHistory.unshift({intent:mLastIntent,code,ok:r.ok&&!d.error&&d.success!==false});
+    cpHistory.splice(10);
+    document.getElementById('cpHistory').innerHTML=cpRenderHistory();
     document.getElementById('mResult').textContent=JSON.stringify(d,null,2);
     document.getElementById('mDistillMsg').textContent='';
     document.getElementById('mDistillBtn').disabled=false;
@@ -113,7 +117,10 @@ async function loadPalette(){
       html+='<div class="cat-node" data-node="'+esc(node)+'"><h4>'+esc(node)+'</h4>';
       for(const a in acts){
         const seed='['+node+':'+a+']{}';
-        html+='<span class="act-chip" data-key="'+esc((node+' '+a).toLowerCase())+'" onclick="seedAction(\''+esc(seed)+'\')">'+esc(a)+'</span>';
+        const meta=acts[a]||{}, search=[node,a,meta.description,...(meta.keywords||[])].join(' ').toLowerCase();
+        html+='<div class="act-chip" data-key="'+cpAttr(search)+'"><button class="btn2" data-seed="'+cpAttr(seed)+'" onclick="seedAction(this.dataset.seed)">'+esc(a)+'</button>'+
+          '<p>'+cpSystemText(meta.description)+'</p>'+(meta.target_key?'<p><code>'+esc(meta.target_key)+'</code> — '+cpSystemText(meta.target_description)+'</p>':'')+
+          Object.entries(meta.ops?.values||{}).map(([op,description])=>'<p><code>'+esc(op)+'</code> — '+cpSystemText(String(description))+'</p>').join('')+'</div>';
       }
       html+='</div>';
     }
@@ -250,3 +257,128 @@ async function jAnalyze(id){
   }catch(e){ alert('분석 준비 실패: '+e.message); }
 }
 
+/* 조종실 정보는 데스크톱과 같은 API의 관측값을 읽는다. 세션/표면이 보일 때만 폴링한다. */
+let cpTimer=null, cpTick=0, cpBodyPath=null, cpPursuitOffset=0;
+const cpGenerations={}, cpInFlight=new Set();
+const cpTargets={active:'cpActive',status:'cpStatusBody',structure:'cpStructureBody',
+  limbs:'cpLimbsBody',logs:'cpLogsBody',body:'cpBodyBody',pursuits:'cpPursuitsBody',recall:'cpRecallBody'};
+function cpVisible(){
+  return !document.hidden && document.getElementById('app')?.classList.contains('on') &&
+    document.getElementById('p-manual')?.classList.contains('on');
+}
+async function cpRequest(path,options){
+  const r=await jfetch(path,options);
+  const data=await r.json();
+  if(!r.ok) throw new Error(typeof data.detail==='string'?data.detail:'HTTP '+r.status);
+  if(data.error || data.success===false) throw new Error(String(data.error||data.message||'조회 실패'));
+  return data;
+}
+function cpPost(path,body){ return cpRequest(path,{method:'POST',body:JSON.stringify(body)}); }
+async function cpRead(kind){
+  if(kind==='active') return cpRequest('/nodes/active-work');
+  if(kind==='status') return cpRequest('/world-pulse/dashboard');
+  if(kind==='structure') return cpRequest('/xray/doc/anatomy/raw');
+  if(kind==='limbs') return cpRequest('/remote-pcs');
+  if(kind==='logs') return cpRequest('/system-logs?file='+encodeURIComponent(document.getElementById('cpLogFile').value)+
+    '&lines=300&errors_only='+document.getElementById('cpLogErrors').checked);
+  if(kind==='pursuits') return cpRequest('/ibl/pursuits?archived='+document.getElementById('cpArchived').checked+
+    '&offset='+cpPursuitOffset+'&limit=20');
+  if(kind==='body'){
+    const args=cpBodyPath?{op:'file',path:cpBodyPath,limit:60}:
+      {op:document.getElementById('cpBodyView').value,days:Number(document.getElementById('cpBodyDays').value),limit:60};
+    const code='[self:body]{'+Object.entries(args).map(([k,v])=>k+':'+JSON.stringify(v)).join(',')+'}';
+    const result=await cpPost('/ibl/execute',{code,project_id:'수동모드',project_path:'.',surface:'web'});
+    const error=cpFind(result,'error');
+    if(error) throw new Error(typeof error==='string'?error:JSON.stringify(error));
+    return {items:cpFind(result,'items')||[],text:cpFind(result,'text')||cpFind(result,'message')||'',path:cpBodyPath};
+  }
+}
+function cpFind(value,key){
+  if(typeof value==='string'){ try{ value=JSON.parse(value); }catch(_){ return; } }
+  if(!value||typeof value!=='object') return;
+  if(Object.prototype.hasOwnProperty.call(value,key)) return value[key];
+  for(const child of Object.values(value)){ const found=cpFind(child,key); if(found!==undefined) return found; }
+}
+async function cpLoad(kind,background=false){
+  if(!cpVisible()) return;
+  if(background&&cpInFlight.has(kind)) return;
+  const box=document.getElementById(cpTargets[kind]); if(!box) return;
+  const generation=(cpGenerations[kind]||0)+1; cpGenerations[kind]=generation;
+  cpInFlight.add(kind);
+  if(!background) box.innerHTML='<p class="muted">불러오는 중…</p>';
+  try{
+    const data=await cpRead(kind);
+    if(generation!==cpGenerations[kind]||!cpVisible()) return;
+    box.innerHTML=cpRender(kind,data);
+    if(kind==='status') document.getElementById('cpHealthSummary').textContent=cpHealthLabel(data.ibl_health||{});
+  }catch(e){
+    if(generation!==cpGenerations[kind]||!cpVisible()) return;
+    box.innerHTML='<p role="alert" class="cp-error">불러오지 못했습니다 — '+esc(e.message)+'</p>'+
+      '<button class="btn2" data-kind="'+kind+'" onclick="cpLoad(this.dataset.kind)">다시 시도</button>';
+    if(kind==='status') document.getElementById('cpHealthSummary').textContent='조회 실패';
+  }finally{ if(generation===cpGenerations[kind]) cpInFlight.delete(kind); }
+}
+function cpToggle(kind,open){ if(open) cpLoad(kind); }
+function cpSync(){
+  clearTimeout(cpTimer); cpTimer=null;
+  if(!cpVisible()){
+    // 화면을 떠난 뒤 도착한 응답은 다시 로그인한 화면을 덮어쓰지 않는다.
+    for(const key of Object.keys(cpGenerations)) cpGenerations[key]++;
+    cpInFlight.clear();
+    return;
+  }
+  cpLoad('active',true);
+  if(cpTick++%10===0) cpLoad('status',true);
+  if(cpTick%5===1 && document.getElementById('cpLimbs')?.open) cpLoad('limbs',true);
+  cpTimer=setTimeout(cpSync,3000);
+}
+function cpEnter(){ cpTick=0; cpSync(); }
+// 공통/폰 셸의 탭 계약을 바꾸지 않고 이 계기의 표시 수명만 관측한다.
+const cpPanel=document.getElementById('p-manual'), cpApp=document.getElementById('app');
+if(cpPanel && cpApp){
+  const cpObserver=new MutationObserver(cpEnter);
+  cpObserver.observe(cpPanel,{attributes:true,attributeFilter:['class']});
+  cpObserver.observe(cpApp,{attributes:true,attributeFilter:['class']});
+  document.addEventListener('visibilitychange',cpEnter);
+  window.addEventListener('pagehide',()=>clearTimeout(cpTimer));
+}
+async function cpOpenActive(button){
+  setSurface('autopilot');
+  if(button.dataset.kind==='system_ai') apPickSystem();
+  else{ await apLoadProjects(); await apBrowseProject(button.dataset.project); }
+}
+async function cpCheckHealth(){
+  const button=document.getElementById('cpCheck'), message=document.getElementById('cpCheckMessage');
+  if(button.disabled) return;
+  button.disabled=true; message.textContent='점검 중… 약 5분 걸릴 수 있습니다 (AI 0).';
+  try{ await cpRequest('/world-pulse/ibl-health-check',{method:'POST'}); message.textContent='점검 완료'; await cpLoad('status'); }
+  catch(e){ message.textContent='점검 실패: '+e.message; }
+  finally{ button.disabled=false; }
+}
+async function cpBodyFile(path){ cpBodyPath=path; await cpLoad('body'); }
+function cpPursuitPage(delta){ cpPursuitOffset=Math.max(0,cpPursuitOffset+delta); cpLoad('pursuits'); }
+async function cpPursuitDetail(id,button){
+  const box=button.nextElementSibling;
+  if(!box.hidden){ box.hidden=true; return; }
+  box.hidden=false; box.textContent='불러오는 중…';
+  try{ const data=await cpRequest('/ibl/pursuits/'+encodeURIComponent(id)); box.innerHTML=cpRenderPursuit(data); }
+  catch(e){ box.innerHTML='<p role="alert" class="cp-error">'+esc(e.message)+'</p>'; }
+}
+async function cpRecall(){
+  const message=document.getElementById('cpRecallQuery').value.trim();
+  const button=document.getElementById('cpRecallButton'), box=document.getElementById('cpRecallBody');
+  if(!message||button.disabled) return;
+  button.disabled=true; box.textContent='회상 중…';
+  try{ const data=await cpPost('/system-ai/recall-preview',{message}); box.innerHTML=cpRenderRecall(data); }
+  catch(e){ box.innerHTML='<p role="alert" class="cp-error">'+esc(e.message)+'</p>'; }
+  finally{ button.disabled=false; }
+}
+
+function cpRestoreHistory(index){
+  const entry=cpHistory[index]; if(!entry) return;
+  document.getElementById('mIntent').value=entry.intent;
+  mLastIntent=entry.intent;
+  document.getElementById('mCode').value=entry.code;
+  document.getElementById('mAfterTranslate').style.display='block';
+  resetManualFrom(3);
+}

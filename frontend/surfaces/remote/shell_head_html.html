@@ -446,6 +446,21 @@ a{ color:var(--info); }
   /* 포식 브라우저: 중앙 컬럼 */
   .fg-wrap{ max-width:840px; width:100%; margin:0 auto; }
 }
+/* 조종실 정보: 긴 로그·경로는 카드 내부에서만 스크롤한다. */
+.cockpit-info { min-width:0; overflow-wrap:anywhere; font-size:13px; }
+.cockpit-info summary { cursor:pointer; font-weight:700; min-height:32px; }
+.cockpit-info[open] > summary { margin-bottom:10px; }
+.cockpit-info .cp-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0; }
+.cockpit-info select { max-width:100%; padding:8px; color:var(--txt); background:var(--bg3); border:1px solid var(--line); border-radius:8px; }
+.cockpit-info button { white-space:normal; overflow-wrap:anywhere; }
+.cockpit-info .cp-entry { padding:9px 0; border-bottom:1px solid var(--line); }
+.cockpit-info .cp-scroll { max-height:360px; overflow:auto; }
+.cockpit-info pre,.cockpit-info .cp-document { white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; }
+.cockpit-info pre { font-size:12px; line-height:1.6; margin:8px 0; }
+.cockpit-info table { border-collapse:collapse; font-size:12px; min-width:100%; }
+.cockpit-info th,.cockpit-info td { padding:6px; text-align:left; border-bottom:1px solid var(--line); min-width:90px; max-width:300px; }
+.cockpit-info .cp-error { color:var(--danger,#c33); }
+@media(max-width:600px){ .cockpit-info summary,.cockpit-info button { min-height:44px; } }
 </style>
 </head>
 <body>

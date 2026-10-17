@@ -315,3 +315,86 @@ function renderDrill(){
   out.innerHTML=h+renderView(av,VIEW_CTX.data)+renderComposeBar(ac);
   initMaps(); scheduleDetailPoll();
 }
+
+/* 원격 조종실의 표시만 소유한다. 조회·타이머·선택 상태는 launcher_manual_js에 둔다. */
+function cpAttr(value){ return esc(value).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function cpSystemText(value){
+  return '<span data-ui-system="'+cpAttr(value||'')+'">'+esc(value||'')+'</span>';
+}
+function cpHealthLabel(health){
+  return health.healthy==null?'IBL 미점검':!health.healthy?'IBL 주의':health.stale?'IBL 점검 오래됨':'IBL 건강';
+}
+function cpPursuitStatus(status){
+  return ({active:'진행 중',parked:'보류',done:'완료',abandoned:'보관'})[status]||status;
+}
+function cpRender(kind,data){
+  if(kind==='active') return (data.items||[]).map(it=>
+    '<div class="cp-entry"><button class="btn2" data-kind="'+cpAttr(it.kind)+'" data-project="'+cpAttr(it.project_id)+'" onclick="cpOpenActive(this)">'+esc(it.project_name)+'</button> '+
+    (it.busy?'작업 중 · '+esc(it.elapsed_sec)+'초째':'대기 중')+
+    '<div class="muted">'+esc((it.agents||[]).join(' · '))+'</div></div>').join('')||'<p class="muted">없음</p>';
+  if(kind==='structure') return mdChat(data.content||'');
+  if(kind==='status'){
+    const h=data.ibl_health||{};
+    return '<p>'+esc(cpHealthLabel(h))+' · 마지막 점검 '+esc(h.checked_at||'미점검')+'</p>'+
+      (h.items||[]).map(it=>'<div class="cp-entry">'+(it.ok==null?'○':it.ok?'✓':'⚠')+' '+cpSystemText(it.label)+
+        (it.detail?'<div class="muted">'+cpSystemText(it.detail)+'</div>':'')+'</div>').join('')+
+      '<p>액션 '+esc(h.action_count??'—')+'개 · 디스크 '+esc(data.disk_free_gb??'—')+'GB</p>'+
+      Object.entries(data.services||{}).map(([name,alive])=>'<p>'+cpSystemText(({scheduler:'스케줄러',channel_poller:'채널 폴러',system_ai_runner:'시스템 AI'})[name]||name)+
+        ' · '+(alive?'실행 중':'중지')+'</p>').join('');
+  }
+  if(kind==='logs') return (data.note?'<p class="muted">'+esc(data.note)+'</p>':'')+
+    '<pre class="cp-scroll">'+esc((data.lines||[]).join('\n')||'(비어 있음)')+'</pre>';
+  if(kind==='limbs') return cpRenderLimbs(data);
+  if(kind==='body') return cpRenderBody(data);
+  if(kind==='pursuits'){
+    const rows=data.items||[];
+    return (rows.map(p=>'<div class="cp-entry"><button class="btn2" data-id="'+cpAttr(p.id)+'" onclick="cpPursuitDetail(this.dataset.id,this)">'+esc(p.title)+'</button><article hidden></article>'+
+      '<p class="muted">'+esc(cpPursuitStatus(p.status))+' · '+esc(p.agent_key)+'</p>'+
+      (p.next?'<p>다음: '+esc(p.next)+'</p>':'')+'</div>').join('')||'<p class="muted">아직 기록된 과제가 없습니다.</p>')+
+      '<div class="cp-tools"><button class="btn2" onclick="cpPursuitPage(-20)"'+(cpPursuitOffset===0?' disabled':'')+'>이전</button>'+
+      '<span>'+esc(rows.length?cpPursuitOffset+1:0)+'–'+esc(cpPursuitOffset+rows.length)+' / '+esc(data.total||0)+'</span>'+
+      '<button class="btn2" onclick="cpPursuitPage(20)"'+(cpPursuitOffset+20>=(data.total||0)?' disabled':'')+'>다음</button></div>';
+  }
+  return '';
+}
+function cpRenderLimbs(data){
+  const rows=(data.items||[]).filter(pc=>!pc.revoked&&pc.registration?.state!=='removed');
+  const phoneLabels={bootstrap:'업데이트 지원 APK 최초 설치 필요',unpublished:'중앙 APK 미발행',current:'앱 최신',available:'새 앱 있음',updating:'APK 전송 중',staged:'설치 준비 중',installing:'설치·재접속 확인 중',awaiting_permission:'폰에서 앱 설치 권한 허용 필요',awaiting_confirmation:'폰에서 Android 설치 확인 필요',failed:'업데이트 실패',incompatible:'APK 호환 확인 필요'};
+  const helperLabels={unknown:'헬퍼 상태 미확인',current:'헬퍼 최신',manual:'새 헬퍼 있음(직접 교체)',available:'새 헬퍼 있음',updating:'헬퍼 교체 중'};
+  return '<p>USB에 복사할 공용 헬퍼 폴더</p><pre>'+esc(data.usb?.folder||'—')+'</pre><p class="muted">'+(data.usb?.ready?'준비됨':'폴더 준비 필요')+'</p>'+
+    (rows.map(pc=>{
+      const reg=pc.registration||{}, phone=reg.kind==='phone', update=pc.phone_update;
+      const status=reg.state==='removal_pending'?'해제 요청됨':reg.paused?'작업 중지됨':pc.connected?'연결됨':'오프라인';
+      return '<div class="cp-entry"><b>'+esc(pc.alias)+'</b><p>'+esc(status)+' · '+(phone?'폰 (IndieBiz OS)':'PC')+' · '+esc(reg.capabilities?.os||'')+'</p>'+
+        '<p class="muted">'+esc(phone?(phoneLabels[update?.state]||update?.state||''):(helperLabels[pc.helper?.state]||''))+
+        (pc.helper?.rolled_back?' · 지난 교체가 되돌려짐':'')+
+        (update?.current_version?' · v'+esc(update.current_version):'')+(update?.latest_version?' → v'+esc(update.latest_version):'')+
+        (update?.message?' · '+esc(update.message):'')+'</p></div>';
+    }).join('')||'<p class="muted">아직 등록된 기기가 없습니다.</p>');
+}
+function cpRenderBody(data){
+  const rows=data.items||[], keys=[...new Set(rows.flatMap(row=>Object.keys(row)))];
+  return (data.path?'<p>'+esc(data.path)+'</p>':'')+'<p class="muted">'+esc(data.text)+'</p>'+
+    (rows.length?'<div class="cp-scroll"><table><thead><tr>'+keys.map(k=>'<th>'+esc(k)+'</th>').join('')+'</tr></thead><tbody>'+
+      rows.map(row=>'<tr>'+keys.map(k=>'<td>'+(k==='파일'&&row[k]?'<button class="linkbtn" data-path="'+cpAttr(row[k])+'" onclick="cpBodyFile(this.dataset.path)">'+esc(row[k])+'</button>':
+        esc(typeof row[k]==='object'?JSON.stringify(row[k]):row[k]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="muted">이 기간엔 기록이 없습니다.</p>');
+}
+function cpRenderPursuit(data){
+  const p=data.pursuit||{};
+  return '<h4>'+esc(p.title)+' · '+esc(cpPursuitStatus(p.status))+'</h4>'+
+    (data.pending_turns?.length?'<p>요약 대기 또는 중단된 턴 '+esc(data.pending_turns.length)+'건이 있습니다.</p>':'')+
+    [['전체 완료 기준',p.goal_criteria],['현재 규정',p.framing],['확보한 결과',p.progress],['다음 할 일',p.next]].map(([label,value])=>
+      value?'<p><b>'+esc(label)+'</b></p><pre>'+esc(value)+'</pre>':'').join('')+
+    (p.assumptions||[]).filter(a=>a.status==='broken').map(a=>'<p>깨진 전제: '+esc(a.text)+' — '+esc(a.evidence)+'</p>').join('')+
+    '<details><summary>사건 기록</summary>'+((data.events||[]).map(e=>'<div class="cp-entry"><b>'+esc(e.kind)+'</b><pre class="cp-scroll">'+esc(JSON.stringify(e.payload,null,2))+'</pre></div>').join('')||'<p class="muted">기록 없음</p>')+'</details>';
+}
+function cpRenderRecall(data){
+  return '<p>해마 최고점수 '+esc(((data.top_score||0)*100).toFixed(1))+'%'+(data.top_score>=0.85?' — 반사(Reflex) 경로':'')+
+    ' · 주입 '+esc(data.total_chars??0)+'자</p><pre>'+esc(data.top_code||'')+'</pre>'+
+    (data.sections||[]).map(sec=>sec.present?'<details open><summary>'+esc(sec.label)+' ('+esc((sec.content||'').length)+'자)</summary><pre class="cp-scroll">'+esc(sec.content)+'</pre></details>':
+      '<p class="muted">'+esc(sec.label)+' — 회상 없음</p>').join('');
+}
+
+function cpRenderHistory(){
+  return cpHistory.map((entry,index)=>'<div class="cp-entry"><button class="btn2" onclick="cpRestoreHistory('+index+')">'+(entry.ok?'✓ ':'⚠ ')+esc(entry.intent||entry.code)+'</button><pre>'+esc(entry.code)+'</pre></div>').join('');
+}

@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessibility_desc">IndieBiz 가 폰 화면을 독해하고 탭·입력·스와이프로 조작합니다([limbs:android] 폰 자급 — USB 없이). 이 서비스를 켜면 AI 가 자율주행/수동 모드에서 폰 앱을 직접 다룰 수 있습니다.</string>
+    <string name="accessibility_desc">IndieBiz가 폰 화면을 읽고 탭·입력·스와이프로 조작합니다. 이 서비스를 켜면 AI가 폰 앱을 직접 다룰 수 있고, 등록된 중앙 PC에서 원격으로 화면을 보고 조종할 수 있습니다. Android 11 이상에서는 연결할 때마다 화면 공유를 승인할 필요가 없습니다. 원격 화면은 저장하지 않으며 공유 알림의 종료 버튼으로 연결을 끊을 수 있습니다.</string>
 </resources>

@@ -20,6 +20,14 @@ object ScreenBridge {
     const val CHANNEL = "remote_screen"
     const val NOTICE = 1010
     @JvmStatic fun init(ctx: Context) { context = ctx.applicationContext }
+    @JvmStatic fun capabilities(): String {
+        val service = PhoneAccessibilityService.instance
+        val unattended = Build.VERSION.SDK_INT >= 30
+        return JSONObject().put("capture", if (unattended) "accessibility" else "media_projection")
+            .put("unattended", unattended).put("accessibility_enabled", service != null)
+            .put("capture_ready", service != null && unattended && AccessibilityScreenCapture.permitted(service))
+            .put("session_consent_required", !unattended).toString()
+    }
     @JvmStatic fun run(id: String): String {
         require(Regex("[a-f0-9]{32}").matches(id))
         val session = synchronized(this) {
@@ -70,8 +78,10 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
     @Volatile var lastMessage = SystemClock.elapsedRealtime()
     @Volatile var capturing = false
     @Volatile var permissionRequested = false
+    val needsProjectionConsent get() = Build.VERSION.SDK_INT < 30
     @Volatile var error: String? = null
     @Volatile var capture: ScreenCaptureService? = null
+    private var accessibilityCapture: AccessibilityScreenCapture? = null
     @Volatile private var socket: WebSocket? = null
     private lateinit var auth: JSONObject
     val active get() = !ended.get()
@@ -96,10 +106,17 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
             val message = JSONObject(text)
             when (message.getString("type")) {
                 "ready" -> {
-                    if (PhoneAccessibilityService.instance == null) { end("accessibility"); return }
-                    status("permission")
                     Handler(Looper.getMainLooper()).post {
                         if (!active) return@post
+                        if (PhoneAccessibilityService.instance == null) { end("accessibility"); return@post }
+                        if (!needsProjectionConsent) {
+                            if (accessibilityCapture == null) {
+                                ctx.getSystemService(NotificationManager::class.java).notify(ScreenBridge.NOTICE, ScreenBridge.notification(ctx, id, true))
+                                accessibilityCapture = AccessibilityScreenCapture(this, ctx).also { it.start() }
+                            }
+                            return@post
+                        }
+                        status("permission")
                         ctx.getSystemService(NotificationManager::class.java).notify(ScreenBridge.NOTICE, ScreenBridge.notification(ctx, id, false))
                         if (Settings.canDrawOverlays(ctx)) {
                             try { ctx.startActivity(Intent(ctx, ScreenPermissionActivity::class.java)
@@ -133,6 +150,8 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
         socket?.close(1000, "screen ended")
         inputs.shutdownNow()
         Handler(Looper.getMainLooper()).post {
+            accessibilityCapture?.close()
+            accessibilityCapture = null
             capture?.stopSelf()
             ctx.getSystemService(NotificationManager::class.java).cancel(ScreenBridge.NOTICE)
         }

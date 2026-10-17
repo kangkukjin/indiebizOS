@@ -264,8 +264,15 @@ class LimbClient:
         caps.update(capabilities())
         from phone_updates import capabilities as update_capabilities
         caps.update(update_capabilities())
-        if _screen_bridge() is not None:
+        screen_bridge = _screen_bridge()
+        if screen_bridge is not None:
             caps.update({"os": "android", "desktop_stream": 1})
+            try:
+                screen_caps = json.loads(str(screen_bridge.capabilities()))
+                if isinstance(screen_caps, dict):
+                    caps["screen"] = screen_caps
+            except (AttributeError, TypeError, ValueError):
+                pass  # Older APKs only expose projection capture.
         bridge = _media_bridge()
         if bridge is not None:
             try:

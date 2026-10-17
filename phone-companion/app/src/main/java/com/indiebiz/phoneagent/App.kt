@@ -76,7 +76,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
     override fun onActivityCreated(a: Activity, b: Bundle?) {}
     override fun onActivityResumed(a: Activity) {
         val screen = com.indiebiz.phoneagent.screen.ScreenBridge.current
-        if (screen?.active == true && !screen.capturing && !screen.permissionRequested &&
+        if (screen?.active == true && screen.needsProjectionConsent && !screen.capturing && !screen.permissionRequested &&
             a !is com.indiebiz.phoneagent.screen.ScreenPermissionActivity) {
             a.startActivity(android.content.Intent(a, com.indiebiz.phoneagent.screen.ScreenPermissionActivity::class.java)
                 .putExtra("screen_id", screen.id))

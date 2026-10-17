@@ -94,6 +94,9 @@
 
         <service android:name=".screen.ScreenCaptureService" android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+        <activity android:name=".screen.ScreenWakeActivity" android:exported="false"
+            android:excludeFromRecents="true" android:taskAffinity="com.indiebiz.phoneagent.screenwake"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity android:name=".screen.ScreenPermissionActivity" android:exported="false"
             android:excludeFromRecents="true" android:taskAffinity="com.indiebiz.phoneagent.screen"
             android:configChanges="orientation|screenSize|keyboardHidden" />

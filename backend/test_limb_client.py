@@ -317,6 +317,10 @@ if __name__ == '__main__':
 def test_phone_desktop_bridge_declares_and_dispatches_without_credentials(hub, phone_env, monkeypatch):
     seen = []
     class Bridge:
+        def capabilities(self):
+            return json.dumps({'capture': 'accessibility', 'unattended': True,
+                               'accessibility_enabled': True, 'capture_ready': True,
+                               'session_consent_required': False})
         def run(self, sid):
             seen.append(sid)
             return '{"success": true}'
@@ -328,7 +332,19 @@ def test_phone_desktop_bridge_declares_and_dispatches_without_credentials(hub, p
     assert 'desktop' in limb_client.supported_ops()
     assert c.capabilities()['desktop_stream'] == 1
     assert c.capabilities()['os'] == 'android'
+    assert c.capabilities()['screen']['capture_ready'] is True
+    assert c.capabilities()['screen']['session_consent_required'] is False
     sid = 'b' * 32
     result = c._dispatch({'id': 'screen-job', 'code': json.dumps({'op': 'desktop', 'screen_id': sid})})
     assert result['success'] and seen == [sid, ('stop', sid)]
     assert c._dispatch({'id': 'bad', 'code': '{"op":"desktop","screen_id":"../bad"}'})['error'] == 'invalid_screen_id'
+
+
+def test_legacy_screen_bridge_keeps_projection_support_without_readiness_metadata(hub, phone_env, monkeypatch):
+    # Updating the Python bundle must not falsely label a legacy native APK as unattended.
+    monkeypatch.setattr(limb_client, '_screen_bridge', lambda: object())
+    c = _client(hub, _enroll_phone(), lambda *a: None)
+    caps = c.capabilities()
+    assert caps['desktop_stream'] == 1
+    assert 'desktop' in caps['ops']
+    assert 'screen' not in caps

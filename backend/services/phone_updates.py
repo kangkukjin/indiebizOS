@@ -73,8 +73,14 @@ def status(rec):
         return result
     result.update(latest_version=release["version_code"], latest_version_name=release.get("version_name"),
                   sha256=release["sha256"])
+    attempt = caps.get("attempt") or {}
     if caps.get("installed_sha256") == release["sha256"]:
         result["state"] = "current"
+    elif attempt.get("state") in {"staged", "installing", "awaiting_permission", "awaiting_confirmation"}:
+        # Publishing the next release must not hide an OS installation already in progress.
+        # Its transport job may be done while Android still owns the package replacement.
+        result.update(state=attempt["state"], message=attempt.get("message", ""),
+                      installing_version=(attempt.get("release") or {}).get("version_code"))
     elif caps.get("signer_sha256") != release["signer_sha256"]:
         result.update(state="incompatible", message="설치된 앱과 APK 서명이 다릅니다")
     elif caps.get("version_code", 0) > release["version_code"]:
@@ -102,10 +108,9 @@ def status(rec):
             outcome = json.loads(row[0]) if row and row[0] else {}
             if outcome.get("error") or outcome.get("unknown") or outcome.get("cancelled"):
                 result.update(state="failed", message=str(outcome.get("error") or "업데이트 요청 중단"))
-        attempt = caps.get("attempt") or {}
         if attempt.get("sha256") == release["sha256"]:
             state = attempt.get("state")
-            if state in {"awaiting_permission", "awaiting_confirmation", "failed", "installing", "staged"}:
+            if state == "failed":
                 result.update(state=state, message=attempt.get("message", ""))
                 # An old failure must not hide a newly queued retry.
                 if pending and attempt.get("job_id") != pending:

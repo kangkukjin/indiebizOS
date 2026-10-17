@@ -20,7 +20,7 @@ class ScreenPermissionActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val s = ScreenBridge.current?.takeIf { it.active && it.id == intent.getStringExtra("screen_id") }
-        if (s == null || s.capturing) { finish(); return }
+        if (s == null || s.capturing || !s.needsProjectionConsent) { finish(); return }
         session = s
         if (savedInstanceState == null) {
             if (s.permissionRequested) { finish(); return }

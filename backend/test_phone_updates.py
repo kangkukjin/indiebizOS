@@ -128,6 +128,21 @@ def test_waiting_for_android_confirmation_is_visible_and_not_duplicated(release,
     assert not resident_store.pending(rec['device_id'], 'phone_update')
 
 
+@pytest.mark.parametrize('state', ['staged', 'installing', 'awaiting_permission', 'awaiting_confirmation'])
+def test_new_publication_cannot_hide_or_duplicate_an_older_android_install(release, device, state):
+    manifest, _ = release
+    rec, client, native = device
+    native.caps['attempt'] = {'sha256': 'd' * 64, 'state': state,
+                              'release': {'version_code': 2}, 'message': '기존 설치 진행 중'}
+    client.step(inline=True, wait=0)
+    result = updates.submit(rec['device_id'])
+    assert result['state'] == state
+    assert result['installing_version'] == 2
+    assert result['latest_version'] == manifest['version_code']
+    assert not resident_store.pending(rec['device_id'], 'phone_update')
+    assert not native.calls
+
+
 def test_interrupted_caller_recovers_native_receipt_and_blocks_other_work(device):
     rec, client, native = device
     receipt = updates.submit(rec['device_id'])

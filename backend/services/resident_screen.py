@@ -145,6 +145,10 @@ def status(sid, touch=False):
 PHONE_STATUS = {
     'permission': '폰에서 IndieBiz 앱이나 화면 공유 알림을 열고 화면 전체 공유를 승인하세요.',
     'accessibility': '폰 설정 → 접근성 → 설치된 서비스에서 IndieBiz를 켠 뒤 다시 연결하세요.',
+    'capture_permission': '폰의 IndieBiz 접근성 서비스에 화면 읽기 권한이 없습니다. 업데이트 후에도 계속되면 접근성에서 IndieBiz를 한 번 껐다 켜세요.',
+    'wake_failed': '원격 연결은 됐지만 Android가 화면 켜기를 허용하지 않았습니다. 이 기기의 무인 화면 제어 준비를 확인해야 합니다.',
+    'screen_sleep': '폰 화면이 꺼져 연결을 종료했습니다. 다시 연결해 원격으로 화면을 깨우세요.',
+    'secure_screen': 'Android가 현재 보안 화면의 캡처를 제한합니다. 해당 화면을 벗어난 뒤 다시 연결하세요.',
     'denied': '폰에서 화면 공유가 거절되거나 종료됐습니다.',
     'capture_failed': '폰 화면을 가져올 수 없습니다. 잠금과 화면 공유 권한을 확인하세요.',
     'input_failed': '폰 조작에 실패했습니다. 접근성 권한과 현재 입력창을 확인하세요.',
@@ -160,7 +164,7 @@ def device_status(sid, value):
         s = _get(sid)
         if s.state == 'closed':
             return
-        if code in {'accessibility', 'denied', 'capture_failed', 'input_failed'}:
+        if code != 'permission':
             _close(s, PHONE_STATUS[code])
         else:
             s.reason = PHONE_STATUS[code]

@@ -157,3 +157,22 @@ def test_phone_screen_requires_owner_entry_and_supports_permission_status(setup)
     assert screen.status(sid)['state'] == 'closed'
     assert screen.frame(sid, 0)[1] == b''
     assert screen.take(sid) == [{'type': 'close'}]
+
+
+@pytest.mark.parametrize('code', ['capture_permission', 'secure_screen', 'wake_failed', 'screen_sleep'])
+def test_phone_capture_failure_closes_stream_and_discards_pixels_and_inputs(setup, code):
+    rec, sid = setup(kind='phone'), uuid.uuid4().hex
+    screen.create(rec['device_id'], sid)
+    screen.put_frame(sid, b'\xff\xd8private-screen')
+    screen.input_message(sid, {'type': 'text', 'text': 'pending'})
+    screen.device_status(sid, {'code': code})
+    assert screen.status(sid)['state'] == 'closed'
+    assert screen.status(sid)['message'] == screen.PHONE_STATUS[code]
+    assert not screen._sessions[sid].frame
+    assert not screen._sessions[sid].inputs
+    # A late screenshot callback must not revive a closed stream.
+    screen.put_frame(sid, b'\xff\xd8late-screen')
+    assert not screen._sessions[sid].frame
+    with pytest.raises(ValueError, match='screen_not_running'):
+        screen.input_message(sid, {'type': 'navigation', 'action': 'home'})
+    screen.create(rec['device_id'], uuid.uuid4().hex)

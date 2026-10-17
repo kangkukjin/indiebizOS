@@ -2,52 +2,6 @@
   <!-- 조종실 (구 계기판) -->
   <div class="panel" id="p-manual">
     <div class="wrap">
-      <section class="card cockpit-info" aria-label="액티브 프로젝트">
-        <b>액티브 프로젝트</b><div id="cpActive" aria-live="polite">불러오는 중…</div>
-      </section>
-      <details class="card cockpit-info" id="cpStructure" ontoggle="cpToggle('structure',this.open)">
-        <summary>indiebizOS의 구조</summary><div id="cpStructureBody" class="cp-scroll cp-document"></div>
-      </details>
-      <details class="card cockpit-info" id="cpStatus">
-        <summary>시스템 상태 <span id="cpHealthSummary" class="muted"></span></summary>
-        <div id="cpStatusBody"></div>
-        <button class="btn2" id="cpCheck" onclick="cpCheckHealth()">지금 점검</button>
-        <p id="cpCheckMessage" role="status" class="muted"></p>
-      </details>
-      <details class="card cockpit-info" id="cpLimbs" ontoggle="cpToggle('limbs',this.open)">
-        <summary>손발 (USB)</summary>
-        <button class="btn2" onclick="cpLoad('limbs')">새로고침</button><div id="cpLimbsBody"></div>
-      </details>
-      <details class="card cockpit-info" id="cpLogs" ontoggle="cpToggle('logs',this.open)">
-        <summary>시스템 로그</summary>
-        <div class="cp-tools">
-          <select id="cpLogFile" aria-label="로그 종류" onchange="cpLoad('logs')">
-            <option value="runtime">백엔드</option><option value="keeper">keeper</option>
-            <option value="tunnel">터널</option><option value="electron">Electron</option>
-          </select>
-          <label><input id="cpLogErrors" type="checkbox" onchange="cpLoad('logs')"> 에러만</label>
-          <button class="btn2" onclick="cpLoad('logs')">새로고침</button>
-        </div><div id="cpLogsBody"></div>
-      </details>
-      <details class="card cockpit-info" id="cpBody" ontoggle="cpToggle('body',this.open)">
-        <summary>몸 원장 — 무엇이 · 언제 · 왜 바뀌었나</summary>
-        <div class="cp-tools">
-          <select id="cpBodyView" aria-label="원장 종류" onchange="cpBodyPath=null;cpLoad('body')">
-            <option value="changes">변화</option><option value="log">커밋</option><option value="writes">쓰기</option>
-          </select>
-          <select id="cpBodyDays" aria-label="회상 기간" onchange="cpBodyPath=null;cpLoad('body')">
-            <option value="7">7일</option><option value="30">30일</option><option value="90">90일</option>
-          </select>
-          <button class="btn2" onclick="cpBodyPath=null;cpLoad('body')">목록 새로고침</button>
-        </div><div id="cpBodyBody"></div>
-      </details>
-      <details class="card cockpit-info" id="cpPursuits" ontoggle="cpToggle('pursuits',this.open)">
-        <summary>이어가는 과제</summary>
-        <div class="cp-tools">
-          <label><input id="cpArchived" type="checkbox" onchange="cpPursuitOffset=0;cpLoad('pursuits')"> 완료·보관 보기</label>
-          <button class="btn2" onclick="cpLoad('pursuits')">새로고침</button>
-        </div><div id="cpPursuitsBody"></div>
-      </details>
       <!-- 조종실 헤더 — IBL 사전 / IBL이란? -->
       <div class="dash-head">
         <div class="dash-titles">
@@ -102,15 +56,6 @@
         </div>
         <div id="jBody" style="display:none;margin-top:10px"></div>
       </div>
-      <details class="card cockpit-info"><summary>최근 실행</summary><div id="cpHistory"><p class="muted">이번 접속에서 실행한 명령이 표시됩니다.</p></div></details>
-      <details class="card cockpit-info" id="cpRecall">
-        <summary>기억 회상 검증</summary>
-        <p class="muted">이 명령에 무엇이 회상되어 주입되는지 미리 봅니다.</p>
-        <form class="row" onsubmit="event.preventDefault();cpRecall()">
-          <input class="field" id="cpRecallQuery" aria-label="회상할 명령" placeholder="예) 강남구 아파트 실거래가 찾아줘" required>
-          <button class="go" id="cpRecallButton">회상</button>
-        </form><div id="cpRecallBody"></div>
-      </details>
       <div class="step">
         <div class="step-label">① 의도 (자연어)</div>
         <div class="row">
@@ -149,5 +94,15 @@
           <p class="muted" id="mDistillMsg" style="margin-top:8px"></p>
         </div>
       </div>
+      <details class="card cockpit-info" id="cpLimbs" ontoggle="cpToggle('limbs',this.open)">
+        <summary>손발 (USB)</summary>
+        <button class="btn2" onclick="cpLoad('limbs')">새로고침</button><div id="cpLimbsBody"></div>
+      </details>
+      <details class="card cockpit-info" id="cpStatus">
+        <summary>시스템 상태 <span id="cpHealthSummary" class="muted"></span></summary>
+        <div id="cpStatusBody"></div>
+        <button class="btn2" id="cpCheck" onclick="cpCheckHealth()">지금 점검</button>
+        <p id="cpCheckMessage" role="status" class="muted"></p>
+      </details>
     </div>
   </div>

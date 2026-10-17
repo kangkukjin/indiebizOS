@@ -324,15 +324,7 @@ function cpSystemText(value){
 function cpHealthLabel(health){
   return health.healthy==null?'IBL 미점검':!health.healthy?'IBL 주의':health.stale?'IBL 점검 오래됨':'IBL 건강';
 }
-function cpPursuitStatus(status){
-  return ({active:'진행 중',parked:'보류',done:'완료',abandoned:'보관'})[status]||status;
-}
 function cpRender(kind,data){
-  if(kind==='active') return (data.items||[]).map(it=>
-    '<div class="cp-entry"><button class="btn2" data-kind="'+cpAttr(it.kind)+'" data-project="'+cpAttr(it.project_id)+'" onclick="cpOpenActive(this)">'+esc(it.project_name)+'</button> '+
-    (it.busy?'작업 중 · '+esc(it.elapsed_sec)+'초째':'대기 중')+
-    '<div class="muted">'+esc((it.agents||[]).join(' · '))+'</div></div>').join('')||'<p class="muted">없음</p>';
-  if(kind==='structure') return mdChat(data.content||'');
   if(kind==='status'){
     const h=data.ibl_health||{};
     return '<p>'+esc(cpHealthLabel(h))+' · 마지막 점검 '+esc(h.checked_at||'미점검')+'</p>'+
@@ -342,19 +334,7 @@ function cpRender(kind,data){
       Object.entries(data.services||{}).map(([name,alive])=>'<p>'+cpSystemText(({scheduler:'스케줄러',channel_poller:'채널 폴러',system_ai_runner:'시스템 AI'})[name]||name)+
         ' · '+(alive?'실행 중':'중지')+'</p>').join('');
   }
-  if(kind==='logs') return (data.note?'<p class="muted">'+esc(data.note)+'</p>':'')+
-    '<pre class="cp-scroll">'+esc((data.lines||[]).join('\n')||'(비어 있음)')+'</pre>';
   if(kind==='limbs') return cpRenderLimbs(data);
-  if(kind==='body') return cpRenderBody(data);
-  if(kind==='pursuits'){
-    const rows=data.items||[];
-    return (rows.map(p=>'<div class="cp-entry"><button class="btn2" data-id="'+cpAttr(p.id)+'" onclick="cpPursuitDetail(this.dataset.id,this)">'+esc(p.title)+'</button><article hidden></article>'+
-      '<p class="muted">'+esc(cpPursuitStatus(p.status))+' · '+esc(p.agent_key)+'</p>'+
-      (p.next?'<p>다음: '+esc(p.next)+'</p>':'')+'</div>').join('')||'<p class="muted">아직 기록된 과제가 없습니다.</p>')+
-      '<div class="cp-tools"><button class="btn2" onclick="cpPursuitPage(-20)"'+(cpPursuitOffset===0?' disabled':'')+'>이전</button>'+
-      '<span>'+esc(rows.length?cpPursuitOffset+1:0)+'–'+esc(cpPursuitOffset+rows.length)+' / '+esc(data.total||0)+'</span>'+
-      '<button class="btn2" onclick="cpPursuitPage(20)"'+(cpPursuitOffset+20>=(data.total||0)?' disabled':'')+'>다음</button></div>';
-  }
   return '';
 }
 function cpRenderLimbs(data){
@@ -371,30 +351,4 @@ function cpRenderLimbs(data){
         (update?.current_version?' · v'+esc(update.current_version):'')+(update?.latest_version?' → v'+esc(update.latest_version):'')+
         (update?.message?' · '+esc(update.message):'')+'</p></div>';
     }).join('')||'<p class="muted">아직 등록된 기기가 없습니다.</p>');
-}
-function cpRenderBody(data){
-  const rows=data.items||[], keys=[...new Set(rows.flatMap(row=>Object.keys(row)))];
-  return (data.path?'<p>'+esc(data.path)+'</p>':'')+'<p class="muted">'+esc(data.text)+'</p>'+
-    (rows.length?'<div class="cp-scroll"><table><thead><tr>'+keys.map(k=>'<th>'+esc(k)+'</th>').join('')+'</tr></thead><tbody>'+
-      rows.map(row=>'<tr>'+keys.map(k=>'<td>'+(k==='파일'&&row[k]?'<button class="linkbtn" data-path="'+cpAttr(row[k])+'" onclick="cpBodyFile(this.dataset.path)">'+esc(row[k])+'</button>':
-        esc(typeof row[k]==='object'?JSON.stringify(row[k]):row[k]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="muted">이 기간엔 기록이 없습니다.</p>');
-}
-function cpRenderPursuit(data){
-  const p=data.pursuit||{};
-  return '<h4>'+esc(p.title)+' · '+esc(cpPursuitStatus(p.status))+'</h4>'+
-    (data.pending_turns?.length?'<p>요약 대기 또는 중단된 턴 '+esc(data.pending_turns.length)+'건이 있습니다.</p>':'')+
-    [['전체 완료 기준',p.goal_criteria],['현재 규정',p.framing],['확보한 결과',p.progress],['다음 할 일',p.next]].map(([label,value])=>
-      value?'<p><b>'+esc(label)+'</b></p><pre>'+esc(value)+'</pre>':'').join('')+
-    (p.assumptions||[]).filter(a=>a.status==='broken').map(a=>'<p>깨진 전제: '+esc(a.text)+' — '+esc(a.evidence)+'</p>').join('')+
-    '<details><summary>사건 기록</summary>'+((data.events||[]).map(e=>'<div class="cp-entry"><b>'+esc(e.kind)+'</b><pre class="cp-scroll">'+esc(JSON.stringify(e.payload,null,2))+'</pre></div>').join('')||'<p class="muted">기록 없음</p>')+'</details>';
-}
-function cpRenderRecall(data){
-  return '<p>해마 최고점수 '+esc(((data.top_score||0)*100).toFixed(1))+'%'+(data.top_score>=0.85?' — 반사(Reflex) 경로':'')+
-    ' · 주입 '+esc(data.total_chars??0)+'자</p><pre>'+esc(data.top_code||'')+'</pre>'+
-    (data.sections||[]).map(sec=>sec.present?'<details open><summary>'+esc(sec.label)+' ('+esc((sec.content||'').length)+'자)</summary><pre class="cp-scroll">'+esc(sec.content)+'</pre></details>':
-      '<p class="muted">'+esc(sec.label)+' — 회상 없음</p>').join('');
-}
-
-function cpRenderHistory(){
-  return cpHistory.map((entry,index)=>'<div class="cp-entry"><button class="btn2" onclick="cpRestoreHistory('+index+')">'+(entry.ok?'✓ ':'⚠ ')+esc(entry.intent||entry.code)+'</button><pre>'+esc(entry.code)+'</pre></div>').join('');
 }

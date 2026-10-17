@@ -254,6 +254,8 @@ export function reloadUICatalog(server) {
   // An external build can replace catalog.json without invalidating Vite's cached JSON module.
   const modules = server.moduleGraph.getModulesByFile(path.join(i18n, 'catalog.json'));
   for (const module of modules || []) server.moduleGraph.invalidateModule(module);
+  const baseline = server.moduleGraph.getModuleById('\0owner-display');
+  if (baseline) server.moduleGraph.invalidateModule(baseline);
   server.ws.send({ type: 'full-reload' });
 }
 export function uiCatalogPlugin() {

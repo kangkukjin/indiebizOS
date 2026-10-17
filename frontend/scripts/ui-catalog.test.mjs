@@ -44,6 +44,7 @@ test('remote multiline UI messages keep their IDs after CRLF checkout', () => {
 test('catalog reload invalidates every cached JSON module before reloading open windows', () => {
   const calls=[],modules=new Set([{id:'catalog'}, {id:'catalog?import'}]);
   reloadUICatalog({moduleGraph:{getModulesByFile(file){assert.equal(file,path.join(root,'frontend/i18n/catalog.json'));return modules;},
+    getModuleById(id){assert.equal(id,'\0owner-display');return {id:'owner baseline'};},
     invalidateModule(module){calls.push(module.id);}},ws:{send(event){calls.push(event.type);}}});
-  assert.deepEqual(calls,['catalog','catalog?import','full-reload']);
+  assert.deepEqual(calls,['catalog','catalog?import','owner baseline','full-reload']);
 });

@@ -40,6 +40,28 @@ export async function buildOwner() {
   return {...result,version:digest(JSON.stringify(result))};
 }
 export function ownerDisplayPlugin(){
-  return {name:'owner-display-contract',resolveId(id){if(id==='virtual:owner-display')return '\0owner-display';},async load(id){if(id==='\0owner-display'){const value=await buildOwner();return 'export default '+JSON.stringify({host:value.host,version:value.version})+';';}}};
+  return {
+    name:'owner-display-contract',
+    resolveId(id){if(id==='virtual:owner-display')return '\0owner-display';},
+    configureServer(server){
+      const inputs=new Set([...ownerInputs(),'i18n/catalog.json'].map(file=>path.join(root,file)));
+      server.watcher.add([...inputs]);
+      const invalidate=file=>{
+        file=path.normalize(file);
+        if(!inputs.has(file)&&!file.startsWith(path.join(root,'src')+path.sep))return;
+        const baseline=server.moduleGraph.getModuleById('\0owner-display');
+        if(baseline)server.moduleGraph.invalidateModule(baseline);
+      };
+      for(const event of ['change','add','unlink'])server.watcher.on(event,invalidate);
+      server.httpServer?.once('close',()=>{
+        for(const event of ['change','add','unlink'])server.watcher.off(event,invalidate);
+      });
+    },
+    async load(id){
+      if(id!=='\0owner-display')return;
+      const value=await buildOwner();
+      return 'export default '+JSON.stringify({host:value.host,version:value.version})+';';
+    },
+  };
 }
 if(process.argv[1]===fileURLToPath(import.meta.url))process.stdout.write(JSON.stringify(process.argv.includes('--inputs')?ownerInputs().map(f=>'frontend/'+f):await buildOwner()));

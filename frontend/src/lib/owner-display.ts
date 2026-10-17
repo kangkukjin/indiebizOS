@@ -51,6 +51,9 @@ export async function applyOwnerDisplay(value: Display, persist=true) {
   finally {busy=false;}
 }
 export async function startOwnerDisplay() {
+  // Vite owns automatic updates in source mode. Published assets may be older than this checkout;
+  // neither their cached views nor their update prompts belong in the dev renderer.
+  if(import.meta.env.DEV)return;
   try {const cached=localStorage.getItem(key);if(cached)await applyOwnerDisplay(JSON.parse(cached),false);}catch{/* The installed app is the recovery baseline. */}
   const button=document.createElement('button');button.hidden=true;button.textContent='새 화면 있음';button.id='ownerDisplayUpdate';
   button.style.cssText='position:fixed;right:12px;bottom:12px;z-index:100000;background:#fff8ed;color:#4a4035;border:1px solid #d8d0c5;border-radius:8px;padding:8px 12px';

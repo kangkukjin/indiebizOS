@@ -19,7 +19,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /** One UI release contract for both Android shells; never touches the executor or its data. */
-class SurfaceUpdates(private val activity: Activity, private val surface: String) {
+class SurfaceUpdates(
+    private val activity: Activity,
+    private val surface: String,
+    private val automatic: Boolean = false
+) {
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
     private val directory = File(activity.filesDir, "ui-releases").apply { mkdirs() }
@@ -35,11 +39,19 @@ class SurfaceUpdates(private val activity: Activity, private val surface: String
     private var completion: ((Boolean, String) -> Unit)? = null
     private var busy = false
     private var closed = false
+    private var pageLoaded = false
     private var offered: JSONObject? = null
     private val configured get() = trust.optString("feed").isNotEmpty() && trust.optString("publicKey").isNotEmpty()
     val button = Button(activity).apply {
         text = "화면 업데이트"
         setOnClickListener { if (!busy) check(true) }
+    }
+    private val refresh = object : Runnable {
+        override fun run() {
+            if (closed) return
+            if (pageLoaded) check(false)
+            if (automatic) main.postDelayed(this, 60000)
+        }
     }
 
     init {
@@ -94,7 +106,7 @@ class SurfaceUpdates(private val activity: Activity, private val surface: String
                 }
             }
         }, "IndieSurfaceResult")
-        main.postDelayed({ if (!closed) check(false) }, 15000)
+        main.postDelayed(refresh, 15000)
     }
     private fun apply(display: JSONObject, callback: (Boolean, String) -> Unit) {
         val value = display.toString().replace("<", "\\u003c")
@@ -107,6 +119,7 @@ class SurfaceUpdates(private val activity: Activity, private val surface: String
         view.evaluateJavascript("$expression.then(()=>IndieSurfaceResult.done($token,true,''),e=>IndieSurfaceResult.done($token,false,String(e.message||e)))", null)
     }
     fun pageReady() {
+        pageLoaded = true
         val active = state.optLong("active")
         if (active <= 0 || busy || closed) return
         busy = true
@@ -131,7 +144,8 @@ class SurfaceUpdates(private val activity: Activity, private val surface: String
                     busy = false;if (closed) return@post
                     offered = if (manifest.getLong("sequence") > state.optLong("highest")) envelope else null
                     button.text = if (offered == null) "화면 업데이트" else "새 화면 있음"
-                    if (prompt && offered != null) AlertDialog.Builder(activity).setMessage("새 화면 ${manifest.getString("version")}을 적용할까요? 작성 중인 내용과 작업은 유지됩니다.")
+                    if (automatic && offered != null) install(envelope)
+                    else if (prompt && offered != null) AlertDialog.Builder(activity).setMessage("새 화면 ${manifest.getString("version")}을 적용할까요? 작성 중인 내용과 작업은 유지됩니다.")
                         .setNegativeButton("취소",null).setPositiveButton("설치") { _,_ -> install(envelope) }.show()
                     else if (prompt) notice("최신 화면입니다")
                 }
@@ -181,7 +195,11 @@ class SurfaceUpdates(private val activity: Activity, private val surface: String
             } catch (error: Exception) { main.post { busy=false;button.isEnabled=true;notice(error.message ?: "설치 실패") } }
         }
     }
-    private fun notice(message: String) { if (!closed) Toast.makeText(activity,message,Toast.LENGTH_LONG).show() }
+    private fun notice(message: String) {
+        if (closed) return
+        if (automatic) android.util.Log.w("IndieSurfaceUpdates", message)
+        else Toast.makeText(activity,message,Toast.LENGTH_LONG).show()
+    }
     fun close() { closed=true;nonce="";completion=null;main.removeCallbacksAndMessages(null);web?.removeJavascriptInterface("IndieSurfaceResult");web=null;worker.shutdownNow() }
 
     companion object {

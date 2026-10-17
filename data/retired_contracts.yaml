@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: phone-manual-media-standby
+    retired: 2026-10-17
+    reason: 등록된 원격 폰의 중앙 요청을 실행하기 위해 매번 폰에서 대기 버튼을 누르게 하던 흐름을 제거했다.
+    instead: 중앙 요청이 세션에 묶인 출력 또는 센서 화면을 준비하고 종료 시 닫는다. 최초 Android 권한 누락은 중앙에 원인으로 보고한다.
+    phrases: ['폰에서 미디어 화면을 열어 주세요', '폰에서 카메라 대기 모드를 시작해 주세요']
   - id: conversation-session-archive-lifecycle
     retired: 2026-10-16
     reason: 대화는 항상 자동 저장되므로 별도 보관·복원 상태와 재개 제한은 불필요하다.

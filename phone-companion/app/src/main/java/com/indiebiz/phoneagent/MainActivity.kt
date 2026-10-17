@@ -1,17 +1,21 @@
 package com.indiebiz.phoneagent
 
 import android.app.Activity
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import java.io.File
 
 /**
  * 게이트 화면 — 다른 앱처럼:
@@ -26,9 +30,12 @@ class MainActivity : Activity() {
         return pm.isIgnoringBatteryOptimizations(packageName)
     }
 
-    // 알림 캡처(NotificationListener)는 제거됨(2026-06-22) — 폰 알림 수집/중계 폐기.
-    // 상주 준비 게이트는 배터리 최적화 제외만으로 충분.
-    private fun allReady() = batteryExempt()
+    private fun registeredDevice() = File(filesDir, "secrets/limb_client.json").isFile
+    private fun missingSensors() = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+    private fun remoteScreenReady() = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || Settings.canDrawOverlays(this)
+    private fun allReady() = batteryExempt() &&
+        (!registeredDevice() || (missingSensors().isEmpty() && remoteScreenReady()))
 
     override fun onResume() {
         super.onResume()
@@ -58,7 +65,8 @@ class MainActivity : Activity() {
         })
 
         root.addView(TextView(this).apply {
-            text = "\n시작하려면 한 가지만 한 번 켜주세요.\n주머니 속에서도 백그라운드로 상주합니다.\n"
+            text = if (registeredDevice()) "\n원격 장치 최초 설정\n권한을 허용하면 중앙 PC 요청에 따라 자동으로 준비하고 실행합니다.\n"
+                else "\n배터리 최적화 제외를 한 번 허용해 주세요.\n주머니 속에서도 백그라운드로 상주합니다.\n"
             textSize = 15f
             setTextColor(Color.DKGRAY)
             gravity = Gravity.CENTER
@@ -79,6 +87,21 @@ class MainActivity : Activity() {
             })
         }
 
+        if (registeredDevice() && missingSensors().isNotEmpty()) {
+            root.addView(Button(this).apply {
+                text = "카메라·마이크 권한 허용"
+                setOnClickListener { requestPermissions(missingSensors().toTypedArray(), 7001) }
+            })
+        }
+        if (registeredDevice() && !remoteScreenReady()) {
+            root.addView(Button(this).apply {
+                text = "중앙 요청의 화면 자동 열기 허용"
+                setOnClickListener {
+                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                }
+            })
+        }
+
         root.addView(TextView(this).apply {
             text = "\n켜면 자동으로 런처가 열립니다."
             textSize = 13f
@@ -87,5 +110,15 @@ class MainActivity : Activity() {
         })
 
         setContentView(root)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 7001) {
+            if (allReady()) {
+                startActivity(Intent(this, LauncherActivity::class.java))
+                finish()
+            } else renderSetup()
+        }
     }
 }

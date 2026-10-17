@@ -48,7 +48,7 @@ class MediaSessionService : Service() {
             deliver(JSONObject().put("error", "invalid_envelope").put("message", e.message)); finish(); return
         }
         if (remoteToken != null && !RemoteMediaStart.ready(env.sessionId, remoteToken)) {
-            deliver(JSONObject().put("error", "needs_local_action").put("message", "원격 카메라 시작 화면이 닫혔습니다"))
+            deliver(JSONObject().put("error", "needs_local_action").put("message", "중앙 요청의 연결 화면이 닫혔습니다"))
             finish(); return
         }
         synchronized(LOCK) {
@@ -127,7 +127,9 @@ class MediaSessionService : Service() {
             else -> "미디어 세션"
         }
         val display = env.isContentDelivery() || env.receivesVideo()
-        val tap = PendingIntent.getActivity(this, 0, Intent(this, if (display) MediaDisplayActivity::class.java else CctvModeActivity::class.java),
+        val tap = PendingIntent.getActivity(this, 0, Intent(this, if (display) MediaDisplayActivity::class.java else com.indiebiz.phoneagent.MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(EXTRA_SESSION, env.sessionId),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return Notification.Builder(this, CH_ID)
             .setContentTitle("IndieBiz 미디어 세션").setContentText(what)
@@ -151,8 +153,7 @@ class MediaSessionService : Service() {
         @Volatile private var lastEnd: JSONObject? = null
 
         private fun localActionMessage(env: MediaEnvelope): String =
-            if (env.isContentDelivery() || env.receivesVideo()) "폰에서 미디어 화면을 열고 다시 시도해 주세요"
-            else "폰에서 카메라 대기 모드를 시작해 주세요"
+            "중앙 요청(${env.purpose})의 실행이 Android에서 거절됐습니다. 기기 등록·센서 권한·다른 앱 위에 표시 권한을 확인해 주세요"
 
         fun currentRunner(): SessionRunner? = runner?.takeIf { !it.ended }
 

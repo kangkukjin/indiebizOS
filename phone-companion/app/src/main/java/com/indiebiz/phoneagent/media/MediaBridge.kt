@@ -69,13 +69,18 @@ object MediaBridge {
                 it.put("needs_local_action", JSONObject().put("code", "camera_unavailable").put("message", "카메라 없음"))
             }
         }
-        val needsScreen = (env.sendsVideo() && !CctvState.cameraReady()) ||
-            (env.sendsAudio() && !CctvState.microphoneReady())
-        val remoteStart = if (needsScreen) RemoteMediaStart.prepare(ctx, env) else null
+        val plan = MediaStartPlan.forRequest(
+            output = env.isContentDelivery() || env.receivesVideo(),
+            camera = env.sendsVideo(), microphone = env.sendsAudio(),
+            cameraReady = CctvState.cameraReady(), microphoneReady = CctvState.microphoneReady(),
+            backgroundServiceRestricted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !CctvState.appVisible()
+        )
+        val needsScreen = plan != MediaStartPlan.DIRECT
+        val remoteStart = if (needsScreen) RemoteMediaStart.prepare(ctx, env, plan) else null
         if (needsScreen && remoteStart == null) {
-            return err("needs_local_action", "폰에서 카메라 대기 모드를 시작해 주세요") {
-                it.put("needs_local_action", JSONObject().put("code", "camera_unavailable")
-                    .put("reason", "remote_start_unavailable").put("message", "원격 화면 시작이 허용되지 않았습니다. 폰에서 카메라 대기 모드를 열거나 IndieBiz의 다른 앱 위에 표시를 허용해 주세요"))
+            return err("needs_local_action", "중앙 요청의 연결 화면을 자동으로 준비하지 못했습니다") {
+                it.put("needs_local_action", JSONObject().put("code", "permission_required")
+                    .put("reason", "remote_start_unavailable").put("message", "기기 등록과 IndieBiz의 다른 앱 위에 표시 권한을 확인해 주세요. 최초 설정 후 중앙 요청으로 자동 준비합니다"))
             }
         }
         val result = MediaSessionService.request(ctx, env, remoteStart?.token)

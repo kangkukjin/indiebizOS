@@ -54,7 +54,7 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
         if (ended) return
         if (!videoVisible) {
             state = "needs_local_action"
-            needsLocalAction = JSONObject().put("code", "display_required").put("message", "폰에서 미디어 화면을 열어 주세요")
+            needsLocalAction = JSONObject().put("code", "display_required").put("message", "중앙 요청의 영상 출력 화면이 표시되지 않습니다")
         } else {
             needsLocalAction = null
             state = if (peerActive && videoRendered) "active" else "connecting"
@@ -210,7 +210,7 @@ class SessionRunner(private val ctx: Context, val env: MediaEnvelope, private va
         lastPlayback = report
         if (report.optBoolean("needs_display")) {
             state = "needs_local_action"
-            needsLocalAction = JSONObject().put("code", "display_required").put("message", "폰에서 미디어 화면을 열어 주세요")
+            needsLocalAction = JSONObject().put("code", "display_required").put("message", "중앙 요청의 영상 출력 화면이 표시되지 않습니다")
         } else {
             needsLocalAction = null
             state = if (report.optBoolean("playing") || report.optBoolean("paused") || report.optBoolean("ended")) "active" else "connecting"

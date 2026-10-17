@@ -40,7 +40,7 @@ class RemoteMediaActivity : Activity() {
             setPadding(48, 64, 48, 64); setBackgroundColor(Color.BLACK)
         }
         root.addView(TextView(this).apply {
-            text = "등록된 PC의 카메라·마이크 연결\n\n연결 중에는 이 화면이 켜져 있습니다.\n종료하면 잠금 화면으로 돌아갑니다."
+            text = "중앙 PC에 연결 중\n\n요청한 작업에 필요한 동안 화면이 켜집니다.\n종료하면 이전 화면으로 돌아갑니다."
             textSize = 18f; setTextColor(Color.LTGRAY); gravity = Gravity.CENTER
         })
         root.addView(Button(this).apply { text = "연결 종료"; setOnClickListener { finish() } })

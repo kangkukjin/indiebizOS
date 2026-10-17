@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
 import java.io.File
@@ -40,7 +41,7 @@ internal class RemoteStartTicket(val sessionId: String, val token: String, val d
     @Synchronized fun cancel() { cancelled = true; resumed = false; ready.countDown() }
 }
 
-/** Registered owner requests may show a dedicated sensor screen using an explicit OS permission.
+/** Registered owner requests prepare their output/sensor screen before starting the service.
  * This never dismisses the keyguard and never grants camera/microphone permission itself.
  */
 internal object RemoteMediaStart {
@@ -52,15 +53,16 @@ internal object RemoteMediaStart {
         JSONObject(File(ctx.filesDir, "secrets/limb_client.json").readText())
     } catch (_: Exception) { null }
 
-    fun available(ctx: Context): Boolean = Settings.canDrawOverlays(ctx) && registration(ctx) != null
+    fun available(ctx: Context): Boolean = registration(ctx) != null &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || CctvState.appVisible() || Settings.canDrawOverlays(ctx))
 
     private fun authorized(ctx: Context, env: MediaEnvelope): Boolean {
         val cfg = registration(ctx) ?: return false
-        return Settings.canDrawOverlays(ctx) && env.localRole == "device" && env.authKey.isNotEmpty()
+        return available(ctx) && env.localRole == "device" && env.authKey.isNotEmpty()
             && cfg.optString("key") == env.authKey && cfg.optString("installation_id") == env.installationId
     }
 
-    fun prepare(ctx: Context, env: MediaEnvelope): RemoteStartTicket? {
+    fun prepare(ctx: Context, env: MediaEnvelope, plan: MediaStartPlan): RemoteStartTicket? {
         if (Looper.myLooper() == Looper.getMainLooper() || !authorized(ctx, env)) return null
         val ticket = RemoteStartTicket(env.sessionId, UUID.randomUUID().toString(), SystemClock.elapsedRealtime() + 5000)
         synchronized(this) {
@@ -70,8 +72,11 @@ internal object RemoteMediaStart {
         main.post {
             if (current !== ticket || !ticket.valid(SystemClock.elapsedRealtime())) return@post
             try {
-                ctx.startActivity(Intent(ctx, RemoteMediaActivity::class.java)
+                val screen = if (plan == MediaStartPlan.OUTPUT_WINDOW)
+                    MediaDisplayActivity::class.java else RemoteMediaActivity::class.java
+                ctx.startActivity(Intent(ctx, screen)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+                    .putExtra(MediaSessionService.EXTRA_SESSION, env.sessionId)
                     .putExtra(EXTRA_TOKEN, ticket.token))
             } catch (_: Exception) { release(ticket.sessionId) }
         }

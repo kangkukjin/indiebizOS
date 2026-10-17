@@ -119,20 +119,15 @@
         <service android:name=".media.CallService" android:foregroundServiceType="camera|microphone|mediaPlayback" android:exported="false" />
         <activity android:name=".media.CallActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
 
-        <activity android:name=".media.MediaDisplayActivity" android:exported="false" android:launchMode="singleTask" android:configChanges="orientation|screenSize|keyboardHidden" />
+        <activity android:name=".media.MediaDisplayActivity" android:exported="false"
+            android:taskAffinity="com.indiebiz.phoneagent.remote_media"
+            android:excludeFromRecents="true" android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <!-- 등록된 중앙 PC가 요청한 세션 전용 화면. 잠금을 풀지 않고 센서를 가시 상태에서 시작한다. -->
         <activity android:name=".media.RemoteMediaActivity" android:exported="false"
             android:taskAffinity="com.indiebiz.phoneagent.remote_media"
             android:showWhenLocked="true" android:turnScreenOn="true"
             android:excludeFromRecents="true" android:configChanges="orientation|screenSize|keyboardHidden" />
-        <!-- 사용자가 폰에서 직접 켜 두는 카메라 대기 모드 -->
-        <activity
-            android:name=".media.CctvModeActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
-
         <receiver android:name=".update.UpdateResultReceiver" android:exported="false" />
         <activity android:name=".update.UpdatePermissionActivity" android:exported="false" />
         <!-- 재부팅·APK 교체 후 상주 복원 -->

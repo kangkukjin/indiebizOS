@@ -23,7 +23,7 @@ export function SpeakerSourcePane({ sending, disabled = false, video = false, on
   };
   return (
     <section aria-label="재생음 보내기" className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-      <p className="text-sm text-stone-300">{video ? '이 PC에서 재생하는 영상과 소리를 장치로 보냅니다. 폰에서 미디어 화면을 열어 주세요.' : '이 PC의 소리를 장치의 스피커로 보냅니다.'}</p>
+      <p className="text-sm text-stone-300">{video ? '이 PC에서 재생하는 영상과 소리를 장치로 보냅니다. 연결하면 장치의 영상 화면이 자동으로 열립니다.' : '이 PC의 소리를 장치의 스피커로 보냅니다.'}</p>
       {!video && <div role="group" aria-label="보낼 소리 선택" className="flex gap-2">
         <button className={`rounded border px-3 py-2 disabled:opacity-40 ${source === 'playback' ? 'border-emerald-400 bg-emerald-900' : 'border-white/20'}`} aria-pressed={source === 'playback'} disabled={locked} onClick={() => setSource('playback')}>파일·주소</button>
         <button className={`rounded border px-3 py-2 disabled:opacity-40 ${source === 'mic' ? 'border-emerald-400 bg-emerald-900' : 'border-white/20'}`} aria-pressed={source === 'mic'} disabled={locked} onClick={() => { audio.current?.pause(); setName(''); setSource('mic'); }}>마이크 입력</button>

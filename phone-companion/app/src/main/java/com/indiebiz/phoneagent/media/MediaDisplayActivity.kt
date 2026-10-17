@@ -6,6 +6,8 @@ import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
+import android.os.SystemClock
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -35,12 +37,26 @@ class MediaDisplayActivity : Activity(), TextureView.SurfaceTextureListener {
     private var track: VideoTrack? = null
     private var foreground = false
     private var seeking = false
+    private var ticket: RemoteStartTicket? = null
+    private var sessionId = ""
     private val poll = object : Runnable {
         override fun run() { if (foreground) { refresh(); main.postDelayed(this, 400) } }
     }
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        val token = intent.getStringExtra(RemoteMediaStart.EXTRA_TOKEN)
+        if (token != null) {
+            ticket = RemoteMediaStart.attach(this, token)
+            if (ticket == null) { finish(); return }
+            sessionId = ticket!!.sessionId
+        } else {
+            // A notification may reopen only its still-running session, never a waiting screen.
+            sessionId = intent.getStringExtra(MediaSessionService.EXTRA_SESSION) ?: ""
+            if (sessionId.isEmpty() || MediaSessionService.currentSessionId() != sessionId) { finish(); return }
+        }
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
         volumeControlStream = android.media.AudioManager.STREAM_MUSIC
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.BLACK) }
@@ -91,12 +107,41 @@ class MediaDisplayActivity : Activity(), TextureView.SurfaceTextureListener {
         setContentView(root)
     }
 
-    override fun onResume() { super.onResume(); foreground = true; main.post(poll) }
+    override fun onResume() {
+        super.onResume()
+        if (isFinishing) return
+        foreground = true; main.post(poll); markVisible()
+    }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) markVisible()
+    }
+    private fun markVisible() {
+        main.post {
+            val t = ticket ?: return@post
+            if (foreground && hasWindowFocus() && !isFinishing &&
+                texture.isAvailable && getSystemService(PowerManager::class.java).isInteractive) {
+                if (!t.resume(SystemClock.elapsedRealtime())) finish()
+            }
+        }
+    }
     override fun onPause() {
         foreground = false; main.removeCallbacks(poll); detach()
         super.onPause()
     }
-    override fun onDestroy() { detach(); surface?.release(); surface = null; super.onDestroy() }
+    override fun onStop() {
+        val t = ticket
+        if (t == null || t.resumed || isFinishing) {
+            RemoteMediaStart.release(sessionId)
+            MediaSessionService.stop(applicationContext, sessionId, "local_display_closed")
+        }
+        super.onStop()
+    }
+    override fun onDestroy() {
+        main.removeCallbacksAndMessages(null)
+        ticket?.let { RemoteMediaStart.release(it.sessionId) }
+        detach(); surface?.release(); surface = null; super.onDestroy()
+    }
 
     private fun detach() {
         val old = runner
@@ -108,10 +153,13 @@ class MediaDisplayActivity : Activity(), TextureView.SurfaceTextureListener {
         runner = null
     }
     private fun refresh() {
-        val next = MediaSessionService.currentRunner()?.takeIf { it.env.isContentDelivery() || it.env.receivesVideo() }
+        if (ticket?.valid(SystemClock.elapsedRealtime()) == false) { finish(); return }
+        val next = MediaSessionService.currentRunner()?.takeIf {
+            it.sessionId == sessionId && (it.env.isContentDelivery() || it.env.receivesVideo())
+        }
         if (next !== runner) {
             detach(); runner = next
-            next?.releaseDisplay = { detach() }
+            next?.releaseDisplay = { detach(); finish() }
             next?.setOutputSurface(surface)
             next?.setVideoVisible(true)
         }
@@ -119,7 +167,11 @@ class MediaDisplayActivity : Activity(), TextureView.SurfaceTextureListener {
         val content = r?.env?.isContentDelivery() == true
         pause.visibility = if (content) View.VISIBLE else View.GONE
         seek.visibility = pause.visibility; volume.visibility = pause.visibility
-        if (r == null) { texture.visibility = View.INVISIBLE; status.text = "미디어 수신 대기 · 중앙PC에서 이 폰으로 영상을 보내 주세요"; return }
+        if (r == null) {
+            status.text = "중앙 PC의 영상 연결 중"
+            if (ticket == null || ticket?.committed == true) finish()
+            return
+        }
         if (content) {
             texture.visibility = View.VISIBLE
             val p = r.playbackSnapshot()
@@ -160,6 +212,7 @@ class MediaDisplayActivity : Activity(), TextureView.SurfaceTextureListener {
     }
     override fun onSurfaceTextureAvailable(value: SurfaceTexture, width: Int, height: Int) {
         surface?.release(); surface = Surface(value)
+        markVisible()
         if (foreground) { runner?.setOutputSurface(surface); if (runner?.env?.receivesVideo() != true) runner?.setVideoVisible(true) }
     }
     override fun onSurfaceTextureSizeChanged(value: SurfaceTexture, width: Int, height: Int) {}

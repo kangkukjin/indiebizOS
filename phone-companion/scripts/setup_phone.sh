@@ -79,14 +79,14 @@ say "미디어 세션 권한(CAMERA·RECORD_AUDIO) 부여"
 for PERM in android.permission.CAMERA android.permission.RECORD_AUDIO; do
   adb shell pm grant "$PKG" "$PERM" 2>/dev/null \
     && echo "✓ $PERM 부여" \
-    || echo "⚠ $PERM 부여 실패 — 폰 설정 또는 앱의 '카메라 대기 모드' 화면에서 허용"
+    || echo "⚠ $PERM 부여 실패 — 폰 설정 또는 앱의 최초 설정 화면에서 허용"
 done
 if [[ "$REMOTE_MEDIA" == 1 ]]; then
   say "등록된 중앙 PC의 원격 센서 화면 시작 허용"
   adb shell appops set "$PKG" SYSTEM_ALERT_WINDOW allow
   echo "※ 카메라·마이크 요청 시 잠금 위에 연결 화면을 켭니다. 잠금은 유지하며 연결 종료 시 화면도 닫습니다."
 else
-  echo "※ Android 10+ 원격 카메라는 '카메라 대기 모드' 또는 --remote-media 설치가 필요합니다."
+  echo "※ Android 10+ 화면 자동 열기는 --remote-media 또는 앱의 최초 설정에서 권한을 한 번 허용합니다."
 fi
 
 # 3) API 키 주입 (.env 부분집합 → app-private)

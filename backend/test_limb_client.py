@@ -312,3 +312,23 @@ def test_phone_ibl_cannot_turn_transport_metadata_into_user_grant(hub, phone_env
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_phone_desktop_bridge_declares_and_dispatches_without_credentials(hub, phone_env, monkeypatch):
+    seen = []
+    class Bridge:
+        def run(self, sid):
+            seen.append(sid)
+            return '{"success": true}'
+        def stop(self, sid):
+            seen.append(('stop', sid))
+    monkeypatch.setattr(limb_client, '_screen_bridge', lambda: Bridge())
+    rec = _enroll_phone()
+    c = _client(hub, rec, lambda *a: None)
+    assert 'desktop' in limb_client.supported_ops()
+    assert c.capabilities()['desktop_stream'] == 1
+    assert c.capabilities()['os'] == 'android'
+    sid = 'b' * 32
+    result = c._dispatch({'id': 'screen-job', 'code': json.dumps({'op': 'desktop', 'screen_id': sid})})
+    assert result['success'] and seen == [sid, ('stop', sid)]
+    assert c._dispatch({'id': 'bad', 'code': '{"op":"desktop","screen_id":"../bad"}'})['error'] == 'invalid_screen_id'

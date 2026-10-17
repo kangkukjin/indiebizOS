@@ -29,18 +29,18 @@ test('all OS use an isolated viewer, double clicks reuse it, old helpers explain
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ items: [{ device_id: 'guestpc-abc', alias: 'PC', registration: { state: 'active', capabilities: { desktop_stream: capability, os } } }] }) });
   try {
     installRemoteDesktop({ app, BrowserWindow: Window, ipcMain: { handle(_name, fn) { handler = fn; } } });
-    for (os of ['windows', 'linux', 'darwin']) {
+    for (os of ['windows', 'linux', 'darwin', 'android']) {
       await Promise.all([handler(event(), 'guestpc-abc'), handler(event(), 'guestpc-abc')]);
       const win = created.at(-1);
       assert.match(win.url, /#\/remote-screen\/guestpc-abc$/);
       assert.equal(win.options.webPreferences.nodeIntegration, false);
       assert.equal(win.options.webPreferences.sandbox, true);
       assert.deepEqual(win.popup(), { action: 'deny' });
-      assert.equal(created.length, ['windows', 'linux', 'darwin'].indexOf(os) + 1);
+      assert.equal(created.length, ['windows', 'linux', 'darwin', 'android'].indexOf(os) + 1);
       win.emit('closed');
     }
     capability = false;
     await assert.rejects(handler(event(), 'guestpc-abc'), /헬퍼를 교체/);
-    assert.equal(created.length, 3);
+    assert.equal(created.length, 4);
   } finally { globalThis.fetch = original; }
 });

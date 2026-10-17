@@ -1,5 +1,6 @@
 """Owner screen sessions and the separately authenticated helper stream."""
 import asyncio
+import json
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
@@ -29,7 +30,7 @@ async def _finish(ws, sid, side, tasks):
         task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
     screen.unwatch(sid, side)
-    reason = ("원격 PC의 연결이나 화면·입력 접근 권한을 확인한 뒤 다시 연결하세요."
+    reason = ("원격 기기의 연결이나 화면·입력 접근 권한을 확인한 뒤 다시 연결하세요."
               if side == "helper" else "화면 공유가 종료됐습니다.")
     await asyncio.to_thread(screen.close, sid, reason)
     try:
@@ -60,8 +61,7 @@ async def helper_socket(ws: WebSocket, sid: str):
                     screen.put_frame(sid, message['bytes'])
                 elif message.get('text'):
                     # Worker diagnostics are not exposed as commands or persisted.
-                    await asyncio.to_thread(screen.close, sid, '원격 PC에서 화면 공유 권한을 허용한 뒤 다시 연결하세요.')
-                    return
+                    await asyncio.to_thread(screen.device_status, sid, json.loads(message['text']))
 
         async def send():
             while True:

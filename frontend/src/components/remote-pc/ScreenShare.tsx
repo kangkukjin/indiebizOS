@@ -7,6 +7,7 @@ export function ScreenShare({ device }: { device: string }) {
   const keyboard = useRef<HTMLTextAreaElement>(null);
   const socket = useRef<WebSocket | null>(null);
   const [state, setState] = useState('연결 중…');
+  const [phone, setPhone] = useState(false);
   const [ready, setReady] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const composing = useRef(false);
@@ -24,8 +25,9 @@ export function ScreenShare({ device }: { device: string }) {
     };
     void Promise.resolve().then(() => {
       if (disposed) return;
-      return api.request('/remote-pcs/screens', { method: 'POST', body: JSON.stringify({ target: device, id: sid }) });
-    }).then(() => {
+      return api.request<{ device_kind: string }>('/remote-pcs/screens', { method: 'POST', body: JSON.stringify({ target: device, id: sid }) });
+    }).then(result => {
+      setPhone(result?.device_kind === 'phone');
       if (disposed) { closeSession(); return; }
       ws = new WebSocket(`${WEBSOCKET_ORIGIN}/remote-pcs/screens/${sid}/stream`);
       socket.current = ws;
@@ -64,6 +66,7 @@ export function ScreenShare({ device }: { device: string }) {
   }
   function pointer(event: React.PointerEvent<HTMLCanvasElement>) {
     if (!ready) return;
+    if (phone && event.type === 'pointermove' && !event.buttons) return;
     event.preventDefault();
     if (event.type === 'pointerdown') { keyboard.current?.focus(); event.currentTarget.setPointerCapture(event.pointerId); }
     send({ type: 'pointer', ...position(event), buttons: event.buttons & 7 });
@@ -71,17 +74,21 @@ export function ScreenShare({ device }: { device: string }) {
   function key(event: React.KeyboardEvent, down: boolean) {
     if (!ready || composing.current || event.nativeEvent.isComposing) return;
     if ((event.metaKey || event.ctrlKey) && event.code === 'KeyV') return;
+    if (phone && (event.metaKey || event.ctrlKey || event.altKey)) { event.preventDefault(); return; }
     event.preventDefault();
     send({ type: 'key', code: event.code, key: event.key, down });
   }
   return <main className="flex h-screen flex-col bg-stone-950 text-white">
     <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-2 text-sm">
       <strong className="flex-1">화면 공유</strong>
+      {phone && <nav className="flex gap-3" aria-label="폰 탐색">
+        {(['back', 'home', 'recents'] as const).map((action, i) => <button key={action} disabled={!ready} onClick={() => send({ type: 'navigation', action })}>{['뒤로', '홈', '최근 앱'][i]}</button>)}
+      </nav>}
       <button onClick={() => void document.documentElement.requestFullscreen().catch(() => {})}>전체 화면</button>
       <button onClick={() => window.close()}>닫기</button>
     </header>
     <section className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-      <canvas ref={canvas} aria-label="원격 PC 화면" className="max-h-full max-w-full touch-none object-contain"
+      <canvas ref={canvas} aria-label="원격 기기 화면" className="max-h-full max-w-full touch-none object-contain"
         onPointerDown={pointer} onPointerUp={pointer} onPointerMove={pointer} onPointerCancel={() => send({ type: 'reset' })}
         onContextMenu={event => event.preventDefault()} onWheel={event => { if (ready) send({ type: 'wheel', ...position(event), dx: Math.max(-2000, Math.min(2000, event.deltaX)), dy: Math.max(-2000, Math.min(2000, event.deltaY)) }); }} />
       <textarea ref={keyboard} aria-label="원격 키보드 입력" className="absolute left-0 top-0 h-px w-px opacity-0" autoCapitalize="off" autoCorrect="off" spellCheck={false}

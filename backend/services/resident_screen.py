@@ -41,16 +41,16 @@ def create(target, sid, lan=None):
         raise ValueError('invalid_screen_id')
     rec = resident_pcs.resolve(target)
     if not (rec['registration'].get('capabilities') or {}).get('desktop_stream'):
-        raise ValueError('이 PC의 헬퍼를 교체한 뒤 화면 공유를 다시 여세요.')
+        raise ValueError('폰 앱을 업데이트한 뒤 화면 공유를 다시 여세요.' if rec['registration'].get('kind') == 'phone' else '이 PC의 헬퍼를 교체한 뒤 화면 공유를 다시 여세요.')
     if time.time() - (rec['registration'].get('last_seen') or 0) > 90:
-        raise ValueError('원격 PC가 오프라인입니다.')
+        raise ValueError('원격 기기가 오프라인입니다.')
     with _lock:
         session_lease.sweep(_sessions, lambda old: _close(old, '화면 공유 연결이 종료됐습니다.'), profile_name='screen')
         if sid in _sessions:
             raise ValueError('screen_id_conflict')
         live = [s for s in _sessions.values() if s.state != 'closed']
         if len(live) >= 32 or any(s.device == rec['device_id'] for s in live):
-            raise ValueError('이 PC에 열린 화면 공유 창을 먼저 닫으세요.')
+            raise ValueError('이 기기에 열린 화면 공유 창을 먼저 닫으세요.')
         s = Session(sid, rec['device_id'])
         _sessions[sid] = s
         try:
@@ -60,7 +60,7 @@ def create(target, sid, lan=None):
         except Exception:
             del _sessions[sid]
             raise
-        return {'id': sid}
+        return {'id': sid, 'device_kind': rec['registration'].get('kind', 'pc')}
 
 
 def _get(sid):
@@ -138,8 +138,33 @@ def status(sid, touch=False):
         if s.state == 'starting':
             tasks = resident_store.history(job=s.job)['tasks']
             if tasks and tasks[0]['state'] in {'failed', 'cancelled', 'unknown', 'expired', 'succeeded'}:
-                _close(s, '원격 PC의 화면 접근 권한을 확인한 뒤 다시 연결하세요.')
+                _close(s, '원격 기기의 화면 접근 권한을 확인한 뒤 다시 연결하세요.')
         return {'type': 'status', 'state': s.state, 'message': s.reason}
+
+
+PHONE_STATUS = {
+    'permission': '폰에서 IndieBiz 앱이나 화면 공유 알림을 열고 화면 전체 공유를 승인하세요.',
+    'accessibility': '폰 설정 → 접근성 → 설치된 서비스에서 IndieBiz를 켠 뒤 다시 연결하세요.',
+    'denied': '폰에서 화면 공유가 거절되거나 종료됐습니다.',
+    'capture_failed': '폰 화면을 가져올 수 없습니다. 잠금과 화면 공유 권한을 확인하세요.',
+    'input_failed': '폰 조작에 실패했습니다. 접근성 권한과 현재 입력창을 확인하세요.',
+}
+
+
+def device_status(sid, value):
+    """Only fixed phone diagnostics cross the stream; never arbitrary device text."""
+    code = value.get('code') if isinstance(value, dict) else None
+    if code not in PHONE_STATUS:
+        raise ValueError('invalid_screen_status')
+    with _lock:
+        s = _get(sid)
+        if s.state == 'closed':
+            return
+        if code in {'accessibility', 'denied', 'capture_failed', 'input_failed'}:
+            _close(s, PHONE_STATUS[code])
+        else:
+            s.reason = PHONE_STATUS[code]
+            _notify(s, 'owner')
 
 
 def put_frame(sid, data):
@@ -162,6 +187,8 @@ def validate_input(value):
     if not isinstance(value, dict):
         raise ValueError('invalid_screen_input')
     kind = value.get('type')
+    if kind == 'navigation' and value.get('action') in {'back', 'home', 'recents'}:
+        return {'type': kind, 'action': value['action']}
     if kind == 'reset':
         return {'type': kind}
     if kind in {'pointer', 'wheel'}:

@@ -25,15 +25,16 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.setattr(screen, '_sessions', {})
     monkeypatch.setattr(api_resident_screen.lan, 'offer', lambda *a, **k: {})
 
-    def make(name='screen-pc'):
-        rec = limb_keys.resident_enroll(limb_keys.resident_invite(name)['key'], uuid.uuid4().hex)
-        limb_keys.resident_update(rec['device_id'], capabilities={'desktop_stream': 1, 'elevation': True}, last_seen=time.time())
+    def make(name='screen-pc', kind='pc'):
+        rec = limb_keys.resident_enroll(limb_keys.resident_invite(name)['key'], uuid.uuid4().hex, kind=kind, adapter='indiebiz-v1' if kind == 'phone' else 'resident-v1')
+        limb_keys.resident_update(rec['device_id'], capabilities={'desktop_stream': 1, 'elevation': True, 'ops': ['info', 'desktop']}, last_seen=time.time())
         return rec
     return make
 
 
-def test_screen_stream_device_owner_auth_delivery_and_close(setup):
-    rec, other, sid = setup(), setup('other'), uuid.uuid4().hex
+@pytest.mark.parametrize('kind', ['pc', 'phone'])
+def test_screen_stream_device_owner_auth_delivery_and_close(setup, kind):
+    rec, other, sid = setup(kind=kind), setup('other'), uuid.uuid4().hex
     app = FastAPI()
     app.include_router(api_resident_screen.router)
     with TestClient(app, base_url='http://localhost') as client:
@@ -135,3 +136,24 @@ def test_elevation_requires_explicit_supported_shell(setup):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_phone_screen_requires_owner_entry_and_supports_permission_status(setup):
+    rec, sid = setup(kind='phone'), uuid.uuid4().hex
+    with pytest.raises(ValueError, match='unsupported'):
+        resident_pcs.submit(rec['device_id'], {'op': 'desktop', 'screen_id': sid})
+    assert screen.create(rec['device_id'], sid)['device_kind'] == 'phone'
+    screen.device_status(sid, {'code': 'permission'})
+    assert '폰에서' in screen.status(sid)['message']
+    assert screen.status(sid)['state'] == 'starting'
+    with pytest.raises(ValueError):
+        screen.device_status(sid, {'code': 'arbitrary', 'message': 'private'})
+    screen.put_frame(sid, b'\xff\xd8phone')
+    screen.input_message(sid, {'type': 'navigation', 'action': 'home'})
+    assert screen.take(sid) == [{'type': 'navigation', 'action': 'home'}]
+    with pytest.raises(ValueError):
+        screen.input_message(sid, {'type': 'navigation', 'action': 'unlock'})
+    screen.device_status(sid, {'code': 'accessibility'})
+    assert screen.status(sid)['state'] == 'closed'
+    assert screen.frame(sid, 0)[1] == b''
+    assert screen.take(sid) == [{'type': 'close'}]

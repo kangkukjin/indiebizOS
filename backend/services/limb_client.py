@@ -73,9 +73,21 @@ def _media_bridge():
         return None
 
 
+def _screen_bridge():
+    if _body_profile() != "phone":
+        return None
+    try:
+        from java import jclass
+        return jclass("com.indiebiz.phoneagent.screen.ScreenBridge")
+    except Exception:
+        return None
+
+
 def supported_ops() -> List[str]:
     """지원 op — `media` 는 다리가 import 될 때만(지연 판정)."""
     ops = list(SUPPORTED_OPS)
+    if _screen_bridge() is not None:
+        ops.append("desktop")
     if _media_bridge() is not None:
         ops.append("media")
     from phone_remote_execution import capabilities
@@ -252,6 +264,8 @@ class LimbClient:
         caps.update(capabilities())
         from phone_updates import capabilities as update_capabilities
         caps.update(update_capabilities())
+        if _screen_bridge() is not None:
+            caps.update({"os": "android", "desktop_stream": 1})
         bridge = _media_bridge()
         if bridge is not None:
             try:
@@ -419,6 +433,29 @@ class LimbClient:
         if not isinstance(env, dict):
             env = {}
         op = env.get("op") or "shell"
+        if op == "desktop":
+            bridge = _screen_bridge()
+            if bridge is None:
+                return {"success": False, "error": "unsupported_on_this_body"}
+            sid = env.get("screen_id", "")
+            import re
+            if not isinstance(sid, str) or not re.fullmatch(r"[a-f0-9]{32}", sid):
+                return {"success": False, "error": "invalid_screen_id"}
+            event = self._active_cancel.setdefault(str(job["id"]), threading.Event())
+            done = threading.Event()
+            def cancel_screen():
+                while not done.wait(0.1):
+                    if event.is_set() or self.stopped.is_set():
+                        bridge.stop(sid)
+            if event.is_set() or self.stopped.is_set():
+                return {"success": False, "cancelled": True}
+            threading.Thread(target=cancel_screen, daemon=True).start()
+            try:
+                # Native code reads the installed credential; no key enters job history.
+                return json.loads(str(bridge.run(sid)))
+            finally:
+                done.set()
+                bridge.stop(sid)
         if op == "phone_update":
             from phone_updates import execute
             with self._lock:
@@ -554,7 +591,7 @@ class LimbClient:
                         op = json.loads(job.get("code") or "{}").get("op")
                     except (ValueError, AttributeError):
                         op = None
-                    if op in {"info", "transfer", "media", "media_session"} and len(self._controls) < 4:
+                    if op in {"info", "transfer", "media", "media_session", "desktop"} and len(self._controls) < 4:
                         self._queue.remove(job)
                         self._controls.add(str(job["id"]))
                         self._active_cancel.setdefault(str(job["id"]), threading.Event())

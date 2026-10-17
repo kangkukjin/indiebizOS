@@ -134,6 +134,10 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
             from phone_remote_execution import require_owner
             require_owner()
             body_ops.add("phone_update")
+        if allow_desktop and capabilities.get("desktop_stream") == 1:
+            from phone_remote_execution import require_owner
+            require_owner()
+            body_ops.add("desktop")
         declared = capabilities.get("ops")
         if capabilities.get("execution_contract") == 1 and isinstance(declared, list):
             body_ops |= {"shell", "python", "transfer"} & {x for x in declared if isinstance(x, str)}

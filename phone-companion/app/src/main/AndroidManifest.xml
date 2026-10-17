@@ -5,6 +5,7 @@
     <!-- WebRTC 네트워크 감시: 누락 시 ConnectivityManager 호출이 예외를 내고 네이티브 엔진이 종료된다. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- 미디어 세션(WebRTC 카메라·마이크 송신, 수신 음성·콘텐츠 재생) — Android 14 유형별 FGS 권한 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
@@ -90,6 +91,12 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_config" />
         </service>
+
+        <service android:name=".screen.ScreenCaptureService" android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+        <activity android:name=".screen.ScreenPermissionActivity" android:exported="false"
+            android:excludeFromRecents="true" android:taskAffinity="com.indiebiz.phoneagent.screen"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <!-- 상주용 포그라운드 서비스 (프로세스 생존 유지) -->
         <service android:name=".execution.RemoteExecutionService"

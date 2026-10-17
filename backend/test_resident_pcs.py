@@ -47,6 +47,26 @@ def test_alias_revoke_targets_registration_not_consumed_invitation(registry):
     with pytest.raises(ValueError, match='invalid_registration'):
         pcs.sync(rec['key'], 'a' * 32)
 
+
+def test_owner_context_survives_device_sync_without_changing_pause(registry):
+    rec = registry('office')
+    limb_keys.resident_update(rec['device_id'], paused=True)
+    app = FastAPI()
+    app.include_router(api_resident_pcs.router)
+    with TestClient(app) as client:
+        response = client.put('/remote-pcs/context', json={
+            'target': rec['device_id'], 'context': '  작은방 프린터 연결 PC  '})
+        assert response.status_code == 200
+        assert response.json()['registration']['paused'] is True
+        assert client.put('/remote-pcs/context', json={
+            'target': rec['device_id'], 'context': ['invalid']}).status_code == 400
+    pcs.sync(rec['key'], 'a' * 32, capabilities={'os': 'windows'})
+    limb_keys.invalidate()
+    saved = pcs.resolve(rec['device_id'], active=False)['registration']
+    assert saved['context'] == '작은방 프린터 연결 PC'
+    assert saved['paused'] is True
+    assert saved['capabilities']['os'] == 'windows'
+
 @pytest.mark.parametrize('days', [-1, float('nan'), float('inf'), True])
 def test_invalid_temporary_duration_never_becomes_unlimited(registry, days):
     with pytest.raises(ValueError):

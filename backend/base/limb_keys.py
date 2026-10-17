@@ -425,9 +425,14 @@ def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter=
 
 
 def resident_update(device, **changes):
-    allowed = {"state", "paused", "wake", "capabilities", "last_seen", "removal_receipt"}
+    allowed = {"state", "paused", "wake", "capabilities", "last_seen", "removal_receipt", "context"}
     if changes.keys() - allowed:
         raise ValueError("invalid_registration_field")
+    if "context" in changes:
+        context = changes["context"]
+        if not isinstance(context, str) or len(context) > 1000:
+            raise ValueError("장치 설명은 1000자 이내 문자열이어야 합니다")
+        changes["context"] = context.strip()
     with _lock:
         rec = _find_locked(_load(), device)
         if not rec or not rec.get("registration"):

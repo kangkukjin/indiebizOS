@@ -450,7 +450,7 @@ _RECALL_CHANNELS = [
     ("recalled_memory", "선택된 심층 기억 — 가지 먼저 고른 3건 (공통 회상)"),
     ("guide_map", "가이드 목차 — 실행기억 가지별 가이드 파일명 (지도 전체는 recall store:실행)"),
     ("forage_memory", "포식 기억 — 자동 주입 없음(어휘가 입구: [self:forage]{op:\"recall\"})"),
-    ("connected_limbs", "연결된 손발 — 라이브 게스트 PC 이름 (있을 때만)"),
+    ("connected_limbs", "원격 장치 — 이름·환경·배치·용도·최근 접속 상태"),
     ("repair_outcome", "자기수리 결말 — 미보고 판정 (있을 때만)"),
     ("decision_ledger", "결정 원장 — 활성 판정 다이제스트 + 질의 일치 상세"),
     ("method_map", "세계 지도(글자 채널) — 이름이 실제로 나온 어휘와 관계 조각"),

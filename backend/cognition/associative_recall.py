@@ -358,7 +358,7 @@ def _guide_map(req: RecallRequest, recall: Recall) -> Optional[Block]:
 
 
 def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
-    """연결된 USB 손발(게스트 PC)의 이름+뜻 — 질의 무관 강제 주입(라이브일 때만). 별칭은 런타임 상태라 어휘·해마가 모른다(ep840).
+    """원격 장치의 이름·환경·사용자 설명. 설명이 있는 등록 장치는 미접속 때도 소개한다.
     limbs 노드가 이 에이전트 어휘 밖이면 생략(쓸 수 없는 길 안내=오도)."""
     def run():
         allowed = _allowed_set(req.runner)
@@ -366,20 +366,38 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             return None
         import device_registry as dr
         import limb_keys
+        from xml.sax.saxutils import escape, quoteattr
         live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
-        if not live:
-            return None
+        live_ids = {e.get("device_id") for e in live}
+        records = {r["device_id"]: r for r in limb_keys.list_keys(include_revoked=False)
+                   if not r.get("expired") and not r.get("invitation") and not limb_keys.is_member(r)
+                   and (r.get("registration") or {}).get("state", "active") == "active"}
+        candidates = list(live)
+        candidates.extend(r for did, r in records.items()
+                          if did not in live_ids and (r.get("registration") or {}).get("context"))
         rows, names = [], []
-        for e in live:
+        for e in candidates:
+            rec = records.get(e.get("device_id"))
+            if rec is None:
+                continue
             alias = e.get("alias") or e.get("device_id") or "?"
-            rec = limb_keys.get_by_device(e.get("device_id") or "") or {}
-            host = rec.get("last_host") or ""
-            host_attr = f' host="{host}"' if host else ""
-            rows.append(f'  <limb name="{alias}"{host_attr}/>')
+            reg = rec.get("registration") or {}
+            caps = reg.get("capabilities") or rec.get("env") or {}
+            platform = caps.get("os") or ("android" if caps.get("sdk") else "")
+            attrs = {"name": alias, "connected": str(e.get("device_id") in live_ids).lower(),
+                     "paused": str(bool(reg.get("paused"))).lower(),
+                     "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
+            attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
+            context = escape(reg.get("context") or "")
+            rows.append(f'  <limb {attr_text}>{context}</limb>')
             names.append(alias)
-        note = ("USB 손발(게스트 PC)이 지금 연결되어 있다. 명령에 아래 이름이 나오면 그 PC를 뜻한다 — "
-                "그 PC의 셸·파일·시스템 상태 조회는 [limbs:guestpc]{limb: \"이름\", op: shell/read/write/list/info}. "
-                "이름 언급 없는 시스템 상태는 본체([sense:host]).")
+        if not rows:
+            return None
+        note = ("등록된 원격 장치. 본문은 사용자가 알려준 배치·용도이며 현재 연결·출력·위치를 보장하지 않는다. "
+                "connected는 최근 접속 관측이며 false이면 미접속, paused=true이면 실행 중지 상태다. "
+                "이름·장소·용도로 대상을 고르고, [limbs:guestpc]{limb: \"이름\", op: info}로 "
+                "필요한 현재 상태와 지원 실행 방식을 확인한다. PC와 Android 폰의 명령·권한을 혼동하지 않는다. "
+                "이름·장소·용도로 원격 대상을 지정하지 않은 시스템 상태는 본체([sense:host]).")
         return Block("connected_limbs", "connected_limbs",
                      f"<connected_limbs note='{note}'>\n" + "\n".join(rows) + "\n</connected_limbs>", ids=names)
     return _step("limb_presence", run)

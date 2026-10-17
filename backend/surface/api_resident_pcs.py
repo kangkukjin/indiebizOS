@@ -108,6 +108,13 @@ def state(req: dict):
     return out
 
 
+@router.put('/remote-pcs/context')
+def device_context(req: dict):
+    """소유자가 알려준 배치·용도. 장치 sync의 능력 보고와 별도로 보존한다."""
+    rec = checked(pcs.resolve, req.get('target'), active=False)
+    return checked(limb_keys.resident_update, rec['device_id'], context=req.get('context'))
+
+
 @router.post('/remote-pcs/helper-update')
 def helper_update(req: dict):
     return checked(pcs.update_helper, req.get('target'))

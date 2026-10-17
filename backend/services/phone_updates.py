@@ -67,17 +67,22 @@ def status(rec):
         return {"state": "bootstrap", "message": "원격 업데이트 지원 APK 최초 설치 필요"}
     release = release_for(caps)
     result = {"state": "unpublished", "current_version": caps.get("version_code"),
+              "current_version_name": caps.get("version_name"),
               "abi": caps.get("abi"), "can_install": caps.get("can_install", False)}
     if release is None:
         return result
-    result.update(latest_version=release["version_code"], sha256=release["sha256"])
+    result.update(latest_version=release["version_code"], latest_version_name=release.get("version_name"),
+                  sha256=release["sha256"])
     if caps.get("installed_sha256") == release["sha256"]:
         result["state"] = "current"
     elif caps.get("signer_sha256") != release["signer_sha256"]:
         result.update(state="incompatible", message="설치된 앱과 APK 서명이 다릅니다")
-    elif (caps.get("sdk", 0) < release["min_sdk"]
-          or caps.get("version_code", 0) >= release["version_code"]):
-        result.update(state="incompatible", message="기기 버전 또는 APK versionCode 확인 필요")
+    elif caps.get("version_code", 0) > release["version_code"]:
+        result["state"] = "ahead"
+    elif caps.get("version_code", 0) == release["version_code"]:
+        result.update(state="different_build", message="버전은 같지만 APK가 다릅니다. 교체하려면 더 높은 버전으로 발행하세요")
+    elif caps.get("sdk", 0) < release["min_sdk"]:
+        result.update(state="incompatible", message=f"중앙 배포 APK는 Android API {release['min_sdk']} 이상이 필요합니다")
     else:
         import resident_store
         result["state"] = "available"
@@ -117,7 +122,7 @@ def submit(target):
         if rec["registration"].get("adapter") != "indiebiz-v1":
             raise ValueError("not_registered_phone")
         state = status(rec)
-        if state["state"] in {"current", "updating", "installing", "staged",
+        if state["state"] in {"current", "ahead", "updating", "installing", "staged",
                               "awaiting_permission", "awaiting_confirmation"}:
             return {"success": True, **state}
         if state["state"] not in {"available", "failed"}:

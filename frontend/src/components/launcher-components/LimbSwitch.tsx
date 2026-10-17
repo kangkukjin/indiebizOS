@@ -15,7 +15,7 @@ type Registration = {
   capabilities?: { os?: string; hostname?: string; desktop_stream?: number; media_session?: MediaCapability };
 };
 type Helper = { state: 'unknown' | 'current' | 'manual' | 'available' | 'updating'; rolled_back?: boolean };
-type PhoneUpdate = { state: string; current_version?: number; latest_version?: number; message?: string };
+type PhoneUpdate = { state: string; current_version?: number; latest_version?: number; current_version_name?: string; latest_version_name?: string; message?: string };
 type PC = { phone_update?: PhoneUpdate; alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration; helper?: Helper };
 type USB = { folder: string; ready: boolean };
 type PCList = { items: PC[]; usb: USB };
@@ -107,8 +107,10 @@ export function LimbSwitch() {
   const phoneNote = (pc: PC) => {
     const u = pc.phone_update;
     if (!u) return '';
-    const labels: Record<string, string> = {bootstrap: '업데이트 지원 APK 최초 설치 필요', unpublished: '중앙 APK 미발행', current: '앱 최신', available: '새 앱 있음', updating: 'APK 전송 중', staged: '설치 준비 중', installing: '설치·재접속 확인 중', awaiting_permission: '폰에서 앱 설치 권한 허용 필요', awaiting_confirmation: '폰에서 Android 설치 확인 필요', failed: '업데이트 실패', incompatible: 'APK 호환 확인 필요'};
-    return ` · ${labels[u.state] || u.state}${u.current_version ? ` (v${u.current_version})` : ''}${u.message ? ` · ${u.message}` : ''}`;
+    const labels: Record<string, string> = {bootstrap: '업데이트 지원 APK 최초 설치 필요', unpublished: '중앙 APK 미발행', current: '앱 최신', ahead: '중앙 배포본보다 새 버전 설치됨', different_build: '같은 버전의 다른 APK 설치됨', available: '새 앱 있음', updating: 'APK 전송 중', staged: '설치 준비 중', installing: '설치·재접속 확인 중', awaiting_permission: '폰에서 앱 설치 권한 허용 필요', awaiting_confirmation: '폰에서 Android 설치 확인 필요', failed: '업데이트 실패', incompatible: 'APK 호환 확인 필요'};
+    const installed = u.current_version_name || u.current_version;
+    const published = u.latest_version_name || u.latest_version;
+    return ` · ${labels[u.state] || u.state}${installed ? ` · 설치 ${installed}` : ''}${published ? ` · 중앙 배포 ${published}` : ''}${u.message ? ` · ${u.message}` : ''}`;
   };
   const helperNote = (pc: PC) => pc.registration.state !== 'active' ? ''
     : pc.helper?.state === 'updating' ? ' · 헬퍼 교체 중'

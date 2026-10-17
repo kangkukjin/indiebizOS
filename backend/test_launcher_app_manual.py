@@ -60,7 +60,7 @@ def cockpit(request, browser):
         elif path == '/remote-pcs':
             result = {'usb': {'ready': True, 'folder': '/work/helper'}, 'items': [
                 {'alias': attack, 'connected': True, 'registration': {'state': 'active', 'kind': 'phone'},
-                 'phone_update': {'state': 'awaiting_confirmation', 'current_version': 4, 'latest_version': 5}}]}
+                 'phone_update': state.get('phone_update', {'state': 'awaiting_confirmation', 'current_version': 4, 'latest_version': 5})}]}
             status = 503 if state['fail_limbs'] else 200
         route.fulfill(status=status, content_type='application/json', body=json.dumps(result))
 
@@ -105,6 +105,21 @@ def test_information_panels_mobile_and_desktop(cockpit, tmp_path):
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         assert page.locator('#p-manual').evaluate('el=>el.scrollWidth<=el.clientWidth')
     page.screenshot(path=str(tmp_path / 'cockpit.png'), full_page=True)
+    assert not errors
+
+
+def test_newer_installed_apk_is_not_shown_as_a_downgrade(cockpit):
+    from playwright.sync_api import expect
+    page, _, errors, _, state = cockpit
+    state['phone_update'] = {'state': 'ahead', 'current_version': 6, 'latest_version': 5,
+                            'current_version_name': '0.6', 'latest_version_name': '0.5'}
+    page.locator('#t-manual').click()
+    page.locator('#cpLimbs > summary').click()
+    panel = page.locator('#cpLimbsBody')
+    expect(panel).to_contain_text('중앙 배포본보다 새 버전 설치됨')
+    expect(panel).to_contain_text('설치 0.6 · 중앙 배포 0.5')
+    expect(panel).not_to_contain_text('→')
+    expect(panel).not_to_contain_text('APK 호환 확인 필요')
     assert not errors
 
 

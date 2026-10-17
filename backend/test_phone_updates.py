@@ -81,7 +81,7 @@ def test_ordinary_command_cannot_request_update(device, hub):
 
 
 @pytest.mark.parametrize('change,state', [({'signer_sha256': 'c' * 64}, 'incompatible'),
-    ({'version_code': 3}, 'incompatible'), ({'sdk': 27}, 'incompatible'),
+    ({'version_code': 3}, 'different_build'), ({'sdk': 27}, 'incompatible'),
     ({'abi': 'x86'}, 'unpublished'), ({'contract': 0}, 'bootstrap')])
 def test_incompatible_or_legacy_never_enqueued(device, change, state):
     rec, client, native = device
@@ -91,6 +91,23 @@ def test_incompatible_or_legacy_never_enqueued(device, change, state):
     with pytest.raises(ValueError):
         updates.submit(rec['device_id'])
     assert not resident_store.pending(rec['device_id'], 'phone_update')
+
+
+def test_newer_installed_apk_is_not_incompatible_or_downgraded(device, release):
+    rec, client, native = device
+    native.caps.update(version_code=4, version_name='0.4')
+    client.step(inline=True, wait=0)
+    status = updates.status(pcs.resolve(rec['device_id']))
+    assert status['state'] == 'ahead'
+    assert status['current_version_name'] == '0.4'
+    assert status['latest_version_name'] == '0.3'
+    assert updates.submit(rec['device_id'])['state'] == 'ahead'
+    assert not resident_store.pending(rec['device_id'], 'phone_update')
+    assert not native.calls
+    # A higher version must not hide an unrelated signing-key mismatch.
+    native.caps['signer_sha256'] = 'c' * 64
+    client.step(inline=True, wait=0)
+    assert updates.status(pcs.resolve(rec['device_id']))['state'] == 'incompatible'
 
 
 def test_tampered_published_bytes_rejected(release, device):

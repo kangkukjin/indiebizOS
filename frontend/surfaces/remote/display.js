@@ -339,7 +339,7 @@ function cpRender(kind,data){
 }
 function cpRenderLimbs(data){
   const rows=(data.items||[]).filter(pc=>!pc.revoked&&pc.registration?.state!=='removed');
-  const phoneLabels={bootstrap:'업데이트 지원 APK 최초 설치 필요',unpublished:'중앙 APK 미발행',current:'앱 최신',available:'새 앱 있음',updating:'APK 전송 중',staged:'설치 준비 중',installing:'설치·재접속 확인 중',awaiting_permission:'폰에서 앱 설치 권한 허용 필요',awaiting_confirmation:'폰에서 Android 설치 확인 필요',failed:'업데이트 실패',incompatible:'APK 호환 확인 필요'};
+  const phoneLabels={bootstrap:'업데이트 지원 APK 최초 설치 필요',unpublished:'중앙 APK 미발행',current:'앱 최신',ahead:'중앙 배포본보다 새 버전 설치됨',different_build:'같은 버전의 다른 APK 설치됨',available:'새 앱 있음',updating:'APK 전송 중',staged:'설치 준비 중',installing:'설치·재접속 확인 중',awaiting_permission:'폰에서 앱 설치 권한 허용 필요',awaiting_confirmation:'폰에서 Android 설치 확인 필요',failed:'업데이트 실패',incompatible:'APK 호환 확인 필요'};
   const helperLabels={unknown:'헬퍼 상태 미확인',current:'헬퍼 최신',manual:'새 헬퍼 있음(직접 교체)',available:'새 헬퍼 있음',updating:'헬퍼 교체 중'};
   return '<p>USB에 복사할 공용 헬퍼 폴더</p><pre>'+esc(data.usb?.folder||'—')+'</pre><p class="muted">'+(data.usb?.ready?'준비됨':'폴더 준비 필요')+'</p>'+
     (rows.map(pc=>{
@@ -348,7 +348,7 @@ function cpRenderLimbs(data){
       return '<div class="cp-entry"><b>'+esc(pc.alias)+'</b><p>'+esc(status)+' · '+(phone?'폰 (IndieBiz OS)':'PC')+' · '+esc(reg.capabilities?.os||'')+'</p>'+
         '<p class="muted">'+esc(phone?(phoneLabels[update?.state]||update?.state||''):(helperLabels[pc.helper?.state]||''))+
         (pc.helper?.rolled_back?' · 지난 교체가 되돌려짐':'')+
-        (update?.current_version?' · v'+esc(update.current_version):'')+(update?.latest_version?' → v'+esc(update.latest_version):'')+
+        (update?.current_version?' · 설치 '+esc(update.current_version_name||update.current_version):'')+(update?.latest_version?' · 중앙 배포 '+esc(update.latest_version_name||update.latest_version):'')+
         (update?.message?' · '+esc(update.message):'')+'</p></div>';
     }).join('')||'<p class="muted">아직 등록된 기기가 없습니다.</p>');
 }

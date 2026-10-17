@@ -69,7 +69,7 @@ return $r.result.value
 폰이 Android PackageInstaller로 자기 앱을 교체한다. 회원 데스크톱의 사용자 선택형
 업데이트와는 별개이며, 일반 에이전트의 `guestpc` 명령으로 업데이트 op를 직접 실행하지 않는다.
 
-최초에는 업데이트 지원 APK(현재 배포 versionCode 5)를 데이터 유지 설치해야 한다.
+최초에는 원격 업데이트 계약을 지원하는 APK를 데이터 유지 설치해야 한다.
 `setup_phone.sh`는 USB 최초 설치 때 앱 설치 허용을 준비한다. USB가 없으면 APK를
 다운로드해 직접 설치하고 Android 설정에서 IndieBiz의 **알 수 없는 앱 설치**를 허용한다.
 그 이후 APK 전달·설치 요청·재접속 확인은 USB/ADB 없이 기존 원격 연결만 사용한다.
@@ -78,6 +78,7 @@ return $r.result.value
 배포보다 높아야 하며, 빌드의 기본값을 재사용해 서로 다른 APK를 같은 버전으로 발행하지 않는다.
 
 ```bash
+# 6/0.6은 예시다. 각 ABI의 중앙 배포보다 높은 새 번호로 바꿔 실행한다.
 cd phone-companion
 ./gradlew :app:assembleArm64Debug :app:assembleArm32Debug -PphoneVersionCode=6 -PphoneVersionName=0.6 --no-watch-fs --no-daemon
 cd ..
@@ -102,7 +103,10 @@ APK와 키는 Git 커밋 대상이 아니다. 중앙은 `POST /remote-pcs/phone-
 - 설치 중에는 새 원격 작업의 실행을 대기시킨다. 설치 콜백·시도 기록은 앱의 영속 저장소에
   남으며 재접속 때 보고된다. Android 설치 거절은 기존 앱을 유지한다. 새 앱 자체가 부팅하지
   못하는 경우 APK 자동 다운그레이드/롤백은 보장하지 않으며 오프라인·미확인을 확인해야 한다.
-- 오래된 앱은 `bootstrap`, 미발행 ABI는 `unpublished`, 서명·버전 불일치는 `incompatible`로
+- 중앙보다 높은 설치 버전은 `ahead`(업데이트 불필요), 같은 버전의 다른 APK는 `different_build`로 구분한다.
+  설치본 해시가 중앙 배포본과 같을 때만 `current`다. 직접 설치는 중앙 발행을 대신하지 않는다.
+  검증한 APK를 USB 등으로 설치했다면 같은 파일을 위 발행기로 등록해야 배포 기준도 갱신된다.
+- 오래된 앱은 `bootstrap`, 미발행 ABI는 `unpublished`, 서명·Android 요구 버전 불일치는 `incompatible`로
   표시한다. 32비트 빌드 지원과 각 실제 기기의 무인 설치 성공은 구분한다.
 
 ### 실기 검증 (2026-10-16)

@@ -52,6 +52,14 @@ def test_remote_pc_desktop(tmp_path):
             expect(panel).to_contain_text('폰에서 Android 설치 확인 필요')
             expect(page.get_by_role('button', name='앱 업데이트', exact=True)).to_have_count(0)
             assert requests.count('/remote-pcs/phone-update') == 1
+            phone['phone_update'] = {'state': 'ahead', 'current_version': 6, 'latest_version': 5,
+                                     'current_version_name': '0.6', 'latest_version_name': '0.5'}
+            page.get_by_title('목록 새로고침').click()
+            expect(panel).to_contain_text('중앙 배포본보다 새 버전 설치됨')
+            expect(panel).to_contain_text('설치 0.6 · 중앙 배포 0.5')
+            expect(panel).not_to_contain_text('APK 호환 확인 필요')
+            expect(page.get_by_role('button', name='앱 업데이트', exact=True)).to_have_count(0)
+            assert requests.count('/remote-pcs/phone-update') == 1
             requests.clear()
             page.get_by_role('button', name='화면 공유', exact=True).click()
             page.wait_for_function('window.desktopCalls.length === 1')

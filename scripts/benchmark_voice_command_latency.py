@@ -49,7 +49,7 @@ def check_answer(text, case):
         return False
 
 
-def invoke(session, profile, case, key):
+def invoke(session, profile, case, key, history=None):
     provider, model, effort = profile
     result = {"provider": provider, "model": model, "effort": effort, "case": case["id"],
               "started_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -57,8 +57,9 @@ def invoke(session, profile, case, key):
     if provider == "deepseek":
         url = "https://api.deepseek.com/chat/completions"
         headers = {"Authorization": "Bearer " + key}
-        body = {"model": model, "messages": [{"role": "system", "content": SYSTEM},
-                {"role": "user", "content": case["text"]}], "stream": True,
+        messages = [{"role": "system", "content": SYSTEM}] + list(history or [])
+        messages.append({"role": "user", "content": case["text"]})
+        body = {"model": model, "messages": messages, "stream": True,
                 "stream_options": {"include_usage": True}, "max_tokens": 4096}
         if effort == "low":
             body.update(thinking={"type": "enabled"}, reasoning_effort="low")

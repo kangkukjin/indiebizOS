@@ -4,10 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 import { ownerDisplayPlugin } from './scripts/owner-display.mjs'
 import { uiCatalogPlugin } from './scripts/ui-catalog.mjs'
+import { devServerIdentityPlugin } from './scripts/dev-server-identity.mjs'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [ownerDisplayPlugin(), uiCatalogPlugin(), react(), tailwindcss()],
+  plugins: [devServerIdentityPlugin(), ownerDisplayPlugin(), uiCatalogPlugin(), react(), tailwindcss()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

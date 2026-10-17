@@ -18,7 +18,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "node scripts/electron-dev.mjs",
     "dist:filter": "node scripts/build-python.mjs ../scripts/build_core_manifest.py && node scripts/build-python.mjs ../scripts/build_dist_filter.py",
     "dist:stage": "node scripts/build-python.mjs ../scripts/build_dist_stage.py",
     "electron:build": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { PhoneControlExtras } from './PhoneControlExtras';
 import { Battery, RefreshCw, Smartphone, Volume2, VolumeX, Undo2, Vibrate } from 'lucide-react';
-import { controlPhone, listControlPhones, type PhoneCommand, type PhoneState, type PhoneTarget } from '../lib/phone-control';
+import { controlPhone, listControlPhones, type PhoneCommand, type PhoneState, type PhoneTarget, type PhoneStream } from '../lib/phone-control';
 
 const button = 'px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition';
 
@@ -8,9 +9,12 @@ const button = 'px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm te
 export function PhoneControlInstrument() {
   const [phones, setPhones] = useState<PhoneTarget[]>([]);
   const [selected, setSelected] = useState('');
+  const [stream, setStream] = useState<PhoneStream>('music');
+  const streamRef = useRef<PhoneStream>('music');
   const [state, setState] = useState<PhoneState | null>(null);
   const [draft, setDraft] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [extrasBusy, setExtrasBusy] = useState(false);
   const [listing, setListing] = useState(false);
   const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState<number | null>(null);
@@ -59,7 +63,7 @@ export function PhoneControlInstrument() {
     setBusy(true); setError(''); setNotice('');
     const started = performance.now();
     try {
-      const result = await controlPhone(id, op, value);
+      const result = await controlPhone(id, op, value, streamRef.current);
       if (!mounted.current || target.current !== id || revision.current !== version) return;
       setState(result); setDraft(result.actual); setNotice(result.message);
       setElapsed((performance.now() - started) / 1000);
@@ -75,16 +79,16 @@ export function PhoneControlInstrument() {
   }, []);
 
   const choose = (id: string) => {
-    if (inFlight.current) return;
+    if (inFlight.current || extrasBusy) return;
     target.current = id; revision.current++;
     setSelected(id); setState(null); setError(''); setNotice(''); setElapsed(null);
     const next = phones.find(p => p.id === id);
     if (next?.connected && next.ready) void execute(id, 'status');
   };
   const change = (op: PhoneCommand, value?: number) => {
-    if (available && state && !busy) void execute(selected, op, value);
+    if (available && state && !busy && !extrasBusy) void execute(selected, op, value);
   };
-  const disabled = busy || !available || !state || state.fixed;
+  const disabled = busy || extrasBusy || !available || !state || state.fixed;
 
   return <div className="h-full overflow-auto bg-stone-50">
     <div className="max-w-2xl mx-auto p-5 sm:p-8 space-y-5">
@@ -97,14 +101,14 @@ export function PhoneControlInstrument() {
       <section className="rounded-2xl border border-stone-200 bg-white p-5 space-y-3">
         <label htmlFor="phone-control-target" className="text-sm font-medium text-stone-700">제어할 폰</label>
         <div className="flex gap-2">
-          <select id="phone-control-target" value={selected} disabled={busy || listing}
+          <select id="phone-control-target" value={selected} disabled={busy || extrasBusy || listing}
             onChange={e => choose(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-stone-200 p-3 text-stone-900 bg-white">
             <option value="">폰을 선택해 주세요</option>
             {phones.map(p => <option key={p.id} value={p.id} disabled={!p.connected || !p.ready}>
               {p.name}{!p.connected ? ' · 연결 안 됨' : !p.ready ? ' · 폰 앱 업데이트 필요' : ' · 연결됨'}
             </option>)}
           </select>
-          <button className={button} disabled={busy || listing} onClick={() => void refreshPhones()} aria-label="폰 목록 새로고침" title="폰 목록 새로고침">
+          <button className={button} disabled={busy || extrasBusy || listing} onClick={() => void refreshPhones()} aria-label="폰 목록 새로고침" title="폰 목록 새로고침">
             <RefreshCw size={17} className={listing ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -117,10 +121,14 @@ export function PhoneControlInstrument() {
 
       <section className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 space-y-5" aria-busy={busy}>
         <div className="flex justify-between items-center">
-          <h2 className="font-medium text-stone-900 flex items-center gap-2"><Volume2 size={20} />미디어 음량</h2>
-          <button className="text-sm text-emerald-700 disabled:text-stone-400" disabled={busy || !available}
+          <h2 className="font-medium text-stone-900 flex items-center gap-2"><Volume2 size={20} />음량</h2>
+          <button className="text-sm text-emerald-700 disabled:text-stone-400" disabled={busy || extrasBusy || !available}
             onClick={() => void execute(selected, 'status')}>상태 새로고침</button>
         </div>
+        <select aria-label="음량 종류" value={stream} disabled={busy || extrasBusy || !available} className="w-full rounded-xl border border-stone-200 p-2 text-sm bg-white"
+          onChange={e => { const next = e.target.value as PhoneStream; streamRef.current = next; setStream(next); setState(null); void execute(selected, 'status'); }}>
+          <option value="music">미디어</option><option value="alarm">알람</option><option value="ring">벨소리</option><option value="notification">알림</option>
+        </select>
         <div className="text-center py-2">
           <div className="text-5xl font-semibold tracking-tight text-stone-900 tabular-nums">{state ? state.actual : '—'}
             <span className="text-lg font-normal text-stone-400">{state ? ` / ${state.max}` : ''}</span>
@@ -148,8 +156,10 @@ export function PhoneControlInstrument() {
         {state?.fixed && <p className="text-sm text-amber-700">현재 출력 장치는 음량이 고정되어 있습니다.</p>}
       </section>
 
+      <PhoneControlExtras key={selected} target={selected} disabled={!available || busy || listing} onBusy={setExtrasBusy} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <button className={`${button} flex items-center gap-2`} disabled={busy || !available || !state?.has_vibrator} onClick={() => change('vibrate')}><Vibrate size={17} />짧은 진동</button>
+        <button className={`${button} flex items-center gap-2`} disabled={busy || extrasBusy || !available || !state?.has_vibrator} onClick={() => change('vibrate')}><Vibrate size={17} />짧은 진동</button>
         <span className="text-xs text-stone-500">{elapsed !== null ? `${elapsed.toFixed(1)}초 · ` : ''}AI 호출 없음</span>
       </div>
       <div aria-live="polite" className="text-sm min-h-6">

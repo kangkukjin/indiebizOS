@@ -9,6 +9,7 @@ export interface PhoneTarget {
 }
 export interface PhoneState {
   success: boolean;
+  stream: PhoneStream;
   actual: number;
   max: number;
   percent: number;
@@ -21,6 +22,7 @@ export interface PhoneState {
   has_vibrator: boolean;
   message: string;
 }
+export type PhoneStream = 'music' | 'alarm' | 'ring' | 'notification';
 export type PhoneCommand = 'status' | 'set' | 'step' | 'half' | 'mute' | 'restore' | 'vibrate';
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -43,9 +45,9 @@ export async function listControlPhones(): Promise<PhoneTarget[]> {
   return phoneTargets(await iblExecuteApp('#!ibl edition=2\nreturn [self:limb]{op:"list"}'));
 }
 
-export function phoneCommandCode(target: string, op: PhoneCommand, value?: number): string {
+export function phoneCommandCode(target: string, op: PhoneCommand, value?: number, stream: PhoneStream = 'music'): string {
   if (!target.trim()) throw new Error('제어할 폰을 선택해 주세요.');
-  const args = { op, ...(value === undefined ? {} : { value }) };
+  const args = { op, stream, ...(value === undefined ? {} : { value }) };
   return '#!ibl edition=2\nreturn [limbs:guestpc]' + JSON.stringify({
     limb: target, op: 'python', code: controlSource, inputs: args, timeout: 20,
   });
@@ -62,6 +64,6 @@ export function controlState(value: unknown): PhoneState {
   return state as unknown as PhoneState;
 }
 
-export async function controlPhone(target: string, op: PhoneCommand, value?: number): Promise<PhoneState> {
-  return controlState(await iblExecuteApp(phoneCommandCode(target, op, value)));
+export async function controlPhone(target: string, op: PhoneCommand, value?: number, stream: PhoneStream = 'music'): Promise<PhoneState> {
+  return controlState(await iblExecuteApp(phoneCommandCode(target, op, value, stream)));
 }

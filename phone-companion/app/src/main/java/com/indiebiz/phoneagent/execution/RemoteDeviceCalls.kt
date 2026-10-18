@@ -10,6 +10,7 @@ object RemoteDeviceCalls {
     fun call(method: String, args: String): String = try {
         val a = JSONArray(args)
         val value: Any = when (method) {
+            "hardware" -> com.indiebiz.phoneagent.HardwareControl.run(JSONObject(a.getString(0)))
             "snapshot" -> JSONObject(PhoneAccessibilityService.snapshot())
             "tap" -> JSONObject(PhoneAccessibilityService.tap(a.getInt(0), a.getInt(1)))
             "tapByText" -> JSONObject(PhoneAccessibilityService.tapByText(a.getString(0), a.optInt(1, 0)))

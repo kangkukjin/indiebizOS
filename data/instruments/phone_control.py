@@ -99,10 +99,17 @@ def run(args):
     os.makedirs(root, exist_ok=True)
     audio = context.getSystemService("audio")
     am = jclass("android.media.AudioManager")
+    stream_name = args.get("stream", "music")
+    streams = {"music": am.STREAM_MUSIC, "alarm": am.STREAM_ALARM,
+               "ring": am.STREAM_RING, "notification": am.STREAM_NOTIFICATION}
+    if stream_name not in streams:
+        raise ValueError("음량 종류는 music/alarm/ring/notification입니다.")
+    receipt_name = "volume.json" if stream_name == "music" else "volume_" + stream_name + ".json"
     with open(os.path.join(root, "volume.lock"), "a") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        out = volume_control(audio, am.STREAM_MUSIC, os.path.join(root, "volume.json"),
+        out = volume_control(audio, streams[stream_name], os.path.join(root, receipt_name),
                              "status" if op == "vibrate" else op, args.get("value"))
+    out["stream"] = stream_name
     build = jclass("android.os.Build")
     version = jclass("android.os.Build$VERSION")
     battery = context.getSystemService("batterymanager")
@@ -110,13 +117,14 @@ def run(args):
     vibrator = context.getSystemService("vibrator")
     has_vibrator = bool(vibrator and vibrator.hasVibrator())
     if op == "vibrate":
+        duration = integer(args.get("duration_ms", 200), 1, 1000)
         if not has_vibrator:
             raise ValueError("이 기기에는 진동 기능이 없습니다.")
         if version.SDK_INT >= 26:
             effect = jclass("android.os.VibrationEffect")
-            vibrator.vibrate(effect.createOneShot(200, effect.DEFAULT_AMPLITUDE))
+            vibrator.vibrate(effect.createOneShot(duration, effect.DEFAULT_AMPLITUDE))
         else:
-            vibrator.vibrate(200)
+            vibrator.vibrate(duration)
         out["message"] = "짧은 진동을 요청했습니다."
     out.update({"model": str(build.MODEL), "android": str(version.RELEASE),
                 "battery": int(battery.getIntProperty(bm.BATTERY_PROPERTY_CAPACITY)),

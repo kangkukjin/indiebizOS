@@ -387,6 +387,8 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             attrs = {"name": alias, "connected": str(e.get("device_id") in live_ids).lower(),
                      "paused": str(bool(reg.get("paused"))).lower(),
                      "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
+            if platform == "android":
+                attrs["control_guide"] = "android_control.md"
             attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
             context = escape(reg.get("context") or "")
             rows.append(f'  <limb {attr_text}>{context}</limb>')
@@ -397,6 +399,8 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                 "connected는 최근 접속 관측이며 false이면 미접속, paused=true이면 실행 중지 상태다. "
                 "이름·장소·용도로 대상을 고르고, [limbs:guestpc]{limb: \"이름\", op: info}로 "
                 "필요한 현재 상태와 지원 실행 방식을 확인한다. PC와 Android 폰의 명령·권한을 혼동하지 않는다. "
+                "control_guide가 있는 장치를 제어할 때는 해당 가이드를 필요할 때 한 번 읽고 준비된 스크립트를 우선 쓴다. "
+                "가이드와 호출 계약이 현재 문맥에 있으면 다시 읽거나 코드를 새로 작성하지 않는다. "
                 "이름·장소·용도로 원격 대상을 지정하지 않은 시스템 상태는 본체([sense:host]).")
         return Block("connected_limbs", "connected_limbs",
                      f"<connected_limbs note='{note}'>\n" + "\n".join(rows) + "\n</connected_limbs>", ids=names)

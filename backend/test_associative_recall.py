@@ -35,11 +35,14 @@ def test_device_context_keeps_offline_description_and_escapes_markup(monkeypatch
     assert len(rows) == 2
     assert rows[0].attrib["name"] == '폰"<&'
     assert rows[0].attrib["os"] == "android"
+    assert rows[0].attrib["control_guide"] == "android_control.md"
     assert rows[0].attrib["connected"] == "true"
     assert rows[0].text == '스피커 <연결> & 사용자 설명'
     assert rows[1].attrib["connected"] == "false"
     assert rows[1].attrib["paused"] == "true"
     assert rows[1].attrib["os"] == "windows"
+    assert "control_guide" not in rows[1].attrib
+    assert "def run" not in block.text
     assert rows[1].text == "작은방 프린터"
 
 

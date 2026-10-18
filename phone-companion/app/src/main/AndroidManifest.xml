@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- WebRTC 네트워크 감시: 누락 시 ConnectivityManager 호출이 예외를 내고 네이티브 엔진이 종료된다. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -45,6 +47,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:usesCleartextTraffic="true"
         android:allowBackup="true">
+
+        <activity android:name=".HardwareWakeActivity" android:exported="false"
+            android:excludeFromRecents="true" android:showWhenLocked="true" android:turnScreenOn="true"
+            android:taskAffinity="com.indiebiz.phoneagent.hardware" />
 
         <!-- 진입 화면 -->
         <activity

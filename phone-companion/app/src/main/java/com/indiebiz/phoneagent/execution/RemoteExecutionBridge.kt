@@ -31,7 +31,7 @@ object RemoteExecutionBridge {
         if (!::context.isInitialized) return "{}"
         val runtime = JSONObject().put("identity", "app").put("ready", true).put("timeout_default", 120).put("timeout_max", 3600)
             .put("cwd", File(context.filesDir, "userdata/remote_work").absolutePath)
-        return JSONObject().put("execution_contract", 1).put("shell", true)
+        return JSONObject().put("execution_contract", 1).put("hardware_control", 1).put("shell", true)
             .put("runtimes", JSONObject()
                 .put("shell", JSONObject(runtime.toString()).put("executable", "/system/bin/sh"))
                 .put("python", JSONObject(runtime.toString()).put("implementation", "chaquopy").put("bridge_version", 1)))

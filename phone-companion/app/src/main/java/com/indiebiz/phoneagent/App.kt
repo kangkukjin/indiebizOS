@@ -31,6 +31,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         com.indiebiz.phoneagent.update.ApkUpdater.init(this)
         com.indiebiz.phoneagent.execution.RemoteExecutionBridge.init(this)
         com.indiebiz.phoneagent.screen.ScreenBridge.init(this)
+        HardwareControl.init(this)
         PhoneActions.init(this)   // 송신측(폰→동작) effector 다리 초기화 — [limbs:phone] 가 호출
         MediaBridge.init(this)    // 미디어 세션 다리(limb_client `media` 봉투) — 프레임은 네이티브에만
         PhoneJavascript.init(this)

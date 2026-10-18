@@ -117,6 +117,45 @@ def test_receipt_precedes_mutation_for_lost_reply_recovery(tmp_path):
     assert execute(tmp_path, audio, "restore")["actual"] == 9
 
 
+def test_run_stream_receipts_and_vibration_are_independent(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace as NS
+    class Streams(Audio):
+        def __init__(self):
+            super().__init__()
+            self.levels = {3: 9, 4: 5, 2: 7, 5: 6}
+        def getStreamVolume(self, stream):
+            return self.levels[stream]
+        def setStreamVolume(self, stream, target, flags):
+            self.calls.append((stream, target))
+            self.levels[stream] = target
+    audio = Streams()
+    vibrations = []
+    services = {"audio": audio, "batterymanager": NS(getIntProperty=lambda _: 80),
+                "vibrator": NS(hasVibrator=lambda: True, vibrate=vibrations.append)}
+    context = NS(getFilesDir=lambda: NS(getAbsolutePath=lambda: str(tmp_path)),
+                 getSystemService=services.get)
+    classes = {"android.media.AudioManager": NS(STREAM_MUSIC=3, STREAM_ALARM=4, STREAM_RING=2, STREAM_NOTIFICATION=5),
+               "android.os.Build": NS(MODEL="fixture"),
+               "android.os.Build$VERSION": NS(SDK_INT=34, RELEASE="14"),
+               "android.os.BatteryManager": NS(BATTERY_PROPERTY_CAPACITY=4),
+               "android.os.VibrationEffect": NS(DEFAULT_AMPLITUDE=-1, createOneShot=lambda n, _: n)}
+    monkeypatch.setitem(sys.modules, "java", NS(jclass=classes.__getitem__))
+    monkeypatch.setitem(sys.modules, "indiebiz_android", NS(context=context))
+    assert controls.run({"op": "half", "stream": "music"})["actual"] == 4
+    alarm = controls.run({"op": "half", "stream": "alarm"})
+    assert alarm["actual"] == 2 and alarm["stream"] == "alarm"
+    assert controls.run({"op": "restore", "stream": "music"})["actual"] == 9
+    assert controls.run({"op": "restore", "stream": "alarm"})["actual"] == 5
+    assert audio.calls == [(3, 4), (4, 2), (3, 9), (4, 5)]
+    for duration in [0, 1001, True, 1.5]:
+        with pytest.raises((ValueError, TypeError)):
+            controls.run({"op": "vibrate", "duration_ms": duration})
+    assert vibrations == []
+    controls.run({"op": "vibrate", "duration_ms": 100})
+    assert vibrations == [100]
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

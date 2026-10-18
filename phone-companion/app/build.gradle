@@ -12,8 +12,8 @@ android {
         applicationId "com.indiebiz.phoneagent"
         minSdk 28
         targetSdk 34
-        versionCode = (project.findProperty('phoneVersionCode') ?: '13').toInteger()
-        versionName = (project.findProperty('phoneVersionName') ?: '0.13').toString()
+        versionCode = (project.findProperty('phoneVersionCode') ?: '14').toInteger()
+        versionName = (project.findProperty('phoneVersionName') ?: '0.14').toString()
 
         // Chaquopy pip 는 두 flavor 공통. ABI·Python 판은 아래 productFlavors 가 정한다.
         python {
@@ -66,7 +66,7 @@ android {
             ndk { abiFilters "armeabi-v7a" }
             python {
                 version "3.11"
-                buildPython "/Users/kangkukjin/.pyenv/versions/3.11.12/bin/python3.11"
+                buildPython "${System.getProperty('user.home')}/.pyenv/versions/3.11.12/bin/python3.11"
             }
         }
     }

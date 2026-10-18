@@ -4,49 +4,304 @@ icon: 📱
 name: 폰 컨트롤
 order: 31
 modes:
-  - name: 미디어 음량
-    note: 폰을 선택하고 조회하세요. 음량은 기기의 미디어 단계입니다. 이전 값 복원은 이 앱의 마지막 변경을 되돌립니다.
-    inputs:
-      - key: target
-        type: select
-        label: 제어할 폰 선택
-        required: true
-        options_action: '$r = [self:limb]{op: "list"}; $phones = $r.limbs >> [table:filter]{where: ($p) => $p.connected == true && $p.revoked != true && $p.expired != true && $p.registration.state == "active" && $p.env.os == "android"}; return {items: $phones}'
-        options_from: items
-        option_value: device_id
-        option_label: alias
-      - key: level
-        type: text
-        placeholder: 설정할 음량 단계
-        default: '4'
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "status"}, timeout: 20}; return $r.result.value'
-    run_label: 상태 조회
-    buttons:
-      - label: − 한 단계
-        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "step", value: -1}, timeout: 20}; return $r.result.value'
-        refresh: true
-      - label: ＋ 한 단계
-        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "step", value: 1}, timeout: 20}; return $r.result.value'
-        refresh: true
-      - label: 절반으로
-        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "half"}, timeout: 20}; return $r.result.value'
-        refresh: true
-      - label: 음소거
-        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "mute"}, timeout: 20}; return $r.result.value'
-        refresh: true
-      - label: 이전 값 복원
-        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "restore"}, timeout: 20}; return $r.result.value'
-        refresh: true
-      - label: 입력한 단계 적용
-        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "set", value: $level}, timeout: 20}; return $r.result.value'
-        refresh: true
-      - label: 짧은 진동
-        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "vibrate"}, timeout: 20}; return $r.result.value'
-    view:
-      - type: kv
-        rows:
-          - {k: 기기, v: '{model} · Android {android}'}
-          - {k: 미디어 음량, v: '{actual} / {max}단계 · {percent}%'}
-          - {k: 배터리, v: '{battery}%'}
-          - {k: 복원할 단계, v: '{previous}'}
-          - {k: 상태, v: '{message} {error}'}
+- name: 음량 · 진동
+  note: 기기 음량을 조절합니다. 벨소리와 알림은 기기에 따라 연동되며 방해금지 권한이 필요할 수 있습니다.
+  inputs:
+  - key: target
+    type: select
+    label: 제어할 폰 선택
+    required: true
+    options_action: '$r = [self:limb]{op: "list"}; $phones = $r.limbs >> [table:filter]{where: ($p) => $p.connected
+      == true && $p.revoked != true && $p.expired != true && $p.registration.state == "active" && $p.env.os == "android"};
+      return {items: $phones}'
+    options_from: items
+    option_value: device_id
+    option_label: alias
+  - key: stream
+    type: select
+    label: 음량 종류
+    default: music
+    options:
+    - value: music
+      label: 미디어
+    - value: alarm
+      label: 알람
+    - value: ring
+      label: 벨소리
+    - value: notification
+      label: 알림
+  - key: level
+    type: text
+    placeholder: 설정할 음량 단계
+    default: '4'
+  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status", stream:$stream}, timeout:
+    20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  run_label: 상태 조회
+  buttons:
+  - label: − 한 단계
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"step", stream:$stream, value:-1},
+      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return
+      $r.result.value'
+  - label: ＋ 한 단계
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"step", stream:$stream, value:1},
+      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return
+      $r.result.value'
+  - label: 절반으로
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"half", stream:$stream}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 음소거
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"mute", stream:$stream}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 이전 값 복원
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"restore", stream:$stream}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 입력한 단계 적용
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "set", value: $level, stream:$stream},
+      timeout: 20}; return $r.result.value'
+  - label: 짧은 진동
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"vibrate", stream:$stream, duration_ms:200},
+      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return
+      $r.result.value'
+  view:
+  - type: kv
+    rows:
+    - k: 음량
+      v: '{actual} / {max}단계 · {percent}%'
+    - k: 복원할 단계
+      v: '{previous}'
+    - k: 배터리
+      v: '{battery}%'
+    - k: 결과
+      v: '{message} {error}'
+- name: 화면
+  note: 밝기·회전·자동 꺼짐은 시스템 설정 변경 허용이 필요합니다. 화면 켜기는 잠금을 해제하지 않습니다.
+  inputs:
+  - key: target
+    type: select
+    label: 제어할 폰 선택
+    required: true
+    options_action: '$r = [self:limb]{op: "list"}; $phones = $r.limbs >> [table:filter]{where: ($p) => $p.connected
+      == true && $p.revoked != true && $p.expired != true && $p.registration.state == "active" && $p.env.os == "android"};
+      return {items: $phones}'
+    options_from: items
+    option_value: device_id
+    option_label: alias
+  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
+    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  run_label: 상태 조회
+  buttons:
+  - label: 화면 켜기
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"screen_on"}, timeout: 20}; assert
+      $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 화면 끄기 · 잠금
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"screen_off"}, timeout: 20};
+      assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 밝기 25%
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:64}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 밝기 50%
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:128}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 밝기 75%
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:191}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 밝기 100%
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:255}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 자동 밝기
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness_auto", enabled:true},
+      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return
+      $r.result.value'
+  - label: 자동 회전
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"rotation", enabled:true}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 현재 방향 고정
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"rotation", enabled:false}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 자동 꺼짐 30초
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:30}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 자동 꺼짐 60초
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:60}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 자동 꺼짐 120초
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:120}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 자동 꺼짐 300초
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:300}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 폰에서 권한 설정 열기
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"settings_permission"}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  view:
+  - type: kv
+    rows:
+    - k: 화면 켜짐
+      v: '{screen_on}'
+    - k: 잠금
+      v: '{locked}'
+    - k: 밝기 (1~255)
+      v: '{brightness}'
+    - k: 자동 밝기
+      v: '{brightness_auto}'
+    - k: 자동 회전
+      v: '{auto_rotate}'
+    - k: 자동 꺼짐 (ms)
+      v: '{screen_timeout_ms}'
+    - k: 설정 변경 권한
+      v: '{capabilities.settings_write}'
+    - k: 변경 확인
+      v: '{verified}'
+    - k: 결과
+      v: '{message} {error}'
+- name: 손전등
+  note: 폰의 카메라 권한과 플래시가 필요합니다. 기본 플래시를 제어합니다.
+  inputs:
+  - key: target
+    type: select
+    label: 제어할 폰 선택
+    required: true
+    options_action: '$r = [self:limb]{op: "list"}; $phones = $r.limbs >> [table:filter]{where: ($p) => $p.connected
+      == true && $p.revoked != true && $p.expired != true && $p.registration.state == "active" && $p.env.os == "android"};
+      return {items: $phones}'
+    options_from: items
+    option_value: device_id
+    option_label: alias
+  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
+    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  run_label: 상태 조회
+  buttons:
+  - label: 켜기
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"torch", enabled:true}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  - label: 끄기
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"torch", enabled:false}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  view:
+  - type: kv
+    rows:
+    - k: 변경 확인
+      v: '{verified}'
+    - k: 결과
+      v: '{message} {error}'
+  - type: kv_list
+    from: torches
+    k: 조명 {id}
+    v: 켜짐 {enabled} · 사용 가능 {available}
+- name: 센서
+  note: 지원 센서를 조회한 뒤 한 번 읽습니다. 화면이 꺼졌거나 센서가 없으면 오류를 표시합니다.
+  inputs:
+  - key: target
+    type: select
+    label: 제어할 폰 선택
+    required: true
+    options_action: '$r = [self:limb]{op: "list"}; $phones = $r.limbs >> [table:filter]{where: ($p) => $p.connected
+      == true && $p.revoked != true && $p.expired != true && $p.registration.state == "active" && $p.env.os == "android"};
+      return {items: $phones}'
+    options_from: items
+    option_value: device_id
+    option_label: alias
+  - key: sensor
+    type: select
+    label: 센서
+    default: light
+    options:
+    - value: light
+      label: 조도 (lx)
+    - value: proximity
+      label: 근접 (cm)
+    - value: accelerometer
+      label: 가속도 (m/s²)
+    - value: gyroscope
+      label: 자이로 (rad/s)
+    - value: magnetic_field
+      label: 자기장 (µT)
+    - value: pressure
+      label: 기압 (hPa)
+  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
+    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  run_label: 상태 조회
+  buttons:
+  - label: 한 번 읽기
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"sensor", sensor:$sensor}, timeout:
+      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  view:
+  - type: kv
+    rows:
+    - k: 센서
+      v: '{sensor}'
+    - k: 측정값
+      v: '{reading.values}'
+    - k: 정확도 코드
+      v: '{reading.accuracy}'
+    - k: 결과
+      v: '{message} {error}'
+  - type: kv_list
+    from: sensors
+    k: '{id}'
+    v: '{name}'
+- name: 기기 상태
+  note: 배터리·화면·연결 상태를 읽습니다. Wi-Fi·블루투스 전환과 기기 종료·재부팅은 일반 앱 권한으로 제공하지 않습니다.
+  inputs:
+  - key: target
+    type: select
+    label: 제어할 폰 선택
+    required: true
+    options_action: '$r = [self:limb]{op: "list"}; $phones = $r.limbs >> [table:filter]{where: ($p) => $p.connected
+      == true && $p.revoked != true && $p.expired != true && $p.registration.state == "active" && $p.env.os == "android"};
+      return {items: $phones}'
+    options_from: items
+    option_value: device_id
+    option_label: alias
+  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
+    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
+    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; return $r.result.value'
+  run_label: 상태 조회
+  buttons: []
+  view:
+  - type: kv
+    rows:
+    - k: 배터리
+      v: '{battery}%'
+    - k: 충전 중
+      v: '{charging}'
+    - k: 화면 켜짐
+      v: '{screen_on}'
+    - k: 절전
+      v: '{power_save}'
+    - k: Wi-Fi 켜짐
+      v: '{wifi_enabled}'
+    - k: 연결
+      v: '{network_transports}'
+    - k: 인터넷 검증
+      v: '{network_validated}'
+    - k: 결과
+      v: '{message} {error}'

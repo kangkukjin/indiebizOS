@@ -22,6 +22,7 @@ import { NewspaperInstrument } from './NewspaperInstrument';
 import { rescueBinnoteDraft } from '../lib/binnote-rescue';
 import { YtMusicInstrument } from './YtMusicInstrument';
 import { PhoneControlInstrument } from './PhoneControlInstrument';
+import { PCControlInstrument } from './PCControlInstrument';
 import { uiMessage, ui, useLocale } from '../i18n/ui';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { DraggableIcon } from './launcher-components/DraggableIcon';
@@ -69,6 +70,8 @@ const STATIC_DOMAINS: Domain[] = [
     id: 'device', icon: '🖥️', label: '내 기기',
     instruments: [
       { id: 'photo', icon: '📷', label: '사진', onOpen: () => openPhoto() },
+      { id: 'mac_control', icon: '🖥️', label: '맥 컨트롤', el: <PCControlInstrument key="darwin" platform="darwin" /> },
+      { id: 'windows_control', icon: '💻', label: 'Windows 컨트롤', el: <PCControlInstrument key="windows" platform="windows" /> },
       { id: 'files', icon: '🖥️', label: '시스템', onOpen: () => openPCManager() },  // 2026-09-03 파일→시스템(탐색·분석·시스템·기억 판 한 창). id 는 저장된 배치 보존을 위해 유지
     ],
   },

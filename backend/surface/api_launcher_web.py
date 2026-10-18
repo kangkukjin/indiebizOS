@@ -680,6 +680,8 @@ _CUSTOM_APP_SOURCES = {
     "directions": "frontend/src/components/DirectionsInstrument.tsx",
     "newspaper": "frontend/src/components/NewspaperInstrument.tsx",
     "ytmusic": "frontend/src/components/YtMusicInstrument.tsx",
+    "mac_control": "frontend/src/components/PCControlInstrument.tsx",
+    "windows_control": "frontend/src/components/PCControlInstrument.tsx",
 }
 
 

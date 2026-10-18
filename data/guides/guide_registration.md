@@ -23,6 +23,7 @@
 | `keywords` | 검색 키워드 목록 | 아래 작성 규칙 참고 |
 | `file` | 실제 파일명 | 확장자 포함 (예: `my_guide.md`) |
 | `topic` | 실행기억 가지 | 실행기억 지도에 있는 가지 이름(예: `보고서/AI 동향`) — `[self:memory]{op:"recall", store:"실행"}`(node 생략 = 실행기억 지도). 가이드가 `<guide_map>` 목차에 실리는 씨앗 — 필수 |
+| `control_platforms` | 장치 제어 가이드가 담당하는 OS 목록(선택) | 예: `["darwin", "windows"]`. 등록 장치 소개의 `control_guide`에 파일명만 노출한다. OS마다 대표 가이드 하나를 등록하고, 본문은 필요한 작업에서 읽는다. |
 
 ### keywords 작성 규칙
 

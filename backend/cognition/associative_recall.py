@@ -366,7 +366,9 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             return None
         import device_registry as dr
         import limb_keys
+        from guide_registry import device_control_guides
         from xml.sax.saxutils import escape, quoteattr
+        control_guides = device_control_guides()
         live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
         live_ids = {e.get("device_id") for e in live}
         records = {r["device_id"]: r for r in limb_keys.list_keys(include_revoked=False)
@@ -387,8 +389,8 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             attrs = {"name": alias, "connected": str(e.get("device_id") in live_ids).lower(),
                      "paused": str(bool(reg.get("paused"))).lower(),
                      "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
-            if platform == "android":
-                attrs["control_guide"] = "android_control.md"
+            if guide := control_guides.get(str(platform).lower()):
+                attrs["control_guide"] = guide
             attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
             context = escape(reg.get("context") or "")
             rows.append(f'  <limb {attr_text}>{context}</limb>')

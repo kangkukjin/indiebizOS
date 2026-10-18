@@ -41,7 +41,7 @@ def test_device_context_keeps_offline_description_and_escapes_markup(monkeypatch
     assert rows[1].attrib["connected"] == "false"
     assert rows[1].attrib["paused"] == "true"
     assert rows[1].attrib["os"] == "windows"
-    assert "control_guide" not in rows[1].attrib
+    assert rows[1].attrib["control_guide"] == "pc_control.md"
     assert "def run" not in block.text
     assert rows[1].text == "작은방 프린터"
 

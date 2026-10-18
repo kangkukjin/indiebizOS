@@ -65,6 +65,27 @@ _date_cache: Optional[Dict[str, Dict]] = None
 STALE_DAYS = 60
 
 
+def device_control_guides() -> Dict[str, str]:
+    """장치 소개용 OS→가이드 포인터. 본문 없이 등록 데이터만 읽는다."""
+    try:
+        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+        result = {}
+        for entry in catalog.get("guides", []):
+            filename = entry.get("file", "")
+            platforms = entry.get("control_platforms", [])
+            if (not isinstance(filename, str) or Path(filename).name != filename
+                    or not filename.endswith(".md") or not (GUIDES_DIR / filename).is_file()
+                    or not isinstance(platforms, list)):
+                continue
+            for platform in platforms:
+                if isinstance(platform, str) and platform.strip():
+                    result.setdefault(platform.lower(), filename)
+        return result
+    except (OSError, ValueError, TypeError, AttributeError):
+        logger.warning("장치 제어 가이드 목차를 읽지 못했습니다.")
+        return {}
+
+
 def catalog_revision() -> str:
     """매 턴 목차와 읽기 응답이 공유하는 내용 지문. 재시작·같은 날 수정에도 바뀐다.
 

@@ -89,7 +89,7 @@ def recall_for_turn_detail(runner, message, history, *, request_type, reflex_hin
 
     # 세계 어휘는 개인 기억이 아니다. 주체·에이전트·실행 역할로 막지 않는다.
     # 모델이 없는 세션 제어만 제외한다. 개인 기억의 권한 관문은 별도로 유지한다.
-    if request_type not in {"THINK", "REPAIR", "EXECUTE", "CONTEXT_UPDATE"}:
+    if request_type not in {"THINK", "REPAIR", "REFLEX", "EXECUTE", "CONTEXT_UPDATE"}:
         event.update(status="excluded")
         return finish()
     root = get_base_path()

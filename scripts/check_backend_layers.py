@@ -109,7 +109,7 @@ LAYERS = {
         "cognitive_eval", "final_evaluator", "repair_readiness", "repair_policy", "repair_check_runner", "repair_resume", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
         "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "legacy_example_projection", "ibl_idiom", "ibl_distill_gates", "ibl_distill_value", "ibl_v2_experience",
-        "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "prompt_builder", "prompt_composition", "repair_verdict_distill", "turn_scope",
+        "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "prompt_builder", "prompt_composition", "repair_verdict_distill", "turn_scope", "reflex_execution",
         "pursuit_bind", "pursuit_tools", "pursuit_maintenance", "reframe", "framing_inheritance", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",
         "system_ai_tools", "system_hooks", "system_tools", "delegation_tasks",

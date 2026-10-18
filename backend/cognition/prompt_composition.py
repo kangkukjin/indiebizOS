@@ -544,7 +544,7 @@ def _assemble_unconscious(sample: str) -> Dict[str, Any]:
     ]
     return {"model": model, "sections": sections, "assembled": {},
             "entry": "cognitive_consciousness._classify_request → consciousness_agent.oneshot_ai_call(role='classify')",
-            "output_keys": ["EXECUTE", "THINK", "REPAIR", "SESSION_RESET", "CONTEXT_UPDATE"]}
+            "output_keys": ["REFLEX", "EXECUTE", "THINK", "REPAIR", "SESSION_RESET", "CONTEXT_UPDATE"]}
 
 
 def _assemble_evaluator(sample: str) -> Dict[str, Any]:
@@ -718,7 +718,7 @@ AGENTS: List[Dict[str, Any]] = [
      "summary": "계획·재규정·중간관리(검토)·인용 영수증. 감독 버스가 살아 있으면 의식 호출을 대신 받는다.",
      "build": lambda s, p: _assemble_supervisor(s)},
     {"id": "unconscious", "label": "무의식 (분류)", "group": "인지", "role": "classify",
-     "summary": "매 턴 첫 관문 — EXECUTE / THINK / REPAIR 분류. 원문만 본다.",
+     "summary": "매 턴 첫 관문 — REFLEX / EXECUTE / THINK / REPAIR 분류. 현재 요청과 짧은 직전 대화를 본다.",
      "build": lambda s, p: _assemble_unconscious(s)},
     {"id": "evaluator", "label": "최종 평가자", "group": "인지", "role": "evaluate",
      "summary": "도구 없는 원샷. 의식이 명시한 기준만 하네스가 모은 증거로 판정.",

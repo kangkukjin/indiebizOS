@@ -417,6 +417,15 @@ class CognitivePipelineMixin:
             # 자기수리의 후반부를 단순 응답으로 낮춰 그랜트를 잃게 하지 않는다.
             request_type = "REPAIR"
 
+        # REFLEX는 무의식 판정이다. 해마 점수·어휘·모델은 바꾸지 않는다.
+        from reflex_execution import ReflexTurn
+        reflex_turn = ReflexTurn(self, message, history, images)
+        if request_type == "REFLEX" and not reflex_turn.eligible:
+            from episode_logger import record_trajectory_event
+            record_trajectory_event("cognition.reflex_fallback", {"reason": reflex_turn.reason})
+            request_type = "EXECUTE"
+        reflex_selected = request_type == "REFLEX"
+
         # SESSION_RESET — Claude Code 세션 매핑만 제거하고 표준 응답 (AI 호출 없음)
         if request_type == "SESSION_RESET":
             from agent_cognitive import handle_session_reset
@@ -539,7 +548,7 @@ class CognitivePipelineMixin:
         # 위의 provider 전환(_switch_to_*)이 끝난 뒤, 턴 사본에만 찍는다(캐시 객체 불변).
         try:
             from model_resolver import reasoning_for_lane
-            _lane = "EXECUTE" if force_role else request_type
+            _lane = "EXECUTE" if force_role or reflex_selected else request_type
             _prov = getattr(self.ai, "_provider", None)
             if _prov is not None:
                 _prov.reasoning_mode = reasoning_for_lane(_lane)
@@ -584,6 +593,9 @@ class CognitivePipelineMixin:
 
         # 히스토리 편집 (명시적 빈 요약은 비움, 판단 부재만 원본 유지)
         history = self._apply_consciousness_to_history(history, consciousness_output)
+        reflex_turn.prepare(reflex_selected, history, enabled=not force_role)
+        if reflex_turn.active:
+            history = reflex_turn.history
 
         # 5~8. 실행 → 평가(THINK) → 반성(EXECUTE) — 궤적을 수집하며 이벤트 yield
         final_content = ""
@@ -749,9 +761,8 @@ class CognitivePipelineMixin:
             if _clarify_text:
                 _initial_stream = iter([{"type": "final", "content": _clarify_text}])
             else:
-                _initial_stream = self.ai.process_message_stream(
-                    message_content=augmented_message, history=history,
-                    images=images, cancel_check=cancel_check)
+                _initial_stream = reflex_turn.stream(
+                    augmented_message, history, images, cancel_check)
             if _repair_granted_task is not None and not _clarify_text:
                 from repair_readiness import execution_stream
                 _initial_stream = execution_stream(_initial_stream)
@@ -766,6 +777,8 @@ class CognitivePipelineMixin:
                     continue  # 저장된 후보만 검수 후 한 번 전달한다.
                 yield event
 
+            if reflex_selected and not reflex_turn.active:
+                history = reflex_turn.full_history
             if final_content:
                 final_content = yield from adopt_response(
                     _capability_guard, self, message, final_content, eval_tool_calls, history,
@@ -843,6 +856,13 @@ class CognitivePipelineMixin:
             print(f"[인지 파이프라인] 예외: {e}")
             _error_text = str(e)
         finally:
+            try:
+                reflex_turn.finish(final_content, eval_tool_calls, _response_completed and not _error_text)
+            except Exception as exc:
+                print(f"[REFLEX] 결말 인계 기록 실패: {type(exc).__name__}: {exc}")
+                record_trajectory_event("cognition.reflex_handoff_failed", {"error": str(exc)})
+            finally:
+                reflex_turn.restore()
             # RED 그랜트 회수 — 이 런이 발급한 것만(동시 런의 그랜트 오소거 방지).
             # task origin 도 여기서 해제(풀 스레드 재사용 누수 방지 — 소비는 1회).
             if _repair_granted_task is not None:

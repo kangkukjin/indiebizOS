@@ -141,6 +141,7 @@
     "cognition/pursuit_bind",
     "cognition/pursuit_maintenance",
     "cognition/pursuit_tools",
+    "cognition/reflex_execution",
     "cognition/reframe",
     "cognition/repair_check_runner",
     "cognition/repair_policy",
@@ -615,8 +616,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 540,
-    "engine": 508,
+    "total": 541,
+    "engine": 509,
     "blocklist": 32
   }
 }

@@ -370,7 +370,7 @@ class CognitiveConsciousnessMixin:
             result = response.strip().upper()
             if result == "RESET":  # 기존 단일 토큰 별칭
                 return "SESSION_RESET"
-            if result in {"SESSION_RESET", "CONTEXT_UPDATE", "EXECUTE", "THINK", "REPAIR"}:
+            if result in {"SESSION_RESET", "CONTEXT_UPDATE", "REFLEX", "EXECUTE", "THINK", "REPAIR"}:
                 return result
             # 오류 문구·부분 토큰·설명문은 분류가 아니다. 포함 문자열로 경로를 추측하지 않는다.
             self._log("[무의식] 분류 실패: 허용된 단일 분류값이 아님 — EXECUTE 기본 경로")

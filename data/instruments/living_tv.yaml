@@ -6,29 +6,29 @@ name: TV 컨트롤
 order: 30
 modes:
 - name: 전원·입력
-  note: 손발에 등록한 TV를 제어합니다. 응답 없음은 전원 꺼짐과 다릅니다. PC 입력 전환은 TV 메뉴 키를 보내며 실제 입력은 별도 확인하세요.
-  action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target, op:
+  note: 거실TV를 제어합니다. 응답 없음은 전원 꺼짐과 다릅니다. PC 입력 전환은 TV 메뉴 키를 보내며 실제 입력은 별도 확인하세요.
+  action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
   buttons:
   - label: ⏻ 켜기
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "on"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: ⏻ 끄기
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "off"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🖥 PC 입력으로 전환
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "to_pc"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🏠 홈
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_HOME"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: TV 연결 허용·페어링
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "pair"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   view:
@@ -44,42 +44,30 @@ modes:
       v: 실행 {apps.youtube.running} · 화면 {apps.youtube.visible}
     - k: 넷플릭스
       v: 실행 {apps.netflix.running} · 화면 {apps.netflix.visible}
-  inputs:
-  - key: target
-    type: select
-    label: 제어할 TV 선택
-    required: true
-    scope: instrument
-    options_action: '$r = [self:limb]{op:"list"}; $tvs = $r.items >> [table:filter]{where: ($p) => $p.registration != null && $p.registration.adapter
-      == "network-api" && $p.registration.kind == "tv" && $p.registration.state == "active" && $p.registration.paused != true};
-      return {items:$tvs}'
-    options_from: items
-    option_value: device_id
-    option_label: alias
 - name: 볼륨
   note: 증감은 상대 단계, 음소거는 켜기/끄기 전환입니다. 현재 음량·음소거 상태는 읽을 수 없습니다. 결과가 불확실하면 자동 반복하지 마세요.
-  action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target, op:
+  action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
   buttons:
   - label: 🔊 +1
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: 1},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🔉 −1
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: -1},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🔊 +3
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: 3},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🔉 −3
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: -3},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🔇 음소거 전환
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "mute"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   view:
@@ -95,34 +83,22 @@ modes:
       v: 실행 {apps.youtube.running} · 화면 {apps.youtube.visible}
     - k: 넷플릭스
       v: 실행 {apps.netflix.running} · 화면 {apps.netflix.visible}
-  inputs:
-  - key: target
-    type: select
-    label: 제어할 TV 선택
-    required: true
-    scope: instrument
-    options_action: '$r = [self:limb]{op:"list"}; $tvs = $r.items >> [table:filter]{where: ($p) => $p.registration != null && $p.registration.adapter
-      == "network-api" && $p.registration.kind == "tv" && $p.registration.state == "active" && $p.registration.paused != true};
-      return {items:$tvs}'
-    options_from: items
-    option_value: device_id
-    option_label: alias
 - name: 앱
   note: 앱 화면 표시까지 확인합니다. 영상 재생은 별도 확인이 필요합니다.
-  action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target, op:
+  action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
   buttons:
   - label: ▶ 유튜브
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "launch", app: "youtube"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🎬 넷플릭스
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "launch", app: "netflix"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: 🏠 홈
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_HOME"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   view:
@@ -138,48 +114,36 @@ modes:
       v: 실행 {apps.youtube.running} · 화면 {apps.youtube.visible}
     - k: 넷플릭스
       v: 실행 {apps.netflix.running} · 화면 {apps.netflix.visible}
-  inputs:
-  - key: target
-    type: select
-    label: 제어할 TV 선택
-    required: true
-    scope: instrument
-    options_action: '$r = [self:limb]{op:"list"}; $tvs = $r.items >> [table:filter]{where: ($p) => $p.registration != null && $p.registration.adapter
-      == "network-api" && $p.registration.kind == "tv" && $p.registration.state == "active" && $p.registration.paused != true};
-      return {items:$tvs}'
-    options_from: items
-    option_value: device_id
-    option_label: alias
 - name: 방향키
   note: TV 메뉴 이동용.
-  action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target, op:
+  action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
   buttons:
   - label: ↑
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_UP"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: ↓
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_DOWN"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: ←
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_LEFT"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   - label: →
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_RIGHT"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return
       $r'
     render_result: true
   - label: OK
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_ENTER"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return
       $r'
     render_result: true
   - label: ↩ 뒤로
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_RETURN"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return
       $r'
     render_result: true
@@ -196,32 +160,9 @@ modes:
       v: 실행 {apps.youtube.running} · 화면 {apps.youtube.visible}
     - k: 넷플릭스
       v: 실행 {apps.netflix.running} · 화면 {apps.netflix.visible}
-  inputs:
-  - key: target
-    type: select
-    label: 제어할 TV 선택
-    required: true
-    scope: instrument
-    options_action: '$r = [self:limb]{op:"list"}; $tvs = $r.items >> [table:filter]{where: ($p) => $p.registration != null && $p.registration.adapter
-      == "network-api" && $p.registration.kind == "tv" && $p.registration.state == "active" && $p.registration.paused != true};
-      return {items:$tvs}'
-    options_from: items
-    option_value: device_id
-    option_label: alias
 - name: 지금 방송
   note: KT 지니TV 공개 편성표(전국 기준)를 번호 순으로 보여 줍니다. 지역 방송과 실제 채널은 다를 수 있습니다. 채널 전환은 셋톱 리모컨으로 합니다.
   inputs:
-  - key: target
-    type: select
-    label: 제어할 TV 선택
-    required: true
-    scope: instrument
-    options_action: '$r = [self:limb]{op:"list"}; $tvs = $r.items >> [table:filter]{where: ($p) => $p.registration != null && $p.registration.adapter
-      == "network-api" && $p.registration.kind == "tv" && $p.registration.state == "active" && $p.registration.paused != true};
-      return {items:$tvs}'
-    options_from: items
-    option_value: device_id
-    option_label: alias
   - key: page
     type: text
     placeholder: 쪽 번호
@@ -235,17 +176,17 @@ modes:
     - '6'
     - '7'
     - '8'
-  action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target, op:
+  action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "epg_now", page: number($page)},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 새로고침
   buttons:
   - label: ⟳ 편성 다시 받기
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "epg_now", page: number($page), refresh: true},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r};
       return $r'
     render_result: true
   - label: 🔎 채널 목록 다시 찾기
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "epg_scan"},timeout:300}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   view:
@@ -264,27 +205,16 @@ modes:
 - name: 미디어 주소
   note: TV가 접근 가능한 HTTP(S) 동영상 주소를 보냅니다. 일반 웹페이지·유튜브 페이지 주소는 DLNA 영상 주소가 아닙니다.
   inputs:
-  - key: target
-    type: select
-    label: 제어할 TV 선택
-    required: true
-    scope: instrument
-    options_action: '$r = [self:limb]{op:"list"}; $tvs = $r.items >> [table:filter]{where: ($p) => $p.registration != null && $p.registration.adapter
-      == "network-api" && $p.registration.kind == "tv" && $p.registration.state == "active" && $p.registration.paused != true};
-      return {items:$tvs}'
-    options_from: items
-    option_value: device_id
-    option_label: alias
   - key: url
     type: text
     label: 동영상 주소
     placeholder: https://…/video.mp4
-  action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target, op:
+  action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "dlna_play", url: $url},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: TV로 재생 요청
   buttons:
   - label: 재생 중지 요청
-    action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "dlna_stop"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
     render_result: true
   view:

@@ -54,6 +54,21 @@ async function ibl(req){
     page.add_script_tag(content=rest)
     page.add_script_tag(content=execution)
     page.evaluate('openInstrument(0)')
+    if instrument == 'living_tv':
+        assert page.locator('#in_target').count() == 0
+        assert page.evaluate('window.calls.length') == 0
+        for index in range(len(manifest['modes'])):
+            page.evaluate(f'setMode({index})')
+            assert page.locator('#in_target').count() == 0
+        page.evaluate('setMode(4); void runMode()')
+        page.wait_for_function('window.pending!==null')
+        request = page.evaluate('window.calls.at(-1)')
+        assert 'target:"거실TV"' in request['code']
+        assert request['inputs']['page'] == '1'
+        assert 'target' not in request['inputs']
+        page.evaluate('window.pending()')
+        page.wait_for_function("document.getElementById('instOut').textContent.includes('적용 확인')")
+        return
     page.wait_for_function("document.querySelectorAll('#in_target option').length===3")
     assert page.locator('#in_target').count() == 1
     page.evaluate("void fireButton(0,document.querySelector('#modeBody .btnrow button'))")

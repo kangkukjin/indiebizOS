@@ -102,31 +102,16 @@ def test_all_app_modes_share_target_and_compilable_script_contract():
     from iblbuild_appview import check_app_templates_edition2
     app = yaml.safe_load((ROOT / 'data/instruments/living_tv.yaml').read_text())
     for mode in app['modes']:
-        target = next(i for i in mode['inputs'] if i['key'] == 'target')
-        assert target['scope'] == 'instrument' and target['required']
+        assert all(i['key'] != 'target' for i in mode.get('inputs', []))
         for item in [mode] + mode.get('buttons', []):
-            assert 'id:"TV제어"' in item['action'] and 'target:$target' in item['action']
+            assert 'id:"TV제어"' in item['action'] and 'target:"거실TV"' in item['action']
+            assert '$target' not in item['action']
             assert 'assert $r.success == true' in item['action']
             assert 'config.json' not in item['action'] and 'guestpc' not in item['action']
     data = yaml.safe_load((ROOT / 'data/ibl_nodes.yaml').read_text())
     data['nodes']['self']['actions']['test_tv'] = {'app': app}
     issues, warnings = check_app_templates_edition2(data, ROOT)
     assert not issues, issues
-
-
-def test_picker_ignores_legacy_pc_without_registration():
-    from ibl_v2_entry import handle_request
-    app = yaml.safe_load((ROOT / 'data/instruments/living_tv.yaml').read_text())
-    code = app['modes'][0]['inputs'][0]['options_action']
-    code = code.replace('$r = [self:limb]{op:"list"}', '$r = $fixture')
-    row = {'device_id': 'tv', 'registration': {'adapter': 'network-api', 'kind': 'tv', 'state': 'active', 'paused': False}}
-    result = handle_request({'edition': 2, 'code': code, 'inputs': {'fixture': {'items': [
-        {'device_id': 'legacy', 'registration': None}, row,
-        {'device_id': 'paused', 'registration': {**row['registration'], 'paused': True}},
-        {'device_id': 'removed', 'registration': {**row['registration'], 'state': 'removed'}},
-    ]}}, 'declared_inputs': ['fixture']}, str(ROOT), None)
-    assert result['success'], result.get('error')
-    assert result['value']['items'] == [row]
 
 
 @pytest.mark.parametrize('refresh', [False, True])
@@ -154,10 +139,11 @@ def test_now_broadcast_text_page_reaches_registered_script(monkeypatch, tmp_path
 
     monkeypatch.setattr(ibl_engine, 'execute_ibl', execute)
     result = handle_request({'edition': 2, 'code': code,
-                             'inputs': {'target': 'test-tv', 'page': page},
-                             'declared_inputs': ['target', 'page']}, str(tmp_path), None)
+                             'inputs': {'page': page},
+                             'declared_inputs': ['page']}, str(tmp_path), None)
     assert result['success'], result.get('error') or result.get('issues')
     assert len(calls) == 1
+    assert calls[0]['target'] == '거실TV'
     assert type(calls[0]['page']) is int and calls[0]['page'] == int(page)
     assert calls[0].get('refresh', False) is refresh
     assert result['value']['items'][0]['title'] == '시험 방송'

@@ -2681,3 +2681,5 @@
 2026-10-18 FIX: ep4886 후속 — Windows PC 앱·AI 공용 youtube_status/replace/stop 구현. 네이티브 UIAutomation으로 기존 Chrome·Edge·Brave 탭/주소창/플레이어를 식별하고 기존 유튜브 정지 후 같은 탭의 주소만 교체. 영상 ID·전체 제목·길이·광고 여부·두 시점의 시간 진행·다른 탭 정지·탭 신원/개수·전체화면을 검증한다. 실제 광고 건너뛰기 버튼 사용, 광고 전환 중 임시 UI 소실/접근성 버튼 이름 변화/숨은 시간 표시 정체 대응. 원격 접수 후 같은 task_ref 완료를 기다리고 decode, 실패 관측을 AI에 보존. 앱에 검색·교체·상태·정지 추가, PC/TV 가이드와 검색 목차 갱신. 선택기 9파일→5/717 시험파일(1%, 허브 없음), 관련105 통과·TypeScript/Vite·Android 번들·불변 화면 대조 통과(backend 전수 미실행). tv1 Chrome 실기: 광고 미완료를 실패 처리, 앱과 동일 IBL로 다른 영상 교체 후 원래 영상 복원, 모두 탭1→1·본영상 진행·전체화면 확인(최종872→875초). 다중 탭/Edge/Brave 실기는 미검증, macOS 자동 교체와 물리 스피커 청취는 범위 밖. data/instruments/pc_youtube_windows.ps1, pc_control.py, frontend/src/components/PCYouTubeControls.tsx.
 
 2026-10-18 | 인지 반사 경로 제거: 해마 고점수의 분류 우회·반사용 모델 전환·우선 코드 힌트 제거. 해마 검색/XML 주입/귀속과 명시 태그·의식 토글·수리 경로 유지. 프리뷰의 반사 판정 표시 제거, 과거 기록 표시는 보존.
+
+2026-10-18 DESIGN: 가이드 정확 참조와 재사용 부품 호출 계약 수리 설계. 미등록 참고문서의 직접 이름 조회·명시 별칭·기존 연결 가드 보강, 등록 Script 계약의 단계 이관, PC 전송/대기/검증의 저장 함수화와 TV 등록 호출, 앱·AI 공유·재개·배포·검증 기준을 정의. 가이드 전체 지문과 포식 기억 변경은 범위 밖. 설계만 반영, 런타임 구현 전. docs/CALLABLE_COMPONENT_REPAIR_DESIGN_2026_10_18.md.

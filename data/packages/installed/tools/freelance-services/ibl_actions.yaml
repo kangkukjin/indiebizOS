@@ -4,10 +4,10 @@ actions:
     aliases:
       query: [q, keyword]
     returns: items
-    fixture: '[sense:freelance]{query: "로고디자인"}'
+    fixture: '[sense:freelance]{query: "로고디자인", limit: 20}'
     description: 프리랜서·외주 서비스 검색 (source 분기, 현재 kmong=크몽). type=gigs(기본)=서비스 상품(제목·가격·평점·판매자) / type=experts=전문가 프로필(등급·경력·응답시간·주문수·전문분야). 통화 items.
     group: research
-    target_description: "프리랜서·외주 서비스 검색. query=검색어 필수(예 \"로고디자인\", \"번역\", \"영상편집\").\n- type=gigs(기본): 서비스 상품 검색 — 제목·가격·평점·리뷰수·판매자·카테고리. max_price=가격 상한(원, 후필터).\n- type=experts: 전문가(프리랜서) 검색 — 닉네임·등급(MASTER 등)·자기소개·경력·평균 응답시간·누적 주문수·전문분야·만족도. 사람을 찾을 땐 이쪽.\nsort=ranking(인기, 기본)/score(연관도). limit=개수(기본 20, 페이지 자동추적 최대 100). source=kmong(기본, 현재 유일)."
+    target_description: "프리랜서·외주 서비스 검색. query=검색어 필수(예 \"로고디자인\", \"번역\", \"영상편집\").\n- type=gigs(기본): 서비스 상품 검색 — 제목·가격·평점·리뷰수·판매자·카테고리. max_price=가격 상한(원, 후필터).\n- type=experts: 전문가(프리랜서) 검색 — 닉네임·등급(MASTER 등)·자기소개·경력·평균 응답시간·누적 주문수·전문분야·만족도. 사람을 찾을 땐 이쪽.\nsort=ranking(인기, 기본)/score(연관도). limit=선택할 표본 개수(예 20, 최대 100). 표본 조회에는 명시한다. 생략한 기본 20건에서 더 많은 결과가 있으면 PARTIAL_SOURCE다. 반환 리뷰 수 필드는 reviews이며 review_count가 아니다. source=kmong(기본, 현재 유일)."
     target_key: query
     router: handler
     tool: freelance_search
@@ -48,7 +48,7 @@ actions:
             label: 인기순
           - value: score
             label: 연관도순
-        action: '[sense:freelance]{type: "gigs", query: $query, sort: $sort}'
+        action: '[sense:freelance]{type: "gigs", query: $query, sort: $sort, limit: 20}'
         view:
         - type: card_list
           from: items
@@ -69,7 +69,7 @@ actions:
           label: 검색어
           placeholder: '예: 로고디자인, 웹개발'
           required: true
-        action: '[sense:freelance]{type: "experts", query: $query}'
+        action: '[sense:freelance]{type: "experts", query: $query, limit: 20}'
         view:
         - type: card_list
           from: items
@@ -97,7 +97,7 @@ tool_json:
   - name: freelance_search
     description: '프리랜서·외주 서비스 검색 (크몽 내부 API). type=gigs(서비스 상품 —
       제목·가격·평점·판매자) / type=experts(전문가 프로필 — 등급·경력·응답시간·주문수·전문분야).
-      통화: {items: [{title, meta, summary, url, image, price}], total, source, type}.'
+      통화: {items: [{title, meta, summary, url, image, price, rating, reviews}], total, source, type}.'
     input_schema:
       type: object
       properties:

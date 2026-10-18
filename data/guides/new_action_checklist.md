@@ -399,3 +399,6 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 
 절단·재사용을 포함한 사전 어댑터: [ibl_v2_adapter.md](ibl_v2_adapter.md).
+
+
+op별 필수·배타: `ops.required/exclusive`.

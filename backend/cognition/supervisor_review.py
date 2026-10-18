@@ -4,28 +4,29 @@ import json
 
 
 def ibl_shape_repair_key(name, payload):
-    """Recognize projection repairs on the same straight-line program and inputs.
+    """Match straight-line projection repairs, retaining calls, inputs and order.
 
-    Source arguments and control flow are never erased. Unrelated successful
-    lookups, evidence paging, and conditional programs cannot retire an issue.
+    Binding a call before projecting its result is equivalent to projecting it
+    in the binding. Evidence IDs may differ while their immutable values agree.
+    Control flow, changed source arguments and unresolved inputs never match.
     """
     if not str(name).endswith("execute_ibl") or not payload.get("code"):
         return None
     from ibl_v2_parser import parse
     from ibl_v2_ir import Node, pack, Fault
+    from model_result_view import resolve_input_refs
     from supervision_store import digest
+
+    bindings, calls = {}, []
 
     def canonical(value, projections=True):
         if isinstance(value, Node):
-            if projections and value.kind not in {"sequence", "bind", "return", "field", "ref", "literal",
-                                                 "record", "list", "pipe", "call"}:
-                raise ValueError("not a straight-line projection repair")
-            if projections and value.kind == "call" and value.data.get("body") is not None:
-                raise ValueError("control body")
-            if projections and value.kind == "pipe" and value.data.get("op") != ">>":
-                raise ValueError("conditional or parallel execution")
-            if value.kind == "field" and projections:
-                return canonical(value.data["base"])
+            if value.kind == "ref" and value.data["name"] in bindings:
+                return canonical(bindings[value.data["name"]], projections)
+            # Only the row-envelope projection is a shape repair. Different
+            # business fields (left/right, gross/net, etc.) remain distinct.
+            if value.kind == "field" and projections and value.data["key"] == "items":
+                return canonical(value.data["base"], projections)
             return [value.kind, {k: canonical(v, projections and value.kind != "call")
                                  for k, v in value.data.items()}]
         if isinstance(value, dict):
@@ -34,10 +35,71 @@ def ibl_shape_repair_key(name, payload):
             return [canonical(v, projections) for v in value]
         return pack(value)
 
+    def visit(value):
+        if isinstance(value, Node):
+            if value.kind not in {"field", "ref", "literal", "record", "list", "pipe", "parallel", "call"}:
+                raise ValueError("not a straight-line projection repair")
+            if value.kind == "call":
+                if value.data.get("body") is not None:
+                    raise ValueError("control body")
+                # Arguments are exact, including callbacks and their projections.
+                calls.append(canonical(value))
+                return
+            if value.kind == "pipe":
+                if value.data.get("op") != ">>":
+                    raise ValueError("conditional execution")
+                visit(value.data["left"])
+                visit(value.data["right"])
+                calls.append(["pipe_input", canonical(value.data["left"]), canonical(value.data["right"])])
+                return
+            if value.kind == "parallel":
+                # Combining already acquired values is safe; do not flatten
+                # concurrent calls into a misleading sequential fingerprint.
+                def has_call(v):
+                    if isinstance(v, Node):
+                        return v.kind == "call" or has_call(v.data)
+                    if isinstance(v, dict):
+                        return any(has_call(x) for x in v.values())
+                    if isinstance(v, (list, tuple)):
+                        return any(has_call(x) for x in v)
+                    return False
+                if has_call(value):
+                    raise ValueError("parallel calls")
+            visit(value.data)
+        elif isinstance(value, dict):
+            for item in value.values():
+                visit(item)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                visit(item)
+
     try:
-        key = [canonical(parse(payload["code"])), pack(payload.get("inputs", {}))]
+        program = parse(payload["code"])
+        inputs, _ = resolve_input_refs(payload.get("inputs", {}))
+        result = None
+        expressions = []
+        for statement in program.data["statements"]:
+            if statement.kind == "bind":
+                key = statement.data["name"]
+                if key in bindings or key in inputs:
+                    return None
+                value = statement.data["value"]
+                visit(value)
+                bindings[key] = value
+                result = canonical(value)
+            else:
+                value = statement.data["value"] if statement.kind == "return" else statement
+                visit(value)
+                result = canonical(value)
+                expressions.append(result)
+                if statement.kind == "return":
+                    break
+        # A bound final value and an explicit return have the same completion.
+        if not expressions or expressions[-1] != result:
+            expressions.append(result)
+        key = [calls, expressions, pack(inputs)]
         return digest(json.dumps(key, sort_keys=True, ensure_ascii=False))
-    except (Fault, ValueError, TypeError, RecursionError):
+    except (Fault, ValueError, TypeError, KeyError, OSError, RecursionError):
         return None
 
 

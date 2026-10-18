@@ -15,10 +15,10 @@
 ## 사용법
 
 ```
-[sense:freelance]{query: "로고디자인"}                          # 서비스 검색 (기본, 인기순)
-[sense:freelance]{query: "번역", sort: "score"}                 # 연관도순
-[sense:freelance]{query: "영상편집", max_price: 100000}         # 10만원 이하 (후필터)
-[sense:freelance]{type: "experts", query: "로고디자인"}         # 전문가(사람) 검색
+[sense:freelance]{query: "로고디자인", limit: 20}                          # 서비스 검색 (기본, 인기순)
+[sense:freelance]{query: "번역", sort: "score", limit: 20}                 # 연관도순
+[sense:freelance]{query: "영상편집", max_price: 100000, limit: 20}         # 10만원 이하 (후필터)
+[sense:freelance]{type: "experts", query: "로고디자인", limit: 20}         # 전문가(사람) 검색
 [sense:freelance]{query: "로고", limit: 40} >> [table:sort]{by: "price"} >> [table:take]{n: 5}
 ```
 
@@ -48,6 +48,8 @@
 - 연관 키워드: `GET /search/v1/search?keyword=&keywordsLimit=8`
 - 포트폴리오 추천: `GET /gig/v1/gigs/search/recommend/portfolios?keyword=`
 - 카테고리 트리: `GET /category/v1/global-navigation-bar`
+
+표본 조회는 `limit`을 명시한다. 생략한 기본 상한에 잘리면 원천 불완전으로 거절되므로 후속 조회도 중단된다. `total`은 원천 검색 총건수이며 표본에서 시장 전체를 추정하지 않는다. 리뷰 수의 실제 필드는 `reviews`다.
 
 ## 자주 하는 실수
 1. **rootCategoryId 등을 빼고 호출** — 400 "요청한 값이 올바르지 않습니다". 문자열 `"null"` 로라도 채워야 한다.

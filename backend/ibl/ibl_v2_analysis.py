@@ -334,6 +334,9 @@ def access_type(compiler, node, base, key, key_type=None):
         hint = HINTS['FIELD_TYPE']
         if base.kind == 'Record' and 'items' in dict(base.fields):
             hint = '반환값은 items 행 목록을 가진 Record입니다. 값.items[0]처럼 목록 필드를 먼저 선택하세요.'
+        elif base.kind == 'Result':
+            hint = ('반환값은 Result입니다. is_ok(값)으로 성공을 확인하고 unwrap(값)으로 값을 꺼내세요. '
+                    '실패는 error_of(값)으로 읽습니다. .value는 전송 JSON 표시이며 IBL 필드가 아닙니다.')
         elif base.kind == 'List':
             hint = ('반환값은 List입니다. .items/.value를 붙이지 말고 값[0]처럼 직접 인덱싱하세요. '
                     '표 연산·each 에는 목록이든 {items:[…]} 봉투든 그대로 넘기면 됩니다.')

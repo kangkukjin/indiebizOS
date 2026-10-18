@@ -929,6 +929,20 @@ def _search_openalex(tool_input: dict) -> str:
             body = (getattr(response, "text", "") or "").strip().replace("\n", " ")[:200]
             return rate_limited_failure("OpenAlex", response, items=[],
                                         hint=f"4회 백오프 후에도 거절. 본문: {body} — 급하면 source: arxiv 를 쓰세요.")
+        if getattr(response, "status_code", 200) == 400:
+            # Preserve the provider's reason instead of guessing that punctuation
+            # is invalid. Do not rewrite a user's search or retry a bad request.
+            from logging_utils import mask_secrets
+            try:
+                detail = response.json()
+                detail = detail.get("message") or detail.get("error") or ""
+            except (ValueError, AttributeError, TypeError):
+                detail = ""
+            detail = str(detail or getattr(response, "text", "") or "원천 사유 미제공")
+            detail = mask_secrets(detail.replace("\n", " "))[:600]
+            return {"success": False, "items": [], "status_code": 400,
+                    "error": f"OpenAlex 검색 요청 거절(HTTP 400): {detail}",
+                    "hint": "원천 사유로 질의·필터를 확인하세요. 원인이 불명확하면 다른 논문 원천으로 조회하세요."}
         response.raise_for_status()
         data = response.json()
 

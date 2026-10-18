@@ -969,7 +969,7 @@ nodes:
           - q
           - keyword
         returns: items
-        fixture: '[sense:freelance]{query: "로고디자인"}'
+        fixture: '[sense:freelance]{query: "로고디자인", limit: 20}'
         description: 프리랜서·외주 서비스 검색 (source 분기, 현재 kmong=크몽). type=gigs(기본)=서비스 상품(제목·가격·평점·판매자) / type=experts=전문가 프로필(등급·경력·응답시간·주문수·전문분야). 통화 items.
         group: research
         target_description: '프리랜서·외주 서비스 검색. query=검색어 필수(예 "로고디자인", "번역", "영상편집").
@@ -978,7 +978,7 @@ nodes:
 
           - type=experts: 전문가(프리랜서) 검색 — 닉네임·등급(MASTER 등)·자기소개·경력·평균 응답시간·누적 주문수·전문분야·만족도. 사람을 찾을 땐 이쪽.
 
-          sort=ranking(인기, 기본)/score(연관도). limit=개수(기본 20, 페이지 자동추적 최대 100). source=kmong(기본, 현재 유일).'
+          sort=ranking(인기, 기본)/score(연관도). limit=선택할 표본 개수(예 20, 최대 100). 표본 조회에는 명시한다. 생략한 기본 20건에서 더 많은 결과가 있으면 PARTIAL_SOURCE다. 반환 리뷰 수 필드는 reviews이며 review_count가 아니다. source=kmong(기본, 현재 유일).'
         target_key: query
         router: handler
         tool: freelance_search
@@ -1019,7 +1019,7 @@ nodes:
                 label: 인기순
               - value: score
                 label: 연관도순
-            action: '[sense:freelance]{type: "gigs", query: $query, sort: $sort}'
+            action: '[sense:freelance]{type: "gigs", query: $query, sort: $sort, limit: 20}'
             view:
             - type: card_list
               from: items
@@ -1040,7 +1040,7 @@ nodes:
               label: 검색어
               placeholder: '예: 로고디자인, 웹개발'
               required: true
-            action: '[sense:freelance]{type: "experts", query: $query}'
+            action: '[sense:freelance]{type: "experts", query: $query, limit: 20}'
             view:
             - type: card_list
               from: items
@@ -3819,7 +3819,7 @@ nodes:
               exists: launcher_ops:project_exists
         fixture: '[self:project]{op: "list"}'
         description: 런처 프로젝트 생애주기 (op 분기). list/templates/create/rename/copy/move(폴더로)/trash(휴지통)/delete(영구, 사람 승인). 주인 전용.
-        target_description: 연구 프로젝트는 create+project_kind:"research"로 만든다. project_ref는 생성된 불변 project_uid. thread_create(title), thread_list(query·archived), thread_messages(thread_ref·cursor, questions_only:true로 연구 질문 조회·question_id/ question_history 선택), thread_send(thread_ref·message·request_id·attachments[{path,name}]), thread_cancel(thread_ref), thread_update(thread_ref·expected_revision·title/mode/notes 또는 questions 변경목록), thread_archive(thread_ref·archived), thread_search(query·thread_ref 선택), research_view(thread_ref)로 선택한 대화의 자료실 화면을 연다. thread_send는 task_ref로 상태를 조회한다. list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.
+        target_description: 연구 프로젝트는 create+project_kind:"research"로 만든다. project_ref는 생성된 불변 project_uid. thread_create(title), thread_list(query·archived), thread_messages(thread_ref·cursor, questions_only:true로 연구 질문 조회·question_id/ question_history 선택), thread_send(thread_ref·message·request_id·attachments[{path,name}]), thread_cancel(thread_ref), thread_update(thread_ref·expected_revision·title/mode/notes 또는 questions 변경목록 — questions와 title/mode/notes는 별도 호출), thread_archive(thread_ref·archived), thread_search(query·thread_ref 선택), research_view(thread_ref)로 선택한 대화의 자료실 화면을 연다. thread_send는 task_ref로 상태를 조회한다. list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.
         guides:
         - research_project.md
         group: system
@@ -3828,6 +3828,14 @@ nodes:
         func: project_op
         implementation: launcher_ops.project_op → project_manager(list_projects/list_templates/create_project/rename_item/copy_item/move_to_folder/move_to_trash/delete_project). 조종실 /projects 라우트와 같은 함수.
         ops:
+          exclusive:
+            thread_update:
+            - - questions
+              - notes
+            - - questions
+              - title
+            - - questions
+              - mode
           default: list
           returns:
             create: effect
@@ -5539,7 +5547,7 @@ nodes:
         fixture: '[self:notebook]{op: "list"}'
         runs_on: pc_only
         description: 근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트·DOCX·Pages)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.
-        target_description: '연구 자료실은 대화마다 독립. name 대신 project_ref+thread_ref 사용(연구 실행 중 thread_ref 생략 시 현재 대화). 다른 대화의 자료 조회·검색은 거부한다. add+version_ref는 보존 자료의 추출·색인 재시도. sources/search/read/versions/add/remove 지원, read는 version_ref로 당시 원문 조회(max_chars: 1~12000 정수, 기본 12000자; next_cursor·extraction_revision으로 이어 읽기), remove는 검색 제외(excluded:false로 복원). op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=후보 검색 전 소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 문서 단위 답변은 실제로 읽은 소스·loc를 검증하고 quote를 원문에서 추출하며, 무효 인용 또는 인용 부재면 success:false로 답을 보류한다. 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
+        target_description: '연구 자료실은 대화마다 독립. name 대신 project_ref+thread_ref 사용(연구 실행 중 thread_ref 생략 시 현재 대화). 다른 대화의 자료 조회·검색은 거부한다. add+version_ref는 보존 자료의 추출·색인 재시도. sources/search/read/versions/add/remove 지원. versions는 source_ref 필수(sources에서 고른다); 이미 version_ref를 알면 versions 없이 read로 바로 읽는다. read는 version_ref로 당시 원문 조회(max_chars: 1~12000 정수, 기본 12000자; next_cursor·extraction_revision으로 이어 읽기), remove는 검색 제외(excluded:false로 복원). op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=후보 검색 전 소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 문서 단위 답변은 실제로 읽은 소스·loc를 검증하고 quote를 원문에서 추출하며, 무효 인용 또는 인용 부재면 success:false로 답을 보류한다. 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
         target_key: op
         group: notebook
         router: handler
@@ -5566,6 +5574,11 @@ nodes:
           force: boolean
           chunks: boolean
         ops:
+          required:
+            versions:
+            - source_ref
+            read:
+            - version_ref
           default: ask
           returns:
             create: effect

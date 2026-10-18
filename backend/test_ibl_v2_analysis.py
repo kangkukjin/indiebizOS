@@ -82,3 +82,14 @@ def test_other_arithmetic_type_errors_keep_their_own_advice():
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_result_field_error_teaches_typed_unwrap(registry):
+    source = '$r=[{n:1}] >> [table:each]{on_error:"collect"}{return $it}; return $r[0].value.n'
+    plan = compile_program(source, registry)
+    issues = [i for i in plan.issues if i['code'] == 'FIELD_TYPE']
+    assert issues and 'unwrap' in issues[0]['hint'] and 'is_ok' in issues[0]['hint']
+    fixed = source.replace('$r[0].value.n', 'is_ok($r[0]) ? unwrap($r[0]).n : null')
+    plan = compile_program(fixed, registry)
+    assert not plan.issues, plan.issues
+    assert Runtime(plan).run()['value'] == 1

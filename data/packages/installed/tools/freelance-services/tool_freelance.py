@@ -206,7 +206,7 @@ def search_freelance(tool_input: dict) -> dict:
         return {"success": False, "error": "curl_cffi 미설치 — 크몽 소스는 curl_cffi 가 필요합니다.", "items": []}
     query = (tool_input.get("query") or tool_input.get("q") or "").strip()
     if not query:
-        return {"success": False, "error": "검색어(query)를 입력해주세요. 예: {query: \"로고디자인\"}", "items": []}
+        return {"success": False, "error": "검색어(query)를 입력해주세요. 예: {query: \"로고디자인\", limit: 20}", "items": []}
     source = (tool_input.get("source") or "kmong").lower()
     if source != "kmong":
         return {"success": False, "error": f"알 수 없는 source: {source} (현재 kmong 만 지원)", "items": []}

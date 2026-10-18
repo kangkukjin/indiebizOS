@@ -93,3 +93,32 @@ def test_full_scheduling_program_and_new_policy_preserve_all_results(tmp_path, m
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+@pytest.mark.parametrize('code,expected', [
+    ('[self:notebook]{op:"versions",project_ref:"p",thread_ref:"t"}', 'source_ref'),
+    ('[self:notebook]{op:"read",project_ref:"p",thread_ref:"t"}', 'version_ref'),
+    ('[self:project]{op:"thread_update",questions:[],notes:"memo"}', 'questions'),
+    ('[self:project]{op:"thread_update",questions:[],title:"title"}', 'questions'),
+    ('[self:project]{op:"thread_update",questions:[],mode:"research"}', 'questions'),
+])
+def test_research_op_preconditions_reject_before_any_execution(code, expected):
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    plan = compile_program('[self:read]{path:"must-not-open"};' + code, load_registry())
+    assert plan.issues and expected in str(plan.issues), plan.issues
+    assert Runtime(plan).run()['executed'] is False
+
+
+@pytest.mark.parametrize('code', [
+    '[self:notebook]{op:"versions",project_ref:"p",source_ref:"s"}',
+    '[self:notebook]{op:"read",project_ref:"p",version_ref:"v"}',
+    '[self:project]{op:"thread_update",questions:[]}',
+    '[self:project]{op:"thread_update",notes:"memo",title:"title"}',
+])
+def test_research_op_preconditions_accept_separate_valid_requests(code):
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    plan = compile_program(code, load_registry())
+    assert not plan.issues, plan.issues

@@ -104,7 +104,7 @@ def validate_extensions(contract):
     for variant in contract.get('variants', []):
         if not isinstance(variant.get('when'), dict) or not variant['when'] or set(variant['when']) - params.keys():
             raise ValueError('variants.when은 선언 인자의 리터럴 값입니다')
-        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'minimum', 'maximum', 'nonempty', 'forbidden'}:
+        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'minimum', 'maximum', 'nonempty', 'forbidden', 'exclusive'}:
             raise ValueError('조건부 계약의 변경 가능 필드가 아닙니다')
         from ibl_v2_adapters import validate_contract
         validate_contract({**{k:v for k,v in contract.items() if k!='variants'},

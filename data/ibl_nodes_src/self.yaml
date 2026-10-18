@@ -544,7 +544,7 @@
         fixture: '[self:project]{op: "list"}'
         description: 런처 프로젝트 생애주기 (op 분기). list/templates/create/rename/copy/move(폴더로)/trash(휴지통)/delete(영구, 사람 승인). 주인 전용.
         # 연구 대화: project_ref는 불변 uid. thread_send는 접수 후 task_ref 반환.
-        target_description: '연구 프로젝트는 create+project_kind:"research"로 만든다. project_ref는 생성된 불변 project_uid. thread_create(title), thread_list(query·archived), thread_messages(thread_ref·cursor, questions_only:true로 연구 질문 조회·question_id/ question_history 선택), thread_send(thread_ref·message·request_id·attachments[{path,name}]), thread_cancel(thread_ref), thread_update(thread_ref·expected_revision·title/mode/notes 또는 questions 변경목록), thread_archive(thread_ref·archived), thread_search(query·thread_ref 선택), research_view(thread_ref)로 선택한 대화의 자료실 화면을 연다. thread_send는 task_ref로 상태를 조회한다. list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.'
+        target_description: '연구 프로젝트는 create+project_kind:"research"로 만든다. project_ref는 생성된 불변 project_uid. thread_create(title), thread_list(query·archived), thread_messages(thread_ref·cursor, questions_only:true로 연구 질문 조회·question_id/ question_history 선택), thread_send(thread_ref·message·request_id·attachments[{path,name}]), thread_cancel(thread_ref), thread_update(thread_ref·expected_revision·title/mode/notes 또는 questions 변경목록 — questions와 title/mode/notes는 별도 호출), thread_archive(thread_ref·archived), thread_search(query·thread_ref 선택), research_view(thread_ref)로 선택한 대화의 자료실 화면을 연다. thread_send는 task_ref로 상태를 조회한다. list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.'
         guides: [research_project.md]
         group: system
         target_key: op
@@ -552,6 +552,8 @@
         func: project_op
         implementation: launcher_ops.project_op → project_manager(list_projects/list_templates/create_project/rename_item/copy_item/move_to_folder/move_to_trash/delete_project). 조종실 /projects 라우트와 같은 함수.
         ops:
+          exclusive:
+            thread_update: [[questions, notes], [questions, title], [questions, mode]]
           default: list
           returns:
             create: effect

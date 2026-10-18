@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "freelance_search",
-      "description": "프리랜서·외주 서비스 검색 (크몽 내부 API). type=gigs(서비스 상품 — 제목·가격·평점·판매자) / type=experts(전문가 프로필 — 등급·경력·응답시간·주문수·전문분야). 통화: {items: [{title, meta, summary, url, image, price}], total, source, type}.",
+      "description": "프리랜서·외주 서비스 검색 (크몽 내부 API). type=gigs(서비스 상품 — 제목·가격·평점·판매자) / type=experts(전문가 프로필 — 등급·경력·응답시간·주문수·전문분야). 통화: {items: [{title, meta, summary, url, image, price, rating, reviews}], total, source, type}.",
       "input_schema": {
         "type": "object",
         "properties": {

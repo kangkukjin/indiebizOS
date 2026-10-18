@@ -112,7 +112,7 @@
     "sense:entity#detail": "[sense:entity]{op: \"detail\", id: \"Q42\"}",
     "sense:exhibit": "[sense:exhibit]{query: \"미술\"}",
     "sense:feed": "[sense:feed]{url: \"https://www.pewresearch.org/feed/\", limit: 3}",
-    "sense:freelance": "[sense:freelance]{query: \"로고디자인\"}",
+    "sense:freelance": "[sense:freelance]{query: \"로고디자인\", limit: 20}",
     "sense:host": "[sense:host]{op: \"status\"}",
     "sense:host#apps": "[sense:host]{op: \"apps\"}",
     "sense:host#resources": "[sense:host]{op: \"resources\"}",

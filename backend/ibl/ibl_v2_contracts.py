@@ -29,6 +29,19 @@ def project_ops(contract, config):
             and (out.get("adapter") or {}).get("protocol") == "legacy-envelope"):
         out["variants"] = list(out.get("variants", [])) + [
             {"when": {"op": op}, "effects": _op_effects(config, op)} for op in values]
+    # Handler preconditions belong to the vocabulary, so check and execution
+    # reject the same missing/conflicting arguments before earlier calls run.
+    for field in ("required", "exclusive"):
+        for op, rules in (ops.get(field) or {}).items():
+            if op not in values:
+                raise ValueError(f"ops.{field}: 알 수 없는 op {op}")
+            variants = out.setdefault("variants", [])
+            variant = next((v for v in variants if v.get("when") == {"op": op}), None)
+            if variant is None:
+                variant = {"when": {"op": op}}
+                variants.append(variant)
+            inherited = variant.get(field, out.get(field, []))
+            variant[field] = list(inherited) + [v for v in rules if v not in inherited]
     return out
 
 

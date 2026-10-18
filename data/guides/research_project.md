@@ -116,3 +116,11 @@ research/index.db는 파생 검색 색인이다. 백업은 프로젝트 전체�
 보존하고 판본별로 비교한다. 같은 대화의 다음 턴에 요약 목록이 전달된다.
 종결은 판단 기록이며 진위 인증이 아니다. 사용·원문 인용 계약은
 [연구 질문 가이드](research_questions.md)를 따른다.
+
+
+## AI의 자료 재사용
+
+이미 `version_ref`를 알면 `[self:notebook]{op:"read",version_ref:...,project_ref:...,thread_ref:...}`로
+직접 읽는다. 판본 목록 `versions`는 자료를 고른 `source_ref`가 필수다. 자료 목록 전체를 다시
+읽는 대신 필요한 검색 결과·참조를 이어 쓴다. `thread_update`의 `questions` 변경은
+`notes/title/mode` 변경과 별도 호출한다. 두 종류를 한 호출로 합치면 실행 전 검사에서 거절된다.

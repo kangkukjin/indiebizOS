@@ -1,0 +1,4 @@
+조건이 바뀌었어. 같은 명부의 D1은 지정 1~3줄 안이 수정되었고 D2는 범위 밖 마지막에 한 줄만 추가됐으며 D3는 이제 기존 경로에 없어. D4~D6는 그대로야. 너 자신의 직전 결과·중간 참조를 재사용해도 돼. 다른 실행자의 trainer/harness/drafts·정답·보고서는 읽지 마. 기존 note_id와 최초 excerpt/claim을 보존하고 note를 다시 생성하지 말고 각 기존 근거의 content 현재성을 대조해 이전과 같은 형식의 report.json/report.md로 저장하고 재독 검증해 줘. 파일 부재도 나머지 검토를 막지 않아야 해. 기본 산출물은 변경하지 마. 판본 변화만 확인하는 것이며 사용자 선언의 진실성은 미검증이라고 계속 밝혀 줘. 입력 명부: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/ai/manifest.json
+직전 결과: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/ai/base/report.json
+새 출력: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/ai/variant
+자료 사본과 그 파일 locus 외 실제 자료·설정·코어를 변경하지 마. 별도 위임·발송·공개는 하지 마.

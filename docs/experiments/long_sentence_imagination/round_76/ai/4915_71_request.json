@@ -1,0 +1,11 @@
+{
+  "code": "$rejected:611cf5b2a41128e3504b3a12853c54fb439d32d4759cfbcdac4f088bfcdc2cb0",
+  "edition": 2,
+  "code_edits": [
+    {
+      "old": "[catch:$e]{ {read:\"failed\",error:json($e)} }",
+      "new": "[catch]{ {read:\"failed\",code:get($error,\"code\"),reason:get($error,\"message\")} }"
+    }
+  ],
+  "check": true
+}

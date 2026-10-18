@@ -1,0 +1,15 @@
+#!ibl edition=2
+[def:관측영수증]($value,$action) {
+  $events=evidence($value).events
+  $calls=filter($events,($e)=>get($e,"kind","")=="invoke" and get($e,"action","")==$action)
+  [if:len($calls)==0] { return [] }
+  $call_id=$calls[-1].id
+  return map(filter($events,($e)=>has($e,"source_observation_ref") and $call_id in $e.parents),($e)=>{receipt_id:$e.source_observation_ref})
+}
+$doc=[self:read]{path:$path,start_line:1,end_line:3}
+$refs=[fn:관측영수증]{value:$doc,action:"self:read"}
+$note=[self:forage]{op:"note",locus:$path,kind:"convention",claim:$claim,
+  prior_class:"semantic",generalizes:false,provenance:{observation_refs:$refs}}
+$recalled=[self:forage]{op:"recall",locus:$path,evidence_check:"content"}
+return {note_id:$note.id,observation_refs:$refs,
+  map:filter($recalled.map,($row)=>$row.id==$note.id)}

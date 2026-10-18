@@ -1,0 +1,38 @@
+[
+  {
+    "id": "D1",
+    "original": "data/system_docs/vision.md",
+    "sha256": "8adfee81f560a1d1f19384b39bb3f780e701d64d8d566b794051deedf369b1fb",
+    "source_bytes": 45989
+  },
+  {
+    "id": "D2",
+    "original": "data/system_docs/anatomy.md",
+    "sha256": "ef7cda7c1a94462128e07f0e6aea183752bedfe5493dac0f40d919c85c7420b9",
+    "source_bytes": 49741
+  },
+  {
+    "id": "D3",
+    "original": "data/system_docs/architecture.md",
+    "sha256": "e192f191896be2b696540ea66f218a5da7a0341cfb6ba1e10da256ee28c52e3a",
+    "source_bytes": 102930
+  },
+  {
+    "id": "D4",
+    "original": "data/system_docs/memory.md",
+    "sha256": "cf31d4d02b28761cffae5c886714b0681ce2ed6d5344114bece19c1ee3b5830a",
+    "source_bytes": 138615
+  },
+  {
+    "id": "D5",
+    "original": "data/system_docs/technical.md",
+    "sha256": "e7fba8864c58316fae2a50e49edbbf8301893fc8fbcc55dea3fa0173337c79ba",
+    "source_bytes": 83397
+  },
+  {
+    "id": "D6",
+    "original": "data/system_docs/communication.md",
+    "sha256": "d5b8ad47eae84ea6873357020ee2bbbceb21fdab6d3505d203ecaddf12012535",
+    "source_bytes": 68234
+  }
+]

@@ -1,0 +1,5 @@
+시스템 인수 검토용 자료 6개를 읽고 각 자료의 지정 줄 범위 원문과 출처를 보존해 검토표를 만들어 줘. 명부의 claim은 원천에 대한 사용자 선언이며 그 정확성이 검증되었다고 주장하지 마. 각 파일에만 적용되는 의미 기억으로 남기되 실제 읽기 관측 영수증을 연결해 줘. 자료별로 기억의 content 현재성을 확인해서 unchanged/changed/missing/unknown을 원 근거와 함께 보고해 줘. 정상 기본 입력은 전건 unchanged여야 하고, 근거가 없거나 확인 실패하면 unknown을 유지해 줘. 지정한 출력 폴더에 report.json(rows: id,path,excerpt,claim,note_id,evidence_status 및 counts)와 모든 행·상태·합계·미확인 한계를 담은 report.md를 저장하고 다시 읽어 검증해 줘. 실제 자료/설정은 변경하지 말고 전용 입력 사본과 해당 사본의 포식 기억만 사용해 줘. 외부 발송·공개·별도 위임·코어 수리는 하지 마. 다른 실행자의 trainer/harness/drafts·정답·보고서는 읽지 마.
+
+입력 명부: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/ai/manifest.json
+출력: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/ai/base
+명부의 numbered=true 항목은 줄 번호를 붙인 발췌를 보존해 줘. 자신이 만든 결과는 이후 변형에서 재사용 가능해. 기억은 이 입력 파일 locus로만 생성해 줘.

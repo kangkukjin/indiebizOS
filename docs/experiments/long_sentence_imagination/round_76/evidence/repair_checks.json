@@ -1,0 +1,303 @@
+{
+  "guide_ref_repro": {
+    "success": false,
+    "error": "필드가 없습니다: source_observation_refs",
+    "run_status": "interrupted",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "aa5d0dd3bf0f46a69713eeab201adae7",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.336
+  },
+  "guide_json_run": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "bd15b23e8e4046559acd09275c20e961",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.409,
+    "value": {
+      "note_id": 2943,
+      "observation_refs": [
+        {
+          "receipt_id": "a87fd622ab474641b68721a8dbb1003e"
+        }
+      ],
+      "map": [
+        {
+          "id": 2943,
+          "body": "mac",
+          "locus": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/collision.json",
+          "kind": "convention",
+          "claim": "훈련 전용 JSON의 공급자 영수증은 업무 데이터이며 시스템 판본과 별개이다.",
+          "prior_class": "semantic",
+          "confidence": 0.7,
+          "provenance": "{\"evidence\": {\"schema_version\": 1, \"items\": [{\"schema_version\": 1, \"source\": {\"kind\": \"file\", \"address\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/collision.json\", \"body\": \"mac\", \"device_id\": \"0b387f032ef6\"}, \"observation_kind\": \"file_full\", \"scope\": {\"complete\": true, \"selector\": {\"start\": 0, \"end\": 1}, \"truncated\": false, \"encoding\": \"utf-8\", \"newline\": \"preserved\"}, \"version\": {\"method\": \"sha256_bytes\", \"sha256\": \"acd0941027d19a237eabcc8fbc3cb1f3d728baec556697150b94ff7e04534608\", \"metadata\": {\"size\": 100, \"mtime_ns\": 1792327683133231289, \"ctime_ns\": 1792327683133231289, \"dev\": 16777234, \"ino\": 178821189, \"target\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/collision.json\"}}, \"observed_at\": \"2026-10-18T12:50:51.975173+00:00\", \"link_state\": \"observed\", \"stable\": true, \"observation_ref\": {\"receipt_id\": \"a87fd622ab474641b68721a8dbb1003e\"}}], \"link_state\": \"observed\"}, \"claim_ref\": \"b8565f85dd744f85a9d4923ff56898f7\", \"claim_digest\": \"2c35b70002cfdaee6f949bde19be9dae9fd37ee61106c7e02852acadaf1cfbbe\", \"formed_at\": \"2026-10-18\"}",
+          "prune_reason": null,
+          "generalizes": 0,
+          "last_seen": "2026-10-18",
+          "locus_mtime": 1792327683.1332314,
+          "surface_flag": 0,
+          "territory": 0,
+          "via": "own",
+          "score": 0,
+          "freshness": "",
+          "evidence_status": {
+            "state": "unchanged",
+            "checked_at": "2026-10-18T12:50:52.028909+00:00",
+            "comparison": "content",
+            "checked": 1,
+            "unchecked": 0,
+            "outcomes": [
+              {
+                "state": "unchanged",
+                "method": "sha256_bytes",
+                "reason": "version_equal",
+                "source": {
+                  "kind": "file",
+                  "address": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/collision.json",
+                  "body": "mac",
+                  "device_id": "0b387f032ef6"
+                },
+                "observation_ref": {
+                  "receipt_id": "a87fd622ab474641b68721a8dbb1003e"
+                },
+                "scope": {
+                  "complete": true,
+                  "selector": {
+                    "start": 0,
+                    "end": 1
+                  },
+                  "truncated": false,
+                  "encoding": "utf-8",
+                  "newline": "preserved"
+                }
+              }
+            ],
+            "receipt_availability": "not_checked",
+            "claim_ref": "b8565f85dd744f85a9d4923ff56898f7"
+          },
+          "evidence_doc": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/forage_surveys/mac/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/memory.md"
+        }
+      ]
+    }
+  },
+  "guide_exact_run": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "3178293c07ea4335b56157222b6f7091",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.413,
+    "value": {
+      "note_id": 2944,
+      "observation_refs": [
+        {
+          "receipt_id": "c6e01c49ca5b4353be7451afabf69965"
+        }
+      ],
+      "map": [
+        {
+          "id": 2944,
+          "body": "mac",
+          "locus": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/guide_contract.txt",
+          "kind": "convention",
+          "claim": "가이드 예제의 지정 범위 1~3줄 관측 시험",
+          "prior_class": "semantic",
+          "confidence": 0.7,
+          "provenance": "{\"evidence\": {\"schema_version\": 1, \"items\": [{\"schema_version\": 1, \"source\": {\"kind\": \"file\", \"address\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/guide_contract.txt\", \"body\": \"mac\", \"device_id\": \"0b387f032ef6\"}, \"observation_kind\": \"file_partial\", \"scope\": {\"complete\": false, \"selector\": {\"start\": 0, \"end\": 3}, \"truncated\": false, \"encoding\": \"utf-8\", \"newline\": \"preserved\"}, \"version\": {\"method\": \"sha256_utf8_lines\", \"sha256\": \"91f7617762d93965fce0f7d54c52c0e2958a1b66c62ae57a0c574fc036db4e77\", \"metadata\": {\"size\": 41, \"mtime_ns\": 1792327906368056206, \"ctime_ns\": 1792327906368056206, \"dev\": 16777234, \"ino\": 178831580, \"target\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/guide_contract.txt\"}}, \"observed_at\": \"2026-10-18T12:51:46.761727+00:00\", \"link_state\": \"observed\", \"stable\": true, \"observation_ref\": {\"receipt_id\": \"c6e01c49ca5b4353be7451afabf69965\"}}], \"link_state\": \"observed\"}, \"claim_ref\": \"f174978059364ea1b12edf9214d74d6a\", \"claim_digest\": \"c1d30b825e8c57c1bb0e3844bf4f4d9227eedad62a139b116883161e1d425714\", \"formed_at\": \"2026-10-18\"}",
+          "prune_reason": null,
+          "generalizes": 0,
+          "last_seen": "2026-10-18",
+          "locus_mtime": 1792327906.3680563,
+          "surface_flag": 0,
+          "territory": 0,
+          "via": "own",
+          "score": 0,
+          "freshness": "",
+          "evidence_status": {
+            "state": "unchanged",
+            "checked_at": "2026-10-18T12:51:46.814920+00:00",
+            "comparison": "content",
+            "checked": 1,
+            "unchecked": 0,
+            "outcomes": [
+              {
+                "state": "unchanged",
+                "method": "sha256_utf8_lines",
+                "reason": "version_equal",
+                "source": {
+                  "kind": "file",
+                  "address": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/guide_contract.txt",
+                  "body": "mac",
+                  "device_id": "0b387f032ef6"
+                },
+                "observation_ref": {
+                  "receipt_id": "c6e01c49ca5b4353be7451afabf69965"
+                },
+                "scope": {
+                  "complete": false,
+                  "selector": {
+                    "start": 0,
+                    "end": 3
+                  },
+                  "truncated": false,
+                  "encoding": "utf-8",
+                  "newline": "preserved"
+                }
+              }
+            ],
+            "receipt_availability": "not_checked",
+            "claim_ref": "f174978059364ea1b12edf9214d74d6a"
+          },
+          "evidence_doc": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/forage_surveys/mac/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/memory.md"
+        }
+      ]
+    }
+  },
+  "guide_unknown_run": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "cd8046ddd3d34a76b8bcbd46b14885a5",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.4,
+    "value": {
+      "note_id": 2945,
+      "observation_refs": [],
+      "map": [
+        {
+          "id": 2945,
+          "body": "mac",
+          "locus": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/unobserved.txt",
+          "kind": "convention",
+          "claim": "무관측 선언은 내용 최신성을 보증하지 않는다.",
+          "prior_class": "semantic",
+          "confidence": 0.7,
+          "provenance": "{\"evidence\": {\"schema_version\": 1, \"items\": [], \"link_state\": \"user_declaration\"}, \"claim_ref\": \"e9182ca24265496fbae0c4e66fb547f0\", \"claim_digest\": \"52da6bffb2590f53a3def461836f318056fc6cfeabc985d68b3ac0b073ba34bd\", \"formed_at\": \"2026-10-18\"}",
+          "prune_reason": null,
+          "generalizes": 0,
+          "last_seen": "2026-10-18",
+          "locus_mtime": 1792327906.368241,
+          "surface_flag": 0,
+          "territory": 0,
+          "via": "own",
+          "score": 0,
+          "freshness": "",
+          "evidence_status": {
+            "state": "unknown",
+            "checked_at": "2026-10-18T12:51:47.262895+00:00",
+            "comparison": "content",
+            "checked": 0,
+            "unchecked": 1,
+            "outcomes": [
+              {
+                "state": "unknown",
+                "method": "none",
+                "reason": "user_declaration"
+              }
+            ],
+            "receipt_availability": "not_checked",
+            "claim_ref": "e9182ca24265496fbae0c4e66fb547f0"
+          },
+          "evidence_doc": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/forage_surveys/mac/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/memory.md"
+        }
+      ]
+    }
+  },
+  "receipt_contract_run": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "fe3c191b02f24f89b3ff6a86960252db",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.371,
+    "value": {
+      "refs": [
+        {
+          "receipt_id": "04a28885906346b0906320e7a8d1f9d9"
+        }
+      ],
+      "list_refs": [
+        {
+          "receipt_id": "e067afc8fe9546f98f5ad9d899ecbb13"
+        }
+      ],
+      "unobserved": []
+    }
+  },
+  "cleanup": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "a552055c47644cb59b5cf7b05ef00b92",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 1.829,
+    "removed_ids": [
+      2931,
+      2932,
+      2933,
+      2934,
+      2935,
+      2936,
+      2937,
+      2938,
+      2939,
+      2940,
+      2941,
+      2942,
+      2943,
+      2944,
+      2945
+    ]
+  },
+  "repaired_base_run": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "fffb561a36804aab99bce8a1cf09e181",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.984
+  },
+  "repaired_variant_run": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "86a8994a384d484ea2bc3ff1a9d4ae01",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.649
+  },
+  "restored_run": {
+    "success": true,
+    "error": null,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "7664a529622c48b6b0708735e6d05bd9",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "wall_s": 0.657
+  }
+}

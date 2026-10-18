@@ -1,0 +1,204 @@
+{
+  "lane": "ai",
+  "phase": "variant",
+  "passed": 49,
+  "total": 49,
+  "checks": [
+    {
+      "name": "all_ids_once",
+      "ok": true
+    },
+    {
+      "name": "requested_order",
+      "ok": true
+    },
+    {
+      "name": "D1_path",
+      "ok": true
+    },
+    {
+      "name": "D1_claim",
+      "ok": true
+    },
+    {
+      "name": "D1_displayed_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D1_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D1_state",
+      "ok": true
+    },
+    {
+      "name": "D1_evidence",
+      "ok": true
+    },
+    {
+      "name": "D1_markdown",
+      "ok": true
+    },
+    {
+      "name": "D2_path",
+      "ok": true
+    },
+    {
+      "name": "D2_claim",
+      "ok": true
+    },
+    {
+      "name": "D2_displayed_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D2_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D2_state",
+      "ok": true
+    },
+    {
+      "name": "D2_evidence",
+      "ok": true
+    },
+    {
+      "name": "D2_markdown",
+      "ok": true
+    },
+    {
+      "name": "D3_path",
+      "ok": true
+    },
+    {
+      "name": "D3_claim",
+      "ok": true
+    },
+    {
+      "name": "D3_displayed_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D3_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D3_state",
+      "ok": true
+    },
+    {
+      "name": "D3_evidence",
+      "ok": true
+    },
+    {
+      "name": "D3_markdown",
+      "ok": true
+    },
+    {
+      "name": "D4_path",
+      "ok": true
+    },
+    {
+      "name": "D4_claim",
+      "ok": true
+    },
+    {
+      "name": "D4_displayed_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D4_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D4_state",
+      "ok": true
+    },
+    {
+      "name": "D4_evidence",
+      "ok": true
+    },
+    {
+      "name": "D4_markdown",
+      "ok": true
+    },
+    {
+      "name": "D5_path",
+      "ok": true
+    },
+    {
+      "name": "D5_claim",
+      "ok": true
+    },
+    {
+      "name": "D5_displayed_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D5_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D5_state",
+      "ok": true
+    },
+    {
+      "name": "D5_evidence",
+      "ok": true
+    },
+    {
+      "name": "D5_markdown",
+      "ok": true
+    },
+    {
+      "name": "D6_path",
+      "ok": true
+    },
+    {
+      "name": "D6_claim",
+      "ok": true
+    },
+    {
+      "name": "D6_displayed_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D6_excerpt",
+      "ok": true
+    },
+    {
+      "name": "D6_state",
+      "ok": true
+    },
+    {
+      "name": "D6_evidence",
+      "ok": true
+    },
+    {
+      "name": "D6_markdown",
+      "ok": true
+    },
+    {
+      "name": "count_unchanged",
+      "ok": true
+    },
+    {
+      "name": "count_changed",
+      "ok": true
+    },
+    {
+      "name": "count_missing",
+      "ok": true
+    },
+    {
+      "name": "count_unknown",
+      "ok": true
+    },
+    {
+      "name": "note_ids_preserved",
+      "ok": true
+    }
+  ]
+}

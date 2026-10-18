@@ -1,0 +1,4 @@
+{
+  "code": "#!ibl edition=2\n$m = [self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/ai/manifest.json\"}\n[def:처리]($row) {\n  $r = [self:read]{path:$row.path,start_line:$row.start_line,end_line:$row.end_line,numbered:$row.numbered}\n  $ref = get($r.data,\"source_observation_ref\")\n  assert $ref != null, \"관측 영수증 없음\", {id:$row.id}\n  $n = [self:forage]{op:\"note\",locus:$row.path,kind:\"identity\",prior_class:\"semantic\",generalizes:false,\n    claim:f\"사용자 선언(미검증): ${$row.claim} — 지정 범위 ${$row.start_line}~${$row.end_line}줄\",\n    provenance:{observation_refs:[{receipt_id:$ref}]}}\n  return {id:$row.id,path:$row.path,start_line:$row.start_line,end_line:$row.end_line,numbered:$row.numbered,\n    excerpt:$r.text,total_lines:get($r.data,\"total_lines\"),observation_ref:$ref,claim:$row.claim,note:$n}\n}\nreturn $m.data.rows >> [table:each]{ [fn:처리]{row:$it} }",
+  "check": true
+}

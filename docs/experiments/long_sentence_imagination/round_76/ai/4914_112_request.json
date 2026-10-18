@@ -1,0 +1,31 @@
+{
+  "code": "$rejected:57c8a8891185d0b43c9b37a3f7e52fcf3412ecf1913649cf129a8722fc708761",
+  "edition": 2,
+  "inputs": {
+    "a": {
+      "$ref": "646188ba904c4c6b17e9c0c794a4570997e9fbaf62ba0b462312e1067cdf7e41"
+    },
+    "b": {
+      "$ref": "738cdd21cbac196af41b307b14fadfd8831c49066d4a5fb9018083b3c7864ea7"
+    }
+  },
+  "code_edits": [
+    {
+      "old": "$ex = $r.excerpt >> strip",
+      "new": "$ex = strip($r.excerpt)"
+    },
+    {
+      "old": "${join($table,\"\\n\")}",
+      "new": "${join(\"\\n\",$table)}"
+    },
+    {
+      "old": "${join($body,\"\\n\")}",
+      "new": "${join(\"\\n\",$body)}"
+    },
+    {
+      "old": "${join($limits >> [table:each]{ return f\"- ${$it}\" },\"\\n\")}",
+      "new": "${join(\"\\n\",$limits >> [table:each]{ return f\"- ${$it}\" })}"
+    }
+  ],
+  "check": true
+}

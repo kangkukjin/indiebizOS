@@ -1,0 +1,23 @@
+{
+  "code": "$rejected:d44804203dfc651584a7621f8d304ec29c1589b1055649f5f3c81518486792f9",
+  "edition": 2,
+  "inputs": {
+    "a": {
+      "$ref": "6d9dfa6b1d4febfe297723a8dba9470a538a29bd5bd7a083ef5b4fc3a5a014a7"
+    },
+    "b": {
+      "$ref": "bab8c6943bc1f917d3bb3834cd031eaaea2232851667c61b338be0a48fb12742"
+    }
+  },
+  "code_edits": [
+    {
+      "old": "split($it.path,\"/\")[-1]",
+      "new": "split($it.path,'/')[-1]"
+    },
+    {
+      "old": "$it.source.numbered == starts_with_num($it.excerpt)",
+      "new": "$it.source.numbered == contains($it.excerpt,\"\\n2\\t\")"
+    }
+  ],
+  "check": true
+}

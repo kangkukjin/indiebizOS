@@ -1,0 +1,4 @@
+{
+  "code": "$p = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_76회차/inputs/ai/02_anatomy.txt\"\n$r = [self:read]{path:$p,start_line:1,end_line:3,numbered:true}\n$f = [self:forage]{op:\"recall\",locus:$p,evidence_check:\"content\"}\nreturn {r:$r, own:get($f,\"own_count\"), map:get($f,\"map\")}",
+  "edition": 2
+}

@@ -1,0 +1,16 @@
+{
+  "code": "$rejected:050abd618f0d364a34cc778fab6cab5eff57d98082066f06f945baf92b731b27",
+  "edition": 2,
+  "inputs": {
+    "입력": {
+      "$ref": "db8079d2df2115b2159b00006957c8190abdeb5bc1c7905fb6f4a16ef152a593"
+    }
+  },
+  "code_edits": [
+    {
+      "old": "${json($c.same_as_original)}, 관측 영수증 `${$c.observation_ref}`",
+      "new": "${json(get($c,'same_as_original'))}, 관측 영수증 `${get($c,'observation_ref')}`"
+    }
+  ],
+  "check": true
+}

@@ -1,0 +1,33 @@
+#!ibl edition=2
+[def:기억]($row) {
+  $doc=[self:read]{path:$row.path,start_line:$row.start_line,end_line:$row.end_line,numbered:$row.numbered}
+  $note=[self:forage]{op:"note",locus:$row.path,kind:"convention",claim:$row.claim,prior_class:"semantic",generalizes:false,provenance:{observation_refs:[{receipt_id:$doc.data.source_observation_ref}]}}
+  return {**$row,excerpt:$doc.text,note:$note}
+}
+[def:검토]($row) {
+  $recall=[self:forage]{op:"recall",locus:$row.path,evidence_check:"content"}
+  $own=filter($recall.map,($r)=>$r.locus == $row.path and $r.claim == $row.claim)
+  assert len($own)==1,"단언을 하나로 특정하지 못함",{row:$row,recall:$recall}
+  return {**$row,note_id:$own[0].id,evidence_status:$own[0].evidence_status}
+}
+$manifest=[self:read]{path:$manifest_path}
+$prepared=[]
+[if:$previous_path == ""] {
+  $prepared=$manifest.data.rows >> [table:each] { [fn:기억]{row:$it} }
+} [else] {
+  $previous=[self:read]{path:$previous_path}
+  $index=from_entries(map($previous.data.rows,($r)=>[$r.id,$r]))
+  $prepared=map($manifest.data.rows,($r)=>get($index,$r.id))
+}
+$rows=$prepared >> [table:each] { [fn:검토]{row:$it} }
+$states=["unchanged","changed","missing","unknown"]
+$counts=from_entries(map($states,($s)=>[$s,len(filter($rows,($r)=>$r.evidence_status.state == $s))]))
+$report={rows:$rows,counts:$counts,total:len($rows),scope:"지정 줄 범위의 판본 대조이며 사용자 선언의 진실성 검증이 아님"}
+$markdown="# 문서 근거 검토\n\n"+$report.scope+"\n\n"+join("\n\n",map($rows,($r)=>f"## ${$r.id}: ${$r.path}\n상태: ${$r.evidence_status.state}\n선언: ${$r.claim}\n\n${$r.excerpt}\n근거: ${json($r.evidence_status)}"))+"\n\n합계: "+json($counts)+"\n"
+$body=json($report)
+[self:write]{path:$out+"/report.json",content:$body}
+[self:write]{path:$out+"/report.md",content:$markdown}
+$a=[self:read]{path:$out+"/report.json"}
+$b=[self:read]{path:$out+"/report.md"}
+assert $a.text == $body and $b.text == $markdown,"저장 후 재독 불일치"
+return {counts:$counts,rows:$rows,reread:true}

@@ -1,0 +1,5 @@
+---
+title: 통신·연동
+scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
+
+범위 밖 훈련 부록

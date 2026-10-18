@@ -1,0 +1,19 @@
+{
+  "code": "$rejected:65503318008332a25ef54107d8f98630cea2a95120bba48d1e57e5380e84ef6c",
+  "edition": 2,
+  "code_edits": [
+    {
+      "old": "[try]{ return [self:forage]{op:\"recall\",locus:$b.path,evidence_check:\"content\"} }[catch]{ return null }",
+      "new": "[try]{ [self:forage]{op:\"recall\",locus:$b.path,evidence_check:\"content\"} }[catch]{ null }"
+    },
+    {
+      "old": "$mine = $f == null ? [] : ($f.map >> [table:filter]{where:($r)=>$r.id == $b.note_id})",
+      "new": "$map = $f == null ? [] : $f.map\n  $mine = $map >> [table:filter]{where:($r)=>$r.id == $b.note_id}"
+    },
+    {
+      "old": "    return {read:\"ok\",excerpt:$r.text,same_as_original:$r.text == $b.excerpt,observation_ref:get($r.data,\"source_observation_ref\")}\n  }[catch]{ return {read:\"failed\",error:text(error_of($_))} }",
+      "new": "    {read:\"ok\",excerpt:$r.text,same_as_original:$r.text == $b.excerpt,observation_ref:get($r.data,\"source_observation_ref\")}\n  }[catch:$e]{ {read:\"failed\",error:json($e)} }"
+    }
+  ],
+  "check": true
+}

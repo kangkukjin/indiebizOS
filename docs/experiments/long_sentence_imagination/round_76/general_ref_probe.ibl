@@ -1,0 +1,7 @@
+#!ibl edition=2
+$doc=[self:read]{path:$path}
+$events=evidence($doc).events
+$calls=filter($events,($e)=>get($e,"kind","")=="invoke" and get($e,"action","")=="self:read")
+$call_id=$calls[-1].id
+$refs=map(filter($events,($e)=>has($e,"source_observation_ref") and $call_id in $e.parents),($e)=>{receipt_id:$e.source_observation_ref})
+return {data:$doc.data,refs:$refs}

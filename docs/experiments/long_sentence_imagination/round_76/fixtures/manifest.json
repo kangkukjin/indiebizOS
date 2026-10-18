@@ -1,0 +1,52 @@
+{
+  "rows": [
+    {
+      "id": "D1",
+      "path": "01_vision.txt",
+      "start_line": 1,
+      "end_line": 3,
+      "numbered": false,
+      "claim": "vision 자료의 인수 검토용 지정 머리말; 의미 정확성은 사용자 선언이다."
+    },
+    {
+      "id": "D2",
+      "path": "02_anatomy.txt",
+      "start_line": 1,
+      "end_line": 3,
+      "numbered": true,
+      "claim": "anatomy 자료의 인수 검토용 지정 머리말; 의미 정확성은 사용자 선언이다."
+    },
+    {
+      "id": "D3",
+      "path": "03_architecture.txt",
+      "start_line": 1,
+      "end_line": 3,
+      "numbered": false,
+      "claim": "architecture 자료의 인수 검토용 지정 머리말; 의미 정확성은 사용자 선언이다."
+    },
+    {
+      "id": "D4",
+      "path": "04_memory.txt",
+      "start_line": 1,
+      "end_line": 3,
+      "numbered": true,
+      "claim": "memory 자료의 인수 검토용 지정 머리말; 의미 정확성은 사용자 선언이다."
+    },
+    {
+      "id": "D5",
+      "path": "05_technical.txt",
+      "start_line": 1,
+      "end_line": 3,
+      "numbered": false,
+      "claim": "technical 자료의 인수 검토용 지정 머리말; 의미 정확성은 사용자 선언이다."
+    },
+    {
+      "id": "D6",
+      "path": "06_communication.txt",
+      "start_line": 1,
+      "end_line": 3,
+      "numbered": true,
+      "claim": "communication 자료의 인수 검토용 지정 머리말; 의미 정확성은 사용자 선언이다."
+    }
+  ]
+}

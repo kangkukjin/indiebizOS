@@ -1,0 +1,32 @@
+[
+  {
+    "episode": 4914,
+    "seq": 101,
+    "name": "execute_ibl",
+    "evidence": "{\"edition\": 2, \"ok\": false, \"success\": false, \"executed\": false, \"status\": \"invalid\", \"error\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"diagnostic\": {\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [], \"details\": {}, \"source_span\": {\"source_hash\": \"94be6ad47acc281e3822ed3491e0b05dfe5a9ff3d51012910ac36b6c54b4c434\", \"start\": 2871, \"end\": 2872, \"line\": 43, \"column\": 75}, \"rule\": \"SYNTAX\", \"severity\": \"error\", \"hint\": \"표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.\", \"location\": {\"source_hash\": \"94be6ad47acc281e3822ed3491e0b05dfe5a9ff3d51012910ac36b6c54b4c434\", \"start\": 2871, \"end\": 2872, \"line\": 43, \"column\": 75, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 43, \"end_column\": 76, \"offset_encoding\": \"unicode-codepoints\"}}, \"issues\": [{\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽 따옴"
+  },
+  {
+    "episode": 4914,
+    "seq": 109,
+    "name": "execute_ibl",
+    "evidence": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"PIPE_TARGET\", \"message\": \"파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.\", \"source_span\": {\"source_hash\": \"c642eb276d96af3951148fb1b86d4a9288baa6eebd93060a9248aa33bfe65308\", \"start\": 1880, \"end\": 1899, \"line\": 28, \"column\": 9}, \"call_path\": [{\"function\": \"행md\", \"call\": {\"source_hash\": \"c642eb276d96af3951148fb1b86d4a9288baa6eebd93060a9248aa33bfe65308\", \"start\": 2779, \"end\": 2794, \"line\": 42, \"column\": 32, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 42, \"end_column\": 47, \"offset_encoding\": \"unicode-codepoints\"}, \"definition\": {\"source_hash\": \"c642eb276d96af3951148fb1b86d4a9288baa6eebd93060a9248aa33bfe65308\", \"start\": 1856, \"end\": 2747, \"line\": 27, \"column\": 1, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 41, \"end_column\": 2, \"offset_encoding\": \"unicode-codepoints\"}}], \"location\": {\"source_hash\": \"c642eb276d96af3951148fb1b86d4a9288baa6eebd93060a9248aa33bfe65308\", \"start\": "
+  },
+  {
+    "episode": 4915,
+    "seq": 55,
+    "name": "execute_ibl",
+    "evidence": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"PURE_EXPRESSION\", \"message\": \"이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.\", \"source_span\": {\"source_hash\": \"e0655ff10fc26bfeb70116db54f92fa97f586a17693c5a195a96c639825dac2a\", \"start\": 604, \"end\": 661, \"line\": 11, \"column\": 30}, \"call_path\": [{\"function\": \"대조\", \"call\": {\"source_hash\": \"e0655ff10fc26bfeb70116db54f92fa97f586a17693c5a195a96c639825dac2a\", \"start\": 1614, \"end\": 1628, \"line\": 24, \"column\": 42, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 24, \"end_column\": 56, \"offset_encoding\": \"unicode-codepoints\"}, \"definition\": {\"source_hash\": \"e0655ff10fc26bfeb70116db54f92fa97f586a17693c5a195a96c639825dac2a\", \"start\": 449, \"end\": 1572, \"line\": 9, \"column\": 1, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 23, \"end_column\": 2, \"offset_encoding\": \"unicode-codepoints\"}}], \"hint\": \"파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduc"
+  },
+  {
+    "episode": 4915,
+    "seq": 62,
+    "name": "execute_ibl",
+    "evidence": "{\"edition\": 2, \"ok\": false, \"success\": false, \"executed\": false, \"status\": \"invalid\", \"error\": \"']'가 필요합니다: :\", \"diagnostic\": {\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"']'가 필요합니다: :\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [], \"details\": {}, \"source_span\": {\"source_hash\": \"5601b6a6aea70f01d40b25c53ed51aeacb0fc022e740439cacdbb515ec0a9ef5\", \"start\": 1116, \"end\": 1117, \"line\": 19, \"column\": 10}, \"rule\": \"SYNTAX\", \"severity\": \"error\", \"hint\": \"표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.\", \"location\": {\"source_hash\": \"5601b6a6aea70f01d40b25c53ed51aeacb0fc022e740439cacdbb515ec0a9ef5\", \"start\": 1116, \"end\": 1117, \"line\": 19, \"column\": 10, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 19, \"end_column\": 11, \"offset_encoding\": \"unicode-codepoints\"}}, \"issues\": [{\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"']'가 필요합니다: :\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [], \"details\": {}, \"source_span\": {\"source_hash\": \"5601b6a6aea70f01d"
+  },
+  {
+    "episode": 4915,
+    "seq": 91,
+    "name": "execute_ibl",
+    "evidence": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"MISSING_FIELD\", \"message\": \"선언된 필드가 없습니다: same_as_original. 선택 필드는 has/get을 쓰세요.\", \"source_span\": {\"source_hash\": \"73302a9cf366cfad07c9e9a5b5f5d4249388f1da47794bb8eece29cae66f0cb5\", \"start\": 1604, \"end\": 1623, \"line\": 24, \"column\": 55}, \"call_path\": [{\"function\": \"행md\", \"call\": {\"source_hash\": \"73302a9cf366cfad07c9e9a5b5f5d4249388f1da47794bb8eece29cae66f0cb5\", \"start\": 2556, \"end\": 2571, \"line\": 39, \"column\": 32, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 39, \"end_column\": 47, \"offset_encoding\": \"unicode-codepoints\"}, \"definition\": {\"source_hash\": \"73302a9cf366cfad07c9e9a5b5f5d4249388f1da47794bb8eece29cae66f0cb5\", \"start\": 1413, \"end\": 2524, \"line\": 20, \"column\": 1, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 38, \"end_column\": 2, \"offset_encoding\": \"unicode-codepoints\"}}], \"location\": {\"source_hash\": \"73302a9cf366cfad07c9e9a5b5f5d4249388f1da47794bb8ee"
+  }
+]

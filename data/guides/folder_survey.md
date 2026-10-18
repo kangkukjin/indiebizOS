@@ -76,8 +76,39 @@ locus로 지정하고 `generalizes:false`로 둔다. 표본에서 추론한 뜻�
 구별한다. 근거가 있다는 사실은 해석의 정확성을 보증하지 않는다.
 
 `self:read`의 텍스트/JSON/CSV/TSV 읽기와 `self:list`는 실제 읽기 경계의 관측 영수증을
-보존한다. 현재 IBL 결과의 `source_observation_refs`를 `note`의
-`provenance:{observation_refs:[{receipt_id:"반환된 참조"}]}`로 연결할 수 있다.
+보존한다. 판본 2에서는 `evidence($값).events`의 `source_observation_ref`를
+`note`의 `provenance:{observation_refs:[{receipt_id:"반환된 참조"}]}`로 연결한다.
+Document 최상위의 `source_observation_refs`라는 필드는 없다. 텍스트 읽기에서는
+`.data.source_observation_ref`도 관측되지만, JSON의 `.data`는 원자료다. 원자료에 같은
+이름의 필드가 있어도 시스템 영수증으로 쓰지 않는다. `self:list`는 목록을 반환하므로
+그 목록의 `.data`를 조회하지 않는다.
+
+아래 함수는 **그 값의 마지막 해당 도구 호출**에 직접 붙은 영수증만 고른다. 경로를 얻기 위해
+먼저 읽은 명부 등 상위 입력의 영수증을 모두 붙이지 않는다. 해당 호출의 영수증이 없으면
+빈 목록을 반환하며 이전 읽기의 영수증으로 대체하지 않는다. `path`와 `claim`은 요청의
+`inputs`로 전달하고, `action`에는 실제 사용한 `self:read` 또는 `self:list`를 넣는다.
+
+<!-- example:forage_observation_receipt -->
+```ibl
+#!ibl edition=2
+[def:관측영수증]($value,$action) {
+  $events=evidence($value).events
+  $calls=filter($events,($e)=>get($e,"kind","")=="invoke" and get($e,"action","")==$action)
+  [if:len($calls)==0] { return [] }
+  $call_id=$calls[-1].id
+  return map(filter($events,($e)=>has($e,"source_observation_ref") and $call_id in $e.parents),($e)=>{receipt_id:$e.source_observation_ref})
+}
+$doc=[self:read]{path:$path,start_line:1,end_line:3}
+$refs=[fn:관측영수증]{value:$doc,action:"self:read"}
+$note=[self:forage]{op:"note",locus:$path,kind:"convention",claim:$claim,
+  prior_class:"semantic",generalizes:false,provenance:{observation_refs:$refs}}
+$recalled=[self:forage]{op:"recall",locus:$path,evidence_check:"content"}
+return {note_id:$note.id,observation_refs:$refs,
+  map:filter($recalled.map,($row)=>$row.id==$note.id)}
+```
+
+이 예제의 근거는 지정한 1~3줄뿐이다. 전체 JSON/CSV/TSV를 읽으려면 범위 인자를 빼고,
+목록에는 `[self:list]{path:$path}`와 `action:"self:list"`를 사용한다.
 통합 증류는 이번 관측 ID를 선택하고 같은 해소기를 사용한다. 사용자가 임의로 제공한
 해시·complete 값은 채택하지 않는다. 참조 없는 메모는 가능하지만 자료 내용 확인은 아니다.
 

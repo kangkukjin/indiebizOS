@@ -1,0 +1,8 @@
+{
+  "code": "#!ibl edition=2\n[def:확인]($row) {\n  $f = [self:forage]{op:\"recall\",locus:$row.path,evidence_check:\"content\"}\n  $mine = $f.map >> [table:filter]{where:($r)=>$r.id == $row.note.id}\n  $hit = len($mine) == 1 ? $mine[0] : null\n  return {id:$row.id,note_id:$row.note.id,own_count:get($f,\"own_count\"),locus_exists:get($f,\"locus_exists\"),\n    found:len($mine),locus_ok:($hit == null ? false : $hit.locus == $row.path),\n    generalizes:($hit == null ? null : $hit.generalizes),prior_class:($hit == null ? null : $hit.prior_class),\n    stored_claim:($hit == null ? null : $hit.claim),\n    evidence_status:($hit == null ? null : $hit.evidence_status),provenance:($hit == null ? null : $hit.provenance),\n    evidence_doc:($hit == null ? null : get($hit,\"evidence_doc\"))}\n}\nreturn $입력 >> [table:each]{ [fn:확인]{row:$it} }",
+  "inputs": {
+    "입력": {
+      "$ref": "fd0c28add7c3f48fb915e5c2def27d7e73685668a39f985cc388a756bc368cc7"
+    }
+  }
+}

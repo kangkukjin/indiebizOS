@@ -1,0 +1,7 @@
+[def:관측영수증]($value,$action) {
+  $events=evidence($value).events
+  $calls=filter($events,($e)=>get($e,"kind","")=="invoke" and get($e,"action","")==$action)
+  [if:len($calls)==0] { return [] }
+  $call_id=$calls[-1].id
+  return map(filter($events,($e)=>has($e,"source_observation_ref") and $call_id in $e.parents),($e)=>{receipt_id:$e.source_observation_ref})
+}

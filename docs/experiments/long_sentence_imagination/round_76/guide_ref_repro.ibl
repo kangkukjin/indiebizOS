@@ -1,0 +1,3 @@
+#!ibl edition=2
+$doc=[self:read]{path:$path,start_line:1,end_line:3}
+return $doc.source_observation_refs

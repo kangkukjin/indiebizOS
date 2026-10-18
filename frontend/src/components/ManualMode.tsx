@@ -1014,13 +1014,12 @@ export default function ManualMode() {
 
           {recallResult && (
             <div className="space-y-2">
-              {/* 요약 칩 — 해마 최고점수(0.85↑=반사 경로)와 top 용례, 총 주입량 */}
+              {/* 요약 칩 — 해마 최고점수와 top 용례, 총 주입량 */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500">
                 <span className={`px-2 py-0.5 rounded ${
                   recallResult.top_score >= 0.85 ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'
                 }`}>
                   해마 최고점수 {(recallResult.top_score * 100).toFixed(1)}%
-                  {recallResult.top_score >= 0.85 ? ' — 반사(Reflex) 경로' : ''}
                 </span>
                 {recallResult.top_code && (
                   <code className="text-stone-400 truncate max-w-[50%]">{recallResult.top_code}</code>

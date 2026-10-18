@@ -404,7 +404,7 @@ def test_bridge_uses_same_contract(bound, row):
         pb._sessions.pop(bound.task, None)
 
 
-@pytest.mark.parametrize("lane", ["EXECUTE", "REFLEX", "THINK"])
+@pytest.mark.parametrize("lane", ["EXECUTE", "HIGH_RECALL", "THINK"])
 def test_pipeline_connects_in_current_model_without_preflight(tmp_path, monkeypatch, lane):
     import thread_context as tc
     import agent_pipeline as ap
@@ -430,10 +430,9 @@ def test_pipeline_connects_in_current_model_without_preflight(tmp_path, monkeypa
         project_path = tmp_path
         full_calls = 0
         def _sync_execution_gear(self): pass
-        _associate = associative_recall.stub('', 0.99 if lane == 'REFLEX' else 0, 'lookup' if lane == 'REFLEX' else '')
+        _associate = associative_recall.stub('회수한 실행기억', 0.99 if lane == 'HIGH_RECALL' else 0, 'lookup' if lane == 'HIGH_RECALL' else '')
         def _classify_request(self, *a):
-            assert lane == 'THINK'
-            return 'THINK'
+            return 'THINK' if lane == 'THINK' else 'EXECUTE'
         def _run_consciousness(self, *a, **kw):
             self.full_calls += 1
             return {'task_framing': '부산만 조회한다', 'achievement_criteria': '', 'assumptions': ['대상 부산'],
@@ -447,12 +446,11 @@ def test_pipeline_connects_in_current_model_without_preflight(tmp_path, monkeypa
     runner = Runner(); runner.ai = AI()
     monkeypatch.setattr(ap, '_reload_gate_notice', lambda: '')
     monkeypatch.setattr(core, '_restore_provider', lambda *a: None)
-    monkeypatch.setattr(core, '_switch_to_midtier', lambda *a: None)
     # 감독 신원 연결 후 이 통합 시험도 최종 검수에 도달한다. 실제 CLI/모델 호출은 금지.
     monkeypatch.setattr('final_evaluator.invoke', lambda *a, **k: json.dumps({
         'status': 'UNKNOWN', 'reason': '조회만 끝났고 전체 보고서는 아직 완성되지 않았다'}))
     monkeypatch.setattr(pb, 'ask_json', lambda *a, **k: pytest.fail('전경 과제 AI 호출'))
-    monkeypatch.setattr('model_resolver.consciousness_enabled', lambda: lane == 'THINK')
+    monkeypatch.setattr('model_resolver.consciousness_enabled', lambda: lane in {'THINK', 'HIGH_RECALL'})
     try:
         events = list(runner.cognitive_stream(row['id'] + ' 아니 부산으로 조회해'))
         assert runner.full_calls == (1 if lane == 'THINK' else 0)
@@ -462,6 +460,7 @@ def test_pipeline_connects_in_current_model_without_preflight(tmp_path, monkeypa
         turn = ledger.turns(row['id'])[-1]
         assert turn['state'] == 'pending' and '부산 조회' in turn['response']
         assert pb.current() is None and 'pipeline_turn' not in pb._sessions
+        assert '회수한 실행기억' in seen[0]
         assert '<pursuits ' in seen[0]
         assert ('<pursuit ' in seen[0]) == (lane == 'THINK')
     finally:

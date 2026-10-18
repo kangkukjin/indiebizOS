@@ -163,7 +163,7 @@ class CognitivePipelineMixin:
     """
 
     def _refresh_execution_prompt(
-        self, message, consciousness_output=None, execution_memory="", reflex_hint=None,
+        self, message, consciousness_output=None, execution_memory="",
         *, extra_role=None, allowed_set=None,
     ):
         """상주 러너의 초기 사전을 재사용하지 않고 이 턴의 활성 사전을 모델에 전달한다.
@@ -174,9 +174,6 @@ class CognitivePipelineMixin:
         if self.config.get("_is_system_ai"):
             role = self._load_role()
             memory = execution_memory
-            if reflex_hint:
-                memory = (f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}"
-                          if execution_memory else f"[Reflex 매칭] {reflex_hint}")
             stable, dynamic = self._build_system_ai_prompt_split(
                 role, consciousness_output, memory,
                 extra_role=extra_role, allowed_set=allowed_set,
@@ -185,12 +182,6 @@ class CognitivePipelineMixin:
             # 초기화와 같은 역할 공급자를 사용한다. 연구 대화의 자료·관점도 이 계약에 포함된다.
             role = self._load_role()
             memory = execution_memory or ""
-            if reflex_hint and not consciousness_output:
-                memory += (
-                    '\n\n<reflex_hint note="고확신 매칭된 IBL 패턴입니다. '
-                    '이 코드를 우선적으로 사용하세요.">'
-                    f"\n{reflex_hint}\n</reflex_hint>"
-                )
             stable, dynamic = self._build_system_prompt_split(
                 role, consciousness_output, memory,
             )
@@ -208,7 +199,7 @@ class CognitivePipelineMixin:
     # 객체에 **턴마다 달라지는 값**을 쓴다 —
     #   · `self.ai.system_prompt` / `self.ai._provider.system_prompt`
     #     = 이 턴의 의식 framing·실행기억이 박힌 프롬프트 (4단계)
-    #   · `self.ai._provider` 슬롯 = THINK/REPAIR/reflex 모델 스왑 (3단계)
+    #   · `self.ai._provider` 슬롯 = THINK/REPAIR 모델 스왑 (3단계)
     #   · `_last_tool_images/_results/_calls` = 이 턴의 도구 수확
     # 동시 턴이 겹치면 나중 턴의 대입이 앞 턴의 값을 덮는다. 스왑은 finally 에서
     # '진입 시점 provider' 로 복원하므로 최종 상태는 맞아도, **겹치는 구간 동안**
@@ -382,7 +373,7 @@ class CognitivePipelineMixin:
     ) -> Generator[Dict[str, Any], None, None]:
         """인지 파이프라인 전체를 한 번만 수행하는 제너레이터.
 
-        연상 → 분류(SESSION_RESET 포함) → 의식(THINK)/모델스왑(reflex·force_role) →
+        연상 → 분류(SESSION_RESET 포함) → 의식(THINK)/모델스왑(force_role) →
         clarification fast-path → 프롬프트 갱신 → 실행 → 평가(THINK) → 반성(EXECUTE) →
         메모리 쓰기(_after_response). 진입점은 이 이벤트를 pump/drain만 한다.
 
@@ -395,7 +386,7 @@ class CognitivePipelineMixin:
         agent_name = agent_name or self.config.get("name", "")
 
         # 0. 실행 축 기어 동기화는 래퍼(cognitive_stream)가 **스코프 밖에서** 끝냈다 —
-        # 상주 러너의 바탕 모델 교체이므로 턴 사본에 적으면 안 된다. reflex/force_role
+        # 상주 러너의 바탕 모델 교체이므로 턴 사본에 적으면 안 된다. force_role
         # 스왑보다 먼저라는 순서는 그대로다(복원도 새 기어로 돌아온다).
 
         # 1. 연상 1상 — 공통 흐름(associative_recall): 실행기억·심층 지도/선택·가이드 목차·손발·수리 결말·판정 원장.
@@ -410,21 +401,21 @@ class CognitivePipelineMixin:
             yield {"type": "error", "content": "작업이 취소되었습니다."}
             return
 
-        # 2. 분류 — 명시 태그(#think/#execute) → Reflex(해마 고확신) → 무의식 분류
+        # 2. 분류 — 명시 태그(#think/#execute) → 무의식 분류
         if continuation:
-            request_type, reflex_hint = "REPAIR", None
+            request_type = "REPAIR"
         elif force_role:
             # 표면 강제 EXECUTE(포식 등): 무의식 분류기(경량 LLM 1회)를 건너뛴다.
-            request_type, reflex_hint = "EXECUTE", None
+            request_type = "EXECUTE"
             print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
         else:
-            request_type, reflex_hint = self._decide_request_type(
+            request_type, _ = self._decide_request_type(
                 message, hippo_score, top_code, history, images)
         from repair_continuation import current as current_repair_continuation
         if current_repair_continuation() and not force_role:
             # 사용자 출처는 영속 인계의 소비자가 복원한다. 분류기가 이미 승인된
             # 자기수리의 후반부를 단순 응답으로 낮춰 그랜트를 잃게 하지 않는다.
-            request_type, reflex_hint = "REPAIR", None
+            request_type = "REPAIR"
 
         # SESSION_RESET — Claude Code 세션 매핑만 제거하고 표준 응답 (AI 호출 없음)
         if request_type == "SESSION_RESET":
@@ -448,20 +439,20 @@ class CognitivePipelineMixin:
 
         # 연상 2상 — 세계 지도(글자 채널)·세계의 기억(의미 채널). 어느 채널이 도는지는 associative_recall.SOURCES 가 정한다.
         if recall:
-            recall.route(request_type, reflex_hint=reflex_hint, force_role=force_role, context_update=context_update)
+            recall.route(request_type, force_role=force_role, context_update=context_update)
         if cancel_check and cancel_check():
             yield {"type": "error", "content": "작업이 취소되었습니다."}
             return
         execution_memory = recall.text() if recall else ""
 
-        # 3. 의식(THINK) / reflex·force_role 모델 스왑
+        # 3. 의식(THINK) / force_role 모델 스왑
         from episode_logger import record_trajectory_event
         record_trajectory_event("cognition.route", {
-            "request_type": request_type, "reflex": bool(reflex_hint), "force_role": force_role,
+            "request_type": request_type, "reflex": False, "force_role": force_role,
             "intent": "context_update" if context_update else "task",
         })
         # 스왑 헬퍼는 runner-제네릭(시스템AI 전용 아님) — system_ai_core에 기거할 뿐.
-        from system_ai_core import _switch_to_midtier, _switch_to_role, _restore_provider
+        from system_ai_core import _switch_to_role, _restore_provider
         consciousness_output = None
         original_provider = None
         _reframe_channel = None
@@ -539,13 +530,6 @@ class CognitivePipelineMixin:
                 else:
                     print(f"[수리] 의식 needs_repair 선언이지만 출처={_origin or '자율'}"
                           f" — 그랜트 없이 THINK 로 진행")
-        elif reflex_hint:
-            # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
-            # ★이미지 첨부 시 스왑 금지(2026-08-13 실측): 중급(딥시크)은 비전 미지원이라
-            # image_url 파트에 400 — 사진 딸린 메시지는 실행 축 모델(비전 가능)로 그대로 간다.
-            if not images:
-                original_provider = _switch_to_midtier(self)
-
         from pursuit_bind import refresh_memory
         execution_memory = refresh_memory(execution_memory)
 
@@ -568,7 +552,7 @@ class CognitivePipelineMixin:
 
         # 작업전 공개(계기판) — 실행 직전 "무슨 판단·얼마나 확신·무슨 연상"을 노출
         try:
-            _decision = "reflex" if reflex_hint else ("think" if request_type in ("THINK", "REPAIR") else "execute")
+            _decision = "think" if request_type in ("THINK", "REPAIR") else "execute"
             _criteria = ""
             if consciousness_output:
                 _criteria = self._extract_achievement_criteria(consciousness_output) or ""
@@ -576,7 +560,7 @@ class CognitivePipelineMixin:
                 "type": "cognition",
                 "decision": _decision,
                 "score": round(float(hippo_score or 0.0), 3),
-                "action": (reflex_hint or top_code or ""),
+                "action": (top_code or ""),
                 "criteria": _criteria,
             }
         except Exception as _ce:
@@ -584,7 +568,7 @@ class CognitivePipelineMixin:
 
         # 4. 매 요청마다 현재 활성 어휘로 조립한다. 기억이 없는 EXECUTE도 예외가 아니다.
         augmented_message = self._refresh_execution_prompt(
-            message, consciousness_output, execution_memory, reflex_hint,
+            message, consciousness_output, execution_memory,
             extra_role=extra_role, allowed_set=allowed_set,
         )
 
@@ -756,7 +740,7 @@ class CognitivePipelineMixin:
             # 6. 실행
             from supervision_bus import current as _supervisor_current
             _supervisor = _supervisor_current()
-            _evaluation_enabled = (bool(consciousness_output) and not reflex_hint
+            _evaluation_enabled = (bool(consciousness_output)
                                    and not force_role and not _clarify_text)
             if _supervisor:
                 _supervisor.request_intent = "context_update" if context_update else "task"

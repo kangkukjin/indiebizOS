@@ -249,7 +249,7 @@ indiebizOS/
 
 ---
 
-## 인지 파이프라인 (연상 → Reflex/무의식 → 의식 → 실행 → 평가)
+## 인지 파이프라인 (연상 → 무의식 → 의식 → 실행 → 평가)
 
 사용자 메시지가 들어오면 다음 순서로 처리된다. 모든 에이전트(시스템 AI / 프로젝트 에이전트)가 동일한 단계를 밟는다.
 
@@ -257,9 +257,7 @@ indiebizOS/
 [0] 연상 단계        — 해마(IBL 사례) + 심층메모리(연상기억) 검색 1회로 자료 묶음
                        (top_score, top_code 함께 추출 — 중복 검색 제거)
      ↓
-[1] Reflex 분기      — top_score ≥ 0.85 이면 무의식 호출 스킵, 곧장 EXECUTE
-     ↓ 미만
-[1B] 무의식 분류     — 경량 AI로 EXECUTE / THINK 판정
+[1] 무의식 분류     — 경량 AI로 EXECUTE / THINK 판정 (해마 점수와 무관)
      ↓
 EXECUTE                                THINK ( = "framing이 필요하다"는 수요)
    │                                     ↓
@@ -268,42 +266,36 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
    │                                  └─ 없음/안맞음 → 의식 에이전트(본격 AI): task_framing / achievement_criteria / …
    ↓                                     ↓
 [3] 실행 에이전트
-     · Reflex(해마 고확신)  → 중급 모델로 전환
      · EXECUTE / THINK     → 본격 모델 유지 (무의식 EXECUTE 오분류여도 품질 방어)
      · 도구: execute_ibl + run_command + read_guide + 인지도구(4) — Python/Node.js는 [self:write]→run_command 패턴
    ↓
 [4] 의식 중간관리 + 별도 최종평가 — 의식은 도구로 진단, 평가자는 제공된 목표·실행 증거·결과로 판정
-                       (의식 규정 없는 EXECUTE·Reflex 는 [4] 생략 → 평가 NULL, 최종 응답 후 [5])
+                       (의식 규정 없는 EXECUTE 는 [4] 생략 → 평가 NULL, 최종 응답 후 [5])
    ↓
 [5] 증류             — 해마 경험 증류 + 심층메모리 증류 (자동; 장기 기억은 최종 응답 전달 뒤 사용자 원문에서 지속 가치만 선별 — `[self:memory]{op:"save"}` 는 즉시 저장하지 않는다)
 ```
 
 **모델 기어 (계기판 변속, 2026-06-30):** 자동차 기어처럼 레버 하나로 시스템 전체 모델 등급을 변속. 자동 변속기(무의식 분류기=작업마다 티어 자동선택) 위의 **수동 변속 레버**. `backend/base/model_resolver.py`가 *역할 → 축 → 기어 → 티어 → 모델*로 해소하고 매 호출 읽기(핫리로드, `/model-gear` REST). 설정=`data/model_gear.json`.
 - **3 티어 = 모델 슬롯** (한 번만 설정): 경량(`lightweight_ai_config.json`) / 중급(`midtier_ai_config.json`) / 고급(`system_ai_config.json` 재사용, UI 라벨 '고급').
-- **4 축** (각 독립 티어 배정): 분류(무의식+백그라운드 정리) · 평가(도구 없는 최종평가자·노트북 답변·단계 기준 검사) · 실행(프로젝트 에이전트·시스템 AI·Reflex·수동 번역·android·자동응답·임베디드 텍스트생성) · 의식(consciousness).
+- **4 축** (각 독립 티어 배정): 분류(무의식+백그라운드 정리) · 평가(도구 없는 최종평가자·노트북 답변·단계 기준 검사) · 실행(프로젝트 에이전트·시스템 AI·수동 번역·android·자동응답·임베디드 텍스트생성) · 의식(consciousness).
 - **기어 = 축→티어 프리셋**: ★프리셋은 **데이터**(사용자가 `/model-gear/presets` 로 편집) — 현행 값의 정본은 `data/model_gear.json` 이고, 코드의 `_DEFAULT_GEAR` 는 파일 부재·손상 시 폴백일 뿐이다. **값을 말하기 전에 그 파일을 읽어라**(2026-09-04 실측: 라이브 최대 기어의 평가 축은 **고급** — 여기 적혀 있던 '분류·평가는 최대에서도 경량'은 폴백만 맞고 라이브는 아니었다. 산문에 값을 복제하면 반드시 이렇게 썩는다). 폴백 기본값: 절약(전부 경량) / 균형(분류·평가=경량, 실행·의식=중급) / 최대(분류·평가=경량, 실행·의식=고급).
 - **에이전트 핀(overrides)**: 특정 에이전트/역할만 기어 무시하고 티어 고정. 우선순위 override > role > gear. **키 = `resolve(role, agent_id)` 에 실리는 이름 그대로** — 프로젝트 에이전트만 `{project}:{agent_id}` 복합키(동명 격리)이고, 나머지는 단일 이름(`system_ai`·`forage`·`system_ai_delegation` 같은 역할·경로 이름)이다. 계기판 열거는 `api_config._list_pinnable_agents()` 하나뿐이라, 거기 없는 키로 핀이 걸리면 **효력은 있는데 화면에 없는 유령 핀**이 된다 — 그래서 그 함수는 실재 에이전트에 더해 *현재 걸려 있는 핀 전부*를 흡수해 낸다(2026-09-04).
 - **per-agent 모델 폐지**: 에이전트 yaml의 provider/model/apiKey 무시 — 모델*과 키*는 실행 티어 상속. 모달리티(이미지·동영상·임베딩)는 기어 밖 패스스루.
 
 - **연상 단계 (단계 0)** — 공통 흐름 `associative_recall`(2026-09-18): 러너 `_associate()`(1상) → `route(request_type)`(2상) → `text()`
   - 1상(분류 전): 해마(`ibl_usage_rag.build_execution_memory()`)·심층메모리 지도+선택(`<memory_map>`·`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장. 2상(분류 뒤): 세계 지도. 어느 채널에 어느 기억이 도는지는 정책 표 `SOURCES`/`CHANNELS`(포식=자동 주입 없음)
-  - 반사 신호: `recall.reflex`(점수·코드) — 검색 한 번으로 확보. 제시 기록: `recall.presented` 사건
+  - 회상 통계: `recall.reflex`(점수·코드, 기록·프리뷰 호환 이름이며 라우팅에 사용하지 않음) — 검색 한 번으로 확보. 제시 기록: `recall.presented` 사건
   - 무의식/의식의 계획/실행이 같은 묶음을 공유. 감독·검수에는 목표·규정·실제 증거를 전달. 관문 `scripts/check_recall_assembly.py`
-- **Reflex 분기** — `cognitive_consciousness._decide_request_type()` 이 판정(공통 파이프라인 `agent_pipeline` 이 호출)
-  - `top_score >= REFLEX_SCORE_THRESHOLD (0.85)` 이면 무의식 모델 호출 스킵
-  - reflex_hint로 매칭된 IBL 코드를 실행 에이전트에 힌트로 전달
-- **무의식 (경량 AI)** — `_classify_request()`
-  - 단순 분류만 담당 (Reflex 로직 분리됨)
+- **무의식 (경량 AI)** — `_decide_request_type()` → `_classify_request()`
+  - 명시 태그·수리·의식 토글 등 기존 규칙을 유지하며 해마 고확신 분기와 전용 모델 전환은 제거했다.
+  - 해마 검색·실행기억 주입·성공/실패 귀속은 유지한다. 회상 코드는 참고이며 우선 실행 지시를 덧붙이지 않는다.
   - 프롬프트: `data/common_prompts/unconscious_prompt.md` (단일 파일, 가볍게 유지)
-- **Reflex 모델 전환** — `model_resolver.get_provider_for('reflex')`로 위임 (2026-06-30 기어 통합)
-  - reflex_hint가 있을 때만 provider를 'reflex' 축 티어(균형 기어 기본=중급)로 교체 후 try/finally로 복원
-  - 무의식 EXECUTE는 'execute' 축 유지 — 분류 오판이 품질 저하로 이어지지 않게 하는 방어. 덕분에 무의식은 EXECUTE 쪽으로 과감하게 기울 수 있다
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
   - 출력 필드: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
   - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<recalled_memory>`, `<guide_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<guide_map>`, 2026-09-17)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **과제 선택·규정 재사용** — `pursuit_bind.py`와 `_run_consciousness_or_reuse()`
-  - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE/Reflex도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.
+  - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.
   - 진행은 원문 턴을 먼저 저장하고 비동기 갱신한다. 다음 턴은 미반영 진행을 먼저 따라잡는다. 상세: architecture.md와 memory.md.
 - **의식의 중간관리** — `conscious_supervisor.py` + `supervisor_runtime.py`
   - 계획·재규정·조건부 중간 점검은 도구를 가진 의식 역할이 맡는다. 진단 뒤 본작업은 실행자에게 인계한다.
@@ -311,7 +303,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - 하네스가 사용자 목표·전체 응답·실제 호출 원장·결과 발췌·산출물을 모아 평가 축 원샷에 전달한다.
   - 평가자는 직접 조사·수정하지 않는다. 결함을 한 번에 넘기며 실행자의 보완은 최대 한 번, 재평가는 갱신된 증거로 수행한다.
   - 응답·파일·공개 대기열 지문을 대조해 승인된 결과를 전달하고 전체 과제 기준을 확인한 완료 요청만 반영한다.
-  - 모델이 응답 페이지나 인용 영수증을 다시 읽어야 하는 조건은 없다. 감독 객체 없는 호환 경로의 GoalEval/SelfReflect 도 의식의 규정(달성 기준)이 있는 턴에만 돈다 — 의식 없는 EXECUTE·Reflex 는 도구 실패·쓰기·장시간 실행에도 평가·자기반성을 부르지 않는다(`cognition.evaluation.path=none`, 판정 NULL).
+  - 모델이 응답 페이지나 인용 영수증을 다시 읽어야 하는 조건은 없다. 감독 객체 없는 호환 경로의 GoalEval/SelfReflect 도 의식의 규정(달성 기준)이 있는 턴에만 돈다 — 의식 없는 EXECUTE 는 도구 실패·쓰기·장시간 실행에도 평가·자기반성을 부르지 않는다(`cognition.evaluation.path=none`, 판정 NULL).
 - **공통 원칙**
   - 시스템 AI와 프로젝트 에이전트 모두 동일한 AgentRunner 인지 메서드 사용 (`_is_system_ai` 플래그로 DB·도구만 분리)
   - 모델·API 키는 모두 모델 기어가 해소한 티어에서 상속 (에이전트별 키 설정 폐지). 티어 슬롯의 키가 비면 고급(시스템 AI) 키로 폴백

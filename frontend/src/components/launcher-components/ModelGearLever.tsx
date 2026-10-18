@@ -80,7 +80,7 @@ export function ModelGearLever({ onToggleStruct, structOpen, member = false, rev
     setChanging(false);
   };
 
-  // 의식 토글 — OFF 면 THINK 경로 차단(반사는 유지, 빠르고 저렴). 핫리로드(다음 작업부터).
+  // 의식 토글 — OFF 면 THINK 경로 차단(바로 실행). 핫리로드(다음 작업부터).
   const conscious = gear?.consciousness_enabled !== false;
   const toggleConsciousness = async () => {
     if (togglingMind || !gear) return;
@@ -198,7 +198,7 @@ export function ModelGearLever({ onToggleStruct, structOpen, member = false, rev
         </div>
       )}
 
-      {/* 의식 토글 — OFF 면 THINK(숙고) 경로를 끄고 반사+바로 실행만 (빠르고 저렴) */}
+      {/* 의식 토글 — OFF 면 THINK(숙고) 경로를 끄고 바로 실행만 (빠르고 저렴) */}
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-100">
         <span className="text-[11.5px] flex items-center gap-1.5 min-w-0">
           <Brain size={13} className={conscious ? 'text-stone-600' : 'text-stone-300'} />
@@ -214,7 +214,7 @@ export function ModelGearLever({ onToggleStruct, structOpen, member = false, rev
           disabled={togglingMind || !gear}
           role="switch"
           aria-checked={conscious}
-          title="의식 없는 바로 실행·반사 경로는 감독·평가를 생략합니다. #think 로 한 건만 숙고할 수 있습니다."
+          title="의식 없는 바로 실행 경로는 감독·평가를 생략합니다. #think 로 한 건만 숙고할 수 있습니다."
           className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${
             conscious ? 'bg-stone-800' : 'bg-stone-300'
           }`}
@@ -226,7 +226,7 @@ export function ModelGearLever({ onToggleStruct, structOpen, member = false, rev
           />
         </button>
       </div>
-      <p className="text-[10.5px] text-stone-400">의식이 작동한 턴만 감독·평가합니다. 바로 실행·반사는 평가하지 않습니다.</p>
+      <p className="text-[10.5px] text-stone-400">의식이 작동한 턴만 감독·평가합니다. 바로 실행는 평가하지 않습니다.</p>
 
       {/* ⚙ 설정 패널 — 프리셋 편집 + 에이전트 핀 */}
       {showSettings && (

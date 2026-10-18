@@ -748,24 +748,6 @@ def _get_lightweight_provider():
 _get_unconscious_provider = _get_lightweight_provider
 
 
-def _get_midtier_provider():
-    """reflex 프로바이더 반환 — 모델 기어 'reflex' 역할로 해소(2026-06-30부터 *경량 티어 고정*).
-    ※ 함수명은 레거시(옛 중급). 실제 모델은 model_resolver 의 reflex→경량 고정이 정한다.
-
-    reflex(해마 고확신) 경로가 provider 자체를 변이(system_prompt/tools/agent_id 복사)해
-    ai._provider 로 스왑하므로 session 버킷(원샷과 객체 분리)으로 받는다. 같은 reflex 객체를
-    여러 호출이 공유(옛 _midtier_provider 싱글턴과 동일 — 동기 호출이라 변이→사용이 밀착).
-    리졸버 실패/모델 미설정 시 옛 midtier_ai_config 직접 로드로 폴백."""
-    try:
-        from model_resolver import get_provider_for
-        prov, _d = get_provider_for("reflex", oneshot=False)
-        if prov is not None:
-            return prov
-    except Exception as e:
-        print(f"[MidtierAI] 리졸버 해소 실패(옛 config 폴백): {e}")
-    return _get_midtier_provider_legacy()
-
-
 def _get_midtier_provider_legacy():
     """호환 경로: 옛 중급 활성/기본값 계약을 model_resolver에서 해소한다."""
     global _midtier_provider, _midtier_provider_initialized
@@ -806,7 +788,7 @@ def _clear_resolver_cache():
 
 
 def reset_midtier_provider():
-    """중급/reflex 프로바이더 캐시 초기화 (설정 변경 시 호출)"""
+    """옛 중급 설정 호환 캐시 초기화 (설정 변경 시 호출)"""
     global _midtier_provider, _midtier_provider_initialized
     _midtier_provider = None
     _midtier_provider_initialized = False
@@ -842,7 +824,7 @@ def _resolve_oneshot_provider(role: str):
 
     리졸버(model_resolver.get_provider_for)가 현재 기어→축→티어로 모델을 해소한다.
     원샷 계약(분류·평가·증류)이라 oneshot 버킷(세션 비활성)으로 획득 — 메인 에이전트와
-    session_key 충돌 방지 + reflex 같은 변이형 provider 와 캐시 객체 분리.
+    session_key 충돌 방지 + 역할 전환용 provider 와 캐시 객체 분리.
     리졸버 실패/모델 미설정 시 None → 호출부가 옛 getter 로 폴백."""
     try:
         from model_resolver import get_provider_for

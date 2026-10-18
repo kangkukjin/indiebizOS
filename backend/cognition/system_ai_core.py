@@ -186,34 +186,6 @@ def _record_switch(role: str, provider):
         pass
 
 
-def _switch_to_midtier(runner):
-    """reflex(해마 고확신) 경로에서 중급 모델로 provider 전환. 전환 성공 시 원래 provider 반환."""
-    from member_runtime import is_member
-    if is_member():
-        return None
-    try:
-        from consciousness_agent import _get_midtier_provider
-        midtier = _get_midtier_provider()
-        if midtier is None:
-            return None  # 중급 설정 없으면 본격 모델 유지
-
-        # ★캐시 공유 객체를 그대로 변이하지 않는다 (2026-08-31): model_resolver 는
-        # provider 를 (프로바이더|모델|키) 로 캐시한다 — 같은 티어로 스왑하는 동시 턴이
-        # 같은 객체를 받는다. 거기에 _carry_context 로 system_prompt·agent_id 를 쓰면
-        # 서로의 신원·프롬프트를 덮는다. 턴 사유 사본에 실어 옮긴다.
-        from agent_pipeline import per_turn_provider_view
-        midtier = per_turn_provider_view(midtier)
-        original_provider = runner.ai._provider
-        _carry_context(midtier, original_provider)
-        runner.ai._provider = midtier
-        _record_switch("reflex-midtier", midtier)
-        print(f"[시스템AI] 중급 모델로 전환: {midtier.model}")
-        return original_provider
-    except Exception as e:
-        print(f"[시스템AI] 중급 모델 전환 실패 (본격 모델 유지): {e}")
-        return None
-
-
 def _restore_provider(runner, original_provider):
     """원래 provider로 복원 (+역할 태그 원복)"""
     if original_provider is not None:
@@ -226,7 +198,7 @@ def _restore_provider(runner, original_provider):
 
 
 def _switch_to_role(runner, role, agent_id: str = None):
-    """지정 역할(예: 'forage')로 해소된 provider 로 전환 — _switch_to_midtier 의 일반화.
+    """지정 역할(예: 'forage')로 해소된 provider 로 전환.
 
     model_resolver 가 role → 티어 → 모델로 해소(forage 는 기본 경량, 계기판 override 로 변경).
     현재 provider 의 실행 컨텍스트 묶음(_CONTEXT_FIELDS)을 원자적으로 옮겨
@@ -243,7 +215,7 @@ def _switch_to_role(runner, role, agent_id: str = None):
         prov, d = get_provider_for(role, agent_id=agent_id, oneshot=False)
         if prov is None:
             return None  # 해당 티어 설정/키 없음 → 기존(본격) 모델 유지
-        # 캐시 공유 객체 변이 금지 — _switch_to_midtier 의 같은 주석 참조.
+        # 캐시 공유 객체를 변이하지 않고 턴 사본으로 전환한다.
         from agent_pipeline import per_turn_provider_view
         prov = per_turn_provider_view(prov)
         cur = runner.ai._provider

@@ -23,7 +23,7 @@ from legacy_example_projection import current_form_of_legacy_call  # noqa: E402,
 
 
 def _top_for_execution(results):
-    """본문을 숨긴 과거 자료는 유사도만으로 반사 실행하거나 현재 증거로 쓰지 않는다."""
+    """본문을 숨긴 과거 자료는 유사도만으로 실행 코드나 현재 증거로 쓰지 않는다."""
     if not results:
         return 0.0, ""
     from hippo_tree import reference_needs_expansion
@@ -530,7 +530,7 @@ def build_execution_memory_detail(user_message: str, allowed_nodes: set = None, 
     # ★긴 붙여넣기 문서(에세이·기사·계약서 등)는 명령이 아니라 *내용*이다 — 본문 한가운데의
     #   표면 단어(예: 에세이 속 '도로교통법')가 무관 용례를 고신뢰(0.69)로 끌어온다(에피소드
     #   858/860 실측). 질의는 의도가 실리는 머리만 쓰고, 참조는 저신뢰로 강등하며,
-    #   top_score 는 Reflex 임계(0.85) 아래로 눌러 표면 매칭 반사 실행을 차단한다.
+    #   top_score 는 기존 표시·귀속 계약을 유지한다. 숨긴 원문은 실행 코드로 내주지 않는다.
     LONG_DOC_CHARS = 1200
     is_long_doc = len(user_message) > LONG_DOC_CHARS
     query = user_message[:400] if is_long_doc else user_message
@@ -543,7 +543,7 @@ def build_execution_memory_detail(user_message: str, allowed_nodes: set = None, 
             query=query,
             top_k=top_k or rag.DEFAULT_K,
             allowed_nodes=allowed_nodes,
-            exclude_category=rag.PHRASE_CATEGORY,   # 낱말 채널 — 반사 top-1 은 낱말만
+            exclude_category=rag.PHRASE_CATEGORY,   # 낱말 채널 — 귀속 top-1 은 낱말만
         )
     except Exception as e:
         logger.error(f"[IBL RAG] 검색 실패: {e}")
@@ -553,7 +553,7 @@ def build_execution_memory_detail(user_message: str, allowed_nodes: set = None, 
     results = _own_only(results)
     top_score, top_code = _top_for_execution(results)
     if is_long_doc or (results and getattr(results[0], "source", "") == "distilled_component"):
-        top_score = min(top_score, 0.80)   # Reflex(≥0.85) 발동 금지 — 문서는 반사 대상이 아님
+        top_score = min(top_score, 0.80)   # 문서 후보의 기존 표시 점수 상한 유지 — 실행 코드 없음
 
     # 관용구 채널(2026-09-04): 문장 여러 개의 골격 Top-2. 긴 문서엔 싣지 않는다(표면 우연).
     # 이 턴에 올린 관용구는 스레드-로컬에 두어 턴 끝의 증류(이미 아는 관용구면 재추출 안 함)·귀속이 읽는다.
@@ -774,9 +774,8 @@ def get_top(user_message: str, allowed_nodes: set = None) -> tuple:
         return (0.0, "")
 
 
-# 피드백 귀속 임계값: 이 점수 이상(Reflex 경로)에서만 top-1 example에 실행 결과 귀속.
-# 연상은 example을 '참고'로 주입하고 AI가 새 코드를 생성하므로 귀속이 흐릿하지만,
-# 고점수 경로는 top-1이 사실상 코드를 주도하므로 깔끔히 귀속된다.
+# 피드백 귀속 임계값: 고점수 top-1 example에 실제 사용이 관측될 때 실행 결과 귀속.
+# 라우팅과 독립이다. 참고로 주입된 회상 액션이 실행 궤적에 등장했는지 아래 관문이 확인한다.
 RECALL_RECORD_THRESHOLD = 0.85
 
 
@@ -802,7 +801,7 @@ def _ibl_elapsed_ms(tool_calls: list) -> Optional[int]:
 
 def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
                           turn_tokens: int = None) -> bool:
-    """Reflex 경로에서 연상 top-1 example의 실행 성공/실패(+소요시간·토큰)를 해마에 피드백한다.
+    """실제 사용한 연상 top-1 example의 실행 성공/실패(+소요시간·토큰)를 해마에 피드백한다.
 
     이것이 해마의 강화-감쇠 루프다. 기록된 성공/실패는 success_rate로 환산되어
     이후 연상 시 참조 XML에 표시되고(검증된 사례 부상), 정리 패스의 가지치기

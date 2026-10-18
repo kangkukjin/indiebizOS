@@ -7,7 +7,6 @@
 import boot_paths  # noqa: F401
 import pytest
 
-from cognitive_consciousness import CognitiveConsciousnessMixin
 from corpus_policy import exclusion_reason
 from hippo_tree import reference_needs_expansion, sentence_count, split_sentences
 from ibl_usage_db import UsageExample
@@ -51,18 +50,6 @@ def test_sentence_count_is_edition_aware_and_split_sentences_is_untouched():
     assert split_sentences(MANY) == [MANY]                   # 증류·관용구 기계의 전제(test_ibl_v2_assets) 그대로
     broken = '#!ibl edition=9\nreturn 1'
     assert sentence_count(broken) == 0 and reference_needs_expansion(broken)
-
-
-def test_reflex_fires_for_current_single_statement_and_vetoes_keep_shape():
-    c = object.__new__(CognitiveConsciousnessMixin)
-    assert c._decide_request_type('오늘 서울 날씨 좀', .9, ONE) == ('EXECUTE', ONE)
-    # 위험 축 거부권 — 키 표기와 무관
-    for code in ('[self:switch]{op: "deploy"}', '#!ibl edition=2\nreturn [self:site]{"op":"deploy","target":"prod"}',
-                 "[self:build]{op:'build'}"):
-        assert c._reflex_veto('올려줘', code) == "빌드·배포 등 되돌리기 어려운 작업"
-    assert c._reflex_veto('보고서 만들어줘. 끝나면 보내줘', ONE)          # 요구 여럿
-    assert c._reflex_veto('x', '[a:b]{} >> [c:d]{}') == "회상이 다단계 파이프라인"
-    assert c._reflex_veto('오늘 서울 날씨 좀', ONE) is None
 
 
 if __name__ == '__main__':

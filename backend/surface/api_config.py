@@ -378,7 +378,7 @@ async def set_model_gear(body: Dict[str, Any]):
 
 @router.put("/model-gear/consciousness")
 async def set_model_gear_consciousness(body: Dict[str, Any]):
-    """의식 토글 — OFF 면 인지 파이프라인이 THINK 경로를 차단(반사 유지 + 나머지 바로 실행).
+    """의식 토글 — OFF 면 인지 파이프라인이 THINK 경로를 차단(바로 실행).
     핫리로드(매 _decide_request_type 가 consciousness_enabled() 를 새로 읽음) — 재시작 불요."""
     try:
         import model_resolver as M

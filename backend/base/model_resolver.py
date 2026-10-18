@@ -2,7 +2,7 @@
 model_resolver.py - 모델 기어 단일 진실원
 IndieBiz OS Core
 
-흩어져 있던 모델 선택(oneshot_ai_call / _get_midtier_provider / load_system_ai_config)을
+흩어져 있던 모델 선택(oneshot_ai_call / load_system_ai_config)을
 한 곳으로 모은다. 텍스트 역할은 4축 → 현재 기어 → 티어 → 모델로 해소한다:
 
     resolve(role) →
@@ -75,7 +75,7 @@ _DEFAULT_GEAR = {
     "role_axis": {
         "classify": "분류", "background": "분류", "evaluate": "평가",
         "consciousness": "의식", "execution": "실행", "system_ai": "실행",
-        "reflex": "실행", "translate": "실행", "content_text": "실행",
+        "translate": "실행", "content_text": "실행",
         "android": "실행", "auto_response": "실행",
         # 가이드 의미 순찰(주 6건)은 '전제가 뒤집혔는가' 판단이라 경량으로는 못 한다 —
         # 실측: 최소 형태 질문에도 경량 모델이 []를 뱉었다(2026-08-17). 빈도가 낮아 실행 축이 감당된다.
@@ -385,16 +385,8 @@ def resolve(role: str, agent_id: Optional[str] = None) -> dict:
                     "source": f"override:{key}(custom)",
                 }
 
-    # reflex(해마 고확신)는 기어와 무관하게 *언제나 경량* — "이미 찾은 답을 그대로 내보냄"이라
-    # 가장 싼 티어로 충분(설계 확정 2026-06-30). 기어는 '경량'이 어느 모델인지만 정한다.
-    # (위 override 루프가 reflex 핀을 먼저 처리하므로, 명시 핀이 있으면 그게 이긴다.)
-    if role == "reflex":
-        d = _load_tier_config("경량", gear)
-        d.update(axis="(reflex)", source="reflex→경량(고정)")
-        return d
-
     # 시스템 수리(system_repair)는 기어와 무관하게 *언제나 고급* — 자기 몸(RED) 수정은
-    # 최고 모델만 한다(헌법 2026-08-05, reflex→경량 고정의 역방향). 기어가 절약이어도
+    # 최고 모델만 한다(헌법 2026-08-05). 기어가 절약이어도
     # REPAIR 태스크의 실행 모델은 여기서 고급으로 승격된다.
     if role == "system_repair":
         d = _load_tier_config("고급", gear)
@@ -513,7 +505,7 @@ def consciousness_enabled() -> bool:
     """의식(THINK 경로) 토글 — model_gear.json 의 consciousness_enabled (기본 True, 핫리로드).
 
     False 면 인지 파이프라인이 무의식 분류(THINK 판정)를 건너뛰고 바로 EXECUTE 로 간다.
-    반사(Reflex, 해마 고확신)는 토글과 무관하게 유지된다 — OFF 는 'THINK 차단'이지 'Reflex 차단'이 아니다."""
+    해마 기억은 토글과 무관하게 유지된다 — OFF 는 THINK 분류를 생략한다."""
     v = _load_gear().get("consciousness_enabled", True)
     return bool(v) if isinstance(v, bool) else True
 
@@ -575,7 +567,7 @@ def set_overrides(overrides: dict) -> bool:
 #
 # ★버킷 분리(oneshot vs session): 옛 구조의 두 싱글턴(lightweight=원샷 / midtier=세션)을 재현.
 #   - oneshot: 분류·평가·증류 — system_prompt 임시 스왑, 세션 비활성. 같은 객체를 변이하지 않음.
-#   - session(reflex 등): provider 자체를 변이(system_prompt/tools/agent_id 복사)해 ai._provider 로 스왑.
+#   - session(역할 전환 등): provider 자체를 변이(system_prompt/tools/agent_id 복사)해 ai._provider 로 스왑.
 #   둘이 같은 모델로 해소돼도 *다른 객체*여야 서로의 system_prompt/tools 를 짓밟지 않는다.
 
 _provider_cache: Dict[str, Any] = {}
@@ -625,7 +617,7 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
                      oneshot: bool = False) -> Tuple[Any, dict]:
     """역할에 맞는 provider 객체와 디스크립터 반환. 모델 없으면 (None, desc).
 
-    oneshot=True: 원샷 버킷(세션 비활성). 변이형(reflex)과 캐시 객체를 분리.
+    oneshot=True: 원샷 버킷(세션 비활성). 역할 전환용 provider와 캐시 객체를 분리.
     """
     d = resolve(role, agent_id)
     prov = _provider_from_desc(d, system_prompt=system_prompt, tools=tools, oneshot=oneshot)

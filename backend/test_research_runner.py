@@ -271,8 +271,8 @@ def test_library_mode_allows_only_same_thread_perspective_updates():
             before({}, params)
 
 
-@pytest.mark.parametrize('reflex_hint', [None, '저장 자료를 확인한다'])
-def test_execution_refresh_keeps_research_role_sources_and_perspective(tmp_path, monkeypatch, reflex_hint):
+@pytest.mark.parametrize('execution_memory', ['', '저장 자료를 확인한다'])
+def test_execution_refresh_keeps_research_role_sources_and_perspective(tmp_path, monkeypatch, execution_memory):
     store = ResearchStore(tmp_path, 'prompt-delivery')
     tid = store.create_thread('교육')['id']
     store.update_thread(tid, notes='사용자의 고유한 교육 관점')
@@ -287,7 +287,7 @@ def test_execution_refresh_keeps_research_role_sources_and_perspective(tmp_path,
         runner.config['_research_role'] = research_runner.PERSPECTIVE_ROLE + research_runner._context(store, store.thread(tid), '질문')
         # 초기화 시 포함됐어도 실제 호출 직전 조립에서 사라지면 회귀다.
         runner.ai.system_prompt = runner._build_system_prompt(runner._load_role())
-        message = runner._refresh_execution_prompt('이번 질문', reflex_hint=reflex_hint)
+        message = runner._refresh_execution_prompt('이번 질문', execution_memory=execution_memory)
         delivered = runner.ai._provider.system_prompt + message
         assert '상속한 기본 역할' in delivered
         assert perspective in delivered

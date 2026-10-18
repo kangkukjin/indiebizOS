@@ -3,7 +3,7 @@ cognitive_consciousness.py - 의식·무의식(분류) 믹스인 + 과제 규정
 IndieBiz OS Core
 
 agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 3단 인지의
-판단 층 — 무의식 분류(_decide_request_type/_classify_request, Reflex·태그 강제
+판단 층 — 무의식 분류(_decide_request_type/_classify_request, 태그 강제
 포함), 의식 에이전트 실행/재사용(영속 과제 선택+재검토), 의식 출력의 히스토리
 적용·되묻기. SESSION_RESET은 CLI 세션 매핑을 비운다. 영속 과제는 대화 삭제·재설정과 독립이다.
 기존 import 경로(agent_cognitive)는 재수출로 유지된다.
@@ -216,14 +216,6 @@ class CognitiveConsciousnessMixin:
         return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]",
                  "_history_replacement": True}]
 
-    # ============================================================
-    # Reflex 임계값 — 단계 0 결과의 top_score가 이 값 이상이면
-    # 무의식(경량 AI) 호출을 건너뛰고 즉시 EXECUTE.
-    # 분기는 호출 측(_process_channel_message)이 책임진다.
-    # 0.88 → 0.85: 한계 사례(0.85~0.88)도 학습된 패턴이면 EXECUTE로 흘림.
-    # ============================================================
-    REFLEX_SCORE_THRESHOLD = 0.85
-
     # 의식 토글 OFF 일 때 분류기(경량 LLM) 대신 쓰는 세션 리셋 키워드 — 고정밀로 추림
     # (unconscious_prompt.md 의 SESSION_RESET 트리거에서). 리셋은 파괴적이므로 보수적:
     # 애매한 단어(맨 "리셋"/"초기화" 단독 — 액션 명령과 충돌)는 일부러 제외, 애매하면 EXECUTE.
@@ -251,7 +243,7 @@ class CognitiveConsciousnessMixin:
         return any(p in low for p in self._RESET_PHRASES)
 
     def _tag_override(self, message: str) -> Optional[str]:
-        """명령에 박힌 명시 태그로 판정을 강제한다 — 사용자 결정이므로 Reflex·분류를 모두 이긴다.
+        """명령에 박힌 명시 태그로 판정을 강제한다 — 사용자 결정이므로 분류를 이긴다.
         #repair → REPAIR(시스템 수리 경로), #think → THINK, #execute → EXECUTE (대소문자 무시).
         여럿이면 #repair > #think > #execute (보수적)."""
         low = (message or "").lower()
@@ -303,64 +295,23 @@ class CognitiveConsciousnessMixin:
             return True
         return False
 
-    # 되돌리기 어렵거나 오래 걸리는 op — 회상된 코드 자체에서 읽는다(세계의 명사 아님).
-    # 키의 따옴표·공백 표기(`op: "deploy"` / `"op":"deploy"` / `op:'build'`)에 무관하게 잡는다(2026-09-26 —
-    # 저장 용례 다수가 JSON 꼴 `{"op":"run",…}` 이라 옛 문자열 목록은 그 표기를 놓쳤다).
-    _LONGRUN_OP_RE = re.compile(r"""["']?\bop["']?\s*:\s*["'](?:deploy|build|publish)["']""")
-    # 요구가 몇 개인지 문장 구조로 센다(주제어가 아니라 문형).
-    # 부탁 종결: 보조용언 '주다' 계열이 대부분을 덮는다(해줘·찍어줘·띄워줘·보내주세요…).
-    _DEMAND_RE = re.compile(r"줘|주세요|줄래|주라|해라|하라|해봐|해다오")
-    # 순차 접속: 뒤에 또 하나의 요구가 온다는 표지("완성되면 …띄워줘" 처럼 종결이 하나여도).
-    _SEQUENCE_RE = re.compile(
-        r"그리고|그다음|그 다음|다음에|이어서|완성되면|끝나면|되면\s|한 뒤|한 후|하고 나서|하고나서")
-
-    def _reflex_veto(self, message: str, top_code: str):
-        """반사 금지 사유 — 없으면 None.
-
-        반사의 정의는 "이미 찾은 답을 그대로 내보냄"이다. 아래 셋은 그 정의에 안 맞는데도
-        해마 점수만으로 반사가 걸려 의식(달성 기준·진실 소스 정의)을 건너뛰던 자리다
-        (ep1173/1176/1177: '홈페이지 업데이트'가 폰트 변경 용례 0.891 로 반사 → 12분 주행,
-        앞의 두 번은 파일 한 글자도 못 고치고 종료). 2026-09-06 판정 '여러 단계 또는 위험'과 동형 —
-        거부권에 걸린 요청은 분류기로 내려가고, 분류기는 여러 단계를 THINK 로 올린다.
-
-        ★주제어(홈페이지·배포 같은 세계의 명사)로 판정하지 않는다 — 요청과 회상의 *모양*으로
-          판정한다. 그래야 새 도메인이 생겨도 목록을 늘릴 필요가 없다.
-        """
-        code = top_code or ""
-        # ① 회상 자체가 다단계 — 한 방에 내보낼 답이 아니다
-        if ">>" in code:
-            return "회상이 다단계 파이프라인"
-        # ② 되돌리기 어려운 작업(빌드·배포·발행) — 위험 축
-        if self._LONGRUN_OP_RE.search(code):
-            return "빌드·배포 등 되돌리기 어려운 작업"
-        # ③ 요구는 여럿인데 회상은 단발 — 회상이 요청을 못 덮는다
-        msg = message or ""
-        demands = len(self._DEMAND_RE.findall(msg))
-        if demands >= 2:
-            return f"요구 {demands}개인데 회상은 단발"
-        # 종결이 하나여도 순차 접속이 있으면 뒤에 또 하나의 요구가 있다
-        # ("…업데이트해줘. 완성되면 브라우저에 띄워죠." — ep1173 실제 문장)
-        if demands >= 1 and self._SEQUENCE_RE.search(msg):
-            return "순차 요구(…한 다음 …)인데 회상은 단발"
-        return None
-
     def _decide_request_type(self, message: str, hippocampus_score: float,
                              top_code: str, history=None, images=None) -> tuple:
-        """요청 판정 단일 진입점 — 명시 태그(무조건) → Reflex(해마 고확신) → 무의식 분류.
+        """요청 판정 단일 진입점 — 명시 태그(무조건) → 무의식 분류.
 
         4개 호출처(시스템AI×2·프로젝트 에이전트·채널)가 같은 결정을 쓰도록 중앙화.
         print 로 남기는 판정 로그는 episode_logger 가 정규식으로 읽어 episode_summary 에
         unconscious_decision 으로 적재하므로 형식([무의식] 분류: / [연상→실행])을 보존한다.
 
-        Returns: (request_type, reflex_hint)  # reflex_hint 는 Reflex EXECUTE 일 때만 top_code
+        해마 점수·코드 인자와 반환 튜플의 둘째 자리(None)는 호출부 호환을 위해 유지한다.
+        기억 검색·주입은 별도 흐름이며 이 판정은 회상 점수에 의존하지 않는다.
         """
         tag = self._tag_override(message)
         if tag:
             # 태그 강제 — episode 추출이 잡도록 "[무의식] 분류: X" 형식 유지(+강제 표기)
-            print(f"[무의식] 분류: {tag} (태그 #{tag.lower()} 강제 — Reflex·분류 무시)")
+            print(f"[무의식] 분류: {tag} (태그 #{tag.lower()} 강제 — 분류 무시)")
             return tag, None
-        # 시스템 수리 단서 — Reflex 보다 먼저: 수리 명령이 해마 고확신 매칭으로
-        # 경량 반사에 흘러가면 안 된다(수리=고급 모델+의식 각성 전용, 헌법 2026-08-05).
+        # 시스템 수리 단서: 수리 요청은 고급 모델·의식 경로로 보낸다.
         # 의식 OFF 경로(분류기 스킵)에서도 이 결정론 검사가 REPAIR 를 잡는다.
         if self._is_repair_cue(message):
             print("[무의식] 분류: REPAIR (결정론 단서 — 직접 수리 요청)")
@@ -371,17 +322,7 @@ class CognitiveConsciousnessMixin:
         if is_delegation_report(message):
             print("[무의식] 분류: CONTEXT_UPDATE (결정론 단서 — 위임 완료 통지)")
             return "CONTEXT_UPDATE", None
-        if (hippocampus_score or 0) >= self.REFLEX_SCORE_THRESHOLD and top_code:
-            # 안전핀 — 점수가 높아도 '한 방에 내보낼 답'이 아니면 반사를 포기하고
-            # 무의식 분류로 내려보낸다(THINK 로 갈 기회를 준다). REPAIR 핀과 대칭.
-            veto = self._reflex_veto(message, top_code)
-            if veto:
-                print(f"[연상→실행] Reflex 보류 (score={hippocampus_score:.3f} — {veto})")
-            else:
-                print(f"[연상→실행] Reflex EXECUTE (score={hippocampus_score:.3f})")
-                return "EXECUTE", top_code
-        # 의식 토글 OFF → 무의식 분류(THINK 판정)를 건너뛰고 바로 EXECUTE. 반사는 위에서 이미 처리됨.
-        # SESSION_RESET 만 비-LLM 키워드로 살림(분류기가 잡던 걸 OFF 에서 대체). 확정 2026-06-30.
+        # 의식 토글 OFF는 분류를 생략한다. 해마 유사도는 실행 경로를 바꾸지 않는다.
         try:
             from model_resolver import consciousness_enabled
             _conscious = consciousness_enabled()
@@ -406,8 +347,7 @@ class CognitiveConsciousnessMixin:
                           execution_memory: str = "") -> str:
         """사용자 요청을 SESSION_RESET / EXECUTE / THINK로 분류한다.
 
-        무의식 에이전트 — 경량 AI 호출만 담당. Reflex 판정은
-        호출 측에서 단계 0(associative_recall 의 반사 신호 recall.reflex)으로 미리 분기한다.
+        무의식 에이전트 — 경량 AI 호출로 분류한다. 해마 고확신도 이 분류를 우회하지 않는다.
 
         execution_memory는 받지만 분류 입력에 합치지 않는다.
         호출자가 전달한 현재 메시지·짧은 직전 대화·첨부 유무만 판단한다.

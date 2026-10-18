@@ -180,7 +180,7 @@ def _repair_section(layer: str = "turn") -> Dict[str, Any]:
 def _user_command_section(sample: str, include_think_note: bool = True) -> Dict[str, Any]:
     from prompt_builder import compile_user_command
     plain = compile_user_command(sample, None)
-    note = ("EXECUTE·반사 경로: 원문 그대로. THINK 경로: 원문 뒤에 '— 다음 절차에 따라 수행하라:' 앵커를 "
+    note = ("EXECUTE 경로: 원문 그대로. THINK 경로: 원문 뒤에 '— 다음 절차에 따라 수행하라:' 앵커를 "
             "끼우고 task_framing · 기준의 출처(criteria_contract) · 전문가의 선택 · 전제(assumptions) · "
             "쓸 수 있는 IBL 액션 + 상세 계약 · 수행 절차(hint) · 실행 초안(imagined_ibl, 기계 검증) · "
             "참고할 가이드 · 충족 기준이 차례로 붙는다." if include_think_note else "")
@@ -540,7 +540,7 @@ def _assemble_unconscious(sample: str) -> Dict[str, Any]:
                  "data/common_prompts/unconscious_prompt.md (consciousness_agent.get_unconscious_prompt)",
                  get_unconscious_prompt()),
         _section("user_message", "사용자 원문", "user", "input", "사용자 메시지 그대로", sample,
-                 note="분류기는 원문만 본다 — 이력·기억 없음. 해마 점수 ≥ 0.85 면 분류 자체를 건너뛴다(반사)."),
+                 note="분류기는 현재 요청·짧은 직전 대화·첨부 유무를 본다. 해마 기억은 실행 문맥에 주입하며 분류를 우회하지 않는다."),
     ]
     return {"model": model, "sections": sections, "assembled": {},
             "entry": "cognitive_consciousness._classify_request → consciousness_agent.oneshot_ai_call(role='classify')",

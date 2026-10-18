@@ -4,10 +4,10 @@
 「네 기억을 최소한의 공통 기반 위에 놓고, 차이는 의미상 필요하거나 성능으로 입증된 것만 유지한다.」
 
 무엇이 공통인가(이 모듈): 주체 관문, 어느 채널에서 어느 기억이 자동으로 도는가(정책 표 `SOURCES`), 조회 순서와
-문맥 조립, 반사 신호의 이름 붙은 출력, 제시 기록(`recall.presented` 사건). 무엇이 기억별인가(공급원 함수가
+문맥 조립, 회상 점수·코드의 이름 붙은 출력, 제시 기록(`recall.presented` 사건). 무엇이 기억별인가(공급원 함수가
 부르는 각 저장소): 검색기(해마는 전용 인코더, 트리 기억은 `tree_recall`), 후보의 뜻, 성공의 정의와 학습.
 
-두 상(相): 1상은 분류 전(반사 신호가 분류에 쓰인다), 2상은 분류 뒤(세계 지도의 글자 채널은 request_type 을 본다).
+두 상(相): 1상은 분류 전(기억을 먼저 검색한다), 2상은 분류 뒤(세계 지도의 글자 채널은 request_type 을 본다).
 그래서 `begin()` 은 1상만 돌고, 호출자는 반드시 `route(request_type)` 로 2상을 닫는다 — `text()` 는 그 전엔 거부한다
 (`scripts/check_recall_assembly.py` 가 호출 자리마다 정적으로 확인한다). 공급원 호출은 이 모듈 밖에서 금지다 —
 세 조립 지점이 각자 부분집합을 부르다 갈라진 것(agent_pipeline/agent_communication/recall-preview)이 이 모듈의 출생 이유다.
@@ -35,7 +35,7 @@ class RecallRequest:
 
 @dataclass
 class ReflexSignal:
-    """반사 분기가 읽는 이름 붙은 출력. 지금은 해마 낱말 채널의 최고 점수·코드 하나다."""
+    """해마 낱말 채널의 최고 점수·코드. ReflexSignal/reflex 이름은 기록·프리뷰 호환용이며 경로를 선택하지 않는다."""
     score: float = 0.0
     code: str = ""
 
@@ -114,7 +114,7 @@ class Recall:
 
 def begin(runner, message: str, *, history: Optional[list] = None, channel: str = "pipeline",
           action_hint: Optional[str] = None, deep: bool = True) -> Recall:
-    """1상 — 분류 전에 도는 공급원 전부. 반사 신호는 `recall.reflex` 로 나온다. 호출자는 `route()` 로 닫는다."""
+    """1상 — 분류 전에 도는 공급원 전부. 회상 통계는 호환 필드 `recall.reflex` 로 나온다. 호출자는 `route()` 로 닫는다."""
     req = RecallRequest(runner, message or "", history or [], channel, action_hint, deep)
     recall = Recall(req)
     _run_phase(recall, 1)

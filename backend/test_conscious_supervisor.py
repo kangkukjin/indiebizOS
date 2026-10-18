@@ -359,7 +359,7 @@ def test_real_aiagent_role_uses_same_tools_but_separate_identity(supervisor, mon
     assert tc.get_current_agent_id() == supervisor.owner
 
 
-@pytest.mark.parametrize("lane", ["THINK", "EXECUTE", "REFLEX", "NO_FRAMING", "NO_CRITERIA", "CONTEXT_UPDATE"])
+@pytest.mark.parametrize("lane", ["THINK", "EXECUTE", "HIGH_RECALL", "NO_FRAMING", "NO_CRITERIA", "CONTEXT_UPDATE"])
 @pytest.mark.parametrize("signal", ["read", "write", "failed", "unknown"])
 @pytest.mark.parametrize("supervised", [False, True])
 def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(supervisor, monkeypatch, lane, signal, supervised):
@@ -373,8 +373,8 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
         config = {"name": "worker"}
         project_path = Path(supervisor.project_path)
         _associate = associative_recall.stub()
-        _decide_request_type = lambda *a: ("EXECUTE" if lane == "REFLEX" else "THINK" if lane in {"NO_FRAMING", "NO_CRITERIA"} else lane,
-                                          "[self:time]" if lane == "REFLEX" else None)
+        _decide_request_type = lambda *a: ("EXECUTE" if lane == "HIGH_RECALL" else "THINK" if lane in {"NO_FRAMING", "NO_CRITERIA"} else lane,
+                                          "[self:time]" if lane == "HIGH_RECALL" else None)
         _run_consciousness_or_reuse = lambda *a: None if lane == "NO_FRAMING" else {"task_framing": "문제", "achievement_criteria": "" if lane == "NO_CRITERIA" else "기준"}
         _consciousness_needs_repair = lambda *a: False
         _consciousness_clarification = lambda *a: None
@@ -405,7 +405,6 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     monkeypatch.setattr("pursuit_bind.prepare", lambda: "")
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
-    monkeypatch.setattr("system_ai_core._switch_to_midtier", lambda *a: None)
     if not supervised:
         monkeypatch.setattr("supervision_bus.current", lambda *a, **kw: None)
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: calls.append(1) or verdict(c))

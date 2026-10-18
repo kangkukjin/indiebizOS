@@ -241,7 +241,7 @@ def test_config_budget_cap_is_observable(enabled, world):
     assert events[-1]["effective_budget"] == {"items": 4, "chars": 600}
 
 
-@pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REPAIR", "REFLEX", "FORAGE", "CONTEXT_UPDATE"])
+@pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REPAIR", "HIGH_RECALL", "FORAGE", "CONTEXT_UPDATE"])
 @pytest.mark.parametrize("presentation", ["names", "structure"])
 def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, isolated, enabled, world, route, presentation):
     (world / "data/world_pulse_config.json").write_text(json.dumps({
@@ -273,9 +273,8 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
         return "stable fixture", _build_dynamic_context(consciousness, execution_memory=memory)
     runner = Runner(tmp_path, stream)
     runner.registry_key = runner_info.registry_key
-    runner._decide_request_type = lambda *args: (("EXECUTE", "fixture reflex") if route == "REFLEX"
+    runner._decide_request_type = lambda *args: (("EXECUTE", "fixture reflex") if route == "HIGH_RECALL"
                                                 else (route, None))
-    monkeypatch.setattr("system_ai_core._switch_to_midtier", lambda *a: None)
     monkeypatch.setattr("system_ai_core._switch_to_role", lambda *a: None)
     runner._build_system_prompt_split = split
     runner._associate = associative_recall.stub("original memory").__get__(runner)

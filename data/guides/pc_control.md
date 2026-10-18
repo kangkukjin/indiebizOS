@@ -21,6 +21,17 @@ return [fn:PC제어]{대상:$PC,요청:{action:"status"}}
 ```
 
 상태 결과의 `result.devices`에서 사용할 출력의 ID와 can_set_volume·can_mute를 확인한다.
+이 두 값은 OS 제어 API의 지원 범위이며 실제 변경 성공이나 물리적 소리를 보장하지 않는다.
+장치별 `capability_basis`는 macOS에서 `coreaudio_property_settable`(속성의 쓰기 가능 여부),
+Windows에서 `wasapi_endpoint_volume_interface`(활성화하고 조회한 EndpointVolume 인터페이스)다.
+Windows는 하드웨어 제어가 없어도 OS의 소프트웨어 제어를 지원할 수 있다.
+Windows의 true는 OS 인터페이스 활성화·조회 성공에 근거한 **API 지원 판정**이다.
+OS API 지원을 묻는 조건에는 이 Bool을 사용한다. 하드웨어 직접 지원이나 실제 변경 성공을
+사용자가 별도로 요구했다면 그것은 별도 미확인이며, 해당 시험을 안 했다는 이유로 API 지원 값까지 미확인으로 바꾸지 않는다.
+`status`는 setter를 호출하지 않는다. `verification_scope:os_state_readback`은 현재 OS 상태 조회,
+`os_setting_readback`은 volume·mute 변경 후 설정값 재조회를 뜻한다.
+전체 계약은 `[self:script]{id:"PC제어부품",args:{op:"contract"}}`의 `audio_capabilities`에 있다.
+상태·음량·음소거의 실제 결과에도 같은 `audio_capabilities` 계약이 포함된다.
 
 ```ibl
 #!ibl edition=2
@@ -66,6 +77,7 @@ return [fn:PC제어확인]{작업:$작업,대기:60}
 후속 확인은 준비·접수의 원래 실행 영수증과 대상·요청 ID·OS·소스 지문을 대조한다.
 verification을 임의 수정하면 검증하지 않는다. 검증기 코드가 바뀌거나 영수증이 만료되면
 unknown으로 남긴다. 최신 코드를 다시 보내 과거 결과를 대신 만들지 않는다.
+evidence_ref나 그 안의 plan·job이 누락·null·잘못된 자료형이어도 unknown으로 반환하며 원격 조회·변경을 전송하지 않는다.
 값을 잃었으면 execute_ibl의 기존 `result_ref.read_args`로 원 반환을 회수한다. 접수 응답 자체를
 잃은 경우 원 실행의 resume·실행 기록과 guestpc history로 확인하고 새 요청을 만들지 않는다.
 

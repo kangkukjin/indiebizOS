@@ -4,7 +4,7 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
-## 75회차 — PC·TV 공용 부품의 점검·후속 확인·재판정 (2026-10-18, 훈련 완료·수리 없음)
+## 75회차 — PC·TV 공용 부품의 점검·후속 확인·재판정 (2026-10-18, 훈련·후속 수리·재검증)
 
 최근 b66081d1과 PC·TV 제어를 실기기4+부재/종류오류2, 총6행의 읽기 전용 준비 점검에 조합했다.
 훈련자 초안 join 인수 수정1회 뒤 기본19.369초·변형5.504초, 원 관측·영수증·기본 산출물 보존.
@@ -18,6 +18,8 @@ Windows pending→동일 task_ref 완료, 오프라인/부재/종류오류 격�
 AI 입력/출력 기본2,833,497/16,644·변형1,075,252/7,553(캐시별도, 내부역할포함). 훈련자 작성 토큰 미측정.
 실제 변경 제어·유튜브·UI·전체 회귀는 미검증. 양 AI task succeeded 회수, 시스템 구현 변경0.
 [보고서·최소 재현·증거](experiments/long_sentence_imagination/round_75/report.md).
+
+후속 수리: L75-1은 손상 근거 9종을 unknown으로 정규화, 재전송0. L75-3은 내부 hint의 7행이 출처로 확인돼 원문/시스템 지침을 분리했다. L75-2는 API 지원 계약·근거·검증 범위를 반환에 노출했지만 원 자연어 재판정은 AI1/6 대 훈련자2/6 차이가 남았다. API 범위 명시 변형에서2/6 일치. 코드 고정 전수10,711통과·1건너뜀, 관련system50통과. [수리 보고서·한계·비용](experiments/long_sentence_imagination/round_75/repair.md).
 
 ## 74회차 — 중앙관리형 회원 데스크톱의 범위 발췌·배포본 갱신 (2026-10-15, 훈련·수리 완료)
 
@@ -616,9 +618,9 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
-| L75-1 | 구현 — PC제어확인의 evidence_ref:null이 RECORD_REQUIRED로 중단, 생략은 unknown | round_75/null_receipt_repro.ibl · missing_receipt_control.ibl | 발견·수리 없음 | 원 영수증/대상·지문 변경은 정상, 손상 근거 입력만 진단 계약 불일치 |
-| L75-2 | 계약/해석 — Windows can_set_volume/can_mute 기본값과 직접 관측의 뜻 혼동 | round_75/report.md §3 · 변형 ready 2 대 1 | 계약 정렬 후보, 기능 불능 미확정 | 소프트웨어 제어와 하드웨어 지원을 구분해야 함 |
-| L75-3 | 응답 품질 — AI가 존재하지 않는 7행 요구를 사용자 지시에 귀속 | round_75/evidence/ai_variant_final.txt · request.txt | 발견·원인 미확정 | 실제 입력·산출물은 6행으로 정확 |
+| L75-1 | 구현 — PC제어확인의 evidence_ref:null이 RECORD_REQUIRED로 중단, 생략은 unknown | round_75/null_receipt_repro.ibl · missing_receipt_control.ibl | 수리·회귀·실행 검증 완료 | 손상9종 unknown, 정상 영수증 완료·재접수0 |
+| L75-2 | 계약/해석 — Windows can_set_volume/can_mute 기본값과 직접 관측의 뜻 혼동 | round_75/report.md §3 · 변형 ready 2 대 1 | 계약 수리·해석 잔여 | API 계약/근거 노출. 원문 변형의 AI 해석 차이 잔존, 범위 명시 변형2/6 일치 |
+| L75-3 | 응답 품질 — AI가 존재하지 않는 7행 요구를 사용자 지시에 귀속 | round_75/evidence/ai_variant_final.txt · request.txt | 출처 경계 수리·재현 재발 없음 | 내부 hint의7행이 원인. 원문/시스템 지침 분리, 재실행5턴에서 잘못된 귀속 없음 |
 | L73-1 | 구현 결함(컴파일러) — 삼중 f문자열 리터럴 조각이 바깥 따옴표로 끝나면 Python SyntaxError 원문, IBL 위치 없음 | `f"""say "${x}"""` · round_73/evidence/base_v0_check.json | 수리 완료 — `_format_literal` 재해석, 실패 시 위치 있는 SYNTAX | 73회차 커밋 · v0 재검사(위치 184 로 바뀜)·기본 3·변형 2 통과 |
 | L73-2 | 관용구 계약·낭비 — `외부PC준비` 기본 환경조회가 문진 info 를 동기 30초로 중복 조회, 느린 몸에서 가지 실패(작업은 뒤에 성공) | round_73/evidence/probe_mac26_after_base.json | 가이드 문장(환경조회:false) — 관용구 자체는 미변경 | 73회차 커밋 · 훈련자 v6 로 재발 0 |
 | L73-3 | 외부 전제·상태 신선도 — `connected:true` 인 PC(맥26)가 info 미응답, 작업 queued→expired, 10분 사이 연결 깜빡임 | round_73/evidence/variant_evidence.json | 기록만 — 헬퍼 쪽 원인(롱폴/절전)과 `connected` 신선도 표기는 후속 | — |

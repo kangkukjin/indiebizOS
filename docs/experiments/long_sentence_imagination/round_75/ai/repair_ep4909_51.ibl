@@ -1,0 +1,42 @@
+#!ibl edition=2
+$base = "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차"
+$v = ([self:read]{path:f"${base}/inputs/variant.json"}).data
+$old = ([self:read]{path:f"${base}/repair_ai/report.json"}).data
+assert $v.policy.require_volume==true and $v.policy.require_mute==true, "정책 불일치", {policy:$v.policy}
+[def:둘다]($o) { return $o.can_set_volume==true and $o.can_mute==true and contains($o.capability_source,"OS 보고") }
+[def:갱신]($t,$old) {
+  $m = $old.rows >> [table:filter]{where:($r)=>$r.id==$t.id}
+  assert len($m)==1, "기존 관측 없음", {id:$t.id}
+  $r = $m[0]
+  assert $r.target==$t.target and $r.kind==$t.kind, "명부 target/kind 불일치", {id:$t.id}
+  [if:$r.kind=="pc" and $r.verified==true] {
+    $os둘다 = $r.outputs >> [table:filter]{where:($o)=>[fn:둘다]{o:$o}}
+    $파생둘다 = $r.outputs >> [table:filter]{where:($o)=>$o.can_set_volume==true and $o.can_mute==true}
+    $ok = len($os둘다) > 0
+    return {**$r, ready:$ok, status:$ok ? "ready" : "unconfirmed_capability", outcome_class:$ok ? "ready" : "미확인",
+      policy_check:{qualifying_outputs_os_reported:$os둘다 >> [table:each]{ return $it.name }, outputs_true_but_script_derived:len($os둘다)>0 ? [] : $파생둘다 >> [table:each]{ return $it.name },
+        basis:$ok ? "OS가 보고한 can_set_volume=true·can_mute=true 출력 존재" : "OS가 보고한 음량·음소거 가능 값이 없음(true는 스크립트 고정값). 동시 충족 출력을 관측하지 못함"},
+      next:$ok ? $r.next : "OS의 가능 플래그(예: 하드웨어 지원 조회)를 보고하는 조회가 필요. 이번엔 새 조회 금지로 미수행"}
+  }
+  return {**$r, policy_check:{basis:"관측 단계에서 ready 조건 미충족(검증 안 됨/무응답/부재/종류 불일치) — 새 정책과 무관하게 동일"}}
+}
+$rows = $v.targets >> [table:each]{ return [fn:갱신]{t:$it,old:$old} }
+$ready = len($rows >> [table:filter]{where:($r)=>$r.ready==true})
+$unc = len($rows >> [table:filter]{where:($r)=>$r.outcome_class=="미확인"})
+$fail = len($rows >> [table:filter]{where:($r)=>$r.outcome_class=="실패"})
+$rep = {round:"75회차 repair_ai variant",input:"inputs/variant.json",policy:$v.policy,
+ basis_run:"새 조회·원격 접수 없음. repair_ai/report.json(같은 실행자의 2026-10-18 19:24~19:26 관측)만 재사용",
+ rules:{pc_ready:"verified=true 이고 can_set_volume·can_mute를 동시에 OS가 true로 보고한 출력 1개 이상",tv_ready:"reachable=true 이고 power=on 실제 관측"},
+ rows:$rows,counts:{total:len($rows),ready:$ready,not_ready:len($rows)-$ready,unconfirmed:$unc,failed:$fail},
+ not_verified:"실제 스피커 소리·영상 재생은 이번에 확인하지 않았다. 기기 상태를 새로 조회하지 않았고 전원·음량·음소거·화면·재생·등록을 변경하지 않았다."}
+$out = f"${base}/repair_ai/variant"
+[self:write]{path:f"${out}/report.json",content:json($rep)}
+[self:write]{path:f"${out}/report.md",content:$md}
+$j = ([self:read]{path:f"${out}/report.json"}).data
+$mt = ([self:read]{path:f"${out}/report.md"}).text
+$ids = $j.rows >> [table:each]{ return $it.id }
+$want = $v.targets >> [table:each]{ return $it.id }
+$cr = len($j.rows >> [table:filter]{where:($r)=>$r.ready==true})
+return {ids:$ids, order_ok:$ids==$want, counts:$j.counts, counts_ok:($cr==$j.counts.ready and $j.counts.total==len($want) and $j.counts.not_ready==$j.counts.total-$cr and $j.counts.unconfirmed+$j.counts.failed==$j.counts.not_ready),
+ status:$j.rows >> [table:each]{ return {id:$it.id,status:$it.status,ready:$it.ready} },
+ md_ids:all($want >> [table:each]{ return contains($mt,$it) }), md_counts:contains($mt,f"total ${$j.counts.total} · ready ${$j.counts.ready} · not_ready ${$j.counts.not_ready}"), md_play:contains($mt,"실제 스피커 소리·영상 재생은 이번에 확인하지 않았다")}

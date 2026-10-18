@@ -1,0 +1,25 @@
+새 정책(require_volume·require_mute 모두 true)으로 판정만 다시 했습니다. 결과는 6개 중 ready 1개, not_ready 5개입니다. 이번 턴에는 기기를 새로 조회하거나 원격 작업을 새로 접수하지 않았습니다. 근거는 제 직전 실행의 관측(`repair2_ai/report.json`, 10:32Z(UTC))만 썼고, base.json과 다른 실행자의 자료는 열지 않았습니다.
+
+- **보고서:** `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair2_ai/variant/report.json`
+- **설명 문서:** `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair2_ai/variant/report.md`
+
+| 순서 | id | ready | 분류 | 근거 |
+|---|---|---|---|---|
+| 1 | wrong_kind | false | 실패 | 명부에는 PC, 연결 원장에는 폰(삼성0)으로 등록돼 있어 종류가 다릅니다. |
+| 2 | absent | false | 실패 | 연결 원장에 이 id가 없습니다. |
+| 3 | tv | false | 미확인 | 직전 관측에서 TV가 응답하지 않았고 전원은 관측하지 못했습니다(reachable=false, power=unknown). |
+| 4 | offline | false | 실패 | 맥12가 연결되지 않아 원격으로 보내기 전에 거절됐습니다. |
+| 5 | windows | false | **미확인** | 아래 설명 참고 |
+| 6 | local | **true** | ready | macOS가 음량·음소거를 둘 다 설정 가능하다고 보고한 출력이 3개입니다(외장 헤드폰, Mac mini 스피커, ZoomAudioDevice). |
+
+**windows가 미확인인 이유:** 출력 4개 모두 can_set_volume·can_mute가 true로 나왔습니다. 하지만 이 값은 OS가 장치별로 보고한 능력이 아닙니다. `pc_control_windows.ps1:95`가 음량 인터페이스를 열고 읽는 데 성공하면 true를 고정해 넣은 값입니다. 그래서 두 조건을 함께 만족하는지는 OS 보고로 확인되지 않은 것으로 판정했습니다.
+
+pc_control 가이드는 이 true를 "OS API 지원 판정"으로 쓰라고 합니다. 그 해석을 받아들이면 windows도 ready가 되어 합계가 ready 2개, not_ready 4개로 바뀝니다. 보고서에는 두 해석을 모두 적어 두었습니다. 어느 쪽을 따를지는 정해 주셔야 합니다.
+
+**검증:** 저장한 두 파일을 다시 읽어 확인했습니다.
+- variant.json과 행 순서·target·kind가 일치합니다.
+- 필수 필드가 모두 있고, 합계는 total=6, ready=1, not_ready=5로 맞습니다.
+- report.md에 6개 행과 합계, 새로 조회하지 않았다는 문구가 들어 있습니다.
+- 기존 `repair2_ai/report.json`과 `report.md`는 작업 전후 SHA-256이 같아 그대로 보존됐습니다.
+
+실제 스피커 소리와 영상 재생은 이번에도 확인하지 않았습니다. 구현·설정 수리나 위임은 하지 않았습니다.

@@ -1,0 +1,2 @@
+#!ibl edition=2
+return [fn:PC제어확인]{작업:$입력[1],대기:90}

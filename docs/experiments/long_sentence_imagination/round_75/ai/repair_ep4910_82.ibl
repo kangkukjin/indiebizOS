@@ -1,0 +1,11 @@
+#!ibl edition=2
+[def:pc조회]($대상) {
+  $first = [try]{ [fn:PC제어]{대상:$대상,요청:{action:"status"}} }[catch]{ {status:"error",error:json($error)} }
+  $follow = get($first,"status") == "pending" ? [fn:PC제어확인]{작업:$first,대기:90} : null
+  return {first:$first,follow:$follow}
+}
+$local = [fn:pc조회]{대상:"__local__"}
+$win = [fn:pc조회]{대상:"guestpc-70e163471313"}
+$off = [fn:pc조회]{대상:"guestpc-3fd796167b18"}
+$tv = [try]{ [self:script]{id:"TV제어",args:{target:"hardware-63b28509b052",op:"status"},timeout:90} }[catch]{ {status:"error",error:json($error)} }
+return {local:$local,windows:$win,offline:$off,tv:$tv}

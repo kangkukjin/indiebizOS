@@ -1,0 +1,186 @@
+[
+  {
+    "executor": "repair_trainer",
+    "variant": "base",
+    "passed": true,
+    "errors": [],
+    "counts": {
+      "total": 6,
+      "ready": 2,
+      "not_ready": 4
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair_trainer",
+    "variant": "variant",
+    "passed": true,
+    "errors": [],
+    "counts": {
+      "total": 6,
+      "ready": 2,
+      "not_ready": 4
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair_ai",
+    "variant": "base",
+    "passed": true,
+    "errors": [],
+    "counts": {
+      "total": 6,
+      "ready": 2,
+      "not_ready": 4,
+      "unconfirmed": 2,
+      "failed": 2
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair_ai",
+    "variant": "variant",
+    "passed": false,
+    "errors": [
+      "windows: API support interpretation",
+      "API policy counts"
+    ],
+    "counts": {
+      "total": 6,
+      "ready": 1,
+      "not_ready": 5,
+      "unconfirmed": 3,
+      "failed": 2
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair2_trainer",
+    "variant": "base",
+    "passed": true,
+    "errors": [],
+    "counts": {
+      "total": 6,
+      "ready": 2,
+      "not_ready": 4
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair2_trainer",
+    "variant": "variant",
+    "passed": true,
+    "errors": [],
+    "counts": {
+      "total": 6,
+      "ready": 2,
+      "not_ready": 4
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair2_ai",
+    "variant": "base",
+    "passed": true,
+    "errors": [],
+    "counts": {
+      "total": 6,
+      "ready": 2,
+      "not_ready": 4
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair2_ai",
+    "variant": "variant",
+    "passed": false,
+    "errors": [
+      "windows: API support interpretation",
+      "API policy counts"
+    ],
+    "counts": {
+      "total": 6,
+      "ready": 1,
+      "not_ready": 5
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "executor": "repair2_ai",
+    "variant": "api_scope",
+    "passed": true,
+    "errors": [],
+    "counts": {
+      "total": 6,
+      "ready": 2,
+      "not_ready": 4
+    },
+    "api_policy_ready": 2
+  },
+  {
+    "probe": "repair_trainer_variant",
+    "passed": true,
+    "calls": [
+      "self:read",
+      "self:read",
+      "self:write",
+      "self:write",
+      "self:read",
+      "self:read"
+    ]
+  },
+  {
+    "probe": "repair2_trainer_variant",
+    "passed": true,
+    "calls": [
+      "self:read",
+      "self:read",
+      "self:write",
+      "self:write",
+      "self:read",
+      "self:read"
+    ]
+  },
+  {
+    "probe": "repair_empty",
+    "passed": true,
+    "calls": [
+      "self:read",
+      "self:read",
+      "self:write",
+      "self:write",
+      "self:read",
+      "self:read"
+    ]
+  },
+  {
+    "probe": "repair2_receipts",
+    "passed": true,
+    "calls": [
+      "self:script",
+      "self:task",
+      "self:script",
+      "self:script",
+      "self:script",
+      "self:script",
+      "self:script",
+      "self:script",
+      "self:script",
+      "self:script"
+    ]
+  },
+  {
+    "probe": "repair_null",
+    "passed": true,
+    "calls": [
+      "self:script"
+    ]
+  },
+  {
+    "probe": "repair_missing",
+    "passed": true,
+    "calls": [
+      "self:script"
+    ]
+  }
+]

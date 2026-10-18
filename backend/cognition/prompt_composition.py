@@ -180,11 +180,11 @@ def _repair_section(layer: str = "turn") -> Dict[str, Any]:
 def _user_command_section(sample: str, include_think_note: bool = True) -> Dict[str, Any]:
     from prompt_builder import compile_user_command
     plain = compile_user_command(sample, None)
-    note = ("EXECUTE 경로: 원문 그대로. THINK 경로: 원문 뒤에 '— 다음 절차에 따라 수행하라:' 앵커를 "
-            "끼우고 task_framing · 기준의 출처(criteria_contract) · 전문가의 선택 · 전제(assumptions) · "
+    note = ("EXECUTE 경로: 원문 그대로. THINK 경로: 원문과 시스템 실행 지침(의식 보강)의 출처를 구분하고 "
+            "'다음 절차에 따라 수행하라' 앵커 아래 task_framing · 기준의 출처(criteria_contract) · 전문가의 선택 · 전제(assumptions) · "
             "쓸 수 있는 IBL 액션 + 상세 계약 · 수행 절차(hint) · 실행 초안(imagined_ibl, 기계 검증) · "
             "참고할 가이드 · 충족 기준이 차례로 붙는다." if include_think_note else "")
-    return _section("user_command", "사용자 명령 (의식 보강 융합)", "user", "input",
+    return _section("user_command", "사용자 명령과 시스템 실행 지침", "user", "input",
                     "prompt_builder.compile_user_command", plain, note=note)
 
 

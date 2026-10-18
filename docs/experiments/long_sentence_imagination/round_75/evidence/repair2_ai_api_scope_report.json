@@ -1,0 +1,315 @@
+{
+  "round": "75회차 repair2_ai api_scope",
+  "input": "inputs/variant.json",
+  "policy": {
+    "require_volume": true,
+    "require_mute": true
+  },
+  "capability_interpretation": "audio_capabilities.scope=os_api_support",
+  "observation_basis": "이번 턴에는 기기 상태 새 조회·원격 작업 새 접수 없음. repair2_ai/report.json의 장치별 원 관측만 재사용해 새 정책으로 계산(variant 판정은 사용하지 않음)",
+  "rows": [
+    {
+      "id": "wrong_kind",
+      "target": "guestpc-fc7b12fba936",
+      "kind": "pc",
+      "label": "PC로 잘못 적은 폰",
+      "status": "failed",
+      "verified": false,
+      "observation_source": "repair2_ai/report.json (기본 보고서; 원 관측 실행 907f4237…, 2026-10-18 10:32Z UTC)",
+      "ledger_match": {
+        "alias": "삼성0",
+        "kind": "phone",
+        "adapter": "indiebiz-v1",
+        "os": "android",
+        "connected": true
+      },
+      "observation": null,
+      "ready": false,
+      "outcome": "failed_kind_mismatch",
+      "evidence": "명부 kind=pc, 원장 kind=phone(android, indiebiz-v1). PC 상태 조회 미전송 (기본 보고서의 기존 관측 재사용)",
+      "follow_up": "명부 kind를 phone으로 고치거나 의도한 PC의 device_id로 교체 후 재점검"
+    },
+    {
+      "id": "absent",
+      "target": "training75-does-not-exist",
+      "kind": "pc",
+      "label": "존재하지 않는 시험 대상",
+      "status": "failed",
+      "verified": false,
+      "observation_source": "repair2_ai/report.json (기본 보고서; 원 관측 실행 907f4237…, 2026-10-18 10:32Z UTC)",
+      "ledger_match": null,
+      "observation": null,
+      "ready": false,
+      "outcome": "failed_absent",
+      "evidence": "self:limb list(활성·폐기 포함 전체)에 device_id 일치 0건. 원격 작업 미전송 (기본 보고서의 기존 관측 재사용)",
+      "follow_up": "명부 target 오기인지 확인하고, 실제 기기면 손발 등록 후 재점검(등록은 이번 범위 밖)"
+    },
+    {
+      "id": "tv",
+      "target": "hardware-63b28509b052",
+      "kind": "tv",
+      "label": "거실TV",
+      "status": "completed_unreachable",
+      "verified": false,
+      "observation_source": "repair2_ai/report.json (기본 보고서; 원 관측 실행 907f4237…, 2026-10-18 10:32Z UTC)",
+      "ledger_match": {
+        "alias": "거실TV",
+        "kind": "tv",
+        "adapter": "network-api",
+        "os": "tizen"
+      },
+      "reachable": false,
+      "power": "unknown",
+      "observation": {
+        "script": "TV제어 status",
+        "success": true,
+        "reachable": false,
+        "power": "unknown",
+        "verified": false,
+        "apps": {},
+        "message": "TV 응답 없음. 전원·네트워크 상태는 확인되지 않았습니다.",
+        "source": "reachable=스크립트의 API 응답 관측, power=미관측(unknown)"
+      },
+      "ready": false,
+      "outcome": "unconfirmed",
+      "evidence": "TV제어 status success=true지만 reachable=false, power=unknown. 미응답을 전원 꺼짐으로 해석하지 않음 (기본 보고서의 기존 관측 재사용)",
+      "follow_up": "TV 전원·네트워크 대기 설정과 IP를 확인한 뒤 TV제어 status 재조회(on 명령은 이번 범위 밖)"
+    },
+    {
+      "id": "offline",
+      "target": "guestpc-3fd796167b18",
+      "kind": "pc",
+      "label": "맥12",
+      "status": "failed",
+      "verified": false,
+      "observation_source": "repair2_ai/report.json (기본 보고서; 원 관측 실행 907f4237…, 2026-10-18 10:32Z UTC)",
+      "ledger_match": {
+        "alias": "맥12",
+        "kind": "pc",
+        "adapter": "resident-v1",
+        "os": "darwin",
+        "connected": false,
+        "state": "active",
+        "last_seen_epoch": 1792212407.3150442
+      },
+      "failure": {
+        "stage": "target",
+        "message": "선택 PC가 연결·활성·shell 준비 상태가 아닙니다",
+        "next": "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+      },
+      "observation": null,
+      "ready": false,
+      "outcome": "failed_offline",
+      "evidence": "원장 connected=false. fn:PC제어가 원격 전송 전 target 단계에서 거절(task_ref 없음). 깨우기 안 함 (기본 보고서의 기존 관측 재사용)",
+      "follow_up": "맥12 전원·로그인·헬퍼 실행을 확인한 뒤 self:limb list에서 connected=true를 보고 status를 다시 조회"
+    },
+    {
+      "id": "windows",
+      "target": "guestpc-70e163471313",
+      "kind": "pc",
+      "label": "거실 연결 Windows PC",
+      "status": "completed",
+      "verified": true,
+      "observation_source": "repair2_ai/report.json (기본 보고서; 원 관측 실행 907f4237…, 2026-10-18 10:32Z UTC)",
+      "ledger_match": {
+        "alias": "tv1",
+        "kind": "pc",
+        "adapter": "resident-v1",
+        "os": "windows",
+        "connected": true
+      },
+      "receipt": {
+        "first_task_ref": {
+          "kind": "guestpc",
+          "task_id": "72a6c11751614b8eb9d35af5573043f3"
+        },
+        "request_id": "9e66294c92094e8aab65d611ce11e81f",
+        "evidence_ref": {
+          "plan": {
+            "run_id": "907f4237f4974049957ea212bd6553b8",
+            "call_id": "84867503767f12bd8a7b90a34f6c2da9f8df8c990a435bbdcd698a9c16a9deb8"
+          },
+          "job": {
+            "run_id": "907f4237f4974049957ea212bd6553b8",
+            "call_id": "970f4aede5f0ad4c6aa4ce540dd17e574bb6f6ee4607f43a0b7446130a09a1de"
+          }
+        },
+        "receipt_ref": {
+          "run_id": "907f4237f4974049957ea212bd6553b8",
+          "call_id": "c1761a09180f06f2d4bea7328499322082339d6c9b68189d9b9914a9f665e829"
+        },
+        "pending_observed": false,
+        "note": "첫 반환이 이미 completed라 PC제어확인 후속 호출 불필요. 재접수 없음"
+      },
+      "observation": {
+        "platform": "windows",
+        "hostname": "DESKTOP-VQJGB71",
+        "os_version": "10.0.19045.0",
+        "observed_at": "2026-10-18T10:32:35.9421339Z",
+        "verification_scope": "os_state_readback",
+        "source_sha256": "d6188ec70a979f197270237ddd1dffc1f6881ed66559b5095826ed350a6a51b1",
+        "devices": [
+          {
+            "id": "{0.0.0.00000000}.{22e3e119-c11a-4789-ac2f-7921f18c767a}",
+            "name": "스피커 (Steam Streaming Speakers)",
+            "is_default": false,
+            "volume": 74,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "capability_basis": "wasapi_endpoint_volume_interface",
+            "capability_scope": "os_api_support",
+            "meets_policy": true
+          },
+          {
+            "id": "{0.0.0.00000000}.{77e0f107-ad66-47c6-8d76-1ede1b604d29}",
+            "name": "스피커 (Realtek High Definition Audio)",
+            "is_default": false,
+            "volume": 29,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "capability_basis": "wasapi_endpoint_volume_interface",
+            "capability_scope": "os_api_support",
+            "meets_policy": true
+          },
+          {
+            "id": "{0.0.0.00000000}.{b61ccde3-6b56-4b55-9865-0cdae8aa55c2}",
+            "name": "스피커 (Steam Streaming Microphone)",
+            "is_default": false,
+            "volume": 73,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "capability_basis": "wasapi_endpoint_volume_interface",
+            "capability_scope": "os_api_support",
+            "meets_policy": true
+          },
+          {
+            "id": "{0.0.0.00000000}.{c6d0a367-3205-4e9f-b7db-7ec190feebda}",
+            "name": "SAMSUNG (인텔(R) 디스플레이 오디오)",
+            "is_default": true,
+            "volume": 100,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "capability_basis": "wasapi_endpoint_volume_interface",
+            "capability_scope": "os_api_support",
+            "meets_policy": true
+          }
+        ]
+      },
+      "qualifying_outputs": [
+        "스피커 (Steam Streaming Speakers)",
+        "스피커 (Realtek High Definition Audio)",
+        "스피커 (Steam Streaming Microphone)",
+        "SAMSUNG (인텔(R) 디스플레이 오디오)"
+      ],
+      "limitations": "can_set_volume/can_mute는 audio_capabilities.scope=os_api_support(OS 제어 API 지원)로 판정. 하드웨어 직접 지원(hardware_support_observed=false)과 실제 setter 실행 성공(setter_tested_by_status=false)은 이번에 검증하지 않음 — 필수 조건 아님, 별도 한계",
+      "ready": true,
+      "outcome": "ready",
+      "evidence": "기존 관측 verified=True, 출력 4개. os_api_support 기준 can_set_volume=true·can_mute=true를 동시에 만족하는 출력 4개: 스피커 (Steam Streaming Speakers), 스피커 (Realtek High Definition Audio), 스피커 (Steam Streaming Microphone), SAMSUNG (인텔(R) 디스플레이 오디오) (basis=wasapi_endpoint_volume_interface)",
+      "follow_up": "없음(ready). 하드웨어 직접 지원·setter 성공·실제 소리는 미검증 한계"
+    },
+    {
+      "id": "local",
+      "target": "__local__",
+      "kind": "pc",
+      "label": "본체",
+      "status": "completed",
+      "verified": true,
+      "observation_source": "repair2_ai/report.json (기본 보고서; 원 관측 실행 907f4237…, 2026-10-18 10:32Z UTC)",
+      "ledger_match": "__local__ = 본체(원장 등록 대상 아님, 가이드가 지정한 본체 ID)",
+      "observation": {
+        "platform": "darwin",
+        "hostname": "Mac-mini.local",
+        "os_version": "26.6.2",
+        "observed_at": "2026-10-18T10:32:31.953704+00:00",
+        "verification_scope": "os_state_readback",
+        "source_sha256": "96c2874dbaf33313bb585473204e513b71df48de0bfbb75b91af43dee2fb6211",
+        "devices": [
+          {
+            "id": "4C2D9770-0000-0000-1D20-0103803C2278",
+            "name": "LF27T450F",
+            "is_default": false,
+            "volume": null,
+            "muted": null,
+            "can_set_volume": false,
+            "can_mute": false,
+            "capability_basis": "coreaudio_property_settable",
+            "capability_scope": "os_api_support",
+            "meets_policy": false
+          },
+          {
+            "id": "BuiltInHeadphoneOutputDevice",
+            "name": "외장 헤드폰",
+            "is_default": true,
+            "volume": 14,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "capability_basis": "coreaudio_property_settable",
+            "capability_scope": "os_api_support",
+            "meets_policy": true
+          },
+          {
+            "id": "BuiltInSpeakerDevice",
+            "name": "Mac mini 스피커",
+            "is_default": false,
+            "volume": 68,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "capability_basis": "coreaudio_property_settable",
+            "capability_scope": "os_api_support",
+            "meets_policy": true
+          },
+          {
+            "id": "zoom.us.zoomaudiodevice.001",
+            "name": "ZoomAudioDevice",
+            "is_default": false,
+            "volume": 0,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "capability_basis": "coreaudio_property_settable",
+            "capability_scope": "os_api_support",
+            "meets_policy": true
+          }
+        ]
+      },
+      "qualifying_outputs": [
+        "외장 헤드폰",
+        "Mac mini 스피커",
+        "ZoomAudioDevice"
+      ],
+      "limitations": "can_set_volume/can_mute는 audio_capabilities.scope=os_api_support(OS 제어 API 지원)로 판정. 하드웨어 직접 지원(hardware_support_observed=false)과 실제 setter 실행 성공(setter_tested_by_status=false)은 이번에 검증하지 않음 — 필수 조건 아님, 별도 한계",
+      "ready": true,
+      "outcome": "ready",
+      "evidence": "기존 관측 verified=True, 출력 4개. os_api_support 기준 can_set_volume=true·can_mute=true를 동시에 만족하는 출력 3개: 외장 헤드폰, Mac mini 스피커, ZoomAudioDevice (basis=coreaudio_property_settable)",
+      "follow_up": "없음(ready). 하드웨어 직접 지원·setter 성공·실제 소리는 미검증 한계"
+    }
+  ],
+  "counts": {
+    "total": 6,
+    "ready": 2,
+    "not_ready": 4
+  },
+  "not_ready_breakdown": {
+    "unconfirmed": [
+      "tv"
+    ],
+    "failed": [
+      "wrong_kind",
+      "absent",
+      "offline"
+    ],
+    "policy_unmet": []
+  },
+  "limitations": [
+    "can_set_volume/can_mute는 audio_capabilities.scope=os_api_support(OS 제어 API 지원)로 판정. 하드웨어 직접 지원(hardware_support_observed=false)과 실제 setter 실행 성공(setter_tested_by_status=false)은 이번에 검증하지 않음 — 필수 조건 아님, 별도 한계",
+    "실제 스피커 소리와 영상 재생은 확인하지 않음",
+    "관측 시점은 2026-10-18 10:32Z UTC이며 이후 상태 변화는 반영되지 않음"
+  ],
+  "scope_note": "읽기 전용. 전원·음량·음소거·화면·재생·등록 변경 없음."
+}

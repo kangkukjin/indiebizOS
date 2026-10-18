@@ -1,0 +1,6 @@
+#!ibl edition=2
+$ids = ["guestpc-70e163471313","guestpc-3fd796167b18","hardware-63b28509b052","training75-does-not-exist","guestpc-fc7b12fba936"]
+$원장 = $입력 >> [table:filter]{where:($r)=>$r.device_id in $ids} >> [table:select]{columns:["alias","device_id","revoked","expired","approved","connected","registration","env"]}
+$첫 = [fn:PC제어]{대상:"__local__",요청:{action:"status"},대기:0} & [fn:PC제어]{대상:"guestpc-70e163471313",요청:{action:"status"},대기:0} & [fn:PC제어]{대상:"guestpc-3fd796167b18",요청:{action:"status"},대기:0}
+$tv = [self:script]{id:"TV제어",args:{target:"hardware-63b28509b052",op:"status"},timeout:90}
+return {원장:$원장, 첫영수증:$첫, tv:$tv}

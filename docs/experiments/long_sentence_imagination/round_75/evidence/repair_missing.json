@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "value": {
+    "status": "unknown",
+    "target": "training75-no-device",
+    "verified": false,
+    "result": null,
+    "task_ref": null,
+    "verification": null,
+    "evidence_ref": null,
+    "failure": {
+      "stage": "verification",
+      "message": "원래 준비·접수 영수증을 읽을 수 없습니다",
+      "next": "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요."
+    },
+    "_receipt_ref": {
+      "run_id": "4c26746d7a034eb785ffc2b264cda44f",
+      "call_id": "89b24709842774e3bc95c2ee694031af62339ecea663c7f1ec7f95da0fb5fd3f"
+    }
+  },
+  "wall_s": 1.906,
+  "calls": [
+    {
+      "action": "self:script",
+      "targets": {
+        "id": "PC제어부품"
+      }
+    }
+  ]
+}

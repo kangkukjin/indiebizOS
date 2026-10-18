@@ -1,8 +1,18 @@
 #!ibl edition=2
 [def:PC제어확인]($작업,$대기=60) {
   assert $대기>=0 and $대기<=240, "대기는 0~240초입니다"
-  $근거 = get($작업,"evidence_ref",{})
-  $확인 = [self:script]{id:"PC제어부품",args:{op:"verify",task:$작업,plan_ref:get($근거,"plan",{}),job_ref:get($근거,"job",{})}}
+  $준비 = {}
+  $접수 = {}
+  [try] {
+    $근거 = get($작업,"evidence_ref",{})
+    $준비 = get($근거,"plan",{})
+    $접수 = get($근거,"job",{})
+    $키 = keys($준비)+keys($접수)
+  } [catch] {
+    $준비 = {}
+    $접수 = {}
+  }
+  $확인 = [self:script]{id:"PC제어부품",args:{op:"verify",task:$작업,plan_ref:$준비,job_ref:$접수}}
   [if:$확인.status!="pending"] { return $확인 }
   $관측 = {}
   [try] {
@@ -13,5 +23,5 @@
       return {**$확인,status:"unknown",failure:{stage:"wait",message:$error.message,next:"같은 작업을 PC제어확인으로 다시 조회하세요. 변경을 재전송하지 마세요."}}
     }
   }
-  return [self:script]{id:"PC제어부품",args:{op:"verify",task:$작업,plan_ref:get($근거,"plan",{}),job_ref:get($근거,"job",{}),observation:$관측}}
+  return [self:script]{id:"PC제어부품",args:{op:"verify",task:$작업,plan_ref:$준비,job_ref:$접수,observation:$관측}}
 }

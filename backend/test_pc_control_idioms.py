@@ -103,6 +103,23 @@ def test_disconnected_target_never_submits(flow):
     assert not any(k == 'limbs:guestpc' for k, _ in state['calls'])
 
 
+@pytest.mark.parametrize('evidence', [
+    None, [], 'lost', 1, False,
+    {'plan': None, 'job': {}}, {'plan': {}, 'job': None},
+    {'plan': [], 'job': {}}, {'plan': {}, 'job': 'lost'},
+])
+def test_malformed_receipt_returns_unknown_without_transport(flow, evidence):
+    run, state = flow
+    task = run('return [fn:PC제어]{대상:"pc-1",요청:{action:"status"},대기:0}')
+    task['evidence_ref'] = evidence
+    before = len(state['calls'])
+    result = run('return [fn:PC제어확인]{작업:$task,대기:0}', {'task': task})
+    assert result['status'] == 'unknown' and not result['verified'], result
+    assert result['target'] == task['target']
+    assert result['task_ref'] == task['task_ref']
+    assert not any(k in {'limbs:guestpc', 'self:task'} for k, _ in state['calls'][before:])
+
+
 def test_changed_verifier_returns_unknown(flow, monkeypatch):
     run, state = flow
     task = run('return [fn:PC제어]{대상:"pc-1",요청:{action:"status"},대기:0}')

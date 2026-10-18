@@ -1,0 +1,51 @@
+#!ibl edition=2
+$out = "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair_ai"
+$first = $A.첫영수증
+$tvr = $A.tv
+[def:장치]($d,$basis) { return {id:$d.id,name:$d.name,default:get($d,"default",get($d,"is_default",null)),volume:$d.volume,muted:$d.muted,can_set_volume:$d.can_set_volume,can_mute:$d.can_mute,capability_basis:$d.capability_basis,capability_source:$basis} }
+$macsrc = "OS 보고: CoreAudio 속성의 쓰기 가능 여부(AudioObjectIsPropertySettable)를 장치별로 읽은 값"
+$winsrc = "스크립트 파생: EndpointVolume 인터페이스 활성화·음량/음소거 조회가 성공한 장치에 pc_control_windows.ps1이 true를 기록(OS의 별도 가능 플래그 아님). 하드웨어 제어 지원 여부는 미확인"
+$localdev = $first[0].result.devices >> [table:each]{ return [fn:장치]{d:$it,basis:$macsrc} }
+$windev = $B.result.devices >> [table:each]{ return [fn:장치]{d:$it,basis:$winsrc} }
+$rows = [
+ {id:"local",target:"__local__",kind:"pc",ledger_kind:"pc(본체, __local__)",status:"ready",outcome_class:"ready",verified:$first[0].verified,ready:true,
+  outputs:$localdev,output_count:len($localdev),
+  evidence:{source:"fn:PC제어 status 즉시 완료",hostname:$first[0].result.hostname,os_version:$first[0].result.os_version,observed_at:$first[0].result.observed_at,verification_scope:$first[0].result.verification_scope,source_sha256:$first[0].result.source_sha256,receipt_ref:$first[0].result._receipt_ref},
+  next:"없음. 실제 소리 출력은 별도 확인 필요"},
+ {id:"windows",target:"guestpc-70e163471313",kind:"pc",ledger_kind:"pc(tv1, resident-v1, windows, connected=true)",status:"ready",outcome_class:"ready",verified:$B.verified,ready:true,
+  outputs:$windev,output_count:len($windev),
+  evidence:{first_receipt:{status:$first[1].status,task_ref:$first[1].task_ref,verification:$first[1].verification,evidence_ref:$first[1].evidence_ref,receipt_ref:$first[1]._receipt_ref},final_observation:{status:$B.status,task_ref:$B.task_ref,hostname:$B.result.hostname,os_version:$B.result.os_version,observed_at:$B.result.observed_at,verification_scope:$B.result.verification_scope,source_sha256:$B.result.source_sha256,receipt_ref:$B._receipt_ref},resubmitted:false},
+  next:"없음. 음량·음소거 가능 값은 스크립트 파생이므로 실제 변경 가능성은 별도 변경 시험에서 확인"},
+ {id:"offline",target:"guestpc-3fd796167b18",kind:"pc",ledger_kind:"pc(맥12, resident-v1, darwin, state=active, connected=false)",status:"unconfirmed_offline",outcome_class:"미확인",verified:false,ready:false,
+  outputs:null,output_count:null,
+  evidence:{failure:$first[2].failure,ledger_connected:false,ledger_last_seen:1792212407.3150442,task_ref:null},
+  next:"맥12가 켜지고 헬퍼가 다시 연결됐는지 self:limb list의 connected로 확인한 뒤 status 재조회. 이번엔 깨우기 미수행(쓰기 금지)"},
+ {id:"tv",target:"hardware-63b28509b052",kind:"tv",ledger_kind:"tv(거실TV, network-api, samsung-tizen)",status:"unconfirmed_no_response",outcome_class:"미확인",verified:$tvr.verified,ready:false,
+  reachable:$tvr.reachable,power:$tvr.power,
+  evidence:{script:"TV제어 op=status",success:$tvr.success,message:$tvr.message,apps:$tvr.apps},
+  next:"TV 전원·네트워크를 사람이 확인하거나 잠시 뒤 TV제어 status 재조회. 무응답은 전원 꺼짐이 아님"},
+ {id:"absent",target:"training75-does-not-exist",kind:"pc",ledger_kind:null,status:"failed_absent",outcome_class:"실패",verified:false,ready:false,
+  outputs:null,output_count:null,
+  evidence:{reason:"self:limb list 원장에 이 device_id가 없음. 원격 작업 미접수"},
+  next:"명부의 target 오기인지 확인하고 실제 등록 device_id로 고친 뒤 재점검"},
+ {id:"wrong_kind",target:"guestpc-fc7b12fba936",kind:"pc",ledger_kind:"phone(삼성0, indiebiz-v1, android)",status:"failed_wrong_kind",outcome_class:"실패",verified:false,ready:false,
+  outputs:null,output_count:null,
+  evidence:{reason:"원장 registration.kind=phone, adapter=indiebiz-v1. 명부 kind=pc와 불일치하여 PC 출력 장치 조회를 보내지 않음",ledger_connected:true},
+  next:"명부 kind를 phone으로 고치고 폰 점검 방법(android_control.md)으로 별도 확인"}
+]
+$ready = len($rows >> [table:filter]{where:($r)=>$r.ready==true})
+$report = {round:"75회차 repair_ai",generated_at:"2026-10-18",input:"inputs/base.json",policy:{require_volume:false,require_mute:false},
+ rules:{pc_ready:"verified=true 이고 출력 장치 1개 이상(정책 두 값 false라 음량·음소거 조건 미적용)",tv_ready:"reachable=true 이고 power=on 실제 관측"},
+ rows:$rows,counts:{total:len($rows),ready:$ready,not_ready:len($rows)-$ready,unconfirmed:2,failed:2},
+ not_verified:"실제 스피커 소리·영상 재생은 이번에 확인하지 않았다. 전원·음량·음소거·화면·재생·등록은 변경하지 않았다.",
+ ledger_note:"맥12 이름의 다른 등록(guestpc-7a440e9daf61 removed, guestpc-9b01f0848912 revoked)은 명부 target이 아니므로 대체하지 않음. 거실TV를 tv1으로 대체하지 않음."}
+[self:write]{path:f"${out}/report.json",content:json($report)}
+[self:write]{path:f"${out}/report.md",content:$md}
+$j = [self:read]{path:f"${out}/report.json"}
+$m = [self:read]{path:f"${out}/report.md"}
+$ids = $j.data.rows >> [table:each]{ return $it.id }
+$cr = len($j.data.rows >> [table:filter]{where:($r)=>$r.ready==true})
+return {ids:$ids, ids_ok:$ids==["local","windows","offline","tv","absent","wrong_kind"], counts:$j.data.counts, counts_ok:($cr==$j.data.counts.ready and $j.data.counts.total==6 and $j.data.counts.not_ready==6-$cr),
+ md_has_ids:all(["local","windows","offline","tv","absent","wrong_kind","guestpc-70e163471313","hardware-63b28509b052"] >> [table:each]{ return contains($m.text,$it) }),
+ md_has_counts:contains($m.text,"total 6 · ready 2 · not_ready 4"), md_has_play:contains($m.text,"실제 스피커 소리·영상 재생은 이번에 확인하지 않았다"),
+ win_basis:$windev[0].capability_source, local_n:len($localdev), win_n:len($windev)}

@@ -1,0 +1,322 @@
+[
+  {
+    "episode": 4908,
+    "seq": 57,
+    "name": "execute_ibl",
+    "actions": [
+      "self:read",
+      "self:limb"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4908,
+    "seq": 66,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data; ls idioms | grep -i -E \"pc_control|tv\"; cat guides/pc_control.md | head -120"
+  },
+  {
+    "episode": 4908,
+    "seq": 70,
+    "name": "execute_ibl",
+    "actions": [],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4908,
+    "seq": 79,
+    "name": "execute_ibl",
+    "actions": [
+      "table:filter",
+      "table:select"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4908,
+    "seq": 87,
+    "name": "execute_ibl",
+    "actions": [
+      "table:filter",
+      "table:select",
+      "fn:PC제어",
+      "fn:PC제어",
+      "fn:PC제어",
+      "self:script"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4908,
+    "seq": 96,
+    "name": "execute_ibl",
+    "actions": [
+      "fn:PC제어확인"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4908,
+    "seq": 101,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/instruments; grep -n -i -E \"can_set_volume|can_mute|capability_basis|QueryHardwareSupport|GetMute|Activate\" pc_control_windows.ps1 | head -30"
+  },
+  {
+    "episode": 4908,
+    "seq": 110,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/instruments; sed -n 84,97p pc_control_windows.ps1; grep -n -E \"settable|can_set_volume|can_mute\" pc_control_mac.py | head"
+  },
+  {
+    "episode": 4908,
+    "seq": 116,
+    "name": "execute_ibl",
+    "actions": [
+      "def:장치",
+      "table:each",
+      "fn:장치",
+      "table:each",
+      "fn:장치",
+      "table:filter",
+      "self:write",
+      "self:write",
+      "self:read",
+      "self:read",
+      "table:each",
+      "table:filter",
+      "table:each"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4908,
+    "seq": 127,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "ls -la \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair_ai\""
+  },
+  {
+    "episode": 4909,
+    "seq": 45,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차\"; cat inputs/variant.json; shasum -a 256 repair_ai/report.json repair_ai/report.md; ls repair_ai"
+  },
+  {
+    "episode": 4909,
+    "seq": 51,
+    "name": "execute_ibl",
+    "actions": [
+      "self:read",
+      "self:read",
+      "def:둘다",
+      "def:갱신",
+      "table:filter",
+      "if:$r.kind==\"pc\" and $r.verified==true",
+      "table:filter",
+      "fn:둘다",
+      "table:filter",
+      "table:each",
+      "table:each",
+      "table:each",
+      "fn:갱신",
+      "table:filter",
+      "table:filter",
+      "table:filter",
+      "self:write",
+      "self:write",
+      "self:read",
+      "self:read",
+      "table:each",
+      "table:each",
+      "table:filter",
+      "table:each",
+      "table:each"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4909,
+    "seq": 61,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차\"; shasum -a 256 repair_ai/report.json repair_ai/report.md"
+  },
+  {
+    "episode": 4910,
+    "seq": 50,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cat /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/inputs/base.json; ls /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/"
+  },
+  {
+    "episode": 4910,
+    "seq": 56,
+    "name": "execute_ibl",
+    "actions": [
+      "self:limb"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 60,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/instruments; grep -n -i -E \"can_set_volume|can_mute|capability_basis|Activate|GetMute|GetMasterVolume\" pc_control_windows.ps1 | head -60"
+  },
+  {
+    "episode": 4910,
+    "seq": 68,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/instruments; sed -n 80,100p pc_control_windows.ps1; grep -n -E \"can_set_volume|can_mute|capability_basis|coreaudio\" pc_control_mac.py | head"
+  },
+  {
+    "episode": 4910,
+    "seq": 74,
+    "name": "execute_ibl",
+    "actions": [
+      "self:read",
+      "self:limb",
+      "table:each",
+      "table:filter"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 82,
+    "name": "execute_ibl",
+    "actions": [
+      "def:pc조회",
+      "fn:PC제어",
+      "fn:PC제어확인",
+      "fn:pc조회",
+      "fn:pc조회",
+      "fn:pc조회",
+      "self:script"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 89,
+    "name": "execute_ibl",
+    "actions": [],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 95,
+    "name": "execute_ibl",
+    "actions": [],
+    "checked_ref": "$checked:03aea293b990ad4a69accb8348c5f63ae9da85998e0dd8a4d564099e4e4f7a5a",
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 103,
+    "name": "execute_ibl",
+    "actions": [
+      "def:winsrc",
+      "def:macsrc",
+      "def:pcready",
+      "table:filter",
+      "table:each",
+      "fn:macsrc",
+      "table:each",
+      "fn:winsrc",
+      "fn:pcready",
+      "fn:pcready",
+      "table:filter",
+      "self:write"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 110,
+    "name": "execute_ibl",
+    "actions": [
+      "def:winsrc",
+      "def:macsrc",
+      "def:pcready",
+      "table:filter",
+      "table:each",
+      "fn:macsrc",
+      "table:each",
+      "fn:winsrc",
+      "fn:pcready",
+      "fn:pcready",
+      "table:filter",
+      "self:write"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 117,
+    "name": "execute_ibl",
+    "actions": [],
+    "checked_ref": "$checked:94cb6441f343f1664ad345a7c245d5f5b0252b135eb3b1f478c2fbb832216f46",
+    "command": null
+  },
+  {
+    "episode": 4910,
+    "seq": 128,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair2_ai && python3 -I - <<'EOF'\nimport json\nr=json.load(open(\"report.json\"))\nL=[f\"# 다중 기기 준비 상태 점검 (75회차 repair2_ai)\\n\",\nf\"- 점검 시각(UTC): {r['checked_at']}\\n- 입력: {r['input']}\\n- 정책: require_volume={r['policy']['require_volume']}, require_mute={r['policy']['require_mute']}\\n\",\n\"- 범위: 읽기 전용 상태 조회만 했습니다. 전원·음량·음소거·화면·재생·기기 등록은 바꾸지 않았고, 오프라인 PC를 깨우지 않았습니다.\\n\",\n\"- **실제 스피커 소리와 영상 재생은 이번에 확인하지 않았습니다.** OS 음량 관측은 물리 출력 확인이 아닙니다.\\n\\n\",\n\"## 행별 결과\\n\\n| id | target | kind | status | verified | ready | 분류 | 근거 | 후속 조치 |\\n|---|---|---|---|---|---|---|---|---|\\n\"]\nfor x in r[\"rows\"]:\n    L.append(f\"| {x['id']} | `{x['target']}` | {x['kind']} | {x['status']} | {x['verified']} | {x['ready']} | {x['outcome']} | {x['evidence']} | {x['follow_up']} |\\n\")\nL.append(\"\\n## PC 출력 장치 (OS 보고 목록)\\n\")\nfor x in r[\"rows\"]:\n    o=x.get(\"observation\")\n    if x[\"kind\"]==\"pc\" and o and o.get(\"devices\"):\n        L.append(f\"\\n### {x['id']} — {o['hostname']} ({o['platform']} {o['os_version']}), {o['verification_scope']}\\n\\n| 장치 | 기본 | 음량 | 음소거 | can_set_volume | can_mute | 가능 여부의 출처 |\\n|---|---|---|---|---|---|---|\\n\")\n        for d in o[\"devices\"]:\n            L.append(f\"| {d['name']} | {d['is_default']} | {d['volume']} | {d['muted']} | {d['can_set_volume']} | {d['can_mute']} | {d['capability_judgement']} — {d['value_source']['can_set_volume']} |\\n\")\nL.append(\"\\n장치 목록·음량·음소거 값은 두 PC 모두 OS가 보고한 것입니다. macOS의 가능 여부는 CoreAudio 쓰기 가능 속성 조회 결과입니다. Windows의 가능 여부는 `pc_control_windows.ps1` 95번 줄이 인터페이스 활성화와 조회에 성공하면 `true`로 고정해 넣는 값이므로, OS가 장치별로 보고한 값으로서는 미확인입니다. 이번 정책은 require_volume·require_mute가 모두 false여서 이 값은 ready 판정에 쓰지 않았습니다.\\n\")\nw=[x for x in r[\"rows\"] if x[\"id\"]==\"windows\"][0][\"receipt\"]\nL.append(f\"\\n## 원격 작업 영수증\\n\\n- windows: 첫 영수증 task_ref=`{w['first_task_ref']['task_id']}`, request_id=`{w['request_id']}`. 첫 반환이 이미 `completed`(verified=true)라 대기 상태가 없었습니다. 재접수하지 않았습니다.\\n- offline: 원격으로 보내기 전에 거절되어 영수증이 없습니다.\\n- tv: 허브에서 `TV제어 status` 스크립트를 동기로 실행했으며 영수증은 없습니다.\\n\")\nc=r[\"counts\"]\nL.append(f\"\\n## 합계\\n\\n- total={c['total']}, ready={c['ready']}, not_ready={c['not_ready']}\\n- not_ready 중 미확인: {', '.join(r['not_ready_breakdown']['unconfirmed'])} / 실패: {', '.join(r['not_ready_breakdown']['failed'])}\\n\")\nopen(\"report.md\",\"w\").write(\"\".join(L))\nEOF\npython3 -I - <<'EOF'\nimport json,os\nd=\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/\"\nb=json.load(open(d+\"inputs/base.json\")); r=json.load(open(d+\"repair2_ai/report.json\")); md=open(d+\"repair2_ai/report.md\").read()\nids=[t[\"id\"] for t in b[\"targets\"]]; rid=[x[\"id\"] for x in r[\"rows\"]]\nprint(\"order_match\",ids==rid)\nprint(\"target_match\",all(t[\"target\"]==x[\"target\"] and t[\"kind\"]==x[\"kind\"] for t,x in zip(b[\"targets\"],r[\"rows\"])))\nreq=[\"target\",\"kind\",\"status\",\"verified\",\"ready\",\"evidence\"]\nprint(\"fields\",all(all(k in x for k in req) for x in r[\"rows\"]))\nn=sum(x[\"ready\"] for x in r[\"rows\"]); c=r[\"counts\"]\nprint(\"counts\",c, c=={\"total\":len(rid),\"ready\":n,\"not_ready\":len(rid)-n})\nprint(\"md_rows\",all(f\"| {i} | `\" in md for i in ids), \"md_total\", f\"total={c['total']}, ready={c['ready']}, not_ready={c['not_ready']}\" in md, \"md_sound\",\"스피커 소리\" in md)\nprint(\"tv\",[(x[\"reachable\"],x[\"power\"]) for x in r[\"rows\"] if x[\"kind\"]==\"tv\"])\nprint(os.listdir(d+\"repair2_ai\"))\nEOF"
+  },
+  {
+    "episode": 4911,
+    "seq": 45,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차; cat inputs/variant.json; shasum -a 256 repair2_ai/report.json repair2_ai/report.md; ls repair2_ai"
+  },
+  {
+    "episode": 4911,
+    "seq": 50,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차 && mkdir -p repair2_ai/variant && python3 -I - <<'EOF'\nimport json\nV=json.load(open(\"inputs/variant.json\")); P=V[\"policy\"]\nold={r[\"id\"]:r for r in json.load(open(\"repair2_ai/report.json\"))[\"rows\"]}\nsrc=\"repair2_ai/report.json (직전 실행 907f4237… 관측, 2026-10-18T10:32Z)\"\nrows=[]\nfor t in V[\"targets\"]:\n    o=old.get(t[\"id\"])\n    base={\"id\":t[\"id\"],\"target\":t[\"target\"],\"kind\":t[\"kind\"],\"label\":t[\"label\"]}\n    if not o or o[\"target\"]!=t[\"target\"] or o[\"kind\"]!=t[\"kind\"]:\n        rows.append({**base,\"status\":\"unobserved\",\"verified\":False,\"ready\":False,\"outcome\":\"unconfirmed\",\"evidence\":\"기존 관측 중 같은 id·target·kind가 없음\",\"follow_up\":\"새 상태 조회 필요(이번 턴 범위 밖)\"}); continue\n    r={**base,\"status\":o[\"status\"],\"verified\":o[\"verified\"],\"prior_observation_source\":src,\n       \"ledger_match\":o.get(\"ledger_match\"),\"observation\":o.get(\"observation\")}\n    for k in (\"failure\",\"receipt\",\"reachable\",\"power\"):\n        if k in o: r[k]=o[k]\n    if t[\"kind\"]==\"pc\" and o.get(\"observation\") and o[\"observation\"].get(\"devices\"):\n        devs=o[\"observation\"][\"devices\"]\n        conf=[d[\"name\"] for d in devs if d[\"capability_os_reported\"] and (not P[\"require_volume\"] or d[\"can_set_volume\"]) and (not P[\"require_mute\"] or d[\"can_mute\"])]\n        unconf=[d[\"name\"] for d in devs if not d[\"capability_os_reported\"] and d[\"can_set_volume\"] and d[\"can_mute\"]]\n        r[\"qualifying_outputs_os_reported\"]=conf\n        r[\"outputs_with_unconfirmed_capability\"]=unconf\n        if o[\"verified\"] and conf:\n            r.update(ready=True,outcome=\"ready\",evidence=f\"기존 관측 verified=true. OS(CoreAudio)가 음량·음소거 모두 설정 가능으로 보고한 출력 {len(conf)}개: {', '.join(conf)}\",follow_up=\"없음(ready). 실제 소리는 별도 청취 확인 필요\")\n        else:\n            r.update(ready=False,outcome=\"unconfirmed\",evidence=f\"기존 관측 verified=true, 출력 {len(devs)}개. can_set_volume/can_mute=true는 pc_control_windows.ps1:95가 인터페이스 활성화·조회 성공 뒤 고정 대입한 값이라 OS가 장치별로 보고한 능력이 아님 → 두 조건 동시 충족을 OS 보고로 확인 못함(미확인). 참고: 가이드는 이 true를 'API 지원 판정'으로 쓰라고 하며, 그 해석을 받아들이면 4개 출력 모두 충족해 ready가 됨\",follow_up=\"장치별 OS 능력 질의(QueryHardwareSupport 등) 또는 setter 후 재조회 시험으로 확인(이번 턴 범위 밖)\")\n    else:\n        r.update(ready=False,outcome=o[\"outcome\"],evidence=o[\"evidence\"]+\" (기존 관측 재사용)\",follow_up=o[\"follow_up\"])\n    rows.append(r)\nn=sum(r[\"ready\"] for r in rows)\nrep={\"round\":\"75회차 repair2_ai variant\",\"input\":\"inputs/variant.json\",\"policy\":P,\n \"observation_basis\":\"이번 턴에는 기기 상태 새 조회·원격 작업 새 접수 없음. 직전 실행의 관측(repair2_ai/report.json)만 재사용해 판정만 갱신\",\n \"rows\":rows,\"counts\":{\"total\":len(rows),\"ready\":n,\"not_ready\":len(rows)-n},\n \"not_ready_breakdown\":{\"unconfirmed\":[r[\"id\"] for r in rows if r[\"outcome\"]==\"unconfirmed\"],\"failed\":[r[\"id\"] for r in rows if r[\"outcome\"].startswith(\"failed\")]},\n \"scope_note\":\"읽기 전용. 전원·음량·음소거·화면·재생·등록 변경 없음. 실제 스피커 소리와 영상 재생은 확인하지 않음.\"}\njson.dump(rep,open(\"repair2_ai/variant/report.json\",\"w\"),ensure_ascii=False,indent=2)\nL=[\"# 다중 기기 준비 상태 점검 — 변형 (75회차 repair2_ai/variant)\\n\\n\",\nf\"- 입력: inputs/variant.json (행 순서 그대로)\\n- 정책: require_volume={P['require_volume']}, require_mute={P['require_mute']} — 두 조건을 동시에 만족하는 출력이 하나 이상 있어야 PC ready\\n\",\n\"- **이번 턴에는 기기 상태를 새로 조회하거나 원격 작업을 새로 접수하지 않았습니다.** 직전 실행(2026-10-18 10:32Z UTC)의 관측만 재사용했습니다.\\n\",\n\"- **실제 스피커 소리와 영상 재생은 확인하지 않았습니다.**\\n\\n\",\n\"| id | target | kind | status | verified | ready | 분류 | 근거 | 후속 조치 |\\n|---|---|---|---|---|---|---|---|---|\\n\"]\nfor r in rows:\n    L.append(f\"| {r['id']} | `{r['target']}` | {r['kind']} | {r['status']} | {r['verified']} | {r['ready']} | {r['outcome']} | {r['evidence']} | {r['follow_up']} |\\n\")\nL.append(\"\\n## PC 출력 장치별 판정 근거\\n\")\nfor r in rows:\n    o=r.get(\"observation\")\n    if r[\"kind\"]==\"pc\" and o and o.get(\"devices\"):\n        L.append(f\"\\n### {r['id']} — {o['hostname']} ({o['platform']})\\n\\n| 장치 | can_set_volume | can_mute | 가능 여부의 출처 | 두 조건 충족(OS 보고) |\\n|---|---|---|---|---|\\n\")\n        for d in o[\"devices\"]:\n            ok = d[\"capability_os_reported\"] and d[\"can_set_volume\"] and d[\"can_mute\"]\n            L.append(f\"| {d['name']} | {d['can_set_volume']} | {d['can_mute']} | {d['capability_judgement']} | {'예' if ok else ('미확인' if not d['capability_os_reported'] else '아니오')} |\\n\")\nc=rep[\"counts\"]\nL.append(f\"\\n## 합계\\n\\n- total={c['total']}, ready={c['ready']}, not_ready={c['not_ready']}\\n- not_ready 중 미확인: {', '.join(rep['not_ready_breakdown']['unconfirmed'])} / 실패: {', '.join(rep['not_ready_breakdown']['failed'])}\\n\")\nopen(\"repair2_ai/variant/report.md\",\"w\").write(\"\".join(L))\nEOF\npython3 -I - <<'EOF'\nimport json\nd=\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/\"\nV=json.load(open(d+\"inputs/variant.json\")); r=json.load(open(d+\"repair2_ai/variant/report.json\")); md=open(d+\"repair2_ai/variant/report.md\").read()\nprint(\"order\",[x[\"id\"] for x in r[\"rows\"]]==[t[\"id\"] for t in V[\"targets\"]])\nprint(\"target/kind\",all(t[\"target\"]==x[\"target\"] and t[\"kind\"]==x[\"kind\"] for t,x in zip(V[\"targets\"],r[\"rows\"])))\nprint(\"fields\",all(all(k in x for k in [\"target\",\"kind\",\"status\",\"verified\",\"ready\",\"evidence\"]) for x in r[\"rows\"]))\nn=sum(x[\"ready\"] for x in r[\"rows\"]); print(\"counts\",r[\"counts\"],r[\"counts\"]=={\"total\":6,\"ready\":n,\"not_ready\":6-n})\nprint(\"ready\",[(x[\"id\"],x[\"ready\"],x[\"outcome\"]) for x in r[\"rows\"]])\nprint(\"md\",all(f\"| {t['id']} | `\" in md for t in V[\"targets\"]), \"새로 조회\" in md, \"스피커 소리\" in md, f\"total={r['counts']['total']}, ready={r['counts']['ready']}, not_ready={r['counts']['not_ready']}\" in md)\nEOF\nshasum -a 256 repair2_ai/report.json repair2_ai/report.md 2>/dev/null || (cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차 && shasum -a 256 repair2_ai/report.json repair2_ai/report.md)"
+  },
+  {
+    "episode": 4912,
+    "seq": 46,
+    "name": "Bash",
+    "actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차 && shasum -a 256 repair2_ai/report.json repair2_ai/report.md repair2_ai/variant/report.json repair2_ai/variant/report.md > /tmp/r75_before.txt && mkdir -p repair2_ai/api_scope && python3 -I - <<'EOF'\nimport json\nV=json.load(open(\"inputs/variant.json\")); P=V[\"policy\"]\nB=json.load(open(\"repair2_ai/report.json\"))\nold={r[\"id\"]:r for r in B[\"rows\"]}\nSRC=\"repair2_ai/report.json (기본 보고서; 원 관측 실행 907f4237…, 2026-10-18 10:32Z UTC)\"\nLIMIT=\"can_set_volume/can_mute는 audio_capabilities.scope=os_api_support(OS 제어 API 지원)로 판정. 하드웨어 직접 지원(hardware_support_observed=false)과 실제 setter 실행 성공(setter_tested_by_status=false)은 이번에 검증하지 않음 — 필수 조건 아님, 별도 한계\"\nrows=[]\nfor t in V[\"targets\"]:\n    o=old.get(t[\"id\"]); base={\"id\":t[\"id\"],\"target\":t[\"target\"],\"kind\":t[\"kind\"],\"label\":t[\"label\"]}\n    if not o or o[\"target\"]!=t[\"target\"] or o[\"kind\"]!=t[\"kind\"]:\n        rows.append({**base,\"status\":\"unobserved\",\"verified\":False,\"ready\":False,\"outcome\":\"unconfirmed\",\"evidence\":\"기본 보고서에 같은 id·target·kind 관측 없음\",\"follow_up\":\"새 상태 조회 필요(이번 턴 범위 밖)\"}); continue\n    r={**base,\"status\":o[\"status\"],\"verified\":o[\"verified\"],\"observation_source\":SRC,\"ledger_match\":o.get(\"ledger_match\")}\n    for k in (\"failure\",\"receipt\",\"reachable\",\"power\"):\n        if k in o: r[k]=o[k]\n    ob=o.get(\"observation\")\n    if t[\"kind\"]==\"pc\" and ob and ob.get(\"devices\"):\n        devs=[]\n        for d in ob[\"devices\"]:\n            vol_ok = (not P[\"require_volume\"]) or d.get(\"can_set_volume\") is True\n            mute_ok = (not P[\"require_mute\"]) or d.get(\"can_mute\") is True\n            devs.append({\"id\":d[\"id\"],\"name\":d[\"name\"],\"is_default\":d[\"is_default\"],\"volume\":d[\"volume\"],\"muted\":d[\"muted\"],\n              \"can_set_volume\":d.get(\"can_set_volume\"),\"can_mute\":d.get(\"can_mute\"),\"capability_basis\":d[\"capability_basis\"],\n              \"capability_scope\":\"os_api_support\",\"meets_policy\":vol_ok and mute_ok})\n        q=[d[\"name\"] for d in devs if d[\"meets_policy\"]]\n        r[\"observation\"]={k:ob[k] for k in (\"platform\",\"hostname\",\"os_version\",\"observed_at\",\"verification_scope\",\"source_sha256\")}\n        r[\"observation\"][\"devices\"]=devs\n        r[\"qualifying_outputs\"]=q; r[\"limitations\"]=LIMIT\n        ok = o[\"verified\"] is True and len(devs)>0 and len(q)>0\n        r[\"ready\"]=ok; r[\"outcome\"]=\"ready\" if ok else \"not_ready_policy\"\n        r[\"evidence\"]=(f\"기존 관측 verified={o['verified']}, 출력 {len(devs)}개. os_api_support 기준 can_set_volume=true·can_mute=true를 동시에 만족하는 출력 {len(q)}개: {', '.join(q)} (basis={devs[0]['capability_basis']})\")\n        r[\"follow_up\"]=\"없음(ready). 하드웨어 직접 지원·setter 성공·실제 소리는 미검증 한계\" if ok else \"정책 충족 출력 없음\"\n    else:\n        r[\"observation\"]=ob\n        r[\"ready\"]=False; r[\"outcome\"]=o[\"outcome\"]\n        r[\"evidence\"]=o[\"evidence\"]+\" (기본 보고서의 기존 관측 재사용)\"; r[\"follow_up\"]=o[\"follow_up\"]\n    rows.append(r)\nn=sum(r[\"ready\"] for r in rows)\nrep={\"round\":\"75회차 repair2_ai api_scope\",\"input\":\"inputs/variant.json\",\"policy\":P,\n \"capability_interpretation\":\"audio_capabilities.scope=os_api_support\",\n \"observation_basis\":\"이번 턴에는 기기 상태 새 조회·원격 작업 새 접수 없음. repair2_ai/report.json의 장치별 원 관측만 재사용해 새 정책으로 계산(variant 판정은 사용하지 않음)\",\n \"rows\":rows,\"counts\":{\"total\":len(rows),\"ready\":n,\"not_ready\":len(rows)-n},\n \"not_ready_breakdown\":{\"unconfirmed\":[r[\"id\"] for r in rows if r[\"outcome\"]==\"unconfirmed\"],\"failed\":[r[\"id\"] for r in rows if r[\"outcome\"].startswith(\"failed\")],\"policy_unmet\":[r[\"id\"] for r in rows if r[\"outcome\"]==\"not_ready_policy\"]},\n \"limitations\":[LIMIT,\"실제 스피커 소리와 영상 재생은 확인하지 않음\",\"관측 시점은 2026-10-18 10:32Z UTC이며 이후 상태 변화는 반영되지 않음\"],\n \"scope_note\":\"읽기 전용. 전원·음량·음소거·화면·재생·등록 변경 없음.\"}\njson.dump(rep,open(\"repair2_ai/api_scope/report.json\",\"w\"),ensure_ascii=False,indent=2)\nL=[\"# 다중 기기 준비 상태 점검 — API 지원 기준 (75회차 repair2_ai/api_scope)\\n\\n\",\nf\"- 입력: inputs/variant.json (행 순서 그대로)\\n- 정책: require_volume={P['require_volume']}, require_mute={P['require_mute']}; 가능 여부 = audio_capabilities.scope=os_api_support\\n\",\n\"- **이번 턴에는 기기 상태를 새로 조회하거나 원격 작업을 새로 접수하지 않았습니다.** repair2_ai/report.json의 장치별 원 관측(10:32Z UTC)으로 다시 계산했고, variant 판정은 쓰지 않았습니다.\\n\",\n\"- **실제 스피커 소리와 영상 재생은 확인하지 않았습니다.** 하드웨어 직접 지원과 setter 실행 성공도 검증하지 않았습니다(필수 조건 아님, 한계로 기록).\\n\\n\",\n\"| id | target | kind | status | verified | ready | 분류 | 근거 | 후속 조치 |\\n|---|---|---|---|---|---|---|---|---|\\n\"]\nfor r in rows:\n    L.append(f\"| {r['id']} | `{r['target']}` | {r['kind']} | {r['status']} | {r['verified']} | {r['ready']} | {r['outcome']} | {r['evidence']} | {r['follow_up']} |\\n\")\nL.append(\"\\n## PC 출력 장치별 계산 (os_api_support)\\n\")\nfor r in rows:\n    ob=r.get(\"observation\")\n    if r[\"kind\"]==\"pc\" and ob and ob.get(\"devices\"):\n        L.append(f\"\\n### {r['id']} — {ob['hostname']} ({ob['platform']})\\n\\n| 장치 | can_set_volume | can_mute | basis | 정책 충족 |\\n|---|---|---|---|---|\\n\")\n        for d in ob[\"devices\"]:\n            L.append(f\"| {d['name']} | {d['can_set_volume']} | {d['can_mute']} | {d['capability_basis']} | {'예' if d['meets_policy'] else '아니오'} |\\n\")\nc=rep[\"counts\"]; b=rep[\"not_ready_breakdown\"]\nL.append(f\"\\n## 합계\\n\\n- total={c['total']}, ready={c['ready']}, not_ready={c['not_ready']}\\n- not_ready 중 미확인: {', '.join(b['unconfirmed']) or '없음'} / 실패: {', '.join(b['failed']) or '없음'} / 정책 미충족: {', '.join(b['policy_unmet']) or '없음'}\\n\\n## 한계\\n\\n\"+\"\".join(f\"- {x}\\n\" for x in rep[\"limitations\"]))\nopen(\"repair2_ai/api_scope/report.md\",\"w\").write(\"\".join(L))\nEOF\npython3 -I - <<'EOF'\nimport json\nd=\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/\"\nV=json.load(open(d+\"inputs/variant.json\")); r=json.load(open(d+\"repair2_ai/api_scope/report.json\")); md=open(d+\"repair2_ai/api_scope/report.md\").read()\nprint(\"order\",[x[\"id\"] for x in r[\"rows\"]]==[t[\"id\"] for t in V[\"targets\"]])\nprint(\"target/kind\",all(t[\"target\"]==x[\"target\"] and t[\"kind\"]==x[\"kind\"] for t,x in zip(V[\"targets\"],r[\"rows\"])))\nprint(\"fields\",all(all(k in x for k in [\"target\",\"kind\",\"status\",\"verified\",\"ready\",\"evidence\"]) for x in r[\"rows\"]))\nn=sum(x[\"ready\"] for x in r[\"rows\"]); print(\"counts\",r[\"counts\"],r[\"counts\"]=={\"total\":6,\"ready\":n,\"not_ready\":6-n})\nprint([(x[\"id\"],x[\"ready\"],x[\"outcome\"],x.get(\"qualifying_outputs\")) for x in r[\"rows\"]])\nc=r[\"counts\"]; print(\"md\",all(f\"| {t['id']} | `\" in md for t in V[\"targets\"]),\"새로 조회\" in md,\"스피커 소리\" in md,f\"total={c['total']}, ready={c['ready']}, not_ready={c['not_ready']}\" in md)\nEOF\ncd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차 && shasum -a 256 -c /tmp/r75_before.txt"
+  }
+]

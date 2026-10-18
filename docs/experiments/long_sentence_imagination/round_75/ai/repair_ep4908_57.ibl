@@ -1,0 +1,4 @@
+#!ibl edition=2
+$b = [self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/inputs/base.json"}
+$l = [self:limb]{op:"list"}
+return {base:$b.data, limbs:$l}

@@ -1,0 +1,12 @@
+{
+  "episode": 4906,
+  "source": "data/spill/supervision/61c8aca8f8e945da891399f6dc20bee5/0000913e9a14ff66e585cfb6e0fb78c1370797b8f1f096c111420e61dd0852f3.txt",
+  "capability_focus": {
+    "hint": "새 조회는 하지 않는다. variant.json을 [self:read]로 읽어 대상·순서·정책을 확인하고, 직전 회차 자신의 rows·영수증을 [self:read]로 읽어 관측값만 근거로 각 행을 재판정한다. require_volume·require_mute 충족 여부는 기존 관측의 장치별 능력 플래그로만 판정하고, 플래그가 없으면 미확인으로 둔다. 새 명부 순서대로 rows를 정렬해 counts를 계산하고 ai/variant에 [self:write]로 저장한 뒤 [self:read]로 7행 누락과 합계를 대조한다. [limbs:guestpc]·[sense:host] 등 새 호출은 하지 않는다.",
+    "highlight_actions": [
+      "self:read",
+      "self:write"
+    ]
+  },
+  "conclusion": "7행은 사용자 요청이 아니라 followup framing 패치가 생성한 hint에서 유입됨"
+}

@@ -1,0 +1,17 @@
+#!ibl edition=2
+$base = [self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/inputs/base.json"}
+$targets = $base.data.targets
+$lst = [self:limb]{op:"list"}
+$ledger = $lst.limbs
+$rows = $targets >> [table:each]{
+  $t = $it
+  $m = $ledger >> [table:filter]{where:($r) => $r.device_id == $t.target}
+  $reg = len($m) > 0 ? get($m[0],"registration") : null
+  $lkind = $reg == null ? null : get($reg,"kind")
+  return {id:$t.id,target:$t.target,kind:$t.kind,label:$t.label,ledger_count:len($m),
+    ledger:len($m) == 0 ? null : {alias:$m[0].alias,revoked:$m[0].revoked,approved:$m[0].approved,connected:$m[0].connected,
+      kind:$lkind,adapter:$reg == null ? null : get($reg,"adapter"),state:$reg == null ? null : get($reg,"state"),
+      paused:$reg == null ? null : get($reg,"paused"),last_seen:$reg == null ? null : get($reg,"last_seen"),
+      os:$reg == null ? null : get(get($reg,"capabilities",{}),"os")}}
+}
+return {policy:$base.data.policy,rows:$rows,connected_count:get($lst,"connected_count")}

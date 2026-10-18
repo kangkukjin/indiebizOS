@@ -1,0 +1,65 @@
+#!ibl edition=2
+$out = "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair2_ai"
+$policy = $명부.policy
+$obs = $관측
+[def:winsrc]($d) { return {id:$d.id,name:$d.name,volume:$d.volume,muted:$d.muted,is_default:$d.is_default,
+  can_set_volume:$d.can_set_volume,can_mute:$d.can_mute,capability_basis:$d.capability_basis,
+  value_source:{devices_volume_muted:"os_reported(WASAPI GetMasterVolumeLevelScalar/GetMute)",
+    can_set_volume:"script_constant: pc_control_windows.ps1:95가 인터페이스 활성화·조회 성공 뒤 true로 고정 대입(장치별 OS 능력 질의 아님)",
+    can_mute:"script_constant: pc_control_windows.ps1:95 고정 true"},
+  capability_os_reported:false,capability_judgement:"미확인(OS 보고 값 아님)"} }
+[def:macsrc]($d) { return {id:$d.id,name:$d.name,volume:$d.volume,muted:$d.muted,is_default:$d.default,
+  can_set_volume:$d.can_set_volume,can_mute:$d.can_mute,capability_basis:$d.capability_basis,
+  value_source:{devices_volume_muted:"os_reported(CoreAudio)",can_set_volume:"os_reported(CoreAudio AudioObjectIsPropertySettable)",can_mute:"os_reported(CoreAudio AudioObjectIsPropertySettable)"},
+  capability_os_reported:true,capability_judgement:"OS 보고"} }
+[def:pcready]($res,$devs,$pol) {
+  $ok = $res.verified == true and len($devs) > 0
+  $both = $devs >> [table:filter]{where:($d) => ($pol.require_volume == false or ($d.can_set_volume == true and $d.capability_os_reported == true)) and ($pol.require_mute == false or ($d.can_mute == true and $d.capability_os_reported == true))}
+  return $ok and len($both) > 0
+}
+$lr = $obs.local.first
+$ldev = $lr.result.devices >> [table:each]{ [fn:macsrc]{d:$it} }
+$wr = $obs.windows.first
+$wdev = $wr.result.devices >> [table:each]{ [fn:winsrc]{d:$it} }
+$or = $obs.offline.first
+$tv = $obs.tv
+$L = $명부.rows
+$rows = [
+ {id:"local",target:"__local__",kind:"pc",status:$lr.status,verified:$lr.verified,ready:[fn:pcready]{res:$lr,devs:$ldev,pol:$policy},outcome:"ready",
+  ledger_match:"__local__ = 본체(원장 등록 대상 아님, 가이드가 지정한 본체 ID)",
+  observation:{platform:$lr.result.platform,hostname:$lr.result.hostname,os_version:$lr.result.os_version,observed_at:$lr.result.observed_at,verification_scope:$lr.result.verification_scope,source_sha256:$lr.result.source_sha256,devices:$ldev,receipt:$lr.result._receipt_ref},
+  evidence:"fn:PC제어 status 즉시 completed, verified=true, OS 출력 4개", follow_up:"없음(ready). 실제 소리는 별도 청취 확인 필요"},
+ {id:"windows",target:"guestpc-70e163471313",kind:"pc",status:$wr.status,verified:$wr.verified,ready:[fn:pcready]{res:$wr,devs:$wdev,pol:$policy},outcome:"ready",
+  ledger_match:{alias:$L[1].ledger.alias,kind:$L[1].ledger.kind,adapter:$L[1].ledger.adapter,os:$L[1].ledger.os,connected:$L[1].ledger.connected},
+  observation:{platform:$wr.result.platform,hostname:$wr.result.hostname,os_version:$wr.result.os_version,observed_at:$wr.result.observed_at,verification_scope:$wr.result.verification_scope,source_sha256:$wr.result.source_sha256,devices:$wdev},
+  receipt:{first_task_ref:$wr.task_ref,request_id:$wr.verification.request.request_id,evidence_ref:$wr.evidence_ref,receipt_ref:$wr._receipt_ref,pending_observed:false,note:"첫 반환이 이미 completed라 PC제어확인 후속 호출 불필요. 재접수 없음"},
+  evidence:"guestpc 작업 72a6c117… completed, verified=true, OS 출력 4개. 음량 조절·음소거 가능 값은 스크립트 고정값이라 OS 보고로는 미확인이나 정책 require_volume/require_mute=false라 ready 판정에 미사용",
+  follow_up:"require 정책을 켜려면 장치별 OS 능력 질의(예: QueryHardwareSupport) 또는 setter 재조회 시험이 별도로 필요"},
+ {id:"offline",target:"guestpc-3fd796167b18",kind:"pc",status:$or.status,verified:$or.verified,ready:false,outcome:"failed_offline",
+  ledger_match:{alias:$L[2].ledger.alias,kind:$L[2].ledger.kind,adapter:$L[2].ledger.adapter,os:$L[2].ledger.os,connected:$L[2].ledger.connected,state:$L[2].ledger.state,last_seen_epoch:$L[2].ledger.last_seen},
+  observation:null,failure:$or.failure,
+  evidence:"원장 connected=false. fn:PC제어가 원격 전송 전 target 단계에서 거절(task_ref 없음). 깨우기 안 함",
+  follow_up:"맥12 전원·로그인·헬퍼 실행을 확인한 뒤 self:limb list에서 connected=true를 보고 status를 다시 조회"},
+ {id:"tv",target:"hardware-63b28509b052",kind:"tv",status:"completed_unreachable",verified:$tv.verified,ready:false,outcome:"unconfirmed",
+  reachable:$tv.reachable,power:$tv.power,
+  ledger_match:{alias:$L[3].ledger.alias,kind:$L[3].ledger.kind,adapter:$L[3].ledger.adapter,os:$L[3].ledger.os},
+  observation:{script:"TV제어 status",success:$tv.success,reachable:$tv.reachable,power:$tv.power,verified:$tv.verified,apps:$tv.apps,message:$tv.message,source:"reachable=스크립트의 API 응답 관측, power=미관측(unknown)"},
+  evidence:"TV제어 status success=true지만 reachable=false, power=unknown. 미응답을 전원 꺼짐으로 해석하지 않음",
+  follow_up:"TV 전원·네트워크 대기 설정과 IP를 확인한 뒤 TV제어 status 재조회(on 명령은 이번 범위 밖)"},
+ {id:"absent",target:"training75-does-not-exist",kind:"pc",status:"failed",verified:false,ready:false,outcome:"failed_absent",
+  ledger_match:null,observation:null,
+  evidence:"self:limb list(활성·폐기 포함 전체)에 device_id 일치 0건. 원격 작업 미전송",
+  follow_up:"명부 target 오기인지 확인하고, 실제 기기면 손발 등록 후 재점검(등록은 이번 범위 밖)"},
+ {id:"wrong_kind",target:"guestpc-fc7b12fba936",kind:"pc",status:"failed",verified:false,ready:false,outcome:"failed_kind_mismatch",
+  ledger_match:{alias:$L[5].ledger.alias,kind:$L[5].ledger.kind,adapter:$L[5].ledger.adapter,os:$L[5].ledger.os,connected:$L[5].ledger.connected},
+  observation:null,
+  evidence:"명부 kind=pc, 원장 kind=phone(android, indiebiz-v1). PC 상태 조회 미전송",
+  follow_up:"명부 kind를 phone으로 고치거나 의도한 PC의 device_id로 교체 후 재점검"}
+]
+$ready = $rows >> [table:filter]{where:($r) => $r.ready == true}
+$report = {round:"75회차 repair2_ai",checked_at:$lr.result.observed_at,input:"inputs/base.json",policy:$policy,
+  rows:$rows,counts:{total:len($rows),ready:len($ready),not_ready:len($rows) - len($ready)},
+  not_ready_breakdown:{unconfirmed:["tv"],failed:["offline","absent","wrong_kind"]},
+  scope_note:"읽기 전용 상태 조회만 수행. 전원·음량·음소거·화면·재생·등록 변경 없음. 실제 스피커 소리와 영상 재생은 이번에 확인하지 않음."}
+$w = [self:write]{path:f"${out}/report.json",content:json($report)}
+return {written:$w,counts:$report.counts}

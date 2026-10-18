@@ -1,0 +1,22 @@
+6개 대상의 상태를 지금 다시 읽기 전용으로 조회했습니다. 6개 중 2개가 ready이고 4개는 ready가 아닙니다. 두 파일을 저장한 뒤 다시 읽어 확인했습니다. 순서, target·kind 일치, 필수 필드, 합계, report.md의 행·합계·안내 문구 모두 맞았습니다.
+
+- **보고서:** `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair2_ai/report.json`
+- **설명 문서:** `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/repair2_ai/report.md`
+
+| id | 결과 | 근거 |
+|---|---|---|
+| local (`__local__`) | **ready** | 조회가 바로 끝났고 확인됨(verified=true). macOS가 출력 장치 4개를 보고했습니다. |
+| windows (`guestpc-70e163471313`, tv1) | **ready** | 원격 작업 `72a6c117…`이 첫 응답에서 이미 완료(completed)로 와서 대기 상태가 없었습니다. Windows가 출력 장치 4개를 보고했습니다. |
+| tv (`hardware-63b28509b052`) | 미확인 | TV 상태 스크립트는 성공했지만 TV가 응답하지 않았습니다(reachable=false). 전원은 관측하지 못했습니다(power=unknown). 응답이 없다고 전원이 꺼졌다고 보지 않았습니다. |
+| offline (`guestpc-3fd796167b18`, 맥12) | 실패 | 연결 원장에서 연결 안 됨으로 나왔고, 원격으로 보내기 전에 거절됐습니다. 깨우지 않았습니다. |
+| absent (`training75-does-not-exist`) | 실패 | 연결 원장에 이 id가 없습니다(폐기된 항목 포함). 원격 작업은 보내지 않았습니다. |
+| wrong_kind (`guestpc-fc7b12fba936`) | 실패 | 명부에는 PC로 적혀 있지만 실제로는 폰(삼성0)으로 등록돼 있습니다. PC 조회는 보내지 않았습니다. |
+
+합계는 total=6, ready=2, not_ready=4입니다. not_ready 4개 중 미확인은 tv 하나, 실패는 offline·absent·wrong_kind 셋입니다. 각 행의 다음 확인 방법은 보고서에 적어 두었습니다.
+
+**음량 조절·음소거 가능 여부의 출처:** 현재 스크립트 본문을 다시 확인했습니다.
+- **macOS:** 기기마다 OS에 실제로 조회한 값입니다. 모니터 LF27T450F는 둘 다 false로 나왔습니다.
+- **Windows:** `pc_control_windows.ps1:95`가 음량 인터페이스를 열고 읽는 데 성공하면 두 값을 `true`로 고정해 넣습니다. 그래서 OS가 기기별로 보고한 값으로는 확인되지 않았다고 표시했습니다.
+- **판정 영향 없음:** 이번 명부의 정책은 require_volume과 require_mute가 둘 다 false라서 이 값은 ready 판정에 쓰지 않았습니다.
+
+실제 스피커 소리와 영상 재생은 이번에 확인하지 않았고, 보고서에도 그렇게 적었습니다. 상태를 바꾸는 명령, 깨우기, 재등록, 코어·설정·가이드 수정, 위임은 하지 않았습니다. 이전 실행자의 결과는 읽지 않았고, 파일은 repair2_ai 폴더에만 썼습니다.

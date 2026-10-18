@@ -62,9 +62,9 @@ namespace IndieBizPC {
   [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
  }
  public class Output {
-  public string id, name;
+  public string id, name, capability_basis;
   public int volume;
-  public bool muted, is_default, can_set_volume=true, can_mute=true;
+  public bool muted, is_default, can_set_volume, can_mute;
  }
  public static class Audio {
   [DllImport("ole32.dll")] static extern int PropVariantClear(ref Variant value);
@@ -90,7 +90,9 @@ namespace IndieBizPC {
     uint state; Check(device.GetState(out state)); if(state!=1) throw new InvalidOperationException("출력 장치가 연결되지 않았습니다.");
     audio=Volume(device); float level; bool mute; Check(audio.GetMasterVolumeLevelScalar(out level)); Check(audio.GetMute(out mute));
     string id=Id(device);
-    return new Output {id=id, name=Name(device), volume=(int)Math.Round(level*100), muted=mute, is_default=id==defaultId};
+    // EndpointVolume provides OS controls, including software fallback. No setter is called by status.
+    return new Output {id=id, name=Name(device), volume=(int)Math.Round(level*100), muted=mute, is_default=id==defaultId,
+                       can_set_volume=true, can_mute=true, capability_basis="wasapi_endpoint_volume_interface"};
    } finally { Release(audio); }
   }
   public static Output[] List() {

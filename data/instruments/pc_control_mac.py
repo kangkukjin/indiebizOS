@@ -82,6 +82,7 @@ class Audio:
                 "muted": all(bool(m[1]) for m in mute) if mute else None,
                 "can_set_volume": bool(volume) and all(v[2] for v in volume),
                 "can_mute": bool(mute) and all(m[2] for m in mute),
+                "capability_basis": "coreaudio_property_settable",
                 "volume_channels": len(volume)}
 
     def devices(self):

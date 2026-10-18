@@ -22,6 +22,16 @@ MARKER = "INDIEBIZ_PC_RESULT:"
 CONTRACT = {
     "version": 1,
     "platforms": ["darwin", "windows"],
+    "audio_capabilities": {
+        "scope": "os_api_support",
+        "meaning": "can_set_volume·can_mute는 OS가 제공하는 제어 API의 지원 여부다. "
+                   "Windows는 EndpointVolume 인터페이스 활성화·조회 성공을 근거로 true를 반환한다. "
+                   "하드웨어 직접 지원이나 실제 변경 시험의 결과가 아니며, 그 시험의 부재로 API 지원을 unknown으로 바꾸지 않는다.",
+        "basis": {"darwin": "coreaudio_property_settable", "windows": "wasapi_endpoint_volume_interface"},
+        "setter_tested_by_status": False,
+        "hardware_support_observed": False,
+        "physical_sound_verified": False,
+    },
     "actions": {
         "status": [], "volume": ["device_id", "value"],
         "mute": ["device_id", "enabled"], "open_url": ["url"], "lock": [],
@@ -186,6 +196,10 @@ def decode(output, plan):
         if request["action"] == "mute" and device.get("muted") is not request["enabled"]:
             raise ValueError("실제 음소거 상태가 요청과 다릅니다.")
     state["source_sha256"] = plan.get("source_sha256")
+    if request["action"] in {"status", "volume", "mute"}:
+        state["audio_capabilities"] = CONTRACT["audio_capabilities"]
+        state["verification_scope"] = ("os_state_readback" if request["action"] == "status"
+                                       else "os_setting_readback")
     return state
 
 

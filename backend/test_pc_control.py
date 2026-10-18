@@ -93,6 +93,32 @@ def test_wrong_local_os_never_starts_process(monkeypatch):
         pc.run({"op": "local", "platform": "windows", "source": "native"})
 
 
+@pytest.mark.parametrize('platform', ['darwin', 'windows'])
+def test_audio_status_exposes_read_only_verification_scope(platform):
+    plan = pc.prepare({'platform': platform, 'source': 'native', 'request': {'action': 'status'}})
+    state = {'protocol': pc.PROTOCOL, 'platform': platform, 'action': 'status',
+             'request_id': plan['request']['request_id'], 'success': True, 'verified': True,
+             'devices': []}
+    result = pc.decode(pc.MARKER + json.dumps(state), plan)
+    assert result['verification_scope'] == 'os_state_readback'
+    contract = pc.run({'op': 'contract'})['audio_capabilities']
+    assert result['audio_capabilities'] == contract
+    assert result['audio_capabilities']['scope'] == 'os_api_support'
+    assert contract['setter_tested_by_status'] is False
+    assert contract['physical_sound_verified'] is False
+
+
+@pytest.mark.parametrize('settable', [True, False])
+def test_mac_capabilities_keep_property_evidence(monkeypatch, settable):
+    mac = module('pc_control_mac')
+    audio = object.__new__(mac.Audio)
+    monkeypatch.setattr(audio, 'slots', lambda *args: [(0, 0.5, settable)])
+    monkeypatch.setattr(audio, 'text', lambda device, prop: prop)
+    result = audio.describe(1, 1)
+    assert result['can_set_volume'] is settable and result['can_mute'] is settable
+    assert result['capability_basis'] == 'coreaudio_property_settable'
+
+
 def test_mac_url_is_one_argument_and_never_claims_playback(monkeypatch):
     mac = module("pc_control_mac")
     monkeypatch.setattr(mac.sys, "platform", "darwin")

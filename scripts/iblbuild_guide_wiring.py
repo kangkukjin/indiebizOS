@@ -6,6 +6,22 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def markdown_references(source: str) -> list[str]:
+    """코드 펜스/인라인 코드를 제외한 로컬 Markdown 문서 링크."""
+    import re
+    from urllib.parse import unquote, urlsplit
+    source = re.sub(r"(?ms)^([ \t]*)(`{3,}|~{3,})[^\n]*\n.*?^\1(?:`{3,}|~{3,})[^\n]*$", "", source)
+    source = re.sub(r"`+[^`\n]*`+", "", source)
+    targets = re.findall(r"\[[^]\n]+\]\(<?([^\s)>]+)>?(?:\s+[^)]*)?\)", source)
+    targets += re.findall(r"(?m)^\s*\[[^]]+\]:\s*<?([^\s>]+)", source)
+    result = []
+    for target in targets:
+        parsed = urlsplit(target)
+        if not parsed.scheme and not parsed.netloc and parsed.path.endswith(".md"):
+            result.append(unquote(parsed.path))
+    return result
+
+
 # === 가이드 위생 가드 (2026-08-17) ===
 # 가이드는 '절차 기억'이고 기억처럼 낡는다. 그런데 어휘 은퇴 절차에는 **코퍼스 이관 의무는
 # 있어도(--check 코퍼스 param 가드가 실제로 강제한다) 가이드 정리 의무는 없었다.**
@@ -37,13 +53,20 @@ def validate_guide_wiring(root: Path) -> list[str]:
             entries = _json.loads(db_path.read_text(encoding="utf-8")).get("guides", [])
         except Exception as e:
             return [f"가이드 가드: guide_db.json 을 읽지 못함 ({e})"]
-        for e in entries:
-            fn = Path(str(e.get("file") or "")).name
-            if fn and fn not in files:
-                issues.append(
-                    f"guide_db 유령 등재: '{e.get('id')}' → data/guides/{fn} 실존하지 않음 "
-                    "(의식 에이전트가 고르면 빈 문자열이 주입된다 — 침묵 실패)"
-                )
+        from guide_registry import guide_reference_owners, resolve_guide_reference
+        try:
+            owners = guide_reference_owners(entries)
+            for name, indexes in owners.items():
+                if len(indexes) > 1:
+                    issues.append(f"가이드 참조 소유권 충돌: {name}")
+            for entry in entries:
+                result = resolve_guide_reference(entry["file"], entries, guides_dir, read=False)
+                if not result or result.get("error"):
+                    issues.append(f"guide_db 유령 등재/잘못된 대상: {entry.get('id')} → {entry.get('file')}")
+        except (KeyError, TypeError, AttributeError):
+            issues.append("가이드 목차 항목 형식 오류")
+    else:
+        issues.append("가이드 목차 guide_db.json 누락")
 
     path_re = _re.compile(r"`(backend/[A-Za-z0-9_/]+\.py)`")
     for name in sorted(files):
@@ -51,6 +74,10 @@ def validate_guide_wiring(root: Path) -> list[str]:
             src = (guides_dir / name).read_text(encoding="utf-8")
         except OSError:
             continue
+        for rel in sorted(set(markdown_references(src))):
+            target = (guides_dir / rel).resolve()
+            if not target.is_relative_to(root.resolve()) or not target.is_file():
+                issues.append(f"[{name}] 끊긴 문서 링크: {rel}")
         for rel in sorted(set(path_re.findall(src))):
             if not (root / rel).exists():
                 base = Path(rel).name
@@ -114,6 +141,12 @@ def guide_staleness_warnings(data: dict, root: Path) -> list[str]:
                 if isinstance(a, dict):
                     referenced.update(str(g) for g in (a.get("guides") or []))
 
+    for filename in files:
+        for rel in markdown_references((guides_dir / filename).read_text(encoding="utf-8")):
+            target = (guides_dir / rel).resolve()
+            if target.parent == guides_dir.resolve():
+                referenced.add(target.name)
+
     act_re = _re.compile(r"\[([a-z_]+):([a-z_]+)\]")
     # 은퇴/제안임을 밝히는 말 — 이런 문맥의 죽은 이름은 기록이지 오류가 아니다
     excused = _re.compile(r"구 |은퇴|폐지|개명|흡수|승격|부활|아직 없는|가상의|제안|통합|합병|없습니다|아니다|자리표시자")
@@ -148,7 +181,7 @@ def guide_staleness_warnings(data: dict, root: Path) -> list[str]:
             )
         if name not in referenced and name not in _GUIDE_ORPHAN_BASELINE:
             warns.append(
-                f"[{name}] 고아 — guide_db·노드 yaml 어디도 안 가리킨다 "
-                "(검색으로 못 찾으니 등록하거나 지울 것)"
+                f"[{name}] 고아 — guide_db·노드 yaml·가이드 링크 어디도 안 가리킨다 "
+                "(직접 이름 조회는 가능; 발견 경로가 필요한지 검토)"
             )
     return warns

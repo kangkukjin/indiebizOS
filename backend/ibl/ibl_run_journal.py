@@ -580,3 +580,37 @@ def maintain_owner_runs():
         return {'skipped': 'private-session-lifecycle'}
     root = runs_root()
     return {p.name: cleanup_runs(p) for p in root.iterdir() if p.is_dir() and not p.is_symlink()} if root.exists() else {}
+
+
+def receipt_access_scope():
+    """영수증 값 조회 권한. 같은 몸이어도 다른 행위자/노드 권한의 값은 열지 않는다."""
+    import principal
+    from thread_context import get_current_agent_id, get_allowed_nodes
+    p = principal.current()
+    allowed = get_allowed_nodes()
+    return digest([p.key(), p.device_id, p.level, get_current_agent_id(),
+                   sorted(allowed) if allowed is not None else None])
+
+
+def receipt_value(root, ref):
+    """현재 주체·프로젝트 루트의 완료 영수증만 조회. 실패/만료는 값으로 위장하지 않는다."""
+    from ibl_v2_ir import unpack
+    if (not isinstance(ref, dict) or set(ref) != {"run_id", "call_id"}
+            or not re.fullmatch(r"[0-9a-f]{32}", str(ref.get("run_id", "")))
+            or not re.fullmatch(r"[0-9a-f]{64}", str(ref.get("call_id", "")))):
+        return {"available": False, "reason": "invalid_reference"}
+    path = Path(root) / (ref["run_id"] + ".sqlite")
+    if path.is_symlink() or not path.is_file():
+        return {"available": False, "reason": "receipt_missing"}
+    try:
+        with sqlite3.connect(path.absolute().as_uri() + '?mode=ro', uri=True, timeout=10) as db:
+            row = db.execute("SELECT receipt FROM calls WHERE id=?", (ref["call_id"],)).fetchone()
+        receipt = json.loads(row[0]) if row and row[0] else {}
+        if receipt.get("access_scope") != receipt_access_scope():
+            return {"available": False, "reason": "receipt_scope_mismatch"}
+        if "value" not in receipt:
+            return {"available": False, "reason": "receipt_unsettled"}
+        return {"available": True, "value": unpack(receipt["value"]),
+                "action": receipt.get("action"), "producer": receipt.get("producer")}
+    except (sqlite3.Error, ValueError, OSError):
+        return {"available": False, "reason": "receipt_unreadable"}

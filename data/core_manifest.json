@@ -89,6 +89,7 @@
       "github저장소메타.py",
       "judgment_idioms.py",
       "nest_tip_rows.py",
+      "pc_control.py",
       "python_bridge_environment.py",
       "python_bridge_values.py",
       "python_bridge_worker.py",
@@ -98,6 +99,8 @@
       "test_folder_watch.py",
       "test_judgment_idioms.py",
       "tips_nest.py",
+      "tv_control.py",
+      "tv_epg.py",
       "webapp_work.py",
       "world_map_lookup.py",
       "나레이션생성.py",
@@ -118,6 +121,11 @@
       "인사말붙이기.py",
       "잔여추정.py",
       "폴더변화.py"
+    ],
+    "idioms": [
+      "installed.json",
+      "pc_control.ibl",
+      "pc_control_check.ibl"
     ],
     "vocab_fragments": [
       "engines.yaml",

@@ -68,7 +68,35 @@ def definitions():
             continue  # Legacy store's list view reports corrupt files.
         if isinstance(data, dict) and data.get("edition") == 2:
             out.add(data.get("name"), data.get("code", ""), f"저장본:{path.stem}")
+    # 배포된 정의는 첫 부팅·임베딩 준비 전에도 호출 가능하다. 사전 항목은 데이터이며
+    # 파서/엔진에 내용어 이름을 넣지 않는다. 개인 개정과 충돌하면 조용히 덮지 않는다.
+    for name, source in installed_definitions().items():
+        if name in out and out[name].strip() == source.strip():
+            continue  # 같은 정본의 의미 검색 색인 사본
+        out.add(name, source, "배포본:" + name)
     return out
+
+
+def installed_definitions():
+    import json
+    from pathlib import Path
+    from runtime_utils import get_base_path
+    from thread_context import get_repair_workspace
+    root = Path(get_repair_workspace(create=False) or get_base_path()) / "data/idioms"
+    manifest = root / "installed.json"
+    if not manifest.is_file():
+        return {}
+    names = json.loads(manifest.read_text(encoding="utf-8"))
+    result = {}
+    for name, filename in names.items():
+        path = root / filename
+        if path.is_symlink() or path.parent != root or path.suffix != ".ibl":
+            raise ValueError("배포 정의 경로 오류")
+        source = path.read_text(encoding="utf-8").strip()
+        if definition_name(source) != name:
+            raise ValueError("배포 이름과 함수 정의 불일치")
+        result[name] = source
+    return result
 
 
 def library():

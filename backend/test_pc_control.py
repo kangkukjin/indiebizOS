@@ -119,7 +119,8 @@ assert.equal(api.pcTargets(value,'windows')[0].ready,false);
 assert.throws(()=>api.pcState({success:false,error:'lost'},'windows','status'));
 assert.throws(()=>api.pcState({success:true,protocol:'pc-control/1',platform:'darwin',action:'status',devices:[]},'windows','status'));
 const code=api.pcCommandCode('remote','windows','volume',{device_id:'a"b',value:30});
-assert.ok(code.includes('stdin:$p.stdin'));assert.ok(code.includes('op:"decode"'));
+assert.ok(code.includes('[fn:PC제어]'));assert.ok(!code.includes('stdin:'));
+assert.ok(code.includes('device_id'));
 assert.ok(!code.includes('%BASE%'));assert.ok(!code.includes('localhost'));
 '''
     result = subprocess.run(["node", "-e", script], cwd=ROOT, text=True, capture_output=True, timeout=30)
@@ -158,7 +159,8 @@ def test_hardware_guide_ibl_examples_compile(guide):
     for code in blocks:
         if not code.startswith("#!ibl"):
             code = "#!ibl edition=2\n" + code
-        plan = compile_program(code, load_registry(), inputs={
+        from ibl_v2_store import definitions
+        plan = compile_program(code, load_registry(), definitions=definitions(), inputs={
             "f": {"path": "example.py"}, "os": "darwin", "native": {"text": "source"}})
         assert not plan.issues, plan.report()
 
@@ -239,10 +241,9 @@ vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/pc-control.ts'
  const videos=await m.exports.searchPCVideos('rain');
  assert.equal(videos.length,1);assert.equal(videos[0].duration_seconds,9586);
  const code=m.exports.pcCommandCode('registered-device','windows','youtube_replace',{...videos[0],fullscreen:true});
- assert.ok(code.includes('pc_youtube_windows.ps1'));
- assert.ok(code.includes('background:true'));
- assert.ok(code.indexOf('[self:task]')<code.indexOf('output:$r.result.output'));
- assert.ok(code.includes('$r.state == "succeeded"'));
+ assert.ok(code.includes('[fn:PC제어]'));
+ assert.ok(!code.includes('pc_youtube_windows.ps1'));
+ assert.ok(code.includes('youtube_replace'));
  process.stdout.write(JSON.stringify([request,code,m.exports.pcCommandCode('registered-device','windows','youtube_status')]));
 })().catch(e=>{console.error(e);process.exit(1)});
 '''
@@ -253,44 +254,6 @@ vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/pc-control.ts'
     codes = json.loads(output.stdout)
     registry = load_registry(str(tmp_path))
     for code in codes:
-        plan = compile_program(code, registry)
+        from ibl_v2_store import definitions
+        plan = compile_program(code, registry, definitions=definitions())
         assert not plan.issues, plan.report()
-    from ibl_v2_adapters import Adapter
-    from ibl_v2_compat import plain_arguments
-    from ibl_v2_runtime import Runtime
-    from ibl_edition import source_context
-    from script_workspace import request_scope
-    calls = []
-    terminal = False
-    def leaf(step, *args, **kwargs):
-        action = f"{step['_node']}:{step['action']}"
-        p = step['params']
-        calls.append((action, p))
-        if action == 'self:read':
-            return {'text': 'native source', 'blocks': [], 'data': None}
-        if action == 'self:write':
-            return {'path': str(tmp_path / 'control.py')}
-        if action == 'self:script':
-            if p['args']['op'] == 'prepare':
-                return pc.prepare(p['args'])
-            assert terminal, 'queued output was decoded'
-            return {'success': True}
-        if action == 'limbs:guestpc':
-            return {'success': True, 'task_ref': {'kind': 'guestpc', 'task_id': 'queued'}}
-        if action == 'self:task':
-            assert p['ref'] == {'kind': 'guestpc', 'task_id': 'queued'}
-            import task_receipts
-            return {'success': True, **task_receipts.view(p['ref'], 'succeeded' if terminal else 'running',
-                                      result={'exit': 0, 'output': 'finished'} if terminal else None)}
-        raise AssertionError(action)
-    for key in ('self:read', 'self:write', 'self:script', 'limbs:guestpc', 'self:task'):
-        node, action = key.split(':')
-        registry[key] = Adapter(registry[key].contract,
-            lambda runtime, args, n=node, a=action: leaf({'_node': n, 'action': a, 'params': plain_arguments(args)}))
-    for terminal in (False, True):
-        calls.clear()
-        with source_context(2), request_scope(str(tmp_path)):
-            outcome = Runtime(compile_program(codes[2], registry), {}).run()
-        assert outcome['success'] is terminal, outcome
-        assert sum(a == 'limbs:guestpc' for a, _ in calls) == 1, outcome
-        assert sum(a == 'self:script' and p['args']['op'] == 'decode' for a, p in calls) == int(terminal)

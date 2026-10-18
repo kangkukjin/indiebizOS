@@ -36,6 +36,12 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
     db = IBLUsageDB()
     seed_path = ROOT / 'data/idioms' / seed_file
     seeds = json.loads(seed_path.read_text())
+    for row in seeds:
+        if "source_file" in row:
+            source = seed_path.parent / row.pop("source_file")
+            if source.parent != seed_path.parent or source.suffix != ".ibl":
+                raise ValueError("시드 원문 경로 오류")
+            row["ibl_code"] = source.read_text().strip()
     functions = [row for row in seeds if row.get('alias')]
     calls = [row for row in seeds if not row.get('alias')]
     library = definitions()
@@ -127,6 +133,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed-file', default='webapp_seeds.json',
                         choices=['webapp_seeds.json', 'homepage_seeds.json', 'housing_seeds.json',
                                  'ai_trend_seeds.json', 'code_read_seeds.json', 'legacy_port_seeds.json',
-                                 'workspace_seeds.json', 'guestpc_seeds.json', 'phone_execution_seeds.json'])
+                                 'workspace_seeds.json', 'guestpc_seeds.json', 'phone_execution_seeds.json', 'pc_control_seeds.json'])
     args = parser.parse_args()
     print(json.dumps(register(args.apply, args.local_encoder, args.seed_file, args.revise_reason), ensure_ascii=False, indent=2))

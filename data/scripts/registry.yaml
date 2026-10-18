@@ -203,15 +203,89 @@ AI동향발행:
   registered_at: '2026-09-05T13:46:00'
   timeout: 900
 세계지도:
-  description: '지식으로 가는 세계의 카탈로그: 분야·개념·방법·도구 어휘를 읽기 전용으로 조회. 이름을 모르면 browse로 분야부터
-    탐색. args: op(search 기본값|browse|open|neighbors|ancestors), query(search에서 생략하면
-    전체 목록), id(open/neighbors/ancestors), offset(0), limit(1..50, 기본 10), path(browse의
-    분류 경로 배열, 생략/빈 배열은 최상위 분야), revision(후속 페이지의 스냅샷). items와 revision·status·truncated·omitted·next·browse를
-    반환. 관계의 verified는 출처 대조이며 사용 가능성이나 현재 조건 충족을 뜻하지 않는다.'
+  description: '세계의 지도 조회·탐색. revision으로 페이지 일관성을 확인한다. 상세 입력·반환은 callable_contract. 가이드: world_tools.md'
   file: world_map_lookup.py
   interpreter: python
   registered_at: '2026-09-17T00:00:00'
   timeout: 30
+  callable_contract:
+    version: 1
+    params:
+      op: Text
+      query: Text
+      id: Text
+      offset: Number
+      limit: Number
+      revision: Text
+      path: List<Text>
+    required: []
+    result:
+      items: List<Record>
+      status: Text
+      revision: Text
+      truncated: Bool
+      omitted: Number
+    effects:
+    - unknown
+    adapter:
+      protocol: registered-json/1
+    defaults:
+      op: search
+      offset: 0
+      limit: 10
+    enums:
+      op:
+      - search
+      - open
+      - neighbors
+      - ancestors
+      - browse
+    integers:
+    - offset
+    - limit
+    minimum:
+      offset: 0
+      limit: 1
+    maximum:
+      limit: 50
+    variants:
+    - when:
+        op: open
+      required:
+      - id
+      nonempty:
+      - id
+      forbidden:
+      - path
+      - query
+    - when:
+        op: neighbors
+      required:
+      - id
+      nonempty:
+      - id
+      forbidden:
+      - path
+      - query
+    - when:
+        op: ancestors
+      required:
+      - id
+      nonempty:
+      - id
+      forbidden:
+      - path
+      - query
+    - when:
+        op: browse
+      forbidden:
+      - query
+      - id
+    - when:
+        op: search
+      forbidden:
+      - path
+      - id
 수리적용상태:
   description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args: key(특정 세션만),
     commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
@@ -250,15 +324,108 @@ AI동향발행:
   registered_at: '2026-09-05T13:46:00'
   timeout: 900
 압축:
-  description: 'zip 묶기·풀기·목록 — args: op(pack|unpack|list). pack: paths(또는 path/items)·output(생략=첫
-    대상 옆 <이름>.zip)·include/exclude(글로브, 기본 .DS_Store·__pycache__ 제외)·base. unpack:
-    path(zip/tar.gz)·out_dir(생략=옆 <이름>/)·include·overwrite(false=기존 파일 건너뜀). 경로 탈출(../)
-    항목 거절, 암호 zip 거절. unpack/list: name_encoding(선택, UTF-8 플래그 없는 ZIP 이름의 인코딩). list: 항목 items(name·size·compressed·modified). 2026-09-15 어휘
-    후보 10번을 스크립트로 먼저 얼림'
+  description: zip 묶기·zip/tar 풀기·목록 조회. 기본 제외 규칙과 경로 탈출 방어를 유지한다. 상세 입력·반환은 callable_contract.
   file: 압축.py
   interpreter: python
   registered_at: '2026-09-15T14:21:29'
   timeout: 300
+  callable_contract:
+    version: 1
+    params:
+      paths: List<Text>
+      path: Text
+      items: List
+      op: Text
+      output: Text
+      include: List<Text>
+      exclude: List<Text>
+      base: Text
+      out_dir: Text
+      overwrite: Bool
+      name_encoding: Text
+    required:
+    - op
+    result:
+      items:
+        $list:
+          name: Text
+          size: Number
+      count: Number
+    effects:
+    - unknown
+    adapter:
+      protocol: registered-json/1
+    enums:
+      op:
+      - pack
+      - unpack
+      - list
+    pipe_input: items
+    nonempty:
+    - path
+    - paths
+    - items
+    variants:
+    - when:
+        op: pack
+      required_any:
+      - - paths
+        - path
+        - items
+      forbidden:
+      - out_dir
+      - name_encoding
+      result:
+        items:
+          $list:
+            name: Text
+            size: Number
+        count: Number
+        output: Text
+        bytes: Number
+    - when:
+        op: unpack
+      required:
+      - op
+      - path
+      forbidden:
+      - paths
+      - items
+      - output
+      - exclude
+      - base
+      result:
+        items:
+          $list:
+            name: Text
+            out: Text
+            size: Number
+        count: Number
+        out_dir: Text
+    - when:
+        op: list
+      required:
+      - op
+      - path
+      forbidden:
+      - paths
+      - items
+      - output
+      - exclude
+      - include
+      - base
+      - out_dir
+      - overwrite
+      result:
+        items:
+          $list:
+            name: Text
+            size: Number
+            compressed: Number?
+            is_dir: Bool
+        count: Number
+        total_size: Number
+        path: Text
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
     IBL 총호출을 실행·계약조회·결과열람·회수·빈호출·종류미상으로 구분하고, 조회는 문법오류로 세지 않는다. IBL 계수·실패·fn([fn:]
@@ -307,15 +474,140 @@ AI동향발행:
   registered_at: '2026-08-20T00:52:17'
   timeout: 1800
 이미지변환:
-  description: '결정론 이미지 변환(모델 호출 없음) — args: paths(또는 path/items 봉투)·op(convert 기본|info)·format(jpg/png/webp,
-    heic→jpg 자동)·max_side·width/height/scale·max_kb(목표 용량, 품질↓→단계 축소)·quality·crop[l,t,r,b]/aspect("3:4"
-    가운데)·strip_exif(제출·공개용 true)·out_dir(생략=원본 옆 <이름>_변환)·overwrite. 원본은 덮어쓰지 않음.
-    items(src·out·format·width·height·bytes·exif_stripped·steps)+errors. 2026-09-15
-    어휘 후보 9번을 스크립트로 먼저 얼림(승격 판정은 호출 빈도)'
+  description: 사진 정보 조회·변환·크기 조정. items는 성공한 파일, errors는 파일별 실패이며 부분 성공이 가능하다. 상세 입력·반환은 callable_contract.
   file: 이미지변환.py
   interpreter: python
   registered_at: '2026-09-15T14:21:29'
   timeout: 300
+  callable_contract:
+    version: 1
+    params:
+      paths: List<Text>
+      path: Text
+      items: List
+      op: Text
+      format: Text
+      max_side: Number
+      width: Number
+      height: Number
+      scale: Number
+      max_kb: Number
+      quality: Number
+      crop: List<Number>
+      aspect: Text
+      strip_exif: Bool
+      out_dir: Text
+      overwrite: Bool
+    required: []
+    result:
+      items:
+        $list:
+          src: Text
+          format: Text
+          width: Number
+          height: Number
+          bytes: Number
+      count: Number
+      errors:
+        $list:
+          src: Text
+          error: Text
+    effects:
+    - unknown
+    adapter:
+      protocol: registered-json/1
+    defaults:
+      op: convert
+    required_any:
+    - - paths
+      - path
+      - items
+    nonempty:
+    - paths
+    - path
+    - items
+    enums:
+      op:
+      - convert
+      - info
+    integers:
+    - max_side
+    - width
+    - height
+    - quality
+    - max_kb
+    minimum:
+      max_side: 1
+      width: 1
+      height: 1
+      quality: 1
+      max_kb: 1
+      scale: 1.0e-06
+    maximum:
+      quality: 100
+    exclusive:
+    - - scale
+      - max_side
+    - - scale
+      - width
+    - - scale
+      - height
+    - - max_side
+      - width
+    - - max_side
+      - height
+    - - crop
+      - aspect
+    pipe_input: items
+    variants:
+    - when:
+        op: info
+      forbidden:
+      - format
+      - max_side
+      - width
+      - height
+      - scale
+      - max_kb
+      - quality
+      - crop
+      - aspect
+      - strip_exif
+      - out_dir
+      - overwrite
+      result:
+        items:
+          $list:
+            src: Text
+            format: Text
+            width: Number
+            height: Number
+            bytes: Number
+            has_exif: Bool
+            has_gps: Bool
+        count: Number
+        errors:
+          $list:
+            src: Text
+            error: Text
+    - when:
+        op: convert
+      result:
+        items:
+          $list:
+            src: Text
+            format: Text
+            width: Number
+            height: Number
+            bytes: Number
+            out: Text
+            exif_stripped: Bool
+            steps: List<Text>
+        count: Number
+        errors:
+          $list:
+            src: Text
+            error: Text
 인사말붙이기:
   description: '본문 wav의 음량을 정적 게인으로 정렬하고 첫·끝 장에 실음성 인사말을 접합 — args: lecture_id(필수),
     raw_dir(본문 wav 폴더, 기본 강의폴더/narration_raw), out_dir(결과 폴더, 기본 강의폴더/narration),
@@ -413,3 +705,427 @@ AI동향발행:
     per_run: true
     read_resources: {mfds: [query, id, page, limit]}
     adapter: {protocol: registered-json/1}
+
+PC제어부품:
+  description: PC제어·PC제어확인의 내부 준비·검증 부품. request의 action·device_id·value·enabled·url·title·duration_seconds·fullscreen은
+    op:contract의 actions에서 조회한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
+  file: pc_control.py
+  interpreter: python
+  registered_at: '2026-10-18T00:00:00'
+  timeout: 125
+  callable_contract:
+    version: 1
+    effects:
+    - unknown
+    required:
+    - op
+    params:
+      op: Text
+      platform: Text
+      source: Text
+      request: Record
+      plan: Record
+      output: Text
+      target: Text
+      limbs: List<Record>
+      wait: Number?
+      task: Record
+      plan_ref: Record
+      job_ref: Record
+      observation: Record
+    result: Record
+    adapter:
+      protocol: ibl-script/2
+      receipt_ref: true
+      receipt_inputs:
+      - plan_ref
+      - job_ref
+    enums:
+      op:
+      - contract
+      - select
+      - prepare
+      - local
+      - decode
+      - verify
+    variants:
+    - when:
+        op: contract
+      required:
+      - op
+      forbidden:
+      - platform
+      - source
+      - request
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      result:
+        success: Bool
+        version: Number
+        platforms: List<Text>
+        actions: Record
+        host_platform: Text
+    - when:
+        op: select
+      required:
+      - op
+      - target
+      - request
+      - limbs
+      forbidden:
+      - platform
+      - source
+      - plan
+      - output
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      result:
+        success: Bool
+        target: Text
+        platform: Text
+        request: Record
+        source_path: Text
+        wait: Number
+        timeout: Number
+    - when:
+        op: prepare
+      required:
+      - op
+      - platform
+      - source
+      - request
+      forbidden:
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      result:
+        success: Bool
+        platform: Text
+        request: Record
+        source_sha256: Text
+        helper_sha256: Text
+        command: Text
+        stdin: Text
+    - when:
+        op: local
+      required:
+      - op
+      - platform
+      - source
+      - request
+      forbidden:
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      result: &id001
+        success: Bool
+        protocol: Text
+        platform: Text
+        action: Text
+        request_id: Text
+        verified: Bool
+        source_sha256: Text
+    - when:
+        op: decode
+      required:
+      - op
+      - plan
+      - output
+      forbidden:
+      - platform
+      - source
+      - request
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      result: *id001
+    - when:
+        op: verify
+      required:
+      - op
+      - task
+      - plan_ref
+      - job_ref
+      forbidden:
+      - platform
+      - source
+      - request
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      result:
+        status: Text
+        target: Text
+        verified: Bool
+        result: Unknown
+        task_ref: Unknown
+        verification: Unknown
+        evidence_ref: Unknown
+        failure: Unknown
+
+TV제어:
+  description: 등록된 Samsung TV 제어. 음량은 상대 단계, mute는 토글이며 자동 재시도하지 않는다. verified는 각 동작의 관측 범위다. 가이드 tv_control.md.
+  file: tv_control.py
+  interpreter: python
+  registered_at: '2026-10-18T00:00:00'
+  timeout: 125
+  callable_contract:
+    version: 1
+    effects:
+    - unknown
+    required:
+    - op
+    params:
+      target: Text
+      op: Text
+      keys: List<Text>
+      steps: Number
+      app: Text
+      url: Text
+      channels: List<Number>
+      page: Number
+      page_size: Number
+      refresh: Bool
+    defaults:
+      op: status
+    nonempty:
+    - target
+    enums:
+      op:
+      - status
+      - 'on'
+      - 'off'
+      - pair
+      - mute
+      - to_pc
+      - dlna_stop
+      - key
+      - volume
+      - launch
+      - dlna_play
+      - epg_now
+      - epg_channel
+      - epg_scan
+    result:
+      success: Bool
+      op: Text
+      target: Text
+      verified: Bool
+    adapter:
+      protocol: registered-json/1
+    variants:
+    - when:
+        op: status
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: 'on'
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: 'off'
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: pair
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: mute
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: to_pc
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: dlna_stop
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: key
+      required:
+      - target
+      - keys
+      forbidden:
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: volume
+      required:
+      - target
+      - steps
+      forbidden:
+      - keys
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      minimum:
+        steps: -10
+      maximum:
+        steps: 10
+    - when:
+        op: launch
+      required:
+      - target
+      - app
+      forbidden:
+      - keys
+      - steps
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: dlna_play
+      required:
+      - target
+      - url
+      forbidden:
+      - keys
+      - steps
+      - app
+      - channels
+      - page
+      - page_size
+      - refresh
+    - when:
+        op: epg_now
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+    - when:
+        op: epg_channel
+      required:
+      - target
+      - channels
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+    - when:
+        op: epg_scan
+      required:
+      - target
+      forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+    integers:
+    - steps
+    - page
+    - page_size
+    minimum:
+      page: 1
+      page_size: 1
+    maximum:
+      page_size: 200

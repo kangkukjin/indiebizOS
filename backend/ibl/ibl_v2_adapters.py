@@ -66,6 +66,12 @@ def validate_contract(contract):
         from ibl_callable_contract import validate_resources
         validate_resources(resources, contract["params"])
     adapter = contract.get("adapter", {})
+    if "receipt_ref" in adapter and type(adapter["receipt_ref"]) is not bool:
+        raise ValueError("adapter.receipt_ref는 Bool입니다")
+    receipt_inputs = adapter.get("receipt_inputs", [])
+    if (not isinstance(receipt_inputs, list) or any(k not in contract["params"] for k in receipt_inputs)
+            or receipt_inputs and adapter.get("protocol") != "ibl-script/2"):
+        raise ValueError("receipt_inputs는 ibl-script/2의 영수증 참조 인자 목록입니다")
     envelopes = adapter.get("input_envelopes", [])
     if (not isinstance(envelopes, list)
             or any(not isinstance(key, str) or key not in contract["params"] for key in envelopes)):
@@ -371,6 +377,8 @@ def load_registry(project_path=".", agent_id=None):
                     'requires': copy.deepcopy(action_config['requires']),
                     'ops': copy.deepcopy(action_config.get('ops', {})),
                 }
+            if action_config.get("receipt_ref") is True:
+                contract["adapter"]["receipt_ref"] = True
             adapter = contract["adapter"]
             key = f"{node}:{action}"
             # Capture contract and implementation identities now. A changed
@@ -411,6 +419,17 @@ def load_registry(project_path=".", agent_id=None):
                 if protocol == "ibl-script/2":
                     params.setdefault("op", "run" if params.get("id") or params.get('path') else "list")
                     params["_ibl_edition"] = 2
+                    from ibl_dependencies import script_contract
+                    declared_script = script_contract(c, args).get("script_contract", {})
+                    receipt_inputs = declared_script.get("adapter", {}).get("receipt_inputs", [])
+                    if receipt_inputs:
+                        from ibl_run_journal import receipt_value
+                        nested = params.get("args") or {}
+                        params["_ibl_context"] = {"receipts": {
+                            name: receipt_value(runtime.journal.root, nested[name])
+                            if runtime.journal else {"available": False, "reason": "no_journal"}
+                            for name in receipt_inputs if name in nested}}
+
                 pipe_key = c["adapter"].get("legacy_pipe_input")
                 if pipe_key and pipe_key in params:
                     previous = params[pipe_key]

@@ -61,4 +61,20 @@ def candidates(query, limit=3):
                          'contract_known': bool(contract)})
         except (ValueError, KeyError, OSError, yaml.YAMLError):
             continue
-    return ranked(query, rows, limit)
+    from ibl_v2_store import installed_definitions, describe
+    installed = installed_definitions()
+    for name in installed:
+        if not any(row['id'] == 'fn:' + name for row in rows):
+            rows.append({'id': 'fn:' + name, 'description': name,
+                         'call': '[fn:' + name + ']{}', 'contract': None,
+                         'contract_known': False, 'origin': 'installed'})
+    found = ranked(query, rows, limit)
+    # 선택된 배포 함수만 기존 컴파일러에서 계약을 얻는다. 별도 계약 사본은 없다.
+    for row in found:
+        if row.get('origin') == 'installed':
+            definition = describe(row['id'][3:], allowed)
+            row['contract'] = definition.get('callable_contract')
+            row['contract_known'] = bool(row['contract'])
+            if definition.get('error'):
+                row['error'] = definition['error']
+    return found

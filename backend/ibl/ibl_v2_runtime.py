@@ -692,7 +692,7 @@ class Runtime(ExpressionEvaluator):
                       and spec.reusable(args.value)))
         model_only = contract['effects'] == ['model'] and model_identity is not None
         reusable_read = (read_only or model_only) and not contract.get('per_run', False)
-        from ibl_run_journal import call_resources, resources_overlap, request_fingerprints
+        from ibl_run_journal import call_resources, resources_overlap, request_fingerprints, receipt_access_scope
         state_change = external and not read_only and contract['effects'] != ['model']
         footprint = call_resources(spec, contract, args.value, 'write' if state_change else 'read')
         if model_only:
@@ -849,10 +849,15 @@ class Runtime(ExpressionEvaluator):
                     tool_evidence, value = value.evidence, value.value
                 if usage:
                     tool_evidence = {**tool_evidence, 'model_usage': copy.deepcopy(usage)}
+                receipt_adapter = contract.get("script_contract", contract).get("adapter", {})
+                if receipt_adapter.get("receipt_ref") and self.journal and isinstance(value, dict):
+                    value = {**value, "_receipt_ref": {"run_id": self.journal.run_id, "call_id": call_id}}
                 guard(value, contract["result"], f"{key} 반환")
                 if external:
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
                                "action": key, "reuse_key": reuse_key, "reuse_parts": reuse_parts,
+                               "access_scope": receipt_access_scope(),
+                               "producer": args.value.get("id"),
                                **({"resource_state": freshness} if freshness else {})}
                     if freshness:
                         stable = all(len(r) > 3 and r[3] is not None for r in freshness) and freshness == resource_state(footprint)

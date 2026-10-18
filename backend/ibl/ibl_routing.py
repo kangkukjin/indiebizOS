@@ -1078,13 +1078,18 @@ def _search_guide(query: str, params: dict) -> Any:
     data_dir = _Path(__file__).parent.parent.parent / "data"
     guide_db_path = data_dir / "guide_db.json"
 
-    if not guide_db_path.exists():
-        return {"error": "guide_db.json이 없습니다."}
-
-    with open(guide_db_path, 'r', encoding='utf-8') as f:
-        db = _json.load(f)
-
-    guides = db.get("guides", [])
+    try:
+        db = _json.loads(guide_db_path.read_text(encoding="utf-8"))
+        guides = db["guides"]
+        if not isinstance(guides, list) or any(
+            not isinstance(g, dict) or any(not isinstance(g.get(k), str) for k in ("file", "id", "name"))
+            or not isinstance(g.get("aliases", []), list)
+            or any(not isinstance(alias, str) for alias in g.get("aliases", []))
+            for g in guides
+        ):
+            raise ValueError("invalid guide catalog")
+    except (OSError, ValueError, KeyError, TypeError):
+        return {"error": "가이드 목차를 읽을 수 없습니다.", "error_code": "GUIDE_CATALOG_INVALID"}
 
     if not query:
         return {
@@ -1093,25 +1098,10 @@ def _search_guide(query: str, params: dict) -> Any:
             "message": "가이드 전체 목록입니다. 키워드로 검색하세요.",
         }
 
-    # ★파일명 정확 일치 빠른길 (2026-09-03): 가이드의 입구가 <guide_map>(옛 <execution_map> 의 `guide:` 줄)으로
-    #   옮겨져 실행자는 지도의 파일명을 그대로 넘긴다. 파일명은 점수 경쟁 없이 그 파일이다 —
-    #   토큰 점수에 맡기면 "goal.md" 가 'goal' 낱말을 가진 다른 가이드에 밀릴 수 있다.
-    _q = (query or "").strip().strip("`")
-    if _q.endswith(".md") or any(_q in g.get("aliases", []) for g in guides):
-        _hit = next((g for g in guides if (g.get("file") or "") == _q or _q in g.get("aliases", [])), None)
-        if _hit:
-            _q = _hit["file"]
-            out = {"guides": [{"id": _hit["id"], "name": _hit["name"],
-                               "description": _hit.get("description", ""), "file": _hit.get("file")}],
-                   "count": 1, "match": "filename"}
-            if params.get("read", True):
-                gp = data_dir / "guides" / _q
-                if gp.exists():
-                    out["content"] = gp.read_text(encoding="utf-8")
-                    out["file"] = _q
-                else:
-                    out["error"] = f"guide_db 에는 있으나 파일이 없습니다: {_q}"
-            return out
+    from guide_registry import resolve_guide_reference
+    exact = resolve_guide_reference(query, guides, data_dir / "guides", params.get("read", True))
+    if exact is not None:
+        return exact
     # 한국어 정규화: 조사 제거 + 복합어 분리 (korean_utils 공통 모듈)
     from korean_utils import tokenize_korean
     import re as _re

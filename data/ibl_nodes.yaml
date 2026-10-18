@@ -7672,6 +7672,7 @@ nodes:
         - 화면분석
         - 버튼찾기
       guestpc:
+        receipt_ref: true
         params:
           code: string
           inputs: object

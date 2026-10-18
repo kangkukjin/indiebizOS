@@ -170,6 +170,19 @@ def _core_package_names(kind: str) -> list[str]:
     return sorted(names)
 
 
+def _installed_idiom_files():
+    """배포 함수의 원문·목록만 강제 갱신한다. 개인 해마는 동기화하지 않는다."""
+    manifest = REPO_ROOT / "data/idioms/installed.json"
+    if not manifest.is_file():
+        return []
+    mapping = json.loads(manifest.read_text(encoding="utf-8"))
+    tracked = {Path(p).name for p in _git_tracked("data/idioms")}
+    names = {"installed.json", *mapping.values()}
+    if not names <= tracked or any(Path(n).name != n for n in names):
+        raise ValueError("배포 관용구는 같은 폴더의 git 추적 원문이어야 합니다")
+    return sorted(names)
+
+
 def build_manifest() -> dict:
     tools = _core_package_names("tools")
     extensions = _core_package_names("extensions")
@@ -200,6 +213,7 @@ def build_manifest() -> dict:
         "packages": {"tools": tools, "extensions": extensions},
         "instruments": instruments,
         "scripts": scripts,
+        "idioms": _installed_idiom_files(),
         "vocab_fragments": vocab_fragments,
         "vocab_artifacts": vocab_artifacts,
     }

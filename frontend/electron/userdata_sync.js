@@ -20,6 +20,7 @@
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import yaml from 'js-yaml';
 
 const OVERWRITE_EXTENSIONS = new Set(['.py', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.scss', '.md']);
 const ALWAYS_OVERWRITE_FILES = new Set(['tool.json', 'requirements.txt', 'package.json']);
@@ -94,6 +95,18 @@ class Tx {
     fs.copyFileSync(src, dest);
     return true;
   }
+  /** 항목 단위로 병합한 데이터도 기존 업그레이드 저널로 보호한다. */
+  writeText(dest, text) {
+    if (fs.existsSync(dest) && fs.readFileSync(dest, 'utf8') === text) return false;
+    const backup = fs.existsSync(dest) ? this._backupPathFor(dest) : null;
+    if (backup) {
+      fs.mkdirSync(path.dirname(backup), { recursive: true });
+      fs.copyFileSync(dest, backup);
+    } else fs.mkdirSync(path.dirname(dest), { recursive: true });
+    this._append({ op: 'overwrite', path: dest, backup });
+    fs.writeFileSync(dest, text);
+    return true;
+  }
   /** 파일/폴더를 격리 폴더로 옮긴다. */
   quarantine(target) {
     if (!fs.existsSync(target)) return false;
@@ -145,6 +158,7 @@ function syncDir(tx, srcDir, destDir, forceOverwrite, skipPaths) {
   for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
     const srcPath = path.join(srcDir, entry.name);
     const destPath = path.join(destDir, entry.name);
+    if (skipPaths && skipPaths.has(srcPath)) continue;
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
       if (skipPaths && skipPaths.has(srcPath)) continue;
@@ -175,11 +189,14 @@ function makeCoreForceOverwrite(manifest) {
   const core = manifest.core || {};
   const vocabArtifacts = new Set(core.vocab_artifacts || []);
   const coreInstruments = new Set(core.instruments || []);
+  const coreIdioms = new Set(core.idioms || []);
   const corePackages = new Set([...((core.packages || {}).tools || []), ...((core.packages || {}).extensions || [])]);
   return (destPath) => {
     const norm = destPath.split(path.sep).join('/');
     const base = path.basename(norm);
     if (vocabArtifacts.has(base)) return true;
+    const idiomMatch = norm.match(/\/data\/idioms\/([^/]+)$/);
+    if (idiomMatch && coreIdioms.has(idiomMatch[1])) return true;
     const instMatch = norm.match(/\/data\/instruments\/(.+)\.yaml$/);
     if (instMatch && coreInstruments.has(instMatch[1])) return true;
     if (base === 'ibl_actions.yaml') {
@@ -188,6 +205,33 @@ function makeCoreForceOverwrite(manifest) {
     }
     return false;
   };
+}
+
+/** 코어 스크립트의 코드와 계약을 함께 갱신한다. 개인 ID·origin:user·상태는 보존. */
+function syncScriptRegistry(tx, resourcesPath, userDataPath, manifest, log) {
+  const source = path.join(resourcesPath, 'data', 'scripts', 'registry.yaml');
+  const dest = path.join(userDataPath, 'data', 'scripts', 'registry.yaml');
+  if (!manifest?.core?.scripts || !fs.existsSync(source)) return;
+  const bundled = yaml.load(fs.readFileSync(source, 'utf8')) || {};
+  const current = fs.existsSync(dest) ? yaml.load(fs.readFileSync(dest, 'utf8')) || {} : {};
+  const files = new Set(manifest.core.scripts);
+  const merged = { ...current };
+  for (const [name, entry] of Object.entries(bundled)) {
+    if (!entry || !files.has(entry.file) || entry.origin === 'user') continue;
+    const previous = current[name];
+    if (previous && (previous.origin === 'user' || previous.file !== entry.file)) {
+      log(`[Init] 사용자 스크립트 보존: ${name}`);
+      continue;
+    }
+    const next = { ...entry };
+    delete next.lifecycle; // 배포 몸의 관측 이력은 새 몸에 전파하지 않는다.
+    if (previous?.lifecycle) next.lifecycle = previous.lifecycle;
+    if (previous?.registered_at) next.registered_at = previous.registered_at;
+    merged[name] = next;
+  }
+  if (JSON.stringify(merged) !== JSON.stringify(current)) {
+    tx.writeText(dest, yaml.dump(merged, { lineWidth: 100, noRefs: true }));
+  }
 }
 
 /** 패키지 — 설치 상태(installed/not_installed 배치 = 사용자 선택) 보존 동기화 (종전 의미 그대로). */
@@ -240,11 +284,25 @@ export function syncUserData({ resourcesPath, userDataPath, version = '', log = 
 
   // 1. 기본 폴더 (packages 하위트리 제외 — 2 에서 상태 보존 동기화)
   const skipPaths = new Set([path.join(resourcesPath, 'data', 'packages')]);
+  if (manifest?.core?.scripts) {
+    // 신규 설치도 병합 경로를 거쳐 배포자의 관측 이력을 물려받지 않는다.
+    skipPaths.add(path.join(resourcesPath, 'data', 'scripts', 'registry.yaml'));
+  }
+  const registryPath = path.join(userDataPath, 'data', 'scripts', 'registry.yaml');
+  if (fs.existsSync(registryPath)) {
+    const registry = yaml.load(fs.readFileSync(registryPath, 'utf8')) || {};
+    for (const entry of Object.values(registry)) {
+      if (entry?.origin === 'user' && typeof entry.file === 'string' && path.basename(entry.file) === entry.file) {
+        skipPaths.add(path.join(resourcesPath, 'data', 'scripts', entry.file));
+      }
+    }
+  }
   for (const dir of ['data', 'projects', 'templates', 'tokens']) {
     const src = path.join(resourcesPath, dir);
     if (fs.existsSync(src)) syncDir(tx, src, path.join(userDataPath, dir), forceOverwrite, skipPaths);
   }
   // 2. 패키지 (설치 상태 보존)
+  syncScriptRegistry(tx, resourcesPath, userDataPath, manifest, log);
   syncPackages(tx, resourcesPath, userDataPath, forceOverwrite, log);
   // 3. common_prompts — 종전 rm+cp 대신 파일 단위 덮어쓰기(저널에 남는다) + 번들에 없는 파일 격리
   const promptsSrc = path.join(resourcesPath, 'data', 'common_prompts');

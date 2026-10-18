@@ -5,6 +5,7 @@ nodes:
   limbs:
     actions:
       guestpc:
+        receipt_ref: true  # 원 접수 영수증을 후속 확인에 연결
         params:
           code: string      # op=ibl 또는 python
           inputs: object    # op=python 입력 객체

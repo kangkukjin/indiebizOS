@@ -105,7 +105,7 @@ def test_all_app_modes_share_target_and_compilable_script_contract():
         target = next(i for i in mode['inputs'] if i['key'] == 'target')
         assert target['scope'] == 'instrument' and target['required']
         for item in [mode] + mode.get('buttons', []):
-            assert 'tv_control.py' in item['action'] and 'target:$target' in item['action']
+            assert 'id:"TV제어"' in item['action'] and 'target:$target' in item['action']
             assert 'assert $r.success == true' in item['action']
             assert 'config.json' not in item['action'] and 'guestpc' not in item['action']
     data = yaml.safe_load((ROOT / 'data/ibl_nodes.yaml').read_text())

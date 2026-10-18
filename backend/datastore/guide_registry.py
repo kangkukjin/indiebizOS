@@ -65,6 +65,64 @@ _date_cache: Optional[Dict[str, Dict]] = None
 STALE_DAYS = 60
 
 
+def guide_reference_owners(entries: list) -> dict:
+    """목차의 명시 이름 소유권. 별칭이 실제 참고 파일을 가리는 것은 허용한다."""
+    owners = {}
+    for index, entry in enumerate(entries):
+        for name in [entry.get("file"), entry.get("id"), *entry.get("aliases", [])]:
+            if isinstance(name, str) and name:
+                owners.setdefault(name, set()).add(index)
+    return owners
+
+
+def safe_guide_path(directory: Path, filename: str) -> Optional[Path]:
+    """basename 및 루트 경계 검사. 대소문자 보정 없이 실재 파일만 해소."""
+    if (not isinstance(filename, str) or not filename.endswith(".md")
+            or any(c in filename for c in ("/", "\\", "..", "\x00"))):
+        return None
+    path = directory / filename
+    try:
+        if (filename not in {p.name for p in directory.iterdir()}
+                or not path.is_file() or not path.resolve().is_relative_to(directory.resolve())):
+            return None
+    except (OSError, ValueError, RuntimeError):
+        return None
+    return path
+
+
+def resolve_guide_reference(query: str, entries: list, directory: Path,
+                            read: bool = True) -> Optional[dict]:
+    """명시 참조는 문서 또는 실패, 자연어는 None(검색 경로 계속)."""
+    name = query.strip().strip("`")
+    owners = guide_reference_owners(entries)
+    matches = owners.get(name, set())
+    if not name.lower().endswith(".md") and not matches:
+        return None
+    def failure(code, message):
+        return {"error": message, "error_code": code, "requested": name,
+                "guides": [], "count": 0}
+    if len(matches) > 1:
+        return failure("GUIDE_REFERENCE_AMBIGUOUS", f"가이드 참조 소유권 충돌: {name}")
+    entry = entries[next(iter(matches))] if matches else None
+    filename = entry["file"] if entry else name
+    path = safe_guide_path(directory, filename)
+    if path is None:
+        return failure("GUIDE_TARGET_MISSING" if entry else "GUIDE_NOT_FOUND",
+                       f"안전한 가이드 파일을 찾을 수 없습니다: {filename}")
+    item = ({k: entry.get(k, "") for k in ("id", "name", "description", "file")}
+            if entry else {"id": path.stem, "name": path.stem,
+                           "description": "", "file": filename})
+    out = {"guides": [item], "count": 1, "file": filename, "match": "filename",
+           "reference_kind": "alias" if entry and name in entry.get("aliases", []) else "filename",
+           "registered": entry is not None, "requested": name}
+    if read:
+        try:
+            out["content"] = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            return failure("GUIDE_READ_FAILED", f"가이드 파일을 읽을 수 없습니다: {filename}")
+    return out
+
+
 def device_control_guides() -> Dict[str, str]:
     """장치 소개용 OS→가이드 포인터. 본문 없이 등록 데이터만 읽는다."""
     try:

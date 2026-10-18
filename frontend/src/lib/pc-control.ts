@@ -18,8 +18,6 @@ export interface PCState {
 type RecordValue = Record<string, unknown>;
 const record = (v: unknown): RecordValue => v && typeof v === 'object' && !Array.isArray(v) ? v as RecordValue : {};
 export const LOCAL_PC = '__local__';
-export const pcBootstrap = '$s = [self:read]{path:"~workspace/data/instruments/pc_control.py"}\n' +
-  '$f = [self:write]{path:"~turn/pc_control.py",content:$s.text}\n';
 
 export function pcPlatform(value: unknown): PCPlatform | null {
   const os = String(value || '').toLowerCase();
@@ -42,31 +40,17 @@ export function pcTargets(value: unknown, platform: PCPlatform): PCTarget[] {
 }
 
 export async function listControlPCs(platform: PCPlatform): Promise<PCTarget[]> {
-  const code = '#!ibl edition=2\n' + pcBootstrap +
-    '$host = [self:script]{path:$f.path,args:{op:"contract"}}\n' +
+  await iblExecuteApp(pcCommandCode(LOCAL_PC, platform, 'status'), {check: true});
+  const code = '#!ibl edition=2\n' +
+    '$host = [self:script]{id:"PC제어부품",args:{op:"contract"}}\n' +
     '$list = [self:limb]{op:"list"}\nreturn {host:$host,limbs:$list.limbs}';
   return pcTargets(await iblExecuteApp(code), platform);
 }
 
-/** Only wiring here. Native source and shared validators are read from the hub at execution time. */
-export function pcCommandCode(target: string, platform: PCPlatform, action: PCAction, args: RecordValue = {}): string {
+/** 앱과 AI는 같은 저장 함수를 호출한다. OS·네이티브 소스는 부품이 해소한다. */
+export function pcCommandCode(target: string, _platform: PCPlatform, action: PCAction, args: RecordValue = {}): string {
   if (!target.trim()) throw new Error('제어할 PC를 선택해 주세요.');
-  const youtube = action.startsWith('youtube_');
-  const file = youtube ? 'pc_youtube_windows.ps1' : platform === 'darwin' ? 'pc_control_mac.py' : 'pc_control_windows.ps1';
-  const request = JSON.stringify({ ...args, action });
-  let code = '#!ibl edition=2\n' + pcBootstrap +
-    `$native = [self:read]{path:"~workspace/data/instruments/${file}"}\n`;
-  if (target === LOCAL_PC) {
-    return code + `return [self:script]{path:$f.path,args:{op:"local",platform:${JSON.stringify(platform)},source:$native.text,request:${request}},timeout:${youtube ? 120 : 35}}`;
-  }
-  code += `$p = [self:script]{path:$f.path,args:{op:"prepare",platform:${JSON.stringify(platform)},source:$native.text,request:${request}}}\n`;
-  code += 'assert $p.success == true, "PC 제어 인수를 확인하세요.", {result:$p}\n';
-  code += `$job = [limbs:guestpc]{limb:${JSON.stringify(target)},op:"shell",cmd:$p.command,stdin:$p.stdin,request_id:$p.request.request_id,timeout:${youtube ? 120 : 30},background:true,mode:"interactive"}\n`;
-  code += 'assert $job.success == true, "PC 작업 접수 실패", {result:$job}\n';
-  code += `$r = [self:task]{op:"wait",ref:$job.task_ref,timeout:${youtube ? 150 : 60}}\n`;
-  code += 'assert get($r,"terminal",false) == true && $r.state == "succeeded", "PC 작업이 완료되지 않았습니다. task_ref로 기다리고 변경을 재전송하지 마세요.", {result:$r,task_ref:$job.task_ref}\n';
-  code += 'assert $r.result != null && $r.result.exit == 0, "PC 실행 실패. 상태를 다시 조회하세요.", {result:$r}\n';
-  return code + 'return [self:script]{path:$f.path,args:{op:"decode",plan:$p,output:$r.result.output}}';
+  return '#!ibl edition=2\nreturn [fn:PC제어]' + JSON.stringify({대상: target, 요청: {...args, action}});
 }
 
 export async function searchPCVideos(query: string): Promise<PCVideo[]> {
@@ -89,8 +73,30 @@ export function pcState(value: unknown, platform: PCPlatform, action: PCAction):
   return state as unknown as PCState;
 }
 
+export class PCUnfinished extends Error {
+  constructor(public task: RecordValue, public action: PCAction) {
+    super(String(record(task.failure).message || '작업이 아직 완료되지 않았습니다. 기존 작업 확인을 눌러 주세요.'));
+  }
+}
+
+function completedPC(value: unknown, platform: PCPlatform, action: PCAction): PCState {
+  const outcome = record(value);
+  if (outcome.status !== 'completed') {
+    if (outcome.task_ref && ['pending', 'unknown'].includes(String(outcome.status))) throw new PCUnfinished(outcome, action);
+    throw new Error(String(record(outcome.failure).message || 'PC 제어 결과를 확인하지 못했습니다.'));
+  }
+  return pcState(outcome.result, platform, action);
+}
+
+export async function confirmPC(task: RecordValue, platform: PCPlatform, action: PCAction): Promise<PCState> {
+  const outcome = await iblExecuteApp('#!ibl edition=2\nreturn [fn:PC제어확인]' +
+    JSON.stringify({작업: task, 대기: 60}), {allowIncomplete: true});
+  return completedPC(outcome, platform, action);
+}
+
 export async function controlPC(target: string, platform: PCPlatform, action: PCAction, args: RecordValue = {}): Promise<PCState> {
-  return pcState(await iblExecuteApp(pcCommandCode(target, platform, action, args)), platform, action);
+  const outcome = await iblExecuteApp(pcCommandCode(target, platform, action, args), {allowIncomplete: true});
+  return completedPC(outcome, platform, action);
 }
 
 export async function capturePC(target: string): Promise<string> {

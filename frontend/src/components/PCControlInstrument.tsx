@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Monitor, RefreshCw, Volume2, VolumeX, Globe, LockKeyhole, Camera } from 'lucide-react';
-import { capturePC, controlPC, listControlPCs, type PCAction, type PCPlatform, type PCState, type PCTarget } from '../lib/pc-control';
+import { capturePC, controlPC, confirmPC, PCUnfinished, listControlPCs, type PCAction, type PCPlatform, type PCState, type PCTarget } from '../lib/pc-control';
 import { PCYouTubeControls } from './PCYouTubeControls';
 
 const button = 'rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40';
@@ -14,6 +14,7 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
   const [draft, setDraft] = useState(0);
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<PCUnfinished | null>(null);
   const [listing, setListing] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -55,7 +56,7 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
     return () => { mounted.current = false; revision.current++; };
   }, [refresh]);
 
-  const execute = async (id: string, action: PCAction | 'screen', args: Record<string, unknown> = {}) => {
+  const execute = async (id: string, action: PCAction | 'screen', args: Record<string, unknown> = {}, followUp?: PCUnfinished) => {
     if (flight.current || !id) return;
     flight.current = true;
     const version = ++revision.current, started = performance.now();
@@ -66,7 +67,8 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
         if (!mounted.current || targetRef.current !== id || revision.current !== version) return;
         setScreen(image); setScreenAt(new Date().toLocaleTimeString()); setNotice('요청 시점의 원격 화면입니다.');
       } else {
-        const next = await controlPC(id, platform, action, args);
+        const next = followUp ? await confirmPC(followUp.task, platform, action) : await controlPC(id, platform, action, args);
+        setPending(null);
         if (!mounted.current || targetRef.current !== id || revision.current !== version) return;
         setState(previous => ({ ...previous, ...next, devices: next.devices ?? previous?.devices,
           playback: next.playback, tabs: next.tabs }));
@@ -80,6 +82,7 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
       setElapsed((performance.now() - started) / 1000);
     } catch (e) {
       if (!mounted.current || targetRef.current !== id || revision.current !== version) return;
+      if (e instanceof PCUnfinished) setPending(e);
       setError(e instanceof Error ? e.message : String(e));
       if (action === 'screen') setScreen(''); else setState(null);
     } finally {
@@ -88,15 +91,15 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
   };
 
   const choose = (id: string) => {
-    if (flight.current) return;
+    if (flight.current || pending) return;
     revision.current++; targetRef.current = id; deviceRef.current = '';
     setSelected(id); setDeviceId(''); setState(null); setScreen(''); setError(''); setNotice(''); setElapsed(null);
     if (targets.some(item => item.id === id && item.ready && item.connected)) void execute(id, 'status');
   };
   const change = (action: PCAction, args: Record<string, unknown> = {}) => {
-    if (ready && !busy && !listing) void execute(selected, action, args);
+    if (ready && !busy && !listing && !pending) void execute(selected, action, args);
   };
-  const disabled = busy || listing || !ready;
+  const disabled = busy || listing || !ready || !!pending;
 
   return <div className="h-full overflow-auto bg-stone-50">
     <div className="max-w-3xl mx-auto p-5 sm:p-8 space-y-5">
@@ -108,7 +111,7 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
       <section className={panel}>
         <label htmlFor="pc-control-target" className="text-sm font-medium text-stone-700">제어할 PC</label>
         <div className="flex gap-2">
-          <select id="pc-control-target" value={selected} disabled={busy || listing} onChange={e => choose(e.target.value)}
+          <select id="pc-control-target" value={selected} disabled={busy || listing || !!pending} onChange={e => choose(e.target.value)}
             className="flex-1 min-w-0 rounded-xl border border-stone-200 bg-white p-3">
             <option value="">PC를 선택해 주세요</option>
             {targets.map(item => <option key={item.id} value={item.id} disabled={!item.connected || !item.ready}>
@@ -164,6 +167,10 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
         {state && !state.can_lock && <p className="text-xs text-stone-500">이 PC에서 지원하는 잠금 명령을 찾지 못했습니다. PC에서 직접 잠가 주세요.</p>}
         {screen && <figure><img src={screen} alt={`${target?.name} 원격 화면`} className="w-full rounded-xl border border-stone-200" /><figcaption className="text-xs text-stone-500 mt-2">{screenAt}에 가져온 화면 · 실시간 영상 아님</figcaption></figure>}
       </section>
+      {pending && <section className={panel}>
+        <p className="text-sm text-amber-800">이전 제어 작업을 확인 중입니다. 같은 변경을 다시 보내지 않습니다.</p>
+        <button className={button} disabled={busy || listing} onClick={() => void execute(selected, pending.action, {}, pending)}>기존 작업 확인</button>
+      </section>}
       <div aria-live="polite" className="text-sm min-h-8">
         {busy ? <p className="text-blue-700">{target?.name}에서 처리 중…</p> : error ? <p className="text-red-700">{error}</p> : <p className="text-stone-600">{notice}</p>}
         <p className="text-xs text-stone-400 mt-2">{elapsed !== null ? `${elapsed.toFixed(1)}초 · ` : ''}AI 호출 없음</p>

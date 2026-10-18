@@ -24,17 +24,21 @@ export const APP_PROJECT_ID = '앱모드';
  * 응답 언랩: 단일 액션이면 결과가 최상위, 합성(`>>`) 다단계면 `final_result` 에 온다.
  * 문자열이면 JSON 파싱을 시도한다(실패 시 문자열 유지).
  */
-export async function iblExecuteApp(code: string): Promise<unknown> {
+export async function iblExecuteApp(code: string, options: { check?: boolean; allowIncomplete?: boolean } = {}): Promise<unknown> {
   const res = await fetch(`${API}/ibl/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...iblSurface, code, project_id: APP_PROJECT_ID }),
+    body: JSON.stringify({ ...iblSurface, code, project_id: APP_PROJECT_ID, ...(options.check ? { check: true } : {}) }),
   });
   checkRemoteSession(res.status);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const d = await res.json();
+  if (options.check) {
+    if (d.success === false || (d.issues || []).length) throw new Error(d.error || JSON.stringify(d.issues) || "호출 준비 실패");
+    return d;
+  }
   if (d?.edition === 2) {
-    if (d.success !== true || d.source_complete === false) throw new Error(d.error || '실행 결과가 불완전합니다.');
+    if (d.success !== true || (d.source_complete === false && !options.allowIncomplete)) throw new Error(d.error || '실행 결과가 불완전합니다.');
     return d.value;
   }
   let r: unknown =

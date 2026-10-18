@@ -142,6 +142,7 @@ def test_workflow_save_load_and_legacy_id_guard(tmp_path,monkeypatch):
     monkeypatch.setattr(ibl_usage_db.IBLUsageDB, '_instance', None)
     import workflow_store
     from ibl_v2_store import action,definitions
+    monkeypatch.setattr('ibl_v2_store.installed_definitions', lambda: {})
     from workflow_engine import execute_workflow
     monkeypatch.setattr(workflow_store,'_get_workflows_path',lambda:tmp_path)
     saved=action('save',{'edition':2,'code':'[def:double]($x){return $x*2}'},'.')

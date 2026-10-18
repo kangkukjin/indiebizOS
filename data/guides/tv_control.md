@@ -1,7 +1,7 @@
 # TV 컨트롤 — 손발 등록·앱·AI 공용 스크립트
 
 TV 전원·입력·음량·앱·DLNA 재생을 제어할 때 읽는다. 앱 모드의 **TV 컨트롤**과 AI가
-`~workspace/data/instruments/tv_control.py`를 함께 사용한다. 장치 소개의 `control_guide`가
+등록 스크립트 `TV제어`를 함께 사용한다. 계약 조회는 `[self:script]{op:"list",id:"TV제어"}`다. 장치 소개의 `control_guide`가
 이 파일을 가리킨다. 현재 문맥에 계약이 있으면 다시 읽거나 같은 코드를 새로 만들지 않는다.
 
 ## 대상과 등록
@@ -35,9 +35,7 @@ return [self:limb]{op:"list"}
 ```ibl
 #!ibl edition=2
 $target = "등록된 TV의 device_id"
-$s = [self:read]{path:"~workspace/data/instruments/tv_control.py"}
-$f = [self:write]{path:"~turn/tv_control.py",content:$s.text}
-$r = [self:script]{path:$f.path,args:{target:$target,op:"status"},timeout:90}
+$r = [self:script]{id:"TV제어",args:{target:$target,op:"status"},timeout:90}
 assert $r.success == true, "TV 요청 실패. 변경 명령을 반복하지 말고 상태를 확인하세요.", {result:$r}
 return $r
 ```

@@ -187,6 +187,9 @@ def test_t7_script_registry_args_drift():
           'args.get("items")\nargs.get("key")\n"value" not in args\nargs["value"]\n'
     flags = _script_args_flags("json원장", desc, src)
     assert len(flags) == 1 and "value" in flags[0]["claim"], flags
+    # 구조 계약에 공개된 입력은 산문에 같은 이름을 다시 나열할 필요가 없다.
+    assert not _script_args_flags("json원장", desc, src, {"params": {"value": "Unknown"}})
+    assert _script_args_flags("json원장", desc, src, {"params": {"other": "Text"}})
     # 설명에 value 가 오르면 깃발 0
     assert not _script_args_flags("json원장", desc + ", value(set 전용)", src)
     # 역방향: 설명에만 있는 인자(소스가 안 읽음)도 깃발

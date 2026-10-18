@@ -160,6 +160,8 @@ data/**/*.json
 !data/idioms/legacy_port_seeds.json
 !data/idioms/guestpc_seeds.json
 !data/idioms/phone_execution_seeds.json
+!data/idioms/installed.json
+!data/idioms/pc_control_seeds.json
 !data/packages/installed/tools/ai-ops/judge_examples.json
 data/ibl_hippo_vecs.f32
 # 공개파일 런타임 스테이징(썸네일 캐시·비공개 실경로 색인 = PII) — 절대 커밋 금지

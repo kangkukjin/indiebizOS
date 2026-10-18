@@ -240,7 +240,7 @@ def _script_desc_args(desc: str):
     return tokens
 
 
-def _script_args_flags(name: str, desc: str, src: str) -> List[Dict]:
+def _script_args_flags(name: str, desc: str, src: str, contract=None) -> List[Dict]:
     """한 스크립트의 설명↔소스 양방향 대조 (순수 함수 — 시험용 분리)."""
     doc = f"data/scripts/registry.yaml#{name}"
     read = set()
@@ -256,8 +256,9 @@ def _script_args_flags(name: str, desc: str, src: str) -> List[Dict]:
                           "claim": f"설명에만 있는 args: {', '.join(dead)}",
                           "hint": "소스가 읽지 않는 인자 — 설명에서 빼거나 소스를 맞출 것"})
     # 소스만 아는 인자 — 설명 누락 (옛 JSON 원장 스크립트 value 사고 부류). 단어 경계로 설명 전문 대조.
+    declared = set((contract or {}).get("params", {})) | set((contract or {}).get("aliases", {}))
     hidden = [k for k in sorted(read)
-              if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(k)}(?![A-Za-z0-9_])", desc)]
+              if k not in declared and not re.search(rf"(?<![A-Za-z0-9_]){re.escape(k)}(?![A-Za-z0-9_])", desc)]
     if hidden:
         flags.append({"kind": "script_args_drift", "doc": doc, "line": 0,
                       "claim": f"설명에 없는 args: {', '.join(hidden)}",
@@ -322,7 +323,7 @@ def _check_script_registry(flags: List[Dict], unchecked: List[str]) -> None:
         except Exception as e:
             unchecked.append(f"data/scripts/{entry.get('file')}({e.__class__.__name__})")
             continue
-        flags.extend(_script_args_flags(name, str(entry.get("description") or ""), src))
+        flags.extend(_script_args_flags(name, str(entry.get("description") or ""), src, entry.get("callable_contract")))
 
 
 # ── 진입점 ───────────────────────────────────────────────────────────────────

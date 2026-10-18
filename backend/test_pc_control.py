@@ -42,6 +42,33 @@ def test_input_is_data_and_does_not_enter_shell_command():
     assert len(plan["source_sha256"]) == 64
 
 
+@pytest.mark.parametrize("url", [
+    "https://www.youtube.com/watch?v=T7tCIDC84EE",
+    "https://youtu.be/T7tCIDC84EE?t=30",
+    "https://music.youtube.com/playlist?list=example",
+    "https://m.youtube.com/shorts/example",
+    "https://youtube.com/live/example",
+    "https://www.youtube-nocookie.com/embed/example",
+    "https://WWW.YOUTUBE.COM./%77atch?v=example",
+])
+@pytest.mark.parametrize("platform", ["darwin", "windows"])
+def test_youtube_playback_never_uses_unmanaged_url_launch(url, platform, monkeypatch):
+    monkeypatch.setattr(pc.subprocess, "run", lambda *a, **kw: pytest.fail("launched another player"))
+    for op in ("prepare", "local"):
+        with pytest.raises(ValueError, match="기존 영상과 겹칠"):
+            pc.run({"op": op, "platform": platform, "source": "native",
+                    "request": {"action": "open_url", "url": url}})
+
+
+@pytest.mark.parametrize("url", [
+    "https://www.youtube.com/", "https://www.youtube.com/results?search_query=rain",
+    "https://example.com/watch?v=example", "https://youtube.com.example.org/watch",
+])
+def test_general_web_browsing_remains_available(url):
+    assert pc.prepare({"platform": "windows", "source": "native",
+                       "request": {"action": "open_url", "url": url}})["request"]["url"] == url
+
+
 def test_mutation_requires_matching_readback():
     plan = pc.prepare({"platform": "darwin", "source": "native", "request": {"action": "volume", "device_id": "a", "value": 30}})
     state = {"protocol": pc.PROTOCOL, "platform": "darwin", "action": "volume",

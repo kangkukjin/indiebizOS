@@ -11,7 +11,7 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
   const [state, setState] = useState<PCState | null>(null);
   const [deviceId, setDeviceId] = useState('');
   const [draft, setDraft] = useState(0);
-  const [url, setUrl] = useState('https://www.youtube.com/');
+  const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [listing, setListing] = useState(false);
   const [error, setError] = useState('');
@@ -148,9 +148,9 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
       <section className={panel}>
         <h2 className="font-medium flex items-center gap-2"><Globe size={20} />웹 주소 열기</h2>
         <div className="flex flex-col sm:flex-row gap-2"><input aria-label="열 웹 주소" value={url} onChange={e => setUrl(e.target.value)} disabled={busy}
-          type="url" className="flex-1 min-w-0 rounded-xl border border-stone-200 p-3 text-sm" />
+          type="url" placeholder="https://…" className="flex-1 min-w-0 rounded-xl border border-stone-200 p-3 text-sm" />
           <button className={button} disabled={disabled || !url.trim()} onClick={() => change('open_url', { url: url.trim() })}>선택한 PC에서 열기</button></div>
-        <p className="text-xs text-stone-500">기본 브라우저로 엽니다. 기존 영상 정지·새 영상 재생·전체 화면은 별도 조작입니다.</p>
+        <p className="text-xs text-stone-500">일반 웹페이지를 기본 브라우저로 엽니다. 유튜브 영상은 중복 재생을 막기 위해 여기서 열지 않습니다. 자동 재생 교체는 아직 지원하지 않습니다.</p>
       </section>
       <section className={panel}>
         <div className="flex flex-wrap gap-2">

@@ -13,7 +13,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 PROTOCOL = "pc-control/1"
 MARKER = "INDIEBIZ_PC_RESULT:"
@@ -62,6 +62,19 @@ def validate(args):
         parsed = urlsplit(url)
         if parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password:
             raise ValueError("인증정보가 없는 http 또는 https 주소만 열 수 있습니다.")
+        host = parsed.hostname.lower().rstrip(".")
+        youtube = host == "youtube.com" or host.endswith(".youtube.com")
+        embedded = host == "youtube-nocookie.com" or host.endswith(".youtube-nocookie.com")
+        # open_url owns no playback session. A successful launch cannot replace an
+        # existing video, so do not silently accumulate players through this path.
+        route = unquote(parsed.path).strip("/").split("/", 1)[0].lower()
+        if (host == "youtu.be" or host.endswith(".youtu.be") or
+                ((youtube or embedded) and route in {"watch", "playlist", "shorts", "live", "embed", "v"})):
+            raise ValueError(
+                "유튜브 영상은 일반 주소 열기로 재생하지 않습니다. 기존 영상과 겹칠 수 있습니다. "
+                "기존 재생 탭을 확인하고 그 탭에서 영상을 교체하세요. "
+                "현재 PC 컨트롤 앱은 자동 재생 교체를 지원하지 않습니다."
+            )
         result["url"] = url
     return result
 

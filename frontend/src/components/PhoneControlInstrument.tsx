@@ -43,7 +43,10 @@ export function PhoneControlInstrument() {
         if (!current) { target.current = ''; setSelected(''); }
       }
     } catch (e) {
-      if (mounted.current) setError(String(e instanceof Error ? e.message : e));
+      if (mounted.current) {
+        revision.current++; setPhones([]); setState(null); setNotice(''); setElapsed(null);
+        setError(String(e instanceof Error ? e.message : e));
+      }
     } finally {
       listingFlight.current = false;
       if (mounted.current) setListing(false);
@@ -105,7 +108,7 @@ export function PhoneControlInstrument() {
             onChange={e => choose(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-stone-200 p-3 text-stone-900 bg-white">
             <option value="">폰을 선택해 주세요</option>
             {phones.map(p => <option key={p.id} value={p.id} disabled={!p.connected || !p.ready}>
-              {p.name}{!p.connected ? ' · 연결 안 됨' : !p.ready ? ' · 폰 앱 업데이트 필요' : ' · 연결됨'}
+              {p.name}{!p.connected ? ' · 연결 안 됨' : p.paused ? ' · 실행 중지' : !p.ready ? ' · Python 실행 준비 필요' : ' · 연결됨'}
             </option>)}
           </select>
           <button className={button} disabled={busy || extrasBusy || listing} onClick={() => void refreshPhones()} aria-label="폰 목록 새로고침" title="폰 목록 새로고침">

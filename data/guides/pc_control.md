@@ -8,7 +8,7 @@ PC의 상태·음량·음소거·웹 주소 열기를 요청받을 때 읽는다
 - macOS: `~workspace/data/instruments/pc_control_mac.py` (`platform:"darwin"`, 대상에 Python 3 필요)
 - Windows: `~workspace/data/instruments/pc_control_windows.ps1` (`platform:"windows"`, 대상에 Windows PowerShell 5.1 이상 필요)
 - 원격 전송은 기존 등록 PC 헬퍼의 `shell`과 `stdin`을 사용한다. 새 서버·토큰·PC별 설치 프로그램은 추가하지 않는다. 활성 등록·연결·실행 허용 상태를 확인한다. 앱은 OS가 맞는 등록 PC만 보여준다.
-- 본체 제어는 `op:"local"`. 원격 PC에서 실행할 때는 `prepare → guestpc shell → decode` 순서다. 대상 ID는 `[self:limb]{op:"list"}`에서 확인한다. TV라는 별명으로 OS나 실제 출력 장치를 추측하지 않는다.
+- 본체 제어는 `op:"local"`. 원격 PC에서 실행할 때는 `prepare → guestpc shell → decode` 순서다. 대상 ID는 `[self:limb]{op:"list"}`에서 확인한다. 선택한 행의 `registration.state:"active"`, `registration.paused:false`, `connected:true`, `registration.capabilities.shell:true`와 OS를 확인한다. `adapter:"network-api"`는 PC 실행 대상이 아니다. TV라는 별명으로 OS나 실제 출력 장치를 추측하지 않는다.
 
 ## 원격 실행 예시 — 먼저 상태 조회
 
@@ -51,7 +51,7 @@ return $v
 
 `success`는 내부 결과까지 확인한다. IBL 실행이 성공했어도 반환 객체의 `success:false`는 실패다. `decode`는 요청 ID·OS·동작·프로토콜·출력 장치 ID를 대조한다. `source_sha256`은 실행에 사용한 네이티브 파일의 지문이다. UI와 AI 모두 같은 prepare/decode를 거친다.
 
-상태의 `devices`에서 사용 목적에 맞는 장치를 선택한다. UI의 출력 장치 선택은 **조절 대상 선택**이며 기본 출력 전환이 아니다. `can_set_volume`/`can_mute`가 false면 시도하지 않는다. HDMI 등 OS 조절이 없는 장치는 외부 리모컨이 필요하다. OS 음량 재조회는 물리 스피커에서 소리가 들렸다는 검증이 아니다. `audio_error`가 있으면 호스트 상태만 조회된 것이며 오디오 성공으로 보고하지 않는다.
+`$target`은 **PC 등록 ID**, `request.device_id`는 **그 PC의 오디오 출력 ID**다. 서로 바꿔 쓰지 않는다. 상태의 `devices`에서 사용 목적에 맞는 장치를 선택한다. UI의 출력 장치 선택은 **조절 대상 선택**이며 기본 출력 전환이 아니다. `can_set_volume`/`can_mute`가 false면 시도하지 않는다. HDMI 등 OS 조절이 없는 장치는 외부 리모컨이 필요하다. OS 음량 재조회는 물리 스피커에서 소리가 들렸다는 검증이 아니다. `audio_error`가 있으면 호스트 상태만 조회된 것이며 오디오 성공으로 보고하지 않는다.
 
 시간 초과·연결 해제·결과 유실은 변경 여부를 모르는 상태다. 변경 명령을 자동 반복하지 말고 새 status로 확인한다. 음소거는 toggle 대신 명시적인 true/false, 음량은 증감 대신 절대값을 사용한다. 사용자가 선택한 장치가 사라지면 다른 장치로 자동 대체하지 않는다.
 

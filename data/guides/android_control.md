@@ -4,23 +4,30 @@
 
 ## 앱과 AI가 공유하는 실행 경로
 
-`폰 컨트롤`에서는 앱 위쪽에서 대상 폰을 한 번 선택한다. 음량·화면·손전등·센서·기기 상태 탭 모두 그 폰을 사용하며, 탭 전환으로 선택을 초기화하지 않는다. 대상을 바꾸면 이전 폰의 결과를 지운다.
+`폰 컨트롤`에서는 앱 위쪽에서 대상 폰을 한 번 선택한다. 원격 웹의 음량·화면·손전등·센서·기기 상태 탭과 데스크톱의 각 제어 영역 모두 그 폰을 사용하며, 탭 전환으로 선택을 초기화하지 않는다. 대상을 바꾸면 이전 폰의 결과를 지운다.
 
 `폰 컨트롤` 앱과 AI는 아래 두 Python 스크립트를 그대로 실행한다. 앱은 모델 호출 없이 IBL → 원격 Python으로 보낸다. AI도 준비된 스크립트와 인수만 보내면 된다. 새 IBL 내용어를 추가하지 않는다. 음악·콘텐츠·앱별 동작은 이 계층의 기능이 아니다.
 
 - `data/instruments/phone_control.py`: 음량 종류별 조회·변경·복원, 진동.
 - `data/instruments/phone_device.py`: 화면·밝기·회전·자동 꺼짐·손전등·센서·전원 및 연결 상태.
 
-아래는 **한 번의 execute_ibl 호출**이다. 폰은 이름·배치 문맥으로 지정된 대상을 사용한다. 아래 대상명은 예시이며, 여러 폰 중 임의 선택하지 않는다.
+먼저 `[self:limb]{op:"list"}` 또는 현재 장치 소개에서 사용자가 지정한 폰의 `device_id`를 고른다. 별칭이 같으면 이름만으로 실행하지 않는다. 활성 등록·`connected:true`·`paused:false`와 Python 실행 준비를 확인한다. `info`의 `execution_contract:1`, `runtimes.python.ready:true`가 실행 조건이며 자세한 등록·복구만 `remote_phone.md`를 읽는다.
+
+아래는 **한 번의 execute_ibl 호출**이다. `$target`에는 확인한 ID를 넣는다. 등록 기기 ID와 PC의 오디오 출력 장치 ID는 서로 다르다.
 
 ```ibl
 #!ibl edition=2
-$s = [self:read]{path:"%BASE%/data/instruments/phone_device.py"}
-$r = [limbs:guestpc]{limb:"대상 폰 이름",op:"python",code:$s.text,inputs:{op:"status"},timeout:20}
+$target = "등록된 폰의 device_id"
+$s = [self:read]{path:"~workspace/data/instruments/phone_device.py"}
+$r = [limbs:guestpc]{limb:$target,op:"python",code:$s.text,inputs:{op:"status"},timeout:20}
+assert $r.success == true && $r.result.success == true, "원격 실행 실패. 변경을 재전송하지 마세요.", {result:$r}
+assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}
 return $r.result.value
 ```
 
-스크립트는 파일에 저장하고 가이드에는 경로·인수·결과 계약만 둔다. `%BASE%`는 실행하는 본체의 저장소다. 이미 파일 내용을 읽었다면 재사용한다. 응답은 바깥 성공 여부, `$r.result.success`, `$r.result.value.success`를 모두 확인한다. 통신 실패 후 변경 명령을 자동 재시도하지 않는다. 먼저 상태를 읽는다.
+스크립트는 파일에 저장하고 가이드에는 경로·인수·결과 계약만 둔다. `~workspace`는 실행하는 본체의 저장소다. 데스크톱·원격 앱 모두 실행할 때 이 파일을 읽으므로 AI와 같은 판본을 사용한다. 이미 파일 내용을 읽었다면 재사용한다. 응답은 바깥 성공 여부, `$r.result.success`, `$r.result.value.success`를 모두 확인한다. 통신 실패 후 변경 명령을 자동 재시도하지 않는다. 먼저 상태를 읽는다.
+
+음량을 바꾸려면 위 예제의 파일을 `phone_control.py`로 바꾸고 먼저 `inputs:{op:"status",stream:"music"}`으로 조회한다. 이어 같은 실행 틀에서 `inputs:{op:"set",stream:"music",value:4}`처럼 인수만 바꾼다. 예시의 4는 조회한 상한 이내의 원하는 정수 단계로 바꾼다. 화면·손전등 등은 `phone_device.py`를 유지한다. 실행 성공과 `verified`가 뜻하는 확인 범위는 아래를 따른다.
 
 ## 음량·진동 (`phone_control.py`)
 

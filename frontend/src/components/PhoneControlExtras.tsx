@@ -26,7 +26,7 @@ export function PhoneControlExtras({ target, disabled, onBusy }: {
       if (!mounted.current) return;
       if (result.hardware_control !== undefined) setState(result);
       if (result.reading) setReading(`${sensorNames[result.sensor || ''] || result.sensor}: ${result.reading.values.map(n => n.toFixed(3)).join(', ')} · 정확도 ${result.reading.accuracy}`);
-      setNotice(result.message || '처리했습니다.');
+      setNotice((result.message || '처리했습니다.') + (result.verified === false ? ' · 요청은 전달됐으며 실제 변경은 미확인입니다.' : ''));
       setElapsed((performance.now() - start) / 1000);
     } catch (e) {
       if (mounted.current) { setError(e instanceof Error ? e.message : String(e)); setState(null); setReading(''); setElapsed(null); }

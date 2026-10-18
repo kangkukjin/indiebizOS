@@ -1,4 +1,3 @@
-import controlSource from '../../../data/instruments/phone_control.py?raw';
 import { iblExecuteApp } from './instrument';
 
 export interface PhoneTarget {
@@ -6,6 +5,7 @@ export interface PhoneTarget {
   name: string;
   connected: boolean;
   ready: boolean;
+  paused: boolean;
 }
 export interface PhoneState {
   success: boolean;
@@ -34,10 +34,11 @@ export function phoneTargets(value: unknown): PhoneTarget[] {
   return root.limbs.flatMap((raw) => {
     const phone = record(raw), registration = record(phone.registration);
     const caps = record(registration.capabilities), env = record(phone.env);
-    if (phone.revoked || phone.expired || registration.state !== 'active' || (caps.os ?? env.os) !== 'android') return [];
+    if (phone.revoked || phone.expired || phone.invitation || typeof phone.device_id !== 'string' || registration.state !== 'active' || (caps.os ?? env.os) !== 'android') return [];
     return [{ id: String(phone.device_id), name: String(phone.alias || phone.device_id),
       connected: phone.connected === true,
-      ready: caps.execution_contract === 1 && record(record(caps.runtimes).python).ready === true }];
+      paused: registration.paused === true,
+      ready: registration.paused !== true && caps.execution_contract === 1 && record(record(caps.runtimes).python).ready === true }];
   }).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 }
 
@@ -48,9 +49,10 @@ export async function listControlPhones(): Promise<PhoneTarget[]> {
 export function phoneCommandCode(target: string, op: PhoneCommand, value?: number, stream: PhoneStream = 'music'): string {
   if (!target.trim()) throw new Error('제어할 폰을 선택해 주세요.');
   const args = { op, stream, ...(value === undefined ? {} : { value }) };
-  return '#!ibl edition=2\nreturn [limbs:guestpc]' + JSON.stringify({
-    limb: target, op: 'python', code: controlSource, inputs: args, timeout: 20,
-  });
+  return '#!ibl edition=2\n$s = [self:read]{path:"~workspace/data/instruments/phone_control.py"}\n' +
+    'return [limbs:guestpc]{code:$s.text,' + JSON.stringify({
+      limb: target, op: 'python', inputs: args, timeout: 20,
+    }).slice(1);
 }
 
 export function controlState(value: unknown): PhoneState {

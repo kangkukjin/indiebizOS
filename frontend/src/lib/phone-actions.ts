@@ -1,4 +1,3 @@
-import deviceSource from '../../../data/instruments/phone_device.py?raw';
 import { iblExecuteApp } from './instrument';
 
 export type HardwareOp = 'status' | 'brightness' | 'brightness_auto' | 'rotation' | 'timeout' |
@@ -18,9 +17,10 @@ const object = (v: unknown): RecordValue => v && typeof v === 'object' && !Array
 
 export function phoneActionCode(target: string, op: HardwareOp, args: RecordValue = {}): string {
   if (!target.trim()) throw new Error('제어할 폰을 선택해 주세요.');
-  return '#!ibl edition=2\nreturn [limbs:guestpc]' + JSON.stringify({
-    limb: target, op: 'python', code: deviceSource, inputs: { ...args, op }, timeout: 20,
-  });
+  return '#!ibl edition=2\n$s = [self:read]{path:"~workspace/data/instruments/phone_device.py"}\n' +
+    'return [limbs:guestpc]{code:$s.text,' + JSON.stringify({
+      limb: target, op: 'python', inputs: { ...args, op }, timeout: 20,
+    }).slice(1);
 }
 export function phoneActionState(value: unknown): HardwareState {
   const outer = object(value), remote = object(outer.result), state = object(remote.value);

@@ -120,6 +120,21 @@ def test_both_app_sources_are_available():
         assert "PCControlInstrument" in source["code"]
 
 
+@pytest.mark.parametrize("guide", ["android_control.md", "pc_control.md", "tv_control.md"])
+def test_hardware_guide_ibl_examples_compile(guide):
+    import re
+    from ibl_v2_compile import compile_program
+    from ibl_v2_adapters import load_registry
+    text = (ROOT / "data/guides" / guide).read_text()
+    blocks = re.findall(r"```ibl\n(.*?)```", text, re.S)
+    assert blocks
+    for code in blocks:
+        if not code.startswith("#!ibl"):
+            code = "#!ibl edition=2\n" + code
+        compile_program(code, load_registry(), inputs={
+            "f": {"path": "example.py"}, "os": "darwin", "native": {"text": "source"}})
+
+
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

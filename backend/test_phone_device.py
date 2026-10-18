@@ -71,7 +71,8 @@ vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/phone-actions.
  const m=mod.exports;
  const state=await m.runPhoneAction('phone "one"','torch',{enabled:true});
  assert.equal(state.verified,false);assert.equal(calls.length,1);
- const args=JSON.parse(calls[0].split('[limbs:guestpc]')[1]);
+ assert.ok(calls[0].includes('[self:read]{path:"~workspace/data/instruments/phone_device.py"}'));
+ const args=JSON.parse(calls[0].split('[limbs:guestpc]')[1].replace('code:$s.text,','"code":"SHARED_SCRIPT",'));
  assert.equal(args.limb,'phone "one"');assert.equal(args.code,'SHARED_SCRIPT');assert.deepEqual(args.inputs,{enabled:true,op:'torch'});
  for(const bad of [{success:false}, {success:true,result:{success:false}}, {success:true,result:{success:true,value:{success:false,error:'permission'}}}]) assert.throws(()=>m.phoneActionState(bad));
  assert.throws(()=>m.phoneActionCode('','status'));

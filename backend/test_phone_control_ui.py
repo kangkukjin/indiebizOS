@@ -45,6 +45,9 @@ vm.runInContext(source.slice(source.indexOf('function resolveOptionsAction('),so
  const target=(id,extra={})=>({device_id:id,alias:id,connected:true,env:{os:'android'},registration:{state:'active',capabilities:{execution_contract:1,python:'3.12.7',runtimes:{python:{ready:true}}}},...extra});
  const list=mod.exports.phoneTargets({limbs:[target('s1'),target('s0'),target('yena'),target('removed',{revoked:true}),target('pc',{env:{os:'linux'}})]});
  assert.equal(list.length,3);assert.ok(list.every(p=>p.ready));
+ const paused=target('paused');paused.registration.paused=true;
+ const stopped=mod.exports.phoneTargets({limbs:[paused]})[0];assert.equal(stopped.ready,false);assert.equal(stopped.paused,true);
+ assert.equal(mod.exports.phoneTargets({limbs:[target('invite',{invitation:true}),target(null),target('legacy',{registration:null})]}).length,0);
  assert.equal(mod.exports.phoneTargets({limbs:[target('old',{registration:{state:'active',capabilities:{execution_contract:1,python:'3.11'}}})]})[0].ready,false);
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''
@@ -62,6 +65,61 @@ def test_template_guard_accepts_declared_envelope_inputs(tmp_path, monkeypatch):
     assert validate_app_template_params(data, tmp_path) == []
     action['app']['action'] = 'return [limbs:test]{inputz:{op:"status"}}'
     assert any('inputz' in issue for issue in validate_app_template_params(data, tmp_path))
+
+
+def test_phone_picker_handles_legacy_and_paused_devices_in_every_mode():
+    from ibl_v2_entry import handle_request
+    manifest = yaml.safe_load((ROOT / 'data/instruments/phone_control.yaml').read_text())
+    row = {'device_id': 'phone', 'connected': True, 'revoked': False, 'expired': False,
+           'registration': {'state': 'active', 'paused': False}, 'env': {'os': 'android'}}
+    fixtures = [row, {**row, 'registration': None},
+                {**row, 'device_id': 'paused', 'registration': {'state': 'active', 'paused': True}},
+                {**row, 'device_id': 'pc', 'env': {'os': 'windows'}},
+                {**row, 'device_id': 'offline', 'connected': False}]
+    for mode in manifest['modes']:
+        picker = next(i for i in mode['inputs'] if i['key'] == 'target')
+        code = picker['options_action'].replace('[self:limb]{op: "list"}', '$fixture')
+        result = handle_request({'edition': 2, 'code': code, 'inputs': {'fixture': {'limbs': fixtures}},
+                                 'declared_inputs': ['fixture']}, str(ROOT), None)
+        assert result['success'], result.get('error')
+        assert result['value']['items'] == [row]
+
+
+def test_phone_commands_read_current_hub_scripts_and_compile():
+    from ibl_v2_compile import compile_program
+    from ibl_v2_adapters import load_registry
+    script = r'''
+const fs=require('fs'),vm=require('vm'),ts=require('./frontend/node_modules/typescript');
+const result=[];
+for(const name of ['phone-control','phone-actions']) {
+ const m={exports:{}};
+ vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/'+name+'.ts','utf8'),{module:ts.ModuleKind.CommonJS}),
+  {exports:m.exports,require:()=>({}),Error});
+ result.push(name==='phone-control'?m.exports.phoneCommandCode('phone "one"','set',4):m.exports.phoneActionCode('phone "one"','torch',{enabled:false}));
+}
+console.log(JSON.stringify(result));
+'''
+    output = subprocess.run(['node', '-e', script], cwd=ROOT, text=True, capture_output=True, timeout=30)
+    assert output.returncode == 0, output.stderr
+    codes = json.loads(output.stdout)
+    for code, filename in zip(codes, ['phone_control.py', 'phone_device.py']):
+        assert f'~workspace/data/instruments/{filename}' in code
+        assert code.count('[limbs:guestpc]') == 1
+        compile_program(code, load_registry())
+
+
+def test_phone_app_propagates_device_failure_without_retry():
+    from ibl_v2_entry import handle_request
+    manifest = yaml.safe_load((ROOT / 'data/instruments/phone_control.yaml').read_text())
+    # Execute the real post-transport assertions with a failed device result.
+    for mode in manifest['modes']:
+        for command in [mode, *mode.get('buttons', [])]:
+            code = command['action']
+            start = code.index('assert $r.result.value.success')
+            result = handle_request({'edition': 2, 'code': code[start:], 'inputs': {
+                'r': {'success': True, 'result': {'success': True, 'value': {'success': False, 'error': 'permission'}}}},
+                'declared_inputs': ['r']}, str(ROOT), None)
+            assert not result['success'], mode['name']
 
 
 if __name__ == '__main__':

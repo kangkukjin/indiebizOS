@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-10-14
+last_updated: 2026-10-18
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -320,6 +320,46 @@ execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:n
 - **모델 프로바이더 카탈로그**: `data/ai_provider_catalog.yaml` — 프로바이더별 env 변수·CLI 명령·로그인 흔적·로컬 tags URL·기본 모델(세계의 명사=데이터). `model_resolver.env_var_for_provider` 와 온보딩 후보 탐지가 읽는다. 새 벤더는 코드가 아니라 여기.
 - **스키마 버전 레지스트리**: `backend/datastore/schema_migrations.py` — SQLite `PRAGMA user_version` 기준, DB 이름별 `(version, 설명, fn)` 목록. 각 DB 모듈 `_init_db` 가 CREATE TABLE 뒤 `apply()`. 한 버전=한 트랜잭션, 실패=예외(반쯤 적용 금지 → 서브시스템 실패로 boot_status 기록). 옛 `migrate_storage_action.py`·`migrate_cctv_action.py` 의 DB 부분은 v1 로 흡수·은퇴.
 - **업데이트 시 사용자 보존 규칙 (`frontend/electron/userdata_sync.js`, 2026-09-02 트랜잭션화 — 종전 `bootstrap.js` `initUserData` 위임)**: 덮어쓰기 전 원본을 `data/_backups/<날짜>_upgrade/files/` 로 뜨고 저널(`journal.jsonl`, `{op, path, backup}`)에 한 줄 → `data/.upgrade_pending` 표식 → 완료 시 회수. 다음 기동에 표식이 남아 있으면(도중 죽음) 저널로 되감고 재동기화. 내용 같은 파일은 무변경(같은 버전 재기동=저널 0줄). 매니페스트 `retired`(코어였다가 사라진 패키지·계기·어휘 조각, `build_core_manifest.py` 가 직전 매니페스트 차집합을 누적)는 **격리 이동**(`_backups/<날짜>_upgrade/retired/`, 실삭제 아님 — 사용자 판정). 관문=`scripts/ci_upgrade_smoke.py`(직전 태그 설치본 → 업그레이드 → 부팅·보존·롤백·은퇴, CI `upgrade-smoke`). 종전 규칙: 재설치·업데이트가 **코어 소유 파일만 갱신**하고 사용자 것은 불가침. (1) 코어 어휘 산출물(`ibl_nodes.yaml`·코어 패키지 `ibl_actions.yaml`·코어 계기 yaml)은 매니페스트 기준 강제 갱신(`makeCoreForceOverwrite`). (2) 패키지 **설치 상태**(installed/not_installed 폴더 배치=사용자의 켜고/끈 선택)는 `syncPackagesPreservingState`가 userData의 *현재 위치*에서 그 자리 갱신, 신규만 번들 기본 폴더로 추가 → 사용자 선택 불가침. (3) 대화(`.db`)·설정(json)·사용자 직접만든(미추적) 패키지는 애초에 건드리지 않음.
+
+## 포식 기억의 저장·관측·이관
+
+| 구성 | 정본 위치와 책임 |
+| --- | --- |
+| 장소 문서 | `data/forage_surveys/<몸>/<경로>/memory.md` — 단언·안정 ID·`## 근거` 판본 JSON. 개인 자료로 Git 제외 |
+| 기억 색인 | `data/forage_memory.db` — 문서에서 단언의 provenance와 적용 범위까지 재생성 |
+| 관측 영수증 | 기존 Pulse DB의 `source_observations` — 주체·몸·기기·출처·조사 범위·지문, 원문 전체는 복제하지 않음 |
+| 읽기 생산자 | `system_essentials/essentials_file_io.py`와 `handler.py` → `backend/datastore/source_observation.py` |
+| 연결·대조 | `backend/datastore/forage_evidence.py` — 영수증 신원·주소 범위 해소와 예산 내 metadata/content 비교 |
+| 문서 왕복 | `backend/datastore/forage_evidence_doc.py` + `forage_doc.py` — 근거 직렬화·충돌 감지·문서 변경 대조 |
+| 장소 발견 | `backend/datastore/forage_recall_store.py` — 기존 검색 저장소에 겹치는 조각을 색인하고 장소로 합침 |
+
+`[self:forage]{op:"recall", locus:"/absolute/path", evidence_check:"content"}`는
+반환할 단언을 먼저 정한 뒤 그 근거만 대조한다. 기본값은 `metadata`이며 내용 동일성을
+보증하지 않는다. `evidence_status`와 `evidence_doc`를 함께 반환한다.
+기계 판본을 연결하는 직접 note는 `provenance.observation_refs`로 실제 관측을 참조한다.
+AI가 적은 해시·완전성 표시는 관측 증거로 채택하지 않는다. 상태·상속·예산의 계약은
+[memory.md](memory.md#포식-의미와-관측-판본-2026-10-18)를 따른다.
+
+**기존 개인 기억 이관**은 쓰는 서비스와 문서 편집을 멈춘 뒤 저장소 루트에서 수행한다.
+관리형 종료는 `.venv/bin/python3 backend/api.py shutdown --wait`를 사용한다.
+백업 디렉터리는 아직 존재하지 않는 날짜·작업 이름이어야 한다.
+
+```bash
+PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup data/_backups/YYYY-MM-DD_forage_evidence/
+```
+
+이관기는 문서 파싱과 pending projection 부재를 확인하고, SQLite backup API와
+문서 트리 복사로 백업 쌍을 만든다. 옛 DB의 상세 근거를 문서에 보존하고 재색인하며,
+`_gone` 보관 문서와 그 색인 행은 유지한다. 실패 시 동시 편집을 지우지 않도록 자동
+복원하지 않는다. `manifest.json`과 오류를 확인하고, 재시도는 새로운 백업 경로를 쓴다.
+롤백이 필요하면 모든 쓰기를 멈춘 상태에서 백업의 `forage_memory.db`와
+`forage_surveys/`를 **같은 시점의 쌍으로** 복원한 뒤 그 형식을 지원하는 코드로 기동한다.
+완료 후 정상 시작 경로 또는 `.venv/bin/python3 backend/api.py start`로 기동하고
+`status`와 `/health`를 확인한다. `start`는 제어자로 계속 실행되는 명령이다.
+
+문서만으로 빈 DB를 재생성한 검사와 비교 측정의 범위는
+[구현·인수 기록](../../docs/FORAGE_EVIDENCE_AND_MEANING_REPAIR_PLAN_2026_10_18.md#9-구현과-인수-결과-2026-10-18)에 있다.
+합성 과제의 재독 범위 측정과 실제 모델의 시간·토큰 절감은 구분한다.
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
 `backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code · codex

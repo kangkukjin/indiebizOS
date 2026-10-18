@@ -6,9 +6,10 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
+  forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
   catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-10-14
+last_updated: 2026-10-18
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -247,13 +248,13 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 > **"쓰면서 *공간*에 대한 지식을 흡수"의 실현체.** 해마(#4)가 "어떻게 하는가"를 증류한다면, 포식 기억은 "어디에 무엇이 사는가"를 증류한다.
 
 - **문제**: AI는 stateless라 디스크를 한 시간 뒤져 알아낸 것(폴더 정체·죽은 가지·주인 관습)을 세션이 끝나면 잊고 매번 콜드 스타트한다. 그 "어떻게 뒤지나"는 *나만의 것*이라 가중치에도 없다.
-- **저장소** (2026-09-03 개정, `backend/datastore/forage_doc.py` + `forage_memory.py`): **정본은 문서**다 — 위치마다 `data/forage_surveys/<몸>/<경로 그대로>/memory.md`(폴더 트리를 비춘 트리, 저장소 밖·개인정보) 의 `## 단언` 절. 절대 경로를 가진 단언은 몸 표기와 무관하게 `mac/<경로>/memory.md` 한 곳, URL 단언은 `host/path` 로 정규화해 `web/<host>/<path>/memory.md` 한 곳(같은 날 저녁 개정 — 몸 라벨이 `web:<url>` 이어도 무관). `code:`·`book:` 문서와 `web/memory.md` 뿌리 문서에는 경로·URL 없는 단언(주제 라벨)만 남는다. `data/forage_memory.db` 는 **2층** — `forage_map`(폴더 정체·관습·죽은가지·기질)은 그 절의 **색인**(DB 쓰기→문서 재렌더, 문서 편집→mtime 으로 색인 재동기화). (옛 `owner_model` — 몸독립 주인모델 — 은 2026-09-18 은퇴: 아래 입구 관문 조항)
-- **닫힌 루프**: ③ AI 가 장소를 보고 `[self:forage]{op:"recall"}` 로 회상(도구 결과로 `<forage_memory>` 수령 — 옛 자동 주입 `_search_forage_memory` 는 2026-09-03 폐지, 아래 **진행** 참조) → ② AI가 포식(`file_find`/`grep`/`read`) → ④ 종료 훅에서 *일반화 가능한 지도 델타만* 통합 증류(`distill_memory_adapters`, 실제 관측에 접지·날 내용과 특정 결과 제외) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
+- **저장소** (2026-09-03 개정, `backend/datastore/forage_doc.py` + `forage_memory.py`): **정본은 문서**다 — 위치마다 `data/forage_surveys/<몸>/<경로 그대로>/memory.md`(폴더 트리를 비춘 트리, 저장소 밖·개인정보) 의 `## 단언`과 `## 근거` 절. 절대 경로를 가진 단언은 몸 표기와 무관하게 `mac/<경로>/memory.md` 한 곳, URL 단언은 `host/path` 로 정규화해 `web/<host>/<path>/memory.md` 한 곳(같은 날 저녁 개정 — 몸 라벨이 `web:<url>` 이어도 무관). `code:`·`book:` 문서와 `web/memory.md` 뿌리 문서에는 경로·URL 없는 단언(주제 라벨)만 남는다. `data/forage_memory.db`의 `forage_map`(폴더 정체·관습·죽은가지·기질)은 그 문서의 **색인**(DB 쓰기→문서 재렌더, 문서 편집→mtime 으로 색인 재동기화). (옛 `owner_model` — 몸독립 주인모델 — 은 2026-09-18 은퇴: 아래 입구 관문 조항)
+- **닫힌 루프**: ③ AI 가 장소를 보고 `[self:forage]{op:"recall"}` 로 회상(도구 결과로 `<forage_memory>` 수령 — 옛 자동 주입 `_search_forage_memory` 는 2026-09-03 폐지, 아래 **진행** 참조) → ② AI가 포식(`file_find`/`grep`/`read`) → ④ 종료 훅에서 *지속 가치가 있는 지도·자료 의미*를 통합 증류(`distill_memory_adapters`, 실제 관측에 접지·원문 전체와 일회성 결과 제외, `generalizes:false` 허용) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
 - **★입구 관문 — locus 는 주소다**(2026-09-18, `forage_memory.locus_is_address`): 포식 기억의 계약은 "장소를 주면 그 장소의 기억 **전부**"(문서 + 조상 상속 + 자식 골격)다 — 심층·세계의 기억처럼 가지 안에서 몇 건을 고르는 것이 아니다. 그래서 주소(절대 경로 · 웹 host/path · `book:`/`notebook:` 몸)가 아닌 locus 는 거절된다(`forage.note.rejected`). 주제 이름·상대 경로·`<몸>/unknown` 은 어느 장소를 열어도 나오지 않는 기억이 된다(재고 감사: 702건 중 239건). 장소가 열쇠가 아닌 지식은 다른 기억의 일 — 주인에 대한 사실=#5, 방법=#8·가이드. **주인모델(`owner_model`)은 은퇴**했다(같은 종류의 사실이 관문 없는 두 번째 저장소에 쌓였고, 09-03 자동 주입 폐지 뒤로는 읽는 경로도 없었다 — 테이블·읽기 경로·어휘 인자 `layer:"owner"`/`facet`/`value` 제거 완료). 포식 브라우저는 개인화 기억 없이 무상태 검색으로 둔다(같은 날 판정). 수리 판정은 그 파일의 절대 경로에, 장소 없는 일반 교훈은 가이드 제안 큐로. 정본 `docs/FORAGE_MEMORY_AUDIT_2026_09_18.md`.
 - **★장소 찾기 — 고르는 일은 여기 하나뿐**(2026-09-18, `forage_recall_store.py` + `tree_recall`): 장소를 모를 때 `recall{query}` 가 의미+글자 융합으로 **후보 장소(주소)** 를 짚어 `places` 로 준다 — 항목은 단언이 아니라 장소 하나이고, 장소 문서 제목 아래 `찾는 말:` 줄(주인이 그 장소를 부를 일상 표현)이 사전이다. 후보는 기억이 아니라 주소라서, 맞는 곳을 `locus` 로 지명하면 그 장소의 전부가 온다. 평가 = **장소 @1**(`scripts/evaluate_forage_place.py`: 글자 일치 52% → 85%). 빗나가서 다른 곳을 연 질문은 정리 패스(`fold_place_trail`)가 결국 연 장소 문서에 `찾는 말 후보` 로 되먹인다. 몸 표기는 주소에서 정해지고(`canonical_body` — `mac`/`web`, 책·노트북만 제 이름), 단언이 40행을 넘는 문서는 자식 폴더 문서로 갈린다(`split_heavy_docs`). 자동 주입은 없다(2026-09-03 판정 그대로).
 - **안전판 4**(누적의 그림자 방지): 폐기가능(prune_reason)·prior_class 게이팅(구조적만 committal prune)·surface 카운터패스·provenance+confidence.
 - (역사) owner 빈도 게이트(2026-07-29): 주인모델의 1회 추론이 상시 주입되던 구멍을 "서로 다른 포식에서 재확인돼야 결정화"로 막았던 장치. 주인모델 은퇴(2026-09-18)로 함께 걷혔다 — territory 승격의 같은 모티프는 남아 있다.
-- **부패 무효화**: lazy — 회상 시 폴더 mtime 비교해 `stale`/`missing` 노출(삭제 안 함, 판단은 AI. 손튜닝 감쇠 곡선 안 씀).
+- **근거 대조**: 회상할 단언의 출처 판본·조사 범위를 대조해 `evidence_status`를 노출한다. 기본 메타데이터 대조와 명시적 내용 대조를 구분하며, 변경·삭제·동일·미확인의 뜻은 아래 표를 따른다. 자동 삭제·신뢰도 감쇠는 하지 않는다. `freshness`의 `stale`/`missing`은 호환 표지이며 빈 값은 최신 보증이 아니다.
 - **수동 액세서**(augmentation): `[self:forage]{op:recall|note|forget}` — 사람이 직접 조회·정정·재오픈.
 - **프로젝트 폴더 = 프로젝트 에이전트의 CLAUDE.md**(2026-09-05 사용자 판정 "주입 쪽으로"): `projects/<프로젝트>/` 의 포식 문서를 `prompt_builder._project_memory_block` 이 안정 프롬프트에 `<project_memory doc=…>` 로 통째 싣고, 조상의 ↓ 관습·기질을 색인에서 덧붙인다(recall 의 inherit 규칙). 폴더 하나 고정이라 선택기가 없다 — 09-03 자동 주입 금지와 양립. 재조사=주 1회 트리거 `forage_resurvey_<프로젝트>` → 저장 함수 `프로젝트재조사` 가 등록 스크립트 `폴더변화` 로 폴더 변화를 먼저 대조하고, 바뀐 것이 있을 때만 그 목록을 실어 `[others:delegate]{scope:"cross"}` 로 그 에이전트를 깨운다(2026-10-01 — 변화 없으면 턴도 기록도 없다. 심층 기억 가지는 `<memory_map>` 몫이라 문서에 옮겨 적지 않는다. 지침 `guides/folder_survey.md` '프로젝트 폴더' 절).
 - **다중 몸**(`forage_map.body`=포식 *공간*): 디스크(`mac`)·코드(`code:<repo>`)·웹(`web`) 등 같은 자아가 여러 공간을 포식하면 body가 갈린다(하드웨어 자아=게이트 / 포식 공간=body 키 분리). 절대 경로·URL 단언은 몸 표기와 무관하게 한 트리로 모인다. **맥 자아 전용**(주관적 기억은 자아별 사적). **#4 해마와의 차이**: 해마=절차(NL→IBL 코드), 포식=공간(공간→지도 지식). 둘 다 증류+정리 대칭.
@@ -261,6 +262,58 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 - **상세**: `docs/FORAGER_MEMORY_GUIDE.md`(설명서), `docs/FORAGER_MEMORY_SCHEMA.md`(스키마), `docs/FORAGER_MULTIBODY_DESIGN.md`(다중 몸), `docs/FILE_FORAGING_RESEARCH.md`(연구).
 - **정리 패스**(`forage_consolidation.py`): 의미적 근접중복을 경량 AI로 병합(같은 공간지식만, surface 보호) + LRU 가지치기. `run_maintenance_bundle` item 4로 합류(24h 카덴스). 증류+정리 대칭 = 심층메모리·해마와 동일.
 - **진행**: 주입→포식→증류→surface→정리 루프 완전히 닫힘 + 다중 몸(코드·웹) + 음성-단언 측정 완료(2026-06-20). **회상은 자동 주입이 아니다**(2026-09-03 사용자 판정 — 옛 항상-on 주입 폐지): AI 가 질문의 장소를 보고 `[self:forage]{op:"recall", locus}` 로 그 폴더의 문서(트리 `data/forage_surveys/mac/<경로>/memory.md`, 조상 사슬·하위 문서)를 스스로 올린다. 시스템 프롬프트 한 문장 + 어휘 입구가 전부이고 선택기는 코드로 두지 않는다. 증류(쓰기)는 전 티어 post-response 유지.
+
+### 포식 의미와 관측 판본 (2026-10-18)
+
+포식 기억은 기존 문서 정본에 단언 ID와 `## 근거` 판본 JSON을 함께 둔다.
+DB는 재생성 가능한 색인이며, 원문 전체를 기억에 복사하지 않는다. 실제 읽기 제공자가
+발급한 영수증의 주체·기기·출처 범위를 공통 해소기가 확인한다. 현재 파일을 증류 때
+읽어 옛 관측으로 소급하지 않는다. 근거 영수증의 열람 가능성과 현재성은 다른 축이다.
+
+통합 증류 한 번 안에서 특정 파일에만 유효한 의미도 `prior_class:semantic`,
+`generalizes:false`로 저장한다. 같은 문장만 반복하면 강화하지 않는다. 새 관측만
+근거에 합치며 재시도는 기존 candidate 영수증으로 중복을 막는다. AI 응답만 받던
+구판 별도 포식 증류 입구는 `unified_observation_required`로 생략한다.
+
+명시적 `self:forage recall`은 반환할 장소·단언을 정한 후 근거를 확인한다.
+`evidence_check` 기본 metadata는 내용 보증이 아니며, content는 저장된 파일/목록
+범위를 제한된 예산으로 대조한다. 상세 `evidence_status`와 문서 위치를 반환하고,
+기존 freshness의 빈 문자열을 최신 보증으로 쓰지 않는다. 의미가 긴 장소는 기존
+ForageStore의 여러 조각으로 색인하고 후보를 장소로 합친다. 자동 주입은 계속 꺼져 있다.
+
+원천의 설명·사용자 선언·AI 해석을 구분하고, 실제 관측 없이 적은 단언은 기계가
+검증한 사실로 승격하지 않는다. 문장·장소·종류·적용 범위가 바뀌면 기존 근거 연결을
+`reconfirmation_required`로 표시한다. 단언 삭제·분할·병합도 근거 연결을 함께 다룬다.
+중복 ID와 충돌하는 근거는 오류로 반환하며, 직접 note와 증류는 같은 문서 변경 대조와
+pending projection 영수증을 사용한다.
+
+| `evidence_status.state` | 의미 |
+| --- | --- |
+| `unchanged` | 필요한 근거를 명시된 범위·방법으로 모두 대조했고 변화가 관측되지 않음 |
+| `changed` | 근거 하나 이상의 판본 또는 조사 대상 집합이 달라짐 |
+| `missing` | 접근 가능한 몸·볼륨에서 근거 대상의 부재를 확인함 |
+| `unknown` | 미연결·옛 근거·미지원·권한·오프라인·불안정 관측·예산 초과 등으로 확인 불충분 |
+
+전체 상태의 우선순위는 changed → missing → unknown → unchanged이며,
+`checked_at`·비교 방법·확인/미확인 수·근거별 사유를 함께 보존한다.
+metadata가 같아도 내용·목록의 동일성은 unknown이다. content의 unchanged도
+검사한 범위와 시점에 한정되며, AI 해석의 정확성을 보증하지 않는다.
+명시한 장소의 자기 단언은 limit이나 대조 예산 때문에 잘리지 않는다.
+
+현재 판본 생산 범위는 텍스트·JSON·CSV·TSV 읽기와 깊이 1 목록이다. 부분 읽기는
+줄 범위를 보존하며, 잘린 결과나 목록은 전체 자료의 부재 근거가 될 수 없다.
+웹 등 비교 가능한 판본이 없는 제공자는 unknown이다. 같은 출처·범위의 현재 관측은
+호출 안에서 공유하고, 호출 사이 mtime 캐시를 내용 동일성의 근거로 쓰지 않는다.
+기본 대조 예산은 호출 전체 2초·10,000개 열거 항목·64MiB이며, 소진되면 사유를
+반환한다. OS 호출을 강제로 중단하는 시간 제한은 아니다. 설정 정본은
+`forage_evidence.CHECK_LIMITS`다.
+
+옛 상세 provenance는 문서로 이관하고, 지문 없는 근거는 legacy로 보존한다.
+현재 파일로 옛 관측을 채우지 않는다. 지원하지 않는 옛 바이너리로 되돌릴 때는
+문서와 DB를 이관 전의 같은 백업 쌍으로 복원한다. [이관·복구 절차](technical.md#포식-기억의-저장관측이관).
+
+계약·제한·예시: [폴더 조사 가이드](../guides/folder_survey.md#의미와-관측-근거-2026-10-18).
+구현·시험: [근거와 의미 수리](../../docs/FORAGE_EVIDENCE_AND_MEANING_REPAIR_PLAN_2026_10_18.md).
 
 ---
 
@@ -344,7 +397,7 @@ revision/digest는 내부 WorldContext와 사건에만 남긴다.
   ├─[3 일화기억]   에피소드 로그 + 인지 품질 요약 저장
   ├─[5 심층메모리] 대화에서 사용자 사실 자동 증류 → 저장/업데이트  ← 사용자 지식 흡수 루프
   ├─[4b 해마]      점수<0.7 & 성공 → 경험 증류 → 절차기억 누적     ← 절차 학습 루프
-  └─[7 포식기억]   포식 시 지도 델타 증류 → surface 표식 → 정리     ← 공간 학습 루프
+  └─[7 포식기억]   포식 시 지도·자료 의미와 근거 증류 → surface 표식 → 정리     ← 공간 학습 루프
   (8 세계기억은 턴에서 쓰지 않는다 — 증류 루프 없음. 갱신 = atlas/*.yaml 편집)
 ```
 
@@ -1029,24 +1082,3 @@ system_ai_state/memory_system_ai.db, 프로그램은 scripts/registry.yaml에 �
 ### 검색 결과 식별자와 범위 (2026-09-15)
 
 `[self:memory]{op:"search"}`의 장기기억 항목은 `memory_id`, 대화 항목은 `conversation_id`를 반환한다. `read/delete/move`에는 장기기억의 `memory_id`만 전달한다. 대화 ID는 장기기억 ID와 별개의 공간이다. `node/category`를 지정하면 대화는 섞지 않고 조건에 맞는 장기기억 후보 안에서 `top_k`를 적용한다. 벡터 검색과 키워드 검색이 같은 가지 경계를 사용한다.
-
-### 포식 의미와 관측 판본 (2026-10-18)
-
-포식 기억은 기존 문서 정본에 단언 ID와 `## 근거` 판본 JSON을 함께 둔다.
-DB는 재생성 가능한 색인이며, 원문 전체를 기억에 복사하지 않는다. 실제 읽기 제공자가
-발급한 영수증의 주체·기기·출처 범위를 공통 해소기가 확인한다. 현재 파일을 증류 때
-읽어 옛 관측으로 소급하지 않는다. 근거 영수증의 열람 가능성과 현재성은 다른 축이다.
-
-통합 증류 한 번 안에서 특정 파일에만 유효한 의미도 `prior_class:semantic`,
-`generalizes:false`로 저장한다. 같은 문장만 반복하면 강화하지 않는다. 새 관측만
-근거에 합치며 재시도는 기존 candidate 영수증으로 중복을 막는다. AI 응답만 받던
-구판 별도 포식 증류 입구는 `unified_observation_required`로 생략한다.
-
-명시적 `self:forage recall`은 반환할 장소·단언을 정한 후 근거를 확인한다.
-`evidence_check` 기본 metadata는 내용 보증이 아니며, content는 저장된 파일/목록
-범위를 제한된 예산으로 대조한다. 상세 `evidence_status`와 문서 위치를 반환하고,
-기존 freshness의 빈 문자열을 최신 보증으로 쓰지 않는다. 의미가 긴 장소는 기존
-ForageStore의 여러 조각으로 색인하고 후보를 장소로 합친다. 자동 주입은 계속 꺼져 있다.
-
-계약·제한·예시: [폴더 조사 가이드](../guides/folder_survey.md#의미와-관측-근거-2026-10-18).
-구현·시험: [근거와 의미 수리](../../docs/FORAGE_EVIDENCE_AND_MEANING_REPAIR_PLAN_2026_10_18.md).

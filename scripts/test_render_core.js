@@ -53,6 +53,14 @@ check('actionRequest 원문 보존 + inputs/declared',
     && req.inputs.item.id === 'x' && JSON.stringify(req.declared_inputs) === JSON.stringify(['k','none','item']),
   JSON.stringify(req));
 
+const requiredBlock = {inputs:[{key:'target', required:true, label:'TV'}, {key:'optional'}]};
+check('미선택 대상은 실행 전에 안내', [undefined, null, '', '  '].every(value =>
+  sandbox.requiredInputMessage(requiredBlock, '[n:a]{target:$target}', {target:value}).includes('TV')));
+check('선택한 대상과 유효한 false/0 입력은 허용', ['device-a', false, 0].every(value =>
+  sandbox.requiredInputMessage(requiredBlock, '[n:a]{target:$target}', {target:value}) === ''));
+check('실행에서 쓰지 않는 필수 입력과 선택 입력은 차단하지 않음',
+  sandbox.requiredInputMessage(requiredBlock, '[n:a]{value:$optional}', {}) === '');
+
 // 2) 프리미티브 렌더
 const metric = R([{type:'metric', label:'현재가', big:'{price|num}', unit:'원', sub:'{chg}', trend:'chg'}], {price:71500, chg:-2.1});
 check('metric 값·추세색', metric.includes('71,500') && metric.includes('var(--down)'), metric.slice(0,160));

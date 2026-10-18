@@ -242,7 +242,8 @@ async function runMode(){
   const mode=CUR.mode; if(!mode||!mode.action||CUR.scopeBusy) return;
   const out=document.getElementById('instOut'); if(!out) return;
   const vals=gatherInputs();
-  for(const inp of (mode.inputs||[])) if(inp.required&&!vals[inp.key]) return;
+  const missing=requiredInputMessage(mode,mode.action,vals);
+  if(missing){ out.innerHTML='<p role="status" class="muted">'+esc(missing)+'</p>'; return; }
   const unlock=lockInstrumentSelection(), owner=CUR;
   out.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{

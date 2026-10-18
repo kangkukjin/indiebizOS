@@ -25,9 +25,10 @@ def page():
         assert errors == []
 
 
-def test_remote_single_selection_and_direct_result(page):
-    manifest = yaml.safe_load((ROOT / 'data/instruments/phone_control.yaml').read_text())
-    manifest['id'] = 'phone_control'
+@pytest.mark.parametrize("instrument", ["phone_control", "living_tv"])
+def test_remote_single_selection_and_direct_result(page, instrument):
+    manifest = yaml.safe_load((ROOT / f'data/instruments/{instrument}.yaml').read_text())
+    manifest['id'] = instrument
     for i, mode in enumerate(manifest['modes']):
         mode.update(id=str(i), edition=2)
     core = (ROOT / 'backend/static/app_render_core.js').read_text().split('/* --- ESM export')[0]
@@ -55,6 +56,11 @@ async function ibl(req){
     page.evaluate('openInstrument(0)')
     page.wait_for_function("document.querySelectorAll('#in_target option').length===3")
     assert page.locator('#in_target').count() == 1
+    page.evaluate("void fireButton(0,document.querySelector('#modeBody .btnrow button'))")
+    assert '먼저 입력하거나 선택' in page.inner_text('#instOut')
+    assert page.evaluate('window.calls.length') == 1
+    page.evaluate('void runMode()')
+    assert page.evaluate('window.calls.length') == 1
     page.select_option('#in_target', 'a')
     for i in [1, 2, 3, 4, 0]:
         page.evaluate(f'setMode({i})')

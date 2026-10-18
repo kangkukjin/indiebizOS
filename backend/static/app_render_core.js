@@ -92,6 +92,19 @@ function appRequest(template, values, item) {
   return { code: String(template), edition: /** @type {2} */ (2), inputs: inputs, declared_inputs: declared };
 }
 
+/** 실행이 참조하는 필수 입력만 검사한다. 선택 전에는 서버에 불완전한 요청을 보내지 않는다.
+ * @param {{inputs?: {key:string, required?:boolean, label?:string, placeholder?:string}[]}|null|undefined} block
+ * @param {string} template @param {Record<string, unknown>|null|undefined} values @returns {string} */
+function requiredInputMessage(block, template, values) {
+  var names = templateNames(template || '');
+  var missing = ((block && block.inputs) || []).find(function (inp) {
+    var value = values && values[inp.key];
+    return inp.required && names.indexOf(inp.key) >= 0 &&
+      (value == null || (typeof value === 'string' && !value.trim()));
+  });
+  return missing ? (missing.label || missing.placeholder || missing.key) + ' 항목을 먼저 입력하거나 선택해 주세요.' : '';
+}
+
 /** 블록(모드·계기)의 실행 요청 — 항상 appRequest(원문+inputs). block 인자는 호출 자리의 형태 유지용(판본 상속 정보).
  *  @param {{edition?: number}|null|undefined} block @param {string} template
  *  @param {Record<string, unknown>|null|undefined} [values] @param {unknown} [item] @returns {AppRequest} */
@@ -449,7 +462,7 @@ function dateInputType(t) { return t === 'datetime' ? 'datetime-local' : t; }
 
 /* --- ESM export (데스크탑 Vite 전용 — 원격 인라인 시 이 블록만 제거된다. 파일의 마지막) --- */
 export {
-  jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requestCode, approvalChallenge, viewList,
+  jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requiredInputMessage, requestCode, approvalChallenge, viewList,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,

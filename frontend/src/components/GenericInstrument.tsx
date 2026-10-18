@@ -37,7 +37,7 @@ import type { StreamData } from './chat/chatUtils';
 import {
   type AppInput, type AppButton, type AppCompose, type AppViewPrim, type AppMode,
   type AppInstrument, type Json, type Dispatch, type ViewEvent, type ActionReq,
-  runIBL, jget, tpl, actionRequest, templateNames, trendClass, asList,
+  runIBL, jget, tpl, actionRequest, requiredInputMessage, templateNames, trendClass, asList,
   composeChannelOptions, mediaSrc, audioUrl, statusGlyph, IMAGE_BASE,
   mediaCallTarget, groupPartition, mediaModel, isSlowNet, shuffleNext, hasMasterDetail, dynFilterCats, applyDynFilter,
   InstrumentMenuContext, type InstrumentMenu,
@@ -736,7 +736,8 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, sh
   const run = useCallback(async (override?: Record<string, string>) => {
     if (!sourceMode.action) return;
     const vals = override || valuesRef.current;
-    for (const inp of sourceMode.inputs || []) if (inp.required && !vals[inp.key]) return;
+    const missing = requiredInputMessage(sourceMode, sourceMode.action, vals);
+    if (missing) { setError(missing); return; }
     const version = ++requestVersion.current;
     setLoading(true); setError(null); setDrill(null); setCatFilter(null);
     try {
@@ -924,6 +925,9 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, sh
 
   const fireButton = useCallback(async (b: AppButton) => {
     if (!b.action || commandFlight.current) return;
+    const missing = requiredInputMessage(sourceMode, b.action, allVars());
+    if (missing) { setError(missing); return; }
+    setError(null);
     commandFlight.current = true; setCommandBusy(true);
     const version = requestVersion.current;
     try {
@@ -1031,6 +1035,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, sh
       data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={{ ...values, ...eventVars }} block={sourceMode} />
   ) : null;
 
+  const inputHint = requiredInputMessage(sourceMode, sourceMode.action || '', { ...values, ...eventVars });
   const inputsEl = (inputs.length > 0 || (Object.keys(sharedValues).length > 0 && !!mode.action)) && (
         <div className="instrument-inputs flex gap-2 mb-2">
           {inputs.map((inp) =>
@@ -1056,7 +1061,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, sh
               </div>
             )
           )}
-          <button disabled={loading || commandBusy} onClick={() => run()}
+          <button disabled={loading || commandBusy || !!inputHint} title={inputHint || undefined} onClick={() => run()}
             className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700">{mode.run_label || '조회'}</button>
         </div>
       );
@@ -1122,7 +1127,8 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, sh
         return visibleButtons.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {visibleButtons.map((b, i) => (
-              <button key={i} disabled={loading || commandBusy} onClick={() => fireButton(b)}
+              <button key={i} disabled={loading || commandBusy || !!requiredInputMessage(sourceMode, b.action || '', { ...values, ...eventVars })}
+                title={requiredInputMessage(sourceMode, b.action || '', { ...values, ...eventVars }) || undefined} onClick={() => fireButton(b)}
                 className="whitespace-nowrap px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-400">
                 {b.label}
               </button>
@@ -1131,6 +1137,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, sh
         );
       })()}
 
+      {inputHint && <p role="status" className="text-sm text-amber-700 mb-3">{inputHint}</p>}
       {loading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin" /></div>}
       {error && <p className="text-sm text-stone-400">오류: {error}</p>}
       {/* 행 액션 성공 메시지 — 뜨는 토스트(원격 렌더러 toast 와 동형). 인라인(계기 상단)으로 두면

@@ -330,10 +330,13 @@ function closeMedia(){
 async function fireButton(bi,btn){
   const mode=CUR.mode, owner=CUR, out=document.getElementById('instOut');
   const b=(mode.buttons||[])[bi]; if(!b || CUR.scopeBusy) return;
+  const vals=Object.assign({},gatherInputs(),VIEW_VARS||{});
+  const missing=requiredInputMessage(mode,b.action,vals);
+  if(missing){ if(out) out.innerHTML='<p role="status" class="muted">'+esc(missing)+'</p>'; return; }
   const unlock=lockInstrumentSelection();
   btn.disabled=true;
   /* $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 데스크탑 fireButton 과 동일 의미 */
-  try{ let d=unwrapFinalResult(await ibl(actionRequest(CUR.mode,b.action,Object.assign({},gatherInputs(),VIEW_VARS||{}))));
+  try{ let d=unwrapFinalResult(await ibl(actionRequest(CUR.mode,b.action,vals)));
     if(d&&d.stop_in_client){ stopRadioStream(); }
     else if(d&&(d.error||d.success===false)){ alert(d.error||d.message||'실패'); }
     else if(d&&d.url){ try{await navigator.clipboard.writeText(d.url);}catch(e){} alert((d.message||'발행 완료')+'\n\n링크가 복사되었습니다 — 친구에게 붙여넣으세요:\n'+d.url); }  // 발행 등 링크 반환 액션

@@ -18,7 +18,7 @@ import { iblSurface } from '../../lib/remote-session';
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import {
   jget, applyFilter, tplWith, templateNames, requestCode, approvalChallenge, viewList,
-  appRequest, actionRequest,
+  appRequest, actionRequest, requiredInputMessage,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
@@ -30,7 +30,7 @@ import {
 
 // 공용 코어 재수출 — 소비자(프리미티브들)는 종전처럼 './generic/manifest' 에서 가져간다.
 export {
-  jget, applyFilter, tplWith, templateNames, requestCode, approvalChallenge, appRequest, actionRequest,
+  jget, applyFilter, tplWith, templateNames, requestCode, approvalChallenge, appRequest, actionRequest, requiredInputMessage,
   emptyText, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,

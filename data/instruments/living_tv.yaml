@@ -236,12 +236,12 @@ modes:
     - '7'
     - '8'
   action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target, op:
-    "epg_now", page: $page},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
+    "epg_now", page: number($page)},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 새로고침
   buttons:
   - label: ⟳ 편성 다시 받기
     action: 'assert $target != null && $target != "", "손발에 등록된 TV를 먼저 선택하세요."; $r = [self:script]{id:"TV제어",args:{target:$target,
-      op: "epg_now", page: $page, refresh: true},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r};
+      op: "epg_now", page: number($page), refresh: true},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r};
       return $r'
     render_result: true
   - label: 🔎 채널 목록 다시 찾기

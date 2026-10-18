@@ -129,5 +129,39 @@ def test_picker_ignores_legacy_pc_without_registration():
     assert result['value']['items'] == [row]
 
 
+@pytest.mark.parametrize('refresh', [False, True])
+@pytest.mark.parametrize('page', ['1', '2', '8', ' 3 '])
+def test_now_broadcast_text_page_reaches_registered_script(monkeypatch, tmp_path, page, refresh):
+    import ibl_engine
+    from ibl_callable_contract import checked_values
+    from ibl_v2_entry import handle_request
+
+    app = yaml.safe_load((ROOT / 'data/instruments/living_tv.yaml').read_text())
+    mode = next(mode for mode in app['modes'] if mode['name'] == '지금 방송')
+    code = mode['buttons'][0]['action'] if refresh else mode['action']
+    contract = yaml.safe_load((ROOT / 'data/scripts/registry.yaml').read_text())['TV제어']['callable_contract']
+    calls = []
+
+    def execute(step, project_path, agent_id=None):
+        assert (step['_node'], step['action'], step['params']['id']) == ('self', 'script', 'TV제어')
+        _, args = checked_values(contract, step['params']['args'])
+        calls.append(args)
+        return {'success': True, 'value': {
+            'success': True, 'op': args['op'], 'target': args['target'],
+            'verified': True, 'page': args['page'],
+            'items': [{'ch': 1, 'name': '시험 채널', 'title': '시험 방송'}],
+        }}
+
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', execute)
+    result = handle_request({'edition': 2, 'code': code,
+                             'inputs': {'target': 'test-tv', 'page': page},
+                             'declared_inputs': ['target', 'page']}, str(tmp_path), None)
+    assert result['success'], result.get('error') or result.get('issues')
+    assert len(calls) == 1
+    assert type(calls[0]['page']) is int and calls[0]['page'] == int(page)
+    assert calls[0].get('refresh', False) is refresh
+    assert result['value']['items'][0]['title'] == '시험 방송'
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

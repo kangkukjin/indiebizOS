@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Monitor, RefreshCw, Volume2, VolumeX, Globe, LockKeyhole, Camera } from 'lucide-react';
 import { capturePC, controlPC, listControlPCs, type PCAction, type PCPlatform, type PCState, type PCTarget } from '../lib/pc-control';
+import { PCYouTubeControls } from './PCYouTubeControls';
 
 const button = 'rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40';
 const panel = 'rounded-2xl border border-stone-200 bg-white p-5 space-y-4';
@@ -67,7 +68,8 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
       } else {
         const next = await controlPC(id, platform, action, args);
         if (!mounted.current || targetRef.current !== id || revision.current !== version) return;
-        setState(previous => ({ ...previous, ...next, devices: next.devices ?? previous?.devices }));
+        setState(previous => ({ ...previous, ...next, devices: next.devices ?? previous?.devices,
+          playback: next.playback, tabs: next.tabs }));
         if (next.devices) {
           const output = next.devices.find(item => item.id === deviceRef.current) ??
             (deviceRef.current ? undefined : next.devices.find(item => item.default || item.is_default) ?? next.devices[0]);
@@ -145,12 +147,13 @@ export function PCControlInstrument({ platform }: { platform: PCPlatform }) {
         {device && !device.can_set_volume && <p className="text-sm text-amber-700">이 장치는 OS 음량 조절을 제공하지 않습니다. 외부 장치의 리모컨을 사용하세요.</p>}
         {state?.audio_error && <p className="text-sm text-amber-700">오디오 조회: {state.audio_error}</p>}
       </section>
+      {platform === 'windows' && <PCYouTubeControls target={selected} disabled={disabled} state={state} onCommand={change} />}
       <section className={panel}>
         <h2 className="font-medium flex items-center gap-2"><Globe size={20} />웹 주소 열기</h2>
         <div className="flex flex-col sm:flex-row gap-2"><input aria-label="열 웹 주소" value={url} onChange={e => setUrl(e.target.value)} disabled={busy}
           type="url" placeholder="https://…" className="flex-1 min-w-0 rounded-xl border border-stone-200 p-3 text-sm" />
           <button className={button} disabled={disabled || !url.trim()} onClick={() => change('open_url', { url: url.trim() })}>선택한 PC에서 열기</button></div>
-        <p className="text-xs text-stone-500">일반 웹페이지를 기본 브라우저로 엽니다. 유튜브 영상은 중복 재생을 막기 위해 여기서 열지 않습니다. 자동 재생 교체는 아직 지원하지 않습니다.</p>
+        <p className="text-xs text-stone-500">일반 웹페이지를 기본 브라우저로 엽니다. 유튜브 영상은 Windows의 유튜브 재생 교체 기능을 사용하세요.</p>
       </section>
       <section className={panel}>
         <div className="flex flex-wrap gap-2">

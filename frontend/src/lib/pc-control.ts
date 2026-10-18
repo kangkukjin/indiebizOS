@@ -1,7 +1,9 @@
 import { iblExecuteApp } from './instrument';
 
 export type PCPlatform = 'darwin' | 'windows';
-export type PCAction = 'status' | 'volume' | 'mute' | 'open_url' | 'lock';
+export type PCAction = 'status' | 'volume' | 'mute' | 'open_url' | 'lock' | 'youtube_status' | 'youtube_replace' | 'youtube_stop';
+export interface PCVideo { url: string; title: string; duration_seconds: number }
+export interface PCPlayback { title?: string; url?: string; state?: string; position?: number; duration?: number; ad?: boolean }
 export interface PCTarget { id: string; name: string; connected: boolean; ready: boolean; local: boolean }
 export interface PCOutput {
   id: string; name: string; volume: number | null; muted: boolean | null;
@@ -11,6 +13,7 @@ export interface PCState {
   success: boolean; platform: PCPlatform; action: PCAction; hostname: string; os_version: string;
   observed_at: string; verified: boolean; message: string; devices?: PCOutput[];
   device?: PCOutput; audio_error?: string; can_lock?: boolean; source_sha256?: string;
+  tabs?: PCPlayback[]; playback?: PCPlayback;
 }
 type RecordValue = Record<string, unknown>;
 const record = (v: unknown): RecordValue => v && typeof v === 'object' && !Array.isArray(v) ? v as RecordValue : {};
@@ -48,18 +51,34 @@ export async function listControlPCs(platform: PCPlatform): Promise<PCTarget[]> 
 /** Only wiring here. Native source and shared validators are read from the hub at execution time. */
 export function pcCommandCode(target: string, platform: PCPlatform, action: PCAction, args: RecordValue = {}): string {
   if (!target.trim()) throw new Error('제어할 PC를 선택해 주세요.');
-  const file = platform === 'darwin' ? 'pc_control_mac.py' : 'pc_control_windows.ps1';
+  const youtube = action.startsWith('youtube_');
+  const file = youtube ? 'pc_youtube_windows.ps1' : platform === 'darwin' ? 'pc_control_mac.py' : 'pc_control_windows.ps1';
   const request = JSON.stringify({ ...args, action });
   let code = '#!ibl edition=2\n' + pcBootstrap +
     `$native = [self:read]{path:"~workspace/data/instruments/${file}"}\n`;
   if (target === LOCAL_PC) {
-    return code + `return [self:script]{path:$f.path,args:{op:"local",platform:${JSON.stringify(platform)},source:$native.text,request:${request}},timeout:35}`;
+    return code + `return [self:script]{path:$f.path,args:{op:"local",platform:${JSON.stringify(platform)},source:$native.text,request:${request}},timeout:${youtube ? 120 : 35}}`;
   }
   code += `$p = [self:script]{path:$f.path,args:{op:"prepare",platform:${JSON.stringify(platform)},source:$native.text,request:${request}}}\n`;
   code += 'assert $p.success == true, "PC 제어 인수를 확인하세요.", {result:$p}\n';
-  code += `$r = [limbs:guestpc]{limb:${JSON.stringify(target)},op:"shell",cmd:$p.command,stdin:$p.stdin,request_id:$p.request.request_id,timeout:30}\n`;
-  code += 'assert $r.success == true && $r.result.exit == 0, "PC 실행 결과가 불완전합니다. 상태를 다시 조회하세요.", {result:$r}\n';
+  code += `$job = [limbs:guestpc]{limb:${JSON.stringify(target)},op:"shell",cmd:$p.command,stdin:$p.stdin,request_id:$p.request.request_id,timeout:${youtube ? 120 : 30},background:true,mode:"interactive"}\n`;
+  code += 'assert $job.success == true, "PC 작업 접수 실패", {result:$job}\n';
+  code += `$r = [self:task]{op:"wait",ref:$job.task_ref,timeout:${youtube ? 150 : 60}}\n`;
+  code += 'assert get($r,"terminal",false) == true && $r.state == "succeeded", "PC 작업이 완료되지 않았습니다. task_ref로 기다리고 변경을 재전송하지 마세요.", {result:$r,task_ref:$job.task_ref}\n';
+  code += 'assert $r.result != null && $r.result.exit == 0, "PC 실행 실패. 상태를 다시 조회하세요.", {result:$r}\n';
   return code + 'return [self:script]{path:$f.path,args:{op:"decode",plan:$p,output:$r.result.output}}';
+}
+
+export async function searchPCVideos(query: string): Promise<PCVideo[]> {
+  const result = record(await iblExecuteApp('#!ibl edition=2\nreturn [sense:search_youtube]' + JSON.stringify({ query, limit: 6 })));
+  if (result.success !== true || !Array.isArray(result.items)) throw new Error(String(result.error || '영상을 검색하지 못했습니다.'));
+  return result.items.flatMap(raw => {
+    const row = record(raw), parts = String(row.duration || '').split(':');
+    if (parts.length < 2 || parts.length > 3 || parts.some(p => !/^\d+$/.test(p))) return [];
+    const duration = parts.reduce((seconds, part) => seconds * 60 + Number(part), 0);
+    if (duration < 1 || duration > 86400 || typeof row.url !== 'string' || typeof row.title !== 'string') return [];
+    return [{url: row.url, title: row.title, duration_seconds: duration}];
+  });
 }
 
 export function pcState(value: unknown, platform: PCPlatform, action: PCAction): PCState {

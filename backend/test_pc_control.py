@@ -158,10 +158,139 @@ def test_hardware_guide_ibl_examples_compile(guide):
     for code in blocks:
         if not code.startswith("#!ibl"):
             code = "#!ibl edition=2\n" + code
-        compile_program(code, load_registry(), inputs={
+        plan = compile_program(code, load_registry(), inputs={
             "f": {"path": "example.py"}, "os": "darwin", "native": {"text": "source"}})
+        assert not plan.issues, plan.report()
 
 
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def youtube_fixture():
+    request = {"action": "youtube_replace", "url": "https://youtu.be/abcdefghijk?t=20",
+               "title": "Test video", "duration_seconds": 120, "fullscreen": True}
+    plan = pc.prepare({"platform": "windows", "source": "native", "request": request})
+    state = {"protocol": pc.PROTOCOL, "platform": "windows", "action": "youtube_replace",
+             "request_id": plan["request"]["request_id"], "success": True, "verified": True,
+             "previous_stopped": True, "playback_verified": True, "fullscreen_verified": True,
+             "tab_count_before": 3, "tab_count_after": 3,
+             "playback": {"url": "https://youtube.com/watch?v=abcdefghijk", "video_id": "abcdefghijk",
+                          "title": "Test video", "duration": 120, "ad": False, "playing": True,
+                          "position": 10, "previous_position": 8}}
+    return plan, state
+
+
+def test_youtube_replacement_requires_correlated_playback_evidence():
+    plan, state = youtube_fixture()
+    assert plan["request"]["url"] == "https://www.youtube.com/watch?v=abcdefghijk"
+    assert "-STA" in plan["command"]
+    assert pc.decode(pc.MARKER + json.dumps(state), plan)["playback_verified"] is True
+    for override in ({"ad": True}, {"playing": False}, {"video_id": "wrong_video"},
+                     {"url": "https://example.com/watch?v=abcdefghijk"}, {"title": "Another video"},
+                     {"duration": 30}, {"position": 8}, {"position": 99},
+                     {"position": float("nan")}, {"previous_position": None}):
+        with pytest.raises(ValueError, match="본영상"):
+            pc.decode(pc.MARKER + json.dumps({**state, "playback": {**state["playback"], **override}}), plan)
+    for override in ({"previous_stopped": False}, {"verified": False}, {"playback_verified": False}, {"fullscreen_verified": False},
+                     {"tab_count_after": 4}, {"tab_count_before": None, "tab_count_after": None},
+                     {"tab_count_before": True, "tab_count_after": True}, {"request_id": "stale"}):
+        with pytest.raises(ValueError):
+            pc.decode(pc.MARKER + json.dumps({**state, **override}), plan)
+
+
+@pytest.mark.parametrize("override", [
+    {"url": "http://youtube.com/watch?v=abcdefghijk"}, {"url": "https://example.com/watch?v=abcdefghijk"},
+    {"url": "https://youtube.com/playlist?list=abcdefghijk"}, {"duration_seconds": 0},
+    {"duration_seconds": True}, {"duration_seconds": 120.5}, {"title": ""}, {"fullscreen": "true"},
+])
+def test_youtube_unknown_video_metadata_is_not_executed(override):
+    plan, _ = youtube_fixture()
+    request = {k: v for k, v in plan["request"].items() if k != "request_id"}
+    with pytest.raises(ValueError):
+        pc.prepare({"platform": "windows", "source": "native", "request": {**request, **override}})
+
+
+def test_mac_does_not_claim_automatic_browser_replacement():
+    with pytest.raises(ValueError, match="Windows"):
+        pc.prepare({"platform": "darwin", "source": "native", "request": {"action": "youtube_status"}})
+
+
+def test_native_failure_keeps_advertisement_observation():
+    plan, state = youtube_fixture()
+    state.update(success=False, verified=False, error="본영상 미확인",
+                 last_observation={"state": "advertisement", "ad": True, "duration": 104})
+    with pytest.raises(pc.ControlFailure) as failure:
+        pc.decode(pc.MARKER + json.dumps(state), plan)
+    assert failure.value.state["last_observation"]["ad"] is True
+
+
+def test_generated_youtube_flow_waits_before_decoding_and_compiles(tmp_path):
+    script = r'''
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const ts=require('./frontend/node_modules/typescript'),m={exports:{}};
+let request;
+vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/pc-control.ts','utf8'),{module:ts.ModuleKind.CommonJS}),
+ {exports:m.exports,require:()=>({iblExecuteApp:async code=>{request=code;return {success:true,items:[
+ {url:'https://youtube.com/watch?v=abcdefghijk',title:'Video',duration:'2:39:46'},
+ {url:'https://youtube.com/watch?v=abcdefghijk',title:'Live',duration:'LIVE'}]};}})});
+(async()=>{
+ const videos=await m.exports.searchPCVideos('rain');
+ assert.equal(videos.length,1);assert.equal(videos[0].duration_seconds,9586);
+ const code=m.exports.pcCommandCode('registered-device','windows','youtube_replace',{...videos[0],fullscreen:true});
+ assert.ok(code.includes('pc_youtube_windows.ps1'));
+ assert.ok(code.includes('background:true'));
+ assert.ok(code.indexOf('[self:task]')<code.indexOf('output:$r.result.output'));
+ assert.ok(code.includes('$r.state == "succeeded"'));
+ process.stdout.write(JSON.stringify([request,code,m.exports.pcCommandCode('registered-device','windows','youtube_status')]));
+})().catch(e=>{console.error(e);process.exit(1)});
+'''
+    output = subprocess.run(["node", "-e", script], cwd=ROOT, text=True, capture_output=True, timeout=30)
+    assert output.returncode == 0, output.stderr
+    from ibl_v2_compile import compile_program
+    from ibl_v2_adapters import load_registry
+    codes = json.loads(output.stdout)
+    registry = load_registry(str(tmp_path))
+    for code in codes:
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compat import plain_arguments
+    from ibl_v2_runtime import Runtime
+    from ibl_edition import source_context
+    from script_workspace import request_scope
+    calls = []
+    terminal = False
+    def leaf(step, *args, **kwargs):
+        action = f"{step['_node']}:{step['action']}"
+        p = step['params']
+        calls.append((action, p))
+        if action == 'self:read':
+            return {'text': 'native source', 'blocks': [], 'data': None}
+        if action == 'self:write':
+            return {'path': str(tmp_path / 'control.py')}
+        if action == 'self:script':
+            if p['args']['op'] == 'prepare':
+                return pc.prepare(p['args'])
+            assert terminal, 'queued output was decoded'
+            return {'success': True}
+        if action == 'limbs:guestpc':
+            return {'success': True, 'task_ref': {'kind': 'guestpc', 'task_id': 'queued'}}
+        if action == 'self:task':
+            assert p['ref'] == {'kind': 'guestpc', 'task_id': 'queued'}
+            import task_receipts
+            return {'success': True, **task_receipts.view(p['ref'], 'succeeded' if terminal else 'running',
+                                      result={'exit': 0, 'output': 'finished'} if terminal else None)}
+        raise AssertionError(action)
+    for key in ('self:read', 'self:write', 'self:script', 'limbs:guestpc', 'self:task'):
+        node, action = key.split(':')
+        registry[key] = Adapter(registry[key].contract,
+            lambda runtime, args, n=node, a=action: leaf({'_node': n, 'action': a, 'params': plain_arguments(args)}))
+    for terminal in (False, True):
+        calls.clear()
+        with source_context(2), request_scope(str(tmp_path)):
+            outcome = Runtime(compile_program(codes[2], registry), {}).run()
+        assert outcome['success'] is terminal, outcome
+        assert sum(a == 'limbs:guestpc' for a, _ in calls) == 1, outcome
+        assert sum(a == 'self:script' and p['args']['op'] == 'decode' for a, p in calls) == int(terminal)

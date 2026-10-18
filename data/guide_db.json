@@ -1264,8 +1264,11 @@
     {
       "id": "pc_control",
       "name": "맥·Windows PC 컨트롤 — 앱·AI 공용 스크립트",
-      "description": "등록된 PC와 본체의 출력 장치 조회, 음량·음소거, 웹 주소 열기, 화면 확인·잠금. 맥/Windows 앱과 동일한 스크립트 및 결과 검증 계약.",
-      "keywords": ["PC 컨트롤", "맥", "Windows", "macOS", "윈도우", "출력 장치", "HDMI 음량", "PC 음소거", "화면 잠금", "PC 브라우저"],
+      "description": "등록된 PC와 본체의 출력 장치 조회, 음량·음소거, 웹 주소 열기, 화면 확인·잠금. Windows 유튜브는 기존 탭 교체·중복 재생 정지·광고 구분·본영상 진행 검증. 앱과 AI가 동일한 스크립트와 결과 검증 계약을 사용.",
+      "keywords": ["PC 컨트롤", "맥", "Windows", "macOS", "윈도우", "출력 장치", "HDMI 음량", "PC 음소거", "화면 잠금", "PC 브라우저",
+        "유튜브 교체",
+        "중복 재생",
+        "광고 확인"],
       "file": "pc_control.md",
       "control_platforms": ["darwin", "macos", "mac", "osx", "windows", "win32", "win"],
       "topic": "손발·이웃 몸"

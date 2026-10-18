@@ -9,11 +9,13 @@ import json
 import math
 import os
 import platform
+import re
 import subprocess
 import sys
 import uuid
+import unicodedata
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 PROTOCOL = "pc-control/1"
 MARKER = "INDIEBIZ_PC_RESULT:"
@@ -23,8 +25,18 @@ CONTRACT = {
     "actions": {
         "status": [], "volume": ["device_id", "value"],
         "mute": ["device_id", "enabled"], "open_url": ["url"], "lock": [],
+        "youtube_status": [], "youtube_stop": [],
+        "youtube_replace": ["url", "title", "duration_seconds", "fullscreen"],
     },
 }
+
+
+class ControlFailure(ValueError):
+    """A correlated native failure retains its observation for AI recovery."""
+
+    def __init__(self, message, state):
+        super().__init__(message)
+        self.state = state
 
 
 def validate(args):
@@ -40,6 +52,24 @@ def validate(args):
         if key not in args:
             raise ValueError(f"{key}가 필요합니다.")
     result = {"action": action}
+    if action == "youtube_replace":
+        parsed = urlsplit(str(args["url"]))
+        host = (parsed.hostname or "").lower().rstrip(".")
+        video = (parsed.path.strip("/") if host == "youtu.be" else
+                 parse_qs(parsed.query).get("v", [""])[0] if
+                 host in {"www.youtube.com", "youtube.com", "m.youtube.com", "music.youtube.com"}
+                 and parsed.path == "/watch" else "")
+        if parsed.scheme != "https" or parsed.username or parsed.password or not re.fullmatch(r"[A-Za-z0-9_-]{11}", video):
+            raise ValueError("검색 결과의 유튜브 단일 영상 https 주소가 필요합니다.")
+        title, duration = args["title"], args["duration_seconds"]
+        if not isinstance(title, str) or not title.strip() or len(title) > 1000:
+            raise ValueError("확인할 영상의 전체 제목이 필요합니다.")
+        if type(duration) is not int or not 1 <= duration <= 86400:
+            raise ValueError("영상 전체 길이를 초 단위로 입력하세요. 생방송은 아직 지원하지 않습니다.")
+        if type(args["fullscreen"]) is not bool:
+            raise ValueError("fullscreen은 true 또는 false입니다.")
+        result.update(url=f"https://www.youtube.com/watch?v={video}", title=title.strip(),
+                      duration_seconds=duration, fullscreen=args["fullscreen"])
     if action in {"volume", "mute"}:
         device = args["device_id"]
         if not isinstance(device, str) or not device.strip() or len(device) > 1024:
@@ -73,7 +103,7 @@ def validate(args):
             raise ValueError(
                 "유튜브 영상은 일반 주소 열기로 재생하지 않습니다. 기존 영상과 겹칠 수 있습니다. "
                 "기존 재생 탭을 확인하고 그 탭에서 영상을 교체하세요. "
-                "현재 PC 컨트롤 앱은 자동 재생 교체를 지원하지 않습니다."
+                "Windows에서는 youtube_replace에 영상 URL·제목·전체 길이를 전달하세요."
             )
         result["url"] = url
     return result
@@ -87,6 +117,8 @@ def prepare(args):
     if not isinstance(source, str) or not source.strip() or len(source.encode()) > 128000:
         raise ValueError("PC 실행 파일을 읽어 전달해 주세요.")
     request = validate(args.get("request", {}))
+    if request["action"].startswith("youtube_") and system != "windows":
+        raise ValueError("검증된 유튜브 탭 교체는 현재 Windows Chrome·Edge·Brave를 지원합니다.")
     request["request_id"] = uuid.uuid4().hex
     encoded = base64.b64encode(json.dumps(request, ensure_ascii=False).encode()).decode()
     if system == "darwin":
@@ -94,7 +126,7 @@ def prepare(args):
         command = "python3 -"
     else:
         prefix = f"$PcRequest = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{encoded}')) | ConvertFrom-Json\n"
-        command = ('powershell.exe -NoProfile -NonInteractive -Command '
+        command = ('powershell.exe -STA -NoProfile -NonInteractive -Command '
                    '"[Console]::InputEncoding=[Text.Encoding]::UTF8; $s=[Console]::In.ReadToEnd(); & ([ScriptBlock]::Create($s))"')
     return {"success": True, "platform": system, "request": request,
             "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
@@ -115,7 +147,32 @@ def decode(output, plan):
             or state.get("action") != request.get("action")):
         raise ValueError("요청과 다른 PC 결과입니다.")
     if state.get("success") is not True:
-        raise ValueError(str(state.get("error") or "PC 제어에 실패했습니다."))
+        raise ControlFailure(str(state.get("error") or "PC 제어에 실패했습니다."), state)
+    if request["action"] in {"youtube_replace", "youtube_stop"}:
+        if state.get("verified") is not True or state.get("previous_stopped") is not True:
+            raise ValueError("기존 유튜브 재생 정지를 확인하지 못했습니다.")
+        if (type(state.get("tab_count_before")) is not int or state["tab_count_before"] < 1
+                or type(state.get("tab_count_after")) is not int
+                or state["tab_count_before"] != state["tab_count_after"]):
+            raise ValueError("유튜브 교체 중 탭 개수가 바뀌었습니다.")
+        if request["action"] == "youtube_replace":
+            if request["fullscreen"] and state.get("fullscreen_verified") is not True:
+                raise ValueError("요청한 전체화면을 확인하지 못했습니다.")
+            playback = state.get("playback") or {}
+            expected_video = parse_qs(urlsplit(request["url"]).query)["v"][0]
+            actual_url = urlsplit(str(playback.get("url", "")))
+            actual_video = parse_qs(actual_url.query).get("v", [""])[0]
+            normalize = lambda text: " ".join(unicodedata.normalize("NFKC", str(text)).split())
+            samples = [playback.get("position"), playback.get("previous_position"), playback.get("duration")]
+            if (state.get("playback_verified") is not True or playback.get("ad") is not False
+                    or playback.get("playing") is not True or playback.get("video_id") != expected_video
+                    or actual_url.scheme != "https" or actual_url.path != "/watch"
+                    or actual_url.hostname not in {"youtube.com", "www.youtube.com"} or actual_video != expected_video
+                    or normalize(playback.get("title")) != normalize(request["title"])
+                    or any(type(v) not in (int, float) or not math.isfinite(v) for v in samples)
+                    or abs(playback["duration"] - request["duration_seconds"]) > 2
+                    or not 0.25 < playback["position"] - playback["previous_position"] < 10):
+                raise ValueError("요청한 본영상의 재생을 확인하지 못했습니다.")
     if request["action"] in {"volume", "mute"}:
         device = state.get("device", {})
         if device.get("id") != request["device_id"] or state.get("verified") is not True:
@@ -146,10 +203,10 @@ def run(args):
     if plan["platform"] != expected:
         raise ValueError("본체 OS와 선택한 앱이 다릅니다. 해당 OS의 원격 PC를 선택하세요.")
     argv = ([sys.executable, "-"] if expected == "darwin" else
-            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+            ["powershell.exe", "-STA", "-NoProfile", "-NonInteractive", "-Command",
              "[Console]::InputEncoding=[Text.Encoding]::UTF8; $s=[Console]::In.ReadToEnd(); & ([ScriptBlock]::Create($s))"])
     proc = subprocess.run(argv, input=plan["stdin"], capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", timeout=25)
+                          encoding="utf-8", errors="replace", timeout=115 if plan["request"]["action"].startswith("youtube_") else 25)
     if proc.returncode != 0:
         raise RuntimeError("PC 실행 실패: " + proc.stderr[-1200:])
     return decode(proc.stdout, plan)
@@ -160,6 +217,8 @@ if __name__ == "__main__":
         result = run(json.load(sys.stdin))
     except Exception as error:
         result = {"success": False, "error": str(error)}
+        if isinstance(error, ControlFailure):
+            result["observation"] = error.state
     text = json.dumps(result, ensure_ascii=False, allow_nan=False)
     destination = os.environ.get("INDIEBIZ_SCRIPT_RESULT")
     if destination:

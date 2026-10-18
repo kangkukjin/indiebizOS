@@ -21,6 +21,7 @@ import { MapInstrument } from './MapInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
 import { rescueBinnoteDraft } from '../lib/binnote-rescue';
 import { YtMusicInstrument } from './YtMusicInstrument';
+import { PhoneControlInstrument } from './PhoneControlInstrument';
 import { uiMessage, ui, useLocale } from '../i18n/ui';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { DraggableIcon } from './launcher-components/DraggableIcon';
@@ -42,6 +43,7 @@ type App = Instrument;
 
 // escape hatch: 매니페스트보다 풍부한 데스크탑 전용 컴포넌트가 있으면 그걸 쓴다.
 const OVERRIDES: Record<string, ReactNode> = {
+  phone_control: <PhoneControlInstrument />,
   ytmusic: <YtMusicInstrument />,       // 다운로드·큐 통합 UI(youtube=pc_only)
 };
 

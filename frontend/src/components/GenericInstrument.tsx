@@ -37,7 +37,7 @@ import type { StreamData } from './chat/chatUtils';
 import {
   type AppInput, type AppButton, type AppCompose, type AppViewPrim, type AppMode,
   type AppInstrument, type Json, type Dispatch, type ViewEvent, type ActionReq,
-  runIBL, jget, tpl, actionRequest, trendClass, asList,
+  runIBL, jget, tpl, actionRequest, templateNames, trendClass, asList,
   composeChannelOptions, mediaSrc, audioUrl, statusGlyph, IMAGE_BASE,
   mediaCallTarget, groupPartition, mediaModel, isSlowNet, shuffleNext, hasMasterDetail, dynFilterCats, applyDynFilter,
   InstrumentMenuContext, type InstrumentMenu,
@@ -470,15 +470,9 @@ function ViewRenderer({ view, data, onDrill, onRowAction, onStream, busyRow, dis
 
 // ===== 계기 본체 =====
 
-// options_action 의 $key 를 형제 입력값으로 치환 — 비어 있으면 missing(종속 대기)
+// 대입·람다의 지역 변수는 입력이 아니다. 실제 외부 입력만 기다리고 원문은 보존한다.
 function resolveOptionsAction(template: string, values: Record<string, string>): { code: string; missing: boolean } {
-  let missing = false;
-  const code = template.replace(/\$(\w+)/g, (_, k: string) => {
-    const v = values[k] || '';
-    if (!v) missing = true;
-    return v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  });
-  return { code, missing };
+  return { code: template, missing: templateNames(template).some((key: string) => !values[key]) };
 }
 // 배열은 option_value/option_label로, 딕셔너리({이름:코드})는 entries로 정규화
 function normalizeOptions(raw: unknown, inp: AppInput): { value: string; label: string }[] {

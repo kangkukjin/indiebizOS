@@ -875,7 +875,7 @@ def _template_param_keys(t: str) -> list[tuple[str, str, set[str]]]:
 def validate_app_template_params(data: dict, root: Path) -> list[str]:
     """app:/standalone 템플릿의 리터럴 파라미터 키 ↔ 액션 허용키 대조 (뷰-어휘 밖 침묵 닫기).
 
-    validate_corpus_params 와 같은 허용집합(핸들러 읽기키 ∪ aliases ∪ 보편키 ∪ target_key)을
+    허용집합(명시 params ∪ 핸들러 읽기키 ∪ aliases ∪ 보편키 ∪ target_key)을
     쓰되 출처가 학습 코퍼스가 아니라 *저술된 앱 템플릿*이다. 선언형 앱이 [sense:realty]{deposit_max:…}
     처럼 핸들러가 안 읽는 키를 넘겨 조용히 무시되는 오답(성공처럼 보임)을 저술 시점(빌드)에
     하드 실패로 잡는다. open_params 액션·미존재 액션(별도 가드가 잡음)은 스킵 = 보수적."""
@@ -932,6 +932,9 @@ def validate_app_template_params(data: dict, root: Path) -> list[str]:
 
     def _known_for(qualified: str, ac: dict) -> set[str]:
         known = set(UNIVERSAL_PARAM_KEYS) | set(RUNTIME_META_KEYS)
+        # 봉투 전달 루프는 AST 읽기키 탐색에 잡히지 않으므로 명시된 계약도 인정한다.
+        if isinstance(ac.get("params"), dict):
+            known.update(ac["params"])
         if ac.get("target_key"):
             known.add(ac["target_key"])
         known |= aliases.get(qualified, set())

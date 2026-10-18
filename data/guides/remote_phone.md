@@ -9,6 +9,19 @@ USB 물리 접근으로 전달하며 허브 로그인 비밀번호는 요구하�
 폰 자체 IBL 엔진을 사용할 수 있다. 새 실행은 info의 `execution_contract:1`과 ops를 확인한다.
 여러 등록에 같은 별칭이 남아 있으면 현재 활성 등록의 device_id를 사용한다.
 
+### 앱 모드의 폰 컨트롤
+
+`폰 컨트롤`에서 대상 폰을 선택하면 미디어 음량·배터리·기기 정보를 조회한다.
+한 단계 조절, 절반, 음소거, 단계 지정, 이전 값 복원, 짧은 진동을 제공한다.
+`data/instruments/phone_control.py`의 고정된 코드를 기존 Python 실행 계약으로 보내
+Android AudioManager·Vibrator API를 호출한다. 버튼 조작에는 AI 호출이나 코드 생성이 없다.
+폰마다 음량 단계 상한을 읽고 실제 적용값을 다시 확인한다. 복원 기록은 해당 폰에 남기며,
+다른 곳에서 음량이 바뀌었으면 오래된 값으로 복원하지 않는다. 통신 오류 뒤에는 상태를
+다시 조회한다. 폰 연결·Python 런타임 준비가 필요하며 벨소리·통화 음량은 제어하지 않는다.
+목록의 `capabilities.python`은 버전 문자열이고 준비 여부는 `runtimes.python.ready`다.
+선언형 선택 목록은 판본 2 반환 배열을 `items`로 감싸 사용한다. `options_action`의 대입·람다 변수는
+외부 입력이 아니므로 사용자 입력을 기다리지 않는다.
+
 - **현재 상태**: `[limbs:guestpc]{op:"info",limb:"삼성1"}`. 동기 결과의 `$r.result`는 폰이
   응답한 정보다. `.capabilities.media_session`에 지원·권한·준비 상태가 있다면 그 값을 사용한다.
   `camera:true`는 촬영 성공이 아니고 `speaker:true`는 TTS 음성 출력 성공이 아니다.

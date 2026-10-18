@@ -1,0 +1,52 @@
+instrument: phone_control
+edition: 2
+icon: 📱
+name: 폰 컨트롤
+order: 31
+modes:
+  - name: 미디어 음량
+    note: 폰을 선택하고 조회하세요. 음량은 기기의 미디어 단계입니다. 이전 값 복원은 이 앱의 마지막 변경을 되돌립니다.
+    inputs:
+      - key: target
+        type: select
+        label: 제어할 폰 선택
+        required: true
+        options_action: '$r = [self:limb]{op: "list"}; $phones = $r.limbs >> [table:filter]{where: ($p) => $p.connected == true && $p.revoked != true && $p.expired != true && $p.registration.state == "active" && $p.env.os == "android"}; return {items: $phones}'
+        options_from: items
+        option_value: device_id
+        option_label: alias
+      - key: level
+        type: text
+        placeholder: 설정할 음량 단계
+        default: '4'
+    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "status"}, timeout: 20}; return $r.result.value'
+    run_label: 상태 조회
+    buttons:
+      - label: − 한 단계
+        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "step", value: -1}, timeout: 20}; return $r.result.value'
+        refresh: true
+      - label: ＋ 한 단계
+        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "step", value: 1}, timeout: 20}; return $r.result.value'
+        refresh: true
+      - label: 절반으로
+        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "half"}, timeout: 20}; return $r.result.value'
+        refresh: true
+      - label: 음소거
+        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "mute"}, timeout: 20}; return $r.result.value'
+        refresh: true
+      - label: 이전 값 복원
+        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "restore"}, timeout: 20}; return $r.result.value'
+        refresh: true
+      - label: 입력한 단계 적용
+        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "set", value: $level}, timeout: 20}; return $r.result.value'
+        refresh: true
+      - label: 짧은 진동
+        action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"}; $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "vibrate"}, timeout: 20}; return $r.result.value'
+    view:
+      - type: kv
+        rows:
+          - {k: 기기, v: '{model} · Android {android}'}
+          - {k: 미디어 음량, v: '{actual} / {max}단계 · {percent}%'}
+          - {k: 배터리, v: '{battery}%'}
+          - {k: 복원할 단계, v: '{previous}'}
+          - {k: 상태, v: '{message} {error}'}

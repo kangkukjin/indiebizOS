@@ -76,11 +76,10 @@ function setMode(i,presentationOnly=false){
   if(presentationOnly) return;  // Language changes never run IBL or reset input values.
   (async()=>{ for(const inp of inputs){ if(inp.type==='select') await fillOptions(inp); } if(mode.auto_run) runMode(); })();
 }
-/* options_action 의 $key 를 형제 입력값으로 치환 — 비어 있으면 missing 표시(종속 대기) */
+/* 대입·람다의 지역 변수는 제외하고 실제 외부 입력만 기다린다. */
 function resolveOptionsAction(template){
-  let missing=false;
-  const code=String(template).replace(/\$(\w+)/g,(m,k)=>{ const el=document.getElementById('in_'+k); const v=el?String(el.value):''; if(!v) missing=true; return v.replace(/"/g,''); });
-  return {code, missing};
+  const missing=templateNames(template).some(k=>{ const el=document.getElementById('in_'+k); return !el || !String(el.value); });
+  return {code:String(template), missing};
 }
 /* 배열은 option_value/option_label로, 딕셔너리({이름:코드})는 entries로 정규화 → [{value,label}] */
 function normalizeOptions(raw,inp){
@@ -360,4 +359,3 @@ function docBlockHtml(b){
 
 // recurrence 옵션(RECURRENCE_OPTS)·dateInputType 은 공용 렌더 코어가 정본 — 여기선 마크업만.
 function _recurSelect(id,val){ const v=val||'none'; return '<select class="field" id="'+id+'">'+RECURRENCE_OPTS.map(o=>'<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'; }
-

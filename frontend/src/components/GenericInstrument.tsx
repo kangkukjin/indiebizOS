@@ -680,8 +680,10 @@ function ModeDialog({ mode, sourceMode, initial, error: firstError, autoRun, onC
   );
 }
 
-function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, projectStyle = false }: {
+function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, sharedValues, onBusy, projectStyle = false }: {
   projectStyle?: boolean;
+  sharedValues: Record<string, string>;
+  onBusy: (busy: boolean) => void;
   preset?: ModePreset;  // 메뉴의 작은 창에서 이미 받은 입력과 실행 결과 — 그대로 세우고 다시 실행하지 않는다
   mode: AppMode;
   sourceMode: AppMode; // Execution identity is independent of display language.
@@ -695,8 +697,8 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
       const def = sourceMode.filter.items.find((x) => x.default) || sourceMode.filter.items[0];
       v[sourceMode.filter.key || 'filter'] = String(def.value);
     }
-    return v;
-  }, [sourceMode]);
+    return { ...v, ...sharedValues };
+  }, [sourceMode, sharedValues]);
 
   const [values, setValues] = useState<Record<string, string>>(initVals);
   const [data, setData] = useState<Json | null>(null);
@@ -704,6 +706,9 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
   const [catFilter, setCatFilter] = useState<string | null>(null);  // 동적 필터(from_field) 선택값 — 클라이언트 측 거르기
   const [tabIdx, setTabIdx] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [commandBusy, setCommandBusy] = useState(false);
+  const commandFlight = useRef(false);
+  useEffect(() => { onBusy(loading || commandBusy); }, [loading, commandBusy, onBusy]);
   const [error, setError] = useState<string | null>(null);
   const [busyRow, setBusyRow] = useState<string | null>(null);
   const [stream, setStream] = useState<Json | null>(null);  // 스트림 재생 오버레이(CCTV '▶ 보기' 등) — 행 데이터를 StreamPlayer 로
@@ -918,7 +923,9 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
   }, [sourceMode, allVars]);
 
   const fireButton = useCallback(async (b: AppButton) => {
-    if (!b.action) return;
+    if (!b.action || commandFlight.current) return;
+    commandFlight.current = true; setCommandBusy(true);
+    const version = requestVersion.current;
     try {
       // $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 빈 입력 파라미터는 제거됨
       const d = await runIBL(actionRequest(sourceMode, b.action, allVars()));
@@ -929,16 +936,17 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
         document.querySelectorAll('audio').forEach((a) => { if (!a.paused) a.pause(); });
         return;
       }
-      if (d?.error) { alert(String(d.error)); return; }
-      if (b.refresh) run();  // 실행 후 현재 모드 재조회(토글/재생성 결과 즉시 반영)
+      if (d?.error || d?.success === false) { alert(String(d.error || d.message || '실패')); return; }
+      if (b.render_result && version === requestVersion.current) { setData(d); setCatFilter(null); }
+      else if (b.refresh) run();  // 실행 후 현재 모드 재조회(토글/재생성 결과 즉시 반영)
     } catch (e) {
       alert('실행 실패: ' + (e instanceof Error ? e.message : String(e)));
-    }
+    } finally { commandFlight.current = false; setCommandBusy(false); }
   }, [run, sourceMode, allVars]);
 
   // 편집 캔버스가 서 있으면 입력줄·안내는 걷는다 — 화면은 글 쓰는 자리의 것. 다시 쓰려면 캔버스 ⚙ 에서 그 탭을 고른다(탭이 새로 선다).
   const canvasUp = !!useContext(InstrumentMenuContext)?.claimed;
-  const inputs = canvasUp ? [] : (mode.inputs || []);
+  const inputs = canvasUp ? [] : (mode.inputs || []).filter(inp => inp.scope !== 'instrument');
   // master_detail card_list → 반응형 2분할(PC: 리스트 좌+상세 우 동시 / 폰: 리스트→선택→상세→뒤로)
   const isSplit = !(mode as { modes?: AppMode[] }).modes && hasMasterDetail(mode.view);
   // engine 뷰(편집 캔버스)가 있는 모드는 넓게 — 글 쓰는 자리가 화면의 대부분이어야 한다(선언에 레이아웃 키를 두지 않는다).
@@ -1023,7 +1031,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
       data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={{ ...values, ...eventVars }} block={sourceMode} />
   ) : null;
 
-  const inputsEl = inputs.length > 0 && (
+  const inputsEl = (inputs.length > 0 || (Object.keys(sharedValues).length > 0 && !!mode.action)) && (
         <div className="instrument-inputs flex gap-2 mb-2">
           {inputs.map((inp) =>
             inp.type === 'select' ? (
@@ -1048,7 +1056,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
               </div>
             )
           )}
-          <button onClick={() => run()}
+          <button disabled={loading || commandBusy} onClick={() => run()}
             className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700">{mode.run_label || '조회'}</button>
         </div>
       );
@@ -1112,10 +1120,10 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
         // 맥 데스크탑 전용 렌더러 — phone_only 버튼([limbs:phone] 등)은 여기서 실행 불가라 숨긴다.
         const visibleButtons = (mode.buttons || []).filter((b) => !b.phone_only);
         return visibleButtons.length > 0 && (
-          <div className="flex gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-3">
             {visibleButtons.map((b, i) => (
-              <button key={i} onClick={() => fireButton(b)}
-                className="px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-400">
+              <button key={i} disabled={loading || commandBusy} onClick={() => fireButton(b)}
+                className="whitespace-nowrap px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-400">
                 {b.label}
               </button>
             ))}
@@ -1202,6 +1210,16 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
   const locale = useLocale();
   const instrument = useMemo(() => ui.instrument(rawInstrument) as AppInstrument, [rawInstrument, locale]);
   const modes: AppMode[] = instrument.modes || [instrument];
+  const sharedInputs = useMemo(() => {
+    const found = new Map<string, AppInput>();
+    (rawInstrument.modes || [rawInstrument]).forEach(m => (m.inputs || []).forEach(inp => {
+      if (inp.scope === 'instrument' && inp.type === 'select' && !found.has(inp.key)) found.set(inp.key, inp);
+    }));
+    return [...found.values()];
+  }, [rawInstrument]);
+  const [sharedValues, setSharedValues] = useState<Record<string, string>>(() => Object.fromEntries(sharedInputs.map(inp => [inp.key, inp.default || ''])));
+  const [sharedBusy, setSharedBusy] = useState(false);
+  useEffect(() => { setSharedValues(Object.fromEntries(sharedInputs.map(inp => [inp.key, inp.default || '']))); }, [rawInstrument.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [modeIdx, setModeIdx] = useState(0);
   const mode = modes[Math.min(modeIdx, modes.length - 1)];
   // 최상단 고정 버튼(탭 무관·항상 보임) — 데스크탑선 phone_only 숨김.
@@ -1286,10 +1304,16 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
           ))}
         </div>
       )}
+      {sharedInputs.length > 0 && <fieldset disabled={sharedBusy} className="max-w-5xl mx-auto px-5 pt-4 flex flex-wrap gap-3">
+        {sharedInputs.map(inp => <label key={inp.key} className="text-sm text-stone-700 flex items-center gap-2">{inp.label || inp.key}
+          <SelectInput inp={inp} values={sharedValues} block={rawInstrument.modes?.[0] || rawInstrument}
+            onChange={value => setSharedValues(previous => ({ ...previous, [inp.key]: value }))} />
+        </label>)}
+      </fieldset>}
       {!folded && (instrument.modes || topButtons.length > 0) && (
         <div className={presentation === 'project' ? 'instrument-navigation flex items-center gap-2 shrink-0' : 'flex flex-wrap items-center gap-1.5 max-w-5xl mx-auto px-5 pt-4'}>
           {(instrument.modes || []).slice(0, primaryModeCount).map((m, i) => (
-            <button key={i} onClick={() => (rawModes?.[i]?.inputs || []).some((inp) => inp.browse && inp.browse_kind === 'folder') ? go(i) : setModeIdx(i)}
+            <button key={i} disabled={sharedInputs.length > 0 && sharedBusy} onClick={() => (rawModes?.[i]?.inputs || []).some((inp) => inp.browse && inp.browse_kind === 'folder') ? go(i) : setModeIdx(i)}
               className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-sm border transition ${
                 i === modeIdx ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
               {m.name}
@@ -1318,7 +1342,7 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
         <ModeDialog mode={modes[asking.idx]} sourceMode={rawModes[asking.idx]} key={transition.current} initial={asking.values} error={asking.error} autoRun={asking.autoRun}
           onCancel={() => { transition.current++; setAsking(null); }} onDone={(values, data) => enter(asking.idx, { values, data })} />
       )}
-      <ModePane projectStyle={presentation === 'project'} key={nonce} preset={preset} mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
+      <ModePane sharedValues={sharedValues} onBusy={setSharedBusy} projectStyle={presentation === 'project'} key={nonce} preset={preset} mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
     </div>
     </InstrumentMenuContext.Provider>
   );

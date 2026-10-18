@@ -1,3 +1,27 @@
+/* Instrument-scoped selects stay mounted above tabs; actions still declare the input. */
+function instrumentSelects(inst){
+  if(!inst) return [];
+  const found=new Map();
+  (inst.modes||[inst]).forEach(m=>(m.inputs||[]).forEach(inp=>{
+    if(inp.scope==='instrument' && inp.type==='select' && !found.has(inp.key)) found.set(inp.key,inp);
+  }));
+  return [...found.values()];
+}
+function refreshInstrumentSelects(){
+  for(const inp of instrumentSelects(CUR.inst)){
+    const el=document.getElementById('in_'+inp.key); if(el) delete el.dataset.scopeState;
+    CUR.optCache={}; void fillOptions(inp);
+  }
+}
+function lockInstrumentSelection(){
+  const owner=CUR;
+  if(!instrumentSelects(owner.inst).length) return ()=>{};
+  owner.scopeBusy=true;
+  const fields=[...document.querySelectorAll('#appInst select, #appInst .tabs button, #appInst #modeBody button, #appInst .scope-refresh')];
+  const previous=fields.map(el=>el.disabled); fields.forEach(el=>el.disabled=true);
+  let released=false;
+  return ()=>{ if(released) return; released=true; owner.scopeBusy=false; fields.forEach((el,i)=>el.disabled=previous[i]); };
+}
 function appBackHome(){
   document.getElementById('appInst').style.display='none';
   document.getElementById('appHome').style.display='block';
@@ -25,6 +49,10 @@ function openInstrument(ix,presentationOnly=false){
     else document.getElementById('modeBody').innerHTML='<p class="muted">렌더러 없음: '+esc(inst.renderer)+'</p>';
     return;
   }
+  const shared=instrumentSelects(inst);
+  if(shared.length) h+='<div class="row" style="margin:12px 0;flex-wrap:wrap">'+shared.map(inp=>
+    '<label>'+esc(inp.label||inp.key)+' <select class="field" id="in_'+esc(inp.key)+'" onchange="selChanged(\''+esc(inp.key)+'\')"><option value="">'+esc(inp.label||'선택')+'</option></select></label>').join('')
+    +'<button class="btn2 scope-refresh" onclick="refreshInstrumentSelects()">목록 새로고침</button></div>';
   // 탭 + 최상단 고정 버튼(소개발행 등)을 같은 줄에 — 버튼은 오른쪽 끝(margin-left:auto)
   const _tabsHtml=(inst.modes && inst.modes.length>1)?inst.modes.map((m,i)=>'<button class="tab" id="modeTab'+i+'" onclick="setMode('+i+')">'+esc(m.name)+'</button>').join(''):'';
   const _topHtml=(inst.top_buttons||[]).map((b,i)=>'<button class="btn2" style="'+(i===0?'margin-left:auto':'')+'" onclick="fireTop('+i+')">'+esc(b.label)+'</button>').join('');
@@ -34,6 +62,7 @@ function openInstrument(ix,presentationOnly=false){
   setMode(0,presentationOnly);
 }
 function setMode(i,presentationOnly=false){
+  if(CUR.scopeBusy) return;
   const inst=CUR.inst; const modes=inst.modes||[inst]; const mode=modes[i];
   CUR.mode=mode; VIEW_CTX=null; SPLIT=false; LIST=null;
   if(inst.modes) modes.forEach((m,j)=>{ const t=document.getElementById('modeTab'+j); if(t)t.classList.toggle('on',j===i); });
@@ -42,8 +71,8 @@ function setMode(i,presentationOnly=false){
   CUR.filterVal=(mode.filter&&mode.filter.items)?((mode.filter.items.find(x=>x.default)||mode.filter.items[0]||{}).value):null;
   let h='';
   if(mode.note) h+='<div class="note">'+esc(mode.note)+'</div>';
-  const inputs=mode.inputs||[];
-  if(inputs.length){
+  const inputs=(mode.inputs||[]).filter(inp=>inp.scope!=='instrument');
+  if(inputs.length || mode.action){
     h+='<div class="row" style="flex-wrap:wrap">'+inputs.map(inp=>{
       if(inp.type==='select')
         return '<select class="field" id="in_'+esc(inp.key)+'" style="flex:0 1 130px" onchange="selChanged(\''+esc(inp.key)+'\')"><option value="">'+esc(inp.label||'전체')+'</option></select>';
@@ -74,7 +103,7 @@ function setMode(i,presentationOnly=false){
   document.getElementById('modeBody').innerHTML=h;
   // select 채우기는 선언 순서대로 — 정적 옵션(동기)이 먼저 값을 잡아야 종속 옵션이 그 값을 읽는다
   if(presentationOnly) return;  // Language changes never run IBL or reset input values.
-  (async()=>{ for(const inp of inputs){ if(inp.type==='select') await fillOptions(inp); } if(mode.auto_run) runMode(); })();
+  (async()=>{ for(const inp of mode.inputs||[]){ if(inp.type==='select') await fillOptions(inp); } if(mode.auto_run) runMode(); })();
 }
 /* 대입·람다의 지역 변수는 제외하고 실제 외부 입력만 기다린다. */
 function resolveOptionsAction(template){
@@ -94,21 +123,29 @@ function setOptions(sel,opts,def){
 }
 async function fillOptions(inp){
   const sel=document.getElementById('in_'+inp.key); if(!sel) return;
-  if(Array.isArray(inp.options)){ setOptions(sel, inp.options.map(o=>({value:o.value,label:o.label})), inp.default); return; }
+  if(inp.scope==='instrument' && ['ready','loading'].includes(sel.dataset.scopeState)) return;
+  if(Array.isArray(inp.options)){ setOptions(sel, inp.options.map(o=>({value:o.value,label:o.label})), sel.value || inp.default); if(inp.scope==='instrument') sel.dataset.scopeState='ready'; return; }
   if(!inp.options_action) return;
   const {code,missing}=resolveOptionsAction(inp.options_action);
   if(missing){ setOptions(sel, [], null); return; }   /* 종속 부모 미선택 — 비워두고 대기 */
   /* 판본 2 모드면 치환 없이 원문+inputs(형제 입력값)로 — 캐시 키는 봉투 직렬화 */
   const req=(CUR.mode&&CUR.mode.edition===2)?actionRequest(CUR.mode,inp.options_action,gatherInputs()):code;
   const ck=typeof req==='string'?req:JSON.stringify(req);
+  if(inp.scope==='instrument') sel.dataset.scopeState='loading';
   let opts=CUR.optCache[ck];
   if(!opts){ try{ const d=await ibl(req); opts=normalizeOptions(jget(d,inp.options_from),inp); CUR.optCache[ck]=opts; }catch(e){ opts=[]; } }
   if(document.getElementById('in_'+inp.key)!==sel) return;
-  setOptions(sel, opts, inp.default);
+  const selected=inp.scope==='instrument'?sel.value:inp.default;
+  setOptions(sel, opts, selected);
+  if(inp.scope==='instrument'){ sel.dataset.scopeState='ready'; if(selected && sel.value!==selected) selChanged(inp.key); }
 }
 /* select 변경 시, 그 키에 의존하는 종속 select 들을 비우고 다시 채운다 (cascade) */
 function selChanged(key){
   const mode=CUR.mode; if(!mode) return;
+  if((mode.inputs||[]).some(inp=>inp.key===key && inp.scope==='instrument')){
+    VIEW_CTX=null; LIST=null; VIEW_VARS={};
+    const out=document.getElementById('instOut'); if(out) out.innerHTML='';
+  }
   (mode.inputs||[]).forEach(inp=>{
     if(inp.type==='select' && inp.options_action && new RegExp('\\$'+key+'\\b').test(inp.options_action)) fillOptions(inp);
   });
@@ -291,17 +328,23 @@ function closeMedia(){
   const ov=document.getElementById('mediaOverlay'); if(ov) ov.style.display='none';
 }
 async function fireButton(bi,btn){
-  const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
+  const mode=CUR.mode, owner=CUR, out=document.getElementById('instOut');
+  const b=(mode.buttons||[])[bi]; if(!b || CUR.scopeBusy) return;
+  const unlock=lockInstrumentSelection();
   btn.disabled=true;
   /* $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 데스크탑 fireButton 과 동일 의미 */
   try{ let d=unwrapFinalResult(await ibl(actionRequest(CUR.mode,b.action,Object.assign({},gatherInputs(),VIEW_VARS||{}))));
     if(d&&d.stop_in_client){ stopRadioStream(); }
     else if(d&&(d.error||d.success===false)){ alert(d.error||d.message||'실패'); }
     else if(d&&d.url){ try{await navigator.clipboard.writeText(d.url);}catch(e){} alert((d.message||'발행 완료')+'\n\n링크가 복사되었습니다 — 친구에게 붙여넣으세요:\n'+d.url); }  // 발행 등 링크 반환 액션
-    else if(b.refresh){ runMode(); }  // 실행 후 현재 모드 재조회(토글/재생성 즉시 반영)
+    else if(b.render_result && CUR===owner && CUR.mode===mode && document.getElementById('instOut')===out){
+      VIEW_CTX={view:mode.view,data:d,compose:mode.compose,refresh:'mode'};
+      out.innerHTML=renderModeBody(mode,d); initMaps();
+    }
+    else if(b.refresh){ unlock(); runMode(); }  // 실행 후 현재 모드 재조회(토글/재생성 즉시 반영)
   }
   catch(e){ alert('실행 실패: '+e.message); }
-  finally{ btn.disabled=false; }
+  finally{ unlock(); btn.disabled=false; }
 }
 /* 최상단 고정 버튼(소개발행 등) — 탭 무관, CUR.inst.top_buttons 에서 실행 */
 async function fireTop(i){

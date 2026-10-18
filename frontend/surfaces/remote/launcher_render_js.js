@@ -239,13 +239,15 @@ function setFilter(v){
   runMode();
 }
 async function runMode(){
-  const mode=CUR.mode; if(!mode||!mode.action) return;
+  const mode=CUR.mode; if(!mode||!mode.action||CUR.scopeBusy) return;
   const out=document.getElementById('instOut'); if(!out) return;
   const vals=gatherInputs();
   for(const inp of (mode.inputs||[])) if(inp.required&&!vals[inp.key]) return;
+  const unlock=lockInstrumentSelection(), owner=CUR;
   out.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{
     const d=await ibl(actionRequest(mode,mode.action,vals));
+    if(CUR!==owner || CUR.mode!==mode || document.getElementById('instOut')!==out) return;
     SPLIT=hasMasterDetail(mode.view);   // 공용 코어 — 데스크탑 isSplit 과 같은 판정
     if(SPLIT){
       LIST={view:mode.view,data:d}; VIEW_CTX=null;
@@ -259,7 +261,8 @@ async function runMode(){
     }
     // 폰: 생성된 HTML(신문 등)을 조회 직후 자동으로 띄운다(별도 '띄우기' 탭 불필요).
     if(IS_PHONE && d && typeof d==='object' && typeof d.file==='string' && /\.html?$/i.test(d.file)) openFileOverlay(d.file, d.html);
-  }catch(e){ out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
+  }catch(e){ if(CUR===owner) out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
+  finally{ unlock(); }
 }
 /* 작성바(compose) — $text=작성 내용, 드릴이면 {field}=대화 상대 행 필드. 전송 후 현재 뷰 새로고침. */
 /* compose 발신 채널 후보 — 선택 규칙은 공용 렌더 코어(composeChannelOptions)가 정본.

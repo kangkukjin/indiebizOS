@@ -24,7 +24,7 @@ assert.equal(scope.resolveOptionsAction(inp.options_action,{}).missing,false);
 assert.equal(scope.resolveOptionsAction('$r = [n:a]{}; return $r.items >> [t:f]{where: ($p) => $p.id == $parent}',{}).missing,true);
 assert.equal(scope.resolveOptionsAction('return [n:a]{id:$parent}',{parent:'some"value'}).code,'return [n:a]{id:$parent}');
 const source=fs.readFileSync('frontend/surfaces/remote/launcher_appmode_rest_js.js','utf8');
-const selected={options:[{value:'',textContent:inp.label}],value:'',remove(i){this.options.splice(i,1)},appendChild(o){this.options.push(o)}};
+const selected={dataset:{},options:[{value:'',textContent:inp.label}],value:'',remove(i){this.options.splice(i,1)},appendChild(o){this.options.push(o)}};
 const elements={in_target:selected,in_parent:{value:''}};
 const rows=['삼성0','삼성1','예나폰'].map((alias,i)=>({alias,device_id:'phone-'+i}));
 let requests=[];

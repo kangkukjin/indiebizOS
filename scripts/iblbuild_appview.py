@@ -630,6 +630,8 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
             continue
         input_keys.add(inp["key"])
         itype = inp.get("type")
+        if inp.get("scope") not in (None, "instrument") or (inp.get("scope") == "instrument" and itype != "select"):
+            issues.append(f"{blabel}: app.inputs[{j}] scope는 select의 instrument만 지원")
         if itype not in APP_INPUT_TYPES:
             issues.append(f"{blabel}: app.inputs[{j}] type={itype!r} (허용: {sorted(APP_INPUT_TYPES)})")
         if itype == "select":

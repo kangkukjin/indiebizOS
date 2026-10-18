@@ -50,6 +50,7 @@ export type ActionReq = string | AppRequest;  // 빌더(appRequest·actionReques
 
 export interface AppInput {
   key: string;
+  scope?: 'instrument'; // select: shared once above every mode, for this open instrument.
   type: 'text' | 'select' | 'file';   // file: 선택 즉시 /launcher/upload 로 올리고 값=서버 절대경로
   browse?: string;  // text 입력이 파일 경로일 때: 데스크탑은 이 폴더에서 시작하는 파일 창으로 고른다(그 외 표면은 글자 입력 그대로)
   browse_kind?: 'file' | 'folder';  // 기본 file, folder 는 네이티브 폴더 선택(원격은 경로 입력)
@@ -72,7 +73,7 @@ export interface AppInput {
 // 실행 불가(phone_unreachable)라 숨긴다. GenericInstrument(데스크탑 전용 렌더러)만 이 필드를 거른다;
 // 원격/폰 렌더러(api_launcher_web)는 무시하고 그대로 노출(폰에선 정상 동작). 계기-레벨 phone_render:false
 // (폰에서 pc_only 숨김)의 반대 방향 짝 — 맥에서 phone_only 숨김.
-export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean; phone_only?: boolean; confirm?: string }
+export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean; phone_only?: boolean; confirm?: string; render_result?: boolean }
 
 export interface AppCompose {
   placeholder?: string;

@@ -43,7 +43,7 @@ export function renderChatDisplay(bindings: ChatDisplayBindings) {
             followRef.current = false;
             try { await session.loadOlder(); }
             finally { setReadingOlder(false); requestAnimationFrame(() => { if (el) el.scrollTop = top + el.scrollHeight - height; }); }
-          }} className={`px-2 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}>{readingOlder ? '불러오는 중…' : conversationLabel('older')}</button>), dictionary: (<button
+          }} className={`px-2 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}>{readingOlder ? '불러오는 중…' : conversationLabel('older')}</button>), dictionary: headerItems?.dictionary !== undefined ? headerItems.dictionary : (<button
             onClick={() => setGrimoireOpen(true)}
             className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}
             title="마법책 — IBL 액션 사전" aria-label="IBL 사전"

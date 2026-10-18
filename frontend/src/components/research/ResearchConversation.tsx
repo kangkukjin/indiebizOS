@@ -26,10 +26,15 @@ export function ResearchConversation({ project, thread, visible, onChange, sessi
   return <section className={`${visible ? 'flex' : 'hidden'} flex-col flex-1 min-h-0 min-w-0`}>
     {error && <p role="alert" className="px-4 py-2 text-sm text-red-600">{error}</p>}
     <div className={`${showLibrary || showPerspective || showQuestions ? 'hidden' : 'flex'} flex-col flex-1 min-h-0`}>
-      <div className="flex flex-wrap justify-end border-b border-[#E5DFD5]"><button onClick={() => setShowQuestions(true)} className="px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm">연구 질문</button><button onClick={() => setShowPerspective(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><FileText size={17} />사용자의 관점</button><button onClick={openLibrary} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><BookOpen size={17} />자료실</button></div>
       <ChatView chatTarget={{ type: 'session', id: `${project}:${thread.id}`, title: thread.title }}
         session={session} active={visible && !showLibrary && !showPerspective && !showQuestions}
-        headerActions={sessionActions} />
+        headerItems={{ dictionary: null }}
+        headerActions={<>
+          {sessionActions}
+          <button onClick={() => setShowQuestions(true)} className="px-2 py-1.5 rounded-lg hover:bg-[#DDD5C8] text-xs">연구 질문</button>
+          <button onClick={() => setShowPerspective(true)} className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-[#DDD5C8] text-xs"><FileText size={14} className="hidden sm:block" />사용자의 관점</button>
+          <button onClick={openLibrary} className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-[#DDD5C8] text-xs"><BookOpen size={14} className="hidden sm:block" />자료실</button>
+        </>} />
     </div>
     {showQuestions && <ResearchQuestions project={project} thread={thread.id} onBack={() => setShowQuestions(false)} />}
     {showPerspective && <ResearchPerspective project={project} thread={thread.id} title={thread.title} onBack={() => setShowPerspective(false)} onChange={onChange} />}

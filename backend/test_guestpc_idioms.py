@@ -34,7 +34,7 @@ def remote(monkeypatch, tmp_path):
         if action == 'self:limb':
             assert p['op'] == 'list'
             return {'success': True, 'items': [
-                {'device_id': job['limb'], 'alias': job['limb_name'], 'connected': state['connected'], 'registration': None},
+                {'device_id': job['limb'], 'alias': job['limb_name'], 'connected': state['connected'], 'registration': state.get('registration')},
                 {'device_id': 'other', 'alias': '다른PC', 'connected': True}]}
         if action == 'limbs:guestpc':
             assert p['limb'] in (job['limb'], job['limb_name'])
@@ -190,6 +190,14 @@ def test_invalid_receipt_is_not_observed(remote, patch):
     out = remote('[fn:외부PC작업확인]{작업:$job}', job={**remote.job, **patch})
     assert out['status'] == 'invalid_input' and not out['settled']
     assert not remote.calls
+
+
+
+def test_prepare_rejects_network_appliance_without_guestpc_call(remote):
+    remote.state["registration"] = {"adapter": "network-api", "state": "active"}
+    result = remote('[fn:외부PC준비]{PC:"사무실PC",환경조회:false}')
+    assert not result["ok"] and result["status"] == "unsupported_target"
+    assert not any(a == "limbs:guestpc" for a, _ in remote.calls)
 
 
 if __name__ == '__main__':

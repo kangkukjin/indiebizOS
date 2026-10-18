@@ -6,6 +6,13 @@ from xml.etree import ElementTree as ET
 import associative_recall as recall
 import device_registry
 import limb_keys
+import hardware_registry
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolated_hardware(monkeypatch):
+    monkeypatch.setattr(hardware_registry, "devices", lambda: [])
 
 
 def test_device_context_keeps_offline_description_and_escapes_markup(monkeypatch):

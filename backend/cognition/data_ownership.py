@@ -157,6 +157,8 @@ DECLARATIONS: List[tuple] = [
     ("data/calendar_events.json",   "캘린더(calendar_manager)",                  "state"),
     ("data/launcher_app_layout.json", "앱 그리드 배치(런처)",                    "state"),
     ("data/launcher_web_config.json", "원격 런처 설정",                          "state"),
+    ("data/network_hardware.json*", "네트워크 손발 연결 설정·페어링(hardware_registry)", "state"),
+    ("data/tv_epg/**",              "TV 공개 편성표 캐시",                         "cache"),
     ("data/limb_keys.json",         "손발 자격 원장(limb_keys)",                 "state"),
     ("data/device_registry.json",   "기기 등록(device_registry)",                "state"),
     ("data/device_id.txt",          "기기 신원",                                 "state"),

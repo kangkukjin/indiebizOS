@@ -374,9 +374,13 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
         records = {r["device_id"]: r for r in limb_keys.list_keys(include_revoked=False)
                    if not r.get("expired") and not r.get("invitation") and not limb_keys.is_member(r)
                    and (r.get("registration") or {}).get("state", "active") == "active"}
-        candidates = list(live)
+        import hardware_registry
+        hardware = [r for r in hardware_registry.devices() if not r["revoked"]]
+        records.update({r["device_id"]: r for r in hardware})
+        candidates = list(live) + hardware
         candidates.extend(r for did, r in records.items()
-                          if did not in live_ids and (r.get("registration") or {}).get("context"))
+                          if did not in live_ids and (r.get("registration") or {}).get("context")
+                          and (r.get("registration") or {}).get("adapter") != "network-api")
         rows, names = [], []
         for e in candidates:
             rec = records.get(e.get("device_id"))
@@ -386,7 +390,10 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             reg = rec.get("registration") or {}
             caps = reg.get("capabilities") or rec.get("env") or {}
             platform = caps.get("os") or ("android" if caps.get("sdk") else "")
-            attrs = {"name": alias, "connected": str(e.get("device_id") in live_ids).lower(),
+            network = reg.get("adapter") == "network-api"
+            connected = ("unknown" if e.get("connected") is None else str(e["connected"]).lower()) if network else str(e.get("device_id") in live_ids).lower()
+            attrs = {"name": alias, "device_id": e.get("device_id"), "adapter": reg.get("adapter"),
+                     "connected": connected,
                      "paused": str(bool(reg.get("paused"))).lower(),
                      "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
             if guide := control_guides.get(str(platform).lower()):
@@ -398,9 +405,9 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
         if not rows:
             return None
         note = ("등록된 원격 장치. 본문은 사용자가 알려준 배치·용도이며 현재 연결·출력·위치를 보장하지 않는다. "
-                "connected는 최근 접속 관측이며 false이면 미접속, paused=true이면 실행 중지 상태다. "
+                "connected는 최근 접속 관측이며 unknown은 미확인이다. 네트워크 기기의 false는 응답 없음이며 전원 꺼짐을 뜻하지 않는다. paused=true이면 실행 중지 상태다. "
                 "이름·장소·용도로 대상을 고르고, [limbs:guestpc]{limb: \"이름\", op: info}로 "
-                "필요한 현재 상태와 지원 실행 방식을 확인한다. PC와 Android 폰의 명령·권한을 혼동하지 않는다. "
+                "PC·폰의 현재 상태와 지원 실행 방식을 확인한다. adapter=network-api는 IndieBiz OS나 헬퍼 없이 제어하는 기기이며 guestpc 대신 control_guide의 스크립트를 허브에서 실행한다. "
                 "control_guide가 있는 장치를 제어할 때는 해당 가이드를 필요할 때 한 번 읽고 준비된 스크립트를 우선 쓴다. "
                 "가이드와 호출 계약이 현재 문맥에 있으면 다시 읽거나 코드를 새로 작성하지 않는다. "
                 "이름·장소·용도로 원격 대상을 지정하지 않은 시스템 상태는 본체([sense:host]).")

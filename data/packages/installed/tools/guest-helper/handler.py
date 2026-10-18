@@ -33,6 +33,9 @@ def _resolve_limb(target: str):
     import device_registry as dr
     import limb_keys
     if target:
+        import hardware_registry
+        if hardware_registry.contains(target):
+            return None, None, "네트워크 기기는 guestpc 실행 대상이 아닙니다. 손발 목록의 OS에 맞는 제어 가이드를 읽고 공용 스크립트를 사용하세요. device_id로 대상을 지정하세요."
         registered = [r for r in limb_keys.list_keys() if r.get("registration") and
                       (target == r["device_id"] or (target == r["alias"] and not r.get("revoked")
                        and r["registration"]["state"] != "removed"))]
@@ -807,10 +810,12 @@ def _limb_list(tool_input: dict) -> dict:
             r["env"] = {k: env.get(k) for k in
                         ("os", "os_version", "hostname", "user", "admin", "gui")
                         if env.get(k) is not None}
+    import hardware_registry
+    rows.extend(hardware_registry.devices())
     # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
     # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
     return {"success": True, "op": "list", "limbs": rows, "items": rows,
-            "connected_count": len(live_ids),
+            "connected_count": sum(r.get("connected") is True for r in rows),
             "helper_dist_dir": os.path.join(_issue_root(), "helper", "dist"),
             "issue_parent_dir": _issue_parent()}
 
@@ -820,6 +825,9 @@ def _limb_revoke(tool_input: dict) -> dict:
     target = tool_input.get("target") or tool_input.get("key") or tool_input.get("device_id")
     if not target:
         return {"success": False, "error": "revoke 엔 target(키·device_id·별칭)이 필요합니다."}
+    import hardware_registry
+    if hardware_registry.contains(target):
+        return {"success": True, "op": "revoke", "limb": hardware_registry.update(target, remove=True)}
     r = limb_keys.revoke(target)
     if not r:
         return {"success": False, "error": f"'{target}' 손발을 찾을 수 없습니다."}
@@ -834,6 +842,9 @@ def _limb_approve(tool_input: dict) -> dict:
         return {"success": False, "error": "approve 엔 target(키·device_id·별칭)이 필요합니다."}
     approved = tool_input.get("approved")
     approved = True if approved is None else bool(approved)
+    import hardware_registry
+    if hardware_registry.contains(target):
+        return {"success": True, "op": "approve", "limb": hardware_registry.update(target, paused=not approved)}
     r = limb_keys.approve(target, approved=approved)
     if not r:
         return {"success": False, "error": f"'{target}' 손발을 찾을 수 없습니다."}
@@ -877,6 +888,10 @@ def _resident_registration(tool_input):
         if op == "register":
             return {"success": True, **resident_pcs.prepare_usb(),
                     "message": "이 폴더를 통째로 USB에 복사하세요. 대상 PC에서 맞는 헬퍼를 실행하고 이름을 정해 등록합니다. 목록·해제는 조종실의 손발 (USB)에 있습니다."}
+        import hardware_registry
+        if hardware_registry.contains(target):
+            return {"success": True, "registration": hardware_registry.update(
+                target, remove=op == "remove", paused=bool(tool_input.get("paused", True)))}
         if op == "remove":
             return {"success": True, "registration": resident_pcs.remove(target)}
         rec = resident_pcs.resolve(target, active=False)

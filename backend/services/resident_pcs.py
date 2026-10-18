@@ -12,6 +12,7 @@ from pathlib import Path
 
 import device_registry
 import limb_keys
+import hardware_registry
 import phone_jobs
 import resident_store
 
@@ -34,7 +35,7 @@ def devices():
     return [{**r, "connected": r["registration"]["state"] != "removed" and now - (r["registration"].get("last_seen") or 0) < 90,
              "helper": helper_status(r),
              **({"phone_update": phone_update_status(r)} if r["registration"].get("kind") == "phone" else {})}
-            for r in limb_keys.list_keys() if r.get("registration")]
+            for r in limb_keys.list_keys() if r.get("registration")] + hardware_registry.devices()
 
 
 _DIGESTS = {}

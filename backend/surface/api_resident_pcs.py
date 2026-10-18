@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 
 import limb_keys
+import hardware_registry
 import resident_pcs as pcs
 import resident_store
 
@@ -71,6 +72,13 @@ def devices():
             'hardware_extensions': ['android', 'ios', 'ipados', 'web']}
 
 
+@router.post('/remote-pcs/hardware')
+def register_hardware(req: dict):
+    return checked(hardware_registry.register, req.get('alias'), req.get('connection'),
+                   context=req.get('context', ''), driver=req.get('driver', 'samsung-tizen'),
+                   target=req.get('target'))
+
+
 @router.post('/remote-pcs/usb')
 def prepare_usb():
     return checked(pcs.prepare_usb)
@@ -99,6 +107,9 @@ def cancel(req: dict):
 
 @router.post('/remote-pcs/state')
 def state(req: dict):
+    if hardware_registry.contains(req.get('target')):
+        return checked(hardware_registry.update, req.get('target'), remove=bool(req.get('remove')),
+                       paused=req.get('paused'))
     if req.get('remove'):
         return checked(pcs.remove, req.get('target'))
     rec = checked(pcs.resolve, req.get('target'), active=False)
@@ -111,6 +122,8 @@ def state(req: dict):
 @router.put('/remote-pcs/context')
 def device_context(req: dict):
     """소유자가 알려준 배치·용도. 장치 sync의 능력 보고와 별도로 보존한다."""
+    if hardware_registry.contains(req.get("target")):
+        return checked(hardware_registry.update, req.get("target"), context=req.get("context", ""))
     rec = checked(pcs.resolve, req.get('target'), active=False)
     return checked(limb_keys.resident_update, rec['device_id'], context=req.get('context'))
 

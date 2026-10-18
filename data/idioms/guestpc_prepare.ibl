@@ -10,6 +10,7 @@
   $손발 = $대상[0]
   $등록 = get($손발,"registration",{})
   [if:$등록==null] { $등록 = {} }
+  [if:get($등록,"adapter","")=="network-api"] { return {ok:false,status:"unsupported_target",reason:"네트워크 기기는 제어 가이드의 공용 스크립트를 사용하세요"} }
   $모드 = "portable"
   [if:len($등록)>0] { $모드 = "resident" }
   $기본 = {limb:$손발.device_id,limb_name:$손발.alias,helper_mode:$모드,registration:$등록,workspace:{cwd:$작업폴더,env:$환경},env:get($손발,"env",{})}

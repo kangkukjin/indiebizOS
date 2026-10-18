@@ -448,3 +448,7 @@ history는 화면 결과의 b64를 생략하고 image_omitted와 image_task_ref�
 종료한다. 이전 헬퍼·휴대형·mode:observe는 elevate를 지원하지 않는다.
 
 플랫폼별 설치·권한·연결·수명 계약은 `helper/README.md`를 따른다.
+
+## 네트워크 기기 손발
+
+TV처럼 IndieBiz OS나 헬퍼가 없는 기기도 손발 패널에서 등록한다. `self:limb list`의 `adapter=network-api`는 `guestpc` 실행 대상이 아니며 장치 소개의 `control_guide`를 읽고 허브 공용 스크립트로 제어한다. TV 계약은 [tv_control.md](tv_control.md). `pause`·`approve`는 제어 중지/허용, `remove`·`revoke`는 연결 설정 삭제다. 네트워크 기기의 `connected:null`은 미확인, false는 최근 응답 없음이며 전원 꺼짐이 아니다.

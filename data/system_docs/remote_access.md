@@ -23,7 +23,7 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 
 ### 등록 PC의 화면 공유
 
-조종실 **손발 (USB) → PC → 화면 공유**는 설치된 상주 헬퍼를 통해 별도 제어 창을 연다.
+조종실 **손발 → PC → 화면 공유**는 설치된 상주 헬퍼를 통해 별도 제어 창을 연다.
 Mac·Windows·Linux에서 동일하며, 터미널 작업창과 경로 선택 창은 없다.
 헬퍼가 중앙의 내부망 TLS 후보를 먼저 시도하고 실패하면 기존 외부 WSS 터널을 쓴다.
 PC별 Cloudflare/VNC 설정은 필요 없다. 이전 Mac 전용 `/remote-pcs/desktop` 설정은
@@ -47,6 +47,14 @@ Electron 창 연결 코드를 바꾼 경우 앱 재시작이 필요하다.
 > 있다 — 개인 포털 `/h/`·공개 파일 `/s/`·가족신문 `/n/`·게시판 `/b/`·정기보고 `/r/`. 이들은
 > `public-files` Cloudflare Worker가 경로 접두로 분기해 터널로 맥에 서빙하며(레벨/로그인 기반),
 > 별도 문서는 [communication.md](communication.md) "공개 표면 — 커뮤니티당 노드 하나" 참조.
+
+### IndieBiz OS 없는 네트워크 기기도 손발이다
+
+조종실 **손발 → 네트워크 기기 등록**은 기기 자체의 API로 제어하는 TV를 같은 목록에 등록한다.
+`adapter=network-api`는 PC 헬퍼나 폰 IBL 엔진을 갖지 않는다. 허브가 등록된 주소로 공용
+스크립트를 실행한다. 현재 Samsung Tizen 드라이버와 TV 컨트롤 앱을 제공하며 상세 계약은
+[tv_control.md](../guides/tv_control.md)에 있다. 연결 설정·토큰은 비공개 손발 원장에만 저장한다.
+장치 소개에는 이름·ID·종류·최근 응답 관측·가이드 포인터만 넣는다. 미응답은 전원 꺼짐이 아니다.
 
 ### 원격 PC·폰을 실행 대상으로 쓰기
 

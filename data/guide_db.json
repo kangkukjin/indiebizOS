@@ -1271,6 +1271,28 @@
       "topic": "손발·이웃 몸"
     },
     {
+      "id": "tv_control",
+      "name": "TV 컨트롤 — 손발 등록·공용 스크립트",
+      "description": "IndieBiz OS 미설치 네트워크 TV를 손발에 등록하고 TV 앱과 AI가 공용 스크립트로 전원·입력·음량·앱·DLNA·편성표를 제어한다. 미응답과 전원 상태, 전달과 검증을 구분한다.",
+      "keywords": [
+        "TV 컨트롤",
+        "삼성 TV",
+        "Tizen",
+        "TV 전원",
+        "TV 음소거",
+        "TV 입력",
+        "TV 유튜브",
+        "DLNA",
+        "TV 편성표",
+        "네트워크 기기"
+      ],
+      "file": "tv_control.md",
+      "control_platforms": [
+        "tizen"
+      ],
+      "topic": "손발·이웃 몸"
+    },
+    {
       "id": "remote_phone",
       "name": "원격폰 기능 활용 — 등록·상태·IBL·파일 왕복",
       "description": "등록된 Android 폰의 원격 접속, 기능 신고·권한·실행 확인의 구분, 판본2 하달과 결과 봉투, 중첩 JSON 문자열 직렬화, 작은 파일 왕복과 바이너리 전송의 경계. 실제 센서·재생 동작은 별도로 확인한다.",

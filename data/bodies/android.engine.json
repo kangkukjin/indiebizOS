@@ -22,6 +22,7 @@
     "base/execution_commit",
     "base/execution_workers",
     "base/file_script",
+    "base/hardware_registry",
     "base/history_excerpt",
     "base/ibl_code_corpus",
     "base/ibl_edition",
@@ -611,8 +612,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 536,
-    "engine": 504,
+    "total": 537,
+    "engine": 505,
     "blocklist": 32
   }
 }

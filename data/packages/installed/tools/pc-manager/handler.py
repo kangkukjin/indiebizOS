@@ -203,8 +203,9 @@ def _forage_recall(tool_input: dict) -> str:
         limit = int(tool_input.get("limit") or 20)
     except (TypeError, ValueError):
         limit = 20
-    res = FM.recall(body=body, query=query, limit=limit, locus=locus)
-    res["xml"] = FM.recall_xml(body=body, query=query, limit=limit, locus=locus)
+    res = FM.recall(body=body, query=query, limit=limit, locus=locus,
+                    evidence_check=tool_input.get("evidence_check") or "metadata")
+    res["xml"] = FM.recall_xml(result=res)
     return json.dumps(res, ensure_ascii=False)
 
 

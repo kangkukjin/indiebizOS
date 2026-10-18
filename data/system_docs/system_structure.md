@@ -310,6 +310,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 178 액션(sense 43·self 59·limbs 14·others 20·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 603(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 178 액션(sense 43·self 59·limbs 14·others 20·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 606(test 제외)**<!-- SELF_IMAGE:END -->
 
 *변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*

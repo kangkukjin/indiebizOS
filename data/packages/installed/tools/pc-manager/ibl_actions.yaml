@@ -203,6 +203,7 @@ nodes:
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
         params:
+          evidence_check: string
           note: string
           path: string
           folder_path: string
@@ -213,7 +214,7 @@ nodes:
         fixture: '[self:forage]{op: "recall", query: "test"}'
         description: 포식 기억(냄새지도) — 과거 디스크·코드·웹·책·노트북 포식에서 배운 장소 정체·관습·죽은가지·기질을 누적·회상. op 분기. 회상 응답=Record — map 은 행 목록이라 `$f.map >> [table:groupby]` 로 흐른다.
         group: file
-        target_description: 'recall(기본)·note·forget·sync(문서→색인, locus) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(장소를 모를 때 찾는 것을 말로 — 의미로 후보 장소를 짚어 places 에 주소로 준다, 맞는 주소를 locus 로 다시 부른다)·body(거의 쓸 일 없음 — 절대 경로·URL 단언의 몸은 주소에서 정해진다: "mac"/"web", 책·노트북만 "book:<제목>"·"notebook:<이름>" — 자리표 괄호 없이, places 가 준 이름 그대로)로 회상. 장소 회상은 정직 칸을 함께 준다 — own_count(그 장소 자신의 단언 수, 0 이면 그 장소의 기억 없음 — inherit 는 조상의 것)·locus_exists(false=그 장소가 지금 없음: 오타·삭제·이사, null=책·웹처럼 확인 대상 아님)·doc_is_ancestor(doc 가 조상 문서)·root_missing(doc 가 덮는 뿌리가 없어짐). note — locus(주소: 절대 경로·웹 host/path·책/노트북은 그 몸 "book:<제목>" 또는 "book:<제목>/<장>" — 주제 이름·다른 몸의 주소는 거절)/kind(identity|convention|dead_branch|substrate)/claim. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id. reconcile — 사라진 폴더(와 locus 로 지명한 노트북)의 기억을 _gone 으로 접는다(일주일 뒤 삭제), 전체 대조는 없어진 노트북을 held 로 알리기만 한다. reconcile의 apply:false는 대조만 수행하며 문자열 false도 거짓으로 해석한다. generalizes/surface_flag/territory도 같은 불리언 규칙이다.'
+        target_description: 'recall(기본)·note·forget·sync(문서→색인, locus) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(장소를 모를 때 찾는 것을 말로 — 의미로 후보 장소를 짚어 places 에 주소로 준다, 맞는 주소를 locus 로 다시 부른다)·body(거의 쓸 일 없음 — 절대 경로·URL 단언의 몸은 주소에서 정해진다: "mac"/"web", 책·노트북만 "book:<제목>"·"notebook:<이름>" — 자리표 괄호 없이, places 가 준 이름 그대로)로 회상. 장소 회상은 정직 칸을 함께 준다 — own_count(그 장소 자신의 단언 수, 0 이면 그 장소의 기억 없음 — inherit 는 조상의 것)·locus_exists(false=그 장소가 지금 없음: 오타·삭제·이사, null=책·웹처럼 확인 대상 아님)·doc_is_ancestor(doc 가 조상 문서)·root_missing(doc 가 덮는 뿌리가 없어짐). note — locus(주소: 절대 경로·웹 host/path·책/노트북은 그 몸 "book:<제목>" 또는 "book:<제목>/<장>" — 주제 이름·다른 몸의 주소는 거절)/kind(identity|convention|dead_branch|substrate)/claim. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id. reconcile — 사라진 폴더(와 locus 로 지명한 노트북)의 기억을 _gone 으로 접는다(일주일 뒤 삭제), 전체 대조는 없어진 노트북을 held 로 알리기만 한다. reconcile의 apply:false는 대조만 수행하며 문자열 false도 거짓으로 해석한다. generalizes/surface_flag/territory도 같은 불리언 규칙이다. evidence_check는 metadata(기본) 또는 content. 각 단언의 evidence_status에 현재성·방법·범위·미검사 사유를 반환하며 unknown을 최신으로 보지 않는다. 파일 하나의 의미도 semantic/generalizes:false로 저장한다.'
         target_key: op
         router: handler
         tool: forage_op
@@ -378,9 +379,13 @@ tool_json:
         generalizes:
           type: boolean
           description: '[note map convention] 새 가지에도 적용되나'
+        evidence_check:
+          type: string
+          enum: [metadata, content]
+          description: "[recall] metadata(기본)는 내용 동일성을 보증하지 않음. content는 반환 단언의 실제 관측 범위만 예산 안에서 대조. evidence_status=changed/missing/unknown/unchanged, 검사 시점·방법·미검사 사유를 함께 반환."
         provenance:
           type: [object, string]
-          description: '[note] 출처 근거 — {observed:[...]} 객체 또는 JSON 문자열(평문이면 observed 한 건으로 감쌈)'
+          description: '[note] 출처 근거 — observation_refs:[{receipt_id:읽기도구참조}] 또는 [{job_key,observation_id}]로 실제 관측을 연결. 임의 해시/complete는 채택하지 않음. 참조 없으면 사용자 메모로 보존. {observed:[...]} 객체 또는 JSON 문자열(평문이면 observed 한 건으로 감쌈)'
         surface_flag:
           type: boolean
           description: '[note map] 라벨 의심 표식 — 폴더 이름과 이질적인 내용을 발견했을 때 true'

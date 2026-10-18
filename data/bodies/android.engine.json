@@ -188,6 +188,8 @@
     "datastore/finance_ledger_sync",
     "datastore/focus_map",
     "datastore/forage_doc",
+    "datastore/forage_evidence",
+    "datastore/forage_evidence_doc",
     "datastore/forage_memory",
     "datastore/forage_recall_store",
     "datastore/guide_registry",
@@ -234,6 +236,7 @@
     "datastore/research_store",
     "datastore/schema_migrations",
     "datastore/service_status",
+    "datastore/source_observation",
     "datastore/store_waste_audit",
     "datastore/supervision_delivery",
     "datastore/supervision_store",
@@ -612,8 +615,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 537,
-    "engine": 505,
+    "total": 540,
+    "engine": 508,
     "blocklist": 32
   }
 }

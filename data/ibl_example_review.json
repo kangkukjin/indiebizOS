@@ -1040,19 +1040,19 @@
   "self:forage": {
    "fields": {
     "description": "71bd5bdb4d41",
-    "target_description": "bc825d72f8ea",
+    "target_description": "ca79dc721be2",
     "implementation": "0ec8e657ab50",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
-    "params": "f53312a2a7c7",
+    "params": "465db339984f",
     "aliases": "96cc7b816c74",
     "ops": "ee9db657b255",
     "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "19acb74ca01c"
    },
-   "reviewed": "2026-09-29",
-   "examples": 0
+   "reviewed": "2026-10-18",
+   "examples": 4
   },
   "self:goal": {
    "fields": {

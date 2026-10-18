@@ -104,8 +104,9 @@ def test_forage_distill_no_longer_writes_owner_model(monkeypatch):
     monkeypatch.setattr('consciousness_agent.oneshot_ai_call', lambda **kw: prompts.append(kw['prompt']) or json.dumps({
         "space": "mac", "map": [], "owner": [{"facet": "habit", "value": "모델이 낸 주인 습관", "source_ids": [1]}]}))
     own = '나는 자료를 연도별 폴더로 정리한다.'
-    CognitiveDistillMixin()._distill_forage_memory(own, '/tmp/papers 폴더를 확인했습니다.', assume_forage=True)
-    assert saved == [] and prompts and '"owner"' not in prompts[0]
+    result = CognitiveDistillMixin()._distill_forage_memory(own, '/tmp/papers 폴더를 확인했습니다.', assume_forage=True)
+    assert saved == [] and prompts == []
+    assert result['reason'] == 'unified_observation_required'
     import importlib
     sys.modules.pop('forage_memory', None)
     real = importlib.import_module('forage_memory')

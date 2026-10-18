@@ -152,14 +152,18 @@ def prepare_forage(job):
                 c.get('scope') in {'source', 'unknown'} for c in cuts):
             omitted.append(index)
             continue
-        locs = _addresses(raw + '\n' + json.dumps(tc.get('input'), ensure_ascii=False))
+        from source_observation import from_result
+        source_evidence = from_result(tc['result'], principal=job.get('principal'), body=job.get('body_id'))
+        extracted = _addresses(raw + '\n' + json.dumps(tc.get('input'), ensure_ascii=False))
+        locs = ([e['source']['address'] for e in source_evidence] if source_evidence else extracted)
         if not locs or len(observations) >= 6:
             continue
         observations.append({'id': index, 'source_kind': 'tool_observation', 'input': tc.get('input'),
-                             'result': tc['result'], 'addresses': locs, 'sha256': fingerprint(tc['result'])})
+                             'result': tc['result'], 'addresses': locs, 'extracted_addresses': extracted,
+                             'source_evidence': source_evidence, 'sha256': fingerprint(tc['result'])})
         for loc in locs:
             addresses[loc] = {'body': fm.canonical_body('web' if loc.startswith('http') else 'mac', loc),
-                              'mtime_ns': os.stat(loc).st_mtime_ns if loc.startswith('/') else None}
+                              'mtime_ns': None}
     # 명시적인 공간 선언도 원문에 주소가 있어야 한다. AI 답변은 주소 근거가 아니다.
     declarations = []
     if job.get('write_deep'):
@@ -169,7 +173,7 @@ def prepare_forage(job):
                 declarations.append({**u, 'addresses': locs})
                 for loc in locs:
                     addresses[loc] = {'body': fm.canonical_body('web' if loc.startswith('http') else 'mac', loc),
-                                      'mtime_ns': os.stat(loc).st_mtime_ns if loc.startswith('/') else None}
+                                      'mtime_ns': None}
     if not addresses:
         return {'eligible': False, 'reason': 'no_actual_spatial_observation'}
     known = {}
@@ -208,11 +212,14 @@ def apply_forage(job, prepared, candidate, key):
             or len(declarations) != len(set(users)) or not sources + declarations
             or not any(loc in r['addresses'] for r in sources + declarations)):
         return {'status': 'rejected', 'reason': 'missing_actual_observation'}
+    if candidate.get('interpretation', 'ai_interpretation') not in {
+            'source_assertion', 'user_declaration', 'ai_interpretation'}:
+        return {'status': 'rejected', 'reason': 'invalid_interpretation'}
     claim = candidate.get('claim', '')
     kind = candidate.get('kind')
     if (not claim or len(claim) > 400 or kind not in fm._MAP_KINDS
             or candidate.get('prior_class') not in fm._PRIOR_CLASSES
-            or candidate.get('generalizes') is not True
+            or type(candidate.get('generalizes')) is not bool
             or CognitiveDistillMixin._is_self_narration(CognitiveDistillMixin, claim, loc)):
         return {'status': 'rejected', 'reason': 'invalid_spatial_claim'}
     if kind == 'dead_branch':
@@ -224,28 +231,31 @@ def apply_forage(job, prepared, candidate, key):
         already_written = lookup(conn, key)
     finally:
         conn.close()
-    if not already_written and loc.startswith('/') and (
-            not os.path.exists(loc) or os.stat(loc).st_mtime_ns != info['mtime_ns']):
-        return {'status': 'deferred', 'reason': 'location_changed_terminal'}
     relation = candidate.get('relation')
     target = next((r for r in prepared['known'] if r['id'] == candidate.get('existing_id')), None)
     if relation in {'SAME', 'UPDATE'} and (not target or candidate.get('existing_version') != target['version']):
         return {'status': 'rejected', 'reason': 'unknown_spatial_version'}
     if target and (target['locus'] != loc or target['body'] != info['body']):
         return {'status': 'rejected', 'reason': 'unrelated_spatial_target'}
-    if relation == 'SAME' and target:
+    actual = [e for r in sources for e in r.get('source_evidence', [])]
+    if relation == 'SAME' and target and not actual:
         return {'status': 'same', 'id': target['id']}
-    if (relation not in {'NEW', 'UPDATE'} or (relation == 'UPDATE' and not target)
+    if relation == 'SAME' and target and claim != target['claim']:
+        return {'status': 'rejected', 'reason': 'same_claim_changed'}
+    if (relation not in {'NEW', 'UPDATE', 'SAME'} or (relation == 'UPDATE' and not target)
             or (relation == 'NEW' and candidate.get('existing_id') is not None)):
         return {'status': 'rejected', 'reason': 'invalid_spatial_relation'}
-    if any(r['locus'] == loc and r['claim'] == claim for r in prepared['known']):
+    if not actual and any(r['locus'] == loc and r['claim'] == claim for r in prepared['known']):
         return {'status': 'same', 'reason': 'identical_spatial_claim'}
     provenance = {'job_key': job['job_key'], 'candidate_key': key,
-                  'observed': [{'id': r['id'], 'sha256': r['sha256']} for r in sources],
-                  'user_declarations': declarations, 'formed_at': job['recorded_at']}
+                  'observed': [{'id': r['id'], 'tool_result_sha256': r['sha256'],
+                                'addresses': r['addresses']} for r in sources],
+                  'user_declarations': declarations, 'formed_at': job['recorded_at'],
+                  'interpretation': candidate.get('interpretation', 'ai_interpretation'),
+                  'observation_refs': [e['observation_ref'] for e in actual]}
     result = fm.note_map(body=info['body'], locus=loc, kind=kind, claim=claim,
                          prior_class=candidate['prior_class'], provenance=provenance,
-                         generalizes=True, candidate_key=key, expected_target=target,
+                         generalizes=candidate['generalizes'], candidate_key=key, expected_target=target,
                          mark_related_surface=candidate.get('surface') is True)
     return {'status': 'saved' if result.get('success') else 'rejected',
             'id': result.get('id'), 'reason': result.get('error', '')}

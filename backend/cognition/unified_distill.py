@@ -41,8 +41,13 @@ partial_selection=true는 일부 원문만 검토했으므로 scope=component로
 첨부파일·외부 변수·일회성 생성 본문에 의존하면 제외한다. 재시도는 최종 성공 원문만 선택한다.
 criteria를 바꾸거나 탐색 중간 결과/쓰기 영수증만으로 전체 성공을 주장하지 마라.
 원시 호출의 검색어·주소만 바뀐 것과 탐색 일지는 새 절차가 아니다. 기존 topic을 우선한다.
-공간 claim은 관측한 주소의 일반화 가능한 지도이다. 단일 문서 내용이나 자기 인지 서술,
+공간 claim은 관측한 주소의 지속적으로 재사용할 의미·사용 조건·관습이다. 자기 인지 서술,
 파일 미발견/검색 실패를 공간 부재로 확정하지 마라. body/locus는 제공된 주소에서 고른다.
+파일 한 개의 행 의미·단위·결합 키·기간 제한도 prior_class:semantic으로 남길 수 있다.
+재사용 가치와 하위 장소 상속은 별개다. 근거가 파일 하나/표본이면 generalizes:false로 범위를 밝힌다.
+source_evidence는 실제 출처, extracted_addresses는 주소 추출일 뿐이다. observation_ids는 이번 실제 관측만 고른다.
+interpretation은 source_assertion|user_declaration|ai_interpretation 중 선택하며 근거가 해석의 진실을 보증하지 않는다.
+SAME은 새 관측이 있을 때만 제출한다. 충돌은 UPDATE/surface로 이전 주장과 함께 보존한다.
 후보끼리 중복/모순이 없도록 하고 가장 가치 있는 소수만 남겨라.
 출력은 schema_version=1인 단일 JSON 객체이며 execution/deep/forage 배열을 모두 포함한다.
 최대 execution 2, deep 3, forage 3건. 각 문자열 필드 최대 400자, 사유는 짧게 쓴다.
@@ -54,7 +59,7 @@ deep: user_source_ids:[정수], retention:"user_fact|user_preference|user_decisi
  relation:"NEW|SAME|UPDATE|REPLACE", existing_id:null|정수, existing_version:null|문자열.
  REPLACE일 때 explicit_correction:true, correction_source_ids:[선택한 사용자 원문 정수].
 forage: observation_ids:[정수] 또는 user_source_ids:[정수], body,locus,kind:"identity|convention|substrate",
- claim,prior_class:"structural|semantic",generalizes:true,relation:"NEW|SAME|UPDATE",
+ claim,prior_class:"structural|semantic",generalizes:false|true,interpretation:"source_assertion|user_declaration|ai_interpretation",relation:"NEW|SAME|UPDATE",
  existing_id:null|정수,existing_version:null|문자열,surface:false|true.
 skip_reasons:{execution:"짧은 이유",deep:"짧은 이유",forage:"짧은 이유"}.
 저장 성공을 선언하지 마라. 출력 밖 설명을 쓰지 마라.'''

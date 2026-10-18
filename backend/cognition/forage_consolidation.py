@@ -64,7 +64,7 @@ def _merge_map_llm(body: str, items: List[Dict], today: str) -> List[Dict]:
     space_word = "코드레포" if str(body).startswith("code") else "디스크"
     locus_word = "디렉토리·모듈" if str(body).startswith("code") else "폴더"
     listing = "\n".join(
-        f'- id={it["id"]} [{it["kind"]}] {it["locus"]}: {(it.get("claim") or "")[:200]}'
+        f'- id={it["id"]} [{it["kind"]}] {it["locus"]} generalizes={bool(it.get("generalizes"))}: {(it.get("claim") or "")[:200]}'
         for it in items
     )
     prompt = f"""아래는 한 {space_word}('{body}')에 대해 누적된 포식 지도 항목들이다. 오늘은 {today}.
@@ -76,6 +76,8 @@ def _merge_map_llm(body: str, items: List[Dict], today: str) -> List[Dict]:
 - kind 가 다르거나(identity vs dead_branch 등) 서로 다른 {locus_word}·다른 사실이면 병합 금지.
 - 병합 시 가장 구체적·정확한 하나로 정규화(claim). dead_branch면 prune_reason 유지.
 - prior_class 는 structural({locus_word} 동질·싸게 재검증) 또는 semantic(의미/정체 주장).
+- 적용 범위가 다르면 병합하지 마라. 근거의 현재성이 unknown인 것은 최신 보증이 아니다.
+- 의미를 바꾸는 병합은 이전 근거가 새 뜻을 자동 보증하지 않으며 재확인 필요로 남는다.
 - 애매하면 병합하지 마라(과병합은 지식 손실).
 
 JSON으로만 응답:

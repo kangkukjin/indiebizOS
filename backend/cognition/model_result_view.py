@@ -771,6 +771,11 @@ def project_v2_result(result):
     out = {k: v for k, v in result.items() if k not in {"evidence", "recordings", "source_map"}}
     if "usage" in out:
         out["usage"] = model_usage(out["usage"])
+    source_refs = list(dict.fromkeys(e['source_observation_ref'] for e in result.get('evidence', [])
+                                    if e.get('kind') == 'tool_evidence' and e.get('source_observation_ref')))
+    if source_refs:
+        out['source_observation_refs'] = source_refs[:64]
+        out['source_observations_omitted'] = max(0, len(source_refs) - 64)
     out["evidence_summary"] = {"events": len(result.get("evidence", [])),
                                "source_complete": result.get("source_complete")}
     failures = [e for e in result.get('evidence', []) if e.get('kind') == 'tool_failure']

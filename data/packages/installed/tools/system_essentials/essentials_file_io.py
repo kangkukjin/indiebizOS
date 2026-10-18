@@ -82,9 +82,19 @@ def read_text_window(path, params, bounds, max_chars=TEXT_PREVIEW_CHARS):
     # Document도 표시 요청을 보존한다. 전체 구조 파싱용 원문에는 번호를 섞지 않는다.
     numbered = bool(params.get('numbered')) and (
         not params.get('blocks') or ranged or data_format not in {'json', 'csv', 'tsv'})
+    from source_observation import file_state, file_evidence, capture
+    before = file_state(path)
+    full_digest, partial_digest = hashlib.sha256(), hashlib.sha256()
+    raw_tail = deque(maxlen=tail) if tail is not None else None
     with open(path, 'r', encoding='utf-8', newline='') as stream:
         for i, line in enumerate(stream):
             total = i + 1
+            raw = line.encode("utf-8")
+            full_digest.update(raw)
+            if raw_tail is not None:
+                raw_tail.append(raw)
+            elif i >= offset and (limit is None or i < offset + limit):
+                partial_digest.update(raw)
             if tail is not None:
                 selected.append(line)
             elif i >= offset and (limit is None or i < offset + limit):
@@ -101,6 +111,17 @@ def read_text_window(path, params, bounds, max_chars=TEXT_PREVIEW_CHARS):
     start, end, ranged = bounds(params, total)
     if tail is not None and numbered:
         selected = [f'{n}\t{line}' for n, line in enumerate(selected, start + 1)]
+    if raw_tail is not None:
+        for raw in raw_tail:
+            partial_digest.update(raw)
+    scope = {'complete': not ranged and not truncated, 'selector': {'start': start, 'end': end},
+             'truncated': truncated,  # truncation-scope: source — 미리보기 상한, 전체 기준선으로 채택하지 않음
+             'encoding': 'utf-8', 'newline': 'preserved'}
+    method = 'tool_result_only' if truncated else ('sha256_utf8_lines' if ranged else 'sha256_bytes')
+    observed_digest = (hashlib.sha256(''.join(selected).encode('utf-8')).hexdigest() if truncated
+                       else (partial_digest if ranged else full_digest).hexdigest())
+    capture(file_evidence(path, before, observed_digest,
+                          scope, method=method), envelope=bool(params.get("blocks")))
     return ''.join(selected), total, start, end, ranged, truncated
 
 

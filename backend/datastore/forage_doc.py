@@ -219,7 +219,10 @@ def _meta_text(r: Dict[str, Any]) -> str:
         parts.append(src)
     if r.get("prune_reason"):
         parts.append("prune: " + str(r["prune_reason"])[:60])
-    return " · ".join(p for p in parts if p)
+    prov = json.loads(r.get("provenance") or "{}")
+    if prov.get("claim_ref"):
+        parts.append("ref:" + prov["claim_ref"])
+    return _claim_key(" · ".join(p for p in parts if p))
 
 
 def _claim_key(claim: str) -> str:
@@ -235,6 +238,8 @@ def render_line(r: Dict[str, Any]) -> str:
 
 
 def render_section(rows: List[Dict[str, Any]]) -> str:
+    import forage_evidence_doc as evidence_doc
+    rows = [evidence_doc.prepare(r) for r in rows]
     by: Dict[str, List[Dict[str, Any]]] = {}
     for r in rows:
         by.setdefault(_norm(r["locus"]), []).append(r)
@@ -244,7 +249,7 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
         for r in sorted(by[loc], key=lambda x: (0 if x.get("territory") else 1, x["kind"], x["claim"])):
             lines.append(render_line(r))
         lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    return "\n".join(lines).rstrip() + "\n\n" + evidence_doc.render(rows)
 
 
 def parse_section(text: str) -> List[Dict[str, Any]]:
@@ -252,8 +257,13 @@ def parse_section(text: str) -> List[Dict[str, Any]]:
     body = tree_doc.split_section(text, SECTION)[1]
     if not body:
         return []
+    import forage_evidence_doc as evidence_doc
+    records, seen = evidence_doc.parse(text), set()
     out, locus = [], None
-    for raw in body.splitlines():
+    # Old renderers allowed newlines in provenance/prune metadata. Join only
+    # that delimited suffix; never reinterpret its continuation as a new claim.
+    from forage_evidence_doc import claim_lines
+    for raw in claim_lines(body):
         line = raw.rstrip()
         if line.startswith("### "):
             locus = line[4:].strip()
@@ -274,12 +284,14 @@ def parse_section(text: str) -> List[Dict[str, Any]]:
                     "territory": "⚑" in flags, "generalizes": "↓" in flags,
                     "prior_class": "semantic" if "≈" in flags else "structural",
                     "surface_flag": "?" in flags, "confidence": conf, "prune_reason": prune})
+        evidence_doc.attach(out[-1], meta, records, seen)
     return out
 
 
 def _replace_section(text: str, section: str) -> str:
     """절을 통째로 바꾼다(없으면 갱신 기록 앞에). 기질이 절 앞을 빈 줄로 띄우므로 옛 문서는 첫 재렌더에 빈 줄 하나가 정돈된다."""
-    return tree_doc.replace_section(text, SECTION, section)
+    from forage_evidence_doc import replace
+    return replace(text, section)
 
 
 def _stamp_key(path: str) -> str:
@@ -373,9 +385,16 @@ def refresh_doc(path: str, body: str, root: str) -> Optional[str]:
                 f"| 머리 | |\n|---|---|\n| 조사 일시 | (아직 조사 안 함 — 단언은 대화·포식에서 쌓인 것) |\n"
                 f"| 예산 (어디까지 봤나) | — |\n| 거칠기 | — |\n| 상위 문서 | — |\n| 하위 문서 | — |\n\n"
                 f"## 갱신 기록\n")
+    original = open(path, encoding="utf-8").read() if os.path.exists(path) else None
+    parse_section(text)  # reject duplicate IDs before any write
     text = _replace_section(text, render_section(rows))
+    if original is not None and open(path, encoding="utf-8").read() != original:
+        raise ValueError("forage_document_changed")
     from distill_receipts import atomic_text
+    from forage_evidence_doc import check_write, projected
+    check_write(path, text)
     atomic_text(path, text)
+    projected(path)
     _stamp(path)
     return path
 
@@ -476,7 +495,10 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
     if not m:
         return {"success": False, "error": "forage-doc 표식이 없는 문서"}
     body, root = m.group(1), m.group(2)
-    parsed = parse_section(text)
+    try:
+        parsed = parse_section(text)
+    except (ValueError, KeyError, TypeError) as exc:
+        return {"success": False, "error": str(exc)}
     # 더 구체적인 하위 문서가 덮는 위치의 줄은 이 문서 소관이 아니다(옛 렌더의 잔재) — 건너뛰고, 다음 재렌더가 절에서 걷어낸다
     t = _tree(root, body)
     deeper = [_canon(root_of_doc(d), t[0]) for d in docs_below(body, root)] if t else []
@@ -495,7 +517,7 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
     try:
         conn.execute("BEGIN IMMEDIATE")
         from distill_receipts import pending_connection
-        if pending_connection(conn) or os.stat(path).st_mtime_ns != _source_mtime:
+        if pending_connection(conn) or os.stat(path).st_mtime_ns != _source_mtime or open(path, encoding="utf-8").read() != text:
             return {"synced": False, "success": False, "reason": "distill_projection_or_document_changed"}
         now = FM._now()
         # 삭제를 먼저 — 같은 (locus, kind) 의 옛 줄이 남아 있으면 새 줄 삽입이 유일 키에 걸린다
@@ -505,16 +527,16 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
             deleted += 1
         for p, r in plan["update"]:
             conn.execute("UPDATE forage_map SET territory=?, generalizes=?, prior_class=?, surface_flag=?, "
-                         "confidence=COALESCE(?, confidence), prune_reason=? WHERE id=?",
+                         "confidence=COALESCE(?, confidence), prune_reason=?, provenance=? WHERE id=?",
                          (1 if p["territory"] else 0, 1 if p["generalizes"] else 0, p["prior_class"],
-                          1 if p["surface_flag"] else 0, p["confidence"], p["prune_reason"], r["id"]))
+                          1 if p["surface_flag"] else 0, p["confidence"], p["prune_reason"], p.get("provenance", r["provenance"]), r["id"]))
             updated += 1
         for p in plan["insert"]:
             loc = _canon(p["locus"], body)
             conn.execute("INSERT INTO forage_map (body, locus, kind, claim, prior_class, confidence, provenance, "
                          "prune_reason, generalizes, last_seen, locus_mtime, surface_flag, territory) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                          (body, loc, p["kind"], FM.mask_secrets(p["claim"]), p["prior_class"], p["confidence"] or 0.9,
-                          json.dumps({"sources": ["doc"], "formed_at": now, "observed": [f"문서 편집: {os.path.basename(path)}"]}, ensure_ascii=False),
+                          p.get("provenance") or json.dumps({"sources": ["doc"], "formed_at": now, "observed": [f"문서 편집: {os.path.basename(path)}"]}, ensure_ascii=False),
                           p["prune_reason"], 1 if p["generalizes"] else 0, now, FM._locus_mtime(loc),
                           1 if p["surface_flag"] else 0, 1 if p["territory"] else 0))
             inserted += 1
@@ -579,6 +601,8 @@ def _prose_len(text: str) -> int:
     """`## 단언` 절·표식·기계 머리(제목·머리 표·`## 갱신 기록` 제목)를 뺀 본문 길이 — '누가 더 많이 썼나'의 잣대.
     (기계가 만든 껍데기의 머리 표가 산문으로 세어져 사람의 짧은 한 줄을 밀어내던 구멍을 막는다.)"""
     t = MARKER_RE.sub("", text)
+    before, _, after = tree_doc.split_section(t, "## 근거")
+    t = before + after
     if SECTION in t:
         i = t.index(SECTION); rest = t[i + len(SECTION):]
         m = re.search(r"^## ", rest, re.M)

@@ -192,6 +192,8 @@ def _merge_provenance(old_json: Optional[str], new_prov: Optional[Dict[str, Any]
         for k in ("forage_id", "query", "observed", "formed_at"):
             if k not in base and new_prov.get(k) is not None:
                 base[k] = new_prov[k]
+    from forage_evidence import merge
+    base = merge(base, new_prov)
     return json.dumps(base, ensure_ascii=False)
 
 
@@ -305,6 +307,10 @@ def canonical_body(body: str, locus: str) -> str:
     return body
 
 
+from forage_evidence_doc import guarded_note
+
+
+@guarded_note
 def note_map(*, body: str, locus: str, kind: str, claim: str,
              prior_class: str = "structural", confidence: float = 0.7,
              provenance: Optional[Dict[str, Any]] = None,
@@ -312,7 +318,7 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
              surface_flag: bool = False, territory: bool = False,
              candidate_key: str = None, expected_target=None,
              mark_related_surface: bool = False) -> Dict[str, Any]:
-    """forage_map 한 항목 upsert (키=body+locus+kind). 재note 시 강화(reinforce).
+    """forage_map 한 단언 저장. 같은 문장은 새 실제 관측이 있을 때만 근거를 추가한다.
 
     territory=True 면 거친 영토 앵커로 표식 — 상시-on 냄새지도에 노출(열거가능 공간의 최상위 가지).
     """
@@ -335,10 +341,6 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
     claim = mask_secrets(claim)
     if prune_reason:
         prune_reason = mask_secrets(prune_reason)
-    prov = dict(provenance or {})
-    if prov.get("query"):
-        prov["query"] = mask_secrets(prov["query"])
-    prov.setdefault("formed_at", _now())
     conf = _clamp_conf(confidence, 0.7)
     mtime = _locus_mtime(locus)
     now = _now()
@@ -353,6 +355,16 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
             from distill_receipts import mark_projected
             mark_projected(conn, candidate_key)
             return prior
+        from forage_evidence import resolve_input, bind
+        try:
+            prov = resolve_input(provenance, locus)
+        except (ValueError, TypeError, KeyError) as exc:
+            return {"success": False, "error": str(exc)}
+        prov = bind(dict(locus=locus, kind=kind, claim=claim, prior_class=prior_class,
+                         generalizes=generalizes), prov)
+        if prov.get("query"):
+            prov["query"] = mask_secrets(prov["query"])
+        prov.setdefault("formed_at", _now())
         if expected_target:
             from distill_receipts import fingerprint, DistillConflict
             target = conn.execute("SELECT claim, provenance, surface_flag FROM forage_map WHERE id=?",
@@ -364,6 +376,20 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
             "SELECT id, confidence, provenance, territory FROM forage_map WHERE body=? AND locus=? AND kind=? AND claim=?",
             (body, locus, kind, claim)).fetchone()
         if row:
+            from forage_evidence import provenance as parse_prov
+            previous = parse_prov(row['provenance'])
+            old_refs = {json.dumps(e.get('observation_ref'), sort_keys=True)
+                        for e in previous.get('evidence', {}).get('items', [])}
+            new_refs = {json.dumps(e.get('observation_ref'), sort_keys=True)
+                        for e in prov['evidence']['items']}
+            if not new_refs - old_refs:
+                result = {"success": True, "action": "same", "id": row['id'], "table": "forage_map"}
+                record(conn, candidate_key, result)
+                conn.commit()
+                if candidate_key:
+                    from distill_receipts import mark_projected
+                    mark_projected(conn, candidate_key)
+                return result
             merged = _merge_provenance(row["provenance"], prov)
             new_conf = max(conf, float(row["confidence"] or 0))  # 재확인은 확신 상향
             # territory 는 한번 켜지면 유지(재note 가 False 라도 끄지 않음 — 끄기는 consolidation/forget 몫)
@@ -398,7 +424,8 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
             action = "noted"
         if expected_target and mark_related_surface:
             conn.execute("UPDATE forage_map SET surface_flag=1 WHERE id=?", (expected_target["id"],))
-        record(conn, candidate_key, {"success": True, "action": action, "id": entry_id,
+        from forage_evidence_doc import document_versions, note_signature
+        record(conn, candidate_key, {"note_signature": note_signature(), "document_versions": document_versions(), "success": True, "action": action, "id": entry_id,
                                      "table": "forage_map", "promoted_territory": promoted})
         conn.commit()
     finally:
@@ -725,9 +752,9 @@ def place_id(body: str, locus: str) -> str:
 def _place_order(query: Optional[str]) -> List[str]:
     try:
         import tree_recall
-        from forage_recall_store import ForageStore
+        from forage_recall_store import ForageStore, place_ids
         r = tree_recall.search(ForageStore(), query or "", limit=_PLACE_CANDIDATES, min_sim=_PLACE_MIN_SIM)
-        return list(r.get("ids") or []) if r.get("status") == "ok" else []
+        return place_ids(r.get("ids") or []) if r.get("status") == "ok" else []
     except Exception as e:   # 의미 채널이 없어도 회상은 글자 일치로 돈다
         print(f"[포식기억] 장소 찾기 생략(글자 일치만): {e}")
         return []
@@ -750,7 +777,8 @@ def _trail(kind: str, **row) -> None:
 
 
 def recall(*, body: Optional[str] = None, query: Optional[str] = None,
-           limit: int = 20, locus: Optional[str] = None) -> Dict[str, Any]:
+           limit: int = 20, locus: Optional[str] = None,
+           evidence_check: str = "metadata") -> Dict[str, Any]:
     """포식 회상 — 몸별 지도(body 일치, query 필터). locus 를 주면 그 장소의 전부(문서·조상 상속·자식 골격).
 
     ★주체 관문: 주체가 owner 가 아니면 빈 회상(closed="principal") — 회원 자기 포식은 손발 회상(1단계).
@@ -768,6 +796,8 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     if not _principal_allows_recall():
         return {"success": True, "map": [], "territory": [], "closed": "principal",
                 "map_count": 0, "territory_count": 0}
+    from forage_evidence import Checker, annotate
+    checker = Checker(evidence_check)
     terms, grams = _query_terms(query)
     loc = _norm_locus(os.path.expanduser(locus)) if locus else None
     if loc:
@@ -854,6 +884,7 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
                     doc_is_ancestor = _root != loc
         except Exception:
             root_missing = False
+        annotate(map_items, checker)
         _trail("open", locus=loc)
         return {"success": True, "map": map_items,
                 "territory": territory_items, "locus": loc, "doc": doc_path, "docs_below": docs_below,
@@ -875,6 +906,7 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         if pid in places and (pid not in ident or (r["kind"] == "identity" and not ident[pid][0])):
             ident[pid] = (r["kind"] == "identity", _short(r["claim"]))
     ident = {k: v[1] for k, v in ident.items()}
+    annotate(map_items + territory_items, checker)
     return {"success": True, "map": map_items,
             # 후보 장소(주소) — 의미+글자 융합 순. 기억이 아니라 주소다: 맞는 곳을 locus 로 지명해 열면 그 장소의 전부가 온다
             "places": [{"place": p, "what": ident.get(p, "")} for p in places],
@@ -956,14 +988,14 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
         for P, rows in by_locus.items():
             if _is_ancestor(P, L):
                 for r in rows:
-                    if r["generalizes"] or r["kind"] == "substrate":
+                    if r["generalizes"] or (r["kind"] == "substrate" and r["prior_class"] != "semantic"):
                         add(r, "inherit")
         kids = [(C, rows) for C, rows in by_locus.items() if _is_child(L, C)]
         kids.sort(key=lambda x: -max(r["confidence"] for r in x[1]))
         for C, rows in kids[:child_cap]:
             r = next((x for x in rows if x["kind"] == "identity"), rows[0])
             add(r, "child", short=True)
-    return order[:limit]
+    return order if focus_override else order[:limit]
 
 
 def territory_loci(body: Optional[str] = None) -> List[str]:
@@ -994,15 +1026,16 @@ def territory_loci(body: Optional[str] = None) -> List[str]:
 
 
 def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
-               limit: int = 12, locus: Optional[str] = None) -> str:
+               limit: int = 12, locus: Optional[str] = None,
+               evidence_check: str = "metadata", result=None) -> str:
     """<forage_memory> XML — `[self:forage]{op:"recall"}` 의 읽기 좋은 꼴(자동 주입은 2026-09-03 폐지)."""
-    res = recall(body=body, query=query, limit=limit, locus=locus)
+    res = result if result is not None else recall(body=body, query=query, limit=limit, locus=locus, evidence_check=evidence_check)
     if not res["map"] and not res.get("territory") and not res.get("places") and not res.get("locus"):
         return ""
     if res["map"]:
         note = ('과거 포식에서 누적한 냄새지도입니다. 참고용이며 폐기가능(defeasible) — '
                 'prune_reason과 지금 목표가 안 겹치면 그 가지를 재오픈하세요. prior_class=semantic은 '
-                'committal하게 prune하지 말 것. freshness=stale/missing이면 디스크가 변했으니 재탐침 판단. '
+                'committal하게 prune하지 말 것. evidence_status=unknown은 미확인, changed는 근거 변화이며 단언의 거짓 판정이 아닙니다. '
                 'surface=1은 이 라벨이 이질 내용으로 흔들린 표식입니다. '
                 'via=place 장소 찾기가 짚은 후보 장소의 단언 · match 글자 일치 · own 그 폴더의 나머지 단언 · inherit 상위 폴더에서 물려받은 관습·기질 · '
                 'child 하위 폴더 한 줄 골격(자세한 건 그 폴더를 지명해 recall).')
@@ -1040,6 +1073,7 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
         lines.append('  <map>')
         for m in res["map"]:
             attrs = (f'kind="{m["kind"]}" prior="{m["prior_class"]}" conf="{m["confidence"]:.2f}"')
+            attrs += f' evidence_status="{m.get("evidence_status", {}).get("state", "unknown")}"'
             if m.get("freshness"):
                 attrs += f' freshness="{m["freshness"]}"'
             if m.get("prune_reason"):
@@ -1161,6 +1195,11 @@ def _union_provenance(conn: sqlite3.Connection, table: str, ids: List[int]) -> s
         for k in ("forage_id", "query", "formed_at"):
             if k not in base and p.get(k) is not None:
                 base[k] = p[k]
+        from forage_evidence import merge
+        base = merge(base, p)
+        for key in ("claim_ref", "claim_digest"):
+            if key in p:
+                base[key] = p[key]
         rb = p.get("reinforced_by")
         if isinstance(rb, list):
             base["reinforced_by"].extend(rb)
@@ -1196,6 +1235,17 @@ def merge_entries(*, table: str, keep_id: int, drop_ids: List[int],
         if marks:
             return {"success": False, "error": "surface 보호 — 병합 거부"}
         prov = _union_provenance(conn, table, drops + [int(keep_id)])
+        from forage_evidence import bind, provenance as parse_prov
+        kept = conn.execute(f"SELECT * FROM {table} WHERE id=?", (keep_id,)).fetchone()
+        if not kept:
+            return {"success": False, "error": "missing keep claim"}
+        p = parse_prov(prov)
+        original = bind(dict(kept))
+        p.update({k: original[k] for k in ('claim_ref', 'claim_digest')})
+        # Different meanings/scopes never silently confirm the surviving sentence.
+        if any(k in fields and fields[k] != kept[k] for k in ('claim', 'prior_class')):
+            p['evidence']['link_state'] = 'reconfirmation_required'
+        prov = json.dumps(p, ensure_ascii=False)
         sets = ", ".join(f"{c}=?" for c in cols) + (", " if cols else "") + "provenance=?, last_seen=?"
         params = [fields[c] for c in cols] + [prov, _now(), int(keep_id)]
         conn.execute(f"UPDATE {table} SET {sets} WHERE id=?", params)

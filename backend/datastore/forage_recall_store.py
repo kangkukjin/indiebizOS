@@ -40,8 +40,12 @@ class ForageStore(Store):
             db = os.path.getmtime(os.path.abspath(FM._DB_PATH))
         except OSError:
             db = 0
-        docs = max((os.path.getmtime(p) for p, _b, _r in FD._scan_docs()), default=0)
-        return f"{db}:{docs}"
+        from distill_receipts import fingerprint
+        docs = [(p, os.stat(p).st_mtime_ns, os.stat(p).st_size) for p, _b, _r in FD._scan_docs()]
+        wal = FM._DB_PATH + '-wal'
+        stamp = [(p, os.stat(p).st_mtime_ns, os.stat(p).st_size)
+                 for p in (FM._DB_PATH, wal) if os.path.exists(p)]
+        return fingerprint([stamp, docs])
 
     def items(self) -> List[Item]:
         import forage_memory as FM
@@ -49,9 +53,14 @@ class ForageStore(Store):
         sig = self._sig()
         if _cache.get("sig") == sig:
             return _cache["items"]  # type: ignore[return-value]
+        for path, _, _ in FD._scan_docs():
+            if FD.tree_doc.is_stale(path, FM.get_meta(FD._stamp_key(path))):
+                result = FD.sync_doc_to_db(path)
+                if not result.get('success'):
+                    raise ValueError(result.get('error') or result.get('reason'))
         conn = FM._connect()
         try:
-            rows = [dict(r) for r in conn.execute("SELECT body, locus, kind, claim, confidence FROM forage_map")]
+            rows = [dict(r) for r in conn.execute("SELECT id, body, locus, kind, claim, confidence FROM forage_map")]
         finally:
             conn.close()
         cues = {}
@@ -65,11 +74,19 @@ class ForageStore(Store):
         items = []
         for pid, rs in by_place.items():
             rs.sort(key=lambda r: (_KIND_ORDER.get(r["kind"], 9), -float(r["confidence"] or 0)))
-            text = " / ".join(r["claim"].split(" ‹", 1)[0] for r in rs)[:TEXT_MAX]
+            text = " / ".join(r["claim"].split(" ‹", 1)[0] for r in rs)
             parts = tuple(p for p in re.split(r"[/:]", pid) if p)
-            items.append(Item(id=pid, path=parts, text=text, cues=cues.get(pid, "")))
+            # Keep the first chunk's place ID for compatibility; index every later claim.
+            chunks = [text[i:i + TEXT_MAX] for i in range(0, len(text), TEXT_MAX - 100)] or ['']
+            for index, chunk in enumerate(chunks):
+                ident = pid if index == 0 else pid + '\x1f' + str(index)
+                items.append(Item(id=ident, path=parts, text=chunk, cues=cues.get(pid, ""), label=pid))
         _cache.update(sig=sig, items=items)
         return items
 
     def branches(self):
         return []
+
+
+def place_ids(ids):
+    return list(dict.fromkeys(ident.split('\x1f', 1)[0] for ident in ids))

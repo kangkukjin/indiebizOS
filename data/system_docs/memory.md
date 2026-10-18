@@ -1029,3 +1029,24 @@ system_ai_state/memory_system_ai.db, 프로그램은 scripts/registry.yaml에 �
 ### 검색 결과 식별자와 범위 (2026-09-15)
 
 `[self:memory]{op:"search"}`의 장기기억 항목은 `memory_id`, 대화 항목은 `conversation_id`를 반환한다. `read/delete/move`에는 장기기억의 `memory_id`만 전달한다. 대화 ID는 장기기억 ID와 별개의 공간이다. `node/category`를 지정하면 대화는 섞지 않고 조건에 맞는 장기기억 후보 안에서 `top_k`를 적용한다. 벡터 검색과 키워드 검색이 같은 가지 경계를 사용한다.
+
+### 포식 의미와 관측 판본 (2026-10-18)
+
+포식 기억은 기존 문서 정본에 단언 ID와 `## 근거` 판본 JSON을 함께 둔다.
+DB는 재생성 가능한 색인이며, 원문 전체를 기억에 복사하지 않는다. 실제 읽기 제공자가
+발급한 영수증의 주체·기기·출처 범위를 공통 해소기가 확인한다. 현재 파일을 증류 때
+읽어 옛 관측으로 소급하지 않는다. 근거 영수증의 열람 가능성과 현재성은 다른 축이다.
+
+통합 증류 한 번 안에서 특정 파일에만 유효한 의미도 `prior_class:semantic`,
+`generalizes:false`로 저장한다. 같은 문장만 반복하면 강화하지 않는다. 새 관측만
+근거에 합치며 재시도는 기존 candidate 영수증으로 중복을 막는다. AI 응답만 받던
+구판 별도 포식 증류 입구는 `unified_observation_required`로 생략한다.
+
+명시적 `self:forage recall`은 반환할 장소·단언을 정한 후 근거를 확인한다.
+`evidence_check` 기본 metadata는 내용 보증이 아니며, content는 저장된 파일/목록
+범위를 제한된 예산으로 대조한다. 상세 `evidence_status`와 문서 위치를 반환하고,
+기존 freshness의 빈 문자열을 최신 보증으로 쓰지 않는다. 의미가 긴 장소는 기존
+ForageStore의 여러 조각으로 색인하고 후보를 장소로 합친다. 자동 주입은 계속 꺼져 있다.
+
+계약·제한·예시: [폴더 조사 가이드](../guides/folder_survey.md#의미와-관측-근거-2026-10-18).
+구현·시험: [근거와 의미 수리](../../docs/FORAGE_EVIDENCE_AND_MEANING_REPAIR_PLAN_2026_10_18.md).

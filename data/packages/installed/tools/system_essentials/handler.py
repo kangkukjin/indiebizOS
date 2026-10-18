@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 import importlib.util
 from ibl_edition import text_result
+from source_observation import observed_tool
 
 _CURRENT_DIR = Path(__file__).parent
 
@@ -668,6 +669,7 @@ _file_views = _fs_find.file_views
 _ENVELOPED_FAILURE_TOOLS = ("copy_path", "move_path", "delete_path")
 
 
+@observed_tool
 def execute(tool_input: dict, context) -> str:
     try:
         if _red_grant_active() and context.tool_name != "patch_op":
@@ -875,6 +877,8 @@ def _execute(tool_input: dict, context) -> str:
         elif tool_name == "list_directory":
             hash_content = _fs_find.hash_requested(tool_input)
             dir_path = os.path.join(project_path, expand_body_path(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))
+            from source_observation import file_state, listing_evidence, capture
+            observation_before = file_state(dir_path)
             import unicodedata
             items = sorted(os.listdir(dir_path), key=lambda n: (unicodedata.normalize("NFC", n), n))
             # 선언(ibl_actions.yaml 의 list.params.pattern)이 약속한 glob 을 실제로 건다.
@@ -896,6 +900,7 @@ def _execute(tool_input: dict, context) -> str:
                 record, row = _file_views(os.path.join(dir_path, name), hash_content=hash_content)
                 records.append(record)
                 rows.append(row)
+            capture(listing_evidence(dir_path, observation_before, records, pattern=pattern))
             table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
             _out = {"text": text, "table": table, "items": records, "total": len(records)}
             if pattern:

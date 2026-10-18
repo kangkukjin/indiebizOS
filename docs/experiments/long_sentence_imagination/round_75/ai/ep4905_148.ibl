@@ -1,0 +1,43 @@
+#!ibl edition=2
+$out = "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/ai"
+$o = $입력
+$loc = $o[0].r
+$win = $o[1].r
+$ldev = $loc.result.devices >> [table:each]{ return {id:$it.id,name:$it.name,default:$it.default,volume:$it.volume,muted:$it.muted,can_set_volume:$it.can_set_volume,can_mute:$it.can_mute,capability_source:"os_reported(AudioObjectIsPropertySettable)"} }
+$wdev = $win.result.devices >> [table:each]{ return {id:$it.id,name:$it.name,default:$it.is_default,volume:$it.volume,muted:$it.muted,can_set_volume:"unverified",can_mute:"unverified",script_flag_can_set_volume:$it.can_set_volume,script_flag_can_mute:$it.can_mute,capability_source:"not_os_reported(스크립트 상수 기본값 true; GetMasterVolumeLevelScalar·GetMute 읽기는 성공)"} }
+$rows = [
+ {id:"local",target:"__local__",kind:{roster:"pc",observed:"pc(본체 darwin)"},status:"ready",verified:$loc.verified,ready:$loc.verified and len($ldev)>0,
+  evidence:{source:"fn:PC제어 status(__local__)",hostname:$loc.result.hostname,os_version:$loc.result.os_version,observed_at:$loc.result.observed_at,request_id:$loc.result.request_id,receipt:$loc.result._receipt_ref,output_count:len($ldev),devices:$ldev},
+  follow_up:"없음(실제 소리는 미확인 — 필요 시 사람이 청취 확인)"},
+ {id:"windows",target:"guestpc-70e163471313",kind:{roster:"pc",observed:"pc(registration.kind=pc, resident-v1, windows)"},status:"ready",verified:$win.verified,ready:$win.verified and len($wdev)>0,
+  evidence:{source:"fn:PC제어 status → 내부 PC제어확인으로 같은 작업 회수",alias:"tv1",hostname:$win.result.hostname,os_version:$win.result.os_version,observed_at:$win.result.observed_at,request_id:$win.result.request_id,first_receipt:$win.task_ref,verification:$win.verification,evidence_ref:$win.evidence_ref,output_count:len($wdev),devices:$wdev},
+  follow_up:"장치별 음량·음소거 가능 여부를 OS로 확인하려면 IAudioEndpointVolume::QueryHardwareSupport 읽기 추가가 필요(이번엔 미실행). 실제 소리는 미확인"},
+ {id:"offline",target:"guestpc-3fd796167b18",kind:{roster:"pc",observed:"pc(registration.kind=pc, darwin, alias 맥12)"},status:"unverified",verified:false,ready:false,
+  evidence:{ledger:{connected:false,state:"active",paused:false,last_seen:1792212407.3150442},probe:$o[2].r.failure,task_ref:null},
+  follow_up:"작업은 접수되지 않음(영수증 없음). 맥12가 켜져 연결되면 [self:limb] list에서 connected=true 확인 후 같은 ID로 status 조회. 깨우기·우회는 하지 않음"},
+ {id:"tv",target:"hardware-63b28509b052",kind:{roster:"tv",observed:"tv(network-api, samsung-tizen)"},status:"unverified",verified:false,ready:false,reachable:$o[3].r.reachable,power:$o[3].r.power,
+  evidence:{source:"self:script TV제어 op:status(읽기 전용)",result:$o[3].r,ledger:{connected:null}},
+  follow_up:"응답 없음은 전원 꺼짐이 아님. TV 전원·네트워크를 사람이 확인한 뒤 같은 ID로 TV제어 status 재조회"},
+ {id:"absent",target:"training75-does-not-exist",kind:{roster:"pc",observed:null},status:"failed",verified:false,ready:false,
+  evidence:{ledger:"self:limb list(전 27행)에 device_id 없음",probe:$o[4].r.failure},
+  follow_up:"명부 ID 오기 또는 미등록. 올바른 device_id를 확인하거나 기기 등록 후 재점검(유사 이름 기기로 대체하지 않음)"},
+ {id:"wrong_kind",target:"guestpc-fc7b12fba936",kind:{roster:"pc",observed:"phone(registration.kind=phone, indiebiz-v1, android, alias 삼성0)"},status:"failed",verified:false,ready:false,
+  evidence:{ledger:{kind:"phone",adapter:"indiebiz-v1",os:"android",connected:true},probe:$o[5].r.failure,reason:"종류 불일치: 명부 pc ↔ 원장 phone. 기기는 연결돼 있으나 PC 출력 장치 점검 대상이 아님"},
+  follow_up:"명부 kind를 phone으로 고친 뒤 폰 절차(guestpc info→AudioManager 조회)로 별도 점검"}
+]
+$ready = len($rows >> [table:filter]{where:($r)=> $r.ready == true})
+$counts = {total:len($rows),ready:$ready,not_ready:len($rows)-$ready,by_status:{ready:len($rows >> [table:filter]{where:($r)=>$r.status=="ready"}),not_ready_verified:len($rows >> [table:filter]{where:($r)=>$r.status=="not_ready_verified"}),unverified:len($rows >> [table:filter]{where:($r)=>$r.status=="unverified"}),failed:len($rows >> [table:filter]{where:($r)=>$r.status=="failed"})}}
+$report = {round:75,checked_at:"2026-10-18",input:"inputs/base.json",policy:{require_volume:false,require_mute:false},read_only:true,changes_made:"없음(전원·음량·음소거·화면·재생·등록 무변경)",playback_verified:false,note:"실제 스피커 소리·영상 재생은 확인하지 않았다. OS 음량 관측은 물리 출력 증명이 아니다.",rows:$rows,counts:$counts}
+[self:write]{path:f"${out}/report.json",content:json($report)}
+$md_rows = $rows >> [table:each]{ return f"| ${$it.id} | `${$it.target}` | ${$it.kind.roster} / ${text($it.kind.observed)} | ${$it.status} | ${text($it.verified)} | ${text($it.ready)} |" }
+$dev_lines = ($ldev >> [table:each]{ return f"  - [local] ${$it.name} (`${$it.id}`) 기본=${text($it.default)} 음량=${text($it.volume)} 음소거=${text($it.muted)} can_set_volume=${text($it.can_set_volume)} can_mute=${text($it.can_mute)} (OS 보고)" }) + ($wdev >> [table:each]{ return f"  - [windows] ${$it.name} 기본=${text($it.default)} 음량=${text($it.volume)} 음소거=${text($it.muted)} can_set_volume=미확인 can_mute=미확인 (스크립트 상수 true, OS 비보고)" })
+$detail = $rows >> [table:each]{ return f"### ${$it.id} — ${$it.status}\n- 근거: ${json($it.evidence)}\n- 후속 조치: ${$it.follow_up}\n" }
+$md = join(["# 75회차 기기 준비 상태 점검 (읽기 전용)","","- 입력: inputs/base.json, 정책 require_volume=false, require_mute=false","- 변경 동작: 없음(전원·음량·음소거·화면·재생·등록 무변경)","- **실제 스피커 소리·영상 재생은 이번에 확인하지 않았다.** OS 음량 관측은 물리 출력의 증명이 아니다.","","## 요약","","| id | target | kind(명부/관측) | status | verified | ready |","|---|---|---|---|---|---|",join($md_rows,"\n"),"",f"**합계: total=${$counts.total}, ready=${$counts.ready}, not_ready=${$counts.not_ready}** (ready ${$counts.by_status.ready} · not_ready_verified ${$counts.by_status.not_ready_verified} · unverified ${$counts.by_status.unverified} · failed ${$counts.by_status.failed})","","## PC 출력 장치","",join($dev_lines,"\n"),"","## 행별 상태·근거·후속 조치","",join($detail,"\n")],"\n")
+[self:write]{path:f"${out}/report.md",content:$md}
+$j = [self:read]{path:f"${out}/report.json"}
+$m = [self:read]{path:f"${out}/report.md"}
+$jr = $j.data.rows
+$ids_ok = sorted($jr >> [table:each]{return $it.id}) == sorted(["local","windows","offline","tv","absent","wrong_kind"])
+$re_ready = len($jr >> [table:filter]{where:($r)=>$r.ready==true})
+$md_has = $jr >> [table:each]{ return contains($m.text, f"| ${$it.id} | `${$it.target}`") }
+return {rows:len($jr),ids_ok:$ids_ok,counts:$j.data.counts,recount_ok:$re_ready==$j.data.counts.ready and len($jr)-$re_ready==$j.data.counts.not_ready and len($jr)==$j.data.counts.total,md_all_rows:all($md_has),md_total_line:contains($m.text,f"total=${$j.data.counts.total}, ready=${$j.data.counts.ready}, not_ready=${$j.data.counts.not_ready}"),md_playback_note:contains($m.text,"확인하지 않았다")}

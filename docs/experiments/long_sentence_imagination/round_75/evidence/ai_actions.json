@@ -1,0 +1,231 @@
+[
+  {
+    "episode": 4905,
+    "seq": 54,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cat /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/inputs/base.json; ls /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/"
+  },
+  {
+    "episode": 4905,
+    "seq": 61,
+    "name": "execute_ibl",
+    "code_actions": [
+      "self:limb"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 69,
+    "name": "execute_ibl",
+    "code_actions": [
+      "table:filter",
+      "table:each"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 77,
+    "name": "execute_ibl",
+    "code_actions": [
+      "table:filter",
+      "table:each"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 88,
+    "name": "execute_ibl",
+    "code_actions": [
+      "table:filter"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 100,
+    "name": "execute_ibl",
+    "code_actions": [
+      "def:PC조회",
+      "fn:PC제어",
+      "def:TV조회",
+      "self:script",
+      "fn:PC조회",
+      "fn:PC조회",
+      "fn:PC조회",
+      "fn:TV조회",
+      "fn:PC조회",
+      "fn:PC조회"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 117,
+    "name": "execute_ibl",
+    "code_actions": [],
+    "checked_ref": "$checked:285693520cd94c9b30efccf018234bdd24eaeeeb7c31940131bee38ce4126e20",
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 127,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/instruments; grep -n -i -E \"SetMasterVolume|SetMute|QueryHardwareSupport|'status'|\\\"status\\\"|function \" pc_control_windows.ps1 | head -40; ls /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/ai"
+  },
+  {
+    "episode": 4905,
+    "seq": 131,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/instruments; sed -n 85,140p pc_control_windows.ps1"
+  },
+  {
+    "episode": 4905,
+    "seq": 136,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data; grep -n -E \"can_set_volume|can_mute\" instruments/pc_control_windows.ps1 scripts/pc_control.py | head"
+  },
+  {
+    "episode": 4905,
+    "seq": 141,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/data; grep -n -E \"can_set_volume|can_mute|Settable|kAudio\" instruments/pc_control_mac.py | head -20"
+  },
+  {
+    "episode": 4905,
+    "seq": 148,
+    "name": "execute_ibl",
+    "code_actions": [
+      "table:each",
+      "table:each",
+      "self:limb",
+      "table:filter",
+      "table:filter",
+      "table:filter",
+      "table:filter",
+      "table:filter",
+      "self:write",
+      "table:each",
+      "table:each",
+      "table:each",
+      "table:each",
+      "self:write",
+      "self:read",
+      "self:read",
+      "table:each",
+      "table:filter",
+      "table:each"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 156,
+    "name": "execute_ibl",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 164,
+    "name": "execute_ibl",
+    "code_actions": [],
+    "checked_ref": "$checked:b9a287d2f7be5ad8e01f34755520a813199e82d219d540cf8424fdb9a630c66a",
+    "command": null
+  },
+  {
+    "episode": 4905,
+    "seq": 175,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/ai; ls -la; sed -n 1,25p report.md"
+  },
+  {
+    "episode": 4906,
+    "seq": 45,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차; cat inputs/variant.json; ls ai; shasum -a 256 ai/report.json ai/report.md"
+  },
+  {
+    "episode": 4906,
+    "seq": 52,
+    "name": "execute_ibl",
+    "code_actions": [
+      "self:read",
+      "self:read",
+      "def:찾기",
+      "table:filter",
+      "def:판정",
+      "if:$t.kind==\"pc\" and $p.verified==true",
+      "table:filter",
+      "table:filter",
+      "if:len($both) > 0",
+      "table:each",
+      "if:len($unk) > 0",
+      "if:$t.kind==\"tv\"",
+      "table:each",
+      "fn:판정",
+      "fn:찾기",
+      "def:세기",
+      "table:filter",
+      "table:filter",
+      "fn:세기",
+      "fn:세기",
+      "fn:세기",
+      "fn:세기",
+      "self:write",
+      "table:each",
+      "table:each",
+      "self:write",
+      "self:read",
+      "self:read",
+      "table:each",
+      "table:each",
+      "table:each",
+      "table:each",
+      "table:filter",
+      "table:each",
+      "table:each"
+    ],
+    "checked_ref": null,
+    "command": null
+  },
+  {
+    "episode": 4906,
+    "seq": 58,
+    "name": "execute_ibl",
+    "code_actions": [],
+    "checked_ref": "$checked:9dd827144b7b58286ce97c90367a35e2432983301f6c34a7c5995b8521cc1f03",
+    "command": null
+  },
+  {
+    "episode": 4906,
+    "seq": 68,
+    "name": "Bash",
+    "code_actions": [],
+    "checked_ref": null,
+    "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차; shasum -a 256 ai/report.json ai/report.md; ls ai/variant; python3 -c \"import json;r=json.load(open('ai/variant/report.json'));print([ (x['id'],len(x.get('qualifying_outputs',[]))) for x in r['rows']])\""
+  }
+]

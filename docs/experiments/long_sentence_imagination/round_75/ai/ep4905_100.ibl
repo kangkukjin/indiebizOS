@@ -1,0 +1,11 @@
+#!ibl edition=2
+[def:PC조회]($대상) {
+  [try] { return {target:$대상, ok:true, r:[fn:PC제어]{대상:$대상,요청:{action:"status"}}} }
+  [catch] { return {target:$대상, ok:false, error:$error} }
+}
+[def:TV조회]($대상) {
+  [try] { return {target:$대상, ok:true, r:[self:script]{id:"TV제어",args:{target:$대상,op:"status"},timeout:90}} }
+  [catch] { return {target:$대상, ok:false, error:$error} }
+}
+$a = [fn:PC조회]{대상:"__local__"} & [fn:PC조회]{대상:"guestpc-70e163471313"} & [fn:PC조회]{대상:"guestpc-3fd796167b18"} & [fn:TV조회]{대상:"hardware-63b28509b052"} & [fn:PC조회]{대상:"training75-does-not-exist"} & [fn:PC조회]{대상:"guestpc-fc7b12fba936"}
+return $a

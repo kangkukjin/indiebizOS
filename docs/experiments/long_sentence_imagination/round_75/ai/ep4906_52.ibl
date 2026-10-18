@@ -1,0 +1,47 @@
+#!ibl edition=2
+$base = "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차"
+$out = f"${base}/ai/variant"
+$v = [self:read]{path:f"${base}/inputs/variant.json"}
+$prev = [self:read]{path:f"${base}/ai/report.json"}
+$pol = $v.data.policy
+$prows = $prev.data.rows
+[def:찾기]($rows,$id) { return ($rows >> [table:filter]{where:($r)=>$r.id==$id})[0] }
+[def:판정]($t,$p,$pol) {
+  $base_row = {id:$t.id,target:$t.target,kind:{roster:$t.kind,observed:$p.kind.observed},prior_status:$p.status,prior_verified:$p.verified}
+  [if:$t.kind=="pc" and $p.verified==true] {
+    $devs = $p.evidence.devices
+    $both = $devs >> [table:filter]{where:($d)=> $d.can_set_volume==true and $d.can_mute==true}
+    $unk = $devs >> [table:filter]{where:($d)=> $d.can_set_volume=="unverified" or $d.can_mute=="unverified"}
+    [if:len($both) > 0] {
+      return {**$base_row,status:"ready",verified:true,ready:true,qualifying_outputs:$both >> [table:each]{return {id:$it.id,name:$it.name}},
+        evidence:{source:"직전 관측 계승(새 조회 없음)",prior:$p.evidence},reason:f"음량 조절·음소거가 모두 OS 보고 true인 출력 ${len($both)}개",follow_up:$p.follow_up}
+    }
+    [if:len($unk) > 0] {
+      return {**$base_row,status:"unverified",verified:true,ready:false,qualifying_outputs:[],
+        evidence:{source:"직전 관측 계승(새 조회 없음)",prior:$p.evidence},reason:f"출력 ${len($devs)}개는 관측됐으나 음량 조절·음소거 가능 여부가 OS 보고가 아님(스크립트 상수) — require_volume·require_mute 충족 미확인",follow_up:"OS 보고 능력값(IAudioEndpointVolume::QueryHardwareSupport) 읽기 조회를 별도 실행해야 판정 가능(이번 회차는 새 조회 금지로 미실행)"}
+    }
+    return {**$base_row,status:"not_ready_verified",verified:true,ready:false,qualifying_outputs:[],evidence:{source:"직전 관측 계승(새 조회 없음)",prior:$p.evidence},reason:"음량·음소거 동시 가능 출력 없음(관측 확인)",follow_up:"조건을 만족하는 출력 장치 연결 후 재점검"}
+  }
+  [if:$t.kind=="tv"] {
+    $ok = $p.reachable==true and $p.power=="on"
+    return {**$base_row,status:$ok ? "ready" : $p.status,verified:$p.verified,ready:$ok,reachable:$p.reachable,power:$p.power,evidence:{source:"직전 관측 계승(새 조회 없음)",prior:$p.evidence},reason:"정책 변경은 TV 판정과 무관. 직전 관측 reachable=false, power=unknown",follow_up:$p.follow_up}
+  }
+  return {**$base_row,status:$p.status,verified:false,ready:false,evidence:{source:"직전 관측 계승(새 조회 없음)",prior:$p.evidence},reason:"정책 변경과 무관하게 직전 판정 유지(새 관측 없음)",follow_up:$p.follow_up}
+}
+$rows = $v.data.targets >> [table:each]{ return [fn:판정]{t:$it,p:[fn:찾기]{rows:$prows,id:$it.id},pol:$pol} }
+[def:세기]($rows,$s) { return len($rows >> [table:filter]{where:($r)=>$r.status==$s}) }
+$ready = len($rows >> [table:filter]{where:($r)=>$r.ready==true})
+$counts = {total:len($rows),ready:$ready,not_ready:len($rows)-$ready,by_status:{ready:[fn:세기]{rows:$rows,s:"ready"},not_ready_verified:[fn:세기]{rows:$rows,s:"not_ready_verified"},unverified:[fn:세기]{rows:$rows,s:"unverified"},failed:[fn:세기]{rows:$rows,s:"failed"}}}
+$report = {round:75,variant:true,input:"inputs/variant.json",policy:$pol,basis:"새 기기 조회·원격 접수 없음. 직전 ai/report.json의 자기 관측·영수증만 재사용",prior_report:"ai/report.json (보존, 덮어쓰지 않음)",read_only:true,changes_made:"없음",playback_verified:false,note:"실제 스피커 소리·영상 재생은 확인하지 않았다. OS 음량 관측은 물리 출력 증명이 아니다.",rows:$rows,counts:$counts}
+[self:write]{path:f"${out}/report.json",content:json($report)}
+$md_rows = $rows >> [table:each]{ return f"| ${$it.id} | `${$it.target}` | ${$it.kind.roster} / ${json($it.kind.observed)} | ${$it.status} | ${json($it.verified)} | ${json($it.ready)} |" }
+$detail = $rows >> [table:each]{ return f"### ${$it.id} — ${$it.status} (ready=${json($it.ready)})\n- 판정 이유: ${$it.reason}\n- 근거(직전 관측): ${json($it.evidence.prior)}\n- 후속 조치: ${$it.follow_up}\n" }
+$md = join("\n",["# 75회차 변형 — 기기 준비 판정 갱신 (새 조회 없음)","","- 입력: inputs/variant.json (행 순서 = 새 명부 순서), 정책 require_volume=true, require_mute=true","- 근거: 직전 ai/report.json의 자기 관측·영수증만 재사용. **새 기기 조회·원격 작업 접수는 하지 않았다.** 확인 불가능한 것은 미확인으로 남겼다.","- 기존 보고서(ai/report.json·report.md)는 보존했다.","- **실제 스피커 소리·영상 재생은 확인하지 않았다.**","","## 요약","","| id | target | kind(명부/관측) | status | verified | ready |","|---|---|---|---|---|---|",join("\n",$md_rows),"",f"**합계: total=${$counts.total}, ready=${$counts.ready}, not_ready=${$counts.not_ready}** (ready ${$counts.by_status.ready} · not_ready_verified ${$counts.by_status.not_ready_verified} · unverified ${$counts.by_status.unverified} · failed ${$counts.by_status.failed})","","## 행별 상태·근거·후속 조치","",join("\n",$detail)])
+[self:write]{path:f"${out}/report.md",content:$md}
+$j = [self:read]{path:f"${out}/report.json"}
+$m = [self:read]{path:f"${out}/report.md"}
+$jr = $j.data.rows
+$order_ok = ($jr >> [table:each]{return $it.id}) == ($v.data.targets >> [table:each]{return $it.id})
+$targets_ok = ($jr >> [table:each]{return $it.target}) == ($v.data.targets >> [table:each]{return $it.target})
+$re = len($jr >> [table:filter]{where:($r)=>$r.ready==true})
+return {rows:len($jr),order_ok:$order_ok,targets_ok:$targets_ok,counts:$j.data.counts,recount_ok:$re==$j.data.counts.ready and len($jr)-$re==$j.data.counts.not_ready and len($jr)==$j.data.counts.total,md_all_rows:all($jr >> [table:each]{return contains($m.text,f"| ${$it.id} | `${$it.target}`")}),md_total:contains($m.text,f"total=${$j.data.counts.total}, ready=${$j.data.counts.ready}, not_ready=${$j.data.counts.not_ready}"),summary:$jr >> [table:each]{return {id:$it.id,status:$it.status,verified:$it.verified,ready:$it.ready}}}

@@ -1,0 +1,16 @@
+{
+  "executor": "trainer",
+  "variant": true,
+  "pass": true,
+  "errors": [],
+  "rows": 6,
+  "counts": {
+    "total": 6,
+    "ready": 2,
+    "not_ready": 4
+  },
+  "artifact_hashes": {
+    "report.json": "dc3254fc47a741723aef249eebf99cd4438d4f8a48f9f640c0ed6f6f8e4a3153",
+    "report.md": "66ed0631d7fcb488e7e803c1958c5ab186fd3159572674a2f0f6f7f1c99a4968"
+  }
+}

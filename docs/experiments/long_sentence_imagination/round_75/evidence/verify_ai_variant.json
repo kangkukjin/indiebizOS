@@ -1,0 +1,22 @@
+{
+  "executor": "ai",
+  "variant": true,
+  "pass": true,
+  "errors": [],
+  "rows": 6,
+  "counts": {
+    "total": 6,
+    "ready": 1,
+    "not_ready": 5,
+    "by_status": {
+      "ready": 1,
+      "not_ready_verified": 0,
+      "unverified": 3,
+      "failed": 2
+    }
+  },
+  "artifact_hashes": {
+    "report.json": "329a8cf28c7cc16da768f40a4fb26140a024ff7264929fca56ece8b8dcbaf4f0",
+    "report.md": "fa73a298fe60dd869afbab24cec271f8e4bbfd502cbee863836f53e5135c5acb"
+  }
+}

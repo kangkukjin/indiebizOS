@@ -1,0 +1,51 @@
+#!ibl edition=2
+[def:관측]($row) {
+  [try] {
+    [if:$row.kind == "pc"] {
+      $first = [fn:PC제어]{대상:$row.target,요청:{action:"status"},대기:0}
+      $r = $first
+      [if:$r.status == "pending"] { $r = [fn:PC제어확인]{작업:$first,대기:60} }
+      return {id:$row.id,target:$row.target,kind:$row.kind,label:$row.label,status:$r.status,verified:$r.verified,raw:$r,initial:$first}
+    }
+    $r = [self:script]{id:"TV제어",args:{target:$row.target,op:"status"},timeout:90}
+    return {id:$row.id,target:$row.target,kind:$row.kind,label:$row.label,status:get($r,"success",false) ? "completed" : "failed",verified:get($r,"verified",false),raw:$r,initial:$r}
+  } [catch] {
+    return {id:$row.id,target:$row.target,kind:$row.kind,label:$row.label,status:"failed",verified:false,raw:{error:$error},initial:null}
+  }
+}
+[def:판정]($row,$policy) {
+  $raw = $row.raw
+  $ready = false
+  $devices = []
+  [if:$row.kind == "pc"] {
+    $result = get($raw,"result",{})
+    [if:$result != null] { $devices = get($result,"devices",[]) }
+    $usable = filter($devices,($d)=>(not $policy.require_volume or get($d,"can_set_volume",false)) and (not $policy.require_mute or get($d,"can_mute",false)))
+    $ready = $row.verified and $row.status == "completed" and len($usable)>0
+  } [else] {
+    $ready = get($raw,"reachable",false) == true and get($raw,"power","unknown") == "on"
+  }
+  $next = $ready ? "OS/API 상태 확인. 실제 소리·영상은 별도 확인" : "원 관측/오류를 확인하고 연결·대상·출력 조건을 점검. 변경 요청 자동 재전송 금지"
+  return {**$row,ready:$ready,devices:$devices,next:$next}
+}
+$input = [self:read]{path:$input_path}
+$manifest = $input.data
+$observed = []
+[if:$previous_path == ""] {
+  $observed = $manifest.targets >> [table:each] { [fn:관측]{row:$it} }
+} [else] {
+  $previous = [self:read]{path:$previous_path}
+  $index = from_entries(map($previous.data.rows,($r)=>[$r.id,$r]))
+  $observed = map($manifest.targets,($r)=>get($index,$r.id))
+}
+$rows = $observed >> [table:each] { [fn:판정]{row:$it,policy:$manifest.policy} }
+$counts = {total:len($rows),ready:len(filter($rows,($r)=>$r.ready)),not_ready:len(filter($rows,($r)=>not $r.ready))}
+$report = {policy:$manifest.policy,rows:$rows,counts:$counts,scope:"읽기 전용 OS/API 관측. 실제 스피커 소리·영상 재생 미확인",reused:$previous_path != ""}
+$text = "# 기기 사용 준비 점검\n\n" + $report.scope + "\n\n" + join("\n",map($rows,($r)=>f"- ${$r.id} / ${$r.label} / ${$r.target}: status=${$r.status}, verified=${$r.verified}, ready=${$r.ready}\n  근거: ${json($r.raw)}\n  다음 확인: ${$r.next}")) + f"\n\n합계: total=${$counts.total}, ready=${$counts.ready}, not_ready=${$counts.not_ready}\n"
+$json = json($report)
+$w1 = [self:write]{path:$out + "/report.json",content:$json}
+$w2 = [self:write]{path:$out + "/report.md",content:$text}
+$r1 = [self:read]{path:$out + "/report.json"}
+$r2 = [self:read]{path:$out + "/report.md"}
+assert $r1.text == $json and $r2.text == $text, "저장 후 재독 불일치"
+return {counts:$counts,rows:$rows,reused:$report.reused,reread:true}

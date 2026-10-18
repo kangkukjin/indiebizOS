@@ -1,0 +1,505 @@
+[
+  {
+    "id": "local",
+    "target": "__local__",
+    "kind": "pc",
+    "label": "본체",
+    "status": "completed",
+    "verified": true,
+    "raw": {
+      "status": "completed",
+      "target": "__local__",
+      "verified": true,
+      "result": {
+        "protocol": "pc-control/1",
+        "platform": "darwin",
+        "action": "status",
+        "request_id": "a6f7161643e84872be674828ab978cba",
+        "hostname": "Mac-mini.local",
+        "os_version": "26.6.2",
+        "can_lock": false,
+        "observed_at": "2026-10-18T10:04:41.758226+00:00",
+        "devices": [
+          {
+            "id": "4C2D9770-0000-0000-1D20-0103803C2278",
+            "name": "LF27T450F",
+            "default": false,
+            "volume": null,
+            "muted": null,
+            "can_set_volume": false,
+            "can_mute": false,
+            "volume_channels": 0
+          },
+          {
+            "id": "BuiltInHeadphoneOutputDevice",
+            "name": "외장 헤드폰",
+            "default": true,
+            "volume": 14,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "volume_channels": 1
+          },
+          {
+            "id": "BuiltInSpeakerDevice",
+            "name": "Mac mini 스피커",
+            "default": false,
+            "volume": 68,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "volume_channels": 1
+          },
+          {
+            "id": "zoom.us.zoomaudiodevice.001",
+            "name": "ZoomAudioDevice",
+            "default": false,
+            "volume": 0,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "volume_channels": 1
+          }
+        ],
+        "verified": true,
+        "message": "맥 상태를 조회했습니다.",
+        "success": true,
+        "source_sha256": "178961b892e8e3cc478a050a442712945823f6a1fb44eea090649ef150cc60fb",
+        "_receipt_ref": {
+          "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+          "call_id": "2d081477c6293614c0f72b49c343f7f47d3768c11fe3219d62f98b5ab1050c12"
+        }
+      },
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": null
+    },
+    "initial": {
+      "status": "completed",
+      "target": "__local__",
+      "verified": true,
+      "result": {
+        "protocol": "pc-control/1",
+        "platform": "darwin",
+        "action": "status",
+        "request_id": "a6f7161643e84872be674828ab978cba",
+        "hostname": "Mac-mini.local",
+        "os_version": "26.6.2",
+        "can_lock": false,
+        "observed_at": "2026-10-18T10:04:41.758226+00:00",
+        "devices": [
+          {
+            "id": "4C2D9770-0000-0000-1D20-0103803C2278",
+            "name": "LF27T450F",
+            "default": false,
+            "volume": null,
+            "muted": null,
+            "can_set_volume": false,
+            "can_mute": false,
+            "volume_channels": 0
+          },
+          {
+            "id": "BuiltInHeadphoneOutputDevice",
+            "name": "외장 헤드폰",
+            "default": true,
+            "volume": 14,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "volume_channels": 1
+          },
+          {
+            "id": "BuiltInSpeakerDevice",
+            "name": "Mac mini 스피커",
+            "default": false,
+            "volume": 68,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "volume_channels": 1
+          },
+          {
+            "id": "zoom.us.zoomaudiodevice.001",
+            "name": "ZoomAudioDevice",
+            "default": false,
+            "volume": 0,
+            "muted": false,
+            "can_set_volume": true,
+            "can_mute": true,
+            "volume_channels": 1
+          }
+        ],
+        "verified": true,
+        "message": "맥 상태를 조회했습니다.",
+        "success": true,
+        "source_sha256": "178961b892e8e3cc478a050a442712945823f6a1fb44eea090649ef150cc60fb",
+        "_receipt_ref": {
+          "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+          "call_id": "2d081477c6293614c0f72b49c343f7f47d3768c11fe3219d62f98b5ab1050c12"
+        }
+      },
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": null
+    },
+    "ready": true,
+    "devices": [
+      {
+        "id": "4C2D9770-0000-0000-1D20-0103803C2278",
+        "name": "LF27T450F",
+        "default": false,
+        "volume": null,
+        "muted": null,
+        "can_set_volume": false,
+        "can_mute": false,
+        "volume_channels": 0
+      },
+      {
+        "id": "BuiltInHeadphoneOutputDevice",
+        "name": "외장 헤드폰",
+        "default": true,
+        "volume": 14,
+        "muted": false,
+        "can_set_volume": true,
+        "can_mute": true,
+        "volume_channels": 1
+      },
+      {
+        "id": "BuiltInSpeakerDevice",
+        "name": "Mac mini 스피커",
+        "default": false,
+        "volume": 68,
+        "muted": false,
+        "can_set_volume": true,
+        "can_mute": true,
+        "volume_channels": 1
+      },
+      {
+        "id": "zoom.us.zoomaudiodevice.001",
+        "name": "ZoomAudioDevice",
+        "default": false,
+        "volume": 0,
+        "muted": false,
+        "can_set_volume": true,
+        "can_mute": true,
+        "volume_channels": 1
+      }
+    ],
+    "next": "OS/API 상태 확인. 실제 소리·영상은 별도 확인"
+  },
+  {
+    "id": "windows",
+    "target": "guestpc-70e163471313",
+    "kind": "pc",
+    "label": "거실 연결 Windows PC",
+    "status": "completed",
+    "verified": true,
+    "raw": {
+      "status": "completed",
+      "target": "guestpc-70e163471313",
+      "verified": true,
+      "result": {
+        "os_version": "10.0.19045.0",
+        "action": "status",
+        "devices": [
+          {
+            "id": "{0.0.0.00000000}.{22e3e119-c11a-4789-ac2f-7921f18c767a}",
+            "name": "스피커 (Steam Streaming Speakers)",
+            "volume": 74,
+            "muted": false,
+            "is_default": false,
+            "can_set_volume": true,
+            "can_mute": true
+          },
+          {
+            "id": "{0.0.0.00000000}.{77e0f107-ad66-47c6-8d76-1ede1b604d29}",
+            "name": "스피커 (Realtek High Definition Audio)",
+            "volume": 29,
+            "muted": false,
+            "is_default": false,
+            "can_set_volume": true,
+            "can_mute": true
+          },
+          {
+            "id": "{0.0.0.00000000}.{b61ccde3-6b56-4b55-9865-0cdae8aa55c2}",
+            "name": "스피커 (Steam Streaming Microphone)",
+            "volume": 73,
+            "muted": false,
+            "is_default": false,
+            "can_set_volume": true,
+            "can_mute": true
+          },
+          {
+            "id": "{0.0.0.00000000}.{c6d0a367-3205-4e9f-b7db-7ec190feebda}",
+            "name": "SAMSUNG (인텔(R) 디스플레이 오디오)",
+            "volume": 100,
+            "muted": false,
+            "is_default": true,
+            "can_set_volume": true,
+            "can_mute": true
+          }
+        ],
+        "verified": true,
+        "request_id": "f9ab1cd9fa9f4a9983506dbe2f732318",
+        "can_lock": true,
+        "success": true,
+        "platform": "windows",
+        "protocol": "pc-control/1",
+        "observed_at": "2026-10-18T10:04:49.1904827Z",
+        "hostname": "DESKTOP-VQJGB71",
+        "message": "Windows PC 상태를 조회했습니다.",
+        "source_sha256": "38666c69b4756a703ead285d109faef44783387a509fda2d20e2a8b8d132cdd9"
+      },
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "2b0042a8b1f240c7b86de6371835b993"
+      },
+      "verification": {
+        "request": {
+          "action": "status",
+          "request_id": "f9ab1cd9fa9f4a9983506dbe2f732318"
+        },
+        "platform": "windows",
+        "source_sha256": "38666c69b4756a703ead285d109faef44783387a509fda2d20e2a8b8d132cdd9"
+      },
+      "evidence_ref": {
+        "plan": {
+          "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+          "call_id": "6a127dda6b61b44e33a6e4a6294bb5d33b2ec5cdb86aad3066f7582d31b1109c"
+        },
+        "job": {
+          "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+          "call_id": "19080c7c7e217bb324776d43a40003a8d22fa134f9ed712e4af1998a0379cde2"
+        }
+      },
+      "failure": null,
+      "_receipt_ref": {
+        "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+        "call_id": "ef2000ec2358f48df2886b314cfda5b5bf8c335ab754ce693fce9979bd97dc57"
+      }
+    },
+    "initial": {
+      "status": "pending",
+      "target": "guestpc-70e163471313",
+      "verified": false,
+      "result": null,
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "2b0042a8b1f240c7b86de6371835b993"
+      },
+      "verification": {
+        "request": {
+          "action": "status",
+          "request_id": "f9ab1cd9fa9f4a9983506dbe2f732318"
+        },
+        "platform": "windows",
+        "source_sha256": "38666c69b4756a703ead285d109faef44783387a509fda2d20e2a8b8d132cdd9"
+      },
+      "evidence_ref": {
+        "plan": {
+          "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+          "call_id": "6a127dda6b61b44e33a6e4a6294bb5d33b2ec5cdb86aad3066f7582d31b1109c"
+        },
+        "job": {
+          "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+          "call_id": "19080c7c7e217bb324776d43a40003a8d22fa134f9ed712e4af1998a0379cde2"
+        }
+      },
+      "failure": null,
+      "_receipt_ref": {
+        "run_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+        "call_id": "c692d050aa36bf4609adc1c617c79133ece248432e4ffc6ee8a7af359b2a285a"
+      }
+    },
+    "ready": true,
+    "devices": [
+      {
+        "id": "{0.0.0.00000000}.{22e3e119-c11a-4789-ac2f-7921f18c767a}",
+        "name": "스피커 (Steam Streaming Speakers)",
+        "volume": 74,
+        "muted": false,
+        "is_default": false,
+        "can_set_volume": true,
+        "can_mute": true
+      },
+      {
+        "id": "{0.0.0.00000000}.{77e0f107-ad66-47c6-8d76-1ede1b604d29}",
+        "name": "스피커 (Realtek High Definition Audio)",
+        "volume": 29,
+        "muted": false,
+        "is_default": false,
+        "can_set_volume": true,
+        "can_mute": true
+      },
+      {
+        "id": "{0.0.0.00000000}.{b61ccde3-6b56-4b55-9865-0cdae8aa55c2}",
+        "name": "스피커 (Steam Streaming Microphone)",
+        "volume": 73,
+        "muted": false,
+        "is_default": false,
+        "can_set_volume": true,
+        "can_mute": true
+      },
+      {
+        "id": "{0.0.0.00000000}.{c6d0a367-3205-4e9f-b7db-7ec190feebda}",
+        "name": "SAMSUNG (인텔(R) 디스플레이 오디오)",
+        "volume": 100,
+        "muted": false,
+        "is_default": true,
+        "can_set_volume": true,
+        "can_mute": true
+      }
+    ],
+    "next": "OS/API 상태 확인. 실제 소리·영상은 별도 확인"
+  },
+  {
+    "id": "offline",
+    "target": "guestpc-3fd796167b18",
+    "kind": "pc",
+    "label": "맥12",
+    "status": "failed",
+    "verified": false,
+    "raw": {
+      "status": "failed",
+      "target": "guestpc-3fd796167b18",
+      "verified": false,
+      "result": null,
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": {
+        "stage": "target",
+        "message": "선택 PC가 연결·활성·shell 준비 상태가 아닙니다",
+        "next": "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+      }
+    },
+    "initial": {
+      "status": "failed",
+      "target": "guestpc-3fd796167b18",
+      "verified": false,
+      "result": null,
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": {
+        "stage": "target",
+        "message": "선택 PC가 연결·활성·shell 준비 상태가 아닙니다",
+        "next": "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+      }
+    },
+    "ready": false,
+    "devices": [],
+    "next": "원 관측/오류를 확인하고 연결·대상·출력 조건을 점검. 변경 요청 자동 재전송 금지"
+  },
+  {
+    "id": "tv",
+    "target": "hardware-63b28509b052",
+    "kind": "tv",
+    "label": "거실TV",
+    "status": "completed",
+    "verified": false,
+    "raw": {
+      "success": true,
+      "op": "status",
+      "target": "hardware-63b28509b052",
+      "reachable": false,
+      "power": "unknown",
+      "verified": false,
+      "apps": {},
+      "message": "TV 응답 없음. 전원·네트워크 상태는 확인되지 않았습니다."
+    },
+    "initial": {
+      "success": true,
+      "op": "status",
+      "target": "hardware-63b28509b052",
+      "reachable": false,
+      "power": "unknown",
+      "verified": false,
+      "apps": {},
+      "message": "TV 응답 없음. 전원·네트워크 상태는 확인되지 않았습니다."
+    },
+    "ready": false,
+    "devices": [],
+    "next": "원 관측/오류를 확인하고 연결·대상·출력 조건을 점검. 변경 요청 자동 재전송 금지"
+  },
+  {
+    "id": "absent",
+    "target": "training75-does-not-exist",
+    "kind": "pc",
+    "label": "존재하지 않는 시험 대상",
+    "status": "failed",
+    "verified": false,
+    "raw": {
+      "status": "failed",
+      "target": "training75-does-not-exist",
+      "verified": false,
+      "result": null,
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": {
+        "stage": "target",
+        "message": "등록된 PC ID를 지정하세요",
+        "next": "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+      }
+    },
+    "initial": {
+      "status": "failed",
+      "target": "training75-does-not-exist",
+      "verified": false,
+      "result": null,
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": {
+        "stage": "target",
+        "message": "등록된 PC ID를 지정하세요",
+        "next": "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+      }
+    },
+    "ready": false,
+    "devices": [],
+    "next": "원 관측/오류를 확인하고 연결·대상·출력 조건을 점검. 변경 요청 자동 재전송 금지"
+  },
+  {
+    "id": "wrong_kind",
+    "target": "guestpc-fc7b12fba936",
+    "kind": "pc",
+    "label": "PC로 잘못 적은 폰",
+    "status": "failed",
+    "verified": false,
+    "raw": {
+      "status": "failed",
+      "target": "guestpc-fc7b12fba936",
+      "verified": false,
+      "result": null,
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": {
+        "stage": "target",
+        "message": "지원 PC OS를 확인하지 못했습니다",
+        "next": "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+      }
+    },
+    "initial": {
+      "status": "failed",
+      "target": "guestpc-fc7b12fba936",
+      "verified": false,
+      "result": null,
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": {
+        "stage": "target",
+        "message": "지원 PC OS를 확인하지 못했습니다",
+        "next": "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+      }
+    },
+    "ready": false,
+    "devices": [],
+    "next": "원 관측/오류를 확인하고 연결·대상·출력 조건을 점검. 변경 요청 자동 재전송 금지"
+  }
+]

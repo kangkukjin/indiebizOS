@@ -1,0 +1,3 @@
+#!ibl edition=2
+$ids = ["__local__","guestpc-70e163471313","guestpc-3fd796167b18","hardware-63b28509b052","training75-does-not-exist","guestpc-fc7b12fba936"]
+return $입력.limbs >> [table:filter]{where:($r)=> contains($ids, $r.device_id)} >> [table:each]{ return {device_id:$it.device_id, alias:$it.alias, revoked:$it.revoked, connected:$it.connected, kind:get(get($it,"registration",{}),"kind",get($it,"kind",null)), adapter:get(get($it,"registration",{}),"adapter",get($it,"adapter",null)), state:get(get($it,"registration",{}),"state",null), paused:get(get($it,"registration",{}),"paused",get($it,"paused",null)), os:get(get($it,"env",{}),"os",get($it,"os",null)), last_seen:get(get($it,"registration",{}),"last_seen",null), keys:keys($it)} }

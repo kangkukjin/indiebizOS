@@ -1,0 +1,44 @@
+{
+  "targets": [
+    {
+      "id": "wrong_kind",
+      "target": "guestpc-fc7b12fba936",
+      "kind": "pc",
+      "label": "PC로 잘못 적은 폰"
+    },
+    {
+      "id": "absent",
+      "target": "training75-does-not-exist",
+      "kind": "pc",
+      "label": "존재하지 않는 시험 대상"
+    },
+    {
+      "id": "tv",
+      "target": "hardware-63b28509b052",
+      "kind": "tv",
+      "label": "거실TV"
+    },
+    {
+      "id": "offline",
+      "target": "guestpc-3fd796167b18",
+      "kind": "pc",
+      "label": "맥12"
+    },
+    {
+      "id": "windows",
+      "target": "guestpc-70e163471313",
+      "kind": "pc",
+      "label": "거실 연결 Windows PC"
+    },
+    {
+      "id": "local",
+      "target": "__local__",
+      "kind": "pc",
+      "label": "본체"
+    }
+  ],
+  "policy": {
+    "require_volume": true,
+    "require_mute": true
+  }
+}

@@ -4,6 +4,21 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 75회차 — PC·TV 공용 부품의 점검·후속 확인·재판정 (2026-10-18, 훈련 완료·수리 없음)
+
+최근 b66081d1과 PC·TV 제어를 실기기4+부재/종류오류2, 총6행의 읽기 전용 준비 점검에 조합했다.
+훈련자 초안 join 인수 수정1회 뒤 기본19.369초·변형5.504초, 원 관측·영수증·기본 산출물 보존.
+Windows pending→동일 task_ref 완료, 오프라인/부재/종류오류 격리, TV 무응답은 unknown 유지.
+정확한 가이드 이름·별칭·미등록 문서·부재·if_hash, TV 인자 계약의 실행 전 거절 모두 통과.
+독립 AI ep4905/4906은 IBL로 기본250.471초·변형87.382초, 새 기기 조회 없이 재판정·재독·지문 보존.
+기본 두 실행 ready2/6. 변형은 공개 Bool 기준 훈련자2/6, 직접 관측만 인정한 AI1/6으로 의미 차이를 남겼다.
+**L75-1** evidence_ref 생략은 unknown, null은 RECORD_REQUIRED로 중단(최소재현 확정, 수리 없음).
+**L75-2** Windows capability 기본값과 장치별 관측의 출처/뜻 공백. 기능 불능은 미입증이며 QueryHardwareSupport만으로 대체할 수 없음.
+**L75-3** AI 최종 답변의 근거 없는 “지시는 7행” 귀속(실제 요청·산출물6행). 산출물 계산은 정확.
+AI 입력/출력 기본2,833,497/16,644·변형1,075,252/7,553(캐시별도, 내부역할포함). 훈련자 작성 토큰 미측정.
+실제 변경 제어·유튜브·UI·전체 회귀는 미검증. 양 AI task succeeded 회수, 시스템 구현 변경0.
+[보고서·최소 재현·증거](experiments/long_sentence_imagination/round_75/report.md).
+
 ## 74회차 — 중앙관리형 회원 데스크톱의 범위 발췌·배포본 갱신 (2026-10-15, 훈련·수리 완료)
 
 18:31 KST 시작, HEAD ab0aeec9. 두 격리 회원·합성12절차서의 지정 줄을 실제 서명 HTTP/Go/IBL로
@@ -601,6 +616,9 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L75-1 | 구현 — PC제어확인의 evidence_ref:null이 RECORD_REQUIRED로 중단, 생략은 unknown | round_75/null_receipt_repro.ibl · missing_receipt_control.ibl | 발견·수리 없음 | 원 영수증/대상·지문 변경은 정상, 손상 근거 입력만 진단 계약 불일치 |
+| L75-2 | 계약/해석 — Windows can_set_volume/can_mute 기본값과 직접 관측의 뜻 혼동 | round_75/report.md §3 · 변형 ready 2 대 1 | 계약 정렬 후보, 기능 불능 미확정 | 소프트웨어 제어와 하드웨어 지원을 구분해야 함 |
+| L75-3 | 응답 품질 — AI가 존재하지 않는 7행 요구를 사용자 지시에 귀속 | round_75/evidence/ai_variant_final.txt · request.txt | 발견·원인 미확정 | 실제 입력·산출물은 6행으로 정확 |
 | L73-1 | 구현 결함(컴파일러) — 삼중 f문자열 리터럴 조각이 바깥 따옴표로 끝나면 Python SyntaxError 원문, IBL 위치 없음 | `f"""say "${x}"""` · round_73/evidence/base_v0_check.json | 수리 완료 — `_format_literal` 재해석, 실패 시 위치 있는 SYNTAX | 73회차 커밋 · v0 재검사(위치 184 로 바뀜)·기본 3·변형 2 통과 |
 | L73-2 | 관용구 계약·낭비 — `외부PC준비` 기본 환경조회가 문진 info 를 동기 30초로 중복 조회, 느린 몸에서 가지 실패(작업은 뒤에 성공) | round_73/evidence/probe_mac26_after_base.json | 가이드 문장(환경조회:false) — 관용구 자체는 미변경 | 73회차 커밋 · 훈련자 v6 로 재발 0 |
 | L73-3 | 외부 전제·상태 신선도 — `connected:true` 인 PC(맥26)가 info 미응답, 작업 queued→expired, 10분 사이 연결 깜빡임 | round_73/evidence/variant_evidence.json | 기록만 — 헬퍼 쪽 원인(롱폴/절전)과 `connected` 신선도 표기는 후속 | — |

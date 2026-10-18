@@ -1,0 +1,502 @@
+{
+  "token_note": "Provider input, output, cache_read/cache_create separately. No addition of cache to input. Trainer author tokens unmeasured.",
+  "ai": [
+    {
+      "id": 4905,
+      "source": "training",
+      "task_id": "task_sysai_70526a20",
+      "total_ms": 250471,
+      "started_at": "2026-10-18T19:03:33.022708",
+      "ended_at": "2026-10-18T19:07:43.494194",
+      "tools": {
+        "Bash": 6,
+        "execute_ibl": 9
+      },
+      "usage": {
+        "input": 2833497,
+        "output": 16644,
+        "cache_read": 2506055,
+        "cache_create": 321470
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 9258,
+          "output": 7,
+          "cache_read": 3328,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 161799,
+          "output": 4842,
+          "cache_read": 62108,
+          "cache_create": 99685
+        },
+        "execution": {
+          "input": 2619780,
+          "output": 11532,
+          "cache_read": 2440075,
+          "cache_create": 179671
+        },
+        "oneshot:evaluate": {
+          "input": 42660,
+          "output": 263,
+          "cache_read": 544,
+          "cache_create": 42114
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 6,
+        "model.input": 6,
+        "model.round": 23,
+        "model.usage": 6,
+        "model.call_finished": 6,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherit_declined": 1,
+        "supervision.model.started": 2,
+        "model.response_snapshot": 46,
+        "supervision.ownership.acquired": 1,
+        "ibl.started": 10,
+        "ibl.checkpoint": 5,
+        "ibl.finished": 10,
+        "supervision.ownership.released": 1,
+        "supervision.tool.supervisor": 1,
+        "supervision.model.finished": 2,
+        "supervision.framing": 1,
+        "supervision.tool.started": 15,
+        "supervision.tool.finished": 15,
+        "context.input_ref_resolved": 6,
+        "supervision.decision": 2,
+        "supervision.instruction.delivered": 1,
+        "seam": 3,
+        "side_effect.write": 2,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      }
+    },
+    {
+      "id": 4906,
+      "source": "training",
+      "task_id": "task_sysai_a17ca5c6",
+      "total_ms": 87382,
+      "started_at": "2026-10-18T19:08:15.359390",
+      "ended_at": "2026-10-18T19:09:42.741613",
+      "tools": {
+        "Bash": 2,
+        "execute_ibl": 2
+      },
+      "usage": {
+        "input": 1075252,
+        "output": 7553,
+        "cache_read": 1010094,
+        "cache_create": 55141
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 10501,
+          "output": 135,
+          "cache_read": 3584,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 4112,
+          "output": 1832,
+          "cache_read": 1024,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 1032585,
+          "output": 5229,
+          "cache_read": 999955,
+          "cache_create": 32620
+        },
+        "oneshot:evaluate": {
+          "input": 28054,
+          "output": 357,
+          "cache_read": 5531,
+          "cache_create": 22521
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 6,
+        "model.input": 6,
+        "model.round": 10,
+        "model.usage": 6,
+        "model.call_finished": 6,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherited": 1,
+        "supervision.framing": 1,
+        "model.response_snapshot": 9,
+        "supervision.tool.started": 4,
+        "supervision.tool.finished": 4,
+        "seam": 2,
+        "ibl.started": 2,
+        "ibl.finished": 2,
+        "ibl.checkpoint": 1,
+        "side_effect.write": 2,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "supervision.decision": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      }
+    }
+  ],
+  "trainer": [
+    {
+      "label": "trainer_base_v1",
+      "wall_s": 19.369,
+      "success": true,
+      "state": "completed",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "48bb3ac7b8ce4fc188b22cdb38d0e522",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "usage": {
+        "steps": 1588,
+        "rows": 12,
+        "elapsed_ms": 19224
+      },
+      "tool_ms_by_line": [
+        {
+          "line": 90,
+          "ms": 7274,
+          "calls": 2,
+          "actions": [
+            "self:task"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 10,
+          "ms": 4443,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 59,
+          "ms": 2138,
+          "calls": 5,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 86,
+          "ms": 922,
+          "calls": 2,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 97,
+          "ms": 879,
+          "calls": 2,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 64,
+          "ms": 531,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 70,
+          "ms": 401,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 47,
+          "ms": 133,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 58,
+          "ms": 116,
+          "calls": 5,
+          "actions": [
+            "self:limb"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 48,
+          "ms": 83,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        }
+      ]
+    },
+    {
+      "label": "trainer_variant_v1",
+      "wall_s": 5.504,
+      "success": true,
+      "state": "completed",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "e6762613ab244b6e873ce5ffc0016d6d",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "usage": {
+        "steps": 981,
+        "rows": 6,
+        "elapsed_ms": 5268
+      },
+      "tool_ms_by_line": [
+        {
+          "line": 46,
+          "ms": 277,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 31,
+          "ms": 73,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 37,
+          "ms": 67,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 48,
+          "ms": 62,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 47,
+          "ms": 60,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        },
+        {
+          "line": 49,
+          "ms": 50,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "5ed44f4070c95477b9c997f7294300f4d1172693ec08827a660a8a2df719353a"
+        }
+      ]
+    },
+    {
+      "label": "receipt_run",
+      "wall_s": 2.468,
+      "success": false,
+      "state": "interrupted",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "1b0340fa7acd4a5db3c66d605366845a",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "usage": {
+        "steps": 240,
+        "rows": 4,
+        "elapsed_ms": 2421
+      },
+      "tool_ms_by_line": [
+        {
+          "line": 7,
+          "ms": 1153,
+          "calls": 3,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "345fe1d941b38888d10936f6d11b711317f3260c4b8b8f28ca572004cfc99e42"
+        },
+        {
+          "line": 18,
+          "ms": 381,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "345fe1d941b38888d10936f6d11b711317f3260c4b8b8f28ca572004cfc99e42"
+        },
+        {
+          "line": 11,
+          "ms": 10,
+          "calls": 1,
+          "actions": [
+            "self:task"
+          ],
+          "source_hash": "345fe1d941b38888d10936f6d11b711317f3260c4b8b8f28ca572004cfc99e42"
+        }
+      ]
+    },
+    {
+      "label": "receipt_run_v1",
+      "wall_s": 2.308,
+      "success": true,
+      "state": "completed",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "9966940eb52945cbae145453875bb1cf",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "usage": {
+        "steps": 254,
+        "rows": 4,
+        "elapsed_ms": 2261
+      },
+      "tool_ms_by_line": [
+        {
+          "line": 7,
+          "ms": 1116,
+          "calls": 3,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "bc74ef423c297735639fa8f621283036be736717b02ae2664341dccffe8beb98"
+        },
+        {
+          "line": 18,
+          "ms": 372,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "bc74ef423c297735639fa8f621283036be736717b02ae2664341dccffe8beb98"
+        },
+        {
+          "line": 11,
+          "ms": 10,
+          "calls": 1,
+          "actions": [
+            "self:task"
+          ],
+          "source_hash": "bc74ef423c297735639fa8f621283036be736717b02ae2664341dccffe8beb98"
+        }
+      ]
+    },
+    {
+      "label": "null_run",
+      "wall_s": 0.694,
+      "success": false,
+      "state": "interrupted",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "1f26ba8c01dc46a8b29f25ed48c83ca7",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "usage": {
+        "steps": 43,
+        "rows": 0,
+        "elapsed_ms": 669
+      },
+      "tool_ms_by_line": []
+    },
+    {
+      "label": "missing_run",
+      "wall_s": 1.219,
+      "success": true,
+      "state": "completed",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "1c01ba2d61114377959eed400d9c7949",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "usage": {
+        "steps": 56,
+        "rows": 0,
+        "elapsed_ms": 1190
+      },
+      "tool_ms_by_line": [
+        {
+          "line": 7,
+          "ms": 488,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ],
+          "source_hash": "f228f85403149f93d3feef10966600f93756e143f625174042efd826e332e65f"
+        }
+      ]
+    }
+  ]
+}

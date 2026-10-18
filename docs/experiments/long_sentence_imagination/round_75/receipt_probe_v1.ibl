@@ -1,0 +1,2 @@
+#!ibl edition=2
+return $cases >> [table:each] { [try] {return {case:$it.case,result:[fn:PC제어확인]{작업:$it.task,대기:0}}} [catch] {return {case:$it.case,error:$error}} }

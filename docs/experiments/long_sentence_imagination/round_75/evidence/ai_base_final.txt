@@ -1,0 +1,22 @@
+6개 대상을 모두 읽기 전용으로 점검했고, 명부의 ID를 그대로 썼습니다. 결과는 **total 6 · ready 2 · not_ready 4**입니다. 4건은 다시 미확인 2건과 실패 2건으로 나뉩니다. 두 파일을 저장한 뒤 다시 읽어서 6개 ID가 모두 있는지, 합계가 행과 맞는지, report.md에 모든 행과 재생 미확인 문구가 있는지 확인했고 모두 일치했습니다.
+
+| id | 상태 | 핵심 근거 |
+|---|---|---|
+| local (`__local__`) | ready | 맥 본체에서 OS가 출력 장치 4개를 보고했습니다. 음량 조절·음소거 가능 여부도 OS가 직접 알려준 값입니다. 모니터 LF27T450F는 둘 다 false입니다. |
+| windows (`guestpc-70e163471313`, tv1) | ready | 출력 장치 4개를 확인했습니다. 기본 출력은 SAMSUNG(인텔 디스플레이 오디오)입니다. 작업이 한 번 대기 상태가 됐고, 처음 받은 영수증 `5bd9a38a…`의 그 작업만 확인해서 결과를 받았습니다. 다시 접수하지 않았습니다. |
+| offline (`guestpc-3fd796167b18`, 맥12) | unverified | 원장에 connected=false로 나오고, 조회 전에 "연결·shell 준비 상태 아님"으로 거절됐습니다. 작업이 접수되지 않아 영수증이 없습니다. 깨우지 않았습니다. |
+| tv (`hardware-63b28509b052`) | unverified | 읽기 전용 상태 조회 결과 `reachable:false, power:"unknown"`입니다. 응답이 없다는 뜻이고, 전원이 꺼졌다는 증거는 아닙니다. |
+| absent (`training75-does-not-exist`) | failed | 등록 원장 전체 27행 중에 없습니다. 비슷한 이름의 기기로 바꾸지 않았습니다. |
+| wrong_kind (`guestpc-fc7b12fba936`) | failed | 명부에는 pc로 적혀 있지만 원장에는 phone(삼성0, Android)입니다. 기기는 연결돼 있지만 PC 점검을 통과한 것으로 치지 않았습니다. |
+
+**확인해 두실 점**
+- **Windows의 음량 조절·음소거 가능 여부는 OS가 보고한 값이 아닙니다.** 상태 조회 스크립트(`data/instruments/pc_control_windows.ps1:67`)는 이 두 값을 항상 true로 내보냅니다. 그래서 report에는 "미확인"으로 적고, 스크립트가 낸 값은 따로 남겼습니다. 정책상 음량·음소거 조건이 꺼져 있어서 ready 판정은 달라지지 않습니다. OS 값을 받으려면 장치별 하드웨어 지원 조회(QueryHardwareSupport)를 읽는 단계가 더 필요합니다.
+- 같은 스크립트의 상태 조회 경로는 장치 열거와 현재 음량·음소거 읽기만 하고, 설정 메서드는 부르지 않는 것을 확인했습니다.
+- 실제 스피커 소리와 영상 재생은 이번에 확인하지 않았습니다. 이 점은 두 파일에도 적었습니다.
+- 전원·음량·음소거·화면·재생·기기 등록은 바꾸지 않았고, 파일은 지정한 출력 폴더에만 썼습니다.
+
+행마다 근거와 다음에 확인할 방법이 report.json과 report.md에 들어 있습니다.
+
+파일:
+- /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/ai/report.json
+- /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/ai/report.md

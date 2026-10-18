@@ -1,0 +1,280 @@
+{
+  "discovery_guides_live": {
+    "file": "pc_control.md",
+    "match": "filename",
+    "reference_kind": "filename",
+    "registered": true,
+    "has_content": true
+  },
+  "python_exact": {
+    "file": "python_libraries.md",
+    "match": "filename",
+    "reference_kind": "filename",
+    "registered": false,
+    "has_content": true
+  },
+  "records_exact": {
+    "file": "managed_records.md",
+    "match": "filename",
+    "reference_kind": "filename",
+    "registered": false,
+    "has_content": true
+  },
+  "alias": {
+    "file": "ibl_composition.md",
+    "match": "filename",
+    "reference_kind": "alias",
+    "registered": true,
+    "has_content": false
+  },
+  "missing": {
+    "error": "안전한 가이드 파일을 찾을 수 없습니다: training75_missing.md",
+    "error_code": "GUIDE_NOT_FOUND",
+    "has_content": false
+  },
+  "tv_metadata": {
+    "file": "tv_control.md",
+    "match": "filename",
+    "reference_kind": "filename",
+    "registered": true,
+    "has_content": false
+  },
+  "guide_if_hash": {
+    "file": "pc_control.md",
+    "match": "filename",
+    "reference_kind": "filename",
+    "registered": true,
+    "unchanged": true,
+    "has_content": false
+  },
+  "contract_check": {
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+      {
+        "code": "ARGUMENT_CONTRACT",
+        "message": "args: 이 조합에서 지원하지 않는 인자: url",
+        "source_span": {
+          "source_hash": "4220d2a4c7527e2750a25bd1128a008dcc6b56a610ab723396cb127caefcabce",
+          "start": 23,
+          "end": 125,
+          "line": 2,
+          "column": 8
+        },
+        "call_path": [],
+        "location": {
+          "source_hash": "4220d2a4c7527e2750a25bd1128a008dcc6b56a610ab723396cb127caefcabce",
+          "start": 23,
+          "end": 125,
+          "line": 2,
+          "column": 8,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 2,
+          "end_column": 110,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARGUMENT_CONTRACT",
+        "severity": "error",
+        "hint": "describe로 이 액션의 인자 관계(함께 필요한 인자·택일·범위)를 확인하고 호출 인자를 맞추세요."
+      }
+    ],
+    "has_content": false
+  },
+  "contract_run": {
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+      {
+        "code": "ARGUMENT_CONTRACT",
+        "message": "args: 이 조합에서 지원하지 않는 인자: url",
+        "source_span": {
+          "source_hash": "4220d2a4c7527e2750a25bd1128a008dcc6b56a610ab723396cb127caefcabce",
+          "start": 23,
+          "end": 125,
+          "line": 2,
+          "column": 8
+        },
+        "call_path": [],
+        "location": {
+          "source_hash": "4220d2a4c7527e2750a25bd1128a008dcc6b56a610ab723396cb127caefcabce",
+          "start": 23,
+          "end": 125,
+          "line": 2,
+          "column": 8,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 2,
+          "end_column": 110,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARGUMENT_CONTRACT",
+        "severity": "error",
+        "hint": "describe로 이 액션의 인자 관계(함께 필요한 인자·택일·범위)를 확인하고 호출 인자를 맞추세요."
+      }
+    ],
+    "success": false,
+    "error": "실행 전 검사에서 거절했습니다: args: 이 조합에서 지원하지 않는 인자: url (ARGUMENT_CONTRACT)",
+    "has_content": false
+  },
+  "trainer_check_v0": {
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+      {
+        "code": "TYPE",
+        "message": "Text가 필요하지만 List<Text>입니다.",
+        "source_span": {
+          "source_hash": "1d6f7fa7580c8f3a52a1d280caaa358d95fdead36c582a291bf51211f34c7114",
+          "start": 2260,
+          "end": 2428,
+          "line": 44,
+          "column": 61
+        },
+        "call_path": [],
+        "expected": "Text",
+        "actual": "List<Text>",
+        "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 1번째는 Text입니다. join(구분자, 문자열목록) 순서입니다. 예: join(\", \", [\"가\", \"나\"]).",
+        "location": {
+          "source_hash": "9f81c424fab45a73d6e787d8574c7b16a2851818d6eafea286274870bf5548e4",
+          "start": 2260,
+          "end": 2428,
+          "line": 44,
+          "column": 61,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 44,
+          "end_column": 229,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error"
+      },
+      {
+        "code": "TYPE",
+        "message": "List<Text>가 필요하지만 Text입니다.",
+        "source_span": {
+          "source_hash": "1d6f7fa7580c8f3a52a1d280caaa358d95fdead36c582a291bf51211f34c7114",
+          "start": 2429,
+          "end": 2433,
+          "line": 44,
+          "column": 230
+        },
+        "call_path": [],
+        "expected": "List<Text>",
+        "actual": "Text",
+        "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 2번째는 List<Text>입니다. join(구분자, 문자열목록) 순서입니다. 예: join(\", \", [\"가\", \"나\"]).",
+        "location": {
+          "source_hash": "9f81c424fab45a73d6e787d8574c7b16a2851818d6eafea286274870bf5548e4",
+          "start": 2429,
+          "end": 2433,
+          "line": 44,
+          "column": 230,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 44,
+          "end_column": 234,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error"
+      }
+    ],
+    "has_content": false
+  },
+  "trainer_check_v1": {
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "has_content": false
+  },
+  "null_check": {
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "has_content": false
+  },
+  "null_run": {
+    "success": false,
+    "error": "has/get은 Record와 Text 키를 받습니다.",
+    "diagnostic": {
+      "code": "RECORD_REQUIRED",
+      "kind": "runtime",
+      "message": "has/get은 Record와 Text 키를 받습니다.",
+      "frames": [
+        {
+          "function": "PC제어확인",
+          "call": {
+            "source_hash": "0340d2ffbec5f4bf30ceb992c8ea76ad7aaaa3184e9982a39f2d08a17dd88110",
+            "start": 23,
+            "end": 182,
+            "line": 2,
+            "column": 8
+          },
+          "definition": {
+            "source_hash": "0340d2ffbec5f4bf30ceb992c8ea76ad7aaaa3184e9982a39f2d08a17dd88110",
+            "start": 199,
+            "end": 927,
+            "line": 4,
+            "column": 1
+          }
+        }
+      ],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        43
+      ],
+      "details": {},
+      "source_span": {
+        "source_hash": "0340d2ffbec5f4bf30ceb992c8ea76ad7aaaa3184e9982a39f2d08a17dd88110",
+        "start": 377,
+        "end": 395,
+        "line": 7,
+        "column": 71
+      }
+    },
+    "executed": true,
+    "run_status": "interrupted",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "1f26ba8c01dc46a8b29f25ed48c83ca7",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "has_content": false
+  },
+  "missing_run": {
+    "success": true,
+    "value": {
+      "status": "unknown",
+      "target": "training75-no-device",
+      "verified": false,
+      "result": null,
+      "task_ref": null,
+      "verification": null,
+      "evidence_ref": null,
+      "failure": {
+        "stage": "verification",
+        "message": "원래 준비·접수 영수증을 읽을 수 없습니다",
+        "next": "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요."
+      },
+      "_receipt_ref": {
+        "run_id": "1c01ba2d61114377959eed400d9c7949",
+        "call_id": "af4933a5cc824ce9f25bb0c851d7443c3bf74ac0b21c9c37cf871009901151ef"
+      }
+    },
+    "executed": true,
+    "run_status": "completed",
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "1c01ba2d61114377959eed400d9c7949",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+    },
+    "has_content": false
+  }
+}

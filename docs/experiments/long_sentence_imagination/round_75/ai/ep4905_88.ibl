@@ -1,0 +1,3 @@
+#!ibl edition=2
+$ids = ["__local__","guestpc-70e163471313","guestpc-3fd796167b18","hardware-63b28509b052","training75-does-not-exist","guestpc-fc7b12fba936"]
+return $입력.limbs >> [table:filter]{where:($r)=> len(intersection([$r.device_id], $ids)) > 0}

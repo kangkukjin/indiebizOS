@@ -1,0 +1,22 @@
+새 조건으로 판정을 다시 했고, 결과는 **total 6 · ready 1 · not_ready 5**입니다. 5건은 미확인 3건과 실패 2건이며, 조건 미달이 관측으로 확인된 행은 0건입니다. 기기 상태를 새로 조회하거나 원격 작업을 접수하지 않았고, 직전에 제가 남긴 `ai/report.json`의 관측과 영수증만 근거로 썼습니다.
+
+| 순서 | id | 상태 | verified | ready | 판정 이유 |
+|---|---|---|---|---|---|
+| 1 | wrong_kind | failed | false | false | 명부에는 pc, 원장에는 phone(삼성0)으로 종류가 맞지 않습니다. 직전 판정을 그대로 유지했습니다. |
+| 2 | absent | failed | false | false | 등록 원장에 없는 ID입니다. |
+| 3 | tv | unverified | false | false | 직전 관측이 `reachable:false, power:"unknown"`입니다. 전원이 켜진 것을 관측하지 못했습니다. |
+| 4 | offline (맥12) | unverified | false | false | 연결되지 않아 접수 전에 거절됐고, 영수증이 없습니다. |
+| 5 | windows (tv1) | unverified | true | false | 출력 장치 4개는 관측했지만 음량 조절·음소거 가능 여부를 OS가 보고한 값이 아닙니다. 그래서 둘 다 충족하는지 확인할 수 없어 미확인으로 두었습니다. |
+| 6 | local | ready | true | true | 음량 조절과 음소거가 둘 다 OS 보고 true인 출력이 3개입니다(외장 헤드폰, Mac mini 스피커, ZoomAudioDevice). |
+
+달라진 점은 windows 하나입니다. 처음 점검에서는 ready였는데, 음량·음소거 조건이 켜지면서 미확인으로 내려갔습니다. 스크립트가 늘 true로 내보내는 값을 충족 근거로 삼지 않았기 때문입니다. 이 행을 판정하려면 OS에서 장치별 음량·음소거 지원 여부를 읽는 조회를 따로 돌려야 하는데, 이번에는 새 조회를 하지 않기로 해서 실행하지 않았습니다.
+
+**검증**
+- 저장 후 다시 읽어 행 순서와 target이 새 명부와 같은지, 합계가 행과 맞는지, report.md에 모든 행과 합계가 있는지 확인했고 모두 일치했습니다.
+- 기존 `ai/report.json`·`report.md`는 작업 전후 SHA-256이 같아 그대로 보존됐습니다.
+- 실제 스피커 소리와 영상 재생은 이번에도 확인하지 않았고, 이 점을 두 파일에 적었습니다.
+- 작업 지시에는 '7행'이라고 되어 있었지만 variant.json 명부는 6개 대상이라 명부를 따랐습니다.
+
+파일:
+- /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/ai/variant/report.json
+- /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-18_75회차/ai/variant/report.md

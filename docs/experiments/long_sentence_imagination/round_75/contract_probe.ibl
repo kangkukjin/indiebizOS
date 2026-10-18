@@ -1,0 +1,2 @@
+#!ibl edition=2
+return [self:script]{id:"TV제어",args:{target:"training75-no-tv",op:"status",url:"https://example.org/unused"}}

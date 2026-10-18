@@ -1,0 +1,82 @@
+{
+  "success": true,
+  "task_ref": {
+    "kind": "ibl_run",
+    "task_id": "9966940eb52945cbae145453875bb1cf",
+    "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+  },
+  "cases": [
+    {
+      "case": "original",
+      "status": "completed",
+      "verified": true,
+      "failure": null,
+      "error": null
+    },
+    {
+      "case": "changed_target",
+      "status": "unknown",
+      "verified": false,
+      "failure": {
+        "stage": "verification",
+        "message": "원래 요청·대상·작업 참조와 다릅니다",
+        "next": "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요."
+      },
+      "error": null
+    },
+    {
+      "case": "changed_fingerprint",
+      "status": "unknown",
+      "verified": false,
+      "failure": {
+        "stage": "verification",
+        "message": "원래 요청·대상·작업 참조와 다릅니다",
+        "next": "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요."
+      },
+      "error": null
+    },
+    {
+      "case": "missing_evidence",
+      "status": null,
+      "verified": null,
+      "failure": null,
+      "error": {
+        "code": "RECORD_REQUIRED",
+        "kind": "runtime",
+        "message": "has/get은 Record와 Text 키를 받습니다.",
+        "frames": [
+          {
+            "function": "PC제어확인",
+            "call": {
+              "source_hash": "bc74ef423c297735639fa8f621283036be736717b02ae2664341dccffe8beb98",
+              "start": 84,
+              "end": 113,
+              "line": 2,
+              "column": 69
+            },
+            "definition": {
+              "source_hash": "bc74ef423c297735639fa8f621283036be736717b02ae2664341dccffe8beb98",
+              "start": 180,
+              "end": 908,
+              "line": 4,
+              "column": 1
+            }
+          }
+        ],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [
+          125
+        ],
+        "details": {},
+        "source_span": {
+          "source_hash": "bc74ef423c297735639fa8f621283036be736717b02ae2664341dccffe8beb98",
+          "start": 358,
+          "end": 376,
+          "line": 7,
+          "column": 71
+        }
+      }
+    }
+  ]
+}

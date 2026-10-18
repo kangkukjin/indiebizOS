@@ -1,0 +1,2 @@
+#!ibl edition=2
+return [fn:PC제어확인]{작업:{status:"pending",target:"training75-no-device",verified:false,result:null,task_ref:null,verification:null,evidence_ref:null,failure:null},대기:0}

@@ -1,11 +1,14 @@
 """Result-reference identity: certified content, historical evidence, and tampering."""
 import boot_paths  # noqa: F401
 import json
+import base64
+from copy import deepcopy
+from decimal import Decimal
 
 import pytest
 
 import model_result_view as view
-from ibl_v2_ir import digest, pack
+from ibl_v2_ir import ResultValue, digest, pack, projection
 from supervision_store import TurnStore
 
 
@@ -96,6 +99,103 @@ def test_call_list_validates_page_bounds_before_reading(monkeypatch, page_args):
     monkeypatch.setattr(view, "evidence_store", lambda: pytest.fail("invalid request read store"))
     with pytest.raises(ValueError, match="limit"):
         view.read_result({"calls": True, **page_args})
+
+
+@pytest.mark.parametrize("size,preview_expected", [(20, False), (3000, True), (9000, True)])
+def test_model_wire_omission_keeps_preview_decision_and_raw_result(
+        tmp_path, monkeypatch, size, preview_expected):
+    import model_value_preview
+
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    original = envelope({"text": "가" * size}, complete=False)
+    before = deepcopy(original)
+    preview_calls = []
+    real_preview = model_value_preview.preview_value
+
+    def observe_preview(*args, **kwargs):
+        preview_calls.append(True)
+        return real_preview(*args, **kwargs)
+
+    monkeypatch.setattr(model_value_preview, "preview_value", observe_preview)
+    shown = view.project_result(original)
+    assert bool(preview_calls) is preview_expected
+    assert "value_wire" not in shown and "partial_wire" not in shown
+    assert shown["value"] == original["value"]
+    assert shown["success"] is True and shown["source_complete"] is False
+    assert shown["resume"] == original["resume"]
+    assert original == before
+    raw = view.read_result({"id": shown["result_ref"]["id"]})
+    assert json.loads(raw["text"]) == before
+    restored, notes = view.resolve_input_refs(shown["result_ref"]["input_args"], store=store)
+    assert restored["입력"] == before["value"]
+    assert notes[0]["evidence"]["incomplete"] is True
+
+
+def test_model_wire_omission_keeps_exact_typed_input(tmp_path, monkeypatch):
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    value = {"amount": Decimal("1.2300"), "id": 2**70,
+             "result": ResultValue(True, [False, None, Decimal("0.01")])}
+    original = envelope(value)
+    original["value"] = projection(value)
+    shown = view.project_result(original)
+    assert shown["value"] == projection(value) and "value_wire" not in shown
+    restored, _ = view.resolve_input_refs(shown["result_ref"]["input_args"], store=store)
+    assert pack(restored["입력"]) == pack(value)
+    assert isinstance(restored["입력"]["amount"], Decimal)
+    assert isinstance(restored["입력"]["result"], ResultValue)
+
+
+def test_model_partial_wire_omission_keeps_failure_and_recovery(tmp_path, monkeypatch):
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    partial = [{"amount": Decimal("12.3400")}]
+    original = {"edition": 2, "success": False, "source_complete": False,
+                "error": "source unavailable", "resume": {"run_id": "failed-run"},
+                "continuation": {"run_id": "failed-run", "reuse_args": {"code": "return 1"}},
+                "diagnostic": {"has_partial": True, "partial": projection(partial),
+                               "code": "SOURCE", "details": {}},
+                "partial_wire": {"protocol": "ibl-value/1", "data": pack(partial)}}
+    before = deepcopy(original)
+    shown = view.project_result(original)
+    assert "partial_wire" not in shown
+    for key in ("success", "source_complete", "error", "diagnostic", "resume", "continuation"):
+        assert shown[key] == before[key]
+    assert original == before
+    restored, notes = view.resolve_input_refs({"partial": {
+        "$ref": shown["result_ref"]["id"], "path": ["diagnostic", "partial"]}}, store=store)
+    assert pack(restored["partial"]) == pack(partial)
+    assert notes[0]["evidence"]["incomplete"] is True
+
+
+def test_app_boundary_retains_wire(monkeypatch):
+    import system_tools_ibl
+    import thread_context
+
+    original = envelope({"value": 42})
+    monkeypatch.setattr(thread_context, "get_call_channel", lambda: "app")
+    monkeypatch.setattr(view, "project_result", lambda *_: pytest.fail("app used model projection"))
+    shown = system_tools_ibl._preview_boundary(original, {})
+    assert shown["value_wire"] == original["value_wire"]
+    assert shown["value"] == original["value"]
+
+
+def test_wire_omission_keeps_image_delivery_and_original(tmp_path, monkeypatch):
+    from image_envelopes import harvest_images
+
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    blob = base64.b64encode(b"image-bytes" * 100).decode()
+    original = envelope({"image_base64": blob, "mime_type": "image/png"})
+    before = deepcopy(original)
+    shown = view.project_result(original)
+    text, images = harvest_images(json.dumps(shown))
+    assert len(images) == 1 and images[0]["b64"] == blob
+    assert images[0]["media_type"] == "image/png" and blob not in text
+    assert "value_wire" not in shown and original == before
+    raw = view.read_result({"id": shown["result_ref"]["id"]})
+    assert json.loads(raw["text"]) == before
 
 
 if __name__ == '__main__':

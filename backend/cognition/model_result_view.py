@@ -842,6 +842,12 @@ def project_v2_result(result):
     # 원문·복구 참조까지 붙인 표시 사본만 예산 안에 있을 때 전달 한도를 협상한다.
     if len(raw) > policy["min_chars"] and len(json.dumps(out, ensure_ascii=False)) <= 2 * policy["prose_chars"]:
         out["_display"] = {"max_chars": policy["prose_chars"]}
+    # 원본 저장·참조 생성·기존 미리보기/전달 한도 판정 뒤에 표시 사본만 정리한다.
+    # 먼저 빼면 6000자 경계가 달라져 본문 표시 정책까지 바뀐다.
+    out.pop("value_wire", None)
+    out.pop("partial_wire", None)
+    out["_hint"] = out["_hint"].replace("손실 없는 타입 전송은 value_wire입니다.",
+                                      "손실 없는 타입은 저장 원본에 보존됩니다.")
     return out
 
 

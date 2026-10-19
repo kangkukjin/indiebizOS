@@ -1,0 +1,46 @@
+{
+  "checks": [
+    {
+      "label": "ai/base",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "label": "ai/variant",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "label": "trainer/base",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "label": "trainer/policy",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "label": "trainer/repair_base",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "label": "trainer/repair_policy",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "label": "trainer/repair_variant",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "label": "trainer/variant",
+      "passed": 18,
+      "total": 18
+    }
+  ],
+  "holdout": "four runs exact expected lines",
+  "source_hashes": "final variant equals prerepair frozen variant"
+}

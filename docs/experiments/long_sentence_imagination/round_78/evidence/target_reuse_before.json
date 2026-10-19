@@ -1,0 +1,22 @@
+{
+  "first": {
+    "site": "north",
+    "count": 3
+  },
+  "second": {
+    "site": "north",
+    "count": 3
+  },
+  "calls": [
+    "north"
+  ],
+  "reuse": {
+    "run_id": "277033ab0d1543c9b16e9e75a5aefb56",
+    "reused_calls": 1,
+    "candidates": 1
+  },
+  "expected": {
+    "site": "south",
+    "count": 8
+  }
+}

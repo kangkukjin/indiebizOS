@@ -1,0 +1,47 @@
+{
+  "request": {
+    "code": "return [self:read]{path:$path}@round78_missing_7f493c",
+    "edition": 2,
+    "origin": "training",
+    "project_id": "study",
+    "task_id": "long_sentence_78_live_wrong_target",
+    "inputs": {
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_78회차/inputs/loans.json"
+    },
+    "reuse": {
+      "run_id": "975acbd365aa4392985a97d16df5e885"
+    }
+  },
+  "success": false,
+  "code": "TOOL",
+  "reuse": {
+    "run_id": "975acbd365aa4392985a97d16df5e885",
+    "reused_calls": 0,
+    "candidates": 1,
+    "skipped": [
+      {
+        "action": "self:read",
+        "location": {
+          "source_hash": "18f60528dfc7141f66574ca43629df759245f57da450837b55839f369d3de345",
+          "start": 7,
+          "end": 53,
+          "line": 1,
+          "column": 8
+        },
+        "reason": "no_matching_receipt",
+        "candidates": [
+          {
+            "receipt": "72b93d0027c7cff9ca5cce1991cdcb5e0459278dd16e9e2e6a9bc78084cf6e22",
+            "changed": [
+              "target_node"
+            ]
+          }
+        ],
+        "candidates_total": 1
+      }
+    ],
+    "skipped_total": 1
+  },
+  "elapsed": 1.1930222921073437,
+  "observation": "Unknown target rejected instead of reusing local file; no device request sent."
+}

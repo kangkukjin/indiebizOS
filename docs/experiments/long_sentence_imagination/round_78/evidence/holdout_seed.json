@@ -1,0 +1,21 @@
+{
+  "files": {
+    "manifest.json": "[\"first.txt\",\"second.txt\"]",
+    "first.txt": "alpha\nkeep:red\nomega\n",
+    "second.txt": "keep:blue\nfinish\n"
+  },
+  "base": [
+    "keep:red",
+    "keep:blue"
+  ],
+  "variant_files": {
+    "first.txt": "alpha\nkeep:tan\nomega\n",
+    "third.txt": "keep:gold\n",
+    "manifest.json": "[\"first.txt\",\"second.txt\",\"third.txt\"]"
+  },
+  "variant": [
+    "keep:tan",
+    "keep:blue",
+    "keep:gold"
+  ]
+}

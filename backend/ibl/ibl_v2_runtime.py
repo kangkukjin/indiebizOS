@@ -667,6 +667,7 @@ class Runtime(ExpressionEvaluator):
         # The whole program may change, but the selected call contract and its
         # dependency snapshot must still describe the same value/effect boundary.
         reuse_identity = {"action": key, "args": request["args"],
+                            "target_node": target_node,
                             "contract": contract,
                             "model_identity": model_identity,
                             "dependency": node.data.get("dependency_snapshot"),

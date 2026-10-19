@@ -1,0 +1,15 @@
+#!ibl edition=2
+[def:발췌]($folder,$names) {
+  return $names >> [table:each]{parallel:2} {
+    $name=$it
+    $doc=[self:read]{path:$folder+"/"+$name}
+    return {source:$name,lines:filter(split($doc.text,"\n"),($line)=>contains($line,"keep:",true))}
+  }
+}
+$manifest=[self:read]{path:$folder+"/manifest.json"}
+$rows=[fn:발췌]{folder:$folder,names:$manifest.data.items}
+$body=json({rows:$rows,count:sum(map($rows,($r)=>len($r.lines)))})
+[self:write]{path:$out,content:$body}
+$read=[self:read]{path:$out}
+assert $read.text==$body,"재독 실패"
+return $rows

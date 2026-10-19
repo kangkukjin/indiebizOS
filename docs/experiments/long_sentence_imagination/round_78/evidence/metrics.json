@@ -1,0 +1,736 @@
+{
+  "trainer": [
+    {
+      "label": "trainer_base",
+      "elapsed": 33.084853172302246,
+      "success": true,
+      "value": {
+        "complete": false,
+        "count": 12,
+        "totals": {
+          "loaned": 198,
+          "good": 102,
+          "damaged": 12,
+          "missing": 84,
+          "exposure": 624000
+        },
+        "missing_sources": [
+          {
+            "source": "late.txt",
+            "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_78회차/inputs/late.txt"
+          }
+        ],
+        "recheck": [
+          "R07",
+          "R08",
+          "R09",
+          "R10",
+          "R11",
+          "R12"
+        ]
+      },
+      "source_complete": false,
+      "usage": {
+        "steps": 2843,
+        "rows": 19,
+        "elapsed_ms": 33043,
+        "model": {
+          "requests": 3,
+          "measured_requests": 3,
+          "unmeasured_requests": 0,
+          "input": 16044,
+          "output": 279,
+          "cache_read": 5720,
+          "cache_create": 10318,
+          "reasoning": 0,
+          "calls": [
+            {
+              "call_id": "120bcc3027b54b3a96a62071c3d272b3",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 12982,
+              "input": 5348,
+              "output": 93,
+              "cache_read": 544,
+              "cache_create": 4802,
+              "reasoning": 0
+            },
+            {
+              "call_id": "9606479cfdbc4e769a2c403ebb72d64c",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 30105,
+              "input": 5348,
+              "output": 93,
+              "cache_read": 2588,
+              "cache_create": 2758,
+              "reasoning": 0
+            },
+            {
+              "call_id": "5f61a37b447f4cb192ef7c85db267703",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 16603,
+              "input": 5348,
+              "output": 93,
+              "cache_read": 2588,
+              "cache_create": 2758,
+              "reasoning": 0
+            }
+          ]
+        }
+      },
+      "reuse": {},
+      "run_id": "cce98d975bb240a7ad6452864d9dc806"
+    },
+    {
+      "label": "trainer_variant",
+      "elapsed": 15.076395988464355,
+      "success": true,
+      "value": {
+        "complete": true,
+        "count": 12,
+        "totals": {
+          "loaned": 198,
+          "good": 106,
+          "damaged": 12,
+          "missing": 80,
+          "exposure": 601000
+        },
+        "missing_sources": [],
+        "recheck": [
+          "R07",
+          "R08",
+          "R09",
+          "R10",
+          "R11",
+          "R12"
+        ]
+      },
+      "source_complete": true,
+      "usage": {
+        "steps": 3085,
+        "rows": 20,
+        "elapsed_ms": 15038,
+        "model": {
+          "requests": 2,
+          "measured_requests": 2,
+          "unmeasured_requests": 0,
+          "input": 10565,
+          "output": 156,
+          "cache_read": 5176,
+          "cache_create": 5385,
+          "reasoning": 0,
+          "calls": [
+            {
+              "call_id": "630095793dc1438bbe02d43630e766ef",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 10931,
+              "input": 5348,
+              "output": 93,
+              "cache_read": 2588,
+              "cache_create": 2758,
+              "reasoning": 0
+            },
+            {
+              "call_id": "efae5df11217414e8b33c56a5da6a2f1",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 13719,
+              "input": 5217,
+              "output": 63,
+              "cache_read": 2588,
+              "cache_create": 2627,
+              "reasoning": 0
+            }
+          ]
+        }
+      },
+      "reuse": {
+        "run_id": "cce98d975bb240a7ad6452864d9dc806",
+        "reused_calls": 6,
+        "candidates": 10,
+        "skipped_total": 6,
+        "model_calls": 2
+      },
+      "run_id": "c804a39e3edc4fa580b5d3e042eaed69"
+    },
+    {
+      "label": "trainer_policy",
+      "elapsed": 0.5591528415679932,
+      "success": true,
+      "value": {
+        "complete": true,
+        "count": 12,
+        "totals": {
+          "loaned": 198,
+          "good": 106,
+          "damaged": 12,
+          "missing": 80,
+          "exposure": 601000
+        },
+        "missing_sources": [],
+        "recheck": [
+          "R05",
+          "R06",
+          "R07",
+          "R08",
+          "R09",
+          "R10",
+          "R11",
+          "R12"
+        ]
+      },
+      "source_complete": true,
+      "usage": {
+        "steps": 3091,
+        "rows": 20,
+        "elapsed_ms": 522
+      },
+      "reuse": {
+        "run_id": "c804a39e3edc4fa580b5d3e042eaed69",
+        "reused_calls": 10,
+        "candidates": 12,
+        "skipped_total": 2,
+        "model_calls": 4
+      },
+      "run_id": "eaec0f43bc384de8b49714478b62ca7b"
+    },
+    {
+      "label": "holdout_base",
+      "elapsed": 0.42180299758911133,
+      "success": true,
+      "value": [
+        {
+          "source": "first.txt",
+          "lines": [
+            "keep:red"
+          ]
+        },
+        {
+          "source": "second.txt",
+          "lines": [
+            "keep:blue"
+          ]
+        }
+      ],
+      "source_complete": true,
+      "usage": {
+        "steps": 173,
+        "rows": 2,
+        "elapsed_ms": 402
+      },
+      "reuse": {},
+      "run_id": "571da19be92e4696a53250b0ac07761b"
+    },
+    {
+      "label": "holdout_variant",
+      "elapsed": 0.41822266578674316,
+      "success": true,
+      "value": [
+        {
+          "source": "first.txt",
+          "lines": [
+            "keep:tan"
+          ]
+        },
+        {
+          "source": "second.txt",
+          "lines": [
+            "keep:blue"
+          ]
+        },
+        {
+          "source": "third.txt",
+          "lines": [
+            "keep:gold"
+          ]
+        }
+      ],
+      "source_complete": true,
+      "usage": {
+        "steps": 222,
+        "rows": 3,
+        "elapsed_ms": 397
+      },
+      "reuse": {
+        "run_id": "571da19be92e4696a53250b0ac07761b",
+        "reused_calls": 1,
+        "candidates": 4,
+        "skipped_total": 4
+      },
+      "run_id": "f9a5117b88f94902a6a898cd6cb9ff9e"
+    },
+    {
+      "label": "live_local",
+      "elapsed": 0.8464815001934767,
+      "success": true,
+      "value": null,
+      "source_complete": true,
+      "usage": {
+        "steps": 5,
+        "rows": 0,
+        "elapsed_ms": 794
+      },
+      "reuse": {},
+      "run_id": "975acbd365aa4392985a97d16df5e885"
+    },
+    {
+      "label": "live_wrong_target",
+      "elapsed": 1.1930222921073437,
+      "success": false,
+      "value": null,
+      "source_complete": false,
+      "usage": {
+        "steps": 5,
+        "rows": 0,
+        "elapsed_ms": 1162
+      },
+      "reuse": {
+        "run_id": "975acbd365aa4392985a97d16df5e885",
+        "reused_calls": 0,
+        "candidates": 1,
+        "skipped_total": 1
+      },
+      "run_id": "70c517671b3f44b798b4a76fb9b7584f"
+    },
+    {
+      "label": "repair_base",
+      "elapsed": 8.716153144836426,
+      "success": true,
+      "value": {
+        "complete": false,
+        "count": 12,
+        "totals": {
+          "loaned": 198,
+          "good": 102,
+          "damaged": 12,
+          "missing": 84,
+          "exposure": 624000
+        },
+        "missing_sources": [
+          {
+            "source": "late.txt",
+            "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_78회차/inputs/late.txt"
+          }
+        ],
+        "recheck": [
+          "R07",
+          "R08",
+          "R09",
+          "R10",
+          "R11",
+          "R12"
+        ]
+      },
+      "source_complete": false,
+      "usage": {
+        "steps": 2843,
+        "rows": 19,
+        "elapsed_ms": 8619,
+        "model": {
+          "requests": 3,
+          "measured_requests": 3,
+          "unmeasured_requests": 0,
+          "input": 16152,
+          "output": 283,
+          "cache_read": 7764,
+          "cache_create": 8382,
+          "reasoning": 0,
+          "calls": [
+            {
+              "call_id": "8fcdb2917e8f453ab5600990aa54919a",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 5130,
+              "input": 5384,
+              "output": 97,
+              "cache_read": 2588,
+              "cache_create": 2794,
+              "reasoning": 0
+            },
+            {
+              "call_id": "e3cbbc77502b4d849bf26b7dd1738900",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 5711,
+              "input": 5384,
+              "output": 93,
+              "cache_read": 2588,
+              "cache_create": 2794,
+              "reasoning": 0
+            },
+            {
+              "call_id": "02711dc42013452787b3922a99b1b077",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 5341,
+              "input": 5384,
+              "output": 93,
+              "cache_read": 2588,
+              "cache_create": 2794,
+              "reasoning": 0
+            }
+          ]
+        }
+      },
+      "reuse": {},
+      "run_id": "2366458cbcf04bdc825fbe74c4732f3d"
+    },
+    {
+      "label": "repair_variant",
+      "elapsed": 8.884773015975952,
+      "success": true,
+      "value": {
+        "complete": true,
+        "count": 12,
+        "totals": {
+          "loaned": 198,
+          "good": 106,
+          "damaged": 12,
+          "missing": 80,
+          "exposure": 601000
+        },
+        "missing_sources": [],
+        "recheck": [
+          "R07",
+          "R08",
+          "R09",
+          "R10",
+          "R11",
+          "R12"
+        ]
+      },
+      "source_complete": true,
+      "usage": {
+        "steps": 3085,
+        "rows": 20,
+        "elapsed_ms": 8755,
+        "model": {
+          "requests": 2,
+          "measured_requests": 2,
+          "unmeasured_requests": 0,
+          "input": 10637,
+          "output": 156,
+          "cache_read": 5176,
+          "cache_create": 5457,
+          "reasoning": 0,
+          "calls": [
+            {
+              "call_id": "eb141818f1ba4bd995975d51e33e56fd",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 5165,
+              "input": 5384,
+              "output": 93,
+              "cache_read": 2588,
+              "cache_create": 2794,
+              "reasoning": 0
+            },
+            {
+              "call_id": "8c69f60d6228414894e555a754e8276f",
+              "parent_call_id": null,
+              "role": "oneshot:execution",
+              "phase": "execution",
+              "provider": "ClaudeCode",
+              "model": "opus",
+              "round_index": 1,
+              "tier": "고급",
+              "source": "gear:최대|실행→고급",
+              "measured": true,
+              "elapsed_ms": 6381,
+              "input": 5253,
+              "output": 63,
+              "cache_read": 2588,
+              "cache_create": 2663,
+              "reasoning": 0
+            }
+          ]
+        }
+      },
+      "reuse": {
+        "run_id": "2366458cbcf04bdc825fbe74c4732f3d",
+        "reused_calls": 6,
+        "candidates": 10,
+        "skipped_total": 6,
+        "model_calls": 2
+      },
+      "run_id": "1b09be51afdc4e658288c0872e2c2610"
+    },
+    {
+      "label": "repair_policy",
+      "elapsed": 1.8252010345458984,
+      "success": true,
+      "value": {
+        "complete": true,
+        "count": 12,
+        "totals": {
+          "loaned": 198,
+          "good": 106,
+          "damaged": 12,
+          "missing": 80,
+          "exposure": 601000
+        },
+        "missing_sources": [],
+        "recheck": [
+          "R05",
+          "R06",
+          "R07",
+          "R08",
+          "R09",
+          "R10",
+          "R11",
+          "R12"
+        ]
+      },
+      "source_complete": true,
+      "usage": {
+        "steps": 3091,
+        "rows": 20,
+        "elapsed_ms": 1697
+      },
+      "reuse": {
+        "run_id": "1b09be51afdc4e658288c0872e2c2610",
+        "reused_calls": 10,
+        "candidates": 12,
+        "skipped_total": 2,
+        "model_calls": 4
+      },
+      "run_id": "c0598851366c42d1ba9dcce331fc9f2d"
+    },
+    {
+      "label": "holdout_repair_base",
+      "elapsed": 0.7978289127349854,
+      "success": true,
+      "value": [
+        {
+          "source": "first.txt",
+          "lines": [
+            "keep:red"
+          ]
+        },
+        {
+          "source": "second.txt",
+          "lines": [
+            "keep:blue"
+          ]
+        }
+      ],
+      "source_complete": true,
+      "usage": {
+        "steps": 173,
+        "rows": 2,
+        "elapsed_ms": 749
+      },
+      "reuse": {},
+      "run_id": "1fedf2e29ea846d3861e2145173c8805"
+    },
+    {
+      "label": "holdout_repair_variant",
+      "elapsed": 0.9954650402069092,
+      "success": true,
+      "value": [
+        {
+          "source": "first.txt",
+          "lines": [
+            "keep:tan"
+          ]
+        },
+        {
+          "source": "second.txt",
+          "lines": [
+            "keep:blue"
+          ]
+        },
+        {
+          "source": "third.txt",
+          "lines": [
+            "keep:gold"
+          ]
+        }
+      ],
+      "source_complete": true,
+      "usage": {
+        "steps": 222,
+        "rows": 3,
+        "elapsed_ms": 935
+      },
+      "reuse": {
+        "run_id": "1fedf2e29ea846d3861e2145173c8805",
+        "reused_calls": 1,
+        "candidates": 4,
+        "skipped_total": 4
+      },
+      "run_id": "b719acfc891e4dbe95155da1313a2f49"
+    }
+  ],
+  "ai": [
+    {
+      "task": "task_sysai_2cf603c0",
+      "episodes": [
+        {
+          "id": 4963,
+          "total_ms": 124372,
+          "source": "training",
+          "started_at": "2026-10-19T12:34:33.081364",
+          "ended_at": "2026-10-19T12:36:37.453771"
+        }
+      ],
+      "usage": {
+        "input": 502940,
+        "output": 7937,
+        "cache_read": 413111,
+        "cache_create": 86727
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 6672,
+          "output": 3,
+          "cache_read": 3584,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 123504,
+          "output": 2803,
+          "cache_read": 89594,
+          "cache_create": 33906
+        },
+        "execution": {
+          "input": 349336,
+          "output": 4656,
+          "cache_read": 314046,
+          "cache_create": 35282
+        },
+        "oneshot:evaluate": {
+          "input": 23428,
+          "output": 475,
+          "cache_read": 5887,
+          "cache_create": 17539
+        }
+      },
+      "tools": {
+        "Bash": 3
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "OpenAI/deepseek-flash"
+      ]
+    },
+    {
+      "task": "task_sysai_4187839b",
+      "episodes": [
+        {
+          "id": 4964,
+          "total_ms": 89589,
+          "source": "training",
+          "started_at": "2026-10-19T12:37:02.209257",
+          "ended_at": "2026-10-19T12:38:31.798698"
+        }
+      ],
+      "usage": {
+        "input": 498654,
+        "output": 7764,
+        "cache_read": 449189,
+        "cache_create": 44334
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 6241,
+          "output": 5,
+          "cache_read": 3584,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 3616,
+          "output": 1840,
+          "cache_read": 1152,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 467643,
+          "output": 5377,
+          "cache_read": 438566,
+          "cache_create": 29069
+        },
+        "oneshot:evaluate": {
+          "input": 21154,
+          "output": 542,
+          "cache_read": 5887,
+          "cache_create": 15265
+        }
+      },
+      "tools": {
+        "Bash": 3
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "OpenAI/deepseek-flash"
+      ]
+    }
+  ],
+  "note": "input includes cache; do not add cache again. Operator author tokens unmeasured; API runtime times exclude preparation, authoring, verification and repairs."
+}

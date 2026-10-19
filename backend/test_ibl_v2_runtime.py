@@ -129,6 +129,56 @@ def test_complete_document_revision_program(tmp_path, record_property, variant):
     assert {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in docs.glob('*.md')} == snapshot
 
 
+@pytest.mark.parametrize('effect', ['read_external', 'model'])
+@pytest.mark.parametrize('first_target,next_target', [
+    ('north', 'south'), ('north', None), (None, 'south'),
+    ('north', 'north'), (None, None),
+])
+def test_reuse_keeps_execution_destination(tmp_path, effect, first_target, next_target):
+    """A changed destination must really execute; unchanged work stays reusable."""
+    from ibl_v2_adapters import Adapter
+    from ibl_run_journal import Journal, reusable_receipts
+
+    calls = []
+
+    def read(runtime, args, target_node=None):
+        calls.append(target_node)
+        return {'site': target_node or 'local', 'count': {'north': 3, 'south': 8}.get(target_node, 5)}
+
+    registry = {'test:read': Adapter(
+        {'version': 1, 'params': {'path': 'Text'}, 'result': 'Record', 'effects': [effect]},
+        read, model_identity=(lambda: 'fixed-model') if effect == 'model' else None)}
+
+    def execute(target, **kwargs):
+        code = '[def:collect]() { return [test:read]{path:"returns.json"}'
+        code += ('@' + target if target else '') + ' }; return [fn:collect]{}'
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.issues
+        return Runtime(plan, **kwargs).run()
+
+    with Journal(tmp_path, 'first') as journal:
+        first = execute(first_target, journal=journal)
+        first_id = journal.run_id
+    assert first['success'], first
+    with Journal(tmp_path, 'second') as journal:
+        second = execute(next_target, journal=journal,
+                         reusable=reusable_receipts(tmp_path, first_id), reuse_run=first_id)
+        second_id = journal.run_id
+    assert second['success'], second
+    assert second['value'] == {'site': next_target or 'local',
+                               'count': {'north': 3, 'south': 8}.get(next_target, 5)}
+    changed = first_target != next_target
+    assert calls == ([first_target, next_target] if changed else [first_target])
+    assert second['reuse']['reused_calls'] == int(not changed)
+    if changed:
+        assert 'target_node' in second['reuse']['skipped'][0]['candidates'][0]['changed']
+    # The new receipt remains useful across another continuation.
+    third = execute(next_target, reusable=reusable_receipts(tmp_path, second_id), reuse_run=second_id)
+    assert third['success'] and third['value'] == second['value']
+    assert third['reuse']['reused_calls'] == 1
+    assert len(calls) == (2 if changed else 1)
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

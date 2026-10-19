@@ -1,0 +1,464 @@
+{
+  "base": {
+    "complete": false,
+    "rows": [
+      {
+        "id": "R01",
+        "loaned": 11,
+        "good": 3,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 8000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R02",
+        "loaned": 12,
+        "good": 4,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 16000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R03",
+        "loaned": 13,
+        "good": 5,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 24000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R04",
+        "loaned": 14,
+        "good": 6,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 32000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R05",
+        "loaned": 15,
+        "good": 7,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 40000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R06",
+        "loaned": 16,
+        "good": 8,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 48000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R07",
+        "loaned": 17,
+        "good": 9,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 56000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R08",
+        "loaned": 18,
+        "good": 10,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 64000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R09",
+        "loaned": 19,
+        "good": 11,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 72000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R10",
+        "loaned": 20,
+        "good": 12,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 80000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R11",
+        "loaned": 21,
+        "good": 13,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 88000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R12",
+        "loaned": 22,
+        "good": 14,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 96000,
+        "sources": [
+          "west.txt"
+        ]
+      }
+    ],
+    "totals": {
+      "loaned": 198,
+      "good": 102,
+      "damaged": 12,
+      "missing": 84,
+      "exposure": 624000
+    },
+    "recheck": [
+      "R07",
+      "R08",
+      "R09",
+      "R10",
+      "R11",
+      "R12"
+    ]
+  },
+  "variant": {
+    "complete": true,
+    "rows": [
+      {
+        "id": "R01",
+        "loaned": 11,
+        "good": 5,
+        "damaged": 1,
+        "missing": 5,
+        "exposure": 6000,
+        "sources": [
+          "north.txt",
+          "late.txt"
+        ]
+      },
+      {
+        "id": "R02",
+        "loaned": 12,
+        "good": 4,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 16000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R03",
+        "loaned": 13,
+        "good": 5,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 24000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R04",
+        "loaned": 14,
+        "good": 6,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 32000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R05",
+        "loaned": 15,
+        "good": 7,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 40000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R06",
+        "loaned": 16,
+        "good": 8,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 48000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R07",
+        "loaned": 17,
+        "good": 9,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 56000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R08",
+        "loaned": 18,
+        "good": 10,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 64000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R09",
+        "loaned": 19,
+        "good": 12,
+        "damaged": 0,
+        "missing": 7,
+        "exposure": 63000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R10",
+        "loaned": 20,
+        "good": 12,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 80000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R11",
+        "loaned": 21,
+        "good": 13,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 88000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R12",
+        "loaned": 22,
+        "good": 15,
+        "damaged": 0,
+        "missing": 7,
+        "exposure": 84000,
+        "sources": [
+          "west.txt",
+          "late.txt"
+        ]
+      }
+    ],
+    "totals": {
+      "loaned": 198,
+      "good": 106,
+      "damaged": 12,
+      "missing": 80,
+      "exposure": 601000
+    },
+    "recheck": [
+      "R07",
+      "R08",
+      "R09",
+      "R10",
+      "R11",
+      "R12"
+    ]
+  },
+  "policy": {
+    "complete": true,
+    "rows": [
+      {
+        "id": "R01",
+        "loaned": 11,
+        "good": 5,
+        "damaged": 1,
+        "missing": 5,
+        "exposure": 6000,
+        "sources": [
+          "north.txt",
+          "late.txt"
+        ]
+      },
+      {
+        "id": "R02",
+        "loaned": 12,
+        "good": 4,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 16000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R03",
+        "loaned": 13,
+        "good": 5,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 24000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R04",
+        "loaned": 14,
+        "good": 6,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 32000,
+        "sources": [
+          "north.txt"
+        ]
+      },
+      {
+        "id": "R05",
+        "loaned": 15,
+        "good": 7,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 40000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R06",
+        "loaned": 16,
+        "good": 8,
+        "damaged": 0,
+        "missing": 8,
+        "exposure": 48000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R07",
+        "loaned": 17,
+        "good": 9,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 56000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R08",
+        "loaned": 18,
+        "good": 10,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 64000,
+        "sources": [
+          "south.txt"
+        ]
+      },
+      {
+        "id": "R09",
+        "loaned": 19,
+        "good": 12,
+        "damaged": 0,
+        "missing": 7,
+        "exposure": 63000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R10",
+        "loaned": 20,
+        "good": 12,
+        "damaged": 1,
+        "missing": 7,
+        "exposure": 80000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R11",
+        "loaned": 21,
+        "good": 13,
+        "damaged": 2,
+        "missing": 6,
+        "exposure": 88000,
+        "sources": [
+          "west.txt"
+        ]
+      },
+      {
+        "id": "R12",
+        "loaned": 22,
+        "good": 15,
+        "damaged": 0,
+        "missing": 7,
+        "exposure": 84000,
+        "sources": [
+          "west.txt",
+          "late.txt"
+        ]
+      }
+    ],
+    "totals": {
+      "loaned": 198,
+      "good": 106,
+      "damaged": 12,
+      "missing": 80,
+      "exposure": 601000
+    },
+    "recheck": [
+      "R05",
+      "R06",
+      "R07",
+      "R08",
+      "R09",
+      "R10",
+      "R11",
+      "R12"
+    ]
+  }
+}

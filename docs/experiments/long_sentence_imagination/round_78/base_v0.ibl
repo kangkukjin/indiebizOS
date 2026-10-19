@@ -1,0 +1,44 @@
+#!ibl edition=2
+[def:접수추출]($folder,$sources) {
+  return $sources >> [table:each]{parallel:3} {
+    $source=$it
+    [try] {
+      $doc=[self:read]{path:$folder+"/"+$source.file}
+      $parsed=[{source:$source.file,text:$doc.text}] >> [table:ai]{instruction:"반납 접수 원문을 읽어 events 배열을 추가하라. events의 각 객체는 id(대여번호 문자열), good(정상반납 수량 숫자), damaged(파손반납 수량 숫자)다. 모든 접수 건을 원문 순서대로 보존하고 원문에 없는 수량은 null로 남겨라. 설명은 쓰지 마라.",schema:"events(접수 객체 배열)",preserve_rows:true,fields:["source","events"]}
+      return {source:$source.file,ok:true,events:$parsed.items[0].events,error:""}
+    } [catch] {
+      return {source:$source.file,ok:false,events:[],error:$error.message}
+    }
+  }
+}
+[def:대사]($loans,$receipts,$threshold) {
+  $events=reduce(filter($receipts,($r)=>$r.ok),[],($acc,$r)=>$acc+map($r.events,($e)=>{**$e,source:$r.source}))
+  $unknown=filter($events,($e)=>$e.good==null or $e.damaged==null)
+  assert len($unknown)==0,"미확인 수량: 합계를 확정할 수 없음"
+  $rows=$loans >> [table:each] {
+    $loan=$it
+    $matched=filter($events,($e)=>$e.id==$loan.id)
+    $good=sum(map($matched,($e)=>number($e.good)))
+    $damaged=sum(map($matched,($e)=>number($e.damaged)))
+    $missing=$loan.loaned-$good-$damaged
+    assert $missing>=0,"대여보다 많은 반납",{id:$loan.id}
+    return {id:$loan.id,loaned:$loan.loaned,good:$good,damaged:$damaged,missing:$missing,exposure:($missing+$damaged)*$loan.unit_value,sources:unique(map($matched,($e)=>$e.source))}
+  }
+  $missing_sources=map(filter($receipts,($r)=>not $r.ok),($r)=>{source:$r.source,error:$r.error})
+  return {complete:len($missing_sources)==0,rows:$rows,missing_sources:$missing_sources,totals:{loaned:sum(map($rows,($r)=>$r.loaned)),good:sum(map($rows,($r)=>$r.good)),damaged:sum(map($rows,($r)=>$r.damaged)),missing:sum(map($rows,($r)=>$r.missing)),exposure:sum(map($rows,($r)=>$r.exposure))},recheck:map(filter($rows,($r)=>$r.exposure>=$threshold),($r)=>$r.id)}
+}
+[def:산출]($out,$result) {
+  $body=json($result)
+  $summary="# 반납 대사\n상태: "+($result.complete ? "전체 자료 대사" : "누락 자료가 있어 잠정")+"\n합계: "+json($result.totals)+"\n누락: "+json($result.missing_sources)+"\n재확인: "+json($result.recheck)+"\n"
+  [self:write]{path:$out+"/report.json",content:$body}
+  [self:write]{path:$out+"/summary.md",content:$summary}
+  $saved=[self:read]{path:$out+"/report.json"}
+  $memo=[self:read]{path:$out+"/summary.md"}
+  assert $saved.text==$body and $memo.text==$summary,"저장 재독 불일치"
+  return {complete:$result.complete,count:len($result.rows),totals:$result.totals,missing_sources:$result.missing_sources,recheck:$result.recheck}
+}
+$manifest=[self:read]{path:$folder+"/sources.json"}
+$loans=[self:read]{path:$folder+"/loans.json"}
+$receipts=[fn:접수추출]{folder:$folder,sources:$manifest.data.items}
+$result=[fn:대사]{loans:$loans.data.items,receipts:$receipts,threshold:$threshold}
+return [fn:산출]{out:$out,result:$result}

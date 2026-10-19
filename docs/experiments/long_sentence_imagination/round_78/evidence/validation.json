@@ -1,0 +1,8 @@
+{
+  "full": "10834 passed, 1 skipped, 190 warnings in 203.95s (0:03:23)",
+  "system": "63 passed, 1 warning in 82.06s (0:01:22)",
+  "related": "45 passed, 7 deselected, 5 warnings in 15.36s",
+  "build": "build_ibl_nodes.py --check passed; build_body_bundle.py android generated no tracked difference",
+  "scope": "No frontend UI, physical remote-device, or independent-AI postrepair replay",
+  "time": "2026-10-19T12:49:48.677503+09:00"
+}

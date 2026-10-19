@@ -1,0 +1,67 @@
+FFFFFF....                                                               [100%]
+=================================== FAILURES ===================================
+______ test_reuse_keeps_execution_destination[north-south-read_external] _______
+backend/test_ibl_v2_runtime.py:168: in test_reuse_keeps_execution_destination
+    assert second['value'] == {'site': next_target or 'local',
+E   AssertionError: assert {'site': 'north', 'count': 3} == {'site': 'south', 'count': 8}
+E     
+E     Differing items:
+E     {'site': 'north'} != {'site': 'south'}
+E     {'count': 3} != {'count': 8}
+E     Use -v to get more diff
+__________ test_reuse_keeps_execution_destination[north-south-model] ___________
+backend/test_ibl_v2_runtime.py:168: in test_reuse_keeps_execution_destination
+    assert second['value'] == {'site': next_target or 'local',
+E   AssertionError: assert {'site': 'north', 'count': 3} == {'site': 'south', 'count': 8}
+E     
+E     Differing items:
+E     {'site': 'north'} != {'site': 'south'}
+E     {'count': 3} != {'count': 8}
+E     Use -v to get more diff
+_______ test_reuse_keeps_execution_destination[north-None-read_external] _______
+backend/test_ibl_v2_runtime.py:168: in test_reuse_keeps_execution_destination
+    assert second['value'] == {'site': next_target or 'local',
+E   AssertionError: assert {'site': 'north', 'count': 3} == {'site': 'local', 'count': 5}
+E     
+E     Differing items:
+E     {'site': 'north'} != {'site': 'local'}
+E     {'count': 3} != {'count': 5}
+E     Use -v to get more diff
+___________ test_reuse_keeps_execution_destination[north-None-model] ___________
+backend/test_ibl_v2_runtime.py:168: in test_reuse_keeps_execution_destination
+    assert second['value'] == {'site': next_target or 'local',
+E   AssertionError: assert {'site': 'north', 'count': 3} == {'site': 'local', 'count': 5}
+E     
+E     Differing items:
+E     {'site': 'north'} != {'site': 'local'}
+E     {'count': 3} != {'count': 5}
+E     Use -v to get more diff
+_______ test_reuse_keeps_execution_destination[None-south-read_external] _______
+backend/test_ibl_v2_runtime.py:168: in test_reuse_keeps_execution_destination
+    assert second['value'] == {'site': next_target or 'local',
+E   AssertionError: assert {'site': 'local', 'count': 5} == {'site': 'south', 'count': 8}
+E     
+E     Differing items:
+E     {'site': 'local'} != {'site': 'south'}
+E     {'count': 5} != {'count': 8}
+E     Use -v to get more diff
+___________ test_reuse_keeps_execution_destination[None-south-model] ___________
+backend/test_ibl_v2_runtime.py:168: in test_reuse_keeps_execution_destination
+    assert second['value'] == {'site': next_target or 'local',
+E   AssertionError: assert {'site': 'local', 'count': 5} == {'site': 'south', 'count': 8}
+E     
+E     Differing items:
+E     {'site': 'local'} != {'site': 'south'}
+E     {'count': 5} != {'count': 8}
+E     Use -v to get more diff
+============================= slowest 15 durations =============================
+
+(15 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_ibl_v2_runtime.py::test_reuse_keeps_execution_destination[north-south-read_external]
+FAILED backend/test_ibl_v2_runtime.py::test_reuse_keeps_execution_destination[north-south-model]
+FAILED backend/test_ibl_v2_runtime.py::test_reuse_keeps_execution_destination[north-None-read_external]
+FAILED backend/test_ibl_v2_runtime.py::test_reuse_keeps_execution_destination[north-None-model]
+FAILED backend/test_ibl_v2_runtime.py::test_reuse_keeps_execution_destination[None-south-read_external]
+FAILED backend/test_ibl_v2_runtime.py::test_reuse_keeps_execution_destination[None-south-model]
+6 failed, 4 passed, 8 deselected in 0.41s

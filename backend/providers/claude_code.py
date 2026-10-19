@@ -446,8 +446,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         (도구 스키마 0 — 원샷 텍스트 호출) / "read"=`--tools Read`(원샷이 이미지를 봐야 할 때만).
         실측: 같은 한 줄 질문이 평소 29.5K 컨텍스트·$0.30, 도구 없음 3.9K·$0.04.
 
-        --no-session-persistence는 일부러 빼놓음 — Claude Code가 디스크에 세션을 저장해야
-        다음 호출 시 --resume으로 자기 과거를 이어볼 수 있음.
+        일반 대화는 디스크에 저장해 --resume으로 이어간다. 원샷처럼
+        disable_session_persistence가 설정된 호출은 CLI의 디스크 저장도 막는다.
 
         --allowed-tools 는 권한(permission)이고 스키마 로드가 아니다 — CLI 2.1.205~258 실측:
         allowed 만 주면 내장 36개+ToolSearch 가 eager, MCP 두 도구는 deferred 라 매 에피소드 첫
@@ -461,6 +461,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             # 비대화 모드에서 권한 프롬프트로 멈추지 않도록 — MCP 호출은 indiebizOS 자체 게이트
             "--permission-mode", "bypassPermissions",
         ]
+        persist_session = not getattr(self, "disable_session_persistence", False)
+        if not persist_session:
+            cmd += ["--no-session-persistence"]
         supervisor_role = getattr(self, "agent_role", "execution") == "consciousness"
         response_repair = getattr(self, "restricted_response_repair", False)
         from research_context import library_only
@@ -518,7 +521,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             cmd += ["--verbose"]
 
         # 세션 이어가기 (Claude Code가 자기 과거 도구 호출·plan·파일 편집 이력을 봄)
-        if resume_session_id:
+        if resume_session_id and persist_session:
             cmd += ["--resume", resume_session_id]
 
         if self.model:

@@ -36,5 +36,36 @@ def test_repair_command_is_not_exposed_to_other_roles(monkeypatch, repair, mode)
         assert 'mcp__indiebizos__execute_ibl' not in allowed
 
 
+@pytest.mark.parametrize('stream', [False, True])
+@pytest.mark.parametrize('tools_mode', [None, 'none', 'read'])
+@pytest.mark.parametrize('disabled', [False, True])
+def test_session_persistence_controls_disk_and_resume(stream, tools_mode, disabled):
+    provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')
+    provider._binary_path = 'claude'
+    provider.disable_session_persistence = disabled
+    cmd = provider._build_command(
+        stream=stream, tools_mode=tools_mode, resume_session_id='prior-session')
+    assert ('--no-session-persistence' in cmd) == disabled
+    assert ('--resume' in cmd) != disabled
+    assert ('prior-session' in cmd) != disabled
+
+
+def test_oneshot_passes_disk_persistence_policy_to_claude(monkeypatch):
+    from consciousness_agent import call_oneshot_provider
+
+    commands = []
+
+    def process(provider, **kwargs):
+        commands.append(provider._build_command(tools_mode='none'))
+        return '{}'
+
+    monkeypatch.setattr(ClaudeCodeProvider, 'process_message', process)
+    provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')
+    provider._binary_path = 'claude'
+    assert call_oneshot_provider(provider, 'test') == '{}'
+    assert '--no-session-persistence' in commands[0]
+    assert provider.disable_session_persistence is False
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

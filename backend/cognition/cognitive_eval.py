@@ -388,19 +388,15 @@ class CognitiveEvalMixin:
             f"턴 종료 후 지연 적용과 충돌해 나중 판본이 덮인다.{read_hint} "
             "피드백 보완은 예약분을 전제로 부족한 부분만 더하라.")
 
-    _evaluator_prompt_cache: str = ""
-
     @classmethod
     def _load_evaluator_prompt(cls) -> str:
-        """기준 판정에 필요한 역할 프롬프트만 로드한다 (캐시)."""
-        if not cls._evaluator_prompt_cache:
-            base = Path(__file__).parent.parent.parent / "data"
-            prompt_path = base / "common_prompts" / "evaluator_prompt.md"
-            try:
-                cls._evaluator_prompt_cache = prompt_path.read_text(encoding='utf-8')
-            except FileNotFoundError:
-                cls._evaluator_prompt_cache = "제공된 달성 기준만 평가하라. 새 요구를 만들지 않는다. 판정 불가면 UNKNOWN."
-        return cls._evaluator_prompt_cache
+        """작은 역할 파일은 매 평가에 읽어 수정·복구를 다음 판정에 반영한다."""
+        prompt_path = (Path(__file__).parent.parent.parent / "data"
+                       / "common_prompts" / "evaluator_prompt.md")
+        try:
+            return prompt_path.read_text(encoding='utf-8')
+        except FileNotFoundError:
+            return "제공된 달성 기준만 평가하라. 새 요구를 만들지 않는다. 판정 불가면 UNKNOWN."
 
     def _evaluate_achievement(self, user_message: str, criteria: str,
                                response: str, created_files: str,

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-19T12:20:12.287653+09:00",
+  "health": {
+    "status": "healthy",
+    "timestamp": "2026-10-19T12:20:12.287347",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "live_turns": [],
+    "live_turns_observation": "known"
+  },
+  "all_original_and_repair_tasks_terminal": true
+}

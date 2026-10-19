@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-19T11:55:55.831377+09:00",
+  "request_frozen_by": "LONG_SENTENCE_COST_DISCOVERY_DESIGN_2026_10_19.md (before repair)",
+  "limit": "Source snapshot and detailed criteria captured after repair, before transfer run; not a preregistered cost comparison.",
+  "criteria": [
+    "원문 변경/소실에도 보존된 사본과 출처로 검토할 수 있는 조건·한계",
+    "주제별 자료 구분과 판단 근거 연결",
+    "미완료 질문의 상태·후속 재개 절차",
+    "현재 구현과 계획 구분, 주요 주장에 원문 근거",
+    "간결한 도입 메모/순서별 점검표, 실제 등록이나 생성 없음"
+  ]
+}

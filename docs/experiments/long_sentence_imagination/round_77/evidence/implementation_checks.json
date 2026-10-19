@@ -1,0 +1,29 @@
+{
+  "phase": "ACTIVE",
+  "generation": "437d32ec5d03d1c51e52ca54aa212d77",
+  "code_digest": "e0ef08cc4aeefbd5a54c6483f870f754182e79b2f42e0c38f0b63599ad205365",
+  "last_result": {
+    "outcome": "deferred",
+    "note": "request_cancelled",
+    "request_id": "round77-evaluator-refresh"
+  },
+  "cache_before_tests": "2 failed (edit not reloaded; recovered file still fallback)",
+  "after_related_tests": "75 passed",
+  "prompt_only_tests": "19 passed",
+  "full_non_system": {
+    "passed": 10823,
+    "skipped": 1,
+    "failed": 1,
+    "seconds": 201.43,
+    "failure": "new test missing direct pytest entry; fixed and verified by targeted 6 tests + direct execution 2 tests"
+  },
+  "related_system": {
+    "passed": 105,
+    "skipped": 1,
+    "seconds": 149.73
+  },
+  "ibl_build_check": "passed",
+  "body_bundle_build": "passed; no tracked output diff",
+  "extraction_and_original_hash_checks": "34/34 passed",
+  "composition_teaching_after_move": "67 passed"
+}

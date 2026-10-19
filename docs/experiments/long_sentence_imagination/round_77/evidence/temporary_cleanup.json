@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/tmp/in_before.txt",
+    "copied_to": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_77회차/evidence/temporary_hashes/in_before.txt",
+    "verified_against": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_77회차/inputs/ai",
+    "removed": true
+  },
+  {
+    "path": "/tmp/rb_before.txt",
+    "copied_to": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_77회차/evidence/temporary_hashes/rb_before.txt",
+    "verified_against": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_77회차/ai/repair_base",
+    "removed": true
+  }
+]

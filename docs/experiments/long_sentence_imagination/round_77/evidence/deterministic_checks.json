@@ -1,0 +1,138 @@
+[
+  {
+    "check": "input hash trainer/D1",
+    "ok": true
+  },
+  {
+    "check": "input hash trainer/D2",
+    "ok": true
+  },
+  {
+    "check": "input hash trainer/D3",
+    "ok": true
+  },
+  {
+    "check": "input hash trainer/D4",
+    "ok": true
+  },
+  {
+    "check": "input hash ai/D1",
+    "ok": true
+  },
+  {
+    "check": "input hash ai/D2",
+    "ok": true
+  },
+  {
+    "check": "input hash ai/D3",
+    "ok": true
+  },
+  {
+    "check": "input hash ai/D4",
+    "ok": true
+  },
+  {
+    "check": "original training outputs unchanged",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D1 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D1 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D1 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D2 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D2 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D2 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D3 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D3 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D3 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D4 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D4 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_base/D4 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D1 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D1 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D1 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D2 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D2 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D2 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D3 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D3 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D3 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D4 source lines exact",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D4 headings retained",
+    "ok": true
+  },
+  {
+    "check": "repair_variant/D4 coverage counted",
+    "ok": true
+  },
+  {
+    "check": "variant reuses repaired base evidence",
+    "ok": true
+  }
+]

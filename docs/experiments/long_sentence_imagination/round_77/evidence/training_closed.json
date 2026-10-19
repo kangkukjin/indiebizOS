@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-19T11:53:09.748068+09:00",
+  "tasks": [
+    "long_sentence_77_trainer_base",
+    "long_sentence_77_trainer_variant",
+    "task_sysai_9217454d",
+    "task_sysai_abb55025"
+  ],
+  "all_terminal": true,
+  "hashes": {
+    "ai/variant/checklist.md": "b124b4945ae397783d33b9072fe992245a9d877ef1290ac28f213ca592631e94",
+    "ai/variant/memo.md": "d9e2dde6e82ddd50e2dab6c40410a3fc26658f958f418dfc13332054bc646c81",
+    "ai/base/checklist.md": "6782e54f2aecfa522f53c67f23e10bf1875a834885089caaccdbdfb02e74360e",
+    "ai/base/memo.md": "ba687b16daf127275c887a83bbb29e0bc25aa88790104fbde15f845a4daf30a0",
+    "trainer/variant/checklist.md": "5347841a357e60a7c0fa46ea4828892d9dfcc1f443760639a204ef9dbae18c26",
+    "trainer/variant/memo.md": "a787cb098097161791fa2e2729e65429a030df0c95ae7382e38550a54cb51917",
+    "trainer/base/checklist.md": "ef970daabbc8e884aa1f3a21d0e8e9d80ebb836c70972d11607b65b29ee9c7c3",
+    "trainer/base/memo.md": "bee31d062084eb4d61e0ac58336f79bf386a7c0305d0d60a871bc7334a662b0a",
+    "inputs/ai/01_MEMBER_DESKTOP_DESIGN_2026_10_15.md": "963fa9a4e629115ecc9cf98454bbfd2c671bb7bfeb4bed2fc9814c7caf02f278",
+    "inputs/ai/04_anatomy.md": "6c8eeba01fc6b2d5b4df86e975bdc293ff3465519f5b3d06a1b3a92ed724d0e4",
+    "inputs/ai/02_remote_access.md": "65201528c8d3ef4701923f546c3d68601783a9387567e229a46442bf31309f7d",
+    "inputs/ai/03_pc_control.md": "cadfda7426e12a81c3fd2c30456d062283c0f4599b7d3e2851539175cb929989",
+    "inputs/trainer/01_MEMBER_DESKTOP_DESIGN_2026_10_15.md": "963fa9a4e629115ecc9cf98454bbfd2c671bb7bfeb4bed2fc9814c7caf02f278",
+    "inputs/trainer/04_anatomy.md": "6c8eeba01fc6b2d5b4df86e975bdc293ff3465519f5b3d06a1b3a92ed724d0e4",
+    "inputs/trainer/02_remote_access.md": "65201528c8d3ef4701923f546c3d68601783a9387567e229a46442bf31309f7d",
+    "inputs/trainer/03_pc_control.md": "cadfda7426e12a81c3fd2c30456d062283c0f4599b7d3e2851539175cb929989"
+  }
+}

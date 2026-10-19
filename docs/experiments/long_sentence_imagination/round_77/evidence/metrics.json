@@ -1,0 +1,783 @@
+{
+  "usage_note": "Provider reported input/output/cache_read/cache_create. Cache is not added again. Trainer author usage unmeasured.",
+  "tasks": [
+    {
+      "task_id": "long_sentence_77_trainer_base",
+      "episodes": [],
+      "tools": {},
+      "usage": {
+        "input": 40005,
+        "output": 25197,
+        "cache_read": 544,
+        "cache_create": 39459
+      },
+      "roles": {
+        "oneshot:execution": {
+          "input": 40005,
+          "output": 25197,
+          "cache_read": 544,
+          "cache_create": 39459
+        }
+      },
+      "models": [
+        "ClaudeCode/opus"
+      ],
+      "event_counts": {
+        "ibl.started": 4,
+        "ibl.finished": 4,
+        "ibl.checkpoint": 1,
+        "side_effect.write": 4,
+        "model.call_started": 1,
+        "model.input": 1,
+        "model.round": 1,
+        "model.response_snapshot": 2,
+        "model.usage": 1,
+        "model.call_finished": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "long_sentence_77_trainer_variant",
+      "episodes": [],
+      "tools": {},
+      "usage": {
+        "input": 54726,
+        "output": 25005,
+        "cache_read": 2781,
+        "cache_create": 51943
+      },
+      "roles": {
+        "oneshot:execution": {
+          "input": 54726,
+          "output": 25005,
+          "cache_read": 2781,
+          "cache_create": 51943
+        }
+      },
+      "models": [
+        "ClaudeCode/opus"
+      ],
+      "event_counts": {
+        "ibl.started": 2,
+        "ibl.finished": 2,
+        "ibl.checkpoint": 1,
+        "side_effect.write": 4,
+        "model.call_started": 1,
+        "model.input": 1,
+        "model.round": 1,
+        "model.response_snapshot": 2,
+        "model.usage": 1,
+        "model.call_finished": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "long_sentence_77_trainer_repair_base",
+      "episodes": [],
+      "tools": {},
+      "usage": {
+        "input": 45228,
+        "output": 11839,
+        "cache_read": 2781,
+        "cache_create": 42445
+      },
+      "roles": {
+        "oneshot:execution": {
+          "input": 45228,
+          "output": 11839,
+          "cache_read": 2781,
+          "cache_create": 42445
+        }
+      },
+      "models": [
+        "ClaudeCode/opus"
+      ],
+      "event_counts": {
+        "ibl.started": 3,
+        "ibl.finished": 3,
+        "ibl.checkpoint": 1,
+        "side_effect.write": 4,
+        "model.call_started": 1,
+        "model.input": 1,
+        "model.round": 1,
+        "model.response_snapshot": 2,
+        "model.usage": 1,
+        "model.call_finished": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "long_sentence_77_trainer_repair_variant",
+      "episodes": [],
+      "tools": {},
+      "usage": {
+        "input": 50673,
+        "output": 9621,
+        "cache_read": 2781,
+        "cache_create": 47890
+      },
+      "roles": {
+        "oneshot:execution": {
+          "input": 50673,
+          "output": 9621,
+          "cache_read": 2781,
+          "cache_create": 47890
+        }
+      },
+      "models": [
+        "ClaudeCode/opus"
+      ],
+      "event_counts": {
+        "ibl.started": 2,
+        "ibl.finished": 2,
+        "ibl.checkpoint": 1,
+        "side_effect.write": 4,
+        "model.call_started": 1,
+        "model.input": 1,
+        "model.round": 1,
+        "model.response_snapshot": 2,
+        "model.usage": 1,
+        "model.call_finished": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "task_sysai_3b9f8310",
+      "episodes": [
+        {
+          "id": 4960,
+          "source": "training",
+          "task_id": "task_sysai_3b9f8310",
+          "total_ms": 216343,
+          "started_at": "2026-10-19T12:08:01.390725",
+          "ended_at": "2026-10-19T12:11:37.734267"
+        }
+      ],
+      "tools": {
+        "Bash": 8
+      },
+      "usage": {
+        "input": 1160342,
+        "output": 17643,
+        "cache_read": 953002,
+        "cache_create": 197327
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 16771,
+          "output": 13,
+          "cache_read": 6784,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 60493,
+          "output": 3325,
+          "cache_read": 29949,
+          "cache_create": 30542
+        },
+        "execution": {
+          "input": 996391,
+          "output": 13144,
+          "cache_read": 909838,
+          "cache_create": 86533
+        },
+        "oneshot:evaluate": {
+          "input": 86687,
+          "output": 1161,
+          "cache_read": 6431,
+          "cache_create": 80252
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 9,
+        "model.input": 9,
+        "model.round": 17,
+        "model.usage": 9,
+        "model.call_finished": 9,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherit_declined": 1,
+        "supervision.model.started": 1,
+        "model.response_snapshot": 26,
+        "supervision.model.finished": 1,
+        "supervision.framing": 1,
+        "supervision.tool.started": 8,
+        "supervision.tool.finished": 8,
+        "capability.judged": 2,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 7,
+        "supervision.evaluation.stage_finished": 7,
+        "supervision.evaluation.started": 2,
+        "supervision.evaluation.finished": 2,
+        "supervision.decision": 2,
+        "validation.completed": 2,
+        "supervision.repair.admitted": 1,
+        "supervision.ownership.handoff": 2,
+        "supervision.repair.context": 1,
+        "supervision.response.operation": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "task_sysai_c7d62d12",
+      "episodes": [
+        {
+          "id": 4961,
+          "source": "training",
+          "task_id": "task_sysai_c7d62d12",
+          "total_ms": 186260,
+          "started_at": "2026-10-19T12:12:05.106779",
+          "ended_at": "2026-10-19T12:15:11.367107"
+        }
+      ],
+      "tools": {
+        "Bash": 6,
+        "Write": 2
+      },
+      "usage": {
+        "input": 1117613,
+        "output": 17483,
+        "cache_read": 1007869,
+        "cache_create": 104307
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 6918,
+          "output": 5,
+          "cache_read": 3968,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 3619,
+          "output": 1769,
+          "cache_read": 1152,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 1065872,
+          "output": 15211,
+          "cache_read": 996862,
+          "cache_create": 68992
+        },
+        "oneshot:evaluate": {
+          "input": 41204,
+          "output": 498,
+          "cache_read": 5887,
+          "cache_create": 35315
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 5,
+        "model.input": 5,
+        "model.round": 13,
+        "model.usage": 5,
+        "model.call_finished": 5,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherited": 1,
+        "supervision.framing": 1,
+        "model.response_snapshot": 19,
+        "supervision.tool.started": 8,
+        "supervision.tool.finished": 8,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "supervision.decision": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "task_sysai_f2a79105",
+      "episodes": [
+        {
+          "id": 4958,
+          "source": "training",
+          "task_id": "task_sysai_f2a79105",
+          "total_ms": 243575,
+          "started_at": "2026-10-19T11:55:14.841806",
+          "ended_at": "2026-10-19T11:59:18.417920"
+        }
+      ],
+      "tools": {
+        "Bash": 9,
+        "Write": 2
+      },
+      "usage": {
+        "input": 1641208,
+        "output": 20865,
+        "cache_read": 1403746,
+        "cache_create": 230750
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 11166,
+          "output": 8,
+          "cache_read": 4480,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 60024,
+          "output": 3846,
+          "cache_read": 29949,
+          "cache_create": 30073
+        },
+        "execution": {
+          "input": 1521843,
+          "output": 16681,
+          "cache_read": 1363501,
+          "cache_create": 158320
+        },
+        "oneshot:evaluate": {
+          "input": 48175,
+          "output": 330,
+          "cache_read": 5816,
+          "cache_create": 42357
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 6,
+        "model.input": 6,
+        "model.round": 16,
+        "model.usage": 6,
+        "model.call_finished": 6,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherit_declined": 1,
+        "supervision.model.started": 1,
+        "model.response_snapshot": 30,
+        "supervision.model.finished": 1,
+        "supervision.framing": 1,
+        "supervision.tool.started": 11,
+        "supervision.tool.finished": 11,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "supervision.decision": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "task_sysai_f9003aed",
+      "episodes": [
+        {
+          "id": 4959,
+          "source": "training",
+          "task_id": "task_sysai_f9003aed",
+          "total_ms": 195436,
+          "started_at": "2026-10-19T11:59:35.890422",
+          "ended_at": "2026-10-19T12:02:51.327242"
+        }
+      ],
+      "tools": {
+        "Bash": 2,
+        "Write": 2,
+        "Edit": 1
+      },
+      "usage": {
+        "input": 1182021,
+        "output": 17081,
+        "cache_read": 1084281,
+        "cache_create": 88685
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 10957,
+          "output": 10,
+          "cache_read": 4736,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 3974,
+          "output": 2029,
+          "cache_read": 1152,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 1136768,
+          "output": 14782,
+          "cache_read": 1072577,
+          "cache_create": 64181
+        },
+        "oneshot:evaluate": {
+          "input": 30322,
+          "output": 260,
+          "cache_read": 5816,
+          "cache_create": 24504
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 6,
+        "model.input": 6,
+        "model.round": 10,
+        "model.usage": 6,
+        "model.call_finished": 6,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherited": 1,
+        "supervision.framing": 1,
+        "model.response_snapshot": 14,
+        "supervision.tool.started": 5,
+        "supervision.tool.finished": 5,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "supervision.decision": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "task_sysai_9217454d",
+      "episodes": [
+        {
+          "id": 4956,
+          "source": "training",
+          "task_id": "task_sysai_9217454d",
+          "total_ms": 276115,
+          "started_at": "2026-10-19T11:42:03.930561",
+          "ended_at": "2026-10-19T11:46:40.046598"
+        }
+      ],
+      "tools": {
+        "Bash": 10,
+        "Read": 1,
+        "Write": 2
+      },
+      "usage": {
+        "input": 1964863,
+        "output": 23349,
+        "cache_read": 1726308,
+        "cache_create": 230976
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 11643,
+          "output": 8,
+          "cache_read": 4096,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 121867,
+          "output": 2893,
+          "cache_read": 88681,
+          "cache_create": 33182
+        },
+        "execution": {
+          "input": 1784595,
+          "output": 20157,
+          "cache_read": 1627715,
+          "cache_create": 156854
+        },
+        "oneshot:evaluate": {
+          "input": 46758,
+          "output": 291,
+          "cache_read": 5816,
+          "cache_create": 40940
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 6,
+        "model.input": 6,
+        "model.round": 19,
+        "model.usage": 6,
+        "model.call_finished": 6,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherit_declined": 1,
+        "supervision.model.started": 1,
+        "model.response_snapshot": 31,
+        "supervision.ownership.acquired": 1,
+        "ibl.started": 1,
+        "ibl.checkpoint": 1,
+        "ibl.finished": 1,
+        "supervision.ownership.released": 1,
+        "supervision.tool.supervisor": 1,
+        "supervision.model.finished": 1,
+        "supervision.framing": 1,
+        "supervision.tool.started": 13,
+        "supervision.tool.finished": 13,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "supervision.decision": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "task_sysai_49b95119",
+      "episodes": [
+        {
+          "id": 4962,
+          "source": "training",
+          "task_id": "task_sysai_49b95119",
+          "total_ms": 210592,
+          "started_at": "2026-10-19T12:15:45.382564",
+          "ended_at": "2026-10-19T12:19:15.974760"
+        }
+      ],
+      "tools": {
+        "Bash": 7,
+        "Read": 2,
+        "Write": 2
+      },
+      "usage": {
+        "input": 1154635,
+        "output": 15602,
+        "cache_read": 993499,
+        "cache_create": 154909
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 10557,
+          "output": 105,
+          "cache_read": 4352,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 122535,
+          "output": 2778,
+          "cache_read": 90546,
+          "cache_create": 31985
+        },
+        "execution": {
+          "input": 981725,
+          "output": 12202,
+          "cache_read": 892714,
+          "cache_create": 88995
+        },
+        "oneshot:evaluate": {
+          "input": 39818,
+          "output": 517,
+          "cache_read": 5887,
+          "cache_create": 33929
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 6,
+        "model.input": 6,
+        "model.round": 14,
+        "model.usage": 6,
+        "model.call_finished": 6,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherit_declined": 1,
+        "supervision.model.started": 1,
+        "model.response_snapshot": 24,
+        "supervision.ownership.acquired": 1,
+        "supervision.ownership.released": 1,
+        "supervision.tool.supervisor": 1,
+        "supervision.model.finished": 1,
+        "supervision.framing": 1,
+        "supervision.tool.started": 11,
+        "supervision.tool.finished": 11,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "supervision.decision": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      },
+      "usage_conflicts": []
+    },
+    {
+      "task_id": "task_sysai_abb55025",
+      "episodes": [
+        {
+          "id": 4957,
+          "source": "training",
+          "task_id": "task_sysai_abb55025",
+          "total_ms": 187652,
+          "started_at": "2026-10-19T11:47:10.009821",
+          "ended_at": "2026-10-19T11:50:17.662238"
+        }
+      ],
+      "tools": {
+        "Bash": 4,
+        "Write": 2,
+        "Edit": 1
+      },
+      "usage": {
+        "input": 1663407,
+        "output": 19421,
+        "cache_read": 1551807,
+        "cache_create": 101308
+      },
+      "roles": {
+        "oneshot:classify": {
+          "input": 11621,
+          "output": 10,
+          "cache_read": 4096,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 3903,
+          "output": 2158,
+          "cache_read": 1152,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 1610508,
+          "output": 16687,
+          "cache_read": 1540743,
+          "cache_create": 69751
+        },
+        "oneshot:evaluate": {
+          "input": 37375,
+          "output": 566,
+          "cache_read": 5816,
+          "cache_create": 31557
+        }
+      },
+      "models": [
+        "ClaudeCode/opus",
+        "DeepSeekProvider/deepseek-flash",
+        "OpenAI/deepseek-flash"
+      ],
+      "event_counts": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 8,
+        "supervision.recall.finished": 8,
+        "model.call_started": 6,
+        "model.input": 6,
+        "model.round": 12,
+        "model.usage": 6,
+        "model.call_finished": 6,
+        "knowledge_catalog.selected": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "framing.inherited": 1,
+        "supervision.framing": 1,
+        "model.response_snapshot": 16,
+        "supervision.tool.started": 7,
+        "supervision.tool.finished": 7,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "supervision.evaluation.stage_started": 4,
+        "supervision.evaluation.stage_finished": 4,
+        "supervision.evaluation.started": 1,
+        "supervision.evaluation.finished": 1,
+        "supervision.decision": 1,
+        "validation.completed": 1,
+        "supervision.response.delivered": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      },
+      "usage_conflicts": []
+    }
+  ]
+}

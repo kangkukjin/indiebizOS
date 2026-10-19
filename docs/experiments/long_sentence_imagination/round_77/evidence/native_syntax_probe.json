@@ -1,0 +1,24 @@
+[
+  {
+    "command": "echo ======",
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "zsh:1: ===== not found\n"
+  },
+  {
+    "command": "echo '======'",
+    "returncode": 0,
+    "stdout": "======\n",
+    "stderr": ""
+  },
+  {
+    "pattern": "회원\\\\|member",
+    "returncode": 1,
+    "matched_lines": 0
+  },
+  {
+    "pattern": "회원\\|member",
+    "returncode": 0,
+    "matched_lines": 3
+  }
+]

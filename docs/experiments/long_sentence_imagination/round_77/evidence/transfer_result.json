@@ -1,0 +1,18 @@
+{
+  "task_id": "task_sysai_49b95119",
+  "episode": 4962,
+  "status": "succeeded",
+  "review": "달성 — 문서 검토 범위. 실기능 검증이나 타 분야 절감률 아님.",
+  "criteria": {
+    "원문 보존/확보범위": "full/partial/snippet/unknown과 실제 확보 원문만 보존하는 한계 구별",
+    "주제별 구분": "대화별 자료실과 사람별 권한 보장을 구별",
+    "근거 연결": "판본·추출 revision·locator·quote와 의미적 타당성 구별",
+    "질문 재개": "gaps/next_probes, answered의 조건, 종결 재개·충돌 확인",
+    "외부 행동": "도구는 입력 읽기·파일 저장·검사만. 프로젝트 생성/등록 없음"
+  },
+  "source_hashes_unchanged": true,
+  "output_hashes": {
+    "checklist.md": "2f50926f32bc8886eb1db78f10b455a1b2867cc565d9f23371d2de9cd486e640",
+    "memo.md": "af8340c19fc2e434d9392b64e11b31b81d5fb5b967aae09430f6b64e3ab22a41"
+  }
+}

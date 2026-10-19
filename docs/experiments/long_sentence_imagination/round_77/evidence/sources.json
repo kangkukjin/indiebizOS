@@ -1,0 +1,37 @@
+{
+  "revision": "293d49f0712df95103be6f87705472634c0ad2df",
+  "sources": [
+    {
+      "id": "D1",
+      "source": "docs/MEMBER_DESKTOP_DESIGN_2026_10_15.md",
+      "file": "01_MEMBER_DESKTOP_DESIGN_2026_10_15.md",
+      "sha256": "963fa9a4e629115ecc9cf98454bbfd2c671bb7bfeb4bed2fc9814c7caf02f278",
+      "bytes": 47206,
+      "lines": 328
+    },
+    {
+      "id": "D2",
+      "source": "data/system_docs/remote_access.md",
+      "file": "02_remote_access.md",
+      "sha256": "65201528c8d3ef4701923f546c3d68601783a9387567e229a46442bf31309f7d",
+      "bytes": 41600,
+      "lines": 738
+    },
+    {
+      "id": "D3",
+      "source": "data/guides/pc_control.md",
+      "file": "03_pc_control.md",
+      "sha256": "cadfda7426e12a81c3fd2c30456d062283c0f4599b7d3e2851539175cb929989",
+      "bytes": 6094,
+      "lines": 89
+    },
+    {
+      "id": "D4",
+      "source": "data/system_docs/anatomy.md",
+      "file": "04_anatomy.md",
+      "sha256": "6c8eeba01fc6b2d5b4df86e975bdc293ff3465519f5b3d06a1b3a92ed724d0e4",
+      "bytes": 49803,
+      "lines": 332
+    }
+  ]
+}

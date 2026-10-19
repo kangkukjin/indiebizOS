@@ -1,0 +1,36 @@
+#!ibl edition=2
+[def:근거모으기]($folder) {
+  $manifest=[self:read]{path:$folder + "/sources.json"}
+  return $manifest.data.items >> [table:each]{parallel:4} {
+    $row=$it
+    $doc=[self:read]{path:$folder + "/" + $row.file}
+    $lines=enumerate(split($doc.text,"\n"))
+    $hits=filter($lines,($p)=>any(map(["회원","member","Member","중앙","셸","임대","Windows","macOS","오프라인"],($word)=>contains($p[1],$word,true))))
+    $positions=unique(reduce($hits,[],($acc,$p)=>$acc+[$p[0]-2,$p[0]-1,$p[0],$p[0]+1,$p[0]+2]))
+    $index=from_entries(map($positions,($n)=>[text($n),true]))
+    $selected=filter($lines,($p)=>has($index,text($p[0])))
+    return {id:$row.id,file:$row.file,sha256:$row.sha256,total_lines:len($lines),selected_lines:len($selected),text:join("\n",map($selected,($p)=>text($p[0]+1)+"\t"+$p[1]))}
+  }
+}
+[def:저장검수]($out,$answer,$sources,$request) {
+  assert $answer.memo != null and $answer.checklist != null,"필수 산출물 누락"
+  [self:write]{path:$out + "/state.json",content:json({sources:$sources,request:$request,answer:$answer})}
+  [self:write]{path:$out + "/memo.md",content:text($answer.memo)}
+  [self:write]{path:$out + "/checklist.md",content:text($answer.checklist)}
+  $memo=[self:read]{path:$out + "/memo.md"}
+  $check=[self:read]{path:$out + "/checklist.md"}
+  assert $memo.text==$answer.memo and $check.text==$answer.checklist,"저장 후 재독 불일치"
+  return {saved:true,memo_path:$out+"/memo.md",checklist_path:$out+"/checklist.md",source_count:len($sources),memo_chars:len($memo.text),checklist_chars:len($check.text)}
+}
+$sources=[]
+$previous={}
+[if:$previous_path==""] {
+  $sources=[fn:근거모으기]{folder:$folder}
+} [else] {
+  $saved=[self:read]{path:$previous_path}
+  $sources=$saved.data.sources
+  $previous=$saved.data.answer
+}
+[self:write]{path:$out+"/evidence.json",content:json($sources)}
+$answer=[{request:$request,sources:$sources,previous:$previous}] >> [table:ai]{instruction:"제공된 원문 발췌만 근거로 사용자 요구를 수행하라. memo와 checklist 두 Markdown 본문을 반환하라. 중요한 사실은 [파일명:줄번호] 인용과 짧은 정확한 원문 발췌를 붙여 검토 가능하게 하라. 주장·설계·현재 구현·실기 검증을 구별하고 자료의 부족은 미확인으로 남겨라. 중앙 모델 관리, 실행 위치, 파일 권한, 결과 소유, 연결 단절, OS별 검증 범위를 모두 다뤄라. previous가 있으면 기존 검토를 새 요구에 맞춰 수정하고 바뀐 결론/유지한 결론/추가 질문을 명시하라. 가이드·계획의 내용만으로 검증 완료를 지어내지 마라. 점검 목록은 실행 순서대로 정리하고 실제 설정은 변경하지 마라.",schema:"memo(문자열), checklist(문자열)",preserve_rows:true,fields:["memo","checklist"]}
+return [fn:저장검수]{out:$out,answer:$answer.items[0],sources:$sources,request:$request}

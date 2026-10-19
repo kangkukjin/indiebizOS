@@ -1,0 +1,23 @@
+[
+  {
+    "id": "R1",
+    "file": "01_RESEARCH_PROJECT_DESIGN_2026_10_10.md",
+    "source": "docs/RESEARCH_PROJECT_DESIGN_2026_10_10.md",
+    "sha256": "48da959003a8d59318c9303c8e37504bb30d4b020ef3caeed766c95973546af7",
+    "lines": 558
+  },
+  {
+    "id": "R2",
+    "file": "02_research_project.md",
+    "source": "data/guides/research_project.md",
+    "sha256": "720d2eae699a3447418b138943a63dd8379cf4d39252a16de5f30d1f589eab05",
+    "lines": 126
+  },
+  {
+    "id": "R3",
+    "file": "03_research_questions.md",
+    "source": "data/guides/research_questions.md",
+    "sha256": "d570b77438d97769272624e0db44397404679f0f01521f1486e53daaec4aab12",
+    "lines": 49
+  }
+]

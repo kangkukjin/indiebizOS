@@ -1,0 +1,103 @@
+{
+  "at": "2026-10-19T12:02:23.650382+09:00",
+  "method": "Reviewer exact edits; no model call. Not autonomous generation success.",
+  "changes": [
+    {
+      "file": "trainer/repair_base/checklist.md",
+      "before": "각 상황마다 아래를 확인한다 [01_MEMBER_DESKTOP_DESIGN_2026_10_15.md:236, 238].\n\n- [ ] 상태가 unknown으로 표시되는지\n- [ ] 명령이 자동으로 재실행되지 않는지\n- [ ] 이미 시작된 명령의 실제 결과",
+      "after": "상황별 기대 결과를 구분한다 [01_MEMBER_DESKTOP_DESIGN_2026_10_15.md:236, 238].\n\n- [ ] 창 닫기: 트레이로 숨고 관리 작업이 계속되는지\n- [ ] 앱 종료: 관리 작업이 중단되는지\n- [ ] 90초 넘는 단절: 다음 실행과 단절 중 신규 승인이 차단되는지\n- [ ] 중앙 재시작 또는 결과 RAM 만료: unknown을 반환하고 명령이 자동 재실행되지 않는지\n- [ ] 이미 시작된 명령은 실제 결과를 따로 확인. 단순 창 닫기·단절만으로 unknown을 기대하지 않음",
+      "reason": "상황별 적용 조건 또는 설계/실기 검증 범위 보존",
+      "before_sha256": "29f44804362574d47e4b60faf0dbf8d08fc2afd959aefda2eac38c893199ec57",
+      "after_sha256": "95ae8b1e745a2646aa7b401d5fd43a90d51d38c5c7edb50776de39ff4d022e45"
+    },
+    {
+      "file": "trainer/repair_variant/checklist.md",
+      "before": "- [ ] 복귀 후 상태가 unknown으로 표시되고 자동 재실행이 없는지 확인 [01_MEMBER_DESKTOP_DESIGN_2026_10_15.md:238]",
+      "after": "- [ ] 중앙 재시작 또는 결과 RAM 만료가 있었으면 unknown 반환과 자동 재실행 금지를 확인. 단순 재연결만으로 unknown을 기대하지 않음 [01_MEMBER_DESKTOP_DESIGN_2026_10_15.md:238]",
+      "reason": "상황별 적용 조건 또는 설계/실기 검증 범위 보존",
+      "before_sha256": "2c576f5e27635144bd83725177bebee20b07506658da6307b07232f5299ff302",
+      "after_sha256": "fe588361ab56766c2f1ab736a17988054b9a43e6994585afaf0cfe0e650a29c3"
+    },
+    {
+      "file": "trainer/repair_variant/memo.md",
+      "before": "오프라인에서 앱으로 할 수 있는 일은 “로컬 파일 열기·기록 조회·백업·진행 프로세스 중단”뿐이다",
+      "after": "설계 절이 오프라인 허용 범위로 제시한 것은 “로컬 파일 열기·기록 조회·백업·진행 프로세스 중단”이며, 실제 오프라인 인수는 미확인이다",
+      "reason": "상황별 적용 조건 또는 설계/실기 검증 범위 보존",
+      "before_sha256": "aeb692ebcb9c6519a7866991ea2afe1ae79bacfba8da6b72f15c790160afdac8",
+      "after_sha256": "3f07ad082d579f2accf6b61098d656e243bfb100699d27b44febfca7870a1eb2"
+    },
+    {
+      "file": "ai/final_base/memo.md",
+      "before": "| 비용 한도 운영 | 설계에는 있지만 구현 절은 '한도 없음' | D1 L109 vs L300 |",
+      "after": "| 비용 한도에 의존하는 운영 | 별도 한도 설정 가능 여부는 미확인. 기본 누적 한도 없음만으로 기능 부재를 뜻하지 않음 | D1 L109, L300 |",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "529006804ef67704a185052da6f3a7097429731c4e2c78015464038fb725711f",
+      "after_sha256": "3daf4247dbefdd9f7987397a2a2e6499f876b697a2d7ac7d4568a1d2be5150e3"
+    },
+    {
+      "file": "ai/final_base/memo.md",
+      "before": "5. **비용 한도**: D1 L109 \"중앙 관리자는 모델·공통 기능·비용 한도…를 관리\" ↔ D1 L300 \"기본 누적 토큰 한도는 계속 없다\".",
+      "after": "5. **비용 한도 — 모순 아님**: D1 L109는 관리 기능의 설계이고 L300은 \"기본 누적 토큰 한도는 계속 없다\"는 기본값이다. 두 문장은 양립할 수 있으며, 별도 한도 설정 기능의 구현 여부는 이 근거만으로 확정할 수 없다.",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "3daf4247dbefdd9f7987397a2a2e6499f876b697a2d7ac7d4568a1d2be5150e3",
+      "after_sha256": "dbbaa9a58d5bc2636c96f073dc82050bfd30a84896bdb658b6065f32c4dcf797"
+    },
+    {
+      "file": "ai/final_base/memo.md",
+      "before": "## 6. 문서끼리 다른 곳 (원문 위치를 그대로 둠)",
+      "after": "## 6. 판본 차이와 추가 확인 대상 (모두 모순이라는 뜻은 아님)",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "dbbaa9a58d5bc2636c96f073dc82050bfd30a84896bdb658b6065f32c4dcf797",
+      "after_sha256": "5307010b35bfab1f93d72c3b5c71e5faf96284e5f04afa468237e1330049581b"
+    },
+    {
+      "file": "ai/final_base/checklist.md",
+      "before": "(D1 L109의 '비용 한도'와 다름 — memo §6-5)",
+      "after": "(D1 L109는 기능 설계, L300은 기본값 — 모순으로 보지 않음; memo §6-5)",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "61752969e34d23774939e3c764aa3fab64c388e5610a6ff090b95a27e3ce34d7",
+      "after_sha256": "933edf9a76d5789ec6f844a95f15d011a167cfdcd986397caef0f40b6f8e42ca"
+    },
+    {
+      "file": "ai/final_base/checklist.md",
+      "before": "관리 작업이 중단되거나 unknown으로 남는다.",
+      "after": "관리 작업이 중단된다. unknown은 중앙 재시작·결과 RAM 만료 조건과 구별한다.",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "933edf9a76d5789ec6f844a95f15d011a167cfdcd986397caef0f40b6f8e42ca",
+      "after_sha256": "0faaeb5a42d22391ea850153fb5fee7205237f0f75ab370f5e7671ccc7b8006c"
+    },
+    {
+      "file": "ai/final_variant/memo.md",
+      "before": "문서 간 불일치 10건(처음 검토 §6)은 같은 판본이므로 그대로 유효하다. 이번 조건과 직접 이어지는 것은 **§6-2(재연결 후 '재개' 설계 D1 L136·L138·L139 ↔ 구현 'unknown·자동 재실행 없음' D1 L238·D2 L726)**와 **§6-3(15초/90초 임대가 초기 제안값 D1 L143 ↔ 구현 서술 D1 L238)**이다. 출장 복귀 뒤 처리가 어느 쪽으로 동작하는지는 이 불일치에 달려 있다.",
+      "after": "처음 검토 §6의 판본 차이·추가 확인 대상은 유지하되 전부 모순으로 세지 않는다. 비용 한도는 기본값과 기능 설계가 다르고, 임대 초기 제안과 구현값은 단계 차이다. 재개 요청과 자동 명령 재실행 금지도 양립할 수 있다. 출장 복귀 처리는 단절 길이·중앙 재시작·결과 RAM 만료 여부별로 실제 인수에서 확인한다(D1 L136–143, L238; D2 L726).",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "2bb68a7ace9b8313c111dd2da5c07481a1f62e1adb9ab753da64c790ba652f07",
+      "after_sha256": "7a7c811768c1004f3158c2f63cea41e066c3691b96e55a473a64e009fb574992"
+    },
+    {
+      "file": "ai/final_variant/memo.md",
+      "before": "Windows 실업무·화면 조작·비용 한도·도구 자동 설치·원격 지원·기기 간 동기화·운영 업데이트 채널은 계속 보류한다",
+      "after": "Windows 실업무·화면 조작·도구 자동 설치·원격 지원·기기 간 동기화·운영 업데이트 채널은 계속 보류한다. 비용 한도에 의존하는 운영은 별도 설정 기능의 구현 여부를 먼저 확인한다. 나머지 근거는 유지한다",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "7a7c811768c1004f3158c2f63cea41e066c3691b96e55a473a64e009fb574992",
+      "after_sha256": "5cd0952bcbba89255977172a80b96a1d0cb1ec7e254b08a46b4a4470252b1e12"
+    },
+    {
+      "file": "ai/final_variant/memo.md",
+      "before": "12. 오프라인으로 몇 시간~며칠 지낸 뒤 재연결하면 진행 중이던 작업은 unknown이 되는가, 설계(D1 L136·L138)대로 영수증을 재전송하고 재개되는가?",
+      "after": "12. 장기 단절에서 중앙 재시작·결과 RAM 만료 여부별로 어떤 상태와 영수증이 보이며, 사용자 확인 후 어떤 방식으로 이어가는가? unknown 반환과 재개 절차는 서로 배타적이지 않다(D1 L136·L138, L238).",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "5cd0952bcbba89255977172a80b96a1d0cb1ec7e254b08a46b4a4470252b1e12",
+      "after_sha256": "4f5ae15d05577b3fe4fae027615e5a7509062d6fcd376cc217c825a697f391f5"
+    },
+    {
+      "file": "ai/final_variant/checklist.md",
+      "before": "(memo §3 불일치 §6-2)",
+      "after": "(memo §3의 단절 조건별 확인 대상)",
+      "reason": "검수자가 기본값/기능/판본/조건 범위를 대조하여 교정",
+      "before_sha256": "510a654e440af25c3abacc94771a56bda6fafb9ef6788a0bd4da3cb1f5a0f0fe",
+      "after_sha256": "d11b1463a14a507af5d91d6bd5dad36e447333a990446c15449106910bc9914b"
+    }
+  ],
+  "ai_correction_at": "2026-10-19T12:16:50.520466+09:00"
+}

@@ -1,0 +1,46 @@
+{
+  "reviewed_at": "2026-10-19T12:17:54.533167+09:00",
+  "note": "Hashes for reviewed deliverables; exact automatic originals live under outputs evidence/generated. These are not automatic quality verdicts.",
+  "files": [
+    {
+      "path": "trainer/repair_base/memo.md",
+      "chars": 4138,
+      "sha256": "418c5bc9cd2e2a0b84fd2b7f732d6f1361d3e91d2f70ad08505eea7a96813f51"
+    },
+    {
+      "path": "trainer/repair_base/checklist.md",
+      "chars": 2207,
+      "sha256": "95ae8b1e745a2646aa7b401d5fd43a90d51d38c5c7edb50776de39ff4d022e45"
+    },
+    {
+      "path": "trainer/repair_variant/memo.md",
+      "chars": 3412,
+      "sha256": "3f07ad082d579f2accf6b61098d656e243bfb100699d27b44febfca7870a1eb2"
+    },
+    {
+      "path": "trainer/repair_variant/checklist.md",
+      "chars": 1662,
+      "sha256": "fe588361ab56766c2f1ab736a17988054b9a43e6994585afaf0cfe0e650a29c3"
+    },
+    {
+      "path": "ai/final_base/memo.md",
+      "chars": 7165,
+      "sha256": "5307010b35bfab1f93d72c3b5c71e5faf96284e5f04afa468237e1330049581b"
+    },
+    {
+      "path": "ai/final_base/checklist.md",
+      "chars": 4113,
+      "sha256": "0faaeb5a42d22391ea850153fb5fee7205237f0f75ab370f5e7671ccc7b8006c"
+    },
+    {
+      "path": "ai/final_variant/memo.md",
+      "chars": 6790,
+      "sha256": "4f5ae15d05577b3fe4fae027615e5a7509062d6fcd376cc217c825a697f391f5"
+    },
+    {
+      "path": "ai/final_variant/checklist.md",
+      "chars": 3085,
+      "sha256": "d11b1463a14a507af5d91d6bd5dad36e447333a990446c15449106910bc9914b"
+    }
+  ]
+}

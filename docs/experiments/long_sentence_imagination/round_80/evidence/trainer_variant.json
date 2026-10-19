@@ -1,0 +1,341 @@
+{
+  "elapsed": 0.6985819339752197,
+  "success": true,
+  "value": {
+    "rows": [
+      {
+        "file": "north.txt",
+        "lines": 4,
+        "good": 18,
+        "bad": 4
+      },
+      {
+        "file": "south.txt",
+        "lines": 4,
+        "good": 34,
+        "bad": 5
+      },
+      {
+        "file": "west.txt",
+        "lines": 4,
+        "good": 50,
+        "bad": 3
+      }
+    ],
+    "total": 114,
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_80회차/trainer/good_total.md"
+  },
+  "usage": {
+    "steps": 907,
+    "rows": 3,
+    "elapsed_ms": 665,
+    "limits": {
+      "steps": 100000,
+      "rows": 10000
+    },
+    "steps_by_span": [
+      {
+        "node_id": "pure_call:232:263",
+        "steps": 60,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 232,
+          "end": 263,
+          "line": 6,
+          "column": 39
+        }
+      },
+      {
+        "node_id": "pure_call:238:255",
+        "steps": 48,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 238,
+          "end": 255,
+          "line": 6,
+          "column": 45
+        }
+      },
+      {
+        "node_id": "pure_call:307:338",
+        "steps": 48,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 307,
+          "end": 338,
+          "line": 7,
+          "column": 38
+        }
+      },
+      {
+        "node_id": "pure_call:313:330",
+        "steps": 48,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 313,
+          "end": 330,
+          "line": 7,
+          "column": 44
+        }
+      },
+      {
+        "node_id": "pure_call:172:192",
+        "steps": 36,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 172,
+          "end": 192,
+          "line": 5,
+          "column": 47
+        }
+      },
+      {
+        "node_id": "pure_call:137:193",
+        "steps": 24,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 137,
+          "end": 193,
+          "line": 5,
+          "column": 12
+        }
+      },
+      {
+        "node_id": "pure_call:144:165",
+        "steps": 24,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 144,
+          "end": 165,
+          "line": 5,
+          "column": 19
+        }
+      },
+      {
+        "node_id": "pure_call:225:267",
+        "steps": 24,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 225,
+          "end": 267,
+          "line": 6,
+          "column": 32
+        }
+      },
+      {
+        "node_id": "pure_call:300:342",
+        "steps": 24,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 300,
+          "end": 342,
+          "line": 7,
+          "column": 31
+        }
+      },
+      {
+        "node_id": "builtin:172:180",
+        "steps": 18,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 172,
+          "end": 180,
+          "line": 5,
+          "column": 47
+        }
+      },
+      {
+        "node_id": "literal:184:191",
+        "steps": 18,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 184,
+          "end": 191,
+          "line": 5,
+          "column": 59
+        }
+      },
+      {
+        "node_id": "pure_call:204:269",
+        "steps": 18,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 204,
+          "end": 269,
+          "line": 6,
+          "column": 11
+        }
+      },
+      {
+        "node_id": "pure_call:208:268",
+        "steps": 18,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 208,
+          "end": 268,
+          "line": 6,
+          "column": 15
+        }
+      },
+      {
+        "node_id": "pure_call:279:344",
+        "steps": 18,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 279,
+          "end": 344,
+          "line": 7,
+          "column": 10
+        }
+      },
+      {
+        "node_id": "pure_call:283:343",
+        "steps": 18,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 283,
+          "end": 343,
+          "line": 7,
+          "column": 14
+        }
+      },
+      {
+        "node_id": "ref:181:183",
+        "steps": 18,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 181,
+          "end": 183,
+          "line": 5,
+          "column": 56
+        }
+      },
+      {
+        "node_id": "builtin:225:231",
+        "steps": 12,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 225,
+          "end": 231,
+          "line": 6,
+          "column": 32
+        }
+      },
+      {
+        "node_id": "builtin:232:237",
+        "steps": 12,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 232,
+          "end": 237,
+          "line": 6,
+          "column": 39
+        }
+      },
+      {
+        "node_id": "builtin:238:243",
+        "steps": 12,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 238,
+          "end": 243,
+          "line": 6,
+          "column": 45
+        }
+      },
+      {
+        "node_id": "builtin:300:306",
+        "steps": 12,
+        "location": {
+          "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130",
+          "start": 300,
+          "end": 306,
+          "line": 7,
+          "column": 31
+        }
+      }
+    ],
+    "steps_other": 397,
+    "steps_by_line": [
+      {
+        "line": 6,
+        "steps": 303,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 7,
+        "steps": 291,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 5,
+        "steps": 159,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 12,
+        "steps": 36,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 8,
+        "steps": 30,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 4,
+        "steps": 27,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 3,
+        "steps": 11,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 11,
+        "steps": 11,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 13,
+        "steps": 9,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 17,
+        "steps": 7,
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      }
+    ],
+    "tool_ms_by_line": [
+      {
+        "line": 15,
+        "ms": 71,
+        "calls": 1,
+        "actions": [
+          "self:read"
+        ],
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 4,
+        "ms": 48,
+        "calls": 3,
+        "actions": [
+          "self:read"
+        ],
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      },
+      {
+        "line": 14,
+        "ms": 14,
+        "calls": 1,
+        "actions": [
+          "self:write"
+        ],
+        "source_hash": "dd5cfac420127951f4e2dba614802fa913d4007c9bc77bca371a24cc3cc71130"
+      }
+    ]
+  }
+}

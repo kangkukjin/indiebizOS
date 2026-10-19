@@ -94,6 +94,9 @@ def owned_turn(path, table, owner, task_id, on_skip=None):
         try:
             store.finish(binding, "failed" if error else "completed", error=error)
         except sqlite3.Error as exc:
+            if error is None:
+                # 턴 잠금이 남았는데 호출자가 성공을 공개하면 즉시 후속이 소유권을 잃는다.
+                raise
             print(f"[conversation_sessions] 턴 마감 실패({owner}): {exc}")
 
 

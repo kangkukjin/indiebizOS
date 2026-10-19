@@ -1,0 +1,10 @@
+{
+  "files": [
+    "backend/test_api_system_ai.py",
+    "backend/test_single_runner.py",
+    "backend/test_electron_dev.py"
+  ],
+  "passed": 10,
+  "seconds": 10.91,
+  "fix": "new test __main__ delegates to pytest; Electron unchanged, isolated rerun passed"
+}

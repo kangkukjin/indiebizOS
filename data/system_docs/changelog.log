@@ -2705,3 +2705,5 @@
 2026-10-19 | 긴문장 78회차: 반납 대사·원문 변경/누락 복구·정책 변경을 수동 교정 없이 검증. 추가 진단에서 IBL reuse의 실행 목적지 누락으로 다른 기기의 결과를 정상 반환하는 결함 재현, 재사용 신원에 target_node 포함. 목적지 변경6실패→동일 목적지/연속재사용 포함10통과, 라이브 미등록 목적지에서 재사용0·정확한 실패. 원 과제8묶음144항목과 별도 발췌4실행 전건 일치. backend 비-system10834통과/1스킵, 관련system63통과. 정상 모델 재사용은 기존 동작이며 시간·토큰 절감 효과를 새 수리 성과로 주장하지 않음. docs/experiments/long_sentence_imagination/round_78/report.md.
 
 2026-10-19 | 긴문장 79회차 L79-1: HTTP /system-ai/chat 턴이 대화 소유권(세션 턴)을 열지 않아 REFLEX(#reflex 포함)가 늘 missing_conversation_binding→EXECUTE 로 떨어지고 영수증이 남지 않던 공백 수리 — 같은 소유자(system_ai/rehearsal) legacy 세션에 턴을 열고 바쁘면 옛 경로 유지. 회귀 backend/test_long_sentence_round79_repairs.py
+
+2026-10-19 | 긴문장 80회차 L80-1: HTTP 작업이 답변 저장·세션 턴 해제보다 먼저 succeeded를 공개해 완료 직후 후속의 REFLEX 소유권·산출물 인계가 끊기던 경합 수리. 저장→턴 마감→완료 공개로 순서 정렬, 마감 DB 실패를 성공으로 숨기지 않음, 위임 완료 소유권 유지. 저장/마감 지연·저장실패 3실패 재현→관련78통과. 독립 AI 원과제·새 판본 합계102/114/117 및 REFLEX result→일반턴 ack 세 쌍, 입력·기존파일·확인턴 SHA/mtime 불변. 최종 비-system10845통과/1스킵/실패0, 관련system24통과. 시간·입력 변화는 캐시·누적 문맥 차이 있는 관측으로 인과 절감률 아님; L79-3의 일반 과거문맥 복구는 잔여. docs/experiments/long_sentence_imagination/round_80/report.md.

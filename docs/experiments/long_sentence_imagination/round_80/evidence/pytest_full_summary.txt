@@ -1,0 +1,3 @@
+FAILED backend/test_single_runner.py::test_r2_direct_run_delegates_to_pytest
+FAILED backend/test_electron_dev.py::test_electron_dev_lifecycle - AssertionE...
+2 failed, 10843 passed, 1 skipped, 190 warnings in 212.42s (0:03:32)

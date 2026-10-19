@@ -1,0 +1,28 @@
+{
+  "training_6": {
+    "episode_wall_seconds_sum": 156.768,
+    "input": 1779133,
+    "output": 3923,
+    "cache_read": 1686288,
+    "cache_create": 92137
+  },
+  "original_after_4": {
+    "episode_wall_seconds_sum": 87.785,
+    "input": 1098870,
+    "output": 3112,
+    "cache_read": 1035015,
+    "cache_create": 62184
+  },
+  "new_variant_2": {
+    "episode_wall_seconds_sum": 41.533,
+    "input": 544430,
+    "output": 1700,
+    "cache_read": 513145,
+    "cache_create": 31275
+  },
+  "limits": [
+    "cache_read/cache_create included in input, do not add twice",
+    "author/operations tokens unmeasured",
+    "different accumulated history/cache/output state; not causal A/B"
+  ]
+}

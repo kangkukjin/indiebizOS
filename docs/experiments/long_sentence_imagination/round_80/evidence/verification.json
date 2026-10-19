@@ -1,0 +1,22 @@
+{
+  "all_input_versions_unchanged": true,
+  "ai_totals": [
+    102,
+    114,
+    117
+  ],
+  "trainer_totals": [
+    102,
+    114,
+    117
+  ],
+  "A1_A2_sha_mtime": true,
+  "A3_A4_sha_mtime": true,
+  "P1_P2_sha_mtime": true,
+  "P3_P4_sha_mtime": true,
+  "N1_N2_sha_mtime": true,
+  "earlier_outputs_unchanged_by_variants": true,
+  "P1_P2_receipt": 791,
+  "P3_P4_receipt": 793,
+  "N1_N2_receipt": 795
+}

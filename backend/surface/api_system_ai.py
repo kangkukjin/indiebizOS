@@ -287,10 +287,17 @@ def chat_with_system_ai(chat: ChatMessage):
         # 턴과 그 뒤의 마감(작업 닫기)을 한 수명으로 쥔다 — 이 작업으로 오는 자식 보고는 그동안 러너가 붙들어 둔다(29회차 L29-1).
         # 대화 소유권(79회차 L79-1): 이 HTTP 턴도 같은 소유자 세션의 턴으로 열어 REFLEX·영수증이 닿게 한다.
         from steer_inbox import turn_hold
-        with turn_hold(task_id), _owned_turn(conv_thread, task_id):
-            return _process_turn()
+        with turn_hold(task_id):
+            with _owned_turn(conv_thread, task_id):
+                response, completed = _process_turn()
+            # 완료 조회 직후의 후속 턴이 저장된 답변과 해제된 소유권을 함께 보게 한다.
+            # 위임 중인 작업의 완료는 기존 자식 결과 처리자가 소유한다.
+            if completed:
+                from system_ai_memory import complete_task
+                complete_task(task_id, response)
+            return response
 
-    def _process_turn() -> str:
+    def _process_turn() -> tuple[str, bool]:
         """LLM 처리 + 대화 저장. 스레드 컨텍스트(threading.local)가 필요하므로
         동기/백그라운드 모두 이 함수 한 덩어리를 한 스레드에서 실행한다. 응답 텍스트를 반환하고
         (위임 없을 때) assistant 메시지를 대화 로그에 저장한다. 위임이면 최종 결과는
@@ -371,13 +378,11 @@ def chat_with_system_ai(chat: ChatMessage):
                 print(f"[시스템 AI] 위임 원장 확인 실패(계속): {_ledger_err}")
             if delegated:
                 # 위임이 발생함 → 결과는 나중에 _finalize_task 가 저장(폴링/WebSocket이 회수)
-                return f"[위임 중] 프로젝트 에이전트에게 작업을 위임했습니다. 결과는 잠시 후 도착합니다.\n\n{response_text}"
+                return (f"[위임 중] 프로젝트 에이전트에게 작업을 위임했습니다. 결과는 잠시 후 도착합니다.\n\n{response_text}", False)
 
-            # 위임 없음 → 즉시 응답, 태스크 완료
-            from system_ai_memory import complete_task as complete_system_ai_task
-            complete_system_ai_task(task_id, response_text)
+            # 원문 저장 실패를 succeeded로 굳히지 않는다. 완료 공개는 턴 마감 뒤 _process에서 한다.
             save_conversation("assistant", response_text, source=conv_source, images=tool_images)
-            return response_text
+            return response_text, True
         finally:
             clear_current_task_id()
             clear_called_agent()

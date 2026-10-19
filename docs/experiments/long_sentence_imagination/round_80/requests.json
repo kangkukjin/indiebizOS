@@ -1,0 +1,8 @@
+{
+  "A0": "80회차 반납 업무를 시작하자. /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_80회차/inputs 안의 파일 목록을 이름순으로 알려주고 첫 파일을 이번 업무의 기준 파일로 정해줘. 파일을 수정하거나 다른 폴더를 읽지 마. #execute",
+  "A1": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_80회차/inputs 의 north.txt, south.txt, west.txt 세 파일에서 정상반납 수량을 모두 더해 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_80회차/ai/good_total.md 에 합계 N 한 줄로 저장해. 입력은 바꾸지 마. 너 자신의 결과는 재사용해도 되지만 다른 실행자의 trainer/harness/drafts·정답은 읽지 마. #reflex",
+  "A2": "방금 네가 저장한 good_total.md의 내용과 SHA-256을 확인해줘. 파일을 다시 쓰거나 합계를 다시 계산하지 마. #execute",
+  "A3": "조건이 바뀌었어. 같은 세 입력 파일에서 정상반납과 파손반납을 모두 포함한 총합을 구해 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-19_80회차/ai/all_total.md 에 합계 N 한 줄로 저장해. 기존 good_total.md와 입력은 바꾸지 마. 너 자신의 결과는 재사용해도 되지만 다른 실행자의 trainer/harness/drafts·정답은 읽지 마. #reflex",
+  "A4": "방금 네가 저장한 all_total.md의 내용과 SHA-256을 확인해줘. 파일을 다시 쓰거나 합계를 다시 계산하지 마. #execute",
+  "A5": "80회차 업무를 시작할 때 네가 이름순 목록에서 골랐던 기준 파일 이름이 뭐였어? 당시 대화에서 확인해줘. 현재 디렉터리 목록을 다시 조회해서 추측하지는 마. #reflex"
+}

@@ -1,0 +1,12 @@
+{
+  "A3_submitted": "2026-10-19T14:28:32.600760+09:00",
+  "A2_turn_finished": "2026-10-19T05:28:32.611189+00:00",
+  "events": [
+    {
+      "kind": "cognition.reflex_fallback",
+      "data": {
+        "reason": "missing_conversation_binding"
+      }
+    }
+  ]
+}

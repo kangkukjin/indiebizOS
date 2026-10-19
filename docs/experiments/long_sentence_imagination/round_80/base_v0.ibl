@@ -1,0 +1,17 @@
+#!ibl edition=2
+[def:정상합]($folder,$files) {
+  return $files >> [table:each] {
+    $doc=[self:read]{path:$folder+"/"+$it.file}
+    $lines=filter(split($doc.text,"\n"),($l)=>contains($l,"정상반납 "))
+    $good=sum(map($lines,($l)=>number(split(split($l,"정상반납 ")[1],"개")[0])))
+    $bad=sum(map($lines,($l)=>number(split(split($l,"파손반납 ")[1],"개")[0])))
+    return {file:$it.file,lines:len($lines),good:$good,bad:$bad}
+  }
+}
+$rows=[fn:정상합]{folder:$folder,files:[{file:"north.txt"},{file:"south.txt"},{file:"west.txt"}]}
+$total=sum(map($rows,($r)=>$r.good + ($include_damaged ? $r.bad : 0)))
+$body="합계 "+json($total)+"\n"
+[self:write]{path:$out+"/good_total.md",content:$body}
+$back=[self:read]{path:$out+"/good_total.md"}
+assert $back.text==$body,"저장 재독 불일치"
+return {rows:$rows,total:$total,path:$out+"/good_total.md"}

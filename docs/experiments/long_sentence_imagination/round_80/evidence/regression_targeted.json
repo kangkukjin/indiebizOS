@@ -1,0 +1,18 @@
+{
+  "tests": [
+    "backend/test_api_system_ai.py",
+    "backend/test_conversation_sessions.py",
+    "backend/test_long_sentence_round79_repairs.py",
+    "backend/test_reflex_execution.py",
+    "backend/test_delegation_tasks.py"
+  ],
+  "passed": 78,
+  "seconds": 6.53,
+  "selector": {
+    "changed_files": 2,
+    "test_files": 676,
+    "total_files": 732,
+    "hub": "conversation_sessions",
+    "requires_full": true
+  }
+}

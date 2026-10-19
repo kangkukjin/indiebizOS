@@ -198,7 +198,8 @@ def test_real_cli_spawn_uses_only_turn_store(binding):
     assert primary.invocation['resume_session_id'] == 'long-main-session'
 
 
-def test_pipeline_routes_reflex_without_changing_recall_or_model(binding, monkeypatch):
+@pytest.mark.parametrize('message', ['지금 몇 시야', '부동산 보고서를 써줘. #reflex'])
+def test_pipeline_routes_reflex_without_changing_recall_or_model(binding, monkeypatch, message):
     from agent_pipeline import CognitivePipelineMixin
 
     class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin):
@@ -218,7 +219,11 @@ def test_pipeline_routes_reflex_without_changing_recall_or_model(binding, monkey
     original = r.ai._provider
     recall = Recall()
     r._associate = lambda *a, **kw: recall
-    r._decide_request_type = lambda *a: ('REFLEX', None)
+    if '#reflex' in message:
+        r._classify_request = lambda *a, **kw: pytest.fail('명시 REFLEX는 무의식 호출을 건너뛴다')
+    else:
+        r._decide_request_type = lambda *a: ('REFLEX', None)
+    r._run_consciousness_or_reuse = lambda *a, **kw: pytest.fail('REFLEX는 의식 호출을 건너뛴다')
     r._load_role = lambda: 'role'
     r._build_system_ai_prompt_split = lambda role, c, mem, **kw: ('System structure + IBL + rules', mem)
     r._after_response_async = lambda *a, **kw: None
@@ -233,7 +238,7 @@ def test_pipeline_routes_reflex_without_changing_recall_or_model(binding, monkey
         return response
     monkeypatch.setattr('capability_guard.adopt_response', adopt)
     with r.turn_ai_scope():
-        events = list(r._cognitive_stream_body('지금 몇 시야', history()))
+        events = list(r._cognitive_stream_body(message, history()))
         assert not [e for e in events if e['type'] == 'error'], events
     assert [e['content'] for e in events if e['type'] == 'final'] == ['현재 시각은 오전 3시입니다.']
     assert recall.routed == 'REFLEX'

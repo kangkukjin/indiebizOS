@@ -244,8 +244,9 @@ class CognitiveConsciousnessMixin:
 
     def _tag_override(self, message: str) -> Optional[str]:
         """명령에 박힌 명시 태그로 판정을 강제한다 — 사용자 결정이므로 분류를 이긴다.
-        #repair → REPAIR(시스템 수리 경로), #think → THINK, #execute → EXECUTE (대소문자 무시).
-        여럿이면 #repair > #think > #execute (보수적)."""
+        #repair → REPAIR(시스템 수리 경로), #think → THINK, #execute → EXECUTE,
+        #reflex → REFLEX (대소문자 무시).
+        여럿이면 #repair > #think > #execute > #reflex (보수적)."""
         low = (message or "").lower()
         if "#repair" in low:
             return "REPAIR"
@@ -253,6 +254,8 @@ class CognitiveConsciousnessMixin:
             return "THINK"
         if "#execute" in low:
             return "EXECUTE"
+        if "#reflex" in low:
+            return "REFLEX"
         return None
 
     # 시스템 수리(REPAIR) 결정론 단서 — 구역어와 수리동사가 *함께* 나타날 때만

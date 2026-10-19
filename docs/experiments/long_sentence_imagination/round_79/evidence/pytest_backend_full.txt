@@ -1,0 +1,6 @@
+FAILED backend/test_media_browser.py::test_call_accepts_before_capture_and_decodes_on_both_hubs[bundled]
+FAILED backend/test_media_browser.py::test_call_accepts_before_capture_and_decodes_on_both_hubs[late-offer]
+FAILED backend/test_media_browser.py::test_recorded_video_element_stream_decodes_at_receiver
+FAILED backend/test_media_browser.py::test_speaker_sends_live_microphone_without_camera
+4 failed, 10836 passed, 1 skipped, 190 warnings in 237.13s (0:03:57)
+done

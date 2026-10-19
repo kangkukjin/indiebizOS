@@ -4,6 +4,16 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 79회차 — REFLEX 실행 문맥·#reflex 태그 이음새 입장 + 보존 궤적 되먹임 + HTTP 턴 소유권 수리 (2026-10-19, 훈련·수리·검증 완료)
+
+개정 가이드 §2 첫 적용: 새 분야 합성 과제 대신 이음새 입장(REFLEX, 10-19 신설 efd5f94e·ed5c6b8b)·불변식 탐침 R1~R6·재호출 0 의 보존 궤적 되먹임(4936~4947). 13:26 고정, 훈련 9분·수리 5분·검증 5분.
+보존 궤적: 실사용 REFLEX 8회는 태그 구현(10:47) 전 분류기 선택이었고 태그는 실사용 0회. 같은 "음악을 꺼줘" REFLEX 4945 실행 input 145,828 vs EXECUTE 4947 440,563. 격리 턴 첫 호출 cache_create 63~64K.
+훈련자 base_v0(모델 0) 검사 0.33초 수정 0회·실행 0.598초 합계 102. 독립 AI 8실행 전부 succeeded 회수, 입력 합 ≈217만(캐시 포함).
+**L79-1** `/system-ai/chat`(원격 런처 자율주행 탭·훈련 리허설)이 대화 세션 턴을 열지 않아 REFLEX 가 `missing_conversation_binding` 으로 **항상** EXECUTE(명시 #reflex 포함), 영수증·작업 연결 없음 — R2 ep4966 재현. 수리: `conversation_sessions.owned_turn` + `api_system_ai._owned_turn` 배선(바쁘면 옛 경로 유지·`conversation.binding_skipped`). 수리 후 R2' ep4969 REFLEX 입력 288K→144K·`reflex.result` #785, R4' ep4970 `reflex.ack` #786·파일 불변, R5' ep4971 도구 전 승격, R3' ep4972 REFLEX 다단계 쓰기 102.
+**L79-2**(기록) REFLEX 는 입력을 절반 안팎 줄이나 벽시계는 늘었다(11.4→22.2s, 19.5→38.0s; 격리 세션 기동+cache_create). **L79-3**(기록) HTTP 경로 전체 문맥 = history 7메시지 → R5' 승격 뒤에도 R1 미포함, 정직한 단서로 답.
+회귀 신규 6·reflex 10·관련 묶음 통과, 층 가드 통과, 전수 10,836통과·1건너뜀·4실패(전부 test_media_browser Playwright 시간 초과, 무관). 새 어휘·프롬프트·평가 모델 0. 미검증: WS 레거시 채팅 소유권·원격 탭 실사용·동시 요청 skip·격리 턴 지연 원인·폰 실기.
+[보고서·프로그램·증거](experiments/long_sentence_imagination/round_79/report.md).
+
 ## 78회차 — 반납 대사·증분 재사용과 목적지 신원 수리 (2026-10-19, 훈련·수리·검증 완료)
 
 과제 고정12:33:49, 60분 상한. 합성12건 원문 추출→다출처 대사→원문 정정/누락 도착→기준 변경.
@@ -659,6 +669,9 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L79-1 | 구현 공백 — HTTP `/system-ai/chat` 턴에 대화 세션 소유권(Binding) 없음 → REFLEX 항상 `missing_conversation_binding`→EXECUTE(명시 #reflex 포함), reflex 영수증·bind_task 없음 | round_79 R2 ep4966 `cognition.reflex_fallback` · evidence/metrics_episodes.json | 수리 완료 — `conversation_sessions.owned_turn`+`api_system_ai._owned_turn`(바쁘면 옛 경로·binding_skipped 사건) | 79회차 커밋 · 회귀 6·reflex 10 · R2' REFLEX 144K·#785, R4' ack #786, R5' 승격, R3' 102 |
+| L79-2 | 과도한 비용·상충(기록) — REFLEX 격리 턴은 입력을 줄이나(288K→144K, 468K→293K) 새 CLI 세션 기동·cache_create 로 벽시계 증가(11.4→22.2s, 19.5→38.0s) | round_79 ep4966/4969·4967/4972 · 실사용 4945/4947 은 반대 | 기록 — 기동 지연 원인 측정이 후속 | — |
+| L79-3 | 경로 설계(기록) — HTTP 경로의 전체 문맥은 `get_history_for_ai(limit=7)`, REFLEX 승격 뒤에도 7메시지 밖 발언은 안 보임 | round_79 R5' ep4971(도구 0·승격 뒤 north.txt 답, oracle loans.json) | 기록 — 가이드 §4-5 사실 명시 후보·경계 정렬 판정 | — |
 | L75-1 | 구현 — PC제어확인의 evidence_ref:null이 RECORD_REQUIRED로 중단, 생략은 unknown | round_75/null_receipt_repro.ibl · missing_receipt_control.ibl | 수리·회귀·실행 검증 완료 | 손상9종 unknown, 정상 영수증 완료·재접수0 |
 | L75-2 | 계약/해석 — Windows can_set_volume/can_mute 기본값과 직접 관측의 뜻 혼동 | round_75/report.md §3 · 변형 ready 2 대 1 | 계약 수리·해석 잔여 | API 계약/근거 노출. 원문 변형의 AI 해석 차이 잔존, 범위 명시 변형2/6 일치 |
 | L75-3 | 응답 품질 — AI가 존재하지 않는 7행 요구를 사용자 지시에 귀속 | round_75/evidence/ai_variant_final.txt · request.txt | 출처 경계 수리·재현 재발 없음 | 내부 hint의7행이 원인. 원문/시스템 지침 분리, 재실행5턴에서 잘못된 귀속 없음 |

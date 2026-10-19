@@ -2703,3 +2703,5 @@
 2026-10-19 | 보고서HTML 표 변환 수정(ep4951): 원문을 바꾸지 않고 표 앞 빈 줄을 변환 사본에 보정, fenced/들여쓰기 코드·원시 HTML 예시 제외. 실제 tables 파서로 인식한 표 개수와 변환 트리를 대조해 소실 시 저장·공개 전 실패하고 기존 HTML 보존. AI 호출 추가 없이 PC·모바일 시각 검수 유지. 새 회귀 14건 포함 관련 63건 통과(실 브라우저 렌더·발행 포함). 당시 원문 재구성에서 표 1→2개, 13링크·표 셀은 수동 수정 정답과 동일, 로컬 변환 30회 중앙값 2.94ms. 과거 재작업 33.2초·약42.4만 토큰은 제거 대상 비용이며 수정 후 전체 턴 절감률은 미측정. 전체 backend 회귀 미실행. data/scripts/보고서HTML.py, backend/test_report_html_script.py.
 
 2026-10-19 | 긴문장 78회차: 반납 대사·원문 변경/누락 복구·정책 변경을 수동 교정 없이 검증. 추가 진단에서 IBL reuse의 실행 목적지 누락으로 다른 기기의 결과를 정상 반환하는 결함 재현, 재사용 신원에 target_node 포함. 목적지 변경6실패→동일 목적지/연속재사용 포함10통과, 라이브 미등록 목적지에서 재사용0·정확한 실패. 원 과제8묶음144항목과 별도 발췌4실행 전건 일치. backend 비-system10834통과/1스킵, 관련system63통과. 정상 모델 재사용은 기존 동작이며 시간·토큰 절감 효과를 새 수리 성과로 주장하지 않음. docs/experiments/long_sentence_imagination/round_78/report.md.
+
+2026-10-19 | 긴문장 79회차 L79-1: HTTP /system-ai/chat 턴이 대화 소유권(세션 턴)을 열지 않아 REFLEX(#reflex 포함)가 늘 missing_conversation_binding→EXECUTE 로 떨어지고 영수증이 남지 않던 공백 수리 — 같은 소유자(system_ai/rehearsal) legacy 세션에 턴을 열고 바쁘면 옛 경로 유지. 회귀 backend/test_long_sentence_round79_repairs.py

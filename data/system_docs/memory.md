@@ -218,6 +218,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
   - 테이블 `memories(category, keywords, content, created_at, node)` + 임베딩 인덱스
   - category: `사용자선호 | 사용자정보 | 작업기록 | 의사결정 | 중요날짜 | 기타` — **종류 표식**이지 축이 아니다
   - **주제 트리(node, 2026-09-03 사용자 판정 "심층기억을 평면으로 두지 말고 폴더 구조로 — 블로그와 같다")**: 행마다 주제 가지 경로(`가족/어머니` 꼴). 가지마다 문서 `<DB 옆>/memory_tree_<자아>/<가지>/memory.md` 가 **정본**(표식 + `> 한 줄 요약` + AI 산문 + `## 기억` 기계 절 + 갱신 기록), DB 는 색인 — 포식 기억 `forage_doc` 와 같은 배치. 사람이 절의 줄을 고치면 다음 회상 때 색인이 따라온다(`memory_tree.sync_node`, mtime 대조). **어디에 넣을지는 AI 가 정한다**: 증류기가 지도를 보고 `node` 를 적고(코드 분류기 없음), 남은 미배치 행은 `memory_tree.file_unfiled` 가 모델에게 배치시킨다. 어휘: `[self:memory]{op:"recall", node}`(가지 열기·생략=지도) · `save`(자동 선별 안내, 저장 없음) · `move{memory_id, node}` · `search{node}` 필터.
+- **첫 지도 조회와 빈 DB**: `memory_tree.ensure_column`은 `memory_db._ensure_schema`로 테이블을 먼저 보장한다. 증류 후보가 없어 실제 저장을 하지 않은 신규 대화도 다음 턴 회상에서 정상적인 빈 기억을 반환한다. 기존의 테이블 없는 빈 DB도 같은 경로로 초기화하며 스키마 오류는 무시하지 않는다.
 - **자동 저장** (`unified_distill` + `distill_memory_adapters`): 응답 뒤 사용자 직접 발화의 지속 가치를
   실행·공간 기억과 함께 한 번 판단한다. 앞 문맥을 포함해 관련 기억을 먼저 조회하며 조회는 사용으로
   세지 않는다. 원문 선택·NEW/SAME/UPDATE/REPLACE를 함께 결정하고 추가 관계 모델은 부르지 않는다.

@@ -4,6 +4,7 @@
 """
 import json
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -29,6 +30,34 @@ def mem(tmp_path, monkeypatch):
 
 def _read(p):
     return open(p, encoding="utf-8").read()
+
+
+@pytest.mark.parametrize("existing_empty_file", [False, True])
+def test_first_map_then_recall_initializes_empty_memory(mem, existing_empty_file):
+    """증류의 첫 지도 조회 → 다음 턴의 읽기 전용 회상(#4988·4989)."""
+    from recall_store import DeepMemoryStore
+    import tree_recall
+
+    db, tree, project, agent, db_path = mem
+    if existing_empty_file:
+        sqlite3.connect(db_path).close()
+    assert tree.map_text(db_path) == ""
+    assert tree.sync_all(db_path) == {"synced_docs": 0}
+    recalled = tree_recall.recall(DeepMemoryStore(db_path), "새 연구 질문")
+    assert recalled["status"] == "empty" and recalled["items"] == []
+    assert tree.rows_of(db_path, "") == []
+    # 초기화 이후 첫 저장과 반복 지도 조회가 기억을 보존한다.
+    mid = db.save(project, agent, "아침에 산책한다", "산책", "사용자정보", node="생활")
+    assert "생활 (1)" in tree.map_text(db_path)
+    assert [item.id for item in DeepMemoryStore(db_path).items()] == [str(mid)]
+
+
+def test_memory_schema_errors_are_not_silenced(mem):
+    _, tree, _, _, db_path = mem
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("CREATE TABLE memories (id INTEGER PRIMARY KEY)")
+    with pytest.raises(sqlite3.OperationalError):
+        tree.ensure_column(db_path)
 
 
 def test_save_with_node_renders_branch_doc_and_map(mem):

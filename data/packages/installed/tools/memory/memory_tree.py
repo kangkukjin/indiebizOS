@@ -87,21 +87,20 @@ def _conn(db_path: str) -> sqlite3.Connection:
 
 
 def ensure_column(db_path: str) -> None:
-    """트리가 읽는 컬럼 보장(옛 DB 이전) — node 와 source_ref. memory_db 스키마 보장에서도 부른다.
+    """첫 지도 조회의 빈 DB 초기화와 옛 DB의 node·source_ref 이전.
 
-    source_ref 는 memory_db.get_db 만 옮겼는데 rows_of 가 그 칸을 읽는다 — 09-11 이후 저장이 없던 DB
-    (법률·출판사·행정, 2026-09-17 실측)는 가지 열기·문서 재렌더가 `no such column` 으로 죽었다."""
+    저장 후보가 없어도 증류는 지도를 조회한다. 테이블 없이 파일만 만들면 다음 턴의
+    읽기 전용 회상이 실패하므로 스키마는 memory_db의 공통 초기화 경로에 맡긴다.
+    source_ref 없는 옛 DB도 보완하되, 실제 스키마·접근 오류는 빈 기억으로 숨기지 않는다.
+    """
+    import memory_db
+    memory_db._ensure_schema(db_path)
     conn = sqlite3.connect(db_path, timeout=10)
     try:
-        for col, ddl in (("node", "node TEXT DEFAULT ''"), ("source_ref", "source_ref TEXT DEFAULT NULL")):
-            try:
-                conn.execute(f"SELECT {col} FROM memories LIMIT 1")
-            except sqlite3.OperationalError:
-                try:
-                    conn.execute(f"ALTER TABLE memories ADD COLUMN {ddl}")
-                    conn.commit()
-                except sqlite3.OperationalError:
-                    pass   # memories 표 자체가 없는 빈 DB — 첫 save 가 만든다
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(memories)")}
+        if "source_ref" not in columns:
+            conn.execute("ALTER TABLE memories ADD COLUMN source_ref TEXT DEFAULT NULL")
+            conn.commit()
     finally:
         conn.close()
 

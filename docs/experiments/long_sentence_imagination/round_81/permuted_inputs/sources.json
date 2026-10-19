@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "file": "store/unavailable.json"
+    },
+    {
+      "file": "manufacturer/daon.json"
+    },
+    {
+      "file": "store/catalog.json"
+    }
+  ]
+}

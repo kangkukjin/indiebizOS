@@ -1,0 +1,76 @@
+{
+  "label": "before",
+  "history": [
+    {
+      "role": "user",
+      "content": "내장 타이머가 있는 쿠커를 찾는다."
+    },
+    {
+      "role": "assistant",
+      "content": "내장 타이머와 코팅이 있는 A를 추천한다."
+    },
+    {
+      "role": "user",
+      "content": "타이머는 콘센트로 해결한다. 내장 타이머는 없어도 된다. 냄비나 조절기를 분리해 물로 씻을 수 있어야 한다."
+    },
+    {
+      "role": "assistant",
+      "content": "A는 냄비가 붙어 있지만 코팅이 있어 닦기 쉽다."
+    }
+  ],
+  "previous": {
+    "message": "내장 타이머가 있는 쿠커를 찾는다.",
+    "framing": {
+      "task_framing": "내장 타이머가 달린 청소 쉬운 쿠커를 1~2개 찾는다.",
+      "achievement_criteria": "내장 타이머, 청소 편의 근거, 제품명과 가격을 제시한다.",
+      "criteria": [
+        {
+          "text": "내장 타이머가 달리고 코팅 등 청소 편의 근거가 있는 후보 제시",
+          "user_quote": "",
+          "fallback": "미확인 사항을 표시"
+        }
+      ]
+    }
+  },
+  "patch": {
+    "task_framing": "내장 타이머가 달리고 청소가 쉬운 쿠커를 앞서 말한 조건대로 추가로 더 찾아 1~2개 제시한다. 이미 제시한 후보는 반복하지 않고 새 후보만 다룬다. 각 후보마다 내장 타이머 여부, 청소 편의 근거, 제품명과 가격을 확인해 제시하고, 확인하지 못한 항목은 미확인으로 표시한다.",
+    "achievement_criteria": "이전에 제시하지 않은 새 후보 1~2개에 대해 내장 타이머, 청소 편의 근거, 제품명과 가격을 제시한다.",
+    "criteria": [
+      {
+        "text": "기존에 제시한 후보와 겹치지 않는 새 후보를 1~2개 제시",
+        "user_quote": "다른 제품을 더 찾아봐",
+        "fallback": ""
+      },
+      {
+        "text": "내장 타이머가 달리고 코팅 등 청소 편의 근거가 있는 후보 제시",
+        "user_quote": "앞서 말한 조건대로",
+        "fallback": "미확인 사항을 표시"
+      },
+      {
+        "text": "제품명과 가격을 제시",
+        "user_quote": "",
+        "fallback": "가격 미확인 시 표시"
+      }
+    ],
+    "assumptions": [
+      "앞서 제시한 후보는 이미 충분히 검토되어 새 제안에서 제외한다"
+    ],
+    "expert_choice": "내장 타이머라도 타이머 조작부가 분리 세척 불가한 구조면 청소 편의 조건을 충족하지 못하므로, 세척 가능 범위를 먼저 확인하는 것이 함정이다.",
+    "capability_focus": {
+      "hint": "새 후보를 찾을 때 타이머 유무뿐 아니라 조작부·뚜껑의 세척 가능 범위를 함께 확인한다.",
+      "highlight_actions": [
+        "sense:search"
+      ]
+    },
+    "guide_files": [],
+    "needs_clarification": false,
+    "clarification_question": ""
+  },
+  "patch_seconds": 3.2271506786346436,
+  "evaluation": [
+    true,
+    "ACHIEVED",
+    0
+  ],
+  "evaluation_seconds": 8.373969793319702
+}

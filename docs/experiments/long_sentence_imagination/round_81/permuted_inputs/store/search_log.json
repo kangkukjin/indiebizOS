@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "query": "냄비 물세척",
+      "status": "error",
+      "reason": "원천 응답 해석 실패",
+      "count": null
+    },
+    {
+      "query": "라면포트 후기",
+      "status": "error",
+      "reason": "원천 응답 해석 실패",
+      "count": null
+    },
+    {
+      "query": "미니 찜기",
+      "status": "empty",
+      "reason": "",
+      "count": 0
+    },
+    {
+      "query": "조절기 탈착",
+      "status": "error",
+      "reason": "원천 응답 해석 실패",
+      "count": null
+    },
+    {
+      "query": "전기쿠커 세척",
+      "status": "error",
+      "reason": "원천 응답 해석 실패",
+      "count": null
+    },
+    {
+      "query": "분리형 전기냄비",
+      "status": "error",
+      "reason": "원천 응답 해석 실패",
+      "count": null
+    }
+  ]
+}

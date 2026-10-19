@@ -308,6 +308,7 @@ def prepare(controller, tool_calls=None):
         "response": "\n".join(f'<block id="{b["id"]}">{b["text"]}</block>' for b in controller.store.blocks),
         "files": "\n\n".join(files), "images": images, "calls": calls, "context": context,
         "criteria": json.dumps(criteria, ensure_ascii=False),
+        "conversation_history": copy.deepcopy(getattr(controller, "history", [])),
     }
     controller._evaluation_snapshot = {"response": controller.store.manifest(), "files": snapshots,
                                        "delivery": delivery, "criteria": copy.deepcopy(criteria),
@@ -365,6 +366,7 @@ def invoke(controller, prompt="", *, phase="final"):
     achieved, feedback, severity = evaluator._evaluate_achievement(
         controller.message, packet["criteria"], packet["response"], packet["files"],
         consciousness_output=controller.framing,
+        conversation_history=packet.get("conversation_history", getattr(controller, "history", None)),
         tool_results_str=serialize_tool_trace(packet["calls"], total_budget=24000,
                                               head_keep=12, tail_keep=12, per_result_chars=3000),
         action_ledger=build_action_ledger(packet["calls"]), visual_artifacts=packet["images"],

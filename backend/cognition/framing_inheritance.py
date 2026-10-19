@@ -8,7 +8,7 @@
 였다. 분류기는 설계상 히스토리를 보지 않으므로 모든 후속이 새 요청으로 보인다.
 
 수리 재개의 `repair_continuation.inherited_framing` 과 같은 꼴 — 규정을 새로 쓰지 않고 계승한다.
-계승은 베끼기가 아니라 **경량 패치**다: 직전 규정 + 새 메시지(+오늘 날짜)를 경량 모델에 주고
+계승은 베끼기가 아니라 **경량 패치**다: 직전 규정 + 새 메시지(+오늘 날짜), 후속이면 그 사이의 대화 발췌를 경량 모델에 주고
 바뀌어야 할 필드만 받는다. 후속 턴은 먼저 "같은 과제의 후속인가"를 경량 분류(출력 한 단어)로
 묻고, NEW 면 전과 같이 의식을 깨운다 — 애매하면 NEW(계승 오판이 각성 1분보다 비싸다).
 
@@ -29,6 +29,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from history_excerpt import conversation_excerpt
 
 FOLLOWUP_MAX_AGE_S = 24 * 3600        # 후속 계승 창 — 그보다 오래되면 새 요청으로 본다
 REPEAT_MAX_AGE_S = 30 * 24 * 3600     # 정기 계승 창
@@ -206,7 +207,7 @@ def _oneshot(prompt: str, system_prompt: str, role: str) -> str:
     return raw if isinstance(raw, str) else ""
 
 
-def _judge_relation(previous: dict, message: str, *, strict=False) -> str:
+def _judge_relation(previous: dict, message: str, *, strict=False, history=None) -> str:
     """CONTINUE / NEW — 출력 한 단어. 어긋난 답은 NEW(계승하지 않음)."""
     system_prompt = _prompt(_RELATION_PROMPT)
     if not system_prompt:
@@ -217,6 +218,7 @@ def _judge_relation(previous: dict, message: str, *, strict=False) -> str:
         "previous_message": (previous.get("message") or "")[:800],
         "previous_framing": ((previous.get("framing") or {}).get("task_framing") or "")[:700],
         "new_message": (message or "")[:1500],
+        "conversation_history": conversation_excerpt(history, 8000),
     }, ensure_ascii=False)
     answer = _oneshot(body, system_prompt, "classify").strip().upper()
     if strict and answer not in {"CONTINUE", "NEW"}:
@@ -265,7 +267,7 @@ def _parse_patch(raw: str) -> dict:
     return obj
 
 
-def _patch(previous: dict, message: str, mode: str) -> dict:
+def _patch(previous: dict, message: str, mode: str, *, history=None) -> dict:
     """바뀌어야 할 필드만 받는다. 형식 오류는 한 번만 재요청, 그래도 틀리면 ValueError."""
     system_prompt = _prompt(_PATCH_PROMPT)
     if not system_prompt:
@@ -277,6 +279,7 @@ def _patch(previous: dict, message: str, mode: str) -> dict:
         "previous_message": (previous.get("message") or "")[:1500],
         "new_message": (message or "")[:3000],
         "framing": _compact(previous.get("framing") or {}),
+        "conversation_history": conversation_excerpt(history) if mode == "followup" else "",
     }, ensure_ascii=False)
     request = body
     last_error = None
@@ -343,7 +346,7 @@ def _inherit(runner, message, history, record_trajectory_event):
     previous = found
     t0 = time.monotonic()
     if mode == "followup":
-        relation = _judge_relation(previous, message)
+        relation = _judge_relation(previous, message, history=history)
         if relation != "CONTINUE":
             record_trajectory_event("framing.inherit_declined", {
                 "mode": mode, "reason": "관계 판정 NEW", "judge_ms": int((time.monotonic() - t0) * 1000)})
@@ -352,7 +355,7 @@ def _inherit(runner, message, history, record_trajectory_event):
     judge_ms = int((time.monotonic() - t0) * 1000)
     t1 = time.monotonic()
     try:
-        patch = _patch(previous, message, mode)
+        patch = _patch(previous, message, mode, history=history)
     except ValueError as exc:
         record_trajectory_event("framing.inherit_declined", {"mode": mode, "reason": f"패치 실패: {exc}"})
         print(f"[규정계승] 패치 실패 — 의식 각성: {exc}")

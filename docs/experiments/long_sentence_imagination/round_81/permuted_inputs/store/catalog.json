@@ -1,0 +1,56 @@
+{
+  "source": "가상 쇼핑 검색 첫 페이지",
+  "total_is_market_total": false,
+  "items": [
+    {
+      "id": "XF",
+      "name": "변형 가온 세척팟",
+      "price": 41000,
+      "timer": null,
+      "dial": true,
+      "washable": null,
+      "reviews": 19,
+      "evidence": "판매자는 세척 편리라고만 씀. 분리 부위와 물세척 가능 범위는 확인 안 됨."
+    },
+    {
+      "id": "XE",
+      "name": "변형 누리 디지털팟",
+      "price": 67000,
+      "timer": true,
+      "dial": false,
+      "washable": true,
+      "reviews": 447,
+      "evidence": "내솥 분리. 터치 패널 메뉴 선택 후 시작 버튼 필요."
+    },
+    {
+      "id": "XD",
+      "name": "변형 온유 베스트팟",
+      "price": 25000,
+      "timer": false,
+      "dial": true,
+      "washable": false,
+      "reviews": 6017,
+      "evidence": "많이 팔리지만 전기부가 붙어 있어 통째 세척 불가."
+    },
+    {
+      "id": "XC",
+      "name": "변형 라온 분리형 쿠커",
+      "price": 29000,
+      "timer": true,
+      "dial": true,
+      "washable": false,
+      "reviews": 867,
+      "evidence": "분리형은 뚜껑에 대한 설명. 냄비는 본체 고정."
+    },
+    {
+      "id": "XA",
+      "name": "변형 소담 타임팟",
+      "price": 32000,
+      "timer": true,
+      "dial": true,
+      "washable": false,
+      "reviews": 137,
+      "evidence": "본체와 냄비가 붙어 있어 물에 담그면 안 됨. 후기: 설거지가 부담스러움."
+    }
+  ]
+}

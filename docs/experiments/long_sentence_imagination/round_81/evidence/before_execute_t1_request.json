@@ -1,0 +1,5 @@
+{
+  "command": "#execute 새 구매 상담이다. 어머니가 국을 데우거나 라면을 끓일 전기쿠커를 찾아줘. 시간이 지나면 꺼져야 하고 다이얼처럼 조작이 쉬워야 해. 후기가 충분한 제품이면 좋겠어. 자료는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_81회차/inputs에 보관된 가상 시장 자료만 사용해. 필요하면 그 폴더 안에서 더 찾아봐. 비교 결과를 간결하게 답하고 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_81회차/ai/before_execute/t1.md에도 저장해.",
+  "origin": "training",
+  "background": true
+}

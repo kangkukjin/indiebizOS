@@ -1,0 +1,86 @@
+[
+  {
+    "name": "final_think_t1",
+    "task_id": "task_8e777424995447b59f7d5cf0d272e7c1",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_4a24491b/tasks/task_8e777424995447b59f7d5cf0d272e7c1"
+  },
+  {
+    "name": "after_think_t2",
+    "task_id": "task_48aacc4f34894a8aa1f1ad8c53680642",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_e50d6748/tasks/task_48aacc4f34894a8aa1f1ad8c53680642"
+  },
+  {
+    "name": "final_execute_t1",
+    "task_id": "task_fad80b8f323a41f1bc36f31c76403883",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_ac322d85/tasks/task_fad80b8f323a41f1bc36f31c76403883"
+  },
+  {
+    "name": "before_execute_t1",
+    "task_id": "task_33892917fb24490da97c4857f23baa97",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_55435d51/tasks/task_33892917fb24490da97c4857f23baa97"
+  },
+  {
+    "name": "before_think_t3",
+    "task_id": "task_ad98dfd9c2bf40e38d495aba0112410c",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_5a9de799/tasks/task_ad98dfd9c2bf40e38d495aba0112410c"
+  },
+  {
+    "name": "after_execute_t2",
+    "task_id": "task_0eec8cf3a97649a996b8a69e42b0061d",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_52291079/tasks/task_0eec8cf3a97649a996b8a69e42b0061d"
+  },
+  {
+    "name": "before_think_t2",
+    "task_id": "task_e58031cb21344dc89213122152260d00",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_5a9de799/tasks/task_e58031cb21344dc89213122152260d00"
+  },
+  {
+    "name": "after_execute_t3",
+    "task_id": "task_da23edb1e2c84b4691a0416dc5ae2701",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_52291079/tasks/task_da23edb1e2c84b4691a0416dc5ae2701"
+  },
+  {
+    "name": "after_think_t3",
+    "task_id": "task_5e35ae2c658047ed91b94452bd969824",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_e50d6748/tasks/task_5e35ae2c658047ed91b94452bd969824"
+  },
+  {
+    "name": "before_execute_t2",
+    "task_id": "task_d2dd7472eace4a839d318ffd944c2e59",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_55435d51/tasks/task_d2dd7472eace4a839d318ffd944c2e59"
+  },
+  {
+    "name": "after_execute_t1",
+    "task_id": "task_09f6a32e482340a58ea40e3985ff8271",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_52291079/tasks/task_09f6a32e482340a58ea40e3985ff8271"
+  },
+  {
+    "name": "after_think_t1",
+    "task_id": "task_2e661115c90c45d996686b6e619a4366",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_e50d6748/tasks/task_2e661115c90c45d996686b6e619a4366"
+  },
+  {
+    "name": "before_think_t1",
+    "task_id": "task_3f952c6d1bfa48dba1949c7d0cd96e4a",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_5a9de799/tasks/task_3f952c6d1bfa48dba1949c7d0cd96e4a"
+  },
+  {
+    "name": "before_execute_t3",
+    "task_id": "task_1e22a7b6f0804042b962395e72a8ddd0",
+    "state": "succeeded",
+    "status_url": "/projects/L81_training/agents/agent_55435d51/tasks/task_1e22a7b6f0804042b962395e72a8ddd0"
+  }
+]

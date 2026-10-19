@@ -1,0 +1,323 @@
+[
+  {
+    "name": "base",
+    "success": true,
+    "value": {
+      "policy": {
+        "timer_required": false,
+        "wash_required": true,
+        "_ai": true
+      },
+      "candidates": [
+        "B"
+      ],
+      "unavailable": [
+        {
+          "source": "store/unavailable.json",
+          "ok": false,
+          "items": [],
+          "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_81회차/inputs/store/unavailable.json"
+        }
+      ],
+      "scope": "제공된 고정 자료"
+    },
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "e4d37c93b5fe45918ddaea6dfa0a88a3",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/L81_training"
+    },
+    "run_status": "completed",
+    "source_complete": false,
+    "usage": {
+      "steps": 657,
+      "rows": 11,
+      "elapsed_ms": 18490,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 5501,
+        "output": 27,
+        "cache_read": 544,
+        "cache_create": 4955,
+        "reasoning": 0,
+        "calls": [
+          {
+            "call_id": "6940fdf63fe645dca49634fd84c5eb70",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 4059,
+            "input": 5501,
+            "output": 27,
+            "cache_read": 544,
+            "cache_create": 4955,
+            "reasoning": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "variant",
+    "success": true,
+    "value": {
+      "policy": {
+        "timer_required": true,
+        "wash_required": true,
+        "_ai": true
+      },
+      "candidates": [],
+      "unavailable": [
+        {
+          "source": "store/unavailable.json",
+          "ok": false,
+          "items": [],
+          "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_81회차/inputs/store/unavailable.json"
+        }
+      ],
+      "scope": "제공된 고정 자료"
+    },
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "8960d82ddfd249f393e23f278b440663",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/L81_training"
+    },
+    "run_status": "completed",
+    "source_complete": false,
+    "usage": {
+      "steps": 667,
+      "rows": 11,
+      "elapsed_ms": 11064,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 5501,
+        "output": 27,
+        "cache_read": 2795,
+        "cache_create": 2704,
+        "reasoning": 0,
+        "calls": [
+          {
+            "call_id": "cfa5b09a650a466f81e84ce54569c926",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 5730,
+            "input": 5501,
+            "output": 27,
+            "cache_read": 2795,
+            "cache_create": 2704,
+            "reasoning": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "base_after",
+    "success": true,
+    "value": {
+      "policy": {
+        "timer_required": false,
+        "wash_required": true,
+        "_ai": true
+      },
+      "candidates": [
+        "B"
+      ],
+      "unavailable": [
+        {
+          "source": "store/unavailable.json",
+          "ok": false,
+          "items": [],
+          "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_81회차/inputs/store/unavailable.json"
+        }
+      ],
+      "scope": "제공된 고정 자료"
+    },
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "6586b19d29f34fcc961e168a384f0e11",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/L81_training"
+    },
+    "run_status": "completed",
+    "source_complete": false,
+    "usage": {
+      "steps": 657,
+      "rows": 11,
+      "elapsed_ms": 7892,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 5670,
+        "output": 27,
+        "cache_read": 2795,
+        "cache_create": 2873,
+        "reasoning": 0,
+        "calls": [
+          {
+            "call_id": "b0050151618e439589231295bd0e2c94",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 6638,
+            "input": 5670,
+            "output": 27,
+            "cache_read": 2795,
+            "cache_create": 2873,
+            "reasoning": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "variant_after",
+    "success": true,
+    "value": {
+      "policy": {
+        "timer_required": true,
+        "wash_required": true,
+        "_ai": true
+      },
+      "candidates": [],
+      "unavailable": [
+        {
+          "source": "store/unavailable.json",
+          "ok": false,
+          "items": [],
+          "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_81회차/inputs/store/unavailable.json"
+        }
+      ],
+      "scope": "제공된 고정 자료"
+    },
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "2b21a99d4427403c8ca8100a3ae5ab87",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/L81_training"
+    },
+    "run_status": "completed",
+    "source_complete": false,
+    "usage": {
+      "steps": 667,
+      "rows": 11,
+      "elapsed_ms": 9260,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 5670,
+        "output": 28,
+        "cache_read": 2795,
+        "cache_create": 2873,
+        "reasoning": 0,
+        "calls": [
+          {
+            "call_id": "00dbdd92f12d4775bf2c5a6557d76625",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 7907,
+            "input": 5670,
+            "output": 28,
+            "cache_read": 2795,
+            "cache_create": 2873,
+            "reasoning": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "permuted",
+    "success": true,
+    "value": {
+      "policy": {
+        "timer_required": false,
+        "wash_required": true,
+        "_ai": true
+      },
+      "candidates": [
+        "XB"
+      ],
+      "unavailable": [
+        {
+          "source": "store/unavailable.json",
+          "ok": false,
+          "items": [],
+          "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_81회차/permuted_inputs/store/unavailable.json"
+        }
+      ],
+      "scope": "제공된 고정 자료"
+    },
+    "task_ref": {
+      "kind": "ibl_run",
+      "task_id": "ce07a915e6e24dbebdd449df034e3c76",
+      "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/L81_training"
+    },
+    "run_status": "completed",
+    "source_complete": false,
+    "usage": {
+      "steps": 657,
+      "rows": 11,
+      "elapsed_ms": 17430,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 5670,
+        "output": 27,
+        "cache_read": 5668,
+        "cache_create": 0,
+        "reasoning": 0,
+        "calls": [
+          {
+            "call_id": "0735e5ffe5704dc39977decfcffd19c2",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 16587,
+            "input": 5670,
+            "output": 27,
+            "cache_read": 5668,
+            "cache_create": 0,
+            "reasoning": 0
+          }
+        ]
+      }
+    }
+  }
+]

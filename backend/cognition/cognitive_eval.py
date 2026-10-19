@@ -406,7 +406,8 @@ class CognitiveEvalMixin:
                                execution_memory: str = "",
                                visual_artifacts: list = None,
                                evaluation_context: str = "", evaluation_policy: str = "",
-                               full_response: bool = False) -> tuple:
+                               full_response: bool = False,
+                               conversation_history: list = None) -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
 
         의식의 명시적 기준만 판정한다. 실행 원장·결과는 증거이며 별도 평가 축이 아니다.
@@ -453,8 +454,16 @@ class CognitiveEvalMixin:
                 f"{action_ledger}\n\n"
             )
 
-        # 대화 맥락은 기준의 의미를 복원하는 데만 쓴다. 추천 도구·포부는 넣지 않는다.
-        if consciousness_output and consciousness_output.get("history_summary"):
+        # 규정과 독립된 사용자 정정으로 기준의 의미·충돌을 확인한다.
+        # 계승 규정에는 history_summary가 없고, 새 규정의 요약도 정정을 누락할 수 있다.
+        from history_excerpt import conversation_excerpt
+        conversation = conversation_excerpt(conversation_history)
+        if conversation:
+            prompt += ("## 기준 해석용 이전 대화 원문 발췌\n"
+                       "사용자 조건의 변경·철회와 assistant의 제안을 구별하라. "
+                       "생략된 내용은 미확인이며 새 목표를 추측하지 않는다.\n"
+                       f"{conversation}\n\n")
+        elif consciousness_output and consciousness_output.get("history_summary"):
             prompt += f"## 기준 해석용 이전 대화\n{consciousness_output['history_summary']}\n\n"
 
         if tool_results_str:
@@ -657,6 +666,7 @@ class CognitiveEvalMixin:
                     tool_results_str=tool_results_str,
                     action_ledger=action_ledger,
                     visual_artifacts=visual_artifacts,
+                    conversation_history=history,
                 )
             except Exception as exc:
                 achieved, feedback, severity = None, f"검수 준비 또는 평가 실패: {exc}", 0

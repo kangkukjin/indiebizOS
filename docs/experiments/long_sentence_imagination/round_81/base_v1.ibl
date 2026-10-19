@@ -1,0 +1,35 @@
+#!ibl edition=2
+[def:자료모으기]($folder,$sources) {
+  return $sources >> [table:each]{parallel:3} {
+    $source=$it.file
+    [try] {
+      $doc=[self:read]{path:$folder+"/"+$source}
+      return {source:$source,ok:true,items:$doc.data.items,error:""}
+    } [catch] {
+      return {source:$source,ok:false,items:[],error:$error.message}
+    }
+  }
+}
+[def:비교]($sources,$policy) {
+  $rows=reduce(filter($sources,($s)=>$s.ok),[],($acc,$s)=>$acc+map($s.items,($p)=>{**$p,source:$s.source}))
+  $compared=$rows >> [table:each] {
+    $p=$it
+    $timer=($policy.timer_required==false) or $p.timer==true
+    $wash=($policy.wash_required==false) or $p.washable==true
+    $eligible=$timer and $wash and $p.dial==true and $p.reviews>=100
+    return {**$p,eligible:$eligible,timer_ok:$timer,wash_ok:$wash,unknown:$p.timer==null or $p.washable==null}
+  }
+  return {rows:$compared,candidates:filter($compared,($p)=>$p.eligible),unavailable:filter($sources,($s)=>not $s.ok)}
+}
+$history=[self:read]{path:$dialogue}
+$decision=[{dialogue:$history.text}] >> [table:ai]{instruction:"사용자 대화의 최종 유효 조건을 읽어 timer_required(쿠커 내장 타이머 필수), wash_required(분리 물세척 필수)를 불리언으로 반환하라. 앞선 요청이 뒤에서 완화/철회되었으면 최종 요청을 따른다.",schema:"timer_required(Bool),wash_required(Bool)",preserve_rows:true,fields:["timer_required","wash_required"]}
+$policy=$decision.items[0]
+assert $policy.timer_required!=null and $policy.wash_required!=null,"현재 조건 미확인"
+$manifest=[self:read]{path:$folder+"/sources.json"}
+$sources=[fn:자료모으기]{folder:$folder,sources:$manifest.data.items}
+$result=[fn:비교]{sources:$sources,policy:$policy}
+$body=json({policy:$policy,result:$result,scope:"제공된 고정 자료",complete:len($result.unavailable)==0})
+[self:write]{path:$out,content:$body}
+$saved=[self:read]{path:$out}
+assert $saved.text==$body,"저장 불일치"
+return {policy:$policy,candidates:map($result.candidates,($p)=>$p.id),unavailable:$result.unavailable,scope:"제공된 고정 자료"}

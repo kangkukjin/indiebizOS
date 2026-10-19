@@ -506,6 +506,11 @@ class SystemAIRunner:
         try:
             with sessions.scope(binding), actor_context(task_id=task_id):
                 sessions.bind_task(task_id)
+                # 예약 요청은 user가 아닌 agent_report로 저장된다. 후속 보고문 대신
+                # 작업의 최초 요청으로 기본 제목만 채워 기존 제목은 보존한다.
+                task = memory.get_task(task_id) or {}
+                with sessions.connection(store.path) as conn:
+                    sessions.touch(conn, sid, task.get('original_request'))
                 yield True
         finally:
             task = memory.get_task(task_id) or {}

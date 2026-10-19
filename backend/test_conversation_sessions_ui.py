@@ -38,8 +38,11 @@ def test_session_workspace_in_browser(tmp_path):
         result = {}
         if path == '/chat-sessions':
             if request.method == 'POST':
-                item = {'id':f'new{len(items)}','title':'새 세션','archived':0,'running':False,'updated_at':'2026-10-16T01:00:00Z'}
-                items.insert(0,item); records[item['id']] = []; result = item
+                item = next((i for i in items if not records[i['id']] and i['id'] not in turns), None)
+                if item is None:
+                    item = {'id':f'new{len(items)}','title':'새 세션','archived':0,'running':False,'updated_at':'2026-10-16T01:00:00Z'}
+                    items.insert(0,item); records[item['id']] = []
+                result = item
             else: result = {'sessions':items}
         elif path.startswith('/chat-sessions/'):
             sid = path.split('/')[2]
@@ -96,6 +99,10 @@ def test_session_workspace_in_browser(tmp_path):
                 page.set_viewport_size({'width':1280,'height':850})
                 page.get_by_role('button',name='새 세션',exact=True).click()
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).not_to_be_visible()
+                page.get_by_role('button',name='새 세션',exact=True).click()
+                page.get_by_role('button',name='히스토리',exact=True).click()
+                expect(page.get_by_role('dialog',name='대화 히스토리').get_by_role('button',name='새 세션',exact=True)).to_have_count(1)
+                page.get_by_role('dialog',name='대화 히스토리').get_by_role('button',name='새 세션',exact=True).click()
                 textbox.fill('새 주제 조사');textbox.press('Enter')
                 expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
                 assert sent == [('new1','새 주제 조사')]

@@ -55,6 +55,55 @@ def test_title_uses_first_request_and_keeps_renames(project):
     assert next(s for s in store.list() if s['id'] == sid)['title'] == '주간 회의'
 
 
+def test_new_session_api_reuses_empty_session_across_repeated_requests(project, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import api_chat_sessions as api
+    db, user, agent, store = project
+    monkeypatch.setattr(api, 'get_store', lambda *args: (store, None))
+    app = FastAPI()
+    app.include_router(api.router)
+    with TestClient(app) as client:
+        first = client.post('/chat-sessions', json={}).json()
+        assert client.post('/chat-sessions', json={}).json()['id'] == first['id']
+        assert len(store.list()) == 2  # 기존 대화 + 빈 세션 하나
+        with sessions.scope(sessions.Binding(store.path, first['id'], store.owner)):
+            db.save_message(user, agent, '첫 요청')
+        second = client.post('/chat-sessions', json={}).json()
+        assert second['id'] != first['id']
+
+
+@pytest.mark.parametrize('occupied', ['message', 'running', 'failed', 'linked', 'named'])
+def test_empty_reuse_preserves_sessions_with_work_or_a_name(project, occupied):
+    db, user, agent, store = project
+    sid = store.create()['id']
+    binding = sessions.Binding(store.path, sid, store.owner)
+    if occupied == 'message':
+        with sessions.scope(binding):
+            db.save_message(agent, user, '예약 실행 결과')
+    elif occupied in ('running', 'failed'):
+        binding = store.begin(sid)
+        if occupied == 'failed':
+            store.finish(binding, 'failed')
+    elif occupied == 'linked':
+        with sessions.scope(binding):
+            sessions.bind_task('pending-request')
+    else:
+        store.update(sid, title='회의 준비')
+    assert store.create(reuse_empty=True)['id'] != sid
+
+
+def test_empty_reuse_is_atomic_and_scoped_to_owner(project):
+    from concurrent.futures import ThreadPoolExecutor
+    db, user, _, store = project
+    other = sessions.SessionStore(db.db_path, 'messages', sessions.pair_owner(user, db.get_or_create_agent('other')))
+    other_id = other.create(reuse_empty=True)['id']
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        ids = list(pool.map(lambda _: store.create(reuse_empty=True)['id'], range(16)))
+    assert len(set(ids)) == 1 and ids[0] != other_id
+    assert len(store.list()) == 2
+
+
 def test_one_turn_per_session_and_cross_session_cancellation(project):
     _, _, _, store = project
     a, b = store.create()['id'], store.create()['id']

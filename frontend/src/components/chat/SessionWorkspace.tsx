@@ -39,7 +39,7 @@ export function SessionWorkspace(props:ChatViewProps) {
   void refresh();const timer = setInterval(refresh,2500);return () => {disposed = true;clearInterval(timer);};
  },[query]);
  const create = async () => {if (busy) return;setBusy(true);
-  try { const row = await sessionCall<SavedSession>('',target,'POST',{});setItems(prev => [row,...prev]);select(row.id);setShowHistory(false);setError(''); }
+  try { const row = await sessionCall<SavedSession>('',target,'POST',{});setItems(prev => [row,...prev.filter(item => item.id !== row.id)]);select(row.id);setShowHistory(false);setError(''); }
   catch(e) {setError((e as Error).message);} finally {setBusy(false);}
  };
  if (props.layout === 'dialog' && props.show === false) return null;

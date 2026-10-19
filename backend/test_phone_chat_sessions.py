@@ -82,8 +82,13 @@ def finished(client, sid, target):
 @pytest.mark.parametrize('target', [{'target': 'system_ai'}, {'target': 'agent', 'project_id': 'p', 'agent_id': 'a'}])
 def test_phone_sessions_are_resumable_and_context_isolated(phone, target):
     client, seen, _, _ = phone
-    a, b = [client.post('/chat-sessions', json=target).json()['id'] for _ in range(2)]
-    for sid, message in [(a, 'first'), (b, 'separate'), (a, 'resume')]:
+    a = client.post('/chat-sessions', json=target).json()['id']
+    assert client.post('/chat-sessions', json=target).json()['id'] == a
+    assert client.post(f'/chat-sessions/{a}/messages', json={**target, 'message': 'first'}).status_code == 202
+    assert finished(client, a, target)['turn']['state'] == 'completed'
+    b = client.post('/chat-sessions', json=target).json()['id']
+    assert b != a
+    for sid, message in [(b, 'separate'), (a, 'resume')]:
         assert client.post(f'/chat-sessions/{sid}/messages', json={**target, 'message': message}).status_code == 202
         assert finished(client, sid, target)['turn']['state'] == 'completed'
     assert seen[0][1] == seen[1][1] == []
@@ -96,9 +101,11 @@ def test_phone_sessions_are_resumable_and_context_isolated(phone, target):
 
 def test_phone_cancel_does_not_cancel_other_session(phone):
     client, _, started, _ = phone
-    a, b = [client.post('/chat-sessions', json={}).json()['id'] for _ in range(2)]
+    a = client.post('/chat-sessions', json={}).json()['id']
     assert client.post(f'/chat-sessions/{a}/messages', json={'message': 'wait'}).status_code == 202
     assert started.wait(3)
+    b = client.post('/chat-sessions', json={}).json()['id']
+    assert b != a
     assert client.post(f'/chat-sessions/{a}/messages', json={'message': 'duplicate'}).status_code == 409
     assert client.post(f'/chat-sessions/{b}/messages', json={'message': 'other'}).status_code == 202
     assert client.post(f'/chat-sessions/{a}/cancel', json={}).json()['cancelled']

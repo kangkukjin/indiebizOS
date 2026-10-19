@@ -37,7 +37,7 @@ def create_router(project_manager, system_runner, agent_runner):
 
     @router.post("")
     def create(req: SessionRequest):
-        return store_for(req.target, req.project_id, req.agent_id)[0].create(req.title)
+        return store_for(req.target, req.project_id, req.agent_id)[0].create(req.title, reuse_empty=True)
 
     @router.get("/{sid}")
     def read(sid: str, target: str = "system_ai", project_id: str = "", agent_id: str = "", before: int | None = None):

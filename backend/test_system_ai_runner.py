@@ -89,6 +89,31 @@ def test_pending_report_keeps_session_after_new_session_and_cache_loss(host):
     assert host.store.history(original)['messages'][-1]['content'] == '완성된 보고서'
 
 
+def test_scheduled_request_names_new_session_and_keeps_report_provenance(host):
+    sid = host.store.create()['id']
+    dispatch(host, content='AI 동향 보고서를\n  작성해줘')
+    assert next(s for s in host.store.list() if s['id'] == sid)['title'] == 'AI 동향 보고서를 작성해줘'
+    assert host.store.history(sid)['messages'][0]['role'] == 'agent_report'
+    dispatch(host, task='task_next', content='다른 보고서 작성')
+    assert next(s for s in host.store.list() if s['id'] == sid)['title'] == 'AI 동향 보고서를 작성해줘'
+
+
+def test_linked_report_names_session_from_original_request(host):
+    sid = host.store.create()['id']
+    request = '첫 요청 ' + '가' * 70
+    memory.create_task('task_pending', 'app', 'delegate', request)
+    with sessions.scope(sessions.Binding(host.store.path, sid, 'system_ai')):
+        sessions.bind_task('task_pending')
+    dispatch(host, 'task_pending', origin='agent', content='조사를 완료했습니다')
+    assert next(s for s in host.store.list() if s['id'] == sid)['title'] == request[:60]
+
+
+def test_schedule_preserves_explicit_session_title(host):
+    sid = host.store.create('내 보고서 모음')['id']
+    dispatch(host)
+    assert next(s for s in host.store.list() if s['id'] == sid)['title'] == '내 보고서 모음'
+
+
 def test_busy_session_defers_without_writing_and_keeps_target(host):
     latest = host.store.create()['id']
     active = host.store.begin(latest)

@@ -227,12 +227,24 @@ class SessionStore:
                 EXISTS(SELECT 1 FROM conversation_turns t WHERE t.session_id=s.id AND t.state='running') AS running
                 FROM conversation_sessions s WHERE owner=? ORDER BY updated_at DESC,id""", (self.owner,))]
 
-    def create(self, title="새 세션"):
+    def create(self, title="새 세션", *, reuse_empty=False):
         sid, stamp = uuid.uuid4().hex, now()
+        title = title.strip()[:120] or "새 세션"
         with connection(self.path) as conn:
+            if reuse_empty and title == "새 세션":
+                # 여러 창/연타가 동시에 들어와도 빈 대화 하나만 만든다.
+                conn.execute("BEGIN IMMEDIATE")
+                row = conn.execute(f"""SELECT s.id FROM conversation_sessions s
+                    WHERE s.owner=? AND s.legacy=0 AND s.title='새 세션'
+                    AND NOT EXISTS (SELECT 1 FROM {self.table} m WHERE m.session_id=s.id)
+                    AND NOT EXISTS (SELECT 1 FROM conversation_turns t WHERE t.session_id=s.id)
+                    AND NOT EXISTS (SELECT 1 FROM conversation_task_links l WHERE l.session_id=s.id)
+                    ORDER BY s.created_at DESC,s.id DESC LIMIT 1""", (self.owner,)).fetchone()
+                if row:
+                    return self.require(conn, row[0])
             conn.execute("""INSERT INTO conversation_sessions
                 (id,owner,title,created_at,updated_at) VALUES (?,?,?,?,?)""",
-                (sid, self.owner, title.strip()[:120] or "새 세션", stamp, stamp))
+                (sid, self.owner, title, stamp, stamp))
             return self.require(conn, sid)
 
     def update(self, sid, title=None):

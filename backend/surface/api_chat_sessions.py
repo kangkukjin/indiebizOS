@@ -41,7 +41,7 @@ def list_sessions(target: str = "system_ai", project_id: str = "", agent_id: str
 
 @router.post("")
 def create_session(req: Change):
-    return get_store(req.target, req.project_id, req.agent_id)[0].create(req.title or "새 세션")
+    return get_store(req.target, req.project_id, req.agent_id)[0].create(req.title or "새 세션", reuse_empty=True)
 
 
 @router.patch("/{sid}")

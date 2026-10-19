@@ -3,6 +3,8 @@
 
 /tmp 고아로 매번 다시 써지던 두 변환기(md2html_tips·render_housing_html)를 흡수한 것이다.
 공유판에서 빼야 하는 줄(개인 시스템 맥락 등)은 사람 손이 아니라 이 변환기가 보장한다.
+표 앞 빈 줄은 변환 사본에서 보정하며, 코드·HTML 예시는 제외한다. 확인된 표가 변환 중
+사라지면 저장 전에 실패한다. table_structure는 구조 보존 관측이며 시각 검수 합격이 아니다.
 
 args 예:
   {"src":"outputs/x/보고서.md", "dst":"공유창고/0/폴더/이름.html",
@@ -169,9 +171,60 @@ def _wrap_cards(body):
                      for p in parts if p.strip())
 
 
+def _render_markdown(text):
+    """표 경계만 보정하고, 확인된 표가 사라지면 파일 쓰기 전에 멈춘다.
+
+    fenced_code/html_block 처리 뒤 실행하여 예시 코드·원시 HTML은 건드리지 않는다.
+    셀 구분(이스케이프·인라인 코드 포함)은 실제 tables 파서의 계약을 재사용한다.
+    """
+    import markdown
+    from markdown.extensions import Extension
+    from markdown.preprocessors import Preprocessor
+    from markdown.treeprocessors import Treeprocessor
+
+    counts = {"expected": 0, "boundaries_fixed": 0}
+
+    class TableBoundaries(Preprocessor):
+        def run(self, lines):
+            table = self.md.parser.blockprocessors["table"]
+            result = []
+            for index, line in enumerate(lines):
+                pair = lines[index:index + 2]
+                # 4칸 들여쓰기 코드는 문서 표가 아니다. 탭은 normalize_whitespace가 펼친다.
+                eligible = (len(pair) == 2 and all(
+                    row.strip() and not row.startswith("    ") for row in pair))
+                if (eligible and table.test(None, "\n".join(pair))
+                        and all(re.fullmatch(r":?-+:?", cell.strip())
+                                for cell in table.separator)):
+                    counts["expected"] += 1
+                    if result and result[-1].strip():
+                        result.append("")
+                        counts["boundaries_fixed"] += 1
+                result.append(line)
+            return result
+
+    class CheckTables(Treeprocessor):
+        def run(self, root):
+            actual = sum(1 for _ in root.iter("table"))
+            if actual < counts["expected"]:
+                raise ValueError(
+                    f"표 구조가 보존되지 않았습니다: 원문 {counts['expected']}개, "
+                    f"변환 {actual}개. HTML을 저장하지 않았습니다.")
+
+    class ReportTables(Extension):
+        def extendMarkdown(self, md):
+            # 코드 울타리(25)·HTML 블록(20)이 보호된 뒤, 블록 파싱 전에 보정한다.
+            md.preprocessors.register(TableBoundaries(md), "report_tables", 15)
+            md.treeprocessors.register(CheckTables(md), "report_tables", 35)
+
+    body = markdown.markdown(text, extensions=[
+        "tables", "fenced_code", "sane_lists", "nl2br", ReportTables(),
+    ])
+    return body, counts
+
+
 def render(args):
     """동일 변환기를 등록 스크립트와 보고서 관용구에서 재사용한다."""
-    import markdown
     src = _repo_path(args.get("src"), "src")
     dst = _repo_path(args.get("dst"), "dst")
     if not src.exists():
@@ -202,7 +255,7 @@ def render(args):
         title = head.group(1).strip() if head else src.stem
     title = re.sub(r'[*`]', '', str(title))
 
-    body = markdown.markdown(text, extensions=["tables", "sane_lists", "nl2br"])
+    body, table_structure = _render_markdown(text)
     if theme == "card":
         body = _wrap_cards(body)
     elif theme == "briefing":
@@ -259,6 +312,7 @@ def render(args):
         "headings": len(re.findall(r'<h[123][ >]', body)),
         "links": len(re.findall(r'<a href=', body)),
         "tables": len(re.findall(r'<table>', body)),
+        "table_structure": {"status": "preserved", **table_structure},
         "dropped_lines": dropped,
     }]}
 

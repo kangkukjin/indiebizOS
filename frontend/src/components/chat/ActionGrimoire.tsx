@@ -36,6 +36,10 @@ interface ActionGrimoireProps {
   open: boolean;
   onClose: () => void;
   onSelect: (actionId: string) => void;
+  /** modal(기본) = 대화창 위 모달, 고르면 닫힌다. page = 독립 창(`#/grimoire`)을 통째로 채우고 고른 뒤에도 열려 있다. */
+  mode?: 'modal' | 'page';
+  /** page 모드: 방금 보낸 낱말(푸터에 확인 표시). */
+  picked?: string | null;
 }
 
 const NODE_LABELS: Record<string, { ko: string; sub: string }> = {
@@ -101,8 +105,9 @@ const GROUP_ORDER = [
   'media_produce', 'chart', 'music', 'web_builder',
 ];
 
-export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps) {
+export function ActionGrimoire({ open, onClose, onSelect, mode = 'modal', picked = null }: ActionGrimoireProps) {
   useLocale();
+  const isPage = mode === 'page';
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,21 +142,21 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
     return () => cancelAnimationFrame(id);
   }, [open]);
 
-  // ESC로 닫기
+  // ESC로 닫기 (모달만 — 독립 창은 OS 창 닫기)
   useEffect(() => {
-    if (!open) return;
+    if (!open || isPage) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, isPage]);
 
   if (!open) return null;
 
   const handleSelect = (node: string, action: string) => {
     onSelect(`${node}:${action}`);
-    onClose();
+    if (!isPage) onClose();
   };
 
   const hoveredMeta =
@@ -159,21 +164,10 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
       ? catalog.nodes[hoveredAction.node]?.actions[hoveredAction.action]
       : null;
 
-  return (
-    <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${
-        visible ? 'opacity-100' : 'opacity-0'
-      }`}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className={`relative w-[min(90vw,900px)] max-h-[80vh] flex flex-col bg-[#FEF9EE] border border-[#D6C8A8] rounded-2xl shadow-2xl transition-all duration-200 ease-out ${
-          visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-        }`}
-      >
+  const body = (
+    <>
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5D5B0] bg-gradient-to-r from-[#F3E5C2] to-[#FEF9EE] rounded-t-2xl">
+        <div className={`flex items-center justify-between px-6 py-4 border-b border-[#E5D5B0] bg-gradient-to-r from-[#F3E5C2] to-[#FEF9EE] ${isPage ? '' : 'rounded-t-2xl'}`}>
           <div className="flex items-center gap-3">
             <BookOpen size={22} className="text-[#92400E]" />
             <div>
@@ -185,13 +179,15 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-[#A09080] hover:text-[#4A4035] p-1.5 rounded-lg hover:bg-[#E5D5B0]/40 transition-colors"
-            title="닫기 (ESC)"
-          >
-            <X size={20} />
-          </button>
+          {!isPage && (
+            <button
+              onClick={onClose}
+              className="text-[#A09080] hover:text-[#4A4035] p-1.5 rounded-lg hover:bg-[#E5D5B0]/40 transition-colors"
+              title="닫기 (ESC)"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* 본문 */}
@@ -298,37 +294,78 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
               })}
           </div>
 
-          {/* 호버 시 상세 패널 */}
-          {hoveredMeta && hoveredAction && (
-            <aside className="w-80 shrink-0 border-l border-[#E5D5B0] bg-[#FFFCF4] p-5 overflow-y-auto">
-              <div className="font-mono text-sm text-[#92400E] mb-2">
-                [{hoveredAction.node}:{hoveredAction.action}]
-              </div>
-              <p className="text-sm text-[#4A4035] mb-3 leading-relaxed">
-                {ui.system(hoveredMeta.description)}
+          {/* 상세 패널 — 항상 자리를 차지한다. 호버 때만 나타나면 격자 폭이 줄어 낱말 단추들이 줄바꿈으로
+              밀려나고, 누르려던 낱말이 커서 밑에서 빠져나가 클릭이 안 먹었다(2026-10-20 실측 원인). */}
+          <aside className="w-72 shrink-0 border-l border-[#E5D5B0] bg-[#FFFCF4] p-5 overflow-y-auto">
+            {hoveredMeta && hoveredAction ? (
+              <>
+                <div className="font-mono text-sm text-[#92400E] mb-2">
+                  [{hoveredAction.node}:{hoveredAction.action}]
+                </div>
+                <p className="text-sm text-[#4A4035] mb-3 leading-relaxed">
+                  {ui.system(hoveredMeta.description)}
+                </p>
+                {hoveredMeta.target_description && (
+                  <div className="text-xs text-[#A09080] mb-2 leading-relaxed">
+                    <span className="font-semibold">파라미터:</span>{' '}
+                    {hoveredMeta.target_key ? (
+                      <code className="bg-[#F3E5C2] px-1 rounded">{hoveredMeta.target_key}</code>
+                    ) : null}{' '}
+                    — {ui.system(hoveredMeta.target_description)}
+                  </div>
+                )}
+                {hoveredMeta.implementation && (
+                  <div className="text-xs text-[#A09080] mt-3 pt-3 border-t border-[#E5D5B0] leading-relaxed">
+                    <span className="font-semibold">구현:</span> {ui.system(hoveredMeta.implementation)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-[#A09080] leading-relaxed">
+                낱말 위에 커서를 올리면 뜻과 파라미터가 여기 보입니다.
               </p>
-              {hoveredMeta.target_description && (
-                <div className="text-xs text-[#A09080] mb-2 leading-relaxed">
-                  <span className="font-semibold">파라미터:</span>{' '}
-                  {hoveredMeta.target_key ? (
-                    <code className="bg-[#F3E5C2] px-1 rounded">{hoveredMeta.target_key}</code>
-                  ) : null}{' '}
-                  — {ui.system(hoveredMeta.target_description)}
-                </div>
-              )}
-              {hoveredMeta.implementation && (
-                <div className="text-xs text-[#A09080] mt-3 pt-3 border-t border-[#E5D5B0] leading-relaxed">
-                  <span className="font-semibold">구현:</span> {ui.system(hoveredMeta.implementation)}
-                </div>
-              )}
-            </aside>
-          )}
+            )}
+          </aside>
         </div>
 
         {/* 푸터 안내 */}
-        <div className="px-6 py-3 border-t border-[#E5D5B0] text-xs text-[#A09080] bg-[#FBF1D9]/40 rounded-b-2xl text-center">
-          액션을 선택하면 다음 메시지에 함께 전달됩니다 · ESC로 닫기
+        <div className={`px-6 py-3 border-t border-[#E5D5B0] text-xs bg-[#FBF1D9]/40 text-center ${isPage ? '' : 'rounded-b-2xl'}`}>
+          {isPage && picked ? (
+            <span className="text-[#92400E]">
+              <code className="font-mono bg-[#F3E5C2] px-1 rounded">[{picked}]</code> 을(를) 대화창 입력칸에 넣었습니다 · 다른 낱말을 고르면 바뀝니다
+            </span>
+          ) : (
+            <span className="text-[#A09080]">
+              {isPage ? '낱말을 고르면 이 사전을 연 대화창의 다음 메시지에 함께 전달됩니다' : '액션을 선택하면 다음 메시지에 함께 전달됩니다 · ESC로 닫기'}
+            </span>
+          )}
         </div>
+    </>
+  );
+
+  if (isPage) {
+    // 독립 창: OS 제목줄 아래를 통째로 채운다. 배경·등장 애니메이션 없음.
+    return (
+      <div className="h-screen w-screen flex flex-col bg-[#FEF9EE] overflow-hidden">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${
+        visible ? 'opacity-100' : 'opacity-0'
+      }`}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-[min(90vw,900px)] max-h-[80vh] flex flex-col bg-[#FEF9EE] border border-[#D6C8A8] rounded-2xl shadow-2xl transition-all duration-200 ease-out ${
+          visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+        }`}
+      >
+        {body}
       </div>
     </div>
   );

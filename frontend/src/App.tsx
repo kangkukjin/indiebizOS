@@ -17,6 +17,7 @@ import { MultiChat } from './components/MultiChat';
 import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
 import { SystemAIView } from './components/SystemAIView';
+import { ActionGrimoireWindow } from './components/chat/ActionGrimoireWindow';
 import { ProjectPanelView } from './components/ProjectPanelView';
 import { LectureWorkspace } from './components/LectureWorkspace';
 import { PromptCompositionView } from './components/PromptCompositionView';
@@ -52,6 +53,7 @@ interface HashRoute {
   lectureId: string | null;
   isPromptComposition: boolean;
   isGuides: boolean;
+  isGrimoire: boolean;
   isCoding: boolean;
   isDocuments: boolean;
   isSpreadsheets: boolean;
@@ -67,7 +69,7 @@ const EMPTY_ROUTE: HashRoute = {
   isPCManager: false, pcManagerPath: null,
   isPhotoManager: false, photoManagerPath: null,
   isSystemAI: false, isLectureWorkspace: false, lectureId: null,
-  isPromptComposition: false, isGuides: false, isExternalUsers: false, isMemberPCs: false, isCoding: false, isDocuments: false, isSpreadsheets: false,
+  isPromptComposition: false, isGuides: false, isGrimoire: false, isExternalUsers: false, isMemberPCs: false, isCoding: false, isDocuments: false, isSpreadsheets: false,
   vocabularyFolder: null,
 };
 
@@ -140,7 +142,7 @@ function App() {
     isCommunity, isMessenger, isBusiness,
     isPCManager, pcManagerPath, isPhotoManager, photoManagerPath,
     isSystemAI, isLectureWorkspace, lectureId,
-    isPromptComposition, isGuides, isExternalUsers, isMemberPCs, vocabularyFolder, isCoding, isDocuments, isSpreadsheets,
+    isPromptComposition, isGuides, isGrimoire, isExternalUsers, isMemberPCs, vocabularyFolder, isCoding, isDocuments, isSpreadsheets,
   } = route;
 
   useEffect(installVocabularySync, []);
@@ -236,6 +238,7 @@ function App() {
   if (isMemberPCs) return <MemberPCsView />;
   if (isExternalUsers) return <ExternalUsersView />;
   if (isGuides) return <GuidesView />;
+  if (isGrimoire) return <ActionGrimoireWindow />;  // IBL 사전(마법책) 독립 창 — 대화창이 연다
   if (vocabularyFolder) return <VocabularyView key={vocabularyFolder} folderId={vocabularyFolder} />;
   if (isCoding) return <DocumentApp id="coding" label="코딩 앱" />;
   if (isDocuments) return <DocumentApp />;

@@ -3,7 +3,7 @@ import type { ChatDisplayBindings } from './ChatView';
 
 /** Only presentation: the persistent ChatPane owns state, streams and callbacks. */
 export function renderChatDisplay(bindings: ChatDisplayBindings) {
-  const { ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, todos, toolHistory, variant } = bindings;
+  const { ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant } = bindings;
   // ── 렌더링: 다이얼로그 모드 가시성 체크 ──
 
   if (isDialog && !show) return null;
@@ -12,16 +12,19 @@ export function renderChatDisplay(bindings: ChatDisplayBindings) {
 
   const chatContent = (
     <>
-      {/* 헤더 (다이얼로그 모드에서는 드래그 핸들) */}
+      {/* 헤더 (다이얼로그 모드에서는 드래그 핸들, 풀페이지 Electron 창에서는 창 끌기 영역).
+          풀페이지: 제목 블록(flex-1)은 drag 에 남기고 단추 묶음만 no-drag. 예전엔 제목 블록까지 no-drag 라
+          헤더의 빈틈 몇 픽셀만 끌렸다(2026-10-20 "시스템 AI 창 드래그가 거의 안 됨"의 원인).
+          titleBarInset: hiddenInset 창(시스템 AI)에서 좌상단 신호등 자리를 비운다. */}
       <div
         className={'chat-header ' + (isDialog
           ? 'h-10 flex items-center justify-between gap-2 min-w-0 px-2 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0 select-none'
-          : 'h-10 px-2 flex items-center justify-between gap-2 min-w-0 border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag'
+          : `h-10 ${titleBarInset ? 'pl-20 pr-2' : 'px-2'} flex items-center justify-between gap-2 min-w-0 border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag select-none`
         )}
         style={isDialog ? { cursor: isDragging ? 'grabbing' : 'grab' } : undefined}
         onMouseDown={isDialog ? handleDragStart : undefined}
       >
-        <div className={`flex items-center gap-2 min-w-0 flex-1${isDialog ? '' : ' no-drag'}`}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className={`w-8 h-8 shrink-0 rounded-full hidden sm:flex items-center justify-center text-white ${
             isDialog ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-[#D97706] to-[#B45309]'
           }`}>
@@ -44,7 +47,7 @@ export function renderChatDisplay(bindings: ChatDisplayBindings) {
             try { await session.loadOlder(); }
             finally { setReadingOlder(false); requestAnimationFrame(() => { if (el) el.scrollTop = top + el.scrollHeight - height; }); }
           }} className={`px-2 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}>{readingOlder ? '불러오는 중…' : conversationLabel('older')}</button>), dictionary: headerItems?.dictionary !== undefined ? headerItems.dictionary : (<button
-            onClick={() => setGrimoireOpen(true)}
+            onClick={openGrimoire}
             className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg transition-colors ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}
             title="마법책 — IBL 액션 사전" aria-label="IBL 사전"
           >

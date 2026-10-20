@@ -584,6 +584,7 @@ const TOOL_WINDOWS = {
   'prompt-composition': { width: 1180, height: 860 },
   'guides': { width: 1280, height: 860 },
   'vocabulary': { width: 1000, height: 760, minWidth: 360, minHeight: 300 },
+  'grimoire': { width: 1040, height: 780, minWidth: 560, minHeight: 420 },  // IBL 사전(마법책) — 대화창의 사전 단추가 연다
 };
 
 function createToolWindow(kind, folderId = 'desktop') {
@@ -632,8 +633,10 @@ function createToolWindow(kind, folderId = 'desktop') {
 }
 
 function registerToolWindowIPC() {
+  // 열렸으면 true. 모르는 kind(옛 메인 프로세스가 아직 떠 있을 때의 새 kind 포함)는 false —
+  // 렌더러가 창 대신 자기 모달로 물러설 수 있게 한다(IBL 사전이 이 길을 쓴다).
   ipcMain.handle('open-tool-window', (_, kind, folderId) => {
-    createToolWindow(String(kind || ''), folderId);
+    return !!createToolWindow(String(kind || ''), folderId);
   });
   ipcMain.on('vocabulary-changed', (event) => {
     for (const win of BrowserWindow.getAllWindows()) {

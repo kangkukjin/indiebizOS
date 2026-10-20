@@ -86,6 +86,7 @@ export function SystemAIView() {
       <ChatView
         chatTarget={{ type: 'system_ai' }}
         layout="fullpage"
+        titleBarInset
         initialMessage={initialMessage}
         initialMessageLabel={initialLabel}
       />

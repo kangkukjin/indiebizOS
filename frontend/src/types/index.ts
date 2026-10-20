@@ -254,7 +254,7 @@ export interface ElectronAPI {
   openPCManagerWindow: (initialPath?: string | null) => Promise<void>;
   openPhotoManagerWindow: (initialPath?: string | null) => Promise<void>;
   openLectureWorkspaceWindow: (lectureId?: string | null) => Promise<void>;
-  openToolWindow?: (kind: 'prompt-composition' | 'guides' | 'vocabulary' | 'external-users' | 'member-pcs' | 'coding' | 'documents' | 'spreadsheets', folderId?: string) => Promise<void>;
+  openToolWindow?: (kind: 'prompt-composition' | 'guides' | 'vocabulary' | 'external-users' | 'member-pcs' | 'coding' | 'documents' | 'spreadsheets' | 'grimoire', folderId?: string) => Promise<boolean | void>;  // true=창 열림. 옛 메인(undefined)·모르는 kind(false)면 호출자가 물러선다
   notifyVocabularyChanged?: () => void;
   onVocabularyChanged?: (callback: () => void) => () => void;
   onLectureWorkspaceSelect?: (callback: (lectureId: string) => void) => void;

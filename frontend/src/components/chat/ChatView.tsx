@@ -14,6 +14,7 @@ import { WEBSOCKET_ORIGIN } from '../../lib/backend-origin';
 import { useState, useRef, useEffect, useCallback, Fragment, type ReactNode } from 'react';
 import type { ChatSession } from './ChatSession';
 import { historyDay, HistoryDate } from './SessionHistory';
+import { claimGrimoireOwner, newGrimoireToken, onGrimoireSelection } from './grimoire-relay';
 import { SessionWorkspace } from './SessionWorkspace';
 import { Bot, Loader2, X, RefreshCw, History, RotateCw, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -59,6 +60,8 @@ export interface ChatViewProps {
   headerItems?: Partial<Record<string, ReactNode>>;
   datedHistory?: boolean;
   active?: boolean;
+  /** hiddenInset Electron 창(시스템 AI)에서 헤더 왼쪽에 신호등 자리를 비운다. */
+  titleBarInset?: boolean;
   // dialog 모드 전용
   show?: boolean;
   onClose?: () => void;
@@ -90,7 +93,7 @@ export function ChatView(props: ChatViewProps) {
   return <SessionWorkspace key={key} {...props} />;
 }
 
-export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel, session, headerActions, headerItems, datedHistory, active = true }: ChatViewProps) {
+export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel, session, headerActions, headerItems, datedHistory, active = true, titleBarInset = false }: ChatViewProps) {
   const isAgent = chatTarget.type === 'agent';
   const isAppMaker = chatTarget.type === 'appmaker';  // system_ai 분기(!isAgent)를 공유하되 스레드/타이틀만 분기
   const isDialog = layout === 'dialog';
@@ -131,10 +134,24 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
   const [localPlanMode, setPlanMode] = useState<PlanModeState>({ active: false, phase: null });
   const planMode = session?.planMode ?? localPlanMode;
 
-  // 마법책 (IBL 액션 사전) 모달
+  // 마법책 (IBL 액션 사전) 모달 — 웹 표면(네이티브 창 없음)에서만. Electron 은 독립 창(`#/grimoire`).
   const [grimoireOpen, setGrimoireOpen] = useState(false);
   // 마법책에서 선택한 액션 — 다음 메시지 전송 시 action_hint로 전달, 전송 후 자동 초기화
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
+  // 독립 사전 창이 고른 낱말을 돌려보낼 때 이 대화창을 가리키는 표. 사전 창은 하나, 주인은 마지막으로 연 대화창.
+  const grimoireTokenRef = useRef<string>(newGrimoireToken());
+  const openGrimoire = useCallback(async () => {
+    const native = window.electron?.openToolWindow;
+    if (native) {
+      claimGrimoireOwner(grimoireTokenRef.current);
+      // true 가 아니면(아직 재시작 안 한 옛 메인 프로세스는 undefined) 모달로 물러선다 — 단추가 죽어 있는 틈을 없앤다.
+      let opened: boolean | void = false;
+      try { opened = await native('grimoire'); } catch { opened = false; }
+      if (opened === true) return;
+    }
+    setGrimoireOpen(true);
+  }, []);
+  useEffect(() => onGrimoireSelection(grimoireTokenRef.current, (actionId) => setSelectedAction(actionId)), []);
 
   // 다이얼로그 히스토리
   const [showHistory, setShowHistory] = useState(false);
@@ -950,7 +967,7 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
     fileAttachments.clearAttachments();
   };
 
-  return { __uiTools, React, ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, todos, toolHistory, variant };
+  return { __uiTools, React, ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant };
 }
 
 export type ChatDisplayBindings = ReturnType<typeof useChatHost>;

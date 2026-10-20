@@ -1,6 +1,7 @@
 """제어 드라이버(CONTROL_DRIVER_DESIGN_2026_10_20) — 발견 경로·실행 전 검사·관측 원장·Safari 부품. 실기기 없음."""
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -334,32 +335,42 @@ def safari(monkeypatch):
             raise mod.Failure("TARGET_MISSING", msg, os_error=code)
         if "is running" in script:
             return "true" if state["running"] else "false"
-        if "of every window" in script:
-            return fmt(state["windows"]) if state["windows"] else "{{}, {}, {}}"
-        if "of every tab" in script:
-            wid = int(script.split("window id ")[1].split(" ")[0])
-            return fmt(state["tabs"][wid])
+        if "safari_snapshot_v2" in script:
+            match = re.search(r"set selectedWindows to \{window id (\d+)\}", script)
+            wanted = int(match[1]) if match else None
+            rows = [[wid, name, current, state["tabs"][wid]]
+                    for wid, name, current in zip(*state["windows"])
+                    if wanted is None or wid == wanted]
+            return fmt(rows)
         if "make new tab" in script:
-            wid = int(script.split("window id ")[1].split(" ")[0])
-            url = script.split("URL:")[1].rstrip("}")
+            wid = int(re.search(r"window id (\d+)", script)[1])
+            url = re.search(r"URL:(.+)\}", script)[1]
             t = state["tabs"][wid]
             n = len(t[0]) + 1
             t[0].append(n); t[1].append(json.loads(url)); t[2].append("new")
             if hang:
                 raise subprocess.TimeoutExpired(script, timeout)
-            return "tab %d of window id %d" % (n, wid)
+            return fmt([wid, n])
         if "set current tab" in script:
-            wid = int(script.split("window id ")[1].split(" ")[0]); n = int(script.rsplit("tab ", 1)[1])
+            wid = int(re.search(r"window id (\d+)", script)[1]); n = int(re.search(r"(?:set current tab of w to tab|close tab) (\d+)", script)[1])
             if not state.get("user_races"):
                 state["windows"][2][state["windows"][0].index(wid)] = n
             if hang:
                 raise subprocess.TimeoutExpired(script, timeout)
             return ""
         if "close tab" in script:
-            wid = int(script.split("window id ")[1].split(" ")[0]); n = int(script.rsplit("tab ", 1)[1])
+            wid = int(re.search(r"window id (\d+)", script)[1]); n = int(re.search(r"(?:set current tab of w to tab|close tab) (\d+)", script)[1])
             t = state["tabs"][wid]; i = t[0].index(n)
             for col in t: col.pop(i)
             t[0][:] = list(range(1, len(t[0]) + 1))
+            if not t[0]:
+                j = state["windows"][0].index(wid)
+                for col in state["windows"]:
+                    col.pop(j)
+            else:
+                j = state["windows"][0].index(wid)
+                current = state["windows"][2][j]
+                state["windows"][2][j] = min(current - (n < current), len(t[0]))
             return ""
         raise AssertionError(script)
     monkeypatch.setattr(mod, "apple_event", fake_apple_event)
@@ -391,11 +402,11 @@ def test_safari_open_is_background_tab_and_verified_by_readback(safari):
 
 def test_safari_switch_and_close_report_requested_shared_state_effects(safari):
     safari.run({"op": "open", "url": "https://example.com", "window_id": 223970})
-    sw = safari.run({"op": "switch", "window_id": 223970, "tab": 2})
+    sw = safari.run({"op": "switch", "window_id": 223970, "tab": 2, "expected": safari.windows(223970)[0]["revision"]})
     assert sw["verified"] and sw["current_tab"] == 2 and sw["previous_tab"] == 1 and sw["condition"]["shared_state"] is True
-    cl = safari.run({"op": "close", "window_id": 223970, "tab": 2})
+    cl = safari.run({"op": "close", "window_id": 223970, "tab": 2, "expected": safari.windows(223970)[0]["revision"]})
     assert cl["verified"] and cl["closed_tab"]["url"] == "https://example.com" and cl["tab_count"] == 1
-    last = safari.run({"op": "close", "window_id": 223970, "tab": 1})
+    last = safari.run({"op": "close", "window_id": 223970, "tab": 1, "expected": safari.windows(223970)[0]["revision"]})
     assert last["verified"] and last["tab_count"] == 0
 
 
@@ -408,13 +419,13 @@ def test_safari_target_missing_permission_and_lost_response(safari):
     assert safari.run({"op": "status"})["running"] is False
     safari._state["running"] = True
     with pytest.raises(safari.Failure) as e:
-        safari.run({"op": "switch", "window_id": 999, "tab": 1})
+        safari.run({"op": "switch", "window_id": 999, "tab": 1, "expected": "0" * 64})
     assert e.value.code == "TARGET_MISSING"
     with pytest.raises(safari.Failure) as e:
-        safari.run({"op": "close", "window_id": 223970, "tab": 9})
+        safari.run({"op": "close", "window_id": 223970, "tab": 9, "expected": safari.windows(223970)[0]["revision"]})
     assert e.value.code == "TARGET_MISSING"
     # 권한 부족 — 첫 사전 호출의 -1743
-    safari._state["fail"] = ("of every window", -1743, "Not authorized")
+    safari._state["fail"] = ("safari_snapshot_v2", -1743, "Not authorized")
     with pytest.raises(safari.Failure) as e:
         safari.run({"op": "status"})
     assert e.value.code == "PERMISSION_REQUIRED"
@@ -426,12 +437,12 @@ def test_safari_target_missing_permission_and_lost_response(safari):
     # 응답 유실 + 효과 불명 → unknown 유지
     safari._state["hang"] = "set current tab"
     safari._state["user_races"] = True
-    out = safari.run({"op": "switch", "window_id": 223970, "tab": 2})
+    out = safari.run({"op": "switch", "window_id": 223970, "tab": 2, "expected": safari.windows(223970)[0]["revision"]})
     assert out["success"] is False and out["status"] == "unknown" and out["failure"]["code"] == "UNKNOWN"
-    # 사용자 동시 조작 — 응답은 왔지만 현재 탭이 다름 → NOT_APPLIED, 자동 재시도 없음
+    # 사용자 동시 조작 — 응답은 왔지만 현재 탭이 다름 → POSTCONDITION_FAILED, 자동 재시도 없음
     before = len(safari._state["calls"])
-    out = safari.run({"op": "switch", "window_id": 223970, "tab": 2})
-    assert out["success"] is False and out["failure"]["code"] == "NOT_APPLIED"
+    out = safari.run({"op": "switch", "window_id": 223970, "tab": 2, "expected": safari.windows(223970)[0]["revision"]})
+    assert out["success"] is False and out["failure"]["code"] == "POSTCONDITION_FAILED"
     assert sum("set current tab" in c for c in safari._state["calls"][before:]) == 1
 
 

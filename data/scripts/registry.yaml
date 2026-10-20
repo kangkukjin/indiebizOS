@@ -1138,7 +1138,7 @@ TV제어:
   created_at: '2026-10-20T02:46:40.371811+00:00'
   timeout: 120
 Safari제어:
-  description: 본체 Safari 의 창·탭 드라이버(조작면 app:com.apple.Safari, macOS 전용). op=contract(동작별 조건·확인 범위)/status(창·탭·현재 탭 조회)/open(url 을 지정 창 끝에 배경 탭으로, 창 없으면 새 창·Safari 꺼져 있으면 launch:true 때만 배경 기동)/switch(window_id,tab 현재 탭 바꾸기)/close(window_id,tab). 어떤 동작도 Safari 를 앞으로 가져오지 않는다. verified 는 변경 뒤 사전 재조회(applescript_tab_readback) 통과이며 화면 표시·페이지 로드는 범위 밖. 시간 초과·응답 유실은 재전송 없이 재조회로 판별하고 안 되면 status unknown. 실패 failure.code=TARGET_MISSING/PERMISSION_REQUIRED/INVALID_ARGUMENT/UNKNOWN. 가이드 safari_control.md.
+  description: 본체 Safari 창·탭 드라이버 v2. status(window_id 선택)로 windows[].revision 조회. switch/close는 window_id·tab·expected(관측 revision) 필수. open(url,window_id 선택,expected 선택,launch 선택)은 배경 탭 생성과 기존 상태 보존을 검증. 모든 변경 결과 state·target·checks로 추가 조회 없이 IBL 연속 조합. target은 다음 호출 인수(window_id,tab,expected). STATE_CHANGED는 변경 전 중단, UNKNOWN·POSTCONDITION_FAILED는 자동 재전송 금지. 페이지 로드와 동일 URL 탭의 개체 신원은 보장하지 않는다. 가이드 safari_control.md.
   file: safari_control.py
   interpreter: python
   registered_at: '2026-10-20T12:00:00'
@@ -1153,6 +1153,7 @@ Safari제어:
       url: Text
       window_id: Number
       tab: Number
+      expected: Text
       launch: Bool
     defaults:
       op: status
@@ -1176,6 +1177,7 @@ Safari제어:
       - window_id
       - tab
       - launch
+      - expected
       result:
         success: Bool
         surface: Text
@@ -1185,9 +1187,9 @@ Safari제어:
         op: status
       forbidden:
       - url
-      - window_id
       - tab
       - launch
+      - expected
     - when:
         op: open
       required:
@@ -1199,6 +1201,7 @@ Safari제어:
       required:
       - window_id
       - tab
+      - expected
       forbidden:
       - url
       - launch
@@ -1207,6 +1210,7 @@ Safari제어:
       required:
       - window_id
       - tab
+      - expected
       forbidden:
       - url
       - launch

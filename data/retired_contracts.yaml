@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: safari-positional-mutation-without-observation
+    retired: 2026-10-20
+    reason: 관측 뒤 탭 번호가 바뀌면 다른 탭을 조작할 수 있어 전환·닫기에 관측 판본을 필수로 받는다.
+    instead: Safari제어 switch/close에는 window_id·tab·expected(관측 revision)가 필요하며 변경 결과 state·target으로 후속 호출을 잇는다.
+    phrases: ["switch(window_id,tab 현재 탭 바꾸기)"]
   - id: api-registry-implicit-vocabulary
     retired: 2026-10-20
     reason: 통합된 액션이 내부 API 등록부에서 다시 공개돼 사전·실행·활성 필터의 정합성이 깨졌다.

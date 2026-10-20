@@ -1,60 +1,90 @@
-# Safari 창·탭 드라이버 — 본체 앱 제어의 시범
+# Safari 창·탭 드라이버 — 본체 앱 제어
 
-본체 macOS 의 Safari 창·탭을 **화면 조작 없이** 사전(AppleScript) 계약으로 다룰 때 읽는다.
-조작면은 `app:com.apple.Safari`, 실행 부품은 등록 스크립트 `Safari제어`, 계약 조회는
-`[self:script]{id:"Safari제어",args:{op:"contract"}}` 다. `[limbs:screen]{op:"snapshot"}` 의 앞 앱이
-Safari 면 응답의 `control_guide` 가 이 파일을 가리킨다 — 좌표·ref 로 더듬기 전에 이 부품을 쓴다.
-현재 문맥에 계약이 있으면 다시 읽거나 같은 AppleScript 를 새로 쓰지 않는다.
-어느 탭을 열고 닫을지는 AI 가 정하고, 이 부품은 사전 호출과 재조회만 얼린다(앱 안의 내용 조작은 범위 밖).
+macOS 본체 Safari의 창·탭을 화면 조작 없이 AppleScript 사전으로 다룬다.
+조작면 `app:com.apple.Safari`, 등록 스크립트 `Safari제어`. 계약 조회는
+`[self:script]{id:"Safari제어",args:{op:"contract"}}`다. 화면 snapshot의 `control_guide`나
+등록 스크립트 설명으로 발견하고, 계약을 이미 읽었다면 다시 조회하지 않는다.
+어느 탭을 다룰지는 AI가 결정하고 부품은 대상 대조·실행·결과 확인을 맡는다.
 
-## 동작과 실행 조건
+## 동작과 대상 판본
 
-어떤 동작도 Safari 를 앞으로 가져오지(activate) 않는다. `needs_front` 는 전부 false 라 정기·배경
-실행에서도 실행 경계가 거절하지 않는다. `shared_state` 가 true 인 동작은 사용자가 보는 탭을 바꾸는
-**요청된 효과** 이므로 요청받았으면 사용자가 작업 중이어도 실행한다.
+| op | 인수 | 확인 범위 |
+| --- | --- | --- |
+| status | window_id 선택 | 전체 창 또는 지정 창의 탭·현재 탭·revision 조회 |
+| open | url, window_id·expected·launch 선택 | 배경 탭 생성, 기존 탭 URL 순서와 현재 탭 보존. 창이 없으면 새 창 |
+| switch | window_id, tab, expected 필수 | 요청 탭 전환과 탭 URL 순서 보존. 이미 그 탭이면 변경 명령 생략 |
+| close | window_id, tab, expected 필수 | 요청 탭을 제외한 URL 순서·개수. 창 소멸은 원래 마지막 탭일 때만 성공 |
 
-| op | 인수 | shared_state | 확인 범위 |
-| --- | --- | --- | --- |
-| status | 없음 | false | 창·탭·현재 탭 조회(`applescript_readback`). 변경 없음 |
-| open | url, window_id(선택, 기본 첫 창), launch(선택) | false | 지정 창 끝에 **배경 탭**. 현재 탭 불변(`current_tab_unchanged`). 창이 없으면 새 창(`window_created:true` — 그때는 사용자 화면에 창이 하나 늘어난다) |
-| switch | window_id, tab | true | 그 창의 현재 탭 재조회가 요청과 같음 |
-| close | window_id, tab | true | 탭 수 1 감소·요청 탭을 제외한 나머지 탭의 URL·제목 순서 재조회(동일 탭의 개체 신원은 판별 불가). 마지막 탭이면 `window_closed:true` |
+`expected`는 `status.windows[].revision` 또는 직전 변경 결과 `state.revision`이다.
+창 ID·현재 탭·탭 URL 순서를 대조하고, 달라졌으면 `STATE_CHANGED`로 **변경 전에** 중단한다.
+`open`에 expected를 주려면 window_id도 필요하다. 전환·닫기에는 관측 판본이 필수다.
+AppleScript 변경 명령 안에서도 URL 순서·현재 탭을 다시 대조한다.
+제목은 페이지 로딩에 따라 바뀌므로 판본·닫기 대조에서 제외한다.
+**탭 번호는 영구 ID가 아니다.** 같은 URL인 탭끼리의 교환, 관측 사이 변경 후 원상 복귀,
+마지막 대조와 실제 효과 사이의 경쟁까지 막는 잠금·트랜잭션은 제공하지 않는다.
 
-`verified:true` 는 변경 뒤 재조회(`applescript_tab_readback`)를 통과했다는 보고다. 페이지 로드 완료·
-화면에 실제로 그려졌는지는 범위 밖이다. 증거가 필요하면 마지막에 `[limbs:screen]{op:"screenshot"}` 한 장
-(그것은 `needs_front` 동작이라 사용자 입회 문맥에서만).
+어떤 동작도 Safari를 앞으로 가져오지 않는다(`needs_front:false`). open은 배경 탭이며
+창이 없으면 새 창이 생기는 효과가 있다. switch·close의 `shared_state:true`는 사용자가 보는
+탭을 바꾸는 요청된 효과다. Safari가 꺼져 있으면 open의 `launch:true`일 때만 배경 기동한다.
+
+## 반환값과 실패
+
+- `verified`는 명시한 사전 재조회 조건을 모두 통과했음을 뜻한다. `checks`에 확인 항목을 싣는다.
+- 변경 결과 `before`는 이전 창의 번호·현재 탭·개수·revision 요약, `state`는 변경 후 대상 창 전체다.
+  전체 브라우저 창 목록은 변경 결과에 반복하지 않는다. 창이 사라지면 state는 null이다.
+- `target`은 후속 동작에 쓸 `{window_id,tab,expected}`다. 열기는 새 탭, 전환은 요청 탭,
+  닫기는 남은 현재 탭을 가리킨다. 후속 대상을 만들 수 없으면 null이다.
+- 열기 응답의 생성 대상과 재조회가 일치하면 URL 리다이렉트가 있어도 탭 생성은 확인할 수 있다.
+  `requested_url`·`observed_url`·`checks.requested_url_observed`는 별도로 반환한다.
+  응답이 유실되면 정확한 요청 URL·추가 탭·기존 상태 보존을 확인할 수 있을 때만 성공이다.
+- `page_loaded:null`: 페이지 로드 완료·화면 렌더링은 확인하지 않는다.
+- `STATE_CHANGED`: 변경 전 대상이 달라졌다. 반환된 failure.state 또는 새 status로 다시 판단한다.
+- `TARGET_MISSING`: 변경 전 창·탭·실행 중인 앱을 찾지 못했다.
+- `PERMISSION_REQUIRED`: 자동화 권한을 허용해야 한다.
+- `POSTCONDITION_FAILED`: 변경 요청 후 보존 조건·요청 결과를 확인하지 못했다. 반환 상태를 검토한다.
+- `UNKNOWN`: 응답 유실 후 효과 판별 불가 또는 변경 후 재조회 실패. 변경을 재전송하지 않는다.
+  실패는 IBL `diagnostic.details`의 failure·recovery에도 남는다.
+
+상태가 반환됐으면 그것으로 후속 판단한다. 필요한 정보가 없을 때만 대상 창의 status를 조회한다.
+성공한 변경마다 별도 status를 붙이지 않는다. 화면 증거가 필요한 작업만 마지막에 screenshot을 쓴다.
 
 ```ibl
 #!ibl edition=2
 $상태 = [self:script]{id:"Safari제어",args:{op:"status"},timeout:60}
-assert $상태.success == true, "Safari 상태 조회 실패", {result:$상태}
+assert $상태.verified == true, "Safari 상태 조회 실패", {result:$상태}
 return $상태
 ```
 
-`windows[].window_id` 와 `tabs[].index` 를 읽어 대상을 고른다. 창 번호가 아니라 `window_id` 를 쓴다(창 순서는 바뀐다).
+## 정해진 연속 동작은 한 프로그램으로
+
+다음은 첫 창에 임시 빈 탭을 열고 전환했다 돌아와 닫는 예시다. 실행 전 Safari 창이 있어야 한다.
+한 번의 execute_ibl로 맡긴다. 모델의 단계별 재호출 없이 값·판본을 이어 주되, 각 변경 전 현재 상태는
+드라이버가 새로 확인한다. 실패하면 그 위치에서 중단하며 자동 되돌리기·닫기 재전송을 하지 않는다.
+새 의미 판단이 필요한 작업은 해당 지점에서 결과를 AI에게 돌려준다.
 
 ```ibl
 #!ibl edition=2
-$r = [self:script]{id:"Safari제어",args:{op:"open",url:"https://example.com",window_id:223970},timeout:60}
-assert $r.success == true and $r.verified == true, "탭 열기를 확인하지 못함", {result:$r}
-return {window_id:$r.window_id,tab:$r.tab,current_tab_unchanged:$r.current_tab_unchanged}
+$s = [self:script]{id:"Safari제어",args:{op:"status"},timeout:60}
+assert $s.window_count > 0, "Safari 창이 필요합니다", {result:$s}
+$w = $s.windows[0]
+$o = [self:script]{id:"Safari제어",args:{op:"open",url:"about:blank",window_id:$w.window_id,expected:$w.revision},timeout:60}
+assert $o.verified == true, "배경 탭 열기 미확인", {result:$o}
+$a = [self:script]{id:"Safari제어",args:{op:"switch",window_id:$o.target.window_id,tab:$o.target.tab,expected:$o.target.expected},timeout:60}
+assert $a.verified == true, "탭 전환 미확인", {result:$a}
+$b = [self:script]{id:"Safari제어",args:{op:"switch",window_id:$a.state.window_id,tab:$o.before.current_tab,expected:$a.state.revision},timeout:60}
+assert $b.verified == true, "원래 탭 복귀 미확인", {result:$b}
+$c = [self:script]{id:"Safari제어",args:{op:"close",window_id:$b.state.window_id,tab:$o.tab,expected:$b.state.revision},timeout:60}
+assert $c.verified == true, "임시 탭 닫기 미확인", {result:$c}
+return $c
 ```
 
-## 네 경우의 동작 (실기 기록 2026-10-20, macOS 26.6 · Safari 26.6)
+## 관측과 폴백
 
-- **사용자가 동시에 작업하는 경우**: 모든 동작이 `activate` 없이 돌아 앞 앱이 바뀌지 않았다(실측: 앞 앱 ChatGPT 유지). `switch` 는 그 창의 보이는 탭을 바꾸는 요청된 효과다. 전환 뒤 재조회가 요청과 다르면 `NOT_APPLIED` — 사용자가 동시에 탭을 바꾼 경우이며 자동 재시도하지 않는다.
-- **권한 부족**: 자동화(Apple Events) 미허용은 첫 사전 호출의 `-1743` 으로 드러나 `failure.code:PERMISSION_REQUIRED` 와 설정 경로를 돌려준다. 시스템 설정 > 개인정보 보호 및 보안 > 자동화. 재시도는 사용자가 허용한 뒤 한 번.
-- **대상 소실**: Safari 미실행은 실행 전 검사가 `TARGET_MISSING` 으로 거절한다(`open` 에 `launch:true` 를 주면 `open -gja` 로 **배경** 기동). 없는 창·탭은 사전 오류 `-1719/-1728` → `TARGET_MISSING`. `status` 로 다시 고른다.
-- **실행 뒤 응답 유실**: 사전 호출 시간 초과(10~15초)는 실패가 아니라 불명확이다. 부품이 **변경 없이** 재조회해 효과가 났으면 `verified:true, response_lost:true`, 안 났으면 `status:"unknown"` 을 유지한다. IBL 실패의 `details.failure.code`와 `details.recovery.status`에도 불명확 상태와 재조회 지침이 보존된다. 재전송하지 않는다. 실측: 숨은 Safari 의 첫 창 만들기는 효과가 즉시 나고 응답은 20초 넘게 늦었다.
+환경별 사실은 `[self:limb]{op:"register",target:"app:com.apple.Safari",observations:[…]}`로 남긴다.
+시각·판본·환경·사실·출처를 적고, `[self:limb]{op:"list",target:"app:com.apple.Safari"}`로 읽는다.
+본체 관측 대상은 `__local__`이다. 과거 실기 기록과 이번 검증 범위는
+`docs/CONTROL_DRIVER_DESIGN_2026_10_20.md`의 구현 기록을 따른다.
 
-## 관측
-
-이 앱의 개체·환경별 사실(판본·설정에 따른 거절 등)은 가이드 산문이 아니라 관측 행으로 남긴다 —
-`[self:limb]{op:"register",target:"app:com.apple.Safari",observations:[{observed_at:"…",version:"Safari 26.6",environment:{device:"__local__"},fact:"…",source:"…"}]}`.
-snapshot 알림과 `[self:limb]{op:"list"}`의 `control_observations`가 행 수를 보인다. 본문은 `[self:limb]{op:"list",target:"app:com.apple.Safari"}`로 읽는다. 본체 관측은 `target:"__local__"`로 조회한다. 지우지 않고 `status` 로 정정한다.
-
-## 폴백
-
-이 부품에 없는 동작(페이지 안 요소 클릭·입력)은 `[limbs:browser]`(DOM 계약) 또는 `[limbs:screen]`
-snapshot 의 ref(AXPress) 순서다. 드라이버 통로가 불명확(`unknown`)한 상태에서 화면으로 같은 변경을
-다시 시도하지 않는다 — 중복 적용과 원인 은폐가 함께 생긴다.
+페이지 안 요소 클릭·입력은 이 부품의 범위 밖이다. `[limbs:browser]`의 DOM 계약 또는
+`[limbs:screen]`의 snapshot ref를 사용하되, 브라우저가 달라지면 같은 로그인·탭이라는 보장은 없다.
+드라이버 결과가 unknown이면 화면으로 같은 변경을 반복하지 않는다.

@@ -6,78 +6,34 @@
   "version": "1.0.0",
   "tools": [
     {
-      "name": "radio_status",
-      "description": "현재 라디오 재생 상태를 확인합니다.\n\n## 반환 정보\n- 재생 중 여부\n- 재생 중인 방송국 이름\n- 재생 시간",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
-      }
-    },
-    {
-      "name": "set_radio_volume",
-      "description": "라디오 볼륨을 조절합니다.",
+      "name": "radio_op",
+      "description": "라디오 조작 — 방송국 검색·목록, 재생·정지·상태·음량, 즐겨찾기를 한 대상의 op로 제공. search: 전세계 방송국 검색(query/name, tag, country, language, limit). stations: 한국 방송사 채널 목록(country 생략 또는 KR만 지원, broadcaster 옵션). play: station_id 또는 stream_url, name·volume·mode(client/host) 옵션; 출력지는 요청 표면이 정한다. stop/status/volume: 현재 라디오 제어(volume 0~100). favorite_list/favorite_add/favorite_remove: 주인 즐겨찾기 조회/등록/삭제. 추가는 station_id/stream_url 생략 시 현재 채널, 삭제는 name 또는 stream_url.",
       "input_schema": {
         "type": "object",
         "properties": {
           "volume": {
             "type": "integer",
-            "description": "볼륨 (0-100)"
-          }
-        },
-        "required": [
-          "volume"
-        ]
-      }
-    },
-    {
-      "name": "radio_favorite_op",
-      "description": "라디오 즐겨찾기 관리 단일 디스패처. op으로 list/add/remove 분기.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
+            "description": "볼륨 0-100 (op=play 시, 기본 70)"
+          },
           "op": {
             "type": "string",
-            "description": "즐겨찾기 동작",
+            "description": "수행할 동작 (ops 목록 참조)",
             "enum": [
-              "list",
-              "add",
-              "remove"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "description": "별칭 (add/remove)"
-          },
-          "station_id": {
-            "type": "string",
-            "description": "방송국 ID (add)"
-          },
-          "stream_url": {
-            "type": "string",
-            "description": "스트림 URL (add)"
-          }
-        },
-        "required": [
-          "op"
-        ]
-      }
-    },
-    {
-      "name": "radio_op",
-      "description": "라디오 재생/중지 단일 디스패처. op으로 play/stop 분기 (기본 play).",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "재생 동작",
-            "enum": [
+              "search",
+              "stations",
               "play",
               "stop",
               "status",
-              "volume"
+              "volume",
+              "favorite_list",
+              "favorite_add",
+              "favorite_remove"
             ],
             "default": "play"
+          },
+          "name": {
+            "type": "string",
+            "description": "[search] 방송국 이름"
           },
           "station_id": {
             "type": "string",
@@ -87,39 +43,9 @@
             "type": "string",
             "description": "스트림 URL (op=play 시)"
           },
-          "volume": {
-            "type": "integer",
-            "description": "볼륨 0-100 (op=play 시, 기본 70)"
-          },
           "mode": {
             "type": "string",
             "description": "출력지 (op=play 시) — client=보고 있는 기기에서 재생 / host=이 PC 스피커에서 재생. 생략하면 요청 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC)."
-          },
-          "name": {
-            "type": "string",
-            "description": "limbs:radio 파라미터"
-          }
-        }
-      }
-    },
-    {
-      "name": "radio_search_op",
-      "description": "라디오 방송국 검색·탐색 (op 분기) — [sense:radio]. 재생은 [limbs:radio].\n- op=search(기본): 전세계 인터넷 라디오 (Radio Browser). name/tag/country/language/limit.\n- op=korean: 한국 방송사 채널 (KBS/MBC/SBS/TBS/CBS/EBS). broadcaster(비우면 전체).",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "search(기본)/korean",
-            "enum": [
-              "search",
-              "korean"
-            ],
-            "default": "search"
-          },
-          "name": {
-            "type": "string",
-            "description": "[search] 방송국 이름"
           },
           "tag": {
             "type": "string",
@@ -127,7 +53,7 @@
           },
           "country": {
             "type": "string",
-            "description": "[search] 국가"
+            "description": "search: 국가 이름. stations: 생략 또는 KR만 지원."
           },
           "language": {
             "type": "string",
@@ -151,14 +77,13 @@
           },
           "broadcaster": {
             "type": "string",
-            "description": "[korean] KBS/MBC/SBS 등(비우면 전체)"
+            "description": "stations: KBS/MBC/SBS 등 (생략 시 전체)"
           },
           "query": {
             "type": "string",
-            "description": "sense:radio 파라미터"
+            "description": "limbs:radio 파라미터"
           }
-        },
-        "required": []
+        }
       }
     }
   ]

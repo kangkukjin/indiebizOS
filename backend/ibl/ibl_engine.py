@@ -842,7 +842,9 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     # 선언 없음=거절(fail-closed). 주인 주체에는 None(무영향).
     try:
         from member_profile import gate as _member_gate
-        _deny = _member_gate(node, action, action_config)
+        _member_params = tool_input.get("params")
+        _member_params = _member_params if isinstance(_member_params, dict) else {}
+        _deny = _member_gate(node, action, action_config, params=_member_params)
     except ImportError:
         raise  # 회원 관문을 불러올 수 없으면 실행하지 않는다
     if _deny:
@@ -879,7 +881,7 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     from member_profile import is_member_principal, entry as member_entry
     if is_member_principal():
         from member_bridge import execute as member_execute
-        declaration = member_entry(node, action)
+        declaration = member_entry(node, action, op=_resolve_op(action_config, params))
         if declaration and declaration.get("lands_on") == "body":
             return member_execute(declaration, params)
 

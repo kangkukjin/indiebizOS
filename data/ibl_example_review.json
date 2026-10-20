@@ -310,17 +310,20 @@
   },
   "limbs:cctv": {
    "fields": {
-    "description": "450e426d8dc4",
-    "target_description": "709d3e8d7ae0",
-    "implementation": "a2801a7ddf86",
-    "returns": "9a5e13f69efc",
+    "description": "932094e3d6c7",
+    "target_description": "7b9c92c51c5c",
+    "implementation": "bbdb0f83a9ce",
+    "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "ops": "a716ca6fa853",
+    "params": "44136fa355b3",
+    "aliases": "dbabb7eee40f",
+    "ops": "23f39c1ee245",
+    "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "b67c077616ca"
    },
-   "reviewed": "2026-09-18",
-   "examples": 22
+   "reviewed": "2026-10-20",
+   "examples": 117
   },
   "limbs:cloudflare_api": {
    "fields": {
@@ -432,33 +435,19 @@
   },
   "limbs:radio": {
    "fields": {
-    "description": "ba4b841a8990",
-    "target_description": "f05df77d703d",
-    "implementation": "1d21b495ffcb",
+    "description": "88549ef995f0",
+    "target_description": "a5bc0e843595",
+    "implementation": "5f198ed97010",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
-    "params": "5e32beccd24b",
-    "ops": "03f87dd69056",
+    "params": "198aa4f09017",
+    "aliases": "17188de3191a",
+    "ops": "e8003f478e4f",
     "router": "ebbb1532efbc",
     "tool": "43a3ee5a2f67"
    },
-   "reviewed": "2026-09-29",
-   "examples": 26
-  },
-  "limbs:radio_favorite": {
-   "fields": {
-    "description": "98203b093602",
-    "target_description": "3ee89cc4a4ec",
-    "implementation": "413faa299b44",
-    "returns": "9a5e13f69efc",
-    "target_key": "0cacf69ab63c",
-    "aliases": "17188de3191a",
-    "ops": "8929265a989a",
-    "router": "ebbb1532efbc",
-    "tool": "cedcb67c6a69"
-   },
-   "reviewed": "2026-09-29",
-   "examples": 8
+   "reviewed": "2026-10-20",
+   "examples": 54
   },
   "limbs:screen": {
    "fields": {
@@ -855,21 +844,6 @@
    },
    "reviewed": "2026-09-18",
    "examples": 44
-  },
-  "self:cctv": {
-   "fields": {
-    "description": "d8ef486bcb3e",
-    "target_description": "c7b13f401250",
-    "implementation": "21681c8bbf96",
-    "returns": "3c22349f8d0b",
-    "target_key": "0cacf69ab63c",
-    "ops": "df44f5fd5019",
-    "side_effect": "b5bea41b6c62",
-    "router": "ebbb1532efbc",
-    "tool": "2dbf00ac2a14"
-   },
-   "reviewed": "2026-09-18",
-   "examples": 25
   },
   "self:copy": {
    "fields": {
@@ -1721,22 +1695,6 @@
    "reviewed": "2026-09-18",
    "examples": 54
   },
-  "sense:cctv": {
-   "fields": {
-    "description": "9259426294dd",
-    "target_description": "0b9b3b88b449",
-    "implementation": "1491d015abbb",
-    "returns": "3c22349f8d0b",
-    "target_key": "0cacf69ab63c",
-    "aliases": "dbabb7eee40f",
-    "ops": "8d558aebc5d9",
-    "side_effect": "fcbcf165908d",
-    "router": "ebbb1532efbc",
-    "tool": "90c3144637e1"
-   },
-   "reviewed": "2026-09-29",
-   "examples": 72
-  },
   "sense:classic": {
    "fields": {
     "description": "de13a5f88fa0",
@@ -2075,22 +2033,6 @@
    },
    "reviewed": "2026-09-27",
    "examples": 14
-  },
-  "sense:radio": {
-   "fields": {
-    "description": "77ccaaed9adf",
-    "target_description": "b9d2f020e228",
-    "implementation": "4c073eedf008",
-    "returns": "3c22349f8d0b",
-    "target_key": "0cacf69ab63c",
-    "params": "198aa4f09017",
-    "ops": "23706605ec2a",
-    "side_effect": "fcbcf165908d",
-    "router": "ebbb1532efbc",
-    "tool": "423c32b59da2"
-   },
-   "reviewed": "2026-09-29",
-   "examples": 18
   },
   "sense:realty": {
    "fields": {

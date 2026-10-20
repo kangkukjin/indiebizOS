@@ -209,7 +209,7 @@ def get_nearby_webcam(lat: float, lon: float, radius_km: float = 50, count: int 
             source="windy_webcams",
             count=len(formatted),
             search_location={"lat": lat, "lon": lon},
-            items=formatted,  # 단일 통화 = native 웹캠 dict([sense:cctv]{op:webcam})
+            items=formatted,  # 단일 통화 = native 웹캠 dict([limbs:cctv]{op:nearby,source:windy})
             **_radius_clamp(radius_km, radius_used)
         )
     except Exception as e:

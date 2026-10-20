@@ -654,6 +654,19 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 **한 줄 요약: 외부 어휘는 빌리고(C), 기존 단어로 되면 조합하고(B/조합), 고유 접근·취약 고정 조합에만 단어를 만들어라(A) — 그리고 사전은 늘 가꿔라.**
 
+## 조작 대상과 지각의 경계
+
+`limbs`의 어휘는 사용하는 도구·기기를 가리킨다. 그 대상의 탐색·관찰·조작은 같은 어휘의
+`op`로 모으며, 읽기/쓰기와 반환값은 각 op가 선언한다. `sense`는 알아내려는 정보·지각 능력을
+중심으로 구성한다. 조회라는 이유만으로 대상의 동작을 sense에 따로 두지 않는다.
+
+라디오는 `limbs:radio`의 search/stations/play/stop/status/volume/favorite_*로,
+CCTV·공개 웹캠은 `limbs:cctv`의 search/nearby/open/capture/stats/refresh로 제공한다.
+라디오 stations는 현재 한국 방송사만 지원한다(country 생략/KR). CCTV nearby의
+`source:"windy"`는 공급처 선택이다. op 생략 시 기존 재생 의미(radio=play, cctv=open)를 유지한다.
+회원 라디오 검색은 허브, 재생 제어는 회원 기기, 즐겨찾기는 주인 전용이다.
+`ops.lands_on`은 실행 목적지(hub/body) 또는 회원 비공개(false)를 선언하며 빌드·실행이 함께 검증한다.
+
 ## 액션 카테고리
 
 전 액션(수·노드별 내역은 아래 '핵심 노드 분류' — 빌드 파생)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
@@ -678,7 +691,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 | 노드 | 주요 group | 설명 |
 |------|-----------|------|
 | limbs | browser, screen, device(android), media, cctv, cloudflare, launcher | 각 제어 대상별 구분 |
-| sense | investment, culture, research, location, cctv, web, real_estate, youtube, radio, shopping, world, device(phone) | 정보 소스별 구분 |
+| sense | investment, culture, research, location, web, real_estate, youtube, shopping, world, device(phone) | 정보 소스별 구분 |
 | self | photo, blog, memory, health, file, storage, schedule, workflow, event, collect, output, system | 관리 영역별 구분 |
 | engines | media_produce, music, chart, web_builder, architecture | 생산물 유형별 구분 |
 | others | delegation, channel, business | 소통 유형별 구분 |
@@ -692,7 +705,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
 - **파일 듣기** (2026-09-10): `[sense:listen]{path}`는 파일 전사, `{path, question}`은 소리 내용 분석, `{path, op:"inspect"}`는 원본 신호 검사다. path 생략 시 기존 마이크 동작. 파일에 마이크는 불필요하며 실행·감독은 같은 구간 분석 증거를 재사용한다. [오디오 듣기 가이드](../guides/audio_listen.md).
 <!-- RUNS_ON:START -->
-- 현 분포: `anywhere` 130 · `pc_only` 47 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
+- 현 분포: `anywhere` 126 · `pc_only` 47 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
 <!-- RUNS_ON:END -->
 
 **분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. **맥→폰 도달(2026-06-17 라이브)**=`INDIEBIZ_PHONE_URL`+`INDIEBIZ_PHONE_TOKEN`: 폰 `phone_api` 미들웨어가 비localhost 요청에 `X-Phone-Token`을 검증(hmac.compare_digest, localhost=WebView 자기접속은 통과), 맥 `forward_to_phone`가 그 토큰을 자동 동봉. 폰 백엔드는 **앱 UI 없이 상주**(`AgentForegroundService`가 `App.ensureBackend()` 기동·START_STICKY·부팅 재기동)하고 **토큰이 있을 때만 `0.0.0.0`(LAN) 바인드**(노출과 인증을 한 묶음 — 토큰 없으면 `127.0.0.1` 전용). 빌린 산출 파일은 `_pull_remote_artifacts`로 양방향 회수(맥←phone_only·폰←mac_only). 보안: 양방향 게이트(맥→폰=토큰/폰→맥=HTTPS 터널+런처 비번), 인터넷 비노출(폰=LAN 한정), caveat=맥→폰 LAN 평문 HTTP(가정 WPA2 저위험·공용 WiFi 금지). 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
@@ -709,7 +722,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 ### 핵심 노드 분류
 
 <!-- IBL_STATS:START -->
-총 **178 액션** — sense 43 · self 59 · limbs 14 · others 20 · engines 19 · table 23
+총 **174 액션** — sense 41 · self 58 · limbs 13 · others 20 · engines 19 · table 23
 <!-- IBL_STATS:END -->
 (위 줄은 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 
@@ -721,7 +734,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `self` | 50 | 개인 도메인: 시스템 관리, 파일(읽기/쓰기/채우기/장부 부분편집), 트리거/스케줄/목표, 메모리·포식기억, **원장(`ledger` 사업·아이템·문서·지침 / `finance` 소비·소유 / `health`)**, 근거 고정 질의(notebook), 등록 스크립트(script), 폰 동기화, 내 음악, USB 손발 발급, 웹앱 등기부, 워크플로우, 패키지·라이브러리 생애주기 | read, write, edit, fill, sheet, file_find, grep, storage, trigger, schedule, workflow, goal, memory, forage, ledger, finance, health, notebook, script, slide, deck, phone_sync, music, limb, webapp, package, install_lib |
-| `limbs` | 14 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 게스트 PC(USB 손발) + 미디어 재생 + 창 열기 | browser, screen, android, phone, guestpc, music, radio, radio_favorite, cctv, launch, os_open, open_window, show_map, cloudflare_api |
+| `limbs` | 13 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 게스트 PC(USB 손발) + 미디어 재생 + 창 열기 | browser, screen, android, phone, guestpc, music, radio, cctv, launch, os_open, open_window, show_map, cloudflare_api |
 | `sense` | 40 | 감각 확장: 외부 정보 수집(연구자·학술·부동산·숙박·중고·프리랜서·개체해소 포함) + 범용 RSS/Atom(feed) + 몸별 지표어 감각(알림·위치·마이크·카메라 — 몸마다 프로브, 없으면 정직하게 no_hardware) | search, feed, stock, company, crawl, realty, stay, used, freelance, entity, weather, researcher, paper, contest, phone, here, listen, see, host, self_check |
 | `others` | 17 | 협업·통신·공개 표면: 에이전트 위임 + **이웃 몸에 자연어 부탁(ask)** + 메시지/커뮤니티 + 이웃 CRM(연락처는 `neighbor` 의 op) + 남이 브라우저로 닿는 공개 웹 표면(포털·공개파일·가족신문·게시판·발행·팔로우) | delegate, ask, channel_send, channel_read, messages, feed, board, nostr, follow, auto_response, neighbor, portal, showcase, family_news, bulletin, publish, agents |
 | `engines` | 9 | 순수 미디어 생성: 이미지(생성 image_gemini·읽기/평가 image_read[op: read/critic])·아이콘·신문 발행·웹·웹컴포넌트·TTS. 슬라이드는 [self:slide]·동영상은 [self:deck]{op:"video"} 로 일원화(2026-08-05), 통화 변환 문법은 `table` 노드로 분리(2026-06-30). | image_gemini, icon, newspaper, image_read, web, web_site, web_component, tts, render_html |
@@ -765,7 +778,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `limbs` | 14 | UI 조작 + 폰 네이티브 동작 + 미디어 재생: 브라우저 자동화, 데스크톱 화면, 안드로이드 폰, phone(진동/알림/TTS), 게스트 PC, 음악, 라디오, CCTV | browser, screen, android, phone, guestpc, music, radio, cctv, launch |
+| `limbs` | 13 | UI 조작 + 폰 네이티브 동작 + 미디어 재생: 브라우저 자동화, 데스크톱 화면, 안드로이드 폰, phone(진동/알림/TTS), 게스트 PC, 음악, 라디오, CCTV | browser, screen, android, phone, guestpc, music, radio, cctv, launch |
 
 구성: browser(op 26종 통합) + screen(데스크톱 화면) + android(폰 화면 조작) + music/radio(미디어) + cctv + launcher
 
@@ -777,14 +790,15 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 | `screen` | 데스크톱 화면 제어 (op: snapshot/click/type) | `[limbs:screen]{op: "snapshot"}` |
 | `android` | 안드로이드 폰 화면 조작 (op: snapshot/tap/type/swipe/key/long_press/open_app) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=ADB+uiautomator(USB), 폰 자신=네이티브 AccessibilityService(USB 불필요, 한글은 ACTION_SET_TEXT라 IME 불필요). 핸들러가 INDIEBIZ_PROFILE로 분기 | `[limbs:android]{op: "snapshot"}` → `{op: "tap", query: "전송"}` |
 | `play` | 유튜브/라디오 재생 | `[limbs:music]{op: "play", url: "유튜브 링크"}` |
-| `radio_play` | 라디오 방송 재생 | `[limbs:radio]{op: "play", station: "KBS Classic FM"}` |
+| `radio` | 방송국 탐색·재생·즐겨찾기 | `[limbs:radio]{op:"stations"}` / `[limbs:radio]{op:"play", station_id:"kbs_coolfm"}` |
+| `cctv` | 카메라 탐색·열기·캡처·소스 관리 | `[limbs:cctv]{op:"search", query:"광화문"}` / `[limbs:cctv]{op:"stats"}` |
 | `download` | 미디어 다운로드 | `[limbs:music]{op: "download", url: "유튜브 링크"}` |
 
 ### 감각 노드 — sense (외부 정보 수집 + 내부 데이터 조회)
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `sense` | 40 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, CCTV, 뉴스·영상 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search, stock, company, crawl, video, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
+| `sense` | 40 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, 뉴스·영상 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search, stock, company, crawl, video, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
 
 구성: 외부 정보 수집(웹 API, 크롤링) 중심. 사진/블로그/건강 등 로컬 DB 조회는 self 노드로 이동(`[self:photo]`/`[self:blog]`/`[self:health]`).
 
@@ -803,8 +817,6 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 | `search_photos` | 사진 검색 | `[self:photo]{op: "search", query: "가족"}` |
 | `rag_search` | 블로그 RAG 검색 | `[self:memory]{op: "search", query: "AI"}` |
 | `save_health` | 건강 기록 저장 | `[self:health]{op: "save", type: "blood_pressure", ...}` |
-| `cctv` | CCTV/웹캠 조회 (op 분기, 좌표·playable 보장) | `[sense:cctv]{query: "광화문"}` / `[sense:cctv]{op: "nearby", lat: 37.57, lng: 126.98}` |
-| `cctv` (self) | CCTV 캐시 행정 (op 분기) — stats(기본): 전체 소스 현황 / refresh: UTIC 캐시 갱신 | `[self:cctv]` / `[self:cctv]{op: "refresh"}` |
 
 ### 엔진 노드 — engines (콘텐츠 생성)
 

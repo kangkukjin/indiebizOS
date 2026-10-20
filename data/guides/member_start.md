@@ -94,7 +94,7 @@
 - PDF 부분 읽기: `[self:read]{path:"report.pdf",pages:"2-4"}`
 - 텍스트 범위: `[self:read]{path:"memo.txt",start_line:2,end_line:5}`
 - 양식 완성: `[self:fill]{path:"form.docx",data:{이름:"회원"},output:"done.docx"}` — 회원 기기의 저장 완료를 확인한 뒤 성공한다.
-- 라디오 묶음이 활성 상태면 `[sense:radio]{op:"korean"}` → `[limbs:radio]{op:"play",station_id:"kbs_1radio"}`.
+- 라디오 묶음이 활성 상태면 `[limbs:radio]{op:"stations"}` → `[limbs:radio]{op:"play",station_id:"kbs_1radio"}`.
   회원 기기에서 재생을 승인한다. 브라우저의 지원 형식에 따라 재생이 거절될 수 있다.
   `[limbs:radio]{op:"status"}`로 확인하고 `op:"stop"`으로 멈춘다. 회원 화면을 켜 둔다.
 - 브라우저 위치 권한을 허용하면 `[sense:here]{}`로 현재 기기 위치를 요청할 수 있다.

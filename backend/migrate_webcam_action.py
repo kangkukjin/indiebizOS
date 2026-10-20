@@ -1,7 +1,7 @@
 """
 webcam_nearby 액션 흡수 마이그레이션 (1회성, #27).
 
-[sense:webcam_nearby] → [sense:cctv]{op: "webcam", ...}.
+[sense:webcam_nearby] → [limbs:cctv]{op: "nearby", source: "windy", ...}.
 - 학습 JSON(ibl_training_balanced) ibl_code 치환
 - ibl_usage.db ibl_examples ibl_code 치환 (재색인은 rebuild_index 별도)
 - world_pulse.db action_health/self_checks 의 webcam_nearby/webcam(옛 잔재) 행 삭제
@@ -22,11 +22,11 @@ def transform(code: str) -> str:
     if not code:
         return code
     # 빈 중괄호 먼저
-    code = code.replace('[sense:webcam_nearby]{}', '[sense:cctv]{op: "webcam"}')
+    code = code.replace('[sense:webcam_nearby]{}', '[limbs:cctv]{op: "nearby", source: "windy"}')
     # 파라미터 있는 경우 — 여는 중괄호 직후 op 삽입
-    code = re.sub(r'\[sense:webcam_nearby\]\{', '[sense:cctv]{op: "webcam", ', code)
+    code = re.sub(r'\[sense:webcam_nearby\]\{', '[limbs:cctv]{op: "nearby", source: "windy", ', code)
     # 파라미터 없는 경우 (뒤에 { 없음)
-    code = re.sub(r'\[sense:webcam_nearby\](?!\{)', '[sense:cctv]{op: "webcam"}', code)
+    code = re.sub(r'\[sense:webcam_nearby\](?!\{)', '[limbs:cctv]{op: "nearby", source: "windy"}', code)
     return code
 
 

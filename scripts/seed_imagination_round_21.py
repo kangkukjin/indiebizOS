@@ -15,7 +15,7 @@
   ② **21회차 수리가 새로 참으로 만든 문형 3건** — 20회차 규율("판정이 새로 참으로 만든
      문형만 가르친다")을 그대로 따른다. 셋 다 수리 *전에는 실패하던* 문장이다:
        · `>> [engines:render_html]` 파이프 싱크 (V21-1) — 전엔 "html은 필수입니다" 로 죽었다
-       · `[self:cctv]{op:"stats"} >> [table:*]` (V21-2) — 전엔 통화 없음으로 거절됐다
+       · `[limbs:cctv]{op:"stats"} >> [table:*]` (V21-2) — 전엔 통화 없음으로 거절됐다
        · `?? ( … >> … )` 괄호 가지 (F21-1) — 구현은 됐는데 교재가 "단일 액션만" 이라 막았다
 
 ★시드는 교재다 — 8건 전건 `/ibl/validate` + **라이브 실행까지** 통과 확인 후 넣었다(8/8).
@@ -53,7 +53,7 @@ NEW = [
      "[sense:crypto]{symbol: \"BTC\"} >> [table:brief]{instruction: \"한 문장 시세 요약\"} >> [engines:render_html]",
      "sense,table,engines", "media", "파이프싱크,render_html,brief,V21-1"),
     ("CCTV 소스별 현황 위에 두 개만 이름이랑 대수로 보여줘",
-     "[self:cctv]{op: \"stats\"} >> [table:take]{n: 2} >> [table:select]{columns: [\"name\", \"total_cctv\"]}",
+     "[limbs:cctv]{op: \"stats\"} >> [table:take]{n: 2} >> [table:select]{columns: [\"name\", \"total_cctv\"]}",
      "self,table", "cctv", "통화승격,items,select,V21-2"),
     ("애플 주가, 안 되면 웹에서 두 줄이라도 찾아줘",
      "[sense:stock]{op: \"quote\", ticker: \"AAPL\"} ?? ([sense:search]{source: \"ddg\", query: \"애플 주가\"} >> [table:take]{n: 2})",

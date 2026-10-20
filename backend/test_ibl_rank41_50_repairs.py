@@ -26,17 +26,17 @@ def load(package, name='handler'):
     return mod
 
 
-@pytest.mark.parametrize('op', ['nearby', 'webcam'])
-def test_cctv_limit_reaches_provider(monkeypatch, op):
+@pytest.mark.parametrize('source', ['auto', 'windy'])
+def test_cctv_limit_reaches_provider(monkeypatch, source):
     mod = load('cctv')
     calls = []
 
-    def provider(lat, lng, count=5):
+    def provider(lat, lng, count=5, source="auto"):
         calls.append((lat, lng, count))
         return {'items': []}
 
-    monkeypatch.setitem(mod._OP_DISPATCHERS['cctv_query'], op, provider)
-    mod._cctv_query(op=op, lat=0, lng=0, limit=2)
+    monkeypatch.setitem(mod._OP_DISPATCHERS['cctv_op'], 'nearby', provider)
+    mod._cctv_op(op='nearby', source=source, lat=0, lng=0, limit=2)
     assert calls == [(0, 0, 2)]
 
 
@@ -235,7 +235,7 @@ def test_sqlite_denies_mutations_and_column_loss(database, query):
 def test_radio_unknown_op_does_not_search(monkeypatch):
     mod = load('radio')
     monkeypatch.setattr(mod, 'load_tool_radio', lambda: SimpleNamespace(search_radio=lambda **kw: pytest.fail('unexpected search')))
-    result = mod.execute({'op': 'typo'}, SimpleNamespace(tool_name='radio_search_op'))
+    result = mod.execute({'op': 'typo'}, SimpleNamespace(tool_name='radio_op'))
     assert result['success'] is False
 
 

@@ -6,20 +6,23 @@
   "version": "3.0.0",
   "tools": [
     {
-      "name": "cctv_query",
-      "description": "CCTV/웹캠 조회 (op 분기) — [sense:cctv].\n- op=search (기본): 키워드로 전국 CCTV+해외 웹캠 통합 검색. 한국+해외 지명 자동 좌표 매핑.\n- op=nearby: 좌표(lat·lng 필수) 근처 CCTV. radius_km(km, 기본 5) 옵션.\n- op=webcam: 좌표(lat·lng 필수) 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀).\n출력 cctvs[]/webcams[]는 항상 lat/lng(float)·playable 포함. stream_tags 동봉 시 채팅창 재생.\n\n## 예시\n- cctv_query(query='광화문')          # 기본 search\n- cctv_query(op='nearby', lat=37.5665, lng=126.9780, radius_km=3)\n- cctv_query(op='webcam', lat=48.8566, lng=2.3522)  # 파리 근처 경치 웹캠",
+      "name": "cctv_op",
+      "description": "CCTV·공개 웹캠 조작 — search/nearby로 찾고 open/capture로 보며 stats/refresh로 소스 현황·캐시 관리. search: query 키워드 통합검색. nearby: lat/lng 필수, radius_km·limit 옵션, source:auto(기본) 또는 windy(Windy 공개 웹캠만). open/capture: name 또는 url, capture의 save_path는 작업공간 기준. stats: 소스별 현황. refresh: UTIC 캐시 갱신. 조회 결과는 items에 좌표·재생 가능 여부를 포함한다.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "search=키워드 검색(기본), nearby=좌표 근처 CCTV, webcam=좌표 근처 해외 경치 웹캠",
+            "description": "수행할 동작 (ops 목록 참조)",
             "enum": [
               "search",
               "nearby",
-              "webcam"
+              "open",
+              "capture",
+              "stats",
+              "refresh"
             ],
-            "default": "search"
+            "default": "open"
           },
           "query": {
             "type": "string",
@@ -43,43 +46,7 @@
           },
           "limit": {
             "type": "integer",
-            "description": "[search] 최대 결과 수 (기본 10)"
-          }
-        }
-      }
-    },
-    {
-      "name": "cctv_admin",
-      "description": "CCTV 데이터 캐시 행정. op으로 stats/refresh 분기 (기본 stats).\nstats=전체 소스(카카오·UTIC·ITS·Windy) 현황 통계, refresh=UTIC 실시간 API로 전국 캐시 갱신(유지보수).",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "stats=전체 소스 현황 통계 / refresh=UTIC 캐시 갱신(유지보수)",
-            "enum": [
-              "stats",
-              "refresh"
-            ],
-            "default": "stats"
-          }
-        }
-      }
-    },
-    {
-      "name": "cctv_op",
-      "description": "CCTV 열기/캡처 단일 디스패처. op으로 open/capture 분기 (기본 open).",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "CCTV 동작",
-            "enum": [
-              "open",
-              "capture"
-            ],
-            "default": "open"
+            "description": "검색 결과 상한 (search 기본 10, nearby 기본 5)"
           },
           "url": {
             "type": "string",
@@ -92,6 +59,14 @@
           "save_path": {
             "type": "string",
             "description": "캡처 저장 경로 (op=capture 시)"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "windy"
+            ],
+            "description": "nearby 공급처: auto(기본 통합검색), windy(Windy 공개 웹캠만)"
           }
         }
       }

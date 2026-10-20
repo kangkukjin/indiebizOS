@@ -3,7 +3,7 @@
 소스 폴더 등록 → 백그라운드 스캔(mutagen 태그) → 라이브러리 질의 + 플레이리스트.
 재생은 핸들러가 하지 않는다 — 통화의 stream 필드(/music/stream)를 보는 표면의
 <audio>(media_player 프리미티브)가 문다. [limbs:music](유튜브뮤직)과 다른 개념:
-그쪽은 유튜브 스트림 재생, 이쪽은 내 파일 라이브러리 (sense:radio/limbs:radio 공존 선례).
+그쪽은 유튜브 스트림 재생, 이쪽은 내 파일 라이브러리 (라디오와는 별개의 파일 라이브러리).
 
 로직은 music_core.py — api_music.py(스트리밍·앨범아트)와 sys.modules 공유 키로
 같은 인스턴스를 쓴다(bulletin_core 선례).

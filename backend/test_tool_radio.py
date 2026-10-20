@@ -47,7 +47,7 @@ def test_phone_radio_cannot_control_or_report_replacement_music(monkeypatch):
 ])
 def test_favorite_play_uses_only_available_identifier(row, expected):
     declaration = yaml.safe_load((ROOT / "data/packages/installed/tools/radio/ibl_actions.yaml").read_text())
-    app = declaration["nodes"]["sense"]["actions"]["radio"]["app"]
+    app = declaration["nodes"]["limbs"]["actions"]["radio"]["app"]
     favorites = next(mode for mode in app["modes"] if mode["name"] == "즐겨찾기")
     code = favorites["view"][0]["button"]["action"]
     registry = load_registry()
@@ -66,5 +66,29 @@ def test_favorite_play_uses_only_available_identifier(row, expected):
     assert calls == [expected]
 
 
+def test_stations_does_not_claim_unsupported_country(monkeypatch):
+    from types import SimpleNamespace
+    from common.pkg_utils import load_sibling
+    h = load_sibling(str(ROOT/'data/packages/installed/tools/radio/tool_radio.py'), 'handler')
+    calls = []
+    monkeypatch.setattr(h, 'load_tool_radio', lambda: SimpleNamespace(get_korean_radio=lambda **kw: calls.append(kw) or {'items': []}))
+    ctx = SimpleNamespace(tool_name='radio_op')
+    assert not h.execute({'op':'stations','country':'US'},ctx)['success']
+    assert calls == []
+    assert h.execute({'op':'stations','country':'KR','broadcaster':'KBS'},ctx) == {'items':[]}
+    assert calls == [{'broadcaster':'KBS'}]
+
+
+def test_favorite_op_reaches_existing_store(monkeypatch):
+    from types import SimpleNamespace
+    from common.pkg_utils import load_sibling
+    h = load_sibling(str(ROOT/'data/packages/installed/tools/radio/tool_radio.py'), 'handler')
+    calls = []
+    monkeypatch.setattr(h, 'load_tool_radio', lambda: SimpleNamespace(save_radio_favorite=lambda **kw: calls.append(kw) or {'success':True}))
+    assert h.execute({'op':'favorite_add','station_id':'kbs_coolfm'}, SimpleNamespace(tool_name='radio_op'))['success']
+    assert calls == [{'station_id':'kbs_coolfm','name':None,'stream_url':None}]
+
+
 if __name__ == "__main__":
-    raise SystemExit(pytest.main([__file__]))
+    import sys
+    raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

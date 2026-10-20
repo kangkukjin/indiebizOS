@@ -6,7 +6,7 @@
  *   · 가게 상세: [sense:place]{op:detail}(네이버 설명·블로그 언급) + 카카오 장소 페이지 <webview>
  *   · 장소 저장: outputs/map/places.json 원장([self:read]/[self:write]{format:json}) — 폴더(tag)·메모
  *   · 지도 클릭: [sense:reverse_geocode] 주소 카드(출발/도착/저장) — 길찾기 패널이 열려 있으면 출발/도착 핀
- *   · 내 위치: [sense:here] · 길찾기·CCTV: [sense:navigate_route]·[sense:cctv] (구 길찾기 계기 흡수)
+ *   · 내 위치: [sense:here] · 길찾기·CCTV: [sense:navigate_route]·[limbs:cctv] (구 길찾기 계기 흡수)
  *
  * 표현만 여기, 능력은 어휘(custom_app_instrument.md 철칙 0). 어휘 호출은 map/api.ts 한 곳.
  */

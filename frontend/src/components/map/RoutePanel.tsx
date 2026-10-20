@@ -1,7 +1,7 @@
 /**
  * RoutePanel — 길찾기 패널(출발·도착 입력, 우리집, 경로 요약·주요 안내, 경로 주변 CCTV 목록).
  * 상태는 부모(MapInstrument)가 소유한다 — 핀·폴리라인·CCTV 마커가 같은 상태를 그리기 때문.
- * 능력: [sense:navigate_route] · [sense:cctv]{op:nearby} (부모의 api.ts 경유).
+ * 능력: [sense:navigate_route] · [limbs:cctv]{op:nearby} (부모의 api.ts 경유).
  */
 import { useState } from 'react';
 import type { Cctv, KeyGuide, Point, RouteMode, RouteResult, RouteSummary } from './types';

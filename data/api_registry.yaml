@@ -1388,8 +1388,7 @@ tools:
         source: its_traffic
         count: _count
         data: _results
-    node: sense
-    action_name: cctv
+    # 공급자 API 연결만 유지. 공개 조작 어휘는 패키지의 limbs:cctv가 소유한다.
     description: "ITS 교통 CCTV 검색 (좌표 영역)"
     target_key: min_x
     target_description: "최소 경도 (minX)"
@@ -1424,8 +1423,7 @@ tools:
         source: windy_webcams
         count: _count
         data: _results
-    node: sense
-    action_name: webcam
+    # 공급자 API 연결만 유지. 공개 조작 어휘는 패키지의 limbs:cctv가 소유한다.
     description: "전세계 웹캠 검색 (Windy)"
     target_key: lat_lon_radius
     target_description: "위도,경도,반경km (예: 37.5,127.0,50)"

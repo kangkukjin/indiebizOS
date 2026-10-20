@@ -1,104 +1,46 @@
-# CCTV 실시간 영상 가이드
+# CCTV·공개 웹캠 조작
 
-## 빠른 사용법 — `[sense:cctv]` 단일 op 액션
+CCTV는 하나의 조작 대상이다. 탐색·관찰·열기·캡처·소스 관리를 모두 `[limbs:cctv]`의 op로 표현한다.
+읽기와 쓰기의 구분은 노드가 아니라 각 op의 반환·부작용 계약이 맡는다.
 
-CCTV 조회는 **`[sense:cctv]` 하나**로 통합되어 있다. `op`로 검색 방식만 고른다.
-
-```
-[sense:cctv]{query: "광화문"}                 # op 생략 시 기본 search
-[sense:cctv]{op: "search", query: "경부고속도로"}
-[sense:cctv]{op: "nearby", lat: 37.5665, lng: 126.9780}        # 좌표 근처
-[sense:cctv]{op: "nearby", lat: 37.49, lng: 127.03, radius_km: 3, count: 5}
-```
-
-| op | 언제 | 필수 | 옵션 |
-|----|------|------|------|
-| `search` (기본) | 장소 **이름**으로 찾을 때 | `query` | `category`(웹캠), `limit` |
-| `nearby` | **좌표**를 알 때 (지도 클릭 등) | `lat`, `lng` | `radius_km`(km, 기본 5), `count`(기본 5) |
-
-> 이름만 알면 `search`, 좌표를 알면 `nearby`. 둘 다 같은 액션이라 출력 형식이 동일하다.
-
-### 출력 계약 (중요)
-
-- `cctvs[]`의 모든 항목은 **좌표 `{lat, lng}` (float)를 보장**한다 — 좌표 없는 항목은 출력에서 제외된다. 그래서 지도에 바로 찍을 수 있다.
-- 각 항목과 `stream_tags`에 **`playable`(bool)** 이 실린다 — HLS(hls.js)로 채팅창/플레이어에서 바로 재생 가능한지. 프론트는 이 값을 신뢰한다(URL 재판별 불필요).
-- `radius_km` 단위는 **km** (전 소스 통일).
-
-**데이터 소스 (검색 순서)**: 카카오맵(전국 6,892대, 좌표 보강 완료·모두 HLS) → TOPIS(서울) → UTIC(전국 시내도로) → ITS(고속도로/국도) → Windy(해외 폴백). 카카오가 전국 시내도로+고속도로를 좌표·HLS로 커버하므로 지도 표시에 가장 적합하다.
-
-### ⚠️ 검색 결과 처리 원칙
-
-1. **`[sense:cctv]` 한 번이면 충분하다.** 같은 장소를 키워드만 바꿔 반복 검색하지 말 것.
-2. 정확한 이름 매칭이 안 되더라도 **좌표가 근접하면 그 결과를 사용**한다.
-3. 결과의 `stream_tags`를 응답에 포함하면 실시간 스트리밍이 표시된다.
-4. 결과가 0건이면 "해당 장소의 CCTV를 찾지 못했습니다"라고 안내. 웹 검색/브라우저 우회 금지.
-5. **금지**: 동일 요청에 3회 이상 반복, web_search로 CCTV URL 찾기, 브라우저로 외부 사이트 접속.
-
----
-
-## 관련 액션
-
-| 용도 | 액션 | 예시 |
-|------|------|------|
-| CCTV 검색(이름) | `[sense:cctv]{op:"search"}` | `[sense:cctv]{query: "광화문"}` |
-| CCTV 검색(좌표) | `[sense:cctv]{op:"nearby"}` | `[sense:cctv]{op: "nearby", lat: 37.49, lng: 127.03}` |
-| 해외 경치 웹캠(좌표) | `[sense:cctv]{op:"webcam"}` | `[sense:cctv]{op: "webcam", lat: 21.31, lng: -157.86, radius_km: 50}` |
-| 영상 열기/캡처 | `[limbs:cctv]{op}` | `[limbs:cctv]{op: "open", name: "시청"}` / `{op: "capture", url: "..."}` |
-| 데이터 통계(전체 소스) | `[self:cctv]{op:"stats"}` | `[self:cctv]` (기본 op=stats) |
-| UTIC 캐시 갱신 | `[self:cctv]{op:"refresh"}` | `[self:cctv]{op: "refresh"}` |
-
-### CCTV 영상 열기 / 캡처 (조작 = limbs)
-
-```
-[sense:cctv]{query: "한라산"} >> [limbs:cctv]{op: "open"}     # 브라우저에서 재생
-[limbs:cctv]{op: "capture", url: "http://cctv-url/stream.m3u8"}  # ffmpeg 프레임 PNG (AI 분석용)
+```ibl
+[limbs:cctv]{op:"search", query:"광화문"}
+[limbs:cctv]{op:"nearby", lat:37.5665, lng:126.978, radius_km:3, limit:5}
+[limbs:cctv]{op:"nearby", source:"windy", lat:48.8566, lng:2.3522, radius_km:50}
+[limbs:cctv]{op:"open", name:"시청"}
+[limbs:cctv]{op:"capture", url:"https://example.com/live.m3u8", save_path:"outputs/cctv.png"}
+[limbs:cctv]{op:"stats"}
+[limbs:cctv]{op:"refresh"}
 ```
 
-> 조회(perceive)는 `[sense:cctv]`, 조작(act: 열기·캡처)은 `[limbs:cctv]` — 노드로 역할이 갈린다.
+| op | 용도 | 인자 |
+|---|---|---|
+| search | 이름으로 카메라 찾기 | query, 선택 lat/lng·category·limit |
+| nearby | 좌표 주변 카메라 찾기 | lat/lng 필수, source·radius_km·limit 선택 |
+| open | 브라우저에서 영상 열기 | name 또는 url |
+| capture | 영상 프레임을 이미지로 저장 | name 또는 url, 선택 save_path |
+| stats | 소스별 현황 조회 | 없음 |
+| refresh | UTIC 캐시 갱신 | 없음 |
 
----
+`op`는 명시해서 사용한다. 기존 재생 호출의 의미를 보존하기 위해 생략 시에는 `open`이다.
+`source`는 `nearby`에만 쓰며 `auto`(기본 통합검색) 또는 `windy`(Windy 공개 웹캠 직접 조회)다.
+Windy 웹캠은 내 PC의 카메라가 아니라 세계 각지의 공개 경치 카메라다.
+검색 반경은 km이며 생략 시 auto=5, windy=50이다. nearby의 결과 상한은 기본 5다.
 
-## AI 화면 분석 워크플로우
+검색은 카카오·TOPIS·UTIC·ITS·Windy 공급자를 사용한다. 지역과 결과에 따라 폴백하며,
+`source:"windy"`는 교통 카메라 공급자를 건너뛴다.
 
-```
-[sense:cctv]{query: "해운대"}
-```
-결과의 첫(또는 가장 가까운) 항목 URL을 `[limbs:cctv]{op: "capture", url: ...}`로 캡처 → 반환된 이미지 경로를 읽어 분석.
-분석 가능: 교통 정체, 차량 밀도, 사고, 날씨(맑음/비/눈/안개), 파도, 혼잡도, 적설량.
+조회 결과는 `items`로 조합할 수 있다. 좌표·URL·`playable` 등 실제 반환 필드를 확인해
+지도나 플레이어에 전달한다. `stream_tags`가 있으면 채팅창에서 스트리밍을 표시할 수 있다.
+검색 결과의 확인된 URL을 `capture`에 넣고 반환된 이미지 경로를 읽어 화면을 분석한다.
+조회 자체와 영상 내용의 해석은 별개다. 0건이면 다른 지역의 영상을 해당 장소로 주장하지 않는다.
 
----
+`search`·`nearby`·`stats`는 읽기, `open`·`capture`·`refresh`는 부작용 동작이다.
+`capture`의 상대 경로는 호출한 작업공간 기준이며 프레임 추출에 ffmpeg가 필요하다.
 
-## UTIC 실시간 API 구조
-
-UTIC(도시교통정보센터)는 전국 시내 도로 CCTV 16,000+대를 실시간 API로 제공한다.
-- 엔드포인트: `http://www.utic.go.kr/map/mapcctv.do` · 인증: UTIC_API_KEY + Referer 헤더
-- 반환: cctvname, lat, lng, kind(1=시내, 7=고속도로), cctvurl(HLS), stream_id
-- `[self:cctv]{op: "refresh"}`로 수동 갱신 (보통 자동 캐시로 충분)
-
----
-
-## 참고: 한국 해안/국립공원 CCTV 사이트 (사용자 직접 접속용)
-
-| 사이트 | URL |
-|--------|-----|
-| 해양수산부 연안 | https://coast.mof.go.kr/coastScene/coastMediaService.do |
-| 바다타임 | https://www.badatime.com/cctv |
-| 국립공원공단 | https://www.knps.or.kr/common/cctv/cctv{번호}.html |
-| 한라산 | https://www.jeju.go.kr/tool/halla/cctv_01.html |
-
-**에이전트가 브라우저 자동화로 접속하지 말 것.** 사용자가 명시적으로 요청한 경우에만.
-
----
-
-## 환경변수
-
-| 변수 | 용도 | 필수 |
-|------|------|------|
-| KAKAO_REST_API_KEY | 카카오맵 CCTV(전국, 좌표·HLS) | 권장 |
-| UTIC_API_KEY | UTIC 시내도로 CCTV | 권장 |
-| ITS_API_KEY | ITS 고속도로/국도 CCTV | 권장 |
-| WINDY_API_KEY | Windy 해외 웹캠([sense:cctv]{op:"webcam"}, search/nearby 폴백) | 선택 |
-
-ffmpeg 필요: HLS 프레임 캡처 (brew install ffmpeg).
-
-*최종 업데이트: 2026-06-03 — cctv_search/cctv_nearby → [sense:cctv]{op} 통합, 좌표 계약·playable·radius_km(km).*
+| 환경변수 | 용도 |
+|---|---|
+| KAKAO_REST_API_KEY | 카카오맵 연동 |
+| UTIC_API_KEY | UTIC 교통 카메라·캐시 갱신 |
+| ITS_API_KEY | 고속도로·국도 CCTV |
+| WINDY_API_KEY | Windy 공개 웹캠 |

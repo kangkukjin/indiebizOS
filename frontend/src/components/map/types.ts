@@ -1,6 +1,6 @@
 /**
  * 지도 계기(MapInstrument) 공용 타입·상수.
- * 능력은 어휘([sense:place]·[sense:navigate_route]·[sense:cctv]·[sense:reverse_geocode]·[sense:here]·
+ * 능력은 어휘([sense:place]·[sense:navigate_route]·[limbs:cctv]·[sense:reverse_geocode]·[sense:here]·
  * [self:read]/[self:write] 원장)가 맡고, 이 폴더는 표현만 맡는다(custom_app_instrument.md 철칙 0).
  */
 export interface LatLng { lat: number; lng: number }

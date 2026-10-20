@@ -13,7 +13,7 @@
 | 좌표 → 주소 | `[sense:reverse_geocode]{lat, lng}` |
 | 내 위치 | `[sense:here]{}` (데스크탑=선언 위치, 폰=GPS) |
 | 자동차 길찾기(기본) | `[sense:navigate_route]{origin: "<장소명 또는 경도,위도>", destination: "<…>"}` |
-| 경로 주변 CCTV | `[sense:cctv]{op: "nearby", lat, lng, radius_km: <km>}` |
+| 경로 주변 CCTV | `[limbs:cctv]{op: "nearby", lat, lng, radius_km: <km>}` |
 
 검색 결과 항목: `id·name·category·cat·address·phone·url(place.map.kakao.com/<id>)·lat·lng·distance(m, 좌표 준 검색만)`. 사진·영업시간·리뷰·평점은 공개 API 가 주지 않는다 — 앱은 `url` 의 카카오 장소 페이지를 안(webview)에 띄워 보여주고, 대화에서는 `url` 을 그대로 건넨다.
 

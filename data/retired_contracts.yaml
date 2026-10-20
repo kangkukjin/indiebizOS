@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: media-object-limbs
+    retired: 2026-10-20
+    reason: 라디오·CCTV의 탐색과 조작을 대상 중심 limbs 어휘로 통합한다.
+    instead: limbs:radio의 search/stations/재생/favorite_*와 limbs:cctv의 search/nearby/open/capture/stats/refresh를 사용한다. Windy 선택은 nearby의 source다.
+    phrases: ['sense:radio', 'sense:cctv', 'self:cctv', '[limbs:radio_favorite]', '[sense:webcam]']
   - id: screen-input-without-app-guard
     retired: 2026-10-20
     reason: 화면 입력이 사용자 앱 전환 뒤 다른 창으로 전달되는 경로를 차단한다.

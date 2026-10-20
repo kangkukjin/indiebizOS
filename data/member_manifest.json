@@ -26,6 +26,13 @@
       "lands_on": "body",
       "package": "radio",
       "side_effect": true,
+      "op_lands_on": {
+        "search": "hub",
+        "stations": "hub",
+        "favorite_list": false,
+        "favorite_add": false,
+        "favorite_remove": false
+      },
       "member_transform": "radio_member:control",
       "limb_op": {
         "op": "media",
@@ -34,8 +41,8 @@
         "volume": "$volume"
       },
       "path_audited": {
-        "at": "2026-10-13",
-        "impl": "50382887f7f2956e"
+        "at": "2026-10-20",
+        "impl": "3dc389918185ab43"
       }
     },
     "self:fill": {
@@ -184,15 +191,6 @@
       "side_effect": true,
       "limb_op": {
         "op": "location"
-      }
-    },
-    "sense:radio": {
-      "lands_on": "hub",
-      "package": "radio",
-      "side_effect": false,
-      "path_audited": {
-        "at": "2026-10-13",
-        "impl": "50382887f7f2956e"
       }
     },
     "sense:search": {

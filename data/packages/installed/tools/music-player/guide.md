@@ -17,7 +17,7 @@ tabs)을 그대로 다시 쓴다". 한 벌 선언으로 깊이 제한 없이 파
 ## 개념 구분 (명명 헌법)
 
 - `[self:music]` = **내 파일** 라이브러리 (이 패키지). self 노드 = 내 소유 데이터 (self:photo 선례).
-- `[limbs:music]` = 유튜브뮤직 스트림 재생 (youtube 패키지). sense:radio/limbs:radio 공존 선례처럼
+- `[limbs:music]` = 유튜브뮤직 스트림 재생 (youtube 패키지). limbs:radio/limbs:radio 공존 선례처럼
   같은 낱말이 노드 축으로 구분된다.
 
 ## op 요약

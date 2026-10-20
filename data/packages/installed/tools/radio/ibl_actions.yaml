@@ -1,38 +1,66 @@
 nodes:
-  sense:
+  limbs:
     actions:
       radio:
-        lands_on: hub
-        path_audited: {at: "2026-10-13", impl: "50382887f7f2956e"}   # 2026-10-13 폰 재생 ID 소유권 재감사 — 회원 검색·URL 해소·기기 exchange 경로 불변
-        # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
-        #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
-        #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+        lands_on: body
         params:
           name: string
           query: string
-        returns: items
-        side_effect: false    # 전 op 읽기 전용
-        fixture: '[sense:radio]{op: "search", query: "jazz"}'
-        description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
-        target_description: 'op로 분기 (기본 search).
-
-          - search: name(방송국 이름)·tag·country·language·limit 등. Radio Browser 전세계.
-
-          - korean: broadcaster(KBS/MBC/SBS/TBS/CBS/EBS, 비우면 전체) 한국 방송사 채널. items는 station_id/broadcaster/stream_url을 제공하며 동적 스트림 URL은 null이다.
-
-          '
-        target_key: op
+        limb_op:
+          op: media
+          action: $op
+          url: $stream_url
+          volume: $volume
+        member_transform: radio_member:control
+        path_audited:
+          at: '2026-10-20'
+          impl: 3dc389918185ab43
+        returns: effect
+        description: 라디오 조작 — 방송국 검색·목록, 재생·정지·상태·음량, 즐겨찾기를 한 대상의 op로 제공.
+        target_description: 'search: 전세계 방송국 검색(query/name, tag, country, language, limit). stations: 한국 방송사 채널
+          목록(country 생략 또는 KR만 지원, broadcaster 옵션). play: station_id 또는 stream_url, name·volume·mode(client/host)
+          옵션; 출력지는 요청 표면이 정한다. stop/status/volume: 현재 라디오 제어(volume 0~100). favorite_list/favorite_add/favorite_remove:
+          주인 즐겨찾기 조회/등록/삭제. 추가는 station_id/stream_url 생략 시 현재 채널, 삭제는 name 또는 stream_url.'
         group: media
+        target_key: op
         router: handler
-        tool: radio_search_op
+        tool: radio_op
         ops:
-          default: search
-          fixture:
-            korean: '[sense:radio]{op: "korean"}'
+          default: play
+          returns:
+            status: scalar
+            search: items
+            stations: items
+            favorite_list: items
+          side_effect:
+            status: false
+            search: false
+            stations: false
+            favorite_list: false
+          exempt:
+            status: 재생 기기 상태 — 상시 가용 아님
           values:
-            search: 전세계 인터넷 라디오 검색 (Radio Browser)
-            korean: 한국 주요 방송사 채널 (KBS/MBC/SBS 등)
-        implementation: radio 패키지 op 분기. search=search_radio, korean=get_korean_radio.
+            search: 전세계 방송국 검색
+            stations: 한국 방송사 채널 목록 (country 생략/KR)
+            play: 라디오 재생 (station_id 또는 stream_url, 기본)
+            stop: 라디오 중지
+            status: 재생 상태 확인 (재생 중 채널·경과 시간)
+            volume: 볼륨 조절 0~100 (스트림 재시작 방식 — 재생 중이 아니면 거절)
+            favorite_list: 즐겨찾기 목록
+            favorite_add: 즐겨찾기 등록
+            favorite_remove: 즐겨찾기 삭제
+          fixture:
+            search: '[limbs:radio]{op: "search", query: "jazz"}'
+            stations: '[limbs:radio]{op:"stations"}'
+            favorite_list: '[limbs:radio]{op:"favorite_list"}'
+          lands_on:
+            search: hub
+            stations: hub
+            favorite_list: false
+            favorite_add: false
+            favorite_remove: false
+        implementation: radio_op가 탐색·재생·즐겨찾기를 분기한다. 회원 검색·방송국 목록은 허브, 재생 제어는 회원 기기, 즐겨찾기는 주인 전용. 볼륨 변경은 호스트 스트림
+          재시작 방식.
         keywords:
         - 라디오
         - 인터넷라디오
@@ -40,8 +68,14 @@ nodes:
         - KBS
         - MBC
         - SBS
+        - 라디오재생
+        - 라디오듣기
+        - 라디오중지
+        - 재생상태
+        - 볼륨
+        - 음량
         app:
-          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
+          edition: 2
           icon: 📻
           name: 라디오
           order: 5
@@ -51,7 +85,7 @@ nodes:
             buttons:
             - label: ■ 정지
               action: '[limbs:radio]{op: "stop"}'
-            action: '[sense:radio]{op: "korean"}'
+            action: '[limbs:radio]{op: "stations"}'
             view:
             - type: list_action
               from: items
@@ -63,7 +97,7 @@ nodes:
                 action: '[limbs:radio]{op: "play", station_id: $item.station_id}'
               button2:
                 label: ♡
-                action: '[limbs:radio_favorite]{op: "add", station_id: $item.station_id, name: $item.name}'
+                action: '[limbs:radio]{op: "favorite_add", station_id: $item.station_id, name: $item.name}'
           - name: 검색
             buttons:
             - label: ■ 정지
@@ -73,7 +107,7 @@ nodes:
               type: text
               placeholder: 방송국 이름·태그  예) jazz, BBC
               required: true
-            action: '[sense:radio]{op: "search", query: $q, limit: 30}'
+            action: '[limbs:radio]{op: "search", query: $q, limit: 30}'
             view:
             - type: list_action
               from: items
@@ -85,13 +119,13 @@ nodes:
                 action: '[limbs:radio]{op: "play", stream_url: $item.stream_url}'
               button2:
                 label: ♡
-                action: '[limbs:radio_favorite]{op: "add", stream_url: $item.stream_url, name: $item.name}'
+                action: '[limbs:radio]{op: "favorite_add", stream_url: $item.stream_url, name: $item.name}'
           - name: 즐겨찾기
             auto_run: true
             buttons:
             - label: ■ 정지
               action: '[limbs:radio]{op: "stop"}'
-            action: '[limbs:radio_favorite]{op: "list"}'
+            action: '[limbs:radio]{op: "favorite_list"}'
             view:
             - type: list_action
               from: items
@@ -101,191 +135,70 @@ nodes:
               sub: '{added_at}'
               button:
                 label: ▶
-                # ID 없는 외부 방송·URL 없는 동적 국내 방송의 null을 문자열 인자로 보내지 않는다.
-                action: >-
-                  [if:$item.station_id != null and $item.station_id != ""] {
-                    [limbs:radio]{op: "play", station_id: $item.station_id}
-                  } [else] {
-                    [limbs:radio]{op: "play", stream_url: $item.stream_url}
-                  }
+                action: "[if:$item.station_id != null and $item.station_id != \"\"] {\n  [limbs:radio]{op: \"play\"\
+                  , station_id: $item.station_id}\n} [else] {\n  [limbs:radio]{op: \"play\", stream_url: $item.stream_url}\n\
+                  }"
               button2:
                 label: ✕
-                action: '[limbs:radio_favorite]{op: "remove", name: $item.name}'
+                action: '[limbs:radio]{op: "favorite_remove", name: $item.name}'
                 refresh: true
-  limbs:
-    actions:
-      radio:
-        lands_on: body
-        params:
-          name: string    # stream_url 재생 시 표시할 채널명(검색 결과의 name) — play_radio 가 읽는다
-        limb_op: {op: media, action: $op, url: $stream_url, volume: $volume}
-        member_transform: radio_member:control
-        path_audited: {at: "2026-10-13", impl: "50382887f7f2956e"}   # 2026-10-13 폰 재생 ID 소유권 재감사 — 회원 검색·URL 해소·기기 exchange 경로 불변
-        returns: effect
-        description: 인터넷 라디오 재생 제어 (op 분기). play/stop/status/volume. 방송국 검색은 [sense:radio].
-        target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio
-          결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서)
-          / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC).
-          stop — 파라미터 없음. status — 파라미터 없음, 재생 중 채널·경과 시간.
-          volume — volume(0~100). ★status·volume 은 재생 중일 때만 의미가 있다(라디오 전용).'
-        group: media
-        target_key: op
-        router: handler
-        tool: radio_op
-        ops:
-          default: play
-          returns:
-            status: scalar
-          side_effect:
-            status: false
-          exempt:
-            status: 재생 기기 상태 — 상시 가용 아님
-          values:
-            play: 라디오 재생 (station_id 또는 stream_url, 기본)
-            stop: 라디오 중지
-            status: 재생 상태 확인 (재생 중 채널·경과 시간)
-            volume: 볼륨 조절 0~100 (스트림 재시작 방식 — 재생 중이 아니면 거절)
-        implementation: mpv/ffplay HLS/ICY 라디오 스트림 재생·중지·상태·볼륨 op 분기.
-          2026-08-15 [limbs:player_status]·[limbs:volume] 흡수 — 둘 다 구현이 라디오
-          모듈 전역만 만지는데 desc 는 "음악·라디오"라고 했다(limbs:explorer 의 "Finder"
-          거짓말과 같은 부류). volume 의 "mpv IPC" 도 사실이 아니다(스트림 재시작).
-        keywords:
-        - 라디오
-        - 라디오재생
-        - 라디오듣기
-        - 라디오중지
-        - 재생상태
-        - 볼륨
-        - 음량
-      # 2026-08-15 은퇴: player_status·volume → [limbs:radio]{op:"status"|"volume"}
-      # 되살리지 말 것 — 둘 다 "음악·라디오"라고 선언하면서 구현은 라디오 모듈 전역
-      # (_player_process·_current_station)만 만졌다. 음악 재생 상태·볼륨은 이 낱말이
-      # 한 적이 없다(내 음악=[self:music], 유튜브=[limbs:music] 각자 자기 표면이 관장).
-      radio_favorite:
         aliases:
-          stream_url: [url]
-          name: [title]
-        returns: effect
-        description: 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
-        target_description: list — 파라미터 없음, 전체 즐겨찾기 목록. station_id/broadcaster는 정식 이름·정적 URL로 확인된 것만 연결하며 미확인은 null. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — [limbs:radio] play 로 재생 중 마음에 들면 바로 add 호출.
-        group: media
-        target_key: op
-        router: handler
-        tool: radio_favorite_op
-        ops:
-          side_effect:
-            list: false
-          returns:
-            list: items
-          fixture:
-            list: '[limbs:radio_favorite]{op: "list"}'
-          values:
-            list: 전체 즐겨찾기 목록 조회
-            add: 즐겨찾기 등록 (station_id/stream_url 또는 현재 재생 채널 자동)
-            remove: 즐겨찾기 삭제 (name 파라미터)
-        implementation: 즐겨찾기 JSON 파일 조회/저장/삭제 op 분기. add는 station_id/stream_url 둘 다 없으면 현재 재생 채널 메타로부터 추출.
-        keywords:
-        - 즐겨찾기
-        - 좋아요
-        - 라디오즐겨찾기
-        - 즐겨찾기 추가
-        - 즐겨찾기 삭제
-
-# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
-# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+          stream_url:
+          - url
+          name:
+          - title
+        requires:
+          ops:
+            favorite_list:
+              principal:
+              - owner
+            favorite_add:
+              principal:
+              - owner
+            favorite_remove:
+              principal:
+              - owner
 tool_json:
   header:
     id: radio
     name: Radio Tools
-    description: 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전세계 라디오를 검색하고, 한국 주요 방송사(KBS/MBC/SBS/TBS/CBS) 직접 스트리밍을 지원합니다. PC 스피커로
-      라디오를 들을 수 있습니다.
+    description: 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전세계 라디오를 검색하고, 한국 주요 방송사(KBS/MBC/SBS/TBS/CBS) 직접 스트리밍을 지원합니다.
+      PC 스피커로 라디오를 들을 수 있습니다.
     version: 1.0.0
   tools:
-  - name: radio_status
-    description: '현재 라디오 재생 상태를 확인합니다.
-
-
-      ## 반환 정보
-
-      - 재생 중 여부
-
-      - 재생 중인 방송국 이름
-
-      - 재생 시간'
-    input_schema:
-      type: object
-      properties: {}
-  - name: set_radio_volume
-    description: 라디오 볼륨을 조절합니다.
+  - name: radio_op
+    description: '라디오 조작 — 방송국 검색·목록, 재생·정지·상태·음량, 즐겨찾기를 한 대상의 op로 제공. search: 전세계 방송국 검색(query/name, tag, country,
+      language, limit). stations: 한국 방송사 채널 목록(country 생략 또는 KR만 지원, broadcaster 옵션). play: station_id 또는 stream_url,
+      name·volume·mode(client/host) 옵션; 출력지는 요청 표면이 정한다. stop/status/volume: 현재 라디오 제어(volume 0~100). favorite_list/favorite_add/favorite_remove:
+      주인 즐겨찾기 조회/등록/삭제. 추가는 station_id/stream_url 생략 시 현재 채널, 삭제는 name 또는 stream_url.'
     input_schema:
       type: object
       properties:
         volume:
           type: integer
-          description: 볼륨 (0-100)
-      required:
-      - volume
-  - name: radio_favorite_op
-    description: 라디오 즐겨찾기 관리 단일 디스패처. op으로 list/add/remove 분기.
-    input_schema:
-      type: object
-      properties:
+          description: 볼륨 0-100 (op=play 시, 기본 70)
         op:
           type: string
-          description: 즐겨찾기 동작
+          description: 수행할 동작 (ops 목록 참조)
         name:
           type: string
-          description: 별칭 (add/remove)
-        station_id:
-          type: string
-          description: 방송국 ID (add)
-        stream_url:
-          type: string
-          description: 스트림 URL (add)
-      required:
-      - op
-  - name: radio_op
-    description: 라디오 재생/중지 단일 디스패처. op으로 play/stop 분기 (기본 play).
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: 재생 동작
+          description: '[search] 방송국 이름'
         station_id:
           type: string
           description: 방송국 ID (op=play 시)
         stream_url:
           type: string
           description: 스트림 URL (op=play 시)
-        volume:
-          type: integer
-          description: 볼륨 0-100 (op=play 시, 기본 70)
         mode:
           type: string
-          description: 출력지 (op=play 시) — client=보고 있는 기기에서 재생 / host=이 PC 스피커에서
-            재생. 생략하면 요청 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC).
-  - name: radio_search_op
-    description: '라디오 방송국 검색·탐색 (op 분기) — [sense:radio]. 재생은 [limbs:radio].
-
-      - op=search(기본): 전세계 인터넷 라디오 (Radio Browser). name/tag/country/language/limit.
-
-      - op=korean: 한국 방송사 채널 (KBS/MBC/SBS/TBS/CBS/EBS). broadcaster(비우면 전체).'
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: search(기본)/korean
-        name:
-          type: string
-          description: '[search] 방송국 이름'
+          description: 출력지 (op=play 시) — client=보고 있는 기기에서 재생 / host=이 PC 스피커에서 재생. 생략하면 요청 표면이 정한다(원격런처·포털·폰=그
+            기기, 데스크탑=이 PC).
         tag:
           type: string
           description: '[search] 장르 태그'
         country:
           type: string
-          description: '[search] 국가'
+          description: 'search: 국가 이름. stations: 생략 또는 KR만 지원.'
         language:
           type: string
           description: '[search] 언어'
@@ -303,5 +216,4 @@ tool_json:
           description: '[search] 결과 수(기본 10)'
         broadcaster:
           type: string
-          description: '[korean] KBS/MBC/SBS 등(비우면 전체)'
-      required: []
+          description: 'stations: KBS/MBC/SBS 등 (생략 시 전체)'

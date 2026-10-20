@@ -52,8 +52,21 @@ def is_member_principal() -> bool:
         return False
 
 
-def entry(node: str, action: str, root: Path = None) -> Optional[dict]:
-    return (manifest(root).get("actions") or {}).get(f"{node}:{action}")
+def entry(node: str, action: str, root: Path = None, *, op: str = None) -> Optional[dict]:
+    declaration = (manifest(root).get("actions") or {}).get(f"{node}:{action}")
+    if declaration is None:
+        return None
+    overrides = declaration.get("op_lands_on") or {}
+    if op not in overrides:
+        return declaration
+    destination = overrides[op]
+    if destination is False:
+        return None  # 합친 대상의 주인 전용 op를 회원에게 새로 열지 않는다.
+    result = {**declaration, "lands_on": destination}
+    if destination == "hub":
+        result.pop("member_transform", None)
+        result.pop("limb_op", None)
+    return result
 
 
 def handler_fingerprint(pkg_dir: Path) -> str:
@@ -139,12 +152,13 @@ def visible(node: str, action: str, cfg: dict, root: Path = None) -> bool:
     return True
 
 
-def gate(node: str, action: str, cfg: dict, root: Path = None) -> Optional[dict]:
+def gate(node: str, action: str, cfg: dict, root: Path = None, *, params: dict = None) -> Optional[dict]:
     """권한 층 — 실행 직전. 회원 주체에서 통과 못 하면 거절 봉투, 아니면 None."""
     if not is_member_principal():
         return None
     q = f"{node}:{action}"
-    e = entry(node, action, root)
+    from ibl_ops import resolve_op
+    e = entry(node, action, root, op=resolve_op(cfg, params))
     if not e:
         return {"success": False, "error_type": "permission",
                 "error": f"[{q}] 은(는) 외부사용자용으로 지원되지 않는 기능입니다."}

@@ -24,7 +24,7 @@ def load_tool_radio():
 # load_tool_radio() 는 sys.modules 싱글턴이라 각 함수에서 재호출해도 비용 0.
 
 def _op_search(tool_input: dict, context):
-    """[sense:radio]{op:search} — 전세계 방송국 검색."""
+    """[limbs:radio]{op:search} — 전세계 방송국 검색."""
     radio = load_tool_radio()
     return radio.search_radio(
         name=tool_input.get("name") or tool_input.get("query"),
@@ -38,8 +38,11 @@ def _op_search(tool_input: dict, context):
     )
 
 
-def _op_korean(tool_input: dict, context):
-    """[sense:radio]{op:korean} — 한국 방송사."""
+def _op_stations(tool_input: dict, context):
+    """[limbs:radio]{op:stations} — 현재 지원하는 한국 방송사 목록."""
+    country = tool_input.get("country")
+    if country is not None and country != "KR":
+        return {"success": False, "error": "stations는 country 생략 또는 KR만 지원합니다. 다른 국가는 search를 사용하세요."}
     radio = load_tool_radio()
     return radio.get_korean_radio(broadcaster=tool_input.get("broadcaster") or tool_input.get("query"))
 
@@ -79,7 +82,7 @@ def _op_volume(tool_input: dict, context):
 
 
 def _op_favorite_list(tool_input: dict, context):
-    # 2026-05-27 단일 액션 통합: [limbs:radio_favorite]{op} → 내부 op 분기
+    # 라디오 조작 대상에 속하는 즐겨찾기 목록.
     radio = load_tool_radio()
     return radio.get_radio_favorites()
 
@@ -104,17 +107,17 @@ def _op_favorite_remove(tool_input: dict, context):
 # 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 디스패처로 전환 (music-player 동형).
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교 — 키 집합 변경 금지.
 _OP_DISPATCHERS = {
-    "radio_op": {"play": _op_play, "stop": _op_stop,
-                 "status": _op_status, "volume": _op_volume},
-    "radio_favorite_op": {"list": _op_favorite_list, "add": _op_favorite_add, "remove": _op_favorite_remove},
-    # 2026-06-03 [sense:radio]{op} — 방송국 검색/탐색 (재생은 limbs:radio).
-    "radio_search_op": {"search": _op_search, "korean": _op_korean},
+    "radio_op": {"search": _op_search, "stations": _op_stations,
+                 "play": _op_play, "stop": _op_stop,
+                 "status": _op_status, "volume": _op_volume,
+                 "favorite_list": _op_favorite_list,
+                 "favorite_add": _op_favorite_add,
+                 "favorite_remove": _op_favorite_remove},
 }
-_OP_DEFAULTS = {"radio_op": "play", "radio_search_op": "search"}
+_OP_DEFAULTS = {"radio_op": "play"}
 
 # 알 수 없는 op는 검색으로 바꾸지 않고 거절한다.
 _OP_FALLBACKS = {}
-_OP_USAGE = {"radio_op": "play/stop/status/volume", "radio_favorite_op": "list/add/remove"}
 
 
 def execute(tool_input: dict, context):
@@ -134,11 +137,5 @@ def execute(tool_input: dict, context):
             else:
                 return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS[tool_name])}"}
         return fn(tool_input, context)
-    elif tool_name == "radio_status":
-        return radio.radio_status()
-    elif tool_name == "set_radio_volume":
-        return radio.set_radio_volume(
-            volume=tool_input.get("volume", 70),
-        )
     else:
         raise ValueError(f"Unknown tool: {tool_name}")

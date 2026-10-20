@@ -46,7 +46,7 @@
 **살아있는 선례 (표현은 커스텀, 능력은 기존 어휘):**
 - 문서(옛 빈노트를 흡수한 선언형 계기) = `[self:file_find]` · `[self:workspace]` · `[self:write]` · `[self:delete]` · `[self:ask]` (파일·작업 공간 어휘 그대로)
 - 신문 = `[sense:search]{source: "gnews"}` 를 키워드마다 팬아웃
-- 지도 = `[sense:place]`(검색·상세) · `[sense:navigate_route]` · `[sense:cctv]` · `[sense:reverse_geocode]` · `[sense:here]` + 저장 장소는 `[self:read]`/`[self:write]{format:"json"}` 원장(`MapInstrument.tsx` + `map/` 하위 모듈로 분할 — 1500줄 규칙)
+- 지도 = `[sense:place]`(검색·상세) · `[sense:navigate_route]` · `[limbs:cctv]` · `[sense:reverse_geocode]` · `[sense:here]` + 저장 장소는 `[self:read]`/`[self:write]{format:"json"}` 원장(`MapInstrument.tsx` + `map/` 하위 모듈로 분할 — 1500줄 규칙)
 - 정기보고 = `[self:file_find]`→`[self:read]` + 작성은 `[others:delegate]{scope:system}`
 
 **어휘가 없으면?** 그 능력이 IBL 액션 기준(조합성·빈도·실시간성·외부 접근)을 만족하면 **먼저 `new_action_checklist.md` 로 액션을 만들고**, 그 다음 이 계기(표현)를 붙인다. **능력 로직을 컴포넌트에 하드코딩하지 말 것** — 그러면 재사용도, 모델 불문도, 조합(`>>`)도 안 되고, 다른 앱·자율주행·조종실이 같은 능력을 못 쓴다. (IBL 명명 헌법: *특수보다 보편 우선, 중복 금지*.)

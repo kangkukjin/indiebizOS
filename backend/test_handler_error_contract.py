@@ -8,7 +8,7 @@ B21-1: 핸들러가 실패를 `\"오류: …\"` **평문**으로 돌려주면 �
        (`FFmpeg 오류:`·`렌더링 중 오류 발생:`). 그래서 계약이 본체고 접두는 안전망이다.
 V21-1: `[engines:render_html]` 이 파이프 통화를 안 먹어 `[table:brief] >> render_html`
        이 죽었다. `[self:write]` 와 같은 파이프 싱크 규약으로 확장.
-V21-2: `[self:cctv]{op:\"stats\"}` 가 소스별 현황을 갖고도 items 를 안 내 변환자가 거절.
+V21-2: `[limbs:cctv]{op:\"stats\"}` 가 소스별 현황을 갖고도 items 를 안 내 변환자가 거절.
 
 실행: python3 backend/test_handler_error_contract.py
 """
@@ -215,8 +215,8 @@ def test_v21_2_cctv_stats_emits_currency():
     import yaml
     decl = yaml.safe_load(open(os.path.join(
         ROOT, "data/packages/installed/tools/cctv/ibl_actions.yaml"), encoding="utf-8"))
-    _cctv = decl["nodes"]["self"]["actions"]["cctv"]
-    assert _cctv["returns"] == "items", _cctv
+    _cctv = decl["nodes"]["limbs"]["actions"]["cctv"]
+    assert _cctv["ops"]["returns"]["stats"] == "items", _cctv
     src = open(os.path.join(ROOT, "data/packages/installed/tools/cctv/handler.py"),
                encoding="utf-8").read()
     assert '"items": _sources' in src, "cctv_sources 가 items 를 안 낸다"

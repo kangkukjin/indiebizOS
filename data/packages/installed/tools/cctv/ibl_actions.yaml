@@ -1,15 +1,42 @@
 nodes:
-  sense:
+  limbs:
     actions:
       cctv:
-        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
-          limit: [count]
-          lng: [lon]
         returns: items
-        side_effect: false    # 전 op 읽기 전용
-        fixture: '[sense:cctv]{op: "search", query: "해운대"}'
-        description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 재생·캡처는 [limbs:cctv]. 자세히 read_guide(query="cctv").
+        description: CCTV·공개 웹캠 조작 — search/nearby로 찾고 open/capture로 보며 stats/refresh로 소스 현황·캐시 관리.
         group: media
+        target_description: 'search: query 키워드 통합검색. nearby: lat/lng 필수, radius_km·limit 옵션, source:auto(기본) 또는
+          windy(Windy 공개 웹캠만). open/capture: name 또는 url, capture의 save_path는 작업공간 기준. stats: 소스별 현황. refresh: UTIC
+          캐시 갱신. 조회 결과는 items에 좌표·재생 가능 여부를 포함한다.'
+        target_key: op
+        router: handler
+        tool: cctv_op
+        ops:
+          default: open
+          values:
+            search: 키워드 CCTV·공개 웹캠 통합검색
+            nearby: 좌표 주변 카메라 검색 (source:auto/windy)
+            open: 브라우저에서 HLS/RTSP 영상 재생 (기본)
+            capture: ffmpeg 단일 프레임 PNG 캡처 (AI 분석용)
+            stats: 소스별 현황 조회
+            refresh: UTIC 캐시 갱신
+          fixture:
+            nearby: '[limbs:cctv]{op: "nearby", lat: 37.5665, lng: 126.978}'
+            search: '[limbs:cctv]{op: "search", query: "해운대"}'
+          returns:
+            search: items
+            nearby: items
+            stats: items
+            open: effect
+            capture: effect
+            refresh: effect
+          side_effect:
+            search: false
+            nearby: false
+            stats: false
+          exempt:
+            stats: 외부 소스·캐시 현황 조회 — 무인 정기 조회 제외
+        implementation: cctv_op가 탐색·열기·캡처·소스 관리를 분기한다. nearby의 source는 공급처 선택이며 windy는 Windy 드라이버를 직접 호출한다.
         keywords:
         - cctv
         - 교통
@@ -22,22 +49,12 @@ nodes:
         - 영상
         - 근처
         - 주변
-        target_description: search — query 키워드(전주·해운대·경부 등). nearby/webcam — lat·lng 필수, radius_km(km) 옵션. webcam은 해외 경치 웹캠(Windy).
-        target_key: op
-        router: handler
-        tool: cctv_query
-        ops:
-          default: search
-          fixture:
-            nearby: '[sense:cctv]{op: "nearby", lat: 37.5665, lng: 126.978}'
-            webcam: '[sense:cctv]{op: "webcam", lat: 37.5665, lng: 126.978}'
-          values:
-            search: 키워드로 전국 CCTV+해외 웹캠 통합 검색 (기본)
-            nearby: 좌표 근처 CCTV (lat·lng 필수, radius_km km)
-            webcam: 좌표 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀)
-        implementation: cctv_search/nearby/webcam op 분기 (카카오 우선 → TOPIS/UTIC/ITS → Windy 폴백; webcam은 Windy 직행).
+        - 열기
+        - 캡처
+        - 스크린샷
+        - 찍어
         app:
-          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
+          edition: 2
           instrument: cctv
           icon: 📹
           name: CCTV
@@ -49,7 +66,7 @@ nodes:
             placeholder: '지역·도로 (예: 해운대, 경부)'
             default: 해운대
           auto_run: true
-          action: '[sense:cctv]{op: "search", query: $q}'
+          action: '[limbs:cctv]{op: "search", query: $q}'
           view:
           - type: map
             markers: items
@@ -57,9 +74,7 @@ nodes:
             'on':
               marker_click:
                 stream: true
-              # "이 지역에서 검색" 버튼 — 지도로 영역을 잡고 누르면 그 중심·반경의 CCTV를 nearby 로 찾는다.
-              # 키워드(이름) 검색과 별개로 지도에서 직접 영역 기반 탐색. viewport 보존(결과가 그 영역에 뜸).
-              search_here: '[sense:cctv]{op: "nearby", lat: $lat, lng: $lng, radius_km: $radius_km}'
+              search_here: '[limbs:cctv]{op: "nearby", lat: $lat, lng: $lng, radius_km: $radius_km}'
           - type: metric
             label: 검색 결과
             big: '{count}개'
@@ -72,58 +87,17 @@ nodes:
             button:
               label: ▶ 보기
               stream: true
-  self:
-    actions:
-      cctv:
-        returns: items    # V21-2(2026-08-22): stats 가 소스별 현황 행을 items 로 낸다
-        side_effect: true    # refresh 가 UTIC 캐시를 갱신한다
-        exempt: '기기 의존(카메라 연결)'
-        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 items / refresh: UTIC 캐시 갱신. 검색은 [sense:cctv].'
-        group: cctv
-        target_description: 'op 외 파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
-        target_key: op
-        router: handler
-        tool: cctv_admin
-        ops:
-          default: stats
-          returns:
-            refresh: effect
-          side_effect:
-            stats: false
-          values:
-            stats: 전체 소스 CCTV 현황 통계
-            refresh: UTIC 캐시 갱신 (유지보수)
-        implementation: handler.py _cctv_admin이 op 분기 — stats=cctv_sources(전체 소스 집계), refresh=utic.refresh_cache.
-        keywords:
-        - CCTV
-        - CCTV 현황
-        - CCTV 통계
-        - CCTV 갱신
-  limbs:
-    actions:
-      cctv:
-        returns: effect
-        description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장). 검색은 [sense:cctv].
-        group: open
-        target_description: name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).
-        target_key: op
-        router: handler
-        tool: cctv_op
-        ops:
-          default: open
-          values:
-            open: 브라우저에서 HLS/RTSP 영상 재생 (기본)
-            capture: ffmpeg 단일 프레임 PNG 캡처 (AI 분석용)
-        implementation: cctv_open/cctv_capture op 분기 (HLS 브라우저 재생 + ffmpeg 프레임 캡처)
-        keywords:
-        - cctv
-        - 열기
-        - 캡처
-        - 스크린샷
-        - 찍어
-
-# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
-# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+        aliases:
+          limit:
+          - count
+          lng:
+          - lon
+        params: {}
+        shape_variants:
+          source=auto: '[limbs:cctv]{op:"nearby", source:"auto", lat:37.5665, lng:126.978}'
+          source=windy: '[limbs:cctv]{op:"nearby", source:"windy", lat:37.5665, lng:126.978}'
+        side_effect: true
+        fixture: '[limbs:cctv]{op:"search", query:"해운대"}'
 tool_json:
   header:
     id: cctv
@@ -162,31 +136,16 @@ tool_json:
       - WINDY_API_KEY: Windy Webcams API 키 (선택)'
     version: 3.0.0
   tools:
-  - name: cctv_query
-    description: 'CCTV/웹캠 조회 (op 분기) — [sense:cctv].
-
-      - op=search (기본): 키워드로 전국 CCTV+해외 웹캠 통합 검색. 한국+해외 지명 자동 좌표 매핑.
-
-      - op=nearby: 좌표(lat·lng 필수) 근처 CCTV. radius_km(km, 기본 5) 옵션.
-
-      - op=webcam: 좌표(lat·lng 필수) 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀).
-
-      출력 cctvs[]/webcams[]는 항상 lat/lng(float)·playable 포함. stream_tags 동봉 시 채팅창 재생.
-
-
-      ## 예시
-
-      - cctv_query(query=''광화문'')          # 기본 search
-
-      - cctv_query(op=''nearby'', lat=37.5665, lng=126.9780, radius_km=3)
-
-      - cctv_query(op=''webcam'', lat=48.8566, lng=2.3522)  # 파리 근처 경치 웹캠'
+  - name: cctv_op
+    description: 'CCTV·공개 웹캠 조작 — search/nearby로 찾고 open/capture로 보며 stats/refresh로 소스 현황·캐시 관리. search: query 키워드
+      통합검색. nearby: lat/lng 필수, radius_km·limit 옵션, source:auto(기본) 또는 windy(Windy 공개 웹캠만). open/capture: name 또는
+      url, capture의 save_path는 작업공간 기준. stats: 소스별 현황. refresh: UTIC 캐시 갱신. 조회 결과는 items에 좌표·재생 가능 여부를 포함한다.'
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: search=키워드 검색(기본), nearby=좌표 근처 CCTV, webcam=좌표 근처 해외 경치 웹캠
+          description: 수행할 동작 (ops 목록 참조)
         query:
           type: string
           description: '[search] 검색 키워드 (광화문, 경부, 해운대 등)'
@@ -204,25 +163,7 @@ tool_json:
           description: '[search] Windy 카테고리 (mountain, beach, city 등)'
         limit:
           type: integer
-          description: '[search] 최대 결과 수 (기본 10)'
-  - name: cctv_admin
-    description: 'CCTV 데이터 캐시 행정. op으로 stats/refresh 분기 (기본 stats).
-
-      stats=전체 소스(카카오·UTIC·ITS·Windy) 현황 통계, refresh=UTIC 실시간 API로 전국 캐시 갱신(유지보수).'
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: stats=전체 소스 현황 통계 / refresh=UTIC 캐시 갱신(유지보수)
-  - name: cctv_op
-    description: CCTV 열기/캡처 단일 디스패처. op으로 open/capture 분기 (기본 open).
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: CCTV 동작
+          description: 검색 결과 상한 (search 기본 10, nearby 기본 5)
         url:
           type: string
           description: CCTV 스트림 URL
@@ -232,3 +173,9 @@ tool_json:
         save_path:
           type: string
           description: 캡처 저장 경로 (op=capture 시)
+        source:
+          type: string
+          enum:
+          - auto
+          - windy
+          description: 'nearby 공급처: auto(기본 통합검색), windy(Windy 공개 웹캠만)'

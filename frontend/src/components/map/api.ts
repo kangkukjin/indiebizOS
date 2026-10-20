@@ -4,7 +4,7 @@
  *   장소 검색/상세   [sense:place]{op: search|detail}
  *   좌표→주소        [sense:reverse_geocode]
  *   내 위치          [sense:here]
- *   길찾기 / CCTV    [sense:navigate_route] / [sense:cctv]{op: nearby}
+ *   길찾기 / CCTV    [sense:navigate_route] / [limbs:cctv]{op: nearby}
  *   저장 장소 원장   [self:read]{path} / [self:write]{path, format:"json"}  (outputs/map/places.json)
  *
  * IBL 문자열 리터럴 안에 큰따옴표·역슬래시가 들어가면 파서가 어긋날 수 있어(escape 절단 이력)
@@ -105,7 +105,7 @@ export async function runRoute(origin: string, destination: string, mode: RouteM
 
 export async function cctvNearby(ll: LatLng, radius_km: number, count: number): Promise<Cctv[]> {
   try {
-    const r = await iblExecuteApp(`[sense:cctv]{op: "nearby", lat: ${n(ll.lat)}, lng: ${n(ll.lng)}, radius_km: ${radius_km}, count: ${count}}`);
+    const r = await iblExecuteApp(`[limbs:cctv]{op: "nearby", lat: ${n(ll.lat)}, lng: ${n(ll.lng)}, radius_km: ${radius_km}, count: ${count}}`);
     return ((asObj(r).items as Cctv[]) || []).filter((c) => c.lat && c.lng);
   } catch { return []; }
 }

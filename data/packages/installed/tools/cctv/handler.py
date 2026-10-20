@@ -158,7 +158,7 @@ _LANDMARKS = {
 
 def cctv_search(query: str, lat: float = None, lng: float = None,
                 category: str = None, limit: int = 10, lon: float = None, **kwargs) -> str:
-    """통합 CCTV/웹캠 검색. 경도의 정본은 lng(선언·nearby·webcam 과 같은 이름), lon 은 옛 표기."""
+    """통합 CCTV/웹캠 검색. 경도의 정본은 lng(선언·nearby와 같은 이름), lon 은 옛 표기."""
     lon = lon if lon is not None else lng
     common = load_module("cctv_common")
     all_results = []
@@ -475,110 +475,61 @@ def cctv_refresh() -> str:
 
 # ── 도구 디스패처 ──────────────────────────────────────
 
-# tool_name → 실제 함수 매핑. CCTV 액션은 모두 op 디스패처로 통합:
-#   [sense:cctv]=cctv_query(search/nearby/webcam), [limbs:cctv]=cctv_op(open/capture),
-#   [self:cctv]=cctv_admin(stats/refresh). 직접 등록은 하단에서.
-_TOOL_MAP = {}
+def _nearby_source(lat: float, lng: float, radius_km: float = None,
+                   count: int = 5, source: str = "auto", radius: float = None) -> str:
+    """같은 주변 카메라 찾기에서 공급처만 선택한다."""
+    if source == "windy":
+        windy = load_module("windy_webcam")
+        return windy.get_nearby_webcam(
+            lat=lat, lon=lng, radius_km=50 if radius_km is None else radius_km,
+            count=count)
+    if source != "auto":
+        return json.dumps({"success": False, "error": "source는 auto 또는 windy여야 합니다"}, ensure_ascii=False)
+    return nearby(lat, lng, radius_km=5 if radius_km is None else radius_km,
+                  count=count, radius=radius)
 
 
-def webcam(lat: float, lng: float = None, lon: float = None,
-           radius_km: float = 50, count: int = 5) -> str:
-    """[sense:cctv]{op:webcam} — 좌표 근처 해외 경치 웹캠 (Windy 직행).
-
-    교통 CCTV를 건너뛰고 Windy Webcams API를 직접 호출한다.
-    lng(표준)/lon 둘 다 수용한다.
-    """
-    windy = load_module("windy_webcam")
-    resolved_lon = lon if lon is not None else lng
-    return windy.get_nearby_webcam(lat=lat, lon=resolved_lon,
-                                   radius_km=radius_km, count=count)
-# cctv_open/cctv_capture 함수는 _cctv_op(limbs:cctv) 디스패처가 호출하므로 유지(직접 등록 안 함).
-# get_cctv_by_name/open_cctv/capture_cctv/list_cctv_sources/search_webcam 표준 도구는
-# 어떤 IBL 액션도 가리키지 않아 2026-06-03 제거(잔존 도구 정리).
-
-
-# 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 디스패처 전환 (장식 스텁 폐기).
-# 값=실행 함수 참조 — _cctv_op/_cctv_query/_cctv_admin 이 이 테이블로 조회·디스패치.
-# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
-    "cctv_op": {"open": cctv_open, "capture": cctv_capture},
-    "cctv_query": {"search": cctv_search, "nearby": nearby, "webcam": webcam},
-    "cctv_admin": {"stats": cctv_sources, "refresh": cctv_refresh},
+    "cctv_op": {"search": cctv_search, "nearby": _nearby_source,
+                "open": cctv_open, "capture": cctv_capture,
+                "stats": cctv_sources, "refresh": cctv_refresh},
 }
-_OP_DEFAULTS = {"cctv_op": "open", "cctv_query": "search", "cctv_admin": "stats"}
+_OP_DEFAULTS = {"cctv_op": "open"}
 
 
 def _cctv_op(op: str = None, **kwargs) -> str:
-    """[limbs:cctv]{op} 단일 디스패처 (2026-05-27 limbs 라운드 2)."""
-    op = (op or _OP_DEFAULTS.get("cctv_op", "")).strip()
-    mapping = _OP_DISPATCHERS["cctv_op"]
-    func = mapping.get(op)
-    if func is None:
-        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(mapping.keys())}"}, ensure_ascii=False)
-    return func(**kwargs)
-
-
-def _cctv_query(op: str = None, **kwargs) -> str:
-    """[sense:cctv]{op} 단일 디스패처 — search(키워드 통합검색)/nearby(좌표 근처).
-
-    op 액션은 두 함수의 파라미터 합집합을 받으므로, 대상 함수 시그니처에 없는 키는 걸러
-    TypeError를 방지한다(예: search인데 radius_km 가 섞여 들어오는 경우).
-    """
+    """[limbs:cctv] — 탐색·관찰·조작·소스 관리의 단일 공개 디스패처."""
     import inspect
-    op = (op or _OP_DEFAULTS.get("cctv_query", "")).strip()
-    func = _OP_DISPATCHERS["cctv_query"].get(op)
+    op = (op or _OP_DEFAULTS["cctv_op"]).strip()
+    mapping = _OP_DISPATCHERS["cctv_op"]
+    func = _OP_DISPATCHERS["cctv_op"].get(op)
     if func is None:
-        return json.dumps({"success": False,
-                           "error": f"알 수 없는 op '{op}'. 사용 가능: ['search', 'nearby', 'webcam']"},
-                          ensure_ascii=False)
-    # IBL은 count 별칭을 limit으로 정규화한다. 공급자 count로 되돌린다.
-    if op in ("nearby", "webcam") and "limit" in kwargs:
+        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(mapping)}"}, ensure_ascii=False)
+    if "source" in kwargs and op != "nearby":
+        return json.dumps({"success": False, "error": "source 선택은 nearby에서만 지원합니다"}, ensure_ascii=False)
+    if op == "nearby" and "limit" in kwargs:
         kwargs["count"] = kwargs.pop("limit")
-    # 경도 정본=lng. 옛 표기 lon 은 선언 별칭(lng: [lon])이 IBL 경로에서 복사하지만, 이 디스패처는
-    # 별칭을 거치지 않는 호출도 받으므로 전 op 에 같은 규칙을 둔다(옛 판은 nearby 에만 있어
-    # search 가 lng 를 시그니처 필터에서 말없이 버렸다 — 2026-09-29 72회차 후속 관문이 발견).
     if "lng" not in kwargs and "lon" in kwargs:
         kwargs["lng"] = kwargs.pop("lon")
     valid = {k: v for k, v in kwargs.items() if k in inspect.signature(func).parameters}
     return func(**valid)
 
 
-def _cctv_admin(op: str = None, **kwargs) -> str:
-    """[self:cctv]{op} 단일 디스패처 — stats(전체 소스 현황)/refresh(UTIC 캐시 갱신).
-
-    기본 op=stats(읽기 전용). refresh는 유지보수용 부작용 op.
-    """
-    op = (op or _OP_DEFAULTS.get("cctv_admin", "stats")).strip()
-    func = _OP_DISPATCHERS["cctv_admin"].get(op)
-    if func is None:
-        return json.dumps({"success": False,
-                           "error": f"알 수 없는 op '{op}'. 사용 가능: ['stats', 'refresh']"},
-                          ensure_ascii=False)
-    return func()
-
-
-_TOOL_MAP["cctv_op"] = _cctv_op
-_TOOL_MAP["cctv_query"] = _cctv_query
-_TOOL_MAP["cctv_admin"] = _cctv_admin
+# 기존 Python 소비자의 조회 진입점. IBL/tool.json에는 공개하지 않는다.
+_OP_DISPATCHERS["cctv_query"] = _OP_DISPATCHERS["cctv_op"]
+def _cctv_query(op: str = None, **kwargs) -> str:
+    return _cctv_op(op=op or "search", **kwargs)
 
 
 def execute(tool_input: dict, context) -> str:
-    """CCTV 도구 실행 통합 핸들러 (ToolContext 기반 신규 시그니처)."""
+    """CCTV 도구 실행 통합 핸들러 (ToolContext SDK)."""
     tool_name = context.tool_name
-    func = _TOOL_MAP.get(tool_name)
-    if func is None:
+    if tool_name != "cctv_op":
         return json.dumps({"success": False, "error": f"미구현 도구: {tool_name}"}, ensure_ascii=False)
-
     tool_input = dict(tool_input)
-    if tool_name == "cctv_op" and (tool_input.get("op") or "").strip() == "capture":
+    if (tool_input.get("op") or "").strip() == "capture":
         tool_input["_project_path"] = context.project_path
     try:
-        return func(**tool_input)
-    except TypeError:
-        # 불필요한 파라미터 제거 후 재시도
-        import inspect
-        sig = inspect.signature(func)
-        valid_args = {k: v for k, v in tool_input.items() if k in sig.parameters}
-        return func(**valid_args)
+        return _cctv_op(**tool_input)
     except Exception as e:
         return json.dumps({"success": False, "error": f"{tool_name} 실행 실패: {str(e)}"}, ensure_ascii=False)

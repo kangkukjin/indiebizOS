@@ -20,7 +20,38 @@ def validate_lands_on(data: dict, root: Path) -> list[str]:
     - lands_on 없이 limb_op/path_audited 만 있으면 오류(선언 불완전).
     """
     from iblbuild_derive import build_tool_index, handler_fingerprint, declared_side_effect
+    from copy import deepcopy
+    # op별 목적지도 같은 감사 규칙을 적용한다. 이름을 엔진에 하드코딩하지 않는다.
+    data = deepcopy(data)
+    override_issues = []
+    for node_name, node in (data.get("nodes") or {}).items():
+        actions = node.get("actions") or {}
+        for name, action in list(actions.items()):
+            ops = action.get("ops") or {}
+            overrides = ops.get("lands_on", {})
+            if not isinstance(overrides, dict):
+                override_issues.append(f"{node_name}:{name} — ops.lands_on은 op별 객체여야 한다")
+                continue
+            for op, destination in overrides.items():
+                if (op not in (ops.get("values") or {}) or
+                        destination not in ("hub", "body", False) or
+                        not action.get("lands_on")):
+                    override_issues.append(f"{node_name}:{name} — 잘못된 ops.lands_on {op}: {destination}")
+                    continue
+                if destination is False:
+                    continue
+                variant = {**action, "lands_on": destination,
+                           "returns": (ops.get("returns") or {}).get(op, action.get("returns"))}
+                variant.pop("ops", None)
+                flag = (ops.get("side_effect") or {}).get(op, action.get("side_effect"))
+                if flag is not None:
+                    variant["side_effect"] = flag
+                if destination == "hub":
+                    variant.pop("member_transform", None)
+                    variant.pop("limb_op", None)
+                actions[f"{name}/{op}"] = variant
     issues: list[str] = []
+    issues.extend(override_issues)
     tool_index = build_tool_index(root)
     nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
     for node_name, node in nodes.items():

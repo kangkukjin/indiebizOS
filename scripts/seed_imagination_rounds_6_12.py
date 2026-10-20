@@ -33,7 +33,7 @@ NEW = [
      '[sense:devdocs]{op: "search", query: "asyncio", library_name: "python"} >> [table:take]{n: 3}',
      "sense,table", "dev", "문서"),
     ("근처 CCTV 3개 지도에 보여줘",
-     '[sense:cctv]{op: "webcam", lat: 36.62, lng: 127.33} >> [table:take]{n: 3} >> [limbs:show_map]{markers: "$items"}',
+     '[limbs:cctv]{op: "nearby", source: "windy", lat: 36.62, lng: 127.33} >> [table:take]{n: 3} >> [limbs:show_map]{markers: "$items"}',
      "sense,table,limbs", "cctv", "지도"),
     ("에이전트 누구누구 있는지 프로젝트랑 이름만 보여줘",
      '[others:agents] >> [table:take]{n: 5} >> [table:select]{columns: ["project", "name"]}',
@@ -146,7 +146,7 @@ NEW = [
     ("폰에 최근 알림 뭐 왔어?",
      '[sense:phone]{op: "notifications"} >> [table:take]{n: 3}', "sense,table", "body", "폰알림"),
     ("근처 CCTV 목록 보여줘",
-     '[sense:cctv]{op: "nearby", lat: 36.62, lng: 127.33} >> [table:take]{n: 3}', "sense,table", "cctv", "근처"),
+     '[limbs:cctv]{op: "nearby", lat: 36.62, lng: 127.33} >> [table:take]{n: 3}', "sense,table", "cctv", "근처"),
 ]
 
 db = IBLUsageDB()

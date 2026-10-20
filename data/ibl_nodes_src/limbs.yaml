@@ -47,13 +47,15 @@
         - 파일탐색
         - 사진창
         - 폴더
-    description: '수족: 작업 도구 및 기기 제어 — 브라우저 자동화, 데스크톱, 미디어 재생(음악/라디오/유튜브), CCTV, URL/파일 열기, Cloudflare'
+    description: '수족: 도구·기기라는 조작 대상의 탐색·관찰·제어 — 브라우저, 데스크톱, 라디오·CCTV, 미디어 재생, URL/파일 열기, Cloudflare'
     tags:
     - 브라우저
     - 데스크톱
     - 재생
     - 음악
     - 라디오
+    - CCTV
+    - 웹캠
     - 유튜브
     - 클릭
     - 입력
@@ -65,3 +67,4 @@
     - open_window.md
     - android.md
     - guest_helper.md
+    - cctv.md

@@ -95,6 +95,9 @@ ep5059(10:59:33 종료)·ep5065·ep5064·ep5066은 모두 `run.ended`까지 남�
 2026-10-07 코딩 앱 작업의 "완료 작업은 재기동 때 지워져 접수증 unknown"과 같은 원인이다. 이 회차는 재현 증거(네 작업·시각·404 본문)를 보존하고 수리는 하지 않았다 — 접수증 영속화는 `api_agents` 작업 저장소의 설계 변경이며, 동시 세션이 backend를 편집 중인 상태에서 backend 수정을 더 보태면 재기동 FAILED가 반복된다(이 회차 중 4회). 별도 수리 작업으로 넘긴다.
 부수 관측: 프로젝트 에이전트의 start 상태도 재기동 뒤 사라져 매번 400 "에이전트가 실행 중이 아닙니다" → `start`를 다시 보내야 했다(83회차에도 동일). 의도된 수명인지 결함인지는 미판정.
 
+**수리 후기(2026-10-20, 커밋 `b2c9e495`)**: 원인은 저장소가 아니라 부팅이었다 — 작업 행은 처음부터 SQLite(프로젝트 `conversations.db`·`system_ai_memory.db` 의 `tasks`)에 있었고, `boot_common._cleanup_completed_tasks` 가 맥·폰 공통 부팅마다 `status='completed'` 행을 전부 지웠다(2026-06-27 `065c5a91`, failed/cancelled 는 남김). 수리 = 보존 30일 지난 종료 행만 묘비(`task_tombstones`)로 바꾸고, GET 은 '접수 기록 없음' 404 와 '종료 후 소실' 410 을 가른다(접수증 어댑터는 `missing: unknown|lost`). 회귀 `test_boot_common.py`·`test_delegation_tasks.py`, 라이브 재검증(ai_execute background 1건 완료 → `restart --wait` → 같은 status_url `succeeded`+result) 통과.
+부수 관측 판정 — 에이전트 start 상태의 재기동 뒤 소실은 **의도된 수명**: `agent_registry.agent_runners` 는 "살아있는 에이전트 런너 등기부"(프로세스 내 dict)이고 agents.yaml 에 running 표식·lifespan 에 에이전트 자동 start 가 없다. 바꾸려면 부팅 자동 start 정책(데이터)이 먼저 필요하므로 수리 범위 밖에 둔다. 남긴 것: 재기동 당시 pending 이던 작업은 재기동 뒤에도 running 투영(interrupted 표식 없음) — 별도 후보.
+
 ### L84-3 — 한국어 사용자에게 영어로 답함 (발견·학습 문제, 표현)
 
 독립 AI 7턴 중 6턴의 채팅 답변이 영어였고 저장 파일은 모두 한국어였다(탐침도 동일). 사용자 발화·역할·자료가 전부 한국어다.

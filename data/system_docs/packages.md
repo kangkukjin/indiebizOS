@@ -279,7 +279,7 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 <!-- IBL_STATS:START -->
 ## 현재 보유한 도구 패키지 (51개 — 빌드 파생)
 
-**op 분기 34 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · books · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · entity-lookup · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · record-ops · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **87개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 34 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · books · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · entity-lookup · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · record-ops · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **86개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
 > 목록은 현재 `_OP_DISPATCHERS`를 가진 보유 패키지에서 파생한다. 새 op를 추가하거나 은퇴시키면 빌드가 목록과 수를 함께 갱신한다.
 <!-- IBL_STATS:END -->
@@ -359,7 +359,7 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 | 내장 브라우저 | `browser-action`의 `limbs:browser`, `driver:embedded` | [브라우저](../guides/browser_action.md) |
 | 상주 PC·폰 손발 | `guest-helper`의 `limbs:guestpc`, PC 명령/폰 `op:ibl` 어댑터 | [헬퍼](../guides/guest_helper.md) · [폰](../guides/remote_phone.md) |
 | 미디어 세션 | backend 세션 서비스 + 기존 `self:script`의 `미디어세션` | [미디어](../guides/media_session.md) |
-| 폰 단독 유튜브·음악 | 기존 `sense:search_youtube`·`limbs:music`·`self:music`의 Android 경로 | [폰 재생](../guides/youtube_relay.md) |
+| 폰 단독 유튜브·음악 | `limbs:youtube`의 검색·재생·큐와 `self:music`의 Android 경로 | [폰 재생](../guides/youtube_relay.md) |
 
 이 기능 목록은 새 패키지 수나 새 액션 수가 아니다. 실제 어휘·op·몸별 사용 가능성은
 빌드 레지스트리, 활성 원장, 기기 능력·권한을 함께 확인한다. 헬퍼 바이너리나 폰 APK의

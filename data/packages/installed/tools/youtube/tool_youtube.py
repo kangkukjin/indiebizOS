@@ -644,7 +644,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
 
     # client 모드: 서버측 재생(ffplay) 대신 오디오 URL 을 resolve 해 클라이언트(폰/원격
     # WebView)가 직접 재생한다 — 라디오의 play_in_client 패턴과 동일(제네릭 런처 표면).
-    # 분산 IBL: 폰서 [limbs:music]{op:play, mode:client} → 맥에 위임 → 맥 yt-dlp resolve →
+    # 분산 IBL: 폰서 [limbs:youtube]{op:play, mode:client} → 맥에 위임 → 맥 yt-dlp resolve →
     # play_in_client+stream_url 반환 → 폰 WebView <audio> 재생. 맥·폰이 같은 공인 IP(집 WiFi)면
     # googlevideo URL 직접 도달(실측 확인). 외출 시 모바일데이터는 후속(오디오 프록시 필요).
     # 서버측 플레이어를 건드리지 않으므로 _close_player() 전에 분기(맥 자신의 재생과 독립).

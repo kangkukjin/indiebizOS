@@ -6,14 +6,14 @@
   "version": "1.1.0",
   "tools": [
     {
-      "name": "search_youtube",
-      "description": "유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출 전에 원하는 영상을 먼저 찾을 때 사용. 정상 0건은 success:true·items:[]·status:empty이며 통신·공급자 오류와 구분한다.",
+      "name": "youtube_op",
+      "description": "YouTube 탐색·조회·요약·재생·큐·다운로드를 한 대상의 op로 제공. search(기본), info/transcript/languages/channel/summarize, play/add/skip/seek/queue/stop/download/relay. 내 파일 음악은 self:music.",
       "input_schema": {
         "type": "object",
         "properties": {
           "query": {
             "type": "string",
-            "description": "검색어. 예: '김필 너무 아픈 사랑은', '빅뱅 판타스틱베이비'"
+            "description": "search: 검색어, play/add/relay: 검색어 또는 URL"
           },
           "queries": {
             "type": [
@@ -24,22 +24,18 @@
           },
           "limit": {
             "type": "integer",
-            "description": "검색 결과 수 (1-75, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "music_op",
-      "description": "유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/seek/queue/stop/download/relay 분기 (기본 play).",
-      "input_schema": {
-        "type": "object",
-        "properties": {
+            "description": "search: 1~75 기본5, channel: 기본5, play: 기본5, add: 기본3, relay: 기본6"
+          },
           "op": {
             "type": "string",
-            "description": "음악 동작",
+            "description": "YouTube 동작 (기본 search·재생 없음)",
             "enum": [
+              "search",
+              "info",
+              "transcript",
+              "languages",
+              "channel",
+              "summarize",
               "play",
               "add",
               "skip",
@@ -49,11 +45,7 @@
               "download",
               "relay"
             ],
-            "default": "play"
-          },
-          "query": {
-            "type": "string",
-            "description": "검색어 또는 URL (op=play/add/relay 시)"
+            "default": "search"
           },
           "position": {
             "type": "number",
@@ -61,7 +53,7 @@
           },
           "url": {
             "type": "string",
-            "description": "유튜브 URL (op=download 시)"
+            "description": "유튜브 URL"
           },
           "mode": {
             "type": "string",
@@ -81,38 +73,9 @@
             ],
             "description": "릴레이 형태 (op=relay 시, 기본 audio — 소리만/영상+소리)"
           },
-          "limit": {
-            "type": "integer",
-            "description": "곡 수 (op=play/add/relay 시)"
-          },
           "output_path": {
             "type": "string",
             "description": "MP3 저장 경로 (op=download 시)"
-          }
-        }
-      }
-    },
-    {
-      "name": "video_op",
-      "description": "유튜브 동영상 조회·시청 (op 분기) — [sense:video]. 검색은 search_youtube.\n- op=info(기본): 메타데이터(제목·발행 채널/ID/URL·설명·조회수/좋아요/댓글/구독자·인증·observed_at). 미제공 지표는 null. url/video_id 필수.\n- op=transcript: 자막/스크립트. language 옵션.\n- op=languages: 사용 가능한 자막 언어 목록.\n- op=channel: 채널 핸들(@name)·URL·channel_id 해석 + 최신 영상. handle/url/channel_id 중 하나.\n- op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션. 긴 자막은 전체를 구간별로 요약한 뒤 통합한다(원문 절단 없음).\n",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "info(기본)/channel/transcript/languages/summarize",
-            "enum": [
-              "info",
-              "transcript",
-              "languages",
-              "channel",
-              "summarize"
-            ],
-            "default": "info"
-          },
-          "url": {
-            "type": "string",
-            "description": "유튜브 URL"
           },
           "video_id": {
             "type": "string",
@@ -133,10 +96,6 @@
           "summary_length": {
             "type": "integer",
             "description": "[summarize] 요약 길이(기본 3000)"
-          },
-          "limit": {
-            "type": "integer",
-            "description": "[channel] 결과 수 (기본 5)"
           }
         },
         "required": []

@@ -129,7 +129,7 @@
 - 참고(2026-07-12): 당근 **중고물건** 쪽(`www.daangn.com/kr/buy-sell/?in=x-{지역ID}&search=`)은 지역 필터가 **진짜 작동**하고 지역ID 해소 API(`/kr/api/v1/regions/keyword?keyword={동이름}`, 키불요)도 발굴됨 — `[sense:used]{source:"danggeun"}` 어휘로 결정화(`used_market.md`). realty.daangn.com이 같은 지역ID 체계를 쓰는지는 미검증 — 부동산 정밀 검색 재도전 시 이 API부터 시도할 것.
 
 ### 비권장
-- 매물 링크에 `sense:search_youtube` 쓰지 말 것(시세 전망·임대주택 모집 영상만 나옴).
+- 매물 링크에 `limbs:youtube` 쓰지 말 것(시세 전망·임대주택 모집 영상만 나옴).
 - crawl이 텍스트를 반환해도 **기대 지역명이 본문에 없으면 의심**(지오로케이션/기본지역 폴백 가능성).
 
 ---

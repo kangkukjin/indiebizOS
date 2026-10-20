@@ -11,7 +11,7 @@ importlib spec_from_file_location 4줄 주문이 30여 핸들러에 복붙돼 �
 관용구지만, 싱글턴 조회가 `if key in sys.modules: return` 이면 **동시 호출자가 반쯤
 만들어진 모듈을 받는다**.
 
-실측: op fixture 를 6-way 병렬로 돌리자 `[sense:video]{op:"history"}` 가
+실측: op fixture 를 6-way 병렬로 돌리자 `[limbs:youtube]{op:"history"}` 가
 `module 'tool_watch_singleton' has no attribute 'history'` 로 죽었다(같은 순간의 `feed`
 는 성공 — 모듈이 feed 까지만 실행된 상태였다). 단독 재실행은 정상이라 **재현이 어려운
 부류**다. IBL 은 `&` 병렬 연산자를 1급으로 가지므로 이건 이론적 레이스가 아니다.

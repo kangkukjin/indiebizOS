@@ -170,6 +170,13 @@ def harvest_from_health(shapes: dict, root: Path = ROOT) -> int:
 
 
 def main():
+    if "--rekey" in sys.argv:
+        # 어휘 이관 때 같은 구현의 관측만 새 op 키로 옮긴다.
+        # 관측 날짜·원천·키를 새 실측처럼 다시 쓰지 않는다. null은 은퇴한 모양.
+        mapping = json.loads(Path(sys.argv[sys.argv.index("--rekey") + 1]).read_text())
+        rekey_catalog(mapping)
+        print(f"관측 이름 이관 {len(mapping)}건 → {OUT}")
+        return
     only = None
     if "--only" in sys.argv:
         only = sys.argv[sys.argv.index("--only") + 1]
@@ -220,6 +227,27 @@ def main():
         "shapes": shapes,
     }, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"\n관측 {ok} · 통화 아님 {skip} · 실패 {fail} → {OUT} (총 {len(shapes)})")
+
+
+def rekey_observations(shapes, mapping):
+    """명시 이관표로 관측을 이동한다. 대상 충돌은 데이터 손실 대신 거절한다."""
+    result = dict(shapes)
+    for old, new in mapping.items():
+        if old not in result:
+            continue
+        if new is not None:
+            if new in result and result[new] != result[old]:
+                raise ValueError(f"관측 충돌: {old} → {new}")
+            result[new] = result[old]
+        if old != new:
+            del result[old]
+    return result
+
+
+def rekey_catalog(mapping, path=OUT):
+    document = json.loads(path.read_text())
+    document["shapes"] = rekey_observations(document["shapes"], mapping)
+    path.write_text(json.dumps(document, ensure_ascii=False, indent=1) + "\n")
 
 
 if __name__ == "__main__":

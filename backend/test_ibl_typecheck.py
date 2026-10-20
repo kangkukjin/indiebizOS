@@ -241,14 +241,14 @@ if __name__ == "__main__":
 def test_observed_column_warning_is_reported_once_and_script_list_columns_are_known(monkeypatch):
     import ibl_access
     cat = dict(ibl_access._return_shapes())
-    cat["sense:video"] = {"kind": "items", "keys": ["title", "duration", "uploader", "view_count", "upload_date", "video_id", "url"]}
-    cat["sense:search_youtube"] = {"kind": "items", "keys": ["index", "id", "title", "channel", "duration", "url"]}
+    cat['limbs:youtube#info'] = {"kind": "items", "keys": ["title", "duration", "uploader", "view_count", "upload_date", "video_id", "url"]}
+    cat['limbs:youtube#search'] = {"kind": "items", "keys": ["index", "id", "title", "channel", "duration", "url"]}
     cat["self:script"] = {"kind": "items", "keys": ["title", "meta", "summary", "registered_at", "last_status"]}
     cat["self:script#list"] = cat["self:script"]
     monkeypatch.setattr(ibl_access, "_return_shapes", lambda: cat)
-    prog = ('$후보 = [sense:search_youtube]{queries:["a"], count:12} >> [table:dedup]{by:"video_id"} '
+    prog = ('$후보 = [limbs:youtube]{op: "search", queries:["a"], count:12} >> [table:dedup]{by:"video_id"} '
             '>> [table:rename]{map:{video_id:"id"}}\n'
-            '$날짜 = $후보 >> [table:each]{limit:80, do:"[sense:video]{op:\\"info\\", video_id:$it.id}"}\n'
+            '$날짜 = $후보 >> [table:each]{limit:80, do:"[limbs:youtube]{op:\\"info\\", video_id:$it.id}"}\n'
             '$날짜 >> [table:select]{fields:["id","title"]}')
     issues = TC.typecheck_code(prog)["issues"]
     hits = [i for i in issues if "'id'" in i["message"]]

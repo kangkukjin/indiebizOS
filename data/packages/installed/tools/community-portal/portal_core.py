@@ -83,7 +83,7 @@ FORBIDDEN_NODES = {"self", "others", "limbs"}
 FORBIDDEN_INSTRUMENTS = {"host"}
 
 # 수동 승인 예외(핸드오프 "설정 파일 수동 편집으로만 추가") — 코드에 명시된 감사 가능한 예외.
-# ytmusic: limbs:music 이 끼지만 ▶ 버튼은 mode:"client"(회원 브라우저에서 소리) 리터럴이
+# ytmusic: limbs:youtube 이 끼지만 ▶ 버튼은 mode:"client"(회원 브라우저에서 소리) 리터럴이
 # 템플릿 게이트로 강제되고, 맥 스피커를 만지는 '큐' 탭은 phone_render:false 라 포털 필터가
 # 걷어낸다. 익명 공개 금지(유튜브 공개 프록시화) — 회원 전용(min_level 1+).
 MANUAL_LISTABLE = {

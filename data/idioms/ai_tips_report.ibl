@@ -6,14 +6,14 @@
   $질의 = [self:script]{id:"AI팁보고서",args:{op:"queries",run:$시작.run,data:$질의안}}
   $검색 = $질의.items >> [table:each]{parallel:3} {
     [try] {
-      $결과 = [sense:search_youtube]{query:$it.query,count:10}
+      $결과 = [limbs:youtube]{op: "search", query:$it.query,count:10}
       return {query:$it.query,data:$결과}
     } [catch] { return {query:$it.query,_error:$error.message} }
   }
   $후보 = [self:script]{id:"AI팁보고서",args:{op:"search",run:$시작.run,data:$검색}}
   $메타 = $후보.items >> [table:each]{parallel:4} {
     [try] {
-      $정보 = [sense:video]{op:"info",video_id:$it.video_id}
+      $정보 = [limbs:youtube]{op:"info",video_id:$it.video_id}
       return {video_id:$it.video_id,data:$정보}
     } [catch] { return {video_id:$it.video_id,_error:$error.message} }
   }
@@ -22,7 +22,7 @@
   $영상 = [self:script]{id:"AI팁보고서",args:{op:"videos",run:$시작.run,data:$선정안}}
   $자막 = $영상.items >> [table:each]{parallel:4} {
     [try] {
-      $본문 = [sense:video]{op:"transcript",video_id:$it.video_id}
+      $본문 = [limbs:youtube]{op:"transcript",video_id:$it.video_id}
       return {video_id:$it.video_id,data:$본문}
     } [catch] { return {video_id:$it.video_id,_error:$error.message} }
   }

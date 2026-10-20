@@ -14,7 +14,7 @@ nodes:
         member_transform: radio_member:control
         path_audited:
           at: '2026-10-20'
-          impl: 3dc389918185ab43
+          impl: fa1eb2d31bfef8b2
         returns: effect
         description: 라디오 조작 — 방송국 검색·목록, 재생·정지·상태·음량, 즐겨찾기를 한 대상의 op로 제공.
         target_description: 'search: 전세계 방송국 검색(query/name, tag, country, language, limit). stations: 한국 방송사 채널

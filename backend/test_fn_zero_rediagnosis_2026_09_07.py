@@ -108,11 +108,11 @@ def test_에피소드통계_진짜_문법오류는_문맥_주입_뒤에도_남�
 
 # ── 실행 관문: 변형 인식 ────────────────────────────────────────────────────────
 IDIOM = ('$원장 = [self:ledger]{path: "${원장경로}", op: "select", target: "covered", fields: ["id"]}\n'
-         '$검색 = [sense:search_youtube]{query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}\n'
+         '$검색 = [limbs:youtube]{op: "search", query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}\n'
          '$신선 = $검색 >> [table:filter]{where: "upload_date >= ${기준일}"} >> [table:sort]{by: "view_count", desc: true}\n'
          '$신선 >> [table:take]{n: 30}')
 VARIANT = ('$원장 = [self:ledger]{path: "x.json", op: "select", target: "covered", fields: ["id", "verdict"]}\n'
-           '$검색 = [sense:search_youtube]{query: "a", limit: 12} & [sense:search_youtube]{query: "b", limit: 12} >> [table:union]\n'
+           '$검색 = [limbs:youtube]{op: "search", query: "a", limit: 12} & [limbs:youtube]{op: "search", query: "b", limit: 12} >> [table:union]\n'
            '$신선 = $검색 >> [table:filter]{where: "upload_date >= 20260311"} >> [table:sort]{by: "view_count", desc: true}\n'
            '$신선 >> [table:take]{n: 40}')
 

@@ -2,7 +2,7 @@
 """seed_snapshot_row.py — 1행 스냅샷 병기(B36-2)로 새로 열린 문형 시드 (2026-08-24).
 
 배경: 단일 개체 조회가 통화(items)를 안 내서 `[table:each]` 팬아웃이 원 행을 그대로
-흘리던(passthrough_rows) 부류를 수리했다 — sense:video#info · sense:reverse_geocode ·
+흘리던(passthrough_rows) 부류를 수리했다 — limbs:youtube#info · sense:reverse_geocode ·
 옛 탐색 낱말(2026-09-03 은퇴). 기계는 열렸는데 코퍼스에 용례가 없으면 모델은 옛 우회(`&` N중 병렬 +
 머릿속 판별)를 계속 쓴다. 실사용에서 실제로 막혔던 자리를 그대로 접어 시드한다:
   · ep1874(유튜브 AI 팁 보고서) — 후보 18편의 upload_date 6개월 규칙을 `&` 8중으로 우회
@@ -19,23 +19,23 @@ from ibl_parser import parse as parse_ibl  # noqa: E402  시드 전 문법 검�
 
 # (intent, code, nodes, category, tags)
 NEW = [
-    # ── sense:video#info — 6개월 규칙이 산문에서 문장 안 술어로 ──
+    # ── limbs:youtube#info — 6개월 규칙이 산문에서 문장 안 술어로 ──
     ("후보 영상들 업로드 날짜 확인해서 6개월 지난 건 빼줘",
      '[table:each]{items: [{id: "hLFnGFYJ3vs"}, {id: "wfMCWxJ-ri4"}, {id: "8ib4Qnh2HFE"}], '
-     'do: "[sense:video]{op: \'info\', video_id: \'$it.id\'}"} '
+     'do: "[limbs:youtube]{op: \'info\', video_id: \'$it.id\'}"} '
      '>> [table:filter]{where: "upload_date >= 20260224"} '
      '>> [table:select]{columns: ["video_id", "title", "upload_date"]}',
-     "table,sense", "media", "팬아웃,최신성,스냅샷"),
+     'limbs,table', "media", "팬아웃,최신성,스냅샷"),
     ("이 영상들 제목이랑 조회수 한 표로 보여줘",
      '[table:each]{items: [{id: "jNQXAC9IVRw"}, {id: "hLFnGFYJ3vs"}], '
-     'do: "[sense:video]{op: \'info\', video_id: \'$it.id\'}"} '
+     'do: "[limbs:youtube]{op: \'info\', video_id: \'$it.id\'}"} '
      '>> [table:select]{columns: ["title", "uploader", "view_count"]} '
      '>> [table:sort]{by: "view_count", desc: true}',
-     "table,sense", "media", "팬아웃,스냅샷,정렬"),
+     'limbs,table', "media", "팬아웃,스냅샷,정렬"),
     ("이 영상 정보를 표로 받아서 재생시간 10분 넘는 것만",
-     '[sense:video]{op: "info", video_id: "8ib4Qnh2HFE"} '
+     '[limbs:youtube]{op: "info", video_id: "8ib4Qnh2HFE"} '
      '>> [table:filter]{where: "duration >= 600"}',
-     "sense,table", "media", "스냅샷,단건"),
+     'limbs,table', "media", "스냅샷,단건"),
     # ── sense:reverse_geocode — 좌표 여러 개를 한 문장으로 ──
     ("이 좌표 세 곳이 각각 어느 동인지 알려줘",
      '[table:each]{items: [{lat: 36.652605, lon: 127.455804}, {lat: 36.65024, lon: 127.456204}, '

@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
 
 RECALLED = ('$원장 = [self:ledger]{path: "outputs/x/_covered.json", op: "select", target: "covered"}; '
-            '$검색 = [sense:search_youtube]{query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}')
+            '$검색 = [limbs:youtube]{op: "search", query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}')
 COPY_RUN = ['$원장 = [self:ledger]{path: "outputs/x/_covered.json", op: "select", target: "covered"}',
-            '$검색 = [sense:search_youtube]{query: "AI 데이터 분석", limit: 12} >> [table:dedup]{by: "video_id"}',
+            '$검색 = [limbs:youtube]{op: "search", query: "AI 데이터 분석", limit: 12} >> [table:dedup]{by: "video_id"}',
             '[self:write]{path: "outputs/x/report.md", content: "…"}']
 CALL_ONLY_RUN = ['[fn:팁영상수집]{주제: "AI 데이터 분석"}']
 CALL_PLUS_RUN = ['$후보 = [fn:팁영상수집]{주제: "AI 데이터 분석"}',

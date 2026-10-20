@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """코퍼스 중첩 IBL 따옴표 수리 (2026-08-22)
 
-증상: `[self:schedule]{..., pipeline: "[limbs:music]{op: "play", ...}"}` 처럼
+증상: `[self:schedule]{..., pipeline: "[limbs:youtube]{op: "play", ...}"}` 처럼
 중첩 IBL 을 값으로 실은 예제가 안쪽 따옴표를 이스케이프하지 않았다.
 
 이 모양은 **한 번도 동작한 적이 없다.** 수리 전 파서는 조용히 잘라서
-pipeline='[limbs:music]{op: ' 을 돌려줬고(침묵 절단), 코퍼스는 그 깨진 모양을
+pipeline='[limbs:youtube]{op: ' 을 돌려줬고(침묵 절단), 코퍼스는 그 깨진 모양을
 3개월간 교재로 가르쳤다. 파서 수리로 이제 IBLSyntaxError 가 나므로 드러났다.
 
 정본 모양은 코퍼스 자신에게 이미 있다(정상 4건):

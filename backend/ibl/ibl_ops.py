@@ -75,6 +75,13 @@ from typing import Any, Dict, List, Optional
 # op 통화로 허용되는 값. transform 은 제외 — group:transform 액션(table 노드)은
 # op 분기가 없고, 파이프 변환자는 액션 단위로만 성립한다.
 OP_RETURNS_ENUM = {"items", "scalar", "effect"}
+OP_RUNS_ON_ENUM = {"anywhere", "pc_only", "phone_only"}
+
+
+def op_runs_on(action_def: dict, op: Optional[str]) -> str:
+    """기기 요구 조건: op별 선언을 우선하고 액션 기본값을 상속한다."""
+    overrides = ops_block(action_def).get("runs_on") or {}
+    return overrides.get(op, action_def.get("runs_on", "anywhere"))
 
 
 def ops_block(action_def: Any) -> Dict[str, Any]:

@@ -618,7 +618,10 @@
     {
       "id": "web_landmarks",
       "name": "웹 랜드마크 지도",
-      "aliases": ["구매 지도", "쇼핑 지도"],
+      "aliases": [
+        "구매 지도",
+        "쇼핑 지도"
+      ],
       "description": "어휘가 덮지 않는 출처·관점을 찾는 지도. 한국 구매 조사(가격비교·판매처·홈쇼핑·제조사·후기·독립 시험·해외몰·중고·전문점)의 채널별 역할·실행 연결·종료 기준과 한국 기관·국제 권위 사이트. 액션이 있는 도메인도 포함하며 등재는 접근 성공 보증이 아니다.",
       "keywords": [
         "랜드마크",
@@ -1267,19 +1270,40 @@
         "음량"
       ],
       "file": "android_control.md",
-      "control_platforms": ["android"],
+      "control_platforms": [
+        "android"
+      ],
       "topic": "손발·이웃 몸"
     },
     {
       "id": "pc_control",
       "name": "맥·Windows PC 컨트롤 — 앱·AI 공용 스크립트",
       "description": "등록된 PC와 본체의 출력 장치 조회, 음량·음소거, 웹 주소 열기, 화면 확인·잠금. Windows 유튜브는 기존 탭 교체·중복 재생 정지·광고 구분·본영상 진행 검증. 앱과 AI가 동일한 스크립트와 결과 검증 계약을 사용.",
-      "keywords": ["PC 컨트롤", "맥", "Windows", "macOS", "윈도우", "출력 장치", "HDMI 음량", "PC 음소거", "화면 잠금", "PC 브라우저",
+      "keywords": [
+        "PC 컨트롤",
+        "맥",
+        "Windows",
+        "macOS",
+        "윈도우",
+        "출력 장치",
+        "HDMI 음량",
+        "PC 음소거",
+        "화면 잠금",
+        "PC 브라우저",
         "유튜브 교체",
         "중복 재생",
-        "광고 확인"],
+        "광고 확인"
+      ],
       "file": "pc_control.md",
-      "control_platforms": ["darwin", "macos", "mac", "osx", "windows", "win32", "win"],
+      "control_platforms": [
+        "darwin",
+        "macos",
+        "mac",
+        "osx",
+        "windows",
+        "win32",
+        "win"
+      ],
       "topic": "손발·이웃 몸"
     },
     {
@@ -1328,7 +1352,7 @@
     {
       "id": "music_player",
       "name": "내 음악 라이브러리 ([self:music]) 가이드",
-      "description": "소스 폴더의 음악 파일을 스캔해 라이브러리로 정리하고(태그·앨범아트), 폴더 단위·검색·플레이리스트로 듣는 [self:music] 사용법. 폴더가 주 축(사용자의 의미 단위). 유튜브뮤직([limbs:music])과의 개념 구분, 백그라운드 스캔 확인, 함정, 2026-07-28 은퇴 목록(AI 추천 compose·관련곡 그래프 related/walk/graph·앨범/아티스트 뷰).",
+      "description": "소스 폴더의 음악 파일을 스캔해 라이브러리로 정리하고(태그·앨범아트), 폴더 단위·검색·플레이리스트로 듣는 [self:music] 사용법. 폴더가 주 축(사용자의 의미 단위). 유튜브뮤직([limbs:youtube])과의 개념 구분, 백그라운드 스캔 확인, 함정, 2026-07-28 은퇴 목록(AI 추천 compose·관련곡 그래프 related/walk/graph·앨범/아티스트 뷰).",
       "keywords": [
         "음악",
         "내 음악",
@@ -1475,8 +1499,8 @@
     },
     {
       "id": "youtube_relay",
-      "name": "유튜브 시청 앱·릴레이 (yttv + [limbs:music] relay) 가이드",
-      "description": "▶️ 유튜브 시청 앱(홈 추천 피드·시청 페이지·기록 — [sense:video] feed/watch/history)과 맥 경유 릴레이(/yt/relay, 유튜브 직접 접속 없음). 추천=시청기록 기반 채널 RSS+연관 검색(로그인 불요, 인기급상승 페이지는 사망). 함정: 옛 결합 포맷 /best 폴백, lazy preload, phone_render:false.",
+      "name": "YouTube 탐색·조회·재생·릴레이 (limbs:youtube) 가이드",
+      "description": "limbs:youtube의 검색·채널·메타·자막·요약·재생·큐·다운로드·릴레이. 기본 search, PC 전용 op의 허브 위임, 폰 로컬 검색·재생, 외부 영상 앱 제어 한계와 스트림/HLS 경로.",
       "keywords": [
         "유튜브",
         "youtube",
@@ -2210,10 +2234,27 @@
       "id": "safari_control",
       "name": "Safari 창·탭 드라이버 — 본체 앱 제어",
       "description": "본체 macOS 의 Safari 창·탭을 화면 조작 없이 사전(AppleScript) 계약으로 조회·열기·전환·닫기. 등록 스크립트 Safari제어의 동작별 실행 조건(needs_front·shared_state)과 재조회 확인 범위, 응답 유실·권한·대상 소실의 처리.",
-      "keywords": ["Safari", "사파리", "탭", "탭 전환", "탭 닫기", "새 탭", "창", "본체 브라우저", "맥 브라우저", "AppleScript", "앱 제어", "앱 드라이버"],
+      "keywords": [
+        "Safari",
+        "사파리",
+        "탭",
+        "탭 전환",
+        "탭 닫기",
+        "새 탭",
+        "창",
+        "본체 브라우저",
+        "맥 브라우저",
+        "AppleScript",
+        "앱 제어",
+        "앱 드라이버"
+      ],
       "file": "safari_control.md",
-      "control_surfaces": ["app:com.apple.Safari"],
-      "supported_platforms": ["darwin"],
+      "control_surfaces": [
+        "app:com.apple.Safari"
+      ],
+      "supported_platforms": [
+        "darwin"
+      ],
       "topic": "브라우저·데스크톱 제어"
     }
   ]

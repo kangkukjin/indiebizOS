@@ -2,7 +2,7 @@
 
   L1  따옴표 밖 `${이름}` 은 `$이름` 과 같은 변수 참조로 파싱된다(수치 자리 포함). 치환도 같다.
   L2  산문 결과(문자열 통화)에 `.message`·`.text` 를 물으면 그 산문이다. 다른 경로는 종전대로 정직 오류.
-  L3  [sense:search_youtube]{queries} 배치 팬아웃 — 검색어마다 query 태그, video_id 중복 제거, sections.
+  L3  [limbs:youtube]{op: "search", queries} 배치 팬아웃 — 검색어마다 query 태그, video_id 중복 제거, sections.
 
 실행: .venv/bin/python -m pytest backend/test_lang_revision_2026_09_04.py -q
 """

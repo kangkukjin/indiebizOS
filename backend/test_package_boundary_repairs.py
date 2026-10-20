@@ -190,7 +190,7 @@ def test_cctv_context_reaches_capture_engine(requested, expected, path_scope, mo
 
 @pytest.mark.parametrize('op,mode', [('play', 'client'), ('download', 'client'), ('download', 'server')])
 def test_youtube_supported_modes_compile_and_dispatch(op, mode, registry, monkeypatch, tmp_path):
-    source = '[limbs:music]{op:"' + op + '",mode:"' + mode + '",query:"fixture",url:"https://example.invalid/v"}'
+    source = '[limbs:youtube]{op:"' + op + '",mode:"' + mode + '",query:"fixture",url:"https://example.invalid/v"}'
     assert compile_program(source, registry).report()['status'] != 'invalid'
     handler = module('youtube')
     calls = []
@@ -200,14 +200,14 @@ def test_youtube_supported_modes_compile_and_dispatch(op, mode, registry, monkey
     monkeypatch.setattr(handler, 'load_tool_youtube', lambda: NS(
         _phone=NS(is_phone=lambda: False),
         play_youtube=yt_call, download_youtube_music=yt_call))
-    assert handler.execute({'op': op, 'mode': mode, 'query': 'fixture'}, ToolContext(str(tmp_path), 'music_op'))['success']
+    assert handler.execute({'op': op, 'mode': mode, 'query': 'fixture'}, ToolContext(str(tmp_path), 'youtube_op'))['success']
     assert calls[-1]['mode'] == mode
 
 
 @pytest.mark.parametrize('op,mode', [('play', 'server'), ('download', 'video'), ('relay', 'client')])
 def test_youtube_wrong_operation_mode_fails_before_action(op, mode):
     handler = module('youtube')
-    result = handler._OP_DISPATCHERS['music_op'][op]({'mode': mode}, NS())
+    result = handler._OP_DISPATCHERS['youtube_op'][op]({'mode': mode}, NS())
     assert result['success'] is False and 'mode' in result['error']
 
 

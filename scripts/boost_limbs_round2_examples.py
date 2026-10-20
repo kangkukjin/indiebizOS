@@ -61,24 +61,24 @@ NEW_EXAMPLES = [
     ("XHR 요청 모니터", '[limbs:logs]{op: "network"}'),
 
     # ─── music (default play) ───
-    ("아이유 좋은날", '[limbs:music]{query: "아이유 좋은날"}'),
-    ("클래식 음악 좀", '[limbs:music]{query: "베토벤 교향곡 9번"}'),
-    ("재즈 분위기", '[limbs:music]{query: "smooth jazz"}'),
+    ("아이유 좋은날", '[limbs:youtube]{op: "play", query: "아이유 좋은날"}'),
+    ("클래식 음악 좀", '[limbs:youtube]{op: "play", query: "베토벤 교향곡 9번"}'),
+    ("재즈 분위기", '[limbs:youtube]{op: "play", query: "smooth jazz"}'),
     # music add
-    ("BTS Butter 대기열에", '[limbs:music]{op: "add", query: "BTS Butter"}'),
-    ("이 곡 다음에 틀어", '[limbs:music]{op: "add", query: "newjeans hype boy"}'),
+    ("BTS Butter 대기열에", '[limbs:youtube]{op: "add", query: "BTS Butter"}'),
+    ("이 곡 다음에 틀어", '[limbs:youtube]{op: "add", query: "newjeans hype boy"}'),
     # music skip
-    ("다음 곡", '[limbs:music]{op: "skip"}'),
-    ("이 노래 패스", '[limbs:music]{op: "skip"}'),
+    ("다음 곡", '[limbs:youtube]{op: "skip"}'),
+    ("이 노래 패스", '[limbs:youtube]{op: "skip"}'),
     # music queue
-    ("재생 목록 보여", '[limbs:music]{op: "queue"}'),
-    ("뭐 들어가 있어", '[limbs:music]{op: "queue"}'),
+    ("재생 목록 보여", '[limbs:youtube]{op: "queue"}'),
+    ("뭐 들어가 있어", '[limbs:youtube]{op: "queue"}'),
     # music stop
-    ("음악 멈춰", '[limbs:music]{op: "stop"}'),
-    ("끄자", '[limbs:music]{op: "stop"}'),
+    ("음악 멈춰", '[limbs:youtube]{op: "stop"}'),
+    ("끄자", '[limbs:youtube]{op: "stop"}'),
     # music download
-    ("이 노래 MP3로 저장", '[limbs:music]{op: "download", url: "https://www.youtube.com/watch?v=abc123"}'),
-    ("유튜브 오디오 다운", '[limbs:music]{op: "download", url: "https://www.youtube.com/watch?v=xyz"}'),
+    ("이 노래 MP3로 저장", '[limbs:youtube]{op: "download", url: "https://www.youtube.com/watch?v=abc123"}'),
+    ("유튜브 오디오 다운", '[limbs:youtube]{op: "download", url: "https://www.youtube.com/watch?v=xyz"}'),
 
     # ─── radio (default play) ───
     ("KBS Cool FM 틀어", '[limbs:radio]{station_id: "kbs_coolfm"}'),

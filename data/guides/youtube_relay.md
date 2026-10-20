@@ -1,17 +1,24 @@
-# 유튜브 릴레이 ([limbs:music]{op: "relay"}) 가이드
+# YouTube 탐색·조회·재생 (`limbs:youtube`) 가이드
+
+공개 어휘는 `limbs:youtube` 하나다. op 생략 시 `search`이며 재생하지 않는다.
+- 탐색: search(query 또는 queries, limit), channel(handle/url/channel_id).
+- 조회: info/transcript/languages(url 또는 video_id), summarize(자막 요약·HTML 보고서).
+- 재생·큐: play/add(query), skip/seek(position)/queue/stop.
+- 파일·전달: download(url, output_path), relay(query/url, media).
+조회·검색 결과의 반환 형식과 재생·저장의 효과는 op마다 다르다. 내 파일 음악 라이브러리는 `self:music`이다.
 
 ## 폰 단독 재생
 
-폰의 `sense:search_youtube`와 `limbs:music`는 폰에서 직접 실행한다. 검색·스트림
+폰의 `limbs:youtube` 중 search/play/add/skip/seek/queue/stop은 폰에서 직접 실행한다. 검색·스트림
 해석은 폰의 yt-dlp, JavaScript 계산은 네트워크·파일·앱 브리지가 없는 별도 WebView,
 오디오 출력은 Android MediaPlayer다. PC 연결·허브 프록시가 필요하지 않다.
 
 ```ibl
-[sense:search_youtube]{query: "재즈", limit: 3}
-[limbs:music]{op: "play", query: "재즈", limit: 1}
-[limbs:music]{op: "queue"}
-[limbs:music]{op: "stop"}
-[limbs:music]{op: "play", query: "https://www.youtube.com/watch?v=jNQXAC9IVRw", mode: "video"}
+[limbs:youtube]{op: "search", query: "재즈", limit: 3}
+[limbs:youtube]{op: "play", query: "재즈", limit: 1}
+[limbs:youtube]{op: "queue"}
+[limbs:youtube]{op: "stop"}
+[limbs:youtube]{op: "play", query: "https://www.youtube.com/watch?v=jNQXAC9IVRw", mode: "video"}
 ```
 
 오디오는 기존 대기열·다음 곡·위치 이동을 사용한다. 라디오 등 다른 재생이 시작되면
@@ -21,8 +28,8 @@
 
 `self:music`는 폰이 접근 가능한 음악 폴더를 등록·스캔하고 폰의 `/music/stream`으로
 재생한다. 시스템 공유 음악 폴더 접근은 Android 파일 권한에 따른다. PC의 라이브러리를
-자동으로 가져오지 않는다. 폰의 MP3 변환(download)·PC 릴레이(relay)는 지원하지 않으며
-명시적 실패를 반환한다. 아래 릴레이 설명은 PC에서 실행하는 별도 선택이다.
+자동으로 가져오지 않는다. info/transcript/languages/channel/summarize/download/relay는 PC 전용이다.
+폰의 IBL 호출은 이 op들을 허브로 위임한다. 허브가 없으면 실패를 알리며 폰에서 실행한 것으로 가장하지 않는다.
 
 새 APK가 필요하다. Python 3.11(32비트)·3.12(64비트)에 yt-dlp 2026.08.19와
 yt-dlp-ejs 0.8.0을 함께 고정한다. 이 결합의 사설 EJS 연동 API는 의존성 업데이트 때
@@ -41,9 +48,9 @@ tee 되어(공개파일 스트리밍 트랜스코드 선례) 두 번째 재생�
 
 ## 사용법
 ```
-[limbs:music]{op: "relay", query: "아이유 밤편지", media: "audio"}          # 검색 → 소리만
-[limbs:music]{op: "relay", query: "여행 브이로그", media: "video", count: 6} # 검색 → 영상
-[limbs:music]{op: "relay", query: "https://youtu.be/…", media: "video"}     # URL 직접
+[limbs:youtube]{op: "relay", query: "아이유 밤편지", media: "audio"}          # 검색 → 소리만
+[limbs:youtube]{op: "relay", query: "여행 브이로그", media: "video", count: 6} # 검색 → 영상
+[limbs:youtube]{op: "relay", query: "https://youtu.be/…", media: "video"}     # URL 직접
 ```
 - 통화: `{success, media, items:[{title, channel, duration, video_id, stream, thumb, is_video}]}`
 - **relay 자체는 검색만 하므로 즉답**(대기 0). 해소+ffmpeg 는 표면이 `stream`
@@ -60,7 +67,7 @@ tee 되어(공개파일 스트리밍 트랜스코드 선례) 두 번째 재생�
   시크바에 총 길이가 정확히 보인다.
 
 > 앱 표면(▶️ 유튜브 yttv 계기)과 `op:feed/watch/history` 는 2026-09-05 은퇴했다.
-> 릴레이 자체는 `[limbs:music]{op:"relay"}` 로 살아 있다(아래).
+> 릴레이 자체는 `[limbs:youtube]{op:"relay"}` 로 살아 있다(아래).
 
 ## 적응형 재생 (HLS — 기본 경로, 넷플릭스식)
 `/yt/hls/{video_id}/master.m3u8` — **유튜브의 화질 사다리(avc1 144~1080p DASH)를

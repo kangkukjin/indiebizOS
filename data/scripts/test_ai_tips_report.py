@@ -78,14 +78,14 @@ def execute(tmp_path, monkeypatch):
             except Exception as exc:
                 out = {"success": False, "error": str(exc)}
             return out if out.get("success") is False else {"success": True, "value": out}
-        if node == "sense" and act == "search_youtube":
+        if node == "limbs" and act == "youtube" and p.get("op") == "search":
             query = p["query"]
             search_calls.append(query)
             override = search_responses.get(query)
             if override is not None:
                 return override(search_calls.count(query)) if callable(override) else copy.deepcopy(override)
             return {"success": True, "items": [{"video_id": vid} for vid in IDS]}
-        if node == "sense" and act == "video":
+        if node == "limbs" and act == "youtube" and p.get("op") in {"info", "transcript"}:
             vid = p["video_id"]
             calls.append((p["op"], vid))
             if p["op"] == "info":

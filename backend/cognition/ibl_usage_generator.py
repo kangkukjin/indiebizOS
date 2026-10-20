@@ -383,8 +383,8 @@ _PIPELINE_TEMPLATES = [
     # 유튜브 → 저장
     (
         "유튜브 영상 자막 추출해서 파일로 저장해줘",
-        '[sense:video]{op: "transcript", url: "https://youtube.com/watch?v=example"} >> [self:write]{path: "transcript.md"}',
-        "sense,self", "pipeline"
+        '[limbs:youtube]{op: "transcript", url: "https://youtube.com/watch?v=example"} >> [self:write]{path: "transcript.md"}',
+        "limbs,self", "pipeline"
     ),
     # 복합 병렬 → 저장
     (
@@ -441,7 +441,7 @@ _PIPELINE_TEMPLATES = [
     # 스트림
     (
         "재즈 음악 틀어줘",
-        '[limbs:music]{op: "play", query: "jazz music"}',
+        '[limbs:youtube]{op: "play", query: "jazz music"}',
         "limbs", "single"
     ),
     (

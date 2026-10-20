@@ -18,7 +18,7 @@ def _module():
 
 
 def test_at_handle_is_literal_inside_ibl_params():
-    nodes = parse('[sense:video]{op: "channel", handle: "@zenandmotor"}')
+    nodes = parse('[limbs:youtube]{op: "channel", handle: "@zenandmotor"}')
     assert nodes[0]["params"]["handle"] == "@zenandmotor"
     assert nodes[0].get("target", "") == ""
 

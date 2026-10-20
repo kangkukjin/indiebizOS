@@ -181,7 +181,7 @@ def test_episode3148_failed_sentence_replays_with_fixed_external_responses(monke
             return _execute_table_each(params, project, agent_id)
         if node == 'table':
             return dataops.execute(params, ToolContext(project, 'data_' + action))
-        if node == 'sense' and action == 'video':
+        if node == 'limbs' and action == 'youtube':
             return {'items': [{'video_id': params['video_id']}], 'success': True}
         if node == 'self' and action == 'struct':
             assert params['known'] == fixture['known']
@@ -193,7 +193,9 @@ def test_episode3148_failed_sentence_replays_with_fixed_external_responses(monke
     monkeypatch.setattr(episode_logger, 'record_trajectory_event', lambda *a, **k: None)
     seed = ('$신선=[table:take]{items:' + q(fixture['videos']) + ',n:4}\n'
             '$기존팁=[table:take]{items:' + q([{'tip': v} for v in fixture['known']]) + ',n:3}\n')
-    out = workflow_engine.execute_pipeline(parse(seed + fixture['code']), str(tmp_path))
+    # 보존한 사건 원문은 해시로 검증하고 현재 어휘로 재생한다.
+    replay_code = fixture['code'].replace('sense:video', 'limbs:youtube')
+    out = workflow_engine.execute_pipeline(parse(seed + replay_code), str(tmp_path))
     final = json.loads(out['final_result']) if isinstance(out.get('final_result'), str) else out.get('final_result')
     assert out['success'] and len(final['items']) == 4 and len(seen) == 4, out
 

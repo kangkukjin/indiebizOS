@@ -61,7 +61,7 @@ def download_youtube_music(url: str, filename: str = "output.mp3", mode: str = "
 
     mode="server"(기본): 맥 Desktop 에 저장(데스크탑 사용).
     mode="client": 임시 폴더에 받아 base64 로 반환(빌린 연산→로컬 산출물). 분산 IBL 에서
-      폰이 [limbs:music]{op:download, mode:client} 를 맥에 위임 → 맥이 추출 → b64 로 돌려주면
+      폰이 [limbs:youtube]{op:download, mode:client} 를 맥에 위임 → 맥이 추출 → b64 로 돌려주면
       폰 Python(phone_api)이 받아 네이티브 MediaStore 로 폰 Music 폴더에 저장한다.
       (큰 b64 를 WebView JS 브리지로 안 보내고 Python↔Kotlin 으로만 다룸.)
     """

@@ -54,7 +54,7 @@ export function pcCommandCode(target: string, _platform: PCPlatform, action: PCA
 }
 
 export async function searchPCVideos(query: string): Promise<PCVideo[]> {
-  const result = record(await iblExecuteApp('#!ibl edition=2\nreturn [sense:search_youtube]' + JSON.stringify({ query, limit: 6 })));
+  const result = record(await iblExecuteApp('#!ibl edition=2\nreturn [limbs:youtube]' + JSON.stringify({ op: "search", query, limit: 6 })));
   if (result.success !== true || !Array.isArray(result.items)) throw new Error(String(result.error || '영상을 검색하지 못했습니다.'));
   return result.items.flatMap(raw => {
     const row = record(raw), parts = String(row.duration || '').split(':');

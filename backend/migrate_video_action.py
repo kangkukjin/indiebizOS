@@ -1,6 +1,6 @@
 """
 video 액션 통합 마이그레이션 (1회성, 2026-06-03).
-video_info/transcript/languages/summarize_video → [sense:video]{op}.
+video_info/transcript/languages/summarize_video → [sense:video]{op}. (retired-ok: 과거 이관 기록; 현재는 migrate_youtube_vocab.py를 뒤이어 적용)
 실행: cd backend && python3 migrate_video_action.py
 """
 import json, re, sqlite3

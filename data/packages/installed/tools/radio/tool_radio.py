@@ -396,7 +396,7 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None, mode=None
       미지정이면 *요청 표면*이 정한다(브라우저=client, 그 기계 자신=host).
       2026-07-21: 옛 판정은 `INDIEBIZ_PROFILE=="phone"`(어느 몸이 실행하는가)이었는데,
       원격런처는 맥이 실행하고 폰이 보고 있어 폰에서 눌러도 맥 스피커로 나갔다.
-      유튜브뮤직([limbs:music]{op:play, mode:"client"})이 이미 쓰는 축을 여기 맞춘다.
+      유튜브뮤직([limbs:youtube]{op:play, mode:"client"})이 이미 쓰는 축을 여기 맞춘다.
     """
     global _player_process, _current_station, _play_start_time
 

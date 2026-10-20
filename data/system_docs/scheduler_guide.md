@@ -100,7 +100,7 @@ IBL 코드를 직접 실행합니다. 음악 재생, 웹 검색, 파일 저장 �
 action_params:
 ```json
 {
-  "pipeline": "[limbs:music]{op: 'play', query: '아이유 밤편지'}"
+  "pipeline": "[limbs:youtube]{op: 'play', query: '아이유 밤편지'}"
 }
 ```
 

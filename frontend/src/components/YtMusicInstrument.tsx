@@ -2,13 +2,13 @@ import { iblSurface, checkRemoteSession } from '../lib/remote-session';
 /**
  * YtMusicInstrument — 유튜브 뮤직 "계기(instrument)" (앱 모드)
  *
- * 두 기능 (둘 다 [limbs:music] op 분기 — yt-dlp + ffplay가 이 PC에서 처리):
- *   재생  [sense:search_youtube]{query} 로 검색 → 선택해서 큐에 넣고 재생
+ * 두 기능 (둘 다 [limbs:youtube] op 분기 — yt-dlp + ffplay가 이 PC에서 처리):
+ *   재생  [limbs:youtube]{op: "search", query} 로 검색 → 선택해서 큐에 넣고 재생
  *         play/add/skip/seek/stop/queue. (에이전트가 주문대로 틀던 걸 사람이 직접 고르는 형태)
  *         seek = 긴 곡 중간 점프 — ffplay 를 -ss 로 재시작(진행바 드래그).
- *   저장  [limbs:music]{op:download, url, name} → ~/Desktop/{이름}.mp3 로 추출
+ *   저장  [limbs:youtube]{op:download, url, name} → ~/Desktop/{이름}.mp3 로 추출
  *
- * 스키마 출처: data/ibl_nodes_src/sense.yaml(search_youtube), limbs.yaml(music), youtube/handler.py
+ * 스키마 출처: youtube/ibl_actions.yaml, youtube/handler.py
  */
 import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -71,7 +71,7 @@ export function YtMusicInstrument() {
 
   // ----- 큐 폴링 -----
   const refreshQueue = useCallback(async () => {
-    const q = await runIBL<QueueResult>('[limbs:music]{op: "queue"}');
+    const q = await runIBL<QueueResult>('[limbs:youtube]{op: "queue"}');
     setQueue(q);
   }, []);
   useEffect(() => {
@@ -105,7 +105,7 @@ export function YtMusicInstrument() {
     if (!q) return;
     setSearching(true); setError(null); setResults(null);
     // search_youtube 는 단일통화 이행 후 결과를 `items` 로 반환한다(옛 `results` 아님 — 2026-06-28 수정).
-    const r = await runIBL<{ items?: Video[] }>(`[sense:search_youtube]{query: "${esc(q)}", count: 15}`);
+    const r = await runIBL<{ items?: Video[] }>(`[limbs:youtube]{op: "search", query: "${esc(q)}", count: 15}`);
     setSearching(false);
     if (r.error) setError(r.error); else setResults(r.items || []);
   }, [query]);
@@ -119,14 +119,14 @@ export function YtMusicInstrument() {
     setTimeout(refreshQueue, 900);
   }, [refreshQueue]);
 
-  const playNow = (v: Video) => ctrl(`[limbs:music]{op: "play", query: "${watchUrl(v.video_id)}"}`);
-  const addQueue = (v: Video) => ctrl(`[limbs:music]{op: "add", query: "${watchUrl(v.video_id)}"}`);
+  const playNow = (v: Video) => ctrl(`[limbs:youtube]{op: "play", query: "${watchUrl(v.video_id)}"}`);
+  const addQueue = (v: Video) => ctrl(`[limbs:youtube]{op: "add", query: "${watchUrl(v.video_id)}"}`);
 
   // 진행바 드래그 놓을 때 = 해당 초로 점프 (ffplay -ss 재시작). 낙관적으로 로컬 위치 먼저 반영.
   const commitSeek = useCallback((sec: number) => {
     seekingRef.current = false;
     setElapsed(sec);
-    ctrl(`[limbs:music]{op: "seek", position: ${Math.round(sec)}}`);
+    ctrl(`[limbs:youtube]{op: "seek", position: ${Math.round(sec)}}`);
   }, [ctrl]);
 
   // 검색 결과 → 저장 탭으로 보내기 (URL/이름 채움)
@@ -137,7 +137,7 @@ export function YtMusicInstrument() {
     const url = dlUrl.trim(), name = dlName.trim();
     if (!url) { setDlResult({ success: false, error: 'URL을 입력하세요.' }); return; }
     setDlLoading(true); setDlResult(null);
-    const r = await runIBL<DlResult>(`[limbs:music]{op: "download", url: "${esc(url)}"${name ? `, name: "${esc(name)}"` : ''}}`);
+    const r = await runIBL<DlResult>(`[limbs:youtube]{op: "download", url: "${esc(url)}"${name ? `, name: "${esc(name)}"` : ''}}`);
     setDlLoading(false);
     setDlResult(r);
   }, [dlUrl, dlName]);
@@ -207,9 +207,9 @@ export function YtMusicInstrument() {
                   <div className="text-sm font-medium truncate">{now?.title || '재생 대기'}</div>
                   <div className="text-[11px] text-stone-400">대기열 {list.length}곡</div>
                 </div>
-                <button onClick={() => ctrl('[limbs:music]{op: "skip"}')} disabled={busy}
+                <button onClick={() => ctrl('[limbs:youtube]{op: "skip"}')} disabled={busy}
                   className="px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-stone-600 text-sm hover:bg-stone-50 disabled:opacity-50">스킵 ⏭</button>
-                <button onClick={() => ctrl('[limbs:music]{op: "stop"}')} disabled={busy}
+                <button onClick={() => ctrl('[limbs:youtube]{op: "stop"}')} disabled={busy}
                   className="px-3 py-1.5 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-50">정지</button>
               </div>
               {/* 진행바: 긴 곡 중간으로 점프 (드래그해서 놓으면 seek) */}

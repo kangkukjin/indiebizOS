@@ -13,7 +13,7 @@ def current_form_of_legacy_call(code: str) -> Optional[str]:
     """판본 1 의 *단일 호출* 용례를 현재 판본 문장으로 옮긴다 — 현재 검사기가 통과시킨 것만.
 
     판본 1 원문은 작성 답안에서 빠져 회상에 제목만 실렸다(코퍼스 3,743건 중 2,360건). ep4214 는 딱 맞는
-    용례 둘(`[sense:video]` info·summarize)이 떴는데 코드가 없어 describe 라운드를 따로 썼다.
+    용례 둘(`[limbs:youtube]{op: "info"}` info·summarize)이 떴는데 코드가 없어 describe 라운드를 따로 썼다.
     호출 하나짜리(`[node:action]{…}`, 변수·중첩 없음)는 문법이 두 판본에서 같으므로 `return` 을 붙여
     현재 컴파일러에 넣어 보고, 진단이 없을 때만 본문으로 보인다. 저장 원문은 고치지 않는다 —
     소비 경계에서의 투영이다. 여러 문장·파이프·변수가 있는 옛 원문은 그대로 숨긴다."""

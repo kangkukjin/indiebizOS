@@ -151,7 +151,11 @@ def _check_op_axis(qualified: str, action: dict, ops: dict, values: dict) -> lis
     그건 이 감사가 잡아낸 침묵 실패 가족과 같은 병이다.
     """
     issues: list[str] = []
-    from ibl_ops import OP_RETURNS_ENUM
+    from ibl_ops import OP_RETURNS_ENUM, OP_RUNS_ON_ENUM
+
+    if ops.get("runs_on") and action.get("runs_on", "anywhere") != "anywhere":
+        issues.append(f"{qualified}: ops.runs_on 액션의 기본 runs_on은 anywhere여야 함 "
+                      "(몸별 사전에 액션을 유지하고 op별로 위임)")
 
     for field, checker, expect in (
         ("returns", lambda v: isinstance(v, str) and v in OP_RETURNS_ENUM,
@@ -159,6 +163,8 @@ def _check_op_axis(qualified: str, action: dict, ops: dict, values: dict) -> lis
         ("side_effect", lambda v: isinstance(v, bool), "true|false"),
         # F14-4 (2026-08-20): op 레벨 AI 낱말 고지 — 한 op 만 모델을 부르는 액션용(notebook#ask)
         ("ai_call", lambda v: isinstance(v, bool), "true|false"),
+        ("runs_on", lambda v: isinstance(v, str) and v in OP_RUNS_ON_ENUM,
+         "|".join(sorted(OP_RUNS_ON_ENUM))),
     ):
         block = ops.get(field)
         if block is None:

@@ -432,12 +432,14 @@ def _resolve_and_maybe_forward(node, action, action_config, params,
         return _forward_to_node(entry, node, action, params, agent_id)
 
     # 2. 능력 기반 자동 — 먼저 "로컬에서 되는가?"
+    from ibl_ops import op_runs_on, resolve_op
+    runs_on = op_runs_on(action_config, resolve_op(action_config, params))
     if profile == "phone":
-        if _phone_runnable(node, action):
+        if runs_on != "pc_only" and _phone_runnable(node, action):
             return None  # 폰 로컬
         req = dr.COMPUTE_CLASS if dr else "compute-class"
     else:
-        if action_config.get("runs_on") != "phone_only":
+        if runs_on != "phone_only":
             return None  # 맥/데스크탑 로컬
         req = dr.PHONE_CLASS if dr else "phone-class"
 

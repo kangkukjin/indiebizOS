@@ -2,7 +2,7 @@
 
 무엇을 고치려고 생겼나 — 실측 사고(유튜브 팁 보고서, 09-01 06:06):
 
-    [table:each]{items: [4편], do: "[sense:video]{op:'transcript'} >> [self:struct]{…}"}
+    [table:each]{items: [4편], do: "[limbs:youtube]{op:'transcript'} >> [self:struct]{…}"}
 
 이 문장이 23분 동안 멈췄는데, 회수(`/ibl/recover`)는 8번을 물어도 똑같이
 `step 2/2 [self:struct] 진행 중 (마지막 갱신 06:06:47)` 만 돌려줬다. 세 가지가 겹쳤다:

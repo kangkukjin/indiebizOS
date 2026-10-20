@@ -947,3 +947,12 @@ retired:
       - 'Android/iPhone/iPad 등록은 아직 지원하지 않는다.'
       - 'setup_phone.sh --limb 삼성1`, 허브 비밀번호 확인'
       - '[if:$r.ok==false]{return}'
+
+  - id: youtube-target-ops
+    retired: 2026-10-20
+    reason: YouTube 검색·조회·재생이 세 공개 어휘로 갈라져 발견·조합·실행 위치가 어긋났다.
+    instead: limbs:youtube의 search/info/transcript/languages/channel/summarize/play/add/skip/seek/queue/stop/download/relay. 기본 search, 기존 호출은 op 명시로 이관.
+    phrases:
+      - 'sense:video'
+      - 'sense:search_youtube'
+      - 'limbs:music'

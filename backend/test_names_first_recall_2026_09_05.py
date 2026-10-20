@@ -20,10 +20,10 @@ import boot_paths  # noqa: E402,F401
 
 SINGLE = '[self:ledger]{path: "outputs/x/_covered.json", op: "select", target: "covered"}'
 MULTI = ('$원장 = [self:ledger]{path: "outputs/x/_covered.json", op: "select"}; '
-         '$검색 = [sense:search_youtube]{query: "AI", limit: 12} >> [table:dedup]{by: "video_id"}; '
+         '$검색 = [limbs:youtube]{op: "search", query: "AI", limit: 12} >> [table:dedup]{by: "video_id"}; '
          '$검색 >> [self:write]{path: "outputs/x/r.md"}')
 PHRASE = ('$원장 = [self:ledger]{path: "${원장경로}", op: "select"}; '
-          '$검색 = [sense:search_youtube]{query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}')
+          '$검색 = [limbs:youtube]{op: "search", query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}')
 
 
 def _mk_db(path):
@@ -69,7 +69,7 @@ def test_recall_shows_names_not_bodies(env):
     text = out["text"]
     assert "## 부를 수 있는 함수" in text and "[fn:팁영상수집]{원장경로: \"…\", 주제: \"…\"}" in text
     assert "✓3" in text
-    assert "[def: 팁영상수집]{" not in text and "search_youtube" not in text.split("## 용례")[0].split("## 부를 수 있는 함수")[1]
+    assert "[def: 팁영상수집]{" not in text and "limbs:youtube" not in text.split("## 용례")[0].split("## 부를 수 있는 함수")[1]
     # 구형 한 문장도 현재 작성 정답으로 노출하지 않는다. 명시 expand는 보존한다.
     assert SINGLE.replace("`", "'") not in text and f'expand:"#{s_id}"' in text
     assert "[self:write]" not in text and f"expand:\"#{m_id}\"" in text and "문장 3" in text
@@ -92,7 +92,7 @@ def test_expand_opens_one_body(env):
     HT.note_run(t, "오늘 주행", [SINGLE, MULTI], ok=True, db_path=db)
     body = HT.recall(t, db, expand="팁영상수집")["text"]
     # 2026-09-07: 카드는 호출 한 줄이 먼저, 정의는 뒤(ep2952 — 정의가 먼저 보이자 실행자가 베껴 변형을 쳤다)
-    assert body.startswith("호출: [fn:팁영상수집]{") and "[def: 팁영상수집]{" in body and "search_youtube" in body
+    assert body.startswith("호출: [fn:팁영상수집]{") and "[def: 팁영상수집]{" in body and "[limbs:youtube]" in body and 'op: "search"' in body
     assert body.index("호출:") < body.index("[def: 팁영상수집]{")
     one = HT.recall(t, db, expand=f"#{m_id}")["text"]
     assert "[self:write]" in one

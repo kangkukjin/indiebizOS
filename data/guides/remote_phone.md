@@ -70,7 +70,7 @@ return $r.result.value
 
 - 소리: `[limbs:radio]{op:"play",station_id:"…"}`를 하달하면 폰 스피커에서 재생한다.
   상태는 `op:"status"`, 정지는 `op:"stop"`이다. 방송국 ID는 먼저 조회한다.
-  음악의 읽기 전용 상태는 `[limbs:music]{op:"queue"}`다. 상태 조회 성공은 재생 실증이 아니다.
+  음악의 읽기 전용 상태는 `[limbs:youtube]{op:"queue"}`다. 상태 조회 성공은 재생 실증이 아니다.
 - 영상·마이크·스피커 연결은 [미디어 세션 가이드](media_session.md)의 기존 스크립트를 사용한다.
   지원 신고와 권한·대기 모드, 실제 프레임/음성 출력은 각각 확인한다.
 - 등록 해제는 `[self:limb]{op:"remove",target:"삼성1"}`, 자격 폐기는 `op:"revoke"`다.

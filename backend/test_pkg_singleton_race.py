@@ -9,7 +9,7 @@
 
 op fixture 를 6-way 병렬로 돌리다 실제로 터졌다:
 
-    [sense:video]{op:"history"}
+    [limbs:youtube]{op:"history"}
     → module 'tool_watch_singleton' has no attribute 'history'
 
 같은 순간의 `feed` 는 성공했다 — 모듈이 feed 까지만 실행된 상태였기 때문이다.

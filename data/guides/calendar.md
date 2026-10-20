@@ -124,7 +124,7 @@
 **"N분 후에 음악 틀어줘" 패턴:**
 ```
 1. [self:time]  →  현재 시각 확인 (예: 11:55)
-2. [self:manage_events]{op: "create", title: "아이유 밤편지 재생", date: "2026-03-09", time: "11:56", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[limbs:music]{op: "play", query: '아이유 밤편지'}"}}
+2. [self:manage_events]{op: "create", title: "아이유 밤편지 재생", date: "2026-03-09", time: "11:56", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[limbs:youtube]{op: "play", query: '아이유 밤편지'}"}}
 3. 텍스트 응답: "11:56에 아이유 밤편지를 재생합니다"
 ```
 

@@ -4,11 +4,13 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'backend'))
 import boot_paths  # noqa: E402,F401
+sys.path.insert(0, str(ROOT / 'scripts'))
+from migrate_youtube_vocab import transform as current_youtube_calls
 import re
 HERE = Path(__file__).resolve().parent
 
 def save(name, code):
-    (HERE/'current'/f'{name}.ibl').write_text('#!ibl edition=2\n'+code.strip()+'\n')
+    (HERE/'current'/f'{name}.ibl').write_text(current_youtube_calls('#!ibl edition=2\n'+code.strip()+'\n'))
 def old(name):
     return (HERE/'original'/f'{name}.ibl').read_text()
 

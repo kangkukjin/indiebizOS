@@ -32,7 +32,7 @@ SETTINGS_PATH = os.path.join(BASE_DIR, "tool_settings.json")
 # --- op 핸들러 (각 op = 파라미터 셰이핑 후 impl 함수 직접 호출·return) ---
 # 2026-07-02: 옛 `tool_name = mapping[op]` 재할당+fall-through(변종2)를 직접-return(변종1)으로
 # 전환. 레거시 내부 tool명(download_youtube_music 등)은 더 이상 tool_name으로 부활하지 않으므로
-# tool.json에서도 은퇴 — music_op/video_op/search_youtube 3개만 IBL 진입점.
+# tool.json의 공개 IBL 진입점은 youtube_op 하나다.
 
 def _resolve_video_url(tool_input):
     url = tool_input.get('url')
@@ -265,8 +265,13 @@ def _direct_search(tool_input, yt):
 # 2026-05-28 dispatcher 표준화: _OP_DISPATCHERS 두 단계 dict (op → 핸들러 함수).
 #   --check 는 inner dict 의 키(op)만 src.ops.values 와 AST 비교(값 타입 무관).
 _OP_DISPATCHERS = {
-    # [limbs:music]{op} — 유튜브 음악 재생/큐
-    "music_op": {
+    "youtube_op": {
+        "search": _direct_search,
+        "info": _op_info,
+        "transcript": _op_transcript,
+        "languages": _op_languages,
+        "summarize": _op_summarize,
+        "channel": _op_channel,
         "play": _op_play,
         "add": _op_add,
         "skip": _op_skip,
@@ -276,38 +281,27 @@ _OP_DISPATCHERS = {
         "download": _op_download,
         "relay": _op_relay,
     },
-    # [sense:video]{op} — 유튜브 동영상 조회
-    "video_op": {
-        "info": _op_info,
-        "transcript": _op_transcript,
-        "languages": _op_languages,
-        "summarize": _op_summarize,
-        "channel": _op_channel,
-    },
 }
-_OP_DEFAULTS = {"music_op": "play", "video_op": "info"}
-# op 없는 직접 액션(IBL 진입점 = tool명 그대로)
-_DIRECT_ACTIONS = {"search_youtube": _direct_search}
+_OP_DEFAULTS = {"youtube_op": "search"}
 
 
 def execute(tool_input: dict, context):
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
     tool_youtube = load_tool_youtube()
+    if tool_name not in _OP_DISPATCHERS:
+        raise ValueError(f'Unknown tool: {tool_name}')
+    op = (tool_input.get('op', '') or '').strip() or _OP_DEFAULTS[tool_name]
+    mapping = _OP_DISPATCHERS[tool_name]
+    if op not in mapping:
+        return {"success": False, "error": f"알 수 없는 op '{op}' ({tool_name}). 사용 가능: {sorted(mapping)}"}
     if tool_youtube._phone.is_phone():
+        # 일반 IBL 실행은 ops.runs_on에 따라 먼저 PC로 위임한다.
+        # 핸들러 직호출도 PC 전용 기능을 폰에서 실행했다고 가장하지 않는다.
+        from ibl_access import load_nodes_raw
+        from ibl_ops import op_runs_on
+        config = load_nodes_raw()['nodes']['limbs']['actions']['youtube']
+        if op_runs_on(config, op) == 'pc_only':
+            return {"success": False, "error": f"{op}은 PC 전용입니다. 허브에 연결해 IBL로 호출하세요."}
         tool_youtube._phone.prepare()
-        if tool_name == "music_op" and tool_input.get("op") in ("download", "relay"):
-            return {"success": False,
-                    "error": "폰 단독 실행은 play/add/skip/seek/queue/stop을 지원합니다. MP3 변환·PC 릴레이는 지원하지 않습니다."}
-
-    if tool_name in _OP_DISPATCHERS:
-        op = (tool_input.pop('op', '') or '').strip() or _OP_DEFAULTS.get(tool_name, '')
-        mapping = _OP_DISPATCHERS[tool_name]
-        if op not in mapping:
-            return {"success": False, "error": f"알 수 없는 op '{op}' ({tool_name}). 사용 가능: {sorted(mapping.keys())}"}
-        return mapping[op](tool_input, tool_youtube)
-
-    if tool_name in _DIRECT_ACTIONS:
-        return _DIRECT_ACTIONS[tool_name](tool_input, tool_youtube)
-
-    raise ValueError(f'Unknown tool: {tool_name}')
+    return mapping[op]({k: v for k, v in tool_input.items() if k != 'op'}, tool_youtube)

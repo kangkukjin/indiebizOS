@@ -43,7 +43,7 @@ class Leaves:
  def run(self,key,args):
   self.calls.append({'action':key,'args':copy.deepcopy(args)})
   empty=self.variant=='empty'
-  if self.variant=='failure' and ((key=='sense:video' and args.get('video_id')=='b') or
+  if self.variant=='failure' and ((key=='limbs:youtube' and args.get('op') in ('info','transcript') and args.get('video_id')=='b') or
       (self.name not in ('videos','enterprise','transcripts','ledger') and (key.startswith('sense:') or key=='self:read'))):
    return {'success':False,'error':'frozen source unavailable'}
   if self.variant=='optional_failure' and key=='sense:crawl':
@@ -54,8 +54,8 @@ class Leaves:
   if key=='sense:commercial':return {'items':[] if empty else copy.deepcopy(SHOPS)}
   if key=='sense:place':return {'items':[] if empty else copy.deepcopy(PLACES)}
   if key=='sense:stock':return {'items':[] if empty else [dict(symbol=args['ticker'],name='quote',current_price=100,change_percent=2,as_of='2026-09-01')]}
-  if key=='sense:search_youtube':return {'items':[] if empty else copy.deepcopy(VIDEOS)}
-  if key=='sense:video':
+  if key=='limbs:youtube' and args.get('op')=='search':return {'items':[] if empty else copy.deepcopy(VIDEOS)}
+  if key=='limbs:youtube' and args.get('op') in ('info','transcript'):
    if args['op']=='transcript':return {'items':[{'text':'transcript'}],'text':'transcript'}
    return {'items':[copy.deepcopy(next(v for v in VIDEOS if v['video_id']==args['video_id']))]}
   if key=='self:struct':return {'items':[{'tip':'tip 1','timestamp':'00:01'},{'tip':'tip 2','timestamp':'00:02'}]}
@@ -113,7 +113,7 @@ def validate(name,variant,result,leaves,inputs):
  v=result['value'];empty=variant=='empty'
  if name in ('videos','enterprise'):
   assert [r['video_id'] for r in v]==([] if empty else ['a'] if variant=='failure' else ['b','a']),v
-  calls=[c['args']['video_id'] for c in leaves.calls if c['action']=='sense:video']
+  calls=[c['args']['video_id'] for c in leaves.calls if c['action']=='limbs:youtube' and c['args'].get('op') in ('info','transcript')]
   assert sorted(calls)==([] if empty else ['a','b','old']),calls
  elif name=='transcripts':
   assert [(r['video_id'],r['tip']) for r in v]==([] if empty else [(i,t) for i in (['a'] if variant=='failure' else ['a','b']) for t in ['tip 1','tip 2']]),v

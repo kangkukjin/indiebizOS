@@ -149,7 +149,7 @@ def test_phone_search_uses_local_extractor(yt, monkeypatch):
 def test_pc_only_operations_report_limitation_without_forwarding(yt, monkeypatch, op):
     handler = load_sibling(HANDLER, 'handler')
     monkeypatch.setattr(handler, 'load_tool_youtube', lambda: yt)
-    result = handler.execute({'op': op}, SimpleNamespace(tool_name='music_op'))
+    result = handler.execute({'op': op}, SimpleNamespace(tool_name='youtube_op'))
     assert not result['success'] and 'PC' in result['error']
 
 
@@ -157,9 +157,9 @@ def test_phone_bundle_contains_standalone_actions():
     import yaml
     manifest = json.loads((ROOT / 'data/phone_manifest.json').read_text())
     assert {'youtube', 'music-player'} <= set(manifest['packages'])
-    assert {'limbs:music', 'sense:search_youtube', 'self:music'} <= set(manifest['runnable_actions'])
+    assert {'limbs:youtube', 'self:music'} <= set(manifest['runnable_actions'])
     nodes = yaml.safe_load((ROOT / 'data/bodies/android.nodes.yaml').read_text())['nodes']
-    assert 'music' in nodes['limbs']['actions']
+    assert 'youtube' in nodes['limbs']['actions']
 
 
 def test_music_stream_is_local_and_retains_source_path_checks(monkeypatch, tmp_path):

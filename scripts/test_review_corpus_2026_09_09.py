@@ -68,7 +68,7 @@ def test_revised_union_preserves_currency_units():
 
 def test_prose_each_collects_summary_instead_of_original_only():
     code = replacement(2337)
-    code = code.replace('[sense:video]{op:"transcript",video_id:"${영상}"} >> [table:chunk]{size:15000}',
+    code = code.replace('[limbs:youtube]{op:"transcript",video_id:"${영상}"} >> [table:chunk]{size:15000}',
                         '[table:take]{items:[{text:"원문 하나"},{text:"원문 둘"}],n:2}')
     code = code.replace('${덩이지시}', '한 문장 요약')
     run(code, [{'text': t, 'message': 'SUMMARY: fixture', 'rows_in': 1}

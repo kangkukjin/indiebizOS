@@ -31,7 +31,7 @@ def host(monkeypatch):
     return SimpleNamespace(h=h, notices=notices, ran=ran)
 
 
-STOP = "[limbs:guestpc]{op:\"ibl\",limb:\"삼성1\",code:\"[limbs:music]{op:'stop'}\"}"
+STOP = '[limbs:guestpc]{op:"ibl",limb:"삼성1",code:"[limbs:youtube]{op:\'stop\'}"}'
 
 
 def test_system_ai_schedule_runs_directly_when_window_unavailable(host):

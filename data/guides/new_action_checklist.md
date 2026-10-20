@@ -74,7 +74,7 @@
 > (`{address, region_1depth…}`) · 종목 기본정보 = **전부 1행 스냅샷**(`items: [행]` 병기,
 > 원 키는 보존해 기존 소비자를 안 깬다). 반면 시각 하나·답변 문장 하나·파일 본문·
 > 이질적 컨텍스트 blob(중첩 리스트가 섞인 world snapshot)은 **진짜 scalar**다.
-> 왜 중요한가: `[sense:video]{op:"info"}` 는 `upload_date` 를 *최신성 필터를 위해* 넣어
+> 왜 중요한가: `[limbs:youtube]{op:"info"}` 는 `upload_date` 를 *최신성 필터를 위해* 넣어
 > 놓고 통화를 안 내서, `[table:each]` 팬아웃이 원 행만 흘리고(`passthrough_rows`)
 > `[table:filter]` 가 그 필드를 영영 못 봤다 — **액션이 자기 설계와 모순**이었다.
 > 목록을 `results` 같은 **사적 키**에

@@ -710,10 +710,10 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 ```xml
 <execution_memory note="과거 코드 사례 + 구현 상세">
   <ibl_references note="참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라.">
-    <ref intent="아이유 밤편지 틀어" code='[limbs:music]{op: "play", query: "아이유 밤편지"}' score="0.9827"/>
+    <ref intent="아이유 밤편지 틀어" code='[limbs:youtube]{op: "play", query: "아이유 밤편지"}' score="0.9827"/>
   </ibl_references>
   <implementations note="코드 사례에 등장하는 도구의 구현 상세">
-    <impl action="[limbs:music]{op: "play"}" implementation="yt-dlp로 유튜브 URL 추출 + mpv/ffplay로 스트리밍 재생"/>
+    <impl action="[limbs:youtube]{op: "play"}" implementation="yt-dlp로 유튜브 URL 추출 + mpv/ffplay로 스트리밍 재생"/>
   </implementations>
 </execution_memory>
 <memory_map note="이 자아의 심층 기억 지도(목차) — 가지 (건수) — 요약. 내용은 실리지 않는다. 답하기 전에 [self:memory]{op:&quot;recall&quot;, node:&quot;<가지>&quot;} 로 연다. 지속 가치가 있는 사용자 사실은 최종 응답 후 자동 선별된다. save 호출은 필요 없다.">

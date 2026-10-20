@@ -62,7 +62,7 @@ def program():
     ]
     branches = []
     for branch, query in queries:
-        branches.append("(" + action("sense:search_youtube", query=query, count=12)
+        branches.append("(" + action('limbs:youtube', query=query, count=12)
                         + " >> " + action("table:compute", set={"branch": repr(branch)}) + ")")
     assign("검색", " & ".join(branches) + " >> [table:union] >> "
            + action("table:dedup", by="video_id"))
@@ -71,7 +71,7 @@ def program():
         "field": "video_id", "op": "not_in", "value": "${기존영상.items.*.id}"}))
     assign("조회", "$신규 >> " + action("table:each", limit=60, parallel=4,
         on_error="keep", keep=["branch"],
-        do=action("sense:video", op="info", video_id="$it.video_id")))
+        do=action('limbs:youtube', op="info", video_id="$it.video_id")))
     fields = ["video_id", "title", "uploader", "duration", "view_count", "upload_date", "url", "branch"]
     row = {k: "${it." + k + "?}" for k in fields}
     row["info_error"] = "${it._error?}"
@@ -96,8 +96,8 @@ def program():
            + " >> " + action("table:take", n=4))
 
     transcript_path = str(OUT / "transcripts/${it.video_id}.json")
-    do = "$자막 = " + action("sense:video", op="transcript", video_id="$it.video_id", language="$it.language")
-    do += " ?? " + action("sense:video", op="transcript", video_id="$it.video_id", language="en") + "; "
+    do = "$자막 = " + action('limbs:youtube', op="transcript", video_id="$it.video_id", language="$it.language")
+    do += " ?? " + action('limbs:youtube', op="transcript", video_id="$it.video_id", language="en") + "; "
     do += "$자막보존 = $자막 >> " + action("self:write", path=transcript_path, format="json") + "; "
     do += "$자막 >> " + action("self:struct", grounded=True,
         known="${기존팁.items.*.tip}", schema="tip(한국어 실행형 팁 제목·동사로 끝남), timestamp(MM:SS)",

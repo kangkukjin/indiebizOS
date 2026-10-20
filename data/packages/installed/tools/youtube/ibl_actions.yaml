@@ -1,15 +1,15 @@
 nodes:
-  sense:
+  limbs:
     actions:
-      video:
-        returns: scalar
-        side_effect: true    # summarize 가 HTML 보고서를 쓰고 브라우저를 연다
-        fixture: '[sense:video]{op: "info", video_id: "jNQXAC9IVRw"}'  # 유튜브 최초 영상(2005~ 불변) — yt-dlp 생존 프로브. 옛 fixture 는 죽은 op 'meta'+비파라미터 query 로 94% 거짓 실패
-        runs_on: pc_only
-        description: 유튜브 동영상 조회·시청 (op 분기). 메타·자막·요약 + 시청 앱(추천 피드·시청 페이지·시청 기록 — 재생은 맥 경유 릴레이, 유튜브 직접 접속 없음). 검색은 search_youtube.
-        target_description: 'op로 분기 (기본 info). info/transcript/languages/summarize 는 url 또는 video_id 필수.
+      youtube:
+        description: YouTube 탐색·조회·요약·재생·큐·다운로드를 한 대상의 op로 제공. search(기본), info/transcript/languages/channel/summarize, play/add/skip/seek/queue/stop/download/relay.
+          내 파일 음악은 self:music.
+        target_description: 'op 생략 시 search(재생하지 않음). search: query 또는 queries(배열·쉼표/개행 문자열), limit 기본5·최대75; 검색어별 sections와
+          video_id 중복 제거 items를 반환. 정상 0건과 공급자 실패를 구별한다. info/transcript/languages/summarize 는 url 또는 video_id
+          필수.
 
-          - info: 메타데이터(제목·발행 채널/ID/URL·설명·조회수/좋아요/댓글/구독자·채널 인증·observed_at·upload_date=ISO YYYY-MM-DD). 미제공 지표는 null이며 0과 구별한다. 채널 인증은 전문성 보증이 아니다. 원 공급자 날짜는 upload_date_raw로 보존. 날짜 누락·달력 오류는 실패.
+          - info: 메타데이터(제목·발행 채널/ID/URL·설명·조회수/좋아요/댓글/구독자·채널 인증·observed_at·upload_date=ISO YYYY-MM-DD). 미제공 지표는 null이며 0과
+          구별한다. 채널 인증은 전문성 보증이 아니다. 원 공급자 날짜는 upload_date_raw로 보존. 날짜 누락·달력 오류는 실패.
 
           - transcript: 자막/스크립트 추출. language 옵션.
 
@@ -22,76 +22,117 @@ nodes:
 
 
 
-          '
-        target_key: op
-        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
-          language: [languages]   # 복수형 관습어 (2026-08-29 구현-읽기 감사 상환).
+
+          play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션).
+          relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음.
+          skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
+
+          실행 위치: 검색·재생·큐는 현재 기기(폰도 자체 실행), info/transcript/languages/channel/summarize/download/relay는 PC. 폰에서 PC 전용 op는 허브로
+          위임한다. 폰 mode:video는 외부 앱을 열며 재생 확인·정지 제어는 외부 앱 소유다.'
         group: media
         router: handler
-        tool: video_op
+        tool: youtube_op
+        target_key: op
+        runs_on: anywhere
+        aliases:
+          language:
+          - languages
+          limit:
+          - count
+          output_path:
+          - output
+          - filename
+          - path
+          - file
+          - name
+          position:
+          - seconds
+          - time
+        returns: items
+        side_effect: true
+        fixture: '[limbs:youtube]{op: "search", query: "indiebiz", limit: 1}'
         ops:
-          default: info
-          returns:
-            summarize: effect
-            # info 는 6필드 레코드(=표의 한 줄) — 1행 스냅샷 병기 (2026-08-24 B36-2,
-            # sense:stock#info 선례). 이걸 안 내주면 upload_date 로 거르지 못한다.
-            info: items
-            channel: items
-          side_effect:
-            info: false
-            transcript: false
-            languages: false
-            channel: false
-          fixture:
-            transcript: '[sense:video]{op: "transcript", video_id: "jNQXAC9IVRw"}'
-            languages: '[sense:video]{op: "languages", video_id: "jNQXAC9IVRw"}'
-            channel: '[sense:video]{op: "channel", handle: "@YouTube", limit: 3}'
+          default: search
           values:
+            search: 영상 검색 (query 또는 queries, limit; 기본·재생 없음)
             info: 동영상 메타데이터 (제목·조회수·채널)
             transcript: 자막/스크립트 추출
             languages: 사용 가능한 자막 언어 목록
             channel: 채널 핸들·URL·ID 해석 + 채널 메타데이터와 최신 영상
             summarize: 자막+AI요약+HTML 보고서 생성
-        implementation: youtube 패키지 op 분기. info=get_youtube_info, channel=get_youtube_channel(yt-dlp+공개 HTML channelId 폴백+RSS), transcript=get_youtube_transcript, languages=list_available_transcripts, summarize=summarize_youtube.
+            play: 즉시 재생 (query 검색어/URL)
+            add: 큐에 추가 (query 검색어/URL)
+            skip: 현재 곡 스킵
+            seek: 현재 곡의 특정 지점으로 점프 (position 초)
+            queue: 큐 목록 조회
+            stop: 재생 중지
+            download: MP3 다운로드 (url + output_path 옵션)
+            relay: 맥 경유 릴레이 스트림 목록 (query 검색어/URL + media audio|video — 원격 표면 재생용, 유튜브 직접 접속 없음)
+          returns:
+            search: items
+            info: items
+            transcript: scalar
+            languages: scalar
+            channel: items
+            summarize: effect
+            play: effect
+            add: effect
+            skip: effect
+            seek: effect
+            queue: scalar
+            stop: effect
+            download: effect
+            relay: items
+          side_effect:
+            search: false
+            info: false
+            transcript: false
+            languages: false
+            channel: false
+            summarize: true
+            play: true
+            add: true
+            skip: true
+            seek: true
+            queue: false
+            stop: true
+            download: true
+            relay: false
+          runs_on:
+            info: pc_only
+            transcript: pc_only
+            languages: pc_only
+            channel: pc_only
+            summarize: pc_only
+            download: pc_only
+            relay: pc_only
+          fixture:
+            info: '[limbs:youtube]{op: "info", video_id: "jNQXAC9IVRw"}'
+            transcript: '[limbs:youtube]{op: "transcript", video_id: "jNQXAC9IVRw"}'
+            languages: '[limbs:youtube]{op: "languages", video_id: "jNQXAC9IVRw"}'
+            channel: '[limbs:youtube]{op: "channel", handle: "@YouTube", limit: 3}'
+            queue: '[limbs:youtube]{op: "queue"}'
+            relay: '[limbs:youtube]{op: "relay", query: "lofi", media: "audio", count: 2}'
+        implementation: youtube 패키지 youtube_op 단일 디스패처. 기존 yt-dlp 검색·메타·자막·요약과 PC ffplay/폰 네이티브 재생·큐를 보존. PC 전용 op는 ops.runs_on으로
+          분산 라우팅.
+        guides:
+        - youtube_relay.md
         keywords:
         - youtube
         - 유튜브
-        - 동영상
+        - 영상
         - 자막
-        - 영상요약
-        - 시청
-        - 추천
-        - 피드
-        - 채널
-        - 핸들
-      search_youtube:
-        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
-          limit: [count]
-        returns: items
-        fixture: '[sense:search_youtube]{query: "jazz"}'
-        runs_on: anywhere
-        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함). queries(배열/쉼표 문자열)로 여러 검색어 배치 팬아웃 — 검색어마다 query 태그, video_id 중복 제거, sections
-        group: media
-        keywords:
-        - youtube
-        - 유튜브
-        - 영상검색
-        - 동영상검색
-        - video search
-        target_description: 검색어 queries는 문자열 배열 또는 쉼표/개행 문자열이다. 정상 검색 0건은 success:true·items:[]·status:empty다. 통신·공급자·응답 형식 오류는 실패다. 배치 일부 실패도 success:false이며 errors/sections에 검색어별 실패를 싣고, 이미 얻은 items는 partial:true로 보존한다. sections의 count는 중복 제거 후 건수, raw_count는 원 검색 건수이며 status로 빈 검색과 중복 제거를 구분한다. 검색 상한 조정은 sections에도 표시한다.
-        router: handler
-        tool: search_youtube
-        implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
-        target_key: query
+        - 음악
+        - 검색
+        - 재생
+        - 큐
+        - 다운로드
         app:
-          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
+          edition: 2
           instrument: ytmusic
           icon: 🎵
           name: 유튜브 뮤직
           order: 8
-          # 명시적 modes — 검색/큐 두 탭을 한 액션이 선언(주식/음악앱 선례).
-          # ★primary 가 modes 를 선언하면 다른 액션의 싱글 mode 블록은 무시되므로
-          #   큐 탭도 여기로 이사(limbs:music 의 app 블록은 제거).
           modes:
           - name: 검색
             inputs:
@@ -99,9 +140,7 @@ nodes:
               type: text
               placeholder: 곡·아티스트 검색
               required: true
-            # 2026-09-05 15 → 45(사용자 "3배로"). 뷰가 list_action 이라 항목이 늘어도
-            # <audio> 는 생기지 않는다(preload 폭주와 무관). 상한은 tool_youtube.SEARCH_COUNT_MAX=75.
-            action: '[sense:search_youtube]{query: $q, count: 45}'
+            action: '[limbs:youtube]{op: "search", query: $q, count: 45}'
             view:
             - type: list_action
               from: items
@@ -110,19 +149,19 @@ nodes:
               sub: '{channel} · {duration}'
               button:
                 label: ▶
-                action: '[limbs:music]{op: "play", mode: "client", query: f"https://www.youtube.com/watch?v=${item.video_id}"}'
+                action: '[limbs:youtube]{op: "play", mode: "client", query: f"https://www.youtube.com/watch?v=${item.video_id}"}'
               button2:
                 label: ⬇
-                action: '[limbs:music]{op: "download", mode: "client", url: f"https://www.youtube.com/watch?v=${item.video_id}"}'
+                action: '[limbs:youtube]{op: "download", mode: "client", url: f"https://www.youtube.com/watch?v=${item.video_id}"}'
           - name: 큐
             phone_render: false
             auto_run: true
             buttons:
             - label: ⏭ 다음 곡
-              action: '[limbs:music]{op: "skip"}'
+              action: '[limbs:youtube]{op: "skip"}'
             - label: ■ 정지
-              action: '[limbs:music]{op: "stop"}'
-            action: '[limbs:music]{op: "queue"}'
+              action: '[limbs:youtube]{op: "stop"}'
+            action: '[limbs:youtube]{op: "queue"}'
             view:
             - type: kv
               rows:
@@ -134,65 +173,6 @@ nodes:
               empty: 대기열이 비어 있습니다
               k: '{position}'
               v: '{title|trunc:40} · {channel}'
-  limbs:
-    actions:
-      music:
-        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
-          limit: [count]
-          # download 저장 경로·seek 위치의 관습어들 — 핸들러가 읽던 폴백 사슬을 데이터로 (2026-08-29 구현-읽기 감사 상환).
-          output_path: [output, filename, path, file, name]
-          position: [seconds, time]
-        returns: effect
-        runs_on: anywhere
-        description: 유튜브 음악 재생·큐 관리·중간 점프 (play/add/skip/seek/queue/stop). 폰은 자체 검색·네이티브 오디오 재생으로 PC 연결 불필요. mode:video는 폰 유튜브 앱/브라우저 열기(재생 확인·정지 제어는 외부 앱). MP3 다운로드(download)·릴레이(relay)는 PC 전용. 내 파일 라이브러리는 [self:music].
-        group: media
-        target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음. skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
-        target_key: op
-        router: handler
-        tool: music_op
-        ops:
-          default: play
-          side_effect:
-            queue: false
-            relay: false
-          returns:
-            queue: scalar
-            relay: items
-          fixture:
-            queue: '[limbs:music]{op: "queue"}'
-            relay: '[limbs:music]{op: "relay", query: "lofi", media: "audio", count: 2}'
-          values:
-            play: 즉시 재생 (query 검색어/URL, 기본)
-            add: 큐에 추가 (query 검색어/URL)
-            skip: 현재 곡 스킵
-            seek: 현재 곡의 특정 지점으로 점프 (position 초)
-            queue: 큐 목록 조회
-            stop: 재생 중지
-            download: MP3 다운로드 (url + output_path 옵션)
-            relay: 맥 경유 릴레이 스트림 목록 (query 검색어/URL + media audio|video — 원격 표면 재생용, 유튜브 직접 접속 없음)
-        implementation: yt-dlp 검색·해석과 공통 큐. PC=ffplay, 폰=EJS를 격리 WebView에서 계산하고 MediaPlayer로 오디오 재생. video는 해당 몸의 앱/브라우저 열기. 다운로드·릴레이는 PC 전용.
-        guides:
-        - youtube_relay.md
-        keywords:
-        - youtube
-        - 유튜브
-        - 음악
-        - 노래
-        - 재생
-        - 틀어줘
-        - 큐
-        - 대기열
-        - 스킵
-        - 다음곡
-        - 정지
-        - 멈춰
-        - 다운로드
-        - mp3
-        - 전송
-        - 릴레이
-
-# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
-# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
 tool_json:
   header:
     id: youtube
@@ -201,40 +181,33 @@ tool_json:
       활용.
     version: 1.1.0
   tools:
-  - name: search_youtube
-    description: 유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출
-      전에 원하는 영상을 먼저 찾을 때 사용. 정상 0건은 success:true·items:[]·status:empty이며 통신·공급자 오류와 구분한다.
+  - name: youtube_op
+    description: YouTube 탐색·조회·요약·재생·큐·다운로드를 한 대상의 op로 제공. search(기본), info/transcript/languages/channel/summarize, play/add/skip/seek/queue/stop/download/relay.
+      내 파일 음악은 self:music.
     input_schema:
       type: object
       properties:
         query:
           type: string
-          description: '검색어. 예: ''김필 너무 아픈 사랑은'', ''빅뱅 판타스틱베이비'''
+          description: 'search: 검색어, play/add/relay: 검색어 또는 URL'
         queries:
-          type: [string, array]
-          description: 여러 검색어 배치 팬아웃(배열 또는 쉼표/개행 문자열) — 검색어마다 query 태그를 붙이고 video_id 중복을 걷어 한 목록(items)+sections 로. [sense:search]{source:"gnews"} 의 queries 와 같은 통화(어휘 개정 2026-09-04).
-
+          type:
+          - string
+          - array
+          description: 여러 검색어 배치 팬아웃(배열 또는 쉼표/개행 문자열) — 검색어마다 query 태그를 붙이고 video_id 중복을 걷어 한 목록(items)+sections 로. [sense:search]{source:"gnews"}
+            의 queries 와 같은 통화(어휘 개정 2026-09-04).
         limit:
           type: integer
-          description: 검색 결과 수 (1-75, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림
-      required: []   # query 또는 queries 중 하나 — 핸들러가 검사
-  - name: music_op
-    description: 유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/seek/queue/stop/download/relay 분기 (기본 play).
-    input_schema:
-      type: object
-      properties:
+          description: 'search: 1~75 기본5, channel: 기본5, play: 기본5, add: 기본3, relay: 기본6'
         op:
           type: string
-          description: 음악 동작
-        query:
-          type: string
-          description: 검색어 또는 URL (op=play/add/relay 시)
+          description: YouTube 동작 (기본 search·재생 없음)
         position:
           type: number
           description: 점프할 위치(초) (op=seek 시)
         url:
           type: string
-          description: 유튜브 URL (op=download 시)
+          description: 유튜브 URL
         mode:
           type: string
           enum:
@@ -242,42 +215,17 @@ tool_json:
           - video
           - client
           - server
-          description: 'play는 audio/video/client(기본 audio), download는 server/client(기본 server). client는 폰·원격 클라이언트에 재생 URL 또는 다운로드 데이터를 반환. relay는 media 사용(audio/video).'
+          description: play는 audio/video/client(기본 audio), download는 server/client(기본 server). client는 폰·원격 클라이언트에 재생 URL
+            또는 다운로드 데이터를 반환. relay는 media 사용(audio/video).
         media:
           type: string
           enum:
           - audio
           - video
           description: 릴레이 형태 (op=relay 시, 기본 audio — 소리만/영상+소리)
-        limit:
-          type: integer
-          description: 곡 수 (op=play/add/relay 시)
         output_path:
           type: string
           description: MP3 저장 경로 (op=download 시)
-  - name: video_op
-    description: '유튜브 동영상 조회·시청 (op 분기) — [sense:video]. 검색은 search_youtube.
-
-      - op=info(기본): 메타데이터(제목·발행 채널/ID/URL·설명·조회수/좋아요/댓글/구독자·인증·observed_at). 미제공 지표는 null. url/video_id 필수.
-
-      - op=transcript: 자막/스크립트. language 옵션.
-
-      - op=languages: 사용 가능한 자막 언어 목록.
-
-      - op=channel: 채널 핸들(@name)·URL·channel_id 해석 + 최신 영상. handle/url/channel_id 중 하나.
-
-      - op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션. 긴 자막은 전체를 구간별로 요약한 뒤 통합한다(원문 절단 없음).
-
-'
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: info(기본)/channel/transcript/languages/summarize
-        url:
-          type: string
-          description: 유튜브 URL
         video_id:
           type: string
           description: 유튜브 video_id (url 대신)
@@ -293,7 +241,4 @@ tool_json:
         summary_length:
           type: integer
           description: '[summarize] 요약 길이(기본 3000)'
-        limit:
-          type: integer
-          description: '[channel] 결과 수 (기본 5)'
       required: []

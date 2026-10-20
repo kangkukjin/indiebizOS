@@ -30,11 +30,11 @@ NEW = [
      "table,sense", "realty", "팬아웃,리터럴,상권"),
     # ── ep1340 유튜브 보고서 ──
     ("이 영상 네 개 자막을 각각 받아와",
-     '[table:each]{items: [{id: "Xn-gtHDsaPY"}, {id: "_C57BxSXRbU"}, {id: "FhtzROwyung"}, {id: "q8vATE5Jwio"}], do: "[sense:video]{op: \'transcript\', video_id: \'$it.id\'}"}',
-     "table,sense", "media", "팬아웃,리터럴,자막"),
+     '[table:each]{items: [{id: "Xn-gtHDsaPY"}, {id: "_C57BxSXRbU"}, {id: "FhtzROwyung"}, {id: "q8vATE5Jwio"}], do: "[limbs:youtube]{op: \'transcript\', video_id: \'$it.id\'}"}',
+     'limbs,table', "media", "팬아웃,리터럴,자막"),
     ("키워드 세 개로 유튜브 각각 검색해서 한 표로 모아줘",
-     '[table:each]{items: [{q: "새로 나온 AI 도구 2026"}, {q: "new AI tools this month"}, {q: "AI 신규 서비스 후기"}], do: "[sense:search_youtube]{query: \'$it.q\', count: 10}"} >> [table:flatten]{} >> [table:dedup]{by: "url"}',
-     "table,sense", "media", "팬아웃,리터럴,유튜브"),
+     '[table:each]{items: [{q: "새로 나온 AI 도구 2026"}, {q: "new AI tools this month"}, {q: "AI 신규 서비스 후기"}], do: "[limbs:youtube]{op: \\"search\\", query: \'$it.q\', count: 10}"} >> [table:flatten]{} >> [table:dedup]{by: "url"}',
+     'limbs,table', "media", "팬아웃,리터럴,유튜브"),
     # ── 투자(ep1325·1355) ──
     ("삼성전자·SK하이닉스·TIGER200 1년 시세를 각각 가져와",
      '[table:each]{items: [{t: "005930"}, {t: "000660"}, {t: "102110"}], do: "[sense:stock]{op: \'history\', ticker: \'$it.t\', period: \'1y\'}"}',

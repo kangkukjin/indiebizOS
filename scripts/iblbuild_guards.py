@@ -16,6 +16,7 @@ from pathlib import Path
 # 진짜 HW 바인딩이면 이 allowlist의 이음매-아래 파일에.
 # allowlist에 파일을 추가하려면 "이게 정말 이음매 아래인가?"를 의식적으로 답할 것 (추세 하향 못박기).
 PROFILE_BRANCH_ALLOWLIST = {
+    "backend/test_youtube_vocab.py",  # 실행기 substrate의 op별 PC/폰 라우팅 회귀
     "backend/base/runtime_utils.py",       # detect_body — capability 감지 본체(정당한 거처)
     "backend/ibl/ibl_engine.py",          # chokepoint 라우팅(_forward_to_mac/forward_to_phone)
     "backend/datastore/ibl_registry.py",        # 몸-사전 설치 필터(_phone_runnable — ibl_engine 에서

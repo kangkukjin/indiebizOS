@@ -30,13 +30,13 @@ sys.path.insert(0, BACKEND)
 import boot_paths  # noqa: E402,F401
 
 # 낡은 본문(검색 2갈래) / 새 본문(검색 3갈래 + 심사 한 칸) — 유튜브팁 보고서의 실제 드리프트 모양을 줄인 것
-OLD = ('$검색 = [sense:search_youtube]{query: "${주제} ${키1}", limit: 12} & '
-       '[sense:search_youtube]{query: "${주제} ${키2}", limit: 12} >> [table:union]\n'
-       '$정보 = $검색 >> [table:each]{do: "[sense:video]{op: \'info\', video_id: \'$it.video_id\'}", limit: 45}')
-NEW = ('$검색 = [sense:search_youtube]{query: "${주제} ${키1}", limit: 20} & '
-       '[sense:search_youtube]{query: "${주제} ${키2}", limit: 20} & '
-       '[sense:search_youtube]{query: "${주제} ${키3}", limit: 20} >> [table:union]\n'
-       '$정보 = $검색 >> [table:each]{do: "[sense:video]{op: \'info\', video_id: \'$it.video_id\'}", limit: 70}\n'
+OLD = ('$검색 = [limbs:youtube]{op: "search", query: "${주제} ${키1}", limit: 12} & '
+       '[limbs:youtube]{op: "search", query: "${주제} ${키2}", limit: 12} >> [table:union]\n'
+       '$정보 = $검색 >> [table:each]{do: "[limbs:youtube]{op: \'info\', video_id: \'$it.video_id\'}", limit: 45}')
+NEW = ('$검색 = [limbs:youtube]{op: "search", query: "${주제} ${키1}", limit: 20} & '
+       '[limbs:youtube]{op: "search", query: "${주제} ${키2}", limit: 20} & '
+       '[limbs:youtube]{op: "search", query: "${주제} ${키3}", limit: 20} >> [table:union]\n'
+       '$정보 = $검색 >> [table:each]{do: "[limbs:youtube]{op: \'info\', video_id: \'$it.video_id\'}", limit: 70}\n'
        '$선정 = $정보 >> [table:ai]{op: "judge", criteria: "${기준}"}')
 TOPIC = "보고서/유튜브 AI 팁"
 

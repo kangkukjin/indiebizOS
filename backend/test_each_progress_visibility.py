@@ -2,7 +2,7 @@
 
 실측 사고(유튜브 팁 보고서 09-01 06:06): 4편짜리 팬아웃
 
-    [table:each]{items: [4편], do: "[sense:video]{op:'transcript'} >> [self:struct]{…}"}
+    [table:each]{items: [4편], do: "[limbs:youtube]{op:'transcript'} >> [self:struct]{…}"}
 
 가 23분을 멈췄는데 회수(`/ibl/recover`)는 여덟 번을 물어도 똑같이
 `step 2/2 [self:struct] 진행 중(마지막 갱신 06:06:47)` 이었다. 두 가지가 거짓이었다:

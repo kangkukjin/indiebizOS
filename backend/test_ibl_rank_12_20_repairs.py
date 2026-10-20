@@ -215,7 +215,7 @@ def test_summarize_accepts_video_id(monkeypatch):
         _phone=SimpleNamespace(is_phone=lambda: False),
         summarize_youtube=lambda **kw: {"success": True, **kw}))
     out = handler.execute({"op": "summarize", "video_id": "jNQXAC9IVRw"},
-                          SimpleNamespace(tool_name="video_op"))
+                          SimpleNamespace(tool_name="youtube_op"))
     assert out["success"] and "jNQXAC9IVRw" in out["url"]
 
 

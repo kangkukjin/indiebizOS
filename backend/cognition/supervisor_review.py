@@ -3,6 +3,82 @@ import difflib
 import json
 
 
+def ibl_error_render_repair_key(name, payload):
+    """Recognize error-object formatting repairs in the final projection only.
+
+    The acquisition program, input values, branch conditions and tool arguments
+    remain exact. A successful rendering does not resolve a different source
+    failure. Never normalize formatting used to choose or invoke an operation.
+    """
+    if not str(name).endswith("execute_ibl") or not payload.get("code"):
+        return None
+    from ibl_v2_parser import parse
+    from ibl_v2_ir import Node, pack, Fault
+    from model_result_view import resolve_input_refs
+    from supervision_store import digest
+
+    def exact(value):
+        if isinstance(value, Node):
+            return [value.kind, exact(value.data)]
+        if isinstance(value, dict):
+            return {k: exact(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [exact(v) for v in value]
+        return pack(value)
+
+    def builtin(value, names):
+        return (isinstance(value, Node) and value.kind == "pure_call"
+                and value.data["fn"].kind == "builtin"
+                and value.data["fn"].data["name"] in names
+                and len(value.data["args"]) == 1)
+
+    found = False
+
+    def projection(value):
+        nonlocal found
+        if not isinstance(value, Node):
+            return exact(value)
+        base = value
+        if value.kind == "slice":
+            lower, upper = value.data["lower"], value.data["upper"]
+            if (lower is not None and lower.kind == "literal" and lower.data["value"] == 0
+                    and upper is not None and upper.kind == "literal"
+                    and type(upper.data["value"]) is int and upper.data["value"] > 0
+                    and value.data["stride"] is None):
+                base = value.data["base"]
+        if builtin(base, {"text", "json"}) and builtin(base.data["args"][0], {"error_of"}):
+            found = True
+            return ["error_render", exact(base.data["args"][0])]
+        if value.kind == "record":
+            return ["record", {k: projection(v) for k, v in value.data["fields"].items()}]
+        if value.kind == "conditional":
+            return ["conditional", exact(value.data["condition"]),
+                    projection(value.data["yes"]), projection(value.data["no"])]
+        if value.kind == "pipe" and value.data["op"] == ">>":
+            call = value.data["right"]
+            if (call.kind == "call" and call.data["node"] == "table"
+                    and call.data["action"] == "each" and call.data.get("body") is not None
+                    and call.data["params"].data.get("fields") == {}):
+                statements = call.data["body"].data["statements"]
+                if len(statements) == 1 and statements[0].kind == "return":
+                    return ["project_each", exact(value.data["left"]),
+                            projection(statements[0].data["value"])]
+        return exact(value)
+
+    try:
+        statements = parse(payload["code"]).data["statements"]
+        if not statements or statements[-1].kind != "return":
+            return None
+        inputs, _ = resolve_input_refs(payload.get("inputs", {}))
+        result = projection(statements[-1].data["value"])
+        if found:
+            return digest(json.dumps(["error_render", exact(statements[:-1]), result, pack(inputs)],
+                                     sort_keys=True, ensure_ascii=False))
+    except (Fault, ValueError, TypeError, KeyError, OSError, RecursionError):
+        pass
+    return None
+
+
 def ibl_shape_repair_key(name, payload):
     """Match straight-line projection repairs, retaining calls, inputs and order.
 

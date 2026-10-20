@@ -439,8 +439,9 @@ class Supervisor:
             self.last_signature, self.last_result = sig, result_signature
             if not observation:
                 self.failures = self.failures + 1 if error else 0
-            from supervisor_review import ibl_shape_repair_key
-            repair_key = ibl_shape_repair_key(call.get("name", ""), payload)
+            from supervisor_review import ibl_shape_repair_key, ibl_error_render_repair_key
+            repair_key = (ibl_shape_repair_key(call.get("name", ""), payload)
+                          or ibl_error_render_repair_key(call.get("name", ""), payload))
             if (error and not observation) or self.repeats >= 3:
                 prior = self.issues.get(sig, {})
                 self.issues[sig] = {"open": True, "generation": prior.get("generation", 0),

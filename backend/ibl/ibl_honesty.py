@@ -338,9 +338,13 @@ def completion_evidence(env: Any) -> list:
                   if isinstance(value.get(k), int) and not isinstance(value[k], bool) and value[k] > 0}
         missing_branches = {k: value[k] for k in ("branches_failed", "branches_skipped")
                             if isinstance(value.get(k), list) and value[k]}
-        if counts or missing_branches:
-            row = {"at": path or "result", **counts, **missing_branches}
-            for k in ("rows_requested", "rows_processed", "ok_count", "halted"):
+        # Legacy envelope producers may report failures without a redundant
+        # error_count. Do not lose those failures when consumers select items.
+        errors = value.get("errors")
+        failures = {"errors": errors} if isinstance(errors, list) and errors else {}
+        if counts or missing_branches or failures:
+            row = {"at": path or "result", **counts, **missing_branches, **failures}
+            for k in ("rows_requested", "rows_processed", "ok_count", "halted", "source_complete"):
                 if k in value:
                     row[k] = value[k]
             found.append(row)

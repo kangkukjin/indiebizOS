@@ -108,6 +108,36 @@ def test_plain_contract_preserves_legacy_permission_evidence(ops, monkeypatch):
     assert not result['success'] and result['denied'] and result['error_type'] == 'permission'
 
 
+@pytest.mark.parametrize('protocol', ['registered-json/1', 'ibl-script/2'])
+def test_script_partial_errors_cannot_be_erased_by_items_projection(ops, monkeypatch, protocol):
+    from ibl_v2_adapters import Adapter, decode_envelope
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+
+    value = {'success': True, 'items': [{'title': 'retained'}], 'errors': ['source A: HTTP 429']}
+    entry = {'file': 'partial.py', 'interpreter': 'python', 'callable_contract': {
+        'version': 1, 'params': {}, 'result': 'Record', 'effects': ['pure'],
+        'adapter': {'protocol': protocol}}}
+    monkeypatch.setattr(ops, '_read_registry', lambda: {'partial': entry})
+    wire = {'protocol': 'ibl-script/2', 'ok': True, 'value': value} if protocol == 'ibl-script/2' else value
+    (ops._SCRIPT_DIR / 'partial.py').write_text('print(' + repr(json.dumps(wire)) + ')')
+    contract = {'version': 1, 'params': {}, 'result': 'Record', 'effects': ['pure'],
+                'adapter': {'value_path': '/value'}}
+
+    def invoke(rt, args):
+        output = ops.op_run({'id': 'partial', '_ibl_edition': 2})
+        return decode_envelope(output, contract['adapter'])[0]
+
+    registry = {'test:source': Adapter(contract, invoke)}
+    result = Runtime(compile_program('$r=[test:source]{}; return $r.items', registry)).run()
+    if protocol == 'ibl-script/2':
+        assert result['success'] and result['value'] == value['items']
+    else:
+        assert not result['success'] and not result['source_complete']
+        assert result['diagnostic']['code'] == 'PARTIAL_SOURCE'
+        assert result['diagnostic']['partial']['items'] == value['items']
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))

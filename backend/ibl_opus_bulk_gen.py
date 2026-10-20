@@ -346,11 +346,12 @@ def gen(code, intents):
             name = "비트코인" if "bitcoin" in coin else "이더리움" if "ethereum" in coin else coin
             results += [f"{name} 지금 얼마야", f"{name} 올랐어?", f"{name} 시세 좀"]
 
-    # ---- sense:apt_trade / apt_rent ----
-    elif a in ("sense:apt_trade", "sense:house_trade"):
-        results += ["아파트값 어때", "매매 실거래가 봐줘", "집값 좀 봐"]
-    elif a in ("sense:apt_rent", "sense:house_rent"):
-        results += ["전세 시세 어때", "월세 얼마야", "전월세 좀 봐"]
+    # ---- sense:realty ----
+    elif a == "sense:realty":
+        if p(code, "deal") == "rent":
+            results += ["전세 시세 어때", "월세 얼마야", "전월세 좀 봐"]
+        else:
+            results += ["매매 실거래가 봐줘", "집값 좀 봐"]
 
     # ---- others:channel_send / channel_read / channel_search / neighbors ----
     elif a == "others:channel_send":

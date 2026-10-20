@@ -275,7 +275,7 @@ execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:n
 
 문법 정본은 **ibl.md**, 주 작성 교재는 `data/guides/ibl_composition.md`, 상시 실행기 교재는 `data/common_prompts/fragments/12_ibl_only.md`(에이전트 + 조종실 번역기 공용, **캐시 없음 = 수정 즉시 라이브**)다. 새 저장 코드는 `#!ibl edition=2`, 실행 전 검사는 `check:true`를 쓴다. 낱말 스캔(따옴표 경계·연산자 분할·소스 머리)은 `backend/ibl/ibl_scanner.py` 한 벌을 파서 셋이 공유하고 JSON5 복호는 `ibl_parser_values._try_json_like` 한 곳이다(2026-09-11, 골든 코퍼스 `backend/testdata/ibl_parser_boundaries.json`).
 
-**자동 발견**: `ibl_engine._merge_api_registry_actions()`가 로드 시 `api_registry.yaml`의 node 바인딩 도구를 노드 액션에 자동 병합.
+**어휘 등록**: 코어·패키지 소스를 빌드한 `ibl_nodes.yaml`만 공개 사전이다. `api_registry.yaml`은 내부 API 연결 정의이며 독립 액션을 추가하지 않는다.
 
 **인프라 노드 (항상 허용)**: `self`, `others`, `table` — 모든 에이전트에 자동 제공. 노드 yaml의 `always_on: true` 플래그가 단일 소스 (`ibl_access._always_allowed()`가 레지스트리에서 읽음, 노드 on/off 기능의 토대)
 
@@ -427,7 +427,7 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/{installed,not_installed}/tools/`: 보유 도구 패키지 (**51개** — op 분기 **34개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/{installed,not_installed}/extensions/`: 백엔드 코어 모듈 (**5개**)
-- `data/api_registry.yaml`: API 도구 정의 — 45개 도구 중 35개가 `node`로 바인딩돼 로드 시 노드 액션에 자동 병합(`ibl_engine._merge_api_registry_actions`, 2026-08-22 실측)
+- `data/api_registry.yaml`: 내부 API 연결 정의 45개. 공개 어휘는 코어·패키지의 `ibl_actions.yaml` 소스에서 빌드하며 API 연결 정의가 런타임에 액션을 추가하지 않는다.
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)

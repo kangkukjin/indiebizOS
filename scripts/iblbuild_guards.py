@@ -333,3 +333,15 @@ def check_self_image(root: Path, data: dict | None) -> list[str]:
             if doc_n != real_n:
                 issues.append(f"{_SELF_IMAGE_DOC}: {label} {doc_n} ≠ 실제 {real_n}")
     return issues
+
+
+def check_api_registry_bindings(root: Path) -> list[str]:
+    """공개 어휘는 코어/패키지 소스에서만 선언한다."""
+    import yaml
+    path = root / "data/api_registry.yaml"
+    if not path.exists():
+        return []
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return [f"api_registry:{name}: node/action_name 바인딩 금지 — ibl_actions.yaml에서 선언하세요."
+            for name, cfg in (data.get("tools") or {}).items()
+            if "node" in cfg or "action_name" in cfg]

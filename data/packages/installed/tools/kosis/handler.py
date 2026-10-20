@@ -36,6 +36,18 @@ def execute(tool_input: dict, context):
         if bool(org_id) != bool(tbl_id):
             return {"success": False, "error": "org_id와 tbl_id를 함께 지정하세요."}
 
+        op = tool_input.get("op")
+        if op == "list":
+            result = kosis_api.search_statistics(
+                keyword=query, vw_cd=tool_input.get("vw_cd", "MT_ZTITLE"),
+                parent_list_id=tool_input.get("parent_list_id"),
+            )
+            if result.get("success") is True and result.get("data") == []:
+                result.setdefault("items", [])
+            return result
+        if op not in (None, "", "lookup"):
+            return {"success": False, "error": "op는 lookup 또는 list입니다."}
+
         if org_id and tbl_id:
             if info:
                 return kosis_api.get_statistics_info(org_id=org_id, tbl_id=tbl_id)

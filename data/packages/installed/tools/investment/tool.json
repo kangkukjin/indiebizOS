@@ -7,13 +7,13 @@
   "tools": [
     {
       "name": "stock_op",
-      "description": "주식 시세·거래 데이터 조회 (op 분기) — [sense:stock]. ticker는 코드/티커 또는 회사명·ETF명(예 '삼성전자'·'TIGER 200', 내부에서 코드로 자동 해소). 시장(kr/us)은 자동판별(005930·.KS·한글=한국, 그 외=미국), market 파라미터로 강제 지정 가능.\n- op=quote (기본): 현재가·현재 시세 ('얼마'·'주가'·'시세' — Yahoo). 한국 005930, 미국 AAPL, ETF SPY.\n- op=history: 기간별 주가 이력 (차트/추이용). period(상대기간 1mo/3mo/6mo/1y/ytd) 또는 start_date/end_date. 한국=KRX, 미국=FMP. 지수 및 FMP HTTP 402 폴백도 start_date/end_date(양끝 포함)를 유지한다.\n- op=info: 종목 메타 — 시가총액·52주 최고/최저·PER·배당 (Yahoo).\n- op=search: 회사명·키워드로 심볼 검색. query 사용.\n- op=investors: 투자자별 매매동향 (한국 전용). ticker 있으면 개별종목, 없으면 전체시장(market=STK 코스피/KSQ 코스닥/ALL).\n- op=news: 종목 관련 뉴스 (Finnhub→Yahoo 폴백).\n- op=earnings: 실적발표 일정 (EPS/매출 예상 vs 실적). ticker 비우면 전체 시장.\n\n## 예시\n- stock_op(ticker='삼성전자')                      # 기본 quote=현재가\n- stock_op(op='history', ticker='TIGER 200', period='3mo')\n- stock_op(op='search', query='삼성전자')\n- stock_op(op='investors', market='KSQ')          # 코스닥 전체시장",
+      "description": "주식 시세·거래 데이터 조회 (op 분기) — [sense:stock]. ticker는 코드/티커 또는 회사명·ETF명(예 '삼성전자'·'TIGER 200', 내부에서 코드로 자동 해소). 시장(kr/us)은 자동판별(005930·.KS·한글=한국, 그 외=미국), market 파라미터로 강제 지정 가능.\n- op=quote (기본): 현재가·현재 시세 ('얼마'·'주가'·'시세' — Yahoo). 한국 005930, 미국 AAPL, ETF SPY.\n- op=history: 기간별 주가 이력 (차트/추이용). period(상대기간 1mo/3mo/6mo/1y/ytd) 또는 start_date/end_date. 한국=KRX, 미국=FMP. 지수 및 FMP HTTP 402 폴백도 start_date/end_date(양끝 포함)를 유지한다.\n- op=info: 종목 메타 — 시가총액·52주 최고/최저·PER·배당 (Yahoo).\n- op=search: 회사명·키워드로 심볼 검색. query 사용.\n- op=investors: 투자자별 매매동향 (한국 전용). ticker 있으면 개별종목, 없으면 전체시장(market=STK 코스피/KSQ 코스닥/ALL).\n- op=news: 종목 관련 뉴스 (Finnhub→Yahoo 폴백).\n- op=earnings: 실적발표 일정 (EPS/매출 예상 vs 실적). ticker 비우면 전체 시장.\n- op=price_target/recommendations: ticker의 애널리스트 목표가/추천 동향 (Finnhub).\n- op=market_news: category=general/forex/crypto/merger 시장 뉴스 (Finnhub).\n\n## 예시\n- stock_op(ticker='삼성전자')                      # 기본 quote=현재가\n- stock_op(op='history', ticker='TIGER 200', period='3mo')\n- stock_op(op='search', query='삼성전자')\n- stock_op(op='investors', market='KSQ')          # 코스닥 전체시장",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "quote=현재가/현재시세(기본), history=기간이력/차트, info=종목메타, search=심볼검색, investors=매매동향(한국), news=종목뉴스, earnings=실적일정",
+            "description": "quote=현재가/현재시세(기본), history=기간이력/차트, info=종목메타, search=심볼검색, investors=매매동향(한국), news=종목뉴스, earnings=실적일정, price_target=목표가, recommendations=추천동향, market_news=시장뉴스",
             "enum": [
               "quote",
               "history",
@@ -21,7 +21,10 @@
               "search",
               "investors",
               "news",
-              "earnings"
+              "earnings",
+              "price_target",
+              "recommendations",
+              "market_news"
             ],
             "default": "quote"
           },
@@ -92,6 +95,10 @@
           "coin_id": {
             "type": "string",
             "description": "sense:stock 파라미터"
+          },
+          "category": {
+            "type": "string",
+            "description": "sense:stock 파라미터"
           }
         },
         "required": []
@@ -99,17 +106,18 @@
     },
     {
       "name": "company_op",
-      "description": "기업 펀더멘털 조회 (op 분기) — [sense:company]. 시장(kr/us)은 ticker로 자동판별(삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC), market 파라미터로 강제 지정 가능. 주가·시세는 stock_op.\n- op=profile (기본): 기업 기본정보 — 대표·업종·주소·시총·섹터. 한국 DART / 미국 FMP.\n- op=financials: 재무제표 — 재무상태표·손익계산서·현금흐름표. 한국은 year 필요, 미국은 statement_type/period.\n- op=disclosures: 공시 검색. 한국 DART(정기/주요사항/지분/거래소), 미국 SEC EDGAR(10-K/10-Q/8-K).\n\n## 예시\n- company_op(ticker='삼성전자')                              # 기본 profile (한국)\n- company_op(op='financials', ticker='삼성전자', year='2024')\n- company_op(op='financials', ticker='AAPL', statement_type='income')\n- company_op(op='disclosures', ticker='AAPL', filing_type='10-K')",
+      "description": "기업 펀더멘털 조회 (op 분기) — [sense:company]. 시장(kr/us)은 ticker로 자동판별(삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC), market 파라미터로 강제 지정 가능. 주가·시세는 stock_op.\n- op=profile (기본): 기업 기본정보 — 대표·업종·주소·시총·섹터. 한국 DART / 미국 FMP.\n- op=financials: 재무제표 — 재무상태표·손익계산서·현금흐름표. 한국은 year 필요, 미국은 statement_type/period.\n- op=disclosures: 공시 검색. 한국 DART(정기/주요사항/지분/거래소), 미국 SEC EDGAR(10-K/10-Q/8-K).\n- op=metrics: 미국 기업 기간별 재무비율 (FMP). ticker·period·limit. profile은 source=finnhub로 Finnhub 프로필 선택 가능.\n\n## 예시\n- company_op(ticker='삼성전자')                              # 기본 profile (한국)\n- company_op(op='financials', ticker='삼성전자', year='2024')\n- company_op(op='financials', ticker='AAPL', statement_type='income')\n- company_op(op='disclosures', ticker='AAPL', filing_type='10-K')",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "profile=기업정보(기본), financials=재무제표, disclosures=공시",
+            "description": "profile=기업정보(기본), financials=재무제표, disclosures=공시, metrics=기간별 재무비율",
             "enum": [
               "profile",
               "financials",
-              "disclosures"
+              "disclosures",
+              "metrics"
             ],
             "default": "profile"
           },
@@ -182,6 +190,10 @@
             "description": "sense:company 파라미터"
           },
           "type": {
+            "type": "string",
+            "description": "sense:company 파라미터"
+          },
+          "source": {
             "type": "string",
             "description": "sense:company 파라미터"
           }

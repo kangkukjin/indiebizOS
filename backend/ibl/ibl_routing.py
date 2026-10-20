@@ -127,8 +127,7 @@ def _route_api_engine(action: str, params: dict, project_path: str,
     from ibl_registry import is_registry_tool
 
     # 노드 액션에서 직접 매핑된 api_registry 도구 실행.
-    # (범용 self:call / self:list_api 액션은 2026-06-04 은퇴 — 모든 등록 도구가
-    #  정식 명명 액션으로 노출되어 mapped_tool 경로로만 디스패치됨.)
+    # 공개 어휘의 명시적 tool 바인딩만 실행한다. 내부 API 목록은 사전에 자동 병합하지 않는다.
     if mapped_tool:
         if not is_registry_tool(mapped_tool):
             return {"error": f"api_registry에 등록되지 않은 도구: {mapped_tool}"}
@@ -868,8 +867,7 @@ def invalidate_runtime_caches() -> list:
         invalidate_nodes_cache()
 
     def _registry():
-        # ★2026-08-24 발견: 안 비우면 reload_nodes 가 낡은 레지스트리를 재병합해 삭제된
-        # registry 액션이 실행기에 유령으로 남는다(/packages/reload 가 2026-07-03 에 고친 병).
+        # 내부 API 연결 설정도 실행기와 함께 갱신한다.
         from ibl_registry import reload_registry
         reload_registry()
 

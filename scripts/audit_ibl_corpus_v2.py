@@ -58,13 +58,7 @@ def rows_from_snapshot(base):
 
 def frozen_registry(base, rows):
     catalog = yaml.safe_load((base / 'data/ibl_nodes.yaml').read_text())
-    # Share the runtime's merge rule, but only supply the backed-up API registry.
-    from unittest.mock import patch
-    import ibl_registry
-    api_path = base / 'data/api_registry.yaml'
-    api = yaml.safe_load(api_path.read_text()) if api_path.exists() else {}
-    with patch.object(ibl_registry, '_registry', api or {}):
-        ibl_registry._merge_api_registry_actions(catalog.get('nodes', {}))
+    # 동결 감사도 빌드된 공개 사전만 사용한다. 내부 API 연결은 어휘를 추가하지 않는다.
     schemas, providers = {}, {}
     for path in sorted((base / 'data/packages/installed/tools').glob('*/tool.json')):
         data = json.loads(path.read_text())

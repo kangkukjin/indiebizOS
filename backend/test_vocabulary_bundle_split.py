@@ -117,7 +117,6 @@ def test_moved_word_gate_and_recall_are_independent_from_parent(split_box, monke
     monkeypatch.setattr(runtime_utils, "get_base_path", lambda: split_box)
     monkeypatch.setattr(state, "get_base_path", lambda: split_box)
     monkeypatch.setattr(ibl_registry, "_nodes_path", ROOT / "data/ibl_nodes.yaml")
-    monkeypatch.setattr(ibl_registry, "_merge_api_registry_actions", lambda _: None)
     monkeypatch.setattr(ibl_registry, "_nodes", None)
     state.write_state({"version": 1, "revision": 1, "active": {"study": True}}, split_box)
     assert ibl_registry.code_is_own('[sense:world_bank]{indicator: "GDP"}')

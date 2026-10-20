@@ -6,6 +6,7 @@ actions:
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       coin_id: string
+      category: string
     # 별칭은 어휘 데이터가 소유한다 (2026-08-23) — 핸들러 _arg(ti,"ticker","symbol",…) 가
     # 코드 안에서 사적으로 풀고 있어서 카탈로그가 두 이름을 다 광고했다(관측 ticker 210/symbol 126,
     # 한 호출에 함께 온 적 0 = 같은 자리를 나눠 가진 두 이름). 호출은 계속 둘 다 통과한다.
@@ -13,10 +14,10 @@ actions:
       ticker: [symbol]
     returns: scalar
     side_effect: false    # 전 op 읽기 전용
-    fixture: '[sense:stock]{query: "삼성전자"}'
+    fixture: '[sense:stock]{op: "quote", query: "삼성전자"}'
     description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
     group: finance
-    target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). 코스피는 "코스피"·KOSPI·KS11·^KS11, 코스닥은 "코스닥"·KOSDAQ·KQ11·^KQ11을 모두 수용한다. search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history의 명시 날짜는 지수·미국 FMP 실패 폴백에서도 양끝 포함으로 유지하고 범위 내 데이터만 표본 추출한다. 과거 범위에 현재가를 덮어쓰지 않는다. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
+    target_description: price_target/recommendations는 ticker 필수(Finnhub), market_news는 category=general(기본)/forex/crypto/merger로 조회하며 ticker 불필요. ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). 코스피는 "코스피"·KOSPI·KS11·^KS11, 코스닥은 "코스닥"·KOSDAQ·KQ11·^KQ11을 모두 수용한다. search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history의 명시 날짜는 지수·미국 FMP 실패 폴백에서도 양끝 포함으로 유지하고 범위 내 데이터만 표본 추출한다. 과거 범위에 현재가를 덮어쓰지 않는다. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
     target_key: op
     router: handler
     tool: stock_op
@@ -34,6 +35,9 @@ actions:
         quote: items
         history: items
         info: items
+        price_target: items
+        recommendations: items
+        market_news: items
       fixture:
         history: '[sense:stock]{op: "history", ticker: "삼성전자", period: "1mo"}'
         info: '[sense:stock]{op: "info", ticker: "삼성전자"}'
@@ -41,6 +45,9 @@ actions:
         investors: '[sense:stock]{op: "investors", ticker: "삼성전자"}'
         news: '[sense:stock]{op: "news", ticker: "삼성전자"}'
         earnings: '[sense:stock]{op: "earnings", ticker: "AAPL"}'
+        price_target: '[sense:stock]{op: "price_target", ticker: "AAPL"}'
+        recommendations: '[sense:stock]{op: "recommendations", ticker: "AAPL"}'
+        market_news: '[sense:stock]{op: "market_news", category: "general"}'
       values:
         quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
         history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
@@ -49,6 +56,9 @@ actions:
         investors: 투자자별 매매동향 (한국 전용)
         news: 종목 관련 뉴스 (Finnhub→Yahoo)
         earnings: 실적발표 일정 (예상 vs 실적)
+        price_target: 애널리스트 목표가 (Finnhub, ticker 필수)
+        recommendations: 애널리스트 매수·보유·매도 추천 동향 (Finnhub, ticker 필수)
+        market_news: 시장 뉴스 (Finnhub, category=general/forex/crypto/merger, ticker 불필요)
     implementation: market 자동판별(6자리/한글=kr, 그외=us) + 시장지수 별칭(KOSPI·KS11·코스피→^KS11, KOSDAQ·KQ11·코스닥→^KQ11) 정규화 후 op 분기. quote(현재가)=yfinance 스냅샷에 한국 종목·코스피/코스닥 지수는 네이버 폴링 API 실시간 오버레이(Yahoo KRX ~20분 지연 해소, 실패 시 Yahoo 폴백 — 2026-08-01), info/search=yfinance, history(이력)=krx|fmp(지수·FMP HTTP 402는 Yahoo/네이버 일봉으로 날짜 범위 유지 폴백), investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
     keywords:
     - 주가
@@ -203,6 +213,7 @@ actions:
           - k: 거래량
             v: '{data.volume|num}'
   company:
+    shape_axes: {source: auto}
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
       limit: [count]
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
@@ -214,12 +225,13 @@ actions:
       query: string
       symbol: string
       type: string
+      source: string
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:company]{op: "disclosures", query: "삼성전자"}'
     description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items 통화. 주가·시세는 stock.
     group: finance
-    target_description: ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
+    target_description: metrics는 미국 기업의 기간별 재무비율(FMP, ticker·period=annual/quarter·limit). profile은 source=auto(기본) 또는 finnhub(명시한 티커의 Finnhub 프로필). ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
     target_key: op
     router: handler
     tool: company_op
@@ -230,10 +242,12 @@ actions:
       fixture:
         profile: '[sense:company]{op: "profile", ticker: "삼성전자"}'
         financials: '[sense:company]{op: "financials", ticker: "삼성전자"}'
+        metrics: '[sense:company]{op: "metrics", ticker: "AAPL"}'
       values:
         profile: 기업 기본정보 (대표·업종·시총·섹터)
         financials: 재무제표 (손익·재무상태·현금흐름)
         disclosures: 공시 검색 (한국 DART / 미국 SEC)
+        metrics: 미국 기업 주요 재무비율 (FMP, period=annual/quarter, limit)
     implementation: market 자동판별 후 분기. profile=kr_company_info|us_company_profile, financials=kr_financial_statements|us_financial_statements, disclosures=kr_disclosures|us_sec_filings.
     keywords:
     - 기업정보
@@ -291,6 +305,10 @@ tool_json:
 
       - op=earnings: 실적발표 일정 (EPS/매출 예상 vs 실적). ticker 비우면 전체 시장.
 
+      - op=price_target/recommendations: ticker의 애널리스트 목표가/추천 동향 (Finnhub).
+
+      - op=market_news: category=general/forex/crypto/merger 시장 뉴스 (Finnhub).
+
 
       ## 예시
 
@@ -306,7 +324,7 @@ tool_json:
       properties:
         op:
           type: string
-          description: quote=현재가/현재시세(기본), history=기간이력/차트, info=종목메타, search=심볼검색, investors=매매동향(한국), news=종목뉴스, earnings=실적일정
+          description: quote=현재가/현재시세(기본), history=기간이력/차트, info=종목메타, search=심볼검색, investors=매매동향(한국), news=종목뉴스, earnings=실적일정, price_target=목표가, recommendations=추천동향, market_news=시장뉴스
         ticker:
           type: string
           description: 종목코드/티커 (005930=한국, AAPL=미국, 자동 시장판별). 한국 종목명도 가능.
@@ -370,6 +388,8 @@ tool_json:
 
       - op=disclosures: 공시 검색. 한국 DART(정기/주요사항/지분/거래소), 미국 SEC EDGAR(10-K/10-Q/8-K).
 
+      - op=metrics: 미국 기업 기간별 재무비율 (FMP). ticker·period·limit. profile은 source=finnhub로 Finnhub 프로필 선택 가능.
+
 
       ## 예시
 
@@ -385,7 +405,7 @@ tool_json:
       properties:
         op:
           type: string
-          description: profile=기업정보(기본), financials=재무제표, disclosures=공시
+          description: profile=기업정보(기본), financials=재무제표, disclosures=공시, metrics=기간별 재무비율
         ticker:
           type: string
           description: 기업명 또는 코드 (삼성전자/005930=한국, AAPL=미국, 자동 시장판별)

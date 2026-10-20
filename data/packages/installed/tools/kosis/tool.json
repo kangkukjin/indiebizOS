@@ -7,13 +7,18 @@
   "tools": [
     {
       "name": "kosis_lookup",
-      "description": "통계청 KOSIS 국가통계 검색·조회. query는 통합 검색, indicator는 주요지표(GDP·물가·인구·고용 등), org_id+tbl_id는 특정 통계표 데이터(info=true면 메타).\n\n파라미터: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회.",
+      "description": "op=list는 통계목록 탐색(vw_cd·parent_list_id·query). 기본 lookup은 통계청 KOSIS 국가통계 검색·조회. query는 통합 검색, indicator는 주요지표(GDP·물가·인구·고용 등), org_id+tbl_id는 특정 통계표 데이터(info=true면 메타).\n\n파라미터: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "동작 분기 — target_description 참조"
+            "description": "동작 분기 — target_description 참조",
+            "enum": [
+              "lookup",
+              "list"
+            ],
+            "default": "lookup"
           },
           "org_id": {
             "type": "string",
@@ -61,9 +66,17 @@
           },
           "query": {
             "type": "string",
-            "description": "sense:kosis 의 주 파라미터"
+            "description": "sense:kosis 파라미터"
           },
           "indicator": {
+            "type": "string",
+            "description": "sense:kosis 파라미터"
+          },
+          "vw_cd": {
+            "type": "string",
+            "description": "sense:kosis 파라미터"
+          },
+          "parent_list_id": {
             "type": "string",
             "description": "sense:kosis 파라미터"
           }

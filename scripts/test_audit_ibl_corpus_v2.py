@@ -139,14 +139,14 @@ def test_binary_metadata_is_not_a_failed_ibl_source(tmp_path):
     assert list(snippets(p)) == []
 
 
-def test_frozen_catalog_includes_snapshot_api_actions(tmp_path):
+def test_frozen_catalog_uses_only_explicit_snapshot_actions(tmp_path):
     from audit_ibl_corpus_v2 import frozen_registry
     data = tmp_path / 'data'
     (data / 'vocabulary').mkdir(parents=True)
-    (data / 'ibl_nodes.yaml').write_text('nodes:\n  sense:\n    actions: {}\n')
+    (data / 'ibl_nodes.yaml').write_text('nodes:\n  sense:\n    actions:\n      declared: {router: api_engine, tool: sample_api}\n')
     (data / 'api_registry.yaml').write_text('tools:\n  sample_api:\n    node: sense\n    action_name: sample\n')
     dump(data / 'vocabulary/activation.json', {'active': {}})
     contracts, definitions, available, issues = frozen_registry(tmp_path, [])
-    assert 'sense:sample' in contracts
-    assert contracts['sense:sample']['compatibility'] == 'legacy-envelope/1'
+    assert 'sense:sample' not in contracts
+    assert contracts['sense:declared']['compatibility'] == 'legacy-envelope/1'
     assert issues == []

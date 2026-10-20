@@ -1258,6 +1258,8 @@ def validate_desc_discipline(data: dict) -> list[str]:
 def validate(data: dict, root: Path) -> list[str]:
     """전체 yaml 데이터에 대해 삼각 검증 수행."""
     issues: list[str] = []
+    from iblbuild_guards import check_api_registry_bindings
+    issues.extend(check_api_registry_bindings(root))
     from iblbuild_v2 import validate_v2_contracts
     issues.extend(validate_v2_contracts(data))
     tool_index = build_tool_index(root)

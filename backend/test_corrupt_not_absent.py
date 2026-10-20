@@ -144,7 +144,7 @@ def test_s5_broken_installed_dictionary_raises():
     """S5(2026-08-24 추가): **설치본** 사전도 깨지면 시끄럽다.
 
     S2 는 원본 사전집(ibl_access.load_nodes_raw)만 덮었다. 같은 ibl_nodes.yaml 을 읽는
-    두 번째 로더(ibl_registry.load_nodes_installed = 원본+api_registry 병합+몸-필터)는
+    두 번째 로더(ibl_registry.load_nodes_installed = 원본+몸-필터)는
     깨진 파일을 그대로 예외로 흘리되 재생성 안내가 없었다 — 실행 경로 전체가 이쪽을 쓴다.
     """
     import ibl_registry

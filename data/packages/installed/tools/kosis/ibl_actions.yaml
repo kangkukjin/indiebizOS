@@ -6,20 +6,31 @@ actions:
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
+      query: string
       indicator: string
+      vw_cd: string
+      parent_list_id: string
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
       query: [keyword]
       indicator: [indicator_id]
       limit: [count]   # 핸들러도 limit 정본 읽기로 개명 (2026-08-29 구현-읽기 감사 상환)
+    side_effect: false
     returns: items
-    fixture: '[sense:kosis]{query: "인구"}'
+    fixture: '[sense:kosis]{op: "lookup", query: "인구"}'
     description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items 통화. 자세히 read_guide(query="통계").
     group: research
-    target_description: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 items를 기간 축으로 피벗해 반환(행=period, 필드=지표·분류 조합) → >> [table:chart/spreadsheet] / [table:document](table 블록). ⚠️다차원 통계표는 items 필드가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
+    target_description: op=list는 통계목록 탐색(query 선택, vw_cd=MT_ZTITLE 기본, parent_list_id로 하위 목록). 기본 op=lookup은 query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 items를 기간 축으로 피벗해 반환(행=period, 필드=지표·분류 조합) → >> [table:chart/spreadsheet] / [table:document](table 블록). ⚠️다차원 통계표는 items 필드가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
+    ops:
+      default: lookup
+      fixture:
+        list: '[sense:kosis]{op:"list", vw_cd:"MT_ZTITLE"}'
+      values:
+        lookup: 검색·데이터·지표·메타 조회 (입력별 분기, 기본)
+        list: 통계목록 탐색 (vw_cd·parent_list_id·query)
     router: handler
     tool: kosis_lookup
     implementation: KOSIS API 통합 — org_id+tbl_id면 get_statistics_data(objL 오류 시 getMeta 차원으로 ALL 보충 1회 재시도), info=true면 get_statistics_info(statisticsData.do getMeta TBL·ITM·PRD 합성 — 옛 statisticsInfo.do 는 404), indicator면 get_indicators, query면 integrated_search.
-    target_key: query
+    target_key: op
     keywords:
     - 통계
     - kosis
@@ -40,7 +51,7 @@ tool_json:
     version: 1.1.0
   tools:
   - name: kosis_lookup
-    description: '통계청 KOSIS 국가통계 검색·조회. query는 통합 검색, indicator는 주요지표(GDP·물가·인구·고용 등), org_id+tbl_id는 특정 통계표 데이터(info=true면
+    description: 'op=list는 통계목록 탐색(vw_cd·parent_list_id·query). 기본 lookup은 통계청 KOSIS 국가통계 검색·조회. query는 통합 검색, indicator는 주요지표(GDP·물가·인구·고용 등), org_id+tbl_id는 특정 통계표 데이터(info=true면
       메타).
 
 

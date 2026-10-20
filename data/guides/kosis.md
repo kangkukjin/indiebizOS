@@ -151,3 +151,7 @@ KOSIS가 큐레이션한 거시지표 빠른 조회. **지표 목록부터 보�
 오류면 코드가 틀린 것이다: 같은 호출을 반복하지 말고 `info:true` 로 차원·코드를 확인한다.
 명시한 값은 API 요청에 그대로 실린다. 넓은 표는 필요한 항목·분류로 좁힌다.
 요청 규격: [KOSIS 공식 개발가이드](https://kosis.kr/openapi/devGuide/devGuide_0201List.do).
+
+## 통계목록 탐색
+
+`[sense:kosis]{op:"list", vw_cd:"MT_ZTITLE", parent_list_id:"A"}`는 통계표 목록 트리를 탐색한다. `parent_list_id`는 앞선 목록 응답의 `list_id`를 사용하며, `query`로 검색어를 더할 수 있다. 최상위는 `parent_list_id`를 생략한다. 검색·수치·메타·주요지표의 기존 인자 분기는 기본 `op:"lookup"`으로 유지된다.

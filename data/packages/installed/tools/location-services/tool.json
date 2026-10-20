@@ -116,6 +116,10 @@
           "id": {
             "type": "string",
             "description": "detail 전용 — 카카오 place id(검색 결과의 id, 동명 판별)"
+          },
+          "source": {
+            "type": "string",
+            "description": "sense:place 파라미터"
           }
         }
       }

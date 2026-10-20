@@ -986,15 +986,16 @@ nodes:
       stock:
         params:
           coin_id: string
+          category: string
         aliases:
           ticker:
           - symbol
         returns: scalar
         side_effect: false
-        fixture: '[sense:stock]{query: "삼성전자"}'
+        fixture: '[sense:stock]{op: "quote", query: "삼성전자"}'
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
-        target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). 코스피는 "코스피"·KOSPI·KS11·^KS11, 코스닥은 "코스닥"·KOSDAQ·KQ11·^KQ11을 모두 수용한다. search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history의 명시 날짜는 지수·미국 FMP 실패 폴백에서도 양끝 포함으로 유지하고 범위 내 데이터만 표본 추출한다. 과거 범위에 현재가를 덮어쓰지 않는다. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
+        target_description: price_target/recommendations는 ticker 필수(Finnhub), market_news는 category=general(기본)/forex/crypto/merger로 조회하며 ticker 불필요. ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). 코스피는 "코스피"·KOSPI·KS11·^KS11, 코스닥은 "코스닥"·KOSDAQ·KQ11·^KQ11을 모두 수용한다. search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history의 명시 날짜는 지수·미국 FMP 실패 폴백에서도 양끝 포함으로 유지하고 범위 내 데이터만 표본 추출한다. 과거 범위에 현재가를 덮어쓰지 않는다. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
         target_key: op
         router: handler
         tool: stock_op
@@ -1018,6 +1019,9 @@ nodes:
             quote: items
             history: items
             info: items
+            price_target: items
+            recommendations: items
+            market_news: items
           fixture:
             history: '[sense:stock]{op: "history", ticker: "삼성전자", period: "1mo"}'
             info: '[sense:stock]{op: "info", ticker: "삼성전자"}'
@@ -1025,6 +1029,9 @@ nodes:
             investors: '[sense:stock]{op: "investors", ticker: "삼성전자"}'
             news: '[sense:stock]{op: "news", ticker: "삼성전자"}'
             earnings: '[sense:stock]{op: "earnings", ticker: "AAPL"}'
+            price_target: '[sense:stock]{op: "price_target", ticker: "AAPL"}'
+            recommendations: '[sense:stock]{op: "recommendations", ticker: "AAPL"}'
+            market_news: '[sense:stock]{op: "market_news", category: "general"}'
           values:
             quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
             history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
@@ -1033,6 +1040,9 @@ nodes:
             investors: 투자자별 매매동향 (한국 전용)
             news: 종목 관련 뉴스 (Finnhub→Yahoo)
             earnings: 실적발표 일정 (예상 vs 실적)
+            price_target: 애널리스트 목표가 (Finnhub, ticker 필수)
+            recommendations: 애널리스트 매수·보유·매도 추천 동향 (Finnhub, ticker 필수)
+            market_news: 시장 뉴스 (Finnhub, category=general/forex/crypto/merger, ticker 불필요)
         implementation: market 자동판별(6자리/한글=kr, 그외=us) + 시장지수 별칭(KOSPI·KS11·코스피→^KS11, KOSDAQ·KQ11·코스닥→^KQ11) 정규화 후 op 분기. quote(현재가)=yfinance 스냅샷에 한국 종목·코스피/코스닥 지수는 네이버 폴링 API 실시간 오버레이(Yahoo KRX ~20분 지연 해소, 실패 시 Yahoo 폴백 — 2026-08-01), info/search=yfinance, history(이력)=krx|fmp(지수·FMP HTTP 402는 Yahoo/네이버 일봉으로 날짜 범위 유지 폴백), investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
         keywords:
         - 주가
@@ -1187,6 +1197,8 @@ nodes:
               - k: 거래량
                 v: '{data.volume|num}'
       company:
+        shape_axes:
+          source: auto
         aliases:
           limit:
           - count
@@ -1196,12 +1208,13 @@ nodes:
           query: string
           symbol: string
           type: string
+          source: string
         returns: items
         side_effect: false
         fixture: '[sense:company]{op: "disclosures", query: "삼성전자"}'
         description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items 통화. 주가·시세는 stock.
         group: finance
-        target_description: ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
+        target_description: metrics는 미국 기업의 기간별 재무비율(FMP, ticker·period=annual/quarter·limit). profile은 source=auto(기본) 또는 finnhub(명시한 티커의 Finnhub 프로필). ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
         target_key: op
         router: handler
         tool: company_op
@@ -1212,10 +1225,12 @@ nodes:
           fixture:
             profile: '[sense:company]{op: "profile", ticker: "삼성전자"}'
             financials: '[sense:company]{op: "financials", ticker: "삼성전자"}'
+            metrics: '[sense:company]{op: "metrics", ticker: "AAPL"}'
           values:
             profile: 기업 기본정보 (대표·업종·시총·섹터)
             financials: 재무제표 (손익·재무상태·현금흐름)
             disclosures: 공시 검색 (한국 DART / 미국 SEC)
+            metrics: 미국 기업 주요 재무비율 (FMP, period=annual/quarter, limit)
         implementation: market 자동판별 후 분기. profile=kr_company_info|us_company_profile, financials=kr_financial_statements|us_financial_statements, disclosures=kr_disclosures|us_sec_filings.
         keywords:
         - 기업정보
@@ -1247,7 +1262,10 @@ nodes:
           tbl_id: null
           indicator: null
         params:
+          query: string
           indicator: string
+          vw_cd: string
+          parent_list_id: string
         aliases:
           query:
           - keyword
@@ -1255,15 +1273,23 @@ nodes:
           - indicator_id
           limit:
           - count
+        side_effect: false
         returns: items
-        fixture: '[sense:kosis]{query: "인구"}'
+        fixture: '[sense:kosis]{op: "lookup", query: "인구"}'
         description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items 통화. 자세히 read_guide(query="통계").
         group: research
-        target_description: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 items를 기간 축으로 피벗해 반환(행=period, 필드=지표·분류 조합) → >> [table:chart/spreadsheet] / [table:document](table 블록). ⚠️다차원 통계표는 items 필드가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
+        target_description: op=list는 통계목록 탐색(query 선택, vw_cd=MT_ZTITLE 기본, parent_list_id로 하위 목록). 기본 op=lookup은 query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 items를 기간 축으로 피벗해 반환(행=period, 필드=지표·분류 조합) → >> [table:chart/spreadsheet] / [table:document](table 블록). ⚠️다차원 통계표는 items 필드가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
+        ops:
+          default: lookup
+          fixture:
+            list: '[sense:kosis]{op:"list", vw_cd:"MT_ZTITLE"}'
+          values:
+            lookup: 검색·데이터·지표·메타 조회 (입력별 분기, 기본)
+            list: 통계목록 탐색 (vw_cd·parent_list_id·query)
         router: handler
         tool: kosis_lookup
         implementation: KOSIS API 통합 — org_id+tbl_id면 get_statistics_data(objL 오류 시 getMeta 차원으로 ALL 보충 1회 재시도), info=true면 get_statistics_info(statisticsData.do getMeta TBL·ITM·PRD 합성 — 옛 statisticsInfo.do 는 404), indicator면 get_indicators, query면 integrated_search.
-        target_key: query
+        target_key: op
         keywords:
         - 통계
         - kosis
@@ -1396,20 +1422,23 @@ nodes:
                 href: '{url}'
                 label: 지도/상세 →
       place:
+        shape_axes:
+          source: kakao
         aliases:
           lng:
           - lon
         returns: items
         side_effect: false
         fixture: '[sense:place]{query: "강남역 카페", limit: 5}'
-        description: 장소 검색 (카카오 로컬, 전 업종 — 가게·카페·편의점·주차장·병원·관광지…). op:search=키워드/카테고리(lat·lng 주변, radius m) · op:detail=한 곳 상세(카카오 기본+네이버 설명+블로그 언급, 1행). 맛집 후기순 추천은 [sense:restaurant], 길찾기는 navigate_route.
+        description: 장소 검색·상세 (source=kakao 기본/네이버 naver). search는 키워드·카테고리 검색, detail은 한 곳 상세. 맛집 후기는 restaurant, 길찾기는 navigate_route.
         group: places
-        target_description: search — query(검색어) 또는 category(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산 한글 라벨 또는 카카오 코드), lat·lng 중심 + radius(m, 최대 20000), sort accuracy|distance, limit 최대 45. detail — name(+id·lat·lng 로 동명 판별).
+        target_description: search의 source=naver는 query 필수, limit 최대 5, sort=random(정확도)/comment(리뷰순)만 지원하며 좌표·반경·category 필터는 거절. 기본 source=kakao의 search — query(검색어) 또는 category(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산 한글 라벨 또는 카카오 코드), lat·lng 중심 + radius(m, 최대 20000), sort accuracy|distance, limit 최대 45. detail — name(+id·lat·lng 로 동명 판별).
         router: handler
         tool: search_place
         implementation: tool_place.py — 키워드는 keyword.json, 카테고리만이면 category.json(좌표 필수), 15×3 페이지네이션, 좌표 없는 항목 드롭. limit 충족 표본은 selection, 미충족 누락은 source로 표기하고 뒷페이지 오류도 실패로 보존. detail 은 keyword 재조회로 id 일치 항목을 고른 뒤 네이버 local(설명·링크)·blog(blog_count·reason) 부착.
         target_key: op
         params:
+          source: string
           query: string
           category: string
           lat: number
@@ -1435,7 +1464,7 @@ nodes:
           fixture:
             detail: '[sense:place]{op: "detail", name: "치폴레 강남점"}'
           values:
-            search: 키워드/카테고리로 장소 검색 (기본)
+            search: 장소 검색 (source=kakao 키워드/카테고리, source=naver 키워드)
             detail: 한 곳 상세 — name(+id·lat·lng) → 카카오 기본 + 네이버 설명 + 블로그 언급
         app:
           edition: 2

@@ -26,6 +26,9 @@
 | `investors` | 투자자별 매매동향 (**한국 전용**) | KRX | `ticker`(개별종목) 또는 `market`(STK/KSQ/ALL, 전체시장) |
 | `news` | 종목 관련 뉴스 | Finnhub→Yahoo | `ticker`, `start_date`, `end_date` |
 | `earnings` | 실적발표 일정 | Finnhub | `ticker`(생략 시 전체시장), `start_date`, `end_date` |
+| `price_target` | 애널리스트 목표가 | Finnhub | `ticker` 필수 |
+| `recommendations` | 매수·보유·매도 추천 동향 | Finnhub | `ticker` 필수 |
+| `market_news` | 시장 전체 뉴스 | Finnhub | `category`: general(기본)/forex/crypto/merger |
 
 ```
 [sense:stock]{op: "quote", ticker: "005930"}                 # 삼성전자 현재가 (KRW)
@@ -61,9 +64,10 @@
 
 | op | 설명 | 한국(DART) / 미국(FMP·SEC) | 주요 파라미터 |
 |----|------|----------------------------|--------------|
-| `profile` (기본) | 기업 기본정보 (대표·업종·시총·섹터) | kr_company_info / us_company_profile | `ticker` |
+| `profile` (기본) | 기업 기본정보 (대표·업종·시총·섹터) | DART / FMP, `source:"finnhub"`로 원천 지정 가능 | `ticker`, `source` |
 | `financials` | 재무제표 (손익·재무상태·현금흐름) | DART / FMP | 아래 참조 |
 | `disclosures` | 공시 검색 | DART / SEC EDGAR | 아래 참조 |
+| `metrics` | 기간별 주요 재무비율 | 미국 FMP | `ticker`, `period`: annual/quarter, `limit` |
 
 ```
 [sense:company]{op: "profile", ticker: "삼성전자"}            # 한국 DART 자동
@@ -139,3 +143,7 @@
 **심볼 형식(Yahoo quote/info)**: 미국 `AAPL`, 한국 `005930.KS`(자동 부착), ETF `SPY`/`QQQ`/`GLD`, 원자재 선물 `GC=F`(금)/`CL=F`(원유), 환율 `USDKRW=X`.
 
 가격의 `currency`를 확인한 뒤 자산군을 합친다. 코인 현재가는 KRW 우선이며 USD 폴백 시 단위도 USD다. 코인 `days` 조회는 이력 행을 `items`와 `data.prices`로 반환하며 이력 단위는 USD다. `max_points`를 지정하면 최대 그 수만큼의 시점(양끝 포함)을 고른다. `truncated`는 실제 생략 여부이며, 요청 상한이 전체보다 크면 false다.
+
+### API 등록부 어휘 정리 (2026-10-20)
+
+API 연결 정의가 독립 액션으로 다시 노출되던 경로를 제거했다. 목표가·추천·시장 뉴스는 `stock`의 위 op로, 기간별 재무비율은 `company`의 `metrics`로 호출한다. 이 분기와 Finnhub profile은 기존 내부 API 변환을 재사용하며 원래 `data`를 보존하고 `items`를 추가한다. 인증·원천 오류는 그대로 실패로 전달하며 외부 서비스의 유료 플랜 권한까지 보장하지 않는다.

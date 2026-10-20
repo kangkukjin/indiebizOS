@@ -1146,11 +1146,30 @@ def _load_place():
 
 
 def place_search(tool_input: dict) -> dict:
+    source = tool_input.get("source", "kakao")
+    if source == "naver":
+        query = tool_input.get("query")
+        if not query:
+            return {"success": False, "error": "naver 장소 검색에는 query가 필요합니다."}
+        unsupported = [key for key in ("lat", "lng", "radius", "category") if key in tool_input]
+        if unsupported:
+            return {"success": False, "error": f"naver는 지원하지 않는 조건입니다: {unsupported}"}
+        sort = tool_input.get("sort", "random")
+        if sort not in ("random", "comment"):
+            return {"success": False, "error": "naver sort는 random 또는 comment입니다."}
+        result = search_naver_local(query, tool_input.get("limit", 5), sort)
+        if result.get("error") or result.get("success") is False:
+            return result
+        return {**result, "items": result["restaurants"]}
+    if source != "kakao":
+        return {"success": False, "error": "source는 kakao 또는 naver입니다."}
     return _load_place().place_search(tool_input)
 
 
 def place_detail(tool_input: dict) -> dict:
     # 네이버 설명·블로그 근거는 맛집 검색과 같은 헬퍼를 쓴다(구현 한 곳).
+    if tool_input.get("source", "kakao") != "kakao":
+        return {"success": False, "error": "detail은 source=kakao만 지원합니다."}
     return _load_place().place_detail(tool_input, naver_local=search_naver_local,
                                       blog_evidence=_blog_evidence, norm_name=_norm_name)
 

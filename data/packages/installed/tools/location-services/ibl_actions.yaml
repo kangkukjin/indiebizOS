@@ -91,19 +91,21 @@ nodes:
                 href: '{url}'
                 label: 지도/상세 →
       place:
+        shape_axes: {source: kakao}
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           lng: [lon]
         returns: items
         side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:place]{query: "강남역 카페", limit: 5}'
-        description: 장소 검색 (카카오 로컬, 전 업종 — 가게·카페·편의점·주차장·병원·관광지…). op:search=키워드/카테고리(lat·lng 주변, radius m) · op:detail=한 곳 상세(카카오 기본+네이버 설명+블로그 언급, 1행). 맛집 후기순 추천은 [sense:restaurant], 길찾기는 navigate_route.
+        description: 장소 검색·상세 (source=kakao 기본/네이버 naver). search는 키워드·카테고리 검색, detail은 한 곳 상세. 맛집 후기는 restaurant, 길찾기는 navigate_route.
         group: places
-        target_description: search — query(검색어) 또는 category(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산 한글 라벨 또는 카카오 코드), lat·lng 중심 + radius(m, 최대 20000), sort accuracy|distance, limit 최대 45. detail — name(+id·lat·lng 로 동명 판별).
+        target_description: search의 source=naver는 query 필수, limit 최대 5, sort=random(정확도)/comment(리뷰순)만 지원하며 좌표·반경·category 필터는 거절. 기본 source=kakao의 search — query(검색어) 또는 category(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산 한글 라벨 또는 카카오 코드), lat·lng 중심 + radius(m, 최대 20000), sort accuracy|distance, limit 최대 45. detail — name(+id·lat·lng 로 동명 판별).
         router: handler
         tool: search_place
         implementation: tool_place.py — 키워드는 keyword.json, 카테고리만이면 category.json(좌표 필수), 15×3 페이지네이션, 좌표 없는 항목 드롭. limit 충족 표본은 selection, 미충족 누락은 source로 표기하고 뒷페이지 오류도 실패로 보존. detail 은 keyword 재조회로 id 일치 항목을 고른 뒤 네이버 local(설명·링크)·blog(blog_count·reason) 부착.
         target_key: op
         params:
+          source: string
           query: string
           category: string
           lat: number
@@ -129,7 +131,7 @@ nodes:
           fixture:
             detail: '[sense:place]{op: "detail", name: "치폴레 강남점"}'
           values:
-            search: 키워드/카테고리로 장소 검색 (기본)
+            search: 장소 검색 (source=kakao 키워드/카테고리, source=naver 키워드)
             detail: 한 곳 상세 — name(+id·lat·lng) → 카카오 기본 + 네이버 설명 + 블로그 언급
         # ── 원격 런처·폰 표면의 '지도' 계기(선언형 4탭). 데스크탑은 같은 id 의 커스텀 계기(MapInstrument)가 덮는다.
         #    저장 원장은 PC 의 outputs/map/places.json 한 곳 — 폰에서도 @hub 로 같은 원장을 읽고 쓴다(정기보고 선례). 판본 2(2026-10-05):

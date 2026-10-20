@@ -138,20 +138,10 @@ def execute(tool_input: dict, context):
     raise ValueError(f"알 수 없는 도구: {context.tool_name}")
 ```
 
-#### (B) api_registry.yaml 등록 (API 호출 + transform으로 충분한 경우)
-`data/api_registry.yaml`에 도구를 등록하면 handler.py 없이 동작합니다. `node` 필드를 추가하면 IBL 노드 액션으로 자동 병합됩니다.
+#### (B) api_registry.yaml 내부 API 연결 (API 호출 + transform으로 충분한 경우)
+`data/api_registry.yaml`은 인증·엔드포인트·응답 변환을 정의한다. 여기에 도구를 추가해도 공개 사전에 액션이 생기지 않는다. 공개할 기능은 패키지 `ibl_actions.yaml`에 명시하고 빌드한다. 이미 있는 기능의 변형은 해당 액션의 `op` 또는 `source`로 연결한다.
 
-```yaml
-kosis_search_statistics:
-  service: kosis
-  endpoint: /statisticsList.do
-  transform: kosis_list
-  node: sense                # IBL 자동 병합 (Phase 25: statistics → sense)
-  action_name: search_statistics
-  description: "통계표 목록 검색"
-```
-
-api_engine 라우팅 액션들이 이 방식을 사용합니다.
+핸들러는 내부적으로 `api_engine.execute_tool`을 재사용할 수 있다. 직접 연결이 필요한 정식 어휘는 `router: api_engine`과 `tool`을 어휘 소스에 선언하며 반환·분류·인자·소유 패키지도 같은 소스가 소유한다. API 연결 정의의 `node`/`action_name` 재등록은 빌드 관문이 거절한다.
 
 ### 3. IBL 노드 액션 등록 — 어휘가 사는 두 자리
 
@@ -289,7 +279,7 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 <!-- IBL_STATS:START -->
 ## 현재 보유한 도구 패키지 (51개 — 빌드 파생)
 
-**op 분기 34 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · books · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · entity-lookup · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · record-ops · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **86개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 34 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · books · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · entity-lookup · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · record-ops · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **87개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
 > 목록은 현재 `_OP_DISPATCHERS`를 가진 보유 패키지에서 파생한다. 새 op를 추가하거나 은퇴시키면 빌드가 목록과 수를 함께 갱신한다.
 <!-- IBL_STATS:END -->

@@ -5,7 +5,8 @@
 #   services: API 서비스 정의 (URL, 인증)
 #   tools: 도구 이름 → API 엔드포인트 매핑
 #
-# 새 API 추가 = 이 파일에 항목 추가 (코드 작성 불필요)
+# 내부 API 연결을 정의한다. 공개 IBL 어휘는 패키지 ibl_actions.yaml에서 선언하고 빌드한다.
+# 이 파일의 도구 이름은 독립 IBL 액션으로 자동 노출되지 않는다.
 
 services:
 
@@ -255,12 +256,7 @@ tools:
     defaults:
       target: law
     response_type: raw
-    # IBL node binding
-    node: sense
-    action_name: search_legal
     description: "법률 정보 통합 검색 (법령+판례+행정규칙)"
-    target_key: query
-    target_description: "검색 키워드"
 
   get_legal_detail:
     service: law
@@ -273,12 +269,7 @@ tools:
     defaults:
       target: law
     response_type: raw
-    # IBL node binding
-    node: sense
-    action_name: detail
     description: "법률 항목 상세 본문 조회"
-    target_key: id
-    target_description: "법률 항목 ID"
 
   search_laws:
     service: law
@@ -289,12 +280,7 @@ tools:
     param_map:
       query: query
     response_type: raw
-    # IBL node binding
-    node: sense
-    action_name: laws
     description: "법령 검색"
-    target_key: query
-    target_description: "검색 키워드"
 
   get_law_detail:
     service: law
@@ -305,12 +291,7 @@ tools:
     param_map:
       law_id: ID
     response_type: raw
-    # IBL node binding
-    node: sense
-    action_name: law_detail
     description: "특정 법령 상세 조회"
-    target_key: law_id
-    target_description: "법령 ID"
 
   search_precedents:
     service: law
@@ -321,12 +302,7 @@ tools:
     param_map:
       query: query
     response_type: raw
-    # IBL node binding
-    node: sense
-    action_name: precedents
     description: "판례 검색"
-    target_key: query
-    target_description: "검색 키워드"
 
   get_precedent_detail:
     service: law
@@ -337,12 +313,7 @@ tools:
     param_map:
       precedent_id: ID
     response_type: raw
-    # IBL node binding
-    node: sense
-    action_name: precedent_detail
     description: "특정 판례 상세 조회"
-    target_key: precedent_id
-    target_description: "판례 ID"
 
   # === KOSIS 통계 도구 ===
   kosis_search_statistics:
@@ -360,12 +331,7 @@ tools:
       vw_cd: MT_ZTITLE
     response:
       wrap: {success: true, count: _count, data: _results}
-    # IBL node binding
-    node: sense
-    action_name: search_kosis
     description: "통계표 목록 검색"
-    target_key: keyword
-    target_description: "검색 키워드"
 
   kosis_get_data:
     service: kosis
@@ -392,12 +358,7 @@ tools:
       prd_se: "Y"
     response:
       wrap: {success: true, count: _count, data: _results}
-    # IBL node binding
-    node: sense
-    action_name: data
     description: "통계 데이터 조회"
-    target_key: tbl_id
-    target_description: "통계표 ID (org_id/tbl_id)"
 
   kosis_get_statistics_info:
     service: kosis
@@ -411,12 +372,7 @@ tools:
       tbl_id: tblId
     response:
       wrap: {success: true, count: _count, data: _results}
-    # IBL node binding
-    node: sense
-    action_name: info
     description: "통계표 메타데이터 조회"
-    target_key: tbl_id
-    target_description: "통계표 ID"
 
   kosis_integrated_search:
     service: kosis
@@ -430,12 +386,7 @@ tools:
       count: 10
     response:
       wrap: {success: true, count: _count, data: _results}
-    # IBL node binding
-    node: sense
-    action_name: integrated
     description: "KOSIS 통합 검색"
-    target_key: keyword
-    target_description: "검색 키워드"
 
   kosis_get_indicators:
     service: kosis
@@ -448,12 +399,7 @@ tools:
       end_prd_de: endPrdDe
     response:
       wrap: {success: true, count: _count, data: _results}
-    # IBL node binding
-    node: sense
-    action_name: indicators
     description: "주요 경제/사회 지표 조회"
-    target_key: indicator_id
-    target_description: "지표 ID"
 
   # === 네이버 쇼핑 ===
   search_shopping:
@@ -539,12 +485,7 @@ tools:
         count: _count
         data: _results
         message: {template: "'{query}' 검색 결과 {_count}개"}
-    # IBL node binding
-    node: sense
-    action_name: restaurants_combined
     description: "카카오+네이버 맛집 병합 검색"
-    target_key: query
-    target_description: "검색 키워드"
 
   # === 카카오 위치 서비스 ===
   search_restaurants:
@@ -605,12 +546,7 @@ tools:
         success: true
         count: _count
         items: _results
-    # IBL node binding
-    node: sense
-    action_name: kstartup
     description: "K-Startup 창업지원 사업공고 검색"
-    target_key: keyword
-    target_description: "검색 키워드"
 
   search_mss_biz:
     service: data-go-kr
@@ -628,12 +564,7 @@ tools:
         success: true
         count: _count
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: mss
     description: "중소벤처기업부 사업공고 검색"
-    target_key: keyword
-    target_description: "검색 키워드"
 
   # === 부동산 ===
   apt_trade_price:
@@ -731,12 +662,7 @@ tools:
       wrap:
         success: true
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: us_quote
     description: "미국 주식 실시간 시세 조회"
-    target_key: symbol
-    target_description: "티커 심볼 (예: AAPL)"
 
   us_company_search:
     service: fmp
@@ -755,12 +681,7 @@ tools:
         success: true
         count: _count
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: us_search
     description: "미국 기업/종목 검색"
-    target_key: query
-    target_description: "검색어 (기업명)"
 
   us_key_metrics:
     service: fmp
@@ -794,12 +715,7 @@ tools:
         success: true
         count: _count
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: us_metrics
     description: "미국 기업 주요 재무 비율 (ROE, PER, PBR 등)"
-    target_key: symbol
-    target_description: "티커 심볼"
 
   us_income_statement:
     service: fmp
@@ -831,12 +747,7 @@ tools:
         success: true
         count: _count
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: us_income
     description: "미국 기업 손익계산서"
-    target_key: symbol
-    target_description: "티커 심볼"
 
   us_balance_sheet:
     service: fmp
@@ -865,12 +776,7 @@ tools:
         success: true
         count: _count
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: us_balance
     description: "미국 기업 재무상태표"
-    target_key: symbol
-    target_description: "티커 심볼"
 
   us_cash_flow:
     service: fmp
@@ -897,12 +803,7 @@ tools:
         success: true
         count: _count
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: us_cashflow
     description: "미국 기업 현금흐름표"
-    target_key: symbol
-    target_description: "티커 심볼"
 
   # === 투자 - Finnhub ===
   finnhub_company_profile:
@@ -927,12 +828,7 @@ tools:
       wrap:
         success: true
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: finnhub_profile
     description: "Finnhub 기업 프로필 조회"
-    target_key: symbol
-    target_description: "티커 심볼"
 
   finnhub_price_target:
     service: finnhub
@@ -950,12 +846,7 @@ tools:
       wrap:
         success: true
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: price_target
     description: "애널리스트 목표가 조회"
-    target_key: symbol
-    target_description: "티커 심볼"
 
   finnhub_recommendations:
     service: finnhub
@@ -974,12 +865,7 @@ tools:
       wrap:
         success: true
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: recommendations
     description: "애널리스트 추천 동향 (매수/보유/매도)"
-    target_key: symbol
-    target_description: "티커 심볼"
 
   finnhub_market_news:
     service: finnhub
@@ -1001,12 +887,7 @@ tools:
         success: true
         count: _count
         data: _results
-    # IBL node binding
-    node: sense
-    action_name: market_news
     description: "시장 뉴스 조회 (general/forex/crypto/merger)"
-    target_key: category
-    target_description: "뉴스 카테고리"
 
   # === 투자 - Finnhub (기존) ===
   company_news:
@@ -1087,11 +968,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: semantic_scholar
     description: "Semantic Scholar 학술 논문 검색"
-    target_key: query
-    target_description: "검색어 (영어 권장)"
 
   # --- OpenAlex ---
   search_openalex:
@@ -1120,11 +997,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: openalex
     description: "OpenAlex 학술 논문 검색 (오픈 학술 데이터)"
-    target_key: query
-    target_description: "검색어 (영어 권장)"
 
   # --- PubMed (2단계 파이프라인: ID 검색 → 상세 조회) ---
   search_pubmed:
@@ -1157,11 +1030,7 @@ tools:
 
     merge:
       mode: last
-    node: sense
-    action_name: pubmed
     description: "PubMed 의학/생명과학 논문 검색"
-    target_key: query
-    target_description: "검색어 (영어 권장)"
 
   # --- Guardian (영국 뉴스) ---
   search_guardian:
@@ -1188,11 +1057,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: guardian_news
     description: "Guardian 영국 뉴스 검색"
-    target_key: query
-    target_description: "검색어 (영어)"
 
   # --- World Bank (세계은행 경제 데이터) ---
   search_world_bank:
@@ -1218,11 +1083,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: world_bank
     description: "세계은행 경제 지표 데이터 조회"
-    target_key: indicator
-    target_description: "지표 코드 (예: NY.GDP.MKTP.CD)"
 
   # --- Google Books (도서 검색) ---
   search_books:
@@ -1253,11 +1114,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: books
     description: "Google Books 도서 검색"
-    target_key: query
-    target_description: "검색어 (도서명, 저자 등)"
 
   # =====================================================
   # 위치/지역 추가 도구
@@ -1287,11 +1144,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: naver_local
     description: "네이버 지역 검색 (장소, 업체)"
-    target_key: query
-    target_description: "검색어 (장소명, 업종 등)"
 
   # --- 카카오 역지오코딩 ---
   reverse_geocode_kakao:
@@ -1312,11 +1165,7 @@ tools:
       wrap:
         success: true
         data: _results
-    node: sense
-    action_name: reverse_geocode
     description: "좌표를 주소로 변환 (역지오코딩)"
-    target_key: longitude
-    target_description: "경도"
 
   # =====================================================
   # 투자 추가 도구
@@ -1349,11 +1198,7 @@ tools:
       wrap:
         success: true
         data: _results
-    node: sense
-    action_name: crypto
     description: "암호화폐 시세 조회 (CoinGecko)"
-    target_key: coin_id
-    target_description: "코인 ID (예: bitcoin, ethereum, solana)"
 
   # =====================================================
   # CCTV / 웹캠 도구
@@ -1390,8 +1235,6 @@ tools:
         data: _results
     # 공급자 API 연결만 유지. 공개 조작 어휘는 패키지의 limbs:cctv가 소유한다.
     description: "ITS 교통 CCTV 검색 (좌표 영역)"
-    target_key: min_x
-    target_description: "최소 경도 (minX)"
 
   # --- Windy 웹캠 검색 ---
   search_windy_webcam:
@@ -1425,14 +1268,12 @@ tools:
         data: _results
     # 공급자 API 연결만 유지. 공개 조작 어휘는 패키지의 limbs:cctv가 소유한다.
     description: "전세계 웹캠 검색 (Windy)"
-    target_key: lat_lon_radius
-    target_description: "위도,경도,반경km (예: 37.5,127.0,50)"
 
   # =====================================================
   # 부동산 추가 도구
   # =====================================================
 
-  # --- 연립다세대 매매 실거래가 ---
+  # --- 단독/다가구 매매 실거래가 ---
   house_trade_price:
     service: molit-house
     endpoint: /getRTMSDataSvcSHTrade
@@ -1462,13 +1303,9 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: house_trade
-    description: "연립다세대 매매 실거래가 (단일 월)"
-    target_key: region_code
-    target_description: "법정동 코드 5자리"
+    description: "단독/다가구 매매 실거래가 (단일 월)"
 
-  # --- 연립다세대 전월세 실거래가 ---
+  # --- 단독/다가구 전월세 실거래가 ---
   house_rent_price:
     service: molit-house-rent
     endpoint: /getRTMSDataSvcSHRent
@@ -1495,10 +1332,6 @@ tools:
         success: true
         count: _count
         data: _results
-    node: sense
-    action_name: house_rent
-    description: "연립다세대 전월세 실거래가 (단일 월)"
-    target_key: region_code
-    target_description: "법정동 코드 5자리"
+    description: "단독/다가구 전월세 실거래가 (단일 월)"
 
   # 소상공인 상가정보 API: 현재 서비스 중단(404). 추후 복구시 YAML 추가 예정.

@@ -4,9 +4,9 @@
 
 새 액션은 아래 절차와 [수명 기록](body.md)을 따른다.
 
-> 어휘 정본은 각 패키지의 `ibl_actions.yaml`과 코어의 `data/ibl_nodes_src/`다. `scripts/build_ibl_nodes.py`가 합쳐 `data/ibl_nodes.yaml`을 만든다. 패키지의 코드·어휘는 함께 설치·제거하며, 핸들러는 ToolContext SDK의 `execute(tool_input, context)`를 따른다.
+> 어휘 정본: 코어는 `data/ibl_nodes_src/`, 패키지는 각 `ibl_actions.yaml`. 아래의 "src"도 이 구분을 따른다. `scripts/build_ibl_nodes.py`가 `data/ibl_nodes.yaml`과 `tool.json`을 빌드한다. 패키지 코드·어휘는 함께 설치·제거하고 핸들러는 ToolContext SDK의 `execute(tool_input, context)`를 따른다.
 >
-> → 즉 아래 2단계의 "src"는 **패키지 능력이면 그 패키지의 `ibl_actions.yaml`, 코어 노드 액션이면 중앙 `ibl_nodes_src/`**를 뜻한다. (옛 `register_actions()` *런타임 자동 등록*은 폐기 유지 — 지금은 등록이 아니라 **빌드 시 병합**이다.)
+> `api_registry.yaml`은 내부 API 연결 전용이다. 런타임 자동 등록(`register_actions()` 포함)은 폐기됐고 공개 어휘는 빌드 시에만 병합한다. [옛 어휘 대응표](../../docs/VOCAB_DEDUP_HANDOFF.md).
 
 ---
 

@@ -73,7 +73,6 @@ def test_concurrent_registry_load_publishes_only_filtered_dictionary(box, monkey
     monkeypatch.setattr(registry, "_nodes", None)
     monkeypatch.setattr(registry, "_nodes_revision", None)
     monkeypatch.setattr(registry, "_pruned_foreign", {})
-    monkeypatch.setattr(registry, "_merge_api_registry_actions", lambda nodes: None)
     state.read_state(box)
     entered, release, second_started = (threading.Event() for _ in range(3))
     original = registry._prune_foreign_vocabulary

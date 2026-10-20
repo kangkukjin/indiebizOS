@@ -20,7 +20,7 @@ _nodes_revision = None
 
 
 # === api_registry.yaml 로더 — api_engine 에서 이동 (같은 절단의 일부) ===
-# api_registry 도 사전의 일부(node 바인딩 액션이 노드 사전에 병합된다).
+# api_registry는 내부 API 연결 정의다. 공개 어휘는 빌드된 ibl_nodes.yaml만 소유한다.
 # 실행 엔진(api_engine)은 이것을 import 해 소비만 한다.
 
 _registry: Optional[Dict] = None
@@ -102,45 +102,6 @@ def _get_nodes_path() -> Path:
     return _nodes_path
 
 
-def _merge_api_registry_actions(nodes_config: Dict):
-    """api_registry의 node 필드 기반 노드 액션 자동 병합.
-
-    api_registry.yaml 도구에 node/action_name이 선언되어 있으면
-    해당 노드의 actions dict에 in-place 병합한다.
-    YAML 앵커(&id005 등)가 가리키는 동일 dict를 직접 변경하므로
-    nodes 섹션에도 자동 반영된다.
-    """
-    registry = _load_registry()
-    tools = registry.get("tools", {})
-
-    for tool_name, tool_cfg in tools.items():
-        node_name = tool_cfg.get("node")
-        if not node_name:
-            continue
-
-        action_name = tool_cfg.get("action_name", tool_name)
-        node_cfg = nodes_config.get(node_name)
-        if not node_cfg:
-            continue
-
-        actions = node_cfg.get("actions")
-        if actions is None:
-            actions = {}
-            node_cfg["actions"] = actions
-
-        # 수동 정의가 이미 있으면 덮어쓰지 않음
-        if action_name in actions:
-            continue
-
-        action = {"router": "api_engine", "tool": tool_name}
-        if tool_cfg.get("description"):
-            action["description"] = tool_cfg["description"]
-        if tool_cfg.get("target_key"):
-            action["target_key"] = tool_cfg["target_key"]
-
-        actions[action_name] = action
-
-
 # 폰 프로파일(#3 runs_on) — runnable 액션 집합 캐시.
 _phone_runnable_cache = {"loaded": False, "set": None}
 
@@ -176,7 +137,7 @@ def _load_nodes_installed() -> Dict:
 
     사전 이음매(2026-08-24 계약화). 같은 ibl_nodes.yaml 을 읽는 로더가 둘인데 의미가 다르다:
       - `ibl_access.load_nodes_raw`  = 원본 사전집(생 yaml, 배포물 전체)
-      - 이 함수                      = 설치본 = 원본 + api_registry 병합 + 몸-필터(prune)
+      - 이 함수                      = 설치본 = 원본 + 몸-필터(prune)
     설치는 몸의 의미론(detect_body 기반)이라 언어(ibl 층)가 아니라 여기(datastore)에 산다.
     ibl 층이 소비하는 공개 표면: load_nodes_installed · invalidate_nodes · pruned_reason ·
     self_can_run · foreign_actions · code_is_own · _load_registry/reload_registry.
@@ -203,9 +164,6 @@ def _load_nodes_installed() -> Dict:
             f"→ 빌드 중이었다면 잠시 후 재시도, 아니면 "
             f"`python3 scripts/build_ibl_nodes.py` 로 재생성하세요."
         ) from e
-
-    # api_registry에서 node 바인딩된 액션 자동 병합
-    _merge_api_registry_actions(nodes.get("nodes", {}))
 
     # 몸-사전 설치 필터(몸 독립 2단계): 배포물(yaml)=전체 사전집이지만, 이 몸의
     # 런타임에 설치되는 어휘는 자기 것만 — PC는 phone_only 를 모르고, 폰은 runnable
@@ -345,7 +303,6 @@ def code_is_owned(code: str) -> bool:
     with open(_get_nodes_path(), encoding="utf-8") as stream:
         data = yaml.safe_load(stream) or {}
     nodes = data.get("nodes", {})
-    _merge_api_registry_actions(nodes)
     from runtime_utils import detect_body
     profile = detect_body().get("profile")
     for node, action in _ACT_RE.findall(_outside_strings(code)):

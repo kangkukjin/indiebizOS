@@ -3,8 +3,8 @@ Investment Tools Handler
 한국/미국 기업의 주가·시세·재무·공시·뉴스 + 암호화폐를 조회하는 투자 분석 도구.
 
 2026-06-03 finance 어휘 정리: 옛 16개 도구를 단일 액션 op 분기로 통합.
-- [sense:stock]{op}   → stock_op   (quote=현재가/history=이력/info/search/investors/news/earnings)
-- [sense:company]{op} → company_op (profile/financials/disclosures)
+- [sense:stock]{op}   → stock_op   (quote=현재가/history=이력/info/search/investors/news/earnings/price_target/recommendations/market_news)
+- [sense:company]{op} → company_op (profile/financials/disclosures/metrics; profile source=finnhub 지원)
 - [sense:crypto]      → crypto_price (자산군 달라 별도 유지)
 시장(kr/us)은 ticker로 자동판별(005930/한글=kr, 그외=us), market 파라미터로 강제 지정 가능.
 """
@@ -626,9 +626,64 @@ def _company_common(ti: dict):
     return ticker, market
 
 
+def _registry_items(tool_name: str, params: dict):
+    """기존 API 변환 결과의 원 필드를 보존하면서 items 통화로 전달한다."""
+    from api_engine import execute_tool
+    result = execute_tool(tool_name, params, str(current_dir))
+    if not isinstance(result, dict) or result.get("error") or result.get("success") is False:
+        return result
+    rows = result.get("data")
+    if rows is None:
+        return {**result, "success": False, "error": "API 응답에 data가 없습니다."}
+    if not isinstance(rows, (dict, list)):
+        return {**result, "success": False, "error": "API data는 객체 또는 행 목록이어야 합니다."}
+    items = rows if isinstance(rows, list) else ([rows] if rows else [])
+    if any(not isinstance(row, dict) for row in items):
+        return {**result, "success": False, "error": "API 행은 객체여야 합니다."}
+    return {**result, "items": items}
+
+
+def _stock_price_target(ti: dict):
+    ticker, _, error = _stock_common(ti, "price_target")
+    if error or not ticker:
+        return error or error_response("price_target은 ticker가 필요합니다.")
+    return _registry_items("finnhub_price_target", {"symbol": ticker})
+
+
+def _stock_recommendations(ti: dict):
+    ticker, _, error = _stock_common(ti, "recommendations")
+    if error or not ticker:
+        return error or error_response("recommendations는 ticker가 필요합니다.")
+    return _registry_items("finnhub_recommendations", {"symbol": ticker})
+
+
+def _stock_market_news(ti: dict):
+    category = ti.get("category", "general")
+    if category not in ("general", "forex", "crypto", "merger"):
+        return error_response("category는 general/forex/crypto/merger 중 하나여야 합니다.")
+    return _registry_items("finnhub_market_news", {"category": category})
+
+
+def _company_metrics(ti: dict):
+    ticker, market = _company_common(ti)
+    if not ticker or market != "us":
+        return error_response("metrics는 미국 기업 ticker가 필요합니다.")
+    return _registry_items("us_key_metrics", {
+        "symbol": ticker, "period": ti.get("period", "annual"),
+        "limit": ti.get("limit", 5),
+    })
+
+
 def _company_profile(ti: dict):
     """[sense:company]{op:profile} — 기업 개요 (kr=DART, us=FMP)."""
     ticker, market = _company_common(ti)
+    source = ti.get("source", "auto")
+    if source == "finnhub":
+        if not ticker:
+            return error_response("Finnhub profile은 ticker가 필요합니다.")
+        return _registry_items("finnhub_company_profile", {"symbol": ticker})
+    if source != "auto":
+        return error_response("profile source는 auto 또는 finnhub입니다.")
     if market == "kr":
         tool = load_module("tool_dart")
         return _attach_company_table(
@@ -686,9 +741,11 @@ _OP_DISPATCHERS = {
         "quote": _stock_quote, "history": _stock_history, "info": _stock_info,
         "search": _stock_search, "investors": _stock_investors,
         "news": _stock_news, "earnings": _stock_earnings,
+        "price_target": _stock_price_target, "recommendations": _stock_recommendations,
+        "market_news": _stock_market_news,
     },
     "company_op": {"profile": _company_profile, "financials": _company_financials,
-                   "disclosures": _company_disclosures},
+                   "disclosures": _company_disclosures, "metrics": _company_metrics},
 }
 _OP_DEFAULTS = {"stock_op": "quote", "company_op": "profile"}
 

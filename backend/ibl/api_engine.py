@@ -30,8 +30,7 @@ from common.auth_manager import get_api_key, get_api_headers, get_auth_query_par
 
 
 # === 레지스트리 로딩 ===
-# api_registry.yaml 로더는 ibl_registry(사전층)로 이동 — 사전 병합(_merge_api_registry_actions)
-# 이 실행 엔진을 import 하지 않게 (2026-08-05 감사 ⑦). 이 모듈은 실행만 담당한다.
+# API 연결 정의 로더는 datastore가 소유한다. 공개 IBL 어휘를 추가하지 않는다.
 from ibl_registry import _load_registry
 
 

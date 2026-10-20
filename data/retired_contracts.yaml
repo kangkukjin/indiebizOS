@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: api-registry-implicit-vocabulary
+    retired: 2026-10-20
+    reason: 통합된 액션이 내부 API 등록부에서 다시 공개돼 사전·실행·활성 필터의 정합성이 깨졌다.
+    instead: 공개 어휘는 코어 및 패키지 소스에서만 빌드한다. 기존 기능은 통합 액션의 op/source/인자로 연결한다.
+    phrases: ["_merge_api_registry_actions"]
   - id: media-object-limbs
     retired: 2026-10-20
     reason: 라디오·CCTV의 탐색과 조작을 대상 중심 limbs 어휘로 통합한다.

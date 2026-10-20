@@ -188,7 +188,7 @@ Claude Code는 CLI 기본 정책, API는 모델별 입력 예산을 사용한다
   - handler: 패키지 `handler.py` / system: 백엔드 내부 함수 직접 / channel_engine·driver: 채널·프로토콜 추상화 / workflow·trigger: 오케스트레이션 엔진
   - (`api_engine` 은 `api_registry.yaml` 실행 엔진 — 라우터 축이 아니라 별도 경로다.)
   - API 등록 여부·설정 조회·리로드는 `ibl_registry`가 소유한다. `system_tools`의 직접 등록 도구 호출과 `api_pipeline`의 YAML 선언 실행은 살아 있으며 `api_engine`이 실행한다.
-- `api_registry.yaml`에 `node` 필드 추가 시 자동으로 노드 액션에 병합 — `ibl_nodes.yaml` 편집 불필요
+- 공개 어휘는 코어·패키지 소스에서만 빌드한다. `api_registry.yaml`은 내부 API 연결 정의이며 `node`/`action_name` 등록은 빌드가 거절한다.
 - 에이전트별 접근 제어: `allowed_nodes`로 노드 필터링
 - 인프라 노드(`self`, `others`, `table`)는 모든 에이전트에 자동 허용 — 노드 yaml의 `always_on: true` 플래그가 단일 소스 (`ibl_access._always_allowed()`가 레지스트리에서 읽음)
 → 상세 문서: [ibl.md](ibl.md)
@@ -363,7 +363,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **명함** `GET /nodes/card` — 레지스트리에서 파생한 desc-프로젝션(표준 코어 제외·params 미포함·몸 인식 필터). 등록 시 상호 자동 교환·캐시(`peer_cards.py`), 프롬프트 냄새 ~70토큰/몸.
 - **부탁** `POST /nodes/ask` (어휘 `[others:ask]`) — 받는 몸이 **자기 사전으로** 컴파일→실행→통화로 회신(1회 자가교정, 어휘 밖이면 정직한 거절). 컴파일러 능력 축은 *해마 유무*(용례 있으면 조종실 경로, 없으면 사전-동봉 경량 모델).
 - **사전 물리 분리**: 배포물=전체 사전집, 설치=자기 어휘만(로더 필터 + 폰 번들 물리 필터). 카탈로그·해마 회상이 **소유-필터**를 지나 "남의 어휘를 학습하지 않는다".
-- **사전 이음매 — 로더가 둘인 이유**(2026-08-24 계약화): 같은 `ibl_nodes.yaml` 을 읽는 로더가 둘인데 중복이 아니라 **의미가 다르다**. `ibl_access.load_nodes_raw` = *원본 사전집*(생 yaml, 배포물 전체), `ibl_registry.load_nodes_installed` = *이 몸의 설치본*(원본 + api_registry 병합 + `detect_body` 기반 타몸 어휘 prune). 설치는 몸의 의미론이라 언어(ibl 층)가 아니라 datastore 층에 산다 — "몸의 명사=코드"의 자리다. ibl 층이 소비하는 공개 표면은 `load_nodes_installed`·`invalidate_nodes`·`pruned_reason`·`self_can_run`·`foreign_actions`·`code_is_own` 이고, 그 밖의 언더스코어 심볼은 계약이 아니다(층-밖에서 찌르지 말 것). 두 로더 다 **부재≠파손** — 없는 파일은 조용한 빈 값, 깨진 파일은 재생성 안내를 단 오류다.
+- **사전 이음매 — 로더가 둘인 이유**(2026-08-24 계약화): 같은 `ibl_nodes.yaml` 을 읽는 로더가 둘인데 중복이 아니라 **의미가 다르다**. `ibl_access.load_nodes_raw` = *원본 사전집*(생 yaml, 배포물 전체), `ibl_registry.load_nodes_installed` = *이 몸의 설치본*(원본 + `detect_body` 기반 타몸 어휘 prune + 패키지 활성 필터). 설치는 몸의 의미론이라 언어(ibl 층)가 아니라 datastore 층에 산다 — "몸의 명사=코드"의 자리다. ibl 층이 소비하는 공개 표면은 `load_nodes_installed`·`invalidate_nodes`·`pruned_reason`·`self_can_run`·`foreign_actions`·`code_is_own` 이고, 그 밖의 언더스코어 심볼은 계약이 아니다(층-밖에서 찌르지 말 것). 두 로더 다 **부재≠파손** — 없는 파일은 조용한 빈 값, 깨진 파일은 재생성 안내를 단 오류다.
 - **신뢰 = 이웃 등급**(`body_trust.py`): 특별함은 배관이 아니라 레벨. 낯선 몸의 부탁은 거절되고, 폰-맥도 "최고 레벨 이웃"일 뿐이다 — **몸 사이 특권 배관을 두지 않는다**가 설계 원칙.
 - **표면 분리**: 원격 런처(=PC의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 가름(`backend/surface/launcher_surface_remote.py`·`backend/surface/launcher_surface_phone.py`). 폰 조종실은 로컬 완결(translate/validate/distill/catalog).
 
@@ -522,7 +522,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 174 액션** (sense 41·self 58·limbs 13·others 20·engines 19·table 23)
 - backend **.py 612개**(test 제외, git 추적 기준) — 층 디렉토리 `base 86 · datastore 87 · ibl 88 · cognition 93 · services 86 · surface 96`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **101개**(guide_db 등록 **97**)
-- op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 23·미선언 92)
+- op 분기 액션 **87개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 24·미선언 91)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)
 - 해마 코퍼스 **3,746 용례** (2026-10-04 실측 — 라이브 수치는 조종실·memory.md)

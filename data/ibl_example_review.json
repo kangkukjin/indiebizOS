@@ -1727,18 +1727,18 @@
   "sense:company": {
    "fields": {
     "description": "4e5d5a29a652",
-    "target_description": "ce55a2d7349a",
+    "target_description": "9461b4578380",
     "implementation": "943913de579b",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "7130b9d7d072",
+    "params": "2c9e17db45d4",
     "aliases": "6447534e114b",
-    "ops": "40bcaea57719",
+    "ops": "dcf36ccb4647",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "f4d1d98f797f"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-10-20",
    "examples": 34
   },
   "sense:contest": {
@@ -1908,16 +1908,18 @@
   "sense:kosis": {
    "fields": {
     "description": "ae45213742a3",
-    "target_description": "202c8b35746c",
+    "target_description": "e00d033b13c9",
     "implementation": "71a673967a8a",
     "returns": "3c22349f8d0b",
-    "target_key": "4c4f28a0fc9a",
-    "params": "0185d4a7256e",
+    "target_key": "0cacf69ab63c",
+    "params": "2a9f0665ed4f",
     "aliases": "a661697e2174",
+    "ops": "7736643b41e7",
+    "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "d54e0652fea1"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-10-20",
    "examples": 24
   },
   "sense:legal": {
@@ -2019,19 +2021,19 @@
   },
   "sense:place": {
    "fields": {
-    "description": "d157cb363383",
-    "target_description": "526c700adb85",
+    "description": "f333b9e29864",
+    "target_description": "8d9640bad5ed",
     "implementation": "7c0a005a6859",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "008c02da8b9b",
+    "params": "5bd693de36a6",
     "aliases": "cd48e05d9ad8",
-    "ops": "fcf9bbaf2cee",
+    "ops": "35b73a719b38",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "dfdc6228afd7"
    },
-   "reviewed": "2026-09-27",
+   "reviewed": "2026-10-20",
    "examples": 14
   },
   "sense:realty": {
@@ -2212,19 +2214,19 @@
   "sense:stock": {
    "fields": {
     "description": "371c78e2bfd3",
-    "target_description": "98364e40168f",
+    "target_description": "1203ff2618bb",
     "implementation": "b61c16068f5c",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
-    "params": "4d836a6542e5",
+    "params": "ebcd612f06c5",
     "aliases": "4a18a36666e4",
-    "ops": "546f8f008d06",
+    "ops": "d3cb91761988",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "0c5575354d32"
    },
-   "reviewed": "2026-09-18",
-   "examples": 141
+   "reviewed": "2026-10-20",
+   "examples": 143
   },
   "sense:used": {
    "fields": {

@@ -338,3 +338,29 @@ python3 -c "import sqlite3; c=sqlite3.connect('data/ibl_usage.db'); \
 [print(p, c.execute('select count(*) from ibl_examples where ibl_code like ?',(p,)).fetchone()[0]) \
  for p in ['%fs_query%','%run_pipeline%','%image_critic%']]"
 ```
+
+## API 등록부의 독립 어휘를 통합한 호출표 (2026-10-20)
+
+아래 32개 이름은 공개 사전에서 은퇴했다. API 연결 정의 45개는 내부 도구로 유지한다. 같은 이름이 이미 정본에 있던 `world_bank`·`reverse_geocode`·`crypto` 세 액션은 계속 사용한다. 사전·실행·회상 소유 판정·동결 코퍼스 감사 모두 빌드된 어휘만 읽는다.
+
+| 은퇴한 sense 액션 | 현재 호출 |
+|---|---|
+| `search_legal`, `laws`, `precedents` | `legal` + query, target=law/prec |
+| `detail`, `law_detail`, `precedent_detail` | `legal` + id, target=law/prec(통합 detail은 원래 target 유지) |
+| `search_kosis` | `kosis` + op=list, query/vw_cd/parent_list_id |
+| `data`, `info` | `kosis` + org_id/tbl_id, 메타는 info=true |
+| `integrated`, `indicators` | `kosis` + query 또는 indicator |
+| `restaurants_combined` | `restaurant` + query |
+| `kstartup`, `mss` | `startup` + source=kstartup/mss (mss 원천 폐기 상태는 유지) |
+| `us_quote`, `us_search` | `stock` + op=quote/search, market=us, ticker/query |
+| `us_metrics` | `company` + op=metrics, ticker/period/limit |
+| `us_income`, `us_balance`, `us_cashflow` | `company` + op=financials, market=us, statement_type=income/balance/cashflow |
+| `finnhub_profile` | `company` + op=profile, source=finnhub, ticker |
+| `price_target`, `recommendations`, `market_news` | `stock` + 같은 이름의 op (앞의 둘은 ticker, 뉴스는 category) |
+| `semantic_scholar`, `openalex`, `pubmed` | `paper` + op=search, source=semantic/openalex/pubmed |
+| `guardian_news` | `search` + source=guardian |
+| `books` | `book` + source=google |
+| `naver_local` | `place` + op=search, source=naver, query/limit/sort |
+| `house_trade`, `house_rent` | `realty` + source=molit, type=house, deal=trade/rent |
+
+통합은 입력·출력 필드가 예전과 완전히 같다는 뜻이 아니다. 예전 symbol은 ticker, deal_date는 year_month, law_id/precedent_id는 id로 옮긴다. 반환은 각 정본 액션의 items 계약을 따른다. 네이버 장소 검색은 limit 최대 5, sort=random/comment만 지원하고 좌표·반경·category 조건은 명시적으로 거절한다. 주택 두 액션의 옛 설명에 적힌 연립다세대는 잘못된 표기였다(SH 엔드포인트는 단독/다가구).

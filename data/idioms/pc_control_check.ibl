@@ -20,7 +20,7 @@
   } [catch] {
     $관측 = get(get($error,"details",{}),"task_observation",{})
     [if:len($관측)==0] {
-      return {**$확인,status:"unknown",failure:{stage:"wait",message:$error.message,next:"같은 작업을 PC제어확인으로 다시 조회하세요. 변경을 재전송하지 마세요."}}
+      return {**$확인,status:"unknown",failure:{stage:"wait",code:null,message:$error.message,next:"같은 작업을 PC제어확인으로 다시 조회하세요. 변경을 재전송하지 마세요."}}
     }
   }
   return [self:script]{id:"PC제어부품",args:{op:"verify",task:$작업,plan_ref:$준비,job_ref:$접수,observation:$관측}}

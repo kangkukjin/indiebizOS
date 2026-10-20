@@ -62,6 +62,9 @@ $관측 = [try] {
 return $관측
 ```
 
+성공 결과에는 `status:"completed"`·`failure:null` 칸이 함께 온다(2026-10-21, 긴문장 87회차 L87-4) — PC제어·Android제어 결과와 같은 투영(`status`·`verified`·`failure`)으로
+세 드라이버를 한 프로그램에서 다룰 수 있게. 실패는 여전히 **예외**이며 `[try]/[catch]` 의 `$error.details.failure{code,message,next}` 로 받는다. 실패를 레코드로 돌려주는 PC·Android 와 이 점은 다르다.
+
 ## 정해진 연속 동작은 한 프로그램으로
 
 첫 창에 임시 빈 탭을 열고 전환했다 돌아와 닫는 예시다. 실행 전 Chrome 창이 있어야 한다.

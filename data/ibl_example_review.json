@@ -1129,7 +1129,7 @@
     "implementation": "7d822e4d3499",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "c41e4b1fdd74",
+    "params": "348a8b9e4530",
     "aliases": "399fa2f32490",
     "ops": "7f82f45ba944",
     "side_effect": "b5bea41b6c62",
@@ -1137,8 +1137,8 @@
     "router": "ebbb1532efbc",
     "tool": "2e81dde1acfc"
    },
-   "reviewed": "2026-10-20",
-   "examples": 15
+   "reviewed": "2026-10-21",
+   "examples": 18
   },
   "self:list": {
    "fields": {

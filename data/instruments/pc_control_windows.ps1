@@ -226,7 +226,7 @@ function Start-App($request) {
             Start-Process -FilePath $lnk -WindowStyle Minimized; $how = 'start_menu_shortcut'
         } else {
             try { Start-Process -FilePath $name -WindowStyle Minimized; $how = 'start_process' }
-            catch { throw ('앱을 찾지 못했거나 실행이 거절됐습니다: ' + $_.Exception.Message) }
+            catch { throw ('LAUNCH_FAILED: 앱을 찾지 못했거나 실행이 거절됐습니다: ' + $_.Exception.Message) }
         }
     }
     $found = @(); $matched = 'name'

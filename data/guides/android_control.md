@@ -127,6 +127,13 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 원격 선언형 앱도 같은 함수를 호출하고 결과의 `control_task`에 원 반환 전체를 보존하며 처리 상태·작업 ID·복구 안내를 표시한다.
 앱의 상태 직접 확인은 작업을 취소하거나 변경을 재전송하지 않는다.
 
+실패 칸의 `code`(2026-10-21, 긴문장 87회차 L87-3): 대상 거절은 `TARGET_NOT_REGISTERED`·`TARGET_NOT_ANDROID`·`TARGET_REVOKED`·`TARGET_INACTIVE`·
+`TARGET_NOT_CONNECTED`·`CONTRACT_MISMATCH`·`PYTHON_NOT_READY`, 검증 실패는 폰이 앞머리에 적은 코드(`UI_DRIVER_UPDATE_REQUIRED`·`STALE_SCREEN`·`POSTCONDITION_FAILED` …),
+없으면 `null`. 메시지는 `CODE: 설명` 모양을 지킨다.
+`needs_front:true` 동작(앱 실행·화면 독해·입력)은 **사람 화면이 있는 문맥**(`user`·`training`·`test` 출처)에서만 폰에 보낸다. 정기·배경 실행에서는 전송 전에
+`SCREEN_CONTEXT_UNAVAILABLE` 로 거절한다(L87-2 — 그전엔 검사 없이 폰까지 갔다). 문맥은 허브가 자식 환경 `INDIEBIZOS_SCREEN_CONTEXT` 로 실어 주고 규칙은 `control_conditions` 한 곳이다.
+하드웨어 동작(음량·밝기·화면·센서)은 문맥에 상관없이 보낸다.
+
 ## 실행 부품과 배포
 
 공용 준비·검증은 `data/scripts/android_control.py`, 공개 정의는

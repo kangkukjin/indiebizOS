@@ -158,6 +158,12 @@ evidence_ref나 그 안의 plan·job이 누락·null·잘못된 자료형이어�
 값을 잃었으면 execute_ibl의 기존 `result_ref.read_args`로 원 반환을 회수한다. 접수 응답 자체를
 잃은 경우 원 실행의 resume·실행 기록과 guestpc history로 확인하고 새 요청을 만들지 않는다.
 
+실패 칸에는 `code` 가 있다(2026-10-21, 긴문장 87회차 L87-3). 대상 거절은 조건별 코드 `TARGET_NOT_REGISTERED`·`TARGET_REVOKED`·`TARGET_INACTIVE`·
+`SHELL_NOT_READY`·`TARGET_NOT_CONNECTED`, 묶음의 미지원 항목은 `UNSUPPORTED_ACTION`, 실행 실패는 실행 파일이 앞머리에 적은 코드(`LAUNCH_FAILED` 등)다.
+코드가 없는 실패는 `code:null` 이며 `message` 로만 판단한다. 메시지는 언제나 `CODE: 설명` 모양이라 registered-json/1 통로에서도 코드가 살아남는다.
+같은 실행 안에서 같은 PC 를 여러 번 부를 때 묶음 조회의 첫 행이 `stage:"target"` 이면 그 대상의 나머지 호출은 건너뛴다 — 끊긴 PC 에 쓰기를 열일곱 번 보내도 전송은 0 이지만 호출마다 손발 조회를 반복한다(W87-3).
+드라이버는 손발 목록을 `[self:limb]{op:"list",limb:$대상}` 로 그 손발만 읽는다(전체 원장 65KB → 10KB, W87-1).
+
 ## 설치와 수리
 
 여러 상태를 점검할 때는 `PC조회묶음`으로 대상 선택과 실행 파일 읽기를 공유한다.

@@ -4,6 +4,14 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 87회차 — 세 조작면 드라이버(Android 폰·Windows PC·Chrome)를 한 프로그램으로: 쓰기·원복·실패 모양 (2026-10-20~21, 훈련 완료·수리 4건)
+
+형식 §2 이음새 입장(Windows 동형·Android UI·Chrome 셋 다 단일 호출 실기만 거침)+탐침 8+독립 AI 1회. 설계 docs/LONG_SENTENCE_DRIVER_TRIAD_DESIGN. 23:50~00:06 훈련자, 00:06~00:26 AI, 00:28~00:45 수리.
+훈련자 v0 수정 1주기(`;`)·검사 56초·실행 233.3초·모델 0: tv1 22/22(clipboard·keep_awake·notepad 원복 same)·삼성0 음량 6/6(3→1→3 same)·Chrome 6/6(배경 탭 open→switch→복귀→close, 판본 same, activation_restored)·삼성1/예나폰 읽기·UI 거절(APK)·맥26 거절(실행 시각 미연결). 변형 A(맥12·창 2147483646) 113.5초 전송 0·기본 SHA 보존. 변형 B STATE_CHANGED 통과, STALE_SCREEN 탐침 불가.
+독립 AI ep5094 1,185초·입력 5.77M(캐시 5.28M)·출력 36K·도구 31(IBL 27)·검사 거절 4: 세 드라이버 전부 IBL, 화면 0. 맥26 명부 미연결인데 info 응답→원시 shell 로 접근→끊김→대기열 변경 3건 cancel(올바른 복구, 가이드 후보).
+**L87-1**(★★ 미수리) guestpc 쓰기 발자국 미상이 같은 실행의 모든 읽기를 재사용 제외(reuse 0·기기 3회 재전송), 자원 계약 개정 판정. **L87-2**(★★ ✅) needs_front 폰 UI 동작이 origin:scheduler 에서 검사 없이 전송 → self:script 자식 환경 화면 문맥+부품 거절. **L87-3**(✅) failure.code 칸·조건별 거절 코드·LAUNCH_FAILED. **L87-4**(✅부분) Chrome·Safari 성공 결과 status/failure 칸. **W87-1**(✅) 드라이버 호출마다 손발 전체 원장 26회·2.5MB → limb 필터 −89%. W87-2 검사 56초·W87-3 부재 대상 17호출 기록만.
+중심 질문 답: 세 드라이버 결과 모양은 같지 않았다(Chrome status null·실패=예외). 회귀 299 통과·build --check 통과. [보고서](experiments/long_sentence_imagination/round_87/report.md).
+
 ## 86회차 — 본체 PC·Safari 드라이버의 실기 관측과 실패 보존 불변식 (2026-10-20, 훈련 완료·후속 진단 수리)
 
 85회차 수리 후 불변식 회차. 21:56 예산 기록·22:07:18 새 실험 종료, 준비 포함 60분/22:50 상한.

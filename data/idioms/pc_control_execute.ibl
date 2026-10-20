@@ -8,7 +8,7 @@
       $단계 = "local"
       $결과 = [self:script]{id:"PC제어부품",args:{op:"local",platform:$선택.platform,source:$원문.text,request:$선택.request},timeout:125}
       [if:$결과.success==false] {
-        return {**$작업,status:"failed",result:$결과,failure:{stage:"local",message:get($결과,"error","PC 제어 실패"),next:"부분 관측을 확인하세요. 변경을 자동 재전송하지 마세요."}}
+        return {**$작업,status:"failed",result:$결과,failure:{stage:"local",code:null,message:get($결과,"error","PC 제어 실패"),next:"부분 관측을 확인하세요. 변경을 자동 재전송하지 마세요."}}
       }
       return {**$작업,status:"completed",verified:get($결과,"verified",false),result:$결과}
     }
@@ -25,6 +25,10 @@
       $상태 = "unknown"
       $다음 = "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
     }
-    return {**$작업,status:$상태,failure:{stage:$단계,message:$error.message,next:$다음}}
+    $조각 = split($error.message,":")
+    $머리 = $조각[0]
+    $코드 = null
+    [if:$머리!="" and len($머리)>=3 and strip($머리,"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")==""] { $코드 = $머리 }
+    return {**$작업,status:$상태,failure:{stage:$단계,code:$코드,message:$error.message,next:$다음}}
   }
 }

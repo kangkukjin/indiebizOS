@@ -224,3 +224,12 @@ def test_real_catalog_binds_chrome_surface_without_shadowing_os_guide():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+# ── 긴문장 87회차 L87-4: 앱 드라이버 성공 결과도 status·failure 자리를 가진다(PC·Android 와 같은 투영)
+def test_success_results_carry_status_and_failure_slots(chrome):
+    s = chrome.run({"op": "status"})
+    assert s["status"] == "completed" and s["failure"] is None and s["verified"] is True
+    w = s["windows"][0]
+    o = chrome.run({"op": "open", "url": "about:blank", "window_id": w["window_id"], "expected": w["revision"]})
+    assert o["status"] == "completed" and o["failure"] is None

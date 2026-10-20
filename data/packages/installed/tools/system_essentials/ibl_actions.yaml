@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-20", impl: "e99d294dfca7298b"}  # 재감사: 등록 실행 실패의 코드·복구 정보만 보존. 파일 경로·회원 기기 실행·권한 판정은 불변.
+        path_audited: {at: "2026-10-21", impl: "aef3177449644334"}  # 재감사(긴문장 87회차 L87-2): 자식 환경에 화면 문맥(INDIEBIZOS_SCREEN_CONTEXT)만 추가. 파일 경로·회원 기기 실행·권한 판정은 불변.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +151,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-20", impl: "e99d294dfca7298b"}  # 재감사: 등록 실행 실패의 코드·복구 정보만 보존. 파일 경로·회원 기기 실행·권한 판정은 불변.
+        path_audited: {at: "2026-10-21", impl: "aef3177449644334"}  # 재감사(긴문장 87회차 L87-2): 자식 환경에 화면 문맥(INDIEBIZOS_SCREEN_CONTEXT)만 추가. 파일 경로·회원 기기 실행·권한 판정은 불변.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -229,7 +229,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-20", impl: "e99d294dfca7298b"}  # 재감사: 등록 실행 실패의 코드·복구 정보만 보존. 파일 경로·회원 기기 실행·권한 판정은 불변.
+        path_audited: {at: "2026-10-21", impl: "aef3177449644334"}  # 재감사(긴문장 87회차 L87-2): 자식 환경에 화면 문맥(INDIEBIZOS_SCREEN_CONTEXT)만 추가. 파일 경로·회원 기기 실행·권한 판정은 불변.
         target_key: path
       list:
         callable_contract:
@@ -968,7 +968,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-20", impl: "e99d294dfca7298b"}  # 재감사: 등록 실행 실패의 코드·복구 정보만 보존. 파일 경로·회원 기기 실행·권한 판정은 불변.
+        path_audited: {at: "2026-10-21", impl: "aef3177449644334"}  # 재감사(긴문장 87회차 L87-2): 자식 환경에 화면 문맥(INDIEBIZOS_SCREEN_CONTEXT)만 추가. 파일 경로·회원 기기 실행·권한 판정은 불변.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

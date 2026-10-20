@@ -514,3 +514,31 @@ def test_native_run_host_dispatches_every_host_action(monkeypatch):
         assert out["verified"] is (action != "sleep"), action
     assert seen and seen[0][-1] == "sleepnow"
     assert mac_native.run_host({"action": "status"}) is None
+
+
+# ── 긴문장 87회차 수리: 대상 거절의 조건별 코드(L87-3) — PC·Android 가 같은 자리·같은 타입
+def _pc_row():
+    return {"device_id": "pc-w", "connected": True, "registration": {
+        "state": "active", "capabilities": {"os": "windows", "shell": True}}}
+
+
+@pytest.mark.parametrize("mutate, code", [
+    (lambda r: r.update(connected=False), "TARGET_NOT_CONNECTED"),
+    (lambda r: r.update(revoked=True), "TARGET_REVOKED"),
+    (lambda r: r.update(expired=True), "TARGET_REVOKED"),
+    (lambda r: r["registration"].update(state="removed"), "TARGET_INACTIVE"),
+    (lambda r: r["registration"].update(paused=True), "TARGET_INACTIVE"),
+    (lambda r: r["registration"]["capabilities"].pop("shell"), "SHELL_NOT_READY"),
+    (lambda r: r.update(device_id="other"), "TARGET_NOT_REGISTERED"),
+])
+def test_target_rejections_name_the_failed_condition(mutate, code):
+    row = _pc_row(); mutate(row)
+    with pytest.raises(ValueError, match="^" + code + ": "):
+        pc.select_target({"target": "pc-w", "request": {"action": "status"}, "limbs": [row]})
+
+
+def test_verify_failure_carries_code_slot_like_android():
+    assert pc.failure_code("TARGET_NOT_CONNECTED: x") == "TARGET_NOT_CONNECTED"
+    assert pc.failure_code("앱을 찾지 못했거나 실행이 거절됐습니다") is None
+    failure = pc.verify_task({"task": {}}, {})["failure"]
+    assert set(failure) == {"stage", "code", "message", "next"} and failure["code"] is None

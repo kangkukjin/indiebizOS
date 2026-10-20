@@ -266,6 +266,10 @@
             "type": "boolean",
             "description": "self:limb 파라미터"
           },
+          "limb": {
+            "type": "string",
+            "description": "self:limb 파라미터"
+          },
           "observations": {
             "type": "array",
             "description": "self:limb 파라미터"

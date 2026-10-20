@@ -394,14 +394,20 @@ def select_target(args):
     else:
         rows = [r for r in args.get("limbs", []) if r.get("device_id") == target]
         if len(rows) != 1:
-            raise ValueError("등록된 PC ID를 지정하세요")
+            raise ValueError("TARGET_NOT_REGISTERED: 등록된 PC ID를 지정하세요")
         row = rows[0]
         registration = row.get("registration") or {}
         caps = registration.get("capabilities") or {}
-        if (row.get("revoked") or row.get("expired") or row.get("invitation")
-                or registration.get("state") != "active" or registration.get("paused")
-                or caps.get("shell") is not True or row.get("connected") is not True):
-            raise ValueError("선택 PC가 연결·활성·shell 준비 상태가 아닙니다")
+        # 거절 사유를 조건별 코드로(긴문장 87회차 L87-3: 맥26 은 명부에 connected 였다가 실행 시각엔 끊겨 있었는데
+        # 다섯 조건이 한 문장이라 어느 것이 막았는지 보고서에 남지 않았다).
+        if row.get("revoked") or row.get("expired") or row.get("invitation"):
+            raise ValueError("TARGET_REVOKED: 폐기·만료·초대 상태의 등록입니다. 활성 device_id 를 고르세요")
+        if registration.get("state") != "active" or registration.get("paused"):
+            raise ValueError("TARGET_INACTIVE: 등록이 활성이 아니거나 일시 중지 상태입니다")
+        if caps.get("shell") is not True:
+            raise ValueError("SHELL_NOT_READY: 이 PC 헬퍼는 shell 실행을 제공하지 않습니다")
+        if row.get("connected") is not True:
+            raise ValueError("TARGET_NOT_CONNECTED: PC 가 지금 연결돼 있지 않습니다")
         raw = str(caps.get("os") or (row.get("env") or {}).get("os") or "").lower()
         system = {"macos": "darwin", "mac": "darwin", "osx": "darwin",
                   "win32": "windows", "win": "windows"}.get(raw, raw)
@@ -431,6 +437,12 @@ def select_target(args):
             "wait": wait, "timeout": 120 if slow else 30}
 
 
+def failure_code(message):
+    """'CODE: 메시지' 관례의 코드(없으면 None) — Android제어부품과 같은 자리·같은 타입(긴문장 87회차 L87-3)."""
+    m = re.match(r"^([A-Z][A-Z0-9_]{2,}):", message or "")
+    return m.group(1) if m else None
+
+
 def verify_task(args, context):
     """원 준비·접수 영수증과 대조. 이 경로는 장치 명령을 전송하지 않는다."""
     task = args.get("task") or {}
@@ -440,7 +452,7 @@ def verify_task(args, context):
            "failure": None}
     def fail(reason, status="unknown", result=None):
         return {**out, "status": status, "result": result,
-                "failure": {"stage": "verification", "message": reason,
+                "failure": {"stage": "verification", "code": failure_code(reason), "message": reason,
                             "next": "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요."}}
     receipts = context.get("receipts", {})
     prepared, accepted = receipts.get("plan_ref", {}), receipts.get("job_ref", {})

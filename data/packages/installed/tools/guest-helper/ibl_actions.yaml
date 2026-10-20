@@ -97,6 +97,7 @@ nodes:
         params:
           key: string
           paused: boolean
+          limb: string          # list: 이 손발(device_id·별칭)의 행만 — 드라이버가 호출마다 전체 원장을 싣지 않게(긴문장 87회차 W87-1)
           observations: array   # 제어 관측 행 목록 — register+target 에서 추가·정정(CONTROL_DRIVER_DESIGN §12 ①)
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           target: [device_id]

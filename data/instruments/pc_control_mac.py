@@ -455,7 +455,7 @@ def launch_app(request):
     flag = "-b" if request["app_kind"] == "bundle" else "-a"
     proc = subprocess.run(["/usr/bin/open", "-g", flag, request["app"]], capture_output=True, text=True, timeout=15)
     if proc.returncode != 0:
-        raise RuntimeError("앱을 찾지 못했거나 실행이 거절됐습니다: " + proc.stderr.strip()[-300:])
+        raise RuntimeError("LAUNCH_FAILED: 앱을 찾지 못했거나 실행이 거절됐습니다: " + proc.stderr.strip()[-300:])
     found = []
     for _ in range(20):
         found = match_app(app_list(), request)

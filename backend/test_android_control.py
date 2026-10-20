@@ -277,3 +277,56 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync('frontend/src/lib/android-
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+# ── 긴문장 87회차 수리: needs_front 동작의 화면 문맥 검사(L87-2)·조건별 거절 코드(L87-3)
+def _android_row():
+    return {'device_id': 'p', 'connected': True, 'registration': {'state': 'active', 'capabilities': {
+        'os': 'android', 'execution_contract': 1, 'runtimes': {'python': {'ready': True}}}}}
+
+
+@pytest.mark.parametrize('context, action, allowed', [
+    ('{"available": false, "origin": "scheduler", "reason": "정기·배경 실행"}', 'app_launch', False),
+    ('{"available": false, "origin": "scheduler", "reason": "정기·배경 실행"}', 'ui_snapshot', False),
+    ('{"available": false, "origin": "scheduler", "reason": "정기·배경 실행"}', 'status', True),
+    ('{"available": false, "origin": "scheduler", "reason": "정기·배경 실행"}', 'volume_half', True),
+    ('{"available": true, "origin": "user", "reason": null}', 'app_launch', True),
+    ('{"available": true, "origin": "training", "reason": null}', 'app_launch', True),
+    (None, 'app_launch', True),   # 허브 밖 직접 실행(환경 없음)=미상 — 막지 않는다. 허브 경로는 항상 싣는다.
+])
+def test_needs_front_actions_follow_hub_screen_context_before_any_transport(monkeypatch, context, action, allowed):
+    if context is None:
+        monkeypatch.delenv('INDIEBIZOS_SCREEN_CONTEXT', raising=False)
+    else:
+        monkeypatch.setenv('INDIEBIZOS_SCREEN_CONTEXT', context)
+    request = {'action': action, **({'package': 'com.android.settings'} if action == 'app_launch' else {})}
+    args = {'target': 'p', 'request': request, 'limbs': [_android_row()]}
+    if allowed:
+        assert pc.select_target(args)['target'] == 'p'
+    else:
+        with pytest.raises(ValueError, match='^SCREEN_CONTEXT_UNAVAILABLE: '):
+            pc.select_target(args)
+
+
+@pytest.mark.parametrize('mutate, code', [
+    (lambda r: r.update(connected=False), 'TARGET_NOT_CONNECTED'),
+    (lambda r: r.update(revoked=True), 'TARGET_REVOKED'),
+    (lambda r: r['registration'].update(state='removed'), 'TARGET_INACTIVE'),
+    (lambda r: r['registration'].update(paused=True), 'TARGET_INACTIVE'),
+    (lambda r: r['registration']['capabilities'].update(execution_contract=0), 'CONTRACT_MISMATCH'),
+    (lambda r: r['registration']['capabilities']['runtimes']['python'].update(ready=False), 'PYTHON_NOT_READY'),
+    (lambda r: r['registration']['capabilities'].update(os='ios'), 'TARGET_NOT_ANDROID'),
+    (lambda r: r.update(device_id='other'), 'TARGET_NOT_REGISTERED'),
+])
+def test_target_rejections_name_the_failed_condition(monkeypatch, mutate, code):
+    monkeypatch.delenv('INDIEBIZOS_SCREEN_CONTEXT', raising=False)
+    row = _android_row(); mutate(row)
+    with pytest.raises(ValueError, match='^' + code + ': '):
+        pc.select_target({'target': 'p', 'request': {'action': 'status'}, 'limbs': [row]})
+
+
+def test_failure_objects_carry_code_from_message_prefix():
+    assert pc.failure_code('UI_DRIVER_UPDATE_REQUIRED: 폰 APK를 업데이트하세요.') == 'UI_DRIVER_UPDATE_REQUIRED'
+    assert pc.failure_code('원래 요청·대상·작업 참조와 다릅니다.') is None
+    failure = pc.verify_task({'task': {}}, {})['failure']
+    assert set(failure) == {'stage', 'code', 'message', 'next'} and failure['code'] is None

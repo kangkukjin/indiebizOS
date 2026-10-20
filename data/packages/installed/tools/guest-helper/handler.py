@@ -807,6 +807,13 @@ def _limb_list(tool_input: dict) -> dict:
     import device_registry as dr
     live_ids = {e.get("device_id") for e in dr.live_with_capability(limb_keys.GUEST_PC_CLASS)}
     rows = [r for r in limb_keys.list_keys() if not r.get("invitation")]
+    # limb(device_id·별칭) 필터 — 드라이버(PC제어·Android제어)가 호출마다 전체 원장(폐기 키 포함, 65KB)을
+    # 실어 나르던 낭비(긴문장 87회차 W87-1: 한 프로그램에 26회·2.5MB). 같은 모양·같은 connected 계산, 행만 좁힌다.
+    limb_filter = tool_input.get("limb")
+    if limb_filter is not None:
+        if not isinstance(limb_filter, str) or not limb_filter.strip():
+            return {"success": False, "error": "limb 은 손발의 device_id 또는 별칭 문자열입니다."}
+        rows = [r for r in rows if r.get("device_id") == limb_filter or r.get("alias") == limb_filter]
     for r in rows:
         r["connected"] = r["device_id"] in live_ids
         if not r.get("registration"):
@@ -820,10 +827,12 @@ def _limb_list(tool_input: dict) -> dict:
                         ("os", "os_version", "hostname", "user", "admin", "gui")
                         if env.get(k) is not None}
     import hardware_registry
-    rows.extend(hardware_registry.devices())
+    rows.extend(h for h in hardware_registry.devices()
+                if limb_filter is None or h.get("device_id") == limb_filter or h.get("alias") == limb_filter)
     # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
     # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
     return {"success": True, "op": "list", "limbs": rows, "items": rows,
+            **({"limb": limb_filter} if limb_filter is not None else {}),
             "control_observations": [
                 {"surface": surface, "count": count} for surface, count in sorted(obs.counts().items())],
             "connected_count": sum(r.get("connected") is True for r in rows),

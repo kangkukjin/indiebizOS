@@ -111,24 +111,56 @@ def validate(request):
     return out
 
 
+def screen_context():
+    """허브가 자식 환경에 실은 화면 문맥(control_conditions.screen_context JSON). 없으면 None(미상)."""
+    raw = os.environ.get("INDIEBIZOS_SCREEN_CONTEXT")
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def failure_code(message):
+    """'CODE: 메시지' 관례의 코드 — registered-json/1 어댑터가 failure 객체를 문자열로 전하므로 앞머리에 싣는다."""
+    m = re.match(r"^([A-Z][A-Z0-9_]{2,}):", message or "")
+    return m.group(1) if m else None
+
+
 def select_target(args):
     request = validate(args.get("request"))
     target = args.get("target")
     if not isinstance(target, str) or not target.strip() or target == "__local__":
-        raise ValueError("등록된 Android 폰의 device_id를 명시하세요.")
+        raise ValueError("INVALID_ARGUMENT: 등록된 Android 폰의 device_id를 명시하세요.")
     rows = [r for r in args.get("limbs", []) if isinstance(r, dict) and r.get("device_id") == target]
     if len(rows) != 1:
-        raise ValueError("등록된 Android 폰 ID를 확인하세요.")
+        raise ValueError("TARGET_NOT_REGISTERED: 등록된 Android 폰 ID를 확인하세요.")
     row = rows[0]
     reg = row.get("registration") or {}
     caps = reg.get("capabilities") or {}
     python = (caps.get("runtimes") or {}).get("python") or {}
-    if ((caps.get("os") or (row.get("env") or {}).get("os")) != "android"
-            or row.get("revoked") or row.get("expired") or row.get("invitation")
-            or row.get("connected") is not True or reg.get("state") != "active"
-            or reg.get("paused") or caps.get("execution_contract") != 1
-            or python.get("ready") is not True):
-        raise ValueError("폰의 Android·등록·연결·Python 실행 준비 상태를 확인하세요.")
+    # 거절 사유를 조건별 코드로(긴문장 87회차 L87-3: 다섯 조건이 한 문장이라 어느 것이 막았는지 몰랐다).
+    if (caps.get("os") or (row.get("env") or {}).get("os")) != "android":
+        raise ValueError("TARGET_NOT_ANDROID: 선택한 손발은 Android 폰이 아닙니다.")
+    if row.get("revoked") or row.get("expired") or row.get("invitation"):
+        raise ValueError("TARGET_REVOKED: 폐기·만료·초대 상태의 등록입니다. 활성 device_id 를 고르세요.")
+    if reg.get("state") != "active" or reg.get("paused"):
+        raise ValueError("TARGET_INACTIVE: 등록이 활성이 아니거나 일시 중지 상태입니다.")
+    if row.get("connected") is not True:
+        raise ValueError("TARGET_NOT_CONNECTED: 폰이 지금 연결돼 있지 않습니다.")
+    if caps.get("execution_contract") != 1:
+        raise ValueError("CONTRACT_MISMATCH: 폰 앱의 execution_contract 가 1 이 아닙니다.")
+    if python.get("ready") is not True:
+        raise ValueError("PYTHON_NOT_READY: 폰의 Python 실행 준비가 되지 않았습니다.")
+    # needs_front 동작은 사람 화면이 있는 문맥에서만(설계 §6). 문맥은 허브가 환경에 실었고 규칙은 허브 한 곳.
+    # 환경 자체가 없으면(허브 밖 직접 실행) 미상이라 막지 않는다 — 허브 경로는 항상 싣는다.
+    context = screen_context()
+    if condition(request["action"], request)["needs_front"] and context is not None and context.get("available") is not True:
+        raise ValueError("SCREEN_CONTEXT_UNAVAILABLE: " + request["action"] + " 은 앞 화면을 요구하는 동작(needs_front)인데 "
+                         "현재 실행 문맥(" + str(context.get("origin")) + ")은 " + str(context.get("reason")) + "이라 "
+                         "화면을 쓸 수 없습니다. 전송하지 않았습니다. 사용자가 입회한 턴에서 실행하세요.")
     wait = args.get("wait")
     wait = 60 if wait is None else wait
     if type(wait) not in (int, float) or not math.isfinite(wait) or not 0 <= wait <= 240:
@@ -311,7 +343,7 @@ def verify_task(args, context):
 
     def fail(message, result=None, status="unknown"):
         return {**out, "status": status, "result": result, "failure": {
-            "stage": "verification", "message": message,
+            "stage": "verification", "code": failure_code(message), "message": message,
             "next": "같은 작업을 Android제어확인으로 조회하세요. 근거가 없으면 상태만 새로 읽으세요. 변경을 재전송하지 마세요."}}
 
     try:

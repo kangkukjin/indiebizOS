@@ -472,3 +472,32 @@ def test_safari_script_registered_and_guide_examples_compile():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+# ── 긴문장 87회차 W87-1: 손발 목록 op 의 limb 필터 — 드라이버 호출마다 전체 원장을 싣지 않는다
+def test_limb_list_filters_one_limb_without_changing_row_shape(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        'guest_helper_handler_for_limb_filter', Path(__file__).resolve().parents[1] / 'data/packages/installed/tools/guest-helper/handler.py')
+    handler = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(handler)
+    import limb_keys, device_registry, hardware_registry, control_observations
+    rows = [{'device_id': 'guestpc-a', 'alias': 'tv1', 'revoked': False, 'invitation': False, 'registration': {'state': 'active'}},
+            {'device_id': 'guestpc-b', 'alias': 'tv1', 'revoked': True, 'invitation': False, 'registration': None},
+            {'device_id': 'guestpc-c', 'alias': '맥26', 'revoked': False, 'invitation': False, 'registration': {'state': 'active'}}]
+    monkeypatch.setattr(limb_keys, 'list_keys', lambda include_revoked=True: [dict(r) for r in rows])
+    monkeypatch.setattr(device_registry, 'live_with_capability', lambda cls: [{'device_id': 'guestpc-a'}])
+    monkeypatch.setattr(hardware_registry, 'devices', lambda: [{'device_id': 'hardware-1', 'alias': '거실TV'}])
+    monkeypatch.setattr(control_observations, 'counts', lambda: {})
+    monkeypatch.setattr(handler, '_payload_dir_for', lambda alias, device_id: '/nonexistent')
+    everything = handler._limb_list({})
+    one = handler._limb_list({'limb': 'guestpc-a'})
+    by_alias = handler._limb_list({'limb': 'tv1'})
+    assert len(everything['limbs']) == 4 and 'limb' not in everything
+    assert [r['device_id'] for r in one['limbs']] == ['guestpc-a'] and one['limb'] == 'guestpc-a'
+    assert one['limbs'][0]['connected'] is True and set(one['limbs'][0]) == set(everything['limbs'][0])
+    assert one['items'] == one['limbs'] and one['connected_count'] == 1
+    assert [r['device_id'] for r in by_alias['limbs']] == ['guestpc-a', 'guestpc-b']   # 동명 폐기 키도 보인다(L49-1 자리)
+    assert handler._limb_list({'limb': ''})['success'] is False
+    assert [r['device_id'] for r in handler._limb_list({'limb': 'hardware-1'})['limbs']] == ['hardware-1']

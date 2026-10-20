@@ -4582,6 +4582,7 @@ nodes:
         params:
           key: string
           paused: boolean
+          limb: string
           observations: array
         aliases:
           target:
@@ -5953,8 +5954,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-10-20'
-          impl: e99d294dfca7298b
+          at: '2026-10-21'
+          impl: aef3177449644334
         target_key: path
         aliases:
           offset:
@@ -5971,8 +5972,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-10-20'
-          impl: e99d294dfca7298b
+          at: '2026-10-21'
+          impl: aef3177449644334
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6048,8 +6049,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-10-20'
-          impl: e99d294dfca7298b
+          at: '2026-10-21'
+          impl: aef3177449644334
         target_key: path
       list:
         callable_contract:
@@ -6915,8 +6916,8 @@ nodes:
             '
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-10-20'
-          impl: e99d294dfca7298b
+          at: '2026-10-21'
+          impl: aef3177449644334
         pipe_in: true
         lands_on: body
         limb_op:

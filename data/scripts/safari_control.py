@@ -294,7 +294,7 @@ def _find(wins, window_id):
 
 
 def _result(request, **fields):
-    base = {"success": True, "op": request["op"], "surface": SURFACE, "verified": False,
+    base = {"success": True, "status": "completed", "failure": None, "op": request["op"], "surface": SURFACE, "verified": False,
             "verification_scope": CONTRACT["actions"][request["op"]]["verification_scope"],
             "condition": {k: CONTRACT["actions"][request["op"]][k] for k in ("needs_front", "shared_state", "isolated_resources")},
             "observed_at": now()}

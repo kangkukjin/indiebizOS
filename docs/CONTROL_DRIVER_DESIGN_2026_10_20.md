@@ -709,3 +709,17 @@ visible 로 확인 → switch 복귀 → 오래된 판본 close = `STATE_CHANGED
 
 **남긴 것.** 전용 프로필의 유튜브 로그인(사용자 1회), TV1 기본 크롬 바로가기 교체 여부(사용자 결정 — 지금은 추가 바로가기만), 원격 맥의 Chrome
 (chrome_control.py 를 pc_control_mac 경로로 보내는 동형), 창 단위 동작(새 창·창 닫기·복원), 접수증 왕복 비용(단계당 ~9초 — 연속 동작은 한 프로그램에서 잇기).
+
+
+## 19 긴문장 87회차 — 세 조작면을 한 프로그램으로 (2026-10-21)
+
+[설계](LONG_SENTENCE_DRIVER_TRIAD_DESIGN_2026_10_20.md)·[보고서](experiments/long_sentence_imagination/round_87/report.md). tv1(Windows)·삼성0(Android)·본체 Chrome 에 쓰기·원복까지
+한 IBL 로 돌려 전부 same, 독립 AI 도 세 드라이버를 IBL 로 골랐다(화면 조작 0). 중심 질문 "같은 결과 모양인가" 의 답은 **아니오**였고 다음을 고쳤다.
+
+- **L87-2 실행 직전 경계**: `self:script` 자식 환경에 `INDIEBIZOS_SCREEN_CONTEXT`(control_conditions.screen_context JSON)를 싣고, Android제어부품 `select` 가 `needs_front` 동작을
+  화면 없는 문맥에서 `SCREEN_CONTEXT_UNAVAILABLE` 로 거절한다. §6 의 "실행 직전 경계가 검사" 가 드라이버 부품에도 닿는다(그전엔 `limbs:screen`·`browser` 만).
+- **L87-3 실패 코드**: PC·Android `failure` 에 `code` 칸. 대상 거절은 조건별 코드(다섯 조건 한 문장 폐기), 실행 파일 실패는 `CODE: 설명` 앞머리(`LAUNCH_FAILED`), 관용구 catch 는 앞머리를
+  잘라 `code` 로 싣는다(IBL 문자열 비교는 대소문자를 무시하므로 `strip` 기반).
+- **L87-4 앱 드라이버 모양**: Chrome·Safari 성공 결과에 `status:"completed"`·`failure:null`. 실패=예외는 유지(가이드 명시).
+- **W87-1 손발 목록**: `[self:limb]{op:"list",limb:$대상}` 필터(새 인자, 같은 행 모양). 읽기 프로그램 하나에서 목록 바이트 191KB→21KB.
+- 미수리(판정 대기): **L87-1** `limbs:guestpc` 의 쓰기 발자국 미상이 같은 실행의 모든 앞선 읽기를 재사용에서 제외 — 장치 realm 선언(`write_resources: {device: limb}`)은 transfer 의 허브 파일 쓰기를 못 담아 거짓 안전이 된다. op 별 발자국 선언이 필요하며 자원 계약 개정이다.

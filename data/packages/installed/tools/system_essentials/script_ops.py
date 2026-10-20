@@ -89,6 +89,7 @@ def _review_environment():
 
 
 SCRIPT_MODE_ENV = "INDIEBIZ_SCRIPT_MODE"
+SCREEN_CONTEXT_ENV = "INDIEBIZOS_SCREEN_CONTEXT"   # control_conditions.screen_context() JSON — 자식 부품의 needs_front 검사 근거
 
 
 def _child_env(mode):
@@ -98,6 +99,14 @@ def _child_env(mode):
     전경으로 받을지는 스크립트가 제일 잘 안다 — 그래서 실행 방식을 알려 주고, 거절은 스크립트가 자기 말로 한다(시험.py)."""
     env = dict(_review_environment() or os.environ)
     env[SCRIPT_MODE_ENV] = mode
+    # 화면 문맥(설계 §6 '실행 직전 경계가 검사'): needs_front 동작을 가진 부품(Android제어부품 등)이 정기·배경
+    # 문맥에서 사람 화면을 쓰지 않게 한다. 규칙은 control_conditions 한 곳(긴문장 87회차 L87-2: 폰 UI 동작이
+    # origin=scheduler 에서 검사 없이 전송됐다). 계산 실패는 '미상' 으로 두고 부품이 보수적으로 다룬다.
+    try:
+        import control_conditions
+        env[SCREEN_CONTEXT_ENV] = json.dumps(control_conditions.screen_context(), ensure_ascii=False)
+    except Exception:
+        env.pop(SCREEN_CONTEXT_ENV, None)
     return env
 
 

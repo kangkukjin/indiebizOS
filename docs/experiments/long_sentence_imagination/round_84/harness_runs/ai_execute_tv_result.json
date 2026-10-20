@@ -1,0 +1,25 @@
+{
+  "state": "succeeded",
+  "recovered_from_episode": 5065,
+  "task_id": "task_32cb4618bc094fe18a7df23cf40e2d44",
+  "started_at": "2026-10-20T11:07:11.826085",
+  "ended_at": "2026-10-20T11:08:10.708310",
+  "total_ms": 58881,
+  "result": null,
+  "turn_closed": {
+    "kind": "turn.closed",
+    "phase": "execute",
+    "reviews": 0,
+    "role": "harness",
+    "seq": 22,
+    "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/0baec2dda94e42b7b299cf91b767210e",
+    "task_id": "task_32cb4618bc094fe18a7df23cf40e2d44",
+    "time": 1792462090.697031,
+    "tools": 0
+  },
+  "run_ended": {
+    "total_ms": 58880
+  },
+  "note": "task 접수증은 재기동 뒤 404. 상태·답변은 에피소드 기록에서 회수. 재실행 없음.",
+  "recovered_at": "2026-10-20T11:10:44.552544+09:00"
+}

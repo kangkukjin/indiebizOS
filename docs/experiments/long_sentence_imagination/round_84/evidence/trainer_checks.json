@@ -1,0 +1,149 @@
+[
+ {
+  "check": "T1 deliverable=faq_draft",
+  "pass": true,
+  "detail": "faq_draft"
+ },
+ {
+  "check": "T1 budget/hours null (미언급)",
+  "pass": true,
+  "detail": [
+   null,
+   null
+  ]
+ },
+ {
+  "check": "집단×장벽 집계",
+  "pass": true,
+  "detail": {
+   "미시작/시작 링크 발견 실패": 2,
+   "미시작/시간 부족": 2,
+   "이탈/밀린 과제 부담": 3,
+   "이탈/시간 부족": 1,
+   "계속/없음": 4
+  }
+ },
+ {
+  "check": "T2 deliverable=experiment_plan, 20만원, 1시간",
+  "pass": true,
+  "detail": {
+   "deliverable": "experiment_plan",
+   "budget_extra_won": 200000,
+   "weekly_hours": 1,
+   "target": "이탈"
+  }
+ },
+ {
+  "check": "T3 지출 0 교체·1시간 유지·두 집단·매일 독려 제외",
+  "pass": true,
+  "detail": {
+   "budget_extra_won": 0,
+   "weekly_hours": 1,
+   "target": "미시작과 이탈 각각",
+   "excluded": "매일 독려"
+  }
+ },
+ {
+  "check": "T3 채택 후보 3건 전부 cost 0·hours<=1",
+  "pass": true,
+  "detail": [
+   [
+    0,
+    0.3
+   ],
+   [
+    0,
+    0.4
+   ],
+   [
+    0,
+    0.3
+   ]
+  ]
+ },
+ {
+  "check": "T4 deliverable=definition, 조건 유지",
+  "pass": true,
+  "detail": {
+   "deliverable": "definition",
+   "budget_extra_won": 0,
+   "weekly_hours": 1
+  }
+ },
+ {
+  "check": "T5 clarify·target 미확정·질문 1개",
+  "pass": true,
+  "detail": "다시 시작하기 쉽게 만들 대상이 '가입만 하고 시작하지 않은 분들'인가요, '한 번 듣고 돌아오지 않는 분들'인가요?"
+ },
+ {
+  "check": "T5 산출물 파일 없음(확정 금지)",
+  "pass": true,
+  "detail": "one_pager_t5_v2.md absent"
+ },
+ {
+  "check": "T5b target=이탈, 대상 P05~P08",
+  "pass": true,
+  "detail": [
+   "P05",
+   "P06",
+   "P07",
+   "P08"
+  ]
+ },
+ {
+  "check": "T5b 조건 유지(0원·1시간·매일 독려 제외)",
+  "pass": true,
+  "detail": {
+   "budget_extra_won": 0,
+   "weekly_hours": 1,
+   "excluded": "과거 메모의 매일 독려"
+  }
+ },
+ {
+  "check": "T5b v2 결함 재현: hours null→rejected 3·accepted 0",
+  "pass": true,
+  "detail": {
+   "accepted": 0,
+   "rejected": 3
+  }
+ },
+ {
+  "check": "T5b v3: unverified 3·rejected 0",
+  "pass": true,
+  "detail": {
+   "accepted": 0,
+   "rejected": 0,
+   "unverified": 3
+  }
+ },
+ {
+  "check": "T5b 메모에 P05~P08·0원·1시간·미확인·발송 안 함",
+  "pass": true,
+  "detail": []
+ },
+ {
+  "check": "V deliverable=review_material·두 집단·주1시간 제외",
+  "pass": true,
+  "detail": {
+   "deliverable": "review_material",
+   "target": "미시작과 이탈 각각",
+   "weekly_hours": null,
+   "budget_extra_won": 0
+  }
+ },
+ {
+  "check": "V 새 파일 + 기존 one_pager 보존",
+  "pass": true,
+  "detail": "both present"
+ },
+ {
+  "check": "V 본문: 개편 확정 않음·가설 표기·두 집단",
+  "pass": true,
+  "detail": null
+ },
+ {
+  "check": "입력 판본 불변(manifest 일치)",
+  "pass": true,
+  "detail": null
+ }
+]

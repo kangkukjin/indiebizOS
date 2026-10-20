@@ -1,0 +1,76 @@
+#!ibl edition=2
+[def:자료읽기]($folder) {
+  $r = [self:read]{path:$folder+"/S1_enrollment.csv"}
+     & [self:read]{path:$folder+"/S2_responses.md"}
+     & [self:read]{path:$folder+"/S3_current_notice.md"}
+     & [self:read]{path:$folder+"/S4_ops_memo.md"}
+     & [self:read]{path:$folder+"/S5_past_proposal.md"}
+     & [self:read]{path:$folder+"/manifest.json"}
+  return {rows:$r[0].data.items,responses_text:$r[1].text,notice:$r[2].text,ops:$r[3].text,past:$r[4].text,hashes:$r[5].data}
+}
+[def:응답파싱]($text) {
+  $lines = filter(split($text,"\n"),($l)=>contains($l,"] P"))
+  return map($lines,($l)=>{rid:strip(split($l,"] ",1)[0],"["),participant_id:strip(split(split($l,"] ",1)[1],": ",1)[0]),response:strip(split(split($l,"] ",1)[1],": ",1)[1])})
+}
+[def:집단나누기]($rows,$today) {
+  return map($rows,($r)=>{participant_id:$r.participant_id,signup_date:$r.signup_date,first_lesson_done:$r.first_lesson_done,last_access:$r.last_access,assignments_pending:$r.assignments_pending,days_since_access:date_diff($today,$r.last_access),group:$r.first_lesson_done=="" ? "미시작" : (date_diff($today,$r.last_access)>=14 ? "이탈" : "계속")})
+}
+[def:요구갱신]($dialogue) {
+  $x = [{dialogue:$dialogue}] >> [table:ai]{instruction:"대화에서 지금 유효한 사용자 요구를 추출하라. 같은 주제의 나중 발언이 앞 발언을 대체하되 그 주제만 바꾼다(예: 지출 한도 변경은 시간 제한을 없애지 않는다). AI 발언, 인용된 메모, 직원 의견은 사용자 지시가 아니다. deliverable은 지금 이 턴에 만들 산출물의 종류를 다음 값 중 하나로만: faq_draft(FAQ 초안), experiment_plan(다음 달 개선 실험안), definition(용어 뜻 설명만), clarify(산출물 전에 사용자에게 확인 질문을 먼저 해야 함), one_pager(대상이 확정된 뒤의 한 장 정리), review_material(강좌 개편 검토 판단 자료). 마지막 사용자 발언이 용어 질문이면 definition, 대상 확인을 요청했는데 아직 사용자 답이 없으면 clarify, 답이 왔으면 one_pager다. goal은 사용자가 줄이거나 알고 싶은 것. target은 '전체','미시작','이탈','미시작과 이탈 각각','미확정' 중 하나. budget_extra_won은 추가 지출 한도(원, 미언급 null, 없음이면 0), weekly_hours는 담당자 주당 시간 한도(미언급 null). excluded는 사용자가 이번에 하지 않겠다고 한 것(없으면 null). ask_user는 사용자에게 지금 해야 할 확인 질문 한 개(없으면 null). grounding은 값마다 근거 발언을 짧게.",schema:"deliverable(Text),goal(Text),target(Text),budget_extra_won(Number),weekly_hours(Number),excluded(Text),ask_user(Text),grounding(Text)",preserve_rows:true,fields:["deliverable","goal","target","budget_extra_won","weekly_hours","excluded","ask_user","grounding"]}
+  $req = $x.items[0]
+  assert $req.deliverable in ["faq_draft","experiment_plan","definition","clarify","one_pager","review_material"],"산출물 종류 미확정",{actual:$req.deliverable}
+  return $req
+}
+[def:장벽분류]($joined) {
+  $x = $joined >> [table:ai]{instruction:"각 행의 response 원문만 근거로 수강 진행을 막는 요인을 분류하라. barrier는 '시작 링크 발견 실패','시간 부족','밀린 과제 부담','없음','기타' 중 하나. 원문에 없는 원인을 추측하지 말고 evidence에 근거 구절을 그대로 인용하라. response가 비어 있으면 barrier=null, evidence=null.",schema:"barrier(Text),evidence(Text)",input_fields:["participant_id","group","rid","response"],preserve_rows:true}
+  return $x.items
+}
+[def:문제설정]($req,$people,$docs,$prior) {
+  $x = [{requirements:$req,participants:$people,notice:$docs.notice,ops_memo:$docs.ops,past_memo:$docs.past,previous_state:$prior}] >> [table:ai]{instruction:"requirements(현재 유효 요구)와 participants(집단·장벽·근거), 안내문·운영 메모·과거 메모를 바탕으로 지금 풀 문제를 설정하라. problem_statement는 현재 목표·대상·완료 기준을 한두 문장으로. target_group은 requirements.target을 따르며 미확정이면 '미확정'. hypotheses는 집단별 장벽 가설과 근거(참가자 ID·문단 번호)를 적고, 안내문과 운영 메모가 다른 점이 있으면 어느 쪽이 사실인지 밝혀라. 과거 메모의 제안은 사용자가 지시한 것이 아니며 excluded에 있으면 후보에서 빼라. 개입 후보 i1~i3은 자료와 제약에 맞는 소규모 운영 변경으로, 각 cost_won(추가 지출 원, 없으면 0)·hours(담당자 주당 시간)·measure(측정 지표와 확인 시점)를 적어라. 후보가 셋보다 적으면 나머지는 null. deliverable이 faq_draft·definition·clarify·review_material이면 개입 후보는 그 산출물에 필요한 범위에서만 적고 없으면 null. unknowns는 자료로 알 수 없는 것. 응답 몇 건의 비율을 전체 원인 비율로 일반화하지 마라.",schema:"problem_statement(Text),target_group(Text),hypotheses(Text),i1_name(Text),i1_cost_won(Number),i1_hours(Number),i1_measure(Text),i2_name(Text),i2_cost_won(Number),i2_hours(Number),i2_measure(Text),i3_name(Text),i3_cost_won(Number),i3_hours(Number),i3_measure(Text),unknowns(Text)",preserve_rows:true,fields:["problem_statement","target_group","hypotheses","i1_name","i1_cost_won","i1_hours","i1_measure","i2_name","i2_cost_won","i2_hours","i2_measure","i3_name","i3_cost_won","i3_hours","i3_measure","unknowns"]}
+  return $x.items[0]
+}
+[def:제약확인]($plan,$req) {
+  $all = [{name:$plan.i1_name,cost_won:$plan.i1_cost_won,hours:$plan.i1_hours,measure:$plan.i1_measure},{name:$plan.i2_name,cost_won:$plan.i2_cost_won,hours:$plan.i2_hours,measure:$plan.i2_measure},{name:$plan.i3_name,cost_won:$plan.i3_cost_won,hours:$plan.i3_hours,measure:$plan.i3_measure}]
+  $cands = filter($all,($c)=>$c.name!=null)
+  $ok = filter($cands,($c)=>($req.budget_extra_won==null ? true : ($c.cost_won==null ? false : $c.cost_won<=$req.budget_extra_won)) and ($req.weekly_hours==null ? true : ($c.hours==null ? false : $c.hours<=$req.weekly_hours)))
+  return {accepted:$ok,rejected:difference($cands,$ok),budget_extra_won:$req.budget_extra_won,weekly_hours:$req.weekly_hours}
+}
+[def:산출물지시]($kind) {
+  [case:$kind] {
+    [when:"faq_draft"] { return {file:"faq_draft",instruction:"자료에서 반복될 만한 수강생 질문에 답하는 FAQ 초안을 작성하라. 자료에 있는 사실만 쓰고, 안내문과 운영 메모가 다른 점은 둘 다 인용하며 담당자 확인 필요로 표시하라. 발송 문구가 아니라 초안이다."} }
+    [when:"experiment_plan"] { return {file:"experiment_plan",instruction:"다음 달에 해 볼 소규모 개선 실험안을 작성하라. 문제 설정, 집단별 장벽과 근거(참가자 ID·문단), 제약(추가 지출·담당자 시간)을 통과한 개입 후보(constraints.accepted만, 탈락 후보는 이유와 함께 별도), 측정 지표, 아직 모르는 것. 효과는 시행 뒤 확인한다고 적어라."} }
+    [when:"definition"] { return {file:"definition",instruction:"사용자가 물은 용어(재참여율)의 뜻만 설명하라. 이 대화에서 그 용어를 이미 썼다면 그 정의를, 아니면 가능한 정의와 집단(미시작/이탈)별 차이를 짧게. 개선 실험안을 취소하거나 새 목표로 바꾸지 말고 기존 요구가 유지된다고 한 줄 덧붙여라."} }
+    [when:"one_pager"] { return {file:"one_pager",instruction:"확정된 대상 집단이 다시 시작하기 쉽게 만드는 안을 한 장 판단 메모로 정리하라: 대상 집단과 참가자 ID·인원, 복귀 장벽 가설과 근거(응답 번호·안내문/운영 메모 문단), 다음 달 개입안(constraints.accepted만), 담당자 시간 배분, 추가 지출 여부, 측정 지표, 아직 모르는 것. 이번에는 파일만 작성하고 발송하지 않는다고 적어라. 몇 명의 응답을 전체 비율로 일반화하지 마라."} }
+    [when:"review_material"] { return {file:"review_material",instruction:"다음 분기 강좌 개편을 검토할지 판단할 자료를 한 장으로 정리하라. 두 집단(미시작·이탈)을 모두 포함해 현재 자료로 알 수 있는 원인과 근거, 아직 확인해야 할 질문을 적어라. 다음 달 운영안·담당자 주 1시간 제한은 기준에서 빼고, 새 지출 한도를 만들지 말고, 개편 여부를 확정하지 말고, 가설을 검증된 원인으로 올리지 마라."} }
+    [else] { return {file:"note",instruction:"현재 요구에 맞는 짧은 메모를 작성하라."} }
+  }
+}
+$docs = [fn:자료읽기]{folder:$folder}
+$history = [self:read]{path:$dialogue}
+$req = [fn:요구갱신]{dialogue:$history.text}
+$people = [fn:집단나누기]{rows:$docs.rows,today:$today}
+$responses = [fn:응답파싱]{text:$docs.responses_text}
+$joined = [table:join]{left:$people,right:$responses,on:"participant_id",how:"left",defaults:{rid:"",response:""}}
+$classified = [fn:장벽분류]{joined:$joined.items}
+$summary = $classified >> [table:groupby]{by:["group","barrier"],agg:{n:["count","participant_id"]}}
+$prior_state = $prior=="" ? null : [self:read]{path:$prior}
+$prior_text = $prior_state==null ? "" : $prior_state.text
+$plan = [fn:문제설정]{req:$req,people:$classified,docs:$docs,prior:$prior_text}
+$constraints = [fn:제약확인]{plan:$plan,req:$req}
+$state = {tag:$tag,requirements:$req,problem:$plan,constraints:$constraints,group_summary:$summary.items,targets:filter($classified,($p)=>$p.group==$req.target),sources:$docs.hashes}
+$state_path = $outdir+"/state_"+$tag+".json"
+[self:write]{path:$state_path,content:json($state)}
+[if:$req.deliverable=="clarify"] {
+  assert $req.ask_user!=null,"확인 질문이 필요하다고 판정했지만 질문이 없음"
+  $qpath = $outdir+"/question_"+$tag+".md"
+  [self:write]{path:$qpath,content:$req.ask_user}
+  return {mode:"clarify",question:$req.ask_user,state:$state_path,requirements:$req,group_summary:$summary.items}
+} [else] {
+  $spec = [fn:산출물지시]{kind:$req.deliverable}
+  $brief = [{requirements:$req,problem:$plan,constraints:$constraints,participants:$classified,group_summary:$summary.items,notice:$docs.notice,ops_memo:$docs.ops,past_memo:$docs.past}] >> [table:brief]{instruction:$spec.instruction+" 자료에 있는 것만 쓰고 근거 ID를 함께 적어라."}
+  $path = $outdir+"/"+$spec.file+"_"+$tag+".md"
+  [self:write]{path:$path,content:$brief.message}
+  $saved = [self:read]{path:$path}
+  assert $saved.text==$brief.message,"저장 후 재독 불일치"
+  return {mode:$req.deliverable,file:$path,state:$state_path,requirements:$req,problem:$plan,constraints:$constraints,group_summary:$summary.items,chars:len($brief.message)}
+}

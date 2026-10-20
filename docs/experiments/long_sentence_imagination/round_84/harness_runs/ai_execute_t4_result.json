@@ -1,0 +1,22 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L84_training",
+    "task_id": "task_24b4454dfbde4f4aa986aefabb529146"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_62b29e200e39d3413448",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "ai_execute",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 02:03:40",
+  "completed_at": "2026-10-20 02:03:57",
+  "pending_children": 0,
+  "children": [],
+  "result": "\"재참여율\" doesn't appear in my proposal or in the source materials (S1–S5). If you mean the \"복귀\" (comeback) measure in my proposal, here is what I meant, with the details pinned down.\n\n**Comeback rate for group B (people who took a lesson then stopped)**\n- **Who counts as the base:** people who completed at least one lesson, were then inactive for 14+ days, and got the comeback email. Right now that's P05–P08, so 4 people.\n- **Who counts as returned:** people who complete at least one lesson within 14 days of getting the email.\n- **Current figure:** 0 of 4. Suggested bar to continue: 2 or more.\n\n**Three points that are easy to mix up:**\n- **Logging in isn't enough.** Just logging in doesn't count as returning. All of P05–P08 logged in after their first lesson but never finished another one (S1).\n- **Group A gets a different measure.** Group A (signed up, never started) can't \"return,\" because they never started. For them the measure is a start rate: how many take their first lesson within 14 days of the \"how to start\" email. Mixing the two groups into one rate would blur both experiments, so keep them as two separate numbers.\n- **Assignments don't count.** Turning in a past assignment isn't returning. Assignments are optional (S4 ¶1), and the point of the experiment is to get people back to the current week's lesson.\n\nThe 14-day window and the \"completed a lesson\" standard are definitions I proposed; the materials don't define them. If you'd rather use a different standard, I'll change it in the proposal file too.",
+  "error": null,
+  "status_url": "/projects/L84_training/agents/agent_ab8150f3/tasks/task_24b4454dfbde4f4aa986aefabb529146",
+  "polled_at": "2026-10-20T11:04:13.361777+09:00"
+}

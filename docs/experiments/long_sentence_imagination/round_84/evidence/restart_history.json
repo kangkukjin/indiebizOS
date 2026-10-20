@@ -1,0 +1,58 @@
+[
+  {
+    "file": "024ec0d71e29fbe2bc076cb9451ce10d.json",
+    "outcome": "restarted",
+    "note": null,
+    "finished_at": 1792460267.5141702,
+    "mtime": "10:37:47"
+  },
+  {
+    "file": "c79d3e897a69f5ec1b88de48beb3f849.json",
+    "outcome": "intentional_shutdown",
+    "note": null,
+    "finished_at": null,
+    "mtime": "10:38:55"
+  },
+  {
+    "file": "files-ebef19a9b045abf560699bc28318e74d-90791365e8262b16f2697caf.json",
+    "outcome": "deferred",
+    "note": "artifact_changed_after_check",
+    "finished_at": 1792461283.93734,
+    "mtime": "10:54:43"
+  },
+  {
+    "file": "files-ebef19a9b045abf560699bc28318e74d-0c3456ceeefc608434eb924d.json",
+    "outcome": "recovery_unavailable",
+    "note": "boot_artifact_changed",
+    "finished_at": 1792461318.227106,
+    "mtime": "10:55:18"
+  },
+  {
+    "file": "3898f823c779ec6fd2e2addd476234a5.json",
+    "outcome": "restarted",
+    "note": null,
+    "finished_at": 1792461405.622796,
+    "mtime": "10:56:45"
+  },
+  {
+    "file": "files-f64f33ad438e8b894342accddf2d4c59-d1b9bbe5188f224b161ee9d0.json",
+    "outcome": "deferred",
+    "note": "artifact_changed_after_check",
+    "finished_at": 1792461585.842004,
+    "mtime": "10:59:45"
+  },
+  {
+    "file": "files-f64f33ad438e8b894342accddf2d4c59-756d0403a71cabd2867093c6.json",
+    "outcome": "artifact_changed_before_start",
+    "note": null,
+    "finished_at": 1792461613.1795158,
+    "mtime": "11:00:13"
+  },
+  {
+    "file": "f31634d9cf833dd63e42d9ab013563a6.json",
+    "outcome": "restarted",
+    "note": null,
+    "finished_at": 1792461675.385102,
+    "mtime": "11:01:15"
+  }
+]

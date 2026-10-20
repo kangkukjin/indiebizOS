@@ -1,0 +1,22 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L84_training",
+    "task_id": "task_0cead3f502e248679fc24b4c91e7497f"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_f0e2b7b86f845399561e",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "ai_probe",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 02:14:58",
+  "completed_at": "2026-10-20 02:15:18",
+  "pending_children": 0,
+  "children": [],
+  "result": "\"재참여율\" doesn't appear in my proposals. I checked the files, and the closest thing in v2 is how many people \"return\" (복귀). There are three measures in total, and each group is counted differently.\n\n**1. Signed up but never started (P01–P04): first-participation count**\n- They've never taken a lesson, so this isn't really a return.\n- **Count:** people who complete their first lesson within 14 days of the email, meaning a date appears in the `first_lesson_done` column.\n- **Out of:** the 4 people who received the email.\n- **Success:** 2 or more.\n\n**2. Took a lesson and didn't come back (P05–P08): return count**\n- **Count:** people who, within 14 days of the email, log in again **and** complete at least one more lesson (`lessons_completed` goes up).\n- **What doesn't count:** a login alone. If someone logs in, just looks around, and leaves, the stall hasn't been resolved.\n- **Out of:** the 4 people who received the email.\n- **Success:** 2 or more.\n\n**3. New sign-ups (for the notice change)**\nThese are rates, not head counts.\n- **Share taking their first lesson within 7 days of signing up:** only people whose 7 days have passed are counted. The current figure is 67% (8 of 12).\n- **Share who go 14+ days without logging in after their first lesson:** only people 14 days past their first lesson are counted. The current figure is 50% (4 of 8).\n\n**Things to settle before you start**\n- **Who's in each group on Nov 2:** the groups are P01–P08 as of today. Someone may log in on their own before November 2, so lock in who belongs to each group by the same rule on that day.\n- **No natural return rate:** the materials don't show how often people come back without any message. If 2 of 4 return, that can't be credited entirely to the email.\n- **Course end dates:** the course period ends Dec 15–30 depending on the person, and the 14-day window falls well before that, so it won't be cut short.\n\nI can add these definitions as a \"measurement definitions\" section in the v2 file if you'd like.",
+  "error": null,
+  "status_url": "/projects/L84_training/agents/agent_4c743b75/tasks/task_0cead3f502e248679fc24b4c91e7497f",
+  "polled_at": "2026-10-20T11:16:45.142815+09:00"
+}

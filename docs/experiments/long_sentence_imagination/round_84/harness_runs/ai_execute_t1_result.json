@@ -1,0 +1,22 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L84_training",
+    "task_id": "task_3e683d7c386c4be98e3d6e4d8139c26a"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_016213e77888dee2ec31",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "ai_execute",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 01:51:19",
+  "completed_at": "2026-10-20 01:52:28",
+  "pending_children": 0,
+  "children": [],
+  "result": "I wrote the FAQ draft and saved it: [faq_draft.md](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_84회차/ai/ai_execute/faq_draft.md)\n\nI read only S1 to S5 in the inputs folder (fingerprints match `manifest.json`). I didn't send anything or change any settings.\n\n**The draft has 5 questions:**\n1. **Do I have to finish all past assignments before the next lesson?** No. Assignments are recommended, not required to complete the course, and students can start from the current week's lesson (from the staff memo, S4 ¶1). Three students (R05, R06, R07) said this was what kept them from coming back.\n2. **I took a few weeks off. Do I have to start over?** No, they can rejoin from the current week.\n3. **Where is the first-lesson link?** The direct start link, or the \"내 강의실\" (My Classroom) menu at the top after logging in (S3 ¶2). Two students (R01, R02) couldn't find it.\n4. **I fell behind because I was busy. How do I restart?** Start with this week's lesson. The course runs 12 weeks from sign-up (S3 ¶5).\n5. **Where do I ask questions?** The Q&A board, answered within 2 business days.\n\n**Please check these before posting:**\n- **The current notice contradicts the actual rule.** The welcome notice (S3 ¶3) says to finish all past assignments first, but the staff memo (S4 ¶1) says assignments are optional. The FAQ alone won't fix the misunderstanding, because that notice is still being sent. The memo (S4 ¶3) says staff can change notice wording on their own; I only wrote the draft and didn't touch the notice.\n- **Past lesson videos may not stay available.** The materials don't say whether missed lessons can be watched later. Q2 includes that sentence, so confirm it or delete it.\n- **I didn't check the real screen layout.** The tip in Q3 about the notice page shown after login comes from one student's answer (R02).\n- **No daily reminder messages.** I left them out on purpose: the meeting notes (S5) show that idea was put on hold because of message fatigue and staff workload.\n- **The evidence is thin.** It comes from a 12-person survey, and the materials don't show how often these questions actually come up.",
+  "error": null,
+  "status_url": "/projects/L84_training/agents/agent_ab8150f3/tasks/task_3e683d7c386c4be98e3d6e4d8139c26a",
+  "polled_at": "2026-10-20T10:53:18.911995+09:00"
+}

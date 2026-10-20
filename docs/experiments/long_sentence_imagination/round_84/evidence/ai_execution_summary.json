@@ -1,0 +1,345 @@
+[
+ {
+  "label": "ai_execute_t1",
+  "task_id": "task_3e683d7c386c4be98e3d6e4d8139c26a",
+  "episode": 5058,
+  "total_ms": 69164,
+  "started_at": "2026-10-20T10:51:19.292686",
+  "ended_at": "2026-10-20T10:52:28.457339",
+  "cost": {
+   "execution": {
+    "input": 355311,
+    "output": 4610,
+    "cache_read": 291897,
+    "cache_create": 63404,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 4,
+  "tools": {
+   "Bash": 3,
+   "Write": 1
+  },
+  "model_round_events": 5,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_execute_t2",
+  "task_id": "task_156d544af39a42b2993dfc3b128276e6",
+  "episode": 5059,
+  "total_ms": 68099,
+  "started_at": "2026-10-20T10:58:25.115208",
+  "ended_at": "2026-10-20T10:59:33.214922",
+  "cost": {
+   "execution": {
+    "input": 167151,
+    "output": 5423,
+    "cache_read": 156552,
+    "cache_create": 10595,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 1982,
+    "output": 105,
+    "cache_read": 512,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 1,
+  "tools": {
+   "Write": 1
+  },
+  "model_round_events": 3,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_execute_t3",
+  "task_id": "task_0dc6e2286f0c47b5b9b2c26504f8ba74",
+  "episode": 5060,
+  "total_ms": 53900,
+  "started_at": "2026-10-20T11:02:20.295868",
+  "ended_at": "2026-10-20T11:03:14.196426",
+  "cost": {
+   "execution": {
+    "input": 188010,
+    "output": 4820,
+    "cache_read": 177854,
+    "cache_create": 10152,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 1957,
+    "output": 103,
+    "cache_read": 512,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 1,
+  "tools": {
+   "Write": 1
+  },
+  "model_round_events": 3,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_execute_t4",
+  "task_id": "task_24b4454dfbde4f4aa986aefabb529146",
+  "episode": 5061,
+  "total_ms": 17304,
+  "started_at": "2026-10-20T11:03:40.629057",
+  "ended_at": "2026-10-20T11:03:57.933704",
+  "cost": {
+   "execution": {
+    "input": 100793,
+    "output": 803,
+    "cache_read": 95984,
+    "cache_create": 4807,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 1227,
+    "output": 5,
+    "cache_read": 512,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 0,
+  "tools": {},
+  "model_round_events": 2,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_execute_t5",
+  "task_id": "task_7a08c07cb7bd4c57989703d21bb2f030",
+  "episode": 5062,
+  "total_ms": 29920,
+  "started_at": "2026-10-20T11:04:48.665547",
+  "ended_at": "2026-10-20T11:05:18.586873",
+  "cost": {
+   "execution": {
+    "input": 107314,
+    "output": 628,
+    "cache_read": 100791,
+    "cache_create": 6521,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 0,
+  "tools": {},
+  "model_round_events": 1,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_execute_t5b",
+  "task_id": "task_8895af5df4614f5b90df918b6b9dec54",
+  "episode": 5063,
+  "total_ms": 26493,
+  "started_at": "2026-10-20T11:06:10.965629",
+  "ended_at": "2026-10-20T11:06:37.459510",
+  "cost": {
+   "execution": {
+    "input": 225151,
+    "output": 2382,
+    "cache_read": 218896,
+    "cache_create": 6251,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 1,
+  "tools": {
+   "Write": 1
+  },
+  "model_round_events": 2,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_execute_tv",
+  "task_id": "task_32cb4618bc094fe18a7df23cf40e2d44",
+  "episode": 5065,
+  "total_ms": 58881,
+  "started_at": "2026-10-20T11:07:11.826085",
+  "ended_at": "2026-10-20T11:08:10.708310",
+  "cost": {
+   "execution": {
+    "input": 243041,
+    "output": 3997,
+    "cache_read": 233382,
+    "cache_create": 9655,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 1722,
+    "output": 5,
+    "cache_read": 512,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 1,
+  "tools": {
+   "Write": 1
+  },
+  "model_round_events": 3,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_probe_t1",
+  "task_id": "task_8724e1ad417244d7a5d22972a30c6eb3",
+  "episode": 5064,
+  "total_ms": 80394,
+  "started_at": "2026-10-20T11:07:11.826268",
+  "ended_at": "2026-10-20T11:08:32.225830",
+  "cost": {
+   "execution": {
+    "input": 356052,
+    "output": 4551,
+    "cache_read": 292487,
+    "cache_create": 63555,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 4051,
+    "output": 62,
+    "cache_read": 512,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 4,
+  "tools": {
+   "Bash": 3,
+   "Write": 1
+  },
+  "model_round_events": 6,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_probe_t2",
+  "task_id": "task_72a1814b22e54ba6807e105bb5baed7d",
+  "episode": 5066,
+  "total_ms": 79940,
+  "started_at": "2026-10-20T11:10:02.049444",
+  "ended_at": "2026-10-20T11:11:21.990606",
+  "cost": {
+   "execution": {
+    "input": 253288,
+    "output": 7035,
+    "cache_read": 240866,
+    "cache_create": 12416,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 2272,
+    "output": 58,
+    "cache_read": 640,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 2,
+  "tools": {
+   "Bash": 1,
+   "Write": 1
+  },
+  "model_round_events": 4,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_probe_t3",
+  "task_id": "task_b8ce6085948d4c448e0daa71e84d147b",
+  "episode": 5067,
+  "total_ms": 52581,
+  "started_at": "2026-10-20T11:12:46.347546",
+  "ended_at": "2026-10-20T11:13:38.929214",
+  "cost": {
+   "execution": {
+    "input": 192083,
+    "output": 4872,
+    "cache_read": 181777,
+    "cache_create": 10302,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 1,
+  "tools": {
+   "Write": 1
+  },
+  "model_round_events": 2,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_probe_t4",
+  "task_id": "task_0cead3f502e248679fc24b4c91e7497f",
+  "episode": 5068,
+  "total_ms": 19754,
+  "started_at": "2026-10-20T11:14:58.567935",
+  "ended_at": "2026-10-20T11:15:18.322285",
+  "cost": {
+   "execution": {
+    "input": 207011,
+    "output": 1114,
+    "cache_read": 200902,
+    "cache_create": 6105,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 2013,
+    "output": 5,
+    "cache_read": 640,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 1,
+  "tools": {
+   "Bash": 1
+  },
+  "model_round_events": 3,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ },
+ {
+  "label": "ai_probe_tp",
+  "task_id": "task_5583490903be4b67b5024ecffb0c9ae2",
+  "episode": 5069,
+  "total_ms": 32391,
+  "started_at": "2026-10-20T11:17:04.563631",
+  "ended_at": "2026-10-20T11:17:36.954997",
+  "cost": {
+   "execution": {
+    "input": 223199,
+    "output": 2917,
+    "cache_read": 214623,
+    "cache_create": 8572,
+    "usage_events": 1
+   },
+   "oneshot:classify": {
+    "input": 1634,
+    "output": 5,
+    "cache_read": 512,
+    "cache_create": 0,
+    "usage_events": 1
+   }
+  },
+  "tool_calls": 1,
+  "tools": {
+   "Write": 1
+  },
+  "model_round_events": 3,
+  "context_compacted": 0,
+  "forbidden_access_candidates": 0
+ }
+]

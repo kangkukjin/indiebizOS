@@ -1,0 +1,22 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L84_training",
+    "task_id": "task_8895af5df4614f5b90df918b6b9dec54"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_de628176e7ce1f7b3902",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "ai_execute",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 02:06:10",
+  "completed_at": "2026-10-20 02:06:37",
+  "pending_children": 0,
+  "children": [],
+  "result": "I wrote the one-pager for the people who took a lesson and then didn't come back (P05–P08). P07 actually took two lessons, but stopped the same way, so I included them. Tell me if you want them dropped.\n\n[onepager_restart_groupB.md](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_84회차/ai/ai_execute/onepager_restart_groupB.md)\n\n- **Why they stopped:** 3 of the 4 believe they have to clear their unfinished assignments before coming back. That belief comes from the notice sentence asking students to finish all past assignments first. The real rule is that students can join from the current week.\n- **What to do:**\n  1. Rewrite that sentence in the notice to say \"You can start from this week's lesson even if you have unfinished assignments.\"\n  2. Send one comeback email per person to anyone inactive for 14+ days. It says they can start from this week's lesson, gives the link, and asks one question about what is in the way.\n- **How to judge it:** the comeback rate is how many complete a lesson within 14 days of the email. It's 0 of 4 now; keep going if 2 or more return.\n- **Staff time (my estimate):** about 40–50 minutes in week 1, then 15–20 minutes a week. No extra spending and no daily reminders.\n\nFour people with no comparison group isn't enough to prove it works; it only checks whether this direction helps. I couldn't confirm whether your email tool charges anything. I haven't changed the notice or sent any email; this is still only a proposal.",
+  "error": null,
+  "status_url": "/projects/L84_training/agents/agent_ab8150f3/tasks/task_8895af5df4614f5b90df918b6b9dec54",
+  "polled_at": "2026-10-20T11:06:37.874392+09:00"
+}

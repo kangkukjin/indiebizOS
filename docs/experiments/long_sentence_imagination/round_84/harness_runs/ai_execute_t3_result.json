@@ -1,0 +1,22 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L84_training",
+    "task_id": "task_0dc6e2286f0c47b5b9b2c26504f8ba74"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_adb16791df57d78388a5",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "ai_execute",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 02:02:20",
+  "completed_at": "2026-10-20 02:03:14",
+  "pending_children": 0,
+  "children": [],
+  "result": "I've revised the proposal with your new limits: no added spending, at most 1 hour of staff time a week, and no daily reminders. The two groups are now treated separately.\n\n**Group A — signed up but never started (P01–P04)**\n- **What's blocking them:** two couldn't find the start link or class button (R01, R02), and two didn't have time (R03, R04).\n- **Pattern:** everyone who did start took their first lesson within 1–2 days of signing up. People who miss those first few days seem to stay at zero, though with 12 people I can't say that's the cause.\n- **Experiment:**\n  1. Move the start link to the top of the notice, and pin it at the top of the announcement screen students see after logging in.\n  2. Send one \"how to start\" email to anyone with no first lesson 3 days after signing up.\n  3. Send the same email once to the current four.\n- **Measure:** how many of the four take their first lesson within 14 days. Right now it's 0 of 4. I suggest continuing if 2 or more start.\n\n**Group B — took a lesson and didn't come back (P05–P08)**\n- P07 actually took two lessons, but stopped the same way, so I included them.\n- **What's blocking them:** three of four (R05–R07) believe they must finish their backlog before returning. That comes from the notice wording (S3 ¶3), but the real rule is that assignments are only recommended. One (R08) didn't have time.\n- **Experiment:**\n  1. Rewrite the notice to say \"You can start from this week's lesson even if you have unfinished assignments.\"\n  2. Send one \"welcome back\" email to anyone inactive for 14+ days. It includes a one-line question asking what is getting in their way.\n  3. Send the same email once to the current four.\n- **Measure:** how many come back and complete a lesson within 14 days. Right now it's 0 of 4. I suggest continuing if 2 or more return.\n\n**Time and cost (my estimates)**\n- Week 1: about 50–60 minutes for the notice edits, two email templates and sending to the current eight.\n- After that: about 20–30 minutes a week to check who qualifies, send the emails and log replies.\n- Cost: 0 won, using only your existing email and classroom notice channels. I couldn't confirm whether your email tool charges per message. If it does, drop the emails and run with just the notice changes and the pinned announcement.\n\n**Limits:** each group has only four people and there's no comparison group, so this is a small pilot to check direction, not proof that it works. \"Dropped out = no access for 14+ days\" is a working definition I proposed; the materials don't define it. The FAQ draft stays only as material for answering questions in Q&A.\n\nI haven't changed the notice or sent any email; this is still only a proposal.\n\nFile: [experiment_proposal.md](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_84회차/ai/ai_execute/experiment_proposal.md)",
+  "error": null,
+  "status_url": "/projects/L84_training/agents/agent_ab8150f3/tasks/task_0dc6e2286f0c47b5b9b2c26504f8ba74",
+  "polled_at": "2026-10-20T11:03:14.377359+09:00"
+}

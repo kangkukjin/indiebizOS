@@ -1,0 +1,12 @@
+{
+  "prep_started": "2026-10-20T10:31:33+09:00",
+  "baseline_started": "2026-10-20T10:40:00+09:00",
+  "head": "0267ba8ae541106e341843633b5ff6fbb0710f70",
+  "uncommitted_lines": 17,
+  "last_episode_id_before": 5056,
+  "backend_recovered_at": "2026-10-20T10:37:41+09:00 explicit_start_retry",
+  "baseline_deadline": "2026-10-20T11:40:00+09:00",
+  "note": "10:38 launcher relaunch(intentional_shutdown→new generation) after my explicit_start_retry; clock fixed at backend availability",
+  "baseline_ended": "2026-10-20T11:17:37+09:00",
+  "last_episode_id_after": null
+}

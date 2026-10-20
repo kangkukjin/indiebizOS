@@ -627,6 +627,39 @@ network 전체가 30초 제한에 걸렸다. 공식 `GetDeviceSelectorFromConnec
 launch 의 AUMID 경로 실측, Windows 한국어 로캘에서 `netsh` 출력 파싱(SSID·State 가 한글이면 null 로 남음 — enabled 는
 WinRT 라 영향 없음), 창 앞으로(needs_front 와 함께)·Windows 창 목록.
 
+## 18 Chrome 창·탭 드라이버 — 두 번째 앱 조작면 (2026-10-21)
+
+§13 걸음 3 의 Safari 부품을 본으로 `app:com.google.Chrome` 에 같은 계약을 깐다. `data/scripts/chrome_control.py`
+(`Chrome제어`, registered-json/1, callable_contract 는 Safari제어와 동일)·`chrome_control.md`·`guide_db`
+`control_surfaces:["app:com.google.Chrome"]`·`supported_platforms:["darwin"]`·`test_chrome_control.py`.
+
+**질문과 답.** "크롬 드라이버는 따로 만들어야 하나, 만들면 Windows 크롬에서도 쓰나." 드라이버의 OS 의존은 "맥이라서"가
+아니라 **말 거는 통로**에서 온다. Safari·Chrome 모두 AppleScript 사전 통로라 맥 전용이고, Windows 에는 앱에 직접 말 거는
+OS 통로가 없다(UI Automation 은 탭 상태를 못 읽음). Chrome 의 통로 셋 — ① AppleScript 사전(맥만, 사용자의 진짜 크롬·배경
+실행·설정 불요), ② CDP(OS 무관이지만 Chrome 136+ 는 기본 프로필의 원격 디버깅을 거부 → 별도 프로필 = 이미 있는
+Playwright 통로와 같음), ③ 확장(현 `driver:chrome`, OS 무관·진짜 탭에 닿지만 DOM 층만 있고 탭·창 동작 없음, L46-1).
+결정: 지금은 ①로 `supported_platforms:["darwin"]`. Windows 가 필요해지면 같은 계약 아래 통로 ③에 `chrome.tabs` 동작을
+보태고 `supported_platforms` 에 windows 를 더한다. ②는 만들지 않는다(Playwright 중복). **AI 가 보는 계약·가이드는 하나,
+실행 부품은 통로별**.
+
+**Chrome 사전이 Safari 와 다른 점(실측 Chrome 155.0.8059.85·macOS 26.6.2).**
+- 창·탭 `id` 가 **문자열**이고 탭 `id` 는 **영구 신원**이다. 탭에 `index` 속성이 없다(-1728) → 위치에서 계산. 현재 탭은
+  `active tab index`. → 판본(revision)을 창 id·현재 탭 번호·**탭 id 순서**로 바꿨다. URL·제목은 판본에서 제외 — 탭 안의
+  페이지 이동이 판본을 깨지 않고, Safari 의 "같은 URL 탭의 개체 신원 미판별" 한계가 사라진다. 닫기는 `close tab id "…"`.
+- **`make new tab at end` 가 새 탭을 활성으로 만든다**(실측: 활성 15 → 17). Safari 는 배경 탭이었다. → open 은 같은
+  AppleScript 안에서 `set active tab index of w to <이전>` 으로 복원하고 `checks.activation_restored` 로 보고. 복원 실패는
+  `POSTCONDITION_FAILED`(탭은 생겼을 수 있음). 창이 화면에 있으면 찰나의 전환이 보일 수 있다 — 계약 effect 에 적었다.
+- AppleScript 에서 `before` 는 예약어(변수명 불가), `class of (id of window 1)` 은 -1700 — 변수에 받아 조회.
+- 창 행에 `mode`(normal/incognito)·`minimized` 를 싣는다. 시크릿 창도 `every window` 에 든다.
+
+**실기(본체, 사용자 다른 앱 작업 중, 창 1·탭 14·현재 탭 2).** status 0.2초 → open about:blank 0.74초(`activation_restored:true`,
+현재 탭 2 유지, tab 15·tab_id 99062812) → switch→15 0.65초 → switch→2 0.64초 → 오래된 판본으로 close 시도 = `STATE_CHANGED`
+변경 전 중단 → close(탭 id) 0.64초 `requested_removal_only:true` → 최종 판본 = 시작 판본. 없는 탭(-1719)·없는 창(-1728) 둘 다
+`TARGET_MISSING`. 앞 앱 변경 없음. 권한(-1743)·응답 유실은 모의 시험으로만(이 본체는 이미 허용).
+
+**남긴 것.** Windows Chrome(통로 ③ 확장 쪽 탭·창 동작), 원격 맥의 Chrome(헬퍼 경로로 같은 파일을 보내는 것은 §17 OS 드라이버와
+동형이나 미실측), 창 단위 동작(새 창·창 닫기·창 앞으로 — needs_front 와 함께), 시크릿 창 제외 옵션.
+
 
 ## Android 접근성 UI 확장 (2026-10-20)
 
@@ -645,3 +678,34 @@ PhoneAccessibilityService의 기존 snapshot/gesture/key/ACTION_SET_TEXT를 재�
 
 검증: 관련 Python 회귀 134건(드라이버·실제 IBL/영수증·모의 네이티브 경계·기존 하드웨어·교재·배포), arm64/arm32 APK 빌드·회원 앱 Kotlin 컴파일·기존 JVM 단위 시험 통과.
 실기기 UI 동작 인수는 별도이며, 테스트 통과를 실기기 터치·입력 완료로 해석하지 않는다. 세부 사용법은 data/guides/android_control.md.
+
+### 18.1 Windows Chrome — TV1 에 CDP 전용 프로필 드라이버 (2026-10-21, 사용자 판정: CDP 전용 프로필)
+
+§18 의 "Windows 는 통로가 없다"는 과했다. TV1(`guestpc-70e163471313`, Windows 10 19045·PowerShell 5.1·Chrome 155.0.8059.80)의 유튜브 부품
+`pc_youtube_windows.ps1` 은 이미 **UI Automation** 으로 크롬 탭을 세고·고르고·주소를 읽는다 — 다만 주소를 읽으려면 탭을 **골라야** 하고(status 가
+화면을 건드림), 배경 탭 열기가 없고, 탭 신원이 제목·순서 추정이다. 세 통로를 표로 놓고 사용자가 **CDP 전용 프로필** 을 골랐다(TV1 은 전용 재생
+기기라 크롬 실행 방식을 우리가 정해도 됨). UIA 는 유튜브 재생 판정(페이지 안) 전용으로 남긴다.
+
+**구현.** `data/instruments/pc_chrome_windows.ps1` — PC제어의 새 instrument. 허브 `pc_control.py` 에 `chrome_launch/status/open/switch/close`
+(Windows 만, `conditions`·검증·복호 검사), `select` 가 chrome_* 를 이 파일로 배정. AI 호출은 `[fn:PC제어]{대상,요청:{action:"chrome_*"}}`
++ `PC제어확인`(접수증). 가이드 `pc_control.md` 'Windows Chrome 창·탭' 절, `chrome_control.md` 에 Windows 경로 문장, 시험 `test_pc_chrome_control.py` 7건.
+- 전용 프로필 `%LOCALAPPDATA%\IndieBiz\ChromeProfile`, `--remote-debugging-port=0`, 포트는 `DevToolsActivePort` 파일에서(충돌 없음, 죽은 포트는
+  `/json/version` 으로 판별). 기동은 `-WindowStyle Minimized`(TV 에 전체화면 유튜브가 떠 있을 때 가리지 않도록). `shortcut:true` 면 바탕화면
+  "IndieBiz Chrome.lnk". 사용자가 따로 띄운 크롬은 `other_chrome_instances` 개수만.
+- CDP 는 ClientWebSocket(Origin 헤더 없음 → `--remote-allow-origins` 불요) 하나로 `Target.getTargets`·`Browser.getWindowForTarget`(창·state)·
+  `Target.createTarget{background:true}`·`activateTarget`·`closeTarget`, 현재 탭은 flatten 세션으로 `document.visibilityState`. 본체 맥에서 Python
+  프로토타입으로 의미 확인 뒤 옮김(배경 생성 시 원래 탭 visible 유지·activate 로 전환·newWindow 가능).
+- **계약 차이(맥 Chrome제어 대비).** `tab` 은 위치 번호가 아니라 **targetId**(CDP 가 탭 띠 순서를 주지 않음, `tabs` 는 id 순). 판본 = 창 id·현재 탭·
+  탭 id 집합. 최소화 창은 모든 탭이 hidden → `current_tab:null`. `chrome_open` 은 CDP background 라 복원 단계가 없다(`checks.background_created`).
+
+**TV1 실측(fn:PC제어 → 접수증 → PC제어확인, 사용자 기본 크롬은 유튜브 전체화면 재생 중).** 한 단계 9~14초(접수증 왕복 포함, 네이티브는 1~2초).
+status(minimized, current null) → open example.com 배경(현재 탭 불변·receipt 일치) → switch→새 탭: **최소화 창이 복원되며**(state minimized→normal)
+visible 로 확인 → switch 복귀 → 오래된 판본 close = `STATE_CHANGED` 변경 전 중단 → close(targetId) → **마지막 탭 close = Windows Chrome 프로세스 종료**
+→ `browser_exited:true` verified → 꺼진 상태 status `running:false, windows:[]` → `chrome_launch` 새 기동(pid·port, 최소화) 14초. 전부 `verified`.
+- PowerShell 5.1 함정 셋(전부 실측 수리): ① void Task 의 `.GetAwaiter().GetResult()` 가 `VoidTaskResult` 를 **출력으로 흘려** 함수 반환이 배열이 됨
+  (`[void]` 필수 — ConnectAsync·SendAsync·CloseAsync). ② `$( if … else { @() } )` 는 빈 배열을 null 로 풂 → 호스트 복호가 "창 목록 없음" 거절. ③ `return ,$out`
+  관례와 호출부 `@()` 가 겹치면 중첩 배열 → 함수는 열거로 내보내고 호출부가 `@()` 로 받는 한 가지 규약으로 통일. ④ 마지막 창이 닫히면 소켓이 끊겨
+  재조회가 예외 → 포트 생존으로 '브라우저 종료' 판별.
+
+**남긴 것.** 전용 프로필의 유튜브 로그인(사용자 1회), TV1 기본 크롬 바로가기 교체 여부(사용자 결정 — 지금은 추가 바로가기만), 원격 맥의 Chrome
+(chrome_control.py 를 pc_control_mac 경로로 보내는 동형), 창 단위 동작(새 창·창 닫기·복원), 접수증 왕복 비용(단계당 ~9초 — 연속 동작은 한 프로그램에서 잇기).

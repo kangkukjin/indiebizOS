@@ -2754,5 +2754,7 @@
 
 [2026-10-20] Android OS 드라이버: Android제어·Android제어확인으로 기존 폰 하드웨어 실행을 공용화. 원 준비·접수 영수증/요청 ID/소스 지문 검증, 설정 재조회와 요청 접수 구분, unknown에서 자동 재전송 금지. 앱·가이드·배포·의미 검색 연결. 연결 폰 3대의 읽기 및 pending→후속 확인 실기 통과; 실제 변경 동작은 미실행.
 2026-10-20 | 본체 OS 조작면 Windows 동형: pc_control_windows.ps1 에 화면·전원·입회·앱·클립보드·네트워크·단축어 16동작 추가(새 낱말 0, 맥과 같은 결과 모양, 관리자 불요, 못 읽는 값은 null+basis). action_platforms 16동작 darwin+windows, lock 재조회 verified. 허브 수리: select 의 app_kind 가 prepare 재검증에서 거절되던 launch·quit. tv1(Windows 10) 실기: 읽기 7·쓰기 7 verified, 블루투스 AQS 열거 멈춤→공식 선택자. 설계 §18.
+2026-10-21 | Chrome 창·탭 드라이버 Chrome제어(data/scripts/chrome_control.py, AppleScript 통로, macOS): Safari제어와 같은 계약에 영구 탭 id 판본·새 탭 활성 복원(checks.activation_restored)·탭 id 로 닫기. 가이드 chrome_control.md·guide_db control_surfaces app:com.google.Chrome·test_chrome_control.py 10건. 실기 open/switch/close 전부 verified. Windows Chrome 은 통로 없음(확장 쪽 후속) — docs/CONTROL_DRIVER_DESIGN §18
 
 2026-10-20 Android OS 드라이버 접근성 UI 확장: 앱 실행·홈·뒤로·화면 독해·터치·문자 입력. 관측 판본 검사, 전면 앱·입력칸·명시 화면 조건 확인, 실행 전 거절/실행 후 미확인 구분과 원 작업 조회 복구. 새 UI 계약 APK 필요.
+2026-10-21 | Windows Chrome 창·탭 드라이버(TV1): PC제어 chrome_launch/status/open/switch/close + data/instruments/pc_chrome_windows.ps1(CDP 전용 프로필, DevToolsActivePort, ClientWebSocket). tab=targetId·판본=탭 id 집합·최소화 창 current null. TV1 실측 전부 verified(단계 9~14초, 접수증 포함). PS5.1 함정 수리: void Task GetResult 출력 누출·$() 빈 배열·중첩 배열·마지막 창 닫힘 소켓 끊김. 시험 test_pc_chrome_control.py 7건. docs/CONTROL_DRIVER_DESIGN §18.1

@@ -42,8 +42,12 @@ CONTRACT = {
         "launch": ["app"], "quit": ["app"], "clipboard": [], "clipboard_write": ["text"],
         "network": [], "wifi": ["enabled"], "shortcuts": [], "shortcut": ["name"],
         "keep_awake": ["seconds"], "allow_sleep": [], "sleep": [],
+        # Windows Chrome 창·탭 드라이버(설계 §18, 2026-10-21). 통로 = CDP 전용 프로필(pc_chrome_windows.ps1). 맥 본체는 Chrome제어.
+        "chrome_launch": [], "chrome_status": [], "chrome_open": ["url"],
+        "chrome_switch": ["window_id", "tab", "expected"], "chrome_close": ["window_id", "tab", "expected"],
     },
-    "optional": {"brightness": ["display_id"], "keep_awake": ["display"]},
+    "optional": {"brightness": ["display_id"], "keep_awake": ["display"],
+                 "chrome_launch": ["url", "shortcut"], "chrome_status": ["window_id"], "chrome_open": ["window_id", "expected", "launch"]},
     # 동작이 도는 OS. 호출 전 검사(select/prepare)가 대조하고, 불일치는 전송 없이 거절한다.
     "action_platforms": {
         "status": ["darwin", "windows"], "volume": ["darwin", "windows"], "mute": ["darwin", "windows"],
@@ -56,6 +60,9 @@ CONTRACT = {
         "network": ["darwin", "windows"], "wifi": ["darwin", "windows"], "shortcuts": ["darwin", "windows"],
         "shortcut": ["darwin", "windows"], "keep_awake": ["darwin", "windows"], "allow_sleep": ["darwin", "windows"],
         "sleep": ["darwin", "windows"],
+        # Chrome 전용 프로필 CDP 통로는 Windows 만(맥 본체 Chrome 은 Chrome제어 AppleScript, 맥 원격은 미구현).
+        "chrome_launch": ["windows"], "chrome_status": ["windows"], "chrome_open": ["windows"],
+        "chrome_switch": ["windows"], "chrome_close": ["windows"],
     },
     # 동작별 실행 조건(설계 §6). needs_front 동작은 없다 — 전부 배경에서 돈다.
     # shared_state 는 사용자와 공유하는 상태를 바꾸는 요청된 효과의 표시이지 거절 조건이 아니다.
@@ -84,6 +91,12 @@ CONTRACT = {
         "keep_awake": {"needs_front": False, "shared_state": False, "verification_scope": "power_assertion_readback", "effect": "지정 초 동안 잠들지 않기(Windows 는 프로세스 생존 재조회)"},
         "allow_sleep": {"needs_front": False, "shared_state": False, "verification_scope": "process_readback", "effect": "켜 둔 잠들지 않기 해제"},
         "sleep": {"needs_front": False, "shared_state": True, "verification_scope": "request_only", "effect": "본체 잠자기(사용자 작업 중단)"},
+        "chrome_launch": {"needs_front": False, "shared_state": True, "verification_scope": "devtools_port_readback",
+                          "effect": "전용 프로필(%LOCALAPPDATA%\\IndieBiz\\ChromeProfile) Chrome 을 최소화로 띄우고 DevTools 포트를 확인. 이미 떠 있으면 변경 없음. shortcut:true 면 바탕화면 바로가기 생성"},
+        "chrome_status": {"needs_front": False, "shared_state": False, "verification_scope": "cdp_target_readback", "effect": "전용 프로필 Chrome 의 창(state)·탭(tab_id·url)·현재 탭·revision 읽기. 다른 프로필 크롬은 other_chrome_instances 개수만"},
+        "chrome_open": {"needs_front": False, "shared_state": False, "verification_scope": "cdp_target_readback", "effect": "배경 탭 생성(현재 탭 불변, CDP background). 창이 없으면 새 창. launch:true 면 꺼진 Chrome 을 그 주소로 띄움"},
+        "chrome_switch": {"needs_front": False, "shared_state": True, "verification_scope": "cdp_target_readback", "effect": "그 창의 현재 탭 변경 — 사용자가 보는 탭이 바뀜. 최소화 창은 표시로 확인 불가"},
+        "chrome_close": {"needs_front": False, "shared_state": True, "verification_scope": "cdp_target_readback", "effect": "탭 하나 닫기(targetId). 마지막 탭이면 창이 닫힘"},
     },
 }
 BUNDLE_ID = re.compile(r"^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$")
@@ -166,6 +179,41 @@ def validate(args):
                 "Windows에서는 youtube_replace에 영상 URL·제목·전체 길이를 전달하세요."
             )
         result["url"] = url
+    if action in {"chrome_open", "chrome_launch"} and "url" in args:
+        url = args["url"]
+        if not isinstance(url, str) or len(url) > 4096 or any(ord(c) < 32 for c in url):
+            raise ValueError("올바른 웹 주소를 입력해 주세요.")
+        parsed = urlsplit(url)
+        if url != "about:blank" and (parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password):
+            raise ValueError("인증정보가 없는 http 또는 https 주소(또는 about:blank)만 열 수 있습니다.")
+        if url != "about:blank":
+            host = parsed.hostname.lower().rstrip(".")
+            route = unquote(parsed.path).strip("/").split("/", 1)[0].lower()
+            if (host == "youtu.be" or host.endswith(".youtu.be") or
+                    ((host == "youtube.com" or host.endswith(".youtube.com") or host.endswith("youtube-nocookie.com"))
+                     and route in {"watch", "playlist", "shorts", "live", "embed", "v"})):
+                raise ValueError("유튜브 영상은 탭 열기로 재생하지 않습니다. 기존 재생과 겹칠 수 있습니다. youtube_replace 를 쓰세요.")
+        result["url"] = url
+    if action.startswith("chrome_"):
+        if "window_id" in args:
+            if isinstance(args["window_id"], bool) or type(args["window_id"]) is not int or args["window_id"] <= 0:
+                raise ValueError("window_id 는 chrome_status 가 돌려준 양의 정수입니다.")
+            result["window_id"] = args["window_id"]
+        if "tab" in args:
+            if not isinstance(args["tab"], str) or not re.fullmatch(r"[0-9A-F]{32}", args["tab"]):
+                raise ValueError("tab 은 chrome_status 의 tabs[].tab_id(32자리 대문자 16진수 targetId)입니다. 위치 번호가 아닙니다.")
+            result["tab"] = args["tab"]
+        if "expected" in args:
+            if not isinstance(args["expected"], str) or not re.fullmatch(r"[0-9a-f]{64}", args["expected"]):
+                raise ValueError("expected 는 관측 결과 state.revision 또는 windows[].revision 입니다.")
+            if "window_id" not in result:
+                raise ValueError("expected 와 함께 window_id 가 필요합니다.")
+            result["expected"] = args["expected"]
+        for flag in ("launch", "shortcut"):
+            if flag in args:
+                if type(args[flag]) is not bool:
+                    raise ValueError(f"{flag} 는 true 또는 false 입니다.")
+                result[flag] = args[flag]
     if action == "brightness":
         value = args["value"]
         if isinstance(value, bool) or type(value) is not int or not 0 <= value <= 100:
@@ -310,6 +358,18 @@ def decode(output, plan):
         raise ValueError("잠들지 않기 해제를 확인하지 못했습니다.")
     if action in {"display", "power", "presence", "apps", "clipboard", "network", "shortcuts"} and state.get("verified") is not True:
         raise ValueError("읽기 결과가 verified 로 돌아오지 않았습니다.")
+    if action.startswith("chrome_"):
+        if state.get("surface") != "app:com.google.Chrome" or state.get("verified") is not True:
+            raise ValueError("Chrome 드라이버 결과가 verified 로 돌아오지 않았습니다.")
+        checks = state.get("checks") or {}
+        if action == "chrome_open" and not (checks.get("created_tab_identified") is True and checks.get("existing_state_preserved") is True):
+            raise ValueError("새 탭 생성과 기존 탭·현재 탭 보존을 확인하지 못했습니다.")
+        if action == "chrome_switch" and checks.get("current_tab_matches") is not True:
+            raise ValueError("전환 뒤 현재 탭이 요청과 다릅니다.")
+        if action == "chrome_close" and checks.get("requested_removal_only") is not True:
+            raise ValueError("요청한 탭만 닫혔는지 확인하지 못했습니다.")
+        if action == "chrome_status" and not isinstance(state.get("windows"), list):
+            raise ValueError("Chrome 창 목록이 없습니다.")
     state["source_sha256"] = plan.get("source_sha256")
     if action in {"status", "volume", "mute"}:
         state["audio_capabilities"] = CONTRACT["audio_capabilities"]
@@ -352,13 +412,15 @@ def select_target(args):
         raise ValueError("유튜브 제어는 Windows에서 지원합니다")
     if system not in CONTRACT["action_platforms"][request["action"]]:
         raise ValueError(f"{request['action']} 은 {'·'.join(CONTRACT['action_platforms'][request['action']])} 에서 지원합니다. 선택 PC 는 {system} 입니다")
-    slow = youtube or request["action"] == "shortcut"
+    chrome = request["action"].startswith("chrome_")
+    slow = youtube or request["action"] in {"shortcut", "chrome_launch"} or (chrome and request.get("launch"))
     wait = args.get("wait")
     if wait is None:
         wait = 150 if slow else 60
     if type(wait) not in (int, float) or not math.isfinite(wait) or not 0 <= wait <= 240:
         raise ValueError("대기는 0~240초입니다")
     filename = ("pc_youtube_windows.ps1" if youtube else
+                "pc_chrome_windows.ps1" if chrome else
                 "pc_control_mac.py" if system == "darwin" else "pc_control_windows.ps1")
     return {"success": True, "target": target, "platform": system, "request": request,
             "source_path": "~workspace/data/instruments/" + filename,
@@ -439,7 +501,7 @@ def run(args, context=None):
              "[Console]::InputEncoding=[Text.Encoding]::UTF8; $s=[Console]::In.ReadToEnd(); & ([ScriptBlock]::Create($s))"])
     proc = subprocess.run(argv, input=plan["stdin"], capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
-                          timeout=115 if plan["request"]["action"] in {"youtube_replace", "youtube_stop", "youtube_status", "shortcut"} else 40)
+                          timeout=115 if plan["request"]["action"] in {"youtube_replace", "youtube_stop", "youtube_status", "shortcut", "chrome_launch"} else 40)
     if proc.returncode != 0:
         raise RuntimeError("PC 실행 실패: " + proc.stderr[-1200:])
     return decode(proc.stdout, plan)

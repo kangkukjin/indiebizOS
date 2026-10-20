@@ -93,7 +93,38 @@ return [fn:PC제어]{대상:"__local__",요청:{action:"launch",app:"com.apple.T
 그림을 success 로 받는 일을 막는 자리). 밤일처럼 긴 배경 작업은 keep_awake 로 시작하고 allow_sleep 으로 끝낸다.
 shortcut 은 사용자가 단축어 앱(Windows 는 작업 스케줄러)에서 만든 흐름을 이름으로 부르는 탈출구다 — 새 동작이 필요하면 코드보다 단축어가 먼저다.
 실패는 `failure.message` 와 `result.error` 에 원인이 있고, 변경 요청을 자동 재전송하지 않는 규칙은 같다.
-본체 앱 자체의 창·탭 조작(Safari 등)은 앱 드라이버(`safari_control.md`)가 맡고, 여기 동작은 OS 수준까지다.
+본체 앱 자체의 창·탭 조작(Safari·Chrome 등)은 앱 드라이버(`safari_control.md`·`chrome_control.md`)가 맡고, 여기 동작은 OS 수준까지다.
+
+## Windows Chrome 창·탭 (전용 프로필 CDP)
+
+Windows PC 의 Chrome 창·탭은 OS 수준이 아니라 앱 조작면 `app:com.google.Chrome` 이다. 맥 본체는 `Chrome제어`(`chrome_control.md`),
+Windows PC 는 같은 계약을 **PC제어의 `chrome_*` 동작**으로 부른다(실행 파일 `pc_chrome_windows.ps1`). 통로는 DevTools 프로토콜이고
+Chrome 136+ 가 기본 프로필의 원격 디버깅을 거부하므로 **전용 프로필**(`%LOCALAPPDATA%\IndieBiz\ChromeProfile`)만 본다 — 사용자가
+따로 띄운 크롬은 `other_chrome_instances` 개수로만 알려 주고 그 탭은 다루지 않는다(그쪽 유튜브 탭은 `youtube_*` 가 UI Automation 으로 다룬다).
+처음 한 번 `chrome_launch` 로 띄우고(최소화로 요청, `shortcut:true` 면 바탕화면 "IndieBiz Chrome" 바로가기 생성) 그 프로필에서 필요한 로그인을 한다.
+
+| action | 추가 요청 인수 | 관측 범위 |
+| --- | --- | --- |
+| chrome_launch | url(선택), shortcut:Bool(선택) | DevTools 포트 확인(`browser`·`port`). 이미 떠 있으면 `already_running:true` 변경 없음 |
+| chrome_status | window_id(선택) | 창(`window_id`·`state` normal/minimized/maximized/fullscreen)·탭(`tab_id`·url·name, **id 순 — 탭 띠 순서가 아님**)·`current_tab`(표시 중인 탭, 최소화 창은 null)·`revision` |
+| chrome_open | url, window_id·expected·launch(선택) | CDP `background` 생성 — 현재 탭 불변. 창이 없으면 새 창. 꺼져 있으면 `launch:true` 때만 그 주소로 기동. 유튜브 영상 주소는 거절(`youtube_replace`) |
+| chrome_switch | window_id, tab, expected | `tab` 은 **targetId(32자리 16진수)** 다. 변경 뒤 표시 상태 재조회. 최소화 창은 확인 불가(`POSTCONDITION_FAILED`) |
+| chrome_close | window_id, tab, expected | targetId 로 닫고 남은 탭 집합 대조. 마지막 탭이면 창 소멸 |
+
+`expected` 는 `windows[].revision` 또는 직전 결과 `state.revision`(창 id·현재 탭·탭 id 집합). 다르면 변경 전 `STATE_CHANGED`.
+결과의 `target` 은 다음 호출 인수 `{window_id,tab,expected}` 다. `UNKNOWN`·`POSTCONDITION_FAILED` 는 재전송하지 않는다.
+원격 PC 라 실행은 접수증(`PC제어확인`)으로 회수한다 — 연속 동작은 각 단계의 `result.target` 을 다음 요청에 잇는다.
+
+```ibl
+#!ibl edition=2
+return [fn:PC제어]{대상:"선택한 device_id",요청:{action:"chrome_status"}}
+```
+
+```ibl
+#!ibl edition=2
+$s = [fn:PC제어]{대상:"선택한 device_id",요청:{action:"chrome_open",url:"https://news.hada.io/",window_id:1378650243,expected:"관측한 revision"}}
+return $s
+```
 
 ## 유튜브 영상 선택
 

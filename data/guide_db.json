@@ -2256,6 +2256,34 @@
         "darwin"
       ],
       "topic": "브라우저·데스크톱 제어"
+    },
+    {
+      "id": "chrome_control",
+      "name": "Chrome 창·탭 드라이버 — 본체 앱 제어",
+      "description": "본체 macOS 의 Google Chrome 창·탭을 화면 조작 없이 사전(AppleScript) 계약으로 조회·열기·전환·닫기. 등록 스크립트 Chrome제어 — Safari제어와 같은 계약에 영구 탭 id 판본과 새 탭 활성 복원이 더해진다. Windows PC 의 Chrome 은 같은 계약을 PC제어 chrome_* 동작(pc_control.md, CDP 전용 프로필)으로 부른다.",
+      "keywords": [
+        "Chrome",
+        "크롬",
+        "구글 크롬",
+        "탭",
+        "탭 전환",
+        "탭 닫기",
+        "새 탭",
+        "창",
+        "본체 브라우저",
+        "맥 브라우저",
+        "AppleScript",
+        "앱 제어",
+        "앱 드라이버"
+      ],
+      "file": "chrome_control.md",
+      "control_surfaces": [
+        "app:com.google.Chrome"
+      ],
+      "supported_platforms": [
+        "darwin"
+      ],
+      "topic": "브라우저·데스크톱 제어"
     }
   ]
 }

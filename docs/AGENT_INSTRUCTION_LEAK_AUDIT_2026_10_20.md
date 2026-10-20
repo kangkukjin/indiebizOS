@@ -151,3 +151,16 @@ Claude 토크나이저로 직접 셀 수 없어(tiktoken 미설치, API 호출 �
 | 첫 턴 cache_create | 55,803(우리 49.6K 프롬프트 포함) | 10,920(짧은 프롬프트+도구 스키마; 직접 비교 불가) |
 
 검증 ② 백엔드 실제 턴: **보류**. 재기동 제어자 `last_result.outcome=check_failed`(파생물 신선도) — 다른 세션이 편집 중인 `system_essentials/script_ops.py`(`self:write`/`self:script` `path_audited.impl` 지문 `b542e8da…` ≠ 현재 `abc167c4…`)와 `frontend/package.json` 설치필터 stale 로 사전검사가 막혀 새 세대가 뜨지 않는다. 그 세션이 재감사·지문 갱신을 마치면 §5 "구현 때 검증 절차" 1~3(프로젝트 에이전트 fresh 턴 → `instructions` 부재·Memory 절 부재·`hook_started`·cache_create 감소, 의식 턴 1회)을 그대로 돌린다. 백엔드는 옛 세대로 ACTIVE 유지(수리 전 동작).
+
+### 검증 ② 백엔드 실제 턴 — 완료 (2026-10-20 12:26~12:28, 별도 세션)
+전제 확인: `data/restart_control/state.json` `phase=ACTIVE`·`last_result.outcome=restarted`, 세대 `9729950b` 워커 12:23:03 기동(커밋 `27c509b1` 12:17:45 이후), `backend_runtime.log` 12:23 부팅의 `[boot] 파생물 신선도 ✓ (98863ms)` — 타 세션이 `script_ops.py` 지문·설치필터를 맞춘 뒤 제어자가 스스로 새 세대를 띄웠다(이 세션은 지문·파생물에 손대지 않음). 탐침 = 프로젝트 에이전트 `L84_training/ai_execute`(정지 상태였음 → start → 턴 2회 → stop 원상복구), `origin=training`(리허설, 증류 미적재). 상한 2회 준수.
+
+| 항목 | 수리 전(L84 `3839d4b6`, 12절) | 백엔드 실제 턴(세대 `9729950b`) |
+|---|---|---|
+| 1. 프로젝트 에이전트 fresh 턴 — 턴 A "안녕하세요. 당신이 누구인지 한 문장으로만 답해 주세요."(12:26, 분류 EXECUTE, 도구 0, `session=new` → 트랜스크립트 `92b4afdc`) | attachment 에 `instructions`(CLAUDE.md 5,069 + MEMORY.md 1,463), 시스템 프롬프트 "# Memory" 절 | attachment = environment·model·auto_mode·language·total_tokens_reminder·session_context·date·remote_session_change·prompt_snapshot — **`instructions` 없음**. `prompt_snapshot` 11절, **"# Memory" 없음**, `하네스 전용 뷰` 문자열 없음. `language` attachment(L84-3 수리) 동승 |
+| 2. 첫 턴 `cache_creation_input_tokens` | 55,803 (cache_read 11,833) | **48,290** (cache_read 11,833 동일) → **−7,513(−13.5%)**, 기대 −5.5~7.5K 의 상단. 턴 B(`#think …`, `2c3ac88f`, 의식 감독 아래 네이티브 Bash 2회)는 cache_create 8,958 + cache_read 52,959(턴 A 접두 재사용) — 역시 `instructions`·Memory 절 없음 |
+| 3. 의식 턴 — 턴 B `#think projects/L84_training/outputs … Bash 도구로 세어 숫자 하나만`(12:27, 분류 THINK 강제) | 의식 트랜스크립트에 AutoMem `instructions` 실림(§2) | `[ClaudeCode/의식 감독] call: session=new system_prompt=31018자`, `events.jsonl`(`data/spill/supervision/b5a28704…`) `model.started/finished role=consciousness provider=claude_code opus`(19.5초, input 45,368). **트랜스크립트는 없다** — 의식 프로바이더는 `isolated_session=True` → `--no-session-persistence`(디스크 저장 안 함; §6 의 `-projects-study/29ec7378…` 파일도 현재 없음). 그래서 instructions 부재는 트랜스크립트가 아니라, 같은 세대 코드로 의식 역할(`agent_role=consciousness`, `isolated_session=True`) 명령을 오프라인 조립해 확인: `--setting-sources ''`·`--no-session-persistence`·env `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`(시험 B6 와 같은 사실의 실객체 확인) |
+
+PreToolUse 훅 발화: **미관측**. 턴 B 에서 감독 아래 네이티브 Bash 2회는 `events.jsonl` 에 `tool.started/finished`(role=execution, 스트림 `tool_start` 관측)로 남았지만, 훅 스크립트 자체의 발화 흔적은 어디에도 없다 — CLI 2.1.299 트랜스크립트는 훅 사건을 기록하지 않고(수리 전 Bash 사용 트랜스크립트 `3839d4b6`·`6c125a1a` 에도 0건), `/ibl/supervision/boundary` dispatch 는 대기 개입이 없으면 아무것도 로그하지 않는다(`conscious_supervisor.boundary` → `_take_pending` 은 stale 때만 `decision.stale`). 훅 설정이 `--settings` 에 실리는 사실은 시험 B6 와 §4 탐침(SessionStart 3/3)으로 닫혀 있고, PreToolUse 의 실발화 관측은 열린 항목 — 후속 후보: boundary dispatch 가 `boundary.checked` 사건 한 줄을 남기게(설계 판정 필요, 이번 범위 밖).
+
+판정: R1·R2 가 백엔드 실제 턴에서 의도대로 동작한다(①·② 닫힘, ③ 은 트랜스크립트 부재로 명령·env 실객체 확인으로 대체). 남는 것 = 훅 실발화 관측 수단, R3(보류).

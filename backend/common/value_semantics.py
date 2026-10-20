@@ -669,9 +669,12 @@ _NON_JSON_RESULT = "NON_JSON_RESULT"
 
 
 class _PublicResultViolation(ValueError):
-    def __init__(self, code: str, message: str):
+    def __init__(self, code: str, message: str, *, reason=None, path="$", value_type=None):
         super().__init__(message)
         self.code = code
+        self.details = {key: value for key, value in {
+            "reason": reason, "path": path, "value_type": value_type,
+        }.items() if value is not None}
 
 
 def _json_object(pairs):
@@ -680,7 +683,8 @@ def _json_object(pairs):
     for key, value in pairs:
         if key in out:
             raise _PublicResultViolation(
-                _NON_JSON_RESULT, f"JSON 문자열 객체에 중복 키 {key!r}가 있습니다")
+                _NON_JSON_RESULT, f"JSON 문자열 객체에 중복 키 {key!r}가 있습니다",
+                reason="duplicate_key")
         out[key] = value
     return out
 
@@ -692,12 +696,16 @@ def _normalize_public_value(value: Any, *, path: str = "$", active=None) -> Any:
             return decimal_json_number(value)
         except ValueError as error:
             code = _NON_JSON_RESULT if value.is_finite() else _NONFINITE_RESULT
-            raise _PublicResultViolation(code, f"공개 결과 {path}: {error}") from error
+            raise _PublicResultViolation(
+                code, f"공개 결과 {path}: {error}", path=path, value_type="Decimal",
+                reason="precision_loss" if value.is_finite() else "nonfinite_number") from error
     if isinstance(value, str) and value.lstrip().startswith(("{", "[")):
         try:
             nested = json.loads(value, object_pairs_hook=_json_object)
         except _PublicResultViolation as error:
-            raise _PublicResultViolation(error.code, f"{path}<json>: {error}") from error
+            raise _PublicResultViolation(
+                error.code, f"{path}<json>: {error}",
+                **{**error.details, "path": f"{path}<json>"}) from error
         except (json.JSONDecodeError, TypeError):
             return value
         _normalize_public_value(nested, path=f"{path}<json>", active=active)
@@ -705,18 +713,21 @@ def _normalize_public_value(value: Any, *, path: str = "$", active=None) -> Any:
     if isinstance(value, float) and not math.isfinite(value):
         label = "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
         raise _PublicResultViolation(
-            _NONFINITE_RESULT, f"계산 결과 {path}가 비유한 수 {label}입니다")
+            _NONFINITE_RESULT, f"계산 결과 {path}가 비유한 수 {label}입니다",
+            reason="nonfinite_number", path=path, value_type="float")
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
     if not isinstance(value, (*_SEQUENCES, dict)):
         raise _PublicResultViolation(
             _NON_JSON_RESULT,
-            f"공개 결과 {path}의 {type(value).__name__} 값은 JSON으로 표현할 수 없습니다")
+            f"공개 결과 {path}의 {type(value).__name__} 값은 JSON으로 표현할 수 없습니다",
+            reason="unsupported_type", path=path, value_type=type(value).__name__)
     active = active if active is not None else set()
     marker = id(value)
     if marker in active:
         raise _PublicResultViolation(
-            _NON_JSON_RESULT, f"공개 결과 {path}에 순환 참조가 있습니다")
+            _NON_JSON_RESULT, f"공개 결과 {path}에 순환 참조가 있습니다",
+            reason="cycle", path=path)
     active.add(marker)
     try:
         if isinstance(value, _SEQUENCES):

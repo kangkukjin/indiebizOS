@@ -1,0 +1,245 @@
+{
+  "scenario_checks_passed": true,
+  "baseline_preserved": true,
+  "runs": {
+    "repair_base": {
+      "run_id": "69a4aa990ffc40459410c52c74b1ab27",
+      "seconds": 24.05538296699524,
+      "success": true,
+      "source_complete": true,
+      "status": "completed",
+      "ended": 1792503230.533014,
+      "calls": {
+        "self:script": 8,
+        "self:read": 2,
+        "self:write": 1
+      },
+      "native_pc_actions": [
+        "status",
+        "presence",
+        "display",
+        "power",
+        "apps",
+        "network"
+      ],
+      "write_actions": {
+        "self:write": 1
+      },
+      "errors": []
+    },
+    "repair_variation": {
+      "run_id": "2d94d0be20c14f9b95ce09cc27398958",
+      "seconds": 15.495522260665894,
+      "success": true,
+      "source_complete": false,
+      "status": "completed",
+      "ended": 1792503259.6954272,
+      "calls": {
+        "self:limb": 1,
+        "self:script": 2,
+        "self:write": 1,
+        "self:read": 1
+      },
+      "native_pc_actions": [],
+      "write_actions": {
+        "self:write": 1
+      },
+      "errors": [
+        "TOOL",
+        "TOOL"
+      ]
+    },
+    "repair_boundary_v0": {
+      "run_id": "457901fc90c64fae876eb8535b1e106f",
+      "seconds": 8.969142198562622,
+      "success": false,
+      "source_complete": false,
+      "status": "interrupted",
+      "ended": 1792503274.140398,
+      "calls": {
+        "self:script": 1,
+        "self:read": 1
+      },
+      "native_pc_actions": [],
+      "write_actions": {},
+      "errors": [],
+      "diagnostic_details": {
+        "reason": "unsupported_type",
+        "path": "$.invalid.error.partial[0]",
+        "value_type": "Unit"
+      }
+    },
+    "repair_boundary_v1": {
+      "run_id": "e3dafbfc6c7f40c8920954c357bde34d",
+      "seconds": 10.888933181762695,
+      "success": true,
+      "source_complete": false,
+      "status": "completed",
+      "ended": 1792503322.430033,
+      "calls": {
+        "self:script": 1,
+        "self:read": 2,
+        "self:write": 1
+      },
+      "native_pc_actions": [],
+      "write_actions": {
+        "self:write": 1
+      },
+      "errors": [],
+      "reused_calls": 1
+    },
+    "repair_boundary_reverse": {
+      "run_id": "fd571b7a289f42cfaab396f635b7f647",
+      "seconds": 24.349478244781494,
+      "success": true,
+      "source_complete": false,
+      "status": "completed",
+      "ended": 1792503375.800055,
+      "calls": {
+        "self:script": 1,
+        "self:read": 2,
+        "self:write": 1
+      },
+      "native_pc_actions": [],
+      "write_actions": {
+        "self:write": 1
+      },
+      "errors": []
+    },
+    "repair_minimal_ready": {
+      "run_id": "0e99dc4a6ddc438d840a6cce7a33d7f3",
+      "seconds": 1.4030358791351318,
+      "success": false,
+      "source_complete": false,
+      "status": "interrupted",
+      "ended": 1792503193.442013,
+      "calls": {},
+      "native_pc_actions": [],
+      "write_actions": {},
+      "errors": [],
+      "diagnostic_details": {
+        "reason": "unsupported_type",
+        "path": "$.partial[0]",
+        "value_type": "Unit"
+      }
+    },
+    "repair_guide": {
+      "run_id": "311d46415a974e4abdf575e3523dd329",
+      "seconds": 0.7617528438568115,
+      "success": true,
+      "source_complete": false,
+      "status": "completed",
+      "ended": 1792503410.833615,
+      "calls": {},
+      "native_pc_actions": [],
+      "write_actions": {},
+      "errors": [],
+      "preserved_units": 1
+    },
+    "repair_guide_variation": {
+      "run_id": "c1e540486ea44d43939bb9daa7947be5",
+      "seconds": 0.39119577407836914,
+      "success": true,
+      "source_complete": false,
+      "status": "completed",
+      "ended": 1792503417.413692,
+      "calls": {},
+      "native_pc_actions": [],
+      "write_actions": {},
+      "errors": [],
+      "preserved_units": 2
+    }
+  },
+  "tests": {
+    "concurrent_after_edits": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "failures": []
+    },
+    "concurrent_recheck": {
+      "passed": 3,
+      "failed": 2,
+      "skipped": 0,
+      "failures": [
+        "backend.test_research_store::test_project_template_upgrade_preserves_user_templates",
+        "backend.test_phone_control_ui::test_phone_commands_read_current_hub_scripts_and_compile"
+      ]
+    },
+    "failures_recheck": {
+      "passed": 141,
+      "failed": 0,
+      "skipped": 0,
+      "failures": []
+    },
+    "full": {
+      "passed": 11217,
+      "failed": 2,
+      "skipped": 1,
+      "failures": [
+        "backend.test_conscious_supervisor::test_manager_state_is_delta_and_cannot_consume_job_progress",
+        "backend.test_managed_records_api::test_member_key_keeps_shared_commands_in_current_role"
+      ]
+    },
+    "full_final": {
+      "passed": 11217,
+      "failed": 5,
+      "skipped": 1,
+      "failures": [
+        "backend.test_pc_control_idioms::test_disconnected_target_never_submits",
+        "backend.test_imagination_round72_followup::test_neighbor_delete_reads_canonical_npub",
+        "backend.test_research_store::test_project_template_upgrade_preserves_user_templates",
+        "backend.test_phone_control_ui::test_phone_commands_read_current_hub_scripts_and_compile",
+        "backend.test_electron_dev::test_electron_dev_lifecycle"
+      ]
+    },
+    "hint_before": {
+      "passed": 0,
+      "failed": 5,
+      "skipped": 0,
+      "failures": [
+        "backend.test_ibl_v2_analysis::test_runtime_json_hint_matches_structured_reason[$u=[if:false]{1}; return json({item:$u})-inputs0-unsupported_type-Unit-round(]",
+        "backend.test_ibl_v2_analysis::test_runtime_json_hint_matches_structured_reason[return json({callback:abs})-inputs1-unsupported_type-\\ud544\\ub4dc-round(]",
+        "backend.test_ibl_v2_analysis::test_runtime_json_hint_matches_structured_reason[return json({n:123456789.123456789*2})-inputs2-precision_loss-round(-$error]",
+        "backend.test_ibl_v2_analysis::test_runtime_json_hint_matches_structured_reason[return json($x)-inputs3-duplicate_key-\\uc911\\ubcf5-round(]",
+        "backend.test_ibl_v2_analysis::test_caught_unit_partial_gets_report_recovery_advice"
+      ]
+    },
+    "related": {
+      "passed": 133,
+      "failed": 0,
+      "skipped": 0,
+      "failures": []
+    },
+    "supervisor_recheck": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "failures": []
+    },
+    "system": {
+      "passed": 63,
+      "failed": 0,
+      "skipped": 0,
+      "failures": []
+    },
+    "system_final": {
+      "passed": 63,
+      "failed": 0,
+      "skipped": 0,
+      "failures": []
+    },
+    "teaching": {
+      "passed": 69,
+      "failed": 0,
+      "skipped": 0,
+      "failures": []
+    }
+  },
+  "limitations": [
+    "JUnit counts do not certify the separate live-store exit guard.",
+    "Full-suite failures under concurrent PC/phone edits are retained, not counted as passes.",
+    "Safari already responded before the fix; zero windows does not verify tab mutations.",
+    "No causal latency/token saving measured; no model calls in these scenarios."
+  ]
+}

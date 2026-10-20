@@ -218,6 +218,22 @@ catch/finally는 실패 직전의 변수 값을 읽는다(try 안 재대입도 �
 실패를 빈 목록 성공으로 보고하지 않는다. 부분 실패·권한·취소·예산·프로토콜 경계는 문법 전문을 따른다.
 조건은 Bool이며 판정할 수 없는 값을 false로 추측하지 않는다.
 
+오류 전체에 `json($error)`를 적용하면 `partial`의 Unit·함수 때문에 보고서 작성도 실패할 수 있다.
+JSON 보고용 필드는 **catch 안에서** 선택한다(try 성공값과 오류의 합타입을 바깥에서 투영하지 않는다).
+부분값 생략은 명시하고, 원형 오류도 필요하면 아래처럼 별도 값으로 반환해 실행 응답의
+`value_wire`·결과 참조로 보존한다. Unit을 null이나 성공값으로 바꾸지 않는다.
+
+<!-- example:catch_json_report -->
+```ibl
+#!ibl edition=2
+[try] { [1,0] >> [table:each] { assert $it>0,"positive required" } }
+[catch] {
+  $report={code:$error.code,kind:$error.kind,message:$error.message,
+    has_partial:$error.has_partial,partial_preserved:false,evidence:$error.evidence}
+  return {report_json:json($report),original_error:$error}
+}
+```
+
 ## 4. 실패한 항목만 재시도하기
 
 <!-- example:retry -->

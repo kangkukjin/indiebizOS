@@ -188,7 +188,8 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
         try:
             return json.dumps(public_result(first, strict=True), ensure_ascii=False, allow_nan=False)
         except ValueError as error:
-            raise Fault(getattr(error, "code", "NON_JSON_RESULT"), str(error)) from error
+            raise Fault(getattr(error, "code", "NON_JSON_RESULT"), str(error),
+                        details=getattr(error, "details", None)) from error
     if name == "number":
         try:
             return number(first)

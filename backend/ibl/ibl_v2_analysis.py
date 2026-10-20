@@ -6,11 +6,26 @@ from ibl_v2_types import Type, UNKNOWN, NUMBER, TEXT, BOOL, join, alternatives
 from ibl_v2_expr import number
 
 
-#: 실행 중 실패에 붙이는 안내. 검사 진단의 HINTS 와 달리 실행 봉투의 diagnostic.hint 로 나간다.
-RUNTIME_HINTS = {
-    # 근사값(몫)은 실수로 계산돼 여기 오지 않는다. 남는 것은 자릿수가 긴 정확한 십진수다.
-    "NON_JSON_RESULT": "자릿수가 긴 정확한 소수는 JSON 숫자로 전달하면 정밀도를 잃습니다. round(값, 자릿수)로 자릿수를 정하세요. 원값 그대로가 필요할 때만 text()를 씁니다.",
+# 공통 값 경계가 판정한 원인을 사용한다. 오류 문장을 다시 해석하지 않는다.
+JSON_RUNTIME_HINTS = {
+    "precision_loss": "자릿수가 긴 정확한 소수는 JSON 숫자로 전달하면 정밀도를 잃습니다. round(값, 자릿수)로 자릿수를 정하세요. 원값 그대로가 필요할 때만 text()를 씁니다.",
+    "unsupported_type": "진단 path의 Unit·함수 등은 일반 JSON 값이 아닙니다. 필요한 필드를 선택하거나 명시적인 업무 값으로 바꾸세요. "
+                        "오류 보고서는 catch 안에서 $error.code·kind·message·has_partial·evidence를 선택하고 부분값 생략을 표시하세요. "
+                        "Unit을 포함한 원형 오류는 json() 대신 값을 반환해 value_wire·결과 참조로 보존하세요. "
+                        "함수 자체는 외부 전송하지 말고 적용해서 얻은 일반 값을 반환하세요.",
+    "duplicate_key": "JSON 원문의 중복 키를 확인하고 어떤 값을 보존할지 명시하세요. 파싱 후 덮어써진 값을 정상 결과로 사용하지 마세요.",
+    "cycle": "진단 path에서 같은 컨테이너를 다시 가리킵니다. 순환 연결을 명시적인 식별자·참조로 바꾸거나 필요한 필드만 선택하세요.",
+    "nonfinite_number": "NaN·Infinity는 JSON 숫자가 아닙니다. 원 계산을 확인하고, 미확인 값은 원인과 함께 명시적으로 표현하세요.",
 }
+
+
+def runtime_hint(fault):
+    """Give cause-specific advice without changing the value rejection contract."""
+    if fault.code not in {"NON_JSON_RESULT", "NONFINITE_RESULT"}:
+        return None
+    return JSON_RUNTIME_HINTS.get(
+        fault.details.get("reason"),
+        "진단의 경로와 값 타입을 확인하고 JSON으로 표현할 값을 명시적으로 선택하세요.")
 
 HINTS = {
     "FORMAT_UNINTERPOLATED": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",

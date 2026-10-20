@@ -93,3 +93,37 @@ def test_result_field_error_teaches_typed_unwrap(registry):
     plan = compile_program(fixed, registry)
     assert not plan.issues, plan.issues
     assert Runtime(plan).run()['value'] == 1
+
+
+@pytest.mark.parametrize("source,inputs,reason,expected,excluded", [
+    ('$u=[if:false]{1}; return json({item:$u})', {}, "unsupported_type", "Unit", "round("),
+    ('return json({callback:abs})', {}, "unsupported_type", "필드", "round("),
+    ('return json({n:123456789.123456789*2})', {}, "precision_loss", "round(", "$error"),
+    ('return json($x)', {"x": '{"a":1,"a":2}'}, "duplicate_key", "중복", "round("),
+])
+def test_runtime_json_hint_matches_structured_reason(source, inputs, reason, expected, excluded):
+    plan = compile_program(source, inputs=inputs)
+    assert not plan.issues, plan.issues
+    result = Runtime(plan, inputs).run()
+    assert not result["success"]
+    diagnostic = result["diagnostic"]
+    assert diagnostic["code"] == "NON_JSON_RESULT"
+    assert diagnostic["details"]["reason"] == reason
+    assert diagnostic["details"]["path"].startswith("$")
+    assert expected in diagnostic["hint"] and excluded not in diagnostic["hint"]
+
+
+def test_caught_unit_partial_gets_report_recovery_advice():
+    plan = compile_program('''
+$failure=[try] {
+  [table:each]{items:[1,0],mode:"effect"} { assert $it>0,"positive required" }
+} [catch] { $error }
+return json($failure)
+''')
+    result = Runtime(plan).run()
+    diagnostic = result["diagnostic"]
+    assert not result["success"]
+    assert diagnostic["details"] == {
+        "reason": "unsupported_type", "path": "$.partial[0]", "value_type": "Unit"}
+    assert "$error" in diagnostic["hint"] and "value_wire" in diagnostic["hint"]
+    assert "round(" not in diagnostic["hint"]

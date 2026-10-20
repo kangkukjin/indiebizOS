@@ -59,6 +59,20 @@ def test_guide_programs_execute(name, current):
     assert out['success'], out
 
 
+def test_catch_report_preserves_typed_original_without_repeating_work(current):
+    out = current(EXAMPLES['catch_json_report'])
+    assert out['success'], out
+    report = json.loads(out['value']['report_json'])
+    original = out['value']['original_error']
+    assert report['code'] == original['code'] == 'ASSERTION_FAILED'
+    assert report['has_partial'] and not report['partial_preserved']
+    assert report['evidence'] == original['evidence']
+    assert original['partial'] == [{'$ibl': 'unit'}]
+    wire_fields = dict(out['value_wire']['data'][1])
+    assert dict(wire_fields['original_error'][1])['partial'] == ['list', [['unit']]]
+    assert not current.calls
+
+
 def test_pipeline_and_new_idiom_composition(current):
     assert current(EXAMPLES['pipeline'])['value'] == [
         {'id': 'b', 'score': 7}, {'id': 'c', 'score': 5}]
@@ -260,7 +274,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision', 'pure_list_transform', 'group_best', 'record_key_aliases', 'flat_record_identity', 'exact_key_groups'}
+    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'catch_json_report', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision', 'pure_list_transform', 'group_best', 'record_key_aliases', 'flat_record_identity', 'exact_key_groups'}
     assert sum(len(re.findall(r'```ibl\n', guide.read_text())) for guide in GUIDES) == len(EXAMPLES)
     assert {'join_time', 'unary_group', 'document_completion'} == set(
         re.findall(r'<!-- example:(\w+) -->', TOOLS_GUIDE.read_text()))

@@ -971,9 +971,9 @@ class Runtime(ExpressionEvaluator):
             out = {"success": False, "error": str(exc), "diagnostic": projection(exc.view(self.plan.source))}
             if exc.kind == "suspended":
                 out.update(status="suspended", suspended=True, waiting=projection(exc.details))
-            from ibl_v2_analysis import RUNTIME_HINTS
-            if exc.code in RUNTIME_HINTS and isinstance(out["diagnostic"], dict):
-                out["diagnostic"].setdefault("hint", RUNTIME_HINTS[exc.code])
+            from ibl_v2_analysis import runtime_hint
+            if (hint := runtime_hint(exc)) and isinstance(out["diagnostic"], dict):
+                out["diagnostic"].setdefault("hint", hint)
             out.update(self._partial_transport(exc.partial))
         out.update({"edition": 2, "executed": True, "plan_hash": self.plan.fingerprint,
                     "source_complete": not any(e.get("incomplete") for e in self.trace),

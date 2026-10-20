@@ -1,9 +1,37 @@
 """Shared record ordering: exact timezone boundaries and one observation per row."""
 from datetime import datetime
+from decimal import Decimal
 
 import pytest
 
 from common import value_semantics as values
+
+
+@pytest.mark.parametrize("value,reason,value_type", [
+    (Decimal("123456789.123456789"), "precision_loss", "Decimal"),
+    (Decimal("NaN"), "nonfinite_number", "Decimal"),
+    (float("inf"), "nonfinite_number", "float"),
+    (object(), "unsupported_type", "object"),
+])
+def test_public_json_violation_preserves_structured_cause(value, reason, value_type):
+    with pytest.raises(ValueError) as caught:
+        values.public_result({"rows": [value]}, strict=True)
+    assert caught.value.details == {
+        "reason": reason, "path": "$.rows[0]", "value_type": value_type}
+    envelope = values.public_result({"rows": [value]})
+    assert set(envelope) == {"success", "error_code", "error"}
+    assert not envelope["success"] and envelope["error_code"] == caught.value.code
+
+
+def test_nested_json_duplicate_and_container_cycle_have_distinct_causes():
+    with pytest.raises(ValueError) as caught:
+        values.public_result({"body": '{"a":1,"a":2}'}, strict=True)
+    assert caught.value.details == {"reason": "duplicate_key", "path": "$.body<json>"}
+    cycle = []
+    cycle.append(cycle)
+    with pytest.raises(ValueError) as caught:
+        values.public_result({"rows": cycle}, strict=True)
+    assert caught.value.details == {"reason": "cycle", "path": "$.rows[0]"}
 
 
 @pytest.mark.parametrize("descending", [False, True])

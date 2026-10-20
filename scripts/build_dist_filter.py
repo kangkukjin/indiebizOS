@@ -97,6 +97,9 @@ PERSONAL_STATE_PATTERNS = [
     "!**/tokens/**",               # packages/installed/extensions/gmail/tokens/*.json 등
     "!packages/installed/extensions/gmail/config.yaml",
     "!*.log",                      # cloudflared.log 등 — 호스트명·경로가 찍힌다
+    # (d) 개인 계기 — 주인만 쓰는 앱은 data/instruments/<이름>.local.yaml (git 제외, .gitignore).
+    #     이름으로 나열하면 추적 package.json 에 개인 앱 이름이 새므로 패턴 한 줄로 막는다.
+    "!instruments/*.local.yaml",
 ]
 
 
@@ -134,6 +137,8 @@ def _noncore_instrument_excludes(core: dict) -> list[str]:
     d = REPO_ROOT / "data" / "instruments"
     if d.is_dir():
         for f in sorted(d.glob("*.yaml")):
+            if f.name.endswith(".local.yaml"):
+                continue  # 개인 계기 — PERSONAL_STATE_PATTERNS 의 패턴 한 줄이 맡는다
             if f.stem not in core["instruments"]:
                 out.append(f"!instruments/{f.name}")
     return out

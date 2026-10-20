@@ -30,6 +30,8 @@ data/system_ai_role.txt
 data/system_ai_memo.txt
 data/packages/system_ai_state/
 data/plan.md
+# 개인 계기(주인 전용 앱) — 추적·배포 밖 (배포 필터는 build_dist_filter 의 같은 패턴)
+data/instruments/*.local.yaml
 
 # 캐시 및 임시 파일
 data/thumbnail_cache/

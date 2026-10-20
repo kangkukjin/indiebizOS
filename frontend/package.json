@@ -240,6 +240,7 @@
           "!**/tokens/**",
           "!packages/installed/extensions/gmail/config.yaml",
           "!*.log",
+          "!instruments/*.local.yaml",
           "!__GEN_END__"
         ]
       },

@@ -1,0 +1,5 @@
+#!ibl edition=2
+$r=[try] {
+  [1,0] >> [table:each] { assert $it>0,"positive required" }
+} [catch] { $error }
+return json($r)

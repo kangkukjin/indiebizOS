@@ -1,0 +1,57 @@
+#!ibl edition=2
+[def:PC점검]($대상,$항목) {
+  [try] {
+    $batch=[fn:PC조회묶음]{대상:$대상,항목:$항목}
+    $rows=$batch.items >> [table:each] {
+      $r=$it
+      [if:$r.status=="pending"] { $r=[fn:PC제어확인]{작업:$r,대기:60} }
+      return {action:$it.action,verified:get($r,"verified",false)==true,raw:$r}
+    }
+    $actions=$rows >> [table:each] { return $it.action }
+    $passed=$rows >> [table:filter]{where:($r)=>$r.verified==true}
+    return {target:$대상,items:$rows,expected_count:len($항목),actual_count:len($rows),
+      ordered:$actions==$항목,verified_count:len($passed),
+      all_verified:len($항목)>0 and $actions==$항목 and len($passed)==len($항목),error:null}
+  } [catch] {
+    return {target:$대상,items:[],expected_count:len($항목),actual_count:0,
+      ordered:false,verified_count:0,all_verified:false,error:$error}
+  }
+}
+[def:Safari점검]($창) {
+  [try] {
+    [if:$창==null] { $s=[self:script]{id:"Safari제어",args:{op:"status"},timeout:60} }
+    [else] { $s=[self:script]{id:"Safari제어",args:{op:"status",window_id:$창},timeout:60} }
+    $detail=null
+    $same=null
+    $target_checked=false
+    $followup_error=null
+    [if:$창==null and $s.window_count>0] {
+      $w=$s.windows[0]
+      [try] {
+        $detail=[self:script]{id:"Safari제어",args:{op:"status",window_id:$w.window_id},timeout:60}
+        $same=$detail.state.revision==$w.revision
+        $target_checked=$detail.verified==true and $detail.state.window_id==$w.window_id
+      } [catch] { $followup_error=$error }
+    }
+    [if:$창!=null] { $target_checked=$s.verified==true and $s.state.window_id==$창 }
+    $ok=$s.verified==true
+    [if:$창==null and $s.window_count>0] { $ok=$ok and $target_checked and $same==true }
+    return {requested_window:$창,verified:$ok,raw:$s,detail:$detail,
+      target_checked:$target_checked,same_revision:$same,error:$followup_error,page_loaded:null}
+  } [catch] {
+    return {requested_window:$창,verified:false,raw:null,detail:null,
+      target_checked:false,same_revision:null,error:$error,page_loaded:null}
+  }
+}
+$branches=[fn:PC점검]{대상:$target,항목:$actions} & [fn:Safari점검]{창:$window}
+$pc=$branches[0]
+$safari=$branches[1]
+$report={pc:$pc,safari:$safari,all_reads_verified:$pc.all_verified and $safari.verified,
+  mutations_executed:false,physical_audio:"미검증",user_presence:"미확정",page_loaded:null,
+  mutation_verification:"미검증: 공유 기기 쓰기 격리 없음"}
+$text=json($report)
+[self:write]{path:$out,content:$text}
+$saved=[self:read]{path:$out}
+assert $saved.text==$text,"보고서 저장 재독 불일치"
+return {saved:$out,reread_equal:true,pc_verified:$pc.verified_count,pc_count:$pc.actual_count,
+  safari_verified:$safari.verified,all_reads_verified:$report.all_reads_verified}

@@ -1,0 +1,146 @@
+{
+  "verified_at": "2026-10-20T22:10:41.168495+09:00",
+  "head_start": "b24dfcc4ea65a6b01e41d7394c32b029a3ab44da",
+  "head_end": "b24dfcc4ea65a6b01e41d7394c32b029a3ab44da",
+  "tracked_driver_source_changes_during_round": [],
+  "base_sha256_preserved": "9acfaea1a6568dda82dc93db94e8968e1df5784c8bb27d9d3f5bc1ce5d7c60b3",
+  "runs": {
+    "base_v0": {
+      "run_id": "f6b6d85b9b284fa8b3678abd8c63d962",
+      "http_seconds": 13.82067608833313,
+      "engine_ms": 13679,
+      "source_complete": false,
+      "source_sha256": "74f524b13e42846739a7f51416df56aa2891380a4064054a7ab8bb62dd6915ef",
+      "reuse_count": 0,
+      "status": "completed",
+      "ended": 1792501188.877874,
+      "calls": {
+        "self:script": 8,
+        "self:read": 2,
+        "self:write": 1
+      },
+      "native_pc_actions": [
+        "status",
+        "presence",
+        "display",
+        "power",
+        "apps",
+        "network"
+      ],
+      "write_actions": {
+        "self:write": 1
+      },
+      "errors": [
+        "TOOL"
+      ]
+    },
+    "variation_v0": {
+      "run_id": "2d14131d77984f2394c3484b02a9adef",
+      "http_seconds": 13.660059928894043,
+      "engine_ms": 13538,
+      "source_complete": false,
+      "source_sha256": "74f524b13e42846739a7f51416df56aa2891380a4064054a7ab8bb62dd6915ef",
+      "reuse_count": 0,
+      "status": "completed",
+      "ended": 1792501321.312376,
+      "calls": {
+        "self:limb": 1,
+        "self:script": 2,
+        "self:write": 1,
+        "self:read": 1
+      },
+      "native_pc_actions": [],
+      "write_actions": {
+        "self:write": 1
+      },
+      "errors": [
+        "TOOL",
+        "TOOL"
+      ]
+    },
+    "boundaries_v0": {
+      "run_id": "586ee1cb4eed40bea9ac20a3ba561ba5",
+      "http_seconds": 4.256690979003906,
+      "engine_ms": 4186,
+      "source_complete": false,
+      "source_sha256": "6c9c41a61aca71fe34b49c0a77a143ddb687a413cafd821b4461d31fea13ad5c",
+      "reuse_count": 0,
+      "status": "interrupted",
+      "ended": 1792501441.6878452,
+      "calls": {
+        "self:script": 1,
+        "self:read": 1
+      },
+      "native_pc_actions": [],
+      "write_actions": {},
+      "errors": []
+    },
+    "boundaries_v1": {
+      "run_id": "aaf7a7fdb8d64d14835427c6f7335e8e",
+      "http_seconds": 4.62794303894043,
+      "engine_ms": 4556,
+      "source_complete": false,
+      "source_sha256": "6a98af172a17233fe4b8ba6a287b279cdfca695e91cb8df23844adae715340a8",
+      "reuse_count": 1,
+      "status": "completed",
+      "ended": 1792501603.0641549,
+      "calls": {
+        "self:script": 1,
+        "self:read": 2,
+        "self:write": 1
+      },
+      "native_pc_actions": [],
+      "write_actions": {
+        "self:write": 1
+      },
+      "errors": []
+    },
+    "minimal_v0": {
+      "run_id": "a0d1c60aa8654c688b1d5201d00ab5e2",
+      "http_seconds": 0.35315465927124023,
+      "engine_ms": 309,
+      "source_complete": false,
+      "source_sha256": "ebcf14d7bf5d59a32f77e82928541701744ffe44cc2ee9ebc2411258c8c06692",
+      "reuse_count": 0,
+      "status": "completed",
+      "ended": 1792501568.979241,
+      "calls": {},
+      "native_pc_actions": [],
+      "write_actions": {},
+      "errors": []
+    },
+    "minimal_v1": {
+      "run_id": "d8220a8b0fb846ae9b316acb277955e1",
+      "http_seconds": 0.342609167098999,
+      "engine_ms": 298,
+      "source_complete": false,
+      "source_sha256": "7fb483bfac09dcc82b844b22d90e9d0fa3200fdc1169afc2521cd1fa08f7ffb3",
+      "reuse_count": 0,
+      "status": "interrupted",
+      "ended": 1792501638.831063,
+      "calls": {},
+      "native_pc_actions": [],
+      "write_actions": {},
+      "errors": []
+    }
+  },
+  "tests": {
+    "driver_tests.xml": {
+      "tests": "173",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "91.907"
+    },
+    "runtime_tests_final.xml": {
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "3.543"
+    }
+  },
+  "program_model_calls": 0,
+  "author_tokens": "미측정",
+  "all_assertions_passed": true
+}

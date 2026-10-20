@@ -17,6 +17,48 @@ from ibl_v2_runtime import Budget, Runtime
 ROUND = Path(__file__).resolve().parents[1] / 'docs/experiments/long_sentence_imagination/round_39'
 
 
+@pytest.mark.parametrize("mode", ["map", "effect"])
+def test_caught_validation_partial_has_explicit_json_boundary(tmp_path, mode):
+    """L86: a successful assertion is Unit, not a completed device operation."""
+    prefix = f'''
+#!ibl edition=2
+$failure=[try] {{
+  [table:each]{{items:[1,0],mode:"{mode}"}} {{
+    assert $it>0,"positive required"
+  }}
+}} [catch] {{ $error }}
+'''
+    rejected = handle_request(
+        {"edition": 2, "code": prefix + "\nreturn json($failure)"},
+        project_path=str(tmp_path),
+    )
+    assert not rejected["success"]
+    assert rejected["diagnostic"]["code"] == "NON_JSON_RESULT"
+    assert "$.partial[0]" in rejected["error"] and "Unit" in rejected["error"]
+
+    # A report may select serializable metadata while explicitly declaring
+    # omitted partial values. Do not silently turn Unit into null or success.
+    projected = handle_request({
+        "edition": 2,
+        "code": prefix.replace("[catch] { $error }", '''[catch] {
+  json({code:$error.code,kind:$error.kind,message:$error.message,
+    has_partial:$error.has_partial,partial_preserved:false,
+    evidence:$error.evidence,details:$error.details})
+}''') + "\nreturn $failure",
+    }, project_path=str(tmp_path))
+    assert projected["success"], projected.get("error")
+    report = json.loads(projected["value"])
+    assert report["code"] == "ASSERTION_FAILED"
+    assert report["kind"] == "partial"
+    assert report["message"] == "positive required"
+    assert report["has_partial"] and report["partial_preserved"] is False
+    assert report["evidence"]
+    assert report["details"]["coverage"] == ["ok", "failed"]
+    assert report["details"]["successful_indices"] == [0]
+    assert report["details"]["errors"]["1"]["code"] == "ASSERTION_FAILED"
+    assert not projected["source_complete"]
+
+
 def test_public_budget_limit_matches_check_and_runtime():
     maximum = capabilities()['v2_budget']['request_max']
     assert maximum == {'steps': 10_000_000, 'rows': 100_000}

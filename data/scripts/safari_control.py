@@ -70,7 +70,7 @@ def now():
 
 # ---------------------------------------------------------------- AppleScript
 
-def osascript(script, timeout=OSA_TIMEOUT):
+def apple_event(script, timeout=OSA_TIMEOUT):
     """한 번 호출, 재시도 없음. 시간 초과는 TimeoutExpired 그대로 — 호출자가 '불명확'으로 다룬다."""
     proc = subprocess.run(["osascript", "-s", "s", "-e", script], capture_output=True, text=True, timeout=timeout)
     if proc.returncode != 0:
@@ -127,20 +127,20 @@ def _parse_list(text):
 
 
 def is_running():
-    return _parse_list(osascript(f'application "{APP}" is running', timeout=5)) is True
+    return _parse_list(apple_event(f'application "{APP}" is running', timeout=5)) is True
 
 
 def windows():
     """[{window_id, name, current_tab, tab_count, tabs:[{index,url,name}]}] — 창 순서는 Safari 의 앞→뒤."""
     # `count of tabs of every window` 는 창별 목록이 아니라 합계 하나를 돌려준다(실측) — 탭 수는 탭 목록에서 센다.
-    raw = _parse_list(osascript(f'tell application "{APP}" to get {{id, name, index of current tab}} of every window'))
+    raw = _parse_list(apple_event(f'tell application "{APP}" to get {{id, name, index of current tab}} of every window'))
     if not raw or raw == [[], [], []]:
         return []
     ids, names, currents = (col if isinstance(col, list) else [col] for col in raw)
     out = []
     for wid, name, current in zip(ids, names, currents):
         try:
-            t = _parse_list(osascript(f'tell application "{APP}" to tell window id {int(wid)} to get {{index, URL, name}} of every tab'))
+            t = _parse_list(apple_event(f'tell application "{APP}" to tell window id {int(wid)} to get {{index, URL, name}} of every tab'))
         except Failure as exc:
             if exc.code == "TARGET_MISSING":
                 continue   # 창 목록과 탭 조회 사이에 창이 사라졌다(마지막 탭 닫기 직후 실측 -1728) — 없는 창으로 본다
@@ -245,9 +245,9 @@ def do_open(request, running):
     url_osa = json.dumps(request["url"])
     try:
         if target is None:
-            osascript(f'tell application "{APP}" to make new document with properties {{URL:{url_osa}}}', timeout=15)
+            apple_event(f'tell application "{APP}" to make new document with properties {{URL:{url_osa}}}', timeout=15)
         else:
-            osascript(f'tell application "{APP}" to tell window id {target["window_id"]} to make new tab at end of tabs with properties {{URL:{url_osa}}}', timeout=15)
+            apple_event(f'tell application "{APP}" to tell window id {target["window_id"]} to make new tab at end of tabs with properties {{URL:{url_osa}}}', timeout=15)
         lost = False
     except subprocess.TimeoutExpired:
         lost = True
@@ -283,7 +283,7 @@ def do_switch(request, running):
     if request["tab"] > target["tab_count"]:
         raise Failure("TARGET_MISSING", f"창 {target['window_id']} 에 탭 {request['tab']} 이 없습니다(탭 {target['tab_count']}개).", "status 로 탭을 다시 고르세요.")
     try:
-        osascript(f'tell application "{APP}" to tell window id {target["window_id"]} to set current tab to tab {request["tab"]}')
+        apple_event(f'tell application "{APP}" to tell window id {target["window_id"]} to set current tab to tab {request["tab"]}')
         lost = False
     except subprocess.TimeoutExpired:
         lost = True
@@ -304,7 +304,7 @@ def do_close(request, running):
     if victim is None:
         raise Failure("TARGET_MISSING", f"창 {target['window_id']} 에 탭 {request['tab']} 이 없습니다.", "status 로 탭을 다시 고르세요.")
     try:
-        osascript(f'tell application "{APP}" to tell window id {target["window_id"]} to close tab {request["tab"]}')
+        apple_event(f'tell application "{APP}" to tell window id {target["window_id"]} to close tab {request["tab"]}')
         lost = False
     except subprocess.TimeoutExpired:
         lost = True

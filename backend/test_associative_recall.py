@@ -63,7 +63,7 @@ def test_device_context_respects_vocabulary_gate(monkeypatch):
 def test_device_context_with_no_known_devices_still_introduces_local_body(monkeypatch):
     """CONTROL_DRIVER_DESIGN_2026_10_20 §5.1 — 본체는 드라이버(`fn:PC제어` __local__)가 있는데 소개에
     없어 AI 가 화면 조작으로 가던 유일한 면. 등록 장치가 없어도 본체 행 하나는 소개한다."""
-    import sys
+    from common.platform_utils import host_os
     monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: [])
     monkeypatch.setattr(device_registry, "live_with_capability", lambda _: [])
     block = recall._connected_limbs(recall.RecallRequest(None, "상태", []), None)
@@ -71,8 +71,8 @@ def test_device_context_with_no_known_devices_still_introduces_local_body(monkey
     assert [r.attrib["device_id"] for r in rows] == ["__local__"]
     local = rows[0].attrib
     assert local["adapter"] == "local" and local["connected"] == "true" and local["name"] == "본체"
-    assert local["os"] == ("windows" if sys.platform == "win32" else sys.platform)
-    if sys.platform in ("darwin", "win32"):
+    assert local["os"] == host_os()
+    if host_os() in ("darwin", "windows"):
         assert local["control_guide"] == "pc_control.md"
     assert "__local__" in block.text and "상태 조회는 본체([sense:host])" in block.text
     assert "[limbs:screen] 탐색으로 간다" in block.text

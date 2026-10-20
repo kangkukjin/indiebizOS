@@ -269,7 +269,7 @@ def test_registration_stores_accept_observation_column(tmp_path, monkeypatch):
         limb_keys.resident_update("x", observations="not-a-list")
 
 
-# ---------------------------------------------------------------- 걸음 3 Safari 부품 (osascript 모의)
+# ---------------------------------------------------------------- 걸음 3 Safari 부품 (사전 호출 모의)
 
 @pytest.fixture
 def safari(monkeypatch):
@@ -285,7 +285,7 @@ def safari(monkeypatch):
             return json.dumps(v)
         return str(v)
 
-    def fake_osascript(script, timeout=10):
+    def fake_apple_event(script, timeout=10):
         state["calls"].append(script)
         hang = bool(state["hang"] and state["hang"] in script)   # 효과는 나고 응답만 유실되는 경우
         if hang:
@@ -326,7 +326,7 @@ def safari(monkeypatch):
             t[0][:] = list(range(1, len(t[0]) + 1))
             return ""
         raise AssertionError(script)
-    monkeypatch.setattr(mod, "osascript", fake_osascript)
+    monkeypatch.setattr(mod, "apple_event", fake_apple_event)
     mod._state = state
     return mod
 

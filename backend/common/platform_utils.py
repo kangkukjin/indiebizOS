@@ -23,6 +23,16 @@ import webbrowser
 IS_WINDOWS = os.name == "nt"
 IS_MAC = sys.platform == "darwin"
 
+
+def host_os() -> str:
+    """이 몸이 도는 OS 의 이름 — 장치 소개·드라이버 매핑이 쓰는 `control_platforms` 키와 같은 어휘
+    (windows / darwin / linux …). OS 분기는 이 이음매에만 두고 코어는 이름만 받는다(OS-가드)."""
+    if IS_WINDOWS:
+        return "windows"
+    if IS_MAC:
+        return "darwin"
+    return sys.platform
+
 try:
     import psutil  # 전 OS 프로세스 관리 (sense:host 등에서 이미 의존)
 except Exception:  # pragma: no cover

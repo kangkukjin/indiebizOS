@@ -384,8 +384,8 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
         rows, names = [], []
         # 본체 행(CONTROL_DRIVER_DESIGN_2026_10_20 §5.1) — 드라이버(`fn:PC제어` __local__)가 있는데
         # 소개에 없어 AI 가 화면 조작으로 가던 유일한 면. 매 턴 고정 비용은 이 행 하나다.
-        import sys as _sys
-        local_platform = "windows" if _sys.platform == "win32" else _sys.platform
+        from common.platform_utils import host_os
+        local_platform = host_os()
         local_attrs = {"name": "본체", "device_id": "__local__", "adapter": "local",
                        "connected": "true", "os": local_platform}
         if guide := control_guides.get(local_platform):

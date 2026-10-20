@@ -84,6 +84,7 @@
       "ai_trend_publish.py",
       "arch_render_cli.py",
       "arxiv최신피드.py",
+      "capability_age.py",
       "drug_approval.py",
       "examples.json",
       "github저장소메타.py",

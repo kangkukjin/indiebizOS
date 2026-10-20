@@ -42,5 +42,27 @@ def test_truly_empty_registry_still_explains_registration(ops, monkeypatch):
     assert result['count'] == 0 and 'op:register' in result['message']
 
 
+def test_reregistration_preserves_birth_and_legacy_unknown(ops, tmp_path, monkeypatch):
+    script = tmp_path / 'sample.py'
+    script.write_text('print(1)')
+    registry = {}
+    monkeypatch.setattr(ops, '_read_registry', lambda: registry)
+    monkeypatch.setattr(ops, '_write_registry', lambda value: registry.update(value))
+    monkeypatch.setattr(ops, '_resolve_path', lambda *a: script)
+    monkeypatch.setattr(ops, '_path', lambda name: tmp_path)
+    args = {'id': 'sample', 'path': str(script)}
+    assert ops.op_register(args)['success']
+    created = registry['sample']['created_at']
+    registered = registry['sample']['registered_at']
+    assert created
+    assert ops.op_register({**args, 'description': 'changed'})['success']
+    assert registry['sample']['created_at'] == created
+    assert registry['sample']['registered_at'] == registered
+    registry['sample'].pop('created_at')
+    assert ops.op_register(args)['success']
+    assert registry['sample']['created_at'] is None
+    assert registry['sample']['registered_at'] == registered
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

@@ -9,7 +9,7 @@ owner_code: >
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
   catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-10-18
+last_updated: 2026-10-20
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -568,6 +568,16 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 `component_lifecycle.compute_transitions(apply=False, include_details=True)`는 상태·파일을 바꾸지 않고 첫 관측일, 최근 실행 여부, 유예, 전체/유효 참조와 후보 이력을 반환한다. 이 진단이 후보 기간이나 마지막 실행 시각을 전진시키지 않는다. 유예 30일·최근 실행 60일·후보 후 90일 정책은 유지한다.
 
 ### 구성요소 생명주기 — 세포 사멸과 수면 후반부 (2026-09-02, 사용자 판정 2건 승인)
+
+어휘·등록 스크립트·이름 붙은 관용구의 **검증·수리 수명**은 `data/capability_history.db`가
+별도로 소유한다. `backend/datastore/capability_history.py`는 사건 원장과 버전 대조,
+`backend/cognition/capability_inventory.py`는 현재 정의 지문, `capability_age.py`는 조회·기록을 맡는다.
+기존 유지보수 번들에서 하루 간격으로 관측하며 등록 스크립트 `구성요소수명`으로도 접근한다.
+생성/최초 관측/구현 변경/의존 변경/범위별 검증/명시 수리/실행 시각은 섞지 않는다.
+정의 또는 의존 지문이 바뀌면 이전 검증은 stale이며 자동 정리의 근거로 삼지 않는다.
+관용구 `updated_at`의 기존 실행·갱신 의미는 호환 유지하고, 도입 후 실행 시각은 별도 기록한다.
+과거 날짜의 의미와 미상 값은 보존한다. 사용법·보수적 지문의 범위·외부 상태 미포함은
+[몸의 변화 가이드](../guides/body.md)의 「구성요소 수명」 절이 정본이다.
 
 기억 8종 중 DB 기억(심층·해마·포식)에는 LRU·cap 가지치기가 있었지만 **가이드·워크플로우·스크립트·낱말**에는
 망각이 없었다 — 깃발 순찰 일곱이 보고만 하고 정리는 사람 손이었다(2026-08-17 81KB, 09-02 세 가이드 다이어트).

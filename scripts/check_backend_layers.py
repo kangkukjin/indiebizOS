@@ -54,6 +54,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
+        "capability_history",
         "member_activity",
         "research_store", "research_questions", "research_evidence", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context",
@@ -114,7 +115,7 @@ LAYERS = {
         "system_ai_core", "system_ai_plans", "system_ai_runner",
         "system_ai_tools", "system_hooks", "system_tools", "delegation_tasks",
         "system_tools_delegate", "system_tools_ibl", "vocab_crystallization",
-        "vocab_overlap_audit", "component_lifecycle", "guide_downscale",
+        "vocab_overlap_audit", "component_lifecycle", "guide_downscale", "capability_age", "capability_inventory",
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {

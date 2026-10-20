@@ -35,6 +35,7 @@ import subprocess
 import sys
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -397,6 +398,8 @@ def _entry_item(sid, e, state):
             "description": e.get("description", ""), "path": f"data/scripts/{e.get('file', '')}",
             "interpreter": e.get("interpreter", ""),
             "registered_at": e.get("registered_at", ""),
+            "created_at": e.get("created_at"),
+            "registration_updated_at": e.get("registration_updated_at"),
             "last_status": ("ok" if lr.get("ok") else "error") if lr else "none",
             "last_run": str(lr.get("at", "")) if lr else "",
             "runnable": not problems,
@@ -486,7 +489,9 @@ def op_register(tool_input):
         "interpreter": interpreter,
         "description": str(tool_input.get("description") or prev.get("description") or ""),
         "timeout": timeout,
-        "registered_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "registered_at": prev.get("registered_at") or datetime.now(timezone.utc).isoformat(),
+        "created_at": prev.get("created_at") if prev else datetime.now(timezone.utc).isoformat(),
+        "registration_updated_at": datetime.now(timezone.utc).isoformat(),
     }
     if contract is not None:
         registry[sid]["callable_contract"] = contract

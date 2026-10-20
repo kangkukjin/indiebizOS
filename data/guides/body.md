@@ -4,6 +4,63 @@
 
 배경: 2026-08-05 백엔드 층 분리 같은 "몸 개조"가 회상 불가능해, 몸을 만지는 도구의 낡은 가정이 몇 주씩 잠복했다(grep 방언 사건). 몸이 바뀌면 몸에 대한 가정이 깨진다 — 변화 자체가 연상 가능한 기억이어야 한다. 각인(2026-08-27)은 그 대칭: REPAIR 로 몸을 고친 턴이 제 손으로 결말을 원장에 남긴다.
 
+## 구성요소 수명 — 어휘·스크립트·관용구
+
+파일의 git 이력과 기능 검증 기록은 다르다. 공통 수명 원장은 기존 등록 스크립트로 조회한다.
+
+```ibl
+[self:script]{id:"구성요소수명", args:{op:"list", key:"action:sense:search"}}
+[self:script]{id:"구성요소수명", args:{op:"list", kind:"script", status:"stale", limit:20}}
+[self:script]{id:"구성요소수명", args:{op:"history", key:"action:sense:search", limit:20}}
+```
+
+`list`는 현재 정의를 관측한 뒤 `items`를 반환한다. `key`는 목록에서 선택한다:
+어휘 `action:노드:액션`, 스크립트 `script:등록ID`, 관용구는 DB 행·저장 워크플로우·배포 정의의
+출처별 key를 사용하므로 같은 별칭을 합치지 않는다. `next_cursor`가 있으면 같은 조건과
+`after:next_cursor`로 계속 읽는다. 전체 수는 `total`, 요약은 `summary`다.
+
+| 칸 | 의미 |
+|---|---|
+| `created_at` | 확인 가능한 생성일. 과거 어휘·옛 등록 스크립트는 모르면 null |
+| `first_observed_at` | 이 원장이 처음 본 시각. 생성일 대용이 아님 |
+| `implementation_changed_at` | 자체 정의·구현의 변경을 마지막으로 관측한 시각 |
+| `dependencies_changed_at` | 공통 코드·호출 가능 영역의 변경을 마지막으로 관측한 시각 |
+| `last_checked_at` / `last_verified_at` | 마지막 검증 시도 / 마지막 성공 판정 시각. 과거 판정도 보존 |
+| `last_repaired_at` | 결함·근거를 명시한 마지막 수리 기록. 수리가 검증을 대신하지 않음 |
+| `last_execution` | 기존 실사용 로그 또는 도입 후 관용구 실행 기록. 검증일을 갱신하지 않음 |
+
+원장의 새 시각은 시간대가 있는 UTC ISO 값이다. 기존 실행 로그·옛 로컬 날짜의 시간대를 추정하지 않는다.
+변경일은 **관측 시각**이며 정확한 편집 순간은 그보다 앞일 수 있다. 같은 본문을 다시 관측하거나
+실행·등록 날짜만 갱신해도 구현 변경일이 움직이지 않는다. 새 스크립트의 생성일은 재등록해도 유지한다.
+
+검증은 목록에서 받은 **현재 `revision`**과 검사 범위·결과·근거를 함께 기록한다. 검사 전에
+revision을 확보하고, 실제 검사를 끝낸 뒤 같은 값을 제출한다. 중간에 구현이 바뀌면 거절된다.
+
+```ibl
+[self:script]{id:"구성요소수명", args:{op:"verify", key:$대상키, expected_revision:$검사전버전,
+  scope:"뉴스 days·부분 실패 회귀", outcome:"passed", evidence:$검사결과파일}}
+[self:script]{id:"구성요소수명", args:{op:"repair", key:$대상키, expected_revision:$현재버전,
+  reason:"기간 필터 이전의 개수 제한 수정", evidence:$수리커밋}}
+```
+
+`verify.outcome`은 `passed` 또는 `failed`. 결과 파일·실호출 기록·커밋 등 `evidence`와
+`scope`는 필수이며, **기록 도구 자체가 검사를 실행하거나 근거의 내용을 입증하지 않는다**.
+수리 후에는 해당 버전으로 검증을 다시 남긴다. 같은 범위의 최신 실패가 옛 성공을 덮고,
+서로 다른 범위의 판정은 따로 보존한다. `current`는 그 범위가 현재 지문과 맞는다는 뜻이다.
+이전 지문이거나 수리보다 앞선 검증은 `stale`, 현재 범위에 실패가 있으면 `failed`, 기록이 없으면
+`unverified`. 일부 범위만 검사한 것을 전체 기능 검증으로 확대하지 않는다.
+
+지문은 어휘 선언·소유 패키지 코드/스키마·공통 backend/API 설정을 포함한다. 스크립트와 관용구는
+동적 호출을 놓치지 않도록 로컬 스크립트·이름 붙은 관용구·몸 코드를 보수적으로 묶으므로,
+실제 영향이 없는 의존 변경도 재검증 대상으로 표시될 수 있다. 환경변수, 외부 API 상태,
+설치된 라이브러리 바이너리, 원격 몸과 실행 중 프로세스의 로드 상태는 지문 밖이다.
+오래된 검증과 현재 외부 서비스의 정상 동작도 별개이므로 실호출 검증은 범위에 명시한다.
+
+정본은 `data/capability_history.db`(런타임 원장), 구현은 `capability_history`·`capability_inventory`·
+`capability_age`다. 조회 시 동기화하고 기존 유지보수 번들에서도 하루 간격으로 관측한다.
+자동 검증·수리·삭제·은퇴는 하지 않는다. 과거 `path_audited`, 용례 검토일, `updated_at`,
+관용구 개정일은 `metadata.legacy_*`로 보여주며 새 기능 검증·수리 기록으로 승격하지 않는다.
+
 ## op 7종
 
 | op | 무엇 | 주요 파라미터 |

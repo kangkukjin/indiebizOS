@@ -6,6 +6,12 @@
 
 ## 설계선 — 파일 실행과 IBL 연결 (2026-10-01 개정)
 
+등록 스크립트의 수명은 `[self:script]{id:"구성요소수명",args:{kind:"script"}}`로 조회한다.
+신규 등록은 `created_at`을 남기고 재등록해도 유지한다. 옛 항목의 생성일은 모르면 null이며,
+기존 `registered_at`도 재등록 시 보존한다. 등록 갱신은 `registration_updated_at`, 실행은
+`last_run`으로 구분한다. 구현 변경·버전별 검증·수리 이력과 기록 방법은 `body.md`의
+「구성요소 수명」 절을 따른다. 성공 실행만으로 기능 검증일을 갱신하지 않는다.
+
 **실행은 파일을 기준으로 하고, IBL은 입력과 결과를 연결한다.** 코드 문자열을 실행기에
 끼워 넣어 traceback을 재작성하지 않는다. Python 실행부(`backend/base/file_script.py`)는
 IBL 파서·값·오류 객체에 의존하지 않는다. IBL 어댑터와 재현 CLI가 같은 실행부를 쓴다.

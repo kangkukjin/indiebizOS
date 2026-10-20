@@ -1129,3 +1129,11 @@ TV제어:
       page_size: 1
     maximum:
       page_size: 200
+
+구성요소수명:
+  file: capability_age.py
+  interpreter: python
+  description: '어휘·등록 스크립트·이름 붙은 관용구의 생성/변경/검증/수리/실행 시각과 구현 지문을 조회한다. 입력(args)은 op=list(기본)/history/sync/verify/repair, key(목록에서 선택), kind=action/script/idiom, status=current/stale/failed/unverified, after(다음 커서), limit(기본50). verify는 expected_revision·scope·outcome(passed/failed)·evidence, repair는 expected_revision·reason·evidence 필수. 검증은 명시 범위만 뜻하며 실행 성공과 분리한다. 사용법=body 가이드 구성요소 수명 절.'
+  registered_at: '2026-10-20T02:46:40.371811+00:00'
+  created_at: '2026-10-20T02:46:40.371811+00:00'
+  timeout: 120

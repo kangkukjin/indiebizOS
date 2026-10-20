@@ -91,8 +91,10 @@
     "cognition/ai_agent",
     "cognition/associative_recall",
     "cognition/body_ask",
+    "cognition/capability_age",
     "cognition/capability_guard",
     "cognition/capability_guard_runtime",
+    "cognition/capability_inventory",
     "cognition/catalog_recall",
     "cognition/client_workflows",
     "cognition/cognitive_consciousness",
@@ -178,6 +180,7 @@
     "datastore/business_manager",
     "datastore/calendar_manager",
     "datastore/calendar_rules",
+    "datastore/capability_history",
     "datastore/coding_store",
     "datastore/conversation_db",
     "datastore/conversation_sessions",
@@ -616,8 +619,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 541,
-    "engine": 509,
+    "total": 544,
+    "engine": 512,
     "blocklist": 32
   }
 }

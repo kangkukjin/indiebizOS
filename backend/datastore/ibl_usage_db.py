@@ -691,6 +691,11 @@ class IBLUsageDB:
                 args
             )
             conn.commit()
+        try:
+            from capability_history import record_execution
+            record_execution(f'idiom:db:{example_id}', success)
+        except Exception as exc:
+            logger.warning('관용구 실행 시각 기록 실패: %s', type(exc).__name__)
 
     def update_success_by_code(self, ibl_code: str, success: bool,
                                elapsed_ms: Optional[int] = None,

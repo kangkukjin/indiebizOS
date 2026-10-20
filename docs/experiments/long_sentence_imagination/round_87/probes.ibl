@@ -1,0 +1,18 @@
+#!ibl edition=2
+# P1: 같은 읽기 프로그램을 대상만 바꿔 — 행 모양 대조는 하네스가 한다
+[def:읽기]($대상) {
+  [try] { return [fn:PC조회묶음]{대상:$대상,항목:["status","display","power","presence"]} }
+  [catch] { return {target:$대상,items:[],error:$error} }
+}
+$p1=[fn:읽기]{대상:$tv1} & [fn:읽기]{대상:"__local__"} & [fn:읽기]{대상:$mac26}
+# P6: 세 드라이버의 거절 1건씩 — 실패 모양 동형인가
+$f_pc=null
+$f_and=null
+$f_chr=null
+$e_pc=null
+$e_and=null
+$e_chr=null
+[try] { $f_pc=[fn:PC제어]{대상:$tv1,요청:{action:"launch",app:"L87_no_such_app_20261020"}} } [catch] { $e_pc=$error }
+[try] { $f_and=[fn:Android제어]{대상:$s0,요청:{action:"app_launch",package:"com.l87.no.such.package"}} } [catch] { $e_and=$error }
+[try] { $f_chr=[self:script]{id:"Chrome제어",args:{op:"close",window_id:99058850,tab:999,expected:"L87-stale"},timeout:60} } [catch] { $e_chr=$error }
+return {p1:$p1,p6:{pc:{value:$f_pc,error:$e_pc},android:{value:$f_and,error:$e_and},chrome:{value:$f_chr,error:$e_chr}}}

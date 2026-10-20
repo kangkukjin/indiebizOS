@@ -1,0 +1,2 @@
+#!ibl edition=2
+return [fn:Android제어]{대상:$s0,요청:{action:"app_launch",package:"com.android.settings"}}

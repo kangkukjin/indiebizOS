@@ -1,0 +1,4 @@
+#!ibl edition=2
+$a=[fn:PC조회묶음]{대상:$tv1,항목:["status","presence"]}
+$b=[fn:Android제어]{대상:$s0,요청:{action:"volume_status",stream:"music"}}
+return {pc:$a,android:$b}

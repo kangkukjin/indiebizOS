@@ -1,0 +1,8 @@
+#!ibl edition=2
+$ra=null
+$rp=null
+$ea=null
+$ep=null
+[try] { $ra=[fn:Android제어확인]{작업:$작업a,대기:30} } [catch] { $ea=$error }
+[try] { $rp=[fn:PC제어확인]{작업:$작업p,대기:30} } [catch] { $ep=$error }
+return {android:{value:$ra,error:$ea},pc:{value:$rp,error:$ep}}

@@ -1,0 +1,209 @@
+#!ibl edition=2
+[def:행]($면,$대상,$동작,$r) {
+  $f=get($r,"failure",null)
+  $code=null
+  $stage=null
+  [if:$f!=null] { $code=get($f,"code",null); $stage=get($f,"stage",null) }
+  $scope=get($r,"verification_scope",null)
+  return {surface:$면,target:$대상,action:$동작,status:get($r,"status",null),
+    verified:get($r,"verified",false)==true,scope:$scope,failure_code:$code,failure_stage:$stage,
+    task_ref:get($r,"task_ref",null),raw:$r}
+}
+[def:오류행]($면,$대상,$동작,$e) {
+  return {surface:$면,target:$대상,action:$동작,status:"error",verified:false,scope:null,
+    failure_code:get($e,"code",null),failure_stage:"exception",task_ref:null,raw:$e}
+}
+[def:대조]($before,$after,$ok) {
+  $v="unverified"
+  [if:$ok==true and $before==$after] { $v="same" }
+  [if:$ok==true and $before!=$after] { $v="changed" }
+  return $v
+}
+[def:PC호출]($대상,$요청) {
+  $r=[fn:PC제어]{대상:$대상,요청:$요청}
+  [if:get($r,"status",null)=="pending"] { $r=[fn:PC제어확인]{작업:$r,대기:60} }
+  return $r
+}
+[def:PC가지]($대상,$쓰기,$url) {
+  $rows=[]
+  $clip_restore="unverified"
+  $awake_restore="unverified"
+  $app_restore="unverified"
+  $err=null
+  [try] {
+    $batch=[fn:PC조회묶음]{대상:$대상,항목:["status","display","power","presence","apps","clipboard","network","shortcuts"]}
+    $rows=$batch.items >> [table:each] {
+      $r=$it
+      [if:get($r,"status",null)=="pending"] { $r=[fn:PC제어확인]{작업:$r,대기:60} }
+      return [fn:행]{면:"pc",대상:$대상,동작:$it.action,r:$r}
+    }
+    $clip=$rows >> [table:filter]{where:($x)=>$x.action=="clipboard" and $x.verified==true}
+    [if:$쓰기!="none" and len($clip)==1] {
+      $text0=get($clip[0].raw.result,"text","")
+      $w1=[fn:PC호출]{대상:$대상,요청:{action:"clipboard_write",text:$url}}
+      $w2=[fn:PC호출]{대상:$대상,요청:{action:"clipboard"}}
+      $w3=[fn:PC호출]{대상:$대상,요청:{action:"clipboard_write",text:$text0}}
+      $w4=[fn:PC호출]{대상:$대상,요청:{action:"clipboard"}}
+      $mid=null
+      $end=null
+      [if:get($w2,"verified",false)==true] { $mid=get($w2.result,"text",null) }
+      [if:get($w4,"verified",false)==true] { $end=get($w4.result,"text",null) }
+      $clip_restore=[fn:대조]{before:$text0,after:$end,ok:get($w4,"verified",false)==true}
+      $rows=$rows+[[fn:행]{면:"pc",대상:$대상,동작:"clipboard_write",r:$w1},
+        [fn:행]{면:"pc",대상:$대상,동작:"clipboard",r:$w2},
+        [fn:행]{면:"pc",대상:$대상,동작:"clipboard_write",r:$w3},
+        [fn:행]{면:"pc",대상:$대상,동작:"clipboard",r:$w4}]
+      $rows=$rows+[{surface:"pc",target:$대상,action:"check:clipboard_mid_equals_url",status:"check",verified:$mid==$url,scope:"program",failure_code:null,failure_stage:null,task_ref:null,raw:null}]
+    }
+    [if:$쓰기=="full"] {
+      $k1=[fn:PC호출]{대상:$대상,요청:{action:"keep_awake",seconds:60}}
+      $k2=[fn:PC호출]{대상:$대상,요청:{action:"power"}}
+      $k3=[fn:PC호출]{대상:$대상,요청:{action:"allow_sleep"}}
+      $k4=[fn:PC호출]{대상:$대상,요청:{action:"power"}}
+      $awake_restore=[fn:대조]{before:true,after:get($k3,"verified",false)==true,ok:get($k4,"verified",false)==true}
+      $l1=[fn:PC호출]{대상:$대상,요청:{action:"launch",app:"notepad"}}
+      $l2=[fn:PC호출]{대상:$대상,요청:{action:"apps"}}
+      $l3=[fn:PC호출]{대상:$대상,요청:{action:"quit",app:"notepad"}}
+      $l4=[fn:PC호출]{대상:$대상,요청:{action:"apps"}}
+      $n2=0
+      $n4=0
+      [if:get($l2,"verified",false)==true] {
+        $hit2=get($l2.result,"apps",[]) >> [table:filter]{where:($a)=>$a.name=="notepad"}
+        $n2=len($hit2)
+      }
+      [if:get($l4,"verified",false)==true] {
+        $hit4=get($l4.result,"apps",[]) >> [table:filter]{where:($a)=>$a.name=="notepad"}
+        $n4=len($hit4)
+      }
+      $app_restore=[fn:대조]{before:0,after:$n4,ok:get($l4,"verified",false)==true}
+      $rows=$rows+[[fn:행]{면:"pc",대상:$대상,동작:"keep_awake",r:$k1},[fn:행]{면:"pc",대상:$대상,동작:"power",r:$k2},
+        [fn:행]{면:"pc",대상:$대상,동작:"allow_sleep",r:$k3},[fn:행]{면:"pc",대상:$대상,동작:"power",r:$k4},
+        [fn:행]{면:"pc",대상:$대상,동작:"launch",r:$l1},[fn:행]{면:"pc",대상:$대상,동작:"apps",r:$l2},
+        [fn:행]{면:"pc",대상:$대상,동작:"quit",r:$l3},[fn:행]{면:"pc",대상:$대상,동작:"apps",r:$l4},
+        {surface:"pc",target:$대상,action:"check:notepad_seen_after_launch",status:"check",verified:$n2>=1,scope:"program",failure_code:null,failure_stage:null,task_ref:null,raw:null}]
+    }
+  } [catch] { $err=$error; $rows=$rows+[[fn:오류행]{면:"pc",대상:$대상,동작:"branch",e:$error}] }
+  $ok=$rows >> [table:filter]{where:($x)=>$x.verified==true}
+  return {surface:"pc",target:$대상,mode:$쓰기,count:len($rows),verified_count:len($ok),
+    restore:{clipboard:$clip_restore,keep_awake:$awake_restore,notepad:$app_restore},error:$err,rows:$rows}
+}
+[def:폰음량가지]($대상) {
+  $rows=[]
+  $restore="unverified"
+  $err=null
+  [try] {
+    $s0=[fn:Android제어]{대상:$대상,요청:{action:"volume_status",stream:"music"}}
+    $v0=null
+    [if:get($s0,"verified",false)==true] { $v0=get($s0.result,"actual",null) }
+    $h=[fn:Android제어]{대상:$대상,요청:{action:"volume_half",stream:"music"}}
+    $s1=[fn:Android제어]{대상:$대상,요청:{action:"volume_status",stream:"music"}}
+    $r=[fn:Android제어]{대상:$대상,요청:{action:"volume_restore",stream:"music"}}
+    $s2=[fn:Android제어]{대상:$대상,요청:{action:"volume_status",stream:"music"}}
+    $v1=null
+    $v2=null
+    [if:get($s1,"verified",false)==true] { $v1=get($s1.result,"actual",null) }
+    [if:get($s2,"verified",false)==true] { $v2=get($s2.result,"actual",null) }
+    $restore=[fn:대조]{before:$v0,after:$v2,ok:get($s2,"verified",false)==true}
+    $rows=[[fn:행]{면:"android",대상:$대상,동작:"volume_status",r:$s0},[fn:행]{면:"android",대상:$대상,동작:"volume_half",r:$h},
+      [fn:행]{면:"android",대상:$대상,동작:"volume_status",r:$s1},[fn:행]{면:"android",대상:$대상,동작:"volume_restore",r:$r},
+      [fn:행]{면:"android",대상:$대상,동작:"volume_status",r:$s2},
+      {surface:"android",target:$대상,action:"check:half_lower_than_start",status:"check",verified:$v1!=null and $v0!=null and $v1<$v0,scope:"program",failure_code:null,failure_stage:null,task_ref:null,raw:{v0:$v0,v1:$v1,v2:$v2}}]
+  } [catch] { $err=$error; $rows=$rows+[[fn:오류행]{면:"android",대상:$대상,동작:"branch",e:$error}] }
+  $ok=$rows >> [table:filter]{where:($x)=>$x.verified==true}
+  return {surface:"android",target:$대상,mode:"volume",count:len($rows),verified_count:len($ok),restore:{volume:$restore},error:$err,rows:$rows}
+}
+[def:폰UI가지]($대상,$패키지) {
+  $rows=[]
+  $restore="unverified"
+  $err=null
+  $ui=false
+  [try] {
+    $st=[fn:Android제어]{대상:$대상,요청:{action:"status"}}
+    $snap=[fn:Android제어]{대상:$대상,요청:{action:"ui_snapshot"}}
+    $rows=[[fn:행]{면:"android",대상:$대상,동작:"status",r:$st},[fn:행]{면:"android",대상:$대상,동작:"ui_snapshot",r:$snap}]
+    [if:get($snap,"status",null)=="completed"] {
+      $ui=true
+      $pkg0=get($snap.result.screen,"package",null)
+      $launch=[fn:Android제어]{대상:$대상,요청:{action:"app_launch",package:$패키지}}
+      $snap2=[fn:Android제어]{대상:$대상,요청:{action:"ui_snapshot"}}
+      $sid=get($snap2.result.screen,"snapshot_id",null)
+      $back=[fn:Android제어]{대상:$대상,요청:{action:"back",snapshot_id:$sid,expect:{package:$pkg0}}}
+      $home=[fn:Android제어]{대상:$대상,요청:{action:"home"}}
+      $snap3=[fn:Android제어]{대상:$대상,요청:{action:"ui_snapshot"}}
+      $pkg3=null
+      [if:get($snap3,"verified",false)==true] { $pkg3=get($snap3.result.screen,"package",null) }
+      $restore=[fn:대조]{before:$pkg0,after:$pkg3,ok:get($snap3,"verified",false)==true}
+      $rows=$rows+[[fn:행]{면:"android",대상:$대상,동작:"app_launch",r:$launch},[fn:행]{면:"android",대상:$대상,동작:"ui_snapshot",r:$snap2},
+        [fn:행]{면:"android",대상:$대상,동작:"back",r:$back},[fn:행]{면:"android",대상:$대상,동작:"home",r:$home},
+        [fn:행]{면:"android",대상:$대상,동작:"ui_snapshot",r:$snap3}]
+    }
+  } [catch] { $err=$error; $rows=$rows+[[fn:오류행]{면:"android",대상:$대상,동작:"branch",e:$error}] }
+  $ok=$rows >> [table:filter]{where:($x)=>$x.verified==true}
+  return {surface:"android",target:$대상,mode:"ui",ui_available:$ui,count:len($rows),verified_count:len($ok),restore:{front_package:$restore},error:$err,rows:$rows}
+}
+[def:폰읽기]($대상) {
+  $rows=[]
+  $err=null
+  [try] {
+    $st=[fn:Android제어]{대상:$대상,요청:{action:"status"}}
+    $vs=[fn:Android제어]{대상:$대상,요청:{action:"volume_status",stream:"music"}}
+    $rows=[[fn:행]{면:"android",대상:$대상,동작:"status",r:$st},[fn:행]{면:"android",대상:$대상,동작:"volume_status",r:$vs}]
+  } [catch] { $err=$error; $rows=$rows+[[fn:오류행]{면:"android",대상:$대상,동작:"branch",e:$error}] }
+  $ok=$rows >> [table:filter]{where:($x)=>$x.verified==true}
+  return {surface:"android",target:$대상,mode:"read",count:len($rows),verified_count:len($ok),restore:{},error:$err,rows:$rows}
+}
+[def:크롬가지]($url,$창) {
+  $rows=[]
+  $err=null
+  $s=null
+  $o=null
+  $a=null
+  $b=null
+  $c=null
+  $s2=null
+  $rev_same="unverified"
+  $act=null
+  [try] {
+    [if:$창==null] { $s=[self:script]{id:"Chrome제어",args:{op:"status"},timeout:60} }
+    [else] { $s=[self:script]{id:"Chrome제어",args:{op:"status",window_id:$창},timeout:60} }
+    assert $s.window_count>0,"Chrome 창 없음",{result:$s}
+    $w=$s.windows[0]
+    $o=[self:script]{id:"Chrome제어",args:{op:"open",url:$url,window_id:$w.window_id,expected:$w.revision},timeout:60}
+    $act=get($o.checks,"activation_restored",null)
+    assert $o.verified==true,"배경 탭 열기 미확인",{result:$o}
+    $a=[self:script]{id:"Chrome제어",args:{op:"switch",window_id:$o.target.window_id,tab:$o.target.tab,expected:$o.target.expected},timeout:60}
+    assert $a.verified==true,"탭 전환 미확인",{result:$a}
+    $b=[self:script]{id:"Chrome제어",args:{op:"switch",window_id:$a.state.window_id,tab:$o.before.current_tab,expected:$a.state.revision},timeout:60}
+    assert $b.verified==true,"원래 탭 복귀 미확인",{result:$b}
+    $c=[self:script]{id:"Chrome제어",args:{op:"close",window_id:$b.state.window_id,tab:$o.tab,expected:$b.state.revision},timeout:60}
+    assert $c.verified==true,"임시 탭 닫기 미확인",{result:$c}
+    $s2=[self:script]{id:"Chrome제어",args:{op:"status",window_id:$w.window_id},timeout:60}
+    $rev_same=[fn:대조]{before:$w.revision,after:$s2.windows[0].revision,ok:$s2.verified==true}
+  } [catch] { $err=$error }
+  [if:$s!=null] { $rows=$rows+[[fn:행]{면:"chrome",대상:"__local__",동작:"status",r:$s}] }
+  [if:$o!=null] { $rows=$rows+[[fn:행]{면:"chrome",대상:"__local__",동작:"open",r:$o}] }
+  [if:$a!=null] { $rows=$rows+[[fn:행]{면:"chrome",대상:"__local__",동작:"switch",r:$a}] }
+  [if:$b!=null] { $rows=$rows+[[fn:행]{면:"chrome",대상:"__local__",동작:"switch",r:$b}] }
+  [if:$c!=null] { $rows=$rows+[[fn:행]{면:"chrome",대상:"__local__",동작:"close",r:$c}] }
+  [if:$s2!=null] { $rows=$rows+[[fn:행]{면:"chrome",대상:"__local__",동작:"status",r:$s2}] }
+  [if:$err!=null] { $rows=$rows+[[fn:오류행]{면:"chrome",대상:"__local__",동작:"branch",e:$err}] }
+  $ok=$rows >> [table:filter]{where:($x)=>$x.verified==true}
+  return {surface:"chrome",target:"__local__",mode:"tab_roundtrip",count:len($rows),verified_count:len($ok),
+    restore:{revision:$rev_same},activation_restored:$act,error:$err,rows:$rows}
+}
+$limbs=[self:limb]{op:"list"}
+$conn=$limbs.limbs >> [table:filter]{where:($l)=>$l.connected==true and $l.revoked!=true}
+$ids=$conn >> [table:each] { return $it.device_id }
+$branches=[fn:PC가지]{대상:$tv1,쓰기:"full",url:$url} & [fn:PC가지]{대상:$mac26,쓰기:"clip",url:$url} & [fn:폰음량가지]{대상:$s0} & [fn:폰UI가지]{대상:$s0,패키지:"com.android.settings"} & [fn:폰읽기]{대상:$s1} & [fn:폰읽기]{대상:$yena} & [fn:크롬가지]{url:$url,창:$window}
+$total=0
+$vtotal=0
+$report={connected_ids:$ids,branches:$branches,
+  unverified_by_design:["실제 소리","사람 입회","페이지 로드 완료","Windows 화면 잠듦(display_asleep null)"],
+  mutations:"tv1 clipboard·keep_awake·notepad, 삼성0 music 음량, 본체 Chrome 임시 탭 — 전부 원복 요청",
+  skipped:"맥26 쓰기(준비 안 됨이면 거절 행), UI 가지(ui_snapshot 거절이면 이후 생략)"}
+$text=json($report)
+[self:write]{path:$out,content:$text}
+$saved=[self:read]{path:$out}
+assert $saved.text==$text,"보고서 저장 재독 불일치"
+$summary=$branches >> [table:each] { return {surface:$it.surface,target:$it.target,mode:$it.mode,count:$it.count,verified_count:$it.verified_count,restore:$it.restore,error:$it.error!=null} }
+return {saved:$out,reread_equal:true,branches:$summary}

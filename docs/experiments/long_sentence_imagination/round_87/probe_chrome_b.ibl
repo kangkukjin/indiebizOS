@@ -1,0 +1,6 @@
+#!ibl edition=2
+# 변형 B(Chrome): 하네스가 status 와 close 사이에 AppleScript 로 탭을 하나 더 연다 → close 는 STATE_CHANGED 로 변경 전 중단해야 한다
+$r=null
+$e=null
+[try] { $r=[self:script]{id:"Chrome제어",args:{op:"close",window_id:$window_id,tab:$tab,expected:$expected},timeout:60} } [catch] { $e=$error }
+return {value:$r,error:$e}

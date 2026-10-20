@@ -1,0 +1,4 @@
+#!ibl edition=2
+$a=[fn:Android제어]{대상:$s0,요청:{action:"status"},대기:0}
+$p=[fn:PC제어]{대상:$tv1,요청:{action:"status"},대기:0}
+return {android:$a,pc:$p}

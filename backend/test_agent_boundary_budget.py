@@ -206,6 +206,31 @@ def test_b5_session_key_carries_tool_policy_fingerprint(monkeypatch, tmp_path):
     assert store.load_map() == {"다른": "sess-2"}
 
 
+# ---------------------------------------------------------------- B6 지침 누출 차단 (2026-10-20)
+def test_b6_every_branch_drops_setting_sources_and_auto_memory(monkeypatch):
+    """docs/AGENT_INSTRUCTION_LEAK_AUDIT_2026_10_20.md R1·R2: EXECUTE 를 포함한 모든 분기가
+    `--setting-sources ""`(cwd 조상 CLAUDE.md·설정 파일 미적재)를 주고, env 가 자동 기억을 끈다.
+    감독 훅은 `--settings`(명령줄 층)로 EXECUTE 에 그대로 남는다."""
+    from providers.claude_code import ClaudeCodeProvider as P
+    inst = object.__new__(P)
+    inst._binary_path = "claude"; inst.model = None; inst.system_prompt = "S"
+    inst._effective_token = None
+    monkeypatch.setattr(inst, "_identity_env", lambda: {})
+    execute = inst._build_command(stream=True, mcp_config_path="/tmp/x.json")
+    assert execute[execute.index("--setting-sources") + 1] == ""
+    assert "hooks" in json.loads(execute[execute.index("--settings") + 1])   # 감독 훅 생존
+    oneshot = inst._build_command(stream=False, mcp_config_path=None, tools_mode="none")
+    assert oneshot[oneshot.index("--setting-sources") + 1] == ""
+    assert "--settings" not in oneshot
+    assert inst._build_env()["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "1"
+    # 옛 resume 세션(CLAUDE.md attachment·Memory 절을 트랜스크립트에 품음)은 지문 변경으로 폐기된다
+    assert "setting-sources:none" in (
+        "|".join(P.EAGER_TOOLS) + "||" + "|".join(P.DISALLOWED_TOOLS) + "||" + P.TOOL_POLICY
+        + "||hook:supervision||repair-owner-only:" + P.REPAIR_COMMAND_TOOL
+        + "||setting-sources:none;auto-memory:off")
+    assert len(P.tool_policy_fingerprint()) == 8
+
+
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))

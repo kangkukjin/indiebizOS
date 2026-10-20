@@ -227,6 +227,12 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         env = super()._build_env()
         # 완료는 공통 실행 계층이 소유한다. 장기 MCP 호출을 모델에게 작업 ID로 넘기지 않는다.
         env["CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS"] = "0"
+        # ★자동 기억 차단(2026-10-20, docs/AGENT_INSTRUCTION_LEAK_AUDIT_2026_10_20.md R1): CLI 자동 기억은
+        #  git 저장소 단위라 cwd 가 projects/·data/·backend/·.worktrees/ 어디든 주인 하네스 세션의
+        #  memory/MEMORY.md 가 첫 턴 instructions 로 실리고, 시스템 프롬프트 "# Memory" 절이 그 폴더에
+        #  쓰라고까지 한다. `--setting-sources ""` 로는 안 빠진다(의식·수리 트랜스크립트 전수·탐침 A).
+        #  env 한 줄이 분기(EXECUTE·의식·원샷·수리) 수와 무관하게 전수를 덮는다. 문서화된 공개 변수.
+        env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
         # ★구독(OAuth) vs API 과금 경로를 코드로 격리한다. 기본은 "구독만" —
         #  .env 의 ANTHROPIC_API_KEY 가 claude 서브프로세스에 새어들어 구독 대신 API 로
         #  과금되는 것을 원천 차단한다(토큰 로딩이 실패해 _effective_token 이 None 인 코너 포함).
@@ -452,7 +458,10 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         """도구 집합·정책의 지문 — EAGER/DISALLOWED 목록 + TOOL_POLICY 본문의 md5 앞 8자."""
         blob = ("|".join(cls.EAGER_TOOLS) + "||" + "|".join(cls.DISALLOWED_TOOLS) + "||" + cls.TOOL_POLICY
                 + "||hook:supervision"
-                + "||repair-owner-only:" + cls.REPAIR_COMMAND_TOOL)
+                + "||repair-owner-only:" + cls.REPAIR_COMMAND_TOOL
+                # 2026-10-20: 설정 소스 없음·자동 기억 차단. resume 세션은 첫 요청의 시스템 프롬프트
+                # 기록본과 옛 instructions attachment 를 압축 전까지 재생하므로 키를 갈아 fresh 로 보낸다.
+                + "||setting-sources:none;auto-memory:off")
         return hashlib.md5(blob.encode("utf-8")).hexdigest()[:8]
 
     def _get_session_key(self) -> str:
@@ -529,11 +538,15 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             cmd += ["--tools", ""]                  # 원샷: 도구 스키마 0
         elif tools_mode == "read":
             cmd += ["--tools", "Read"]              # 원샷+이미지: 파일 읽기만
-        if tools_mode or supervisor_role or response_repair or repair_mode or research_library:
-            # 원샷은 CLAUDE.md·settings 도 안 읽는다(모델·권한은 인자로 명시됨) — cwd 의
-            # 프로젝트 지침 ~3.4K 가 "2문장 요약해" 에 따라붙던 것(실측 8.5K→5.1K).
-            cmd += ["--setting-sources", ""]
-        else:
+        # 설정 소스는 전 분기 공통으로 비운다 — user/project/local 설정 파일과 cwd 조상의 CLAUDE.md·
+        # .claude/rules·CLAUDE.local.md 를 읽지 않는다. 모델·권한·도구는 인자로 명시되고, 감독 훅은
+        # `--settings`(명령줄 층, 소스 목록과 별개)로 그대로 산다(2026-10-20 탐침 A/B/C).
+        # 원샷 다이어트(08-21: 조상 지침 ~3.4K, 8.5K→5.1K)의 전제가 EXECUTE 에도 성립한다 — 실측으로
+        # cwd 상위 Desktop/AI/CLAUDE.md(5,070자, 하네스 전용 뷰)가 프로젝트 에이전트·시스템 AI 첫 턴에
+        # 실렸다(docs/AGENT_INSTRUCTION_LEAK_AUDIT_2026_10_20.md R2). 자동 기억은 이 플래그로 안 빠진다
+        # → _build_env 의 CLAUDE_CODE_DISABLE_AUTO_MEMORY.
+        cmd += ["--setting-sources", ""]
+        if not (tools_mode or supervisor_role or response_repair or repair_mode or research_library):
             cmd += [
                 # 내장 도구 집합 자체를 좁힌다 → ToolSearch 소멸 + MCP eager (위 docstring)
                 "--tools", ",".join(self.EAGER_BUILTIN_TOOLS),

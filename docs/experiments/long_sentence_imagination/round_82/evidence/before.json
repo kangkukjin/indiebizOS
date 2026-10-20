@@ -1,0 +1,981 @@
+[
+  {
+    "label": "base",
+    "run": {
+      "run_id": "db9529b46c5d44c5a716f135abe2759d"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          "sha256": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+          "value": 10
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          "sha256": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b",
+          "value": 20
+        }
+      ],
+      "total": 30
+    },
+    "reuse": null,
+    "usage": {
+      "elapsed_ms": 514,
+      "steps": 101
+    },
+    "verification": {
+      "plan_hash": "e007d184f0d6fee424febe1c61b84d5e590779fc5046f2efefa9b7ba9f4cd063",
+      "value_hash": "b3deb70b8189f0663d40326fee7225b30d0d574c6e21163dccb31a09e418ffc4",
+      "checks": [
+        {
+          "id": 77,
+          "node_id": "assert:426:462",
+          "invocation_id": 77,
+          "kind": "assertion",
+          "parents": [
+            76
+          ],
+          "passed": true,
+          "predicate_hash": "663af2c9c05486576d3d8d7d30ec1ee124514c6d980074ce8dc41344512b96c2"
+        }
+      ],
+      "source_snapshots": [
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          1792444004153293421,
+          2,
+          "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          1792444004153361017,
+          2,
+          "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/results/base.json",
+          1792444030998941644,
+          445,
+          "72c988fa5707e5e4a4a5821aa621bb09e4c0ef7f72fcd7efc1c816c281a56ee1"
+        ]
+      ],
+      "scope": "declared_assertions",
+      "source_complete": true
+    }
+  },
+  {
+    "label": "same_v1",
+    "run": {
+      "run_id": "ea6258ba3f51497b82cecc0d54890261"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          "sha256": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+          "value": 10
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          "sha256": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b",
+          "value": 20
+        }
+      ],
+      "total": 30
+    },
+    "reuse": {
+      "run_id": "db9529b46c5d44c5a716f135abe2759d",
+      "reused_calls": 2,
+      "candidates": 3,
+      "skipped": [
+        {
+          "action": "self:list",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 45,
+            "end": 96,
+            "line": 3,
+            "column": 10
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [],
+          "candidates_total": 0
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 403,
+            "end": 425,
+            "line": 13,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        }
+      ],
+      "skipped_total": 2
+    },
+    "usage": {
+      "elapsed_ms": 492,
+      "steps": 101
+    },
+    "verification": {
+      "plan_hash": "e007d184f0d6fee424febe1c61b84d5e590779fc5046f2efefa9b7ba9f4cd063",
+      "value_hash": "b3deb70b8189f0663d40326fee7225b30d0d574c6e21163dccb31a09e418ffc4",
+      "checks": [
+        {
+          "id": 79,
+          "node_id": "assert:426:462",
+          "invocation_id": 79,
+          "kind": "assertion",
+          "parents": [
+            78
+          ],
+          "passed": true,
+          "predicate_hash": "663af2c9c05486576d3d8d7d30ec1ee124514c6d980074ce8dc41344512b96c2"
+        }
+      ],
+      "source_snapshots": [
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          1792444004153293421,
+          2,
+          "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          1792444004153361017,
+          2,
+          "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/results/same_v1.json",
+          1792444073214367998,
+          445,
+          "72c988fa5707e5e4a4a5821aa621bb09e4c0ef7f72fcd7efc1c816c281a56ee1"
+        ]
+      ],
+      "scope": "declared_assertions",
+      "source_complete": true
+    }
+  },
+  {
+    "label": "changed_v1",
+    "run": {
+      "run_id": "5318a668777b43d49a380a52f82c4c60"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          "sha256": "69f59c273b6e669ac32a6dd5e1b2cb63333d8b004f9696447aee2d422ce63763",
+          "value": 90
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          "sha256": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b",
+          "value": 20
+        }
+      ],
+      "total": 110
+    },
+    "reuse": {
+      "run_id": "db9529b46c5d44c5a716f135abe2759d",
+      "reused_calls": 1,
+      "candidates": 3,
+      "skipped": [
+        {
+          "action": "self:list",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 45,
+            "end": 96,
+            "line": 3,
+            "column": 10
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [],
+          "candidates_total": 0
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 139,
+            "end": 165,
+            "line": 5,
+            "column": 10
+          },
+          "reason": "resource_changed",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": []
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3,
+          "changed_resources": [
+            "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt"
+          ]
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 403,
+            "end": 425,
+            "line": 13,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        }
+      ],
+      "skipped_total": 3
+    },
+    "usage": {
+      "elapsed_ms": 487,
+      "steps": 101
+    },
+    "verification": {
+      "plan_hash": "e007d184f0d6fee424febe1c61b84d5e590779fc5046f2efefa9b7ba9f4cd063",
+      "value_hash": "e9efa72f2a17a00a7f783fd3f39f8d3fa05208f2cddd28bf3f1f95da2b8db31c",
+      "checks": [
+        {
+          "id": 78,
+          "node_id": "assert:426:462",
+          "invocation_id": 78,
+          "kind": "assertion",
+          "parents": [
+            77
+          ],
+          "passed": true,
+          "predicate_hash": "663af2c9c05486576d3d8d7d30ec1ee124514c6d980074ce8dc41344512b96c2"
+        }
+      ],
+      "source_snapshots": [
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          1792444004153293421,
+          2,
+          "69f59c273b6e669ac32a6dd5e1b2cb63333d8b004f9696447aee2d422ce63763"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          1792444004153361017,
+          2,
+          "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/results/changed_v1.json",
+          1792444073786031605,
+          446,
+          "99241aa5874138b0d82a850d5e0c80d78d94195323ef0414960b436806ffa7f7"
+        ]
+      ],
+      "scope": "declared_assertions",
+      "source_complete": true
+    }
+  },
+  {
+    "label": "added_v1",
+    "run": {
+      "run_id": "5fb30625e01841db8c50d5d28329fe6c"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          "sha256": "69f59c273b6e669ac32a6dd5e1b2cb63333d8b004f9696447aee2d422ce63763",
+          "value": 90
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          "sha256": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b",
+          "value": 20
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/c.txt",
+          "sha256": "624b60c58c9d8bfb6ff1886c2fd605d2adeb6ea4da576068201b6c6958ce93f4",
+          "value": 30
+        }
+      ],
+      "total": 140
+    },
+    "reuse": {
+      "run_id": "db9529b46c5d44c5a716f135abe2759d",
+      "reused_calls": 1,
+      "candidates": 3,
+      "skipped": [
+        {
+          "action": "self:list",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 45,
+            "end": 96,
+            "line": 3,
+            "column": 10
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [],
+          "candidates_total": 0
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 139,
+            "end": 165,
+            "line": 5,
+            "column": 10
+          },
+          "reason": "resource_changed",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": []
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3,
+          "changed_resources": [
+            "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt"
+          ]
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 139,
+            "end": 165,
+            "line": 5,
+            "column": 10
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 403,
+            "end": 425,
+            "line": 13,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        }
+      ],
+      "skipped_total": 4
+    },
+    "usage": {
+      "elapsed_ms": 600,
+      "steps": 127
+    },
+    "verification": {
+      "plan_hash": "e007d184f0d6fee424febe1c61b84d5e590779fc5046f2efefa9b7ba9f4cd063",
+      "value_hash": "d7c45fba32c4b67949522a907820d7a2a2e24c53760bc6becd890afb21bc4168",
+      "checks": [
+        {
+          "id": 87,
+          "node_id": "assert:426:462",
+          "invocation_id": 87,
+          "kind": "assertion",
+          "parents": [
+            86
+          ],
+          "passed": true,
+          "predicate_hash": "663af2c9c05486576d3d8d7d30ec1ee124514c6d980074ce8dc41344512b96c2"
+        }
+      ],
+      "source_snapshots": [
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          1792444004153293421,
+          2,
+          "69f59c273b6e669ac32a6dd5e1b2cb63333d8b004f9696447aee2d422ce63763"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          1792444004153361017,
+          2,
+          "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/c.txt",
+          1792444073843850202,
+          2,
+          "624b60c58c9d8bfb6ff1886c2fd605d2adeb6ea4da576068201b6c6958ce93f4"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/results/added_v1.json",
+          1792444074461065666,
+          657,
+          "14c2ec35bb420362fb90a85be3cd63301e0a941254f13cc83ffa6334b14508e5"
+        ]
+      ],
+      "scope": "declared_assertions",
+      "source_complete": true
+    }
+  },
+  {
+    "label": "deleted_v1",
+    "run": {
+      "run_id": "b1cac7b5b7d543439541847ac31b5444"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          "sha256": "69f59c273b6e669ac32a6dd5e1b2cb63333d8b004f9696447aee2d422ce63763",
+          "value": 90
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/c.txt",
+          "sha256": "624b60c58c9d8bfb6ff1886c2fd605d2adeb6ea4da576068201b6c6958ce93f4",
+          "value": 30
+        }
+      ],
+      "total": 120
+    },
+    "reuse": {
+      "run_id": "db9529b46c5d44c5a716f135abe2759d",
+      "reused_calls": 0,
+      "candidates": 3,
+      "skipped": [
+        {
+          "action": "self:list",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 45,
+            "end": 96,
+            "line": 3,
+            "column": 10
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [],
+          "candidates_total": 0
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 139,
+            "end": 165,
+            "line": 5,
+            "column": 10
+          },
+          "reason": "resource_changed",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": []
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3,
+          "changed_resources": [
+            "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt"
+          ]
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 139,
+            "end": 165,
+            "line": 5,
+            "column": 10
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 403,
+            "end": 425,
+            "line": 13,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        }
+      ],
+      "skipped_total": 4
+    },
+    "usage": {
+      "elapsed_ms": 669,
+      "steps": 101
+    },
+    "verification": {
+      "plan_hash": "e007d184f0d6fee424febe1c61b84d5e590779fc5046f2efefa9b7ba9f4cd063",
+      "value_hash": "3fa7d019e51ebf4d7e735637e8460932fe95e03f87a487c10b3ba4abca476acb",
+      "checks": [
+        {
+          "id": 77,
+          "node_id": "assert:426:462",
+          "invocation_id": 77,
+          "kind": "assertion",
+          "parents": [
+            76
+          ],
+          "passed": true,
+          "predicate_hash": "663af2c9c05486576d3d8d7d30ec1ee124514c6d980074ce8dc41344512b96c2"
+        }
+      ],
+      "source_snapshots": [
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          1792444004153293421,
+          2,
+          "69f59c273b6e669ac32a6dd5e1b2cb63333d8b004f9696447aee2d422ce63763"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/c.txt",
+          1792444073843850202,
+          2,
+          "624b60c58c9d8bfb6ff1886c2fd605d2adeb6ea4da576068201b6c6958ce93f4"
+        ],
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/results/deleted_v1.json",
+          1792444107571092719,
+          446,
+          "d25f406927b44247ae07d99a8af29b98445e61261f4d638ce3928d2c3852d9f4"
+        ]
+      ],
+      "scope": "declared_assertions",
+      "source_complete": true
+    }
+  },
+  {
+    "label": "empty_v1",
+    "run": {
+      "run_id": "15ac697c8c8c40eeb0de82b313c26c78"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [],
+      "total": 0
+    },
+    "reuse": {
+      "run_id": "db9529b46c5d44c5a716f135abe2759d",
+      "reused_calls": 0,
+      "candidates": 3,
+      "skipped": [
+        {
+          "action": "self:list",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 45,
+            "end": 96,
+            "line": 3,
+            "column": 10
+          },
+          "reason": "no_matching_receipt",
+          "candidates": [],
+          "candidates_total": 0
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "644bb40d573ddf7917de01754a1c51ca1cb8a3819ebdea375c9532f854460f5e",
+            "start": 403,
+            "end": 425,
+            "line": 13,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "e0b7b3d439d78b2c21113fcd53c5ead53225e850c86c9b529784c3c2ea21bb85",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 3
+        }
+      ],
+      "skipped_total": 2
+    },
+    "usage": {
+      "elapsed_ms": 473,
+      "steps": 49
+    },
+    "verification": {
+      "plan_hash": "e007d184f0d6fee424febe1c61b84d5e590779fc5046f2efefa9b7ba9f4cd063",
+      "value_hash": "20de9517b6bf572031a407d747ba907a1b864f5597c4dcb34142c6f51d79a800",
+      "checks": [
+        {
+          "id": 48,
+          "node_id": "assert:426:462",
+          "invocation_id": 48,
+          "kind": "assertion",
+          "parents": [
+            47
+          ],
+          "passed": true,
+          "predicate_hash": "663af2c9c05486576d3d8d7d30ec1ee124514c6d980074ce8dc41344512b96c2"
+        }
+      ],
+      "source_snapshots": [
+        [
+          "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/results/empty_v1.json",
+          1792444108127271877,
+          24,
+          "b13105f4c5accd342d8722bada33c2b7b12de0dc8ca034fd519506a0c7ef3735"
+        ]
+      ],
+      "scope": "declared_assertions",
+      "source_complete": true
+    }
+  },
+  {
+    "label": "list_base",
+    "run": {
+      "run_id": "cc5a9fcfcef74d04b6117d178c94fe5a"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": [
+      {
+        "title": "a.txt",
+        "meta": "2B · 2026-10-20 06:08",
+        "summary": "",
+        "url": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+        "name": "a.txt",
+        "size": 2,
+        "mtime": "2026-10-20 06:08",
+        "mtime_ns": "1792444108184787859",
+        "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+        "dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs",
+        "is_dir": false,
+        "sha256": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5"
+      }
+    ],
+    "reuse": null,
+    "usage": {
+      "elapsed_ms": 464,
+      "steps": 7
+    },
+    "verification": null
+  },
+  {
+    "label": "list_changed",
+    "run": {
+      "run_id": "9f653bfade874599bed0a8231f83cb6f"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": [
+      {
+        "title": "a.txt",
+        "meta": "2B · 2026-10-20 06:08",
+        "summary": "",
+        "url": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+        "name": "a.txt",
+        "size": 2,
+        "mtime": "2026-10-20 06:08",
+        "mtime_ns": "1792444108184787859",
+        "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+        "dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs",
+        "is_dir": false,
+        "sha256": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5"
+      }
+    ],
+    "reuse": {
+      "run_id": "cc5a9fcfcef74d04b6117d178c94fe5a",
+      "reused_calls": 1,
+      "candidates": 1
+    },
+    "usage": {
+      "elapsed_ms": 426,
+      "steps": 7
+    },
+    "verification": null
+  },
+  {
+    "label": "readonly_base",
+    "run": {
+      "run_id": "26d0806776c14da3ad126f1be8018e0d"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          "sha256": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+          "value": 10
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          "sha256": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b",
+          "value": 20
+        }
+      ],
+      "total": 30
+    },
+    "reuse": null,
+    "usage": {
+      "elapsed_ms": 495,
+      "steps": 83
+    },
+    "verification": null
+  },
+  {
+    "label": "readonly_changed",
+    "run": {
+      "run_id": "04d4d47209dd4852b7645c78a15f94d0"
+    },
+    "run_status": "completed",
+    "success": true,
+    "source_complete": true,
+    "value": {
+      "rows": [
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt",
+          "sha256": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+          "value": 90
+        },
+        {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/b.txt",
+          "sha256": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b",
+          "value": 20
+        }
+      ],
+      "total": 110
+    },
+    "reuse": {
+      "run_id": "26d0806776c14da3ad126f1be8018e0d",
+      "reused_calls": 2,
+      "candidates": 3,
+      "skipped": [
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "9efbee0d534057a79d58851e72cb74eaa33f4c7e5d2368c4aa577cde9da89325",
+            "start": 139,
+            "end": 165,
+            "line": 5,
+            "column": 10
+          },
+          "reason": "resource_changed",
+          "candidates": [
+            {
+              "receipt": "06a5e6c4b8381709ac2c0c5c2e32d1e7cff78e7d8b8fac8342c75cc0469a3e98",
+              "changed": []
+            },
+            {
+              "receipt": "4ab58b835735b3d5682a62eea5a2965883cc4abc7388cee7ff73498b11a85122",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 2,
+          "changed_resources": [
+            "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_82회차/inputs/a.txt"
+          ]
+        }
+      ],
+      "skipped_total": 1
+    },
+    "usage": {
+      "elapsed_ms": 633,
+      "steps": 83
+    },
+    "verification": null
+  }
+]

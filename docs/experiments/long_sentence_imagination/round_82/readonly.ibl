@@ -1,0 +1,11 @@
+#!ibl edition=2
+[def:합산]($folder) {
+  $files=[self:list]{path:$folder,pattern:"*.txt",hash:true}
+  $rows=$files >> [table:each] {
+    $doc=[self:read]{path:$it.path}
+    return {path:$it.path,sha256:$it.sha256,value:number(strip($doc.text))}
+  }
+  return {rows:$rows,total:sum(map($rows,($r)=>$r.value))}
+}
+$result=[fn:합산]{folder:$folder}
+return $result

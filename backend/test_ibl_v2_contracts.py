@@ -1,5 +1,7 @@
 """효과 계약은 검사·함수 조합·실행·읽기 재사용에 같은 의미를 준다."""
 import json
+import hashlib
+import os
 from pathlib import Path
 
 import boot_paths  # noqa: F401
@@ -10,6 +12,73 @@ from test_ibl_v2_assets import memory  # noqa: F401 — 격리한 관용구 DB
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.parametrize('action', ['list', 'file_find', 'grep'])
+@pytest.mark.parametrize('change', ['add', 'delete', 'content', 'empty'])
+def test_file_discovery_reuse_observes_current_sources(tmp_path, action, change):
+    folder = tmp_path / 'sources'
+    folder.mkdir()
+    a, b = folder / 'a.txt', folder / 'b.txt'
+    a.write_text('10')
+    b.write_text('20')
+    args = 'path:$folder,pattern:"*.txt",hash:true'
+    if action == 'grep':
+        args = 'path:$folder,pattern:"[0-9]+",regex:true,file_pattern:"*.txt"'
+    code = f'return [self:{action}]{{{args}}}'
+    request = {'edition': 2, 'code': code, 'inputs': {'folder': str(folder)}}
+    first = handle_request(request, str(tmp_path))
+    assert first['success'], first
+    if change == 'add':
+        (folder / 'c.txt').write_text('30')
+    elif change == 'delete':
+        b.unlink()
+    elif change == 'empty':
+        a.unlink()
+        b.unlink()
+    else:
+        stamp = a.stat()
+        a.write_text('90')
+        os.utime(a, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+    # A new run must discover the current population, even without any writes.
+    again = handle_request({**request, 'reuse': first['resume']}, str(tmp_path))
+    assert again['success'], again
+    rows = again['value'] if action == 'list' else again['value']['items']
+    expected = {str(p): p.read_text() for p in folder.glob('*.txt')}
+    if action == 'grep':
+        assert {str(tmp_path / r['파일']): r['내용'] for r in rows} == expected
+    else:
+        assert {r['path']: r['sha256'] for r in rows} == {
+            path: hashlib.sha256(text.encode()).hexdigest()
+            for path, text in expected.items()
+        }
+    assert again['reuse']['reused_calls'] == 0
+    # Resume is historical replay of the same run, not a new observation.
+    resumed = handle_request({**request, 'resume': first['resume']}, str(tmp_path))
+    assert resumed['success'] and resumed['value'] == first['value'], resumed
+
+
+def test_discovery_refresh_keeps_unchanged_file_reads_reusable(tmp_path):
+    source = tmp_path / 'sources'
+    source.mkdir()
+    (source / 'a.txt').write_text('10')
+    (source / 'b.txt').write_text('20')
+    code = '''$files=[self:list]{path:$folder,pattern:"*.txt",hash:true}
+$rows=$files >> [table:each] {
+  $doc=[self:read]{path:$it.path}
+  return {value:number($doc.text),sha256:$it.sha256}
+}
+return {rows:$rows,total:sum(map($rows,($r)=>$r.value))}'''
+    request = {'edition': 2, 'code': code, 'inputs': {'folder': str(source)}}
+    first = handle_request(request, str(tmp_path))
+    assert first['success'] and first['value']['total'] == 30, first
+    same = handle_request({**request, 'reuse': first['resume']}, str(tmp_path))
+    assert same['success'] and same['value'] == first['value'], same
+    (source / 'c.txt').write_text('30')
+    changed = handle_request({**request, 'reuse': same['resume']}, str(tmp_path))
+    assert changed['success'] and changed['value']['total'] == 60, changed
+    assert same['reuse']['reused_calls'] == 2
+    assert changed['reuse']['reused_calls'] == 2
 
 
 def test_groupby_declared_pure_and_composes_inside_lambda():

@@ -4,6 +4,7 @@ import { EventEmitter, once } from 'node:events';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { createServer } from 'vite';
 import { devServerIdentityPlugin } from './dev-server-identity.mjs';
 import { probeServer, runDesktop } from './electron-dev.mjs';
@@ -31,6 +32,21 @@ function renderer(origin) {
 
 const electronExit = code => spawn(process.execPath, ['-e', `process.exit(${code})`]);
 
+async function assertRendererClosed(origin) {
+  // Socket teardown can reset a request immediately after Vite.close(). Only
+  // ECONNREFUSED (probeServer=false) proves closure; a reset alone does not.
+  const deadline = Date.now() + 1000;
+  while (true) {
+    try {
+      assert.equal(await probeServer(root, origin), false);
+      return;
+    } catch (error) {
+      if (error.code !== 'ECONNRESET' || Date.now() >= deadline) throw error;
+      await delay(10);
+    }
+  }
+}
+
 test('cold start waits for its renderer and closes it after Electron exits', async () => {
   const origin = await freeOrigin();
   let running;
@@ -42,7 +58,7 @@ test('cold start waits for its renderer and closes it after Electron exits', asy
   });
   assert.equal(await running, true);
   assert.equal(result, 0);
-  assert.equal(await probeServer(root, origin), false);
+  await assertRendererClosed(origin);
 });
 
 test('existing renderer survives window exit and repeated launches', async () => {
@@ -103,7 +119,7 @@ test('Electron spawn failure releases the owned renderer', async () => {
     createServer: () => renderer(origin),
     launch: () => spawn('/nonexistent/indiebiz-electron'),
   }), /ENOENT/);
-  assert.equal(await probeServer(root, origin), false);
+  await assertRendererClosed(origin);
 });
 
 test('termination stops the child and releases the owned renderer', async () => {
@@ -119,7 +135,7 @@ test('termination stops the child and releases the owned renderer', async () => 
   });
   assert.equal(result, 1);
   assert.equal(child.signalCode, 'SIGTERM');
-  assert.equal(await probeServer(root, origin), false);
+  await assertRendererClosed(origin);
   assert.equal(signals.listenerCount('SIGTERM'), 0);
 });
 

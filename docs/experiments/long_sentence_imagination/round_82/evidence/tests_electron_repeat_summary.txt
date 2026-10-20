@@ -1,0 +1,3 @@
+20 independent Node invocations; all exit 0, 8 subtests each (160 passed).
+Full log: outputs/long_sentence_imagination/2026-10-20_82회차/evidence/tests_electron_repeat.txt
+SHA-256: d4dd8d833665234954aafbd82588a4b37e115abaff0dc759802c34785794d838

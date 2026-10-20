@@ -1,0 +1,105 @@
+{
+  "ended_at": "2026-10-20T06:09:07.033751+09:00",
+  "runs": [
+    {
+      "label": "empty_v1",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "15ac697c8c8c40eeb0de82b313c26c78",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "same_v1",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "ea6258ba3f51497b82cecc0d54890261",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "list_changed",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "9f653bfade874599bed0a8231f83cb6f",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "list_base",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "cc5a9fcfcef74d04b6117d178c94fe5a",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "readonly_changed",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "04d4d47209dd4852b7645c78a15f94d0",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "added_v1",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "5fb30625e01841db8c50d5d28329fe6c",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "base",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "db9529b46c5d44c5a716f135abe2759d",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "changed_v1",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "5318a668777b43d49a380a52f82c4c60",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "readonly_base",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "26d0806776c14da3ad126f1be8018e0d",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "deleted_v1",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "b1cac7b5b7d543439541847ac31b5444",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/study"
+      },
+      "status": "completed",
+      "success": true
+    }
+  ]
+}

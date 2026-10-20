@@ -74,8 +74,13 @@ export function pcState(value: unknown, platform: PCPlatform, action: PCAction):
 }
 
 export class PCUnfinished extends Error {
-  constructor(public task: RecordValue, public action: PCAction) {
+  task: RecordValue;
+  action: PCAction;
+
+  constructor(task: RecordValue, action: PCAction) {
     super(String(record(task.failure).message || '작업이 아직 완료되지 않았습니다. 기존 작업 확인을 눌러 주세요.'));
+    this.task = task;
+    this.action = action;
   }
 }
 

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: file-discovery-stale-reuse
+    retired: 2026-10-20
+    reason: 읽기 전용 목록·파일 검색이 새 파일과 내용 변경을 누락한 과거 결과를 정상 재사용했다.
+    instead: list/file_find/grep는 per_run으로 새 실행에서 재관측한다. 개별 read의 SHA-256 재사용과 같은 실행 resume은 유지한다.
+    phrases: ["파일 탐색 결과는 새 실행에서도 무조건 재사용", "파일 읽기 영수증에는 읽기 직전의 파일 지문(수정 시각·크기)이 실린다"]
   - id: phone-manual-media-standby
     retired: 2026-10-17
     reason: 등록된 원격 폰의 중앙 요청을 실행하기 위해 매번 폰에서 대기 버튼을 누르게 하던 흐름을 제거했다.

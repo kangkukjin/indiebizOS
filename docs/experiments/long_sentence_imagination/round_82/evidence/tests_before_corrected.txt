@@ -1,0 +1,63 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_________ test_file_discovery_reuse_observes_current_sources[add-grep] _________
+backend/test_ibl_v2_contracts.py:49: in test_file_discovery_reuse_observes_current_sources
+    assert {str(tmp_path / r['파일']): r['내용'] for r in rows} == expected
+E   AssertionError: assert {'/private/va.../b.txt': '20'} == {'/private/va.../a.txt': '10'}
+E
+E     Omitting 2 identical items, use -vv to show
+E     Right contains 1 more item:
+E     {'/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6323/test_file_discovery_reuse_obse0/sources/c.txt': '30'}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+[도구 핸들러 로드] grep_files <- system_essentials
+_______ test_file_discovery_reuse_observes_current_sources[delete-grep] ________
+backend/test_ibl_v2_contracts.py:49: in test_file_discovery_reuse_observes_current_sources
+    assert {str(tmp_path / r['파일']): r['내용'] for r in rows} == expected
+E   AssertionError: assert {'/private/va.../b.txt': '20'} == {'/private/va.../a.txt': '10'}
+E
+E     Omitting 1 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6323/test_file_discovery_reuse_obse1/sources/b.txt': '20'}
+E     Use -v to get more diff
+_______ test_file_discovery_reuse_observes_current_sources[content-grep] _______
+backend/test_ibl_v2_contracts.py:49: in test_file_discovery_reuse_observes_current_sources
+    assert {str(tmp_path / r['파일']): r['내용'] for r in rows} == expected
+E   AssertionError: assert {'/private/va.../b.txt': '20'} == {'/private/va.../a.txt': '90'}
+E
+E     Omitting 1 identical items, use -vv to show
+E     Differing items:
+E     {'/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6323/test_file_discovery_reuse_obse2/sources/a.txt': '10'} != {'/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6323/test_file_discovery_reuse_obse2/sources/a.txt': '90'}
+E     Use -v to get more diff
+________ test_file_discovery_reuse_observes_current_sources[empty-grep] ________
+backend/test_ibl_v2_contracts.py:49: in test_file_discovery_reuse_observes_current_sources
+    assert {str(tmp_path / r['파일']): r['내용'] for r in rows} == expected
+E   AssertionError: assert {'/private/va.../b.txt': '20'} == {}
+E
+E     Left contains 2 more items:
+E     {'/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6323/test_file_discovery_reuse_obse3/sources/a.txt': '10',
+E      '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6323/test_file_discovery_reuse_obse3/sources/b.txt': '20'}
+E     Use -v to get more diff
+__________ test_discovery_refresh_keeps_unchanged_file_reads_reusable __________
+backend/test_ibl_v2_contracts.py:79: in test_discovery_refresh_keeps_unchanged_file_reads_reusable
+    assert changed['success'] and changed['value']['total'] == 60, changed
+E   AssertionError: {'success': True, 'value': {'rows': [{'value': 10, 'sha256': '4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ad...otocol': 'ibl-value/1', 'data': ['record', [['rows', ['list', [...]]], ['total', ['scalar', 30]]]]}, 'edition': 2, ...}
+E   assert (True and 30 == 60)
+----------------------------- Captured stdout call -----------------------------
+[도구 핸들러 재사용] list_directory <- system_essentials (공유 모듈)
+[도구 핸들러 재사용] read_op <- system_essentials (공유 모듈)
+============================= slowest 15 durations =============================
+2.67s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[add-grep]
+1.04s call     backend/test_ibl_v2_contracts.py::test_discovery_refresh_keeps_unchanged_file_reads_reusable
+0.68s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[empty-grep]
+0.66s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[content-grep]
+0.66s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[delete-grep]
+
+(10 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[add-grep]
+FAILED backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[delete-grep]
+FAILED backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[content-grep]
+FAILED backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[empty-grep]
+FAILED backend/test_ibl_v2_contracts.py::test_discovery_refresh_keeps_unchanged_file_reads_reusable
+5 failed, 21 deselected in 5.97s

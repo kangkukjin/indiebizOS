@@ -1,0 +1,211 @@
+[
+  {
+    "mode": "write",
+    "stage": "base",
+    "run": {
+      "run_id": "1b67dc43f1844f3194a82047368e1c73"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 30,
+    "reused": 0,
+    "seconds": 0.4486401081085205,
+    "verified": true
+  },
+  {
+    "mode": "write",
+    "stage": "same",
+    "run": {
+      "run_id": "d223f7602aed4706a77fd0a54867e851"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 30,
+    "reused": 2,
+    "seconds": 0.4009089469909668,
+    "verified": true
+  },
+  {
+    "mode": "write",
+    "stage": "content",
+    "run": {
+      "run_id": "33829fb49c3542e4974d08218f015246"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 110,
+    "reused": 1,
+    "seconds": 0.38186073303222656,
+    "verified": true
+  },
+  {
+    "mode": "write",
+    "stage": "add",
+    "run": {
+      "run_id": "5513fe3f3a9f40eca9e68a279df878d6"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 140,
+    "reused": 2,
+    "seconds": 0.43527984619140625,
+    "verified": true
+  },
+  {
+    "mode": "write",
+    "stage": "delete",
+    "run": {
+      "run_id": "f030ac9f00a7405fbb88ed256a61dbdf"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 120,
+    "reused": 2,
+    "seconds": 0.38748788833618164,
+    "verified": true
+  },
+  {
+    "mode": "write",
+    "stage": "empty",
+    "run": {
+      "run_id": "27fd72ff15e24ce1901494f84fc2d8c5"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 0,
+    "reused": 0,
+    "seconds": 0.3595619201660156,
+    "verified": true
+  },
+  {
+    "mode": "write",
+    "stage": "new",
+    "run": {
+      "run_id": "3671799cbe2b46f79788e07aa458bade"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 2,
+    "reused": 0,
+    "seconds": 0.5293748378753662,
+    "verified": true
+  },
+  {
+    "mode": "write",
+    "stage": "damaged",
+    "run": {
+      "run_id": "1cd30a275d1e429fbaee03d87d6d9d91"
+    },
+    "status": "interrupted",
+    "success": false,
+    "total": null,
+    "reused": 1,
+    "seconds": 0.34395861625671387,
+    "verified": true,
+    "verifier_correction": "IBL failed execution is terminal interrupted, not failed; no execution repeated."
+  },
+  {
+    "mode": "readonly",
+    "stage": "base",
+    "run": {
+      "run_id": "053798211a9b4ea79ebe85677af8f320"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 30,
+    "reused": 0,
+    "seconds": 1.2643671035766602,
+    "verified": true
+  },
+  {
+    "mode": "readonly",
+    "stage": "same",
+    "run": {
+      "run_id": "9a4273f6d61144ee8965ca420fdb96e7"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 30,
+    "reused": 2,
+    "seconds": 1.661081075668335,
+    "verified": true
+  },
+  {
+    "mode": "readonly",
+    "stage": "content",
+    "run": {
+      "run_id": "af15830593ed4039b92b7122ac13446b"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 110,
+    "reused": 1,
+    "seconds": 0.7276899814605713,
+    "verified": true
+  },
+  {
+    "mode": "readonly",
+    "stage": "add",
+    "run": {
+      "run_id": "27bc0f3fbef840b49a5ea3318d68dcbd"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 140,
+    "reused": 2,
+    "seconds": 1.0738661289215088,
+    "verified": true
+  },
+  {
+    "mode": "readonly",
+    "stage": "delete",
+    "run": {
+      "run_id": "9466838d2d744b9fa653dad3fdf2882c"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 120,
+    "reused": 2,
+    "seconds": 1.5232808589935303,
+    "verified": true
+  },
+  {
+    "mode": "readonly",
+    "stage": "empty",
+    "run": {
+      "run_id": "37b6967bc8ea4701aa6f991259e98e02"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 0,
+    "reused": 0,
+    "seconds": 1.2570791244506836,
+    "verified": true
+  },
+  {
+    "mode": "readonly",
+    "stage": "new",
+    "run": {
+      "run_id": "62144397595d48a2a09aa5596ce33541"
+    },
+    "status": "completed",
+    "success": true,
+    "total": 2,
+    "reused": 0,
+    "seconds": 2.2207508087158203,
+    "verified": true
+  },
+  {
+    "mode": "readonly",
+    "stage": "damaged",
+    "run": {
+      "run_id": "b1c8e17688ed4830a88f2dae695777e2"
+    },
+    "status": "interrupted",
+    "success": false,
+    "total": null,
+    "reused": 1,
+    "seconds": 0.7011961936950684,
+    "verified": true
+  }
+]

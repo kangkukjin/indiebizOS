@@ -1,0 +1,18 @@
+.............                                                            [100%]
+============================= slowest 15 durations =============================
+2.92s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[add-list]
+1.13s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[delete-list]
+1.12s call     backend/test_ibl_v2_contracts.py::test_discovery_refresh_keeps_unchanged_file_reads_reusable
+1.12s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[empty-file_find]
+1.07s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[empty-grep]
+1.05s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[content-grep]
+1.05s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[content-file_find]
+1.04s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[empty-list]
+1.03s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[add-grep]
+1.01s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[delete-grep]
+0.99s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[content-list]
+0.99s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[add-file_find]
+0.98s call     backend/test_ibl_v2_contracts.py::test_file_discovery_reuse_observes_current_sources[delete-file_find]
+
+(2 durations < 0.1s hidden.)
+13 passed, 13 deselected in 15.80s

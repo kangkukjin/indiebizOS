@@ -1,0 +1,15 @@
+#!ibl edition=2
+[def:합산]($folder) {
+  $files=[self:list]{path:$folder,pattern:"*.txt",hash:true}
+  $rows=$files >> [table:each] {
+    $doc=[self:read]{path:$it.path}
+    return {path:$it.path,sha256:$it.sha256,value:number(strip($doc.text))}
+  }
+  return {rows:$rows,total:sum(map($rows,($r)=>$r.value))}
+}
+$result=[fn:합산]{folder:$folder}
+$body=json($result)
+[self:write]{path:$out,content:$body}
+$back=[self:read]{path:$out}
+assert $back.text==$body,"저장 재독 불일치"
+return $result

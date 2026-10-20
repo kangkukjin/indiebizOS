@@ -1,0 +1,32 @@
+=================================== FAILURES ===================================
+_________________________ test_browser_source_workflow _________________________
+[gw1] darwin -- Python 3.13.5 /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3
+backend/test_document_browser.py:27: in test_browser_source_workflow
+    dist = build_frontend_fixture(tmp_path, monkeypatch)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/test_document_app_support.py:50: in build_frontend_fixture
+    assert built["ok"], built.get("output_tail", str(built))
+E   AssertionError:
+E     > indiebiz-os@1.5.2 build
+E     > tsc -b && vite build --outDir /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6328/popen-gw1/test_browser_source_workflow0/frontend-dist
+E
+E     src/lib/pc-control.ts(77,15): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+E     src/lib/pc-control.ts(77,41): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+E
+E   assert False
+_____________________ test_grid_app_edit_save_queue_and_ai _____________________
+[gw9] darwin -- Python 3.13.5 /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3
+backend/test_spreadsheet_browser_live.py:33: in test_grid_app_edit_save_queue_and_ai
+    dist = build_frontend_fixture(tmp_path, monkeypatch)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/test_document_app_support.py:50: in build_frontend_fixture
+    assert built["ok"], built.get("output_tail", str(built))
+E   AssertionError:
+E     > indiebiz-os@1.5.2 build
+E     > tsc -b && vite build --outDir /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-6328/popen-gw9/test_grid_app_edit_save_queue_0/frontend-dist
+E
+E     src/lib/pc-control.ts(77,15): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+E     src/lib/pc-control.ts(77,41): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+E
+E   assert False
+2 failed, 11037 passed, 14 skipped, 190 warnings in 296.11s (0:04:56)

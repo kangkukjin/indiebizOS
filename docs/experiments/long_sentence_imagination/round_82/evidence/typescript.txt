@@ -1,0 +1,2 @@
+npx tsc -p tsconfig.app.json
+exit_code=0

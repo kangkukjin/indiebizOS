@@ -160,8 +160,9 @@ def handler_contract(node, action, config, schema_keys=None):
                 contract["params"].pop(alias, None)
     contract = project_aliases(contract, config)
 
-    # Inferred adapters retain the same resource declarations as explicit contracts.
-    for name in ("read_resources", "write_resources"):
+    # Inferred adapters retain resource and freshness policies, just like
+    # explicit contracts. Discovery may observe files absent from old results.
+    for name in ("read_resources", "write_resources", "per_run"):
         if name in config:
             contract[name] = copy.deepcopy(config[name])
 

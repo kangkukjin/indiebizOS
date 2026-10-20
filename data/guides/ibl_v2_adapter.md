@@ -53,7 +53,7 @@ JSON 도구 경계의 Decimal은 십진 표기가 JSON 숫자 왕복 후 동일�
 ForeignRef는 공통 타입/wire이고 공급자가 실행 소유권을 검사한다. stateful 어댑터의 영수증은
 새 실행에 재생하지 않는다. 세션 스크립트는 제한 없는 주인의 로컬 코드 실행 권한을 별도 검사한다.
 
-새 `truncated` 생산 위치에는 `truncation-scope: 분류 — 사유`를 적는다(정직 표지 관문 C). 명시 상한·실효 상한·충족 건수는 `common.currency.bounded_selection`로 판정한다. 기본·안전 상한·미충족·수집 오류는 selection으로 덮지 않는다. 시계처럼 실행 순간 자체가 값인 읽기 계약은 `per_run:true`로 새 실행의 재사용에서 제외한다. 같은 실행의 resume은 기록을 복원한다.
+새 `truncated` 생산 위치에는 `truncation-scope: 분류 — 사유`를 적는다(정직 표지 관문 C). 명시 상한·실효 상한·충족 건수는 `common.currency.bounded_selection`로 판정한다. 기본·안전 상한·미충족·수집 오류는 selection으로 덮지 않는다. 시계나 파일 목록·검색처럼 매 실행 다시 관측해야 하는 읽기 계약은 `per_run:true`로 새 실행의 재사용에서 제외한다. 같은 실행의 resume은 기록을 복원한다. 명시 계약은 그 안에, 유도 계약은 액션 루트에 `per_run`을 선언한다. 기존 검색 결과만으로 새 항목·이전 불일치 항목의 변화까지 검증할 수 없다.
 
 읽기·쓰기 범위를 알면 `read_resources`·`write_resources: {file: 인자}`로 선언한다.
 명시 `callable_contract`는 그 안에, 기존 봉투에서 계약을 유도하는 액션은 액션 루트에 둔다.

@@ -1,0 +1,2 @@
+127 failed, 10838 passed, 17 skipped, 190 warnings, 71 errors in 285.52s (0:04:45)
+PermissionError: [Errno 1] Operation not permitted (process/socket/browser boundaries)

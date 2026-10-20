@@ -131,3 +131,23 @@ Claude 토크나이저로 직접 셀 수 없어(tiktoken 미설치, API 호출 �
 - 기록: `~/.claude/projects/-Users-kangkukjin-Desktop-AI-indiebizOS-projects-L84-training/{3839d4b6…,6c125a1a…}.jsonl`, `…-indiebizOS-backend/ecc40da2….jsonl`(기억 선별 원샷)·`ceb0a60e….jsonl`(평가자), `…-projects-study/29ec7378….jsonl`(의식), `…--worktrees-repair-task-*` 최신 1건씩.
 - 문서: memory(Auto memory → Enable or disable, Storage location), settings(Settings precedence), cli-reference(`--setting-sources`·`--settings`·`--bare`·`--restricted`·`--exclude-dynamic-system-prompt-sections`).
 - 선행: `docs/ANSWER_LANGUAGE_TRACE_2026_10_20.md` §7, 원샷 다이어트 2026-08-21(`_build_command` 주석).
+
+## 7. 구현 기록 — R1·R2 (2026-10-20 12:10, 사용자 판정: R1+R2 구현, R3 보류)
+
+변경(`backend/providers/claude_code.py`, 미커밋 — 같은 파일에 L84-3 세션의 `language` 설정 변경이 스테이징돼 있어 커밋 묶음은 사용자 판정):
+- R1 `_build_env`: `env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"` — 모든 분기 공통.
+- R2 `_build_command`: `--setting-sources ""` 를 분기 조건 밖으로 꺼내 전 분기 공통(EXECUTE 포함). 감독 훅 `--settings` 는 그대로.
+- 세션 지문 `tool_policy_fingerprint` 에 `||setting-sources:none;auto-memory:off` 추가 — resume 세션은 첫 요청의 시스템 프롬프트 기록본과 옛 `instructions` attachment 를 압축 전까지 재생하므로, 키를 갈아 다음 턴부터 fresh 로 보낸다(2026-09-04 선례).
+- 시험 `backend/test_agent_boundary_budget.py::test_b6_every_branch_drops_setting_sources_and_auto_memory` — EXECUTE·원샷 둘 다 `--setting-sources ""`, EXECUTE 의 `--settings` 에 hooks 생존, env 변수, 지문 길이. 관련 6개 시험 파일 통과.
+
+검증 ① 실명령 직접 실행(백엔드 밖): 수리 뒤 `_build_command(stream=False)` 가 만든 EXECUTE 명령(도구 좁힘·`--allowed/--disallowed`·훅 `--settings`·`--setting-sources ""`)을 `_build_env()` 환경으로 cwd=`projects/L84_training` 에서 haiku 1턴 실행(`--session-id` 지정, 도구 미사용, 트랜스크립트 확인 뒤 삭제):
+
+| 항목 | 수리 전(L84 `3839d4b6`) | 수리 후(탐침 `e1a833a9`) |
+|---|---|---|
+| attachment 목록 | environment·model·auto_mode·total_tokens·**instructions**·session_context·date·remote_session_change·prompt_snapshot | environment·model·total_tokens·session_context·date·credential_org·remote_session_change·prompt_snapshot |
+| `instructions` files | CLAUDE.md(Project 5,069)+MEMORY.md(AutoMem 1,463) | **없음** |
+| 시스템 프롬프트 "# Memory" 절 | 있음(절 6, 2,099자) | **없음**(12절, 우리 프롬프트 마지막 절 유지) |
+| `하네스 전용 뷰` 문자열 | 있음 | 없음 |
+| 첫 턴 cache_create | 55,803(우리 49.6K 프롬프트 포함) | 10,920(짧은 프롬프트+도구 스키마; 직접 비교 불가) |
+
+검증 ② 백엔드 실제 턴: **보류**. 재기동 제어자 `last_result.outcome=check_failed`(파생물 신선도) — 다른 세션이 편집 중인 `system_essentials/script_ops.py`(`self:write`/`self:script` `path_audited.impl` 지문 `b542e8da…` ≠ 현재 `abc167c4…`)와 `frontend/package.json` 설치필터 stale 로 사전검사가 막혀 새 세대가 뜨지 않는다. 그 세션이 재감사·지문 갱신을 마치면 §5 "구현 때 검증 절차" 1~3(프로젝트 에이전트 fresh 턴 → `instructions` 부재·Memory 절 부재·`hook_started`·cache_create 감소, 의식 턴 1회)을 그대로 돌린다. 백엔드는 옛 세대로 ACTIVE 유지(수리 전 동작).

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: screen-input-without-app-guard
+    retired: 2026-10-20
+    reason: 화면 입력이 사용자 앱 전환 뒤 다른 창으로 전달되는 경로를 차단한다.
+    instead: 입력에는 expect_app 또는 현재 snapshot의 ref가 필요하며 둘 다 없으면 APP_GUARD_REQUIRED.
+    phrases: ["생략한 좌표·키 입력은 기존처럼 현재 포커스로 간다"]
   - id: web-search-provider-and-partial-date
     retired: 2026-10-20
     reason: DDGS의 메타검색 동작과 뉴스 부분 실패·기간 적용·Guardian 실패 신고를 현재 구현에 맞췄다.

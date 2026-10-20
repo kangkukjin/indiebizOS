@@ -28,7 +28,7 @@ actions:
     returns: effect
     runs_on: pc_only
     description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
-    target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: path(PNG 저장, 지정하면 images 없이 file_path·bytes 반환), x,y,width,height(옵션). path 생략 시 images(base64·media_type) 반환. 좌표는 1280x800 가상 기준. expect_app은 입력 직전 앱 이름 또는 bundle ID 가드이며 불일치·조회 실패는 입력 거절. ref는 snapshot 세대·소유 PID가 일치할 때만 동작. wait는 expect_app 앱의 포커스를 timeout 밀리초 동안 대기하며 idle_seconds로 입력 유휴 조건을 추가한다. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
+    target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: path(PNG 저장, 지정하면 images 없이 file_path·bytes 반환), x,y,width,height(옵션). path 생략 시 images(base64·media_type) 반환. 좌표는 1280x800 가상 기준. 입력 op는 expect_app 또는 현재 snapshot의 ref가 필수이며 둘 다 없으면 APP_GUARD_REQUIRED로 거절한다. expect_app은 입력 직전 앱 이름 또는 bundle ID 가드이며 불일치·조회 실패는 입력 거절. ref는 snapshot 세대·소유 PID가 일치할 때만 동작. wait는 expect_app 앱의 포커스를 timeout 밀리초 동안 대기하며 idle_seconds로 입력 유휴 조건을 추가한다. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y와 expect_app.'
     group: desktop
     target_key: op
     router: handler
@@ -104,6 +104,6 @@ tool_json:
           description: '수행할 동작 (snapshot=화면 독해: AX 요소+OCR 글자+클릭좌표)'
         ref:
           type: string
-          description: snapshot이 부여한 요소 ref(예 e3). click/type에서 좌표 없이 요소 직접 조작(AXPress/AXValue). 권장 1순위, OCR 글자는 ref 없어 x,y 사용.
+          description: snapshot이 부여한 요소 ref(예 e3). click/type에서 좌표 없이 요소 직접 조작(AXPress/AXValue). 권장 1순위, OCR 글자는 ref 없어 x,y와 expect_app 사용.
       required:
       - op

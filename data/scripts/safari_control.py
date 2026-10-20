@@ -230,7 +230,28 @@ def _result(request, **fields):
             "condition": {k: CONTRACT["actions"][request["op"]][k] for k in ("needs_front", "shared_state", "isolated_resources")},
             "observed_at": now()}
     base.update(fields)
-    return base
+    return _failure_evidence(base)
+
+
+def _failure_evidence(result):
+    """문장과 구조화 복구 정보를 registered-json/1 → IBL 실패 경계까지 보존한다."""
+    failure = result.get("failure")
+    if result.get("success") is False and isinstance(failure, dict):
+        code = failure["code"]
+        result["error_code"] = code
+        result["error"] = f"{code}: {failure['message']}" + (
+            f" 다음: {failure['next']}" if failure.get("next") else "")
+        if code == "UNKNOWN":
+            result["error_type"] = "result_unknown"
+        elif code == "PERMISSION_REQUIRED":
+            result["error_type"] = "permission"
+        result["recovery"] = {
+            "status": result.get("status", "failed"),
+            "next": failure.get("next"),
+            "retry_change": False,
+            "observe": {"op": "status"},
+        }
+    return result
 
 
 def do_status(request, running):
@@ -311,15 +332,19 @@ def do_close(request, running):
     after_all = windows()
     after = next((w for w in after_all if w["window_id"] == target["window_id"]), None)
     window_closed = after is None
-    gone = window_closed or (after["tab_count"] == target["tab_count"] - 1 and not any(
-        t["index"] == victim["index"] and t["url"] == victim["url"] and t["name"] == victim["name"] for t in after["tabs"]))
+    # index 는 닫은 뒤 재번호된다. 남은 탭의 순서를 비교해야 동일 URL·제목의
+    # 이웃 탭이 닫힌 탭의 번호를 물려받아도 정상 완료로 판정할 수 있다.
+    expected = [(t["url"], t["name"]) for t in target["tabs"] if t["index"] != victim["index"]]
+    gone = window_closed or (
+        after["tab_count"] == target["tab_count"] - 1
+        and [(t["url"], t["name"]) for t in after["tabs"]] == expected)
     if gone:
         return _result(request, verified=True, window_id=target["window_id"], closed_tab=victim, window_closed=window_closed,
                        tab_count=0 if window_closed else after["tab_count"], response_lost=lost)
     if lost:
-        return _unknown(request, "탭 닫기 응답이 유실됐고 재조회에서 탭 수가 줄지 않았습니다.", tab_count=after["tab_count"])
+        return _unknown(request, "탭 닫기 응답이 유실됐고 재조회한 남은 탭 상태가 요청과 다릅니다.", tab_count=after["tab_count"])
     return _result(request, success=False, verified=False, tab_count=after["tab_count"],
-                   failure={"code": "NOT_APPLIED", "message": "닫기 요청 뒤 탭 수가 줄지 않았습니다.", "next": "status 로 확인하세요. 같은 닫기를 자동 반복하지 마세요."})
+                   failure={"code": "NOT_APPLIED", "message": "닫기 요청 뒤 남은 탭 상태가 요청과 다릅니다.", "next": "status 로 확인하세요. 같은 닫기를 자동 반복하지 마세요."})
 
 
 def _unknown(request, message, **fields):
@@ -353,7 +378,7 @@ if __name__ == "__main__":
     except Exception as exc:  # noqa: BLE001 — 스크립트 경계: 원인은 보존하고 전송 세부는 노출하지 않는다
         result = {"success": False, "verified": False, "surface": SURFACE, "error": f"{type(exc).__name__}: {exc}"[:300],
                   "failure": {"code": "SCRIPT_ERROR", "message": str(exc)[:300], "next": "status 로 현재 상태를 조회하세요."}}
-    text = json.dumps(result, ensure_ascii=False, allow_nan=False)
+    text = json.dumps(_failure_evidence(result), ensure_ascii=False, allow_nan=False)
     if dest := os.environ.get("INDIEBIZ_SCRIPT_RESULT"):
         Path(dest + ".tmp").write_text(text, encoding="utf-8")
         os.replace(dest + ".tmp", dest)

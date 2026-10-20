@@ -2,6 +2,7 @@
 import boot_paths  # noqa: F401
 import base64
 import importlib.util
+import itertools
 import json
 from pathlib import Path
 import sys
@@ -80,6 +81,49 @@ def test_app_guard_refuses_before_any_input(screen, monkeypatch, tmp_path, op, p
     monkeypatch.setattr(screen, '_get_pyautogui', lambda: pytest.fail('input driver must not load'))
     result = json.loads(screen.execute({'op': op, 'expect_app': 'Calculator', **params}, ToolContext(str(tmp_path), 'computer_op')))
     assert not result['success'] and 'APP_MISMATCH' in result['error']
+
+
+@pytest.mark.parametrize('op,params', [
+    ('click', {'x': 10, 'y': 10}), ('type', {'text': 'secret'}), ('key', {'key': 'enter'}),
+    ('mouse_move', {'x': 10, 'y': 10}), ('drag', {}), ('scroll', {}),
+])
+def test_ibl_entry_refuses_missing_app_guard_before_input(monkeypatch, tmp_path, op, params):
+    from tool_loader import load_tool_handler
+    from ibl_v2_entry import handle_request
+    import thread_context
+    handler = load_tool_handler('computer_op')
+    monkeypatch.setattr(thread_context, 'get_task_origin', lambda: 'user')
+    monkeypatch.setattr(handler, '_get_pyautogui', lambda: pytest.fail('input driver must not load'))
+    monkeypatch.setattr(handler, '_frontmost_app', lambda: pytest.fail('missing target must not infer current app'))
+    args = json.dumps({'op': op, **params})
+    result = handle_request({'edition': 2, 'code': '[limbs:screen]' + args}, str(tmp_path))
+    assert not result['success'], result
+    assert 'APP_GUARD_REQUIRED' in json.dumps(result, ensure_ascii=False), result
+
+
+@pytest.mark.parametrize('focus_changed', [False, True])
+def test_guarded_snapshot_recipe_through_ibl_entry(monkeypatch, tmp_path, focus_changed):
+    from tool_loader import load_tool_handler
+    from ibl_v2_entry import handle_request
+    import thread_context
+    handler = load_tool_handler('computer_op')
+    monkeypatch.setattr(thread_context, 'get_task_origin', lambda: 'user')
+    app = {'name': 'Calculator', 'bundle_id': 'com.apple.calculator', 'pid': 8}
+    other = {'name': 'Other', 'bundle_id': 'test.other', 'pid': 9}
+    apps = itertools.chain([app, app], itertools.repeat(other if focus_changed else app))
+    monkeypatch.setattr(handler, '_frontmost_app', lambda: next(apps))
+    monkeypatch.setattr(handler, '_ax_elements', lambda pid: [])
+    monkeypatch.setattr(handler, '_capture_png', lambda: str(tmp_path / 'synthetic.png'))
+    monkeypatch.setattr(handler, '_ocr_lines', lambda path: [])
+    events = []
+    monkeypatch.setattr(handler, '_get_pyautogui', lambda: NS(press=lambda key: events.append(key)))
+    code = ('#!ibl edition=2\n$s = [limbs:screen]{op:"snapshot"}\n'
+            'return [limbs:screen]{op:"key",key:"enter",expect_app:$s.app}')
+    result = handle_request({'edition': 2, 'code': code}, str(tmp_path))
+    assert result['success'] is (not focus_changed), result
+    assert events == ([] if focus_changed else ['enter'])
+    if focus_changed:
+        assert 'APP_MISMATCH' in json.dumps(result, ensure_ascii=False)
 
 
 def test_ref_pid_guard_and_snapshot_focus_change(screen, monkeypatch, tmp_path):

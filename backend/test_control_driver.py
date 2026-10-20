@@ -118,14 +118,15 @@ def test_scheduler_context_refuses_needs_front_ops_before_any_input(screen, orig
     assert screen._calls == []
 
 
-def test_user_context_runs_and_background_safe_ops_are_never_refused(screen, origin, tmp_path):
+def test_user_context_runs_and_background_safe_ops_are_never_refused(screen, origin, tmp_path, monkeypatch):
     from tool_context import ToolContext
     origin("scheduler")
     info = json.loads(screen.execute({"op": "screen_info"}, ToolContext(str(tmp_path), "computer_op")))
     assert info["success"] and info["conditions"]["click"]["needs_front"] is True
     assert info["screen_context"]["available"] is False
     origin("user")
-    out = json.loads(screen.execute({"op": "click", "x": 1, "y": 1, "screenshot_after": False},
+    monkeypatch.setattr(screen, "_frontmost_app", lambda: {"name": "Test", "pid": 7})
+    out = json.loads(screen.execute({"op": "click", "x": 1, "y": 1, "expect_app": "Test", "screenshot_after": False},
                                     ToolContext(str(tmp_path), "computer_op")))
     assert out["success"] is True and screen._calls[0][0] == "click"
 
@@ -267,6 +268,41 @@ def test_registration_stores_accept_observation_column(tmp_path, monkeypatch):
     import limb_keys
     with pytest.raises(ValueError):
         limb_keys.resident_update("x", observations="not-a-list")
+
+
+@pytest.mark.parametrize("target", ["__local__", "app:com.apple.Safari", "site:example.test"])
+def test_observation_write_discover_read_through_ibl_entry(ledger, monkeypatch, tmp_path, target):
+    from ibl_v2_entry import handle_request
+    import limb_keys, hardware_registry, device_registry
+    monkeypatch.setattr(limb_keys, "list_keys", lambda *a, **kw: [])
+    monkeypatch.setattr(hardware_registry, "devices", lambda: [])
+    monkeypatch.setattr(device_registry, "live_with_capability", lambda *a: [])
+    args = json.dumps({"op": "register", "target": target, "observations": [_row()]}, ensure_ascii=False)
+    query = json.dumps({"op": "list", "target": target})
+    result = handle_request({"edition": 2, "code":
+        "$write = [self:limb]" + args + '\n$index = [self:limb]{op:"list"}\n'
+        "$read = [self:limb]" + query + "\nreturn {index:$index,read:$read}"}, str(tmp_path))
+    assert result["success"], result
+    index, read = result["value"]["index"], result["value"]["read"]
+    assert read["count"] == 1 and read["items"] == read["observations"]
+    assert read["items"][0]["fact"] == _row()["fact"]
+    assert index["items"] == []  # 기기 목록의 기존 계약은 유지
+    assert index["control_observations"] == [{"surface": read["surface"], "count": 1}]
+    assert ledger.count(read["surface"]) == 1  # 조회가 행을 추가하거나 수정하지 않음
+
+
+def test_screen_announces_observation_without_inventing_guide(ledger, screen, origin, monkeypatch, tmp_path):
+    from tool_context import ToolContext
+    import guide_registry
+    origin("user")
+    ledger.record("app:com.example.test", [_row()])
+    monkeypatch.setattr(guide_registry, "surface_control_guide", lambda *args: None)
+    monkeypatch.setattr(screen, "_frontmost_app",
+                        lambda: {"name": "Test", "pid": 7, "bundle_id": "com.example.test"})
+    result = json.loads(screen.execute({"op": "snapshot"}, ToolContext(str(tmp_path), "computer_op")))
+    assert result.get("success") is not False and "control_guide" not in result
+    assert result["driver"]["observations"] == 1
+    assert result["driver"]["surface"] == "app:com.example.test"
 
 
 # ---------------------------------------------------------------- 걸음 3 Safari 부품 (사전 호출 모의)

@@ -30,7 +30,7 @@
           },
           "ref": {
             "type": "string",
-            "description": "snapshot이 부여한 요소 ref(예 e3). click/type에서 좌표 없이 요소 직접 조작(AXPress/AXValue). 권장 1순위, OCR 글자는 ref 없어 x,y 사용."
+            "description": "snapshot이 부여한 요소 ref(예 e3). click/type에서 좌표 없이 요소 직접 조작(AXPress/AXValue). 권장 1순위, OCR 글자는 ref 없어 x,y와 expect_app 사용."
           },
           "expect_app": {
             "type": "string",

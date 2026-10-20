@@ -619,10 +619,12 @@ def op_run(tool_input):
     if not ok:
         # Preserve declared legacy failure/permission evidence at the adapter boundary.
         details = {}
-        if v2 and (not wire_v2 or plain_contract) and isinstance(script_value, dict):
-            details = {k: script_value[k] for k in
-                       ("blocked", "denied", "permission_denied", "error_type") if k in script_value}
-            details["result"] = script_value
+        failure_value = script_value if v2 else parsed
+        if (not wire_v2 or plain_contract) and isinstance(failure_value, dict):
+            details = {k: failure_value[k] for k in
+                       ("blocked", "denied", "permission_denied", "error_type",
+                        "error_code", "failure", "recovery") if k in failure_value}
+            details["result"] = failure_value
         return {**details, "success": False, "id": sid, "exit_code": exit_code, "duration_ms": duration_ms,
                 **({"timed_out": True, "error": f"타임아웃 {timeout}초 초과 — 스크립트 중단."} if timed_out
                    else {"error": result_error or f"스크립트 실패 (exit {exit_code}) — 로그를 보고 self:edit 또는 run_command로 수정하세요. 같은 파일이면 재등록은 필요하지 않습니다."}),

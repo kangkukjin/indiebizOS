@@ -463,7 +463,7 @@
   "limbs:screen": {
    "fields": {
     "description": "5f50d9551ee1",
-    "target_description": "57a3188f927b",
+    "target_description": "57725c65790b",
     "implementation": "c53c3765a003",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
@@ -473,7 +473,7 @@
     "router": "ebbb1532efbc",
     "tool": "b24733bf34ec"
    },
-   "reviewed": "2026-10-09",
+   "reviewed": "2026-10-20",
    "examples": 53
   },
   "limbs:show_map": {
@@ -1150,13 +1150,13 @@
   "self:limb": {
    "fields": {
     "description": "029bd0d50efd",
-    "target_description": "5be87a74f6be",
+    "target_description": "038e65caaffe",
     "implementation": "7d822e4d3499",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "params": "c41e4b1fdd74",
     "aliases": "399fa2f32490",
-    "ops": "06fa724fbd3a",
+    "ops": "7f82f45ba944",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",

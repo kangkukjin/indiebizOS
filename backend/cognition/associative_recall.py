@@ -428,7 +428,7 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                 "가이드와 호출 계약이 현재 문맥에 있으면 다시 읽거나 코드를 새로 작성하지 않는다. "
                 "원격 대상을 지정하지 않은 시스템 상태 조회는 본체([sense:host])다. 본체 제어(음량·주소 열기·잠금·앱 조작)는 "
                 "device_id __local__ 행의 control_guide 를 따르고, 그 가이드에 없는 동작만 [limbs:screen] 탐색으로 간다. "
-                "observations 는 그 대상의 관측 행 수이며 제어 전에 [self:limb]{op: list}로 읽는다.")
+                "observations 는 그 대상의 관측 행 수이며 제어 전에 [self:limb]{op: list, target: device_id}로 읽는다.")
         return Block("connected_limbs", "connected_limbs",
                      f"<connected_limbs note='{note}'>\n" + "\n".join(rows) + "\n</connected_limbs>", ids=names)
     return _step("limb_presence", run)

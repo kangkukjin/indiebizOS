@@ -307,7 +307,7 @@ async def _execute(tool_input: dict, context):
 # 같은 계정으로 로그인했으면 계정 데이터는 공유다. Chrome MCP 는 사용자의 탭·세션을 그대로 쓴다 —
 # 사용자와 공유하는 상태를 바꾸는 동작(shared_state)을 화면 없는 문맥(정기·배경)에서 사용자 Chrome 으로
 # 보내는 것은 요청된 효과가 아니라 부수 간섭(L48-1 활성 탭 전환)이다. 그래서 auto 는 간섭 없는 통로
-# (Playwright)를 먼저 고르고, Chrome 을 명시한 호출만 거절한다.
+# (Playwright)를 먼저 고르고, 최종 선택이 Chrome인 공유 상태 변경은 거절한다.
 _SHARED_STATE_OPS = frozenset({
     "navigate", "click", "dblclick", "rightclick", "type", "press_key", "select", "select_option",
     "check", "hover", "drag", "upload_file", "scroll", "evaluate", "tab", "cookies", "auth", "wait", "resize",
@@ -320,7 +320,7 @@ _DRIVER_CONDITIONS = {
 
 
 def _op_name(params, tool_name):
-    op = params.get("op") or tool_name.removeprefix("browser_")
+    op = params.get("op") or ("snapshot" if tool_name == "browser_op" else tool_name.removeprefix("browser_"))
     return str(op).split("_", 1)[0] if str(op).startswith(("tab_", "iframe_", "cookies_", "chrome_")) else str(op)
 
 
@@ -341,14 +341,42 @@ def _site_notice(url):
             return None
         from guide_registry import surface_control_guide
         found = surface_control_guide("site", host)
-        if not found:
-            return None
         import control_observations
-        found["observations"] = control_observations.count(found["surface"])
-        found["note"] = "이 사이트에는 계약 통로(드라이버·관측)가 있습니다. ref 조작 전에 control_guide 를 한 번 읽으세요."
-        return found
+        surface = "site:" + host
+        observed = control_observations.count(surface)
+        if not found and not observed:
+            return None
+        notice = {**(found or {}), "surface": surface, "observations": observed}
+        notice["note"] = (
+            "ref 조작 전에 control_guide 를 한 번 읽으세요. " if found else
+            "이 사이트에는 관측이 있습니다(실행 드라이버 등록은 없음). "
+        ) + '관측 본문은 [self:limb]{op:"list",target:"' + surface + '"}로 조회하세요.'
+        return notice
     except Exception:
         return None
+
+
+def _snapshot_notice(result, op):
+    """모든 브라우저 통로의 snapshot 에 같은 발견 정보를 붙인다."""
+    if op == "snapshot" and isinstance(result, dict) and result.get("url"):
+        if notice := _site_notice(result["url"]):
+            if notice.get("control_guide"):
+                result["control_guide"] = notice["control_guide"]
+            result["driver_surface"] = notice
+    return result
+
+
+def _chrome_refusal(op, screen_ctx):
+    import control_conditions
+    refused = control_conditions.refusal(
+        op, _DRIVER_CONDITIONS["chrome"] | {"needs_front": True},
+        screen_ctx, surface="[limbs:browser] driver:chrome")
+    refused["error"] = (
+        "Chrome MCP 는 사용자의 탭·세션을 그대로 쓰므로 화면 없는 문맥("
+        + str(screen_ctx.get("origin")) + ")에서 공유 상태를 바꾸는 동작은 실행하지 않았습니다. "
+        "현재 작업을 close한 뒤 격리된 Playwright 작업을 시작하거나 사용자가 입회한 턴에서 실행하세요.")
+    refused["condition"] = _DRIVER_CONDITIONS["chrome"]
+    return json.dumps(refused, ensure_ascii=False)
 
 
 def execute(tool_input: dict, context):
@@ -371,22 +399,17 @@ async def _route_execute(params, context, owner, owner_allowed, screen_ctx=None)
     chrome_connected = _is_chrome_connected()
     if shared and not screen_ctx.get("available"):
         if params.get("driver") == "chrome":
-            import control_conditions
-            refused = control_conditions.refusal(_op_name(params, context.tool_name), _DRIVER_CONDITIONS["chrome"]
-                                                 | {"needs_front": True}, screen_ctx, surface="[limbs:browser] driver:chrome")
-            refused["error"] = ("Chrome MCP 는 사용자의 탭·세션을 그대로 쓰므로 화면 없는 문맥(" + str(screen_ctx.get("origin"))
-                                + ")에서 공유 상태를 바꾸는 동작은 부수 간섭입니다. 실행하지 않았습니다. "
-                                "격리된 내장 Playwright(driver 생략 또는 playwright)를 쓰거나 사용자가 입회한 턴에서 실행하세요.")
-            refused["condition"] = _DRIVER_CONDITIONS["chrome"]
-            return json.dumps(refused, ensure_ascii=False)
+            return _chrome_refusal(_op_name(params, context.tool_name), screen_ctx)
         chrome_connected = False   # auto 는 간섭 없는 통로를 먼저 고른다
     driver, result = await load_singleton(__file__, "browser_embedded").route(
         params, context.tool_name, owner, owner_allowed, chrome_connected)
     if result is not None:
-        return json.dumps(result, ensure_ascii=False)
+        return json.dumps(_snapshot_notice(result, _op_name(params, context.tool_name)), ensure_ascii=False)
+    # route 는 작업에 고정된 드라이버를 우선한다. 후보 연결을 끄는 것만으로는
+    # 앞선 읽기에서 Chrome 에 결속된 auto 호출을 차단할 수 없다.
+    if driver == "chrome" and shared and not screen_ctx.get("available"):
+        return _chrome_refusal(_op_name(params, context.tool_name), screen_ctx)
     params["driver"] = driver
-    if shared and not screen_ctx.get("available") and params.get("driver") == "auto":
-        params["driver"] = "playwright"
     return await _owned_execute(params, context, owner)
 
 
@@ -417,10 +440,7 @@ async def _owned_execute(params, context, owner):
             } or (op == "press_key" and params.get("key") in {"Enter", "Space", " "})
             try:
                 result = json.loads(await _execute(params, context))
-                if op == "snapshot" and isinstance(result, dict) and result.get("url"):
-                    if notice := _site_notice(result.get("url")):
-                        result["control_guide"] = notice["control_guide"]
-                        result["driver_surface"] = notice
+                _snapshot_notice(result, op)
                 if not chrome:
                     result.setdefault("session_owner", owner)
                     result.setdefault("tab_id", session.events.before_tab or session.active_tab_id)

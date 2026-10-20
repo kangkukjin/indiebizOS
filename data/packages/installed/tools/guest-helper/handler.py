@@ -794,6 +794,15 @@ def _issue_readme(minted: dict, base: str, copied) -> str:
 
 
 def _limb_list(tool_input: dict) -> dict:
+    import control_observations as obs
+    if tool_input.get("target") is not None:
+        try:
+            surface = _observation_surface(tool_input["target"])
+            observed = obs.rows(surface)
+            return {"success": True, "op": "list", "surface": surface,
+                    "observations": observed, "items": observed, "count": len(observed)}
+        except (ValueError, KeyError, StopIteration) as exc:
+            return {"success": False, "error": str(exc) or "관측 대상을 찾지 못했습니다"}
     import limb_keys
     import device_registry as dr
     live_ids = {e.get("device_id") for e in dr.live_with_capability(limb_keys.GUEST_PC_CLASS)}
@@ -815,6 +824,8 @@ def _limb_list(tool_input: dict) -> dict:
     # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
     # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
     return {"success": True, "op": "list", "limbs": rows, "items": rows,
+            "control_observations": [
+                {"surface": surface, "count": count} for surface, count in sorted(obs.counts().items())],
             "connected_count": sum(r.get("connected") is True for r in rows),
             "helper_dist_dir": os.path.join(_issue_root(), "helper", "dist"),
             "issue_parent_dir": _issue_parent()}
@@ -902,6 +913,24 @@ def _resident_registration(tool_input):
     except ValueError as exc:
         return {"success": False, "error": str(exc)}
 
+def _observation_surface(target):
+    """읽기와 쓰기가 같은 대상(기기 별칭·ID·조작면 식별자)을 해소한다."""
+    import control_observations as obs
+    if not isinstance(target, str) or not target.strip():
+        raise ValueError("target(기기 이름·ID·__local__ 또는 app:/site: 식별자)이 필요합니다.")
+    target = target.strip()
+    if target.partition(":")[0].lower() in ("app", "site", "device"):
+        return obs.normalize_surface(target)
+    if target == "__local__":
+        return "device:__local__"
+    import hardware_registry
+    import resident_pcs
+    if hardware_registry.contains(target):
+        row = next(r for r in hardware_registry.devices() if target in (r["device_id"], r["alias"]))
+        return "device:" + row["device_id"]
+    return "device:" + resident_pcs.resolve(target, active=False)["device_id"]
+
+
 def _record_observations(target, observations):
     """제어 관측 행의 추가·정정 — CONTROL_DRIVER_DESIGN_2026_10_20 §12 ① (a).
 
@@ -915,18 +944,7 @@ def _record_observations(target, observations):
         return {"success": False, "error": "observations 를 기록할 target(기기 이름·device_id·__local__ 또는 app:/site: 식별자)이 필요합니다."}
     target = target.strip()
     try:
-        if target.partition(":")[0].lower() in ("app", "site", "device"):
-            surface = target
-        elif target == "__local__":
-            surface = "device:__local__"
-        else:
-            import hardware_registry
-            import resident_pcs
-            if hardware_registry.contains(target):
-                row = next(r for r in hardware_registry.devices() if target in (r["device_id"], r["alias"]))
-                surface = "device:" + row["device_id"]
-            else:
-                surface = "device:" + resident_pcs.resolve(target, active=False)["device_id"]
+        surface = _observation_surface(target)
         import thread_context
         recorded = obs.record(surface, observations, source=thread_context.get_current_task_id() or "")
         return {"success": True, "op": "register", "target": target, **recorded,

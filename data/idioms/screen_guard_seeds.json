@@ -1,0 +1,582 @@
+[
+  {
+    "intent": "마우스 이 좌표로 옮겨",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"mouse_move\", x: 300, y: 200, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "마우스 이 좌표로 옮겨",
+        "ibl_code": "[limbs:screen]{op: \"mouse_move\", x: 300, y: 200}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "키보드로 타이핑해줘",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"type\", text: \"안녕하세요\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "키보드로 타이핑해줘",
+        "ibl_code": "[limbs:screen]{op: \"type\", text: \"안녕하세요\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "키보드 숏컷 실행해",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"key\", key: \"cmd+c\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "키보드 숏컷 실행해",
+        "ibl_code": "[limbs:screen]{op: \"key\", key: \"cmd+c\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "PC 화면 밑으로",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "PC 화면 밑으로",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "마우스 드래그 앤 드롭",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "마우스 드래그 앤 드롭",
+        "ibl_code": "[limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "데스크톱 스크롤 내려",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "데스크톱 스크롤 내려",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "커서 이동해줘",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"mouse_move\", x: 300, y: 200, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "커서 이동해줘",
+        "ibl_code": "[limbs:screen]{op: \"mouse_move\", x: 300, y: 200}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "컴퓨터 화면 스크롤",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "컴퓨터 화면 스크롤",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "이 좌표 클릭해줘",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"click\", x: 500, y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "이 좌표 클릭해줘",
+        "ibl_code": "[limbs:screen]{op: \"click\", x: 500, y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "화면에서 드래그해",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "화면에서 드래그해",
+        "ibl_code": "[limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "데스크톱에서 드래그 앤 드롭",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "데스크톱에서 드래그 앤 드롭",
+        "ibl_code": "[limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "컴퓨터 화면 스크롤 내려",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "컴퓨터 화면 스크롤 내려",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "커서 여기로 이동해",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"mouse_move\", x: 300, y: 200, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "커서 여기로 이동해",
+        "ibl_code": "[limbs:screen]{op: \"mouse_move\", x: 300, y: 200}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "데스크톱 아래로 스크롤",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "데스크톱 아래로 스크롤",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"scroll\",\"direction\":\"down\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "복사 단축키 눌러",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "복사 단축키 눌러",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "커맨드C 눌러줘",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "커맨드C 눌러줘",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "텍스트 타이핑해줘",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"type\", text: \"안녕하세요\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "텍스트 타이핑해줘",
+        "ibl_code": "[limbs:screen]{op: \"type\", text: \"안녕하세요\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "마우스 이 위치로 옮겨",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"mouse_move\", x: 300, y: 200, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "마우스 이 위치로 옮겨",
+        "ibl_code": "[limbs:screen]{op: \"mouse_move\", x: 300, y: 200}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "화면에서 끌어다 놓기",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "화면에서 끌어다 놓기",
+        "ibl_code": "[limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "키보드로 이거 타이핑해",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"type\", text: \"안녕하세요\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "키보드로 이거 타이핑해",
+        "ibl_code": "[limbs:screen]{op: \"type\", text: \"안녕하세요\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "이 글자 입력해",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"type\", text: \"안녕하세요\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "이 글자 입력해",
+        "ibl_code": "[limbs:screen]{op: \"type\", text: \"안녕하세요\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "텍스트 입력해줘",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"type\", text: \"안녕하세요\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "텍스트 입력해줘",
+        "ibl_code": "[limbs:screen]{op: \"type\", text: \"안녕하세요\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "여기 마우스 클릭해",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"click\", x: 500, y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "여기 마우스 클릭해",
+        "ibl_code": "[limbs:screen]{op: \"click\", x: 500, y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "데스크톱에서 끌어다 놓기",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "데스크톱에서 끌어다 놓기",
+        "ibl_code": "[limbs:screen]{op: \"drag\", start_x: 100, start_y: 100, end_x: 500, end_y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "복사 단축키",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "복사 단축키",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "마우스로 여기 클릭",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"click\", x: 500, y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "마우스로 여기 클릭",
+        "ibl_code": "[limbs:screen]{op: \"click\", x: 500, y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "맥 화면 이 위치 클릭해줘",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"click\", x: 500, y: 300, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "맥 화면 이 위치 클릭해줘",
+        "ibl_code": "[limbs:screen]{op: \"click\", x: 500, y: 300}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "마우스 위치 변경",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{op: \"mouse_move\", x: 300, y: 200, expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "마우스 위치 변경",
+        "ibl_code": "[limbs:screen]{op: \"mouse_move\", x: 300, y: 200}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "커맨드C 눌러",
+    "nodes": "limbs",
+    "difficulty": 1,
+    "tags": "",
+    "topic": "브라우저·데스크톱 제어",
+    "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\", expect_app:$s.app}",
+    "category": "composition",
+    "source": "manual_seed",
+    "provenance": {
+      "edition": 2,
+      "kind": "reviewed_screen_guard",
+      "supersedes": {
+        "intent": "커맨드C 눌러",
+        "ibl_code": "#!ibl edition=2\nreturn [limbs:screen]{\"op\":\"key\",\"key\":\"cmd+c\"}",
+        "source": "balanced_20260516"
+      },
+      "runtime_success_claimed": false
+    }
+  }
+]

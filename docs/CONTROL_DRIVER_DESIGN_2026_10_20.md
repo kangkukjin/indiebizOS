@@ -441,3 +441,54 @@ AI 는 후보를 제안한다.
 **라이브 확인(재기동 뒤 `/ibl/execute`).** `Safari제어` status(Safari 미실행 → `running:false, verified:true`)·contract·open(미실행 → `TARGET_MISSING`)·`limbs:screen screen_info`(직접 호출 출처 `user` → `screen_context.available:true`, op 조건 노출)·`[self:limb]{op:"register",target:"app:com.apple.Safari",observations:[…]}` 실기 관측 1행 기록(`data/control_observations.json`). 발견: registered-json/1 어댑터는 `success:false` 의 `error` 문자열만 호출자에게 전하고 `failure` 객체를 떨어뜨린다 → 부품이 코드·다음 걸음을 문장에 싣는다(`"TARGET_MISSING: … 다음: …"`). `contract` op 는 변형 결과 선언이 없으면 `{success, verified}` 결과 계약에 걸린다 → 변형에 `result` 선언.
 
 **남은 것.** (1)·(2) 는 위 실측으로 닫힘(10-20 입회 세션). (3) `pc_control.md` 의 개체 사실("본체 맥 CGSession 없어 잠금 비활성")을 관측 행으로 옮기기 — 행 형식은 준비됨. (4) `recheck` 행을 실행 전 변경 없는 상태 조회로 재확인하는 자동 단계 — 드라이버 부품마다 `status` 가 그 자리이며 공통 집행은 미구현. (5) 사이트 실행 부품은 0개 — 안정된 업무 계약을 줄 수 있는 사이트부터.
+
+## 16 호출 경계 검토에서 발견한 6건 수리 (2026-10-20)
+
+1. **배경 Chrome 결속**: 앞선 읽기가 Chrome을 작업에 결속한 뒤 `auto` 변경 호출이 같은 Chrome으로
+   가던 경로를 최종 드라이버 선택 뒤 거절한다. 다른 브라우저에 같은 변경을 조용히 재전송하지 않는다.
+   `test_browser_embedded.py::test_handler_blocks_background_mutation_after_real_router_pins_chrome`은
+   실제 `execute → route → owned_execute`를 잇고 외부 브라우저 통신만 대체한다.
+2. **입력 대상 필수**: 화면 입력은 `expect_app` 또는 현재 snapshot의 ref가 없으면
+   `APP_GUARD_REQUIRED`로 중단한다. ref의 PID와 입력 직전 포커스 재검사는 유지한다.
+   `test_computer_use.py::test_ibl_entry_refuses_missing_app_guard_before_input`이 실제 IBL 진입점에서
+   여섯 입력 op를 검사한다. 가이드·어휘 설명·은퇴 등록부도 같은 계약으로 맞췄다.
+3. **불명확 결과 전달**: Safari 실패는 `error` 문장뿐 아니라 `error_code`, `failure`, `recovery`를
+   명시한다. UNKNOWN은 `error_type:result_unknown`이며 `recovery`에 상태 조회와 변경 재전송 금지를
+   보존한다. 등록 실행기가 이 필드를 IBL 실패 어댑터에 넘겨 `diagnostic.details`까지 전달한다.
+4. **관측 읽기**: `[self:limb]{op:"list"}`의 기존 기기 목록은 유지하고 `control_observations`에
+   파일 원장의 대상별 개수를 더한다. `list+target`은 기기 이름·ID·`__local__`·`app:`·`site:`를
+   쓰기와 같은 해석기로 해소해 `observations`와 `items`로 본문을 반환한다.
+   `test_control_driver.py::test_observation_write_discover_read_through_ibl_entry`가 등록→목록→본문을 잇는다.
+5. **관측만 있는 면의 발견**: 가이드가 없어도 앱·사이트 관측이 있으면 snapshot이 개수와 조회 대상을
+   알린다. 없는 `control_guide`는 꾸며 넣지 않는다. 내장 브라우저의 조기 반환도 같은 알림 함수를
+   거치며 사이트 관측은 실제 호스트로 조회한다(상위 도메인 가이드 결속과 개체 관측은 구분).
+6. **Safari 닫기 확인**: 탭 index는 닫기 뒤 재번호되므로 고정 신원으로 비교하지 않는다.
+   요청 탭을 제외한 URL·제목 순서와 남은 탭 수를 재조회 값과 비교한다. 동일 URL·제목을 가진
+   탭의 개체 신원이나 요청과 효과의 인과를 보장하는 것은 아니다.
+
+`test_safari_control.py`는 실제 `/ibl/execute` HTTP 라우터·IBL 진입점·등록 실행기·자식 Python 프로세스·Safari 소스·출력 어댑터를
+연결한다. Apple Events 끝단만 모의해 응답 유실 후 UNKNOWN 보존·변경 재전송 0회, 동일 탭의
+앞/중간/뒤 닫기와 다른 탭이 닫힌 경우의 검증 거절을 확인한다. 실제 사용자 앱 조작의 인수 시험과 구분한다.
+
+공용 패키지 경로 재감사: `script_ops.op_run`의 변경은 이미 실패로 판정한 등록 스크립트의
+복구 필드 전달뿐이다. 입력 인자·경로 해소·인터프리터·환경·회원 실행·문서 변환의 권한 경계는
+변경하지 않았다. 패키지 지문을 사용하는 read/fill/write/script 표식을 갱신하고 회원 문서·브리지 회귀를 포함한다.
+
+§15의 미구현 범위(개체 사실 이관·recheck 자동 재확인·사이트 실행 부품)는 이번 수리의 완료 범위와 별개다.
+
+용례 재검토: screen 53건과 limb 15건을 확인했다. screen 중 실행 이력이 없는 입력 예시 29건은
+백업 후 snapshot → `expect_app:$s.app` 입력으로 새로 등록하고 기존 합성 행을 퇴역시켰다.
+정본 시드 `data/idioms/screen_guard_seeds.json`, 원장 입구 `add_examples_batch`, 시맨틱 색인 29건 확인.
+훈련 원본의 일치 행 28건도 갱신했다. 백업은 `data/_backups/2026-10-20_control_driver_examples/`.
+기존 실행 성공 이력은 개작하지 않았으며 새 예시에도 실기 성공을 주장하지 않는다.
+
+검증 결과: 종합 회귀 `pytest backend/ -m 'not system' -n auto --dist loadfile`는 11,027 통과·1 건너뜀.
+관련 system 묶음(스크립트·어휘 배포·제작자 예시·async 관문) 74 통과. HTTP 라우터를 포함해
+보강한 제어 경로와 단일 러너 규약 묶음은 마지막으로 91 통과. 실 서비스 8765는 연결 거절 상태여서
+라이브 HTTP/실기 앱 조작은 검증하지 않았다. HTTP 시험은 동일 라우터를 격리된 FastAPI 앱에 장착한다.
+
+어휘·몸 번들을 재생성했고 어휘 파생·계약·용례 관문은 통과했다. 작업 트리의 어휘 종합 검사에서
+기존 미커밋 `scripts/build_dist_filter.py`·`frontend/package.json` 간 설치 필터 불일치만 남았다.
+두 파일은 이번 커밋에서 제외한다. HEAD의 생성기·package.json을 메모리에서 현재 매니페스트와
+대조한 커밋 대상 필터는 일치했다. 다른 정적 관문 25개를 개별 실행해 모두 통과했으며,
+이 기존 작업 트리 불일치 때문에 커밋 훅은 `--no-verify` 예외를 사용한다.

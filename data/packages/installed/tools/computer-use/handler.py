@@ -683,7 +683,8 @@ def _guard_input(tool_input):
     ref = tool_input.get("ref")
     expected_pid = tool_input.get("_expect_pid")
     if expected is None and not ref and expected_pid is None:
-        return
+        raise ValueError("APP_GUARD_REQUIRED: 입력에는 expect_app(앱 이름·bundle ID) 또는 "
+                         "현재 snapshot의 ref가 필요합니다. snapshot으로 대상을 확인하세요.")
     if expected is not None and (not isinstance(expected, str) or not expected.strip()):
         raise ValueError("expect_app은 비어 있지 않은 앱 이름 또는 bundle ID여야 합니다.")
     current = _frontmost_app()
@@ -835,13 +836,14 @@ def _do_snapshot(tool_input):
         "ocr_lines": [], "ocr_note": None,
         "resolution": f"{VIRTUAL_WIDTH}x{VIRTUAL_HEIGHT}",
         "hint": "요소는 ref로 [limbs:screen]{op:click, ref:\"e3\"} — 좌표 없이 누름(강건). "
-                "OCR 글자는 ref가 없으니 center로 [limbs:screen]{op:click, x, y}.",
+                "OCR 글자는 ref가 없으니 expect_app과 center 좌표로 클릭한다.",
     }
     try:
         app = _frontmost_app()
         result.update(app=app["name"], pid=app["pid"], bundle_id=app.get("bundle_id"))
         if notice := _driver_notice(app.get("bundle_id")):
-            result["control_guide"] = notice["control_guide"]
+            if notice.get("control_guide"):
+                result["control_guide"] = notice["control_guide"]
             result["driver"] = notice
         try:
             els = _ax_elements(app["pid"])
@@ -909,13 +911,17 @@ def _driver_notice(bundle_id):
     try:
         from guide_registry import surface_control_guide
         found = surface_control_guide("app", bundle_id)
-        if not found:
-            return None
         import control_observations
-        found["observations"] = control_observations.count(found["surface"])
-        found["note"] = ("이 앱에는 계약 통로(드라이버)가 있습니다. 좌표·ref 조작 전에 control_guide 를 한 번 읽고 "
-                         "준비된 실행 부품을 우선 쓰세요. 통신 실패 뒤 같은 변경을 화면으로 다시 시도하지 않습니다.")
-        return found
+        surface = "app:" + str(bundle_id).strip().lower()
+        observed = control_observations.count(surface)
+        if not found and not observed:
+            return None
+        notice = {**(found or {}), "surface": surface, "observations": observed}
+        notice["note"] = (
+            "control_guide 의 실행 부품을 우선 쓰세요. " if found else
+            "이 앱에는 관측이 있습니다(실행 드라이버 등록은 없음). "
+        ) + '관측은 [self:limb]{op:"list",target:"' + surface + '"}로 조회하세요. 통신 실패 뒤 변경을 재전송하지 않습니다.'
+        return notice
     except Exception:
         return None
 

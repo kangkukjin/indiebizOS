@@ -162,7 +162,7 @@ def revision(window):
 
 
 def windows(window_id=None):
-    """One Apple Event for the requested window, or all windows. No per-window process."""
+    """One script process for the requested window, or all windows; getters stay inside it."""
     selection = "every window" if window_id is None else f"{{window id {int(window_id)}}}"
     script = f'''-- safari_snapshot_v2
 set rows to {{}}
@@ -351,7 +351,9 @@ def _guard(window):
     # Safari exposes positional tabs, not durable identities or transactional locks.
     urls = osa([t["url"] for t in window["tabs"]])
     return f'''set w to window id {window["window_id"]}
-if (URL of every tab of w) is not equal to {urls} then error "SAFARI_STATE_CHANGED" number -27001
+considering case
+    if (URL of every tab of w) is not equal to {urls} then error "SAFARI_STATE_CHANGED" number -27001
+end considering
 if (index of current tab of w) is not equal to {window["current_tab"]} then error "SAFARI_STATE_CHANGED" number -27001'''
 
 

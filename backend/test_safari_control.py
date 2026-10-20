@@ -273,6 +273,30 @@ def test_native_guard_checks_again_before_changing(driver):
     assert "URL of every tab of w" in script and "index of current tab of w" in script
 
 
+@pytest.mark.parametrize("actual,changed", [
+    ("https://example.test/Path", False),
+    ("https://example.test/path", True),
+])
+def test_native_guard_compares_url_case_exactly(driver, actual, changed):
+    contract = driver.run({"op": "contract"})
+    if contract["host_platform"] not in contract["supported_platforms"]:
+        pytest.skip("Native comparison requires a platform supported by this driver")
+    before = window(driver, ["https://example.test/Path"])
+    # Execute the production guard in the native interpreter, binding getters to local
+    # values so this exercises comparison semantics without touching any user app.
+    script = driver._guard(before).replace(
+        "set w to window id 7",
+        f"set observedURLs to {driver.osa([actual])}\nset observedCurrent to 1",
+    ).replace("URL of every tab of w", "observedURLs").replace(
+        "index of current tab of w", "observedCurrent")
+    if changed:
+        with pytest.raises(driver.Failure) as exc:
+            driver.apple_event(script)
+        assert exc.value.code == "STATE_CHANGED"
+    else:
+        driver.apple_event(script)
+
+
 def test_already_selected_tab_needs_no_mutation_or_second_read(driver):
     before = window(driver, ["A", "B"], current=2)
     out, event = scenario(driver, "switch", [before], [])

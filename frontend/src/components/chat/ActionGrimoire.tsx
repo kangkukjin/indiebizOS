@@ -267,7 +267,6 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
                                     onMouseEnter={() =>
                                       setHoveredAction({ node, action })
                                     }
-                                    onMouseLeave={() => setHoveredAction(null)}
                                     className="px-2.5 py-1 text-xs font-mono bg-white border border-[#E5D5B0] rounded-md text-[#4A4035] hover:bg-[#FFE9B8] hover:border-[#D97706] hover:text-[#92400E] transition-colors"
                                     title={ui.system(meta.description)}
                                   >
@@ -286,7 +285,6 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
                             key={action}
                             onClick={() => handleSelect(node, action)}
                             onMouseEnter={() => setHoveredAction({ node, action })}
-                            onMouseLeave={() => setHoveredAction(null)}
                             className="px-2.5 py-1 text-xs font-mono bg-white border border-[#E5D5B0] rounded-md text-[#4A4035] hover:bg-[#FFE9B8] hover:border-[#D97706] hover:text-[#92400E] transition-colors"
                             title={ui.system(meta.description)}
                           >

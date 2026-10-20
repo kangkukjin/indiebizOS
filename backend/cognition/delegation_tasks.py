@@ -186,6 +186,52 @@ def get_task_row(owner: str, task_id: str):
     return db.get_task(task_id) if db else None
 
 
+def _owner_db_path(owner: str):
+    """소유자의 작업 원장 파일 — 묘비(task_tombstones)는 같은 파일 안에 산다."""
+    if owner == SYSTEM_OWNER:
+        from system_ai_memory import MEMORY_DB_PATH
+        return Path(MEMORY_DB_PATH)
+    folder = Path(get_base_path()) / "projects" / owner
+    return (folder / "conversations.db") if folder.is_dir() else None
+
+
+def tombstone(owner: str, task_id: str):
+    """보존 기간이 지나 지워진 종료 작업의 묘비(boot_common._prune_terminal_tasks_in 이 남김). 없으면 None."""
+    import sqlite3
+    path = _owner_db_path(owner)
+    if not path or not path.exists():
+        return None
+    try:
+        conn = sqlite3.connect(str(path), timeout=3)
+        try:
+            row = conn.execute("SELECT task_id, status, delegated_to, created_at, completed_at, pruned_at "
+                               "FROM task_tombstones WHERE task_id = ?", (task_id,)).fetchone()
+        finally:
+            conn.close()
+    except sqlite3.Error:   # 표가 아직 없는 옛 원장 등 — 묘비 없음과 같다
+        return None
+    if not row:
+        return None
+    return {"task_id": row[0], "status": row[1], "state": state_of({"status": row[1]}), "delegated_to": row[2],
+            "created_at": row[3], "completed_at": row[4], "pruned_at": row[5]}
+
+
+def missing_explanation(owner: str, task_id: str, names=None):
+    """없는 작업의 두 사정을 가른다(긴문장 84회차 L84-2) — ("lost", 글) | ("unknown", 글).
+
+    lost = 종료 뒤 보존 기간이 지나 기록이 지워짐(묘비 있음) · unknown = 이 저장소에 접수 기록 자체가 없음.
+    names 를 주면(프로젝트 경로의 agent 대조) 다른 에이전트의 묘비는 unknown 으로 취급한다."""
+    t = tombstone(owner, task_id)
+    if t and names is not None and t.get("delegated_to") not in names:
+        t = None
+    if t:
+        return "lost", (f"작업 {task_id} 은(는) {t['state']} 로 끝났으나(종료 {t.get('completed_at') or '?'} UTC) "
+                        f"보존 기간이 지나 {t.get('pruned_at')} UTC 에 기록이 지워졌습니다 — 결과 전문은 회수할 수 없고, "
+                        f"산출물 파일이 있으면 그것이 정본입니다.")
+    return "unknown", (f"작업 {task_id} 의 접수 기록이 {owner} 저장소에 없습니다 — "
+                       f"접수된 적 없거나 다른 소유자·다른 몸의 작업입니다.")
+
+
 def settle_sync(owner: str, parent_task_id: str, child_task_id: str):
     if owner == SYSTEM_OWNER:
         from system_ai_memory import settle_sync_delegation
@@ -285,7 +331,8 @@ def task_status(ref: dict) -> dict:
     owner = ref.get("owner") or SYSTEM_OWNER
     v = task_view(owner, ref["task_id"])
     if v is None:
-        return T.view(ref, T.UNKNOWN, error=f"작업 {ref['task_id']} 을(를) {owner} 저장소에서 찾지 못했습니다")
+        missing, text = missing_explanation(owner, ref["task_id"])
+        return T.view(ref, T.UNKNOWN, error=text, missing=missing)
     state = v["state"] if v["state"] in T.STATES else T.RUNNING   # waiting_user 등 수리 대기 = 아직 살아 있음
     from task_cancellation import requested
     if state not in T.TERMINAL and requested(owner, ref['task_id']):

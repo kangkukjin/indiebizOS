@@ -448,7 +448,7 @@ def get_agent_task(project_id: str, agent_id: str, task_id: str, wait: int = 0):
 
     경로의 agent 를 믿지 않고 저장된 delegated_to 와 대조한다(id 또는 이름). wait 는 서버 상한
     (delegation_tasks.HTTP_WAIT_MAX)으로 제한된 대기. 결과 전문은 종료 상태에서만."""
-    from delegation_tasks import HTTP_WAIT_MAX, task_view, wait_for_task
+    from delegation_tasks import HTTP_WAIT_MAX, missing_explanation, task_view, wait_for_task
     try:
         project_path = project_manager.get_project_path(project_id)
     except Exception as exc:
@@ -469,7 +469,11 @@ def get_agent_task(project_id: str, agent_id: str, task_id: str, wait: int = 0):
         names |= {runner.config.get("id"), runner.config.get("name")}
     bounded = max(0, min(int(wait or 0), HTTP_WAIT_MAX))
     view = wait_for_task(project_id, task_id, bounded, agent_id) if bounded else task_view(project_id, task_id, agent_id)
-    if view is None or view.get("delegated_to") not in names:
+    if view is None:
+        # 404 '기록 없음' 과 410 '종료 후 소실'(보존 기간 지나 묘비만 남음)을 가른다 — L84-2.
+        missing, text = missing_explanation(project_id, task_id, names)
+        raise HTTPException(status_code=410 if missing == "lost" else 404, detail=text)
+    if view.get("delegated_to") not in names:
         raise HTTPException(status_code=404, detail=f"작업을 찾을 수 없습니다: {task_id}")
     return view
 

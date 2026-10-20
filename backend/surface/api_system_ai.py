@@ -449,11 +449,13 @@ def get_system_ai_task(task_id: str, wait: int = 0):
     wait(초, 서버 상한 delegation_tasks.HTTP_WAIT_MAX)를 주면 종료 상태가 되거나 시간이 끝날 때까지
     기다린 뒤 현재 상태를 돌려준다 — 클라이언트가 무한 대기를 지정하지 못한다. 결과 전문은 종료
     상태에서만 `result`(실패면 `error`). 완료 상태와 업무 달성 판정은 별개다."""
-    from delegation_tasks import HTTP_WAIT_MAX, SYSTEM_OWNER, task_view, wait_for_task
+    from delegation_tasks import HTTP_WAIT_MAX, SYSTEM_OWNER, missing_explanation, task_view, wait_for_task
     bounded = max(0, min(int(wait or 0), HTTP_WAIT_MAX))
     view = wait_for_task(SYSTEM_OWNER, task_id, bounded) if bounded else task_view(SYSTEM_OWNER, task_id)
     if view is None:
-        raise HTTPException(status_code=404, detail=f"작업을 찾을 수 없습니다: {task_id}")
+        # 404 '기록 없음' 과 410 '종료 후 소실'(보존 기간 지나 묘비만 남음)을 가른다 — L84-2.
+        missing, text = missing_explanation(SYSTEM_OWNER, task_id)
+        raise HTTPException(status_code=410 if missing == "lost" else 404, detail=text)
     return view
 
 

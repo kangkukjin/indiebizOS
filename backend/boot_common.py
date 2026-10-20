@@ -70,8 +70,9 @@ def wire_local_subsystems(profile: str = None) -> dict:
             print(f"{tag} 증류 큐 무장 실패 (무시): {e}")
             results["distill_resume"] = False
 
-    # 이전 세션의 완료된 task 기록 정리: 프로젝트별 conversations.db + system_ai_memory.db 의
-    # status='completed' 행을 비운다(현재 세션 task만 보존). 순수 로컬 SQLite, 하드웨어 무관 —
+    # 보존 기간이 지난 종료 task 정리(L84-2 수리 2026-10-20 — 옛 동작은 status='completed' 행을 부팅마다
+    # 전부 지워 접수증 status_url 이 재기동을 넘기지 못했다): 프로젝트별 conversations.db +
+    # system_ai_memory.db 에서 TASK_RETENTION_DAYS 가 지난 종료 행만 묘비로 바꾼다. 순수 로컬 SQLite, 하드웨어 무관 —
     # 폰-자아도 로컬에서 에이전트를 돌려 task 를 쌓으므로 같이 정리받아야 한다(맥 진입점에만
     # 있던 것이 폰서 침묵 누락이었다). 경로는 runtime_utils 가 INDIEBIZ_BASE_PATH 로 몸별 해소.
     if other_body:
@@ -174,13 +175,53 @@ def _another_body_is_live() -> bool:
         return False
 
 
+# 종료(completed/failed/cancelled) 작업 행의 보존 기간(일). 접수증(status_url)은 재기동을 넘겨 살아야 하므로
+# 부팅은 이 기간이 지난 종료 행만 지우고, 지울 때 묘비(task_tombstones)를 남긴다 — 조회가 '접수 기록 없음'과
+# '종료 후 소실'을 가를 수 있게(delegation_tasks.missing_explanation). 진행 중(pending 등) 행은 건드리지 않는다.
+TASK_RETENTION_DAYS = 30
+TERMINAL_TASK_STATUSES = ("completed", "failed", "cancelled")
+
+
+def _prune_terminal_tasks_in(db_path, retention_days=TASK_RETENTION_DAYS) -> int:
+    """한 SQLite 파일의 tasks 에서 보존 기간이 지난 종료 행을 묘비(task_tombstones)로 바꾼다. 지운 행 수.
+
+    stdlib 만 사용(폰 번들 안전). tasks 표가 없으면 0. 묘비는 task_id·status·delegated_to·created_at·
+    completed_at·pruned_at 만 — 결과 전문은 보존하지 않는다(소실 사실 자체를 알리는 것이 목적)."""
+    import sqlite3
+    conn = sqlite3.connect(str(db_path), timeout=3)
+    try:
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'").fetchone():
+            return 0
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS task_tombstones (
+                task_id TEXT PRIMARY KEY, status TEXT, delegated_to TEXT,
+                created_at TEXT, completed_at TEXT,
+                pruned_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )""")
+        marks = ",".join("?" * len(TERMINAL_TASK_STATUSES))
+        rows = conn.execute(
+            f"SELECT task_id, status, delegated_to, created_at, completed_at FROM tasks "
+            f"WHERE status IN ({marks}) AND COALESCE(completed_at, created_at) < datetime('now', ?)",
+            (*TERMINAL_TASK_STATUSES, f"-{int(retention_days)} days")).fetchall()
+        if not rows:
+            return 0
+        conn.executemany(
+            "INSERT OR REPLACE INTO task_tombstones (task_id, status, delegated_to, created_at, completed_at) "
+            "VALUES (?, ?, ?, ?, ?)", rows)
+        conn.executemany("DELETE FROM tasks WHERE task_id = ?", [(r[0],) for r in rows])
+        conn.commit()
+        return len(rows)
+    finally:
+        conn.close()
+
+
 def _cleanup_completed_tasks(base_path, data_path, tag: str) -> bool:
-    """projects.json 의 각 프로젝트 conversations.db + system_ai_memory.db 에서 완료 task 삭제.
+    """projects.json 의 각 프로젝트 conversations.db + system_ai_memory.db 에서 보존 기간이 지난 종료 task 를 묘비로.
 
     stdlib(json/sqlite3/pathlib)만 사용 — 새 backend 모듈 의존 없음(폰 번들 안전).
+    옛 동작(완료 행 전부 삭제)은 백그라운드 접수증이 재기동 뒤 404 가 되는 원인이었다(긴문장 84회차 L84-2).
     """
     import json
-    import sqlite3
     from pathlib import Path
 
     cleaned = 0
@@ -194,11 +235,7 @@ def _cleanup_completed_tasks(base_path, data_path, tag: str) -> bool:
             db = Path(proj.get("path", "")) / "conversations.db"
             if db.exists():
                 try:
-                    conn = sqlite3.connect(str(db), timeout=3)
-                    conn.execute("DELETE FROM tasks WHERE status = 'completed'")
-                    conn.commit()
-                    cleaned += conn.total_changes
-                    conn.close()
+                    cleaned += _prune_terminal_tasks_in(db)
                 except Exception:
                     pass
 
@@ -206,14 +243,10 @@ def _cleanup_completed_tasks(base_path, data_path, tag: str) -> bool:
     sys_db = data_path / "system_ai_memory.db"
     if sys_db.exists():
         try:
-            conn = sqlite3.connect(str(sys_db), timeout=3)
-            conn.execute("DELETE FROM tasks WHERE status = 'completed'")
-            conn.commit()
-            cleaned += conn.total_changes
-            conn.close()
+            cleaned += _prune_terminal_tasks_in(sys_db)
         except Exception:
             pass
 
     if cleaned > 0:
-        print(f"{tag} 이전 세션 완료 task {cleaned}건 정리")
+        print(f"{tag} 보존 기간({TASK_RETENTION_DAYS}일) 지난 종료 task {cleaned}건 묘비로 정리")
     return True

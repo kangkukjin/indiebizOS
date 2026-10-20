@@ -578,6 +578,97 @@ def test_agent_task_route_checks_stored_owner(world, monkeypatch):
     assert other.value.status_code == 404
 
 
+def _restart(world):
+    """재기동 모사 — 부팅 배선의 작업 원장 정리를 임시 base 에 돌린다(boot_common 이 projects.json 을 읽는다)."""
+    import boot_common
+    (world.tmp / "projects" / "projects.json").write_text(json.dumps(
+        [{"id": PROJECT, "type": "project", "path": world.project_path}]), encoding="utf-8")
+    boot_common._cleanup_completed_tasks(world.tmp, world.tmp, "[t]")
+    boot_common._prune_terminal_tasks_in(memory.MEMORY_DB_PATH)   # 시험의 시스템 원장은 data/ 밖(system.db)
+
+
+def _age_out(db_file, task_id):
+    import boot_common
+    with sqlite3.connect(db_file) as conn:
+        conn.execute("UPDATE tasks SET completed_at = datetime('now', ?) WHERE task_id = ?",
+                     (f"-{boot_common.TASK_RETENTION_DAYS + 1} days", task_id))
+
+
+def test_agent_background_receipt_survives_restart(world, monkeypatch):
+    """긴문장 84회차 L84-2 — 완료 → 재기동 → 같은 status_url 이 succeeded + 결과 전문."""
+    import api_agents
+    monkeypatch.setattr(api_agents, "project_manager",
+                        SimpleNamespace(get_project_path=lambda pid: Path(world.project_path)))
+    monkeypatch.setattr(api_agents, "agent_runners", {})   # 재기동 뒤 러너 명부는 비어 있다
+    full = "답변 전문 " * 400
+    world.db.create_task("t_bg", "user@gui", "gui", "명령", AGENT_NAME)
+    world.db.complete_task("t_bg", full)
+    _restart(world)
+    view = api_agents.get_agent_task(PROJECT, AGENT_ID, "t_bg")
+    assert view["state"] == "succeeded" and view["result"] == full
+    assert view["status_url"] == f"/projects/{PROJECT}/agents/{AGENT_ID}/tasks/t_bg"
+    # 실패로 끝난 작업도 사유째 산다
+    world.db.create_task("t_bg_failed", "user@gui", "gui", "명령", AGENT_NAME)
+    world.db.fail_task("t_bg_failed", "모델 호출 실패")
+    _restart(world)
+    failed = api_agents.get_agent_task(PROJECT, AGENT_ID, "t_bg_failed")
+    assert failed["state"] == "failed" and "모델 호출 실패" in failed["error"]
+
+
+def test_system_ai_background_receipt_survives_restart(world):
+    import api_system_ai
+    memory.create_task("s_bg", "user@gui", "gui", "명령")
+    memory.complete_task("s_bg", "시스템 답 " * 300)
+    _restart(world)
+    view = api_system_ai.get_system_ai_task("s_bg")
+    assert view["state"] == "succeeded" and view["result"] == "시스템 답 " * 300
+
+
+def test_missing_task_is_told_apart_from_lost_task(world, monkeypatch):
+    """모르는 task_id: 접수 기록 없음(404)과 종료 후 보존 기간이 지나 소실(410)을 가른다 — HTTP 와 접수증 어댑터 모두."""
+    import api_agents
+    import api_system_ai
+    monkeypatch.setattr(api_agents, "project_manager",
+                        SimpleNamespace(get_project_path=lambda pid: Path(world.project_path)))
+    monkeypatch.setattr(api_agents, "agent_runners", {})
+    # 접수된 적 없는 작업
+    with pytest.raises(api_agents.HTTPException) as never:
+        api_agents.get_agent_task(PROJECT, AGENT_ID, "t_never")
+    assert never.value.status_code == 404 and "접수 기록이" in never.value.detail and "t_never" in never.value.detail
+    assert world.dt.missing_explanation(PROJECT, "t_never")[0] == "unknown"
+    # 끝났지만 보존 기간이 지나 지워진 작업
+    world.db.create_task("t_lost", "user@gui", "gui", "명령", AGENT_NAME)
+    world.db.complete_task("t_lost", "옛 결과")
+    _age_out(world.tmp / "projects" / PROJECT / "conversations.db", "t_lost")
+    _restart(world)
+    assert world.db.get_task("t_lost") is None
+    with pytest.raises(api_agents.HTTPException) as lost:
+        api_agents.get_agent_task(PROJECT, AGENT_ID, "t_lost")
+    assert lost.value.status_code == 410
+    assert "succeeded" in lost.value.detail and "지워졌습니다" in lost.value.detail
+    # 다른 에이전트 경로로는 묘비도 보이지 않는다(저장된 소유자 대조 유지)
+    with pytest.raises(api_agents.HTTPException) as other:
+        api_agents.get_agent_task(PROJECT, "다른에이전트", "t_lost")
+    assert other.value.status_code == 404
+    # 접수증 어댑터([self:task]{op:status})도 같은 구분을 missing 칸으로 돌려준다
+    import task_receipts as T
+    lost_view = world.dt.task_status({"kind": "delegation", "owner": PROJECT, "task_id": "t_lost"})
+    assert lost_view["state"] == T.UNKNOWN and lost_view["missing"] == "lost" and "지워졌습니다" in lost_view["failure"]
+    never_view = world.dt.task_status({"kind": "delegation", "owner": PROJECT, "task_id": "t_never"})
+    assert never_view["state"] == T.UNKNOWN and never_view["missing"] == "unknown"
+    # 시스템 AI 원장도 같은 두 사정
+    memory.create_task("s_lost", "user@gui", "gui", "명령")
+    memory.complete_task("s_lost", "옛 시스템 결과")
+    _age_out(memory.MEMORY_DB_PATH, "s_lost")
+    _restart(world)
+    with pytest.raises(api_system_ai.HTTPException) as s_lost:
+        api_system_ai.get_system_ai_task("s_lost")
+    assert s_lost.value.status_code == 410 and "지워졌습니다" in s_lost.value.detail
+    with pytest.raises(api_system_ai.HTTPException) as s_never:
+        api_system_ai.get_system_ai_task("s_never")
+    assert s_never.value.status_code == 404 and "접수 기록이" in s_never.value.detail
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
 

@@ -1255,7 +1255,7 @@
     {
       "id": "android_control",
       "name": "Android OS 드라이버 — 호출·검증·복구",
-      "description": "Android제어·Android제어확인으로 폰 음량·진동·화면·밝기·회전·손전등·센서를 제어한다. 대상·권한·결과 확인과 원 영수증 기반 복구.",
+      "description": "Android제어·Android제어확인으로 앱 실행·홈·뒤로·접근성 화면 읽기·터치·문자 입력과 하드웨어를 제어한다. 화면 판본 검사·결과 확인·원 영수증 복구.",
       "keywords": [
         "안드로이드",
         "폰 컨트롤",

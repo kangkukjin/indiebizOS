@@ -11,6 +11,8 @@ object RemoteDeviceCalls {
         val a = JSONArray(args)
         val value: Any = when (method) {
             "hardware" -> com.indiebiz.phoneagent.HardwareControl.run(JSONObject(a.getString(0)))
+            // Preserve inner failure/phase evidence: the generic Python bridge unwraps value only.
+            "uiControl" -> JSONObject().put("success", true).put("control", JSONObject(PhoneAccessibilityService.control(a.getString(0))))
             "snapshot" -> JSONObject(PhoneAccessibilityService.snapshot())
             "tap" -> JSONObject(PhoneAccessibilityService.tap(a.getInt(0), a.getInt(1)))
             "tapByText" -> JSONObject(PhoneAccessibilityService.tapByText(a.getString(0), a.optInt(1, 0)))

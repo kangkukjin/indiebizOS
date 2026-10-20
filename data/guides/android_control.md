@@ -36,15 +36,76 @@ return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"volume",s
 | torch | torch | 선택한 카메라의 토치 콜백 상태 |
 | sensor | sensor | 지정 센서의 유효한 한 표본 |
 | settings_permission | 같은 이름 | 설정 화면 열기 요청만, verified:false |
+| ui_snapshot | phone_ui.py → snapshot | 전면 창의 접근성 요소·패키지·화면 판본 읽기 |
+| app_launch | uiControl → launcher Intent | 요청한 패키지가 전면에 있는지 |
+| home | uiControl → GLOBAL_ACTION_HOME | 기본 홈 패키지가 전면에 있는지 |
+| back / tap | uiControl → 기존 접근성 키/제스처 | expect가 있으면 화면 조건, 없으면 접수·관측만 verified:false |
+| type_text | uiControl → ACTION_SET_TEXT | 지정한 포커스 입력칸의 실제 텍스트 |
 
-현재 범위는 기존 하드웨어 기능의 계약 정비다. 앱 실행·홈/뒤로·범용 화면 입력·브라우저는 이 드라이버에 추가하지 않았다.
-동작의 `needs_front:false`는 앞 앱 선택을 요구하지 않는다는 뜻이며 사용자에게 보이지 않는다는 뜻이 아니다.
+UI 제어는 아래 별도 조건을 따른다. 브라우저 DOM·탭 제어는 이 드라이버의 범위가 아니다.
+하드웨어 동작의 `needs_front:false`는 앞 앱 선택을 요구하지 않는다는 뜻이며 사용자에게 보이지 않는다는 뜻이 아니다.
 화면 켜기·잠금·권한 화면·음량 등은 `shared_state:true`, 격리 자원은 없다.
+
+## 앱 실행·화면 독해·입력
+
+새 UI 기능은 **`ui_contract:1`을 제공하는 APK와 켜진 접근성 서비스**가 필요하다.
+기존 APK는 변경 전에 `UI_DRIVER_UPDATE_REQUIRED`로 거절한다. 접근성 권한은 폰 설정에서
+사용자가 켠다. 기존 하드웨어 제어는 그대로 사용할 수 있다. 회원 APK도 접근성 화면 독해 확장을 공유한다.
+
+```ibl
+#!ibl edition=2
+return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"app_launch",package:"com.android.settings"}}
+```
+
+`app_launch`는 설치된 앱의 정확한 패키지를 받아 launcher Intent를 한 번 보낸다. 패키지가 없거나
+실행 진입점이 없으면 실행 전에 실패한다. Android의 백그라운드 실행 제한·잠금·권한을 우회하지 않는다.
+`home`은 기본 홈 앱 관측을 확인한다. 앱의 업무 완료나 홈 화면의 특정 페이지까지 보장하지 않는다.
+
+`ui_snapshot`의 `result.screen`에는 `package,window_id,width,height,rotation,snapshot_id,elements,truncated`가 있다.
+각 요소는 `ref,path,resource_id,label,text,cx,cy,bounds,editable,focused,enabled,password`를 제공한다.
+`bounds`는 화면 픽셀의 `[left,top,right,bottom]`. 이것은 스크린샷/OCR이 아닌 접근성 트리다.
+최대 200개 요소·1000개 노드·깊이 40을 읽으며 생략이 있으면 truncated:true다.
+빈 입력칸도 포함하고 비밀번호 텍스트·설명은 노출하지 않는다. 앱이 제공하지 않는 캔버스 내용은 읽을 수 없다.
+
+```ibl
+#!ibl edition=2
+return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"ui_snapshot"}}
+```
+
+화면을 보고 선택한 뒤 `tap`에 **그 화면의 snapshot_id와 ref**, 또는 **snapshot_id와 x/y**를 전달한다.
+ref와 좌표는 함께 쓰지 않는다. `back`에도 snapshot_id를 전달한다.
+접근성 서비스에서 관측 판본을 다시 비교하고 다르면 `STALE_SCREEN`으로 실행 전에 거절한다.
+판본은 세션·전면 창·방향·크기·관측한 요소 내용에 묶인다. 이것은 사람·다른 앱의 동시 조작까지 잠그는 OS 트랜잭션이 아니다.
+자동으로 새 좌표를 선택하거나 재시도하지 않는다.
+
+`tap`·`back`의 선택 인수 `expect:{package:"...",text:"..."}`는 동작 뒤 확인할 조건이다.
+지정한 조건은 모두 일치해야 하며 text는 보이는 요소 label의 **정확한 일치**다.
+조건이 없으면 호출 종료와 후속 화면만 반환하고 **verified:false**다.
+전후 화면이 다르다는 이유만으로 원하는 동작이 됐다고 판정하지 않는다.
+
+```ibl
+#!ibl edition=2
+return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"tap",snapshot_id:"관측한 64자리 snapshot_id",ref:3,expect:{text:"다음 화면의 라벨"}}}
+```
+
+`type_text`는 `snapshot_id,ref,text`를 받는다. 먼저 입력칸을 터치하고 **다시 화면을 읽어**
+focused:true인 editable 요소를 지정한다. 텍스트는 추가 입력이 아닌 **전체 교체**이고 빈 문자열은 비우기다.
+한글·줄바꿈을 지원하며 최대 10000자다. 비밀번호 필드·비편집 요소·다른 포커스는 실행 전에 거절한다.
+실행 뒤 같은 패키지·창·요소 경로·resource_id의 실제 텍스트를 대조한다. 키보드 Enter/전송은 하지 않는다.
+
+```ibl
+#!ibl edition=2
+return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"type_text",snapshot_id:"관측한 64자리 snapshot_id",ref:2,text:"안녕하세요"}}
+```
+
+모든 UI 동작은 `needs_front:true`, 변경은 `shared_state:true`다. 사람에게 보이는 전면 화면을 사용한다.
+변경은 한 번만 전송하고 이후 약 1.75초 동안 최대 8회 **읽기만** 한다. 전환 지연·화면 부재·서비스 중단으로
+확인하지 못하면 unknown과 원 관측을 남긴다. 탭 콜백 취소도 일부 효과 가능성이 있어 unknown이다.
 
 ## 결과와 실패 복구
 
 PC와 같은 반환 틀: `status,target,verified,result,task_ref,verification,evidence_ref,failure`.
-- `completed`: 호출 처리 종료. `verified:false`인 진동·권한 화면 요청을 실제 효과 확인으로 보고하지 않는다.
+- `completed`: 호출 처리 종료. `verified:false`인 진동·권한 화면·조건 없는 터치/뒤로 요청을 실제 효과 확인으로 보고하지 않는다.
 - `failed`: 대상/준비 거절 또는 확인한 결과가 요청과 불일치. `failure.stage/message/next`와 원 관측을 읽는다.
 - `pending`: 실행 중. 전체 반환을 보존해 아래 확인 함수에 전달한다.
 - `unknown`: 실행 여부·원 영수증·연결이 불명확. **변경을 다시 보내지 않는다.**
@@ -59,7 +120,7 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 대상·request_id·소스 지문·검증기 판본을 대조한 뒤 **같은 작업만 조회**한다. 실패·취소·시간 초과에도
 일부 변경 가능성이 있으면 unknown을 유지한다. 검증기 변경·근거 만료·영수증 손실도 성공으로 꾸미지 않는다.
 응답 자체를 잃었으면 실행 원장의 `result_ref`·resume 또는 guestpc history에서 원 요청을 회수한다.
-회수할 수 없으면 새 **읽기**(`status`/`volume_status`)로 현재 상태만 확인한다. 현재 값의 일치는
+회수할 수 없으면 새 **읽기**(`status`/`volume_status`/`ui_snapshot`)로 현재 상태만 확인한다. 현재 값의 일치는
 이전 요청이 실행됐다는 증거가 아니며, 다른 통로로 같은 변경을 재전송하지 않는다.
 
 데스크톱 앱은 미확인 반환을 보관하고 **기존 작업 확인** 버튼으로 조회한다(창 재시작 뒤에는 실행 원장 사용).
@@ -70,8 +131,8 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 
 공용 준비·검증은 `data/scripts/android_control.py`, 공개 정의는
 `data/idioms/android_control.ibl`·`android_control_check.ibl`이며 `installed.json`으로 배포한다.
-기존 `data/instruments/phone_control.py`·`phone_device.py`를 호출 시 읽어 폰에서 실행한다.
-앱과 AI는 같은 판본·같은 검증을 쓴다. 새 IBL 내용어나 APK 기능을 요구하지 않는다.
+`data/instruments/phone_control.py`·`phone_device.py`·`phone_ui.py`를 호출 시 읽어 폰에서 실행한다.
+앱과 AI는 같은 판본·같은 검증을 쓴다. 새 IBL 내용어는 만들지 않는다. UI 확장은 접근성 관측·판본 검사·앱 실행 다리를 포함한 APK가 필요하다.
 의미 검색 시드는 `android_control_seeds.json`, 등록은 `.venv/bin/python3 scripts/register_webapp_idioms.py --seed-file android_control_seeds.json --apply`다.
 
 아래 표의 `op`는 실행 부품 내부 계약이다. 일반 호출은 위 공개 `action`을 사용한다.

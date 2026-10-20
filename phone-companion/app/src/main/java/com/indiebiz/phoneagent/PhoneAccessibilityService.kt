@@ -30,35 +30,130 @@ class PhoneAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
     // ---- 화면 독해 ----
+    private val observationSession = java.util.UUID.randomUUID().toString()
+
     private fun doSnapshot(): String {
         val root = rootInActiveWindow ?: return err("활성 창 없음(잠금화면/전환 중일 수 있음)")
         val arr = JSONArray()
-        val counter = intArrayOf(0)
-        fun visit(node: AccessibilityNodeInfo?, depth: Int) {
-            if (node == null || counter[0] >= 200 || depth > 40) return
-            val text = node.text?.toString()?.trim() ?: ""
-            val desc = node.contentDescription?.toString()?.trim() ?: ""
-            val clickable = node.isClickable
-            if (text.isNotEmpty() || desc.isNotEmpty() || clickable) {
-                val r = Rect(); node.getBoundsInScreen(r)
-                if (r.width() > 0 && r.height() > 0) {
-                    arr.put(
-                        JSONObject()
-                            .put("ref", counter[0])
-                            .put("label", if (text.isNotEmpty()) text else desc)
+        var visited = 0
+        var truncated = false
+        fun visit(node: AccessibilityNodeInfo?, depth: Int, path: String) {
+            if (node == null) return
+            try {
+                if (++visited > 1000 || arr.length() >= 200 || depth > 40) { truncated = true; return }
+                val text = if (node.isPassword) "" else node.text?.toString() ?: ""
+                val desc = if (node.isPassword) "" else node.contentDescription?.toString() ?: ""
+                if (text.isNotEmpty() || desc.isNotEmpty() || node.isClickable || node.isEditable) {
+                    val r = Rect(); node.getBoundsInScreen(r)
+                    if (r.width() > 0 && r.height() > 0 && node.isVisibleToUser) {
+                        arr.put(JSONObject().put("ref", arr.length()).put("path", path)
+                            .put("resource_id", node.viewIdResourceName ?: "")
+                            .put("label", if (text.isNotEmpty()) text else desc).put("text", text)
                             .put("cx", r.centerX()).put("cy", r.centerY())
-                            .put("clickable", clickable)
-                            .put("editable", node.isEditable)
-                            .put("cls", node.className?.toString()?.substringAfterLast('.') ?: "")
-                    )
-                    counter[0]++
+                            .put("bounds", JSONArray(listOf(r.left, r.top, r.right, r.bottom)))
+                            .put("clickable", node.isClickable).put("editable", node.isEditable)
+                            .put("focused", node.isFocused).put("enabled", node.isEnabled)
+                            .put("password", node.isPassword)
+                            .put("cls", node.className?.toString()?.substringAfterLast('.') ?: ""))
+                    }
                 }
-            }
-            for (i in 0 until node.childCount) visit(node.getChild(i), depth + 1)
+                for (i in 0 until node.childCount) {
+                    if (visited >= 1000 || arr.length() >= 200) { truncated = true; break }
+                    visit(node.getChild(i), depth + 1, "$path/$i")
+                }
+            } finally { node.recycle() }
         }
-        visit(root, 0)
-        return JSONObject().put("success", true).put("count", arr.length())
-            .put("elements", arr).toString()
+        val pkg = root.packageName?.toString() ?: ""
+        val windowId = root.windowId
+        val display = getSystemService(android.view.WindowManager::class.java).defaultDisplay
+        val size = android.graphics.Point().also { display.getRealSize(it) }
+        visit(root, 0, "0")
+        val result = JSONObject().put("success", true).put("ui_contract", 1)
+            .put("session", observationSession).put("package", pkg).put("window_id", windowId)
+            .put("width", size.x).put("height", size.y).put("rotation", display.rotation)
+            .put("count", arr.length()).put("elements", arr).put("truncated", truncated)
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(result.toString().toByteArray(Charsets.UTF_8))
+        return result.put("snapshot_id", digest.joinToString("") { "%02x".format(it) }).toString()
+    }
+
+    /** Driver mutations share one guard/dispatch lock. Never retries a dispatched action. */
+    @Synchronized private fun doControl(a: JSONObject): String {
+        var phase = "before_dispatch"
+        var inputNode: AccessibilityNodeInfo? = null
+        try {
+            val op = a.getString("op")
+            require(op in setOf("app_launch", "home", "back", "tap", "type_text")) { "unsupported_ui_action" }
+            val before = JSONObject(doSnapshot())
+            require(before.optBoolean("success")) { before.optString("error") }
+            val guarded = op in setOf("back", "tap", "type_text")
+            require(!guarded || a.getString("snapshot_id") == before.getString("snapshot_id")) {
+                "STALE_SCREEN: 화면을 다시 읽고 새 요청을 만드세요"
+            }
+            val result = JSONObject().put("before", before)
+            var target: JSONObject? = null
+            if (op == "tap" || op == "type_text") {
+                if (a.has("ref")) {
+                    val nodes = before.getJSONArray("elements")
+                    target = (0 until nodes.length()).map { nodes.getJSONObject(it) }
+                        .singleOrNull { it.getInt("ref") == a.getInt("ref") }
+                    require(target != null && target.getBoolean("enabled")) { "INVALID_TARGET" }
+                }
+                if (op == "type_text") {
+                    require(target != null && target.getBoolean("focused") && target.getBoolean("editable")
+                        && !target.getBoolean("password")) { "FOCUSED_EDITABLE_REQUIRED: 입력칸을 먼저 선택하세요" }
+                    val text = a.getString("text")
+                    require(text.codePointCount(0, text.length) <= 10000) { "text too long" }
+                }
+                if (target != null) result.put("target_element", target)
+            }
+            var launch: android.content.Intent? = null
+            if (op == "app_launch") {
+                launch = packageManager.getLaunchIntentForPackage(a.getString("package"))
+                require(launch != null) { "APP_NOT_LAUNCHABLE: 패키지·설치를 확인하세요" }
+                result.put("expected_package", a.getString("package"))
+            }
+            if (op == "home") {
+                val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+                    .addCategory(android.content.Intent.CATEGORY_HOME)
+                val home = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                val candidates = packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                val concrete = candidates.any { it.activityInfo.packageName == home?.activityInfo?.packageName
+                    && it.activityInfo.name == home?.activityInfo?.name }
+                result.put("expected_package", if (concrete) home?.activityInfo?.packageName ?: "" else "")
+            }
+            val x = if (op == "tap") target?.getInt("cx") ?: a.getInt("x") else 0
+            val y = if (op == "tap") target?.getInt("cy") ?: a.getInt("y") else 0
+            if (op == "tap") require(x in 0 until before.getInt("width") && y in 0 until before.getInt("height")) { "INVALID_COORDINATES" }
+            // Resolve the observed node itself, not whichever field gained focus later.
+            if (op == "type_text") inputNode = resolveInput(before, target!!)
+            phase = "dispatch"
+            val dispatch = when (op) {
+                "app_launch" -> { startActivity(launch!!.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); JSONObject().put("success", true) }
+                "home", "back" -> JSONObject(doPressKey(op))
+                "tap" -> JSONObject(doTap(x, y))
+                else -> JSONObject(setNodeText(inputNode!!, a.getString("text")))
+            }
+            return result.put("success", dispatch.optBoolean("success"))
+                .put("dispatched", true).put("dispatch", dispatch).put("execution_phase", phase)
+                .put("error", dispatch.optString("error")).toString()
+        } catch (e: Exception) {
+            return JSONObject().put("success", false).put("error", e.message ?: e.toString())
+                .put("execution_phase", phase).put("dispatched", phase != "before_dispatch").toString()
+        } finally { inputNode?.recycle() }
+    }
+
+    private fun resolveInput(before: JSONObject, target: JSONObject): AccessibilityNodeInfo {
+        var node = rootInActiveWindow ?: error("STALE_SCREEN: 활성 창 없음")
+        try {
+            require(node.windowId == before.getInt("window_id") && node.packageName?.toString() == before.getString("package")) { "STALE_SCREEN: 전면 창 변경" }
+            for (index in target.getString("path").split('/').drop(1)) {
+                val child = node.getChild(index.toInt()) ?: error("STALE_SCREEN: 입력칸 없음")
+                node.recycle(); node = child
+            }
+            require(node.isFocused && node.isEditable && node.isEnabled && !node.isPassword
+                && (node.viewIdResourceName ?: "") == target.getString("resource_id")) { "STALE_SCREEN: 입력칸 변경" }
+            return node
+        } catch (e: Exception) { node.recycle(); throw e }
     }
 
     private fun findByText(query: String, index: Int): AccessibilityNodeInfo? {
@@ -130,15 +225,19 @@ class PhoneAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun doTypeText(text: String): String {
-        val root = rootInActiveWindow ?: return err("활성 창 없음")
-        val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            ?: return err("입력 포커스 없음 — 먼저 입력창을 탭하세요")
+    private fun setNodeText(node: AccessibilityNodeInfo, text: String): String {
         val args = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         }
-        return if (focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args))
-            ok("입력: ${text.take(20)}") else err("입력 실패(편집 불가 요소일 수 있음)")
+        return if (node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args))
+            ok("텍스트 교체 요청") else err("입력 실패(편집 불가 요소일 수 있음)")
+    }
+
+    private fun doTypeText(text: String): String {
+        val root = rootInActiveWindow ?: return err("활성 창 없음")
+        val focused = try { root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) } finally { root.recycle() }
+            ?: return err("입력 포커스 없음 — 먼저 입력창을 탭하세요")
+        return try { setNodeText(focused, text) } finally { focused.recycle() }
     }
 
     private fun doPressKey(key: String): String {
@@ -162,6 +261,7 @@ class PhoneAccessibilityService : AccessibilityService() {
             .put("error", "접근성 서비스 미활성 — 폰 설정 > 접근성 > 설치된 서비스 > IndieBiz 를 켜세요")
             .put("needs_accessibility", true).toString()
 
+        @JvmStatic fun control(args: String): String = instance?.doControl(JSONObject(args)) ?: notReady()
         @JvmStatic fun snapshot(): String = instance?.doSnapshot() ?: notReady()
         @JvmStatic fun tap(x: Int, y: Int): String = instance?.doTap(x, y) ?: notReady()
         @JvmStatic fun tapByText(q: String, idx: Int): String = instance?.doTapByText(q, idx) ?: notReady()

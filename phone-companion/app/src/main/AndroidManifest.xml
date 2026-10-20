@@ -40,6 +40,11 @@
     <!-- 사진 GPS(EXIF) 원본 접근 — 위치 질의(has_gps) 일 때만 사용. -->
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
 
+    <queries>
+        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
+        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.HOME" /></intent>
+    </queries>
+
     <application
         android:name=".App"
         android:label="IndieBiz"

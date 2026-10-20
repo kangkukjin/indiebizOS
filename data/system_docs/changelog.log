@@ -2754,3 +2754,5 @@
 
 [2026-10-20] Android OS 드라이버: Android제어·Android제어확인으로 기존 폰 하드웨어 실행을 공용화. 원 준비·접수 영수증/요청 ID/소스 지문 검증, 설정 재조회와 요청 접수 구분, unknown에서 자동 재전송 금지. 앱·가이드·배포·의미 검색 연결. 연결 폰 3대의 읽기 및 pending→후속 확인 실기 통과; 실제 변경 동작은 미실행.
 2026-10-20 | 본체 OS 조작면 Windows 동형: pc_control_windows.ps1 에 화면·전원·입회·앱·클립보드·네트워크·단축어 16동작 추가(새 낱말 0, 맥과 같은 결과 모양, 관리자 불요, 못 읽는 값은 null+basis). action_platforms 16동작 darwin+windows, lock 재조회 verified. 허브 수리: select 의 app_kind 가 prepare 재검증에서 거절되던 launch·quit. tv1(Windows 10) 실기: 읽기 7·쓰기 7 verified, 블루투스 AQS 열거 멈춤→공식 선택자. 설계 §18.
+
+2026-10-20 Android OS 드라이버 접근성 UI 확장: 앱 실행·홈·뒤로·화면 독해·터치·문자 입력. 관측 판본 검사, 전면 앱·입력칸·명시 화면 조건 확인, 실행 전 거절/실행 후 미확인 구분과 원 작업 조회 복구. 새 UI 계약 APK 필요.

@@ -23,6 +23,16 @@ def flow(tmp_path, monkeypatch):
     from ibl_v2_store import installed_definitions
     from ibl_edition import source_context
     from script_workspace import request_scope
+    # Pin an isolated copy: dynamic exec otherwise fingerprints unrelated live scripts.
+    import ibl_dependencies
+    import yaml
+    scripts = tmp_path / 'scripts'
+    scripts.mkdir()
+    entry = yaml.safe_load((ROOT / 'data/scripts/registry.yaml').read_text())['Android제어부품']
+    (scripts / 'registry.yaml').write_text(yaml.safe_dump({'Android제어부품': entry}, allow_unicode=True))
+    (scripts / 'android_control.py').write_bytes((ROOT / 'data/scripts/android_control.py').read_bytes())
+    snapshot = ibl_dependencies.script_snapshot
+    monkeypatch.setattr(ibl_dependencies, 'script_snapshot', lambda args: snapshot(args, root=scripts))
     state = {'terminal': False, 'calls': [], 'plans': [], 'connected': True}
     target = {'device_id': 'pc-1', 'connected': True, 'registration': {
         'state': 'active', 'capabilities': {'os': 'android', 'execution_contract': 1, 'runtimes': {'python': {'ready': True}}}}}
@@ -53,6 +63,7 @@ def flow(tmp_path, monkeypatch):
             native = dict(protocol=pc.PROTOCOL, request_id=plan['request_id'],
                           platform='android', action='status', success=True, verified=True, driver_status='completed',
                           source_sha256=plan['source_sha256'], hardware_control=1, screen_on=True, locked=False, battery=80, capabilities={})
+            native.update(state.get("native_override", {}))
             import task_receipts
             return {'success': True, 'limb': 'pc-1', **task_receipts.view(state['job'],
                     'succeeded' if state['terminal'] else 'running',

@@ -626,3 +626,22 @@ network 전체가 30초 제한에 걸렸다. 공식 `GetDeviceSelectorFromConnec
 **남긴 것.** Windows 의 display_asleep·lid_closed(공개 API 없음), 관리자 세션에서의 flags·sleep_holders 실측, UWP 앱
 launch 의 AUMID 경로 실측, Windows 한국어 로캘에서 `netsh` 출력 파싱(SSID·State 가 한글이면 null 로 남음 — enabled 는
 WinRT 라 영향 없음), 창 앞으로(needs_front 와 함께)·Windows 창 목록.
+
+
+## Android 접근성 UI 확장 (2026-10-20)
+
+목적: 기존 접근성 제어를 앱/AI가 같은 호출·판정·복구 계약으로 쓰게 한다. 실행자·언어 코어·새 IBL 어휘는 추가하지 않는다.
+`Android제어`의 action에 ui_snapshot/app_launch/home/back/tap/type_text를 추가하고 phone_ui.py를 실행 부품으로 선택한다.
+PhoneAccessibilityService의 기존 snapshot/gesture/key/ACTION_SET_TEXT를 재사용하며, 같은 상주 서비스에 uiControl 다리를 둔다.
+기존 직접 제어·화면 공유의 호출 서명은 유지한다. Android 앱과 회원 앱의 공유 접근성 소스를 함께 컴파일한다.
+
+- 관측: 전면 패키지·창·방향·화면 크기, 빈 편집칸과 텍스트·포커스·resource_id·경로·ref, 생략 여부를 반환한다. 비밀번호는 가린다.
+- 입력 대상: tap/back/type_text는 관측 snapshot_id 필수. 서비스의 드라이버 잠금 안에서 관측을 다시 비교한다. 불일치는 실행 전 실패. 사람/다른 앱과의 OS 원자성은 보장하지 않는다.
+- 앱 실행: 정확한 패키지의 launcher Intent. 홈은 기본 홈 Intent를 해소해 실제 전면 패키지와 비교한다. 기본 홈 미선택은 확인 불가다.
+- 문자 입력: 포커스가 있는 비밀번호 아닌 편집칸만 전체 교체. 같은 패키지·창·경로·resource_id와 실제 문자열을 다시 읽는다.
+- 터치/뒤로: 명시한 expect(package/text 모두 일치)만 효과 확인. 없으면 동작 접수+후속 화면으로 completed/verified:false. 단순 화면 변화는 성공 증거로 쓰지 않는다.
+- 실행은 한 번, 후속 관측만 최대 8회. 실행 전 거절 failed, 실행 후 불확실성 unknown. 원 task_ref/영수증을 Android제어확인으로 조회하며 자동 재입력·앱 재실행은 없다.
+- 배포: UI 확장은 ui_contract:1 APK가 필요하며 구 APK는 변경 전에 거절한다. 하드웨어 계약은 유지한다. 화면은 접근성 트리이며 OCR/DOM/픽셀 이미지가 아니다.
+
+검증: 관련 Python 회귀 134건(드라이버·실제 IBL/영수증·모의 네이티브 경계·기존 하드웨어·교재·배포), arm64/arm32 APK 빌드·회원 앱 Kotlin 컴파일·기존 JVM 단위 시험 통과.
+실기기 UI 동작 인수는 별도이며, 테스트 통과를 실기기 터치·입력 완료로 해석하지 않는다. 세부 사용법은 data/guides/android_control.md.

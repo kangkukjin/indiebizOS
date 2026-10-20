@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import sys
 import uuid
@@ -23,14 +24,27 @@ REQUIRED = {
     "timeout": ["seconds"], "torch": ["enabled"], "sensor": ["sensor"],
     "screen_on": [], "screen_off": [], "settings_permission": [],
 }
+UI = {"ui_snapshot", "app_launch", "home", "back", "tap", "type_text"}
+REQUIRED.update(ui_snapshot=[], app_launch=["package"], home=[], back=["snapshot_id"],
+                tap=["snapshot_id"], type_text=["snapshot_id", "ref", "text"])
 OPTIONAL = {a: ["stream"] for a in AUDIO}
-OPTIONAL.update(vibrate=["stream", "duration_ms"], torch=["camera_id"])
-READS = {"status", "volume_status", "sensor"}
+OPTIONAL.update(vibrate=["stream", "duration_ms"], torch=["camera_id"], tap=["ref", "x", "y", "expect"], back=["expect"])
+READS = {"status", "volume_status", "sensor", "ui_snapshot"}
 REQUEST_ONLY = {"vibrate", "settings_permission"}
 SENSORS = {"light", "proximity", "accelerometer", "gyroscope", "magnetic_field", "pressure"}
 
 
-def condition(action):
+def request_only(request):
+    return request["action"] in REQUEST_ONLY or (request["action"] in {"tap", "back"} and not request.get("expect"))
+
+
+def condition(action, request=None):
+    if action in UI:
+        scope = ("accessibility_snapshot" if action == "ui_snapshot" else
+                 "ui_dispatch_observed" if request and request_only(request) else
+                 "focused_text_readback" if action == "type_text" else "ui_postcondition")
+        return {"needs_front": True, "shared_state": action not in READS,
+                "isolated_resources": [], "verification_scope": scope}
     scope = ("request_only" if action in REQUEST_ONLY else
              "sensor_sample" if action == "sensor" else
              "os_state_readback" if action in READS else
@@ -74,6 +88,26 @@ def validate(request):
     if "camera_id" in out and (not isinstance(out["camera_id"], str)
                                or not out["camera_id"] or len(out["camera_id"]) > 128):
         raise ValueError("조회한 camera_id 문자열을 지정하세요.")
+    if action in UI:
+        if "package" in out and (not isinstance(out["package"], str) or
+                not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+", out["package"])):
+            raise ValueError("package에는 실행할 앱의 정확한 패키지 이름을 지정하세요.")
+        if "snapshot_id" in out and (not isinstance(out["snapshot_id"], str) or
+                not re.fullmatch(r"[a-f0-9]{64}", out["snapshot_id"])):
+            raise ValueError("ui_snapshot으로 읽은 snapshot_id를 지정하세요.")
+        for key in ("ref", "x", "y"):
+            if key in out and (type(out[key]) is not int or not 0 <= out[key] <= 100000):
+                raise ValueError(key + "는 0 이상의 정수입니다.")
+        if action == "tap" and not (("ref" in out and "x" not in out and "y" not in out) or
+                                    ("ref" not in out and "x" in out and "y" in out)):
+            raise ValueError("tap은 ref 또는 x/y 중 하나만 지정하세요.")
+        if action == "type_text" and (not isinstance(out["text"], str) or len(out["text"]) > 10000):
+            raise ValueError("text는 10000자 이하 문자열입니다. 빈 문자열은 입력칸을 비웁니다.")
+        if "expect" in out:
+            expect = out["expect"]
+            if (not isinstance(expect, dict) or not expect or set(expect) - {"package", "text"}
+                    or any(not isinstance(v, str) or not v or len(v) > 10000 for v in expect.values())):
+                raise ValueError("expect는 package 또는 text의 비어 있지 않은 정확한 관측값입니다.")
     return out
 
 
@@ -99,7 +133,8 @@ def select_target(args):
     wait = 60 if wait is None else wait
     if type(wait) not in (int, float) or not math.isfinite(wait) or not 0 <= wait <= 240:
         raise ValueError("대기는 0~240초입니다.")
-    filename = "phone_control.py" if request["action"] in AUDIO else "phone_device.py"
+    filename = ("phone_ui.py" if request["action"] in UI else
+                "phone_control.py" if request["action"] in AUDIO else "phone_device.py")
     return {"target": target, "platform": "android", "request": request,
             "source_path": "~workspace/data/instruments/" + filename, "wait": wait, "timeout": 20}
 
@@ -125,11 +160,59 @@ def prepare(args):
             "source_sha256": digest, "helper_sha256": helper_hash(), "code": code}
 
 
+def screen_valid(screen):
+    return (isinstance(screen, dict) and screen.get("success") is True
+            and screen.get("ui_contract") == 1 and isinstance(screen.get("package"), str)
+            and bool(screen["package"]) and isinstance(screen.get("snapshot_id"), str)
+            and re.fullmatch(r"[a-f0-9]{64}", screen["snapshot_id"]) is not None
+            and type(screen.get("width")) is int and screen["width"] > 0
+            and type(screen.get("height")) is int and screen["height"] > 0
+            and isinstance(screen.get("elements"), list)
+            and all(isinstance(n, dict) for n in screen["elements"])
+            and screen.get("count") == len(screen["elements"]))
+
+
+def ui_readback(request, value):
+    action = request["action"]
+    screen = value.get("screen")
+    if not screen_valid(screen):
+        return False
+    if action == "ui_snapshot":
+        return True
+    if value.get("dispatched") is not True or not screen_valid(value.get("before")):
+        return False
+    if action in {"tap", "back", "type_text"} and value["before"]["snapshot_id"] != request["snapshot_id"]:
+        return False
+    if action == "app_launch":
+        return screen["package"] == request["package"]
+    if action == "home":
+        return bool(value.get("expected_package")) and screen["package"] == value["expected_package"]
+    if action == "type_text":
+        target = value.get("target_element") or {}
+        if (target.get("ref") != request["ref"] or target.get("focused") is not True
+                or target.get("editable") is not True or target.get("password") is not False
+                or not target.get("path") or screen["package"] != value["before"]["package"]
+                or screen.get("window_id") != value["before"].get("window_id")):
+            return False
+        nodes = [n for n in screen["elements"] if n.get("path") == target["path"]
+                 and n.get("resource_id") == target.get("resource_id")]
+        return (len(nodes) == 1 and nodes[0].get("text") == request["text"]
+                and nodes[0].get("focused") is True and nodes[0].get("editable") is True
+                and nodes[0].get("password") is False)
+    expect = request.get("expect", {})
+    return bool(expect) and all(
+        screen["package"] == expected if key == "package" else
+        any(n.get("label") == expected for n in screen["elements"])
+        for key, expected in expect.items())
+
+
 def readback(request, value):
     """Check observed values, not just a provider's success/verified bit."""
     action = request["action"]
     if value.get("success") is not True:
         return False
+    if action in UI:
+        return ui_readback(request, value)
     if action in REQUEST_ONLY:
         return False
     if action in AUDIO:
@@ -176,24 +259,41 @@ def readback(request, value):
     return False
 
 
+def completion_allowed(request, value, verified):
+    if value.get("success") is not True:
+        return False
+    if verified:
+        return True
+    if not request_only(request):
+        return False
+    if request["action"] not in UI:
+        return True
+    return (value.get("dispatched") is True and screen_valid(value.get("screen"))
+            and screen_valid(value.get("before"))
+            and value["before"]["snapshot_id"] == request["snapshot_id"])
+
+
 def run_device(request, source, request_id, digest):
     action = request["action"]
     metadata = {"protocol": PROTOCOL, "platform": "android", "action": action,
                 "request_id": request_id, "source_sha256": digest,
                 "observed_at": datetime.now(timezone.utc).isoformat(),
-                "condition": condition(action), "verification_scope": condition(action)["verification_scope"]}
+                "condition": condition(action, request), "verification_scope": condition(action, request)["verification_scope"]}
     try:
         validate(request)
         namespace = {"__name__": "phone_primitive"}
         exec(compile(source, "<phone_primitive>", "exec"), namespace)
         inputs = {k: v for k, v in request.items() if k != "action"}
         inputs["op"] = AUDIO.get(action, action)
-        value = namespace["run"](inputs)
+        value = (namespace["run"](inputs, verifier=lambda observed: readback(request, observed))
+                 if action in UI else namespace["run"](inputs))
         metadata["observed_at"] = datetime.now(timezone.utc).isoformat()
         if not isinstance(value, dict):
             raise ValueError("폰 실행 응답이 객체가 아닙니다.")
+        if action in UI and value.get("driver_status") in {"failed", "unknown"}:
+            return {**value, **metadata, "success": False, "verified": False}
         verified = readback(request, value)
-        success = value.get("success") is True and (verified or action in REQUEST_ONLY)
+        success = completion_allowed(request, value, verified)
         return {**value, **metadata, "success": success, "verified": verified,
                 "driver_status": "completed" if success else "failed",
                 **({} if success else {"error": value.get("error") or "POSTCONDITION_FAILED: 관측값이 요청과 다릅니다."})}
@@ -252,11 +352,11 @@ def verify_task(args, context):
             return fail("원격 작업 종료를 확인하지 못했습니다.", value)
         action = plan["request"]["action"]
         verified = readback(plan["request"], value)
-        if value.get("success") is not True or (not verified and action not in REQUEST_ONLY):
+        if not completion_allowed(plan["request"], value, verified):
             return fail("POSTCONDITION_FAILED: 결과 재검증에 실패했습니다.", value, "failed")
         return {**out, "status": "completed", "verified": verified, "result": {
-            **value, "verified": verified, "condition": condition(action),
-            "verification_scope": condition(action)["verification_scope"]}}
+            **value, "verified": verified, "condition": condition(action, plan["request"]),
+            "verification_scope": condition(action, plan["request"])["verification_scope"]}}
     except (KeyError, TypeError, AttributeError, ValueError):
         return fail("준비·접수·관측 근거의 형식이 불완전합니다.")
 
@@ -267,7 +367,12 @@ def run(args, context=None):
         return {"version": 1, "platforms": ["android"], "actions": REQUIRED, "optional": OPTIONAL,
                 "conditions": {a: condition(a) for a in REQUIRED},
                 "units": {"volume": "OS integer steps, max from volume_status",
-                          "brightness": "1..255", "timeout": "seconds"},
+                          "brightness": "1..255", "timeout": "seconds", "tap": "physical screen pixels or snapshot ref"},
+                "ui": {"requires": "APK ui_contract:1 + enabled accessibility service",
+                       "snapshot_guard": "tap/type_text/back require snapshot_id from ui_snapshot",
+                       "type_text": "replace focused editable text; empty clears; passwords rejected",
+                       "expect": "tap/back: exact package and/or visible text label, all must match",
+                       "verification": "tap/back without expect complete with verified:false"},
                 "recovery": "Query the original task; never replay a mutation automatically."}
     if op == "select":
         return select_target(args)

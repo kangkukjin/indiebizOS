@@ -338,6 +338,9 @@ def get_finance_context(input_data: dict) -> str:
                      f"  지출 {_won(s['expense'])} · 수입 {_won(s['income'])} · 순액 {_won(s['net'])} ({s['tx_count']}건)"]
             if s['top_categories']:
                 lines.append("  지출 상위: " + ", ".join(f"{c} {_won(v)}" for c, v in s['top_categories'][:3]))
+            bill_total = sum(b['amount'] for b in s.get('card_bills', []))
+            if s.get('card_bills'):
+                lines.append(f"  카드대금 기록 {len(s['card_bills'])}건 {_won(bill_total)} (지출 합산 제외)")
             if s['holdings']:
                 lines.append(f"  순자산: 자산 {_won(s['asset_total'])} − 부채 {_won(s['liability_total'])} = {_won(s['net_worth'])}")
             if s['tx_count'] == 0 and not s['holdings']:
@@ -353,6 +356,7 @@ def get_finance_context(input_data: dict) -> str:
                                "hana_label": _won(s.get('by_source', {}).get('하나카드', 0)),
                                "cjpay_label": _won(s.get('by_source', {}).get('청주페이', 0)),
                                "last_sync": s.get('last_sync', ''),
+                               "card_bill_total": bill_total, "card_bill_count": len(s.get('card_bills', [])),
                                "items": top, "expense": s["expense"], "income": s["income"], "net": s["net"],
                                "top_categories": [{"category": c, "amount": v, "currency": "KRW"} for c, v in s["top_categories"]],
                                "month": s['month']}, ensure_ascii=False)

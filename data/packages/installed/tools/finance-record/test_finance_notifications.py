@@ -124,3 +124,23 @@ def test_income_survives_collection_and_handler(modules, monkeypatch):
     assert response["success"] and response["new"] == 1
     assert storage.get_transactions()[0]["tx_type"] == "income"
     assert json.loads(handler.sync_finance_from_phone({}))["new"] == 0
+
+
+@pytest.mark.parametrize("title,body,kind", [
+    ("하나카드 결제예정금액", "테스트 님 09월 15일 결제예정금액은 545,408원 입니다.", "notice"),
+    ("결제일 출금내역 안내", "테스트 님 08월 18일 결제대금 547,601원이 출금되었습니다.", "payment"),
+])
+def test_card_bills_are_recorded_outside_expense_sum(modules, title, body, kind):
+    """카드대금은 개별 결제의 합이라 지출로 더하면 이중계상 — 기록만 한다."""
+    sync, storage, handler = modules
+    approve = sync._record_to_row(record("9,000원 일시불 테스트상점 승인", "하나카드 승인", "com.hanaskcard.paycla"))
+    bill = sync._record_to_row(record(body, title, "com.hanaskcard.paycla"))
+    assert storage.merge_synced_rows([approve, bill]) == [approve]
+    assert storage.merge_synced_rows([bill]) == []
+    summary = storage.get_summary(month="2026-09")
+    assert summary["expense"] == 9000
+    assert [(b["kind"], b["amount"]) for b in summary["card_bills"]] == [(kind, bill["amount"])]
+    assert all(t["tx_type"] == "expense" and t["amount"] == 9000 for t in storage.get_transactions())
+    import json
+    out = json.loads(handler.get_finance_context({"query_type": "summary", "month": "2026-09"}))
+    assert out["expense"] == 9000 and out["card_bill_count"] == 1 and "지출 합산 제외" in out["text"]

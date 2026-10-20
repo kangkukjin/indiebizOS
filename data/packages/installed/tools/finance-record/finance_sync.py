@@ -198,7 +198,9 @@ def _parse_payment(title: str, body: str) -> dict:
         out["amount"] = int(amount.group(1).replace(",", "")) if amount else 0
         return out
     if _RE_BILLING_NOTICE.search(text):
-        out["type"] = "notice"
+        out["type"] = "bill"   # 카드대금 안내 — 기록만, 지출 합산 밖(card_bills)
+        amount = _RE_AMOUNT.search(text)
+        out["amount"] = int(amount.group(1).replace(",", "")) if amount else 0
         return out
     # 결제 알림에 붙은 인센티브 안내는 별도 수령 거래로 바꾸지 않는다.
     receipt = _RE_REWARD_RECEIPT.search(body or title)

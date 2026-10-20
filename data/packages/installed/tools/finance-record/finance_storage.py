@@ -106,6 +106,20 @@ def get_db_connection():
         CREATE TABLE IF NOT EXISTS sync_log (
             at INTEGER, fetched INTEGER, new INTEGER, skipped INTEGER
         )""")
+    # 카드대금(결제예정 안내·결제대금 출금) — 개별 결제가 이미 지출이라 합산하면 이중계상.
+    # 기록만 하고 지출 합산 밖에 둔다. transactions 와 분리해 폰↔PC 동기화(구판 CHECK) 밖에 둔다.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS card_bills (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL,
+            kind TEXT NOT NULL CHECK(kind IN ('notice','payment')),
+            amount REAL NOT NULL,
+            source TEXT,
+            occurred_at TEXT,
+            note TEXT,
+            ext_id TEXT UNIQUE,
+            created_at TEXT
+        )""")
     # 기본 주체 행 보장
     row = conn.execute("SELECT id FROM owners WHERE name = ?", (DEFAULT_OWNER,)).fetchone()
     if not row:
@@ -173,7 +187,8 @@ def save_holding(kind: str, name: str, value: float = None, asset_type: str = No
 def merge_synced_rows(rows: list, owner: str = None) -> list:
     """수거된 결제 알림 행들 → 거래 병합 (ext_id dedup — 여러 번 수거해도 안전).
 
-    approve=지출(+) / cancel=지출(−) / income=수입 / charge(충전)=이체라 원장 제외.
+    approve=지출(+) / cancel=지출(−) / income=수입 / charge(충전)=이체라 원장 제외 /
+    transfer(카드대금 출금)·bill(결제예정 안내)=card_bills 에 기록, 지출 합산 밖.
     파싱 실패(amount 0)도 원문을 note 로 보존해 넣는다(침묵 실패 금지 — 합계 무영향).
     returns 새로 들어간 행 목록."""
     new_rows = []
@@ -183,7 +198,18 @@ def merge_synced_rows(rows: list, owner: str = None) -> list:
         for r in rows:
             conn.execute("INSERT OR IGNORE INTO notification_evidence VALUES (?,?,?)",
                          (r['ext_id'], oid, json.dumps(r, ensure_ascii=False)))
-            if r.get('type') in ('charge', 'transfer'):
+            if r.get('type') == 'charge':
+                continue
+            occurred = datetime.fromtimestamp((r.get('ts') or 0) / 1000).strftime('%Y-%m-%d') \
+                if r.get('ts') else datetime.now().strftime('%Y-%m-%d')
+            original = '\n'.join(x for x in (r.get('title'), r.get('body')) if x)
+            if r.get('type') in ('transfer', 'bill'):
+                conn.execute(
+                    """INSERT OR IGNORE INTO card_bills
+                       (owner_id, kind, amount, source, occurred_at, note, ext_id, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (oid, 'payment' if r['type'] == 'transfer' else 'notice', r.get('amount') or 0,
+                     r.get('source'), occurred, original or None, r['ext_id'], _now()))
                 continue
             tx_type = 'income' if r.get('type') == 'income' else 'expense'
             sign = -1 if r.get('type') == 'cancel' else 1
@@ -191,9 +217,7 @@ def merge_synced_rows(rows: list, owner: str = None) -> list:
             if r.get('type') == 'cancel':
                 note_bits.append('취소·환불')
             # Successful parses need evidence too; retain title and full original body.
-            note_bits.append('\n'.join(x for x in (r.get('title'), r.get('body')) if x))
-            occurred = datetime.fromtimestamp((r.get('ts') or 0) / 1000).strftime('%Y-%m-%d') \
-                if r.get('ts') else datetime.now().strftime('%Y-%m-%d')
+            note_bits.append(original)
             # OR IGNORE = ext_id 부분 유니크 인덱스 위반 시 조용히 건너뜀
             # (부분 인덱스는 ON CONFLICT(ext_id) 타깃으로 못 잡는다 — 실측)
             cur = conn.execute(
@@ -314,6 +338,10 @@ def get_summary(owner: str = None, month: str = None, **filters) -> Dict[str, An
     holds = get_holdings(owner=owner, latest_only=True)
     asset_total = sum(h['value'] or 0 for h in holds if h['kind'] == 'asset')
     liab_total = sum(h['value'] or 0 for h in holds if h['kind'] == 'liability')
+    with get_db_connection() as conn:
+        bills = [dict(r) for r in conn.execute(
+            "SELECT * FROM card_bills WHERE owner_id=? AND occurred_at LIKE ? ORDER BY occurred_at",
+            (_owner_clause(conn, owner), month + '%')).fetchall()]
     return {
         'owner': owner or DEFAULT_OWNER, 'month': month,
         'expense': expense, 'income': income, 'net': income - expense,
@@ -322,6 +350,7 @@ def get_summary(owner: str = None, month: str = None, **filters) -> Dict[str, An
         'holdings': holds, 'asset_total': asset_total,
         'liability_total': liab_total, 'net_worth': asset_total - liab_total,
         'last_sync': last_sync_label(),
+        'card_bills': bills,
     }
 
 

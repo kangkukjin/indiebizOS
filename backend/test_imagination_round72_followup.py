@@ -213,12 +213,15 @@ def test_partial_source_message_names_the_remedy():
 
 
 def test_billing_notices_are_not_payments():
-    """포획소 원문(2026-09-29 확인) — 청구 예정 안내가 545,408원 지출로 적히던 B72-1 #102."""
+    """포획소 원문(2026-09-29 확인) — 청구 예정 안내가 545,408원 지출로 적히던 B72-1 #102.
+    2026-10-17: 카드대금은 버리지 않고 card_bills 에 기록한다(지출 합산 밖)."""
     sync = module('finance-record', 'finance_sync')
-    assert sync._parse_payment('하나카드 결제예정금액', '강*진 님 09월 15일 결제예정금액은 545,408원 입니다.')['type'] == 'notice'
+    notice = sync._parse_payment('하나카드 결제예정금액', '강*진 님 09월 15일 결제예정금액은 545,408원 입니다.')
+    assert (notice['type'], notice['amount']) == ('bill', 545408)
     assert sync._parse_payment('결제일 출금내역 안내', '강*진 님 08월 18일 결제대금 547,601원이 출금되었습니다.')['type'] == 'transfer'
-    assert sync._record_to_row({'pkg': next(iter(sync.PAY_PKGS)), 'android.title': '하나카드 결제예정금액',
-                                'android.text': '09월 15일 결제예정금액은 545,408원 입니다.', 'ts': 1}) == {}
+    row = sync._record_to_row({'pkg': next(iter(sync.PAY_PKGS)), 'android.title': '하나카드 결제예정금액',
+                               'android.text': '09월 15일 결제예정금액은 545,408원 입니다.', 'ts': 1})
+    assert (row['type'], row['amount'], row['merchant']) == ('bill', 545408, '')
     assert sync._parse_payment('하나카드 승인', '테스트상점(지점) / 신용(1234) / 09/29 12:00 / 누적 99,000원')['type'] == 'approve'
 
 

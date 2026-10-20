@@ -1,0 +1,22 @@
+#!ibl edition=2
+$original=[self:read]{path:$source}
+$r=$original.data.response
+assert $r.run_status == "interrupted", "중단 실행만 회수합니다"
+assert $r.diagnostic.details.successful_indices == [0], "부분 결과 갈래 확인 필요"
+$pc=$r.diagnostic.partial[0][0]
+$safari={driver:"safari",ok:false,error:$r.diagnostic.details.errors["1"],page_loaded:null}
+$passed=$pc >> [table:filter]{where:($row)=>$row.ok == true}
+$report={pc:$pc,safari:$safari,pc_verified:len($passed),pc_total:len($pc),all_reads_verified:false,original_run:$r.resume.run_id,original_status:$r.run_status,manually_recovered:true,mutations_executed:false,mutation_verification:"미검증: 공유 기기 변경 격리 없음",physical_audio:"미검증",page_loaded:null}
+$text=json($report)
+[self:write]{path:$out,content:$text}
+$saved=[self:read]{path:$out}
+assert $saved.text == $text, "근거 JSON 재독 불일치"
+$md=f"# 본체 PC·Safari 점검\n\n판정: 부분 달성. 본체 조회 ${len($passed)}/4 검증, Safari 조회 실패.\n\n원 IBL은 interrupted. 성공한 본체 부분 결과를 회수했으며 기기 조회를 재실행하지 않았습니다.\n\n## 본체 관측\n"
+$sections=$pc >> [table:each] {
+  return f"\n### ${$it.action}\n\n검증: ${$it.ok}\n\n```json\n${json($it)}\n```\n"
+}
+$md=$md + join($sections,"\n") + f"\n## Safari\n\n조회 실패: ${$r.error}\n\n창·탭·판본 및 페이지 로드는 미검증입니다. 지정 창 후속 조회는 실행하지 않았습니다. 시간 초과 원인은 확정하지 않습니다.\n\n## 판정 범위\n\nAPI 지원과 OS 설정 관측은 실제 소리·페이지 렌더링·사용자 입회 확인이 아닙니다. 탭·설정 변경 및 Windows/원격 기기는 시험하지 않았습니다. 근거: ${$out}\n"
+[self:write]{path:$markdown,content:$md}
+$readback=[self:read]{path:$markdown}
+assert $readback.text == $md, "보고서 재독 불일치"
+return {original_run:$r.resume.run_id,pc_verified:len($passed),safari_verified:false,json:$out,markdown:$markdown,reread_equal:true,device_requeries:0}

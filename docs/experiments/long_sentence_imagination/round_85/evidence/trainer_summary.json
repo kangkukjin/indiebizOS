@@ -1,0 +1,57 @@
+{
+  "base_v0": {
+    "run_id": "3ff31032630c46ca89c71c46d59c011a",
+    "status": "interrupted",
+    "http_seconds": 15.490211963653564,
+    "engine_ms": 13783,
+    "steps": 490,
+    "pc_rows": 4,
+    "pc_verified": 4,
+    "safari_failure": "UNKNOWN",
+    "safari_failure_kind": "protocol",
+    "state_change_possible": true,
+    "reuse_read_calls": 0,
+    "source_sha256": "ea2eaa1f9587ebc133e0116c0fcc9d174cb239d610598d9ed5a5f28ac285b96e"
+  },
+  "variation_v0": {
+    "run_id": "f195133199d746a6b5a92f55a99c6cc9",
+    "status": "interrupted",
+    "http_seconds": 13.26245403289795,
+    "engine_ms": 12923,
+    "steps": 391,
+    "pc_rows": 4,
+    "pc_verified": 0,
+    "safari_failure": "UNKNOWN",
+    "safari_failure_kind": "protocol",
+    "state_change_possible": true,
+    "reuse_read_calls": 0,
+    "source_sha256": "ea2eaa1f9587ebc133e0116c0fcc9d174cb239d610598d9ed5a5f28ac285b96e"
+  },
+  "base_recovered": {
+    "json_sha256": "61a3193c301fc2a5b3d1cf5674347dcbce882d5c3b55ca598befbb631164c6b9",
+    "pc_verified": 4,
+    "original_run": "3ff31032630c46ca89c71c46d59c011a"
+  },
+  "variation_recovered": {
+    "json_sha256": "1b6a0d7b38e3a898546e8ae15fd685dbd5070da51304a29c742abab4f4298f95",
+    "pc_verified": 0,
+    "original_run": "f195133199d746a6b5a92f55a99c6cc9"
+  },
+  "recovery_terminal": {
+    "run_id": "9888d34c75964f2abbfcbaa8e52e1ac6",
+    "status": "completed",
+    "locked": false,
+    "source_complete": true,
+    "created_at": 1792497281.1074078,
+    "updated_at": 1792497568.810055,
+    "ended_at": 1792497568.810055,
+    "calls": 5,
+    "uncertain_calls": 0,
+    "last_checkpoint": "3a8a153b39b0d249733de4c5334a8795f2d49060a27ebab68299961f08a55b29",
+    "reason": null,
+    "resumable": true,
+    "note": "재개는 원 소스·입력·의존성·권한의 일치를 다시 검사합니다."
+  },
+  "recovery_seconds": 287.7026472091675,
+  "variation_recovery_seconds": 0.5419444581493735
+}

@@ -1,0 +1,17 @@
+{
+  "ai_terminal": [
+    {
+      "task_id": "task_sysai_e95c06eb",
+      "state": "succeeded"
+    },
+    {
+      "task_id": "task_sysai_366b9c73",
+      "state": "succeeded"
+    }
+  ],
+  "base_files_preserved": 4,
+  "trainer_primary": "partial",
+  "trainer_variant": "partial: PC target rejection verified; Safari target existence unknown",
+  "no_production_edits": true,
+  "verified_at": "2026-10-20T21:10:27.677684+09:00"
+}

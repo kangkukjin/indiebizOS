@@ -1,0 +1,27 @@
+{
+  "head_before_commit": "4c2f9e172f7893eb4c832f7009bde5696101cd4b",
+  "branch": "main",
+  "production_files_changed_by_this_round": [],
+  "files": {
+    "data/scripts/safari_control.py": {
+      "sha256": "59e69e96aa143093c8b816c46392dfa176f227534c1d28ed57be2438065cbc06",
+      "preexisting_dirty": false
+    },
+    "data/scripts/pc_control.py": {
+      "sha256": "0a4731cfb91c8f3c26be171d385795a24ef645cb88499c0398d9d3ce1104ec5b",
+      "preexisting_dirty": true
+    },
+    "data/instruments/pc_control_mac.py": {
+      "sha256": "c39f083177268facdf5d821772c575047b4c82557822783c1a32b30ce1ca28cd",
+      "preexisting_dirty": true
+    },
+    "data/idioms/pc_control.ibl": {
+      "sha256": "3b239762313cf8db8269709d93e0de7439095166ce90b6dc9db2f709a5739bda",
+      "preexisting_dirty": false
+    },
+    "backend/ibl/ibl_v2_types.py": {
+      "sha256": "79f6f17b9a6dc2436855dcd52e7688f288700d354390ec06efa972a13ae3c0ad",
+      "preexisting_dirty": false
+    }
+  }
+}

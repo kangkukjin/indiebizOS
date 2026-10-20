@@ -1,0 +1,226 @@
+[
+  {
+    "label": "base",
+    "task_id": "task_sysai_e95c06eb",
+    "episode_id": 5090,
+    "source": "training",
+    "total_ms": 731005,
+    "ended_at": "2026-10-20T21:05:02.522731",
+    "models": [
+      "deepseek-flash",
+      "opus"
+    ],
+    "cost_by_role": {
+      "oneshot:classify": {
+        "input": 19499,
+        "output": 311,
+        "cache_read": 5120,
+        "cache_create": 0,
+        "billable_events": 4
+      },
+      "consciousness": {
+        "input": 153447,
+        "output": 4495,
+        "cache_read": 58661,
+        "cache_create": 94780,
+        "billable_events": 2
+      },
+      "execution": {
+        "input": 2339731,
+        "output": 20238,
+        "cache_read": 2161076,
+        "cache_create": 178609,
+        "billable_events": 2
+      },
+      "oneshot:evaluate": {
+        "input": 109446,
+        "output": 3020,
+        "cache_read": 6124,
+        "cache_create": 103318,
+        "billable_events": 2
+      }
+    },
+    "cost_total": {
+      "input": 2622123,
+      "output": 28064,
+      "cache_read": 2230981,
+      "cache_create": 376707,
+      "billable_events": 10
+    },
+    "tools": {
+      "Bash": 10,
+      "execute_ibl": 14
+    },
+    "tools_by_phase": {
+      "execute": 15,
+      "repair": 9
+    },
+    "unique_tool_ids": 24,
+    "tool_started_events": 24,
+    "ibl_runs": [
+      {
+        "ts": "2026-10-20T20:53:19.232825",
+        "success": true,
+        "elapsed_ms": 1701
+      },
+      {
+        "ts": "2026-10-20T20:54:20.116150",
+        "success": true,
+        "elapsed_ms": 3087
+      },
+      {
+        "ts": "2026-10-20T20:54:26.413011",
+        "success": false,
+        "elapsed_ms": 300
+      },
+      {
+        "ts": "2026-10-20T20:54:35.480418",
+        "success": true,
+        "elapsed_ms": 1639
+      },
+      {
+        "ts": "2026-10-20T20:59:40.483996",
+        "success": false,
+        "elapsed_ms": 302453
+      },
+      {
+        "ts": "2026-10-20T20:59:46.709529",
+        "success": true,
+        "elapsed_ms": 2
+      },
+      {
+        "ts": "2026-10-20T20:59:47.242437",
+        "success": true,
+        "elapsed_ms": 1
+      },
+      {
+        "ts": "2026-10-20T20:59:51.879130",
+        "success": true,
+        "elapsed_ms": 4
+      },
+      {
+        "ts": "2026-10-20T21:03:20.118142",
+        "success": false,
+        "elapsed_ms": 16329
+      },
+      {
+        "ts": "2026-10-20T21:03:23.881790",
+        "success": true,
+        "elapsed_ms": 2
+      },
+      {
+        "ts": "2026-10-20T21:03:28.414247",
+        "success": true,
+        "elapsed_ms": 1
+      },
+      {
+        "ts": "2026-10-20T21:03:29.613631",
+        "success": true,
+        "elapsed_ms": 1
+      },
+      {
+        "ts": "2026-10-20T21:03:30.827141",
+        "success": true,
+        "elapsed_ms": 1
+      },
+      {
+        "ts": "2026-10-20T21:03:32.125637",
+        "success": true,
+        "elapsed_ms": 1
+      },
+      {
+        "ts": "2026-10-20T21:03:32.888655",
+        "success": true,
+        "elapsed_ms": 1
+      }
+    ],
+    "model_round_events": 32,
+    "compactions": 0,
+    "forbidden_access_candidates": []
+  },
+  {
+    "label": "variation",
+    "task_id": "task_sysai_366b9c73",
+    "episode_id": 5091,
+    "source": "training",
+    "total_ms": 233819,
+    "ended_at": "2026-10-20T21:09:17.549638",
+    "models": [
+      "deepseek-flash",
+      "opus"
+    ],
+    "cost_by_role": {
+      "oneshot:classify": {
+        "input": 15305,
+        "output": 10,
+        "cache_read": 4096,
+        "cache_create": 0,
+        "billable_events": 3
+      },
+      "oneshot:background": {
+        "input": 8823,
+        "output": 1605,
+        "cache_read": 1280,
+        "cache_create": 0,
+        "billable_events": 1
+      },
+      "consciousness": {
+        "input": 118594,
+        "output": 4246,
+        "cache_read": 87945,
+        "cache_create": 30645,
+        "billable_events": 1
+      },
+      "execution": {
+        "input": 1314819,
+        "output": 9336,
+        "cache_read": 1231543,
+        "cache_create": 83254,
+        "billable_events": 1
+      },
+      "oneshot:evaluate": {
+        "input": 33876,
+        "output": 612,
+        "cache_read": 5580,
+        "cache_create": 28294,
+        "billable_events": 1
+      }
+    },
+    "cost_total": {
+      "input": 1491417,
+      "output": 15809,
+      "cache_read": 1330444,
+      "cache_create": 142193,
+      "billable_events": 7
+    },
+    "tools": {
+      "Bash": 7,
+      "execute_ibl": 3
+    },
+    "tools_by_phase": {
+      "execute": 10
+    },
+    "unique_tool_ids": 10,
+    "tool_started_events": 10,
+    "ibl_runs": [
+      {
+        "ts": "2026-10-20T21:07:12.384743",
+        "success": true,
+        "elapsed_ms": 4401
+      },
+      {
+        "ts": "2026-10-20T21:07:33.999219",
+        "success": false,
+        "elapsed_ms": 17138
+      },
+      {
+        "ts": "2026-10-20T21:07:38.132726",
+        "success": true,
+        "elapsed_ms": 4
+      }
+    ],
+    "model_round_events": 18,
+    "compactions": 0,
+    "forbidden_access_candidates": []
+  }
+]

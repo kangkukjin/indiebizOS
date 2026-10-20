@@ -524,6 +524,43 @@ AI 는 후보를 제안한다.
 실제 Safari 읽기 인수는 새 조회와 기존 조회 모두 10초 시간 초과여서 완료하지 못했고,
 실제 탭 변경은 실행하지 않았다. §15의 과거 실기 성공을 v2 실기 인수로 대신하지 않는다.
 
+## 17 본체 OS 조작면 1층 구현 (2026-10-20)
+
+§4 표의 "본체 앱은 드라이버가 전혀 없고 탐색 통로만 있다" 는 사실 가운데 **OS 수준** 을 먼저 메운다.
+기존 드라이버(`fn:PC제어` → `PC제어부품` → `pc_control_mac.py`)에 새 낱말 없이 동작 16개를 더했다.
+원격 맥에도 같은 실행 파일이 가므로 본체·원격 PC 가 같은 계약을 쓴다. Windows 는 `action_platforms` 로
+실행 전에 거절한다(유튜브와 같은 자리).
+
+| 조작면 | 동작 | 확인 범위 |
+| --- | --- | --- |
+| 화면 | display(읽기)·brightness | CoreGraphics 공개 API 로 목록·잠듦·세션 잠금. 밝기는 비공개 프레임워크라 `can_set_brightness` 와 basis 를 같이 돌려주고 외부 모니터는 거절 |
+| 전원 | power(읽기)·keep_awake·allow_sleep·sleep | 전원 출처·배터리·잠 방지 플래그·잠 못 들게 하는 프로세스·뚜껑. keep_awake 는 전원 관리 목록 재조회, allow_sleep 은 프로세스 종료 확인 |
+| 입회 | presence(읽기) | 마지막 입력 뒤 초·앞 앱·잠금·주 화면 잠듦. §6 의 "입력 유휴는 보조 관측" 을 읽을 값이 생겼다 |
+| 앱 | apps(읽기)·launch·quit | 앱 목록 재조회. launch 는 앞으로 가져오지 않음(-g). quit 는 앱별 Apple Events 권한 |
+| 클립보드 | clipboard·clipboard_write | 재조회 일치 |
+| 네트워크 | network(읽기)·wifi | Wi-Fi 전원 재조회. SSID 는 위치 권한 없으면 null. 블루투스는 읽기만 |
+| 단축어 | shortcuts·shortcut | 사용자 단축어를 이름으로 실행. 효과는 범위 밖(verified:false) |
+
+lock 도 세션 잠금 재조회를 얻어 `verified` 가 가능해졌다(전엔 "요청만").
+
+**동작별 조건.** 계약 `conditions` 에 동작마다 `needs_front`·`shared_state`·`verification_scope`·`effect` 를 적었고,
+결과의 `condition`·`verification_scope` 칸으로 돌아온다. **needs_front 동작은 하나도 없다.** 그래서 §6 의
+실행 전 검사(행위자 출처 판정)를 이 드라이버에 잇는 일은 이번 범위에서 필요가 없었고, "창 앞으로 가져오기" 는
+needs_front 가 필요한 첫 동작이 될 것이므로 그 검사와 함께 넣는다.
+
+**실측(본체 Mac16,11·macOS 26.6.2, 허브 local 경로).** 읽기 7종 0.0~0.2초(블루투스 포함 network 0.2초).
+clipboard_write→clipboard 왕복 일치. keep_awake 는 전원 관리 목록에 즉시 등장, 중복 켜기 거절, allow_sleep 종료 확인.
+launch `com.apple.TextEdit` 0.1초 verified, quit 2.3~8.7초 verified. brightness 는 외부 모니터라 변경 없이 거절(정직).
+없는 단축어·없는 번들 ID 는 전송 없이 또는 즉시 거절. Windows 대상의 새 동작은 prepare·select 에서 거절.
+wifi·sleep 은 이 세션 연결을 끊거나 작업을 중단시키므로 실기 실행하지 않았다(인수·거절 경로만 시험).
+
+**발견.** ① 앱 목록의 이름은 현지화 표시 이름("텍스트 편집기")이라 `launch TextEdit` 의 이름 대조가 빗나갔다 →
+번들 경로 파일 이름(TextEdit.app)도 이름으로 친다. ② 이 맥은 뚜껑 상태 키가 없어 `lid_closed:null`(노트북만 값).
+③ 이 맥은 비공개 밝기 프레임워크가 열리지만 주 화면이 외부 모니터라 `can_set_brightness:false`.
+
+**남긴 것.** 창 목록·창 앞으로(needs_front 와 함께)·앱 숨기기·블루투스 연결·예약 깨우기(관리자 권한)·Windows 동형
+동작·브라우저 외 앱 드라이버. 본체 제어의 해마 용례는 아직 슬롯 모양만이라 첫 호출 마찰(§15)은 그대로다.
+
 
 ## Android OS 드라이버 계약 정비 (2026-10-20)
 
@@ -549,3 +586,43 @@ AI 는 후보를 제안한다.
 상태 읽기만 실기 검증했고 음량·화면·손전등 변경은 실행하지 않았다. 회귀는
 backend/test_android_control.py·test_phone_control.py·test_phone_device.py·test_phone_control_ui.py에 있다.
 이 범위는 기존 하드웨어 기능의 계약 정비이며 앱 실행·홈/뒤로·범용 화면 입력·브라우저 드라이버는 포함하지 않는다.
+
+## 18 본체 OS 조작면 Windows 동형 (2026-10-20)
+
+§17 이 "남긴 것" 으로 적은 **Windows 동형 동작** 을 메웠다. 계기 = 등록된 Windows 10 PC(tv1, Home 에디션·헬퍼 상주·관리자
+아님·외부 TV 모니터)가 연결돼 있었으므로 그 PC 를 실기 삼았다. 새 낱말 0, 새 동작 0 — `pc_control_windows.ps1` 이
+맥 실행 파일과 **같은 동작 이름·같은 결과 모양** 을 돌려주고, 허브 계약 `action_platforms` 의 16동작이 `["darwin","windows"]`
+가 됐다. 관리자 권한을 요구하지 않는다 — 관리자여야만 읽히는 값·공개 API 가 없는 값은 `null` 과 `*_basis` 로 남긴다(거짓 0 금지).
+
+| 조작면 | Windows 구현 | 맥과 다른 점 |
+| --- | --- | --- |
+| 화면 | `System.Windows.Forms.Screen`(목록) + WMI `WmiMonitorBrightness`(내장 화면만) + `OpenInputDesktop`·LogonUI(잠금) | id=DISPLAYn 번호, asleep·builtin null. 외부 모니터는 `can_set_brightness:false` 로 변경 없이 거절(맥과 동일) |
+| 전원 | `SystemInformation.PowerStatus` + `powercfg /requests`(관리자만) + 잠 방지 자식 프로세스(`SetThreadExecutionState`) | flags·sleep_holders 는 관리자 아니면 null+`requests_basis`. keep_awake 재조회 = 프로세스 생존(`readback_basis`), 전원 관리 목록이 아니다 |
+| 입회 | `GetLastInputInfo`·`GetForegroundWindow` | front 는 pid·name·title(bundle_id 없음). display_asleep 은 공개 API 없어 null |
+| 앱 | `Get-Process`(창 있는 것) + 시작 메뉴 바로가기·`Start-Process`·`shell:AppsFolder`(AUMID) + `CloseMainWindow` | 이름 대조 = 프로세스명·exe·설명·제품명·바로가기 대상. 실행은 최소화 요청(앱이 무시 가능). 종료는 창 닫기 요청만, 강제 종료 없음 |
+| 클립보드 | `Get-Clipboard -Raw`·`Set-Clipboard` | 같음(빈 글은 Clear) |
+| 네트워크 | WinRT `Windows.Devices.Radios`(Wi-Fi·블루투스 전원, 관리자 불요) + `netsh wlan`(SSID) + 블루투스 연결 상태 선택자 | Wi-Fi 끄고 켜기가 관리자 없이 된다(맥 `networksetup` 과 동형) |
+| 단축어 | 작업 스케줄러 루트 폴더(`\`)의 작업 = Windows 의 단축어 자리. `Start-ScheduledTask` 뒤 상태 재조회·`LastTaskResult` | 출력 없음·`verified:false` 는 같다. 사용자가 작업 스케줄러에서 이름 붙인 흐름을 부른다 |
+| 잠금·잠자기 | `LockWorkStation` + 입력 데스크톱 재조회(이제 `verified` 가능), `Application.SetSuspendState(Suspend)` | lock 이 "요청만" 에서 재조회 확인으로 올라갔다 |
+
+**실측(tv1 = Windows 10 19045·PowerShell 5.1·헬퍼 resident, 허브 원격 경로 `fn:PC제어` → `guestpc shell`).** 읽기 7종
+display 16초·power 24초·presence 9초·apps 8초·clipboard 8초·network 8.5초·shortcuts 10초(첫 호출의 Add-Type 컴파일과
+헬퍼 왕복 포함, 두 번째부터 4~9초). clipboard_write→clipboard 왕복 일치(한글·✓·줄바꿈)·빈 글 Clear 일치. keep_awake 40초 →
+power 가 같은 pid 를 돌려줌 → allow_sleep 종료 확인. launch `notepad`(시작 메뉴 바로가기 경로) 12초 verified, apps 에 창 등장,
+quit 10초 verified. network → wifi off → wifi on 재조회 일치(이 PC 는 이더넷이라 연결이 끊기지 않음). brightness 는 외부
+모니터라 변경 없이 거절(정직). lock·sleep·shortcut 실행은 이 PC 에 사용자가 Netflix 를 띄워 둔 상태라 실행하지 않았다(인수·거절
+경로만 시험).
+
+**발견.** ① **허브 버그(OS 무관)**: `select` 가 요청에 `app_kind` 를 붙이고 `prepare` 가 그 요청을 재검증하면서 "받지 않는 인수"
+로 거절 → launch·quit 이 원격 경로에서 접수조차 되지 않았다(§17 의 본체 실측은 `run_host` 직접 호출이라 드러나지 않음).
+`validate` 가 파생 칸을 허용하고 다시 계산하도록 수리, 시험 추가. ② **PowerShell 배열 풀림**: 함수가 원소 1개 배열을 돌려주면
+호출부에서 스칼라가 되어 `$found[0]` 이 해시 키 조회가 된다 → 앱 행이 전부 null 로 verified:true(거짓 성공의 모양). 호출부
+`@()` 로 수리. ③ 블루투스 `DeviceInformation.FindAllAsync(aqs, null, AssociationEndpoint)` 는 이 PC 에서 8초 넘게 멈춰
+network 전체가 30초 제한에 걸렸다. 공식 `GetDeviceSelectorFromConnectionStatus` 선택자는 0.6초 → 교체, 모든 WinRT 대기에
+상한(기본 8초·열거 6초)과 취소. ④ `powercfg /requests`·`query session` 은 관리자/에디션 제한이라 기본값으로 못 쓴다.
+⑤ 이 PC 의 `idle_seconds` 가 19만 초(2.3일) — Netflix 창이 앞에 있는데도 입력이 없다는 뜻이며 GetLastInputInfo 는
+키보드·마우스만 센다(리모컨·원격 조작은 입력이 아님). 입회 판정 재료로 쓸 때 이 한계를 안다.
+
+**남긴 것.** Windows 의 display_asleep·lid_closed(공개 API 없음), 관리자 세션에서의 flags·sleep_holders 실측, UWP 앱
+launch 의 AUMID 경로 실측, Windows 한국어 로캘에서 `netsh` 출력 파싱(SSID·State 가 한글이면 null 로 남음 — enabled 는
+WinRT 라 영향 없음), 창 앞으로(needs_front 와 함께)·Windows 창 목록.

@@ -37,8 +37,56 @@ CONTRACT = {
         "mute": ["device_id", "enabled"], "open_url": ["url"], "lock": [],
         "youtube_status": [], "youtube_stop": [],
         "youtube_replace": ["url", "title", "duration_seconds", "fullscreen"],
+        # 본체 OS 조작면(2026-10-20 1층 §17, Windows 동형 §18). 원격 PC 에도 같은 OS 실행 파일이 간다.
+        "display": [], "brightness": ["value"], "power": [], "presence": [], "apps": [],
+        "launch": ["app"], "quit": ["app"], "clipboard": [], "clipboard_write": ["text"],
+        "network": [], "wifi": ["enabled"], "shortcuts": [], "shortcut": ["name"],
+        "keep_awake": ["seconds"], "allow_sleep": [], "sleep": [],
+    },
+    "optional": {"brightness": ["display_id"], "keep_awake": ["display"]},
+    # 동작이 도는 OS. 호출 전 검사(select/prepare)가 대조하고, 불일치는 전송 없이 거절한다.
+    "action_platforms": {
+        "status": ["darwin", "windows"], "volume": ["darwin", "windows"], "mute": ["darwin", "windows"],
+        "open_url": ["darwin", "windows"], "lock": ["darwin", "windows"],
+        "youtube_status": ["windows"], "youtube_stop": ["windows"], "youtube_replace": ["windows"],
+        # 본체 OS 조작면은 맥·Windows 동형(2026-10-20 §18). OS 가 공개 API 로 못 읽는 값은 실행 파일이 null·basis 로 돌려준다.
+        "display": ["darwin", "windows"], "brightness": ["darwin", "windows"], "power": ["darwin", "windows"],
+        "presence": ["darwin", "windows"], "apps": ["darwin", "windows"], "launch": ["darwin", "windows"],
+        "quit": ["darwin", "windows"], "clipboard": ["darwin", "windows"], "clipboard_write": ["darwin", "windows"],
+        "network": ["darwin", "windows"], "wifi": ["darwin", "windows"], "shortcuts": ["darwin", "windows"],
+        "shortcut": ["darwin", "windows"], "keep_awake": ["darwin", "windows"], "allow_sleep": ["darwin", "windows"],
+        "sleep": ["darwin", "windows"],
+    },
+    # 동작별 실행 조건(설계 §6). needs_front 동작은 없다 — 전부 배경에서 돈다.
+    # shared_state 는 사용자와 공유하는 상태를 바꾸는 요청된 효과의 표시이지 거절 조건이 아니다.
+    "conditions": {
+        "status": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "출력 장치·음량·음소거 읽기"},
+        "volume": {"needs_front": False, "shared_state": True, "verification_scope": "os_setting_readback", "effect": "지정 출력의 음량"},
+        "mute": {"needs_front": False, "shared_state": True, "verification_scope": "os_setting_readback", "effect": "지정 출력의 음소거"},
+        "open_url": {"needs_front": False, "shared_state": True, "verification_scope": "launch_request_only", "effect": "기본 브라우저에 탭·창이 열려 사용자 화면에 보일 수 있음"},
+        "lock": {"needs_front": False, "shared_state": True, "verification_scope": "session_lock_readback", "effect": "사용자 세션 잠금"},
+        "youtube_status": {"needs_front": False, "shared_state": False, "verification_scope": "browser_tab_readback", "effect": "기존 유튜브 탭 읽기"},
+        "youtube_stop": {"needs_front": False, "shared_state": True, "verification_scope": "browser_tab_readback", "effect": "기존 재생 정지"},
+        "youtube_replace": {"needs_front": False, "shared_state": True, "verification_scope": "browser_playback_readback", "effect": "기존 탭의 영상 교체·전체화면"},
+        "display": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "화면 목록·잠듦·잠금 읽기"},
+        "brightness": {"needs_front": False, "shared_state": True, "verification_scope": "os_setting_readback", "effect": "지정 화면 밝기(지원 화면만)"},
+        "power": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "전원·배터리·뚜껑·잠 방지 읽기"},
+        "presence": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "입력 유휴·앞 앱·잠금 읽기(사용자 입회 판단 재료)"},
+        "apps": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "앞 앱·실행 중 앱 읽기"},
+        "launch": {"needs_front": False, "shared_state": True, "verification_scope": "app_list_readback", "effect": "앱 실행(앞으로 가져오지 않음·Windows 는 최소화 요청, 창은 생길 수 있음)"},
+        "quit": {"needs_front": False, "shared_state": True, "verification_scope": "app_list_readback", "effect": "앱에 종료 요청(맥은 Apple Events 권한, Windows 는 창 닫기 요청. 저장 확인 창이 뜰 수 있음)"},
+        "clipboard": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "클립보드 글 읽기"},
+        "clipboard_write": {"needs_front": False, "shared_state": True, "verification_scope": "os_setting_readback", "effect": "클립보드 내용 교체"},
+        "network": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "Wi-Fi·블루투스 상태 읽기"},
+        "wifi": {"needs_front": False, "shared_state": True, "verification_scope": "os_setting_readback", "effect": "Wi-Fi 전원(끄면 이 연결 자체가 끊길 수 있음)"},
+        "shortcuts": {"needs_front": False, "shared_state": False, "verification_scope": "os_state_readback", "effect": "단축어 이름 목록"},
+        "shortcut": {"needs_front": False, "shared_state": True, "verification_scope": "exit_status_only", "effect": "사용자 단축어(Windows 는 작업 스케줄러 루트 작업) 실행 — 효과는 단축어가 정함"},
+        "keep_awake": {"needs_front": False, "shared_state": False, "verification_scope": "power_assertion_readback", "effect": "지정 초 동안 잠들지 않기(Windows 는 프로세스 생존 재조회)"},
+        "allow_sleep": {"needs_front": False, "shared_state": False, "verification_scope": "process_readback", "effect": "켜 둔 잠들지 않기 해제"},
+        "sleep": {"needs_front": False, "shared_state": True, "verification_scope": "request_only", "effect": "본체 잠자기(사용자 작업 중단)"},
     },
 }
+BUNDLE_ID = re.compile(r"^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$")
 
 
 class ControlFailure(ValueError):
@@ -55,7 +103,9 @@ def validate(args):
     action = args.get("action", "status")
     if action not in CONTRACT["actions"]:
         raise ValueError("지원하지 않는 PC 동작입니다.")
-    allowed = {"action", *CONTRACT["actions"][action]}
+    allowed = {"action", *CONTRACT["actions"][action], *CONTRACT["optional"].get(action, [])}
+    if action in {"launch", "quit"}:
+        allowed.add("app_kind")  # select 가 붙인 파생 칸 — prepare 의 재검증에서 다시 계산한다(§18 발견 ①)
     if set(args) - allowed:
         raise ValueError("이 동작이 받지 않는 인수가 있습니다.")
     for key in CONTRACT["actions"][action]:
@@ -116,6 +166,45 @@ def validate(args):
                 "Windows에서는 youtube_replace에 영상 URL·제목·전체 길이를 전달하세요."
             )
         result["url"] = url
+    if action == "brightness":
+        value = args["value"]
+        if isinstance(value, bool) or type(value) is not int or not 0 <= value <= 100:
+            raise ValueError("밝기는 0~100 사이 정수여야 합니다.")
+        result["value"] = value
+        if "display_id" in args:
+            display_id = args["display_id"]
+            if isinstance(display_id, bool) or type(display_id) is not int or display_id < 0:
+                raise ValueError("display_id 는 display 로 조회한 정수 ID 입니다.")
+            result["display_id"] = display_id
+    if action in {"launch", "quit"}:
+        app = args["app"]
+        if not isinstance(app, str) or not app.strip() or len(app) > 256 or any(ord(c) < 32 for c in app):
+            raise ValueError("앱은 번들 ID(com.apple.Safari) 또는 앱 이름입니다.")
+        result["app"] = app.strip()
+        result["app_kind"] = "bundle" if BUNDLE_ID.fullmatch(result["app"]) else "name"
+    if action == "clipboard_write":
+        text = args["text"]
+        if not isinstance(text, str) or len(text) > 100_000:
+            raise ValueError("클립보드 글은 100,000자 이하 문자열입니다.")
+        result["text"] = text
+    if action == "wifi":
+        if type(args["enabled"]) is not bool:
+            raise ValueError("Wi-Fi 전원은 true 또는 false 입니다.")
+        result["enabled"] = args["enabled"]
+    if action == "shortcut":
+        name = args["name"]
+        if not isinstance(name, str) or not name.strip() or len(name) > 256 or any(ord(c) < 32 for c in name):
+            raise ValueError("shortcuts 로 조회한 단축어 이름이 필요합니다.")
+        result["name"] = name.strip()
+    if action == "keep_awake":
+        seconds = args["seconds"]
+        if isinstance(seconds, bool) or type(seconds) is not int or not 1 <= seconds <= 86400:
+            raise ValueError("잠들지 않기는 1~86400초 정수입니다.")
+        result["seconds"] = seconds
+        if "display" in args:
+            if type(args["display"]) is not bool:
+                raise ValueError("display 는 true 또는 false 입니다.")
+            result["display"] = args["display"]
     return result
 
 
@@ -129,6 +218,8 @@ def prepare(args):
     request = validate(args.get("request", {}))
     if request["action"].startswith("youtube_") and system != "windows":
         raise ValueError("검증된 유튜브 탭 교체는 현재 Windows Chrome·Edge·Brave를 지원합니다.")
+    if system not in CONTRACT["action_platforms"][request["action"]]:
+        raise ValueError(f"{request['action']} 은 {'·'.join(CONTRACT['action_platforms'][request['action']])} 에서 지원합니다. 이 대상은 {system} 입니다.")
     request["request_id"] = uuid.uuid4().hex
     encoded = base64.b64encode(json.dumps(request, ensure_ascii=False).encode()).decode()
     if system == "darwin":
@@ -195,11 +286,37 @@ def decode(output, plan):
             raise ValueError("실제 음량이 요청과 다릅니다.")
         if request["action"] == "mute" and device.get("muted") is not request["enabled"]:
             raise ValueError("실제 음소거 상태가 요청과 다릅니다.")
+    action = request["action"]
+    if action == "brightness":
+        display = state.get("display") or {}
+        if (state.get("verified") is not True or type(display.get("brightness")) not in (int, float)
+                or abs(display["brightness"] - request["value"]) > 2
+                or ("display_id" in request and display.get("id") != request["display_id"])):
+            raise ValueError("변경 뒤 읽은 화면 밝기가 요청과 다릅니다.")
+    if action in {"launch", "quit"}:
+        app = state.get("app") or {}
+        if state.get("verified") is not True or app.get("running") is not (action == "launch"):
+            raise ValueError("앱 목록 재조회가 요청한 상태와 다릅니다.")
+    if action == "clipboard_write":
+        if state.get("verified") is not True or state.get("length") != len(request["text"]):
+            raise ValueError("클립보드 쓰기 결과를 확인하지 못했습니다.")
+    if action == "wifi":
+        if state.get("verified") is not True or (state.get("wifi") or {}).get("enabled") is not request["enabled"]:
+            raise ValueError("Wi-Fi 전원 재조회가 요청과 다릅니다.")
+    if action == "keep_awake":
+        if state.get("verified") is not True or type((state.get("keep_awake") or {}).get("pid")) is not int:
+            raise ValueError("잠들지 않기 등록을 확인하지 못했습니다.")
+    if action == "allow_sleep" and state.get("verified") is not True:
+        raise ValueError("잠들지 않기 해제를 확인하지 못했습니다.")
+    if action in {"display", "power", "presence", "apps", "clipboard", "network", "shortcuts"} and state.get("verified") is not True:
+        raise ValueError("읽기 결과가 verified 로 돌아오지 않았습니다.")
     state["source_sha256"] = plan.get("source_sha256")
-    if request["action"] in {"status", "volume", "mute"}:
+    if action in {"status", "volume", "mute"}:
         state["audio_capabilities"] = CONTRACT["audio_capabilities"]
-        state["verification_scope"] = ("os_state_readback" if request["action"] == "status"
-                                       else "os_setting_readback")
+    condition = CONTRACT["conditions"].get(action)
+    if condition:
+        state["verification_scope"] = condition["verification_scope"]
+        state["condition"] = {k: condition[k] for k in ("needs_front", "shared_state")}
     return state
 
 
@@ -233,9 +350,12 @@ def select_target(args):
     youtube = request["action"].startswith("youtube_")
     if youtube and system != "windows":
         raise ValueError("유튜브 제어는 Windows에서 지원합니다")
+    if system not in CONTRACT["action_platforms"][request["action"]]:
+        raise ValueError(f"{request['action']} 은 {'·'.join(CONTRACT['action_platforms'][request['action']])} 에서 지원합니다. 선택 PC 는 {system} 입니다")
+    slow = youtube or request["action"] == "shortcut"
     wait = args.get("wait")
     if wait is None:
-        wait = 150 if youtube else 60
+        wait = 150 if slow else 60
     if type(wait) not in (int, float) or not math.isfinite(wait) or not 0 <= wait <= 240:
         raise ValueError("대기는 0~240초입니다")
     filename = ("pc_youtube_windows.ps1" if youtube else
@@ -246,7 +366,7 @@ def select_target(args):
                 "action_platforms", {a: ["windows"] if a.startswith("youtube_") else CONTRACT["platforms"]
                                      for a in CONTRACT["actions"]}).items()
                                   if system in systems],
-            "wait": wait, "timeout": 120 if youtube else 30}
+            "wait": wait, "timeout": 120 if slow else 30}
 
 
 def verify_task(args, context):
@@ -318,7 +438,8 @@ def run(args, context=None):
             ["powershell.exe", "-STA", "-NoProfile", "-NonInteractive", "-Command",
              "[Console]::InputEncoding=[Text.Encoding]::UTF8; $s=[Console]::In.ReadToEnd(); & ([ScriptBlock]::Create($s))"])
     proc = subprocess.run(argv, input=plan["stdin"], capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", timeout=115 if plan["request"]["action"].startswith("youtube_") else 25)
+                          encoding="utf-8", errors="replace",
+                          timeout=115 if plan["request"]["action"] in {"youtube_replace", "youtube_stop", "youtube_status", "shortcut"} else 40)
     if proc.returncode != 0:
         raise RuntimeError("PC 실행 실패: " + proc.stderr[-1200:])
     return decode(proc.stdout, plan)

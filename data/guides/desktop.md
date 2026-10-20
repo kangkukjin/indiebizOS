@@ -141,7 +141,8 @@ AX가 0개면(권한 미부여/앱 a11y 미노출) `ocr_lines`로 폴백한다 �
 | 화면 기록 | 시스템 설정 → 개인정보 보호 → 화면 기록 | screenshot |
 | 손쉬운 사용 | 시스템 설정 → 개인정보 보호 → 손쉬운 사용 | click·type·key·drag·scroll·mouse_move |
 
-권한 부여 후 백엔드 프로세스(Python)를 재시작해야 반영된다.
+권한 주체=백엔드를 띄운 앱(책임 프로세스, 예: `IndieBiz 시작.app` — Python 이 아님)이며, AX 오류 중 **-25211 만 권한**이고 -25204 는 포커스 조회 완료 불가(권한 아님)다 — `screen_info` 의 `ax_trusted`·`responsible_app` 으로 확인한다.
+권한 부여 후 백엔드를 재기동해야 반영된다.
 
 ---
 

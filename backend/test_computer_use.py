@@ -198,3 +198,68 @@ if __name__ == "__main__":
     import sys
     import pytest
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def _ax_mock(system_err, app_err, front_pid=303, front=True):
+    """system-wide 포커스 조회와 앱 단위 조회의 AX 오류 코드를 흉내 낸다 (10-20 입회 측정의 두 코드)."""
+    def copy_attr(element, key, out):
+        if element == 'system':
+            return (system_err, None if system_err else front_pid)
+        return (app_err, [] if not app_err else None)
+    return NS(AXUIElementCreateSystemWide=lambda: 'system',
+              AXUIElementCreateApplication=lambda pid: ('app', pid),
+              AXUIElementCopyAttributeValue=copy_attr,
+              AXUIElementGetPid=lambda element, out: (0, element),
+              AXIsProcessTrusted=lambda: app_err == 0), NS(
+        NSWorkspace=NS(sharedWorkspace=lambda: NS(
+            frontmostApplication=lambda: NS(processIdentifier=lambda: front_pid) if front else None)),
+        NSRunningApplication=NS(runningApplicationWithProcessIdentifier_=lambda pid: NS(
+            localizedName=lambda: f'app-{pid}', bundleIdentifier=lambda: f'test.{pid}')))
+
+
+def test_frontmost_falls_back_to_workspace_when_systemwide_cannot_complete(screen, monkeypatch):
+    """-25204(kAXErrorCannotComplete)는 권한이 아니다 — NSWorkspace 폴백 + 앱 단위 조회로 앞 앱을 얻는다."""
+    services, appkit = _ax_mock(system_err=-25204, app_err=0, front_pid=303)
+    monkeypatch.setitem(sys.modules, 'ApplicationServices', services)
+    monkeypatch.setitem(sys.modules, 'AppKit', appkit)
+    assert screen._frontmost_app() == {'name': 'app-303', 'pid': 303, 'bundle_id': 'test.303'}
+    # 폴백마저 앞 앱을 못 주면 "완료 불가(권한 아님)" — 권한 안내가 섞이면 안 된다
+    services, appkit = _ax_mock(system_err=-25204, app_err=0, front=False)
+    monkeypatch.setitem(sys.modules, 'ApplicationServices', services)
+    monkeypatch.setitem(sys.modules, 'AppKit', appkit)
+    with pytest.raises(RuntimeError) as exc:
+        screen._frontmost_app()
+    assert '-25204' in str(exc.value) and '권한 아님' in str(exc.value) and '손쉬운 사용' not in str(exc.value)
+
+
+def test_frontmost_reports_permission_only_for_api_disabled_with_responsible_app(screen, monkeypatch):
+    """-25211(kAXErrorAPIDisabled)만 권한 안내 — 권한 주체(책임 프로세스 경로)를 문장에 싣는다."""
+    monkeypatch.setattr(screen, '_responsible_app',
+                        lambda: {'pid': 1, 'path': '/Applications/IndieBiz 시작.app', 'name': 'IndieBiz 시작.app'})
+    services, appkit = _ax_mock(system_err=-25204, app_err=-25211)
+    monkeypatch.setitem(sys.modules, 'ApplicationServices', services)
+    monkeypatch.setitem(sys.modules, 'AppKit', appkit)
+    with pytest.raises(RuntimeError) as exc:
+        screen._frontmost_app()
+    msg = str(exc.value)
+    assert '-25211' in msg and '손쉬운 사용' in msg and '/Applications/IndieBiz 시작.app' in msg and 'Python 이 아님' in msg
+    # system-wide 자체가 -25211 이어도 같은 권한 문장
+    services, appkit = _ax_mock(system_err=-25211, app_err=-25211)
+    monkeypatch.setitem(sys.modules, 'ApplicationServices', services)
+    with pytest.raises(RuntimeError, match='IndieBiz 시작.app'):
+        screen._frontmost_app()
+
+
+def test_screen_info_reports_ax_trust_and_responsible_app(screen, monkeypatch, tmp_path):
+    monkeypatch.setattr(screen.platform, 'system', lambda: 'Darwin')
+    monkeypatch.setattr(screen, '_ax_trusted', lambda: False)
+    monkeypatch.setattr(screen, '_responsible_app',
+                        lambda: {'pid': 1, 'path': '/Applications/IndieBiz 시작.app', 'name': 'IndieBiz 시작.app'})
+    monkeypatch.setattr(screen, '_get_screen_size', lambda: (1920, 1080))
+    monkeypatch.setattr(screen.subprocess, 'run', lambda *a, **k: open(a[0][-1], 'wb').write(b'x' * 200))
+    info = json.loads(screen.execute({'op': 'screen_info'}, ToolContext(str(tmp_path), 'computer_op')))
+    assert info['ax_trusted'] is False and info['responsible_app']['name'] == 'IndieBiz 시작.app'
+    assert '손쉬운 사용' in info['note'] and '/Applications/IndieBiz 시작.app' in info['note'] and '-25211' in info['note']
+    monkeypatch.setattr(screen, '_ax_trusted', lambda: True)
+    info = json.loads(screen.execute({'op': 'screen_info'}, ToolContext(str(tmp_path), 'computer_op')))
+    assert info['ax_trusted'] is True and 'OK' in info['note']

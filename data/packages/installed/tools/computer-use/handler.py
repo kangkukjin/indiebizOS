@@ -482,7 +482,23 @@ def _do_screen_info(tool_input):
         except Exception:
             info["screenshot_permission"] = "확인 불가"
 
-        info["note"] = "시스템 환경설정 > 개인정보 보호 > 화면 기록 & 손쉬운 사용에서 Python에 권한을 부여하세요"
+        # 손쉬운 사용: AXIsProcessTrusted 가 판정, 권한 주체는 책임 프로세스(Python 이 아님).
+        info["ax_trusted"] = _ax_trusted()
+        info["responsible_app"] = _responsible_app()
+        subject = (info["responsible_app"] or {}).get("path") or "백엔드를 띄운 앱(책임 프로세스)"
+        missing = []
+        if info["screenshot_permission"] != "OK":
+            missing.append("화면 기록")
+        if info["ax_trusted"] is False:
+            missing.append("손쉬운 사용")
+        if missing:
+            info["note"] = (f"{'·'.join(missing)} 권한이 없습니다. 권한 주체 = 백엔드를 띄운 앱 {subject} — "
+                            "시스템 설정 → 개인정보 보호에서 이 앱을 켜고 백엔드를 재기동하세요(Python 이 아님). "
+                            "AX 오류는 -25211 만 권한이며 -25204 는 포커스 조회 완료 불가(권한 아님).")
+        elif info["ax_trusted"] is None:
+            info["note"] = f"손쉬운 사용 상태 확인 불가(AXIsProcessTrusted 호출 실패). 권한 주체 = {subject}."
+        else:
+            info["note"] = f"화면 기록·손쉬운 사용 권한 OK. 권한 주체 = {subject}."
 
     # 동작별 실행 조건과 지금 문맥 — AI 가 "지금 어떤 조건에서 실행할 수 있는지"를 알고 조합하게.
     try:
@@ -556,11 +572,80 @@ def _ax_refind(pid, role, title):
     return found[0]
 
 
-def _frontmost_app():
-    """이벤트 루프가 없는 worker에서도 AX 서버의 현재 포커스를 매번 조회한다.
+# AX 오류 코드 — 권한은 -25211 하나뿐이다. -25204 는 "조회가 완료되지 않음"이며 권한과 무관
+# (10-20 입회 측정: 신뢰된 터미널 아래서도 system-wide 포커스 조회는 -25204, 앱 단위 조회는 0).
+_AX_ERR_CANNOT_COMPLETE = -25204   # kAXErrorCannotComplete
+_AX_ERR_API_DISABLED = -25211      # kAXErrorAPIDisabled = 손쉬운 사용 권한 없음
 
-    NSWorkspace.frontmostApplication은 daemon에서 활성 변경 알림이 처리되지
-    않으면 오래된 앱을 돌려준다. 캐시 대신 system-wide AXFocusedApplication 사용.
+
+def _ax_trusted():
+    """AXIsProcessTrusted — 이 프로세스(의 책임 프로세스)가 손쉬운 사용에 켜져 있는가. 확인 불가=None."""
+    try:
+        from ApplicationServices import AXIsProcessTrusted
+        return bool(AXIsProcessTrusted())
+    except Exception:
+        return None
+
+
+def _responsible_app():
+    """TCC 권한 주체 = 백엔드를 띄운 책임 프로세스(responsibility_get_pid_responsible_for_pid).
+
+    Python 이 아니라 그 조상 앱(예: IndieBiz 시작.app)이 손쉬운 사용 목록의 주체다.
+    {"pid","path","name"} 또는 확인 불가=None.
+    """
+    try:
+        import ctypes
+        libc = ctypes.CDLL(None)
+        fn = libc.responsibility_get_pid_responsible_for_pid
+        fn.restype, fn.argtypes = ctypes.c_int, [ctypes.c_int]
+        rpid = int(fn(os.getpid()))
+        if rpid <= 0:
+            return None
+        path = None
+        try:
+            from AppKit import NSRunningApplication
+            app = NSRunningApplication.runningApplicationWithProcessIdentifier_(rpid)
+            url = app.bundleURL() if app is not None else None
+            if url is not None:
+                path = str(url.path())
+        except Exception:
+            pass
+        if not path:
+            buf = ctypes.create_string_buffer(4096)
+            libc.proc_pidpath.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32]
+            if libc.proc_pidpath(rpid, buf, 4096) > 0:
+                path = buf.value.decode(errors="replace")
+        name = os.path.basename(path.rstrip("/")) if path else None
+        return {"pid": rpid, "path": path, "name": name}
+    except Exception:
+        return None
+
+
+def _permission_hint():
+    """손쉬운 사용 안내 한 문장 — 권한 주체(책임 프로세스)를 실어서."""
+    resp = _responsible_app() or {}
+    subject = resp.get("path") or resp.get("name") or "백엔드를 띄운 앱(책임 프로세스)"
+    return (f"손쉬운 사용 권한이 없습니다. 권한 주체 = 백엔드를 띄운 앱 {subject} — "
+            "시스템 설정 → 개인정보 보호 → 손쉬운 사용에서 이 앱을 켜고 백엔드를 재기동하세요(Python 이 아님).")
+
+
+def _ax_error_message(err, what):
+    """AX 오류 코드별 문장. -25211 만 권한, -25204 는 완료 불가(권한 아님), 나머지는 코드만."""
+    if err == _AX_ERR_API_DISABLED:
+        return f"{what} (AX {err} kAXErrorAPIDisabled): {_permission_hint()}"
+    if err == _AX_ERR_CANNOT_COMPLETE:
+        return f"{what} (AX {err} kAXErrorCannotComplete): 포커스 조회 완료 불가(권한 아님)."
+    return f"{what} (AX {err})"
+
+
+def _frontmost_app():
+    """이벤트 루프가 없는 worker에서 현재 앞 앱을 조회한다.
+
+    1차 = system-wide AXFocusedApplication(AX 서버의 현재 포커스). 이 환경에서는 신뢰 여부와
+    무관하게 -25204(완료 불가)가 나므로 그때는 NSWorkspace.frontmostApplication 으로 폴백해
+    pid 를 얻고, 앱 단위 AXUIElementCreateApplication(pid) 조회를 이어 신뢰 여부를 판정한다
+    (-25211 이면 권한 없음 — 책임 프로세스 경로를 문장에 싣는다). NSWorkspace 값은 daemon 에서
+    활성 변경 알림이 처리되지 않으면 오래될 수 있어 system-wide 가 되는 환경에선 그쪽을 우선한다.
     """
     from ApplicationServices import (
         AXUIElementCreateSystemWide, AXUIElementCopyAttributeValue, AXUIElementGetPid,
@@ -568,11 +653,23 @@ def _frontmost_app():
     from AppKit import NSRunningApplication
     err, focused = AXUIElementCopyAttributeValue(
         AXUIElementCreateSystemWide(), "AXFocusedApplication", None)
-    if err or focused is None:
-        raise RuntimeError(f"현재 앱 조회 실패 (AX {err}). 손쉬운 사용 권한을 확인하세요.")
-    err, pid = AXUIElementGetPid(focused, None)
-    if err or not pid:
-        raise RuntimeError(f"현재 앱 PID 조회 실패 (AX {err})")
+    if not err and focused is not None:
+        err, pid = AXUIElementGetPid(focused, None)
+        if err or not pid:
+            raise RuntimeError(_ax_error_message(err, "현재 앱 PID 조회 실패"))
+    elif err == _AX_ERR_CANNOT_COMPLETE or (not err and focused is None):
+        from AppKit import NSWorkspace
+        from ApplicationServices import AXUIElementCreateApplication
+        front = NSWorkspace.sharedWorkspace().frontmostApplication()
+        if front is None:
+            raise RuntimeError(_ax_error_message(_AX_ERR_CANNOT_COMPLETE, "현재 앱 조회 실패"))
+        pid = int(front.processIdentifier())
+        # 앱 단위 조회 — 신뢰 판정. -25211 만 권한 오류, 그 밖의 코드(창 없음·앱 무응답)는 통과.
+        app_err, _ = AXUIElementCopyAttributeValue(AXUIElementCreateApplication(pid), "AXWindows", None)
+        if app_err == _AX_ERR_API_DISABLED:
+            raise RuntimeError(_ax_error_message(app_err, "앱 단위 AX 조회 실패"))
+    else:
+        raise RuntimeError(_ax_error_message(err, "현재 앱 조회 실패"))
     app = NSRunningApplication.runningApplicationWithProcessIdentifier_(pid)
     if app is None:
         raise RuntimeError("현재 앱이 종료되었습니다. snapshot으로 다시 확인하세요.")
@@ -750,7 +847,7 @@ def _do_snapshot(tool_input):
             els = _ax_elements(app["pid"])
             result["elements"] = els
             if not els:
-                result["elements_note"] = "AX 0개 — 손쉬운 사용 권한 미부여 또는 앱 a11y 미노출. OCR 폴백."
+                result["elements_note"] = "AX 0개 — 앱이 a11y 를 노출하지 않음(권한은 앞 앱 조회에서 확인됨). OCR 폴백."
         except Exception as e:
             result["elements_note"] = f"AX 실패: {e}"
     except Exception as e:

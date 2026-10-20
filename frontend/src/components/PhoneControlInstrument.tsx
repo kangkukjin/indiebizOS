@@ -13,7 +13,6 @@ export function PhoneControlInstrument() {
   const [stream, setStream] = useState<PhoneStream>('music');
   const streamRef = useRef<PhoneStream>('music');
   const [state, setState] = useState<PhoneState | null>(null);
-  const [draft, setDraft] = useState(0);
   const [busy, setBusy] = useState(false);
   const [extrasBusy, setExtrasBusy] = useState(false);
   const [recoveryBusy, setRecoveryBusy] = useState(false);
@@ -70,7 +69,7 @@ export function PhoneControlInstrument() {
     try {
       const result = await controlPhone(id, op, value, streamRef.current);
       if (!mounted.current || target.current !== id || revision.current !== version) return;
-      setState(result); setDraft(result.actual); setNotice(result.message);
+      setState(result); setNotice(result.message);
       setElapsed((performance.now() - started) / 1000);
     } catch (e) {
       if (!mounted.current || target.current !== id || revision.current !== version) return;
@@ -140,14 +139,6 @@ export function PhoneControlInstrument() {
           </div>
           <p className="text-sm text-stone-500 mt-2">{state ? `현재 ${state.percent}% · ${phone?.name}` : selected ? '상태를 확인하면 조절할 수 있습니다.' : '먼저 제어할 폰을 선택하세요.'}</p>
         </div>
-        <label className="block space-y-2">
-          <span className="text-sm text-stone-600">설정할 음량 {state ? `${draft}단계` : ''}</span>
-          <input aria-label="설정할 미디어 음량" type="range" min={0} max={state?.max || 1} step={1}
-            value={draft} disabled={disabled} onChange={e => setDraft(Number(e.target.value))}
-            className="w-full accent-emerald-700 disabled:opacity-40" />
-        </label>
-        <button className="w-full py-3 rounded-xl bg-emerald-800 text-white hover:bg-emerald-900 disabled:opacity-40"
-          disabled={disabled || draft === state?.actual} onClick={() => change('set', draft)}>선택한 음량 적용</button>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button className={button} disabled={disabled || state?.actual === 0} onClick={() => change('step', -1)}>− 한 단계</button>
           <button className={button} disabled={disabled || state?.actual === state?.max} onClick={() => change('step', 1)}>＋ 한 단계</button>

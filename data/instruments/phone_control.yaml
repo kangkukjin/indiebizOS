@@ -31,10 +31,6 @@ modes:
       label: 벨소리
     - value: notification
       label: 알림
-  - key: level
-    type: text
-    placeholder: 설정할 음량 단계
-    default: '4'
   action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_status", stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
   run_label: 상태 조회
   buttons:
@@ -52,9 +48,6 @@ modes:
     render_result: true
   - label: 이전 값 복원
     action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_restore", stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
-    render_result: true
-  - label: 입력한 단계 적용
-    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume", value: number($level), stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 짧은 진동
     action: '$r = [fn:Android제어]{대상:$target,요청:{action:"vibrate", stream:$stream, duration_ms:200}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'

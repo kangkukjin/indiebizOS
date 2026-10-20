@@ -1,3 +1,12 @@
+AI동향발행:
+  description: '저장한 AI 동향 보고서를 공유창고/0/오늘의 AI 보고서.html에 목차·요약·기사 구획을 갖춘 HTML로 발행한다.
+    args: src(선택, 생략하면 파일명 날짜가 가장 최근인 원문). 기존 공유판은 새 HTML이 완성된 뒤 원자 교체하며, 감독 턴에서도
+    검수 대기 없이 바로 공개한다(published:true). public_url은 공개 사이트 설정의 정식 파일 링크이며 public_url_checked:false는
+    접속 미검증이다. 주소가 없으면 public_url_status로 미설정·설정 오류·조회 실패를 구분한다. 보고서 조사·작성·알림은 하지 않는다.'
+  file: ai_trend_publish.py
+  interpreter: python
+  registered_at: '2026-10-06T09:00:00'
+  timeout: 120
 AI시대뉴스동기화:
   description: '완료된 AI 동향 보고서의 공개 출처 준비·제목 번역용 메타 정규화·뉴스 전송 — args: op(prepare 기본값|normalize|publish|retry|status)·data(normalize/publish에서
     필수인 행 목록 또는 items 봉투)·keys(retry에서 필수인 후보 키 목록). prepare는 보고서 본문이 실제로 인용한 검증 출처
@@ -53,16 +62,6 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
-미디어세션:
-  description: '미디어 세션 제어(docs/MEDIA_SESSION_CONTRACT.md) — args: op(capabilities|create|status|accept|reject|end|update|list|history|health)·
-    target(장치 이름·device_id 또는 통화 상대 이름/npub)·kind(call|extension)·purpose(voice_call|video_call|camera|microphone|speaker|playback)·
-    session_id·delivery(content|realtime, playback 기본 content)·content(파일 경로 또는 URL과 재생 위치 객체)·want_mic·camera·changes·expected_revision·reason·block·active·limit. 세션 한 행을 items 로 돌려주며 통화 창은
-    조종실·연락처 버튼이 연다(이 스크립트는 제어만). 실패는 error 코드(device_offline·device_busy·unsupported_track·relation_revoked·
-    content_unavailable·signaling_unavailable 등)로 정직하게. 토큰·SDP 는 다루지 않는다.'
-  file: 미디어세션.py
-  interpreter: python
-  registered_at: '2026-10-13T18:10:00'
-  timeout: 60
 python_libraries:
   callable_contract:
     adapter:
@@ -180,19 +179,25 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-07T20:07:16'
   timeout: 300
+미디어세션:
+  description: '미디어 세션 제어(docs/MEDIA_SESSION_CONTRACT.md) — args: op(capabilities|create|status|accept|reject|end|update|list|history|health)·
+    target(장치 이름·device_id 또는 통화 상대 이름/npub)·kind(call|extension)·purpose(voice_call|video_call|camera|microphone|speaker|playback)·
+    session_id·delivery(content|realtime, playback 기본 content)·content(파일 경로 또는 URL과
+    재생 위치 객체)·want_mic·camera·changes·expected_revision·reason·block·active·limit.
+    세션 한 행을 items 로 돌려주며 통화 창은 조종실·연락처 버튼이 연다(이 스크립트는 제어만). 실패는 error 코드(device_offline·device_busy·unsupported_track·relation_revoked·
+    content_unavailable·signaling_unavailable 등)로 정직하게. 토큰·SDP 는 다루지 않는다.'
+  file: 미디어세션.py
+  interpreter: python
+  registered_at: '2026-10-13T18:10:00'
+  timeout: 60
 보고서HTML:
   description: '마크다운 보고서 → 공유창고용 자족 HTML(스타일 인라인·다크모드 대응). args: src·dst(필수) · title(기본=첫
-    h1) · subtitle(머리 한 줄) · theme(plain|card|briefing: 목차·요약·기사 구획) · accent · drop_lines(그 문자열이 든 줄 제거
-    — 공유판 배포 규약을 사람 손이 아니라 변환기가 집행) · publish(direct=완성 즉시 dst 공개, 기본 | review=감독 턴 검수 대기 초안·승인 뒤 하네스 공개). items 로 링크·표·제목 수와 제거한 줄 수를 신고'
+    h1) · subtitle(머리 한 줄) · theme(plain|card|briefing: 목차·요약·기사 구획) · accent · drop_lines(그
+    문자열이 든 줄 제거 — 공유판 배포 규약을 사람 손이 아니라 변환기가 집행) · publish(direct=완성 즉시 dst 공개, 기본
+    | review=감독 턴 검수 대기 초안·승인 뒤 하네스 공개). items 로 링크·표·제목 수와 제거한 줄 수를 신고'
   file: 보고서HTML.py
   interpreter: python
   registered_at: '2026-08-28T07:10:03'
-  timeout: 120
-AI동향발행:
-  description: '저장한 AI 동향 보고서를 공유창고/0/오늘의 AI 보고서.html에 목차·요약·기사 구획을 갖춘 HTML로 발행한다. args: src(선택, 생략하면 파일명 날짜가 가장 최근인 원문). 기존 공유판은 새 HTML이 완성된 뒤 원자 교체하며, 감독 턴에서도 검수 대기 없이 바로 공개한다(published:true). public_url은 공개 사이트 설정의 정식 파일 링크이며 public_url_checked:false는 접속 미검증이다. 주소가 없으면 public_url_status로 미설정·설정 오류·조회 실패를 구분한다. 보고서 조사·작성·알림은 하지 않는다.'
-  file: ai_trend_publish.py
-  interpreter: python
-  registered_at: '2026-10-06T09:00:00'
   timeout: 120
 빌드검증:
   description: '몸의 커밋 전 관문 배터리(build --check·층·동등성(+typecheck)·items 주입·경로 해석·파일 크기)를
@@ -303,19 +308,27 @@ AI동향발행:
   description: '공통 HTML 틀 한 벌 + 장별 JSON을 AI 호출 없이 덱에 적용. args: lecture_id, lecture_dir(선택),
     template_path({{slot}} 틀 파일), contents_path([{id,title,speaker_note,fields:{...}}]
     파일), inspect. 문자열은 HTML escape, *_html 슬롯만 명시적 HTML 삽입. 변경된 장만 렌더. 창작 그림/SVG는
-    내용 JSON에 따로 제작하고 바깥 HTML을 반복 생성하지 않음. title과 fields.title 충돌은 거절. 반환 title/speaker_note는 저장된 덱의 실제 값(사용자 수정 포함).'
+    내용 JSON에 따로 제작하고 바깥 HTML을 반복 생성하지 않음. title과 fields.title 충돌은 거절. 반환 title/speaker_note는
+    저장된 덱의 실제 값(사용자 수정 포함).'
   file: 슬라이드틀적용.py
   interpreter: python
   registered_at: '2026-09-11T00:00:00'
   timeout: 1800
 시험:
   callable_contract:
-    version: 1
-    params: {files: 'List<Text>', k: Text, timeout: Number}
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - unknown
+    params:
+      files: List<Text>
+      k: Text
+      timeout: Number
     required: []
-    result: {items: 'List<Record>', ok: Bool}
-    effects: [unknown]
-    adapter: {protocol: registered-json/1}
+    result:
+      items: List<Record>
+      ok: Bool
+    version: 1
   description: 'pytest 를 파일·-k 단위로 — args: files(바뀐 곳의 시험 파일 목록)·k·timeout. items(file·passed·failed·errors·failures[])+ok.
     [self:edit] 뒤 검증을 같은 프로그램에서(2026-09-05). 전수(files 생략·폴더, 약 8분)는 전경 거절 — background:true
     로 돌리고 status{job_id, wait:240} 로 받는다(2026-09-18)'
@@ -473,10 +486,56 @@ AI동향발행:
   interpreter: python
   registered_at: '2026-08-20T00:52:17'
   timeout: 1800
+의약품허가조회:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    defaults:
+      limit: 20
+      page: 1
+    effects:
+    - read_external
+    integers:
+    - page
+    - limit
+    maximum:
+      limit: 100
+    minimum:
+      limit: 1
+      page: 1
+    params:
+      id: Text
+      limit: Number
+      page: Number
+      query: Text
+    per_run: true
+    read_resources:
+      mfds:
+      - query
+      - id
+      - page
+      - limit
+    required: []
+    required_any:
+    - - query
+      - id
+    result: Record
+    version: 1
+  description: '식약처 의약품 제품 허가정보(전문·일반)를 조회. args: query(제품명) 또는 id(품목기준코드), page(기본1),
+    limit(1~100). items에 id·title·manufacturer·classification·ingredients_text·url·raw,
+    다음 페이지와 원천 확인 상태를 반환. DATA_GO_KR_API_KEY와 해당 API 활용승인 필요. e약은요에 없는 처방약의 후보 확인용이며
+    조회 실패를 없음으로 바꾸지 않는다. 개인 건강 원장은 쓰지 않는다.'
+  file: drug_approval.py
+  interpreter: python
+  registered_at: '2026-10-12T00:00:00'
+  timeout: 60
 이미지변환:
   description: 사진 정보 조회·변환·크기 조정. items는 성공한 파일, errors는 파일별 실패이며 부분 성공이 가능하다. 상세 입력·반환은 callable_contract.
   file: 이미지변환.py
   interpreter: python
+  lifecycle:
+    candidate_since: '2026-10-16'
+    evidence: 참조 0 · 쓸모 실행 0 · 첫 관측 2026-09-16
   registered_at: '2026-09-15T14:21:29'
   timeout: 300
   callable_contract:
@@ -684,28 +743,6 @@ AI동향발행:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
-
-의약품허가조회:
-  description: '식약처 의약품 제품 허가정보(전문·일반)를 조회. args: query(제품명) 또는 id(품목기준코드), page(기본1), limit(1~100). items에 id·title·manufacturer·classification·ingredients_text·url·raw, 다음 페이지와 원천 확인 상태를 반환. DATA_GO_KR_API_KEY와 해당 API 활용승인 필요. e약은요에 없는 처방약의 후보 확인용이며 조회 실패를 없음으로 바꾸지 않는다. 개인 건강 원장은 쓰지 않는다.'
-  file: drug_approval.py
-  interpreter: python
-  registered_at: '2026-10-12T00:00:00'
-  timeout: 60
-  callable_contract:
-    version: 1
-    params: {query: Text, id: Text, page: Number, limit: Number}
-    required: []
-    required_any: [[query, id]]
-    defaults: {page: 1, limit: 20}
-    integers: [page, limit]
-    minimum: {page: 1, limit: 1}
-    maximum: {limit: 100}
-    result: Record
-    effects: [read_external]
-    per_run: true
-    read_resources: {mfds: [query, id, page, limit]}
-    adapter: {protocol: registered-json/1}
-
 PC제어부품:
   description: PC제어·PC제어확인의 내부 준비·검증 부품. request의 action·device_id·value·enabled·url·title·duration_seconds·fullscreen·app·display·display_id·name·seconds·text는 지원 동작별로 op:contract의 actions에서 조회한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
   file: pc_control.py
@@ -750,6 +787,7 @@ PC제어부품:
     variants:
     - when:
         op: contract
+      effects: [read_external]
       required:
       - op
       forbidden:
@@ -771,10 +809,9 @@ PC제어부품:
         platforms: List<Text>
         actions: Record
         host_platform: Text
-      effects:
-      - read_external
     - when:
         op: select
+      effects: [read_external]
       required:
       - op
       - target
@@ -795,13 +832,12 @@ PC제어부품:
         platform: Text
         request: Record
         source_path: Text
+        supported_actions: List<Text>
         wait: Number
         timeout: Number
-        supported_actions: List<Text>
-      effects:
-      - read_external
     - when:
         op: prepare
+      effects: [read_external]
       required:
       - op
       - platform
@@ -825,8 +861,6 @@ PC제어부품:
         helper_sha256: Text
         command: Text
         stdin: Text
-      effects:
-      - read_external
     - when:
         op: local
       required:
@@ -853,7 +887,44 @@ PC제어부품:
         verified: Bool
         source_sha256: Text
     - when:
+        op: local
+        request: {action: status}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: display}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: power}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: presence}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: apps}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: clipboard}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: network}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: shortcuts}
+      effects: [read_external]
+    - when:
+        op: local
+        request: {action: youtube_status}
+      effects: [read_external]
+    - when:
         op: decode
+      effects: [read_external]
       required:
       - op
       - plan
@@ -870,10 +941,9 @@ PC제어부품:
       - job_ref
       - observation
       result: *id001
-      effects:
-      - read_external
     - when:
         op: verify
+      effects: [read_external]
       required:
       - op
       - task
@@ -897,64 +967,9 @@ PC제어부품:
         verification: Unknown
         evidence_ref: Unknown
         failure: Unknown
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: status
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: display
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: power
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: presence
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: apps
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: clipboard
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: network
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: shortcuts
-      effects:
-      - read_external
-    - when:
-        op: local
-        request:
-          action: youtube_status
-      effects:
-      - read_external
 TV제어:
-  description: 등록된 Samsung TV 제어. 음량은 상대 단계, mute는 토글이며 자동 재시도하지 않는다. verified는 각 동작의 관측 범위다. 가이드 tv_control.md.
+  description: 등록된 Samsung TV 제어. 음량은 상대 단계, mute는 토글이며 자동 재시도하지 않는다. verified는 각
+    동작의 관측 범위다. 가이드 tv_control.md.
   file: tv_control.py
   interpreter: python
   registered_at: '2026-10-18T00:00:00'
@@ -1235,6 +1250,7 @@ Safari제어:
     variants:
     - when:
         op: contract
+      effects: [read_external]
       forbidden:
       - url
       - window_id
@@ -1246,27 +1262,24 @@ Safari제어:
         surface: Text
         supported_platforms: List<Text>
         actions: Record
-      effects:
-      - read_external
     - when:
         op: status
+      effects: [read_external]
       forbidden:
       - url
       - tab
       - launch
       - expected
-      effects:
-      - read_external
     - when:
         op: open
+      effects: [write_external]
       required:
       - url
       forbidden:
       - tab
-      effects:
-      - write_external
     - when:
         op: switch
+      effects: [write_external]
       required:
       - window_id
       - tab
@@ -1274,10 +1287,9 @@ Safari제어:
       forbidden:
       - url
       - launch
-      effects:
-      - write_external
     - when:
         op: close
+      effects: [write_external]
       required:
       - window_id
       - tab
@@ -1285,9 +1297,89 @@ Safari제어:
       forbidden:
       - url
       - launch
-      effects:
-      - write_external
 
+Chrome제어:
+  description: 본체 Google Chrome 창·탭 드라이버(AppleScript 통로, macOS). Safari제어와 같은 계약 — status(window_id 선택)로 windows[].revision 조회, switch/close는 window_id·tab·expected(관측 revision) 필수, open(url,window_id 선택,expected 선택,launch 선택)은 끝에 탭을 만들고 Chrome 이 활성으로 만든 새 탭 대신 이전 현재 탭을 같은 스크립트 안에서 복원(checks.activation_restored). 판본·대조·닫기는 영구 탭 id 기준이라 탭 안의 페이지 이동은 판본을 깨지 않는다. 결과 state·target·checks로 추가 조회 없이 IBL 연속 조합. STATE_CHANGED는 변경 전 중단, UNKNOWN·POSTCONDITION_FAILED는 자동 재전송 금지. Windows Chrome 은 이 통로가 없다(UNSUPPORTED_PLATFORM). 가이드 chrome_control.md.
+  file: chrome_control.py
+  interpreter: python
+  registered_at: '2026-10-21T08:30:00'
+  timeout: 60
+  callable_contract:
+    version: 1
+    effects:
+    - unknown
+    required: []
+    params:
+      op: Text
+      url: Text
+      window_id: Number
+      tab: Number
+      expected: Text
+      launch: Bool
+    defaults:
+      op: status
+    enums:
+      op:
+      - contract
+      - status
+      - open
+      - switch
+      - close
+    result:
+      success: Bool
+      verified: Bool
+    adapter:
+      protocol: registered-json/1
+    variants:
+    - when:
+        op: contract
+      effects: [read_external]
+      forbidden:
+      - url
+      - window_id
+      - tab
+      - launch
+      - expected
+      result:
+        success: Bool
+        surface: Text
+        supported_platforms: List<Text>
+        actions: Record
+    - when:
+        op: status
+      effects: [read_external]
+      forbidden:
+      - url
+      - tab
+      - launch
+      - expected
+    - when:
+        op: open
+      effects: [write_external]
+      required:
+      - url
+      forbidden:
+      - tab
+    - when:
+        op: switch
+      effects: [write_external]
+      required:
+      - window_id
+      - tab
+      - expected
+      forbidden:
+      - url
+      - launch
+    - when:
+        op: close
+      effects: [write_external]
+      required:
+      - window_id
+      - tab
+      - expected
+      forbidden:
+      - url
+      - launch
 
 Android제어부품:
   description: Android제어·Android제어확인의 준비·영수증 검증 부품. 동작·인수·단위·확인 범위는 op:contract. 일반 호출은 저장 함수를 사용한다. 가이드 android_control.md.

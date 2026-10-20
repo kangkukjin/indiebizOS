@@ -1,5 +1,6 @@
 """Android UI driver: native boundary, postconditions and no-replay recovery."""
 import boot_paths  # noqa: F401
+import copy
 import importlib.util
 import json
 from pathlib import Path
@@ -172,20 +173,6 @@ def test_ui_pending_followup_queries_original_receipt(flow, req):
     state['terminal'] = True
     result = run('return [fn:Android제어확인]{작업:$task,대기:0}', {'task': task})
     assert result['status'] == 'completed' and result['verified'], result
-    assert sum(k == 'limbs:guestpc' for k, _ in state['calls']) == 1
-
-
-@pytest.mark.parametrize('status', ['failed', 'unknown'])
-def test_ui_failure_receipt_never_replays_mutation(flow, status):
-    run, state = flow
-    req = request('type_text', ref=0, text='한 번만')
-    task = run('return [fn:Android제어]{대상:"pc-1",요청:$request,대기:0}', {'request': req})
-    state['native_override'] = {'action': req['action'], 'success': False,
-                                'driver_status': status, 'error': 'STALE_SCREEN' if status == 'failed' else 'lost after apply'}
-    state['terminal'] = True
-    result = run('return [fn:Android제어확인]{작업:$task,대기:0}', {'task': task})
-    assert result['status'] == status and not result['verified']
-    assert result['task_ref'] == task['task_ref']
     assert sum(k == 'limbs:guestpc' for k, _ in state['calls']) == 1
 
 

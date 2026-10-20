@@ -1,6 +1,6 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 27개
+## 프로젝트 (활성) - 28개
 
 > 시스템 프로젝트 `수동모드`·`앱모드`는 런처의 조종실/앱 표면이 IBL 실행 시 쓰는 프로젝트 컨텍스트(자율주행 데스크탑에선 `SYSTEM_PROJECT_IDS`로 숨김). 삭제·개명 시 해당 표면의 IBL이 깨진다.
 
@@ -9,6 +9,7 @@
 | CCTV | CCTV |  |
 | L81_training | L81_training |  |
 | L83_training | L83_training |  |
+| L84_training | L84_training |  |
 | WORK | WORK |  |
 | study | study |  |
 | 건축 | 건축 |  |
@@ -113,4 +114,4 @@
 위 표의 설치됨/미설치는 **보관 위치**(installed/not_installed)다. 이 몸이 실제로 소개·회상·실행하는 묶음은 활성 원장 `data/vocabulary/activation.json`이 정하며, 런처 안경 메뉴 → **내 어휘**에서 깨우고 잠재운다(필수 공급자는 `data/vocabulary_policy.yaml`이 보호). → packages.md '보유와 활성'
 
 ---
-*마지막 업데이트: 2026-10-20 10:01*
+*마지막 업데이트: 2026-10-20 10:40*

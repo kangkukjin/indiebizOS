@@ -53,7 +53,7 @@ see_also: [architecture.md, ibl.md]
 - `GET /system-ai/prompts/role` - 역할 프롬프트 조회
 - `PUT /system-ai/prompts/role` - 역할 프롬프트 업데이트
 - `GET /prompt-composition/agents` · `POST /prompt-composition/assemble` - **프롬프트 구성** 표면(런처 안경 메뉴). 에이전트 종류(시스템 AI·프로젝트 에이전트·포식/앱메이커 변형·의식·의식 감독·무의식·최종 평가자·경험 증류·심층기억·이력 압축·가이드 순찰·IBL 번역·자동응답)마다 프롬프트 조각을 순서·출처·조건·분량과 함께 돌려준다. 실행기억 같은 가변 조각은 샘플 메시지 한 건으로 실제 조립(LLM 0). 정본=`backend/cognition/prompt_composition.py`, 로컬 전용(프롬프트·기억 본문 노출)
-- `GET /guides` · `GET /guides/{name}` · `PUT /guides/{name}` - **가이드 파일** 표면(런처 안경 메뉴). `data/guides/*.md` 전체를 등록(guide_db.json)·신선도(guide_registry: 작성·최종수정·무수정 사용·마지막 검토)·예산(lifecycle_policy)·정리 후보 표식과 함께 목록으로 주고, 본문 읽기·저장(기존 파일만, 예산 초과는 알림). 정본=`backend/datastore/guide_registry.guide_catalog`, 로컬 전용. 프롬프트 구성·가이드 파일·내 어휘 셋은 Electron 에서 독립 OS 창(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별 키), 웹 표면은 해시 라우트 `#/prompt-composition`·`#/guides`·`#/vocabulary`(`ab0ed494`)
+- `GET /guides` · `GET /guides/{name}` · `PUT /guides/{name}` - **가이드 파일** 표면(런처 안경 메뉴). `data/guides/*.md` 전체를 등록(guide_db.json)·신선도(guide_registry: 작성·최종수정·무수정 사용·마지막 검토)·예산(lifecycle_policy)·정리 후보 표식과 함께 목록으로 주고, 본문 읽기·저장(기존 파일만, 예산 초과는 알림). 정본=`backend/datastore/guide_registry.guide_catalog`, 로컬 전용. 프롬프트 구성·가이드 파일·내 어휘 셋은 Electron 에서 독립 OS 창(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별 키), 웹 표면은 해시 라우트 `#/prompt-composition`·`#/guides`·`#/vocabulary`(`ab0ed494`). **IBL 사전**(마법책)도 같은 `createToolWindow('grimoire')` 독립 창(`#/grimoire`, 안경 메뉴엔 없고 대화창 헤더의 사전 단추가 연다). 고른 낱말은 localStorage `indiebiz_grimoire_select` + `storage` 이벤트로 그 사전을 마지막으로 연 대화창(`indiebiz_grimoire_owner` 표)의 입력 칩에 돌아간다(`frontend/src/components/chat/grimoire-relay.ts`). 네이티브 창이 못 열리면(웹 표면·재시작 전 옛 메인) 대화창 위 모달로 물러선다
 - `GET /system-ai/status` - 준비 판정. `ready` 는 provider 를 본다(무키 프로바이더 claude_code·codex·ollama 는 키 없이 ready — `provider_needs_api_key` 정본, 2026-09-02 수리)
 - `GET /system-ai/candidates` - 이 기계가 이미 가진 AI 후보 `{items:[{provider, model, source, kind, login?}]}` — 환경변수 키 · 설치된 CLI · 로컬 모델 서버 (`backend/base/ai_candidates.py`, 카탈로그=`data/ai_provider_catalog.yaml`)
 - `POST /system-ai/probe` - `{provider, model, api_key?}` 실응답 1턴 검증. 실패는 원인별 kind(no_key/auth/model/cli_login/local_down/timeout…). 저장 안 함 — 검증 → 저장 순서 (첫 성공 온보딩, `api_onboarding.py`, 로컬 전용)
@@ -431,7 +431,7 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)
-- `data/guides/`: 가이드 101개 (guide_db 등록 97). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
+- `data/guides/`: 가이드 101개 (guide_db 등록 98). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
 <!-- IBL_STATS:END -->
 - `projects/`: 사용자 프로젝트 데이터 (24개 — 시스템 프로젝트 수동모드·앱모드 포함)
 - `data/_backups/YYYY-MM-DD_<이름>/`: **일회성 백업의 유일한 주소**(2026-08-14 규약). 작업 폴더·`data/` 루트에 `*_backup*` 사본 금지. **git 추적 대상이 아니다** — 규약 정본 `README.md` 하나만 `!` 예외

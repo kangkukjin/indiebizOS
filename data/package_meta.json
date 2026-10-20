@@ -297,7 +297,9 @@
       "needs_key": [
         "GUARDIAN_API_KEY",
         "NAVER_CLIENT_ID",
-        "NAVER_CLIENT_SECRET"
+        "NAVER_CLIENT_SECRET",
+        "NAVER_HUB_CLIENT_ID",
+        "NAVER_HUB_CLIENT_SECRET"
       ],
       "weight": "heavy",
       "locale": "kr"

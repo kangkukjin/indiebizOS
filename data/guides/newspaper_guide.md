@@ -43,7 +43,7 @@ JSON 판 구조(`loadEdition`이 기대하는 형태):
 
 뽑히지 않은 나머지는 응답의 `pool` 필드로 반환되어, 편집신문(사용자 큐레이션)에서 대체 후보로 쓰입니다. 응답의 `perspective` 필드(true/false)가 관점 코어 반영 여부이며, 판 JSON에도 저장되어 데스크탑 상단바에 "💡 관점 반영/일반 판"으로 표시됩니다.
 
-**소스**: 영어 키워드 섹션에는 **가디언(The Guardian)**이 자동 합류합니다 — `sources` 파라미터(기본 `"gnews,guardian"`, `"gnews"`로 끔). 구현은 web 패키지 `[sense:search]{source: "guardian"}`(+`GUARDIAN_API_KEY`, 2026-08-05 어휘 압축으로 study 에서 흡수). 한국어 키워드는 가디언 코퍼스에 없어 자동 생략.
+**소스**: 영어 키워드 섹션에는 **가디언(The Guardian)**이 자동 합류합니다 — `sources` 파라미터(기본 `"gnews,guardian"`, `"gnews"`로 끔). 구현은 web 패키지 `[sense:search]{source: "guardian"}`(+`GUARDIAN_API_KEY`, 2026-08-05 어휘 압축으로 study 에서 흡수). 한국어 키워드는 가디언 코퍼스에 없어 자동 생략. 요청한 Guardian 합류가 인증·통신 오류로 실패하면 검색 응답의 `errors`에 남기고 확보한 Google News 행은 보존합니다. 이를 정상 무결과로 간주하지 않습니다.
 
 ## 핵심 원칙
 

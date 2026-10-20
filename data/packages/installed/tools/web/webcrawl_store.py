@@ -61,6 +61,8 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None, op="content"):
                         raise ValueError("구조 전용 수집은 본문 완전성을 보장하지 않습니다")
                     if op != "content" and result.get("_page_structure", {}).get("errors"):
                         raise ValueError("불완전한 구조 정보는 다시 수집합니다")
+                    if op != "content" and not result.get("_page_structure"):
+                        raise ValueError("본문 전용 스냅샷은 HTML 구조를 다시 수집합니다")
                     return _decorate(result, saved, True, ttl)
             except (OSError, ValueError, KeyError, TypeError):
                 pass  # 만료·소실 캐시만 재수집 — 원문을 미리보기로 대체하지 않는다

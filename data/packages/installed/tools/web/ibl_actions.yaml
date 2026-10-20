@@ -80,7 +80,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-20", impl: "3c3cadf7beaef7b5"}  # 재감사: 종료된 쇼핑 안내 문구만 다나와·에누리/중고 분리로 갱신. 경로·인증·쓰기 경계 불변.
+        path_audited: {at: "2026-10-20", impl: "01686abbfd294e7c"}  # 회원 공개 경로는 member_web 유지. 내장 브라우저는 소유자만, HUB 키는 외부 검색에 전달하지 않음.
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -107,12 +107,12 @@ nodes:
           source=gnews: '[sense:search]{query: "climate policy", source: "gnews", limit: 3}'
           source=hn: '[sense:search]{query: "rust", source: "hn", limit: 3}'
           source=guardian: '[sense:search]{query: "climate policy", source: "guardian", limit: 3}'
-        description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
+        description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, DDGS 메타검색·엔진 자동 선택)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
-        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 반환 행수 count(limit 상한)와 원천이 제공한 total_estimate, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver의 total_estimate는 검색 전체 결과 추정치이며 단건은 최상위·배치는 각 sections에 보존한다(0은 실제 추정 0, 미제공은 필드 없음). 기간 필터 이후 count와 달리 전체 검색 추정이며 모집단·정확한 수요로 간주하지 않는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★최근 N일로 한정하려면 days — gnews/hn/guardian·naver(news/blog)에서 보장(기간 밖 제외·미상은 보존하고 days_filter 로 신고), ddg 등 날짜 없는 소스는 거절. hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
+        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 반환 행수 count(limit 상한)와 원천이 제공한 total_estimate, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver의 total_estimate는 검색 전체 결과 추정치이며 단건은 최상위·배치는 각 sections에 보존한다(0은 실제 추정 0, 미제공은 필드 없음). 기간 필터 이후 count와 달리 전체 검색 추정이며 모집단·정확한 수요로 간주하지 않는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, Guardian 합류 실패는 errors에 남긴다. gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★최근 N일로 한정하려면 days — gnews/hn/guardian·naver(news/blog)에서 보장(기간 밖 제외·미상은 보존하고 days_filter 로 신고; 부분 실패에도 적용, gnews는 RSS 기간 필터 후 limit·curate), ddg 등 날짜 없는 소스는 거절. hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
         router: handler
         tool: search
-        implementation: source 분기 단일 도구 — ddg=DuckDuckGo ddgs 라이브러리(키 불요), naver=네이버 개발자센터 API(NAVER_CLIENT_ID/SECRET — 구 web-kr 패키지 흡수), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
+        implementation: source 분기 단일 도구 — ddg=DDGS 메타검색(키 불요, backend:auto), naver=네이버 검색 API(NAVER_HUB_CLIENT_ID/SECRET 설정 시 API HUB, 미설정 시 기존 NAVER_CLIENT_ID/SECRET), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
         target_key: query
       crawl:
         research_coverage: full
@@ -165,7 +165,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-20", impl: "3c3cadf7beaef7b5"}  # 재감사: 종료된 쇼핑 안내 문구만 다나와·에누리/중고 분리로 갱신. 경로·인증·쓰기 경계 불변.
+        path_audited: {at: "2026-10-20", impl: "01686abbfd294e7c"}  # 회원 공개 경로는 member_web 유지. 내장 브라우저는 소유자만, HUB 키는 외부 검색에 전달하지 않음.
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -174,7 +174,7 @@ nodes:
         target_description: 'url 필수(http/https). op=content(기본): 전문·문단 items(url·paragraph_index), 제목은 봉투 title(주소마다읽기는 각 문단에 title도 보존). links: items(text·url·href·source_url·title·rel·link_index), 상대 링크를 해소하며 HTTP(S)만 수집한다. metadata: 관측별 items(field·value·raw·source·source_url·url·title), 날짜 normalized는 ISO 파싱 가능할 때만, 없으면 null. 서로 다른 발행일은 각각 보존하고 일반 time은 date로 남겨 발행일로 추정하지 않는다. PDF는 내장 정보(source pdf.info.*)와 첫 쪽 최대 글꼴 줄(pdf.page[1].largest_font)을 제목 관측으로, 문서 안 URI를 links로 낸다. 파일명은 제목으로 내지 않으며 관측이 없으면 title은 빈 문자열. 부분 구조 수집은 structure_errors로 알린다. max_length는 모델 표시 예산(기본 60000)이며 원문·후속 처리량을 자르지 않는다. 캐시 만료·미완성 또는 refresh:true면 재수집, 더 읽기는 저장 변수·source_ref.path. 본문 대목 발췌: >> [fn:본문에서찾기]{패턴:"수영|사우나",문맥:1,개수:5}. content_selection은 자동 선택한 본문 범위를 알린다. 표준 main/article와 일반 편집기의 명시 본문을 우선하고 불명확하면 body를 유지한다. content에서 selector(CSS)를 지정하면 해당 영역의 본문만 선택한다(불일치 실패). include_images:true는 선택 영역 이미지(기본 main/article·명시 본문 컨테이너/body)의 실제 픽셀을 첨부한다. image_limit=1~4(기본4), image_offset=0부터, next_image_offset이 있으면 같은 URL·selector로 이어 읽는다. 전체 원문은 source_ref에 남으며 선택은 원천 누락을 뜻하지 않는다. 이미지 다운로드 실패는 성공으로 숨기지 않는다.'
         router: handler
         tool: crawl_website
-        implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.
+        implementation: 정적 curl_cffi → 본문은 연결된 소유자 내장 브라우저의 임시 탭·고정 커서·프레임 수집. 내장 미연결/구조·CSS·이미지 수집은 Chrome MCP/Playwright. 내장 수집 시작 후 실패는 다른 로그인 세션으로 전환하지 않는다. 부분 수집·캡처 상한·탭 정리 실패를 명시한다.
         target_key: op
         params:
           url: string

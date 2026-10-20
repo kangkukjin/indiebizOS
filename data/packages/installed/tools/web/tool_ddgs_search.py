@@ -1,6 +1,6 @@
 """
 tool_ddgs_search.py - 웹 검색 도구
-AI 에이전트가 웹에서 정보를 검색할 수 있음 (무료 DuckDuckGo 사용)
+AI 에이전트가 웹에서 정보를 검색할 수 있음 (키가 필요 없는 DDGS 메타검색 사용)
 검색 결과를 직접 반환합니다 (파일 저장 없음).
 """
 
@@ -23,7 +23,7 @@ SEARCH_COUNT_MAX = 10
 
 def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
     """
-    DuckDuckGo로 웹 검색하고 결과를 직접 반환
+    DDGS의 자동 엔진 선택으로 웹 검색하고 결과를 직접 반환
 
     Args:
         query: 검색 키워드
@@ -39,13 +39,14 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
         requested = max(1, int(count or 5))
         count = min(requested, SEARCH_COUNT_MAX)
 
-        # DuckDuckGo 검색
+        # DDGS 메타검색: 엔진 선택을 명시하고 결과에도 실행 정책을 남긴다
         ddgs = DDGS()
         results = ddgs.text(
             query,
             region=country,
             max_results=count,
-            safesearch='moderate'
+            safesearch='moderate',
+            backend='auto'
         )
 
         # 결과 정리
@@ -60,6 +61,7 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
         out = {
             "success": True,
             "query": query,
+            "provider": "ddgs", "backend": "auto",
             "count": len(formatted_results),
             "results": formatted_results,
             # 단일 통화 items(records-관습 카드 shape) — >> 파이프.

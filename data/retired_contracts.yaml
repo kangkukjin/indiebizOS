@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: web-search-provider-and-partial-date
+    retired: 2026-10-20
+    reason: DDGS의 메타검색 동작과 뉴스 부분 실패·기간 적용·Guardian 실패 신고를 현재 구현에 맞췄다.
+    instead: DDGS는 자동 엔진 선택이며 기간은 부분 실패에도 적용한다. Guardian 실패는 errors에 남기고 확보한 행은 보존한다.
+    phrases: ['ddg=DuckDuckGo ddgs 라이브러리', '실패 시 조용히 gnews만', 'DuckDuckGo로 웹 검색하고 결과를 직접 반환']
   - id: shopping-danawa-only
     retired: 2026-10-20
     reason: 새 상품 가격비교에 에누리를 추가하고 다나와 공개 검색·조회 범위를 검증했다.

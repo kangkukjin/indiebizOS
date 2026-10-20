@@ -343,7 +343,8 @@ def _gnews_item(r: dict, tag: str) -> dict:
     }
 
 
-def search_gnews(query: str = "", count: int = 10, language: str = "ko", region: str = None, headlines: bool = False) -> dict:
+def search_gnews(query: str = "", count: int = 10, language: str = "ko", region: str = None,
+                 headlines: bool = False, days: int = 0) -> dict:
     """Google News RSS 검색. 정상 빈 RSS는 성공 0행, HTTP·파싱 실패는 오류다.
 
     Args:
@@ -390,8 +391,16 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
                 "results": [], "items": [], "count": 0,
             }
 
+        # RSS는 한 번에 전체 후보를 받는다. 기간 밖 상위 행이 최신 후보를 밀어내지
+        # 않도록 기간을 먼저 적용하고 그 뒤 반환/편집 후보 수를 제한한다.
+        entries = feed.entries
+        if days:
+            dated = [{"entry": entry, **_rfc2822_iso(entry.get("published", ""))}
+                     for entry in entries]
+            filtered = _apply_days({"days": days}, {"items": dated})
+            entries = [row["entry"] for row in filtered["items"]]
         results = []
-        for entry in feed.entries[:count]:
+        for entry in entries[:count]:
             _src = entry.get('source', {}).get('title', '출처 없음')
             _title = entry.get('title', '제목 없음')
             results.append({
@@ -491,6 +500,10 @@ def _search_guardian(tool_input: dict) -> dict:
     page_size = tool_input.get("limit") or tool_input.get("count") or tool_input.get("page_size") or 10
     from_date = tool_input.get("from_date")
     to_date = tool_input.get("to_date")
+    days = _days_window(tool_input)
+    if days:
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
+        from_date = max(from_date, since) if from_date else since
 
     url = "https://content.guardianapis.com/search"
     params = {
@@ -549,14 +562,26 @@ def _search_guardian(tool_input: dict) -> dict:
         return {"success": True, "message": "\n".join(output), "items": records, "count": len(records)}
 
     except Exception as e:
-        return {"success": False, "error": f"The Guardian API 검색 오류: {str(e)}", "items": []}
+        # requests의 HTTPError에는 api-key가 들어간 전체 URL이 포함된다.
+        # 상태 코드와 예외 종류만 보존하고 인증정보·요청 URL은 반환하지 않는다.
+        status = getattr(getattr(e, "response", None), "status_code", None)
+        message = (f"HTTP {status}" if status is not None else type(e).__name__)
+        out = {"success": False, "error": f"The Guardian API 검색 오류: {message}", "items": []}
+        if status is not None:
+            out["status_code"] = status
+        if status in (401, 403):
+            out.update(reason="authentication_failed", hint="GUARDIAN_API_KEY의 유효성과 검색 API 이용 권한을 확인하세요.")
+        return out
 
 
-def _guardian_items(query: str, count: int = 30) -> list:
+def _guardian_items(query: str, count: int = 30, *, days=0, errors=None) -> list:
     """가디언 기사 → 신문 items 통화(_search_guardian 의 신문용 투영).
-    GUARDIAN_API_KEY 부재·무결과 시 [] 반환 — 신문은 gnews만으로 진행."""
+    실패는 errors에 남기며 확보한 다른 원천의 행은 보존한다."""
     try:
-        res = _search_guardian({"query": query, "count": min(count, 50)})  # clamp-ok: Guardian Open Platform page-size 상한 50
+        res = _search_guardian({"query": query, "count": min(count, 50), "days": days})  # clamp-ok: Guardian Open Platform page-size 상한 50
+        if res.get("success") is False and errors is not None:
+            errors.append({"source": "guardian", "query": query,
+                           "error": res.get("error", "Guardian 검색 실패")})
         if isinstance(res, dict) and res.get("items"):
             # meta 는 원천 행의 표시 문자열을 다시 접지 않고 구조 칸(published·section)에서 조립한다
             # — 표시 결과는 옛 "The Guardian · {날짜} · {섹션}" 그대로(R7 칸 규약).
@@ -572,7 +597,9 @@ def _guardian_items(query: str, count: int = 30) -> list:
                 **_iso_date_field(r.get("date")),
             } for r in res["items"]]
     except Exception as e:
-        print(f"[_guardian_items] 가디언 검색 생략: {e}", file=sys.stderr)
+        if errors is not None:
+            errors.append({"source": "guardian", "query": query,
+                           "error": f"Guardian 결과 처리 실패: {type(e).__name__}"})
     return []
 
 
@@ -1057,6 +1084,12 @@ def _execute(tool_input: dict, context):
 
     # Google News 검색 (search source:gnews 내부 갈래 — 신문 발행 shim 도 이 갈래를 탄다)
     elif tool_name == "search_gnews":
+        def _news(**kwargs):
+            days = _days_window(tool_input)
+            if days:
+                kwargs["days"] = days
+            return search_gnews(**kwargs)
+
         # 배치 팬아웃(queries: 리스트/콤마·개행) — 각 검색어를 돌려 query 태그된 항목을 한 목록으로.
         # group 뷰(신문 섹션)·table:groupby 에 바로 먹인다. N-way 팬아웃을 액션 하나로(신문 계기용).
         _queries = tool_input.get("queries")
@@ -1091,15 +1124,20 @@ def _execute(tool_input: dict, context):
 
             def _fetch_section_items(q):
                 lang = _dl(q)
-                section = _to_items(search_gnews(query=q, count=_fetch, language=lang), q)
+                section = _to_items(_news(query=q, count=_fetch, language=lang), q)
                 # 가디언 합류: curate(신문 편성) + 영어 키워드일 때만 — 한국어 질의는 가디언 코퍼스에 없음
                 if _curate and "guardian" in _sources and lang == "en":
-                    section["items"] += [{**g, "query": q} for g in _guardian_items(q, 30)]
+                    failures = []
+                    section["items"] += [{**g, "query": q} for g in _guardian_items(
+                        q, 30, days=_days_window(tool_input), errors=failures)]
+                    if failures:
+                        section["source_errors"] = failures
+                        section["error"] = " / ".join(filter(None, [section.get("error"), failures[0]["error"]]))
                 return section
 
             jobs = []  # (섹션명, items thunk) — 오늘의 핫토픽은 맨 앞 섹션(원격/폰 신문 파리티)
             if tool_input.get("headlines") in (True, "true", "True", 1, "1"):
-                jobs.append(("오늘의 핫토픽", lambda: _to_items(search_gnews(
+                jobs.append(("오늘의 핫토픽", lambda: _to_items(_news(
                     count=_fetch, language=(_lang if _lang != "auto" else "ko"), headlines=True), "오늘의 핫토픽")))
             for q in _queries:
                 jobs.append((q, (lambda qq: (lambda: _fetch_section_items(qq)))(q)))
@@ -1116,7 +1154,9 @@ def _execute(tool_input: dict, context):
                 sections.append({"query": jobs[i][0], "count": len(items)})
             resp = {"success": True, "queries": _queries, "count": len(all_items),
                     "sections": sections, "items": all_items, "_display": {"group_by": "query"}}
-            errors = [{"query": sec["topic"], "error": sec["error"]} for sec in secs if sec.get("error")]
+            errors = [{"query": sec["topic"], "error": sec["error"],
+                       **({"source_errors": sec["source_errors"]} if sec.get("source_errors") else {})}
+                      for sec in secs if sec.get("error")]
             if errors:
                 resp.update(success=False, errors=errors, error=f"뉴스 검색 {len(errors)}개 실패; 다른 검색 결과는 items에 보존")
             if curated:
@@ -1131,7 +1171,7 @@ def _execute(tool_input: dict, context):
                 language = "ko"
             _curate = _parse_curate(tool_input)
             _fetch = 100 if _curate else tool_input.get("limit", tool_input.get("count", 12))   # 헤드라인 피드는 실제 최대 ~34
-            result = search_gnews(count=_fetch, language=language, headlines=True)
+            result = _news(count=_fetch, language=language, headlines=True)
             if isinstance(result, dict) and isinstance(result.get("results"), list):
                 result["items"] = [_gnews_item(r, "오늘의 핫토픽") for r in result["results"]]
                 if _curate:
@@ -1153,7 +1193,7 @@ def _execute(tool_input: dict, context):
 
         _curate = _parse_curate(tool_input)
         _fetch = 100 if _curate else tool_input.get("limit", tool_input.get("count", 10))   # 편집장은 넓게 보고 좁게 뽑는다
-        result = search_gnews(
+        result = _news(
             query=query,
             count=_fetch,
             language=language
@@ -1162,9 +1202,14 @@ def _execute(tool_input: dict, context):
             # 단일 통화 items — 행 조립은 _gnews_item 한 벌 (date 포함, 2026-08-28)
             result["items"] = [_gnews_item(r, query) for r in result["results"]]
             if _curate:
-                # 가디언 합류(영어 키워드): 정본=study search_guardian, 실패 시 조용히 gnews만
+                # 가디언 합류(영어 키워드): 실패와 확보한 gnews 행을 함께 보존
                 if "guardian" in str(tool_input.get("sources") or "gnews,guardian") and language == "en":
-                    result["items"] += [{**g, "query": query} for g in _guardian_items(query, 30)]
+                    failures = []
+                    result["items"] += [{**g, "query": query} for g in _guardian_items(
+                        query, 30, days=_days_window(tool_input), errors=failures)]
+                    if failures:
+                        result.update(success=False, errors=failures,
+                                      error="Guardian 검색 실패; 확보한 뉴스는 items에 보존")
                 cr = _curate_sections_batch([{"topic": query, "items": result["items"]}], _curate)[0]
                 result["items"], result["pool"] = cr["picks"], cr["rest"]
                 result["count"] = len(result["items"])
@@ -1250,7 +1295,7 @@ def execute(tool_input: dict, context):
     if context.tool_name == "search":
         if _days_window(tool_input):
             value = json.loads(result) if isinstance(result, str) else result
-            if isinstance(value, dict) and value.get("success") is not False:
+            if isinstance(value, dict):
                 value = _apply_days(tool_input, value)
                 result = format_json(value) if isinstance(result, str) else value
         notes = load_module("web_search_io").query_notes(tool_input)

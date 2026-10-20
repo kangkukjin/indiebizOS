@@ -1801,7 +1801,7 @@
    "fields": {
     "description": "a7e2a6285c10",
     "target_description": "97783fe8f197",
-    "implementation": "d2aeb9e54591",
+    "implementation": "84a9fe71d7c4",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "params": "d0374971be33",
@@ -1810,7 +1810,7 @@
     "router": "ebbb1532efbc",
     "tool": "6b90f82ab8ac"
    },
-   "reviewed": "2026-10-04",
+   "reviewed": "2026-10-20",
    "examples": 55
   },
   "sense:crypto": {
@@ -2153,9 +2153,9 @@
   },
   "sense:search": {
    "fields": {
-    "description": "de849f0a0855",
-    "target_description": "16dd39b49bb4",
-    "implementation": "9103edc5f400",
+    "description": "587495d4c188",
+    "target_description": "180ca2586eb8",
+    "implementation": "cac1d677e598",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "aliases": "bb6d70d17c4c",
@@ -2163,8 +2163,8 @@
     "router": "ebbb1532efbc",
     "tool": "6ad21f9d2ea1"
    },
-   "reviewed": "2026-10-09",
-   "examples": 211
+   "reviewed": "2026-10-20",
+   "examples": 212
   },
   "sense:search_shopping": {
    "fields": {

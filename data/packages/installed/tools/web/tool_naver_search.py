@@ -2,7 +2,7 @@
 네이버 검색 API 도구
 
 단일 도구로 네이버의 검색 도메인을 호출합니다. (웹 문서/뉴스/블로그/카페/지식인/백과)
-같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 모든 엔드포인트가 작동합니다.
+NAVER_HUB_CLIENT_ID/SECRET이 있으면 API HUB, 없으면 기존 NAVER_CLIENT_ID/SECRET을 사용합니다.
 한국어 검색에서 DuckDuckGo/Google보다 압도적으로 강합니다.
 ★book/doc/shop 도메인은 2026-08 네이버가 은퇴시킴(_RETIRED_TYPES 참조).
 """
@@ -14,7 +14,7 @@ _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "
 if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
-from common.api_client import api_call
+from common.api_client import api_call, api_call_raw
 from common.auth_manager import check_api_key
 from common.html_utils import clean_html
 
@@ -165,9 +165,19 @@ def search_naver(
                      f"지원 type: {', '.join(_TYPE_ENDPOINTS.keys())}",
         }
 
-    ok, err = check_api_key("naver")
-    if not ok:
-        return {"success": False, "error": err}
+    # HUB 키는 기존 개발자센터 키와 호환되지 않는다. 하나라도 설정했으면
+    # HUB 설정을 검증하며, 인증 실패 때 옛 키로 조용히 돌아가지 않는다.
+    hub_id = os.getenv("NAVER_HUB_CLIENT_ID")
+    hub_secret = os.getenv("NAVER_HUB_CLIENT_SECRET")
+    use_hub = bool(hub_id or hub_secret)
+    if use_hub:
+        if not (hub_id and hub_secret):
+            return {"success": False, "items": [],
+                    "error": "NAVER_HUB_CLIENT_ID와 NAVER_HUB_CLIENT_SECRET을 함께 설정하세요."}
+    else:
+        ok, err = check_api_key("naver")
+        if not ok:
+            return {"success": False, "error": err}
 
     # display는 네이버 API 제한(1~100, shop은 1~100, 그 외 1~100) 적용
     display = max(1, min(int(display) if display else 5, 100))  # clamp-ok: 네이버 검색 API 스펙 상한(display 100)
@@ -178,7 +188,16 @@ def search_naver(
         "sort": sort if sort in ("sim", "date") else "sim",
     }
 
-    data = api_call("naver", endpoint, params=params)
+    if use_hub:
+        # 공식 이관 계약: /v1/search/news.json -> /search/v1/news.
+        domain = endpoint.rsplit("/", 1)[-1].removesuffix(".json")
+        data = api_call_raw(
+            f"https://naverapihub.apigw.ntruss.com/search/v1/{domain}",
+            params={**params, "format": "json"},
+            headers={"X-NCP-APIGW-API-KEY-ID": hub_id,
+                     "X-NCP-APIGW-API-KEY": hub_secret})
+    else:
+        data = api_call("naver", endpoint, params=params)
 
     if isinstance(data, dict) and "error" in data:
         return {"success": False, "error": data["error"], "type": normalized_type}
@@ -200,5 +219,6 @@ def search_naver(
                    "summary": it.get("snippet", ""), "url": it.get("link", ""),
                    **_item_date_iso(it)} for it in items],
         "source": "네이버 검색 API",
+        "api_backend": "naver_api_hub" if use_hub else "naver_developers",
         **_empty_query_note(query, items),
     }

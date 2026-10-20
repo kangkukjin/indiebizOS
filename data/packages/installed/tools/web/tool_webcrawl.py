@@ -4,10 +4,12 @@ tool_webcrawl.py - 웹사이트 크롤링 도구
 에스컬레이션 사다리 (도구가 자동으로 오름 — 모델 지능에 의존하지 않음):
   1. curl_cffi 정적 크롤 — TLS 지문까지 크롬으로 위장. UA만 바꾼 requests가 못 뚫는
      Akamai/Cloudflare급 봇차단(테슬라 등) 통과. 미설치 시 requests 폴백.
-  2. Chrome MCP — 이미 연결돼 있으면 실제 크롬(로그인 세션 포함) 사용.
-  3. Playwright — 자체 Chromium. data/browser_cookies/_auto_state.json의 로그인 상태를
+  2. 내장 브라우저 — 소유자·연결된 데스크톱·본문 수집일 때 기존 로그인 세션으로 수집.
+     선택한 내장 브라우저의 실패는 다른 세션으로 숨기지 않고 반환한다.
+  3. Chrome MCP — 내장 수집 미지원/미연결이면 이미 연결된 실제 크롬 사용.
+  4. Playwright — 자체 Chromium. data/browser_cookies/_auto_state.json의 로그인 상태를
      자동 복원하고, 본문이 iframe에 있는 사이트(네이버 카페/블로그)는 전 프레임 텍스트 수집.
-  4. 전부 실패 시 reason(bot_blocked/login_required/...)을 명시 — 모델이 "정보가 없다"가
+  5. 전부 실패 시 reason(bot_blocked/login_required/...)을 명시 — 모델이 "정보가 없다"가
      아니라 "왜 못 가져왔는지"를 정확히 보고하고 우회할 수 있게 한다.
 
 에스컬레이션 발동: HTTP 에러·짧은 본문만이 아니라 로그인 벽/봇차단 페이지 시그니처,
@@ -917,6 +919,28 @@ def _crawl_website_impl(url: str, max_length: int | None = None, *, op="content"
           static.get("error") or static.get("reason") or f"본문 {static.get('length', 0)}자")
     if static.get("success") and not static.get("reason"):
         return static
+
+    # 내장 DOM은 본문만 제공한다. CSS/이미지/구조 수집(fetch_op != content)은
+    # 기존 HTML 경로로 남겨 지원하지 않는 선택·메타데이터를 주장하지 않는다.
+    if op == "content":
+        embedded = load_sibling(__file__, "webcrawl_embedded")
+        call = embedded.prepare()
+        if call is not None:
+            try:
+                result = _run_async(embedded.collect(call, url, _diagnose))
+            except Exception as exc:
+                result = {"success": False, "url": url, "method": "embedded",
+                          "reason": "embedded_failed",
+                          "error": f"내장 브라우저 수집 실패: {type(exc).__name__}"}
+            if result.pop("fallback_safe", False):
+                _note("내장 브라우저", False, "건너뜀 — 탭 생성 전 연결 불가")
+            elif not result.get("success"):
+                result["stages"] = stages + [{"stage": "내장 브라우저", "ran": True,
+                                             "detail": result.get("error", "수집 실패")}]
+                result["methods_tried"] = [static.get("method"), "embedded"]
+                return result
+            else:
+                return result
 
     # 2단계: Chrome MCP가 "이미 연결돼 있으면" 우선 사용 (실제 크롬 로그인 세션·쿠키 활용).
     #        연결돼 있지 않으면 외부 서버(12306)가 필요하므로 건너뛴다 — 자동 연결하지 않음.

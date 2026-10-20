@@ -10,7 +10,7 @@ stdin: {op: contract/status/open/switch/close, url, window_id, tab, expected, la
   OS·실행 중 여부·권한을 확인한다. 어떤 동작도 Safari 를 앞으로 가져오지(activate) 않는다.
 - 결과는 그림이 아니라 상태값이다. `verified` 는 변경 뒤 AppleScript 재조회(`applescript_tab_readback`)를
   통과했다는 보고이며 화면에 실제로 그려졌는지는 범위 밖이다.
-- 시간 초과·응답 유실은 실패가 아니라 불명확이다. 변경을 재전송하지 않고 **변경 없이** 재조회해 판별하고,
+- 읽기 시간 초과는 OBSERVATION_FAILED, 변경 전송 뒤 응답 유실은 UNKNOWN이다. 변경을 재전송하지 않고 **변경 없이** 재조회해 판별하고,
   판별이 안 되면 `unknown` 을 유지한다(실측: 숨은 Safari 의 첫 창 만들기는 효과가 즉시 나고 응답은 20초 넘게 늦었다).
 stdlib 만 쓴다. 등록: data/scripts/registry.yaml `Safari제어`, 가이드 safari_control.md.
 """
@@ -30,6 +30,7 @@ APP = "Safari"
 READBACK = "applescript_tab_readback"
 OSA_TIMEOUT = 10
 DEADLINE = None
+EFFECT_STARTED = False
 CONTRACT = {
     "version": 2,
     "surface": SURFACE,
@@ -56,6 +57,7 @@ CONTRACT = {
         "UNSUPPORTED_PLATFORM": "darwin 이 아닌 본체", "TARGET_MISSING": "Safari 미실행·창·탭 없음(-1719/-1728)",
         "PERMISSION_REQUIRED": "자동화(Apple Events) 권한 미허용(-1743)", "INVALID_ARGUMENT": "인수 검증 실패",
         "UNKNOWN": "응답 유실·시간 초과 뒤 재조회로도 실행 여부를 판별하지 못함",
+        "OBSERVATION_FAILED": "변경 전송 전 상태 조회 실패. 관측은 미확인으로 남기고 나머지 작업을 계속할 수 있음",
         "STATE_CHANGED": "관측한 창 상태와 달라 변경 전에 중단. 새 상태로 대상을 다시 선택",
         "POSTCONDITION_FAILED": "변경을 요청했으나 보존 조건이나 요청 결과를 확인하지 못함. 자동 재전송 금지",
     },
@@ -267,6 +269,8 @@ def precheck(request):
     if running or request["op"] == "status":
         return running
     if request["op"] == "open" and request.get("launch"):
+        global EFFECT_STARTED
+        EFFECT_STARTED = True
         subprocess.run(["open", "-gja", APP], capture_output=True, timeout=10)
         for _ in range(40):
             if is_running():
@@ -316,10 +320,14 @@ def _failure_evidence(result):
             "status": result.get("status", "failed"),
             "next": failure.get("next"),
             "retry_change": False,
-            "observe": {"op": "status"},
         }
-        if result.get("window_id"):
-            result["recovery"]["observe"]["window_id"] = result["window_id"]
+        if code != "OBSERVATION_FAILED":
+            result["recovery"]["observe"] = {"op": "status"}
+            if result.get("window_id"):
+                result["recovery"]["observe"]["window_id"] = result["window_id"]
+        else:
+            result["error_type"] = "observation_failed"
+            result["recovery"]["retry_observation"] = False
     return result
 
 
@@ -358,6 +366,8 @@ if (index of current tab of w) is not equal to {window["current_tab"]} then erro
 
 
 def _mutate(script, timeout=10):
+    global EFFECT_STARTED
+    EFFECT_STARTED = True
     try:
         return apple_event(script, timeout=timeout), False
     except subprocess.TimeoutExpired:
@@ -513,14 +523,24 @@ def _unknown(request, message, **fields):
 
 
 def run(args):
-    global DEADLINE
+    global DEADLINE, EFFECT_STARTED
     request = validate(args)
     if request["op"] == "contract":
         return {"success": True, **CONTRACT, "host_platform": sys.platform}
     DEADLINE = time.monotonic() + 50  # Leave time to emit UNKNOWN before the registered 60s timeout.
+    EFFECT_STARTED = False
     try:
         running = precheck(request)
         return {"status": do_status, "open": do_open, "switch": do_switch, "close": do_close}[request["op"]](request, running)
+    except subprocess.TimeoutExpired:
+        if EFFECT_STARTED:
+            return _unknown(request, "변경 요청 이후 Safari 응답 시간 초과")
+        return _result(request, success=False, verified=False, status="failed",
+                       state_change_possible=False, stage="observation",
+                       failure={"code": "OBSERVATION_FAILED", "stage": "observation",
+                                "state_change_possible": False,
+                                "message": "Safari 상태 조회 시간 초과. 변경을 전송하지 않았습니다.",
+                                "next": "관측 실패를 보존하고 나머지 작업을 계속하세요. 앱 응답·자동화 권한·세션 상태를 점검한 뒤 새 조회를 요청하세요."})
     finally:
         DEADLINE = None
 

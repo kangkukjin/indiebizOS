@@ -19,9 +19,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def safari_process(ops, monkeypatch, tmp_path):
+    import ibl_dependencies
     from tool_loader import load_tool_handler
     entry = yaml.safe_load((ROOT / "data/scripts/registry.yaml").read_text())["Safari제어"]
     monkeypatch.setattr(ops, "_read_registry", lambda: {"Safari제어": {**entry, "file": "check.py"}})
+    # Fingerprint the actual test script namespace, independent of other
+    # workers and the live app. Keep dependency checking enabled.
+    (ops._SCRIPT_DIR / "registry.yaml").write_text(
+        yaml.safe_dump({"Safari제어": {**entry, "file": "check.py"}}, allow_unicode=True))
+    source = ops._SCRIPT_DIR / "safari_control.py"
+    source.write_bytes((ROOT / "data/scripts/safari_control.py").read_bytes())
+    snapshot = ibl_dependencies.script_snapshot
+    monkeypatch.setattr(ibl_dependencies, "script_snapshot",
+                        lambda args: snapshot(args, root=ops._SCRIPT_DIR))
     monkeypatch.setattr(ops, "_resolve_interpreter", lambda *args: (sys.executable, None))
     handler = load_tool_handler("script_op")
     monkeypatch.setitem(handler._SIBLING_MODS, "script_ops", ops)
@@ -45,6 +55,8 @@ def native(argv, **kwargs):
     if "is running" in script:
         value = True
     elif "safari_snapshot_v2" in script:
+        if MODE == "read-timeout":
+            raise subprocess.TimeoutExpired(argv, kwargs.get("timeout"))
         value = [[7, "A", state["current"], [list(range(1, len(tabs) + 1)), ["about:blank" if t == "blank" else "https://example.test/" + t for t in tabs], tabs]]]
     elif "make new tab" in script:
         tabs.append("blank")
@@ -68,7 +80,7 @@ with patch.object(sys, "platform", "darwin"), patch.object(subprocess, "run", na
 
     def prepare(mode="normal"):
         (ops._SCRIPT_DIR / "check.py").write_text(
-            "SOURCE = " + repr(str(ROOT / "data/scripts/safari_control.py"))
+            "SOURCE = " + repr(str(source))
             + "\nLOG = " + repr(str(log)) + "\nMODE = " + repr(mode) + "\n" + wrapper)
         return log
     return prepare
@@ -97,7 +109,7 @@ def test_unknown_survives_real_script_process_and_ibl_fault(safari_process, tmp_
     result = invoke({"op": "switch", "window_id": 7, "tab": 2}, tmp_path)
     assert not result["success"], result
     details = result["diagnostic"]["details"]
-    assert details["failure"]["code"] == "UNKNOWN"
+    assert details.get("failure", {}).get("code") == "UNKNOWN", json.dumps(result, ensure_ascii=False)
     assert details["recovery"]["status"] == "unknown"
     assert details["recovery"]["retry_change"] is False
     assert details["error_type"] == "result_unknown"
@@ -396,3 +408,55 @@ def test_guide_workflow_executes_as_one_ibl_program(safari_process, tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+@pytest.mark.parametrize('op', ['status', 'switch'])
+def test_observation_timeout_before_mutation_is_catchable(safari_process, tmp_path, op):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from api_ibl import router
+    log = safari_process('read-timeout')
+    app = FastAPI()
+    app.include_router(router)
+    args = {'op': op}
+    if op == 'switch':
+        args.update(window_id=7, tab=2, expected='0' * 64)
+    code = ('[try] { [self:script]' + json.dumps({'id': 'Safari제어', 'args': args})
+            + ' } [catch] { {caught:true,error:$error} }')
+    with TestClient(app) as client:
+        result = client.post('/ibl/execute', json={
+            'edition': 2, 'code': code, 'project_path': str(tmp_path)}).json()
+    assert result['success'], result
+    details = result['value']['error']['details']
+    assert details['failure']['code'] == 'OBSERVATION_FAILED'
+    assert details['failure']['state_change_possible'] is False
+    assert details['failure']['stage'] == 'observation'
+    assert details['recovery']['retry_observation'] is False
+    assert 'observe' not in details['recovery']
+    calls = json.loads(log.read_text())
+    assert sum('safari_snapshot_v2' in c for c in calls) == 1
+    assert not any('set current tab' in c for c in calls)
+
+
+def test_launch_timeout_remains_unknown(driver, monkeypatch):
+    monkeypatch.setattr(driver, 'precheck', lambda request: driver._mutate('launch'))
+    monkeypatch.setattr(driver, 'apple_event', lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired('launch', 1)))
+    monkeypatch.setattr(driver, 'windows', lambda *a: (_ for _ in ()).throw(subprocess.TimeoutExpired('read', 1)))
+    result = driver.run({'op': 'open', 'url': 'about:blank', 'launch': True})
+    assert result['error_type'] == 'result_unknown'
+
+
+@pytest.mark.parametrize('args,effects', [
+    ('', {'read_external'}),
+    (',args:{op:"status",window_id:$window}', {'read_external'}),
+    (',args:{op:$op}', {'unknown'}),
+    (',args:{**$args}', {'unknown'}),
+    (',args:{op:"open",url:$url}', {'write_external'}),
+])
+def test_script_effects_keep_known_selectors_and_dynamic_safety(args, effects):
+    from ibl_v2_compile import compile_program
+    from ibl_v2_adapters import load_registry
+    plan = compile_program('[self:script]{id:"Safari제어"' + args + '}', load_registry(),
+                           inputs={'window': 7, 'op': 'status', 'url': 'about:blank', 'args': {}})
+    assert not plan.issues, plan.report()
+    assert plan.effects == effects

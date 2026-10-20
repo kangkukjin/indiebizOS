@@ -1,0 +1,80 @@
+[
+  {
+    "label": "base_v0",
+    "run_id": "36b061bbe26c4346a0ba7fe1b4123e86",
+    "status": "completed",
+    "http_seconds": 16.150494813919067,
+    "pc_verified": 4,
+    "safari_verified": false,
+    "safari_error_code": "OBSERVATION_FAILED",
+    "reread_equal": true,
+    "calls": {
+      "self:script:Safari제어:status": 1,
+      "self:script:?:?": 8,
+      "self:read": 5,
+      "self:write": 1
+    },
+    "safari_call_state_change": [
+      0
+    ]
+  },
+  {
+    "label": "variation_v0",
+    "run_id": "48ac05885a5149108ef82b7dada81359",
+    "status": "completed",
+    "http_seconds": 18.751835823059082,
+    "pc_verified": 0,
+    "safari_verified": false,
+    "safari_error_code": "OBSERVATION_FAILED",
+    "reread_equal": true,
+    "calls": {
+      "self:limb": 4,
+      "self:script:Safari제어:status": 1,
+      "self:script:PC제어부품:select": 4,
+      "self:write": 1,
+      "self:read": 1
+    },
+    "safari_call_state_change": [
+      0
+    ]
+  },
+  {
+    "label": "base_v1",
+    "run_id": "8023573ad94f4ee6a0b73a4c97200fda",
+    "status": "completed",
+    "http_seconds": 17.14949083328247,
+    "pc_verified": 4,
+    "safari_verified": false,
+    "safari_error_code": "OBSERVATION_FAILED",
+    "reread_equal": true,
+    "calls": {
+      "self:script:Safari제어:status": 1,
+      "self:script:?:?": 5,
+      "self:read": 2,
+      "self:write": 1
+    },
+    "safari_call_state_change": [
+      0
+    ]
+  },
+  {
+    "label": "variation_v1",
+    "run_id": "aa19d937e6bf4176bf79b8342b5b77a0",
+    "status": "completed",
+    "http_seconds": 20.878448963165283,
+    "pc_verified": 0,
+    "safari_verified": false,
+    "safari_error_code": "OBSERVATION_FAILED",
+    "reread_equal": true,
+    "calls": {
+      "self:limb": 1,
+      "self:script:Safari제어:status": 1,
+      "self:script:PC제어부품:select": 1,
+      "self:write": 1,
+      "self:read": 1
+    },
+    "safari_call_state_change": [
+      0
+    ]
+  }
+]

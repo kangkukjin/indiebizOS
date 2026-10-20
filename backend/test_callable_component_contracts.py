@@ -79,7 +79,7 @@ def test_installed_functions_have_single_source_and_compile(monkeypatch, tmp_pat
     from ibl_v2_store import installed_definitions, definitions
     from ibl_v2_learning import check_source
     library = installed_definitions()
-    assert set(library) == {'PC제어','PC제어확인'}
+    assert set(library) == {'PC제어', 'PC제어확인', 'PC제어실행', 'PC조회묶음'}
     for name, source in library.items():
         assert check_source(source, True, library=library) is None
         assert definitions()[name].strip() == source.strip()

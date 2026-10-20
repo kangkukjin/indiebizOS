@@ -617,7 +617,13 @@ class Compiler:
                 self.call_dependencies[node.id] = snapshot
             contract = selected(spec.contract, values)
             if spec.specialize and not d.get('target'):
-                contract = spec.specialize(contract, values)
+                # Nested literal selectors remain known even when a sibling
+                # argument (e.g. window_id/source) is supplied at runtime.
+                # These partial values are only for contract selection, never
+                # dependency snapshots, receipts or execution arguments.
+                selectors = {**values, **{k: constant_value(v, partial_records=True)
+                                         for k, v in fields.items()}}
+                contract = spec.specialize(contract, selectors)
             from ibl_value_checks import value_problems
             for problem in ([] if arg_type.open else problems(contract, values)) + value_problems(contract, values, self.registry, self.definitions):
                 self.issue(node, 'ARGUMENT_CONTRACT', problem)

@@ -41,12 +41,30 @@ AppleScript 변경 명령 안에서도 URL 순서·현재 탭을 다시 대조�
 - `STATE_CHANGED`: 변경 전 대상이 달라졌다. 반환된 failure.state 또는 새 status로 다시 판단한다.
 - `TARGET_MISSING`: 변경 전 창·탭·실행 중인 앱을 찾지 못했다.
 - `PERMISSION_REQUIRED`: 자동화 권한을 허용해야 한다.
+- `OBSERVATION_FAILED`: 변경을 전송하기 전 상태 조회 시간 초과. IBL `try/catch`로
+  실패 근거를 보존하고 나머지 점검을 계속할 수 있다. 같은 조회를 즉시 반복하지 않는다.
 - `POSTCONDITION_FAILED`: 변경 요청 후 보존 조건·요청 결과를 확인하지 못했다. 반환 상태를 검토한다.
 - `UNKNOWN`: 응답 유실 후 효과 판별 불가 또는 변경 후 재조회 실패. 변경을 재전송하지 않는다.
   실패는 IBL `diagnostic.details`의 failure·recovery에도 남는다.
 
 상태가 반환됐으면 그것으로 후속 판단한다. 필요한 정보가 없을 때만 대상 창의 status를 조회한다.
 성공한 변경마다 별도 status를 붙이지 않는다. 화면 증거가 필요한 작업만 마지막에 screenshot을 쓴다.
+`contract`·`status`는 읽기, `open`·`switch`·`close`는 변경으로 선언한다.
+현재 상태는 실행마다 새로 관측한다. 조회 실패를 잡았다는 사실을 조회 성공으로 보고하지 않는다.
+
+여러 드라이버를 점검할 때는 다음처럼 조회 실패를 값으로 남긴다. 변경 후 `UNKNOWN`은 일반
+catch로 삼켜 다음 변경을 진행하지 않으며 원 실행의 불명확 상태를 유지한다.
+
+```ibl
+#!ibl edition=2
+$관측 = [try] {
+  $s = [self:script]{id:"Safari제어",args:{op:"status"},timeout:60}
+  {verified:$s.verified,state:$s,error:null}
+} [catch] {
+  {verified:false,state:null,error:$error}
+}
+return $관측
+```
 
 ```ibl
 #!ibl edition=2

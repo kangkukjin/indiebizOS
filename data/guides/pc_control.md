@@ -84,7 +84,23 @@ evidence_ref나 그 안의 plan·job이 누락·null·잘못된 자료형이어�
 
 ## 설치와 수리
 
-배포 정의의 정본은 `data/idioms/pc_control*.ibl`, 구현은 `data/scripts/pc_control.py`다.
+여러 상태를 점검할 때는 `PC조회묶음`으로 대상 선택과 실행 파일 읽기를 공유한다.
+기본 항목은 status·display·power·presence다. 선택 항목은 apps·clipboard·network·shortcuts까지이며,
+읽기만 받는다. Windows에서 지원하지 않는 항목은 항목별 실패로 남긴다.
+반환은 `{target,items}`이고 각 행에 action과 기존 PC제어의 결과·실패·영수증이 있다.
+항목별 `verified`를 확인하며 pending 행은 `PC제어확인`에 그 행 전체를 전달한다.
+동일 PC의 조회는 순서대로 실행하므로 여러 상태가 같은 시각의 원자적 스냅샷이라는 뜻은 아니다.
+본체는 원격 목록을 조회하지 않으며, 원격은 목록을 한 번 읽되 각 실제 전송의 연결·권한 검사는 유지한다.
+다음 호출에서는 현재 상태를 다시 읽는다. 접수 전 target/prepare 실패에는 존재하지 않는 task_ref 조회를 권하지 않는다.
+
+```ibl
+#!ibl edition=2
+$점검 = [fn:PC조회묶음]{대상:"__local__",항목:["status","presence","display","power"]}
+return $점검
+```
+
+배포 정의의 정본은 `data/idioms/pc_control*.ibl`·`pc_read_batch.ibl`, 구현은 `data/scripts/pc_control.py`다.
 설치 목록 `data/idioms/installed.json`이 첫 부팅에도 정의를 제공한다. 같은 이름의 다른 개인
 정의는 충돌로 신고한다. 임베딩 색인 등록은 `register_webapp_idioms.py --seed-file pc_control_seeds.json`을 사용한다.
 구현은 prepare→guestpc→task→검증을 소유한다. 정상 호출에서 이 연결을 다시 작성하지 않는다.
+`PC제어실행`은 두 공개 함수가 공유하는 내부 부품이며 직접 대상 선택을 대신하는 공개 입구로 쓰지 않는다.

@@ -1,0 +1,36 @@
+#!ibl edition=2
+[def:사파리읽기]($창) {
+  [try] {
+    [if:$창 == null] { $s=[self:script]{id:"Safari제어",args:{op:"status"},timeout:60} }
+    [else] { $s=[self:script]{id:"Safari제어",args:{op:"status",window_id:$창},timeout:60} }
+    $detail=null
+    $same=null
+    [if:$창 == null and $s.window_count > 0] {
+      $w=$s.windows[0]
+      [try] {
+        $detail=[self:script]{id:"Safari제어",args:{op:"status",window_id:$w.window_id},timeout:60}
+        $same=$detail.state.revision == $w.revision
+      } [catch] { $detail={ok:false,error:$error} }
+    }
+    $ok=$s.verified == true
+    [if:$창 == null and $s.window_count > 0] {
+      [if:$detail!=null] { $ok=$ok and get($detail,"verified",false)==true and $same==true }
+      [else] { $ok=false }
+    }
+    return {driver:"safari",ok:$ok,raw:$s,detail:$detail,same_revision:$same,page_loaded:null}
+  } [catch] { return {driver:"safari",ok:false,error:$error,page_loaded:null} }
+}
+$branches = ([fn:PC조회묶음]{대상:$target,항목:["status","presence","display","power"]} >> [table:each] {
+  $r=$it
+  [if:$r.status == "pending"] { $r=[fn:PC제어확인]{작업:$r,대기:60} }
+  {driver:"pc",action:$it.action,ok:$r.verified==true,raw:$r}
+}) & [fn:사파리읽기]{창:$window}
+$pc=$branches[0]
+$safari=$branches[1]
+$passed=$pc >> [table:filter]{where:($row)=>$row.ok == true}
+$report={pc:$pc,safari:$safari,pc_verified:len($passed),pc_total:len($pc),all_reads_verified:len($passed)==4 and $safari.ok == true,mutations_executed:false,mutation_verification:"미검증: 공유 기기 변경 격리 없음",physical_audio:"미검증",page_loaded:null}
+$text=json($report)
+[self:write]{path:$out,content:$text}
+$saved=[self:read]{path:$out}
+assert $saved.text == $text, "보고서 저장 재독 불일치"
+return {report:$report,saved:$out,reread_equal:true}

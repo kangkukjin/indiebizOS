@@ -52,3 +52,43 @@ def test_required_fields_and_list_elements_remain_checked():
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_nested_wire_inference_and_diagnostics_are_bounded():
+    """197 bytes used to expand for >5s; test a deeper independent input too."""
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    script = '''
+import sys
+sys.path.insert(0, 'backend')
+import boot_paths
+from ibl_v2_types import infer, plain, compatible
+value = ['scalar', 1]
+for _ in range(24):
+    value = ['record', [['key', value]]]
+a, b = infer(value), infer(value)
+assert a == b and hash(a) == hash(b)
+assert len(str(a)) < 2300 and len(repr(a)) < 2400
+assert compatible(a, b)
+assert plain(a) == plain(b)
+assert a.positions[0].kind == 'Text'
+'''
+    result = subprocess.run([sys.executable, '-c', script], cwd=root,
+                            capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr
+
+
+def test_union_order_and_discriminants_do_not_depend_on_display(monkeypatch):
+    def forbidden(_):
+        raise AssertionError('display is not a structural sort key')
+    monkeypatch.setattr(types.Type, '__str__', forbidden)
+    monkeypatch.setattr(types.Type, '__repr__', forbidden)
+    left = types.infer({'ok': True, 'rows': [1, 2]})
+    right = types.infer({'ok': False, 'error': 'failed'})
+    joined = types.join(left, right)
+    assert joined.kind == 'Union' and set(joined.item) == {left, right}
+    assert joined == types.join(right, left)
+    assert types.join(types.TEXT, types.NUMBER) == types.join(types.NUMBER, types.TEXT)
+    assert dict(left.fields)['rows'].positions == (types.NUMBER, types.NUMBER)

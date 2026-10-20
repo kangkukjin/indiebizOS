@@ -127,7 +127,9 @@
     "idioms": [
       "installed.json",
       "pc_control.ibl",
-      "pc_control_check.ibl"
+      "pc_control_check.ibl",
+      "pc_control_execute.ibl",
+      "pc_read_batch.ibl"
     ],
     "vocab_fragments": [
       "engines.yaml",

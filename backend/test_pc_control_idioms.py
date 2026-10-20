@@ -36,6 +36,11 @@ def flow(tmp_path, monkeypatch):
             return {'success': True, 'text': 'native fixture', 'blocks': [], 'data': None}
         if key == 'self:script':
             assert params['id'] == 'PC제어부품'
+            if params['args']['op'] == 'local':
+                return {'success': True, 'value': {
+                    'success': True, 'protocol': pc.PROTOCOL, 'platform': 'darwin',
+                    'action': params['args']['request']['action'], 'request_id': 'local-test',
+                    'source_sha256': 'test', 'verified': True}}
             value = pc.run(params['args'], params.get('_ibl_context', {}))
             if params['args']['op'] == 'prepare':
                 state['plans'].append(value)
@@ -165,3 +170,43 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync('frontend/src/lib/pc-contr
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_batch_missing_target_selects_once_and_never_submits(flow):
+    run, state = flow
+    result = run('return [fn:PC조회묶음]{대상:"missing"}')
+    assert len(result['items']) == 4
+    assert all(r['status'] == 'failed' and not r['verified'] and r['task_ref'] is None for r in result['items'])
+    assert all('접수되지' in r['failure']['next'] for r in result['items'])
+    assert sum(k == 'self:limb' for k, _ in state['calls']) == 1
+    assert sum(k == 'self:script' and p['args']['op'] == 'select' for k, p in state['calls']) == 1
+    assert not any(k in {'self:read', 'limbs:guestpc', 'self:task'} for k, _ in state['calls'])
+
+
+def test_batch_reads_share_selection_but_keep_fresh_results(flow):
+    run, state = flow
+    state['terminal'] = True
+    code = 'return [fn:PC조회묶음]{대상:"pc-1",항목:["status","status"]}'
+    for _ in range(2):
+        result = run(code)
+        assert all(r['status'] == 'completed' and r['verified'] for r in result['items']), result
+    assert sum(k == 'self:limb' for k, _ in state['calls']) == 2
+    assert sum(k == 'self:script' and p['args']['op'] == 'select' for k, p in state['calls']) == 2
+    assert sum(k == 'self:read' for k, _ in state['calls']) == 2
+    assert sum(k == 'limbs:guestpc' for k, _ in state['calls']) == 4
+
+
+def test_local_batch_skips_remote_inventory_and_reads_every_item(flow):
+    run, state = flow
+    result = run('return [fn:PC조회묶음]{대상:"__local__",항목:["status","status"]}')
+    assert all(r['verified'] for r in result['items'])
+    assert sum(k == 'self:read' for k, _ in state['calls']) == 1
+    assert sum(k == 'self:script' and p['args']['op'] == 'local' for k, p in state['calls']) == 2
+    assert not any(k in {'self:limb', 'limbs:guestpc'} for k, _ in state['calls'])
+
+
+def test_batch_rejects_mutations_before_target_resolution(flow):
+    run, state = flow
+    with pytest.raises(AssertionError, match='읽기 동작만'):
+        run('return [fn:PC조회묶음]{대상:"__local__",항목:["status","lock"]}')
+    assert state['calls'] == []

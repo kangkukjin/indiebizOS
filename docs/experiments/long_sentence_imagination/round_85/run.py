@@ -30,14 +30,23 @@ def main():
     parser.add_argument('mode', choices=['check', 'base', 'variation', 'submit', 'poll'])
     parser.add_argument('--version', default='v0')
     parser.add_argument('--label', default='base')
+    parser.add_argument('--post-repair', action='store_true')
     args = parser.parse_args()
+    global OUT
+    if args.post_repair:
+        OUT = OUT / 'post_repair'
+    for folder in ['runs', 'trainer', 'ai/base', 'ai/variation']:
+        (OUT / folder).mkdir(parents=True, exist_ok=True)
     label = args.label
     if args.mode == 'submit':
         import sqlite3
         db = sqlite3.connect(f'file:{ROOT}/data/world_pulse.db?mode=ro', uri=True)
         last = db.execute('select max(id) from episode_log').fetchone()[0]
         text = (DOC / ('request.txt' if label == 'base' else 'variation.txt')).read_text()
-        text += f'\n자료 위치: {OUT}/inputs/\n산출물 저장 위치: {OUT}/ai/{label}/'
+        clean_inputs = OUT / 'inputs_clean' / label
+        clean_inputs.mkdir(parents=True, exist_ok=True)
+        (clean_inputs / 'request.txt').write_text(text)
+        text += f'\n자료 위치: {clean_inputs}/\n산출물 저장 위치: {OUT}/ai/{label}/'
         body = {'message': text, 'origin': 'training', 'background': True}
         (OUT / f'runs/ai_{label}_request.json').write_text(json.dumps({'last_episode': last, 'body': body}, ensure_ascii=False, indent=2))
         result = api('/system-ai/chat', body, 60)

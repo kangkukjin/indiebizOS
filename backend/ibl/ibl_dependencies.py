@@ -105,6 +105,8 @@ def script_contract(base, args):
     nested = args.get('args')
     if isinstance(nested, dict):
         contract = selected(contract, normalize(contract, nested))
+    elif nested is None:
+        contract = selected(contract, {})
     if args.get('background'):
         return {**base, 'result': 'Record', 'effects': ['write_external'],
                 'nested_contracts': {'args': contract}}

@@ -242,6 +242,10 @@ def select_target(args):
                 "pc_control_mac.py" if system == "darwin" else "pc_control_windows.ps1")
     return {"success": True, "target": target, "platform": system, "request": request,
             "source_path": "~workspace/data/instruments/" + filename,
+            "supported_actions": [action for action, systems in CONTRACT.get(
+                "action_platforms", {a: ["windows"] if a.startswith("youtube_") else CONTRACT["platforms"]
+                                     for a in CONTRACT["actions"]}).items()
+                                  if system in systems],
             "wait": wait, "timeout": 120 if youtube else 30}
 
 

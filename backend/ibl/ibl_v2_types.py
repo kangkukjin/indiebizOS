@@ -1,13 +1,14 @@
 """Structural types shared by edition 2 preflight and boundary guards."""
 from common.foreign_ref import ForeignRef
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cached_property, lru_cache
+import hashlib
 from decimal import Decimal
 from ibl_v2_ir import Unit, ResultValue, Fault
 from ibl_v2_expr import Builtin, Closure
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False, repr=False)
 class Type:
     kind: str
     fields: tuple = ()
@@ -27,14 +28,87 @@ class Type:
     # identity (declared write resources) read it via static_text (70회차 B70-2).
     literal: object = None
 
+    @cached_property
+    def _key(self):
+        # A List shares its children with both item and positions. Expanding
+        # repr/hash recursively turns a small DAG into an exponential tree.
+        def ref(value):
+            if isinstance(value, Type):
+                return value._key
+            if isinstance(value, tuple):
+                return tuple(ref(v) for v in value)
+            return value
+        value = (self.kind, ref(self.fields), ref(self.item), self.open,
+                 ref(self.positions), self.observed, self.literal)
+        return hashlib.sha256(repr(value).encode()).digest()
+
+    def __hash__(self):
+        return hash(self._key)
+
+    def __eq__(self, other):
+        if not isinstance(other, Type):
+            return NotImplemented
+        # Fingerprints are a fast rejection/order key, never equality proof.
+        pending, seen = [(self, other)], set()
+        while pending:
+            left, right = pending.pop()
+            if left is right:
+                continue
+            pair = (id(left), id(right))
+            if pair in seen:
+                continue
+            seen.add(pair)
+            if isinstance(left, Type) and isinstance(right, Type):
+                if left._key != right._key:
+                    return False
+                pending.extend(zip(
+                    (left.kind, left.fields, left.item, left.open, left.positions, left.observed, left.literal),
+                    (right.kind, right.fields, right.item, right.open, right.positions, right.observed, right.literal)))
+            elif isinstance(left, tuple) and isinstance(right, tuple):
+                if len(left) != len(right):
+                    return False
+                pending.extend(zip(left, right))
+            elif left != right:
+                return False
+        return True
+
     def __str__(self):
-        if self.kind == "Union":
-            return " | ".join(str(t) for t in self.item)
-        if self.kind == "Record" and self.observed:
-            return "Record⟨관측: " + "·".join(k for k, _ in self.fields) + "⟩"
-        if self.kind == "Record" and self.fields:
-            return "{" + ", ".join(f"{k}: {v}" for k, v in self.fields) + "}"
-        return f"{self.kind}<{self.item}>" if self.item else self.kind
+        # Diagnostics need a bounded view; the complete refinements stay on
+        # the type and are still checked. Never use this display for ordering.
+        budget = [2048, 256]
+        def show(typ, depth=0):
+            if budget[0] <= 0 or budget[1] <= 0 or depth > 32:
+                return "…"
+            budget[1] -= 1
+            def text(value):
+                part = value[:max(0, budget[0])]
+                budget[0] -= len(part)
+                return part + ("…" if len(part) < len(value) else "")
+            def parts(values, separator):
+                out = []
+                for value in values:
+                    if out:
+                        out.append(text(separator))
+                    if budget[0] <= 0 or budget[1] <= 0:
+                        out.append("…")
+                        break
+                    out.append(value())
+                return "".join(out)
+            if typ.kind == "Union":
+                return parts((lambda t=t: show(t, depth + 1) for t in typ.item), " | ")
+            if typ.kind == "Record" and typ.observed:
+                return text("Record⟨관측: " + "·".join(k for k, _ in typ.fields) + "⟩")
+            if typ.kind == "Record" and typ.fields:
+                return text("{") + parts(
+                    (lambda k=k, v=v: text(k + ": ") + show(v, depth + 1) for k, v in typ.fields),
+                    ", ") + text("}")
+            if isinstance(typ.item, Type):
+                return text(typ.kind + "<") + show(typ.item, depth + 1) + text(">")
+            return text(typ.kind)
+        return show(self)
+
+    def __repr__(self):
+        return f"Type({self!s})"
 
 
 UNKNOWN, UNIT_T, BOOL = Type("Unknown"), Type("Unit"), Type("Bool")
@@ -85,6 +159,7 @@ def plain(typ):
     return Type(typ.kind, tuple((k, plain(v)) for k, v in typ.fields), item, typ.open, positions, typ.observed)
 
 
+@lru_cache(maxsize=8192)
 def join(left, right):
     if left == NEVER:
         return right
@@ -98,7 +173,7 @@ def join(left, right):
                             and a[k].literal is not None and b[k].literal is not None
                             and a[k].literal != b[k].literal for k in a.keys() & b.keys())
         if discriminated:
-            return Type("Union", item=tuple(sorted({left, right}, key=repr)))
+            return Type("Union", item=tuple(sorted({left, right}, key=_order_key)))
     if left.kind == right.kind and left.kind not in {"Record", "List", "Union"}:
         # Paths that meet with different known values only know the type; the
         # shape (field order, positions) is the one they had without values.
@@ -123,7 +198,11 @@ def join(left, right):
     if "Unknown" in (left.kind, right.kind):
         return UNKNOWN
     members = set(alternatives(left)) | set(alternatives(right))
-    return Type("Union", item=tuple(sorted(members, key=lambda t: (str(t), repr(t)))))
+    return Type("Union", item=tuple(sorted(members, key=_order_key)))
+
+
+def _order_key(typ):
+    return typ.kind, typ._key
 
 
 def ordered_list(types):

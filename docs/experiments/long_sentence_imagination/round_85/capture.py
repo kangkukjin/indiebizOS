@@ -9,7 +9,10 @@ DOC = Path(__file__).resolve().parent
 OUT = ROOT / 'outputs/long_sentence_imagination/2026-10-20_85회차'
 
 
-def capture():
+def capture(post_repair=False):
+    global OUT
+    if post_repair:
+        OUT = OUT / "post_repair"
     db = sqlite3.connect(f'file:{ROOT}/data/world_pulse.db?mode=ro', uri=True)
     db.row_factory = sqlite3.Row
     summaries = []
@@ -66,9 +69,10 @@ def capture():
                    'compactions': sum(e['kind'] == 'context.compacted' for e in events),
                    'forbidden_access_candidates': forbidden}
         summaries.append(summary)
-    (DOC / 'evidence/ai_summary.json').write_text(json.dumps(summaries, ensure_ascii=False, indent=2))
+    (DOC / ('evidence/ai_summary_post_repair.json' if post_repair else 'evidence/ai_summary.json')).write_text(json.dumps(summaries, ensure_ascii=False, indent=2))
     print(json.dumps([{k: s[k] for k in ('label', 'episode_id', 'total_ms', 'cost_total', 'tools', 'ended_at')} for s in summaries], ensure_ascii=False))
 
 
 if __name__ == '__main__':
-    capture()
+    import sys
+    capture('--post-repair' in sys.argv)

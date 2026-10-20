@@ -1,0 +1,30 @@
+#!ibl edition=2
+[def:PC제어실행]($선택,$원문) {
+  $대상 = $선택.target
+  $단계 = "prepare"
+  $작업 = {status:"failed",target:$대상,verified:false,result:null,task_ref:null,verification:null,evidence_ref:null,failure:null}
+  [try] {
+    [if:$대상=="__local__"] {
+      $단계 = "local"
+      $결과 = [self:script]{id:"PC제어부품",args:{op:"local",platform:$선택.platform,source:$원문.text,request:$선택.request},timeout:125}
+      [if:$결과.success==false] {
+        return {**$작업,status:"failed",result:$결과,failure:{stage:"local",message:get($결과,"error","PC 제어 실패"),next:"부분 관측을 확인하세요. 변경을 자동 재전송하지 마세요."}}
+      }
+      return {**$작업,status:"completed",verified:get($결과,"verified",false),result:$결과}
+    }
+    $계획 = [self:script]{id:"PC제어부품",args:{op:"prepare",platform:$선택.platform,source:$원문.text,request:$선택.request}}
+    $작업 = {**$작업,verification:{request:$계획.request,platform:$계획.platform,source_sha256:$계획.source_sha256},evidence_ref:{plan:get($계획,"_receipt_ref",{})}}
+    $단계 = "submit"
+    $접수 = [limbs:guestpc]{limb:$대상,op:"shell",cmd:$계획.command,stdin:$계획.stdin,request_id:$계획.request.request_id,timeout:$선택.timeout,background:true,mode:"interactive"}
+    $작업 = {**$작업,status:"pending",task_ref:$접수.task_ref,evidence_ref:{plan:get($계획,"_receipt_ref",{}),job:get($접수,"_receipt_ref",{})}}
+    return [fn:PC제어확인]{작업:$작업,대기:$선택.wait}
+  } [catch] {
+    $상태 = "failed"
+    $다음 = "준비 실패를 확인하세요. 장치 작업은 접수되지 않았습니다."
+    [if:$단계 in ["submit","local"]] {
+      $상태 = "unknown"
+      $다음 = "실행 영수증과 기존 작업을 확인하세요. 변경을 자동 재전송하지 마세요."
+    }
+    return {**$작업,status:$상태,failure:{stage:$단계,message:$error.message,next:$다음}}
+  }
+}

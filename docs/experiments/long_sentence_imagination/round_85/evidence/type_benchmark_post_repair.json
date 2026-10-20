@@ -1,0 +1,16 @@
+[
+  {
+    "label": "synthetic8",
+    "bytes": 197,
+    "sha256": "dfaa295d68cb45fc93992d72a1f8097c8133daaf63f987c8a3e30831e27212f2",
+    "infer_seconds": 0.0001810831017792225,
+    "kind": "List"
+  },
+  {
+    "label": "original_response",
+    "bytes": 199189,
+    "sha256": "d7917817c5a082086dfd3c4dd0eb01bed2bc588584b370795dd498e84924dead",
+    "infer_seconds": 0.01256541721522808,
+    "kind": "Record"
+  }
+]

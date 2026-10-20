@@ -1,26 +1,50 @@
 [
-  {
-    "alias": "PC제어확인",
-    "intent": "PC 제어가 대기 중이면 원래 작업과 준비·접수 영수증으로 완료를 확인한다. 변경 명령은 다시 보내지 않는다.",
-    "source_file": "pc_control_check.ibl",
-    "nodes": "self",
-    "category": "phrase",
-    "source": "manual_seed",
-    "difficulty": 2,
-    "returns": "Record",
-    "topic": "PC 제어",
-    "tags": "manual,PC,control"
-  },
-  {
-    "alias": "PC제어",
-    "intent": "명시적으로 고른 PC와 출력 장치의 상태·음량·음소거·주소 열기·잠금·Windows 유튜브를 공용 부품으로 제어한다.",
-    "source_file": "pc_control.ibl",
-    "nodes": "self,limbs",
-    "category": "phrase",
-    "source": "manual_seed",
-    "difficulty": 2,
-    "returns": "Record",
-    "topic": "PC 제어",
-    "tags": "manual,PC,control"
-  }
+ {
+  "alias": "PC제어확인",
+  "intent": "PC 제어가 대기 중이면 원래 작업과 준비·접수 영수증으로 완료를 확인한다. 변경 명령은 다시 보내지 않는다.",
+  "source_file": "pc_control_check.ibl",
+  "nodes": "self",
+  "category": "phrase",
+  "source": "manual_seed",
+  "difficulty": 2,
+  "returns": "Record",
+  "topic": "PC 제어",
+  "tags": "manual,PC,control"
+ },
+ {
+  "alias": "PC제어실행",
+  "intent": "PC제어와 PC조회묶음의 내부 실행 부품. 선택한 대상과 읽은 원문으로 한 요청을 실행하고 원 영수증으로 검증한다. 일반 호출은 PC제어 또는 PC조회묶음을 쓴다.",
+  "source_file": "pc_control_execute.ibl",
+  "nodes": "self,limbs",
+  "category": "phrase",
+  "source": "manual_seed",
+  "difficulty": 2,
+  "returns": "Record",
+  "topic": "PC 제어",
+  "tags": "manual,PC,internal"
+ },
+ {
+  "alias": "PC제어",
+  "intent": "명시적으로 고른 PC와 출력 장치의 상태·음량·음소거·주소 열기·잠금·Windows 유튜브를 공용 부품으로 제어한다.",
+  "source_file": "pc_control.ibl",
+  "nodes": "self,limbs",
+  "category": "phrase",
+  "source": "manual_seed",
+  "difficulty": 2,
+  "returns": "Record",
+  "topic": "PC 제어",
+  "tags": "manual,PC,control"
+ },
+ {
+  "alias": "PC조회묶음",
+  "intent": "명시한 PC의 여러 상태를 한 번의 대상 선택·실행 파일 읽기로 점검한다. 기본 status·display·power·presence, 읽기만 허용하며 실패도 항목별로 보존한다. 현재 상태는 호출마다 새로 읽는다.",
+  "source_file": "pc_read_batch.ibl",
+  "nodes": "self,limbs",
+  "category": "phrase",
+  "source": "manual_seed",
+  "difficulty": 2,
+  "returns": "Record",
+  "topic": "PC 제어",
+  "tags": "manual,PC,read,batch"
+ }
 ]

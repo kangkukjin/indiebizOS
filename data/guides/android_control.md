@@ -110,6 +110,12 @@ PC와 같은 반환 틀: `status,target,verified,result,task_ref,verification,ev
 - `pending`: 실행 중. 전체 반환을 보존해 아래 확인 함수에 전달한다.
 - `unknown`: 실행 여부·원 영수증·연결이 불명확. **변경을 다시 보내지 않는다.**
 
+대상·화면 문맥 거절 뒤 같은 변경을 원시 shell/python·화면 조작으로 우회하지 않는다.
+연결이 끊긴 작업은 원 영수증과 history로 상태를 확인하고 취소했다면 실제 종료까지 확인한다.
+`reuse`의 새 실행은 연결·현재 상태를 다시 관측한다. 과거 관측만 재가공하려면 원 결과 참조를
+입력으로 전달하고 관측 시점을 남긴다. 임의 원격 코드의 쓰기 범위는 미상이므로, 그 앞의
+읽기 재사용이 제외됐다는 이유로 기기 상태를 캐시하거나 코드를 읽기 전용으로 선언하지 않는다.
+
 ```ibl
 #!ibl edition=2
 $작업 = [fn:Android제어]{대상:"선택한 device_id",요청:{action:"status"},대기:0}
@@ -129,7 +135,7 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 
 실패 칸의 `code`(2026-10-21, 긴문장 87회차 L87-3): 대상 거절은 `TARGET_NOT_REGISTERED`·`TARGET_NOT_ANDROID`·`TARGET_REVOKED`·`TARGET_INACTIVE`·
 `TARGET_NOT_CONNECTED`·`CONTRACT_MISMATCH`·`PYTHON_NOT_READY`, 검증 실패는 폰이 앞머리에 적은 코드(`UI_DRIVER_UPDATE_REQUIRED`·`STALE_SCREEN`·`POSTCONDITION_FAILED` …),
-없으면 `null`. 메시지는 `CODE: 설명` 모양을 지킨다.
+없으면 `null`. 코드를 가진 메시지는 `CODE: 설명` 모양을 지킨다.
 `needs_front:true` 동작(앱 실행·화면 독해·입력)은 **사람 화면이 있는 문맥**(`user`·`training`·`test` 출처)에서만 폰에 보낸다. 정기·배경 실행에서는 전송 전에
 `SCREEN_CONTEXT_UNAVAILABLE` 로 거절한다(L87-2 — 그전엔 검사 없이 폰까지 갔다). 문맥은 허브가 자식 환경 `INDIEBIZOS_SCREEN_CONTEXT` 로 실어 주고 규칙은 `control_conditions` 한 곳이다.
 하드웨어 동작(음량·밝기·화면·센서)은 문맥에 상관없이 보낸다.

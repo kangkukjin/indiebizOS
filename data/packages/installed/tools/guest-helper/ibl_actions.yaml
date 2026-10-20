@@ -6,6 +6,7 @@ nodes:
     actions:
       guestpc:
         receipt_ref: true  # 원 접수 영수증을 후속 확인에 연결
+        per_run: true  # 원격 관측은 새 실행마다 현재 값을 읽는다. resume 영수증은 유지.
         params:
           code: string      # op=ibl 또는 python
           inputs: object    # op=python 입력 객체
@@ -94,6 +95,7 @@ nodes:
   self:
     actions:
       limb:
+        per_run: true  # 연결·등록·중지 상태를 다른 실행의 읽기 결과로 대체하지 않는다.
         params:
           key: string
           paused: boolean

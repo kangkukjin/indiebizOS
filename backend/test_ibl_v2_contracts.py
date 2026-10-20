@@ -14,6 +14,36 @@ from test_ibl_v2_assets import memory  # noqa: F401 — 격리한 관용구 DB
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.parametrize("source", [
+    'return [self:limb]{op:"list",limb:"fixture-device"}',
+    'return [limbs:guestpc]{op:"info",limb:"fixture-device"}',
+    'return [limbs:guestpc]{op:"history",limb:"fixture-device"}',
+])
+def test_live_device_observations_refresh_on_reuse(tmp_path, monkeypatch, source):
+    import ibl_engine
+
+    calls = []
+    state = {"connected": True, "revision": 1}
+
+    def observe(step, *args, **kwargs):
+        calls.append(step)
+        return {"success": True, "observation": dict(state)}
+
+    monkeypatch.setattr(ibl_engine, "execute_ibl", observe)
+    request = {"edition": 2, "code": source}
+    first = handle_request(request, str(tmp_path))
+    assert first["success"], first
+    state.update(connected=False, revision=2)
+    second = handle_request({**request, "reuse": first["resume"]}, str(tmp_path))
+    assert second["success"], second
+    assert second["value"]["observation"] == state
+    assert second["reuse"]["reused_calls"] == 0
+    assert len(calls) == 2
+    resumed = handle_request({**request, "resume": first["resume"]}, str(tmp_path))
+    assert resumed["success"] and resumed["value"] == first["value"]
+    assert len(calls) == 2  # Same-run recovery remains a historical receipt.
+
+
 @pytest.mark.parametrize('action', ['list', 'file_find', 'grep'])
 @pytest.mark.parametrize('change', ['add', 'delete', 'content', 'empty'])
 def test_file_discovery_reuse_observes_current_sources(tmp_path, action, change):

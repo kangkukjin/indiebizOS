@@ -1,8 +1,40 @@
 """Dependency snapshots for declared script and legacy callable boundaries."""
 import ast
+from contextlib import contextmanager
+from contextvars import ContextVar
+import copy
 from pathlib import Path
 import yaml
 from ibl_v2_ir import digest
+
+
+_check_metadata = ContextVar("ibl_check_metadata", default=None)
+
+
+@contextmanager
+def compilation_dependencies():
+    """One check observes one metadata snapshot; execution never inherits it."""
+    token = _check_metadata.set({})
+    try:
+        yield
+    finally:
+        _check_metadata.reset(token)
+
+
+def _check_value(key, read):
+    cache = _check_metadata.get()
+    if cache is None:
+        return read()
+    if key not in cache:
+        cache[key] = read()
+    return cache[key]
+
+
+def _script_registry(path):
+    return _check_value(
+        ("registry", str(path)),
+        lambda: (yaml.safe_load(path.read_text()) or {}) if path.is_file() else {},
+    )
 
 
 def script_snapshot(args, root=None):
@@ -12,13 +44,18 @@ def script_snapshot(args, root=None):
     from runtime_utils import get_base_path
     from thread_context import get_repair_workspace
     root = Path(root) if root else Path(get_repair_workspace(create=bool(args)) or get_base_path()) / 'data/scripts'
-    registry_path = root / 'registry.yaml'
-    registry = yaml.safe_load(registry_path.read_text()) if registry_path.exists() else {}
-    registry = registry or {}
     sid = args.get('id')
+    operation = args.get('op', 'run' if sid else 'list')
+    key = ("snapshot", str(root), digest([sid, operation]))
+    # Call sites own their snapshots. Do not let one mutate another's evidence.
+    return copy.deepcopy(_check_value(key, lambda: _script_snapshot(root, sid, operation)))
+
+
+def _script_snapshot(root, sid, operation):
+    registry = _script_registry(root / 'registry.yaml')
     entry = registry.get(sid) if isinstance(sid, str) else None
     # Dynamic selection and list/register/remove observe the whole namespace.
-    dynamic = not entry or args.get('op', 'run' if sid else 'list') != 'run'
+    dynamic = not entry or operation != 'run'
     files, pending, seen = {}, [], set()
     import_root = root / str(entry.get('file') or '') if entry else root
     # Python의 스크립트 검색 경로는 링크 이름이 아니라 실제 진입 파일의 디렉터리다.
@@ -75,7 +112,9 @@ def script_snapshot(args, root=None):
     if entry and entry.get('interpreter') == 'python':
         from python_environment_lock import fingerprint
         from runtime_utils import get_python_cmd
-        snapshot.update(environment=fingerprint(import_root), interpreter=get_python_cmd())
+        environment = _check_value(("environment", str(import_root)),
+                                   lambda: fingerprint(import_root))
+        snapshot.update(environment=environment, interpreter=get_python_cmd())
     return snapshot
 
 
@@ -95,7 +134,7 @@ def script_contract(base, args):
     from runtime_utils import get_base_path
     from thread_context import get_repair_workspace
     path = Path(get_repair_workspace() or get_base_path()) / 'data/scripts/registry.yaml'
-    registry = yaml.safe_load(path.read_text()) if path.is_file() else {}
+    registry = _script_registry(path)
     contract = ((registry or {}).get(sid) or {}).get('callable_contract')
     if not contract or contract.get('adapter', {}).get('protocol') == 'ibl-script-session/1':
         return base

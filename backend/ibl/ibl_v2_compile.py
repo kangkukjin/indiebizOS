@@ -11,6 +11,7 @@ from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches, record
 from ibl_v2_parser import parse
 from ibl_v2_narrow import narrow
 from ibl_v2_expr import BUILTINS
+from ibl_dependencies import compilation_dependencies
 import re
 # f-문자열의 글자 부분에 남은 `$이름` — `$(`·`$5` 같은 다른 쓰임은 잡지 않는다.
 _BARE_DOLLAR_NAME = re.compile(r"\$[A-Za-z_\uac00-\ud7a3][\w\uac00-\ud7a3]*")
@@ -888,6 +889,7 @@ def _rows_of(typ):
     return Type("List", item=element if element != NEVER else UNKNOWN, positions=positions)
 
 
+@compilation_dependencies()
 def compile_program(source, registry=None, inputs=None, definitions=None, *, declared_inputs=None, input_types=None):
     """declared_inputs: 표면이 템플릿에서 참조하는 입력 이름 전부. inputs 에 없는 이름은 '미지정'으로 컴파일된다.
     input_types: 값 없는 입력의 타입 선언(저술 시점 검사용) — 실행 요청에는 쓰지 않는다."""

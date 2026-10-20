@@ -4579,6 +4579,7 @@ nodes:
                 - '{meta}'
                 - '{summary}'
       limb:
+        per_run: true
         params:
           key: string
           paused: boolean
@@ -7481,6 +7482,7 @@ nodes:
         - 버튼찾기
       guestpc:
         receipt_ref: true
+        per_run: true
         params:
           code: string
           inputs: object

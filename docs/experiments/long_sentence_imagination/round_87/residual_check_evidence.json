@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-21",
+  "baseline_commit": "cfa021d3",
+  "mode": "offline-check-only",
+  "device_calls": 0,
+  "model_calls": 0,
+  "inputs": "fixed synthetic device IDs, example.com URL, window=1, /tmp output; source unchanged",
+  "source_sha256": "3c583e06b9cce315345fd4d6dffaaac9be42feb004d63f23dfa6f46a18f62683",
+  "baseline_seconds": 50.856371709145606,
+  "after_metadata_cache_seconds": 1.664860958699137,
+  "final_seconds": 1.8432011669501662,
+  "issues": 0,
+  "guards": 1240,
+  "semantic_report_equal": true,
+  "semantic_report_sha256": "75552890c9d370dda338bdb13df7084a3cf83e0d7b69d6d8f553c2703a869136",
+  "changed_dependency_keys": [
+    "contracts",
+    "core"
+  ],
+  "profile": {
+    "seconds": 129.91370120784268,
+    "script_snapshot_calls": 253,
+    "script_snapshot_cumulative_seconds": 102.52,
+    "environment_fingerprint_calls": 253,
+    "environment_fingerprint_cumulative_seconds": 73.236
+  },
+  "limitations": [
+    "Single matched baseline/final measurement; not an AI token or whole-device-task benchmark.",
+    "Profiling adds overhead and cumulative times overlap.",
+    "The final contract additionally makes live device observations per_run."
+  ],
+  "live_api_check": {
+    "http_status": 200,
+    "seconds": 2.207423,
+    "ok": true,
+    "executed": false,
+    "mode": "check",
+    "status": "incomplete",
+    "guards_total": 1240,
+    "issues": []
+  },
+  "tests": {
+    "backend_non_system": {
+      "passed": 11371,
+      "skipped": 1,
+      "failed": 0,
+      "seconds": 215.61
+    },
+    "related_system": {
+      "passed": 79,
+      "failed": 0,
+      "seconds": 152.21
+    }
+  }
+}

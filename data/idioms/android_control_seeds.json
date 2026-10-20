@@ -1,0 +1,26 @@
+[
+  {
+    "alias": "Android제어확인",
+    "source_file": "android_control_check.ibl",
+    "intent": "안드로이드 폰 제어가 대기 또는 불명확하면 원 작업과 영수증으로 결과를 확인한다. 변경은 재전송하지 않는다.",
+    "nodes": "self,limbs",
+    "category": "phrase",
+    "source": "manual_seed",
+    "difficulty": 2,
+    "returns": "Record",
+    "topic": "Android OS 제어",
+    "tags": "manual,Android,폰,control,복구"
+  },
+  {
+    "alias": "Android제어",
+    "source_file": "android_control.ibl",
+    "intent": "명시한 Android 폰의 음량·화면·밝기·회전·손전등·센서를 앱과 같은 드라이버로 제어하고 결과를 검증한다.",
+    "nodes": "self,limbs",
+    "category": "phrase",
+    "source": "manual_seed",
+    "difficulty": 2,
+    "returns": "Record",
+    "topic": "Android OS 제어",
+    "tags": "manual,Android,폰,control,복구"
+  }
+]

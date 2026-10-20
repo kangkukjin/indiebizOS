@@ -2748,3 +2748,5 @@
 
 2026-10-20 | YouTube 공개 어휘를 limbs:youtube의 14개 op로 통합. 기본 search, 기존 검색·조회·자막·요약·재생·큐·다운로드·릴레이 보존. ops.runs_on으로 폰 로컬 검색·재생과 PC 전용 작업 위임을 구분. 프롬프트·사전·앱·가이드·시드·현재 재생 프로그램 갱신. 용례 178행/훈련 자료/관용구 이관 및 재색인, 현재 판본 66건 컴파일 통과. 전체 backend 회귀 11112 통과/1 건너뜀, 설치·폰 번들/Python 72 통과, 최종 관련 검사 93 통과, frontend tsc 통과. 빌드 --check 통과. 별도 프로세스 및 라이브 API 사전 159개·14 op 검사 통과/옛 3개 거절. 실제 기기 재생·외부 YouTube API 호출 미실시.
 [2026-10-20] LONG_SENTENCE_85_REPAIR: Safari 조회 실패 격리와 변경 후 UNKNOWN 보호, 공유 구조 타입 추론 병목 제거, op별 효과, PC조회묶음과 미접수 안내. 동일 회수 엔진287.703→0.450초·기기 재조회0; 전수11207통과/1skip·관련system80통과. Safari 실기 응답 timeout은 남음. docs/experiments/long_sentence_imagination/round_85/report.md
+
+[2026-10-20] Android OS 드라이버: Android제어·Android제어확인으로 기존 폰 하드웨어 실행을 공용화. 원 준비·접수 영수증/요청 ID/소스 지문 검증, 설정 재조회와 요청 접수 구분, unknown에서 자동 재전송 금지. 앱·가이드·배포·의미 검색 연결. 연결 폰 3대의 읽기 및 pending→후속 확인 실기 통과; 실제 변경 동작은 미실행.

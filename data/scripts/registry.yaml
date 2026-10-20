@@ -1287,3 +1287,63 @@ Safari제어:
       - launch
       effects:
       - write_external
+
+
+Android제어부품:
+  description: Android제어·Android제어확인의 준비·영수증 검증 부품. 동작·인수·단위·확인 범위는 op:contract. 일반 호출은 저장 함수를 사용한다. 가이드 android_control.md.
+  file: android_control.py
+  interpreter: python
+  registered_at: '2026-10-20T00:00:00'
+  timeout: 30
+  callable_contract:
+    version: 1
+    effects: [read_external]
+    required: [op]
+    params:
+      op: Text
+      source: Text
+      request: Record
+      target: Text
+      limbs: List<Record>
+      wait: Number?
+      task: Record
+      plan_ref: Record
+      job_ref: Record
+      observation: Record
+    result: Record
+    adapter:
+      protocol: ibl-script/2
+      receipt_ref: true
+      receipt_inputs: [plan_ref, job_ref]
+    enums:
+      op: [contract, select, prepare, verify]
+    variants:
+    - when: {op: select}
+      required: [op, target, request, limbs]
+      result:
+        target: Text
+        platform: Text
+        request: Record
+        source_path: Text
+        wait: Number
+        timeout: Number
+    - when: {op: prepare}
+      required: [op, source, request]
+      result:
+        request: Record
+        request_id: Text
+        platform: Text
+        source_sha256: Text
+        helper_sha256: Text
+        code: Text
+    - when: {op: verify}
+      required: [op, task, plan_ref, job_ref]
+      result:
+        status: Text
+        target: Unknown
+        verified: Bool
+        result: Unknown
+        task_ref: Unknown
+        verification: Unknown
+        evidence_ref: Unknown
+        failure: Unknown

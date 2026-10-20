@@ -162,6 +162,7 @@ data/**/*.json
 !data/idioms/phone_execution_seeds.json
 !data/idioms/installed.json
 !data/idioms/pc_control_seeds.json
+!data/idioms/android_control_seeds.json
 !data/idioms/screen_guard_seeds.json
 !data/packages/installed/tools/ai-ops/judge_examples.json
 data/ibl_hippo_vecs.f32

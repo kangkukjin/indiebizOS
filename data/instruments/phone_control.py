@@ -41,6 +41,7 @@ def volume_control(audio, stream, path, op, value=None):
                    and 0 <= previous <= maximum and receipt.get("after") == before
                    and previous != before and not fixed)
     message = "현재 음량을 확인했습니다."
+    target = before
     if op != "status":
         if fixed:
             raise ValueError("이 출력 장치는 음량을 변경할 수 없습니다.")
@@ -81,7 +82,8 @@ def volume_control(audio, stream, path, op, value=None):
     can_restore = (isinstance(previous, int) and not isinstance(previous, bool)
                    and 0 <= previous <= maximum and saved.get("after") == actual
                    and previous != actual and not fixed)
-    return {"success": True, "stream": "music", "before": before, "actual": actual,
+    return {"success": True, "verified": actual == target, "target": target,
+            "stream": "music", "before": before, "actual": actual,
             "max": maximum, "percent": round(actual * 100 / maximum) if maximum else 0,
             "fixed": fixed, "can_restore": can_restore,
             "previous": previous if can_restore else None, "message": message}

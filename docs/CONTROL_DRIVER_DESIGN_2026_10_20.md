@@ -523,3 +523,29 @@ AI 는 후보를 제안한다.
 생성한 AppleScript 6종은 macOS `osacompile`로 문법·Safari 사전 해석을 확인했다.
 실제 Safari 읽기 인수는 새 조회와 기존 조회 모두 10초 시간 초과여서 완료하지 못했고,
 실제 탭 변경은 실행하지 않았다. §15의 과거 실기 성공을 v2 실기 인수로 대신하지 않는다.
+
+
+## Android OS 드라이버 계약 정비 (2026-10-20)
+
+폰 컨트롤의 직접 Python 전송을 `Android제어`·`Android제어확인` 공용 함수로 연결했다.
+준비·검증은 `data/scripts/android_control.py`, 기기 실행은 기존 `phone_control.py`·`phone_device.py`를
+그대로 재사용한다. APK 교체나 새 내용어 없이 등록·연결·Python 준비 상태를 확인하고,
+원 준비·접수 영수증의 대상·request_id·소스 지문·검증기 판본을 대조해 같은 작업만 조회한다.
+폰 실행은 PC interactive 모드가 아닌 기존 phone_execution_contract의 background 경로다.
+
+결과는 PC와 같은 status/target/verified/result/task_ref/verification/evidence_ref/failure다.
+설정의 재조회값·음량 종류·센서 표본을 검증하며 진동·권한 화면은 요청 접수만 확인한다.
+부작용 뒤 예외·응답 유실·시간 초과는 unknown, 확인한 불일치는 failed다. 자동 재전송·자동 롤백은 없다.
+음량 복원은 기존 폰 안의 영수증과 외부 변경 감지를 유지한다. 확인 범위는 가이드와 contract에 명시한다.
+
+데스크톱과 원격 선언형 앱은 같은 함수를 쓴다. 데스크톱에는 기존 작업 확인 버튼과 미확인 변경의
+재전송 방지가 있고, 원격 앱은 원 반환을 control_task로 보존하고 상태·작업 ID·복구 안내를 표시한다.
+앱 창 재시작 뒤 복구는 실행 원장의 원 반환으로 한다. 공개 정의는 installed.json·core_manifest,
+의미 검색은 android_control_seeds.json의 add_examples_batch 등록 경로를 쓴다.
+
+실제 HTTP IBL → 등록 스크립트 → 원격 Python → 원 영수증 검증 경계에서 삼성0의 기기 상태,
+삼성1의 음량 상태, 예나폰의 구형 APK 부분 상태가 completed/verified:true로 돌아왔다.
+삼성0은 대기:0의 pending 반환을 별도 HTTP 호출의 Android제어확인으로 completed까지 확인했다.
+상태 읽기만 실기 검증했고 음량·화면·손전등 변경은 실행하지 않았다. 회귀는
+backend/test_android_control.py·test_phone_control.py·test_phone_device.py·test_phone_control_ui.py에 있다.
+이 범위는 기존 하드웨어 기능의 계약 정비이며 앱 실행·홈/뒤로·범용 화면 입력·브라우저 드라이버는 포함하지 않는다.

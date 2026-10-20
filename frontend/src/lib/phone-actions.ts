@@ -1,4 +1,4 @@
-import { iblExecuteApp } from './instrument';
+import { androidCommandCode, androidState, executeAndroid } from './android-control';
 
 export type HardwareOp = 'status' | 'brightness' | 'brightness_auto' | 'rotation' | 'timeout' |
   'sensor' | 'torch' | 'screen_on' | 'screen_off' | 'settings_permission';
@@ -13,24 +13,14 @@ export interface HardwareState {
   sensor?: string; reading?: { values: number[]; accuracy: number; timestamp_ns: number };
 }
 type RecordValue = Record<string, unknown>;
-const object = (v: unknown): RecordValue => v && typeof v === 'object' && !Array.isArray(v) ? v as RecordValue : {};
 
 export function phoneActionCode(target: string, op: HardwareOp, args: RecordValue = {}): string {
-  if (!target.trim()) throw new Error('제어할 폰을 선택해 주세요.');
-  return '#!ibl edition=2\n$s = [self:read]{path:"~workspace/data/instruments/phone_device.py"}\n' +
-    'return [limbs:guestpc]{code:$s.text,' + JSON.stringify({
-      limb: target, op: 'python', inputs: { ...args, op }, timeout: 20,
-    }).slice(1);
+  return androidCommandCode(target, { ...args, action: op });
 }
 export function phoneActionState(value: unknown): HardwareState {
-  const outer = object(value), remote = object(outer.result), state = object(remote.value);
-  for (const layer of [outer, remote, state]) {
-    if (layer.success !== true || layer.error) {
-      throw new Error(String(layer.error || layer.message || '실행 결과가 불완전합니다. 상태를 다시 조회하세요.'));
-    }
-  }
+  const state = androidState(value);
   return state as unknown as HardwareState;
 }
 export async function runPhoneAction(target: string, op: HardwareOp, args: RecordValue = {}): Promise<HardwareState> {
-  return phoneActionState(await iblExecuteApp(phoneActionCode(target, op, args)));
+  return phoneActionState(await executeAndroid(target, phoneActionCode(target, op, args)));
 }

@@ -1,4 +1,5 @@
 import { iblExecuteApp } from './instrument';
+import { androidCommandCode, androidState, executeAndroid } from './android-control';
 
 export interface PhoneTarget {
   id: string;
@@ -47,19 +48,13 @@ export async function listControlPhones(): Promise<PhoneTarget[]> {
 }
 
 export function phoneCommandCode(target: string, op: PhoneCommand, value?: number, stream: PhoneStream = 'music'): string {
-  if (!target.trim()) throw new Error('제어할 폰을 선택해 주세요.');
-  const args = { op, stream, ...(value === undefined ? {} : { value }) };
-  return '#!ibl edition=2\n$s = [self:read]{path:"~workspace/data/instruments/phone_control.py"}\n' +
-    'return [limbs:guestpc]{code:$s.text,' + JSON.stringify({
-      limb: target, op: 'python', inputs: args, timeout: 20,
-    }).slice(1);
+  const actions = { status: 'volume_status', set: 'volume', step: 'volume_step', half: 'volume_half',
+    mute: 'volume_mute', restore: 'volume_restore', vibrate: 'vibrate' };
+  return androidCommandCode(target, { action: actions[op], stream, ...(value === undefined ? {} : { value }) });
 }
 
 export function controlState(value: unknown): PhoneState {
-  const outer = record(value), remote = record(outer.result), state = record(remote.value);
-  for (const layer of [outer, remote, state]) {
-    if (layer.success !== true || layer.error) throw new Error(String(layer.error || '실행 결과를 확인하지 못했습니다. 상태를 새로 확인해 주세요.'));
-  }
+  const state = androidState(value);
   if (typeof state.actual !== 'number' || typeof state.max !== 'number' || state.actual < 0 || state.actual > state.max) {
     throw new Error('실제 음량 응답을 확인할 수 없습니다.');
   }
@@ -67,5 +62,5 @@ export function controlState(value: unknown): PhoneState {
 }
 
 export async function controlPhone(target: string, op: PhoneCommand, value?: number, stream: PhoneStream = 'music'): Promise<PhoneState> {
-  return controlState(await iblExecuteApp(phoneCommandCode(target, op, value, stream)));
+  return controlState(await executeAndroid(target, phoneCommandCode(target, op, value, stream)));
 }

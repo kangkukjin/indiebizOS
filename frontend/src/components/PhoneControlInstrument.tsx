@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PhoneControlExtras } from './PhoneControlExtras';
+import { AndroidControlRecovery } from './AndroidControlRecovery';
 import { Battery, RefreshCw, Smartphone, Volume2, VolumeX, Undo2, Vibrate } from 'lucide-react';
 import { controlPhone, listControlPhones, type PhoneCommand, type PhoneState, type PhoneTarget, type PhoneStream } from '../lib/phone-control';
 
@@ -15,6 +16,7 @@ export function PhoneControlInstrument() {
   const [draft, setDraft] = useState(0);
   const [busy, setBusy] = useState(false);
   const [extrasBusy, setExtrasBusy] = useState(false);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
   const [listing, setListing] = useState(false);
   const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState<number | null>(null);
@@ -25,7 +27,7 @@ export function PhoneControlInstrument() {
   const listingFlight = useRef(false);
   const revision = useRef(0);
   const phone = phones.find(p => p.id === selected);
-  const available = !!phone?.connected && !!phone?.ready;
+  const available = !!phone?.connected && !!phone?.ready && !recoveryBusy;
 
   const refreshPhones = useCallback(async () => {
     if (listingFlight.current) return;
@@ -82,7 +84,7 @@ export function PhoneControlInstrument() {
   }, []);
 
   const choose = (id: string) => {
-    if (inFlight.current || extrasBusy) return;
+    if (inFlight.current || extrasBusy || recoveryBusy) return;
     target.current = id; revision.current++;
     setSelected(id); setState(null); setError(''); setNotice(''); setElapsed(null);
     const next = phones.find(p => p.id === id);
@@ -104,7 +106,7 @@ export function PhoneControlInstrument() {
       <section className="rounded-2xl border border-stone-200 bg-white p-5 space-y-3">
         <label htmlFor="phone-control-target" className="text-sm font-medium text-stone-700">제어할 폰</label>
         <div className="flex gap-2">
-          <select id="phone-control-target" value={selected} disabled={busy || extrasBusy || listing}
+          <select id="phone-control-target" value={selected} disabled={busy || extrasBusy || recoveryBusy || listing}
             onChange={e => choose(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-stone-200 p-3 text-stone-900 bg-white">
             <option value="">폰을 선택해 주세요</option>
             {phones.map(p => <option key={p.id} value={p.id} disabled={!p.connected || !p.ready}>
@@ -159,6 +161,7 @@ export function PhoneControlInstrument() {
         {state?.fixed && <p className="text-sm text-amber-700">현재 출력 장치는 음량이 고정되어 있습니다.</p>}
       </section>
 
+      <AndroidControlRecovery key={`recovery-${selected}`} target={selected} disabled={busy || extrasBusy || listing} onBusy={setRecoveryBusy} />
       <PhoneControlExtras key={selected} target={selected} disabled={!available || busy || listing} onBusy={setExtrasBusy} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

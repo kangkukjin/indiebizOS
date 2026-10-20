@@ -2,5 +2,7 @@
   "PC제어확인": "pc_control_check.ibl",
   "PC제어실행": "pc_control_execute.ibl",
   "PC제어": "pc_control.ibl",
-  "PC조회묶음": "pc_read_batch.ibl"
+  "PC조회묶음": "pc_read_batch.ibl",
+  "Android제어확인": "android_control_check.ibl",
+  "Android제어": "android_control.ibl"
 }

@@ -90,11 +90,13 @@ def test_phone_commands_read_current_hub_scripts_and_compile():
     from ibl_v2_adapters import load_registry
     script = r'''
 const fs=require('fs'),vm=require('vm'),ts=require('./frontend/node_modules/typescript');
+const driver={exports:{}};
+vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/android-control.ts','utf8'),{module:ts.ModuleKind.CommonJS}),{exports:driver.exports,require:()=>({}),Error});
 const result=[];
 for(const name of ['phone-control','phone-actions']) {
  const m={exports:{}};
  vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/'+name+'.ts','utf8'),{module:ts.ModuleKind.CommonJS}),
-  {exports:m.exports,require:()=>({}),Error});
+  {exports:m.exports,require:()=>driver.exports,Error});
  result.push(name==='phone-control'?m.exports.phoneCommandCode('phone "one"','set',4):m.exports.phoneActionCode('phone "one"','torch',{enabled:false}));
 }
 console.log(JSON.stringify(result));
@@ -102,24 +104,30 @@ console.log(JSON.stringify(result));
     output = subprocess.run(['node', '-e', script], cwd=ROOT, text=True, capture_output=True, timeout=30)
     assert output.returncode == 0, output.stderr
     codes = json.loads(output.stdout)
-    for code, filename in zip(codes, ['phone_control.py', 'phone_device.py']):
-        assert f'~workspace/data/instruments/{filename}' in code
-        assert code.count('[limbs:guestpc]') == 1
-        compile_program(code, load_registry())
+    from ibl_v2_store import installed_definitions
+    for code in codes:
+        assert code.count('[fn:Android제어]') == 1
+        assert '[limbs:guestpc]' not in code
+        plan = compile_program(code, load_registry(), definitions=installed_definitions())
+        assert not plan.issues, plan.report()
 
 
 def test_phone_app_propagates_device_failure_without_retry():
     from ibl_v2_entry import handle_request
     manifest = yaml.safe_load((ROOT / 'data/instruments/phone_control.yaml').read_text())
-    # Execute the real post-transport assertions with a failed device result.
+    # Every app result retains the complete failed task and its recovery evidence.
+    task = {'status':'unknown','verified':False,'result':None,'task_ref':{'kind':'guestpc','task_id':'one'},
+            'failure':{'message':'permission','next':'query original'}}
     for mode in manifest['modes']:
         for command in [mode, *mode.get('buttons', [])]:
             code = command['action']
-            start = code.index('assert $r.result.value.success')
-            result = handle_request({'edition': 2, 'code': code[start:], 'inputs': {
-                'r': {'success': True, 'result': {'success': True, 'value': {'success': False, 'error': 'permission'}}}},
+            start = code.index('$state =')
+            result = handle_request({'edition': 2, 'code': code[start:], 'inputs': {'r': task},
                 'declared_inputs': ['r']}, str(ROOT), None)
-            assert not result['success'], mode['name']
+            assert result['success'], result
+            assert result['value']['control_task'] == task
+            assert result['value']['status'] == 'unknown'
+            assert result['value']['verified'] is False
 
 
 if __name__ == '__main__':

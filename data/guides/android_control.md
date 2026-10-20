@@ -1,33 +1,80 @@
-# Android 하드웨어 제어
+# Android OS 제어 — 앱과 AI의 공용 드라이버
 
-폰을 제어할 때 이 가이드를 읽는다. 현재 문맥에 호출 계약이 있으면 재독·API 재탐색·코드 재생성을 생략한다. 원격 장치 소개의 `control_guide`가 이 문서를 가리킨다. 등록·업데이트·범용 실행은 [remote_phone.md](remote_phone.md).
+폰 컨트롤 앱과 AI는 저장 함수 `Android제어`·`Android제어확인`을 사용한다.
+`execute_ibl`의 `describe:["fn:Android제어","fn:Android제어확인"]`으로 서명을 조회한다.
+동작별 인수·단위·조건은 `[self:script]{id:"Android제어부품",args:{op:"contract"}}`가 정본이다.
+등록·업데이트·범용 실행만 [remote_phone.md](remote_phone.md)를 참고한다.
 
-## 앱과 AI가 공유하는 실행 경로
+## 대상과 호출
 
-`폰 컨트롤`에서는 앱 위쪽에서 대상 폰을 한 번 선택한다. 원격 웹의 음량·화면·손전등·센서·기기 상태 탭과 데스크톱의 각 제어 영역 모두 그 폰을 사용하며, 탭 전환으로 선택을 초기화하지 않는다. 대상을 바꾸면 이전 폰의 결과를 지운다.
-
-`폰 컨트롤` 앱과 AI는 아래 두 Python 스크립트를 그대로 실행한다. 앱은 모델 호출 없이 IBL → 원격 Python으로 보낸다. AI도 준비된 스크립트와 인수만 보내면 된다. 새 IBL 내용어를 추가하지 않는다. 음악·콘텐츠·앱별 동작은 이 계층의 기능이 아니다.
-
-- `data/instruments/phone_control.py`: 음량 종류별 조회·변경·복원, 진동.
-- `data/instruments/phone_device.py`: 화면·밝기·회전·자동 꺼짐·손전등·센서·전원 및 연결 상태.
-
-먼저 `[self:limb]{op:"list"}` 또는 현재 장치 소개에서 사용자가 지정한 폰의 `device_id`를 고른다. 별칭이 같으면 이름만으로 실행하지 않는다. 활성 등록·`connected:true`·`paused:false`와 Python 실행 준비를 확인한다. `info`의 `execution_contract:1`, `runtimes.python.ready:true`가 실행 조건이며 자세한 등록·복구만 `remote_phone.md`를 읽는다.
-
-아래는 **한 번의 execute_ibl 호출**이다. `$target`에는 확인한 ID를 넣는다. 등록 기기 ID와 PC의 오디오 출력 장치 ID는 서로 다르다.
+`[self:limb]{op:"list"}` 또는 장치 소개에서 사용자가 지정한 **device_id**를 고른다.
+같은 별칭이나 단 한 대라는 이유로 자동 선택하지 않는다. 드라이버가 활성 등록·연결·중지 여부,
+Android OS·`execution_contract:1`·`runtimes.python.ready:true`를 확인하고 아니면 전송 전에 거절한다.
+권한·제조사 제한은 폰의 기존 Android API가 최종 판정한다. PC의 `__local__` 대상은 지원하지 않는다.
 
 ```ibl
 #!ibl edition=2
-$target = "등록된 폰의 device_id"
-$s = [self:read]{path:"~workspace/data/instruments/phone_device.py"}
-$r = [limbs:guestpc]{limb:$target,op:"python",code:$s.text,inputs:{op:"status"},timeout:20}
-assert $r.success == true && $r.result.success == true, "원격 실행 실패. 변경을 재전송하지 마세요.", {result:$r}
-assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}
-return $r.result.value
+return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"status"}}
 ```
 
-스크립트는 파일에 저장하고 가이드에는 경로·인수·결과 계약만 둔다. `~workspace`는 실행하는 본체의 저장소다. 데스크톱·원격 앱 모두 실행할 때 이 파일을 읽으므로 AI와 같은 판본을 사용한다. 이미 파일 내용을 읽었다면 재사용한다. 응답은 바깥 성공 여부, `$r.result.success`, `$r.result.value.success`를 모두 확인한다. 통신 실패 후 변경 명령을 자동 재시도하지 않는다. 먼저 상태를 읽는다.
+기기 상태는 `status`, 음량 상태는 `volume_status`다. 음량은 **퍼센트가 아닌 OS 정수 단계**이며
+조회한 `result.max` 이하로 지정한다. 밝기는 기존 폰 API와 같은 **1~255**, 자동 꺼짐은 초 단위다.
 
-음량을 바꾸려면 위 예제의 파일을 `phone_control.py`로 바꾸고 먼저 `inputs:{op:"status",stream:"music"}`으로 조회한다. 이어 같은 실행 틀에서 `inputs:{op:"set",stream:"music",value:4}`처럼 인수만 바꾼다. 예시의 4는 조회한 상한 이내의 원하는 정수 단계로 바꾼다. 화면·손전등 등은 `phone_device.py`를 유지한다. 실행 성공과 `verified`가 뜻하는 확인 범위는 아래를 따른다.
+```ibl
+#!ibl edition=2
+return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"volume",stream:"music",value:4}}
+```
+
+| 공개 action | 기존 실행 부품의 op | 확인 범위 |
+|---|---|---|
+| volume_status | phone_control.py status | 지정 음량 종류의 현재 값 |
+| volume / volume_step / volume_half / volume_mute / volume_restore | set / step / half / mute / restore | 목표 단계와 실제 단계 일치 |
+| vibrate | vibrate | 요청 접수만, verified:false |
+| status | phone_device.py status | 기기 상태 조회(구형 APK의 부분 조회 포함) |
+| brightness / brightness_auto / rotation / timeout | 같은 이름 | 적용 설정 재조회. 물리적 밝기 측정 아님 |
+| screen_on / screen_off | 같은 이름 | 화면의 interactive 상태. 잠금 해제·인증 보장 아님 |
+| torch | torch | 선택한 카메라의 토치 콜백 상태 |
+| sensor | sensor | 지정 센서의 유효한 한 표본 |
+| settings_permission | 같은 이름 | 설정 화면 열기 요청만, verified:false |
+
+현재 범위는 기존 하드웨어 기능의 계약 정비다. 앱 실행·홈/뒤로·범용 화면 입력·브라우저는 이 드라이버에 추가하지 않았다.
+동작의 `needs_front:false`는 앞 앱 선택을 요구하지 않는다는 뜻이며 사용자에게 보이지 않는다는 뜻이 아니다.
+화면 켜기·잠금·권한 화면·음량 등은 `shared_state:true`, 격리 자원은 없다.
+
+## 결과와 실패 복구
+
+PC와 같은 반환 틀: `status,target,verified,result,task_ref,verification,evidence_ref,failure`.
+- `completed`: 호출 처리 종료. `verified:false`인 진동·권한 화면 요청을 실제 효과 확인으로 보고하지 않는다.
+- `failed`: 대상/준비 거절 또는 확인한 결과가 요청과 불일치. `failure.stage/message/next`와 원 관측을 읽는다.
+- `pending`: 실행 중. 전체 반환을 보존해 아래 확인 함수에 전달한다.
+- `unknown`: 실행 여부·원 영수증·연결이 불명확. **변경을 다시 보내지 않는다.**
+
+```ibl
+#!ibl edition=2
+$작업 = [fn:Android제어]{대상:"선택한 device_id",요청:{action:"status"},대기:0}
+return [fn:Android제어확인]{작업:$작업,대기:60}
+```
+
+기본 대기는 60초(0~240), 기기 실행 제한은 20초다. 확인은 원래 준비·접수 영수증과
+대상·request_id·소스 지문·검증기 판본을 대조한 뒤 **같은 작업만 조회**한다. 실패·취소·시간 초과에도
+일부 변경 가능성이 있으면 unknown을 유지한다. 검증기 변경·근거 만료·영수증 손실도 성공으로 꾸미지 않는다.
+응답 자체를 잃었으면 실행 원장의 `result_ref`·resume 또는 guestpc history에서 원 요청을 회수한다.
+회수할 수 없으면 새 **읽기**(`status`/`volume_status`)로 현재 상태만 확인한다. 현재 값의 일치는
+이전 요청이 실행됐다는 증거가 아니며, 다른 통로로 같은 변경을 재전송하지 않는다.
+
+데스크톱 앱은 미확인 반환을 보관하고 **기존 작업 확인** 버튼으로 조회한다(창 재시작 뒤에는 실행 원장 사용).
+원격 선언형 앱도 같은 함수를 호출하고 결과의 `control_task`에 원 반환 전체를 보존하며 처리 상태·작업 ID·복구 안내를 표시한다.
+앱의 상태 직접 확인은 작업을 취소하거나 변경을 재전송하지 않는다.
+
+## 실행 부품과 배포
+
+공용 준비·검증은 `data/scripts/android_control.py`, 공개 정의는
+`data/idioms/android_control.ibl`·`android_control_check.ibl`이며 `installed.json`으로 배포한다.
+기존 `data/instruments/phone_control.py`·`phone_device.py`를 호출 시 읽어 폰에서 실행한다.
+앱과 AI는 같은 판본·같은 검증을 쓴다. 새 IBL 내용어나 APK 기능을 요구하지 않는다.
+의미 검색 시드는 `android_control_seeds.json`, 등록은 `.venv/bin/python3 scripts/register_webapp_idioms.py --seed-file android_control_seeds.json --apply`다.
+
+아래 표의 `op`는 실행 부품 내부 계약이다. 일반 호출은 위 공개 `action`을 사용한다.
 
 ## 음량·진동 (`phone_control.py`)
 

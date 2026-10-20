@@ -64,16 +64,18 @@ def test_desktop_result_contract_and_single_execution():
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const ts=require('./frontend/node_modules/typescript');
 const mod={exports:{}},calls=[];
-const success={success:true,result:{success:true,value:{success:true,verified:false,hardware_control:1}}};
+const success={status:'completed',target:'phone \"one\"',result:{success:true,protocol:'android-control/1',platform:'android',verified:false,hardware_control:1}};
+const driver={exports:{}};
+vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/android-control.ts','utf8'),{module:ts.ModuleKind.CommonJS}),{exports:driver.exports,require:()=>({iblExecuteApp:async code=>{calls.push(code);return success}}),Error});
 vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/phone-actions.ts','utf8'),{module:ts.ModuleKind.CommonJS}),
- {exports:mod.exports,require:(path)=>path.endsWith('?raw')?{default:'SHARED_SCRIPT'}:{iblExecuteApp:async code=>{calls.push(code);return success}},Error});
+ {exports:mod.exports,require:()=>driver.exports,Error});
 (async()=>{
  const m=mod.exports;
  const state=await m.runPhoneAction('phone "one"','torch',{enabled:true});
  assert.equal(state.verified,false);assert.equal(calls.length,1);
- assert.ok(calls[0].includes('[self:read]{path:"~workspace/data/instruments/phone_device.py"}'));
- const args=JSON.parse(calls[0].split('[limbs:guestpc]')[1].replace('code:$s.text,','"code":"SHARED_SCRIPT",'));
- assert.equal(args.limb,'phone "one"');assert.equal(args.code,'SHARED_SCRIPT');assert.deepEqual(args.inputs,{enabled:true,op:'torch'});
+ assert.ok(calls[0].includes('[fn:Android제어]'));
+ const args=JSON.parse(calls[0].split('[fn:Android제어]')[1]);
+ assert.equal(args.대상,'phone "one"');assert.deepEqual(args.요청,{enabled:true,action:'torch'});
  for(const bad of [{success:false}, {success:true,result:{success:false}}, {success:true,result:{success:true,value:{success:false,error:'permission'}}}]) assert.throws(()=>m.phoneActionState(bad));
  assert.throws(()=>m.phoneActionCode('','status'));
 })().catch(e=>{console.error(e);process.exitCode=1});
@@ -91,7 +93,9 @@ def test_all_remote_app_commands_compile_and_do_not_refresh_twice():
         for command in [mode, *mode.get('buttons', [])]:
             assert not command.get('refresh')
             code = '#!ibl edition=2\n' + command['action']
-            compile_program(code, load_registry(), inputs=inputs)
+            from ibl_v2_store import installed_definitions
+            plan = compile_program(code, load_registry(), inputs=inputs, definitions=installed_definitions())
+            assert not plan.issues, plan.report()
 
 
 if __name__ == '__main__':

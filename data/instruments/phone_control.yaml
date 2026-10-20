@@ -35,49 +35,39 @@ modes:
     type: text
     placeholder: 설정할 음량 단계
     default: '4'
-  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status", stream:$stream}, timeout:
-    20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+  action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_status", stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
   run_label: 상태 조회
   buttons:
   - label: − 한 단계
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"step", stream:$stream, value:-1},
-      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_step", stream:$stream, value:-1}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: ＋ 한 단계
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"step", stream:$stream, value:1},
-      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_step", stream:$stream, value:1}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 절반으로
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"half", stream:$stream}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_half", stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 음소거
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"mute", stream:$stream}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_mute", stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 이전 값 복원
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"restore", stream:$stream}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume_restore", stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 입력한 단계 적용
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op: "set", value: $level, stream:$stream},
-      timeout: 20}; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"volume", value: number($level), stream:$stream}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 짧은 진동
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_control.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"vibrate", stream:$stream, duration_ms:200},
-      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"vibrate", stream:$stream, duration_ms:200}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   view:
   - type: kv
     rows:
+    - k: 처리 상태
+      v: '{status}'
+    - k: 확인·복구
+      v: '{driver_failure.message} {driver_failure.next}'
+    - k: 작업 ID
+      v: '{control_task.task_ref.task_id}'
     - k: 음량
       v: '{actual} / {max}단계 · {percent}%'
     - k: 복원할 단계
@@ -100,84 +90,60 @@ modes:
     option_value: device_id
     option_label: alias
     scope: instrument
-  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
-    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+  action: '$r = [fn:Android제어]{대상:$target,요청:{action:"status"}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
   run_label: 상태 조회
   buttons:
   - label: 화면 켜기
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"screen_on"}, timeout: 20}; assert
-      $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"screen_on"}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 화면 끄기 · 잠금
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"screen_off"}, timeout: 20};
-      assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"screen_off"}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 밝기 25%
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:64}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"brightness", value:64}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 밝기 50%
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:128}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"brightness", value:128}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 밝기 75%
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:191}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"brightness", value:191}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 밝기 100%
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness", value:255}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"brightness", value:255}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 자동 밝기
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"brightness_auto", enabled:true},
-      timeout: 20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"brightness_auto", enabled:true}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 자동 회전
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"rotation", enabled:true}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"rotation", enabled:true}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 현재 방향 고정
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"rotation", enabled:false}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"rotation", enabled:false}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 자동 꺼짐 30초
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:30}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"timeout", seconds:30}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 자동 꺼짐 60초
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:60}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"timeout", seconds:60}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 자동 꺼짐 120초
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:120}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"timeout", seconds:120}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 자동 꺼짐 300초
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"timeout", seconds:300}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"timeout", seconds:300}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 폰에서 권한 설정 열기
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"settings_permission"}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"settings_permission"}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   view:
   - type: kv
     rows:
+    - k: 처리 상태
+      v: '{status}'
+    - k: 확인·복구
+      v: '{driver_failure.message} {driver_failure.next}'
+    - k: 작업 ID
+      v: '{control_task.task_ref.task_id}'
     - k: 화면 켜짐
       v: '{screen_on}'
     - k: 잠금
@@ -210,24 +176,24 @@ modes:
     option_value: device_id
     option_label: alias
     scope: instrument
-  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
-    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+  action: '$r = [fn:Android제어]{대상:$target,요청:{action:"status"}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
   run_label: 상태 조회
   buttons:
   - label: 켜기
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"torch", enabled:true}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"torch", enabled:true}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   - label: 끄기
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"torch", enabled:false}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"torch", enabled:false}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   view:
   - type: kv
     rows:
+    - k: 처리 상태
+      v: '{status}'
+    - k: 확인·복구
+      v: '{driver_failure.message} {driver_failure.next}'
+    - k: 작업 ID
+      v: '{control_task.task_ref.task_id}'
     - k: 변경 확인
       v: '{verified}'
     - k: 결과
@@ -267,19 +233,21 @@ modes:
       label: 자기장 (µT)
     - value: pressure
       label: 기압 (hPa)
-  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
-    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+  action: '$r = [fn:Android제어]{대상:$target,요청:{action:"status"}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
   run_label: 상태 조회
   buttons:
   - label: 한 번 읽기
-    action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-      $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"sensor", sensor:$sensor}, timeout:
-      20}; assert $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+    action: '$r = [fn:Android제어]{대상:$target,요청:{action:"sensor", sensor:$sensor}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
     render_result: true
   view:
   - type: kv
     rows:
+    - k: 처리 상태
+      v: '{status}'
+    - k: 확인·복구
+      v: '{driver_failure.message} {driver_failure.next}'
+    - k: 작업 ID
+      v: '{control_task.task_ref.task_id}'
     - k: 센서
       v: '{sensor}'
     - k: 측정값
@@ -306,14 +274,18 @@ modes:
     option_value: device_id
     option_label: alias
     scope: instrument
-  action: 'assert $target != null && $target != "", "폰을 먼저 선택해 주세요."; $s = [self:read]{path: "%BASE%/data/instruments/phone_device.py"};
-    $r = [limbs:guestpc]{limb: $target, op: "python", code: $s.text, inputs: {op:"status"}, timeout: 20}; assert
-    $r.success == true && $r.result.success == true, "원격 실행에 실패했습니다. 상태를 다시 조회하세요."; assert $r.result.value.success == true, "폰 제어 실패. 상태를 확인하세요.", {result:$r.result.value}; return $r.result.value'
+  action: '$r = [fn:Android제어]{대상:$target,요청:{action:"status"}};  $state = {}; [if:$r.result != null] { $state = $r.result }; return {**$state,status:$r.status,verified:$r.verified,control_task:$r,driver_failure:get($r,"failure",null)}'
   run_label: 상태 조회
   buttons: []
   view:
   - type: kv
     rows:
+    - k: 처리 상태
+      v: '{status}'
+    - k: 확인·복구
+      v: '{driver_failure.message} {driver_failure.next}'
+    - k: 작업 ID
+      v: '{control_task.task_ref.task_id}'
     - k: 배터리
       v: '{battery}%'
     - k: 충전 중

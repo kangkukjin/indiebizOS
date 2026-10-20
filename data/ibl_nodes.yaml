@@ -2382,24 +2382,39 @@ nodes:
           - display
         returns: items
         fixture: '[sense:search_shopping]{query: "노트북"}'
-        description: 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). 순수 HTTP 라 PC·폰 모두 동작. ★중고 매물은 [sense:used] 가 정본(2026-08 site=used/all 은퇴). ★site=naver 도 은퇴(공식 API SE05 + 내부 API 봇차단).
+        shape_variants:
+          site=enuri: '[sense:search_shopping]{site:"enuri", query:"밥솥", limit:3}'
+        description: 새 상품 가격비교 검색. 다나와(기본)·에누리 공개 검색, 상품명·표시 가격·출처 링크. 다나와는 페이지 이동 지원. 중고는 [sense:used], 원천 밖 구매 조사는 구매 지도 참조.
         group: research
-        target_description: '새 상품 가격비교 검색. query=상품명(필수). display=개수(기본 5).
+        target_description: 'query=상품명(필수), site=danawa(기본)|enuri, limit=1..40(기본5; display 별칭).
 
-          다나와 가격비교 — 상품명·최저가·스펙 요약·상품 링크. 순수 HTTP 라 폰에서도 동작.
+          page=1..100은 다나와에서 지원(원천 40개 단위 페이지). sort는 두 원천 모두 default만 지원한다.
 
-          ★중고 매물은 이 어휘가 아니라 [sense:used] — 소스 넷(번개장터·당근·중고나라·네이버카페)에 동네 스코프까지 된다.
+          에누리는 기본 정렬 첫 페이지의 JSON-LD 목록만 지원하며 page>1/다른 sort는 오류로 거절한다.
 
-          ★site 는 danawa(기본) 하나뿐이다. 옛 used/all 축은 2026-08 은퇴(두 사이트 개편으로 스크래핑이 0건, [sense:used] 가 같은 소스를 내부 API 로 더 잘 준다) — 넣으면 다나와 결과 + 안내 note 를 준다. site=naver 도 죽었다(안내만 반환).'
+          items의 price는 숫자 문자열 또는 null(미확인). currency·price_status·price_basis·shipping_included·rental_hint 보존.
+
+          최저가·표시가는 배송·쿠폰·옵션·렌탈 조건을 확정한 구매 총액이 아니다. total은 반환 건수, page_items는 파싱된 해당 페이지 건수다.
+
+          site별 query·page·sort·source_url·observed_at으로 범위를 확인한다. 구조 변경·HTTP 실패는 정상 0건과 구분한다.
+
+          두 원천은 &로 조합하고 한쪽 실패는 부분 결과를 회수한다. site=naver는 공식 API 종료 안내만 반환.
+
+          홈쇼핑·제조사·해외몰·후기는 구매 지도에 따라 기존 search/crawl/browser로 보완한다. 중고는 [sense:used].
+
+          '
+        guides:
+        - shopping.md
         router: handler
         tool: search_shopping
-        implementation: 'tool_danawa.py — 다나와 검색 HTML(search.danawa.com/dsearch.php) SSR 파싱. 봇차단·TLS 지문 검사 없어 stdlib urllib 만으로 200(curl_cffi 위장 불요) → 폰서도 로컬 실행. Playwright 는 폴백(PC 전용, 실측 정상 동작). ★site=used/all 은퇴(2026-08-04): 중고나라·번개장터 Playwright 스크래핑이 사이트 개편으로 라이브 0건 + except:pass 로 침묵 — 같은 두 소스를 [sense:used] 가 내부 API 로 준다. ★site=naver 은퇴: 공식 /v1/search/shop.json=404 SE05, 내부 API(api/search/all·ns/v1/paged-composite-cards)=418 WAF, headed 브라우저조차 ncpt 캡차(sus_val·X-Wtm-Cpt-Tk), robots Disallow /.'
+        implementation: tool_danawa.py는 공개 검색 HTML의 상품 카드 경계를 파싱하고 HTTP 실패 시 같은 인자·파서의 브라우저 폴백. tool_enuri.py는 검색어에 대응하는 공개 JSON-LD ItemList만 파싱. 표준 라이브러리 파서·urllib 폴백으로 폰 경로 유지. 네이버 공식 검색 API는 2026-07-31 종료.
         keywords:
         - 쇼핑
         - 상품
         - 가격비교
         - 최저가
         - 다나와
+        - 에누리
         - 신제품
         - 구매
         - 물건값
@@ -2772,8 +2787,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-10-12'
-          impl: 29f1da29a22f066a
+          at: '2026-10-20'
+          impl: 3c3cadf7beaef7b5
         aliases:
           limit:
           - count
@@ -2889,8 +2904,8 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-10-12'
-          impl: 29f1da29a22f066a
+          at: '2026-10-20'
+          impl: 3c3cadf7beaef7b5
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'

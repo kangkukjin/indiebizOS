@@ -37,7 +37,7 @@ _RETIRED_TYPES = {
             "국내 도서·대출은 [sense:book](도서관정보나루), 서지·표지는 [sense:book]{source: \"google\"}(Google Books) 사용.",
     "doc": "네이버 전문자료 검색 API는 은퇴했습니다(2026-08 실측, SE05). 논문·학술자료는 [sense:paper] 사용.",
     "shop": "네이버 쇼핑 검색 API는 은퇴했습니다(2026-08 실측, SE05). "
-            "상품 검색은 [sense:search_shopping](다나와·중고, PC 전용) 사용.",
+            "상품 검색은 [sense:search_shopping](다나와·에누리 가격비교), 중고는 [sense:used] 사용.",
 }
 
 # 자연어 별칭 — 사용자/AI가 자주 쓰는 표현을 정식 type으로 정규화

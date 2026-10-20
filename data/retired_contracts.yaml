@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: shopping-danawa-only
+    retired: 2026-10-20
+    reason: 새 상품 가격비교에 에누리를 추가하고 다나와 공개 검색·조회 범위를 검증했다.
+    instead: danawa와 enuri를 명시 선택한다. 가격 미확인은 null, 구조 변경과 HTTP 실패는 정상 0건과 구분한다.
+    phrases: ['다나와 가격비교(기본이자 유일)', 'site 축 — 이제 다나와 하나뿐', '다나와·중고, PC 전용']
   - id: file-discovery-stale-reuse
     retired: 2026-10-20
     reason: 읽기 전용 목록·파일 검색이 새 파일과 내용 변경을 누락한 과거 결과를 정상 재사용했다.

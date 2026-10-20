@@ -307,6 +307,7 @@
     "sense:search@source=guardian": "[sense:search]{query: \"climate policy\", source: \"guardian\", limit: 3}",
     "sense:search@source=hn": "[sense:search]{query: \"rust\", source: \"hn\", limit: 3}",
     "sense:search@source=naver": "[sense:search]{query: \"기후 정책\", source: \"naver\", limit: 3}",
+    "sense:search_shopping@site=enuri": "[sense:search_shopping]{site:\"enuri\", query:\"밥솥\", limit:3}",
     "sense:used@source=danggeun": "[sense:used]{source: \"danggeun\", query: \"자전거\", region: \"역삼동\", limit: 5}",
     "sense:used@source=joongna": "[sense:used]{source: \"joongna\", query: \"자전거\", limit: 5}",
     "sense:used@source=naver": "[sense:used]{source: \"naver\", query: \"자전거\", limit: 5}"

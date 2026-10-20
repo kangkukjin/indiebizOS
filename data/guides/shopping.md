@@ -1,95 +1,81 @@
 # 새 상품 가격비교 검색 가이드 (`[sense:search_shopping]`)
 
-새 상품의 값을 알아볼 때 쓰는 어휘. 중고 매물은 `[sense:used]`, 외주·프리랜서는
-`[sense:freelance]` 가 따로 있다 — 이 문서는 **새 상품 가격비교**만 다룬다.
+새 상품의 후보와 표시 가격을 확인한다. 다나와(기본)·에누리 중 원천을 선택한다.
+중고 매물은 `[sense:used]`, 외주·프리랜서는 `[sense:freelance]`를 사용한다.
 
-**제품 추천·구매처 비교는 다나와 조회만으로 끝나지 않는다.** 먼저 [웹 랜드마크의 구매 지도](web_landmarks.md#한국에서-구매할-제품을-찾을-때)에서 목적에 맞는 채널을 고른다. 이 액션은 그중 가격비교 한 원천이며, 후보가 많다는 것과 필요한 시장·검증 관점을 살폈다는 것은 다르다. 제조사·판매처·후기·홈쇼핑·해외 대안 등 추가 확인은 기존 `search`·`crawl`·`browser`로 연결한다. 지도는 검토 후보이며 모든 채널의 의무 순회나 접근 성공 보증이 아니다.
+**제품 추천·구매처 비교는 가격비교 두 곳만으로 끝나지 않는다.** 먼저
+[구매 지도](web_landmarks.md#한국에서-구매할-제품을-찾을-때)에서 목적에 맞는 채널을 고른다.
+제조사·판매처·후기·홈쇼핑·해외 대안은 기존 `search`·`crawl`·`browser`로 확인한다.
+이 지도는 검토 후보이며 모든 채널의 의무 순회나 접근 성공 보증이 아니다.
 
+## 원천과 범위
+
+| site | 수집 경로 | 지원 범위 |
+|---|---|---|
+| `danawa` (기본) | 공개 검색 HTML의 상품 카드 | 기본 정렬, `page=1..100` |
+| `enuri` | 공개 검색의 JSON-LD 상품 목록 | 기본 정렬 첫 페이지 (`page=1`) |
+| `naver` | 종료 안내 | `source_retired` 오류 |
+
+두 원천 모두 API 키가 필요 없다. HTTP와 표준 라이브러리 파서를 사용하며,
+`curl_cffi`가 없는 폰에는 `urllib` 폴백이 있다. 다나와 HTTP 실패 시 PC에서는
+Playwright로 같은 조회 범위와 파서를 재시도한다. 기본 진입점이 상품 없는 셸을 반환하면 먼저 같은 첫 페이지를 명시해 한 번 재조회한다. 폰에서 브라우저 폴백이 불가능하면 실패를 보존한다.
+
+- `query`: 상품명·모델명. 필수.
+- `limit`: 해당 페이지에서 반환할 개수, 1..40, 기본 5. `display`는 별칭.
+- `page`: 다나와 원천의 40개 단위 페이지. `limit=5,page=2`는 전체 6번째 상품부터가 아니다.
+- `sort`: `default`만 지원. 원천 기본 순서를 보존한다. 정렬 옵션을 붙인 다나와 URL은 일부 검색어에서 상품 없는 셸을 반환해 지원하지 않는다.
+- 에누리의 다른 페이지·정렬은 `unsupported_option` 오류다. 조용히 첫 페이지로 대체하지 않는다.
+
+```ibl
+[sense:search_shopping]{query:"밥솥", limit:10}
+[sense:search_shopping]{query:"밥솥", site:"danawa", page:2, limit:10}
+[sense:search_shopping]{query:"밥솥", site:"enuri", limit:10}
 ```
-[sense:search_shopping]{query: "무선 이어폰"}                 # 다나와 가격비교(기본이자 유일)
-[sense:search_shopping]{query: "노트북", display: 10}
+
+두 곳을 확인하려면 기존 병렬 조합을 쓴다. 새 상품과 중고를 섞던 옛 `site=all`은 되살리지 않는다.
+
+```ibl
+[sense:search_shopping]{query:"밥솥", site:"danawa", limit:10}
+& [sense:search_shopping]{query:"밥솥", site:"enuri", limit:10}
 ```
 
-통화 = `{total, items: [{name, price, mall, link, image, category, site, spec}]}`
-(`price` 는 콤마 없는 숫자 문자열, `spec` 은 다나와 스펙 요약 한 줄.)
+두 결과에서 같은 모델은 모델명을 확인해 묶고 출처는 각각 남긴다. 한 원천의 실패를
+다른 원천의 성공으로 감추지 않는다. 검색 범위와 실제 확인하지 못한 채널을 보고한다.
 
-## 1. site 축 — 이제 다나와 하나뿐
+## 결과를 읽는 법
 
-| site | 소스 | 어디서 되나 | 비고 |
-|------|------|------------|------|
-| `danawa` (기본) | 다나와 가격비교 | **PC·폰 모두** | 순수 HTTP. 상품명·최저가·스펙·상품 링크 |
-| `naver` | — | 죽음 | 안내 문구만 반환 (아래 §3) |
+통화는 `{items:[...], total, source, query, page, sort, source_url, observed_at}`.
+`total`은 **반환 건수**이며 시장 전체 상품 수가 아니다. `page_items`는 파싱된 해당 페이지
+상품 수다. `source_url`·UTC `observed_at`은 실제 조회 주소와 관측 시각이다.
 
-`site` 를 생략하면 다나와다. **사실상 쓸 일이 없는 파라미터**이니 그냥 빼고 불러라.
+각 상품에는 `name`, `price`, `mall`, `link`, `image`, `category`, `site`, `spec`이 있다.
+에누리는 스펙 요약을 제공하지 않으며, 원천에 있으면 상품 ID·판매처 수·평점·리뷰 수를 보존한다.
+`mall`은 가격비교 서비스 이름이므로 실제 판매처로 오해하지 않는다.
 
-### ★은퇴한 축: `used` · `all` (2026-08-04)
+- `price`: 콤마 없는 숫자 문자열. 없거나 0·문의·품절 등 판독할 수 없는 가격은 **null**.
+- `currency`: 관측 통화. `price_status`: `observed` 또는 `unknown`.
+- `price_basis`: 에누리 집계 최저가는 `aggregate_low`, 그 밖의 표시는 `listed`.
+- `shipping_included`: 확인하지 못했으므로 null. 배송 포함으로 추정하지 않는다.
+- `rental_hint`: 제목의 렌탈·렌트 단서. false여도 일시불 구매 조건을 보증하지 않는다.
 
-`site: "used"`(중고나라·번개장터 Playwright 스크래핑)와 그걸 합치던 `site: "all"` 은
-**어휘에서 제거했다**. 되살리지 말 것 — 두 가지 이유가 겹친다.
+**표시 가격은 구매 총액이 아니다.** 옵션·배송비·쿠폰·회원 조건·렌탈 월 납부액은
+판매처 원문에서 확인한다. 가격 미확인은 무료 상품으로 취급하거나 가격순 맨 앞에 놓지 않는다.
 
-1. **죽어 있었다.** 두 사이트 개편으로 셀렉터(`ul.grid > li`,
-   `div[class*='ProductItem']`)가 낡아 **라이브 0건**이었다(실측: 11.6초 걸려 빈 목록).
-   두 블록 다 `except: pass` 라 실패가 침묵해서, 호출자는 "중고 매물이 없다"와
-   "긁기가 깨졌다"를 구별할 수 없었다.
-2. **고칠 가치가 없다.** 바로 그 두 소스를 **`[sense:used]` 가 내부 API 로 이미 더 잘
-   준다** — 실측 번개장터 0.1초·중고나라 0.3초(스크래퍼의 11.6초 대비 40배 이상).
-   소스도 넷(번개장터·당근·중고나라·네이버카페)이고 동네 스코프까지 되며,
-   브라우저 자동화가 아니라 **폰에서도 돈다**. 스크래퍼를 고쳐 봐야 더 느리고 더 약한
-   두 번째 창구가 하나 더 생길 뿐이다.
+## 빈 결과와 실패
 
-→ **중고 매물은 `[sense:used]`.** 자세한 건 `used_market.md`.
+- 원천이 명시한 빈 목록만 `empty_reason:no_results`로 반환한다.
+- HTTP 오류는 `http_error`, 목록 구조를 확인하지 못하면 `source_changed`다.
+- 일부 상품 구조가 깨지면 유효한 상품을 보존하고 `truncations(scope:source)`로 불완전함을 알린다.
+- 에누리의 추천 상품은 검색 결과가 아니다. 검색어와 일치하는 ItemList만 읽는다.
+- 다나와는 상품 카드 안에서만 가격을 읽어 다음 상품·푸터의 가격을 잘못 붙이지 않는다.
 
-옛 습관으로 `site: "used"`/`"all"` 을 넣어도 에러는 안 난다 — 다나와 결과에
-`note`(중고는 `[sense:used]` 로 가라)를 붙여 돌려준다.
+## 종료된 경로
 
-## 2. 다나와 (기본 축)
+네이버 쇼핑 검색 API는 **2026-07-31 종료**됐다.
+[공식 종료 공지](https://developers.naver.com/notice/article/32564)를 기준으로 하며,
+남아 있는 옛 API 문서나 키를 근거로 복구를 시도하지 않는다.
+네이버 웹 검색·쇼핑 페이지의 접근 가능성은 별도 문제이며 이 액션의 지원 원천에 포함되지 않는다.
 
-- 엔드포인트 = `search.danawa.com/dsearch.php` 검색 결과 HTML. 상품 목록이 **첫 HTML 에
-  SSR 로 박혀 있어** 정규식 파싱으로 충분하다 (크몽처럼 클라이언트 fetch 구조가 아니다).
-- **봇 차단도 TLS 지문 검사도 없다** — `curl_cffi` 크롬 위장조차 불필요하고 stdlib
-  `urllib` 만으로 200 이 나온다(실측). 직방·크몽과 달리 위장이 필요 없는 순한 소스.
-  → 그래서 `tool_danawa.py` 는 curl_cffi 가 있으면 쓰고 **없으면 urllib 로 폴백**한다.
-  이 폴백이 폰(Chaquopy — curl_cffi 없음) 동작의 전부다. 지우지 말 것.
-- `limit` 파라미터는 다나와가 30/60/90 만 받는다 → 30 을 받아 클라이언트에서 자른다.
-- 상품 카드 = `<li id="productItem숫자">`, 이름 = `p.prod_name > a`,
-  가격 = `p.price_sect ... <strong>`, 스펙 = `div.spec_list`.
-- 상품 URL = `prod.danawa.com/info/?pcode=…` (그대로 열림).
-
-## 3. ★네이버 축은 죽었다 (2026-08-04 실측 종결)
-
-되살리려 시도하기 전에 이 절을 읽어라. **두 겹 모두 막혔다.**
-
-**① 공식 오픈API** — `/v1/search/shop.json` = `404 SE05 "존재하지 않는 검색 api"`.
-네이버가 은퇴시켰다. `NAVER_CLIENT_ID` 와 무관하며 book/doc 축도 같이 죽었다.
-
-**② 내부 API 발굴** (직방 `tool_zigbang`·크몽 `tool_freelance` 선례로 시도) — 전부 차단:
-
-- `search.shopping.naver.com/api/search/all` → **418** (I'm a teapot = WAF 봇 차단).
-  ★판별법: **없는 경로는 404 `text/plain` 9바이트**로 답한다. 즉 418 은
-  "경로는 살아있는데 WAF 가 막는다"는 뜻이지 "없다"가 아니다.
-  `/ns/v1/search/paged-composite-cards` 도 418(존재+차단).
-- 검색 페이지 HTML(웹·`m.shopping`·`msearch.shopping`) 전부 418 → SSR 추출 경로도 없음.
-- 쿠키 부트스트랩(`naver.com` → `shopping.naver.com` 방문 후 재시도)도 418 그대로.
-- `curl_cffi impersonate="chrome"` **무효** — TLS 지문 위장으로 뚫리는 층이 아니다.
-- **실제 창을 띄운 Chromium(headed)조차 캡차**로 착지: `ncpt.naver.com/v1/wcpt/*`
-  영수증 이미지 문제 + 쿠키 `sus_val`·`X-Wtm-Cpt-Tk`(네이버 WTM 봇탐지 플랫폼).
-  → headless 탐지가 아니라 **자동화 전면 게이트**다.
-- `robots.txt` = `User-agent: * / Disallow: /` — 정책상으로도 금지.
-
-남은 길은 캡차를 푸는 것뿐인데 그건 하지 않는다(우회 금지이고, 애초에 언제 깨질지 모르는
-토대다). 새 플러스스토어(`shopping.naver.com/ns/search`)도 자동화 브라우저에선 302 →
-"지금 이 서비스와 연결할 수 없습니다" 오류 면으로 간다.
-
-**대체 후보도 실측함**: 통합검색(`search.naver.com`)은 200 이 나오지만 고유 상품이
-**3개**뿐이고 대부분 광고 블록이라 검색 소스로 부적합하다(robots 도 `Disallow: /`).
-
-→ 되살릴 여지가 생겼는지 보려면 **`/api/search/all` 이 418 에서 200 으로 바뀌었는지**부터
-재실측하라. 그 전엔 다른 시도가 다 헛수고다.
-
-## 4. 자주 하는 실수
-
-- 중고를 이 어휘로 찾는 것 — `site: "used"`/`"all"` 축은 은퇴했다(§1). `[sense:used]`.
-- 은퇴한 중고 스크래퍼를 "고쳐 되살리는" 것 — §1 의 두 번째 이유를 먼저 읽을 것.
-  셀렉터를 고칠 수 있느냐가 아니라, 고쳐도 `[sense:used]` 보다 느리고 약하다는 게 요점이다.
-- `price` 를 그대로 출력하는 것 — 콤마 없는 숫자 문자열이라 사람에게 보여줄 땐 포맷 필요.
-- 네이버 쇼핑을 다시 붙이려 드는 것 — §3 을 먼저 읽을 것.
+옛 `site=used/all`은 2026-08-04 은퇴했다. 중고 스크래퍼를 복구하지 말고
+[중고 검색 가이드](used_market.md)의 `[sense:used]`를 쓴다. 기존 직접 호출의 알 수 없는
+site 값은 다나와 결과에 안내를 붙이는 호환 경로가 있지만, 새 IBL에서는 명시된 enum을 사용한다.

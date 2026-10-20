@@ -1,5 +1,5 @@
 """
-쇼핑 검색 도구 — 새 상품 가격비교(다나와) + 중고 C2C([sense:used]) + 외주([sense:freelance])
+쇼핑 검색 도구 — 새 상품 가격비교(다나와·에누리) + 중고 C2C([sense:used]) + 외주([sense:freelance])
 
 ★2026-08-04: [sense:search_shopping] 의 중고 축(site=used/all)은 은퇴했다.
   중고 매물은 [sense:used](tool_used.py — 내부 API, 소스 4종, 폰 동작)가 정본.
@@ -61,105 +61,58 @@ def _products_to_records(items):
 
 
 def search_naver_shopping(query: str, display: int = 5):
-    """네이버 쇼핑 검색 — ★은퇴. 공식 API 도 내부 API 도 막혔다(2026-08-04 실측 종결).
-
-    ① 공식 오픈API `/v1/search/shop.json` = 404 SE05 "존재하지 않는 검색 api"(네이버가 은퇴).
-    ② 내부 API 발굴 시도(직방 tool_zigbang·크몽 tool_freelance 선례) — **전부 차단**:
-       · `search.shopping.naver.com/api/search/all` → **418**(I'm a teapot = WAF 봇 차단).
-         ★없는 경로는 404 text/plain 9바이트로 답한다 → 418 은 "경로는 살아있고 WAF 가 막는다"는 뜻.
-         `/ns/v1/search/paged-composite-cards` 도 동일하게 418(존재+차단).
-       · 검색 페이지 HTML(웹·모바일·msearch) 전부 418 — SSR 데이터 추출 경로도 없음.
-       · 쿠키 부트스트랩(naver.com→shopping.naver.com 방문 후 재시도)도 418 그대로.
-       · curl_cffi impersonate="chrome" 무효 — TLS 지문 위장으로 뚫리는 층이 아니다.
-       · **실제 창을 띄운 Chromium(headed, non-headless)조차 캡차**로 착지:
-         `ncpt.naver.com/v1/wcpt/*` 영수증 이미지 문제 + 쿠키 `sus_val`·`X-Wtm-Cpt-Tk`
-         (네이버 WTM 봇탐지 플랫폼). 즉 headless 탐지가 아니라 **자동화 전면 게이트**.
-       · robots.txt = `User-agent: * / Disallow: /` (정책상으로도 금지).
-       → 캡차를 푸는 것 외에 경로가 없고, 그건 하지 않는다(우회 금지 + 애초에 불안정한 토대).
-    ③ 대체 후보 실측: 통합검색(search.naver.com)은 200 이지만 고유 상품 **3개**뿐이고
-       대부분 광고 블록이라 상품 검색 소스로 부적합(robots 도 Disallow: /).
-    → 결론: **네이버 축은 죽었다.** 쇼핑 검색의 몸은 다나와(순수 HTTP, 폰 포함)로 옮겼다
-      (tool_danawa.py). 되살릴 여지가 생기면 418→200 전환 여부부터 재실측할 것.
-
-    호출부(search_all_async·site:naver)가 items 부재를 우아하게 건너뛰도록 즉시 반환."""
-    return {"success": False, "error": "네이버 쇼핑 검색 은퇴(2026-08) — 공식 API SE05 + 내부 API 418/캡차. 다나와 검색을 사용하세요.",
-            "items": []}
+    """종료된 공식 API: https://developers.naver.com/notice/article/32564 (2026-07-31)."""
+    return {"success": False, "error_type": "source_retired", "items": [],
+            "error": "네이버 쇼핑 API는 2026-07-31 종료됐습니다. site=danawa 또는 enuri를 사용하세요."}
 
 
-async def search_danawa_shopping_async(query: str, display: int = 5):
-    """다나와 검색 — **순수 HTTP 우선**(2026-08-04), Playwright 는 폴백.
+def _load_shopping_source(filename):
+    # 패키지 reload 뒤에도 새 파일의 파서를 사용한다. 외부 입력은 파일명으로 받지 않는다.
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename + ".py")
+    spec = importlib.util.spec_from_file_location(filename, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
-    네이버 축이 죽어(search_naver_shopping 주석) 폰 쇼핑 검색이 완전히 비었던 것을,
-    다나와가 봇 차단·TLS 지문 검사 없이 stdlib urllib 만으로 상품을 준다는 실측으로 메움.
-    → tool_danawa.py 가 폰(curl_cffi 없는 Chaquopy)에서도 그대로 동작한다.
-    HTTP 가 실패할 때만 옛 Playwright 경로(PC 전용)로 내려간다."""
+
+async def search_danawa_shopping_async(query: str, display: int = 5, page: int = 1,
+                                       sort: str = "default"):
+    """HTTP 실패만 브라우저로 보완한다. 두 경로의 페이지·정렬·파서는 동일하다."""
+    from datetime import datetime, timezone
+    from urllib.parse import urlencode
+    module = _load_shopping_source("tool_danawa")
     try:
-        # tool_used/tool_freelance 와 동일 — /packages/reload 는 handler 만 갈고
-        # 서브모듈은 sys.modules 캐시에 남으므로 파일에서 매번 fresh 로드.
-        import importlib.util as _ilu
-        _path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tool_danawa.py")
-        _spec = _ilu.spec_from_file_location("tool_danawa", _path)
-        _td = _ilu.module_from_spec(_spec)
-        _spec.loader.exec_module(_td)
-        res = _td.search_danawa(query, display)
-        if res.get("items") or res.get("empty_reason") == "no_results":
-            return res   # 정상 결과·정상 0건 — 폴백은 HTTP 실패·구조 변경일 때만
-    except Exception:
-        pass  # 아래 Playwright 폴백으로
-
+        result = await asyncio.to_thread(module.search_danawa, query, display, page, sort)
+        if result.get("success") is not False or result.get("error_type") in ("invalid_argument", "unsupported_option"):
+            return result
+        failure = result
+    except Exception as exc:
+        failure = {"success": False, "items": [], "error_type": "http_error", "error": str(exc)}
+    params = module.search_params(query, page, sort)
+    url = module._SEARCH + "?" + urlencode(params)
     try:
         from playwright.async_api import async_playwright
-    except ImportError:
-        return {"success": False, "total": 0, "items": [], "error": "다나와 검색 실패(HTTP 파싱 결과 없음, 이 기기엔 브라우저 폴백 미지원)"}
-    async with async_playwright() as p:
-        try:
+        async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            )
-            page = await context.new_page()
-            url = f"https://search.danawa.com/dsearch.php?query={query}"
-            await page.goto(url, wait_until="domcontentloaded")
-
             try:
-                await page.wait_for_selector(".product_list .prod_main_info", timeout=5000)
-            except Exception:
+                tab = await browser.new_page()
+                response = await tab.goto(url, wait_until="domcontentloaded", timeout=25000)
+                if response is None or response.status != 200:
+                    raise RuntimeError(f"브라우저 HTTP {response.status if response else '미확인'}")
+                await tab.wait_for_selector('[id^="productItem"], #nosearchArea',
+                                            state="attached", timeout=12000)
+                result = module.parse_danawa(await tab.content(), display)
+                result.update(source="danawa", query=query, page=page,
+                              page_size=module.PAGE_SIZE, sort=sort, source_url=url,
+                              observed_at=datetime.now(timezone.utc).isoformat(),
+                              transport="browser", http_failure=failure)
+                return result
+            finally:
                 await browser.close()
-                # 목록 요소를 못 찾은 것은 0건이 아니다 — 구조 변경과 결과 없음을 여기선 가를 수 없다.
-                return {"success": False, "error_type": "source_changed", "total": 0, "items": [],
-                        "error": "다나와 브라우저 폴백에서 상품 목록 요소를 찾지 못했습니다(구조 변경 의심). "
-                                 "0건으로 해석하지 마세요."}
-
-            items_els = await page.query_selector_all(".product_list .prod_main_info")
-            items = []
-            for el in items_els[:display]:
-                name_el = await el.query_selector(".prod_name a")
-                name = (await name_el.inner_text()).strip() if name_el else "N/A"
-
-                price_el = await el.query_selector(".rank_one .price_sect strong")
-                price = (await price_el.inner_text()).replace(",", "").strip() if price_el else "0"
-
-                link = await name_el.get_attribute("href") if name_el else ""
-
-                img_el = await el.query_selector(".thumb_image img")
-                image = (await img_el.get_attribute("data-original")) or (await img_el.get_attribute("src")) or ""
-                if image and image.startswith("//"):
-                    image = "https:" + image
-
-                items.append({
-                    "name": name,
-                    "price": price,
-                    "mall": "다나와",
-                    "link": link,
-                    "image": image,
-                    "category": "가전/디지털",
-                    "site": "danawa"
-                })
-
-            await browser.close()
-            return {"total": len(items), "items": items}
-        except Exception as e:
-            return {"success": False, "error": f"다나와 검색 중 오류: {str(e)}"}
+    except Exception as exc:
+        failure["browser_failure"] = str(exc)
+        return failure
 
 
 # ★중고 축(site=used/all)은 2026-08-04 은퇴 — `search_used_items_async`·`search_all_async` 삭제.
@@ -174,7 +127,7 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
 #   폰에서도 돈다. 스크래퍼를 고쳐 봐야 더 느리고 더 약한 두 번째 창구가 될 뿐이다.
 # → 중고는 [sense:used]. 되살리지 말 것.
 #
-# `site=all`(다나와+중고 합침)도 함께 은퇴 — 중고가 빠지면 다나와 하나라 별칭일 뿐이다.
+# 옛 site=all(새 상품+중고)은 은퇴 상태다. 여러 원천은 IBL의 &로 명시 조합한다.
 
 
 def _search_naver_used(query: str, limit: int = 15):
@@ -246,19 +199,23 @@ def execute(tool_input: dict, context) -> str:
         return _handle_used(tool_input)
     if tool_name == "search_shopping":
         query = tool_input.get("query")
-        # site 는 이제 danawa(실동작) + naver(은퇴 안내) 둘뿐이다 — 중고 축은 2026-08-04 은퇴.
         site = tool_input.get("site", "danawa")
         display = tool_input.get("limit", tool_input.get("display", 5))
+        page = tool_input.get("page", 1)
+        sort = tool_input.get("sort", "default")
 
-        if not query:
+        if not isinstance(query, str) or not query.strip():
             return format_json({"success": False, "error": "검색어를 입력해주세요.", "items": []})
 
         try:
             if site == "naver":
                 result = search_naver_shopping(query, display)
+            elif site == "enuri":
+                module = _load_shopping_source("tool_enuri")
+                result = module.search_enuri(query, display, page, sort)
             else:
-                result = asyncio.run(search_danawa_shopping_async(query, display))
-                if site not in ("danawa", "naver"):
+                result = asyncio.run(search_danawa_shopping_async(query, display, page, sort))
+                if site not in ("danawa", "enuri", "naver"):
                     # 어휘 밖 값(옛 used/all 포함) — 빈손으로 돌려보내는 대신 가격비교 결과를
                     # 주고 중고 정본으로 안내한다(옛 스크래퍼는 조용히 0건이라 이보다 나빴다).
                     # ★enum 리터럴로만 분기한다 — 은퇴한 값을 코드에 박으면 enum-가드가
@@ -269,8 +226,19 @@ def execute(tool_input: dict, context) -> str:
                         "쓰세요(옛 site=used/all 축은 2026-08-04 은퇴)."
                     )
 
+            result.setdefault("source", "enuri" if site == "enuri" else "naver" if site == "naver" else "danawa")
+            result.setdefault("query", query)
+            result.setdefault("page", page)
+            result.setdefault("sort", sort)
+            if result.get("empty_reason") == "no_results" and result["source"] == "danawa":
+                from datetime import datetime, timezone
+                from urllib.parse import urlencode
+                module = _load_shopping_source("tool_danawa")
+                result.update(source_url=module._SEARCH + "?" + urlencode(module.search_params(query, page, sort)),
+                              observed_at=datetime.now(timezone.utc).isoformat(), page_size=module.PAGE_SIZE)
+            result["price_note"] = "원천 표시 가격입니다. 옵션·배송·쿠폰·렌탈 조건은 판매처 원문에서 확인하세요. total은 반환 건수입니다."
             return format_json(result)
         except Exception as e:
-            return format_json({"success": False, "error": f"오류 발생: {e}", "items": []})
+            return format_json({"success": False, "error": f"오류 발생: {e}", "error_type": "http_error", "items": []})
 
     return format_json({"success": False, "error": f"알 수 없는 도구: {tool_name}"})

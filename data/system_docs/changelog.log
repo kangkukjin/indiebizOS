@@ -2717,3 +2717,7 @@
 2026-10-20 | 긴문장81회차: 구매 ep5017~5030 기반 조건변경·반증 실험. 규정 계승 관계판정/패치와 최종 평가에 발화자 있는 대화 발췌 전달, 철회 조건 재강제·핵심 요구 누락의 잘못된 승인 차단. 실제 패치 내장타이머→분리세척 복원, 평가 ACHIEVED→UNKNOWN(criteria), 장소 선택 전이 확인. 모순 답변 평가 규칙 보완 뒤 THINK는 조건부 답변으로 수정했으나 EXECUTE 재발은 잔존. 독립 AI14작업 회수, IBL 기본/반전/순서변형 확인, 고정 입력 불변. 관련82+64·system2통과, 비-system10863통과/1스킵(최종 프롬프트 보완 전), Android 번들·어휘/층 관문 통과. 실제 웹 탐색 충분성·EXECUTE 의미검증은 미완료. docs/experiments/long_sentence_imagination/round_81/report.md.
 
 2026-10-20 | 긴문장82회차: 읽기 전용 list/file_find/grep가 과거 탐색 결과를 재사용해 추가 파일을 누락하던 결함 수리. 기존 per_run 계약으로 새 실행마다 관측, 유도 계약 전달; 개별 read SHA-256 재사용과 같은 실행 resume 유지. 신규13실패→통과·관련86통과, 라이브 전체16실행(정상14/의도한 손상실패2) 입력·행·합계·SHA·저장 재독 대조. 교재 신선도 설명 갱신. 전수에서 기존 PC TypeScript 오류도 수리(tsc·관련78통과). 최종 전수11038통과/1실패/14스킵의 Electron 종료 확인 ECONNRESET은 검사만 제한 재확인으로 수리, 해당1통과·20회/160하위검사 통과(이후 전수 미반복). 어휘·층·은퇴 관문 통과. 비용 절감률·실기·대규모 탐색 미검증. docs/experiments/long_sentence_imagination/round_82/report.md.
+[2026-10-20 10:01:59] PROJECT_CREATED: L83_training (ID: L83_training)
+[2026-10-20 10:01:59] PROJECT_CREATED: L83_training (ID: L83_training)
+
+2026-10-20 | 긴문장83회차: 구매 조건 변경·자료 발견·실제 웹 기준선9대화, 수리 뒤 원 EXECUTE·새 반전2대화 종료. 다나와 옛 UI 인자가 빈 셸을 선택하는 결함을 query 경로로 수리·저장 응답 재생/관련5회귀/라이브15+3건 확인. 같은 소스의 동시 확장은 해당 작업 소유로 보존. 훈련자 IBL v3 우선순위 반영·읽기14+추출1 재사용, 입력/핵심34항목 확인. 미확인 기능 단정 L81-3 재현, 후기 부분표본 일반화 잔존. 후속 답변 조건부 개선이나 시간315.758→437.148초로 비용 절감 없음; 인과 비교·시장 정답 완전성 미검증. docs/experiments/long_sentence_imagination/round_83/report.md.

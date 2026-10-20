@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "text": "모델별 사용기와 판매처 후기 집계",
+  "links": [
+    "reviews/model_counts.json",
+    "reviews/washing.json"
+  ]
+}

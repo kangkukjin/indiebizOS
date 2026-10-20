@@ -1,0 +1,66 @@
+{
+  "baseline_closed_at": "2026-10-20T10:14:56.960265+09:00",
+  "tasks": [
+    {
+      "name": "fixed_think_t2_accepted",
+      "state": "succeeded",
+      "task_id": "task_9d5f63195a9048c58a3ff56516d07e28",
+      "completed_at": "2026-10-20 01:05:52"
+    },
+    {
+      "name": "web_execute_t2_accepted",
+      "state": "succeeded",
+      "task_id": "task_e191deb2523e4694b007897b316e90ec",
+      "completed_at": "2026-10-20 01:10:58"
+    },
+    {
+      "name": "web_execute_t1_accepted",
+      "state": "succeeded",
+      "task_id": "task_2ba6e142570a4b57b6c6fee67b4b5d72",
+      "completed_at": "2026-10-20 01:08:14"
+    },
+    {
+      "name": "fixed_think_t1_accepted",
+      "state": "succeeded",
+      "task_id": "task_f78eb59367e54372a5fa62520c4a2d1a",
+      "completed_at": "2026-10-20 01:04:31"
+    },
+    {
+      "name": "fixed_execute_t3_accepted",
+      "state": "succeeded",
+      "task_id": "task_231f0560846446278b1b1e2d64cb5722",
+      "completed_at": "2026-10-20 01:06:40"
+    },
+    {
+      "name": "fixed_execute_t1_accepted",
+      "state": "succeeded",
+      "task_id": "task_7a41ff0eb3694c78a55e6777a0ff4929",
+      "completed_at": "2026-10-20 01:03:48"
+    },
+    {
+      "name": "fixed_execute_t2_accepted",
+      "state": "succeeded",
+      "task_id": "task_73cb20c620eb467fa2eb1150a5beb947",
+      "completed_at": "2026-10-20 01:05:41"
+    },
+    {
+      "name": "fixed_think_t3_accepted",
+      "state": "succeeded",
+      "task_id": "task_e1078466586a4052b1c7db453b7bd1b4",
+      "completed_at": "2026-10-20 01:07:42"
+    },
+    {
+      "name": "web_execute_t3_accepted",
+      "state": "succeeded",
+      "task_id": "task_f1093e9cb72848d6b3ed23ed6d63eba7",
+      "completed_at": "2026-10-20 01:14:19"
+    }
+  ],
+  "health": {
+    "status": "healthy",
+    "timestamp": "2026-10-20T10:14:56.961807",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "live_turns": [],
+    "live_turns_observation": "known"
+  }
+}

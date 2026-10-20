@@ -1,0 +1,21 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L83_training",
+    "task_id": "task_2ba6e142570a4b57b6c6fee67b4b5d72"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_0eb3ee1349df35e837b3",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "web_execute",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 01:02:58",
+  "completed_at": "2026-10-20 01:08:14",
+  "pending_children": 0,
+  "children": [],
+  "result": "세 조건을 모두 충족하는 제품 중에서는 **쿠잉 미니 멀티쿠커 CPO-1522**(1.5L, 약 2.5만 원)를 추천합니다. 다만 이 제품도 아래 미확인 사항이 남아 있습니다.\n\n| 제품 | 다이얼 | 타이머 | 용량 | 가격 | 후기 | 판단 |\n|---|---|---|---|---|---|---|\n| **쿠잉 CPO-1522** | O | O | 1.5L / 630W | 약 2.5만 원 | 쿠팡 4.7점, 749~998개(검색 결과 요약에서 확인) | **1순위**: 라면이나 국 1~2인분용 |\n| 쿠쿠 스피드팟 CMC-A0655FB | 다이얼+터치 | O | 6L, 압력 | 약 8~9만 원 | 다나와 4.5점, 209개 | 국을 많이 끓일 때의 대안. 압력 뚜껑이라 라면에는 불편함 |\n| 도무스 두판 타이머 DG-A140DL | O | O(최대 60분) | 5L, 그릴+전골 | 약 7~9만 원 | 29개 이하 | 조건은 맞지만 후기가 적고 부피가 큼 |\n\n**미확인 사항(CPO-1522):**\n- 시간이 끝나면 전원이 완전히 꺼지는지, 보온으로 넘어가는지 확인하지 못했습니다. 이 내용은 상세 설명 이미지에만 있어 글로 읽을 수 없었습니다.\n- 쿠팡 후기 749~998개가 이 모델 것인지는 추정입니다. 쿠팡 페이지가 접속을 막아(403) 직접 열지 못했고, 검색 결과 요약과 블로그의 연결로만 판단했습니다. 다나와 후기는 5개, 에누리 후기는 4개뿐입니다.\n- 630W라서 물 끓는 속도가 느린 편일 수 있습니다.\n\n**후기는 많지만 뺀 제품:**\n- 키친아트 라면포트 1.8L(KSJ-NP188): 쿠팡 후기 1,431개지만 다나와 스펙에 타이머가 없습니다. 표기된 \"자동전원차단\"은 과열 차단으로 보입니다.\n- 보아르 혼요(후기 406개): 타이머 유무를 확인하지 못했습니다.\n- 델리팬 DEL-MC3: 다이얼식이지만 타이머 표기가 없습니다.\n\n**근거 링크:**\n- CPO-1522 다나와 스펙: https://prod.danawa.com/info/?pcode=19489064\n- CPO-1522 하이마트(다이얼식·타이머): https://www.e-himart.co.kr/app/goods/goodsDetail?goodsNo=0022098619\n- CPO-1522 에누리: https://price.enuri.com/catalog/101864568\n- 쿠팡 쿠잉 미니 멀티쿠커: https://www.coupang.com/vp/products/7214285779\n- 쿠쿠 스피드팟 다나와: https://prod.danawa.com/info/?pcode=12871454\n\n가격과 후기 수는 오늘(10월 20일) 조회한 값입니다. 구매나 문의는 하지 않았습니다.\n\n저장 파일: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_83회차/ai/web_execute/t1.md",
+  "error": null,
+  "status_url": "/projects/L83_training/agents/agent_979cb528/tasks/task_2ba6e142570a4b57b6c6fee67b4b5d72"
+}

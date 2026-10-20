@@ -1,0 +1,324 @@
+[
+  {
+    "label": "fixed_think_t2",
+    "episode": 5050,
+    "task_id": "task_9d5f63195a9048c58a3ff56516d07e28",
+    "total_ms": 63710,
+    "agent": "fixed_think",
+    "started_at": "2026-10-20T10:04:48.723993",
+    "ended_at": "2026-10-20T10:05:52.434764",
+    "cost": {
+      "oneshot:classify": {
+        "input": 4836,
+        "output": 113,
+        "cache_read": 896,
+        "cache_create": 0,
+        "usage_events": 2
+      },
+      "oneshot:background": {
+        "input": 4548,
+        "output": 1374,
+        "cache_read": 1280,
+        "cache_create": 0,
+        "usage_events": 1
+      },
+      "execution": {
+        "input": 199716,
+        "output": 3531,
+        "cache_read": 179650,
+        "cache_create": 20062,
+        "usage_events": 1
+      },
+      "oneshot:evaluate": {
+        "input": 17217,
+        "output": 308,
+        "cache_read": 6280,
+        "cache_create": 10935,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 1,
+    "model_round_events": 6,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "web_execute_t2",
+    "episode": 5053,
+    "task_id": "task_e191deb2523e4694b007897b316e90ec",
+    "total_ms": 148608,
+    "agent": "web_execute",
+    "started_at": "2026-10-20T10:08:30.299491",
+    "ended_at": "2026-10-20T10:10:58.907961",
+    "cost": {
+      "execution": {
+        "input": 1050798,
+        "output": 8999,
+        "cache_read": 1016771,
+        "cache_create": 34017,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 4,
+    "model_round_events": 5,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "web_execute_t1",
+    "episode": 5048,
+    "task_id": "task_2ba6e142570a4b57b6c6fee67b4b5d72",
+    "total_ms": 315758,
+    "agent": "web_execute",
+    "started_at": "2026-10-20T10:02:58.481508",
+    "ended_at": "2026-10-20T10:08:14.240457",
+    "cost": {
+      "execution": {
+        "input": 3299021,
+        "output": 17994,
+        "cache_read": 3124096,
+        "cache_create": 174875,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 24,
+    "model_round_events": 25,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "reverse_execute_t4",
+    "episode": 5056,
+    "task_id": "task_e237a15fe5984da381bb586f6d499892",
+    "total_ms": 48770,
+    "agent": "reverse_execute",
+    "started_at": "2026-10-20T10:16:08.452130",
+    "ended_at": "2026-10-20T10:16:57.223342",
+    "cost": {
+      "execution": {
+        "input": 273605,
+        "output": 3129,
+        "cache_read": 214646,
+        "cache_create": 58951,
+        "usage_events": 1
+      },
+      "oneshot:classify": {
+        "input": 3217,
+        "output": 54,
+        "cache_read": 512,
+        "cache_create": 0,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 3,
+    "model_round_events": 5,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "fixed_think_t1",
+    "episode": 5047,
+    "task_id": "task_f78eb59367e54372a5fa62520c4a2d1a",
+    "total_ms": 102243,
+    "agent": "fixed_think",
+    "started_at": "2026-10-20T10:02:49.745597",
+    "ended_at": "2026-10-20T10:04:31.988931",
+    "cost": {
+      "consciousness": {
+        "input": 91147,
+        "output": 2173,
+        "cache_read": 45403,
+        "cache_create": 45740,
+        "usage_events": 1
+      },
+      "execution": {
+        "input": 390071,
+        "output": 3688,
+        "cache_read": 320962,
+        "cache_create": 69099,
+        "usage_events": 1
+      },
+      "oneshot:classify": {
+        "input": 3857,
+        "output": 57,
+        "cache_read": 512,
+        "cache_create": 0,
+        "usage_events": 1
+      },
+      "oneshot:evaluate": {
+        "input": 18478,
+        "output": 307,
+        "cache_read": 544,
+        "cache_create": 17932,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 4,
+    "model_round_events": 9,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "fixed_execute_t3",
+    "episode": 5051,
+    "task_id": "task_231f0560846446278b1b1e2d64cb5722",
+    "total_ms": 45756,
+    "agent": "fixed_execute",
+    "started_at": "2026-10-20T10:05:54.721257",
+    "ended_at": "2026-10-20T10:06:40.478024",
+    "cost": {
+      "execution": {
+        "input": 337037,
+        "output": 3220,
+        "cache_read": 325569,
+        "cache_create": 11460,
+        "usage_events": 1
+      },
+      "oneshot:classify": {
+        "input": 3165,
+        "output": 165,
+        "cache_read": 512,
+        "cache_create": 0,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 3,
+    "model_round_events": 5,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "web_after_execute_t1",
+    "episode": 5055,
+    "task_id": "task_b5e573f29ca84b15b5bdc187a8e74598",
+    "total_ms": 437148,
+    "agent": "web_after_execute",
+    "started_at": "2026-10-20T10:16:08.451891",
+    "ended_at": "2026-10-20T10:23:25.600207",
+    "cost": {
+      "execution": {
+        "input": 3952380,
+        "output": 19212,
+        "cache_read": 3725256,
+        "cache_create": 227072,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 24,
+    "model_round_events": 26,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "fixed_execute_t1",
+    "episode": 5046,
+    "task_id": "task_7a41ff0eb3694c78a55e6777a0ff4929",
+    "total_ms": 58301,
+    "agent": "fixed_execute",
+    "started_at": "2026-10-20T10:02:49.745385",
+    "ended_at": "2026-10-20T10:03:48.047259",
+    "cost": {
+      "execution": {
+        "input": 343198,
+        "output": 3703,
+        "cache_read": 271558,
+        "cache_create": 71630,
+        "usage_events": 1
+      },
+      "oneshot:classify": {
+        "input": 3803,
+        "output": 56,
+        "cache_read": 512,
+        "cache_create": 0,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 4,
+    "model_round_events": 6,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "fixed_execute_t2",
+    "episode": 5049,
+    "task_id": "task_73cb20c620eb467fa2eb1150a5beb947",
+    "total_ms": 52979,
+    "agent": "fixed_execute",
+    "started_at": "2026-10-20T10:04:48.657278",
+    "ended_at": "2026-10-20T10:05:41.636588",
+    "cost": {
+      "execution": {
+        "input": 286759,
+        "output": 4012,
+        "cache_read": 265153,
+        "cache_create": 21598,
+        "usage_events": 1
+      },
+      "oneshot:classify": {
+        "input": 3344,
+        "output": 5,
+        "cache_read": 512,
+        "cache_create": 0,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 3,
+    "model_round_events": 5,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "fixed_think_t3",
+    "episode": 5052,
+    "task_id": "task_e1078466586a4052b1c7db453b7bd1b4",
+    "total_ms": 64455,
+    "agent": "fixed_think",
+    "started_at": "2026-10-20T10:06:38.047660",
+    "ended_at": "2026-10-20T10:07:42.503046",
+    "cost": {
+      "oneshot:classify": {
+        "input": 6542,
+        "output": 65,
+        "cache_read": 896,
+        "cache_create": 0,
+        "usage_events": 2
+      },
+      "oneshot:background": {
+        "input": 5721,
+        "output": 1747,
+        "cache_read": 1280,
+        "cache_create": 0,
+        "usage_events": 1
+      },
+      "execution": {
+        "input": 365011,
+        "output": 3380,
+        "cache_read": 342179,
+        "cache_create": 22826,
+        "usage_events": 1
+      },
+      "oneshot:evaluate": {
+        "input": 21734,
+        "output": 365,
+        "cache_read": 6280,
+        "cache_create": 15452,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 2,
+    "model_round_events": 7,
+    "forbidden_access_candidates": 0
+  },
+  {
+    "label": "web_execute_t3",
+    "episode": 5054,
+    "task_id": "task_f1093e9cb72848d6b3ed23ed6d63eba7",
+    "total_ms": 170087,
+    "agent": "web_execute",
+    "started_at": "2026-10-20T10:11:29.538876",
+    "ended_at": "2026-10-20T10:14:19.626487",
+    "cost": {
+      "execution": {
+        "input": 1746422,
+        "output": 9675,
+        "cache_read": 1703402,
+        "cache_create": 43006,
+        "usage_events": 1
+      }
+    },
+    "tool_calls": 6,
+    "model_round_events": 7,
+    "forbidden_access_candidates": 0
+  }
+]

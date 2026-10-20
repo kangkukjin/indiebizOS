@@ -1,0 +1,43 @@
+#!ibl edition=2
+[def:링크읽기]($folder,$path,$depth=0) {
+  assert $depth<=4,"자료 링크 깊이 초과"
+  [try] {
+    $doc=[self:read]{path:$folder+"/"+$path}
+    $page={path:$path,status:$doc.data.status,text:$doc.data.text,error:get($doc.data,"error",""),links:$doc.data.links}
+    $nested=$page.links >> [table:each]{parallel:3} {
+      [fn:링크읽기]{folder:$folder,path:$it,depth:$depth+1}
+    }
+    return [$page]+reduce($nested,[],($a,$b)=>$a+$b)
+  } [catch] {
+    return [{path:$path,status:"error",text:"",error:$error.message,links:[]}]
+  }
+}
+[def:근거추출]($sources) {
+  $review=filter($sources,($s)=>contains($s.path,"reviews/"))
+  $models=filter($sources,($s)=>contains($s.path,"makers/"))
+  $rows=map($models,($s)=>{path:$s.path,text:$s.text,reviews:$review})
+  return $rows >> [table:ai]{instruction:"각 제조사 문서의 정확한 제품 모델을 식별하고 그 모델의 후기 자료만 결합하라. auto_off는 설정 시간이 끝나면 가열 전원이 꺼지는지, washable_pot은 냄비를 분리하여 물로 세척 가능한지, easy는 다이얼처럼 간단한 조작인지다. timer=true만 있으면 auto_off는 null. 뚜껑 분리는 냄비 분리가 아니다. 컨트롤러/가열부 물세척 금지를 지켜라. easy는 터치 단계가 많아 확인 필요하면 null. review_count는 해당 모델 후기만, 브랜드 합산 금지. wash_caveat에 세척 불편 후기와 한계, evidence에 기능과 후기 출처 경로를 적어라. 외부 타이머 호환은 별도 미확인이다.",schema:"model(Text),auto_off(Bool),washable_pot(Bool),easy(Bool),review_count(Number),wash_caveat(Text),evidence(Text)",preserve_rows:true,fields:["path","model","auto_off","washable_pot","easy","review_count","wash_caveat","evidence"]}
+}
+[def:조건판정]($models,$policy) {
+  return $models >> [table:each] {
+    $m=$it
+    $timer=($policy.timer_required==false) or ($m.auto_off==true)
+    $wash=($policy.wash_required==false) or ($m.washable_pot==true)
+    return {**$m,eligible:$timer and $wash and ($m.easy==true),timer_ok:$timer,wash_ok:$wash}
+  }
+}
+$sources=[fn:링크읽기]{folder:$folder,path:"index.json"}
+$extracted=[fn:근거추출]{sources:$sources}
+$history=[self:read]{path:$dialogue}
+$decision=[{dialogue:$history.text}] >> [table:ai]{instruction:"대화의 최종 유효 요구를 추출하라. timer_required는 쿠커 자체의 시간 종료 자동 차단이 필수인지, wash_required는 분리 냄비 물세척이 필수인지다. 후속 철회/완화를 적용하라. reason에 조건의 근거 발언과 세척 불편 반증이 있으면 그것도 보존하라.",schema:"timer_required(Bool),wash_required(Bool),reason(Text)",preserve_rows:true,fields:["timer_required","wash_required","reason"]}
+$policy=$decision.items[0]
+assert $policy.timer_required!=null and $policy.wash_required!=null,"유효 조건 미확인"
+$compared=[fn:조건판정]{models:$extracted.items,policy:$policy}
+$candidates=filter($compared,($m)=>$m.eligible)
+$ranked=$candidates >> [table:sort]{by:"review_count",descending:true}
+$report={policy:$policy,comparison:$compared,candidates:$ranked,sources:$sources,scope:"제공된 고정 자료만. 오류·빈 조회·부분 반환은 시장 전체 부재가 아님. 후기 수는 임의 합격선이 아닌 비교 근거. 외부 타이머 호환 미확인; 조절기 물세척 금지."}
+$body=json($report)
+[self:write]{path:$out,content:$body}
+$saved=[self:read]{path:$out}
+assert $saved.text==$body,"저장 후 재독 불일치"
+return {policy:$policy,models:$extracted.items,candidates:$ranked,sources:$sources,saved:$out}

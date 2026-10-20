@@ -1,0 +1,42 @@
+{
+  "originalQuery": {
+    "value": "전기쿠커 타이머",
+    "cards": 80,
+    "chars": 1064394
+  },
+  "volumeType": {
+    "value": "allvs",
+    "cards": 80,
+    "chars": 1063844
+  },
+  "page": {
+    "value": 1,
+    "cards": 80,
+    "chars": 1063958
+  },
+  "limit": {
+    "value": 30,
+    "cards": 80,
+    "chars": 1063938
+  },
+  "sort": {
+    "value": "saveDESC",
+    "cards": 0,
+    "chars": 1112594
+  },
+  "list": {
+    "value": "list",
+    "cards": 0,
+    "chars": 1110558
+  },
+  "boost": {
+    "value": "true",
+    "cards": 80,
+    "chars": 1064010
+  },
+  "tab": {
+    "value": "main",
+    "cards": 0,
+    "chars": 1110621
+  }
+}

@@ -1,0 +1,2 @@
+시작 HEAD ab20210c. 실행 중 별도 세션이 10:07:41에 9ad67a50 구매 조사 웹지도와 가이드 탐색 연결을 커밋했다. 변경: guide_db, forage_search, shopping, web_landmarks, web_search. 본 작업은 이 변경을 수정/취소하지 않았다. 이후 독립 AI 실행은 환경이 완전히 고정된 A/B가 아니므로 비용 차이를 인과적 개선율로 계산하지 않는다.
+API는 training origin의 agent별 rehearsal 히스토리를 사용. 이 경로는 conversation_turns 테이블을 채우지 않으므로 task terminal·supervision.turn.closed·저장된 답변과 다음 요청 시각을 대조한다. 원생 모델 세션의 동일성은 별도 관측 범위이며 테이블이 비었다는 이유만으로 동일 세션을 추정하지 않는다.

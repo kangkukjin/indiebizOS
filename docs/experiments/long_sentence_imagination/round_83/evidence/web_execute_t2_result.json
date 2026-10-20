@@ -1,0 +1,21 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L83_training",
+    "task_id": "task_e191deb2523e4694b007897b316e90ec"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_32907e127fb96370929f",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "web_execute",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 01:08:30",
+  "completed_at": "2026-10-20 01:10:58",
+  "pending_children": 0,
+  "children": [],
+  "result": "바뀐 조건(분리 세척, 후기 충분, 다이얼 조작)으로 다시 찾은 결과 **보아르 혼요 VO-KI006**(약 5만 원)를 추천합니다. 냄비가 분리되고, 다이얼로 조작하며, 이번 후보 중 후기가 가장 많습니다. 다만 물에 담가 씻어도 되는지는 설명서로 확인하지 못했습니다. 다나와 스펙의 '분리' 표기만 보고 판단했습니다.\n\n| 제품 | 떼어서 씻는 부분 | 조작 | 용량/출력 | 가격 | 후기 |\n|---|---|---|---|---|---|\n| **보아르 혼요 VO-KI006** | 냄비(스텐 전골팬)·그릴팬 | 다이얼 | 3L / 1000W | 약 5만 원 | 11번가 4.6점, 406개 · 오늘의집 942개 · 다나와 4.6점, 999개 표시(상한 표기일 수 있음) |\n| 디온리 NJM221CW | 냄비 **+ 온도조절기** | 다이얼 | 1.2L / 600W | 약 4.9만 원 | 다나와 4.6점, 125개 · review101 1,515개 |\n| 대원 허니문 DW-8900 | 냄비 **+ 온도조절기** | 다이얼 | 870W, 코팅 냄비 | 약 4.8만 원 | 다나와 4.6점, 162개 |\n| 델리팬 DEL-MC3 | 냄비 | 다이얼 | 2L / 800W | 약 5.7만 원 | 다나와 4.6점, 100개 · 쿠팡 4.5점, 142개 |\n\nreview101과 쿠팡 수치는 검색 결과 요약에서 가져왔고, 해당 페이지를 직접 열지는 못했습니다.\n\n- **혼요의 단점:** 11번가 후기 중에 \"라면 끓이기엔 물이 늦게 끓는다\"는 평이 하나 있습니다.\n- **조절기까지 떼어 씻고 싶다면:** 디온리(1~2인 소량용)나 대원 DW-8900이 맞습니다.\n- **빠진 제품:**\n  - 지난번 추천한 쿠잉 CPO-1522와 후기가 많은 라면포트 제품들은 이번 조건에서 뺐습니다. 다나와 스펙의 '분리형'은 뚜껑만 해당하고, 열판이 붙은 일체형 포트라서 통째로 씻기 어렵다고 봤습니다. 구조는 스펙으로 추정한 것입니다.\n  - 에버홈 EV-MP8000(4.7점, 후기 200개)과 태유 TC-8200G(186개)는 냄비가 분리되지만 슬라이드식이고 8만 원대라 순위에서 내렸습니다.\n- **콘센트 타이머와 함께 쓸 때:**\n  - 다 쓴 뒤에는 다이얼을 끔으로 돌려 두세요. 다이얼이 켜짐에 있으면 타이머가 전기를 다시 넣을 때 가열이 시작됩니다.\n  - 1000W 제품은 약 4.5A를 씁니다. 콘센트 타이머의 정격 전류가 이보다 큰지 확인하세요.\n\n**근거 링크:**\n- 보아르 혼요: https://prod.danawa.com/info/?pcode=9541932 · https://www.11st.co.kr/products/2563387376 · https://store.ohou.se/goods/177574\n- 디온리 NJM221CW: https://prod.danawa.com/info/?pcode=25866095 · https://www.review101.kr/review/201eb642-0851-46e4-be56-d3f703945f2b\n- 대원 DW-8900: https://prod.danawa.com/info/?pcode=28387\n- 델리팬 DEL-MC3: https://prod.danawa.com/info/?pcode=105457787 · https://www.coupang.com/vp/products/9290790930\n\n가격과 후기 수는 오늘 조회한 값입니다. 구매나 문의는 하지 않았습니다.\n\n저장 파일: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_83회차/ai/web_execute/t2.md",
+  "error": null,
+  "status_url": "/projects/L83_training/agents/agent_979cb528/tasks/task_e191deb2523e4694b007897b316e90ec"
+}

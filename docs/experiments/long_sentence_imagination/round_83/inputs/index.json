@@ -1,0 +1,11 @@
+{
+  "status": "ok",
+  "text": "가상 시장 자료 시작. 첫 쇼핑 검색, 다른 판매처 및 사용자 후기 검색의 보존 자료. links는 자료 폴더 기준 상대 경로다.",
+  "links": [
+    "shopping/first.json",
+    "shopping/alternate.json",
+    "reviews/search.json",
+    "shopping/failed.json",
+    "shopping/empty.json"
+  ]
+}

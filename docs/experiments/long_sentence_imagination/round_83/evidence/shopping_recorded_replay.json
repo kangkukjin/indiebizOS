@@ -1,0 +1,188 @@
+{
+  "before": {
+    "params": [
+      {
+        "query": "전기쿠커 타이머",
+        "originalQuery": "전기쿠커 타이머",
+        "volumeType": "allvs",
+        "page": 1,
+        "limit": 30,
+        "sort": "saveDESC",
+        "list": "list",
+        "boost": "true",
+        "tab": "main"
+      }
+    ],
+    "seconds": 0.0030368329025804996,
+    "result": {
+      "success": false,
+      "error_type": "source_changed",
+      "total": 0,
+      "items": [],
+      "error": "다나와 검색 구조를 확인할 수 없습니다(상품 카드·결과 없음 표지 모두 미발견). 0건으로 해석하지 마세요."
+    }
+  },
+  "candidate": {
+    "params": [
+      {
+        "query": "전기쿠커 타이머"
+      }
+    ],
+    "seconds": 0.003815957810729742,
+    "result": {
+      "total": 15,
+      "items": [
+        {
+          "name": "삼성전자 비스포크 큐커 오븐 MC32B7388L",
+          "price": "409360",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=17565221&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=102124",
+          "image": "https://img.danuri.io/catalog-image/221/565/017/99e524382dfe4f988545646dd7148f54.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "복합형오븐/가정용/용량: 32L/ 고주파출력: 700W/ 소비전력: 2500W/[특징] 가열방식: 컨벡션, 직화열풍/ 오븐/ 전자레인지/ 에어프라이/[조리] 온도조절/ 그릴(브로일)/ 발효/ 식품건조/ 베이킹/ 찜/ 해동/ 자동메뉴/밀키트자동조리/ 자동메뉴: 62가지/[조작] 다이얼+터치식/ 상하도어/ 턴테이블형/ 디스플레이/ 탈취/ Wi-Fi/ 타이머/스"
+        },
+        {
+          "name": "쿠랩 스마트멀티쿠커 1단",
+          "price": "34210",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=108401306&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/306/401/108/3b5d189d23684460807a3e28f402d37c.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/ 400W/ 분리형/원형/ 다이얼식/용기재질: 스테인리스/달걀용량: 7개/찜기: 1단/뚜껑/찜판/[부가] 타이머/자동전원차단/크기(가로x세로x깊이): 194x200x209mm"
+        },
+        {
+          "name": "샤오미 Xiaomi 멀티쿠커 1.5L",
+          "price": "52800",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=105180986&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/986/180/105/62779a72c9b847adbc88197a21ac75fa.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기냄비/용량: 1.5L/ 분리형/원형/ 터치식/ 1000W/용기재질: 폴리프로필렌(PP)/세라믹논스틱코팅/달걀용량: 7개/찜기: 1단/[구성] 뚜껑/찜판/[조리] 찜(조림)/국(스프)/탕/찌개/[부가] 보온/ 타이머/5도온도조절/무게: 1.8kg/크기(가로x세로x깊이): 248x272x181mm"
+        },
+        {
+          "name": "쿠랩 스마트멀티쿠커 2단",
+          "price": "39010",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=108401327&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/327/401/108/3de1e5cc5d1c4aedb44218945101f47f.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/ 400W/ 분리형/원형/ 다이얼식/용기재질: 스테인리스/달걀용량: 14개/찜기: 2단/뚜껑/찜판/[부가] 타이머/자동전원차단/크기(가로x세로x깊이): 194x276x209mm"
+        },
+        {
+          "name": "자일렉 ZL-264",
+          "price": "19890",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=124327269&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/269/327/124/589213964a6a444d90dff3e37fba5e6d.jpeg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/ 400W/ 분리형/ 다이얼식/용기재질: 스테인리스/달걀용량: 6개/뚜껑/찜판/[부가] 타이머/크기(가로x세로x깊이): 201x132x131mm"
+        },
+        {
+          "name": "휴롬 슈퍼스팀팟 SC-P01FMG",
+          "price": "408920",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=10901934&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/934/901/010/aabaceccdb004d0b9fb3b4fb4ed5cc7b.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "멀티쿠커/용량: 3L/ 950W/ 분리형/ 버튼식/용기재질: 스테인리스/[조리] 찜(조림)/죽(이유식)/저당밥/밥(취사)/국(스프)/[부가] 자동세척/ 타이머/스팀조리/이중진공구조/크기(가로x세로x깊이): 387x353x260mm"
+        },
+        {
+          "name": "하츠 듀얼 플랫 CIH-251FK",
+          "price": "187060",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=16997555&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=102132",
+          "image": "https://img.danuri.io/catalog-image/555/997/016/a247757c48664a21a3c4d509dad84b18.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "인덕션/ 프리스탠딩/화구수: 2구/ 소비전력: 3000W/기능: 터보모드/안전장치: 타이머, 잔열표시, 과열감지/ 다이얼/ 터치+다이얼/ 세라믹글라스/크기(가로x세로x높이): 555x320x63mm"
+        },
+        {
+          "name": "씨엔컴퍼니 쿠잉 EB-06CR",
+          "price": "17900",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=102914060&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/060/914/102/6227662a63254fbfad7f2df682f70ff1.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/사각형/ 다이얼식/ 300W/달걀용량: 6개/[부가] 타이머/ 알람/자동전원차단/무게: 0.58kg/크기(가로x세로x깊이): 196x153x151mm"
+        },
+        {
+          "name": "뉴스타 스마트 타이밍 에그마스터",
+          "price": "14240",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=45196823&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/823/196/045/ffea2bf55ead41a6bc36ba119d88a209.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/ 분리형/사각형/ 터치식/ 300W/용기재질: 폴리프로필렌(PP)/달걀용량: 4개/찜기: 1단/[조리] 요거트(발효)/달걀/[부가] 타이머/ 알람/자동전원차단/예약/크기(가로x세로x깊이): 163x132x143mm"
+        },
+        {
+          "name": "키친아트 KAEB-1000S",
+          "price": "29320",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=124413341&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/341/413/124/7fd89c023eee4d33ba3ad89d22d67588.jpeg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/ 350W/ 분리형/ 다이얼식/달걀용량: 7개/찜기: 2단/뚜껑/찜판/[부가] 타이머/ 동시조리/크기(가로x세로x깊이): 195x240x170mm"
+        },
+        {
+          "name": "자일렉 ZL-263SC",
+          "price": "34900",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=124327344&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/344/327/124/64ddeb2ef47543cd9547342f612c653a.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/ 350W/ 분리형/원형/ 다이얼식/달걀용량: 7개/찜기: 2단/뚜껑/찜판/[부가] 온도조절기분리/ 타이머/실리콘마감/크기(가로x세로x깊이): 185x250x195mm"
+        },
+        {
+          "name": "프리옴 PRO-E390",
+          "price": "34900",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=124224297&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/297/224/124/89bd6a142e854e21bcb0c7fce1867fa0.jpeg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/ 350W/ 분리형/원형/ 다이얼식/용기재질: 스테인리스/달걀용량: 14개/찜기: 2단/[구성] 뚜껑/찜판/달걀/[부가] 온도조절기분리/ 타이머/자동전원차단/코드분리/퀵가열고온스팀/크기(가로x세로): 185x225x185mm"
+        },
+        {
+          "name": "로얄에식스 ST-EG05",
+          "price": "83900",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=19165493&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/493/165/019/191c94a8316344679e12613d90a75135.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/용량: 4L/ 분리형/원형/ 터치식/ 600W/용기재질: 스테인리스/찜기: 3단/[부가] 보온/ 타이머/예약/2시간자동보온/최대8시간보온/디지털디스플레이/"
+        },
+        {
+          "name": "로얄에식스 ST-KS03",
+          "price": "95000",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=11563517&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/517/563/011/81df7b9926c4451d9f19696ef34eb2d8.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/용량: 1.2L/ 600W/ 분리형/원형/ 터치식/용기재질: 스테인리스/찜기: 2단/[부가] 타이머/ 보온/예약/찜기용량: 4L/8가지자동메뉴/2시간자동보온/최대8시간보온/열차단손잡이"
+        },
+        {
+          "name": "테팔 VC1451",
+          "price": "114200",
+          "mall": "다나와",
+          "link": "https://prod.danawa.com/info/?pcode=28324874&keyword=%EC%A0%84%EA%B8%B0%EC%BF%A0%EC%BB%A4+%ED%83%80%EC%9D%B4%EB%A8%B8&cate=103664",
+          "image": "https://img.danuri.io/catalog-image/874/324/028/1fe56a58876141f8ae5a346f9825094a.jpg",
+          "category": "가격비교",
+          "site": "danawa",
+          "spec": "전기찜기/용량: 6L/ 분리형/원형/ 다이얼식/용기재질: 스테인리스/찜기: 2단/[부가] 타이머/외부물주입구/수위표시창"
+        }
+      ]
+    }
+  }
+}

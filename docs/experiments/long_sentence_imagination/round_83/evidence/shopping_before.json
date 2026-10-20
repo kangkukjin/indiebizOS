@@ -1,0 +1,23 @@
+{
+  "current": {
+    "chars": 1111347,
+    "cards": 0,
+    "result": {
+      "success": false,
+      "error_type": "source_changed",
+      "total": 0,
+      "error": "다나와 검색 구조를 확인할 수 없습니다(상품 카드·결과 없음 표지 모두 미발견). 0건으로 해석하지 마세요."
+    },
+    "seconds": 0.45722629223018885,
+    "returned_items": 0
+  },
+  "minimal": {
+    "chars": 1063776,
+    "cards": 80,
+    "result": {
+      "total": 15
+    },
+    "seconds": 0.9601072501391172,
+    "returned_items": 15
+  }
+}

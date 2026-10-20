@@ -1,0 +1,172 @@
+[
+  {
+    "check": "input_unchanged",
+    "name": "index.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "shopping/first.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "shopping/alternate.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "reviews/search.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "shopping/failed.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "shopping/empty.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "makers/sr31.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "makers/hr28.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "makers/mr44.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "makers/os52.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "makers/nr67.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "makers/gr81.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "reviews/model_counts.json",
+    "ok": true
+  },
+  {
+    "check": "input_unchanged",
+    "name": "reviews/washing.json",
+    "ok": true
+  },
+  {
+    "check": "sr31_auto_unknown",
+    "file": "trainer_t4_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "os52_model_reviews",
+    "file": "trainer_t4_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "mr44_fixed_pot",
+    "file": "trainer_t4_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "sources_preserved",
+    "file": "trainer_t4_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "sr31_auto_unknown",
+    "file": "trainer_t3_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "os52_model_reviews",
+    "file": "trainer_t3_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "mr44_fixed_pot",
+    "file": "trainer_t3_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "sources_preserved",
+    "file": "trainer_t3_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "sr31_auto_unknown",
+    "file": "trainer_t1_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "os52_model_reviews",
+    "file": "trainer_t1_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "mr44_fixed_pot",
+    "file": "trainer_t1_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "sources_preserved",
+    "file": "trainer_t1_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "sr31_auto_unknown",
+    "file": "trainer_t3_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "os52_model_reviews",
+    "file": "trainer_t3_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "mr44_fixed_pot",
+    "file": "trainer_t3_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "sources_preserved",
+    "file": "trainer_t3_v3_run.json",
+    "ok": true
+  },
+  {
+    "check": "sr31_auto_unknown",
+    "file": "trainer_t2_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "os52_model_reviews",
+    "file": "trainer_t2_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "mr44_fixed_pot",
+    "file": "trainer_t2_v1_run.json",
+    "ok": true
+  },
+  {
+    "check": "sources_preserved",
+    "file": "trainer_t2_v1_run.json",
+    "ok": true
+  }
+]

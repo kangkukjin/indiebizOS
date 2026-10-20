@@ -1,0 +1,5 @@
+{
+  "command": "#think 어머니가 국이나 라면을 끓일 전기쿠커를 찾아줘. 타이머가 있어서 시간이 지나면 꺼지고, 다이얼처럼 조작이 쉬우면 좋겠어. 후기가 충분한 제품을 비교해서 추천해줘.\n제공된 가상 시장 자료 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_83회차/inputs 를 사용해 판단해줘. 시작 자료는 index.json이야. 네 이전 결과는 재사용해도 돼. 다른 실행자의 결과나 trainer·harness·정답 자료는 읽지 마. 조회와 지정 출력 파일 저장만 하고 구매·결제·문의 발송·예약은 하지 마. 비교 결과를 간결하게 답하고 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_83회차/ai/fixed_think/t1.md 에도 저장해줘.",
+  "origin": "training",
+  "background": true
+}

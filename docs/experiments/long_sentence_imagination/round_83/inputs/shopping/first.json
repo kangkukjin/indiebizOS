@@ -1,0 +1,9 @@
+{
+  "status": "partial",
+  "text": "타이머 다이얼 전기쿠커 첫 검색. 전체 추정 85건 중 3건 반환. 서림 SR31(timer=true), 하루 HR28(시간 종료시 전원 차단), 모람 MR44(분리형). 표시된 후기 수는 상세에서 모델을 확인해야 한다.",
+  "links": [
+    "makers/sr31.json",
+    "makers/hr28.json",
+    "makers/mr44.json"
+  ]
+}

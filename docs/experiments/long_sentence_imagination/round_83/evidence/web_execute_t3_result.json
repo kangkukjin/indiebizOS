@@ -1,0 +1,21 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "L83_training",
+    "task_id": "task_f1093e9cb72848d6b3ed23ed6d63eba7"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_f42952b4dfbf267e79cd",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "web_execute",
+  "requester_channel": "rehearsal",
+  "created_at": "2026-10-20 01:11:29",
+  "completed_at": "2026-10-20 01:14:19",
+  "pending_children": 0,
+  "children": [],
+  "result": "같은 조건(냄비나 조절기 분리 세척, 쉬운 조작, 후기 충분, 내장 타이머 불필요)으로 추가 후보를 찾았습니다. 가장 쓸 만한 새 후보는 **리큅 LEP-P20**입니다. 다만 국·라면을 두루 쓴다면 앞 턴의 **보아르 혼요**가 여전히 1순위입니다.\n\n| 제품 | 떼어서 씻는 부분 | 조작 | 용량/출력 | 가격 | 후기 |\n|---|---|---|---|---|---|\n| **리큅 LEP-P20** | 내솥(물빠짐 구멍 있음) | 노브 다이얼 | 2L / 750W | 6.5만 원 | review101 1,336개, 4.8점 · 오늘의집 57개, 4.7점 |\n| 단미 사각 DA-MEK04 | 냄비 | 다이얼 | 2.5L / 800W | 4.3~6.9만 원 | 쿠팡 139개, 4.7점 · review101 399개 |\n| 자이글 파티쿠커 ZEC-A300 | **온도조절기**(조절기 빼고 냄비째 세척) | 다이얼 | 1.7L / 1200W | 약 9.7만 원 | 11번가 201개, 4.5점 |\n| 키친아트 팬가마솥 WP-157JL | 온도조절기 | 다이얼 | 1500W, 폭 47cm | 6.3만 원 | 다나와 92개, 4.9점 |\n| 미라스 트윈팟 CA-2W15WH | 냄비 | 다이얼 | 1.5L / 800W | 4.5만 원 | 다나와 30개(적음) |\n\n후기 수 중 다나와가 아닌 수치(review101·쿠팡·오늘의집)는 검색 결과 요약에서 가져왔습니다. review101은 판매처 전체 후기를 센 숫자라 다른 상품 후기가 섞였을 수 있습니다. 분리한 냄비를 물에 통째로 담가도 되는지는 설명서로 확인하지 못했고, 다나와 스펙의 분리 표기로 판단했습니다.\n\n- **용도별 선택**\n  - 라면을 자주 끓이신다면 리큅 LEP-P20이 잘 맞습니다. 공식몰 후기 중 \"손잡이 쪽이 떨어진 채 왔는데 문의에 답이 없다\"는 불만이 1건 있습니다.\n  - 조절기를 떼고 냄비째 씻는 방식을 원하시면 자이글 ZEC-A300입니다. 다만 가장 비쌉니다.\n  - 키친아트 팬가마솥은 넓고 얕은 부침팬 모양이라 라면에는 비효율적입니다.\n- **후기는 많지만 뺀 제품**\n  - 단미 멀티쿠커 3L(쿠팡 2,545개): 다나와 기준으로 같은 계열 제품이 일체형이고 전원 코드만 빠집니다.\n  - 락앤락 전기 멀티쿠커 3L(쿠팡 1,138개): 다나와 기준으로 일체형입니다.\n  - 두 제품 모두 쿠팡 상품이 다나와의 그 모델과 같은지는 확인하지 못했습니다.\n  - 에버홈 EV-MP8000·태유 TC-8200G는 냄비가 분리되지만 레버를 미는 슬라이드식이고 6~8만 원대라 순위를 낮췄습니다.\n\n**근거 링크:**\n- 리큅 LEP-P20: https://prod.danawa.com/info/?pcode=18434498 · https://www.review101.kr/review/a90ead81-9295-458b-93d1-575083022d72\n- 단미 DA-MEK04: https://prod.danawa.com/info/?pcode=69698441 · https://www.coupang.com/vp/products/8409221232\n- 자이글 ZEC-A300: https://prod.danawa.com/info/?pcode=8926790 · https://www.11st.co.kr/products/5072354701\n- 키친아트 팬가마솥: https://prod.danawa.com/info/?pcode=10474707\n- 미라스 트윈팟: https://prod.danawa.com/info/?pcode=24703562\n\n가격과 후기 수는 오늘 조회한 값입니다. 구매나 문의는 하지 않았습니다.\n\n저장 파일: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_83회차/ai/web_execute/t3.md",
+  "error": null,
+  "status_url": "/projects/L83_training/agents/agent_979cb528/tasks/task_f1093e9cb72848d6b3ed23ed6d63eba7"
+}

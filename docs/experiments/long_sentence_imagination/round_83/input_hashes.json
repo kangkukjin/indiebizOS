@@ -1,0 +1,16 @@
+{
+  "index.json": "e0a931b43fa0e954200d2bd606d0d820ac5c4d84dc88a718955f683f926b4646",
+  "shopping/first.json": "a0805b556c52e32f261d72983adb57f4eb7f90346393838c6ca4c5a03bfb570b",
+  "shopping/alternate.json": "751a2d54f759daa526925b6cfd0653e7ad2e023360b741a53b53ba28aa2dbf4e",
+  "reviews/search.json": "1a47b35b1086457b0893796af22ea1b66f4c0a376a624738b4bbf1feaa3c1c3e",
+  "shopping/failed.json": "80786872510d72e796c5051d3e34fa03702d4765d0ea636d79445fc99d722f0b",
+  "shopping/empty.json": "598ce2e017c6a9e1d227e6e03e513169bb98aa365559b11b0be5730c6a8e69e8",
+  "makers/sr31.json": "100a01545379a4df3e425925d640310b3b29ea28454bb674960e3a5c98cb4b82",
+  "makers/hr28.json": "b8bd0da6112d7139abdbaa0c4c21e9c2ec0a5ce5f038b97fd8a21bae410e5b2e",
+  "makers/mr44.json": "b31b4e661d09d852644d8ce9c45c94994830be6d69fa5d9c66552bbd7dfd073b",
+  "makers/os52.json": "2ed08d1f331ad38f6ac7538749adaa63f8d238aee9aadcd2275b3fa3b7449283",
+  "makers/nr67.json": "cbc0e0e5cc5e60d3821e1983e030d4d48accf1a79b915b955b4b1a7d564dafaa",
+  "makers/gr81.json": "bd2b11782b237935859a695200deddd459264b3d317ebcdbb73422d4d766a545",
+  "reviews/model_counts.json": "689d4dba5f6732cfedc60d96e853bcd7dfad36e56a18b439a1100c41c51a077a",
+  "reviews/washing.json": "4cd6dacfb866796c6433c1cbbadfaa2d20b43bf2a37e0d188ce8522b97f39588"
+}

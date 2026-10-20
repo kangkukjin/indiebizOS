@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "usage": {
+    "steps": 12,
+    "rows": 0,
+    "elapsed_ms": 6545
+  },
+  "counts": [
+    15,
+    3
+  ],
+  "sample_names": [
+    [
+      "삼성전자 비스포크 큐커 오븐 MC32B7388L",
+      "쿠랩 스마트멀티쿠커 1단",
+      "샤오미 Xiaomi 멀티쿠커 1.5L"
+    ],
+    [
+      "AULA F108 PRO 유무선 기계식 치즈 화이트 한글",
+      "로지텍 KEYS-TO-GO 2 (정품)",
+      "AULA F108 유무선 기계식 스카이 블랙 한글"
+    ]
+  ]
+}

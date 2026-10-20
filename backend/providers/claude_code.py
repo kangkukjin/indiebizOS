@@ -31,6 +31,7 @@ config 예시 (data/system_ai_config.json 등):
 """
 
 import json
+import re
 import os
 import hashlib
 import shutil
@@ -397,6 +398,34 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "웹 자료는 `[sense:search]`·`[sense:crawl]`로 획득한다(WebSearch/WebFetch는 비활성)."
     )
 
+    # 발화의 지배 문자 → CLI `language` 설정값 (CLI 는 "언어 이름 또는 ISO 코드"를 받는다).
+    # 세계의 명사(사용자의 언어)는 데이터다 — 사용자 프로필에 언어 항목이 생기면 그것이 이 파생을 이긴다.
+    SCRIPT_LANGUAGES = {"hangul": "Korean"}
+    LANGUAGE_MIN_LETTERS = 5
+
+    @classmethod
+    def output_language_for(cls, message: Optional[str]) -> Optional[str]:
+        """이 턴 사용자 발화의 언어 → CLI `language` 설정값. 판정 불가면 None(키 생략 = CLI 기본
+        "Match the user's language").
+
+        왜 여기인가(L84-3, docs/ANSWER_LANGUAGE_TRACE_2026_10_20.md): 공용 프롬프트의 "사용자가 쓰는
+        언어로 응답하라"는 실제로 전달되는데도(마지막 절 6행) Claude Code 하네스의 영어 페르소나·영어
+        system-reminder 와의 경합에서 작업 보고 문체가 영어로 기운다(L81 14/16·L83 17/24·L84 0/14 한국어).
+        같은 층의 스위치(CLI 가 `# Language / Always respond in …` 블록을 자기 책임으로 주입)로 묶는다 —
+        프롬프트 문장 0, 다른 공급자 영향 0, 모델 교체와 무관.
+        발화 = 메시지에서 하네스 배경(`</turn_context>`) 뒤의 본문. 경로·코드 토큰은 세지 않는다.
+        """
+        text = message or ""
+        tail = text.rsplit("</turn_context>", 1)
+        text = tail[1] if len(tail) == 2 else text
+        text = re.sub(r"`[^`\n]*`", " ", text)                       # 코드 스팬
+        text = " ".join(t for t in text.split() if "/" not in t and "\\" not in t)   # 경로·URL
+        hangul = len(re.findall(r"[가-힣]", text))
+        latin = len(re.findall(r"[A-Za-z]", text))
+        if hangul >= cls.LANGUAGE_MIN_LETTERS and hangul > latin:
+            return cls.SCRIPT_LANGUAGES["hangul"]
+        return None
+
     @classmethod
     def native_hook_settings(cls) -> Dict[str, Any]:
         """네이티브 도구에도 감독의 중단·개입 경계를 유지한다."""
@@ -408,6 +437,15 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         }]}}
 
     # ================= 세션 =================
+
+    def _turn_settings(self) -> Dict[str, Any]:
+        """`--settings` JSON = 네이티브 훅 + (판정되면) 이 턴 발화 언어. resume 세션에도 CLI 가
+        settings_sync 로 블록을 다시 주입한다(2026-10-20 실측, 세션 aa56fe43)."""
+        settings = self.native_hook_settings()
+        language = self.output_language_for(getattr(self, "_turn_message", ""))
+        if language:
+            settings["language"] = language
+        return settings
 
     @classmethod
     def tool_policy_fingerprint(cls) -> str:
@@ -503,8 +541,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                 "--allowed-tools", ",".join(self.EAGER_TOOLS),
                 # 명시 차단: indiebizOS UI와 연결되지 않은 도구 (AskUserQuestion 등)
                 "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS),
-                # 네이티브 호출도 감독 경계에 연결한다
-                "--settings", json.dumps(self.native_hook_settings(), ensure_ascii=False),
+                # 네이티브 호출도 감독 경계에 연결한다 + 이 턴 발화 언어를 CLI 자체 스위치로(L84-3)
+                "--settings", json.dumps(self._turn_settings(), ensure_ascii=False),
             ]
 
         # allowed-tools is permission, not an MCP schema allowlist. Explicitly

@@ -782,6 +782,9 @@ class CliSubprocessProvider(BaseProvider):
         self._pending_map_tags = []
         self._seam = SeamTracker()          # 이 턴의 셸↔IBL 이음매(인접·모델 경유)
         self._model_rounds = 0              # 이 턴의 모델 응답(실행 라운드) 계수 — _note_model_round 가 올린다
+        # 이 턴의 원 메시지(turn_context + 사용자 명령). 벤더 어댑터가 명령 조립 때 사용자 발화의
+        # 언어 같은 턴 속성을 읽는 자리 — 이력 직렬화·이미지 접두 전의 원문이다(L84-3, 2026-10-20).
+        self._turn_message = message or ""
         # 벤더 어댑터가 턴 사이에 들고 있는 상태도 함께 비운다
         self._reset_turn_state()
 

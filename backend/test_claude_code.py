@@ -69,3 +69,53 @@ def test_oneshot_passes_disk_persistence_policy_to_claude(monkeypatch):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+# ── L84-3 (2026-10-20): 발화 언어 → CLI `language` 스위치 (docs/ANSWER_LANGUAGE_TRACE_2026_10_20.md R1) ──
+
+KO_T1 = ('#execute 온라인 강좌에서 같은 질문이 반복됩니다. 자료를 보고 FAQ 초안을 만들어 주세요.\n'
+         '자료는 /Users/x/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-20_84회차/inputs 에 있는 '
+         '사본이고 README.md가 색인이야. 산출물은 /Users/x/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/'
+         '2026-10-20_84회차/ai/ai_execute 폴더에 저장해 줘.')
+WRAPPED = '<turn_context note="이번 턴 한정 부속 참고 정보.">\n# 현재 시각\n2026-10-20 10:51\n' + ('한국어 배경 자료 ' * 80) + '\n</turn_context>\n\n'
+
+
+def _settings_of(cmd):
+    import json
+    return json.loads(cmd[cmd.index('--settings') + 1]) if '--settings' in cmd else None
+
+
+@pytest.mark.parametrize('message, expected', [
+    (KO_T1, 'Korean'),                                      # 경로가 길어도 발화는 한국어
+    (WRAPPED + KO_T1, 'Korean'),                            # turn_context 뒤 본문으로 판정
+    (WRAPPED + '#execute Please summarize the FAQ draft in three lines.', None),   # 배경은 한국어, 발화는 영어
+    ('#execute Fix the failing test in backend/test_x.py', None),
+    ('#execute 테스트', None),                                # 글자 수 미달 → 판정 보류
+    ('', None),
+])
+def test_output_language_follows_the_users_utterance(message, expected):
+    assert ClaudeCodeProvider.output_language_for(message) == expected
+
+
+def test_language_key_rides_native_hook_settings_only_on_tool_turns():
+    provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')
+    provider._binary_path = 'claude'
+    provider._turn_message = WRAPPED + KO_T1
+    settings = _settings_of(provider._build_command(mcp_config_path='/tmp/example.json'))
+    assert settings['language'] == 'Korean' and 'hooks' in settings
+    provider._turn_message = '#execute Fix the failing test in backend/test_x.py'
+    settings = _settings_of(provider._build_command(mcp_config_path='/tmp/example.json'))
+    assert 'language' not in settings and 'hooks' in settings
+    # 원샷(tools_mode)·resume 은 종전대로: 원샷엔 --settings 자체가 없고, resume 은 같은 규칙
+    provider._turn_message = KO_T1
+    assert _settings_of(provider._build_command(tools_mode='none')) is None
+    resumed = provider._build_command(mcp_config_path='/tmp/example.json', resume_session_id='prior')
+    assert _settings_of(resumed)['language'] == 'Korean' and '--resume' in resumed
+
+
+def test_process_message_stream_records_turn_message_before_build(monkeypatch):
+    provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')
+    provider._binary_path = 'claude'
+    provider._client = None          # 초기화 전 조기 반환 경로 — 턴 상태 초기화는 그보다 먼저다
+    list(provider.process_message_stream(KO_T1, history=[]))
+    assert provider._turn_message == KO_T1

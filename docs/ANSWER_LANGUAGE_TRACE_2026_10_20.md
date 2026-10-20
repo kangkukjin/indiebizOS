@@ -1,13 +1,13 @@
 # L84-3 답변 언어 추적 — 실제 모델 입력·공급자 전달·재현 (2026-10-20)
 
-84회차(`3c7f08ff`, [report §4 L84-3](experiments/long_sentence_imagination/round_84/report.md))에서 프로젝트 에이전트 EXECUTE 경로(ClaudeCode 공급자, opus)가 한국어 발화·역할·자료에 대해 7턴 중 6턴 채팅 답변을 영어로 썼다. 이 문서는 **규칙이 실제로 모델에 전달됐는지, 어디에 놓였는지, 공급자가 어떻게 넘기는지**를 코드와 기록으로 확정하고, 세 가설을 판정하며, 수리안을 제안만 한다(수리는 사용자 판정 뒤).
+84회차(`3c7f08ff`, [report §4 L84-3](experiments/long_sentence_imagination/round_84/report.md))에서 프로젝트 에이전트 EXECUTE 경로(ClaudeCode 공급자, opus)가 한국어 발화·역할·자료에 대해 7턴 중 6턴 채팅 답변을 영어로 썼다. 이 문서는 **규칙이 실제로 모델에 전달됐는지, 어디에 놓였는지, 공급자가 어떻게 넘기는지**를 코드와 기록으로 확정하고, 세 가설을 판정하며, 수리안을 제안한다. 사용자 판정(같은 날) 뒤 R1 을 구현·재검증했다 — §9.
 
 ## 1. 결론
 
 - **규칙은 전달됐다.** `base_prompt_v6.md`의 "사용자가 쓰는 언어로 응답하라"는 실제 시스템 프롬프트의 **마지막 절(우리 본문) 6행, 179자째**에 그대로 실렸다. CLI 자체 절에는 영어로 답하라는 지시가 없고, 우리 본문이 CLI 절보다 **뒤**에 놓인다. 따라서 "공급자 전달 순서·위치" 가설(①)은 **기각**.
 - **전달이 같아도 결과는 회차마다 다르다.** 같은 CLI(2.1.299)·같은 모델(claude-opus-5-5)·같은 12절 구조·같은 규칙 위치에서 L81 은 16건 중 14건 한국어, L83 은 24건 중 17건, L84 는 14건 중 0건이었다. 원인은 결정적 전달 결함이 아니라 **CLI 하네스의 영어 맥락(영어 페르소나 절·영어 system-reminder) 아래에서 '작업 보고' 문체가 영어로 기우는 확률적 선택**이다. 재현에서도 같은 세션이 "#execute 테스트"에는 한국어로, 바로 다음 한국어 요약 요청에는 영어로 답했다.
 - **파일/채팅 단계 분리(③)는 코드상 없다.** Write 도구 호출과 채팅 텍스트는 같은 CLI 세션의 같은 응답 루프에서 나온다(`claude_code.py` 스트림 파서가 text 블록을 그대로 답으로 넘김). 관측된 분리는 "독자가 한국어인 산출물"과 "하네스에 보내는 보고"의 분리다.
-- **수리안(제안만)**: 프롬프트 문장을 늘리지 않고, ClaudeCode 공급자 어댑터가 이미 넘기는 `--settings` JSON에 CLI 자체 스위치 `language` 를 싣는다. 값은 사용자 발화에서 파생(데이터). CLI가 `# Language / Always respond in …` 블록을 자기 책임으로 주입하며(실측), 영어 요청에도 한국어로 답했다. 소유 위치·재검증 조건은 §6.
+- **수리안(→ §9 구현 완료)**: 프롬프트 문장을 늘리지 않고, ClaudeCode 공급자 어댑터가 이미 넘기는 `--settings` JSON에 CLI 자체 스위치 `language` 를 싣는다. 값은 사용자 발화에서 파생(데이터). CLI가 `# Language / Always respond in …` 블록을 자기 책임으로 주입하며(실측), 영어 요청에도 한국어로 답했다. 소유 위치·재검증 조건은 §6.
 
 ## 2. 증거 경로
 
@@ -97,3 +97,21 @@
 ## 8. 실측 추가 — resume 세션의 언어 블록 주입
 
 haiku 원샷으로 설정 없이 세션을 만든 뒤(첫 턴은 CLI 측 도구 호출 파싱 오류로 답 없음), 같은 세션을 `--resume` + `--settings '{"language":"Korean"}'` 로 이어 영어 요청 "Now say one more short sentence about the weather." 를 보냈다 → 트랜스크립트에 `attachment.type=language` 가 resume 시점(02:44:36Z)에 기록됐고 답변은 "오늘은 가을 하늘이 높고 맑아서 산책하기 좋은 날씨예요." 였다. 즉 **설정이 나중에 붙은 resume 세션에도 블록이 주입된다**(1회 실측, 세션 `aa56fe43…`). R1 재검증 3 은 이 실측으로 1차 충족이며, 구현 때 EXECUTE 경로의 실제 resume 세션에서 한 번 더 확인한다.
+
+## 9. R1 구현과 재검증 (2026-10-20 11:45~12:00, 사용자 판정 뒤)
+
+**구현** (프롬프트 문장 0, 새 어휘 0, 다른 공급자 영향 0):
+- `backend/providers/cli_provider.py` `process_message_stream`: 턴 상태 초기화 자리에 `self._turn_message = message` 한 줄 — 벤더 어댑터가 이 턴 발화를 읽는 자리(이력 직렬화·이미지 접두 전 원문).
+- `backend/providers/claude_code.py`: `output_language_for(message)` — `</turn_context>` 뒤 본문에서 코드 스팬·경로 토큰을 뺀 뒤 한글 ≥ 5 이고 한글 > 라틴이면 `"Korean"`, 아니면 None(키 생략 = CLI 기본 "Match the user's language"). `_turn_settings()` 가 `native_hook_settings()` 에 `language` 키를 합쳐 기존 `--settings` 인자로 나간다. 원샷(tools_mode)·의식·감독 경로는 종전대로(`--settings` 없음). `SCRIPT_LANGUAGES = {"hangul": "Korean"}` 가 데이터 자리 — 사용자 프로필에 언어 항목이 생기면 그것이 우선.
+- `backend/test_claude_code.py` 시험 3종 추가(발화 판정 6사례·설정 합성/원샷/resume·턴 메시지 기록).
+
+**재검증 결과** (증거: [evidence/L84-3_r1_verify.json](experiments/long_sentence_imagination/round_84/evidence/L84-3_r1_verify.json), 원자료 `outputs/…/repro_L84-3/r1_verify/`):
+
+| 조건 | 결과 |
+| --- | --- |
+| 1. 단위 시험 | `test_claude_code.py`+`test_cli_provider_gates.py` 43건 통과. 층 가드·파일 크기 통과. |
+| 2. 새 에이전트 3개(ai_lang1~3, fresh) × T1(FAQ)·T4("재참여율?")·채팅 요약 | **최종 답변 9/9 한국어**(수리 전 L84 0/14). 파일 본문 한국어 유지(faq_draft.md 한글 927~1,371자). 중간 진행 한 줄은 ai_lang2 에서 2건 영어("Hashes match the manifest. Writing the draft now.", "File changed on disk; read current content before summarizing."), ai_lang1·3 은 0건 — L81·L83 에서도 보이던 부류이며 최종 답은 모두 한국어. |
+| 3. resume 세션(ai_execute, 영어 답 9턴 뒤) | 한국어 요청 1턴 → **한국어** 답. 트랜스크립트에 `attachment.type=language` 가 resume 시점(02:59:39Z)에 기록됨 — 실제 EXECUTE 경로에서도 settings_sync 주입 확인. |
+| 4. 트랜스크립트 구조 | 네 세션 모두 `language` attachment 1건(`<system-reminder># Language Always respond in Korean …`), `prompt_snapshot` 12절 불변(우리 본문 마지막 절). |
+
+**남은 관찰**: 중간 진행 한 줄의 영어(2/5)는 CLI 가 "Technical terms … remain in their original form" 을 허용하는 범위에서 모델이 고른 것이라 수리 대상으로 보지 않는다(최종 답·파일은 전부 한국어). 영어 발화에는 키가 생략되므로 영어 사용자 회귀는 없다(시험으로 고정). 부수: 재검증 중 다른 세션의 backend 편집으로 재기동 2회가 끼어 하네스가 503 재시도로 넘겼다.

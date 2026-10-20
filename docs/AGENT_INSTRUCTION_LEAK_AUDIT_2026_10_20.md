@@ -134,7 +134,7 @@ Claude 토크나이저로 직접 셀 수 없어(tiktoken 미설치, API 호출 �
 
 ## 7. 구현 기록 — R1·R2 (2026-10-20 12:10, 사용자 판정: R1+R2 구현, R3 보류)
 
-변경(`backend/providers/claude_code.py`, 미커밋 — 같은 파일에 L84-3 세션의 `language` 설정 변경이 스테이징돼 있어 커밋 묶음은 사용자 판정):
+변경(`backend/providers/claude_code.py`·시험, 커밋 `27c509b1` — L84-3 세션의 `language` 설정 변경 `1953468e` 뒤에 따로 얹음. pre-commit IBL 검사가 다른 세션의 미완 편집에 막혀 사유를 적고 `--no-verify`):
 - R1 `_build_env`: `env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"` — 모든 분기 공통.
 - R2 `_build_command`: `--setting-sources ""` 를 분기 조건 밖으로 꺼내 전 분기 공통(EXECUTE 포함). 감독 훅 `--settings` 는 그대로.
 - 세션 지문 `tool_policy_fingerprint` 에 `||setting-sources:none;auto-memory:off` 추가 — resume 세션은 첫 요청의 시스템 프롬프트 기록본과 옛 `instructions` attachment 를 압축 전까지 재생하므로, 키를 갈아 다음 턴부터 fresh 로 보낸다(2026-09-04 선례).

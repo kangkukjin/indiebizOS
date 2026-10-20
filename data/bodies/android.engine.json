@@ -9,6 +9,7 @@
     "base/codex_rollout",
     "base/coding_process",
     "base/completion_lease",
+    "base/control_conditions",
     "base/corpus_policy",
     "base/desktop_notify",
     "base/device_registry",
@@ -182,6 +183,7 @@
     "datastore/calendar_rules",
     "datastore/capability_history",
     "datastore/coding_store",
+    "datastore/control_observations",
     "datastore/conversation_db",
     "datastore/conversation_sessions",
     "datastore/decision_ledger",
@@ -619,8 +621,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 544,
-    "engine": 512,
+    "total": 546,
+    "engine": 514,
     "blocklist": 32
   }
 }

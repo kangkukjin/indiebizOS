@@ -94,6 +94,7 @@
       "python_bridge_environment.py",
       "python_bridge_values.py",
       "python_bridge_worker.py",
+      "safari_control.py",
       "spreadsheet_followup.py",
       "targeted_code_read.py",
       "test_ai_tips_report.py",

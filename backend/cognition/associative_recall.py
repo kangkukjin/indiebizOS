@@ -382,6 +382,22 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                           if did not in live_ids and (r.get("registration") or {}).get("context")
                           and (r.get("registration") or {}).get("adapter") != "network-api")
         rows, names = [], []
+        # 본체 행(CONTROL_DRIVER_DESIGN_2026_10_20 §5.1) — 드라이버(`fn:PC제어` __local__)가 있는데
+        # 소개에 없어 AI 가 화면 조작으로 가던 유일한 면. 매 턴 고정 비용은 이 행 하나다.
+        import sys as _sys
+        local_platform = "windows" if _sys.platform == "win32" else _sys.platform
+        local_attrs = {"name": "본체", "device_id": "__local__", "adapter": "local",
+                       "connected": "true", "os": local_platform}
+        if guide := control_guides.get(local_platform):
+            local_attrs["control_guide"] = guide
+        try:
+            import control_observations
+            if observed := control_observations.count("device:__local__"):
+                local_attrs["observations"] = observed
+        except Exception:
+            pass
+        rows.append("  <limb " + " ".join(f"{k}={quoteattr(str(v))}" for k, v in local_attrs.items()) + "></limb>")
+        names.append("본체")
         for e in candidates:
             rec = records.get(e.get("device_id"))
             if rec is None:
@@ -398,19 +414,21 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                      "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
             if guide := control_guides.get(str(platform).lower()):
                 attrs["control_guide"] = guide
+            if isinstance(reg.get("observations"), list) and reg["observations"]:
+                attrs["observations"] = len(reg["observations"])   # 개수만 — 본문은 다룰 때 읽는다(§5.3)
             attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
             context = escape(reg.get("context") or "")
             rows.append(f'  <limb {attr_text}>{context}</limb>')
             names.append(alias)
-        if not rows:
-            return None
-        note = ("등록된 원격 장치. 본문은 사용자가 알려준 배치·용도이며 현재 연결·출력·위치를 보장하지 않는다. "
+        note = ("등록된 장치와 본체. 본문은 사용자가 알려준 배치·용도이며 현재 연결·출력·위치를 보장하지 않는다. "
                 "connected는 최근 접속 관측이며 unknown은 미확인이다. 네트워크 기기의 false는 응답 없음이며 전원 꺼짐을 뜻하지 않는다. paused=true이면 실행 중지 상태다. "
                 "이름·장소·용도로 대상을 고르고, [limbs:guestpc]{limb: \"이름\", op: info}로 "
                 "PC·폰의 현재 상태와 지원 실행 방식을 확인한다. adapter=network-api는 IndieBiz OS나 헬퍼 없이 제어하는 기기이며 guestpc 대신 control_guide의 스크립트를 허브에서 실행한다. "
                 "control_guide가 있는 장치를 제어할 때는 해당 가이드를 필요할 때 한 번 읽고 준비된 스크립트를 우선 쓴다. "
                 "가이드와 호출 계약이 현재 문맥에 있으면 다시 읽거나 코드를 새로 작성하지 않는다. "
-                "이름·장소·용도로 원격 대상을 지정하지 않은 시스템 상태는 본체([sense:host]).")
+                "원격 대상을 지정하지 않은 시스템 상태 조회는 본체([sense:host])다. 본체 제어(음량·주소 열기·잠금·앱 조작)는 "
+                "device_id __local__ 행의 control_guide 를 따르고, 그 가이드에 없는 동작만 [limbs:screen] 탐색으로 간다. "
+                "observations 는 그 대상의 관측 행 수이며 제어 전에 [self:limb]{op: list}로 읽는다.")
         return Block("connected_limbs", "connected_limbs",
                      f"<connected_limbs note='{note}'>\n" + "\n".join(rows) + "\n</connected_limbs>", ids=names)
     return _step("limb_presence", run)

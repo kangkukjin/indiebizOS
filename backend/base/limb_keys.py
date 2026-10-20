@@ -425,9 +425,14 @@ def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter=
 
 
 def resident_update(device, **changes):
-    allowed = {"state", "paused", "wake", "capabilities", "last_seen", "removal_receipt", "context"}
+    allowed = {"state", "paused", "wake", "capabilities", "last_seen", "removal_receipt", "context", "observations"}
     if changes.keys() - allowed:
         raise ValueError("invalid_registration_field")
+    if "observations" in changes:
+        # 제어 관측 칸(CONTROL_DRIVER_DESIGN §3) — 행 검증·추가·정정의 주인은 control_observations 이다.
+        # 여기서는 "목록" 모양만 지키고 통째로 받는다(그 모듈이 병합한 전체를 넘긴다).
+        if not isinstance(changes["observations"], list) or len(changes["observations"]) > 500:
+            raise ValueError("관측 칸은 500행 이내 목록이어야 합니다")
     if "context" in changes:
         context = changes["context"]
         if not isinstance(context, str) or len(context) > 1000:

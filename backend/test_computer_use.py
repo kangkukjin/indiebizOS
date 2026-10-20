@@ -25,6 +25,8 @@ def test_screenshot_path_is_guarded_and_writes_exact_bytes(monkeypatch, tmp_path
         return {'base64': base64.b64encode(raw).decode(), 'media_type': 'image/png'}
     monkeypatch.setattr(module, '_capture_screenshot', capture)
     monkeypatch.setattr(module, '_get_screen_size', lambda: (1280, 800))
+    import thread_context
+    monkeypatch.setattr(thread_context, 'get_task_origin', lambda: 'user')   # 입회 턴 — 실행 전 문맥 검사 통과
     context = ToolContext(str(tmp_path), 'computer_op')
     monkeypatch.setattr(context, '_scope_refusal', lambda path, guard=None: None)
     legacy = module.execute({'op': 'screenshot'}, context)
@@ -46,6 +48,10 @@ def screen(monkeypatch):
     spec = importlib.util.spec_from_file_location('screen_focus_handler', ROOT / 'data/packages/installed/tools/computer-use/handler.py')
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    # 이 묶음은 사용자가 입회한 턴의 앱 가드를 검사한다 — 실행 전 문맥 검사(CONTROL_DRIVER §6)는
+    # test_control_driver 가 따로 본다. 출처 미세팅(None)은 화면을 쓸 수 없는 문맥이라 먼저 거절된다.
+    import thread_context
+    monkeypatch.setattr(thread_context, 'get_task_origin', lambda: 'user')
     monkeypatch.setattr(mod, '_capture_png', lambda: 'synthetic.png')
     monkeypatch.setattr(mod, '_ocr_lines', lambda path: [])
     return mod

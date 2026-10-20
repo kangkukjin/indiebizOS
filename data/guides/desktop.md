@@ -3,6 +3,11 @@
 `[limbs:screen]{op: ...}` 단일 액션으로 macOS 화면(좌표 기반, 브라우저 밖 일반 앱)을 제어한다. (구 `[limbs:desktop]` — 2026-06-04 개명)
 브라우저는 `[limbs:browser]{op: "click"}`·`[limbs:browser]{op: "type"}` 등 browser_action을 사용하라. 데스크톱과 브라우저는 **다른 도구다.**
 
+## 먼저: 드라이버가 있으면 화면을 더듬지 않는다 (폴백 서열)
+
+화면 조작은 **계약 통로가 없는 면**의 탐색 도구다. 본체를 다룰 때는 ① 계약 통로 — 장치 소개의 본체 행(`device_id="__local__"`)이 가리키는 `control_guide`(음량·주소 열기·잠금은 `fn:PC제어`, 앱은 `guide_db` 의 `control_surfaces` 가이드, 없으면 셸·`open`·`defaults`·AppleScript 사전) → ② AX 동작 — `snapshot` 의 ref 로 AXPress(좌표 불필요) → ③ 좌표 — snapshot center·OCR 좌표, 사용자 입회. 이 순서다. `snapshot` 응답에 `control_guide` 가 실리면 앞 앱에 드라이버가 있다는 알림이니 그 가이드를 한 번 읽고 준비된 부품을 쓴다.
+동작마다 조건이 있다 — `needs_front`(앞 앱·포커스 요구: snapshot·wait·screenshot·입력 op 전부), `shared_state`(사용자와 공유하는 상태를 바꿈: 입력 op). `needs_front` 동작은 정기·배경 실행처럼 화면을 쓸 수 없는 문맥에서 **실행 경계가 `SCREEN_CONTEXT_UNAVAILABLE` 로 거절**한다(가이드가 아니라 핸들러가 보장). 요청된 효과는 사용자가 작업 중이어도 실행하고, 요청 범위 밖의 간섭(앞 창 가림·활성 앱 전환)만 피한다 — `expect_app` 가드가 그 도구다. 드라이버 통로가 시간 초과·응답 유실로 **불명확**하면 화면으로 같은 변경을 다시 시도하지 않고 상태를 재조회한다. `screen_info` 가 op 별 조건과 현재 문맥을 돌려준다.
+
 ## 핵심 원리: Snapshot → 판단 → Action → Snapshot
 
 **좌표를 추측하지 말 것.** 클릭 전에 `snapshot`으로 화면을 **읽어서** 좌표를 얻는다.

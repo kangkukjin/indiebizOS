@@ -1137,3 +1137,76 @@ TV제어:
   registered_at: '2026-10-20T02:46:40.371811+00:00'
   created_at: '2026-10-20T02:46:40.371811+00:00'
   timeout: 120
+Safari제어:
+  description: 본체 Safari 의 창·탭 드라이버(조작면 app:com.apple.Safari, macOS 전용). op=contract(동작별 조건·확인 범위)/status(창·탭·현재 탭 조회)/open(url 을 지정 창 끝에 배경 탭으로, 창 없으면 새 창·Safari 꺼져 있으면 launch:true 때만 배경 기동)/switch(window_id,tab 현재 탭 바꾸기)/close(window_id,tab). 어떤 동작도 Safari 를 앞으로 가져오지 않는다. verified 는 변경 뒤 사전 재조회(applescript_tab_readback) 통과이며 화면 표시·페이지 로드는 범위 밖. 시간 초과·응답 유실은 재전송 없이 재조회로 판별하고 안 되면 status unknown. 실패 failure.code=TARGET_MISSING/PERMISSION_REQUIRED/INVALID_ARGUMENT/UNKNOWN. 가이드 safari_control.md.
+  file: safari_control.py
+  interpreter: python
+  registered_at: '2026-10-20T12:00:00'
+  timeout: 60
+  callable_contract:
+    version: 1
+    effects:
+    - unknown
+    required: []
+    params:
+      op: Text
+      url: Text
+      window_id: Number
+      tab: Number
+      launch: Bool
+    defaults:
+      op: status
+    enums:
+      op:
+      - contract
+      - status
+      - open
+      - switch
+      - close
+    result:
+      success: Bool
+      verified: Bool
+    adapter:
+      protocol: registered-json/1
+    variants:
+    - when:
+        op: contract
+      forbidden:
+      - url
+      - window_id
+      - tab
+      - launch
+      result:
+        success: Bool
+        surface: Text
+        supported_platforms: List<Text>
+        actions: Record
+    - when:
+        op: status
+      forbidden:
+      - url
+      - window_id
+      - tab
+      - launch
+    - when:
+        op: open
+      required:
+      - url
+      forbidden:
+      - tab
+    - when:
+        op: switch
+      required:
+      - window_id
+      - tab
+      forbidden:
+      - url
+      - launch
+    - when:
+        op: close
+      required:
+      - window_id
+      - tab
+      forbidden:
+      - url
+      - launch

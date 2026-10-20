@@ -112,13 +112,15 @@ def test_prompt_contains_guide_even_without_heartbeat_or_description(monkeypatch
     row = register()
     monkeypatch.setattr(device_registry, 'live_with_capability', lambda _: [])
     block = recall._connected_limbs(recall.RecallRequest(None, 'TV', []), None)
-    item = ET.fromstring(block.text).find('limb')
-    assert item.attrib['device_id'] == row['device_id']
+    rows = ET.fromstring(block.text).findall('limb')
+    assert rows[0].attrib['device_id'] == '__local__'     # 본체 행이 맨 앞(CONTROL_DRIVER §5.1)
+    item = next(r for r in rows if r.attrib['device_id'] == row['device_id'])
     assert item.attrib['connected'] == 'unknown'
     assert item.attrib['control_guide'] == 'tv_control.md'
     assert 'private-token' not in block.text and '192.0.2.10' not in block.text
     hardware.update(row['device_id'], remove=True)
-    assert recall._connected_limbs(recall.RecallRequest(None, 'TV', []), None) is None
+    rows = ET.fromstring(recall._connected_limbs(recall.RecallRequest(None, 'TV', []), None).text).findall('limb')
+    assert [r.attrib['device_id'] for r in rows] == ['__local__']   # 제거된 TV 는 사라지고 본체 행만 남는다
 
 
 def test_limb_list_and_guestpc_rejection(monkeypatch):

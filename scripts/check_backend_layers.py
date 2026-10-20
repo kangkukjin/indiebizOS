@@ -45,7 +45,7 @@ LAYERS = {
         "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
-        "desktop_notify", "device_registry", "doc_ir", "document_converter",
+        "desktop_notify", "device_registry", "doc_ir", "document_converter", "control_conditions",
         "member_jobs", "member_enrollment", "member_runtime", "member_model_settings", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys", "hardware_registry",
         "ai_candidates", "imap_reader", "logging_utils", "mime_compat", "model_resolver", "model_context", "nip17", "nip44",
         "resident_store", "phone_jobs", "principal", "approval_tokens", "action_requires", "task_receipts", "warehouse_paths", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
@@ -54,7 +54,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
-        "capability_history",
+        "capability_history", "control_observations",
         "member_activity",
         "research_store", "research_questions", "research_evidence", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context",

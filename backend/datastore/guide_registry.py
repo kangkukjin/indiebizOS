@@ -144,6 +144,78 @@ def device_control_guides() -> Dict[str, str]:
         return {}
 
 
+def _control_entries(catalog):
+    """실존하는 .md 등록 항목만 — 경로 탈출·대소문자 보정 없이."""
+    for entry in catalog.get("guides", []):
+        filename = entry.get("file", "")
+        if (not isinstance(filename, str) or Path(filename).name != filename
+                or not filename.endswith(".md") or not (GUIDES_DIR / filename).is_file()):
+            continue
+        yield filename, entry
+
+
+def surface_control_entries() -> Dict[str, Dict]:
+    """조작면 식별자(`app:<bundle id>`·`site:<domain>`) → {file, supported_platforms}.
+
+    `control_platforms` 는 OS 대표 가이드 전용이고 이 칸은 앱·사이트 드라이버 전용이다
+    (CONTROL_DRIVER_DESIGN_2026_10_20 §5.2). 같은 식별자를 둘이 가지면 먼저 만난 것을
+    고르지 않고 둘 다 제외한 뒤 경고로 신고한다 — 조용한 선택은 OS 가이드가 앱 가이드를
+    가리던 setdefault 함정의 재판이다. 앱·사이트 목록은 세계의 명사라 데이터에만 있다.
+    """
+    try:
+        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+        result, owners = {}, {}
+        for filename, entry in _control_entries(catalog):
+            surfaces = entry.get("control_surfaces")
+            if not isinstance(surfaces, list):
+                continue
+            platforms = entry.get("supported_platforms")
+            platforms = [str(x).lower() for x in platforms if isinstance(x, str) and x.strip()] \
+                if isinstance(platforms, list) else []
+            for surface in surfaces:
+                if not isinstance(surface, str) or ":" not in surface or not surface.strip():
+                    continue
+                key = surface.strip().lower()
+                owners.setdefault(key, []).append(filename)
+                result[key] = {"file": filename, "supported_platforms": platforms}
+        for key, files in owners.items():
+            if len(set(files)) > 1:
+                logger.warning("조작면 %s 의 제어 가이드가 둘 이상입니다: %s — 둘 다 결속하지 않습니다.", key, files)
+                result.pop(key, None)
+        return result
+    except (OSError, ValueError, TypeError, AttributeError):
+        logger.warning("조작면 제어 가이드 목차를 읽지 못했습니다.")
+        return {}
+
+
+def surface_control_guides() -> Dict[str, str]:
+    """조작면 식별자 → 가이드 파일명. 장치 소개의 OS 포인터와 같은 모양의 앱·사이트 판."""
+    return {key: value["file"] for key, value in surface_control_entries().items()}
+
+
+def surface_control_guide(kind: str, identifier) -> Optional[Dict]:
+    """탐색 도중 알림용 조회 — snapshot 의 bundle_id(`app`) 또는 URL 호스트(`site`).
+
+    site 는 정확한 호스트부터 상위 도메인으로 올라가며 찾는다(`m.example.com` → `example.com`).
+    찾으면 {surface, control_guide, supported_platforms}, 없으면 None. 모델 호출·파일 본문 읽기 없음.
+    """
+    if not isinstance(identifier, str) or not identifier.strip():
+        return None
+    entries = surface_control_entries()
+    if not entries:
+        return None
+    candidates = [identifier.strip().lower()]
+    if kind == "site":
+        parts = candidates[0].split(".")  # path-ok: 문서 필드 경로가 아닌 호스트명의 상위 도메인 후보
+        candidates = [".".join(parts[i:]) for i in range(len(parts) - 1)] or candidates
+    for name in candidates:
+        found = entries.get(f"{kind}:{name}")
+        if found:
+            return {"surface": f"{kind}:{name}", "control_guide": found["file"],
+                    "supported_platforms": found["supported_platforms"]}
+    return None
+
+
 def catalog_revision() -> str:
     """매 턴 목차와 읽기 응답이 공유하는 내용 지문. 재시작·같은 날 수정에도 바뀐다.
 

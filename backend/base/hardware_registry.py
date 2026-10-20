@@ -81,6 +81,7 @@ def _public(rec):
             "kind": rec["kind"], "adapter": "network-api", "driver": rec["driver"],
             "state": rec["state"], "paused": rec["paused"], "context": rec["context"],
             "capabilities": {"os": rec["platform"]},
+            "observations": deepcopy(rec.get("observations") or []),
         },
     }
 
@@ -163,7 +164,7 @@ def register(alias, connection_config, *, context="", driver="samsung-tizen", ta
         return _public(rec)
 
 
-def update(target, *, remove=False, paused=None, context=None):
+def update(target, *, remove=False, paused=None, context=None, observations=None):
     with _store(write=True) as rows:
         rec = _resolve(target, rows)
         if remove:
@@ -174,6 +175,11 @@ def update(target, *, remove=False, paused=None, context=None):
             rec["paused"] = bool(paused)
         if context is not None:
             rec["context"] = str(context)[:2000]
+        if observations is not None:
+            # 제어 관측 칸 — 병합·검증은 control_observations 가 맡고 여기는 목록 모양만 지킨다.
+            if not isinstance(observations, list) or len(observations) > 500:
+                raise ValueError("관측 칸은 500행 이내 목록이어야 합니다")
+            rec["observations"] = deepcopy(observations)
         return _public(rec)
 
 

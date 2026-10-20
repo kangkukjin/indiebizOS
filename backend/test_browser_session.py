@@ -22,6 +22,8 @@ def load_handler():
 
 @pytest.fixture
 def browser(monkeypatch, tmp_path):
+    import thread_context
+    monkeypatch.setattr(thread_context, 'get_task_origin', lambda: 'user')   # 입회 턴 — 화면·공유 상태 동작의 실행 전 문맥 검사(CONTROL_DRIVER §6) 통과
     from runtime_utils import setup_playwright_browsers_path
     setup_playwright_browsers_path()
     handler = load_handler()

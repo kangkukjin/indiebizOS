@@ -2205,6 +2205,16 @@
       ],
       "file": "media_session.md",
       "topic": "손발·이웃 몸"
+    },
+    {
+      "id": "safari_control",
+      "name": "Safari 창·탭 드라이버 — 본체 앱 제어",
+      "description": "본체 macOS 의 Safari 창·탭을 화면 조작 없이 사전(AppleScript) 계약으로 조회·열기·전환·닫기. 등록 스크립트 Safari제어의 동작별 실행 조건(needs_front·shared_state)과 재조회 확인 범위, 응답 유실·권한·대상 소실의 처리.",
+      "keywords": ["Safari", "사파리", "탭", "탭 전환", "탭 닫기", "새 탭", "창", "본체 브라우저", "맥 브라우저", "AppleScript", "앱 제어", "앱 드라이버"],
+      "file": "safari_control.md",
+      "control_surfaces": ["app:com.apple.Safari"],
+      "supported_platforms": ["darwin"],
+      "topic": "브라우저·데스크톱 제어"
     }
   ]
 }

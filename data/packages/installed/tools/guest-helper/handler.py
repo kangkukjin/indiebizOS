@@ -885,6 +885,8 @@ def _resident_registration(tool_input):
     op = tool_input.get("op")
     target = tool_input.get("target")
     try:
+        if op == "register" and tool_input.get("observations") is not None:
+            return _record_observations(target, tool_input.get("observations"))
         if op == "register":
             return {"success": True, **resident_pcs.prepare_usb(),
                     "message": "이 폴더를 통째로 USB에 복사하세요. 대상 PC에서 맞는 헬퍼를 실행하고 이름을 정해 등록합니다. 목록·해제는 조종실의 손발 (USB)에 있습니다."}
@@ -899,6 +901,39 @@ def _resident_registration(tool_input):
             rec["device_id"], paused=bool(tool_input.get("paused", True)))}
     except ValueError as exc:
         return {"success": False, "error": str(exc)}
+
+def _record_observations(target, observations):
+    """제어 관측 행의 추가·정정 — CONTROL_DRIVER_DESIGN_2026_10_20 §12 ① (a).
+
+    새 낱말 없이 `[self:limb]{op:"register", target, observations:[...]}` 의 인자 확장이다. target 은
+    등록 기기(이름·device_id·`__local__`) 또는 조작면 식별자(`app:<bundle id>`·`site:<domain>`).
+    기기 행은 등록 기록의 observations 칸에, 앱·사이트 행은 data/control_observations.json 에 남는다.
+    의미는 행 단위 추가·정정(status 변경 포함)이며 목록 덮어쓰기가 아니다. 행 검증은 원장 모듈이 한다.
+    """
+    import control_observations as obs
+    if not isinstance(target, str) or not target.strip():
+        return {"success": False, "error": "observations 를 기록할 target(기기 이름·device_id·__local__ 또는 app:/site: 식별자)이 필요합니다."}
+    target = target.strip()
+    try:
+        if target.partition(":")[0].lower() in ("app", "site", "device"):
+            surface = target
+        elif target == "__local__":
+            surface = "device:__local__"
+        else:
+            import hardware_registry
+            import resident_pcs
+            if hardware_registry.contains(target):
+                row = next(r for r in hardware_registry.devices() if target in (r["device_id"], r["alias"]))
+                surface = "device:" + row["device_id"]
+            else:
+                surface = "device:" + resident_pcs.resolve(target, active=False)["device_id"]
+        import thread_context
+        recorded = obs.record(surface, observations, source=thread_context.get_current_task_id() or "")
+        return {"success": True, "op": "register", "target": target, **recorded,
+                "observations": obs.rows(surface)}
+    except (obs.ObservationError, ValueError, KeyError, StopIteration) as exc:
+        return {"success": False, "error": str(exc) or "관측 기록 실패", "target": target}
+
 
 # === 디스패처 (진짜 함수 참조 — --check 가 이 dict 키로 src.ops.values 와 정확 비교) ===
 

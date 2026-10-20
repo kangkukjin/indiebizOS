@@ -484,6 +484,13 @@ def _do_screen_info(tool_input):
 
         info["note"] = "시스템 환경설정 > 개인정보 보호 > 화면 기록 & 손쉬운 사용에서 Python에 권한을 부여하세요"
 
+    # 동작별 실행 조건과 지금 문맥 — AI 가 "지금 어떤 조건에서 실행할 수 있는지"를 알고 조합하게.
+    try:
+        import control_conditions
+        info["conditions"] = _OP_CONDITIONS
+        info["screen_context"] = control_conditions.screen_context()
+    except Exception:
+        pass
     return json.dumps(info, ensure_ascii=False, indent=2)
 
 
@@ -736,6 +743,9 @@ def _do_snapshot(tool_input):
     try:
         app = _frontmost_app()
         result.update(app=app["name"], pid=app["pid"], bundle_id=app.get("bundle_id"))
+        if notice := _driver_notice(app.get("bundle_id")):
+            result["control_guide"] = notice["control_guide"]
+            result["driver"] = notice
         try:
             els = _ax_elements(app["pid"])
             result["elements"] = els
@@ -769,6 +779,48 @@ def _do_snapshot(tool_input):
     else:
         result.update(success=False, error=result["elements_note"])
     return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+# ── 동작별 실행 조건 (CONTROL_DRIVER_DESIGN_2026_10_20 §6) ──
+# 화면 조작은 드라이버가 없는 면의 정당한 탐색 도구다. 다만 사용자의 손과 눈이 보는 상태를
+# 건드리는 동작(needs_front)은 화면을 쓸 수 없는 문맥(정기·배경 실행)에서 **실행 직전 경계**가
+# 거절한다 — 가이드가 아니라 여기가 보장의 주체다. 51회차 무인 밤일의 화면 찍기(L51-1)가 이 자리.
+_OP_CONDITIONS = {
+    "snapshot":        {"needs_front": True,  "shared_state": False, "isolated_resources": []},
+    "wait":            {"needs_front": True,  "shared_state": False, "isolated_resources": []},
+    "screenshot":      {"needs_front": True,  "shared_state": False, "isolated_resources": []},
+    "click":           {"needs_front": True,  "shared_state": True,  "isolated_resources": []},
+    "type":            {"needs_front": True,  "shared_state": True,  "isolated_resources": []},
+    "key":             {"needs_front": True,  "shared_state": True,  "isolated_resources": []},
+    "mouse_move":      {"needs_front": True,  "shared_state": True,  "isolated_resources": []},
+    "drag":            {"needs_front": True,  "shared_state": True,  "isolated_resources": []},
+    "scroll":          {"needs_front": True,  "shared_state": True,  "isolated_resources": []},
+    "cursor_position": {"needs_front": False, "shared_state": False, "isolated_resources": []},
+    "screen_info":     {"needs_front": False, "shared_state": False, "isolated_resources": []},
+}
+
+
+def _precheck(op):
+    """실행 전 검사 — 거절이면 결과 dict, 아니면 None. 모델 호출·OS 조회 없음."""
+    import control_conditions
+    return control_conditions.refusal(op, _OP_CONDITIONS.get(op, {}), control_conditions.screen_context(),
+                                      surface="[limbs:screen]")
+
+
+def _driver_notice(bundle_id):
+    """탐색 도중 드라이버가 있음을 알린다(§5.2 발견 (a)). 매핑은 guide_db 데이터, 코드엔 앱 이름 없음."""
+    try:
+        from guide_registry import surface_control_guide
+        found = surface_control_guide("app", bundle_id)
+        if not found:
+            return None
+        import control_observations
+        found["observations"] = control_observations.count(found["surface"])
+        found["note"] = ("이 앱에는 계약 통로(드라이버)가 있습니다. 좌표·ref 조작 전에 control_guide 를 한 번 읽고 "
+                         "준비된 실행 부품을 우선 쓰세요. 통신 실패 뒤 같은 변경을 화면으로 다시 시도하지 않습니다.")
+        return found
+    except Exception:
+        return None
 
 
 # ── 라우팅 테이블 ──
@@ -822,6 +874,9 @@ def _do_op(tool_input: dict):
             "success": False,
             "error": f"알 수 없는 op: '{op}'. 사용 가능: {sorted(mapping.keys())}"
         }, ensure_ascii=False)
+    refused = _precheck(op)
+    if refused:
+        return json.dumps(refused, ensure_ascii=False)
     return _TOOLS[tool](tool_input)
 
 

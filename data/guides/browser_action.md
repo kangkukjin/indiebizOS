@@ -3,6 +3,10 @@
 브라우저 자동화 IBL 어휘. 연결된 내장 포식 브라우저 우선, Chrome MCP 또는 Playwright 선택.
 데스크톱 일반 앱 자동화는 `[limbs:screen]` (별도 가이드 참조).
 
+## 먼저: 세 층과 폴백 서열
+
+브라우저 제어는 세 층이다 — ① 사이트 실행 부품(있으면: `snapshot` 응답의 `control_guide` 가 현재 도메인에 드라이버·관측이 있음을 알린다. 그 가이드를 한 번 읽고 부품을 먼저 쓴다) → ② 범용 DOM(이 가이드: navigate·snapshot ref·content·evaluate) → ③ 화면(screenshot·vision 은 캔버스·이미지처럼 DOM 이 못 주는 것에만). **격리는 도구가 아니라 자원 단위다.** 내장 Playwright 의 전용 프로필은 화면·포커스·세션이 분리되지만 같은 계정으로 로그인했으면 계정 데이터(문서·장바구니)는 공유다. Chrome MCP 는 사용자의 탭·세션을 그대로 쓴다(`shared_state`). 그래서 정기·배경 실행처럼 화면을 쓸 수 없는 문맥에서 공유 상태를 바꾸는 동작은 `driver:auto` 면 Playwright 로 가고, `driver:chrome` 을 명시하면 실행 경계가 `SCREEN_CONTEXT_UNAVAILABLE` 로 거절한다. 드라이버 통로가 응답 유실로 불명확하면 같은 변경을 DOM 으로 다시 시도하지 않고 상태를 재조회한다.
+
 ## 기본 흐름
 
 페이지를 열고 DOM 구조를 관측한 뒤 조작한다. 본문은 content, 버튼·입력칸은 snapshot의 ref로 읽는다.

@@ -20,6 +20,14 @@ sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
 
 
+@pytest.fixture(autouse=True)
+def isolated_steering(monkeypatch):
+    import steer_inbox
+    for name in ('_inbox', '_active', '_journals', '_delivered', '_held'):
+        monkeypatch.setattr(steer_inbox, name, {})
+    monkeypatch.setattr(steer_inbox, '_sealed', set())
+
+
 def test_inbox_core():
     import steer_inbox as SI
     SI.clear("t1")
@@ -29,11 +37,13 @@ def test_inbox_core():
     texts = SI.drain("t1")
     assert len(texts) == 2 and "주식" in texts[0]
     assert SI.drain("t1") == []              # drain 은 비운다
-    for i in range(9):
+    for i in range(SI._MAX_PER_KEY):
         SI.post("t1", f"m{i}")
+    with pytest.raises(ValueError, match="가득"):
+        SI.post("t1", "overflow")
     assert len(SI.drain("t1")) == SI._MAX_PER_KEY  # 키당 상한
     SI.post("t1", "stale")
-    assert SI.clear("t1") == 1 and SI.drain("t1") == []  # 턴 종료 폐기
+    assert SI.clear("t1") == 1 and SI.drain("t1") == []  # 명시적 관리 삭제
     r = SI.render(["a", "b"])
     assert "[사용자 조향]" in r and "- a" in r and SI.render([]) == ""
     print("OK 인박스 코어 (post/drain/clear/render/상한)")
@@ -52,7 +62,7 @@ def test_same_agent_tasks_alias_delivery_and_cleanup_are_isolated():
                 assert "A 지시" in _attach_steer({}, "same", "a")["steer_notice"]
                 assert si.drain("same", "a") == []
             si.post("same", "A 미배달", "a", require_active=True)
-        assert si.drain("same", "a") == []
+        assert si.drain("same", "a") == ["A 지시", "A 미배달"]  # 배달됐어도 미확정이면 보존
         assert si.drain("별칭", "b") == ["B 지시"]
         with pytest.raises(ValueError):
             si.post("same", "종료 뒤", "a", require_active=True)

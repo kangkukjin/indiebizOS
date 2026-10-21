@@ -21,8 +21,8 @@ async def accept_stream_steer(client_id, data, target):
     if key and task_id and target in (key, name):
         from steer_inbox import post
         try:
-            pending = post(key, data.get("message", ""), task_id, require_active=True)
-            message = (f"⤳ 조향 접수 — 다음 도구 완료 시 반영됩니다 (대기 {pending}건)"
+            pending = await asyncio.to_thread(post, key, data.get("message", ""), task_id, require_active=True)
+            message = (f"⤳ 조향 접수 — 다음 도구 결과 또는 응답 후 이어서 반영합니다 (대기 {pending}건)"
                        if pending else "⚠ 조향 메시지가 비어 있습니다")
         except ValueError as exc:
             message = f"⚠ {exc}"

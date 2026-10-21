@@ -109,6 +109,7 @@
     "cognition/corpus_vocab_audit",
     "cognition/delegation_tasks",
     "cognition/derived_freshness",
+    "cognition/dialogue_continuation",
     "cognition/distill_memory_adapters",
     "cognition/distill_queue",
     "cognition/doc_drift",
@@ -185,6 +186,7 @@
     "datastore/coding_store",
     "datastore/control_observations",
     "datastore/conversation_db",
+    "datastore/conversation_handoff",
     "datastore/conversation_sessions",
     "datastore/decision_ledger",
     "datastore/distill_ledger",
@@ -621,8 +623,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 546,
-    "engine": 514,
+    "total": 548,
+    "engine": 516,
     "blocklist": 32
   }
 }

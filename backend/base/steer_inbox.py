@@ -10,12 +10,12 @@
   ②클로드 코드 경로: api_ibl /ibl/execute (MCP 호출 = req.agent_id 명시된 것만 —
     앱/수동 모드의 결정론 결과를 오염시키지 않는 게이트)
 
-한계(정직): 도구를 더 부르지 않는 턴에는 배달할 수 없다 — 미배달분은 턴 종료 시
-폐기되고 로그에 남는다(다음 턴으로 새는 stale 조향 방지). 조향은 지시의 *주입*이지
-보장된 *수신*이 아니다.
+도구 없는 종료도 공통 대화 경계가 take_or_seal로 확인한다. 접수와 종료 확정은
+같은 잠금을 사용한다. 전달과 처리 완료는 구분하며 실패·취소의 미처리 지시는
+주입된 journal 콜백을 통해 원래 대화 사건에 남긴다.
 """
 import threading
-import time
+import sqlite3
 from contextlib import contextmanager
 from itertools import count
 from typing import List
@@ -25,13 +25,15 @@ _inbox: dict = {}   # (agent_id, task_id) -> 사용자 지시 봉투 목록
 _active: dict = {}  # 등록 별칭도 같은 작업의 정규 키로 해소
 _sequence = count(1)
 _lock = threading.Lock()
-_MAX_PER_KEY = 5        # 키당 대기 조향 상한 (초과 시 오래된 것부터 밀어냄)
+_journals: dict = {}
+_delivered: dict = {}
+_sealed: set = set()
+_MAX_PER_KEY = 5        # 키당 대기 조향 상한 (초과 시 새 접수 거절)
 _MAX_TEXT = 2000        # 조향 1건 길이 상한
-_TTL_SECONDS = 1800     # 30분 지난 조향은 배달하지 않음 (유령 방지)
 
 
 @contextmanager
-def task_scope(agents, task_id):
+def task_scope(agents, task_id, journal=None):
     """감독 비활성 턴도 등록한다. 별칭과 미배달분의 종료 정리는 이 수명이 소유한다."""
     agents = list(dict.fromkeys(agent for agent in agents if agent))
     keys = [execution_key(agent, task_id) for agent in agents]
@@ -44,17 +46,29 @@ def task_scope(agents, task_id):
             _active[key] = owner
             queued.extend(_inbox.pop(key, []))
         if queued:
-            _inbox[owner] = sorted(queued, key=lambda row: row["sequence"])[-_MAX_PER_KEY:]
+            _inbox[owner] = sorted(queued, key=lambda row: row["sequence"])
+        _sealed.discard(owner)
+        _journals[owner] = journal
+        _delivered[owner] = []
     try:
         yield
     finally:
         with _lock:
-            left = len(_inbox.pop(owner, []))
+            left = len(_inbox.get(owner, []))
+            _journals.pop(owner, None)
+            delivered = _delivered.pop(owner, [])
+            if journal:
+                # 영속 사건이 다음 턴 인계를 소유한다. 같은 task 재개 시 메모리 중복 배달 방지.
+                _inbox.pop(owner, None)
+            elif delivered:
+                # 저장소 없는 내부 실행도 미확정 배달을 조용히 버리지 않는다.
+                _inbox[owner] = delivered + _inbox.get(owner, [])
+            _sealed.discard(owner)
             for key in keys:
                 if _active.get(key) == owner:
                     _active.pop(key, None)
         if left:
-            print(f"[조향] 미배달 {left}건 폐기 — 작업 종료")
+            print(f"[조향] 미처리 {left}건 보존 — 작업 종료")
 
 
 _held: dict = {}    # task_id -> 겹친 수. 턴 뒤 마감(작업 닫기)까지 잇는 표면의 수명
@@ -103,40 +117,100 @@ def resolve_task(agent_id, task_id=None):
     raise ValueError("활성 작업이 없거나 여러 개입니다. 대상 task_id를 지정하세요")
 
 
-def post(key: str, text: str, task_id=None, *, require_active=False) -> int:
-    """조향 1건 접수. 반환 = 그 키의 대기 건수."""
-    text = (text or "").strip()[:_MAX_TEXT]
+def post(key: str, text: str, task_id=None, *, require_active=False, request_id=None) -> int:
+    """저장 성공 뒤 접수한다. 가득 찬 큐·긴 지시는 기존 내용을 버리지 않고 거절한다."""
+    text = (text or "").strip()
     if not key or not text:
         return 0
+    if len(text) > _MAX_TEXT:
+        raise ValueError(f"조향은 {_MAX_TEXT}자 이내로 입력해주세요. 접수하지 않았습니다")
     with _lock:
         key = execution_key(key, task_id)
         if require_active and key not in _active:
             raise ValueError("대상 작업이 아직 시작되지 않았거나 이미 종료됐습니다")
         key = _active.get(key, key)
+        if request_id:
+            prior = next((r for r in _inbox.get(key, []) + _delivered.get(key, [])
+                          if r.get("request_id") == request_id), None)
+            if prior:
+                if prior["instruction"] != text:
+                    raise ValueError("같은 요청 신원으로 다른 조향을 보낼 수 없습니다")
+                return max(1, len(_inbox.get(key, [])))
+        if key in _sealed:
+            raise ValueError("응답이 이미 확정되었습니다. 새 메시지로 보내주세요")
         q = _inbox.setdefault(key, [])
-        now = time.time()
-        q.append({"source": "user", "target": {"agent": key[0], "task": key[1]},
-                  "sequence": next(_sequence), "expires_at": now + _TTL_SECONDS,
-                  "conditions": None, "instruction": text})
-        del q[:-_MAX_PER_KEY]
+        if len(q) >= _MAX_PER_KEY:
+            raise ValueError("대기 조향이 가득 찼습니다. 기존 지시를 보존하며 새 지시는 접수하지 않았습니다")
+        from uuid import uuid4
+        row = {"id": uuid4().hex, "source": "user", "target": {"agent": key[0], "task": key[1]},
+               "sequence": next(_sequence), "instruction": text, "request_id": request_id}
+        journal = _journals.get(key)
+        if journal:
+            try:
+                journal("steer.accepted", row)
+            except (OSError, sqlite3.Error) as exc:
+                raise ValueError("추가 지시를 저장하지 못해 접수하지 않았습니다. 다시 보내주세요") from exc
+        q.append(row)
         return len(q)
 
 
+def _take(key):
+    q = _inbox.get(key, [])
+    journal = _journals.get(key)
+    if q and journal:
+        journal("steer.delivered", {"ids": [row["id"] for row in q]})
+    _inbox.pop(key, None)
+    if q:
+        _delivered.setdefault(key, []).extend(q)
+    return [row["instruction"] for row in q]
+
+
 def drain(key: str, task_id=None) -> List[str]:
-    """대기 조향 전부 회수(비움). TTL 지난 것은 버린다."""
+    """도구 결과에 전달한다. 최종 응답 확정 전까지 처리 완료로 보지 않는다."""
     with _lock:
         key = execution_key(key, task_id)
-        key = _active.get(key, key)
-        q = _inbox.pop(key, [])
-    now = time.time()
-    return [row["instruction"] for row in q if now <= row["expires_at"]]
+        return _take(_active.get(key, key))
+
+
+def take_or_seal(key, task_id):
+    """대기가 있으면 전달, 없으면 접수를 원자적으로 닫는다."""
+    with _lock:
+        key = _active.get((key, task_id), (key, task_id))
+        if _inbox.get(key):
+            return _take(key)
+        _sealed.add(key)
+        return []
+
+
+def complete(key, task_id):
+    """성공 응답이 확정된 뒤에만 전달한 지시를 처리 완료로 기록한다."""
+    with _lock:
+        key = _active.get((key, task_id), (key, task_id))
+        rows = _delivered.get(key, [])
+        journal = _journals.get(key)
+        if rows and journal:
+            journal("steer.completed", {"ids": [row["id"] for row in rows]})
+        _delivered[key] = []
+
+
+def hold(key, task_id, reason):
+    """실패·취소는 재실행하지 않고 미처리 상태와 사유를 보존한다."""
+    with _lock:
+        key = _active.get((key, task_id), (key, task_id))
+        _sealed.add(key)
+        rows = _delivered.get(key, []) + _inbox.get(key, [])
+        journal = _journals.get(key)
+        if rows and journal:
+            journal("steer.held", {"ids": [row["id"] for row in rows], "reason": reason})
+        return len(rows)
 
 
 def clear(key: str, task_id=None) -> int:
-    """턴 종료 시 미배달분 폐기. 반환 = 폐기 건수 (0이면 조용)."""
+    """명시적 관리용 삭제. 정상 턴 종료에는 사용하지 않는다."""
     with _lock:
         key = execution_key(key, task_id)
         key = _active.get(key, key)
+        _delivered.pop(key, None)
         return len(_inbox.pop(key, []))
 
 

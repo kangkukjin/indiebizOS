@@ -381,9 +381,14 @@ def steer(store, tid, message, request, attachments):
         if not message.strip() or len(message) > 2000:
             raise ValueError('작업 중 추가 지시는 1~2000자로 입력하세요')
         actor = f'research:{store.uid}:{tid}'
-        steer_inbox.post(actor, message, task_id=run, require_active=True)
         source = db.execute("SELECT from_agent_id,to_agent_id FROM messages WHERE thread_id=? AND research_run=? AND research_role='user' LIMIT 1", (tid, run)).fetchone()
-        db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_run,research_role,research_status) "
-                   "VALUES (?,?,?,'research',?,?,'user','complete')", (*source, message, tid, run))
-        store.event(db, 'chat.steer', {'request_id': request, 'message': message}, tid, run)
-    return {'success': True, 'steered': True, 'items': [], 'message': '추가 지시를 접수했습니다. 다음 도구 완료 시 반영됩니다'}
+    # journal 콜백도 같은 DB에 기록하므로 기존 쓰기 트랜잭션 밖에서 접수한다.
+    steer_inbox.post(actor, message, task_id=run, require_active=True, request_id=request)
+    with store.connect(True) as db:
+        store.check_epoch(db)
+        previous = db.execute("SELECT payload FROM research_events WHERE thread_id=? AND kind='chat.steer'", (tid,)).fetchall()
+        if not any(json.loads(row['payload']).get('request_id') == request for row in previous):
+            db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_run,research_role,research_status) "
+                       "VALUES (?,?,?,'research',?,?,'user','complete')", (*source, message, tid, run))
+            store.event(db, 'chat.steer', {'request_id': request, 'message': message}, tid, run)
+    return {'success': True, 'steered': True, 'items': [], 'message': '추가 지시를 접수했습니다. 다음 도구 결과 또는 응답 후 이어서 반영합니다'}

@@ -14,6 +14,7 @@ IndieBiz OS Core
 - system_ai_plans.py: 플랜 레지스트리, 플랜/스케줄 실행
 """
 
+import asyncio
 import json
 import os
 import re
@@ -144,17 +145,17 @@ class SteerMessage(BaseModel):
 @router.post("/system-ai/steer")
 async def steer(req: SteerMessage):
     """조향 접수. 다음 도구 결과에 부록으로 배달된다 — 도구를 더 부르지 않는 턴이면
-    미배달 폐기(턴 종료 시). 접수 즉시 반환하므로 실행 중에도 호출 가능(HTTP 동시성)."""
+    공통 종료 경계가 추가 실행으로 이어받는다. 접수 즉시 반환한다."""
     from steer_inbox import post, resolve_task
     try:
-        task_id = resolve_task(req.agent_id or "system_ai", req.task_id)
-        pending = post(req.agent_id or "system_ai", req.message, task_id, require_active=True)
+        task_id = await asyncio.to_thread(resolve_task, req.agent_id or "system_ai", req.task_id)
+        pending = await asyncio.to_thread(post, req.agent_id or "system_ai", req.message, task_id, require_active=True)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if pending == 0:
         raise HTTPException(status_code=400, detail="빈 조향 메시지")
     return {"accepted": True, "pending": pending, "task_id": task_id,
-            "note": "다음 도구 호출 완료 시 반영됩니다. 도구 호출 없이 턴이 끝나면 폐기됩니다."}
+            "note": "다음 도구 결과 또는 응답 종료 뒤 이어지는 실행에 전달됩니다. 실패·취소 시 미처리 상태로 보존됩니다."}
 
 
 class PromptConfigUpdate(BaseModel):

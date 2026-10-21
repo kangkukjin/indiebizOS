@@ -323,9 +323,11 @@ class CognitivePipelineMixin:
         steer_agents = (agent_id, getattr(self.ai, "agent_id", None),
                         getattr(getattr(self.ai, "_provider", None), "agent_id", None), kwargs.get("agent_name"))
         from repair_resume import user_resume
+        from conversation_handoff import Handoff
+        handoff = Handoff()
         with self.turn_ai_scope(), actor_context(agent_id=agent_id, task_id=task_id), \
                 user_resume(self, message, history), \
-                task_scope(steer_agents, task_id), \
+                task_scope(steer_agents, task_id, journal=handoff.record if handoff.available else None), \
                 turn_token_scope(agent_id, task_id, (getattr(self.ai, "agent_id", None),),
                                  hard_token_limit=resource_limits.get("hard_token_limit"),
                                  deadline_s=resource_limits.get("deadline_s")):
@@ -335,18 +337,30 @@ class CognitivePipelineMixin:
             from conscious_supervisor import open_supervisor
             _supervisor = None
             try:
-                if not kwargs.get("force_role"):
-                    _supervisor = open_supervisor(self, message, history, kwargs.get("cancel_check"))
-                else:
-                    from episode_logger import record_trajectory_event
-                    record_trajectory_event("cognition.supervisor_selected", {"reason": "force_role", "enabled": False})
-                from repair_continuation import current as repair_current
-                from repair_resume import review_stream
-                continuation = repair_current()
-                stream = (review_stream(self, _supervisor, continuation, kwargs.get("cancel_check"))
-                          if continuation and continuation.get("phase") == "review"
-                          else self._cognitive_stream_body(message, history, **kwargs))
-                for event in stream:
+                first_segment = True
+
+                def segment(prompt, previous):
+                    nonlocal _supervisor, first_segment
+                    if _supervisor:
+                        _supervisor.close()
+                        _supervisor = None
+                    if not kwargs.get("force_role"):
+                        _supervisor = open_supervisor(self, prompt, previous, kwargs.get("cancel_check"))
+                    else:
+                        from episode_logger import record_trajectory_event
+                        record_trajectory_event("cognition.supervisor_selected", {"reason": "force_role", "enabled": False})
+                    from repair_continuation import current as repair_current
+                    from repair_resume import review_stream
+                    continuation = repair_current() if first_segment else None
+                    first_segment = False
+                    if continuation and continuation.get("phase") == "review":
+                        yield from review_stream(self, _supervisor, continuation, kwargs.get("cancel_check"))
+                    else:
+                        yield from self._cognitive_stream_body(prompt, previous, **kwargs)
+
+                from dialogue_continuation import stream
+                for event in stream(segment, message, history, agent_id, task_id, handoff,
+                                    kwargs.get("cancel_check")):
                     observe(event)
                     yield event
             finally:

@@ -44,7 +44,7 @@ return $r
 
 | op | 추가 인수 | 확인하는 것 |
 | --- | --- | --- |
-| status | 없음 | API 응답과 보고된 power, 등록 앱의 running/visible |
+| status | 없음 | power·앱 running/visible + UPnP 음량·음소거·DLNA 재생/위치, 지원 시 입력. 선택 SmartThings 마지막 보고값 |
 | on | 없음 | WOL 후 power=on 재조회. 실패는 success=false |
 | off | 없음 | on일 때만 전원 키 1회. off/standby 관측 때만 verified=true |
 | volume | `steps:1` 또는 `steps:-1` (최대 ±10) | 상대 음량 키 전달, verified=false |
@@ -67,8 +67,64 @@ return $r
 시간이 지나면 null(미확인)이다. 상시 연결·TV 전원 상태를 뜻하지 않는다.
 
 음량 증감·음소거·전원 키·입력 전환은 자동 재시도하지 않는다. 시간 초과·연결 종료 후에는
-먼저 상태를 조회한다. 상태 조회로 읽을 수 없는 음량·화면·입력은 사용자 또는 별도 관측이 필요하다.
+먼저 상태를 조회한다. 아래 항목별 관측이 미지원·미확인이면 사용자 또는 별도 관측이 필요하다.
 `launch`가 성공해도 사용자가 원한 영상의 재생·전체 화면·소리까지 성공했다고 보고하지 않는다.
+
+## 음량·입력·재생 상태 읽기
+
+기존 `status` 한 번으로 조회한다. 추가 키 입력·앱 실행·음량 변경 없이 읽는다.
+꺼진 TV를 켜서 확인하는 요청이면 기존 `on`을 먼저 사용한다. `status` 자체는 켜지 않는다.
+전원 확인용 내부 조회는 가벼운 기존 경로를 유지해 WOL 재확인마다 전체 조회를 반복하지 않는다.
+
+결과의 `observations`는 항목별 `{value,state,verified,source,scope,observed_at}`이다.
+최상위 `verified`는 기존 **전원 확인** 의미(`verification_scope:power_only`)이며 전체 항목의
+성공이 아니다. `local_observations`·`cloud_observations`에는 각 경로의 원래 증거가 남는다.
+로컬 관측이 있으면 우선하고, 없는 항목만 클라우드 보고로 보완한다.
+
+| 항목 | 조회 수단·의미 |
+| --- | --- |
+| volume | UPnP RenderingControl `GetVolume`, 0~100. 0도 실제 값 |
+| mute | UPnP `GetMute`, Bool. false는 조회 실패가 아니라 음소거 해제 |
+| input_source | TV의 `/dmr`가 MainTVAgent2와 `GetCurrentExternalSource`를 광고할 때 조회. 그 외에는 선택 SmartThings `mediaInputSource.inputSource` |
+| dlna_transport | AVTransport `GetTransportInfo`의 상태. **DLNA 재생기만** 대상으로 함 |
+| dlna_position | `GetPositionInfo`의 위치·길이·트랙. 한 번의 위치 조회이며 시간 진행을 입증하지 않음 |
+| media_playback | 선택 SmartThings `mediaPlayback.playbackStatus`의 마지막 보고. 해당 TV가 제공해야 함 |
+
+`observed`는 로컬 API에서 읽은 값, `reported`는 클라우드 마지막 보고다.
+`unsupported`는 **해당 조회 경로**에 서비스·액션·속성이 없다는 뜻이다.
+`unavailable`(연결/일시 실패), `unauthorized`(인증/권한), `invalid_response`(잘못된 응답),
+`not_configured`(선택 연동 없음)는 구분한다. 미확인 값은 null이며 0·false로 대체하지 않는다.
+
+DLNA의 `NO_MEDIA_PRESENT`·`STOPPED`가 TV 전체의 재생 중단을 뜻하지 않는다.
+HDMI로 연결된 TV1의 유튜브는 `PC제어`의 `youtube_status`로 PC 브라우저 쪽에서 확인한다.
+그 결과 역시 TV의 현재 입력·패널 표시·물리적 소리를 입증하지 않는다.
+TV 자체 유튜브의 영상 진행을 모든 모델에서 원격 조회할 수 있다고 주장하지 않는다.
+
+### 선택 SmartThings 연결
+
+로컬 음량·음소거·DLNA 조회에는 계정이나 토큰이 필요 없다. 로컬에서 제공하지 않는 입력·
+재생 보고를 보완하려면 TV가 등록된 SmartThings 계정의 **기기 읽기 권한** 액세스 토큰과
+기기 ID가 필요하다. 주인 등록 API `POST /remote-pcs/hardware`의 기존 수정 계약에서
+`target`을 지정하고 `connection.smartthings:{device_id,token}`을 추가한다.
+기존 IP·MAC·앱 등 전체 연결 설정을 유지한다. 토큰은 허브 비공개 원장(0600)에만 저장하고
+가이드·코드·대화·공개 기기 목록에 넣지 않는다. 수정 시 smartthings 생략은 기존 설정 유지,
+명시적 null은 연결 해제다. 다른 SmartThings 기기와 자동으로 매칭하지 않는다.
+
+클라우드는 읽기 전용 GET 한 번이며 자동 새로고침 명령·재생 명령을 보내지 않는다.
+`reported_at`은 SmartThings가 보고한 마지막 변경 시각(누락이면 null)이고,
+`observed_at`은 허브가 응답을 받은 시각이다. 오래된 보고를 현재 실측으로 바꾸지 않으며
+클라우드 항목의 verified는 false다. 토큰 만료·권한 부족은 unauthorized로 표시한다.
+TV 모델이 해당 capability를 제공하지 않으면 연결해도 조회할 수 없다.
+
+구현 근거: [UPnP RenderingControl 표준](https://upnp.org/specs/av/UPnP-av-RenderingControl-v1-Service.pdf),
+[AVTransport 표준](https://upnp.org/specs/av/UPnP-av-AVTransport-v1-Service.pdf),
+[Samsung 로컬 UPnP 구현](https://github.com/ollo69/ha-samsungtv-smart/blob/master/custom_components/samsungtv_smart/api/upnp.py),
+[MainTVAgent2 패킷 관측](https://github.com/casperboone/homey-samsung-smart-tv/blob/master/samsung.md),
+[SmartThings 상태 API](https://developer.smartthings.com/docs/service-integrations/query-and-list-devices).
+
+2026-10-21 실기 관측: 등록된 KU70UA8070FXKR에서 WOL 후 전원 on, 음량 0·음소거 false,
+DLNA NO_MEDIA_PRESENT·위치 0:00:00을 확인했다. `/dmr`에는 MainTVAgent2가 없었고
+7676 연결도 실패했다. SmartThings 실계정 조회·TV 자체 앱의 영상 진행 확인은 미검증이다.
 
 DLNA는 직접 미디어 주소용이다. 유튜브 웹페이지 주소는 미디어 주소가 아니며 TV 내 유튜브 앱
 실행과 구분한다. KT 편성표(`tv_epg.py`)는 공개 정보의 날짜별 캐시이며 현재 셋톱 채널을
@@ -78,7 +134,7 @@ DLNA는 직접 미디어 주소용이다. 유튜브 웹페이지 주소는 미�
 
 소유자 API `POST /remote-pcs/hardware`는 `{alias,driver:"samsung-tizen",context,connection}`으로
 등록한다. 같은 요청에 `target:device_id`를 주면 수정한다. `connection`은 `ip` 필수,
-`mac,broadcast,token,client_name,apps,pc_input_index` 선택이다. 수정 시 빈 토큰은 기존 토큰을 유지한다.
+`mac,broadcast,token,client_name,apps,pc_input_index,smartthings` 선택이다. 수정 시 빈 페어링 토큰은 기존 토큰을 유지한다.
 기존 값을 포함한 전체 연결 설정을 보내며 공개 목록에서 토큰을 얻으려 하지 않는다.
 `POST /remote-pcs/state`와 `PUT /remote-pcs/context`는 기존 대상 ID를 그대로 사용한다.
 

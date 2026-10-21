@@ -103,7 +103,7 @@ def connection(target):
 def _validate_connection(value):
     if not isinstance(value, dict):
         raise ValueError("connection 객체가 필요합니다")
-    allowed = {"ip", "mac", "broadcast", "token", "client_name", "apps", "pc_input_index"}
+    allowed = {"ip", "mac", "broadcast", "token", "client_name", "apps", "pc_input_index", "smartthings"}
     if set(value) - allowed:
         raise ValueError("지원하지 않는 연결 설정입니다")
     cfg = deepcopy(value)
@@ -133,6 +133,14 @@ def _validate_connection(value):
         index = cfg["pc_input_index"]
         if type(index) is not int or not 1 <= index <= 12:
             raise ValueError("PC 입력 위치는 1~12 정수입니다")
+    cloud = cfg.get("smartthings")
+    if cloud is not None:
+        if (not isinstance(cloud, dict) or set(cloud) != {"device_id", "token"} or
+                not isinstance(cloud.get("device_id"), str) or
+                not re.fullmatch(r"[a-zA-Z0-9_-]{1,100}", cloud["device_id"]) or
+                not isinstance(cloud.get("token"), str) or
+                not re.fullmatch(r"[a-zA-Z0-9_.~+/-]{1,4096}=*", cloud["token"])):
+            raise ValueError("SmartThings 기기 ID와 읽기 권한 토큰을 확인하세요")
     return cfg
 
 
@@ -151,6 +159,10 @@ def register(alias, connection_config, *, context="", driver="samsung-tizen", ta
             # Empty token on editing means keep the existing pairing.
             if not cfg.get("token"):
                 cfg["token"] = rec["connection"].get("token", "")
+            # Old registration clients do not know the optional cloud observation settings.
+            # Omission preserves them; explicit null disconnects the cloud observer.
+            if "smartthings" not in cfg and "smartthings" in rec["connection"]:
+                cfg["smartthings"] = deepcopy(rec["connection"]["smartthings"])
         else:
             if any(r["state"] == "active" and r["connection"]["ip"] == cfg["ip"] for r in rows.values()):
                 raise ValueError("이미 등록된 주소입니다. 기존 기기를 수정하세요")

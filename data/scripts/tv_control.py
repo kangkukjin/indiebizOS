@@ -18,6 +18,10 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import urllib.error
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
 
@@ -56,6 +60,257 @@ def status(cfg):
             except (OSError, ValueError):
                 out["apps"][name] = {"running": None, "visible": None}
     return out
+
+
+class ObservationError(Exception):
+    """Public diagnostic code only; never include transport URLs or credentials."""
+
+    def __init__(self, state, code):
+        self.state, self.code = state, code
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def observation_request(url, *, data=None, headers=None):
+    """Bounded reads; cloud credentials must never follow a redirect."""
+    request = urllib.request.Request(url, data=data, headers=headers or {})
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+    try:
+        with opener.open(request, timeout=3) as response:
+            raw = response.read(512 * 1024 + 1)
+        if len(raw) > 512 * 1024:
+            raise ObservationError("invalid_response", "response_too_large")
+        return raw
+    except urllib.error.HTTPError as exc:
+        # SOAP faults commonly use HTTP 500; preserve their numeric code only.
+        raw = exc.read(512 * 1024 + 1) if exc.code == 500 else b""
+        if raw:
+            root = observation_xml(raw)
+            code = root.findtext(".//{*}errorCode")
+            if code:
+                raise ObservationError("unsupported" if code == "401" else "unavailable",
+                                       "upnp_" + code if code.isdigit() else "upnp_fault") from None
+        raise ObservationError("unauthorized" if exc.code in (401, 403) else "unavailable",
+                               "http_" + str(exc.code)) from None
+    except (OSError, ValueError):
+        raise ObservationError("unavailable", "connection_failed") from None
+
+
+def observation_xml(raw):
+    declarations = raw.replace(b"\x00", b"").upper()
+    if b"<!DOCTYPE" in declarations or b"<!ENTITY" in declarations:
+        raise ObservationError("invalid_response", "xml_declaration_rejected")
+    try:
+        return ET.fromstring(raw)
+    except ET.ParseError:
+        raise ObservationError("invalid_response", "invalid_xml") from None
+
+
+def observation(value=None, *, state="observed", source="upnp", scope="tv", code=None,
+                reported_at=None):
+    result = {"value": value, "state": state, "verified": state == "observed",
+              "source": source, "scope": scope,
+              "observed_at": datetime.now(timezone.utc).isoformat()}
+    if code:
+        result["reason"] = code
+    if reported_at is not None:
+        result["reported_at"] = reported_at
+    return result
+
+
+def service_url(cfg, base, path):
+    """TV advertisements may only point back to the registered TV on the same port."""
+    try:
+        url = urllib.parse.urljoin(base, path)
+        parsed, origin = urllib.parse.urlsplit(url), urllib.parse.urlsplit(base)
+        valid = (parsed.scheme == "http" and parsed.hostname == cfg["ip"] and
+                 parsed.port == origin.port and not (parsed.username or parsed.password or parsed.fragment))
+    except ValueError:
+        valid = False
+    if not valid:
+        raise ObservationError("invalid_response", "foreign_service_url")
+    return url
+
+
+def observation_services(cfg):
+    base = f'http://{cfg["ip"]}:9197/dmr'
+    root = observation_xml(observation_request(base))
+    if root.tag.split("}")[-1] != "root" or root.find("{*}device") is None:
+        raise ObservationError("invalid_response", "invalid_device_description")
+    services = {}
+    for element in root.findall(".//{*}service"):
+        urn = element.findtext("{*}serviceType", "")
+        for name in ("RenderingControl", "AVTransport", "MainTVAgent2"):
+            prefix = ("urn:samsung.com:service:" if name == "MainTVAgent2"
+                      else "urn:schemas-upnp-org:service:")
+            if not re.fullmatch(re.escape(prefix + name + ":") + r"\d+", urn):
+                continue
+            control, scpd = element.findtext("{*}controlURL"), element.findtext("{*}SCPDURL")
+            if control and scpd:
+                services[name] = {"urn": urn, "url": service_url(cfg, base, control),
+                                  "scpd": service_url(cfg, base, scpd)}
+    return services
+
+
+def read_service(service):
+    root = observation_xml(observation_request(service["scpd"]))
+    if root.tag.split("}")[-1] != "scpd":
+        raise ObservationError("invalid_response", "invalid_service_description")
+    return {**service, "actions": {a.findtext("{*}name") for a in root.findall(".//{*}action")}}
+
+
+def observation_soap(service, action, args):
+    if action not in service["actions"]:
+        raise ObservationError("unsupported", "action_not_advertised")
+    urn = service["urn"]
+    body = ('<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+            f'<u:{action} xmlns:u="{urn}">{args}</u:{action}></s:Body></s:Envelope>')
+    raw = observation_request(service["url"], data=body.encode(), headers={
+        "Content-Type": "text/xml; charset=utf-8", "SOAPAction": f'"{urn}#{action}"'})
+    root = observation_xml(raw)
+    if root.find(".//{*}Fault") is not None:
+        code = root.findtext(".//{*}errorCode", "")
+        raise ObservationError("unsupported" if code == "401" else "unavailable",
+                               "upnp_" + code if code.isdigit() else "upnp_fault")
+    response = root.find(f".//{{{urn}}}{action}Response")
+    if response is None:
+        raise ObservationError("invalid_response", "missing_action_response")
+    values = {e.tag.split("}")[-1]: (e.text or "").strip() for e in response}
+    if values.get("Result", "OK") != "OK":
+        raise ObservationError("unavailable", "device_rejected_read")
+    return values
+
+
+def upnp_observations(cfg):
+    # AVTransport observes its DLNA renderer, never arbitrary HDMI/native app playback.
+    specs = {
+        "volume": ("RenderingControl", "GetVolume", "CurrentVolume", "tv_audio"),
+        "mute": ("RenderingControl", "GetMute", "CurrentMute", "tv_audio"),
+        "input_source": ("MainTVAgent2", "GetCurrentExternalSource", "CurrentExternalSource", "tv_input"),
+        "dlna_transport": ("AVTransport", "GetTransportInfo", "CurrentTransportState", "dlna_renderer"),
+        "dlna_position": ("AVTransport", "GetPositionInfo", None, "dlna_renderer"),
+    }
+    try:
+        services = observation_services(cfg)
+    except ObservationError as exc:
+        return {key: observation(state=exc.state, scope=spec[3], code=exc.code)
+                for key, spec in specs.items()}
+
+    def load(pair):
+        name, service = pair
+        try:
+            return name, read_service(service)
+        except ObservationError as exc:
+            return name, exc
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        services = dict(pool.map(load, services.items()))
+
+    def read(pair):
+        key, (name, action, field, scope) = pair
+        try:
+            if name not in services:
+                raise ObservationError("unsupported", "service_not_advertised")
+            service = services[name]
+            if isinstance(service, ObservationError):
+                raise service
+            args = "" if name == "MainTVAgent2" else "<InstanceID>0</InstanceID>"
+            if name == "RenderingControl":
+                args += "<Channel>Master</Channel>"
+            values = observation_soap(service, action, args)
+            value = values.get(field) if field else {
+                "position": values.get("RelTime"), "duration": values.get("TrackDuration"),
+                "track": values.get("Track")}
+            if key == "volume":
+                if not isinstance(value, str) or not value.isdigit() or not 0 <= int(value) <= 100:
+                    raise ValueError()
+                value = int(value)
+            elif key == "mute":
+                if value not in ("0", "1", "true", "false"):
+                    raise ValueError()
+                value = value in ("1", "true")
+            elif key == "dlna_position":
+                if not value["position"] or not value["duration"] or value["position"] == "NOT_IMPLEMENTED":
+                    raise ValueError()
+            elif not value:
+                raise ValueError()
+            return key, observation(value, scope=scope)
+        except ObservationError as exc:
+            return key, observation(state=exc.state, scope=scope, code=exc.code)
+        except (ValueError, TypeError):
+            return key, observation(state="invalid_response", scope=scope, code="missing_or_invalid_value")
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        return dict(pool.map(read, specs.items()))
+
+
+def cloud_observations(cfg):
+    """Optional SmartThings last-reported state; fetching is not a fresh TV observation."""
+    specs = {"volume": ("audioVolume", "volume"), "mute": ("audioMute", "mute"),
+             "input_source": ("mediaInputSource", "inputSource"),
+             "media_playback": ("mediaPlayback", "playbackStatus")}
+    auth = cfg.get("smartthings")
+    def absent(state, code):
+        return {key: observation(state=state, source="smartthings", scope="cloud_last_reported", code=code)
+                for key in specs}
+    if not auth:
+        return absent("not_configured", "smartthings_not_configured")
+    try:
+        raw = observation_request("https://api.smartthings.com/v1/devices/" + auth["device_id"] + "/status",
+                                  headers={"Authorization": "Bearer " + auth["token"]})
+        payload = json.loads(raw)
+        main = payload["components"]["main"]
+        if not isinstance(main, dict):
+            raise ValueError()
+    except ObservationError as exc:
+        return absent(exc.state, exc.code)
+    except (ValueError, KeyError, TypeError):
+        return absent("invalid_response", "invalid_cloud_status")
+    out = {}
+    for key, (capability, attribute) in specs.items():
+        group = main.get(capability)
+        item = group.get(attribute) if isinstance(group, dict) else None
+        if capability not in main:
+            state, value, stamp = "unsupported", None, None
+        elif not isinstance(item, dict) or item.get("value") is None:
+            state, value, stamp = "unavailable", None, None
+        else:
+            state, value, stamp = "reported", item["value"], item.get("timestamp")
+            if key == "mute" and value in ("muted", "unmuted"):
+                value = value == "muted"
+            valid = ((key == "volume" and type(value) in (int, float) and 0 <= value <= 100)
+                     or (key == "mute" and type(value) is bool)
+                     or (key in ("input_source", "media_playback") and isinstance(value, str) and 0 < len(value) <= 100))
+            if not valid:
+                state, value = "invalid_response", None
+            if not isinstance(stamp, str):
+                stamp = None
+        out[key] = observation(value, state=state, source="smartthings", scope="cloud_last_reported",
+                               reported_at=stamp)
+        # Explicit even when the cloud omitted its update time.
+        out[key]["reported_at"] = stamp
+    return out
+
+
+def detailed_status(cfg):
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        basic_job = pool.submit(status, cfg)
+        local_job = pool.submit(upnp_observations, cfg)
+        cloud_job = pool.submit(cloud_observations, cfg)
+        result, local, cloud = basic_job.result(), local_job.result(), cloud_job.result()
+    observations = dict(local)
+    for key, item in cloud.items():
+        if key not in observations or (observations[key]["state"] != "observed" and item["state"] == "reported"):
+            observations[key] = item
+    result.update(observations=observations, cloud_observations=cloud,
+                  local_observations=local, verification_scope="power_only",
+                  message=result.get("message", "") + " 각 항목의 state·scope를 확인하세요. DLNA 상태는 HDMI/유튜브 재생 상태가 아닙니다. "
+                          "SmartThings 값은 reported_at 시점의 마지막 보고이며 현재 화면·소리를 검증하지 않습니다.")
+    # Keep the old reachable meaning (Samsung REST endpoint), do not let cloud data turn it on.
+    return result
 
 
 class Remote:
@@ -228,7 +483,7 @@ def execute(args, cfg, token_sink, root):
         epg.CACHE_ROOT = root / "data/tv_epg"
         return {**epg.epg_op(args), "verified": True}
     if op == "status":
-        return status(cfg)
+        return detailed_status(cfg)
     if op == "on":
         return wake(cfg, token_sink)
     if op == "pair":

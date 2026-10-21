@@ -158,6 +158,27 @@ def test_process_writes_preserve_each_other_and_pc_credentials(tmp_path):
     assert limb_keys.get_by_device(pc['device_id'])
 
 
+def test_cloud_credentials_private_preserved_and_explicitly_removable():
+    cfg = {'ip': '192.0.2.10', 'smartthings': {'device_id': 'cloud-tv', 'token': 'private-cloud-token'}}
+    row = hardware.register('screen', cfg)
+    public = json.dumps(hardware.devices())
+    assert 'private-cloud-token' not in public and 'cloud-tv' not in public
+    hardware.register('screen', {'ip': '192.0.2.10'}, target=row['device_id'])
+    assert hardware.connection(row['device_id'])['connection']['smartthings'] == cfg['smartthings']
+    hardware.register('screen', {'ip': '192.0.2.10', 'smartthings': None}, target=row['device_id'])
+    assert hardware.connection(row['device_id'])['connection']['smartthings'] is None
+
+
+@pytest.mark.parametrize('cloud', [
+    {'device_id': '../other', 'token': 'valid'}, {'device_id': 'tv', 'token': 'bad\r\nheader'},
+    {'device_id': 'tv', 'token': ''}, {'device_id': 'tv'}, 'secret',
+])
+def test_bad_cloud_credentials_rejected_without_echo(cloud):
+    with pytest.raises(ValueError, match='SmartThings'):
+        hardware.register('screen', {'ip': '192.0.2.10', 'smartthings': cloud})
+    assert not hardware._store_path().exists()
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

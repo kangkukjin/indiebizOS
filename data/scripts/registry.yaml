@@ -968,8 +968,9 @@ PC제어부품:
         evidence_ref: Unknown
         failure: Unknown
 TV제어:
-  description: 등록된 Samsung TV 제어. 음량은 상대 단계, mute는 토글이며 자동 재시도하지 않는다. verified는 각
-    동작의 관측 범위다. 가이드 tv_control.md.
+  description: 등록된 Samsung TV 제어. status는 전원·앱과 항목별 observations(음량·음소거·입력·DLNA 상태/위치)를 반환한다.
+    선택 SmartThings는 갱신 시각을 가진 마지막 보고다. DLNA는 HDMI/앱 재생과 구분한다.
+    음량은 상대 단계, mute는 토글이며 자동 재시도하지 않는다. status의 verified는 전원만 뜻한다. 가이드 tv_control.md.
   file: tv_control.py
   interpreter: python
   registered_at: '2026-10-18T00:00:00'

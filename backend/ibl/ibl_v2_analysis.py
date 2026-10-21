@@ -95,6 +95,19 @@ def constant_value(node, depth=0, *, partial_records=False):
         return UNRESOLVED
     if node.kind == 'literal':
         return node.data['value']
+    if node.kind == 'unary' and node.data['op'] in ('+', '-'):
+        # 음수 리터럴은 파서에서 부호+숫자다. 부호 때문에 이미 아는 하한 위반을
+        # 동적 값으로 취급하면 앞선 외부 호출이 끝난 뒤에야 실패한다.
+        value = constant_value(node.data['value'], depth + 1)
+        if value is UNRESOLVED:
+            return UNRESOLVED
+        from common.expression_ops import number
+        from ibl_v2_ir import Fault
+        try:
+            value = number(value)
+            return -value if node.data['op'] == '-' else value
+        except Fault:
+            return UNRESOLVED  # 타입 오류는 기존 타입 검사기가 보고한다.
     if node.kind == 'list':
         values = [constant_value(v, depth + 1) for v in node.data['values']]
         return UNRESOLVED if any(v is UNRESOLVED for v in values) else values

@@ -2583,8 +2583,8 @@
   },
   "table:take": {
    "fields": {
-    "description": "d2c330a731e6",
-    "target_description": "e461e97b83a7",
+    "description": "5a3f37ab6c0b",
+    "target_description": "4dad890f246b",
     "implementation": "2ed6ce156ec1",
     "returns": "5450ffb2cf8a",
     "target_key": "46a3ae93aa7a",
@@ -2592,8 +2592,8 @@
     "router": "ebbb1532efbc",
     "tool": "d5515d822742"
    },
-   "reviewed": "2026-09-18",
-   "examples": 203
+   "reviewed": "2026-10-21",
+   "examples": 210
   },
   "table:union": {
    "fields": {

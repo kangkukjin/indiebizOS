@@ -19,12 +19,12 @@
    의미 있는 하위 작업마다 입력·반환·실패·외부 효과를 정하고 구현한 뒤, 마지막에 전체 흐름을 조합한다.
    첫 인자가 파이프 자리다. 모든 외부 의존은 인자로 받는다. `return`은 즉시 반환한다. 저장·등록 없이 실행된다.
 5. 빈값·실패·입력 규모·재개를 설계한 뒤 `check:true`로 검사하고, 통과하면 `execute_args` 그대로 실행한다(원문·`inputs`·`budget` 보존 — 적은 인자만 전체 교체).
-   오류는 `issues`를 모아 `location`(원문·정의 속 위치), `call_path`, `expected/actual`, `hint`로 고친 뒤 전체를 재검사한다. 긴 원문은 `revise_args`의 `code_edits`로 조각만 고친다.
+   오류는 `issues`를 모아 `location`(원문·정의 속 위치), `call_path`, `expected/actual`, `hint`로 고친 뒤 전체를 재검사한다. `revise_args`가 있으면 `code_edits`로 조각만 고친다. 참조가 원래 inputs·budget·edition과 읽기 재사용을 복원한다. 검사만 하려면 check:true, 새 조회는 reuse:null을 명시한다.
    `warnings`의 반복 AI 입력은 의도를 확인한다. `incomplete`는 실행 중 검사할 타입·도구 경계가 있다는 뜻이다.
    `PROJECT_CONTEXT` 경고는 요청에 프로젝트 문맥이 없어 파일 액션이 첫 호출에서 거절된다는 사전경고다 — HTTP `/ibl/execute`는 body에 `project_id`를 넣는다.
    명시한 프로젝트 ID가 해소되지 않으면 다른 프로젝트로 폴백하지 않는다. HTTP는 `PROJECT_NOT_FOUND`로 실행 전에 거절하므로 ID를 바로잡는다.
    `UNOBSERVED_FIELD`는 관측된 반환 필드 밖의 이름이다 — `describe`의 `observed_returns`나 작은 실행으로 실제 필드를 본 뒤 쓴다.
-6. 수정 실행은 응답 `continuation.reuse_args`의 키를 요청 최상위에 합쳐(`reuse:{run_id:…}`) 같은 읽기·성공 모델 결과를 재사용한다(조건: `ibl_composition_tools.md` 「중단 뒤 이어가기」).
+6. 읽기 후 실패의 `revise_args`는 기존 읽기를 자동으로 이어 쓴다. 참조 없이 원문을 수정할 때는 응답 `continuation.reuse_args`의 키를 요청 최상위에 합쳐(`reuse:{run_id:…}`) 같은 읽기·성공 모델 결과를 재사용한다(조건: `ibl_composition_tools.md` 「중단 뒤 이어가기」).
    단계별 입력 연결은 [분할 예제](long_sentence_imagination.md#비싼-추출-결과를-반환한-뒤-계산표현을-바꾸기)를 따른다.
    `$ref`는 출처·불완전성을 보존하며 `evidence($입력)`으로 확인한다.
 

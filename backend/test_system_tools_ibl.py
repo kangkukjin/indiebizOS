@@ -111,6 +111,82 @@ def test_description_only_keeps_current_authoring_edition(tmp_path, monkeypatch)
     assert seen == [2] and result["executed"] is False
 
 
+@pytest.mark.parametrize("check_first,fresh", [(False, False), (True, False), (False, True)])
+def test_revision_reuses_reads_and_inputs_through_optional_check(store, tmp_path, monkeypatch, check_first, fresh):
+    import ibl_engine
+
+    calls = []
+
+    def quote(step, *args, **kwargs):
+        calls.append(step)
+        return {"success": True, "items": [{"symbol": "fixture", "current_price": 100}]}
+
+    monkeypatch.setattr(ibl_engine, "execute_ibl", quote)
+    code = '''$quotes=[table:each]{items:$symbols} {
+  $q=[sense:stock]{op:"quote",ticker:$it}
+  return $q
+}
+return $quotes >> [table:select]{columns:["symbol","current_price"]}'''
+    inputs = {"symbols": [f"FIX{i}" for i in range(18)]}
+    request = {"edition": 2, "code": code, "inputs": inputs, "budget": {"steps": 4000}}
+    failed = run(request, tmp_path)
+    assert failed["success"] is False and len(calls) == 18, failed
+    assert "items" in failed["error"] and "flat_map" in failed["error"], failed
+    args = {**failed["revise_args"], "code_edits": [
+        {"old": "items:$symbols", "new": 'items:$symbols,mode:"flat_map"'},
+        {"old": "return $q\n", "new": "return $q.items\n"},
+    ]}
+    if fresh:
+        args["reuse"] = None
+    resolved, error = tools._resolve_checked_code(args)
+    assert error is None and resolved["inputs"] == inputs
+    assert resolved["budget"] == request["budget"]
+    if check_first:
+        checked = run({**args, "check": True}, tmp_path)
+        assert checked["ok"] and len(calls) == 18, checked
+        args = checked["execute_args"]
+    out = run(args, tmp_path)
+    assert out["success"] and len(out["value"]) == 18, out
+    assert len(calls) == (36 if fresh else 18)
+    if not fresh:
+        assert out["reuse"]["reused_calls"] == 18, out
+
+
+def test_compile_revision_preserves_inputs_and_explicit_overrides(store, tmp_path):
+    code = '# ' + 'long program ' * 30 + '\nreturn $x + $missing'
+    failed = run({"edition": 2, "code": code, "inputs": {"x": 3}, "check": True}, tmp_path)
+    args = {**failed["revise_args"], "code_edits": [{"old": "$missing", "new": "2"}]}
+    assert run(args, tmp_path)["value"] == 5
+    assert run({**args, "inputs": {"x": 8}}, tmp_path)["value"] == 10
+
+
+@pytest.mark.parametrize("status,changed", [("interrupted", True), ("uncertain", False), ("suspended", False)])
+def test_revision_does_not_replay_writes_or_uncertain_runs(store, status, changed):
+    result = {"executed": True, "success": False, "run_status": status,
+              "continuation": {"state_change_possible": changed,
+                               "reuse_args": {"reuse": {"run_id": "fixture"}}}}
+    tools._offer_code_revision(result, "return 1")
+    assert "revise_args" not in result
+
+
+def test_revision_does_not_restore_masked_inputs(store):
+    result = {"executed": False, "ok": False, "issues": [{"code": "UNKNOWN_VARIABLE"}]}
+    tools._offer_code_revision(result, "# " + "long " * 70 + "\nreturn $missing",
+                               {"inputs": {"config": {"api_key": "DEMO_KEY_PLACEHOLDER"}}})
+    assert "revise_args" not in result
+
+
+def test_revision_preserves_explicit_model_refresh_policy(store):
+    result = {"executed": True, "success": False, "run_status": "interrupted",
+              "continuation": {"state_change_possible": False,
+                               "reuse_args": {"reuse": {"run_id": "current"}}}}
+    tools._offer_code_revision(result, "return 1",
+                               {"reuse": {"run_id": "previous", "models": False}})
+    args = {**result["revise_args"], "code_edits": [{"old": "1", "new": "2"}]}
+    resolved, error = tools._resolve_checked_code(args)
+    assert not error and resolved["reuse"] == {"run_id": "current", "models": False}
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))

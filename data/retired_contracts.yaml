@@ -966,3 +966,10 @@ retired:
       - 'sense:video'
       - 'sense:search_youtube'
       - 'limbs:music'
+
+  - id: take-negative-unqualified
+    retired: 2026-10-21
+    reason: 판본 1의 음수 슬라이스 설명이 판본 2의 비음수 계약에도 노출되어 실행 실패를 유도했다.
+    instead: 판본 2는 n>=0 정수값. 음수 슬라이스 설명은 target_description_edition:1에만 보존한다.
+    phrases:
+      - 'items에서 상위 n개만(음수면 뒤에서 n)'

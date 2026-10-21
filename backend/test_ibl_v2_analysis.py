@@ -6,6 +6,23 @@ from ibl_v2_compile import compile_program
 from ibl_v2_runtime import Runtime
 
 
+@pytest.mark.parametrize("value,expected", [(4, -4), (1.5, -1.5), (0, 0)])
+def test_signed_literal_is_observed_for_declarative_bounds(value, expected):
+    from ibl_v2_analysis import constant_value
+    from ibl_v2_ir import Node
+    literal = Node("literal", 0, 1, {"value": value})
+    unary = Node("unary", 0, 2, {"op": "-", "value": literal})
+    assert constant_value(unary) == expected
+
+
+def test_signed_dynamic_or_invalid_values_remain_unknown():
+    from ibl_callable_contract import UNRESOLVED
+    from ibl_v2_analysis import constant_value
+    from ibl_v2_ir import Node
+    for node in (Node("ref", 0, 1, {"name": "x"}), Node("literal", 0, 1, {"value": "bad"})):
+        assert constant_value(Node("unary", 0, 2, {"op": "-", "value": node})) is UNRESOLVED
+
+
 @pytest.fixture
 def registry():
     from ibl_v2_adapters import load_registry

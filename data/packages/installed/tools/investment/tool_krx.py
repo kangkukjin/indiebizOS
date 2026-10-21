@@ -19,6 +19,9 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
 from common.response_formatter import save_large_data, downsample_prices, compact_price_series
+from common.pkg_utils import load_sibling
+
+_normalize_row_change = load_sibling(__file__, "investment_history").normalize_history
 
 # 종목 코드 캐시
 STOCK_CODE_CACHE_PATH = Path(__file__).parent / "stock_code_cache.json"
@@ -221,27 +224,6 @@ def _find_stock_code(symbol: str):
             return code
 
     return None
-
-
-def _normalize_row_change(prices):
-    """행별 change/change_percent 를 '전일 종가 대비'로 통일 (2026-09-01).
-
-    소스마다 뜻이 갈려 있었다 — FDR=등락 비율(소수), KRX=등락률(%), FMP=종가−시가.
-    같은 op 의 같은 열 이름이 소스에 따라 다른 양을 담으면 비교가 조용히 틀린다.
-    창 밖의 전일은 모르므로 첫 행은 None(추측 금지). 다운샘플 전 전체 시계열에 적용할 것.
-    """
-    prev = None
-    for row in prices:
-        close = row.get("close")
-        if prev and close is not None:
-            row["change"] = close - prev
-            row["change_percent"] = round((close - prev) / prev * 100, 2)
-        else:
-            row["change"] = None
-            row["change_percent"] = None
-        if close is not None:
-            prev = close
-    return prices
 
 
 def _fetch_stock_price_fdr(code: str, start_date: str, end_date: str):

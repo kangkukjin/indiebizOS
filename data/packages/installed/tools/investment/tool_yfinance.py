@@ -14,6 +14,9 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
 from common.response_formatter import save_large_data, downsample_prices, compact_price_series
+from common.pkg_utils import load_sibling
+
+_normalize_row_change = load_sibling(__file__, "investment_history").normalize_history
 
 
 def _format_number(num):
@@ -427,6 +430,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         if not all_history:
             return {"success": False, "error": f"'{symbol}' 종목을 찾을 수 없거나 데이터가 없습니다."}
 
+        _normalize_row_change(all_history)
         latest = all_history[-1]
         as_of = latest["date"]                       # 이 시세가 말하는 거래일 = history 마지막 행의 날짜
         current_price = latest["close"]

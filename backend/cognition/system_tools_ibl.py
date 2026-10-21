@@ -515,6 +515,7 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
 
 
 _CHECKED_CODE_RE = re.compile(r"\s*\$checked:([0-9a-f]{64})\s*")
+_SAVED_REQUEST_KEYS = ("inputs", "budget", "edition", "value_protocols", "reuse")
 
 
 def _offer_checked_code(checked, code, request=None) -> None:
@@ -529,7 +530,7 @@ def _offer_checked_code(checked, code, request=None) -> None:
         return
     try:
         from model_result_view import evidence_store
-        saved = {key: request[key] for key in ("inputs", "budget", "edition", "value_protocols")
+        saved = {key: request[key] for key in _SAVED_REQUEST_KEYS
                  if request is not None and key in request}
         ref = evidence_store().evidence(json.dumps(
             {"kind": "checked_program", "code": code, "request": saved}, ensure_ascii=False))
@@ -550,28 +551,45 @@ _REJECTED_CODE_RE = re.compile(r"\s*\$rejected:([0-9a-f]{64})\s*")
 _CODE_EDIT_EXAMPLE = [{"old": "<고칠 원문 조각>", "new": "<바꿀 글>"}]
 
 
-def _offer_code_revision(result, code) -> None:
-    """실행 전에 거절된 프로그램에 수정 손잡이를 붙인다 — 한 군데를 고치려고 원문 전체를 다시 적지 않게(긴문장 L18-7).
+def _offer_code_revision(result, code, request=None) -> None:
+    """거절·읽기 후 실패에 원문·입력·읽기 재사용을 묶은 수정 손잡이를 붙인다.
 
     통과한 검사에는 `$checked` 가 있는데 거절에는 없어서, 7K자 프로그램의 인자 이름 하나를 고치는 데 92초가 들었다
     (ep4338, 전문 재출력). 보낸 원문은 이미 여기 있으므로 증거 저장소에 두고 `code: "$rejected:<id>"` 와
     `code_edits`(정확히 일치하는 조각 치환)로 고친다. `$checked` 와 같은 code 자리의 참조이고 새 문법이 아니다."""
-    if (not isinstance(result, dict) or result.get("executed") is not False
-            or result.get("ok") is not False or not result.get("issues")):
+    if not isinstance(result, dict):
         return
-    if not isinstance(code, str) or len(code) < _REVISION_MIN_CHARS:
+    rejected = (result.get("executed") is False and result.get("ok") is False
+                and bool(result.get("issues")))
+    continuation = result.get("continuation") or {}
+    reuse_args = continuation.get("reuse_args") or {}
+    # 이미 쓰기를 했거나 결과가 불확실한 실행을 수정 재실행으로 유도하지 않는다.
+    reusable_failure = (result.get("executed") is True and result.get("success") is False
+                        and continuation.get("state_change_possible") is False
+                        and bool(reuse_args.get("reuse"))
+                        and result.get("run_status") == "interrupted")
+    if not (rejected or reusable_failure):
+        return
+    if not isinstance(code, str) or not code.strip() or (not reusable_failure and len(code) < _REVISION_MIN_CHARS):
         return
     try:
         from model_result_view import evidence_store
-        ref = evidence_store().evidence(json.dumps({"kind": "rejected_program", "code": code}, ensure_ascii=False))
+        saved = {key: request[key] for key in _SAVED_REQUEST_KEYS
+                 if request is not None and key in request}
+        if reusable_failure:
+            previous = saved.get("reuse") or {}
+            saved["reuse"] = {**previous, **reuse_args["reuse"]}
+        ref = evidence_store().evidence(json.dumps(
+            {"kind": "rejected_program", "code": code, "request": saved}, ensure_ascii=False))
     except (OSError, ValueError, TypeError):
         return
     if ref.get("masked_paths"):
         return
     result["revise_args"] = {"code": f"$rejected:{ref['id']}", "code_edits": _CODE_EDIT_EXAMPLE}
     result["revise_hint"] = ('고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다'
-                             '(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 '
-                             '함께 보냅니다. 원문 전체를 다시 적지 않습니다.')
+                             '(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 입력·예산과 재사용 가능한 읽기를 '
+                             '복원하므로 원문 전체나 inputs를 다시 적지 않습니다. check:true는 검사만, '
+                             'reuse:null은 새 조회입니다. 명시한 인자는 저장된 인자 전체를 교체합니다.')
 
 
 def apply_code_edits(source, edits):
@@ -625,10 +643,10 @@ def _resolve_checked_code(tool_input):
             return tool_input, problem
     elif rejected:
         return tool_input, "$rejected 참조는 거절된 원문입니다 — code_edits 로 고칠 조각을 함께 보내세요."
-    saved = record.get("request", {}) if match else {}
+    saved = record.get("request", {})
     if not isinstance(saved, dict):
         return tool_input, f"{name} 참조의 저장 인자가 잘못됐습니다.{again}"
-    defaults = {k: v for k, v in saved.items() if k in {"inputs", "budget", "edition", "value_protocols"}}
+    defaults = {k: v for k, v in saved.items() if k in _SAVED_REQUEST_KEYS}
     return {**defaults, **{k: v for k, v in tool_input.items() if k != "code_edits"}, "code": source}, None
 
 
@@ -745,7 +763,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         if tool_input.get("check"):
             _offer_checked_code(_v2, code, _checked_request)
         _shown = _v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input)
-        _offer_code_revision(_shown, code)
+        _offer_code_revision(_shown, code, _checked_request)
         return json.dumps(_shown, ensure_ascii=False)
 
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---

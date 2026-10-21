@@ -20,6 +20,9 @@ if _backend_dir not in sys.path:
 
 from common.api_client import api_call
 from common.response_formatter import save_large_data, downsample_prices, compact_price_series
+from common.pkg_utils import load_sibling
+
+_normalize_row_change = load_sibling(__file__, "investment_history").normalize_history
 
 
 def _api_request(endpoint: str, params: dict = None):
@@ -258,20 +261,7 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None, m
             "vwap": item.get("vwap")
         })
 
-    # 행별 change 의미 통일 (2026-09-01): FMP 원본의 change/changePercent 는 '종가 − 시가'
-    # 라서 KR(전일 대비)과 같은 열 이름에 다른 양이 담겨 있었다. 두 시장을 같은 자로.
-    # 창 밖의 전일은 모르므로 첫 행은 None. 다운샘플 전 전체 시계열에 적용한다.
-    _prev = None
-    for _row in prices:
-        _close = _row.get("close")
-        if _prev and _close is not None:
-            _row["change"] = round(_close - _prev, 4)
-            _row["change_percent"] = round((_close - _prev) / _prev * 100, 2)
-        else:
-            _row["change"] = None
-            _row["change_percent"] = None
-        if _close is not None:
-            _prev = _close
+    _normalize_row_change(prices)
 
     latest = prices[-1] if prices else {}
     total_days = len(prices)

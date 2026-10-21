@@ -107,8 +107,17 @@ def table_operation(operation, runtime, args):
             for index, row in enumerate(rows):
                 missing = [k for k in columns if not isinstance(row, dict) or k not in row]
                 if missing:
-                    raise Fault("MISSING_FIELD", f"select 입력 {index}번 행에 열이 없습니다: {missing}",
-                                details={"row_index": index, "missing_fields": missing})
+                    available = list(row)[:20] if isinstance(row, dict) else []
+                    details = {"row_index": index, "missing_fields": missing, "available_fields": available}
+                    hint = ""
+                    nested = row.get("items") if isinstance(row, dict) else None
+                    if isinstance(nested, list) and nested and isinstance(nested[0], dict):
+                        details["items_fields"] = list(nested[0])[:20]
+                        if all(key in nested[0] for key in missing):
+                            hint = (" 열은 행의 items 안에 있습니다. each에서 응답의 items를 반환하고 "
+                                    'mode:"flat_map"으로 합친 뒤 select하세요.')
+                    raise Fault("MISSING_FIELD", f"select 입력 {index}번 행에 열이 없습니다: {missing}. "
+                                f"실제 필드: {available}.{hint}", details=details)
             return [{k: row[k] for k in columns} for row in rows]
         return [at_row(columns, row, index, "Record") for index, row in enumerate(rows)]
     if operation == "take":

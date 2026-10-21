@@ -10804,6 +10804,8 @@ nodes:
           required:
           - items
           - n
+          minimum:
+            n: 0
           pipe_input: items
           result: List
           effects:
@@ -10819,8 +10821,9 @@ nodes:
           columns: keep
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤. 표본 추출: 기존 total을 유지하며 반환 행보다 크면 truncated를 신고한다.'
-        target_description: 'n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [table:sort]{by:..} >> [table:take]{n:5}.'
+        description: 행 목록에서 앞의 n개를 선택한다. 판본 2의 n은 0 이상의 정수값이며 List를 반환한다. 최근 N개는 날짜 내림차순 정렬 뒤 취한다.
+        target_description_edition: 1
+        target_description: '구판 전용: n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [table:sort]{by:..} >> [table:take]{n:5}.'
         group: transform
         router: handler
         tool: data_take

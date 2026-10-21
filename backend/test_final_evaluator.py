@@ -11,6 +11,25 @@ from test_conscious_supervisor import supervisor, finish  # noqa: F401
 from test_supervision_delivery import prepare as stage
 
 
+def test_unicode_source_text_reaches_final_evaluation(supervisor, monkeypatch):
+    source = "PDF 원문 앞\u2028가운데\u2029끝\u0085다음"
+    supervisor.run_tool("read", {"query": source}, lambda: source)
+    evaluated = []
+
+    def evaluate(prompt, **kwargs):
+        evaluated.append(prompt)
+        assert source in prompt
+        return "ACHIEVED"
+
+    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
+    result = finish(supervisor, "원문을 확인했습니다.")
+    assert len(evaluated) == 1
+    decisions = [e for e in supervisor.store.read_events(limit=100000)["events"]
+                 if e["kind"] == "decision"]
+    assert decisions[-1]["decision"]["status"] == "APPROVED"
+    assert result[-1]["content"] == "원문을 확인했습니다."
+
+
 @pytest.mark.parametrize("scope,has_artifact,active", [
     ("local", False, False), ("research", False, False),
     ("local", True, False), ("local", False, True),

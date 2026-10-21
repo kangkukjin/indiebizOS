@@ -76,7 +76,8 @@ def _lineage_ledger(directory, key):
 
 def _ledger_turns(ledger):
     try:
-        rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines() if line.strip()]
+        with ledger.open(encoding="utf-8") as stream:
+            rows = [json.loads(line) for line in stream if line.strip()]
     except (OSError, ValueError):
         return []
     return [r["turn"] for r in rows if isinstance(r, dict) and isinstance(r.get("turn"), str)]
@@ -142,24 +143,26 @@ def tool_index_at(directory, limit=40):
     path = Path(directory) / "events.jsonl"
     if not path.exists():
         return rows
-    lines = path.read_text(encoding="utf-8").splitlines()
-    for line in lines:
-        event = json.loads(line)
-        if event["kind"] == "tool.started":
-            pending[event.get("id")] = event
-        elif event["kind"] in {"tool.finished", "tool.supervisor"}:
-            if event["kind"] == "tool.supervisor" and event.get("operation") != "execute":
-                continue
-            start = pending.pop(event.get("id"), event)
-            inp = start.get("input", {})
-            result = event.get("result") or event.get("evidence", {})
-            if not result.get("id"):
-                continue
-            rows.append({"seq": event["seq"], "name": start.get("name", event.get("operation", "")),
-                         "input": {"id": inp.get("id"), "excerpt": inp.get("excerpt", "")[:240]},
-                         "result": {"id": result["id"], "chars": result.get("chars")},
-                         "is_error": bool(event.get("is_error")),
-                         **({"check_rejected": True} if event.get("check_rejected") else {})})
+    # JSONL 경계는 파일의 줄바꿈이다. splitlines()는 JSON 문자열 안의
+    # U+0085/U+2028/U+2029까지 잘라 정상 도구 원문을 파싱 오류로 만든다.
+    with path.open(encoding="utf-8") as stream:
+        for line in stream:
+            event = json.loads(line)
+            if event["kind"] == "tool.started":
+                pending[event.get("id")] = event
+            elif event["kind"] in {"tool.finished", "tool.supervisor"}:
+                if event["kind"] == "tool.supervisor" and event.get("operation") != "execute":
+                    continue
+                start = pending.pop(event.get("id"), event)
+                inp = start.get("input", {})
+                result = event.get("result") or event.get("evidence", {})
+                if not result.get("id"):
+                    continue
+                rows.append({"seq": event["seq"], "name": start.get("name", event.get("operation", "")),
+                             "input": {"id": inp.get("id"), "excerpt": inp.get("excerpt", "")[:240]},
+                             "result": {"id": result["id"], "chars": result.get("chars")},
+                             "is_error": bool(event.get("is_error")),
+                             **({"check_rejected": True} if event.get("check_rejected") else {})})
     return rows[-limit:]
 
 

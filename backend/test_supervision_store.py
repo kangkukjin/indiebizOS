@@ -5,7 +5,38 @@ import boot_paths  # noqa: F401
 import pytest
 
 import model_result_view as view
-from supervision_store import TurnStore
+from supervision_store import TurnStore, _ledger_turns
+
+
+@pytest.mark.parametrize("separator", ["\u0085", "\u2028", "\u2029", "\n"])
+def test_jsonl_tool_index_preserves_text_separators(tmp_path, separator):
+    store = TurnStore(tmp_path)
+    text = f"원문 앞{separator}원문 뒤"
+    inp = store.evidence({"query": text})
+    result = store.evidence(text)
+    store.log("tool.started", id="read", name="read", input=inp)
+    store.log("tool.finished", id="read", evidence=result, is_error=False)
+    calls = store.tool_index()
+    assert len(calls) == 1
+    assert calls[0]["input"]["id"] == inp["id"]
+    assert calls[0]["result"]["id"] == result["id"]
+    assert store.read_evidence(calls[0]["result"]["id"], 0, None)["text"] == text
+    assert [e["seq"] for e in store.read_events()["events"]] == [1, 2]
+
+
+def test_jsonl_tool_index_does_not_hide_malformed_records(tmp_path):
+    store = TurnStore(tmp_path)
+    (tmp_path / "events.jsonl").write_text('{"kind": "unfinished\n', encoding="utf-8")
+    with pytest.raises(json.JSONDecodeError):
+        store.tool_index()
+
+
+def test_lineage_jsonl_preserves_unicode_in_metadata(tmp_path):
+    ledger = tmp_path / "lineage.jsonl"
+    records = [{"turn": "first", "note": "앞\u2028중간\u2029뒤"}, {"turn": "second"}]
+    ledger.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in records) + "\n",
+                      encoding="utf-8")
+    assert _ledger_turns(ledger) == ["first", "second"]
 
 
 @pytest.mark.parametrize("serialized", [False, True])

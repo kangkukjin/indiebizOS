@@ -20,6 +20,24 @@ def schema(db):
         received REAL NOT NULL, payload TEXT NOT NULL, UNIQUE(device,event_id))""")
     db.execute("CREATE INDEX IF NOT EXISTS resident_events_job ON resident_events(job,cursor)")
     db.execute("CREATE INDEX IF NOT EXISTS resident_events_kind ON resident_events(job,kind,cursor)")
+    _reconcile(db)
+
+
+def _reconcile(db):
+    """Close the receipt of a command the device never pulled.
+
+    phone_jobs expires a job still queued after JOB_TTL and later drops the row, but
+    only the job: the receipt stayed 'queued' with no result, so pending() reported
+    the operation as running for good and the cockpit's helper-update button stayed
+    disabled (KHJoffice, 2026-10-17: clicked as the PC went down, '교체 중' for days).
+    Closed as 'failed' (the one receipt vocabulary) with the reason in the result."""
+    rows = db.execute("SELECT t.id,t.device FROM resident_tasks t LEFT JOIN jobs j ON j.id=t.id "
+                      "WHERE t.result IS NULL AND t.state='queued' AND (j.id IS NULL OR j.state='expired')").fetchall()
+    for row in rows:
+        payload = {"error": "expired", "delivered": False}
+        db.execute("UPDATE resident_tasks SET state='failed',result=? WHERE id=?",
+                   (json.dumps(payload), row["id"]))
+        _event(db, row["device"], row["id"], "expired:" + row["id"], "expired", payload)
 
 
 def _event(db, device, job, event_id, kind, payload, occurred=None):

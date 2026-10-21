@@ -67,6 +67,32 @@ def test_owner_context_survives_device_sync_without_changing_pause(registry):
     assert saved['paused'] is True
     assert saved['capabilities']['os'] == 'windows'
 
+def test_command_the_device_never_pulled_expires_instead_of_pending_forever(registry, monkeypatch):
+    rec = registry()
+    command = {'op': 'update', 'transfer_id': 'x', 'sha256': '0' * 64}
+    jid = resident_store.submit(rec, command, 'r1')
+    assert resident_store.pending(rec['device_id'], 'update') == jid
+    monkeypatch.setattr(phone_jobs, 'JOB_TTL', -1.0)  # the PC went down before its next sync
+    assert resident_store.pending(rec['device_id'], 'update') is None
+    task = resident_store.history(rec['device_id'])['tasks'][0]
+    assert task['state'] == task['outcome'] == 'failed'
+    assert task['result'] == {'error': 'expired', 'delivered': False}
+    assert [e['kind'] for e in resident_store.history(job=jid)['events']] == ['queued', 'expired']
+    assert resident_store.wait_result(jid, 0) == {'error': 'expired', 'delivered': False}
+    # 만료 행이 보존 기한 뒤 지워진 뒤에 처음 보더라도 같은 결론이다.
+    monkeypatch.setattr(phone_jobs, 'JOB_TTL', 600.0)
+    other = resident_store.submit(rec, {'op': 'info'}, 'r2')
+    with phone_jobs._db() as db:
+        db.execute("DELETE FROM jobs WHERE id=?", (other,))
+    assert resident_store.pending(rec['device_id'], 'info') is None
+    assert resident_store.history(job=other)['tasks'][0]['state'] == 'failed'
+    # 전달된 작업은 건드리지 않는다.
+    live = resident_store.submit(rec, {'op': 'shell', 'cmd': 'x'}, 'r3')
+    assert pcs.sync(rec['key'], 'a' * 32)['jobs'][0]['id'] == live
+    monkeypatch.setattr(phone_jobs, 'JOB_TTL', -1.0)
+    assert resident_store.pending(rec['device_id'], 'shell') == live
+
+
 @pytest.mark.parametrize('days', [-1, float('nan'), float('inf'), True])
 def test_invalid_temporary_duration_never_becomes_unlimited(registry, days):
     with pytest.raises(ValueError):

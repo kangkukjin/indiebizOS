@@ -140,6 +140,50 @@ def test_project_reentry_passes_own_repair_gate_but_rejects_other_owner(tmp_path
     assert asyncio.run(execute_ibl_code(req))['success']
 
 
+def test_catalog_preserves_request_scope_in_worker(monkeypatch):
+    import api_ibl
+    import thread_context
+    before = thread_context.snapshot()
+    try:
+        thread_context.set_allowed_nodes({'table'})
+        monkeypatch.setattr(api_ibl, '_build_actions_catalog',
+                            lambda: thread_context.get_allowed_nodes())
+        assert asyncio.run(api_ibl.get_actions_catalog()) == {'table'}
+        assert thread_context.get_allowed_nodes() == {'table'}
+    finally:
+        thread_context.restore(before)
+
+
+def test_catalog_teaches_same_current_contract_as_describe():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import api_ibl
+    from model_result_view import describe_actions
+    app = FastAPI()
+    app.include_router(api_ibl.router)
+    with TestClient(app) as client:
+        response = client.get('/ibl/actions/catalog')
+    assert response.status_code == 200
+    catalog = response.json()
+    assert catalog['total'] == sum(n['count'] for n in catalog['nodes'].values())
+    names = ['table:filter', 'table:select', 'table:each', 'self:write', 'self:script']
+    for row in describe_actions(names, {'table', 'self'}, edition=2)['actions']:
+        node, action = row['action'].split(':')
+        shown = catalog['nodes'][node]['actions'][action]
+        current = row['definition']
+        assert shown['callable_contract'] == current['callable_contract']
+        if current.get('target_description'):
+            assert shown['target_description'] == current['target_description']
+        assert '$return' not in shown['target_description']
+        assert '기본 20' not in shown['target_description']
+        assert not shown['implementation']
+        assert not shown['target_key'] or shown['target_key'] in current['callable_contract']['params']
+        if 'op' in current['callable_contract']['params']:
+            assert (shown['ops'] or {}).get('values', {}) == current['operations']
+        else:
+            assert shown['ops'] is None
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

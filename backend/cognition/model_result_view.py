@@ -938,6 +938,20 @@ def observed_returns(name):
             if isinstance(v, dict) and (k == name or k.startswith(name + "#") or k.startswith(name + "@"))}
 
 
+def current_action_definition(spec, runtime_contract):
+    """현재 작성 설명 한 벌 — describe·마법책·선택 힌트가 함께 소비한다."""
+    contract = {k: v for k, v in runtime_contract.items()
+                if k not in {"analysis", "implementation_fingerprint"}}
+    return {**{k: spec[k] for k in ("description", "guides", "group", "runs_on", "authoring_examples") if k in spec},
+            **({"target_description": spec["authoring_hint"]} if spec.get("authoring_hint") else {}),
+            **({"target_description": spec["target_description"]}
+               if contract.get("adapter", {}).get("protocol") in {"legacy-envelope", "document-value/1"}
+               and spec.get("target_description_edition", 2) == 2
+               and spec.get("target_description") else {}),
+            "callable_contract": contract,
+            "operations": (spec.get("ops") or {}).get("values", {})}
+
+
 def describe_actions(names, allowed_nodes, edition=None, program=None):
     from ibl_access import load_nodes_raw, resolve_allowed_nodes
     from ibl_registry import self_can_run
@@ -995,16 +1009,7 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
                     continue
                 # Inspection consumes the same schema-resolved contract as the
                 # compiler. Never independently reconstruct legacy parameters.
-                contract = {k: v for k, v in adapter.contract.items()
-                            if k not in {"analysis", "implementation_fingerprint"}}
-                spec = {**{k: spec[k] for k in ("description", "guides", "group", "runs_on", "authoring_examples") if k in spec},
-                        **({"target_description": spec["authoring_hint"]} if spec.get("authoring_hint") else {}),
-                        **({"target_description": spec["target_description"]}
-                           if adapter.contract.get("adapter", {}).get("protocol") in {"legacy-envelope", "document-value/1"}
-                           and spec.get("target_description_edition", 2) == edition
-                           and spec.get("target_description") else {}),
-                        "callable_contract": contract,
-                        "operations": (spec.get("ops") or {}).get("values", {})}
+                spec = current_action_definition(spec, adapter.contract)
                 observed = observed_returns(name)
                 if observed:
                     spec = {**spec, "observed_returns": observed,

@@ -610,11 +610,11 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     return (d["xml"], d["top_score"], d["top_code"])
 
 
-def build_execution_memory_from_hint(action_hint: str) -> tuple:
+def build_execution_memory_from_hint(action_hint: str, allowed_nodes=None) -> tuple:
     """사용자가 마법책에서 명시적으로 선택한 액션을 Top-1로 <execution_memory> 합성.
 
-    해마 시맨틱 검색을 건너뛰고, ibl_nodes.yaml에서 해당 액션의 메타와 implementation을
-    직접 조회하여 의식 에이전트가 그 액션 중심으로 task_framing/capability_focus를 짤 수 있게 한다.
+    해마 검색 대신 describe와 같은 현재 작성 계약을 제공한다. 구판 저장본의
+    설명·구현 문자열을 현재 문법으로 주입하지 않으며 활성·허용 범위를 함께 따른다.
 
     Args:
         action_hint: "sense:price" 같은 [node:action] 형태의 액션 ID
@@ -634,11 +634,9 @@ def build_execution_memory_from_hint(action_hint: str) -> tuple:
         return ("", 0.0, "")
 
     try:
-        from ibl_access import load_nodes_raw
-        data = load_nodes_raw()
-        action_config = (
-            (data.get("nodes") or {}).get(node, {}).get("actions", {}).get(action, {})
-        )
+        from model_result_view import describe_actions
+        entry = describe_actions([f"{node}:{action}"], allowed_nodes, edition=2)["actions"][0]
+        action_config = entry.get("definition")
     except Exception:
         return ("", 0.0, "")
 
@@ -649,25 +647,11 @@ def build_execution_memory_from_hint(action_hint: str) -> tuple:
         return _xml_attr(s)   # `&`·`<` 도 — 실측 16건의 description 이 이 둘을 담고 있었다
 
     action_id = f"[{node}:{action}]"
-    description = _esc(action_config.get("description", ""))
-    target_description = _esc(action_config.get("target_description", ""))
-    target_key = action_config.get("target_key", "")
-    implementation = _esc(action_config.get("implementation", ""))
-
-    sections = [
-        f'  <user_selected_action action="{action_id}" '
-        f'description="{description}" '
-        f'target_description="{target_description}" '
-        f'target_key="{target_key}"/>'
-    ]
-    if implementation:
-        sections.append(
-            '  <implementations note="구현 상세">\n'
-            f'    <impl action="{action_id}" implementation="{implementation}"/>\n'
-            '  </implementations>'
-        )
-
-    inner = "\n".join(sections)
+    teaching = {key: action_config[key] for key in
+                ("description", "target_description", "callable_contract", "operations", "guides")
+                if key in action_config}
+    inner = (f'  <user_selected_action action="{_esc(action_id)}" edition="2" '
+             f'contract="{_esc(json.dumps(teaching, ensure_ascii=False))}"/>')
     xml = (
         '<execution_memory note="사용자가 마법책에서 명시적으로 선택한 액션. 해마 검색 결과 대신 이 액션이 Top-1.">\n'
         f'{inner}\n'

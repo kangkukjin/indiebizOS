@@ -54,6 +54,11 @@ def test_installed_and_catalog_cannot_resurrect_api_actions(tmp_path, monkeypatc
     monkeypatch.setattr(vocabulary_state, 'revision', lambda: 1)
     monkeypatch.setattr(vocabulary_state, 'action_reason', lambda *args: None)
     assert registry.load_nodes_installed() == source
+    # 이 격리 루트에는 패키지가 없다. 현재 계약을 공급하되 실행 레지스트리에
+    # ghost가 있어도 공개 사전에 없는 액션은 카탈로그로 되살아나지 않아야 한다.
+    adapter = SimpleNamespace(contract={'params': {}, 'result': 'List<Record>'})
+    monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda: {
+        'sense:paper': adapter, 'sense:ghost': adapter})
     catalog = asyncio.run(api_ibl.get_actions_catalog())
     assert set(catalog['nodes']['sense']['actions']) == {'paper'}
     assert not registry.code_is_own('[sense:ghost]{}')

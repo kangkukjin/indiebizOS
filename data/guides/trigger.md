@@ -25,8 +25,8 @@
 |---|---|---|---|
 | `list` | (없음) | `type` (필터) | 등록된 모든 트리거 — items 통화(`>> [table:filter]` 가능), `runnable`/`problem` 동반 |
 | `detail` | `id` | — | 트리거 상세(저장된 do 원문 포함) |
-| `create` | `name`, `do` | `cron` 또는 `config`, `enabled`, `type` | 새 트리거 |
-| `update` | `id` | `cron`/`config`/`do`/`enabled`/`name` | 필드 수정 (캘린더 이벤트도 따라온다) |
+| `create` | `name`, `do` | `cron` 또는 `config`, `enabled`, `type`, `inputs` | 새 트리거 |
+| `update` | `id` | `cron`/`config`/`do`/`enabled`/`name`/`inputs` | 필드 수정 (캘린더 이벤트도 따라온다) |
 | `delete` | `id` | — | 영구 삭제 (캘린더 이벤트도 삭제) |
 | `enable` / `disable` | `id` | — | 켜기 / 끄기 (조건 충족해도 실행 안 됨) |
 | `status` | (없음) | — | 시스템 전체 상태 (폴러·스케줄러·자동응답) |
@@ -65,12 +65,12 @@
 ## 발화 규칙 (trigger · schedule · manage_events 공통 — 2026-09-02 54회차)
 
 1. **등록한 프로젝트에서 돈다.** 트리거·스케줄·실행 이벤트는 등록 시 프로젝트를 싣고, 발화가 그 프로젝트 경로에서 실행된다 — `do` 안에 `project_id` 를 손으로 쓸 필요가 없다. (시스템 AI 가 자기 자리에서 등록한 것은 시스템 AI 의 것.)
-2. **`do` 속 `$변수`는 등록 시점 값으로 굳는다.** `$q = [sense:stock]{…}` 뒤에 `do:"[self:write]{content:'$q.items.0.current_price'}"` 를 등록하면 저장본은 `content:'253000.0'` 이다. 발화 시점의 값이 필요하면 **조회를 do 안에** 넣어라.
+2. **`do`는 원문이고 외부 값은 `inputs`로 보존한다.** 일반 문자열 속 `$변수`는 등록할 때 자동 치환되지 않는다. 등록 시점 값을 고정하려면 `inputs:{가격:$가격}`과 `do:"return $가격"`처럼 연결한다. 발화 시점의 값이 필요하면 조회를 do 안에 넣는다. 현재 문맥에서 저장한 원문은 판본 2로 고정된다.
 3. **반복형은 오늘 예정 시각이 지났으면 내일부터.** "매일 9시"를 15시에 등록하면 15시에 돌지 않고 내일 9시에 처음 돈다. 따라잡기는 등록 전의 결번(그 분에 몸이 죽어 있던 날)에만. 1회 예약(`[self:schedule]{at}`)의 지난 시각은 등록 거절.
 4. **결과는 알림함으로.** 발화 성공·실패 모두 알림(`스케줄 실행 완료/실패`, `예약 실행 완료/실패`)이 온다. 소유 **에이전트**가 있는 스케줄은 창을 열어 채팅에서 "보이는 실행"으로 돈다.
-5. **이력은 통화다.** `[self:trigger]{op:"history", id} >> [table:filter]{where:"success == false"} >> [table:select]{columns:["time","error"]}`. 트리거 레코드의 `run_count`·`last_run`·`last_success` 도 발화마다 갱신된다.
+5. **이력은 통화다.** `$이력=[self:trigger]{op:"history",id:$id}; $이력.items >> [table:filter]{where:($r)=>$r.success == false} >> [table:select]{columns:["time","error"]}`. 트리거 레코드의 `run_count`·`last_run`·`last_success` 도 발화마다 갱신된다.
 6. **같은 분에 여러 건이 due 여도 전부 돈다.**
-7. 인용은 안쪽으로 갈수록 `"` → `'` → `\"` (3중까지 실측 무손상): `do: "[sense:feed]{url: '…'} >> [table:each]{do: '[self:write]{path: \"…\", content: \"$it.title\"}'}"`.
+7. 여러 줄 원문은 삼중 따옴표를 쓴다. each는 문자열 do가 아닌 코드 블록이며, 본문에서는 `$it.title`처럼 값을 직접 읽는다. 문자열이 필요한 자리에서만 `f"${값}"`으로 보간한다.
 
 ---
 
@@ -116,10 +116,13 @@ cron:"0 */6 * * *"        # 6시간마다 (분은 0 만)
 
 ### 5) 한 번만 (특정 날짜) — 트리거 대신 `[self:schedule]`
 
+<!-- example:trigger_delay -->
+```ibl
+#!ibl edition=2
+[self:schedule]{minutes:10,do:"[self:notify_user]{message:'예약 확인'}"}
 ```
-[self:schedule]{date:"2026-06-15", time:"14:00", do:"…"}     # 지난 시각이면 거절
-[self:schedule]{minutes:10, do:"…"}                           # 잠깐 뒤
-```
+
+특정 날짜는 `date`·`time`을 지정하며 지난 시각은 거절한다.
 
 ### 6) 채널 메시지 수신 → 자동 응답
 
@@ -131,11 +134,18 @@ cron:"0 */6 * * *"        # 6시간마다 (분은 0 만)
 
 ### 7) 워크플로우·스위치를 부르는 트리거
 
+<!-- example:trigger_workflow -->
+```ibl
+#!ibl edition=2
+[self:workflow]{op:"save",code:"[def:아침브리핑](){return [self:time]{}}"}
+[self:trigger]{op:"create",name:"morning_routine",cron:"30 7 * * *",
+  do:"[self:workflow]{op:'run',workflow_id:'아침브리핑'}"}
+[self:trigger]{op:"create",name:"switch_call",cron:"30 7 * * *",
+  do:"[self:switch]{op:'run',switch_id:'daily_briefing'}"}
 ```
-[self:workflow]{op:"save", name:"아침브리핑", do:"…"}
-[self:trigger]{op:"create", name:"morning_routine", cron:"30 7 * * *", do:"[self:workflow]{op: 'run', name: '아침브리핑'}"}
-[self:trigger]{op:"create", name:"switch_call", cron:"30 7 * * *", do:"[self:switch]{op: 'run', switch_id: 'daily_briefing'}"}
-```
+
+`daily_briefing`은 실제 등록된 스위치 ID로 교체한다. 함수 예제의 본문은 현재 시각을 반환하며,
+실제 브리핑 절차는 별도로 작성·검증한 뒤 저장한다.
 
 ---
 
@@ -143,20 +153,28 @@ cron:"0 */6 * * *"        # 6시간마다 (분은 0 만)
 
 ### 등록 → 확인 → 수정 → 비활성/삭제
 
+<!-- example:trigger_lifecycle -->
+```ibl
+#!ibl edition=2
+$t=[self:trigger]{op:"create",name:"morning_news",cron:"0 8 * * *",
+  do:"[self:notify_user]{message:$알림}",inputs:{알림:"아침 확인"}}
+[self:trigger]{op:"detail",id:$t.trigger.id}
+$목록=[self:trigger]{op:"list"}
+$목록.items >> [table:filter]{where:($r)=>$r.enabled == true}
+  >> [table:select]{columns:["name","last_run","run_count"]}
+$이력=[self:trigger]{op:"history",id:$t.trigger.id,limit:10}
+$이력.items >> [table:filter]{where:($r)=>$r.success == false}
+[self:trigger]{op:"update",id:$t.trigger.id,cron:"0 9 * * *"}
+[self:trigger]{op:"disable",id:$t.trigger.id}
 ```
-$t = [self:trigger]{op:"create", name:"morning_news", cron:"0 8 * * *", do:"…"}
-[self:trigger]{op:"detail", id:"$t.trigger.id"}                 # 저장된 do 원문 확인
-[self:trigger]{op:"list"} >> [table:filter]{where:"enabled == true"} >> [table:select]{columns:["name","last_run","run_count"]}
-[self:trigger]{op:"history", id:"$t.trigger.id", limit:10} >> [table:filter]{where:"success == false"}
-[self:trigger]{op:"update", id:"$t.trigger.id", cron:"0 9 * * *"}
-[self:trigger]{op:"disable", id:"$t.trigger.id"} · {op:"enable"} · {op:"delete"}
-```
+
+다시 켜기는 `op:"enable"`, 영구 삭제는 `op:"delete"`로 같은 ID를 전달한다.
 
 ### 시스템 헬스 점검
 
 ```
 [self:trigger]{op:"status"}
-→ poller(channel) / scheduler(calendar) / auto_response 모듈 상태 한꺼번에
+# poller(channel) / scheduler(calendar) / auto_response 모듈 상태 확인
 ```
 
 `history`가 자주 실패면 do 안의 액션이 깨졌을 가능성 — `list` 의 `runnable:false`/`problem`(어휘 은퇴 pre-flight)과 교차 점검.
@@ -177,7 +195,7 @@ $t = [self:trigger]{op:"create", name:"morning_news", cron:"0 8 * * *", do:"…"
 
 - **do 없이 create**: 에러. do 는 필수.
 - **옛 `config` 형태(1회를 once 로, 요일을 이름으로)**: 입구가 정규화하지만, cron 이 더 짧고 검수도 본다.
-- **분 단위 반복을 트리거로**: 거절. `[self:schedule]{seconds|minutes}` 또는 `[repeat: …, every]`.
+- **분 단위 반복을 트리거로**: 거절. 1회 지연은 `[self:schedule]{seconds|minutes}`를 쓴다. 현재 repeat은 대기 주기를 받지 않으며 지원되지 않는 주기 예약을 반복문으로 가장하지 않는다.
 - **이름 충돌**: create 시 같은 이름이면 새 id 가 발급되어 중복 등록됨. list로 확인 후 등록.
 - **disable과 delete 혼동**: 일시 정지는 disable, 영구 제거는 delete.
 - **스위치를 IBL로 만들려는 시도**: 스위치 등록은 IBL 액션 없음. switches.json 직접 편집.

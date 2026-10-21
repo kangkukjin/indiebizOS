@@ -63,9 +63,10 @@
 ```
 [sense:classic]{op: "western", query: "moby dick"}
 # 결과의 text_url 을 받아서 — 원문 받기는 [sense:crawl] (옛 [sense:web_get] 은 은퇴):
-[sense:crawl]{url: "<text_url>"} >> [self:write]{path: "/tmp/moby.txt"}
+$원문=[sense:crawl]{url:"<text_url>"}
+[self:write]{path:"/tmp/moby.txt",content:$원문.text}
 ```
-★`[self:write]` 는 파이프 싱크로 쓸 때 `content` 를 적지 않습니다 — 앞 단계의 통화가 그대로 흘러듭니다.
+`self:write`에는 원문의 `.text`를 전달한다. 읽기 결과 Record 전체를 본문 문자열로 가정하지 않는다.
 긴 원문은 한 번에 컨텍스트에 넣지 말고 파일로 저장 후 필요한 부분만 `[self:read]`.
 
 ## 활용 팁

@@ -49,11 +49,13 @@
 TXT/MD/HTML/LaTeX/Typst 원문과 사무 문서의 세션·스냅샷·제안·저장·버전은 **`[self:workspace]`** 가 맡는다
 (2026-10-05, 이 액션의 세션 op 14개를 흡수). 자세한 흐름은 `workspace.md`.
 
+<!-- example:workspace_edit -->
 ```ibl
 $w = [self:workspace]{op:"open", path:"보고서.md"}
 $r = [self:workspace]{op:"read", resource:$w.resource, selector:{start:0, end:200}}
 $p = [self:workspace]{op:"propose", resource:$w.resource, selector:{start:0, end:200, selected_sha256:$r.selected_sha256}, replacement:"고친 문단"}
-[self:workspace]{op:"apply", resource:$w.resource, proposal:$p.proposal} >> [self:workspace]{op:"save", resource:$w.resource}
+[self:workspace]{op:"apply", resource:$w.resource, proposal:$p.proposal}
+[self:workspace]{op:"save", resource:$w.resource}
 ```
 
 - 세션 ID·epoch·operation_id 는 언어에 나오지 않는다. 작성 창이 세션을 쥐고 있으면 그 창의 `client` 만 적용·저장할 수 있다.

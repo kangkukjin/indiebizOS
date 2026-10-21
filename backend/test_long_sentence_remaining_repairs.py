@@ -150,8 +150,10 @@ def test_unreviewed_semantic_condition_withholds_candidate(world, monkeypatch):
 
 def test_compact_prompt_teaches_current_contracts():
     from prompt_builder import _build_system_ai_stable_prompt
+    from ibl_v2_runtime import Budget
     prompt = _build_system_ai_stable_prompt()
-    for contract in ('calls:true', 'steps_by_line', '100만/10만', '효과 없는 지역 함수', 'get(객체,키)'):
+    maxima = f"{Budget.REQUEST_LIMITS['steps'] // 10000:,}만/{Budget.REQUEST_LIMITS['rows'] // 10000}만"
+    for contract in ('calls:true', 'steps_by_line', maxima, '효과 없는 지역 함수', 'get(객체,키)'):
         assert contract in prompt
 
 

@@ -34,9 +34,10 @@ unknown·미판정은 보존한다. 개수는 선별할 페이지/중심 문단 
 
 ## 참/거짓 → 바로 필터
 
+<!-- example:judgment_filter -->
 ```ibl
 [table:judge]{items:[{text:"결제한 돈을 환불해 주세요."},{text:"배송일을 알려 주세요."}], instruction:"이 고객은 환불을 요청하는가?"}
->> [table:filter]{where:{field:"judgment_result_value",op:"eq",value:true}}
+>> [table:filter]{where:($r)=>$r.judgment_result_value == true}
 ```
 
 단일 질문 이름은 `result`, 결과 열 접두사는 `judgment`다. 원 행·순서·개수를 보존하며 판정 열만
@@ -55,7 +56,7 @@ unknown·미판정은 보존한다. 개수는 선별할 페이지/중심 문단 
 
 `choice`는 선택지→설명(문자열/null) 맵(2~255개), `score`는 낮은 순 등급 목록(2~10개)을
 받는다. 점수는 **0부터 N-1까지의 실수**이며 확률이 아니다. 질문마다 서로 다른 형식을 섞을 수 있다.
-행별 판정은 독립이며 각 질문에는 해당 행의 경로가 명시된다. 다른 행과 함께 비교하려면
+각 질문에는 해당 행의 경로가 명시되지만 같은 배치의 다른 행이 판정에 영향을 줄 수 있다. 다른 행과 명시적으로 비교하려면
 `items:[{candidate:…,reference:…}]`처럼 비교할 자료를 같은 행에 넣는다.
 
 ## 불명은 거짓이 아니다

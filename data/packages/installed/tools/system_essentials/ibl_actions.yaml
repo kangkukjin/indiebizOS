@@ -220,7 +220,9 @@ nodes:
         # (2026-08-30 실측 2건). B36-3 param-조건부 통화 선언으로 정정.
         returns_variants:
           spill=true: items
-        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:"json" 이면 items와 명시된 원문 본문을 함께 JSON으로 보존. spill:true 면 봉투에 참조(ref)만.
+        description: 텍스트 또는 행 목록을 파일에 새로 쓰거나 덮어쓴다. content는 Text 또는 List<Record>이며 파이프도 같은 타입을 받는다. 읽기 결과는 .text, 행 데이터는 .data.items를 명시한다.
+        authoring_hint: 'path와 content가 필수이며 파이프는 content를 채운다. Document·임의 Record를 자동으로 본문으로 바꾸지 않는다. 예: $문서=[self:read]{path:"원문.txt"}; [self:write]{path:"복사.txt",content:$문서.text}. 임의 JSON 구조는 content:json($값)으로 직렬화하고 format을 생략하면 그대로 저장된다. 행 목록은 format:"json"이면 {items,count}, 생략하면 배열 JSON, format:"csv"이면 CSV다. CSV columns는 열 순서·선택 목록이며 빈 행 목록에는 필수다. 상대경로는 현재 프로젝트 기준, 공유 경로는 ~workspace/ 접두나 반환 path를 사용한다. 기존 파일을 덮어쓰며 append가 아니다. 저장 원장을 다시 읽으면 .data에서 구조를 확인한다.'
+        target_description_edition: 1
         group: file
         target_description: 쓸 파일 경로 + content. format:"csv"는 content 객체 행 목록을 CSV로 저장하며 쉼표·따옴표·줄바꿈을 자동 인용한다. columns는 열 순서·선택 목록(생략시 모든 키, 빈 목록에는 필수), 결측/null은 빈 셀. 중첩 셀은 사전 변환한다. 상대경로는 현재 프로젝트 기준(시스템 AI는 data/일 수 있음). 원장과 공유할 파일은 ~workspace/ 접두 또는 반환된 절대경로를 쓴다. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format 생략+content:json(목록)은 맨 배열 원문을 그대로 쓴다. format:"json"은 배열 입력도 {items,count} 봉투로 저장한다. 원장 select/upsert는 맨 배열이면 target 생략, 봉투이면 target:"items"로 지정한다. format:"json" = 통화 보존 스위치 — items/count와 명시된 원문(transcript/text/content), 출처·언어·시간 정보를 함께 저장한다. saved_to_file 원문은 전문을 읽어 넣으므로 저장 뒤 캐시가 삭제돼도 다시 struct에 전달할 수 있다. 원문 파일이 없으면 실패한다. 실행 진단은 제외한다(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:"json"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
         router: handler

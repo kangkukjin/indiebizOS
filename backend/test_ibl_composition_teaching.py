@@ -345,6 +345,108 @@ def test_retry_with_zero_or_all_failures(current, all_failed):
     assert len(current.calls) == (4 if all_failed else 2)
 
 
+# 업무 교재도 표시된 실행 예제를 같은 컴파일러에 통과시킨다. 설명용 조각은 포함하지 않는다.
+DOMAIN_GUIDES = ('goal', 'trigger', 'sheet', 'ai_words', 'judgment', 'body',
+                 'document_edit', 'member_start', 'web_search')
+DOMAIN_EXAMPLES = dict(pair for name in DOMAIN_GUIDES for pair in re.findall(
+    r'<!-- example:(\w+) -->\s*```ibl\n(.*?)\n```',
+    (ROOT / 'data/guides' / (name + '.md')).read_text(), re.S))
+
+
+@pytest.fixture
+def domain_runtime(monkeypatch, tmp_path):
+    import ibl_engine
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from ibl_edition import source_context
+    calls = []
+    def leaf(ti, *args, **kwargs):
+        node, action, params = ti['_node'], ti['action'], ti['params']
+        calls.append((node, action, params))
+        if (node, action) == ('self', 'trigger'):
+            if params['op'] == 'create':
+                return {'success': True, 'trigger': {'id': 'trg_actual'}}
+            if params['op'] == 'list':
+                return {'success': True, 'items': [
+                    {'name': 'one', 'enabled': True, 'last_run': None, 'run_count': 0},
+                    {'name': 'off', 'enabled': False, 'last_run': None, 'run_count': 0}]}
+            if params['op'] == 'history':
+                return {'success': True, 'items': [{'success': False}, {'success': True}]}
+            return {'success': True, 'items': []}
+        if (node, action) == ('self', 'read'):
+            return {'success': True, 'text': '원문 $변수 \"인용\"', 'blocks': [],
+                    'table': {'columns': ['품목', '단가'], 'rows': [['A', 30], ['B', 10]]}}
+        if (node, action) in {('self', 'write'), ('self', 'sheet')}:
+            return {'success': True, 'path': params['path']}
+        raise AssertionError(f'예기치 않은 외부 호출: {node}:{action}')
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
+    registry = load_registry(str(tmp_path))
+    def execute(name):
+        plan = compile_program(DOMAIN_EXAMPLES[name], registry)
+        assert not plan.issues, plan.report()
+        with source_context(2):
+            out = Runtime(plan).run()
+        assert out['success'], out
+        return out
+    execute.registry, execute.calls = registry, calls
+    return execute
+
+
+@pytest.mark.parametrize('name', list(DOMAIN_EXAMPLES))
+def test_domain_teaching_compiles_without_external_effects(name, domain_runtime):
+    from ibl_v2_compile import compile_program
+    plan = compile_program(DOMAIN_EXAMPLES[name], domain_runtime.registry)
+    assert not plan.issues, plan.report()
+    assert domain_runtime.calls == []
+
+
+def test_trigger_teaching_passes_real_id_and_preserves_explicit_inputs(domain_runtime):
+    domain_runtime('trigger_lifecycle')
+    calls = domain_runtime.calls
+    created = next(p for _, a, p in calls if a == 'trigger' and p['op'] == 'create')
+    assert created['inputs'] == {'알림': '아침 확인'}
+    assert '$알림' in created['pipeline']
+    assert all(p['trigger_id'] == 'trg_actual' for _, a, p in calls
+               if a == 'trigger' and p['op'] in ('detail', 'history', 'update', 'disable'))
+
+
+def test_file_copy_teaching_passes_text_instead_of_document_envelope(domain_runtime):
+    domain_runtime('member_copy')
+    writes = [p for _, a, p in domain_runtime.calls if a == 'write']
+    assert len(writes) == 1
+    assert writes[0]['content'] == '원문 $변수 \"인용\"'
+
+
+def test_pdf_teaching_converts_columns_and_rows_to_sheet_records(domain_runtime):
+    domain_runtime('sheet_pdf_rows')
+    append = next(p for _, a, p in domain_runtime.calls if a == 'sheet')
+    assert append['items'] == [{'품목': 'A', '단가': 30}, {'품목': 'B', '단가': 10}]
+
+
+@pytest.mark.parametrize('name,expected', [
+    ('goal_condition', {'판단': '방어 전략 검토', '관측': 2350}),
+    ('goal_case', '추가 비교'), ('goal_repeat', 3),
+])
+def test_goal_teaching_runs_current_control_grammar(domain_runtime, name, expected):
+    assert domain_runtime(name)['value'] == expected
+    assert not domain_runtime.calls
+
+
+def test_teaching_budget_matches_runtime_contract():
+    from ibl_v2_runtime import Budget
+    full = (FRAGMENTS / '12_ibl_only.md').read_text()
+    compact = (FRAGMENTS / '12_ibl_compact.md').read_text()
+    defaults = re.search(r'기본 (\d+)만 계산 단계·(\d+)만 반복 행·함수 깊이 (\d+)', full)
+    maxima = re.search(r'최대 ([\d,]+)만/(\d+)만', compact)
+    budget = Budget()
+    assert (int(defaults[1]) * 10000, int(defaults[2]) * 10000, int(defaults[3])) == (
+        budget.steps, budget.rows, budget.depth)
+    assert (int(maxima[1].replace(',', '')) * 10000, int(maxima[2]) * 10000) == (
+        Budget.REQUEST_LIMITS['steps'], Budget.REQUEST_LIMITS['rows'])
+    assert budget.seconds is None and '프로그램 전체의 기본 시간 제한은 없음' in full
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

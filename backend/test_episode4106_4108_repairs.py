@@ -25,7 +25,11 @@ def test_describe_preserves_leaf_usage_but_not_old_core_grammar():
     assert 'channel_type:"email",max_results:5' in read["target_description"]
     assert read["callable_contract"]["params"]["channel_type"] == "Text"
     assert read["callable_contract"]["enums"]["channel_type"] == ["email", "nostr", "gmail"]
-    assert "target_description" not in definitions["table:each"]
+    from ibl_access import load_nodes_raw
+    each = load_nodes_raw()['nodes']['table']['actions']['each']
+    assert definitions['table:each']['target_description'] == each['authoring_hint']
+    assert definitions['table:each']['target_description'] != each['target_description']
+    assert '$return' not in definitions['table:each']['target_description']
 
 
 @pytest.mark.parametrize("code", [

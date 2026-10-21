@@ -62,9 +62,11 @@
 [self:move]{src:"memo.txt",dest:"notes/memo.txt"}
 ```
 
-6. **읽은 내용을 다른 파일에 저장** — 파이프의 문자열을 로컬 쓰기로 전달한다. 확인: 두 파일 본문이 같다.
+6. **읽은 내용을 다른 파일에 저장** — 읽기 결과의 text를 로컬 쓰기로 전달한다. 확인: 두 파일 본문이 같다.
+<!-- example:member_copy -->
 ```ibl
-[self:read]{path:"notes/memo.txt"} >> [self:write]{path:"notes/copy.txt"}
+$문서=[self:read]{path:"notes/memo.txt"}
+[self:write]{path:"notes/copy.txt",content:$문서.text}
 ```
 
 7. **등록 프로그램 보기** — 내 기기의 프로그램 원장을 읽는다. 확인: 허브에 설치된 프로그램은 나오지 않는다.

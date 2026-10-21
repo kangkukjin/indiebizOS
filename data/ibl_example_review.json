@@ -1666,7 +1666,7 @@
   },
   "self:write": {
    "fields": {
-    "description": "6138ddd9ffd5",
+    "description": "46707edca613",
     "target_description": "7b83d086ad50",
     "implementation": "5011cee6a0e9",
     "returns": "9a5e13f69efc",
@@ -1676,8 +1676,8 @@
     "router": "ebbb1532efbc",
     "tool": "1377afcca699"
    },
-   "reviewed": "2026-10-09",
-   "examples": 95
+   "reviewed": "2026-10-21",
+   "examples": 98
   },
   "sense:book": {
    "fields": {
@@ -2377,7 +2377,7 @@
   },
   "table:each": {
    "fields": {
-    "description": "7fa95217adbe",
+    "description": "ab0f726c5036",
     "target_description": "e605a7d7d628",
     "implementation": "c86d8be05a15",
     "returns": "5450ffb2cf8a",
@@ -2386,12 +2386,12 @@
     "runs_on": "519dd933e8a2",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
-   "examples": 93
+   "reviewed": "2026-10-21",
+   "examples": 118
   },
   "table:filter": {
    "fields": {
-    "description": "20efef67e528",
+    "description": "5086db7c1de4",
     "target_description": "6c5845b1df91",
     "implementation": "551f98383af6",
     "returns": "5450ffb2cf8a",
@@ -2401,8 +2401,8 @@
     "router": "ebbb1532efbc",
     "tool": "47fa78a71bde"
    },
-   "reviewed": "2026-09-21",
-   "examples": 97
+   "reviewed": "2026-10-21",
+   "examples": 117
   },
   "table:flatten": {
    "fields": {
@@ -2508,7 +2508,7 @@
   },
   "table:select": {
    "fields": {
-    "description": "586123f04019",
+    "description": "dc39cd23e3d5",
     "target_description": "e39e5c0aff4d",
     "implementation": "6bed9ea1ed87",
     "returns": "5450ffb2cf8a",
@@ -2517,8 +2517,8 @@
     "router": "ebbb1532efbc",
     "tool": "bd31ce2d9611"
    },
-   "reviewed": "2026-09-18",
-   "examples": 76
+   "reviewed": "2026-10-21",
+   "examples": 98
   },
   "table:since": {
    "fields": {

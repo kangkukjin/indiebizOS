@@ -297,7 +297,11 @@ def test_current_contract_help_does_not_teach_legacy_parameters():
     for row in out['actions']:
         definition = row['definition']
         assert 'callable_contract' in definition
-        assert 'target_description' not in definition and 'returns' not in definition
+        assert 'returns' not in definition
+        node, action = row['action'].split(':')
+        source = load_nodes_installed()['nodes'][node]['actions'][action]
+        assert definition.get('target_description') == source.get('authoring_hint')
+        assert definition.get('target_description') != source['target_description']
         assert 'params' not in definition  # One authoritative signature, inside callable_contract.
     assert out['actions'][0]['definition']['callable_contract']['params']['where'] == 'Callable'
     config = load_nodes_installed()['nodes']['self']['actions']['script']

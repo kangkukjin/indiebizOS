@@ -242,7 +242,7 @@ def _hippocampus(req: RecallRequest, recall: Recall) -> Optional[Block]:
     from ibl_usage_rag import build_execution_memory_detail, build_execution_memory_from_hint
     xml, score, code, presented = ("", 0.0, "", [])
     if req.action_hint:
-        xml, score, code = build_execution_memory_from_hint(req.action_hint)
+        xml, score, code = build_execution_memory_from_hint(req.action_hint, _allowed_set(req.runner))
         if xml:
             presented = [{"id": "hint", "code": code, "kind": "hint", "alias": ""}]
         else:

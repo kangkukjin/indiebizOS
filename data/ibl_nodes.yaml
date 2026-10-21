@@ -6037,7 +6037,9 @@ nodes:
         pipe_in: true
         returns_variants:
           spill=true: items
-        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:"json" 이면 items와 명시된 원문 본문을 함께 JSON으로 보존. spill:true 면 봉투에 참조(ref)만.
+        description: 텍스트 또는 행 목록을 파일에 새로 쓰거나 덮어쓴다. content는 Text 또는 List<Record>이며 파이프도 같은 타입을 받는다. 읽기 결과는 .text, 행 데이터는 .data.items를 명시한다.
+        authoring_hint: 'path와 content가 필수이며 파이프는 content를 채운다. Document·임의 Record를 자동으로 본문으로 바꾸지 않는다. 예: $문서=[self:read]{path:"원문.txt"}; [self:write]{path:"복사.txt",content:$문서.text}. 임의 JSON 구조는 content:json($값)으로 직렬화하고 format을 생략하면 그대로 저장된다. 행 목록은 format:"json"이면 {items,count}, 생략하면 배열 JSON, format:"csv"이면 CSV다. CSV columns는 열 순서·선택 목록이며 빈 행 목록에는 필수다. 상대경로는 현재 프로젝트 기준, 공유 경로는 ~workspace/ 접두나 반환 path를 사용한다. 기존 파일을 덮어쓰며 append가 아니다. 저장 원장을 다시 읽으면 .data에서 구조를 확인한다.'
+        target_description_edition: 1
         group: file
         target_description: 쓸 파일 경로 + content. format:"csv"는 content 객체 행 목록을 CSV로 저장하며 쉼표·따옴표·줄바꿈을 자동 인용한다. columns는 열 순서·선택 목록(생략시 모든 키, 빈 목록에는 필수), 결측/null은 빈 셀. 중첩 셀은 사전 변환한다. 상대경로는 현재 프로젝트 기준(시스템 AI는 data/일 수 있음). 원장과 공유할 파일은 ~workspace/ 접두 또는 반환된 절대경로를 쓴다. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format 생략+content:json(목록)은 맨 배열 원문을 그대로 쓴다. format:"json"은 배열 입력도 {items,count} 봉투로 저장한다. 원장 select/upsert는 맨 배열이면 target 생략, 봉투이면 target:"items"로 지정한다. format:"json" = 통화 보존 스위치 — items/count와 명시된 원문(transcript/text/content), 출처·언어·시간 정보를 함께 저장한다. saved_to_file 원문은 전문을 읽어 넣으므로 저장 뒤 캐시가 삭제돼도 다시 struct에 전달할 수 있다. 원문 파일이 없으면 실패한다. 실행 진단은 제외한다(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:"json"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
         router: handler
@@ -10443,7 +10445,8 @@ nodes:
         side_effect: true
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자(고차) — items의 각 행에 IBL 문장(do)을 적용한다. 목록을 항목 단위 행동으로 잇는 유일한 어휘. 앞 통화 없이 items 를 직접 주면 리터럴 팬아웃(같은 액션 N번 대신).
+        description: 목록의 각 입력에 코드 블록을 실행하고 결과를 입력 순서대로 모은다. 기본 map·실패 stop이며 전체 입력을 공유 실행 예산 안에서 처리한다.
+        authoring_hint: $행 >> [table:each]{parallel:4}{return $it}. items는 목록 또는 items 목록을 가진 Record. mode는 map(기본)·flat_map(List 반환을 한 겹 펼침)·effect(Unit 반환), on_error는 stop(기본)·collect(map에서 List<Result>), parallel은 1~8. 본문은 코드 블록이며 $it·$i를 읽는다. limit은 없고 표본은 앞에서 take로 명시한다. Unit을 원 행으로 바꾸지 않는다.
         target_description: '값 재구성: [table:each] { $return=[{id:$it.id,label:"고정",total:$it.price*$it.qty}] }. 문자열은 따옴표, 참조는 $이름.필드, 계산은 식 그대로 쓴다. 옵션이 없으면 {} 생략. 반환 목록은 자동으로 합쳐진다. 산문 요약을 각 행에 남길 때: [table:each]{collect:true, do:"[sense:crawl]{url:''$it.url''} >> [table:brief]{instruction:''핵심 요약''}"}. 문자열 산문은 value 열, 객체 결과는 해당 키로 보존한다. 코드 블록 표기: [table:each]{parallel:4,as:v} { [액션]{id:$v.id} >> [액션] }. 기존 do 문자열과 같은 실행이며 둘을 동시에 쓰면 오류. do(각 행에 적용할 IBL 문장; 블록을 쓰면 생략 — 행 값은 $it.필드 로 참조) · items(★입력을 직접 줄 때 — >> 앞 통화가 없어도 네가 방금 정한 목록으로 팬아웃: [table:each]{items: [{city: "청주"}, {city: "속초"}], do: "[sense:weather]{city: ''$it.city''}"} — 같은 액션을 파라미터만 바꿔 N번 부를 자리는 전부 이것) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop | keep — keep 은 실패 행을 {원 행…, _error} 로 **통화에도** 흘린다(언어 개정 2026-08-28): 후속이 [table:filter] 의 _error eq null/exists 로 성공·실패를 갈라 교체·재시도를 조합하는 자리. keep 은 전량 실패도 통화로 흘린다) · keep([부모 필드] — 팬아웃 결과 행에 원 행의 그 필드를 승계, 충돌 시 _2 접미. "어느 부모에서 왔는지"가 필요할 때) · parallel(동시 실행 수, 기본 auto — 선언된 읽기 전용 do 는 4, 쓰기·미분류·on_error stop 은 1. 명시 1로 순차 고정, 2~8로 동시성 지정(언어 개정 2026-09-06): 결과 순서와 봉투 계약은 순차와 같고, on_error stop 은 병렬에서 이미 돈 뒤 행의 결과를 버린다. 같은 파일·원장에 쓰는 do 는 병렬로 돌리지 말 것) · collect(true — 언어 개정 2026-09-06: do 가 통화를 **안 내는** 행(효과·스칼라 — 보고서 계산·도면 생성·write 의 path)의 결과 필드를 버리지 않고 {원 행…, 결과 키…} 한 행으로 승격한다. 원 행 이름이 먼저, 겹치는 결과 키는 _2 접미 + collect_renamed 신고. "각각에 대해 X 를 구해 표로" 의 자리 — 예: [engines:arch_list] >> [table:each]{collect: true, do: "[engines:arch_report]{design_id: ''$it.id'', report_type: ''coverage_ratio''}"} >> [table:select]{columns: ["name", "coverage_ratio"]}. do 가 통화를 내는 행에는 아무 뜻이 없다(종전 계약)). 예산 초과는 success:false. rows_requested/rows_processed/rows_unprocessed와 ok_count/error_count로 완료·실패·미처리를 구분한다. 완료 행은 재실행하지 않는다. ★결과는 **통화 그대로**(2026-08-23 언어 개정): do 가 통화를 내면 그 행들이 감싸기 없이 흐르므로 뒤에 변환자를 바로 잇는다(flatten 불필요). do 가 통화를 안 내면(효과·스칼라 — notify·write 등) **원 행**이 흐르고 봉투가 passthrough_rows 로 그 사실을 말한다(결과가 필요하면 collect: true — collected_rows 로 신고). 실패한 행은 통화에 섞지 않고 봉투의 errors: [{원 행…, _error}] + error_count + warning 으로 나른다(부분 실패는 파이프를 끊지 않되 반드시 보인다). 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[sense:crawl]{url: ''$it.url''}"} >> [table:select]{columns: ["title","price"]} / 종착: … >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
         group: transform
         router: system
@@ -10672,6 +10675,7 @@ nodes:
         - 한줄로
         - brief
       filter:
+        authoring_hint: 'where는 행을 받아 Bool을 반환하는 람다다. 예: $행 >> [table:filter]{where:($r)=>len($r.text)>200}. 결과는 List<Record>. 문맥 발췌는 [fn:본문에서찾기]의 계약을 조회한다.'
         legacy_callable_contract:
           version: 1
           params:
@@ -10734,7 +10738,8 @@ nodes:
           - condition
         runs_on: anywhere
         scope: workspace
-        description: 조건(where) 부분집합. context:{before,after,by,limit}으로 같은 그룹의 앞뒤 행·실패·일치 계수를 보존한다. 본문 발췌는 [fn:본문에서찾기]. where 왼쪽은 필드명, 길이는 먼저 compute. 기존 total 갱신·상류 절단 보존.
+        description: 행 목록에서 where 람다가 참인 행을 선택해 List<Record>로 반환한다. 람다 안에서 길이·비교 등 순수 식을 계산할 수 있다. 원문 문맥 발췌는 [fn:본문에서찾기].
+        target_description_edition: 1
         target_description: 'where 왼쪽은 필드명이며 계산식이 아니다. 길이는 먼저 compute{set:{문자수:"len(text)"}} 후 filter{where:"문자수 > 200"}. where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/not_in/not_contains/matches/startswith/endswith/eq/ne/lt/le/lte/gt/ge/gte — 예 "아파트명 matches 자이" · not_in 값=배열(구조형 {field, op: "not_in", value: [...]} — 원장 제외 등 안티조인) · "A and B or C" 논리식(조각 전부 비교식일 때, 우선순위 SQL — or 최하위; 비교식·비-비교식 혼합은 중의성 거절, 값 속의 and/or 는 구조형으로) · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). ~=는 지원하지 않는다. 정규식은 {field:"title",op:"matches",value:"패턴"}으로 쓴다. check:true도 실행과 같은 조건 파서로 연산자·정규식을 검사한다. 날짜 하한은 YYYY-MM-DD 로 — 달력 날짜는 시간대 있는 시각(Z·+09:00)과도 그 값의 자기 시간대 날짜로 비교된다(2026-09-05); 시각이 있는 naive 와 aware 의 비교는 판정 불능 거절. >> 파이프로 앞 통화를 자동 수용하고, items 파라미터로 행 목록(리터럴·`$변수` 원형)을 직접 받을 수도 있다(언어 개정 2026-08-27). 도메인 무관 — 모든 검색·목록 생산자에 적용. context:{before,after,by,limit}은 일치 행 앞뒤의 같은 그룹 이웃을 입력 순서로 보존한다(기본 0,0,[],전체 일치). limit은 문맥을 붙일 일치 수이며 행수 제한이 아니다. 겹친 문맥은 한 번만, 실패(_error) 행은 항상 남기며 문맥 경계가 된다. by 키가 없으면 이웃을 잇지 않는다. match_info는 전체·선택·생략 일치 수와 입력 기준 1부터의 행 위치를 담는다. 원문 검색 관용구는 [fn:본문에서찾기].'
         group: transform
         router: handler
@@ -10891,6 +10896,7 @@ nodes:
         - split
         - 긴 자막
       select:
+        authoring_hint: 'columns는 열 이름 목록 또는 행을 받아 Record를 반환하는 람다다. 예: $행 >> [table:select]{columns:($r)=>{id:$r.id,total:$r.qty*$r.price}}. 결과는 List<Record>. 필드 누락과 계산 실패를 숨기지 않는다.'
         callable_contract:
           version: 1
           params:
@@ -10924,7 +10930,8 @@ nodes:
           - fields
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기. 형태 보존 — items 입력은 items 로, 명시 표형 입력만 표형으로.
+        description: 행 목록에서 columns로 열을 고르거나 람다로 행을 투영해 List<Record>로 반환한다. 차트·문서 전에 필요한 열로 좁힌다.
+        target_description_edition: 1
         target_description: 'columns(열 이름 배열 또는 {출력열: 식} 투영 객체, 필수). 투영 객체는 중첩 객체·목록을 만들며 잎 문자열은 한 줄 식이다. 예 columns:{tip:"tip",source:{id:"video_id",url:"url"},cost:"qty * price"}. 문자열 상수는 식 안에서 따옴표로 감싼다. 복사·문자열 함수는 원형을 보존하고 산술에서만 숫자 문자열을 수치로 관측한다(assign/compute/reduce와 동일). 일반 값 재구성은 each 블록의 $return=[{...}]로도 쓴다. 필드 결측·계산 실패는 전체 투영 오류. 예: [sense:...] >> [table:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
         group: transform
         router: handler
@@ -10972,6 +10979,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
+        target_description_edition: 1
         target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 산술의 숫자 문자열("3,500")은 수치로 관측하고 단순 복사·str은 문자열 원형을 보존한다. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", descending: true}. 집계(합·평균)는 groupby. 문자열 포함은 contains(tip, "툴 콜"), 부정은 not contains(tip, "툴 콜")로 쓴다. Python의 in/not in 구문은 불가. 객체·목록 구성도 가능하다(예 source: "{''id'': video_id, ''url'': url}"). 키는 중복 없는 문자열 상수. 컴프리헨션·펼침·임의 호출은 불가. 일반 값 재구성은 each 블록의 $return=[{...}]로도 쓴다.'
         group: transform
         router: handler

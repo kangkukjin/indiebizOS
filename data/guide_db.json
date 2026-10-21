@@ -116,8 +116,8 @@
     },
     {
       "id": "goal",
-      "name": "목표 선언(Goal) 문법 가이드",
-      "description": "반복·예약·조건부 실행이 필요할 때 goal 블록을 작성하는 문법 정본. if/case 분기, every/until/deadline 시간 표현, 필수 안전장치(max_rounds/max_cost), 전략 전환 규칙.",
+      "name": "목표 관리·조건·반복·예약 가이드",
+      "description": "현재 IBL의 목표 관리(self:goal), 값 기반 if/case 분기, 프로그램 반복과 시간 예약의 구분. 새 goal 블록은 지원하지 않으며 예약은 trigger/schedule을 사용한다.",
       "keywords": [
         "목표",
         "goal",

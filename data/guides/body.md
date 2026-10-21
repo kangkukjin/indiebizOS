@@ -89,7 +89,7 @@ items 행: changes=`{파일, 상태, 영역, 시각, 요지, 커밋}` (이동이
 
 ```
 [self:body]{days: 30, limit: 1000} >> [table:groupby]{by: "영역"}     # 층별 변경 분포
-[self:body]{days: 7} >> [table:filter]{where: {상태: "이동"}}          # 최근 이사한 파일만
+[self:body]{days: 7} >> [table:filter]{where:($r)=>$r.상태 == "이동"}          # 최근 이사한 파일만
 [self:body]{op: "log", days: 7} >> [table:take]{n: 5}
 ```
 
@@ -126,9 +126,10 @@ DB 파일·스키마를 찾을 필요 없이 같은 `trajectory`에서 목록과
 
 ## 각인 (commit) — 수리의 마무리
 
-```
+<!-- example:body_commit -->
+```ibl
 [self:body]{op: "diff", path: "backend/ibl"}                       # 먼저 무엇이 바뀌었나 본다
->> [self:body]{op: "commit", message: "파서 escape 수리", paths: ["backend/ibl/ibl_parser.py"]}
+[self:body]{op: "commit", message: "파서 escape 수리", paths: ["backend/ibl/ibl_parser.py"]}
 ```
 
 - **paths 필수** — "전부 커밋"이라는 굴절은 없다. 동시 세션이 같은 저장소를 쓰므로, 각인은 언제나 자기가 만진 경로를 이름으로 부른다. 신규·수정·삭제 모두 경로로 지정.

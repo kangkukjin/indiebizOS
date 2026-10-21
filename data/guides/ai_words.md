@@ -17,12 +17,15 @@
 
 ## 조합 예
 
-```
+<!-- example:ai_words_composition -->
+```ibl
 # 수집 → 의미 선별 → 산문 보고 → 저장
-[sense:search]{query: "청주 창업 지원", source: "naver"} >> [table:ai]{instruction: "실제 지원사업 공고만"} >> [table:brief]{instruction: "마감 임박 순 3문장 보고"} >> [self:write]{path: "outputs/브리핑.md"}
+$보고=[sense:search]{query:"청주 창업 지원",source:"naver"} >> [table:ai]{instruction:"실제 지원사업 공고만"} >> [table:brief]{instruction:"마감 임박 순 3문장 보고"}
+[if:has($보고,"message")] { [self:write]{path:"outputs/브리핑.md",content:$보고.message} } [else] { return {status:"대상 없음",report:$보고} }
 
 # 크롤 본문 → 구조화 → 필터
-[sense:crawl]{url: "https://..."} >> [self:struct]{schema: "행사명, 날짜, 장소"} >> [table:filter]{where: {"장소": "청주"}}
+$원문=[sense:crawl]{url:"https://example.org/events"}
+[self:struct]{text:$원문.text,schema:"행사명, 날짜, 장소"} >> [table:filter]{where:($r)=>$r.장소 == "청주"}
 
 # 영수증 이미지 → 재무 레코드 (grounded 는 finance/health 스키마에서 자동 on)
 [self:struct]{file: "영수증.jpg", schema: "finance"}
@@ -78,9 +81,9 @@ input_fields로 뺀 자료를 AI가 읽었다고 주장하거나 전건 검토 �
 
 ## 함정·경계
 
-- **지시문 자리는 `instruction`** — `do` 는 IBL *문장*을 나르는 자리(each·schedule)라 자연어 지시에 쓰지 않는다(별칭 do·prompt 는 수용).
+- **지시문 자리는 `instruction`** — `do` 는 저장할 IBL 원문을 나르는 자리(schedule·trigger)라 자연어 지시에 쓰지 않는다(별칭 do·prompt 는 수용).
 - `[table:structure]` 와 구분: structure=텍스트→**문서 IR**(조판용, 경량 편집장) / struct=비정형→**레코드 items**(데이터화, 실행 축) / brief=items→**산문**.
 - 이미 표인 입력은 `[self:read]{tables:true}`(결정론 표 추출)가 먼저다.
 - 평문 텍스트 요약·질문은 `[self:ask]{prompt}` — brief 는 items 통화 전용.
-- 행별 독립 처리가 정말 필요하면 `[table:each]{do: "[table:brief]{...}"}` — limit(기본 20)만큼 모델 호출이 곱해지니 집합 호출이 기본.
+- 행별 문맥 분리가 필요하면 `$행 >> [table:each]{parallel:4}{return [table:brief]{items:[$it],instruction:"요약"}}`. each는 모든 입력을 공유 예산 안에서 처리하며 기본 실패는 stop이다. 호출 수·비용은 처리 행 수에 따라 늘어나므로 의도한 표본만 앞에서 take로 고른다.
 - 다단·도구 루프가 필요한 작업은 원샷의 영토가 아니다 — 자율주행(위임)으로.

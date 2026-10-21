@@ -18,9 +18,10 @@ indiebizOS는 여러 도메인에 *어휘(IBL 액션)*를 가져, 많은 검색�
 ## 3. 넓게 → 좁게, 그리고 판단
 - **검색어가 여럿이면 한 호출에 묶는다.** 1차 넓게는 검색어·언어·소스를 여러 개 던지는 일이므로 낱개 호출이 아니라 배치다 — 같은 소스는 `queries`, 다른 소스는 `&`. 낱개로 치면 검색어 수만큼 모델 왕복이 생기고 그때마다 문맥 전체가 다시 실린다(ep3854: 26건 낱개).
 
+<!-- example:search_batch -->
 ```ibl
 $후보 = [sense:search]{source:"naver", queries:["<국내 검색어 1>","<국내 검색어 2>","<국내 검색어 3>"], limit:5} & [sense:search]{source:"ddg", queries:["<영어 검색어 1>","<영어 검색어 2>"], limit:5}
-$후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{fields:["title","url","summary","query"]}
+$후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{columns:["title","url","summary","query"]}
 ```
 
   행의 `query` 가 어느 검색어에서 왔는지 말해 준다. 0건인 검색어는 실패가 아니고, 실패한 검색어만 `errors` 에 남는다. 결과를 보고 모자란 각도가 보이면 그때 다음 배치를 던진다 — 한 번에 하나씩 확인하며 좁혀야 하는 추적 검색(앞 결과가 다음 검색어를 정하는 경우)만 낱개가 맞다.

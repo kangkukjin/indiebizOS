@@ -508,24 +508,44 @@ async def get_actions_catalog():
     전체 IBL 액션 목록을 반환한다. 프론트의 액션 사전 모달이
     이 데이터로 책장을 그린다.
     """
-    from ibl_registry import load_nodes_installed
+    import asyncio
+    from execution_workers import bind_context
+    return await asyncio.to_thread(bind_context(_build_actions_catalog))
+
+
+def _build_actions_catalog():
+    """사전/계약 파일 읽기는 작업자에서 하고 현재 작성 설명만 화면에 보낸다."""
+    from ibl_registry import load_nodes_installed, self_can_run
+    from ibl_v2_adapters import load_registry
+    from model_result_view import current_action_definition
     data = load_nodes_installed()
     if not data:
         raise HTTPException(status_code=500, detail="ibl_nodes.yaml 로드 실패")
+    registry = load_registry()
 
     nodes_out: dict = {}
     total = 0
     for node_name, node_config in (data.get("nodes") or {}).items():
         actions: dict = {}
         for action_name, action_config in (node_config.get("actions") or {}).items():
+            adapter = registry.get(f"{node_name}:{action_name}")
+            if adapter is None or not self_can_run(node_name, action_name, action_config):
+                continue
+            definition = current_action_definition(action_config, adapter.contract)
+            contract = definition["callable_contract"]
+            params = contract.get("params", {})
+            signature = ", ".join(f"{key}: {value}" for key, value in params.items())
+            target_key = action_config.get("target_key", "")
             actions[action_name] = {
-                "description": action_config.get("description", ""),
-                "target_description": action_config.get("target_description", ""),
-                "target_key": action_config.get("target_key", ""),
-                "implementation": action_config.get("implementation", ""),
+                "description": definition.get("description", ""),
+                "target_description": definition.get("target_description") or
+                    f"인자: {signature or '없음'}. 반환: {contract.get('result', 'Unknown')}.",
+                "target_key": target_key if target_key in params else "",
+                "implementation": "",
+                "callable_contract": contract,
                 "keywords": action_config.get("keywords") or [],
                 "group": action_config.get("group", ""),
-                "ops": action_config.get("ops") or None,  # {default, values:{op명:설명}} — 수동모드 op 분기 안내용
+                "ops": (action_config.get("ops") or None) if "op" in params else None,
             }
         nodes_out[node_name] = {"actions": actions, "count": len(actions)}
         total += len(actions)

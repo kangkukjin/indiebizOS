@@ -21,8 +21,8 @@
 
 앱의 ☆ 저장은 파일 원장 한 개에 쌓인다 — **`~workspace/projects/앱모드/outputs/map/places.json`** (통화 `{items:[…], count}`). 행 = 검색 항목 + `tag`(폴더, 기본 "기본") + `memo` + `saved_at`. 지도 클릭으로 저장한 임의 위치는 `id: "spot:<lat>,<lng>"`·`cat: "위치"`.
 
-- 읽기: `[self:read]{path: "~workspace/projects/앱모드/outputs/map/places.json"}` → items. 거르기는 `>> [table:filter]{where: {tag: "<폴더>"}}` 등 표 어휘.
-- 쓰기(AI 가 대신 저장): `$본 = [self:read]{path}` 로 읽어 `items` 에 행을 더해 `[self:write]{path, format: "json"}` 로 통째 다시 쓴다(부분 갱신 어휘 없음 — 원장 누적 관용구). 행에는 반드시 `id·name·lat·lng` 을 채운다(앱은 좌표 없는 행을 버린다).
+- 읽기: `$문서=[self:read]{path:"~workspace/projects/앱모드/outputs/map/places.json"}`의 `.data`에서 저장 구조를 확인한다. 행 목록은 `$문서.data.items >> [table:filter]{where:($r)=>$r.tag == "<폴더>"}`처럼 값으로 연결한다.
+- 쓰기(AI 가 대신 저장): 읽기 결과의 `.data`를 바탕으로 `items`에 행을 더하고 `count`도 갱신한 Record를 만든다. `[self:write]{path:$경로,content:json($새원장)}`으로 통째 다시 쓴다. 기존 필드도 보존하며 행에는 반드시 `id·name·lat·lng`을 채운다(앱은 좌표 없는 행을 버린다).
 - 이 원장은 개인 데이터다 — 내용(가게 이름·메모)을 문서·커밋 메시지에 옮기지 말 것.
 
 ## 원격 런처·폰 표면 — 같은 id 의 선언형 4탭 계기

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: current-teaching-legacy-interpolation-and-goal
+    retired: 2026-10-21
+    reason: 현재 작성 교재가 구판 goal 선언·문자열 자동 치환·each 상한을 계속 가르쳐 구문 오류와 잘못된 값 전달을 일으켰다.
+    instead: 새 코드는 명시 값·람다·each 블록을 쓰고 저장 외부 값은 inputs로 전달한다. 목표 관리는 self:goal, 예약은 trigger/schedule이다. 구판 설명은 저장본 호환 문서에서만 읽는다.
+    phrases: ['**`do` 속 `$변수`는 등록 시점 값으로 굳는다.**', 'limit(기본 20)만큼 모델 호출', 'goal 블록을 작성하는 문법 정본']
   - id: cross-run-live-device-observation
     retired: 2026-10-21
     reason: 연결·등록·원격 작업 상태가 변해도 이전 실행의 관측을 재사용해 현재 상태처럼 반환했다.

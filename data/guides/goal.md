@@ -1,121 +1,89 @@
-# Goal / Time / Condition — 목적 기반 실행
+# 목표 관리·조건·반복·예약
 
-> 이 가이드는 IBL의 **goal 블록 문법** 정본이다 (2026-07-03 교재 12_ibl_only.md에서 주문형 가이드로 이동 — 어휘는 상시, 저빈도 문법은 주문형 원칙).
-> 반복·예약·조건부 실행을 선언할 때 이 문법대로 작성하고, 진행 중인 목표 관리는 카탈로그의 `[self:goal]{op}` 액션을 쓴다.
-> op: `list`(전체 — 종결 포함, `status` 필터로 좁힘) · `status` · `kill`(중단=상태 전환) · `delete`(종결 목표 원장 삭제 — 살아있으면 kill 먼저) · `log` · `attempts`.
+새 IBL은 현재 값·함수 문법으로 작성한다. `[goal: "이름"]` 선언은 구판 저장 프로그램의
+문법이며 현재 새 코드에서는 지원하지 않는다. 이 문서를 읽고 새 goal 블록을 만들지 않는다.
+문법 정본은 `data/system_docs/ibl.md`, 작성 교재는 `ibl_composition.md`다.
 
-IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 선언하면 에이전트가 달성 여부를 스스로 판단하고 반복한다.
+목표 관리, 한 프로그램 안의 반복, 시간이 지난 뒤의 실행을 구분한다.
 
-## 블록의 자리 (2026-08-16 개통)
+| 의도 | 현재 경로 |
+| --- | --- |
+| 진행 중인 목표의 상태·종료·시도 이력 관리 | `[self:goal]{op:...}` |
+| 읽은 값에 따라 분기·유한 반복 | `[if:]`, `[case:]`, `[repeat:]` |
+| 나중에 또는 정기적으로 프로그램 실행 | `self:schedule`, `self:trigger`, `self:manage_events` |
+| 매번 새로운 조사·판단이 필요한 목표 | 사용자 요구·달성 기준을 실행 에이전트에 전달하고 실행·검수 경로 사용 |
 
-- goal 블록은 **문장 위치에 통째로** 쓴다 — 여러 문장 코드 안에서 다른 문장과 **줄(또는 ;)로 분리**해 섞을 수 있다. (if/case/repeat/try 는 2026-08-22 M6 이후 **파이프 세그먼트로도** 들어간다 — 정본은 교재의 M6 절. goal 은 목적 선언이라 파이프에 잇지 않는다.)
-- 블록 뒤에 같은 줄로 다른 문장을 붙이면 명시 에러다 ("블록 뒤에 해석되지 않은 텍스트").
-- `[else]`/`[else if:]`는 앞 `[if:]` 문장의 연속 — 다음 물리 줄에 써도 이어진다.
-- goal 이름은 따옴표 유무 모두 허용: `[goal: "이름"]` = `[goal: 이름]`.
+## 값을 먼저 읽고 조건으로 분기
 
-## Goal Block (목적 선언)
+조건에는 순수 Bool 식을 쓴다. 외부 도구 호출은 앞 문장에서 받고 실제 반환 필드를 확인한다.
+다음은 입력값만 사용하는 실행 가능한 예제다. 실제 시세의 필드명·단위는 조회 계약을 따른다.
 
-```
-[goal: "에어컨 최적 구매"]{
-  success_condition: "가격/성능/배송 비교 완료",
-  resources: ["shopping-assistant", "web"],
-  max_rounds: 20,
-  max_cost: 1000,
-  by: "오늘 저녁",
-  report_to: "사용자"
+<!-- example:goal_condition -->
+```ibl
+#!ibl edition=2
+$지수=2350
+[if:$지수 < 2400] {
+  return {판단:"방어 전략 검토",관측:$지수}
+} [else] {
+  return {판단:"추가 관측",관측:$지수}
 }
 ```
 
-- `success_condition`: 에이전트가 달성 여부를 판단하는 기준
-- `resources`: 사용할 도구 패키지
-- `report_to`: 완료 시 보고 대상
-- **필수 안전장치**: 모든 Goal에 `max_rounds` 또는 `max_cost` 중 하나 이상 필수 (무한루프 방지)
+`case`는 같은 값인 첫 `[when:식]` 가지를 고른다. 구간 비교는 if나 먼저 계산한 분류로 표현한다.
 
-## 시간 표현
-
-**종료 통제 (언제 멈추는가):**
-
-| 표현 | 의미 | 예시 |
-|------|------|------|
-| `deadline` | 최종 기한 | `deadline: "2026-12-31"` |
-| `until` | 조건 달성까지 | `until: "매수결정"` |
-| `within` | 기한 내 완료 | `within: "2h"` |
-| `by` | 특정 시점까지 보고 | `by: "오늘 저녁"` |
-
-**빈도 통제 (얼마나 자주 하는가):**
-
-| 표현 | 의미 | 예시 |
-|------|------|------|
-| `every` | 반복 실행 주기 | `every: "매일 08:00"` |
-| `schedule` | 일회성 예약 실행 | `schedule: "2026-04-01 09:00"` |
-
-**종료 우선순위**: `until` 충족 > `deadline` 도달 > `max_rounds`/`max_cost` 도달
-
-## 조건문 (if/else)
-
-상황에 따라 다른 Goal을 활성화한다:
-
-```
-[if: sense:stock{op: "quote", ticker: "^KS11"}.data.current_price < 2400]{
-  [goal: "방어적 포트폴리오 재편"]{deadline: "즉시", max_rounds: 10}
-} [else]{
-  [goal: "성장주 모니터링 유지"]{every: "매일 09:00", max_rounds: 30}
+<!-- example:goal_case -->
+```ibl
+#!ibl edition=2
+$지수=2700
+$구간=$지수 > 3000 ? "높음" : $지수 < 2400 ? "낮음" : "중간"
+[case:$구간] {
+  [when:"높음"] { return "위험과 기대수익 비교" }
+  [when:"낮음"] { return "손실 위험 점검" }
+  [else] { return "추가 비교" }
 }
 ```
 
-조건식의 좌변은 `node:action{params}.field` 형태로 쓸 수 있다. `.field`는 액션 결과 dict에서 점 표기법으로 값을 꺼낸다(`memory.percent` 중첩 가능, JSON 문자열 봉투도 자동 파싱). 생략하면 결과의 `value` → `result` → 전체 dict 순으로 폴백한다.
+## 프로그램 안의 반복과 시간 예약
 
-**★좌변은 소스 참조(`node:action{…}[.field]`) 또는 `$변수[.경로]`** — 자연어(`[if: 디스크가 부족하면]`)는 평가할 수 없어 **판정 불능**(`condition_errors` 신고, else 도 보류)이 된다(2026-08-22 개정 — 옛 '조용히 거짓' 아님). `count()/empty()/exists()`·`matches`·`and/or/not`·AI 술어(`[table:brief]{…} == "yes"`)는 시스템 프롬프트의 '조건 언어' 절 참조. 조종실 dry-run(`/ibl/validate`)이 미리 경고를 단다.
+`[repeat:횟수]`, `[repeat:while Bool식]`, `[repeat:until Bool식]`은 프로그램 안의 반복이다.
+공유 실행 예산을 사용하며 대기 주기 `every` 인자는 없다. 횟수·종료 조건을 명시한다.
 
-## 케이스문 (case)
-
-여러 경우를 분기할 때:
-
-```
-[case: sense:stock{op: "quote", ticker: "^KS11"}.data.current_price]{
-  "> 3000": [goal: "공격적 매수"]{max_rounds: 20},
-  "2400~3000": [goal: "추가 비교"]{max_rounds: 15},
-  "< 2400": [goal: "손절 점검"]{max_rounds: 10},
-  default: [goal: "관망"]{max_rounds: 5}
-}
+<!-- example:goal_repeat -->
+```ibl
+#!ibl edition=2
+$합=0
+[repeat:3] { $합=$합+$i }
+return $합
 ```
 
-범위 표현식: `> N`, `>= N`, `< N`, `<= N`, `== N`, `N~M` 지원.
+매일 08시 같은 실행은 트리거로 등록한다. 아래 예제는 등록 시 캘린더 작업을 만든다.
 
-## Goal 프로세스 관리
-
-`[self:goal]` 단일 액션의 `op` 파라미터로 분기한다.
-
-```
-[self:goal]{op: "list", status: "active"}        # 진행 중인 목표 조회
-[self:goal]{op: "status", goal_id: "goal_001"}   # 특정 목표 상태 조회
-[self:goal]{op: "kill", goal_id: "goal_001"}     # 목표 중단
+<!-- example:goal_schedule -->
+```ibl
+#!ibl edition=2
+[self:trigger]{op:"create",name:"매일 목표 확인",cron:"0 8 * * *",
+  do:"[self:goal]{op:'list',status:'active'}"}
 ```
 
-**Goal 상태**: `pending` → `active` → `achieved` / `expired` / `limit_reached` / `cancelled`
+저장 원문은 현재 작성 문맥의 판본으로 고정된다. 외부 값을 보존할 때는 `inputs`를 사용하며,
+실행 시점의 새 값은 저장 코드 안에서 조회한다. 자세한 등록·해제·결과 확인은 `trigger.md`,
+`scheduler_guide.md`를 따른다. 예약 등록 성공은 목표 달성이나 실제 작업 완료가 아니다.
 
-## 전략 전환 규칙
+## 목표 프로세스 관리
 
-- 매 시도 후 `[self:goal]{op: "log", goal_id, strategy, result}`로 접근 범주·결과·배운 점을 기록
-- 동일 접근이 3회 연속 실패하면 근본적으로 다른 접근으로 전환
-- 새 시도 전에 `[self:goal]{op: "attempts", goal_id}`로 이전 이력 확인하여 같은 실수 반복 방지
-- 모든 접근 범주가 소진되면 사용자에게 상황 보고
+`self:goal`은 기존 목표의 관리 액션이며 새 목표 생성 op는 없다.
+실제 ID는 목록 응답에서 선택한다. 아래 `goal_001`, `T1`은 그 ID로 교체한다.
 
-## 통합 예시
-
-```
-[goal: "청주 투자 적기 판단"]{
-  every: "매일 08:00",
-  deadline: "2026-09-30",
-  until: "매수 결정",
-  max_rounds: 200,
-  max_cost: 50000,
-  strategy: [case: sense:stock{op: "quote", ticker: "^IRX"}.data.current_price]{
-    "< 4": [sense:realty]{type: "apt", deal: "trade", region: "청주"},
-    "> 5": [goal: "관망"]{max_rounds: 1},
-    default: [sense:realty]{type: "apt", deal: "trade", region: "청주"}
-  }
-}
+```ibl
+[self:goal]{op:"list",status:"active"}
+[self:goal]{op:"status",goal_id:"goal_001"}
+[self:goal]{op:"attempts",task_id:"T1",limit:10}
 ```
 
-→ 금리 상황을 읽고, 그에 맞는 깊이로 탐색하고, 조건 충족까지 매일 반복한다.
+- `kill`: `goal_id` 필수. 목표를 종료하고 스케줄을 제거한다.
+- `delete`: `goal_id` 필수. 종결 목표 원장만 삭제하며 살아있는 목표는 먼저 kill한다.
+- `log`: `task_id`, `approach_category`, `description` 필수, `result`·`lesson` 선택.
+- `attempts`: `task_id` 필수, `limit` 선택. 과거 시도와 실패 범주를 확인한다.
+
+같은 접근이 반복 실패하면 이력과 실패 근거를 확인해 다른 접근을 선택한다.
+해결되지 않은 실패를 성공으로 바꾸거나 목표·품질 기준을 임의로 낮추지 않는다.

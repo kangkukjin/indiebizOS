@@ -17,6 +17,8 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from recall_relevance import lexical_evidence
+
 MODEL_NAME = "jhgan/ko-sroberta-multitask"
 TEXT_VERSION = "1"          # 항목·가지 텍스트 조립 규칙의 판 — 바꾸면 전부 재색인(블로그 EMBEDDING_VERSION 과 같은 뜻)
 INLINE_SYNC_MAX = 12        # 이만큼까지의 변경분은 그 자리에서 임베딩한다. 넘으면 백그라운드.
@@ -267,10 +269,12 @@ def _rrf(orders: Sequence[Sequence[str]]) -> List[str]:
 
 
 def recall(store: Store, query: str, *, n_branches: int = 2, k_in: int = 2, k_out: int = 1,
-           branch_filter: Optional[Sequence[Sequence[str]]] = None, wait: bool = False) -> Dict[str, Any]:
-    """가지 n개 → 그 안 k_in + 밖 k_out. branch_filter 를 주면 가지 고르기를 건너뛴다(AI 의 직접 검색).
+           branch_filter: Optional[Sequence[Sequence[str]]] = None, wait: bool = False,
+           min_sim: float = 0.55) -> Dict[str, Any]:
+    """관련 항목만 가지 n개 → 그 안 최대 k_in + 밖 최대 k_out. 빈 자리는 채우지 않는다.
 
-    status: ok | empty | unavailable(인코더 없음) | indexing(색인 동기화 중) | lexical_only
+    min_sim은 같은 기본 인코더의 심층 검색 하한과 같다. 가지·글자 순위는 이 하한을 우회하지 않는다.
+    status: ok | empty | no_match | unavailable | indexing | lexical_only
     """
     import numpy as np
     items, branches = store.items(), store.branches()
@@ -289,14 +293,20 @@ def recall(store: Store, query: str, *, n_branches: int = 2, k_in: int = 2, k_ou
     by_id = {it.id: it for it in items}
     if idx is None:
         # 의미 채널 없이: 글자로 잡힌 것만. 가지 고르기는 하지 않는다(라벨만으로 가지를 단정하지 않는다).
-        picked = [by_id[i] for i in lex[:k_in + k_out] if i in by_id]
+        eligible = [i for i in lex if i in by_id and lexical_evidence(
+            query, item_text(by_id[i]))]
+        picked = [by_id[i] for i in eligible[:k_in + k_out]]
         if picked:
             out.update(status="lexical_only", items=picked)
         return out
     q = _encode([query[:2000]])[0]
     sims = idx["item_vecs"] @ q
-    sem = [items[k].id for k in np.argsort(-sims)[:50]]
-    fused = _rrf([sem, lex[:50]])
+    eligible = {it.id for k, it in enumerate(items) if sims[k] >= min_sim}
+    if not eligible:
+        out["status"] = "no_match"
+        return out
+    sem = [items[k].id for k in np.argsort(-sims) if items[k].id in eligible][:50]
+    fused = _rrf([sem, [i for i in lex if i in eligible][:50]])
     if branch_filter is not None:
         chosen = [tuple(b) for b in branch_filter]
     else:
@@ -307,7 +317,8 @@ def recall(store: Store, query: str, *, n_branches: int = 2, k_in: int = 2, k_ou
     inside = [i for i in fused if any(under(by_id[i].path, b) for b in chosen)]
     if len(inside) < k_in:                                    # 융합 상위 50 밖에 있는 가지 안 항목
         rest = sorted((k for k, it in enumerate(items)
-                       if it.id not in inside and any(under(it.path, b) for b in chosen)), key=lambda k: -sims[k])
+                       if it.id in eligible and it.id not in inside
+                       and any(under(it.path, b) for b in chosen)), key=lambda k: -sims[k])
         inside += [items[k].id for k in rest]
     outside = [i for i in fused if i not in set(inside)]
     pos = {i: r for r, i in enumerate(fused)}

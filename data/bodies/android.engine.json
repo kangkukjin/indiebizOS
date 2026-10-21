@@ -48,6 +48,7 @@
     "base/quantity_checks",
     "base/quiescent_reload",
     "base/r2_client",
+    "base/recall_relevance",
     "base/reload_gate",
     "base/repair_live_probe",
     "base/repair_process",
@@ -553,8 +554,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 542,
-    "engine": 510,
+    "total": 543,
+    "engine": 511,
     "blocklist": 32
   }
 }

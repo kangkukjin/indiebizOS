@@ -1,7 +1,7 @@
 """심층기억의 회상 어댑터 — backend/datastore/tree_recall.Store 구현.
 
 항목 = memories 행(가지 경로 = node), 가지 = 주제 트리의 노드 + 가지 문서의 사전 항목(memory_tree.entry_of).
-읽기만 한다 — 회상 색인은 tree_recall 이 data/recall_index/ 에 따로 두며, 이 패키지의 memories_vec
+첫 읽기 전에 공통 스키마 초기화·이전을 거친다. 회상 색인은 tree_recall 이 data/recall_index/ 에 따로 두며, 이 패키지의 memories_vec
 (중복 판정·모순 스캔이 쓰는 해마 공간 벡터)는 건드리지 않는다.
 """
 import hashlib
@@ -24,6 +24,9 @@ class DeepMemoryStore(Store):
 
     def items(self) -> List[Item]:
         if self._items is None:
+            # 지도 조회보다 먼저 호출돼도 빈 SQLite 파일·옛 node 없는 DB를 안전하게 읽는다.
+            # 손상된 스키마나 접근 실패는 숨기지 않고 공급원의 error로 전달한다.
+            memory_tree.ensure_column(self.db_path)
             conn = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True, timeout=5)
             try:
                 sql = "SELECT id, COALESCE(node,''), content, COALESCE(keywords,'') FROM memories"

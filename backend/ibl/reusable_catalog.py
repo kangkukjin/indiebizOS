@@ -4,25 +4,28 @@ No new memory store: definitions stay in their owners. Search is deterministic,
 bounded and optional; matching describes candidates, never proves suitability.
 """
 import json
-import re
+import math
 from pathlib import Path
+
+from recall_relevance import lexical_evidence, terms
 
 
 def ranked(query, entries, limit=3):
     query = (query or '').strip().casefold()
-    words = {w.casefold() for w in re.findall(r'[\w]+', query or '') if len(w) >= 2}
     if not query:
         return []
     scored = []
     for row in entries:
         sid = str(row.get('id', '')).casefold()
-        exact = query in {sid, sid.partition(':')[2]}
+        name = sid.partition(':')[2] or sid
+        exact = query in {sid, name}
+        named = len(name) >= 2 and name in terms(query)
         text = sid + ' ' + str(row.get('description', '')).casefold()
-        score = sum(len(w) for w in words if w in text)
-        # 허용한 두 글자 검색어를 점수 하한에서 다시 버리지 않는다.
-        # 정확명은 길이와 무관하게 우선하며, 한 글자의 광범위 부분 검색은 피한다.
-        if exact or score >= 2:
-            scored.append((exact, score, row))
+        score = lexical_evidence(query, text)
+        if exact or named or score:
+            # 긴 인자·결과 설명이 우연한 겹침을 많이 모아 짧고 적합한 부품을 밀어내지 않게 한다.
+            score /= 1 + math.log1p(len(terms(text)))
+            scored.append((exact or named, score, row))
     ordered = sorted(scored, key=lambda item: (-item[0], -item[1], str(item[2]['id'])))
     return [row for _, _, row in ordered[:limit]]
 
@@ -68,6 +71,11 @@ def candidates(query, limit=3):
             rows.append({'id': 'fn:' + name, 'description': name,
                          'call': '[fn:' + name + ']{}', 'contract': None,
                          'contract_known': False, 'origin': 'installed'})
+    from ibl_access import exposed_idiom_names
+    exposed = exposed_idiom_names(allowed)
+    # 실제 상시 블록에 실린 함수만 제외한다. 예산 밖의 함수·같은 이름의 스크립트는 남긴다.
+    rows = [row for row in rows if not (
+        row['id'].startswith('fn:') and row['id'][3:] in exposed)]
     found = ranked(query, rows, limit)
     # 선택된 배포 함수만 기존 컴파일러에서 계약을 얻는다. 별도 계약 사본은 없다.
     for row in found:

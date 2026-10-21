@@ -115,6 +115,9 @@ class Recall:
 def begin(runner, message: str, *, history: Optional[list] = None, channel: str = "pipeline",
           action_hint: Optional[str] = None, deep: bool = True) -> Recall:
     """1상 — 분류 전에 도는 공급원 전부. 회상 통계는 호환 필드 `recall.reflex` 로 나온다. 호출자는 `route()` 로 닫는다."""
+    if channel == "pipeline":
+        from dialogue_continuation import recall_query
+        message = recall_query(message)
     req = RecallRequest(runner, message or "", history or [], channel, action_hint, deep)
     recall = Recall(req)
     _run_phase(recall, 1)
@@ -282,8 +285,7 @@ def _memory_map(req: RecallRequest, recall: Recall) -> Optional[Block]:
 
 
 def _recalled_memory(req: RecallRequest, recall: Recall) -> Optional[Block]:
-    """이 질문에 맞춰 고른 심층기억 — 가지 2 → 그 안 2건 + 밖 1건(공통 회상 tree_recall, 설계 2026-09-17).
-    관련 없음은 기계가 가르지 못한다 — 작게 싣고 판단은 받는 AI 가 한다. 인코더 적재 중이면 0토큰."""
+    """관련성 하한을 통과한 심층기억만 최대 안 2건 + 밖 1건. 0건도 정상이다."""
     def run():
         db_path = deep_memory_db(req.runner)
         if not db_path:
@@ -300,7 +302,7 @@ def _recalled_memory(req: RecallRequest, recall: Recall) -> Optional[Block]:
             note_outside_hit(store.key, req.message, r)
         branches = ", ".join("/".join(b) for b in r["branches"]) or "(가지 고르기 생략)"
         xml = (
-            '<recalled_memory note="이 질문에 맞춰 기계가 고른 심층기억 후보 — 고른 가지 안에서 2건, 밖에서 1건. '
+            '<recalled_memory note="이 질문에 맞춰 기계가 고른 심층기억 후보 — 관련성 하한을 통과한 것만 고른 가지 안에서 최대 2건, 밖에서 최대 1건. '
             '관련 없으면 무시한다. 긴 기억은 잘려 있다(…): 전문과 같은 가지의 다른 기억은 '
             '[self:memory]{op:\"recall\", node:\"<가지>\"} 로 연다.">\n'
             f"고른 가지: {branches}\n" + "\n".join(it.label for it in picked) + "\n</recalled_memory>"

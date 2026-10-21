@@ -33,6 +33,58 @@ class Journal:
         self.record("finished", {"success": success})
 
 
+def test_recall_uses_user_requests_without_recovery_or_tool_observations(monkeypatch):
+    import associative_recall as recall
+    from dialogue_continuation import recall_query
+    journal = Journal()
+    journal.recovery = lambda: '이전 실행: 나레이션 파일 정렬과 폴더 변화\n'
+    monkeypatch.setattr(recall, 'SOURCES', ())
+    seen = []
+
+    def execute(message, history):
+        seen.append(recall.begin(None, message).request.message)
+        assert '이전 실행:' in message  # 실행자는 복구 근거를 계속 받는다.
+        assert recall.begin(None, '별도 위임 질문').request.message == '별도 위임 질문'
+        if len(seen) == 1:
+            yield {'type': 'tool_result', 'id': 'read', 'result': '무관한 도구 결과'}
+            inbox.post('agent', '음량도 낮춰', 'task', require_active=True)
+        yield {'type': 'final', 'content': '이전 응답의 무관한 단어'}
+
+    with inbox.task_scope(['agent'], 'task', journal.record):
+        list(stream(execute, '본체 상태 확인', [], 'agent', 'task', journal))
+    assert seen == ['본체 상태 확인', '본체 상태 확인\n음량도 낮춰']
+    assert recall_query('본체 상태 확인') == '본체 상태 확인'
+
+
+def test_recall_query_scope_restores_after_error():
+    from dialogue_continuation import _execute, recall_query
+
+    def fail(message, history):
+        assert recall_query(message) == '사용자 요청'
+        raise RuntimeError('중단')
+        yield  # noqa: unreachable — generator
+
+    with pytest.raises(RuntimeError):
+        list(_execute(fail, '복구 자료를 포함한 요청', [], '사용자 요청'))
+    assert recall_query('복구 자료를 포함한 요청') == '복구 자료를 포함한 요청'
+
+
+def test_recall_query_does_not_leak_across_yields_or_worker_threads():
+    from dialogue_continuation import _execute, recall_query
+
+    def execute(message, history):
+        for _ in range(2):
+            assert recall_query(message) == '순수 요청'
+            yield {'type': 'text'}
+
+    iterator = _execute(execute, '복구 포함', [], '순수 요청')
+    with ThreadPoolExecutor(max_workers=1) as first, ThreadPoolExecutor(max_workers=1) as second:
+        for worker in (first, second):
+            assert worker.submit(next, iterator).result() == {'type': 'text'}
+            assert worker.submit(recall_query, '복구 포함').result() == '복구 포함'
+        first.submit(iterator.close).result()
+
+
 @pytest.mark.parametrize('native', [False, True])
 def test_final_text_and_native_tools_continue_before_single_final(native):
     journal, requests = Journal(), []

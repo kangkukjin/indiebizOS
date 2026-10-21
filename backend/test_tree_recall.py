@@ -63,7 +63,8 @@ def _world(T):
 
 def test_branch_first_inside_and_outside(TR):
     items, branches = _world(TR)
-    r = TR.recall(_Store(TR, items, branches), "속초 호텔 방에서 요리할 수 있나", n_branches=1)
+    # 가지·안/밖 배치 계약만 보는 가짜 인코더. 실제 모델의 관련성 하한은 별도 검사한다.
+    r = TR.recall(_Store(TR, items, branches), "속초 호텔 방에서 요리할 수 있나", n_branches=1, min_sim=0)
     assert r["status"] == "ok" and r["branches"][0] == ("여행", "속초")
     assert len(r["items"]) == 2 and all(it.path == ("여행", "속초") for it in r["items"])
     assert len(r["outside"]) == 1 and r["outside"][0].path != ("여행", "속초")
@@ -75,13 +76,13 @@ def test_see_also_widens_the_inside(TR):
     B = TR.Branch
     branches = [B(("여행", "속초"), "속초 여행 숙소 호텔 일정", see_also=(("취향", "음식"),)), B(("가족",), "가족 구성"),
                 B(("취향", "음식"), "음식 취향")]
-    r = TR.recall(_Store(TR, items, branches), "속초 호텔 조식", n_branches=1, k_in=3)
+    r = TR.recall(_Store(TR, items, branches), "속초 호텔 조식", n_branches=1, k_in=3, min_sim=0)
     assert ("취향", "음식") in r["branches"] and "c1" in [it.id for it in r["items"]]
 
 
 def test_branch_filter_skips_routing(TR):
     items, branches = _world(TR)
-    r = TR.recall(_Store(TR, items, branches), "호텔", branch_filter=[("가족",)], k_in=1)
+    r = TR.recall(_Store(TR, items, branches), "호텔", branch_filter=[("가족",)], k_in=1, min_sim=0)
     assert r["branches"] == [("가족",)] and [it.id for it in r["items"]] == ["b1"]
 
 
@@ -165,10 +166,75 @@ def test_injection_block_and_no_block_without_related(TR, tmp_path, monkeypatch)
     db = str(tmp_path / "memory_x.db"); _mk_memory_db(db)
     scent = lambda q: AR._recalled_memory(AR.RecallRequest(None, q, [], "pipeline"), None).text
     monkeypatch.setattr(AR, "deep_memory_db", lambda runner: db)
-    xml = scent("속초 호텔에서 요리할 수 있나")
+    xml = scent("속초 호텔")
     assert xml.startswith("<recalled_memory ") and "고른 가지:" in xml and "‹#1›" in xml and xml.count("\n- [") <= 3
     monkeypatch.setattr(AR, "deep_memory_db", lambda runner: "")
     assert scent("속초") == ""
+
+
+def test_auto_recall_does_not_fill_inside_or_outside_slots_with_weak_hits(TR, monkeypatch):
+    items = [TR.Item("good", ("여행",), "여행 숙소"),
+             TR.Item("weak", ("여행",), "여행 부동산"),
+             TR.Item("outside", ("금융",), "여행 금융")]
+    store = _Store(TR, items, [TR.Branch(("여행",), "여행")])
+    # 같은 글자·같은 가지가 있어도 항목 자체의 의미 유사도 하한을 우회하지 않는다.
+    monkeypatch.setattr(TR, "_encode", lambda texts: np.array([[1., 0.]] * len(texts)))
+    monkeypatch.setattr(TR, "_build", lambda *a, **kw: {
+        "item_vecs": np.array([[.8, .6], [.3, .954], [.1, .995]]),
+        "branch_vecs": np.array([[1., 0.]])})
+    r = TR.recall(store, "여행", k_in=2, k_out=1)
+    assert [it.id for it in r["items"]] == ["good"]
+    assert r["outside"] == []
+    assert TR.recall(store, "여행", min_sim=.9)["status"] == "no_match"
+
+
+def test_auto_recall_without_encoder_rejects_incidental_word(TR, monkeypatch):
+    monkeypatch.setattr(TR, "_model_state", "failed")
+    items = [TR.Item("noise", ("제작",), "나레이션 음량 정렬"),
+             TR.Item("match", ("장치",), "본체 음량 제어")]
+    r = TR.recall(_Store(TR, items, []), "본체 음량 낮춰")
+    assert [it.id for it in r["items"]] == ["match"]
+
+
+@pytest.mark.parametrize("exists", [False, True])
+def test_deep_store_first_read_does_not_depend_on_map_initialization(tmp_path, exists):
+    from recall_store import DeepMemoryStore
+    path = tmp_path / "memory_new.db"
+    if exists:
+        sqlite3.connect(path).close()
+    assert DeepMemoryStore(str(path)).items() == []
+    with sqlite3.connect(path) as conn:
+        conn.execute("INSERT INTO memories(content) VALUES ('기억을 보존한다')")
+    assert DeepMemoryStore(str(path)).items()[0].text == "기억을 보존한다"
+
+
+def test_deep_store_migrates_legacy_columns_without_losing_memories(tmp_path):
+    from recall_store import DeepMemoryStore
+    path = tmp_path / "memory_old.db"
+    with sqlite3.connect(path) as conn:
+        conn.execute("CREATE TABLE memories(id INTEGER PRIMARY KEY, category TEXT, keywords TEXT, content TEXT)")
+        conn.execute("INSERT INTO memories VALUES (1, '기타', '', '기존 기억')")
+    assert DeepMemoryStore(str(path)).items()[0].text == "기존 기억"
+
+
+def test_deep_store_does_not_hide_invalid_schema(tmp_path):
+    from recall_store import DeepMemoryStore
+    path = tmp_path / "memory_invalid.db"
+    with sqlite3.connect(path) as conn:
+        conn.execute("CREATE TABLE memories(id INTEGER PRIMARY KEY)")
+    with pytest.raises(sqlite3.OperationalError):
+        DeepMemoryStore(str(path)).items()
+
+
+def test_deep_store_initializes_metadata_only_db_without_replacing_metadata(tmp_path):
+    from recall_store import DeepMemoryStore
+    path = tmp_path / "memory_metadata.db"
+    with sqlite3.connect(path) as conn:
+        conn.execute("CREATE TABLE _meta(key TEXT PRIMARY KEY, value TEXT)")
+        conn.execute("INSERT INTO _meta VALUES ('existing', 'keep')")
+    assert DeepMemoryStore(str(path)).items() == []
+    with sqlite3.connect(path) as conn:
+        assert conn.execute("SELECT * FROM _meta").fetchall() == [('existing', 'keep')]
 
 
 def test_search_floor_drops_unrelated_semantic_hits_but_keeps_lexical(TR):

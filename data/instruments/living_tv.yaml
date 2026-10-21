@@ -10,27 +10,31 @@ modes:
   action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
+  auto_run: true
   buttons:
+  - label: ⟳ 상태 새로고침
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",op:"status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
+    render_result: true
   - label: ⏻ 켜기
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "on"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: ⏻ 끄기
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "off"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🖥 PC 입력으로 전환
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "to_pc"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🏠 홈
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_HOME"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: TV 연결 허용·페어링
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "pair"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   view:
   - type: kv
     rows:
@@ -61,27 +65,31 @@ modes:
   action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
+  auto_run: true
   buttons:
+  - label: ⟳ 상태 새로고침
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",op:"status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
+    render_result: true
   - label: 🔊 +1
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: 1},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🔉 −1
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: -1},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🔊 +3
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: 3},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🔉 −3
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "volume", steps: -3},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🔇 음소거 전환
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "mute"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   view:
   - type: kv
     rows:
@@ -112,19 +120,23 @@ modes:
   action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
+  auto_run: true
   buttons:
+  - label: ⟳ 상태 새로고침
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",op:"status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
+    render_result: true
   - label: ▶ 유튜브
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "launch", app: "youtube"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🎬 넷플릭스
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "launch", app: "netflix"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: 🏠 홈
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_HOME"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   view:
   - type: kv
     rows:
@@ -155,34 +167,38 @@ modes:
   action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV", op:
     "status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
   run_label: 상태 새로고침
+  auto_run: true
   buttons:
+  - label: ⟳ 상태 새로고침
+    action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",op:"status"},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
+    render_result: true
   - label: ↑
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_UP"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: ↓
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_DOWN"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: ←
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_LEFT"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return $r'
-    render_result: true
+    refresh: true
   - label: →
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_RIGHT"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return
       $r'
-    render_result: true
+    refresh: true
   - label: OK
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_ENTER"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return
       $r'
-    render_result: true
+    refresh: true
   - label: ↩ 뒤로
     action: '$r = [self:script]{id:"TV제어",args:{target:"거실TV",
       op: "key", keys: ["KEY_RETURN"]},timeout:90}; assert $r.success == true, "TV 요청 실패. 상태를 확인하세요.", {result:$r}; return
       $r'
-    render_result: true
+    refresh: true
   view:
   - type: kv
     rows:

@@ -27,7 +27,7 @@ def drain(stream):
 
 
 def claim(quote, status="unsupported", evidence_ids=None):
-    return {"quote": quote, "status": status, "target": "이미지 열람",
+    return {"quote": quote, "status": status, "scope": "executor_means", "target": "이미지 열람",
             "lookup_terms": ["이미지", "image"], "evidence_ids": evidence_ids or []}
 
 
@@ -71,6 +71,36 @@ def install_lookup(monkeypatch, routes=True):
                                   "I cannot read this file.", "이미지 처리는 지원되지 않습니다."])
 def test_candidate_detection(text):
     assert cg.CANDIDATE.search(text)
+
+
+@pytest.mark.parametrize("scope", [None, "external", "meta", "uncertain", "invalid"])
+def test_external_or_unconfirmed_scope_cannot_rewrite_answer(monkeypatch, scope):
+    # #5122의 실제 오판. 틀린 사실 판정만으로 실행자 재개를 허용하지 않는다.
+    response = "그래서 도구가 계속 늘어나는 건 피할 수 없고, 소스들의 권고는 이 경우를 다루지 않습니다."
+    row = {"candidate_id": "c0", "target": "소스들의 권고 범위",
+           "status": "unsupported", "lookup_terms": ["도구", "권고"]}
+    if scope is not None:
+        row["scope"] = scope
+    inputs = install_judge(monkeypatch, [[row]])
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+
+    def resume(*args):
+        pytest.fail("외부 사실 판단 때문에 실행자를 재개하면 안 됨")
+
+    assert drain(guard.adopt(NS(), "이 구조를 설명해줘", response, [], resume=resume))[1] == response
+    assert len(inputs) == 1 and guard.lookups == guard.resumes == 0
+
+
+def test_scope_filters_only_external_claim_in_mixed_answer(monkeypatch):
+    external = "기사 속 기관은 원문을 공개할 수 없습니다."
+    response = external + "\n" + EYES
+    outside = {**claim(external), "scope": "external"}
+    install_judge(monkeypatch, [[outside, claim(EYES)], []])
+    lookups = install_lookup(monkeypatch, routes=False)
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+    result = drain(guard.adopt(NS(ai=NS()), "기사를 설명하고 이미지를 읽어줘", response, []))[1]
+    assert external in result and EYES not in result
+    assert len(lookups) == 1
 
 
 def test_normal_answer_costs_no_calls():
@@ -340,7 +370,8 @@ def test_candidate_budget_does_not_drop_denial_after_medium_response():
 def test_candidate_selection_does_not_replace_adjacent_normal_sentence():
     response = '첫 작업은 완료했습니다. **이미지를 볼 수 없습니다.** 다음 작업은 보존합니다.'
     data = cg.packet('확인', response, [], cg.DEFAULTS)
-    rows = cg.parse(json.dumps({'claims': [{'candidate_id': 'c0', 'status': 'unsupported'}]}),
+    rows = cg.parse(json.dumps({'claims': [{'candidate_id': 'c0', 'status': 'unsupported',
+                                          'scope': 'executor_means'}]}),
                     response, [], data['candidates'])
     assert rows[0]['quote'] == '**이미지를 볼 수 없습니다.**'
     result = cg.replace_unknown(response, rows)

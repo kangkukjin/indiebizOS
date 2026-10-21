@@ -483,7 +483,22 @@ THINK/REPAIR의 계획도 공통 `AIAgent(role="consciousness")`로 수행한다
 | `backend/datastore/supervision_store.py` | 증거 원문, 응답 후보·버전·해시·읽기 범위, 원자적 블록 패치 |
 | `backend/base/supervision_watch.py` | 시계와 로그 증분, 살아 있음/진척 분리, 단계·처리량·자원 정보, runner 종료 행 |
 | `backend/surface/api_supervision.py`, `mcp_server.py` | CLI와 같은 작업대·행위자 문맥 연결 |
-| `backend/base/supervision_hook.py` | Claude Code 네이티브 실행 전 지시 전달 |
+| `backend/base/supervision_hook.py` | Claude Code 네이티브 실행 전 지시 전달·Bash 파이프 실패 상태 보존 |
+
+2026-10-21 에피소드 5122에서는 Python의 모듈 로드 실패 두 번이 `2>&1 | tail` 뒤에서
+종료 코드 0으로 덮여 감독 원장에도 성공으로 들어왔다. 네이티브 PreToolUse 훅이 Bash
+입력 앞에 `set -o pipefail`을 붙여 파이프의 오른쪽부터 첫 비정상 종료를 유지한다.
+[Claude Code 훅 계약](https://code.claude.com/docs/en/hooks#pretooluse-decision-control)의
+`updatedInput`으로 나머지 입력 필드를 함께 보존하고, 권한 허용 결정은 반환하지 않는다.
+기존 감독 중단 지시가 먼저 적용되며, 입력 해석에 실패하면 해당 호출을 중단한다.
+
+이는 출력 오류 문자열 추측이나 명령 재실행이 아니다. 기존 CLI의 실패 영수증을
+provider→감독 원장으로 전달한다. `set -e`는 추가하지 않으며 명시적인 `||` 복구,
+후속 명령, 별도 하위 셸의 종료 정책은 원문대로다. `head` 등으로 생산자에 SIGPIPE가
+생기면 그것도 파이프 실패이므로 의도한 조기 종료는 명령에서 명시적으로 처리해야 한다.
+모든 내부 명령의 실패 이력을 복원하거나 과거 에피소드 영수증을 소급 변경하지는 않는다.
+`backend/test_supervision_hook.py`는 Bash/zsh의 모듈 실패→tail, 출력/종료 코드/복구 보존,
+1회 실행, 권한·감독 경계, provider→감독 실패 집계를 검사한다.
 
 정상적인 짧은 조회에는 의식 호출이 추가되지 않는다. 실제 실패·세계 변경·복잡한 작업은
 응답 생성 전에 감독으로 승격한다. 연속 실패·같은 결과의 반복·진척 정체·긴 작업에서 중간 검토를

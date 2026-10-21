@@ -46,7 +46,15 @@ evidence는 관련 호출을 우선한 발췌다. omitted_calls가 있거나 res
 과거 답변의 정정·시도의 실패·검색 결과 없음·잔여석 등 외부 사실의 미확인은 능력 부정이 아니다.
 이 관측이 참인지 심사하거나 기능 목록으로 검증하지 마라. '확인할 수 없다'도 외부 사실의 불확실성만
 말하면 제외한다. 현재 도구·권한·지원의 부족 때문에 요청을 수행할 수 없다고 주장한 부분만 선택한다.
+먼저 진위와 독립적으로 scope를 판정한다: executor_means(현재 실행자가 요청 수행에 쓸
+도구·권한·지원의 부족), external(세계·자료·타인의 상태나 불가피성), meta(인용·논평),
+uncertain(누구의 어떤 수단이 부족한지 불명확). 주장이 틀려도 external이면 개입 대상이 아니다.
+요청이 설명/비교인 경우 설명 대상의 한계를 실행자 자신의 한계로 바꾸지 마라.
+문장의 주어가 프로그램·도구여도 요청을 실행할 수단으로 지목한 기능의 부재는
+executor_means다. 설명의 대상인지 실행의 수단인지는 사용자 요청과 응답의 관계로 구분한다.
+executor_means가 확실할 때만 unsupported를 줄 수 있다. 모호하면 scope는 uncertain이다.
 JSON 객체 하나만 출력: {"claims":[{"candidate_id":"candidates에서 선택한 id",
+"scope":"executor_means|external|meta|uncertain",
 "target":"주장의 대상", "status":"unsupported|limited|unknown|meta",
 "evidence_ids":["e0"], "lookup_terms":["대상과 관련된 검색어", "영문 동의어"]}]}.
 원문은 다시 작성하지 말고 candidate_id로 선택한다. 한 후보 문단에 독립적인 다른 주장도 섞였거나
@@ -203,6 +211,10 @@ def parse(raw, response, evidence, candidates=()):
         terms = row.get("lookup_terms", [])
         if not isinstance(terms, list) or any(not isinstance(t, str) for t in terms):
             raise ValueError("invalid lookup terms")
+        # 진위 판정과 개입 권한은 별개다. 범위가 없거나 불명확한 모델 응답은
+        # 원문을 보존한다. 외부 사실을 unsupported로 오판해도 조회/재개하지 않는다.
+        if row["status"] == "unsupported" and row.get("scope") != "executor_means":
+            continue
         claims.append({**row, "quote": quote, "target": excerpt(row.get("target") or "해당 기능", 180),
                        "lookup_terms": [excerpt(t, 100) for t in terms[:8]]})
     return claims
@@ -242,7 +254,7 @@ class CapabilityGuard:
             raise ValueError("claim crosses excerpt boundary")
         log("judged", attempt=self.judgments, response_hash=fingerprint(response),
             statuses=[r["status"] for r in claims], omitted_calls=data["omitted_calls"],
-            evidence=evidence_ref({"packet": data, "claims": claims}))
+            evidence=evidence_ref({"packet": data, "raw": raw, "claims": claims}))
         return claims
 
     def adopt(self, runner, message, response, calls, *, resume=None,

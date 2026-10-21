@@ -32,7 +32,36 @@ def main():
     if instruction:
         sys.stderr.write(instruction + "\n")
         return 2
+    try:
+        output = shell_input(json.load(sys.stdin))
+    except (ValueError, TypeError) as exc:
+        sys.stderr.write(f"도구 입력을 확인하지 못해 실행하지 않았습니다: {type(exc).__name__}\n")
+        return 2
+    if output:
+        print(json.dumps(output, ensure_ascii=False))
     return 0
+
+
+def shell_input(payload):
+    """Bash의 마지막 파이프에서 앞 명령 실패를 보존한다. 실행/재시도는 CLI 소유다.
+
+    PreToolUse updatedInput은 전체 입력을 교체하므로 나머지 필드를 보존한다.
+    permissionDecision을 주지 않아 변경된 명령도 기존 권한 검사를 거친다.
+    set -e는 쓰지 않는다. 명시적인 || 복구와 셸 제어 흐름은 원문대로다.
+    """
+    if not isinstance(payload, dict):
+        raise ValueError("invalid hook payload")
+    if payload.get("tool_name") != "Bash":
+        return None
+    params = payload.get("tool_input")
+    if not isinstance(params, dict) or not isinstance(params.get("command"), str):
+        raise ValueError("invalid Bash input")
+    prefix = "set -o pipefail\n"
+    command = params["command"]
+    if not command.strip() or command.startswith(prefix):
+        return None
+    return {"hookSpecificOutput": {"hookEventName": "PreToolUse",
+            "updatedInput": {**params, "command": prefix + command}}}
 
 
 if __name__ == "__main__":

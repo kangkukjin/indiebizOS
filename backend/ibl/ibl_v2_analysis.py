@@ -88,17 +88,32 @@ HINTS = {
 }
 
 
-def constant_value(node, depth=0, *, partial_records=False):
-    """Observe literal containers without executing code or inventing dynamic values."""
+def constant_value(node, depth=0, *, partial_records=False, bindings=None):
+    """Observe literals, proven bindings and bounded arithmetic; never execute calls."""
     from ibl_callable_contract import UNRESOLVED
     if depth > 16:
         return UNRESOLVED
+    if node.kind == 'ref':
+        return (bindings or {}).get(node.data['name'], UNRESOLVED)
+    if node.kind == 'binary' and node.data['op'] in ('+', '-', '*', '/', '//', '%'):
+        from common.expression_ops import binary
+        from ibl_v2_ir import Fault
+        left = constant_value(node.data['left'], depth + 1, bindings=bindings)
+        right = constant_value(node.data['right'], depth + 1, bindings=bindings)
+        # Bounded numeric folding only: no allocation-heavy list/text/power evaluation.
+        if any(v is UNRESOLVED or type(v) not in (int, float) or abs(v) > 10**12
+               for v in (left, right)):
+            return UNRESOLVED
+        try:
+            return binary(node.data['op'], left, right)
+        except (Fault, ArithmeticError, ValueError):
+            return UNRESOLVED
     if node.kind == 'literal':
         return node.data['value']
     if node.kind == 'unary' and node.data['op'] in ('+', '-'):
         # 음수 리터럴은 파서에서 부호+숫자다. 부호 때문에 이미 아는 하한 위반을
         # 동적 값으로 취급하면 앞선 외부 호출이 끝난 뒤에야 실패한다.
-        value = constant_value(node.data['value'], depth + 1)
+        value = constant_value(node.data['value'], depth + 1, bindings=bindings)
         if value is UNRESOLVED:
             return UNRESOLVED
         from common.expression_ops import number
@@ -109,7 +124,7 @@ def constant_value(node, depth=0, *, partial_records=False):
         except Fault:
             return UNRESOLVED  # 타입 오류는 기존 타입 검사기가 보고한다.
     if node.kind == 'list':
-        values = [constant_value(v, depth + 1) for v in node.data['values']]
+        values = [constant_value(v, depth + 1, bindings=bindings) for v in node.data['values']]
         return UNRESOLVED if any(v is UNRESOLVED for v in values) else values
     if node.kind == 'record':
         # 레코드 리터럴도 관측한다(75회차 후속): 옛 판은 `config:{repeat:"매일"}` 을 미상으로 봐 check 가
@@ -117,7 +132,7 @@ def constant_value(node, depth=0, *, partial_records=False):
         from ibl_v2_ir import record_fields
         if partial_records and any(k is None for k, _ in node.data.get("entries", ())):
             return UNRESOLVED  # A spread may supply/override an omitted selector.
-        fields = {k: constant_value(v, depth + 1, partial_records=partial_records)
+        fields = {k: constant_value(v, depth + 1, partial_records=partial_records, bindings=bindings)
                   for k, v in record_fields(node).items()}
         return UNRESOLVED if not partial_records and any(v is UNRESOLVED for v in fields.values()) else fields
     return UNRESOLVED

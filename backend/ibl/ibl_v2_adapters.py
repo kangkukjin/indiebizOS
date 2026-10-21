@@ -72,6 +72,10 @@ def validate_contract(contract):
     if (not isinstance(receipt_inputs, list) or any(k not in contract["params"] for k in receipt_inputs)
             or receipt_inputs and adapter.get("protocol") != "ibl-script/2"):
         raise ValueError("receipt_inputs는 ibl-script/2의 영수증 참조 인자 목록입니다")
+    if "partial_value_path" in adapter and (
+            adapter.get("protocol") != "legacy-envelope" or
+            not isinstance(adapter["partial_value_path"], str)):
+        raise ValueError("partial_value_path는 legacy-envelope의 부분 결과 경로입니다")
     envelopes = adapter.get("input_envelopes", [])
     if (not isinstance(envelopes, list)
             or any(not isinstance(key, str) or key not in contract["params"] for key in envelopes)):
@@ -247,7 +251,12 @@ def decode_envelope(raw, adapter, input_values=None):
             code, kind = "APPROVAL_REQUIRED", "suspended"
         elif raw.get("suspended") and raw.get("task_ref"):
             code, kind = "TASK_PENDING", "suspended"
+        partial = UNIT
+        if kind == "runtime" and "partial_value_path" in adapter:
+            partial = pointer(raw, adapter["partial_value_path"])
+            kind = "partial"
         raise Fault(code, str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind,
+                    partial=partial,
                     details={key: raw[key] for key in (
                         "error_type", "errno", "path", "base_path", "hint", "stage",
                         "inspection", "input_chars", "input_bytes", "limit_chars", "root_type", "target",

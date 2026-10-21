@@ -133,8 +133,9 @@ def test_take_accepts_integer_valued_numbers(registry, count):
 
 @pytest.mark.parametrize('count', ['2.5'])
 def test_take_rejects_fractional_and_negative_numbers(registry, count):
-    result = run('[1,2,3] >> [table:take]{n:' + count + '}', registry)
-    assert result['diagnostic']['code'] == 'TAKE_COUNT'
+    plan = compile_program('[1,2,3] >> [table:take]{n:' + count + '}', registry)
+    assert any(i['code'] == 'ARGUMENT_CONTRACT' for i in plan.issues), plan.report()
+    assert not Runtime(plan).run()['executed']
 
 
 def test_pure_list_transform_already_composes_with_reduce(registry):

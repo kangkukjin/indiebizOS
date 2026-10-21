@@ -98,6 +98,7 @@ class Compiler:
         self.unit_warned = set()
         self.impure_spans = []
         self.pure_calls, self.call_effects = [], {}
+        self.constant_bindings = {}
 
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
@@ -206,11 +207,26 @@ class Compiler:
         return names
 
     def sequence(self, node, env, names, readonly=frozenset(), final=False):
+        # Only straight-line bindings in this frame are proven constants. Nested
+        # functions/loops/branches start fresh; assignments invalidate prior facts.
+        outer, self.constant_bindings = self.constant_bindings, {}
+        try:
+            return self._sequence(node, env, names, readonly, final)
+        finally:
+            self.constant_bindings = outer
+
+    def _sequence(self, node, env, names, readonly=frozenset(), final=False):
         names = self.predeclare(node, names)
         result = UNIT_T
         terminated = False
         dead_env = None
         for statement in node.data["statements"]:
+            from ibl_v2_analysis import constant_value
+            from ibl_callable_contract import UNRESOLVED
+            value = (constant_value(statement.data["value"], bindings=self.constant_bindings)
+                     if statement.kind == "bind" else UNRESOLVED)
+            for name in assigned_names(statement):
+                self.constant_bindings.pop(name, None)
             if terminated:
                 # Still diagnose invalid dead source, but it cannot supply a
                 # frame result or add return types to the reachable paths.
@@ -219,6 +235,8 @@ class Compiler:
                 self.returns = old_returns
             else:
                 result = self.visit(statement, env, names, readonly, final)
+                if statement.kind == "bind" and value is not UNRESOLVED:
+                    self.constant_bindings[statement.data["name"]] = value
                 if self.returns_unconditionally(statement):
                     terminated, dead_env = True, env.copy()
         return result
@@ -598,7 +616,7 @@ class Compiler:
                 self.issue(node, exc.code, str(exc))
                 return UNKNOWN
             from ibl_v2_analysis import constant_value
-            values = {k: constant_value(v) for k, v in fields.items()}
+            values = {k: constant_value(v, bindings=self.constant_bindings) for k, v in fields.items()}
             for arg in args:
                 values.setdefault(arg, UNRESOLVED)
             if arg_type.open:
@@ -622,7 +640,7 @@ class Compiler:
                 # argument (e.g. window_id/source) is supplied at runtime.
                 # These partial values are only for contract selection, never
                 # dependency snapshots, receipts or execution arguments.
-                selectors = {**values, **{k: constant_value(v, partial_records=True)
+                selectors = {**values, **{k: constant_value(v, partial_records=True, bindings=self.constant_bindings)
                                          for k, v in fields.items()}}
                 contract = spec.specialize(contract, selectors)
             from ibl_value_checks import value_problems

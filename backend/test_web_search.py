@@ -104,3 +104,36 @@ if __name__ == "__main__":
     import sys
     import pytest
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_batch_partial_crosses_ibl_and_failed_query_can_be_retried(web, monkeypatch, tmp_path):
+    import ibl_engine
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from ibl_v2_ir import unpack
+    calls = []
+    def query(args, context):
+        q = args['query']
+        calls.append(q)
+        if q == 'bad' and calls.count(q) == 1:
+            return json.dumps({'success': False, 'error': 'fixture timeout', 'items': []})
+        return json.dumps({'success': True, 'items': [{'title': q}]})
+    monkeypatch.setattr(web, 'execute', query)
+    monkeypatch.setattr(web, '_fetch_sections', lambda jobs: [fn() for _, fn in jobs])
+    raw = web._batch_search({'queries': ['ok', 'bad']}, 'ddgs_search', 'ddg', None)
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **kw: raw)
+    registry = load_registry(str(tmp_path))
+    source = '[sense:search]{source:"ddg",queries:["ok","bad"]}'
+    rt = Runtime(compile_program(source, registry))
+    out = rt.run()
+    assert not out['success'] and out['diagnostic']['has_partial'], out
+    partial = out['diagnostic']['partial']
+    assert partial['items'] == [{'title': 'ok', 'query': 'ok'}]
+    assert partial['errors'] == [{'query': 'bad', 'error': 'fixture timeout'}]
+    assert unpack(rt.recordings[0]['partial']) == partial  # durable receipt payload
+    caught = Runtime(compile_program('[try]{' + source + '}[catch]{return $error.partial}', registry)).run()
+    assert caught['value'] == partial
+    retry = web._batch_search({'queries': [e['query'] for e in partial['errors']]}, 'ddgs_search', 'ddg', None)
+    assert [r['title'] for r in partial['items'] + retry['items']] == ['ok', 'bad']
+    assert calls == ['ok', 'bad', 'bad']

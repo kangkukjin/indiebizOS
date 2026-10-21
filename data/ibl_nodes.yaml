@@ -2591,6 +2591,7 @@ nodes:
           adapter:
             protocol: legacy-envelope
             value_path: ''
+            partial_value_path: ''
           required: []
           integers:
           - limit
@@ -2696,7 +2697,7 @@ nodes:
           source=guardian: '[sense:search]{query: "climate policy", source: "guardian", limit: 3}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, DDGS 메타검색·엔진 자동 선택)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
-        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 반환 행수 count(limit 상한)와 원천이 제공한 total_estimate, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver의 total_estimate는 검색 전체 결과 추정치이며 단건은 최상위·배치는 각 sections에 보존한다(0은 실제 추정 0, 미제공은 필드 없음). 기간 필터 이후 count와 달리 전체 검색 추정이며 모집단·정확한 수요로 간주하지 않는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, Guardian 합류 실패는 errors에 남긴다. gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★최근 N일로 한정하려면 days — gnews/hn/guardian·naver(news/blog)에서 보장(기간 밖 제외·미상은 보존하고 days_filter 로 신고; 부분 실패에도 적용, gnews는 RSS 기간 필터 후 limit·curate), ddg 등 날짜 없는 소스는 거절. hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
+        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. 판본 2 실패의 partial(또는 catch의 $error.partial)에 items·errors·sections 봉투가 남으므로 성공 행을 재사용하고 errors의 검색어만 재시도한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 반환 행수 count(limit 상한)와 원천이 제공한 total_estimate, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver의 total_estimate는 검색 전체 결과 추정치이며 단건은 최상위·배치는 각 sections에 보존한다(0은 실제 추정 0, 미제공은 필드 없음). 기간 필터 이후 count와 달리 전체 검색 추정이며 모집단·정확한 수요로 간주하지 않는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, Guardian 합류 실패는 errors에 남긴다. gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★최근 N일로 한정하려면 days — gnews/hn/guardian·naver(news/blog)에서 보장(기간 밖 제외·미상은 보존하고 days_filter 로 신고; 부분 실패에도 적용, gnews는 RSS 기간 필터 후 limit·curate), ddg 등 날짜 없는 소스는 거절. hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
         router: handler
         tool: search
         implementation: source 분기 단일 도구 — ddg=DDGS 메타검색(키 불요, backend:auto), naver=네이버 검색 API(NAVER_HUB_CLIENT_ID/SECRET 설정 시 API HUB, 미설정 시 기존 NAVER_CLIENT_ID/SECRET), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
@@ -10762,6 +10763,8 @@ nodes:
           required:
           - items
           - by
+          nonempty:
+          - by
           pipe_input: items
           result: List<Record>
           effects:
@@ -10811,6 +10814,8 @@ nodes:
           - n
           minimum:
             n: 0
+          integer_values:
+          - n
           pipe_input: items
           result: List
           effects:
@@ -10882,7 +10887,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 긴 문자열 하나(크롤 본문·산문) 또는 본문 열이 있는 items(자막 구간 등)를 덩이 items 로 자른다(size 자 상한, by=paragraph|line|chars, overlap; items 는 행 경계). 긴 원문을 파이프 안에서 나눠 [table:each] 로 덩이마다 요약하고 다시 [table:brief] 로 종합하는 자리.
-        target_description: 'size(덩이 상한 자, 기본 20000) · by(paragraph|line|chars, 기본 paragraph — 경계로 나눈 뒤 size 안에서 이어 붙임, 경계 없는 통짜 본문은 줄·글자로 내려감) · overlap(겹침 자, chars 전용) · field(봉투 입력의 본문 키, 기본 text/transcript/content/message/body 순) · text(직접 본문). 출력 items {index, text, chars, start}. 빈 문자열·빈 목록은 0건 성공이다. 평문·text 파라미터·field 본문은 빈 문자열도 유효하며 chars 모드에서 공백까지 보존한다. items 행의 누락·빈 본문은 rows_dropped·skipped_row_indices로 신고한다. 예: [limbs:youtube]{op: "transcript", video_id: "…"} >> [table:chunk]{size: 15000} >> [table:each]{do: "[table:brief]{items: [$it], instruction: \"이 덩이의 팁만 불릿으로\"}"} >> [table:brief]{instruction: "덩이 요약들을 하나로"}. items 통화(자막 구간·검색 결과)도 받는다 — 행의 본문 키(field, 기본 text 계열)를 행 경계를 지키며 size 안에 담아 {index, text, chars, start(첫 행), rows} 로. 변환자라 파이프 머리에 홀로 설 수 없다 — 본문을 직접 주려면 items: [{text: "…"}] 로(text 파라미터는 $변수 주입용).'
+        target_description: 'size(덩이 상한 자, 기본 20000) · by(paragraph|line|chars, 기본 paragraph) · overlap(겹침 자, chars 전용) · field(본문 키, 기본 text/transcript/content/message/body 순). 평문·items·text 인자를 받는다. 출력은 items 봉투이며 행은 {index,text,chars,start}, 행 입력이면 rows도 포함한다. 빈 문자열·목록은 0건 성공이고 누락·빈 본문 행은 rows_dropped·skipped_row_indices로 신고한다. 예: $본문 >> [table:chunk]{size:15000} >> [table:each]{return [table:brief]{items:[$it],instruction:"이 덩이의 팁만 불릿으로"}}. 합친 요약은 [table:brief]로 종합한다.'
         group: transform
         router: handler
         tool: data_chunk

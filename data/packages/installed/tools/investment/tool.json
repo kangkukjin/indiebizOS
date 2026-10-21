@@ -69,7 +69,7 @@
               "1wk",
               "1mo"
             ],
-            "description": "[quote] 데이터 간격 (기본 1d)"
+            "description": "[quote] 차트 간격 (기본 1d). 비일봉의 현재가·전일 대비는 별도 일봉 조회 1회로 계산. 분·시간봉 date는 시간대 포함 시각, 직전 봉 대비는 bar_change/bar_change_percent, 봉 수는 total_bars."
           },
           "start_date": {
             "type": "string",

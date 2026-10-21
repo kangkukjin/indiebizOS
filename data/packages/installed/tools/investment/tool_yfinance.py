@@ -7,6 +7,7 @@ import sys
 import json
 import requests
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # common 유틸리티 사용
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
@@ -192,11 +193,12 @@ def _normalize_symbol(symbol: str) -> str:
 
 def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
                  meta_sink: dict = None, start_date=None, end_date=None) -> list:
-    """Yahoo Finance chart API 직접 호출(requests) → 일별 바 리스트.
+    """Yahoo Finance chart API 직접 호출(requests) → 요청 간격의 바 리스트.
 
     yfinance 라이브러리는 Yahoo 봇차단에 막히고(최신판은 curl_cffi 네이티브 의존),
     이 v8/finance/chart 엔드포인트는 브라우저 UA 헤더면 열려 있다 — 폰(Chaquopy)·데스크탑 공통.
     반환: [{date, open, high, low, close, volume}] (close 결측 바 제외).
+    분·시간봉 date는 거래소 시간대의 ISO 시각, 일·주·월봉은 거래소 날짜다.
 
     meta_sink(dict)를 주면 응답의 meta 블록을 담아준다 — currency/instrumentType 등
     *권위 있는* 메타데이터가 여기 있다(심볼 접미사 추측 금지)."""
@@ -218,15 +220,21 @@ def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
     ts = res0.get("timestamp") or []
     q = ((res0.get("indicators") or {}).get("quote") or [{}])[0]
     o, h, l, c, v = (q.get(k) or [] for k in ("open", "high", "low", "close", "volume"))
+    try:
+        exchange_zone = ZoneInfo((res0.get("meta") or {}).get("exchangeTimezoneName") or "UTC")
+    except (ZoneInfoNotFoundError, ValueError):
+        exchange_zone = timezone.utc
+    intraday = str(interval).endswith(("m", "h")) and not str(interval).endswith("mo")
     bars = []
     dropped = []          # close 결측 바 = '거래일인데 값이 없는 구멍'. 조용히 버리면 전일종가가 한 장 밀린다.
     for i, t in enumerate(ts):
         cl = c[i] if i < len(c) else None
         if cl is None:
-            dropped.append(datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d"))
+            dropped.append(datetime.fromtimestamp(t, exchange_zone).strftime("%Y-%m-%d"))
             continue
         bars.append({
-            "date": datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d"),
+            "date": (datetime.fromtimestamp(t, exchange_zone).isoformat() if intraday
+                     else datetime.fromtimestamp(t, exchange_zone).strftime("%Y-%m-%d")),
             "open": round(o[i], 2) if i < len(o) and o[i] is not None else round(cl, 2),
             "high": round(h[i], 2) if i < len(h) and h[i] is not None else round(cl, 2),
             "low": round(l[i], 2) if i < len(l) and l[i] is not None else round(cl, 2),
@@ -383,6 +391,35 @@ def _naver_index_daily(symbol: str, period: str = "5d", start_date=None, end_dat
         return []
 
 
+def _non_daily_result(symbol, period, interval, rows, max_points, date_args):
+    """차트 봉 간격과 현재가의 전일 대비 기준을 분리한다."""
+    snapshot = get_stock_price(symbol, period="5d", interval="1d", max_points=None, **date_args)
+    if not snapshot.get("success"):
+        return {"success": False, "error": "전일 대비 시세의 일봉 기준을 확인하지 못했습니다: "
+                + str(snapshot.get("error", "")), "data": {"prices": rows}}
+    _normalize_row_change(rows)
+    for row in rows:
+        row["bar_change"] = row["change"]
+        row["bar_change_percent"] = row["change_percent"]
+        row["change"] = row["change_percent"] = None  # 일일 등락으로 오인하지 않는다.
+    compact, truncated = compact_price_series(rows, max_points)
+    data = snapshot["data"]
+    for key in ("prices", "sample", "file_path", "total_days", "truncated"):
+        data.pop(key, None)
+    data.update(prices=compact, interval=interval, period=period, total_bars=len(rows),
+                truncated=truncated)  # truncation-scope: propagate — 요청 간격의 차트 표본
+    if truncated:
+        data["file_path"] = save_large_data(rows, "investment", "yf_bars_" + symbol.replace("=", "_"))
+        data["sample"] = compact
+    data["snapshot_interval"] = "1d"
+    change = data.get("change_percent")
+    label = f"{change:+.2f}%" if change is not None else "미상(전일 종가 없음)"
+    snapshot["summary"] = (f"[{data.get('as_of')} 기준] 현재가 {data.get('current_price')} "
+                           f"{data.get('currency')}, 전일 대비 {label}. "
+                           f"차트 {interval} 봉 {len(rows)}개(거래일 수 아님).")
+    return snapshot
+
+
 def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10,
                     start_date=None, end_date=None) -> dict:
     """
@@ -426,16 +463,18 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             all_history = _yahoo_chart(symbol, period, interval, meta_sink=chart_meta, **date_args)
         if date_args:
             all_history = [row for row in all_history
-                           if date_args["start_date"] <= row["date"] <= date_args["end_date"]]
+                           if date_args["start_date"] <= row["date"][:10] <= date_args["end_date"]]
         if not all_history:
             return {"success": False, "error": f"'{symbol}' 종목을 찾을 수 없거나 데이터가 없습니다."}
 
+        if str(interval or "1d").lower() not in ("1d", "1day", "d"):
+            return _non_daily_result(symbol, period, interval, all_history, max_points, date_args)
         _normalize_row_change(all_history)
         latest = all_history[-1]
         as_of = latest["date"]                       # 이 시세가 말하는 거래일 = history 마지막 행의 날짜
         current_price = latest["close"]
         prev_row = all_history[-2] if len(all_history) >= 2 else None
-        prev_close = prev_row["close"] if prev_row else current_price
+        prev_close = prev_row["close"] if prev_row else None
         prev_close_date = prev_row["date"] if prev_row else None
         snap_open, snap_high, snap_low, snap_volume = latest["open"], latest["high"], latest["low"], latest["volume"]
 
@@ -443,8 +482,8 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             change = current_price - prev_close
             change_percent = (change / prev_close) * 100
         else:
-            change = 0
-            change_percent = 0
+            change = None
+            change_percent = None
 
         # ★한국 종목·지수: 현재가 스냅샷을 네이버 실시간으로 덮음(Yahoo KRX ~20분 지연).
         #   시계열(prices)은 Yahoo 일봉 유지 — 차트 계약 불변. 실패 시 Yahoo 값 그대로.
@@ -499,7 +538,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         # 진짜 직전 장이 아니다(옛 증상: 8/28 결측 → 8/27 기준 계산 → 부호 반전).
         series_gap = [d for d in (chart_meta.get("_dropped_dates") or [])
                       if (prev_close_date or "") < d < as_of]
-        direction = "▲" if change >= 0 else "▼"
+        direction = "▲" if change is not None and change >= 0 else "▼"
         currency = _resolve_currency(symbol, chart_meta)
         total_days = len(all_history)
 
@@ -507,9 +546,9 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             "symbol": symbol.upper(),
             "current_price": round(current_price, 2),
             "currency": currency,
-            "change": round(change, 2),
-            "change_percent": round(change_percent, 2),
-            "previous_close": round(prev_close, 2),
+            "change": round(change, 2) if change is not None else None,
+            "change_percent": round(change_percent, 2) if change_percent is not None else None,
+            "previous_close": round(prev_close, 2) if prev_close is not None else None,
             "as_of": as_of,                          # 이 시세가 말하는 거래일 (history 마지막 행과 대조 가능)
             "previous_close_date": prev_close_date,
             "open": snap_open,
@@ -533,7 +572,9 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         if series_gap:
             base_data["series_gap"] = series_gap     # 전일종가와 as_of 사이의 결측 거래일(핸들러가 정합 보정)
 
-        msg = f"{symbol.upper()}: {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%)"
+        movement = (f"{direction} {abs(round(change, 2))} ({change_percent:+.2f}%)"
+                    if change is not None and change_percent is not None else "전일 대비 미상(전일 종가 없음)")
+        msg = f"{symbol.upper()}: {round(current_price, 2)} {currency} {movement}"
 
         # prices는 항상 포함(shape 일관). 50일 이하면 전체, 초과면 다운샘플 + 전체는 file_path.
         compact, truncated = compact_price_series(all_history, max_points)
@@ -549,7 +590,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             summary = f"{msg}, 총 {total_days}거래일. 차트 생성 시 line_chart 도구의 data 파라미터에 prices 배열을 전달하세요."
         else:
             # 짧은 현재가 조회(기본 5일) → 현재가 중심 요약 (차트 안내 생략, prices는 최근 맥락일 뿐)
-            summary = f"[{as_of} 기준] 현재가 {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%), 전일({prev_close_date or '?'}) {round(prev_close, 2)}. 최근 {total_days}거래일 시세 포함."
+            summary = f"[{as_of} 기준] 현재가 {round(current_price, 2)} {currency} {movement}, 전일({prev_close_date or '?'}) {base_data['previous_close']}. 최근 {total_days}거래일 시세 포함."
         if realtime:
             summary += " (네이버 실시간)"
         return {"success": True, "data": base_data, "summary": summary}

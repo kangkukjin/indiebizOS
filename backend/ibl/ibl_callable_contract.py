@@ -1,5 +1,5 @@
 """Data-declared argument aliases, conditional contracts and boundary constraints."""
-from common.value_semantics import values_equal, compare_order, order_matches
+from common.value_semantics import values_equal, compare_order, order_matches, integer_value
 from ibl_v2_ir import Fault
 
 UNRESOLVED = object()
@@ -58,6 +58,8 @@ def problems(contract, values):
             errors.append(f'{key}: 허용 값 {choices}')
         if key in contract.get('integers', []) and type(value) is not int:
             errors.append(f'{key}: 정수가 필요합니다')
+        if key in contract.get('integer_values', []) and integer_value(value) is None:
+            errors.append(f'{key}: 정수값이 필요합니다')
         if key in contract.get('minimum', {}) and not order_matches(compare_order(value, contract['minimum'][key]), '>='):
             errors.append(f'{key}: 최소 {contract["minimum"][key]}입니다')
         if key in contract.get('maximum', {}) and not order_matches(compare_order(value, contract['maximum'][key]), '<='):
@@ -81,7 +83,7 @@ def validate_extensions(contract):
     for key in ('enums', 'minimum', 'maximum', 'defaults'):
         if not isinstance(contract.get(key, {}), dict) or set(contract.get(key, {})) - params.keys():
             raise ValueError(f'{key}는 선언 인자만 참조합니다')
-    for key in ('integers', 'nonempty', 'forbidden'):
+    for key in ('integers', 'integer_values', 'nonempty', 'forbidden'):
         if not isinstance(contract.get(key, []), list) or set(contract.get(key, [])) - params.keys():
             raise ValueError(f'{key}는 선언 인자 목록입니다')
     for group in contract.get('required_any', []):
@@ -104,7 +106,7 @@ def validate_extensions(contract):
     for variant in contract.get('variants', []):
         if not isinstance(variant.get('when'), dict) or not variant['when'] or set(variant['when']) - params.keys():
             raise ValueError('variants.when은 선언 인자의 리터럴 값입니다')
-        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'minimum', 'maximum', 'nonempty', 'forbidden', 'exclusive'}:
+        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'integer_values', 'minimum', 'maximum', 'nonempty', 'forbidden', 'exclusive'}:
             raise ValueError('조건부 계약의 변경 가능 필드가 아닙니다')
         from ibl_v2_adapters import validate_contract
         validate_contract({**{k:v for k,v in contract.items() if k!='variants'},

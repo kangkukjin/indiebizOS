@@ -190,3 +190,15 @@ def test_revision_preserves_explicit_model_refresh_policy(store):
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_search_partial_survives_model_tool_boundary(store, tmp_path, monkeypatch):
+    import ibl_engine
+    raw = {'success': False, 'error': 'one query failed',
+           'items': [{'title': 'kept', 'query': 'ok'}],
+           'errors': [{'query': 'bad', 'error': 'timeout'}],
+           'sections': [{'query': 'ok', 'count': 1}, {'query': 'bad', 'count': 0}]}
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **kw: raw)
+    out = run({'edition': 2, 'code': '[sense:search]{queries:["ok","bad"]}'}, tmp_path)
+    assert not out['success'] and out['diagnostic']['has_partial'], out
+    assert out['diagnostic']['partial'] == raw

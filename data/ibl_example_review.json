@@ -2099,7 +2099,7 @@
   "sense:search": {
    "fields": {
     "description": "587495d4c188",
-    "target_description": "180ca2586eb8",
+    "target_description": "0993832f26a6",
     "implementation": "cac1d677e598",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
@@ -2108,7 +2108,7 @@
     "router": "ebbb1532efbc",
     "tool": "6ad21f9d2ea1"
    },
-   "reviewed": "2026-10-20",
+   "reviewed": "2026-10-21",
    "examples": 212
   },
   "sense:search_shopping": {
@@ -2318,7 +2318,7 @@
   "table:chunk": {
    "fields": {
     "description": "51e09798912d",
-    "target_description": "e4b019d19f12",
+    "target_description": "9f6d3b410564",
     "implementation": "38414c92fd09",
     "returns": "5450ffb2cf8a",
     "target_key": "eb1e91e44529",
@@ -2327,7 +2327,7 @@
     "router": "ebbb1532efbc",
     "tool": "17c3086f634b"
    },
-   "reviewed": "2026-10-20",
+   "reviewed": "2026-10-21",
    "examples": 4
   },
   "table:compute": {

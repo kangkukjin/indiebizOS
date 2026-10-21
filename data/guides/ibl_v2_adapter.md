@@ -47,7 +47,7 @@ JSON 도구 경계의 Decimal은 십진 표기가 JSON 숫자 왕복 후 동일�
 타입 전송은 저장소에 유지하고, 표시에서 잘린 목록·필드·문자열은 경로별 read_args로
 읽는다. 생산자의 content_selection은 HTML 본문 영역 선택이며 문서 전체 검토의 증명이 아니다.
 
-원천별 제한은 `variants.when`과 `minimum`/`maximum`/`integers`/`nonempty`로 선언한다. 알려진 리터럴·목록은 실행 전에, 동적 값은 호출 직전에 같은 계약으로 검사한다. 예: source=zigbang의 limit 최대 50. 상한 초과를 조용히 자르지 않는다.
+원천별 제한은 `variants.when`과 `minimum`/`maximum`/`integers`/`integer_values`/`nonempty`로 선언한다. 리터럴·목록·같은 순차 블록에서 확정된 바인딩과 유계 수치 산술은 실행 전에, 동적 값은 호출 직전에 같은 계약으로 검사한다. 예: source=zigbang의 limit 최대 50. 상한 초과를 조용히 자르지 않는다.
 
 등록 Script의 `ibl-script-session/1`은 실행 소유 워커에 네이티브 값을 전달하며 JSON 도구 인자 투영을 거치지 않는다.
 ForeignRef는 공통 타입/wire이고 공급자가 실행 소유권을 검사한다. stateful 어댑터의 영수증은
@@ -70,3 +70,7 @@ PNG/HTML 형식으로 그 경로 자체에 저장하므로 실제 쓰기 범위�
 묶어 최대 20건 표시한다(`read_exclusions_total`은 원인 그룹 전체 수).
 각 항목은 `reason`(`unknown_write_resources`/`overlapping_write`), `write_call_id`,
 `action`, `location`, `excluded_calls`를 담는다. 저장된 원장에도 남아 같은 실행 재개 후 유지된다.
+
+`integers`는 정수 표현만, `integer_values`는 1.0처럼 정수로 정확히 관측되는 값도 허용한다. 인자 타입 검사는 별도로 유지한다. 분기·반복·함수 경계에서는 상수 바인딩을 추측하지 않고 실행 시 검사한다.
+
+부분 성공을 제공하는 기존 봉투는 `adapter.partial_value_path`로 실패 시 보존할 값 경로를 선언한다. 빈 경로는 전체 봉투다. 실패는 성공으로 바뀌지 않으며 오류의 `partial`에 보존하고 원장·catch에도 전달한다. 권한·접수 대기·프로토콜 실패에는 적용하지 않는다. `sense:search`는 성공한 items·실패한 errors·sections를 함께 보존하므로 실패 검색어만 재시도할 수 있다.

@@ -57,6 +57,7 @@
 ### period / interval (quote 전용)
 - period: `1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `2y`, `5y`, `10y`, `ytd`, `max`
 - interval: `1m`, `5m`, `15m`, `30m`, `1h`, `1d`, `1wk`, `1mo`
+- 일봉 이외 간격은 차트만 바꾼다. 현재가·전일 대비는 별도의 일봉 조회(1회 추가, 한국 실시간 오버레이 유지)로 계산한다. `snapshot_interval:"1d"`, 차트 봉 수 `total_bars`를 제공한다. 분·시간봉 `date`에는 거래소 시간대의 시각이 보존된다. 차트 행의 직전 봉 대비는 `bar_change`·`bar_change_percent`, 일일 등락 칸 `change`·`change_percent`는 null이다. 전일 종가가 없는 스냅샷도 등락을 0으로 꾸미지 않고 null로 표시한다.
 
 ---
 

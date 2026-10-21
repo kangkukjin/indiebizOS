@@ -305,3 +305,5 @@ manifest의 실제 URL이나 `/f?path=<URL 인코딩한 창고 상대경로>`를
 RED 수리 스테이징·회원 원격 fill은 overwrite만 지원하며 다른 정책을 실행 전에 거절한다.
 템플릿 복사 뒤 행을 추가하는 프로그램을 다시 실행할 때는 overwrite를 명시해 초기화하거나
 새 출력 경로를 사용한다. 복사 결과의 이름이 바뀌었는데 요청했던 옛 경로에 append하지 않는다.
+
+검색 배치의 일부가 실패하면 실패 응답의 `diagnostic.partial`(catch 안에서는 `$error.partial`)에 원래 `items`, `errors`, `sections`가 남는다. 성공한 행은 보관하고 `errors`의 검색어만 다시 조회한 뒤 합친다. 전체 성공으로 간주하지 말고 실패·누락의 해소를 확인한다.

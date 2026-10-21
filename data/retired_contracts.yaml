@@ -978,3 +978,10 @@ retired:
     instead: 판본 2는 n>=0 정수값. 음수 슬라이스 설명은 target_description_edition:1에만 보존한다.
     phrases:
       - 'items에서 상위 n개만(음수면 뒤에서 n)'
+
+  - id: chunk-current-edition-example
+    retired: 2026-10-21
+    reason: chunk의 현재 설명에 구판 each 문자열 본문과 직접 입력 불가 안내가 남았다.
+    instead: each 블록 본문을 사용하며 chunk는 직접 text 또는 items 입력도 받는다.
+    phrases:
+      - '변환자라 파이프 머리에 홀로 설 수 없다 — 본문을 직접 주려면'

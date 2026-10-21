@@ -554,12 +554,12 @@ class OllamaProvider(BaseProvider):
 
             # 도구 실행
             ui_details = None
+            tool_images = None  # 파싱·실행 실패도 이번 호출의 이미지 상태를 가진다.
             if execute_tool and not is_error:
                 try:
                     raw_output = self._execute_tool_to_completion(execute_tool, tool_name, tool_input, cancel_check=cancel_check)
 
                     # [content/details 분리] dict 반환 시 AI용과 UI용 분리
-                    tool_images = None  # [images] 도구가 반환한 이미지 데이터
                     if isinstance(raw_output, dict) and "content" in raw_output:
                         tool_output = raw_output["content"]
                         ui_details = raw_output.get("details", tool_output)

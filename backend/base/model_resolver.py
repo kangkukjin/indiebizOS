@@ -663,11 +663,12 @@ def provider_from_frozen(descriptor):
     provider.distill_max_output_tokens = max(4000, budget + 1024) if type(budget) is int else 4000
     provider.DEFAULT_MAX_TOKENS = provider.distill_max_output_tokens
     provider.distill_single_decision = True
-    if "reasoning_mode" in d:
-        provider.reasoning_mode = d["reasoning_mode"]
-        provider.disable_thinking = d["reasoning_mode"] == "off"
-    if "thinkingBudget" in d:
-        provider.thinking_budget = d["thinkingBudget"]
+    # 동결한 것은 모델 선택이다. 주 실행의 추론 설정이 원샷 계약을 덮으면
+    # 출력 예산을 추론만으로 소진하고 큐 재시도마다 같은 빈 응답을 만든다.
+    # 사본에만 적용해 실행 모델·캐시된 제공자의 설정은 보존한다.
+    provider.disable_thinking = True
+    provider.reasoning_mode = "off"
+    provider.thinking_budget = 0
     return provider
 
 

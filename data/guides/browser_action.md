@@ -363,7 +363,10 @@ next_offset이 null일 때 끝이다. 기본값 절단·범위 밖 limit의 보�
 내장 드라이버는 macOS/Linux 소유자 작업용이다. Windows는 아직 연결 미지원이다. 기존 탭은 UI에서
 “이 탭을 AI에 맡기기”로 공유한 뒤 tab list의 tab_id로 지정한다. 자동 생성 탭은 해당 작업에 귀속된다.
 사람이 조작하거나 “AI 중지”를 누르면 USER_TAKEOVER이며 자동으로 탈취하지 않는다. 사용자가 재개를 요청한 뒤
-새 snapshot으로 확인한다(auth resume/cancel이 대기를 해제한다). close는 작업 연결만 해제하고 앱을 종료하지 않는다.
+새 snapshot으로 확인한다(auth resume/cancel이 대기를 해제한다). close는 작업 연결을 해제하고 앱을 종료하지 않는다.
+AI가 연 패널은 호출 완료·실패 후 자동으로 숨겨 런처를 보여준다(close 호출을 잊어도 적용).
+탭·문서·ref는 숨겨진 상태로 유지되어 후속 호출을 이어갈 수 있다. 기존 사용자 패널과 직접
+이어받은 화면은 유지하며, 추가 인증·계정 선택이 필요하면 패널을 다시 보여준다.
 
 현재 지원: navigate, tab, snapshot, content(text), click(single), type, press_key(관측 ref 필수), select,
 check, scroll, wait(text/ref/문서 완료), iframe, auth, close. 자유 evaluate·HTML·쿠키 내보내기·파일 전송·로그·

@@ -26,7 +26,7 @@ export function useEmbeddedTabs(options: {
           if (!live || !Array.isArray(rows)) return;
           const actions = lifecycle.current.sync(rows, callback.current.panelOpen);
           if (actions.removed.length) callback.current.removeTabs(actions.removed);
-          if (actions.added.length) callback.current.show();
+          if (actions.show) callback.current.show();
           for (const r of actions.added) callback.current.openTab(r.url!, r.id);
           if (actions.close) callback.current.hide();
         } while (dirty && live);

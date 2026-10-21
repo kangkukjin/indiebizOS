@@ -1194,10 +1194,10 @@ export function ForageBrowser({ open, onOpen, onClose, openUrl, onUrlConsumed }:
         </div>
       </div>
 
-      {/* 도로 — 탭별 크로미움 webview. 열려 있으면 전부 mount 유지(세션·페이지 보존), 활성 탭만 보임.
+      {/* 도로 — 패널을 숨겨도 탭은 mount 유지(세션·페이지·AI ref 보존), 활성 탭만 보임.
           검색홈(mode!=='browse')이면 스택 전체를 숨긴다. partition persist:forage 로 탭끼리 세션 공유. */}
       <div className={`flex-1 min-h-0 bg-stone-100 ${mode === 'browse' ? 'block' : 'hidden'}`}>
-        {open && tabs.map((t) => (
+        {tabs.map((t) => (
           <div key={t.id} className="w-full h-full"
             style={{ display: mode === 'browse' && t.id === activeId ? 'block' : 'none' }}>
             {t.kind === 'favorites'

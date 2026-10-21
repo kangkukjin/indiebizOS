@@ -70,11 +70,13 @@ async function run() {
       const actions=lifecycle.sync(await ipcRenderer.invoke('list'),window.panelOpen);
       for(const id of actions.removed) document.getElementById(id)?.remove();
       if(actions.close) window.panelOpen=false;
-      if(actions.added.length) window.panelOpen=true;
+      if(actions.show) window.panelOpen=true;
       for(const r of actions.added) {const w=document.createElement('webview'); w.id=r.id;
       w.setAttribute('partition','persist:forage'); w.src=r.url; w.style='width:900px;height:700px';
       w.addEventListener('dom-ready',()=>ipcRenderer.invoke('bind',r.id,w.getWebContentsId()));document.body.append(w);
-    }});});</script>`;
+    }
+    document.body.style.display=window.panelOpen?'block':'none';
+    });});</script>`;
   await win.loadURL(`data:text/html,${encodeURIComponent(html)}`); await bridge.ready;
   const endpoint = JSON.parse(fs.readFileSync(path.join(root, 'embedded-browser.json')));
   async function call(params, who = owner, id = randomUUID()) {
@@ -89,13 +91,25 @@ async function run() {
   const temporary = await Promise.all([call({op: 'tab', mode: 'new', url: `${origin}/delayed`}),
     call({op: 'tab', mode: 'new', url: `${origin}/delayed`}, owner2)]);
   check(temporary.every(t => t.success), 'concurrent temporary tabs');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('!window.panelOpen && document.querySelectorAll("webview").length===2'),
+    'finished calls hide panel without model close and preserve guests');
+  const hiddenContent = await call({op: 'content', tab_id: temporary[0].tab_id});
+  check(hiddenContent.success, 'follow-up content works in hidden guest');
+  check(await win.webContents.executeJavaScript('!window.panelOpen'), 'follow-up does not reopen panel');
   await call({op: 'tab', mode: 'close', tab_id: temporary[0].tab_id});
   await new Promise(resolve => setTimeout(resolve, 100));
-  check(await win.webContents.executeJavaScript('window.panelOpen'), 'panel stays until last task ends');
+  check(await win.webContents.executeJavaScript('!window.panelOpen && document.querySelectorAll("webview").length===1'),
+    'closing one task preserves the other hidden guest');
   await call({op: 'tab', mode: 'close', tab_id: temporary[1].tab_id}, owner2);
   await new Promise(resolve => setTimeout(resolve, 100));
   check(await win.webContents.executeJavaScript('!window.panelOpen && !document.querySelector("webview")'),
     'last temporary tab removes guest and closes panel');
+  const failed = await call({op: 'tab', mode: 'new', url: 'file:///not-allowed'});
+  check(failed.error_code === 'INVALID_URL', 'failed navigation reported');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('!window.panelOpen && !document.querySelector("webview")'),
+    'failed creation also hides panel and removes guest');
   await win.webContents.executeJavaScript('window.panelOpen=true');
   const preserved = await call({op: 'tab', mode: 'new', url: `${origin}/delayed`});
   await call({op: 'tab', mode: 'close', tab_id: preserved.tab_id});
@@ -139,7 +153,13 @@ async function run() {
   check(r.error_code === 'AUTH_FORM_ORIGIN_MISMATCH' && submissions === 1, 'cross-origin credential form rejected');
   await call({ op: 'auth', mode: 'cancel' });
   await call({ op: 'navigate', url: `${origin}/mfa` });
+  await win.webContents.executeJavaScript('window.panelOpen=false');
   r = await call({ op: 'auth', mode: 'login' }); check(r.state === 'user_action_required', 'MFA handed to user');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('window.panelOpen'), 'authentication handoff shows panel');
+  await call({ op: 'auth', mode: 'cancel' });
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('!window.panelOpen'), 'cancel authentication hides panel');
   await call({ op: 'navigate', url: `${origin}/long` });
   r = await call({ op: 'content', limit: 500 });
   check(r.truncated && r.next_offset === 500, 'bounded DOM extraction');

@@ -38,7 +38,7 @@ life.sync([user, row('a')], true);
 result = life.sync([user], true);
 assert.deepEqual(result.removed, ['a']); assert.equal(result.close, false);
 // Host interaction and webview takeover both cancel automatic panel closure.
-for (const takeover of ['host', 'guest', 'released']) {
+for (const takeover of ['host', 'guest']) {
   life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
   if (takeover === 'host') life.retain();
   else life.sync([row('a', {pending: false, controlled: takeover !== 'released',
@@ -50,6 +50,27 @@ life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
 result = life.sync([row('b')], true);
 assert.deepEqual(result.removed, ['a']); assert.equal(result.close, false);
 assert.equal(life.sync([], true).close, true);
+// A completed call hides the panel without waiting for an optional model close.
+life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
+result = life.sync([row('a', {pending: false, busy: false})], true);
+assert.equal(result.close, true); assert.deepEqual(result.removed, []);
+// Follow-up calls keep running in the hidden, mounted guest without reopening it.
+assert.equal(life.sync([row('a', {pending: false, busy: true})], false).show, false);
+assert.equal(life.sync([row('a', {pending: false, busy: false})], false).show, false);
+// Explicit release also hides the panel; it is not human takeover.
+life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
+assert.equal(life.sync([row('a', {pending: false, controlled: false})], true).close, true);
+// Authentication handoff reopens once, then resume/cancel returns to the launcher.
+life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
+life.sync([row('a', {pending: false, busy: false})], true);
+result = life.sync([row('a', {pending: false, busy: false, needsUser: true})], false);
+assert.equal(result.show, true); assert.equal(result.close, false);
+assert.equal(life.sync([row('a', {pending: false, busy: false, needsUser: true})], true).show, false);
+assert.equal(life.sync([row('a', {pending: false, busy: false})], true).close, true);
+// Another task still operating prevents premature hiding.
+life = new EmbeddedTabLifecycle(); life.sync([row('a'), row('b')], false);
+assert.equal(life.sync([row('a', {busy: false}), row('b', {busy: true})], true).close, false);
+assert.equal(life.sync([row('a', {busy: false}), row('b', {busy: false})], true).close, true);
 ''')
 
 
@@ -67,6 +88,16 @@ await assert.rejects(tabs.create('owner', 'https://example.test', Date.now() + 1
 assert.equal(closed, true);
 assert.deepEqual(tabs.ui('list'), []);
 assert.equal(tabs.active.has('owner'), false);
+// A newly-created tab can fail the shared auth lock before its first operation.
+// Its final notification must still report idle so the panel can hide.
+const blocked = new EmbeddedTabs({show() {}, changed() {
+  for (const r of blocked.records.values()) if (!r.wc) r.wc = {isDestroyed() {return false;}};
+}});
+blocked.navigate = async () => ({});
+blocked.authOwner = 'another-owner';
+await assert.rejects(blocked.operation('owner', {op: 'navigate', url: 'https://example.test'},
+  Date.now() + 1000), {code: 'AUTH_SESSION_BUSY'});
+assert.equal(blocked.ui('list')[0].busy, false);
 ''')
 
 

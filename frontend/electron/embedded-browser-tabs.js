@@ -68,6 +68,7 @@ export class EmbeddedTabs {
     const r = this.records.get(id);
     if (action === 'list') return [...this.records.values()].filter(r => !r.closed).map(r => ({
       id: r.id, url: r.requestURL, pending: !r.wc, state: r.state, controlled: !!r.owner,
+      busy: !!(r.creating || r.executing || !r.wc), needsUser: !!r.needsUser,
     }));
     if (!r) throw fault('TAB_NOT_FOUND');
     if (action === 'pause') this.pause(r);
@@ -87,7 +88,7 @@ export class EmbeddedTabs {
   async create(owner, url, deadline) {
     const id = `ai-${randomUUID()}`;
     // Load blank first: registration must precede all site scripts and password autofill.
-    const r = { id, owner, requestURL: 'about:blank', state: 'AI가 여는 중', document: null };
+    const r = { id, owner, requestURL: 'about:blank', state: 'AI가 여는 중', document: null, creating: true };
     this.records.set(id, r); this.active.set(owner, id); this.show(); this.notice();
     while (!r.wc && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 40));
     if (!r.wc) { r.closed = true; this.active.delete(owner); this.notice(); throw fault('BROWSER_UI_UNAVAILABLE'); }
@@ -166,19 +167,22 @@ export class EmbeddedTabs {
       .filter(r => !r.closed && (r.owner === owner || (!r.owner && r.shared)))
       .map(r => ({ tab_id: r.id, url: safeURL(r.wc?.getURL()), title: r.wc?.getTitle(), state: r.state })), capabilities };
     if (op === 'close') {
-      for (const r of this.records.values()) if (r.owner === owner) { r.owner = null; r.shared = false; r.state = ''; }
+      for (const r of this.records.values()) if (r.owner === owner) {
+        r.owner = null; r.shared = false; r.state = ''; r.needsUser = false;
+      }
       this.active.delete(owner); if (this.authOwner === owner) this.authOwner = null;
       this.notice(); return { released: true };
     }
     const creating = (op === 'tab' && args.mode === 'new') || (op === 'navigate' && !args.tab_id && !this.active.has(owner));
     const r = creating ? await this.create(owner, args.url || 'about:blank', deadline) : this.target(owner, args.tab_id);
-    if (op === 'auth' && ['resume', 'cancel'].includes(args.mode)) r.paused = false;
-    this.check(r, deadline);
-    if (this.authOwner && this.authOwner !== owner) throw fault('AUTH_SESSION_BUSY');
-    r.state = ['content', 'snapshot', 'wait'].includes(op) ? 'AI가 읽는 중' : 'AI가 조작 중'; this.notice();
+    r.creating = false;
     let data = {};
-    r.executing = true;
     try {
+      if (op === 'auth' && ['resume', 'cancel'].includes(args.mode)) r.paused = false;
+      this.check(r, deadline);
+      if (this.authOwner && this.authOwner !== owner) throw fault('AUTH_SESSION_BUSY');
+      r.executing = true;
+      r.state = ['content', 'snapshot', 'wait'].includes(op) ? 'AI가 읽는 중' : 'AI가 조작 중'; this.notice();
       if (creating) data = { url: safeURL(r.wc.getURL()), created: true };
       else if (op === 'navigate') data = await this.navigate(r, args, deadline);
       else if (op === 'tab') {
@@ -189,7 +193,11 @@ export class EmbeddedTabs {
           r.closed = true;
         }
         else if (args.mode !== 'switch') throw fault('UNSUPPORTED_OPERATION');
-      } else if (op === 'auth') data = await auth(r, args, deadline);
+      } else if (op === 'auth') {
+        data = await auth(r, args, deadline);
+        r.needsUser = ['user_action_required', 'account_selection_required'].includes(data.state)
+          || !!data.user_action_required;
+      }
       else if (op === 'iframe') {
         const frames = await this.frames(r);
         if (args.mode === 'reset') r.frame = null;
@@ -218,6 +226,7 @@ export class EmbeddedTabs {
         } while (Date.now() < deadline);
         if (op === 'wait' && !data.matched) throw fault('WAIT_TIMEOUT');
       }
+      if (op === 'navigate') r.needsUser = false;
       return { ...data, tab_id: r.id, captured_at: data.captured_at || new Date().toISOString() };
     } finally { r.executing = false; if (!r.paused) r.state = r.authWaiting ? '로그인 확인 필요' : 'AI 작업 탭'; this.notice(); }
   }

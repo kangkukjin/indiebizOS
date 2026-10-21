@@ -10,6 +10,7 @@ export const embeddedAPI = () => (window.electron || {}) as Bridge;
 export function useEmbeddedTabs(options: {
   panelOpen: boolean; show: () => void; hide: () => void;
   openTab: (url: string, id: string) => void; removeTabs: (ids: string[]) => void;
+  focusTab: (id: string) => void;
 }) {
   const callback = useRef(options); callback.current = options;
   const lifecycle = useRef(new EmbeddedTabLifecycle());
@@ -26,8 +27,9 @@ export function useEmbeddedTabs(options: {
           if (!live || !Array.isArray(rows)) return;
           const actions = lifecycle.current.sync(rows, callback.current.panelOpen);
           if (actions.removed.length) callback.current.removeTabs(actions.removed);
-          if (actions.show) callback.current.show();
           for (const r of actions.added) callback.current.openTab(r.url!, r.id);
+          if (actions.focusId) callback.current.focusTab(actions.focusId);
+          if (actions.show) callback.current.show();
           if (actions.close) callback.current.hide();
         } while (dirty && live);
       } catch { /* unavailable on web or old desktop */ }

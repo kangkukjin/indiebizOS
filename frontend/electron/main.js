@@ -109,21 +109,16 @@ function createWindow() {
     }
   });
 
-  // 포식 브라우저 <webview> 안에서 target=_blank / window.open 으로 뜨려는 새 창을 막고,
-  // 같은 webview 안에서 그 URL 로 이동시킨다 — 별도 OS 창 대신 인플레이스(브라우저 안에서 열림).
+  // AI 탭·팝업의 백그라운드 생성/인증 인계는 embedded bridge가 소유한다.
+  // 일반 webview의 새 창은 같은 webview 안의 URL 이동으로 처리한다.
   // (Electron 39 는 렌더러 'new-window' 이벤트가 제거돼 메인에서 guest webContents 로 처리해야 한다.)
   mainWindow.webContents.on('will-attach-webview', (_event, preferences) => {
     delete preferences.preload; preferences.nodeIntegration = false;
     preferences.contextIsolation = true; preferences.sandbox = true; preferences.webSecurity = true;
   });
   mainWindow.webContents.on('did-attach-webview', (_e, guest) => {
-    if (guest.session === session.fromPartition('persist:forage')) embeddedBridge?.tabs.attach(guest);
-    guest.setWindowOpenHandler(({ url }) => {
-      if (embeddedBridge?.tabs.byContents(guest.id)?.owner && /^https?:\/\//i.test(url)) {
-        return { action: 'allow', overrideBrowserWindowOptions: {
-          width: 950, height: 750, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:forage' },
-        } };
-      }
+    if (guest.session === session.fromPartition('persist:forage') && embeddedBridge) embeddedBridge.tabs.attach(guest);
+    else guest.setWindowOpenHandler(({ url }) => {
       if (url && /^https?:\/\//i.test(url)) guest.loadURL(url);
       return { action: 'deny' };
     });

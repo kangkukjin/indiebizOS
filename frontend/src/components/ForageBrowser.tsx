@@ -443,16 +443,16 @@ export function ForageBrowser({ open, onOpen, onClose, openUrl, onUrlConsumed }:
       return { ...t, ...patch };
     })), []);
 
-  // 새 탭으로 사이트 열기 — 즐겨찾기·검색결과·링크 클릭이 전부 여기로(각각 별개 탭이 쌓인다).
+  // 사용자 링크는 새 탭으로 전환하고, AI의 requestedId 탭은 선택을 바꾸지 않고 생성한다.
   const openTab = (url: string, requestedId?: string) => {
     const id = requestedId || `t${++tabSeq.current}`;
     setTabs((prev) => [...prev, { id, kind: 'web', initialUrl: url, url, title: url, canBack: false, canFwd: false, loading: true, translated: false }]);
-    setActiveId(id);
-    setMode('browse');
+    if (!requestedId) { setActiveId(id); setMode('browse'); }
   };
 
   const retainBrowser = useEmbeddedTabs({
     panelOpen: open, show: onOpen, hide: onClose, openTab,
+    focusTab: (id) => { setActiveId(id); setMode('browse'); },
     removeTabs: (ids) => {
       const removed = new Set(ids);
       for (const id of ids) delete webviewRefs.current[id];

@@ -7,7 +7,8 @@ export function installEmbeddedBrowser(basePath, getWindow) {
   const bridge = startEmbeddedBridge({ basePath, runtimePath: process.env.INDIEBIZ_RUNTIME_STATE_DIR,
     vault, show: () => {
       const win = getWindow(); if (!win || win.isDestroyed()) throw fault('BROWSER_UI_UNAVAILABLE');
-      // The tab lifecycle opens the panel and remembers whether it must close it.
+      // Only authentication handoff may reveal the launcher; creation stays hidden.
+      if (win.isMinimized()) win.restore();
       win.show();
     }, changed: () => { const win = getWindow(); if (win && !win.isDestroyed()) win.webContents.send('embedded-browser-changed'); } });
   const trusted = event => {

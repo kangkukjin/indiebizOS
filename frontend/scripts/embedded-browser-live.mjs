@@ -15,7 +15,7 @@ import ts from 'typescript';
 const root = fs.mkdtempSync('/tmp/ib-eb-test-');
 fs.mkdirSync(path.join(root, 'profile'), { recursive: true });
 app.setPath('userData', path.join(root, 'profile'));
-let bridge, server, win; let origin; let submissions = 0;
+let bridge, server, win; let origin; let submissions = 0; let windowShows = 0;
 const owner = 'a'.repeat(64);
 const secret = 'synthetic-only-password';
 const owner2 = 'b'.repeat(64);
@@ -37,6 +37,7 @@ async function run() {
     }
     if (req.url === '/delayed') { res.end('<main id="m">로딩</main><script>setTimeout(()=>m.textContent="동적 문서 완료",250)</script>'); return; }
     if (req.url === '/mfa') { res.end('<input autocomplete="one-time-code" aria-label="인증번호">'); return; }
+    if (req.url === '/popup') { res.end('<button onclick="window.open(\'/mfa\')">인증 창</button>'); return; }
     if (req.url === '/unsafe') { res.end('<form action="https://example.invalid/login"><input autocomplete="username"><input type="password"><button>로그인</button></form>'); return; }
     if (req.url === '/long') { res.end('<main>' + '가나다 '.repeat(7000) + '</main>'); return; }
     if (req.url === '/frame') { res.end('<main>부모</main><iframe name="child" src="/delayed"></iframe>'); return; }
@@ -49,7 +50,7 @@ async function run() {
   win = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: true, contextIsolation: false, webviewTag: true } });
   bridge = startEmbeddedBridge({ basePath: root, runtimePath: root,
     vault: { listAll: () => [{ origin, username: 'test-user' }], getCredential: (url) => { assert.equal(url, origin); return { username: 'test-user', password: secret }; } },
-    show: () => {}, changed: () => {
+    show: () => { windowShows++; }, changed: () => {
       if (win?.isDestroyed() === false) win.webContents.send('refresh');
     } });
   win.webContents.on('did-attach-webview', (_e, guest) => bridge.tabs.attach(guest));
@@ -65,14 +66,17 @@ async function run() {
   }).outputText.replace('export class', 'class');
   const html = `<script>const {ipcRenderer}=require('electron');
     ${lifecycleJS}
-    const lifecycle=new EmbeddedTabLifecycle(); window.panelOpen=false; let queue=Promise.resolve();
+    const lifecycle=new EmbeddedTabLifecycle(); window.panelOpen=false; window.panelShows=0;
+    window.activeTab='user-tab'; window.retainBrowser=()=>lifecycle.retain(); let queue=Promise.resolve();
     ipcRenderer.on('refresh',()=>{queue=queue.then(async()=>{
       const actions=lifecycle.sync(await ipcRenderer.invoke('list'),window.panelOpen);
       for(const id of actions.removed) document.getElementById(id)?.remove();
       if(actions.close) window.panelOpen=false;
-      if(actions.show) window.panelOpen=true;
+      if(actions.focusId) window.activeTab=actions.focusId;
+      if(actions.show) { window.panelOpen=true; window.panelShows++; }
       for(const r of actions.added) {const w=document.createElement('webview'); w.id=r.id;
-      w.setAttribute('partition','persist:forage'); w.src=r.url; w.style='width:900px;height:700px';
+      w.setAttribute('partition','persist:forage'); w.setAttribute('allowpopups','true');
+      w.src=r.url; w.style='width:900px;height:700px';
       w.addEventListener('dom-ready',()=>ipcRenderer.invoke('bind',r.id,w.getWebContentsId()));document.body.append(w);
     }
     document.body.style.display=window.panelOpen?'block':'none';
@@ -92,8 +96,11 @@ async function run() {
     call({op: 'tab', mode: 'new', url: `${origin}/delayed`}, owner2)]);
   check(temporary.every(t => t.success), 'concurrent temporary tabs');
   await new Promise(resolve => setTimeout(resolve, 100));
+  check(windowShows === 0 && !win.isVisible(), 'background creation never raises launcher window');
+  check(await win.webContents.executeJavaScript('window.panelShows===0 && window.activeTab==="user-tab"'),
+    'background creation never opens panel or changes user selection');
   check(await win.webContents.executeJavaScript('!window.panelOpen && document.querySelectorAll("webview").length===2'),
-    'finished calls hide panel without model close and preserve guests');
+    'background calls keep panel hidden and preserve guests');
   const hiddenContent = await call({op: 'content', tab_id: temporary[0].tab_id});
   check(hiddenContent.success, 'follow-up content works in hidden guest');
   check(await win.webContents.executeJavaScript('!window.panelOpen'), 'follow-up does not reopen panel');
@@ -104,17 +111,19 @@ async function run() {
   await call({op: 'tab', mode: 'close', tab_id: temporary[1].tab_id}, owner2);
   await new Promise(resolve => setTimeout(resolve, 100));
   check(await win.webContents.executeJavaScript('!window.panelOpen && !document.querySelector("webview")'),
-    'last temporary tab removes guest and closes panel');
+    'last temporary tab removes guest while panel stays hidden');
   const failed = await call({op: 'tab', mode: 'new', url: 'file:///not-allowed'});
   check(failed.error_code === 'INVALID_URL', 'failed navigation reported');
   await new Promise(resolve => setTimeout(resolve, 100));
   check(await win.webContents.executeJavaScript('!window.panelOpen && !document.querySelector("webview")'),
-    'failed creation also hides panel and removes guest');
+    'failed creation keeps panel hidden and removes guest');
   await win.webContents.executeJavaScript('window.panelOpen=true');
   const preserved = await call({op: 'tab', mode: 'new', url: `${origin}/delayed`});
+  check(await win.webContents.executeJavaScript('window.activeTab==="user-tab"'), 'new AI tab preserves visible user tab');
   await call({op: 'tab', mode: 'close', tab_id: preserved.tab_id});
   await new Promise(resolve => setTimeout(resolve, 100));
   check(await win.webContents.executeJavaScript('window.panelOpen'), 'preserve already-open user panel');
+  await win.webContents.executeJavaScript('window.panelOpen=false');
   let r = await call({ op: 'navigate', url: `${origin}/mail` }); check(r.success, 'create actual guest tab'); const tab = r.tab_id;
   let snap = await call({ op: 'snapshot' }); check(snap.success && snap.elements.length >= 4, 'DOM snapshot refs');
   const submit = snap.elements.find(e => e.role === 'button' && e.name === '로그인').ref;
@@ -126,6 +135,8 @@ async function run() {
   await call(login, owner, id); check(submissions <= 1, 'idempotent submission');
   await new Promise(resolve => setTimeout(resolve, 300));
   r = await call({ op: 'content' }); assert.equal(r.success, true, JSON.stringify(r)); check(r.content.includes('합성 메일 본문 123'), 'read authenticated page');
+  check(windowShows === 0 && await win.webContents.executeJavaScript('window.panelShows===0'),
+    'saved credential login and content stay entirely in background');
   check(!JSON.stringify(r.links).includes('hidden'), 'remove token query');
   await call({ op: 'auth', mode: 'resume' });
   r = await call({ op: 'snapshot', tab_id: tab }, owner2); check(r.error_code === 'TAB_NOT_GRANTED', 'other task denied');
@@ -157,9 +168,42 @@ async function run() {
   r = await call({ op: 'auth', mode: 'login' }); check(r.state === 'user_action_required', 'MFA handed to user');
   await new Promise(resolve => setTimeout(resolve, 100));
   check(await win.webContents.executeJavaScript('window.panelOpen'), 'authentication handoff shows panel');
+  check(windowShows === 1 && await win.webContents.executeJavaScript(`window.activeTab===${JSON.stringify(r.tab_id)}`),
+    'authentication raises launcher and selects the requesting tab');
+  await win.webContents.executeJavaScript('window.retainBrowser()');
+  bridge.tabs.ui('pause', r.tab_id);
   await call({ op: 'auth', mode: 'cancel' });
   await new Promise(resolve => setTimeout(resolve, 100));
   check(await win.webContents.executeJavaScript('!window.panelOpen'), 'cancel authentication hides panel');
+  await call({op: 'auth', mode: 'status'});
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('window.panelOpen'), 'authentication status can reveal a required OTP');
+  const authenticating = bridge.tabs.target(owner);
+  bridge.tabs.ui('pause', authenticating.id);
+  await authenticating.wc.executeJavaScript("document.body.innerHTML='<main>인증 완료</main>'");
+  r = await call({op: 'auth', mode: 'resume'});
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(r.success && await win.webContents.executeJavaScript('!window.panelOpen'),
+    'resume after human authentication returns to background');
+  const beforePopupShows = windowShows;
+  await call({op: 'navigate', url: `${origin}/popup`});
+  snap = await call({op: 'snapshot'});
+  r = await call({op: 'click', ref: snap.elements.find(e => e.name === '인증 창').ref});
+  check(r.success, 'AI opens authentication popup from a hidden tab');
+  let popup;
+  for (let i = 0; i < 50; i++) {
+    popup = [...bridge.tabs.records.values()].find(t => t.window && !t.closed);
+    if (popup && !popup.wc.isLoading()) break;
+    await new Promise(resolve => setTimeout(resolve, 40));
+  }
+  check(popup && !popup.window.isVisible(), 'AI popup starts hidden');
+  await call({op: 'auth', mode: 'login', tab_id: popup.id});
+  check(popup.window.isVisible(), 'popup is revealed only for human authentication');
+  check(windowShows === beforePopupShows && await win.webContents.executeJavaScript('!window.panelOpen'),
+    'popup authentication does not also reveal launcher panel');
+  await call({op: 'auth', mode: 'cancel', tab_id: popup.id});
+  check(!popup.window.isVisible(), 'popup authentication cancel hides window');
+  await call({op: 'tab', mode: 'close', tab_id: popup.id});
   await call({ op: 'navigate', url: `${origin}/long` });
   r = await call({ op: 'content', limit: 500 });
   check(r.truncated && r.next_offset === 500, 'bounded DOM extraction');

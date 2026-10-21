@@ -22,6 +22,16 @@ export class EmbeddedTabs {
   notice() { this.changed(); }
   attach(wc) {
     this.guests.add(wc);
+    wc.setWindowOpenHandler(({ url }) => {
+      if (this.byContents(wc.id)?.owner && /^https?:\/\//i.test(url)) {
+        return { action: 'allow', overrideBrowserWindowOptions: {
+          show: false, width: 950, height: 750,
+          webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:forage' },
+        } };
+      }
+      if (url && /^https?:\/\//i.test(url)) wc.loadURL(url);
+      return { action: 'deny' };
+    });
     wc.on('destroyed', () => {
       this.guests.delete(wc);
       for (const r of this.records.values()) if (r.wc === wc) {
@@ -47,7 +57,7 @@ export class EmbeddedTabs {
       this.attach(popup.webContents);
       const parent = this.byContents(wc.id);
       const id = `popup-${randomUUID()}`;
-      this.records.set(id, { id, wc: popup.webContents, owner: parent?.owner, parent: parent?.id,
+      this.records.set(id, { id, wc: popup.webContents, window: popup, owner: parent?.owner, parent: parent?.id,
         state: '로그인 창', queue: Promise.resolve(), document: null });
       if (parent?.owner) this.active.set(parent.owner, id);
       this.notice();
@@ -64,11 +74,19 @@ export class EmbeddedTabs {
     return { tab_id: id, controlled: !!r.owner };
   }
   pause(r) { r.paused = true; r.state = '사용자 조작 중'; r.document = null; this.notice(); }
+  authenticationVisibility(r, needed) {
+    const previous = !!r.needsUser;
+    r.needsUser = needed;
+    if (r.window && !r.window.isDestroyed()) {
+      if (needed && !previous) { r.window.show(); r.authPresented = true; }
+      else if (!needed && r.authPresented) { r.window.hide(); r.authPresented = false; }
+    } else if (needed && !previous) this.show();
+  }
   ui(action, id) {
     const r = this.records.get(id);
     if (action === 'list') return [...this.records.values()].filter(r => !r.closed).map(r => ({
       id: r.id, url: r.requestURL, pending: !r.wc, state: r.state, controlled: !!r.owner,
-      busy: !!(r.creating || r.executing || !r.wc), needsUser: !!r.needsUser,
+      busy: !!(r.creating || r.executing || !r.wc), needsUser: !!r.needsUser, popup: !!r.window,
     }));
     if (!r) throw fault('TAB_NOT_FOUND');
     if (action === 'pause') this.pause(r);
@@ -89,7 +107,7 @@ export class EmbeddedTabs {
     const id = `ai-${randomUUID()}`;
     // Load blank first: registration must precede all site scripts and password autofill.
     const r = { id, owner, requestURL: 'about:blank', state: 'AI가 여는 중', document: null, creating: true };
-    this.records.set(id, r); this.active.set(owner, id); this.show(); this.notice();
+    this.records.set(id, r); this.active.set(owner, id); this.notice();
     while (!r.wc && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 40));
     if (!r.wc) { r.closed = true; this.active.delete(owner); this.notice(); throw fault('BROWSER_UI_UNAVAILABLE'); }
     try { await this.navigate(r, { url }, deadline); }
@@ -168,7 +186,8 @@ export class EmbeddedTabs {
       .map(r => ({ tab_id: r.id, url: safeURL(r.wc?.getURL()), title: r.wc?.getTitle(), state: r.state })), capabilities };
     if (op === 'close') {
       for (const r of this.records.values()) if (r.owner === owner) {
-        r.owner = null; r.shared = false; r.state = ''; r.needsUser = false;
+        this.authenticationVisibility(r, false);
+        r.owner = null; r.shared = false; r.state = '';
       }
       this.active.delete(owner); if (this.authOwner === owner) this.authOwner = null;
       this.notice(); return { released: true };
@@ -195,8 +214,9 @@ export class EmbeddedTabs {
         else if (args.mode !== 'switch') throw fault('UNSUPPORTED_OPERATION');
       } else if (op === 'auth') {
         data = await auth(r, args, deadline);
-        r.needsUser = ['user_action_required', 'account_selection_required'].includes(data.state)
-          || !!data.user_action_required;
+        this.authenticationVisibility(r,
+          ['user_action_required', 'account_selection_required'].includes(data.state)
+          || !!data.user_action_required);
       }
       else if (op === 'iframe') {
         const frames = await this.frames(r);
@@ -226,7 +246,7 @@ export class EmbeddedTabs {
         } while (Date.now() < deadline);
         if (op === 'wait' && !data.matched) throw fault('WAIT_TIMEOUT');
       }
-      if (op === 'navigate') r.needsUser = false;
+      if (op === 'navigate') this.authenticationVisibility(r, false);
       return { ...data, tab_id: r.id, captured_at: data.captured_at || new Date().toISOString() };
     } finally { r.executing = false; if (!r.paused) r.state = r.authWaiting ? '로그인 확인 필요' : 'AI 작업 탭'; this.notice(); }
   }

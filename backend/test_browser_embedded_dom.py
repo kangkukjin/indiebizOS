@@ -27,50 +27,52 @@ const row = (id, extra = {}) => ({id, pending: true, controlled: true, url: 'abo
 let life = new EmbeddedTabLifecycle();
 let result = life.sync([row('a'), row('b')], false);
 assert.equal(result.added.length, 2);
-assert.equal(life.sync([row('b', {pending: false})], true).close, false);
-result = life.sync([], true);
-assert.deepEqual(result.removed, ['b']); assert.equal(result.close, true);
-assert.equal(life.sync([], false).close, false);
-// Already-open user panel and tabs survive; only missing agent tabs are removed.
+assert.equal(result.show, false); assert.equal(result.focusId, undefined);
+assert.equal(life.sync([row('b', {pending: false, busy: true})], false).show, false);
+result = life.sync([], false);
+assert.deepEqual(result.removed, ['b']); assert.equal(result.close, false);
+// A new AI tab never replaces the user's current panel or selected tab.
 life = new EmbeddedTabLifecycle();
 const user = row('user', {pending: false, controlled: false});
-life.sync([user, row('a')], true);
+result = life.sync([user, row('a')], true);
+assert.equal(result.show, false); assert.equal(result.focusId, undefined);
 result = life.sync([user], true);
 assert.deepEqual(result.removed, ['a']); assert.equal(result.close, false);
-// Host interaction and webview takeover both cancel automatic panel closure.
-for (const takeover of ['host', 'guest']) {
-  life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
-  if (takeover === 'host') life.retain();
-  else life.sync([row('a', {pending: false, controlled: takeover !== 'released',
-    state: takeover === 'guest' ? '사용자 조작 중' : ''})], true);
-  assert.equal(life.sync([], true).close, false);
+// Calls, release and overlapping tasks all stay in the background.
+life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
+for (const extra of [{busy: true}, {busy: false}, {controlled: false}]) {
+  result = life.sync([row('a', {pending: false, ...extra})], false);
+  assert.equal(result.show, false); assert.equal(result.close, false);
 }
-// An overlapping new task prevents closing between tasks.
-life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
-result = life.sync([row('b')], true);
-assert.deepEqual(result.removed, ['a']); assert.equal(result.close, false);
-assert.equal(life.sync([], true).close, true);
-// A completed call hides the panel without waiting for an optional model close.
-life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
-result = life.sync([row('a', {pending: false, busy: false})], true);
-assert.equal(result.close, true); assert.deepEqual(result.removed, []);
-// Follow-up calls keep running in the hidden, mounted guest without reopening it.
-assert.equal(life.sync([row('a', {pending: false, busy: true})], false).show, false);
-assert.equal(life.sync([row('a', {pending: false, busy: false})], false).show, false);
-// Explicit release also hides the panel; it is not human takeover.
-life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
-assert.equal(life.sync([row('a', {pending: false, controlled: false})], true).close, true);
-// Authentication handoff reopens once, then resume/cancel returns to the launcher.
-life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
-life.sync([row('a', {pending: false, busy: false})], true);
-result = life.sync([row('a', {pending: false, busy: false, needsUser: true})], false);
-assert.equal(result.show, true); assert.equal(result.close, false);
-assert.equal(life.sync([row('a', {pending: false, busy: false, needsUser: true})], true).show, false);
-assert.equal(life.sync([row('a', {pending: false, busy: false})], true).close, true);
-// Another task still operating prevents premature hiding.
+result = life.sync([row('b')], false);
+assert.deepEqual(result.removed, ['a']); assert.equal(result.show, false);
+// Authentication reveals the right tab exactly once. OTP typing must not cancel cleanup.
 life = new EmbeddedTabLifecycle(); life.sync([row('a'), row('b')], false);
-assert.equal(life.sync([row('a', {busy: false}), row('b', {busy: true})], true).close, false);
-assert.equal(life.sync([row('a', {busy: false}), row('b', {busy: false})], true).close, true);
+const auth = row('a', {pending: false, busy: false, needsUser: true});
+result = life.sync([auth, row('b')], false);
+assert.equal(result.show, true); assert.equal(result.focusId, 'a'); assert.equal(result.close, false);
+life.retain(); // pointer/key events while typing the code
+result = life.sync([{...auth, state: '사용자 조작 중'}, row('b')], true);
+assert.equal(result.show, false); assert.equal(result.close, false);
+// Unrelated background work must not hold the authentication panel open.
+assert.equal(life.sync([row('a', {pending: false, busy: false}), row('b', {busy: true})], true).close, true);
+// A panel already opened by the user survives authentication completion.
+life = new EmbeddedTabLifecycle(); life.sync([row('a')], true);
+assert.equal(life.sync([auth], true).focusId, 'a');
+assert.equal(life.sync([row('a', {pending: false, busy: false})], true).close, false);
+// Concurrent handoffs stay visible until the last authentication finishes or releases.
+life = new EmbeddedTabLifecycle(); life.sync([row('a'), row('b')], false);
+life.sync([auth], false);
+result = life.sync([auth, {...auth, id: 'b'}], true);
+assert.equal(result.focusId, 'b');
+result = life.sync([auth], true);
+assert.equal(result.close, false); assert.equal(result.focusId, 'a');
+assert.equal(life.sync([{...auth, controlled: false}], true).close, true);
+// Popup authentication has its own window; it must not also cover the launcher.
+life = new EmbeddedTabLifecycle();
+result = life.sync([{...auth, popup: true}], false);
+assert.equal(result.show, false); assert.equal(result.focusId, undefined);
+
 ''')
 
 

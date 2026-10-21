@@ -9,7 +9,7 @@ owner_code: >
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
   catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -167,7 +167,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 - **저장** (`episode_logger.py`): 사용자 명령 1건 = 1 에피소드. stdout 전체를 가로채 종료 시 저장.
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **10,000건** 롤링 — `episode_logger.MAX_EPISODES`, 2026-09-07 1000→10000. 실측 1행 ≒ 37KB(로그 21KB + 궤적 15KB)·하루 약 24주행이라 창 = 약 400일치 ≒ 370MB 대)
   - `ibl_code_corpus` (2026-09-06 부활, 사용자 판정 "필요한 정보가 지워지고 있다"): 몸이 실제로 쓴 **IBL 문장 원문 전량**. 전 IBL 표면의 초크포인트(`system_tools_ibl._execute_ibl_unified`)가 매 실행 `episode_logger.record_ibl_code` 로 upsert — 키=원문 sha256(궤적 `ibl.started.code_sha256` 과 같아 한 DB 안에서 조인), 같은 문장은 한 행에 seen/success/fail 누계·마지막 실패 사유·last_agent/origin, 본문은 `mask_secrets` 를 거치고 바뀌었으면 `masked=1`(해시는 원문 기준). 롤링 없이 영구(중복 제거 뒤 월 수 MB 미만). ibl_usage.db 가 아닌 world_pulse.db 인 이유 = 해마 DB 는 hippocampus.zip 으로 릴리스에 실려 사용자 원문을 담을 수 없다. `source` 는 B18-2(실사용이 한 번 밟은 행은 `usage` 유지). 파인튜닝 코퍼스·조합률 실측(`scripts/vocab_composition_metrics.py`, 아직 미독)의 정본 자리.
-  - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 판정(ACHIEVED/NOT_ACHIEVED/**UNKNOWN**/**NULL**) (**영구 보존**). 도구 없는 평가자가 최종 판정을 소유하며 `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 새 `[GoalEval] 최종 판정` 마커를 우선하고, 과거 `[ConsciousSupervisor]` 및 기존 `[GoalEval]` 라운드 마커도 읽는다. 산문 응답에서 성공을 추측하지 않는다.
+  - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, REFLEX/EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 판정(ACHIEVED/NOT_ACHIEVED/**UNKNOWN**/**NULL**) (**영구 보존**). 도구 없는 평가자가 최종 판정을 소유하며 `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 새 `[GoalEval] 최종 판정` 마커를 우선하고, 과거 `[ConsciousSupervisor]` 및 기존 `[GoalEval]` 라운드 마커도 읽는다. 산문 응답에서 성공을 추측하지 않는다.
     - **실행 라운드·IBL 횟수의 정본(2026-09-12, `docs/CODEX_JOURNAL_2026_09_12.md`)**: 라운드 = 모델 응답 수. Claude Code 는 응답 ID, Codex 는 `exec --json` 이 turn/item 만 내보내므로 로컬 롤아웃의 `token_usage_record.response_id` 를 증분 조회해(`backend/base/codex_rollout.py`) 응답별 한 번만 `model.round` 를 적는다 — item 하나를 라운드로 세지 않는다(한 응답에 도구 호출 여럿). 응답 ID 를 주지 않는 구버전 CLI 는 미측정. 주행 목록(`episode_logger` 조회)은 `ended_at` 없는 **진행 중** 주행도 돌려주고, 종료 요약이 없거나 옛 0/NULL 요약이어도 `model.round` 원장에서 같은 집계 함수로 현재까지의 라운드를 보완한다 — 실행 역할 `system_ai`·`system_repair`는 포함, 배경 원샷·평가는 제외. IBL 호출 시도는 `supervision.tool.started` 와 엔진 `ibl.started` 를 중복 합산하지 않고 중첩 실행은 뺀다(전체 도구 수 ≠ IBL 횟수). 과거 요약 복원은 `backend/migrate_codex_episode_rounds.py`(기본 dry-run, 원 사건·토큰 기록은 덮어쓰지 않음).
   - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 롤링 창에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
@@ -387,7 +387,7 @@ revision/digest는 내부 WorldContext와 사건에만 남긴다.
   ├─[8 세계기억]   공통 흐름 2상(분류·과제 목차 뒤·의식 이전 1회): 글자 일치(<method_map>) + 가지 먼저 고른 의미 3건(<world_map>+<world_memory>) — 이름·관계만, 모델 호출 없음. 제시 기록 = recall.presented 사건
   ├─[결정원장]     사용자 판정 다이제스트 상시 + 질의 일치 상세 (<decision_ledger>, 정본=data/decisions.yaml)
   │     │
-  │     ├ 무의식 EXECUTE 판정 → 실행 (회상 점수와 무관)
+  │     ├ 무의식 REFLEX/EXECUTE 판정 → 짧은 별도 문맥/전체 문맥으로 실행 (회상 점수와 무관)
   │     └ 무의식 THINK 판정 → 의식 에이전트 호출
   │                          ├─[1 의미기억]  guide_files 지목 문서 로드
   │                          └─[6 자기상태]  world_pulse 압축 주입
@@ -623,7 +623,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 
 ### 왜 연상기억인가
 
-- 무의식이 EXECUTE/THINK를 판정하려면 **관련 액션과 메모리**가 뭔지 알아야 한다
+- 무의식이 REFLEX/EXECUTE/THINK를 판정하려면 **관련 액션과 메모리**가 뭔지 알아야 한다
 - 의식이 문제를 구성하려면 **과거 코드 사례, 도구 구현 상세, 사용자 맥락**을 알아야 한다
 - 실행이 코드를 생성하려면 **참고 사례, 파라미터 형식, "내 ~", "방금 ~" 같은 사용자 컨텍스트**를 알아야 한다
 - 평가가 검증하려면 **어떤 도구가 있었고 어떻게 동작하는지**를 알아야 한다
@@ -657,7 +657,7 @@ return (result, top_score, top_code)   # 한 번의 검색으로 점수/코드�
     └─ 해마 검색 1회로 (xml, top_score, top_code) 확보
        <execution_memory> + <memory_map> 결합
     ↓
-[1] 무의식 (경량 AI) — EXECUTE/THINK 판정 (회상 점수와 무관)
+[1] 무의식 (경량 AI) — REFLEX/EXECUTE/THINK 판정 (회상 점수와 무관)
     ↓
 THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
     ↓
@@ -731,7 +731,7 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 
 ### 현재 라이브 모델 (2026-10-06 재학습, 10-21 재학습 후보는 미채택)
 
-현재 판본 DB 1,403건(전체 3,795건), 학습쌍 1,958·epoch 2·검증 0.870으로 채택한 모델이다.
+2026-10-06 당시 현재 판본 DB 1,403건(전체 3,795건), 학습쌍 1,958·epoch 2·검증 0.870으로 채택한 모델이다.
 10-21에 최신 코퍼스(DB 현재 판본 1,491건·학습쌍 2,084)로 다시 학습했지만,
 동일 285쌍의 저장 용례 회상 Top-5가 252→243으로 하락하여 기존 모델을 유지했다.
 이번 후보의 최적 epoch는 7이며, 코드·설명문 지표와 실제 저장 용례 회상을 구분해 판단했다.
@@ -741,7 +741,7 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 
 로컬 MPS(seed42·batch8·seq64), 조기 종료 7. A/B(같은 분할, A=08-28 백업): **code T1/3/5 57.1/79.6/87.3 → 62.0/84.7/91.7(+4.9/+5.1/+4.4p)** · desc T1/5 71.1/92.6 → 70.1/93.8(T1 −1.0p) · 프로브 51/53 동점으로 채택. 라이브 recall-preview 에서 `[self:ledger]` 세 질의 0.72~0.83 직행, `[self:business]` 0.88(재학습 전 범용 임베딩에선 무관 문장). 백업=`data/models/ibl_embedding.bak.20260904_111200`. 프로그램급 IBL M1~M6 시드(08-22 대기열)는 이 세대에 흡수됐다. ★사고: 사전점검이 도는 턴을 알렸는데 스크립트가 멈추지 않고 재기동을 강행해 그 턴이 절단됨 — 절차에 '사전점검 비0이면 중단' 관문(changelog 2026-09-04 12:10, 정본 절차 `data/guides/hippocampus_retraining.md`).
 
-#### 직전 세대 (2026-08-21 재학습 — 몸 원장 어휘 세대, 코퍼스 3,448, epoch 3·검증 0.886)
+#### 이전 세대 (2026-08-21 재학습 — 몸 원장 어휘 세대, 코퍼스 3,448, epoch 3·검증 0.886)
 
 `[self:body]` 3 op 시드 16 + `writes` 시드 5 + 증류분(+35)을 흡수한 세대 — 게이트(1,245쌍·607패턴)에서 **code Top-5 +3.1p(88.3→91.4)**·desc T5 +0.7p, T1 −0.7/−0.9p(노이즈)로 채택. 백업=`data/models/ibl_embedding.bak.20260821_114913`. 몸 원장 어휘가 연상 직행하고, ★08-20 세대의 관찰 항목이던 "네이버 블로그 후기" 경계가 대조 시드 흡수로 잡혔다(라이브 translate 실증: `source:naver`·`type:blog` 정확). 신어휘 프로브 40/45 — 잔여 실패 5(`table:since`·`table:ai`·`table:brief`)는 코퍼스 희소가 원인이라 다음 시드 후보. 직전 세대 2026-08-20(epoch 7·0.864) · 2026-08-17(epoch 4·0.878).
 
@@ -772,8 +772,8 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 
 > held-out %가 직전(2026-06-12 92.6%)보다 소폭 낮은 건 코퍼스가 커지고(distilled placeholder 슬롯 등) 노이즈가 늘어 *측정 난이도*가 오른 영향 — 실연상은 멀쩡(아래 ~99% 및 시장-보고 쿼리 검증 0.635→1.0). 더 짜내려면 노이즈 distilled 가지치기.
 
-- **재학습 경로 = 로컬**: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac M4 Pro 24GB는 OOM 없고 데이터셋이 작아 로컬 MPS가 더 빠름(클라우드 콜드스타트·400MB 다운로드 회피). lib 버전도 트레이너 검증값과 일치(torch/MPS·st 5.2.2·transformers 5.1.0). 파이프라인=백업→`backend/ibl_embedding_trainer.py`→rebuild_index→백엔드 touch.
-- **실제 런타임 검색 정확도 ~99%**: 위 벤치마크(query→벌거벗은 코드 패턴)는 보수적 프록시다. 런타임은 query→저장용례(`intent×3 + code`)로 검색하므로(아래 "검색 방식") 액션단위 Top-5 ≈ **99%**로 천장.
+- **재학습 경로 = 로컬**: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac M4 Pro 24GB는 OOM 없고 데이터셋이 작아 로컬 MPS가 더 빠름(클라우드 콜드스타트·400MB 다운로드 회피). lib 버전도 트레이너 검증값과 일치(torch/MPS·st 5.2.2·transformers 5.1.0). 운영 순서는 백업 → 별도 후보 학습 → 동일 자료 A/B 비교 → 채택 여부 결정이다. 채택할 때만 모델 교체·재색인·재기동을 수행하며, 미채택이면 기존 모델·색인을 유지한다. 절차·현재 학습 환경은 [재학습 가이드](../guides/hippocampus_retraining.md)가 정본이다.
+- **과거 런타임 프로브 약 99%**: 당시 저장 intent와 코드로 구성한 제한된 검색 평가다. 현행 코퍼스·미지 과제의 정확도를 보장하지 않는다. 10-21 비교는 같은 intent 후보를 제외한 저장 용례 회상과 코드/설명문 검색을 나눠 측정했으며, 채택 근거는 위 현재 라이브 모델 절을 따른다.
 - **어휘 정합**: 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인한다(현재 건수는 빠르게 변하므로 `SELECT count(*) FROM ibl_examples`가 정본; 문서에 고정하지 않는다). ★**어휘를 지우면 코퍼스도 따라온다** — 음악앱 5기능 은퇴 때 `--check` 의 코퍼스 param 정합 가드가 죽은 파라미터를 잡아 용례 15건 삭제를 강제했고, 2026-08-15 지역정보·연락처·사업원장 은퇴에서도 코퍼스 이관(41행·27행 등)이 은퇴의 일부였다. 은퇴어의 용례는 **후계어로 재배선**하되, 후계가 없으면 삭제한다.
 - **시딩은 단일 경로**: `add_examples_batch`(source=`manual_seed`). ★두 함정 — ①직후엔 임베딩 모델이 백그라운드 로딩 중이라 **벡터가 조용히 안 붙는다**(FTS 로만 걸려 회상되는 척함. 신호=`export_hippo_index` 의 '누락 N') → `_load_model_sync()` 후 `_index_batch` 재색인 ②시딩은 **`.venv` 파이썬 필수**(시스템 python3 엔 sqlite_vec 이 없다).
 - 학습 환경: **로컬 Mac M4 Pro(MPS)**, batch=8(로컬최선), max_seq 64, 10 epoch, patience 3. 베이스 `jhgan/ko-sroberta-multitask`. (클라우드 Modal 경로 cloud_training/ 은 보존하되 기본은 로컬 — OOM 없는 M4 Pro에선 로컬이 빠름.)
@@ -800,15 +800,18 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 |---|---|---|
 | `MAX_REFERENCES` | 5 | 최대 참조 수 |
 | `DEFAULT_K` | 5 | 기본 반환 참조 수 |
-| `MIN_SCORE` | 0.25 | 최소 점수 임계값 |
+| `MIN_SCORE` | 0.65 | 용례를 기본 참조로 표시하는 최소 점수 |
+| `LOW_CONF_FLOOR` / `LOW_CONF_MAX` | 0.45 / 2 | 기본 문턱을 넘는 용례가 없으면 저신뢰 참조 최대 2개 |
+| `PHRASE_MIN_SCORE` / `PHRASE_K` | 0.45 / 2 | 이름 있는 저장 함수의 서명 참조 |
 | `DEFAULT_ALPHA` | 1.0 | 시맨틱 100% (BM25는 폴백 전용) |
-| `REFLEX_SCORE_THRESHOLD` | 0.85 | 이 이상이면 의식·무의식 모두 스킵하고 EXECUTE |
 
 ### 점수 정규화 (2026-05-17)
 
 이전에는 FTS5 단독 폴백 시 raw BM25 점수(0~10+)가 반환되어 REFLEX 임계값 0.85가 무력화되는 문제가 있었다. `_combine_scores` 외에 단독 분기에도 max-normalize를 적용해 모든 경로에서 점수 0~1을 보장한다.
 
 ---
+
+**해마와 REFLEX는 독립**이다. 검색 점수는 회상 자료의 선정에 쓰며 실행 경로를 강제하지 않는다. 현재 REFLEX는 무의식 분류 또는 `#reflex`로 선택하고, 이번 턴 회상은 유지하면서 긴 CLI 이력만 분리한다. 결말과 결과 참조는 `conversation_events`에 남아 같은 대화의 다음 일반 실행으로 이어진다. [문맥 정책](../../docs/MODEL_CONTEXT_POLICY.md).
 
 ## 심층메모리 (Deep Memory / 연상 풀)
 
@@ -1015,7 +1018,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 | 뇌 구조 | IndieBiz OS 컴포넌트 | 역할 |
 |---|---|---|
-| 기저핵 | 무의식 (경량 AI) | EXECUTE/THINK 게이팅 |
+| 기저핵 | 무의식 (경량 AI) | REFLEX/EXECUTE/THINK 게이팅 |
 | **해마** | **IBL Usage DB + fine-tuned 임베딩** | **과거 IBL 코드 사례 인출** |
 | **연합피질** | **심층메모리 (memory_db)** | **사용자·세계에 대한 장기 사실 인출** |
 | 전전두엽 | 의식 에이전트 (본격 AI) | 자기 참조적 문제 구성 + 달성 기준 |
@@ -1081,7 +1084,9 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 자동 용례는 짧은 한 문장만 인라인으로 보여 준다. 무명 여러 문장 또는 1200자 초과 원문은 ID·주제·명시 `recall{store:"실행",node,expand:"#id"}` 입구만 노출한다. 원장은 그대로 보존하며 출처·날짜를 대조한 뒤 열 수 있다. 숨긴 원문은 유사도만으로 반사 실행하지 않는다. 이름 있는 함수는 기존처럼 호출 서명으로 보여 준다. 길이 상한은 의미 분류가 아닌 노출 예산이다. `ibl_call_cost.fn_calls`는 호환 키로 남지만 문자열·주석 밖 `[fn:]` 작성 구문 수다. 분기·반복·지연 문자열의 실제 실행 횟수는 이 값으로 추정하지 않는다.
 
 
-### 반사 규칙 모순 수리 (2026-09-26)
+### 과거 반사 규칙 모순 수리 (2026-09-26)
+
+이 절은 당시의 사건 기록이다. 해마 고확신 반사 경로는 10-18 제거되었으며, 현재 REFLEX는 무의식 분류 또는 명시 태그로 선택하는 별도 실행 문맥이다.
 
 자격과 노출은 다른 규칙이다. 자격(`corpus_policy.exclusion_reason`)은 판본 1 을 구형으로 제외하고 검토 판정(hold·quarantine·invalid)을 거른다. 노출(`hippo_tree.reference_needs_expansion`)은 길이(1200자)와 문장 수만 본다 — 판본을 이유로 숨기지 않는다. 09-23 에 판본 2 를 통째로 숨기던 자리표가 자격 정책과 겹쳐 저장 용례 전부가 반사·인라인 노출에서 빠졌던 것을 되돌렸다(반사 후보 0 → 1,232). 문장 수는 판본을 아는 `sentence_count`(판본 2 = 최상위 문장)로 세고, `split_sentences` 는 증류·관용구 기계의 전제대로 판본 2 를 한 단위로 둔다. 정본: `docs/REFLEX_RULES_CONTRADICTION_REPAIR_2026_09_26.md`
 

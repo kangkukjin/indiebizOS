@@ -215,6 +215,8 @@ Persistent questions carry provisional answers, supporting and contradicting evi
 
 The existing `limbs:browser` action can open embedded browser tabs and read material using an existing login or a saved account. The local vault fills credentials without sending passwords to the model. Extra authentication or an unresolved account choice returns the tab to the person; human interaction also returns control. Separate Chrome MCP and Playwright drivers remain available. Site compatibility and supported operations are recorded in the [embedded browser design](docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md).
 
+AI collection closes its temporary embedded tabs when it finishes. A browser panel opened for that collection closes with the last temporary tab; existing user tabs, an already-open panel, and tabs handed back for human interaction stay available.
+
 ### → A currency algebra
 
 The `table` node carries domain-agnostic transformers — filter / sort / take / select / compute / dedup / groupby / join / union / merge / **rename** / **flatten**. Lists and records flow as explicit values, and emitters (chart / spreadsheet / document / structure) turn those values into artifacts. Any search result can therefore compose through `>>` without glue code:
@@ -298,6 +300,19 @@ An **Android phone** can also register over USB once and then connect remotely a
 
 **Media sessions** connect accepted voice/video calls and registered devices' cameras, microphones, speakers, and playback through a shared session layer. The existing registered script `미디어세션` controls them. Phone video playback is successful only after the display and first frame are observed. Remaining device, external-network, TURN deployment, and long-duration acceptance checks are documented in the [media implementation status](docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md).
 
+### → Shared control drivers for apps and AI
+
+The PC and phone control apps use the same stored functions as the AI. The AI chooses the device and goal; the driver checks the target, executes the request, and reports what it could verify.
+
+| Target | Control path | Scope |
+| --- | --- | --- |
+| Local or registered macOS/Windows PC | `PC제어` / `PC제어확인` | Audio, displays, power, apps, clipboard, network, and OS controls |
+| Registered Android phone | `Android제어` / `Android제어확인` | Settings, sensors, and accessibility UI; UI needs a compatible APK and permission |
+| Local macOS Safari / Chrome | `Safari제어` / `Chrome제어` scripts | Window and tab operations with a check against the observed revision |
+| Registered Windows Chrome | `PC제어` `chrome_*` actions | Tabs in a dedicated CDP profile |
+
+Receipt, execution, and verified outcome are separate states. An uncertain result is checked through the original receipt rather than replayed automatically. These drivers use existing IBL functions and scripts; browser DOM automation remains a separate capability. Supported operations and remaining device checks: [PC](data/guides/pc_control.md) · [Android](data/guides/android_control.md) · [Safari](data/guides/safari_control.md) · [Chrome](data/guides/chrome_control.md).
+
 ---
 
 ## The split mind — define the problem, then execute it
@@ -307,9 +322,10 @@ Most systems plan and act as a single agent. IndieBiz OS separates problem frami
 ```
 User message
    ↓ association: hippocampus + deep memory
-   ↓ reflex: EXECUTE or THINK
+   ↓ classifier: REFLEX, EXECUTE, or THINK (or an explicit user tag)
    ↓ world map: a small clue-set of relevant names, methods, and tools
-   ├─ EXECUTE/reflex → direct execution → finish
+   ├─ REFLEX → short, separate execution context → finish
+   ├─ EXECUTE → existing full context → finish
    └─ THINK → consciousness defines the problem and achievement criteria
                     ↓
                  executor
@@ -320,7 +336,9 @@ User message
      after delivery, select durable execution/relational/spatial memory
 ```
 
-The two branches do not validate in the same way. Only `THINK` has achievement criteria authored by consciousness, and the final evaluator judges only those criteria. If they are unmet, all identified defects are handed back together for **at most one** repair, followed by evaluation against the same criteria. `EXECUTE` and reflex add no evaluator call to a normal short lookup. A `NULL` episode evaluation therefore means “not evaluated,” not failure; `UNKNOWN` means the criteria could not be decided from the available evidence.
+The execution paths do not validate in the same way. Only `THINK` has achievement criteria authored by consciousness, and the final evaluator judges only those criteria. If they are unmet, all identified defects are handed back together for **at most one** repair, followed by evaluation against the same criteria. `REFLEX` and `EXECUTE` without consciousness-authored criteria skip supervision and final evaluation. A `NULL` episode evaluation therefore means “not evaluated,” not failure; `UNKNOWN` means the criteria could not be decided from the available evidence.
+
+**REFLEX keeps simple requests out of a long working transcript.** It uses the same model gear, common prompt, vocabulary, and recalled material as ordinary execution, with only a short recent conversation in a separate session. Choose it explicitly with `#reflex`, or let the classifier select it. If more context is needed, it can return to the full history before calling a tool; after a tool call, it does not automatically replay the task. The main session is preserved, and the next ordinary turn receives the separate execution's outcome. Hippocampus similarity does not select this path. → [Context policy](docs/MODEL_CONTEXT_POLICY.md)
 
 The consciousness agent reframes the raw request into a well-defined problem *before* the executor ever sees it. Because the two are different subjects, the executor solves an *already-framed* problem: the off-target or unsafe paths a single plan-then-act agent would have to *consider and reject* are largely kept out of its frame from the start. This is **containment, not alignment** — safety dissolved into the goal rather than bolted on as a rule. And it's a property a single agent *cannot* have, because it cannot un-ask its own question — which is exactly why a more capable reasoning model doesn't absorb it.
 
@@ -346,6 +364,7 @@ A periodic consolidation pass (part of the immune patrol below) merges near-dupl
 - **World Pulse** — hourly: economy, weather, news (every 6h), user activity, system health.
 - **Self-Check** — once a day, a deterministic sweep: static consistency, a currency probe over every action's fixture, and a set of golden pipelines (**no model calls** — the AI patrol it replaced was retired). On `/self-inspect`, the system AI retries failures to classify them transient vs reproducible and rate fix difficulty (easy / medium / hard).
 - **Commit-time guards** — the checks that hold the vocabulary together (a three-way match between source, tool schema, and handler) were extended to the *seams* — the things that aren't actions: an auth gate that fails **closed** rather than open, a check that every publicly-exposed route really has its own gate (the oracle is the live route table, not a re-parsed list), a scan for blocking calls inside async code (this server calls itself often enough that a blocked loop is a self-deadlock), a Unix-only-import scan for Windows portability, and a **fresh-clone CI** — because `main` once passed only on the machine that wrote it.
+- **Capability history** — records first observation, implementation and dependency changes, verification, repairs, and execution separately for vocabulary, scripts, and stored functions. Verification is tied to current fingerprints and explicit evidence; an unknown creation date stays unknown. → [Body history guide](data/guides/body.md)
 - **Boot observability** — the subsystems a server may start without are wrapped in "log it and carry on" blocks, which is correct; the problem is that three days later the answer to "why did nothing get scheduled?" is somewhere off the top of a terminal. Every one of those blocks is now instrumented, and a failed boot step shows up in the health endpoint.
 - **Self-repair** — when you tell it to, the system fixes its own code. Not on top of its living self, though. Every change is made in an **isolated working copy**, and only **the exact bytes that passed the relevant checks in that copy** are applied to the canonical tree. Applying, restarting, and rolling back on failure belong to a restart controller that lives outside the backend — *a step that must run after your own death belongs to a process that outlives it.* There is no fallback that writes to the canonical tree when isolation fails. Facts a machine can verify (real test reports, candidate and environment fingerprints) are no longer re-approved by another AI reading prose; the evaluator is asked only where a judgement of meaning is needed. The authority is bound to *the one run a person commanded*: schedules, delegation chains and external channels never get it, and another run under the same agent name cannot borrow it.
 - **Prompt composition** — the system runs many kinds of LLM agent (system AI, project agents, consciousness and its supervisor, the unconscious classifier, the evaluator, the experience distiller, the IBL translator …) and each assembles its prompt differently. A **Prompt composition** window in the launcher's glasses (logo) menu shows, per agent, the assembly as layers — system prompt / turn context / user message — piece by piece with source, condition and size; the variable pieces (execution memory, IBL environment, project memory, world state) are produced by running the real builders on one sample message, so the sizes are actual (embedding search only, no model call). Its sibling **Guide files** window lists every guide in `data/guides/` with its registration, freshness and budget marks, and lets you read and edit them in place.
@@ -369,6 +388,8 @@ agents:
 You define *who* an agent is, not *which model* runs it — model and API key are decided centrally by the gear lever above (with an optional per-agent **pin** to override one agent's tier). Agents form teams and delegate — synchronously (`call_agent`, wait for the result), on a schedule (hand a task to another agent's clock), or via a written plan (`create_plan` → `execute_plan`, each agent runs its part and hands off). Agents with a communication channel (Nostr, Gmail) can take orders remotely and reach other people's agents over **IndieNet** (Nostr; DMs use modern NIP-17 gift-wrap encryption).
 
 ---
+
+**The IBL dictionary** opens from the conversation header: a separate window in Electron and a dialog on the web. Selecting an action attaches it to the next message in the originating conversation. **My vocabulary** manages which bundles you own and activate. YouTube, radio, and CCTV each collect their operations under `limbs:youtube`, `limbs:radio`, and `limbs:cctv`; effects and execution location are declared per operation.
 
 ## Under the hood (reference)
 

@@ -2,7 +2,7 @@
 title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행에 주입, 평가자는 기준·증거 입력 사용)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 see_also: [architecture.md, memory.md, ibl.md]
 ---
 
@@ -249,6 +249,10 @@ indiebizOS/
 
 ---
 
+**현재 제어 진입점**: 본체·등록 PC는 `PC제어`, Android는 `Android제어`, macOS 브라우저 창·탭은 `Safari제어`·`Chrome제어`를 쓴다. 기존 어휘 위의 공용 부품이며 실행 조건·관측·복구 계약은 [아키텍처의 드라이버 표](architecture.md#조작면-제어-드라이버)에 모은다.
+
+**사용자 사전 표면**: 대화의 IBL 사전은 낱말을 조회·선택하는 창이고, 내 어휘는 묶음의 보유·활성을 관리한다. 이 창들과 프롬프트 구성·가이드 파일이 같은 레지스트리와 정본 빌더를 참조한다.
+
 ## 인지 파이프라인 (연상 → 무의식 → 의식 → 실행 → 평가)
 
 사용자 메시지가 들어오면 다음 순서로 처리된다. 모든 에이전트(시스템 AI / 프로젝트 에이전트)가 동일한 단계를 밟는다.
@@ -257,7 +261,8 @@ indiebizOS/
 [0] 연상 단계        — 해마(IBL 사례) + 심층메모리(연상기억) 검색 1회로 자료 묶음
                        (top_score, top_code 함께 추출 — 중복 검색 제거)
      ↓
-[1] 무의식 분류     — 경량 AI로 EXECUTE / THINK 판정 (해마 점수와 무관)
+[1] 무의식 분류     — 경량 AI로 REFLEX / EXECUTE / THINK 판정 (해마 점수와 무관)
+                       REFLEX는 주 세션을 보존하는 짧은 별도 실행 문맥
      ↓
 EXECUTE                                THINK ( = "framing이 필요하다"는 수요)
    │                                     ↓
@@ -266,14 +271,16 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
    │                                  └─ 없음/안맞음 → 의식 에이전트(본격 AI): task_framing / achievement_criteria / …
    ↓                                     ↓
 [3] 실행 에이전트
-     · EXECUTE / THINK     → 본격 모델 유지 (무의식 EXECUTE 오분류여도 품질 방어)
+     · REFLEX / EXECUTE / THINK → 실행 역할의 모델 기어 사용 (회상 점수로 모델 변경 없음)
      · 도구: execute_ibl + run_command + read_guide + 인지도구(4) — Python/Node.js는 [self:write]→run_command 패턴
    ↓
 [4] 의식 중간관리 + 별도 최종평가 — 의식은 도구로 진단, 평가자는 제공된 목표·실행 증거·결과로 판정
-                       (의식 규정 없는 EXECUTE 는 [4] 생략 → 평가 NULL, 최종 응답 후 [5])
+                       (의식 규정 없는 REFLEX·EXECUTE 는 [4] 생략 → 평가 NULL, 최종 응답 후 [5])
    ↓
 [5] 증류             — 해마 경험 증류 + 심층메모리 증류 (자동; 장기 기억은 최종 응답 전달 뒤 사용자 원문에서 지속 가치만 선별 — `[self:memory]{op:"save"}` 는 즉시 저장하지 않는다)
 ```
+
+**REFLEX 선택과 문맥**: `#reflex`는 분류·의식을 생략하되 문맥 적합성 검사는 유지한다. 주 CLI 세션을 보존하며, 실행 전 문맥 부족 시 전체 이력으로 복귀하고 별도 실행의 결말은 같은 대화에 인계한다. [정책·태그 우선순위·관측 사건](../../docs/MODEL_CONTEXT_POLICY.md).
 
 **모델 기어 (계기판 변속, 2026-06-30):** 자동차 기어처럼 레버 하나로 시스템 전체 모델 등급을 변속. 자동 변속기(무의식 분류기=작업마다 티어 자동선택) 위의 **수동 변속 레버**. `backend/base/model_resolver.py`가 *역할 → 축 → 기어 → 티어 → 모델*로 해소하고 매 호출 읽기(핫리로드, `/model-gear` REST). 설정=`data/model_gear.json`.
 - **3 티어 = 모델 슬롯** (한 번만 설정): 경량(`lightweight_ai_config.json`) / 중급(`midtier_ai_config.json`) / 고급(`system_ai_config.json` 재사용, UI 라벨 '고급').

@@ -2,7 +2,7 @@
 title: 도구 패키지 시스템
 scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘는 코어 `ibl_nodes_src`와 패키지 `ibl_actions.yaml`이 소유권별 정본이며, op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -351,6 +351,8 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 
 ---
 
+**검증·수리 이력**은 파일의 수정 시각만으로 판정하지 않는다. `data/capability_history.db`가 어휘·등록 스크립트·저장 함수의 최초 관측, 구현/의존성 변경, 검증, 수리, 실행을 따로 기록한다. `구성요소수명` 등록 스크립트로 조회하며, 현재 지문과 명시 근거가 있어야 검증 기록을 남긴다. 과거 미상 날짜를 생성일로 추정하지 않는다. [몸의 변화 가이드](../guides/body.md).
+
 ## 최근 연결 기능의 소유 위치
 
 | 기능 | 기존 어휘·구현 | 상세 계약 |
@@ -359,6 +361,9 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 | 내장 브라우저 | `browser-action`의 `limbs:browser`, `driver:embedded` | [브라우저](../guides/browser_action.md) |
 | 상주 PC·폰 손발 | `guest-helper`의 `limbs:guestpc`, PC 명령/폰 `op:ibl` 어댑터 | [헬퍼](../guides/guest_helper.md) · [폰](../guides/remote_phone.md) |
 | 미디어 세션 | backend 세션 서비스 + 기존 `self:script`의 `미디어세션` | [미디어](../guides/media_session.md) |
+| PC·Android OS 제어 | 기존 `self:script`의 제어 부품 + `PC제어`·`Android제어` 저장 함수 | [PC](../guides/pc_control.md) · [Android](../guides/android_control.md) |
+| Safari·Chrome 창·탭 | `Safari제어`·`Chrome제어`, Windows는 `PC제어`의 `chrome_*` | [Safari](../guides/safari_control.md) · [Chrome](../guides/chrome_control.md) |
+| 미디어 대상별 통합 | `limbs:youtube`·`limbs:radio`·`limbs:cctv`의 op 분기 | [어휘 경계](ibl.md#조작-대상과-지각의-경계) |
 | 폰 단독 유튜브·음악 | `limbs:youtube`의 검색·재생·큐와 `self:music`의 Android 경로 | [폰 재생](../guides/youtube_relay.md) |
 
 이 기능 목록은 새 패키지 수나 새 액션 수가 아니다. 실제 어휘·op·몸별 사용 가능성은

@@ -2,7 +2,7 @@
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
 owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py, chat_streams.py, chat_runs.py, execution_workers.py, vocabulary_state.py, vocabulary_lifecycle.py
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 see_also: [architecture.md, scheduler_guide.md, technical.md]
 ---
 
@@ -228,6 +228,8 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - **실행 문맥**: 지원 설치본은 `training`·`test` 출처를 허브→폰으로 전달하고 실행 뒤 복원한다. 원격 프로그램의 판본과 결과 참조는 그 몸에 속한다. 중앙의 참조 저장소와 혼용하지 않는다.
 
 구체적인 설치·권한·파일 전송 범위는 [헬퍼](../../helper/README.md), [원격폰](../guides/remote_phone.md), [기기 작업 전달과 재기동](technical.md#기기-작업-전달과-재기동)을 따른다.
+
+**앱·AI의 공용 제어**: PC·Android OS와 브라우저 창·탭 조작은 등록된 제어 드라이버로 연결한다. `PC제어`·`Android제어`의 후속 확인은 최초 접수증·요청 ID를 그대로 사용한다. 원격 상태는 실행마다 새로 읽고 접수 뒤 미확인을 실패로 단정해 재전송하지 않는다. [대상별 진입점·검증 범위](architecture.md#조작면-제어-드라이버).
 
 ### 미디어 통신 — 통화와 확장관계의 카메라·마이크·스피커 (2026-10-13)
 
@@ -682,6 +684,8 @@ agents:
   ]
 }
 ```
+
+**에이전트 작업 기록**은 재기동을 넘어 보존된다. 종료 후 보존 만료와 미접수를 구분하며, 다른 작업 종류의 보존 정책과 혼동하지 않는다. [접수증 수명·조회 계약](ibl.md#작업-접수증과-대기--긴-작업의-공통-관찰제어-2026-10-05-설치-목록-③).
 
 ### 컨텍스트 생명주기
 

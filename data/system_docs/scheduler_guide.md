@@ -2,7 +2,7 @@
 title: 스케줄러 가이드
 scope: 정기 작업 스케줄, 트리거 엔진, 워크플로우, 캘린더 연동
 owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, workflow_contract.py, calendar_actions.py, calendar_manager.py
-last_updated: 2026-10-17
+last_updated: 2026-10-21
 see_also: [architecture.md, communication.md, memory.md]
 ---
 
@@ -22,6 +22,8 @@ see_also: [architecture.md, communication.md, memory.md]
 스케줄러는 백그라운드에서 동작하며, 에이전트 없이 지정된 시간에 자동으로 작업을 실행합니다.
 
 **아키텍처**: `scheduler.py`는 하위 호환 래퍼이며, 모든 실제 로직은 `CalendarManager`(`calendar_manager.py`)에서 처리됩니다. 데이터 저장소는 `data/calendar_events.json`(Single Source of Truth)입니다.
+
+**예약 실행의 대화 기록**: 시스템 AI 예약 요청은 `agent_report`로 저장되며, 기본 제목은 후속 보고문이 아닌 작업의 `original_request`로 채운다. 이미 있는 제목은 보존한다. 새 대화를 반복 요청할 때 실제 사용자 발화가 없는 빈 세션은 재사용하고, 사용 이력이 있는 대화는 분리한다. [대화 세션 계약](../../docs/CONVERSATION_SESSIONS_2026_10_15.md).
 
 ## 핵심 규칙
 

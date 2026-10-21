@@ -40,11 +40,11 @@
 
 | ID | 이름 | 설명 | 상태 |
 |----|------|------|------|
-| ai-ops | AI Ops (원샷 낱말) | 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형 | 설치됨 |
+| ai-ops | AI Ops (원샷 낱말) | AI 원자 — struct(구조화)·ai(의미 변환)·brief(산문)는 | 설치됨 |
 | android | Android Phone Control | ADB(uiautomator)로 안드로이드 폰 화면을 독해·터치·입력하는 | 설치됨 |
 | blog | Blog Tools | 개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 | 설치됨 |
 | books | 책·고전 | 도서 검색·대출 통계·추천과 서양·한국 고전을 조회합니다. | 설치됨 |
-| browser-action | Browser Action | Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화 | 설치됨 |
+| browser-action | Browser Action | 내장 Electron + Playwright + Chrome MCP 브라 | 설치됨 |
 | bulletin | Bulletin | 로그인 없는 자유게시판. 게시판마다 공개 주소(/b/<5자>)가 하나씩  | 설치됨 |
 | business | Business & Contacts | 비즈니스 관계 및 연락처(이웃) 관리 도구. 이웃 목록 조회, 상세 정보 | 설치됨 |
 | cctv | CCTV 실시간 영상 | CCTV 및 실시간 웹캠 통합 도구  ## 소스 - UTIC 도시교통정보 | 설치됨 |
@@ -55,13 +55,13 @@
 | context7 | Context7 Docs | 라이브러리/프레임워크 최신 공식 문서 검색. 코드 생성 시 최신 API와 | 설치됨 |
 | culture | 공연·전시 | KOPIS 공연·공연장과 KCISA 전시·문화행사를 조회합니다. | 설치됨 |
 | data-ops | Data Ops (통화 변환자) | 통화→통화 변환 동사(currency algebra). 생산자가 내는 공 | 설치됨 |
-| entity-lookup | 개체 식별 | Wikidata에서 동명이인·동음이의를 식별하고 개체의 사실을 조회합니다. | 설치됨 |
+| entity-lookup | 개체 식별 | Wikidata에서 동명이인·동음이의를 식별하고 개체의 사실을 조회합니다 | 설치됨 |
 | family-news | Family News | 가족신문 — 폰(USB) 사진으로 신문 판을 조판해 공개 주소에 누적 발 | 설치됨 |
 | finance-record | Finance Record | 재무 기록 및 조회 도구. 지출·수입 거래와 자산·부채 소유 현황을 저장 | 설치됨 |
 | freelance-services | 외주 서비스 | 외주 서비스 상품과 프리랜서 전문가를 검색합니다. | 설치됨 |
-| guest-helper | Guest PC Helper (USB 손발) | USB 로 낯선 PC 에 꽂는 얇은 손발(헬퍼) — 허브가 셸/파일 명령 | 설치됨 |
+| guest-helper | Guest PC Helper (USB 손발) | USB로 설치하는 상주 PC 및 휴대형 손발 헬퍼 — 원격 셸·파일 전송 | 설치됨 |
 | health-record | Health Record | 건강 정보 기록 및 조회 도구. 혈압, 혈당, 체중 측정값과 증상, 투약 | 설치됨 |
-| house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 설치됨 |
+| house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 미설치 |
 | ibl-core | IBL Core | IBL(IndieBiz Logic) 노드-액션 통합 도구. 여러 도구를  | 설치됨 |
 | investment | Investment Tools | 한국/미국 기업의 주가·시세·재무·공시·뉴스 및 암호화폐 정보를 조회하는 | 설치됨 |
 | kosis | KOSIS Statistics | 통계청 KOSIS API를 통한 국가통계 조회 도구. 인구, GDP, 물 | 설치됨 |
@@ -69,7 +69,7 @@
 | legal | Legal | 대한민국 법률 정보 검색 도구. 국가법령정보센터(law.go.kr) AP | 설치됨 |
 | location-services | Location Services | 위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, | 설치됨 |
 | media_producer | Media Producer | 홍보용 슬라이드 이미지, HTML 기반 MP4 동영상, AI 이미지 생성 | 설치됨 |
-| memory | Memory | 에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [s | 설치됨 |
+| memory | Memory | 에이전트 심층 메모리. 최종 응답 후 사용자 원문의 지속 가치만 자동 선 | 설치됨 |
 | music-player | Music Player | 내 음악 라이브러리 — 소스 폴더의 음악 파일을 스캔해 정리하고(태그·앨 | 설치됨 |
 | nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동 | 미설치 |
 | notebook | Notebook | 근거 고정 질의 — 문서 더미(노트북)에 넣고, 소스 안에서만 답하며 인 | 설치됨 |
@@ -80,7 +80,7 @@
 | python-exec | Python Executor | Python 코드 실행 환경. 수학 계산, 데이터 처리, 파일 파싱(JS | 미설치 |
 | radio | Radio Tools | 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전 | 설치됨 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거 | 설치됨 |
-| record-ops | Managed Records | 공동 업무의 기록·명령·승인·이력·복구 기반 | 설치됨 |
+| record-ops | Managed Records | 공동 업무의 기록·명령·승인·이력·복구 기반 | 미설치 |
 | remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 미설치 |
 | shopping-assistant | 상품·중고 | 새 상품 가격비교와 중고 거래 매물을 검색합니다. | 설치됨 |
 | startup | Startup Support | 정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소 | 설치됨 |
@@ -114,4 +114,4 @@
 위 표의 설치됨/미설치는 **보관 위치**(installed/not_installed)다. 이 몸이 실제로 소개·회상·실행하는 묶음은 활성 원장 `data/vocabulary/activation.json`이 정하며, 런처 안경 메뉴 → **내 어휘**에서 깨우고 잠재운다(필수 공급자는 `data/vocabulary_policy.yaml`이 보호). → packages.md '보유와 활성'
 
 ---
-*마지막 업데이트: 2026-10-20 10:40*
+*마지막 업데이트: 2026-10-21 13:07*

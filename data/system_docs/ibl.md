@@ -315,6 +315,8 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 아직 접수증이 아닌 것(다음 차수): 사진·PC 스캔(HTTP 전용 동기 경로)·
 표면 `await:` 선언(접수증이면 진행률·취소·완료 재조회 — 렌더러 2곳의 폴링 코드 은퇴는 그때).
 
+**에이전트 백그라운드 접수증의 보존**: 시스템 AI·프로젝트 에이전트의 `tasks` 종료 행은 재기동 때 전부 삭제하지 않고 30일간 보존한다. 보존 기간이 지나 정리된 행은 `task_tombstones`에 종료 상태·시각을 남긴다. HTTP 조회는 미접수/다른 소유자(404)와 보존 만료(410)를 구분하며, 만료된 결과 전문을 복구했다고 주장하지 않는다. 이 정책은 모든 `task_ref` 종류의 공통 보존 기간이 아니다. 구현은 `boot_common.py`·`delegation_tasks.py`다.
+
 ## 실행 증거와 값 전송
 
 `value`는 사람이 읽는 값, `value_wire:{protocol:"ibl-value/1",data:...}`는 모든 컨테이너를 태그한 손실 없는 값이다.
@@ -692,12 +694,12 @@ CCTV·공개 웹캠은 `limbs:cctv`의 search/nearby/open/capture/stats/refresh�
 
 ## 액션 group
 
-각 액션은 `group` 필드를 가진다. group은 같은 노드 안에서 액션의 소속/맥락을 나타낸다. 예: limbs 노드의 `music`은 `group: media`이므로 미디어 재생, `browser`는 `group: browser`이므로 Playwright 브라우저 자동화다.
+각 액션은 `group` 필드를 가진다. group은 같은 노드 안에서 액션의 소속/맥락을 나타낸다. 예: limbs 노드의 `youtube`는 영상 조회·재생을 같은 대상으로 묶고, `browser`는 브라우저 제어를 묶는다. 읽기/쓰기 여부는 group이 아니라 op의 계약을 따른다.
 
 | 노드 | 주요 group | 설명 |
 |------|-----------|------|
 | limbs | browser, screen, device(android), media, cctv, cloudflare, launcher | 각 제어 대상별 구분 |
-| sense | investment, culture, research, location, web, real_estate, youtube, shopping, world, device(phone) | 정보 소스별 구분 |
+| sense | investment, culture, research, location, web, real_estate, shopping, world, device(phone) | 정보 소스별 구분 |
 | self | photo, blog, memory, health, file, storage, schedule, workflow, event, collect, output, system | 관리 영역별 구분 |
 | engines | media_produce, music, chart, web_builder, architecture | 생산물 유형별 구분 |
 | others | delegation, channel, business | 소통 유형별 구분 |
@@ -723,6 +725,8 @@ CCTV·공개 웹캠은 `limbs:cctv`의 search/nearby/open/capture/stats/refresh�
 
 ---
 
+**공개 사전의 소스**는 코어 YAML과 패키지 `ibl_actions.yaml`이다. API 레지스트리는 공급자 연결 자료이며, 공개 사전에 API 낱말을 자동 재등록하지 않는다. 기능 통합 뒤에도 과거 API 이름이 다시 노출되지 않도록 한다.
+
 ## 노드 (6-Node 구조 — Phase 25 5-Node 재구조화 + 2026-06-30 table 분리)
 
 ### 핵심 노드 분류
@@ -737,14 +741,16 @@ CCTV·공개 웹캠은 `limbs:cctv`의 search/nearby/open/capture/stats/refresh�
 workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps 를 `do` 별칭으로 흡수 —
 핸들러 읽기키는 불변]. 정본 docs/HIGHER_ORDER_SENTENCE_DESIGN.md → 150에서 151. 이전: 2026-08-05 영상 어휘 정리: engines:html_video·engines:remotion 은퇴[영상의 정본 경로=`[self:deck]{op:"video"}` 덱→나레이션 MP4 결정화, 합성 파이프라인은 함수층 잔류·remotion-video 패키지 not_installed] → 152에서 150. 같은 날 슬라이드 어휘 일원화: engines:slide·slide_shadcn→`[self:slide]{op:"create"}`[lecture_id 미지정=스크래치 덱, aesthetic 관통] → 154에서 152. 같은 날 2b: search_books→`book{source:"google"}` 흡수[classic 은 서지↔원문 동음이의로 병합 금지 판정] → 155에서 154. 같은 날 2단계: 검색 5액션[search_ddg/naver/gnews/hn/guardian]→`search{source}` 하나 — web-kr 패키지 은퇴[naver 흡수]·guardian 은 study→web 이주 → 159에서 155. 같은 날 1단계: fs_query→file_find 메타 모드·self:agents→others:agents·run_pipeline→workflow{op:run}·image_critic→image_read{op:critic}·output op:file→write[파이프 싱크 겸용] 흡수 → 163에서 159. 이전: 웹앱 등기부[self:webapp] 추가 → 162에서 163. 이전: 몸 부탁[others:ask]·USB 손발[self:limb·limbs:guestpc]·신문 발행 결정화[engines:newspaper]·내 음악[self:music] 추가 → 157에서 162. 이전: 공개 표면 가족[others: portal/showcase/family_news/bulletin/publish/follow]·숙박/개체해소/중고[sense: stay/entity/used]·공급망 게이트[self:install_lib]·아이콘[engines:icon] → 157. 이전: engines 변환자/emitter 13종을 신규 `table` 노드로 분리(2026-06-30, 노드 5→6). 이전: `self:package` 생애주기 어휘 → 143).
 
-| 노드 | 액션 수 | 설명 | 주요 액션 |
-|--------|---------|------|----------|
-| `self` | 50 | 개인 도메인: 시스템 관리, 파일(읽기/쓰기/채우기/장부 부분편집), 트리거/스케줄/목표, 메모리·포식기억, **원장(`ledger` 사업·아이템·문서·지침 / `finance` 소비·소유 / `health`)**, 근거 고정 질의(notebook), 등록 스크립트(script), 폰 동기화, 내 음악, USB 손발 발급, 웹앱 등기부, 워크플로우, 패키지·라이브러리 생애주기 | read, write, edit, fill, sheet, file_find, grep, storage, trigger, schedule, workflow, goal, memory, forage, ledger, finance, health, notebook, script, slide, deck, phone_sync, music, limb, webapp, package, install_lib |
-| `limbs` | 13 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 게스트 PC(USB 손발) + 미디어 재생 + 창 열기 | browser, screen, android, phone, guestpc, music, radio, cctv, launch, os_open, open_window, show_map, cloudflare_api |
-| `sense` | 40 | 감각 확장: 외부 정보 수집(연구자·학술·부동산·숙박·중고·프리랜서·개체해소 포함) + 범용 RSS/Atom(feed) + 몸별 지표어 감각(알림·위치·마이크·카메라 — 몸마다 프로브, 없으면 정직하게 no_hardware) | search, feed, stock, company, crawl, realty, stay, used, freelance, entity, weather, researcher, paper, contest, phone, here, listen, see, host, self_check |
-| `others` | 17 | 협업·통신·공개 표면: 에이전트 위임 + **이웃 몸에 자연어 부탁(ask)** + 메시지/커뮤니티 + 이웃 CRM(연락처는 `neighbor` 의 op) + 남이 브라우저로 닿는 공개 웹 표면(포털·공개파일·가족신문·게시판·발행·팔로우) | delegate, ask, channel_send, channel_read, messages, feed, board, nostr, follow, auto_response, neighbor, portal, showcase, family_news, bulletin, publish, agents |
-| `engines` | 9 | 순수 미디어 생성: 이미지(생성 image_gemini·읽기/평가 image_read[op: read/critic])·아이콘·신문 발행·웹·웹컴포넌트·TTS. 슬라이드는 [self:slide]·동영상은 [self:deck]{op:"video"} 로 일원화(2026-08-05), 통화 변환 문법은 `table` 노드로 분리(2026-06-30). | image_gemini, icon, newspaper, image_read, web, web_site, web_component, tts, render_html |
-| `table` | 21 | 표·통화 변환 문법(관계대수·고차 `each`·AI 변환·emitter). engines에서 분리(2026-06-30) — 무거운 engines를 꺼도(노드 on/off) 가벼운 문법은 생존. `each` 만 코어 src(table.yaml)에 사는 이유 = 실행이 `execute_ibl` 재귀라 엔진 층이 필요(패키지가 엔진을 import 하면 층 역전), 나머지는 패키지 fragment가 공급한다. | filter, sort, take, select, dedup, groupby, join, union, merge, **rename**, **flatten**, **each**, ai, brief, chart, spreadsheet, document, structure |
+현재 수치의 정본은 위 빌드 구간이다. 아래 표는 각 노드의 역할과 대표 예시이며 전수 목록이 아니다.
+
+| 노드 | 역할 | 대표 액션 |
+| --- | --- | --- |
+| `self` | 파일·문서·시트·기억·원장·작업·저장 프로그램 관리 | read, write, document, sheet, memory, forage, ledger, script, task, workflow |
+| `limbs` | 기기·브라우저와 미디어 대상의 조회·조작 | browser, screen, android, phone, guestpc, youtube, radio, cctv |
+| `sense` | 외부 정보와 몸별 감각의 획득 | search, crawl, stock, realty, paper, researcher, phone, here, listen, see |
+| `others` | 위임·소통·이웃·공개 표면 | delegate, ask, messages, feed, neighbor, portal, publish |
+| `engines` | 이미지·음성·웹 등 생성 | image_gemini, image_read, icon, newspaper, web, tts |
+| `table` | 값의 변환·집계·반복·출력 | filter, sort, select, groupby, join, each, chart, spreadsheet, document |
 
 **Phase 25 통합 맥락:**
 - source → sense(78): 외부 정보 인식의 "감각 기관" 역할
@@ -782,11 +788,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 
 ### 수족 노드 — limbs (장치 제어 + 미디어 재생)
 
-| 노드 | 액션 수 | 설명 | 주요 액션 |
-|--------|---------|------|----------|
-| `limbs` | 13 | UI 조작 + 폰 네이티브 동작 + 미디어 재생: 브라우저 자동화, 데스크톱 화면, 안드로이드 폰, phone(진동/알림/TTS), 게스트 PC, 음악, 라디오, CCTV | browser, screen, android, phone, guestpc, music, radio, cctv, launch |
-
-구성: browser(op 26종 통합) + screen(데스크톱 화면) + android(폰 화면 조작) + music/radio(미디어) + cctv + launcher
+구성: browser·screen·android·phone·guestpc 등 기기 제어와 youtube·radio·cctv 등 대상별 조회·조작. 정확한 op·실행 위치는 레지스트리의 액션/연산 계약을 따른다.
 
 | 주요 액션 | 설명 | 예시 |
 |----------|------|------|
@@ -795,16 +797,13 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 | `click` | 요소 클릭 | `[limbs:browser]{op: "click", element: "검색 버튼"}` |
 | `screen` | 데스크톱 화면 제어 (op: snapshot/click/type) | `[limbs:screen]{op: "snapshot"}` |
 | `android` | 안드로이드 폰 화면 조작 (op: snapshot/tap/type/swipe/key/long_press/open_app) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=ADB+uiautomator(USB), 폰 자신=네이티브 AccessibilityService(USB 불필요, 한글은 ACTION_SET_TEXT라 IME 불필요). 핸들러가 INDIEBIZ_PROFILE로 분기 | `[limbs:android]{op: "snapshot"}` → `{op: "tap", query: "전송"}` |
-| `play` | 유튜브/라디오 재생 | `[limbs:youtube]{op: "play", url: "유튜브 링크"}` |
+| `youtube` (channel) | YouTube 동영상·채널 조회 (op 분기). `channel`은 `handle`·`url`·`channel_id` 중 하나를 받음 | `[limbs:youtube]{op: "channel", handle: "@YouTube", limit: 3}` |
+| `youtube` (play) | 유튜브 재생 | `[limbs:youtube]{op: "play", url: "유튜브 링크"}` |
 | `radio` | 방송국 탐색·재생·즐겨찾기 | `[limbs:radio]{op:"stations"}` / `[limbs:radio]{op:"play", station_id:"kbs_coolfm"}` |
 | `cctv` | 카메라 탐색·열기·캡처·소스 관리 | `[limbs:cctv]{op:"search", query:"광화문"}` / `[limbs:cctv]{op:"stats"}` |
-| `download` | 미디어 다운로드 | `[limbs:youtube]{op: "download", url: "유튜브 링크"}` |
+| `youtube` (download) | 유튜브 미디어 다운로드 | `[limbs:youtube]{op: "download", url: "유튜브 링크"}` |
 
 ### 감각 노드 — sense (외부 정보 수집 + 내부 데이터 조회)
-
-| 노드 | 액션 수 | 설명 | 주요 액션 |
-|--------|---------|------|----------|
-| `sense` | 40 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, 뉴스·영상 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search, stock, company, crawl, video, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
 
 구성: 외부 정보 수집(웹 API, 크롤링) 중심. 사진/블로그/건강 등 로컬 DB 조회는 self 노드로 이동(`[self:photo]`/`[self:blog]`/`[self:health]`).
 
@@ -814,7 +813,6 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 | `stock` | 주가·시세 (op 분기) | `[sense:stock]{op: "quote", ticker: "삼성전자"}` |
 | `crawl` | 웹 크롤링 | `[sense:crawl]{url: "https://..."}` |
 | `company` | 기업 펀더멘털 (op 분기) | `[sense:company]{op: "profile", ticker: "삼성전자"}` |
-| `video` | YouTube 동영상·채널 조회 (op 분기). `channel`은 `handle`·`url`·`channel_id` 중 하나를 받음 | `[limbs:youtube]{op: "channel", handle: "@YouTube", limit: 3}` |
 | `stay` | 숙박·단기임대 (source 분기 goodchoice/33m2/tourapi) | `[sense:stay]{region: "제주", type: "hotel"}` |
 | `world_bank` | 세계은행 지표 (지표명·국가명 자연어 내부해소) | `[sense:world_bank]{indicator: "인구", country: "한국"}` |
 | `researcher` | 연구자 검색 (op: find/coauthor) — 국회도서관 국가학술정보(LOSI). 동명이인을 소속·생년으로 분리, 공저자 추적. 인물 찾기 | `[sense:researcher]{op: "find", name: "홍길동"}` |
@@ -874,7 +872,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 - **경로 입력 `browse`:** text 입력에 `browse: "<작업 공간 기준 폴더>"` 를 달면 데스크탑은 그 폴더에서 시작하는 OS 파일 창으로 경로를 고른다(그 외 표면은 글자 입력 그대로 — 새 입력 타입이 아니라 text 의 속성). 문서 앱 "열기"가 시연. 접힌 계기 메뉴(캔버스의 ⚙)에서 입력 있는 탭을 고르면 화면을 옮기지 않고 작은 창에서 입력을 받아 실행하고, 성공했을 때만 결과로 화면을 바꾼다.
 - **인터랙티브 지도 — `map` 프리미티브 + `on:` 뷰-이벤트(2026-06-29):** `type: map`은 봉투(`from: map_data`의 center/path/origin/destination)와 마커 리스트(`markers: items`)를 leaflet으로 그린다. `on:` 맵으로 *사용자 조작을 액션으로* 흘린다 — `moveend`(지도 팬/줌 → `$lat/$lng/$radius` 주입해 재조회, 위치 입력박스 대체) / `marker_click`(마커 클릭 → IBL 템플릿 재조회 `$id/$name/$lat/$lng/$url`, **또는** `{stream: true}` = 마커 url 을 HLS 영상 오버레이로 재생, CCTV). 상호작용도 선언이다 — 표면별 코드 0. **★YAML 함정:** `on:`은 따옴표 필수(`'on':`) — 무인용은 YAML 1.1 불리언으로 파싱돼 무시된다(체커가 RED 로 차단).
 - **결과-필드 동적 필터 — `filter`:** ①정적 `filter: {items: [{label,value}], key}` = 칩 클릭 시 그 값으로 *재조회*. ②동적 `filter: {from_field: <필드>}` = 결과 items 의 그 필드 distinct 값으로 칩 자동 생성 + **클라이언트 측 거르기(재조회 없음, 같은 결과 내 필터)** — 지도 마커·목록 동시 거름. 상권(category)·검색 결과 분류 등. 둘은 상호배타(체커 강제).
-- 탭 계기는 여러 액션이 같은 `instrument:` id + `mode:` 이름 공유 (예: performance+exhibit → 문화공연, search_youtube+music → 유튜브 뮤직). 노드가 달라도 병합된다.
+- 탭 계기는 여러 액션이 같은 `instrument:` id + `mode:` 이름 공유 (예: performance+exhibit → 문화공연, youtube의 검색·재생 → 유튜브 뮤직). 노드가 달라도 병합된다.
 - **리모컨 의미론(2026-06-11 사용자 결정):** 부작용이 집 PC에서 일어나는 계기(라디오·유튜브뮤직 재생, 신문 띄우기)도 원격 노출 OK — `note:`로 "집 PC에서 실행됩니다" 경고만 명확히. 폰-로컬 실행은 폰 네이티브 배포의 일이므로 섞지 말 것.
 - `GET /launcher/instruments`가 app: 블록을 모아 계기 매니페스트로 자동 파생 (api_launcher_web._derive_instruments).
 - 정합성은 `build_ibl_nodes.py --check`의 `validate_app_blocks`가 정적 차단 (참조 액션 실존·$key↔inputs·view 어휘·계기 그룹·템플릿 판본) + 판본 2 앱-템플릿 컴파일 가드.

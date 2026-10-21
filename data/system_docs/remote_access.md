@@ -2,7 +2,7 @@
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, 상주 PC·폰 손발, 미디어 연결, NAS 연동
 owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_surface_remote.py, launcher_react.py, nas_*.py
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 
@@ -47,6 +47,16 @@ Electron 창 연결 코드를 바꾼 경우 앱 재시작이 필요하다.
 > 있다 — 개인 포털 `/h/`·공개 파일 `/s/`·가족신문 `/n/`·게시판 `/b/`·정기보고 `/r/`. 이들은
 > `public-files` Cloudflare Worker가 경로 접두로 분기해 터널로 맥에 서빙하며(레벨/로그인 기반),
 > 별도 문서는 [communication.md](communication.md) "공개 표면 — 커뮤니티당 노드 하나" 참조.
+
+### 화면 공유와 공용 제어 드라이버
+
+PC·폰의 OS 설정과 상태는 화면 공유 없이 `PC제어`·`Android제어`의 공용 실행 경로로 다룬다.
+본체 PC는 `__local__`, 원격 기기는 등록 목록의 실제 `device_id`를 명시한다.
+미접속·사용 중지·미지원 기기는 전송 전에 거절하고, 접수 뒤 미확인은 원 접수증으로 확인한다.
+Android UI는 `ui_contract:1` APK·접근성 권한·전면 동작의 화면 문맥이 필요하다.
+패키지 reload만으로 APK나 헬퍼를 갱신할 수 없다. Windows Chrome 제어는 전용 CDP 프로필이며,
+사용자의 일반 Chrome 탭에 연결하는 기능과 구분한다.
+[대상별 제어 경로·검증 범위](architecture.md#조작면-제어-드라이버).
 
 ### IndieBiz OS 없는 네트워크 기기도 손발이다
 

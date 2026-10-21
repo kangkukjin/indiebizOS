@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-10-18
+last_updated: 2026-10-21
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -173,6 +173,15 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - 상주 PC: 공용 USB 등록 후 장치별 자격·설치 신원을 사용한다. 조종실은 화면 공유·헬퍼 교체·등록 해제를 제공한다. 사용자 로그인 범위로 실행하며 최소 연결과 미디어 구성요소 설치를 분리한다. [헬퍼 계약](../../helper/README.md).
 - Android: USB 최초 등록 뒤 `adapter:indiebiz-v1`의 `op:ibl`로 폰 실행기를 호출한다. `info`는 장치 정보, 판본 2 IBL의 동기 `.result.value`는 업무 값이다. `code` 문자열 안에도 `#!ibl edition=2`를 기록한다. [원격폰 교재](../guides/remote_phone.md).
 - 원격 장기 작업은 준비 결과의 device_id·workspace와 접수증을 이어 쓴다. 동기 실행도 실제 실패와 대기 종료를 구분한다. 대상 PC의 `scripts/remote_steps.py`는 argv 단계·검증·실패 원문·재개를 보존하고 `remote_install.py`는 IndieBiz 업데이트 계획을 만든다. 부팅은 `scripts/remote_boot.py`가 종료까지 소유하는 제한 시간 검사로 확인한다. [원격 실행](../../docs/REMOTE_EXECUTION_CONTINUITY_2026_10_13.md) · [설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md).
+
+### 조작면 제어 드라이버
+
+`data/scripts/pc_control.py`·`android_control.py`가 공용 부품이고, macOS Safari·Chrome은
+`safari_control.py`·`chrome_control.py`의 등록 스크립트다. PC 저장 함수는 본체 `__local__`과
+등록 기기를 구분하며, Windows Chrome은 CDP 전용 프로필을 사용한다.
+기기·실행 환경·관측 판본을 확인한 뒤 요청하고 원 접수증으로 후속 결과를 조회한다.
+연결·원격 관측은 `per_run`으로 새 실행마다 다시 읽으며, 검사 중 지문 공유를 실행 결과 재사용과 혼동하지 않는다.
+대상별 계약·실패 반환·검증 범위는 [아키텍처의 드라이버 표](architecture.md#조작면-제어-드라이버)를 따른다.
 
 ### 미디어 세션 (/media) — api_media.py (2026-10-13, docs/MEDIA_SESSION_CONTRACT.md)
 - `GET /media/capabilities?target=` - 허브(통화·TURN·릴레이 준비) 또는 장치(camera/microphone/speaker/playback 지원·온라인·바쁨)
@@ -365,18 +374,27 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
 `backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code · codex
 - **Anthropic Claude** / **OpenAI GPT** / **Google Gemini**(HTTP 경량 경로 `gemini_http` 포함 — 폰도 쓰는 키-only 경로) / **DeepSeek**(V4 Pro·Flash, OpenAI 호환 API, 2026-07-22 신설) / **OpenRouter** / **Ollama**(로컬) / **claude_code**·**codex**(하네스 렌트)
-- **아웃오브프로세스 CLI 프로바이더 두 종**(`claude_code`·`codex`, 2026-08-31 codex 신설): CLI 를 subprocess 로 띄워 JSONL 을 내부 이벤트 어휘로 번역한다. 몸통은 `providers/cli_provider.py` 의 `CliSubprocessProvider` 공유 — 세션 영속(resume+크기 리셋)·신원 전파(episode/run/task/origin/agent_id 를 env·헤더로)·지도 봉투 재주입·정직 표지 요약·resume 실패 폴백·과부하 backoff 가 전부 거기 산다. 벤더 파일에는 바이너리 탐지·인증 격리·이벤트 번역·도구 정책만 남는다. 둘 다 **구독 인증**이라 API 키가 없다(`model_resolver._NO_KEY_PROVIDERS`; 판정은 `provider_needs_api_key()` 한 곳에서만 — 손복사 집합은 관문 `test_cli_provider_gates` 가 금지한다). 도구 브리지는 같은 `mcp_server.py`(execute_ibl·read_guide)를 공유하며 실명도 `mcp__indiebizos__*` 로 같다.
+- **아웃오브프로세스 CLI 프로바이더 두 종**(`claude_code`·`codex`, 2026-08-31 codex 신설): CLI 를 subprocess 로 띄워 JSONL 을 내부 이벤트 어휘로 번역한다. 몸통은 `providers/cli_provider.py` 의 `CliSubprocessProvider` 공유 — 세션 영속(resume·명시 리셋·유실 복구)·신원 전파(episode/run/task/origin/agent_id 를 env·헤더로)·지도 봉투 재주입·정직 표지 요약·resume 실패 폴백·과부하 backoff 가 전부 거기 산다. 벤더 파일에는 바이너리 탐지·인증 격리·이벤트 번역·도구 정책만 남는다. 둘 다 **구독 인증**이라 API 키가 없다(`model_resolver._NO_KEY_PROVIDERS`; 판정은 `provider_needs_api_key()` 한 곳에서만 — 손복사 집합은 관문 `test_cli_provider_gates` 가 금지한다). 도구 브리지는 같은 `mcp_server.py`(execute_ibl·read_guide)를 공유하며 실명도 `mcp__indiebizos__*` 로 같다.
   - **셸·파일 도구와 IBL의 공존**(2026-10-14): IBL은 셸·도구 사이의 값 전달·실패 처리·재개를 조합해 추가 모델 호출을 줄이기 위한 언어다. 비슷한 어휘가 있다는 이유로 셸이나 네이티브 파일 작업을 강제 변환하지 않는다. 단독 명령은 그 의미를 보존해 직접 실행하고, 조합·재사용이 왕복과 토큰을 줄이는 곳에서 IBL을 선택한다. 자기수리 격리·대상 권한·위험 명령 승인은 실행 수단과 별도로 유지한다. Claude Code는 Read·Grep·Glob·Bash·Write/Edit와 MCP IBL을 함께 제공하고 네이티브 호출의 감독 경계는 유지한다. Codex도 셸·패치를 허용한다. 웹 획득의 기존 브리지 정책은 유지한다. `shell_shadow_gate.py`는 이미 시작된 CLI의 옛 훅을 통과시키는 호환 입구만 남기며, 새 CLI와 run_command는 이 관문을 호출하지 않는다. 도구 정책 지문 변경으로 다음 실행은 이전 강제 정책의 세션을 재사용하지 않는다.
   - ★**자작 관문**(2026-09-07, `backend/base/selfbuild_gate.py`): IBL 쓰기 싱크에서 **"세상에 이미 있는 걸 자작하는 것"** 을 막는다. 지도(`data/guides/world_tools.md`)와 의식 규정의 '세상의 방식'·'전문가의 선택'은 둘 다 *규정 순간*에 서지만 실측된 실패는 늘 *행동 순간*이었다. 판정은 도메인이 아니라 **행동** — 한 턴에 새 구현 코드가 누적 `THRESHOLD_LINES` 줄(파일별 최대치의 합)을 넘었는데 ①세상을 한 번도 확인하지 않았고 ②쓴 코드가 지도의 도구를 하나도 쓰지 않으면 쓰기 싱크(`sink_ops.write_sink`)가 거절하고 다음 한 걸음(지도 열람·`install_lib{check:true}`)을 돌려준다. 확인은 `ibl_routing` 한 자리에서 감지한다(`_route_handler` 의 params 가 지도를 가리키면·`search_guide`·`_install_lib` — 낱말 이름을 코드에 적지 않아 어느 길로 열어도 같게 걷힌다). 몸의 코드(RED·등록 스크립트·패키지)와 데이터·문서는 관할 밖이고, 파이프로 흘러든 본문은 자작이 아니다(모델이 직접 친 `content` 만 센다). 지도는 사람·AI 가 고치는 가이드라 빌드 파생표를 두지 않고 mtime 캐시로 읽는다. 같은 턴의 실제 코드 읽기 본문을 최대 8개·합계 60,000자 보관하고, 그중 한 원본과 일치하는 줄(출현 수 보존)은 복사분으로 제외한다. 변경·추가한 줄은 기존 누적 기준을 따르며, 다른 에이전트·다음 턴에는 이어지지 않는다. 읽었다는 주장이나 다른 파일 자동 탐색은 사용하지 않는다. [물품구매 훈련의 재사용 오탐 수리](../../docs/experiments/long_sentence_imagination/round_58/report.md).
   - **Codex 모델 선택**: AI 설정의 고급·중급·경량과 도구 AI 설정은 `/codex/models`로 설치된 Codex 캐시의 공개 모델과 지원 추론 강도를 읽어 선택 상자를 표시한다. 새 모델은 캐시 갱신으로 반영되며, 캐시가 없을 때도 모델명을 직접 입력할 수 있다. 선택 결과는 기존 `model` 문자열에 저장한다. 직접 입력한 표시명이나 대소문자 변형은 실행 직전에 같은 카탈로그의 정식 슬러그로 해소한다(미등록 사용자 ID는 보존).
   - **Codex 실행 파일 탐색**: `providers/codex.py`의 `find_codex_binary`가 PATH를 우선 사용한다. 맥 GUI 실행에서는 `/Applications`·`~/Applications`의 ChatGPT 앱 내부 `Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`와 기존 `Contents/Resources/codex` 배치를 함께 찾는다. 시스템AI 스트림 오류는 최종 응답과 대화 이력에도 보존해 일반적인 '응답 없음' 안내로 덮지 않는다.
   - **응답 원장으로 라운드를 센다**(2026-09-12 `231328d0`·`cf3f1d98`): 도구 item 수로 모델 왕복을 추정하지 않고 `backend/base/codex_rollout.py` `CodexResponseLedger` 가 `~/.codex/sessions/**/rollout-*.jsonl` 의 `response_id` 를 이번 CLI 호출 이후분만 증분 조회해 `model.round`(trajectory_event) 로 기록한다. 주행기록은 `episode_summary.execution_rounds` 가 비어도 `model.round` 원장에서 같은 집계(`model_call_context.count_execution_rounds` — `execution`·`system_ai` 역할만, 배경 원샷·평가 제외)로 현재까지의 라운드와 IBL 호출 수(`ibl_calls`)를 계산하고, 진행 중 주행은 '진행 중'·'집계 대기'로 표시해 5초마다 재조회한다(데스크탑 `EpisodeJournal.tsx`·원격 `launcher_app_manual.py` 동일). 정본 `docs/CODEX_JOURNAL_2026_09_12.md`.
-  - **턴 안 문맥 압축은 CLI 자체 auto-compact 로, 문턱은 세션 리셋과 같은 창의 절반**(2026-09-18): codex 는 `-c model_auto_compact_token_limit=<SESSION_RESET_TOKEN_THRESHOLD>`, claude_code 는 env `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. 실측(09-15~18 실행 60회): 압축 0회, 76라운드 턴이 문맥을 창 끝까지 키워 라운드마다 통째 재전송(입력 1,224만 토큰 중 70% 가 누적분 재전송, 라운드당 새 입력은 중앙값 5.5K·상위 10% 24K 토큰 — 큰 도구 결과 소수가 몫의 2/3). `base.py` 의 롤링 압축은 in-process 프로바이더 전용이라 CLI 경로엔 없었고 리셋 관문은 다음 턴 시작에만 걸린다. 압축 사건은 `context.compacted`(trajectory_event, `_note_compaction`) 로 센다.
+  - **문맥 압축 정책**: Codex는 설치된 모델 카탈로그의 최대 문맥과 `effective_context_window_percent`를 사용하고, Claude Code는 강제 `CLAUDE_CODE_AUTO_COMPACT_WINDOW` 없이 CLI 기본 관리에 맡긴다. 크기만으로 다음 턴을 fresh 세션으로 바꾸는 조기 리셋은 기본 해제다. 명시적 새 대화·권한 지문 변경·유실 세션 복구는 유지한다. 압축 사건은 `context.compacted`로 관측한다. [모델 문맥 정책](../../docs/MODEL_CONTEXT_POLICY.md).
   - **codex 의 모델 표기 = `슬러그` 또는 `슬러그:추론강도`**(예: `gpt-5.6-sol:high`). Codex 는 모델과 추론강도가 **별개 축**이라(`-m` 과 `-c model_reasoning_effort`), 티어 설정의 `model` 한 칸이 둘을 함께 싣는다. ★별도 설정 칸이 아닌 이유는 편의가 아니라 캐시 정합이다 — 프로바이더 캐시 키가 `bucket|provider|model|keyhash` 라, 강도가 그 문자열 밖에 있으면 같은 슬러그를 쓰는 두 티어(고급=`sol:max` · 중급=`sol:low`)가 **캐시에서 충돌해 에러 없이 강도가 뒤바뀐다**. 강도를 안 적으면 사용자의 `~/.codex/config.toml` 을 따른다(ChatGPT 데스크톱 앱이 바꾸는 값이므로, 재현 가능한 비용·품질을 원하면 티어에 적을 것). 철자가 틀리면 경고 후 무시한다. **모델 슬러그·지원 강도의 정본은 우리가 아니라 `~/.codex/models_cache.json`**(원격 갱신 캐시) — 목록을 문서에 베끼지 않는다(모델명 하드코딩은 은퇴로 죽는다).
   - `--ignore-user-config` 를 원샷 다이어트에 **쓰지 않는다**(2026-08-31 실측 기각): 같은 질문에서 17,222→16,270 토큰(5.5%)만 아끼면서 사용자의 `model_reasoning_effort` 를 빼앗아 원샷만 모델 기본 강도로 떨어뜨린다 — 경로마다 강도가 다르면 비용도 품질도 재현되지 않는다. 남는 16K 는 Codex 자신의 기본 지침·AGENTS.md·작업공간 맥락이라 이 플래그로는 못 깎는다.
   - ★**codex 는 시스템 프롬프트를 붙일 플래그가 없다**(`--append-system-prompt` 등가물 부재). fresh 턴 프롬프트 머리에 싣고 resume 턴엔 생략하므로, 프롬프트가 바뀌면 세션 키(`키#프롬프트해시`)가 바뀌어 자동으로 fresh 로 끊긴다. '새 대화' 리셋은 `providers.clear_cli_sessions_for_agent` 가 접두 스윕으로 파생 키까지 지운다.
 - 모델·API 키는 **모델 기어**가 해소한 티어에서 상속(에이전트별 설정 폐지). 구체 모델 ID 는 `data/*_ai_config.json` 슬롯이 보유 — 이 문서는 목록만 유지(모델명은 빨리 낡는다). **API 키의 자리는 `.env`** 가 우선이다(`model_resolver.env_var_for_provider`/`set_env_key`, 2026-09-11 `5bb6aa43` — 저장 시 키를 먼저 `.env` 로 옮긴 뒤 설정 파일을 원자 교체하고, 옛 슬롯 파일 안의 키는 이행용 대체값, 조회는 파일을 이전하지 않는다. 설정 읽기·기본값·디스크립터·저장 전부 `model_resolver` 소유).
 - ★함정: Gemini `flash-latest` 별칭은 `thinkingConfig.thinkingBudget:0` 을 400 으로 거부 — 버전 명시(`gemini-2.5-flash`) 필요.
+
+### Claude Code 지침·응답 언어 격리
+
+실행·의식·원샷 분기는 `--setting-sources ""`로 CLI 설정 원천을 비우고,
+`CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`로 CLI 자동 기억을 차단한다. 하네스의 공통 지침과
+기억 조립은 유지한다. 사용자 발화의 언어는 CLI의 `language` 설정에도 전달하며,
+판정할 수 없으면 키를 생략한다. 코드·실측·남은 관측 범위는
+[지침 누출 감사](../../docs/AGENT_INSTRUCTION_LEAK_AUDIT_2026_10_20.md)와
+[답변 언어 추적](../../docs/ANSWER_LANGUAGE_TRACE_2026_10_20.md)을 따른다.
 
 ### Tool Result 절삭
 - **기본 한도**: 16KB — tool result가 이 크기를 초과하면 절삭
@@ -549,6 +567,8 @@ Vite `uiCatalogPlugin`(`frontend/scripts/ui-catalog.mjs`·`ui-compiler.mjs`)이 
 ### 회귀 시험 실행 (2026-10-04)
 
 일상 회귀는 병렬(pytest-xdist)로 돌고, 전체 재생이 필요한 고비용 검사는 `system` 표지로 분리돼 있다. 변경한 파일에서 관련 시험을 고르는 선택기는 `scripts/select_tests.py`. 시험은 런타임 저장소·스필 루트를 워커 단위 임시 경로로 격리하며, 시험이 추적 파일이나 실제 저장소에 쓰면 세션 관문이 실패시킨다. 규약 정본: `docs/REGRESSION_TESTING.md`.
+
+**에이전트 작업 기록**은 재기동을 넘어 보존된다. 종료 후 보존 만료와 미접수를 구분하며, 다른 작업 종류의 보존 정책과 혼동하지 않는다. [접수증 수명·조회 계약](ibl.md#작업-접수증과-대기--긴-작업의-공통-관찰제어-2026-10-05-설치-목록-③).
 
 ### 기기 작업 전달과 재기동
 

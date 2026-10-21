@@ -3,6 +3,7 @@ import { Plus, History, X } from 'lucide-react';
 import type { Project } from '../types';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 import { ResearchConversation } from './research/ResearchConversation';
+import { ResearchThreadRow } from './research/ResearchThreadRow';
 import { researchCall, type ResearchThread } from './research/api';
 
 /** 대화 입력·첨부·메시지 표시는 일반 프로젝트의 공통 채팅 컴포넌트를 사용한다. */
@@ -65,9 +66,15 @@ export function ResearchProjectView({ project }: { project: Project }) {
         <button disabled={!title.trim()} className="px-3 py-2 rounded-lg bg-[#D97706] text-white disabled:opacity-50">만들기</button><button type="button" onClick={() => setCreating(false)}>취소</button>
       </form>}
       <div className="flex-1 min-h-0 overflow-auto">
-        {threads.map(thread => <button key={thread.id} onClick={() => {setSelected(thread.id);history.current?.close();setCreating(false);}} aria-current={selected === thread.id} className="block w-full text-left px-3 py-3 rounded-xl hover:bg-white/60">
-          <span className="block font-medium">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}</span>
-        </button>)}
+        {threads.map(thread => <ResearchThreadRow key={thread.id} thread={thread} selected={selected === thread.id}
+          onSelect={() => {setSelected(thread.id);history.current?.close();setCreating(false);}}
+          onRename={async (title, revision) => {
+            const result = await researchCall(uid, 'thread_update', {
+              thread_ref: thread.id, title, ...(revision !== undefined ? { expected_revision: revision } : {}),
+            });
+            const updated = (result.items as ResearchThread[])[0];
+            setThreads(previous => previous.map(item => item.id === thread.id ? { ...item, ...updated } : item));
+          }} />)}
         {!threads.length && <p className="p-3 text-sm text-[#A09080]">새 대화를 만들어 시작하세요.</p>}
       </div>
     </dialog>

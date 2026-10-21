@@ -4,6 +4,7 @@ import { runIBL, IMAGE_BASE } from '../generic/manifest';
 export interface ResearchThread {
   id: string; thread_ref: string; title: string; updated_label: string;
   active_run?: string | null; archived?: boolean;
+  revision?: number;
 }
 export interface SavedAttachment { name: string; version_ref: string; mime: string; path: string }
 export interface ResearchMessage {

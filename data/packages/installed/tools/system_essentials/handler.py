@@ -807,10 +807,6 @@ def _execute(tool_input: dict, context) -> str:
             content, total, start, end, ranged, truncated = _file_io.read_text_window(
                 path, tool_input, _text_read_bounds,
                 max_chars=None if structured else _file_io.TEXT_PREVIEW_CHARS)
-            # 읽은 코드의 조건만 바꿔 다른 파일에 저장하는 것은 전량 새 구현이 아니다.
-            # 실제 반환한 창만 기록하며, 신원·턴 경계와 보존 상한은 관문이 소유한다.
-            from selfbuild_gate import note_code_read
-            note_code_read(agent_id or "", path, content)
             if tool_input.get("blocks") and data_format == "json" and not ranged and not truncated and content.strip():
                 parsed = _file_io.structured_data(content, data_format, path)
                 return json.dumps({"success": True, "text": content, "blocks": [],

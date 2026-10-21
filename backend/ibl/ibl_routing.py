@@ -334,16 +334,6 @@ def _route_handler(mapped_tool: str, params: dict,
     """
     from tool_loader import load_tool_handler
 
-    # 자작 관문의 '확인' 감지 — 어떤 액션이든 파라미터가 세상의 도구 지도를 가리키면
-    # 그 턴은 확인한 것으로 친다(2026-09-07). 낱말 이름을 골라 적지 않으므로
-    # [self:read]·[self:grep]·[self:list] 어느 길로 지도를 열어도 같게 걷힌다.
-    try:
-        if "world_tools" in str(params):
-            from selfbuild_gate import note_consult
-            note_consult(agent_id or "", "지도 열람")
-    except Exception:
-        pass
-
     if not mapped_tool:
         return {"error": "매핑된 도구가 없습니다."}
 
@@ -778,14 +768,6 @@ def _install_lib(params: dict) -> dict:
         return {"error": "설치할 라이브러리를 package 로 지정하세요. 예: [self:install_lib]{package: \"duckdb\", check: true}"}
     check_only = params.get("check") in (True, "true", "True", 1, "1", "yes")
 
-    # 세상의 도구를 물어본 것 자체가 자작 관문의 '확인'이다 (2026-09-07).
-    try:
-        from thread_context import get_current_agent_id
-        from selfbuild_gate import note_consult as _sb_ok
-        _sb_ok(get_current_agent_id() or "", f"install_lib({package})")
-    except Exception:
-        pass
-
     import install_approvals
     name = install_approvals.canonical_name(package)
 
@@ -1188,12 +1170,6 @@ def search_guide(query: str, params: dict) -> Any:
     result = _search_guide(query, params)
     if isinstance(result, dict) and (result.get("content") or result.get("guide_content")):
         result["catalog_revision"] = revision
-    if (params.get("read", True) and isinstance(result, dict)
-            and (result.get("content") or result.get("guide_content"))
-            and result.get("file") in {"world_tools.md", "world_tools_local.md"}):
-        from thread_context import get_current_agent_id
-        from selfbuild_gate import note_consult
-        note_consult(get_current_agent_id() or "", f"read_guide({result['file']})")
     from guide_registry import guide_read_view
     return guide_read_view(result, params) if isinstance(result, dict) else result
 

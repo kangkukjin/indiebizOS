@@ -1,6 +1,6 @@
 ---
-title: 메모리 아키텍처 — 8종 기억 통합 지도
-scope: indiebizOS의 모든 기억 하위 시스템(의미·작업·일화·절차(실행기억)·관계(심층기억)·자기상태·공간(포식)·세계)의 저장/사용/학습 흐름
+title: 메모리 아키텍처 — 7종 기억 통합 지도
+scope: indiebizOS의 모든 기억 하위 시스템(의미·작업·일화·절차(실행기억)·관계(심층기억)·자기상태·공간(포식))의 저장/사용/학습 흐름
 owner_code: >
   ibl_usage_db.py, ibl_usage_rag.py, memory_db.py, agent_cognitive.py,
   episode_logger.py, world_pulse.py, world_pulse_health.py,
@@ -8,16 +8,16 @@ owner_code: >
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
-  catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-10-21
+  tree_recall.py, associative_recall.py, cognitive_recall.py
+last_updated: 2026-10-22
 see_also: [architecture.md, ibl.md]
 ---
 
-# 메모리 아키텍처 — 8종 기억 통합 지도
+# 메모리 아키텍처 — 7종 기억 통합 지도
 
-> indiebizOS의 메모리는 단일 시스템이 아니라 **여덟 개의 독립 하위 시스템**으로 구성된다.
-> 앞의 일곱은 인간 기억 분류와 거의 정확히 대응하고, 여덟째(세계 기억)는 모델이 이미 가진 지식으로 가는 다리다(2026-09-17 독립 종으로 승격 — 그전에는 #1 의 하위 절). 이 문서는 그 전체 지도다.
-> (해마 단일 시스템의 상세는 아래 **부록: 연상기억 심층** 참조 — 본 문서는 그것을 8종 중 하나로 위치시킨다.)
+> indiebizOS의 메모리는 단일 시스템이 아니라 **일곱 개의 독립 하위 시스템**으로 구성된다.
+> 일곱 기억은 인간 기억 분류에 대응한다. 방법·도구의 선택은 의식의 ‘세상의 방식’과 실행자가 맡는다. 세계의 지도는 2026-10-22 은퇴했고 [수집 자료](../../docs/world_map/retired_2026_10_22/README.md)는 기록으로 보존한다.
+> (해마 단일 시스템의 상세는 아래 **부록: 연상기억 심층** 참조 — 본 문서는 그것을 7종 중 하나로 위치시킨다.)
 
 ## 철학
 
@@ -29,7 +29,7 @@ see_also: [architecture.md, ibl.md]
 
 ---
 
-## 한눈에 — 8종 메모리
+## 한눈에 — 7종 메모리
 
 | # | 인간 기억 | indiebizOS 구현 | 저장소 | 무엇을 기억하나 |
 |---|---|---|---|---|
@@ -40,12 +40,10 @@ see_also: [architecture.md, ibl.md]
 | 5 | **관계 기억** (사용자 사실) = 통칭 **심층기억** | **심층메모리** | 에이전트별 `memory.db` (memory 패키지) | 사용자 선호·결정·중요날짜·작업기록 |
 | 6 | **자기 상태** (항상성) | World Pulse + Self-Check | `world_pulse.db:pulse_log / self_checks / action_health` | 세계·사용자·자신의 실시간 상태와 건강 |
 | 7 | **공간 기억** (포식) | **포식 기억(냄새지도)** | 정본=문서 트리 `data/forage_surveys/<몸>/<경로>/memory.md` · `forage_memory.db:forage_map`=색인 | "어디에 무엇이 사는가" — 디스크·웹 포식 경험 누적 |
-| 8 | **세계 기억** (지식의 단서) | **세계의 지도** + 가지 사전 | `data/knowledge_catalog/world.yaml` · `atlas/*.yaml` · `foundation/*.yaml` · `outline.yaml` · `branches.yaml` | "세계를 이해하고 다루는 데 어떤 개념·방법·도구가 있는가" — 이름·분류·관계만. 내용은 모델 가중치에 |
 
 > **핵심 연결**: 매 요청마다 단계 0에서 생성되는 **연상기억(associative memory)** 은 **공통 흐름 `backend/cognition/associative_recall.py`**(2026-09-18, 정본 `docs/ASSOCIATIVE_RECALL_COMMON_FLOW_2026_09_18.md`)가 조립한다 —
-> 정책 표 `SOURCES`(공급원·상·주체 관문·자동 여부)와 `CHANNELS`(채널별 켬/끔)대로 #4 해마(`<execution_memory>`)·#5 심층메모리의 **지도**(`<memory_map>`)와 선택 기억·가이드 목차·손발·수리 결말·결정 원장(1상, 분류 전)과 #8 세계 지도(2상, 분류 뒤)를 **한 묶음**으로 만들고, 회상 통계(`recall.reflex`, 호환 이름)를 이름 붙여 내며, 제시를 `recall.presented` 사건으로 남긴다. 검색기·후보의 뜻·성공의 정의는 기억별로 남는다(해마 전용 인코더 유지). 포식 기억은 표에 `auto=False` 로 실려 자동 주입되지 않는다. 채널을 가르는 예외는 없다(에이전트 간 경로·스위치도 같은 묶음, 2026-09-18 판정) · 후보 수는 `BUDGET` 표. 세 트리 기억의 **가지 문서 기질**(표식·절·요약·갱신 기록·도장·동기화 계획)은 `backend/datastore/tree_doc.py` 한 벌이고 줄 문법·식별·검증·저장만 기억별이다(2단계 ④). 관문 `scripts/check_recall_assembly.py`, 동작 불변 고정물 `scripts/recall_golden.py`. **제시→사용 결합**(2단계 ①): 턴 끝 `record_usage` 가 기억별 해석기(해마 executed·세계 mentioned·심층 expanded/confirmed)로 무엇이 쓰였는지 가르고 턴 종료 `recall.used(phase=turn)`로 즉시 남긴다. 중단·증류 생략에도 기록하며, 증류의 후속 확인은 같은 recall_id로 합쳐 중복 집계하지 않는다. 재개 큐는 원래 episode/run을 복원하고 보고는 미관측과 미사용을 구분한다 — 점수·성공률은 안 고친다(관측). 보고 `scripts/recall_usage_report.py`.
+> 정책 표 `SOURCES`(공급원·상·주체 관문·자동 여부)와 `CHANNELS`(채널별 켬/끔)대로 #4 해마(`<execution_memory>`)·#5 심층메모리의 **지도**(`<memory_map>`)와 선택 기억·가이드 목차·손발·수리 결말·결정 원장(1상, 분류 전)을 **한 묶음**으로 만들고, 회상 통계(`recall.reflex`, 호환 이름)를 이름 붙여 내며, 제시를 `recall.presented` 사건으로 남긴다. 검색기·후보의 뜻·성공의 정의는 기억별로 남는다(해마 전용 인코더 유지). 포식 기억은 표에 `auto=False` 로 실려 자동 주입되지 않는다. 채널을 가르는 예외는 없다(에이전트 간 경로·스위치도 같은 묶음, 2026-09-18 판정) · 후보 수는 `BUDGET` 표. 세 트리 기억의 **가지 문서 기질**(표식·절·요약·갱신 기록·도장·동기화 계획)은 `backend/datastore/tree_doc.py` 한 벌이고 줄 문법·식별·검증·저장만 기억별이다(2단계 ④). 관문 `scripts/check_recall_assembly.py`, 동작 불변 고정물 `scripts/recall_golden.py`. **제시→사용 결합**(2단계 ①): 턴 끝 `record_usage` 가 기억별 해석기(해마 executed·심층 expanded/confirmed)로 무엇이 쓰였는지 가르고 턴 종료 `recall.used(phase=turn)`로 즉시 남긴다. 중단·증류 생략에도 기록하며, 증류의 후속 확인은 같은 recall_id로 합쳐 중복 집계하지 않는다. 재개 큐는 원래 episode/run을 복원하고 보고는 미관측과 미사용을 구분한다 — 점수·성공률은 안 고친다(관측). 보고 `scripts/recall_usage_report.py`.
 > 해마는 fine-tuned 임베딩으로 검색된다. 심층메모리는 **재학습하지 않는 기본 인코더**(`ko-sroberta`)를 쓰며, 지도와 함께 가지 먼저 고른 기억 3건이 자동 주입된다(2026-09-17 — §5). 모자라면 AI 가 `[self:memory]{op:"recall", node}` 로 가지를 연다.
-> #8 세계 기억(`<method_map>`·`<world_map>`·`<world_memory>`)은 심층기억과 **같은 가지-먼저 회상 함수**(`tree_recall.py`)를 쓰지만 채널은 따로이며, 해마 점수·Reflex 판정·개인 사실 회상에는 섞이지 않는다.
 
 ---
 
@@ -318,49 +316,6 @@ metadata가 같아도 내용·목록의 동일성은 unknown이다. content의 u
 
 ---
 
-## 8. 세계 기억 — 세계의 지도 (AI 가 이미 가진 지식으로 가는 다리)
-
-> **다른 일곱과의 차이: 내용을 담지 않는다.** 모델 가중치에는 세계의 개념·방법·도구 지식이 이미 있지만, 이름이 불리지 않으면 떠오르지 않는다. 세계 기억은 그 지식의 **이름·분류·관계만** 구조화해 두고 턴마다 작게 건넨다 — 기억의 내용은 모델 안에, 단서는 여기에. #1 의미 기억이 *시스템 자신*에 대한 지식이라면 이것은 *바깥 세계*에 대한 지식이고, #5 심층기억이 *주인 개인*의 사실이라면 이것은 누구에게나 같은 공용 어휘라 회원·위임 에이전트에도 실린다.
-
-`data/knowledge_catalog/world.yaml`과 fragments는 개념·방법·도구·자료원의 이름·분류·뜻·별칭과
-검토된 문제–방법–도구 관계·근거를 담는다. 전체 지도 크기는 턴마다 주입하는 정보량과 별개다. 이름과 위치에서 전문지식을 회상하거나 검색하도록 돕는다.
-적절한 기존 접근을 유지하며 대안이나 관점 전환을 강제하지 않는다.
-`catalog_recall`이 과제 연결 뒤 의식 이전에 한 번 검색한다. names 모드는 종전 4항목·600자,
-structure 모드는 seed 4·노드 16·관계 20 한도와 별도 문맥 예산을 사용한다.
-UTF-8 바이트/2 추정 1800토큰·6000문자는 조각의 비정상 팽창을 막는 상한이며 지도 크기의 제한이 아니다.
-실제로는 이름과 관계만 전달한다. 뜻·긴 설명·출처·조회 명령·해시·반복 안내는 주입하지 않는다.
-관계에 명시된 적용 범위와 어휘 구별용 범위는 유지한다.
-근거 정보는 검증과 내부 WorldContext에 보존한다. 추정값은 모델 실측 토큰이 아니다.
-`<method_map>` 안의 같은 어휘 조각을 의식과 실행 가변 문맥에 전달한다.
-**세계의 기억(의미 채널, 2026-09-17)**: 글자 일치는 이름을 실제로 말했을 때만 닿는다(새 표현 2/24). 그 옆에 `catalog_recall.world_memory_for_turn` 이 `<world_map>`(최상위 분야 한 줄)과 `<world_memory>`(가지 사전 `data/knowledge_catalog/branches.yaml` 로 **가지 2개를 먼저** 고른 뒤 그 안 2건 + 밖 1건, `분류 경로: 이름`)를 싣는다 — 심층기억의 `<recalled_memory>` 와 같은 함수(`backend/datastore/tree_recall.py`), 정본 `docs/TREE_MEMORY_RECALL_COMMON_DESIGN_2026_09_17.md`. 글자 조각에 이미 나온 이름은 뺀다. 에이전트 간 위임 경로(`agent_communication`)도 같은 블록을 받는다. 끄는 키는 `knowledge_catalog.world_memory`(기본 켬 — 옛 자리표 `semantic_enabled` 는 읽지 않는다). 관련 없음은 기계가 가르지 못하므로(실측) 작게 싣고 판단은 받는 AI 가 한다.
-revision/digest는 내부 WorldContext와 사건에만 남긴다.
-개인 사실의 회상·해마 점수에는 섞지 않는다.
-
-`world_pulse_config.json`의 `knowledge_catalog`는 미설정이어도 켜지며 mode 기본값은 structure다.
-모든 작업 에이전트의 공통 인지 경로에서 회상한다. 시스템·프로젝트·회원·위임 에이전트와
-강제 역할·문맥 갱신에도 적용한다. 과거 에이전트 허용 목록은 적용하지 않는다.
-전체 진단용 enabled=false만 명시적으로 끌 수 있다. 모델 호출이 없는 세션 초기화에는 필요 없다.
-세계 어휘 공유는 주인의 개인 기억 회상이나 실행 권한을 허용하는 것이 아니다.
-설정 변경은 다음 턴에 반영된다. 로컬 어휘·FTS 검색이며 추가 모델 호출은 없다.
-근거 문서가 바뀐 관계는 stale로 자동 확장에서 제외한다. 필수 조건의 이름을 동봉하고 충족 여부 unknown은 내부에 보존하며
-담을 수 없으면 묶음을 생략한다. 정본 오류는 기록 후 생략하고 낡은 색인은 어휘 검색으로 폴백한다.
-선택·관계·생략·digest·추정 토큰·지연은 `knowledge_catalog.selected` 사건에 남는다.
-자동 생략과 별개로 등록 스크립트 `세계지도`에서 전체 search/browse/open/neighbors/ancestors 조회가 가능하다.
-이름을 모를 때는 browse의 빈 path에서 분야를 열고 하위 분류로 내려간다.
-어휘 일치가 없고 검색어 전체가 정확한 분류명일 때에는 그 분류의 항목을 반환한다.
-분야 골격은 `data/knowledge_catalog/outline.yaml`에 먼저 선언하고 기존 어휘 배치와 빈 가지 보강을 거친다.
-`branches.yaml`은 같은 가지의 검색 단서를 맡고, `atlas/*.yaml`·`foundation/*.yaml`·`concepts/*.yaml`은 실제 항목을 담는다.
-`outline.yaml`의 세부 주제까지 항목 벡터와 browse 경로에 담되 자동 가지 선택은 앞 두 단에서 한다.
-파일 묶음 전체를 내용 바이트로 캐시하여 조각 수가 개별 문서 캐시보다 많아도 재해석하지 않는다.
-범위와 만 개 합성 부하 실측은 [세부 확장 기록](../../docs/WORLD_MAP_DEPTH_2026_09_22.md)을 따른다.
-골격 밖 항목·빈 계획 가지·사전 불일치는 빌드 검사로 확인한다. [확장 기록](../../docs/WORLD_MAP_TOPDOWN_2026_09_22.md).
-이름·별칭·분류의
-편집 초안과 관계의 외부 확인 범위는 source 기록으로 구별한다. YAML은 내용 바이트에 따라
-파싱 결과를 재사용하므로 큰 지도도 매 턴 전체를 다시 해석하지 않으며 내용 변경은 바로 반영한다.
-[구현 계약](../../docs/WORLD_MAP_STRUCTURE_PLAN_2026_09_17.md) · [사용법](../guides/world_map.md).
-
----
-
 ## 회상의 주체 관문 (2026-09-14)
 
 **회원 세션의 기억(외부 서비스 앱 1단계, 2026-09-14)**: 회원 주체(`member:<id>`)의 턴은 주인 저장소에 쓰지 않는다 —
@@ -374,7 +329,7 @@ revision/digest는 내부 WorldContext와 사건에만 남긴다.
 쓰지 않는다 — 실행 에이전트 이름이 아니라 전송 관문이 세운 주체가 축이다(`base/principal.py`, communication.md "행위자
 봉투"). 회원 자기 기억의 회상은 외부 서비스 앱 1단계(손발 회상)에서 연다. 시험 `backend/test_principal_isolation_2026_09_14.py`.
 
-## 요청 1건에서 8종 메모리가 협력하는 흐름
+## 요청 1건에서 7종 메모리가 협력하는 흐름
 
 ```
 사용자 입력
@@ -384,7 +339,6 @@ revision/digest는 내부 WorldContext와 사건에만 남긴다.
   ├─[4b 해마]     유사 IBL 선례 검색 → 회상 통계(recall.reflex, 호환 이름) ┐ 공통 흐름 associative_recall 1상(분류 전) —
   ├─[5 심층메모리] 기억 지도(가지 목차)+가지 먼저 고른 3건      ┘ 가이드 목차·손발·수리 결말·결정 원장까지 한 묶음(<execution_memory>+<memory_map>+<recalled_memory>+…)
   ├─[7 포식기억]   일반 턴 자동 주입 없음(2026-09-03 폐지) — AI 가 [self:forage]{op:"recall", locus|query} 로 직접 연다. 프로젝트 에이전트만 자기 폴더 문서를 안정 프롬프트에 통째(<project_memory>)
-  ├─[8 세계기억]   공통 흐름 2상(분류·과제 목차 뒤·의식 이전 1회): 글자 일치(<method_map>) + 가지 먼저 고른 의미 3건(<world_map>+<world_memory>) — 이름·관계만, 모델 호출 없음. 제시 기록 = recall.presented 사건
   ├─[결정원장]     사용자 판정 다이제스트 상시 + 질의 일치 상세 (<decision_ledger>, 정본=data/decisions.yaml)
   │     │
   │     ├ 무의식 REFLEX/EXECUTE 판정 → 짧은 별도 문맥/전체 문맥으로 실행 (회상 점수와 무관)
@@ -399,7 +353,6 @@ revision/digest는 내부 WorldContext와 사건에만 남긴다.
   ├─[5 심층메모리] 대화에서 사용자 사실 자동 증류 → 저장/업데이트  ← 사용자 지식 흡수 루프
   ├─[4b 해마]      점수<0.7 & 성공 → 경험 증류 → 절차기억 누적     ← 절차 학습 루프
   └─[7 포식기억]   포식 시 지도·자료 의미와 근거 증류 → surface 표식 → 정리     ← 공간 학습 루프
-  (8 세계기억은 턴에서 쓰지 않는다 — 증류 루프 없음. 갱신 = atlas/*.yaml 편집)
 ```
 
 > **결정 원장** (2026-08-29 신설): `data/decisions.yaml` — 사용자가 내린 설계 판정(기각·채택·보류)의
@@ -579,7 +532,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 과거 날짜의 의미와 미상 값은 보존한다. 사용법·보수적 지문의 범위·외부 상태 미포함은
 [몸의 변화 가이드](../guides/body.md)의 「구성요소 수명」 절이 정본이다.
 
-기억 8종 중 DB 기억(심층·해마·포식)에는 LRU·cap 가지치기가 있었지만 **가이드·워크플로우·스크립트·낱말**에는
+기억 7종 중 DB 기억(심층·해마·포식)에는 LRU·cap 가지치기가 있었지만 **가이드·워크플로우·스크립트·낱말**에는
 망각이 없었다 — 깃발 순찰 일곱이 보고만 하고 정리는 사람 손이었다(2026-08-17 81KB, 09-02 세 가이드 다이어트).
 세대 교체가 없는 한 개체는 죽음을 구성요소 수준으로 들여와야 한다는 설계(docs/COMPONENT_APOPTOSIS_HANDOFF.md):
 - **죽음**(`backend/cognition/component_lifecycle.py`, 일일·무LLM): 생존 = 영양 지지(가이드·프롬프트·트리거·일정·
@@ -596,7 +549,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
   **기계 대조가 관문**: 살아 있는 어휘 참조·절 제목·코드 경로 보존 + 더 짧음. 탈락은 파일 무접촉·`unchecked`.
 - 회귀 고정물 `backend/test_component_lifecycle.py`·`backend/test_guide_downscale.py`. 자기점검 노드 `__telemetry__:component_lifecycle`·`guide_downscale`.
 
-*이 문서는 8종 메모리의 통합 지도다. 개별 시스템 변경 시 본 표와 흐름도를 함께 갱신할 것.*
+*이 문서는 7종 메모리의 통합 지도다. 개별 시스템 변경 시 본 표와 흐름도를 함께 갱신할 것.*
 
 
 ---
@@ -1035,7 +988,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 | `backend/cognition/ibl_usage_rag.py` | `build_execution_memory()` — (xml, top_score, top_code) 반환, `distill_experience()` |
 | `backend/datastore/ibl_usage_db.py` | 해마 검색 엔진 (시맨틱 + FTS5 폴백, 점수 0~1 정규화) |
 | `backend/ibl_embedding_trainer.py` | 해마 학습 스크립트 (베이스 모델에서 fine-tuning) |
-| `backend/cognition/associative_recall.py` | 연상 공통 흐름 — `begin()`(1상)·`route()`(2상)·`text()`·`presented()`, 정책 표 `SOURCES`/`CHANNELS`, 공급원 함수(해마·심층 지도/선택·가이드·손발·수리·판정·세계) |
+| `backend/cognition/associative_recall.py` | 연상 공통 흐름 — `begin()`(1상)·`route()`(2상)·`text()`·`presented()`, 정책 표 `SOURCES`/`CHANNELS`, 공급원 함수(해마·심층 지도/선택·가이드·손발·수리·판정) |
 | `backend/cognition/cognitive_recall.py` | 러너 쪽 입구 `_associate()`(위임만) + 포식 의도 단서 `_FORAGE_CUES` |
 | `data/packages/installed/tools/memory/memory_db.py` | 심층메모리 (시맨틱 우선 + LIKE 폴백, 2026-05-16 시맨틱 추가) |
 | `backend/services/chat_streams.py` | GUI/WS 실행 서비스 — 인지 파이프라인 호출·대화/작업 기록·스트림 전달 (인증/수신은 api_websocket) |

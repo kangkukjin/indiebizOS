@@ -80,16 +80,16 @@ def test_approved_then_install_consumes_approval(gate):
     assert ia.list_state() == {"pending": {}, "approved": {}}
 
 
-def test_world_tools_map_registered_and_pointed_to():
-    guide = ROOT / "data" / "guides" / "world_tools.md"
+def test_library_install_map_registered_and_pointed_to():
+    guide = ROOT / "data" / "guides" / "library_install.md"
     assert guide.exists() and guide.stat().st_size <= 36000
     text = guide.read_text(encoding="utf-8")
     assert "check: true" in text and "자동 설치는 없다" in text
     db = json.loads((ROOT / "data" / "guide_db.json").read_text(encoding="utf-8"))
-    entry = next(g for g in db["guides"] if g["id"] == "world_tools")
-    assert entry["file"] == "world_tools.md" and entry.get("topic")
+    entry = next(g for g in db["guides"] if g["id"] == "library_install")
+    assert entry["file"] == "library_install.md" and entry.get("topic")
     frag = (ROOT / "data" / "common_prompts" / "fragments" / "12_ibl_only.md").read_text(encoding="utf-8")
-    assert "world_tools.md" in frag and "check: true" in frag and "자동 설치는 없다" in frag
+    assert "library_install.md" in frag and "check: true" in frag and "자동 설치는 없다" in frag
     src = (ROOT / "data" / "ibl_nodes_src" / "self.yaml").read_text(encoding="utf-8")
     assert "check:true" in src.split("install_lib:", 1)[1].split("group:", 1)[0]
 

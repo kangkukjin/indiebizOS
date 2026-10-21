@@ -95,3 +95,31 @@ def test_device_rows_expose_observation_count_only(monkeypatch):
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize("channel", list(recall.CHANNELS))
+@pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REFLEX", "REPAIR", "CONTEXT_UPDATE"])
+def test_retired_world_catalog_is_not_searched_or_presented(monkeypatch, channel, route):
+    """모든 공통 진입점에서 기존 기억은 남고 방법 목록은 분류 후에도 추가되지 않는다."""
+    from dataclasses import replace
+    import episode_logger
+    expected = {"hippocampus", "reusable_capabilities", "memory_map", "recalled_memory",
+                "guide_map", "connected_limbs", "pending_repair", "decision_ledger"}
+    calls, events = [], []
+    def read(source):
+        def run(*args, **kwargs):
+            calls.append(source.name)
+            return recall.Block(source.name, source.tag, f"<{source.tag}>기존 기억</{source.tag}>")
+        return run
+    monkeypatch.setattr(recall, "_principal_ok", lambda: True)
+    monkeypatch.setattr(recall, "SOURCES", tuple(replace(s, fn=read(s)) if s.fn else s for s in recall.SOURCES))
+    monkeypatch.setattr(episode_logger, "record_trajectory_event", lambda kind, data: events.append((kind, data)))
+    result = recall.begin(None, "직원 근무표를 제약을 지키며 짜야 한다", channel=channel)
+    result.attach("pursuit", "<pursuit>현재 과제</pursuit>")
+    result.route(route)
+    assert set(calls) == expected and len(calls) == len(expected)
+    assert {b["source"] for b in result.presented()} == expected | {"pursuit"}
+    assert "현재 과제" in result.text() and "기존 기억" in result.text()
+    result.route(route)
+    assert len(events) == 1 and events[0][0] == "recall.presented"
+    assert not {"method_map", "world_memory"} & set(recall.USAGE)

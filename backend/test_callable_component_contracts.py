@@ -27,18 +27,17 @@ def call(name, args):
     return result
 
 
-@pytest.mark.parametrize('name', ['세계지도','이미지변환','압축','PC제어부품','TV제어',
+@pytest.mark.parametrize('name', ['이미지변환','압축','PC제어부품','TV제어',
                                   'python_libraries','시험','의약품허가조회'])
 def test_contracts_validate_and_keep_conservative_effects(name):
     contract = REG[name]['callable_contract']
     validate_contract(contract)
-    if name in ['세계지도','이미지변환','압축','PC제어부품','TV제어']:
+    if name in ['이미지변환','압축','PC제어부품','TV제어']:
         assert contract['effects'] == ['unknown']
         assert contract['result'] != 'Record' or contract.get('variants')
 
 
 @pytest.mark.parametrize('name,args', [
-    ('세계지도',{'op':'open'}), ('세계지도',{'op':'search','limit':0}),
     ('이미지변환',{'op':'info','path':'a','out_dir':'ignored'}),
     ('이미지변환',{'path':'a','width':50,'scale':.5}),
     ('압축',{'op':'list','path':'a','overwrite':True}), ('압축',{'op':'unpack','paths':['a']}),

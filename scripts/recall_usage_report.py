@@ -18,8 +18,8 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend"))
 import boot_paths  # noqa: E402,F401
 
-LABEL = {"hippocampus": "실행기억(해마)", "recalled_memory": "심층기억(선택)", "method_map": "세계 지도(글자)",
-         "world_memory": "세계의 기억(의미)"}
+LABEL = {"hippocampus": "실행기억(해마)", "recalled_memory": "심층기억(선택)", "method_map": "세계 지도(글자·과거 기록)",
+         "world_memory": "세계 기억(의미·과거 기록)"}
 
 
 def _rows(days: int):
@@ -47,12 +47,6 @@ def _name_of(source: str, item_id: str) -> str:
             finally:
                 conn.close()
             return (row[0] if row else item_id)[:50]
-        if source in ("method_map", "world_memory"):
-            from knowledge_catalog import load_snapshot
-            from runtime_utils import get_base_path
-            for e in load_snapshot(get_base_path()).entries:
-                if e.id == item_id:
-                    return e.name
     except Exception:
         pass
     return item_id

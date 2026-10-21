@@ -1080,13 +1080,13 @@
   "self:install_lib": {
    "fields": {
     "description": "f7f3530ce887",
-    "target_description": "40961e10609d",
+    "target_description": "46786240e44c",
     "returns": "9a5e13f69efc",
     "params": "beac01a6c0f4",
     "aliases": "ddc8b67cfb00",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-10-22",
    "examples": 12
   },
   "self:lecture": {

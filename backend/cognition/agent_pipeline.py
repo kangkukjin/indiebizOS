@@ -460,7 +460,7 @@ class CognitivePipelineMixin:
             recall.attach("context_update", CONTEXT_UPDATE)
             request_type = "EXECUTE"
 
-        # 연상 2상 — 세계 지도(글자 채널)·세계의 기억(의미 채널). 어느 채널이 도는지는 associative_recall.SOURCES 가 정한다.
+        # 분류 결과와 연결 과제를 붙인 뒤 연상 제시 기록을 확정한다.
         if recall:
             recall.route(request_type, force_role=force_role, context_update=context_update)
         if cancel_check and cancel_check():
@@ -734,19 +734,6 @@ class CognitivePipelineMixin:
             from thread_context import clear_tool_calls as _clear_tc
             _clear_tc()  # 턴 시작 — 이전 턴 잔여 이력 제거
             # 턴 토큰 원장은 cognitive_stream 진입에서 이미 열었다(인지 비용 포함).
-
-            # 5.4 자작 관문 원장 초기화 — 턴마다 새로 센다(EXECUTE 턴도 코드를 쓴다).
-            # 키는 재규정·조향과 같은 agent_id 다. TTL 이 있어 안 걷혀도 삭지만, 턴 경계는
-            # 여기가 정본 — 앞 턴의 누적이 다음 턴을 막으면 그게 새 침묵이 된다.
-            try:
-                from reframe import turn_key_for as _sb_keyfn
-                from thread_context import get_current_agent_id as _sb_cur
-                from selfbuild_gate import reset as _sb_reset
-                for _k in {_sb_keyfn(self, fallback=agent_name), _sb_cur() or "", agent_name or ""}:
-                    if _k:
-                        _sb_reset(_k)
-            except Exception as _sbe:
-                print(f"[자작관문] 원장 초기화 실패(무시): {_sbe}")
 
             # 5.5 턴 안 재규정 통로 — 의식 규정이 있는 턴에만 연다(reframe.py). 실행자가
             # 깨진 전제를 들고 되물으면 의식이 다시 규정하고, 새 규정이 도구 결과로 같은

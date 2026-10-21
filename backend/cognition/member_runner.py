@@ -250,7 +250,7 @@ class MemberRunner(AgentRunner):
 
     def _associate(self, message, **kwargs):
         # 로컬 SQLite 회상은 세션 입구에서 받아 회원 문맥으로만 전달한다 — 주인 기억(1상)은 돌지 않고,
-        # 2상(세계 지도·세계의 기억)은 개인 기억이 아니라 공통 흐름대로 돈다.
+        # 회원 턴도 공통 흐름의 분류 뒤 제시 기록을 확정한다.
         from associative_recall import stub
         return stub(self.config.get("_member_memory", ""))(self, message, **kwargs)
 

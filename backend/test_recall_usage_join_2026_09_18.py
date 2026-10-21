@@ -3,7 +3,6 @@
 무엇을 고정하나:
   ① 공급원마다 제시 id 와 결합 키(join)가 payload 로 나오고, 사건에는 id·건수만 실린다(4KB 절단에 안전).
   ② 해마: 동작 선택 인자와 호출 순서가 일치해야 '사용'(record_recall_outcome 과 같은 규칙), 관용구는 [fn:이름].
-  ③ 세계 지도(두 채널): 이름·별칭이 응답이나 코드에 나타나면 'mentioned' — 약한 증거로 종류가 남는다.
   ④ 심층: 명시 조회(node 아래·expand #id)=expanded, 증류가 used_at 을 올림=confirmed. 자동 회상은 사용이 아니다.
   ⑤ 점수·성공률은 여기서 고치지 않는다 — 사용 해석기는 DB 를 쓰지 않는다.
 """
@@ -32,13 +31,6 @@ def test_hippocampus_usage_is_executed_pairs_or_fn_call():
     assert AR._used_hippocampus(["1"], join, {"ibl_codes": [], "response": "x"})["used"] == []
 
 
-def test_world_names_usage_is_mention_in_response_or_code():
-    join = {"names": {"ortools": ["OR-Tools", "제약 프로그래밍"], "blender": ["Blender"], "x": ["a"]}}
-    ev = {"ibl_codes": ['[self:script]{op: "run", id: "blender_render"}'], "response": "제약 프로그래밍으로 짜겠습니다.", "deep_touched": []}
-    r = AR._used_names(["ortools", "blender", "x"], join, ev)
-    assert r["used"] == ["ortools", "blender"] and r["evidence"] == "mentioned"   # 한 글자 별칭 'a' 는 증거가 아니다
-
-
 def test_deep_usage_expanded_by_recall_op_or_confirmed_by_distill():
     join = {"paths": {"7": "여행/속초", "8": "가족/어머니", "9": "블로그"}, "db": ""}
     ev = {"ibl_codes": ['[self:memory]{op: "recall", node: "여행"}', '[self:memory]{op: "recall", store: "실행", node: "블로그"}'],
@@ -60,8 +52,8 @@ def test_record_usage_emits_one_event_and_touches_no_store(monkeypatch):
         {"source": "guide_map", "ids": ["x"], "join": {}},          # 해석기 없는 공급원은 사건에 실리지 않는다
     ]
     out = AR.record_usage(presented, tool_calls=[_tc("[sense:price]{}")], response="OR-Tools 로 풉니다")
-    assert [o["source"] for o in out] == ["hippocampus", "world_memory"]
-    assert out[0]["used"] == ["1"] and out[1]["used"] == ["ortools"]
+    assert [o["source"] for o in out] == ["hippocampus"]  # retired payloads are ignored
+    assert out[0]["used"] == ["1"]
     assert events and events[-1][0] == "recall.used" and len(json.dumps(events[-1][1], ensure_ascii=False)) < 4096
     assert AR.record_usage([], tool_calls=[], response="x") == []
 

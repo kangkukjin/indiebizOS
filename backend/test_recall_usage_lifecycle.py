@@ -78,8 +78,8 @@ def test_pipeline_persists_usage_before_distill_even_on_failure(tmp_path, monkey
     monkeypatch.setattr(ar, '_run_phase', lambda *a, **kw: None)
     def associate(self, message, **kwargs):
         recall = ar.Recall(ar.RecallRequest(self, message, []))
-        recall.blocks.append(ar.Block('world_memory', 'world_map', '<world_map>Library</world_map>',
-            ids=['x'], join={'names': {'x': ['Library']}}))
+        recall.blocks.append(ar.Block('recalled_memory', 'recalled_memory', '<recalled_memory>Library</recalled_memory>',
+            ids=['1'], join={'paths': {'1': 'Library'}}))
         return recall
     monkeypatch.setattr(Runner, '_associate', associate)
     monkeypatch.setattr('consciousness_agent.get_consciousness_agent',
@@ -87,6 +87,8 @@ def test_pipeline_persists_usage_before_distill_even_on_failure(tmp_path, monkey
     def stream(**kwargs):
         if fails:
             raise RuntimeError('model unavailable')
+        from thread_context import append_tool_call
+        append_tool_call('execute_ibl', {'code': '[self:memory]{op:"recall",node:"Library"}'}, True)
         yield {'type': 'final', 'content': 'Library'}
     runner = Runner(tmp_path, stream)
     queued = []
@@ -102,7 +104,7 @@ def test_pipeline_persists_usage_before_distill_even_on_failure(tmp_path, monkey
     assert len(events) == 1
     data = json.loads(events[0]['data'])
     assert data['phase'] == 'turn' and data['completed'] is not fails
-    assert data['blocks'][0]['used'] == ([] if fails else ['x'])
+    assert data['blocks'][0]['used'] == ([] if fails else ['1'])
     assert bool(queued) is not fails
 
 
@@ -111,8 +113,8 @@ def test_resumed_queue_records_original_episode_and_restores_context(journal):
     from distill_queue import DistillQueue, _Job
     from thread_context import set_current_task_id, get_current_task_id, clear_current_task_id
     def after(*args, **kwargs):
-        ar.record_usage([{'source': 'world_memory', 'ids': ['x'], 'recall_id': 'recall',
-                          'join': {'names': {'x': ['Library']}}}], response='Library')
+        ar.record_usage([{'source': 'recalled_memory', 'ids': ['1'], 'recall_id': 'recall',
+                          'join': {'paths': {'1': 'Library'}}}], deep_touched=['1'])
     prior_task = get_current_task_id()
     try:
         with el.trajectory_scope(task_id='unrelated'):

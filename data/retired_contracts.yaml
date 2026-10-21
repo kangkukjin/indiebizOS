@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: world-map-runtime
+    retired: 2026-10-22
+    reason: 방법 후보의 비AI 선택·관리 비용과 의식의 방법 선택 역할이 중복되어 세계의 지도를 은퇴한다.
+    instead: 의식의 세상의 방식·탐색과 실행자가 방법을 선택한다. 수집 자료는 docs/world_map/retired_2026_10_22에 기록으로만 보존한다. 설치 승인은 유지한다.
+    phrases: ['from catalog_recall import', 'from knowledge_catalog import', 'from world_recall_store import', 'from world_context import', 'from selfbuild_gate import', 'world_tools.md', '<method_map>', '<world_memory>']
   - id: current-teaching-legacy-interpolation-and-goal
     retired: 2026-10-21
     reason: 현재 작성 교재가 구판 goal 선언·문자열 자동 치환·each 상한을 계속 가르쳐 구문 오류와 잘못된 값 전달을 일으켰다.

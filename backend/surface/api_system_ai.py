@@ -474,9 +474,6 @@ _RECALL_CHANNELS = [
     ("connected_limbs", "원격 장치 — 이름·환경·배치·용도·최근 접속 상태"),
     ("repair_outcome", "자기수리 결말 — 미보고 판정 (있을 때만)"),
     ("decision_ledger", "결정 원장 — 활성 판정 다이제스트 + 질의 일치 상세"),
-    ("method_map", "세계 지도(글자 채널) — 이름이 실제로 나온 어휘와 관계 조각"),
-    ("world_map", "세계 지도(최상위 분야) — 어휘 수"),
-    ("world_memory", "세계의 기억 — 가지 먼저 고른 어휘 3건 (의미 채널)"),
 ]
 
 
@@ -486,8 +483,8 @@ def recall_preview(req: RecallPreviewRequest):
 
     시스템 AI 러너의 공통 회상 흐름(associative_recall, LLM 0·부작용 없음)을 파이프라인과 같은 두 상으로
     돌려 *실제 주입물과 동일한* XML 을 채널별로 갈라 돌려준다 — 가공하면 검증창이 거짓말을 하게 되므로
-    원문 그대로. 2상은 분류 없이 THINK 로 닫는다(세계 지도 글자 채널이 실린다). sync def 라 FastAPI
-    스레드풀에서 돈다(임베딩 검색 블로킹). 종전엔 1상만 불러 세계 지도·세계의 기억이 빠졌었다(2026-09-18 수리).
+    원문 그대로. 실제 분류 호출 없이 THINK로 제시 기록을 확정한다. sync def라 FastAPI
+    스레드풀에서 돈다(임베딩 검색 블로킹).
     """
     import re as _re
     message = (req.message or "").strip()

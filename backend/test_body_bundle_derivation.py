@@ -144,7 +144,6 @@ def test_identical_manifests_report_nothing(bbb, tmp_path):
     (lambda c: c["blocklist"].pop("needs_torch"), "blocklist 제거"),
     (lambda c: c["blocklist"].update({"needs_torch": "force_exclude (프로파일 명시)"}), "사유 변경"),
     (lambda c: c["blocklist_globs"].append("bench_*"), "글롭 규칙 변경"),
-    (lambda c: c["world_catalog_files"].append("data/obsolete.yaml"), "지도 자료 변경"),
 ])
 def test_every_drift_carries_a_reason(bbb, tmp_path, mutate, label):
     """★판정과 설명이 갈라져 '이유 빈칸'이 나오던 자리 — 어떤 차이든 줄이 따라붙는다."""
@@ -173,25 +172,25 @@ def test_missing_globs_field_in_old_manifest_is_a_named_drift(bbb, tmp_path):
     assert any("blocklist_globs" in p for p in problems)
 
 
-def test_bundled_catalog_loads_without_desktop_files(tmp_path):
-    """배포 매니페스트가 고른 파일만으로 지도·관계·출처를 읽을 수 있어야 한다."""
-    from knowledge_catalog import load_snapshot
-
-    mod = _load()
-    root = Path(_ROOT)
-    files = mod.world_catalog_files(root)
-    manifest = json.loads((root / "data/bodies/android.engine.json").read_text())
-    assert manifest["world_catalog_files"] == files
-    assert "data/world_pulse_config.json" not in files
-    for name in files:
-        target = tmp_path / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(root / name, target)
-    original = load_snapshot(root)
-    bundled = load_snapshot(tmp_path)
-    assert bundled == original
-    assert all(item.current for item in bundled.graph.evidence)
-
-
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_retired_world_material_is_archived_without_runtime_registration():
+    import hashlib
+    import yaml
+    root = Path(_ROOT)
+    archive = root / "docs/world_map/retired_2026_10_22"
+    for line in (archive / "SHA256SUMS").read_text().splitlines():
+        digest, name = line.split("  ", 1)
+        assert hashlib.sha256((archive / name).read_bytes()).hexdigest() == digest
+        assert not (root / name).exists()
+    registry = yaml.safe_load((root / "data/scripts/registry.yaml").read_text())
+    assert "세계지도" not in registry
+    guides = json.loads((root / "data/guide_db.json").read_text())["guides"]
+    assert not {"world_map.md", "world_tools.md"} & {g["file"] for g in guides}
+    manifest = json.loads((root / "data/bodies/android.engine.json").read_text())
+    assert "world_catalog_files" not in manifest
+    assert not {"cognition/catalog_recall", "datastore/world_recall_store",
+                "datastore/knowledge_catalog", "datastore/knowledge_graph",
+                "cognition/world_context", "base/selfbuild_gate"} & set(manifest["engine_modules"])

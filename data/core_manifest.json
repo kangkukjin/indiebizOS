@@ -106,7 +106,6 @@
       "tv_control.py",
       "tv_epg.py",
       "webapp_work.py",
-      "world_map_lookup.py",
       "나레이션생성.py",
       "나레이션원고추출.py",
       "미디어세션.py",
@@ -161,6 +160,7 @@
       "ai_tips_search.py",
       "ai_tips_sources.py",
       "json원장.py",
+      "world_map_lookup.py",
       "폴더조사.py"
     ],
     "vocab_fragments": []

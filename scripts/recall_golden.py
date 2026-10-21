@@ -28,7 +28,7 @@ TAG_RE = re.compile(r"<([a-z_]+)\b[^>]*>.*?</\1>", re.DOTALL)
 
 _LONG_DOC = ("도로교통법 개정안에 관한 에세이. " * 60)[:1300]
 
-# 입력 묶음 — 네 기억이 각각 깨어나는 자리를 하나씩은 담는다(실행·심층·세계·포식 단서·후속·수리 단서·긴 문서·잡담).
+# 입력 묶음 — 여러 과제와 기억 단서를 담는다(실행·심층·포식 단서·후속·수리 단서·긴 문서·잡담).
 CASES: List[Dict[str, Any]] = [
     {"id": "ibl_schedule", "message": "오늘 일정 알려줘", "history": []},
     {"id": "ibl_report", "message": "AI 동향 보고서 만들어줘", "history": []},
@@ -76,13 +76,6 @@ def _warm(runner) -> Dict[str, str]:
     status["hippocampus"] = "ready" if IBLUsageDB._load_model_sync() else "absent"
     import tree_recall
     status["encoder"] = "ready" if tree_recall.ensure_model(block=True) else "absent"
-    try:
-        from runtime_utils import get_base_path
-        from world_recall_store import WorldStore
-        tree_recall.build_now(WorldStore(get_base_path()))
-        status["world_index"] = "built"
-    except Exception as e:  # noqa: BLE001
-        status["world_index"] = f"failed: {e}"
     try:
         from associative_recall import deep_memory_db
         db = deep_memory_db(runner)

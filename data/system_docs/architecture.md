@@ -58,7 +58,7 @@ EXECUTE                          [2] 과제 규정 재검토 → 유효하면 �
 
 **REFLEX의 문맥 경계**: 무의식이 선택하거나 사용자가 `#reflex`로 지정한다. 명시 태그는 `#repair > #think > #execute > #reflex` 순이며, `#reflex`는 분류·의식을 생략한다. 공통 프롬프트·어휘·회상·모델 기어는 유지하고 최근 사용자·최종 답변 최대 4개(6,000자 이내)만 별도 실행 세션에 전달한다. 첨부·긴 최근 대화·대화 소유권 부재 등은 일반 실행으로 돌아간다. 도구 호출 전 문맥 부족이면 전체 이력으로 복귀할 수 있지만, 호출 뒤에는 자동 재실행하지 않는다. 결말은 같은 대화의 다음 일반 실행에 인계하며 주 CLI 세션은 보존한다. [문맥 정책](../../docs/MODEL_CONTEXT_POLICY.md#reflex-실행-문맥-2026-10-19-사용자-결정).
 
-- **연상기억**: 파이프라인 최상단에서 1회 생성 — 공통 흐름 `associative_recall`(2026-09-18)이 정책 표대로 해마(`<execution_memory>`)·심층 지도/선택(`<memory_map>`/`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장(1상), 분류 뒤 세계 지도(`<method_map>`/`<world_map>`/`<world_memory>`, 2상)를 한 묶음으로 조립하고 `recall.presented` 로 제시를 기록한다. 네 호출 지점(파이프라인·에이전트 간 통신·조종실 검증창·스위치)은 같은 흐름을 쓴다
+- **연상기억**: 파이프라인 최상단에서 1회 생성 — 공통 흐름 `associative_recall`(2026-09-18)이 정책 표대로 해마(`<execution_memory>`)·심층 지도/선택(`<memory_map>`/`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장을 한 묶음으로 조립하고 분류 뒤 `recall.presented` 로 제시를 기록한다. 네 호출 지점(파이프라인·에이전트 간 통신·조종실 검증창·스위치)은 같은 흐름을 쓴다
 - **분류 실패 경계**: 분류 응답은 허용된 단일 토큰만 채택한다. API 오류·빈 응답·잘못된 출력은 실패로 기록하고 기존 기본 경로 `EXECUTE`로 간다. OpenAI SDK 계열 동기 호출은 스트림 오류와 부분 응답을 성공 텍스트로 반환하지 않는다. [ep3796 오류 전달 수리](../../docs/EPISODE_3796_CLASSIFICATION_FAILURE_2026_09_15.md).
 - **단일 검색**: 검색 1회로 top_score까지 확보 (이전 3회 중복 호출 제거, 2026-05-17)
 - **해마**: `ko-sroberta-multitask` 기반 fine-tuning과 저장 용례 회상. 라이브 모델은 2026-10-06 세대이며 10-21 후보는 동일 평가에서 저장 용례 회상이 떨어져 미채택했다. 과거의 약 99% 측정치를 현재 과제 전체의 정확도로 일반화하지 않는다. 세대·비교 지표는 [memory.md](memory.md), 재학습 절차는 `data/guides/hippocampus_retraining.md`를 따른다.
@@ -548,7 +548,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 172 액션** (sense 39·self 58·limbs 13·others 20·engines 19·table 23)
-- backend **.py 614개**(test 제외, git 추적 기준) — 층 디렉토리 `base 86 · datastore 88 · ibl 88 · cognition 94 · services 86 · surface 96`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **98**)
+- backend **.py 608개**(test 제외, git 추적 기준) — 층 디렉토리 `base 85 · datastore 85 · ibl 88 · cognition 92 · services 86 · surface 96`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **101개**(guide_db 등록 **97**)
 - op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 24·미선언 89)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

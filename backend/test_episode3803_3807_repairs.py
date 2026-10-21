@@ -97,7 +97,6 @@ def test_action_and_permission_failures_still_wake_supervisor(supervisor, code, 
 def test_mcp_guide_read_carries_identity_and_restores_http_context(monkeypatch, headers):
     import mcp_server
     import thread_context as tc
-    import selfbuild_gate
     from api_ibl import GuideRequest, read_guide_bridge
     agent, task = ("header-guide", "header-task") if headers else ("stdio-guide", "stdio-task")
     monkeypatch.setattr(mcp_server, "DEFAULT_AGENT_ID", "stdio-guide")
@@ -106,33 +105,14 @@ def test_mcp_guide_read_carries_identity_and_restores_http_context(monkeypatch, 
         "x-indiebiz-agent-id": agent, "x-indiebiz-task-id": task}))) if headers else None
     payloads = []
     monkeypatch.setattr(mcp_server, "_post_backend", lambda path, data, timeout: payloads.append(data) or "{}")
-    asyncio.run(mcp_server.read_guide("world_tools.md", ctx=context))
+    asyncio.run(mcp_server.read_guide("library_install.md", ctx=context))
     assert payloads[0]["agent_id"] == agent and payloads[0]["task_id"] == task
-    selfbuild_gate.reset(agent)
-    try:
-        with tc.actor_context(agent_id="unrelated", task_id="unrelated-task"):
-            result = asyncio.run(read_guide_bridge(GuideRequest(**payloads[0])))
-            assert tc.get_current_agent_id() == "unrelated"
-            assert tc.get_current_task_id() == "unrelated-task"
-        assert result["content"] and selfbuild_gate.state(agent)["consulted"]
-    finally:
-        selfbuild_gate.reset(agent)
 
-
-def test_guide_listing_or_failed_read_does_not_clear_gate(monkeypatch):
-    import ibl_routing
-    import thread_context as tc
-    import selfbuild_gate
-    selfbuild_gate.reset("guide-negative")
-    try:
-        with tc.actor_context(agent_id="guide-negative"):
-            ibl_routing.search_guide("world_tools.md", {"read": False})
-            assert not selfbuild_gate.state("guide-negative")["consulted"]
-            monkeypatch.setattr(ibl_routing, "_search_guide", lambda *a: {"error": "missing"})
-            ibl_routing.search_guide("world_tools.md", {"read": True})
-            assert not selfbuild_gate.state("guide-negative")["consulted"]
-    finally:
-        selfbuild_gate.reset("guide-negative")
+    with tc.actor_context(agent_id="unrelated", task_id="unrelated-task"):
+        result = asyncio.run(read_guide_bridge(GuideRequest(**payloads[0])))
+        assert tc.get_current_agent_id() == "unrelated"
+        assert tc.get_current_task_id() == "unrelated-task"
+    assert result["content"]
 
 
 @pytest.fixture

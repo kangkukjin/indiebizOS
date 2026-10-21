@@ -171,55 +171,6 @@ def test_injection_block_and_no_block_without_related(TR, tmp_path, monkeypatch)
     assert scent("속초") == ""
 
 
-def test_world_dictionary_matches_the_tree():
-    """가지 사전(branches.yaml)은 트리와 같이 움직여야 한다 — 없는 경로·사전 없는 가지는 여기서 잡힌다."""
-    from runtime_utils import get_base_path
-    from world_recall_store import WorldStore
-    store = WorldStore(get_base_path())
-    assert store.unknown_dictionary_paths() == []
-    missing = ["/".join(b.path) for b in store.branches() if not (b.cues or b.gist)]
-    assert missing == [], f"사전 항목 없는 가지: {missing[:5]}"
-    assert store.map_text().count(" · ") >= 10 and "\n" not in store.map_text()
-    it = next(i for i in store.items() if i.id == "ortools")
-    assert it.label.endswith(": OR-Tools") and len(it.path) == 2
-
-
-def test_world_deep_topics_reach_embeddings_without_splitting_route_branches():
-    from runtime_utils import get_base_path
-    from world_recall_store import WorldStore, BRANCH_DEPTH
-    from tree_recall import item_text, under
-    store = WorldStore(get_base_path())
-    branches = {b.path for b in store.branches()}
-    deep = [i for i in store.items() if len(i.path) > BRANCH_DEPTH]
-    assert deep
-    for item in deep:
-        parent = item.path[:BRANCH_DEPTH]
-        assert parent in branches and under(item.path, parent)
-        assert item.path[-1] in item_text(item)
-        assert '/'.join(item.path) in item.label
-    assert all(len(path) == BRANCH_DEPTH for path in branches)
-
-
-def test_world_memory_block_dedupes_and_can_be_turned_off(TR, monkeypatch):
-    import catalog_recall as C
-    events = []
-    monkeypatch.setattr(C, "_record", events.append)
-    monkeypatch.setattr(C, "load_config", lambda root: {})
-    monkeypatch.setattr(TR, "INLINE_SYNC_MAX", 10 ** 9)          # 가짜 인코더라 첫 색인을 그 자리에서 만든다
-    xml = C.world_memory_for_turn("직원 근무표를 제약을 지키며 짜야 한다")
-    assert xml.startswith("<world_map ") and "<world_memory " in xml and "고른 가지:" in xml
-    from knowledge_catalog import load_snapshot
-    by_id = {e.id: e.name for e in load_snapshot(C.get_base_path()).entries}
-    names = [by_id[s['id']] for s in events[-1]['seeds']]
-    assert 1 <= len(names) <= 3 and events[-1]["channel"] == "world_memory" and events[-1]["status"] == "ok"
-    again = C.world_memory_for_turn("직원 근무표를 제약을 지키며 짜야 한다", lexical_snippet=" ".join(names))
-    assert all(n not in again.split("<world_memory", 1)[-1] for n in names) or "<world_memory" not in again
-    monkeypatch.setattr(C, "load_config", lambda root: {"world_memory": False})
-    assert C.world_memory_for_turn("직원 근무표") == ""
-    monkeypatch.setattr(C, "load_config", lambda root: {"semantic_enabled": False})     # 옛 자리표 키는 끄지 못한다
-    assert C.world_memory_for_turn("직원 근무표") != ""
-
-
 def test_search_floor_drops_unrelated_semantic_hits_but_keeps_lexical(TR):
     items, branches = _world(TR)
     s = _Store(TR, items, branches)

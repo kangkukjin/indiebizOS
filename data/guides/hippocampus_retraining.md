@@ -6,7 +6,7 @@
 이 문서는 그 재학습을 실제로 돌리는 절차다.
 
 > 관련: `new_action_checklist.md`(어휘 추가 시 해마 시딩) · `action_removal.md`(어휘 제거
-> 시 코퍼스 정리) · `data/system_docs/memory.md`(기억 8종 지도).
+> 시 코퍼스 정리) · `data/system_docs/memory.md`(기억 7종 지도).
 > 클라우드(Colab/Modal) 경로는 `cloud_training/README.md`. **다만 그 문서의 "로컬은
 > OOM" 전제는 옛 맥에어 기준이다** — 아래 §1 참조.
 

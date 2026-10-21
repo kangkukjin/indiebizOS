@@ -7,7 +7,7 @@
 문맥 조립, 회상 점수·코드의 이름 붙은 출력, 제시 기록(`recall.presented` 사건). 무엇이 기억별인가(공급원 함수가
 부르는 각 저장소): 검색기(해마는 전용 인코더, 트리 기억은 `tree_recall`), 후보의 뜻, 성공의 정의와 학습.
 
-두 상(相): 1상은 분류 전(기억을 먼저 검색한다), 2상은 분류 뒤(세계 지도의 글자 채널은 request_type 을 본다).
+두 상(相): 1상은 분류 전 회상, 2상은 분류 결과를 붙여 제시 기록을 확정하는 경계다.
 그래서 `begin()` 은 1상만 돌고, 호출자는 반드시 `route(request_type)` 로 2상을 닫는다 — `text()` 는 그 전엔 거부한다
 (`scripts/check_recall_assembly.py` 가 호출 자리마다 정적으로 확인한다). 공급원 호출은 이 모듈 밖에서 금지다 —
 세 조립 지점이 각자 부분집합을 부르다 갈라진 것(agent_pipeline/agent_communication/recall-preview)이 이 모듈의 출생 이유다.
@@ -80,7 +80,7 @@ class Recall:
             self.blocks.append(Block(source, tag or source, text))
 
     def route(self, request_type: Optional[str], *, reflex_hint=None, force_role=None, context_update=False) -> "Recall":
-        """2상 — 분류 뒤에 도는 공급원(세계 지도·세계의 기억). request_type=None 은 분류 없는 채널."""
+        """분류 뒤 제시 기록을 확정한다. request_type=None 은 분류 없는 채널."""
         if self.routed:
             return self
         self.request_type = request_type
@@ -93,7 +93,7 @@ class Recall:
 
     def text(self) -> str:
         if not self.routed:
-            raise RuntimeError("associative_recall: route(request_type) 전에 text() 를 불렀다 — 2상(세계 지도)이 빠진 주입")
+            raise RuntimeError("associative_recall: route(request_type) 전에 text() 를 불렀다 — 분류 뒤 제시 기록 확정이 빠진 주입")
         return "\n".join(b.text for b in self.blocks if b.text)
 
     def presented(self) -> List[Dict[str, Any]]:
@@ -194,7 +194,7 @@ def _record_presented(recall: Recall) -> None:
 
 _LABELS = [("execution_memory", "실행기억"), ("memory_map", "기억지도"), ("recalled_memory", "선택기억"),
            ("guide_map", "가이드목차"), ("forage_memory", "포식기억"), ("connected_limbs", "손발"), ("repair_outcome", "수리결말"),
-           ("decision_ledger", "결정원장"), ("method_map", "세계지도"), ("world_memory", "세계기억")]
+           ("decision_ledger", "결정원장")]
 
 
 def _print_summary(recall: Recall) -> None:
@@ -455,28 +455,8 @@ def _decision_ledger(req: RecallRequest, recall: Recall) -> Optional[Block]:
 
 # ─────────────────────────── 공급원 (2상) ───────────────────────────
 
-def _method_map(req: RecallRequest, recall: Recall, *, request_type=None, reflex_hint=None, force_role=None,
-                context_update=False) -> Optional[Block]:
-    """세계 지도의 글자 채널 — 이름을 실제로 말했을 때의 정밀한 길. 개인 기억이 아니라 주체로 막지 않는다."""
-    from catalog_recall import recall_for_turn_detail
-    text, event, names = recall_for_turn_detail(req.runner, req.message, req.history, request_type=request_type,
-                                                reflex_hint=reflex_hint, force_role=force_role,
-                                                context_update=context_update)
-    if not text:
-        return Block("method_map", "method_map", "", status=event.get("status") or "empty")
-    return Block("method_map", "method_map", text, status=event.get("status") or "ok", ids=list(event.get("ids") or []),
-                 join={"names": names})
 
 
-def _world_memory(req: RecallRequest, recall: Recall, **_route_kw) -> Optional[Block]:
-    """세계의 기억 — 지도 + 가지 먼저 고른 어휘 3건(의미 채널). 글자 채널에 이미 나온 이름은 뺀다."""
-    from catalog_recall import world_memory_detail
-    lexical = next((b.text for b in recall.blocks if b.source == "method_map"), "")
-    text, event, names = world_memory_detail(req.message, lexical, budget=BUDGET["world_memory"])
-    if not text:
-        return Block("world_memory", "world_map", "", status=event.get("status") or "empty")
-    return Block("world_memory", "world_map", text, status=event.get("status") or "ok", ids=list(event.get("ids") or []),
-                 meta={"picked": len(event.get("ids") or [])}, join={"names": names})
 
 
 # ─────────────────────────── 제시 → 사용 결합 (2026-09-18, 2단계 ①) ───────────────────────────
@@ -514,16 +494,6 @@ def _used_hippocampus(ids, join, ev) -> Dict[str, Any]:
     return {"used": used, "evidence": "executed", "ibl_calls": len(codes)}
 
 
-def _used_names(ids, join, ev) -> Dict[str, Any]:
-    """지식의 단서(세계 지도 두 채널) — 이름·별칭이 응답 본문이나 실행 코드에 나타났나. 증거 = mentioned.
-    '언급'은 약한 증거다(모델이 이미 알던 이름일 수 있다) — 그래서 종류를 붙여 남기고 점수엔 쓰지 않는다."""
-    from common.value_semantics import text_match
-    hay = (ev.get("response") or "") + "\n" + "\n".join(ev.get("ibl_codes") or [])
-    used = []
-    for i, names in (join.get("names") or {}).items():
-        if any(len(n) >= 2 and text_match("contains", hay, n) for n in names if isinstance(n, str)):
-            used.append(i)
-    return {"used": used, "evidence": "mentioned"}
 
 
 def _used_deep(ids, join, ev) -> Dict[str, Any]:
@@ -585,8 +555,6 @@ USAGE: Dict[str, Callable] = {
     "reusable_capabilities": _used_capabilities,
     "hippocampus": _used_hippocampus,
     "recalled_memory": _used_deep,
-    "method_map": _used_names,
-    "world_memory": _used_names,
 }
 
 
@@ -650,17 +618,9 @@ SOURCES = (
     Source("connected_limbs", "connected_limbs", 1, True, _connected_limbs),
     Source("pending_repair", "repair_outcome", 1, True, _pending_repair),
     Source("decision_ledger", "decision_ledger", 1, True, _decision_ledger),
-    Source("method_map", "method_map", 2, False, _method_map),
-    Source("world_memory", "world_map", 2, False, _world_memory),
 )
 
 # 채널별 정책 — 어느 공급원이 자동으로 도는가. None = 전부.
-# 2026-09-18 판정(사용자: "판단할 수 있는 건 측정 뒤로 미루지 말 것"): 채널을 가를 이유가 없다.
-#   agent_message: 종전엔 분류가 없어 글자 채널(method_map)이 빠져 있었다 — 세계 어휘는 개인 기억이 아니라 모든 작업 에이전트가
-#     받는 것이 설계(공통 회상 §5.6)이고, 빠진 것은 결함이었다. route("EXECUTE") 로 닫아 같은 블록을 받는다.
-#   switch: 종전엔 해마만 — 스위치 명령도 주인의 명령이고 실행자는 같은 IBL 환경을 받으므로 가이드 목차·판정 원장·세계 지도가
-#     빠질 이유가 없다. 심층기억은 그 에이전트의 DB 가 있을 때만(없으면 0토큰).
-# 채널을 가르는 값이 다시 필요해지면 여기 한 줄이다.
 CHANNELS: Dict[str, Optional[Dict[str, set]]] = {
     "pipeline": None,
     "preview": None,
@@ -670,11 +630,9 @@ CHANNELS: Dict[str, Optional[Dict[str, set]]] = {
 }
 
 # 후보 수 — 기억별 자동 주입 분량의 정책 값(2026-09-18 ③: 코드 상수에서 표로). 값은 종전 그대로.
-#   세계 지도 글자 채널(method_map)의 항목·글자 예산은 이미 데이터(data/world_pulse_config.json knowledge_catalog)라 여기 두지 않는다.
 BUDGET: Dict[str, Dict[str, int]] = {
     "hippocampus": {"top_k": 5, "phrase_k": 2},                  # 낱말 Top-5 · 관용구 Top-2
     "recalled_memory": {"n_branches": 2, "k_in": 2, "k_out": 1},  # 가지 2 → 안 2건 + 밖 1건
-    "world_memory": {"n_branches": 2, "k_in": 2, "k_out": 1},
 }
 
 

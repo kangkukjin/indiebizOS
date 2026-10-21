@@ -238,7 +238,7 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|scripts/check_backend_layers\.py)
 fi
 
 # 연상 조립 관문 (2026-09-18): 회상 공급원은 associative_recall 밖에서 못 부르고, 1상을 연 자리는 2상을 닫는다.
-# 세 조립 지점이 각자 부분집합을 부르다 갈라진 부류(프리뷰가 세계 지도를 통째로 못 받음)의 재발 차단.
+# 세 조립 지점이 각자 부분집합을 부르다 갈라진 부류(프리뷰가 일부 공급원을 누락함)의 재발 차단.
 if echo "$staged" | grep -qE '^(backend/.*\.py|scripts/check_recall_assembly\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] 연상 조립 관문 실행..."

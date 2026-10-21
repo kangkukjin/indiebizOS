@@ -189,20 +189,6 @@ def test_script_guide_does_not_route_authoring_to_run_command():
 
 
 # ---------------------------------------------------------------- L18-5
-def test_usage_join_ignores_search_aliases(monkeypatch):
-    from types import SimpleNamespace
-    from catalog_recall import identity_names
-    import associative_recall as AR
-    duck = SimpleNamespace(name="DuckDB", aliases=["csv", "sql", "파일 집계"])
-    cpm = SimpleNamespace(name="주공정법 (Critical Path Method)", aliases=["선후관계", "여유시간"])
-    assert identity_names(duck) == ["DuckDB"]
-    assert identity_names(cpm) == ["주공정법 (Critical Path Method)", "주공정법", "Critical Path Method"]
-    join = {"names": {"duckdb": identity_names(duck), "critical_path": identity_names(cpm)}}
-    untouched = AR._used_names([], join, {"response": "선후관계를 따라 계산했습니다",
-                                         "ibl_codes": ['[self:read]{path:"inputs/tasks_a.csv"}']})
-    assert untouched == {"used": [], "evidence": "mentioned"}
-    named = AR._used_names([], join, {"response": "주공정법으로 임계 작업을 찾았습니다", "ibl_codes": ["import duckdb"]})
-    assert sorted(named["used"]) == ["critical_path", "duckdb"]
 
 
 # ---------------------------------------------------------------- L18-7

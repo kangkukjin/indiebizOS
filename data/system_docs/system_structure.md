@@ -51,7 +51,7 @@ see_also: [architecture.md, memory.md, ibl.md]
   - `architecture.md` - 시스템 개요·아키텍처·설계 의도 (구 overview.md 오브젝트/에이전트 유형 흡수)
   - `technical.md` - 기술 문서 (API, 설정, 경로)
   - `ibl.md` - IBL 명세(6-Node·op 어휘화·삼각 검증) + **설계 철학**(구 ibl_design_philosophy.md)
-  - `memory.md` - 메모리 8종 통합 지도 + **연상기억 심층**(해마·심층메모리 — 구 memory_architecture.md + execution_memory.md)
+  - `memory.md` - 메모리 7종 통합 지도 + **연상기억 심층**(해마·심층메모리 — 구 memory_architecture.md + execution_memory.md)
   - `packages.md` - 패키지 시스템 (구조·설치 절차·설치 목록. 수·표는 빌드 파생)
   - `inventory.md` - 프로젝트/패키지 현황 (자동 생성)
   - `communication.md` - 통신/연동 + **위임 체인**(구 delegation.md)
@@ -290,7 +290,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 - **per-agent 모델 폐지**: 에이전트 yaml의 provider/model/apiKey 무시 — 모델*과 키*는 실행 티어 상속. 모달리티(이미지·동영상·임베딩)는 기어 밖 패스스루.
 
 - **연상 단계 (단계 0)** — 공통 흐름 `associative_recall`(2026-09-18): 러너 `_associate()`(1상) → `route(request_type)`(2상) → `text()`
-  - 1상(분류 전): 해마(`ibl_usage_rag.build_execution_memory()`)·심층메모리 지도+선택(`<memory_map>`·`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장. 2상(분류 뒤): 세계 지도. 어느 채널에 어느 기억이 도는지는 정책 표 `SOURCES`/`CHANNELS`(포식=자동 주입 없음)
+  - 1상(분류 전): 해마(`ibl_usage_rag.build_execution_memory()`)·심층메모리 지도+선택(`<memory_map>`·`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장. 2상(분류 뒤): 제시 기록 확정. 어느 채널에 어느 기억이 도는지는 정책 표 `SOURCES`/`CHANNELS`(포식=자동 주입 없음)
   - 회상 통계: `recall.reflex`(점수·코드, 기록·프리뷰 호환 이름이며 라우팅에 사용하지 않음) — 검색 한 번으로 확보. 제시 기록: `recall.presented` 사건
   - 무의식/의식의 계획/실행이 같은 묶음을 공유. 감독·검수에는 목표·규정·실제 증거를 전달. 관문 `scripts/check_recall_assembly.py`
 - **무의식 (경량 AI)** — `_decide_request_type()` → `_classify_request()`
@@ -317,6 +317,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 172 액션(sense 39·self 58·limbs 13·others 20·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 614(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 172 액션(sense 39·self 58·limbs 13·others 20·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 608(test 제외)**<!-- SELF_IMAGE:END -->
 
 *변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*

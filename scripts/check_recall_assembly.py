@@ -2,16 +2,16 @@
 """연상 조립 관문 — 회상 공급원은 공통 흐름(associative_recall) 밖에서 부를 수 없고, 1상을 연 자리는 반드시 2상을 닫는다.
 
 왜(2026-09-18 실측): 회상 조립이 세 곳(agent_pipeline·agent_communication·recall-preview)에서 각자 공급원의 부분집합을
-불렀다 — 프리뷰는 세계 지도·세계의 기억을 통째로 못 받았고, 통신 경로는 파이프라인과 손으로 같은 두 단계를 다시 썼다.
+불렀다 — 프리뷰는 일부 공급원을 누락했고, 통신 경로는 파이프라인과 손으로 같은 두 단계를 다시 썼다.
 새 기억을 하나 넣으면 세 곳을 고쳐야 하고 하나를 빠뜨리면 조용히 갈라진다. 사람이 grep 으로 지키는 규칙은 샌다
 (pitfall hand-picked-sweep-leaks) — 그래서 관문이다.
 
 규칙:
   A. 공급원 진입 함수(SOURCE_ENTRIES)는 `backend/cognition/associative_recall.py` 와 그 함수를 *정의한* 모듈 안에서만
-     호출된다. `tree_recall.recall`(자동 주입용 가지 먼저 회상)은 associative_recall·catalog_recall 에서만.
+     호출된다. `tree_recall.recall`(자동 주입용 가지 먼저 회상)은 associative_recall 에서만.
      (`tree_recall.search` 는 AI 의 명시 조회·포식 장소 찾기용이라 자유.)
   B. `_associate(...)` 나 `associative_recall.begin(...)` 을 부른 함수는 같은 함수 안에서 `.route(...)` 도 부른다 —
-     2상(세계 지도)이 빠진 주입은 정적 검사에서 막는다. (`text()` 도 런타임에 거부하지만, 여기서 먼저 잡는다.)
+     분류 뒤 제시 기록 확정이 빠진 주입은 정적 검사에서 막는다. (`text()` 도 런타임에 거부하지만, 여기서 먼저 잡는다.)
 
 표면: backend/**/*.py (test_ 제외) + scripts/*.py (이 관문·고정물 스크립트 자신 제외).
 사용: python3 scripts/check_recall_assembly.py            # 관문 (실패 시 exit 1)
@@ -30,15 +30,11 @@ SOURCE_ENTRIES: Dict[str, str] = {
     "build_execution_memory": "ibl_usage_rag",
     "build_execution_memory_detail": "ibl_usage_rag",
     "build_execution_memory_from_hint": "ibl_usage_rag",
-    "recall_for_turn": "catalog_recall",
-    "recall_for_turn_detail": "catalog_recall",
-    "world_memory_for_turn": "catalog_recall",
-    "world_memory_detail": "catalog_recall",
     "scent_xml": "decision_ledger",
     "pending_scent": "red_report",
     "guide_map_text": "hippo_tree",
 }
-TREE_RECALL_ALLOWED = {"associative_recall", "catalog_recall"}
+TREE_RECALL_ALLOWED = {"associative_recall"}
 SELF = {"scripts/check_recall_assembly.py", "scripts/recall_golden.py"}
 # 평가 하네스는 회상 함수를 직접 재어야 한다 — 자동 주입 경로가 아니다.
 EXEMPT = {"scripts/evaluate_tree_recall.py"}
@@ -89,7 +85,7 @@ def violations_in(rel: str, source: str) -> List[str]:
             out.append(f"{rel}:{node.lineno}: 공급원 `{name}` 을 공통 흐름 밖에서 부른다 — associative_recall 의 공급원으로 옮겨라")
         if ((name == "recall" and owner == "tree_recall") or (name in tr_aliases and not owner)) \
                 and mod not in TREE_RECALL_ALLOWED:
-            out.append(f"{rel}:{node.lineno}: `tree_recall.recall`(가지 먼저 회상)은 associative_recall·catalog_recall 에서만")
+            out.append(f"{rel}:{node.lineno}: `tree_recall.recall`(가지 먼저 회상)은 associative_recall 에서만")
 
     # B. 1상을 연 함수는 2상을 닫는다
     for fn in ast.walk(tree):

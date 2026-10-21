@@ -84,16 +84,6 @@ def _toplevel_imports(pyfile):
     return ext, be
 
 
-def world_catalog_files(root):
-    """공통 세계 지도와 실제로 참조하는 공개 자료만 정본에서 파생한다."""
-    sys.path.insert(0, str(ROOT / "backend"))
-    import boot_paths  # noqa: F401
-    from knowledge_catalog import CATALOG_PATH, load_snapshot
-
-    snapshot = load_snapshot(root)
-    return sorted({CATALOG_PATH, *snapshot.files}
-                  | {entry.source for entry in snapshot.entries}
-                  | {evidence.path for evidence in snapshot.graph.evidence})
 
 
 def derive(body):
@@ -150,8 +140,6 @@ def derive(body):
         "_doc": "scripts/build_body_bundle.py 가 data/bodies/%s.json 에서 파생. 직접 편집 금지 — 프로파일을 고치고 재생성하라." % body,
         "body": body,
         "engine_modules": engine,
-        "world_catalog_files": (world_catalog_files(ROOT)
-                                if "catalog_recall" in mods - set(blocklist) else []),
         "blocklist": {m: reasons[m] for m in blocklist},
         # 규칙 자체(전개본 아님) — 이 글롭에 걸린 파일은 엔진 모듈 후보에서 아예 빠진다.
         "blocklist_globs": sorted(glob_exclude),
@@ -186,8 +174,6 @@ def diff_against(cur, derived):
     _cmp("engine_modules", cur.get("engine_modules", []), derived["engine_modules"])
     _cmp("blocklist", list(cur.get("blocklist", {})), list(derived["blocklist"]))
     _cmp("blocklist_globs", cur.get("blocklist_globs", []), derived["blocklist_globs"])
-    _cmp("world_catalog_files", cur.get("world_catalog_files", []),
-         derived.get("world_catalog_files", []))
 
     # 키는 같은데 *사유*가 달라진 것도 파생 드리프트다(무엇 때문에 빠지는지가 바뀌었다).
     ca, cb = cur.get("blocklist", {}), derived["blocklist"]

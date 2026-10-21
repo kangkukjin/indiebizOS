@@ -177,11 +177,6 @@ class PromptBuilder:
             return ""
         if not content.strip():
             return ""
-        # 전문 주입도 지도 확인이다. 재열람 생략 때문에 자작 관문이 다시 서지 않게 한다.
-        if guide_filename in {"world_tools.md", "world_tools_local.md"}:
-            from selfbuild_gate import note_consult
-            from thread_context import get_current_agent_id
-            note_consult(get_current_agent_id() or "", f"injected:{guide_filename}")
         note = ""
         try:
             from guide_registry import freshness_note, record_use, mark_injected

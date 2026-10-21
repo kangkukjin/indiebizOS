@@ -7,7 +7,6 @@ from types import SimpleNamespace
 import pytest
 import boot_paths  # noqa: F401
 from test_episode3388_repairs import Runner, isolated  # noqa: F401
-from test_knowledge_catalog import world  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -97,55 +96,6 @@ def test_rehearsal_failure_and_background_keep_origin(tmp_path, monkeypatch, iso
                 command='훈련', origin='unknown', background=background))
         assert refused.value.status_code == 400
     assert len(calls) == 1 and origins == ['training']
-
-
-def _semantic(monkeypatch, root, status='ok'):
-    import catalog_recall as recall
-    import tree_recall
-    import knowledge_catalog
-    snapshot = knowledge_catalog.load_snapshot(root)
-    entry = next(e for e in snapshot.entries if e.id == 'ortools')
-    item = SimpleNamespace(id=entry.id, label=f'{"/".join(entry.path)}: {entry.name}')
-    monkeypatch.setattr(recall, 'get_base_path', lambda: root)
-    monkeypatch.setattr(recall, 'load_config', lambda _: {})
-    monkeypatch.setattr(recall, '_record', lambda event: None)
-    monkeypatch.setattr(tree_recall, 'recall', lambda *a, **kw: dict(
-        status=status, items=[item], outside=[], branches=[entry.path]))
-    return recall
-
-
-@pytest.mark.parametrize('status,reason', [('ok', 'semantic'), ('lexical_only', 'lexical')])
-def test_semantic_candidates_carry_required_conditions_and_source(monkeypatch, status, reason):
-    recall = _semantic(monkeypatch, ROOT, status)
-    text, event, names = recall.world_memory_detail('인원을 공평하게 배정해 줘')
-    assert 'ortools' in event['ids'] and 'condition.schedule' in event['ids']
-    assert event['seeds'][0]['reason'] == reason
-    assert '필요=' in text and '설치·권한·실행 가능성' in text
-    assert event['edge_ids'] and set(names) == set(event['ids'])
-    _, duplicate, names = recall.world_memory_detail('같은 요구', lexical_snippet=text)
-    assert duplicate['ids'] == [] and names == {}
-
-
-def test_semantic_bundle_cannot_drop_required_relations_for_budget(monkeypatch):
-    recall = _semantic(monkeypatch, ROOT)
-    monkeypatch.setattr(recall, 'load_config', lambda _: {'max_tokens': 100})
-    text, event, names = recall.world_memory_detail('인원을 공평하게 배정해 줘')
-    assert '<world_memory' not in text and '<world_map' in text
-    assert not names and not event['ids']
-    assert event['omitted'][0]['reason'] == 'context_budget'
-
-
-def test_unreviewed_semantic_condition_withholds_candidate(world, monkeypatch):
-    import yaml
-    p = world / 'data/knowledge_catalog/structure.yaml'
-    doc = yaml.safe_load(p.read_text())
-    edge = next(e for e in doc['edges'] if e['predicate'] == 'requires' and e['subject'] == 'method.cp_sat')
-    edge['status'] = 'disputed'
-    p.write_text(yaml.safe_dump(doc, allow_unicode=True))
-    recall = _semantic(monkeypatch, world)
-    text, event, names = recall.world_memory_detail('인원을 공평하게 배정해 줘')
-    assert not names and '<world_memory' not in text
-    assert event['omitted'][0]['reason'] == 'unreviewed_required_relation'
 
 
 def test_compact_prompt_teaches_current_contracts():

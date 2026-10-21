@@ -73,5 +73,7 @@ history를 축약해도 직전 결과를 후속 요청에 함께 전달한다.
   남은 실패는 `test_instrument_shared_inputs.py::test_remote_single_selection_and_direct_result[living_tv]`.
   이번 변경에 포함되지 않은 TV manifest의 `auto_run: true`가 호출 1회를 만들지만 시험은
   초기 호출 0회를 기대한다. 관련 파일은 HEAD와 동일하며 단독 재실행에서도 재현된다.
+  2026-10-22 후속 수리: TV 자동 조회/결과 표시와 수동 조회 계약에 맞춰 해당 시험을 갱신했다.
+  TV·휴대폰 관련 3개 시험 파일 43건 통과로 이 실패를 해소했다(제품 코드 변경 없음).
 - CLI는 실제 자식 프로세스와 기존 세션 어댑터로 검사했다. 외부 모델 서비스와의
   실대화 및 모델의 의미적 지시 준수는 이 시험에 포함하지 않았다.

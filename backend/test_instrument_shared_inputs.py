@@ -2,6 +2,7 @@
 import boot_paths  # noqa: F401
 from pathlib import Path
 import json
+import re
 
 import pytest
 import yaml
@@ -56,12 +57,29 @@ async function ibl(req){
     page.evaluate('openInstrument(0)')
     if instrument == 'living_tv':
         assert page.locator('#in_target').count() == 0
-        assert page.evaluate('window.calls.length') == 0
-        for index in range(len(manifest['modes'])):
-            page.evaluate(f'setMode({index})')
+        # 전원·볼륨·앱·방향키는 진입 시 상태 조회, 방송·미디어는 명시적 실행이다.
+        assert [bool(mode.get('auto_run')) for mode in manifest['modes']] == [True]*4 + [False]*2
+        expected_calls = 0
+        for index, mode in enumerate(manifest['modes']):
+            if index:  # 첫 탭은 openInstrument가 이미 열었다.
+                page.evaluate(f'setMode({index})')
+            assert page.evaluate('CUR.mode.id') == str(index)
             assert page.locator('#in_target').count() == 0
+            if mode.get('auto_run'):
+                expected_calls += 1
+                page.wait_for_function('window.pending!==null')
+                request = page.evaluate('window.calls.at(-1)')
+                assert 'target:"거실TV"' in request['code']
+                assert re.search(r'op:\s*"status"', request['code'])
+                assert 'target' not in request['inputs']
+                assert page.evaluate('window.calls.length') == expected_calls
+                page.evaluate('window.pending(); window.pending=null')
+                page.wait_for_function("document.getElementById('instOut').textContent.includes('적용 확인')")
+                assert '적용 확인' in page.inner_text('#instOut')
+            assert page.evaluate('window.calls.length') == expected_calls
         page.evaluate('setMode(4); void runMode()')
         page.wait_for_function('window.pending!==null')
+        assert page.evaluate('window.calls.length') == expected_calls + 1
         request = page.evaluate('window.calls.at(-1)')
         assert 'target:"거실TV"' in request['code']
         assert request['inputs']['page'] == '1'

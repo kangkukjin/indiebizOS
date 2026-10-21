@@ -90,8 +90,13 @@ export class EmbeddedTabs {
     const r = { id, owner, requestURL: 'about:blank', state: 'AI가 여는 중', document: null };
     this.records.set(id, r); this.active.set(owner, id); this.show(); this.notice();
     while (!r.wc && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 40));
-    if (!r.wc) { r.closed = true; this.notice(); throw fault('BROWSER_UI_UNAVAILABLE'); }
-    await this.navigate(r, { url }, deadline);
+    if (!r.wc) { r.closed = true; this.active.delete(owner); this.notice(); throw fault('BROWSER_UI_UNAVAILABLE'); }
+    try { await this.navigate(r, { url }, deadline); }
+    catch (error) {
+      // A failed creation has no returned tab id for the caller to clean up.
+      if (!r.paused) { r.closed = true; r.wc.close(); this.active.delete(owner); this.notice(); }
+      throw error;
+    }
     return r;
   }
   check(r, deadline) {

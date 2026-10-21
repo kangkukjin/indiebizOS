@@ -1,29 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
+import { EmbeddedTabLifecycle, type EmbeddedState as State } from './embeddedLifecycle';
 
-type State = { id: string; url?: string; pending: boolean; state: string; controlled: boolean };
 type Bridge = {
   embeddedBrowserUI?: (action: string, id?: string, contentsId?: number) => Promise<any>;
   onEmbeddedBrowserChanged?: (callback: () => void) => (() => void);
 };
 export const embeddedAPI = () => (window.electron || {}) as Bridge;
 
-export function useEmbeddedTabs(open: (url: string, id: string) => void) {
-  const callback = useRef(open); callback.current = open;
-  const opened = useRef(new Set<string>());
+export function useEmbeddedTabs(options: {
+  panelOpen: boolean; show: () => void; hide: () => void;
+  openTab: (url: string, id: string) => void; removeTabs: (ids: string[]) => void;
+}) {
+  const callback = useRef(options); callback.current = options;
+  const lifecycle = useRef(new EmbeddedTabLifecycle());
   useEffect(() => {
-    const api = embeddedAPI(); let live = true;
+    const api = embeddedAPI(); let live = true; let running = false; let dirty = false;
     const sync = async () => {
+      if (running) { dirty = true; return; }
+      if (!api.embeddedBrowserUI) return;
+      running = true;
       try {
-        const rows: State[] = await api.embeddedBrowserUI?.('list') || [];
-        if (!live) return;
-        for (const r of rows) if (r.pending && r.url && !opened.current.has(r.id)) {
-          opened.current.add(r.id); callback.current(r.url, r.id);
-        }
+        do {
+          dirty = false;
+          const rows: State[] = await api.embeddedBrowserUI('list');
+          if (!live || !Array.isArray(rows)) return;
+          const actions = lifecycle.current.sync(rows, callback.current.panelOpen);
+          if (actions.removed.length) callback.current.removeTabs(actions.removed);
+          if (actions.added.length) callback.current.show();
+          for (const r of actions.added) callback.current.openTab(r.url!, r.id);
+          if (actions.close) callback.current.hide();
+        } while (dirty && live);
       } catch { /* unavailable on web or old desktop */ }
+      finally { running = false; }
     };
     const dispose = api.onEmbeddedBrowserChanged?.(sync); void sync();
     return () => { live = false; dispose?.(); };
   }, []);
+  return () => lifecycle.current.retain();
 }
 
 export function EmbeddedTabControl({ id }: { id: string }) {

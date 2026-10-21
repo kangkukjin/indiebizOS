@@ -448,6 +448,7 @@ export function renderLauncherDisplay(bindings: LauncherDisplayBindings) {
             탭·사냥판 상태를 보존하고 open 으로 표시/숨김만 토글한다. ✕닫기는 현재 표면으로 복귀(오버레이). */}
         <ForageBrowser
           open={browserOpen}
+          onOpen={() => setBrowserOpen(true)}
           onClose={() => setBrowserOpen(false)}
           openUrl={pendingBrowserUrl}
           onUrlConsumed={() => setPendingBrowserUrl(null)}

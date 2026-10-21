@@ -219,6 +219,7 @@ IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 �
 연구 대화·질문은 기존 `self:project`의 `thread_*` 연산, 자료실은 `self:notebook`의 `project_ref`·`thread_ref` 범위를 사용한다. 실행 신원은 `base/research_context.py`, 실행은 `cognition/research_runner.py`, 자료 획득은 `services/research_capture.py`·`research_library.py`, 원문·질문·근거 원장은 `datastore/research_store.py`·`research_questions.py`·`research_evidence.py`가 맡는다. 정본은 각 프로젝트의 `conversations.db`와 `research/objects`이며 FTS 색인은 복구 가능하다. [연구 사용·복구](../guides/research_project.md) · [질문 판본](../guides/research_questions.md).
 
 내장 브라우저는 기존 `limbs:browser`의 `driver:embedded`다. Electron main이 등록한 포식 탭만 제어하며 로컬 연결·계정 금고·인증 인계를 담당한다. DOM 본문은 cursor로 이어 읽고 수집 범위와 출처를 보존한다. 변경 적용에는 Electron 재시작이 필요하다. [브라우저 설계와 지원 연산](../../docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md).
+본문 수집이 만든 임시 탭은 종료 시 화면 목록에서도 제거한다. 수집 때문에 열린 브라우저 패널은 마지막 임시 탭이 닫히면 자동으로 닫고, 이미 열려 있던 패널이나 사용자가 조작을 이어받은 화면은 유지한다. 탭 생성 중 탐색 실패도 임시 탭을 정리한다.
 
 ### 알림 도달 (notify_dispatch)
 - 수신 단일 관문(`channel_poller._save_message_to_db`) 직후 `notify_dispatch.notify_user()` — ①알림함 기록 ②런처 연결 시 `/ws/launcher` `show_notification`(`api_websocket.send_launcher_command_sync`, 워커 스레드 안전) → Electron OS 네이티브 알림+배지 ③미연결이면 `desktop_notify.py`(의존성 0 — osascript / PowerShell WinRT / notify-send). `[self:notify_user]` 도 같은 관문을 쓴다.

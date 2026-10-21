@@ -10,6 +10,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { startEmbeddedBridge } from '../electron/embedded-browser-bridge.js';
+import ts from 'typescript';
 
 const root = fs.mkdtempSync('/tmp/ib-eb-test-');
 fs.mkdirSync(path.join(root, 'profile'), { recursive: true });
@@ -58,12 +59,22 @@ async function run() {
     const wc = [...bridge.tabs.guests].find(w => w.id === wcId);
     return bridge.tabs.bind(id, wc);
   });
-  const html = `<script>const {ipcRenderer}=require('electron'); const made=new Set();
-    ipcRenderer.on('refresh',async()=>{for(const r of await ipcRenderer.invoke('list')) {
-      if(!r.pending||made.has(r.id))continue; made.add(r.id); const w=document.createElement('webview');
+  const lifecyclePath = new URL('../src/components/forage/embeddedLifecycle.ts', import.meta.url);
+  const lifecycleJS = ts.transpileModule(fs.readFileSync(lifecyclePath, 'utf8'), {
+    compilerOptions: {module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022},
+  }).outputText.replace('export class', 'class');
+  const html = `<script>const {ipcRenderer}=require('electron');
+    ${lifecycleJS}
+    const lifecycle=new EmbeddedTabLifecycle(); window.panelOpen=false; let queue=Promise.resolve();
+    ipcRenderer.on('refresh',()=>{queue=queue.then(async()=>{
+      const actions=lifecycle.sync(await ipcRenderer.invoke('list'),window.panelOpen);
+      for(const id of actions.removed) document.getElementById(id)?.remove();
+      if(actions.close) window.panelOpen=false;
+      if(actions.added.length) window.panelOpen=true;
+      for(const r of actions.added) {const w=document.createElement('webview'); w.id=r.id;
       w.setAttribute('partition','persist:forage'); w.src=r.url; w.style='width:900px;height:700px';
       w.addEventListener('dom-ready',()=>ipcRenderer.invoke('bind',r.id,w.getWebContentsId()));document.body.append(w);
-    }});</script>`;
+    }});});</script>`;
   await win.loadURL(`data:text/html,${encodeURIComponent(html)}`); await bridge.ready;
   const endpoint = JSON.parse(fs.readFileSync(path.join(root, 'embedded-browser.json')));
   async function call(params, who = owner, id = randomUUID()) {
@@ -75,6 +86,21 @@ async function run() {
     });
     assert.ok(!JSON.stringify(result).includes(secret), 'secret redaction'); return result;
   }
+  const temporary = await Promise.all([call({op: 'tab', mode: 'new', url: `${origin}/delayed`}),
+    call({op: 'tab', mode: 'new', url: `${origin}/delayed`}, owner2)]);
+  check(temporary.every(t => t.success), 'concurrent temporary tabs');
+  await call({op: 'tab', mode: 'close', tab_id: temporary[0].tab_id});
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('window.panelOpen'), 'panel stays until last task ends');
+  await call({op: 'tab', mode: 'close', tab_id: temporary[1].tab_id}, owner2);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('!window.panelOpen && !document.querySelector("webview")'),
+    'last temporary tab removes guest and closes panel');
+  await win.webContents.executeJavaScript('window.panelOpen=true');
+  const preserved = await call({op: 'tab', mode: 'new', url: `${origin}/delayed`});
+  await call({op: 'tab', mode: 'close', tab_id: preserved.tab_id});
+  await new Promise(resolve => setTimeout(resolve, 100));
+  check(await win.webContents.executeJavaScript('window.panelOpen'), 'preserve already-open user panel');
   let r = await call({ op: 'navigate', url: `${origin}/mail` }); check(r.success, 'create actual guest tab'); const tab = r.tab_id;
   let snap = await call({ op: 'snapshot' }); check(snap.success && snap.elements.length >= 4, 'DOM snapshot refs');
   const submit = snap.elements.find(e => e.role === 'button' && e.name === '로그인').ref;

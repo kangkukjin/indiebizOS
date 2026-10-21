@@ -13,6 +13,63 @@ ROOT = Path(__file__).resolve().parents[1]
 ADAPTER = {"protocol": "legacy-envelope", "value_path": ""}
 
 
+def test_agent_tabs_cleanup_panel_and_preserve_user_browsing():
+    subprocess.run(['node', '--input-type=module', '-'], cwd=ROOT, check=True, text=True, input=r'''
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import ts from './frontend/node_modules/typescript/lib/typescript.js';
+const source = fs.readFileSync('./frontend/src/components/forage/embeddedLifecycle.ts', 'utf8');
+const js = ts.transpileModule(source, {compilerOptions: {
+  module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022,
+}}).outputText;
+const {EmbeddedTabLifecycle} = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
+const row = (id, extra = {}) => ({id, pending: true, controlled: true, url: 'about:blank', state: '', ...extra});
+let life = new EmbeddedTabLifecycle();
+let result = life.sync([row('a'), row('b')], false);
+assert.equal(result.added.length, 2);
+assert.equal(life.sync([row('b', {pending: false})], true).close, false);
+result = life.sync([], true);
+assert.deepEqual(result.removed, ['b']); assert.equal(result.close, true);
+assert.equal(life.sync([], false).close, false);
+// Already-open user panel and tabs survive; only missing agent tabs are removed.
+life = new EmbeddedTabLifecycle();
+const user = row('user', {pending: false, controlled: false});
+life.sync([user, row('a')], true);
+result = life.sync([user], true);
+assert.deepEqual(result.removed, ['a']); assert.equal(result.close, false);
+// Host interaction and webview takeover both cancel automatic panel closure.
+for (const takeover of ['host', 'guest', 'released']) {
+  life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
+  if (takeover === 'host') life.retain();
+  else life.sync([row('a', {pending: false, controlled: takeover !== 'released',
+    state: takeover === 'guest' ? '사용자 조작 중' : ''})], true);
+  assert.equal(life.sync([], true).close, false);
+}
+// An overlapping new task prevents closing between tasks.
+life = new EmbeddedTabLifecycle(); life.sync([row('a')], false);
+result = life.sync([row('b')], true);
+assert.deepEqual(result.removed, ['a']); assert.equal(result.close, false);
+assert.equal(life.sync([], true).close, true);
+''')
+
+
+def test_failed_embedded_navigation_removes_unreturned_tab():
+    subprocess.run(['node', '--input-type=module', '-'], cwd=ROOT, check=True, text=True, input=r'''
+import assert from 'node:assert/strict';
+import {EmbeddedTabs, fault} from './frontend/electron/embedded-browser-tabs.js';
+let closed = false;
+const tabs = new EmbeddedTabs({show() {}, changed() {
+  for (const r of tabs.records.values()) if (!r.wc) r.wc = {close() {closed = true;}};
+}});
+tabs.navigate = async () => {throw fault('NAVIGATION_TIMEOUT');};
+await assert.rejects(tabs.create('owner', 'https://example.test', Date.now() + 1000),
+  {code: 'NAVIGATION_TIMEOUT'});
+assert.equal(closed, true);
+assert.deepEqual(tabs.ui('list'), []);
+assert.equal(tabs.active.has('owner'), false);
+''')
+
+
 @pytest.fixture(scope="module")
 def operation_source():
     return subprocess.check_output([

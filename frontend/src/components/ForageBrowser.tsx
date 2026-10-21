@@ -45,8 +45,9 @@ function retweetNameFromUrl(url: string, text?: string): string {
   }
 }
 
-export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
+export function ForageBrowser({ open, onOpen, onClose, openUrl, onUrlConsumed }: {
   open: boolean;
+  onOpen: () => void;
   onClose: () => void;
   // 외부(예: 런처 X-Ray 버튼)가 특정 URL을 새 탭으로 열도록 넘기는 신호. 열고 나면
   // onUrlConsumed 로 부모가 null 로 되돌려 재발화를 막는다.
@@ -450,11 +451,24 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
     setMode('browse');
   };
 
-  useEmbeddedTabs(openTab);
+  const retainBrowser = useEmbeddedTabs({
+    panelOpen: open, show: onOpen, hide: onClose, openTab,
+    removeTabs: (ids) => {
+      const removed = new Set(ids);
+      for (const id of ids) delete webviewRefs.current[id];
+      setTabs(prev => prev.filter(t => !removed.has(t.id)));
+      if (activeId && removed.has(activeId)) {
+        const remaining = tabs.filter(t => !removed.has(t.id));
+        setActiveId(remaining.at(-1)?.id || null);
+        if (!remaining.length) setMode('search');
+      }
+    },
+  });
 
   // 외부에서 openUrl 신호가 오면(브라우저가 열린 상태) 그 URL을 새 탭으로 열고 신호를 소비한다.
   useEffect(() => {
     if (open && openUrl) {
+      retainBrowser();
       openTab(openUrl);
       onUrlConsumed?.();
     }
@@ -794,6 +808,8 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
   return (
     <div
       className={`absolute inset-0 z-30 flex-col bg-white ${open ? 'flex' : 'hidden'}`}
+      onPointerDownCapture={retainBrowser}
+      onKeyDownCapture={retainBrowser}
     >
       {/* 탭 스트립 — 탭이 하나라도 있으면 항상. 클릭=전환, +=새 탭(검색홈), ×=닫기. */}
       {tabs.length > 0 && (

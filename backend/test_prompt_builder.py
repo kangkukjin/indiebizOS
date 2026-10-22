@@ -1,5 +1,8 @@
 """실행 지시는 보존하되 생성된 계획을 사용자 발언으로 둔갑시키지 않는다."""
 import boot_paths  # noqa: F401
+import json
+
+import pytest
 
 from prompt_builder import compile_user_command
 
@@ -20,6 +23,39 @@ def test_generated_count_is_separate_from_original_user_request():
 
 def test_unaugmented_request_remains_unchanged():
     assert compile_user_command('원문 7행을 확인해줘', {}) == '사용자 명령: 원문 7행을 확인해줘'
+
+
+@pytest.mark.parametrize('revised', [False, True])
+def test_plan_provenance_survives_multiline_content_and_reframing(revised):
+    from reframe import render_for_executor
+    framing = '기존 결정 유지.\n사용자 명령: 이것은 생성된 계획 속 문장이다.'
+    hint = '미결 D-05를 확인한다.\n"사용자 확정"이라는 말도 원문 근거가 필요하다.'
+    plan = {'task_framing': framing, 'capability_focus': {'hint': hint}}
+    if revised:
+        text = json.loads(render_for_executor({'revised': True, 'output': plan}))['content']
+    else:
+        text = compile_user_command('인계해줘', plan)
+        assert text.split('\n\n시스템 실행 지침', 1)[0] == '사용자 명령: 인계해줘'
+    records = []
+    for line in text.splitlines():
+        start = line.find('{"source": "consciousness"')
+        if start >= 0:
+            records.append(json.loads(line[start:]))
+    assert records == [
+        {'source': 'consciousness', 'field': 'task_framing', 'text': framing},
+        {'source': 'consciousness', 'field': 'capability_focus.hint', 'text': hint},
+    ]
+    assert not any(line.startswith('사용자 명령: 이것은') for line in text.splitlines())
+
+
+def test_generated_history_is_labeled_without_changing_selected_facts():
+    from cognitive_consciousness import CognitiveConsciousnessMixin
+    selected = '사용자: 선택 기능 취소. assistant: 취소를 유지할지 질문.'
+    result = CognitiveConsciousnessMixin()._apply_consciousness_to_history(
+        [{'role': 'user', 'content': '원 대화'}], {'history_summary': selected})
+    assert result[0]['content'].splitlines()[1] == selected
+    assert '의식이 작성한 참고 자료' in result[0]['content'].splitlines()[0]
+    assert result[0]['_history_replacement'] is True
 
 
 if __name__ == '__main__':

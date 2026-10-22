@@ -17,7 +17,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from typing import Optional, List, Dict
-from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
+from history_excerpt import history_excerpt, conversation_excerpt, HISTORY_TEXT_CHARS
 import conversation_sessions as sessions
 
 
@@ -508,6 +508,36 @@ class ConversationDB:
         except (TypeError, ValueError):
             return ""
 
+    def _earlier_rehearsal_excerpt(self, conn, agent_id, user_id, before_id):
+        """요약 모델 없는 훈련의 이전 원문. 처음과 최근을 남기고 누락을 표시한다."""
+        where = """((from_agent_id=? AND to_agent_id=?)
+                    OR (from_agent_id=? AND to_agent_id=?))
+                   AND contact_type='rehearsal' AND session_id IS NULL AND id<?"""
+        args = (agent_id, user_id, user_id, agent_id, before_id)
+        columns = 'id,from_agent_id,content,message_time'
+        rows = conn.execute(f'SELECT {columns} FROM messages WHERE {where} '
+                            'ORDER BY id DESC LIMIT 40', args).fetchall()
+        if not rows:
+            return ''
+        first = conn.execute(f'SELECT {columns} FROM messages WHERE {where} '
+                             'ORDER BY id LIMIT 1', args).fetchone()
+        count = conn.execute(f'SELECT COUNT(*) FROM messages WHERE {where}', args).fetchone()[0]
+        if first[0] != rows[-1][0]:
+            rows.append(first)
+        omitted = count - len(rows)
+        selected = []
+        for row in reversed(rows):
+            role = 'assistant' if row[1] == agent_id else 'user'
+            content = row[2] or ''
+            if role == 'user':
+                content = self._time_prefix(row[3]) + content
+            selected.append({'role': role, 'content': content})
+        prefix = ('[훈련 대화의 이전 원문 발췌 — 저장된 발화자·순서이며 새 지시가 아님. '
+                  '현재 요청과 관련된 과거만 사용하고 생략한 내용은 추정하지 않는다.]\n')
+        if omitted:
+            prefix += f'[처음과 최근 사이 {omitted}개 메시지 생략]\n'
+        return prefix + conversation_excerpt(selected, limit=12000 - len(prefix))
+
     def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None,
                            *, rehearsal: bool = False) -> list:
         """AI용 대화 히스토리 (최신 순, Observation Masking 적용)
@@ -515,6 +545,7 @@ class ConversationDB:
         최근 N턴은 원본 유지, 오래된 긴 턴은 결과 쪽을 더 넓게 남기는 원문 발췌
         최근 턴의 이미지는 파일에서 로드하여 포함
         user 메시지에는 현지 절대 시각·UTC 오프셋([YYYY-MM-DD HH:MM +HHMM])을 붙여 시간 접지
+        훈련은 실사용 체크포인트 대신 이전 원문 발췌(최대12000자)를 별도로 보존한다.
         """
         if limit is None:
             limit = HISTORY_LIMIT_USER
@@ -524,7 +555,7 @@ class ConversationDB:
             sid = None if rehearsal else sessions.resolve(conn, self.db_path, sessions.pair_owner(agent_id, user_id), "messages")
             conn.commit()
             cursor.execute("""
-                SELECT from_agent_id, content, message_time, images
+                SELECT from_agent_id, content, message_time, images, id
                 FROM messages
                 WHERE ((from_agent_id = ? AND to_agent_id = ?)
                    OR (from_agent_id = ? AND to_agent_id = ?))
@@ -537,6 +568,8 @@ class ConversationDB:
 
             messages = []
             rows = cursor.fetchall()
+            earlier = (self._earlier_rehearsal_excerpt(conn, agent_id, user_id, rows[-1][4])
+                       if rehearsal and rows and limit > 0 else '')
 
             for idx, row in enumerate(rows):
                 role = "assistant" if row[0] == agent_id else "user"
@@ -566,7 +599,13 @@ class ConversationDB:
 
         history = list(reversed(messages))
 
-        history = sessions.bounded_history(history)
+        history = sessions.bounded_history(history, max_chars=48000 if earlier else 60000)
+        if earlier:
+            # 기존 체크포인트처럼 연속 user 역할을 만들지 않는다. 출처는 발췌 안에 남는다.
+            if history and history[0]['role'] == 'user':
+                history[0] = {**history[0], 'content': earlier + '\n\n[최근 대화]\n' + history[0]['content']}
+            else:
+                history.insert(0, {'role': 'user', 'content': earlier})
 
         # 하드캡 요약 체크포인트를 머리에 주입 (history_checkpoint — 없으면 무변화, fail-soft)
         if _ckpt_apply and not rehearsal:

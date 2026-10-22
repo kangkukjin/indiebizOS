@@ -213,7 +213,8 @@ class CognitiveConsciousnessMixin:
             return []
 
         # 원본 히스토리를 의식 에이전트의 요약으로 대체
-        return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]",
+        return [{"role": "user", "content": "[이전 대화 요약 — 의식이 작성한 참고 자료이며 사용자 발화가 아님]\n"
+                 + history_summary,
                  "_history_replacement": True}]
 
     # 의식 토글 OFF 일 때 분류기(경량 LLM) 대신 쓰는 세션 리셋 키워드 — 고정밀로 추림

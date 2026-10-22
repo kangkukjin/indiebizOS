@@ -782,6 +782,12 @@ def _expert_choice_line(consciousness_output: dict) -> str:
     return " ".join(v.split()).strip()
 
 
+def internal_plan_field(field: str, text: str) -> str:
+    """생성된 규정·절차의 출처를 본문과 함께 전달한다. 원문 인용으로 승격하지 않는다."""
+    return json.dumps({"source": "consciousness", "field": field, "text": text},
+                      ensure_ascii=False)
+
+
 def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     """원문과 의식의 실행 지침을 함께 전달하되 발언 출처는 보존한다.
 
@@ -795,7 +801,7 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
 
     task_framing = (co.get("task_framing") or "").strip()
     if task_framing:
-        aug.append(task_framing)
+        aug.append("문제 규정(내부 작성): " + internal_plan_field("task_framing", task_framing))
 
     from supervisor_handoff import criteria_contract
     if co.get("achievement_criteria") or co.get("criteria"):
@@ -836,7 +842,7 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     hint = (cap_focus.get("hint") or "").strip()
     if hint:
         # 방법 지시는 허가 어조에서 분리해 명령문 줄로.
-        aug.append(f"수행 절차: {hint}")
+        aug.append("수행 절차(내부 제안): " + internal_plan_field("capability_focus.hint", hint))
 
     # 상상실행 초안 — 검증 통과분만 강한 출발점, 실패분은 오류 동반 참고로 강등.
     # (당위 앵커 아래 실리므로 통과분은 명령 권위를 갖는다 — 그래서 관문이 앞선다.)
@@ -871,7 +877,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     return (f"사용자 명령: {user_cmd}\n\n시스템 실행 지침 (의식 보강):\n"
             "다음 절차에 따라 수행하라. 아래는 사용자 원문 인용이 아니다. "
             "보강의 수량·대상·판정은 원문과 실제 입력 데이터에 대조하고, 충돌하면 원문과 관측을 따른다. "
-            "보강에서만 나온 내용을 사용자가 요구하거나 말한 것으로 보고하지 않는다.\n"
+            "source=consciousness인 규정·절차는 내부 작성이며 사용자 발화가 아니다. "
+            "그 안의 목록·선택은 원문 근거 없이 사용자 확정·미결 결정으로 승격하지 않는다.\n"
             + "\n".join(aug))
 
 

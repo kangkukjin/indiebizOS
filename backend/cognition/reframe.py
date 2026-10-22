@@ -257,7 +257,9 @@ def render_for_executor(env: dict) -> str:
     if out.get("needs_clarification") and (out.get("clarification_question") or "").strip():
         lines.append("★멈춤: 이 문제는 사용자 확인 없이는 진행할 수 없다. 더 실행하지 말고, 지금까지 확인한 "
                      "사실을 짧게 정리한 뒤 다음 질문으로 응답을 마무리하라:\n" + out["clarification_question"].strip())
-    lines.append("현재 태스크:\n" + (out.get("task_framing") or "").strip())
+    from prompt_builder import internal_plan_field
+    lines.append("현재 태스크(내부 재규정):\n" + internal_plan_field(
+        "task_framing", (out.get("task_framing") or "").strip()))
     try:
         from prompt_builder import _expert_choice_line
         _ex = _expert_choice_line(out)
@@ -275,7 +277,7 @@ def render_for_executor(env: dict) -> str:
     cf = out.get("capability_focus") or {}
     hint = (cf.get("hint") or "").strip()
     if hint:
-        lines.append("수행 절차: " + hint)
+        lines.append("수행 절차(내부 제안): " + internal_plan_field("capability_focus.hint", hint))
     hl = cf.get("highlight_actions") or []
     if hl:
         lines.append("쓸 수 있는 IBL 액션: " + ", ".join(hl) + " (이 밖의 액션도 가능)")

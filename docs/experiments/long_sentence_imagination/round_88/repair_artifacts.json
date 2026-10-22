@@ -1,0 +1,710 @@
+{
+  "sha256": {
+    "ai/T1/budget.json": "0c298a55ea7b48d0a1212163544e0897cb1189e58e1d56d098b390c8579b6e0c",
+    "ai/T1/launch_gate.json": "e416823be718697d0e3b83a509134d8388dd1d9a4c48c838d545df7b7f011240",
+    "ai/T1/raid_ledger.json": "b4afd18b744e553147bb943ee5b339c0dfc25263b4a93ef4e5e8e5a93148ee08",
+    "ai/T1/record_exceptions.csv": "a8d17f943f9dd2464714a123d8e45c5d748201294b2a006a1320f845dd2f5066",
+    "ai/T1/record_ledger.csv": "7b1a9bdd1f2d499e0712f44997cba6146a53f688240e9ec0ee87ae905678ed40",
+    "ai/T1/record_summary.json": "48057f652c056ebda21c375e1814c023d0e37c6fec5cc9fa2b35acebbe5f5bb8",
+    "ai/T1/report.md": "ed18ab24df06234411b31909039f5e6294125a72ff1aa4dbffdc1619ff6e41ba",
+    "ai/T1/scripts/build_t1.py": "2ef59ce1df08ad189e28629fa5dc392c3af3b8f3870c0b1aff07de3b6877a54c",
+    "ai/T1/task_ledger.csv": "2b1602f2bf48d88c7e4344f31a26a6bf5a4555b9ce1a1263513f359993a0e65c",
+    "ai/T1/task_ledger.json": "bd272ff012b3f30c8ff4736921a10611d39461a64152e13aa581338fe47ce4d8",
+    "ai/T2/budget.json": "16849879bf72bc29fd57f545d3338101e2b1389a932f90297eae58d48ec1ac79",
+    "ai/T2/change_log.json": "65281a818c0a29bed302342b8a84ac07292d648d4d68d2473eb2e6c7b3754d38",
+    "ai/T2/launch_gate.json": "a34c9985c933587de1c6d05bf5e85df710f58bfdf32e3568682c8c895f342897",
+    "ai/T2/raid_ledger.json": "3d3ee201da19256f1dc044d93981d49e127ddb3a9885b5737df3e9ef30705b08",
+    "ai/T2/report.md": "7da5150b06193b1c3839dfd2095ff5d682064245d236fa962ce692d34ec9bee8",
+    "ai/T2/scripts/build_t2.py": "710045d67f2e6797227166f299990a404bc32bc540bdd3100827673143de4050",
+    "ai/T2/task_ledger.csv": "4fc7de51d3b5cd206eff7547f2b396d624b2a8f5fb91e4db5f1321d4ba1e5719",
+    "ai/T2/task_ledger.json": "150cb11ef08b9e4ef0440652cd588861428550a2e4d747f6d9c192465151668e",
+    "ai/T3/budget.json": "90ac0550e4541090a8f8bb5f956e01a232d5463a841fbab78af67abd71151148",
+    "ai/T3/change_log.json": "6f7bc5b37002829769713e0f126c5f2e6184639f3d048f46c9bb8895501304ed",
+    "ai/T3/launch_gate.json": "efa26b83c39f3519d27dd7be48e0f7fcd0574bb526138731aeb7f5365fcf350f",
+    "ai/T3/raid_ledger.json": "49dc99ea4eb0d08fb242462bd4e4269bab86de1b1f1055d00ceafed6d73e055e",
+    "ai/T3/report.md": "4b5f1e188615bfa61cd8efc2adfa954a6171714ec0701a94a96505f877dc0e6a",
+    "ai/T3/scripts/build_t3.py": "f364a191def410b429739a96384b524f1cef92f71cb79b5371058b9950b85f78",
+    "ai/T3/scripts/t1_t2_hash_after.txt": "1a157034d74ee7267a76e2a7d152d9d85de484b74f4b2af00de221b18f3a4c88",
+    "ai/T3/scripts/t1_t2_hash_before.txt": "1a157034d74ee7267a76e2a7d152d9d85de484b74f4b2af00de221b18f3a4c88",
+    "ai/T3/task_ledger.csv": "5164fa665e488f2003185797737b7de2d58da22e1e0cb38504beb83c019802ee",
+    "ai/T3/task_ledger.json": "4236cf1f7cef122fa78a76fa76795d99e1665bf2231e08f41206394691c8e9f2",
+    "ai/T4/handoff.json": "43d841d4d5b0a6f9991db68f099ec9ebddde50f7cd44abb2295eee44c0bd31e7",
+    "ai/T4/handoff.md": "25940ed88bdec75bc429e0abd1b702005ed4e81ce35977d65799b6f676762162",
+    "ai/T4/t1_t3_hashes_after.txt": "6a4ff1b85b410dfca2e6831931354a72c5a35309f38d2ed67096893598733ee9",
+    "ai/T4/t1_t3_hashes_before.txt": "6a4ff1b85b410dfca2e6831931354a72c5a35309f38d2ed67096893598733ee9",
+    "ai/T5/change_log.json": "2926dbb18727bba241aa83071664d3754818a65d4c79c08c28f89e7743df9947",
+    "ai/T5/launch_gate.json": "765440ef97cd5deffcf090e3223e769cbc35fa4712a0bff2d0bacf4fd1fea910",
+    "ai/T5/raid_ledger.json": "568f5c6dcd64b1e3563353aa4e55474967771821c9b87269f30a2eac3cb5c389",
+    "ai/T5/record_diff.csv": "29dc6557eef95a711f75bd006f0f945c8c09759c4585295abc83514b5fa1da9a",
+    "ai/T5/record_diff.json": "bc0e6d89837e845df9b7e6f7301a92e00d3b62ea35953c8dbdefac0d20a9fc34",
+    "ai/T5/record_ledger.csv": "9e6ad470edcdc013a8913d05c79f0c556d8ad2688a33cd4d0400c1a3a9541523",
+    "ai/T5/record_summary.json": "c28965bd2401f1d7c0e7990b9ac85a7852b544dfde09cc440df120e63c30c449",
+    "ai/T5/report.md": "fcab2dcc6324b0eb3bd08d58cb7c31e5d9338dd273afd45539114a9806815df6",
+    "ai/T5/scripts/build_t5.py": "f64e68a523150d3ec036b1ef20adcb753ee4f70fead4b4f33afc31322482531d",
+    "ai/T5/verify/t1_t4_hashes_after.txt": "8862da369f8bdb33a484fadadf4857ed586dd5f9e4ab8e3363421241caa07d9f",
+    "ai/T5/verify/t1_t4_hashes_before.txt": "8862da369f8bdb33a484fadadf4857ed586dd5f9e4ab8e3363421241caa07d9f",
+    "ai/T5/verify/t3_rerun/budget.json": "90ac0550e4541090a8f8bb5f956e01a232d5463a841fbab78af67abd71151148",
+    "ai/T5/verify/t3_rerun/change_log.json": "6f7bc5b37002829769713e0f126c5f2e6184639f3d048f46c9bb8895501304ed",
+    "ai/T5/verify/t3_rerun/launch_gate.json": "efa26b83c39f3519d27dd7be48e0f7fcd0574bb526138731aeb7f5365fcf350f",
+    "ai/T5/verify/t3_rerun/raid_ledger.json": "49dc99ea4eb0d08fb242462bd4e4269bab86de1b1f1055d00ceafed6d73e055e",
+    "ai/T5/verify/t3_rerun/task_ledger.csv": "5164fa665e488f2003185797737b7de2d58da22e1e0cb38504beb83c019802ee",
+    "ai/T5/verify/t3_rerun/task_ledger.json": "4236cf1f7cef122fa78a76fa76795d99e1665bf2231e08f41206394691c8e9f2",
+    "ai/T5/verify/t3_rerun_compare.txt": "8222d8b4bd8a4aced8bf65a45bb06111a09b0b30e9d755d0faee1aad1d61d293",
+    "ai/T6/action_table.csv": "55cb449a9926fd4952d395ec457aee7230e21309ace4da27001873c309ff2669",
+    "ai/T6/action_table.json": "58699174cc9557ea0942b9206c29ced1a2075fdf8af38ab597e84b3b12e7aab6",
+    "ai/T6/inspection_order.md": "f019935fa532adccf09c0ba738e0d56ccc8963834c2fc929189a6eea2e2cc5ee",
+    "ai/T6/issue_condition_map.csv": "f5441523742a291f7799291433668421ce29cc2337e98543e88dfcec7b32859c",
+    "ai/T6/report.md": "657035c5a6c25428f64fc7d478fdd1fa1a66cfec489a00f777a8f5160fe68898",
+    "ai/T6/scripts/build_t6.py": "e5144a7ea4404b16529908a4ee9542ab3a3718684c85bec6e44328eff0714f41",
+    "ai/T6/task_actions.csv": "e2e5498bdf6ec543bfc8e714a3f49bd7ab09d378295b99d783fe494fca19e211",
+    "ai/T6/verify/crosscheck.txt": "ebc23b97395b0b555aef20a9b0ff7864b8faab01765f9eb01d69feaac46a1e03",
+    "ai/T6/verify/t1_t5_hashes_after.txt": "482b0b24fd151cecfa4a5738c781639cd425c8e63f5701c62805b8c0a7ae8072",
+    "ai/T6/verify/t1_t5_hashes_before.txt": "0fd554c1418ef099a6bd9ace0b7059566ec1e1a008900df715e35fd91dac4b86",
+    "ai/T7/input_check.json": "e3f7b29c81433d716041bcd20e564fc1d926075cf8c0f650c288ffc30cf3862b",
+    "ai/T7/inspection_order_delta.md": "ffcb9b2d93480aaa9fdc0f6ce2e425eb23de57ffb6fd59fbc8baa84782d317bc",
+    "ai/T7/issue_update.csv": "e02f9087d4a9a521390ddc60e87a1fc3245a8182119596b0cc767a0bde501c68",
+    "ai/T7/issue_update.json": "2d04653c234f0d24f7515388299465734b3ccf745a1066fb70a109c6a1e609f1",
+    "ai/T7/launch_gate.json": "e180d54a4d42565189e264d15f6faba71e051f2d6f04223fe4690b9b7a88c983",
+    "ai/T7/record_diff.csv": "1cabb6eacaf5e9f41d9b9595d5b9109e8040343a7261d6c783fc9f6d543c33cc",
+    "ai/T7/record_diff.json": "b6c72cf2dedf8e6ef3f1058b36deeaf1c478f8ca2f16600a0638b6d0bd3299eb",
+    "ai/T7/record_ledger.csv": "55898315bc4ef80603ffabcd9145168a87d372211704b8613b1d468cd94a53e1",
+    "ai/T7/record_summary.json": "3555041e6f16a43c05bd70c513f619875baa959eb79c20a16f7b78f94e9ff0dd",
+    "ai/T7/report.md": "eb8828500b2db91583a83aaebd13e15372c812d04a8172f1fe639d39639baa89",
+    "ai/T7/scripts/build_t7.py": "60d0cce5d22df405b142d710354f1c60cc9568f706715864e3ceb9788ea4beaa",
+    "ai/T7/verify/crosscheck.txt": "fa2b674807c9ab8cda7a2a17e4b68263bb5737b378b9eda468d0c29c6f5f7d7e",
+    "ai/T7/verify/t1_t6_hashes_after.txt": "bff3eb20f56166551c97258790cefc60f6eb365d4463ad6d977db9dc158be512",
+    "ai/T7/verify/t1_t6_hashes_before.txt": "bff3eb20f56166551c97258790cefc60f6eb365d4463ad6d977db9dc158be512",
+    "ai/T8/decision_ledger.json": "a63fe39c5c06014182551ecfd4d59ccca9a3982db921cabef15f4ff4c6fb65bd",
+    "ai/T8/handoff_paths.csv": "70c315ca1b68c8ed20ac58eedffa4790365e2342c8ffe83beedb701e44a1fab6",
+    "ai/T8/hold_actions.csv": "a79c6c86ea092f3feb60eb1049df9deb46200cb12a800aa523c85f7af346342d",
+    "ai/T8/hold_actions.json": "49b7ba4f971e393bea46ce776e39fc5149652900ab189bf77a6b7bfd4b7f07a1",
+    "ai/T8/initial_vs_final.json": "15a21ca0ae8e1204c217300e026e622d05a40aa1405aabdfb892c94ef9b4debd",
+    "ai/T8/input_check.json": "7d69461a41a14910809b5f6e2201e241ad46310719c3d93a30a2f9793bec976a",
+    "ai/T8/launch_gate.json": "b6a1776af734bcbdb7a5044f11a6b7fc9ba2b36714f98ccc66965dffbf430c3e",
+    "ai/T8/record_ledger.csv": "72fe15b3d3451d4653253af7781959248f57f9f0a741f19a87a6efa2c68bcc81",
+    "ai/T8/record_summary.json": "438cdaaeb777ef71933a45625f8a2deb0b6d2dbf9de27e5e2b5be01eaec5cb5c",
+    "ai/T8/report.md": "45891b30cf99f81a301847d25f673aab5a86b4bd1824fbaea5867a54cc3792c0",
+    "ai/T8/scripts/build_t8.py": "f288d6e42f183a784d60c48a4bd15c67f9f567ddf3376ae3d6839201f97bd764",
+    "ai/T8/verify/crosscheck.txt": "6523b1345cca95578dd7f63b61a74cfdc5af3934e6a4fd376f9cc14043dc9bb6",
+    "ai/T8/verify/t1_t7_hashes_after.txt": "2e468bfb39d236ee8519e13ebcb2c0f573c66f3cfb0bf67f2232e842a863e679",
+    "ai/T8/verify/t1_t7_hashes_before.txt": "2e468bfb39d236ee8519e13ebcb2c0f573c66f3cfb0bf67f2232e842a863e679",
+    "trainer/T1/report.txt": "5c5a81d9874fb45308a77f4fa8ede03d7aed384c65c338f1d0ecbc976eac4880",
+    "trainer/T1/state.json": "84b2a418634f8bb5e3a1d9c47f982ec8d491450da3455a111c035ee7241bbeba",
+    "trainer/T2/report.txt": "a4271ba3c4347057ecfdd2d18ec9ed6a96cbf1ae590e86837b46fc509b2aaa4a",
+    "trainer/T2/state.json": "0f4259fe33df3bf194dc7bb0b4a34f4d31fad8cdacb84c72a3ca80aa337d0a70",
+    "trainer/T3/report.txt": "721c1aca620b46d4e8128a26890a0174c3ad73a5ca93dd0ada844b50f70cab49",
+    "trainer/T3/state.json": "1555d068e60c68804e43a8bf49ebf62cccb9c106e7d02cabf46180d2add69ae5",
+    "trainer/T4/report.txt": "1980ed8bba51dd8ad9ac49a552f9194198c5dbd9525833ab696df97d80641ade",
+    "trainer/T4/state.json": "54f7df442632b945e8ddef75090766f693b0fac1900dd109a9d6b0f863d3ff64",
+    "trainer/T5/report.txt": "eb0826280021037882fd5a8d01d8a0bd7ad0e4df6bdbed9ae9ab53c5d1b7288c",
+    "trainer/T5/state.json": "4df9e406930a74c93f9cffcbe3a9f0a9b7cbb7ffeb9082848694b5c9aae43a30",
+    "trainer/T6/report.txt": "b5d140ea7f9d899c7597472b2f471abde582d95056fc3d7749ad29e3701e23fd",
+    "trainer/T6/state.json": "11570aa0b3647b5c3578fb3251c4798eb41c4f424b6e58885b56e48060765bc6",
+    "trainer/T7/report.txt": "52aa7ee3861afd47ecbf7b9aad50d2fe5d3328d5287ff57b4f73688928d8fd17",
+    "trainer/T7/state.json": "d7a52171618589e451243d7cf1fbfa7b1dd04a70592b87c5d59f5cce29f600ef",
+    "trainer/T8/report.txt": "f87e595fbd1addeae5c765bbe50dec577262adf293aaaf7310e1b4170cf94488",
+    "trainer/T8/state.json": "fc2787c917f5abb170fd327e0c0e9507afce86408087ecf6329f8263ca020c76",
+    "runs/T1_planning_tool_inputs.json": "df6ab6eb73fb19e86638af3f216c47e12acd1df540ca1fdd5df815d904e13712",
+    "runs/T1_tool_inputs.json": "8592c8412a51bb1c7d45769661507ceb388450a97df4f3207842b8b2cd60311f",
+    "runs/T2_planning_tool_inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "runs/T2_tool_inputs.json": "2c62e7d809d2e2918c5226d24971c3c0429df4d5ad02fa294548934add95b05f",
+    "runs/T3_planning_tool_inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "runs/T3_tool_inputs.json": "0534bfa46a7b59e87e068c9587c960c6cea1f8500e93307b1e902347d5160fd0",
+    "runs/T4_planning_tool_inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "runs/T4_tool_inputs.json": "677abd0b8d92ff7e2aa3caf6999e4e56d61d30ed51e4c98f02ef777babdd8d34",
+    "runs/T5_planning_tool_inputs.json": "26ab0cf8a620e34c7e66f0b733a7ba4d107718b30007f43a4444ac483f55d1da",
+    "runs/T5_tool_inputs.json": "e2c133374c7e30d0034aa2ecca4964e98de951f3e70178e7e80f63ffd0fa1f40",
+    "runs/T6_planning_tool_inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "runs/T6_tool_inputs.json": "9dcf197a4160c538dd178a21f09346da5bef844e9b8ddc5af082de4992ea31bf",
+    "runs/T7_planning_tool_inputs.json": "90bebdb0fa036aec7ace8f7247fd43ec1713f6351b2a8f615e281e380dabe345",
+    "runs/T7_tool_inputs.json": "7f2ab180e30f151204c999d98241bfe97ebfa6448523ce949e092f0a8cb951ee",
+    "runs/T8_planning_tool_inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "runs/T8_tool_inputs.json": "de81b3e4498e85f2970ce6039f7803d14eb5e54eb11999e72e3e237165c8eb3b",
+    "checkpoint/ai/T1/budget.json": "0c298a55ea7b48d0a1212163544e0897cb1189e58e1d56d098b390c8579b6e0c",
+    "checkpoint/ai/T1/launch_gate.json": "e416823be718697d0e3b83a509134d8388dd1d9a4c48c838d545df7b7f011240",
+    "checkpoint/ai/T1/raid_ledger.json": "b4afd18b744e553147bb943ee5b339c0dfc25263b4a93ef4e5e8e5a93148ee08",
+    "checkpoint/ai/T1/record_exceptions.csv": "a8d17f943f9dd2464714a123d8e45c5d748201294b2a006a1320f845dd2f5066",
+    "checkpoint/ai/T1/record_ledger.csv": "7b1a9bdd1f2d499e0712f44997cba6146a53f688240e9ec0ee87ae905678ed40",
+    "checkpoint/ai/T1/record_summary.json": "48057f652c056ebda21c375e1814c023d0e37c6fec5cc9fa2b35acebbe5f5bb8",
+    "checkpoint/ai/T1/report.md": "ed18ab24df06234411b31909039f5e6294125a72ff1aa4dbffdc1619ff6e41ba",
+    "checkpoint/ai/T1/scripts/build_t1.py": "2ef59ce1df08ad189e28629fa5dc392c3af3b8f3870c0b1aff07de3b6877a54c",
+    "checkpoint/ai/T1/task_ledger.csv": "2b1602f2bf48d88c7e4344f31a26a6bf5a4555b9ce1a1263513f359993a0e65c",
+    "checkpoint/ai/T1/task_ledger.json": "bd272ff012b3f30c8ff4736921a10611d39461a64152e13aa581338fe47ce4d8",
+    "checkpoint/ai/T2/budget.json": "16849879bf72bc29fd57f545d3338101e2b1389a932f90297eae58d48ec1ac79",
+    "checkpoint/ai/T2/change_log.json": "65281a818c0a29bed302342b8a84ac07292d648d4d68d2473eb2e6c7b3754d38",
+    "checkpoint/ai/T2/launch_gate.json": "a34c9985c933587de1c6d05bf5e85df710f58bfdf32e3568682c8c895f342897",
+    "checkpoint/ai/T2/raid_ledger.json": "3d3ee201da19256f1dc044d93981d49e127ddb3a9885b5737df3e9ef30705b08",
+    "checkpoint/ai/T2/report.md": "7da5150b06193b1c3839dfd2095ff5d682064245d236fa962ce692d34ec9bee8",
+    "checkpoint/ai/T2/scripts/build_t2.py": "710045d67f2e6797227166f299990a404bc32bc540bdd3100827673143de4050",
+    "checkpoint/ai/T2/task_ledger.csv": "4fc7de51d3b5cd206eff7547f2b396d624b2a8f5fb91e4db5f1321d4ba1e5719",
+    "checkpoint/ai/T2/task_ledger.json": "150cb11ef08b9e4ef0440652cd588861428550a2e4d747f6d9c192465151668e",
+    "checkpoint/ai/T3/budget.json": "90ac0550e4541090a8f8bb5f956e01a232d5463a841fbab78af67abd71151148",
+    "checkpoint/ai/T3/change_log.json": "6f7bc5b37002829769713e0f126c5f2e6184639f3d048f46c9bb8895501304ed",
+    "checkpoint/ai/T3/launch_gate.json": "efa26b83c39f3519d27dd7be48e0f7fcd0574bb526138731aeb7f5365fcf350f",
+    "checkpoint/ai/T3/raid_ledger.json": "49dc99ea4eb0d08fb242462bd4e4269bab86de1b1f1055d00ceafed6d73e055e",
+    "checkpoint/ai/T3/report.md": "4b5f1e188615bfa61cd8efc2adfa954a6171714ec0701a94a96505f877dc0e6a",
+    "checkpoint/ai/T3/scripts/build_t3.py": "f364a191def410b429739a96384b524f1cef92f71cb79b5371058b9950b85f78",
+    "checkpoint/ai/T3/scripts/t1_t2_hash_after.txt": "1a157034d74ee7267a76e2a7d152d9d85de484b74f4b2af00de221b18f3a4c88",
+    "checkpoint/ai/T3/scripts/t1_t2_hash_before.txt": "1a157034d74ee7267a76e2a7d152d9d85de484b74f4b2af00de221b18f3a4c88",
+    "checkpoint/ai/T3/task_ledger.csv": "5164fa665e488f2003185797737b7de2d58da22e1e0cb38504beb83c019802ee",
+    "checkpoint/ai/T3/task_ledger.json": "4236cf1f7cef122fa78a76fa76795d99e1665bf2231e08f41206394691c8e9f2",
+    "checkpoint/ai/T4/handoff.json": "43d841d4d5b0a6f9991db68f099ec9ebddde50f7cd44abb2295eee44c0bd31e7",
+    "checkpoint/ai/T4/handoff.md": "25940ed88bdec75bc429e0abd1b702005ed4e81ce35977d65799b6f676762162",
+    "checkpoint/ai/T4/t1_t3_hashes_after.txt": "6a4ff1b85b410dfca2e6831931354a72c5a35309f38d2ed67096893598733ee9",
+    "checkpoint/ai/T4/t1_t3_hashes_before.txt": "6a4ff1b85b410dfca2e6831931354a72c5a35309f38d2ed67096893598733ee9",
+    "checkpoint/ai/T5/budget.json": "901ec356a21173937896c3b857a2170f4fcf5782a2382cc19f7acaf351070276",
+    "checkpoint/ai/T5/change_log.json": "31bc45f4b6ad017b136dd12e275a37bf2a2334a7324d999a2c013a09ef121273",
+    "checkpoint/ai/T5/launch_gate.json": "78f6e43e8590690059a4484d2f9ceac75e6b6a1faf7cbdb0808e1f17c9abccc8",
+    "checkpoint/ai/T5/raid_ledger.json": "ca35fae3024b18babc9c708ec3537c91a65b0c727b6e6d32b181434028a14253",
+    "checkpoint/ai/T5/record_diff.csv": "5703ce4245069ec32915640ff834e104feef510794d4c8ee0c2d5ec0c8a449e0",
+    "checkpoint/ai/T5/record_ledger.csv": "a266ec07bed88d616a97076f8dfadaf0caa16ca6f9c47b5cc00c60c28dad30a1",
+    "checkpoint/ai/T5/record_summary.json": "80c139eef7df10956a2d10ffebe640bf1c3510bbbb73ed62c353dcf48a751258",
+    "checkpoint/ai/T5/report.md": "e24245e50f087fefefe04fd66936375e709d7d9d9eba264ac3b7237e9a38c2bc",
+    "checkpoint/ai/T5/scripts/build_t5.py": "7e0283f06f4020ed31c4a2ffd470a60aa376718c85aafc3cfadbb8ccdf050c42",
+    "checkpoint/ai/T5/scripts/t1_t4_hashes_after.txt": "24271b052dc0d83dadc56b06ffd7ae2dbeefcc96645315fcf5c90d1dcf4a35f4",
+    "checkpoint/ai/T5/scripts/t1_t4_hashes_before.txt": "24271b052dc0d83dadc56b06ffd7ae2dbeefcc96645315fcf5c90d1dcf4a35f4",
+    "checkpoint/ai/T5/task_ledger.csv": "5474ab94dca5666e45c3190af4a6f1b452c5bf923757046a19c25b60d5ab99aa",
+    "checkpoint/ai/T5/task_ledger.json": "bcff222514634863c3e848021e046f3dac1a45e14f38267bd3131edad0f9731f",
+    "checkpoint/ai/T6/action_table.csv": "6476adfc7ee297630fc5536e38f45e57538f3e51839f71bacf1bb993da4f7527",
+    "checkpoint/ai/T6/action_table.json": "4dd4f9455844c9dcd7159c0e072e33a93df61fee56302bca4d98466f66fef2e7",
+    "checkpoint/ai/T6/problem_links.csv": "2fa8108bc1764505958b04c6a7d9cf65109b10234d825c9e40d5949861cc3295",
+    "checkpoint/ai/T6/remaining_tasks.csv": "7e3a576864a8f532d421e4d994d5f017af80933ab4f44d2a3eca254e863a5b3b",
+    "checkpoint/ai/T6/report.md": "e69dcfc9432f09ec93c25018ac9b81754404ebf55702df176109fdcd92efc7a4",
+    "checkpoint/ai/T6/review_order.json": "2e744adc43402273248a082851bd51ac263d9150f972ba7f6dab92ef400164b9",
+    "checkpoint/ai/T6/scripts/build_t6.py": "d34298697b4a37bb9e1185d76122d61e161fb0fb7030b52bf707e9ee74380c39",
+    "checkpoint/ai/T6/scripts/t1_t5_hashes_after.txt": "5e5df62b07a3082b0222d9df6599716da61a7a9a79d9fdb8561281496dabef51",
+    "checkpoint/ai/T6/scripts/t1_t5_hashes_before.txt": "5e5df62b07a3082b0222d9df6599716da61a7a9a79d9fdb8561281496dabef51",
+    "checkpoint/ai/T9/action_table_t9.json": "9bb2f90db2576006c293ea599bf077f96d0fa6853135d24f5ee502f30d3e7062",
+    "checkpoint/ai/T9/crosscheck.csv": "78d350ba664ebb6c94e9a8a6e679535d6834222866f5769d37aba7e1e123c6ca",
+    "checkpoint/ai/T9/doc_review.json": "a9a4f450b29f36ff52ce0083c25a9aa181e6015b941df686ffbe931f254d33d0",
+    "checkpoint/ai/T9/handover_nontask_actions.csv": "2a067e25465051087f3e04b58644501b2f5df1b60faa31e94cced3694586a816",
+    "checkpoint/ai/T9/handover_tasks.csv": "f5a4cea6c7dffe2aab95d3add2764f071d6671822969d5b9a8dbc2a6a9d488a4",
+    "checkpoint/ai/T9/problem_links_t9.csv": "b879a39d7e2f5e5b97912d7b2f96e76bfa9145b6077f08f7ff934eddeb85ec80",
+    "checkpoint/ai/T9/questions.csv": "4079cb116f10f3f567cbfa2f9c02d79199e646c623077ddaa82289130552c09a",
+    "checkpoint/ai/T9/questions_excluded.json": "d7e7c641cb380c8b5101648f19bffb24de0c4b685daf6b7d91050631d7696eb2",
+    "checkpoint/ai/T9/report.md": "ae8573c25f28ebfcac72bac323367ea83443f04645d3727ed18e96ba779ea13d",
+    "checkpoint/ai/T9/review_order_t9.json": "80d9715ecb5672ae26b6a0ad1e8e0d8996737e35b7bf95ad87629fd1ed005bc6",
+    "checkpoint/ai/T9/scripts/build_t9.py": "6ccecb7633f728ad7969d76847f6330c3be3e005d32d46dc6a1618c165744933",
+    "checkpoint/ai/T9/scripts/t1_t6_hashes_after.txt": "9e7f89acc88762b04720b6fbe08e8d813cc88030c4a80be1d66e860fcf231786",
+    "checkpoint/ai/T9/scripts/t1_t6_hashes_before.txt": "9e7f89acc88762b04720b6fbe08e8d813cc88030c4a80be1d66e860fcf231786",
+    "checkpoint/runs/T1_planning_tool_inputs.json": "dfb43f36a39228a35987e21a9d9daa33efae3f4c1dfd847106459dfdb91cf2e2",
+    "checkpoint/runs/T1_tool_inputs.json": "06619a13431d7ad5b4758d704ab3d7622617acf056f9a1cba85a0c767ed9e5b6",
+    "checkpoint/runs/T2_planning_tool_inputs.json": "b020b7f767409e24fdd6b8d3868fc19169ef4683fb3da13bf5663678ca0ab7dc",
+    "checkpoint/runs/T2_tool_inputs.json": "0afa677cd3b51c2f993fb499aa2a88341ce64e579ae3cc92e5c5c05ac87480cd",
+    "checkpoint/runs/T3_planning_tool_inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "checkpoint/runs/T3_tool_inputs.json": "129c7651d0a0a5022060c83bce77b5d48f3fa1866f8a05d428aa35b455debdce",
+    "scope/ai/T1/budget.json": "0c298a55ea7b48d0a1212163544e0897cb1189e58e1d56d098b390c8579b6e0c",
+    "scope/ai/T1/launch_gate.json": "e416823be718697d0e3b83a509134d8388dd1d9a4c48c838d545df7b7f011240",
+    "scope/ai/T1/raid_ledger.json": "b4afd18b744e553147bb943ee5b339c0dfc25263b4a93ef4e5e8e5a93148ee08",
+    "scope/ai/T1/record_exceptions.csv": "a8d17f943f9dd2464714a123d8e45c5d748201294b2a006a1320f845dd2f5066",
+    "scope/ai/T1/record_ledger.csv": "7b1a9bdd1f2d499e0712f44997cba6146a53f688240e9ec0ee87ae905678ed40",
+    "scope/ai/T1/record_summary.json": "48057f652c056ebda21c375e1814c023d0e37c6fec5cc9fa2b35acebbe5f5bb8",
+    "scope/ai/T1/report.md": "ed18ab24df06234411b31909039f5e6294125a72ff1aa4dbffdc1619ff6e41ba",
+    "scope/ai/T1/scripts/build_t1.py": "2ef59ce1df08ad189e28629fa5dc392c3af3b8f3870c0b1aff07de3b6877a54c",
+    "scope/ai/T1/task_ledger.csv": "2b1602f2bf48d88c7e4344f31a26a6bf5a4555b9ce1a1263513f359993a0e65c",
+    "scope/ai/T1/task_ledger.json": "bd272ff012b3f30c8ff4736921a10611d39461a64152e13aa581338fe47ce4d8",
+    "scope/ai/T2/budget.json": "16849879bf72bc29fd57f545d3338101e2b1389a932f90297eae58d48ec1ac79",
+    "scope/ai/T2/change_log.json": "65281a818c0a29bed302342b8a84ac07292d648d4d68d2473eb2e6c7b3754d38",
+    "scope/ai/T2/launch_gate.json": "a34c9985c933587de1c6d05bf5e85df710f58bfdf32e3568682c8c895f342897",
+    "scope/ai/T2/raid_ledger.json": "3d3ee201da19256f1dc044d93981d49e127ddb3a9885b5737df3e9ef30705b08",
+    "scope/ai/T2/report.md": "7da5150b06193b1c3839dfd2095ff5d682064245d236fa962ce692d34ec9bee8",
+    "scope/ai/T2/scripts/build_t2.py": "710045d67f2e6797227166f299990a404bc32bc540bdd3100827673143de4050",
+    "scope/ai/T2/task_ledger.csv": "4fc7de51d3b5cd206eff7547f2b396d624b2a8f5fb91e4db5f1321d4ba1e5719",
+    "scope/ai/T2/task_ledger.json": "150cb11ef08b9e4ef0440652cd588861428550a2e4d747f6d9c192465151668e",
+    "scope/ai/T3/budget.json": "90ac0550e4541090a8f8bb5f956e01a232d5463a841fbab78af67abd71151148",
+    "scope/ai/T3/change_log.json": "6f7bc5b37002829769713e0f126c5f2e6184639f3d048f46c9bb8895501304ed",
+    "scope/ai/T3/launch_gate.json": "efa26b83c39f3519d27dd7be48e0f7fcd0574bb526138731aeb7f5365fcf350f",
+    "scope/ai/T3/raid_ledger.json": "49dc99ea4eb0d08fb242462bd4e4269bab86de1b1f1055d00ceafed6d73e055e",
+    "scope/ai/T3/report.md": "4b5f1e188615bfa61cd8efc2adfa954a6171714ec0701a94a96505f877dc0e6a",
+    "scope/ai/T3/scripts/build_t3.py": "f364a191def410b429739a96384b524f1cef92f71cb79b5371058b9950b85f78",
+    "scope/ai/T3/scripts/t1_t2_hash_after.txt": "1a157034d74ee7267a76e2a7d152d9d85de484b74f4b2af00de221b18f3a4c88",
+    "scope/ai/T3/scripts/t1_t2_hash_before.txt": "1a157034d74ee7267a76e2a7d152d9d85de484b74f4b2af00de221b18f3a4c88",
+    "scope/ai/T3/task_ledger.csv": "5164fa665e488f2003185797737b7de2d58da22e1e0cb38504beb83c019802ee",
+    "scope/ai/T3/task_ledger.json": "4236cf1f7cef122fa78a76fa76795d99e1665bf2231e08f41206394691c8e9f2",
+    "scope/ai/T4/handoff.json": "43d841d4d5b0a6f9991db68f099ec9ebddde50f7cd44abb2295eee44c0bd31e7",
+    "scope/ai/T4/handoff.md": "25940ed88bdec75bc429e0abd1b702005ed4e81ce35977d65799b6f676762162",
+    "scope/ai/T4/t1_t3_hashes_after.txt": "6a4ff1b85b410dfca2e6831931354a72c5a35309f38d2ed67096893598733ee9",
+    "scope/ai/T4/t1_t3_hashes_before.txt": "6a4ff1b85b410dfca2e6831931354a72c5a35309f38d2ed67096893598733ee9",
+    "scope/ai/T5/budget.json": "901ec356a21173937896c3b857a2170f4fcf5782a2382cc19f7acaf351070276",
+    "scope/ai/T5/change_log.json": "31bc45f4b6ad017b136dd12e275a37bf2a2334a7324d999a2c013a09ef121273",
+    "scope/ai/T5/launch_gate.json": "78f6e43e8590690059a4484d2f9ceac75e6b6a1faf7cbdb0808e1f17c9abccc8",
+    "scope/ai/T5/raid_ledger.json": "ca35fae3024b18babc9c708ec3537c91a65b0c727b6e6d32b181434028a14253",
+    "scope/ai/T5/record_diff.csv": "5703ce4245069ec32915640ff834e104feef510794d4c8ee0c2d5ec0c8a449e0",
+    "scope/ai/T5/record_ledger.csv": "a266ec07bed88d616a97076f8dfadaf0caa16ca6f9c47b5cc00c60c28dad30a1",
+    "scope/ai/T5/record_summary.json": "80c139eef7df10956a2d10ffebe640bf1c3510bbbb73ed62c353dcf48a751258",
+    "scope/ai/T5/report.md": "e24245e50f087fefefe04fd66936375e709d7d9d9eba264ac3b7237e9a38c2bc",
+    "scope/ai/T5/scripts/build_t5.py": "7e0283f06f4020ed31c4a2ffd470a60aa376718c85aafc3cfadbb8ccdf050c42",
+    "scope/ai/T5/scripts/t1_t4_hashes_after.txt": "24271b052dc0d83dadc56b06ffd7ae2dbeefcc96645315fcf5c90d1dcf4a35f4",
+    "scope/ai/T5/scripts/t1_t4_hashes_before.txt": "24271b052dc0d83dadc56b06ffd7ae2dbeefcc96645315fcf5c90d1dcf4a35f4",
+    "scope/ai/T5/task_ledger.csv": "5474ab94dca5666e45c3190af4a6f1b452c5bf923757046a19c25b60d5ab99aa",
+    "scope/ai/T5/task_ledger.json": "bcff222514634863c3e848021e046f3dac1a45e14f38267bd3131edad0f9731f",
+    "scope/ai/T6/action_table.csv": "6476adfc7ee297630fc5536e38f45e57538f3e51839f71bacf1bb993da4f7527",
+    "scope/ai/T6/action_table.json": "4dd4f9455844c9dcd7159c0e072e33a93df61fee56302bca4d98466f66fef2e7",
+    "scope/ai/T6/problem_links.csv": "2fa8108bc1764505958b04c6a7d9cf65109b10234d825c9e40d5949861cc3295",
+    "scope/ai/T6/remaining_tasks.csv": "7e3a576864a8f532d421e4d994d5f017af80933ab4f44d2a3eca254e863a5b3b",
+    "scope/ai/T6/report.md": "e69dcfc9432f09ec93c25018ac9b81754404ebf55702df176109fdcd92efc7a4",
+    "scope/ai/T6/review_order.json": "2e744adc43402273248a082851bd51ac263d9150f972ba7f6dab92ef400164b9",
+    "scope/ai/T6/scripts/build_t6.py": "d34298697b4a37bb9e1185d76122d61e161fb0fb7030b52bf707e9ee74380c39",
+    "scope/ai/T6/scripts/t1_t5_hashes_after.txt": "5e5df62b07a3082b0222d9df6599716da61a7a9a79d9fdb8561281496dabef51",
+    "scope/ai/T6/scripts/t1_t5_hashes_before.txt": "5e5df62b07a3082b0222d9df6599716da61a7a9a79d9fdb8561281496dabef51",
+    "scope/ai/T9/action_table.csv": "c6c82097ad1794d9af621abe9982b9367a769b71fe2a8cbdc2bb0da33c6139b4",
+    "scope/ai/T9/action_table.json": "1fbcad04989eacb85b99acf8d0ca373c3e7a53235b8e55eb6ff0593fa06a5738",
+    "scope/ai/T9/change_log.json": "82c5ca29a793aa9b5e048a0d01d99b8a7b9b93659cf3994913d9f9e191fba716",
+    "scope/ai/T9/handover_resolution.csv": "b871450693f55828b0a8a31c05e63712e358695bcaedb11794b6d8e24c8c5cf8",
+    "scope/ai/T9/intake_classification.json": "0e0002eac13ae3611775a9cb084e916766d3868575d976cbc37be15553ecb182",
+    "scope/ai/T9/ops_worklist.csv": "6d06df7daddaeb770d92f769bfadc87a9147342bb789ef8d6ceb74f313c91629",
+    "scope/ai/T9/questions.csv": "754a76e172f6472e3cd3d997e9aaff0caaed317c97b1fd0f8cd93a992c213e86",
+    "scope/ai/T9/questions.json": "4addb492a339dc13dbead84e30c8f490a877236ba596248f740b48c52edc8033",
+    "scope/ai/T9/report.md": "496665056f6afd8994b4eb464bac05703b5c94ed6bc6753edb3a4fd348e5ec53",
+    "scope/ai/T9/review_order.json": "c83cd003c699df48beee4e2ce4d0066221232e0690e021a82d7ad0bc434247a0",
+    "scope/ai/T9/scripts/build_t9.py": "c2847d8ed4e1b35ea947528f3d9bddc6a0125eef867caed0c8e480096c21db0b",
+    "scope/ai/T9/scripts/t1_t6_hashes_after.txt": "9e7f89acc88762b04720b6fbe08e8d813cc88030c4a80be1d66e860fcf231786",
+    "scope/ai/T9/scripts/t1_t6_hashes_before.txt": "9e7f89acc88762b04720b6fbe08e8d813cc88030c4a80be1d66e860fcf231786",
+    "scope/runs/T1_planning_tool_inputs.json": "ef57bb64da4bbbcbf9397f2be6dba31839bbe4cd69173fa726e12981bdd02ffc",
+    "scope/runs/T1_tool_inputs.json": "ea114a4a129dfe9418864fde1fce72755b2d9e76af23a2cc394142c16ec40d6b"
+  },
+  "models": {
+    "first": {
+      "T1": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ]
+    },
+    "second": {
+      "T1": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T2": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T3": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T4": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T5": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T6": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T7": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T8": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ]
+    },
+    "checkpoint": {
+      "T1": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T2": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "T3": [
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ]
+    },
+    "final": {
+      "T1": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ]
+    }
+  }
+}

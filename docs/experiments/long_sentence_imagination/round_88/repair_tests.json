@@ -1,0 +1,34 @@
+{
+  "restricted_full": {
+    "tests": 11434.0,
+    "failures": 98.0,
+    "errors": 34.0,
+    "skipped": 4.0,
+    "time": 216.273,
+    "failed_cases": "mostly browser/sandbox/local server permission restrictions; not product attribution"
+  },
+  "host_full_before_test_entrypoint_fix": {
+    "tests": 11434.0,
+    "failures": 1.0,
+    "errors": 0.0,
+    "skipped": 1.0,
+    "time": 193.549,
+    "failed_cases": [
+      "backend.test_single_runner::test_r2_direct_run_delegates_to_pytest"
+    ]
+  },
+  "related_before_final_scope": {
+    "passed": 96,
+    "seconds": 3.47
+  },
+  "test_entrypoint_fix_recheck": {
+    "passed": 7,
+    "seconds": 2.69
+  },
+  "final_scope_related": {
+    "passed": 60,
+    "seconds": 9.59
+  },
+  "system": "No system suite; live synthetic checkpoint replay used for changed path",
+  "full_after_last_policy_change": false
+}

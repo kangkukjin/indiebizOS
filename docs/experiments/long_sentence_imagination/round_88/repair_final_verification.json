@@ -1,0 +1,321 @@
+{
+  "checks": [
+    {
+      "check": "replay production source unchanged backend/cognition/cognitive_consciousness.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay production source unchanged backend/cognition/prompt_builder.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay production source unchanged backend/cognition/reframe.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay production source unchanged backend/cognition/final_evaluator.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay production source unchanged data/common_prompts/base_prompt_v6.md",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay production source unchanged data/common_prompts/consciousness_prompt.md",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay production source unchanged backend/datastore/conversation_db.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/launch_gate.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/raid_ledger.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/change_log.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/report.md",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/task_ledger.csv",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/budget.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/task_ledger.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/launch_gate.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/raid_ledger.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/change_log.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/report.md",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/task_ledger.csv",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/budget.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/task_ledger.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T4/handoff.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T4/t1_t3_hashes_before.txt",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T4/t1_t3_hashes_after.txt",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T4/handoff.md",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/record_exceptions.csv",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/launch_gate.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/raid_ledger.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/report.md",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/task_ledger.csv",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/record_ledger.csv",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/budget.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/task_ledger.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/record_summary.json",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T2/scripts/build_t2.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/scripts/t1_t2_hash_after.txt",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/scripts/build_t3.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T3/scripts/t1_t2_hash_before.txt",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "seeded prior artifact preserved T1/scripts/build_t1.py",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "initial scope reaches resumed history",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "bounded resumed history",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay 1 terminal",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay 2 terminal",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "replay 3 terminal",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T1 all prior outputs unchanged",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T2 all prior outputs unchanged",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T3 all prior outputs unchanged",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T5 full records",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T5 every record judgment",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T5 exact completed tasks",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T5 cancelled kept",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T5 exact ready tasks",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T5 budget unchanged",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T5 stale completion blocker repaired",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T6 only remaining tasks assigned",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T6 completed and cancelled excluded",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T6 optional evidence no longer blocks",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T6 optional evidence not prerequisite",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T6 independent work proceeds",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T9 remaining task set preserved",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T9 old policy questions excluded",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T9 known site constraint scoped to P2 and P4",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T9 no speculative prerequisite for independent work",
+      "pass": false,
+      "detail": null
+    }
+  ],
+  "passed": 62,
+  "failed": 1
+}

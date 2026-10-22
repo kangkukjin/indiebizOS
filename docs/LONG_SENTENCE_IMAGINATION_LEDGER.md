@@ -4,6 +4,15 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 90회차 — 에이전트 위임·재위임·조건 전달 (2026-10-22, 사용자 요청으로 중단·정리 완료)
+
+14:39 준비 시작·14:52:16 훈련자 위임3건 접수, 이후 사용자가 나중에 다시 하도록 요청해 중단.
+비용 task_6d8f4716(ep5180)·일정 task_86da5c70(ep5181)은 succeeded, 자료 task_cd0c0186(ep5179)은
+cancelled로 회수했다. 14:53:45 모든 작업 종료·자식잔여0, 훈련용 에이전트5개 정지·health정상/live_turns0.
+비용/일정 부분 산출물과 최초 IBL·접수증·궤적을 보존했다. 전체 검토·재위임·조건 변경·독립 AI는 미검증.
+제품 수리0·훈련 완료 아님. 재실시 때 번호90을 재사용하지 않고 새 회차·실행예산으로 시작한다.
+[사전 과제](experiments/long_sentence_imagination/round_90/task.md) · [중단 보고](experiments/long_sentence_imagination/round_90/report.md) · [증거](experiments/long_sentence_imagination/round_90/evidence.json).
+
 ## 89회차 — 복잡한 일의 분해·병렬 처리·부분 합류·선택 재실행 (2026-10-22, 훈련 완료·후속 공통 지침 수리)
 
 13:22시작·마지막AI13:41:05종료·정리13:41:49(상한14:22). 88회차 초기 합성1800행·72작업·영수증 재사용.

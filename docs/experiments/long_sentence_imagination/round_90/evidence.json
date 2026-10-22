@@ -1,0 +1,202 @@
+{
+  "status": "interrupted_by_user",
+  "tasks": [
+    {
+      "task_id": "task_cd0c0186",
+      "agent": "자료",
+      "state": "cancelled",
+      "pending_children": 0,
+      "episodes": [
+        {
+          "id": 5179,
+          "source": "training",
+          "task_id": "task_cd0c0186",
+          "run_id": "run_1631763fa604383c07b1",
+          "total_ms": 88764,
+          "ended_at": "2026-10-22T14:53:45.127867"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 3884,
+          "output": 3,
+          "cache_read": 3200,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 190811,
+          "output": 34,
+          "cache_read": 135587,
+          "cache_create": 55218
+        }
+      },
+      "event_kinds": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 7,
+        "supervision.recall.finished": 7,
+        "model.call_started": 2,
+        "model.input": 2,
+        "model.round": 4,
+        "model.usage": 2,
+        "model.call_finished": 2,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "supervision.framing": 1,
+        "model.response_snapshot": 4,
+        "supervision.tool.started": 2,
+        "supervision.tool.finished": 2,
+        "cognition.evaluation": 1,
+        "recall.used": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      }
+    },
+    {
+      "task_id": "task_6d8f4716",
+      "agent": "비용",
+      "state": "succeeded",
+      "pending_children": 0,
+      "episodes": [
+        {
+          "id": 5180,
+          "source": "training",
+          "task_id": "task_6d8f4716",
+          "run_id": "run_4016afd6df120ec22bc9",
+          "total_ms": 51464,
+          "ended_at": "2026-10-22T14:53:07.849866"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 7543,
+          "output": 54,
+          "cache_read": 3968,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 236133,
+          "output": 1888,
+          "cache_read": 187216,
+          "cache_create": 48909
+        }
+      },
+      "event_kinds": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 7,
+        "supervision.recall.finished": 7,
+        "model.call_started": 3,
+        "model.input": 3,
+        "model.round": 6,
+        "model.usage": 3,
+        "model.call_finished": 3,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "supervision.framing": 1,
+        "model.response_snapshot": 4,
+        "supervision.tool.started": 3,
+        "supervision.tool.finished": 3,
+        "seam": 2,
+        "ibl.started": 1,
+        "ibl.checkpoint": 1,
+        "side_effect.write": 2,
+        "ibl.finished": 1,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      }
+    },
+    {
+      "task_id": "task_86da5c70",
+      "agent": "일정",
+      "state": "succeeded",
+      "pending_children": 0,
+      "episodes": [
+        {
+          "id": 5181,
+          "source": "training",
+          "task_id": "task_86da5c70",
+          "run_id": "run_f734e104c9e910a2b6e0",
+          "total_ms": 46479,
+          "ended_at": "2026-10-22T14:53:03.073069"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 7367,
+          "output": 8,
+          "cache_read": 3968,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 235199,
+          "output": 2222,
+          "cache_read": 185741,
+          "cache_create": 49450
+        }
+      },
+      "event_kinds": {
+        "request.received": 1,
+        "cognition.supervisor_selected": 1,
+        "supervision.turn.opened": 1,
+        "supervision.recall.started": 7,
+        "supervision.recall.finished": 7,
+        "model.call_started": 3,
+        "model.input": 3,
+        "model.round": 6,
+        "model.usage": 3,
+        "model.call_finished": 3,
+        "recall.presented": 1,
+        "cognition.route": 1,
+        "supervision.framing": 1,
+        "model.response_snapshot": 5,
+        "supervision.tool.started": 3,
+        "supervision.tool.finished": 3,
+        "seam": 1,
+        "ibl.started": 1,
+        "ibl.checkpoint": 1,
+        "side_effect.write": 2,
+        "ibl.finished": 1,
+        "capability.judged": 1,
+        "cognition.evaluation": 1,
+        "recall.used": 1,
+        "supervision.cost.summary": 1,
+        "supervision.turn.closed": 1,
+        "run.ended": 1
+      }
+    }
+  ],
+  "health": {
+    "status": "healthy",
+    "timestamp": "2026-10-22T14:53:45.351302",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "live_turns": [],
+    "live_turns_observation": "known"
+  },
+  "artifact_hashes": {
+    "trainer/T1/C_envelope.json": "e3519170d3a2a32369df04399e01ca31a2844122c31d7b6b33850b23e458d1df",
+    "trainer/T1/receipts.json": "9186146eebbbc211022080e1a4afbd01face6468e9fd37a534b515600f216732",
+    "trainer/T1/C.json": "df90c2346258d19de0ecc37821498fa61f7526f723bbbf1c851e5bd26ce7796b",
+    "trainer/T1/B_envelope.json": "b9696fdbb6b9b84d934119bd550066cc957ef6a54db895583ac359e4d18304f9",
+    "trainer/T1/B.json": "054a283108856e356cf687baae9f0fc8d22edbe5ecefd86b9aee358d7e02d889",
+    "trainer/inputs/options.json": "4a3cc9e840c8b772a9c9c4a8b63ebc60431c81e710e0be058b7fd8648165d158",
+    "trainer/inputs/project.json": "85a1f7914034e4dd901b553e9bf824f16cb7dcd8492e062cb419cd60eec2c52a",
+    "trainer/inputs/receipts.json": "fa900253a984cbdb02bc4f4ed178c84e8de3da78ebae41a984bd3bddea858c49",
+    "trainer/inputs/README.txt": "6273ccdd2f024fa4e06cdc38a7251c146ac088fa219a667c6bfdb4d45d66ba26",
+    "trainer/inputs/records.json": "9a2c601b229e758c0ba080827d9ab69163d2b3541e0ee41345ba2d8a796f2673",
+    "trainer/inputs/tasks.json": "cf810d7dd5d114f364f6fc053c5ee3634332454e348121ddaad350b224685eee",
+    "trainer/T1/programs/비용.ibl": "883b5ade4da7918c64fafec4594f5002ec646ce0133d8c0161bab516fd08d026",
+    "trainer/T1/programs/운영.ibl": "fa26a8b6db31cc8beff708b633c1b79cc1037062abd384c23ecc5a1156cfd7ef",
+    "trainer/T1/programs/총괄.ibl": "57d5f3ba3788eb8fb6a699af28df5162ea40afdddebad4ef030bf376e4f16138",
+    "trainer/T1/programs/일정.ibl": "3023f8cc8a395024a2799abcd4dd7a6ab7c3aef0a4577ea4aac7a8b9e82eb0af",
+    "trainer/T1/programs/자료.ibl": "c76012c07dc1c0516dfd24e0ee8fee2db3fbcef8f829aecbd5a89f2f222e4407"
+  },
+  "production_repairs": 0,
+  "ai_independent_runs": 0
+}

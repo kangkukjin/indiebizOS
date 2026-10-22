@@ -1,0 +1,7 @@
+#!ibl edition=2
+$receipts=$jobs >> [table:each]{parallel:3} {
+  $r=[others:delegate]{agent_id:$it.agent,message:$it.message}
+  return {role:$it.role,task_ref:$r.task_ref}
+}
+$saved=[self:write]{path:$out,content:json($receipts)}
+return $receipts

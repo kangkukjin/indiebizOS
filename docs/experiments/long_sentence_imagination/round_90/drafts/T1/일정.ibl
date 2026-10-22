@@ -1,0 +1,35 @@
+#!ibl edition=2
+[def:시각]() { return [self:time]{format:"%Y-%m-%dT%H:%M:%S.%f%z"} }
+[def:보존]($id,$value,$started,$output,$sources) {
+  $path=$output+"/"+$id+".json"
+  $saved=[self:write]{path:$path,content:json($value)}
+  $ended=[fn:시각]{}
+  return {id:$id,value:$value,started:$started,ended:$ended,artifact:$saved.path,sources:$sources,reused:false}
+}
+[def:일정검토]($source,$policy,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  $docs=([self:read]{path:$source+"/tasks.json"}) & ([self:read]{path:$source+"/receipts.json"})
+  $tasks=$docs[0].data.items
+  $receipts=$docs[1].data.items
+  $verified=map(filter($receipts,($r)=>$r.reported_done and $r.verified),($r)=>$r.task_id)
+  $reported=map(filter($receipts,($r)=>$r.reported_done),($r)=>$r.task_id)
+  $states=map($tasks,($t)=>{**$t,status:$policy.cancel_optional and $t.optional ? "cancelled" : $t.id in $verified ? "verified_done" : $t.id in $reported ? "unverified" : "planned"})
+  $done=map(filter($states,($t)=>$t.status=="verified_done"),($t)=>$t.id)
+  $pending=filter($states,($t)=>$t.status!="cancelled" and $t.status!="verified_done")
+  $ready=filter($pending,($t)=>all(map($t.depends,($id)=>$id in $done)))
+  $required=filter($states,($t)=>not $t.optional)
+  $streams=reduce($pending,[],($acc,$t)=>$t.stream in $acc ? $acc : $acc+[$t.stream])
+  $chains=map($streams,($s)=>{stream:$s,hours:reduce(filter($pending,($t)=>$t.stream==$s),0,($a,$t)=>$a+$t.hours)})
+  $value={policy:$policy,items:$states,ready:map($ready,($t)=>$t.id),done:$done,
+    required:len($required),required_done:len(filter($required,($t)=>$t.status=="verified_done")),
+    remaining_required:len(filter($required,($t)=>$t.status!="verified_done")),
+    unverified:map(filter($states,($t)=>$t.status=="unverified"),($t)=>$t.id),chains:$chains,
+    deadline:$policy.deadline,deadline_confirmed:false,deadline_missing:["시작일·가동일", "담당자 가용시간"]}
+  return [fn:보존]{id:"C",value:$value,started:$start,output:$output,sources:[$source+"/tasks.json",$source+"/receipts.json"]}
+}
+$source="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_90회차/trainer/inputs"; $output="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_90회차/trainer/T1"; $policy={"budget":6000000,"deadline":"2026-11-20","cancel_optional":false,"external_saas":true,"face":true}
+$old={}
+$r=[fn:일정검토]{source:$source,policy:$policy,output:$output,reload:true,old:$old}
+$saved=[self:write]{path:$output+"/C_envelope.json",content:json($r)}
+return {artifact:$saved.path}

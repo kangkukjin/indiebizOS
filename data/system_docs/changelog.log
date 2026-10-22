@@ -2818,3 +2818,5 @@
 [2026-10-22 14:09:57] PROJECT_CREATED: L89_repair (ID: L89_repair)
 
 2026-10-22 | 긴문장89 후속 지침 수리: 실제 의존 결과만 합류, 입력 스캔/판정/집계/검증과 재사용 설명을 공통 계획·실행·최종평가에 연결. 4턴 재실행 산출232통과·지연 이벤트 대기 해소·계산 과장 제거, 행 단위 증분/전체 비용 절감은 미달. 네이티브 출력 범위 위반 잔존. 선택 회귀3648통과/1건너뜀·평가 반례4건 기대판정. docs/experiments/long_sentence_imagination/round_89/report.md §8.
+[2026-10-22 14:44:40] PROJECT_CREATED: L90_trainer (ID: L90_trainer)
+[2026-10-22 14:44:40] PROJECT_CREATED: L90_trainer (ID: L90_trainer)

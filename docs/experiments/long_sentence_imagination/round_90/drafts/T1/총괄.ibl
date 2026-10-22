@@ -1,0 +1,35 @@
+#!ibl edition=2
+[def:시각]() { return [self:time]{format:"%Y-%m-%dT%H:%M:%S.%f%z"} }
+[def:보존]($id,$value,$started,$output,$sources) {
+  $path=$output+"/"+$id+".json"
+  $saved=[self:write]{path:$path,content:json($value)}
+  $ended=[fn:시각]{}
+  return {id:$id,value:$value,started:$started,ended:$ended,artifact:$saved.path,sources:$sources,reused:false}
+}
+[def:최종검토]($ade,$b,$c,$policy,$output,$phase) {
+  $start=[fn:시각]{}
+  assert json($b.value.policy)==json($policy) and json($c.value.policy)==json($policy) and json($ade.D.value.policy)==json($policy),"policy revision mismatch"
+  $launch=$ade.E.value.records_ready and $b.value.within_budget and $c.value.required_done==$c.value.required
+  $actions=map($c.value.ready,($id)=>{task_id:$id,owner:filter($c.value.items,($t)=>$t.id==$id)[0].owner,kind:"착수 가능",source:$c.artifact})
+  $summary={phase:$phase,policy:$policy,observed:$ade.A.value.observed,eligible:$ade.A.value.eligible,failed:len($ade.A.value.blocked),missing:$ade.A.value.missing,
+    cost:$b.value.cost,overrun:$b.value.overrun,required_done:$c.value.required_done,remaining_required:$c.value.remaining_required,
+    cancelled:$b.value.cancelled,ready:$c.value.ready,launch_ready:$launch,review_complete:true,
+    block_reasons:{data_failed:len($ade.E.value.issues),data_unverified:len($ade.E.value.unknown),budget_overrun:$b.value.overrun,required_pending:$c.value.remaining_required},
+    actions:$actions,record_actions:$ade.E.value,deadline_confirmed:false}
+  $f=[fn:보존]{id:"F",value:$summary,started:$start,output:$output,sources:[$ade.E.artifact,$b.artifact,$c.artifact]}
+  $state={phase:$phase,policy:$policy,A:$ade.A,B:$b,C:$c,D:$ade.D,E:$ade.E,F:$f}
+  $body=json($state)
+  $saved=[self:write]{path:$output+"/state.json",content:$body}
+  $read=[self:read]{path:$saved.path,format:"text"}
+  assert $read.text==$body,"state roundtrip mismatch"
+  $report=f"인수 검토 ${phase}\n자료 관측 ${summary.observed}/1800, 적합 ${summary.eligible}, 실패 ${summary.failed}, 미확인 ${json($summary.missing)}\n비용 ${summary.cost}원 / 예산 ${policy.budget}원 / 초과 ${summary.overrun}원\n필수 작업 검증완료 ${summary.required_done}/60, 잔여 ${summary.remaining_required}, 취소 ${json($summary.cancelled)}\n우선 착수 작업 ${json($summary.actions)}\n자료 보완·미확인 확인 목록: ${ade.E.artifact}\n예산 초과 시 필수 작업과 검증 기준을 유지하고 자금·비용 변경 결정을 요청한다.\n기한 ${policy.deadline}: 시작일·가동일·담당자 가용시간이 없어 준수 확정 불가.\n개통 가능 ${launch}; 이번 검토 완료.\n근거: ${ade.A.artifact}, ${b.artifact}, ${c.artifact}, ${ade.D.artifact}\n"
+  $written=[self:write]{path:$output+"/report.txt",content:$report}
+  $reread=[self:read]{path:$written.path,format:"text"}
+  assert $reread.text==$report,"report roundtrip mismatch"
+  return {phase:$phase,state_path:$saved.path,report_path:$written.path,summary:$summary}
+}
+$source="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_90회차/trainer/inputs"; $output="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_90회차/trainer/T1"; $policy={"budget":6000000,"deadline":"2026-11-20","cancel_optional":false,"external_saas":true,"face":true}
+$read=[self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_90회차/trainer/T1/ADE_envelope.json"}; $ade=$read.data
+$read=[self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_90회차/trainer/T1/B_envelope.json"}; $b=$read.data
+$read=[self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_90회차/trainer/T1/C_envelope.json"}; $c=$read.data
+return [fn:최종검토]{ade:$ade,b:$b,c:$c,policy:$policy,output:$output,phase:"T1"}

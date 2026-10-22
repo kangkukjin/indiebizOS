@@ -1,0 +1,7 @@
+#!ibl edition=2
+$read=[self:read]{path:$file}
+$observed=$read.data >> [table:each]{parallel:3} {
+  [try] { $r=[self:task]{op:"wait",ref:$it.task_ref,timeout:20}; return {role:$it.role,view:$r} }
+  [catch] { return {role:$it.role,error:$error} }
+}
+return $observed

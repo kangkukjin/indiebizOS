@@ -1,0 +1,56 @@
+#!ibl edition=2
+[def:시각]() { return [self:time]{format:"%Y-%m-%dT%H:%M:%S.%f%z"} }
+[def:보존]($id,$value,$started,$output,$sources) {
+  $path=$output+"/"+$id+".json"
+  $saved=[self:write]{path:$path,content:json($value)}
+  $ended=[fn:시각]{}
+  return {id:$id,value:$value,started:$started,ended:$ended,artifact:$saved.path,sources:$sources,reused:false}
+}
+[def:행판정]($r) {
+  return {id:$r.id,source:$r,consent:$r.consent!="yes",checksum:$r.checksum!="pass",search:not $r.searchable,access:not $r.accessible,
+    eligible:$r.consent=="yes" and $r.checksum=="pass" and $r.searchable and $r.accessible}
+}
+[def:자료검증]($source,$expected,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  [try] { $doc=[self:read]{path:$source+"/records.json"} } [catch] {
+    $unknown={version:null,rows:[],observed:0,expected:len($expected),missing:$expected,blocked:[],eligible:0,complete:false,
+      consent:0,checksum:0,search:0,access:0,computed_rows:0,reused_rows:0,read_error:$error.code}
+    return [fn:보존]{id:"A",value:$unknown,started:$start,output:$output,sources:[$source+"/records.json"]}
+  }
+  $rows=$doc.data.items
+  $old_rows=[]
+  [if:has($old,"value")] { $old_rows=$old.value.rows }
+  $index=from_entries(map($old_rows,($r)=>[$r.id,$r]))
+  $classified=map($rows,($r)=>has($index,$r.id) and json(get($index,$r.id).source)==json($r) ? get($index,$r.id) : [fn:행판정]{r:$r})
+  $reused=filter($rows,($r)=>has($index,$r.id) and json(get($index,$r.id).source)==json($r))
+  $ids=from_entries(map($rows,($r)=>[$r.id,true]))
+  $missing=filter($expected,($id)=>not has($ids,$id))
+  $bad=filter($classified,($r)=>not $r.eligible)
+  $value={version:$doc.data.version,rows:$classified,observed:len($rows),expected:len($expected),missing:$missing,
+    blocked:$bad,eligible:len($rows)-len($bad),complete:len($missing)==0 and len($rows)==len($expected),
+    consent:len(filter($classified,($r)=>$r.consent)),checksum:len(filter($classified,($r)=>$r.checksum)),
+    search:len(filter($classified,($r)=>$r.search)),access:len(filter($classified,($r)=>$r.access)),
+    computed_rows:len($rows)-len($reused),reused_rows:len($reused)}
+  return [fn:보존]{id:"A",value:$value,started:$start,output:$output,sources:[$source+"/records.json"]}
+}
+[def:보완대상]($a,$d,$output) {
+  $start=[fn:시각]{}
+  assert $a.value.expected==$d.value.expected,"expected record count mismatch"
+  $issues=map($a.value.blocked,($r)=>{id:$r.id,status:"failed",consent:$r.consent,checksum:$r.checksum,search:$r.search,access:$r.access,source:$a.artifact})
+  $unknown=map($a.value.missing,($id)=>{id:$id,status:"unverified",source:$a.artifact})
+  $value={record_version:$a.value.version,gates:$d.value.gates,issues:$issues,unknown:$unknown,
+    records_ready:$a.value.complete and $a.value.eligible==$a.value.expected}
+  return [fn:보존]{id:"E",value:$value,started:$start,output:$output,sources:[$a.artifact,$d.artifact]}
+}
+$source="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/inputs"; $output="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/T1"; $policy={"budget":6000000,"deadline":"2026-11-20","cancel_optional":false,"external_saas":true,"face":true}
+$old={A:{}}
+$child=[others:delegate]{agent_id:"agent_941ebeb9",message:"훈련자 작성 IBL 실행 위임, 단계 T1, 담당 운영. 공개 계약에 맞춰 준비한 전체 프로그램 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/T1/programs/운영.ibl를 읽고 execute_ibl로 실행해 주세요. 계산을 Python/머릿속으로 대체하지 마세요. 예산 steps1000000/rows100000으로 실행하세요. 입력 읽기는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/inputs와 프로그램에 명시한 같은 팀의 이전 산출물만, 쓰기는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/T1 안만 허용합니다. 현재 정책 {\"budget\":6000000,\"deadline\":\"2026-11-20\",\"cancel_optional\":false,\"external_saas\":true,\"face\":true}. 개인정보/접근성/1800건 전량 검증과 필수작업은 유지합니다. 담당자 완료 주장만으로 완료 처리하지 않습니다. 달력/인력 정보 없으므로 기한 준수 확정 불가입니다. 외부 발송·배포·예약·구매·설정 변경 없음. 다른 팀·reference·runs·snapshots·회차 docs 접근 금지. 프로그램 오류는 원문과 진단을 보고하고 임의로 계산 계약을 바꾸지 마세요. 작업이 접수되었으면 같은 접수증으로 기다리며 중복 실행하지 마세요. 최종 응답은 생성한 파일 절대경로와 완료/실패 상태만 간결하게 보고하세요."}
+$saved=[self:write]{path:$output+"/operation_receipt.json",content:json($child)}
+$ids=[self:read]{path:$source+"/expected_ids.json"}; $expected=$ids.data.items
+$a=[fn:자료검증]{source:$source,expected:$expected,output:$output,reload:true,old:$old.A}
+$wait=[self:task]{op:"wait",ref:$child.task_ref,timeout:240,suspend:true}
+$read=[self:read]{path:$output+"/D_envelope.json"}; $d=$read.data
+$e=[fn:보완대상]{a:$a,d:$d,output:$output}
+$saved=[self:write]{path:$output+"/ADE_envelope.json",content:json({A:$a,D:$d,E:$e})}
+return {artifact:$saved.path}

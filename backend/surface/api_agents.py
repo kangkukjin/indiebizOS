@@ -336,10 +336,24 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
         # 기어 동기화도 파이프라인 0단계라 여기서 따로 부르지 않는다.
         from agent_pipeline import drain_stream
         from repair_continuation import resume_context, cancelled as repair_cancelled
-        result = drain_stream(runner.cognitive_stream(command, history, images=images, agent_name=agent_name,
-                                                      extra_role=resume_context(continuation) if continuation else "",
-                                                      cancel_check=(lambda: repair_cancelled(continuation)) if continuation else None,
-                                                      utterance_author="owner"))
+        import conversation_sessions as sessions
+        owner = sessions.pair_owner(user_id, target_agent_id)
+        if rehearsal:
+            owner = "rehearsal:" + owner
+        # HTTP도 같은 대화의 후속 턴과 과제 실행자 소유권을 연결한다.
+        from episode_logger import record_trajectory_event
+        with sessions.owned_turn(
+            db.db_path, "messages", owner, task_id,
+            on_skip=lambda exc: record_trajectory_event("conversation.binding_skipped", {
+                "surface": "agents/command", "owner": owner,
+                "reason": str(exc) or type(exc).__name__,
+            }),
+        ):
+            result = drain_stream(runner.cognitive_stream(
+                command, history, images=images, agent_name=agent_name,
+                extra_role=resume_context(continuation) if continuation else "",
+                cancel_check=(lambda: repair_cancelled(continuation)) if continuation else None,
+                utterance_author="owner"))
         response = result.get("final") or result.get("error") or ""
 
         # AI 응답 저장
@@ -353,6 +367,11 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
                 conn.commit()
         elif not task.get("pending_delegations"):
             db.complete_task(task_id, response)
+        else:
+            # 모델 응답과 소유한 자식의 완료는 별개다. 마지막 자식이 부모를
+            # 마감할 수 있도록 응답을 봉인한다(상주 위임만 있으면 기존 경로).
+            from task_worker_store import defer_completion
+            defer_completion(db.db_path, task_id, response)
         if continuation:
             from thread_context import get_goal_eval_outcome
             return {"response": response, "evaluation": get_goal_eval_outcome(),

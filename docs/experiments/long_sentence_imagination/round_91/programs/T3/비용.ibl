@@ -1,0 +1,27 @@
+#!ibl edition=2
+[def:시각]() { return [self:time]{format:"%Y-%m-%dT%H:%M:%S.%f%z"} }
+[def:보존]($id,$value,$started,$output,$sources) {
+  $path=$output+"/"+$id+".json"
+  $saved=[self:write]{path:$path,content:json($value)}
+  $ended=[fn:시각]{}
+  return {id:$id,value:$value,started:$started,ended:$ended,artifact:$saved.path,sources:$sources,reused:false}
+}
+[def:비용검토]($source,$policy,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  $docs=([self:read]{path:$source+"/tasks.json"}) & ([self:read]{path:$source+"/options.json"})
+  $tasks=$docs[0].data.items
+  $active=filter($tasks,($t)=>not ($policy.cancel_optional and $t.optional))
+  $cost=reduce($active,0,($s,$t)=>$s+$t.cost)
+  $value={policy:$policy,cost:$cost,budget:$policy.budget,overrun:max(0,$cost-$policy.budget),within_budget:$cost<=$policy.budget,
+    items:map($active,($t)=>{id:$t.id,cost:$t.cost,optional:$t.optional}),
+    cancelled:map(filter($tasks,($t)=>$policy.cancel_optional and $t.optional),($t)=>$t.id),
+    cost_note:$docs[1].data.cost_note,
+    allowed_options:map(filter($docs[1].data.items,($o)=>($policy.external_saas or not $o.external_saas) and ($policy.face or not $o.face)),($o)=>$o.id)}
+  return [fn:보존]{id:"B",value:$value,started:$start,output:$output,sources:[$source+"/tasks.json",$source+"/options.json"]}
+}
+$source="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/inputs"; $output="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/T3"; $policy={"budget":3200000,"deadline":"2026-11-20","cancel_optional":true,"external_saas":false,"face":false}
+$read=[self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/T2/B_envelope.json"}; $old=$read.data
+$r=[fn:비용검토]{source:$source,policy:$policy,output:$output,reload:false,old:$old}
+$saved=[self:write]{path:$output+"/B_envelope.json",content:json($r)}
+return {artifact:$saved.path}

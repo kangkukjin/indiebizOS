@@ -2826,3 +2826,10 @@
 2026-10-22 | 병렬 설계 검토 반영: 장기 능력 목표 유지, P2 중첩 실행 독립 선행으로 의존성 정정. worker_ref 후속은 기존 세션으로 유지하고 별도 worker 수명 원장·공개 세대 제거. 10월7일 코딩 정책 변경 제안 명시, 재진입성 선언과 검증 구분. usage 기록 읽기 감사에서 DeepSeek 실행163라운드 중 다중도구 후보22(독립성·속도 미검증) 확인. 설계 보완만, 제품 코드 변경 없음. docs/IBL_PARALLEL_EXECUTION_DESIGN_2026_10_22.md.
 
 2026-10-22 | IBL 병렬·과제 협업 구현: 중첩 가용 슬롯, 검증한 API 읽기 묶음, 기존 tasks/대화 사건 기반 독립 실행·후속·조향·취소·재기동 복구, 트리 예산과 모델 입장, 외부 코드 사본의 단일 검사·조건부 통합·부분 복구. 새 노드/액션 없이 scope:task·task steer·workspace collaborate 계약 개정. 비-system11464통과/1건너뜀·관련system104통과, 이후 후속맥락 연결 관련73통과·최초 동시접수 경합 수리 관련54통과. 실제 모델 속도·토큰 절감은 미측정. 검증 기록: docs/IBL_PARALLEL_EXECUTION_DESIGN_2026_10_22.md §12.
+[2026-10-22 16:44:08] PROJECT_CREATED: L91_trainer (ID: L91_trainer)
+[2026-10-22 16:44:08] PROJECT_CREATED: L91_trainer (ID: L91_trainer)
+[2026-10-22 16:53:00] PROJECT_CREATED: L91_ai (ID: L91_ai)
+[2026-10-22 16:53:00] PROJECT_CREATED: L91_ai (ID: L91_ai)
+[2026-10-22 17:11:59] PROJECT_CREATED: L91_repair_ai (ID: L91_repair_ai)
+[2026-10-22 17:11:59] PROJECT_CREATED: L91_repair_ai (ID: L91_repair_ai)
+2026-10-22 | 긴문장91회차 위임 훈련·수리: HTTP 에이전트 명령에 대화 세션 소유권을 연결해 scope:task/worker_ref 후속을 복구하고, 부모 모델이 먼저 끝나도 소유 자식 종료까지 waiting_children으로 마감 대기. 훈련/일반 히스토리 분리 유지. 전체 IBL4단계159대조·실제 AI 위임/재위임/후속2턴80대조, 비system11472통과/1건너뜀·재기동24통과. 실제 시간·토큰은 증가해 최적화로 보고하지 않음. docs/experiments/long_sentence_imagination/round_91/report.md.

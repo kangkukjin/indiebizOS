@@ -1,0 +1,20 @@
+#!ibl edition=2
+[def:시각]() { return [self:time]{format:"%Y-%m-%dT%H:%M:%S.%f%z"} }
+[def:보존]($id,$value,$started,$output,$sources) {
+  $path=$output+"/"+$id+".json"
+  $saved=[self:write]{path:$path,content:json($value)}
+  $ended=[fn:시각]{}
+  return {id:$id,value:$value,started:$started,ended:$ended,artifact:$saved.path,sources:$sources,reused:false}
+}
+[def:운영조건]($source,$policy,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  $doc=[self:read]{path:$source+"/project.json"}
+  $value={policy:$policy,expected:$doc.data.expected_records,gates:$doc.data.gates,acceptance:$doc.data.acceptance,status_rule:$doc.data.status_rule,publication:$doc.data.publication}
+  return [fn:보존]{id:"D",value:$value,started:$start,output:$output,sources:[$source+"/project.json"]}
+}
+$source="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/inputs"; $output="/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_91회차/trainer/T2"; $policy={"budget":3200000,"deadline":"2026-11-20","cancel_optional":true,"external_saas":false,"face":false}
+$old={}
+$r=[fn:운영조건]{source:$source,policy:$policy,output:$output,reload:true,old:$old}
+$saved=[self:write]{path:$output+"/D_envelope.json",content:json($r)}
+return {artifact:$saved.path}

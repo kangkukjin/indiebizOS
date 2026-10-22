@@ -1303,6 +1303,12 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 상태를 공유하지 않는다. 기존 same/cross/system 위임은 유지된다. request_id는 같은 부모
 작업 안의 중복 접수를 막으며 같은 키에 다른 내용을 주면 거절한다.
 
+프로젝트 에이전트의 HTTP `command` 경로도 대화 상대별 세션에 부모 작업을 연결한다.
+같은 상대의 다음 명령에서 `worker_ref` 후속을 사용할 수 있다. `origin:training`은
+별도 실행 세션을 사용하며 기존 훈련 메시지의 히스토리 분리를 유지한다. 모델이 먼저
+응답해도 소유 자식이 남으면 부모는 `waiting_children`으로 기다렸다가 자식 종료 후 마감된다.
+동시 턴 등으로 세션을 연결하지 못하면 `conversation.binding_skipped` 사건이 남는다.
+
 ```ibl
 $a = [others:delegate]{scope:"task", request_id:"sources-a", message:"자료 A의 근거를 검토해줘"}
 $b = [others:delegate]{scope:"task", request_id:"sources-b", message:"자료 B의 반례를 검토해줘"}

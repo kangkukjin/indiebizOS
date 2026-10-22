@@ -164,6 +164,10 @@ def _predicate(owner, table):
         if owner in ("appmaker", "rehearsal"):
             return "source=?", [owner]
         return "(source IS NULL OR source NOT IN ('appmaker','rehearsal'))", []
+    if owner.startswith("rehearsal:pair:"):
+        # 훈련 HTTP 턴은 실행 소유권만 갖는다. 기존 rehearsal 히스토리는
+        # session_id IS NULL 계약으로 읽으므로 일반 대화로 이주하지 않는다.
+        return "0", []
     _, a, b = owner.split(":")
     return ("((from_agent_id=? AND to_agent_id=?) OR (from_agent_id=? AND to_agent_id=?)) "
             "AND COALESCE(contact_type,'gui') NOT IN ('research','rehearsal')"), [a, b, b, a]

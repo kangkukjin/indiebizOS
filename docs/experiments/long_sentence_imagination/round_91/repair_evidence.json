@@ -1,0 +1,841 @@
+{
+  "episodes": [
+    {
+      "task_id": "task_48968e89b8b44d7f80cdc1bdac6b535a",
+      "episodes": [
+        {
+          "id": 5200,
+          "source": "training",
+          "task_id": "task_48968e89b8b44d7f80cdc1bdac6b535a",
+          "run_id": "run_c08930a1489baf00a639",
+          "total_ms": 461668,
+          "ended_at": "2026-10-22T17:30:38.339832"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 14412,
+          "output": 83,
+          "cache_read": 4864,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 7290,
+          "output": 2233,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 73373,
+          "output": 874,
+          "cache_read": 40434,
+          "cache_create": 32935
+        },
+        "execution": {
+          "input": 1525501,
+          "output": 15642,
+          "cache_read": 1461797,
+          "cache_create": 63688
+        },
+        "oneshot:evaluate": {
+          "input": 26489,
+          "output": 796,
+          "cache_read": 6408,
+          "cache_create": 20079
+        }
+      }
+    },
+    {
+      "task_id": "task_67cf0509b58340868c12f891ce61a6ed",
+      "episodes": [
+        {
+          "id": 5195,
+          "source": "training",
+          "task_id": "task_67cf0509b58340868c12f891ce61a6ed",
+          "run_id": "run_3ce9751a02ff1d04fe9c",
+          "total_ms": 621027,
+          "ended_at": "2026-10-22T17:22:47.640703"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 9461,
+          "output": 152,
+          "cache_read": 4736,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 149265,
+          "output": 4808,
+          "cache_read": 126573,
+          "cache_create": 22686
+        },
+        "execution": {
+          "input": 2046652,
+          "output": 23208,
+          "cache_read": 1953589,
+          "cache_create": 93027
+        },
+        "oneshot:evaluate": {
+          "input": 34880,
+          "output": 648,
+          "cache_read": 6408,
+          "cache_create": 28470
+        }
+      }
+    },
+    {
+      "task_id": "task_worker_1946559d01104649b035b40f95544fb1",
+      "episodes": [
+        {
+          "id": 5197,
+          "source": "training",
+          "task_id": "task_worker_1946559d01104649b035b40f95544fb1",
+          "run_id": "run_04f0197f84478f374c04",
+          "total_ms": 135992,
+          "ended_at": "2026-10-22T17:17:20.991400"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 9791,
+          "output": 55,
+          "cache_read": 3968,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 45958,
+          "output": 3155,
+          "cache_read": 31141,
+          "cache_create": 14815
+        },
+        "execution": {
+          "input": 364851,
+          "output": 7351,
+          "cache_read": 333661,
+          "cache_create": 31180
+        },
+        "oneshot:evaluate": {
+          "input": 45321,
+          "output": 390,
+          "cache_read": 6408,
+          "cache_create": 38911
+        }
+      }
+    },
+    {
+      "task_id": "task_worker_1d9c03712f2047eaa7fac86ab9ff8197",
+      "episodes": [
+        {
+          "id": 5203,
+          "source": "training",
+          "task_id": "task_worker_1d9c03712f2047eaa7fac86ab9ff8197",
+          "run_id": "run_3b676dc5e3c88c13b1eb",
+          "total_ms": 151689,
+          "ended_at": "2026-10-22T17:27:52.633926"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 21356,
+          "output": 251,
+          "cache_read": 8192,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 12820,
+          "output": 2362,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 511523,
+          "output": 9285,
+          "cache_read": 446815,
+          "cache_create": 64698
+        },
+        "oneshot:evaluate": {
+          "input": 91929,
+          "output": 2169,
+          "cache_read": 12816,
+          "cache_create": 79109
+        }
+      }
+    },
+    {
+      "task_id": "task_worker_240e3e6251184543a2ab948ba58bae46",
+      "episodes": [
+        {
+          "id": 5196,
+          "source": "training",
+          "task_id": "task_worker_240e3e6251184543a2ab948ba58bae46",
+          "run_id": "run_613e9e0f52e3911ad7e5",
+          "total_ms": 158825,
+          "ended_at": "2026-10-22T17:17:43.823644"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 5176,
+          "output": 2,
+          "cache_read": 3200,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 92705,
+          "output": 2861,
+          "cache_read": 77211,
+          "cache_create": 15490
+        },
+        "execution": {
+          "input": 287424,
+          "output": 6583,
+          "cache_read": 258778,
+          "cache_create": 28638
+        },
+        "oneshot:evaluate": {
+          "input": 62220,
+          "output": 460,
+          "cache_read": 6408,
+          "cache_create": 55810
+        }
+      }
+    },
+    {
+      "task_id": "task_worker_2921f8a1699d42a5b0ec59dbc6150b4c",
+      "episodes": [
+        {
+          "id": 5201,
+          "source": "training",
+          "task_id": "task_worker_2921f8a1699d42a5b0ec59dbc6150b4c",
+          "run_id": "run_a210fc7bcb6b53cfc957",
+          "total_ms": 280742,
+          "ended_at": "2026-10-22T17:29:04.105026"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 18027,
+          "output": 82,
+          "cache_read": 5504,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 12818,
+          "output": 2325,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 910913,
+          "output": 10721,
+          "cache_read": 836006,
+          "cache_create": 74891
+        },
+        "oneshot:evaluate": {
+          "input": 59198,
+          "output": 695,
+          "cache_read": 6408,
+          "cache_create": 52788
+        }
+      }
+    },
+    {
+      "task_id": "task_worker_3e0c4e99de1d4518bd7856b30365a875",
+      "episodes": [
+        {
+          "id": 5198,
+          "source": "training",
+          "task_id": "task_worker_3e0c4e99de1d4518bd7856b30365a875",
+          "run_id": "run_a8f2ed31b3e8b2d66df9",
+          "total_ms": 283740,
+          "ended_at": "2026-10-22T17:19:48.740005"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 5408,
+          "output": 2,
+          "cache_read": 3200,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 98325,
+          "output": 2716,
+          "cache_read": 77665,
+          "cache_create": 20656
+        },
+        "execution": {
+          "input": 772298,
+          "output": 10760,
+          "cache_read": 724326,
+          "cache_create": 47954
+        },
+        "oneshot:evaluate": {
+          "input": 48982,
+          "output": 454,
+          "cache_read": 6408,
+          "cache_create": 42572
+        }
+      }
+    },
+    {
+      "task_id": "task_worker_584d0e577d6b4dd790400e2ce6b414af",
+      "episodes": [
+        {
+          "id": 5202,
+          "source": "training",
+          "task_id": "task_worker_584d0e577d6b4dd790400e2ce6b414af",
+          "run_id": "run_05aac5a8183d6f638867",
+          "total_ms": 131075,
+          "ended_at": "2026-10-22T17:26:34.437800"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 17204,
+          "output": 72,
+          "cache_read": 4352,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 13299,
+          "output": 2360,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 274390,
+          "output": 10280,
+          "cache_read": 225231,
+          "cache_create": 49153
+        },
+        "oneshot:evaluate": {
+          "input": 52874,
+          "output": 408,
+          "cache_read": 6408,
+          "cache_create": 46464
+        }
+      }
+    },
+    {
+      "task_id": "task_worker_bd0e138d61284297808d72d7bad2c191",
+      "episodes": [
+        {
+          "id": 5199,
+          "source": "training",
+          "task_id": "task_worker_bd0e138d61284297808d72d7bad2c191",
+          "run_id": "run_95f5df889061bd45136b",
+          "total_ms": 135543,
+          "ended_at": "2026-10-22T17:18:55.267402"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 9902,
+          "output": 127,
+          "cache_read": 6400,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 92898,
+          "output": 2542,
+          "cache_read": 77114,
+          "cache_create": 15780
+        },
+        "execution": {
+          "input": 303782,
+          "output": 7790,
+          "cache_read": 269423,
+          "cache_create": 34351
+        },
+        "oneshot:evaluate": {
+          "input": 35562,
+          "output": 443,
+          "cache_read": 6408,
+          "cache_create": 29152
+        }
+      }
+    }
+  ],
+  "usage": {
+    "oneshot:classify": {
+      "input": 110737,
+      "output": 826,
+      "cache_read": 44416,
+      "cache_create": 0
+    },
+    "oneshot:background": {
+      "input": 46227,
+      "output": 9280,
+      "cache_read": 5120,
+      "cache_create": 0
+    },
+    "consciousness": {
+      "input": 552524,
+      "output": 16956,
+      "cache_read": 430138,
+      "cache_create": 122362
+    },
+    "execution": {
+      "input": 6997334,
+      "output": 101620,
+      "cache_read": 6509626,
+      "cache_create": 487580
+    },
+    "oneshot:evaluate": {
+      "input": 457455,
+      "output": 6463,
+      "cache_read": 64080,
+      "cache_create": 393355
+    }
+  },
+  "parent_elapsed_s": 1082.695,
+  "episode_elapsed_sum_s": 2360.301,
+  "verification": {
+    "passed": 80,
+    "failed": 0,
+    "checks": [
+      {
+        "name": "T1 all record remediation and gates",
+        "ok": true
+      },
+      {
+        "name": "T1 record count",
+        "ok": true
+      },
+      {
+        "name": "T1 eligible",
+        "ok": true
+      },
+      {
+        "name": "T1 no missing IDs",
+        "ok": true
+      },
+      {
+        "name": "T1 all completed tasks",
+        "ok": true
+      },
+      {
+        "name": "T1 all task coverage",
+        "ok": true
+      },
+      {
+        "name": "T1 all ready tasks",
+        "ok": true
+      },
+      {
+        "name": "T1 required completion",
+        "ok": true
+      },
+      {
+        "name": "T1 total cost",
+        "ok": true
+      },
+      {
+        "name": "T1 required cost",
+        "ok": true
+      },
+      {
+        "name": "T1 launch blocked",
+        "ok": true
+      },
+      {
+        "name": "T1 deadline unknown",
+        "ok": true
+      },
+      {
+        "name": "T1 data input README.txt",
+        "ok": true
+      },
+      {
+        "name": "T1 data input options.json",
+        "ok": true
+      },
+      {
+        "name": "T1 data input project.json",
+        "ok": true
+      },
+      {
+        "name": "T1 data input receipts.json",
+        "ok": true
+      },
+      {
+        "name": "T1 data input records.json",
+        "ok": true
+      },
+      {
+        "name": "T1 data input tasks.json",
+        "ok": true
+      },
+      {
+        "name": "T1 schedule input README.txt",
+        "ok": true
+      },
+      {
+        "name": "T1 schedule input options.json",
+        "ok": true
+      },
+      {
+        "name": "T1 schedule input project.json",
+        "ok": true
+      },
+      {
+        "name": "T1 schedule input receipts.json",
+        "ok": true
+      },
+      {
+        "name": "T1 schedule input records.json",
+        "ok": true
+      },
+      {
+        "name": "T1 schedule input tasks.json",
+        "ok": true
+      },
+      {
+        "name": "T1 cost input README.txt",
+        "ok": true
+      },
+      {
+        "name": "T1 cost input options.json",
+        "ok": true
+      },
+      {
+        "name": "T1 cost input project.json",
+        "ok": true
+      },
+      {
+        "name": "T1 cost input receipts.json",
+        "ok": true
+      },
+      {
+        "name": "T1 cost input records.json",
+        "ok": true
+      },
+      {
+        "name": "T1 cost input tasks.json",
+        "ok": true
+      },
+      {
+        "name": "T1 ops input README.txt",
+        "ok": true
+      },
+      {
+        "name": "T1 ops input options.json",
+        "ok": true
+      },
+      {
+        "name": "T1 ops input project.json",
+        "ok": true
+      },
+      {
+        "name": "T1 ops input receipts.json",
+        "ok": true
+      },
+      {
+        "name": "T1 ops input records.json",
+        "ok": true
+      },
+      {
+        "name": "T1 ops input tasks.json",
+        "ok": true
+      },
+      {
+        "name": "T1 actual child count",
+        "ok": true
+      },
+      {
+        "name": "T1 actual redelegation",
+        "ok": true
+      },
+      {
+        "name": "T1 separate worker sessions",
+        "ok": true
+      },
+      {
+        "name": "T1 workers terminal",
+        "ok": true
+      },
+      {
+        "name": "T2 final launch blocked",
+        "ok": true
+      },
+      {
+        "name": "T2 final budget",
+        "ok": true
+      },
+      {
+        "name": "T2 final records reused",
+        "ok": true
+      },
+      {
+        "name": "T2 final no missing result",
+        "ok": true
+      },
+      {
+        "name": "T2 cost",
+        "ok": true
+      },
+      {
+        "name": "T2 budget and deficit",
+        "ok": true
+      },
+      {
+        "name": "T2 required preserved",
+        "ok": true
+      },
+      {
+        "name": "T2 cancelled only W6",
+        "ok": true
+      },
+      {
+        "name": "T2 required completion",
+        "ok": true
+      },
+      {
+        "name": "T2 ready",
+        "ok": true
+      },
+      {
+        "name": "T2 operations excluded",
+        "ok": true
+      },
+      {
+        "name": "T2 original record judgment reused",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved provenance.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved 자료보완목록.md",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved 검토서.md",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved delegations.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved supplement_list.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved final_report.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/cost.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/messages.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/data.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/schedule.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/ops.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved scripts/make_supplement.py",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved scripts/parent_check.py",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved scripts/make_final.py",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/work/ops_message.txt",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/work/cost_assemble.py",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/work/ops_build.py",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/work/cost_calc.py",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/work/verify_records.py",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/work/calc.json",
+        "ok": true
+      },
+      {
+        "name": "T1 preserved sub/work/schedule_calc.py",
+        "ok": true
+      },
+      {
+        "name": "T2 only two followup children",
+        "ok": true
+      },
+      {
+        "name": "T2 nested followup count",
+        "ok": true
+      },
+      {
+        "name": "T2 exact child sessions reused",
+        "ok": true
+      },
+      {
+        "name": "T2 exact grandchild session reused",
+        "ok": true
+      },
+      {
+        "name": "T2 no active child",
+        "ok": true
+      },
+      {
+        "name": "T1 parent finished",
+        "ok": true
+      },
+      {
+        "name": "T2 parent finished",
+        "ok": true
+      }
+    ]
+  },
+  "cleanup": {
+    "time": "2026-10-22T17:31:13.333058+09:00",
+    "rows": [
+      {
+        "task_id": "task_67cf0509b58340868c12f891ce61a6ed",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": null,
+        "worker_session": null,
+        "created_at": "2026-10-22 08:12:26",
+        "completed_at": "2026-10-22 08:22:47"
+      },
+      {
+        "task_id": "task_worker_240e3e6251184543a2ab948ba58bae46",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": "task_67cf0509b58340868c12f891ce61a6ed",
+        "worker_session": "9cf8b98e9af744288deff8b1357ee8d4",
+        "created_at": "2026-10-22 08:15:04",
+        "completed_at": "2026-10-22 08:17:43"
+      },
+      {
+        "task_id": "task_worker_3e0c4e99de1d4518bd7856b30365a875",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": "task_67cf0509b58340868c12f891ce61a6ed",
+        "worker_session": "478a026ae5984433ba13bf156dcfabe0",
+        "created_at": "2026-10-22 08:15:04",
+        "completed_at": "2026-10-22 08:19:48"
+      },
+      {
+        "task_id": "task_worker_1946559d01104649b035b40f95544fb1",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": "task_67cf0509b58340868c12f891ce61a6ed",
+        "worker_session": "590fd0346d3b4982af267098004eac38",
+        "created_at": "2026-10-22 08:15:04",
+        "completed_at": "2026-10-22 08:17:20"
+      },
+      {
+        "task_id": "task_worker_bd0e138d61284297808d72d7bad2c191",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": "task_worker_3e0c4e99de1d4518bd7856b30365a875",
+        "worker_session": "7500e14b3c9141e4b7c2ff6f19bb9036",
+        "created_at": "2026-10-22 08:16:39",
+        "completed_at": "2026-10-22 08:18:55"
+      },
+      {
+        "task_id": "task_48968e89b8b44d7f80cdc1bdac6b535a",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": null,
+        "worker_session": null,
+        "created_at": "2026-10-22 08:22:56",
+        "completed_at": "2026-10-22 08:30:38"
+      },
+      {
+        "task_id": "task_worker_2921f8a1699d42a5b0ec59dbc6150b4c",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": "task_48968e89b8b44d7f80cdc1bdac6b535a",
+        "worker_session": "478a026ae5984433ba13bf156dcfabe0",
+        "created_at": "2026-10-22 08:24:23",
+        "completed_at": "2026-10-22 08:29:04"
+      },
+      {
+        "task_id": "task_worker_584d0e577d6b4dd790400e2ce6b414af",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": "task_48968e89b8b44d7f80cdc1bdac6b535a",
+        "worker_session": "590fd0346d3b4982af267098004eac38",
+        "created_at": "2026-10-22 08:24:23",
+        "completed_at": "2026-10-22 08:26:34"
+      },
+      {
+        "task_id": "task_worker_1d9c03712f2047eaa7fac86ab9ff8197",
+        "status": "completed",
+        "pending_delegations": 0,
+        "parent_task_id": "task_worker_2921f8a1699d42a5b0ec59dbc6150b4c",
+        "worker_session": "7500e14b3c9141e4b7c2ff6f19bb9036",
+        "created_at": "2026-10-22 08:25:20",
+        "completed_at": "2026-10-22 08:27:52"
+      }
+    ],
+    "running_turns": 0
+  },
+  "health": {
+    "status": "healthy",
+    "timestamp": "2026-10-22T17:31:13.475940",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "live_turns": [],
+    "live_turns_observation": "known"
+  },
+  "regression": {
+    "non_system": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "1",
+        "tests": "11473",
+        "time": "185.906",
+        "timestamp": "2026-10-22T17:20:49.700460+09:00",
+        "hostname": "Mac-mini.local"
+      }
+    ],
+    "system_restart": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "24",
+        "time": "147.208",
+        "timestamp": "2026-10-22T17:27:46.741212+09:00",
+        "hostname": "Mac-mini.local"
+      }
+    ]
+  }
+}

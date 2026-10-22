@@ -42,6 +42,7 @@ $후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{columns:
 - **`embedded_failed` / `embedded_unavailable`**: 내장 수집 또는 연결 실패. 앱·탭 상태를 확인한다. `cleanup_error`가 있으면 임시 탭 정리도 확인한다.
 - **`http_error`**: 서버가 HTTP 오류를 반환했다. URL·`stages`의 상태를 확인하고 유효한 원문으로 이동한다.
 - **`http_status_unverified`**: 브라우저의 HTTP 상태 확인이 불가능했다. 정상 200 응답으로 추측하지 않으며 다른 수집 경로를 시도한다.
+- **`browser_timeout` / `browser_failed`**: 브라우저 수집을 시도했으나 시간 초과·오류로 완료하지 못했다. `stages`와 `methods_tried`에 시도가 남는다. 미연결로 건너뛴 경우와 구분하고 같은 조건의 즉시 반복보다 오류 원인·다른 원천을 확인한다. 이미 읽은 본문의 `maintenance_errors`는 세션 저장·탭 정리 문제다. 본문을 재수집할 이유는 아니며, 정리 실패에는 해당 탭 ID가 남는다.
 네이버 카페·블로그는 본문이 iframe이라 자동으로 브라우저 렌더링을 탄다(로그인돼 있으면 회원 카페 본문도 나옴).
 
 
@@ -61,6 +62,7 @@ $후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{columns:
 - `[sense:crawl]{url:"https://example.com",op:"links"}`: 링크의 `text·url·href·source_url·rel·link_index`. 상대 주소는 해소하고 실행·메일 링크는 제외한다.
 - `[sense:crawl]{url:"https://example.com",op:"metadata"}`: 제목·대표 URL·저자·게시/수정 날짜의 관측 목록. `field·value·raw·source·source_url`을 보고 근거를 판단한다. 날짜가 충돌하면 두 관측을 남기며 일반 `<time>`을 게시일로 추정하지 않는다. ISO 형식만 `normalized`에 정규화하고 나머지는 null이다.
 - 같은 프로젝트·에이전트의 같은 URL은 모드 사이에서도 15분간 스냅샷을 재사용한다. 갱신은 `refresh:true`. 구조만 읽힌 짧은 페이지는 본문 읽기를 다시 시도한다. `structure_errors`·`partial`은 구조 수집의 누락이며 정상 0건과 구분한다. PDF도 같은 모양이다: 제목은 내장 정보(`pdf.info.title`)와 첫 쪽 최대 글꼴 줄(`pdf.page[1].largest_font`)을 각각 근거로 내고 파일명은 제목으로 내지 않는다.
+- 셸만으로 잘 처리되는 작업은 그대로 수행한다. IBL 수집 뒤 셸 가공이 필요하면 `source_ref.path`의 저장 JSON을 읽어 전문·HTML을 이어 쓴다. 같은 원문을 다시 curl로 받거나 본문·값을 모델이 명령에 재입력할 필요가 없다. 원천이 바뀌었거나 저장 관측에 필요한 정보가 없는 경우에만 새로 수집한다.
 
 본문에서 조건을 찾을 때는 원문 통화를 그대로 넘긴다:
 

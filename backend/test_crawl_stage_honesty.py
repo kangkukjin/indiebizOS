@@ -107,6 +107,28 @@ def test_c4_success_path_unchanged():
     assert "stages" not in r, "성공 경로에 진단 잡음이 끼었다"
 
 
+@pytest.mark.parametrize("driver", ["chrome", "playwright"])
+def test_started_browser_timeout_is_not_reported_as_skipped(driver):
+    m = _load()
+    _stub_static(m)
+    m._get_chrome_driver = lambda: object() if driver == "chrome" else None
+    m._get_browser_session = lambda: object() if driver == "playwright" else None
+    m._crawl_chrome_async = m._crawl_playwright_async = lambda *a, **k: None
+
+    def timeout(*args):
+        raise TimeoutError()
+
+    m._run_async = timeout
+    r = m.crawl_website("https://fixture.test/slow")
+    assert r["success"] is False
+    assert r["reason"] == "browser_timeout"
+    assert "정적 단계만" not in r["error"]
+    assert ("chrome_mcp" if driver == "chrome" else "playwright") in r["methods_tried"]
+    stage = next(s for s in r["stages"] if s["stage"] == (
+        "Chrome MCP" if driver == "chrome" else "Playwright"))
+    assert stage["ran"] is True and "TimeoutError" in stage["detail"]
+
+
 class _FakeResponse:
     def __init__(self, body, url, content_type):
         self.content = body

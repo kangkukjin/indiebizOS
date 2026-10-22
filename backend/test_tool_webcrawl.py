@@ -78,6 +78,35 @@ def playwright(crawl, frames):
     return raw, crawl._structure().project(raw, 'content')
 
 
+@pytest.mark.parametrize('stage', ['storage', 'cleanup'])
+def test_session_maintenance_timeout_preserves_collected_body(crawl, monkeypatch, stage):
+    session = Session([Frame()])
+    cancelled = []
+
+    async def hang(*args):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.append(stage)
+
+    monkeypatch.setattr(crawl, '_STORAGE_TIMEOUT_SECONDS', 0.01)
+    monkeypatch.setattr(crawl, '_CLEANUP_TIMEOUT_SECONDS', 0.01)
+    if stage == 'storage':
+        session.save_storage_state = hang
+    else:
+        session.close_tab = hang
+    raw = asyncio.run(crawl._crawl_playwright_async(session, URL, None))
+    out = crawl._structure().project(raw, 'content')
+    assert out['success'] and BODY in out['text'] and CODE in out['text']
+    assert cancelled == [stage]
+    assert out['maintenance_errors'][0]['stage'] == stage
+    assert out['maintenance_errors'][0]['error'] == 'TimeoutError'
+    if stage == 'storage':
+        assert session.closed == ['owned']
+    else:
+        assert out['maintenance_errors'][0]['tab_id'] == 'owned'
+
+
 def chrome(crawl, monkeypatch, *, html=HTML, frames=0):
     calls = []
 

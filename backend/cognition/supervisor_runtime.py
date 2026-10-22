@@ -14,7 +14,9 @@ PLANNING_TOOL_PROMPT = """계획 확인에는 supervision 도구(CLI에서는 mc
 execute는 name/input으로 기존 도구를 호출한다. 도구 스키마는 evidence id='tool:도구이름',
 IBL 액션의 인자·설명은 evidence id='ibl:node:action'으로 확인한다. 문법·인자를 추측하지 마라.
 IBL은 [node:action]{params}, >>는 순차, &는 병렬이다. 여러 경로를 string 인자에 배열로
-넣지 말고 독립 문장이나 [table:each]로 실행한다. IBL로 표현되는 조회를 셸로 우회하지 마라.
+넣지 말고 독립 문장이나 [table:each]로 실행한다. IBL은 조합·재사용으로 왕복을 줄일 때 선택한다.
+허용된 셸·네이티브 도구는 직접 사용할 수 있다. 도구 형식만으로 중단·재작성을 요구하지 마라.
+셸만으로 잘 끝나는 작업은 유지한다. IBL↔셸 사이 값 재입력·중복 수집이 있으면 그 연결을 개선한다.
 파일 쓰기 성공 영수증은 본문 확인이 아니며 거절된 명령은 실행 증거가 아니다.
 합계·차이·단위 환산은 calculate(input:{expression,values,unit}) 또는 기존 table 계산으로 확인한다.
 주행·체류·여유 같은 서로 다른 양을 섞지 말고 가정은 가정으로 유지한다.
@@ -37,7 +39,9 @@ state는 현재 상태와 사용 가능한 기존 도구의 목록, execute는 n
 state 재조회는 변경분이다. evidence의 파일 쓰기 성공 영수증은 파일 본문이 아니다.
 도구 문법을 추측하지 마라. IBL은 [node:action]{params}, >>는 순차, &는 병렬이다.
 여러 경로를 string 인자에 배열로 넣지 말고 독립 문장이나 [table:each]로 실행한다.
-파일 조회 등 IBL로 표현되는 작업을 셸로 우회하지 마라. 거절된 명령은 실행 증거가 아니다.
+IBL은 조합·재사용으로 왕복을 줄일 때 선택한다. 허용된 셸·네이티브 도구는 직접 사용할 수 있다.
+도구 형식만으로 중단·재작성을 요구하지 마라. 거절된 명령은 실행 증거가 아니다.
+셸만으로 잘 끝나는 작업은 유지한다. IBL↔셸 사이 값 재입력·중복 수집이 있으면 그 연결을 개선한다.
 실제 액션의 인자·설명은 evidence id='ibl:node:action'으로, 도구 스키마는 'tool:도구이름'으로 읽는다.
 합계·차이·단위 환산은 calculate(input:{expression,values,unit}) 또는 기존 table 계산으로 확인한다.
 quantity_checks는 코드가 환산한 시·분 표와 명시적 합산 오류다. REWORK의 수정 예문도 같은 산식을

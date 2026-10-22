@@ -53,6 +53,9 @@ HEADERS = {
 _MIN_CONTENT_LENGTH = 200
 # 이 미만 + 로그인 흔적이면 "메뉴만 나온" 로그인 벽으로 의심 (성공 반환 기준과 별개)
 _SUSPICIOUS_CONTENT_LENGTH = 600
+# 이미 읽은 본문을 부수적인 세션 저장·탭 정리가 붙잡지 않게 한다.
+_STORAGE_TIMEOUT_SECONDS = 1
+_CLEANUP_TIMEOUT_SECONDS = 2
 
 # 본문이 iframe/JS 렌더링에 있어 정적 텍스트가 본문이 아닌 호스트 — 항상 브라우저로 에스컬레이션
 _RENDER_REQUIRED_HOSTS = {
@@ -545,6 +548,7 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
     """
     opened_tab = None
     status = None
+    maintenance_errors = []
     try:
         # 초기화는 세션 잠금으로 직렬화하고, 읽기는 요청별 독립 탭에서 진행한다.
         await session.ensure_browser(headless=None)
@@ -596,7 +600,10 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
 
         # 로그인 상태 자동 저장 (구버전 browser_session 모듈이면 스킵)
         if hasattr(session, "save_storage_state"):
-            await session.save_storage_state()
+            try:
+                await asyncio.wait_for(session.save_storage_state(), _STORAGE_TIMEOUT_SECONDS)
+            except Exception as exc:
+                maintenance_errors.append({"stage": "storage", "error": type(exc).__name__})
 
         if op == "content" and (not text or len(text) < _MIN_CONTENT_LENGTH):
             result = {"success": False, "error": "Playwright에서도 콘텐츠 부족", "url": url, "method": "playwright"}
@@ -623,6 +630,7 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
             "resolved_url": final_url,
             "_page_structure": _structure().combine(structures, structure_errors),
             "_content_selection": selections,
+            "maintenance_errors": maintenance_errors,
         }
         if content_errors:
             result.update(source_complete=False, partial=True, errors=content_errors)
@@ -635,9 +643,13 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
     finally:
         if opened_tab:
             try:
-                await session.close_tab(opened_tab)
-            except Exception:
-                pass
+                closed = await asyncio.wait_for(session.close_tab(opened_tab), _CLEANUP_TIMEOUT_SECONDS)
+                if closed is False:
+                    maintenance_errors.append({"stage": "cleanup", "tab_id": opened_tab,
+                                               "error": "tab_not_closed"})
+            except Exception as exc:
+                maintenance_errors.append({"stage": "cleanup", "tab_id": opened_tab,
+                                           "error": type(exc).__name__})
 
 
 async def _crawl_chrome_async(driver, url: str, max_length: int, *, op="content") -> dict:
@@ -833,6 +845,8 @@ _REASON_HINTS = {
         "내장 브라우저(driver:embedded)의 navigate→snapshot→content로 확인하거나 다른 소스를 시도하세요."
     ),
     "insufficient_content": "본문을 충분히 추출하지 못했습니다.",
+    "browser_timeout": "브라우저 수집을 시작했지만 제한 시간 안에 완료하지 못했습니다. 단계 내역을 확인하고 다른 원천 또는 사용 가능한 브라우저에서 확인하세요.",
+    "browser_failed": "브라우저 수집 중 오류가 발생했습니다. 단계 내역의 원인을 해결한 뒤 다시 시도하세요.",
 }
 
 
@@ -957,7 +971,9 @@ def _crawl_website_impl(url: str, max_length: int | None = None, *, op="content"
             if chrome_result.get("success") and not chrome_result.get("reason"):
                 return chrome_result
         except Exception as e:
-            _note("Chrome MCP", False, f"실행 중 죽음: {type(e).__name__}: {e}")
+            attempts.append({"success": False, "method": "chrome_mcp",
+                             "reason": "browser_timeout" if isinstance(e, TimeoutError) else "browser_failed"})
+            _note("Chrome MCP", True, f"실행 중 실패: {type(e).__name__}: {e}")
 
     # 3단계: Playwright — 자동 복원된 로그인 세션 + 전 프레임 수집
     session = _get_browser_session()
@@ -975,7 +991,9 @@ def _crawl_website_impl(url: str, max_length: int | None = None, *, op="content"
         except Exception as e:
             # ★예전엔 pass — 단계가 죽은 이유가 사라지고 methods_tried 에서도 빠져서
             # "브라우저도 시도했는데 안 됐다"는 거짓 신고가 됐다.
-            _note("Playwright", False, f"실행 중 죽음: {type(e).__name__}: {e}")
+            attempts.append({"success": False, "method": "playwright",
+                             "reason": "browser_timeout" if isinstance(e, TimeoutError) else "browser_failed"})
+            _note("Playwright", True, f"실행 중 실패: {type(e).__name__}: {e}")
 
     # ── 전 단계가 흠 있음 — 사유 확정 (가장 능력 있는 마지막 단계의 진단이 진실에 가장 가까움) ──
     reason = None
@@ -1001,6 +1019,8 @@ def _crawl_website_impl(url: str, max_length: int | None = None, *, op="content"
             if reason:
                 best["reason"] = reason
                 best["note"] = "본문이 짧거나 완전하지 않을 수 있습니다 (JS 렌더링/iframe 폴백이 더 나은 결과를 얻지 못함)."
+                best["stages"] = stages
+                best["methods_tried"] = [a["method"] for a in attempts if a.get("method")]
             return best
 
     reason = reason or "insufficient_content"

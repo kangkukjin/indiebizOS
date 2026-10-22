@@ -181,8 +181,8 @@
       "package": "web",
       "side_effect": false,
       "path_audited": {
-        "at": "2026-10-20",
-        "impl": "01686abbfd294e7c"
+        "at": "2026-10-23",
+        "impl": "b5e6e474133fd3d5"
       }
     },
     "sense:here": {
@@ -198,8 +198,8 @@
       "package": "web",
       "side_effect": false,
       "path_audited": {
-        "at": "2026-10-20",
-        "impl": "01686abbfd294e7c"
+        "at": "2026-10-23",
+        "impl": "b5e6e474133fd3d5"
       }
     }
   }

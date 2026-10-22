@@ -1,0 +1,56 @@
+#!ibl edition=2
+# Task inputs: source folder, current user policy, previous state (optional), output.
+[def:자료판정]($rows,$expected) {
+  $flags=map($rows,($r)=>{id:$r.id,consent:$r.consent!="yes",checksum:$r.checksum!="pass",search:not $r.searchable,access:not $r.accessible})
+  $bad=filter($flags,($r)=>$r.consent or $r.checksum or $r.search or $r.access)
+  $ids=from_entries(map($rows,($r)=>[$r.id,true]))
+  $missing=filter($expected,($id)=>not has($ids,$id))
+  return {observed:len($rows),expected:len($expected),missing:$missing,
+    eligible:len($rows)-len($bad),blocked:$bad,
+    consent:len(filter($flags,($r)=>$r.consent)),checksum:len(filter($flags,($r)=>$r.checksum)),
+    search:len(filter($flags,($r)=>$r.search)),access:len(filter($flags,($r)=>$r.access)),
+    complete:len($missing)==0 and len($rows)==len($expected)}
+}
+[def:작업판정]($tasks,$receipts,$cancel_optional) {
+  $verified=map(filter($receipts,($r)=>$r.reported_done and $r.verified),($r)=>$r.task_id)
+  $reported=map(filter($receipts,($r)=>$r.reported_done),($r)=>$r.task_id)
+  $states=map($tasks,($t)=>{**$t,status:$cancel_optional and $t.optional ? "cancelled" : $t.id in $verified ? "verified_done" : $t.id in $reported ? "unverified" : "planned"})
+  $done=map(filter($states,($t)=>$t.status=="verified_done"),($t)=>$t.id)
+  $ready=filter($states,($t)=>$t.status!="cancelled" and $t.status!="verified_done" and all(map($t.depends,($id)=>$id in $done)))
+  $required=filter($states,($t)=>not $t.optional)
+  return {items:$states,ready:map($ready,($t)=>$t.id),
+    required:len($required),required_done:len(filter($required,($t)=>$t.status=="verified_done")),
+    active_cost:reduce(filter($states,($t)=>$t.status!="cancelled"),0,($s,$t)=>$s+$t.cost),
+    cancelled:map(filter($states,($t)=>$t.status=="cancelled"),($t)=>$t.id)}
+}
+[def:저장]($state,$path) {
+  $body=json($state)
+  $saved=[self:write]{path:$path,content:$body}
+  $read=[self:read]{path:$saved.path,format:"text"}
+  assert $read.text==$body,"state roundtrip mismatch"
+  return {path:$saved.path,verified:true}
+}
+$prior=[self:read]{path:$previous,format:"json"}
+$data=$prior.data.data
+$tasks=$prior.data.tasks
+$version=$prior.data.record_version
+[if:$reload_data] {
+  $records=[self:read]{path:$source+"/records.json"}
+  $data=[fn:자료판정]{rows:$records.data.items,expected:$expected_ids}
+  $version=$records.data.version
+}
+[if:$reload_tasks] {
+  $taskdoc=[self:read]{path:$source+"/tasks.json"}
+  $receipts=[]
+  [if:$receipts_path!=""] { $r=[self:read]{path:$receipts_path}; $receipts=$r.data.items }
+  $tasks=[fn:작업판정]{tasks:$taskdoc.data.items,receipts:$receipts,cancel_optional:$policy.cancel_optional}
+}
+$ready=$data.complete and $data.eligible==$data.expected and $tasks.required_done==$tasks.required and $tasks.active_cost<=$policy.budget
+$history=get($prior.data,"history",[])+[{phase:$phase,policy:$policy,previous:$previous,reloaded_data:$reload_data,reloaded_tasks:$reload_tasks}]
+$state={phase:$phase,policy:$policy,record_version:$version,data:$data,tasks:$tasks,launch_ready:$ready,review_complete:true,previous:$previous,history:$history}
+$saved=[fn:저장]{state:$state,path:$output+"/state.json"}
+$report=f"프로젝트 인수 검토 ${phase}\n예산 ${policy.budget}원 / 기한 ${policy.deadline} / 외부SaaS ${policy.external_saas} / 얼굴분류 ${policy.face}\n자료 ${data.observed}/${data.expected}, 적합 ${data.eligible}, 누락 ${json($data.missing)}\n필수 작업 검증 완료 ${tasks.required_done}/${tasks.required}, 취소 ${len($tasks.cancelled)}, 계획비 ${tasks.active_cost}원\n개통 가능 ${ready}; 이번 검토 완료.\n남은 자료 문제 ${json($data.blocked)}\n다음 작업 ${json($tasks.ready)}\n작업 상태·담당·선행관계 ${json($tasks.items)}\n이전 상태 ${previous}\n결정 인계 ${json($history)}\n"
+$written=[self:write]{path:$output+"/report.txt",content:$report}
+$reread=[self:read]{path:$written.path,format:"text"}
+assert $reread.text==$report,"report roundtrip mismatch"
+return {phase:$phase,observed:$data.observed,eligible:$data.eligible,missing:$data.missing,required_done:$tasks.required_done,cancelled:len($tasks.cancelled),ready:$tasks.ready,launch_ready:$ready,state_path:$saved.path,report_path:$written.path}

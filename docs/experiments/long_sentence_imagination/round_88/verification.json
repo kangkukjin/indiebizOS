@@ -1,0 +1,541 @@
+{
+  "checks": [
+    {
+      "check": "trainer T1 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T1 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T1 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T1 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T1 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T1 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T2 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T2 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T2 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T2 policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T2 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T2 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T2 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T3 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T3 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T3 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T3 policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T3 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T3 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T3 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T4 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T4 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T4 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T4 policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T4 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T4 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T4 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T5 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T5 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T5 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T5 policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T5 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T5 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T5 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T6 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T6 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T6 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T6 policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T6 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T6 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T6 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T7 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T7 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T7 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T7 policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T7 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T7 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T7 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T8 coverage",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T8 task states",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T8 decision",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T8 policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T8 report",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T8 every blocked record",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "trainer T8 every task state",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T1 record IDs",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T1 source fields all rows",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T1 all row judgments",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T1 summary counts",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T1 task IDs",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T1 no false completion",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T2 scope and cost",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T2 prior analysis retained",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T2 withdrawn options",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T3 completed evidence IDs",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T3 cancelled receipts retained",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T3 dependency readiness",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T3 no false record repair",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T3 policy and remaining",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T4 handoff policy",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T4 handoff completion evidence",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T4 decision provenance",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T5 corrected source",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T5 progress retained",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T5 old proposal not adopted",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T5 all record IDs",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T5 all source fields",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T5 all row judgments",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T6 exactly 51 remaining tasks",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T6 done and cancelled excluded",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T6 dependency order",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T6 current record counts",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T7 missing separated from failure",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T7 no launch or false progress",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T7 changed input isolated",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T7 full population IDs",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T7 every row three-valued",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 population restored",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 failure retained",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 task evidence retained",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 policy retained",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 launch remains blocked",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 history compared",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 full population IDs",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T8 every row judgment",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T1 every task status",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T2 every task status",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T3 every task status",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "AI T5 every task status",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "check": "T1 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T2 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T3 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T4 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T5 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T6 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T7 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "T8 prior artifacts preserved",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "passed": 107,
+  "failed": 0
+}

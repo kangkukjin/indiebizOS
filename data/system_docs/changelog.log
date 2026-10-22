@@ -2814,3 +2814,7 @@
 [2026-10-22 13:25:40] PROJECT_CREATED: L89_training (ID: L89_training)
 
 2026-10-22 | 긴문장89 병렬분해 훈련: 88회차1800자료·72작업 재사용, 순차/병렬·예산변경·누락/복구·읽기실패 실행. 훈련자862·독립AI259대조 통과, AI 전체대기/증분계산 자기보고는 부분달성. 반복검색→색인으로 병렬6.711→2.660초(각3회 중앙), 병렬자체 이득 없음. IBL 작성 보완만, 제품수리0. docs/experiments/long_sentence_imagination/round_89/report.md.
+[2026-10-22 14:09:57] PROJECT_CREATED: L89_repair (ID: L89_repair)
+[2026-10-22 14:09:57] PROJECT_CREATED: L89_repair (ID: L89_repair)
+
+2026-10-22 | 긴문장89 후속 지침 수리: 실제 의존 결과만 합류, 입력 스캔/판정/집계/검증과 재사용 설명을 공통 계획·실행·최종평가에 연결. 4턴 재실행 산출232통과·지연 이벤트 대기 해소·계산 과장 제거, 행 단위 증분/전체 비용 절감은 미달. 네이티브 출력 범위 위반 잔존. 선택 회귀3648통과/1건너뜀·평가 반례4건 기대판정. docs/experiments/long_sentence_imagination/round_89/report.md §8.

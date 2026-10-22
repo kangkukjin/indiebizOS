@@ -1,0 +1,867 @@
+{
+  "start": {
+    "start": "2026-10-22T14:09:17.570639+09:00",
+    "deadline": "2026-10-22T15:09:17.570639+09:00",
+    "sources": {
+      "data/common_prompts/base_prompt_v6.md": "6259823fad916173bcd0aa0a8dfaf4fa305afa86b76e45b50c6785964b6e4116",
+      "data/common_prompts/consciousness_prompt.md": "7f93316f1402a5fd08e669e57aab2c2e5ebed928b0ad97276e606d243fe0b8da",
+      "backend/cognition/final_evaluator.py": "f41f77e5379a20082950a53db824787d28a043c95c39a462b54acd93e94caf33",
+      "data/guides/ibl_composition.md": "58dcfe3b2e6188cf229f1e14f3b35a5a95670b4b51794d55838ac9c9a2dee86d"
+    },
+    "baseline": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_89회차"
+  },
+  "end": {
+    "end": "2026-10-22T14:31:38.747847+09:00",
+    "sources": {
+      "data/common_prompts/base_prompt_v6.md": "6259823fad916173bcd0aa0a8dfaf4fa305afa86b76e45b50c6785964b6e4116",
+      "data/common_prompts/consciousness_prompt.md": "7f93316f1402a5fd08e669e57aab2c2e5ebed928b0ad97276e606d243fe0b8da",
+      "backend/cognition/final_evaluator.py": "f41f77e5379a20082950a53db824787d28a043c95c39a462b54acd93e94caf33",
+      "data/guides/ibl_composition.md": "58dcfe3b2e6188cf229f1e14f3b35a5a95670b4b51794d55838ac9c9a2dee86d"
+    }
+  },
+  "audit": {
+    "turns": [
+      {
+        "turn": "T1",
+        "task_id": "task_101166dbfd324d52b18853bb7b05348d",
+        "episodes": [
+          {
+            "id": 5175,
+            "total_ms": 337145,
+            "ended_at": "2026-10-22T14:15:47.038621"
+          }
+        ],
+        "usage": {
+          "oneshot:classify": {
+            "input": 9502,
+            "output": 120,
+            "cache_read": 4736,
+            "cache_create": 0
+          },
+          "consciousness": {
+            "input": 140852,
+            "output": 4308,
+            "cache_read": 92723,
+            "cache_create": 48123
+          },
+          "execution": {
+            "input": 974825,
+            "output": 26477,
+            "cache_read": 859608,
+            "cache_create": 115199
+          },
+          "oneshot:evaluate": {
+            "input": 67716,
+            "output": 1214,
+            "cache_read": 6408,
+            "cache_create": 61306
+          }
+        },
+        "tool_count": 8,
+        "full_tool_inputs": 8,
+        "sessions": [
+          "[ClaudeCode/의식 감독] call: session=new system_prompt=31987자 message=17659자",
+          "[ClaudeCode/parallel_review] call: session=new system_prompt=43525자 message=41505자",
+          "[ClaudeCode/에이전트] call: session=new system_prompt=5012자 message=109974자"
+        ],
+        "evaluations": [
+          {
+            "instruction": "",
+            "pursuit_status": "UNKNOWN",
+            "reason": "ACHIEVED",
+            "response_hash": "3b28f9bfd1c91fd8429e6f492d71143f6e9adebe8e2fc942d83d32618e390154",
+            "response_version": 1,
+            "severity": 0,
+            "status": "APPROVED"
+          }
+        ],
+        "planning_tool_count": 2,
+        "full_planning_inputs": 2,
+        "models": [
+          {
+            "role": "consciousness",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "execution_instance"
+          },
+          {
+            "role": "execution",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|실행→고급"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "DeepSeekProvider",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "OpenAI",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:evaluate",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|평가→고급"
+          }
+        ],
+        "context_compacted": 0
+      },
+      {
+        "turn": "T2",
+        "task_id": "task_97c84b99f9e7469ba0e7c82df2821785",
+        "episodes": [
+          {
+            "id": 5176,
+            "total_ms": 473854,
+            "ended_at": "2026-10-22T14:23:43.034949"
+          }
+        ],
+        "usage": {
+          "oneshot:classify": {
+            "input": 14139,
+            "output": 68,
+            "cache_read": 4864,
+            "cache_create": 0
+          },
+          "oneshot:background": {
+            "input": 6627,
+            "output": 1836,
+            "cache_read": 1280,
+            "cache_create": 0
+          },
+          "consciousness": {
+            "input": 47894,
+            "output": 2943,
+            "cache_read": 31141,
+            "cache_create": 16751
+          },
+          "execution": {
+            "input": 2410895,
+            "output": 29683,
+            "cache_read": 2286492,
+            "cache_create": 124367
+          },
+          "oneshot:evaluate": {
+            "input": 76382,
+            "output": 529,
+            "cache_read": 6408,
+            "cache_create": 69972
+          }
+        },
+        "tool_count": 23,
+        "full_tool_inputs": 23,
+        "sessions": [
+          "[ClaudeCode/의식 감독] call: session=new system_prompt=31987자 message=21583자",
+          "[ClaudeCode/parallel_review] call: session=new system_prompt=43525자 message=39999자",
+          "[ClaudeCode/에이전트] call: session=new system_prompt=5012자 message=120120자"
+        ],
+        "evaluations": [
+          {
+            "instruction": "",
+            "pursuit_status": "UNKNOWN",
+            "reason": "ACHIEVED",
+            "response_hash": "c1ffb2a45fe41df2c9d377856fa6fb3ba85ada5f7d27ebda14e81e443a6fdc22",
+            "response_version": 1,
+            "severity": 0,
+            "status": "APPROVED"
+          }
+        ],
+        "planning_tool_count": 0,
+        "full_planning_inputs": 0,
+        "models": [
+          {
+            "role": "consciousness",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "execution_instance"
+          },
+          {
+            "role": "execution",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|실행→고급"
+          },
+          {
+            "role": "oneshot:background",
+            "model": "deepseek-flash",
+            "provider": "OpenAI",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "DeepSeekProvider",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "OpenAI",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:evaluate",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|평가→고급"
+          }
+        ],
+        "context_compacted": 0
+      },
+      {
+        "turn": "T3",
+        "task_id": "task_09889616182b406289ef9dcb554e2d5f",
+        "episodes": [
+          {
+            "id": 5177,
+            "total_ms": 273700,
+            "ended_at": "2026-10-22T14:28:19.139855"
+          }
+        ],
+        "usage": {
+          "oneshot:classify": {
+            "input": 15245,
+            "output": 151,
+            "cache_read": 4608,
+            "cache_create": 0
+          },
+          "oneshot:background": {
+            "input": 15489,
+            "output": 1454,
+            "cache_read": 8704,
+            "cache_create": 0
+          },
+          "consciousness": {
+            "input": 160908,
+            "output": 4008,
+            "cache_read": 136488,
+            "cache_create": 24414
+          },
+          "execution": {
+            "input": 1779848,
+            "output": 20988,
+            "cache_read": 1682662,
+            "cache_create": 97156
+          },
+          "oneshot:evaluate": {
+            "input": 107358,
+            "output": 740,
+            "cache_read": 6408,
+            "cache_create": 100948
+          }
+        },
+        "tool_count": 14,
+        "full_tool_inputs": 14,
+        "sessions": [
+          "[ClaudeCode/의식 감독] call: session=new system_prompt=31987자 message=26666자",
+          "[ClaudeCode/parallel_review] call: session=new system_prompt=43525자 message=39185자",
+          "[ClaudeCode/에이전트] call: session=new system_prompt=5012자 message=195097자"
+        ],
+        "evaluations": [
+          {
+            "instruction": "",
+            "pursuit_status": "UNKNOWN",
+            "reason": "ACHIEVED",
+            "response_hash": "eeb2a1beae4e679babba9ef1aeb8a625427dd8b568087e0305dff9b97c2f39da",
+            "response_version": 1,
+            "severity": 0,
+            "status": "APPROVED"
+          }
+        ],
+        "planning_tool_count": 2,
+        "full_planning_inputs": 2,
+        "models": [
+          {
+            "role": "consciousness",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "execution_instance"
+          },
+          {
+            "role": "execution",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|실행→고급"
+          },
+          {
+            "role": "oneshot:background",
+            "model": "deepseek-flash",
+            "provider": "OpenAI",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "DeepSeekProvider",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "OpenAI",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:evaluate",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|평가→고급"
+          }
+        ],
+        "context_compacted": 0
+      },
+      {
+        "turn": "T4",
+        "task_id": "task_754a986c22ad4d5aac062ec6abec68a5",
+        "episodes": [
+          {
+            "id": 5178,
+            "total_ms": 194995,
+            "ended_at": "2026-10-22T14:31:36.322192"
+          }
+        ],
+        "usage": {
+          "oneshot:classify": {
+            "input": 15315,
+            "output": 74,
+            "cache_read": 4480,
+            "cache_create": 0
+          },
+          "oneshot:background": {
+            "input": 9523,
+            "output": 1380,
+            "cache_read": 1280,
+            "cache_create": 0
+          },
+          "consciousness": {
+            "input": 54775,
+            "output": 3151,
+            "cache_read": 31141,
+            "cache_create": 23632
+          },
+          "execution": {
+            "input": 1663780,
+            "output": 12515,
+            "cache_read": 1582526,
+            "cache_create": 81224
+          },
+          "oneshot:evaluate": {
+            "input": 76392,
+            "output": 670,
+            "cache_read": 6408,
+            "cache_create": 69982
+          }
+        },
+        "tool_count": 13,
+        "full_tool_inputs": 13,
+        "sessions": [
+          "[ClaudeCode/의식 감독] call: session=new system_prompt=31987자 message=30119자",
+          "[ClaudeCode/parallel_review] call: session=new system_prompt=43525자 message=39229자",
+          "[ClaudeCode/에이전트] call: session=new system_prompt=5012자 message=111813자"
+        ],
+        "evaluations": [
+          {
+            "instruction": "",
+            "pursuit_status": "APPROVED",
+            "reason": "ACHIEVED",
+            "response_hash": "b442518114ca990aaaab92fd101585a2cc6240be6890999ccb560c35bc67ac48",
+            "response_version": 1,
+            "severity": 0,
+            "status": "APPROVED"
+          }
+        ],
+        "planning_tool_count": 0,
+        "full_planning_inputs": 0,
+        "models": [
+          {
+            "role": "consciousness",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "execution_instance"
+          },
+          {
+            "role": "execution",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|실행→고급"
+          },
+          {
+            "role": "oneshot:background",
+            "model": "deepseek-flash",
+            "provider": "OpenAI",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "DeepSeekProvider",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:classify",
+            "model": "deepseek-flash",
+            "provider": "OpenAI",
+            "source": "gear:최대|분류→경량"
+          },
+          {
+            "role": "oneshot:evaluate",
+            "model": "opus",
+            "provider": "ClaudeCode",
+            "source": "gear:최대|평가→고급"
+          }
+        ],
+        "context_compacted": 0
+      }
+    ],
+    "preservation": [
+      {
+        "turn": "T1",
+        "files": 21,
+        "changed": []
+      },
+      {
+        "turn": "T2",
+        "files": 31,
+        "changed": []
+      },
+      {
+        "turn": "T3",
+        "files": 54,
+        "changed": []
+      },
+      {
+        "turn": "T4",
+        "files": 67,
+        "changed": []
+      }
+    ]
+  },
+  "totals": {
+    "input": 7647465,
+    "output": 112309,
+    "cache_read": 6758365,
+    "cache_create": 833074,
+    "seconds": 1279.694,
+    "execution_tools": 58,
+    "planning_tools": 4
+  },
+  "oracle": {
+    "passed": 232,
+    "failed": 0,
+    "passed_names": [
+      "T1 terminal",
+      "T1 rows",
+      "T1 missing",
+      "T1 version",
+      "T1 usable",
+      "T1 gate ids consent",
+      "T1 gate ids checksum",
+      "T1 gate ids searchable",
+      "T1 gate ids accessible",
+      "T1 failed ids",
+      "T1 unknown ids",
+      "T1 cost",
+      "T1 budget",
+      "T1 done ids",
+      "T1 ready ids",
+      "T1 all task states",
+      "T1 required remaining",
+      "T1 not open",
+      "T1 required completed",
+      "T1 report exists",
+      "T1 output hash data_gates",
+      "T1 time order data_gates",
+      "T1 output hash budget",
+      "T1 time order budget",
+      "T1 output hash schedule",
+      "T1 time order schedule",
+      "T1 output hash operations",
+      "T1 time order operations",
+      "T2 terminal",
+      "T2 rows",
+      "T2 missing",
+      "T2 version",
+      "T2 usable",
+      "T2 gate ids consent",
+      "T2 gate ids checksum",
+      "T2 gate ids searchable",
+      "T2 gate ids accessible",
+      "T2 failed ids",
+      "T2 unknown ids",
+      "T2 cost",
+      "T2 budget",
+      "T2 done ids",
+      "T2 ready ids",
+      "T2 all task states",
+      "T2 required remaining",
+      "T2 not open",
+      "T2 required completed",
+      "T2 report exists",
+      "T2 reused status data_gates",
+      "T2 reused bytes data_gates",
+      "T2 output hash data_gates",
+      "T2 time order data_gates",
+      "T2 output hash budget",
+      "T2 time order budget",
+      "T2 output hash schedule",
+      "T2 time order schedule",
+      "T2 output hash operations",
+      "T2 time order operations",
+      "T2 preserved T1/acceptance_review.json",
+      "T2 preserved T1/run_ledger.json",
+      "T2 preserved T1/인수검토서.md",
+      "T2 preserved T1/tools/review.py",
+      "T2 preserved T1/reviews/data_gates.json",
+      "T2 preserved T1/reviews/budget.json",
+      "T2 preserved T1/reviews/schedule.json",
+      "T2 preserved T1/reviews/operations.json",
+      "T2 preserved T1/selftests/selftest_fail/acceptance_review.json",
+      "T2 preserved T1/selftests/selftest_fail/run_ledger.json",
+      "T2 preserved T1/selftests/selftest_fail/인수검토서.md",
+      "T2 preserved T1/selftests/selftest_reuse/acceptance_review.json",
+      "T2 preserved T1/selftests/selftest_reuse/run_ledger.json",
+      "T2 preserved T1/selftests/selftest_reuse/인수검토서.md",
+      "T2 preserved T1/selftests/selftest_fail/reviews/data_gates.json",
+      "T2 preserved T1/selftests/selftest_fail/reviews/budget.json",
+      "T2 preserved T1/selftests/selftest_fail/reviews/operations.json",
+      "T2 preserved T1/selftests/selftest_reuse/reviews/data_gates.json",
+      "T2 preserved T1/selftests/selftest_reuse/reviews/budget.json",
+      "T2 preserved T1/selftests/selftest_reuse/reviews/schedule.json",
+      "T2 preserved T1/selftests/selftest_reuse/reviews/operations.json",
+      "T3 terminal",
+      "T3 rows",
+      "T3 missing",
+      "T3 version",
+      "T3 usable",
+      "T3 gate ids consent",
+      "T3 gate ids checksum",
+      "T3 gate ids searchable",
+      "T3 gate ids accessible",
+      "T3 failed ids",
+      "T3 unknown ids",
+      "T3 cost",
+      "T3 budget",
+      "T3 done ids",
+      "T3 ready ids",
+      "T3 all task states",
+      "T3 required remaining",
+      "T3 not open",
+      "T3 required completed",
+      "T3 report exists",
+      "T3 reused status budget",
+      "T3 reused bytes budget",
+      "T3 reused status schedule",
+      "T3 reused bytes schedule",
+      "T3 reused status operations",
+      "T3 reused bytes operations",
+      "T3 output hash data_gates",
+      "T3 time order data_gates",
+      "T3 output hash budget",
+      "T3 time order budget",
+      "T3 output hash schedule",
+      "T3 time order schedule",
+      "T3 output hash operations",
+      "T3 time order operations",
+      "T3 preserved T1/acceptance_review.json",
+      "T3 preserved T1/run_ledger.json",
+      "T3 preserved T1/인수검토서.md",
+      "T3 preserved T1/tools/review.py",
+      "T3 preserved T1/reviews/data_gates.json",
+      "T3 preserved T1/reviews/budget.json",
+      "T3 preserved T1/reviews/schedule.json",
+      "T3 preserved T1/reviews/operations.json",
+      "T3 preserved T1/selftests/selftest_fail/acceptance_review.json",
+      "T3 preserved T1/selftests/selftest_fail/run_ledger.json",
+      "T3 preserved T1/selftests/selftest_fail/인수검토서.md",
+      "T3 preserved T1/selftests/selftest_reuse/acceptance_review.json",
+      "T3 preserved T1/selftests/selftest_reuse/run_ledger.json",
+      "T3 preserved T1/selftests/selftest_reuse/인수검토서.md",
+      "T3 preserved T1/selftests/selftest_fail/reviews/data_gates.json",
+      "T3 preserved T1/selftests/selftest_fail/reviews/budget.json",
+      "T3 preserved T1/selftests/selftest_fail/reviews/operations.json",
+      "T3 preserved T1/selftests/selftest_reuse/reviews/data_gates.json",
+      "T3 preserved T1/selftests/selftest_reuse/reviews/budget.json",
+      "T3 preserved T1/selftests/selftest_reuse/reviews/schedule.json",
+      "T3 preserved T1/selftests/selftest_reuse/reviews/operations.json",
+      "T3 preserved T2/conditions.json",
+      "T3 preserved T2/acceptance_review.json",
+      "T3 preserved T2/run_ledger.json",
+      "T3 preserved T2/인수검토서.md",
+      "T3 preserved T2/tools/patch_t2.py",
+      "T3 preserved T2/tools/review.py",
+      "T3 preserved T2/reviews/data_gates.json",
+      "T3 preserved T2/reviews/budget.json",
+      "T3 preserved T2/reviews/schedule.json",
+      "T3 preserved T2/reviews/operations.json",
+      "T4 terminal",
+      "T4 rows",
+      "T4 missing",
+      "T4 version",
+      "T4 usable",
+      "T4 gate ids consent",
+      "T4 gate ids checksum",
+      "T4 gate ids searchable",
+      "T4 gate ids accessible",
+      "T4 failed ids",
+      "T4 unknown ids",
+      "T4 cost",
+      "T4 budget",
+      "T4 done ids",
+      "T4 ready ids",
+      "T4 all task states",
+      "T4 required remaining",
+      "T4 not open",
+      "T4 required completed",
+      "T4 report exists",
+      "T4 reused status budget",
+      "T4 reused bytes budget",
+      "T4 reused status schedule",
+      "T4 reused bytes schedule",
+      "T4 reused status operations",
+      "T4 reused bytes operations",
+      "T4 output hash data_gates",
+      "T4 time order data_gates",
+      "T4 output hash budget",
+      "T4 time order budget",
+      "T4 output hash schedule",
+      "T4 time order schedule",
+      "T4 output hash operations",
+      "T4 time order operations",
+      "T4 preserved T1/acceptance_review.json",
+      "T4 preserved T1/run_ledger.json",
+      "T4 preserved T1/인수검토서.md",
+      "T4 preserved T1/tools/review.py",
+      "T4 preserved T1/reviews/data_gates.json",
+      "T4 preserved T1/reviews/budget.json",
+      "T4 preserved T1/reviews/schedule.json",
+      "T4 preserved T1/reviews/operations.json",
+      "T4 preserved T1/selftests/selftest_fail/acceptance_review.json",
+      "T4 preserved T1/selftests/selftest_fail/run_ledger.json",
+      "T4 preserved T1/selftests/selftest_fail/인수검토서.md",
+      "T4 preserved T1/selftests/selftest_reuse/acceptance_review.json",
+      "T4 preserved T1/selftests/selftest_reuse/run_ledger.json",
+      "T4 preserved T1/selftests/selftest_reuse/인수검토서.md",
+      "T4 preserved T1/selftests/selftest_fail/reviews/data_gates.json",
+      "T4 preserved T1/selftests/selftest_fail/reviews/budget.json",
+      "T4 preserved T1/selftests/selftest_fail/reviews/operations.json",
+      "T4 preserved T1/selftests/selftest_reuse/reviews/data_gates.json",
+      "T4 preserved T1/selftests/selftest_reuse/reviews/budget.json",
+      "T4 preserved T1/selftests/selftest_reuse/reviews/schedule.json",
+      "T4 preserved T1/selftests/selftest_reuse/reviews/operations.json",
+      "T4 preserved T2/conditions.json",
+      "T4 preserved T2/acceptance_review.json",
+      "T4 preserved T2/run_ledger.json",
+      "T4 preserved T2/인수검토서.md",
+      "T4 preserved T2/tools/patch_t2.py",
+      "T4 preserved T2/tools/review.py",
+      "T4 preserved T2/reviews/data_gates.json",
+      "T4 preserved T2/reviews/budget.json",
+      "T4 preserved T2/reviews/schedule.json",
+      "T4 preserved T2/reviews/operations.json",
+      "T4 preserved T3/conditions.json",
+      "T4 preserved T3/acceptance_review.json",
+      "T4 preserved T3/run_ledger.json",
+      "T4 preserved T3/인수검토서.md",
+      "T4 preserved T3/selftests/README.json",
+      "T4 preserved T3/tools/review.py",
+      "T4 preserved T3/tools/patch_t3.py",
+      "T4 preserved T3/reviews/data_gates.json",
+      "T4 preserved T3/reviews/budget.json",
+      "T4 preserved T3/reviews/schedule.json",
+      "T4 preserved T3/reviews/operations.json",
+      "T4 preserved T3/selftests/read_fail/acceptance_review.json",
+      "T4 preserved T3/selftests/read_fail/run_ledger.json",
+      "T4 preserved T3/selftests/read_fail/인수검토서.md",
+      "T4 preserved T3/selftests/inputs_read_fail/options.json",
+      "T4 preserved T3/selftests/inputs_read_fail/project.json",
+      "T4 preserved T3/selftests/inputs_read_fail/receipts.json",
+      "T4 preserved T3/selftests/inputs_read_fail/README.txt",
+      "T4 preserved T3/selftests/inputs_read_fail/records.json",
+      "T4 preserved T3/selftests/inputs_read_fail/tasks.json",
+      "T4 preserved T3/selftests/read_fail/reviews/budget.json",
+      "T4 preserved T3/selftests/read_fail/reviews/schedule.json",
+      "T4 preserved T3/selftests/read_fail/reviews/operations.json"
+    ],
+    "failures": []
+  },
+  "behavior": {
+    "baseline_join": {
+      "source": "docs/experiments/long_sentence_imagination/round_89/ai_T1_observed.py",
+      "sha256": "20dd60cef826d65ac17660369fe21fb9334ec5ef7a431c173cb7f72b683077fc",
+      "calls": {
+        "<module>": 1,
+        "sha": 13,
+        "now": 18,
+        "gated": 5,
+        "run_job": 7,
+        "review_operations": 1,
+        "load": 15,
+        "review_records": 1,
+        "review_budget": 1,
+        "review_graph": 1,
+        "review_receipts": 1,
+        "<genexpr>": 404,
+        "cp": 2,
+        "<lambda>": 14685,
+        "write": 8,
+        "gate_state": 14400,
+        "review_schedule": 1,
+        "synthesize": 1
+      },
+      "observations": [
+        {
+          "budget_wait_released_by_schedule": false
+        }
+      ]
+    },
+    "repair_join": {
+      "source": "outputs/long_sentence_imagination/2026-10-22_89회차_repair/snapshots/T1/T1/tools/review.py",
+      "sha256": "4138371e130c232e48a32331a78aa72be38c00a6fb08c1859d2ec5bec720fa27",
+      "calls": {
+        "<module>": 1,
+        "main": 1,
+        "now": 16,
+        "sha_file": 7,
+        "sha_bytes": 24,
+        "load_inputs": 1,
+        "run_one": 4,
+        "slice_data_gates": 1,
+        "need": 11,
+        "canon": 11,
+        "slice_budget": 1,
+        "run_data_gates": 1,
+        "<genexpr>": 9729,
+        "run_budget": 1,
+        "slice_schedule": 1,
+        "run_schedule": 1,
+        "cpm": 2,
+        "EFd": 121,
+        "downstream": 6,
+        "<lambda>": 87,
+        "remaining_longest": 2,
+        "gate_state": 7200,
+        "slice_operations": 1,
+        "run_operations": 1,
+        "merge": 1,
+        "md_report": 1
+      },
+      "observations": [
+        {
+          "budget_wait_released_by_schedule": true
+        }
+      ]
+    },
+    "baseline_classification": {
+      "source": "docs/experiments/long_sentence_imagination/round_89/ai_T4_observed.py",
+      "sha256": "3a45f042ed67fae893c4bcabaf2689628899eb17161421046a181e042123e91e",
+      "calls": {
+        "<module>": 1,
+        "<genexpr>": 3641,
+        "prior_manifests": 2,
+        "jread": 17,
+        "sha": 78,
+        "now": 17,
+        "preserve": 4,
+        "go": 5,
+        "run_job": 7,
+        "fn": 4,
+        "review_records": 1,
+        "load": 3,
+        "t3_states": 1,
+        "states_of": 1800,
+        "gstate": 7200,
+        "<lambda>": 7282,
+        "verdict": 1801,
+        "write": 4,
+        "review_operations": 1,
+        "synthesize": 1
+      },
+      "observations": []
+    },
+    "repair_classification": {
+      "source": "outputs/long_sentence_imagination/2026-10-22_89회차_repair/snapshots/T4/T4/tools/review.py",
+      "sha256": "48a2a531be4b7177ce99ed442cf314cb6b8c207a887ffd743923461e02e54c05",
+      "calls": {
+        "<module>": 1,
+        "main": 1,
+        "now": 16,
+        "sha_file": 11,
+        "sha_bytes": 31,
+        "load_inputs": 1,
+        "run_one": 4,
+        "slice_data_gates": 1,
+        "need": 11,
+        "canon": 14,
+        "slice_budget": 1,
+        "<genexpr>": 9340,
+        "slice_schedule": 1,
+        "run_data_gates": 1,
+        "slice_operations": 1,
+        "gate_state": 7200,
+        "why_of": 4,
+        "data_diff": 1,
+        "verdicts": 2,
+        "merge": 1,
+        "<lambda>": 9,
+        "in_scope": 60,
+        "md_report": 1
+      },
+      "observations": []
+    }
+  },
+  "evaluator": [
+    {
+      "case": "unrelated_wait",
+      "expected": false,
+      "achieved": false,
+      "passed": true,
+      "feedback": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"C1\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"실행 코드 `[f.result() for f in futures]`가 A·B·C 전체의 완료를 기다린 뒤에야 `E(futures[0].result())`를 호출한다. 기록에서도 A는 1초에 끝났지만 E는 C가 끝난 10초에 시작했다. E는 A만 사용하고 공유 자원·일관성 제약도 없으므로 무관한 B·C를 기다릴 근거가 없다. 따라서 응답의 'A 결과가 준비되자마자 시작했다'는 주장은 증거와 모순된다.\", \"repair\": \"E가 A의 future 결과만 기다린 뒤 B·C 완료와 무관하게 바로 시작되도록 코드를 고친다. 예를 들어 A의 future에 E를 연결하고, B·C의 결과는 마지막에 따로 수집한다. 이후 재실행해 E 시작 시각이 약 1초인지 기록으로 확인하고, 그에 맞게 응답을 고친다.\"}]",
+      "severity": 2,
+      "seconds": 9.651874125003815
+    },
+    {
+      "case": "selective_join",
+      "expected": true,
+      "achieved": true,
+      "passed": true,
+      "feedback": "ACHIEVED",
+      "severity": 0,
+      "seconds": 10.291202332824469
+    },
+    {
+      "case": "full_classification_claim",
+      "expected": false,
+      "achieved": false,
+      "passed": true,
+      "feedback": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"C1\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"코드는 cur={r.id:classify(r) for r in rows}로 51행 전체를 다시 판정하고 바뀐 상태만 교체한다. 계측에서도 classify 호출이 51회다. 그런데 응답은 '기존50행의 판정을 재사용해 새1행만 계산했다'고 보고해, 실제 처리 범위와 다르게 설명한다.\", \"repair\": \"previous에 없는 새 행(1행)만 classify하도록 코드를 고친다. 기존 50행은 previous의 판정을 그대로 쓴다. classify 호출 수가 1인지 다시 계측하고, 그 실측 범위(판정 1행, 재사용 50행)를 보고한다.\"}]",
+      "severity": 2,
+      "seconds": 11.36394808255136
+    },
+    {
+      "case": "incremental_with_full_validation",
+      "expected": true,
+      "achieved": true,
+      "passed": true,
+      "feedback": "ACHIEVED",
+      "severity": 0,
+      "seconds": 7.180218957364559
+    }
+  ],
+  "assessment": {
+    "L89-4": "보존 프로그램의 지연 이벤트 시험에서 무관한 예산 분기 대기 해소 확인.",
+    "L89-5": "1행만 계산했다는 과장 제거. 검토 단위 재사용과 전량 자료 재판정을 정직하게 보고. 행 단위 증분 계산은 미구현.",
+    "L89-6": "프로그램 복사·부분 수정으로 재사용했으나 설명 보완의 전체 재실행과 비용 증가는 잔존.",
+    "scope": "T2 실행도구15의 os.makedirs(/tmp/x) 성공, T4 도구2의 /tmp/x 출력 시도는 디렉터리라 실패. 지정 출력 범위 위반이며 합격 처리하지 않음."
+  },
+  "limits": [
+    "캐시 읽기/생성은 input과 중복 합산하지 않는다.",
+    "별도 검수 반례4회와 외부 훈련자 작성 비용은 네 턴 합계에 포함되지 않는다.",
+    "지연 주입은 의존 관계를 검사하며 실제 성능 향상 측정이 아니다.",
+    "정규 회귀는 선택230파일 3648통과·1건너뜀; backend 전체 전수는 미실행."
+  ]
+}

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: transcript-length-dependent-fields
+    retired: 2026-10-23
+    reason: 긴 자막에서 transcript 필드가 사라져 후속 조합이 실패하고 요약기가 빈 본문을 읽었다.
+    instead: 자막 길이와 무관하게 transcript·formatted_transcript·segments·items를 유지한다. 모델 표시량은 공통 결과 투영이 관리한다.
+    phrases: ['긴 자막은 파일로 저장하고 경로만 반환', '자막이 길어서 파일로 저장했습니다']
   - id: world-map-runtime
     retired: 2026-10-22
     reason: 방법 후보의 비AI 선택·관리 비용과 의식의 방법 선택 역할이 중복되어 세계의 지도를 은퇴한다.

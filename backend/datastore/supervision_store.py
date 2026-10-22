@@ -251,12 +251,15 @@ class TurnStore:
             page["masked_paths"] = masked
         return page
 
-    def join_lineage(self, agent, project, principal_key):
-        """이 턴을 같은 행위자(에이전트·프로젝트·요청 주체)의 턴 원장에 올린다.
+    def join_lineage(self, agent, project, principal_key, *, conversation=None):
+        """같은 행위자·대화의 턴만 이어 읽는다. 독립 작업은 다른 원장을 쓴다.
 
         다음 턴이 앞 턴의 result_ref 를 이어 쓰는 범위다(긴문장 9회차 L9-1). 발급하는 쪽이 범위를
         적고, 읽는 쪽은 자기 턴과 같은 키의 턴만 본다 — 다른 저장소를 훑지 않는다."""
-        key = digest(json.dumps([str(agent or ""), str(project or ""), str(principal_key or "")], ensure_ascii=False))
+        identity = [str(agent or ""), str(project or ""), str(principal_key or "")]
+        if conversation is not None:
+            identity.append(conversation)
+        key = digest(json.dumps(identity, ensure_ascii=False))
         ledger = _lineage_ledger(self.directory, key)
         ledger.parent.mkdir(parents=True, exist_ok=True)
         name = self.directory.name

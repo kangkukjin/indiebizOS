@@ -445,64 +445,8 @@ def get_youtube_transcript(
                 formatted_lines.append(f"[{timestamp}] {text}")
             formatted_transcript = '\n'.join(formatted_lines)
 
-        # 긴 자막은 파일로 저장하고 경로만 반환
-        LONG_THRESHOLD = 10000  # 10,000자 초과 시 파일 저장
-        if len(full_text) > LONG_THRESHOLD:
-            import os
-            outputs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'outputs')
-            outputs_dir = os.path.normpath(outputs_dir)
-            os.makedirs(outputs_dir, exist_ok=True)
-
-            safe_title = re.sub(r'[^\w가-힣\s-]', '', title)[:50].strip()
-            filename = f"transcript_{video_id}_{safe_title}.txt"
-            filepath = os.path.join(outputs_dir, filename)
-
-            # 타임스탬프 포함 버전 저장 (더 유용)
-            save_lines = []
-            for segment in segments:
-                timestamp = format_timestamp(segment['start'])
-                text = segment['text'].strip()
-                save_lines.append(f"[{timestamp}] {text}")
-            save_content = f"# {title}\n# Video ID: {video_id}\n# 언어: {used_language}\n# 세그먼트: {len(segments)}개\n\n" + '\n'.join(save_lines)
-
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(save_content)
-
-            preview = full_text[:2000]
-            out = {
-                'success': True,
-                'saved_to_file': True,
-                'file_path': filepath,
-                'total_length': len(full_text),
-                'segment_count': len(segments),
-                'preview': preview,
-                'language': used_language,
-                'title': title,
-                'duration': duration,
-                'video_id': video_id,
-                # 통째로 도로 읽으면 파일로 뺀 의미가 사라진다 — 부분 읽기 '방법'까지 알려준다.
-                # ★[self:grep] 은 path 가 아니라 root_path + file_pattern 을 받는다.
-                'message': (
-                    f'자막이 길어서 파일로 저장했습니다 ({len(full_text):,}자, {len(segments)}개 세그먼트): {filepath}\n'
-                    f'★통째로 읽지 마세요. 앵커를 먼저 잡고 그 구간만 읽습니다:\n'
-                    f'  1) [self:grep]{{pattern: "키워드1|키워드2", root_path: "{outputs_dir}", file_pattern: "{filename}"}} → 줄 번호 확보\n'
-                    f'  2) [self:read]{{path: "{filepath}", start_line: 640, end_line: 1045}} → 그 구간만 발췌 (1-기반 양끝 포함)\n'
-                    f'  전체 흐름만 필요하면 preview 필드(앞 2,000자)로 충분한 경우가 많습니다.'
-                )
-            }
-            # 파이프 통화(2026-08-29): 봉투는 파일 참조로 작게 유지하되, 세그먼트 통화를
-            # 스필 참조로 싣는다 — `transcript >> [table:brief]` 류 파이프의 소비자
-            # (_get_items·each·$items 바인딩)가 resolve_ref 로 투명하게 전체 세그먼트를
-            # 받는다(어제·오늘 이틀 연속 마찰: "입력 통화가 없습니다"). 미가용 시 종전 모양.
-            try:
-                from common.spill import spill_write
-                _env = spill_write(json.dumps({"items": segments}, ensure_ascii=False),
-                                   tag=f"transcript_{video_id}")
-                out.update({"items": [], "ref": _env["ref"], "_spilled": True})
-            except Exception:
-                pass
-            return out
-
+        # 길이와 무관하게 실행 값은 동일한 계약을 유지한다. 모델에 보여줄 분량은
+        # 공통 결과 투영·스필 경계가 관리하며, 후속 IBL과 요약에는 전문을 넘긴다.
         return {
             'success': True,
             'transcript': full_text,

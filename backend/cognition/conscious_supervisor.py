@@ -58,7 +58,20 @@ class Supervisor:
         self.store = TurnStore(directory or (Path(spill_dir()) / "supervision" / self.turn_id))   # 스필 루트 시임(2026-10-04)
         try:
             import principal
-            self.store.join_lineage(agent, self.project_path, principal.cache_key())
+            from conversation_sessions import current as current_conversation
+            from research_context import current as current_research
+            binding, research = current_conversation(), current_research()
+            if binding:
+                conversation = ['conversation', str(Path(binding.db_path).resolve()),
+                                binding.owner, binding.session_id]
+            elif research and research.get('thread_id'):
+                conversation = ['research', research.get('project_uid'), research['thread_id']]
+            else:
+                # 대화 신원이 없으면 같은 실행 안에서만 잇는다. 에이전트 ID만으로
+                # 다른 사용자 대화·독립 작업의 증거를 가져오지 않는다.
+                conversation = ['task', task]
+            self.store.join_lineage(agent, self.project_path, principal.cache_key(),
+                                    conversation=conversation)
         except Exception:
             pass  # 원장에 못 올리면 앞 턴 결과를 이어 쓰지 못할 뿐이다 — 턴은 그대로 진행한다.
         from supervision_delivery import DeliveryQueue

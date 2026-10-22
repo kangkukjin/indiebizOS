@@ -8,6 +8,59 @@ import model_result_view as view
 from supervision_store import TurnStore, _ledger_turns
 
 
+def test_parallel_worker_sessions_do_not_evict_or_share_parent_evidence(tmp_path):
+    from types import SimpleNamespace
+    from conversation_sessions import Binding, scope
+    from conscious_supervisor import Supervisor
+    from supervision_store import EvidenceNotFound, LINEAGE_KEEP
+
+    runner = SimpleNamespace(ai=SimpleNamespace(project_path=str(tmp_path)))
+    def turn(session, number, *, owner='owner', db='conversations.db'):
+        binding = Binding(str(tmp_path / db), session, owner, str(number))
+        with scope(binding):
+            controller = Supervisor(runner, '조회', [], 'same-agent', f'task-{number}',
+                                    directory=tmp_path / 'supervision' / f'{number:032x}')
+        controller.close()
+        return controller.store
+
+    parent = turn('parent', 1)
+    ref = parent.evidence({'checked_program': 'return 42'})
+    for number in range(2, LINEAGE_KEEP + 3):
+        worker = turn(f'worker-{number}', number)
+        with pytest.raises(EvidenceNotFound):
+            worker.read_evidence_across_turns(ref['id'])
+    resumed = turn('parent', 100)
+    assert resumed.read_evidence_across_turns(ref['id'])['from_turn'] == parent.directory.name
+    for kwargs in ({'owner': 'other-owner'}, {'db': 'other.db'}):
+        with pytest.raises(EvidenceNotFound):
+            turn('parent', 101, **kwargs).read_evidence_across_turns(ref['id'])
+
+
+@pytest.mark.parametrize('mode', ['research', 'unbound'])
+def test_supervisor_without_chat_binding_uses_research_or_task_identity(tmp_path, mode):
+    from types import SimpleNamespace
+    from conversation_sessions import scope
+    from research_context import scope as research_scope
+    from conscious_supervisor import Supervisor
+    from supervision_store import EvidenceNotFound
+
+    runner = SimpleNamespace(ai=SimpleNamespace(project_path=str(tmp_path)))
+    def turn(number, identity):
+        research = {'project_uid': 'project', 'thread_id': identity} if mode == 'research' else None
+        task = f'task-{number}' if research else identity
+        with scope(None), research_scope(research):
+            controller = Supervisor(runner, '조회', [], 'agent', task,
+                                    directory=tmp_path / 'supervision' / f'{number:032x}')
+        controller.close()
+        return controller.store
+
+    first = turn(1, 'same')
+    ref = first.evidence('same conversation')
+    assert turn(2, 'same').read_evidence_across_turns(ref['id'])['from_turn'] == first.directory.name
+    with pytest.raises(EvidenceNotFound):
+        turn(3, 'other').read_evidence_across_turns(ref['id'])
+
+
 @pytest.mark.parametrize("separator", ["\u0085", "\u2028", "\u2029", "\n"])
 def test_jsonl_tool_index_preserves_text_separators(tmp_path, separator):
     store = TurnStore(tmp_path)

@@ -534,12 +534,14 @@ def _assemble_supervisor(sample: str) -> Dict[str, Any]:
 
 def _assemble_unconscious(sample: str) -> Dict[str, Any]:
     from consciousness_agent import get_unconscious_prompt
+    from turn_scope import classification_message
     model = _model_info("classify")
     sections = [
         _section("unconscious_prompt", "무의식 프롬프트", "system", "file",
                  "data/common_prompts/unconscious_prompt.md (consciousness_agent.get_unconscious_prompt)",
                  get_unconscious_prompt()),
-        _section("user_message", "사용자 원문", "user", "input", "사용자 메시지 그대로", sample,
+        _section("user_message", "분류 대상 자료", "user", "input", "turn_scope.classification_message",
+                 classification_message(sample),
                  note="분류기는 현재 요청·짧은 직전 대화·첨부 유무를 본다. 해마 기억은 실행 문맥에 주입하며 분류를 우회하지 않는다."),
     ]
     return {"model": model, "sections": sections, "assembled": {},

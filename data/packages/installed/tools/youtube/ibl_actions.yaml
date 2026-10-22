@@ -11,7 +11,8 @@ nodes:
           - info: 메타데이터(제목·발행 채널/ID/URL·설명·조회수/좋아요/댓글/구독자·채널 인증·observed_at·upload_date=ISO YYYY-MM-DD). 미제공 지표는 null이며 0과
           구별한다. 채널 인증은 전문성 보증이 아니다. 원 공급자 날짜는 upload_date_raw로 보존. 날짜 누락·달력 오류는 실패.
 
-          - transcript: 자막/스크립트 추출. language 옵션.
+          - transcript: 자막/스크립트 추출. language 옵션. 길이와 무관하게 transcript 전문과 segments/items 시간 구간을 반환한다.
+          긴 결과의 모델 표시량은 공통 result_ref로 관리하며 IBL에서는 전문을 그대로 조합한다.
 
           - languages: 사용 가능한 자막 언어 목록.
 

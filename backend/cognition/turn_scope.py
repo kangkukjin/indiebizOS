@@ -15,8 +15,8 @@ def classification_message(message, history=None, images=None):
         recent.append({"role": item["role"], "content": content[-1500:]})
         if len(recent) == 2:
             break
-    if not recent and not images:
-        return message
+    # 첫 턴도 자료 봉투에 넣는다. 본문 속 역할·답변 형식을 분류기 자신의
+    # 지시로 읽으면 문제를 풀기 시작하고 라우팅 토큰을 반환하지 못한다.
     return json.dumps({"recent_dialogue": list(reversed(recent)),
                        "attached_images": len(images or []),
                        "current_message": message}, ensure_ascii=False)

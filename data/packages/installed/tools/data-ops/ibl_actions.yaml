@@ -27,6 +27,7 @@ actions:
         protocol: legacy-envelope
         value_path: ""
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         items: List<Record>
@@ -74,6 +75,7 @@ actions:
     - filter
   sort:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         items: List<Record>
@@ -120,6 +122,7 @@ actions:
     - 순서
   take:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         items: List
@@ -160,6 +163,7 @@ actions:
     - top
   chunk:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         by: Unknown
@@ -215,6 +219,7 @@ actions:
   select:
     authoring_hint: 'columns는 열 이름 목록 또는 행을 받아 Record를 반환하는 람다다. 예: $행 >> [table:select]{columns:($r)=>{id:$r.id,total:$r.qty*$r.price}}. 결과는 List<Record>. 필드 누락과 계산 실패를 숨기지 않는다.'
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         items: List<Record>
@@ -258,6 +263,7 @@ actions:
   compute:
     authoring_hint: 'set은 행을 받아 추가·수정 열 Record를 반환하는 람다입니다. 예: $행 >> [table:compute]{set:($r)=>{금액:number($r.금액),월:$r.일자[5:7]}}. 원본의 다른 열은 보존합니다. 람다 안 식도 실행 단계 예산을 소비합니다.'
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         items: List<Record>
@@ -302,6 +308,7 @@ actions:
     - compute
   rename:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         columns: Unknown
@@ -352,6 +359,7 @@ actions:
     - 키맞추기
   flatten:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         criteria: Unknown
@@ -397,6 +405,7 @@ actions:
     - 풀기
   dedup:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         by: Unknown
@@ -444,6 +453,7 @@ actions:
     - 고유
   since:
     callable_contract:
+      execution: {concurrency: reentrant}
       deferred_observation: true
       version: 1
       params:
@@ -499,6 +509,7 @@ actions:
     - 감시
   groupby:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       nonempty: [by]
       params:
@@ -546,6 +557,7 @@ actions:
     - 통계
   join:
     callable_contract:
+      execution: {concurrency: reentrant}
       version: 1
       params:
         inputs: List<List<Record>|Record|Text>
@@ -659,6 +671,7 @@ actions:
     - 세로결합
   merge:
     callable_contract:
+      execution: {concurrency: reentrant}
       <<: *combine_contract
       params:
         inputs: List<List<Record>|Record|Text>

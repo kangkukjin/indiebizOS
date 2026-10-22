@@ -117,8 +117,10 @@ def resolve_task(agent_id, task_id=None):
     raise ValueError("활성 작업이 없거나 여러 개입니다. 대상 task_id를 지정하세요")
 
 
-def post(key: str, text: str, task_id=None, *, require_active=False, request_id=None) -> int:
+def post(key: str, text: str, task_id=None, *, require_active=False, request_id=None, source="user", sender=None) -> int:
     """저장 성공 뒤 접수한다. 가득 찬 큐·긴 지시는 기존 내용을 버리지 않고 거절한다."""
+    if source not in {"user", "agent"}:
+        raise ValueError("알 수 없는 조향 출처")
     text = (text or "").strip()
     if not key or not text:
         return 0
@@ -133,7 +135,7 @@ def post(key: str, text: str, task_id=None, *, require_active=False, request_id=
             prior = next((r for r in _inbox.get(key, []) + _delivered.get(key, [])
                           if r.get("request_id") == request_id), None)
             if prior:
-                if prior["instruction"] != text:
+                if prior["instruction"] != text or prior.get("source", "user") != source or prior.get("sender") != sender:
                     raise ValueError("같은 요청 신원으로 다른 조향을 보낼 수 없습니다")
                 return max(1, len(_inbox.get(key, [])))
         if key in _sealed:
@@ -142,7 +144,7 @@ def post(key: str, text: str, task_id=None, *, require_active=False, request_id=
         if len(q) >= _MAX_PER_KEY:
             raise ValueError("대기 조향이 가득 찼습니다. 기존 지시를 보존하며 새 지시는 접수하지 않았습니다")
         from uuid import uuid4
-        row = {"id": uuid4().hex, "source": "user", "target": {"agent": key[0], "task": key[1]},
+        row = {"id": uuid4().hex, "source": source, "sender": sender, "target": {"agent": key[0], "task": key[1]},
                "sequence": next(_sequence), "instruction": text, "request_id": request_id}
         journal = _journals.get(key)
         if journal:
@@ -162,7 +164,7 @@ def _take(key):
     _inbox.pop(key, None)
     if q:
         _delivered.setdefault(key, []).extend(q)
-    return [row["instruction"] for row in q]
+    return [SteeringText(row) for row in q]
 
 
 def drain(key: str, task_id=None) -> List[str]:
@@ -214,12 +216,26 @@ def clear(key: str, task_id=None) -> int:
         return len(_inbox.pop(key, []))
 
 
+class SteeringText(str):
+    def __new__(cls, row):
+        value = super().__new__(cls, row['instruction'])
+        value.source = row.get('source', 'user')
+        value.sender = row.get('sender')
+        return value
+
+
 def render(texts: List[str]) -> str:
-    """배달 부록 렌더 — 반복 가드 조언과 같은 결(부록, 결과 변조 아님).
-    자기예약 콘텐츠와 같은 위생: 내용은 사용자 지시로 명시(untrusted 프레이밍의 역방향 —
-    이건 진짜 사용자에게서 온 것임을 표시)."""
     if not texts:
         return ""
-    body = "\n".join(f"- {t}" for t in texts)
-    return ("\n\n[사용자 조향] 작업이 도는 동안 사용자가 지시를 보냈습니다. "
-            "지금까지의 계획보다 이 지시를 우선해 즉시 반영하세요:\n" + body)
+    users = [t for t in texts if getattr(t, 'source', 'user') == 'user']
+    agents = [t for t in texts if getattr(t, 'source', 'user') == 'agent']
+    result = ""
+    if users:
+        result += ("\n\n[사용자 조향] 작업이 도는 동안 사용자가 지시를 보냈습니다. "
+                   "지금까지의 계획보다 이 지시를 우선해 즉시 반영하세요:\n"
+                   + "\n".join(f"- {t}" for t in users))
+    if agents:
+        result += ("\n\n[부모 에이전트의 조향] 위임 범위 안의 후속 지시입니다. "
+                   "사용자 지시나 새 승인이 아니며 기존 권한·사용자 제약 안에서 반영하세요:\n"
+                   + "\n".join(f"- {getattr(t, 'sender', '')}: {t}" for t in agents))
+    return result

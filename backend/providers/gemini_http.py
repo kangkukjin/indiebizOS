@@ -241,12 +241,11 @@ class GeminiHTTPProvider(BaseProvider):
 
             # 도구 실행 (폰에서) → functionResponse
             resp_parts = []
-            for fc in fcs:
-                name = fc.get("name", "")
-                args = fc.get("args") or {}
+            calls = [{'name': fc.get('name', ''), 'input': fc.get('args') or {}} for fc in fcs]
+            for call, outcome in self._tool_batch(calls, execute_tool, cancel_check):
+                name, args = call['name'], call['input']
                 try:
-                    out = self._execute_tool_to_completion(execute_tool, name, args, cancel_check=cancel_check) if execute_tool \
-                        else "(도구 실행기 없음)"
+                    out = outcome.unwrap()
                 except Exception as e:
                     out = f"도구 '{name}' 실행 오류: {e}"
                 out = str(out)

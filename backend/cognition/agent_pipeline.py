@@ -513,7 +513,7 @@ class CognitivePipelineMixin:
                     "force_role": "", "intent": "task",
                 })
                 print("[수리] 의식이 코어 수정 불필요로 정정 — RED 그랜트 없이 THINK 실행")
-            elif _origin == "user":
+            elif _origin == "user" and utterance_author != "agent":
                 original_provider = _switch_to_role(self, "system_repair")
                 from red_grant import issue_grant
                 _g_task = get_current_task_id()
@@ -536,7 +536,7 @@ class CognitivePipelineMixin:
             if self._consciousness_needs_repair(consciousness_output):
                 from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
                 _origin = get_task_origin()
-                if _origin == "user":
+                if _origin == "user" and utterance_author != "agent":
                     original_provider = _switch_to_role(self, "system_repair")
                     from red_grant import issue_grant
                     _g_task = get_current_task_id()

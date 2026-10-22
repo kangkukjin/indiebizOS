@@ -70,6 +70,14 @@ class Workspace:
             self._code = CodeAdapter(self._coding_store)
         return self._code
 
+    def collaborate(self, resource, phase, request_id=None, workers=2, collaboration=None, checks=None):
+        kind, app, row = self.resolve(resource)
+        if kind != 'code':
+            raise ValueError('collaborate는 코딩 프로젝트 전용입니다')
+        from coding_collaboration import Collaboration
+        return Collaboration(app.store).run(row, phase, request_id=request_id, workers=workers,
+                                             collaboration=collaboration, checks=checks)
+
     def resolve(self, resource: str):
         """자료 ID → (kind, 어댑터, 행). 종류는 저장소가 안다 — 호출자가 kind 를 들고 다니지 않는다."""
         if not isinstance(resource, str) or not resource:
@@ -467,7 +475,7 @@ class CodeAdapter:
     def capabilities(self, row):
         from coding_process import available
         return {"engine": "git", "edit_native": True, "save": True, "export_copy": False, "restore": True,
-                "close": True, "read_projection": True, "propose": True, "run": available(),
+                "close": True, "read_projection": True, "propose": True, "run": available(), "collaborate": available(),
                 "reason": "코딩 프로젝트 — 저장은 기록(커밋), 복구는 기록으로 되돌리기, 실행은 샌드박스 프로세스"}
 
     def snapshot(self, row):

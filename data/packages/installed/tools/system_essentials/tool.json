@@ -953,6 +953,7 @@
             "type": "string",
             "description": "open/snapshot/read/propose/apply/save/export/versions/restore/close/capabilities/recover",
             "enum": [
+              "collaborate",
               "open",
               "snapshot",
               "read",
@@ -1036,6 +1037,22 @@
           "wait": {
             "type": "number",
             "description": "snapshot(시트) — 편집창 엔진 응답 대기 초(상한 30)"
+          },
+          "phase": {
+            "type": "string",
+            "description": "self:workspace 파라미터"
+          },
+          "workers": {
+            "type": "integer",
+            "description": "self:workspace 파라미터"
+          },
+          "collaboration": {
+            "type": "string",
+            "description": "self:workspace 파라미터"
+          },
+          "checks": {
+            "type": "array",
+            "description": "self:workspace 파라미터"
           },
           "args": {
             "type": "object",

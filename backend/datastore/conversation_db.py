@@ -690,6 +690,9 @@ class ConversationDB:
         """작업 완료 처리 — status 업데이트 + 도구 이력 저장 (세션 내 조회용).
 
         result 는 전문을 저장한다(2026-10-05, system_ai_memory.complete_task 와 같은 수리)."""
+        from task_worker_store import defer_completion
+        if defer_completion(self.db_path, task_id, result):
+            return True
         from repair_continuation import task_state
         pending = task_state(task_id)
         if pending and pending != "completed":
@@ -869,6 +872,8 @@ class ConversationDB:
             """, (_json.dumps(ctx, ensure_ascii=False), task_id))
             cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
             left = cursor.fetchone()
+            from task_worker_store import settle_waiting
+            settle_waiting(conn, task_id)
             return {"remaining": (left[0] if left else 0) or 0, "duplicate": False, "mode": mode,
                     "total": len(delegations), "found": True}
 

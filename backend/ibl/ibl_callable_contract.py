@@ -71,6 +71,11 @@ def problems(contract, values):
 
 def validate_extensions(contract):
     params = contract['params']
+    execution = contract.get('execution', {})
+    if (not isinstance(execution, dict) or set(execution) - {'concurrency', 'affinity_resources'}
+            or execution.get('concurrency', 'serial') not in {'serial', 'reentrant', 'affinity'}):
+        raise ValueError('execution.concurrency는 serial/reentrant/affinity입니다')
+    validate_resources(execution.get('affinity_resources', {}), params)
     hint = contract.get('unknown_param_hint')
     if hint is not None and (not isinstance(hint, str) or not hint.strip()):
         raise ValueError('unknown_param_hint는 받지 않는 인자에 대한 안내 문장입니다')

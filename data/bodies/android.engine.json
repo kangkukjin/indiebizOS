@@ -20,6 +20,7 @@
     "base/episode_logger",
     "base/episode_orphans",
     "base/episode_trace_reader",
+    "base/execution_capacity",
     "base/execution_commit",
     "base/execution_workers",
     "base/file_script",
@@ -73,6 +74,7 @@
     "base/supervision_watch",
     "base/task_cancellation",
     "base/task_receipts",
+    "base/task_tree_budget",
     "base/thread_context",
     "base/thumbnails",
     "base/tool_completion",
@@ -165,6 +167,7 @@
     "cognition/system_tools",
     "cognition/system_tools_delegate",
     "cognition/system_tools_ibl",
+    "cognition/task_workers",
     "cognition/turn_scope",
     "cognition/unified_distill",
     "cognition/vocab_crystallization",
@@ -247,6 +250,7 @@
     "datastore/switch_manager",
     "datastore/system_ai_memory",
     "datastore/system_docs",
+    "datastore/task_worker_store",
     "datastore/tree_doc",
     "datastore/tree_recall",
     "datastore/verification_cache",
@@ -331,6 +335,7 @@
     "ibl/pipeline_state",
     "ibl/repair_execution_scope",
     "ibl/reusable_catalog",
+    "ibl/tool_batch",
     "ibl/tool_context",
     "ibl/tool_loader",
     "ibl/tool_selector",
@@ -360,8 +365,10 @@
     "services/chat_session_service",
     "services/chat_streams",
     "services/client_agent",
+    "services/coding_collaboration",
     "services/coding_git",
     "services/coding_projects",
+    "services/coding_worker_tools",
     "services/document_creation",
     "services/document_formats",
     "services/document_hwp",
@@ -554,8 +561,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 543,
-    "engine": 511,
+    "total": 550,
+    "engine": 518,
     "blocklist": 32
   }
 }

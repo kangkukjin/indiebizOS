@@ -78,7 +78,7 @@ def narrowed_allowed(requested) -> tuple:
     from ibl_access import resolve_allowed_nodes
     parent = get_allowed_nodes()
     if requested in (None, "", [], ()):
-        return (sorted(parent) if parent else None), []
+        return (sorted(parent) if parent is not None else None), []
     names = [str(x).strip() for x in (requested if isinstance(requested, (list, tuple, set)) else [requested]) if str(x).strip()]
     wanted = resolve_allowed_nodes(names) or set()
     if parent is None:
@@ -137,7 +137,7 @@ def received(msg_dict: dict):
     prev_chain = get_delegation_chain()
     prev_allowed = get_allowed_nodes()
     set_delegation_chain(chain)
-    if isinstance(allowed, (list, tuple, set)) and allowed:
+    if isinstance(allowed, (list, tuple, set)):
         set_allowed_nodes(set(str(x) for x in allowed))
     try:
         # None 이면 actor_context 가 칸을 건드리지 않는다 — 봉투에 출처가 없는 메시지
@@ -328,6 +328,8 @@ def accepted(owner: str, task_id: str, agent_id: str = None, **extra) -> dict:
 def task_status(ref: dict) -> dict:
     """③ 접수증 어댑터 — task_ref{kind: delegation, owner, task_id} → 공통 투영. routing_system.register_all 이 등록."""
     import task_receipts as T
+    from task_workers import authorize
+    owned = authorize(ref)
     owner = ref.get("owner") or SYSTEM_OWNER
     v = task_view(owner, ref["task_id"])
     if v is None:
@@ -342,7 +344,8 @@ def task_status(ref: dict) -> dict:
         _note_collected(v.get("parent_task_ref"), ref["task_id"])
     return T.view(ref, state, progress=progress, result=v.get("result"), error=v.get("error"),
                   accepted_at=_utc_epoch(v.get("created_at")), ended_at=_utc_epoch(v.get("completed_at")),
-                  status_url=v["status_url"], run_id=v.get("run_id"))
+                  status_url=v["status_url"], run_id=v.get("run_id"),
+                  capabilities={"steer": bool(owned)})
 
 
 def task_cancel(ref):
@@ -351,7 +354,11 @@ def task_cancel(ref):
     current = task_status(ref)
     if current['state'] in T.TERMINAL or current['state'] == T.UNKNOWN:
         return current
-    request(ref.get('owner') or SYSTEM_OWNER, ref['task_id'])
+    owner = ref.get('owner') or SYSTEM_OWNER
+    request(owner, ref['task_id'])
+    path = _owner_db_path(owner)
+    from task_worker_store import cancel_owned
+    cancel_owned(path, owner, ref['task_id'])
     return task_status(ref)
 
 

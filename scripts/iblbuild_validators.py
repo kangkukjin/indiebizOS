@@ -1103,6 +1103,7 @@ def validate_node_guides(data: dict, root: Path) -> list[str]:
 # 2026-09-26 객체·목록 값의 호출 허용: 기존 호출 경로를 조합하며 코어 노드 집합 유지.
 from vocabulary_policy import load_policy
 
+# 2026-10-22 scope:task / task.steer는 기능어 계약 개정. 표준 노드 집합은 그대로다(ibl.md).
 STANDARD_CORE_NODES = set(load_policy()["standard_nodes"])
 
 

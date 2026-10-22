@@ -882,6 +882,11 @@ class AgentCommunicationMixin:
                                     recorded = sys_record(parent_task_id, new_response)
                                 else:
                                     recorded = self.db.record_child_response(parent_task_id, new_response)
+                                if parent_task.get('worker_session'):
+                                    from task_workers import wake_after_reply
+                                    from system_ai_memory import MEMORY_DB_PATH
+                                    wake_after_reply(MEMORY_DB_PATH if channel == 'system_ai' else self.db.db_path,
+                                                     parent_task_id)
                                 remaining = recorded["remaining"]
                                 if recorded["duplicate"]:
                                     print(f"[자동 보고] 중복 응답 생략: {task_id} → {parent_task_id} (이미 반영됨)")

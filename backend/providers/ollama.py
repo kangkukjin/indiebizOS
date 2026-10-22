@@ -525,11 +525,21 @@ class OllamaProvider(BaseProvider):
         approval_message = ""
         cancelled = False
 
+        calls = []
         for tc_id, tc_info in tool_calls.items():
+            try:
+                args = json.loads(tc_info["arguments"]) if tc_info["arguments"] else {}
+                parse_error = False
+            except json.JSONDecodeError:
+                args, parse_error = {"_raw": tc_info["arguments"]}, True
+            calls.append({"id": tc_id, "name": tc_info["name"], "input": args,
+                          "parse_error": parse_error, "original": tc_info})
+        for call, outcome in self._tool_batch(calls, execute_tool, cancel_check):
+            tc_id, tc_info = call['id'], call['original']
             tool_name = tc_info["name"]
 
             # [steer] 도구 실행 전 사용자 중단 확인
-            if cancel_check and cancel_check():
+            if not outcome.started and cancel_check and cancel_check():
                 print(f"[Ollama][depth={depth}] 사용자 중단 — 도구 '{tool_name}' 스킵")
                 messages.append({
                     "role": "tool",
@@ -557,7 +567,7 @@ class OllamaProvider(BaseProvider):
             tool_images = None  # 파싱·실행 실패도 이번 호출의 이미지 상태를 가진다.
             if execute_tool and not is_error:
                 try:
-                    raw_output = self._execute_tool_to_completion(execute_tool, tool_name, tool_input, cancel_check=cancel_check)
+                    raw_output = outcome.unwrap()
 
                     # [content/details 분리] dict 반환 시 AI용과 UI용 분리
                     if isinstance(raw_output, dict) and "content" in raw_output:

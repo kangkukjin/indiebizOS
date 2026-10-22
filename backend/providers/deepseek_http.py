@@ -194,16 +194,18 @@ class DeepSeekHTTPProvider(BaseProvider):
             messages.append(assistant_message)
 
             # 도구 실행 (폰에서) → role:"tool" 응답
+            calls = []
             for tc in tool_calls:
-                fn = tc.get("function") or {}
-                name = fn.get("name", "")
+                fn = tc.get('function') or {}
                 try:
-                    args = json.loads(fn.get("arguments") or "{}")
+                    args, parse_error = json.loads(fn.get('arguments') or '{}'), False
                 except (json.JSONDecodeError, TypeError):
-                    args = {}
+                    args, parse_error = {}, True
+                calls.append({'name': fn.get('name', ''), 'input': args, 'original': tc, 'parse_error': parse_error})
+            for call, outcome in self._tool_batch(calls, execute_tool, cancel_check):
+                tc, name, args = call['original'], call['name'], call['input']
                 try:
-                    out = self._execute_tool_to_completion(execute_tool, name, args, cancel_check=cancel_check) \
-                        if execute_tool else "(도구 실행기 없음)"
+                    out = outcome.unwrap()
                 except Exception as e:
                     out = f"도구 '{name}' 실행 오류: {e}"
                 if isinstance(out, dict):

@@ -44,7 +44,7 @@ LAYERS = {
         "research_context",
         "coding_process", "repair_process", "repair_runtime", "repair_test_results", "repair_live_probe",
         "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",
-        "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
+        "audit_lifecycle", "execution_workers", "execution_capacity", "task_tree_budget", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
         "desktop_notify", "device_registry", "doc_ir", "document_converter", "control_conditions",
         "member_jobs", "member_enrollment", "member_runtime", "member_model_settings", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys", "hardware_registry",
@@ -70,14 +70,14 @@ LAYERS = {
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
         "red_grant", "red_report", "red_watchdog", "restart_red", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
-        "conversation_sessions", "conversation_handoff", "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
+        "conversation_sessions", "task_worker_store", "conversation_handoff", "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
         "websocket_manager", "xray_stream", "media_store",
     },
     "ibl": {
         "reusable_catalog",
         "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
-        "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies",
+        "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "tool_batch", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies",
         "member_bridge", "member_profile", "member_files",
         # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
         # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
@@ -114,7 +114,7 @@ LAYERS = {
         "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "prompt_builder", "prompt_composition", "repair_verdict_distill", "turn_scope", "reflex_execution",
         "pursuit_bind", "pursuit_tools", "pursuit_maintenance", "reframe", "framing_inheritance", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",
-        "system_ai_tools", "system_hooks", "system_tools", "delegation_tasks",
+        "system_ai_tools", "system_hooks", "system_tools", "delegation_tasks", "task_workers",
         "system_tools_delegate", "system_tools_ibl", "vocab_crystallization",
         "vocab_overlap_audit", "component_lifecycle", "guide_downscale", "capability_age", "capability_inventory",
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
@@ -126,7 +126,7 @@ LAYERS = {
         "limb_client",   # 이 몸이 허브의 손발이 되는 클라이언트(폰 전용, 2026-10-13)
         "session_lease", "media_sessions", "media_signaling",   # 미디어 통신(2026-10-13, docs/MEDIA_COMMUNICATION_DESIGN)
         "launcher_ops", "chat_room_ops", "warehouse_ops", "warehouse_admin", "channel_settings_ops", "media_ops",   # ⑩ 몸의 명사 생애주기(2026-10-05)
-        "spreadsheet_grid", "spreadsheet_templates", "spreadsheet_conversion_types", "spreadsheet_formats", "spreadsheet_changes", "spreadsheet_imports", "spreadsheet_workspace", "spreadsheet_files", "document_hwp", "document_pdf", "document_formats", "document_pages", "document_imports", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_projects", "workspace_sessions",
+        "spreadsheet_grid", "spreadsheet_templates", "spreadsheet_conversion_types", "spreadsheet_formats", "spreadsheet_changes", "spreadsheet_imports", "spreadsheet_workspace", "spreadsheet_files", "document_hwp", "document_pdf", "document_formats", "document_pages", "document_imports", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_projects", "coding_collaboration", "coding_worker_tools", "workspace_sessions",
         "record_dispatch", "record_adapters",
         "member_desktop_requests", "client_agent",
         "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper",

@@ -188,6 +188,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
 
     return {
         "name": "execute_ibl",
+        "execution": {"protocol": "ibl-program/2"},
         "description": description,
         "input_schema": {
             "type": "object",

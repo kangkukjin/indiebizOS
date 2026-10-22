@@ -80,6 +80,11 @@ async def control(action: str, request: Request):
             callback = runtime_work.bind_lease(queue.resume, "distill-resume", kind="finalizer")
             with runtime_work.service_scope():
                 threading.Thread(target=callback, daemon=True, name="distill-resume").start()
+        workers = sys.modules.get('task_workers')
+        if workers is not None and workers._resume_armed:
+            callback = runtime_work.bind_lease(workers.resume, 'task-resume', kind='finalizer')
+            with runtime_work.service_scope():
+                threading.Thread(target=callback, daemon=True, name='task-resume').start()
     return result
 
 

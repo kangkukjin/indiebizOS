@@ -110,6 +110,10 @@ def read_turn_tokens() -> Optional[int]:
 
 
 def turn_limit_reason():
+    from task_tree_budget import current
+    tree = current()
+    if tree and tree.reason():
+        return tree.reason()
     ledger = _turn_token_ledger.get()
     if not ledger:
         return None
@@ -262,6 +266,10 @@ class ProviderMetrics:
                 led["input"] += int(input_tokens or 0)
                 led["output"] += int(output_tokens or 0)
                 led["cache_read"] = led.get("cache_read", 0) + int(cache_read_tokens or 0)
+        from task_tree_budget import observe
+        observe(int(input_tokens or 0) + int(output_tokens or 0))
+        from model_call_context import settle_model_round
+        settle_model_round()
         from member_runtime import current as member_turn
         mt = member_turn()
         if mt:
@@ -423,6 +431,20 @@ class BaseProvider(ABC):
             if name in cls.__dict__:
                 setattr(cls, name, trace_provider_method(cls.__dict__[name]))
 
+    def _tool_batch(self, calls, execute_tool, cancel_check=None):
+        from tool_batch import execute
+
+        def invoke(call):
+            if call.get('parse_error'):
+                raise ValueError('도구 입력 JSON 파싱 오류')
+            if execute_tool is None:
+                raise ValueError('도구 실행 함수가 없습니다')
+            return self._execute_tool_to_completion(execute_tool, call['name'], call['input'],
+                                                    cancel_check=cancel_check)
+
+        return execute(calls, self.tools, invoke, project_path=self.project_path,
+                       agent_id=self.agent_id, cancel_check=cancel_check)
+
     def _execute_tool_to_completion(self, execute_tool, name, arguments, *, cancel_check=None):
         """All API adapters cross the same terminal-result boundary."""
         from tool_completion import await_completion, observe_wait, CompletionWaitError
@@ -518,6 +540,8 @@ class BaseProvider(ABC):
         if round_no > getattr(self, "max_role_rounds", budget):
             raise RuntimeError("의식 역할의 호출 라운드 예산에 도달했습니다")
         name = type(self).__name__.replace("Provider", "")
+        from model_call_context import admit_model_round
+        admit_model_round()
         try:
             from episode_logger import notify_round
             notify_round(name, getattr(self, "model", "?"), round_no, budget)

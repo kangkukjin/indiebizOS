@@ -14,6 +14,7 @@ def service():
 
 
 _ALLOWED = {
+    "collaborate": ("resource", "phase", "request_id", "workers", "collaboration", "checks"),
     "open": ("path", "encoding", "kind", "goal", "conversion", "request_id", "working_resource"),
     "snapshot": ("resource", "client", "wait"),
     "read": ("resource", "selector", "snapshot", "kind"),
@@ -170,3 +171,6 @@ def _size(rec: dict) -> int:
         return Path(rec["output"]).stat().st_size
     except (OSError, KeyError, TypeError):
         return 0
+
+
+def op_collaborate(p): return _run(p, "collaborate")

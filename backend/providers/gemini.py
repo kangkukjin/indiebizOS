@@ -405,9 +405,12 @@ class GeminiProvider(BaseProvider):
             print(f"[Gemini] {len(function_calls)}개 도구 실행 중...")
 
             cancelled = False
-            for fc in function_calls:
+            calls = [{"name": fc.name, "input": dict(fc.args) if fc.args else {}, "original": fc}
+                     for fc in function_calls]
+            for call, outcome in self._tool_batch(calls, execute_tool, cancel_check):
+                fc = call['original']
                 # [steer] 도구 실행 전 사용자 중단 확인
-                if cancel_check and cancel_check():
+                if not outcome.started and cancel_check and cancel_check():
                     print(f"[Gemini][round={iteration}] 사용자 중단 — 도구 '{fc.name}' 스킵")
                     function_response_parts.append(self._function_response_part(
                         fc, "[사용자가 중단했습니다]"))
@@ -417,7 +420,7 @@ class GeminiProvider(BaseProvider):
                 yield {"type": "thinking", "content": f"도구 실행 중: {fc.name}"}
 
                 # 도구 실행 (content/details/images 분리 적용)
-                tool_output, ui_details, tool_images, tool_is_error = self._execute_single_tool(fc, execute_tool, iteration, cancel_check=cancel_check)
+                tool_output, ui_details, tool_images, tool_is_error = self._execute_single_tool(fc, execute_tool, iteration, cancel_check=cancel_check, outcome=outcome)
 
                 # 승인 요청 감지
                 if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
@@ -706,7 +709,7 @@ class GeminiProvider(BaseProvider):
                 else:
                     raise e
 
-    def _execute_single_tool(self, fc, execute_tool: Callable, iteration: int, cancel_check=None) -> tuple:
+    def _execute_single_tool(self, fc, execute_tool: Callable, iteration: int, cancel_check=None, outcome=None) -> tuple:
         """단일 도구 실행 (검증 및 메트릭 포함)
 
         Returns:
@@ -739,7 +742,8 @@ class GeminiProvider(BaseProvider):
             return "도구 실행 함수가 제공되지 않았습니다.", None, None, True
 
         try:
-            raw_output = self._execute_tool_to_completion(execute_tool, fc.name, tool_input, cancel_check=cancel_check)
+            raw_output = (outcome.unwrap() if outcome is not None else
+                          self._execute_tool_to_completion(execute_tool, fc.name, tool_input, cancel_check=cancel_check))
 
             # [content/details 분리] dict 반환 시 AI용과 UI용 분리
             ui_details = None

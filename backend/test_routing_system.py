@@ -28,7 +28,7 @@ def agents(monkeypatch):
 def test_agent_info_public_identifier_forms(agents, monkeypatch, params, op):
     import ibl_routing
     import routing_system
-    monkeypatch.setattr(ibl_routing, "_cap", lambda name: routing_system._agent_info)
+    monkeypatch.setattr(ibl_routing, "system_capability", lambda name: routing_system._agent_info)
     result = ibl_routing._route_system("agents", {**params, "op": op}, "/unused")
     assert result == agents[0]
 

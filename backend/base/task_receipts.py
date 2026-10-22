@@ -44,6 +44,7 @@ POLL_SECONDS = 1.0
 _LOCK = threading.Lock()
 _RESOLVE_LOCK = threading.Lock()   # 패키지 어댑터 첫 적재의 직렬화(_LOCK 과 따로 — 적재 중 register 가 _LOCK 을 잡는다)
 _STATUS: dict = {}     # kind -> fn(ref) -> view
+_STEER: dict = {}
 _CANCEL: dict = {}     # kind -> fn(ref) -> view
 _RESOLVED: set = set()
 
@@ -117,9 +118,13 @@ def view(r: dict, state: str, *, progress=None, result=None, error: Optional[str
     return out
 
 
-def register(kind: str, status_fn: Callable[[dict], dict], cancel_fn: Optional[Callable[[dict], dict]] = None) -> None:
+def register(kind: str, status_fn: Callable[[dict], dict], cancel_fn: Optional[Callable[[dict], dict]] = None, *, steer_fn=None) -> None:
     with _LOCK:
         _STATUS[str(kind)] = status_fn
+        if steer_fn:
+            _STEER[str(kind)] = steer_fn
+        else:
+            _STEER.pop(str(kind), None)
         if cancel_fn is not None:
             _CANCEL[str(kind)] = cancel_fn
         else:
@@ -335,3 +340,13 @@ def cancel(r: dict) -> dict:
 def _reset_for_tests() -> None:
     with _LOCK:
         _STATUS.clear(); _CANCEL.clear(); _RESOLVED.clear()
+
+
+def steer(r, message, request_id):
+    fn = _adapter(r['kind'], _STEER)
+    if fn is None:
+        return {'success': False, 'error': '이 작업 종류는 조향을 지원하지 않습니다', 'task_ref': r}
+    try:
+        return fn(r, message, request_id)
+    except ValueError as exc:
+        return {'success': False, 'error': str(exc), 'task_ref': r}

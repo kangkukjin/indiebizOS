@@ -35,7 +35,7 @@ def register_system_capabilities(mapping: Dict[str, Any]) -> None:
     _SYSTEM_CAPS.update(mapping)
 
 
-def _cap(name: str):
+def system_capability(name: str):
     fn = _SYSTEM_CAPS.get(name)
     if fn is None:
         raise RuntimeError(
@@ -542,31 +542,31 @@ def _route_handler(mapped_tool: str, params: dict,
 def _route_system(func_name: str, params: dict, project_path: str, agent_id: str = None) -> Any:
     """system_tools 내장 함수 직접 호출"""
     if func_name == "send_notification":
-        return _cap("send_notification")(dict(params), project_path)
+        return system_capability("send_notification")(dict(params), project_path)
 
     elif func_name == "delegate":
-        return _cap("delegate")(params, project_path)
+        return system_capability("delegate")(params, project_path)
 
     elif func_name == "ask_body":
         # [others:ask] — 이웃 몸(다른 indiebizOS 기기)에 자연어 부탁 (몸 독립 소통).
-        return _cap("ask_body")(dict(params))
+        return system_capability("ask_body")(dict(params))
 
     elif func_name == "agents":
         # ⑩ 생애주기 op(create|update|delete|start|stop|role|note)는 인지층(agent_lifecycle) 능력으로, list/info 는 종전대로.
         op = (params.get("op") or "").strip()
         if op and op not in ("list", "info"):
-            return _cap("agents_lifecycle")(op, dict(params))
+            return system_capability("agents_lifecycle")(op, dict(params))
         agent_id = params.get("agent_id", "")
         if agent_id and op != "list":
             if params.get("project_id"):
-                return _cap("agent_info")(agent_id, project_id=params["project_id"])
-            return _cap("agent_info")(agent_id)
-        return _cap("list_project_agents")(dict(params))
+                return system_capability("agent_info")(agent_id, project_id=params["project_id"])
+            return system_capability("agent_info")(agent_id)
+        return system_capability("list_project_agents")(dict(params))
 
     elif func_name in ("project_op", "folder_op", "trash_op", "chat_room_op", "warehouse_op", "my_warehouse_op",
                        "channel_op", "media_op"):
         # ⑩ 몸의 명사 생애주기(런처 항목·채팅방·창고·채널 설정·미디어) — 구현은 서비스층, 조립 루트(boot_common)가 주입(의존 역전)
-        return _cap(func_name)(dict(params))
+        return system_capability(func_name)(dict(params))
 
     # [table:each] — 문장을 값으로 받는 고차 변환자. 다른 table 변환자와 달리 패키지가 아니라
     # 엔진 층에 산다(하위 문장 실행이 execute_ibl 재귀 — 패키지가 엔진을 import 하면 층 역전).
@@ -616,16 +616,16 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
 
     # Phase 17: 시스템 AI 전용 함수
     elif func_name == "list_project_agents":
-        return _cap("list_project_agents")(params)
+        return system_capability("list_project_agents")(params)
 
     elif func_name == "call_project_agent":
-        return _cap("call_project_agent")(dict(params))
+        return system_capability("call_project_agent")(dict(params))
 
     elif func_name == "schedule":
-        return _cap("schedule")(params, agent_id=agent_id, project_path=project_path)
+        return system_capability("schedule")(params, agent_id=agent_id, project_path=project_path)
 
     elif func_name == "manage_events":
-        return _cap("manage_events")(params, project_path=project_path)
+        return system_capability("manage_events")(params, project_path=project_path)
 
     elif func_name == "launcher_command":
         # 신규: params.app ("project" 등) → "open_<app>" 합성
@@ -638,10 +638,10 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return _execute_launcher_command(launcher_action, params)
 
     elif func_name == "list_switches":
-        return _cap("list_switches")(params)
+        return system_capability("list_switches")(params)
 
     elif func_name == "run_switch":
-        return _cap("run_switch")(params)
+        return system_capability("run_switch")(params)
 
     elif func_name == "switch_op":
         # 단일 액션 패턴: switch {op: list|run|info|create|update|rename|copy|trash|delete}
@@ -650,7 +650,7 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             return _route_system("list_switches", params, project_path, agent_id=agent_id)
         if op == "run":
             return _route_system("run_switch", params, project_path, agent_id=agent_id)
-        return _cap("switch_manage_op")(dict(params))   # ⑩ 생애주기 — 서비스층 launcher_ops(switch_manager 의 같은 함수)
+        return system_capability("switch_manage_op")(dict(params))   # ⑩ 생애주기 — 서비스층 launcher_ops(switch_manager 의 같은 함수)
 
     elif func_name == "goal_op":
         # 단일 액션 패턴: goal {op: list|status|kill|log|attempts}
@@ -679,7 +679,7 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         action_name = op_map.get(op)
         if not action_name:
             return {"success": False, "error": "op 파라미터가 필요합니다. (snapshot|trend|refresh)"}
-        return _cap("world_pulse")(action_name, dict(params))
+        return system_capability("world_pulse")(action_name, dict(params))
 
     # 자가점검: IBL 건강 점검 (정적+fixture+골든, AI 0) — 단일 액션 패턴: self_check {op: run|results}
     elif func_name == "self_check":
@@ -689,10 +689,10 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             # 결과는 REST 전용이라 "실패 항목만 알림"이 IBL 로 표현 불가하던 갭의 해소.
             # 구현은 cognition 층(routing_system._cap_self_check_results) — 층 가드가 잡은
             # ibl→cognition 직수입을 능력 등록(의존 역전)으로 끊었다.
-            return _cap("self_check_results")(dict(params))
+            return system_capability("self_check_results")(dict(params))
         if op != "run":
             return {"success": False, "error": "op 파라미터가 필요합니다. (run|results)"}
-        return _cap("self_check")()
+        return system_capability("self_check")()
 
     # Phase 26: Goal 프로세스 관리
     elif func_name == "list_goals":
@@ -860,7 +860,7 @@ def invalidate_runtime_caches() -> list:
     failed = []
     for name, step in (("package_meta", _pkg_meta), ("catalog", _catalog),
                        ("api_registry", _registry), ("executor", _executor),
-                       ("consciousness", lambda: _cap("reset_consciousness")())):
+                       ("consciousness", lambda: system_capability("reset_consciousness")())):
         try:
             step()
         except Exception as e:  # noqa: BLE001
@@ -869,7 +869,7 @@ def invalidate_runtime_caches() -> list:
 
 
 def _task_op(params: dict) -> dict:
-    """[self:task]{op: status|wait|cancel, ref, timeout} — 긴 작업 접수증(task_ref)의 공통 관찰·제어(③ 작업 수명).
+    """[self:task]{op: status|wait|cancel|steer, ref, timeout} — 긴 작업 접수증(task_ref)의 공통 관찰·제어(③ 작업 수명).
     위임·script 백그라운드·guestpc·신문 발행·강의 렌더·노트북 색인·시트 엔진이 같은 접수증을 돌려주고 여기서 읽는다.
     실행기는 어댑터 뒤(task_receipts 등록부) — 이 낱말은 저장소를 갖지 않는다."""
     import task_receipts as T
@@ -888,7 +888,9 @@ def _task_op(params: dict) -> dict:
         return T.wait(r, params.get("timeout", 0 if params.get('suspend') else 60), suspend=params.get('suspend') is True)
     if op == "cancel":
         return T.cancel(r)
-    return {"success": False, "error": f"알 수 없는 op: {op} (status/wait/cancel)"}
+    if op == "steer":
+        return T.steer(r, params.get("message"), params.get("request_id"))
+    return {"success": False, "error": f"알 수 없는 op: {op} (status/wait/cancel/steer)"}
 
 
 def _package_op(params: dict) -> dict:

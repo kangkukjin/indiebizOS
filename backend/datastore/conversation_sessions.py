@@ -42,7 +42,7 @@ def bind_task(task):
     if not b:
         return
     with connection(b.db_path) as conn:
-        conn.execute("INSERT OR IGNORE INTO conversation_task_links VALUES (?,?,?)", (task, b.session_id, b.turn_id))
+        conn.execute("INSERT INTO conversation_task_links VALUES (?,?,?) ON CONFLICT(task_id) DO UPDATE SET turn_id=excluded.turn_id WHERE conversation_task_links.session_id=excluded.session_id", (task, b.session_id, b.turn_id))
     with _task_lock:
         _task_bindings[task] = b
 
@@ -199,11 +199,12 @@ def touch(conn, sid, content=None):
 
 
 class SessionStore:
-    def __init__(self, path, table, owner):
+    def __init__(self, path, table, owner, *, create_legacy=True):
         self.path, self.table, self.owner = str(path), table, owner
         with connection(path) as conn:
             ensure_schema(conn, table)
-            legacy(conn, owner, table)
+            if create_legacy:
+                legacy(conn, owner, table)
             with _task_lock:
                 if self.path not in _loaded_paths:
                     for row in conn.execute("""SELECT t.task_id,t.session_id,t.turn_id,s.owner FROM conversation_task_links t

@@ -167,7 +167,7 @@ def test_vocabulary_absorbed_session_ops_into_one_word():
     actions = src["self"]["actions"] if "self" in src else src["nodes"]["self"]["actions"]
     workspace_ops = set(actions["workspace"]["ops"]["values"])
     assert workspace_ops == {"open", "snapshot", "read", "propose", "apply", "save", "export", "versions",
-                             "restore", "close", "capabilities", "recover"}
+                             "restore", "close", "capabilities", "recover", "collaborate"}
     assert set(actions["document"]["ops"]["values"]) == {"inspect", "edit"}
     assert set(actions["sheet"]["ops"]["values"]) == {"find", "append", "update", "range", "range_write", "calculate"}
     from resource_links import package_module

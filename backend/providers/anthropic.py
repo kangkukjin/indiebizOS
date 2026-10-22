@@ -271,7 +271,8 @@ class AnthropicProvider(BaseProvider):
                 "messages": messages
             }
             if self.tools:
-                create_params["tools"] = self.tools
+                create_params["tools"] = [{k: v for k, v in tool.items() if k != "execution"}
+                                          for tool in self.tools]
 
             # Extended Thinking
             if self.thinking_budget > 0 and self.reasoning_mode != "off":
@@ -494,9 +495,9 @@ class AnthropicProvider(BaseProvider):
         # 모든 도구 실행 (병렬 도구 호출 대응)
         print(f"[Anthropic] {len(tool_uses)}개 도구 실행 중...")
 
-        for tool in tool_uses:
+        for tool, outcome in self._tool_batch(tool_uses, execute_tool, cancel_check):
             # [steer] 도구 실행 전 사용자 중단 확인
-            if cancel_check and cancel_check():
+            if not outcome.started and cancel_check and cancel_check():
                 print(f"[Anthropic][depth={depth}] 사용자 중단 — 도구 '{tool['name']}' 스킵")
                 tool_results.append({
                     "type": "tool_result",
@@ -523,7 +524,7 @@ class AnthropicProvider(BaseProvider):
             tool_images = None  # 실패 시 이전 호출의 이미지를 재전송하지 않는다.
             if execute_tool:
                 try:
-                    raw_output = self._execute_tool_to_completion(execute_tool, tool["name"], tool["input"], cancel_check=cancel_check)
+                    raw_output = outcome.unwrap()
 
                     # [content/details 분리] dict 반환 시 AI용과 UI용 분리
                     if isinstance(raw_output, dict) and "content" in raw_output:

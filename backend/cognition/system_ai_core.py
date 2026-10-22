@@ -207,6 +207,8 @@ def _switch_to_role(runner, role, agent_id: str = None):
     agent_id: 역할보다 우선하는 구체 핀(model_gear.overrides 의 키). 위임 경로가
     'system_ai_delegation' 핀을 파이프라인 바깥에서 걸 때 쓴다 — 파이프라인 안쪽의
     THINK/REPAIR 스왑은 진입 시점 provider 로 복원하므로 바깥 핀과 겹쳐도 안전하다."""
+    if getattr(runner, 'config', {}).get('_isolated_workspace'):
+        return None  # the configured provider owns the OS coding boundary
     from member_runtime import is_member
     if is_member():
         return None

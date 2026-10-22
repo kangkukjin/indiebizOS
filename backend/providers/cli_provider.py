@@ -386,6 +386,7 @@ def clear_sessions_for_agent(session_key: str):
 
 
 class CliSubprocessProvider(BaseProvider):
+    native_tool_scheduling = True
     """CLI 를 subprocess 로 호출하는 프로바이더의 공통 몸통.
 
     서브클래스는 아래 훅만 채우면 된다 — 스트림 오케스트레이션·세션·신원은 상속된다.

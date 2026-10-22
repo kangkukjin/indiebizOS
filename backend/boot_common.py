@@ -119,6 +119,9 @@ def wire_local_subsystems(profile: str = None) -> dict:
     try:
         from routing_system import register_all
         register_all()
+        if not other_body:
+            from task_workers import arm_resume
+            arm_resume()
         results["system_capabilities"] = True
         print(f"{tag} 시스템 라우터 능력 등록")
     except Exception as e:
@@ -128,6 +131,10 @@ def wire_local_subsystems(profile: str = None) -> dict:
     # 조립 루트가 직접 주입한다(라우터는 이름만 안다 — 위와 같은 의존 역전).
     try:
         from ibl_routing import register_system_capabilities
+        from coding_collaboration import resolve_workspace
+        from coding_worker_tools import configure_worker
+        register_system_capabilities({'collaboration_workspace': resolve_workspace,
+                                      'collaboration_executor': configure_worker})
         from launcher_ops import project_op, folder_op, trash_op, switch_manage_op
         from chat_room_ops import chat_room_op
         from warehouse_ops import warehouse_op

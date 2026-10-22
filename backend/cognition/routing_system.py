@@ -20,7 +20,7 @@ from typing import Any
 # === 위임 기계 — ibl_routing 에서 verbatim 이동 ===
 
 def _delegate_unified(params: dict, project_path: str) -> Any:
-    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross/system).
+    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross/system/task).
 
     2026-10-05 수리(docs/ASYNC_DELEGATION_REPAIR_DESIGN_2026_10_05.md):
       · cross 가 mode 분기보다 먼저 반환해 sync 가 무시되던 것 → cross 도 접수 뒤 같은 task 를 기다린다.
@@ -31,12 +31,19 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
     """
     mode = (params.get("mode") or "async").lower()
     scope = (params.get("scope") or "same").lower()
-    if mode not in {"async", "sync", "workflow"} or scope not in {"same", "cross", "system"}:
-        return {"success": False, "error": "mode는 async/sync/workflow, scope는 same/cross/system입니다."}
+    if mode not in {"async", "sync", "workflow"} or scope not in {"same", "cross", "system", "task"}:
+        return {"success": False, "error": "mode는 async/sync/workflow, scope는 same/cross/system/task입니다."}
     if mode == "workflow" and scope != "same":
         return {"success": False, "error_type": "capability",
                 "error": (f"scope={scope} 의 mode=workflow 는 지원하지 않습니다. 타 프로젝트·시스템 AI 에는 "
                           "자연어 message 로 async/sync 위임하세요(do 는 같은 프로젝트 workflow 전용).")}
+
+    if scope == "task":
+        from task_workers import delegate
+        try:
+            return delegate(params, project_path)
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
 
     if scope == "system":
         # 시스템 AI(자율주행 top-level)에게 자연어 의도를 fire-and-forget 위임.
@@ -433,7 +440,8 @@ def register_all() -> None:
     # ③ 작업 접수증(task_receipts): 위임 작업의 관찰 어댑터 — 코드(몸의 명사) 길. 패키지 종류는 yaml task_kinds 로.
     import task_receipts
     from delegation_tasks import KIND as _DELEGATION_KIND, task_status as _delegation_task_status, task_cancel
-    task_receipts.register(_DELEGATION_KIND, _delegation_task_status, task_cancel)
+    from task_workers import steer as task_steer
+    task_receipts.register(_DELEGATION_KIND, _delegation_task_status, task_cancel, steer_fn=task_steer)
     task_receipts.register(SWITCH_RUN_KIND, _switch_run_status)
     # ⑩ 몸의 명사 생애주기 — 에이전트(인지층 러너 시작·중지 포함)
     from agent_lifecycle import agents_op as _agents_op

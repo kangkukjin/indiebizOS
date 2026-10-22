@@ -602,6 +602,7 @@ _OP_DISPATCHERS = {
         "close": _sib_op("essentials_workspace", "op_close"),
         "capabilities": _sib_op("essentials_workspace", "op_capabilities"),
         "recover": _sib_op("essentials_workspace", "op_recover"),
+        "collaborate": _sib_op("essentials_workspace", "op_collaborate"),
     },
     "sheet_op": {
         "find": _sib_op("sheet_ops", "op_find"),

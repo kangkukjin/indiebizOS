@@ -688,6 +688,9 @@ def complete_task(task_id: str, result: str = None) -> bool:
     result 는 **전문**을 저장한다(2026-10-05). 그동안 500자로 잘라 저장해 작업 조회가
     요약밖에 돌려주지 못했고, 동기 위임·백그라운드 접수의 결과 회수가 전문으로 돌아갈
     길이 없었다. 표시용 발췌는 소비자가 자른다."""
+    from task_worker_store import defer_completion
+    if defer_completion(MEMORY_DB_PATH, task_id, result):
+        return True
     from repair_continuation import task_state
     pending = task_state(task_id)
     if pending and pending != "completed":
@@ -853,6 +856,8 @@ def record_child_response(task_id: str, new_response: dict) -> dict:
         """, (_json.dumps(ctx, ensure_ascii=False), task_id))
         cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
         left = cursor.fetchone()
+        from task_worker_store import settle_waiting
+        settle_waiting(conn, task_id)
         return {"remaining": (left[0] if left else 0) or 0, "duplicate": False, "mode": mode,
                 "total": len(delegations), "found": True}
 

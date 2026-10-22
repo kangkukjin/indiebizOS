@@ -1295,3 +1295,32 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 재시작의 running은 unknown으로 바꿔 자동 반복을 막는다. 재조회·최근 결과·승인 판의 정본은 로컬 SQLite다.
 주인은 내 어휘의 패키지 기본설명에서 회원 공개를 선택한다(주인 활성과 회원 선택의 교집합).
 회원 기기에 붙는 인증과 몸 신뢰 레벨은 계속 별개의 축이다. 이웃 변경·키 폐기 이후에는 새 회원 요청을 받지 않는다.
+
+
+## 과제별 병렬 실행과 후속
+
+`scope:task`는 현재 대화의 부모 작업 아래 독립 세션을 만든다. 모델·역할이 같아도 실행
+상태를 공유하지 않는다. 기존 same/cross/system 위임은 유지된다. request_id는 같은 부모
+작업 안의 중복 접수를 막으며 같은 키에 다른 내용을 주면 거절한다.
+
+```ibl
+$a = [others:delegate]{scope:"task", request_id:"sources-a", message:"자료 A의 근거를 검토해줘"}
+$b = [others:delegate]{scope:"task", request_id:"sources-b", message:"자료 B의 반례를 검토해줘"}
+$results = [self:task]{op:"wait", ref:$a.task_ref, timeout:240} & [self:task]{op:"wait", ref:$b.task_ref, timeout:240}
+return {results:$results, workers:[$a.worker_ref, $b.worker_ref]}
+```
+
+완료 후 같은 대화에서 `worker_ref`를 delegate에 넣으면 도구 결과·응답 맥락을 이어서
+새 task를 접수한다. 바쁜 세션에는 FIFO로 대기한다. 실행 중 보충은
+`[self:task]{op:"steer",ref:$a.task_ref,message:"출처 날짜도 확인해줘",request_id:"dates"}`로
+보낸다. accepted는 접수이며 실제 배달·처리와 구별한다. 부모 에이전트 지시는 사용자
+권한으로 승격되지 않는다. 부모 완료 기록은 소유 자식 종료를 기다리며 취소는 그 트리에만
+전파한다. 기존 상주 위임은 해당 task_ref로 별도 제어한다.
+
+코드 협업은 먼저 `self:workspace`로 폴더를 열고 `op:collaborate, phase:prepare,
+request_id, workers:2`로 내부 사본을 받는다. 반환된 `workspaces`의 각 참조를 task 위임의
+`workspace`에 넣는다. 자식 종료를 확인한 뒤 같은 resource와 collaboration(id)로
+merge → validate(checks는 argv 배열들의 목록) → apply를 호출한다. 충돌·검사 실패·외부
+변경은 성공으로 숨기지 않는다. partial 상태는 status/recover로 확인하고 원본의 다른
+편집을 덮지 않는다. 현재 macOS 쓰기 격리, API 및 Codex 실행을 지원하며 자기수리에는
+적용하지 않는다. 상세 경계는 [설계 §12](../../docs/IBL_PARALLEL_EXECUTION_DESIGN_2026_10_22.md#12-2026-10-22-구현).

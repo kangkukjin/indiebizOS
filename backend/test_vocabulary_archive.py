@@ -136,7 +136,7 @@ def test_real_cache_reset_updates_catalog_and_gate(runtime, monkeypatch):
     from vocabulary_import import import_package
     from vocabulary_lifecycle import set_package_active, HUMAN_AUTHORITY
     monkeypatch.setattr(ibl_routing, 'invalidate_runtime_caches', REAL_RESET)
-    monkeypatch.setattr(ibl_routing, '_cap', lambda name: lambda: None)
+    monkeypatch.setattr(ibl_routing, 'system_capability', lambda name: lambda: None)
     monkeypatch.setattr(ibl_access, '_get_nodes_path', lambda: runtime / 'data/ibl_nodes.yaml')
     import_package(packet())
     assert 'lego_probe' not in asyncio.run(get_actions_catalog())['nodes']['sense']['actions']

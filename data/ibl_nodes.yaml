@@ -3431,6 +3431,8 @@ nodes:
           owner: string
           timeout: integer
           suspend: boolean
+          message: string
+          request_id: string
         callable_contract:
           version: 1
           params:
@@ -3441,12 +3443,15 @@ nodes:
             owner: Text
             timeout: Number
             suspend: Bool
+            message: Text
+            request_id: Text
           required: []
           enums:
             op:
             - status
             - wait
             - cancel
+            - steer
           defaults:
             op: status
           result:
@@ -3481,11 +3486,20 @@ nodes:
               op: cancel
             effects:
             - write_external
+          - when:
+              op: steer
+            required:
+            - ref
+            - message
+            - request_id
+            result: Record
+            effects:
+            - write_external
         returns: scalar
         side_effect: true
         exempt: 접수증(task_ref) 필요 — 고정 fixture 부적합
-        description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청. 위임·script·guestpc·신문·강의 렌더·노트북·시트·IBL 실행이 같은 접수증.
-        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. accepted_at·elapsed_s 는 접수 기준 시계(접수부터 지금·끝났으면 종료까지의 초, 모르면 null) — wait 의 timeout 은 그 호출이 기다린 시간일 뿐이라 "접수 후 N초 안에 끝났는가"는 elapsed_s 로 센다. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 현재 IBL에서 suspend:true는 시간 초과 시 프로그램을 중단·보존하며 주인 실행은 자식 종료 뒤 같은 원장에서 자동 재개한다(기본 timeout=0). 승인 대기는 자동 승인하지 않는다. 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만 — state 로 읽는다(cancelled=멈춤 확인, cancel_requested=요청만 남음). 이미 끝난 작업은 실패가 아니라 그 종료 투영을 값으로 돌려준다(state: succeeded 면 result 도 있다). 살아 있는데 취소를 지원하지 않는 종류(렌더 등)만 거절되며 [catch] 의 $error.details.state 가 현재 상태다. script 백그라운드·개별 위임·IBL 실행은 취소 요청을 지원한다. 위임은 실행 범위가 끝난 뒤에만 cancelled이며 자식 취소는 해당 접수증으로 별도 요청한다. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
+        description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청, steer=지원 작업에 부모 에이전트 조향 전달. 위임·script·guestpc·신문·강의 렌더·노트북·시트·IBL 실행이 같은 접수증.
+        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. accepted_at·elapsed_s 는 접수 기준 시계(접수부터 지금·끝났으면 종료까지의 초, 모르면 null) — wait 의 timeout 은 그 호출이 기다린 시간일 뿐이라 "접수 후 N초 안에 끝났는가"는 elapsed_s 로 센다. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 현재 IBL에서 suspend:true는 시간 초과 시 프로그램을 중단·보존하며 주인 실행은 자식 종료 뒤 같은 원장에서 자동 재개한다(기본 timeout=0). 승인 대기는 자동 승인하지 않는다. 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만 — state 로 읽는다(cancelled=멈춤 확인, cancel_requested=요청만 남음). 이미 끝난 작업은 실패가 아니라 그 종료 투영을 값으로 돌려준다(state: succeeded 면 result 도 있다). 살아 있는데 취소를 지원하지 않는 종류(렌더 등)만 거절되며 [catch] 의 $error.details.state 가 현재 상태다. script 백그라운드·개별 위임·IBL 실행은 취소 요청을 지원한다. 위임은 실행 범위가 끝난 뒤에만 cancelled이며 자식 취소는 해당 접수증으로 별도 요청한다. steer는 scope:task 자식만 지원하며 message·request_id가 필수. accepted는 접수이며 delivered·completed와 다르다. 사용자 지시로 승격하지 않는다. 봉인된 작업은 worker_ref로 새 후속을 접수한다. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
         group: system
         target_key: op
         router: system
@@ -3495,6 +3509,7 @@ nodes:
           default: status
           returns:
             cancel: effect
+            steer: effect
           side_effect:
             status: false
             wait: false
@@ -3502,6 +3517,7 @@ nodes:
             status: task_ref 필요 — 고정 fixture 부적합
             wait: task_ref 필요 — 고정 fixture 부적합
           values:
+            steer: 지원하는 자식 실행에 부모 에이전트 조향 전달(message·request_id)
             status: 현재 상태·진행·(종료면) 결과
             wait: 유한 대기 뒤 결과 — 시간 초과는 실패가 아니다
             cancel: 취소 요청 — 확인된 사실만 보고
@@ -5957,7 +5973,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-22'
-          impl: 356885250a3c2e86
+          impl: 35c426d647894f4d
         target_key: path
         aliases:
           offset:
@@ -5975,7 +5991,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-22'
-          impl: 356885250a3c2e86
+          impl: 35c426d647894f4d
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6054,7 +6070,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-22'
-          impl: 356885250a3c2e86
+          impl: 35c426d647894f4d
         target_key: path
       list:
         callable_contract:
@@ -6691,7 +6707,7 @@ nodes:
         - document_edit.md
       workspace:
         description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(프로젝트 폴더)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
-        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없으면 실행법·설명 자동 추론, goal은 설명에 우선) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. close에 unregister:true를 주면 코딩 프로젝트 등록만 해제(폴더·파일·기록·실행 보존), 목록과 기본 폴더 자동 발견에서 제외하며 같은 폴더를 open하면 재등록된다. 다른 종류에는 unregister:true를 지원하지 않는다. Pages open은 원본을 보존하고 DOCX 작업 사본으로 자동 변환해 resource를 반환하며 같은 원본 재열기는 사본·초안을 이어 쓴다. conversion:auto(기본)/source(원본 등록만)/refresh(새 사본, request_id 필수), working_resource는 원본에서 변환한 기존 사본 선택. 원본 변경은 conversion.source_changed로 알리고 저장은 DOCX에만 한다. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
+        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없으면 실행법·설명 자동 추론, goal은 설명에 우선) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. close에 unregister:true를 주면 코딩 프로젝트 등록만 해제(폴더·파일·기록·실행 보존), 목록과 기본 폴더 자동 발견에서 제외하며 같은 폴더를 open하면 재등록된다. 다른 종류에는 unregister:true를 지원하지 않는다. Pages open은 원본을 보존하고 DOCX 작업 사본으로 자동 변환해 resource를 반환하며 같은 원본 재열기는 사본·초안을 이어 쓴다. conversion:auto(기본)/source(원본 등록만)/refresh(새 사본, request_id 필수), working_resource는 원본에서 변환한 기존 사본 선택. 원본 변경은 conversion.source_changed로 알리고 저장은 DOCX에만 한다. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다. collaborate: resource·phase. prepare(request_id·workers 2~8)는 독립 사본 workspace 참조를 반환해 scope:task에 전달한다. merge(collaboration)는 충돌 없는 고정 후보, validate(checks=[[명령, 인자]])는 후보 검사, apply는 검증된 동일 바이트만 원본 지문 대조 후 반영한다. status/recover는 부분 적용 조회·조건부 복구. 협업 사본은 원본 Git 메타데이터를 공유하지 않으며 ignored 파일은 제외한다.'
         returns: items
         side_effect: true
         exempt: 실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증
@@ -6702,6 +6718,10 @@ nodes:
         runs_on: pc_only
         implementation: essentials_workspace.py(인자·경로 관문) → backend/services/workspace_sessions.Workspace(어댑터 document/sheet/code 위 공통 계약, office_sessions·coding_workspace 재사용)
         params:
+          phase: string
+          workers: integer
+          collaboration: string
+          checks: array
           args: object
           path: string
           encoding: string
@@ -6737,6 +6757,7 @@ nodes:
             capabilities: false
             snapshot: false
           values:
+            collaborate: 같은 프로젝트 병렬 편집의 사본·통합·검사·조건부 반영(phase)
             open: 파일·git 폴더를 작업 공간에 등록(종류 자동) — resource·capabilities·세션 상태
             snapshot: 지금 초안·저장본의 고정 스냅샷(시트는 편집창 엔진 응답 대기, queued 가능)
             read: selector 로 읽기 — 문자·시트 범위, 파일 줄·diff·목록·프로젝트(kind:code+projects=목록), 사무는 투영
@@ -6921,7 +6942,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-22'
-          impl: 356885250a3c2e86
+          impl: 35c426d647894f4d
         pipe_in: true
         lands_on: body
         limb_op:
@@ -7999,6 +8020,9 @@ nodes:
             role: Text
             allowed: List|Text
             context: Unknown
+            request_id: Text
+            worker_ref: Record
+            workspace: Record
           required: []
           defaults:
             mode: async
@@ -8012,6 +8036,7 @@ nodes:
             - same
             - cross
             - system
+            - task
           nonempty:
           - agent_id
           - message
@@ -8051,6 +8076,7 @@ nodes:
               - same
               - cross
               - system
+              - task
           - when:
               scope: system
             required:
@@ -8063,6 +8089,21 @@ nodes:
               - same
               - cross
               - system
+              - task
+          - when:
+              scope: task
+            required:
+            - message
+            - request_id
+            enums:
+              mode:
+              - async
+              - sync
+              scope:
+              - same
+              - cross
+              - system
+              - task
           result: Record
           effects:
           - write_external
@@ -8097,6 +8138,9 @@ nodes:
           - object
           - array
           - string
+          request_id: string
+          worker_ref: object
+          workspace: object
         aliases:
           steps:
           - do
@@ -8106,7 +8150,7 @@ nodes:
         returns: effect
         pipe_in: true
         description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기. 반환은 접수증(task_ref·child_task_id·status_url) — 접수는 완료가 아니다.
-        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 문장 위임, same 전용). scope: same(기본, 대상 에이전트의 상주 러너가 실행 중이어야 함 — others:agents의 start로 시작)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 위임 — 접수 시점에 시스템 작업을 선발급해 접수증 task_ref·status_url 반환, sync 면 그 작업을 기다림, agent_id 불필요). cross/system 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절. 범위 지정(⑨): allowed=허용 노드 목록 — 부모 권한을 좁히기만(밖의 노드는 잘라내고 allowed_clamped 로 알림)·하위 위임에 상속 / role=시스템 AI 위임의 프롬프트 역할(force_role) / context=구조화 맥락(메시지에 JSON 동봉, 64KB 상한).'
+        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 문장 위임, same 전용). scope: same(기본, 대상 에이전트의 상주 러너가 실행 중이어야 함 — others:agents의 start로 시작)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 위임 — 접수 시점에 시스템 작업을 선발급해 접수증 task_ref·status_url 반환, sync 면 그 작업을 기다림, agent_id 불필요). scope:task는 부모 세션 아래 독립 실행자(상주 에이전트 활성 불필요). message·request_id 필수, 같은 키 재전송은 같은 접수증. worker_ref로 같은 세션의 후속을 보내며 바쁘면 FIFO 대기. workspace는 협업 준비가 발급한 사본 참조만. task_ref는 한 실행, worker_ref는 세션. 부모 종료는 소유 자식 완료를 기다리고 부모 취소는 소유 자식에 전파. cross/system/task 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절. 범위 지정(⑨): allowed=허용 노드 목록 — 부모 권한을 좁히기만(밖의 노드는 잘라내고 allowed_clamped 로 알림)·하위 위임에 상속 / role=시스템 AI 위임의 프롬프트 역할(force_role) / context=구조화 맥락(메시지에 JSON 동봉, 64KB 상한).'
         group: delegation
         target_key: agent_id
         router: system
@@ -10705,6 +10749,8 @@ nodes:
             protocol: legacy-envelope
             value_path: ''
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             items: List<Record>
@@ -10755,6 +10801,8 @@ nodes:
         - filter
       sort:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             items: List<Record>
@@ -10805,6 +10853,8 @@ nodes:
         - 순서
       take:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             items: List
@@ -10847,6 +10897,8 @@ nodes:
         - top
       chunk:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             by: Unknown
@@ -10903,6 +10955,8 @@ nodes:
       select:
         authoring_hint: 'columns는 열 이름 목록 또는 행을 받아 Record를 반환하는 람다다. 예: $행 >> [table:select]{columns:($r)=>{id:$r.id,total:$r.qty*$r.price}}. 결과는 List<Record>. 필드 누락과 계산 실패를 숨기지 않는다.'
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             items: List<Record>
@@ -10952,6 +11006,8 @@ nodes:
       compute:
         authoring_hint: 'set은 행을 받아 추가·수정 열 Record를 반환하는 람다입니다. 예: $행 >> [table:compute]{set:($r)=>{금액:number($r.금액),월:$r.일자[5:7]}}. 원본의 다른 열은 보존합니다. 람다 안 식도 실행 단계 예산을 소비합니다.'
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             items: List<Record>
@@ -11001,6 +11057,8 @@ nodes:
         - compute
       rename:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             columns: Unknown
@@ -11054,6 +11112,8 @@ nodes:
         - 키맞추기
       flatten:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             criteria: Unknown
@@ -11101,6 +11161,8 @@ nodes:
         - 풀기
       dedup:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             by: Unknown
@@ -11153,6 +11215,8 @@ nodes:
         - 고유
       since:
         callable_contract:
+          execution:
+            concurrency: reentrant
           deferred_observation: true
           version: 1
           params:
@@ -11210,6 +11274,8 @@ nodes:
         - 감시
       groupby:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           nonempty:
           - by
@@ -11262,6 +11328,8 @@ nodes:
         - 통계
       join:
         callable_contract:
+          execution:
+            concurrency: reentrant
           version: 1
           params:
             inputs: List<List<Record>|Record|Text>
@@ -11480,6 +11548,8 @@ nodes:
           nondeterministic: false
           enums: *id007
           adapter: *id008
+          execution:
+            concurrency: reentrant
         returns: transform
         flow:
           accepts: pair

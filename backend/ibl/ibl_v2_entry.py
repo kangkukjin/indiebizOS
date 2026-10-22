@@ -67,8 +67,11 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
         from ibl_v2_runtime import Runtime, Budget
         budget = Budget.from_request(request.get("budget"))
         from ibl_v2_store import definitions
-        plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions(),
-                               declared_inputs=declared)
+        from tool_batch import prepared_plan
+        plan = prepared_plan(source, inputs, project_path, agent_id)
+        if plan is None:
+            plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions(),
+                                   declared_inputs=declared)
         from ibl_run_journal import Journal, journal_root, identity, reusable_receipts, validate_resume
         if request.get("check"):
             if reuse:

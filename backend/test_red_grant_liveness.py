@@ -179,14 +179,15 @@ def test_legacy_agent_slot_never_authorizes_or_renews():
 
 
 def test_g7_grant_condition_is_only_what_the_constitution_declared():
-    """그랜트를 여는 `if` 는 `_origin == "user"` 하나만 본다 (ep1915 수리, 2026-08-25).
+    """그랜트는 사용자 명령 출처를 보고, 부모 에이전트의 새 위임 발화를 구분한다 (ep1915 수리, 2026-08-25).
 
     헌법(2026-08-05, 커밋 6caa2ea)의 한도는 셋이고 그 첫째는 **누가 명령했나**다.
     그런데 같은 커밋의 코드는 선언에 없는 넷째 `is_system_ai` 를 함께 걸었고, 하필
     헌법이 정당한 진입점으로 이름 붙인 '에이전트 명령 HTTP'(폰 원격런처 → 프로젝트
     에이전트)를 그 조건이 배제했다 — 사용자가 `#repair` 를 붙인 턴이 RED 에 막혔다.
     '누가 명령했나'(origin)와 '누가 실행하나'(is_system_ai)는 다른 축이다.
-    조건이 다시 늘어나면 여기서 실패한다 — 선언 없는 조건은 조건이 아니다."""
+    2026-10-22 과제 위임은 origin을 보존하되 utterance_author=agent로 새 RED 권한을 발급하지 않는다.
+    이 출처 구분 외 실행자 종류 조건은 여전히 금지한다."""
     src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "cognition", "agent_pipeline.py")
     tree = ast.parse(open(src, encoding="utf-8").read())
@@ -209,8 +210,9 @@ def test_g7_grant_condition_is_only_what_the_constitution_declared():
             "그랜트 조건에 `is_system_ai` 가 다시 붙었다 — 헌법에 없는 넷째 조건이다.\n"
             "누가 실행하느냐로 막고 싶다면 먼저 헌법(docs/SELF_MODIFICATION_SAFETY_DESIGN.md·"
             "data/system_docs/architecture.md)을 개정할 것. 코드가 정본을 앞서지 않는다.")
-        assert isinstance(g.test, ast.Compare) and getattr(g.test.left, "id", "") == "_origin", (
-            f"그랜트 조건이 `_origin == \"user\"` 한 칸이 아니다: {ast.unparse(g.test)}")
+        expected = ast.parse('_origin == "user" and utterance_author != "agent"', mode='eval').body
+        assert ast.dump(g.test) == ast.dump(expected), (
+            f"선언한 사용자 출처·발화자 경계와 다릅니다: {ast.unparse(g.test)}")
 
 if __name__ == "__main__":
     # ★러너는 하나 — 직접 실행도 pytest 로 위임한다(2026-08-23 28회차: 직접 실행이

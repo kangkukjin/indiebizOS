@@ -685,7 +685,9 @@ def guide_catalog() -> Dict:
 
 def read_guide_schema():
     """One provider-neutral schema; conditional reads never assume retained context."""
-    return {"name": "read_guide", "description":
+    return {"name": "read_guide",
+            "execution": {"concurrency": "reentrant", "effects": ["read_external"]},
+            "description":
             "가이드 파일명으로 엽니다. 이미 읽은 본문이 현재 문맥에 있으면 재독하지 마세요. "
             "변경 확인은 if_hash, 특정 절 재확인은 반환된 sections의 정확한 제목을 section에 사용합니다. "
             "절 제목을 모르면 section을 생략합니다. 문맥에서 사라졌으면 본문을 다시 읽습니다.",

@@ -138,7 +138,7 @@ class AgentCognitiveMixin(
         시스템 AI 는 get_system_ai_runner() 가 같은 검사로 러너를 재생성하므로 제외.
         기어 불변이면 작은 JSON 읽기로 끝(무비용). provider 재초기화 실패 시 기존
         provider 로 원복한다 — 기어 전파가 메시지를 죽여선 안 된다."""
-        if self.config.get("_is_system_ai") or not getattr(self, "ai", None):
+        if self.config.get("_is_system_ai") or self.config.get('_isolated_workspace') or not getattr(self, "ai", None):
             return
         agent_id = self.config.get("id")
         project_id = self.config.get("_project_id") or getattr(self, "project_id", "") or ""

@@ -9,8 +9,7 @@ from dataclasses import dataclass, field
 import copy
 import threading
 import time
-from concurrent.futures import wait, FIRST_COMPLETED
-from execution_workers import create_executor
+from execution_capacity import fanout as bounded_fanout, scope as execution_scope
 from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, digest_packed, pack, projection, span,
                        parallel_branches)
 from ibl_v2_expr import (Builtin, Closure, binary, boolean, number, scalar_text,
@@ -469,7 +468,6 @@ class Runtime(ExpressionEvaluator):
         results, errors, states = {}, {}, ["pending"] * count
         depth = getattr(self.local, "depth", 0)
         control = getattr(self.local, "control", frozenset())
-        nested = getattr(self.local, "parallel", False)
         route = getattr(self.local, "route", ()) + ((node.id, self.ordinal("fanout:" + node.id)),)
         def run(i):
             previous = getattr(self.local, "parallel", False)
@@ -500,24 +498,7 @@ class Runtime(ExpressionEvaluator):
                     results[i] = Binding(ResultValue(False, error=exc.view(self.plan.source)), frozenset({eid}))
                     return True
                 return False
-        if workers == 1 or nested or count < 2:
-            for i in range(count):
-                if not accept(i):
-                    break
-        else:
-            # Stop submitting on failure, then account for every already-started
-            # branch. No retry/rollback is inferred from a cancelled future.
-            with create_executor("ibl_v2", max_workers=workers) as pool:
-                pending, next_i, stopped = {}, 0, False
-                while pending or (not stopped and next_i < count):
-                    while not stopped and len(pending) < workers and next_i < count:
-                        pending[pool.submit(run, next_i)] = next_i
-                        states[next_i] = "running"
-                        next_i += 1
-                    done, _ = wait(pending, return_when=FIRST_COMPLETED)
-                    for future in done:
-                        if not accept(pending.pop(future), future):
-                            stopped = True
+        bounded_fanout(count, workers, run, accept, role="ibl_v2")
         fatal = [i for i, e in errors.items() if not collect or not e.catchable]
         if fatal:
             first = errors[min(fatal)]
@@ -922,7 +903,7 @@ class Runtime(ExpressionEvaluator):
         return Binding(value, frozenset({eid}))
 
     def run(self):
-        with self.resources:
+        with self.resources, execution_scope():
             return self._run()
 
     def _partial_transport(self, value):

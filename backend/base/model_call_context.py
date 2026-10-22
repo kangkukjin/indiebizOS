@@ -148,7 +148,7 @@ def call_scope(provider):
              "role": role, "phase": _purpose.get() or ("execute" if role == "execution" else role),
              "provider": type(provider).__name__.removesuffix("Provider"),
              "model": getattr(provider, "model", ""), "round_index": 0,
-             "_provider": id(provider)}
+             "_provider": id(provider), "_native_tools": getattr(provider, "native_tool_scheduling", False)}
     descriptor = getattr(provider, 'distill_descriptor', {}) or {}
     value.update({key: descriptor[key] for key in ('tier', 'source') if key in descriptor})
     from thread_context import execution_key
@@ -158,9 +158,16 @@ def call_scope(provider):
             _registry.setdefault(key, []).append(value)
     token = _call.set(value)
     started = time.monotonic()
+    value["_token_estimate"] = max(1, int((getattr(provider, "_last_prompt_usage", {}) or {}).get("input", 0)) + int(getattr(provider, "max_tokens", 4096) or 4096))
     requests_before = provider.metrics.total_requests
     record_trajectory_event("model.call_started", fields())
     try:
+        # Single-shot cognition/finalization calls have no tool-loop round hook.
+        # Admit their first request here too; loop hooks renew the same lease.
+        from task_tree_budget import start_round, finish_round
+        if parent:
+            finish_round(parent)  # A fallback provider replaces the waiting request.
+        start_round(value)
         yield
     finally:
         snapshots = value.get("_responses", {})
@@ -184,6 +191,8 @@ def call_scope(provider):
                 stack[:] = [entry for entry in stack if entry is not value]
                 if not stack:
                     _registry.pop(key, None)
+        from task_tree_budget import finish_round
+        finish_round(value)
         _call.reset(token)
 
 
@@ -237,3 +246,15 @@ def count_execution_rounds(rows):
                 previous = 0
             previous = n
     return len(observed) + legacy_total + previous
+
+
+def settle_model_round():
+    from task_tree_budget import finish_round
+    finish_round(_call.get())
+
+
+def admit_model_round():
+    from task_tree_budget import start_round
+    call = _call.get()
+    if call is not None:
+        start_round(call)

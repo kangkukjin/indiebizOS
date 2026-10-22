@@ -160,11 +160,11 @@ def _call_judge(prompt: str) -> Optional[str]:
     cognitive_eval 의 달성 기준 평가자와 같은 축이다(절약·균형=경량, 최대=고급 이
     사용자 설정의 실물, 2026-08-27 정정: 옛 배선은 background(분류 축)로 박아
     "경량 판정자"를 단언했는데, 그건 기어의 평가-축 의도를 우회하는 티어 하드코딩의
-    변형이었다). 구현(인지층 oneshot)은 능력 테이블로 주입받는다(_cap — 라우팅층은
+    변형이었다). 구현(인지층 oneshot)은 능력 테이블로 주입받는다(system_capability — 라우팅층은
     인지층을 모른다, 의존 역전). 미등록(부팅 배선 밖 스크립트)이면 예외 → 호출자가
     '판정 불능=실행 계속+미판정 신고' 로 처리한다."""
-    from ibl_routing import _cap
-    return _cap("oneshot_ai_call")(prompt=prompt, system_prompt=_JUDGE_SYSTEM,
+    from ibl_routing import system_capability
+    return system_capability("oneshot_ai_call")(prompt=prompt, system_prompt=_JUDGE_SYSTEM,
                                    role="evaluate")
 
 

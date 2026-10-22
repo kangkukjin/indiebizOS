@@ -776,6 +776,11 @@ def start_system_ai_runner(config: dict = None) -> SystemAIRunner:
         DistillQueue.get().resume()
     except Exception as e:
         print(f"[증류큐] 재개 실패 (무시): {e}")
+    try:
+        from task_workers import resume
+        resume()
+    except Exception as e:
+        print(f"[과제 실행자] 재개 실패: {e}")
     return runner
 
 

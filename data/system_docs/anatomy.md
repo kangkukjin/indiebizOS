@@ -232,6 +232,12 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 섞지 않으며 별도 요약 모델을 호출하지 않는다. 원문 DB는 변경하지 않는다.
 [88회차 후속 수리](../../docs/experiments/long_sentence_imagination/round_88/report.md#후속-수리--사용자-요청2026-10-22).
 
+**할일 계획과 수행**: `todo_write`는 현재 대화의 할일 목록 전체를 교체한다. Claude Code도 MCP의
+같은 도구로 기존 저장 경로에 연결하며, 활성 실행 턴의 신원·대화·감독 문맥을 복원한다.
+계획 작성은 실제 수행·검증을 대신하지 않는다. 막힌 일은 `pending`과 이유로 남기고,
+`in_progress`는 한 번에 하나만 둔다. 잘못된 목록·저장 실패는 이전 계획을 보존하며 `[]`는 명시적 비우기다.
+[계획 수행 훈련과 경계 수리](../../docs/experiments/long_sentence_imagination/round_94/report.md).
+
 **과제 기억과 현재 의도**: 시작 시 작은 과제 후보 목차만 제공한다. 별도 선택·재검토 AI와 전경 요약은 없다.
 현재 의식은 기존 계획 응답의 `pursuit_id/pursuit_reason`으로, 실행자는 `pursuit bind(id, why)`로
 필요한 과제만 연결한다. 무관하거나 모호하면 연결하지 않으며 최초 숙고 OFF를 과제 판단이 다시 THINK로 바꾸지 않는다.

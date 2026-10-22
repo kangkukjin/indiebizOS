@@ -2836,3 +2836,9 @@
 2026-10-22 | 긴문장92회차 위임·병렬 불변식 훈련 및 수리: 후속 세션의 구조화 context 누락·최종 응답 없는 실패/취소 이유 누락·자식 대기 중 중복 종료의 최초 결과 덮어쓰기를 수리. 구판 맥락은 task/turn에서 읽기 복원, 새 실패 이유는 종료 사건에 원자 저장해 작업 행 정리 뒤에도 유지. 실제 IBL+모델대역, 기준선5실패→최종관련83통과·비system11493통과/1건너뜀·재기동24통과. 실제 모델 협업 비용 절감은 미측정. docs/experiments/long_sentence_imagination/round_92/report.md.
 
 2026-10-22 | 긴문장93회차 즉석 스크립트 훈련·수리: CSV 작성/실행/실패격리/부분수정/원본재현 확인. 보존 기록의 추가 모듈 혼입 및 검사 후 코드·stdin 변경 허용을 수리해 파일 집합·지문과 실제 복사 바이트를 일치시킴. 기준선6실패→관련31통과·비system11504통과/1건너뜀·Python라이브러리49통과. 독립AI·시간/토큰 절감은 미측정. docs/experiments/long_sentence_imagination/round_93/report.md.
+[2026-10-22 19:01:08] PROJECT_CREATED: L94_ai (ID: L94_ai)
+[2026-10-22 19:01:08] PROJECT_CREATED: L94_ai (ID: L94_ai)
+[2026-10-22 19:21:27] PROJECT_CREATED: L94_repair_ai (ID: L94_repair_ai)
+[2026-10-22 19:21:27] PROJECT_CREATED: L94_repair_ai (ID: L94_repair_ai)
+
+2026-10-22 | 긴문장94회차 할일 계획·수행 훈련과 수리: CLI에 없던 todo_write를 MCP→활성 실행 턴·대화→기존 처리기로 연결. 잘못된 목록·저장 실패는 이전 계획을 보존하고 원자 교체, 채팅·연구 재개에서 성공/비우기만 반영. 독립AI 수리전 ep5207/5208 도구미달→수리후5209/5210 실제 도구 갱신·4행 합계80·A/B와 계획 판본 보존. 관련179통과·비system11530통과/1건너뜀/진입점1실패 수정후 관련검사통과·system26+Python실행49통과. docs/experiments/long_sentence_imagination/round_94/report.md.

@@ -8,6 +8,28 @@ import pytest
 from test_lifecycle_vocab_2026_10_05 import world, _run
 
 
+def test_research_todo_replay_accepts_mcp_clear_and_preserves_plan_after_error(world):
+    from research_threads import chat_activity
+    from research_store import ResearchStore
+    from project_manager import ProjectManager
+    row = ProjectManager().create_project('할일 재개', project_kind='research')
+    store = ResearchStore(row['path'])
+    tid = store.create_thread('검수')['id']
+    def event(call, todos, error=False):
+        with store.connect(True) as db:
+            store.event(db, 'tool_start', {'id': call, 'name': 'mcp__indiebizos__todo_write',
+                        'input': {'todos': todos}}, tid, 'run')
+            store.event(db, 'tool_result', {'id': call, 'result': json.dumps({'success': not error}),
+                        'is_error': error}, tid, 'run')
+    plan = [{'content': '검수', 'activeForm': '검수 중', 'status': 'pending'}]
+    event('first', plan)
+    assert chat_activity(store, tid, 'run')['todos'] == plan
+    event('invalid', [], True)
+    assert chat_activity(store, tid, 'run')['todos'] == plan
+    event('clear', [])
+    assert chat_activity(store, tid, 'run')['todos'] == []
+
+
 def test_notebook_read_character_budget_through_public_ibl(world, monkeypatch):
     import research_threads as service
     import notebook_store

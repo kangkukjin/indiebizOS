@@ -491,6 +491,24 @@ async def read_guide(query: str, read: bool = True, ctx: Context = None,
 
 
 @mcp.tool()
+async def todo_write(todos: List[dict], ctx: Context = None):
+    """현재 대화의 할일 목록을 전체 교체합니다. 진행에 따라 같은 목록의 상태를 갱신하세요.
+
+    각 항목: content(작업 내용), activeForm(진행형 설명), status(pending/in_progress/completed).
+    in_progress는 한 번에 하나만. 막힌 일은 pending으로 두고 content에 이유를 기록합니다.
+    []는 명시적 비우기입니다. 계획 파일 작성이나 실제 작업의 수행을 대신하지 않습니다.
+    """
+    agent, _, task, _ = _http_identity(ctx)
+    payload = {"agent_id": agent or DEFAULT_AGENT_ID, "task_id": task or DEFAULT_TASK_ID, "todos": todos}
+    raw = await anyio.to_thread.run_sync(lambda: _post_backend("/ibl/todo", payload, 60))
+    from ibl_result_transport import tool_result_is_error
+    if tool_result_is_error(raw):
+        from mcp.types import CallToolResult, TextContent
+        return CallToolResult(isError=True, content=[TextContent(type="text", text=raw)])
+    return raw
+
+
+@mcp.tool()
 async def reframe(broken_assumption: str, evidence: str, progress: str = "",
                   kind: str = "other", ctx: Context = None) -> str:
     """규정(현재 태스크·이 계획의 전제)이 실행 중 사실이 아니게 됐을 때 의식에게 재규정을 요청합니다.

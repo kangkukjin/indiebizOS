@@ -91,6 +91,13 @@ def tool_event_payload(event: dict, agent: str) -> dict:
     if payload["type"] == "tool_result":
         # 판정은 언제나 실린다 — 없으면 '성공'이 아니라 '미표명'이 되어 옛 병이 되살아난다.
         payload["is_error"] = bool(event.get("is_error", False))
+        if (payload["name"] in {"todo_write", "mcp__indiebizos__todo_write"}
+                and not payload["is_error"]):
+            from ibl_result_transport import tool_result_is_error
+            if not tool_result_is_error(event.get("result", "")):
+                inputs = event.get("input") or {}
+                if isinstance(inputs.get("todos"), list):
+                    payload["todos"] = inputs["todos"]
     return payload
 
 
@@ -678,11 +685,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
                 # todo_write 도구인 경우 TODO 데이터 추가
                 # Phase 17: execute_ibl 경유 시 params에서 추출
-                if tool_name == "todo_write":
-                    todos = tool_input.get("todos", [])
-                    if todos:
-                        message_data["todos"] = todos
-                elif tool_name == "execute_ibl":
+                if tool_name == "execute_ibl":
                     # Phase 17: execute_ibl 경유 시 params 또는 result에서 추출
                     _ibl_params = tool_input.get("params", {})
                     _ibl_todos = _ibl_params.get("todos", [])
@@ -1059,11 +1062,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
 
                 # todo_write 도구인 경우 TODO 데이터 추가
                 # Phase 17: execute_ibl 경유 시 params에서 추출
-                if tool_name == "todo_write":
-                    todos = tool_input.get("todos", [])
-                    if todos:
-                        message_data["todos"] = todos
-                elif tool_name == "execute_ibl":
+                if tool_name == "execute_ibl":
                     # Phase 17: execute_ibl 경유 시 params 또는 result에서 추출
                     _ibl_params = tool_input.get("params", {})
                     _ibl_todos = _ibl_params.get("todos", [])

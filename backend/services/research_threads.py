@@ -343,12 +343,14 @@ def chat_activity(store, tid, run):
                     inputs = target.get('input') if isinstance(target.get('input'), dict) else {}
                     if target['name'] == 'ask_user_question' and inputs.get('questions'):
                         out['questions'] = inputs['questions']
-                    elif target['name'] == 'todo_write':
-                        out['todos'] = inputs.get('todos', [])
+                    elif target['name'] in {'todo_write', 'mcp__indiebizos__todo_write'}:
+                        from ibl_result_transport import tool_result_is_error
+                        if not tool_result_is_error(result) and isinstance(inputs.get('todos'), list):
+                            out['todos'] = inputs['todos']
                     elif target['name'] == 'exit_plan_mode' and '[[PLAN_APPROVAL_REQUESTED]]' in str(result):
                         out['plan_mode'] = {'active': True, 'phase': 'awaiting_approval',
                                             'plan_content': str(result).split('---', 1)[-1].strip()}
-                if event.get('todos'):
+                if isinstance(event.get('todos'), list) and not event.get('is_error'):
                     out['todos'] = event['todos']
             elif row['kind'] == 'cognition' and event.get('decision'):
                 out['cognition'] = {k: event.get(k) for k in ('decision', 'score', 'action', 'criteria')}

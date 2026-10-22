@@ -115,6 +115,8 @@ class Binding:
     aliases: set = field(default_factory=set)
     detached: bool = False
     trace: object = field(default_factory=lambda: __import__("episode_logger").capture_trace())
+    context: dict = field(default_factory=lambda: __import__("thread_context").snapshot())
+    conversation: object = field(default_factory=lambda: __import__("conversation_sessions").current())
 
     def bind(self, row):
         from episode_logger import EpisodeLogger

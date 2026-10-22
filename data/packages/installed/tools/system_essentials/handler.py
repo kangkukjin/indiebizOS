@@ -1373,30 +1373,8 @@ def _execute(tool_input: dict, context) -> str:
                                        context=context)
 
         elif tool_name == "todo_write":
-            todos = tool_input.get("todos", [])
-            paths = get_state_paths(project_path, agent_id)
-
-            # 상태 저장
-            state = {
-                "todos": todos,
-                "updated_at": datetime.now().isoformat()
-            }
-
-            with open(paths["todo"], 'w', encoding='utf-8') as f:
-                json.dump(state, f, ensure_ascii=False, indent=2)
-
-            # 결과 포맷팅 (텍스트 기반, Anthropic 스타일)
-            result_lines = ["Todo list updated:"]
-            for i, todo in enumerate(todos, 1):
-                status = todo["status"]
-                if status == "in_progress":
-                    result_lines.append(f"  {i}. [in_progress] {todo['activeForm']}")
-                elif status == "completed":
-                    result_lines.append(f"  {i}. [completed] {todo['content']}")
-                else:
-                    result_lines.append(f"  {i}. [pending] {todo['content']}")
-
-            return "\n".join(result_lines)
+            return _load_sibling("essentials_todo").write(
+                tool_input, get_state_paths(project_path, agent_id)["todo"], _file_io)
 
         elif tool_name == "ask_user_question":
             # GoalEval 재실행 중에는 사용자에게 질문할 수 없음
@@ -1481,6 +1459,8 @@ def _execute(tool_input: dict, context) -> str:
             return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:
+        if tool_name == "todo_write":
+            return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
         if tool_name.startswith("read_") or tool_name in {"list_directory", "glob_files", "copy_path", "move_path", "delete_path"}:
             # 읽기 실패도 성공과 같은 JSON 경계를 사용한다. 평문 Error는
             # document 어댑터에서 파일 부재를 봉투 파손으로 오진하게 한다.

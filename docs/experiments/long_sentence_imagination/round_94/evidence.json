@@ -1,0 +1,491 @@
+{
+  "baseline": {
+    "baseline_head": "62282c4beb6a88330c9a4ea3d2e0b6c3206f5c93",
+    "baseline_model_terminal": "2026-10-22T19:09:50+09:00",
+    "baseline_agent_stopped": true,
+    "diagnostic_baseline": "repair_baseline_tests.txt",
+    "repair_applied_before_restart": "2026-10-22T19:21:04+09:00",
+    "restart_request": "cbbfaa6d4e3ec598a467381e268c1e36",
+    "repair_validation_started": "2026-10-22T19:21:28.608743+09:00"
+  },
+  "trainer": {
+    "baseline": {
+      "run_ids": [
+        "7dae93a8999741d987a830395861c891",
+        "dcbefb3f335c401fbe0afcbe993a3d0a"
+      ],
+      "preserved_bytes_and_mtime": [
+        "A.json",
+        "B.json"
+      ],
+      "final": {
+        "rows": 4,
+        "amounts": {
+          "a1": 21,
+          "a2": 9,
+          "b1": 20,
+          "c1": 30
+        },
+        "total": 80
+      }
+    },
+    "repair": {
+      "run_ids": [
+        "1c5f58d4f9ee4bf88441eeed65951eb3",
+        "953cd286b649470b8514c0592c94800a"
+      ],
+      "preserved_bytes_and_mtime": [
+        "A.json",
+        "B.json"
+      ],
+      "final": {
+        "rows": 4,
+        "amounts": {
+          "a1": 21,
+          "a2": 9,
+          "b1": 20,
+          "c1": 30
+        },
+        "total": 80
+      }
+    },
+    "plan_fix": {
+      "run_ids": [
+        "4603b6f988c84080a7cd219c9c00220d",
+        "2180264ccc9f44b8b83eed37b3403be3"
+      ],
+      "preserved_bytes_and_mtime": [
+        "A.json",
+        "B.json"
+      ],
+      "final": {
+        "rows": 4,
+        "amounts": {
+          "a1": 21,
+          "a2": 9,
+          "b1": 20,
+          "c1": 30
+        },
+        "total": 80
+      }
+    },
+    "invalid_C": {
+      "run_id": "79deac4e70fa493d81b448e75e9fe23a",
+      "final_withheld": true
+    },
+    "plan_fix_invalid_C": {
+      "run_id": "dba521e3739349f398ba23113feab006",
+      "final_withheld": true
+    }
+  },
+  "ai": {
+    "baseline": {
+      "final": {
+        "rows": 4,
+        "amounts": {
+          "a1": 21,
+          "a2": 9,
+          "b1": 20,
+          "c1": 30
+        },
+        "total": 80
+      },
+      "preserved_bytes_and_mtime": [
+        "A.result.json",
+        "B.result.json",
+        "plan_versions/plan.v1.json",
+        "plan_versions/plan.v2.json"
+      ],
+      "stable_step_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7"
+      ],
+      "turns": [
+        {
+          "turn": 1,
+          "task_id": "task_63af37e55174427ca6e65da57ddfea91",
+          "episodes": [
+            {
+              "id": 5207,
+              "source": "training",
+              "task_id": "task_63af37e55174427ca6e65da57ddfea91",
+              "run_id": "run_0353e53737613bcb0423",
+              "total_ms": 163717,
+              "ended_at": "2026-10-22T19:04:03.500151"
+            }
+          ],
+          "usage": {
+            "oneshot:classify": {
+              "input": 12798,
+              "output": 133,
+              "cache_read": 5248,
+              "cache_create": 0
+            },
+            "consciousness": {
+              "input": 95386,
+              "output": 2814,
+              "cache_read": 78385,
+              "cache_create": 16997
+            },
+            "execution": {
+              "input": 613212,
+              "output": 8886,
+              "cache_read": 527059,
+              "cache_create": 86137
+            },
+            "oneshot:evaluate": {
+              "input": 28353,
+              "output": 880,
+              "cache_read": 6408,
+              "cache_create": 21943
+            }
+          },
+          "supervised_tool_calls": {
+            "Bash": 6
+          },
+          "model_rounds": {
+            "oneshot:classify": 3,
+            "consciousness": 2,
+            "execution": 8,
+            "oneshot:evaluate": 1
+          },
+          "evaluations": [
+            "UNKNOWN"
+          ],
+          "compactions": 0,
+          "total_usage": {
+            "input": 749749,
+            "output": 12713,
+            "cache_read": 617100,
+            "cache_create": 125077
+          }
+        },
+        {
+          "turn": 2,
+          "task_id": "task_bb9e2ad1395e4c5f821a5a3772724844",
+          "episodes": [
+            {
+              "id": 5208,
+              "source": "training",
+              "task_id": "task_bb9e2ad1395e4c5f821a5a3772724844",
+              "run_id": "run_fe4816a14bb1722fbd28",
+              "total_ms": 235012,
+              "ended_at": "2026-10-22T19:09:50.546009"
+            }
+          ],
+          "usage": {
+            "oneshot:classify": {
+              "input": 17354,
+              "output": 142,
+              "cache_read": 5504,
+              "cache_create": 0
+            },
+            "oneshot:background": {
+              "input": 6427,
+              "output": 1518,
+              "cache_read": 1280,
+              "cache_create": 0
+            },
+            "consciousness": {
+              "input": 104900,
+              "output": 3572,
+              "cache_read": 82752,
+              "cache_create": 22144
+            },
+            "execution": {
+              "input": 972222,
+              "output": 13775,
+              "cache_read": 894754,
+              "cache_create": 77444
+            },
+            "oneshot:evaluate": {
+              "input": 91521,
+              "output": 2430,
+              "cache_read": 12816,
+              "cache_create": 78701
+            }
+          },
+          "supervised_tool_calls": {
+            "Bash": 6,
+            "execute_ibl": 1
+          },
+          "model_rounds": {
+            "oneshot:classify": 4,
+            "oneshot:background": 1,
+            "consciousness": 2,
+            "execution": 12,
+            "oneshot:evaluate": 2
+          },
+          "evaluations": [
+            "REWORK",
+            "UNKNOWN"
+          ],
+          "compactions": 0,
+          "total_usage": {
+            "input": 1192424,
+            "output": 21437,
+            "cache_read": 997106,
+            "cache_create": 178289
+          }
+        }
+      ]
+    },
+    "repair": {
+      "final": {
+        "rows": 4,
+        "amounts": {
+          "a1": 21,
+          "a2": 9,
+          "b1": 20,
+          "c1": 30
+        },
+        "total": 80
+      },
+      "preserved_bytes_and_mtime": [
+        "result_A.json",
+        "result_B.json",
+        "plan.v1.json",
+        "plan.v2.json"
+      ],
+      "stable_step_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7"
+      ],
+      "turns": [
+        {
+          "turn": 1,
+          "task_id": "task_5fe96d784d0843808abf1c2af91b196f",
+          "episodes": [
+            {
+              "id": 5209,
+              "source": "training",
+              "task_id": "task_5fe96d784d0843808abf1c2af91b196f",
+              "run_id": "run_a7ac815dc97ab15e9288",
+              "total_ms": 126498,
+              "ended_at": "2026-10-22T19:23:53.328439"
+            }
+          ],
+          "usage": {
+            "oneshot:classify": {
+              "input": 8853,
+              "output": 69,
+              "cache_read": 4736,
+              "cache_create": 0
+            },
+            "consciousness": {
+              "input": 145257,
+              "output": 2685,
+              "cache_read": 127190,
+              "cache_create": 18061
+            },
+            "execution": {
+              "input": 405870,
+              "output": 6450,
+              "cache_read": 320593,
+              "cache_create": 85267
+            },
+            "oneshot:evaluate": {
+              "input": 23324,
+              "output": 431,
+              "cache_read": 6408,
+              "cache_create": 16914
+            }
+          },
+          "supervised_tool_calls": {
+            "Bash": 2,
+            "todo_write": 2
+          },
+          "model_rounds": {
+            "oneshot:classify": 2,
+            "consciousness": 3,
+            "execution": 5,
+            "oneshot:evaluate": 1
+          },
+          "evaluations": [
+            "APPROVED"
+          ],
+          "compactions": 0,
+          "total_usage": {
+            "input": 583304,
+            "output": 9635,
+            "cache_read": 458927,
+            "cache_create": 120242
+          }
+        },
+        {
+          "turn": 2,
+          "task_id": "task_d9dbc524abd84874aa67f7c3af796e0d",
+          "episodes": [
+            {
+              "id": 5210,
+              "source": "training",
+              "task_id": "task_d9dbc524abd84874aa67f7c3af796e0d",
+              "run_id": "run_b659b0dff122cff6bd3a",
+              "total_ms": 94640,
+              "ended_at": "2026-10-22T19:27:19.903654"
+            }
+          ],
+          "usage": {
+            "oneshot:classify": {
+              "input": 12812,
+              "output": 10,
+              "cache_read": 4864,
+              "cache_create": 0
+            },
+            "oneshot:background": {
+              "input": 5420,
+              "output": 1425,
+              "cache_read": 1280,
+              "cache_create": 0
+            },
+            "execution": {
+              "input": 442365,
+              "output": 6782,
+              "cache_read": 412675,
+              "cache_create": 29682
+            },
+            "oneshot:evaluate": {
+              "input": 25480,
+              "output": 212,
+              "cache_read": 6408,
+              "cache_create": 19070
+            }
+          },
+          "supervised_tool_calls": {
+            "Bash": 2,
+            "todo_write": 1
+          },
+          "model_rounds": {
+            "oneshot:classify": 3,
+            "oneshot:background": 1,
+            "execution": 4,
+            "oneshot:evaluate": 1
+          },
+          "evaluations": [
+            "APPROVED"
+          ],
+          "compactions": 0,
+          "total_usage": {
+            "input": 486077,
+            "output": 8429,
+            "cache_read": 425227,
+            "cache_create": 48752
+          }
+        }
+      ],
+      "todo_states": {
+        "T1": [
+          {
+            "content": "S1 입력 현황 조사(inventory.json)",
+            "activeForm": "입력 현황 조사 중",
+            "status": "completed"
+          },
+          {
+            "content": "S2 묶음 A 검수·amount 계산·저장 (a1=21, a2=9)",
+            "activeForm": "묶음 A 검수 중",
+            "status": "completed"
+          },
+          {
+            "content": "S3 묶음 B 검수·amount 계산·저장 (b1=20)",
+            "activeForm": "묶음 B 검수 중",
+            "status": "completed"
+          },
+          {
+            "content": "S4 묶음 C 검수 — 막힘: inputs/C.json 없음",
+            "activeForm": "묶음 C 검수 중",
+            "status": "pending"
+          },
+          {
+            "content": "S5 status.json 작성",
+            "activeForm": "진행 상태 작성 중",
+            "status": "completed"
+          },
+          {
+            "content": "S6 저장 파일 재독·대조, 원본 불변 확인",
+            "activeForm": "재독·대조 중",
+            "status": "completed"
+          },
+          {
+            "content": "S7 final.json 생성·재독 — 막힘: S4(C) 미검수로 보류",
+            "activeForm": "final 생성 중",
+            "status": "pending"
+          }
+        ],
+        "T2": [
+          {
+            "content": "S1 입력 현황 조사(inventory.json) — C.json 보충 반영",
+            "activeForm": "입력 현황 조사 중",
+            "status": "completed"
+          },
+          {
+            "content": "S2 묶음 A 검수 (a1=21, a2=9) — 결과 재사용",
+            "activeForm": "묶음 A 검수 중",
+            "status": "completed"
+          },
+          {
+            "content": "S3 묶음 B 검수 (b1=20) — 결과 재사용",
+            "activeForm": "묶음 B 검수 중",
+            "status": "completed"
+          },
+          {
+            "content": "S4 묶음 C 검수 (c1=30)",
+            "activeForm": "묶음 C 검수 중",
+            "status": "completed"
+          },
+          {
+            "content": "S5 status.json 작성",
+            "activeForm": "진행 상태 작성 중",
+            "status": "completed"
+          },
+          {
+            "content": "S6 저장 파일 재독·대조, 원본 불변 확인",
+            "activeForm": "재독·대조 중",
+            "status": "completed"
+          },
+          {
+            "content": "S7 final.json 생성·재독 (4행, 합계 80)",
+            "activeForm": "final 생성 중",
+            "status": "completed"
+          }
+        ]
+      }
+    }
+  },
+  "validation": {
+    "baseline_regressions": {
+      "failed": 9,
+      "passed": 1
+    },
+    "related_final": {
+      "passed": 179,
+      "seconds": 11.73
+    },
+    "non_system_full": {
+      "passed": 11530,
+      "failed": 1,
+      "skipped": 1,
+      "seconds": 218.76,
+      "remaining_failure": "new test modules lacked __main__; fixed and verified by related_final including all single_runner tests; full suite not repeated"
+    },
+    "system": {
+      "passed": 26,
+      "seconds": 182.2
+    },
+    "python_libraries": {
+      "passed": 49,
+      "seconds": 48.97,
+      "exit_code": 0
+    }
+  },
+  "recorded_at": "2026-10-22T19:52:01.178619+09:00"
+}

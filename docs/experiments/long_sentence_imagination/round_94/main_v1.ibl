@@ -1,0 +1,58 @@
+#!ibl edition=2
+[def:상태저장]($출력,$판본,$번호,$계획) {
+  [self:write]{path:f"${출력}/plan.json",content:json($계획)}
+  [self:write]{path:f"${출력}/plan_${판본}_${번호}.json",content:json($계획)}
+  return $계획
+}
+[def:묶음수행]($id,$입력,$출력) {
+  [try] {
+    $문서=[self:read]{path:f"${입력}/${id}.json"}
+    $행들=$문서.data.items >> [table:each] {
+      assert $it.qty>=0 and $it.qty==round($it.qty) and $it.price>=0 and $it.price==round($it.price),"nonnegative integer required"
+      return {id:$it.id,qty:$it.qty,price:$it.price,amount:$it.qty*$it.price}
+    }
+    $결과={id:$id,items:$행들,total:reduce($행들,0,($n,$r)=>$n+$r.amount)}
+    $경로=f"${출력}/${id}.json"
+    $재사용=false
+    [try] { $기존=[self:read]{path:$경로}; $재사용=$기존.data==$결과 } [catch] { $재사용=false }
+    [if:not $재사용] { [self:write]{path:$경로,content:json($결과)} }
+    $검증=[self:read]{path:$경로}
+    assert $검증.data==$결과,"saved result mismatch"
+    return {id:$id,status:"completed",depends_on:["inventory"],evidence:$경로,reason:null,result:$결과,reused:$재사용}
+  } [catch] {
+    return {id:$id,status:"blocked",depends_on:["inventory"],evidence:null,reason:$error.message,result:null,reused:false}
+  }
+}
+$목록=[self:read]{path:f"${입력}/manifest.json"}
+$ids=$목록.data.required
+$계획=$ids >> [table:each] { return {id:$it,status:"pending",depends_on:["inventory"],evidence:null,reason:null} }
+$계획=union([{id:"inventory",status:"in_progress",depends_on:[],evidence:null,reason:null}],$계획,[{id:"final",status:"pending",depends_on:$ids,evidence:null,reason:null}])
+[fn:상태저장]{출력:$출력,판본:$판본,번호:0,계획:$계획}
+$현황=$ids >> [table:each] {
+  [try] { $문서=[self:read]{path:f"${입력}/${it}.json"}; return {id:$it,available:true} }
+  [catch] { return {id:$it,available:false} }
+}
+[self:write]{path:f"${출력}/inventory.json",content:json($현황)}
+$완료=[]
+[repeat:len($ids)] {
+  $현재=$ids[$i]
+  $계획=$계획 >> [table:each] { return $it.id==$현재 ? {**$it,status:"in_progress"} : $it.id=="inventory" ? {**$it,status:"completed",evidence:f"${출력}/inventory.json"} : $it }
+  [fn:상태저장]{출력:$출력,판본:$판본,번호:$i*2+1,계획:$계획}
+  $결과=[fn:묶음수행]{id:$현재,입력:$입력,출력:$출력}
+  $완료=union($완료,[$결과])
+  $계획=$계획 >> [table:each] { return $it.id==$현재 ? $결과 : $it }
+  [fn:상태저장]{출력:$출력,판본:$판본,번호:$i*2+2,계획:$계획}
+}
+$준비=all($완료 >> [table:each] { return $it.status=="completed" })
+[if:$준비] {
+  $행들=$완료 >> [table:each]{mode:"flat_map"} { return $it.result.items }
+  $최종={items:$행들,total:reduce($행들,0,($n,$r)=>$n+$r.amount)}
+  [self:write]{path:f"${출력}/final.json",content:json($최종)}
+  $검증=[self:read]{path:f"${출력}/final.json"}
+  assert $검증.data==$최종,"final readback mismatch"
+}
+$계획=$계획 >> [table:each] { return $it.id=="final" ? {**$it,status:$준비 ? "completed" : "blocked",evidence:$준비 ? f"${출력}/final.json" : null,reason:$준비 ? null : "required source incomplete"} : $it }
+[fn:상태저장]{출력:$출력,판본:$판본,번호:99,계획:$계획}
+$진행={ready:$준비,steps:$계획}
+[self:write]{path:f"${출력}/status.json",content:json($진행)}
+return $진행

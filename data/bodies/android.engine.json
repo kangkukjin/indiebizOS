@@ -168,6 +168,7 @@
     "cognition/system_tools_delegate",
     "cognition/system_tools_ibl",
     "cognition/task_workers",
+    "cognition/todo_bridge",
     "cognition/turn_scope",
     "cognition/unified_distill",
     "cognition/vocab_crystallization",
@@ -561,8 +562,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 550,
-    "engine": 518,
+    "total": 551,
+    "engine": 519,
     "blocklist": 32
   }
 }

@@ -340,7 +340,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         # 셸 명령과 도구 조합은 서로 보완한다.
         "Bash", "BashOutput", "KillShell",
         # 작업 관리
-        "TodoWrite",
+        "mcp__indiebizos__todo_write",
         # MCP — IBL 브리지 (5노드 전체)
         "mcp__indiebizos__execute_ibl",
         # MCP — 가이드 읽기 브리지. in-process 프로바이더(Gemini 등)는 read_guide 를 자기
@@ -394,7 +394,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "`mcp__indiebizos__read_guide` 로 호출하라(file_find 로 data/guides 를 뒤지지 말 것 — 이 도구가 가이드 DB를 검색해 본문까지 준다).\n"
         "재규정 도구의 정확한 이름은 `mcp__indiebizos__reframe` 다(맨이름 `reframe` 아님) — 규정의 전제가 "
         "깨졌거나 이 틀 안에서 풀 수 없거나 위험하다고 알게 되면 이 도구로 의식에게 되묻는다.\n"
-        "이 세 MCP 도구는 세션 시작부터 로드돼 있다 — 스키마를 따로 찾거나 불러올 필요 없이 곧장 호출하라.\n"
+        "할일 관리는 `mcp__indiebizos__todo_write`로 현재 대화의 목록을 갱신한다. "
+        "pending/in_progress/completed 상태를 실제 진행과 맞추며 막힌 일은 pending과 이유로 남긴다.\n"
+        "이 MCP 도구들은 세션 시작부터 로드돼 있다 — 스키마를 따로 찾거나 불러올 필요 없이 곧장 호출하라.\n"
         "IBL과 셸은 함께 쓰는 실행 수단이다. 도구 사이의 값 전달·실패 처리·재개·반복을 묶어 "
         "모델 왕복을 줄일 때 IBL을 사용한다. 파일 읽기·검색·가공·편집·빌드는 셸이나 네이티브 도구로 "
         "직접 처리해도 된다. 비슷한 IBL 어휘가 있다는 이유로 실행을 나누거나 다시 번역하지 않는다. "

@@ -13,6 +13,21 @@ router.include_router(pursuits_router)
 from api_supervision import router as supervision_router
 router.include_router(supervision_router)
 
+
+class TodoRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    agent_id: str
+    task_id: str
+    todos: list
+
+
+@router.post("/todo")
+async def todo_write(req: TodoRequest):
+    import asyncio
+    from todo_bridge import execute
+    return await asyncio.to_thread(execute, req.todos, req.agent_id, req.task_id)
+
+
 class IBLRequest(BaseModel):
     # An ignored reuse/approval typo can execute a different, costly request.
     model_config = ConfigDict(extra="forbid")

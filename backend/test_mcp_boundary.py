@@ -22,6 +22,25 @@ import boot_paths  # noqa: F401
 import mcp_server as M
 
 
+def test_todo_bridge_exposes_existing_contract_and_no_caller_selected_identity(monkeypatch):
+    import asyncio
+    tools = {t.name: t for t in asyncio.run(M.mcp.list_tools())}
+    assert 'todo_write' in tools
+    assert set(tools['todo_write'].inputSchema['properties']) == {'todos'}
+    calls = []
+    monkeypatch.setattr(M, '_http_identity', lambda ctx: ('agent', '/ignored', 'task', 'training'))
+    monkeypatch.setattr(M, '_post_backend', lambda *args: calls.append(args) or '{"success":true}')
+    asyncio.run(M.todo_write([], ctx=None))
+    assert calls[0][0:2] == ('/ibl/todo', {'agent_id': 'agent', 'task_id': 'task', 'todos': []})
+
+
+def test_todo_bridge_preserves_failure_as_mcp_error(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(M, '_post_backend', lambda *args: '{"success":false,"error":"no active turn"}')
+    result = asyncio.run(M.todo_write([]))
+    assert result.isError is True
+
+
 def test_image_harvest():
     b64 = base64.b64encode(b'PNGDATA').decode()
 

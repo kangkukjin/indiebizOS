@@ -6,6 +6,21 @@ from providers.claude_code import ClaudeCodeProvider
 COMMAND = 'mcp__indiebizos__run_command'
 
 
+@pytest.mark.parametrize('role', ['execution', 'consciousness', 'response'])
+def test_todo_bridge_is_exposed_only_to_execution(role):
+    provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')
+    provider._binary_path = 'claude'
+    provider.agent_role = role
+    provider.restricted_response_repair = role == 'response'
+    cmd = provider._build_command(mcp_config_path='/tmp/example.json')
+    name = 'mcp__indiebizos__todo_write'
+    allowed = cmd[cmd.index('--allowed-tools') + 1].split(',')
+    denied = cmd[cmd.index('--disallowed-tools') + 1].split(',')
+    assert (name in allowed) == (role == 'execution')
+    assert (name in denied) == (role != 'execution')
+    assert 'TodoWrite' not in provider.EAGER_BUILTIN_TOOLS
+
+
 @pytest.mark.parametrize('no_tools', [False, True])
 def test_image_instruction_matches_execution_and_oneshot_tools(no_tools):
     provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')

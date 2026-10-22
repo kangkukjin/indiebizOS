@@ -1,0 +1,15 @@
+#!ibl edition=2
+[def:접수]($요청) {
+  return [others:delegate]{scope:"task",request_id:$요청.id,message:$요청.message,context:$요청.context}
+}
+[def:회수]($접수증) {
+  [try] {
+    $결과 = [self:task]{op:"wait",ref:$접수증.task_ref,timeout:5}
+    return {task:$접수증.task_ref,worker:$접수증.worker_ref,result:$결과}
+  } [catch] {
+    return {task:$접수증.task_ref,worker:$접수증.worker_ref,error:$error.code,details:$error.details}
+  }
+}
+$접수들 = $requests >> [table:each]{parallel:4} { [fn:접수]{요청:$it} }
+$결과들 = $접수들 >> [table:each]{parallel:4} { [fn:회수]{접수증:$it} }
+return {receipts:$접수들,results:$결과들}

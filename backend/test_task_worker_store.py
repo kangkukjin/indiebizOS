@@ -55,6 +55,75 @@ def test_parent_completion_waits_for_owned_children(database):
         workers.accept(path, 'parent', 'late', 'request', payload(sid))
 
 
+@pytest.mark.parametrize('state', ['completed', 'failed', 'cancelled'])
+@pytest.mark.parametrize('nested_state', ['completed', 'failed'])
+def test_sealed_worker_preserves_first_outcome_while_children_finish(database, state, nested_state):
+    path, db, sid = database
+    child = workers.accept(path, 'parent', 'one', 'request', payload(sid))
+    nested = workers.accept(path, child['task_id'], 'nested', 'nested', payload(child['worker_session']))
+    workers.finish(path, child['task_id'], state, 'original outcome')
+    assert db.get_task(child['task_id'])['status'] == 'waiting_children'
+    workers.finish(path, child['task_id'], 'failed' if state == 'completed' else 'completed', 'late duplicate')
+    workers.finish(path, nested['task_id'], nested_state, 'nested output')
+    assert db.get_task(child['task_id'])['status'] == state
+    assert db.get_task(child['task_id'])['result'] == 'original outcome'
+    assert db.get_task('parent')['pending_delegations'] == 0
+
+
+def test_history_keeps_cancelled_result_as_observation_and_in_order(database):
+    path, _, sid = database
+    child = workers.accept(path, 'parent', 'one', 'request', payload(sid))
+    workers.finish(path, child['task_id'], 'cancelled', 'partially checked; do not resend')
+    followup = workers.accept(path, 'parent', 'two', 'inspect', payload(sid), session_id=child['worker_session'])
+    with sessions.connection(path) as conn:
+        workers.event(conn, child['worker_session'], 'worker.history',
+                      {'message': {'role': 'user', 'content': 'inspect'}})
+    workers.finish(path, followup['task_id'], 'completed', 'inspected')
+    messages = workers.history(path, child['worker_session'])
+    assert messages[0]['role'] == 'assistant'
+    assert 'cancelled' in messages[0]['content'] and 'do not resend' in messages[0]['content']
+    assert messages[1] == {'role': 'user', 'content': 'inspect'}
+
+
+def test_history_recovers_legacy_context_from_exact_task_turn_without_writes(database):
+    path, _, sid = database
+    first_payload = payload(sid)
+    first_payload['envelope']['context'] = {'revision': 7, 'policy': '원본 보존'}
+    child = workers.accept(path, 'parent', 'one', 'same request', first_payload)
+    workers.finish(path, child['task_id'], 'completed', 'first')
+    second_payload = payload(sid)
+    second_payload['envelope']['context'] = {'revision': 8, 'policy': '새 사본'}
+    second = workers.accept(path, 'parent', 'two', 'same request', second_payload,
+                            session_id=child['worker_session'])
+    with sessions.connection(path) as conn:
+        for task, turn in [(child, 'old-turn'), (second, 'new-turn')]:
+            conn.execute('UPDATE conversation_task_links SET turn_id=? WHERE task_id=?',
+                         (turn, task['task_id']))
+            workers.event(conn, child['worker_session'], 'worker.history',
+                          {'message': {'role': 'user', 'content': 'same request'}}, turn)
+        before = list(conn.execute('SELECT payload FROM conversation_events'))
+    workers.finish(path, second['task_id'], 'completed', 'second')
+    messages = workers.history(path, child['worker_session'])
+    assert len(messages) == 4
+    assert '원본 보존' in messages[1]['content'] and '7' in messages[1]['content']
+    assert '새 사본' in messages[3]['content'] and '8' in messages[3]['content']
+    assert messages[1]['role'] == messages[3]['role'] == 'assistant'
+    with sessions.connection(path) as conn:
+        after = list(conn.execute('SELECT payload FROM conversation_events'))
+    assert [tuple(r) for r in before] == [tuple(r) for r in after[:-1]]
+
+
+def test_failed_history_survives_pruning_terminal_task_rows(database):
+    path, _, sid = database
+    child = workers.accept(path, 'parent', 'one', 'request', payload(sid))
+    workers.finish(path, child['task_id'], 'failed', 'transport lost; inspect before retry')
+    with sessions.connection(path) as conn:
+        conn.execute('DELETE FROM tasks WHERE task_id=?', (child['task_id'],))
+    messages = workers.history(path, child['worker_session'])
+    assert len(messages) == 1
+    assert 'failed' in messages[0]['content'] and 'inspect before retry' in messages[0]['content']
+
+
 def test_recovery_dispatches_only_unstarted_and_keeps_failed_effects(database):
     path, db, sid = database
     first = workers.accept(path, 'parent', 'one', 'request', payload(sid))

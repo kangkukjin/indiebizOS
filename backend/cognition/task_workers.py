@@ -200,15 +200,18 @@ def _run(path, row):
             set_current_agent_name('과제 실행자')
             EpisodeLogger.start_episode('과제 실행자', row['original_request'], project_id=payload['owner'], task_id=task)
             history = store.history(path, sid)
+            message = with_context(row['original_request'], payload['envelope'].get('context'))
             with sessions.connection(path) as conn:
-                store.event(conn, sid, 'worker.history', {'message': {'role': 'user', 'content': row['original_request']}}, binding.turn_id)
+                # Follow-ups need the same conditions the worker actually saw,
+                # including structured context, not only the short request.
+                store.event(conn, sid, 'worker.history', {'message': {'role': 'user', 'content': message}}, binding.turn_id)
             runner = _runner(payload, sid)
             cancelled = lambda: store.cancellation_requested(path, payload['owner'], task)
             if payload.get('workspace'):
                 from ibl_routing import system_capability
                 runner.config['_isolated_workspace'] = payload['project_path']
                 processes = system_capability('collaboration_executor')(runner, payload['project_path'], task, cancelled)
-            for item in runner.cognitive_stream(with_context(row['original_request'], payload['envelope'].get('context')), history,
+            for item in runner.cognitive_stream(message, history,
                     extra_role=payload['envelope'].get('role', ''),
                     force_role='coding' if payload.get('workspace') else '',
                     allowed_set=payload['envelope'].get('allowed'), utterance_author='agent', cancel_check=cancelled):

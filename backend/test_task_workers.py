@@ -1,5 +1,7 @@
 import boot_paths  # noqa: F401
 import json
+import os
+from pathlib import Path
 from threading import Barrier, Event
 import time
 
@@ -9,6 +11,184 @@ import task_workers
 import task_worker_store as store
 from conversation_db import ConversationDB
 from thread_context import actor_context
+
+
+@pytest.fixture
+def worker_program(tmp_path, monkeypatch, request):
+    """Real IBL/dispatch/storage, with only the cognitive stream replaced."""
+    import delegation_tasks
+    import ibl_routing
+    import routing_system
+    import task_receipts
+    from episode_logger import EpisodeLogger
+    from ibl_v2_entry import handle_request
+    from thread_context import get_task_origin
+
+    monkeypatch.setitem(ibl_routing._SYSTEM_CAPS, 'delegate', routing_system._delegate_unified)
+    monkeypatch.setitem(task_receipts._STATUS, 'delegation', delegation_tasks.task_status)
+
+    path = tmp_path / 'conversations.db'
+    db = ConversationDB(str(path))
+    db.create_task('parent', 'user', 'gui', 'parallel review', 'agent')
+    parent_store = sessions.SessionStore(path, 'messages', 'pair:1:2')
+    binding = parent_store.begin(parent_store.create()['id'])
+    monkeypatch.setattr(task_workers, '_identity', lambda: (sessions.current(), 'test', 'parent', 'agent'))
+    monkeypatch.setattr(delegation_tasks, '_owner_db_path', lambda _: path)
+    monkeypatch.setattr(delegation_tasks, 'get_task_row', lambda owner, task: db.get_task(task))
+    monkeypatch.setattr(delegation_tasks, 'project_db', lambda owner: db)
+    monkeypatch.setattr(EpisodeLogger, 'start_episode', lambda *a, **kw: None)
+    monkeypatch.setattr(EpisodeLogger, 'end_episode', lambda: None)
+    seen, evidence = [], []
+
+    class Runner:
+        def cognitive_stream(self, message, history, **kwargs):
+            seen.append({'session': sessions.current().session_id, 'message': message,
+                         'history': history, 'origin': get_task_origin()})
+            # Opposite completion order is deliberate failure/latency injection.
+            if message.startswith('slow'):
+                time.sleep(.08)
+            if message.startswith('raise'):
+                raise RuntimeError('TRANSPORT_LOST: revision 9')
+            if message.startswith('fail'):
+                yield {'type': 'error', 'content': 'SOURCE_UNAVAILABLE: revision 7'}
+            else:
+                yield {'type': 'tool_result', 'name': 'probe', 'input': {}, 'result': message + ' evidence'}
+                yield {'type': 'final', 'content': message + ' result'}
+
+    monkeypatch.setattr(task_workers, '_runner', lambda payload, sid: Runner())
+
+    def execute(code, inputs=None):
+        payload = {'edition': 2, 'code': code, 'inputs': inputs or {}}
+        checked = handle_request({**payload, 'check': True}, project_path=str(tmp_path))
+        evidence.append({'check': checked})
+        assert checked['ok'], checked
+        result = handle_request(payload, project_path=str(tmp_path))
+        evidence[-1]['result'] = result
+        assert result['success'], result
+        return result['value']
+
+    with sessions.scope(binding), actor_context(agent_id='agent', task_id='parent', origin='training'):
+        try:
+            yield execute, seen, db
+        finally:
+            deadline = time.monotonic() + 8
+            while time.monotonic() < deadline:
+                with task_workers._dispatch_lock:
+                    busy = any(p == str(path) for p, _ in task_workers._dispatching)
+                if not busy:
+                    break
+                time.sleep(.01)
+            assert not busy, 'training workers must be drained before applying repairs'
+            with sessions.connection(path) as conn:
+                rows = [dict(row) for row in conn.execute('SELECT * FROM tasks')]
+            assert all(row['status'] in store.TERMINAL for row in rows if row['task_id'] != 'parent')
+            assert db.get_task('parent')['pending_delegations'] == 0
+            parent_store.finish(binding, 'completed')
+            if directory := os.getenv('INDIEBIZ_WORKER_PROBE_OUTPUT'):
+                out = Path(directory)
+                out.mkdir(parents=True, exist_ok=True)
+                (out / (request.node.name + '.json')).write_text(json.dumps(
+                    {'executions': evidence, 'seen': seen, 'tasks': rows, 'drained': True},
+                    ensure_ascii=False, indent=2, default=str))
+
+
+@pytest.mark.parametrize('variant', ['duplicate', 'reverse', 'failure', 'empty'])
+def test_parallel_program_preserves_receipts_and_terminal_results(worker_program, variant):
+    execute, seen, db = worker_program
+    source = (Path(__file__).resolve().parents[1] /
+              'docs/experiments/long_sentence_imagination/round_92/main_v0.ibl').read_text()
+    a = {'id': 'a', 'message': 'slow A', 'context': {'revision': 7}}
+    b = {'id': 'b', 'message': 'fast B', 'context': {'revision': 8}}
+    requests = {'duplicate': [a, b, a], 'reverse': [b, a],
+                'failure': [a, {**b, 'message': 'fail B'}], 'empty': []}[variant]
+    value = execute(source, {'requests': requests})
+    assert len(value['receipts']) == len(requests)
+    assert len(seen) == len({row['id'] for row in requests})
+    assert all(row['origin'] == 'training' for row in seen)
+    for index, row in enumerate(value['results']):
+        receipt = value['receipts'][index]
+        assert row['task'] == receipt['task_ref']
+        if requests[index]['message'].startswith('fail'):
+            assert row['error'] and row['details']['state'] == 'failed'
+        else:
+            assert row['result']['state'] == 'succeeded'
+            assert requests[index]['message'] in row['result']['result']
+    if variant == 'duplicate':
+        assert value['receipts'][0]['task_ref'] == value['receipts'][2]['task_ref']
+    assert db.get_task('parent')['pending_delegations'] == 0
+
+
+@pytest.mark.parametrize('first_message', ['review A', 'fail A'])
+def test_followup_preserves_structured_context_and_failure(worker_program, first_message):
+    execute, seen, _ = worker_program
+    value = execute('''
+$a=[others:delegate]{scope:"task",request_id:"first",message:$message,
+ context:{revision:7,policy:"원본 보존",budget:3200000}}
+[try] { [self:task]{op:"wait",ref:$a.task_ref,timeout:5} }
+[catch] { null }
+$b=[others:delegate]{scope:"task",request_id:"next",worker_ref:$a.worker_ref,
+ message:"앞 판본과 유지 조건을 확인하고 후속 처리해 줘"}
+$result=[self:task]{op:"wait",ref:$b.task_ref,timeout:5}
+return {a:$a,b:$b,result:$result}
+''', {'message': first_message})
+    assert value['a']['worker_ref'] == value['b']['worker_ref']
+    assert value['a']['task_ref'] != value['b']['task_ref']
+    prior = next(row['history'] for row in seen if row['message'].startswith('앞 판본'))
+    user_input = next(row['content'] for row in prior if row['role'] == 'user')
+    assert '원본 보존' in user_input and '3200000' in user_input and 'revision' in user_input
+    if first_message.startswith('fail'):
+        assert any('SOURCE_UNAVAILABLE' in row['content'] for row in prior)
+
+
+@pytest.mark.parametrize('message,reason', [
+    ('fail A', 'SOURCE_UNAVAILABLE'), ('raise A', 'TRANSPORT_LOST'),
+])
+def test_followup_reports_failed_attempt_even_without_final_response(worker_program, message, reason):
+    execute, seen, _ = worker_program
+    execute('''
+$a=[others:delegate]{scope:"task",request_id:"first",message:$message}
+[try] { [self:task]{op:"wait",ref:$a.task_ref,timeout:5} }
+[catch] { null }
+$b=[others:delegate]{scope:"task",request_id:"next",worker_ref:$a.worker_ref,message:"retry"}
+return [self:task]{op:"wait",ref:$b.task_ref,timeout:5}
+''', {'message': message})
+    prior = next(row['history'] for row in seen if row['message'] == 'retry')
+    assert any(reason in row['content'] and 'failed' in row['content'] for row in prior)
+
+
+@pytest.mark.parametrize('changed', ['message', 'context', 'allowed'])
+def test_duplicate_request_rejects_changed_contract_before_new_work(worker_program, changed):
+    execute, seen, db = worker_program
+    value = execute('''
+$a=[others:delegate]{scope:"task",request_id:"one",message:"A",context:{revision:7}}
+$conflict=[try] {
+  [others:delegate]{scope:"task",request_id:"one",message:$message,context:$context,allowed:$allowed}
+} [catch] { {rejected:true,message:$error.message} }
+$done=[self:task]{op:"wait",ref:$a.task_ref,timeout:5}
+return {conflict:$conflict,done:$done}
+''', {'message': 'changed' if changed == 'message' else 'A',
+      'context': {'revision': 8 if changed == 'context' else 7},
+      'allowed': ['table'] if changed == 'allowed' else []})
+    assert value['conflict']['rejected'] and 'request_id' in value['conflict']['message']
+    assert len(seen) == 1 and db.get_task('parent')['pending_delegations'] == 0
+
+
+def test_queued_followup_keeps_prior_context_without_repeating_other_worker(worker_program):
+    execute, seen, _ = worker_program
+    value = execute('''
+$a=[others:delegate]{scope:"task",request_id:"first",message:"slow A",context:{revision:7,policy:"원본 보존"}}
+$b=[others:delegate]{scope:"task",request_id:"followup",worker_ref:$a.worker_ref,message:"continue A"}
+$c=[others:delegate]{scope:"task",request_id:"other",message:"other B",context:{revision:99}}
+$results=[self:task]{op:"wait",ref:$b.task_ref,timeout:5} & [self:task]{op:"wait",ref:$c.task_ref,timeout:5}
+return {a:$a,b:$b,c:$c,results:$results}
+''')
+    assert value['a']['worker_ref'] == value['b']['worker_ref']
+    assert value['a']['worker_ref'] != value['c']['worker_ref']
+    followup = next(row for row in seen if row['message'] == 'continue A')
+    text = json.dumps(followup['history'], ensure_ascii=False)
+    assert '원본 보존' in text and 'slow A' in text and 'evidence' in text
+    assert 'other B' not in text and '99' not in text
+    assert len(seen) == 3
 
 
 def test_independent_sessions_overlap_and_followup_uses_history(tmp_path, monkeypatch):

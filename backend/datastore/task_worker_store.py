@@ -113,7 +113,9 @@ def finish(path, task, state, result):
     with sessions.connection(path) as conn:
         conn.execute('BEGIN IMMEDIATE')
         row = conn.execute('SELECT * FROM tasks WHERE task_id=?', (task,)).fetchone()
-        if not row or row['status'] in TERMINAL:
+        if not row or row['status'] in (*TERMINAL, 'waiting_children'):
+            # The model outcome is already sealed while children drain. A late
+            # duplicate completion must not replace its result or terminal state.
             return
         live = conn.execute("SELECT 1 FROM tasks WHERE parent_task_id=? AND worker_session IS NOT NULL AND status NOT IN ('completed','failed','cancelled')", (task,)).fetchone()
         if live or (row['pending_delegations'] or 0) > 0:
@@ -127,7 +129,12 @@ def finish(path, task, state, result):
 def _finish(conn, row, state, result):
     conn.execute('UPDATE tasks SET status=?,result=?,completed_at=CURRENT_TIMESTAMP WHERE task_id=?',
                  (state, result, row['task_id']))
-    event(conn, row['worker_session'], 'worker.finished', {'task_id': row['task_id'], 'state': state})
+    outcome = {'task_id': row['task_id'], 'state': state}
+    if state in ('failed', 'cancelled'):
+        # Session history outlives prunable task rows. Keep the failure evidence
+        # in the same transaction as completion, even without a model final.
+        outcome['result'] = result
+    event(conn, row['worker_session'], 'worker.finished', outcome)
     cursor = conn.cursor()
     cursor.row_factory = sqlite3.Row
     parent = cursor.execute('SELECT * FROM tasks WHERE task_id=?', (row['parent_task_id'],)).fetchone()
@@ -176,17 +183,43 @@ def defer_completion(path, task, result):
 
 def history(path, sid):
     with sessions.connection(path) as conn:
-        events = [json.loads(r[0]) for r in conn.execute(
-            'SELECT payload FROM conversation_events WHERE session_id=? ORDER BY id', (sid,))]
+        tasks = [dict(row) for row in conn.execute('''
+            SELECT t.task_id,t.status,t.result,t.original_request,t.worker_payload,l.turn_id
+            FROM tasks t LEFT JOIN conversation_task_links l ON l.task_id=t.task_id
+            WHERE t.worker_session=?''', (sid,))]
+        outcomes = {row['task_id']: {k: row[k] for k in ('task_id', 'status', 'result')} for row in tasks}
+        turns = {row['turn_id']: row for row in tasks if row['turn_id']}
+        events = [(json.loads(r[0]), r[1]) for r in conn.execute(
+            'SELECT payload,turn_id FROM conversation_events WHERE session_id=? ORDER BY id', (sid,))]
         delivery = {}
-        for entry in events:
+        for entry, _ in events:
             if entry.get('type', '').startswith('handoff.steer.'):
                 for ident in entry.get('ids', []):
                     delivery[ident] = entry['type'].rsplit('.', 1)[-1]
         messages = []
-        for entry in events:
+        for entry, turn in events:
             if entry.get('type') == 'worker.history':
                 messages.append(entry['message'])
+                task = turns.get(turn)
+                if (task and entry['message'].get('role') == 'user'
+                        and entry['message'].get('content') == task['original_request']):
+                    # Older workers logged only the request text. Recover their
+                    # context from that exact task/turn without rewriting events.
+                    context = json.loads(task['worker_payload'])['envelope'].get('context')
+                    if context not in (None, '', {}, []):
+                        messages.append({'role': 'assistant',
+                                         'content': '[이전 위임자가 준 구조화 맥락] ' +
+                                         json.dumps(context, ensure_ascii=False)})
+            elif entry.get('type') == 'worker.finished':
+                outcome = ({'task_id': entry['task_id'], 'status': entry['state'], 'result': entry['result']}
+                           if 'result' in entry else outcomes.get(entry.get('task_id'), {}))
+                if outcome.get('status') in ('failed', 'cancelled'):
+                    # Providers can fail/raise without ever yielding a final
+                    # message. The durable task outcome is still follow-up context,
+                    # and is an observation rather than a new user instruction.
+                    messages.append({'role': 'assistant',
+                                     'content': '[이전 실행 종료] ' + json.dumps(
+                                         outcome, ensure_ascii=False)})
             elif entry.get('type') == 'handoff.steer.accepted':
                 source = entry.get('source', 'user')
                 state = delivery.get(entry['id'], 'accepted')

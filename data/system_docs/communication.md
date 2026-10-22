@@ -1317,7 +1317,12 @@ return {results:$results, workers:[$a.worker_ref, $b.worker_ref]}
 ```
 
 완료 후 같은 대화에서 `worker_ref`를 delegate에 넣으면 도구 결과·응답 맥락을 이어서
-새 task를 접수한다. 바쁜 세션에는 FIFO로 대기한다. 실행 중 보충은
+새 task를 접수한다. 구조화된 `context`도 실제 전달한 요청과 함께 보존하며, 이전 판본의
+기록은 같은 task/turn에 저장된 봉투에서 맥락을 회수한다. 실패·취소가 최종 응답 없이
+끝나도 그 상태와 이유를 후속의 관측으로 전달한다. 자식 종료를 기다리는 동안 최초
+종료 결과는 봉인되어 늦은 중복 완료 신호로 바뀌지 않는다.
+[92회차 재현·수리](../../docs/experiments/long_sentence_imagination/round_92/report.md).
+바쁜 세션에는 FIFO로 대기한다. 실행 중 보충은
 `[self:task]{op:"steer",ref:$a.task_ref,message:"출처 날짜도 확인해줘",request_id:"dates"}`로
 보낸다. accepted는 접수이며 실제 배달·처리와 구별한다. 부모 에이전트 지시는 사용자
 권한으로 승격되지 않는다. 부모 완료 기록은 소유 자식 종료를 기다리며 취소는 그 트리에만

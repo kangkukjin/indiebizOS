@@ -1,0 +1,761 @@
+{
+  "baseline": "33262b74",
+  "training_closed": {
+    "ended_at": "2026-10-22T17:45:35.996352+09:00",
+    "baseline": "33262b74",
+    "program_cases": 11,
+    "all_workers_drained": true,
+    "tests": {
+      "passed": 21,
+      "failed": 5
+    },
+    "live_model_calls": 0
+  },
+  "cases": {
+    "baseline_final": [
+      {
+        "case": "test_duplicate_request_rejects_changed_contract_before_new_work[allowed]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "observed_model_invocations": 1,
+        "origins": [
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed"
+        ]
+      },
+      {
+        "case": "test_duplicate_request_rejects_changed_contract_before_new_work[context]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "observed_model_invocations": 1,
+        "origins": [
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed"
+        ]
+      },
+      {
+        "case": "test_duplicate_request_rejects_changed_contract_before_new_work[message]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "observed_model_invocations": 1,
+        "origins": [
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_preserves_structured_context_and_failure[fail A]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "same_worker": true,
+            "new_task": true
+          }
+        ],
+        "seen": [
+          {
+            "session": "5f6d010f30d046c3bd4faa193ceeef0b",
+            "message": "fail A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n```",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "5f6d010f30d046c3bd4faa193ceeef0b",
+            "message": "앞 판본과 유지 조건을 확인하고 후속 처리해 줘",
+            "history": [
+              {
+                "role": "user",
+                "content": "fail A"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "failed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_preserves_structured_context_and_failure[review A]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "same_worker": true,
+            "new_task": true
+          }
+        ],
+        "seen": [
+          {
+            "session": "29e1bc559f6f47b08677b47b831dbc15",
+            "message": "review A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n```",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "29e1bc559f6f47b08677b47b831dbc15",
+            "message": "앞 판본과 유지 조건을 확인하고 후속 처리해 줘",
+            "history": [
+              {
+                "role": "user",
+                "content": "review A"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"type\": \"tool_result\", \"name\": \"probe\", \"input\": {}, \"result\": \"review A\\n\\n[context — 위임자가 준 구조화 맥락]\\n```json\\n{\\\"revision\\\": 7, \\\"policy\\\": \\\"원본 보존\\\", \\\"budget\\\": 3200000}\\n``` evidence\"}"
+              },
+              {
+                "role": "assistant",
+                "content": "review A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n``` result"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_reports_failed_attempt_even_without_final_response[fail A-SOURCE_UNAVAILABLE]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "seen": [
+          {
+            "session": "9c4a3b1ed6874eba89909e11c57e59e5",
+            "message": "fail A",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "9c4a3b1ed6874eba89909e11c57e59e5",
+            "message": "retry",
+            "history": [
+              {
+                "role": "user",
+                "content": "fail A"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "failed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_reports_failed_attempt_even_without_final_response[raise A-TRANSPORT_LOST]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "seen": [
+          {
+            "session": "94671440094146a6a82670bd4eabd965",
+            "message": "raise A",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "94671440094146a6a82670bd4eabd965",
+            "message": "retry",
+            "history": [
+              {
+                "role": "user",
+                "content": "raise A"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "failed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[duplicate]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [
+              "task_worker_1dd3b542d7354e7da1fe3166e834e70a",
+              "task_worker_2491d37c6bc84c4d900291e1c29f34fd",
+              "task_worker_1dd3b542d7354e7da1fe3166e834e70a"
+            ],
+            "result_states": [
+              "succeeded",
+              "succeeded",
+              "succeeded"
+            ]
+          }
+        ],
+        "observed_model_invocations": 2,
+        "origins": [
+          "training",
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[empty]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [],
+            "result_states": []
+          }
+        ],
+        "observed_model_invocations": 0,
+        "origins": [],
+        "pending_children_at_close": 0,
+        "closed_child_states": []
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[failure]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [
+              "task_worker_a9a863e49b684041acdb748b019d23c3",
+              "task_worker_25c8ded48f5e4c5485c65cdf94630246"
+            ],
+            "result_states": [
+              "succeeded",
+              "failed"
+            ]
+          }
+        ],
+        "observed_model_invocations": 2,
+        "origins": [
+          "training",
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "failed"
+        ]
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[reverse]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [
+              "task_worker_37df034d7cf64e8c9c04acb53d2e66e0",
+              "task_worker_90eed6c3206243f6b776f58ab74bd846"
+            ],
+            "result_states": [
+              "succeeded",
+              "succeeded"
+            ]
+          }
+        ],
+        "observed_model_invocations": 2,
+        "origins": [
+          "training",
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "completed"
+        ]
+      }
+    ],
+    "final_programs": [
+      {
+        "case": "test_duplicate_request_rejects_changed_contract_before_new_work[allowed]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "observed_model_invocations": 1,
+        "origins": [
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed"
+        ]
+      },
+      {
+        "case": "test_duplicate_request_rejects_changed_contract_before_new_work[context]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "observed_model_invocations": 1,
+        "origins": [
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed"
+        ]
+      },
+      {
+        "case": "test_duplicate_request_rejects_changed_contract_before_new_work[message]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "observed_model_invocations": 1,
+        "origins": [
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_preserves_structured_context_and_failure[fail A]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "same_worker": true,
+            "new_task": true
+          }
+        ],
+        "seen": [
+          {
+            "session": "1ec7d7af77b94bae81cf3b4ac3ad1fdb",
+            "message": "fail A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n```",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "1ec7d7af77b94bae81cf3b4ac3ad1fdb",
+            "message": "앞 판본과 유지 조건을 확인하고 후속 처리해 줘",
+            "history": [
+              {
+                "role": "user",
+                "content": "fail A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n```"
+              },
+              {
+                "role": "assistant",
+                "content": "[이전 실행 종료] {\"task_id\": \"task_worker_6a4f8d1e961e4e4f897c9457dc117d5d\", \"status\": \"failed\", \"result\": \"SOURCE_UNAVAILABLE: revision 7\"}"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "failed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_preserves_structured_context_and_failure[review A]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "same_worker": true,
+            "new_task": true
+          }
+        ],
+        "seen": [
+          {
+            "session": "db86fdf15c4a4b768d37caa79deb0923",
+            "message": "review A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n```",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "db86fdf15c4a4b768d37caa79deb0923",
+            "message": "앞 판본과 유지 조건을 확인하고 후속 처리해 줘",
+            "history": [
+              {
+                "role": "user",
+                "content": "review A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n```"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"type\": \"tool_result\", \"name\": \"probe\", \"input\": {}, \"result\": \"review A\\n\\n[context — 위임자가 준 구조화 맥락]\\n```json\\n{\\\"revision\\\": 7, \\\"policy\\\": \\\"원본 보존\\\", \\\"budget\\\": 3200000}\\n``` evidence\"}"
+              },
+              {
+                "role": "assistant",
+                "content": "review A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\", \"budget\": 3200000}\n``` result"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_reports_failed_attempt_even_without_final_response[fail A-SOURCE_UNAVAILABLE]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "seen": [
+          {
+            "session": "daccb92cbf1c49e78e3655be67ed3c91",
+            "message": "fail A",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "daccb92cbf1c49e78e3655be67ed3c91",
+            "message": "retry",
+            "history": [
+              {
+                "role": "user",
+                "content": "fail A"
+              },
+              {
+                "role": "assistant",
+                "content": "[이전 실행 종료] {\"task_id\": \"task_worker_0f6328aae499405695905f9481f8f440\", \"status\": \"failed\", \"result\": \"SOURCE_UNAVAILABLE: revision 7\"}"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "failed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_followup_reports_failed_attempt_even_without_final_response[raise A-TRANSPORT_LOST]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null
+          }
+        ],
+        "seen": [
+          {
+            "session": "583a0294fca542b9932adbfcf95be9a6",
+            "message": "raise A",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "583a0294fca542b9932adbfcf95be9a6",
+            "message": "retry",
+            "history": [
+              {
+                "role": "user",
+                "content": "raise A"
+              },
+              {
+                "role": "assistant",
+                "content": "[이전 실행 종료] {\"task_id\": \"task_worker_66e5c84aa1304fd7ac2c5371b40ef2ef\", \"status\": \"failed\", \"result\": \"TRANSPORT_LOST: revision 9\"}"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 2,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "failed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[duplicate]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [
+              "task_worker_e2defbbc054949d288155d158b74a60b",
+              "task_worker_99d86e1ed6514143b1a7aa9397936b57",
+              "task_worker_e2defbbc054949d288155d158b74a60b"
+            ],
+            "result_states": [
+              "succeeded",
+              "succeeded",
+              "succeeded"
+            ]
+          }
+        ],
+        "observed_model_invocations": 2,
+        "origins": [
+          "training",
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[empty]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [],
+            "result_states": []
+          }
+        ],
+        "observed_model_invocations": 0,
+        "origins": [],
+        "pending_children_at_close": 0,
+        "closed_child_states": []
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[failure]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [
+              "task_worker_e7837b363a044effb76543f20ea0c5df",
+              "task_worker_54bbd652f7274ca398381a4fe59aef9b"
+            ],
+            "result_states": [
+              "succeeded",
+              "failed"
+            ]
+          }
+        ],
+        "observed_model_invocations": 2,
+        "origins": [
+          "training",
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "failed"
+        ]
+      },
+      {
+        "case": "test_parallel_program_preserves_receipts_and_terminal_results[reverse]",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "receipt_tasks": [
+              "task_worker_4f155e3fd1ae40b38341a490fcf3e89b",
+              "task_worker_52cfbdea85e64c4a86f44c5c93960414"
+            ],
+            "result_states": [
+              "succeeded",
+              "succeeded"
+            ]
+          }
+        ],
+        "observed_model_invocations": 2,
+        "origins": [
+          "training",
+          "training"
+        ],
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "completed"
+        ]
+      },
+      {
+        "case": "test_queued_followup_keeps_prior_context_without_repeating_other_worker",
+        "drained": true,
+        "executions": [
+          {
+            "check_ok": true,
+            "success": true,
+            "run_id": null,
+            "same_worker": true,
+            "new_task": true
+          }
+        ],
+        "seen": [
+          {
+            "session": "198240ab1d19456297442b7e47f8bdac",
+            "message": "slow A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\"}\n```",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "9c1f2127f2e84f21909bc20a1b91c8c9",
+            "message": "other B\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 99}\n```",
+            "history": [],
+            "origin": "training"
+          },
+          {
+            "session": "198240ab1d19456297442b7e47f8bdac",
+            "message": "continue A",
+            "history": [
+              {
+                "role": "user",
+                "content": "slow A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\"}\n```"
+              },
+              {
+                "role": "assistant",
+                "content": "{\"type\": \"tool_result\", \"name\": \"probe\", \"input\": {}, \"result\": \"slow A\\n\\n[context — 위임자가 준 구조화 맥락]\\n```json\\n{\\\"revision\\\": 7, \\\"policy\\\": \\\"원본 보존\\\"}\\n``` evidence\"}"
+              },
+              {
+                "role": "assistant",
+                "content": "slow A\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{\"revision\": 7, \"policy\": \"원본 보존\"}\n``` result"
+              }
+            ],
+            "origin": "training"
+          }
+        ],
+        "observed_model_invocations": 3,
+        "pending_children_at_close": 0,
+        "closed_child_states": [
+          "completed",
+          "completed",
+          "completed"
+        ]
+      }
+    ]
+  },
+  "retention_followup": {
+    "initial": "1 failed: history empty after terminal task row removed",
+    "repair": "failure/cancellation result recorded atomically in worker.finished",
+    "related": "83 passed in 22.82s"
+  },
+  "verification": {
+    "at": "2026-10-22T18:00:22.046899+09:00",
+    "sha256": {
+      "backend/cognition/task_workers.py": "095b1aea436a01ee8796c74cf4a5fe26c57da235638f1219feff63bcd31bdd45",
+      "backend/datastore/task_worker_store.py": "2412b8d6b56741ad41208bf7e791b5ed0ce804d8a416e91ca8c3e1a2d63aa529",
+      "backend/test_task_workers.py": "4f1a633a49c837c756c3b17e351a4287e306448bc18d55f526f09efae3a2fbc9",
+      "backend/test_task_worker_store.py": "0584eb65eba950e88d9c218536ee186d5b441c08c6443ee185fe04934c4584cb"
+    },
+    "full_regression": {
+      "passed": 11493,
+      "skipped": 1,
+      "seconds": 191.0
+    },
+    "related": {
+      "passed": 83,
+      "seconds": 22.82
+    },
+    "system": {
+      "passed": 24,
+      "seconds": 147.21,
+      "file": "backend/test_restart_process.py"
+    }
+  },
+  "activation": {
+    "request_id": "8a20052ddf8b93426cf6d6f47204676c",
+    "outcome": "restarted",
+    "generation": "5b6a5054d54f0c317aa5f0a50ba3444b",
+    "effect_unknown": false,
+    "finished_at": 1792659792.349906,
+    "health": "healthy",
+    "live_turns": 0,
+    "observed_at": "2026-10-22T18:04:46.684114+09:00"
+  }
+}

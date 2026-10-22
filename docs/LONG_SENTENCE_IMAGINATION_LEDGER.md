@@ -4,6 +4,20 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 93회차 — 즉석 스크립트 작성·수정·원본 재현 (2026-10-22, 훈련·수리 완료)
+
+18:11 시작·상한19:11, 기준선18:16:53 종료 후 수리. 구현 도움을 받은 불변식 회차다.
+실제 IBL/Python과 HTTP origin:training으로 CSV 기본·역순·빈자료·부분실패의 합계41과
+한글/따옴표/CRLF 보존·저장/재독을 확인했다. 부분수정21→22·옛기록재현21도 통과.
+**L93-1** 재현에 미기록 모듈이 섞여7→99로 달라짐, **L93-2** 검사 뒤 코드/stdin 변경을
+실행부에 전달함을 재현했다. 코드 전체 파일 집합·지문을 확인하고 검증한 바이트만 복사하도록 수리.
+기준선 중복제외5통과/6실패→관련31통과, 동일 변조기록 CLI거절·새실행0.
+비system11504통과/1건너뜀·Python라이브러리system49통과, 빌드정합·Android파생·층가드 통과.
+실행모델호출0·작성자토큰미측정. 독립AI·전체system·전체 시간/토큰 절감은 미검증.
+[과제](experiments/long_sentence_imagination/round_93/task.md) ·
+[보고서](experiments/long_sentence_imagination/round_93/report.md) ·
+[증거](experiments/long_sentence_imagination/round_93/evidence.json).
+
 ## 92회차 — 위임·병렬의 중복 접수와 후속 실패 불변식 (2026-10-22, 훈련·수리 완료)
 
 17:39 시작·상한18:39, 기준선33262b74. 실제 IBL/위임/작업 원장과 모델 대역으로

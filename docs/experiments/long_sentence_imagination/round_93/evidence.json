@@ -1,0 +1,78 @@
+{
+  "baseline_commit": "a222f2647a0c90ee792f4d4dc129c033db504763",
+  "training_closed": "2026-10-22T18:16:53.542217+09:00",
+  "http": {
+    "origin": "training",
+    "run_id": "d46d209ea410457f857121bdaff9e3da",
+    "success": true,
+    "elapsed_ms": 1447,
+    "total": 41,
+    "batches": [
+      {
+        "id": "A",
+        "ok": true
+      },
+      {
+        "id": "B",
+        "ok": true
+      },
+      {
+        "id": "C",
+        "ok": false
+      }
+    ],
+    "saved_read_matches": true
+  },
+  "baseline_unique": {
+    "passed": 5,
+    "failed": 6
+  },
+  "replay_before": {
+    "before": {
+      "amount": 7
+    },
+    "reproduction": {
+      "amount": 99
+    },
+    "before_sources": {
+      "main.py": "8d1ff9fdf3d014b70a62e88ae1353161b019a2957c0c67d7f778cae9f14cd2bc"
+    },
+    "reproduction_sources": {
+      "main.py": "8d1ff9fdf3d014b70a62e88ae1353161b019a2957c0c67d7f778cae9f14cd2bc",
+      "optional_rule.py": "d6e544c8c487640da0b4453027f1bdc8bdf2b2c67b068f97e65a2160a0c21def"
+    }
+  },
+  "replay_after": {
+    "exit_code": 1,
+    "result": {
+      "ok": false,
+      "code": "SCRIPT_RECORD_INVALID",
+      "error": "실행 기록이 없거나 지문과 일치하지 않습니다."
+    },
+    "new_execution_count": 0
+  },
+  "verification": {
+    "module": {
+      "passed": 31,
+      "seconds": 19.51
+    },
+    "non_system": {
+      "passed": 11504,
+      "skipped": 1,
+      "seconds": 193.68
+    },
+    "python_libraries": {
+      "passed": 49,
+      "seconds": 50.26
+    },
+    "selected_files": 717,
+    "all_files": 766
+  },
+  "verified_code_sha256": {
+    "backend/base/file_script.py": "cccbc803f97a8fea07c5654e237de9008d2004edab768cba54caa28bae0d9cd3",
+    "backend/test_file_script.py": "43a9d948a978f93594071f1a4aac7b7e19d09d65c787d4321c18a3702c63710e"
+  },
+  "program_model_calls": 0,
+  "author_tokens": null,
+  "independent_ai": false
+}

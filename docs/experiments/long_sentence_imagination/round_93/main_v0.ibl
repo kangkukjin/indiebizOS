@@ -1,0 +1,16 @@
+#!ibl edition=2
+[def:묶음읽기]($묶음,$경로) {
+  [try] {
+    $값=[self:script]{path:$경로,args:{csv:$묶음.csv}}
+    return {id:$묶음.id,ok:true,items:$값.items,error:null}
+  } [catch] {
+    return {id:$묶음.id,ok:false,items:[],error:$error}
+  }
+}
+$파일=[self:write]{path:"~turn/입고.py",content:$본문}
+$결과=$묶음들 >> [table:each] { return [fn:묶음읽기]{묶음:$it,경로:$파일.path} }
+$합계=reduce($결과,0,($합,$묶음)=>$합+reduce($묶음.items,0,($금액,$행)=>$금액+$행.amount))
+$보고={batches:$결과,total:$합계}
+[self:write]{path:$출력,content:json($보고)}
+$재독=[self:read]{path:$출력}
+return {report:$보고,saved:$재독}

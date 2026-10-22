@@ -2834,3 +2834,5 @@
 [2026-10-22 17:11:59] PROJECT_CREATED: L91_repair_ai (ID: L91_repair_ai)
 2026-10-22 | 긴문장91회차 위임 훈련·수리: HTTP 에이전트 명령에 대화 세션 소유권을 연결해 scope:task/worker_ref 후속을 복구하고, 부모 모델이 먼저 끝나도 소유 자식 종료까지 waiting_children으로 마감 대기. 훈련/일반 히스토리 분리 유지. 전체 IBL4단계159대조·실제 AI 위임/재위임/후속2턴80대조, 비system11472통과/1건너뜀·재기동24통과. 실제 시간·토큰은 증가해 최적화로 보고하지 않음. docs/experiments/long_sentence_imagination/round_91/report.md.
 2026-10-22 | 긴문장92회차 위임·병렬 불변식 훈련 및 수리: 후속 세션의 구조화 context 누락·최종 응답 없는 실패/취소 이유 누락·자식 대기 중 중복 종료의 최초 결과 덮어쓰기를 수리. 구판 맥락은 task/turn에서 읽기 복원, 새 실패 이유는 종료 사건에 원자 저장해 작업 행 정리 뒤에도 유지. 실제 IBL+모델대역, 기준선5실패→최종관련83통과·비system11493통과/1건너뜀·재기동24통과. 실제 모델 협업 비용 절감은 미측정. docs/experiments/long_sentence_imagination/round_92/report.md.
+
+2026-10-22 | 긴문장93회차 즉석 스크립트 훈련·수리: CSV 작성/실행/실패격리/부분수정/원본재현 확인. 보존 기록의 추가 모듈 혼입 및 검사 후 코드·stdin 변경 허용을 수리해 파일 집합·지문과 실제 복사 바이트를 일치시킴. 기준선6실패→관련31통과·비system11504통과/1건너뜀·Python라이브러리49통과. 독립AI·시간/토큰 절감은 미측정. docs/experiments/long_sentence_imagination/round_93/report.md.

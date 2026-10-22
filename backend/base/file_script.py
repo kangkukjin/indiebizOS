@@ -216,6 +216,38 @@ def _execute(source, stdin, workspace, *, interpreter=None, timeout=300,
             'error': error, 'record': str(directory), 'meta': meta}
 
 
+def _record_payload(directory, meta):
+    """Read exactly the recorded code and input; never include later additions."""
+    try:
+        source = directory / 'source'
+        if source.is_symlink() or not source.is_dir():
+            raise ValueError('source directory')
+        files, total = {}, 0
+        for path in source.rglob('*'):
+            if path.is_symlink():
+                raise ValueError('source link')
+            if path.is_dir():
+                continue
+            if not path.is_file() or path.stat().st_nlink != 1:
+                raise ValueError('source file')
+            total += path.stat().st_size
+            if total > MAX_CODE_BYTES:
+                raise ValueError('source size')
+            files[path.relative_to(source).as_posix()] = path.read_bytes()
+        hashes = {name: digest(raw) for name, raw in files.items()}
+        if hashes != meta['source_hashes'] or meta['entry'] not in files:
+            raise ValueError('source fingerprint')
+        input_path = directory / 'stdin.json'
+        if input_path.is_symlink() or not input_path.is_file():
+            raise ValueError('stdin file')
+        stdin = input_path.read_bytes()
+        if digest(stdin) != meta['stdin_hash']:
+            raise ValueError('stdin fingerprint')
+        return files, stdin
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise ScriptError('SCRIPT_RECORD_INVALID', '실행 기록이 없거나 지문과 일치하지 않습니다.') from exc
+
+
 def inspect_record(directory):
     """Original input is never reconstructed from a masked display."""
     directory = Path(directory).resolve()
@@ -225,12 +257,7 @@ def inspect_record(directory):
             raise ValueError('protocol')
         if time.time() >= meta['expires_at']:
             raise ScriptError('SCRIPT_RECORD_EXPIRED', '원문 보존 기간이 끝났습니다. 마스킹본으로 재현하지 않습니다.')
-        for relative, expected in meta['source_hashes'].items():
-            path = directory / 'source' / relative
-            if not path.resolve().is_relative_to(directory / 'source') or path.is_symlink() or digest(path.read_bytes()) != expected:
-                raise ValueError('source fingerprint')
-        if digest((directory / 'stdin.json').read_bytes()) != meta['stdin_hash']:
-            raise ValueError('stdin fingerprint')
+        _record_payload(directory, meta)
         return meta
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise ScriptError('SCRIPT_RECORD_INVALID', '실행 기록이 없거나 지문과 일치하지 않습니다.') from exc
@@ -244,13 +271,20 @@ def reproduce(directory, *, check=None, env=None):
         raise ScriptError('SCRIPT_EFFECT_UNCERTAIN', '진행 중이거나 완료 불명인 실행은 재실행하지 않습니다.')
     if meta['state'] == 'interrupted':
         raise ScriptError('SCRIPT_EFFECT_UNCERTAIN', '중단된 실행의 외부 효과를 먼저 확인하세요.')
-    # Copy the recorded code to a new private working tree. Never edit evidence.
+    # Validate the bytes we will actually copy, not a prior observation followed
+    # by copytree (which could include changed input or unrecorded import code).
+    files, stdin = _record_payload(directory, meta)
     root = Path(meta['workspace']).parent / 'reproductions' / uuid.uuid4().hex
     root.mkdir(parents=True, mode=0o700)
-    shutil.copytree(directory / 'source', root / 'work')
-    result = execute(root / 'work' / meta['entry'], (directory / 'stdin.json').read_bytes(),
+    for name, raw in files.items():
+        target = root / 'work' / name
+        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        target.write_bytes(raw)
+        os.chmod(target, 0o600)
+    result = execute(root / 'work' / meta['entry'], stdin,
                      root / 'work', interpreter=meta['interpreter'], timeout=meta['timeout'],
-                     check=check, env=env, parent_execution=meta['execution_id'], cwd=meta['cwd'])
+                     check=check, env=env, parent_execution=meta['execution_id'], cwd=meta['cwd'],
+                     expected_hashes=meta['source_hashes'])
     return result
 
 

@@ -312,5 +312,109 @@ def test_described_authoring_examples_execute_in_both_modes(tmp_path):
     assert json.loads(proc.stdout) == {'value': 12}
 
 
+CSV_SCRIPT = '''import csv, io, json, os, sys
+from pathlib import Path
+args = json.load(sys.stdin)
+items = []
+for row in csv.DictReader(io.StringIO(args['csv'], newline='')):
+    items.append({'id': row['id'], 'note': row['note'],
+                  'amount': int(row['qty']) * int(row['price'])})
+print('parsed', len(items))
+Path(os.environ['INDIEBIZ_SCRIPT_RESULT']).write_text(
+    json.dumps({'items': items}, ensure_ascii=False), encoding='utf-8')
+'''
+
+
+@pytest.mark.parametrize('variant', ['normal', 'reverse', 'empty', 'failure'])
+def test_transient_csv_program_preserves_rows_and_failure(ibl, tmp_path, variant):
+    code = (ROOT / 'docs/experiments/long_sentence_imagination/round_93/main_v0.ibl').read_text()
+    batches = [
+        {'id': 'A', 'csv': 'id,qty,price,note\r\na,3,7,"한글\r\n두 줄"\r\n'},
+        {'id': 'B', 'csv': 'id,qty,price,note\r\nb,2,10,"따옴표 ""메모"""\r\n'},
+    ]
+    if variant == 'reverse':
+        batches.reverse()
+    if variant == 'empty':
+        batches = []
+    if variant == 'failure':
+        batches.append({'id': 'C', 'csv': 'id,qty,price,note\nc,??,9,미확인\n'})
+    destination = tmp_path / 'report.json'
+    out = ibl(code, {'본문': CSV_SCRIPT, '묶음들': batches, '출력': str(destination)})
+    assert out['success'], out
+    report = out['value']['report']
+    assert json.loads(destination.read_text()) == report
+    assert report['total'] == (0 if variant == 'empty' else 41)
+    assert [b['id'] for b in report['batches']] == [b['id'] for b in batches]
+    values = {b['id']: b for b in report['batches']}
+    if batches:
+        assert values['A']['items'] == [{'id': 'a', 'amount': 21, 'note': '한글\r\n두 줄'}]
+        assert values['B']['items'] == [{'id': 'b', 'amount': 20, 'note': '따옴표 "메모"'}]
+    if variant == 'failure':
+        assert values['C']['ok'] is False and values['C']['items'] == []
+        assert values['C']['error']['code'] == 'SCRIPT_EXIT'
+
+
+@pytest.mark.parametrize('change', ['extra_module', 'extra_package', 'code_directory_link', 'bytecode'])
+def test_reproduction_rejects_unrecorded_code_without_execution(tmp_path, change):
+    work, source = create(tmp_path)
+    first = file_script.execute(source, b'{"n":7}', work)
+    assert first['ok']
+    record = Path(first['record'])
+    if change == 'extra_module':
+        (record / 'source/extra.py').write_text('raise RuntimeError("unrecorded")\n')
+    elif change == 'extra_package':
+        (record / 'source/pkg').mkdir()
+        (record / 'source/pkg/__init__.py').write_text('raise RuntimeError("unrecorded")\n')
+    elif change == 'code_directory_link':
+        foreign = tmp_path / 'foreign'
+        foreign.mkdir()
+        (foreign / 'module.py').write_text('raise RuntimeError("unrecorded")\n')
+        (record / 'source/pkg').symlink_to(foreign, target_is_directory=True)
+    else:
+        (record / 'source/extra.pyc').write_bytes(b'unrecorded bytecode')
+    with pytest.raises(file_script.ScriptError, match='지문'):
+        file_script.reproduce(record)
+    assert not (work.parent / 'reproductions').exists()
+
+
+@pytest.mark.parametrize('change', ['source', 'stdin'])
+def test_reproduction_rechecks_copied_bytes_before_execution(tmp_path, monkeypatch, change):
+    work, source = create(tmp_path)
+    first = file_script.execute(source, b'{"n":7}', work)
+    record = Path(first['record'])
+    original_inspect = file_script.inspect_record
+
+    def inspect_then_change(directory):
+        meta = original_inspect(directory)
+        target = record / ('source/분석.py' if change == 'source' else 'stdin.json')
+        target.write_text('raise RuntimeError("changed")' if change == 'source' else '{"n":99}')
+        return meta
+
+    monkeypatch.setattr(file_script, 'inspect_record', inspect_then_change)
+    monkeypatch.setattr(file_script, 'execute', lambda *a, **k: pytest.fail('changed bytes executed'))
+    with pytest.raises(file_script.ScriptError, match='지문'):
+        file_script.reproduce(record)
+
+
+def test_script_local_module_edit_is_new_attempt_and_replay_keeps_original(ibl):
+    helper = 'def amount(row):\n    return int(row["qty"]) * int(row["price"])\n'
+    script = CSV_SCRIPT.replace('items = []', 'from rule import amount\nitems = []').replace(
+        "int(row['qty']) * int(row['price'])", 'amount(row)')
+    data = {'csv': 'id,qty,price,note\na,3,7,원문\n'}
+    first = ibl('''[self:write]{path:"~turn/rule.py",content:$helper}
+        [self:write]{path:"~turn/main.py",content:$source}
+        return [self:script]{path:"~turn/main.py",args:$data}''',
+        {'helper': helper, 'source': script, 'data': data})
+    assert first['success'] and first['value']['items'][0]['amount'] == 21, first
+    old_record = next((workspace().parent / 'executions').iterdir())
+    updated = ibl('''[self:edit]{path:"~turn/rule.py",old_string:$old,new_string:$new}
+        return [self:script]{path:"~turn/main.py",args:$data}''',
+        {'old': '* int(row["price"])', 'new': '* int(row["price"]) + 1', 'data': data})
+    assert updated['success'] and updated['value']['items'][0]['amount'] == 22, updated
+    original = file_script.reproduce(old_record)
+    assert original['ok'] and original['value'] == first['value']
+    assert original['meta']['source_hashes'] == file_script.inspect_record(old_record)['source_hashes']
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

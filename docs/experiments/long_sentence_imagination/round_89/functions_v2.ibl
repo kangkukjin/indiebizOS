@@ -1,0 +1,118 @@
+#!ibl edition=2
+# Each branch owns its own artifact. Final report has one writer.
+[def:시각]() { return [self:time]{format:"%Y-%m-%dT%H:%M:%S.%f%z"} }
+[def:보존]($id,$value,$started,$output,$sources) {
+  $path=$output+"/"+$id+".json"
+  $saved=[self:write]{path:$path,content:json($value)}
+  $ended=[fn:시각]{}
+  return {id:$id,value:$value,started:$started,ended:$ended,artifact:$saved.path,sources:$sources,reused:false}
+}
+[def:행판정]($r) {
+  return {id:$r.id,source:$r,consent:$r.consent!="yes",checksum:$r.checksum!="pass",search:not $r.searchable,access:not $r.accessible,
+    eligible:$r.consent=="yes" and $r.checksum=="pass" and $r.searchable and $r.accessible}
+}
+[def:자료검증]($source,$expected,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  $doc=[self:read]{path:$source+"/records.json"}
+  $rows=$doc.data.items
+  $old_rows=[]
+  [if:has($old,"value")] { $old_rows=$old.value.rows }
+  $index=from_entries(map($old_rows,($r)=>[$r.id,$r]))
+  $classified=map($rows,($r)=>has($index,$r.id) and json(get($index,$r.id).source)==json($r) ? get($index,$r.id) : [fn:행판정]{r:$r})
+  $reused=filter($rows,($r)=>has($index,$r.id) and json(get($index,$r.id).source)==json($r))
+  $ids=from_entries(map($rows,($r)=>[$r.id,true]))
+  $missing=filter($expected,($id)=>not has($ids,$id))
+  $bad=filter($classified,($r)=>not $r.eligible)
+  $value={version:$doc.data.version,rows:$classified,observed:len($rows),expected:len($expected),missing:$missing,
+    blocked:$bad,eligible:len($rows)-len($bad),complete:len($missing)==0 and len($rows)==len($expected),
+    consent:len(filter($classified,($r)=>$r.consent)),checksum:len(filter($classified,($r)=>$r.checksum)),
+    search:len(filter($classified,($r)=>$r.search)),access:len(filter($classified,($r)=>$r.access)),
+    computed_rows:len($rows)-len($reused),reused_rows:len($reused)}
+  return [fn:보존]{id:"A",value:$value,started:$start,output:$output,sources:[$source+"/records.json"]}
+}
+[def:비용검토]($source,$policy,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  $docs=([self:read]{path:$source+"/tasks.json"}) & ([self:read]{path:$source+"/options.json"})
+  $tasks=$docs[0].data.items
+  $active=filter($tasks,($t)=>not ($policy.cancel_optional and $t.optional))
+  $cost=reduce($active,0,($s,$t)=>$s+$t.cost)
+  $value={policy:$policy,cost:$cost,budget:$policy.budget,overrun:max(0,$cost-$policy.budget),within_budget:$cost<=$policy.budget,
+    items:map($active,($t)=>{id:$t.id,cost:$t.cost,optional:$t.optional}),
+    cancelled:map(filter($tasks,($t)=>$policy.cancel_optional and $t.optional),($t)=>$t.id),
+    cost_note:$docs[1].data.cost_note,
+    allowed_options:map(filter($docs[1].data.items,($o)=>($policy.external_saas or not $o.external_saas) and ($policy.face or not $o.face)),($o)=>$o.id)}
+  return [fn:보존]{id:"B",value:$value,started:$start,output:$output,sources:[$source+"/tasks.json",$source+"/options.json"]}
+}
+[def:일정검토]($source,$policy,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  $docs=([self:read]{path:$source+"/tasks.json"}) & ([self:read]{path:$source+"/receipts.json"})
+  $tasks=$docs[0].data.items
+  $receipts=$docs[1].data.items
+  $verified=map(filter($receipts,($r)=>$r.reported_done and $r.verified),($r)=>$r.task_id)
+  $reported=map(filter($receipts,($r)=>$r.reported_done),($r)=>$r.task_id)
+  $states=map($tasks,($t)=>{**$t,status:$policy.cancel_optional and $t.optional ? "cancelled" : $t.id in $verified ? "verified_done" : $t.id in $reported ? "unverified" : "planned"})
+  $done=map(filter($states,($t)=>$t.status=="verified_done"),($t)=>$t.id)
+  $pending=filter($states,($t)=>$t.status!="cancelled" and $t.status!="verified_done")
+  $ready=filter($pending,($t)=>all(map($t.depends,($id)=>$id in $done)))
+  $required=filter($states,($t)=>not $t.optional)
+  $streams=reduce($pending,[],($acc,$t)=>$t.stream in $acc ? $acc : $acc+[$t.stream])
+  $chains=map($streams,($s)=>{stream:$s,hours:reduce(filter($pending,($t)=>$t.stream==$s),0,($a,$t)=>$a+$t.hours)})
+  $value={policy:$policy,items:$states,ready:map($ready,($t)=>$t.id),done:$done,
+    required:len($required),required_done:len(filter($required,($t)=>$t.status=="verified_done")),
+    remaining_required:len(filter($required,($t)=>$t.status!="verified_done")),
+    unverified:map(filter($states,($t)=>$t.status=="unverified"),($t)=>$t.id),chains:$chains,
+    deadline:$policy.deadline,deadline_confirmed:false,deadline_missing:["시작일·가동일", "담당자 가용시간"]}
+  return [fn:보존]{id:"C",value:$value,started:$start,output:$output,sources:[$source+"/tasks.json",$source+"/receipts.json"]}
+}
+[def:운영조건]($source,$policy,$output,$reload,$old) {
+  [if:not $reload] { return {**$old,reused:true} }
+  $start=[fn:시각]{}
+  $doc=[self:read]{path:$source+"/project.json"}
+  $value={policy:$policy,expected:$doc.data.expected_records,gates:$doc.data.gates,acceptance:$doc.data.acceptance,status_rule:$doc.data.status_rule,publication:$doc.data.publication}
+  return [fn:보존]{id:"D",value:$value,started:$start,output:$output,sources:[$source+"/project.json"]}
+}
+[def:보완대상]($a,$d,$output) {
+  $start=[fn:시각]{}
+  assert $a.value.expected==$d.value.expected,"expected record count mismatch"
+  $issues=map($a.value.blocked,($r)=>{id:$r.id,status:"failed",consent:$r.consent,checksum:$r.checksum,search:$r.search,access:$r.access,source:$a.artifact})
+  $unknown=map($a.value.missing,($id)=>{id:$id,status:"unverified",source:$a.artifact})
+  $value={record_version:$a.value.version,gates:$d.value.gates,issues:$issues,unknown:$unknown,
+    records_ready:$a.value.complete and $a.value.eligible==$a.value.expected}
+  return [fn:보존]{id:"E",value:$value,started:$start,output:$output,sources:[$a.artifact,$d.artifact]}
+}
+[def:자료운영합류]($source,$policy,$expected,$output,$reload_a,$reload_d,$old_a,$old_d,$parallel) {
+  [if:$parallel] {
+    $ad=([fn:자료검증]{source:$source,expected:$expected,output:$output,reload:$reload_a,old:$old_a}) & ([fn:운영조건]{source:$source,policy:$policy,output:$output,reload:$reload_d,old:$old_d})
+    $a=$ad[0]; $d=$ad[1]
+  } [else] {
+    $a=[fn:자료검증]{source:$source,expected:$expected,output:$output,reload:$reload_a,old:$old_a}
+    $d=[fn:운영조건]{source:$source,policy:$policy,output:$output,reload:$reload_d,old:$old_d}
+  }
+  $e=[fn:보완대상]{a:$a,d:$d,output:$output}
+  return {A:$a,D:$d,E:$e}
+}
+[def:최종검토]($ade,$b,$c,$policy,$output,$phase) {
+  $start=[fn:시각]{}
+  assert json($b.value.policy)==json($policy) and json($c.value.policy)==json($policy) and json($ade.D.value.policy)==json($policy),"policy revision mismatch"
+  $launch=$ade.E.value.records_ready and $b.value.within_budget and $c.value.required_done==$c.value.required
+  $actions=map($c.value.ready,($id)=>{task_id:$id,owner:filter($c.value.items,($t)=>$t.id==$id)[0].owner,kind:"착수 가능",source:$c.artifact})
+  $summary={phase:$phase,policy:$policy,observed:$ade.A.value.observed,eligible:$ade.A.value.eligible,failed:len($ade.A.value.blocked),missing:$ade.A.value.missing,
+    cost:$b.value.cost,overrun:$b.value.overrun,required_done:$c.value.required_done,remaining_required:$c.value.remaining_required,
+    cancelled:$b.value.cancelled,ready:$c.value.ready,launch_ready:$launch,review_complete:true,
+    block_reasons:{data_failed:len($ade.E.value.issues),data_unverified:len($ade.E.value.unknown),budget_overrun:$b.value.overrun,required_pending:$c.value.remaining_required},
+    actions:$actions,record_actions:$ade.E.value,deadline_confirmed:false}
+  $f=[fn:보존]{id:"F",value:$summary,started:$start,output:$output,sources:[$ade.E.artifact,$b.artifact,$c.artifact]}
+  $state={phase:$phase,policy:$policy,A:$ade.A,B:$b,C:$c,D:$ade.D,E:$ade.E,F:$f}
+  $body=json($state)
+  $saved=[self:write]{path:$output+"/state.json",content:$body}
+  $read=[self:read]{path:$saved.path,format:"text"}
+  assert $read.text==$body,"state roundtrip mismatch"
+  $report=f"인수 검토 ${phase}\n자료 관측 ${summary.observed}/1800, 적합 ${summary.eligible}, 실패 ${summary.failed}, 미확인 ${json($summary.missing)}\n비용 ${summary.cost}원 / 예산 ${policy.budget}원 / 초과 ${summary.overrun}원\n필수 작업 검증완료 ${summary.required_done}/60, 잔여 ${summary.remaining_required}, 취소 ${json($summary.cancelled)}\n우선 착수 작업 ${json($summary.actions)}\n자료 보완·미확인 확인 목록: ${ade.E.artifact}\n예산 초과 시 필수 작업과 검증 기준을 유지하고 자금·비용 변경 결정을 요청한다.\n기한 ${policy.deadline}: 시작일·가동일·담당자 가용시간이 없어 준수 확정 불가.\n개통 가능 ${launch}; 이번 검토 완료.\n근거: ${ade.A.artifact}, ${b.artifact}, ${c.artifact}, ${ade.D.artifact}\n"
+  $written=[self:write]{path:$output+"/report.txt",content:$report}
+  $reread=[self:read]{path:$written.path,format:"text"}
+  assert $reread.text==$report,"report roundtrip mismatch"
+  return {phase:$phase,state_path:$saved.path,report_path:$written.path,summary:$summary}
+}

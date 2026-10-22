@@ -1,0 +1,976 @@
+{
+  "start": {
+    "start": "2026-10-22T13:22:00+09:00",
+    "deadline": "2026-10-22T14:22:00+09:00",
+    "head": "e8dd6305528cedcf340c42cf6344842f79771b3e",
+    "synthetic": true
+  },
+  "head_at_capture": "e8dd6305528cedcf340c42cf6344842f79771b3e",
+  "closure": {
+    "last_ai_ended": "2026-10-22T13:41:05.547436+09:00",
+    "agent_stopped": {
+      "status": "stopped",
+      "agent_id": "agent_e2a414b1"
+    },
+    "health": {
+      "status": "healthy",
+      "timestamp": "2026-10-22T13:41:49.461286",
+      "live_turns": []
+    },
+    "head": "e8dd6305528cedcf340c42cf6344842f79771b3e",
+    "recorded_at": "2026-10-22T13:46:25.258622+09:00"
+  },
+  "trainer_checks": {
+    "passed": 862,
+    "failed": 0
+  },
+  "ai_checks": {
+    "passed": 259,
+    "failed": 0
+  },
+  "benchmark": {
+    "sequential": {
+      "labels": [
+        "seq1",
+        "seq2",
+        "seq3"
+      ],
+      "seconds": [
+        6.524773167446256,
+        6.430919333361089,
+        6.612769500352442
+      ],
+      "median": 6.524773167446256
+    },
+    "parallel": {
+      "labels": [
+        "par2",
+        "par3",
+        "par4"
+      ],
+      "seconds": [
+        6.684534916654229,
+        6.710611582733691,
+        6.804320749826729
+      ],
+      "median": 6.710611582733691
+    },
+    "optimized_sequential": {
+      "labels": [
+        "opt_seq1",
+        "opt_seq2",
+        "opt_seq3"
+      ],
+      "seconds": [
+        2.518996249884367,
+        2.359080375172198,
+        2.514115583151579
+      ],
+      "median": 2.514115583151579
+    },
+    "optimized_parallel": {
+      "labels": [
+        "opt_par2",
+        "opt_par3",
+        "opt_par4"
+      ],
+      "seconds": [
+        2.7073490004986525,
+        2.660018125548959,
+        2.515668165870011
+      ],
+      "median": 2.660018125548959
+    }
+  },
+  "turns": [
+    {
+      "turn": "T1",
+      "task_id": "task_2d5d48ffdbaf48c09999c939029fe3ea",
+      "episodes": [
+        {
+          "id": 5169,
+          "total_ms": 230562,
+          "ended_at": "2026-10-22T13:29:38.915931"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 9007,
+          "output": 178,
+          "cache_read": 3968,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 140310,
+          "output": 3744,
+          "cache_read": 120572,
+          "cache_create": 19732
+        },
+        "execution": {
+          "input": 586186,
+          "output": 19377,
+          "cache_read": 502169,
+          "cache_create": 84003
+        },
+        "oneshot:evaluate": {
+          "input": 35521,
+          "output": 855,
+          "cache_read": 6117,
+          "cache_create": 29402
+        }
+      },
+      "tool_count": 6,
+      "full_tool_inputs": 6,
+      "planning_tool_count": 2,
+      "full_planning_inputs": 2,
+      "models": [
+        {
+          "role": "consciousness",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "execution_instance"
+        },
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "context_compacted": 0,
+      "evaluations": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "7653acd40846be599ddc260829d488a6a1855cbf0511d7726513cc336afd1521",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "totals": {
+        "input": 771024,
+        "output": 24154,
+        "cache_read": 632826,
+        "cache_create": 133137
+      },
+      "state": "succeeded",
+      "pending_children": 0,
+      "access_indicators_for_manual_review": [],
+      "artifact_run_started": "2026-10-22T13:28:15.653409+09:00",
+      "artifact_run_ended": "2026-10-22T13:28:15.661803+09:00",
+      "reused": null,
+      "recomputed": null
+    },
+    {
+      "turn": "T2",
+      "task_id": "task_f9da9f7d4c7e4d2cbb67f62f50c3ed52",
+      "episodes": [
+        {
+          "id": 5170,
+          "total_ms": 180552,
+          "ended_at": "2026-10-22T13:34:18.437768"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 13979,
+          "output": 75,
+          "cache_read": 4352,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 6540,
+          "output": 2349,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 644410,
+          "output": 17597,
+          "cache_read": 604558,
+          "cache_create": 39842
+        },
+        "oneshot:evaluate": {
+          "input": 33695,
+          "output": 711,
+          "cache_read": 6117,
+          "cache_create": 27576
+        }
+      },
+      "tool_count": 4,
+      "full_tool_inputs": 4,
+      "planning_tool_count": 0,
+      "full_planning_inputs": 0,
+      "models": [
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "context_compacted": 0,
+      "evaluations": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "3c2bcbe6e6693df3943d0f484237ea6fd2794d0847646c8aac3cc3066d243b10",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "totals": {
+        "input": 698624,
+        "output": 20732,
+        "cache_read": 616307,
+        "cache_create": 67418
+      },
+      "state": "succeeded",
+      "pending_children": 0,
+      "access_indicators_for_manual_review": [],
+      "artifact_run_started": "2026-10-22T13:33:14.862076+09:00",
+      "artifact_run_ended": "2026-10-22T13:33:14.865271+09:00",
+      "reused": [
+        "A_records",
+        "R_receipts"
+      ],
+      "recomputed": [
+        "C1_graph",
+        "D_operations",
+        "B_budget",
+        "C2_schedule",
+        "S_synthesis"
+      ]
+    },
+    {
+      "turn": "T3",
+      "task_id": "task_8e24eae5b66f4dd6bfa5e54b5401d44a",
+      "episodes": [
+        {
+          "id": 5171,
+          "total_ms": 151767,
+          "ended_at": "2026-10-22T13:37:52.687295"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 15384,
+          "output": 61,
+          "cache_read": 4352,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 8481,
+          "output": 2366,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 1010233,
+          "output": 14633,
+          "cache_read": 968964,
+          "cache_create": 41257
+        },
+        "oneshot:evaluate": {
+          "input": 53163,
+          "output": 681,
+          "cache_read": 6117,
+          "cache_create": 47044
+        }
+      },
+      "tool_count": 5,
+      "full_tool_inputs": 5,
+      "planning_tool_count": 0,
+      "full_planning_inputs": 0,
+      "models": [
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "context_compacted": 0,
+      "evaluations": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "8983fab254f4522bf3aaeb435d1472a859e1d56bb8539cfdbd41237f04522381",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "totals": {
+        "input": 1087261,
+        "output": 17741,
+        "cache_read": 980713,
+        "cache_create": 88301
+      },
+      "state": "succeeded",
+      "pending_children": 0,
+      "access_indicators_for_manual_review": [],
+      "artifact_run_started": "2026-10-22T13:36:51.505562+09:00",
+      "artifact_run_ended": "2026-10-22T13:36:51.515525+09:00",
+      "reused": [
+        "R_receipts",
+        "C2_schedule",
+        "C1_graph",
+        "B_budget"
+      ],
+      "recomputed": [
+        "A_records",
+        "D_operations",
+        "S_synthesis"
+      ]
+    },
+    {
+      "turn": "T4",
+      "task_id": "task_65f144485cbd43fc8108b8a380f3365d",
+      "episodes": [
+        {
+          "id": 5172,
+          "total_ms": 156846,
+          "ended_at": "2026-10-22T13:41:05.547436"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 15697,
+          "output": 122,
+          "cache_read": 4352,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 10223,
+          "output": 2770,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 831994,
+          "output": 15429,
+          "cache_read": 792120,
+          "cache_create": 39866
+        },
+        "oneshot:evaluate": {
+          "input": 51980,
+          "output": 690,
+          "cache_read": 6117,
+          "cache_create": 45861
+        }
+      },
+      "tool_count": 3,
+      "full_tool_inputs": 3,
+      "planning_tool_count": 0,
+      "full_planning_inputs": 0,
+      "models": [
+        {
+          "role": "execution",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|실행→고급"
+        },
+        {
+          "role": "oneshot:background",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "DeepSeekProvider",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:classify",
+          "model": "deepseek-flash",
+          "provider": "OpenAI",
+          "source": "gear:최대|분류→경량"
+        },
+        {
+          "role": "oneshot:evaluate",
+          "model": "opus",
+          "provider": "ClaudeCode",
+          "source": "gear:최대|평가→고급"
+        }
+      ],
+      "context_compacted": 0,
+      "evaluations": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "f6f5003f724bf57672cfe5656bd216fe07dddfa2e350e359f44c38391d99f1c0",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "totals": {
+        "input": 909894,
+        "output": 19011,
+        "cache_read": 803869,
+        "cache_create": 85727
+      },
+      "state": "succeeded",
+      "pending_children": 0,
+      "access_indicators_for_manual_review": [],
+      "artifact_run_started": "2026-10-22T13:39:57.639544+09:00",
+      "artifact_run_ended": "2026-10-22T13:39:57.647229+09:00",
+      "reused": [
+        "C2_schedule",
+        "C1_graph",
+        "B_budget",
+        "R_receipts"
+      ],
+      "recomputed": [
+        "A_records",
+        "D_operations",
+        "S_synthesis"
+      ]
+    }
+  ],
+  "trainer_runs": [
+    {
+      "label": "T2",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "3db3dc5f207543cfac5a5968ddbe378d",
+      "seconds": 2.173481874167919,
+      "elapsed_ms": 1995,
+      "steps": 14732,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "348eb1da8245002071fd31c6be066ed96ad8d4bdadf1ce350a8795ecaf67dd3e"
+    },
+    {
+      "label": "T3",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "dc45023ad6524c59be2671080946eeff",
+      "seconds": 6.606012625619769,
+      "elapsed_ms": 6413,
+      "steps": 154730,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "27486bdd957b43ff6f4f730888b93fe307abfe7a0a5506637b03b80a3819c890"
+    },
+    {
+      "label": "T4",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "6ad44677efd74db9bbb11691d8afdc86",
+      "seconds": 7.170596124604344,
+      "elapsed_ms": 6971,
+      "steps": 154815,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "7a5f8a669ad8f03de5aab971bdc3d2ce37ee5d3460e75b08598a05403d0ee82f"
+    },
+    {
+      "label": "clock_probe",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "67fe3f6bddf74a0ab93f46a5d6a8e14a",
+      "seconds": 0.3727152915671468,
+      "elapsed_ms": 346,
+      "steps": 13,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "7de3581d85657be75a39cc2d387fd6646dfe4bf405c077ac9b33d5ee591e7b6c"
+    },
+    {
+      "label": "final_T1",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "91f15d090c3f4e5fbfbbe7f2406cca4f",
+      "seconds": 2.772258374840021,
+      "elapsed_ms": 2331,
+      "steps": 166333,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "2c07b81967b1fa4fef9173c0bbb426138d50a7caae06f4bf0face23c97efc464"
+    },
+    {
+      "label": "final_T2",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "729f47b00b454d2787c426d840bf3d77",
+      "seconds": 2.193199208006263,
+      "elapsed_ms": 2022,
+      "steps": 14732,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "379e4e21bad4dd8ea13d57b32b25bce499fad923c0738c1226c1c934dc07a100"
+    },
+    {
+      "label": "final_T3",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "ce26938afd414e2098ae0dd44df20249",
+      "seconds": 2.830782917328179,
+      "elapsed_ms": 2472,
+      "steps": 163732,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "8d90125c658eae1edca3ebbcc1e3151fe0b39aed2df59bae3636fce31fd34910"
+    },
+    {
+      "label": "final_T4",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "fcaf88b34e5747998c404fce7736d435",
+      "seconds": 2.7272424176335335,
+      "elapsed_ms": 2533,
+      "steps": 163820,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "f96dc898e7c3b78759cfafcf662f160ccc973789e2c6118aac6e85f37132bfda"
+    },
+    {
+      "label": "missing_recovered",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "69766e6757ab41fea185523e94f6ef10",
+      "seconds": 2.596957292407751,
+      "elapsed_ms": 2302,
+      "steps": 156128,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "d1e08cee33be19db78b0c1f66bd0955237d683931df83e2f7c33108b2c05a10f"
+    },
+    {
+      "label": "missing_v2",
+      "success": false,
+      "run_status": "interrupted",
+      "run_id": "aade45643ee044c889991112a02ce307",
+      "seconds": 1.1592803755775094,
+      "elapsed_ms": 1082,
+      "steps": 10286,
+      "source_complete": false,
+      "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-22_89회차/staged/file_missing/records.json",
+      "reuse": null,
+      "response_sha256": "98826f18cd9faea6e73b28f5a824662563bec133be10417db8df98967df47adf"
+    },
+    {
+      "label": "missing_v3",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "4b37900f9c4a41cf8109aab4b92ec71f",
+      "seconds": 1.9603713750839233,
+      "elapsed_ms": 1619,
+      "steps": 23928,
+      "source_complete": false,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "d3cb57896ffb690002435b4ba38c19f7dbb42629caed652fe06ced48603f1e5b"
+    },
+    {
+      "label": "opt_par1",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "885859244ec448f9aa9c4c24d0bb2cd3",
+      "seconds": 2.7683675829321146,
+      "elapsed_ms": 2502,
+      "steps": 166331,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "ef9ba9e78706331328b743ca70986ac9cadc1e632b46ceaf5f2446e2bce1f5c1"
+    },
+    {
+      "label": "opt_par2",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "a6db80ae369640e88fb3edfb428c7f65",
+      "seconds": 2.7073490004986525,
+      "elapsed_ms": 2456,
+      "steps": 166331,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "c9f58304bdb6f72554d1f36ed973cb1f1df00513eee19e7c1b224285ed3f8c28"
+    },
+    {
+      "label": "opt_par3",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "c39eb018b624402ea0ded9e81a81974a",
+      "seconds": 2.660018125548959,
+      "elapsed_ms": 2267,
+      "steps": 166331,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "306678a6c76b432f856d13e1917714378e92f05dbe47454a21c27937232de637"
+    },
+    {
+      "label": "opt_par4",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "acec3709c6d6428cb49c8c65ecfc25ec",
+      "seconds": 2.515668165870011,
+      "elapsed_ms": 2263,
+      "steps": 166331,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "7f9b1ad2f455294b65fba2f4aa8871a86c3d48d8e2eb397ab1a8f820dc408ea5"
+    },
+    {
+      "label": "opt_seq1",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "a37c4b5749f44cf698b4b80201eb4b12",
+      "seconds": 2.518996249884367,
+      "elapsed_ms": 2267,
+      "steps": 166307,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "01bbe037ad97b2cb18a30a44c8ce68223dce4ff5971512724da5a1d647e16d96"
+    },
+    {
+      "label": "opt_seq2",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "c28c22357b974faa946e04e03a6b229d",
+      "seconds": 2.359080375172198,
+      "elapsed_ms": 2086,
+      "steps": 166307,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "c211250a1f29f9926af62bee09a95c25894ec9d67514a56d3cf9ab682c1a5161"
+    },
+    {
+      "label": "opt_seq3",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "c4c987e12c4d497f993df25de811f1ce",
+      "seconds": 2.514115583151579,
+      "elapsed_ms": 2112,
+      "steps": 166307,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "43ed0293d5eb71d319fb502b8ba118560da1b4d8677b9dde5a20941444954b75"
+    },
+    {
+      "label": "par0",
+      "success": false,
+      "run_status": "interrupted",
+      "run_id": "3c6f2ed4cefe49d18b9575ef52cb6dd3",
+      "seconds": 6.910887500271201,
+      "elapsed_ms": 6194,
+      "steps": 151201,
+      "source_complete": false,
+      "error": "from_entries에 중복 키가 있습니다: '자료정리'. 먼저 중복을 정리하세요.",
+      "reuse": null,
+      "response_sha256": "6c6fe069b0727e3cf8e5884125109d4af494cd43c315d95664ed59b6e958d850"
+    },
+    {
+      "label": "par1",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "ac11c882ffe4491f897e1c4ff6efe184",
+      "seconds": 6.566646999679506,
+      "elapsed_ms": 6296,
+      "steps": 157328,
+      "source_complete": true,
+      "error": null,
+      "reuse": {
+        "run_id": "3c6f2ed4cefe49d18b9575ef52cb6dd3",
+        "reused_calls": 6,
+        "candidates": 5,
+        "skipped": [
+          {
+            "action": "self:read",
+            "location": {
+              "source_hash": "a601fc8176b94c45a2d7ac277c575504dbded4dabbe4fe847ffd006becc2098d",
+              "start": 7736,
+              "end": 7779,
+              "line": 111,
+              "column": 9
+            },
+            "reason": "overlapping_write",
+            "candidates": [
+              {
+                "receipt": "488e8829d27b9b11c910deb7fa34901a66a00357fa70cb6feb272874fc703ee1",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "78832b6b803e33ad57041e82afbfe961b81d7d04f1ca19caeacaf39792f68c0e",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "738b3e2ab596987b1ce29e740d77e31ee38d1e2edc4cbb90a8239a830686458a",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "b9b8455af3d9038707a88ec441639e5e303783e7bbbc9529db8ce44fce78422d",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "62a2393cb2e0b9df94df1f789d9aaffabb731a8f26cfa1d4a0725ea1ba7da395",
+                "changed": [
+                  "args"
+                ]
+              }
+            ],
+            "candidates_total": 5
+          },
+          {
+            "action": "self:read",
+            "location": {
+              "source_hash": "a601fc8176b94c45a2d7ac277c575504dbded4dabbe4fe847ffd006becc2098d",
+              "start": 8500,
+              "end": 8545,
+              "line": 115,
+              "column": 11
+            },
+            "reason": "overlapping_write",
+            "candidates": [
+              {
+                "receipt": "488e8829d27b9b11c910deb7fa34901a66a00357fa70cb6feb272874fc703ee1",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "78832b6b803e33ad57041e82afbfe961b81d7d04f1ca19caeacaf39792f68c0e",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "738b3e2ab596987b1ce29e740d77e31ee38d1e2edc4cbb90a8239a830686458a",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "b9b8455af3d9038707a88ec441639e5e303783e7bbbc9529db8ce44fce78422d",
+                "changed": [
+                  "args"
+                ]
+              },
+              {
+                "receipt": "62a2393cb2e0b9df94df1f789d9aaffabb731a8f26cfa1d4a0725ea1ba7da395",
+                "changed": [
+                  "args"
+                ]
+              }
+            ],
+            "candidates_total": 5
+          }
+        ],
+        "skipped_total": 2
+      },
+      "response_sha256": "c89cd619e3479201b0ae88500981a7d6c70b73946565d9adf08df32e60c68942"
+    },
+    {
+      "label": "par2",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "51604bf4317e4a03b850e9a2a2b072d0",
+      "seconds": 6.684534916654229,
+      "elapsed_ms": 6414,
+      "steps": 157328,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "bb04811e431786b56f5bd71df270978a55ce4bea21698d78181d202bdd021b5e"
+    },
+    {
+      "label": "par3",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "8d12f2aee2594347b93880e0d1cf48f5",
+      "seconds": 6.710611582733691,
+      "elapsed_ms": 6458,
+      "steps": 157328,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "03c58d1d5c24feca17cc7353c96743768a9be3efa623e11df8e8bc02d18d9915"
+    },
+    {
+      "label": "par4",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "47e51af96afc4032bea2099709202546",
+      "seconds": 6.804320749826729,
+      "elapsed_ms": 6543,
+      "steps": 157328,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "c650bdf14a076c09881eae6aa19531a957eef50f9933d7dd5d8c4db94fe8c884"
+    },
+    {
+      "label": "seq1",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "578ac19cb90745d1a677b715cf4d59fe",
+      "seconds": 6.524773167446256,
+      "elapsed_ms": 6273,
+      "steps": 157304,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "48c88038d20131225a8f414b319123d211cfaf9317525a2cc1e3cd6ceac2fc95"
+    },
+    {
+      "label": "seq2",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "d9df57a155ea4812ab63d1ac5ac4545d",
+      "seconds": 6.430919333361089,
+      "elapsed_ms": 6177,
+      "steps": 157304,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "efadf19569e5668f3bd9ccd32e6a2ca21cce94f0234728bc0343b8a79bc35fea"
+    },
+    {
+      "label": "seq3",
+      "success": true,
+      "run_status": "completed",
+      "run_id": "573a4cca31d84ca58743e7aeb7189335",
+      "seconds": 6.612769500352442,
+      "elapsed_ms": 6359,
+      "steps": 157304,
+      "source_complete": true,
+      "error": null,
+      "reuse": null,
+      "response_sha256": "2a44cdb968b32a770f50e5a6ff485c921526d4d132e7aa98f304ea1b3a570800"
+    }
+  ],
+  "preservation": [
+    {
+      "turn": "T1",
+      "files": 11,
+      "changed": []
+    },
+    {
+      "turn": "T2",
+      "files": 22,
+      "changed": []
+    },
+    {
+      "turn": "T3",
+      "files": 33,
+      "changed": []
+    },
+    {
+      "turn": "T4",
+      "files": 44,
+      "changed": []
+    }
+  ],
+  "seed_reconstruction": {
+    "project.json": true,
+    "tasks.json": true,
+    "options.json": true,
+    "receipts.json": true,
+    "records.json": true
+  },
+  "limits": [
+    "CPU 동시 수행은 구간 겹침만으로 입증하지 않는다",
+    "훈련자 작성 토큰 미측정",
+    "AI 전체 시간·토큰 개선율 미측정",
+    "접근 감사는 수집된 도구 인자와 보존 스크립트 범위"
+  ]
+}

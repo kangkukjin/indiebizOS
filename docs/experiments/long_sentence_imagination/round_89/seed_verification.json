@@ -1,0 +1,7 @@
+{
+  "project.json": true,
+  "tasks.json": true,
+  "options.json": true,
+  "receipts.json": true,
+  "records.json": true
+}

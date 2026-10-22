@@ -1,0 +1,11 @@
+$prior={}
+[if:$previous!=""] { $read=[self:read]{path:$previous}; $prior=$read.data }
+[if:$parallel] {
+  $branches=([fn:자료운영합류]{source:$source,policy:$policy,expected:$expected_ids,output:$output,reload_a:$reload_a,reload_d:$reload_policy,old_a:get($prior,"A",{}),old_d:get($prior,"D",{}),parallel:true}) & ([fn:비용검토]{source:$source,policy:$policy,output:$output,reload:$reload_policy,old:get($prior,"B",{})}) & ([fn:일정검토]{source:$source,policy:$policy,output:$output,reload:$reload_policy,old:get($prior,"C",{})})
+  $ade=$branches[0]; $b=$branches[1]; $c=$branches[2]
+} [else] {
+  $ade=[fn:자료운영합류]{source:$source,policy:$policy,expected:$expected_ids,output:$output,reload_a:$reload_a,reload_d:$reload_policy,old_a:get($prior,"A",{}),old_d:get($prior,"D",{}),parallel:false}
+  $b=[fn:비용검토]{source:$source,policy:$policy,output:$output,reload:$reload_policy,old:get($prior,"B",{})}
+  $c=[fn:일정검토]{source:$source,policy:$policy,output:$output,reload:$reload_policy,old:get($prior,"C",{})}
+}
+return [fn:최종검토]{ade:$ade,b:$b,c:$c,policy:$policy,output:$output,phase:$phase}

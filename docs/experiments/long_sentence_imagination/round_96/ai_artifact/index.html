@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>마린 소규모 전투 프로토타입 (근사 재현)</title>
+<style>
+  body { margin: 0; background: #14161a; color: #dde; font: 13px/1.45 system-ui, sans-serif; display: flex; gap: 12px; padding: 10px; }
+  canvas { background: #2b3324; border: 1px solid #555; cursor: crosshair; display: block; }
+  #side { width: 300px; }
+  button { margin: 2px 2px 2px 0; padding: 4px 8px; background: #2c3442; color: #eef; border: 1px solid #567; border-radius: 3px; cursor: pointer; }
+  button:hover { background: #3a465a; }
+  .box { border: 1px solid #444; padding: 6px 8px; margin-bottom: 8px; border-radius: 4px; }
+  .warn { color: #fc8; }
+  kbd { background: #333; border: 1px solid #666; border-radius: 3px; padding: 0 4px; font-size: 12px; }
+  #status b { color: #fff; }
+  #msg { min-height: 1.4em; color: #9f9; }
+  #msg.err { color: #f88; }
+</style>
+</head>
+<body>
+<div>
+  <canvas id="cv" width="960" height="560"></canvas>
+  <div id="msg"></div>
+</div>
+<div id="side">
+  <div class="box warn">원본 게임·리플레이·관찰 영상 없이 공식 문서 수치와 <b>선택한 근사 규칙</b>으로 만든 프로토타입입니다. 원본과의 일치를 주장하지 않습니다. 근거: rules.json · report.md</div>
+  <div class="box" id="status"></div>
+  <div class="box">
+    <button id="bPause">일시정지 (Space)</button>
+    <button id="bRestart">재시작 (R)</button><br>
+    <button id="bExport">기록 내보내기</button>
+    <button id="bReplay">현재 기록 재생</button><br>
+    <label>기록 불러와 재생 <input type="file" id="fImport" accept=".json,application/json"></label><br>
+    <label><input type="checkbox" id="cAI" checked> 적(빨강) 자동 지휘</label>
+    <label><input type="checkbox" id="cRanges"> 모든 사거리 표시</label><br>
+    속도 <select id="sSpeed"><option value="12">12 tick/s</option><option value="24" selected>24 tick/s</option><option value="48">48 tick/s</option><option value="96">96 tick/s</option></select>
+  </div>
+  <div class="box">
+    <b>조작</b><br>
+    좌클릭: 아군(파랑) 선택 · 드래그: 사각형 선택<br>
+    <kbd>Shift</kbd>+클릭/드래그: 선택 추가(다중 선택)<br>
+    우클릭 땅: 이동 · 우클릭 적: 지정 공격<br>
+    <kbd>A</kbd> 후 좌클릭: 공격 이동 (적을 클릭하면 지정 공격)<br>
+    <kbd>M</kbd> 후 좌클릭: 이동 · <kbd>S</kbd>: 정지 · <kbd>Esc</kbd>: 명령 취소<br>
+    <kbd>Ctrl</kbd>+<kbd>A</kbd>: 살아 있는 아군 전체 선택<br>
+    <kbd>Space</kbd>/<kbd>P</kbd>: 일시정지 · <kbd>R</kbd>: 재시작<br>
+    일시정지 중 낸 명령은 다음 tick 시작에 적용됩니다.
+  </div>
+  <div class="box" id="sel"></div>
+</div>
+<script src="engine.js"></script>
+<script src="scenario.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

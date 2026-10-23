@@ -1,0 +1,38 @@
+[
+  {
+    "episode": 5445,
+    "seq": 92,
+    "tool": "Bash",
+    "elapsed_s": 0.147,
+    "evidence": {
+      "chars": 286,
+      "excerpt": "Exit code 1\n.venv/bin/python\nms-playwright\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import playwright;print(playwright.__version__)\n                            ^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'playwright' has no attribute '__version__'",
+      "id": "bb667f24c3679cb43784fffc61b96d713c55345fac271c48bf556614aacca2b2",
+      "integrity": "verified"
+    }
+  },
+  {
+    "episode": 5445,
+    "seq": 98,
+    "tool": "Bash",
+    "elapsed_s": 0.61,
+    "evidence": {
+      "chars": 2774,
+      "excerpt": "Exit code 1\nPASS 계약: window.RTS/module.exports 와 simulate 노출 — vm 문맥(window만 존재)에서도 window.RTS.simulate 확인\nPASS 계약: final 은 모든 원래 유닛의 {id,team,x,y,hp,alive} — 40개 유닛, 입력 순서 유지\nPASS 계약: frames 는 매 tick 종료 뒤 모든 유닛 상태 — 1500 frames × 40 units, 마지막 frame == final\nFAIL 계약: events 에 발사/피해/사망 tick 과 관련 유닛 — The expression evaluated to a falsy value:\n\n  assert(Number.isInteger(e.tick) && e.attacker !== undefined && e.target !== undefined && e.amount === R.damage)\n\nPASS 계약: 입력 scenario 를 변경하지 않음 — JSON 동일\nPASS 잘못된 입력 거절 (code=INVALID_SCENARIO) — 19건 모두 거절\n    null → 잘못된 scenario: 객체가 아님\n    width 음수 → 잘못된 scenario: width 는 (0,8192] 숫자여야 함\n    ticks 실수 → 잘못된 scenario: ticks 는 0~200000 정수여야 함\n    seed 문자열 → 잘못된 scenario: seed 는 정수여야 함\n    walls 비배열 → 잘못된 scenario: walls 는 배열이어야 함\n    wall w=0 → 잘못된 scenario: walls[2] 의 w,h 는 양수여야 함\n    units 비어 있음 → 잘못된 scenario: units 는 비지 않은 배열이어야 함\n    id 중복 → 잘못된 scenario: units[1].id 중복: A1\n    x 누락 → 잘못된 scenario: units[0].x/.y 는 유한 숫자여야 함\n    hp 41 → 잘못된 s",
+      "id": "613c89214d60d23925b322f42dd843fcbc7afb5d867f2e84bad4bb8ed5d988a0",
+      "integrity": "verified"
+    }
+  },
+  {
+    "episode": 5445,
+    "seq": 131,
+    "tool": "Bash",
+    "elapsed_s": 18.119,
+    "evidence": {
+      "chars": 1271,
+      "excerpt": "Exit code 1\nPASS 로드: window.RTS.simulate 와 40기·벽 2개 \nPASS 네트워크 요청 없음 (file:// 만) — 요청 4건, 비-file []\nPASS Space 일시정지 \nPASS 일시정지 중 tick 정지 — tick 0\nPASS 드래그 선택 → 아군 20기 — 20\nPASS 단일 클릭 선택 → 1기 (A1) \nPASS Shift+클릭 다중 선택 → 3기 — A1,A2,A3\nFAIL 적 클릭은 선택이 아닌 정보 보기 \nPASS 우클릭 땅 → move 명령 대기열 — [{\"tick\":0,\"ids\":[\"A1\"],\"kind\":\"move\",\"source\":\"user\",\"x\":300,\"y\":150}]\nPASS move 명령이 시뮬레이션에 반영 (A1 이동, 미선택 A2~A4 정지) — A1 [100, 220] → [135.1, 200.2]\nPASS 기록에 move 가 tick 과 함께 저장 \nPASS S 정지 → A1 order 해제·위치 고정(적 미접근 구간) — [135.1341176171452, 200.16103126144415, None] / [135.1341176171452, 200.16103126144415, None]\nPASS A+좌클릭 → attackMove 명령 \nFAIL 우클릭 적 → attack(targetId) 명령 — 선택 A5\nPASS 적 병력 교전 참여(적 발사 이벤트) \nPASS 전투 진행·사망 처리 — {'tick': 691, 'a': 2, 'e': 0, 'deaths': 38, 'log': 5, 'hash': '5741da67', 'msg': '아군 승리 · tick 691 · hash 5741da67 (계속 진행 가능, 기록 내보내기 가능)'}\nPASS 기록 내보내기 다운로드 — ticks 691, 명령 5, hash 5741da67\nFAIL UI 기록 → Node simulate 재생: hash·final 일치 — node 859e7ec4 / ui 5741da67\nPASS 기록 불러오기 → 브라",
+      "id": "a26fcd003972029f6ab4168ac42322cad99f4ba535b9d85da905ac2ab3af9935",
+      "integrity": "verified"
+    }
+  }
+]

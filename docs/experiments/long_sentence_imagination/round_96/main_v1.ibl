@@ -1,0 +1,46 @@
+#!ibl edition=2
+[def:저장확인]($경로,$본문) {
+  $저장=[self:write]{path:$경로,content:$본문}
+  $확인=[self:read]{path:$저장.path,format:"text"}
+  assert $확인.text==$본문,"저장한 원문과 재독이 다름"
+  return {path:$저장.path,chars:len($본문)}
+}
+[def:전투검사]($사례,$실행기,$측정기,$엔진) {
+  $관측=[self:script]{path:$실행기,args:{runner:$측정기,engine:$엔진,scenario:$사례.scenario},timeout:50}
+  $안전=$관측.deterministic and $관측.wallContacts==0 and $관측.overlaps==0 and $관측.invalidHp==0 and $관측.deadActions==0
+  $생존=filter($관측.final,($u)=>$u.alive)
+  $명령통과=true
+  [if:$사례.kind=="duel"] { $명령통과=len($생존)==0 and $관측.shots==14 }
+  [if:$사례.kind=="out_of_range"] { $명령통과=$관측.shots==0 and len($생존)==2 }
+  [if:$사례.kind=="passage"] { $명령통과=len(filter($관측.final,($u)=>$u.x>520))==len($관측.final) }
+  [if:$사례.kind=="stop"] { $명령통과=$관측.final[0].x>80 and $관측.final[0].x<130 }
+  [if:$사례.kind=="battle"] { $명령통과=$관측.shots>0 and len($생존)<len($사례.scenario.units) }
+  [if:$사례.kind=="empty"] { $명령통과=len($관측.final)==0 and $관측.shots==0 }
+  return {name:$사례.scenario.name,kind:$사례.kind,passed:$안전 and $명령통과,
+    invariants:$안전,behavior:$명령통과,observations:$관측}
+}
+$출처=[self:read]{path:f"${입력}/sources.json"}
+$공식=[self:read]{path:f"${입력}/official_stats.html",format:"text"}
+assert contains($공식.text,"Marine"),"필수 공식 자료에서 Marine을 찾지 못함"
+$규칙={facts:$공식수치,assumptions:$근사규칙,original_game:$출처.data.original_game,
+  original_equivalence_verified:false,source_kind:"official documentation, not execution observation"}
+$파일들=$파일 >> [table:each] { [fn:저장확인]{경로:f"${출력}/${it.name}",본문:$it.content} }
+$규칙파일=[fn:저장확인]{경로:f"${출력}/rules.json",본문:json($규칙)}
+$실행기=[self:write]{path:"~turn/node_adapter.py",content:$어댑터}
+$검사=$사례들 >> [table:each] {
+  [fn:전투검사]{사례:$it,실행기:$실행기.path,측정기:f"${출력}/measure.js",엔진:f"${출력}/engine.js"}
+}
+$통과=filter($검사,($r)=>$r.passed)
+$결론={phase:$판본,scenario_count:len($검사),passed_count:len($통과),
+  prototype_automated_checks_passed:len($통과)==len($검사),
+  original_equivalence_verified:false,overall_status:"부분 달성: 원본 실행 관측 없음",
+  ui_verified:false,checks:$검사,sources:$출처.data.sources,rules:$규칙}
+$행=map($검사,($r)=>f"| ${r.name} | ${r.passed} | ${r.observations.shots} | ${r.observations.wallContacts} | ${r.observations.overlaps} |")
+$본문="# 마린 전투 재현 — 훈련자 판정\n\n원본 실행·리플레이가 없어 스타크래프트 동작 일치는 미검증입니다.\n공식 수치 기반 근사 구현이며 생성 성공과 재현 성공을 구별합니다.\n\n" +
+  "| 사례 | 통과 | 발사 | 벽 접촉 | 유닛 중첩 |\n|---|---|---|---|---|\n" + join("\n",$행) +
+  "\n\nindex.html을 로컬에서 열면 조작할 수 있습니다. rules.json에 공식 출처와 근사 규칙을 보존했습니다.\n" +
+  "UI는 이 자동 검사에서 미검증이며 별도 실제 브라우저 조작으로 확인합니다.\n"
+[fn:저장확인]{경로:f"${출력}/audit.json",본문:json($결론)}
+[fn:저장확인]{경로:f"${출력}/report.md",본문:$본문}
+return {phase:$판본,scenario_count:len($검사),passed_count:len($통과),
+  original_equivalence_verified:false,artifact:f"${출력}/index.html",checks:$검사}

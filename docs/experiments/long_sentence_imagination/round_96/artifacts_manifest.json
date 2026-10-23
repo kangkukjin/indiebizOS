@@ -1,0 +1,213 @@
+{
+  "local_root": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_96회차",
+  "files": {
+    "ai/artifacts/index.html": {
+      "sha256": "4c56c490833a47b086f8c633ad854ba24ff9cccee8be8f4e1ebe703f4ba2445f",
+      "bytes": 2889
+    },
+    "ai/artifacts/test.js": {
+      "sha256": "fe80cebc963e98572d219734d82040a0b811a060779e80518173684941e0ed92",
+      "bytes": 17760
+    },
+    "ai/artifacts/report.md": {
+      "sha256": "07fe9cff348ac0f58fd483c320ec7a0674756162f6cbf0516e7cd39226476fb8",
+      "bytes": 17747
+    },
+    "ai/artifacts/rules.json": {
+      "sha256": "f833c4efd6c04bd4086ab73cb98d0bcb401143164c8930e90085c69ae6d990b9",
+      "bytes": 9135
+    },
+    "ai/artifacts/report_variant.md": {
+      "sha256": "3e5e39392cff2271ec0be5a6b0cae6b13242b153241c83c9d5bb07fef11b1ca6",
+      "bytes": 30291
+    },
+    "ai/artifacts/engine.js": {
+      "sha256": "303d315c5b80fa6f8e1028431272d682069197a7b896feb1cc14eadb5f839080",
+      "bytes": 21436
+    },
+    "ai/artifacts/test_output.txt": {
+      "sha256": "e8334433a7a119dd531c492284b4550e69e4c7f903e0c5d7cd0e72fd0c9db0d7",
+      "bytes": 4774
+    },
+    "ai/artifacts/variant_test.js": {
+      "sha256": "398de23b5415a292b9b3cbe52746a37ab5550df3b0d04c67f634099b2ab7f640",
+      "bytes": 18610
+    },
+    "ai/artifacts/app.js": {
+      "sha256": "a0cba0bafd48667809029b48eae84a2397f90fac70448657f66179723e20df75",
+      "bytes": 14485
+    },
+    "ai/artifacts/scenario.js": {
+      "sha256": "41073c3b366ec7ae1d5b47bacc19e039521bcc902a4f0e76de6f00c9877ab667",
+      "bytes": 2078
+    },
+    "ai/artifacts/ui_test.py": {
+      "sha256": "fd93615172413a88112442db49f68166dfb4a0f8b63db4a999a40537f385e575",
+      "bytes": 8956
+    },
+    "ai/artifacts/ui_test_output.txt": {
+      "sha256": "2a17127cbd5ef1e82bff4cf98f91867d74b0719127bca091c78a632bd536d9b4",
+      "bytes": 1937
+    },
+    "ai/artifacts/variant_check/v1_hashes_before.txt": {
+      "sha256": "fe9d53bee6741f60fb41a56dcee0a9045d5d7b3a70eaa631854b85d4e72e14db",
+      "bytes": 1431
+    },
+    "ai/artifacts/variant_check/heldout_final_v1_output.txt": {
+      "sha256": "7d3f8cc06049a5a87d9976952b16a4aeac6f4d86114a39fb38875c46927810fd",
+      "bytes": 2984
+    },
+    "ai/artifacts/variant_check/variant_v1_output.txt": {
+      "sha256": "1c8f317f065b769b78da89adff0c02b588adb12b26407089c44fc57812edeb49",
+      "bytes": 5281
+    },
+    "ai/artifacts/variant_check/heldout_v2_output.txt": {
+      "sha256": "e4a08b624ca673dc99cd3a113b23b0de9e5d6aa6e9154f816ec8f862e63cd987",
+      "bytes": 1414
+    },
+    "ai/artifacts/variant_check/diag_jam.js": {
+      "sha256": "971ad08a9501feec663778e3982afb857c1638ac00c2f6d683113d1210015646",
+      "bytes": 699
+    },
+    "ai/artifacts/variant_check/diag_gap.js": {
+      "sha256": "735020a533b9ac350d7652674177b32522dcae203f02d31a3c73f9a0b400c27e",
+      "bytes": 1311
+    },
+    "ai/artifacts/variant_check/test_v1_rerun_output.txt": {
+      "sha256": "e8334433a7a119dd531c492284b4550e69e4c7f903e0c5d7cd0e72fd0c9db0d7",
+      "bytes": 4774
+    },
+    "ai/artifacts/variant_check/attack_check.js": {
+      "sha256": "44fba37b1b274ba68cc6a6723a13a6be52b6354fa1144961f2027f4fc1530144",
+      "bytes": 2040
+    },
+    "ai/artifacts/variant_check/heldout_final.js": {
+      "sha256": "1979cfe02cb93ffc2113c29cde00441310bd8eda192110c1ce85b072ccda33c3",
+      "bytes": 2179
+    },
+    "ai/artifacts/variant_check/choke_sweep.js": {
+      "sha256": "8801345ebdd2db6e7887433e51c734d944fa3e69eecfa85a084f2723f1cc0a1b",
+      "bytes": 1734
+    },
+    "ai/artifacts/variant_check/heldout.js": {
+      "sha256": "a6c6efe1d35046e732da924ec167e9274b80f1346f6b932b82d17f88d34a29bc",
+      "bytes": 1306
+    },
+    "ai/artifacts/variant_check/diag_gap2.js": {
+      "sha256": "1d09787c32f05b7d9603d01a52f17b209a80ab88ca4d454095ad3257699f9f5f",
+      "bytes": 596
+    },
+    "ai/artifacts/variant_check/v1_hashes_after.txt": {
+      "sha256": "fe9d53bee6741f60fb41a56dcee0a9045d5d7b3a70eaa631854b85d4e72e14db",
+      "bytes": 1431
+    },
+    "ai/artifacts/variant_check/attack_check_output.txt": {
+      "sha256": "f98f7864ac3c61a1b30ddbeec7e1cd418f66d2d92830adaceeae0581aebf4106",
+      "bytes": 566
+    },
+    "ai/artifacts/variant_check/sweep_v2_output.txt": {
+      "sha256": "53024868d5d7cf283a55f0376c1e473315b1d17de70858f36a19e5205182a847",
+      "bytes": 159
+    },
+    "ai/artifacts/variant_check/sweep.js": {
+      "sha256": "524578fb7e45432a33c7fafda606bf9c754b26eae4d3c451fa8aac66179ec97c",
+      "bytes": 1039
+    },
+    "ai/artifacts/variant_check/variant_v2_output.txt": {
+      "sha256": "760a74cef216ef7679eb8c2898d8fcf8fa96fe89d1e77b041e3c038952714886",
+      "bytes": 5030
+    },
+    "ai/artifacts/variant_check/heldout_v1_output.txt": {
+      "sha256": "a1b3f61bcc014afdfebce5e207bc0386c2afec6af230e179f66f6755bbc83f68",
+      "bytes": 1107
+    },
+    "ai/artifacts/variant_check/heldout_final_v2_output.txt": {
+      "sha256": "fce31ab00053f03351aa775c9c1caf60f829aac66cc2aad9cc2f6a3b64cf9206",
+      "bytes": 3316
+    },
+    "ai/artifacts/ui_check/diverge.py": {
+      "sha256": "438c4be0717fea965a97f478c09edcca7759f6e3ca2a418b7eac7a769e99ee49",
+      "bytes": 1414
+    },
+    "ai/artifacts/ui_check/record_from_ui.json": {
+      "sha256": "2ccbb59de425d195df22ed0f7a2e8a0b06885fe80c6cf5b1e74b1fd385632338",
+      "bytes": 4213
+    },
+    "ai/artifacts/ui_check/restart.png": {
+      "sha256": "c4c491b0b4bffbe1c42450d09687468a3096239889f70d04a649f9c1d05fbaa1",
+      "bytes": 94067
+    },
+    "ai/artifacts/ui_check/end.png": {
+      "sha256": "1d4512de2cb9999d2878ea23d69c8a80d2b9b9ee5449e103fa3c5dc53ebc8adc",
+      "bytes": 102645
+    },
+    "ai/artifacts/ui_check/bad_record.json": {
+      "sha256": "f326a84cd37fb14aa33a5cb0cf7b70e96bc6ddddbd1fb2d4ff39c446faba90f8",
+      "bytes": 108
+    },
+    "ai/artifacts/ui_check/battle.png": {
+      "sha256": "48df55deb1786c61eba1f222457b76083bcff4dcc95d23f701526e05afaa8738",
+      "bytes": 123272
+    },
+    "ai/artifacts/ui_check/diverge_output.txt": {
+      "sha256": "fc1f0d7956e2e7d671907765250cf0d98771e89887f90fa0249d47015ea86578",
+      "bytes": 379
+    },
+    "ai/artifacts/variant/index.html": {
+      "sha256": "4c56c490833a47b086f8c633ad854ba24ff9cccee8be8f4e1ebe703f4ba2445f",
+      "bytes": 2889
+    },
+    "ai/artifacts/variant/test.js": {
+      "sha256": "fe80cebc963e98572d219734d82040a0b811a060779e80518173684941e0ed92",
+      "bytes": 17760
+    },
+    "ai/artifacts/variant/rules.json": {
+      "sha256": "28d3b866cc3077d088a674f4334055e82d2b24391fa95fe7d53c8b5fde11cc5f",
+      "bytes": 11990
+    },
+    "ai/artifacts/variant/engine.js": {
+      "sha256": "0db97889186e165a2b7fa35327181f446a2d6c498cdc7423ff41cd6eb9c03375",
+      "bytes": 26714
+    },
+    "ai/artifacts/variant/test_output.txt": {
+      "sha256": "bf5885488c60c0767ca402c7b50d23f28651307fee55959b8bf728afed445c87",
+      "bytes": 4773
+    },
+    "ai/artifacts/variant/app.js": {
+      "sha256": "a0cba0bafd48667809029b48eae84a2397f90fac70448657f66179723e20df75",
+      "bytes": 14485
+    },
+    "ai/artifacts/variant/scenario.js": {
+      "sha256": "41073c3b366ec7ae1d5b47bacc19e039521bcc902a4f0e76de6f00c9877ab667",
+      "bytes": 2078
+    },
+    "ai/artifacts/variant/ui_test.py": {
+      "sha256": "fd93615172413a88112442db49f68166dfb4a0f8b63db4a999a40537f385e575",
+      "bytes": 8956
+    },
+    "ai/artifacts/variant/ui_test_output.txt": {
+      "sha256": "5166b611d03b98640c76d593cdc0da5b065daec8cee32580b5ed73ef0510dae2",
+      "bytes": 1940
+    },
+    "ai/artifacts/variant/ui_check/record_from_ui.json": {
+      "sha256": "3534b3b3f3ccbd62a961b6a6104a7e4a084db9dc8555e3810c672777abde6832",
+      "bytes": 4221
+    },
+    "ai/artifacts/variant/ui_check/restart.png": {
+      "sha256": "c4c491b0b4bffbe1c42450d09687468a3096239889f70d04a649f9c1d05fbaa1",
+      "bytes": 94067
+    },
+    "ai/artifacts/variant/ui_check/end.png": {
+      "sha256": "efa72a054e4a73182100f5b8a27d5474bf7b5e65c6933d33949cb5aabbb938cc",
+      "bytes": 125066
+    },
+    "ai/artifacts/variant/ui_check/bad_record.json": {
+      "sha256": "f326a84cd37fb14aa33a5cb0cf7b70e96bc6ddddbd1fb2d4ff39c446faba90f8",
+      "bytes": 108
+    },
+    "ai/artifacts/variant/ui_check/battle.png": {
+      "sha256": "630e517a3f44d1408ec2b13edd24e388505d9eb9eb1c883924b83287d18ad208",
+      "bytes": 122036
+    }
+  }
+}

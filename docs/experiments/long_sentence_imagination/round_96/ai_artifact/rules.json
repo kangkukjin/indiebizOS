@@ -1,0 +1,211 @@
+{
+  "title": "스타크래프트 1 마린 소규모 전투 프로토타입 — 수치·근거·가정 (판본 2 — variant)",
+  "claim": "원본 게임과의 일치를 주장하지 않는다. 공식 문서 원값과 선택한 근사 규칙을 분리해 기록한다.",
+  "evidence_inventory": {
+    "checked_folder": "inputs/",
+    "files": [
+      "sources.json",
+      "official_marine.html",
+      "official_stats.html"
+    ],
+    "original_game_execution": null,
+    "replays": [],
+    "observation_videos": [],
+    "sources_json_note": "원본 설치·리플레이를 찾지 못했음. 문서는 실행 관측이 아님.",
+    "encoding_note": "두 HTML 사본은 latin-1 로 디코딩해 읽었다."
+  },
+  "observed": {
+    "items": [],
+    "reason": "원본 게임 실행·리플레이·관찰 영상이 제공되지 않아 실제 관측 근거는 0건이다. 아래 official 값은 문서 기재값이며 실행 관측이 아니다."
+  },
+  "sources": {
+    "S1": {
+      "file": "inputs/official_marine.html",
+      "url": "https://classic.battle.net/scc/terran/um.shtml",
+      "title": "StarCraft Compendium — Marine"
+    },
+    "S2": {
+      "file": "inputs/official_stats.html",
+      "url": "https://classic.battle.net/scc/terran/ustats.shtml",
+      "title": "StarCraft Compendium — Terran unit stats table"
+    }
+  },
+  "official": [
+    {
+      "key": "hp",
+      "source_value": 40,
+      "engine_value": 40,
+      "engine_field": "RULES.maxHp",
+      "status": "문서값 그대로 사용"
+    },
+    {
+      "key": "size",
+      "source_value": "Small",
+      "engine_value": "반지름 8px",
+      "status": "문서는 정성 분류만 제공. 충돌 반지름 8px 는 근사(approximation.radius)"
+    },
+    {
+      "key": "ground_attack",
+      "source_value": 6,
+      "engine_value": 6,
+      "engine_field": "RULES.damage",
+      "status": "문서값 사용. 업그레이드는 미구현"
+    },
+    {
+      "key": "air_attack",
+      "source_value": 6,
+      "engine_value": null,
+      "status": "공중 유닛 없음 — 미사용"
+    },
+    {
+      "key": "damage_type",
+      "source_value": "Normal",
+      "engine_value": "크기 보정 없음(100%)",
+      "status": "S2 의 E/C 보정은 Normal 에 해당하지 않으므로 보정 없이 적용"
+    },
+    {
+      "key": "armor",
+      "source_value": 0,
+      "engine_value": 0,
+      "engine_field": "RULES.armor",
+      "status": "문서값 사용. 피해 = 공격 − 장갑 은 근사 공식(approximation.damage_formula)"
+    },
+    {
+      "key": "cooldown",
+      "source_value": "15 (Stim 7.5)",
+      "source_unit": "문서에 단위 없음",
+      "engine_value": 15,
+      "engine_unit": "tick",
+      "assumed_conversion": "문서 단위 1 = 엔진 1 tick (근사)",
+      "engine_field": "RULES.cooldownTicks",
+      "status": "원값은 문서, 단위 환산은 근사. 공격 동작 자체의 지속 시간은 0 으로 보고 발사 tick 에서 바로 15 tick 쿨다운 시작(근사). 스팀팩 7.5 는 미구현"
+    },
+    {
+      "key": "range",
+      "source_value": "4 (U-238 업그레이드 +1 → 5)",
+      "source_unit": "문서에 단위 없음",
+      "engine_value": 128,
+      "engine_unit": "px (가장자리 간 거리)",
+      "assumed_conversion": "4 × 32px/타일 (근사), 두 원의 가장자리 거리로 비교 (근사)",
+      "engine_field": "RULES.rangePx",
+      "status": "원값은 문서, 픽셀 환산·측정 기준은 근사. 업그레이드 미구현"
+    },
+    {
+      "key": "sight",
+      "source_value": 7,
+      "source_unit": "문서에 단위 없음",
+      "engine_value": 224,
+      "engine_unit": "px (가장자리 간 거리)",
+      "assumed_conversion": "7 × 32px/타일 (근사)",
+      "engine_field": "RULES.sightPx",
+      "status": "원값은 문서. 엔진에서는 '자동 표적 획득 반경'으로만 사용(근사). 시야 차단·안개는 미구현"
+    },
+    {
+      "key": "out_of_scope_documented",
+      "source_value": {
+        "supply": 1,
+        "minerals": 50,
+        "gas": 0,
+        "build_time": 24,
+        "attack_mod": 1,
+        "notes": "B (Biological)"
+      },
+      "engine_value": null,
+      "status": "자원·생산·업그레이드는 범위 밖 — 미사용"
+    }
+  ],
+  "approximation": [
+    {
+      "key": "time_unit",
+      "value": "1 tick = 엔진의 이산 시간 단위. 쿨다운 15 를 15 tick 으로 둠",
+      "basis": "문서에 Cool 단위·게임 속도와 실시간의 관계가 없음",
+      "ui": "UI 기본 24 tick/s 는 화면 속도 선택일 뿐 원본 실시간과의 대응 주장 아님"
+    },
+    {
+      "key": "coordinate_conversion",
+      "value": "1 타일 = 32px",
+      "basis": "문서에 Range/Sight 단위·타일 크기 없음. 선택한 환산"
+    },
+    {
+      "key": "radius",
+      "value": "8px 원형 충돌체",
+      "basis": "문서는 Size: Small 만 제공"
+    },
+    {
+      "key": "speed",
+      "value": "1.25 px/tick, 가속·감속 없음",
+      "basis": "제공 문서에 이동 속도 수치 없음 (S1 은 스팀팩 시 '속도가 크게 증가'라는 정성 서술만)"
+    },
+    {
+      "key": "damage_formula",
+      "value": "피해 = max(0.5, 공격 − 장갑) = 6, 명중률 100%, 투사체 지연 없음(발사 tick 즉시 피해)",
+      "basis": "문서에 피해 공식·명중·탄도 지연 없음"
+    },
+    {
+      "key": "simultaneity",
+      "value": "같은 tick 의 모든 사격은 피해 적용 전에 확정 → 같은 tick 상호 사살 가능, 이미 죽을 대상에게 쏜 사격은 남은 체력만큼(0 가능) 피해",
+      "basis": "처리 순서 편향 제거를 위한 선택"
+    },
+    {
+      "key": "target_selection",
+      "value": "가장자리 거리 최소의 적, 동률이면 seed PRNG(mulberry32)로 선택. attackMove·대기 상태는 시야(224px) 안 적을 자동 획득해 추격, 자동 표적이 시야 밖으로 나가면 해제",
+      "basis": "문서에 표적 선택 규칙 없음"
+    },
+    {
+      "key": "orders",
+      "value": "move: 적 무시 이동, 도착·정체 시 대기 / attack(targetId): 대상 사망까지 추격·사격 / attackMove: 이동 중 시야 내 적 교전 후 재진행 / stop: 명령·표적 해제 후 대기(대기 상태는 시야 내 적 자동 교전)",
+      "basis": "RTS 일반 명령 의미를 직접 정의. 원본 동작 미검증"
+    },
+    {
+      "key": "movement_collision",
+      "value": "8px 격자 A*(8방향). 판본 2: 칸마다 벽·경계 여유(상한 16px)가 가장 큰 0.5px 표본점을 대표점으로 쓰고, 이웃 대표점을 잇는 선분이 반지름 8px 로 벽 없이 지날 때만 간선으로 연결. 목표에 닿지 못하면 가장 가까운 도달 칸까지. 매 tick id 순서로 한 기씩 이동, 정면 한 걸음이 벽에 막히면 ±25°~±100° 회전·반 걸음 후보로 미끄러짐. 벽·경계 여유가 80px 미만인 곳에서 정면이 다른 유닛에 막히면 4 tick 대기 → 이후 회전 후보 허용 → 6 tick 째 순번에 따라 2~5 tick 후퇴(양보). 벽에서 먼 평지는 판본 1 처럼 바로 회전 후보로 미끄러짐. 경유점 2px 안에서 다음 구간 직진이 막히면 구간 위 수직 투영점으로 합류. 살아 있는 유닛·벽과의 겹침은 어떤 경우에도 허용하지 않으며 죽은 유닛은 충돌에서 제외",
+      "basis": "원본 경로탐색·충돌 규칙은 문서에 없음. 대기 4·양보 6 tick·적용 범위 80px 는 좁은 입구 시나리오와 판본 1 지정 공격 시나리오를 측정해 고른 값이며 원본 근거 없음. 값 고정 후 새 기하 60개 조건으로 1회 확인(report_variant.md)"
+    },
+    {
+      "key": "arrival",
+      "value": "목표 2px 이내 도착, 또는 목표 64px 이내에서 20 tick 이상 정체하면 도착 처리",
+      "basis": "무리 이동이 한 점에 몰려 영구 정체하는 것을 막는 선택"
+    },
+    {
+      "key": "enemy_ai_ui",
+      "value": "UI 전용: tick 24 부터 48 tick 마다 명령 없는 적에게 아군 무게중심으로 attackMove 명령 생성. 이 명령도 기록에 저장되어 재생에 포함",
+      "basis": "적 병력의 전투 참여를 위한 선택"
+    },
+    {
+      "key": "determinism",
+      "value": "고정 tick, id 정렬 처리, seed PRNG, 엔진 내 초월함수 미사용(사칙연산·sqrt·상수 회전표)",
+      "basis": "Chrome 151 과 Node 20 의 sin/cos 결과가 마지막 비트에서 달라 재생이 갈라지는 것을 실측 후 제거"
+    },
+    {
+      "key": "map",
+      "value": "960×560px 평지, x=460~500 세로 벽, 입구 y=250~310 (폭 60px)",
+      "basis": "요청의 '평지와 좁은 입구가 있는 벽'을 직접 배치. 원본 맵 아님"
+    }
+  ],
+  "unimplemented": [
+    "지형·벽에 의한 시야/사격 차단(벽 너머로도 사거리 안이면 사격함), 전장의 안개",
+    "고지대·명중 실패, 투사체 비행 시간",
+    "스팀팩(쿨다운 7.5·이속 증가·체력 10 소모), 공격·방어·사거리 업그레이드",
+    "유닛 밀어내기(판본 2 도 양보·대기만 하고 밀지 않음), 원본 경로탐색, 가속·회전 속도, 공격 모션 시간",
+    "홀드·순찰·대형 유지, 공중 유닛, 벙커",
+    "자원·건물·생산·캠페인 (요청 범위 밖)"
+  ],
+  "engine_rules_object": {
+    "maxHp": 40,
+    "damage": 6,
+    "armor": 0,
+    "cooldownTicks": 15,
+    "tilePx": 32,
+    "rangePx": 128,
+    "sightPx": 224,
+    "radius": 8,
+    "speed": 1.25,
+    "gridCell": 8,
+    "repathTicks": 12,
+    "waitTicks": 4,
+    "yieldAfter": 6,
+    "chokeClearance": 80
+  },
+  "version_note": "판본 2: 판본 1(상위 폴더)의 공식 수치·근거·관측 0건 표시는 그대로이며, 좁은 입구 변형에서 드러난 경로탐색·정체 결함을 고친 이동 규칙만 다르다. 변경 이유는 ../report_variant.md.",
+  "archive_note": "Official text quotations omitted from this archived view; original rules.json and its hash are retained in local artifacts."
+}

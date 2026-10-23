@@ -1,0 +1,48 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>마린 전투 실험실 · 긴문장 96</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1420;color:#d7e7ef;font:15px system-ui}main{max-width:1160px;margin:auto;padding:24px}
+header{display:flex;justify-content:space-between;align-items:center}h1{font-size:28px;margin:6px 0}small,.muted{color:#91aabc}b{color:#5fe4cf}
+.warning{border-left:3px solid #edbd69;background:#27251f;padding:12px 16px;color:#efd4a7;margin:16px 0}.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+button,label.file{background:#1d3449;border:1px solid #38556a;border-radius:6px;color:inherit;padding:9px 13px;cursor:pointer}button.active{background:#236b63;border-color:#5fe4cf}
+canvas{width:100%;background:#101f2b;border:1px solid #365060;border-radius:8px;touch-action:none}#status{padding:10px 0;min-height:40px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.card{padding:14px 18px;background:#142333;border-radius:8px;line-height:1.7}a{color:#79d8d1}input[type=file]{display:none}
+@media(max-width:700px){main{padding:12px}.grid{grid-template-columns:1fr}header{display:block}}
+</style><main><header><div><small>LONG SENTENCE 96 / COMBAT LAB</small><h1>마린 전투 실험실</h1></div><b id="score">BLUE 20 · RED 20</b></header>
+<div class="warning">공식 수치 기반 근사 프로토타입 · 스타크래프트 원본 실행과의 일치는 검증하지 않았습니다.</div>
+<div class="bar"><button id="move" class="active">이동 M</button><button id="attack">지정 공격 T</button><button id="attackMove">공격 이동 A</button><button id="stop">정지 S</button><button id="pause">시작 / 일시정지 Space</button><button id="reset">처음부터</button><button id="export">명령 저장</button><label class="file">기록 재생<input type="file" id="import" accept=".json"></label></div>
+<canvas id="field" width="960" height="544" aria-label="마린 전투장"></canvas><div id="status" role="status"></div>
+<div class="grid"><section class="card"><b>조작</b><br>파란 유닛을 클릭하거나 드래그해 선택합니다. Shift는 선택을 더합니다. 이동·공격 이동을 고른 뒤 땅을 클릭하세요. 지정 공격은 빨간 유닛을 클릭합니다. 우클릭은 적 지정 공격 또는 이동입니다. 정지 명령은 이동을 멈추되 사거리 안 적에 대응합니다.</section>
+<section class="card"><b>무엇을 재현했나</b><br>체력40 · 공격6 · 기본 사거리4 · Cool15는 <a href="https://classic.battle.net/scc/terran/ustats.shtml">공식 표</a>에서 확인했습니다. 1칸=32px, 24tick/s, 속도·반지름·충돌·경로·동시 피해·시야 처리는 근사입니다. 원본 관측과 안개 표현은 없습니다. 전체 가정은 rules.json에 있습니다.</section></div></main>
+<script src="engine.js"></script><script>
+'use strict';
+const canvas=document.querySelector('#field'),ctx=canvas.getContext('2d'),status=document.querySelector('#status');
+let selected=new Set(),mode='move',paused=true,world,initial,drag=null,shift=false,last=0,acc=0;
+function base(){const units=[];for(const team of [0,1])for(let i=0;i<20;i++)units.push({id:(team?'R':'B')+String(i).padStart(2,'0'),team,x:(team?744:120)+(i%5)*18,y:190+Math.floor(i/5)*18});
+return {width:960,height:544,walls:[{x:460,y:0,w:40,h:224},{x:460,y:320,w:40,h:224}],units,commands:[{tick:0,ids:units.filter(u=>u.team===1).map(u=>u.id),kind:'attackMove',x:160,y:264}],ticks:1200,seed:96};}
+function reset(s=base()){initial=JSON.parse(JSON.stringify(s));world=RTS.create(s);selected.clear();paused=true;acc=0;status.textContent='파란 유닛 선택 → 명령 → 시작. 적은 자동으로 진격합니다.';render();}
+function setMode(m){mode=m;for(const k of ['move','attack','attackMove'])document.getElementById(k).classList.toggle('active',m===k);status.textContent='현재 명령: '+m;}
+function point(e){const b=canvas.getBoundingClientRect();return{x:(e.clientX-b.left)*canvas.width/b.width,y:(e.clientY-b.top)*canvas.height/b.height};}
+function issue(kind,p){const ids=[...selected].filter(id=>world.state().some(u=>u.id===id&&u.alive));if(!ids.length){status.textContent='먼저 파란 유닛을 선택하세요.';return;}
+const c={tick:world.tick,ids,kind};if(kind==='attack'){const t=world.state().find(u=>u.alive&&u.team===1&&Math.hypot(u.x-p.x,u.y-p.y)<14);if(!t){status.textContent='지정 공격은 빨간 유닛을 클릭하세요.';return;}c.targetId=t.id;}
+if(['move','attackMove'].includes(kind))Object.assign(c,p);world.command(c);status.textContent=ids.length+'기에 '+kind+' 명령 · tick '+world.tick;}
+canvas.onpointerdown=e=>{if(e.button!==0)return;drag={start:point(e),end:point(e),shift:e.shiftKey};canvas.setPointerCapture(e.pointerId);};
+canvas.onpointermove=e=>{if(drag)drag.end=point(e);};
+canvas.onpointerup=e=>{if(!drag)return;const d=drag;drag=null;const p=point(e);if(Math.hypot(p.x-d.start.x,p.y-d.start.y)>5){if(!d.shift)selected.clear();for(const u of world.state())if(u.alive&&u.team===0&&u.x>=Math.min(p.x,d.start.x)&&u.x<=Math.max(p.x,d.start.x)&&u.y>=Math.min(p.y,d.start.y)&&u.y<=Math.max(p.y,d.start.y))selected.add(u.id);}
+else{const friendly=world.state().find(u=>u.alive&&u.team===0&&Math.hypot(u.x-p.x,u.y-p.y)<12);if(friendly){if(!d.shift)selected.clear();selected.add(friendly.id);}else issue(mode,p);}render();};
+canvas.oncontextmenu=e=>{e.preventDefault();const p=point(e);issue(world.state().some(u=>u.alive&&u.team===1&&Math.hypot(u.x-p.x,u.y-p.y)<14)?'attack':'move',p);};
+for(const k of ['move','attack','attackMove'])document.getElementById(k).onclick=()=>setMode(k);
+document.getElementById('stop').onclick=()=>issue('stop');document.getElementById('pause').onclick=()=>{paused=!paused};document.getElementById('reset').onclick=()=>reset();
+document.onkeydown=e=>{if(e.target.tagName==='INPUT')return;const k=e.key.toLowerCase();if(k===' '){e.preventDefault();paused=!paused;}if(k==='m')setMode('move');if(k==='a')setMode('attackMove');if(k==='t')setMode('attack');if(k==='s')issue('stop');};
+document.getElementById('export').onclick=()=>{const s={...initial,commands:world.scenario.commands,ticks:world.tick};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));a.download='combat-replay.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+document.getElementById('import').onchange=async e=>{try{const s=JSON.parse(await e.target.files[0].text());RTS.simulate(s);reset(s);paused=false;status.textContent='기록 재생 중';}catch(err){status.textContent='기록 거절: '+err.message;}};
+function render(){ctx.clearRect(0,0,960,544);ctx.strokeStyle='#192f3d';ctx.lineWidth=1;for(let x=0;x<960;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,544);ctx.stroke();}for(let y=0;y<544;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(960,y);ctx.stroke();}
+for(const w of world.scenario.walls){ctx.fillStyle='#40515f';ctx.fillRect(w.x,w.y,w.w,w.h);ctx.fillStyle='#667984';ctx.fillRect(w.x,w.y,w.w,3);}
+const state=world.state();for(const u of state){if(!u.alive){ctx.fillStyle='#48505a';ctx.fillRect(u.x-2,u.y-2,4,4);continue;}
+if(selected.has(u.id)){ctx.strokeStyle='#8affd7';ctx.beginPath();ctx.arc(u.x,u.y,10,0,Math.PI*2);ctx.stroke();}ctx.fillStyle=u.team?'#f18075':'#5fb9ef';ctx.beginPath();ctx.arc(u.x,u.y,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#09202b';ctx.fillRect(u.x-3,u.y-2,6,3);ctx.fillStyle='#233a43';ctx.fillRect(u.x-8,u.y-13,16,3);ctx.fillStyle=u.hp>15?'#79e4b2':'#efbb63';ctx.fillRect(u.x-8,u.y-13,16*u.hp/40,3);}
+for(const ev of world.events.slice(-80)){if(ev.type!=='fire'||world.tick-ev.tick>3)continue;const a=state.find(u=>u.id===ev.actor),b=state.find(u=>u.id===ev.target);if(a&&b){ctx.strokeStyle='#f6d88d';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
+if(drag){ctx.fillStyle='#5fe4cf22';ctx.strokeStyle='#5fe4cf';ctx.fillRect(drag.start.x,drag.start.y,drag.end.x-drag.start.x,drag.end.y-drag.start.y);ctx.strokeRect(drag.start.x,drag.start.y,drag.end.x-drag.start.x,drag.end.y-drag.start.y);}
+document.getElementById('score').textContent='BLUE '+state.filter(u=>u.alive&&u.team===0).length+' · RED '+state.filter(u=>u.alive&&u.team===1).length+' / TICK '+world.tick+(paused?' · PAUSED':'');}
+function loop(t){acc+=Math.min(100,t-last);last=t;if(!paused)while(acc>=1000/24){world.step();acc-=1000/24;}else acc=0;render();requestAnimationFrame(loop);}
+window.lab={get world(){return world},get selected(){return [...selected]},reset};reset();requestAnimationFrame(loop);
+</script></html>

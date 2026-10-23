@@ -1,0 +1,467 @@
+{
+  "episodes": [
+    {
+      "turn": 1,
+      "task_id": "task_0c61b7fcad9345a094a4e3a7fd9eb01f",
+      "episodes": [
+        {
+          "id": 5445,
+          "source": "training",
+          "task_id": "task_0c61b7fcad9345a094a4e3a7fd9eb01f",
+          "run_id": "run_2a44d94308fd4abcbe54",
+          "total_ms": 706955,
+          "ended_at": "2026-10-23T14:40:45.494804"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 4632,
+          "output": 2,
+          "cache_read": 3456,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 228662,
+          "output": 5300,
+          "cache_read": 145470,
+          "cache_create": 83182
+        },
+        "execution": {
+          "input": 2974432,
+          "output": 63829,
+          "cache_read": 2803740,
+          "cache_create": 170646
+        },
+        "oneshot:evaluate": {
+          "input": 71519,
+          "output": 421,
+          "cache_read": 1679,
+          "cache_create": 69838
+        }
+      },
+      "totals": {
+        "input": 3279245,
+        "output": 69552,
+        "cache_read": 2954345,
+        "cache_create": 323666
+      },
+      "tool_counts": {
+        "Bash": 18,
+        "Write": 3,
+        "Read": 1
+      },
+      "evaluation": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "8c228adf8809cedffe8caf0a575a46edb354aeb6793ea4652d0f2b2a80cfd3ed",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "compactions": 0
+    },
+    {
+      "turn": 2,
+      "task_id": "task_35e50be53d9f4b01928dfd703c504f18",
+      "episodes": [
+        {
+          "id": 5446,
+          "source": "training",
+          "task_id": "task_35e50be53d9f4b01928dfd703c504f18",
+          "run_id": "run_e8e2eb9136d1ef2586fc",
+          "total_ms": 1013304,
+          "ended_at": "2026-10-23T14:57:59.069591"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 9858,
+          "output": 5,
+          "cache_read": 3840,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 7560,
+          "output": 2199,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 8422900,
+          "output": 75236,
+          "cache_read": 8299708,
+          "cache_create": 123126
+        },
+        "oneshot:evaluate": {
+          "input": 73598,
+          "output": 1124,
+          "cache_read": 658,
+          "cache_create": 72938
+        }
+      },
+      "totals": {
+        "input": 8513916,
+        "output": 78564,
+        "cache_read": 8305486,
+        "cache_create": 196064
+      },
+      "tool_counts": {
+        "Bash": 31,
+        "Read": 1
+      },
+      "evaluation": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "69e749d37b1ad09306d93b963cbe4926d3f27389ffddd82c69d9da7762a9c823",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "compactions": 0
+    }
+  ],
+  "preservation": {
+    "baseline_files": 17,
+    "changed": [],
+    "inputs": [
+      {
+        "name": "official_stats.html",
+        "same_as_original_copy": true,
+        "sha256": "163c043996745a7fa045439db0b3d6bc5b77a586f54e58681e77de33c6ed6489"
+      },
+      {
+        "name": "official_marine.html",
+        "same_as_original_copy": true,
+        "sha256": "7d1c3774a355aef0c3fc6f59224f6dc33e085809d52fbd88f83e99640ae816bb"
+      },
+      {
+        "name": "sources.json",
+        "same_as_original_copy": true,
+        "sha256": "cae6aae656426edb3a4d4c5baeec03c4e945342ab1c63ea2edf8f274c2b22250"
+      }
+    ]
+  },
+  "T2_holdout": {
+    "engine": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_96회차/ai/artifacts/variant/engine.js",
+    "passed": 12,
+    "total": 12,
+    "checks": [
+      {
+        "name": "stop_exact",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "move_progress_before_stop",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "explicit_target",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "move_does_not_fire",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "distant_idle_no_damage",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "deterministic",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "duplicate_ids",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "nan_position",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "negative_ticks",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "unknown_command_unit",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "overlapping_start",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "unit_in_wall",
+        "passed": true,
+        "detail": null
+      }
+    ],
+    "original_equivalence_verified": false
+  },
+  "T2_ui": {
+    "checks": [
+      {
+        "name": "load_40_units",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "drag_select_20",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "move_queued",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "movement",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "stop_holds",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "node_replay_executes",
+        "passed": true,
+        "detail": ""
+      },
+      {
+        "name": "ui_to_node_final",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "import_finished",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "import_hash_match",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "chrome_node_full_800_tick_trace",
+        "passed": true,
+        "detail": {
+          "chrome": "60cf4d3095ebc721407371ce57cdadef615c83d14ec2b0f93a1bb26a77169fc7",
+          "node": "60cf4d3095ebc721407371ce57cdadef615c83d14ec2b0f93a1bb26a77169fc7"
+        }
+      },
+      {
+        "name": "restart",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "offline",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "name": "no_errors",
+        "passed": true,
+        "detail": []
+      }
+    ],
+    "passed": 13,
+    "total": 13
+  },
+  "T2_external_scenarios": [
+    {
+      "name": "battle_40v40",
+      "kind": "battle",
+      "executed": true,
+      "deterministic": true,
+      "collisions": 0,
+      "wallContacts": 0,
+      "invalid": 0,
+      "deadActions": 0,
+      "shots": 433,
+      "events": 926,
+      "survivors": 20,
+      "passed_right": 40,
+      "total": 80,
+      "trace_sha256": "60cf4d3095ebc721407371ce57cdadef615c83d14ec2b0f93a1bb26a77169fc7",
+      "wall_ms": 288
+    },
+    {
+      "name": "passage_narrow",
+      "kind": "passage",
+      "executed": true,
+      "deterministic": true,
+      "collisions": 0,
+      "wallContacts": 0,
+      "invalid": 0,
+      "deadActions": 0,
+      "shots": 0,
+      "events": 0,
+      "survivors": 40,
+      "passed_right": 40,
+      "total": 40,
+      "trace_sha256": "ad3350886a9030e4567d724c7822988d6b16abc0b3c1a4096d7803a1f3c8cfc6",
+      "wall_ms": 127
+    },
+    {
+      "name": "duel",
+      "kind": "duel",
+      "executed": true,
+      "deterministic": true,
+      "collisions": 0,
+      "wallContacts": 0,
+      "invalid": 0,
+      "deadActions": 0,
+      "shots": 14,
+      "events": 30,
+      "survivors": 0,
+      "passed_right": 0,
+      "total": 2,
+      "trace_sha256": "717b74e3f244d7dead479b442138ec2d62caa0c54f95ff0d4886521e0e3e1ff2",
+      "wall_ms": 15
+    },
+    {
+      "name": "out_of_range",
+      "kind": "out_of_range",
+      "executed": true,
+      "deterministic": true,
+      "collisions": 0,
+      "wallContacts": 0,
+      "invalid": 0,
+      "deadActions": 0,
+      "shots": 12,
+      "events": 24,
+      "survivors": 2,
+      "passed_right": 0,
+      "total": 2,
+      "trace_sha256": "88eb23d60aae917f2fe3628488e2e071ecccfce0bc3708d95c592332ba33a1e8",
+      "wall_ms": 5
+    },
+    {
+      "name": "stop",
+      "kind": "stop",
+      "executed": true,
+      "deterministic": true,
+      "collisions": 0,
+      "wallContacts": 0,
+      "invalid": 0,
+      "deadActions": 0,
+      "shots": 0,
+      "events": 0,
+      "survivors": 1,
+      "passed_right": 0,
+      "total": 1,
+      "trace_sha256": "25c394d9a16b77b50a75a371a5f0ba808e3386fc890c75c230872fd78371b2ef",
+      "wall_ms": 6
+    },
+    {
+      "name": "empty",
+      "kind": "empty",
+      "executed": false,
+      "error": "ScenarioError: 잘못된 scenario: units 는 비지 않은 배열이어야 함",
+      "wall_ms": 0
+    },
+    {
+      "name": "battle_reversed",
+      "kind": "battle",
+      "executed": true,
+      "deterministic": true,
+      "collisions": 0,
+      "wallContacts": 0,
+      "invalid": 0,
+      "deadActions": 0,
+      "shots": 433,
+      "events": 926,
+      "survivors": 20,
+      "passed_right": 40,
+      "total": 80,
+      "trace_sha256": "46e7e8ab06e378dbce97597b724925e354d52299f3ed1d572bf1c41caf08fd89",
+      "wall_ms": 224
+    }
+  ],
+  "T2_remaining_failures_rechecked": [
+    {
+      "wall_x": 620,
+      "wall_width": 60,
+      "gap_y": 90,
+      "gap_width": 16,
+      "units": 35,
+      "ticks": 15000,
+      "crossed": 0,
+      "wall_contacts": 0,
+      "unit_overlaps": 0
+    },
+    {
+      "wall_x": 620,
+      "wall_width": 60,
+      "gap_y": 260,
+      "gap_width": 16,
+      "units": 35,
+      "ticks": 15000,
+      "crossed": 9,
+      "wall_contacts": 0,
+      "unit_overlaps": 0
+    },
+    {
+      "wall_x": 620,
+      "wall_width": 60,
+      "gap_y": 470,
+      "gap_width": 16,
+      "units": 12,
+      "ticks": 15000,
+      "crossed": 3,
+      "wall_contacts": 0,
+      "unit_overlaps": 0
+    },
+    {
+      "wall_x": 620,
+      "wall_width": 60,
+      "gap_y": 470,
+      "gap_width": 16,
+      "units": 35,
+      "ticks": 15000,
+      "crossed": 2,
+      "wall_contacts": 0,
+      "unit_overlaps": 0
+    },
+    {
+      "wall_x": 620,
+      "wall_width": 60,
+      "gap_y": 90,
+      "gap_width": 18,
+      "units": 35,
+      "ticks": 15000,
+      "crossed": 35,
+      "wall_contacts": 0,
+      "unit_overlaps": 0
+    }
+  ],
+  "cleanup": {
+    "agent_stopped": true,
+    "pending_children": 0,
+    "health": "healthy",
+    "live_turns": [],
+    "verified_at": "2026-10-23T15:00:18+09:00"
+  }
+}

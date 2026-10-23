@@ -443,6 +443,66 @@ def test_same_poll_with_elapsed_numbers_is_not_progress(supervisor):
     assert supervisor.trigger == "unchanged_repeat"
 
 
+def test_alternating_retry_and_inspection_reaches_existing_review(supervisor, monkeypatch):
+    """조회 성공이 같은 전송 실패를 번갈아 덮어도 순환을 검토한다."""
+    seen = []
+    monkeypatch.setattr(supervisor, "review", seen.append)
+    for _ in range(3):
+        key = supervisor._start("send", {"document": "report"})
+        supervisor._finish(key, "destination unavailable", error=True)
+        key = supervisor._start("inspect", {"destination": "archive"})
+        supervisor._finish(key, {"reachable": False})
+    assert supervisor.failures == 0  # 순차 실패 계수와는 독립이다.
+    assert supervisor.trigger == "unchanged_repeat"
+    supervisor.tick(time.monotonic())
+    assert seen == ["unchanged_repeat"]
+
+
+def test_cycle_review_retires_after_changed_result(supervisor):
+    for _ in range(3):
+        for name in ("inspect_queue", "inspect_worker"):
+            supervisor._finish(supervisor._start(name, {}), "waiting")
+    assert supervisor.trigger == "unchanged_repeat"
+    conditions = supervisor.review_conditions("unchanged_repeat")
+    supervisor._finish(supervisor._start("inspect_queue", {}), "completed")
+    assert supervisor.trigger == ""
+    assert not supervisor.conditions_valid(conditions)
+
+
+def test_changing_work_and_explicit_progress_do_not_accumulate_cycles(supervisor):
+    for count in range(5):
+        supervisor._finish(supervisor._start("inspect_queue", {}), {"completed": count})
+        supervisor._finish(supervisor._start("inspect_worker", {}), "running")
+        assert supervisor.trigger == ""
+    for count in range(5):
+        supervisor.progress({"page_written": count})
+        for name in ("inspect_queue", "inspect_worker"):
+            supervisor._finish(supervisor._start(name, {}), "running")
+        assert supervisor.trigger == ""
+
+
+def test_explicit_progress_invalidates_pending_cycle_review(supervisor):
+    for _ in range(3):
+        supervisor._finish(supervisor._start("inspect", {}), "waiting")
+    conditions = supervisor.review_conditions("unchanged_repeat")
+    supervisor.progress({"files_written": 1})
+    assert supervisor.trigger == ""
+    assert not supervisor.conditions_valid(conditions)
+    supervisor._finish(supervisor._start("inspect", {}), "waiting")
+    assert supervisor.repeats == 1
+
+
+def test_changing_inputs_and_long_history_preserve_bounded_cycle_detection(supervisor):
+    for page in range(30):
+        supervisor._finish(supervisor._start("read_page", {"page": page}), "empty")
+    assert supervisor.trigger == ""
+    assert len(supervisor.tool_observations) == 24
+    for _ in range(3):
+        for name in ("read_queue", "read_worker", "read_destination"):
+            supervisor._finish(supervisor._start(name, {}), "waiting")
+    assert supervisor.trigger == "unchanged_repeat"
+
+
 def test_verdict_from_before_real_progress_is_not_delivered(supervisor, monkeypatch):
     active = supervisor._start("inspect", {"target": "stalled"})
     def invoke(c, *args, **kwargs):

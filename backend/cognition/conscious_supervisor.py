@@ -89,6 +89,7 @@ class Supervisor:
         self.reviews = self.failures = self.repeats = self.tools_used = self.call_tools = 0
         self.last_signature = ""
         self.last_result = ""
+        self.tool_observations = deque(maxlen=24)
         self.trigger = ""
         self.pending = None
         self.phase = "plan"
@@ -407,7 +408,7 @@ class Supervisor:
             if signature != getattr(self, "progress_signature", None):
                 self.progress_signature = signature
                 self.last_progress = time.monotonic()
-                self.repeats = 0
+                self._reset_tool_cycle()
                 self.exec_revision += 1
                 self.recent.append(self.log("progress", role="execution", detail=str(detail)[:800]))
 
@@ -417,6 +418,18 @@ class Supervisor:
             self.active[key] = {"name": name, "started": time.monotonic(), "input": self.store.evidence(payload), "_payload": payload}
             self.recent.append(self.log("tool.started", id=key, name=name, input=self.active[key]["input"]))
         return key
+
+    def _retire_repeat_issues(self):
+        for sig, issue in list(self.issues.items()):
+            if issue["open"] and issue.get("kind") == "repeat":
+                self.issues[sig] = {"open": False, "generation": issue["generation"] + 1}
+
+    def _reset_tool_cycle(self):
+        self.repeats = 0
+        self.tool_observations.clear()
+        self._retire_repeat_issues()
+        if self.trigger == "unchanged_repeat":
+            self.trigger = ""
 
     def _finish(self, key, result, error=False):
         with self.lock:
@@ -448,8 +461,13 @@ class Supervisor:
                     and (payload.get("read_result") is not None or payload.get("describe") is not None)):
                 return  # Evidence paging neither repairs an execution failure nor repeats execution.
             sig = call.get("name", "") + call.get("input", {}).get("id", "")
-            self.repeats = self.repeats + 1 if sig == self.last_signature and result_signature == self.last_result else 1
+            self.tool_observations.append((sig, result_signature, bool(error)))
+            self.repeats, period = _repeated_tool_cycle(self.tool_observations)
             self.last_signature, self.last_result = sig, result_signature
+            if self.repeats < 3:
+                # 다른 호출의 새 관측도 이전 순환을 끊는다. 검토 중이던 지시는
+                # 해당 이슈의 세대가 달라져 전달 경계에서 폐기된다.
+                self._retire_repeat_issues()
             if not observation:
                 self.failures = self.failures + 1 if error else 0
             from supervisor_review import ibl_shape_repair_key, ibl_error_render_repair_key
@@ -473,6 +491,9 @@ class Supervisor:
                 if self.trigger == "tool_stalled":
                     self.trigger = ""
             if self.failures >= 2 or self.repeats >= 3:
+                if self.repeats >= 3 and self.failures < 2 and self.trigger != "unchanged_repeat":
+                    self.log("tool.repeat_detected", role="harness", period=period,
+                             repetitions=self.repeats, observations=list(self.tool_observations)[-period:])
                 self.trigger = "repeated_failure" if self.failures >= 2 else "unchanged_repeat"
             elif self.trigger in {"repeated_failure", "unchanged_repeat"}:
                 self.log("review.trigger_retired", role="harness", trigger=self.trigger,
@@ -646,7 +667,7 @@ class Supervisor:
                 self.job_states[str(job.path)] = observed
                 if observed["changed"]:
                     self.last_progress = now
-                    self.repeats = 0
+                    self._reset_tool_cycle()
                     self.exec_revision += 1
                     self.recent.append(self.log("job.progress", role="harness", **observed))
                     if observed.get("job_status") in {"failed", "timeout", "lost"} or observed.get("cleanup") == "failed":
@@ -1062,6 +1083,25 @@ class Supervisor:
         yield {"type": "text", "content": final}
         yield {"type": "final", "content": final}
         return final
+
+
+def _repeated_tool_cycle(observations):
+    """최근 24개 경계 안에서 입력·결과·실패 여부가 같은 1~8호출 순환.
+
+    도메인 상태를 추측하거나 출력을 버리지 않는다. 기존 검토의 조건만 만들며
+    실제 재실행·대기·중단 판단과 검토 예산은 기존 감독 경계가 소유한다.
+    """
+    rows = list(observations)
+    best, period = 1, 1
+    for width in range(1, min(8, len(rows) // 2) + 1):  # clamp-ok: 내부 순환 탐색 범위이며 사용자 요청·출력·실행을 자르지 않는다.
+        tail, count = rows[-width:], 1
+        while (count + 1) * width <= len(rows):
+            if rows[-(count + 1) * width:-count * width] != tail:
+                break
+            count += 1
+        if count > best:
+            best, period = count, width
+    return best, period
 
 
 def _failed(value):

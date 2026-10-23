@@ -42,7 +42,7 @@ def scripts(tmp_path, monkeypatch):
 
     registry = {"fixture:script": Adapter(
         {"version": 1, "params": {"id": "Text"}, "result": "Number",
-         "effects": ["read_external"]}, run, dependency=dependencies.script_snapshot)}
+         "effects": ["read_external"]}, run, dependency=dependencies.script_dependency)}
     source = (
         '$a=[fixture:script]{id:"one"}\n'
         '$b=[fixture:script]{id:"two"}\n'
@@ -143,6 +143,88 @@ def test_call_sites_do_not_share_mutable_snapshot_evidence(scripts):
     assert snapshots[0] == snapshots[2]
     snapshots[0]["files"].clear()
     assert snapshots[2]["files"]
+
+
+def test_register_then_first_run_binds_new_definition_at_invocation(scripts):
+    import json
+    root, registry, _, state = scripts
+    original = registry["fixture:script"]
+    def run(rt, args):
+        if args.get("op") == "register":
+            entries = dependencies.yaml.safe_load((root / "registry.yaml").read_text())
+            entries[args["id"]] = {"file": "one.py", "interpreter": "python"}
+            (root / "registry.yaml").write_text(json.dumps(entries))
+            return 0
+        assert rt.local.invocation_dependency["scope"] == "script-closure"
+        state["executed"] += 1
+        return 1
+    registry["fixture:script"] = replace(original, run=run,
+        contract={"version": 1, "params": {"id": "Text", "op": "Text"},
+                  "required": ["id"], "result": "Number", "effects": ["write_external"]},
+        invocation_dependency=dependencies.script_invocation_snapshot)
+    plan = compile_program('$r=[fixture:script]{op:"register",id:"new"}\n'
+                           'return [fixture:script]{id:"new"}', registry)
+    assert not plan.issues, plan.issues
+    result = Runtime(plan).run()
+    assert result["success"] and result["value"] == 1, result
+    assert state["executed"] == 1
+    assert plan.dependencies["calls"][list(plan.dependencies["calls"])[-1]]["binding"] == "invocation"
+
+
+def test_unbound_dependency_requires_invocation_provider(scripts):
+    _, registry, _, state = scripts
+    plan = compile_program('[fixture:script]{id:"not_yet_registered"}', registry)
+    result = Runtime(plan).run()
+    assert result["diagnostic"]["code"] == "DEPENDENCY_CONTRACT"
+    assert state["executed"] == 0
+
+
+def test_public_script_register_then_run_uses_real_runner(scripts, monkeypatch):
+    import runtime_utils
+    from ibl_v2_adapters import load_registry
+    from system_tools import load_tool_handler
+    root, _, _, _ = scripts
+    monkeypatch.setattr(runtime_utils, "get_base_path", lambda: Path(__file__).resolve().parents[1])
+    snapshot = dependencies.script_snapshot
+    monkeypatch.setattr(dependencies, "script_snapshot", lambda args, **kw: snapshot(args, root, **kw))
+    handler = load_tool_handler("script_op")
+    ops = handler._load_sibling("script_ops")
+    monkeypatch.setattr(ops, "_SCRIPT_DIR", root)
+    monkeypatch.setattr(ops, "_REGISTRY", root / "registry.yaml")
+    monkeypatch.setitem(handler._SIBLING_MODS, "script_ops", ops)
+    script = root / "fresh.py"
+    script.write_text('import json,sys; print(json.dumps({"answer":json.load(sys.stdin)["n"]*2}))')
+    registry = load_registry(str(root.parent.parent))
+    source = ('[self:script]{op:"register",id:"fresh",path:$path}\n'
+              'return [self:script]{id:"fresh",args:{n:7}}')
+    plan = compile_program(source, registry, {"path": str(script)})
+    assert not plan.issues, plan.report()
+    result = Runtime(plan, {"path": str(script)}).run()
+    assert result["success"] and result["value"] == {"answer": 14}, result
+    assert dependencies.yaml.safe_load((root / "registry.yaml").read_text())["fresh"]["file"] == "fresh.py"
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_dynamic_script_reuse_checks_invocation_assets(scripts, tmp_path, changed):
+    from ibl_run_journal import Journal, reusable_receipts
+    root, registry, _, state = scripts
+    registry["fixture:script"] = replace(registry["fixture:script"],
+        invocation_dependency=dependencies.script_invocation_snapshot)
+    inputs = {"name": "one"}
+    plan = compile_program('return [fixture:script]{id:$name}', registry, inputs)
+    assert not plan.issues, plan.report()
+    assert next(iter(plan.dependencies["calls"].values()))["binding"] == "invocation"
+    with Journal(tmp_path / "journal", "first") as journal:
+        first = Runtime(plan, inputs, journal=journal).run()
+        run_id = journal.run_id
+    assert first["success"], first
+    if changed:
+        (root / "one.py").write_text("result = 3\n")
+    result = Runtime(plan, inputs, reusable=reusable_receipts(tmp_path / "journal", run_id),
+                     reuse_run=run_id).run()
+    assert result["success"], result
+    assert state["executed"] == (2 if changed else 1)
+    assert result["reuse"]["reused_calls"] == int(not changed)
 
 
 if __name__ == "__main__":

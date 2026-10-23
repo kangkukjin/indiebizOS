@@ -32,7 +32,7 @@ def flow(tmp_path, monkeypatch):
     (scripts / 'registry.yaml').write_text(yaml.safe_dump({'Android제어부품': entry}, allow_unicode=True))
     (scripts / 'android_control.py').write_bytes((ROOT / 'data/scripts/android_control.py').read_bytes())
     snapshot = ibl_dependencies.script_snapshot
-    monkeypatch.setattr(ibl_dependencies, 'script_snapshot', lambda args: snapshot(args, root=scripts))
+    monkeypatch.setattr(ibl_dependencies, 'script_snapshot', lambda args, **kw: snapshot(args, root=scripts, **kw))
     state = {'terminal': False, 'calls': [], 'plans': [], 'connected': True}
     target = {'device_id': 'pc-1', 'connected': True, 'registration': {
         'state': 'active', 'capabilities': {'os': 'android', 'execution_contract': 1, 'runtimes': {'python': {'ready': True}}}}}

@@ -12,7 +12,8 @@ def is_file_call(args):
 
 def invocation_identity(args):
     if not is_file_call(args):
-        return None
+        from ibl_dependencies import script_invocation_snapshot
+        return script_invocation_snapshot(args)
     from script_workspace import authorize, source_path, workspace
     from file_script import digest
     from python_environment_lock import fingerprint

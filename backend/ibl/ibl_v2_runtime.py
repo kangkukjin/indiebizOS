@@ -600,7 +600,11 @@ class Runtime(ExpressionEvaluator):
         if spec.contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args.value:
             from ibl_v2_types import rows_value
             args = Binding({**args.value, "items": rows_value(args.value["items"])}, args.evidence)
-        if spec.dependency and spec.dependency(node.data['dependency_args']) != node.data['dependency_snapshot']:
+        dependency = node.data.get('dependency_snapshot')
+        deferred = isinstance(dependency, dict) and dependency.get('binding') == 'invocation'
+        if deferred and not spec.invocation_dependency:
+            raise Fault('DEPENDENCY_CONTRACT', '실행 시점 자산 바인딩에 지문 제공자가 없습니다.', node, kind='protocol')
+        if spec.dependency and not deferred and spec.dependency(node.data['dependency_args']) != dependency:
             raise Fault('DEFINITION_CHANGED', '참조한 실행 자산이 검사 이후 변경되었습니다.', node, kind='protocol')
         contract = selected(spec.contract, args.value)
         if spec.specialize and not node.data.get('target'):
@@ -654,6 +658,8 @@ class Runtime(ExpressionEvaluator):
                             "dependency": node.data.get("dependency_snapshot"),
                             "semantics": {k: self.plan.dependencies[k]
                                           for k in ("core", "edition", "semantics", "expressions")}}
+        if invocation_dependency is not None:
+            reuse_identity['invocation_dependency'] = invocation_dependency
         reuse_key = digest(reuse_identity)
         reuse_parts = {name: digest(value) for name, value in reuse_identity.items()}
         stateful = bool(spec.stateful and spec.stateful(args.value))

@@ -431,6 +431,9 @@ def load_registry(project_path=".", agent_id=None):
                     from ibl_file_script import is_file_call, invoke as invoke_file
                     if is_file_call(args):
                         return invoke_file(runtime, args, ac, node, action)
+                    from ibl_dependencies import script_invocation_snapshot
+                    if script_invocation_snapshot(args) != runtime.local.invocation_dependency:
+                        raise Fault("DEFINITION_CHANGED", "실행 직전 등록 자산이 바뀌었습니다.", kind="protocol")
                     from ibl_script_session import registration, invoke
                     session_registration = registration(args)
                     if session_registration:
@@ -472,14 +475,14 @@ def load_registry(project_path=".", agent_id=None):
                 current_allowed = get_allowed_nodes()
                 if (current_allowed is not None and not check_node_access(node, current_allowed)) or not visible(node, action, ac):
                     raise Fault("RECEIPT_ACCESS", "현재 권한으로 이 호출의 영수증을 사용할 수 없습니다.", kind="permission")
-            from ibl_dependencies import script_snapshot, script_contract
+            from ibl_dependencies import script_dependency, script_contract
             def reusable(args, ac=action_config):
                 # 조이는 건 자동, 푸는 건 명시(ibl_ops 규칙 그대로): 부작용 없음 + 내부 모델 호출 없음 + 스크립트 아님.
                 if ac.get("ai_call") is True or (ac.get("callable_contract") or {}).get("adapter", {}).get("protocol") == "ibl-script/2":
                     return False
                 from ibl_ops import op_side_effect, resolve_op
                 return not op_side_effect(ac, resolve_op(ac, args if isinstance(args, dict) else {}))
-            dependency = script_snapshot if adapter['protocol'] == 'ibl-script/2' else None
+            dependency = script_dependency if adapter['protocol'] == 'ibl-script/2' else None
             def resource_identity(realm, value, base=project_path):
                 from runtime_utils import file_resource_identity
                 # Offline definition checks have no turn directory. Keep a symbolic

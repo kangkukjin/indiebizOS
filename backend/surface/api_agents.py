@@ -467,7 +467,7 @@ def get_agent_task(project_id: str, agent_id: str, task_id: str, wait: int = 0):
 
     경로의 agent 를 믿지 않고 저장된 delegated_to 와 대조한다(id 또는 이름). wait 는 서버 상한
     (delegation_tasks.HTTP_WAIT_MAX)으로 제한된 대기. 결과 전문은 종료 상태에서만."""
-    from delegation_tasks import HTTP_WAIT_MAX, missing_explanation, task_view, wait_for_task
+    from delegation_tasks import HTTP_WAIT_MAX, get_task_row, missing_explanation, task_view, wait_for_task
     try:
         project_path = project_manager.get_project_path(project_id)
     except Exception as exc:
@@ -486,6 +486,13 @@ def get_agent_task(project_id: str, agent_id: str, task_id: str, wait: int = 0):
     runner = runner_info.get("runner")
     if runner is not None:
         names |= {runner.config.get("id"), runner.config.get("name")}
+    if agent_id == "-":
+        # scope:task receipts use a worker session, not a configured agent.
+        # The placeholder is valid only for a persisted worker, never a wildcard
+        # granting access to another configured agent's task.
+        row = get_task_row(project_id, task_id)
+        if row and row.get("worker_session") and row["worker_session"] == row.get("delegated_to"):
+            names.add(row["worker_session"])
     bounded = max(0, min(int(wait or 0), HTTP_WAIT_MAX))
     view = wait_for_task(project_id, task_id, bounded, agent_id) if bounded else task_view(project_id, task_id, agent_id)
     if view is None:

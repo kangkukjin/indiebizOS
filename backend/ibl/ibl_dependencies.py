@@ -37,7 +37,7 @@ def _script_registry(path):
     )
 
 
-def script_snapshot(args, root=None):
+def script_snapshot(args, root=None, *, binding=False, invocation=False):
     if 'path' in args and args.get('op', 'run') == 'run':
         # A preceding write may create this file. Pin bytes in the receipt at invocation.
         return {'scope': 'invocation-file', 'protocol': 'file-script/1'}
@@ -46,13 +46,31 @@ def script_snapshot(args, root=None):
     root = Path(root) if root else Path(get_repair_workspace(create=bool(args)) or get_base_path()) / 'data/scripts'
     sid = args.get('id')
     operation = args.get('op', 'run' if sid else 'list')
+    registry = _script_registry(root / 'registry.yaml')
+    if binding and (operation != 'run' or not isinstance(sid, str) or sid not in registry):
+        # Management reads the current registry. New/dynamic IDs cannot have an
+        # executable definition pinned yet, just like a file created earlier in
+        # the program. Pin the resolved bytes/contract at invocation instead.
+        return {'binding': 'invocation', 'scope': 'registered-script', 'protocol': 'registered-json/1'}
+    if invocation and operation != 'run':
+        return {'scope': 'script-management', 'registry': digest(registry)}
     key = ("snapshot", str(root), digest([sid, operation]))
     # Call sites own their snapshots. Do not let one mutate another's evidence.
-    return copy.deepcopy(_check_value(key, lambda: _script_snapshot(root, sid, operation)))
+    return copy.deepcopy(_check_value(key, lambda: _script_snapshot(root, sid, operation, registry)))
 
 
-def _script_snapshot(root, sid, operation):
-    registry = _script_registry(root / 'registry.yaml')
+def script_dependency(args):
+    """Compiler binding policy; raw namespace snapshots retain their full evidence."""
+    return script_snapshot(args, binding=True)
+
+
+def script_invocation_snapshot(args):
+    return script_snapshot(args, invocation=True)
+
+
+def _script_snapshot(root, sid, operation, registry=None):
+    if registry is None:
+        registry = _script_registry(root / 'registry.yaml')
     entry = registry.get(sid) if isinstance(sid, str) else None
     # Dynamic selection and list/register/remove observe the whole namespace.
     dynamic = not entry or operation != 'run'

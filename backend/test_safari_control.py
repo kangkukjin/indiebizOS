@@ -31,7 +31,7 @@ def safari_process(ops, monkeypatch, tmp_path):
     source.write_bytes((ROOT / "data/scripts/safari_control.py").read_bytes())
     snapshot = ibl_dependencies.script_snapshot
     monkeypatch.setattr(ibl_dependencies, "script_snapshot",
-                        lambda args: snapshot(args, root=ops._SCRIPT_DIR))
+                        lambda args, **kw: snapshot(args, root=ops._SCRIPT_DIR, **kw))
     monkeypatch.setattr(ops, "_resolve_interpreter", lambda *args: (sys.executable, None))
     handler = load_tool_handler("script_op")
     monkeypatch.setitem(handler._SIBLING_MODS, "script_ops", ops)

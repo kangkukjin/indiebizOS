@@ -578,6 +578,33 @@ def test_agent_task_route_checks_stored_owner(world, monkeypatch):
     assert other.value.status_code == 404
 
 
+def test_worker_receipt_url_resolves_only_persisted_worker(world, monkeypatch):
+    import api_agents
+    import conversation_sessions as sessions
+    import task_worker_store as store
+    monkeypatch.setattr(api_agents, "project_manager",
+                        SimpleNamespace(get_project_path=lambda pid: Path(world.project_path)))
+    monkeypatch.setattr(api_agents, "agent_runners", {})
+    path = Path(world.project_path) / "conversations.db"
+    world.db.create_task("parent", "user", "gui", "work", AGENT_NAME)
+    session_store = sessions.SessionStore(path, "messages", "test:worker", create_legacy=False)
+    binding = session_store.begin(session_store.create()["id"])
+    payload = {"controller": binding.session_id, "principal": {}, "actor": AGENT_ID,
+               "agent_id": AGENT_ID, "owner": PROJECT, "project_path": world.project_path,
+               "envelope": {}}
+    row = store.accept(path, "parent", "worker-test", "work", payload)
+    receipt = world.dt.accepted(PROJECT, row["task_id"])
+    assert receipt["status_url"] == f"/projects/{PROJECT}/agents/-/tasks/{row['task_id']}"
+    view = api_agents.get_agent_task(PROJECT, "-", row["task_id"])
+    assert view["state"] == "queued"
+    world.db.complete_task(row["task_id"], "worker result")
+    assert api_agents.get_agent_task(PROJECT, "-", row["task_id"])["result"] == "worker result"
+    for agent, task in [("-", "parent"), (AGENT_ID, row["task_id"]), ("-", "missing")]:
+        with pytest.raises(api_agents.HTTPException) as denied:
+            api_agents.get_agent_task(PROJECT, agent, task)
+        assert denied.value.status_code == 404
+
+
 def _restart(world):
     """재기동 모사 — 부팅 배선의 작업 원장 정리를 임시 base 에 돌린다(boot_common 이 projects.json 을 읽는다)."""
     import boot_common

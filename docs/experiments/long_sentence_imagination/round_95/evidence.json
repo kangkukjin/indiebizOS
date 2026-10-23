@@ -1,0 +1,370 @@
+{
+  "baseline": {
+    "start": "2026-10-23T11:53:00+09:00",
+    "deadline": "2026-10-23T12:53:00+09:00",
+    "head": "f7062930bbe3ad21b4826428d2404302041d0cb7"
+  },
+  "end_head": "f7062930bbe3ad21b4826428d2404302041d0cb7",
+  "trainer": [
+    {
+      "tag": "trainer_T1_v1",
+      "success": false,
+      "resume": {
+        "run_id": "15b9f7ed6dc94349b100e81b7174cf04"
+      },
+      "usage": {
+        "steps": 22304,
+        "rows": 48,
+        "elapsed_ms": 1332,
+        "limits": {
+          "steps": 100000,
+          "rows": 10000
+        }
+      },
+      "http": {
+        "wall_s": 1.422486124560237
+      },
+      "source_complete": false,
+      "diagnostic": {
+        "code": "TEXT_REQUIRED",
+        "kind": "runtime",
+        "message": "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 이 값은 null입니다 — 보간·text() 앞에서 `$x == null ? '없음' : text($x)`처럼 가르세요.",
+        "frames": [
+          {
+            "function": "저장검증",
+            "call": {
+              "source_hash": "cd4a1ebdd46bc529c1ee499879f27c1fc9dc3c828cde37b1e8cc858d49c9ca38",
+              "start": 3357,
+              "end": 3388,
+              "line": 62,
+              "column": 1
+            },
+            "definition": {
+              "source_hash": "cd4a1ebdd46bc529c1ee499879f27c1fc9dc3c828cde37b1e8cc858d49c9ca38",
+              "start": 1927,
+              "end": 2698,
+              "line": 40,
+              "column": 1
+            }
+          }
+        ],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [
+          2797
+        ],
+        "details": {
+          "actual": "Null",
+          "expected": "Bool | Number | Text",
+          "list_index": 3
+        },
+        "source_span": {
+          "source_hash": "cd4a1ebdd46bc529c1ee499879f27c1fc9dc3c828cde37b1e8cc858d49c9ca38",
+          "start": 2131,
+          "end": 2201,
+          "line": 45,
+          "column": 26
+        }
+      },
+      "reused_calls": 0,
+      "changed_resources": []
+    },
+    {
+      "tag": "trainer_T1_v2",
+      "success": true,
+      "resume": {
+        "run_id": "5695f8948f66478c847b1e1c87402350"
+      },
+      "usage": {
+        "steps": 22749,
+        "rows": 48,
+        "elapsed_ms": 517,
+        "limits": {
+          "steps": 100000,
+          "rows": 10000
+        }
+      },
+      "http": {
+        "wall_s": 0.6088223746046424
+      },
+      "source_complete": false,
+      "diagnostic": null,
+      "reused_calls": 43,
+      "changed_resources": []
+    },
+    {
+      "tag": "trainer_T2_v2",
+      "success": true,
+      "resume": {
+        "run_id": "b94054b3bd2240e4b97adca1ad87de3b"
+      },
+      "usage": {
+        "steps": 29579,
+        "rows": 48,
+        "elapsed_ms": 779,
+        "limits": {
+          "steps": 100000,
+          "rows": 10000
+        }
+      },
+      "http": {
+        "wall_s": 0.8904520003125072
+      },
+      "source_complete": true,
+      "diagnostic": null,
+      "reused_calls": 35,
+      "changed_resources": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/artifacts/J07.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/artifacts/J08.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/artifacts/J10.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/artifacts/J12.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/artifacts/J14.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/policy.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/receipts.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/trainer/inputs/source/J03.json"
+      ]
+    }
+  ],
+  "ai": [
+    {
+      "turn": 1,
+      "task_id": "task_6e9080ac2d4d41219bff9400b4b95b7f",
+      "episodes": [
+        {
+          "id": 5442,
+          "source": "training",
+          "task_id": "task_6e9080ac2d4d41219bff9400b4b95b7f",
+          "run_id": "run_6308e2da3556e03330c2",
+          "total_ms": 220735,
+          "ended_at": "2026-10-23T12:07:30.425089"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 9712,
+          "output": 66,
+          "cache_read": 4224,
+          "cache_create": 0
+        },
+        "consciousness": {
+          "input": 94501,
+          "output": 3183,
+          "cache_read": 77843,
+          "cache_create": 16654
+        },
+        "execution": {
+          "input": 609760,
+          "output": 11961,
+          "cache_read": 526575,
+          "cache_create": 83171
+        },
+        "oneshot:evaluate": {
+          "input": 46263,
+          "output": 545,
+          "cache_read": 6408,
+          "cache_create": 39853
+        }
+      },
+      "terminal": {
+        "state": "succeeded",
+        "pending_children": 0,
+        "created_at": "2026-10-23 03:03:49",
+        "completed_at": "2026-10-23 03:07:30"
+      },
+      "tool_calls": {
+        "Bash": 6
+      },
+      "model_rounds": {
+        "oneshot:classify": 2,
+        "consciousness": 2,
+        "execution": 7,
+        "oneshot:evaluate": 1
+      },
+      "evaluations": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "a53547f03fa94bde806b50e0da79064c271432371ea2cef7ca6f923170ae2244",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "compactions": 0,
+      "recall_events": {
+        "recall.presented": 1,
+        "recall.used": 1
+      },
+      "total_usage": {
+        "input": 760236,
+        "output": 15755,
+        "cache_read": 615050,
+        "cache_create": 139678
+      }
+    },
+    {
+      "turn": 2,
+      "task_id": "task_eea45acd4638485393c4e73ba639f14e",
+      "episodes": [
+        {
+          "id": 5443,
+          "source": "training",
+          "task_id": "task_eea45acd4638485393c4e73ba639f14e",
+          "run_id": "run_17492286dcb24b992806",
+          "total_ms": 126433,
+          "ended_at": "2026-10-23T12:10:05.946380"
+        }
+      ],
+      "usage": {
+        "oneshot:classify": {
+          "input": 13818,
+          "output": 71,
+          "cache_read": 4608,
+          "cache_create": 0
+        },
+        "oneshot:background": {
+          "input": 6432,
+          "output": 2030,
+          "cache_read": 1280,
+          "cache_create": 0
+        },
+        "execution": {
+          "input": 865755,
+          "output": 8477,
+          "cache_read": 830744,
+          "cache_create": 34997
+        },
+        "oneshot:evaluate": {
+          "input": 52051,
+          "output": 636,
+          "cache_read": 6408,
+          "cache_create": 45641
+        }
+      },
+      "terminal": {
+        "state": "succeeded",
+        "pending_children": 0,
+        "created_at": "2026-10-23 03:07:59",
+        "completed_at": "2026-10-23 03:10:05"
+      },
+      "tool_calls": {
+        "Bash": 6
+      },
+      "model_rounds": {
+        "oneshot:classify": 3,
+        "oneshot:background": 1,
+        "execution": 7,
+        "oneshot:evaluate": 1
+      },
+      "evaluations": [
+        {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "388570af7e9d658613480c0b4dfa27b80bf58daf348ba596ba2bf7207cf83e5a",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        }
+      ],
+      "compactions": 0,
+      "recall_events": {
+        "recall.presented": 1,
+        "recall.used": 1
+      },
+      "total_usage": {
+        "input": 938056,
+        "output": 11214,
+        "cache_read": 843040,
+        "cache_create": 80638
+      }
+    }
+  ],
+  "probes": [
+    {
+      "probe": "positive",
+      "passed": true,
+      "success": true,
+      "resume": {
+        "run_id": "134f605c043b4fd7bb19cd9f9edb204e"
+      },
+      "diagnostic": null
+    },
+    {
+      "probe": "empty",
+      "passed": true,
+      "success": true,
+      "resume": {
+        "run_id": "7fd5f240f5644cc49e54d16c999bf8c9"
+      },
+      "diagnostic": null
+    },
+    {
+      "probe": "missing_source",
+      "passed": true,
+      "success": false,
+      "resume": {
+        "run_id": "fefc872e6d17400cbb6d233a2c6e23ee"
+      },
+      "diagnostic": {
+        "code": "NOT_FOUND",
+        "kind": "partial",
+        "message": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-23_95회차/missing_source/inputs/source/J01.json"
+      }
+    }
+  ],
+  "verification": [
+    {
+      "lane": "trainer",
+      "turn": 1,
+      "passed": 131,
+      "failed": 0
+    },
+    {
+      "lane": "trainer",
+      "turn": 2,
+      "passed": 133,
+      "failed": 0
+    },
+    {
+      "lane": "ai",
+      "turn": 1,
+      "passed": 131,
+      "failed": 0
+    },
+    {
+      "lane": "ai",
+      "turn": 2,
+      "passed": 135,
+      "failed": 0
+    }
+  ],
+  "artifacts": {
+    "trainer/artifacts/audit_T1.json": "a03b39766cb9e345a22fc165814b0332c7b0537a6302550882b5604928c62e4f",
+    "trainer/artifacts/report_T2.md": "1c31e4865473025f7e1cd1dd6e2e26baf561e312cb8f202a6642e85ebe157e51",
+    "trainer/artifacts/report_T1.md": "80720fe5fbf6e85ad48aa5913815c6a13e7453628f369f7d4671a6aca88ab764",
+    "trainer/artifacts/audit_T2.json": "b9577e0bc109697bcb0c7937f60aa6a242e83d968b04df6b47c31cfd2970a7c6",
+    "ai/artifacts/procedure_T2.md": "32379e500b2a6ae3439e10e7677e5873be51e0ec8282b46c6db3a263c22a8608",
+    "ai/artifacts/audit_T2.py": "84977685a67e9437dcdcf3d3af1922bd93cf437bd2d35515606b0d9f0cce1ad9",
+    "ai/artifacts/audit_T1.json": "7bfacaee742fc3b97c0cb072271ec2a4bf1216f753eacb2f39a6f34479a339a7",
+    "ai/artifacts/report_T2.md": "44ed801727310cbcaec2c7716bbca201cb0aa2686326fcec9cb3a07693263cc5",
+    "ai/artifacts/report_T1.md": "643b5611391ccedcfd0fd24c0f3d60a615fae794db20cc091d56117f23e714da",
+    "ai/artifacts/audit_T2.json": "4a8c0e174d431813d54e209a7e7df358674b27911cb1a4c3dc83d557a1c420f9",
+    "ai/artifacts/procedure_T1.md": "5a6140c89d11a203e5cb5ce8da5e9cd2273e21481f3dfcd3db79f11ae3707eec",
+    "ai/artifacts/audit_T1.py": "f5dd09603e4319b20a7a1283392eca255a7716ddab55bf6a90604d82fe6f8f25",
+    "ai/artifacts/t2_work/t1_outputs_sha256_before.txt": "cb279ea2790381ddaeb19d3edff4fd2705b22893a52bb4e30b1dfbec992c0388",
+    "ai/artifacts/t2_work/t1_outputs_sha256_after.txt": "cb279ea2790381ddaeb19d3edff4fd2705b22893a52bb4e30b1dfbec992c0388"
+  },
+  "health": {
+    "status": "healthy",
+    "timestamp": "2026-10-23T12:17:12.787500",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "live_turns": [],
+    "live_turns_observation": "known"
+  },
+  "cleanup": {
+    "status": "stopped",
+    "agent_id": "agent_ebf83311"
+  }
+}

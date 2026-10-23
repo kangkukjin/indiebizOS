@@ -1,0 +1,62 @@
+#!ibl edition=2
+[def:물증확인]($작업,$입력,$실행,$정책) {
+  $id=$작업.id
+  $기록=sorted(filter($실행,($r)=>$r.job==$id),"attempt",true)
+  $최신=$기록[0]
+  $원천경로=f"${입력}/source/${id}.json"
+  $결과경로=f"${입력}/artifacts/${id}.json"
+  $근거={source:$원천경로,artifact:$결과경로,receipt:f"${입력}/receipts.json",state:$최신.state,depends_on:$작업.depends_on}
+  $기본={id:$id,status:"verified",attempt:$최신.attempt,total:null,reason:"",evidence:$근거}
+  [if:$id in $정책.cancelled] { return {**$기본,status:"cancelled",reason:"현재 정책의 명시적 취소"} }
+  [if:$최신.state!="succeeded"] { return {**$기본,status:"execution_incomplete",reason:f"최신 시도 ${최신.attempt}: ${최신.state}"} }
+  $원천=[self:read]{path:$원천경로}
+  $문서=null
+  [try] { $문서=[self:read]{path:$결과경로} }
+  [catch] { return {**$기본,status:$error.code=="NOT_FOUND" ? "missing" : "invalid",reason:$error.message} }
+  $자료=$문서.data
+  [if:get($자료,"job",null)!=$id] { return {**$기본,status:"invalid",reason:"결과 작업 식별자 불일치"} }
+  [if:get($자료,"source_rev",null)!=$원천.data.rev] { return {**$기본,status:"stale",reason:"원천 판본 불일치"} }
+  $기대=from_entries(map($원천.data.items,($r)=>[$r.id,$r.qty*$r.price]))
+  $행=get($자료,"items",[])
+  $ids=map($행,($r)=>$r.id)
+  $유효=len($행)==len($원천.data.items) and len(unique($ids))==len($ids) and all(map($행,($r)=>has($기대,$r.id) and get($기대,$r.id,null)==$r.amount))
+  [if:not $유효] { return {**$기본,status:"invalid",reason:"행 식별자·개수·금액 전건 대조 불일치"} }
+  [if:$정책.require_compat and get($자료,"compat",null)!=true] { return {**$기본,status:"incompatible",reason:"현재 정책의 필수 호환성 미충족"} }
+  return {**$기본,total:sum(map($행,($r)=>$r.amount)),reason:"원천·결과 전건 일치"}
+}
+[def:선행확인]($검사) {
+  $상태={};$완료=[]
+  [repeat:len($검사)] {
+    $r=$검사[$i]
+    $막힘=filter($r.evidence.depends_on,($id)=>get($상태,$id,"unknown")!="verified")
+    [if:$r.status=="verified" and len($막힘)>0] {
+      $r={**$r,status:"blocked",total:null,reason:f"선행 미완료: ${join(", ",$막힘)}"}
+    }
+    $완료=$완료+[$r]
+    $상태={**$상태,**from_entries([[$r.id,$r.status]])}
+  }
+  return $완료
+}
+[def:저장검증]($출력,$판본,$결과) {
+  $경로=f"${출력}/audit_T${판본}.json"
+  [self:write]{path:$경로,content:json($결과)}
+  $재독=[self:read]{path:$경로}
+  assert $재독.data==$결과,"audit readback mismatch"
+  $줄=map($결과.items,($r)=>f"| ${r.id} | ${r.status} | ${r.attempt} | ${r.total} | ${r.reason} |")
+  $본문=f"# 인수 검사 T${판본}\n\n실행 종료 기록과 실제 인수 완료를 구분했다. 인수 가능: ${결과.release_ready}.\n\n검증된 금액: ${결과.verified_total}\n\n상태별 건수: ${json($결과.counts)}\n\n| 작업 | 판정 | 최신 시도 | 검증 합계 | 근거·남은 확인 |\n|---|---|---|---|---|\n${join("\n",$줄)}\n\n근거 파일과 선행 관계는 audit JSON 각 항목에 연결했다. 미완료 작업은 원인 해소 후 재검증이 필요하며 실제 재실행·배포는 하지 않았다.\n"
+  $문서경로=f"${출력}/report_T${판본}.md"
+  [self:write]{path:$문서경로,content:$본문}
+  $문서=[self:read]{path:$문서경로,format:"text"}
+  assert $문서.text==$본문,"report readback mismatch"
+  return $결과
+}
+$목록=[self:read]{path:f"${입력}/manifest.json"}
+$접수=[self:read]{path:f"${입력}/receipts.json"}
+$정책=[self:read]{path:f"${입력}/policy.json"}
+$검사=$목록.data.jobs >> [table:each] { [fn:물증확인]{작업:$it,입력:$입력,실행:$접수.data.items,정책:$정책.data} }
+$행=[fn:선행확인]{검사:$검사}
+$상태명=["cancelled","execution_incomplete","missing","invalid","stale","incompatible","blocked","verified"]
+$집계=from_entries(map($상태명,($s)=>[$s,len(filter($행,($r)=>$r.status==$s))]))
+$대상=filter($행,($r)=>$r.status!="cancelled")
+$결과={phase:$판본,release_ready:len($대상)>0 and all(map($대상,($r)=>$r.status=="verified")),counts:$집계,verified_total:sum(map(filter($행,($r)=>$r.status=="verified"),($r)=>$r.total)),items:$행}
+[fn:저장검증]{출력:$출력,판본:$판본,결과:$결과}

@@ -28,6 +28,180 @@ AI팁보고서:
   interpreter: python
   registered_at: '2026-09-23T05:40:38'
   timeout: 120
+Android제어부품:
+  callable_contract:
+    adapter:
+      protocol: ibl-script/2
+      receipt_inputs:
+      - plan_ref
+      - job_ref
+      receipt_ref: true
+    effects:
+    - read_external
+    enums:
+      op:
+      - contract
+      - select
+      - prepare
+      - verify
+    params:
+      job_ref: Record
+      limbs: List<Record>
+      observation: Record
+      op: Text
+      plan_ref: Record
+      request: Record
+      source: Text
+      target: Text
+      task: Record
+      wait: Number?
+    required:
+    - op
+    result: Record
+    variants:
+    - required:
+      - op
+      - target
+      - request
+      - limbs
+      result:
+        platform: Text
+        request: Record
+        source_path: Text
+        target: Text
+        timeout: Number
+        wait: Number
+      when:
+        op: select
+    - required:
+      - op
+      - source
+      - request
+      result:
+        code: Text
+        helper_sha256: Text
+        platform: Text
+        request: Record
+        request_id: Text
+        source_sha256: Text
+      when:
+        op: prepare
+    - required:
+      - op
+      - task
+      - plan_ref
+      - job_ref
+      result:
+        evidence_ref: Unknown
+        failure: Unknown
+        result: Unknown
+        status: Text
+        target: Unknown
+        task_ref: Unknown
+        verification: Unknown
+        verified: Bool
+      when:
+        op: verify
+    version: 1
+  description: Android제어·Android제어확인의 준비·영수증 검증 부품. 동작·인수·단위·확인 범위는 op:contract. 일반
+    호출은 저장 함수를 사용한다. 가이드 android_control.md.
+  file: android_control.py
+  interpreter: python
+  registered_at: '2026-10-20T00:00:00'
+  timeout: 30
+Chrome제어:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    defaults:
+      op: status
+    effects:
+    - unknown
+    enums:
+      op:
+      - contract
+      - status
+      - open
+      - switch
+      - close
+    params:
+      expected: Text
+      launch: Bool
+      op: Text
+      tab: Number
+      url: Text
+      window_id: Number
+    required: []
+    result:
+      success: Bool
+      verified: Bool
+    variants:
+    - effects:
+      - read_external
+      forbidden:
+      - url
+      - window_id
+      - tab
+      - launch
+      - expected
+      result:
+        actions: Record
+        success: Bool
+        supported_platforms: List<Text>
+        surface: Text
+      when:
+        op: contract
+    - effects:
+      - read_external
+      forbidden:
+      - url
+      - tab
+      - launch
+      - expected
+      when:
+        op: status
+    - effects:
+      - write_external
+      forbidden:
+      - tab
+      required:
+      - url
+      when:
+        op: open
+    - effects:
+      - write_external
+      forbidden:
+      - url
+      - launch
+      required:
+      - window_id
+      - tab
+      - expected
+      when:
+        op: switch
+    - effects:
+      - write_external
+      forbidden:
+      - url
+      - launch
+      required:
+      - window_id
+      - tab
+      - expected
+      when:
+        op: close
+    version: 1
+  description: 본체 Google Chrome 창·탭 드라이버(AppleScript 통로, macOS). Safari제어와 같은 계약 —
+    status(window_id 선택)로 windows[].revision 조회, switch/close는 window_id·tab·expected(관측
+    revision) 필수, open(url,window_id 선택,expected 선택,launch 선택)은 끝에 탭을 만들고 Chrome 이
+    활성으로 만든 새 탭 대신 이전 현재 탭을 같은 스크립트 안에서 복원(checks.activation_restored). 판본·대조·닫기는
+    영구 탭 id 기준이라 탭 안의 페이지 이동은 판본을 깨지 않는다. 결과 state·target·checks로 추가 조회 없이 IBL 연속
+    조합. STATE_CHANGED는 변경 전 중단, UNKNOWN·POSTCONDITION_FAILED는 자동 재전송 금지. Windows Chrome
+    은 이 통로가 없다(UNSUPPORTED_PLATFORM). 가이드 chrome_control.md.
+  file: chrome_control.py
+  interpreter: python
+  registered_at: '2026-10-21T08:30:00'
+  timeout: 60
 Cloudflare사용량:
   description: 'Cloudflare 사용량 vs 무료 한도 — args: days(기본 30)·account_id(기본 환경변수→/accounts)·sections(all|r2|workers).
     items 통화(section 열): r2_storage 버킷별 최근 저장 GB·객체·pct_of_free(10GB), r2_ops 이달 Class
@@ -37,6 +211,586 @@ Cloudflare사용량:
   interpreter: python
   registered_at: '2026-09-05T11:02:03'
   timeout: 120
+PC제어부품:
+  callable_contract:
+    adapter:
+      protocol: ibl-script/2
+      receipt_inputs:
+      - plan_ref
+      - job_ref
+      receipt_ref: true
+    effects:
+    - unknown
+    enums:
+      op:
+      - contract
+      - select
+      - prepare
+      - local
+      - decode
+      - verify
+    params:
+      job_ref: Record
+      limbs: List<Record>
+      observation: Record
+      op: Text
+      output: Text
+      plan: Record
+      plan_ref: Record
+      platform: Text
+      request: Record
+      source: Text
+      target: Text
+      task: Record
+      wait: Number?
+    required:
+    - op
+    result: Record
+    variants:
+    - effects:
+      - read_external
+      forbidden:
+      - platform
+      - source
+      - request
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      required:
+      - op
+      result:
+        actions: Record
+        host_platform: Text
+        platforms: List<Text>
+        success: Bool
+        version: Number
+      when:
+        op: contract
+    - effects:
+      - read_external
+      forbidden:
+      - platform
+      - source
+      - plan
+      - output
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      required:
+      - op
+      - target
+      - request
+      - limbs
+      result:
+        platform: Text
+        request: Record
+        source_path: Text
+        success: Bool
+        supported_actions: List<Text>
+        target: Text
+        timeout: Number
+        wait: Number
+      when:
+        op: select
+    - effects:
+      - read_external
+      forbidden:
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      required:
+      - op
+      - platform
+      - source
+      - request
+      result:
+        command: Text
+        helper_sha256: Text
+        platform: Text
+        request: Record
+        source_sha256: Text
+        stdin: Text
+        success: Bool
+      when:
+        op: prepare
+    - forbidden:
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      required:
+      - op
+      - platform
+      - source
+      - request
+      result: &id001
+        action: Text
+        platform: Text
+        protocol: Text
+        request_id: Text
+        source_sha256: Text
+        success: Bool
+        verified: Bool
+      when:
+        op: local
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: status
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: display
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: power
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: presence
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: apps
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: clipboard
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: network
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: shortcuts
+    - effects:
+      - read_external
+      when:
+        op: local
+        request:
+          action: youtube_status
+    - effects:
+      - read_external
+      forbidden:
+      - platform
+      - source
+      - request
+      - target
+      - limbs
+      - wait
+      - task
+      - plan_ref
+      - job_ref
+      - observation
+      required:
+      - op
+      - plan
+      - output
+      result: *id001
+      when:
+        op: decode
+    - effects:
+      - read_external
+      forbidden:
+      - platform
+      - source
+      - request
+      - plan
+      - output
+      - target
+      - limbs
+      - wait
+      required:
+      - op
+      - task
+      - plan_ref
+      - job_ref
+      result:
+        evidence_ref: Unknown
+        failure: Unknown
+        result: Unknown
+        status: Text
+        target: Text
+        task_ref: Unknown
+        verification: Unknown
+        verified: Bool
+      when:
+        op: verify
+    version: 1
+  description: PC제어·PC제어확인의 내부 준비·검증 부품. request의 action·device_id·value·enabled·url·title·duration_seconds·fullscreen·app·display·display_id·name·seconds·text·window_id·tab·expected는
+    지원 동작별로 op:contract의 actions에서 조회한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
+  file: pc_control.py
+  interpreter: python
+  registered_at: '2026-10-18T00:00:00'
+  timeout: 125
+Safari제어:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    defaults:
+      op: status
+    effects:
+    - unknown
+    enums:
+      op:
+      - contract
+      - status
+      - open
+      - switch
+      - close
+    params:
+      expected: Text
+      launch: Bool
+      op: Text
+      tab: Number
+      url: Text
+      window_id: Number
+    required: []
+    result:
+      success: Bool
+      verified: Bool
+    variants:
+    - effects:
+      - read_external
+      forbidden:
+      - url
+      - window_id
+      - tab
+      - launch
+      - expected
+      result:
+        actions: Record
+        success: Bool
+        supported_platforms: List<Text>
+        surface: Text
+      when:
+        op: contract
+    - effects:
+      - read_external
+      forbidden:
+      - url
+      - tab
+      - launch
+      - expected
+      when:
+        op: status
+    - effects:
+      - write_external
+      forbidden:
+      - tab
+      required:
+      - url
+      when:
+        op: open
+    - effects:
+      - write_external
+      forbidden:
+      - url
+      - launch
+      required:
+      - window_id
+      - tab
+      - expected
+      when:
+        op: switch
+    - effects:
+      - write_external
+      forbidden:
+      - url
+      - launch
+      required:
+      - window_id
+      - tab
+      - expected
+      when:
+        op: close
+    version: 1
+  description: 본체 Safari 창·탭 드라이버 v2. status(window_id 선택)로 windows[].revision 조회.
+    switch/close는 window_id·tab·expected(관측 revision) 필수. open(url,window_id 선택,expected
+    선택,launch 선택)은 배경 탭 생성과 기존 상태 보존을 검증. 모든 변경 결과 state·target·checks로 추가 조회 없이 IBL
+    연속 조합. target은 다음 호출 인수(window_id,tab,expected). STATE_CHANGED는 변경 전 중단, UNKNOWN·POSTCONDITION_FAILED는
+    자동 재전송 금지. 페이지 로드와 동일 URL 탭의 개체 신원은 보장하지 않는다. 가이드 safari_control.md.
+  file: safari_control.py
+  interpreter: python
+  registered_at: '2026-10-20T12:00:00'
+  timeout: 60
+TV제어:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    defaults:
+      op: status
+    effects:
+    - unknown
+    enums:
+      op:
+      - status
+      - 'on'
+      - 'off'
+      - pair
+      - mute
+      - to_pc
+      - dlna_stop
+      - key
+      - volume
+      - launch
+      - dlna_play
+      - epg_now
+      - epg_channel
+      - epg_scan
+    integers:
+    - steps
+    - page
+    - page_size
+    maximum:
+      page_size: 200
+    minimum:
+      page: 1
+      page_size: 1
+    nonempty:
+    - target
+    params:
+      app: Text
+      channels: List<Number>
+      keys: List<Text>
+      op: Text
+      page: Number
+      page_size: Number
+      refresh: Bool
+      steps: Number
+      target: Text
+      url: Text
+    required:
+    - op
+    result:
+      op: Text
+      success: Bool
+      target: Text
+      verified: Bool
+    variants:
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: status
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: 'on'
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: 'off'
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: pair
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: mute
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: to_pc
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: dlna_stop
+    - forbidden:
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      - keys
+      when:
+        op: key
+    - forbidden:
+      - keys
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      maximum:
+        steps: 10
+      minimum:
+        steps: -10
+      required:
+      - target
+      - steps
+      when:
+        op: volume
+    - forbidden:
+      - keys
+      - steps
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      - app
+      when:
+        op: launch
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      - url
+      when:
+        op: dlna_play
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      required:
+      - target
+      when:
+        op: epg_now
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      required:
+      - target
+      - channels
+      when:
+        op: epg_channel
+    - forbidden:
+      - keys
+      - steps
+      - app
+      - url
+      - channels
+      - page
+      - page_size
+      - refresh
+      required:
+      - target
+      when:
+        op: epg_scan
+    version: 1
+  description: 등록된 Samsung TV 제어. status는 전원·앱과 항목별 observations(음량·음소거·입력·DLNA 상태/위치)를
+    반환한다. 선택 SmartThings는 갱신 시각을 가진 마지막 보고다. DLNA는 HDMI/앱 재생과 구분한다. 음량은 상대 단계, mute는
+    토글이며 자동 재시도하지 않는다. status의 verified는 전원만 뜻한다. 가이드 tv_control.md.
+  file: tv_control.py
+  interpreter: python
+  registered_at: '2026-10-18T00:00:00'
+  timeout: 125
 arch_render:
   description: '설계 JSON(design_*.json 경로 또는 design_id) → 헤드리스 Blender/Cycles 외관 렌더
     PNG + glTF(.glb). 옵션: --samples N --res W H --view auto|sw|se|ne|nw --out PNG
@@ -61,6 +815,16 @@ github저장소메타:
   file: github저장소메타.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
+  timeout: 180
+nethack:
+  created_at: '2026-10-23T15:19:19.658342+00:00'
+  description: 'NetHack(BALROG NetHackChallenge) 도구 서버 창구 — op: instructions(규칙·행동
+    목록)/observe(현재 화면·소지품·진행도)/step(actions:[행동…] 최대 50개를 차례로 실행, 행동별 메시지와 최종 화면 반환)/status.
+    서버는 projects/study/nethack/server.py, 한 판·고정 시드.'
+  file: nethack.py
+  interpreter: python
+  registered_at: '2026-10-23T15:19:19.658333+00:00'
+  registration_updated_at: '2026-10-23T15:19:19.658343+00:00'
   timeout: 180
 python_libraries:
   callable_contract:
@@ -150,6 +914,17 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-27T18:26:29'
   timeout: 60
+구성요소수명:
+  created_at: '2026-10-20T02:46:40.371811+00:00'
+  description: 어휘·등록 스크립트·이름 붙은 관용구의 생성/변경/검증/수리/실행 시각과 구현 지문을 조회한다. 입력(args)은 op=list(기본)/history/sync/verify/repair,
+    key(목록에서 선택), kind=action/script/idiom, status=current/stale/failed/unverified,
+    after(다음 커서), limit(기본50). verify는 expected_revision·scope·outcome(passed/failed)·evidence,
+    repair는 expected_revision·reason·evidence 필수. 검증은 명시 범위만 뜻하며 실행 성공과 분리한다. 사용법=body
+    가이드 구성요소 수명 절.
+  file: capability_age.py
+  interpreter: python
+  registered_at: '2026-10-20T02:46:40.371811+00:00'
+  timeout: 120
 나레이션생성:
   description: '등록된 목소리로 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts
     또는 texts_file(이름→원고 객체를 담은 JSON 경로), voice(키·이름·별칭, 기본=원장 voices.json의 default),
@@ -290,90 +1065,79 @@ python_libraries:
   registered_at: '2026-09-05T13:46:00'
   timeout: 900
 압축:
-  description: zip 묶기·zip/tar 풀기·목록 조회. 기본 제외 규칙과 경로 탈출 방어를 유지한다. 상세 입력·반환은 callable_contract.
-  file: 압축.py
-  interpreter: python
-  registered_at: '2026-09-15T14:21:29'
-  timeout: 300
   callable_contract:
-    version: 1
-    params:
-      paths: List<Text>
-      path: Text
-      items: List
-      op: Text
-      output: Text
-      include: List<Text>
-      exclude: List<Text>
-      base: Text
-      out_dir: Text
-      overwrite: Bool
-      name_encoding: Text
-    required:
-    - op
-    result:
-      items:
-        $list:
-          name: Text
-          size: Number
-      count: Number
-    effects:
-    - unknown
     adapter:
       protocol: registered-json/1
+    effects:
+    - unknown
     enums:
       op:
       - pack
       - unpack
       - list
-    pipe_input: items
     nonempty:
     - path
     - paths
     - items
+    params:
+      base: Text
+      exclude: List<Text>
+      include: List<Text>
+      items: List
+      name_encoding: Text
+      op: Text
+      out_dir: Text
+      output: Text
+      overwrite: Bool
+      path: Text
+      paths: List<Text>
+    pipe_input: items
+    required:
+    - op
+    result:
+      count: Number
+      items:
+        $list:
+          name: Text
+          size: Number
     variants:
-    - when:
-        op: pack
+    - forbidden:
+      - out_dir
+      - name_encoding
       required_any:
       - - paths
         - path
         - items
-      forbidden:
-      - out_dir
-      - name_encoding
       result:
+        bytes: Number
+        count: Number
         items:
           $list:
             name: Text
             size: Number
-        count: Number
         output: Text
-        bytes: Number
-    - when:
-        op: unpack
-      required:
-      - op
-      - path
-      forbidden:
+      when:
+        op: pack
+    - forbidden:
       - paths
       - items
       - output
       - exclude
       - base
+      required:
+      - op
+      - path
       result:
+        count: Number
         items:
           $list:
             name: Text
             out: Text
             size: Number
-        count: Number
         out_dir: Text
-    - when:
-        op: list
-      required:
-      - op
-      - path
-      forbidden:
+      when:
+        op: unpack
+    - forbidden:
       - paths
       - items
       - output
@@ -382,16 +1146,27 @@ python_libraries:
       - base
       - out_dir
       - overwrite
+      required:
+      - op
+      - path
       result:
+        count: Number
         items:
           $list:
-            name: Text
-            size: Number
             compressed: Number?
             is_dir: Bool
-        count: Number
-        total_size: Number
+            name: Text
+            size: Number
         path: Text
+        total_size: Number
+      when:
+        op: list
+    version: 1
+  description: zip 묶기·zip/tar 풀기·목록 조회. 기본 제외 규칙과 경로 탈출 방어를 유지한다. 상세 입력·반환은 callable_contract.
+  file: 압축.py
+  interpreter: python
+  registered_at: '2026-09-15T14:21:29'
+  timeout: 300
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
     IBL 총호출을 실행·계약조회·결과열람·회수·빈호출·종류미상으로 구분하고, 조회는 문법오류로 세지 않는다. IBL 계수·실패·fn([fn:]
@@ -483,80 +1258,17 @@ python_libraries:
   registered_at: '2026-10-12T00:00:00'
   timeout: 60
 이미지변환:
-  description: 사진 정보 조회·변환·크기 조정. items는 성공한 파일, errors는 파일별 실패이며 부분 성공이 가능하다. 상세 입력·반환은 callable_contract.
-  file: 이미지변환.py
-  interpreter: python
-  lifecycle:
-    candidate_since: '2026-10-16'
-    evidence: 참조 0 · 쓸모 실행 0 · 첫 관측 2026-09-16
-  registered_at: '2026-09-15T14:21:29'
-  timeout: 300
   callable_contract:
-    version: 1
-    params:
-      paths: List<Text>
-      path: Text
-      items: List
-      op: Text
-      format: Text
-      max_side: Number
-      width: Number
-      height: Number
-      scale: Number
-      max_kb: Number
-      quality: Number
-      crop: List<Number>
-      aspect: Text
-      strip_exif: Bool
-      out_dir: Text
-      overwrite: Bool
-    required: []
-    result:
-      items:
-        $list:
-          src: Text
-          format: Text
-          width: Number
-          height: Number
-          bytes: Number
-      count: Number
-      errors:
-        $list:
-          src: Text
-          error: Text
-    effects:
-    - unknown
     adapter:
       protocol: registered-json/1
     defaults:
       op: convert
-    required_any:
-    - - paths
-      - path
-      - items
-    nonempty:
-    - paths
-    - path
-    - items
+    effects:
+    - unknown
     enums:
       op:
       - convert
       - info
-    integers:
-    - max_side
-    - width
-    - height
-    - quality
-    - max_kb
-    minimum:
-      max_side: 1
-      width: 1
-      height: 1
-      quality: 1
-      max_kb: 1
-      scale: 1.0e-06
-    maximum:
-      quality: 100
     exclusive:
     - - scale
       - max_side
@@ -570,11 +1282,63 @@ python_libraries:
       - height
     - - crop
       - aspect
+    integers:
+    - max_side
+    - width
+    - height
+    - quality
+    - max_kb
+    maximum:
+      quality: 100
+    minimum:
+      height: 1
+      max_kb: 1
+      max_side: 1
+      quality: 1
+      scale: 1.0e-06
+      width: 1
+    nonempty:
+    - paths
+    - path
+    - items
+    params:
+      aspect: Text
+      crop: List<Number>
+      format: Text
+      height: Number
+      items: List
+      max_kb: Number
+      max_side: Number
+      op: Text
+      out_dir: Text
+      overwrite: Bool
+      path: Text
+      paths: List<Text>
+      quality: Number
+      scale: Number
+      strip_exif: Bool
+      width: Number
     pipe_input: items
+    required: []
+    required_any:
+    - - paths
+      - path
+      - items
+    result:
+      count: Number
+      errors:
+        $list:
+          error: Text
+          src: Text
+      items:
+        $list:
+          bytes: Number
+          format: Text
+          height: Number
+          src: Text
+          width: Number
     variants:
-    - when:
-        op: info
-      forbidden:
+    - forbidden:
       - format
       - max_side
       - width
@@ -588,38 +1352,50 @@ python_libraries:
       - out_dir
       - overwrite
       result:
+        count: Number
+        errors:
+          $list:
+            error: Text
+            src: Text
         items:
           $list:
-            src: Text
-            format: Text
-            width: Number
-            height: Number
             bytes: Number
+            format: Text
             has_exif: Bool
             has_gps: Bool
+            height: Number
+            src: Text
+            width: Number
+      when:
+        op: info
+    - result:
         count: Number
         errors:
           $list:
-            src: Text
             error: Text
-    - when:
-        op: convert
-      result:
+            src: Text
         items:
           $list:
-            src: Text
-            format: Text
-            width: Number
-            height: Number
             bytes: Number
-            out: Text
             exif_stripped: Bool
-            steps: List<Text>
-        count: Number
-        errors:
-          $list:
+            format: Text
+            height: Number
+            out: Text
             src: Text
-            error: Text
+            steps: List<Text>
+            width: Number
+      when:
+        op: convert
+    version: 1
+  description: 사진 정보 조회·변환·크기 조정. items는 성공한 파일, errors는 파일별 실패이며 부분 성공이 가능하다. 상세
+    입력·반환은 callable_contract.
+  file: 이미지변환.py
+  interpreter: python
+  lifecycle:
+    candidate_since: '2026-10-16'
+    evidence: 참조 0 · 쓸모 실행 0 · 첫 관측 2026-09-16
+  registered_at: '2026-09-15T14:21:29'
+  timeout: 300
 인사말붙이기:
   description: '본문 wav의 음량을 정적 게인으로 정렬하고 첫·끝 장에 실음성 인사말을 접합 — args: lecture_id(필수),
     raw_dir(본문 wav 폴더, 기본 강의폴더/narration_raw), out_dir(결과 폴더, 기본 강의폴더/narration),
@@ -696,700 +1472,3 @@ python_libraries:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
-PC제어부품:
-  description: PC제어·PC제어확인의 내부 준비·검증 부품. request의 action·device_id·value·enabled·url·title·duration_seconds·fullscreen·app·display·display_id·name·seconds·text·window_id·tab·expected는 지원 동작별로 op:contract의 actions에서 조회한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
-  file: pc_control.py
-  interpreter: python
-  registered_at: '2026-10-18T00:00:00'
-  timeout: 125
-  callable_contract:
-    version: 1
-    effects:
-    - unknown
-    required:
-    - op
-    params:
-      op: Text
-      platform: Text
-      source: Text
-      request: Record
-      plan: Record
-      output: Text
-      target: Text
-      limbs: List<Record>
-      wait: Number?
-      task: Record
-      plan_ref: Record
-      job_ref: Record
-      observation: Record
-    result: Record
-    adapter:
-      protocol: ibl-script/2
-      receipt_ref: true
-      receipt_inputs:
-      - plan_ref
-      - job_ref
-    enums:
-      op:
-      - contract
-      - select
-      - prepare
-      - local
-      - decode
-      - verify
-    variants:
-    - when:
-        op: contract
-      effects: [read_external]
-      required:
-      - op
-      forbidden:
-      - platform
-      - source
-      - request
-      - plan
-      - output
-      - target
-      - limbs
-      - wait
-      - task
-      - plan_ref
-      - job_ref
-      - observation
-      result:
-        success: Bool
-        version: Number
-        platforms: List<Text>
-        actions: Record
-        host_platform: Text
-    - when:
-        op: select
-      effects: [read_external]
-      required:
-      - op
-      - target
-      - request
-      - limbs
-      forbidden:
-      - platform
-      - source
-      - plan
-      - output
-      - task
-      - plan_ref
-      - job_ref
-      - observation
-      result:
-        success: Bool
-        target: Text
-        platform: Text
-        request: Record
-        source_path: Text
-        supported_actions: List<Text>
-        wait: Number
-        timeout: Number
-    - when:
-        op: prepare
-      effects: [read_external]
-      required:
-      - op
-      - platform
-      - source
-      - request
-      forbidden:
-      - plan
-      - output
-      - target
-      - limbs
-      - wait
-      - task
-      - plan_ref
-      - job_ref
-      - observation
-      result:
-        success: Bool
-        platform: Text
-        request: Record
-        source_sha256: Text
-        helper_sha256: Text
-        command: Text
-        stdin: Text
-    - when:
-        op: local
-      required:
-      - op
-      - platform
-      - source
-      - request
-      forbidden:
-      - plan
-      - output
-      - target
-      - limbs
-      - wait
-      - task
-      - plan_ref
-      - job_ref
-      - observation
-      result: &id001
-        success: Bool
-        protocol: Text
-        platform: Text
-        action: Text
-        request_id: Text
-        verified: Bool
-        source_sha256: Text
-    - when:
-        op: local
-        request: {action: status}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: display}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: power}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: presence}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: apps}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: clipboard}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: network}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: shortcuts}
-      effects: [read_external]
-    - when:
-        op: local
-        request: {action: youtube_status}
-      effects: [read_external]
-    - when:
-        op: decode
-      effects: [read_external]
-      required:
-      - op
-      - plan
-      - output
-      forbidden:
-      - platform
-      - source
-      - request
-      - target
-      - limbs
-      - wait
-      - task
-      - plan_ref
-      - job_ref
-      - observation
-      result: *id001
-    - when:
-        op: verify
-      effects: [read_external]
-      required:
-      - op
-      - task
-      - plan_ref
-      - job_ref
-      forbidden:
-      - platform
-      - source
-      - request
-      - plan
-      - output
-      - target
-      - limbs
-      - wait
-      result:
-        status: Text
-        target: Text
-        verified: Bool
-        result: Unknown
-        task_ref: Unknown
-        verification: Unknown
-        evidence_ref: Unknown
-        failure: Unknown
-TV제어:
-  description: 등록된 Samsung TV 제어. status는 전원·앱과 항목별 observations(음량·음소거·입력·DLNA 상태/위치)를 반환한다.
-    선택 SmartThings는 갱신 시각을 가진 마지막 보고다. DLNA는 HDMI/앱 재생과 구분한다.
-    음량은 상대 단계, mute는 토글이며 자동 재시도하지 않는다. status의 verified는 전원만 뜻한다. 가이드 tv_control.md.
-  file: tv_control.py
-  interpreter: python
-  registered_at: '2026-10-18T00:00:00'
-  timeout: 125
-  callable_contract:
-    version: 1
-    effects:
-    - unknown
-    required:
-    - op
-    params:
-      target: Text
-      op: Text
-      keys: List<Text>
-      steps: Number
-      app: Text
-      url: Text
-      channels: List<Number>
-      page: Number
-      page_size: Number
-      refresh: Bool
-    defaults:
-      op: status
-    nonempty:
-    - target
-    enums:
-      op:
-      - status
-      - 'on'
-      - 'off'
-      - pair
-      - mute
-      - to_pc
-      - dlna_stop
-      - key
-      - volume
-      - launch
-      - dlna_play
-      - epg_now
-      - epg_channel
-      - epg_scan
-    result:
-      success: Bool
-      op: Text
-      target: Text
-      verified: Bool
-    adapter:
-      protocol: registered-json/1
-    variants:
-    - when:
-        op: status
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: 'on'
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: 'off'
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: pair
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: mute
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: to_pc
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: dlna_stop
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: key
-      required:
-      - target
-      - keys
-      forbidden:
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: volume
-      required:
-      - target
-      - steps
-      forbidden:
-      - keys
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-      minimum:
-        steps: -10
-      maximum:
-        steps: 10
-    - when:
-        op: launch
-      required:
-      - target
-      - app
-      forbidden:
-      - keys
-      - steps
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: dlna_play
-      required:
-      - target
-      - url
-      forbidden:
-      - keys
-      - steps
-      - app
-      - channels
-      - page
-      - page_size
-      - refresh
-    - when:
-        op: epg_now
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-    - when:
-        op: epg_channel
-      required:
-      - target
-      - channels
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-    - when:
-        op: epg_scan
-      required:
-      - target
-      forbidden:
-      - keys
-      - steps
-      - app
-      - url
-      - channels
-      - page
-      - page_size
-      - refresh
-    integers:
-    - steps
-    - page
-    - page_size
-    minimum:
-      page: 1
-      page_size: 1
-    maximum:
-      page_size: 200
-
-구성요소수명:
-  file: capability_age.py
-  interpreter: python
-  description: '어휘·등록 스크립트·이름 붙은 관용구의 생성/변경/검증/수리/실행 시각과 구현 지문을 조회한다. 입력(args)은 op=list(기본)/history/sync/verify/repair, key(목록에서 선택), kind=action/script/idiom, status=current/stale/failed/unverified, after(다음 커서), limit(기본50). verify는 expected_revision·scope·outcome(passed/failed)·evidence, repair는 expected_revision·reason·evidence 필수. 검증은 명시 범위만 뜻하며 실행 성공과 분리한다. 사용법=body 가이드 구성요소 수명 절.'
-  registered_at: '2026-10-20T02:46:40.371811+00:00'
-  created_at: '2026-10-20T02:46:40.371811+00:00'
-  timeout: 120
-Safari제어:
-  description: 본체 Safari 창·탭 드라이버 v2. status(window_id 선택)로 windows[].revision 조회. switch/close는 window_id·tab·expected(관측 revision) 필수. open(url,window_id 선택,expected 선택,launch 선택)은 배경 탭 생성과 기존 상태 보존을 검증. 모든 변경 결과 state·target·checks로 추가 조회 없이 IBL 연속 조합. target은 다음 호출 인수(window_id,tab,expected). STATE_CHANGED는 변경 전 중단, UNKNOWN·POSTCONDITION_FAILED는 자동 재전송 금지. 페이지 로드와 동일 URL 탭의 개체 신원은 보장하지 않는다. 가이드 safari_control.md.
-  file: safari_control.py
-  interpreter: python
-  registered_at: '2026-10-20T12:00:00'
-  timeout: 60
-  callable_contract:
-    version: 1
-    effects:
-    - unknown
-    required: []
-    params:
-      op: Text
-      url: Text
-      window_id: Number
-      tab: Number
-      expected: Text
-      launch: Bool
-    defaults:
-      op: status
-    enums:
-      op:
-      - contract
-      - status
-      - open
-      - switch
-      - close
-    result:
-      success: Bool
-      verified: Bool
-    adapter:
-      protocol: registered-json/1
-    variants:
-    - when:
-        op: contract
-      effects: [read_external]
-      forbidden:
-      - url
-      - window_id
-      - tab
-      - launch
-      - expected
-      result:
-        success: Bool
-        surface: Text
-        supported_platforms: List<Text>
-        actions: Record
-    - when:
-        op: status
-      effects: [read_external]
-      forbidden:
-      - url
-      - tab
-      - launch
-      - expected
-    - when:
-        op: open
-      effects: [write_external]
-      required:
-      - url
-      forbidden:
-      - tab
-    - when:
-        op: switch
-      effects: [write_external]
-      required:
-      - window_id
-      - tab
-      - expected
-      forbidden:
-      - url
-      - launch
-    - when:
-        op: close
-      effects: [write_external]
-      required:
-      - window_id
-      - tab
-      - expected
-      forbidden:
-      - url
-      - launch
-
-Chrome제어:
-  description: 본체 Google Chrome 창·탭 드라이버(AppleScript 통로, macOS). Safari제어와 같은 계약 — status(window_id 선택)로 windows[].revision 조회, switch/close는 window_id·tab·expected(관측 revision) 필수, open(url,window_id 선택,expected 선택,launch 선택)은 끝에 탭을 만들고 Chrome 이 활성으로 만든 새 탭 대신 이전 현재 탭을 같은 스크립트 안에서 복원(checks.activation_restored). 판본·대조·닫기는 영구 탭 id 기준이라 탭 안의 페이지 이동은 판본을 깨지 않는다. 결과 state·target·checks로 추가 조회 없이 IBL 연속 조합. STATE_CHANGED는 변경 전 중단, UNKNOWN·POSTCONDITION_FAILED는 자동 재전송 금지. Windows Chrome 은 이 통로가 없다(UNSUPPORTED_PLATFORM). 가이드 chrome_control.md.
-  file: chrome_control.py
-  interpreter: python
-  registered_at: '2026-10-21T08:30:00'
-  timeout: 60
-  callable_contract:
-    version: 1
-    effects:
-    - unknown
-    required: []
-    params:
-      op: Text
-      url: Text
-      window_id: Number
-      tab: Number
-      expected: Text
-      launch: Bool
-    defaults:
-      op: status
-    enums:
-      op:
-      - contract
-      - status
-      - open
-      - switch
-      - close
-    result:
-      success: Bool
-      verified: Bool
-    adapter:
-      protocol: registered-json/1
-    variants:
-    - when:
-        op: contract
-      effects: [read_external]
-      forbidden:
-      - url
-      - window_id
-      - tab
-      - launch
-      - expected
-      result:
-        success: Bool
-        surface: Text
-        supported_platforms: List<Text>
-        actions: Record
-    - when:
-        op: status
-      effects: [read_external]
-      forbidden:
-      - url
-      - tab
-      - launch
-      - expected
-    - when:
-        op: open
-      effects: [write_external]
-      required:
-      - url
-      forbidden:
-      - tab
-    - when:
-        op: switch
-      effects: [write_external]
-      required:
-      - window_id
-      - tab
-      - expected
-      forbidden:
-      - url
-      - launch
-    - when:
-        op: close
-      effects: [write_external]
-      required:
-      - window_id
-      - tab
-      - expected
-      forbidden:
-      - url
-      - launch
-
-Android제어부품:
-  description: Android제어·Android제어확인의 준비·영수증 검증 부품. 동작·인수·단위·확인 범위는 op:contract. 일반 호출은 저장 함수를 사용한다. 가이드 android_control.md.
-  file: android_control.py
-  interpreter: python
-  registered_at: '2026-10-20T00:00:00'
-  timeout: 30
-  callable_contract:
-    version: 1
-    effects: [read_external]
-    required: [op]
-    params:
-      op: Text
-      source: Text
-      request: Record
-      target: Text
-      limbs: List<Record>
-      wait: Number?
-      task: Record
-      plan_ref: Record
-      job_ref: Record
-      observation: Record
-    result: Record
-    adapter:
-      protocol: ibl-script/2
-      receipt_ref: true
-      receipt_inputs: [plan_ref, job_ref]
-    enums:
-      op: [contract, select, prepare, verify]
-    variants:
-    - when: {op: select}
-      required: [op, target, request, limbs]
-      result:
-        target: Text
-        platform: Text
-        request: Record
-        source_path: Text
-        wait: Number
-        timeout: Number
-    - when: {op: prepare}
-      required: [op, source, request]
-      result:
-        request: Record
-        request_id: Text
-        platform: Text
-        source_sha256: Text
-        helper_sha256: Text
-        code: Text
-    - when: {op: verify}
-      required: [op, task, plan_ref, job_ref]
-      result:
-        status: Text
-        target: Unknown
-        verified: Bool
-        result: Unknown
-        task_ref: Unknown
-        verification: Unknown
-        evidence_ref: Unknown
-        failure: Unknown

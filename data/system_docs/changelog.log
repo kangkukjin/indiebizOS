@@ -2847,5 +2847,7 @@
 2026-10-23 | GAIA ep5211–5387 감사·공통 결함 수리: 분류 대상의 역할/출력 지시를 JSON 자료로 구분해 분류기의 문제풀이 이탈 방지, 감독 원장을 대화 DB·소유자·세션별 격리해 독립 작업의 부모 참조 축출 방지, 긴 유튜브 자막의 transcript/segments/items 계약 유지로 필드 소실·빈 요약 입력 제거. 실제 분류 모델 동일3요청 유효1/3→3/3, backend 전수11703통과·14건너뜀. 기존 GAIA148/165는 재측정하지 않음. docs/GAIA_EPISODE_AUDIT_2026_10_23.md.
 [2026-10-23 12:03:48] PROJECT_CREATED: L95_harness_ai (ID: L95_harness_ai)
 [2026-10-23 12:03:48] PROJECT_CREATED: L95_harness_ai (ID: L95_harness_ai)
+[2026-10-23 14:28:57] PROJECT_CREATED: L96_starcraft_ai (ID: L96_starcraft_ai)
+[2026-10-23 14:28:57] PROJECT_CREATED: L96_starcraft_ai (ID: L96_starcraft_ai)
 2026-10-24 | 확정 IBL 위임 직접 실행: others:delegate mode=workflow는 기존 자식 task·상주 큐에서 원문·판본·inputs를 보존해 실행기로 전달하고 AI 재해석을 제거. 호출자/대상 권한·주체·취소·수리 작업공간 유지, 결과 선기록과 중복/불명확 실행의 자동 재실행 금지, 명시 비동기 자식의 보고는 원장 조회로 유지. 예약 자연어 pipeline·창 의존 교재 정렬. 일반 회귀11625통과·1건너뜀, 관련 system96통과, 용례55건 재검토·빌드 정합 통과. 범위/한계: docs/IBL_DISCOVERY_EXECUTION_REPAIR_DESIGN_2026_10_24.md §10.
 2026-10-24 | 잠재적 어휘 사용 일관성: 배포 함수는 기존 교재의 용도로 발견하고 저장 함수 후보 계약은 현재 의존성으로 재계산. PC·Android 제어는 원 오류·구조화 코드·복구 지시 보존, 보고서HTML은 등록 입력/반환 계약 검사, typed 스크립트 작업 판정은 동기·분리·task 조회·회원·감독 경계까지 전달. 기존 제어 정의와 해마 개정 원장 갱신, 형태·상시 노출 정책 유지. 모의 실패·실제 임시 HTML·자식 프로세스 경계 회귀 추가. 실기기·시간/토큰 개선은 미측정. docs/CALLABLE_COMPONENT_REPAIR_DESIGN_2026_10_18.md.

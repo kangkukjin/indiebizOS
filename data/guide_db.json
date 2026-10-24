@@ -1940,6 +1940,8 @@
         "forage"
       ],
       "file": "folder_survey.md",
+      "control_callables": ["script:폴더변화"],
+      "control_brief_section": "폴더변화 빠른 호출",
       "topic": "기억"
     },
     {

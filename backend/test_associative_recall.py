@@ -119,6 +119,22 @@ def test_reusable_discovery_adds_only_selected_briefs_within_existing_budget(mon
     assert seen[-1] == []
 
 
+def test_reusable_context_retains_oversize_match_and_its_lookup(monkeypatch):
+    import json
+    import reusable_catalog
+    monkeypatch.setattr(reusable_catalog, 'candidates', lambda q: [
+        {'id': 'fn:long', 'description': '재사용 부품', 'contract_known': True,
+         'contract': {'params': {'request': 'Record'}, 'variants': ['x' * 6000]}}])
+    monkeypatch.setattr('guide_registry.callable_control_briefs', lambda names: [])
+    block = recall._reusable_capabilities(recall.RecallRequest(None, 'request', []), None)
+    payload = json.loads(block.text.split('\n')[1])
+    assert block.ids == block.join['candidates'] == ['fn:long']
+    card, = payload['candidates']
+    assert card['inspect'] == {'describe': ['fn:long']}
+    assert card['details_omitted'] == ['contract'] and 'contract' not in card
+    assert len(json.dumps(payload, ensure_ascii=False)) <= 5000
+
+
 def test_device_context_with_no_known_devices_still_introduces_local_body(monkeypatch):
     """CONTROL_DRIVER_DESIGN_2026_10_20 §5.1 — 본체는 드라이버(`fn:PC제어` __local__)가 있는데 소개에
     없어 AI 가 화면 조작으로 가던 유일한 면. 등록 장치가 없어도 본체 행 하나는 소개한다."""

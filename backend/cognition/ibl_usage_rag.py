@@ -635,7 +635,8 @@ def build_execution_memory_from_hint(action_hint: str, allowed_nodes=None) -> tu
 
     try:
         from model_result_view import describe_actions
-        entry = describe_actions([f"{node}:{action}"], allowed_nodes, edition=2)["actions"][0]
+        described = describe_actions([f"{node}:{action}"], allowed_nodes, edition=2)
+        entry = described["actions"][0]
         action_config = entry.get("definition")
     except Exception:
         return ("", 0.0, "")
@@ -648,12 +649,16 @@ def build_execution_memory_from_hint(action_hint: str, allowed_nodes=None) -> tu
 
     action_id = f"[{node}:{action}]"
     teaching = {key: action_config[key] for key in
-                ("description", "target_description", "callable_contract", "operations", "guides")
+                ("description", "target_description", "callable_contract", "operations", "guides",
+                 "authoring_examples", "observed_returns", "observed_note")
                 if key in action_config}
+    if described.get("control_briefs"):
+        teaching["control_briefs"] = described["control_briefs"]
     inner = (f'  <user_selected_action action="{_esc(action_id)}" edition="2" '
              f'contract="{_esc(json.dumps(teaching, ensure_ascii=False))}"/>')
     xml = (
-        '<execution_memory note="사용자가 마법책에서 명시적으로 선택한 액션. 해마 검색 결과 대신 이 액션이 Top-1.">\n'
+        '<execution_memory note="사용자가 마법책에서 명시적으로 선택한 액션. 해마 검색 결과 대신 이 액션이 Top-1. '
+        '제공된 계약·호출 요약으로 충분한 범위는 바로 사용하고, 빠진 인수·조건만 추가 조회한다.">\n'
         f'{inner}\n'
         '</execution_memory>'
     )

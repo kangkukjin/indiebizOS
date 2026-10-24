@@ -64,7 +64,8 @@ def test_briefs_bound_total_without_cutting_a_contract(catalog):
 
 
 @pytest.mark.parametrize('filename', ['android_control.md', 'pc_control.md', 'tv_control.md',
-                                     'safari_control.md', 'chrome_control.md', 'browser_action.md'])
+                                     'safari_control.md', 'chrome_control.md', 'browser_action.md',
+                                     'folder_survey.md'])
 def test_published_brief_fits_budget_and_compiles_call_examples(filename):
     import re
     from ibl_v2_adapters import load_registry
@@ -78,7 +79,7 @@ def test_published_brief_fits_budget_and_compiles_call_examples(filename):
         plan = compile_program("#!ibl edition=2\nreturn " + call,
                                load_registry(str(guides.DATA_PATH.parent)),
                                inputs={"폰": "selected-device", "원결과": {}, "PC": "__local__",
-                                       "출력": "output-device", "TV": "selected-tv"},
+                                       "출력": "output-device", "TV": "selected-tv", "폴더": "selected-folder"},
                                definitions=installed_definitions())
         assert not plan.issues, plan.report()
 
@@ -116,6 +117,42 @@ def test_published_device_briefs_fit_together_and_every_callable_maps_back():
     for entry in entries:
         for name in entry.get('control_callables', []):
             assert [b['file'] for b in guides.callable_control_briefs([name])] == [entry['file']]
+
+
+def test_general_script_brief_reaches_discovery_and_matches_check_ack_semantics(tmp_path, monkeypatch):
+    """요약의 초기 0건·부분 결과·상태 쓰기·ack 의미를 실제 부품으로 대조한다."""
+    import importlib.util
+    from reusable_catalog import discovery_payload
+    path = guides.DATA_PATH / 'scripts' / '폴더변화.py'
+    spec = importlib.util.spec_from_file_location('folder_watch_brief_test', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, 'STATE_DIR', tmp_path / 'state')
+    folder = tmp_path / 'folder'
+    folder.mkdir()
+    (folder / 'old.txt').write_text('old')
+    args = {'path': str(folder), 'commit': False, 'limit': 1}
+    first = module.main(args)
+    assert first['first_check'] and first['count'] == 0
+    assert list(module.STATE_DIR.glob('*.json'))  # commit:false도 초기 기준을 기록한다.
+    for name in ('new1.txt', 'new2.txt'):
+        (folder / name).write_text(name)
+    changed = module.main(args)
+    assert changed['count'] == 2 and changed['omitted'] == 1 and len(changed['items']) == 1
+    assert changed['awaiting_ack'] and not changed['committed']
+    complete = module.main({**args, 'limit': 60})
+    assert complete['count'] == len(complete['items']) == 2 and complete['omitted'] == 0
+    assert module.main({'op': 'ack', 'path': str(folder)})['acked']
+    assert module.main(args)['count'] == 0
+    assert not module.main({'op': 'ack', 'path': str(folder)})['acked']
+
+    payload = discovery_payload([{'id': 'script:폴더변화', 'contract_known': False}])
+    brief, = payload['control_briefs']
+    assert brief == guides.callable_control_briefs(['script:폴더변화'])[0]
+    assert brief['file'] == 'folder_survey.md'
+    for fact in ('commit:false', 'first_check:true,count:0', 'omitted>0', 'acked:false', '순수 읽기가 아니다'):
+        assert fact in brief['text']
+    assert payload['candidates'][0]['contract_known'] is False  # 가이드가 선언 계약을 꾸며내지 않는다.
 
 
 if __name__ == "__main__":

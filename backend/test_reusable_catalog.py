@@ -106,6 +106,56 @@ def test_stored_function_retains_derived_contract_and_dependencies(tmp_path, mon
     assert saved['source_hash'] and saved['dependencies'] and saved['plan_hash']
 
 
+def test_long_contract_preserves_candidate_and_exact_inspection_without_partial_contract(monkeypatch):
+    import json
+    from copy import deepcopy
+    from reusable_catalog import discovery_payload
+    monkeypatch.setattr('guide_registry.callable_control_briefs', lambda names: [])
+    row = {'id': 'script:big"name', 'description': '누락 행을 확인한다', 'contract_known': True,
+           'contract': {'params': {'request': 'Record'}, 'variants': [{'conditions': 'x' * 6000}]}}
+    original = deepcopy(row)
+    out = discovery_payload([row])
+    card, = out['candidates']
+    assert card['id'] == row['id'] and card['description'] == row['description']
+    assert card['contract_known'] and 'contract' in card['details_omitted']
+    assert 'contract' not in card  # params만 잘라 싣고 동작별 조건을 감추지 않는다.
+    code = card['inspect']['code']
+    assert json.loads(code[len('[self:script]'):]) == {'op': 'list', 'id': 'big"name'}
+    assert len(json.dumps(out, ensure_ascii=False)) <= 5000 and row == original
+
+
+def test_discovery_reserves_names_and_prioritizes_complete_usage_over_long_contract(monkeypatch):
+    import json
+    from reusable_catalog import discovery_payload
+    brief = {'file': 'one.md', 'text': '예제·검증·복구 ' + 'x' * 1200}
+    seen = []
+    def lookup(names):
+        seen.extend(names)
+        return [brief]
+    monkeypatch.setattr('guide_registry.callable_control_briefs', lookup)
+    rows = [{'id': 'fn:first', 'description': 'first', 'contract_known': True,
+             'contract': {'detail': 'x' * 4000}},
+            {'id': 'script:second', 'description': 'second', 'contract_known': False}]
+    out = discovery_payload(rows)
+    assert [r['id'] for r in out['candidates']] == seen == ['fn:first', 'script:second']
+    assert out['control_briefs'] == [brief]
+    assert out['candidates'][0]['inspect'] == {'describe': ['fn:first']}
+    assert out['candidates'][1]['contract_known'] is False
+    assert len(json.dumps(out, ensure_ascii=False)) <= 5000
+
+
+def test_small_contract_is_preserved_whole_and_oversized_guide_is_omitted(monkeypatch):
+    from reusable_catalog import discovery_payload
+    contract = {'params': {'request': 'Record'}, 'effects': ['unknown'],
+                'variants': [{'when': {'op': 'set'}, 'required': ['value']}]}
+    monkeypatch.setattr('guide_registry.callable_control_briefs',
+                        lambda names: [{'file': 'big.md', 'text': 'x' * 5000}])
+    out = discovery_payload([{'id': 'fn:small', 'contract': contract, 'contract_known': True}])
+    assert out['candidates'][0]['contract'] == contract
+    assert out['candidates'][0]['details_omitted'] == []
+    assert not out['control_briefs']
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))

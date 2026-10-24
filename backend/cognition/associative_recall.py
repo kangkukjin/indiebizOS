@@ -532,24 +532,17 @@ def _used_deep(ids, join, ev) -> Dict[str, Any]:
 
 
 def _reusable_capabilities(req, recall):
-    from reusable_catalog import candidates
-    from guide_registry import callable_control_briefs
+    from reusable_catalog import candidates, discovery_payload
     import json
-    rows = candidates(req.message)
-    while rows and len(json.dumps(rows, ensure_ascii=False)) > 5000:
-        rows.pop()
+    payload = discovery_payload(candidates(req.message))
+    rows, briefs = payload['candidates'], payload['control_briefs']
     if not rows:
         return None
-    briefs = []
-    # 기존 검색이 선택한 후보만 보충한다. 모든 앱을 상시 주입하거나 질문을 재분류하지 않는다.
-    for brief in callable_control_briefs(r['id'] for r in rows if not r.get('error')):
-        if len(json.dumps({'candidates': rows, 'control_briefs': briefs + [brief]}, ensure_ascii=False)) <= 5000:
-            briefs.append(brief)
     text = '<reusable_capabilities>현재 요청과 관련된 기존 부품 후보입니다. 계약과 효과가 맞을 때 사용하세요. '
-    text += 'control_briefs의 범위는 바로 호출하고 검증·실패 복구를 유지합니다. 요약 밖의 계약만 self:script list 또는 describe:["fn:이름"]으로 확인합니다.\n'
-    text += json.dumps(rows, ensure_ascii=False)
-    if briefs:
-        text += '\ncontrol_briefs: ' + json.dumps(briefs, ensure_ascii=False)
+    text += ('제공된 계약·control_briefs로 충분한 범위는 재조회 없이 사용하고 검증·실패 복구를 유지합니다. '
+             'call은 입력을 채울 호출 골격입니다. details_omitted는 소개에서 생략된 정보이며, '
+             '호출에 필요한 인수·조건이 부족할 때만 inspect의 execute_ibl 인수로 조회합니다.\n')
+    text += json.dumps(payload, ensure_ascii=False)
     text += '\n</reusable_capabilities>'
     return Block('reusable_capabilities', 'reusable_capabilities', text,
                  ids=[r['id'] for r in rows], join={'candidates': [r['id'] for r in rows]},

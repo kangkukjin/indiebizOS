@@ -53,6 +53,36 @@ def test_hint_xml_preserves_contract_text(monkeypatch):
     assert json.loads(ET.fromstring(xml).find('user_selected_action').attrib['contract']) == expected
 
 
+def test_selected_action_keeps_call_example_observation_and_guide(monkeypatch):
+    import model_result_view
+    definition = {'callable_contract': {'params': {'request': 'Record'}},
+                  'authoring_examples': ['[self:demo]{request:{mode:"read"}}'],
+                  'observed_returns': {'keys': ['actual']}, 'observed_note': '관측이며 보장 아님'}
+    briefs = [{'file': 'demo.md', 'content_hash': 'edition',
+               'text': '입력 <요청> & 결과 확인. 모호한 변경은 재전송하지 않는다.'}]
+    monkeypatch.setattr(model_result_view, 'describe_actions', lambda *a, **kw: {
+        'actions': [{'definition': definition}], 'control_briefs': briefs})
+    xml, _, _ = build_execution_memory_from_hint('self:demo')
+    taught = json.loads(ET.fromstring(xml).find('user_selected_action').attrib['contract'])
+    assert taught == {**definition, 'control_briefs': briefs}
+    assert '빠진 인수·조건만 추가 조회' in ET.fromstring(xml).attrib['note']
+
+
+def test_denied_selected_action_does_not_expose_a_guide(monkeypatch):
+    import model_result_view
+    monkeypatch.setattr(model_result_view, 'describe_actions', lambda *a, **kw: {
+        'actions': [{'error': 'denied'}], 'control_briefs': [{'text': 'must not be shown'}]})
+    assert build_execution_memory_from_hint('self:demo') == ('', 0.0, '')
+
+
+def test_browser_selection_keeps_current_published_call_brief():
+    described = describe_actions(['limbs:browser'], {'limbs'}, edition=2)
+    xml, _, _ = build_execution_memory_from_hint('limbs:browser', {'limbs'})
+    taught = json.loads(ET.fromstring(xml).find('user_selected_action').attrib['contract'])
+    assert taught['control_briefs'] == described['control_briefs']
+    assert any(b['file'] == 'browser_action.md' for b in taught['control_briefs'])
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

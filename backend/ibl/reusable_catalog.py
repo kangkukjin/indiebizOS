@@ -10,6 +10,54 @@ from pathlib import Path
 from recall_relevance import lexical_evidence, terms
 
 
+def discovery_payload(rows, max_chars=5000):
+    """소개 예산은 상세를 접는다. 긴 계약이 검색된 이름까지 지우지 않게 한다.
+
+    원 계약·가이드 절은 통째로 넣거나 생략한다. 부분 계약을 만들어 조건을 잃지 않으며,
+    contract_known(정의 존재)과 details_omitted(이번 소개 생략)는 별개다.
+    """
+    from guide_registry import callable_control_briefs
+
+    payload = {'candidates': [], 'control_briefs': []}
+
+    def fits():
+        return len(json.dumps(payload, ensure_ascii=False)) <= max_chars
+
+    sources = []
+    for row in rows:
+        kind, _, name = row['id'].partition(':')
+        inspect = ({'describe': [row['id']]} if kind == 'fn' else
+                   {'code': '[self:script]' + json.dumps({'op': 'list', 'id': name}, ensure_ascii=False)})
+        card = {'id': row['id'], 'inspect': inspect,
+                'contract_known': row.get('contract_known', False),
+                'details_omitted': [key for key in ('description', 'contract', 'call') if row.get(key)]}
+        if row.get('error'):
+            # 조회 거절은 소개 예산 때문에 실행 가능한 후보로 바뀌지 않는다.
+            card['error'] = row['error']
+        payload['candidates'].append(card)
+        if not fits():
+            payload['candidates'].pop()
+            break
+        sources.append(row)
+
+    # 내부 Record의 실제 사용법·검증·복구 조건을 담은 짧은 절을 긴 계약보다 먼저 확보한다.
+    for brief in callable_control_briefs(row['id'] for row in sources if not row.get('error')):
+        payload['control_briefs'].append(brief)
+        if not fits():
+            payload['control_briefs'].pop()
+
+    for key in ('description', 'contract', 'call'):
+        for card, row in zip(payload['candidates'], sources):
+            if key not in card['details_omitted']:
+                continue
+            card[key] = row[key]
+            card['details_omitted'].remove(key)
+            if not fits():
+                del card[key]
+                card['details_omitted'].append(key)
+    return payload
+
+
 def ranked(query, entries, limit=3):
     query = (query or '').strip().casefold()
     if not query:

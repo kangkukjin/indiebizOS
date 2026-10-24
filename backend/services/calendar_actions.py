@@ -171,73 +171,30 @@ class CalendarActionsMixin:
             return {"success": False, "error": str(e)}
 
     def _action_run_pipeline(self, task: dict):
-        """IBL 파이프라인 실행 — 창을 열고 에이전트가 보이는 곳에서 실행
+        """예약된 원문을 소유자 경로에서 바로 실행한다. 창·WS·모델 재해석은 거치지 않는다.
 
-        흐름:
-        1. 프로젝트 창(또는 시스템 AI 창) 열기
-        2. 에이전트 활성화 + WS 연결 대기
-        3. WS를 통해 메시지 주입 → 에이전트가 채팅창에서 실시간으로 작업
-        4. 요청/응답/도구실행 과정이 모두 사용자에게 보임
+        검증과 영수증은 기존 예약 실행기가 소유한다. 실패·불명확 결과를 그대로
+        반환하며, 화면 전달 실패 등을 이유로 다른 통로에서 같은 변경을 재실행하지 않는다.
         """
         import time as _time
-        import asyncio
 
         params = task.get("action_params", {})
         pipeline = params.get("pipeline", "")
         trigger_id = params.get("trigger_id")
-
         owner_project_id = task.get("owner_project_id", "")
         owner_agent_id = task.get("owner_agent_id", "")
-        is_system_ai = (owner_project_id == "__system_ai__")
-
-        # 폰-자아: 폰엔 Electron 창도 WS 도 없으므로 "보이는 실행"(_execute_visible_*) 경로가
-        # 성립하지 않는다. 소유자 유무와 무관하게 아래 else 레거시 분기(ibl_parse +
-        # execute_pipeline — 둘 다 폰 번들)로 흐르게 owner 를 비운다. 결과 전달은 pipeline 자체의
-        # [limbs:phone]{op:notify}(창 없는 몸의 출력 짝)로. 이음매 아래 fork-guard(INDIEBIZ_PROFILE).
-        import os as _os
-        if _os.environ.get("INDIEBIZ_PROFILE") == "phone":
-            is_system_ai = False
-            owner_project_id = ""
-            owner_agent_id = task.get("owner_agent_id", "") or "phone"
 
         if not pipeline:
             self._log(f"파이프라인이 없습니다: {task.get('title')}")
             return {"success": False, "error": "pipeline 누락"}
 
-        # 사용자 메시지 생성 (에이전트에게 보낼 내용)
-        user_message = (
-            f"[스케줄 작업] 다음을 실행하고 결과를 보고해주세요:\n\n"
-            f"`{pipeline}`"
-        )
-
         try:
             start = _time.time()
-
-            if is_system_ai or (owner_project_id and owner_agent_id):
-                result = (self._execute_visible_system_ai(user_message, task) if is_system_ai
-                          else self._execute_visible_agent(owner_project_id, owner_agent_id,
-                                                           user_message, task))
-                # 창·WS·에이전트를 못 띄웠으면 아무것도 실행되지 않은 것이다(2026-10-14: 창 없는
-                # 데스크탑에서 시스템 AI 예약 정지가 30초 대기 뒤 그대로 사라져 폰 음악이 계속 났다).
-                # "보이는 실행"은 표시 방식일 뿐이므로 같은 문장을 소유자 신원으로 직접 실행한다.
-                if not result.get("success") and result.get("not_started"):
-                    reason = result.get("error")
-                    self._log(f"[직접 실행] 보이는 실행 불가({reason}) → 파이프라인: {pipeline[:60]}...")
-                    result = self._execute_scheduled_pipeline(
-                        pipeline, self._owner_run_path(owner_project_id), owner_agent_id,
-                        edition=params.get("edition"), inputs=params.get("inputs"))
-                    if isinstance(result, dict):
-                        result["visible_unavailable"] = reason
-            else:
-                # ── 소유 에이전트 없는 스케줄: 파이프라인 직접 실행 ──
-                # ★B54-1 (2026-09-02 54회차): 옛 판은 project_path "." 고정이라 발화한 문장의
-                #   패키지 도구가 전부 "활성 프로젝트 경로를 확보할 수 없어"로 죽었다(등록한
-                #   프로젝트를 트리거가 몰랐다). 소유 프로젝트가 있으면 그 경로에서 돈다.
-                run_path = self._owner_run_path(owner_project_id)
-                self._log(f"[직접 실행] 파이프라인: {pipeline[:60]}... (project={owner_project_id or '-'})")
-                result = self._execute_scheduled_pipeline(
-                    pipeline, run_path, owner_agent_id, edition=params.get("edition"),
-                    inputs=params.get("inputs"))
+            run_path = self._owner_run_path(owner_project_id)
+            self._log(f"[직접 실행] 파이프라인: {pipeline[:60]}... (project={owner_project_id or '-'})")
+            result = self._execute_scheduled_pipeline(
+                pipeline, run_path, owner_agent_id, edition=params.get("edition"),
+                inputs=params.get("inputs"))
 
             duration_ms = int((_time.time() - start) * 1000)
 
@@ -326,7 +283,7 @@ class CalendarActionsMixin:
         ★B54-3 (2026-09-02 54회차): 이 이름을 `_execute_schedule._delayed_run` 이 불렀지만
         정의가 없어 AttributeError 를 삼키고("결과 전달 실패") 성공은 아무에게도, 실패는
         호출조차 없이 사라졌다. 스케줄러 틱 경로(_action_run_pipeline)와 같은 알림 규약으로
-        전한다. 채팅 주입은 소유 에이전트가 있는 "보이는 실행" 경로의 몫이라 여기선 안 한다.
+        전한다. 예약 원문의 실행·검증은 창 없이 끝나며 결과 알림이 실패해도 재실행하지 않는다.
         """
         title = str((task or {}).get("title") or pipeline[:40])
         owner = ""
@@ -353,7 +310,7 @@ class CalendarActionsMixin:
             return {"delivered": False, "error": str(e)}
 
     # =========================================================================
-    # 스케줄 실행: "보이는 실행" — 창을 열고 에이전트가 채팅에서 작업
+    # 계획 실행의 "보이는 실행" — 예약된 run_pipeline은 이 경로를 거치지 않는다
     # =========================================================================
 
     def _run_async(self, async_fn):

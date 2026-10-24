@@ -28,9 +28,6 @@ PROFILE_BRANCH_ALLOWLIST = {
                                       #  본체·믹스인은 _ON_PHONE 이름만 참조)
     "backend/services/nostr_phone_bridge.py",  # 폰 네이티브 nostr 브리지(HW 바인딩)
     "backend/services/phone_notifications.py", # 폰 알림 센서 바인딩
-    "backend/services/calendar_actions.py",    # 스케줄 발화 실행 substrate — 맥=GUI창+WS '보이는 실행' /
-                                      # 폰=창·WS 없어 헤드리스 폰-로컬 execute_pipeline. "무엇을 실행"(어휘)이
-                                      # 아니라 "어떤 몸 메커니즘으로 실행"(바인딩)이라 이음매 아래.
     "data/packages/installed/tools/radio/tool_radio.py",     # 핸들러(이음매 아래)
     "data/packages/installed/tools/youtube/youtube_phone.py", # Java MediaPlayer/WebView 바인딩(이음매 아래)
     "backend/test_youtube_phone.py",  # 위 네이티브 바인딩의 폰 환경·PC 프로세스 미호출 회귀

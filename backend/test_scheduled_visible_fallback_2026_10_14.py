@@ -1,6 +1,7 @@
 """보이는 실행을 못 띄운 예약 문장(2026-10-14): 시스템 AI 창이 없자 30분 뒤 '음악 정지'가
 WS 30초 대기 뒤 아무것도 실행하지 않고 '1회 작업 완료'로 사라졌다. 창은 표시 방식일 뿐이므로
 같은 문장을 소유자 신원으로 직접 실행해야 하고, 실제 실패는 실패로 기록돼야 한다.
+2026-10-24: 대기 뒤 폴백이 아니라 처음부터 직접 실행하며 불명확 실패를 재전송하지 않는다.
 """
 import sys
 from types import SimpleNamespace
@@ -21,7 +22,8 @@ def host(monkeypatch):
     h = CalendarActionsMixin()
     h.logs = []
     h._log = h.logs.append
-    h._open_window_and_wait_ws = lambda *a, **k: None   # 창·WS 없음
+    h._open_window_and_wait_ws = lambda *a, **k: pytest.fail("예약 실행이 창·WS를 기다림")
+    h._inject_message_via_ws = lambda *a, **k: pytest.fail("예약 원문을 모델에 재전송함")
 
     def direct(steps, run_path, agent_id, edition=None, inputs=None):
         ran.append((steps, agent_id))
@@ -40,7 +42,7 @@ def test_system_ai_schedule_runs_directly_when_window_unavailable(host):
     result = host.h._action_run_pipeline(task)
     assert host.ran == [(STOP, "system_ai")]
     assert result["success"] is True
-    assert result["visible_unavailable"] == "시스템 AI 창/WS 연결 실패"
+    assert "visible_unavailable" not in result
     assert host.notices and host.notices[0][0] == "ok"
 
 
@@ -49,17 +51,23 @@ def test_agent_schedule_runs_directly_when_window_unavailable(host):
             "owner_agent_id": "a", "action_params": {"pipeline": STOP}}
     result = host.h._action_run_pipeline(task)
     assert host.ran == [(STOP, "a")]
-    assert result["visible_unavailable"] == "프로젝트 창/WS 연결 실패"
+    assert result["success"] is True and "visible_unavailable" not in result
 
 
-def test_injection_failure_is_not_retried_directly(host):
-    # 창은 열렸으나 주입 단계에서 실패 — 시작됐을 수 있으므로 두 번 실행하지 않는다.
-    host.h._open_window_and_wait_ws = lambda *a, **k: "client-1"
-    host.h._inject_message_via_ws = lambda *a, **k: {"success": False, "error": "주입 실패"}
+def test_unknown_execution_is_not_retried_or_sent_to_chat(host, monkeypatch):
+    unknown = {"success": False, "error": "effect unknown", "run_status": "unknown",
+               "resume": {"run_id": "original"}, "value": {"verified": False}}
+
+    def direct(*args, **kwargs):
+        host.ran.append(args)
+        return unknown
+
+    monkeypatch.setattr(CalendarActionsMixin, "_execute_scheduled_pipeline", staticmethod(direct))
     task = {"id": "evt_z", "title": "t", "owner_project_id": "__system_ai__",
             "owner_agent_id": "system_ai", "action_params": {"pipeline": STOP}}
     result = host.h._action_run_pipeline(task)
-    assert host.ran == [] and result["success"] is False
+    assert len(host.ran) == 1 and result is unknown
+    assert host.notices[0][0] == "warn"
 
 
 def test_one_shot_failure_is_logged_as_failure(monkeypatch, tmp_path):

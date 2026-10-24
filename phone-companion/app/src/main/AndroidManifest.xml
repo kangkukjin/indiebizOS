@@ -144,6 +144,14 @@
             android:excludeFromRecents="true" android:configChanges="orientation|screenSize|keyboardHidden" />
         <receiver android:name=".update.UpdateResultReceiver" android:exported="false" />
         <activity android:name=".update.UpdatePermissionActivity" android:exported="false" />
+        <receiver android:name=".update.UpdateDeviceAdminReceiver" android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN" android:label="IndieBiz 무인 업데이트">
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/update_device_admin" />
+            <intent-filter><action android:name="android.app.action.DEVICE_ADMIN_ENABLED" /></intent-filter>
+        </receiver>
+        <!-- Opening the recovery screen grants/revokes nothing; removal requires a local confirmation. -->
+        <activity android:name=".update.UpdateManagementActivity" android:exported="true"
+            android:label="IndieBiz 업데이트 관리" />
         <!-- 재부팅·APK 교체 후 상주 복원 -->
         <receiver
             android:name=".BootReceiver"

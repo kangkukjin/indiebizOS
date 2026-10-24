@@ -25,6 +25,6 @@ class UpdatePermissionActivity : Activity() {
     }
     override fun onResume() {
         super.onResume()
-        if (packageManager.canRequestPackageInstalls()) { Thread { ApkUpdater.resumeInstall() }.start(); finish() }
+        if (ApkUpdater.canInstall()) { Thread { ApkUpdater.resumeInstall() }.start(); finish() }
     }
 }

@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
@@ -40,13 +41,19 @@ object ApkUpdater {
         }
         return md.digest().joinToString("") { "%02x".format(it) }
     }
-    @Suppress("DEPRECATION") private fun current() = ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+    // Samsung Android 9 only collects archive certificates when GET_SIGNATURES is also
+    // requested. Still verify signingInfo (the actual current signer), never a legacy fallback.
+    @Suppress("DEPRECATION") private fun signatureFlags() = PackageManager.GET_SIGNING_CERTIFICATES or
+        if (Build.VERSION.SDK_INT == 28) PackageManager.GET_SIGNATURES else 0
+    @Suppress("DEPRECATION") private fun current() = ctx.packageManager.getPackageInfo(ctx.packageName, signatureFlags())
     private fun signer(info: PackageInfo): String {
         val signatures = info.signingInfo?.apkContentsSigners ?: error("apk_signer_missing")
         require(signatures.size == 1) { "multiple_apk_signers_unsupported" }
         return sha(signatures[0].toByteArray())
     }
     private fun abi() = if (android.os.Process.is64Bit()) "arm64-v8a" else "armeabi-v7a"
+    private fun isDeviceOwner() = ctx.getSystemService(DevicePolicyManager::class.java).isDeviceOwnerApp(ctx.packageName)
+    internal fun canInstall() = isDeviceOwner() || ctx.packageManager.canRequestPackageInstalls()
 
     @JvmStatic @Synchronized fun init(context: Context) {
         if (::ctx.isInitialized) return
@@ -72,14 +79,14 @@ object ApkUpdater {
         return JSONObject().put("contract", 1).put("abi", abi()).put("sdk", Build.VERSION.SDK_INT)
             .put("version_code", info.longVersionCode).put("version_name", info.versionName)
             .put("installed_sha256", digest).put("signer_sha256", signer(info))
-            .put("can_install", ctx.packageManager.canRequestPackageInstalls()).put("attempt", attempt).toString()
+            .put("can_install", canInstall()).put("device_owner", isDeviceOwner()).put("attempt", attempt).toString()
     }
 
     @Suppress("DEPRECATION") private fun validate(path: String, release: JSONObject): File {
         val file = File(path).canonicalFile
         require(file.parentFile == File(ctx.filesDir, "userdata/apk-updates").canonicalFile) { "invalid_apk_path" }
         require(file.length() == release.getLong("size") && hash(file) == release.getString("sha256")) { "apk_hash_mismatch" }
-        val archive = ctx.packageManager.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES)
+        val archive = ctx.packageManager.getPackageArchiveInfo(file.path, signatureFlags())
             ?: error("invalid_apk")
         val installed = current()
         require(archive.packageName == ctx.packageName && release.getString("package") == ctx.packageName) { "apk_package_mismatch" }
@@ -111,7 +118,7 @@ object ApkUpdater {
         val value = read()
         if (value.optString("state") !in setOf("staged", "awaiting_permission")) return
         try {
-            if (!ctx.packageManager.canRequestPackageInstalls()) {
+            if (!canInstall()) {
                 value.put("state", "awaiting_permission").put("message", "폰에서 IndieBiz의 앱 설치 허용이 필요합니다")
                 save(value)
                 prompt(Intent(ctx, UpdatePermissionActivity::class.java), value.getString("message"))

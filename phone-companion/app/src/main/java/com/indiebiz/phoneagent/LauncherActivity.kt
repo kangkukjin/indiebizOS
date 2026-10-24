@@ -39,6 +39,17 @@ class LauncherActivity : Activity() {
 
     private companion object { const val FILE_CHOOSER_REQUEST = 1001 }
 
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        if (!getSystemService(android.app.admin.DevicePolicyManager::class.java).isDeviceOwnerApp(packageName)) {
+            return super.onCreateOptionsMenu(menu)
+        }
+        menu.add("업데이트 관리").setOnMenuItemClickListener {
+            startActivity(Intent(this, com.indiebiz.phoneagent.update.UpdateManagementActivity::class.java))
+            true
+        }
+        return true
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {

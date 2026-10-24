@@ -127,6 +127,39 @@ APK와 키는 Git 커밋 대상이 아니다. 중앙은 `POST /remote-pcs/phone-
 - 오래된 앱은 `bootstrap`, 미발행 ABI는 `unpublished`, 서명·Android 요구 버전 불일치는 `incompatible`로
   표시한다. 32비트 빌드 지원과 각 실제 기기의 무인 설치 성공은 구분한다.
 
+### 전용 기기의 선택적 무인 설치 관리
+
+일반 앱의 설치 허용과 **Device Owner(기기 소유자)**는 다르다. Android 9 등 일반 앱이
+매번 설치 확인을 요구받는 전용 기기는 소유자의 명시적 선택으로 IndieBiz를 Device Owner로
+설정할 수 있다. 이 상태에서는 Android의 관리 기기 설치 경로를 사용하며, 설치 확인을
+자동 클릭하지 않는다. 앱 설치·USB 업데이트만으로 이 권한을 자동 활성화하지 않는다.
+
+수신기는 `.update.UpdateDeviceAdminReceiver`, 선언은 `@xml/update_device_admin`이다.
+잠금·초기화·카메라·비밀번호 정책을 선언하거나 적용하지 않는다. 다만 Device Owner 자체는
+폰 전체를 관리하는 넓은 권한이므로 일상용 폰을 단순 업데이트 편의를 위해 임의 전환하지 않는다.
+등록된 중앙의 업데이트 요청, 동일 서명·버전·해시 검사와 새 앱 재접속 검증은 동일하게 유지한다.
+
+USB 준비는 대상 기기와 등록 ID를 확인하고, 계정·다른 사용자·기존 관리자가 없는 조건을
+확인한 뒤 해당 기기에만 다음 명령을 실행한다. 계정 제거와 재로그인은 별도 사용자 결정이며,
+설정 조건을 만들기 위해 계정 DB 삭제나 초기화를 자동 실행하지 않는다.
+
+```bash
+adb -s SERIAL shell dpm set-device-owner com.indiebiz.phoneagent/.update.UpdateDeviceAdminReceiver
+```
+
+설정 성공은 `dumpsys device_policy`와 `apk_update.device_owner`로 확인한다. 이후 더 높은
+APK를 중앙 `/remote-pcs/phone-update`로 보내 **USB 설치·화면 확인 없이** 설치·재접속하는지
+검증한다. 재부팅 후에도 같은 권한·등록이 유지되는지 확인하며, 설정 성공만으로 무인 설치
+성공을 주장하지 않는다. 기종별 제조사 정책은 별도로 적용될 수 있다.
+
+해제는 폰 런처의 **업데이트 관리 → 무인 업데이트 관리 해제**에서 본인이 확인한다.
+복구 화면은 `adb -s SERIAL shell am start -n com.indiebiz.phoneagent/.update.UpdateManagementActivity`로도
+열 수 있다. 화면을 여는 것만으로 권한이 변경되지는 않는다. 해제는 앱·데이터를 지우지 않지만
+재설정에는 다시 USB 준비 조건이 필요하다.
+
+근거: [Android 관리 기기 설정 조건](https://developer.android.com/work/guide#fully-managed-device),
+[PackageInstaller 관리 기기 설치 계약](https://developer.android.com/reference/android/content/pm/PackageInstaller).
+
 ### 실기 검증 (2026-10-16)
 
 예나폰(SM-A516N, Android 13, arm64)은 기존 등록·데이터를 유지한 USB 준비 설치 후,
@@ -180,6 +213,24 @@ SHA-256 일치(`41813657b8f336a7b2602dd1cb62931f0295dc4b78469fadefd546814182b588
 `Android/data/com.indiebiz.phoneagent/files/IndieBiz-0.18-arm32.apk`에 준비했다.
 삼성1은 공용 Download 쓰기 권한이 없어 앱 소유 외부 파일 폴더에 보관했다.
 직접 설치 후에도 중앙 `current`·설치 해시·실제 어휘를 재확인해야 한다.
+
+### Android 9 서명 조회 수리와 관리 기기 준비 (2026-10-24, 0.19–0.20)
+
+삼성1 실기에서 `GET_SIGNING_CERTIFICATES` 단독으로 APK를 읽으면 `signingInfo`가 비었지만,
+`GET_SIGNATURES`를 함께 요청하면 현재 서명이 정상 반환됨을 재현했다. API 28에만 두 옵션을
+함께 사용하도록 수정했고, 검증은 계속 `signingInfo.apkContentsSigners` 단일 서명을 사용한다.
+옛 서명 배열로 검증을 대체하거나 서명·버전·해시 검사를 생략하지 않는다. 설치된 0.19의
+실제 조회 옵션과 반환 서명 지문이 발행 서명과 일치하는 것을 삼성1에서 확인했다.
+
+삼성0·삼성1은 데이터 유지 USB 설치로 0.19의 재접속·배포 해시 일치와 각 97개 파일 일치,
+`limbs:youtube` 대기열·`self:music` 소스 조회를 확인했다. APK 두 ABI 빌드와 중앙 업데이트
+회귀 19개가 통과했다. 삼성0의 제조사 자체 설치 차단은 이 변경으로 해결된 것이 아니다.
+
+소유자는 **삼성1만** 관리 기기 전환을 선택했다. 삼성1에 선택적 관리 수신기와 본인 확인을
+거치는 권한 해제 화면을 포함한 0.20을 USB 설치했고 재접속·배포 해시 일치를 확인했다.
+Android 단위 검사 26개가 통과했다. `dpm set-device-owner`는 기존 계정이 있다는 OS 오류로
+거절됐다. 현재 계정 제거·관리 기기 설정·무인 APK 설치·재부팅 후 유지 검증은 미완료다.
+삼성0은 일반 앱 상태로 유지하며, 삼성1의 OS 설정 성공 전에는 무인 업데이트 완료로 보고하지 않는다.
 
 ## 범용 실행 계약 1 (새 APK 필요)
 

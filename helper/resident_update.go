@@ -302,5 +302,14 @@ func (r *residentRuntime) restartDue(pendingEvents int) bool {
 	if r.restartAt.IsZero() || len(r.active) > 0 {
 		return false
 	}
+	// The caller's spool snapshot may predate the final event and active removal.
+	// Under mu, an empty active map implies every worker already persisted its result.
+	if pendingEvents == 0 {
+		paths, err := filepath.Glob(filepath.Join(r.cfg.DataDir, "spool", "events", "*.json"))
+		if err != nil {
+			return time.Since(r.restartAt) > 30*time.Second
+		}
+		pendingEvents = len(paths)
+	}
 	return pendingEvents == 0 || time.Since(r.restartAt) > 30*time.Second
 }

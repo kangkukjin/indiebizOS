@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"net/url"
@@ -20,6 +21,12 @@ func (t *residentTransport) close() {
 	}
 }
 func (t *residentTransport) sync(body map[string]interface{}) (map[string]interface{}, error) {
+	return t.syncContext(context.Background(), body)
+}
+func (t *residentTransport) syncContext(ctx context.Context, body map[string]interface{}) (map[string]interface{}, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if t.conn == nil && time.Now().After(t.retry) {
 		u, e := url.Parse(t.base)
 		if e != nil {
@@ -35,7 +42,7 @@ func (t *residentTransport) sync(body map[string]interface{}) (map[string]interf
 		}
 		u.Path += "/limb/resident/ws"
 		dialer := websocket.Dialer{HandshakeTimeout: 5 * time.Second}
-		conn, response, e := dialer.Dial(u.String(), nil)
+		conn, response, e := dialer.DialContext(ctx, u.String(), nil)
 		if response != nil && response.Body != nil {
 			response.Body.Close()
 		}
@@ -47,6 +54,9 @@ func (t *residentTransport) sync(body map[string]interface{}) (map[string]interf
 		}
 	}
 	if t.conn != nil {
+		conn := t.conn
+		cancelClose := context.AfterFunc(ctx, func() { _ = conn.Close() })
+		defer cancelClose()
 		_ = t.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		e := t.conn.WriteJSON(body)
 		var result map[string]interface{}
@@ -60,5 +70,5 @@ func (t *residentTransport) sync(body map[string]interface{}) (map[string]interf
 		t.close()
 		t.retry = time.Now().Add(time.Minute)
 	}
-	return residentPost(t.base+"/limb/resident/sync", body)
+	return residentPostContext(ctx, t.base+"/limb/resident/sync", body)
 }

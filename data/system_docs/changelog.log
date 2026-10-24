@@ -2864,3 +2864,5 @@
 2026-10-25 | Android 단건 실행 지연 축소: HTTP 연결 재사용·수신과 분리한 사건 즉시 전송, 프로세스 자식 탐색의 실제 조기 종료, 설치된 고정 제어 코드의 지문 일치 시 별도 Python 프로세스 없는 control 전송. 임의 코드는 격리 유지·불명 결과 무재전송·취소는 네이티브 반환/잠금 회수 뒤 판정. 전체 backend11883통과18건너뜀·Android34통과·IBL/층 가드 통과. 0.24 양 ABI 발행·삼성0/1 설치 확인, 예나폰 최종 무선 전송 대기. 삼성1 폰 내부 중앙값2.557→0.057초·준비 제외 왕복4.757→2.714초(각3회). docs/ANDROID_SINGLE_CONTROL_LATENCY_2026_10_24.md.
 
 2026-10-25 | 하드웨어 연결 지연 후속 설계: 상주 PC 사건 보고 분리→TV 호출 간 연결 유지의 단계·소유 수명·권한/ACK/무재전송·검증/배포·공수와 세션 인계 기록. 설계만 작성, PC/TV 구현 미착수. docs/HARDWARE_CONNECTION_LATENCY_DESIGN_2026_10_25.md.
+
+2026-10-25 | 상주 PC 결과 즉시 전송: 영속 spool publisher와 기존 명령 수신 분리, event_push 협상·404 복귀·동일 ID ACK·종료 join·업데이트 빈 스냅샷 경합 수리. Go 전체 race 및 HTTP/WS 차단 회귀 통과, 지원 타깃 빌드 완료. 원격 배포는 후속 확인. docs/HARDWARE_CONNECTION_LATENCY_DESIGN_2026_10_25.md §9.

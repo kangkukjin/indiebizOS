@@ -106,6 +106,7 @@ func (r *residentRuntime) schedule() error {
 				r.terminals--
 			}
 			r.mu.Unlock()
+			residentNotify(r.syncWake)
 		}(v, observation, terminal)
 	}
 	return nil

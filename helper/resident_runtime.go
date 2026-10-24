@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -40,12 +39,26 @@ type residentRuntime struct {
 	updating    bool      // a self-update is replacing the executable; start no new job
 	restartAt   time.Time // set once the new executable is in place
 	wg          sync.WaitGroup
+	eventsWG    sync.WaitGroup
+	ctx         context.Context
+	cancel      context.CancelFunc
+	eventsWake  chan struct{}
+	syncWake    chan struct{}
+	eventPush   bool
+	pushRetry   time.Time
+	failure     error
+	remove      bool
 }
 
 func (r *residentRuntime) event(jid, kind string, payload map[string]interface{}) error {
 	e := residentEvent{residentID(), jid, kind, payload, float64(time.Now().UnixNano()) / 1e9}
 	path := filepath.Join(r.cfg.DataDir, "spool", "events", fmt.Sprintf("%020d-%s.json", time.Now().UnixNano(), e.EventID))
-	return residentSave(path, e)
+	if err := residentSave(path, e); err != nil {
+		return err
+	}
+	residentNotify(r.eventsWake)
+	residentNotify(r.syncWake)
+	return nil
 }
 func (r *residentRuntime) record(v residentRecord) error {
 	if v.State == "queued" && v.QueuedAt == 0 {
@@ -108,6 +121,8 @@ func startResident(cfg *Config) error {
 	if b, e := os.ReadFile(filepath.Join(cfg.DataDir, "paused.json")); e == nil {
 		_ = json.Unmarshal(b, &r.localPaused)
 	}
+	r.startEvents()
+	defer r.stop()
 	r.localControl(listener)
 	// Never retry a side effect whose process died before a durable result was saved.
 	records, _ := filepath.Glob(filepath.Join(cfg.DataDir, "spool", "jobs", "*.json"))
@@ -140,45 +155,38 @@ func startResident(cfg *Config) error {
 			r.stop()
 			return residentRemove(cfg)
 		}
-		paths, _ := filepath.Glob(filepath.Join(cfg.DataDir, "spool", "events", "*.json"))
-		sort.Strings(paths)
-		if r.restartDue(len(paths)) {
+		if err, remove := r.runtimeFailure(); err != nil {
+			if remove {
+				r.stop()
+				return residentRemove(cfg)
+			}
+			return err
+		}
+		batch, e := r.eventBatch()
+		if e != nil {
+			return e
+		}
+		if r.restartDue(batch.pending) {
 			return fmt.Errorf("restarting into the updated helper")
 		}
-		if len(paths) > 64 {
-			paths = paths[:64]
-		}
-		events := []residentEvent{}
-		batchBytes := 0
-		for _, p := range paths {
-			b, e := os.ReadFile(p)
-			if e != nil {
-				return e
-			}
-			var ev residentEvent
-			if e = json.Unmarshal(b, &ev); e != nil {
-				return e
-			}
-			if batchBytes+len(b) > 4*1024*1024 && len(events) > 0 {
-				break
-			}
-			batchBytes += len(b)
-			events = append(events, ev)
+		events := batch.events
+		if r.pushEnabled() {
+			events = []residentEvent{}
 		}
 		r.mu.Lock()
-		busy := len(r.active) > 0
+		busy := len(r.active) > 0 || !r.restartAt.IsZero()
 		r.mu.Unlock()
 		wait := 20
 		if busy || len(events) > 0 {
 			wait = 0
 		}
-		resp, e := transport.sync(map[string]interface{}{"key": cfg.Key, "installation_id": cfg.InstallationID, "events": events, "capabilities": r.capabilities(), "wait": wait})
+		resp, e := transport.syncContext(r.ctx, map[string]interface{}{"key": cfg.Key, "installation_id": cfg.InstallationID, "events": events, "capabilities": r.capabilities(), "wait": wait})
 		if e != nil || resp["success"] != true {
 			if e != nil && strings.Contains(e.Error(), "invalid_registration") {
 				r.stop()
 				return residentRemove(cfg)
 			}
-			time.Sleep(backoff)
+			r.waitRetry(backoff)
 			if backoff < 30*time.Second {
 				backoff *= 2
 			}
@@ -189,26 +197,11 @@ func startResident(cfg *Config) error {
 			residentConfirmUpdate(cfg.DataDir, residentSelfDigest())
 			confirmed = true
 		}
-		acks, _ := resp["ack"].([]interface{})
-		acked := map[string]bool{}
-		for _, a := range acks {
-			if id, ok := a.(string); ok {
-				acked[id] = true
-			}
+		if e = r.responseState(resp); e != nil {
+			continue
 		}
-		for i, ev := range events {
-			if acked[ev.EventID] {
-				_ = os.Remove(paths[i])
-			}
-		}
-		if resp["state"] == "removal_pending" || resp["state"] == "removed" {
-			r.stop()
-			return residentRemove(cfg)
-		}
-		if resp["generation"] != cfg.Generation {
-			r.stop()
-			return fmt.Errorf("registration generation mismatch")
-		}
+		batch.ack(resp, events)
+		r.negotiateEvents(resp)
 		jobs, _ := resp["jobs"].([]interface{})
 		for _, raw := range jobs {
 			b, _ := json.Marshal(raw)
@@ -226,16 +219,9 @@ func startResident(cfg *Config) error {
 				}
 			}
 		}
-		r.mu.Lock()
-		cancels, _ := resp["cancel"].([]interface{})
-		for _, id := range cancels {
-			jid, _ := id.(string)
-			if cancel := r.active[jid]; cancel != nil {
-				cancel()
-			}
-			r.cancelQueued(jid)
+		if e = r.responseControls(resp); e != nil {
+			continue
 		}
-		r.mu.Unlock()
 		r.mu.Lock()
 		localPaused := r.localPaused
 		r.mu.Unlock()
@@ -245,7 +231,7 @@ func startResident(cfg *Config) error {
 			}
 		}
 		if wait == 0 || resp["paused"] == true {
-			time.Sleep(500 * time.Millisecond)
+			r.wait(500 * time.Millisecond)
 		}
 	}
 }
@@ -282,10 +268,14 @@ func (r *residentRuntime) cancelQueued(jid string) {
 func (r *residentRuntime) stop() {
 	r.mu.Lock()
 	r.stopping = true
+	if r.cancel != nil {
+		r.cancel()
+	}
 	for _, cancel := range r.active {
 		cancel()
 	}
 	r.mu.Unlock()
+	r.eventsWG.Wait()
 	r.wg.Wait()
 }
 func (r *residentRuntime) localControl(listener net.Listener) {
@@ -336,6 +326,7 @@ func (r *residentRuntime) localControl(listener net.Listener) {
 			r.mu.Lock()
 			r.localPaused = paused
 			r.mu.Unlock()
+			residentNotify(r.syncWake)
 
 		}
 		fmt.Fprint(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz PC 관리</title><h1>상주 헬퍼 실행 중</h1><p>중앙 기록에 AI 작업 내역이 저장됩니다. 화면 공유 영상과 키 입력은 저장하지 않습니다. 제거해도 작업 폴더는 보존합니다.</p><form method="post"><button name="action" value="screen">화면 공유 권한 설정</button><button name="action" value="media">미디어 구성요소 다시 설치</button><button name="action" value="pause">새 작업 중지</button><button name="action" value="resume">재개</button><button name="action" value="remove">이 PC 등록 해제 및 제거</button></form>`+residentMediaReportHTML(newMediaLookup(r.cfg.DataDir).status())+residentInstallWarningsHTML(r.cfg.DataDir)+residentPermissionHelp())

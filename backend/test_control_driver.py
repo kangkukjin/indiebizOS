@@ -148,6 +148,23 @@ def test_snapshot_announces_driver_for_mapped_app(screen, origin, monkeypatch, t
     assert "control_guide" not in out
 
 
+@pytest.mark.parametrize('kind', ['app', 'site'])
+def test_discovery_notice_provides_brief_without_empty_observation_lookup(screen, monkeypatch, kind):
+    import guide_registry
+    import control_observations
+    brief = {'file': 'driver.md', 'text': 'Call; verify; recover.'}
+    monkeypatch.setattr(guide_registry, 'surface_control_guide', lambda *args: {
+        'control_guide': 'driver.md', 'control_brief': brief})
+    monkeypatch.setattr(control_observations, 'count', lambda surface: 0)
+    if kind == 'app':
+        notice = screen._driver_notice('com.test.app')
+    else:
+        mod = _load('brief_browser_handler', 'data/packages/installed/tools/browser-action/handler.py')
+        notice = mod._site_notice('https://example.com/path')
+    assert notice['control_brief'] == brief
+    assert '바로 호출' in notice['note'] and 'self:limb' not in notice['note']
+
+
 def test_browser_shared_state_reroutes_auto_and_refuses_explicit_chrome(origin, monkeypatch, tmp_path):
     """Chrome MCP 는 사용자의 탭을 그대로 쓴다 — 화면 없는 문맥의 공유 상태 변경은 부수 간섭(L48-1)."""
     import asyncio

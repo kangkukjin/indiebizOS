@@ -1015,4 +1015,11 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
                     spec = {**spec, "observed_returns": observed,
                             "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."}
             answer.append({"action": name, "definition": spec})
-    return {"actions": answer, "executed": False}
+    result = {"actions": answer, "executed": False}
+    from guide_registry import callable_control_briefs
+    # 지역 함수가 같은 이름을 가리면 등록 드라이버의 교재를 섞지 않는다.
+    known = [row["action"] for row in answer if "definition" in row
+             and not (row["action"].startswith("fn:") and row["action"][3:] in (local or {}))]
+    if briefs := callable_control_briefs(known):
+        result["control_briefs"] = briefs
+    return result

@@ -5,6 +5,17 @@ macOS·Windows PC의 출력 장치·음량·음소거·주소 열기·잠금과 
 `execute_ibl`의 `describe:["fn:PC제어","fn:PC제어확인"]`으로 서명을 조회한다.
 내부 스크립트 계약은 `[self:script]{op:"list",id:"PC제어부품"}`에 있다.
 
+
+## 빠른 호출
+
+현재 장치 소개의 이름·설명·OS로 고른 device_id를 `$PC`에 넣는다. 본체는 `__local__`이다. 소개가 충분하면 목록·info·describe를 반복하지 않는다. 연결·권한·지원 OS는 드라이버가 실행 때 확인한다.
+- 상태: `[fn:PC제어]{대상:$PC,요청:{action:"status"}}`. `result.devices`에서 출력 ID와 can_set_volume·can_mute를 확인한다. 출력 ID는 PC ID와 다르며 API 지원은 실제 소리의 증거가 아니다.
+- 음량: `[fn:PC제어]{대상:$PC,요청:{action:"volume",device_id:$출력,value:50}}` (0~100 정수). 음소거는 요청에 `action:"mute",device_id,enabled:Bool`. 출력 정보가 없을 때 필요한 status와 변경은 한 IBL 프로그램에서 잇는다.
+- 완료는 `status:"completed"`와 `verified:true`, 실제 `result`의 검증 범위로 판단한다. volume·mute는 드라이버가 OS 설정을 재조회하므로 성공 뒤 별도 status를 붙이지 않는다. 물리적 소리·영상 재생까지 확인한 뜻은 아니다.
+- pending·unknown은 원 영수증을 보존해 `[fn:PC제어확인]{작업:$원결과}`로 확인한다. 변경을 새로 보내지 않는다. failed는 failure를 보고 원인을 해결한다.
+- 읽기 action은 display·power·presence·apps·network도 가능하다. 밝기·앱 종료·잠금·네트워크 변경 등 조건이 다른 쓰기는 이 가이드의 해당 절을 읽는다.
+- Windows Chrome은 같은 함수의 chrome_status·chrome_open·chrome_switch·chrome_close다. 전용 프로필만 다루고 tab은 CDP targetId다. 창·판본·인수는 아래 “Windows Chrome 창·탭”에서 확인한다. macOS 창·탭은 Safari제어·Chrome제어 스크립트다. 유튜브 영상은 아래 기존 재생 교체 계약을 사용하며 일반 open_url로 재생 성공을 판단하지 않는다.
+
 ## 대상 선택
 
 `[self:limb]{op:"list"}`의 device_id·이름·설명·OS·연결 상태를 읽어 사용자가 가리킨

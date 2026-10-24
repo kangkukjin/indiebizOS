@@ -8,6 +8,16 @@ TV 앱의 전원·입력, 볼륨, 앱, 방향키 탭은 열 때 상태를 자동
 각 탭의 **⟳ 상태 새로고침**으로 다시 읽고, 제어 버튼 실행 뒤에도 상태를 재조회합니다.
 입력란 없는 탭에도 새로고침은 명시적인 버튼으로 제공합니다.
 
+
+## 빠른 호출
+
+현재 장치 소개에서 사용자가 지정한 등록 TV의 device_id를 `$TV`로 고른다. `adapter:network-api`, `os:tizen` 전용이며 PC·Android 통로를 쓰지 않는다. 대상이 명확하면 목록·계약을 반복 조회하지 않는다. 주소·토큰은 부품이 해소한다.
+- 상태: `[self:script]{id:"TV제어",args:{target:$TV,op:"status"},timeout:90}`. 이후에도 target을 유지하고 args의 op와 추가 인수만 바꾼다.
+- on·off는 전원 재조회, launch는 `app:"youtube"` 등 지정 앱 visible 재조회까지 한다. 앱 실행은 영상 재생 확인이 아니다.
+- volume은 `steps:1` 또는 `steps:-1`(최대 ±10), mute는 토글이다. volume·mute·key·to_pc·dlna_play·dlna_stop은 전달 성공이어도 `verified:false`일 수 있다.
+- `success`만으로 완료라 하지 않는다. status의 최상위 verified는 power_only 범위다. 목표 항목의 observations에서 value·state·verified·source·scope·observed_at을 확인한다. cloud_reported는 현재 로컬 관측과 다르고 unknown은 꺼짐이 아니다.
+- 변경 결과가 목표의 실제 상태를 이미 검증했다면 중복 status를 생략한다. 전달만 확인했거나 응답 유실·시간 초과면 읽기 status로 효과를 확인하며 키·토글·변경을 재전송하지 않는다. 관측 불가하면 미확인으로 남긴다. 입력·DLNA·페어링의 추가 인수와 조건은 아래 해당 절을 읽는다.
+
 ## 대상과 등록
 
 조종실 **손발 → 네트워크 기기 등록 · 삼성 TV**에서 이름·IPv4 주소를 등록한다.

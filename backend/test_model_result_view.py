@@ -19,6 +19,30 @@ def envelope(value, *, complete=True):
             "evidence": [{"kind": "ref", "parents": [i]} for i in range(300)]}
 
 
+def test_describe_driver_briefs_preserve_permission_and_local_shadowing(monkeypatch):
+    import guide_registry
+    import ibl_v2_store
+    selected = []
+
+    def briefs(names):
+        selected.append(list(names))
+        return [{'file': 'driver.md'}] if names else []
+
+    monkeypatch.setattr(guide_registry, 'callable_control_briefs', briefs)
+    monkeypatch.setattr(ibl_v2_store, 'describe', lambda name, allowed: (
+        {'error': 'denied'} if name == 'denied' else {'name': name}))
+    monkeypatch.setattr(view, 'observed_returns_of_alias', lambda name: None)
+    result = view.describe_actions(['fn:driver', 'fn:denied'], None, edition=2)
+    assert selected[-1] == ['fn:driver'] and result['control_briefs']
+    monkeypatch.setattr(ibl_v2_store, 'program_functions', lambda *args: {'driver': {'local': True}})
+    result = view.describe_actions(['fn:driver'], None, edition=2, program='local code')
+    assert selected[-1] == [] and 'control_briefs' not in result
+    result = view.describe_actions(['limbs:browser'], {'self'}, edition=2)
+    assert selected[-1] == [] and 'control_briefs' not in result
+    result = view.describe_actions(['limbs:browser'], None, edition=2)
+    assert selected[-1] == ['limbs:browser'] and result['control_briefs']
+
+
 def test_certified_reference_avoids_rehashing_trace_and_keeps_status(tmp_path, monkeypatch):
     import ibl_v2_ir
     store = TurnStore(tmp_path / "evidence")

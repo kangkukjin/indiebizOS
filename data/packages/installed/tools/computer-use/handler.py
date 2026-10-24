@@ -918,9 +918,11 @@ def _driver_notice(bundle_id):
             return None
         notice = {**(found or {}), "surface": surface, "observations": observed}
         notice["note"] = (
+            "control_brief 범위는 바로 호출하고 검증·실패 복구를 유지하세요. 나머지만 control_guide를 읽으세요. " if notice.get("control_brief") else
             "control_guide 의 실행 부품을 우선 쓰세요. " if found else
             "이 앱에는 관측이 있습니다(실행 드라이버 등록은 없음). "
-        ) + '관측은 [self:limb]{op:"list",target:"' + surface + '"}로 조회하세요. 통신 실패 뒤 변경을 재전송하지 않습니다.'
+        ) + ('관측은 [self:limb]{op:"list",target:"' + surface + '"}로 조회하세요. ' if observed else '')
+        notice["note"] += '통신 실패 뒤 변경을 재전송하지 않습니다.'
         return notice
     except Exception:
         return None

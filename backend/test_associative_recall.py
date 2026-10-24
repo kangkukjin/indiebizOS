@@ -84,9 +84,39 @@ def test_driver_brief_is_shared_by_devices_and_comes_from_guide(monkeypatch, tmp
                                 "content_hash": sha256(content.encode()).hexdigest()}
     assert briefs[0].text == '## Short\nCall "driver"; verify <actual> & recover.'
     assert all(r.attrib["control_guide"] == "robot.md" for r in root.findall("limb")[1:])
+    previous = SimpleNamespace(blocks=[recall.Block('reusable_capabilities', '', '',
+                                                   meta={'control_briefs': ['robot.md']})])
+    deduped = recall._connected_limbs(recall.RecallRequest(None, 'anything', []), previous)
+    assert not ET.fromstring(deduped.text).findall('control_brief')
+    assert 'control_guide="robot.md"' in deduped.text
     monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: [])
     assert not ET.fromstring(recall._connected_limbs(
         recall.RecallRequest(None, "anything", []), None).text).findall("control_brief")
+
+
+def test_reusable_discovery_adds_only_selected_briefs_within_existing_budget(monkeypatch):
+    import guide_registry
+    import reusable_catalog
+    row = {'id': 'script:one', 'contract_known': True, 'contract': {}}
+    brief = {'file': 'one.md', 'text': 'Call, verify, recover.'}
+    seen = []
+    monkeypatch.setattr(reusable_catalog, 'candidates', lambda q: [dict(row)])
+
+    def selected(names):
+        seen.append(list(names))
+        return [brief]
+
+    monkeypatch.setattr(guide_registry, 'callable_control_briefs', selected)
+    req = recall.RecallRequest(None, 'request', [])
+    block = recall._reusable_capabilities(req, None)
+    assert seen == [['script:one']]
+    assert brief['text'] in block.text and block.meta['control_briefs'] == ['one.md']
+    brief['text'] = 'x' * 5000
+    block = recall._reusable_capabilities(req, None)
+    assert block.meta['control_briefs'] == [] and 'x' * 5000 not in block.text
+    row['error'] = 'not allowed'
+    recall._reusable_capabilities(req, None)
+    assert seen[-1] == []
 
 
 def test_device_context_with_no_known_devices_still_introduces_local_body(monkeypatch):

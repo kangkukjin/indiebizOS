@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-22", impl: "2dbbf11bf70ded61"}  # 재감사: todo 입력 검증·원자 저장을 형제 모듈로 분리. read/fill/write/script 회원 경로·RED 쓰기·설치 승인 관문은 변경 없음.
+        path_audited: {at: "2026-10-24", impl: "6304714c556493b3"}  # 재감사: 명시적 script 목록의 실행 가능 항목에 안전한 가이드 절만 보충. 회원은 기존 member_script 기기 통로이며 허브 실행·경로 확장·RED/설치 관문 변경 없음.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +151,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-22", impl: "2dbbf11bf70ded61"}  # 재감사: todo 입력 검증·원자 저장을 형제 모듈로 분리. read/fill/write/script 회원 경로·RED 쓰기·설치 승인 관문은 변경 없음.
+        path_audited: {at: "2026-10-24", impl: "6304714c556493b3"}  # 재감사: 명시적 script 목록의 실행 가능 항목에 안전한 가이드 절만 보충. 회원은 기존 member_script 기기 통로이며 허브 실행·경로 확장·RED/설치 관문 변경 없음.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -231,7 +231,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-22", impl: "2dbbf11bf70ded61"}  # 재감사: todo 입력 검증·원자 저장을 형제 모듈로 분리. read/fill/write/script 회원 경로·RED 쓰기·설치 승인 관문은 변경 없음.
+        path_audited: {at: "2026-10-24", impl: "6304714c556493b3"}  # 재감사: 명시적 script 목록의 실행 가능 항목에 안전한 가이드 절만 보충. 회원은 기존 member_script 기기 통로이며 허브 실행·경로 확장·RED/설치 관문 변경 없음.
         target_key: path
       list:
         callable_contract:
@@ -968,14 +968,14 @@ nodes:
               temp.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
               os.replace(temp, path)
           - mode: id
-            contract: 등록 스크립트는 먼저 op:list로 callable_contract를 확인한다. registered-json/1이면 stdin 객체와 stdout JSON을 쓴다.
+            contract: 등록 스크립트는 현재 계약·control_brief 범위에서 바로 호출한다. 계약이 없을 때만 op:list로 callable_contract를 확인한다. registered-json/1이면 stdin 객체와 stdout JSON을 쓴다.
             call: '[self:script]{id:"등록ID",args:{value:12}}'
             python: |
               import json, sys
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-22", impl: "2dbbf11bf70ded61"}  # 재감사: todo 입력 검증·원자 저장을 형제 모듈로 분리. read/fill/write/script 회원 경로·RED 쓰기·설치 승인 관문은 변경 없음.
+        path_audited: {at: "2026-10-24", impl: "6304714c556493b3"}  # 재감사: 명시적 script 목록의 실행 가능 항목에 안전한 가이드 절만 보충. 회원은 기존 member_script 기기 통로이며 허브 실행·경로 확장·RED/설치 관문 변경 없음.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

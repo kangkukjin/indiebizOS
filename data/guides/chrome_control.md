@@ -7,6 +7,16 @@ macOS 본체 Google Chrome의 창·탭을 화면 조작 없이 AppleScript 사�
 `Safari제어`(`safari_control.md`)와 같은 계약이며, 아래 "Safari와 다른 점"만 Chrome 고유다.
 어느 탭을 다룰지는 AI가 결정하고 부품은 대상 대조·실행·결과 확인을 맡는다.
 
+
+## 빠른 호출
+
+macOS 본체 Chrome은 아래 스크립트다. Windows는 PC제어의 chrome_*를 쓰며 pc_control.md의 전용 프로필·CDP 계약을 읽는다. 두 통로의 tab 뜻은 다르다.
+- 상태: `[self:script]{id:"Chrome제어",args:{op:"status"},timeout:60}`. windows에서 사용자가 지정한 창·탭을 고른다. args의 window_id로 조회 범위를 좁힐 수 있다. 요약 범위에서 계약·목록 재조회는 필요 없다.
+- 같은 호출의 args로 open은 `op:"open",url`과 선택 window_id·expected·launch, switch·close는 `op,window_id,tab,expected`를 전달한다. macOS tab은 index(1부터 세는 위치), Windows tab은 targetId다. expected는 windows[].revision 또는 직전 state.revision이고 open의 expected에도 window_id가 필요하다. 꺼진 앱은 open에 launch:true일 때만 기동한다.
+- 드라이버가 변경 전 판본과 변경 후 조건을 확인한다. `status:"completed",verified:true`와 checks로 판단하고 state·target={window_id,tab,expected}를 후속 호출에 넘긴다. 성공마다 status를 다시 붙이지 않는다. 정해진 연속 동작은 한 프로그램에서 잇고 실패하면 중단한다.
+- open은 새 탭을 활성으로 만든 뒤 기존 탭을 복원한다(checks.activation_restored). 순간 전환이 보일 수 있다. switch·close는 공유 상태 변경이다. 앱을 앞으로 가져오지 않는다. page_loaded:null이므로 페이지 로드·영상 재생은 별도 확인한다.
+- 실패는 예외다. try/catch의 `$error.details.failure`·recovery를 보존한다. STATE_CHANGED는 변경 전 중단이므로 반환 상태 또는 새 status로 재판단한다. UNKNOWN·POSTCONDITION_FAILED는 효과가 있을 수 있어 변경 재전송·화면 조작 반복을 금한다. 필요한 상태만 읽는다. OBSERVATION_FAILED는 조회 실패이며 즉시 반복하지 않는다. 권한 오류·판본 한계는 해당 절을 읽는다.
+
 ## 동작과 대상 판본
 
 | op | 인수 | 확인 범위 |

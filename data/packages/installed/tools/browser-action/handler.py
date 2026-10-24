@@ -348,9 +348,10 @@ def _site_notice(url):
             return None
         notice = {**(found or {}), "surface": surface, "observations": observed}
         notice["note"] = (
+            "control_brief 범위는 바로 호출하고 검증·실패 복구를 유지하세요. 나머지만 control_guide를 읽으세요. " if notice.get("control_brief") else
             "ref 조작 전에 control_guide 를 한 번 읽으세요. " if found else
             "이 사이트에는 관측이 있습니다(실행 드라이버 등록은 없음). "
-        ) + '관측 본문은 [self:limb]{op:"list",target:"' + surface + '"}로 조회하세요.'
+        ) + ('관측 본문은 [self:limb]{op:"list",target:"' + surface + '"}로 조회하세요.' if observed else '')
         return notice
     except Exception:
         return None

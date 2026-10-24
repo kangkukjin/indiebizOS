@@ -288,7 +288,11 @@
         "원격제어"
       ],
       "file": "browser_action.md",
-      "topic": "브라우저·데스크톱 제어"
+      "topic": "브라우저·데스크톱 제어",
+      "control_brief_section": "빠른 호출",
+      "control_callables": [
+        "limbs:browser"
+      ]
     },
     {
       "id": "android",
@@ -1274,7 +1278,11 @@
       "control_platforms": [
         "android"
       ],
-      "topic": "손발·이웃 몸"
+      "topic": "손발·이웃 몸",
+      "control_callables": [
+        "fn:Android제어",
+        "fn:Android제어확인"
+      ]
     },
     {
       "id": "pc_control",
@@ -1305,7 +1313,12 @@
         "win32",
         "win"
       ],
-      "topic": "손발·이웃 몸"
+      "topic": "손발·이웃 몸",
+      "control_brief_section": "빠른 호출",
+      "control_callables": [
+        "fn:PC제어",
+        "fn:PC제어확인"
+      ]
     },
     {
       "id": "tv_control",
@@ -1327,7 +1340,11 @@
       "control_platforms": [
         "tizen"
       ],
-      "topic": "손발·이웃 몸"
+      "topic": "손발·이웃 몸",
+      "control_brief_section": "빠른 호출",
+      "control_callables": [
+        "script:TV제어"
+      ]
     },
     {
       "id": "remote_phone",
@@ -2217,7 +2234,11 @@
       "supported_platforms": [
         "darwin"
       ],
-      "topic": "브라우저·데스크톱 제어"
+      "topic": "브라우저·데스크톱 제어",
+      "control_brief_section": "빠른 호출",
+      "control_callables": [
+        "script:Safari제어"
+      ]
     },
     {
       "id": "chrome_control",
@@ -2245,7 +2266,11 @@
       "supported_platforms": [
         "darwin"
       ],
-      "topic": "브라우저·데스크톱 제어"
+      "topic": "브라우저·데스크톱 제어",
+      "control_brief_section": "빠른 호출",
+      "control_callables": [
+        "script:Chrome제어"
+      ]
     }
   ]
 }

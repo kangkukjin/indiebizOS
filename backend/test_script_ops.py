@@ -42,6 +42,26 @@ def test_truly_empty_registry_still_explains_registration(ops, monkeypatch):
     assert result['count'] == 0 and 'op:register' in result['message']
 
 
+def test_filtered_script_discovery_includes_brief_only_for_runnable_matches(ops, monkeypatch):
+    import guide_registry
+    seen = []
+    monkeypatch.setattr(ops, '_entry_item', lambda sid, e, state: {
+        'id': sid, 'runnable': sid == '압축'})
+
+    def briefs(names):
+        names = list(names)
+        seen.append(names)
+        return [{'file': 'pack.md'}] if names else []
+
+    monkeypatch.setattr(guide_registry, 'callable_control_briefs', briefs)
+    assert ops.op_list({'id': '압축'})['control_briefs'] == [{'file': 'pack.md'}]
+    assert seen == [['script:압축']]
+    assert 'control_briefs' not in ops.op_list({'id': '시험'})
+    assert seen[-1] == []
+    ops.op_list({})
+    assert len(seen) == 2  # broad inventory is not a reason to inject every guide
+
+
 def test_reregistration_preserves_birth_and_legacy_unknown(ops, tmp_path, monkeypatch):
     script = tmp_path / 'sample.py'
     script.write_text('print(1)')

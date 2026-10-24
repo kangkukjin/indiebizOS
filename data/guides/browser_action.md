@@ -3,9 +3,19 @@
 브라우저 자동화 IBL 어휘. 연결된 내장 포식 브라우저 우선, Chrome MCP 또는 Playwright 선택.
 데스크톱 일반 앱 자동화는 `[limbs:screen]` (별도 가이드 참조).
 
+
+## 빠른 호출
+
+범용 DOM 조작은 `[limbs:browser]`다. 앱의 창·탭만 다루면 해당 OS의 Safari제어·Chrome제어·PC제어 드라이버를 먼저 사용한다. 사이트 snapshot이 control_brief를 제공하면 그 범위는 직접 호출하고, 범위 밖만 control_guide를 읽는다.
+- 페이지 열기: `[limbs:browser]{op:"navigate",url:"https://example.com"}`. 구조·조작 대상은 `[limbs:browser]{op:"snapshot"}`, 글은 `[limbs:browser]{op:"content"}`로 읽는다. 스크린샷은 이미지·캔버스 등의 시각 증거가 필요할 때만 쓴다.
+- 관측한 ref로 op:click 또는 op:type을 사용한다. 페이지 이동·동적 내용·메뉴·화면 크기 변경 후에는 snapshot으로 새 ref를 얻는다. REF_NOT_RESOLVED에 같은 ref를 반복하지 않는다. 추가 인수는 해당 절·액션 계약을 읽는다.
+- driver:auto는 연결된 내장 브라우저 우선이며 작업 중 통로가 고정된다. 반환된 driver·탭 신원을 유지한다. Chrome은 사용자 세션을 공유하며 배경 공유 상태 변경의 실행 제한을 유지한다.
+- click·type·navigate의 접수 성공은 업무 완료 증거가 아니다. 변경 뒤 필요한 content·snapshot 등으로 요청한 결과를 확인한다. 드라이버가 이미 제공한 결과 증거를 다시 조회할 필요는 없다.
+- 응답 유실로 효과가 불명확하면 읽기로 확인하며 같은 변경을 재전송하거나 다른 드라이버·DOM·화면으로 반복하지 않는다. 사이트 계약의 실패 복구가 있으면 그것을 따른다. 관측 실패는 미확인으로 남긴다.
+
 ## 먼저: 세 층과 폴백 서열
 
-브라우저 제어는 세 층이다 — ① 사이트 실행 부품(있으면: `snapshot` 응답의 `control_guide` 가 현재 도메인에 드라이버·관측이 있음을 알린다. 그 가이드를 한 번 읽고 부품을 먼저 쓴다) → ② 범용 DOM(이 가이드: navigate·snapshot ref·content·evaluate) → ③ 화면(screenshot·vision 은 캔버스·이미지처럼 DOM 이 못 주는 것에만). **격리는 도구가 아니라 자원 단위다.** 내장 Playwright 의 전용 프로필은 화면·포커스·세션이 분리되지만 같은 계정으로 로그인했으면 계정 데이터(문서·장바구니)는 공유다. Chrome MCP 는 사용자의 탭·세션을 그대로 쓴다(`shared_state`). 그래서 정기·배경 실행처럼 화면을 쓸 수 없는 문맥에서 공유 상태를 바꾸는 동작은 새 `driver:auto` 작업은 Chrome을 후보에서 제외하고, 앞선 조회로 Chrome에 결속된 작업이나 `driver:chrome` 명시는 실행 경계가 `SCREEN_CONTEXT_UNAVAILABLE` 로 거절한다. 관측만 있는 사이트도 snapshot의 `driver_surface.observations`로 알리며, `[self:limb]{op:"list",target:"site:<실제 호스트>"}`로 읽는다. 드라이버 통로가 응답 유실로 불명확하면 같은 변경을 DOM 으로 다시 시도하지 않고 상태를 재조회한다.
+브라우저 제어는 세 층이다 — ① 사이트 실행 부품(있으면: `snapshot` 응답의 `control_guide` 가 현재 도메인에 드라이버·관측이 있음을 알린다. 함께 온 control_brief 범위는 바로 호출하고, 범위 밖만 가이드를 읽어 부품을 먼저 쓴다) → ② 범용 DOM(이 가이드: navigate·snapshot ref·content·evaluate) → ③ 화면(screenshot·vision 은 캔버스·이미지처럼 DOM 이 못 주는 것에만). **격리는 도구가 아니라 자원 단위다.** 내장 Playwright 의 전용 프로필은 화면·포커스·세션이 분리되지만 같은 계정으로 로그인했으면 계정 데이터(문서·장바구니)는 공유다. Chrome MCP 는 사용자의 탭·세션을 그대로 쓴다(`shared_state`). 그래서 정기·배경 실행처럼 화면을 쓸 수 없는 문맥에서 공유 상태를 바꾸는 동작은 새 `driver:auto` 작업은 Chrome을 후보에서 제외하고, 앞선 조회로 Chrome에 결속된 작업이나 `driver:chrome` 명시는 실행 경계가 `SCREEN_CONTEXT_UNAVAILABLE` 로 거절한다. 관측만 있는 사이트도 snapshot의 `driver_surface.observations`로 알리며, `[self:limb]{op:"list",target:"site:<실제 호스트>"}`로 읽는다. 드라이버 통로가 응답 유실로 불명확하면 같은 변경을 DOM 으로 다시 시도하지 않고 상태를 재조회한다.
 
 ## 기본 흐름
 

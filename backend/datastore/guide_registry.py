@@ -144,8 +144,8 @@ def device_control_guides() -> Dict[str, str]:
         return {}
 
 
-def device_control_briefs(filenames) -> list:
-    """소개된 장치의 호출 요약만 가이드 정본에서 읽는다. 기기 상태/권한 캐시가 아니다.
+def control_briefs(filenames) -> list:
+    """발견한 드라이버의 호출 요약만 가이드 정본에서 읽는다. 상태/권한 캐시가 아니다.
 
     등록 데이터가 정확한 절을 지정한다. 중복·누락·예산 초과는 요약을 생략하고
     기존 가이드 포인터를 유지한다. 절을 잘라 검증/복구 조건을 잃지 않는다.
@@ -178,7 +178,30 @@ def device_control_briefs(filenames) -> list:
             used += len(text)
         return briefs
     except (OSError, ValueError, TypeError, AttributeError):
-        logger.warning("장치 제어 호출 요약을 읽지 못했습니다.")
+        logger.warning("제어 호출 요약을 읽지 못했습니다.")
+        return []
+
+
+def callable_control_briefs(names) -> list:
+    """이미 선택/허용된 호출명 → 같은 요약. 검색·허용 판정을 대신하지 않는다."""
+    wanted = set(names)
+    if not wanted:
+        return []
+    try:
+        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+        owners = {}
+        for filename, entry in _control_entries(catalog):
+            names = entry.get("control_callables", [])
+            if not isinstance(names, list):
+                continue
+            for name in names:
+                if isinstance(name, str) and name in wanted:
+                    owners.setdefault(name, set()).add(filename)
+        # 같은 호출의 가이드가 충돌하면 임의로 한쪽 계약을 가르치지 않는다.
+        files = {next(iter(files)) for files in owners.values() if len(files) == 1}
+        return control_briefs(files)
+    except (OSError, ValueError, TypeError, AttributeError):
+        logger.warning("제어 호출명 연결을 읽지 못했습니다.")
         return []
 
 
@@ -235,7 +258,7 @@ def surface_control_guide(kind: str, identifier) -> Optional[Dict]:
     """탐색 도중 알림용 조회 — snapshot 의 bundle_id(`app`) 또는 URL 호스트(`site`).
 
     site 는 정확한 호스트부터 상위 도메인으로 올라가며 찾는다(`m.example.com` → `example.com`).
-    찾으면 {surface, control_guide, supported_platforms}, 없으면 None. 모델 호출·파일 본문 읽기 없음.
+    찾으면 가이드·지원 OS·같은 호출 요약을 함께 돌려준다. 없으면 None. 모델 호출 없음.
     """
     if not isinstance(identifier, str) or not identifier.strip():
         return None
@@ -249,8 +272,11 @@ def surface_control_guide(kind: str, identifier) -> Optional[Dict]:
     for name in candidates:
         found = entries.get(f"{kind}:{name}")
         if found:
-            return {"surface": f"{kind}:{name}", "control_guide": found["file"],
-                    "supported_platforms": found["supported_platforms"]}
+            result = {"surface": f"{kind}:{name}", "control_guide": found["file"],
+                      "supported_platforms": found["supported_platforms"]}
+            if briefs := control_briefs([found["file"]]):
+                result["control_brief"] = briefs[0]
+            return result
     return None
 
 

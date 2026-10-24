@@ -27,15 +27,15 @@ def test_briefs_are_opt_in_selected_deduplicated_and_live(catalog):
     files = {"robot.md": "# Robot\n## Call\nDo & verify.\n## Details\nPRIVATE LONG DETAILS",
              "other.md": "## Call\nUnrelated driver", "plain.md": "## Call\nNot opted in"}
     catalog(entries, files)
-    first = guides.device_control_briefs(["robot.md", "robot.md", "plain.md"])
+    first = guides.control_briefs(["robot.md", "robot.md", "plain.md"])
     assert len(first) == 1 and first[0]["text"] == "## Call\nDo & verify."
     assert first[0]["section"] == "Call" and len(first[0]["content_hash"]) == 64
     files["robot.md"] = files["robot.md"].replace("Do & verify.", "New contract; verify.")
     catalog(entries, files)
-    second = guides.device_control_briefs(["robot.md"])[0]
+    second = guides.control_briefs(["robot.md"])[0]
     assert "New contract" in second["text"]
     assert second["content_hash"] != first[0]["content_hash"]
-    assert guides.device_control_briefs([]) == []
+    assert guides.control_briefs([]) == []
 
 
 @pytest.mark.parametrize("content", [
@@ -44,7 +44,7 @@ def test_briefs_are_opt_in_selected_deduplicated_and_live(catalog):
 ])
 def test_invalid_or_oversize_brief_is_omitted_whole(catalog, content):
     catalog([{"file": "robot.md", "control_brief_section": "Call"}], {"robot.md": content})
-    assert guides.device_control_briefs(["robot.md"]) == []
+    assert guides.control_briefs(["robot.md"]) == []
 
 
 def test_briefs_refuse_catalog_conflicts_and_unsafe_paths(catalog):
@@ -52,32 +52,70 @@ def test_briefs_refuse_catalog_conflicts_and_unsafe_paths(catalog):
         {"file": "../outside.md", "control_brief_section": "Call"},
         {"file": "missing.md", "control_brief_section": "Call"}],
         {"robot.md": "## Call\nDo & verify."})
-    assert guides.device_control_briefs(["robot.md", "../outside.md", "missing.md"]) == []
+    assert guides.control_briefs(["robot.md", "../outside.md", "missing.md"]) == []
 
 
 def test_briefs_bound_total_without_cutting_a_contract(catalog):
     files = {f"{i}.md": "## Call\n" + "x" * 1490 for i in range(4)}
     catalog([{"file": name, "control_brief_section": "Call"} for name in files], files)
-    result = guides.device_control_briefs(files)
+    result = guides.control_briefs(files)
     assert len(result) == 2
     assert all(b["text"] == files[b["file"]] for b in result)
 
 
-def test_published_android_brief_fits_budget_and_compiles_call_examples():
+@pytest.mark.parametrize('filename', ['android_control.md', 'pc_control.md', 'tv_control.md',
+                                     'safari_control.md', 'chrome_control.md', 'browser_action.md'])
+def test_published_brief_fits_budget_and_compiles_call_examples(filename):
     import re
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_store import installed_definitions
-    briefs = guides.device_control_briefs(["android_control.md"])
+    briefs = guides.control_briefs([filename])
     assert len(briefs) == 1
-    calls = re.findall(r'`(\[(?:fn|limbs):[^`]+)`', briefs[0]["text"])
-    assert len(calls) >= 3
+    calls = re.findall(r'`(\[(?:fn|limbs|self):[^`]+\]\{[^`]+)`', briefs[0]["text"])
+    assert calls
     for call in calls:
         plan = compile_program("#!ibl edition=2\nreturn " + call,
                                load_registry(str(guides.DATA_PATH.parent)),
-                               inputs={"폰": "selected-device", "원결과": {}},
+                               inputs={"폰": "selected-device", "원결과": {}, "PC": "__local__",
+                                       "출력": "output-device", "TV": "selected-tv"},
                                definitions=installed_definitions())
         assert not plan.issues, plan.report()
+
+
+def test_callable_briefs_only_use_exact_selected_unambiguous_bindings(catalog):
+    catalog([
+        {"file": "one.md", "control_brief_section": "Call",
+         "control_callables": ["script:one", "fn:alias", "script:conflict"]},
+        {"file": "two.md", "control_brief_section": "Call",
+         "control_callables": ["script:two", "script:conflict"]},
+    ], {"one.md": "## Call\nOne: verify and recover", "two.md": "## Call\nTwo"})
+    assert guides.callable_control_briefs(['script:one', 'fn:alias']) == guides.control_briefs(['one.md'])
+    assert guides.callable_control_briefs(['one', 'script:conflict', 'script:missing']) == []
+    assert guides.callable_control_briefs([]) == []
+
+
+@pytest.mark.parametrize('kind,identifier,surface', [
+    ('app', 'com.test.App', 'app:com.test.app'), ('site', 'm.example.com', 'site:example.com')])
+def test_surface_and_callable_discovery_share_live_brief_and_keep_pointer_on_omission(
+        catalog, kind, identifier, surface):
+    entry = {"file": "driver.md", "control_brief_section": "Call",
+             "control_callables": ["script:driver"], "control_surfaces": [surface]}
+    catalog([entry], {"driver.md": "## Call\nVerify; never resend unknown writes."})
+    found = guides.surface_control_guide(kind, identifier)
+    assert found['control_brief'] == guides.callable_control_briefs(['script:driver'])[0]
+    catalog([entry], {"driver.md": "## Call\n" + 'x' * 1800})
+    found = guides.surface_control_guide(kind, identifier)
+    assert found['control_guide'] == 'driver.md' and 'control_brief' not in found
+
+
+def test_published_device_briefs_fit_together_and_every_callable_maps_back():
+    filenames = ['android_control.md', 'pc_control.md', 'tv_control.md']
+    assert {b['file'] for b in guides.control_briefs(filenames)} == set(filenames)
+    entries = json.loads((guides.DATA_PATH / 'guide_db.json').read_text())['guides']
+    for entry in entries:
+        for name in entry.get('control_callables', []):
+            assert [b['file'] for b in guides.callable_control_briefs([name])] == [entry['file']]
 
 
 if __name__ == "__main__":

@@ -6,6 +6,16 @@ macOS 본체 Safari의 창·탭을 화면 조작 없이 AppleScript 사전으로
 등록 스크립트 설명으로 발견하고, 계약을 이미 읽었다면 다시 조회하지 않는다.
 어느 탭을 다룰지는 AI가 결정하고 부품은 대상 대조·실행·결과 확인을 맡는다.
 
+
+## 빠른 호출
+
+macOS 본체 Safari 전용이다. 호출 요약이 있으면 계약·스크립트 목록을 다시 읽지 않는다.
+- 상태: `[self:script]{id:"Safari제어",args:{op:"status"},timeout:60}`. windows에서 사용자가 지정한 창과 탭을 고른다. 창 하나만 필요하면 args에 window_id를 넣는다.
+- 같은 호출의 args로 open은 `op:"open",url`과 선택 window_id·expected·launch, switch·close는 `op,window_id,tab,expected`를 전달한다. tab은 1부터 세는 위치다. expected는 관측한 windows[].revision 또는 직전 결과 state.revision이다. open의 expected에도 window_id가 필요하다. 꺼진 앱은 open에 launch:true를 명시할 때만 기동한다.
+- 드라이버가 변경 전 판본과 변경 후 조건을 확인한다. `status:"completed",verified:true` 및 checks로 판단한다. state와 target={window_id,tab,expected}를 후속 동작에 연결하므로 성공마다 status를 덧붙이지 않는다. 정해진 연속 동작은 한 프로그램으로 잇고, 실패하면 중단한다.
+- open은 배경 탭, switch·close는 사용자와 공유하는 현재 탭을 바꾼다. 앱을 앞으로 가져오지 않는다. page_loaded:null이므로 페이지 로드·영상 재생까지 검증한 뜻은 아니다.
+- 실패는 예외다. IBL try/catch의 `$error.details.failure`·recovery를 보존한다. STATE_CHANGED는 변경 전 중단이므로 반환 상태 또는 새 status로 대상을 다시 판단한다. UNKNOWN·POSTCONDITION_FAILED는 효과가 있을 수 있어 변경을 재전송하거나 화면 조작으로 반복하지 않는다. 필요한 상태만 조회한다. OBSERVATION_FAILED는 조회 실패이며 즉시 같은 조회를 반복하지 않는다. 권한 오류·판본 한계는 아래 해당 절을 읽는다.
+
 ## 동작과 대상 판본
 
 | op | 인수 | 확인 범위 |

@@ -368,7 +368,7 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             return None
         import device_registry as dr
         import limb_keys
-        from guide_registry import device_control_guides, device_control_briefs
+        from guide_registry import device_control_guides, control_briefs
         from xml.sax.saxutils import escape, quoteattr
         control_guides = device_control_guides()
         live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
@@ -424,7 +424,9 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             context = escape(reg.get("context") or "")
             rows.append(f'  <limb {attr_text}>{context}</limb>')
             names.append(alias)
-        for brief in device_control_briefs(introduced_guides):
+        already = {name for block in getattr(recall, "blocks", [])
+                   for name in block.meta.get("control_briefs", [])}
+        for brief in control_briefs(introduced_guides - already):
             attrs = " ".join(f"{key}={quoteattr(brief[key])}"
                              for key in ("file", "section", "content_hash"))
             rows.append(f"  <control_brief {attrs}>{escape(brief['text'])}</control_brief>")
@@ -531,17 +533,27 @@ def _used_deep(ids, join, ev) -> Dict[str, Any]:
 
 def _reusable_capabilities(req, recall):
     from reusable_catalog import candidates
+    from guide_registry import callable_control_briefs
     import json
     rows = candidates(req.message)
     while rows and len(json.dumps(rows, ensure_ascii=False)) > 5000:
         rows.pop()
     if not rows:
         return None
+    briefs = []
+    # 기존 검색이 선택한 후보만 보충한다. 모든 앱을 상시 주입하거나 질문을 재분류하지 않는다.
+    for brief in callable_control_briefs(r['id'] for r in rows if not r.get('error')):
+        if len(json.dumps({'candidates': rows, 'control_briefs': briefs + [brief]}, ensure_ascii=False)) <= 5000:
+            briefs.append(brief)
     text = '<reusable_capabilities>현재 요청과 관련된 기존 부품 후보입니다. 계약과 효과가 맞을 때 사용하세요. '
-    text += '계약 미상은 self:script list 또는 describe:["fn:이름"]으로 확인합니다.\n'
-    text += json.dumps(rows, ensure_ascii=False) + '\n</reusable_capabilities>'
+    text += 'control_briefs의 범위는 바로 호출하고 검증·실패 복구를 유지합니다. 요약 밖의 계약만 self:script list 또는 describe:["fn:이름"]으로 확인합니다.\n'
+    text += json.dumps(rows, ensure_ascii=False)
+    if briefs:
+        text += '\ncontrol_briefs: ' + json.dumps(briefs, ensure_ascii=False)
+    text += '\n</reusable_capabilities>'
     return Block('reusable_capabilities', 'reusable_capabilities', text,
-                 ids=[r['id'] for r in rows], join={'candidates': [r['id'] for r in rows]})
+                 ids=[r['id'] for r in rows], join={'candidates': [r['id'] for r in rows]},
+                 meta={'control_briefs': [b['file'] for b in briefs]})
 
 
 def _used_capabilities(ids, join, ev):

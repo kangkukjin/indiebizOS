@@ -428,6 +428,10 @@ def op_list(tool_input):
         from reusable_catalog import ranked
         items = ranked(str(tool_input['query']), items, 10)
     result = {"success": True, "count": len(items), "items": items}
+    if tool_input.get('id') or tool_input.get('query'):
+        from guide_registry import callable_control_briefs
+        if briefs := callable_control_briefs('script:' + row['id'] for row in items if row['runnable']):
+            result['control_briefs'] = briefs
     if not items:
         result["message"] = (
             "검색 조건에 맞는 스크립트가 없습니다 — query/id를 바꾸거나 조건 없이 목록을 조회하세요."

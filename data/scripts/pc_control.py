@@ -36,7 +36,7 @@ CONTRACT = {
         "status": [], "volume": ["device_id", "value"],
         "mute": ["device_id", "enabled"], "open_url": ["url"], "lock": [],
         "youtube_status": [], "youtube_stop": [],
-        "youtube_replace": ["url", "title", "duration_seconds", "fullscreen"],
+        "youtube_replace": [],
         # 본체 OS 조작면(2026-10-20 1층 §17, Windows 동형 §18). 원격 PC 에도 같은 OS 실행 파일이 간다.
         "display": [], "brightness": ["value"], "power": [], "presence": [], "apps": [],
         "launch": ["app"], "quit": ["app"], "clipboard": [], "clipboard_write": ["text"],
@@ -46,8 +46,14 @@ CONTRACT = {
         "chrome_launch": [], "chrome_status": [], "chrome_open": ["url"],
         "chrome_switch": ["window_id", "tab", "expected"], "chrome_close": ["window_id", "tab", "expected"],
     },
-    "optional": {"brightness": ["display_id"], "keep_awake": ["display"],
+    "optional": {"youtube_replace": ["video", "url", "title", "duration_seconds", "fullscreen"],
+                 "brightness": ["display_id"], "keep_awake": ["display"],
                  "chrome_launch": ["url", "shortcut"], "chrome_status": ["window_id"], "chrome_open": ["window_id", "expected", "launch"]},
+    "youtube_input": {
+        "preferred": "video에 limbs:youtube search의 items 한 행을 그대로 전달한다. 제목을 요약하지 않는다.",
+        "alternative": "video 없이 url·title·duration_seconds를 함께 전달한다. fullscreen 기본값은 false.",
+        "duration": "검색 행의 duration(M:SS/H:MM:SS)을 초로 변환한다. 생방송·불명 길이는 거절한다.",
+    },
     # 동작이 도는 OS. 호출 전 검사(select/prepare)가 대조하고, 불일치는 전송 없이 거절한다.
     "action_platforms": {
         "status": ["darwin", "windows"], "volume": ["darwin", "windows"], "mute": ["darwin", "windows"],
@@ -110,6 +116,32 @@ class ControlFailure(ValueError):
         self.state = state
 
 
+def youtube_metadata(args):
+    """Preserve a selected search row; convert its duration without model rewriting."""
+    args = dict(args)
+    row = args.pop("video", None)
+    if row is not None:
+        if not isinstance(row, dict):
+            raise ValueError("video는 유튜브 검색 items의 한 행이어야 합니다.")
+        if any(key in args for key in ("url", "title", "duration_seconds")):
+            raise ValueError("video와 개별 영상 필드를 섞지 마세요. 검색 행을 그대로 전달하세요.")
+        duration = row.get("duration")
+        if not isinstance(duration, str) or not re.fullmatch(r"(?:[0-9]+:)?[0-9]+:[0-5][0-9]", duration):
+            raise ValueError("검색 행의 duration은 M:SS 또는 H:MM:SS여야 합니다. 생방송은 지원하지 않습니다.")
+        parts = [int(part) for part in duration.split(":")]
+        if len(parts) == 3 and parts[1] >= 60:
+            raise ValueError("H:MM:SS의 분은 60 미만이어야 합니다.")
+        seconds = 0
+        for part in parts:
+            seconds = seconds * 60 + part
+        args.update(url=row.get("url"), title=row.get("title"), duration_seconds=seconds)
+    for key in ("url", "title", "duration_seconds"):
+        if key not in args:
+            raise ValueError("video에 검색 행을 전달하거나 url·title·duration_seconds를 함께 지정하세요.")
+    args.setdefault("fullscreen", False)
+    return args
+
+
 def validate(args):
     if not isinstance(args, dict):
         raise ValueError("PC 제어 인수는 객체여야 합니다.")
@@ -126,6 +158,7 @@ def validate(args):
             raise ValueError(f"{key}가 필요합니다.")
     result = {"action": action}
     if action == "youtube_replace":
+        args = youtube_metadata(args)
         parsed = urlsplit(str(args["url"]))
         host = (parsed.hostname or "").lower().rstrip(".")
         video = (parsed.path.strip("/") if host == "youtu.be" else
@@ -315,6 +348,7 @@ def decode(output, plan):
             normalize = lambda text: " ".join(unicodedata.normalize("NFKC", str(text)).split())
             samples = [playback.get("position"), playback.get("previous_position"), playback.get("duration")]
             if (state.get("playback_verified") is not True or playback.get("ad") is not False
+                    or playback.get("state") == "error" or playback.get("player_error")
                     or playback.get("playing") is not True or playback.get("video_id") != expected_video
                     or actual_url.scheme != "https" or actual_url.path != "/watch"
                     or actual_url.hostname not in {"youtube.com", "www.youtube.com"} or actual_video != expected_video
@@ -443,6 +477,17 @@ def failure_code(message):
     return m.group(1) if m else None
 
 
+def recovery_hint(code):
+    return {
+        "YOUTUBE_TITLE_MISMATCH": "검색 행의 전체 제목과 last_observation.title을 대조하세요. 제목을 줄인 동일 요청을 재전송하지 마세요.",
+        "YOUTUBE_DURATION_MISMATCH": "검색 행의 길이와 last_observation.duration을 대조하세요. 동일 요청을 재전송하지 마세요.",
+        "YOUTUBE_PLAYER_ERROR": "last_observation.player_error를 확인하세요. 화면에 오류가 있어 재생을 확인하지 못했습니다. 동일 영상의 반복 재생·좌표 클릭을 중단하고 원인을 알리세요.",
+        "YOUTUBE_PLAYBACK_TIMEOUT": "마지막 관측을 확인하고 필요하면 화면을 한 번 읽으세요. 같은 변경을 반복하지 마세요.",
+        "YOUTUBE_NO_TAB": "사용할 브라우저에 유튜브 홈을 한 번 연 뒤 기존 탭을 사용하세요. 다른 작업 탭을 덮어쓰지 마세요.",
+        "YOUTUBE_FOCUS_FAILED": "브라우저 창 상태를 확인하세요. 주소창 초점을 확인하지 못해 입력하지 않았습니다. 임의 좌표·키 입력으로 재시도하지 마세요.",
+    }.get(code, "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요.")
+
+
 def verify_task(args, context):
     """원 준비·접수 영수증과 대조. 이 경로는 장치 명령을 전송하지 않는다."""
     task = args.get("task") or {}
@@ -453,7 +498,7 @@ def verify_task(args, context):
     def fail(reason, status="unknown", result=None):
         return {**out, "status": status, "result": result,
                 "failure": {"stage": "verification", "code": failure_code(reason), "message": reason,
-                            "next": "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요."}}
+                            "next": recovery_hint(failure_code(reason))}}
     receipts = context.get("receipts", {})
     prepared, accepted = receipts.get("plan_ref", {}), receipts.get("job_ref", {})
     if not prepared.get("available") or not accepted.get("available"):

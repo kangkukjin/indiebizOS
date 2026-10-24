@@ -29,7 +29,7 @@ public static class PCYouTube {
   public int hwnd;
  }
  public class Observation {
-  public string url, video_id, title, browser, tab_id, state;
+  public string url, video_id, title, browser, tab_id, state, player_error;
   public bool playing, paused, ad;
   public double position, previous_position, duration;
  }
@@ -140,13 +140,20 @@ public static class PCYouTube {
   for(int i=1;i<=3;i++) if(words.Groups[i].Success) seconds+=Double.Parse(words.Groups[i].Value)*(i==1?3600:i==2?60:1);
   return true;
  }
+ public static bool IsPlayerError(string text) {
+  return Regex.IsMatch(text??"",@"^(문제가 발생했습니다|오류가 발생했습니다|동영상을 재생할 수 없습니다|이 동영상을 재생할 수 없습니다|동영상을 볼 수 없습니다|이 동영상을 볼 수 없습니다|An error occurred|Something went wrong|Video unavailable|This video is unavailable|This video isn't available)",RegexOptions.IgnoreCase);
+ }
  public static Observation Read(Tab t) {
   Select(t);
   var o=new Observation {url=URL(t.window),browser=t.browser,tab_id=t.identity,state="unknown"};
   o.video_id=VideoId(o.url);
   if(!YouTube(o.url)) throw new Exception("검사 중 탭의 주소가 바뀌었습니다. 명령을 중단합니다.");
   var p=Player(t.window);
+  Last=o;
   if(p==null) { if(o.video_id=="") o.state="idle"; return o; }
+  // Inspect only visible text inside this player, never surrounding page comments.
+  var error=Find(p,e=>e.Current.ControlType==ControlType.Text && !e.Current.IsOffscreen && IsPlayerError(e.Current.Name));
+  if(error!=null) { o.state="error"; o.player_error=error.Current.Name; return o; }
   // Keep the observed controls exposed; hidden Chromium controls can retain old
   // accessible time values. Focus is on a known player button, never a shortcut.
   var control=Button(p,PauseLabel) ?? Button(p,PlayLabel);
@@ -178,7 +185,11 @@ public static class PCYouTube {
  public static Observation Pause(Tab t) {
   Observation before=null;
   for(int i=0;i<15;i++) {
-   try { before=Read(t); if(before.state=="idle" || before.paused || before.playing) break; }
+   try {
+    before=Read(t);
+    if(before.state=="error") throw new Exception("YOUTUBE_PLAYER_ERROR: "+before.player_error);
+    if(before.state=="idle" || before.paused || before.playing) break;
+   }
    catch(ElementNotAvailableException) {}
    Thread.Sleep(250);
   }
@@ -192,10 +203,19 @@ public static class PCYouTube {
  public static void Navigate(Tab t,string url) {
   Select(t);
   if(!YouTube(URL(t.window))) throw new Exception("대상 탭이 유튜브에서 벗어났습니다.");
+  var window=(WindowPattern)t.window.GetCurrentPattern(WindowPattern.Pattern);
+  if(window.Current.WindowVisualState==WindowVisualState.Minimized) {
+   window.SetWindowVisualState(WindowVisualState.Normal);
+  }
   SetForegroundWindow(new IntPtr(t.hwnd));
   var address=Address(t.window); address.SetFocus();
-  var focused=AutomationElement.FocusedElement;
-  if(GetForegroundWindow().ToInt64()!=t.hwnd || Id(focused)!=Id(address)) throw new Exception("주소창 초점을 확인하지 못했습니다. 입력을 중단합니다.");
+  bool focused=false;
+  for(int i=0;i<10;i++) {
+   var element=AutomationElement.FocusedElement;
+   if(GetForegroundWindow().ToInt64()==t.hwnd && element!=null && Id(element)==Id(address)) { focused=true; break; }
+   Thread.Sleep(100);
+  }
+  if(!focused) throw new Exception("YOUTUBE_FOCUS_FAILED: 주소창 초점을 확인하지 못했습니다. 입력을 중단합니다.");
   ((ValuePattern)address.GetCurrentPattern(ValuePattern.Pattern)).SetValue(url);
   if(((ValuePattern)address.GetCurrentPattern(ValuePattern.Pattern)).Current.Value!=url) throw new Exception("주소 입력을 확인하지 못했습니다.");
   if(Id(AutomationElement.FocusedElement)!=Id(address)) throw new Exception("주소창 초점이 바뀌었습니다.");
@@ -215,8 +235,16 @@ public static class PCYouTube {
   throw new Exception("전체화면 적용을 확인하지 못했습니다.");
  }
  public static bool Matches(Observation o,string video,string title,double duration) {
-  return o.video_id==video && Normalize(o.title)==Normalize(title) && !o.ad &&
+  return o.state!="error" && o.video_id==video && Normalize(o.title)==Normalize(title) && !o.ad &&
    duration>0 && Math.Abs(o.duration-duration)<=2 && o.playing;
+ }
+ public static string Failure(Observation o,string video,string title,double duration) {
+  if(o.state=="error") return "YOUTUBE_PLAYER_ERROR: "+o.player_error;
+  // Navigation and ads can expose stale metadata; only diagnose a loaded main video.
+  if(o.video_id!=video || o.ad || o.duration<=0 || String.IsNullOrWhiteSpace(o.title)) return null;
+  if(Normalize(o.title)!=Normalize(title)) return "YOUTUBE_TITLE_MISMATCH: 요청 제목=["+title+"] 실제 제목=["+o.title+"]. 검색 행의 전체 제목을 그대로 전달하세요.";
+  if(Math.Abs(o.duration-duration)>2) return "YOUTUBE_DURATION_MISMATCH: 요청 길이="+duration+", 실제 길이="+o.duration+"초. 검색 행의 길이를 확인하세요.";
+  return null;
  }
  static string Normalize(string s) { return Regex.Replace((s??"").Normalize(System.Text.NormalizationForm.FormKC),@"\s+"," ").Trim(); }
  static bool hoverOffset;
@@ -242,16 +270,21 @@ public static class PCYouTube {
   var deadline=DateTime.UtcNow.AddSeconds(seconds);
   var lastSkip=DateTime.MinValue;
   Observation previous=null;
+  string previousFailure=null;
   while(DateTime.UtcNow<deadline) {
    Observation o;
    try { ExposeControls(t); o=Read(t); }
-   catch(ElementNotAvailableException) { previous=null; Thread.Sleep(250); continue; }
+   catch(ElementNotAvailableException) { previous=null; previousFailure=null; Thread.Sleep(250); continue; }
+   var failure=Failure(o,video,title,duration);
+   // Player errors are terminal. Metadata mismatches must repeat on two samples.
+   if(failure!=null && (o.state=="error" || failure==previousFailure)) throw new Exception(failure);
+   previousFailure=failure;
    if(o.video_id==video) {
     if(o.ad && (DateTime.UtcNow-lastSkip).TotalSeconds>3) {
      var skip=Button(Player(t.window),@"^((광고\s*)?건너뛰기|Skip( ads?)?)$");
      if(skip!=null && skip.Current.IsEnabled && !skip.Current.IsOffscreen) { Invoke(skip); lastSkip=DateTime.UtcNow; }
     }
-    if(o.paused && Normalize(o.title)==Normalize(title)) Play(t);
+    if(o.paused && failure==null) Play(t);
     if(Matches(o,video,title,duration)) {
      if(previous!=null && o.position>previous.position+0.25 && o.position-previous.position<10) { o.previous_position=previous.position; return o; }
      previous=o;
@@ -259,7 +292,7 @@ public static class PCYouTube {
    } else previous=null;
    Thread.Sleep(1000);
   }
-  throw new Exception("본영상 재생을 확인하지 못했습니다(광고·버퍼링·제목/길이 불일치·자동재생 제한). 새 탭을 만들거나 변경을 재전송하지 말고 상태를 조회하세요.");
+  throw new Exception("YOUTUBE_PLAYBACK_TIMEOUT: 본영상 재생 진행을 확인하지 못했습니다. last_observation과 필요하면 화면을 한 번 확인하세요. 동일 요청을 재전송하지 마세요.");
  }
 }
 '@
@@ -273,7 +306,7 @@ public static class PCYouTube {
         $result.verified = $true
         $result.message = '유튜브 탭의 플레이어 상태를 조회했습니다. 재생 완료 판정은 교체 요청의 검증을 사용합니다.'
     } elseif ($PcRequest.action -in @('youtube_replace','youtube_stop')) {
-        if ($inventory.tabs.Count -eq 0) { throw '열린 유튜브 탭이 없습니다. 사용할 브라우저에서 유튜브를 한 번 열어 주세요. 다른 작업 탭을 덮어쓰지 않습니다.' }
+        if ($inventory.tabs.Count -eq 0) { throw 'YOUTUBE_NO_TAB: 열린 유튜브 탭이 없습니다. 사용할 브라우저에서 유튜브를 한 번 열어 주세요. 다른 작업 탭을 덮어쓰지 않습니다.' }
         $target = $inventory.tabs[0]
         if ($PcRequest.action -eq 'youtube_replace') {
             $video = [PCYouTube]::VideoId($PcRequest.url)
@@ -312,6 +345,7 @@ public static class PCYouTube {
     $result.success = $false; $result.verified = $false
     $cause = $_.Exception.GetBaseException()
     $result.error = if ($cause.Message) { $cause.Message } else { '브라우저 접근성 응답 실패: ' + $cause.GetType().Name }
+    if ($result.error -match '^(YOUTUBE_[A-Z_]+):') { $result.error_code = $Matches[1] }
     $result.error_detail = $cause.ToString()
     if ('PCYouTube' -as [type]) { $result.last_observation = [PCYouTube]::Last }
 } finally {

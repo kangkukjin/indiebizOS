@@ -139,10 +139,35 @@ return $s
 
 ## 유튜브 영상 선택
 
-Windows의 Chrome·Edge·Brave에서 기존 재생 탭을 교체한다. 영상 검색 결과의 URL·전체 제목·
-길이를 사용하며 길이는 **초** 단위 정수다. 생방송은 지원하지 않는다. 광고가 재생 중이거나
+Windows의 Chrome·Edge·Brave에서 기존 재생 탭을 교체한다. **검색 결과의 한 행을 `video`에 그대로 전달**한다.
+제목을 요약·재입력하지 않는다. 검색의 `duration`(M:SS/H:MM:SS)은 부품이 초로 바꾼다.
+기존 `url`·`title`·`duration_seconds` 직접 지정도 지원하지만 `video`와 섞지 않는다.
+`fullscreen`은 생략하면 false다. 생방송은 지원하지 않는다. 광고가 재생 중이거나
 본영상 시간을 확인하지 못하면 검증 실패다. `open_url`로 새 유튜브 영상 플레이어를 추가하지 않는다.
 macOS의 브라우저 교체는 지원하지 않는다. TV 자체 앱 실행은 [TV 제어](tv_control.md)의 launch다.
+다음은 첫 검색 행을 사용하는 예시다. 실제로는 검색 행의 제목·채널을 보고 고른다.
+
+```ibl
+#!ibl edition=2
+$검색 = [limbs:youtube]{op:"search",query:"사용자가 원하는 음악",limit:3}
+$영상 = $검색.items[0]
+return [fn:PC제어]{대상:"선택한 device_id",요청:{action:"youtube_replace",video:$영상,fullscreen:true}}
+```
+
+호출 결과는 **전체를 반환**한다. 함수 안에서 `$작업.value`·`$작업.success`를 읽지 않는다.
+PC제어의 상태는 `$작업.status`, 장치 관측은 `$작업.result`, 실패 설명은 `$작업.failure`다.
+`execute_ibl`가 바깥에 붙이는 `value`는 프로그램 내부의 함수 반환 필드가 아니다.
+TV제어 스크립트는 `success`·`observations`를 직접 돌려주므로 PC제어와 같은 모양으로 가정하지 않는다.
+
+실패 시 `failure.code`·`failure.next`·`result.last_observation`을 먼저 읽는다.
+- `YOUTUBE_NO_TAB`: 사용할 브라우저에 유튜브 홈을 한 번 열고 기존 탭을 사용한다.
+- `YOUTUBE_FOCUS_FAILED`: 창 상태를 확인한다. 최소화 창은 교체 시 드라이버가 복원하고 초점을 확인한 뒤 입력한다.
+- `YOUTUBE_TITLE_MISMATCH`·`YOUTUBE_DURATION_MISMATCH`: 로드된 본영상의 불일치를 연속 두 번 관측하면 대기를 끝낸다. 요청과 관측을 대조하고, 잘못 줄인 제목으로 다시 보내지 않는다.
+- `YOUTUBE_PLAYER_ERROR`: 플레이어 안의 보이는 오류 문구를 즉시 돌려준다. 같은 영상 재시도·좌표 클릭을 반복하지 말고 오류와 미완료를 알린다.
+- `YOUTUBE_PLAYBACK_TIMEOUT`: 마지막 관측으로 설명할 수 없으면 화면을 한 번 읽는다. 상태 조회·동일 변경을 끝없이 반복하지 않는다.
+
+결과 정리에서 필드 오류가 났어도 앞선 장치 변경은 실행됐을 수 있다. 기존 결과·영수증을
+`read_result`로 회수한다(`code`와 동시에 보내지 않는다). 결과를 다시 얻으려고 변경을 재실행하지 않는다.
 
 ## 완료와 후속 확인
 

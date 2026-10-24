@@ -256,6 +256,80 @@ def test_native_failure_keeps_advertisement_observation():
     assert failure.value.state["last_observation"]["ad"] is True
 
 
+@pytest.mark.parametrize("duration,seconds", [("57:24", 3444), ("2:32:06", 9126), ("152:06", 9126)])
+def test_youtube_search_row_reaches_native_request_without_title_rewriting(duration, seconds):
+    row = {"title": "𝗣𝗟𝗔𝗬𝗟𝗜𝗦𝗧 가을밤 | 잔나비 •••", "duration": duration,
+           "url": "https://www.youtube.com/watch?v=0eyvWdgx_gk", "channel": "인디인디",
+           "index": 1, "video_id": "0eyvWdgx_gk", "thumb": "https://example.com/thumb"}
+    request = {"action": "youtube_replace", "video": row}
+    selected = pc.select_target({"target": "pc", "request": request, "limbs": [{
+        "device_id": "pc", "connected": True,
+        "registration": {"state": "active", "capabilities": {"os": "windows", "shell": True}}}]})
+    plan = pc.prepare({"platform": "windows", "source": "native", "request": selected["request"]})
+    assert plan["request"]["title"] == row["title"]
+    assert plan["request"]["url"] == row["url"]
+    assert plan["request"]["duration_seconds"] == seconds
+    assert plan["request"]["fullscreen"] is False
+    assert request["video"] == row and "video" not in plan["request"]
+
+
+@pytest.mark.parametrize("duration", ["LIVE", "", None, True, 120, "1:99", "1:60:00", "0:00", "25:00:00"])
+def test_youtube_search_row_invalid_duration_rejected_before_transport(duration):
+    with pytest.raises(ValueError):
+        pc.prepare({"platform": "windows", "source": "native", "request": {
+            "action": "youtube_replace", "video": {"title": "Title", "duration": duration,
+                "url": "https://www.youtube.com/watch?v=0eyvWdgx_gk"}}})
+
+
+@pytest.mark.parametrize("field,value", [("title", "shortened"), ("url", "https://youtu.be/abcdefghijk"),
+                                       ("duration_seconds", 12)])
+def test_youtube_search_row_cannot_be_partially_overwritten(field, value):
+    with pytest.raises(ValueError, match="섞지"):
+        pc.validate({"action": "youtube_replace", "video": {"title": "Original", "duration": "1:20",
+                     "url": "https://youtu.be/abcdefghijk"}, field: value})
+
+
+def test_youtube_error_observation_never_counts_as_playback():
+    plan, state = youtube_fixture()
+    state["playback"].update(state="error", player_error="문제가 발생했습니다.")
+    with pytest.raises(ValueError, match="본영상"):
+        pc.decode(pc.MARKER + json.dumps(state), plan)
+
+
+@pytest.mark.parametrize("code", ["YOUTUBE_TITLE_MISMATCH", "YOUTUBE_DURATION_MISMATCH",
+                                  "YOUTUBE_PLAYER_ERROR", "YOUTUBE_PLAYBACK_TIMEOUT"])
+def test_youtube_native_failure_preserves_code_observation_and_specific_recovery(code):
+    plan, state = youtube_fixture()
+    state.update(success=False, verified=False, error=code + ": 원인",
+                 last_observation={"state": "error", "player_error": "문제가 발생했습니다."})
+    job = {"task_ref": {"kind": "guestpc", "task_id": "job"}, "limb": "pc",
+           "request_id": plan["request"]["request_id"]}
+    task = {"target": "pc", "task_ref": job["task_ref"], "verification": {
+        key: plan[key] for key in ("request", "platform", "source_sha256")}}
+    result = pc.verify_task({"task": task, "observation": {"task_ref": job["task_ref"],
+        "state": "succeeded", "result": {"exit": 0, "output": pc.MARKER + json.dumps(state)}}},
+        {"receipts": {"plan_ref": {"available": True, "producer": "PC제어부품", "value": plan},
+                      "job_ref": {"available": True, "action": "limbs:guestpc", "value": job}}})
+    assert result["status"] == "failed" and result["verified"] is False
+    assert result["failure"]["code"] == code
+    assert result["result"]["last_observation"] == state["last_observation"]
+    assert result["failure"]["next"] != pc.recovery_hint(None)
+    assert result["task_ref"] == job["task_ref"]
+
+
+def test_windows_youtube_native_policy():
+    import base64
+    import sys
+    if sys.platform != "win32":
+        pytest.skip("Windows UIAutomation assemblies required; native fixture also supports remote validation")
+    source = (ROOT / "data/instruments/pc_youtube_windows.ps1").read_bytes()
+    run = subprocess.run(["powershell.exe", "-NoProfile", "-File",
+        str(ROOT / "backend/fixtures/pc_youtube_policy.ps1"),
+        "-DriverBase64", base64.b64encode(source).decode()], capture_output=True, text=True, timeout=30)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert "PC_YOUTUBE_POLICY_OK" in run.stdout
+
+
 def test_generated_youtube_flow_waits_before_decoding_and_compiles(tmp_path):
     script = r'''
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');

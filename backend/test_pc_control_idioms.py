@@ -48,7 +48,8 @@ def flow(tmp_path, monkeypatch):
                 state['plans'].append(value)
             return {'success': True, 'value': value}
         if key == 'limbs:guestpc':
-            assert params['background'] and params['timeout'] == 30
+            action = state['plans'][-1]['request']['action']
+            assert params['background'] and params['timeout'] == (120 if action.startswith('youtube_') else 30)
             state['job'] = {'kind': 'guestpc', 'task_id': 'job-1'}
             return {'success': True, 'limb': 'pc-1', 'request_id': params['request_id'],
                     'task_ref': state['job']}
@@ -57,6 +58,7 @@ def flow(tmp_path, monkeypatch):
             plan = state['plans'][-1]
             native = dict(protocol=pc.PROTOCOL, request_id=plan['request']['request_id'],
                           platform='windows', action='status', success=True, verified=True, devices=[])
+            native.update(state.get('native', {}))
             import task_receipts
             return {'success': True, 'limb': 'pc-1', **task_receipts.view(state['job'],
                     'succeeded' if state['terminal'] else 'running',
@@ -88,6 +90,24 @@ def test_pending_then_new_run_confirms_without_retransmit(flow):
     assert second['status'] == 'completed' and second['verified'], second
     assert sum(k == 'limbs:guestpc' for k, _ in state['calls']) == 1
     assert sum(k == 'self:script' and p['args']['op'] == 'prepare' for k, p in state['calls']) == 1
+
+
+def test_search_video_row_and_native_error_survive_public_function_without_retransmit(flow):
+    run, state = flow
+    state['terminal'] = True
+    state['native'] = {'action': 'youtube_replace', 'success': False, 'verified': False,
+                       'error': 'YOUTUBE_PLAYER_ERROR: 문제가 발생했습니다.',
+                       'last_observation': {'state': 'error', 'player_error': '문제가 발생했습니다.'}}
+    row = {'url': 'https://www.youtube.com/watch?v=0eyvWdgx_gk',
+           'title': '𝗣𝗟𝗔𝗬𝗟𝗜𝗦𝗧 가을밤 | 잔나비 •••', 'duration': '2:32:06'}
+    result = run('return [fn:PC제어]{대상:"pc-1",요청:{action:"youtube_replace",video:$video}}', {'video': row})
+    assert result['status'] == 'failed' and result['verified'] is False, result
+    assert result['failure']['code'] == 'YOUTUBE_PLAYER_ERROR', result
+    assert '반복' in result['failure']['next']
+    assert result['result']['last_observation']['state'] == 'error'
+    assert result['verification']['request']['title'] == row['title']
+    assert result['verification']['request']['duration_seconds'] == 9126
+    assert sum(k == 'limbs:guestpc' for k, _ in state['calls']) == 1
 
 
 @pytest.mark.parametrize('field', ['target', 'task_ref', 'verification', 'evidence_ref'])

@@ -453,8 +453,8 @@ PC제어부품:
       when:
         op: verify
     version: 1
-  description: PC제어·PC제어확인의 내부 준비·검증 부품. request의 action·device_id·value·enabled·url·title·duration_seconds·fullscreen·app·display·display_id·name·seconds·text·window_id·tab·expected는
-    지원 동작별로 op:contract의 actions에서 조회한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
+  description: PC제어·PC제어확인의 내부 준비·검증 부품. request의 action·device_id·value·enabled·video·url·title·duration_seconds·fullscreen·app·display·display_id·name·seconds·text·window_id·tab·expected는
+    지원 동작별로 op:contract의 actions·optional에서 조회한다. youtube_replace는 검색 행을 video로 그대로 전달하거나 URL·전체 제목·초 길이를 함께 지정한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
   file: pc_control.py
   interpreter: python
   registered_at: '2026-10-18T00:00:00'

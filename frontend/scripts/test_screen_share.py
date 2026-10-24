@@ -33,11 +33,12 @@ def test_screen_share(tmp_path):
                 route.fulfill(status=200, content_type='application/json', body='{}', headers={'Access-Control-Allow-Origin': '*'})
             page.route('**/remote-pcs/screens**', api)
             page.goto(f'http://127.0.0.1:{server.server_port}/#/remote-screen/guestpc-abc')
-            canvas = page.get_by_label('원격 PC 화면')
+            canvas = page.get_by_label('원격 기기 화면')
             expect(canvas).to_have_attribute('width', '800')
             assert len([r for r in requests if r[0] == 'POST']) == 1
             assert canvas.evaluate("c=>Array.from(c.getContext('2d').getImageData(10,10,1,1).data)")[2] > 180
             canvas.click(position={'x': 400, 'y': 300})
+            expect(page.get_by_label('원격 키보드 입력')).to_be_focused()
             page.keyboard.press('a')
             page.keyboard.press('Control+a')
             page.get_by_label('원격 키보드 입력').evaluate("el=>{const e=new Event('compositionend',{bubbles:true});e.data='한글';el.dispatchEvent(e)}")

@@ -10,10 +10,15 @@ export function ScreenShare({ device }: { device: string }) {
   const [phone, setPhone] = useState(false);
   const [ready, setReady] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [textEntry, setTextEntry] = useState(false);
+  const [text, setText] = useState('');
+  const [textError, setTextError] = useState('');
   const composing = useRef(false);
   const frameCounter = useRef(0);
   function send(value: object) {
-    if (socket.current?.readyState === WebSocket.OPEN && socket.current.bufferedAmount < 65536) socket.current.send(JSON.stringify(value));
+    if (socket.current?.readyState !== WebSocket.OPEN || socket.current.bufferedAmount >= 65536) return false;
+    socket.current.send(JSON.stringify(value));
+    return true;
   }
   useEffect(() => {
     const sid = crypto.randomUUID().replaceAll('-', '');
@@ -68,7 +73,12 @@ export function ScreenShare({ device }: { device: string }) {
     if (!ready) return;
     if (phone && event.type === 'pointermove' && !event.buttons) return;
     event.preventDefault();
-    if (event.type === 'pointerdown') { keyboard.current?.focus(); event.currentTarget.setPointerCapture(event.pointerId); }
+    if (event.type === 'pointerdown') {
+      // Touch/pen selects the remote screen without opening the local software keyboard.
+      if (event.pointerType === 'mouse') keyboard.current?.focus({ preventScroll: true });
+      else event.currentTarget.focus({ preventScroll: true });
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     send({ type: 'pointer', ...position(event), buttons: event.buttons & 7 });
   }
   function key(event: React.KeyboardEvent, down: boolean) {
@@ -78,20 +88,43 @@ export function ScreenShare({ device }: { device: string }) {
     event.preventDefault();
     send({ type: 'key', code: event.code, key: event.key, down });
   }
+  function sendText(event: React.FormEvent) {
+    event.preventDefault();
+    if (!ready || !text) return;
+    if (new TextEncoder().encode(text).length > 16384) {
+      setTextError('입력할 글이 너무 깁니다. 나누어 보내 주세요.');
+      return;
+    }
+    send({ type: 'reset' });
+    if (!send({ type: 'text', text })) {
+      setTextError('연결이 원활하지 않습니다. 잠시 뒤 다시 보내 주세요.');
+      return;
+    }
+    setText(''); setTextError('');
+  }
   return <main className="flex h-screen flex-col bg-stone-950 text-white">
-    <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-2 text-sm">
+    <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 px-4 py-2 text-sm">
       <strong className="flex-1">화면 공유</strong>
       {phone && <nav className="flex gap-3" aria-label="폰 탐색">
         {(['back', 'home', 'recents'] as const).map((action, i) => <button key={action} disabled={!ready} onClick={() => send({ type: 'navigation', action })}>{['뒤로', '홈', '최근 앱'][i]}</button>)}
       </nav>}
+      <button disabled={!ready} aria-expanded={textEntry} aria-controls="screen-text-entry" onClick={() => setTextEntry(open => !open)}>문자 입력</button>
       <button onClick={() => void document.documentElement.requestFullscreen().catch(() => {})}>전체 화면</button>
       <button onClick={() => window.close()}>닫기</button>
     </header>
+    {textEntry && <form id="screen-text-entry" onSubmit={sendText} className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2">
+      <textarea aria-label="보낼 글" value={text} onChange={event => { setText(event.target.value); setTextError(''); }}
+        rows={2} placeholder="원격 화면에서 입력할 곳을 선택한 뒤 글을 보내세요."
+        className="min-w-0 flex-1 rounded border border-white/30 bg-stone-900 p-2 text-base" />
+      <button type="submit" disabled={!ready || !text} className="rounded border border-white/30 px-3 py-2 disabled:opacity-50">보내기</button>
+      {textError && <p role="alert" className="w-full text-sm text-amber-300">{textError}</p>}
+    </form>}
     <section className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-      <canvas ref={canvas} aria-label="원격 기기 화면" className="max-h-full max-w-full touch-none object-contain"
+      <canvas ref={canvas} tabIndex={0} aria-label="원격 기기 화면" className="max-h-full max-w-full touch-none object-contain"
+        onKeyDown={event => key(event, true)} onKeyUp={event => key(event, false)}
         onPointerDown={pointer} onPointerUp={pointer} onPointerMove={pointer} onPointerCancel={() => send({ type: 'reset' })}
         onContextMenu={event => event.preventDefault()} onWheel={event => { if (ready) send({ type: 'wheel', ...position(event), dx: Math.max(-2000, Math.min(2000, event.deltaX)), dy: Math.max(-2000, Math.min(2000, event.deltaY)) }); }} />
-      <textarea ref={keyboard} aria-label="원격 키보드 입력" className="absolute left-0 top-0 h-px w-px opacity-0" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+      <textarea ref={keyboard} tabIndex={-1} aria-label="원격 키보드 입력" className="absolute left-0 top-0 h-px w-px opacity-0" autoCapitalize="off" autoCorrect="off" spellCheck={false}
         onKeyDown={event => key(event, true)} onKeyUp={event => key(event, false)}
         onCompositionStart={() => { composing.current = true; send({ type: 'reset' }); }}
         onCompositionEnd={event => { composing.current = false; if (ready) send({ type: 'text', text: event.data }); event.currentTarget.value = ''; }}

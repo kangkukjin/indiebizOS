@@ -1,0 +1,1041 @@
+{
+  "study": "Android read-only sequence cost, not production batch acceptance",
+  "date": "2026-10-24",
+  "baseline_commit": "812c3b2c",
+  "clock": "caller monotonic for wall; Android bridge elapsed for worker lifecycle",
+  "devices": [
+    {
+      "alias": "삼성1",
+      "device_id": "guestpc-4e51c614b25b",
+      "abi": "armeabi-v7a",
+      "sdk": 28,
+      "apk_version": "0.20"
+    },
+    {
+      "alias": "삼성0",
+      "device_id": "guestpc-fc7b12fba936",
+      "abi": "arm64-v8a",
+      "sdk": 36,
+      "apk_version": "0.19"
+    },
+    {
+      "alias": "예나폰",
+      "device_id": "guestpc-f0fa1e3465a0",
+      "abi": "arm64-v8a",
+      "sdk": 33,
+      "apk_version": "0.18"
+    }
+  ],
+  "driver_sha256": "5cb7e51f2d4c196d5a7a479ae66f342b8dc8b5d5aafee1d8ed87160376bc1768",
+  "primitive_sha256": "3655593197936f9f6693a8f334157e8b1b00145fdd2c4b00ed33513a14b279c2",
+  "trials": [
+    {
+      "alias": "예나폰",
+      "round": 1,
+      "count": 1,
+      "request_id": "2d5b11f8e8514a3697a650e05768a175",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "4857c6acf4b347618d89af5a515cc878"
+      },
+      "wall_seconds": 5.703110042028129,
+      "submit_seconds": 0.3467222498729825,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2437,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.08504665398504585
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "4857c6acf4b347618d89af5a515cc878",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848534.0802948,
+          "received": 1792848534.0802948
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848534.992504,
+          "received": 1792848536.226381
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848537.5575807,
+          "received": 1792848538.4898372
+        }
+      ]
+    },
+    {
+      "alias": "예나폰",
+      "round": 1,
+      "count": 1,
+      "request_id": "7a560cf51e0245a9bacf4802380ffb10",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "4ea81da54ef745b5964790dbc8007463"
+      },
+      "wall_seconds": 5.006411541253328,
+      "submit_seconds": 0.5977908745408058,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2326,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07968580699525774
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "4ea81da54ef745b5964790dbc8007463",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848540.036273,
+          "received": 1792848540.036273
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848540.5040126,
+          "received": 1792848541.63032
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848542.8779085,
+          "received": 1792848544.375624
+        }
+      ]
+    },
+    {
+      "alias": "예나폰",
+      "round": 1,
+      "count": 1,
+      "request_id": "5e22ea235ad44ff5aa3db03fd46bf102",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "b337dfb9381141bd8915fd2b1dfd5eae"
+      },
+      "wall_seconds": 4.747689666226506,
+      "submit_seconds": 0.32672108244150877,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2301,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.08373669197317213
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "b337dfb9381141bd8915fd2b1dfd5eae",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848544.7733681,
+          "received": 1792848544.7733681
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848545.759745,
+          "received": 1792848546.996398
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848548.104177,
+          "received": 1792848548.805134
+        }
+      ]
+    },
+    {
+      "alias": "예나폰",
+      "round": 1,
+      "count": 3,
+      "request_id": "07cfdbbfce19437688ca85e1430f1ac5",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "f59df02fa83b4c32b857a1b6c6752738"
+      },
+      "wall_seconds": 4.689744541421533,
+      "submit_seconds": 0.3274641241878271,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2343,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07645242300350219,
+        0.01655261602718383,
+        0.015715923043899238
+      ],
+      "verified": [
+        true,
+        true,
+        true
+      ],
+      "job_id": "f59df02fa83b4c32b857a1b6c6752738",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848549.522739,
+          "received": 1792848549.522739
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848550.2417023,
+          "received": 1792848551.152763
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848552.6297371,
+          "received": 1792848553.565564
+        }
+      ]
+    },
+    {
+      "alias": "예나폰",
+      "round": 2,
+      "count": 3,
+      "request_id": "0fe4a4c1508c4ca0ba328af2bab0c4ce",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "0269aa4784f7490fa72d44b23022a856"
+      },
+      "wall_seconds": 4.773304374888539,
+      "submit_seconds": 0.33470987528562546,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2311,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07941996096633375,
+        0.017436000052839518,
+        0.01646973006427288
+      ],
+      "verified": [
+        true,
+        true,
+        true
+      ],
+      "job_id": "0269aa4784f7490fa72d44b23022a856",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848554.218524,
+          "received": 1792848554.218524
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848554.9706252,
+          "received": 1792848555.836365
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848557.32447,
+          "received": 1792848558.144654
+        }
+      ]
+    },
+    {
+      "alias": "예나폰",
+      "round": 2,
+      "count": 1,
+      "request_id": "51d73243d72f4f98901bd8e119bc2a63",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "a053a6b48ad64efab0441dda5dbdebd9"
+      },
+      "wall_seconds": 5.993541625328362,
+      "submit_seconds": 0.3392139170318842,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2270,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07813261600676924
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "a053a6b48ad64efab0441dda5dbdebd9",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848558.999855,
+          "received": 1792848558.999855
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848560.9505212,
+          "received": 1792848561.779043
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848563.265107,
+          "received": 1792848564.173598
+        }
+      ]
+    },
+    {
+      "alias": "예나폰",
+      "round": 2,
+      "count": 1,
+      "request_id": "1fdb91a13bb54aeaa7939633767b59dc",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "d0d4338a144c44bf80fb1f1bb663364e"
+      },
+      "wall_seconds": 5.781817499548197,
+      "submit_seconds": 0.3363366248086095,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2309,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07639619300607592
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "d0d4338a144c44bf80fb1f1bb663364e",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848564.993595,
+          "received": 1792848564.993595
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848566.386552,
+          "received": 1792848567.2078998
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848568.7412767,
+          "received": 1792848569.4749491
+        }
+      ]
+    },
+    {
+      "alias": "예나폰",
+      "round": 2,
+      "count": 1,
+      "request_id": "9ed8309ca554432fb202b9fd12900d9b",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "1194388b921e4b3f830eb28fcff4b28a"
+      },
+      "wall_seconds": 4.849854375235736,
+      "submit_seconds": 0.3350666658952832,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2309,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07702284608967602
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "1194388b921e4b3f830eb28fcff4b28a",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848570.774625,
+          "received": 1792848570.774625
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848571.2730827,
+          "received": 1792848572.2197602
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848573.6340303,
+          "received": 1792848575.175362
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 1,
+      "count": 1,
+      "request_id": "6fc2c14b0d9b4c5ba8b4d5b40358d6c2",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "5b5022043ca44ed782e6db2d8ce5d495"
+      },
+      "wall_seconds": 34.34527625050396,
+      "submit_seconds": 0.32184391655027866,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2651,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07597346098918933
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "5b5022043ca44ed782e6db2d8ce5d495",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848575.613958,
+          "received": 1792848575.613958
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848598.836093,
+          "received": 1792848600.7811131
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848601.5419397,
+          "received": 1792848608.784938
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 1,
+      "count": 1,
+      "request_id": "d29b02eca1e5484ea08b5984318ce7fc",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "79215a6020944495a2471bd02884cdee"
+      },
+      "wall_seconds": 11.103331625461578,
+      "submit_seconds": 0.32894079200923443,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2590,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.0737924999993993
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "79215a6020944495a2471bd02884cdee",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848609.968809,
+          "received": 1792848609.968809
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848612.2230964,
+          "received": 1792848614.050616
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848614.8699381,
+          "received": 1792848620.094392
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 1,
+      "count": 1,
+      "request_id": "d91bfc7f6161477093fcb582eabf38aa",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "6df9cea082034c58a5eab26e8ff9bb7b"
+      },
+      "wall_seconds": 26.27171520795673,
+      "submit_seconds": 0.33653875067830086,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2637,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.0749154610093683
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "6df9cea082034c58a5eab26e8ff9bb7b",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848621.0820081,
+          "received": 1792848621.0820081
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848640.6905744,
+          "received": 1792848642.7371001
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848643.3789062,
+          "received": 1792848646.101162
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 1,
+      "count": 3,
+      "request_id": "6a5c2fea19934e4bb6b4dec9355803ce",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "708d08dcf44346bfb0c7323a71370b13"
+      },
+      "wall_seconds": 7.780031665228307,
+      "submit_seconds": 0.3202279154211283,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2649,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07390380799188279,
+        0.014651230987510644,
+        0.015234460995998234
+      ],
+      "verified": [
+        true,
+        true,
+        true
+      ],
+      "job_id": "708d08dcf44346bfb0c7323a71370b13",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848647.339315,
+          "received": 1792848647.339315
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848649.2855463,
+          "received": 1792848651.047843
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848651.9980028,
+          "received": 1792848654.0542212
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 2,
+      "count": 3,
+      "request_id": "8ee3205c91734b87a290012cc9331b8e",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "4df6b6aadd4b433f96e3acf4d5e780de"
+      },
+      "wall_seconds": 13.952245042659342,
+      "submit_seconds": 0.3310195002704859,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2628,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07856738500413485,
+        0.015066306994413026,
+        0.0152324230002705
+      ],
+      "verified": [
+        true,
+        true,
+        true
+      ],
+      "job_id": "4df6b6aadd4b433f96e3acf4d5e780de",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848655.1316721,
+          "received": 1792848655.1316721
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848660.0615218,
+          "received": 1792848661.987398
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848662.733244,
+          "received": 1792848668.683896
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 2,
+      "count": 1,
+      "request_id": "f5286346cdb047cbb3d9ef160c26e5d0",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "04ec2909ef454f81a773482d37902e97"
+      },
+      "wall_seconds": 13.894245292060077,
+      "submit_seconds": 0.3319831667467952,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2568,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07277707700268365
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "04ec2909ef454f81a773482d37902e97",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848669.086741,
+          "received": 1792848669.086741
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848672.438702,
+          "received": 1792848674.3785632
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848675.055576,
+          "received": 1792848681.781764
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 2,
+      "count": 1,
+      "request_id": "3e679302746d47ad87ebd406c248ffa3",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "f59663c3412b41faaf0a01102483e4b7"
+      },
+      "wall_seconds": 8.06711025070399,
+      "submit_seconds": 0.49813066702336073,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2575,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.0745203069964191
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "f59663c3412b41faaf0a01102483e4b7",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848683.1477718,
+          "received": 1792848683.1477718
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848682.9571204,
+          "received": 1792848685.13787
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848685.583529,
+          "received": 1792848690.359091
+        }
+      ]
+    },
+    {
+      "alias": "삼성1",
+      "round": 2,
+      "count": 1,
+      "request_id": "12659aedf3f7487fb6ab9f511de0ebbc",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "aafddc2fbf334983aa1165131235413a"
+      },
+      "wall_seconds": 13.894058333709836,
+      "submit_seconds": 0.3203615006059408,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 2614,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.07715342300070915
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "aafddc2fbf334983aa1165131235413a",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848691.03874,
+          "received": 1792848691.03874
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848691.3183277,
+          "received": 1792848692.987721
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848693.984367,
+          "received": 1792848703.609809
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 1,
+      "count": 1,
+      "request_id": "6fd6d1d9ede844a8a2a92e17940c6489",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "5b619dd04c744e7592bb68286a7b8cae"
+      },
+      "wall_seconds": 3.8422897504642606,
+      "submit_seconds": 0.43397025018930435,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 965,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.04397921898635104
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "5b619dd04c744e7592bb68286a7b8cae",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848705.049174,
+          "received": 1792848705.049174
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848705.2712245,
+          "received": 1792848706.942632
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848706.3566673,
+          "received": 1792848708.0644019
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 1,
+      "count": 1,
+      "request_id": "a93c34a9f17340fcb65606d210ac1aed",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "a8f3a887244946b6b3f26ddfacd0f5b5"
+      },
+      "wall_seconds": 4.758206041529775,
+      "submit_seconds": 0.3291188748553395,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 767,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.028810415999032557
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "a8f3a887244946b6b3f26ddfacd0f5b5",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848708.7880251,
+          "received": 1792848708.7880251
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848709.4450624,
+          "received": 1792848710.651548
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848710.2418854,
+          "received": 1792848712.611968
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 1,
+      "count": 1,
+      "request_id": "0b8996ac01ba48879b331e8693809c4d",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "136fed886bd64a32b2b1f9b166630b30"
+      },
+      "wall_seconds": 5.905568832531571,
+      "submit_seconds": 0.3770772498100996,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 773,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.027905415976420045
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "136fed886bd64a32b2b1f9b166630b30",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848713.596469,
+          "received": 1792848713.596469
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848714.8365986,
+          "received": 1792848716.4859252
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848715.6526892,
+          "received": 1792848718.461351
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 1,
+      "count": 3,
+      "request_id": "cd2d764218ee4f12ae3e3b576ceaf268",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "2aaa3694815e45998aa67ec2a621c963"
+      },
+      "wall_seconds": 3.883720625191927,
+      "submit_seconds": 0.48544358275830746,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 793,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.029051249963231385,
+        0.0058044789475388825,
+        0.005575103976298124
+      ],
+      "verified": [
+        true,
+        true,
+        true
+      ],
+      "job_id": "2aaa3694815e45998aa67ec2a621c963",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848719.614662,
+          "received": 1792848719.614662
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848720.6364517,
+          "received": 1792848721.5063639
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848721.4538672,
+          "received": 1792848722.88329
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 2,
+      "count": 3,
+      "request_id": "f37365d6e4934b0a9b2016709a062d21",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "83fc1836e5c0421c8111fef693fd91a2"
+      },
+      "wall_seconds": 4.730016999877989,
+      "submit_seconds": 0.3220533747226,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 783,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.026279790967237204,
+        0.004816198023036122,
+        0.004690885019954294
+      ],
+      "verified": [
+        true,
+        true,
+        true
+      ],
+      "job_id": "83fc1836e5c0421c8111fef693fd91a2",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848723.332532,
+          "received": 1792848723.332532
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848724.1557686,
+          "received": 1792848725.472977
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848724.9779367,
+          "received": 1792848727.350673
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 2,
+      "count": 1,
+      "request_id": "a2051532542a4959b2b1237815d88bb8",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "07148b25809b4f9daf525f7c54d30742"
+      },
+      "wall_seconds": 3.715131583623588,
+      "submit_seconds": 0.3224246250465512,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 765,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.029740469006355852
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "07148b25809b4f9daf525f7c54d30742",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848728.069352,
+          "received": 1792848728.069352
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848728.6309736,
+          "received": 1792848730.3508182
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848729.4415696,
+          "received": 1792848731.209692
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 2,
+      "count": 1,
+      "request_id": "a25dd40f698e4c58851e949b6b4e6248",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "dea70d1f927d40d59222800b5b24f31a"
+      },
+      "wall_seconds": 3.764919082634151,
+      "submit_seconds": 0.3453974165022373,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 796,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.028741511050611734
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "dea70d1f927d40d59222800b5b24f31a",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848731.809778,
+          "received": 1792848731.809778
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848733.4302554,
+          "received": 1792848734.2621708
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848734.247752,
+          "received": 1792848734.953392
+        }
+      ]
+    },
+    {
+      "alias": "삼성0",
+      "round": 2,
+      "count": 1,
+      "request_id": "c7d01fbfd3544f9aada6fa8f60471832",
+      "task_ref": {
+        "kind": "guestpc",
+        "task_id": "333be4af54d646268305c5819c01bd0b"
+      },
+      "wall_seconds": 4.896474459208548,
+      "submit_seconds": 0.33325345907360315,
+      "code_bytes": 32030,
+      "state": "succeeded",
+      "bridge_ms": 792,
+      "worker_cleanup_confirmed": true,
+      "resource_cleanup_confirmed": true,
+      "step_seconds": [
+        0.02801671903580427
+      ],
+      "verified": [
+        true
+      ],
+      "job_id": "333be4af54d646268305c5819c01bd0b",
+      "events": [
+        {
+          "kind": "queued",
+          "occurred": 1792848735.565359,
+          "received": 1792848735.565359
+        },
+        {
+          "kind": "started",
+          "occurred": 1792848736.3158758,
+          "received": 1792848737.130514
+        },
+        {
+          "kind": "result",
+          "occurred": 1792848737.1491003,
+          "received": 1792848739.271687
+        }
+      ]
+    }
+  ]
+}

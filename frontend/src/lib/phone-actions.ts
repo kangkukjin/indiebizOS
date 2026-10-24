@@ -3,6 +3,7 @@ import { androidCommandCode, androidState, executeAndroid } from './android-cont
 export type HardwareOp = 'status' | 'brightness' | 'brightness_auto' | 'rotation' | 'timeout' |
   'sensor' | 'torch' | 'screen_on' | 'screen_off' | 'settings_permission';
 export interface HardwareState {
+  observation_scope?: 'settings';
   success: boolean; hardware_control?: number; op?: HardwareOp; message?: string; verified?: boolean;
   screen_on?: boolean; locked?: boolean; brightness?: number; brightness_auto?: boolean;
   auto_rotate?: boolean; screen_timeout_ms?: number; battery?: number; charging?: boolean;
@@ -23,4 +24,10 @@ export function phoneActionState(value: unknown): HardwareState {
 }
 export async function runPhoneAction(target: string, op: HardwareOp, args: RecordValue = {}): Promise<HardwareState> {
   return phoneActionState(await executeAndroid(target, phoneActionCode(target, op, args)));
+}
+
+// Partial setting observations update only their fields; full reads replace old state.
+export function mergeHardwareState(previous: HardwareState | null, next: HardwareState): HardwareState {
+  if (next.observation_scope !== 'settings') return next;
+  return { ...previous, ...next, capabilities: { ...previous?.capabilities, ...next.capabilities } };
 }

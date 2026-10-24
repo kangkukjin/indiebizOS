@@ -80,6 +80,15 @@ vm.runInNewContext(ts.transpile(fs.readFileSync('frontend/src/lib/phone-actions.
  assert.equal(args.대상,'phone "one"');assert.deepEqual(args.요청,{enabled:true,action:'torch'});
  for(const bad of [{success:false}, {success:true,result:{success:false}}, {success:true,result:{success:true,value:{success:false,error:'permission'}}}]) assert.throws(()=>m.phoneActionState(bad));
  assert.throws(()=>m.phoneActionCode('','status'));
+ const previous={success:true,hardware_control:1,brightness:60,battery:80,capabilities:{settings_write:true,screen_on:true},sensors:[{id:'light',name:'Light'}]};
+ const changed={success:true,hardware_control:1,observation_scope:'settings',brightness:100,brightness_auto:false,verified:true,capabilities:{settings_write:false}};
+ const merged=m.mergeHardwareState(previous,changed);
+ assert.equal(merged.brightness,100);assert.equal(merged.battery,80);
+ assert.equal(merged.capabilities.settings_write,false);assert.equal(merged.capabilities.screen_on,true);
+ assert.deepEqual(merged.sensors,previous.sensors);assert.equal(previous.brightness,60);
+ const full={success:true,hardware_control:0};assert.equal(m.mergeHardwareState(merged,full),full);
+ assert.equal(m.mergeHardwareState(null,changed).brightness,100);
+
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''
     run = subprocess.run(['node', '-e', script], cwd=ROOT, text=True, capture_output=True, timeout=30)
@@ -98,6 +107,21 @@ def test_all_remote_app_commands_compile_and_do_not_refresh_twice():
             from ibl_v2_store import installed_definitions
             plan = compile_program(code, load_registry(), inputs=inputs, definitions=installed_definitions())
             assert not plan.issues, plan.report()
+
+
+@pytest.mark.parametrize('req,observed', [
+    ({'action': 'brightness', 'value': 100}, {'brightness': 100, 'brightness_auto': False}),
+    ({'action': 'brightness_auto', 'enabled': True}, {'brightness_auto': True}),
+    ({'action': 'rotation', 'enabled': False}, {'auto_rotate': False, 'user_rotation': 1}),
+    ({'action': 'timeout', 'seconds': 60}, {'screen_timeout_ms': 60000}),
+])
+def test_scoped_setting_observation_passes_driver_without_full_hardware_snapshot(req, observed):
+    from test_android_control import pc
+    value = {'success': True, 'verified': True, 'hardware_control': 1,
+             'observation_scope': 'settings', **observed}
+    assert pc.readback(req, value)
+    assert not pc.readback(req, {**value, 'verified': False})
+    assert not pc.readback(req, {'success': True, 'verified': True, 'observation_scope': 'settings'})
 
 
 if __name__ == '__main__':

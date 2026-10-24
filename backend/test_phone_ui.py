@@ -38,8 +38,6 @@ def exercise(req, after=None, reply=None, error=None):
             sent = json.loads(args[0])
             assert sent['op'] == req['action']
             return {'control': dispatch}
-        if len(calls) == 1:
-            return before
         if error:
             raise RuntimeError(error)
         return after if after is not None else screen()
@@ -62,6 +60,7 @@ def test_verified_ui_readback(req, after):
     value, calls = exercise(req, after)
     assert pc.readback(req, value)
     assert sum(m == 'uiControl' for m, _ in calls) == (req['action'] != 'ui_snapshot')
+    assert [m for m, _ in calls] == (['snapshot'] if req['action'] == 'ui_snapshot' else ['uiControl', 'snapshot'])
 
 
 @pytest.mark.parametrize('req,after', [
@@ -76,7 +75,7 @@ def test_unconfirmed_ui_is_unknown_and_never_replayed(req, after):
     value, calls = exercise(req, after)
     assert value['driver_status'] == 'unknown' and not pc.readback(req, value)
     assert sum(m == 'uiControl' for m, _ in calls) == 1
-    assert sum(m == 'snapshot' for m, _ in calls) == 9
+    assert sum(m == 'snapshot' for m, _ in calls) == 8
 
 
 @pytest.mark.parametrize('action,extra', [('tap', {'ref': 0}), ('back', {})])
@@ -106,19 +105,42 @@ def test_lost_observation_retains_dispatch_evidence():
 def test_native_failure_phase_preserved(reply, status):
     value, calls = exercise(request('tap', ref=0), reply=reply)
     assert value['driver_status'] == status
-    assert len(calls) == 2
+    assert len(calls) == 1
 
 
 def test_old_apk_and_disabled_accessibility_never_dispatch():
     calls = []
+    def old(method, *args):
+        calls.append(method)
+        raise RuntimeError('java.lang.IllegalArgumentException: unsupported_device_call: uiControl')
+    value = ui.run({'op': 'home'}, bridge=old)
+    assert value['driver_status'] == 'failed' and calls == ['uiControl']
+    assert value['execution_phase'] == 'before_dispatch'
+    assert 'UI_DRIVER_UPDATE_REQUIRED' in value['error']
+    value, calls = exercise(request('home'), reply={
+        'success': False, 'needs_accessibility': True, 'dispatched': False, 'error': 'disabled'})
+    assert value['driver_status'] == 'failed' and len(calls) == 1
+    value = ui.run({'op': 'ui_snapshot'}, bridge=lambda *_: {'success': True, 'elements': []})
+    assert value['driver_status'] == 'failed' and 'UI_DRIVER_UPDATE_REQUIRED' in value['error']
+
+
+@pytest.mark.parametrize('reply', [None, {}, {'control': None}, {'control': {'success': 'yes'}}])
+def test_malformed_dispatch_reply_is_unknown_without_retry(reply):
+    calls = []
     def bridge(method, *args):
         calls.append(method)
-        return {'success': True, 'elements': [], 'count': 0}
+        return reply
     value = ui.run({'op': 'home'}, bridge=bridge)
-    assert value['driver_status'] == 'failed' and calls == ['snapshot']
-    def disabled(*_):
-        raise RuntimeError('accessibility disabled')
-    assert ui.run({'op': 'home'}, bridge=disabled)['execution_phase'] == 'before_dispatch'
+    assert value['driver_status'] == 'unknown' and calls == ['uiControl']
+
+
+def test_lost_dispatch_reply_is_unknown_without_snapshot_or_retry():
+    calls = []
+    def bridge(method, *args):
+        calls.append(method)
+        raise TimeoutError('reply lost after dispatch')
+    value = ui.run({'op': 'home'}, bridge=bridge)
+    assert value['driver_status'] == 'unknown' and calls == ['uiControl']
 
 
 @pytest.mark.parametrize('change', [

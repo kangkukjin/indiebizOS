@@ -115,7 +115,6 @@ object HardwareControl {
 
     private fun setSystem(a: JSONObject, op: String): JSONObject {
         check(Settings.System.canWrite(context)) { "settings_permission_required: 폰에서 시스템 설정 변경을 허용하세요" }
-        val before = state()
         val values = when (op) {
             "brightness" -> listOf(Settings.System.SCREEN_BRIGHTNESS_MODE to Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL,
                 Settings.System.SCREEN_BRIGHTNESS to number(a, "value", 1, 255))
@@ -126,10 +125,24 @@ object HardwareControl {
             "timeout" -> listOf(Settings.System.SCREEN_OFF_TIMEOUT to number(a, "seconds", 15, 600) * 1000)
             else -> error("unsupported_setting")
         }
-        for ((key, value) in values) check(Settings.System.putInt(context.contentResolver, key, value)) { "setting_rejected: $key (일부 적용 가능, 상태 재조회 필요)" }
-        val verified = values.all { setting(it.first) == it.second }
-        return state().put("op", op).put("before", before).put("verified", verified)
-            .put("message", if (verified) "설정 적용값을 확인했습니다." else "설정값이 요청과 다릅니다. 상태를 다시 확인하세요.")
+        val update = HardwareSettingUpdate.apply(values, ::setting) { key, value ->
+            Settings.System.putInt(context.contentResolver, key, value)
+        }
+        return settingFields(update.after).put("success", true).put("hardware_control", 1)
+            .put("observation_scope", "settings").put("op", op)
+            .put("before", settingFields(update.before)).put("verified", update.verified)
+            .put("capabilities", JSONObject().put("settings_write", Settings.System.canWrite(context)))
+            .put("message", if (update.verified) "설정 적용값을 확인했습니다." else "설정값이 요청과 다릅니다. 상태를 다시 확인하세요.")
+    }
+
+    private fun settingFields(values: Map<String, Int>): JSONObject = JSONObject().apply {
+        values[Settings.System.SCREEN_BRIGHTNESS]?.let { put("brightness", it) }
+        values[Settings.System.SCREEN_BRIGHTNESS_MODE]?.let {
+            put("brightness_auto", if (it < 0) JSONObject.NULL else it == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC)
+        }
+        values[Settings.System.ACCELEROMETER_ROTATION]?.let { put("auto_rotate", if (it < 0) JSONObject.NULL else it == 1) }
+        values[Settings.System.USER_ROTATION]?.let { put("user_rotation", it) }
+        values[Settings.System.SCREEN_OFF_TIMEOUT]?.let { put("screen_timeout_ms", it) }
     }
 
     private fun sample(a: JSONObject): JSONObject {

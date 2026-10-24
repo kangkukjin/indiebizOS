@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { runPhoneAction, type HardwareOp, type HardwareState } from '../lib/phone-actions';
+import { mergeHardwareState, runPhoneAction, type HardwareOp, type HardwareState } from '../lib/phone-actions';
 
 const button = 'px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed';
 const sensorNames: Record<string, string> = { light: '조도 (lx)', proximity: '근접 (cm)', accelerometer: '가속도 (m/s²)', gyroscope: '자이로 (rad/s)', magnetic_field: '자기장 (µT)', pressure: '기압 (hPa)' };
@@ -24,7 +24,7 @@ export function PhoneControlExtras({ target, disabled, onBusy }: {
     try {
       const result = await runPhoneAction(target, op, args);
       if (!mounted.current) return;
-      if (result.hardware_control !== undefined) setState(result);
+      if (result.hardware_control !== undefined) setState(previous => mergeHardwareState(previous, result));
       if (result.reading) setReading(`${sensorNames[result.sensor || ''] || result.sensor}: ${result.reading.values.map(n => n.toFixed(3)).join(', ')} · 정확도 ${result.reading.accuracy}`);
       setNotice((result.message || '처리했습니다.') + (result.verified === false ? ' · 요청은 전달됐으며 실제 변경은 미확인입니다.' : ''));
       setElapsed((performance.now() - start) / 1000);

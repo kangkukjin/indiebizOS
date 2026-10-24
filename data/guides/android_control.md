@@ -38,6 +38,10 @@ Android OS·`execution_contract:1`·`runtimes.python.ready:true`를 확인하고
 return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"status"}}
 ```
 
+밝기·자동 밝기·회전·자동 꺼짐 변경은 `observation_scope:"settings"`와 변경한 설정의
+`before`·적용 후 값만 반환할 수 있다. 배터리·연결·센서 상태는 새로 관측한 것이 아니며
+이 결과에 없는 필드는 미조회다. 전체 기기 상태가 필요할 때만 `status`를 요청한다.
+
 기기 상태는 `status`, 음량 상태는 `volume_status`다. 음량은 **퍼센트가 아닌 OS 정수 단계**이며
 조회한 `result.max` 이하로 지정한다. 밝기는 기존 폰 API와 같은 **1~255**, 자동 꺼짐은 초 단위다.
 
@@ -62,6 +66,10 @@ return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"volume",s
 | home | uiControl → GLOBAL_ACTION_HOME | 기본 홈 패키지가 전면에 있는지 |
 | back / tap | uiControl → 기존 접근성 키/제스처 | expect가 있으면 화면 조건, 없으면 접수·관측만 verified:false |
 | type_text | uiControl → ACTION_SET_TEXT | 지정한 포커스 입력칸의 실제 텍스트 |
+
+UI 변경은 Android 서비스가 실행 직전에 화면을 한 번 읽고 판본을 대조한다.
+Python에서 같은 사전 화면을 중복 조회하지 않으며, 서비스의 `before`와 조작 후 새 화면으로 검증한다.
+구형 APK의 미지원은 실행 전 실패, 응답 유실은 결과 미확인으로 남기며 변경을 반복하지 않는다.
 
 UI 제어는 아래 별도 조건을 따른다. 브라우저 DOM·탭 제어는 이 드라이버의 범위가 아니다.
 하드웨어 동작의 `needs_front:false`는 앞 앱 선택을 요구하지 않는다는 뜻이며 사용자에게 보이지 않는다는 뜻이 아니다.

@@ -138,6 +138,11 @@ def test_classic_launcher_with_desktop_bundle_keeps_session_cookie_flow(web_clie
     assert '<base href="/launcher/ui/">' not in shell.text
     assert 'href="/launcher/lite"' not in shell.text
     assert shell.headers["cache-control"] == "no-store"
+    tool = client.get("/launcher/ui/")
+    assert tool.status_code == 200
+    assert 'data-indiebiz-surface="remote"' in tool.text
+    assert '<base href="/launcher/ui/">' in tool.text
+    assert tool.headers["cache-control"] == "no-store"
     assert client.get("/launcher/ui/assets/app.js").status_code == 200
     assert client.get("/launcher/ui/assets/app.css").headers["content-type"].startswith("text/css")
     assert client.get("/launcher/auth/session").json() == {"external": True, "authenticated": False}
@@ -173,10 +178,13 @@ def test_missing_old_or_partial_bundle_retains_legacy_and_portal_helper(web_clie
     assert auth.get_launcher_webapp_html() == "legacy-shared-phone-portal"
     assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
     (root / "assets/app.js").unlink()
+    assert client.get("/launcher/ui/").status_code == 503
     assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
     (root / "index.html").write_text("old desktop bundle")
+    assert client.get("/launcher/ui/").status_code == 503
     assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
     monkeypatch.setattr(launcher_react, "bundle_root", lambda: None)
+    assert client.get("/launcher/ui/").status_code == 503
     assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
     assert client.get("/launcher/lite").status_code == 200
 
@@ -200,7 +208,7 @@ def test_old_socket_cannot_control_or_remove_same_id_reconnection(client, monkey
     assert cancelled == []
 
 
-@pytest.mark.parametrize('path', ['/launcher/app', '/launcher/lite'])
+@pytest.mark.parametrize('path', ['/launcher/app', '/launcher/lite', '/launcher/ui/'])
 def test_http_launcher_upgrades_before_login_but_local_and_https_stay(web_client, path):
     client, _ = web_client
     response = client.get('http://remote.invalid' + path + '?view=apps', follow_redirects=False)

@@ -959,6 +959,19 @@ async def remote_session(request: Request):
                         headers={"Cache-Control": "no-store"})
 
 
+@router.get("/ui/", response_class=HTMLResponse)
+def remote_tool_shell(request: Request):
+    """화면 공유·통화 도구창을 기존 원격 세션 셸로 연다."""
+    redirect = _launcher_https_redirect(request)
+    if redirect is not None:
+        return redirect
+    from launcher_react import react_shell
+    html = react_shell()
+    if html is None:
+        raise HTTPException(503, "원격 도구 화면 빌드가 준비되지 않았습니다.")
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+
 @router.get("/ui/{path:path}")
 async def react_asset(path: str):
     from launcher_react import serve_asset

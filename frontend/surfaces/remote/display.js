@@ -345,10 +345,15 @@ function cpRenderLimbs(data){
     (rows.map(pc=>{
       const reg=pc.registration||{}, phone=reg.kind==='phone', update=pc.phone_update;
       const status=reg.state==='removal_pending'?'해제 요청됨':reg.paused?'작업 중지됨':pc.connected?'연결됨':'오프라인';
+      const screenSupported=reg.adapter!=='network-api' && (phone || ['darwin','windows','linux'].includes(reg.capabilities?.os));
+      const screenReady=reg.state==='active' && pc.connected && !reg.paused && /^guestpc-[a-f0-9]+$/.test(pc.device_id||'');
+      const screenButton=!screenSupported?'':screenReady
+        ? '<a class="btn2" style="display:inline-block;text-decoration:none" href="/launcher/ui/#/remote-screen/'+encodeURIComponent(pc.device_id)+'" target="_blank" rel="noopener noreferrer">화면 공유</a>'
+        : '<button class="btn2" disabled>화면 공유</button>';
       return '<div class="cp-entry"><b>'+esc(pc.alias)+'</b><p>'+esc(status)+' · '+(phone?'폰 (IndieBiz OS)':'PC')+' · '+esc(reg.capabilities?.os||'')+'</p>'+
         '<p class="muted">'+esc(phone?(phoneLabels[update?.state]||update?.state||''):(helperLabels[pc.helper?.state]||''))+
         (pc.helper?.rolled_back?' · 지난 교체가 되돌려짐':'')+
         (update?.current_version?' · 설치 '+esc(update.current_version_name||update.current_version):'')+(update?.latest_version?' · 중앙 배포 '+esc(update.latest_version_name||update.latest_version):'')+
-        (update?.message?' · '+esc(update.message):'')+'</p></div>';
+        (update?.message?' · '+esc(update.message):'')+'</p>'+screenButton+'</div>';
     }).join('')||'<p class="muted">아직 등록된 기기가 없습니다.</p>');
 }

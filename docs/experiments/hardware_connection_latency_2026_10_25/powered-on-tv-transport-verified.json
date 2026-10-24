@@ -1,0 +1,17 @@
+{
+  "target": "hardware-63b28509b052",
+  "scope": "separate_manager_real_tv",
+  "keys_sent": 0,
+  "http_pool_objects_reused": true,
+  "websocket_reused": true,
+  "handshake_seconds": [
+    1.1888,
+    1.3817
+  ],
+  "idle_expiry_seconds": 60.0915,
+  "idle_session_removed": true,
+  "idle_socket_closed": true,
+  "reconnected_after_idle": true,
+  "shutdown_closed_socket": true,
+  "passed": true
+}

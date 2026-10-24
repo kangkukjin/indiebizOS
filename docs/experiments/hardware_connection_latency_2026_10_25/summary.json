@@ -17,7 +17,27 @@
     "seconds": 556.42
   },
   "go_race": "passed",
-  "tv_live_verified": false,
+  "tv_live_verified": true,
   "llm_tokens": "unmeasured",
-  "internal_substage_timings": "unmeasured"
+  "internal_substage_timings": "unmeasured",
+  "tv_live_verification_scope": {
+    "public_status": {
+      "n": 10,
+      "power_on_verified": 10,
+      "median_seconds": 1.28,
+      "max_seconds": 1.4988
+    },
+    "separate_manager": [
+      "HTTP pool reuse",
+      "WebSocket reuse",
+      "60s idle cleanup",
+      "reconnect after idle",
+      "shutdown cleanup"
+    ],
+    "not_tested": [
+      "remote key effect",
+      "power-cycle recovery",
+      "before-after speedup"
+    ]
+  }
 }

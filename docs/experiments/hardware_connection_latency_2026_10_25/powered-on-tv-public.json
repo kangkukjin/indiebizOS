@@ -1,0 +1,92 @@
+[
+  {
+    "phase": "powered-on",
+    "round": 1,
+    "seconds": 1.4371,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 2,
+    "seconds": 1.2343,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 3,
+    "seconds": 1.2877,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 4,
+    "seconds": 1.2378,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 5,
+    "seconds": 1.4988,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 6,
+    "seconds": 1.2789,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 7,
+    "seconds": 1.2811,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 8,
+    "seconds": 1.2467,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 9,
+    "seconds": 1.4213,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  },
+  {
+    "phase": "powered-on",
+    "round": 10,
+    "seconds": 1.2293,
+    "success": true,
+    "verified": true,
+    "power": "on",
+    "reachable": true
+  }
+]

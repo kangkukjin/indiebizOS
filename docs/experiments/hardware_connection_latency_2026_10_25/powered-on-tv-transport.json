@@ -1,0 +1,15 @@
+{
+  "target": "hardware-63b28509b052",
+  "scope": "separate_manager_real_tv",
+  "keys_sent": 0,
+  "http_pool_objects_reused": true,
+  "websocket_reused": true,
+  "handshake_seconds": [
+    1.267
+  ],
+  "idle_expiry_seconds": 60.9118,
+  "idle_session_removed": true,
+  "idle_socket_closed": false,
+  "passed": false,
+  "error_type": "AssertionError"
+}

@@ -11,6 +11,7 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.*
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.WindowManager
 import androidx.core.app.ServiceCompat
 import java.io.ByteArrayOutputStream
@@ -20,6 +21,7 @@ import kotlin.math.roundToInt
 class ScreenCaptureService : Service() {
     private var session: ScreenSession? = null
     private var projection: MediaProjection? = null
+    private var projectionCallback: MediaProjection.Callback? = null
     private var display: VirtualDisplay? = null
     private var reader: ImageReader? = null
     private val thread = HandlerThread("phone-screen")
@@ -43,19 +45,20 @@ class ScreenCaptureService : Service() {
             @Suppress("DEPRECATION") val data = intent?.getParcelableExtra<Intent>("capture_data") ?: error("missing consent")
             projection = getSystemService(MediaProjectionManager::class.java)
                 .getMediaProjection(intent.getIntExtra("result_code", 0), data)
-            projection!!.registerCallback(object : MediaProjection.Callback() {
+            projectionCallback = object : MediaProjection.Callback() {
                 override fun onStop() { s.end("denied") }
                 override fun onCapturedContentResize(w: Int, h: Int) {
                     // Input coordinates are display coordinates: reject an OEM app-only capture.
                     val metrics = metrics()
                     if (w != metrics.widthPixels || h != metrics.heightPixels) s.end("capture_failed")
                 }
-            }, handler)
+            }
+            projection!!.registerCallback(projectionCallback!!, handler)
             handler.post {
                 try { resize(); s.capturing = true; handler.post(tick) }
-                catch (_: Exception) { s.end("capture_failed") }
+                catch (e: Exception) { fail("start", e) }
             }
-        } catch (_: Exception) { s.end("capture_failed"); stopSelf() }
+        } catch (e: Exception) { fail("projection", e); stopSelf() }
         return START_NOT_STICKY
     }
     @Suppress("DEPRECATION") private fun metrics() = DisplayMetrics().also {
@@ -68,7 +71,7 @@ class ScreenCaptureService : Service() {
                 val m = metrics()
                 if (m.widthPixels != pixelsWidth || m.heightPixels != pixelsHeight) resize()
                 handler.postDelayed(this, 250)
-            } catch (_: Exception) { session?.end("capture_failed") }
+            } catch (e: Exception) { fail("resize", e) }
         }
     }
     private fun resize() {
@@ -96,7 +99,7 @@ class ScreenCaptureService : Service() {
                         session?.frame(out.toByteArray(), pixelsWidth, pixelsHeight)
                     } finally { if (cropped !== padded) cropped.recycle() }
                 } finally { padded.recycle() }
-            } catch (_: Exception) { session?.end("capture_failed") }
+            } catch (e: Exception) { fail("frame", e) }
             finally { image.close() }
         }, handler)
         if (display == null) display = projection!!.createVirtualDisplay("IndieBiz remote screen", width, height,
@@ -104,10 +107,16 @@ class ScreenCaptureService : Service() {
         else { display!!.resize(width, height, m.densityDpi); display!!.surface = next.surface }
         old?.close()
     }
+    private fun fail(stage: String, error: Exception) {
+        Log.w("IndieBizScreen", "projection $stage failed", error)
+        session?.end("capture_failed")
+    }
     override fun onDestroy() {
         session?.end()
         handler.post {
             handler.removeCallbacksAndMessages(null)
+            projectionCallback?.let { projection?.unregisterCallback(it) }
+            reader?.setOnImageAvailableListener(null, null)
             display?.release(); reader?.close(); projection?.stop()
             session?.capture = null
             session?.captureReleased?.countDown()

@@ -4,6 +4,7 @@ import android.app.*
 import android.content.*
 import android.os.*
 import android.provider.Settings
+import android.util.Log
 import com.indiebiz.phoneagent.PhoneAccessibilityService
 import okhttp3.*
 import okio.ByteString.Companion.toByteString
@@ -39,7 +40,7 @@ object ScreenBridge {
             val start = SystemClock.elapsedRealtime()
             while (!session.done.await(1, TimeUnit.SECONDS)) {
                 val now = SystemClock.elapsedRealtime()
-                if (now - session.lastMessage > 20000 || now - start > 86400000 ||
+                if (ScreenSessionPolicy.heartbeatExpired(now, session.lastMessage) || now - start > 86400000 ||
                     (!session.capturing && now - start > 120000)) session.end("denied")
             }
             return JSONObject().put("success", session.error == null).apply {
@@ -72,7 +73,7 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
     val done = CountDownLatch(1)
     val captureReleased = CountDownLatch(1)
     private val ended = AtomicBoolean()
-    private val client = OkHttpClient.Builder().pingInterval(5, TimeUnit.SECONDS).build()
+    private val client = ScreenSessionPolicy.client()
     private val inputs = ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, ArrayBlockingQueue(256))
     private val input = ScreenInput()
     @Volatile var lastMessage = SystemClock.elapsedRealtime()
@@ -118,7 +119,9 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
                         }
                         status("permission")
                         ctx.getSystemService(NotificationManager::class.java).notify(ScreenBridge.NOTICE, ScreenBridge.notification(ctx, id, false))
-                        if (Settings.canDrawOverlays(ctx)) {
+                        // Background activity restrictions start at Android 10. On Android 9,
+                        // requiring an overlay grant strands every reconnect at the notification.
+                        if (ScreenSessionPolicy.canOpenConsent(Build.VERSION.SDK_INT, Settings.canDrawOverlays(ctx))) {
                             try { ctx.startActivity(Intent(ctx, ScreenPermissionActivity::class.java)
                                 .putExtra("screen_id", id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)) }
                             catch (_: Exception) { /* notification remains the user entry point */ }
@@ -140,7 +143,11 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
         if (ws.queueSize() < 512 * 1024) ws.send(jpeg.toByteString())
     }
     private fun status(code: String) { socket?.send(JSONObject().put("code", code).toString()) }
-    override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) { end("capture_failed") }
+    override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
+        if (!active) return // A late close-frame failure is not a failed sharing session.
+        Log.w("IndieBizScreen", "screen transport failed", t)
+        end("capture_failed")
+    }
     override fun onClosing(ws: WebSocket, code: Int, reason: String) { end() }
     override fun onClosed(ws: WebSocket, code: Int, reason: String) { end() }
     fun end(code: String? = null) {

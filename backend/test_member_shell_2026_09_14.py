@@ -24,11 +24,15 @@ def test_common_markdown_does_not_make_attribute_injection():
 def test_bundled_shell_and_scripts_parse():
     from pathlib import Path
     from member_shell import member_html
+    from surface_assets import source_build
     root = Path(__file__).parents[1]
-    assert (root / "helper/member_app.html").read_text() == member_html()
+    # Compare the source-built bundle to source, not a user's older active UI release.
+    with source_build():
+        html = member_html()
+    assert (root / "helper/member_app.html").read_text() == html
     if not shutil.which("node"):
         pytest.skip("node가 필요합니다")
-    for code in re.findall(r"<script[^>]*>(.*?)</script>", member_html(), re.S):
+    for code in re.findall(r"<script[^>]*>(.*?)</script>", html, re.S):
         subprocess.run(["node", "--check"], input=code, text=True, capture_output=True, check=True)
 
 

@@ -492,6 +492,26 @@ def _op_python(tool_input: dict) -> dict:
                       min(envelope["timeout"] + 25.0, _SYNC_WAIT_CAP))
 
 
+def _op_control(tool_input: dict) -> dict:
+    """Installed Android control only; use Android제어 for correlated verification."""
+    if any(k in tool_input for k in ('code', 'cmd', 'env', 'stdin', 'cwd', 'shell', 'reset', 'elevate')):
+        return {'success': False, 'error': 'control_accepts_no_code_or_environment'}
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    import limb_keys
+    reg = (limb_keys.get_by_device(device_id) or {}).get('registration') or {}
+    if reg.get('adapter') != 'indiebiz-v1':
+        return {'success': False, 'error': 'control_requires_registered_phone'}
+    from phone_native_control import validate
+    try:
+        envelope = validate({'op': 'control', 'inputs': tool_input.get('inputs'),
+                             'timeout': tool_input.get('timeout', 20), 'mode': tool_input.get('mode', 'background')})
+    except (ValueError, TypeError) as error:
+        return {'success': False, 'error': str(error)}
+    return _send_wait(tool_input, device_id, alias, 'control', envelope, 45)
+
+
 def _op_ibl(tool_input: dict) -> dict:
     """op=ibl — IndieBiz OS 손발(폰 등)에 IBL 을 하달해 **그 몸의 사전**으로 돌린다 (2026-10-13).
 
@@ -968,6 +988,7 @@ _OP_DISPATCHERS = {
     "guestpc_op": {
         "shell": _op_shell,
         "python": _op_python,
+        "control": _op_control,
         "ibl": _op_ibl,      # IndieBiz OS 손발(adapter=indiebiz-v1)에 IBL 하달 — 2026-10-13
         "read": _op_read,
         "write": _op_write,

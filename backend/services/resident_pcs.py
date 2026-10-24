@@ -142,16 +142,28 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
         declared = capabilities.get("ops")
         if capabilities.get("execution_contract") == 1 and isinstance(declared, list):
             body_ops |= {"shell", "python", "transfer"} & {x for x in declared if isinstance(x, str)}
+        if (capabilities.get('android_control') or {}).get('contract') == 1:
+            body_ops.add('control')
         if isinstance(declared, list):
             body_ops &= {str(x) for x in declared}
         if op not in body_ops:
             raise ValueError("unsupported_on_this_body")
-        if op in {"shell", "python", "transfer"}:
+        if op in {"shell", "python", "transfer", "control"}:
             from phone_remote_execution import require_owner
             require_owner()
         if op in {"shell", "python"}:
             from phone_execution_contract import validate
             command = validate(command)
+        if op == 'control':
+            from phone_native_control import validate, require_screen
+            import control_conditions
+            command = validate(command)
+            require_screen(command)
+            command['screen_context'] = control_conditions.screen_context()
+            inner_id = command['inputs']['request_id']
+            if request_id is not None and request_id != inner_id:
+                raise ValueError('control_request_id_mismatch')
+            request_id = inner_id
         if op == "ibl":
             code = command.get("ibl")
             if not isinstance(code, str) or not code.strip():
@@ -181,7 +193,7 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
             or not math.isfinite(volume) or not 0 <= volume <= 100):
         raise ValueError("volume must be 0..100")
     command = {**command, "op": op, "mode": command.get("mode", "background")}
-    if adapter == "indiebiz-v1" and op in {"ibl", "shell", "python"}:
+    if adapter == "indiebiz-v1" and op in {"ibl", "shell", "python", "control"}:
         # 실행 출처는 언어 인자가 아닌 전송 메타데이터다. 격리 표식만 전달하며
         # 임의 봉투의 user 값으로 폰의 주인 수리 권한을 만들지 않는다.
         from thread_context import ISOLATED_ORIGINS, get_isolated_origin
@@ -228,7 +240,7 @@ def remove(target):
     return out
 
 
-def sync(key, installation_id, events=None, capabilities=None, wait=0):
+def sync(key, installation_id, events=None, capabilities=None, wait=0, *, receive_jobs=True):
     rec = limb_keys.resident_auth(key, installation_id, cleanup=True)
     if rec["registration"]["state"] == "removed":
         return {"success": True, "ack": [], "jobs": [], "cancel": [],
@@ -245,7 +257,7 @@ def sync(key, installation_id, events=None, capabilities=None, wait=0):
                                  auth="limb_key", owner="self", primary=False)
     reg = public["registration"]
     jobs = []
-    if reg["state"] == "active" and not reg.get("paused"):
+    if receive_jobs and reg["state"] == "active" and not reg.get("paused"):
         jobs = phone_jobs.pull_blocking(rec["device_id"], min(20, max(0, wait)))
         # Offer again what an earlier response carried but no device event confirmed
         # (this request's events were recorded above, so a received job is excluded).
@@ -257,7 +269,7 @@ def sync(key, installation_id, events=None, capabilities=None, wait=0):
                 resident_store.cancel(j["id"], rec["device_id"])
             jobs = []
         reg = latest
-    return {"success": True, "ack": ack, "jobs": jobs, "generation": reg["generation"],
+    return {"success": True, "ack": ack, "jobs": jobs, "event_push": 1, "generation": reg["generation"],
             "state": reg["state"], "paused": reg.get("paused", False),
             "cancel": resident_store.cancellations(rec["device_id"])}
 

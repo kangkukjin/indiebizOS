@@ -122,7 +122,7 @@ LAYERS = {
     "services": {
         "research_library", "research_capture", "research_threads", "research_view",
         "resident_pcs", "resident_terminal", "resident_terminal_lan", "resident_desktop", "resident_screen",
-        "phone_remote_execution", "phone_limb_transfer", "phone_updates",
+        "phone_remote_execution", "phone_limb_transfer", "phone_updates", "phone_native_control", "limb_http_transport",
         "limb_client",   # 이 몸이 허브의 손발이 되는 클라이언트(폰 전용, 2026-10-13)
         "session_lease", "media_sessions", "media_signaling",   # 미디어 통신(2026-10-13, docs/MEDIA_COMMUNICATION_DESIGN)
         "launcher_ops", "chat_room_ops", "warehouse_ops", "warehouse_admin", "channel_settings_ops", "media_ops",   # ⑩ 몸의 명사 생애주기(2026-10-05)

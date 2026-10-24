@@ -204,6 +204,8 @@ tasks.register('bundleIndiebizBase', Zip) {
     from("${_ROOT}/data/instruments") {
         into 'data/instruments'
     }
+    // Fixed installed Android control verifier; requests carry hashes, never executable source.
+    from("${_ROOT}/data/scripts/android_control.py") { into 'data/scripts' }
     // 공용 프롬프트 에셋 (step4: prompt_builder 가 로드 — base/consciousness/evaluator/unconscious 등)
     from("${_ROOT}/data/common_prompts") {
         into 'data/common_prompts'

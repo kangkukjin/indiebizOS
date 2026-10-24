@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-25",
+  "apk_version": "0.24",
+  "method": "삼성1, 동일 APK에서 volume_status 읽기 각 경로 3회 교대. low_level은 prepare를 측정 밖에서 수행, full_call은 동일 Android제어 본문에서 native_control 입력만 비워 기존 python 경로를 강제. LLM 시간 제외.",
+  "low_level": [
+    {
+      "alias": "삼성1",
+      "mode": "python",
+      "round": 1,
+      "wall_seconds": 4.093,
+      "elapsed_ms": 2660,
+      "state": "succeeded",
+      "verified": true,
+      "execution_mode": null
+    },
+    {
+      "alias": "삼성1",
+      "mode": "control",
+      "round": 1,
+      "wall_seconds": 1.764,
+      "elapsed_ms": 145,
+      "state": "succeeded",
+      "verified": true,
+      "execution_mode": "native_control"
+    },
+    {
+      "alias": "삼성1",
+      "mode": "control",
+      "round": 2,
+      "wall_seconds": 5.0,
+      "elapsed_ms": 49,
+      "state": "succeeded",
+      "verified": true,
+      "execution_mode": "native_control"
+    },
+    {
+      "alias": "삼성1",
+      "mode": "python",
+      "round": 2,
+      "wall_seconds": 4.825,
+      "elapsed_ms": 2546,
+      "state": "succeeded",
+      "verified": true,
+      "execution_mode": null
+    },
+    {
+      "alias": "삼성1",
+      "mode": "python",
+      "round": 3,
+      "wall_seconds": 4.757,
+      "elapsed_ms": 2557,
+      "state": "succeeded",
+      "verified": true,
+      "execution_mode": null
+    },
+    {
+      "alias": "삼성1",
+      "mode": "control",
+      "round": 3,
+      "wall_seconds": 2.714,
+      "elapsed_ms": 57,
+      "state": "succeeded",
+      "verified": true,
+      "execution_mode": "native_control"
+    }
+  ],
+  "full_call": [
+    {
+      "alias": "삼성1",
+      "mode": "python",
+      "round": 1,
+      "wall_seconds": 8.401,
+      "status": "completed",
+      "verified": true
+    },
+    {
+      "alias": "삼성1",
+      "mode": "control",
+      "round": 1,
+      "wall_seconds": 6.109,
+      "status": "completed",
+      "verified": true
+    },
+    {
+      "alias": "삼성1",
+      "mode": "control",
+      "round": 2,
+      "wall_seconds": 6.329,
+      "status": "completed",
+      "verified": true
+    },
+    {
+      "alias": "삼성1",
+      "mode": "python",
+      "round": 2,
+      "wall_seconds": 8.154,
+      "status": "completed",
+      "verified": true
+    },
+    {
+      "alias": "삼성1",
+      "mode": "python",
+      "round": 3,
+      "wall_seconds": 7.347,
+      "status": "completed",
+      "verified": true
+    },
+    {
+      "alias": "삼성1",
+      "mode": "control",
+      "round": 3,
+      "wall_seconds": 5.118,
+      "status": "completed",
+      "verified": true
+    }
+  ],
+  "validation": {
+    "backend_passed": 11883,
+    "backend_skipped": 18,
+    "backend_seconds": 582.4,
+    "kotlin_passed": 34
+  },
+  "source_hashes": {
+    "backend/services/limb_client.py": "257fd69ef68035d84477dcb9234e2c47455e43d0eda257dcb872f1e851a168d3",
+    "backend/services/phone_native_control.py": "924b1b9f621a2b0be454a00bc2a0604249ec478a978d11637752ce71b909b6d1",
+    "data/scripts/android_control.py": "ff5e7f611deb5deced30c248252b07e7d9e1ad8e335cf048e6955696ad99bd3f"
+  },
+  "apks": {
+    "arm64": {
+      "package": "com.indiebiz.phoneagent",
+      "version_code": 24,
+      "version_name": "0.24",
+      "min_sdk": 28,
+      "abi": "arm64-v8a",
+      "signer_sha256": "35ebf258ac654dce9ce4d67a6609628242718c03a2bc20c7147cb3d278cab612",
+      "sha256": "780416f950fe9ca13da7abe1d5d4e15d2f26893868fc12fdfe954bf82def5c1f",
+      "size": 83418217
+    },
+    "arm32": {
+      "package": "com.indiebiz.phoneagent",
+      "version_code": 24,
+      "version_name": "0.24",
+      "min_sdk": 28,
+      "abi": "armeabi-v7a",
+      "signer_sha256": "35ebf258ac654dce9ce4d67a6609628242718c03a2bc20c7147cb3d278cab612",
+      "sha256": "15a4c45b9371b17188dda1019909af1c0dbaf4e569819c16d75d9cfb12fc544b",
+      "size": 72461851
+    }
+  }
+}

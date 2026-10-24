@@ -43,6 +43,7 @@ def flow(tmp_path, monkeypatch):
         key, params = step['_node'] + ':' + step['action'], step['params']
         state['calls'].append((key, copy.deepcopy(params)))
         if key == 'self:limb':
+            target['registration']['capabilities']['android_control'] = state.get('native_control', {})
             return {'success': True, 'limbs': [{**target, 'connected': state['connected']}]}
         if key == 'self:read':
             return {'success': True, 'text': 'def run(args): return {}', 'blocks': [], 'data': None}
@@ -54,8 +55,12 @@ def flow(tmp_path, monkeypatch):
             return {'success': True, 'value': value}
         if key == 'limbs:guestpc':
             assert params['background'] and params['timeout'] == 20
-            from phone_execution_contract import validate
-            validate({k: params[k] for k in ('op', 'code', 'timeout', 'mode') if k in params})
+            if params['op'] == 'control':
+                from phone_native_control import validate
+                validate({k: params[k] for k in ('op', 'inputs', 'timeout', 'mode') if k in params})
+            else:
+                from phone_execution_contract import validate
+                validate({k: params[k] for k in ('op', 'code', 'timeout', 'mode') if k in params})
             state['job'] = {'kind': 'guestpc', 'task_id': 'job-1'}
             return {'success': True, 'limb': 'pc-1', 'request_id': params['request_id'],
                     'task_ref': state['job']}
@@ -69,7 +74,9 @@ def flow(tmp_path, monkeypatch):
             import task_receipts
             return {'success': True, 'limb': 'pc-1', **task_receipts.view(state['job'],
                     'succeeded' if state['terminal'] else 'running',
-                    result={'success': True, 'value': native} if state['terminal'] else None)}
+                    result={'success': True, 'value': native,
+                            'execution_mode': 'native_control' if plan.get('transport') == 'control' else 'python'}
+                    if state['terminal'] else None)}
         raise AssertionError(key)
 
     monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
@@ -332,3 +339,29 @@ def test_failure_objects_carry_code_from_message_prefix():
     assert pc.failure_code('원래 요청·대상·작업 참조와 다릅니다.') is None
     failure = pc.verify_task({'task': {}}, {})['failure']
     assert set(failure) == {'stage', 'code', 'message', 'next'} and failure['code'] is None
+
+
+def test_native_control_selection_and_unknown_result_never_replays(flow):
+    import hashlib
+    run, state = flow
+    state['native_control'] = {'contract': 1, 'helper_sha256': pc.helper_hash(), 'sources': {
+        'phone_device.py': hashlib.sha256(b'def run(args): return {}').hexdigest()}}
+    state['terminal'] = True
+    result = run('return [fn:Android제어]{대상:"pc-1",요청:{action:"status"}}')
+    assert result['status'] == 'completed' and result['verified']
+    submissions = [p for key, p in state['calls'] if key == 'limbs:guestpc']
+    assert len(submissions) == 1 and submissions[0]['op'] == 'control' and 'code' not in submissions[0]
+    state['native_override'] = {'driver_status': 'unknown', 'success': False, 'verified': False}
+    again = run('return [fn:Android제어확인]{작업:$task}', {'task': result})
+    assert again['status'] == 'unknown'
+    assert len([p for key, p in state['calls'] if key == 'limbs:guestpc']) == 1
+
+
+def test_version_mismatch_selects_legacy_before_submission(flow):
+    run, state = flow
+    state['native_control'] = {'contract': 1, 'helper_sha256': '0' * 64, 'sources': {}}
+    state['terminal'] = True
+    result = run('return [fn:Android제어]{대상:"pc-1",요청:{action:"status"}}')
+    assert result['status'] == 'completed'
+    submissions = [p for key, p in state['calls'] if key == 'limbs:guestpc']
+    assert len(submissions) == 1 and submissions[0]['op'] == 'python'

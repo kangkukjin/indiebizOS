@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "guestpc_op",
-      "description": "원격 PC·폰 디스패처. python/ibl/shell/read/write/list/info·screen/입력·transfer/media/wake/history/cancel·result/detach. 상주형은 작업별 환경 분리와 request_id 중복 방지, GUI mode:interactive 필수. 확인 셸은 mode:observe와 timeout:1..10으로 별도 자리에서 실행한다. 긴 작업은 background:true 접수증→self:task 관측. detach는 휴대형만. 상세는 guest_helper.md.",
+      "description": "원격 PC·폰 디스패처. control(설치된 Android제어 내부)/python/ibl/shell/read/write/list/info·screen/입력·transfer/media/wake/history/cancel·result/detach. 상주형은 작업별 환경 분리와 request_id 중복 방지, GUI mode:interactive 필수. 확인 셸은 mode:observe와 timeout:1..10으로 별도 자리에서 실행한다. 긴 작업은 background:true 접수증→self:task 관측. detach는 휴대형만. 상세는 guest_helper.md.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -17,6 +17,7 @@
             "enum": [
               "shell",
               "python",
+              "control",
               "ibl",
               "read",
               "write",

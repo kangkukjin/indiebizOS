@@ -93,6 +93,9 @@ def supported_ops() -> List[str]:
     from phone_remote_execution import capabilities
     if capabilities():
         ops.extend(("shell", "python", "transfer"))
+    from phone_native_control import capabilities as control_capabilities
+    if control_capabilities():
+        ops.append('control')
     from phone_updates import capabilities as update_capabilities
     if update_capabilities():
         ops.append("phone_update")
@@ -183,6 +186,12 @@ class LimbClient:
         self.log = log
         self.generation = cfg.get("generation")
         self.stopped = threading.Event()
+        self._wake = threading.Event()
+        self._event_wake = threading.Event()
+        self._event_push_supported = False
+        self._event_publisher = None
+        from limb_http_transport import LimbHttpTransport
+        self._http = LimbHttpTransport(cfg['hub'])
         self.stop_reason: Optional[str] = None
         self._lock = threading.Lock()
         self._queue: List[Dict] = []          # 접수 순서(큐 순서 = 허브 응답 순서)
@@ -200,16 +209,7 @@ class LimbClient:
 
     # ── 전송 ────────────────────────────────────────────────────────────────────
     def _http_post(self, path: str, payload: Dict, timeout: float) -> Dict:
-        import requests
-        url = f"{self.cfg['hub'].rstrip('/')}/limb/resident/{path}"
-        r = requests.post(url, json=payload, timeout=(10, timeout))
-        try:
-            body = r.json()
-        except ValueError:
-            body = {}
-        if r.status_code != 200:
-            raise LimbError(str((body or {}).get("detail") or f"http_{r.status_code}"), r.status_code)
-        return body if isinstance(body, dict) else {}
+        return self._http(path, payload, timeout)
 
     def _auth(self) -> Dict:
         return {"key": self.cfg["key"], "installation_id": self.cfg["installation_id"]}
@@ -262,6 +262,8 @@ class LimbClient:
                 "python": platform.python_version(), "alias": self.cfg.get("alias")}
         from phone_remote_execution import capabilities
         caps.update(capabilities())
+        from phone_native_control import capabilities as control_capabilities
+        caps.update(control_capabilities())
         from phone_updates import capabilities as update_capabilities
         caps.update(update_capabilities())
         screen_bridge = _screen_bridge()
@@ -309,6 +311,8 @@ class LimbClient:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(rec, ensure_ascii=False), encoding="utf-8")
         os.replace(tmp, path)
+        self._event_wake.set()
+        self._wake.set()
 
     def _pending_events(self):
         out = []
@@ -475,6 +479,11 @@ class LimbClient:
             finally:
                 with self._lock:
                     self._apk_transferring = False
+        if op == 'control':
+            from phone_native_control import execute
+            with self._lock:
+                event = self._active_cancel.setdefault(str(job['id']), threading.Event())
+            return execute(str(job['id']), env, event)
         if op in {"shell", "python", "transfer"}:
             if op not in supported_ops():
                 return {"success": False, "error": "unsupported_on_this_body", "op": op}
@@ -564,6 +573,8 @@ class LimbClient:
             result = {"result": result}
         self._event(jid, "result", result)
         self._record(jid, state="done", result=result)
+        # Transfers/install jobs may open their own per-thread pool.
+        self._http.close()
         with self._lock:
             self._active_cancel.pop(jid, None)
             self._controls.discard(jid)
@@ -620,7 +631,7 @@ class LimbClient:
     # ── sync 한 바퀴 ────────────────────────────────────────────────────────────
     def step(self, *, inline: bool = False, wait: Optional[float] = None) -> Optional[Dict]:
         """허브와 한 번 동기화: 쌓인 사건 올리고, 작업·취소 받아 줄 세우고(또는 inline 실행)."""
-        events = self._pending_events()
+        events = [] if self._event_publisher and self._event_push_supported else self._pending_events()
         if wait is None:
             wait = 0 if (self._busy() or events) else 20
         payload = {**self._auth(), "events": [e for _, e in events],
@@ -636,6 +647,9 @@ class LimbClient:
                 return None
             raise
         self._ack(events, resp.get("ack"))
+        self._event_push_supported = resp.get('event_push') == 1
+        if self._event_push_supported:
+            self._event_wake.set()
         state = resp.get("state")
         if state in ("removed", "removal_pending"):
             self._removed(state)
@@ -651,12 +665,61 @@ class LimbClient:
         self._schedule(inline=inline)
         return resp
 
+    def _publish_events(self) -> None:
+        """A result never waits for the command receiver's in-flight long-poll."""
+        backoff = 1.0
+        try:
+            while not self.stopped.is_set():
+                self._event_wake.clear()
+                events = self._pending_events() if self._event_push_supported else []
+                if not events:
+                    self._event_wake.wait(1)
+                    continue
+                try:
+                    resp = self._post('events', {**self._auth(), 'events': [e for _, e in events]}, 15)
+                    self._ack(events, resp.get('ack'))
+                    if resp.get('state') in ('removed', 'removal_pending'):
+                        self._removed(resp['state'])
+                    for jid in resp.get('cancel') or []:
+                        self._cancel(jid)
+                    if not resp.get('ack'):
+                        self.stopped.wait(backoff)
+                    backoff = 1.0
+                except LimbError as error:
+                    if error.code == 'invalid_registration':
+                        self._wipe('허브가 이 자격을 더 모릅니다(폐기·해제·재설치)')
+                    elif error.code in _DEAD_EVENT_CODES:
+                        self._bury(events, error.code)
+                    else:
+                        if error.status == 404:
+                            self._event_push_supported = False
+                        self.stopped.wait(backoff)
+                        backoff = min(30, backoff * 2)
+                except Exception as error:
+                    self.log(f'[limb] 사건 전송 실패: {type(error).__name__}')
+                    self.stopped.wait(backoff)
+                    backoff = min(30, backoff * 2)
+        finally:
+            self._http.close()
+
     def run(self) -> None:
+        self._event_publisher = threading.Thread(target=self._publish_events, name='limb-events', daemon=True)
+        self._event_publisher.start()
+        try:
+            self._run_sync()
+        finally:
+            self.stopped.set()
+            self._event_wake.set()
+            self._http.close()
+            self._event_publisher.join(26)
+
+    def _run_sync(self) -> None:
         self._recover()
         backoff = 1.0
         self.log(f"[limb] 손발 모드 — 허브 {self.cfg['hub']} 에 '{self.cfg.get('alias')}' 로 대기")
         while not self.stopped.is_set():
             try:
+                self._wake.clear()
                 self.step()
                 backoff = 1.0
             except Exception as e:  # noqa: BLE001 — 네트워크 단절은 일상, 지수 백오프
@@ -666,10 +729,12 @@ class LimbClient:
                 continue
             # 롱폴이 바로 돌아온 경우(작업 있음·사건 있음) 틈 없이 다음 바퀴 — 바쁠 땐 짧게 쉰다
             if self._busy():
-                self.stopped.wait(0.3)
+                self._wake.wait(0.3)
 
     def stop(self) -> None:
         self.stopped.set()
+        self._wake.set()
+        self._event_wake.set()
         from phone_remote_execution import cancel
         with self._lock:
             for jid, event in self._active_cancel.items():

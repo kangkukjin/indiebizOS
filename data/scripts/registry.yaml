@@ -47,6 +47,7 @@ Android제어부품:
     params:
       job_ref: Record
       limbs: List<Record>
+      native_control: Record
       observation: Record
       op: Text
       plan_ref: Record
@@ -68,6 +69,7 @@ Android제어부품:
         platform: Text
         request: Record
         source_path: Text
+        native_control: Record
         target: Text
         timeout: Number
         wait: Number
@@ -80,6 +82,8 @@ Android제어부품:
       result:
         code: Text
         helper_sha256: Text
+        transport: Text
+        inputs: Record
         platform: Text
         request: Record
         request_id: Text

@@ -342,19 +342,19 @@
   "limbs:guestpc": {
    "fields": {
     "description": "116c68669e9e",
-    "target_description": "4519dbbc1e98",
+    "target_description": "3f5b42d7dd45",
     "implementation": "11bd2c55aa6e",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
     "params": "4025984c7e1a",
     "aliases": "39c390016025",
-    "ops": "ddc0770da290",
+    "ops": "bca9f4879ed7",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "9c98c80a5fd1"
    },
-   "reviewed": "2026-10-15",
-   "examples": 68
+   "reviewed": "2026-10-25",
+   "examples": 94
   },
   "limbs:launch": {
    "fields": {

@@ -348,3 +348,74 @@ def test_legacy_screen_bridge_keeps_projection_support_without_readiness_metadat
     assert caps['desktop_stream'] == 1
     assert 'desktop' in caps['ops']
     assert 'screen' not in caps
+
+
+def test_event_endpoint_acks_without_delivering_queued_commands(hub, phone_env):
+    rec = _enroll_phone()
+    c = _client(hub, rec, lambda *a: {})
+    task = pcs.submit(rec['device_id'], {'op': 'ibl', 'ibl': 'return 1'}, 'waiting')
+    response = hub.post('/limb/resident/events', json={**c._auth(), 'events': []}).json()
+    assert response['event_push'] == 1 and response['jobs'] == []
+    assert resident_store.history(job=task['job_id'])['tasks'][0]['state'] == 'queued'
+    assert c.step(inline=True, wait=0)['jobs'][0]['id'] == task['job_id']
+
+
+def test_results_upload_while_command_receiver_is_blocked(hub, phone_env):
+    import threading
+    rec = _enroll_phone()
+    c = _client(hub, rec, lambda *a: {})
+    task = pcs.submit(rec['device_id'], {'op': 'ibl', 'ibl': 'return 1'}, 'report-once')
+    # Take ownership through the normal receiver, then leave the result in durable spool.
+    c.step(inline=True, wait=0)
+    c._event_push_supported = True
+    blocked, release, uploaded = threading.Event(), threading.Event(), threading.Event()
+    post = c._post
+    def send(path, payload, timeout):
+        if path == 'sync':
+            blocked.set()
+            assert release.wait(5)
+            return {'ack': [], 'jobs': [], 'event_push': 1}
+        response = post(path, payload, timeout)
+        uploaded.set()
+        return response
+    c._post = send
+    publisher = threading.Thread(target=c._publish_events)
+    c._event_publisher = publisher
+    receiver = threading.Thread(target=lambda: c.step(wait=20))
+    receiver.start()
+    assert blocked.wait(2)
+    publisher.start()
+    try:
+        assert uploaded.wait(3)
+        assert receiver.is_alive()
+        assert resident_store.history(job=task['job_id'])['tasks'][0]['state'] == 'succeeded'
+    finally:
+        c.stop(); release.set()
+        receiver.join(3); publisher.join(3)
+    assert not receiver.is_alive() and not publisher.is_alive()
+
+
+def test_lost_event_ack_retries_same_event_without_reexecuting_job(hub, phone_env):
+    import threading
+    rec = _enroll_phone()
+    calls = []
+    c = _client(hub, rec, lambda *a: calls.append(a) or {'success': True})
+    task = pcs.submit(rec['device_id'], {'op': 'ibl', 'ibl': 'return 1'}, 'lost-ack')
+    c.step(inline=True, wait=0)
+    c._event_push_supported = True
+    post = c._post
+    batches = []
+    def send(path, payload, timeout):
+        response = post(path, payload, timeout)
+        batches.append([e['event_id'] for e in payload['events']])
+        if len(batches) == 1:
+            raise OSError('response lost after commit')
+        c.stopped.set()
+        return response
+    c._post = send
+    worker = threading.Thread(target=c._publish_events)
+    worker.start(); worker.join(4)
+    assert not worker.is_alive() and len(calls) == 1
+    assert len(batches) == 2 and batches[0] == batches[1]
+    assert not c._pending_events()
+    assert resident_store.history(job=task['job_id'])['tasks'][0]['state'] == 'succeeded'

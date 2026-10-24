@@ -353,6 +353,10 @@ Go 1.22와 `go.legacy.mod`를 쓰는 `mac-amd64-legacy`를 사용한다. 일반 
 등록된 Android 폰은 USB 없이 원격으로 연결된다. `op:"info"`로 능력·권한을 조회하고
 `op:"ibl"`로 폰 자체 엔진에 하달한다. execution_contract:1을 신고한 새 폰은 앱 UID의
 `op:shell`, 내장 `op:python`(code·inputs → result), transfer도 지원한다.
+`android_control.contract:1`을 신고한 폰의 정해진 OS 제어는 `Android제어` 관용구를 쓴다.
+이 관용구는 설치된 코드 지문이 일치하면 내부 `op:control`로 요청만 전송해 worker 시작을
+생략한다. 내부 봉투를 직접 조립하지 않는다. 코드·환경을 보내는 기능은 아니며, 구형 폰은
+접수 전에 기존 Python 경로를 선택한다. 결과 불명 후 경로를 바꿔 변경을 재전송하지 않는다.
 폰 실행 제한은 기본120초·최대3600초이며 PC의 관리자/observe 모드를 지원하지 않는다.
 설치·판본·결과 봉투·중첩 JSON·파일 회수·미디어 사용법은
 [원격폰 기능 활용 가이드](remote_phone.md)를 따른다.

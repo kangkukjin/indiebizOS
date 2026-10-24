@@ -1,4 +1,4 @@
-"""Shared hardware primitives for the app and AI; execute with guestpc/python inputs."""
+"""Shared hardware primitives for installed controls and isolated Python execution."""
 import json
 
 OPS = {"status", "brightness", "brightness_auto", "rotation", "timeout",

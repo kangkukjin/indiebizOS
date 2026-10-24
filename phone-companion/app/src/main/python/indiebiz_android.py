@@ -2,12 +2,19 @@
 import json
 from java import jclass
 
-_worker = jclass("com.indiebiz.phoneagent.execution.RemoteWorkerContext")
-context = _worker.applicationContext()
+_is_worker = str(jclass('android.app.Application').getProcessName()).endswith(':remote_exec')
+_owner = jclass("com.indiebiz.phoneagent.execution." +
+                ("RemoteWorkerContext" if _is_worker else "RemoteExecutionBridge"))
+context = _owner.applicationContext()
 
 
 def call(method, *args):
-    reply = json.loads(str(_worker.call(method, json.dumps(args, ensure_ascii=False))))
+    arguments = json.dumps(args, ensure_ascii=False)
+    if _is_worker:
+        raw = _owner.call(method, arguments)
+    else:
+        raw = jclass('com.indiebiz.phoneagent.execution.RemoteDeviceCalls').INSTANCE.call(method, arguments)
+    reply = json.loads(str(raw))
     if not reply.get("success"):
         raise RuntimeError(reply.get("error", "device_call_failed"))
     value = reply["value"]

@@ -15,20 +15,13 @@ object WorkerProcessTree {
         if (pid <= 0 || (pid == Process.myPid() && !allowSelf) || birth == null) return false
         if (info(pid)?.second != birth) return true
         if (pid != Process.myPid()) Process.sendSignal(pid, 19)
-        val owned = mutableMapOf(pid to birth!!)
-        // Freeze newly observed children before another snapshot so ordinary child forks stop.
-        repeat(8) {
-            val before = owned.size
-            File("/proc").listFiles()?.forEach { file ->
-                val pid = file.name.toIntOrNull() ?: return@forEach
-                val info = info(pid) ?: return@forEach
-                if (info.first in owned && pid !in owned) {
-                    owned[pid] = info.second
-                    if (pid != Process.myPid()) Process.sendSignal(pid, 19)
-                }
-            }
-            if (owned.size == before) return@repeat
-        }
+        val owned = ProcessDescendants.collect(pid, birth, scan = {
+            File("/proc").listFiles()?.mapNotNull { file ->
+                val child = file.name.toIntOrNull() ?: return@mapNotNull null
+                val info = info(child) ?: return@mapNotNull null
+                Triple(child, info.first, info.second)
+            } ?: emptyList()
+        }, freeze = { child -> if (child != Process.myPid()) Process.sendSignal(child, 19) })
         owned.entries.sortedBy { if (it.key == pid) 1 else 0 }.forEach { (pid, birth) ->
             if (info(pid)?.second == birth) Process.killProcess(pid)
         }

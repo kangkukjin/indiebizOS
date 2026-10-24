@@ -32,6 +32,7 @@ object RemoteExecutionBridge {
         val runtime = JSONObject().put("identity", "app").put("ready", true).put("timeout_default", 120).put("timeout_max", 3600)
             .put("cwd", File(context.filesDir, "userdata/remote_work").absolutePath)
         return JSONObject().put("execution_contract", 1).put("hardware_control", 1).put("shell", true)
+            .put("native_control", 1)
             .put("runtimes", JSONObject()
                 .put("shell", JSONObject(runtime.toString()).put("executable", "/system/bin/sh"))
                 .put("python", JSONObject(runtime.toString()).put("implementation", "chaquopy").put("bridge_version", 1)))
@@ -44,6 +45,45 @@ object RemoteExecutionBridge {
         job.cancelled = true
         job.done.countDown()
         return true
+    }
+
+    @JvmStatic fun applicationContext(): Context = context
+
+    /** Fixed installed controls share the execution lock, without starting a Python worker.
+     * Cancellation is a request: the caller retains the lock until its native call returns. */
+    @JvmStatic fun beginControl(id: String, seconds: Int): Boolean {
+        check(::context.isInitialized) { "execution_bridge_unavailable" }
+        require(id.matches(Regex("[A-Za-z0-9_-]{1,128}")) && seconds in 1..30)
+        check(Looper.myLooper() != Looper.getMainLooper()) { "execution_on_main_thread" }
+        val job = Job()
+        check(active.putIfAbsent(id, job) == null) { "job_already_running" }
+        val deadline = SystemClock.elapsedRealtime() + seconds * 1000L
+        try {
+            while (!serial.tryLock(50, TimeUnit.MILLISECONDS)) {
+                if (job.cancelled || SystemClock.elapsedRealtime() >= deadline) {
+                    active.remove(id, job)
+                    return false
+                }
+            }
+            if (job.cancelled) {
+                serial.unlock()
+                active.remove(id, job)
+                return false
+            }
+            return true
+        } catch (error: Throwable) {
+            active.remove(id, job)
+            throw error
+        }
+    }
+
+    @JvmStatic fun controlActive(id: String): Boolean = active[id]?.cancelled == false
+
+    @JvmStatic fun endControl(id: String): Boolean {
+        check(serial.isHeldByCurrentThread) { "control_lock_not_owned" }
+        val job = active.remove(id) ?: error("control_job_missing")
+        serial.unlock()
+        return !job.cancelled
     }
 
     @JvmStatic fun execute(id: String, code: String): String {

@@ -174,6 +174,13 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 공용 준비·검증은 `data/scripts/android_control.py`, 공개 정의는
 `data/idioms/android_control.ibl`·`android_control_check.ibl`이며 `installed.json`으로 배포한다.
 `data/instruments/phone_control.py`·`phone_device.py`·`phone_ui.py`를 호출 시 읽어 폰에서 실행한다.
+새 APK의 `android_control.contract:1`과 설치된 검증기·primitive 지문이 일치하면 기존
+`guestpc`의 `control` 전송으로 요청만 보내 상주 엔진의 설치된 제어 함수를 호출한다.
+별도 Python 프로세스를 띄우지 않으며 같은 판본·화면·결과 검증을 수행한다. 구형 폰이나
+지문 불일치는 접수 전에 기존 `python` 경로를 선택한다. 접수 후 실패에 다른 경로로 재전송하지 않는다.
+임의 코드는 계속 일회용 프로세스에서 실행한다. 취소 요청은 이미 들어간 Android 호출을
+되돌리지 않으며, 호출 반환과 실행 자리 해제 전에는 종료됐다고 보고하지 않는다.
+통신은 연결을 재사용하고 새 허브에서는 결과를 수신 long-poll과 별도 경로로 즉시 보고한다.
 앱과 AI는 같은 판본·같은 검증을 쓴다. 새 IBL 내용어는 만들지 않는다. UI 확장은 접근성 관측·판본 검사·앱 실행 다리를 포함한 APK가 필요하다.
 의미 검색 시드는 `android_control_seeds.json`, 등록은 `.venv/bin/python3 scripts/register_webapp_idioms.py --seed-file android_control_seeds.json --apply`다.
 

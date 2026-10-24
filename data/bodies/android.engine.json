@@ -397,6 +397,7 @@
     "services/ingest_engine",
     "services/launcher_ops",
     "services/limb_client",
+    "services/limb_http_transport",
     "services/media_ops",
     "services/media_sessions",
     "services/media_signaling",
@@ -411,6 +412,7 @@
     "services/office_sessions",
     "services/oneshot_facade",
     "services/phone_limb_transfer",
+    "services/phone_native_control",
     "services/phone_notifications",
     "services/phone_remote_execution",
     "services/phone_updates",
@@ -567,8 +569,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 556,
-    "engine": 524,
+    "total": 558,
+    "engine": 526,
     "blocklist": 32
   }
 }

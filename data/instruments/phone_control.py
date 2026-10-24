@@ -1,4 +1,4 @@
-"""Selected Android phone controls. Executed by guestpc/python with explicit inputs.
+"""Selected Android phone controls. Installed control or isolated Python execution.
 
 No model calls, shell commands, player replacement or manufacturer-specific paths.
 The undo receipt lives on the phone, and is consumed only after verified restoration.

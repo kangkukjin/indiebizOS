@@ -49,6 +49,12 @@ def sync(req: DeviceMessage):
     return checked(pcs.sync, req.key, req.installation_id, req.events, req.capabilities, req.wait)
 
 
+@router.post('/limb/resident/events')
+def events(req: DeviceMessage):
+    """Durable event upload independent of command long-poll; never consumes jobs."""
+    return checked(pcs.sync, req.key, req.installation_id, req.events, receive_jobs=False)
+
+
 @router.post('/limb/resident/removed')
 def removed(req: DeviceMessage):
     rec = checked(limb_keys.resident_auth, req.key, req.installation_id, cleanup=True)

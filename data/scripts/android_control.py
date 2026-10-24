@@ -168,7 +168,8 @@ def select_target(args):
     filename = ("phone_ui.py" if request["action"] in UI else
                 "phone_control.py" if request["action"] in AUDIO else "phone_device.py")
     return {"target": target, "platform": "android", "request": request,
-            "source_path": "~workspace/data/instruments/" + filename, "wait": wait, "timeout": 20}
+            "source_path": "~workspace/data/instruments/" + filename, "wait": wait, "timeout": 20,
+            "native_control": caps.get("android_control") or {}}
 
 
 def helper_hash():
@@ -182,6 +183,11 @@ def prepare(args):
         raise ValueError("선택한 폰 실행 파일을 읽어 전달하세요.")
     request_id = uuid.uuid4().hex
     digest = hashlib.sha256(source.encode()).hexdigest()
+    helper_digest = helper_hash()
+    native = args.get("native_control") or {}
+    filename = "phone_ui.py" if request["action"] in UI else "phone_control.py" if request["action"] in AUDIO else "phone_device.py"
+    direct = (native.get("contract") == 1 and native.get("helper_sha256") == helper_digest
+              and (native.get("sources") or {}).get(filename) == digest)
     # Separate namespaces avoid triggering the primitive's legacy inputs entry point.
     driver = Path(__file__).read_text(encoding="utf-8")
     code = ("_driver = {'__name__': 'android_driver'}\n"
@@ -189,7 +195,10 @@ def prepare(args):
             f"result = _driver['run_device']({request!r}, {source!r}, "
             f"{request_id!r}, {digest!r})\n")
     return {"request": request, "request_id": request_id, "platform": "android",
-            "source_sha256": digest, "helper_sha256": helper_hash(), "code": code}
+            "source_sha256": digest, "helper_sha256": helper_digest, "code": "" if direct else code,
+            "transport": "control" if direct else "python", "inputs": {
+                "request": request, "request_id": request_id,
+                "source_sha256": digest, "helper_sha256": helper_digest}}
 
 
 def screen_valid(screen):
@@ -305,7 +314,7 @@ def completion_allowed(request, value, verified):
             and value["before"]["snapshot_id"] == request["snapshot_id"])
 
 
-def run_device(request, source, request_id, digest):
+def run_device(request, source, request_id, digest, bridge=None):
     action = request["action"]
     metadata = {"protocol": PROTOCOL, "platform": "android", "action": action,
                 "request_id": request_id, "source_sha256": digest,
@@ -317,8 +326,10 @@ def run_device(request, source, request_id, digest):
         exec(compile(source, "<phone_primitive>", "exec"), namespace)
         inputs = {k: v for k, v in request.items() if k != "action"}
         inputs["op"] = AUDIO.get(action, action)
-        value = (namespace["run"](inputs, verifier=lambda observed: readback(request, observed))
-                 if action in UI else namespace["run"](inputs))
+        options = {"verifier": lambda observed: readback(request, observed)} if action in UI else {}
+        if bridge is not None and action not in AUDIO:
+            options["bridge"] = bridge
+        value = namespace["run"](inputs, **options)
         metadata["observed_at"] = datetime.now(timezone.utc).isoformat()
         if not isinstance(value, dict):
             raise ValueError("폰 실행 응답이 객체가 아닙니다.")
@@ -372,7 +383,11 @@ def verify_task(args, context):
             return {**out, "status": "pending"}
         result = observation.get("result") or observation.get("execution_result")
         if not isinstance(result, dict) or result.get("success") is not True:
+            if isinstance(result, dict) and result.get('side_effects_possible') is False and state == 'failed':
+                return fail(result.get('error') or '실행 전 거절됐습니다.', result, 'failed')
             return fail("원격 실행 결과가 불확실합니다: " + str(state), result)
+        if plan.get('transport') == 'control' and result.get('execution_mode') != 'native_control':
+            return fail('원래 제어 실행 경로와 다릅니다.', result)
         value = result.get("value")
         if not isinstance(value, dict) or any(value.get(k) != v for k, v in {
                 "protocol": PROTOCOL, "platform": "android", "action": plan["request"]["action"],

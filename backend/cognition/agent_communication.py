@@ -486,6 +486,10 @@ class AgentCommunicationMixin:
                 # call_agent 호출 플래그 초기화
                 clear_called_agent()
 
+                if msg_dict.get('execution_kind') == 'ibl':
+                    self._run_delegated_ibl(extracted_task_id, from_agent)
+                    continue
+
                 # 에피소드 로깅 — 내부 위임 경로(시스템 AI→에이전트 하달, 에이전트 간 위임·
                 # 보고 회수)도 주행기록에 남긴다. 그동안 start/end 가 WebSocket 채팅 핸들러에만
                 # 배선돼 이 루프는 사각지대였다(SystemAIRunner._check_internal_messages 와
@@ -620,6 +624,83 @@ class AgentCommunicationMixin:
                     EpisodeLogger.end_episode()  # 미시작이면 no-op
                 except Exception:
                     pass
+
+    def _run_delegated_ibl(self, task_id, from_agent):
+        """같은 큐·원장의 코드 작업. 실행 결과를 보고보다 먼저 보존하고 재해석하지 않는다."""
+        import thread_context as tc
+        import principal
+        from ibl_access import resolve_allowed_nodes
+        from task_cancellation import requested
+        from workflow_verdict import is_error_result
+
+        # 중복 배달은 완료 결과만 재보고한다. 시작 뒤 결과를 못 남긴 작업은 불명확하며
+        # 자동 재실행하지 않는다(쓰기 후 프로세스가 죽었을 수도 있다).
+        with self.db.get_exclusive_connection() as conn:
+            row = conn.execute('SELECT status,delegation_context FROM tasks WHERE task_id=?',
+                               (task_id,)).fetchone()
+            if not row or row[0] in ('completed', 'failed', 'cancelled'):
+                return
+            ctx = json.loads(row[1] or '{}')
+            request = ctx.get('ibl_request')
+            if not isinstance(request, dict):
+                raise ValueError('직접 실행 작업의 IBL 원문이 없습니다.')
+            result = ctx.get('ibl_result')
+            if result is None and ctx.get('ibl_started'):
+                result = {"success": False, "status": "unknown",
+                          "error": "앞 실행의 결과가 확정되지 않았습니다. 재실행하지 않았으므로 원 실행의 효과를 확인하세요."}
+            if result is None:
+                ctx['ibl_started'] = True
+                conn.execute('UPDATE tasks SET delegation_context=? WHERE task_id=?',
+                             (json.dumps(ctx, ensure_ascii=False), task_id))
+
+        if result is None:
+            previous = tc.snapshot()
+            try:
+                inherited = tc.get_allowed_nodes()
+                target = resolve_allowed_nodes(self.config.get('allowed_nodes'))
+                allowed = (target if inherited is None else inherited if target is None
+                           else set(inherited) & set(target))
+                tc.set_allowed_nodes(allowed)
+                tc.set_current_agent_id(self.config.get('id'))
+                tc.set_current_agent_name(self.config.get('name'))
+                tc.set_current_project_id(self.project_id)
+                tc.set_current_task_id(task_id)
+                tc.set_call_channel('delegation', override=True)
+                owner = principal.Principal(**ctx['principal'])
+                cancelled = lambda: requested(self.project_id, task_id) or self.cancel_event.is_set()
+                from steer_inbox import task_scope
+                with principal.narrow(owner, 'workflow delegation'), \
+                        tc.repair_workspace_scope(ctx.get('repair_workspace')), \
+                        task_scope((self.config.get('id'), self.config.get('name')), task_id):
+                    if cancelled():
+                        result = {"success": False, "status": "cancelled", "error": "실행 전 취소됨"}
+                    else:
+                        from ibl_v2_entry import handle_request
+                        from workflow_engine import execute_pipeline
+                        code = request['code']
+                        result = (handle_request(request, str(self.project_path), self.config.get('id'),
+                                                 cancel_check=cancelled) if isinstance(code, str) else None)
+                        if result is None:
+                            # 판본 판정이 명시적으로 1일 때만 레거시 실행. v2 실패는 폴백하지 않는다.
+                            result = execute_pipeline(code, str(self.project_path), agent_id=self.config.get('id'))
+            except Exception as exc:
+                from logging_utils import mask_secrets
+                result = {"success": False, "error": mask_secrets(str(exc))}
+            finally:
+                tc.restore(previous)
+
+        # 실행 중 명시적으로 만든 자식 작업의 메타데이터를 덮지 않는다.
+        with self.db.get_exclusive_connection() as conn:
+            row = conn.execute('SELECT delegation_context FROM tasks WHERE task_id=?', (task_id,)).fetchone()
+            ctx = json.loads(row[0] or '{}')
+            ctx['ibl_result'] = result
+            conn.execute('UPDATE tasks SET delegation_context=? WHERE task_id=?',
+                         (json.dumps(ctx, ensure_ascii=False), task_id))
+        try:
+            self._auto_report_to_chain(task_id, json.dumps(result, ensure_ascii=False), from_agent,
+                                       failed=is_error_result(result))
+        except Exception as exc:
+            self._log(f"IBL 결과 보고 실패(원장 결과 보존, 재실행 없음): {exc}")
 
     def _send_to_external_channel(self, channel_type: str, requester: str, response: str, task_id: str):
         """

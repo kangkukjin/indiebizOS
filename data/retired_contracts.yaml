@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: scheduled-code-as-natural-language
+    retired: 2026-10-24
+    reason: 예약과 workflow 위임의 확정 IBL을 AI 메시지로 되돌리던 실행 경로와 교재를 정렬했다.
+    instead: 예약은 IBL 직접 실행, workflow 위임도 대상 러너가 원문·판본·입력을 직접 실행한다. 자연어 판단은 명시 위임한다.
+    phrases: ['스케줄러 경유 위임 시 pipeline에는 자연어로 의도를 전달하세요.']
   - id: transcript-length-dependent-fields
     retired: 2026-10-23
     reason: 긴 자막에서 transcript 필드가 사라져 후속 조합이 실패하고 요약기가 빈 본문을 읽었다.

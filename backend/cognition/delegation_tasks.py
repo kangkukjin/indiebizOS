@@ -429,6 +429,10 @@ def recover_reports(owner, agent_name, queued=()):
             continue
         try:
             ctx = json.loads(raw)
+            if 'ibl_request' in ctx:
+                # 직접 프로그램은 이미 반환했다. 명시 async 자식의 결과는 원장/접수증으로
+                # 회수하며, 자식 보고를 새 AI 턴으로 바꾸거나 원 프로그램을 재실행하지 않는다.
+                continue
             modes = {d.get('child_task_id'): d.get('mode', 'async') for d in ctx.get('delegations', [])}
             responses = [r for r in ctx.get('responses', []) if r.get('delivery_pending') and not r.get('collected')
                          and modes.get(r.get('child_task_id')) == 'async']

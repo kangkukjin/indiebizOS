@@ -216,7 +216,7 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
 
     @classmethod
     def send_message(cls, to_agent_id: str, message: str, from_agent: str = "system",
-                     task_id: str = None, envelope: dict = None) -> bool:
+                     task_id: str = None, envelope: dict = None, *, execution_kind=None) -> bool:
         """
         에이전트에게 메시지 전송 (비동기)
 
@@ -244,6 +244,8 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
             if envelope:
                 from delegation_tasks import ENVELOPE_KEYS
                 msg_dict.update({k: envelope[k] for k in ENVELOPE_KEYS if k in envelope})
+            if execution_kind is not None:
+                msg_dict['execution_kind'] = execution_kind
 
             if to_agent_id not in cls.internal_messages:
                 cls.internal_messages[to_agent_id] = runtime_work.WorkMessages()

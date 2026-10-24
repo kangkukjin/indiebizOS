@@ -165,40 +165,44 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
 
 
 def _delegate_workflow(agent_id: str, params: dict, project_path: str) -> Any:
-    """다른 에이전트에게 IBL 파이프라인을 위임
-
-    Args:
-        agent_id: 대상 에이전트 이름 또는 ID
-        params: {"steps": [...], "message": "..."} 파이프라인 정의
-    """
+    """확정된 IBL을 같은 프로젝트의 상주 러너에 데이터로 전달한다."""
     if not agent_id:
         return {"error": "agent_id가 필요합니다."}
+
+    if '/' in agent_id:
+        project, agent_id = agent_id.split('/', 1)
+        if project != Path(project_path).name:
+            return {"success": False, "error_type": "capability",
+                    "error": "mode=workflow는 같은 프로젝트 전용입니다. 다른 프로젝트의 코드를 재해석해 위임하지 않습니다."}
 
     steps = params.get("steps", [])
     if not steps:
         return {"error": "params.steps가 필요합니다. 파이프라인 단계를 정의해주세요."}
 
-    # 파이프라인 steps를 JSON으로 직렬화
-    steps_json = json.dumps(steps, ensure_ascii=False)
-    user_message = params.get("message", "")
-
-    # 위임 메시지 구성
-    delegation_msg = f"""다음 IBL 파이프라인을 실행해주세요.
-
-```json
-{steps_json}
-```
-
-execute_ibl(node="system", action="run_pipeline", params={{"steps": {steps_json}}}) 로 실행하세요."""
-
-    if user_message:
-        delegation_msg = f"{user_message}\n\n{delegation_msg}"
-
-    # call_agent으로 위임
+    from ibl_edition import pin_source, source_edition
+    try:
+        if isinstance(steps, str):
+            edition = source_edition(pin_source(steps, params.get("edition")))
+        elif isinstance(steps, list):
+            edition = 1
+            if source_edition('', params.get("edition")) != 1 or params.get("inputs") is not None:
+                raise ValueError("steps 배열은 판본 1입니다. edition·inputs를 쓰려면 IBL 원문을 전달하세요.")
+        else:
+            raise ValueError("steps/do는 IBL 원문 또는 판본 1 단계 배열이어야 합니다.")
+        request = {"code": steps, "edition": edition}
+        if "inputs" in params:
+            if not isinstance(params["inputs"], dict):
+                raise ValueError("inputs는 이름→값 Record여야 합니다.")
+            request["inputs"] = params["inputs"]
+        # 큐와 원장에 같은 값의 사본을 전달한다. 문자열 보간·메시지 태그 제거와 무관하다.
+        request = json.loads(json.dumps(request, ensure_ascii=False))
+    except (ValueError, TypeError) as exc:
+        return {"success": False, "error": str(exc)}
     from system_tools import execute_call_agent
     return execute_call_agent(
-        {"agent_id": agent_id, "message": delegation_msg},
-        project_path
+        {**params, "agent_id": agent_id, "mode": "async",
+         "message": params.get("message") or "IBL 직접 실행"},
+        project_path, ibl_request=request,
     )
 
 

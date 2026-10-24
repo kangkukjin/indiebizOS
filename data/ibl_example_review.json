@@ -616,15 +616,15 @@
   "others:delegate": {
    "fields": {
     "description": "aa87d2790fbe",
-    "target_description": "cb0e8ee7d5e3",
-    "implementation": "62dd3e0faa63",
+    "target_description": "81b2a7d62c6b",
+    "implementation": "426051c894a0",
     "returns": "9a5e13f69efc",
     "target_key": "4423a660687c",
-    "params": "522e241b3d2d",
+    "params": "a347042f21cb",
     "aliases": "d84e35f4f510",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-22",
+   "reviewed": "2026-10-24",
    "examples": 55
   },
   "others:family_news": {

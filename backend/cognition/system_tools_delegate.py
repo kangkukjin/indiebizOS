@@ -12,13 +12,13 @@ from datetime import datetime
 from pathlib import Path
 
 
-def execute_call_agent(tool_input: dict, project_path: str) -> str:
+def execute_call_agent(tool_input: dict, project_path: str, *, ibl_request=None) -> str:
     """call_agent 도구 실행 - 에이전트 간 통신
 
     같은 프로젝트 위임의 **단일 접수 경로**(2026-10-05): mode=async/sync 모두 여기서 자식
     task 를 만들고 상주 러너에 메시지를 넣는다. sync 는 routing_system 이 접수 뒤 같은
-    task 를 기다린다(옛 임시 AIAgent 실행기 은퇴 — 같은 어휘의 두 mode 가 다른 실행기로
-    돌지 않게). 반환 JSON 에 child_task_id·task_ref 가 실린다."""
+    task 를 기다린다. workflow도 같은 접수·큐를 쓰되 ibl_request를 원장에 보존하고
+    대상 러너가 모델 없이 직접 실행한다. 반환 JSON 에 child_task_id·task_ref 가 실린다."""
     agent_id_or_name = tool_input.get("agent_id", "")
     message = tool_input.get("message", "")
     mode = (tool_input.get("mode") or "async").lower()
@@ -52,8 +52,11 @@ def execute_call_agent(tool_input: dict, project_path: str) -> str:
             except ValueError as bad:
                 return json.dumps({"success": False, "error": str(bad)}, ensure_ascii=False)
             # call_agent 호출 플래그 설정 (자동 보고 스킵용) — 접수가 확정된 뒤에만.
-            set_called_agent(True)
-            return _send_to_running_agent(target_runner, message, project_path, mode=mode, envelope=env)
+            receipt = _send_to_running_agent(target_runner, message, project_path, mode=mode, envelope=env,
+                                             ibl_request=ibl_request)
+            if json.loads(receipt).get('success'):
+                set_called_agent(True)
+            return receipt
 
         # 2. 레지스트리에 없으면 agents.yaml 확인
         return _check_agents_yaml(agent_id_or_name, project_path)
@@ -65,7 +68,7 @@ def execute_call_agent(tool_input: dict, project_path: str) -> str:
 
 
 def _send_to_running_agent(target_runner, message: str, project_path: str,
-                           mode: str = "async", envelope: dict = None) -> str:
+                           mode: str = "async", envelope: dict = None, ibl_request=None) -> str:
     """실행 중인 에이전트에게 메시지 전송"""
     from agent_runner import AgentRunner
     from thread_context import get_current_agent_name, get_current_task_id
@@ -98,6 +101,17 @@ def _send_to_running_agent(target_runner, message: str, project_path: str,
         return json.dumps({"success": False, "error": f"위임 작업 행을 만들지 못해 접수하지 않았습니다 ({target_name}, {project_path})",
                            "error_type": "delegation_task_row"}, ensure_ascii=False)
 
+    if ibl_request is not None:
+        from dataclasses import asdict
+        import principal
+        from thread_context import get_repair_workspace
+        db = ConversationDB(str(Path(project_path) / "conversations.db"))
+        workspace = get_repair_workspace()
+        execution = {"ibl_request": ibl_request, "principal": asdict(principal.current()),
+                     "repair_workspace": str(workspace) if workspace is not None else None}
+        db.update_task_delegation(new_task_id, json.dumps(execution, ensure_ascii=False),
+                                  increment_pending=False)
+
     # 메시지에 태스크 ID 추가
     message = f"[task:{new_task_id}] {message}"
 
@@ -108,6 +122,7 @@ def _send_to_running_agent(target_runner, message: str, project_path: str,
         from_agent=from_agent,
         task_id=new_task_id,
         envelope=envelope,
+        **({"execution_kind": "ibl"} if ibl_request is not None else {}),
     )
 
     if success:
@@ -223,6 +238,7 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
             if 'delegations' not in existing_context:
                 # 구 형식 → 새 형식으로 변환 (completed 유지)
                 existing_context = {
+                    **existing_context,
                     'original_request': existing_context.get('original_request', ''),
                     'requester': existing_context.get('requester', ''),
                     'completed': existing_context.get('completed', []),
@@ -263,6 +279,7 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
                 print(f"   [위임 컨텍스트] {len(delegations)}개 위임 → completed에 병합 (총 {len(completed)}개)")
 
                 return {
+                    **existing_context,
                     'original_request': parent_task.get('original_request', ''),
                     'requester': parent_task.get('requester', ''),
                     'completed': completed,  # 이전 작업 기록 포함

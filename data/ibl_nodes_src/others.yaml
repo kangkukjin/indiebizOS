@@ -10,6 +10,8 @@
             scope: Text
             workflow: Text
             steps: List|Text
+            edition: Number
+            inputs: Record
             from_agent: Text
             project_id: Text
             items: Unknown
@@ -52,7 +54,8 @@
         # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
         open_params: false
         params: {agent_id: string, message: string, mode: string, scope: string, workflow: string,
-                 steps: [array, string], from_agent: string, items: [array, object, string],
+                 steps: [array, string], edition: integer, inputs: object,
+                 from_agent: string, items: [array, object, string],
                  role: string, allowed: [array, string], context: [object, array, string],
                  request_id: string, worker_ref: object, workspace: object}
         aliases:
@@ -62,7 +65,7 @@
         returns: effect
         pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기. 반환은 접수증(task_ref·child_task_id·status_url) — 접수는 완료가 아니다.
-        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 문장 위임, same 전용). scope: same(기본, 대상 에이전트의 상주 러너가 실행 중이어야 함 — others:agents의 start로 시작)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 위임 — 접수 시점에 시스템 작업을 선발급해 접수증 task_ref·status_url 반환, sync 면 그 작업을 기다림, agent_id 불필요). scope:task는 부모 세션 아래 독립 실행자(상주 에이전트 활성 불필요). message·request_id 필수, 같은 키 재전송은 같은 접수증. worker_ref로 같은 세션의 후속을 보내며 바쁘면 FIFO 대기. workspace는 협업 준비가 발급한 사본 참조만. task_ref는 한 실행, worker_ref는 세션. 부모 종료는 소유 자식 완료를 기다리고 부모 취소는 소유 자식에 전파. cross/system/task 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절. 범위 지정(⑨): allowed=허용 노드 목록 — 부모 권한을 좁히기만(밖의 노드는 잘라내고 allowed_clamped 로 알림)·하위 위임에 상속 / role=시스템 AI 위임의 프롬프트 역할(force_role) / context=구조화 맥락(메시지에 JSON 동봉, 64KB 상한).'
+        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). async/sync는 message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 원문 직접 실행, same 전용·모델 재해석 없음·edition/inputs 지원·message는 기록용 설명). scope: same(기본, 대상 에이전트의 상주 러너가 실행 중이어야 함 — others:agents의 start로 시작)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 위임 — 접수 시점에 시스템 작업을 선발급해 접수증 task_ref·status_url 반환, sync 면 그 작업을 기다림, agent_id 불필요). scope:task는 부모 세션 아래 독립 실행자(상주 에이전트 활성 불필요). message·request_id 필수, 같은 키 재전송은 같은 접수증. worker_ref로 같은 세션의 후속을 보내며 바쁘면 FIFO 대기. workspace는 협업 준비가 발급한 사본 참조만. task_ref는 한 실행, worker_ref는 세션. 부모 종료는 소유 자식 완료를 기다리고 부모 취소는 소유 자식에 전파. cross/system/task 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절. 범위 지정(⑨): allowed=허용 노드 목록 — 부모 권한을 좁히기만(밖의 노드는 잘라내고 allowed_clamped 로 알림)·하위 위임에 상속 / role=시스템 AI 위임의 프롬프트 역할(force_role) / context=구조화 맥락(메시지에 JSON 동봉, 64KB 상한).'
         group: delegation
         target_key: agent_id
         router: system
@@ -71,7 +74,12 @@
           mode/scope 통합 디스패치(routing_system._delegate_unified). scope=cross →
           _execute_call_project_agent(접수증 dict), scope=same → execute_call_agent(접수증 JSON);
           mode=sync 는 두 scope 모두 같은 접수 뒤 delegation_tasks.await_child 가 자식 task 를
-          기다린다(임시 AIAgent 실행기 은퇴, 2026-10-05). mode=workflow → _delegate_workflow (same 전용).
+          기다린다(임시 AIAgent 실행기 은퇴, 2026-10-05). mode=workflow → _delegate_workflow (same 전용):
+          원문·edition·inputs를 작업 원장에 보존하고 같은 큐의 대상 러너가 실행기로 직접 전달한다.
+          AI 재해석·창 연결 불필요. message는 기록용 설명이며 실행 지시로 재해석하지 않는다.
+          판본 2 inputs는 명시 입력, 생략한 edition은 코드 헤더/작성 문맥에 고정한다.
+          단계 배열은 판본 1이며 edition=2·inputs와 함께 사용할 수 없다.
+          실행 결과·영수증은 같은 task 결과에 보존한다. 명시 async 자식은 접수증으로 별도 조회한다.
           봉투(origin·chain)는 delegation_tasks.envelope, 상태 투영은 task_view.
         keywords:
         - 위임

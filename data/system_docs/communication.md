@@ -1187,9 +1187,9 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 | 방식 | `[others:delegate]`, `call_project_agent` | `[self:schedule]` + 크로스 위임 |
 | 시점 | 즉시 (작업 도중) | 미래 시간 (스케줄러가 트리거) |
 | 용도 | A가 일하다가 B에게 분담 | "매일 9시에 B가 이걸 해라" |
-| 결과 전달 | 자동 보고 체인 | 대화창 자동 열기 + WS push |
+| 결과 전달 | 자동 보고 체인 | 실행 원장 + 알림함 |
 
-두 경로는 조합 가능: 스케줄로 에이전트가 활성화된 후, 작업 중 동기 위임 사용 가능.
+두 경로는 조합 가능하다. 예약 IBL 안에서 명시적으로 AI 위임을 호출할 수 있다.
 
 ### 에이전트 소유 스케줄 (Owner-based Scheduling)
 
@@ -1209,7 +1209,7 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 - `owner_project_id`: 소유 프로젝트 (시스템 AI일 때 `__system_ai__`)
 - `owner_agent_id`: 소유 에이전트 ID
 - 실행 시 owner의 project_path에서 파이프라인이 실행됨
-- 결과는 owner의 대화창에 전달 (열려있으면 WS push, 닫혀있으면 창 자동 열기)
+- 결과는 실행 원장과 알림함에 기록한다. 대화창 연결은 실행 조건이 아니다.
 
 ### 셀프 스케줄 vs 크로스 위임
 
@@ -1224,7 +1224,7 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
   pipeline: "[sense:search]{query: '오늘 주요 뉴스'}"}
 ```
 
-`target_project_id`/`target_agent_id`를 지정하면 해당 에이전트가 owner가 되어, 그 에이전트의 컨텍스트에서 실행되고 결과도 그쪽 대화창에 전달됨.
+`target_project_id`/`target_agent_id`는 실행 신원을 정한다. 저장 코드·판본·입력을 그대로 실행하며 새 판단은 코드 안의 명시 AI 호출에만 맡긴다.
 
 ### 핵심 컴포넌트
 
@@ -1233,9 +1233,8 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 | `calendar_manager.py` | 에이전트 소유 스케줄 저장/실행, `owner_project_id`/`owner_agent_id` 필드 |
 | `api_system_ai.py` | `_execute_schedule()` — 셀프/크로스 위임 분기 |
 | `api_scheduler.py` | `GET /calendar/events/by-agent` — 에이전트별 스케줄 조회 API |
-| `websocket_manager.py` | `send_to_system_ai_chat()`, `find_system_ai_connections()` |
-| `api_websocket.py` | `/ws/launcher` — 백엔드→Electron 창 제어 (자동 열기) |
-| `Launcher.tsx` | WS 리스너 — 창 열기 명령 수신 |
+| `ibl_scheduled.py` | 저장 원문·판본·입력과 예약 신원을 실행기에 전달 |
+| `notification_manager.py` | 실행 후 성공·실패 알림 |
 | `workflow_engine.py` | `execute_pipeline(agent_id=)` — 파이프라인에 agent_id 전달 |
 | `trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 (구 `event_engine.py`에서 이전) |
 
@@ -1250,12 +1249,10 @@ owner_project_id/owner_agent_id 읽기
     ↓
 ProjectManager로 project_path 해석
     ↓
-execute_pipeline(steps, project_path, agent_id=owner_agent_id)
+ibl_scheduled.execute_scheduled(원문, project_path, owner_agent_id, 판본, 입력)
     ↓
-결과 → _deliver_result_to_chat()
-    ↓
-대화창 열림? → WS push (auto_report)
-대화창 닫힘? → Launcher WS로 창 열기 + DB 저장
+기존 실행기 → 결과·실행 영수증 → 알림함
+(표시 실패는 원 코드를 재실행하지 않는다)
 ```
 
 ---
@@ -1270,7 +1267,7 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 | **스케줄 위임** | `[self:schedule]` + 크로스 위임 | 시간 기반, 에이전트 소유 |
 
 두 레이어는 조합 가능:
-- 스케줄로 활성화된 에이전트가 작업 중 동기 위임 사용
+- 예약 IBL에서 필요한 AI 판단을 명시 위임
 - 멀티에이전트 작업계획서는 동기 위임을 순차/병렬로 조합하여 실행
 
 ---
@@ -1335,3 +1332,14 @@ merge → validate(checks는 argv 배열들의 목록) → apply를 호출한다
 변경은 성공으로 숨기지 않는다. partial 상태는 status/recover로 확인하고 원본의 다른
 편집을 덮지 않는다. 현재 macOS 쓰기 격리, API 및 Codex 실행을 지원하며 자기수리에는
 적용하지 않는다. 상세 경계는 [설계 §12](../../docs/IBL_PARALLEL_EXECUTION_DESIGN_2026_10_22.md#12-2026-10-22-구현).
+
+### 확정 코드의 위임 (2026-10-24)
+
+`others:delegate{mode:"workflow",scope:"same"}`는 기존 자식 작업 접수와 상주 러너 큐를 공유하되,
+원문·판본·inputs를 `tasks.delegation_context.ibl_request`에 보존한다. 대상 러너는 이 작업을
+모델 메시지로 풀지 않고 기존 IBL 실행기에 전달한다. 호출자 제한과 대상 allowed_nodes를
+교집합으로 적용하고 원 요청 주체·출처·순환 사슬·수리 작업공간을 유지한다.
+결과는 보고 전에 같은 원장에 저장한다. 중복 배달은 저장 결과만 재보고하며, 시작 후 결과가
+유실된 작업은 불명확 실패로 표시하고 자동 재실행하지 않는다. 코드 안의 명시 async 자식은
+별도 접수증으로 조회하며 그 보고가 원 코드 작업을 AI 턴으로 다시 깨우지 않는다.
+[구현 범위와 검증](../../docs/IBL_DISCOVERY_EXECUTION_REPAIR_DESIGN_2026_10_24.md#10-확정-코드-위임의-직접-실행-2026-10-24).

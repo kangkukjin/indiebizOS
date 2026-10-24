@@ -118,20 +118,15 @@
 
 ## 시간 지정 위임 (스케줄러 경유)
 
-사용자가 **특정 시간에 다른 에이전트에게 작업을 시키는 경우**, `[self:schedule]`에 `target_project_id`/`target_agent_id`를 지정하세요.
+예약의 `pipeline`은 확정된 IBL이다. 미래에 AI의 판단을 요청하려면 그 IBL 안에 자연어 위임을 명시한다.
 
-- 즉시 위임 → `[others:delegate]{scope: "cross", ...}` 사용
-- 시간 지정 → `[self:schedule]` + `target_project_id`/`target_agent_id` 사용
-
-```
-# ❌ 스케줄 안에 delegate (결과 전달 불가)
-[self:schedule]{at: "15:00", pipeline: "[others:delegate]{scope: 'cross', agent_id: '투자/analyst', message: '주식 현황 보고'}"}
-
-# ✅ 스케줄러로 시간 지정 위임 (대상 에이전트가 직접 실행)
-[self:schedule]{at: "15:00", target_project_id: "투자", target_agent_id: "analyst", pipeline: "내 주식 현재 가격을 확인하고 보고해줘"}
+```ibl
+[self:schedule]{seconds:60, edition:2, pipeline:"[others:delegate]{scope:\"cross\",agent_id:\"투자/analyst\",message:\"내 주식 현재 가격을 확인하고 보고해줘\"}"}
 ```
 
-스케줄러 경유 위임 시 pipeline에는 자연어로 의도를 전달하세요. 대상 에이전트가 자신의 맥락과 도구로 실행 방법을 스스로 판단합니다.
+확정 코드의 실행 신원을 지정할 때 `target_project_id`/`target_agent_id`를 쓴다.
+이 필드는 코드를 자연어 부탁으로 바꾸지 않는다. 실행은 창 없이 진행하고 결과는 알림함으로 보낸다.
+명시 비동기 위임은 접수와 완료를 구분하며 작업 참조로 최종 결과를 확인한다.
 
 ## 주의사항
 

@@ -144,6 +144,44 @@ def device_control_guides() -> Dict[str, str]:
         return {}
 
 
+def device_control_briefs(filenames) -> list:
+    """소개된 장치의 호출 요약만 가이드 정본에서 읽는다. 기기 상태/권한 캐시가 아니다.
+
+    등록 데이터가 정확한 절을 지정한다. 중복·누락·예산 초과는 요약을 생략하고
+    기존 가이드 포인터를 유지한다. 절을 잘라 검증/복구 조건을 잃지 않는다.
+    """
+    wanted = set(filenames)
+    if not wanted:
+        return []
+    try:
+        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+        entries = catalog.get("guides", [])
+        briefs, used = [], 0
+        for filename in sorted(wanted):
+            matches = [e for e in entries if e.get("file") == filename]
+            if len(matches) != 1:
+                continue
+            section = matches[0].get("control_brief_section")
+            path = safe_guide_path(GUIDES_DIR, filename)
+            if not isinstance(section, str) or not section or path is None:
+                continue
+            try:
+                view = guide_read_view({"file": filename, "content": path.read_text(encoding="utf-8")},
+                                       {"section": section})
+            except (OSError, UnicodeError):
+                continue
+            text = view.get("content", "").strip()
+            if not text or len(text) > 1800 or used + len(text) > 4000:
+                continue
+            briefs.append({"file": filename, "section": section,
+                           "content_hash": view["content_hash"], "text": text})
+            used += len(text)
+        return briefs
+    except (OSError, ValueError, TypeError, AttributeError):
+        logger.warning("장치 제어 호출 요약을 읽지 못했습니다.")
+        return []
+
+
 def _control_entries(catalog):
     """실존하는 .md 등록 항목만 — 경로 탈출·대소문자 보정 없이."""
     for entry in catalog.get("guides", []):

@@ -5,6 +5,27 @@
 동작별 인수·단위·조건은 `[self:script]{id:"Android제어부품",args:{op:"contract"}}`가 정본이다.
 등록·업데이트·범용 실행만 [remote_phone.md](remote_phone.md)를 참고한다.
 
+## 빠른 호출
+
+사용자가 선택한 장치 행의 `device_id`를 `$폰`으로 둔다. 대상·목표는 AI가 결정하고,
+드라이버가 매 호출의 연결·권한·현재 상태를 확인한다. 아래 범위는 가이드/describe를 재조회하지 않고 호출한다.
+
+- 한 단계 키움: `[fn:Android제어]{대상:$폰,요청:{action:"volume_step",stream:"music",value:1}}`.
+  줄임은 `value:-1`. 이 호출이 현재 값 읽기→변경→재검증하고 `result.before/actual/max/percent`를 반환하므로
+  상대 변경 앞뒤에 별도 `volume_status`를 붙이지 않는다. 조회만 필요하면 `action:"volume_status"`.
+  절대값은 `action:"volume",value:정수단계`(퍼센트 아님).
+  크기를 정해야 하면 조회→AI가 선택한 목표 계산→변경을 한 IBL 프로그램에 묶는다. 과거 음량은 재사용하지 않는다.
+- 반환 `status:"completed",verified:true`와 실제 `result`를 확인한다. `pending/unknown`은
+  `[fn:Android제어확인]{작업:$원결과}`로 원 작업만 조회한다. 불명확한 변경을 재전송하지 않는다.
+- 유튜브 음악은 OS 드라이버 밖의 재생기다. 폰에
+  `[limbs:guestpc]{limb:$폰,op:"ibl",code:"[limbs:youtube]{op:'play',query:'검색어'}"}`로 보낸다.
+  기본 오디오, 기본 검색 5개(첫 영상 재생·나머지 대기열); 한 개만 원하면 내부 호출에 `count:1`.
+  응답의 바깥 접수 성공뿐 아니라 안쪽 `result.success`·제목·모드·오류를 확인한다.
+  정지는 같은 폰에 `stop` 후 `queue`를 순서대로 호출해 `now_playing:null,queue_length:0`을 확인한다.
+  영상 모드의 `opened:true`는 재생 증거가 아니다. 추가 미디어 조건은 `youtube_relay.md`를 읽는다.
+- 앱 실행·터치·입력은 이 요약에 없다. `android_control.md`의 `앱 실행·화면 독해·입력` 절에서
+  화면 판본·접근성 권한·검증 조건을 먼저 확인한다.
+
 ## 대상과 호출
 
 `[self:limb]{op:"list"}` 또는 장치 소개에서 사용자가 지정한 **device_id**를 고른다.

@@ -1270,6 +1270,7 @@
         "음량"
       ],
       "file": "android_control.md",
+      "control_brief_section": "빠른 호출",
       "control_platforms": [
         "android"
       ],

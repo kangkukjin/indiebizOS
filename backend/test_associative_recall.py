@@ -60,6 +60,35 @@ def test_device_context_respects_vocabulary_gate(monkeypatch):
     assert recall._connected_limbs(req, None) is None
 
 
+def test_driver_brief_is_shared_by_devices_and_comes_from_guide(monkeypatch, tmp_path):
+    import guide_registry
+    from hashlib import sha256
+    import json
+    directory = tmp_path / "guides"
+    directory.mkdir()
+    content = '# Driver\n## Short\nCall "driver"; verify <actual> & recover.\n## Long\nDetails'
+    (directory / "robot.md").write_text(content)
+    (tmp_path / "guide_db.json").write_text(json.dumps({"guides": [{
+        "file": "robot.md", "control_platforms": ["robot-os"], "control_brief_section": "Short"}]}))
+    monkeypatch.setattr(guide_registry, "DATA_PATH", tmp_path)
+    monkeypatch.setattr(guide_registry, "GUIDES_DIR", directory)
+    records = [{"device_id": name, "alias": name, "registration": {
+        "state": "active", "capabilities": {"os": "robot-os"}}} for name in ("one", "two")]
+    monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: records)
+    monkeypatch.setattr(device_registry, "live_with_capability", lambda _: records)
+    block = recall._connected_limbs(recall.RecallRequest(None, "anything", []), None)
+    root = ET.fromstring(block.text)
+    briefs = root.findall("control_brief")
+    assert len(briefs) == 1
+    assert briefs[0].attrib == {"file": "robot.md", "section": "Short",
+                                "content_hash": sha256(content.encode()).hexdigest()}
+    assert briefs[0].text == '## Short\nCall "driver"; verify <actual> & recover.'
+    assert all(r.attrib["control_guide"] == "robot.md" for r in root.findall("limb")[1:])
+    monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: [])
+    assert not ET.fromstring(recall._connected_limbs(
+        recall.RecallRequest(None, "anything", []), None).text).findall("control_brief")
+
+
 def test_device_context_with_no_known_devices_still_introduces_local_body(monkeypatch):
     """CONTROL_DRIVER_DESIGN_2026_10_20 §5.1 — 본체는 드라이버(`fn:PC제어` __local__)가 있는데 소개에
     없어 AI 가 화면 조작으로 가던 유일한 면. 등록 장치가 없어도 본체 행 하나는 소개한다."""

@@ -368,7 +368,7 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             return None
         import device_registry as dr
         import limb_keys
-        from guide_registry import device_control_guides
+        from guide_registry import device_control_guides, device_control_briefs
         from xml.sax.saxutils import escape, quoteattr
         control_guides = device_control_guides()
         live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
@@ -383,7 +383,7 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
         candidates.extend(r for did, r in records.items()
                           if did not in live_ids and (r.get("registration") or {}).get("context")
                           and (r.get("registration") or {}).get("adapter") != "network-api")
-        rows, names = [], []
+        rows, names, introduced_guides = [], [], set()
         # 본체 행(CONTROL_DRIVER_DESIGN_2026_10_20 §5.1) — 드라이버(`fn:PC제어` __local__)가 있는데
         # 소개에 없어 AI 가 화면 조작으로 가던 유일한 면. 매 턴 고정 비용은 이 행 하나다.
         from common.platform_utils import host_os
@@ -392,6 +392,7 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                        "connected": "true", "os": local_platform}
         if guide := control_guides.get(local_platform):
             local_attrs["control_guide"] = guide
+            introduced_guides.add(guide)
         try:
             import control_observations
             if observed := control_observations.count("device:__local__"):
@@ -416,17 +417,23 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                      "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
             if guide := control_guides.get(str(platform).lower()):
                 attrs["control_guide"] = guide
+                introduced_guides.add(guide)
             if isinstance(reg.get("observations"), list) and reg["observations"]:
                 attrs["observations"] = len(reg["observations"])   # 개수만 — 본문은 다룰 때 읽는다(§5.3)
             attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
             context = escape(reg.get("context") or "")
             rows.append(f'  <limb {attr_text}>{context}</limb>')
             names.append(alias)
+        for brief in device_control_briefs(introduced_guides):
+            attrs = " ".join(f"{key}={quoteattr(brief[key])}"
+                             for key in ("file", "section", "content_hash"))
+            rows.append(f"  <control_brief {attrs}>{escape(brief['text'])}</control_brief>")
         note = ("등록된 장치와 본체. 본문은 사용자가 알려준 배치·용도이며 현재 연결·출력·위치를 보장하지 않는다. "
                 "connected는 최근 접속 관측이며 unknown은 미확인이다. 네트워크 기기의 false는 응답 없음이며 전원 꺼짐을 뜻하지 않는다. paused=true이면 실행 중지 상태다. "
-                "이름·장소·용도로 대상을 고르고, [limbs:guestpc]{limb: \"이름\", op: info}로 "
-                "PC·폰의 현재 상태와 지원 실행 방식을 확인한다. adapter=network-api는 IndieBiz OS나 헬퍼 없이 제어하는 기기이며 guestpc 대신 control_guide의 스크립트를 허브에서 실행한다. "
-                "control_guide가 있는 장치를 제어할 때는 해당 가이드를 필요할 때 한 번 읽고 준비된 스크립트를 우선 쓴다. "
+                "이름·장소·용도로 대상을 고른다. control_brief는 가이드 정본의 현재 호출 요약이며 해당 범위는 바로 호출한다. "
+                "드라이버 내부의 연결·준비 검사와 결과 검증을 유지하며 같은 검사를 별도 info 조회로 중복하지 않는다. "
+                "요약 밖의 동작·인수·조건만 control_guide 또는 describe로 확인한다. "
+                "adapter=network-api는 IndieBiz OS나 헬퍼 없이 제어하는 기기이며 guestpc 대신 control_guide의 스크립트를 허브에서 실행한다. "
                 "가이드와 호출 계약이 현재 문맥에 있으면 다시 읽거나 코드를 새로 작성하지 않는다. "
                 "원격 대상을 지정하지 않은 시스템 상태 조회는 본체([sense:host])다. 본체 제어(음량·주소 열기·잠금·앱 조작)는 "
                 "device_id __local__ 행의 control_guide 를 따르고, 그 가이드에 없는 동작만 [limbs:screen] 탐색으로 간다. "

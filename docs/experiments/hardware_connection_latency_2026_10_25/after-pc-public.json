@@ -1,0 +1,82 @@
+[
+  {
+    "phase": "after",
+    "round": 1,
+    "seconds": 8.2871,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 2,
+    "seconds": 8.1853,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 3,
+    "seconds": 8.0555,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 4,
+    "seconds": 8.1197,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 5,
+    "seconds": 8.2079,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 6,
+    "seconds": 8.0109,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 7,
+    "seconds": 8.2518,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 8,
+    "seconds": 8.0292,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 9,
+    "seconds": 8.1756,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "after",
+    "round": 10,
+    "seconds": 8.2261,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  }
+]

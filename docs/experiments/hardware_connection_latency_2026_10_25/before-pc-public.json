@@ -1,0 +1,82 @@
+[
+  {
+    "phase": "before",
+    "round": 1,
+    "seconds": 18.698,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 2,
+    "seconds": 9.4006,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 3,
+    "seconds": 9.1632,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 4,
+    "seconds": 9.2838,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 5,
+    "seconds": 9.0814,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 6,
+    "seconds": 10.1968,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 7,
+    "seconds": 9.0836,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 8,
+    "seconds": 10.1968,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 9,
+    "seconds": 10.1176,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  },
+  {
+    "phase": "before",
+    "round": 10,
+    "seconds": 9.1795,
+    "success": true,
+    "status": "completed",
+    "verified": true
+  }
+]

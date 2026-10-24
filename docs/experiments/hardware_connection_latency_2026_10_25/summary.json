@@ -1,0 +1,23 @@
+{
+  "pc_public": {
+    "before": {
+      "n": 10,
+      "median_seconds": 9.3422,
+      "max_seconds": 18.698
+    },
+    "after": {
+      "n": 10,
+      "median_seconds": 8.18045,
+      "max_seconds": 8.2871
+    }
+  },
+  "backend_tests": {
+    "passed": 11907,
+    "skipped": 18,
+    "seconds": 556.42
+  },
+  "go_race": "passed",
+  "tv_live_verified": false,
+  "llm_tokens": "unmeasured",
+  "internal_substage_timings": "unmeasured"
+}

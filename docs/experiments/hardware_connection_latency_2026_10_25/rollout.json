@@ -1,0 +1,46 @@
+[
+  {
+    "device_id": "guestpc-3fd796167b18",
+    "alias": "맥12",
+    "connected": false,
+    "helper": {
+      "state": "available",
+      "current": "a1634f86821d49645fc3ebc4668a84f9448774642cfb6ec55e63cd5e159f95e2",
+      "latest": "93c01f9b53b2989d45d202c3cf47ae70b2c20caea22ff1bfd61eca3ac5a57b0c",
+      "rolled_back": false
+    }
+  },
+  {
+    "device_id": "guestpc-7da97e970821",
+    "alias": "KHJoffice",
+    "connected": true,
+    "helper": {
+      "state": "current",
+      "current": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+      "latest": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+      "rolled_back": false
+    }
+  },
+  {
+    "device_id": "guestpc-9dc41d53987d",
+    "alias": "맥26",
+    "connected": false,
+    "helper": {
+      "state": "available",
+      "current": "f2cc2f8d3632f0bbe8c94c4d11309dc4edbcb38b468774f878fff0814c349205",
+      "latest": "fd79d9ebf829e7084f3569e8c258dbd6faf85df31a8ec91cbd99e94d6cbd82d7",
+      "rolled_back": false
+    }
+  },
+  {
+    "device_id": "guestpc-70e163471313",
+    "alias": "tv1",
+    "connected": true,
+    "helper": {
+      "state": "current",
+      "current": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+      "latest": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+      "rolled_back": false
+    }
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "device_id": "guestpc-7da97e970821",
+  "alias": "KHJoffice",
+  "job_id": "5f2132adbdd14b9888ed0d639ba88286",
+  "state": "succeeded",
+  "seconds": 1.7716,
+  "helper": {
+    "state": "current",
+    "current": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+    "latest": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+    "rolled_back": false
+  }
+}

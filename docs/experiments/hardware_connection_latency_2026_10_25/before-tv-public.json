@@ -1,0 +1,92 @@
+[
+  {
+    "phase": "before",
+    "round": 1,
+    "seconds": 6.6077,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 2,
+    "seconds": 6.5184,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 3,
+    "seconds": 2.2704,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 4,
+    "seconds": 2.2696,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 5,
+    "seconds": 2.5537,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 6,
+    "seconds": 2.8544,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 7,
+    "seconds": 2.012,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 8,
+    "seconds": 2.8956,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 9,
+    "seconds": 6.6649,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  },
+  {
+    "phase": "before",
+    "round": 10,
+    "seconds": 4.0317,
+    "success": true,
+    "verified": false,
+    "power": "unknown",
+    "reachable": false
+  }
+]

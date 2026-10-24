@@ -1,0 +1,13 @@
+{
+  "device_id": "guestpc-70e163471313",
+  "alias": "tv1",
+  "job_id": "9d4664e2252f4472bbfc961a3c75bc26",
+  "state": "succeeded",
+  "seconds": 3.1954,
+  "helper": {
+    "state": "current",
+    "current": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+    "latest": "60dc1812d082fbc36bc55e1fa09f72bee5f7e96a8b9057757317ed68c4d11319",
+    "rolled_back": false
+  }
+}

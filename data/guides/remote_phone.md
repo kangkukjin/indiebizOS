@@ -161,6 +161,26 @@ SHA-256 일치(`41813657b8f336a7b2602dd1cb62931f0295dc4b78469fadefd546814182b588
 삼성0에는 해시를 검증한 0.13 APK를 `다운로드/IndieBiz/IndieBiz-0.13.apk`에 준비했다.
 이 파일의 존재·전송 완료를 앱 설치 완료로 표시하지 않는다.
 
+### 어휘 정합 배포 확인 (2026-10-24, 0.18)
+
+중앙 정본에서 arm64·arm32 0.18을 빌드·발행했다. 두 APK의 Android 사전과 패키지
+선언·핸들러·tool.json 97개 파일이 정본과 일치하며, 어휘 빌드 검사와 관련 검사 72개가 통과했다.
+예나폰은 중앙 원격 업데이트로 0.14 → 0.18 설치·재접속·설치 해시 일치를 확인했다.
+실기 파일 97개 대조와 `[limbs:youtube]{op:"queue"}`·`[self:music]{op:"sources"}` 조회도 통과했다.
+공통 어휘의 이름·계약을 맞추되 Android 사전은 기존 몸별 필터를 적용하므로 PC 전체 사전과 같지는 않다.
+
+삼성0은 0.14에서 자체 업데이트가 `INSTALL_FAILED_ABORTED: Self update is blocked by unknown source package`로
+거절됐으나, 사용자가 USB를 연결한 뒤 동일한 arm64 배포본을 `adb install -r`로 설치했다.
+기존 등록을 유지한 0.18 재접속, 중앙 `current`·설치 해시 일치, 실기 파일 97개 일치와
+`[limbs:youtube]{op:"queue"}`·`[self:music]{op:"sources"}`의 실제 조회 성공을 확인했다.
+
+삼성1은 0.17에서 설치 전 APK 서명정보 읽기가 `apk_signer_missing`으로 실패했다.
+이는 서명 불일치 판정과 구별한다. 삼성1의 0.18 설치 완료는 아직 확인되지 않았다.
+검증된 수동 설치본은 삼성1의
+`Android/data/com.indiebiz.phoneagent/files/IndieBiz-0.18-arm32.apk`에 준비했다.
+삼성1은 공용 Download 쓰기 권한이 없어 앱 소유 외부 파일 폴더에 보관했다.
+직접 설치 후에도 중앙 `current`·설치 해시·실제 어휘를 재확인해야 한다.
+
 ## 범용 실행 계약 1 (새 APK 필요)
 
 앱 설치와 원격 등록은 별개다. 기존 APK를 업데이트하고 info의

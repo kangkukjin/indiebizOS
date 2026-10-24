@@ -10,6 +10,8 @@ from types import SimpleNamespace as NS
 import boot_paths  # noqa: F401
 import pytest
 
+pytestmark = pytest.mark.usefixtures("installed_functions")
+
 ROOT = Path(__file__).resolve().parents[1]
 
 

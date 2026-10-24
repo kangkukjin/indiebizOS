@@ -95,6 +95,8 @@ def run_named(tmp_path, monkeypatch):
             pass
 
     monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", DB)
+    from test_function_support import use_legacy
+    use_legacy(monkeypatch, {n: e['body'] for n, e in ENTRIES.items()})
     monkeypatch.setattr(workflow_engine, "get_workflow", lambda name: None)
     monkeypatch.setattr(ibl_typecheck, "FN_CODE_SOURCES", [lambda n: ENTRIES[n]["body"] if n in ENTRIES else None])
     monkeypatch.setattr(spill, "_root", lambda: str(tmp_path / "spill"))

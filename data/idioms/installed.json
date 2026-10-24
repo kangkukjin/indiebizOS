@@ -4,5 +4,9 @@
   "PC제어": "pc_control.ibl",
   "PC조회묶음": "pc_read_batch.ibl",
   "Android제어확인": "android_control_check.ibl",
-  "Android제어": "android_control.ibl"
+  "Android제어": "android_control.ibl",
+  "AI시대 보고서 출처 뉴스 갱신": "AI시대_보고서_출처_뉴스_갱신.yaml",
+  "프로젝트재조사": "프로젝트재조사.yaml",
+  "프로젝트재조사확인": "프로젝트재조사확인.yaml",
+  "화면검수": "화면검수.yaml"
 }

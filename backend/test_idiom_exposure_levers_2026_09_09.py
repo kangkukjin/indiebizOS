@@ -53,6 +53,11 @@ def test_catalog_line_stands_under_anchor_and_switch_strips_both(tmp_path, monke
     monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
     monkeypatch.setattr(ibl_access, "_get_nodes_path", lambda: ROOT / "data/ibl_nodes.yaml")   # 어휘는 실물
     monkeypatch.setattr(ibl_access, "_idioms_cache", {"text": None, "t": 0, "key": None, "anchors": {}})
+    from test_function_support import import_memory
+    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as fixture_db:
+        import_memory(fixture_db)
+    import ibl_registry
+    monkeypatch.setattr(ibl_registry, "code_is_own", lambda code: True)
     env = ibl_access.build_environment()
     lines = env.splitlines()
     i = next(k for k, l in enumerate(lines) if l.strip().startswith("self:read ::"))
@@ -93,7 +98,7 @@ class _DB:
         with self._get_connection() as c:
             c.execute("CREATE TABLE ibl_examples (id INTEGER PRIMARY KEY, intent, ibl_code, alias, returns, signature,"
                       " success_count DEFAULT 0, fail_count DEFAULT 0, bypass_count DEFAULT 0, avg_ms, avg_tokens,"
-                      " updated_at, topic, always_on, source)")
+                      " updated_at, topic, always_on, source, provenance TEXT DEFAULT '{}')")
     def _get_connection(self):
         c = sqlite3.connect(self.path); c.row_factory = sqlite3.Row
         return c
@@ -105,7 +110,11 @@ class _DB:
     def find_phrase_by_alias(self, name):
         with self._get_connection() as c:
             r = c.execute("SELECT * FROM ibl_examples WHERE alias=?", (name,)).fetchone()
-            return dict(r) if r else None
+            if not r:
+                return None
+            import function_store
+            row = function_store.resolve(name)
+            return {**dict(r), 'function_ref': function_store.reference(row)}
     def _index_single(self, *a, **k):
         pass
 
@@ -116,6 +125,8 @@ def test_update_idiom_signature_change_needs_resign_and_names_old_callers(tmp_pa
     monkeypatch.setattr(ibl_usage_db, "_tree_refresh", lambda *a, **k: None)
     db = _DB(tmp_path / "usage.db")
     rid = db.add("위치마다읽기", OLD)
+    from function_library import register
+    register("위치마다읽기", OLD, WHEN)
     caller = db.add("", '[self:grep]{pattern:"x"} >> [fn:위치마다읽기]{개수:3,줄수:5}', source="idiom_registry")
     with pytest.raises(ValueError, match="--resign"):
         update_idiom(db, "위치마다읽기", NEW, "서명 개정 시험")

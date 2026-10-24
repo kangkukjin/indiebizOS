@@ -331,17 +331,22 @@ class Runtime(ExpressionEvaluator):
                 for name, default in params.items():
                     if name not in local:
                         local[name] = self.eval(default, {})
+                entry = next((e for e in self.plan.dependencies.get('source_map', [])[1:]
+                              if e['start'] <= definition.start < e['end']), {})
+                function_ref = entry.get('function_ref')
                 depth = getattr(self.local, "depth", 0)
                 self.local.depth = depth + 1
                 try:
                     result = self.frame(definition.data["body"], local)
                     eid = self.event(node, "function_result", result.evidence | args.evidence,
                                      name=d["action"], definition_start=definition.start, success=True,
+                                     function_ref=function_ref,
                                      **returned_shape(result.value))
                     return Binding(result.value, frozenset({eid}))
                 except Fault as exc:
                     eid = self.event(node, "function_result", exc.evidence,
-                                     name=d["action"], definition_start=definition.start, success=False)
+                                     name=d["action"], definition_start=definition.start, success=False,
+                                     function_ref=function_ref)
                     exc.evidence = [eid]
                     exc.frames.append({"function": d["action"], "call": span(self.plan.source, node),
                                        "definition": span(self.plan.source, definition)})
@@ -969,7 +974,7 @@ class Runtime(ExpressionEvaluator):
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
         checks = [e for e in self.trace if e.get('kind') == 'assertion']
         entries = self.plan.dependencies.get('source_map', [])[1:]
-        used = [{'id': 'fn:' + e['name'], 'success': e['success'], 'source_hash': digest(self.plan.source[source['start']:source['end']])}
+        used = [{'id': 'fn:' + e['name'], 'success': e['success'], 'source_hash': digest(self.plan.source[source['start']:source['end']]), 'function_ref': source.get('function_ref')}
                 for e in self.trace if e.get('kind') == 'function_result'
                 for source in entries if source['start'] <= e['definition_start'] < source['end']]
         used += [{'id': e['capability_id'], 'success': e['success']} for e in self.trace if e.get('kind') == 'capability_result']

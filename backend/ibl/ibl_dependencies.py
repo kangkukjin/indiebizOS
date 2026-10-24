@@ -174,7 +174,7 @@ def script_contract(base, args):
             'script_contract': contract}
 
 
-def legacy_snapshot(name, assets):
+def legacy_selection(name, assets):
     """Resolve static transitive calls; opaque generated source stays conservative."""
     from ibl_parser import parse
     selected, pending, dynamic = {}, [name], False
@@ -211,7 +211,10 @@ def legacy_snapshot(name, assets):
         if selected[key] is None:
             continue
         scan(selected[key])
-    return digest(assets if dynamic else selected)
+    return assets if dynamic else selected
+
+def legacy_snapshot(name, assets):
+    return digest(legacy_selection(name, assets))
 
 
 def legacy_runtime_snapshot():

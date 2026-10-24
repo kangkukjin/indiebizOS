@@ -101,6 +101,9 @@ def test_idiom_cache_tracks_activation_without_local_invalidation(prompt_box):
         conn.execute("INSERT INTO ibl_examples VALUES (?, ?, 3, 0, '검증', '잠드는관용구', 1, '2026')",
                      ("검증용", '[sense:awake]{}; [sense:awake]{}'))
     before_file = db.read_bytes()
+    from test_function_support import import_memory
+    with sqlite3.connect(prompt_box / 'data/ibl_usage.db') as fixture_db:
+        import_memory(fixture_db)
     assert "잠드는관용구" in idioms_map(None)
     set_package_active("awake", False, authority=HUMAN_AUTHORITY)
     assert "잠드는관용구" not in idioms_map(None)

@@ -64,6 +64,8 @@ def run(monkeypatch, tmp_path):
     fs = load('_idiom_fs', tools / 'system_essentials/handler.py')
     original = ibl_engine._execute_ibl_impl
     observed = {'brief': [], 'crawl': [], 'used': []}
+    monkeypatch.setattr('capability_history.record_function_call',
+                        lambda ref, run, call, **kw: observed['used'].append(kw['success']))
 
     class DB:
         def find_phrase_by_alias(self, name):
@@ -72,6 +74,8 @@ def run(monkeypatch, tmp_path):
         def update_success_by_code(self, code, ok, **kw):
             observed['used'].append(ok)
     monkeypatch.setattr(ibl_usage_db, 'IBLUsageDB', DB)
+    from test_function_support import use_legacy
+    use_legacy(monkeypatch, {n: e['body'] for n, e in ENTRIES.items()})
     monkeypatch.setattr(workflow_store, 'get_workflow', lambda name: None)
 
     def leaf(ti, project, agent=None):

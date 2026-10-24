@@ -33,24 +33,30 @@ def signature(source):
 
 def record_functions(plan, result):
     """Attribute actual native library calls to their exact stored source."""
-    from ibl_usage_db import IBLUsageDB
+    from capability_history import record_function_call
     from member_runtime import is_member
     if is_member():
         return
     entries = plan.dependencies.get("source_map", [])[1:]
-    for event in result.get("evidence", []):
+    events = {e["id"]: e for e in result.get("evidence", [])}
+    for event in events.values():
         if event.get("kind") != "function_result":
             continue
         entry = next((s for s in entries if s["start"] <= event["definition_start"] < s["end"]), None)
-        if entry:
-            code = plan.source[entry["start"]:entry["end"]]
-            # 함수의 성적은 그 함수가 값을 돌려줬는가다(2026-09-26). 종전엔 프로그램 봉투의
-            # source_complete 와 AND 했는데, 09-25 언어 개정(91448265)으로 catch 한 외부 실패도
-            # source_complete:false 가 되면서 "자료 하나 빠지면 한계를 적고 완료" 하도록 설계된
-            # 보고서 관용구가 설계대로 동작한 턴마다 fail_count 를 먹었다(AI동향준비읽기·검색묶음추리기·
-            # 웹앱검사하기 실측). 원천 불완전은 봉투가 따로 말한다 — 성적과 섞지 않는다.
-            db = IBLUsageDB()
-            db.update_success_by_code(code, bool(event["success"]))
-            if event.get("success") and event.get("returns_keys"):
-                # 관측 반환 필드(2026-09-26) — 성공한 실행이 돌려준 최상위 키를 정의 행에 병합
-                db.record_observed_returns(code, event["returns_keys"], event.get("returns_kind", "record"))
+        if entry and entry.get('function_ref'):
+            ref = entry['function_ref']
+            event['function_ref'] = ref
+            run_id = (result.get('task_ref') or {}).get('task_id') or (result.get('resume') or {}).get('run_id')
+            if run_id:
+                pending, seen = [event['id']], set()
+                while pending:
+                    eid = pending.pop()
+                    if eid in seen:
+                        continue
+                    seen.add(eid)
+                    pending.extend(events.get(eid, {}).get('parents', []))
+                complete = not any(events.get(eid, {}).get('incomplete') for eid in seen)
+                record_function_call(ref, run_id, event['id'], success=event['success'],
+                                     dependency_revision=plan.fingerprint, source_complete=complete,
+                                     observed={'keys': event.get('returns_keys', []),
+                                               'kind': event.get('returns_kind')})

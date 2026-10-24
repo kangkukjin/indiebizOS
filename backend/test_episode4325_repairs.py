@@ -38,17 +38,23 @@ def test_recovered_evidence_budget_prefers_latest(supervisor):
 
 def test_truncated_idiom_result_is_not_scored_as_success(monkeypatch):
     import ibl_function_result as fr
-    updates, events = [], []
-    monkeypatch.setattr("ibl_usage_db.IBLUsageDB.update_success_by_code", lambda self, *a, **k: updates.append(a))
+    from function_library import register, record_legacy_call
+    from function_store import resolve
+    from capability_history import function_statistics
+    events = []
     monkeypatch.setattr("episode_logger.record_trajectory_event", lambda kind, row: events.append(row))
+    ref = register('result', '$return=1', edition=1)
+    row = resolve('result', edition=1)
     cut = {"success": True, "items": [1], "truncated": True,
            "truncations": [{"scope": "source", "reason": "일치 줄 본문 절단"}]}
     assert fr.source_partial(cut)
-    assert fr.record_idiom_outcome("[self:grep]{}", cut, 10) is False
-    assert not updates and events[-1]["failure_origin"]["kind"] == "partial_source"
+    record_legacy_call(row, cut)
+    assert function_statistics(ref)['success_count'] == 0
+    assert events[-1]['source_complete'] is False
     sample = {"success": True, "items": [1], "truncations": [{"scope": "selection", "reason": "limit"}]}
     assert not fr.source_partial(sample)
-    assert fr.record_idiom_outcome("[self:grep]{}", sample, 10) is True and updates
+    record_legacy_call(row, sample)
+    assert function_statistics(ref)['success_count'] == 1
 
 
 if __name__ == "__main__":

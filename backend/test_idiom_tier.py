@@ -243,7 +243,7 @@ def test_p3_recall_outcome_attributes_to_used_phrase(monkeypatch):
     unused = '[sense:realty]{region: "${지역}"}; [self:write]{path: "${경로}", content: "x"}'
     thread_context.set_phrase_recall([used, unused])
     rag.record_recall_outcome("", 0.0, TOOL_CALLS)          # 낱말 top-1 없음 — 관용구 귀속은 그래도 돈다
-    assert hits == [(used, True)]
+    assert hits == []  # 복사한 본문을 관용구 실행으로 귀속하지 않는다.
     assert thread_context.get_phrase_recall() == []         # 꺼내면 비운다
 
 
@@ -270,6 +270,10 @@ def _add(db, intent, code, topic, category="single", ok=0, alias=""):
         conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
     cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, created_at, updated_at, topic, alias) VALUES (?,?,?,?,?,?,?,?)",
                        (intent, code, category, ok, now, now, topic, alias))
+    if alias:
+        conn.execute("ALTER TABLE ibl_examples ADD COLUMN provenance TEXT DEFAULT '{}'") if 'provenance' not in {r[1] for r in conn.execute('PRAGMA table_info(ibl_examples)')} else None
+        from test_function_support import import_memory
+        import_memory(conn)
     conn.commit(); conn.close()
     return cur.lastrowid
 
@@ -301,7 +305,7 @@ def test_p4_phrase_section_roundtrip_and_map(env):
     text = open(path, encoding="utf-8").read()
     assert "## 용례" in text and "## 관용구" in text
     assert text.index("## 용례") < text.index("## 관용구") < text.index("## 갱신 기록")
-    assert f"### 찾아고치기 — 찾아 읽고 고친다 · 문장 3 · 슬롯 패턴, 루트, 파일, 앞, 뒤 ‹#{pid} · ✓2/✗0" in text
+    assert f"### 찾아고치기 — 찾아 읽고 고친다 · 문장 3 · 슬롯 패턴, 루트, 파일, 앞, 뒤 ‹#{pid} · " in text
     assert '호출: `[fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"} → Record`' in text   # 관용구 = 이름 붙은 함수
     assert "1. `" + PHRASE[0] + "`" in text
     # 용례 절엔 관용구가 섞이지 않는다
@@ -313,8 +317,9 @@ def test_p4_phrase_section_roundtrip_and_map(env):
     with open(path, "w", encoding="utf-8") as f:
         f.write(text.replace("### 찾아고치기 — ", "### 찾아서고치기 — "))
     os.utime(path, (os.path.getmtime(path) + 5, os.path.getmtime(path) + 5))
-    assert HT.sync_topic("개발/프론트", db)["updated"] == 1
-    assert HT.rows_of("개발/프론트", db, kind="phrase")[0]["alias"] == "찾아서고치기"
+    sync = HT.sync_topic("개발/프론트", db)
+    assert sync["updated"] == 0 and sync["rejected"]
+    assert HT.rows_of("개발/프론트", db, kind="phrase")[0]["alias"] == "찾아고치기"
     assert "개발/프론트 (1 · 관용구 1)" in HT.map_text(db)
     r = HT.recall("개발/프론트", db)
     # recall의 items는 용례와 호출 가능한 함수를 함께 싣는다. count는 통화 행수다.
@@ -338,9 +343,10 @@ def test_p4_human_block_inserted_and_removed_block_deleted(env):
         f.write(head + new_sec + tail)
     os.utime(path, (os.path.getmtime(path) + 5, os.path.getmtime(path) + 5))
     out = HT.sync_topic("개발/프론트", db)
-    assert out["inserted"] == 1 and out["deleted"] == 1, out
+    assert out["inserted"] == 0 and out["deleted"] == 1 and out["rejected"], out
     rows = HT.rows_of("개발/프론트", db, kind="phrase")
-    assert len(rows) == 1 and rows[0]["category"] == "phrase" and rows[0]["ibl_code"].startswith("[sense:realty]")
+    assert rows == []
+    assert "지역을 조회해 저장한다" in open(path, encoding="utf-8").read()
     assert HT.rows_of("개발/프론트", db, kind="word") == []
     # 한 문장짜리 블록은 관용구가 아니다 — 거절 사유
     text = open(path, encoding="utf-8").read()
@@ -352,7 +358,7 @@ def test_p4_human_block_inserted_and_removed_block_deleted(env):
         f.write(head + sec + tail)
     os.utime(path, (os.path.getmtime(path) + 10, os.path.getmtime(path) + 10))
     out = HT.sync_topic("개발/프론트", db)
-    assert out.get("rejected") and "문장 수 1" in out["rejected"][0]
+    assert out.get("rejected") and "공통 등록" in out["rejected"][0]
 
 
 # ---------------------------------------------------------------- P5 회상 XML
@@ -463,6 +469,9 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     # (2026-09-18 실측: 전수 실행에서 간헐 실패 — 경로가 식은 채 오면 tmp 에는 어휘가 없어 전부 '남의 것'→ 빈 지도).
     import ibl_registry
     monkeypatch.setattr(ibl_registry, "code_is_own", lambda code: True)
+    from test_function_support import import_memory
+    with sqlite3.connect(tmp_path / "data/ibl_usage.db") as imported:
+        import_memory(imported)
     block = A.idioms_map(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
     assert "[개발]" in block
@@ -470,7 +479,7 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     assert '- [fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block
     assert "  언제: 어디 있는지 모르는 것을 읽어야 할 때" in block
     assert "  골격: self:grep → self:read → self:edit" in block
-    assert "· 사용 6회" in block
+    assert "· 사용 6회" not in block  # 옛 행의 통계를 새 판본 실적으로 옮기지 않는다.
     # 층 — 등록만 인 것도, 이름 없는 낱말도 싣지 않는다
     assert "등록만이름" not in block and PIPE not in block
     # 본문은 싣지 않는다 — recall{expand:"이름"} 으로만(베끼기 방지)
@@ -518,4 +527,4 @@ def test_p3_registration_requires_the_when_line():
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
     import register_idiom
     info, why = register_idiom._gates("찾아고치기2", "", "; ".join(PHRASE))
-    assert info is None and "--when" in why
+    assert info is not None and why is None  # 함수 등록에는 소개 맥락이 필수가 아니다.

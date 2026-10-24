@@ -140,11 +140,12 @@ def test_f4_honest_failures_and_workflow_fallback(monkeypatch):
     assert not out["success"] and "깊이 상한" in json.dumps(out, ensure_ascii=False)
     out = _run('[fn:없는이름]{}')
     assert not out["success"] and "정의가 없고" in _fn_error(out)
-    monkeypatch.setattr(workflow_store, "get_workflow", lambda wid: {"name": wid} if wid == "저장된것" else None)
+    from function_library import register
+    register('저장된것', '', edition=1, legacy={'name': '저장된것', 'do': '[self:time]{}'})
     monkeypatch.setattr(workflow_engine, "execute_workflow", lambda wid, pp, params=None, **kw: {"success": True, "workflow_id": wid, "got": params})
     out = _run('[fn:저장된것]{city: "수원"}')
     fn_env = _step_env(out, 0)
-    assert fn_env["fn_source"] == "workflow" and fn_env["got"] == {"city": "수원"}
+    assert fn_env["fn_source"] == "function" and fn_env["got"] == {"city": "수원"}
 
 
 # ---------------------------------------------------------------- F5 검증기
@@ -176,7 +177,11 @@ def test_f6_fn_resolves_named_idiom_after_def_and_workflow(monkeypatch):
                         lambda self, name: {"id": 1, "intent": "앞 둘 뽑기", "alias": name,
                                             "ibl_code": '[x:rows]{q: "${질의}"} >> [x:take]{n: 2}', "topic": "개발"} if name == "앞둘뽑기" else None)
     monkeypatch.setattr(mod.IBLUsageDB, "phrase_aliases", lambda self, limit=12: ["앞둘뽑기"])
+    from test_function_support import use_legacy
+    use_legacy(monkeypatch, {'앞둘뽑기': '[x:rows]{q: "${질의}"} >> [x:take]{n: 2}'})
     used = []
+    monkeypatch.setattr('capability_history.record_function_call',
+                        lambda ref, run, call, **kw: used.append((ref, kw['success'])))
     monkeypatch.setattr(mod.IBLUsageDB, "update_success_by_code", lambda self, code, ok, **kw: used.append((code, ok)) or True)
     out = _run('[fn:앞둘뽑기]{질의: "a"}', calls)
     fn_env = _step_env(out, 0)

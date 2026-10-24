@@ -1633,18 +1633,18 @@
   },
   "self:workflow": {
    "fields": {
-    "description": "654de203c322",
-    "target_description": "087810362b3e",
+    "description": "52a58c2caa4e",
+    "target_description": "de610c1f5dd9",
     "implementation": "7438bc5a92a5",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
     "params": "f06cac358f64",
     "aliases": "1bb934bf4227",
-    "ops": "656545404c2b",
+    "ops": "6e80bd12876b",
     "side_effect": "b5bea41b6c62",
     "router": "adcb3a461920"
    },
-   "reviewed": "2026-09-28",
+   "reviewed": "2026-10-24",
    "examples": 72
   },
   "self:workspace": {

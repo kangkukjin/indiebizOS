@@ -134,6 +134,8 @@ def test_named_idiom_records_its_own_result_once(run, monkeypatch, tmp_path, bod
 
     body = ('[table:take]{items:[{x:1}],n:1}' if not body_fails else
             '[self:read]' + json.dumps({"path": str(tmp_path / "missing_body.txt")}))
+    from test_function_support import use_legacy
+    use_legacy(monkeypatch, {"직전보고서찾아읽기": body})
     row = {"id": 1, "alias": "직전보고서찾아읽기", "ibl_code": body}
     hits = []
     monkeypatch.setattr(workflow_store, "get_workflow", lambda name: None)
@@ -149,7 +151,7 @@ def test_named_idiom_records_its_own_result_once(run, monkeypatch, tmp_path, bod
     out = run(program)
     assert out["success"] is False
     # 파일 부재는 정의 결함으로 확정할 수 없다. 실행 실패는 보존하되 감점은 보류한다.
-    expected = [] if body_fails else [(body, True)]
+    expected = []  # 함수 실적은 호출 ID와 revision으로만 기록한다.
     assert [(c, ok) for c, ok, _ in hits] == expected
     import episode_logger
     with episode_logger._get_db() as conn:
@@ -163,8 +165,8 @@ def test_named_idiom_records_its_own_result_once(run, monkeypatch, tmp_path, bod
     assert feedback[0]["attributed"] is (not body_fails)
     if body_fails:
         assert feedback[0]["failure_origin"]["kind"] == "unknown"
-    if not body_fails:
-        assert hits[0][2]["elapsed_ms"] > 0
+    assert feedback[0]["function_ref"]["revision"]
+    assert feedback[0]["call_id"]
     rag.record_recall_outcome(body, 0.95, [{
         "tool_name": "execute_ibl", "input": {"code": program}, "success": False,
     }], turn_tokens=1000)

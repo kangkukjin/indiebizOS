@@ -225,15 +225,33 @@ MAX_FN_DEPTH = 5
 
 
 def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
-    """[fn:이름]{인자} — 같은 프로그램의 [def: 이름] 몸통을 닫힌 스코프로 실행. 정의가 없으면 저장 워크플로(원장)의
-    같은 이름을 부른다(두 길이 하나로). 규약은 워크플로 run 과 같다: 시그니처(미할당 $이름) 누락은 정직 거절,
+    from member_runtime import is_member
+    if tool_input.get('_fn_ref') or is_member():
+        return _execute_fn_impl(tool_input, project_path, agent_id)
+    import function_store
+    view = function_store.snapshot()
+    with function_store.using(view):
+        result = _execute_fn_impl(tool_input, project_path, agent_id)
+        row = function_store.resolve(tool_input.get('action'), edition=1, include_inactive=True)
+        if row and row.get('state') == 'active' and isinstance(result, dict) and (result.get('_fn_result') or result.get('failure_origin')):
+            from function_library import record_legacy_call
+            try:
+                record_legacy_call(row, result)
+            except Exception:
+                pass
+        return result
+
+
+def _execute_fn_impl(tool_input: dict, project_path: str, agent_id: str) -> Any:
+    """[fn:이름]{인자} — 같은 프로그램의 [def: 이름] 몸통을 닫힌 스코프로 실행. 정의가 없으면 공통 관용구 원장의
+    같은 이름을 부른다. 규약은 워크플로 run 과 같다: 시그니처(미할당 $이름) 누락은 정직 거절,
     인자는 파스 후 값 층에 주입, 반환은 `$return` 이 있으면 그 문장 아니면 마지막 통화, 앞 통화(>>)는 몸의 첫 문장에
     흐른다. 첫 파이프가 맨몸 자유 변수로 시작하면 앞 통화는 그 인자를 채운다(명시 인자 우선).
     재귀·상호 호출은 깊이 MAX_FN_DEPTH 에서 끊는다(무한 재귀 방지, 반복은 [repeat:]/[table:each] 로)."""
     import copy as _c
     from ibl_traceback import push_frame
     from ibl_function_result import (
-        compact_execution, failure_origin, record_idiom_outcome, annotate_failure,
+        compact_execution, failure_origin, annotate_failure,
     )
     name = tool_input.get("action") or ""
     _p = tool_input.get("params") or {}
@@ -255,22 +273,21 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
         from member_runtime import is_member
         if is_member():
             return {"success": False, "error_type": "permission", "error": "회원 기기에서 동봉한 함수 정의만 실행할 수 있습니다"}
-        # 둘째 길: 저장 워크플로(원장) · 셋째 길: 이름 붙은 관용구(해마, 2026-09-05 — 관용구는 이름 붙은 함수)
-        from workflow_engine import execute_workflow
-        from workflow_store import get_workflow
-        if get_workflow(name) is not None:
-            res = execute_workflow(name, project_path, params=caller or None)
-            if isinstance(res, dict):
-                res["fn"] = name
-                res["fn_source"] = "workflow"
-                res["_fn_result"] = True
-            return compact_execution(res)
-        row = None
+        import function_store
         try:
-            from ibl_usage_db import IBLUsageDB
-            row = IBLUsageDB().find_phrase_by_alias(name)
-        except Exception:
-            row = None
+            stored = function_store.resolve(name, edition=1)
+        except ValueError as exc:
+            return {'success': False, 'fn': name, 'error': str(exc)}
+        if stored and 'legacy' in stored:
+            from workflow_engine import execute_workflow
+            from workflow_store import _as_workflow
+            res = execute_workflow(name, project_path, params=caller or None,
+                                   definition=_as_workflow(stored))
+            if isinstance(res, dict):
+                res.update(fn=name, fn_source='function', _fn_result=True,
+                           function_ref=function_store.reference(stored))
+            return compact_execution(res)
+        row = function_store.memory_reference(name, 1) if stored else None
         if not row:
             # The legacy lookup deliberately excludes edition 2. A missing old
             # definition must not become a claim that the callable does not exist.
@@ -287,12 +304,12 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
                                   "#!ibl edition=2를 붙여 같은 코드와 인자를 검사·실행하세요. "
                                   "기존 판본 1 저장 프로그램은 자동 변환하지 않습니다.")}
             try:
-                from ibl_usage_db import IBLUsageDB
-                names = IBLUsageDB().phrase_aliases(10)
+                names = sorted({r['name'] for r in function_store.snapshot()['records'].values()
+                                if r.get('state') == 'active'})[:10]
             except Exception:
                 names = []
             return {"success": False, "fn": name,
-                    "error": (f"[fn:{name}] — 이 프로그램에 [def: {name}]{{…}} 정의가 없고, 저장 워크플로에도 관용구에도 '{name}' 이 없습니다. "
+                    "error": (f"[fn:{name}] — 이 프로그램에 [def: {name}]{{…}} 정의가 없고, 관용구 원장에도 '{name}' 이 없습니다. "
                               "같은 프로그램에 정의를 두거나(정의는 호출 뒤에 와도 됩니다) 있는 이름을 부르세요."
                               + (f" 관용구 이름: {', '.join(names)}" if names else ""))}
         from ibl_parser import parse_function_body as _parse_body
@@ -308,10 +325,6 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             failed = annotate_failure(
                 {"success": False, "fn": name, "error": f"[fn:{name}] 관용구 골격 파싱 실패: {e}"},
                 name, origin, row["ibl_code"])
-            try:
-                record_idiom_outcome(row["ibl_code"], failed, None, origin)
-            except Exception:
-                pass
             return failed
         from workflow_contract import _free_vars
         fdef = {"name": name, "params": _free_vars(body_steps), "todo": False, "body": body_steps, "_idiom_code": row["ibl_code"]}
@@ -365,17 +378,6 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             if not out.get("success", True):
                 origin = failure_origin(out, fdef.get("body") or [], required)
                 annotate_failure(out, name, origin, fdef["_idiom_code"])
-            # 실행 실패와 정의 결함은 다르다. 입력/원천/미확정 실패는 사건으로만 보존한다.
-            try:
-                from ibl_function_result import source_partial
-                partial = bool(out.get("success", True)) and source_partial(out)
-                ok = bool(out.get("success", True)) and not partial
-                elapsed = max(1, round((_time.monotonic() - started) * 1000)) if ok else None
-                attributed = record_idiom_outcome(fdef["_idiom_code"], out, elapsed, origin)
-                status = '성공' if ok else '부분 결과 — 점수 귀속 보류' if partial else '정의 실패' if attributed else '실패 귀속 보류'
-                print(f"[해마피드백:관용구] [fn:{name}] {status} 기록(실행 자리)")
-            except Exception:
-                pass
         if required:
             out["params_required"] = required
         if inject_meta:

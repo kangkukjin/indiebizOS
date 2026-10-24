@@ -27,8 +27,10 @@ def test_same_name_native_contract_does_not_inherit_legacy_success():
         old = ('옛 뜻', '$return=$목록', 99, 1, '목록', 'f', 'items', '목록', 1, '2026-01')
         native = ('현재 뜻', '#!ibl edition=2\n[def:f]($목록){return $목록}', 0, 0, '목록', 'f', 'List', '목록', 0, '2026-02')
         conn.executemany('INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?,?,?,?)', [old, native])
+        from test_function_support import import_memory
+        import_memory(conn)
         result = ibl_access._current_idiom_rows(conn, [old[:8]], 'returns', 'signature')
-        assert result == [native[:8]]
+        assert result[0][1] == native[1] and result[0][2:4] == (0, 0)
         assert conn.execute('SELECT success_count FROM ibl_examples WHERE always_on=1').fetchone()[0] == 99
 
 
@@ -36,6 +38,8 @@ def test_only_selected_names_are_exposed_and_legacy_has_no_current_pipe_slot():
     with db() as conn:
         old = ('뜻', '$return=$목록', 3, 0, '목록', 'f', 'items', '목록', 1, '2026-01')
         conn.execute('INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?,?,?,?)', old)
+        from test_function_support import import_memory
+        import_memory(conn)
         result = ibl_access._current_idiom_rows(conn, [old[:8]], 'returns', 'signature')
         assert result[0][6] == 'Record'
         assert ibl_access._authoring_pipe_note(result[0][1]) == ''
@@ -47,6 +51,8 @@ def test_latest_legacy_body_owns_the_signature_and_statistics():
         old = ('옛 뜻', '$return=$목록', 99, 0, '목록', 'f', 'items', '목록', 1, '2026-01')
         latest = ('새 뜻', '$return=$새목록', 0, 0, '목록', 'f', 'items', '새목록', 0, '2026-02')
         conn.executemany('INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?,?,?,?)', [old, latest])
+        from test_function_support import import_memory
+        import_memory(conn)
         rows = ibl_access._current_idiom_rows(conn, [old[:8]], 'returns', 'signature')
         assert rows[0][1] == latest[1] and rows[0][2] == 0
         assert rows[0][7] == '새목록' and rows[0][6] == 'Record'

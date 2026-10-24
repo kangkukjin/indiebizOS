@@ -24,20 +24,8 @@ SUMMARY = '[def:요약]($목록){ $t=[fn:성적표]{목록:$목록}; return len(
 def store(tmp_path, monkeypatch):
     """임시 저장소 + 관용구 별칭 하나(정렬해추리기) — 실제 원장·색인은 건드리지 않는다."""
     monkeypatch.setattr(workflow_store, "_get_workflows_path", lambda: tmp_path)
-    real = ibl_v2_store.definitions
-
-    def definitions():
-        out = ibl_v2_store.Library()
-        out.add("정렬해추리기", "#!ibl edition=2\n[def:정렬해추리기]($x){ return $x }", "관용구:정렬해추리기")
-        for path in sorted(tmp_path.glob("*.yaml")):
-            import yaml
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
-            if isinstance(data, dict) and data.get("edition") == 2:
-                out.add(data.get("name"), data.get("code", ""), f"저장본:{path.stem}")
-        return out
-
-    assert real is not None
-    monkeypatch.setattr(ibl_v2_store, "definitions", definitions)
+    from function_library import register
+    register('정렬해추리기', '#!ibl edition=2\n[def:정렬해추리기]($x){ return $x }')
     return tmp_path
 
 
@@ -54,37 +42,34 @@ def run(code):
 def test_same_name_under_another_id_is_rejected_and_language_keeps_running(store):
     assert save('[def:배수]($x){ return $x * 2 }')["success"]
     r = save('[def:배수]($x){ return $x * 3 }', workflow_id="배수-v2")
-    assert r["success"] is False and r["diagnostic"]["code"] == "DUPLICATE_LIBRARY"
-    assert 'workflow_id:"배수"' in r["error"] and "[def:배수2]" in r["error"]
+    assert r["success"] is False and r["diagnostic"]["code"] == "FUNCTION_MUTATION"
+    assert "다른 저장 ID" in r["error"]
     assert not (store / "배수-v2.yaml").exists()
     assert run("return 1+1")["value"] == 2
 
 
-def test_idiom_name_cannot_be_taken_by_a_saved_function(store):
+def test_idiom_and_saved_function_share_one_identity(store):
+    import function_store
+    original = function_store.resolve('정렬해추리기')
     r = save('[def:정렬해추리기]($x){ return $x }')
-    assert r["success"] is False and "관용구:정렬해추리기" in r["error"]
-    assert "workflow_id" not in r["error"]  # 관용구는 저장 ID로 고칠 수 있는 대상이 아니다
+    assert r['success'] and r['function_ref']['function_id'] == original['function_id']
 
 
 def test_resave_same_id_and_name_only_resave_are_revisions(store):
     assert save('[def:할인]($p){ return $p * 0.9 }', workflow_id="it-discount")["success"]
     # 저장 ID를 안 주면 그 이름을 가진 저장본의 개정이다 — 새 파일을 만들어 겹치지 않는다
     assert save('[def:할인]($p){ return $p * 0.8 }')["success"]
-    assert sorted(p.stem for p in store.glob("*.yaml")) == ["it-discount"]
+    assert workflow_store.get_workflow("할인")["id"] == "it-discount"
     assert save('[def:할인]($p){ return $p * 0.7 }', workflow_id="it-discount")["success"]
 
 
-def test_duplicate_on_disk_only_breaks_calls_to_that_name(store):
-    for wid in ("a", "b"):
-        (store / f"{wid}.yaml").write_text('edition: 2\nname: 겹침\ncode: "[def:겹침]($x){ return $x }"\n',
-                                           encoding="utf-8")
-    assert run("return 2+2")["value"] == 4
-    issue = run("return [fn:겹침]{x:1}")["issues"][0]
-    assert issue["code"] == "DUPLICATE_LIBRARY" and "저장본:a" in issue["message"]
-    assert "op:" in issue["hint"] and "다른 함수는 영향이 없습니다" in issue["hint"]
-    problems = [w["problem"] for w in workflow_store.list_workflows() if w["name"] == "겹침"]
-    assert len(problems) == 2 and all("같은 이름의 저장 정의가 여럿" in p for p in problems)
-    assert "고를 수 없습니다" in ibl_v2_store.describe("겹침")["error"]
+def test_duplicate_legacy_files_never_become_runtime_owners(store):
+    for wid in ('a', 'b'):
+        (store / f'{wid}.yaml').write_text('edition: 2\nname: 겹침\ncode: "[def:겹침]($x){return $x}"\n')
+    assert run('return 2+2')['value'] == 4
+    assert not run('return [fn:겹침]{x:1}')['success']
+    assert not any(w['name'] == '겹침' for w in workflow_store.list_workflows())
+    assert ibl_v2_store.describe('겹침')['error']
 
 
 def test_library_conflicts_survive_the_compilers_deepcopy():
@@ -109,7 +94,7 @@ def test_revision_that_breaks_callers_is_rejected_naming_them_transitively(store
     assert r["success"] is False
     assert [b["name"] for b in r["broken_callers"]] == ["성적표", "요약"]
     assert r["broken_callers"][0]["code"] == "MISSING_ARGUMENT"
-    assert "[def:등급2]" in r["error"] and "옛 정의를 지우세요" in r["error"]
+    assert "호출자 전환" in r["error"] and "옛 정의 은퇴" in r["error"]
     assert run("return [fn:성적표]{목록:[95]}")["value"] == [{"점수": 95, "등급": "A"}]
 
 
@@ -150,7 +135,7 @@ def test_delete_of_a_called_function_is_refused_and_leaf_delete_works(store):
     for code in (GRADE, SHEET):
         save(code)
     r = execute_workflow_action("delete", {"workflow_id": "등급"}, PROJECT)
-    assert r["success"] is False and "성적표" in r["error"] and (store / "등급.yaml").exists()
+    assert r["success"] is False and "성적표" in r["error"] and workflow_store.get_workflow("등급")["runnable"]
     assert execute_workflow_action("delete", {"workflow_id": "성적표"}, PROJECT)["success"]
     assert execute_workflow_action("delete", {"workflow_id": "등급"}, PROJECT)["success"]
 
@@ -159,7 +144,7 @@ def test_saving_another_name_over_an_id_checks_the_vanishing_name(store):
     save(GRADE)
     save(SHEET)
     r = save('[def:등급X]($s){ return "A" }', workflow_id="등급")
-    assert r["success"] is False and "사라지면" in r["error"] and "성적표" in r["error"]
+    assert r["success"] is False and "개정" in r["error"] and "성적표" in r["error"]
 
 
 # B71-3 — 거절 봉투는 스스로 설명하고, 안쪽 진단이 경계를 넘는다

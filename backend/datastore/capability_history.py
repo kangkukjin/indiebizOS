@@ -13,11 +13,53 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def record_function_call(ref, run_id, call_id, *, success, dependency_revision,
+                         source_complete=None, observed=None, path=None):
+    """Idempotent revision-specific observations in the existing evidence store."""
+    if not run_id or not call_id:
+        raise ValueError('함수 실행 귀속에는 실행 ID와 호출 ID가 필요합니다.')
+    with connection(path) as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS function_calls (
+            run_id TEXT NOT NULL, call_id TEXT NOT NULL, function_id TEXT NOT NULL,
+            revision TEXT NOT NULL, dependency_revision TEXT NOT NULL,
+            success INTEGER NOT NULL, source_complete INTEGER, observed TEXT NOT NULL,
+            PRIMARY KEY(run_id,call_id))''')
+        conn.execute('CREATE INDEX IF NOT EXISTS function_calls_revision ON function_calls(function_id,revision)')
+        inserted = conn.execute('INSERT OR IGNORE INTO function_calls VALUES(?,?,?,?,?,?,?,?)',
+                     (run_id, str(call_id), ref['function_id'], ref['revision'], dependency_revision,
+                      int(bool(success)), None if source_complete is None else int(bool(source_complete)),
+                      json.dumps(observed or {}, ensure_ascii=False))).rowcount
+        if inserted:
+            conn.execute('INSERT INTO executions VALUES (?,?,?,?) ON CONFLICT(key) DO UPDATE SET '
+                         'at=excluded.at,success=excluded.success,source=excluded.source',
+                         ('idiom:' + ref['function_id'], now(), int(bool(success)), 'function_call'))
+
+
+def function_statistics(ref, path=None):
+    with connection(path) as conn:
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE name='function_calls'").fetchone():
+            return {'success_count': 0, 'fail_count': 0, 'returns_observed': ''}
+        row = conn.execute('SELECT SUM(CASE WHEN success=1 AND source_complete IS NOT 0 THEN 1 ELSE 0 END),SUM(1-success) FROM function_calls '
+                           'WHERE function_id=? AND revision=?',
+                           (ref['function_id'], ref['revision'])).fetchone()
+        from ibl_returns_observed import merge_observed_returns
+        observed = ''
+        for item in conn.execute('SELECT observed FROM function_calls WHERE function_id=? AND revision=? '
+                                 'AND success=1 AND source_complete IS NOT 0 ORDER BY rowid',
+                                 (ref['function_id'], ref['revision'])):
+            value = json.loads(item[0])
+            if value.get('keys'):
+                observed = merge_observed_returns(observed, value['keys'], value.get('kind') or 'record')
+        return {'success_count': row[0] or 0, 'fail_count': row[1] or 0, 'returns_observed': observed}
+
+
 def storage_path(root=None):
     if root is not None:
         return Path(root) / 'data/capability_history.db'
     state = os.environ.get('INDIEBIZ_RUNTIME_STATE_DIR')
-    return (Path(state) if state else get_base_path() / 'data') / 'capability_history.db'
+    from thread_context import get_repair_workspace
+    workspace = get_repair_workspace(create=False)
+    return (Path(state) if state else Path(workspace or get_base_path()) / 'data') / 'capability_history.db'
 
 
 @contextmanager

@@ -1,5 +1,5 @@
 """Saved source execution with scheduler identity; shared by timers and calendar."""
-def execute_scheduled(steps, run_path, agent_id, edition=None, inputs=None):
+def execute_scheduled(steps, run_path, agent_id, edition=None, inputs=None, function_refs=None):
     """직접 발화의 출처를 전달한다. 위임 종류별 원장은 해당 위임기가 소유한다."""
     import json
     import uuid
@@ -15,7 +15,8 @@ def execute_scheduled(steps, run_path, agent_id, edition=None, inputs=None):
             tc.clear_called_agent()
             tc.set_call_channel("scheduler", override=True)
             from ibl_v2_entry import handle_request
-            result = (handle_request({"code": steps, "edition": edition, "inputs": inputs},
+            result = (handle_request({"code": steps, "edition": edition, "inputs": inputs,
+                                     **({"function_refs": function_refs} if function_refs is not None else {})},
                                      run_path, agent_id=agent_id) if isinstance(steps, str) else None)
             if result is None:
                 if isinstance(steps, str):

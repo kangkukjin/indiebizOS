@@ -40,6 +40,18 @@ def add_examples_batch(db, examples, *, owned_vocabulary=False):
     now = datetime.now().isoformat()
     ids = []
 
+    from function_memory import attach
+    accepted = []
+    for original in examples:
+        ex = dict(original)
+        try:
+            if ex.get('alias'):
+                ex['provenance'] = attach(ex['alias'], ex['ibl_code'], ex['intent'], ex.get('provenance'))
+            accepted.append(ex)
+        except ValueError as exc:
+            logger.warning('함수 등록 거절: %s', exc)
+    examples = accepted
+
     with db._get_connection() as conn:
         for ex in examples:
             cursor = conn.execute(

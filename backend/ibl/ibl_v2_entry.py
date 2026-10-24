@@ -18,7 +18,7 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
     try:
         if 'approval' in request:
             from approval_tokens import request_digest
-            set_approval(request.get('approval'), request_digest(request.get('code'), request.get('inputs'), request.get('declared_inputs')))
+            set_approval(request.get('approval'), request_digest(request.get('code'), request.get('inputs'), request.get('declared_inputs'), request.get('function_refs')))
         with request_scope(project_path, agent_id, request.get('resume'), stored_scope):
             return _handle_request(request, project_path, agent_id, cancel_check,
                                    input_evidence=input_evidence)
@@ -32,6 +32,8 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
         if edition_of(source, request.get("edition")) != 2:
             if request.get('budget') is not None:
                 raise Fault("EDITION_ARGUMENT", "budget은 판본 2에서만 사용할 수 있습니다.", kind="compile")
+            if request.get("function_refs") is not None:
+                raise Fault("EDITION_ARGUMENT", "function_refs는 판본 2 요청에서만 사용할 수 있습니다.", kind="compile")
             if request.get("inputs") is not None:
                 raise Fault("EDITION_ARGUMENT", "inputs는 판본 2에서만 사용할 수 있습니다.", kind="compile")
             if request.get("declared_inputs") is not None:
@@ -69,9 +71,33 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
         from ibl_v2_store import definitions
         from tool_batch import prepared_plan
         plan = prepared_plan(source, inputs, project_path, agent_id)
-        if plan is None:
-            plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions(),
-                                   declared_inputs=declared)
+        from member_runtime import is_member
+        from ibl_run_journal import recorded_function_refs, journal_root
+        refs = request.get('function_refs')
+        if request.get('resume'):
+            recorded = recorded_function_refs(journal_root(project_path), request['resume'])
+            if recorded is not None:
+                if refs is not None and refs != recorded:
+                    raise Fault('RESUME_CHANGED', '함수 참조가 원 실행과 다릅니다.', kind='protocol')
+                refs = recorded
+        if is_member() and refs:
+            raise Fault('MEMBER_LIBRARY', '회원은 동봉한 함수 정의만 사용할 수 있습니다.', kind='permission')
+        if plan is None or refs is not None:
+            if is_member():
+                plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions(),
+                                       declared_inputs=declared)
+            else:
+                import function_store
+                from function_library import reference_library
+                pinned = reference_library(refs) if refs is not None else None
+                view = pinned.pinned_view if pinned is not None else function_store.snapshot()
+                with function_store.using(view):
+                    plan = compile_program(source, load_registry(project_path, agent_id), inputs,
+                                           pinned if pinned is not None else definitions(), declared_inputs=declared)
+        from approval_tokens import request_digest
+        from thread_context import get_approval, set_approval
+        used_refs = plan.dependencies.get('function_refs') or None
+        set_approval(get_approval()[0], request_digest(source, inputs, declared, used_refs))
         from ibl_run_journal import Journal, journal_root, identity, reusable_receipts, validate_resume
         if request.get("check"):
             if reuse:
@@ -81,6 +107,7 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                                 identity(plan, inputs, project_path, agent_id, input_evidence=input_evidence))
             from ibl_v2_analysis import compact_check
             checked = compact_check(plan)
+            checked['function_refs'] = plan.dependencies.get('function_refs', [])
             checked['budget'] = {'steps': budget.steps, 'rows': budget.rows}
             from ibl_v2_analysis import project_context_warning
             context_warning = project_context_warning(plan, project_path)
@@ -96,6 +123,13 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
             journal.db.execute('CREATE TABLE IF NOT EXISTS file_workspace(scope TEXT)')
             if not request.get('resume'):
                 journal.db.execute('INSERT INTO file_workspace VALUES(?)', (current_scope(),))
+                journal.db.commit()
+            journal.db.execute('CREATE TABLE IF NOT EXISTS function_snapshot(refs TEXT,access_scope TEXT)')
+            if not journal.resuming:
+                import json
+                from ibl_run_journal import receipt_access_scope
+                journal.db.execute('INSERT INTO function_snapshot VALUES(?,?)',
+                                   (json.dumps(plan.dependencies.get('function_refs', [])), receipt_access_scope()))
                 journal.db.commit()
             journal.announce(plan.fingerprint)
             from ibl_continuations import remember, finished
@@ -116,7 +150,9 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
         except Exception:
             pass  # Usage accounting never retries an already executed program.
         return result
-    except Fault as exc:
+    except (Fault, ValueError, OSError) as exc:
+        if not isinstance(exc, Fault):
+            exc = Fault('FUNCTION_LIBRARY', str(exc), kind='protocol')
         from ibl_v2_analysis import syntax_report
         return projection(syntax_report(exc, source))
     except Exception as exc:

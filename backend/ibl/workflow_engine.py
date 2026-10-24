@@ -888,8 +888,25 @@ def preflight_sentence(code: Any, inputs=None) -> Dict:
 
 
 def execute_workflow(workflow_id: str, project_path: str = ".",
+                     params=None, stack=None, definition=None, function_refs=None):
+    if definition is not None:
+        return _execute_workflow(workflow_id, project_path, params, stack, definition, function_refs)
+    import function_store
+    with function_store.using(function_store.snapshot()):
+        result = _execute_workflow(workflow_id, project_path, params, stack, definition, function_refs)
+        row = function_store.resolve(workflow_id, edition=1, include_inactive=True)
+        if row and row.get('state') == 'active':
+            from function_library import record_legacy_call
+            try:
+                record_legacy_call(row, result)
+            except Exception:
+                pass
+        return result
+
+
+def _execute_workflow(workflow_id: str, project_path: str = ".",
                      params: Optional[dict] = None,
-                     stack: Optional[list] = None) -> dict:
+                     stack: Optional[list] = None, definition=None, function_refs=None) -> dict:
     """
     저장된 워크플로우 실행
 
@@ -902,12 +919,14 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     Returns:
         파이프라인 실행 결과
     """
-    wf = get_workflow(workflow_id)
+    wf = definition if definition is not None else get_workflow(workflow_id)
     if not wf:
         return {"success": False, "error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
+    if wf.get('state') not in (None, 'active'):
+        return {'success': False, 'error': '관용구가 활성 상태가 아닙니다.', 'state': wf['state']}
     if wf.get("edition") == 2:
         from ibl_v2_store import action
-        return action("run", {"workflow_id": workflow_id, "params": params}, project_path)
+        return action("run", {"workflow_id": workflow_id, "params": params, "function_refs": function_refs}, project_path)
     if wf.get("problem"):
         return {"success": False, "error": wf["problem"]}
 
@@ -1058,7 +1077,8 @@ def execute_workflow_action(action: str, params: dict,
         if not workflow_id:
             return {"error": "workflow_id(저장본) 또는 steps/pipeline(즉석 실행)이 필요합니다.",
                     "available": [w["id"] for w in list_workflows()]}
-        return execute_workflow(workflow_id, project_path, params=caller, stack=_stack)
+        return execute_workflow(workflow_id, project_path, params=caller, stack=_stack,
+                                function_refs=params.get("function_refs"))
 
     elif action in ("save", "save_workflow"):
         if not params:
@@ -1105,15 +1125,11 @@ def execute_workflow_action(action: str, params: dict,
     elif action in ("delete", "delete_workflow"):
         if not workflow_id:
             return {"error": "workflow_id가 필요합니다."}
-        # 저장 정의를 부르는 다른 저장 정의가 있으면 지우지 않는다 — workflow.md 가 약속한
-        # "호출자의 계약 확인"의 삭제 쪽 (71회차 B71-2). 판본 2 저장본에만 해당한다.
-        from ibl_v2_store import delete_blockers
-        from workflow_store import workflow_transaction
-        with workflow_transaction():
-            blocked = delete_blockers(workflow_id, project_path)
-            if blocked:
-                return {"success": False, "error": blocked}
+        try:
             ok = delete_workflow(workflow_id)
+        except (ValueError, OSError) as exc:
+            return {"success": False, "error": str(exc),
+                    **({"broken_callers": exc.broken_callers} if hasattr(exc, 'broken_callers') else {})}
         if ok:
             return {"success": True, "message": f"워크플로우 '{workflow_id}' 삭제 완료"}
         return {"error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}

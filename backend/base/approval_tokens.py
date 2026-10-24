@@ -27,10 +27,13 @@ def challenge(principal_key: str, action_key: str, request_digest: str, op: Opti
     return hashlib.sha256(body.encode("utf-8")).hexdigest()[:32]
 
 
-def request_digest(code: str, inputs=None, declared_inputs=None) -> str:
+def request_digest(code: str, inputs=None, declared_inputs=None, function_refs=None) -> str:
     """요청 지문 — 코드 원문과 입력(이름·값·선언)의 해시. 표면이 같은 요청을 재전송하면 같은 값."""
     import json
-    payload = json.dumps({"code": code or "", "inputs": inputs or {}, "declared": sorted(declared_inputs or [])},
+    content = {"code": code or "", "inputs": inputs or {}, "declared": sorted(declared_inputs or [])}
+    if function_refs is not None:
+        content["function_refs"] = function_refs
+    payload = json.dumps(content,
                          ensure_ascii=False, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 

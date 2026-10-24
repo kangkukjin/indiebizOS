@@ -117,46 +117,17 @@ def collect(root):
                     and p.suffix in {'.py', '.sh', '.js', '.ibl'} and '__pycache__' not in p.parts]
     script_realm = digest([scripts, _files(root, script_files)])
 
+    import function_store
     idioms = {}
-    usage = data / 'ibl_usage.db'
-    if usage.is_file():
-        conn = _readonly(usage)
-        try:
-            for row in conn.execute("SELECT * FROM ibl_examples WHERE COALESCE(alias,'') != ''"):
-                row = dict(row)
-                key = f"idiom:db:{row['id']}"
-                definition = {k: row.get(k) for k in ('alias', 'ibl_code', 'intent', 'signature', 'returns')}
-                idioms[key] = definition
-                items[key] = _entry('idiom', row['alias'], definition, '', created_at=row.get('created_at'), metadata={
-                    'source': f"data/ibl_usage.db#ibl_examples/{row['id']}",
-                    'legacy_updated_at': row.get('updated_at'), 'external_state_covered': False})
-            if conn.execute("SELECT 1 FROM sqlite_master WHERE name='ibl_idiom_revisions'").fetchone():
-                for row in conn.execute('SELECT example_id,MAX(revised_at) AS at FROM ibl_idiom_revisions GROUP BY example_id'):
-                    key = f"idiom:db:{row['example_id']}"
-                    if key in items:
-                        items[key]['metadata']['legacy_revised_at'] = row['at']
-        finally:
-            conn.close()
-    for path in sorted((data / 'workflows').glob('*.yaml')):
-        entry = _yaml(path)
-        if not isinstance(entry, dict) or entry.get('edition') != 2:
+    for row in function_store.snapshot(data / 'workflows')['records'].values():
+        if row.get('state') == 'retired':
             continue
-        key = f'idiom:workflow:{path.stem}'
-        definition = {k: entry.get(k) for k in ('name', 'code', 'description', 'edition', 'capability_contract')}
+        key = 'idiom:' + row['function_id']
+        definition = {k: row.get(k) for k in ('name', 'source', 'legacy', 'edition', 'state', 'revision')}
         idioms[key] = definition
-        items[key] = _entry('idiom', entry.get('name') or path.stem, definition, '', metadata={
-            'source': str(path.relative_to(root)), 'external_state_covered': False})
-    for name, filename in (_json(data / 'idioms/installed.json') or {}).items():
-        if not isinstance(filename, str):
-            raise ValueError('배포 관용구 파일명은 문자열이어야 합니다.')
-        path = data / 'idioms' / filename
-        if path.is_symlink() or path.parent != data / 'idioms' or path.suffix != '.ibl':
-            raise ValueError('배포 관용구 경로 오류')
-        definition = path.read_text(encoding='utf-8')
-        key = f'idiom:installed:{name}'
-        idioms[key] = definition
-        items[key] = _entry('idiom', name, definition, '', metadata={
-            'source': str(path.relative_to(root)), 'external_state_covered': False})
+        items[key] = _entry('idiom', row['name'], definition, '', metadata={
+            'source': 'data/workflows/catalog.json', 'function_ref': function_store.reference(row),
+            'state': row.get('state'), 'external_state_covered': False})
     # 스크립트/관용구는 동적으로 서로를 호출할 수 있다. 정의 카탈로그의 보수적 폐포.
     dependencies = digest([runtime, script_realm, idioms])
     for item in items.values():

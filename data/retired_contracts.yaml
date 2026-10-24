@@ -25,6 +25,16 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: body-matched-idiom-execution-statistics
+    retired: 2026-10-24
+    reason: 본문 문자열·회상된 이름으로 관용구 실행 실적을 다시 귀속하던 경로를 제거했다.
+    instead: 실제 호출의 function_id·revision·run_id·call_id로 기존 증거 원장에 한 번 기록한다.
+    phrases: ['def record_idiom_outcome(', 'def _record_phrase_recall_outcome(', 'def delete_blockers(']
+  - id: independent-idiom-function-definition-owners
+    retired: 2026-10-24
+    reason: 해마 별칭 행과 개별 workflow 파일과 배포 IBL의 실행 시 합성 경로를 통합 관용구 원장으로 교체했다.
+    instead: 본문은 data/workflows의 불변 판본과 원자 카탈로그가 소유한다. 기억은 관용구 참조, 배포 파일은 명시 import 입력이다.
+    phrases: ['해마가 없으면 배포 .ibl에서 함수를 읽는다', 'workflow 파일과 관용구 DB를 합쳐 실행 정의를 만든다']
   - id: scheduled-code-as-natural-language
     retired: 2026-10-24
     reason: 예약과 workflow 위임의 확정 IBL을 AI 메시지로 되돌리던 실행 경로와 교재를 정렬했다.

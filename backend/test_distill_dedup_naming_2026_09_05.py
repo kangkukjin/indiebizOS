@@ -92,7 +92,7 @@ def test_n1_name_shape_rule_is_now_a_gate_not_prose():
     good = '[self:patch]{op: "status"}; [self:patch]{op: "apply", proposal_id: "${제안번호}"}'
     assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때",
                                  '[self:patch]{op: "apply", id: "${제안번호}"}')[1] == "존재하지 않는 액션 또는 인자"
-    assert register_idiom._gates("오버레이레이아웃무관허용및재적용", "제안을 적용해야 할 때", good)[0] is None
+    assert register_idiom._gates("오버레이레이아웃무관허용및재적용", "제안을 적용해야 할 때", good)[0] is not None  # 문법적으로 유효한 긴 이름도 저장 가능.
     assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때", good)[1] is None
 
 

@@ -43,7 +43,7 @@ export {
 export const IBL_ENDPOINT = `${BACKEND_ORIGIN}/ibl/execute`;
 
 // 판본 2 표면 바인딩 요청 봉투(공용 코어 appRequest 의 반환) — 치환 없는 원문 + 타입 보존 inputs + 참조 이름.
-export interface AppRequest { code: string; edition: 2; inputs: Record<string, unknown>; declared_inputs: string[] }
+export interface AppRequest { code: string; edition: 2; inputs: Record<string, unknown>; declared_inputs: string[]; function_refs?: Record<string, unknown>[] }
 export type ActionReq = string | AppRequest;  // 빌더(appRequest·actionRequest)는 공용 코어 — JSDoc 타입을 TS 가 그대로 읽는다.
 
 // ===== 매니페스트 타입 (느슨하게 — 서버 파생 JSON이 진실) =====

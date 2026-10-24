@@ -163,7 +163,7 @@ def test_critic_without_prescreen_keeps_normal_path(gv, tmp_path, monkeypatch):
 
 def test_inspection_workflow_passes_prescreen():
     import yaml
-    w = yaml.safe_load(open(os.path.join(ROOT, "data/workflows/화면검수.yaml"), encoding="utf-8"))
+    w = yaml.safe_load(open(os.path.join(ROOT, "data/idioms/화면검수.yaml"), encoding="utf-8"))
     for k in ("do", "steps"):
         assert "prescreen: '$it.prescreen'" in w[k], f"화면검수 {k} 에 0층 통과 배선 없음"
 

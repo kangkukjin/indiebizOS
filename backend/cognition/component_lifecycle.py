@@ -87,7 +87,7 @@ WORKFLOW_ID_RE = re.compile(r"\bworkflow_id\s*:\s*[\"']([^\"']+)[\"']")
 GUIDE_MARK_RE = re.compile(r"^<!-- lifecycle: candidate since (\d{4}-\d{2}-\d{2})[^\n]*-->\n?", re.M)
 
 # 결정권 표 — 가역(git 추적) 층은 기계 집행, 어휘는 판정 큐.
-RETIRE_BY_MACHINE = {"guide", "workflow", "script"}
+RETIRE_BY_MACHINE = {"guide", "idiom", "script"}
 RETIRE_BY_VERDICT = {"action"}
 
 # 시험이 끼워 넣는 커밋 함수 자리 — 라이브에선 _commit_via_body.
@@ -167,9 +167,14 @@ def collect_inventory() -> Dict[str, Dict]:
     if GUIDES_DIR.is_dir():
         for p in sorted(GUIDES_DIR.glob("*.md")):
             inv[f"guide:{p.name}"] = {"kind": "guide", "name": p.name, "path": p}
-    if WORKFLOWS_DIR.is_dir():
-        for p in sorted(WORKFLOWS_DIR.glob("*.yaml")):
-            inv[f"workflow:{p.stem}"] = {"kind": "workflow", "name": p.stem, "path": p}
+    import function_store
+    for row in function_store.snapshot(WORKFLOWS_DIR)['records'].values():
+        if row.get('state') != 'active':
+            continue
+        inv['idiom:' + row['function_id']] = {
+            'kind': 'idiom', 'name': row['name'], 'function_ref': function_store.reference(row),
+            'legacy_ids': row.get('legacy_ids', []),
+            'text': row.get('source') or json.dumps(row.get('legacy') or {}, ensure_ascii=False)}
     reg = _load_yaml(SCRIPTS_DIR / "registry.yaml")
     if isinstance(reg, dict):
         for sid, ent in reg.items():
@@ -192,9 +197,9 @@ def _refs_in_text(text: str, inv: Dict[str, Dict]) -> Set[str]:
         k = f"script:{sid}"
         if k in inv:
             out.add(k)
-    for wid in WORKFLOW_ID_RE.findall(text):
-        k = f"workflow:{wid}"
-        if k in inv:
+    names = set(WORKFLOW_ID_RE.findall(text)) | set(re.findall(r"\[fn:\s*([^]\s]+)\]", text))
+    for k, m in inv.items():
+        if m['kind'] == 'idiom' and names.intersection([m['name'], *m.get('legacy_ids', [])]):
             out.add(k)
     for k, m in inv.items():
         if m["kind"] == "guide" and m["name"] in text:
@@ -213,8 +218,8 @@ def collect_references(inv: Dict[str, Dict]) -> Dict[str, Set[str]]:
 
     # 가이드 → (액션·스크립트·워크플로우·다른 가이드)
     for k, m in inv.items():
-        if m["kind"] in ("guide", "workflow"):
-            text = _read(m["path"])
+        if m["kind"] in ("guide", "idiom"):
+            text = m.get("text") if m["kind"] == "idiom" else _read(m["path"])
             for t in _refs_in_text(text, inv):
                 _add(t, k)
 
@@ -327,13 +332,13 @@ def last_signal(meta: Dict) -> Optional[str]:
                       (meta["name"],))
             conn.close()
             return ts[:10] if isinstance(ts, str) else None
-        if kind == "workflow":
-            if not PULSE_DB_PATH.exists():
+        if kind == "idiom":
+            path = DATA / 'capability_history.db'
+            if not path.exists():
                 return None
-            conn = sqlite3.connect(str(PULSE_DB_PATH), timeout=5)
-            ts = _one(conn, "SELECT MAX(timestamp) FROM workflow_run WHERE workflow_id=? "
-                            "AND success=1 AND source='usage'", (meta["name"],))
-            conn.close()
+            with sqlite3.connect(str(path), timeout=5) as conn:
+                ts = _one(conn, "SELECT at FROM executions WHERE key=? AND success=1",
+                          ('idiom:' + meta['function_ref']['function_id'],))
             return ts[:10] if isinstance(ts, str) else None
         if kind == "script":
             st = json.loads(_read(SCRIPTS_STATE_PATH) or "{}")
@@ -389,8 +394,6 @@ def _mark(meta: Dict, since: str, evidence: str) -> None:
     kind = meta["kind"]
     if kind == "guide":
         _mark_guide(meta["path"], since, evidence)
-    elif kind == "workflow":
-        _set_yaml_key(meta["path"], "lifecycle", {"candidate_since": since, "evidence": evidence})
     elif kind == "script":
         _set_yaml_key(SCRIPTS_DIR / "registry.yaml", "lifecycle",
                       {"candidate_since": since, "evidence": evidence}, script_id=meta["name"])
@@ -401,8 +404,6 @@ def _unmark(meta: Dict) -> None:
     kind = meta["kind"]
     if kind == "guide":
         _unmark_guide(meta["path"])
-    elif kind == "workflow":
-        _set_yaml_key(meta["path"], "lifecycle", None)
     elif kind == "script":
         _set_yaml_key(SCRIPTS_DIR / "registry.yaml", "lifecycle", None, script_id=meta["name"])
 
@@ -436,12 +437,11 @@ def _retire_guide(meta: Dict) -> List[str]:
     return changed
 
 
-def _retire_workflow(meta: Dict) -> List[str]:
-    src: Path = meta["path"]
-    _set_yaml_key(src, "lifecycle", None)
-    dst = _retired_dir(WORKFLOWS_DIR) / src.name
-    shutil.move(str(src), str(dst))
-    return [str(src.relative_to(BASE)), str(dst.relative_to(BASE))]
+def _retire_idiom(meta: Dict) -> List[str]:
+    from function_library import retire
+    ref = meta['function_ref']
+    retire(ref['function_id'], expected_revision=ref['revision'])
+    return []  # Private catalog is not committed; lifecycle state records the event.
 
 
 def _retire_script(meta: Dict) -> List[str]:
@@ -646,8 +646,8 @@ def compute_transitions(today: Optional[str] = None, apply: bool = True,
         try:
             if meta["kind"] == "guide":
                 paths = _retire_guide(meta)
-            elif meta["kind"] == "workflow":
-                paths = _retire_workflow(meta)
+            elif meta["kind"] == "idiom":
+                paths = _retire_idiom(meta)
             else:
                 paths = _retire_script(meta)
             st["candidates"].pop(key, None)

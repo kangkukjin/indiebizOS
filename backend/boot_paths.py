@@ -11,6 +11,7 @@ bare import·폰 번들(zip 안 평면)·해마 코퍼스가 평면 이름을 �
 """
 import os
 import sys
+from pathlib import Path
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -82,3 +83,31 @@ def wire_ledger_signature() -> None:
 
 wire_ledger_syntax_gate()
 wire_ledger_signature()
+
+
+def wire_function_store():
+    """All definition writers share the compiler gate without upward imports."""
+    import function_store
+
+    def root(for_write=False):
+        from thread_context import get_repair_workspace
+        from workflow_store import _get_workflows_path
+        pending = get_repair_workspace(resolve=False)
+        workspace = get_repair_workspace(create=for_write)
+        if workspace:
+            return Path(workspace) / "data/workflows"
+        root = _get_workflows_path()
+        return root / ".unopened-repair" if pending else root
+
+    def validate(before, after, changed):
+        from function_library import validate_changes
+        return validate_changes(before, after, changed)
+
+    def register(*args, **kwargs):
+        from function_library import register
+        return register(*args, **kwargs)
+
+    function_store.wire(root, validate, register)
+
+
+wire_function_store()

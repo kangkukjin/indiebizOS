@@ -112,9 +112,11 @@ def test_saved_workflow_called_as_function_uses_same_value_gate(monkeypatch):
             "results": [{"step": 1}],
         },
     )
+    from function_library import register
+    register("저장된함수", "[self:time]", edition=1, legacy={"name":"저장된함수", "do":"[self:time]"})
     out = _execute_fn({"action": "저장된함수", "params": {}}, ".", "test")
     assert _to_prev_currency(out) == "저장 함수 본문"
-    assert out["fn_source"] == "workflow" and out["results"]
+    assert out["fn_source"] == "function" and out["results"]
 
 
 @pytest.mark.local
@@ -174,6 +176,9 @@ def test_current_block_body_uses_edition_checked_call_teaching(tmp_path, monkeyp
     monkeypatch.setattr(
         ibl_access, "_idioms_cache", {"text": None, "t": 0, "key": None}
     )
+    from test_function_support import import_memory
+    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as fixture_db:
+        import_memory(fixture_db)
     block = ibl_access.idioms_map(None)
     assert lesson["example"] not in block
     assert '[fn:위치마다읽기]' in block and '→ Record' in block

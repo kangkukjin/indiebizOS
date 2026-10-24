@@ -192,7 +192,7 @@ def test_metadata_refresh_legacy_name_preserves_registration(tmp_path, monkeypat
                     'returns, signature, topic, always_on, success_count, fail_count)')
         con.execute('INSERT INTO ibl_examples VALUES(1,?,?,?,?,?,?,?,?,?)',
                     (name, '과거 등록', code, '?', '[]', '개발', 0, 7, 2))
-    assert _gates(name, '과거 등록', code)[1]  # 신규 승격 정책은 계속 유지한다.
+    assert _gates(name, '과거 등록', code)[1] is None  # 정의와 승격 정책 분리.
     before = db.find_phrase_by_alias(name)
     assert refresh_idiom_metadata(db, name)
     after = db.find_phrase_by_alias(name)

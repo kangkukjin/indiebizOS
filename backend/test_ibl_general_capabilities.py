@@ -186,9 +186,10 @@ def test_local_function_saved_and_recomposed_tracks_transitive_revision(memory, 
     request = {"edition": 2, "code": "return [fn:compose]{values:$input}", "inputs": {"input": [1, 2]}}
     first = handle_request(request, str(tmp_path))
     assert first["success"] and first["value"] == [2, 4], first
-    with memory._get_connection() as conn:
-        conn.execute("UPDATE ibl_examples SET ibl_code=? WHERE alias='scale'", (source.replace('factor=2', 'factor=3'),))
-        conn.commit()
+    import function_store
+    from function_library import register
+    ref = function_store.resolve('scale')
+    register('scale', source.replace('factor=2', 'factor=3'), expected_revision=ref['revision'])
     after = describe("compose")
     assert before["plan_hash"] != after["plan_hash"]
     second = handle_request(request, str(tmp_path))
@@ -283,6 +284,9 @@ def test_idiom_map_cache_expires_on_review_change_in_wal(tmp_path, monkeypatch):
     monkeypatch.setattr(ibl_registry, "code_is_own", lambda _: True)
     monkeypatch.setattr(vocabulary_state, "revision", lambda: 1)
     monkeypatch.setattr(ibl_access, "_idioms_cache", {"text": None, "t": 0, "key": None})
+    from function_library import register
+    monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a: {})
+    register('f', source, 'pure')
     conn = sqlite3.connect(data / "ibl_usage.db")
     try:
         conn.execute('PRAGMA journal_mode=WAL')

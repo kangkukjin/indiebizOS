@@ -65,6 +65,14 @@ def run_trial(code, case_id, named=True, catalog=None, suite='legacy', source_re
     with tempfile.TemporaryDirectory(prefix='ibl_idiom_trial_') as tmp, ExitStack() as stack:
         root = Path(tmp).resolve()
         setup_case(root)
+        import function_store, capability_history
+        from function_migration import prepare, prepared_snapshot
+        codes = {name: e['body'] for name, e in entries.items()} if named else {}
+        proposed = prepare([{'key': 'fixture:' + name, 'name': name, 'edition': 1,
+                             'source': body, 'description': '', 'origin': 'user'}
+                            for name, body in codes.items()])
+        stack.enter_context(function_store.using(prepared_snapshot(proposed)))
+        stack.enter_context(patch.object(capability_history, 'storage_path', lambda: root / 'history.db'))
         stack.enter_context(patch.object(ibl_usage_db, 'IBLUsageDB', DB))
         stack.enter_context(patch.object(workflow_engine, 'get_workflow', lambda name: None))
         stack.enter_context(patch.object(ibl_typecheck, 'FN_CODE_SOURCES', [lambda n: entries[n]['body'] if named and n in entries else None]))

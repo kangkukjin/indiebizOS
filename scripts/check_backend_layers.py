@@ -55,7 +55,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
-        "capability_history", "control_observations",
+        "capability_history", "control_observations", "function_store", "function_memory",
         "member_activity",
         "research_store", "research_questions", "research_evidence", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context",
@@ -75,7 +75,7 @@ LAYERS = {
         "websocket_manager", "xray_stream", "media_store",
     },
     "ibl": {
-        "reusable_catalog",
+        "reusable_catalog", "function_library", "function_consumers", "function_migration",
         "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
         "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "tool_batch", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies",
         "member_bridge", "member_profile", "member_files",

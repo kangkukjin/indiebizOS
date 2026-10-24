@@ -11,7 +11,7 @@ from capability_inventory import collect
 
 
 @pytest.fixture
-def body(tmp_path):
+def body(tmp_path, monkeypatch):
     def write(name, value):
         p = tmp_path / name
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -28,7 +28,16 @@ def body(tmp_path):
     conn.execute('INSERT INTO ibl_examples VALUES (1,?,?,?,?,?,?,?)',
                  ('fn', '[sense:sample]{}', 'example', '[]', 'items', '2026-01-01', '2026-10-01'))
     conn.commit(); conn.close()
+    import workflow_store
+    from function_library import register
+    monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: tmp_path / 'data/workflows')
+    register('value', '#!ibl edition=2\n[def:value](){return 1}')
     return tmp_path
+
+
+def idiom_key(body):
+    import function_store
+    return 'idiom:' + next(iter(function_store.snapshot(body / 'data/workflows')['records']))
 
 
 def test_legacy_dates_not_misrepresented_as_verified_or_repaired(body):
@@ -37,7 +46,7 @@ def test_legacy_dates_not_misrepresented_as_verified_or_repaired(body):
     rows = {r['key']: r for r in out['items']}
     assert rows['script:legacy']['created_at'] is None
     assert rows['script:legacy']['metadata']['legacy_registered_at'] == '2026-01-02'
-    assert rows['idiom:db:1']['created_at'] == '2026-01-01'
+    assert rows[idiom_key(body)]['created_at'] is None
     assert all(r['last_repaired_at'] is None and r['last_verified_at'] is None for r in rows.values())
 
 
@@ -46,7 +55,7 @@ def test_package_backend_helper_and_nested_definition_changes_stale(body):
     (body / 'data/packages/installed/tools/sample/handler.py').write_text('def run(): return 2\n')
     changed = collect(body)
     assert before['action:sense:sample']['implementation_revision'] != changed['action:sense:sample']['implementation_revision']
-    assert before['idiom:db:1']['revision'] != changed['idiom:db:1']['revision']
+    assert before[idiom_key(body)]['revision'] != changed[idiom_key(body)]['revision']
     (body / 'backend/base/core.py').write_text('VALUE = 2\n')
     backend = collect(body)
     assert backend['action:sense:sample']['implementation_revision'] == changed['action:sense:sample']['implementation_revision']
@@ -54,7 +63,7 @@ def test_package_backend_helper_and_nested_definition_changes_stale(body):
     (body / 'data/scripts/helper.py').write_text('VALUE = 3\n')
     helper = collect(body)
     assert helper['script:legacy']['revision'] != backend['script:legacy']['revision']
-    assert helper['idiom:db:1']['revision'] != backend['idiom:db:1']['revision']
+    assert helper[idiom_key(body)]['revision'] != backend[idiom_key(body)]['revision']
 
 
 def test_execution_and_registration_timestamps_do_not_change_revision(body):
@@ -97,32 +106,16 @@ def test_daily_maintenance_observes_without_verifying(body, monkeypatch):
 
 
 def test_idiom_usage_records_execution_without_verification(body, monkeypatch):
-    from types import SimpleNamespace
-    from contextlib import contextmanager
-    from ibl_usage_db import IBLUsageDB
-
-    path = body / 'data/ibl_usage.db'
-    conn = sqlite3.connect(path)
-    for name in ('success_count', 'fail_count'):
-        conn.execute(f'ALTER TABLE ibl_examples ADD COLUMN {name} INTEGER DEFAULT 0')
-    conn.commit()
-    conn.close()
-
-    @contextmanager
-    def connect():
-        connection = sqlite3.connect(path)
-        try:
-            yield connection
-        finally:
-            connection.close()
-
+    import function_store
     monkeypatch.setenv('INDIEBIZ_RUNTIME_STATE_DIR', str(body / 'data'))
     age.operate({}, root=body)
-    IBLUsageDB.update_success(SimpleNamespace(_get_connection=connect, AVG_MS_ALPHA=0.3), 1, True)
-    row = age.operate({'key': 'idiom:db:1'}, root=body)['items'][0]
+    ref = function_store.reference(function_store.resolve('value'))
+    history.record_function_call(ref, 'run', 'call', success=True, dependency_revision='test')
+    row = age.operate({'key': idiom_key(body)}, root=body)['items'][0]
     assert row['last_execution']['success'] == 1
     assert row['last_execution']['at'].endswith('+00:00')
     assert row['last_verified_at'] is None
+    assert not any(k.startswith('idiom:db:') for k in collect(body))
 
 
 def test_runtime_state_directory_does_not_write_canonical_ledger(body, tmp_path, monkeypatch):

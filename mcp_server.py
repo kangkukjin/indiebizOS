@@ -273,6 +273,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       read_result: Optional[ResultRead] = None,
                       edition: Optional[int] = None,
                       value_protocols: Optional[List[str]] = None,
+                      function_refs: Optional[List[dict]] = None,
                       inputs: Optional[dict] = None,
                       ctx: Context = None,
                       origin: Optional[Literal["training"]] = None):
@@ -330,6 +331,8 @@ async def execute_ibl(code: str, project_path: str = "",
     if runtime_parent:
         payload["_runtime_parent"] = runtime_parent
     from ibl_edition import authoring_request
+    if function_refs is not None:
+        payload["function_refs"] = function_refs
     if value_protocols is not None:
         payload["value_protocols"] = value_protocols
     if budget is not None:

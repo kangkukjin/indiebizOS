@@ -238,3 +238,16 @@ def isolated_distill_training(tmp_path, monkeypatch):
     monkeypatch.setattr(rag, '__file__', str(root / 'backend/cognition/ibl_usage_rag.py'))
     monkeypatch.setattr(ibl_idiom, '__file__', str(root / 'backend/cognition/ibl_idiom.py'))
     return training
+
+
+@pytest.fixture
+def installed_functions(isolated_runtime_stores, monkeypatch):
+    """Explicit boot import for tests exercising shipped reusable functions."""
+    import function_store
+    from function_migration import installed_sources, prepare
+    root = Path(__file__).resolve().parents[1]
+    import ibl_registry
+    monkeypatch.setattr(ibl_registry, '_nodes_path', root / 'data/ibl_nodes.yaml')
+    monkeypatch.setattr(ibl_registry, '_nodes', None)
+    plan = prepare(installed_sources(root))
+    function_store.publish(plan['changes'])

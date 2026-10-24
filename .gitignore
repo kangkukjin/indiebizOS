@@ -516,3 +516,8 @@ frontend/dist-surfaces/
 member-desktop/display.json
 
 /docs/world_map/retired_2026_10_22/local/
+
+# Private reusable function revisions and migration/import state.
+data/workflows/catalog.json
+data/workflows/revisions/
+data/workflows/install-conflicts.json

@@ -45,6 +45,11 @@ def boundary(monkeypatch, tmp_path):
             return True
 
     monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", DB)
+    from test_function_support import use_legacy
+    use_legacy(monkeypatch, lambda: {'발췌': state['code']})
+    monkeypatch.setattr('capability_history.record_function_call',
+                        lambda ref, run, call, **kw: state['feedback'].append(kw['success'])
+                        if kw.get('source_complete') else None)
     original = ibl_engine._execute_ibl_impl
 
     def leaf(request, project, agent=None):
@@ -97,7 +102,7 @@ def test_wrong_parallel_branch_is_input_mismatch_not_bad_definition(boundary):
     assert out["failure_origin"]["parameter"] == "목록"
     assert out["failure_origin"]["input_contract"]["missing_fields"] == ["text"]
     assert "넘긴 값" in out["hint"] and "def" not in out
-    assert state["feedback"] == []
+    assert state["feedback"] == [False]
     ev = next(data for kind, data in state["events"] if kind == "ibl.function_feedback")
     assert ev["success"] is False and ev["attributed"] is False
     with pytest.raises(Fault) as caught:
@@ -107,7 +112,7 @@ def test_wrong_parallel_branch_is_input_mismatch_not_bad_definition(boundary):
     assert details["execution_ref"]["id"] == out["execution_ref"]["id"]
     assert "def" not in details
     fixed = run({"items": [{"text": "wanted", "url": "apply"}]})
-    assert fixed["success"] and state["feedback"] == [True]
+    assert fixed["success"] and state["feedback"] == [False, True]
 
 
 def test_internal_bad_shape_is_not_misattributed_to_caller(boundary):
@@ -117,7 +122,7 @@ def test_internal_bad_shape_is_not_misattributed_to_caller(boundary):
     out = run({"items": [{"text": "wanted", "url": "good"}]}, code)
     assert out["success"] is False
     assert out["failure_origin"]["kind"] == "unknown"
-    assert state["feedback"] == [] and "def" not in out
+    assert state["feedback"] == [False] and "def" not in out
 
 
 def test_confirmed_definition_syntax_failure_still_has_feedback_and_definition(boundary):
@@ -139,7 +144,7 @@ def test_opaque_failure_keeps_evidence_without_false_blame(boundary, monkeypatch
     out = run({})
     assert out["success"] is False and out["error"] == "원천 접근 실패"
     assert out["failure_origin"]["kind"] == "unknown"
-    assert not state["feedback"] and "def" not in out
+    assert state["feedback"] == [False] and "def" not in out
 
 
 @pytest.mark.parametrize("value", [None, 3, "본문", [1, 2], {"results": ["business data"]}])

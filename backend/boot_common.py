@@ -43,6 +43,17 @@ def wire_local_subsystems(profile: str = None) -> dict:
     #   **되돌릴 수 없는 부작용(삭제)** 은 여기서 게이트가 막는다.
     other_body = _another_body_is_live()
 
+    if other_body:
+        results["function_catalog"] = "skipped"
+    else:
+        try:
+            from function_migration import install
+            from runtime_utils import get_base_path
+            results["function_catalog"] = install(get_base_path())
+        except Exception as exc:
+            results["function_catalog"] = False
+            print(f"{tag} 관용구 원장 설치 실패: {exc}")
+
     # 에피소드 로거: 사용자 명령 → 최종 응답까지 1턴을 로컬 SQLite(world_pulse.db)에 기록한다.
     # 순수 로컬, 하드웨어 무관 — 모든 몸이 자기 실행을 (성공·실패 모두) 회고할 수 있어야 한다.
     # install() 이 자기 스키마(episode_log/episode_summary)도 보장하므로 추가 DB 초기화 불필요.

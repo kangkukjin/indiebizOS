@@ -24,7 +24,6 @@ def test_call_strings_and_local_shadowing_are_not_dependencies(store):
     save('[def:base]($x){return $x}')
     save('[def:text](){return "[fn:base]{x:1}"}')
     save('[def:local](){[def:base]($x){return $x}; return [fn:base]{x:1}}')
-    assert ibl_v2_store.callers(ibl_v2_store.library(), 'base') == []
     assert save('[def:base]($y){return $y}')['success']
 
 
@@ -46,7 +45,7 @@ def test_same_name_concurrent_saves_commit_exactly_one(store):
         results = list(pool.map(create, ['one', 'two']))
     assert sorted(r['success'] for r in results) == [False, True]
     assert ibl_v2_store.library().conflicts == {}
-    assert len(list(store.glob('*.yaml'))) == 1
+    assert len([w for w in workflow_store.list_workflows() if w['name'] == 'shared']) == 1
 
 
 def test_legacy_save_cannot_remove_a_current_function(store):
@@ -56,7 +55,7 @@ def test_legacy_save_cannot_remove_a_current_function(store):
     result = execute_workflow_action('save', {'workflow_id': 'base', 'name': 'base',
                                              'edition': 1, 'do': '[self:time]{}'}, PROJECT)
     assert result['success'] is False
-    assert '덮어쓸 수 없습니다' in result['error']
+    assert '판본' in result['error']
     assert run('return [fn:caller]{x:4}')['value'] == 4
 
 

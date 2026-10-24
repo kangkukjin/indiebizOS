@@ -7,6 +7,8 @@ import subprocess
 
 import pytest
 
+pytestmark = pytest.mark.usefixtures("installed_functions")
+
 ROOT = Path(__file__).resolve().parents[1]
 
 

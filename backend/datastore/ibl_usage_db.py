@@ -558,6 +558,13 @@ class IBLUsageDB:
         now = datetime.now().isoformat()
         # 서명은 문에서 한 번(2026-09-06) — 기록기마다 세면 표시와 실행이 갈라진다.
         signature = _signature_of(ibl_code)
+        if alias:
+            from function_memory import attach
+            try:
+                provenance = attach(alias, ibl_code, intent, provenance)
+            except ValueError as exc:
+                logger.warning('함수 등록 거절: %s', exc)
+                return 0
         with self._get_connection() as conn:
             from distill_receipts import begin
             prior = begin(conn, candidate_key)
@@ -691,11 +698,6 @@ class IBLUsageDB:
                 args
             )
             conn.commit()
-        try:
-            from capability_history import record_execution
-            record_execution(f'idiom:db:{example_id}', success)
-        except Exception as exc:
-            logger.warning('관용구 실행 시각 기록 실패: %s', type(exc).__name__)
 
     def update_success_by_code(self, ibl_code: str, success: bool,
                                elapsed_ms: Optional[int] = None,

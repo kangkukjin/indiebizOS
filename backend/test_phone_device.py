@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 
 import pytest
+
+pytestmark = pytest.mark.usefixtures("installed_functions")
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]

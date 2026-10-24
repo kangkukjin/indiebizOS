@@ -123,7 +123,10 @@ def test_image_critic_provenance_is_runtime_owned(monkeypatch):
 def test_workflow_invalid_row_does_not_break_list(tmp_path, monkeypatch, content):
     import workflow_store as mod
     monkeypatch.setattr(mod, '_get_workflows_path', lambda: tmp_path)
-    (tmp_path / 'bad.yaml').write_text(content)
+    import function_store
+    from function_library import register
+    ref = register('bad', '#!ibl edition=2\n[def:bad](){return 1}')
+    (tmp_path / 'revisions' / ref['function_id'] / (ref['revision'] + '.yaml')).write_text(content)
     rows = mod.list_workflows()
     assert rows[0]['runnable'] is False and rows[0]['problem']
 
@@ -148,12 +151,12 @@ def test_workflow_failed_replace_preserves_old_file(tmp_path, monkeypatch):
     import workflow_store as mod
     monkeypatch.setattr(mod, '_get_workflows_path', lambda: tmp_path)
     mod.save_workflow({'id': 'test', 'steps': ['[self:time]{}']})
-    before = (tmp_path / 'test.yaml').read_bytes()
+    before = (tmp_path / 'catalog.json').read_bytes()
     monkeypatch.setattr(mod.os, 'replace', lambda *a: (_ for _ in ()).throw(OSError('disk failure')))
     with pytest.raises(OSError):
-        mod.save_workflow({'id': 'test', 'steps': ['new']})
-    assert (tmp_path / 'test.yaml').read_bytes() == before
-    assert list(tmp_path.glob('.workflow-*')) == []
+        mod.save_workflow({'id': 'test', 'steps': ['[self:time]{}', '[self:time]{}']})
+    assert (tmp_path / 'catalog.json').read_bytes() == before
+    assert list(tmp_path.rglob('.function-*')) == []
 
 
 def test_paper_unknown_source_does_not_search(monkeypatch):

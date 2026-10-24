@@ -3,8 +3,7 @@
 No legacy asset is upgraded in place. Definition source is pinned by compilation;
 subsequent edits cannot change a running plan's function bodies.
 """
-import yaml
-from ibl_v2_ir import Fault, digest
+from ibl_v2_ir import Fault
 from ibl_v2_parser import parse, edition_of
 
 class Library(dict):
@@ -18,6 +17,7 @@ class Library(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.origins, self.conflicts = {}, {}
+        self.references, self.legacy_references = {}, {}
 
     def add(self, name, source, origin):
         if name in self.conflicts:
@@ -32,160 +32,28 @@ class Library(dict):
     def owners(self, name):
         return list(self.conflicts.get(name) or ([self.origins[name]] if name in self.origins and name in self else []))
 
-    def revised(self, name, source):
-        """name 을 source 로 바꾼(None 이면 뺀) 사본 — 개정 전/후 대조용."""
-        out = Library(self)
-        out.origins, out.conflicts = dict(self.origins), {k: list(v) for k, v in self.conflicts.items()}
-        if source is None:
-            out.pop(name, None)
-        else:
-            out[name] = source
-        return out
-
 
 def definitions():
-    from workflow_store import _get_workflows_path
     from member_runtime import is_member
     if is_member():
         from ibl_member_library import definitions as member_definitions
         return Library(member_definitions())
-    out = Library()
-    from ibl_usage_db import IBLUsageDB
-    from ibl_edition import source_edition
-    db = IBLUsageDB()
-    with db._get_connection() as conn:
-        for row in conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY updated_at, id"):
-            if source_edition(row["ibl_code"]) == 2:
-                # 같은 별칭의 행은 최신 행이 이긴다(색인의 갱신) — 겹침은 별칭과 저장본 사이의 일이다.
-                out.pop(row["alias"], None)
-                out.add(row["alias"], row["ibl_code"], f"관용구:{row['alias']}")
-    for path in sorted(_get_workflows_path().glob("*.yaml")):
-        if path.is_symlink():
-            continue
-        try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        except (OSError, yaml.YAMLError):
-            continue  # Legacy store's list view reports corrupt files.
-        if isinstance(data, dict) and data.get("edition") == 2:
-            out.add(data.get("name"), data.get("code", ""), f"저장본:{path.stem}")
-    # 배포된 정의는 첫 부팅·임베딩 준비 전에도 호출 가능하다. 사전 항목은 데이터이며
-    # 파서/엔진에 내용어 이름을 넣지 않는다. 개인 개정과 충돌하면 조용히 덮지 않는다.
-    for name, source in installed_definitions().items():
-        if name in out and out[name].strip() == source.strip():
-            continue  # 같은 정본의 의미 검색 색인 사본
-        out.add(name, source, "배포본:" + name)
-    return out
+    from function_library import definitions as current
+    return current()
 
 
 def installed_definitions():
-    import json
-    from pathlib import Path
-    from runtime_utils import get_base_path
-    from thread_context import get_repair_workspace
-    root = Path(get_repair_workspace(create=False) or get_base_path()) / "data/idioms"
-    manifest = root / "installed.json"
-    if not manifest.is_file():
-        return {}
-    names = json.loads(manifest.read_text(encoding="utf-8"))
-    result = {}
-    for name, filename in names.items():
-        path = root / filename
-        if path.is_symlink() or path.parent != root or path.suffix != ".ibl":
-            raise ValueError("배포 정의 경로 오류")
-        source = path.read_text(encoding="utf-8").strip()
-        if definition_name(source) != name:
-            raise ValueError("배포 이름과 함수 정의 불일치")
-        result[name] = source
-    return result
+    """Installed definitions are catalog entries, never a runtime file fallback."""
+    import function_store
+    return {r['name']: r['source'] for r in function_store.snapshot()['records'].values()
+            if r.get('edition') == 2 and r.get('state') == 'active'
+            and r.get('origin') == 'core' and not r.get('problem')}
 
 
 def library():
     """definitions() 를 Library 로 — 시험·회원 경로가 평범한 사전을 돌려줘도 겹침 기록 자리가 있다."""
     known = definitions()
     return known if isinstance(known, Library) else Library(known)
-
-
-def callers(known, name, registry=None):
-    """Compiler-resolved external dependencies, including lexical shadowing.
-
-    The parser/compiler owns calls; whitespace, comments, strings and local
-    functions must not create a second, regex-based version of the language.
-    """
-    from ibl_v2_compile import compile_program
-    if registry is None:
-        from ibl_v2_adapters import load_registry
-        registry = load_registry()
-    found = []
-    for caller, source in known.items():
-        if caller == name:
-            continue
-        try:
-            plan = compile_program(source, registry, definitions=known)
-            if name in {entry['name'] for entry in plan.dependencies['source_map'][1:]}:
-                found.append(caller)
-        except Fault:
-            continue
-    return sorted(found)
-
-
-def broken_callers(known, name, source, registry, *, after=None):
-    """개정(source) 또는 삭제(source=None) 뒤에 **새로** 깨지는 호출자 (71회차 B71-2).
-
-    전에는 검사를 통과하던 호출자가 후에 거절되면 그 개정·삭제의 탓이다. 이미 깨져 있던
-    호출자는 이 쓰기를 막지 않는다(다른 수리를 볼모로 잡지 않는다)."""
-    from ibl_v2_compile import compile_program
-    after = known.revised(name, source) if after is None else after
-
-    def issues(library, caller):
-        try:
-            return compile_program(known[caller], registry, definitions=library).issues
-        except Fault as exc:
-            return [{"code": exc.code, "message": str(exc)}]
-
-    out = []
-    # Validate the actual resulting namespace, not a hypothetical single-name
-    # edit. Renames remove the old binding AND install the new one together.
-    for caller in sorted(known):
-        if caller not in after or after[caller] != known[caller]:
-            continue
-        if issues(known, caller):
-            continue
-        now = issues(after, caller)
-        if now:
-            out.append({"name": caller, "origin": known.origins.get(caller),
-                        "code": now[0]["code"], "message": now[0]["message"]})
-    return out
-
-
-def _broken_message(name, clause, broken):
-    rows = "; ".join(f"{b['name']}({b['origin']}) — {b['code']}: {b['message']}" for b in broken[:5])
-    more = f" 외 {len(broken) - 5}개" if len(broken) > 5 else ""
-    return (f"{clause} '{name}'을(를) 부르는 저장 정의가 깨집니다: {rows}{more}. "
-            f"호출자를 두고 바꾸려면 새 이름으로 저장(예: [def:{name}2])한 뒤 호출자를 하나씩 "
-            f"새 이름으로 다시 저장하고, 호출자가 없어진 다음 옛 정의를 지우세요.")
-
-
-def _stored_name(wf):
-    if not wf or wf.get("edition") != 2:
-        return None
-    try:
-        return definition_name(wf.get("code", ""))
-    except Fault:
-        return None
-
-
-def delete_blockers(workflow_id, project_path):
-    """판본 2 저장본 삭제 전 확인 — 부르는 저장 정의가 있으면 거절 문구, 없으면 None."""
-    from workflow_store import get_workflow
-    from ibl_v2_adapters import load_registry
-    name = _stored_name(get_workflow(workflow_id))
-    if name is None:
-        return None  # 판본 2가 아니거나 이름조차 없는 깨진 저장본은 아무도 부를 수 없다.
-    known = library()
-    if name in known.conflicts:
-        return None  # 겹친 이름은 해소되지 않았다 — 지우는 것이 겹침을 푸는 길이다.
-    broken = broken_callers(known, name, None, load_registry(project_path))
-    return _broken_message(name, f"'{name}'을(를) 지우면", broken) if broken else None
 
 
 def definition_name(source):
@@ -224,51 +92,21 @@ def _action(action_name, params, project_path):
             if not isinstance(source, str):
                 raise Fault("LIBRARY_FORM", "edition:2 저장에는 code가 필요합니다.", kind="compile")
             name = definition_name(source)
-            known = library()
-            owners = known.owners(name)
-            wf_id = params.get("workflow_id") or params.get("id")
-            if not wf_id:
-                # 저장 ID를 안 주면 그 이름을 가진 저장본의 개정이다(run 이 이름으로 해소하는 것과 같은 방향).
-                stored = [o.split(":", 1)[1] for o in owners if o.startswith("저장본:")]
-                wf_id = stored[0] if len(owners) == 1 and stored else name
-            others = [o for o in owners if o != f"저장본:{wf_id}"]
-            if others:
-                # 이름 하나에 정의 하나 — 읽을 때 전역으로 터지던 불변식을 쓰는 자리에서 막는다 (71회차 B71-1).
-                stored = [o.split(":", 1)[1] for o in others if o.startswith("저장본:")]
-                fix = (f"같은 함수를 고치려면 workflow_id:\"{stored[0]}\"로 저장하고, 새 판을 따로 두려면 "
-                       if len(stored) == 1 and len(others) == 1 else "관용구·여러 저장본이 가진 이름은 덮어쓸 수 없으니 ")
-                raise Fault("DUPLICATE_LIBRARY", f"함수 이름 '{name}'은(는) 이미 {', '.join(others)}에 있습니다. "
-                            f"{fix}정의 이름을 바꾸세요(예: [def:{name}2]). 함수 이름은 저장 정의·관용구 전체에서 하나입니다.",
-                            kind="compile")
+            from function_library import register
+            import function_store
+            wf_id = params.get('workflow_id') or params.get('id') or name
             previous = get_workflow(wf_id)
-            if previous and previous.get("edition", 1) != 2:
-                raise Fault("MIGRATION_ID", "판본 1 저장본은 새 id로 명시 등록하세요. 기존 호출은 보존합니다.", kind="compile")
-            registry = load_registry(project_path)
-            renamed = _stored_name(previous)
-            after = known.revised(renamed, None) if renamed and renamed != name else known
-            after = after.revised(name, source)
-            plan = compile_program(source, registry, definitions=after)
-            if plan.issues:
-                from ibl_v2_analysis import rejection_message
-                return {**plan.report(), "success": False, "error": rejection_message("저장 전 검사 거절", plan.issues)}
-            broken = broken_callers(known, name, source, registry, after=after)
-            gone, clause = name, f"'{name}'을(를) 이렇게 개정하면"
-            if renamed and renamed != name:
-                # 같은 저장 ID에 다른 이름을 저장하면 옛 이름이 사라진다 — 삭제와 같은 확인.
-                gone, clause = renamed, f"저장 ID '{wf_id}'에 다른 이름({name})을 저장해 '{renamed}'이(가) 사라지면"
-            if broken:
-                return {"success": False, "edition": 2, "error": _broken_message(gone, clause, broken),
-                        "broken_callers": broken}
-            # 설명을 주지 않은 재저장은 기존 설명을 지우지 않는다 — "안 줌"과 "비움"은 다르다 (71회차 F71-1).
-            description = params["description"] if "description" in params else (previous or {}).get("description", "")
-            saved = save_workflow({"id": wf_id, "name": name, "edition": 2,
-                                   "code": source, "description": description,
-                                   "params_required": [k for k, v in plan.root.data["statements"][0].data["params"].items() if v is None],
-                                   "plan_hash": plan.fingerprint,
-                                   "source_hash": digest(source),
-                                   "capability_contract": plan.function_contracts[plan.root.data['statements'][0].id],
-                                   "dependencies": plan.dependencies})
-            return {"success": True, "edition": 2, "workflow_id": saved, "name": name, "check": plan.report()}
+            if previous and previous.get('edition', 1) != 2:
+                raise Fault('MIGRATION_ID', '다른 언어 판본은 새 ID로 저장하세요.', kind='compile')
+            description = params.get('description', (previous or {}).get('description', ''))
+            ref = register(name, source, description, edition=2,
+                           function_id=(previous or {}).get('function_id'),
+                           expected_revision=params.get('expected_revision', (previous or {}).get('revision')),
+                           workflow_id=wf_id, request_id=params.get('request_id'), request_payload=params,
+                           reason=params.get('reason', ''), state=params.get('state'))
+            plan = compile_program(source, load_registry(project_path), definitions=definitions())
+            return {'success': True, 'edition': 2, 'workflow_id': wf_id, 'name': name,
+                    'function_ref': ref, 'check': plan.report()}
         if action_name == "run":
             wf_id = params.get("workflow_id") or _resolve_workflow_id(params.get("name") or params.get("id") or "")
             wf = get_workflow(wf_id)
@@ -280,12 +118,19 @@ def _action(action_name, params, project_path):
                 raise Fault("INPUTS", "params는 명시 이름→값 Record입니다.", kind="compile")
             code = f'[fn:{name}]' + '{' + ','.join(f'{k}:${k}' for k in inputs) + '}'
             from thread_context import get_current_agent_id
-            return handle_request({"edition": 2, "code": code, "inputs": inputs}, project_path,
+            request = {"edition": 2, "code": code, "inputs": inputs}
+            if params.get("function_refs") is not None:
+                request["function_refs"] = params["function_refs"]
+            return handle_request(request, project_path,
                                   agent_id=get_current_agent_id())
         raise Fault("WORKFLOW_OPERATION", "edition:2는 save/run에 지정합니다. 조회·삭제는 기존 관리 경로입니다.", kind="compile")
-    except Fault as exc:
+    except (Fault, ValueError) as exc:
+        broken = getattr(exc, "broken_callers", None)
+        if not isinstance(exc, Fault):
+            exc = Fault("FUNCTION_MUTATION", str(exc), kind="compile")
         source = params.get("code") if action_name == "save" and isinstance(params.get("code"), str) else ""
-        return {"success": False, "edition": 2, "error": str(exc), "diagnostic": exc.view(source)}
+        return {"success": False, "edition": 2, "error": str(exc), "diagnostic": exc.view(source),
+                **({"broken_callers": broken} if broken else {})}
 
 
 def program_functions(code, allowed_nodes=None):
@@ -317,6 +162,14 @@ def program_functions(code, allowed_nodes=None):
 
 
 def describe(name, allowed_nodes=None):
+    from contextlib import nullcontext
+    from member_runtime import is_member
+    import function_store
+    with nullcontext() if is_member() else function_store.using(function_store.snapshot()):
+        return _describe(name, allowed_nodes)
+
+
+def _describe(name, allowed_nodes=None):
     """Expose compiler-owned function signatures without publishing every body."""
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
@@ -335,7 +188,10 @@ def describe(name, allowed_nodes=None):
     node = next((n for n in plan.root.data['statements'] if n.kind == 'def' and n.data['name'] == name), None)
     if node is None or plan.issues:
         return {'error':'함수 계약 검사 실패', 'issues':plan.issues}
-    return {'callable_contract': plan.function_contracts[node.id],
+    return {'function_ref': getattr(sources, "references", {}).get(name),
+            'function_refs': ([sources.references[name]] if name in sources.references else []) +
+                             plan.dependencies.get('function_refs', []),
+            'callable_contract': plan.function_contracts[node.id],
             'status': report['status'], 'guards': report['guards'],
             'guards_total': report['guards_total'], 'guards_inner': report['guards_inner'],
             'plan_hash': plan.fingerprint,

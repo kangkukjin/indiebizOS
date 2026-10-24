@@ -48,6 +48,8 @@ def test_legacy_reports_current_definition_without_execution(
 
 def test_actually_missing_call_keeps_unknown_name_diagnostic(
         missing_legacy, monkeypatch):
+    from function_library import register
+    register('기존함수', '$return=1', edition=1)
     monkeypatch.setattr(ibl_v2_store, "library", lambda: ibl_v2_store.Library())
     result = call("없는함수")
     assert result["success"] is False

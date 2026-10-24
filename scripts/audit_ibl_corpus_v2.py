@@ -78,31 +78,24 @@ def frozen_registry(base, rows):
             provider = providers.get(config.get('tool'))
             availability[key] = {'provider': provider,
                                  'active': activation.get(provider, True) if provider else None}
-    for row in sorted((r for r in rows if r['role'] == 'learning' and r.get('alias')
-                       and r['origin'].endswith(':ibl_examples')), key=lambda r: r.get('updated_at', '')):
-        name, code = row['alias'], row['ibl_code']
+    import function_store
+    for row in function_store.snapshot(base / 'data/workflows')['records'].values():
+        if row.get('state') != 'active':
+            continue
         try:
-            if source_edition(code) == 2:
-                definitions[name] = code
-                continue
-            params = call_signature(code)
-            if any(not p.isidentifier() or p.startswith('_') for p in params):
-                raise ValueError('Invalid legacy parameter name')
-            contracts['fn:' + name] = legacy_contract(params, {})
-        except Exception as exc:
-            problems.append({'origin': row['origin'], 'row_id': row['row_id'], 'kind': type(exc).__name__})
-    for path in sorted((base / 'data/workflows').glob('*.yaml')):
-        try:
-            wf = yaml.safe_load(path.read_text())
-            if wf.get('edition', 1) == 2:
-                if wf['name'] in definitions:
-                    raise ValueError('Duplicate current function definition')
-                definitions[wf['name']] = wf['code']
+            name = row['name']
+            if row.get('problem'):
+                raise ValueError(row['problem'])
+            if row['edition'] == 2:
+                definitions[name] = row['source']
             else:
-                params = _signature_of(wf.get('steps') or wf.get('do') or wf.get('pipeline'))
-                contracts['fn:' + path.stem] = legacy_contract(params, wf.get('params_default') or {})
+                wf = row.get('legacy') or {}
+                params = (_signature_of(wf.get('steps') or wf.get('do') or wf.get('pipeline'))
+                          if wf else call_signature(row['source']))
+                for alias in [name, *row.get('legacy_ids', [])]:
+                    contracts['fn:' + alias] = legacy_contract(params, wf.get('params_default') or {})
         except Exception as exc:
-            problems.append({'origin': str(path.relative_to(base)), 'kind': type(exc).__name__})
+            problems.append({'origin': 'function:' + row['function_id'], 'kind': type(exc).__name__})
     return contracts, definitions, availability, problems
 
 

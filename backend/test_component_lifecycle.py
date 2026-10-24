@@ -42,6 +42,8 @@ def env(tmp_path, monkeypatch):
         (data / d).mkdir(parents=True)
     (root / "outputs" / "imagination_training").mkdir(parents=True)
 
+    import workflow_store
+    monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: data / 'workflows')
     monkeypatch.setattr(CL, "BASE", root)
     monkeypatch.setattr(CL, "DATA", data)
     monkeypatch.setattr(CL, "POLICY_PATH", data / "lifecycle_policy.yaml")
@@ -295,45 +297,46 @@ def test_guide_retirement_moves_file_and_removes_index_entry_and_commits(env):
     assert "data/guides/old.md" in paths and "data/guides/_retired/old.md" in paths and "data/guide_db.json" in paths
 
 
-def test_workflow_and_script_retirement(env):
-    (env.data / "workflows" / "wf.yaml").write_text("name: wf\nsteps: '[self:time]{}'\n", encoding="utf-8")
+def _idiom():
+    from function_library import register
+    return register('wf', '[self:time]{}', edition=1)
+
+
+def test_idiom_and_script_retirement(env):
+    import function_store
+    ref = _idiom()
+    key = 'idiom:' + ref['function_id']
     (env.data / "scripts" / "registry.yaml").write_text(
         "sc:\n  description: d\n  file: sc.py\n  interpreter: python\n", encoding="utf-8")
     (env.data / "scripts" / "sc.py").write_text("print(1)\n", encoding="utf-8")
     _seed_state(env, candidates={
-        "workflow:wf": {"since": _d(100), "evidence": "e", "kind": "workflow"},
+        key: {"since": _d(100), "evidence": "e", "kind": "idiom"},
         "script:sc": {"since": _d(100), "evidence": "e", "kind": "script"}})
     res = CL.compute_transitions(today=TODAY)
-    keys = {r["key"] for r in res["retired"]}
-    assert {"workflow:wf", "script:sc"} <= keys
-    assert (env.data / "workflows" / "_retired" / "wf.yaml").exists()
+    assert {key, "script:sc"} <= {r["key"] for r in res["retired"]}
+    assert function_store.resolve('wf', include_inactive=True)['state'] == 'retired'
+    assert function_store.revision(ref['function_id'], ref['revision'])['source']
     assert (env.data / "scripts" / "_retired" / "sc.py").exists()
-    import yaml
-    reg = yaml.safe_load((env.data / "scripts" / "registry.yaml").read_text()) or {}
-    assert "sc" not in reg
-    rreg = yaml.safe_load((env.data / "scripts" / "_retired" / "registry.yaml").read_text())
-    assert rreg["sc"]["file"] == "sc.py", "되살리기용 등록 항목 보존"
 
 
-def test_workflow_candidate_mark_is_a_yaml_field_not_a_hide(env):
-    (env.data / "workflows" / "wf.yaml").write_text("name: wf\nsteps: '[self:time]{}'\n", encoding="utf-8")
+def test_idiom_candidate_is_metadata_and_preserves_revision(env):
+    import function_store
+    ref = _idiom()
     _seed_state(env)
     CL.compute_transitions(today=TODAY)
-    import yaml
-    d = yaml.safe_load((env.data / "workflows" / "wf.yaml").read_text())
-    assert d["lifecycle"]["candidate_since"] == TODAY and d["steps"], "본문은 그대로, 표식만 추가"
+    state = json.loads(CL.STATE_PATH.read_text())
+    assert state['candidates']['idiom:' + ref['function_id']]['since'] == TODAY
+    assert function_store.reference(function_store.resolve('wf')) == ref
 
 
-def test_workflow_run_signal_keeps_workflow_alive(env):
-    (env.data / "workflows" / "wf.yaml").write_text("name: wf\nsteps: '[self:time]{}'\n", encoding="utf-8")
-    conn = sqlite3.connect(str(env.data / "world_pulse.db"))
-    conn.execute("INSERT INTO workflow_run(workflow_id, success, source, timestamp) VALUES (?,?,?,?)",
-                 ("wf", 1, "usage", _d(3) + "T01:00:00"))
-    conn.commit(); conn.close()
+def test_idiom_call_signal_keeps_idiom_alive(env):
+    from capability_history import record_function_call
+    ref = _idiom()
+    record_function_call(ref, 'run', 'call', success=True, dependency_revision='test',
+                         path=env.data / 'capability_history.db')
     _seed_state(env)
     res = CL.compute_transitions(today=TODAY)
-    assert "workflow:wf" not in _candidates(res)
-    # 워크플로우가 부르는 어휘도 산다(참조)
+    assert 'idiom:' + ref['function_id'] not in _candidates(res)
     assert "action:self:time" not in _candidates(res)
 
 

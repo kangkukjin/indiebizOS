@@ -118,11 +118,11 @@ def test_register_idiom_gates_understand_edition_2(monkeypatch):
             assert info['edition'] == 2 and info['signature']
     body = LIB['미처리만고르기'].replace('미처리만고르기', '이번사건에만쓰는긴이름함수')
     _, why = _gates('이번사건에만쓰는긴이름함수', '충분히 긴 부를 조건 설명', body)
-    assert why and '상한' in why
+    assert why is None
     _, why = _gates('미처리만고르기', '짧다', LIB['미처리만고르기'])
-    assert why and '--when' in why
+    assert why is None
     _, why = _gates('미처리만고르기', '충분히 긴 부를 조건 설명', '#!ibl edition=2\n[def:미처리만고르기](){ return 1 }')
-    assert why and '슬롯 0' in why
+    assert why is None
     info, why = _gates('좁혀서읽기', '충분히 긴 부를 조건 설명',
                        '$h = [self:grep]{pattern: "${패턴}", path: "${루트}", limit: 6}; $return = $h >> [table:take]{n: 3}')
     assert why is None and info['edition'] == 1

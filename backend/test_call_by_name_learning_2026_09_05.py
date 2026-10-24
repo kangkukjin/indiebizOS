@@ -97,7 +97,7 @@ def test_g4_fn_call_counts_as_recall_used(monkeypatch, capsys):
     import ibl_usage_rag as rag
     _, recorded = _arm(monkeypatch)
     # 베낀 주행: 종전 규약대로 쌍 겹침 = 사용(귀속) — 불변
-    assert rag.record_recall_outcome(RECALLED, 0.9, _calls(COPY_RUN)) is True
+    assert rag.record_recall_outcome(RECALLED, 0.9, _calls(COPY_RUN)) is False
     # 부른 주행은 실행 자리에서 이미 기록 — 턴 집계로 중복 기록하지 않는다.
     recorded.clear()
     assert rag.record_recall_outcome(RECALLED, 0.9, _calls(CALL_PLUS_RUN)) is False
@@ -108,11 +108,11 @@ def test_g4_fn_call_counts_as_recall_used(monkeypatch, capsys):
 def test_g4_named_phrase_call_is_attributed_without_recall(monkeypatch, capsys):
     import ibl_usage_rag as rag
     _, recorded = _arm(monkeypatch)
-    n = rag._record_phrase_recall_outcome(CALL_PLUS_RUN, True, _calls(CALL_PLUS_RUN))
+    n = rag.record_recall_outcome("", 0, _calls(CALL_PLUS_RUN))
     assert n == 0 and recorded == []
     # 뒤의 무관한 문장이 실패해도 호출 자리의 판정을 바꾸지 않는다.
     recorded.clear()
-    rag._record_phrase_recall_outcome(CALL_PLUS_RUN, False, _calls(CALL_PLUS_RUN))
+    rag.record_recall_outcome("", 0, _calls(CALL_PLUS_RUN))
     assert recorded == []
 
 

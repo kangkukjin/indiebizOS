@@ -180,6 +180,8 @@ def test_원인_미확정_관용구_실패는_정의_수정을_강요하지_않�
     monkeypatch.setattr(workflow_store, "get_workflow", lambda name: None)
     monkeypatch.setattr(workflow_engine, "execute_pipeline",
                         lambda *a, **k: {"success": False, "error": "Step 1 에러: 파일 없음"})
+    from test_function_support import use_legacy
+    use_legacy(monkeypatch, {"읽고세기": _DB().find_phrase_by_alias("읽고세기")["ibl_code"]})
     out = cb._execute_fn({"_node": "fn", "action": "읽고세기", "params": {"경로": "/없음"}}, str(tmp_path), "t")
     assert out["success"] is False and out["fn_source"] == "idiom"
     assert "def" not in out and "미확정" in out["hint"]

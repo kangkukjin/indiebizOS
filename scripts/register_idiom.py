@@ -52,18 +52,10 @@ def _edition(code: str) -> int:
 
 
 def _gates_v2(name: str, when: str, code: str, *, metadata_only=False):
-    """판본 2 정의의 관문(2026-09-26) — 이름·언제·슬롯 수는 판본 1과 같은 자, 본문은 판본 2 컴파일러가 본다."""
+    """현재 함수 등록의 정적 관문. 소개 선정 정책은 promote가 따로 소유한다."""
     from ibl_v2_store import definition_name, definitions
     from ibl_v2_learning import check_source
     from ibl_v2_parser import parse
-    from ibl_idiom import sanitize_fn_name
-    if sanitize_fn_name(name, name) != name:
-        return None, f"이름이 규약에 안 맞는다 — 권장: {sanitize_fn_name(name, name)}"
-    if not metadata_only and len(name) > NAME_MAX_CHARS:
-        return None, (f"이름 {len(name)}자 — 상한 {NAME_MAX_CHARS}. 이번 사건이 아니라 되풀이될 모양의 "
-                      f"동사 골격만 남겨라")
-    if not metadata_only and (not when or len(when.strip()) < 10):
-        return None, "`--when` 이 없다 — 지도는 뜻이 아니라 **부를 조건**을 싣는다(10자 이상)"
     try:
         if definition_name(code) != name:
             return None, f"정의 이름이 등록 이름과 다르다: [def:{definition_name(code)}] ≠ {name}"
@@ -77,11 +69,6 @@ def _gates_v2(name: str, when: str, code: str, *, metadata_only=False):
     params = parse(code).data["statements"][0].data["params"]
     sig = list(params)
     n = code.count("\n")
-    if not metadata_only and not sig:
-        return None, "슬롯 0 — 부를 때 바꿀 것이 없다(매크로이지 함수가 아니다)"
-    required = [k for k, default in params.items() if default is None]
-    if not metadata_only and len(required) >= 6:
-        return None, f"필수 슬롯 {len(required)}개 — 서명이 본문만큼 길다. 묶어서 Record 하나로 받아라(기본값 있는 인자는 세지 않는다)"
     return {"signature": sig, "returns": "", "sentences": n, "edition": 2}, None
 
 
@@ -95,19 +82,8 @@ def _gates(name: str, when: str, code: str, *, metadata_only=False):
     from ibl_param_vocab import check_code_params
     from ibl_typecheck import typecheck_code, return_type_of
     from workflow_contract import call_signature
-    from ibl_idiom import (uncallable_reason, _phrase_private_reason, sanitize_fn_name,
-                           frozen_incident_reason)
     import hippo_tree
 
-    if sanitize_fn_name(name, name) != name:
-        return None, f"이름이 규약에 안 맞는다 — 권장: {sanitize_fn_name(name, name)}"
-    # 이름은 **이번 사건이 아니라 되풀이될 모양**을 말한다(옛 반성기 프롬프트의 규약을 관문으로 옮겼다,
-    # 2026-09-07): 12자를 넘으면 사건 이름일 확률이 크다 — 사건 이름은 다음 주행이 못 부른다.
-    if not metadata_only and len(name) > NAME_MAX_CHARS:
-        return None, (f"이름 {len(name)}자 — 상한 {NAME_MAX_CHARS}. 이번 사건이 아니라 되풀이될 모양의 "
-                      f"동사 골격만 남겨라(나쁜 예 '오버레이레이아웃무관허용및재적용')")
-    if not metadata_only and (not when or len(when.strip()) < 10):
-        return None, "`--when` 이 없다 — 지도는 뜻이 아니라 **부를 조건**을 싣는다(10자 이상)"
     try:
         parse_function_body(code)
     except Exception as e:
@@ -122,10 +98,6 @@ def _gates(name: str, when: str, code: str, *, metadata_only=False):
         return None, f"타입 오류: {(errs[0].get('message') or '')[:120]}"
     sig = call_signature(code)
     n = len(hippo_tree.split_sentences(code))
-    # 일회성 관문(2026-09-07): 슬롯 0·슬롯 6+·얼어붙은 경로 리터럴 — 다시 부를 수 없는 몸에는 이름을 주지 않는다.
-    why = uncallable_reason(sig, n, code) or _phrase_private_reason(code) or frozen_incident_reason(code, sig)
-    if why and not metadata_only:
-        return None, why
     return {"signature": sig, "returns": return_type_of(code), "sentences": n, "edition": 1}, None
 
 
@@ -148,20 +120,22 @@ def _corpus_example(name: str, sig, when: str):
 
 
 def cmd_list(_a):
-    conn = sqlite3.connect(_db_path())
-    rows = conn.execute(
-        "SELECT alias, COALESCE(always_on,0), success_count+fail_count, COALESCE(topic,''), intent, ibl_code "
-        "FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY COALESCE(always_on,0) DESC, alias").fetchall()
-    conn.close()
-    rows = [(a, o, n, t, i, _edition(c)) for a, o, n, t, i, c in rows]
-    on = [r for r in rows if r[1]]
-    off = [r for r in rows if not r[1]]
-    print(f"■ 상시 소개(어휘) {len(on)}건")
-    for a, _o, n, t, i, e in on:
-        print(f"   {a:20} ed{e} · 사용 {n:>3}회 · [{t}] {i[:60]}")
-    print(f"\n■ 등록만(소개 안 함) {len(off)}건 — 이름으로 부를 수는 있다")
-    for a, _o, n, t, i, e in off:
-        print(f"   {a:20} ed{e} · 사용 {n:>3}회 · [{t}] {i[:60]}")
+    import function_store
+    from capability_history import function_statistics
+    cards = {}
+    if os.path.isfile(_db_path()):
+        with sqlite3.connect(_db_path()) as conn:
+            conn.row_factory = sqlite3.Row
+            for item in conn.execute("SELECT * FROM ibl_examples WHERE COALESCE(alias,'') != ''"):
+                row = function_store.project_memory(dict(item))
+                if not row.get('function_problem') and row.get('function_ref'):
+                    cards[row['function_ref']['function_id']] = row
+    for row in sorted(function_store.snapshot()['records'].values(), key=lambda r: (r['name'], r['edition'])):
+        card = cards.get(row['function_id'], {})
+        stats = function_statistics(function_store.reference(row))
+        label = '상시 소개' if card.get('always_on') else '등록'
+        print(f"{row['name']:20} ed{row['edition']} · {row['state']} · {label} · "
+              f"성공 {stats['success_count']} / 실패 {stats['fail_count']} · {row.get('description', '')[:60]}")
 
 
 def cmd_add(a):
@@ -216,17 +190,24 @@ def update_idiom(db, name, code, reason, when="", resign=False):
         raise ValueError("호출 서명이 달라집니다 — 기존 인자를 유지해 수리하거나 --resign 으로 서명 개정을 명시하세요")
     if old["ibl_code"].strip() == code.strip() and old["intent"] == intent:
         return False
+    from function_memory import attach
+    prior = json.loads(old.get('provenance') or '{}')
+    new_provenance = attach(name, code, intent, prior,
+                            expected_revision=old['function_ref']['revision'], reason=reason)
+    if old.get('id') is None:
+        return True
     now = datetime.now().isoformat()
     with db._get_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
         current = conn.execute("SELECT * FROM ibl_examples WHERE id=?", (old["id"],)).fetchone()
-        if (not current or current["ibl_code"] != old["ibl_code"]
-                or current["intent"] != old["intent"] or current["alias"] != name):
+        if (not current or current["intent"] != old["intent"] or current["alias"] != name):
             raise ValueError("검사 중 본문이 바뀌었습니다 — 새 정의를 읽고 다시 개정하세요")
         conn.execute("""CREATE TABLE IF NOT EXISTS ibl_idiom_revisions (
             id INTEGER PRIMARY KEY, example_id INTEGER NOT NULL, alias TEXT NOT NULL,
             revised_at TEXT NOT NULL, reason TEXT NOT NULL, old_row TEXT NOT NULL,
             new_code TEXT NOT NULL)""")
+        conn.execute('UPDATE ibl_examples SET provenance=? WHERE id=?',
+                     (json.dumps(new_provenance, ensure_ascii=False), old['id']))
         conn.execute("INSERT INTO ibl_idiom_revisions "
                      "(example_id, alias, revised_at, reason, old_row, new_code) VALUES (?,?,?,?,?,?)",
                      (old["id"], name, now, reason, json.dumps(dict(current), ensure_ascii=False), code))
@@ -272,8 +253,7 @@ def refresh_idiom_metadata(db, name):
         conn.execute("BEGIN IMMEDIATE")
         current = conn.execute("SELECT ibl_code, intent, alias FROM ibl_examples WHERE id=?",
                                (old["id"],)).fetchone()
-        if (not current or current["ibl_code"] != old["ibl_code"]
-                or current["intent"] != old["intent"] or current["alias"] != name):
+        if (not current or current["intent"] != old["intent"] or current["alias"] != name):
             raise ValueError("검사 중 정의가 바뀌었습니다 — 다시 갱신하세요")
         conn.execute("UPDATE ibl_examples SET returns=?, signature=? WHERE id=? AND ibl_code=? AND intent=?",
                      (info["returns"], signature, old["id"], old["ibl_code"], old["intent"]))
@@ -303,6 +283,15 @@ def _promote(name: str, on: bool, when: str = "") -> int:
     if not row:
         print(f"✗ '{name}' 이 없다")
         return 1
+    if on and len((when or row.get('intent') or '').strip()) < 10:
+        print("✗ 승격에는 부를 조건을 --when으로 설명하세요(10자 이상). 관용구 등록과 소개 선정은 별개입니다.")
+        return 1
+    if on and row.get('id') is None:
+        eid = db.add_example(intent=when or row['intent'], ibl_code=row['ibl_code'],
+                             category='phrase', source='manual_registry', alias=name)
+        if not eid:
+            print('✗ 소개할 관용구 참조 카드를 만들지 못했습니다.')
+            return 1
     if on and when:
         # 승격하며 '언제'를 다시 쓴다 — 자동 증류가 남긴 intent 는 *무엇을 하는가*(뜻)라서
         # 지도의 '언제' 자리에 그대로 두면 부를 조건이 되지 못한다(2026-09-07).

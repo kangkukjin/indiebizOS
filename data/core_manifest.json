@@ -130,13 +130,17 @@
       "폴더변화.py"
     ],
     "idioms": [
+      "AI시대_보고서_출처_뉴스_갱신.yaml",
       "android_control.ibl",
       "android_control_check.ibl",
       "installed.json",
       "pc_control.ibl",
       "pc_control_check.ibl",
       "pc_control_execute.ibl",
-      "pc_read_batch.ibl"
+      "pc_read_batch.ibl",
+      "프로젝트재조사.yaml",
+      "프로젝트재조사확인.yaml",
+      "화면검수.yaml"
     ],
     "vocab_fragments": [
       "engines.yaml",

@@ -515,7 +515,7 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
 
 
 _CHECKED_CODE_RE = re.compile(r"\s*\$checked:([0-9a-f]{64})\s*")
-_SAVED_REQUEST_KEYS = ("inputs", "budget", "edition", "value_protocols", "reuse")
+_SAVED_REQUEST_KEYS = ("inputs", "budget", "edition", "value_protocols", "reuse", "function_refs")
 
 
 def _offer_checked_code(checked, code, request=None) -> None:

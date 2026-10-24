@@ -60,7 +60,7 @@ def test_g1_슬롯으로_비운_몸은_수동_경로에서_이름을_받는다()
 
     private = ('[self:grep]{pattern: "x", root_path: "/Users/kangkukjin/Desktop", limit: 60}; '
                '[self:read]{path: "/Users/kangkukjin/Desktop/a.py", start_line: 1, end_line: 20}')
-    assert register_idiom._gates("찾아읽기2", "어디 있는지 모르는 것을 읽어야 할 때", private)[0] is None
+    assert register_idiom._gates("찾아읽기2", "어디 있는지 모르는 것을 읽어야 할 때", private)[0] is not None  # 개인 함수 정의는 저장 가능; 소개 선정과 분리.
 
 def test_g1_입력함수도_개인명사_관문을_통과해야_한다(monkeypatch):
     """본문을 추출한 새 경로도 개인 명사를 허용하지 않는다. 주석 이름 검사는 하지 않는다."""

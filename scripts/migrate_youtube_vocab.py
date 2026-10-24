@@ -122,6 +122,8 @@ def _walk(value):
 
 
 def migrate(root=ROOT, apply=False):
+    if apply and (root / 'data/workflows/catalog.json').exists():
+        raise ValueError('이 구형 일회성 이관기는 은퇴했습니다. 관용구는 공통 개정 관문으로 수정하세요.')
     backup = root / 'data/_backups/2026-10-20_youtube_vocab'
     stats = {}
     db_path = root / 'data/ibl_usage.db'

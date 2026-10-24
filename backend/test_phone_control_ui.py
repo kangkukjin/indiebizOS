@@ -5,6 +5,9 @@ from pathlib import Path
 import subprocess
 
 import yaml
+import pytest
+
+pytestmark = pytest.mark.usefixtures("installed_functions")
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -133,4 +136,5 @@ def test_phone_app_propagates_device_failure_without_retry():
 if __name__ == '__main__':
     import sys
     import pytest
+
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

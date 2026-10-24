@@ -77,6 +77,15 @@ class _FakeDB:
                 "INSERT INTO ibl_examples (intent, ibl_code, category, topic, alias, success_count, fail_count, "
                 "bypass_count, created_at, updated_at) VALUES (?,?,'phrase',?,?,?,?,?,'2026-09-04','2026-09-04')",
                 (intent, code, topic, alias, ok, fail, bypass))
+            from test_function_support import import_memory
+            import_memory(conn)
+            if ok or fail:
+                from function_store import resolve, reference
+                from capability_history import record_function_call
+                ref = reference(resolve(alias, edition=1))
+                for i in range(ok + fail):
+                    record_function_call(ref, f"fixture-{alias}-{i}", "call", success=i < ok,
+                                         dependency_revision="fixture", source_complete=True)
             conn.commit()
             return cur.lastrowid
 

@@ -141,7 +141,8 @@ class CalendarActionsMixin:
                 with tc.actor_context(agent_id=task.get("owner_agent_id") or "system_ai",
                                       task_id=f"task_schedule_{uuid.uuid4().hex[:8]}", origin="scheduler"):
                     tc.set_call_channel("scheduler", override=True)
-                    result = execute_workflow(workflow_id, CalendarActionsMixin._owner_run_path(task.get("owner_project_id")), params=wf_params)
+                    result = execute_workflow(workflow_id, CalendarActionsMixin._owner_run_path(task.get("owner_project_id")), params=wf_params,
+                                              **({"function_refs": params["function_refs"]} if "function_refs" in params else {}))
             finally:
                 tc.restore(previous)
 
@@ -194,7 +195,8 @@ class CalendarActionsMixin:
             self._log(f"[직접 실행] 파이프라인: {pipeline[:60]}... (project={owner_project_id or '-'})")
             result = self._execute_scheduled_pipeline(
                 pipeline, run_path, owner_agent_id, edition=params.get("edition"),
-                inputs=params.get("inputs"))
+                inputs=params.get("inputs"),
+                **({"function_refs": params["function_refs"]} if "function_refs" in params else {}))
 
             duration_ms = int((_time.time() - start) * 1000)
 
@@ -252,9 +254,9 @@ class CalendarActionsMixin:
             return {"success": False, "error": str(e)}
 
     @staticmethod
-    def _execute_scheduled_pipeline(steps, run_path, agent_id, edition=None, inputs=None):
+    def _execute_scheduled_pipeline(steps, run_path, agent_id, edition=None, inputs=None, function_refs=None):
         from ibl_scheduled import execute_scheduled
-        return execute_scheduled(steps, run_path, agent_id, edition, inputs)
+        return execute_scheduled(steps, run_path, agent_id, edition, inputs, function_refs)
 
     @staticmethod
     def _owner_run_path(owner_project_id: str) -> str:

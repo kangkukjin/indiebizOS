@@ -50,24 +50,20 @@ def test_returns_display_appends_observation_but_never_overrides_declared_fields
     assert returns_display("", rows) == "List<Record⟨관측: x·y⟩>"
 
 
-def test_record_functions_feeds_observed_returns_only_on_success(monkeypatch):
-    import ibl_usage_db
-    import ibl_v2_learning
-    calls = []
-
-    class Stub:
-        def update_success_by_code(self, code, ok):
-            calls.append(("success", ok))
-        def record_observed_returns(self, code, keys, kind="record", source="run"):
-            calls.append(("observed", list(keys), kind))
-    monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", Stub)
-    plan = compile_program("#!ibl edition=2\n[def:보고](){return {status:\"completed\", report:\"p\"}}\nreturn [fn:보고]{}")
-    # 저장 정의처럼 보이게: source_map 두 번째 항목이 정의 구간
-    plan.dependencies["source_map"] = [{"name": "<program>", "start": 0, "end": len(plan.source)},
-                                       {"name": "보고", "start": 0, "end": len(plan.source)}]
+def test_record_functions_feeds_observed_returns_only_on_success():
+    from function_library import register, definitions
+    from capability_history import function_statistics
+    from ibl_v2_learning import record_functions
+    ref = register('보고', '#!ibl edition=2\n[def:보고](){return {status:"completed",report:"p"}}')
+    plan = compile_program('[fn:보고]{}', definitions=definitions())
     out = Runtime(plan).run()
-    ibl_v2_learning.record_functions(plan, out)
-    assert ("success", True) in calls and ("observed", ["status", "report"], "record") in calls
+    out['resume'] = {'run_id': 'observed-return-test'}
+    record_functions(plan, out)
+    record_functions(plan, out)  # 재수집은 같은 호출의 실적을 늘리지 않는다.
+    stats = function_statistics(ref)
+    assert stats['success_count'] == 1
+    assert json.loads(stats['returns_observed'])['keys'] == ['status', 'report']
+    assert 'completed' not in stats['returns_observed']
 
 
 def test_idiom_rows_carry_observation_in_returns_column(tmp_path):
@@ -81,6 +77,13 @@ def test_idiom_rows_carry_observation_in_returns_column(tmp_path):
                  ("보고서를 쓴다", code, 1, 0, "", "보고", "Record", "설정", obs, "2026-09-26", 1))
     conn.execute("INSERT INTO ibl_examples VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                  ("옛 정의", "[self:time]", 1, 0, "", "옛것", "prose", "", "", "2026-09-01", 1))
+    from test_function_support import import_memory
+    from function_store import resolve, reference
+    from capability_history import record_function_call
+    import_memory(conn)
+    record_function_call(reference(resolve('보고')), 'observation-fixture', 'call', success=True,
+                         dependency_revision='fixture', source_complete=True,
+                         observed={'kind':'record', 'keys':['status','report']})
     rows = conn.execute("SELECT intent,ibl_code,success_count,fail_count,COALESCE(topic,''),alias,COALESCE(returns,''),signature "
                         "FROM ibl_examples").fetchall()
     out = _current_idiom_rows(conn, rows, "COALESCE(returns,'')", "signature")

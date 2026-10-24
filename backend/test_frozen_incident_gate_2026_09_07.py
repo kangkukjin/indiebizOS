@@ -45,7 +45,7 @@ def test_registration_uses_the_same_gate():
     info, why = register_idiom._gates(
         "상태보고적용", "패치 상태를 보고 적용해야 할 때 그것을 한 번에",
         '[self:patch]{op: "status"}; [self:patch]{op: "apply"}')
-    assert info is None and "슬롯 0" in why
+    assert info is not None and why is None  # 정의 등록은 무인자 함수도 허용한다.
 
 
 def test_promoted_vocabulary_all_pass_the_gate():

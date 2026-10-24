@@ -7,6 +7,8 @@ from pathlib import Path
 import boot_paths  # noqa: F401
 import pytest
 
+pytestmark = pytest.mark.usefixtures("installed_functions")
+
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('pc_component_test', ROOT / 'data/scripts/pc_control.py')
 pc = importlib.util.module_from_spec(spec)

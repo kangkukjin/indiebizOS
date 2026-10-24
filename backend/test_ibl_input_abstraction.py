@@ -80,9 +80,11 @@ def test_real_memory_round_trip_and_actual_success_count(memory):
                                       'category':'phrase', 'alias':name, 'returns':returns}]) == 1
     stored = memory.find_phrase_by_alias(name, edition=2)
     assert stored['success_count'] == 0 and stored['signature'] == 'n'
-    plan = compile_program('[fn:하나더]{n:20}', definitions={name:stored['ibl_code']})
+    from function_library import definitions
+    plan = compile_program('[fn:하나더]{n:20}', definitions=definitions())
     result = Runtime(plan).run()
     assert result['value'] == 21
+    result["resume"] = {"run_id": "fixture-actual-call"}
     record_functions(plan, result)
     assert memory.find_phrase_by_alias(name, edition=2)['success_count'] == 1
 
@@ -159,11 +161,14 @@ def test_function_that_handles_external_failure_counts_as_success(memory, monkey
             '    return len($r.items)\n  } [catch] { return -1 }\n}')
     assert memory.add_examples_batch([{'intent': '실패를 버티고 값 반환', 'ibl_code': body,
                                       'category': 'phrase', 'alias': '버티기', 'returns': 'Number'}]) == 1
-    plan = compile_program('[fn:버티기]{n:3}', registry, definitions={'버티기': body})
+    from function_library import definitions
+    plan = compile_program('[fn:버티기]{n:3}', registry, definitions=definitions())
     assert not plan.issues, plan.report()
     result = Runtime(plan).run()
     assert result['success'] and result['value'] == -1
     assert result['source_complete'] is False
+    result["resume"] = {"run_id": "fixture-actual-call"}
     record_functions(plan, result)
     row = memory.find_phrase_by_alias('버티기', edition=2)
-    assert row['success_count'] == 1 and row['fail_count'] == 0
+    assert row['success_count'] == 0 and row['fail_count'] == 0
+    # 외부 자료가 불완전한 실행은 완전 성공 실적과 분리한다.

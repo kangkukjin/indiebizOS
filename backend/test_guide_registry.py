@@ -5,6 +5,8 @@ import boot_paths  # noqa: F401
 import guide_registry as guides
 import pytest
 
+pytestmark = pytest.mark.usefixtures("installed_functions")
+
 
 @pytest.fixture
 def catalog(tmp_path, monkeypatch):

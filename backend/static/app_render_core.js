@@ -80,7 +80,7 @@ function templateNames(template) {
   return names;
 }
 
-/** @typedef {{code: string, edition: 2, inputs: Record<string, unknown>, declared_inputs: string[]}} AppRequest */
+/** @typedef {{code: string, edition: 2, inputs: Record<string, unknown>, declared_inputs: string[], function_refs?: Record<string, unknown>[]}} AppRequest */
 /** 판본 2 요청 봉투 {code, edition:2, inputs, declared_inputs}
  *  @param {string} template @param {Record<string, unknown>|null|undefined} values @param {unknown} [item] @returns {AppRequest} */
 function appRequest(template, values, item) {
@@ -106,10 +106,12 @@ function requiredInputMessage(block, template, values) {
 }
 
 /** 블록(모드·계기)의 실행 요청 — 항상 appRequest(원문+inputs). block 인자는 호출 자리의 형태 유지용(판본 상속 정보).
- *  @param {{edition?: number}|null|undefined} block @param {string} template
+ *  @param {{edition?: number, function_refs?: Record<string, unknown>[]}|null|undefined} block @param {string} template
  *  @param {Record<string, unknown>|null|undefined} [values] @param {unknown} [item] @returns {AppRequest} */
 function actionRequest(block, template, values, item) {
-  return appRequest(template, values || {}, item);
+  var request = appRequest(template, values || {}, item);
+  if (block && block.function_refs) request.function_refs = block.function_refs;
+  return request;
 }
 
 /** 응답에서 사람 승인 도전(action_requires.gate 의 approval_required)을 찾는다 — 판본 1 봉투 최상위 또는 판본 2 diagnostic.details.

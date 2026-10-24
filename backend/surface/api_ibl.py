@@ -51,6 +51,7 @@ class IBLRequest(BaseModel):
     # 토큰을 받아 같은 요청(code·inputs 동일 = 같은 지문)에 실어 재전송한다. 관문이 1회 소비.
     approval: Optional[str] = None
     value_protocols: Optional[List[str]] = None
+    function_refs: Optional[List[dict]] = None
     describe: Optional[List[str]] = None
     read_result: Optional[dict] = None
     check: bool = False                # 정적 통화 검사만(실행 없음) — ibl_typecheck (2026-09-05)
@@ -258,7 +259,7 @@ async def execute_ibl_code(req: IBLRequest):
             # 사람 승인(②) — 토큰과 이 요청의 지문(code·inputs·declared)을 스레드에 싣는다. 관문(action_requires.gate)이
             # (주체·액션·op·지문) challenge 로 대조·1회 소비. 풀 스레드 재사용 → 복원 필수(티켓 선례).
             import approval_tokens as _approval_tokens
-            set_approval(req.approval or None, _approval_tokens.request_digest(req.code, req.inputs, req.declared_inputs))
+            set_approval(req.approval or None, _approval_tokens.request_digest(req.code, req.inputs, req.declared_inputs, req.function_refs))
             # 표면 티켓을 스레드에 싣는다(⑨) — 엔진 최외곽 파이프라인이 step 경계마다
             # ticket_progress 를 쓴다. to_thread 풀 스레드 재사용 → 복원 필수(선례 동일).
             set_surface_ticket(req.ticket or None)
@@ -309,6 +310,8 @@ async def execute_ibl_code(req: IBLRequest):
                     _ti = {"code": req.code}
                     if req.edition is not None:
                         _ti["edition"] = req.edition
+                    if req.function_refs is not None:
+                        _ti["function_refs"] = req.function_refs
                     if req.value_protocols is not None:
                         _ti["value_protocols"] = req.value_protocols
                     if req.inputs is not None:

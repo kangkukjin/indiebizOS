@@ -53,7 +53,8 @@ def checked_read_program(args, project_path, agent_id):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_store import definitions
-    plan = compile_program(args.get('code', ''), load_registry(project_path, agent_id), args.get('inputs') or {}, definitions())
+    from function_library import compile_current
+    plan = compile_current(args.get('code', ''), project_path, agent_id, args.get('inputs'))
     if plan.issues or not plan.effects <= {'pure', 'read_external'}:
         raise ValueError('작업 사본의 변경은 격리된 run_command로 실행하세요. IBL은 확인된 읽기만 허용됩니다')
     token = _prepared.set(((args.get('code', ''), args.get('inputs') or {}, str(project_path), agent_id), plan))
@@ -75,8 +76,8 @@ def _eligibility(schema, args, project_path, agent_id):
         from ibl_v2_adapters import load_registry
         from ibl_v2_compile import compile_program
         from ibl_v2_store import definitions
-        plan = compile_program(args['code'], load_registry(project_path, agent_id),
-                               args.get('inputs') or {}, definitions())
+        from function_library import compile_current
+        plan = compile_current(args['code'], project_path, agent_id, args.get('inputs'))
         if plan.issues or not plan.effects <= {'pure', 'read_external'}:
             return False, None
         for action in plan.preflight.get('actions', []):

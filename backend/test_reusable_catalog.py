@@ -59,8 +59,8 @@ def test_candidates_exclude_only_actually_exposed_functions_before_limit(tmp_pat
     from reusable_catalog import candidates
     monkeypatch.setattr(principal, 'is_owner', lambda: True)
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
-    monkeypatch.setattr(thread_context, 'get_repair_workspace', lambda: None)
-    monkeypatch.setattr(thread_context, 'get_allowed_nodes', lambda: None)
+    monkeypatch.setattr(thread_context, 'get_repair_workspace', lambda **kwargs: None)
+    monkeypatch.setattr(thread_context, 'get_allowed_nodes', lambda **kwargs: None)
     monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: tmp_path)
     monkeypatch.setattr(ibl_v2_store, 'installed_definitions', lambda: {})
     monkeypatch.setattr(ibl_v2_store, 'describe', lambda name, allowed: {'callable_contract': {'result': 'Number'}})
@@ -75,6 +75,10 @@ def test_candidates_exclude_only_actually_exposed_functions_before_limit(tmp_pat
         (tmp_path / (name + '.yaml')).write_text(yaml.safe_dump({
             'edition': 2, 'name': name, 'description': '압축', 'code': code,
             'source_hash': digest(code), 'capability_contract': {'result': 'Number'}}))
+    from function_library import register
+    monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a: {})
+    for name in ('압축', '예산밖함수'):
+        register(name, f'#!ibl edition=2\n[def:{name}](){{return 1}}', '압축')
     assert {row['id'] for row in candidates('압축', limit=2)} == {'script:압축', 'fn:예산밖함수'}
 
 
@@ -98,13 +102,13 @@ def test_stored_function_retains_derived_contract_and_dependencies(tmp_path, mon
     import yaml
     import ibl_v2_store, ibl_v2_adapters, workflow_store
     monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: tmp_path)
-    monkeypatch.setattr(ibl_v2_store, 'definitions', lambda: {})
     monkeypatch.setattr(ibl_v2_adapters, 'load_registry', lambda *a: {})
     out = ibl_v2_store.action('save', {'code': '[def:opaque]($n){return $n*2}', 'description': 'sensor calibration'}, str(tmp_path))
     assert out['success'], out
-    saved = yaml.safe_load((tmp_path / (out['workflow_id'] + '.yaml')).read_text())
-    assert saved['capability_contract']['name'] == 'opaque'
-    assert saved['source_hash'] and saved['dependencies'] and saved['plan_hash']
+    saved = workflow_store.get_workflow(out['workflow_id'])
+    derived = ibl_v2_store.describe('opaque')
+    assert derived['callable_contract']['name'] == 'opaque'
+    assert saved['function_id'] and saved['revision'] and derived['plan_hash']
 
 
 def test_long_contract_preserves_candidate_and_exact_inspection_without_partial_contract(monkeypatch):
@@ -175,7 +179,7 @@ def test_saved_candidate_rechecks_dependencies_and_access(tmp_path, monkeypatch)
         'capability_contract': compiled('Number'), 'dependencies': {'demo:read': 'old'}}))
     monkeypatch.setattr(principal, 'is_owner', lambda: True)
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
-    monkeypatch.setattr(thread_context, 'get_repair_workspace', lambda: None)
+    monkeypatch.setattr(thread_context, 'get_repair_workspace', lambda **kwargs: None)
     monkeypatch.setattr(thread_context, 'get_allowed_nodes', lambda: {'self'})
     monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: tmp_path)
     monkeypatch.setattr(ibl_v2_store, 'installed_definitions', lambda: {})
@@ -185,6 +189,10 @@ def test_saved_candidate_rechecks_dependencies_and_access(tmp_path, monkeypatch)
         calls.append((name, allowed))
         return {'callable_contract': compiled('Text')}
     monkeypatch.setattr(ibl_v2_store, 'describe', describe)
+    from function_library import register
+    monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a: {'demo:read': Adapter(
+        {'version': 1, 'params': {}, 'result': 'Number', 'effects': ['pure']}, None)})
+    register('probe', source, edition=2)
     row, = candidates('probe')
     assert row['contract']['result'] == 'Text' and row['contract_known']
     assert calls == [('probe', {'self'})]
@@ -198,9 +206,9 @@ def test_saved_candidate_rechecks_dependencies_and_access(tmp_path, monkeypatch)
 
 def test_installed_intent_uses_matching_source_and_rejects_conflicting_teaching(tmp_path, monkeypatch):
     import json
-    from reusable_catalog import installed_descriptions
+    from function_migration import installed_descriptions
     monkeypatch.setattr('runtime_utils.get_base_path', lambda: tmp_path)
-    monkeypatch.setattr('thread_context.get_repair_workspace', lambda: None)
+    monkeypatch.setattr('thread_context.get_repair_workspace', lambda **kwargs: None)
     root = tmp_path/'data/idioms'
     root.mkdir(parents=True)
     source = '[def:opaque](){return 1}'
@@ -216,11 +224,12 @@ def test_installed_intent_uses_matching_source_and_rejects_conflicting_teaching(
     assert installed_descriptions({'opaque': source}) == descriptions
 
 
-def test_shipped_functions_have_task_descriptions():
+def test_shipped_functions_have_task_descriptions(installed_functions):
     from ibl_v2_store import installed_definitions
-    from reusable_catalog import installed_descriptions
+    from function_migration import installed_descriptions
     definitions = installed_definitions()
-    descriptions = installed_descriptions(definitions)
+    import function_store
+    descriptions = {r['name']: r['description'] for r in function_store.snapshot()['records'].values() if r['edition'] == 2}
     assert set(descriptions) == set(definitions)
     assert all(descriptions[name] != name for name in definitions)
     assert any(r['id'] == 'fn:PC제어' for r in ranked('본체 음량 낮춰', [

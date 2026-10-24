@@ -113,7 +113,7 @@ def test_member_legacy_pipe_contract_uses_same_body_rule(monkeypatch):
     assert seen == [{'개수': 1, '목록': [{'id': '007'}]}]
 
 
-def test_legacy_asset_change_invalidates_pinned_bridge(memory):
+def test_legacy_asset_change_keeps_pinned_bridge_original(memory):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
@@ -124,7 +124,10 @@ def test_legacy_asset_change_invalidates_pinned_bridge(memory):
         conn.execute("UPDATE ibl_examples SET ibl_code=? WHERE alias='옛것'", (old.replace('n:1', 'n:2'),))
         conn.commit()
     result = Runtime(plan).run()
-    assert not result['success'] and result['diagnostic']['code'] == 'DEFINITION_CHANGED'
+    assert result['success'], result
+    assert result['value']['items'] == []
+    import function_store
+    assert function_store.resolve('옛것', edition=1)['source'] == old
 
 
 def test_declared_handler_bridge_keeps_whole_record_and_does_not_pipe_guess(memory, monkeypatch):

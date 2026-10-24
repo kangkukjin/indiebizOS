@@ -666,7 +666,13 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
             stamps.append((stat.st_mtime_ns, stat.st_size))
         except OSError:
             stamps.append(None)
-    key = (tuple(sorted(allowed)) if allowed is not None else None, revision(), tuple(stamps))
+    import function_store
+    try:
+        generation = function_store.catalog()["generation"]
+    except (ValueError, OSError):
+        generation = None
+    key = (tuple(sorted(allowed)) if allowed is not None else None, revision(), tuple(stamps),
+           str(function_store.storage_root()), generation)
     if _idioms_cache["text"] is not None and time.time() - _idioms_cache["t"] < 300 and _idioms_cache["key"] == key:
         return _idioms_cache["text"]
     text = ""
@@ -777,32 +783,39 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
     A same-name current definition overrides the compatibility bridge even when
     the old row owns always_on. Never transfer that old body's usage statistics.
     """
-    from ibl_edition import source_edition
+    import function_store
+    from ibl_signature_slot import signature_of
+    from capability_history import function_statistics
     result, seen = [], set()
-    columns = {r[1] for r in conn.execute('PRAGMA table_info(ibl_examples)')}
-    order = 'updated_at DESC, rowid DESC' if 'updated_at' in columns else 'rowid DESC'
-    observed_sql = "COALESCE(returns_observed,'')" if 'returns_observed' in columns else "''"
-    provenance_sql = "COALESCE(provenance,'{}')" if 'provenance' in columns else "'{}'"
-    from ibl_returns_observed import returns_display
-    from corpus_policy import callable_exclusion_reason
+    view = function_store.snapshot()
+    columns = {c[1] for c in conn.execute('PRAGMA table_info(ibl_examples)')}
     for row in rows:
         name = row[5]
         if name in seen:
             continue
         seen.add(name)
-        candidates = conn.execute(
-            f"SELECT intent,ibl_code,success_count,fail_count,COALESCE(topic,''),alias,{returns_sql},{signature_sql},{observed_sql},{provenance_sql} "
-            f"FROM ibl_examples WHERE alias=? ORDER BY {order}", (name,)).fetchall()
-        current = next((r for r in candidates if source_edition(r[1]) == 2), None)
-        selected = list(current or (candidates[0] if candidates else tuple(row) + ('',)))
-        if candidates and callable_exclusion_reason({'ibl_code': selected[1], 'provenance': selected[9]}):
+        if 'provenance' in columns:
+            from corpus_policy import callable_exclusion_reason
+            candidates = conn.execute(
+                'SELECT ibl_code,provenance FROM ibl_examples WHERE alias=? ORDER BY updated_at DESC,rowid DESC', (name,)).fetchall()
+            if candidates and callable_exclusion_reason({'ibl_code': candidates[0][0], 'provenance': candidates[0][1]}):
+                continue
+        try:
+            current = function_store.resolve(name, view=view)
+        except (ValueError, OSError):
             continue
         if current is None:
-            selected[6] = 'Record'  # The current legacy-function adapter returns the complete envelope.
-        else:
-            # 관측 반환 필드(2026-09-26) — 병기 줄의 `→ 반환` 에 `⟨관측: …⟩` 로 붙는다(선언이 필드를 말하면 그대로)
-            selected[6] = returns_display(selected[6], selected[8])
-        result.append(tuple(selected[:8]))
+            continue
+        stats = function_statistics(function_store.reference(current))
+        selected = list(row[:8])
+        selected[0] = current.get('description') or selected[0]
+        from ibl_edition import pin_source
+        selected[1] = (pin_source(current['source'], 2) if current['edition'] == 2 else current['source'])
+        selected[2:4] = [stats['success_count'], stats['fail_count']]
+        from ibl_returns_observed import returns_display
+        selected[6] = 'Record' if current['edition'] == 1 else returns_display('', stats.get('returns_observed'))
+        selected[7] = signature_of(selected[1])
+        result.append(tuple(selected))
     return result
 
 

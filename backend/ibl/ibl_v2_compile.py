@@ -75,7 +75,7 @@ class Plan:
 class Compiler:
     def __init__(self, source, registry, inputs, definitions=None, declared_inputs=None, input_types=None):
         self.source, self.registry = source, registry
-        self.definitions, self.external = definitions or {}, {}
+        self.definitions, self.external = definitions if definitions is not None else {}, {}
         self.source_map = [{"name": "<program>", "start": 0, "end": len(source)}]
         self.inputs = {k: infer(v) for k, v in inputs.items()}
         # input_types: 값 없이 타입만 아는 입력(앱 템플릿의 저술 시점 검사 — 전부 Unknown). 실행에는 쓰지 않는다.
@@ -263,7 +263,8 @@ class Compiler:
             raise Fault("LIBRARY_NAME", f"등록 이름과 정의 이름이 다릅니다: {name}", kind="compile")
         offset = len(self.source) + 1
         self.source += "\n" + code
-        self.source_map.append({"name": name, "start": offset, "end": len(self.source)})
+        self.source_map.append({"name": name, "start": offset, "end": len(self.source),
+                                "function_ref": getattr(self.definitions, "references", {}).get(name)})
         body = Parser(code, offset).program()
         symbols = self.predeclare(body, {})
         self.external[name] = symbols[name]
@@ -918,7 +919,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
                           getattr(v, 'invocation_dependency', None), getattr(v, 'specialize', None))
                 for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
-    compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}),
+    compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions) if definitions is not None else {},
                         declared_inputs=declared_inputs, input_types=input_types)
     root = parse(source)
     result = compiler.sequence(root, compiler.inputs.copy(), {})
@@ -940,6 +941,12 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
                               {Path(__file__).parent / name for name in ("ibl_script_session.py", "ibl_file_script.py", "ibl_document_value.py", "ibl_member_library.py",
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")} |
                               {Path(__file__).parents[1] / 'base' / name for name in ('file_script.py', 'script_process.py', 'script_workspace.py')})})}
+    refs = [getattr(compiler.definitions, 'references', {}).get(name) for name in sorted(compiler.external)]
+    refs += [getattr(compiler.definitions, 'legacy_references', {}).get(key[3:])
+             for key in sorted(compiler.used_actions) if key.startswith('fn:')]
+    refs += [ref for key in sorted(compiler.used_actions)
+             for ref in registry[key].contract.get('function_refs', [])]
+    dependencies['function_refs'] = list({(r['function_id'], r['revision']): r for r in refs if r}.values())
     for call in compiler.pure_calls:
         effects = compiler.call_effects.get(call.id)
         if effects is not None and effects - {"pure"}:

@@ -31,6 +31,8 @@ def discovery_payload(rows, max_chars=5000):
         card = {'id': row['id'], 'inspect': inspect,
                 'contract_known': row.get('contract_known', False),
                 'details_omitted': [key for key in ('description', 'contract', 'call') if row.get(key)]}
+        if row.get('function_ref'):
+            card['function_ref'] = row['function_ref']
         if row.get('error'):
             # 조회 거절은 소개 예산 때문에 실행 가능한 후보로 바뀌지 않는다.
             card['error'] = row['error']
@@ -78,39 +80,6 @@ def ranked(query, entries, limit=3):
     return [row for _, _, row in ordered[:limit]]
 
 
-def installed_descriptions(definitions):
-    """배포 정의와 일치하는 기존 시딩 교재의 용도만 읽는다. 별도 설명 사본은 없다."""
-    from runtime_utils import get_base_path
-    from thread_context import get_repair_workspace
-    root = Path(get_repair_workspace() or get_base_path()) / 'data/idioms'
-    descriptions = {}
-    for path in sorted(root.glob('*_seeds.json')):
-        try:
-            rows = json.loads(path.read_text())
-        except (OSError, ValueError):
-            continue
-        if not isinstance(rows, list):
-            continue
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            name, filename, intent = row.get('alias'), row.get('source_file'), row.get('intent')
-            if (not isinstance(name, str) or name not in definitions
-                    or not isinstance(filename, str) or not isinstance(intent, str)):
-                continue
-            source = root / filename
-            if source.parent != root or source.is_symlink() or source.suffix != '.ibl':
-                continue
-            try:
-                if source.read_text().strip() != definitions[name].strip():
-                    continue
-            except (OSError, UnicodeError):
-                continue
-            if intent.strip():
-                descriptions.setdefault(name, set()).add(intent.strip())
-    # 충돌한 교재를 임의로 선택하지 않는다. 이름과 상세 조회는 계속 사용 가능하다.
-    return {name: next(iter(values)) for name, values in descriptions.items() if len(values) == 1}
-
 
 def candidates(query, limit=3):
     import principal
@@ -133,27 +102,14 @@ def candidates(query, limit=3):
         rows.append({'id': 'script:' + sid, 'description': entry.get('description', ''),
                      'call': '[self:script]' + json.dumps({'op': 'run', 'id': sid, 'args': {}}, ensure_ascii=False),
                      'contract': contract, 'contract_known': bool(contract)})
-    from workflow_store import _get_workflows_path
-    for path in _get_workflows_path().glob('*.yaml'):
-        if path.is_symlink():
+    import function_store
+    from ibl_v2_store import describe
+    for entry in function_store.snapshot()['records'].values():
+        if entry.get('state') != 'active' or entry.get('problem'):
             continue
-        try:
-            entry = yaml.safe_load(path.read_text()) or {}
-            if not isinstance(entry, dict) or entry.get('edition') != 2 or not isinstance(entry.get('name'), str):
-                continue
-            rows.append({'id': 'fn:' + entry['name'], 'description': entry.get('description', ''),
-                         'call': '[fn:' + entry['name'] + ']{}', 'contract': None,
-                         'contract_known': False})
-        except (ValueError, KeyError, OSError, yaml.YAMLError):
-            continue
-    from ibl_v2_store import installed_definitions, describe
-    installed = installed_definitions()
-    descriptions = installed_descriptions(installed)
-    for name in installed:
-        if not any(row['id'] == 'fn:' + name for row in rows):
-            rows.append({'id': 'fn:' + name, 'description': descriptions.get(name, name),
-                         'call': '[fn:' + name + ']{}', 'contract': None,
-                         'contract_known': False, 'origin': 'installed'})
+        rows.append({'id': 'fn:' + entry['name'], 'description': entry.get('description', ''),
+                     'call': '[fn:' + entry['name'] + ']{}', 'contract': None,
+                     'contract_known': False, 'function_ref': function_store.reference(entry)})
     from ibl_access import exposed_idiom_names
     exposed = exposed_idiom_names(allowed)
     # 실제 상시 블록에 실린 함수만 제외한다. 예산 밖의 함수·같은 이름의 스크립트는 남긴다.

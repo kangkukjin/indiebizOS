@@ -822,9 +822,9 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
             from ibl_edition import explicit_source
             ibl_codes.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
 
-    # 관용구 귀속(2026-09-04): 이 턴에 올린 관용구가 실행 궤적에 순서대로 절반 이상 등장했으면
-    # 그 관용구에 성공/실패(+시간·토큰)를 기록한다. 낱말 top-1 귀속과 독립. 학습은 이 귀속으로 잰다.
-    _record_phrase_recall_outcome(ibl_codes, ibl_success, tool_calls, turn_tokens)
+    # 관용구 실적은 실행 자리의 ID·revision·call_id에만 귀속된다.
+    from thread_context import clear_phrase_recall
+    clear_phrase_recall()
 
     if not top_code or top_score < RECALL_RECORD_THRESHOLD:
         return False
@@ -836,7 +836,7 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
     #   닮은 고점수 회상이 전혀 안 쓰인 턴의 성공/실패까지 흡수했다 — 잘못된 강화·감쇠.
     _alias = _alias_of_code(top_code)
     _pointed = _pointed_count(tool_calls)     # 가리킴(턴 변수 주입) — 베끼지 않고 앞 결과를 가리킨 횟수(2026-09-06 §3)
-    if _alias and _fn_called(_alias, ibl_codes):
+    if _alias:
         # 호출 자리에서 그 몸의 결과로 이미 기록했다. 턴 전체의 오류를 다시 덮어쓰면
         # 성공한 fn이 무관한 후속 문장의 실패까지 흡수하고, 성공도 두 번 센다(ep3219).
         print(f"[해마피드백] 함수 호출 [fn:{_alias}] — 실행 자리 귀속 사용(턴 중복 기록 없음, 가리킴 {_pointed})")
@@ -868,45 +868,6 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
     except Exception as e:
         print(f"[해마피드백] 실패 (무시): {e}")
         return False
-
-
-def _record_phrase_recall_outcome(ibl_codes: list, ibl_success, tool_calls: list, turn_tokens: int = None) -> int:
-    """스레드-로컬의 관용구 회상을 꺼내(비우고) 쓰인 것마다 성공/실패를 기록. 반환=기록 건수."""
-    try:
-        from thread_context import get_phrase_recall, clear_phrase_recall
-        phrases = get_phrase_recall()
-        clear_phrase_recall()
-    except Exception:
-        return 0
-    if ibl_success is None or not ibl_codes:
-        return 0
-    n = 0
-    try:
-        from ibl_usage_db import IBLUsageDB
-        db = IBLUsageDB()
-        elapsed_ms = _ibl_elapsed_ms(tool_calls) if ibl_success else None
-        tokens = turn_tokens if (ibl_success and turn_tokens and turn_tokens > 0) else None
-        done = set()
-        # 이름 호출은 ibl_control_blocks의 실행 자리가 실제 결과로 기록한다.
-        # 이곳은 턴 결과를 재귀속하지 않고 본문으로도 회상된 같은 관용구를 제외한다.
-        called = _fn_names_in(ibl_codes)
-        for name in called:
-            row = db.find_phrase_by_alias(name)
-            if row:
-                done.add(row["ibl_code"])
-        # ② 회상된 관용구가 문장으로 쓰인 경우(종전 규약)
-        for code in (phrases or []):
-            if code in done or not _phrase_used(code, ibl_codes):
-                continue
-            if db.update_success_by_code(code, ibl_success, elapsed_ms=elapsed_ms, tokens=tokens):
-                n += 1
-                done.add(code)
-                print(f"[해마피드백:관용구] {'성공' if ibl_success else '실패'} 기록: {code[:60]}")
-        if n or called:
-            IBLUsageRAG().clear_cache()
-    except Exception as e:
-        print(f"[해마피드백:관용구] 실패 (무시): {e}")
-    return n
 
 
 _FN_CALL_RE = re.compile(r'\[fn:\s*([^\]\s]+)\s*\]')

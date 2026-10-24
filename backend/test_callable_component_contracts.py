@@ -7,6 +7,8 @@ import sys
 
 import boot_paths  # noqa: F401
 import pytest
+
+pytestmark = pytest.mark.usefixtures("installed_functions")
 import yaml
 from ibl_callable_contract import checked_values
 from ibl_v2_adapters import validate_contract
@@ -80,6 +82,7 @@ def test_installed_functions_have_single_source_and_compile(monkeypatch, tmp_pat
     library = installed_definitions()
     assert set(library) == {
         'PC제어', 'PC제어확인', 'PC제어실행', 'PC조회묶음', 'Android제어', 'Android제어확인',
+        '프로젝트재조사', '프로젝트재조사확인',
     }
     for name, source in library.items():
         assert check_source(source, True, library=library) is None

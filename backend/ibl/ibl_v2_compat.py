@@ -64,30 +64,22 @@ def plain_arguments(value):
 
 
 def legacy_functions():
-    """Read existing callable assets without rewriting bodies or histories."""
+    """The language compatibility adapter reads only the common catalog."""
     from member_runtime import is_member
     if is_member():
         return {}
-    from ibl_usage_db import IBLUsageDB
-    from ibl_edition import source_edition
-    from workflow_store import _get_workflows_path
-    import yaml
+    import function_store
     assets = {}
-    with IBLUsageDB()._get_connection() as conn:
-        for row in conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY updated_at, id"):
-            if source_edition(row["ibl_code"]) == 1:
-                assets[row["alias"]] = {"code": row["ibl_code"], "kind": "idiom"}
-    for path in sorted(_get_workflows_path().glob("*.yaml")):
-        if path.is_symlink():
+    for row in function_store.snapshot()['records'].values():
+        if row.get('edition') != 1 or row.get('state') != 'active' or row.get('problem'):
             continue
-        try:
-            data = yaml.safe_load(path.read_text())
-        except (OSError, yaml.YAMLError):
-            continue
-        if isinstance(data, dict) and data.get("edition", 1) == 1:
-            assets[path.stem] = {"workflow": data, "kind": "workflow"}
+        asset = ({'workflow': row['legacy'], 'kind': 'workflow'} if 'legacy' in row
+                 else {'code': row['source'], 'kind': 'idiom'})
+        asset['function_ref'] = function_store.reference(row)
+        assets[row['name']] = asset
+        for alias in row.get('legacy_ids', []):
+            assets.setdefault(alias, asset)
     return dict(sorted(assets.items()))
-
 
 
 def forwarding_contract(steps, params, receiver):
@@ -167,11 +159,13 @@ def function_adapters(project_path, agent_id):
     from workflow_contract import (
         call_signature, _signature_of, normalize_steps_for_injection, pipe_input_param,
     )
-    from ibl_parser import parse_function_body
+    from ibl_parser import parse_function_body, IBLSyntaxError
     assets = legacy_functions()
-    from ibl_dependencies import legacy_snapshot, legacy_runtime_snapshot
+    from ibl_dependencies import legacy_snapshot, legacy_selection, legacy_runtime_snapshot
     implementation = legacy_runtime_snapshot()
     result = {}
+    import function_store
+    pinned_view = function_store.snapshot()
     for name, asset in assets.items():
         snapshot = legacy_snapshot(name, assets)
         try:
@@ -186,11 +180,12 @@ def function_adapters(project_path, agent_id):
             receiver = pipe_input_param(steps) if not error else None
             if any(not p.isidentifier() or p.startswith("_") for p in params):
                 continue
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, IBLSyntaxError):
             continue
         contract = {"version": 1, "params": {p: "Unknown" for p in [*params, *defaults]},
                     "required": [p for p in params if p not in defaults],
                     "result": "Unknown", "effects": ["unknown"],
+                    "function_refs": [a["function_ref"] for a in legacy_selection(name, assets).values() if a and a.get("function_ref")],
                     "compatibility": "legacy-function-value/1", "implementation_fingerprint": digest([snapshot, implementation]),
                     "adapter": {"protocol": "legacy-envelope", "value_path": "/final_result"}}
         contract.update(forwarding_contract(steps, contract["params"], receiver))
@@ -199,10 +194,10 @@ def function_adapters(project_path, agent_id):
         def run(runtime, args, *, name=name, contract=contract, snapshot=snapshot, target_node=None):
             if target_node:
                 raise Fault("TARGET_NODE", "함수 호출에는 노드 지정을 쓸 수 없습니다.", kind="compile")
-            if legacy_snapshot(name, legacy_functions()) != snapshot or legacy_runtime_snapshot() != implementation:
+            if legacy_runtime_snapshot() != implementation:
                 raise Fault("DEFINITION_CHANGED", "컴파일 이후 기존 관용구가 바뀌었습니다. 다시 검사하세요.", kind="protocol")
             from ibl_edition import source_context
-            with source_context(1):
+            with source_context(1), function_store.using(pinned_view):
                 raw = execute_ibl({"_node": "fn", "action": name, "params": plain_arguments(args)},
                                   project_path, agent_id=agent_id)
             return decode_function_result(raw)

@@ -37,7 +37,8 @@ def search_aliased(db, query: str, top_k: int = 5, alpha: float = None,
                       COALESCE(returns_observed,'') AS returns_observed,
                       COALESCE(provenance,'{}') AS provenance
                FROM ibl_examples WHERE COALESCE(alias,'') != ''""").fetchall()
-    metas = {int(r["id"]): dict(r) for r in rows}
+    from function_memory import project_rows
+    metas = {int(r["id"]): r for r in project_rows(rows)}
     if not metas:
         return []
     ids = list(metas)
@@ -139,36 +140,19 @@ def alias_of_code(db, ibl_code: str) -> str:
 
 def aliased_examples(db, limit: int = 500) -> List[tuple]:
     """이름 있는 용례 (alias, ibl_code) — 실행 관문의 모양 대조(fn_recognizer)가 읽는다(2026-09-06)."""
-    with db._get_connection() as conn:
-        rows = conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' "
-                            "ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
-    return [(r[0], r[1]) for r in rows]
+    import function_store
+    return [(r['name'], r['source']) for r in function_store.snapshot()['records'].values()
+            if r.get('state') == 'active' and not r.get('problem')][:limit]
 
 def phrase_aliases(db, limit: int = 12) -> List[str]:
-    with db._get_connection() as conn:
-        rows = conn.execute("SELECT alias FROM ibl_examples WHERE COALESCE(alias,'') != '' "
-                            "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?", (limit,)).fetchall()
-    return [r[0] for r in rows]
+    import function_store
+    return list(dict.fromkeys(r['name'] for r in function_store.snapshot()['records'].values()
+                              if r.get('state') == 'active' and not r.get('problem')))[:limit]
 
 
 def find_phrase_by_alias(db, name: str, edition: int = 1) -> Optional[Dict]:
-    """이름으로 관용구 하나 — `[fn:이름]` 해소의 셋째 길(프로그램 정의 → 저장 워크플로 → 관용구). 없으면 None."""
-    if not name:
-        return None
-    with db._get_connection() as conn:
-        # 2026-09-05: 카테고리 무관 — 이름이 붙은 용례(관용구·다문장 프로그램)는 무엇이든 부를 수 있다(자동 작명과 한 벌)
-        row = conn.execute(
-            "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category, "
-            "COALESCE(returns,'') AS returns, COALESCE(returns_observed,'') AS returns_observed, signature, "
-            # provenance 도 최신 행에서(2026-09-26) — 검색 메타는 내보낸 색인이라 심사 판정(hold)이 낡는다
-            "COALESCE(provenance,'{}') AS provenance, "
-            # 실행 이력·우회 횟수도 준다(2026-09-07) — 증류의 덮어쓰기 판정이 '돈 적 있는가'를 여기서 묻는다
-            "COALESCE(success_count,0) AS success_count, COALESCE(fail_count,0) AS fail_count, "
-            "COALESCE(bypass_count,0) AS bypass_count "
-            "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC, id DESC",
-            (name.strip(),)).fetchall()
-    from ibl_edition import source_edition
-    return next((dict(r) for r in row if source_edition(r["ibl_code"]) == edition), None)
+    from function_memory import lookup
+    return lookup(db, name, edition) if name else None
 
 
 def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: str = "",
@@ -194,7 +178,7 @@ def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: s
         return 0
     now = datetime.now().isoformat()
     with db._get_connection() as conn:
-        old = conn.execute("SELECT COALESCE(topic,'') AS topic, ibl_code FROM ibl_examples WHERE id = ?",
+        old = conn.execute("SELECT COALESCE(topic,'') AS topic, ibl_code, provenance FROM ibl_examples WHERE id = ?",
                            (example_id,)).fetchone()
         if not old:
             return 0
@@ -202,6 +186,15 @@ def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: s
         if source_edition(old["ibl_code"]) != source_edition(ibl_code):
             logger.warning("판본 변경은 기존 행 덮어쓰기 대신 새 판본 행으로 등록해야 합니다.")
             return 0
+        if alias:
+            import json
+            from function_memory import attach
+            prior = json.loads(old['provenance'] or '{}')
+            ref = prior.get('function_ref') or {}
+            updated_provenance = attach(alias, ibl_code, intent, prior,
+                                        expected_revision=ref.get('revision'), reason='명시 용례 개정')
+            conn.execute('UPDATE ibl_examples SET provenance=? WHERE id=?',
+                         (json.dumps(updated_provenance, ensure_ascii=False), example_id))
         conn.execute(
             "UPDATE ibl_examples SET intent = ?, ibl_code = ?, nodes = ?, topic = ?, alias = ?, returns = ?, "
             "signature = ?, bypass_count = 0, updated_at = ? WHERE id = ?",

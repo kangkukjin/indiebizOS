@@ -1,5 +1,5 @@
 """
-workflow_store.py - 워크플로 원장(data/workflows/*.yaml)의 저장·조회·삭제 + 등록 시점 문법 관문
+workflow_store.py - 통합 관용구 원장의 워크플로 호환 관리 표면
 
 2026-09-05 workflow_engine 에서 분리(1500줄 규칙 — 연쇄 실패 뿌리 진단이 더해져 넘쳤다).
 저장소는 실행기가 아니다: 여기엔 파이프 실행 코드가 없고, 실행기(workflow_engine)가
@@ -8,13 +8,9 @@ workflow_store.py - 워크플로 원장(data/workflows/*.yaml)의 저장·조회
 """
 import os
 import re
-import yaml
-import tempfile
 from contextlib import contextmanager
-from functools import lru_cache, wraps
-from filelock import FileLock
+from functools import wraps
 from pathlib import Path
-from datetime import datetime
 from typing import Dict, List, Optional
 
 
@@ -30,17 +26,11 @@ def _get_workflows_path() -> Path:
     return wf_path
 
 
-@lru_cache(maxsize=64)
-def _mutation_lock(directory):
-    # Same instance makes nested store operations reentrant in this thread;
-    # FileLock also serializes other threads, processes and backend reloads.
-    return FileLock(str(Path(directory) / ".mutation.lock"), timeout=10)
-
-
 @contextmanager
 def workflow_transaction():
-    """Serialize workflow mutations across their snapshot/check/commit boundary."""
-    with _mutation_lock(str(_get_workflows_path().resolve())):
+    """All public writers share the catalog's reentrant lock."""
+    import function_store
+    with function_store.transaction():
         yield
 
 
@@ -52,78 +42,30 @@ def serialized_mutation(function):
     return wrapped
 
 
-def list_workflows() -> List[Dict]:
-    """저장된 워크플로우 목록 (문장 pre-flight 동반 — preflight_sentence 참조)"""
-    from workflow_engine import preflight_sentence
-    from workflow_contract import _signature_of
-    wf_path = _get_workflows_path()
-    workflows = []
-    conflicts = None
-    for f in sorted(wf_path.glob("*.yaml")):
+def _as_workflow(row):
+    data = dict(row.get('legacy') or {})
+    data.update({k: row[k] for k in ('name', 'edition', 'function_id', 'revision', 'description') if k in row})
+    data['id'] = next(iter(row.get('legacy_ids') or []), row['function_id'])
+    data['state'] = row.get('state')
+    data['runnable'] = row.get('state') == 'active' and not row.get('problem')
+    if row.get('problem'):
+        data['problem'] = row['problem']
+    if row.get('edition') == 2:
+        data['code'] = row.get('source', '')
+        from ibl_v2_parser import parse
         try:
-            if f.is_symlink():
-                raise ValueError("워크플로 파일은 심볼릭 링크일 수 없습니다")
-            data = yaml.safe_load(f.read_text(encoding="utf-8"))
-            if not isinstance(data, dict):
-                raise ValueError("워크플로 파일이 매핑이 아닙니다")
-        except Exception as e:
-            # ★깨진 원장 항목을 조용히 감추지 않는다 — 목록에서 사라지면 "없는 것"이 된다.
-            workflows.append({
-                "id": f.stem, "name": f.stem, "description": "", "steps_count": 0,
-                "file": str(f), "runnable": False,
-                "problem": f"워크플로 파일을 읽을 수 없습니다: {e}",
-            })
-            continue
-        if data.get("edition") == 2:
-            from ibl_v2_store import definition_name, definitions
-            try:
-                definition_name(data.get("code", ""))
-                from ibl_v2_learning import check_source
-                problem = check_source(data.get("code", ""), function_body=True)
-                # 제 정의만 보면 검사는 통과하지만 이름이 겹치면 아무도 부를 수 없다 (71회차 B71-1).
-                if conflicts is None:
-                    conflicts = definitions().conflicts
-                if data.get("name") in conflicts:
-                    problem = (f"같은 이름의 저장 정의가 여럿입니다: {', '.join(conflicts[data.get('name')])} — "
-                               f"하나를 새 이름으로 다시 저장하거나 지우세요.")
-            except Exception as exc:
-                problem = str(exc)
-            workflows.append({"id": f.stem, "name": data.get("name", f.stem),
-                              "description": data.get("description", ""), "edition": 2,
-                              "steps_count": 1, "file": str(f), "runnable": problem is None,
-                              "problem": problem, "params_required": data.get("params_required", [])})
-            continue
-        steps = data.get("steps") or data.get("do") or data.get("pipeline") or []
-        # ★B1 동형: steps 가 문자열(저장 원문)이면 len()이 글자 수가 된다 — 목록에서
-        # "스텝 121개"로 보이는 오표시 방지. 문장 하나 = 스텝 하나로 센다.
-        if isinstance(steps, str):
-            steps = [steps] if steps.strip() else []
-        raw_steps = data.get("steps") or data.get("do") or []
-        if isinstance(raw_steps, str):
-            raw_steps = [raw_steps] if raw_steps.strip() else []
-        pf = preflight_sentence(steps)
-        entry = {
-            "id": f.stem,
-            "name": data.get("name", f.stem),
-            "description": data.get("description", ""),
-            "steps_count": len(raw_steps),
-            "file": str(f),
-            "runnable": pf["runnable"],
-        }
-        # 시그니처 — 목록에서 "이 워크플로우가 무엇을 요구하는지"가 보여야 부를 수 있다.
-        sig = data.get("params_required")
-        if not isinstance(sig, list):
-            sig = _signature_of(data.get("steps") or data.get("do") or data.get("pipeline"))
-        if sig:
-            entry["params_required"] = sig
-        if isinstance(data.get("params_default"), dict) and data["params_default"]:
-            entry["params_default"] = data["params_default"]
-        if pf["problem"]:
-            entry["problem"] = pf["problem"]
-            if pf["dead_vocab"]:
-                entry["dead_vocab"] = pf["dead_vocab"]
-        workflows.append(entry)
-    return workflows
+            node = parse(data['code']).data['statements'][0]
+            data['params_required'] = [k for k, v in node.data['params'].items() if v is None]
+        except Exception as exc:
+            data.update(runnable=False, problem=str(exc))
+    elif 'legacy' not in row:
+        data['do'] = row.get('source', '')
+    return data
+
+
+def list_workflows() -> List[Dict]:
+    import function_store
+    return [_as_workflow(r) for r in function_store.snapshot()['records'].values()]
 
 
 def _resolve_workflow_id(name: str) -> str:
@@ -158,25 +100,15 @@ def _workflow_path(workflow_id: str) -> Path:
 
 
 def get_workflow(workflow_id: str) -> Optional[Dict]:
-    """워크플로우 조회"""
+    import function_store
     try:
-        wf_path = _workflow_path(workflow_id)
-    except ValueError as exc:
-        return {"id": workflow_id, "runnable": False, "problem": str(exc)}
-    if not wf_path.exists():
-        return None
-    try:
-        data = yaml.safe_load(wf_path.read_text(encoding="utf-8"))
-    except Exception as e:
-        # ★파일이 있는데 못 읽은 것을 None(=없음)으로 눙치지 않는다 — 바로 위
-        # list_workflows 가 이미 세운 계약과 같은 어휘로 신고한다(2026-08-22).
-        return {"id": workflow_id, "name": workflow_id, "runnable": False,
-                "problem": f"워크플로 파일을 읽을 수 없습니다: {e}"}
-    if not isinstance(data, dict):
-        return {"id": workflow_id, "name": workflow_id, "runnable": False,
-                "problem": f"워크플로 파일이 매핑이 아닙니다(빈 파일?): {type(data).__name__}"}
-    data["id"] = workflow_id
-    return data
+        _workflow_path(workflow_id)
+        row = function_store.resolve(workflow_id, include_inactive=True)
+        if row is None:
+            row = function_store.resolve(function_id=workflow_id, include_inactive=True)
+        return _as_workflow(row) if row else None
+    except (ValueError, OSError) as exc:
+        return {'id': workflow_id, 'runnable': False, 'problem': str(exc)}
 
 
 # === 등록 시점 문법 관문 (2026-08-17) ===
@@ -242,52 +174,28 @@ def _validate_sentence(raw) -> Optional[str]:
 
 @serialized_mutation
 def save_workflow(workflow: dict) -> str:
-    """
-    워크플로우 저장
-
-    Args:
-        workflow: {name, description?, steps: [...], id?}
-
-    Returns:
-        워크플로우 ID
-    """
-    wf_id = workflow.get("id") or _slugify(workflow.get("name", "workflow"))
-    wf_path = _workflow_path(wf_id)
-    previous = get_workflow(wf_id)
-    if previous and previous.get("edition") == 2 and workflow.get("edition") != 2:
-        raise ValueError("판본 2 함수는 옛 워크플로우로 덮어쓸 수 없습니다. 새 ID로 저장하세요.")
-
-    # id 필드는 YAML에 저장하지 않음 (파일명이 ID)
-    save_data = {k: v for k, v in workflow.items() if k != "id"}
-    save_data["updated"] = datetime.now().isoformat()
-
-    # 고유 임시 파일을 완성한 뒤 교체하여 읽는 쪽에 반쪽 YAML을 노출하지 않는다.
-    temp = None
-    try:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=wf_path.parent,
-                                         prefix=".workflow-", suffix=".tmp", delete=False) as stream:
-            temp = Path(stream.name)
-            stream.write(yaml.dump(save_data, allow_unicode=True, default_flow_style=False))
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temp, wf_path)
-    finally:
-        if temp is not None:
-            temp.unlink(missing_ok=True)
+    import function_store
+    wf_id = workflow.get('id') or _slugify(workflow.get('name', 'workflow'))
+    _workflow_path(wf_id)  # Retain identifier validation for legacy callers.
+    old = get_workflow(wf_id)
+    edition = workflow.get('edition', 1)
+    if old and old.get('edition', 1) != edition:
+        raise ValueError('다른 언어 판본은 새 ID로 저장하세요.')
+    source = workflow.get('code', '') if edition == 2 else ''
+    legacy = None if edition == 2 else {k: v for k, v in workflow.items() if k != 'id'}
+    function_store.register_memory(workflow.get('name') or wf_id, source, workflow.get('description', ''),
+        edition=edition, legacy=legacy, workflow_id=wf_id,
+        function_id=(old or {}).get('function_id'),
+        expected_revision=workflow.get('expected_revision', (old or {}).get('revision')),
+        state=workflow.get('state'), reason=workflow.get('reason', ''),
+        request_id=workflow.get('request_id'), request_payload=workflow)
     return wf_id
 
 
 @serialized_mutation
 def delete_workflow(workflow_id: str) -> bool:
-    """워크플로우 삭제"""
-    try:
-        wf_path = _workflow_path(workflow_id)
-    except ValueError:
-        return False
-    if wf_path.exists():
-        wf_path.unlink()
-        return True
-    return False
+    from function_library import retire
+    return retire(workflow_id)
 
 
 # === 유틸리티 ===

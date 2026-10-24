@@ -42,7 +42,9 @@ def test_s1_broken_workflow_is_not_missing():
 def _run_s1(wf, st, Path):
     with tempfile.TemporaryDirectory() as td:
         st._get_workflows_path = lambda: Path(td)          # noqa: E731
-        (Path(td) / "broken.yaml").write_text(BROKEN_YAML, encoding="utf-8")
+        from function_library import register
+        ref = register('broken', '#!ibl edition=2\n[def:broken](){return 1}')
+        (Path(td) / 'revisions' / ref['function_id'] / (ref['revision'] + '.yaml')).write_text(BROKEN_YAML, encoding='utf-8')
 
         got = wf.get_workflow("broken")
         assert got is not None, "깨진 파일이 None(=없음)으로 눙쳐졌다"

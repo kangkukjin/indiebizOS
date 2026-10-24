@@ -56,7 +56,7 @@ PHRASES_NOTE = ("<!-- 기계가 읽는 절: 관용구 = 독립 문장 2~8개의 
                 "관용구는 이름 붙은 함수다(2026-09-05) — 머리의 이름으로 `[fn:이름]{슬롯…}` 을 부르면 그대로 돌고, 고치려면 "
                 "`[def: 이름]{문장들}` 로 프로그램에 붙여 넣는다. 한 관용구 = `### 이름 — 의도 · 문장 n · 슬롯 a, b ‹#id · ✓성공/✗실패 · 날짜›` "
                 "머리 + `호출: ` 줄 + 번호 목록(문장마다 `코드`). "
-                "블록을 고치면 색인이 따라오고, 지우면 색인에서도 지워지며, ‹#id› 없이 새 블록을 적으면 새 관용구가 된다(구문 관문 통과 시). -->")
+                "이 문서는 함수 참조와 사용 맥락이다. 설명 편집·카드 삭제는 기억만 바꾼다. 본문·이름의 변경과 신규 정의는 공통 관용구 저장으로 제출하며, 문서의 변경안은 후보로 보존한다. -->")
 PHRASE_HEAD_RE = re.compile(r"^### (?:(\S+) — )?(.*?) · 문장 (\d+)(?: · 슬롯 (.*?))?(?:\s*‹#(\d+)[^›]*›)?\s*$")
 PHRASE_CALL_RE = re.compile(r"^호출: `(.+)`\s*$")
 PHRASE_LINE_RE = re.compile(r"^\d+\. `(.+)`\s*$")
@@ -198,7 +198,7 @@ def ensure_column(db_path: Optional[str] = None) -> None:
         # 자리: 컬럼 → 선언. 여기 없는 컬럼을 rows_of 가 SELECT 하면 OperationalError 로 **가지 전체가 빈다**
         # (rows_of 의 except 는 [] 를 돌려준다) — 새 컬럼은 반드시 이 자리에도 등록한다.
         for col, decl in (("topic", "TEXT DEFAULT ''"), ("alias", "TEXT DEFAULT ''"),
-                          ("returns", "TEXT DEFAULT ''"),
+                          ("returns", "TEXT DEFAULT ''"), ("provenance", "TEXT DEFAULT '{}'"),
                           # signature 는 NULL=미계산 / ''=인자 없음 을 구분해야 한다(2026-09-06) — 기본값을 주지 않는다
                           ("signature", "TEXT"),
                           ("bypass_count", "INTEGER DEFAULT 0"),     # 우회 횟수(2026-09-07)
@@ -229,12 +229,16 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
         rows = conn.execute(
             "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, updated_at, "
             "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, COALESCE(returns,'') AS returns, signature, "
-            "COALESCE(bypass_count,0) AS bypass_count "
+            "COALESCE(bypass_count,0) AS bypass_count, COALESCE(provenance,'{}') AS provenance "
             "FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
         from ibl_usage_db import execution_success_rate
-        return [{**dict(r), 'success_rate': execution_success_rate(r['success_count'] or 0, r['fail_count'] or 0)}
-                for r in rows]
+        import function_store
+        view = function_store.snapshot()
+        result = [function_store.project_memory(dict(r), view=view) for r in rows]
+        for row in result:
+            row['success_rate'] = execution_success_rate(row['success_count'] or 0, row['fail_count'] or 0)
+        return result
     except sqlite3.OperationalError:
         return []
     finally:
@@ -475,7 +479,7 @@ def phrase_expand_card(r: Dict[str, Any]) -> str:
     b = int(r.get("bypass_count") or 0)
     if b:
         ran += (f" · 거부 {b}회 — 이 정의를 열어 보고 부르지 않은 실행이 {b}번. 또 베끼지 말고, 안 맞는 문장을 "
-                f"아래 [def:] 로 고쳐 부르면 그 골격이 다음 증류에서 이 이름의 새 본문이 된다")
+                f"정의를 검증하고 현재 revision을 지정해 공통 저장으로 개정하세요")
     call = phrase_call_line(alias, code, (r.get("returns") or "").strip(), r.get("signature"),
                             observed=r.get("returns_observed") or "")
     from corpus_policy import applicability_note
@@ -861,6 +865,7 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
     existing = {r["id"]: r for r in rows_of(topic, db_path)}
     updated = deleted = inserted = 0
     rejected: List[str] = []
+    definition_rejected = False
     try:
         from ibl_usage_db import _syntax_reason
     except Exception:
@@ -878,12 +883,21 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
             return k["intent"] != r["intent"] or k["ibl_code"] != r["ibl_code"] or _alias_changed
         plan = tree_doc.plan_sync(known, fresh, list(existing.values()), key=lambda r: r["id"], changed=_changed)
         for k, r in plan["update"]:
+            if r.get('alias') or k.get('alias'):
+                if k['ibl_code'] != r['ibl_code'] or (k.get('alias') or r.get('alias')) != r.get('alias'):
+                    definition_rejected = True
+                    rejected.append(f"#{k['id']}: 관용구 본문은 공통 관용구 개정으로 수정하세요. 문서 변경은 후보로 보존합니다.")
+                    continue
             why = _syntax_reason(k["ibl_code"])
             if why:
                 rejected.append(f"#{k['id']}: {why}")
                 continue
-            conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, alias=?, updated_at=? WHERE id=?",
-                         (k["intent"], k["ibl_code"], (k.get("alias") if "alias" in k else r.get("alias")) or "", now, k["id"]))
+            if r.get('alias'):
+                conn.execute('UPDATE ibl_examples SET intent=?, updated_at=? WHERE id=?',
+                             (k['intent'], now, k['id']))
+            else:
+                conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, alias=?, updated_at=? WHERE id=?",
+                             (k["intent"], k["ibl_code"], (k.get("alias") if "alias" in k else r.get("alias")) or "", now, k["id"]))
             updated += 1
             _index(db_path, k["id"], k["intent"], k["ibl_code"])
         gone = [r["id"] for r in plan["delete"]]
@@ -899,6 +913,10 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
             except Exception:
                 pass
         for f in plan["insert"]:
+            if f.get('alias') or f.get('category') == PHRASE_CATEGORY:
+                definition_rejected = True
+                rejected.append('관용구 정의는 공통 등록으로 추가하세요. 문서의 후보 원문은 보존합니다.')
+                continue
             why = _syntax_reason(f["ibl_code"])
             if why:
                 rejected.append(f"{f['ibl_code'][:40]}: {why}")
@@ -921,7 +939,8 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
         conn.commit()
     finally:
         conn.close()
-    refresh_topic(topic, db_path)
+    if not definition_rejected:
+        refresh_topic(topic, db_path)
     out = {"synced": True, "updated": updated, "deleted": deleted, "inserted": inserted}
     if rejected:
         out["rejected"] = rejected
@@ -1183,7 +1202,7 @@ def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = No
         refresh_topic(topic, db_path)
     rows = rows_of(topic, db_path, kind="word")
     phrases = rows_of(topic, db_path, kind="phrase")
-    # 가지를 좁혀 회상해도 상위의 공통 함수는 보인다. 이름만 상속하며
+    # 가지를 좁혀 회상해도 상위의 공통 관용구는 보인다. 이름만 상속하며
     # 상위의 무명 용례·주행 본문은 끌어오지 않는다. 같은 이름은 가까운 정의가 우선.
     inherited = []
     seen = {r.get('alias') for r in rows + phrases if r.get('alias')}

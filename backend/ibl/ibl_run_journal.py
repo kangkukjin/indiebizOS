@@ -65,6 +65,21 @@ def recorded_file_scope(root, resume):
         return None
 
 
+def recorded_function_refs(root, resume):
+    if not isinstance(resume, dict) or not re.fullmatch('[0-9a-f]{32}', str(resume.get('run_id', ''))):
+        return None
+    path = Path(root) / (resume['run_id'] + '.sqlite')
+    if path.is_symlink() or not path.is_file():
+        return None
+    with sqlite3.connect(path.absolute().as_uri() + '?mode=ro', uri=True, timeout=10) as db:
+        if not db.execute("SELECT 1 FROM sqlite_master WHERE name='function_snapshot'").fetchone():
+            return None
+        row = db.execute('SELECT refs,access_scope FROM function_snapshot').fetchone()
+        if not row or row[1] != receipt_access_scope():
+            raise Fault('RESUME_CHANGED', '원래 함수 실행의 접근 범위와 다릅니다.', kind='permission')
+        return json.loads(row[0])
+
+
 def model_reuse_identity(declaration):
     """Configuration and provider code identity; persist hashes, never credentials.
 
@@ -589,7 +604,7 @@ def receipt_access_scope():
     p = principal.current()
     allowed = get_allowed_nodes()
     return digest([p.key(), p.device_id, p.level, get_current_agent_id(),
-                   sorted(allowed) if allowed is not None else None])
+                   sorted(set(allowed)) if allowed is not None else None])
 
 
 def receipt_value(root, ref):

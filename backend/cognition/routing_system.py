@@ -194,6 +194,8 @@ def _delegate_workflow(agent_id: str, params: dict, project_path: str) -> Any:
             if not isinstance(params["inputs"], dict):
                 raise ValueError("inputs는 이름→값 Record여야 합니다.")
             request["inputs"] = params["inputs"]
+        if "function_refs" in params:
+            request["function_refs"] = params["function_refs"]
         # 큐와 원장에 같은 값의 사본을 전달한다. 문자열 보간·메시지 태그 제거와 무관하다.
         request = json.loads(json.dumps(request, ensure_ascii=False))
     except (ValueError, TypeError) as exc:

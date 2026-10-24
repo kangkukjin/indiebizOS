@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 
 import pytest
+
+pytestmark = pytest.mark.usefixtures("installed_functions")
 from test_android_control import pc, flow  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]

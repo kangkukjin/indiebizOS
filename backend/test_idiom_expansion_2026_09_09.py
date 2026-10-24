@@ -152,6 +152,9 @@ def test_selected_idioms_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_p
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
     monkeypatch.setattr(ibl_access, '_get_nodes_path', lambda: ROOT / 'data/ibl_nodes.yaml')
     monkeypatch.setattr(ibl_access, '_idioms_cache', {'text': None, 't': 0, 'key': None, 'anchors': {}})
+    from test_function_support import import_memory
+    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as fixture_db:
+        import_memory(fixture_db)
     env = ibl_access.build_environment(compact=compact)
     assert env.count('↳ 관용구') == len(entries)
     for e in entries:

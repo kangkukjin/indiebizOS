@@ -91,6 +91,9 @@ def test_scoped_map_keeps_control_words_but_filters_real_nodes(tmp_path, monkeyp
         ])
     monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
     monkeypatch.setattr(access, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
+    from test_function_support import import_memory
+    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as fixture_db:
+        import_memory(fixture_db)
     for allowed in ({"self", "others", "table"},
                     {"self", "others", "table", "sense", "limbs", "engines"}):
         block = access.idioms_map(allowed)
@@ -98,12 +101,12 @@ def test_scoped_map_keeps_control_words_but_filters_real_nodes(tmp_path, monkeyp
         assert ("[fn:금지노드시험]" in block) == ("sense" in allowed)
 
 
-def test_registration_requires_a_when():
-    """등록 관문 — '언제' 없이는 등록되지 않는다(지도가 실을 것이 없다)."""
+def test_function_registration_does_not_require_promotion_context():
+    """함수 등록과 지도 노출용 맥락은 서로 다른 책임이다."""
     sys.path.insert(0, os.path.join(_REPO, "scripts"))
     import register_idiom
     info, why = register_idiom._gates("좁혀서읽기2", "", '[self:grep]{pattern: "x"} >> [table:take]{n: 1}')
-    assert info is None and "--when" in why
+    assert info is not None and not why
 
 
 def test_entry_gate_reads_idiom_bodies_as_functions():

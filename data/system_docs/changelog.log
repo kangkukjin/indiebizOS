@@ -2866,3 +2866,5 @@
 2026-10-25 | 하드웨어 연결 지연 후속 설계: 상주 PC 사건 보고 분리→TV 호출 간 연결 유지의 단계·소유 수명·권한/ACK/무재전송·검증/배포·공수와 세션 인계 기록. 설계만 작성, PC/TV 구현 미착수. docs/HARDWARE_CONNECTION_LATENCY_DESIGN_2026_10_25.md.
 
 2026-10-25 | 상주 PC 결과 즉시 전송: 영속 spool publisher와 기존 명령 수신 분리, event_push 협상·404 복귀·동일 ID ACK·종료 join·업데이트 빈 스냅샷 경합 수리. Go 전체 race 및 HTTP/WS 차단 회귀 통과, 지원 타깃 빌드 완료. 원격 배포는 후속 확인. docs/HARDWARE_CONNECTION_LATENCY_DESIGN_2026_10_25.md §9.
+
+2026-10-25 | TV 호출 간 연결 재사용: 설치 드라이버 지문·주인 권한을 확인하는 전경 어댑터, 허브 소유 WebSocket/HTTP 세션·장치별 순서·TTL/LRU·조건부 토큰 갱신·취소/부분 전송 무재실행. IBL 입력/반환·관측 계약 유지, 임의 코드·회원·수리 사본의 실행 경계 보존. 전체 backend11907통과18건너뜀, Go race·지원 타깃 빌드·IBL/층/몸 번들 통과. TV1 새 헬퍼 재접속 확인, 거실TV 실기기 제어는 미응답으로 미검증. docs/HARDWARE_CONNECTION_LATENCY_DESIGN_2026_10_25.md §9.

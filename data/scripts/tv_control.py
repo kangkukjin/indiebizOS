@@ -20,9 +20,12 @@ import urllib.parse
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import ContextVar, copy_context
 from datetime import datetime, timezone
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
+
+_transport = ContextVar("tv_transport", default=None)
 
 
 def registry():
@@ -37,6 +40,8 @@ def registry():
 
 
 def rest(cfg, method, path, timeout=4):
+    if transport := _transport.get():
+        return transport.request(f'http://{cfg["ip"]}:8001{path}', method=method, timeout=timeout).decode("utf-8", "replace")
     request = urllib.request.Request(f'http://{cfg["ip"]}:8001{path}', method=method)
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read().decode("utf-8", "replace")
@@ -85,8 +90,11 @@ def observation_request(url, *, data=None, headers=None):
     request = urllib.request.Request(url, data=data, headers=headers or {})
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
     try:
-        with opener.open(request, timeout=3) as response:
-            raw = response.read(512 * 1024 + 1)
+        if transport := _transport.get():
+            raw = transport.request(url, data=data, headers=headers, timeout=3)
+        else:
+            with opener.open(request, timeout=3) as response:
+                raw = response.read(512 * 1024 + 1)
         if len(raw) > 512 * 1024:
             raise ObservationError("invalid_response", "response_too_large")
         return raw
@@ -213,7 +221,7 @@ def upnp_observations(cfg):
             return name, exc
 
     with ThreadPoolExecutor(max_workers=3) as pool:
-        services = dict(pool.map(load, services.items()))
+        services = dict(f.result() for f in [pool.submit(copy_context().run, load, pair) for pair in services.items()])
 
     def read(pair):
         key, (name, action, field, scope) = pair
@@ -250,7 +258,7 @@ def upnp_observations(cfg):
             return key, observation(state="invalid_response", scope=scope, code="missing_or_invalid_value")
 
     with ThreadPoolExecutor(max_workers=5) as pool:
-        return dict(pool.map(read, specs.items()))
+        return dict(f.result() for f in [pool.submit(copy_context().run, read, pair) for pair in specs.items()])
 
 
 def cloud_observations(cfg):
@@ -303,9 +311,9 @@ def cloud_observations(cfg):
 
 def detailed_status(cfg):
     with ThreadPoolExecutor(max_workers=3) as pool:
-        basic_job = pool.submit(status, cfg)
-        local_job = pool.submit(upnp_observations, cfg)
-        cloud_job = pool.submit(cloud_observations, cfg)
+        basic_job = pool.submit(copy_context().run, status, cfg)
+        local_job = pool.submit(copy_context().run, upnp_observations, cfg)
+        cloud_job = pool.submit(copy_context().run, cloud_observations, cfg)
         result, local, cloud = basic_job.result(), local_job.result(), cloud_job.result()
     observations = dict(local)
     for key, item in cloud.items():
@@ -321,8 +329,11 @@ def detailed_status(cfg):
 
 class Remote:
     """Bounded WebSocket transport, including ping/close and fragmented messages."""
-    def __init__(self, cfg, token_sink):
+    def __init__(self, cfg, token_sink, *, check=None, deadline=None):
         self.s = None
+        self.check = check or (lambda: None)
+        self.deadline = deadline
+        self.read_end = deadline or time.monotonic() + 8
         try:
             name = base64.b64encode(cfg.get("client_name", "IndieBiz").encode()).decode()
             query = urllib.parse.urlencode({"name": name, **({"token": cfg["token"]} if cfg.get("token") else {})})
@@ -330,12 +341,19 @@ class Remote:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
-            raw = socket.create_connection((cfg["ip"], 8002), timeout=8)
+            self.check()
+            timeout = min(8, max(.01, deadline - time.monotonic())) if deadline else 8
+            raw = socket.create_connection((cfg["ip"], 8002), timeout=timeout)
             try:
+                self.check()
+                if deadline:
+                    raw.settimeout(max(.01, min(8, deadline - time.monotonic())))
                 self.s = ctx.wrap_socket(raw, server_hostname=cfg["ip"])
             except Exception:
                 raw.close()
                 raise
+            self.check()
+            self.read_end = min(deadline or float("inf"), time.monotonic() + 8)
             key = base64.b64encode(os.urandom(16)).decode()
             request = (f"GET /api/v2/channels/samsung.remote.control?{query} HTTP/1.1\r\n"
                        f'Host: {cfg["ip"]}:8002\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n'
@@ -351,13 +369,14 @@ class Remote:
             accept = base64.b64encode(hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()).decode()
             if " 101 " not in lines[0] or headers.get("sec-websocket-accept") != accept:
                 raise RuntimeError("TV WebSocket 연결 확인 실패")
-            end = time.monotonic() + 35
+            end = min(time.monotonic() + 35, deadline or float("inf"))
             while time.monotonic() < end:
                 event = json.loads(self._message(end))
                 if event.get("event") == "ms.channel.connect":
                     token = (event.get("data") or {}).get("token")
                     if token and str(token) != cfg.get("token"):
                         token_sink(str(token))
+                    self.check()
                     return
                 if event.get("event") in {"ms.channel.unauthorized", "ms.channel.timeOut"}:
                     raise PermissionError("TV 화면에서 연결을 허용한 뒤 페어링을 다시 요청하세요")
@@ -374,7 +393,17 @@ class Remote:
     def _n(self, count):
         chunks = bytearray()
         while len(chunks) < count:
-            part = self.s.recv(count - len(chunks))
+            if hasattr(self, "check"):
+                self.check()
+                if time.monotonic() >= self.read_end:
+                    raise TimeoutError("TV 응답 대기 시간 초과")
+                self.s.settimeout(min(.25, max(.01, self.read_end - time.monotonic())))
+            try:
+                part = self.s.recv(count - len(chunks))
+            except socket.timeout:
+                if not hasattr(self, "check"):
+                    raise
+                continue
             if not part:
                 raise EOFError("TV 연결 종료")
             chunks.extend(part)
@@ -388,6 +417,7 @@ class Remote:
         self.s.sendall(header + mask + bytes(v ^ mask[i % 4] for i, v in enumerate(payload)))
 
     def _message(self, end):
+        self.read_end = end
         data = bytearray()
         while time.monotonic() < end:
             self.s.settimeout(max(.1, end - time.monotonic()))
@@ -420,7 +450,7 @@ class Remote:
             "Cmd": "Click", "DataOfCmd": key, "Option": "false", "TypeOfRemote": "SendRemoteKey"}}).encode())
 
 
-def send_keys(cfg, seq, token_sink):
+def parse_keys(seq):
     if not isinstance(seq, list) or not 1 <= len(seq) <= 40:
         raise ValueError("keys는 1~40개 키 목록입니다")
     parsed = []
@@ -432,6 +462,11 @@ def send_keys(cfg, seq, token_sink):
         if not 0 <= wait <= 5:
             raise ValueError("키 간 대기는 0~5초입니다")
         parsed.append((key, wait))
+    return parsed
+
+
+def send_keys(cfg, seq, token_sink):
+    parsed = parse_keys(seq)
     remote = Remote(cfg, token_sink)
     try:
         for key, wait in parsed:
@@ -443,7 +478,9 @@ def send_keys(cfg, seq, token_sink):
             "message": "리모컨 명령 전달. 실제 화면·음량 변화는 확인되지 않았습니다."}
 
 
-def wake(cfg, token_sink):
+def wake(cfg, token_sink, *, send=None, sleep=None, transport=None):
+    send = send or send_keys
+    sleep = sleep or time.sleep
     initial = power_status(cfg)
     if initial["power"] == "on":
         return initial
@@ -453,6 +490,8 @@ def wake(cfg, token_sink):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         for port in (9, 7):
+            if transport:
+                transport.before_change()
             sock.sendto(packet, (cfg["broadcast"], port))
     # Power is a toggle: send at most once and only on explicit standby evidence.
     toggled = False
@@ -463,8 +502,8 @@ def wake(cfg, token_sink):
             return state
         if state["power"] == "standby" and not toggled:
             toggled = True
-            send_keys(cfg, ["KEY_POWER:2"], token_sink)
-        time.sleep(2)
+            send(cfg, ["KEY_POWER:2"], token_sink)
+        sleep(2)
     return {**state, "success": False, "verified": False, "error": "켜짐 미확인. 변경 명령을 자동 반복하지 마세요."}
 
 
@@ -478,11 +517,16 @@ def soap(cfg, action, args):
             f'<s:Body><u:{action} xmlns:u="{service}">{args}</u:{action}></s:Body></s:Envelope>')
     request = urllib.request.Request(f'http://{cfg["ip"]}:9197/upnp/control/AVTransport1', data=body.encode(),
                                     headers={"Content-Type": "text/xml; charset=utf-8", "SOAPAction": f'"{service}#{action}"'})
-    with urllib.request.urlopen(request, timeout=8) as response:
-        response.read()
+    if transport := _transport.get():
+        transport.request(request.full_url, data=body.encode(), headers=dict(request.header_items()), timeout=8)
+    else:
+        with urllib.request.urlopen(request, timeout=8) as response:
+            response.read()
 
 
-def execute(args, cfg, token_sink, root):
+def execute(args, cfg, token_sink, root, *, transport=None):
+    send = transport.send_keys if transport else send_keys
+    sleep = transport.sleep if transport else time.sleep
     op = args.get("op", "status")
     if op.startswith("epg_") and op in {"epg_now", "epg_channel", "epg_scan"}:
         import tv_epg as epg
@@ -491,34 +535,34 @@ def execute(args, cfg, token_sink, root):
     if op == "status":
         return detailed_status(cfg)
     if op == "on":
-        return wake(cfg, token_sink)
+        return wake(cfg, token_sink, send=send, sleep=sleep, transport=transport)
     if op == "pair":
-        Remote({**cfg, "token": ""}, token_sink).close()
+        transport.pair(cfg, token_sink) if transport else Remote({**cfg, "token": ""}, token_sink).close()
         return {"paired": True, "verified": True}
     if op not in {"off", "key", "volume", "mute", "launch", "to_pc", "dlna_play", "dlna_stop"}:
         raise ValueError("지원하지 않는 TV 동작입니다")
     if power_status(cfg)["power"] != "on":
         raise RuntimeError("TV 켜짐을 확인하지 못했습니다. 상태·연결을 확인하세요")
     if op == "off":
-        sent = send_keys(cfg, ["KEY_POWER:2"], token_sink)
+        sent = send(cfg, ["KEY_POWER:2"], token_sink)
         state = power_status(cfg)
         verified = state["power"] in {"off", "standby"}
         return {**sent, **state, "verified": verified,
                 "message": "전원 대기 확인" if verified else "전원 명령 전달. 꺼짐은 확인되지 않았습니다."}
     if op == "key":
-        return send_keys(cfg, args.get("keys"), token_sink)
+        return send(cfg, args.get("keys"), token_sink)
     if op == "volume":
         steps = args.get("steps")
         if type(steps) is not int or not 1 <= abs(steps) <= 10:
             raise ValueError("음량 증감은 -10~-1 또는 1~10 단계입니다")
-        return send_keys(cfg, ["KEY_VOLUP" if steps > 0 else "KEY_VOLDOWN"] * abs(steps), token_sink)
+        return send(cfg, ["KEY_VOLUP" if steps > 0 else "KEY_VOLDOWN"] * abs(steps), token_sink)
     if op == "mute":
-        return send_keys(cfg, ["KEY_MUTE"], token_sink)
+        return send(cfg, ["KEY_MUTE"], token_sink)
     if op == "to_pc":
         index = cfg.get("pc_input_index")
         if index is None:
             raise ValueError("등록 설정에서 PC 입력 위치를 지정하세요")
-        return send_keys(cfg, ["KEY_SOURCE:3"] + ["KEY_LEFT"] * 12 +
+        return send(cfg, ["KEY_SOURCE:3"] + ["KEY_LEFT"] * 12 +
                          ["KEY_RIGHT"] * (index - 1) + ["KEY_ENTER:1"], token_sink)
     if op == "launch":
         app = str(args.get("app", ""))
@@ -527,7 +571,7 @@ def execute(args, cfg, token_sink, root):
             raise ValueError("등록된 앱 이름 또는 앱 ID가 필요합니다")
         rest(cfg, "POST", "/api/v2/applications/" + app_id)
         for _ in range(10):
-            time.sleep(1)
+            sleep(1)
             if app_state(cfg, app_id).get("visible") is True:
                 return {"app": app, "visible": True, "verified": True,
                         "message": "앱 화면 표시 확인. 영상 재생은 별도 확인이 필요합니다."}

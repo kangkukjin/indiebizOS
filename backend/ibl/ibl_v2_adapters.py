@@ -464,7 +464,9 @@ def load_registry(project_path=".", agent_id=None):
                     if not _principal.is_owner():
                         raise Fault("NODE_ACCESS", f"노드 지정 @{target_node} 은 주인 전용입니다.", kind="permission")
                     step["target_node"] = target_node   # 엔진의 다중 노드 라우팅(_resolve_and_maybe_forward)이 읽는다
-                raw = execute_ibl(step, project_path, agent_id=agent_id)
+                from script_process import invocation_scope
+                with invocation_scope(runtime.check):
+                    raw = execute_ibl(step, project_path, agent_id=agent_id)
                 boundary = c["adapter"]
                 if protocol == "ibl-script/2" and params["op"] != "run":
                     boundary = {**boundary, "value_path": ""}

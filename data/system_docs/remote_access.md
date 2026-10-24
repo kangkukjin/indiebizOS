@@ -83,6 +83,8 @@ Android UI는 `ui_contract:1` APK·접근성 권한·전면 동작의 화면 문
 | 상주 PC 손발 | 등록 PC의 사용자 세션 | 조종실에서 준비한 USB 폴더로 헬퍼 최초 설치·등록 |
 | Android 손발 | 폰의 자체 IBL 엔진 | `phone-companion/scripts/setup_phone.sh --limb <이름>`으로 USB 최초 등록 |
 
+상주 PC의 완료 사건은 디스크에 기록한 뒤 명령 수신과 독립적인 HTTP 경로로 보고한다. 구형 허브는 기존 sync 보고를 유지한다. 등록된 Samsung TV는 검증된 설치 드라이버의 전경 호출에서 허브가 연결을 재사용하며, 매 호출·키 전송 전에 등록·권한·취소를 확인한다. 연결 수명과 배포 상태는 [하드웨어 연결 개선 기록](../../docs/HARDWARE_CONNECTION_LATENCY_DESIGN_2026_10_25.md#9-구현-기록-2026-10-25)을 따른다.
+
 상주 PC는 USB를 빼도 사용자 로그인 때 다시 연결한다. Windows 신규 설치는 HKCU Run을 쓰고 기존 예약 작업 설치는 유지한다. 최소 연결에는 선택 미디어 설치가 필요하지 않다. 미디어 도구 누락이나 자동 시작 설정 경고는 현재 연결과 구분해 로컬 관리 화면·중앙의 능력 보고에서 확인한다. 구형 설치는 헬퍼 교체가 필요하다. [설치와 OS별 조건](../../helper/README.md).
 
 AI의 원격 실행은 대상 device_id·workspace·작업 접수증을 보존한다. 시간 초과는 실행 실패와 다르므로 같은 접수증으로 회수한다. Windows 출력은 새 헬퍼에서 UTF-8 경로를 사용하고, 셸 인용·종료 코드·부팅 확인은 [원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다. 폰에는 `op:ibl` 또는 info에서 계약1을 확인한 뒤 `op:shell/python`을 보낸다. 폰은 별도 프로세스의 앱 UID로 실행하며 원격 참조를 중앙 참조처럼 읽지 않는다. [원격폰 기능 범위](../guides/remote_phone.md).

@@ -182,3 +182,16 @@ def test_bad_cloud_credentials_rejected_without_echo(cloud):
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_pairing_token_compare_and_swap_does_not_overwrite_new_configuration():
+    row = register()
+    target = row['device_id']
+    old = hardware.connection(target)['connection']
+    hardware.register('screen', {**old, 'ip': '192.0.2.11'}, target=target)
+    with pytest.raises(PermissionError, match='변경'):
+        hardware.save_token(target, 'late-token', expected_connection=old)
+    current = hardware.connection(target)['connection']
+    assert current['ip'] == '192.0.2.11' and current['token'] == 'private-token'
+    hardware.save_token(target, 'fresh-token', expected_connection=current)
+    assert hardware.connection(target)['connection']['token'] == 'fresh-token'

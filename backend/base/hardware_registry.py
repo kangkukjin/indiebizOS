@@ -202,10 +202,12 @@ def observe(target, reachable):
             rec["observation"] = {"reachable": bool(reachable), "at": time.time()}
 
 
-def save_token(target, token):
+def save_token(target, token, *, expected_connection=None):
     with _store(write=True) as rows:
         rec = _resolve(target, rows)
         if rec["state"] != "active" or rec["paused"]:
             raise PermissionError("기기 등록이 해제되었거나 제어가 중지되었습니다")
+        if expected_connection is not None and rec["connection"] != expected_connection:
+            raise PermissionError("연결 설정이 변경되어 이전 연결 토큰을 저장하지 않았습니다")
         cfg = _validate_connection({**rec["connection"], "token": str(token)})
         rec["connection"] = cfg

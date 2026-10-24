@@ -585,12 +585,15 @@ def op_run(tool_input):
     started = time.time()
     try:
         from script_process import run_process
-        proc = run_process(
-            [interp, str(p)],
-            (stdin_data or '').encode('utf-8'),
-            timeout=timeout, cwd=str(p.parent),
-            env=_child_env("foreground"),
-        )
+        from tv_transport import registered_process
+        proc = registered_process(p, entry, args, timeout=timeout)
+        if proc is None:
+            proc = run_process(
+                [interp, str(p)],
+                (stdin_data or '').encode('utf-8'),
+                timeout=timeout, cwd=str(p.parent),
+                env=_child_env("foreground"),
+            )
         exit_code, stdout, stderr = proc['exit_code'], proc['stdout'], proc['stderr']
         timed_out = proc['timed_out']
     except subprocess.TimeoutExpired as te:

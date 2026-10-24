@@ -2,11 +2,30 @@
 
 No IBL dependencies. The caller owns codecs, authority, and durable receipts.
 """
+from contextlib import contextmanager
+from contextvars import ContextVar
 import os
 import signal
 import subprocess
 import tempfile
 import time
+
+_invocation_check = ContextVar("registered_script_check", default=None)
+
+
+@contextmanager
+def invocation_scope(check):
+    token = _invocation_check.set(check)
+    try:
+        yield
+    finally:
+        _invocation_check.reset(token)
+
+
+def check_invocation():
+    check = _invocation_check.get()
+    if check:
+        check()
 
 
 def stop_tree(proc):

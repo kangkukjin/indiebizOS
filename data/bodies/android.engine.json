@@ -440,6 +440,7 @@
     "services/spreadsheet_templates",
     "services/spreadsheet_workspace",
     "services/sync_exchange",
+    "services/tv_transport",
     "services/warehouse_adapters",
     "services/warehouse_admin",
     "services/warehouse_feed",
@@ -569,8 +570,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 558,
-    "engine": 526,
+    "total": 559,
+    "engine": 527,
     "blocklist": 32
   }
 }

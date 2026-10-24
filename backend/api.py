@@ -393,6 +393,9 @@ async def lifespan(app: FastAPI):
         async with _mcp_ctx:
             yield
     finally:
+        from tv_transport import shutdown as stop_tv_transport
+        from asyncio import to_thread
+        await to_thread(stop_tv_transport)
         stop_records()
 
     # Cloudflare 터널 종료 — ★own_only: 떠나는 워커는 *자기가 띄운* 터널만 치운다.

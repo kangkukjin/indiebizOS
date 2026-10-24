@@ -1016,7 +1016,7 @@ async def launcher_manifest():
         "start_url": "/launcher/app",
         "scope": "/launcher/",
         "display": "standalone",
-        "orientation": "portrait-primary",
+        "orientation": "any",
         "background_color": "#F5F1EB",
         "theme_color": "#F5F1EB",
         "lang": "ko",
@@ -1027,7 +1027,7 @@ async def launcher_manifest():
             {"src": "/launcher/icon-maskable-512.png", "sizes": "512x512", "type": "image/png",
              "purpose": "maskable"},
         ],
-    }, media_type="application/manifest+json")
+    }, media_type="application/manifest+json", headers={"Cache-Control": "no-cache"})
 
 
 @router.get("/sw.js")

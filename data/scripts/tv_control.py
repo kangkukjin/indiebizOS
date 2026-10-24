@@ -42,7 +42,8 @@ def rest(cfg, method, path, timeout=4):
         return response.read().decode("utf-8", "replace")
 
 
-def status(cfg):
+def power_status(cfg):
+    """Read only power; app availability must not delay wake or key preconditions."""
     try:
         info = json.loads(rest(cfg, "GET", "/api/v2/"))["device"]
         power = str(info.get("PowerState", "unknown")).lower()
@@ -52,7 +53,12 @@ def status(cfg):
     except (OSError, ValueError, KeyError, TypeError):
         return {"reachable": False, "power": "unknown", "verified": False, "apps": {},
                 "message": "TV 응답 없음. 전원·네트워크 상태는 확인되지 않았습니다."}
-    if power == "on":
+    return out
+
+
+def status(cfg):
+    out = power_status(cfg)
+    if out["power"] == "on":
         for name, app in cfg.get("apps", {}).items():
             try:
                 state = app_state(cfg, app)
@@ -438,7 +444,7 @@ def send_keys(cfg, seq, token_sink):
 
 
 def wake(cfg, token_sink):
-    initial = status(cfg)
+    initial = power_status(cfg)
     if initial["power"] == "on":
         return initial
     if not cfg.get("mac") or not cfg.get("broadcast"):
@@ -452,7 +458,7 @@ def wake(cfg, token_sink):
     toggled = False
     end = time.monotonic() + 40
     while time.monotonic() < end:
-        state = status(cfg)
+        state = power_status(cfg)
         if state["power"] == "on":
             return state
         if state["power"] == "standby" and not toggled:
@@ -491,11 +497,11 @@ def execute(args, cfg, token_sink, root):
         return {"paired": True, "verified": True}
     if op not in {"off", "key", "volume", "mute", "launch", "to_pc", "dlna_play", "dlna_stop"}:
         raise ValueError("지원하지 않는 TV 동작입니다")
-    if status(cfg)["power"] != "on":
+    if power_status(cfg)["power"] != "on":
         raise RuntimeError("TV 켜짐을 확인하지 못했습니다. 상태·연결을 확인하세요")
     if op == "off":
         sent = send_keys(cfg, ["KEY_POWER:2"], token_sink)
-        state = status(cfg)
+        state = power_status(cfg)
         verified = state["power"] in {"off", "standby"}
         return {**sent, **state, "verified": verified,
                 "message": "전원 대기 확인" if verified else "전원 명령 전달. 꺼짐은 확인되지 않았습니다."}

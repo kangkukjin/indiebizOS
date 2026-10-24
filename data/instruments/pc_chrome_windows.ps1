@@ -77,7 +77,11 @@ function Get-Snapshot($windowId) {
         if ($null -ne $windowId -and $wid -ne [int64]$windowId) { continue }
         if (-not $wins.ContainsKey($wid)) { $wins[$wid] = @{ window_id=$wid; state=$w.bounds.windowState; tabs=@(); current_tab=$null } }
         $vis = $null
-        try { $vis = Get-Visibility $t.targetId } catch { $vis = $null }
+        # Minimized windows have no visible page. Avoid three CDP round trips per tab
+        # (attach/evaluate/detach), while retaining target IDs, URLs and window readback.
+        if ($w.bounds.windowState -ne 'minimized') {
+            try { $vis = Get-Visibility $t.targetId } catch { $vis = $null }
+        }
         $wins[$wid].tabs += ,@{ tab_id=$t.targetId; url=$t.url; name=$t.title }
         if ($vis -eq 'visible') { $wins[$wid].current_tab = $t.targetId }
     }

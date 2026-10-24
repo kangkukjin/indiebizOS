@@ -25,7 +25,7 @@ def test_unreachable_is_unknown_and_missing_power_is_not_on(monkeypatch):
 
 def test_off_sends_once_and_unreachable_does_not_verify(monkeypatch):
     observations = iter([{'power': 'on'}, {'power': 'unknown', 'reachable': False}])
-    monkeypatch.setattr(tv, 'status', lambda cfg: next(observations))
+    monkeypatch.setattr(tv, 'power_status', lambda cfg: next(observations))
     calls = []
     monkeypatch.setattr(tv, 'send_keys', lambda *args: calls.append(args) or {'sent': ['KEY_POWER']})
     result = tv.execute({'op': 'off'}, {}, lambda _: None, ROOT)
@@ -34,14 +34,14 @@ def test_off_sends_once_and_unreachable_does_not_verify(monkeypatch):
 
 
 def test_unknown_power_blocks_toggle_before_transport(monkeypatch):
-    monkeypatch.setattr(tv, 'status', lambda cfg: {'power': 'unknown'})
+    monkeypatch.setattr(tv, 'power_status', lambda cfg: {'power': 'unknown'})
     monkeypatch.setattr(tv, 'send_keys', lambda *a: pytest.fail('toggle sent'))
     with pytest.raises(RuntimeError):
         tv.execute({'op': 'off'}, {}, lambda _: None, ROOT)
 
 
 def test_launch_failure_is_not_wrapped_as_success(monkeypatch):
-    monkeypatch.setattr(tv, 'status', lambda cfg: {'power': 'on'})
+    monkeypatch.setattr(tv, 'power_status', lambda cfg: {'power': 'on'})
     monkeypatch.setattr(tv, 'rest', lambda *a: '')
     monkeypatch.setattr(tv, 'app_state', lambda *a: {'visible': False})
     monkeypatch.setattr(tv.time, 'sleep', lambda _: None)
@@ -50,7 +50,7 @@ def test_launch_failure_is_not_wrapped_as_success(monkeypatch):
 
 
 def test_launch_visible_is_not_video_playback(monkeypatch):
-    monkeypatch.setattr(tv, 'status', lambda cfg: {'power': 'on'})
+    monkeypatch.setattr(tv, 'power_status', lambda cfg: {'power': 'on'})
     monkeypatch.setattr(tv, 'rest', lambda *a: '')
     monkeypatch.setattr(tv, 'app_state', lambda *a: {'visible': True})
     monkeypatch.setattr(tv.time, 'sleep', lambda _: None)
@@ -276,3 +276,46 @@ def test_cloud_unauthorized_and_missing_capabilities(monkeypatch):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_power_ready_does_not_wait_for_apps_and_full_status_still_reads_them(monkeypatch):
+    calls = []
+    def read(cfg, method, path):
+        calls.append(path)
+        if path == '/api/v2/':
+            return '{"device":{"PowerState":"on"}}'
+        raise TimeoutError('app service is slow')
+    monkeypatch.setattr(tv, 'rest', read)
+    cfg = {'apps': {'youtube': 'yt', 'netflix': 'nf'}}
+    result = tv.wake(cfg, lambda _: pytest.fail('already on: no token write'))
+    assert result['power'] == 'on' and result['verified']
+    assert calls == ['/api/v2/']
+    monkeypatch.setattr(tv, 'send_keys', lambda *a: {'verified': False})
+    tv.execute({'op': 'key', 'keys': ['KEY_HOME']}, cfg, lambda _: None, ROOT)
+    assert calls == ['/api/v2/', '/api/v2/']
+    full = tv.status(cfg)
+    assert full['apps'] == {name: {'running': None, 'visible': None} for name in cfg['apps']}
+    assert calls[-3:] == ['/api/v2/', '/api/v2/applications/yt', '/api/v2/applications/nf']
+
+
+def test_wake_poll_reads_only_power_and_standby_toggle_is_sent_once(monkeypatch):
+    powers = iter(['unknown', 'standby', 'standby', 'on'])
+    calls, sent, packets = [], [], []
+    def read(cfg, method, path):
+        calls.append(path)
+        assert path == '/api/v2/'
+        return json.dumps({'device': {'PowerState': next(powers)}})
+    class Socket:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def setsockopt(self, *args): pass
+        def sendto(self, packet, target): packets.append((packet, target))
+    monkeypatch.setattr(tv, 'rest', read)
+    monkeypatch.setattr(tv.socket, 'socket', lambda *a: Socket())
+    monkeypatch.setattr(tv.time, 'sleep', lambda _: None)
+    monkeypatch.setattr(tv, 'send_keys', lambda cfg, keys, sink: sent.append(keys))
+    result = tv.wake({'mac': '00:11:22:33:44:55', 'broadcast': '192.0.2.255',
+                      'apps': {'youtube': 'yt'}}, lambda _: None)
+    assert result['power'] == 'on' and result['verified']
+    assert len(calls) == 4 and len(packets) == 2
+    assert sent == [['KEY_POWER:2']]

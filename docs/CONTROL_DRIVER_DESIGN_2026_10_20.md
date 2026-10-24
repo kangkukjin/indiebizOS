@@ -793,3 +793,43 @@ visible 로 확인 → switch 복귀 → 오래된 판본 close = `STATE_CHANGED
 샌드박스의 로컬 포트 생성 거절로 실행되지 못한 HTTP 2건을 허용 환경에서 재실행해
 2통과(합계 544통과)했다. IBL 정합성·Android 번들 파생 확인도 통과했다.
 backend 전수 검사는 실행하지 않았다.
+
+
+## 21. 전원·브라우저 준비의 불필요한 대기 제거 (2026-10-24)
+
+전원 확인은 앱 상태 관측과 독립이고, 별개 기기의 준비와 검색은 병렬로 조합할 수 있다.
+새 업무 전용 어휘 없이 기존 부품의 관측 비용과 호출 교재를 바로잡는다.
+
+에피소드5484의 요청은 19:33:35에 시작했다. TV on은 19:34:03~19:34:27,
+Chrome launch 요청은 19:36:55였으며 뒤따른 chrome_status까지 19:37:20에 끝났다.
+전원 확인 뒤 Chrome 요청까지 약 2분28초는 기기 부팅 시간이 아니었다. 오디오 조회,
+없는 가이드 절·잘못된 스크립트 ID·소스 탐색, 탭 준비 전 교체 실패와 중복 조회가 끼었다.
+launch는 자체 관측을 반환했지만 전후 chrome_status를 따로 보냈다.
+
+- `tv_control.power_status`는 전원 API만 읽는다. wake·명령 전제·off 확인이 이 경로를
+  사용하므로 등록 앱이 응답하지 않아도 그 타임아웃을 추가로 기다리지 않는다.
+  명시 status는 기존 앱·UPnP·클라우드 관측을 유지한다. unknown을 off로 바꾸거나
+  전원 토글을 반복하지 않는다.
+- Windows Chrome snapshot은 최소화 창에서 페이지 visibility의 attach/evaluate/detach
+  세 왕복을 탭마다 생략한다. 탭 ID·URL·창 상태는 계속 읽고, 보이는 창의 현재 탭과
+  revision 검사는 유지한다. 캐시나 검증 생략으로 성공을 추정하지 않는다.
+- TV 교재는 on·chrome_launch·검색을 `&`로 조합한다. Chrome의 반환 windows를 소비하고
+  기존 유튜브 탭이 없을 때만 home을 연다. launch의 URL은 신규 기동에만 적용된다는
+  계약을 명시한다. 영상 선택 후 원본 검색 행으로 youtube_replace를 호출한다.
+  TV 입력과 영상 교체의 독립성·검증 범위, pending의 원 영수증 재개도 설명한다.
+  존재하지 않던 PC 가이드 절 참조와 action을 스크립트 ID로 오인시키는 표현을 수정했다.
+
+회귀는 `test_tv_control`의 느린 앱·WOL 대기·한 번만 토글 검사,
+`test_pc_control_idioms`의 교재 원문/실제 컴파일러·어댑터·영수증 경로 병렬 실행 검사,
+`test_pc_chrome_control` 및 `fixtures/pc_chrome_snapshot.ps1`의 실제 생산 함수 검사다.
+Windows TV1에서 고정 CDP 응답을 주입한 생산 snapshot 함수가
+`PC_CHROME_SNAPSHOT_OK`를 반환했다. 최소화 2탭에서 visibility 0회, 일반 창에서
+2회·현재 탭·revision 변화를 확인했다. 실제 브라우저 조작은 하지 않았다.
+
+전체 재생을 다시 실행한 시간·모델 토큰 절감은 미측정이다. 네이티브 PowerShell 기동과
+원격 작업 접수 비용, WOL 자체 대기, 입력 키 지연은 남는다. 교재가 다음 자연어 실행에서
+선택되는지는 별도의 에이전트 재실행으로 확인해야 하며, 코드 검사 통과와 구분한다.
+
+관련 선택 5/778 파일(1%)의 회귀는 233통과·Windows 전용 2건너뜀이다.
+이번 Chrome 네이티브 검사는 TV1에서 별도로 통과했다. IBL 정합성과 Android 번들
+파생 확인도 통과했으며 backend 전수 검사는 실행하지 않았다.

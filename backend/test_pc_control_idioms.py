@@ -32,6 +32,14 @@ def flow(tmp_path, monkeypatch):
     def leaf(step, *args, **kw):
         key, params = step['_node'] + ':' + step['action'], step['params']
         state['calls'].append((key, copy.deepcopy(params)))
+        if key == 'self:script' and params['id'] == 'TV제어':
+            state['startup_hook']('tv')
+            assert params['args']['op'] == 'on'
+            return {'success': True, 'value': {'success': True, 'power': 'on', 'verified': True, 'op': 'on', 'target': params['args']['target']}}
+        if key == 'limbs:youtube':
+            state['startup_hook']('search')
+            assert params['op'] == 'search'
+            return {'success': True, 'items': [{'title': 'candidate', 'duration': '1:23'}]}
         if key == 'self:limb':
             return {'success': True, 'limbs': [{**target, 'connected': state['connected']}]}
         if key == 'self:read':
@@ -49,7 +57,9 @@ def flow(tmp_path, monkeypatch):
             return {'success': True, 'value': value}
         if key == 'limbs:guestpc':
             action = state['plans'][-1]['request']['action']
-            assert params['background'] and params['timeout'] == (120 if action.startswith('youtube_') else 30)
+            assert params['background'] and params['timeout'] == (120 if action.startswith('youtube_') or action == 'chrome_launch' else 30)
+            if 'startup_hook' in state:
+                state['startup_hook']('browser')
             state['job'] = {'kind': 'guestpc', 'task_id': 'job-1'}
             return {'success': True, 'limb': 'pc-1', 'request_id': params['request_id'],
                     'task_ref': state['job']}
@@ -232,3 +242,31 @@ def test_batch_rejects_mutations_before_target_resolution(flow):
     with pytest.raises(AssertionError, match='읽기 동작만'):
         run('return [fn:PC조회묶음]{대상:"__local__",항목:["status","lock"]}')
     assert state['calls'] == []
+
+
+def test_tv_guide_starts_independent_preparation_together_without_duplicate_queries(flow):
+    import re
+    import threading
+    run, state = flow
+    state['terminal'] = True
+    windows = [{'window_id': 1, 'state': 'minimized', 'tabs': [
+        {'tab_id': 'A', 'url': 'https://www.youtube.com/', 'name': 'YouTube'}]}]
+    state['native'] = {'action': 'chrome_launch', 'surface': 'app:com.google.Chrome',
+                       'running': True, 'windows': windows}
+    barrier = threading.Barrier(3)
+    seen = []
+    def reached(branch):
+        seen.append(branch)
+        barrier.wait(timeout=15)
+    state['startup_hook'] = reached
+    guide = (ROOT / 'data/guides/tv_control.md').read_text()
+    code = re.search(r'<!-- example:tv_pc_startup -->\s*```ibl\n(.*?)```', guide, re.S)[1]
+    code = code.replace('등록된 TV의 device_id', 'tv-1').replace('연결된 Windows PC의 device_id', 'pc-1')
+    result = run(code)
+    assert sorted(seen) == ['browser', 'search', 'tv']
+    assert result[0]['result']['power'] == 'on'
+    assert result[1]['result']['status'] == 'completed', result
+    assert result[1]['result']['result']['windows'] == windows
+    assert len(state['plans']) == 1 and state['plans'][0]['request']['action'] == 'chrome_launch'
+    assert sum(k == 'self:task' for k, _ in state['calls']) == 1
+    assert sum(k == 'self:script' and p['id'] == 'TV제어' for k, p in state['calls']) == 1

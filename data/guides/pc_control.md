@@ -112,6 +112,8 @@ Windows PC 의 Chrome 창·탭은 OS 수준이 아니라 앱 조작면 `app:com.
 Windows PC 는 같은 계약을 **PC제어의 `chrome_*` 동작**으로 부른다(실행 파일 `pc_chrome_windows.ps1`). 통로는 DevTools 프로토콜이고
 Chrome 136+ 가 기본 프로필의 원격 디버깅을 거부하므로 **전용 프로필**(`%LOCALAPPDATA%\IndieBiz\ChromeProfile`)만 본다 — 사용자가
 따로 띄운 크롬은 `other_chrome_instances` 개수로만 알려 주고 그 탭은 다루지 않는다(그쪽 유튜브 탭은 `youtube_*` 가 UI Automation 으로 다룬다).
+준비할 때는 `chrome_status`를 먼저 부르지 말고 `chrome_launch`로 바로 실행 여부를 확인한다. 반환된 `result.windows`가 창·탭 관측이므로 성공 뒤에도 같은 상태를 다시 읽지 않는다. TV와 함께 쓰는 독립 준비 조합은 [TV 제어](tv_control.md#전원브라우저검색을-함께-준비하기)를 따른다.
+
 처음 한 번 `chrome_launch` 로 띄우고(최소화로 요청, `shortcut:true` 면 바탕화면 "IndieBiz Chrome" 바로가기 생성) 그 프로필에서 필요한 로그인을 한다.
 
 | action | 추가 요청 인수 | 관측 범위 |

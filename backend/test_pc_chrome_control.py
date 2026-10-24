@@ -119,3 +119,17 @@ def test_guides_name_the_windows_route_and_compile():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_native_chrome_snapshot_skips_only_minimized_page_visibility():
+    import base64
+    import shutil
+    import subprocess
+    powershell = shutil.which('powershell.exe')
+    if not powershell:
+        pytest.skip('Windows PowerShell required; same fixture can run on registered Windows PC')
+    result = subprocess.run([powershell, '-NoProfile', '-NonInteractive', '-File',
+        str(ROOT / 'backend/fixtures/pc_chrome_snapshot.ps1'), '-DriverBase64',
+        base64.b64encode(SOURCE.encode()).decode()], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'PC_CHROME_SNAPSHOT_OK' in result.stdout

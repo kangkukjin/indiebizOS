@@ -4,6 +4,20 @@
 문법 전문: `data/common_prompts/fragments/12_ibl_only.md`.
 도구 결합·문서 읽기·결과 미리보기·중단 뒤 이어가기: `read_guide(query="ibl_composition_tools.md")`.
 
+## 부품의 형태와 완료 의미
+
+어휘·등록 스크립트·관용구·드라이버는 현재 계약으로 발견하고 조합한다. 형태 전환은 사용자가
+결정하며 빈도로 자동 전환하지 않는다. 계약이 소개에 이미 있으면 같은 설명을 다시 조회하지 않는다.
+`contract_known:false`나 생략된 상세는 완료 보장이 아니므로 필요한 정보만 inspect로 확인한다.
+
+실행 성공과 업무 완료를 구분한다. PC·Android 제어 함수는 실패도 정상 값으로 반환할 수 있으므로
+`status`·`verified`·검증 범위를 확인한다. pending·unknown은 원 영수증으로 조회하고 변경을
+재전송하지 않는다. Safari·Chrome 스크립트의 실패는 catch로 전달된다. 함수를 감싸서 오류를
+값으로 바꿀 때는 `$error.details.error_code`·failure·recovery와 원 `$error`를 보존한다.
+PC·Android 반환의 `failure.cause`는 원 오류, `failure.recovery`는 구조화된 복구 지시다.
+검증 스크립트의 명시 `operation_outcome`은 실행 봉투의 작업 판정이며 업무 값 속 동명 필드를
+자동 판정하지 않는다. 선언 판정이 없으면 성공으로 추정하지 않는다. 구체 형식은 `script.md`를 따른다.
+
 ## 작성 순서
 
 복잡한 새 일의 기본은 **사용자 요구 → 분해 이유 → 함수별 계약 → 구현 → 최상위 조합**이다.

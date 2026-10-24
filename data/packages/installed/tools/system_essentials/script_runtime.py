@@ -25,6 +25,21 @@ def operation_outcomes(value, identity):
              'message': outcome.get('message', '')}]
 
 
+def output_operation_outcomes(stdout, contract, identity):
+    """명시 실행 봉투의 판정만 읽는다. typed value 내부의 동명 필드는 업무 데이터다."""
+    try:
+        envelope = json.loads(stdout)
+    except (ValueError, TypeError):
+        return []
+    protocol = (contract or {}).get('adapter', {}).get('protocol', 'registered-json/1')
+    if protocol == 'ibl-script/2':
+        if not isinstance(envelope, dict) or envelope.get('protocol') != protocol or envelope.get('ok') is not True:
+            return []
+    elif protocol != 'registered-json/1':
+        return []
+    return operation_outcomes(envelope, identity)
+
+
 def atomic_write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
@@ -114,6 +129,7 @@ def v2_output(stdout, contract):
             raise ValueError("stdout.ok는 Bool입니다.")
         if not envelope["ok"]:
             return None, str(envelope.get("error") or "script 실패")
+        operation_outcomes(envelope, '')
         if "value" not in envelope:
             raise ValueError("stdout.value가 없습니다(null은 값으로 허용).")
         value = guard(envelope["value"], contract["result"], "script 반환")
@@ -182,7 +198,7 @@ def member_value_script(params, command, exchange):
     if not contract or contract["adapter"]["protocol"] == "registered-json/1":
         from ibl_honesty import merge_into
         merge_into(value, out)
-        outcomes = operation_outcomes(value, uuid.uuid4().hex)
-        if outcomes:
-            out['operation_outcomes'] = outcomes
+    outcomes = output_operation_outcomes(result.get('stdout', ''), contract, uuid.uuid4().hex)
+    if outcomes:
+        out['operation_outcomes'] = outcomes
     return out

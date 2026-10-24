@@ -13,6 +13,68 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.parametrize('name', ['PC제어', 'Android제어', 'PC조회묶음'])
+@pytest.mark.parametrize('details', [
+    {'error_code': 'DEVICE_OFFLINE', 'failure': {'code': 'INNER', 'extra': 7},
+     'recovery': {'retry_change': False, 'next': '원 접수증을 조회하세요'}},
+    {'failure': None, 'recovery': None},
+])
+def test_control_functions_preserve_structured_faults(name, details):
+    from ibl_v2_adapters import load_registry, Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_ir import Fault
+    from ibl_v2_runtime import Runtime
+    from ibl_v2_store import installed_definitions
+    registry = load_registry()
+    def fail(rt, args):
+        raise Fault('TOOL', '관측한 오류 원문', details=details)
+    registry['self:limb'] = Adapter(registry['self:limb'].contract, fail)
+    params = '대상:"test-device"' + ('' if name == 'PC조회묶음' else ',요청:{action:"status"}')
+    plan = compile_program('return [fn:' + name + ']{' + params + '}', registry,
+                           definitions=installed_definitions())
+    assert not plan.issues, plan.report()
+    result = Runtime(plan).run()
+    assert result['success'], result
+    values = result['value']['items'] if name == 'PC조회묶음' else [result['value']]
+    for value in values:
+        assert value['status'] == 'failed' and not value['verified']
+        failure = value['failure']
+        assert failure['cause']['details'] == details
+        assert failure['message'] == '관측한 오류 원문'
+        if details.get('error_code'):
+            assert failure['code'] == 'DEVICE_OFFLINE' and failure['extra'] == 7
+            assert failure['recovery'] == details['recovery']
+            assert failure['next'] == details['recovery']['next']
+        else:
+            assert failure['code'] is None and failure['recovery'] == {}
+
+
+@pytest.mark.parametrize('name', ['PC제어확인', 'Android제어확인'])
+def test_control_wait_fault_preserves_receipt_and_recovery(name):
+    from ibl_v2_adapters import load_registry, Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_ir import Fault
+    from ibl_v2_runtime import Runtime
+    from ibl_v2_store import installed_definitions
+    registry = load_registry()
+    task = {'status': 'pending', 'task_ref': {'kind': 'guestpc', 'task_id': 'original'}}
+    details = {'error_code': 'RECEIPT_UNAVAILABLE', 'recovery': {'retry_change': False}}
+    registry['self:script'] = Adapter(registry['self:script'].contract, lambda rt, args: task)
+    def fail(rt, args):
+        raise Fault('TOOL', '원 작업 조회 불가', details=details)
+    registry['self:task'] = Adapter(registry['self:task'].contract, fail)
+    plan = compile_program('return [fn:' + name + ']{작업:$task,대기:0}', registry,
+                           inputs={'task': task}, definitions=installed_definitions())
+    assert not plan.issues, plan.report()
+    result = Runtime(plan, {'task': task}).run()
+    assert result['success'], result
+    value = result['value']
+    assert value['status'] == 'unknown' and value['task_ref'] == task['task_ref']
+    assert value['failure']['code'] == 'RECEIPT_UNAVAILABLE'
+    assert value['failure']['recovery'] == details['recovery']
+    assert value['failure']['cause']['details'] == details
+
+
 def _load(name, path):
     spec = importlib.util.spec_from_file_location(name, ROOT / path)
     mod = importlib.util.module_from_spec(spec)

@@ -14,7 +14,7 @@
   {
     "alias": "Android제어",
     "source_file": "android_control.ibl",
-    "intent": "명시한 Android 폰의 앱 실행·홈·뒤로·접근성 화면 읽기·터치·문자 입력과 음량·밝기·회전·손전등·센서를 공용 드라이버로 제어하고 원 작업의 결과를 확인·복구한다.",
+    "intent": "명시한 Android 폰·휴대폰의 화면 켜기·끄기와 앱 실행·홈·뒤로·접근성 화면 읽기·터치·문자 입력과 음량·밝기·회전·손전등·센서를 공용 드라이버로 제어하고 원 작업의 결과를 확인·복구한다.",
     "nodes": "self,limbs",
     "category": "phrase",
     "source": "manual_seed",

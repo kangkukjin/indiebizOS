@@ -28,6 +28,26 @@ IBL 파서·값·오류 객체에 의존하지 않는다. IBL 어댑터와 재�
 stdin 객체→결과 파일, `registered-json/1` 등록 실행은 stdin 객체→stdout JSON의
 최소 동작 예제가 각각 나온다. 등록 ID는 먼저 `op:list`에서 해당 계약을 확인한다.
 
+등록 스크립트·저장 함수·관용구는 현재 형태 그대로 조합한다. 후보 소개에 필요한 계약이
+이미 있으면 조회를 반복하지 않는다. `contract_known:false`는 입력·결과 계약을 확인하지
+못했다는 뜻이며 실행 가능·완료 보장이 아니다. 저장 함수의 후보 계약은 현재 하위 부품까지
+컴파일해 얻는다. 배포 함수의 용도 설명은 실제 정의와 일치하는 기존 시딩 교재를 사용한다.
+
+등록 부품을 작성·수리할 때는 기존 `callable_contract`에 필수 인자·조건별 제약·다음 부품이
+읽을 반환 필드를 적는다. 효과를 확정하지 못하면 `unknown`을 유지한다. `보고서HTML`은
+src·dst와 선택 인자, 결과 items의 path·bytes·table_structure를 이 계약으로 검사한다.
+HTML 생성·표 구조 보존은 시각 검수나 공개 승인과 다르며 `publication_pending`을 확인한다.
+
+### 실행 성공과 작업 판정
+
+종료 코드 0·IBL `success:true`는 실제 작업의 합격과 다를 수 있다. 검증 스크립트는 명시
+`operation_outcome:{status:"passed"|"failed",message:"판정 근거"}`를 실행 봉투에 선언한다.
+`registered-json/1`은 stdout 최상위, `ibl-script/2`는 `protocol`·`ok`·`value`와 같은 층이다.
+typed `value` 내부의 동명 필드는 업무 데이터이며 판정으로 해석하지 않는다. 선언 판정은
+동기·백그라운드·회원 실행에서 값과 별도로 전달되고 원 작업 ID로 중복 집계를 피한다.
+작업 판정이 failed여도 정상적으로 반환한 검증 결과는 계속 조합할 수 있다.
+pending·unknown은 passed/failed로 추정하지 않으며 해당 부품의 상태 계약으로 처리한다.
+
 ## 미등록 Python 파일을 조합하기
 
 다음 프로그램의 `inputs`에 `본문`(Python Text)과 `자료`(Record)를 넣는다.

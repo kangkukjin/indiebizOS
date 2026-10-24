@@ -191,6 +191,43 @@ python_libraries:
   registered_at: '2026-10-13T18:10:00'
   timeout: 60
 보고서HTML:
+  callable_contract:
+    version: 1
+    params:
+      src: Text
+      dst: Text
+      title: Text?
+      subtitle: Text?
+      theme: Text?
+      accent: Text?
+      drop_lines: Text|List<Text>|Null
+      publish: Text?
+    required:
+    - src
+    - dst
+    nonempty:
+    - src
+    - dst
+    result:
+      success: Bool
+      items:
+        $list:
+          path: Text
+          title: Text
+          theme: Text
+          bytes: Number
+          headings: Number
+          links: Number
+          tables: Number
+          dropped_lines: Number
+          table_structure:
+            status: Text
+            expected: Number
+            boundaries_fixed: Number
+    effects:
+    - unknown
+    adapter:
+      protocol: registered-json/1
   description: '마크다운 보고서 → 공유창고용 자족 HTML(스타일 인라인·다크모드 대응). args: src·dst(필수) · title(기본=첫
     h1) · subtitle(머리 한 줄) · theme(plain|card|briefing: 목차·요약·기사 구획) · accent · drop_lines(그
     문자열이 든 줄 제거 — 공유판 배포 규약을 사람 손이 아니라 변환기가 집행) · publish(direct=완성 즉시 dst 공개, 기본

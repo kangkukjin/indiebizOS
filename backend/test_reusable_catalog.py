@@ -63,6 +63,7 @@ def test_candidates_exclude_only_actually_exposed_functions_before_limit(tmp_pat
     monkeypatch.setattr(thread_context, 'get_allowed_nodes', lambda: None)
     monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: tmp_path)
     monkeypatch.setattr(ibl_v2_store, 'installed_definitions', lambda: {})
+    monkeypatch.setattr(ibl_v2_store, 'describe', lambda name, allowed: {'callable_contract': {'result': 'Number'}})
     monkeypatch.setattr(ibl_access, 'exposed_idiom_names', lambda allowed: {'압축'})
     scripts = tmp_path / 'data/scripts'
     scripts.mkdir(parents=True)
@@ -154,6 +155,78 @@ def test_small_contract_is_preserved_whole_and_oversized_guide_is_omitted(monkey
     assert out['candidates'][0]['contract'] == contract
     assert out['candidates'][0]['details_omitted'] == []
     assert not out['control_briefs']
+
+
+def test_saved_candidate_rechecks_dependencies_and_access(tmp_path, monkeypatch):
+    import yaml
+    import principal, runtime_utils, thread_context, workflow_store, ibl_v2_store, ibl_access
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_ir import digest
+    from reusable_catalog import candidates
+    source = '[def:probe](){return [demo:read]{}}'
+    def compiled(result):
+        contract = {'version': 1, 'params': {}, 'result': result, 'effects': ['pure']}
+        plan = compile_program(source, {'demo:read': Adapter(contract, None)}, definitions={})
+        assert not plan.issues
+        return plan.function_contracts[plan.root.data['statements'][0].id]
+    (tmp_path/'saved.yaml').write_text(yaml.safe_dump({
+        'edition': 2, 'name': 'probe', 'code': source, 'source_hash': digest(source),
+        'capability_contract': compiled('Number'), 'dependencies': {'demo:read': 'old'}}))
+    monkeypatch.setattr(principal, 'is_owner', lambda: True)
+    monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
+    monkeypatch.setattr(thread_context, 'get_repair_workspace', lambda: None)
+    monkeypatch.setattr(thread_context, 'get_allowed_nodes', lambda: {'self'})
+    monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: tmp_path)
+    monkeypatch.setattr(ibl_v2_store, 'installed_definitions', lambda: {})
+    monkeypatch.setattr(ibl_access, 'exposed_idiom_names', lambda allowed: set())
+    calls = []
+    def describe(name, allowed):
+        calls.append((name, allowed))
+        return {'callable_contract': compiled('Text')}
+    monkeypatch.setattr(ibl_v2_store, 'describe', describe)
+    row, = candidates('probe')
+    assert row['contract']['result'] == 'Text' and row['contract_known']
+    assert calls == [('probe', {'self'})]
+    monkeypatch.setattr(ibl_v2_store, 'describe', lambda *args: {'error': '현재 의존 부품 접근 불가'})
+    row, = candidates('probe')
+    assert not row['contract_known'] and row['contract'] is None and row['error']
+    from reusable_catalog import discovery_payload
+    monkeypatch.setattr('guide_registry.callable_control_briefs', lambda names: [])
+    assert discovery_payload([row])['candidates'][0]['error'] == row['error']
+
+
+def test_installed_intent_uses_matching_source_and_rejects_conflicting_teaching(tmp_path, monkeypatch):
+    import json
+    from reusable_catalog import installed_descriptions
+    monkeypatch.setattr('runtime_utils.get_base_path', lambda: tmp_path)
+    monkeypatch.setattr('thread_context.get_repair_workspace', lambda: None)
+    root = tmp_path/'data/idioms'
+    root.mkdir(parents=True)
+    source = '[def:opaque](){return 1}'
+    (root/'part.ibl').write_text(source)
+    row = {'alias': 'opaque', 'source_file': 'part.ibl', 'intent': '본체 음량 조절'}
+    (root/'parts_seeds.json').write_text(json.dumps([row]))
+    descriptions = installed_descriptions({'opaque': source})
+    assert ranked('본체 음량 낮춰', [{'id': 'fn:opaque', 'description': descriptions['opaque']}])
+    assert installed_descriptions({'opaque': '[def:opaque](){return 2}'}) == {}
+    (root/'other_seeds.json').write_text(json.dumps([{**row, 'intent': '다른 의미'}]))
+    assert installed_descriptions({'opaque': source}) == {}
+    (root/'other_seeds.json').write_text(json.dumps([{**row, 'source_file': '../outside.ibl'}]))
+    assert installed_descriptions({'opaque': source}) == descriptions
+
+
+def test_shipped_functions_have_task_descriptions():
+    from ibl_v2_store import installed_definitions
+    from reusable_catalog import installed_descriptions
+    definitions = installed_definitions()
+    descriptions = installed_descriptions(definitions)
+    assert set(descriptions) == set(definitions)
+    assert all(descriptions[name] != name for name in definitions)
+    assert any(r['id'] == 'fn:PC제어' for r in ranked('본체 음량 낮춰', [
+        {'id': 'fn:' + name, 'description': description} for name, description in descriptions.items()]))
+    assert any(r['id'] == 'fn:Android제어' for r in ranked('휴대폰 화면 켜줘', [
+        {'id': 'fn:' + name, 'description': description} for name, description in descriptions.items()]))
 
 
 if __name__ == "__main__":

@@ -18,9 +18,12 @@
   [try] {
     $관측 = [self:task]{op:"wait",ref:$확인.task_ref,timeout:$대기}
   } [catch] {
-    $관측 = get(get($error,"details",{}),"task_observation",{})
+    $정보 = get($error,"details",{})
+    $원실패 = [try] { $값 = get($정보,"failure",{}); keys($값); $값 } [catch] { {} }
+    $복구 = [try] { $값 = get($정보,"recovery",{}); keys($값); $값 } [catch] { {} }
+    $관측 = get($정보,"task_observation",{})
     [if:len($관측)==0] {
-      return {**$확인,status:"unknown",failure:{stage:"wait",code:null,message:$error.message,next:"같은 작업을 Android제어확인으로 다시 조회하세요. 변경을 재전송하지 마세요."}}
+      return {**$확인,status:"unknown",failure:{**$원실패,stage:"wait",code:get($정보,"error_code",get($원실패,"code",null)),message:$error.message,cause:$error,recovery:$복구,next:get($복구,"next",get($원실패,"next","같은 작업을 Android제어확인으로 다시 조회하세요. 변경을 재전송하지 마세요."))}}
     }
   }
   return [self:script]{id:"Android제어부품",args:{op:"verify",task:$작업,plan_ref:$준비,job_ref:$접수,observation:$관측}}

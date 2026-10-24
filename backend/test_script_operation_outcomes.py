@@ -101,11 +101,39 @@ def test_typed_script_value_is_not_a_legacy_declaration(ops, monkeypatch):
     assert 'operation_outcomes' not in out
 
 
-def test_member_script_uses_the_same_explicit_work_contract(ops):
+@pytest.mark.parametrize('status', ['passed', 'failed', 'unknown', False])
+def test_typed_script_envelope_declares_work_verdict_independently_of_value(ops, monkeypatch, status):
+    contract = {'version': 1, 'params': {}, 'result': 'Record', 'effects': ['unknown'],
+                'adapter': {'protocol': 'ibl-script/2'}}
+    monkeypatch.setattr(ops, '_read_registry', lambda: {
+        'check': {'file': 'check.py', 'interpreter': 'python', 'callable_contract': contract}})
+    value = {'operation_outcome': {'status': 'business-data'}, 'ok': False}
+    envelope = {'protocol': 'ibl-script/2', 'ok': True, 'value': value,
+                'operation_outcome': {'status': status, 'message': '실제 작업 판정'}}
+    monkeypatch.setattr('script_process.run_process', lambda *a, **kw: {
+        'exit_code': 0, 'stdout': json.dumps(envelope), 'stderr': '', 'timed_out': False})
+    out = ops.op_run({'id': 'check', '_ibl_edition': 2})
+    if status not in ('passed', 'failed'):
+        assert not out['success'] and 'operation_outcome' in out['error']
+        return
+    assert out['success'] and out['value'] == value
+    assert out['operation_outcomes'][0]['status'] == status
+    assert out['operation_outcomes'][0]['id'].endswith(out['log'])
+
+
+@pytest.mark.parametrize('typed', [False, True])
+def test_member_script_uses_the_same_explicit_work_contract(ops, typed):
+    contract = {'version': 1, 'params': {}, 'result': 'Record', 'effects': ['unknown'],
+                'adapter': {'protocol': 'ibl-script/2'}}
     def exchange(command):
         if command.get('action') == 'list':
-            return {'script_protocols': ['ibl-script/2'], 'items': [{'id': 'check'}]}
-        return {'success': True, 'stdout': json.dumps(verdict())}
+            return {'script_protocols': ['ibl-script/2'], 'items': [
+                {'id': 'check', **({'callable_contract': contract} if typed else {})}]}
+        payload = verdict()
+        if typed:
+            payload = {'protocol': 'ibl-script/2', 'ok': True, 'value': payload,
+                       'operation_outcome': payload['operation_outcome']}
+        return {'success': True, 'stdout': json.dumps(payload)}
     out = ops._runtime.member_value_script({'id': 'check'}, {}, exchange)
     assert out['success'] and out['value'] == verdict()
     assert out['operation_outcomes'][0]['status'] == 'failed'
@@ -123,17 +151,23 @@ def test_background_notice_reports_work_failure_without_changing_process_status(
     assert sent[1]['type'] == 'info'
 
 
+@pytest.mark.parametrize('typed', [False, True])
 def test_background_verdict_survives_lookup_list_composition_and_supervision(
-        ops, tmp_path, monkeypatch, supervisor):
+        ops, tmp_path, monkeypatch, supervisor, typed):
     monkeypatch.syspath_prepend(str(PKG))
     runner = load(PKG / '_bg_runner.py')
     monkeypatch.setattr(runner, '_announce', lambda job: None)
     ops._JOB_DIR.mkdir()
     for name, payload in [('failed', verdict()), ('passed', verdict(False))]:
         script = tmp_path / (name + '.py')
-        script.write_text('print(' + repr(json.dumps(payload)) + ')')
+        envelope = ({'protocol': 'ibl-script/2', 'ok': True, 'value': payload,
+                     'operation_outcome': payload['operation_outcome']} if typed else payload)
+        script.write_text('print(' + repr(json.dumps(envelope)) + ')')
         job = {'job_id': name, 'id': 'check', 'status': 'starting', 'script': str(script),
                'interpreter': sys.executable, 'log': str(tmp_path / (name + '.log')), 'timeout': 10}
+        if typed:
+            job['callable_contract'] = {'version': 1, 'params': {}, 'result': 'Record',
+                                       'effects': ['unknown'], 'adapter': {'protocol': 'ibl-script/2'}}
         path = ops._JOB_DIR / (name + '.json')
         path.write_text(json.dumps(job))
         monkeypatch.setattr(sys, 'argv', ['runner', str(path)])
@@ -142,8 +176,10 @@ def test_background_verdict_survives_lookup_list_composition_and_supervision(
         assert stored['status'] == 'done' and stored['result'] == payload
     single = ops.op_status({'job_id': 'failed'})
     grouped = ops.op_status({'id': 'check'})
+    task = ops.task_status({'kind': 'script', 'task_id': 'failed'})
     assert single['success'] and grouped['success']
     assert single['result'] == verdict()
+    assert task['operation_outcomes'] == single['operation_outcomes']
     assert len(grouped['operation_outcomes']) == 2
 
     import model_result_view as view
@@ -162,7 +198,7 @@ def test_background_verdict_survives_lookup_list_composition_and_supervision(
         assert view.project_v2_result(replayed)['evidence_summary']['operation_failures'] == 1
         return view.project_v2_result(result)
 
-    for envelope in (single, grouped, single):
+    for envelope in (single, grouped, single, task):
         shown = project(envelope)
         assert shown['evidence_summary']['operation_failures'] == 1
         assert shown['evidence_summary']['tool_failures'] == 0

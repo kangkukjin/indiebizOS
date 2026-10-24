@@ -5,7 +5,7 @@ import json, os, subprocess, sys, time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[5] / 'backend'))
 import boot_paths  # noqa: F401 — detached workers use the same value contract as foreground
-from script_runtime import atomic_write, parse_output, v2_output, legacy_value_output
+from script_runtime import atomic_write, parse_output, v2_output, legacy_value_output, output_operation_outcomes
 
 STDOUT_TAIL = 8000
 STDERR_TAIL = 2000
@@ -108,6 +108,10 @@ def main():
     else:
         parsed, result_error = parse_output(out)
     ok = code == 0 and not timed_out and not cancelled and not result_error
+    if ok:
+        outcomes = output_operation_outcomes(out, job.get('callable_contract'), job['job_id'])
+        if outcomes:
+            job['operation_outcomes'] = outcomes
     job.update({"status": "cancelled" if cancelled else "done" if ok else "failed", "exit_code": code, "duration_ms": dur,
                 "ended_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
     if cancelled:
@@ -146,6 +150,8 @@ def _announce(job):
         result = job.get('result')
         plain = (job.get('callable_contract') or {}).get('adapter', {}).get('protocol', 'registered-json/1') == 'registered-json/1'
         outcome = result.get('operation_outcome', {}) if plain and isinstance(result, dict) else {}
+        if job.get('operation_outcomes'):
+            outcome = job['operation_outcomes'][0]
         work_failed = isinstance(outcome, dict) and outcome.get('status') == 'failed'
         ok = job.get("status") == "done" and not work_failed
         stopped = job.get("status") == "cancelled"      # 사람이 멈춘 것은 실패 알림이 아니다

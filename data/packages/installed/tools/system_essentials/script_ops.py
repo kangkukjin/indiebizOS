@@ -647,7 +647,7 @@ def op_run(tool_input):
 
     res = {"success": True, "id": sid, "exit_code": 0, "duration_ms": duration_ms, "log": str(log_path)}
     # Typed protocol value is arbitrary business data, not a legacy stdout envelope.
-    outcomes = [] if wire_v2 and not plain_contract else _runtime.operation_outcomes(script_value if v2 else parsed, log_path)
+    outcomes = _runtime.output_operation_outcomes(stdout, entry.get('callable_contract'), log_path)
     if outcomes:
         res['operation_outcomes'] = outcomes
     if interp_note:
@@ -797,14 +797,18 @@ def op_status(tool_input):
         if j.get("status") in ("done", "failed") and "result" in j:
             row["result"] = j["result"]
         row['value_protocol'] = (j.get('callable_contract') or {}).get('adapter', {}).get('protocol', 'registered-json/1')
+        if j.get('status') == 'done' and j.get('operation_outcomes'):
+            row['operation_outcomes'] = j['operation_outcomes']
         items.append(row)
     still = [r["job_id"] for r in items if r.get("status") in ("starting", "running")]
     text = f"작업 {len(items)}건" + (f" · 진행 중 {len(still)}" if still else "") + (" · " + ", ".join(notes) if notes else "")
     if len(still) == 1 and len(items) == 1 and items[0].get("progress"):
         text += " · " + items[0]["progress"][-1]
     res = {"success": True, "items": items, "count": len(items), "running": still, "text": text}
-    outcomes = [outcome for row in items if row['status'] == 'done' and row['value_protocol'] == 'registered-json/1'
-                for outcome in _runtime.operation_outcomes(row.get('result'), row['job_id'])]
+    outcomes = [outcome for row in items if row['status'] == 'done'
+                for outcome in (row.get('operation_outcomes') or (
+                    _runtime.operation_outcomes(row.get('result'), row['job_id'])
+                    if row['value_protocol'] == 'registered-json/1' else []))]
     if outcomes:
         res['operation_outcomes'] = outcomes
     if job_id and len(items) == 1:
@@ -848,7 +852,8 @@ def task_status(ref: dict) -> dict:
         state = T.CANCEL_REQUESTED          # 요청은 남았고 러너가 아직 끝을 기록하지 않았다
     return T.view(ref, state, progress={"lines": row.get("progress") or [], "log": row.get("log")},
                   result=row.get("result"), error=row.get("error"), job=row,
-                  accepted_at=row.get("started_at"), ended_at=row.get("ended_at"))
+                  accepted_at=row.get("started_at"), ended_at=row.get("ended_at"),
+                  **({'operation_outcomes': res['operation_outcomes']} if res.get('operation_outcomes') else {}))
 
 
 def task_status_cancel(ref: dict) -> dict:

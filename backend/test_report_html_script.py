@@ -43,6 +43,27 @@ def test_missing_boundary_preserves_cells_links_and_source(renderer, tmp_path, t
     assert html.select_one("table strong").get_text() == "2~4억"
 
 
+@pytest.mark.parametrize('drop', ['제외', ['제외'], None])
+def test_registered_contract_preserves_supported_inputs_and_actual_result(renderer, tmp_path, drop):
+    import yaml
+    from ibl_callable_contract import checked_values
+    from ibl_v2_adapters import validate_contract
+    from ibl_v2_types import guard
+    path = Path(__file__).resolve().parents[1]/'data/scripts/registry.yaml'
+    contract = yaml.safe_load(path.read_text())['보고서HTML']['callable_contract']
+    validate_contract(contract)
+    (tmp_path/'source.md').write_text('# 제목\n\n제외할 줄\n\n유지할 줄')
+    selected, args = checked_values(contract, {'src': 'source.md', 'dst': 'result.html', 'drop_lines': drop})
+    result = renderer.render(args)
+    guard(result, selected['result'], '보고서HTML 결과')
+    assert (tmp_path/'result.html').is_file()
+    assert result['items'][0]['dropped_lines'] == (0 if drop is None else 1)
+    with pytest.raises(ValueError, match='알 수 없는 인자'):
+        checked_values(contract, {**args, 'definitely_wrong': True})
+    with pytest.raises(ValueError, match='필수 인자 누락'):
+        checked_values(contract, {'src': 'source.md'})
+
+
 @pytest.mark.parametrize("example", [
     "```markdown\n제목\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n```",
     "~~~\n제목\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n~~~",

@@ -21,10 +21,13 @@
       $상태 = "unknown"
       $다음 = "원래 request_id·작업 기록을 확인하세요. 변경을 재전송하지 마세요."
     }
+    $정보 = get($error,"details",{})
+    $원실패 = [try] { $값 = get($정보,"failure",{}); keys($값); $값 } [catch] { {} }
+    $복구 = [try] { $값 = get($정보,"recovery",{}); keys($값); $값 } [catch] { {} }
     $조각 = split($error.message,":")
     $머리 = $조각[0]
-    $코드 = null
-    [if:$머리!="" and len($머리)>=3 and strip($머리,"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")==""] { $코드 = $머리 }
-    return {**$작업,status:$상태,failure:{stage:$단계,code:$코드,message:$error.message,next:$다음}}
+    $코드 = get($정보,"error_code",get($원실패,"code",null))
+    [if:$코드==null and $머리!="" and len($머리)>=3 and strip($머리,"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")==""] { $코드 = $머리 }
+    return {**$작업,status:$상태,failure:{**$원실패,stage:$단계,code:$코드,message:$error.message,cause:$error,recovery:$복구,next:get($복구,"next",get($원실패,"next",$다음))}}
   }
 }

@@ -1,0 +1,457 @@
+{
+  "synthetic": true,
+  "persistent_user_memory_written": false,
+  "cases": [
+    {
+      "case": "존대 선호",
+      "utterance": "제 선호를 말씀드리겠습니다. 저는 앞으로 모든 답변을 한국어로 받기를 원합니다.",
+      "eligible_ids": [
+        1,
+        2
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [
+          {
+            "user_source_ids": [
+              2
+            ],
+            "retention": "user_preference",
+            "node": "답변 언어",
+            "keywords": [
+              "한국어",
+              "답변언어",
+              "선호"
+            ],
+            "category": "사용자선호",
+            "relation": "NEW",
+            "existing_id": null,
+            "existing_version": null,
+            "future_use": "모든 답변의 기본 언어를 한국어로 유지",
+            "novelty": "기존 기억에 답변 언어 선호 없음",
+            "durable": true
+          }
+        ],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "재사용 실행 절차 없음",
+          "deep": "단위1은 서두뿐으로 지속 사실 없음",
+          "forage": "관측된 공간 근거 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 1.931,
+          "usage": {
+            "total_input_tokens": 2041,
+            "total_output_tokens": 166,
+            "total_cache_read_tokens": 128,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 1924.26,
+            "avg_request_latency_ms": 1924.26,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "요청형 선호",
+      "utterance": "앞으로 모든 답변은 한국어로 해주세요.",
+      "eligible_ids": [
+        1
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [
+          {
+            "user_source_ids": [
+              1
+            ],
+            "retention": "user_preference",
+            "node": "응답 언어",
+            "keywords": [
+              "한국어",
+              "답변 언어"
+            ],
+            "category": "사용자선호",
+            "relation": "NEW",
+            "existing_id": null,
+            "existing_version": null
+          }
+        ],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "실행 절차 없음",
+          "deep": "",
+          "forage": "공간 관측 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 0.804,
+          "usage": {
+            "total_input_tokens": 1907,
+            "total_output_tokens": 101,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 803.55,
+            "avg_request_latency_ms": 803.55,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "접속사 사실",
+      "utterance": "그리고 저는 땅콩 알레르기가 있습니다.",
+      "eligible_ids": [
+        1
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [
+          {
+            "user_source_ids": [
+              1
+            ],
+            "retention": "user_fact",
+            "node": "건강",
+            "keywords": [
+              "땅콩",
+              "알레르기"
+            ],
+            "category": "사용자정보",
+            "relation": "NEW",
+            "existing_id": null,
+            "existing_version": null,
+            "future_use": "식사·요리·간식 제안 시 땅콩 성분을 배제하고 알레르기 위험을 고지한다.",
+            "novelty": "기존 기억에 없는 새로운 신체 건강 정보.",
+            "durable": true
+          }
+        ],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "재사용할 실행 절차 없음",
+          "forage": "공간 관습·구조적 사실 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 1.415,
+          "usage": {
+            "total_input_tokens": 1907,
+            "total_output_tokens": 168,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 1414.48,
+            "avg_request_latency_ms": 1414.48,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "문단 간 문체",
+      "utterance": "저는 아버님께 매주 일요일에 전화합니다.\n\n저는 채식을 합니다.",
+      "eligible_ids": [
+        1,
+        2
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [
+          {
+            "user_source_ids": [
+              1
+            ],
+            "retention": "user_fact",
+            "node": "가족 관계",
+            "keywords": [
+              "아버지",
+              "전화",
+              "주간 연락"
+            ],
+            "category": "사용자정보",
+            "relation": "NEW",
+            "existing_id": null,
+            "existing_version": null,
+            "future_use": "연락 일정·가족 관련 대화에서 아버지와의 주간 통화를 고려한다.",
+            "novelty": "기존 기억에 없는 가족 연락 습관.",
+            "durable": true
+          },
+          {
+            "user_source_ids": [
+              2
+            ],
+            "retention": "user_preference",
+            "node": "식생활",
+            "keywords": [
+              "채식",
+              "식사 선호"
+            ],
+            "category": "사용자선호",
+            "relation": "NEW",
+            "existing_id": null,
+            "existing_version": null,
+            "future_use": "식사·모임·레시피 제안 시 채식 선호를 반영한다.",
+            "novelty": "기존 기억에 없는 식생활 선호.",
+            "durable": true
+          }
+        ],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "실행할 도구 호출 없음",
+          "deep": "없음",
+          "forage": "공간 관측 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 1.797,
+          "usage": {
+            "total_input_tokens": 2031,
+            "total_output_tokens": 265,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 1796.18,
+            "avg_request_latency_ms": 1796.18,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "타인 인용",
+      "utterance": "친구가 말했습니다.\n\n> 나는 앞으로 모든 답변을 한국어로 받고 싶다.\n\n이것은 친구의 말이고 제 선호가 아닙니다.",
+      "eligible_ids": [
+        1,
+        2,
+        3
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "재사용 가능한 실행 절차 없음",
+          "deep": "인용된 타인의 선호이며 사용자가 명시적으로 자기 선호가 아니라고 부정함",
+          "forage": "공간 관측이나 재사용 관습 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 1.063,
+          "usage": {
+            "total_input_tokens": 2179,
+            "total_output_tokens": 80,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 1062.7,
+            "avg_request_latency_ms": 1062.7,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "명시 채택",
+      "utterance": "> 모든 답변을 한국어로 받고 싶다.\n\n저도 위 선호를 채택합니다. 앞으로 제 답변에도 계속 적용해 주세요.",
+      "eligible_ids": [
+        1,
+        2,
+        3
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [
+          {
+            "user_source_ids": [
+              1,
+              2,
+              3
+            ],
+            "retention": "user_preference",
+            "node": "의사소통/답변 언어",
+            "keywords": [
+              "한국어",
+              "답변 언어",
+              "선호"
+            ],
+            "category": "사용자선호",
+            "relation": "NEW",
+            "existing_id": null,
+            "existing_version": null
+          }
+        ],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "재사용 가능한 실행 절차 없음",
+          "deep": "",
+          "forage": "공간 관측 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 1.654,
+          "usage": {
+            "total_input_tokens": 2169,
+            "total_output_tokens": 117,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 1654.07,
+            "avg_request_latency_ms": 1654.07,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "일회성",
+      "utterance": "오늘 이 답변만 한국어로 해주세요.",
+      "eligible_ids": [
+        1
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "실행 가능한 요청 없음",
+          "deep": "이번 답변에만 적용되는 일회성 언어 조건이라 지속 선호가 아님",
+          "forage": "공간 관측 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 1.079,
+          "usage": {
+            "total_input_tokens": 1908,
+            "total_output_tokens": 72,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 1078.73,
+            "avg_request_latency_ms": 1078.73,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "부정과 철회",
+      "utterance": "전에 한국어 답변을 원했지만 그 선호는 철회합니다. 앞으로는 답변 언어를 고정하지 마세요.",
+      "eligible_ids": [
+        1,
+        2
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [
+          {
+            "user_source_ids": [
+              1,
+              2
+            ],
+            "retention": "user_preference",
+            "node": "응답 언어",
+            "keywords": [
+              "답변 언어",
+              "한국어 선호 철회",
+              "언어 고정"
+            ],
+            "category": "사용자선호",
+            "relation": "NEW",
+            "existing_id": null,
+            "existing_version": null
+          }
+        ],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "재사용할 실행 절차나 관측 없음",
+          "deep": "",
+          "forage": "관측된 공간 주소나 관습 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 0.923,
+          "usage": {
+            "total_input_tokens": 2049,
+            "total_output_tokens": 124,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 923.05,
+            "avg_request_latency_ms": 923.05,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "미해결 지시",
+      "utterance": "앞으로 그것은 늘 그렇게 해주세요.",
+      "eligible_ids": [
+        1
+      ],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "실행 가능한 절차나 도구 사용이 없음",
+          "deep": "지시 대상 '그것'이 없어 지속 선호로 해석 불가",
+          "forage": "공간 관측·주소 근거 없음"
+        }
+      },
+      "calls": [
+        {
+          "seconds": 0.982,
+          "usage": {
+            "total_input_tokens": 1901,
+            "total_output_tokens": 79,
+            "total_cache_read_tokens": 1536,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 982.08,
+            "avg_request_latency_ms": 982.08,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    }
+  ]
+}

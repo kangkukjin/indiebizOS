@@ -74,22 +74,12 @@ def test_image_harvest():
     print("OK image harvest (5)")
 
 
-def test_repeat_guard():
-    # 공용 코어(backend/base/repeat_guard) — 직결 어댑터(execute_tool)와 CC 어댑터가 공유
-    import repeat_guard
-    repeat_guard.reset_all()
-    sig = '[sense:search]{query:"x"}|/p'
-    assert M._repeat_advisory("a1", sig) == ""
-    assert M._repeat_advisory("a1", sig) == ""
-    assert "연속 3회" in M._repeat_advisory("a1", sig)
-    assert M._repeat_advisory("a1", sig) == ""          # 4회째 조용
-    assert "5회째" in M._repeat_advisory("a1", sig)
-    assert M._repeat_advisory("a1", "다른코드|/p") == ""  # 리셋
-    assert M._repeat_advisory("a2", sig) == ""          # 신원 분리
-    # 두 어댑터가 같은 코어 객체를 쓰는지 (표류 방지의 핵심 단언)
-    assert M._repeat_advisory is repeat_guard.advise
-    repeat_guard.reset_all()
-    print("OK repeat guard (8)")
+def test_mcp_transports_backend_observation_without_local_chain(monkeypatch):
+    import anyio
+    notice = "[반복 관측] 같은 입력으로 같은 결과를 연속 3회 관측했습니다."
+    monkeypatch.setattr(M, '_post_backend', lambda *a: json.dumps({'value': 'waiting', '_model_advisory': notice}))
+    result = anyio.run(M.execute_ibl, 'return 1', '/tmp')
+    assert json.loads(result)['_model_advisory'] == notice
 
 
 def test_execute_ibl_shapes():

@@ -194,16 +194,22 @@ def test_member_combined_call_keeps_member_execution_context(tmp_path):
     assert result["descriptions"][0]["action"] == "self:read"
 
 
-def test_mcp_combined_call_keeps_repeat_guard(monkeypatch):
+def test_mcp_combined_call_preserves_backend_observation(monkeypatch):
     import mcp_server
-    seen = []
-    monkeypatch.setattr(mcp_server, "_post_backend", lambda *args: '{"success":true,"value":1}')
-    monkeypatch.setattr(mcp_server, "_repeat_advisory", lambda *args: seen.append(args) or "")
+    notice = "같은 입력으로 같은 결과를 연속 3회 관측했습니다."
+    def backend(route, payload, timeout):
+        result = {"success": True, "value": 1}
+        if payload.get("code"):
+            result["_model_advisory"] = notice
+        return json.dumps(result, ensure_ascii=False)
+    monkeypatch.setattr(mcp_server, "_post_backend", backend)
     async def run():
-        await mcp_server.execute_ibl("return 1", describe=["self:read"])
-        await mcp_server.execute_ibl("", describe=["self:read"])
-    asyncio.run(run())
-    assert len(seen) == 1 and "return 1" in seen[0][1]
+        executed = await mcp_server.execute_ibl("return 1", describe=["self:read"])
+        described = await mcp_server.execute_ibl("", describe=["self:read"])
+        return json.loads(executed), json.loads(described)
+    executed, described = asyncio.run(run())
+    assert executed["_model_advisory"] == notice
+    assert "_model_advisory" not in described
 
 
 if __name__ == "__main__":

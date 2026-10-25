@@ -175,7 +175,6 @@ def test_default_page_survives_real_mcp_and_provider_boundaries(result_view, bod
         return raw
 
     monkeypatch.setattr(mcp_server, "_post_backend", backend_read)
-    monkeypatch.setattr(mcp_server, "_repeat_advisory", lambda *a: "")
     monkeypatch.delenv("MAX_MCP_OUTPUT_TOKENS", raising=False)
     # limit 자체를 생략해도 60K가 기본값이어야 한다.
     request = {"id": ref["id"], "path": ["value", "text"]}

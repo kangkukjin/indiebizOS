@@ -143,13 +143,15 @@ def test_dict_advisory_appendix():
     orig = ST._execute_tool_inner
     try:
         ST._execute_tool_inner = lambda *a, **k: {"content": "본문", "images": [{"base64": "x"}]}
-        for _ in range(2):
-            ST.execute_tool("dict_tool", {"q": 1}, "/tmp", agent_id="dt")
-        r3 = ST.execute_tool("dict_tool", {"q": 1}, "/tmp", agent_id="dt")
-        assert isinstance(r3, dict) and "[반복 감지]" in r3["content"], r3
-        SI.post("dt", "조향도 dict 로")
-        r4 = ST.execute_tool("dict_tool", {"q": 2}, "/tmp", agent_id="dt")
-        assert "[사용자 조향]" in r4["content"]
+        from thread_context import actor_context
+        with actor_context(agent_id="dt", task_id="fixture"), repeat_guard.execution_scope(["dt"], "fixture"):
+            for _ in range(2):
+                ST.execute_tool("dict_tool", {"q": 1}, "/tmp", agent_id="dt")
+            r3 = ST.execute_tool("dict_tool", {"q": 1}, "/tmp", agent_id="dt")
+            assert isinstance(r3, dict) and "[반복 관측]" in r3["content"], r3
+            SI.post("dt", "조향도 dict 로")
+            r4 = ST.execute_tool("dict_tool", {"q": 2}, "/tmp", agent_id="dt")
+            assert "[사용자 조향]" in r4["content"]
     finally:
         ST._execute_tool_inner = orig
         repeat_guard.reset_all()

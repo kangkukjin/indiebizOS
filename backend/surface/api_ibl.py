@@ -329,7 +329,12 @@ async def execute_ibl_code(req: IBLRequest):
                     cancel_check = (lambda: channel_cancelled(req.completion_channel)) if req.completion_channel else None
                     call = lambda: _execute_ibl_unified(_ti, project_path, agent_id=agent_id, **({"cancel_check": cancel_check} if cancel_check else {}))
                     with adopt_execution(agent_id, req.task_id, project_path):
-                        return supervisor.run_tool("execute_ibl", _ti, call) if supervisor else call()
+                        result = supervisor.run_tool("execute_ibl", _ti, call) if supervisor else call()
+                        from repeat_guard import observe_result, append_advisory
+                        from model_result_view import repeat_observation
+                        advisory = observe_result("execute_ibl", _ti, result, agent_id, req.task_id or "",
+                                                  read_observation=repeat_observation)
+                        return append_advisory(result, advisory)
                 finally:
                     set_current_project_id(_prev_pid)
                     set_current_surface(_prev_surface)

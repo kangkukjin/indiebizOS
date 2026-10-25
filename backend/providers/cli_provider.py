@@ -337,13 +337,24 @@ class CliSessionStore:
         파생을 모르고 평범한 registry_key 를 넘기므로, 정확히 같은 키 + `키#…` 파생분을
         함께 지운다. 안 그러면 '새 대화'가 파생 키를 못 찾아 옛 스레드가 살아남는다.
         """
-        m = self.load_map()
-        prefix = f"{session_key}#"
-        victims = [k for k in m if k == session_key or k.startswith(prefix)]
+        return self._clear(self.map_path(), session_key)
+
+    def _clear(self, path, session_key):
+        # 초기화는 실패를 삼키는 캐시 읽기/쓰기를 사용하지 않는다.
+        from restart_protocol import atomic_json
+        try:
+            mapping = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return 0
+        if not isinstance(mapping, dict):
+            raise ValueError("세션 저장소가 객체가 아닙니다")
+        victims = [k for k in mapping if k == session_key or k.startswith(session_key + "#")]
         if victims:
-            for k in victims:
-                del m[k]
-            self.save_map(m)
+            atomic_json(path, {k: v for k, v in mapping.items() if k not in victims})
+            observed = json.loads(path.read_text(encoding="utf-8"))
+            if any(k in observed for k in victims):
+                raise OSError("세션 매핑 삭제 후 재독 불일치")
+        return len(victims)
 
     # --- 컨텍스트 크기 ---
     def load_sizes(self) -> Dict[str, int]:
@@ -361,28 +372,23 @@ class CliSessionStore:
         self.save_sizes(m)
 
     def clear_size(self, session_key: str):
-        m = self.load_sizes()
-        prefix = f"{session_key}#"     # clear_agent 와 같은 접두 스윕 규약
-        victims = [k for k in m if k == session_key or k.startswith(prefix)]
-        if victims:
-            for k in victims:
-                del m[k]
-            self.save_sizes(m)
+        return self._clear(self.size_path(), session_key)
 
 
 def clear_sessions_for_agent(session_key: str):
-    """등록된 **모든** CLI 프로바이더의 세션 매핑을 비운다 (프로바이더 무관 '새 대화').
-
-    호출부(UI 리셋·SESSION_RESET 분류)는 지금 어떤 프로바이더가 걸려 있는지 모르고,
-    알 필요도 없다 — 기어가 턴 사이에 바뀔 수도 있다. 그래서 '이 키의 CLI 세션 전부'를
-    끊는다. 존재하지 않는 매핑은 no-op 이라 비용은 파일 읽기 몇 번뿐이다.
-    """
+    """해당 세션과 파생 키만 제거하고 재독한 결과를 반환한다. 다른 세션·기록은 유지한다."""
+    removed, errors = 0, []
     for store in _SESSION_STORES:
         try:
-            store.clear_agent(session_key)
+            removed += store.clear_agent(session_key) or 0
             store.clear_size(session_key)
-        except Exception as e:      # 한 저장소의 손상이 다른 저장소를 막지 않게
-            print(f"[cli_provider] {store.label} 세션 클리어 실패 (무시): {e}")
+        except Exception as exc:
+            errors.append(f"{store.label}: {exc}")
+    message = ("CLI 세션 매핑을 제거했습니다. 다음 호출은 새 컨텍스트로 시작합니다."
+               if removed else "제거할 CLI 세션 매핑이 없습니다.")
+    return {"ok": not errors, "key": session_key, "removed": removed,
+            "message": message if not errors else "세션 매핑 정리를 완료하지 못했습니다.",
+            "error": "; ".join(errors)}
 
 
 class CliSubprocessProvider(BaseProvider):

@@ -169,14 +169,14 @@ def test_replace_compare_and_swap_and_replay(env):
     assert apply_deep(env.job, section, c, 'competing-replacement')['status'] == 'deferred'
 
 
-def test_quoted_text_and_dangling_reference_cannot_become_user_fact(env):
-    env.job['user_message'] = '> 나는 앞으로 존댓말을 선호해.'
+@pytest.mark.parametrize('message', ['> 친구는 앞으로 존댓말을 선호한다고 말했습니다.', '그걸 앞으로 계속 쓰기로 했어.'])
+def test_semantic_abstention_for_quote_or_missing_referent_is_preserved(env, message):
+    env.job['user_message'] = message
     section = deep_section(env)
-    assert apply_deep(env.job, section, candidate(), 'quoted')['status'] == 'rejected'
-    env.job['user_message'] = '그걸 앞으로 계속 쓰기로 했어.'
-    section = deep_section(env)
-    assert apply_deep(env.job, section, candidate(), 'dangling')['status'] == 'rejected'
-    assert count(env) == 0
+    assert section['units'][0]['eligible']  # 판단 기회를 문체가 빼앗지 않는다.
+    asked = arm(env, empty(), sections={'deep': section})
+    assert ud.run(env.job)['status'] == 'completed_empty'
+    assert count(env) == 0 and len(asked) == 1
 
 
 def test_search_failure_closes_only_deep(env):

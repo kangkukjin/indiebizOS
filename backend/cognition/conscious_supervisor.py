@@ -438,8 +438,16 @@ class Supervisor:
             from supervisor_review import missing_read_observation
             observation = error and missing_read_observation(call.get("name", ""),
                                                              call.get("_payload") or {}, result)
-            job_observation = _job_observation(result)
-            result_signature = digest(json.dumps(job_observation, sort_keys=True, ensure_ascii=False)) if job_observation else ref["id"]
+            observed = result
+            result_signature = ref["id"]
+            if str(call.get("name", "")).endswith("execute_ibl"):
+                from model_result_view import repeat_observation
+                try:
+                    observed = repeat_observation(result)
+                    result_signature = digest(json.dumps(observed, sort_keys=True, ensure_ascii=False, default=str))
+                except (ValueError, TypeError, KeyError, OSError) as exc:
+                    self.log("observation.unavailable", role="harness", evidence=ref, error=str(exc))
+            job_observation = _job_observation(observed)
             try:
                 detail = json.loads(result) if isinstance(result, str) else result
                 detail = detail if isinstance(detail, dict) else {}
@@ -1119,7 +1127,7 @@ def _failed(value):
 
 
 def _job_observation(value):
-    """실행 시간 숫자만 변하는 status 폴링을 진척으로 세지 않는다. 뜻은 실제 job 필드에서 온다."""
+    """생산자가 반환한 작업 상태 전체를 보존한다. 변화가 곧 진척이라는 판단은 하지 않는다."""
     if isinstance(value, str):
         try:
             value = json.loads(value)
@@ -1127,7 +1135,7 @@ def _job_observation(value):
             return []
     if isinstance(value, dict):
         if value.get("job_id") and value.get("status"):
-            return [{"job_id": value["job_id"], "status": value["status"]}]
+            return [value]
         rows = []
         for item in value.values():
             if isinstance(item, (dict, list)):

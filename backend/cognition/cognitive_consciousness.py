@@ -19,9 +19,6 @@ from consciousness_agent import FramingContractError, ConsciousnessCallSkipped
 # SESSION_RESET 핸들러 (모듈 레벨 — call site에서 직접 호출)
 # ============================================================
 
-SESSION_RESET_RESPONSE = "새 세션을 시작했습니다. 무엇을 도와드릴까요?"
-
-
 def handle_session_reset() -> str:
     """SESSION_RESET 분류 후 호출.
 
@@ -35,16 +32,17 @@ def handle_session_reset() -> str:
     try:
         from providers import clear_cli_sessions_for_agent
         from thread_context import get_current_registry_key
-        key = get_current_registry_key() or "default"
+        key = get_current_registry_key()
+        if not key:
+            return "세션 초기화 실패: 현재 에이전트의 세션 범위를 확인할 수 없습니다."
         from conversation_sessions import current
         binding = current()
         if binding:
             key += "@session:" + binding.session_id
-        clear_cli_sessions_for_agent(key)
-        print(f"[SESSION_RESET] 세션 매핑 클리어: {key}")
+        result = clear_cli_sessions_for_agent(key)
+        return result["message"] if result["ok"] else "세션 초기화 실패: " + result["error"]
     except Exception as e:
-        print(f"[SESSION_RESET] 매핑 클리어 실패 (무시): {e}")
-    return SESSION_RESET_RESPONSE
+        return f"세션 초기화 실패: {e}"
 
 
 class CognitiveConsciousnessMixin:
@@ -217,32 +215,6 @@ class CognitiveConsciousnessMixin:
                  + history_summary,
                  "_history_replacement": True}]
 
-    # 의식 토글 OFF 일 때 분류기(경량 LLM) 대신 쓰는 세션 리셋 키워드 — 고정밀로 추림
-    # (unconscious_prompt.md 의 SESSION_RESET 트리거에서). 리셋은 파괴적이므로 보수적:
-    # 애매한 단어(맨 "리셋"/"초기화" 단독 — 액션 명령과 충돌)는 일부러 제외, 애매하면 EXECUTE.
-    _RESET_PHRASES = (
-        "새세션", "세션시작", "세션끝", "세션초기화", "세션리셋", "세션그만",
-        "깨끗하게시작", "여기까지하자",
-        "그만하자", "다른이야기하자", "새작업으로넘어가",
-    )
-    # 공백을 뺀 글자 수 상한 — 리셋 인사는 한두 문장이다. 그보다 길면 작업 지시로 본다(애매하면 EXECUTE).
-    _RESET_MAX_CHARS = 60
-    # "처음부터 다시"는 낱말만으로는 못 가른다 — "처음부터 다시 써줘·해줘·만들어줘"는 작업 지시다.
-    # 문장 전체가 대상 없이 그 말(＋하자·시작하자)일 때만 리셋이고, 나머지는 EXECUTE 로 흘린다(2026-10-01).
-    _RESET_WHOLE = re.compile(r"^(자|그럼|이제|우리)*처음부터다시(하자|시작하자|시작)?$")
-
-    def _is_reset_keyword(self, message: str) -> bool:
-        """의식 OFF 에서 분류기를 스킵하므로, 세션 리셋만 비-LLM 키워드로 대체 탐지(토큰 0)."""
-        low = (message or "").lower().replace(" ", "")
-        # 리셋은 대화에 대한 말이지 작업 지시의 조각이 아니다. 위임·예약 과제(`[task:…]`)와 긴 지시문 안의
-        # 같은 글자열은 리셋이 아니다 — 2026-10-01 실측: 예약 위임 문구의 "처음부터 다시 훑지 말고"가
-        # 받는 에이전트의 세션을 지우고 표준 응답만 돌려줬다(일은 하지 않음).
-        if low.startswith("[task:") or len(low) > self._RESET_MAX_CHARS:
-            return False
-        if self._RESET_WHOLE.match(re.sub(r"[,.!?~…]", "", low)):
-            return True
-        return any(p in low for p in self._RESET_PHRASES)
-
     def _tag_override(self, message: str) -> Optional[str]:
         """명령에 박힌 명시 태그로 판정을 강제한다 — 사용자 결정이므로 분류를 이긴다.
         #repair → REPAIR(시스템 수리 경로), #think → THINK, #execute → EXECUTE,
@@ -333,9 +305,6 @@ class CognitiveConsciousnessMixin:
         except Exception:
             _conscious = True
         if not _conscious:
-            if self._is_reset_keyword(message):
-                print("[무의식] 분류: SESSION_RESET (키워드 · 의식 OFF)")
-                return "SESSION_RESET", None
             print("[무의식] 분류: EXECUTE (의식 OFF — THINK 경로 차단)")
             return "EXECUTE", None
         from turn_scope import classification_message

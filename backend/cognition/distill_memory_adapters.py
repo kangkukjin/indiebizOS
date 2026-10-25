@@ -53,23 +53,24 @@ def prepare_deep(job):
     mapping = tree.map_text(db._get_db_path(project, agent))
     if len(mapping) > 4000:
         mapping = '\n'.join(mapping.splitlines()[:30])
-    return {'eligible': bool(allowed), 'units': units, 'allowed_ids': allowed,
+    return {'eligible': bool(allowed), 'utterance': job['user_message'], 'units': units, 'allowed_ids': allowed,
             'omitted_ids': omitted, 'queries': queries, 'known': list(known.values()),
             'tree': mapping, 'reason': 'ready' if allowed else 'no_complete_comparison'}
 
 
 def apply_deep(job, prepared, candidate, key):
-    from memory_evidence import grounded_fact, select_units, unresolved_reference
+    from memory_evidence import grounded_fact
     ids = candidate.get('user_source_ids')
     if (not isinstance(ids, list) or not ids
             or any(type(i) is not int or i not in prepared['allowed_ids'] for i in ids)):
         return {'status': 'rejected', 'reason': 'ineligible_user_source'}
-    source = {'recorded_at': job['recorded_at'], 'timezone': job['timezone'],
+    source = {'utterance': prepared.get('utterance', job['user_message']),
+              'recorded_at': job['recorded_at'], 'timezone': job['timezone'],
               'episode_id': job.get('episode_id'), 'task': job.get('task_id'),
               'turn_id': job['turn_id'], 'candidate_key': key}
     fact = grounded_fact({**candidate, 'source_ids': ids}, prepared['units'],
                          json.dumps(source, ensure_ascii=False), durable_only=True)
-    if not fact or unresolved_reference(select_units(ids, prepared['units'])):
+    if not fact:
         return {'status': 'rejected', 'reason': 'unresolved_user_fact'}
     db, tree = memory_modules()
     if db.body_noun_leak(fact['content']):

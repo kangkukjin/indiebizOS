@@ -1,0 +1,26 @@
+{
+  "guides": [
+    {
+      "file": "deep_research.md",
+      "map_entries": [
+        "- 보고서: deep_research.md"
+      ],
+      "content_hash": "d8c7e070d6ba027cfdb30cb96ff9bb0fcbad51b2bb7e118dd35cbd90e7b5bea0",
+      "catalog_revision": "c86673c285e9c8d4",
+      "chars_returned": 4704,
+      "contains_entire_current_file": true,
+      "conditional_read_unchanged": true
+    },
+    {
+      "file": "work_plan_writing.md",
+      "map_entries": [
+        "- 메시지·위임: delegation_agent.md, delegation_system_ai.md, work_plan_writing.md"
+      ],
+      "content_hash": "24255de141c37948e68912f5dd51b575dd34c10f250216046f1eb5eaef25b865",
+      "catalog_revision": "c86673c285e9c8d4",
+      "chars_returned": 2755,
+      "contains_entire_current_file": true,
+      "conditional_read_unchanged": true
+    }
+  ]
+}

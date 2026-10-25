@@ -1,0 +1,12 @@
+{
+  "readiness": "ready",
+  "phase": "ACTIVE",
+  "errors": [],
+  "code_digest": "7333ec9eb105c7a85ace5deee4abafeaf40cfa833d461997ce88d2cb17fc711c",
+  "generation": "737cc4e5a919311a366f9711b3e555f5",
+  "ownership": "known",
+  "accepting": true,
+  "checkout_digest": "7333ec9eb105c7a85ace5deee4abafeaf40cfa833d461997ce88d2cb17fc711c",
+  "checkout_matches_active": true,
+  "controller_phase": "ACTIVE"
+}

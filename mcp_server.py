@@ -140,16 +140,10 @@ def _count_actions(code: str) -> int:
 from image_envelopes import harvest_images as _harvest_images_for_mcp
 
 
-# ── 반복 호출 가드 (2026-08-14, 클로드 코드 경로 어댑터) ─────────────────────
-# 공용 코어 = backend/base/repeat_guard.py (직결 경로 어댑터 system_tools.execute_tool 과
-# 공유 — 정책 표류 방지, 렌더러 "공용 코어+두 어댑터" 선례). 이 서버는 stdio 모드에서
-# backend 층 밖에서 돌므로 base 경로만 좁게 삽입해 임포트한다(boot_paths 전체를 안
-# 끄는 것이 의도 — MCP 서버는 얇게 유지).
-# stdio = CC 세션당 프로세스라 프로세스-로컬 체인 / HTTP(/mcp) = 공유 인스턴스라
-# 신원(agent_id·task_id) 키로 분리. 인메모리 휴리스틱 — 재시작 시 리셋은 수용 비용.
+# 반복 관측은 백엔드의 실행 수명에서 직결 경로와 함께 관리한다.
+# MCP는 반환된 사실 통지를 나르며 프로세스 전역 호출 체인을 만들지 않는다.
 import sys as _sys
 _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "base"))
-from repeat_guard import advise as _repeat_advisory  # noqa: E402  (key, signature) -> str
 
 # 표면 대기 상한은 backend/common/spill.py 가 소유한다(클라이언트 벽과 짝인 수라 한 곳에서만
 # 정해져야 한다 — 여기서 따로 적으면 벽과 어긋나도 아무도 모른다). spill 은 stdlib 뿐이라
@@ -408,16 +402,6 @@ async def execute_ibl(code: str, project_path: str = "",
     # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
     cleaned, images = _harvest_images_for_mcp(raw)
     text = await anyio.to_thread.run_sync(lambda: _trim_for_agent(cleaned, _count_actions(code)))
-    # 반복 호출 가드 — 조언은 예산 밖 부록(±200자)이라 절단과 무관.
-    # ★회수(recover) 폴링은 반복이 정상 사용이라 가드를 안 태운다(F51-1).
-    if code.strip() and not recover and not is_observation_request(payload):
-        guard_key = agent_id or task_id or "stdio"
-        from repeat_guard import inputs_digest as _inputs_digest
-        advisory = _repeat_advisory(
-            guard_key, f"{code.strip()}|{effective_path}|{_inputs_digest(inputs)}")
-        if advisory:
-            from repeat_guard import append_advisory
-            text = append_advisory(text, advisory)
     blocks = [text]
     if images:
         import base64 as _b64

@@ -93,3 +93,13 @@ def respond_panel(binding, action, message):
     temp = path.with_suffix(".tmp")
     temp.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
     temp.replace(path)
+
+
+def reset_cli_session(target="system_ai", project_id="", agent_id=""):
+    """기존 UI의 현재 대화 소유권을 자연어 초기화와 같은 CLI 키로 해소한다."""
+    from providers import clear_cli_sessions_for_agent
+    store, config = store_for(target, project_id, agent_id)
+    with sessions.connection(store.path) as conn:
+        sid = sessions.resolve(conn, store.path, store.owner, store.table)
+    registry = f"{project_id}:{config.get('id', agent_id)}" if target == "agent" else "system:system_ai"
+    return clear_cli_sessions_for_agent(registry + "@session:" + sid)

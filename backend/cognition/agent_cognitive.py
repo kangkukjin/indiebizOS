@@ -35,7 +35,6 @@ from cognitive_trace import (  # noqa: F401
     _FILE_WRITE_TOOL_NAMES,
 )
 from cognitive_consciousness import (  # noqa: F401
-    SESSION_RESET_RESPONSE,
     handle_session_reset,
     CognitiveConsciousnessMixin,
 )

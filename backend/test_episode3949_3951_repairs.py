@@ -19,8 +19,8 @@ def test_punctuation_cannot_trigger_memory_search(monkeypatch):
     message = '. 우체국에 k 패키지라는게 있다는데 그걸 어떻게 쓰는지 저사해줘'
     units = durable_source_units(message)
     assert units[0]['text'] == '.' and units[0]['basis'] == 'punctuation_only'
-    assert not any(u['eligible'] for u in units)
-    assert adapters.prepare_deep({'user_message': message})['reason'] == 'no_user_fact_candidate'
+    assert not units[0]['eligible'] and units[1]['eligible']
+    assert adapters.prepare_deep({'user_message': '.'})['reason'] == 'no_user_fact_candidate'
     assert durable_source_units('나는 존댓말을 선호해.')[0]['eligible']
 
 

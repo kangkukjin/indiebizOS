@@ -58,7 +58,7 @@ def test_supervisor_observes_actual_tool_with_original_identity(active, monkeypa
     def run_tool(name, payload, call):
         calls.append((name, tc.get_current_task_id(), tc.get_current_agent_id(), tc.get_task_origin()))
         return call()
-    supervisor = SimpleNamespace(context=b.context, run_tool=run_tool, cancelled=lambda: False)
+    supervisor = SimpleNamespace(context=b.context, run_tool=run_tool, cancelled=lambda: False, enabled=True)
     monkeypatch.setattr('supervision_bus.current', lambda *a, **kw: supervisor)
     with ThreadPoolExecutor(1) as pool:
         assert pool.submit(execute, [], 'provider-alias', b.task).result()['success']

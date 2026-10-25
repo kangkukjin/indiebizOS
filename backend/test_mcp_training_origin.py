@@ -17,7 +17,6 @@ import mcp_server as M  # noqa: E402
 def clean_identity(monkeypatch):
     for name in ("AGENT_ID", "TASK_ID", "TASK_ORIGIN", "EPISODE_ID", "PARENT_RUN_ID"):
         monkeypatch.setattr(M, "DEFAULT_" + name, "")
-    monkeypatch.setattr(M, "_repeat_advisory", lambda *args: "")
 
 
 def _ctx(origin):

@@ -600,7 +600,7 @@ class CognitiveEvalMixin:
             최종 응답 텍스트 (`yield from` 의 값)
         """
         import time as _time
-        from thread_context import set_goal_eval_outcome, clear_goal_eval_outcome
+        from thread_context import set_goal_eval_outcome, clear_goal_eval_outcome, get_goal_eval_outcome
         # 이번 평가의 판정을 초기화 — 증류 게이트가 직전 메시지의 stale 판정을 보지 않도록.
         clear_goal_eval_outcome()
         response = initial_response
@@ -613,7 +613,7 @@ class CognitiveEvalMixin:
             store = evidence_store()
             ref = store.evidence(response)
             (store.directory / "review_status.json").write_text(json.dumps({
-                "status": status, "reason": reason, "original_goal": user_message,
+                **get_goal_eval_outcome(), "original_goal": user_message,
                 "criteria": criteria, "response": {"hash": digest(response), **ref},
                 "learning": "deferred", "validator": "goal_eval",
             }, ensure_ascii=False), encoding="utf-8")

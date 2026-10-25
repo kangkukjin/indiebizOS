@@ -240,14 +240,14 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
     try {
       const result = isAgent
         ? await api.resetAgentSession(projectId!, agentId!)
-        : await api.resetSystemAISession();
+        : await api.resetSystemAISession(isAppMaker ? "appmaker" : "system_ai");
       const ok = (result as { ok?: boolean }).ok !== false;
       console.log('[ChatView] 세션 재시작:', result);
       setMessages(prev => [...prev, {
         id: `reset-${Date.now()}`,
         role: 'assistant',
         content: ok
-          ? '↻ Claude Code 새 세션을 시작했습니다. 누적 컨텍스트가 끊어졌습니다.'
+          ? `↻ ${result.message || '세션 매핑 정리 결과를 받았습니다.'}`
           : `↻ 세션 재시작 실패: ${(result as { error?: string }).error || '알 수 없는 오류'}`,
         timestamp: new Date(),
       }]);

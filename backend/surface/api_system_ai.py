@@ -1310,17 +1310,17 @@ async def get_system_ai_status():
 
 
 @router.post("/system-ai/reset-session")
-async def reset_system_ai_session():
+async def reset_system_ai_session(role: str = "system_ai"):
     """CLI 프로바이더 세션 매핑 클리어 — 다음 호출이 fresh 세션으로 시작.
 
     누적된 도구 결과·resume 컨텍스트를 끊고 싶을 때 사용.
     CLI 프로바이더(claude_code·codex)가 아니면 no-op이지만 200 OK 반환 (안전).
     """
     try:
-        from providers import clear_cli_sessions_for_agent
-        # 시스템 AI의 registry_key는 "system:system_ai"
-        clear_cli_sessions_for_agent("system:system_ai")
-        return {"ok": True, "message": "새 세션을 시작했습니다."}
+        from chat_session_service import reset_cli_session
+        if role not in {"system_ai", "appmaker"}:
+            raise ValueError("대화 대상을 찾을 수 없습니다")
+        return await asyncio.to_thread(reset_cli_session, role)
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

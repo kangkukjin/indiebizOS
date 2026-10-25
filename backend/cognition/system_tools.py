@@ -757,19 +757,7 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
     success = True
     _reason = ""   # 실패 사유 — 로그 줄에 싣는다(_failure_reason)
 
-    # 반복 호출 가드 (직결 경로 어댑터, 2026-08-14 두-경로 대칭 2탄) — 공용 코어는
-    # repeat_guard(base), CC 경로 어댑터는 mcp_server.execute_ibl. 카운트는 결과와
-    # 무관하게 호출마다(오류 결과도 카운트 — 거부를 두들기는 게 바로 끊을 루프).
     _advisory = ""
-    try:
-        from repeat_guard import advise as _repeat_advise
-        _sig = tool_name + "|" + json.dumps(tool_input or {}, sort_keys=True, ensure_ascii=False)
-        from result_read_contract import is_observation_request
-        observing = tool_name == "execute_ibl" and is_observation_request(tool_input or {})
-        if not observing:
-            _advisory = _repeat_advise(agent_id or "anon", _sig)
-    except Exception:
-        pass
 
     try:
         # cancel_check가 있으면 별도 스레드에서 실행 (중단 가능)
@@ -786,6 +774,11 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
             result = dumps_public_result(_public, ensure_ascii=False, indent=2)
         else:
             result = _public
+
+        # 실제 결과를 받은 뒤 관측한다. 절단·이미지 분리·자기 조언은 다이제스트에 넣지 않는다.
+        from repeat_guard import observe_result
+        from model_result_view import repeat_observation
+        _advisory = observe_result(tool_name, tool_input, result, agent_id, read_observation=repeat_observation)
 
         # [MAP:...] 태그 변환 — 결과 트리 전체를 재귀 수확하는 단일 관문.
         # 단독/파이프/병렬/중첩 깊이 무관. 태그는 결과 끝에 부착(프로바이더 재주입 regex가 끝 앵커).
@@ -842,8 +835,10 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
             if isinstance(result, str):
                 from repeat_guard import append_advisory
                 result = append_advisory(result, _appendix)
-            elif isinstance(result, dict) and isinstance(result.get("content"), str):
-                result["content"] += _appendix
+            elif isinstance(result, dict):
+                from repeat_guard import append_advisory
+                result = ({**result, "content": result["content"] + _appendix}
+                          if isinstance(result.get("content"), str) else append_advisory(result, _appendix))
         if _harvested:
             # content=AI 가 읽을 본문(base64 제거됨) / images=진짜 그림 / details=UI 표시용.
             return {"content": result, "images": _harvested, "details": result}

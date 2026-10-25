@@ -62,5 +62,19 @@ def test_execution_prompt_preserves_recalled_memory_and_provider(system):
     assert "reflex_hint" not in message and "Reflex 매칭" not in message
 
 
+@pytest.mark.parametrize("message", [
+    "세션 초기화하지 말고 기존 작업을 이어가세요.", "새 세션을 만들지 마세요.",
+    '\"그만하자\"라는 표현을 영어로 번역해주세요.', "[task:sample] 새 세션 시작 문구를 설명하세요.",
+    "새 세션 시작하자", "오늘 대화는 여기까지 하고 문서 번역을 해주세요.",
+    "현재 컨텍스트를 지우지 않고 이어갑니다.",
+])
+def test_off_passes_natural_language_without_reset_or_model(monkeypatch, message):
+    runner = CognitiveConsciousnessMixin()
+    monkeypatch.setattr("model_resolver.consciousness_enabled", lambda: False)
+    monkeypatch.setattr("providers.clear_cli_sessions_for_agent", lambda *a: pytest.fail("자동 초기화"))
+    runner._classify_request = lambda _: pytest.fail("OFF에 분류 모델 추가")
+    assert runner._decide_request_type(message, 0.0, "") == ("EXECUTE", None)
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

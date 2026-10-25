@@ -19,6 +19,28 @@ def evidence_store():
     return current_evidence_store()
 
 
+def repeat_observation(result):
+    """반복 비교용 실제 반환 값. IBL 봉투의 실행 ID/계측은 업무 관측과 별개다.
+
+    업무 값 내부는 걸러내지 않는다. 타임스탬프의 변화도 보존하되 진척이라고 추론하지 않는다.
+    원 증거와 전체 실행 기록은 그대로 보존하며, 이 뷰는 동일 결과 횟수 표시에만 쓴다.
+    """
+    value = _decode_json(result)
+    ref = value.get("result_ref") if isinstance(value, dict) else None
+    if isinstance(ref, dict) and ref.get("id"):
+        value = _decode_json(evidence_store().read_evidence(ref["id"], 0, None)["text"])
+    if not isinstance(value, dict) or value.get("edition") != 2 or value.get("executed") is not True:
+        return value
+    fields = ("success", "executed", "source_complete", "error", "diagnostic",
+              "status", "suspended", "waiting", "partial_wire", "run_status")
+    observed = {key: value[key] for key in fields if key in value}
+    # typed wire는 값의 종류를, value는 생산자의 작업 상태 구조를 보존한다.
+    for key in ("value_wire", "value"):
+        if key in value:
+            observed[key] = value[key]
+    return observed
+
+
 def read_result(request):
     offset, limit = int(request.get("offset", 0)), int(request.get("limit", DEFAULT_LIMIT))
     if offset < 0 or not 1 <= limit <= MAX_LIMIT:

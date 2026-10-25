@@ -169,13 +169,15 @@ def test_direct_adapter_via_execute_tool():
     import repeat_guard
     from system_tools import execute_tool
     repeat_guard.reset_all()
-    r1 = execute_tool("no_such_tool_xyz", {"a": 1}, "/tmp", agent_id="test_agent")
-    r2 = execute_tool("no_such_tool_xyz", {"a": 1}, "/tmp", agent_id="test_agent")
-    r3 = execute_tool("no_such_tool_xyz", {"a": 1}, "/tmp", agent_id="test_agent")
-    assert "[반복 감지]" not in r1 and "[반복 감지]" not in r2
-    assert "[반복 감지]" in r3, r3[-200:]  # 오류 결과도 카운트 (설계)
-    r4 = execute_tool("no_such_tool_xyz", {"a": 2}, "/tmp", agent_id="test_agent")
-    assert "[반복 감지]" not in r4  # 다른 인자 → 리셋
+    from thread_context import actor_context
+    with actor_context(agent_id="test_agent", task_id="fixture"), repeat_guard.execution_scope(["test_agent"], "fixture"):
+        r1 = execute_tool("no_such_tool_xyz", {"a": 1}, "/tmp", agent_id="test_agent")
+        r2 = execute_tool("no_such_tool_xyz", {"a": 1}, "/tmp", agent_id="test_agent")
+        r3 = execute_tool("no_such_tool_xyz", {"a": 1}, "/tmp", agent_id="test_agent")
+        assert "[반복 관측]" not in r1 and "[반복 관측]" not in r2
+        assert "[반복 관측]" in r3, r3[-200:]  # 오류 결과도 카운트 (설계)
+        r4 = execute_tool("no_such_tool_xyz", {"a": 2}, "/tmp", agent_id="test_agent")
+        assert "[반복 관측]" not in r4  # 다른 인자 → 리셋
     repeat_guard.reset_all()
     print("OK 직결 어댑터 (3연타 조언·오류 카운트·리셋)")
 

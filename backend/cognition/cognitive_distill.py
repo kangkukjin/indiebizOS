@@ -234,8 +234,7 @@ class CognitiveDistillMixin:
                  "final_response_sha256": __import__("hashlib").sha256(ai_response.encode()).hexdigest()},
                 ensure_ascii=False)
 
-            from memory_evidence import (durable_source_units, grounded_fact, select_units,
-                                         unresolved_reference)
+            from memory_evidence import (durable_source_units, grounded_fact)
             units = durable_source_units(user_message)
             if not any(u["eligible"] for u in units):
                 from episode_logger import record_trajectory_event
@@ -258,9 +257,10 @@ content를 재작성하지 마라. 원문 단위의 source_ids만 고르면 본�
 사용자 메시지는 전달 경로이지 저자 증명이 아니다. 붙여 넣은 AI 답변·보고서·타인 의견을
 사용자 선호로 저장하지 마라. attribution=user_candidate도 저자 확정이 아니다.
 문맥에서 사용자가 직접 말한 개인 사실·선호·확정 결정임이 분명할 때만 고른다.
-타인의 제안을 사용자가 명시적으로 채택했다면 사용자의 채택 선언만 선택한다.
+타인의 제안을 사용자가 명시적으로 채택했다면 인용 내용과 사용자의 채택 발화를 함께 선택한다.
 (이름, 중요한 날짜, 사용자 선호, 사용자가 확정한 결정사항)
-eligible=false인 질문·요청과 안내문 상투구는 선택하지 않는다. AI의 답변·권고·도구 관측은
+문체·존대·접속사·요청 형식은 탈락 사유가 아니다. 요청형의 지속 선호도 의미와 적용 범위를 읽는다.
+eligible은 내용 유무만 뜻한다. 타인의 인용·전달문은 직접 채택 근거가 없으면 사용자 사실이 아니다. AI의 답변·권고·도구 관측은
 에피소드와 산출물에 남아 있으므로 여기서 사용자 사실로 복제하지 않는다.
 retention은 user_fact|user_preference|user_decision 중 하나이며 확신 없으면 선택하지 않는다.
 과거 사건의 인원·장소·조건을 이번 사건의 사실이나 지속적 선호로 확장하지 않는다.
@@ -280,9 +280,9 @@ retention은 user_fact|user_preference|user_decision 중 하나이며 확신 없
 근거 없이 "항상 선호한다"로 일반화하지 마라. 해당 에피소드·산출물에 이미 기록되므로 복제하지 않는다.
 
 ★저장되는 것은 네가 고른 원문 단위 그대로다. 나중에 이 조각만 따로 읽는 사람이 누구의·무엇에 관한
-말인지 알 수 있어야 한다. "그·그런·그래서"처럼 앞 문장에 기대는 단위는, 가리키는 대상이 담긴 앞
+말인지 문맥에서 판단하라. 접속사나 대명사만으로 보류하지 마라. 실제로 앞 문맥이 필요한 단위는, 대상이 담긴 앞
 단위를 source_ids 에 **함께** 골라라(여러 id 는 한 기억으로 이어 붙는다). 같은 메시지 안에 대상이
-없으면(이전 턴·AI 답변에만 있으면) 고르지 마라 — 홀로 서지 못하는 조각은 기계가 거절한다.
+없으면(이전 턴·AI 답변에만 있으면) 확인할 수 없으면 보류한다. 없는 지시 대상을 추측하지 마라.
 (나쁜 예: [2] "11월 18일이니까 아직 시간은 있는데." 단독 → 무엇의 날짜인지 모른다.
 좋은 예: [1,2] "아내에게 선물을 사고 싶은데 …" + "11월 18일이니까 …")
 
@@ -324,17 +324,6 @@ JSON 배열로만 응답.
             for candidate in facts[:5]:  # 최대 5개 조각
                 fact = grounded_fact(candidate, units, source_ref, durable_only=True)
                 if not fact:
-                    continue
-                # 지시 대상 관문 — 선행 문장 없이 고른 의존 조각은 저장하지 않는다(사유는 궤적에 남아 셀 수 있다).
-                dangling = unresolved_reference(select_units(candidate.get("source_ids"), units))
-                if dangling:
-                    print(f"[심층메모리] 지시 대상 거부({dangling}): \"{fact.get('content', '')[:50]}\"")
-                    try:
-                        from episode_logger import record_trajectory_event
-                        record_trajectory_event("memory.distill.rejected",
-                                                {"reason": dangling, "text": fact.get("content", "")[:120]})
-                    except Exception:
-                        pass
                     continue
                 content = fact.get("content", "").strip()
                 if not content:

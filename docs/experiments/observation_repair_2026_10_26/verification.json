@@ -1,0 +1,103 @@
+{
+  "general": {
+    "command": ".venv/bin/python3 -m pytest backend/ -m \"not system\" -n auto --dist loadfile",
+    "passed": 10415,
+    "skipped": 5,
+    "seconds": 1235.15,
+    "exit_code": 0
+  },
+  "system": {
+    "command": ".venv/bin/python3 -m pytest backend/test_restart_process.py backend/test_python_libraries.py backend/test_vocabulary_archive.py backend/test_vocabulary_bundle_split.py backend/test_repair_staging.py backend/test_event_loop_gate.py::test_repo_has_no_blocking_calls_in_async_bodies backend/test_imagination_round74_residual.py::test_user_path_effects_gate_is_clean_on_live_tree -m system -n 4 --dist loadfile",
+    "passed": 104,
+    "skipped": 0,
+    "seconds": 275.37,
+    "exit_code": 0
+  },
+  "final_boundary_delta": {
+    "command": ".venv/bin/python3 -m pytest backend/test_repeat_guard.py backend/test_todo_bridge.py backend/test_conscious_supervisor.py backend/test_mcp_boundary.py backend/test_model_result_view.py backend/test_example_review_gate_2026_09_18.py backend/test_electron_dev.py",
+    "passed": 185,
+    "skipped": 0,
+    "seconds": 17.81,
+    "exit_code": 0
+  },
+  "unchanged_repair_files_during_final_verification": 54,
+  "source_sha256": {
+    "backend/base/repeat_guard.py": "35ac39698bbfc654c0f2f91d2f3d74b5abdd5d765357cedae9b94014ba0a9ad7",
+    "backend/cognition/agent_cognitive.py": "b3f99f193a8721324f94aa093d89ea63549d1f0001a12f6d27bdcd36f95becaa",
+    "backend/cognition/agent_pipeline.py": "0716978f85e7bdb7b4464730dfb3cadaf3d8a4f1c5f1f845fa3ef49ae807014d",
+    "backend/cognition/cognitive_consciousness.py": "fe10c31bf2ee4a27e61c70788f9d4c0b20476d9fb095d4bab36540c898aed8dc",
+    "backend/cognition/cognitive_distill.py": "8278e1d977089aba35e6b8d7d3e384396e68b0d66df9423381fd512cad9f8764",
+    "backend/cognition/cognitive_eval.py": "b1cf151256cd33ef0b1d034e05e7a04231d347751ec98a70607809f4e686a665",
+    "backend/cognition/conscious_supervisor.py": "ce005c402a905abf274006e6c36f87d4511590839782e86a5938f2542bed4a87",
+    "backend/cognition/distill_memory_adapters.py": "05207b0a685908cfea1f960048bfcef9f6c4393f9095c394a80142dcf3cbd3d9",
+    "backend/cognition/final_evaluator.py": "bf8f478cdef3913c00c61de2715e2e320692d2cf365a91942a447f2e0793b8e2",
+    "backend/cognition/memory_evidence.py": "de5b3d10f7892bf146e6cf9e8ade08358425f510f29eda8a643b92982284bbd5",
+    "backend/cognition/model_result_view.py": "7fb4ff6b250b05b6474a59526182863eb211a3e2d1d1647f051b8ef1cfc9c8f8",
+    "backend/cognition/system_tools.py": "27a96830da70fa2d91de2c4df737b4f36ec369a090ac2215facd02ac26b63a97",
+    "backend/cognition/unified_distill.py": "3db4f37bd2efc92cae0583fc911165b275548380394cc14cfcf1d31242c9b9e7",
+    "backend/providers/__init__.py": "7f789f9a930e0a3a5f5e0e964b6474a85f2fa390433f1eefce8470dddddfab9d",
+    "backend/providers/cli_provider.py": "d835ad2e2072ecec144898121ef049fa4bf91411bac542daba166ce2934c0754",
+    "backend/services/chat_session_service.py": "4f7aecf9f458adc579da6bccfa967078c7e750ccb3381fe8c2f255f43556a7b0",
+    "backend/surface/api_agents.py": "f1bbae3bb0d9f1e900dba65f170a2ccf0776e29c4587986fe43734dfdd97b120",
+    "backend/surface/api_ibl.py": "499ab4853be1719a753ab2972f567659cb18a0bd6917ec3c7a5aeaa2d3ff3eb3",
+    "backend/surface/api_system_ai.py": "a0e72dca857967f9567ef7ac6e36305c8d238d3fbf4a57b4c5c4718ff7701770",
+    "backend/test_cognitive_consciousness.py": "a7317bee6ba31f47f48d27b8630e9e10134a80a0c7c773a21ea5e6c536c45376",
+    "backend/test_conscious_supervisor.py": "d559175301290bd7c5dea90493921870f24a40c64ec8afb676bf8f439403996a",
+    "backend/test_deep_memory_entrance_2026_09_17.py": "6ae9aa4cd0d2f00abae5e67bdd62539f1a73d0e5b3568684d5e5d471dd0912b1",
+    "backend/test_distill_efficiency_2026_09_30.py": "32e9e8288ea2509d36d2158a0bcd57fdd68dc1be16fcf3a7cc7b62fc7ec81aaf",
+    "backend/test_episode3507_3510_repairs.py": "f4ac9f7149472e95270d8a9c80d17dfb703db864fee9b3e6633ea618f1ca10dc",
+    "backend/test_episode3632_result_reads.py": "fb9cf4a08350d46b6a49fb31f37b7c0ac279a1156519767c724ed47c73203596",
+    "backend/test_episode3781_3783_repairs.py": "c98b93e124bf4c0c491c25e06781439c0406e29469057427fe3bd2e48627c3ea",
+    "backend/test_episode3860_3861_repairs.py": "a91352252eef6ea7594783fc85c6ede7e2917efbfcd713388c893d4c70f1ace5",
+    "backend/test_episode3949_3951_repairs.py": "32dfb3b6762c8c8989804aeece7b5e61715a52df5f49732915bd383599d9ae2d",
+    "backend/test_episode4064_repairs.py": "e1951d1b252f64771ba3ca15ea5e19f111f91a0f6c325f5328d1774c6f825669",
+    "backend/test_episode_memory_repairs_2026_09_12.py": "e5ac6ba3deeb19597bd8936d2662d5e93352dc69ec5157feb85f210c0e146f4b",
+    "backend/test_mcp_boundary.py": "4b5c79b66588bf50da753b40560479ee0e73d186ae1712c6fdb20d807b276ad2",
+    "backend/test_mcp_training_origin.py": "8e12b5bb7da9782d1c89cda11af338ecc8530046ee3eacf6f633576561e59127",
+    "backend/test_public_result_boundary_matrix.py": "79f0ae03c7d8101fe5717574d823049d1da83ef4ad2cee9f67812bac5403b1cc",
+    "backend/test_reset_keyword_scope_2026_10_01.py": null,
+    "backend/test_steer.py": "d92fcbe6f59ddb645e4e040cd5f677e41223461f71ba701f2491255fb223cdd3",
+    "backend/test_step_ledger.py": "5b66da355a80867f64fcdbb18245c6ec3a017b86740cee2d2047ea92c9185e22",
+    "backend/test_todo_bridge.py": "b5a2792133c9ae358dbb81739c68657d201907bd737352b924d8f21525c8f414",
+    "backend/test_unified_distill_2026_09_21.py": "8c297534cff713fbd49cc059ddcfa4251ae3bdb747e0a3a089d2806d8738305c",
+    "backend/test_cli_provider.py": "28217a42e1af92177cc3e5af2e8e3da47936ee52b244418c9de4cf536a1387d1",
+    "backend/test_memory_evidence.py": "e1d8d0d15b3ddbea2fb37c8a88f230003cdd8d42e872ed5140b4bc4416cbe1b7",
+    "backend/test_repeat_guard.py": "d15e7dae48eaabb42e021b52edeb56be37c07bd72c9251d244a018739f45c3a1",
+    "data/common_prompts/base_prompt_v6.md": "431c7a0ebdf4d73679295429978df287bc25408505484c8b8a4e744cedcefebc",
+    "data/guides/work_plan_writing.md": "24255de141c37948e68912f5dd51b575dd34c10f250216046f1eb5eaef25b865",
+    "frontend/src/components/chat/ChatView.tsx": "6f38c3ea770a4b2f89c4b6af833551256fdf69a68bd3444897f67b1e139f3b5b",
+    "frontend/src/lib/api-system-ai.ts": "0a0cebfa3bc7265b197da311b569f84d6291cdb26d27357d36ef4cf3bb5351d1",
+    "mcp_server.py": "612c0aa18d6ea67cb469c7b0aad8ff43a9fdaf4143348d06f91129c95c9df8d1"
+  },
+  "earlier_runs": [
+    {
+      "passed": 10317,
+      "failed": 1,
+      "skipped": 4,
+      "interrupted": true,
+      "note": "ON의 IBL 원 결과 비교를 보완하기 위해 중단. todo_bridge 시험 대역에 실제 Supervisor의 enabled 계약을 반영했다."
+    },
+    {
+      "passed": 10393,
+      "failed": 2,
+      "skipped": 5,
+      "exit_code": 1,
+      "note": "병행 원격 PC 작업의 self:limb 용례 검토 불일치와 Electron 시험 ECONNRESET. 두 항목은 코드 변경 없이 재검사 통과. 저장소 변경 감지도 발생하여 전체 통과로 세지 않았다."
+    },
+    {
+      "system_passed": 104,
+      "exit_code": 1,
+      "note": "동시 작업의 data/ibl_example_review.json 변경으로 세션 실패. 최종 시스템 묶음을 다시 실행해 종료 검사까지 통과했다."
+    }
+  ],
+  "other_validation": {
+    "frontend": "TypeScript 및 Vite 빌드 통과 (3단계 이후 UI 추가 변경 없음)",
+    "android_body": "최종 backend 변경 후 build_body_bundle.py android 재생성",
+    "live_runtime": "runtime.json"
+  },
+  "limits": [
+    "실제 모델 검사는 합성 사례이며 외부 PC 변경과 라이브 사용자 기억/세션 초기화는 하지 않았다.",
+    "장기 재수리 감소, 전체 작업 비용, 실제 구기록 계승의 재확인/재수행 빈도는 미측정이다.",
+    "경량 background 증류 모델의 필수 필드 누락은 memory_background.json에 실패 증거로 남겼다."
+  ]
+}

@@ -115,4 +115,4 @@ def clear_cli_sessions_for_agent(session_key: str):
     ★새 CLI 프로바이더를 추가할 때 이 함수를 고칠 필요는 없다: CliSessionStore 를 만들면
     자동 등록된다(cli_provider._SESSION_STORES).
     """
-    clear_sessions_for_agent(session_key)
+    return clear_sessions_for_agent(session_key)

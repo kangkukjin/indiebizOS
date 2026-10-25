@@ -17,24 +17,20 @@ def _sig(files):
 
 
 def test_same_code_different_files_is_not_a_repeat():
-    repeat_guard.reset_all()
-    assert not any(repeat_guard.advise("k", _sig([f"old{i}", f"new{i}"])) for i in range(8))
+    with repeat_guard.execution_scope(["k"], "task") as key:
+        assert not any(repeat_guard.advise(key, _sig([f"old{i}", f"new{i}"]), "same result") for i in range(8))
 
 
-def test_same_code_same_files_still_advises():
-    repeat_guard.reset_all()
-    out = [repeat_guard.advise("k", _sig(["old", "new"])) for _ in range(3)]
-    assert out[:2] == ["", ""] and "반복 감지" in out[2]
+def test_same_code_same_files_still_observes_same_result():
+    with repeat_guard.execution_scope(["k"], "task") as key:
+        out = [repeat_guard.advise(key, _sig(["old", "new"]), "same result") for _ in range(3)]
+    assert out[:2] == ["", ""] and "반복 관측" in out[2]
     assert repeat_guard.inputs_digest(None) == repeat_guard.inputs_digest([]) == ""
 
 
-def test_mcp_guard_signature_carries_inputs_digest():
-    """CC 경로 어댑터는 stdio 프로세스라 직접 못 부른다 — 시그니처 조립을 소스로 고정."""
-    src = (Path(__file__).resolve().parent.parent / "mcp_server.py").read_text(encoding="utf-8")
-    call = re.search(r"_repeat_advisory\((.*?)\)\n", src, flags=re.S).group(1)
-    assert "inputs_digest(inputs)" in call
-
-
+def test_explicit_inputs_have_distinct_digests():
+    assert repeat_guard.inputs_digest({"a": 1}) != repeat_guard.inputs_digest({"a": 2})
+    assert repeat_guard.inputs_digest({"a": 1, "b": 2}) == repeat_guard.inputs_digest({"b": 2, "a": 1})
 
 
 def test_detach_on_already_detached_turn_is_idempotent(monkeypatch):

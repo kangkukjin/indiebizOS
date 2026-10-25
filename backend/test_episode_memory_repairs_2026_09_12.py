@@ -24,20 +24,20 @@ def test_call_metrics_ignore_sql_report_comments_and_deferred_strings():
     assert c["fn_calls"] == 0 and c["single"] == 1
 
 
-def test_forwarded_answer_cannot_become_user_preference():
+def test_forwarded_answer_reaches_semantic_judgment_without_author_claim():
     text = '맞습니다. **새로운 설계와 좋은 구현은 다른 평가 대상입니다.**\n\n' + ('기초를 평가해야 합니다. ' * 45)
     text += '\n\n앞으로 비교에서 먼저 물어야 할 것은 이것입니다.'
     units = durable_source_units(text)
-    assert units and not any(u["eligible"] for u in units)
-    for u in units:
-        assert grounded_fact({"source_ids": [u["id"]], "retention": "user_preference",
-                              "future_use": "향후 비교 기준"}, units, '{}', durable_only=True) is None
+    assert units and all(u["eligible"] for u in units)
+    assert all(u["attribution"] == "user_candidate" for u in units)
+    assert all(text[u["start"]:u["end"]] == u["text"] for u in units)
 
 
 def test_quote_fence_and_explicit_user_adoption():
     units = durable_source_units('> 나는 중고를 사지 않는다.\n\n```text\n나는 신품만 산다.\n```\n\n나는 이 제안을 채택해서 앞으로 신품만 사겠다.')
     eligible = [u for u in units if u["eligible"]]
-    assert len(eligible) == 1 and eligible[0]["text"].startswith('나는 이 제안을')
+    assert len(eligible) == 3 and eligible[-1]["text"].startswith('나는 이 제안을')
+    assert [u["attribution"] for u in eligible] == ["quoted", "quoted", "user_candidate"]
     own = durable_source_units('나는 앞으로도 중고 제품은 사지 않을 거야.')
     assert own[0]["eligible"]
     assert source_summary({"evidence": [{"role": "user", "attribution": "quoted"}]})["status"] == 'external_record'
@@ -125,25 +125,23 @@ _EP3813_HEAD = ('직접 보고 말씀드리겠습니다. 사이트를 열어 보
                 '출처와 발행일을 모르면 미확인이라고 적는 정직함도 좋습니다.')
 
 
-def test_addressed_document_is_conveyed_not_owner_evidence():
+def test_addressed_document_preserves_full_context_for_attribution():
     units = durable_source_units(_EP3813_HEAD)
-    assert units and not any(u["eligible"] for u in units)
-    assert {u["attribution"] for u in units} == {"conveyed"}
-    assert {u["basis"] for u in units} == {"addressed_to_owner"}
-    # 전달문 뒤에 붙인 짧은 채택 선언만 주인의 목소리로 남는다.
+    assert units and all(u["eligible"] for u in units)
+    assert {u["attribution"] for u in units} == {"user_candidate"}
     mixed = durable_source_units(_EP3813_HEAD + '\n\n나는 이 평가에 동의해. 앞으로 책 카드는 빼겠어.')
-    assert [u["text"] for u in mixed if u["eligible"]] == ['나는 이 평가에 동의해.', '앞으로 책 카드는 빼겠어.']
-    assert all(u["basis"] == "user_statement" for u in mixed if u["eligible"])
+    assert [u["text"] for u in mixed[-2:]] == ['나는 이 평가에 동의해.', '앞으로 책 카드는 빼겠어.']
+    assert len(mixed) == len(units) + 2  # 채택과 그 대상이 함께 도달한다.
     assert source_summary({"evidence": [{"role": "user", "attribution": "conveyed"}]})["status"] == 'external_record'
 
 
-def test_long_formal_document_is_unresolved_but_short_own_words_stay():
+def test_document_length_and_formality_do_not_decide_ownership():
     doc = ('사이트 구조를 살펴본 결과입니다.\n\n'
            + '첫째 축은 질문입니다. 둘째 축은 매체입니다. 셋째로 저자 이름은 바이라인으로 내려갑니다. ' * 12
            + '\n\n결론은 재구성이 필요하다는 것입니다.')
     assert len(doc) >= 600
     units = durable_source_units(doc)
-    assert units and not any(u["eligible"] for u in units)
-    assert {u["basis"] for u in units} == {"formal_document"}
+    assert units and all(u["eligible"] for u in units)
+    assert {u["attribution"] for u in units} == {"user_candidate"}
     own = durable_source_units('컨텐츠도 필요하지만 사이트를 잘 만드는 것도 필요하지. 지금은 일단 사이트 개발이 첫째라고 봐.')
-    assert all(u["eligible"] and u["basis"] == "user_statement" for u in own)
+    assert all(u["eligible"] and u["basis"] == "user_utterance" for u in own)

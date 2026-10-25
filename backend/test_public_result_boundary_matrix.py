@@ -189,7 +189,6 @@ def test_mcp_protocol_status_reaches_both_cli_providers(code, failed, monkeypatc
     result = Runtime(compile_program(code, {})).run()
     raw = json.dumps(result)
     monkeypatch.setattr(mcp_boundary, "_post_backend", lambda *a: raw)
-    monkeypatch.setattr(mcp_boundary, "_repeat_advisory", lambda *a: "")
     monkeypatch.setattr(mcp_boundary.mcp, "get_context", lambda: None)
     wire = asyncio.run(mcp_boundary.mcp.call_tool("execute_ibl", {"code": code}))
     if not isinstance(wire, CallToolResult):
@@ -263,7 +262,6 @@ def test_projection_and_mcp_trimming_preserve_status_and_images(failed, monkeypa
     assert tool_result_is_error(json.dumps(projected)) is failed
     projected["images"] = [{"base64": base64.b64encode(b"image").decode(), "media_type": "image/png"}]
     monkeypatch.setattr(mcp_boundary, "_post_backend", lambda *a: json.dumps(projected))
-    monkeypatch.setattr(mcp_boundary, "_repeat_advisory", lambda *a: "")
     monkeypatch.setattr(mcp_boundary.mcp, "get_context", lambda: None)
     # 더 큰 진단도 실제 전송 축약을 거친다. 실패 판정은 미리보기 텍스트에 의존하지 않는다.
     projected["diagnostic_text"] = "traceback " * 10000

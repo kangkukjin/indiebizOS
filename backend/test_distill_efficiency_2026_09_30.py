@@ -60,16 +60,20 @@ def test_unexecuted_or_unknown_code_gets_no_usage_credit(code):
     'Indiebizos 홈페이지를 개선해봐.', '그럼 그렇게 고쳐봐.', '이 결과를 다시 확인해 보세요.',
     '전체 시스템을 살펴봐.', '색상을 바꿔봐.',
 ])
-def test_simple_commands_never_search_or_call_a_memory_model(monkeypatch, message):
+def test_commands_reach_existing_semantic_distiller(monkeypatch, message):
+    from types import SimpleNamespace
     import distill_memory_adapters as adapters
-    monkeypatch.setattr(adapters, 'memory_modules', lambda: pytest.fail('unnecessary memory lookup'))
-    assert adapters.prepare_deep({'user_message': message})['reason'] == 'no_user_fact_candidate'
+    db = SimpleNamespace(search=lambda *a, **kw: [], _get_db_path=lambda *a: "fixture")
+    monkeypatch.setattr(adapters, 'memory_modules', lambda: (db, SimpleNamespace(map_text=lambda *a: "")))
+    section = adapters.prepare_deep({'user_message': message, 'project_path': '.', 'agent_id': 'fixture'})
+    assert section['eligible'] and section['utterance'] == message
+    assert section['allowed_ids'] == [1]
 
 
 def test_mixed_request_keeps_independent_fact():
     from memory_evidence import durable_source_units
     units = durable_source_units('나는 존댓말을 선호해. 홈페이지를 개선해봐.')
-    assert [u['text'] for u in units if u['eligible']] == ['나는 존댓말을 선호해.']
+    assert [u['text'] for u in units if u['eligible']] == ['나는 존댓말을 선호해.', '홈페이지를 개선해봐.']
     assert durable_source_units('나는 시스템을 고쳐봐야겠다고 생각한다.')[0]['eligible']
 
 

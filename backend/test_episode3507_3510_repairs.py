@@ -68,9 +68,11 @@ def test_source_role_survives_recall_and_projection(mem):
     assert projected["items"][0]["provenance"]["status"] == "assistant_record"
 
 
-def test_questions_do_not_call_memory_extractor(memory_harness, monkeypatch):
-    monkeypatch.setattr("consciousness_agent.oneshot_ai_call", lambda *a, **k: pytest.fail("질문뿐인 턴의 증류"))
+def test_question_is_read_and_semantically_skipped(memory_harness, monkeypatch):
+    asked = []
+    monkeypatch.setattr("consciousness_agent.oneshot_ai_call", lambda *a, **k: asked.append(k["prompt"]) or "[]")
     memory_harness.runner._distill_deep_memory("다음주 여행은 기억하고 있나?", "아내와 어머니가 가는 여행입니다")
+    assert len(asked) == 1 and "다음주 여행은 기억하고 있나?" in asked[0]
     assert not memory_harness.saved and not memory_harness.updates
 
 
@@ -79,7 +81,7 @@ def test_user_correction_can_be_retained_but_question_and_assistant_cannot():
     units = durable_source_units("이번 여행은 나와 두 형님 그리고 어머니가 가. 점심은 어디서 먹을까?")
     fact = {"source_ids": [1], "retention": "user_fact", "future_use": "향후 사용자 상황에 맞춘 계획"}
     assert grounded_fact(fact, units, "{}", durable_only=True)["content"] == units[0]["text"]
-    assert grounded_fact({**fact, "source_ids": [2]}, units, "{}", durable_only=True) is None
+    assert units[1]["eligible"]  # 요청 형식은 관측 기회를 막지 않는다.
     mixed = source_units("기억하나?", "아내와 어머니가 간다")
     assert grounded_fact({**fact, "source_ids": [2]}, mixed, "{}", durable_only=True) is None
 

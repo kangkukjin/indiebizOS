@@ -49,7 +49,6 @@ def test_large_image_survives_preview_native_and_mcp(view, monkeypatch, shape):
     evidence = view.evidence_store().read_evidence(projected['result_ref']['id'], 0, None)
     assert json.loads(evidence['text']) == raw
     monkeypatch.setattr(mcp_server, '_post_backend', lambda *a, **k: serialized)
-    monkeypatch.setattr(mcp_server, '_repeat_advisory', lambda *a: '')
     delivered = asyncio.run(mcp_server.execute_ibl(code='[limbs:browser]{op:"vision"}'))
     assert isinstance(delivered, list) and len(delivered) == 2
     assert isinstance(delivered[1], Image)
@@ -94,7 +93,7 @@ def test_result_pages_remain_json_with_real_repeat_guard(view, monkeypatch):
         assert page['offset'] == offset and '_model_advisory' not in page
     for _ in range(3):
         text = asyncio.run(mcp_server.execute_ibl(code='[sense:search]{query:"x"}'))
-    assert '반복 감지' in json.loads(text)['_model_advisory']
+    assert '_model_advisory' not in json.loads(text)  # MCP 자체에는 실행을 넘는 체인이 없다.
     repeat_guard.reset_all()
 
 

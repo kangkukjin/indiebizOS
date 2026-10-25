@@ -1,0 +1,86 @@
+[
+  {
+    "request": "세션 초기화하지 말고 기존 작업을 이어가세요.",
+    "classification": "EXECUTE",
+    "calls": [
+      {
+        "seconds": 0.956,
+        "usage": {
+          "total_input_tokens": 3602,
+          "total_output_tokens": 3,
+          "total_cache_read_tokens": 3328,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 949.35,
+          "avg_request_latency_ms": 949.35,
+          "reasoning_tokens": null
+        }
+      }
+    ]
+  },
+  {
+    "request": "새 세션을 만들지 마세요.",
+    "classification": "EXECUTE",
+    "calls": [
+      {
+        "seconds": 0.509,
+        "usage": {
+          "total_input_tokens": 3595,
+          "total_output_tokens": 3,
+          "total_cache_read_tokens": 3328,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 508.5,
+          "avg_request_latency_ms": 508.5,
+          "reasoning_tokens": null
+        }
+      }
+    ]
+  },
+  {
+    "request": "\"그만하자\"라는 표현을 영어로 번역해주세요.",
+    "classification": "EXECUTE",
+    "calls": [
+      {
+        "seconds": 0.691,
+        "usage": {
+          "total_input_tokens": 3602,
+          "total_output_tokens": 3,
+          "total_cache_read_tokens": 3328,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 690.4,
+          "avg_request_latency_ms": 690.4,
+          "reasoning_tokens": null
+        }
+      }
+    ]
+  },
+  {
+    "request": "현재 대화의 세션을 초기화해주세요.",
+    "classification": "SESSION_RESET",
+    "calls": [
+      {
+        "seconds": 0.51,
+        "usage": {
+          "total_input_tokens": 3600,
+          "total_output_tokens": 3,
+          "total_cache_read_tokens": 3328,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 509.52,
+          "avg_request_latency_ms": 509.52,
+          "reasoning_tokens": null
+        }
+      }
+    ]
+  }
+]

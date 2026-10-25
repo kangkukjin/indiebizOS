@@ -444,7 +444,8 @@ def test_same_poll_with_elapsed_numbers_is_not_progress(supervisor):
         key = supervisor._start("status", {})
         supervisor._finish(key, {"items": [{"job_id": "j", "status": "running", "duration_ms": i * 1000}]})
     assert supervisor.last_progress == initial
-    assert supervisor.trigger == "unchanged_repeat"
+    assert supervisor.trigger == ""
+    assert supervisor.repeats == 1  # 결과가 다르다. 시간 변화만으로 진척이라 보고하지도 않는다.
 
 
 def test_alternating_retry_and_inspection_reaches_existing_review(supervisor, monkeypatch):

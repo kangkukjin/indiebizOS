@@ -1,73 +1,103 @@
-"""repeat_guard.py — 반복 호출 가드 공용 코어 (2026-08-14, 두-경로 대칭 감사 2탄)
-
-동일 (신원, 시그니처) 연속 호출을 세어 임계치(3/5/8)에서 점증 조언 문자열을 돌려준다.
-차단·변조 없음(조언뿐) · 오류 결과도 카운트(거부를 두들기는 게 바로 끊을 루프) ·
-다른 호출이 오면 리셋. dsh repeat-tool-reminder 의미론의 IBL판.
-
-어댑터 둘이 이 코어를 공유한다 (정책 표류 방지 — 렌더러 "공용 코어+두 어댑터" 선례):
-  ①직결 경로: system_tools.execute_tool 래퍼 (인프로세스 프로바이더 전부)
-  ②클로드 코드 경로: mcp_server.execute_ibl (MCP 에이전트 경계)
-두 경로는 서로 다른 목을 지나므로 이중 카운트 없음(/ibl/execute 는 execute_tool 미경유).
-
-턴 경계 리셋은 하지 않는다 — 연속-동일 호출은 턴을 건너도 루프 신호이고, 다른 호출이
-오면 어차피 리셋되며, 조언-전용이라 오탐 비용이 낮다(사용자가 턴마다 같은 호출을
-정확히 3회 요구하는 드문 경우만 조언 한 줄).
-"""
+"""이번 실행 안에서 동일 입력·동일 결과의 연속 횟수만 관측한다."""
+import hashlib
 import json
 import threading
+from contextlib import contextmanager
+from uuid import uuid4
 
-THRESHOLDS = (3, 5, 8)
-_chains: dict = {}   # key -> [signature, count]
-_CHAIN_CAP = 256
+THRESHOLDS = (3, 5, 8)  # 표시 빈도이며 실패/종료 기준이 아니다.
+_chains = {}
+_active = {}
 _lock = threading.Lock()
 
 
-def advise(key: str, signature: str) -> str:
-    """호출 1건을 체인에 반영하고, 임계치면 조언 문자열을(아니면 "") 돌려준다."""
+@contextmanager
+def execution_scope(agents, task_id):
+    from thread_context import execution_key
+    keys = [execution_key(a, task_id) for a in dict.fromkeys(agents) if a]
+    key = uuid4().hex
     with _lock:
-        chain = _chains.get(key)
-        if chain and chain[0] == signature:
-            chain[1] += 1
-        else:
-            if key not in _chains and len(_chains) >= _CHAIN_CAP:
-                _chains.pop(next(iter(_chains)))
-            _chains[key] = chain = [signature, 1]
-        n = chain[1]
-    if n == THRESHOLDS[0]:
-        return ("\n\n[반복 감지] 같은 도구 호출을 같은 인자로 연속 3회 실행했습니다. "
-                "직전 결과를 다시 읽고, 접근이나 파라미터를 바꾸거나 결론을 내리세요.")
-    if n in THRESHOLDS[1:]:
-        return (f"\n\n[반복 감지] 같은 호출 연속 {n}회째입니다: "
-                f"{signature[:200]}{'…' if len(signature) > 200 else ''}\n"
-                "같은 호출의 반복은 같은 결과를 냅니다. 다른 액션·다른 인자를 쓰거나, "
-                "지금까지의 결과로 결론을 내리세요.")
-    return ""
+        if any(k in _active for k in keys):
+            raise RuntimeError("이미 활성인 반복 관측 실행입니다")
+        _chains[key] = None
+        for alias in keys:
+            _active[alias] = key
+    try:
+        yield key
+    finally:
+        with _lock:
+            _chains.pop(key, None)
+            for alias in keys:
+                if _active.get(alias) == key:
+                    _active.pop(alias, None)
 
 
-def inputs_digest(inputs=None) -> str:
-    """Different explicit input values are different calls, even with the same source."""
-    if not inputs:
-        return ''
-    import hashlib
-    blob = json.dumps(inputs, ensure_ascii=False, sort_keys=True, default=str)
-    return hashlib.sha256(blob.encode('utf-8')).hexdigest()[:16]
+def advise(execution_key, signature, result_digest):
+    """결과를 읽은 뒤 호출한다. 같은 결과도 정상 대기일 수 있으므로 행동은 지시하지 않는다."""
+    with _lock:
+        if execution_key not in _chains:
+            return ""
+        chain = _chains[execution_key]
+        n = chain[2] + 1 if chain and chain[:2] == (signature, result_digest) else 1
+        _chains[execution_key] = (signature, result_digest, n)
+    return f"\n\n[반복 관측] 같은 입력으로 같은 결과를 연속 {n}회 관측했습니다." if n in THRESHOLDS else ""
+
+
+def digest(value):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            pass
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def observe_result(tool_name, tool_input, result, agent_id=None, task_id=None, *, read_observation=None):
+    """직결·MCP가 같은 백엔드 수명에서 센다. 감독이 켜진 실행은 기존 감독 관측만 사용한다."""
+    from thread_context import execution_key
+    from supervision_bus import current
+    actor = execution_key(agent_id, task_id)
+    supervisor = current(*actor)
+    if supervisor and supervisor.enabled:
+        return ""
+    with _lock:
+        key = _active.get(actor)
+    if key is None:
+        return ""
+    observed = result
+    if tool_name == "execute_ibl":
+        from result_read_contract import is_observation_request
+        if is_observation_request(tool_input or {}):
+            return ""  # 증거 페이지 회수는 실행 횟수가 아니다.
+        if read_observation is None:
+            return ""  # IBL 표시본은 생산자의 원 결과 해소가 필요하다.
+        try:
+            observed = read_observation(result)
+        except (ValueError, TypeError, KeyError, OSError):
+            return ""  # 읽지 못한 원문 대신 잘린 표시본을 관측으로 세지 않는다.
+    return advise(key, tool_name + "|" + digest(tool_input), digest(observed))
+
+
+def inputs_digest(inputs=None):
+    return digest(inputs)[:16] if inputs else ""
 
 
 def reset_all():
-    """테스트 전용 — 체인 전체 초기화."""
+    """시험 격리용."""
     with _lock:
         _chains.clear()
+        _active.clear()
 
 
 def append_advisory(raw, advisory):
-    """Keep machine-readable JSON valid when adding model-facing guidance."""
     if not advisory:
         return raw
+    if isinstance(raw, dict):
+        return {**raw, "_model_advisory": str(raw.get("_model_advisory", "")) + advisory}
     try:
         obj = json.loads(raw)
     except (ValueError, TypeError):
-        return raw + advisory
+        return str(raw) + advisory
     if isinstance(obj, dict):
-        obj["_model_advisory"] = str(obj.get("_model_advisory", "")) + advisory
-        return json.dumps(obj, ensure_ascii=False)
-    return raw + advisory
+        return json.dumps(append_advisory(obj, advisory), ensure_ascii=False)
+    return str(raw) + advisory

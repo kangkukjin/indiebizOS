@@ -1,0 +1,115 @@
+{
+  "base_chars": 6071,
+  "evaluator_policy_chars": 1346,
+  "synthetic": true,
+  "cases": [
+    {
+      "request": "제공된 수치로 전체 작업시간 절감률을 계산할 수 있는지 짧게 답하세요.",
+      "given_evidence": "인원의 20%인 A팀에서 작업시간을 30% 절감했다. A팀의 기존 작업시간 비중과 나머지 팀의 변화는 모른다.",
+      "response": "**계산할 수 없습니다.**\n\n- 전체 절감률 = A팀의 기존 작업시간 비중 × 30% + 나머지 팀의 비중 × 나머지 팀 변화율\n- 20%는 **인원** 비중입니다. 인당 작업시간이 팀마다 다를 수 있으므로 **작업시간** 비중으로 바로 쓸 수 없습니다.\n- 나머지 팀의 변화도 모르므로 둘째 항을 정할 수 없습니다.\n\n**가정을 두면 이렇게 됩니다.**\n- 나머지 팀이 변하지 않았다고 가정하면 전체 절감률은 0%보다 크고 30%보다 작습니다. 정확한 값은 A팀의 작업시간 비중에 따라 정해집니다.\n- 여기에 인당 작업시간까지 같다고 가정하면(작업시간 비중 20%) 0.2 × 30% = **6%**입니다. 다만 이 값은 두 가정에 기댄 추정치이고, 확인된 결과가 아닙니다.",
+      "defective_candidate": "전체 작업시간을 6% 절감했습니다.",
+      "review": [
+        false,
+        "NOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"response\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"응답은 '전체 작업시간을 6% 절감'이라고 단정했다. 이는 인원 비중 20%에 30%를 곱한 값으로 보인다. 그러나 제공 자료에는 'A팀의 기존 작업시간 비중과 나머지 팀의 변화는 모른다'고 적혀 있다. 인원 비중을 작업시간 비중으로 대체했고, 나머지 팀의 변화를 0으로 가정했다. 따라서 결론이 근거와 모순되며, 계산 가능성에 대한 설명도 없다.\", \"repair\": \"기존 자료만으로 응답을 고친다. 전체 절감률은 계산할 수 없다고 답한다. 이유로 A팀의 작업시간 비중(인원 비중 20%와 다를 수 있음)과 나머지 팀의 변화를 모른다는 점을 짧게 밝힌다. 6%는 'A팀 작업시간 비중이 20%이고 나머지 팀 변화가 0'이라는 가정에서만 성립한다고 조건부로만 언급한다.\"}]",
+        3
+      ],
+      "goal": {
+        "goal_status": "NOT_ACHIEVED",
+        "goal_reason": "사용자는 계산 가능 여부를 물었다. 응답은 근거가 없는 가정으로 6%를 확정값처럼 제시했다. 자료상으로는 계산 불가가 맞는 답이다.",
+        "goal_evidence": [
+          "에이전트 응답: '전체 작업시간을 6% 절감했습니다.'",
+          "생성 파일: 'A팀의 기존 작업시간 비중과 나머지 팀의 변화는 모른다.'"
+        ],
+        "remaining": [
+          "계산 불가 판정과 그 이유(작업시간 비중·나머지 팀 변화 미상)를 제시"
+        ]
+      },
+      "calls": [
+        {
+          "seconds": 7.115,
+          "usage": {
+            "total_input_tokens": 9069,
+            "total_output_tokens": 493,
+            "total_cache_read_tokens": 658,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 6577.38,
+            "avg_request_latency_ms": 6577.38,
+            "reasoning_tokens": null
+          }
+        },
+        {
+          "seconds": 9.41,
+          "usage": {
+            "total_input_tokens": 8129,
+            "total_output_tokens": 794,
+            "total_cache_read_tokens": 658,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 8890.1,
+            "avg_request_latency_ms": 8890.1,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "request": "장치 상태 보고를 두 문장으로 요약하세요.",
+      "given_evidence": "실험 장치 P는 연결되었고 센서값을 읽었다. 장치 Q는 연결 오류로 값을 읽지 못했다.",
+      "response": "실험 장치 P는 정상적으로 연결되어 센서값을 읽었습니다. 장치 Q는 연결 오류로 값을 읽지 못했습니다.",
+      "defective_candidate": "P와 Q 모두 정상 작동합니다.",
+      "review": [
+        false,
+        "NOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"response\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"응답은 'P와 Q 모두 정상 작동합니다'라고 단정하지만, 생성된 파일에는 장치 Q가 연결 오류로 값을 읽지 못했다고 기록되어 있다. 이는 관측된 상태와 모순되며, Q의 값은 확인하지 못했다는 미확인 범위도 요약하지 않았다.\", \"repair\": \"P는 연결되어 센서값을 읽었고, Q는 연결 오류로 값을 읽지 못해 상태가 미확인임을 두 문장으로 요약한다.\"}]",
+        3
+      ],
+      "goal": {
+        "goal_status": "NOT_ACHIEVED",
+        "goal_reason": "요약이 원 보고와 모순된다. Q의 연결 오류를 정상 작동으로 바꿔 적었고, 미확인 범위도 빠졌다.",
+        "goal_evidence": [
+          "응답: 'P와 Q 모두 정상 작동합니다.'",
+          "파일: '장치 Q는 연결 오류로 값을 읽지 못했다.'"
+        ],
+        "remaining": [
+          "Q의 연결 오류·미확인 상태를 반영한 정확한 두 문장 요약"
+        ]
+      },
+      "calls": [
+        {
+          "seconds": 3.671,
+          "usage": {
+            "total_input_tokens": 9042,
+            "total_output_tokens": 62,
+            "total_cache_read_tokens": 7292,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 2922.86,
+            "avg_request_latency_ms": 2922.86,
+            "reasoning_tokens": null
+          }
+        },
+        {
+          "seconds": 6.696,
+          "usage": {
+            "total_input_tokens": 8074,
+            "total_output_tokens": 477,
+            "total_cache_read_tokens": 5903,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 6172.83,
+            "avg_request_latency_ms": 6172.83,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    }
+  ]
+}

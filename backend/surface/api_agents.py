@@ -186,11 +186,9 @@ async def reset_agent_session(project_id: str, agent_id: str):
     CLI 프로바이더(claude_code·codex)가 아니면 no-op이지만 200 OK 반환 (안전).
     """
     try:
-        from providers import clear_cli_sessions_for_agent
-        # registry_key 형식: "{project_id}:{agent_id}"
-        key = f"{project_id}:{agent_id}"
-        clear_cli_sessions_for_agent(key)
-        return {"ok": True, "message": "새 세션을 시작했습니다.", "key": key}
+        from chat_session_service import reset_cli_session
+        import asyncio
+        return await asyncio.to_thread(reset_cli_session, "agent", project_id, agent_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

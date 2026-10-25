@@ -1,0 +1,136 @@
+{
+  "cases": [
+    {
+      "case": "clean",
+      "diagnostic": "",
+      "result": {
+        "success": true,
+        "passed": true,
+        "score": 7,
+        "issues": [
+          "체크 2번 실패 — 내용이 왼쪽 위에만 몰려 있고 캔버스의 약 3분의 2가 비어 있어 여백이 너무 많고 레이아웃이 한쪽으로 치우침. 스타일 없는 기본 serif 글꼴"
+        ],
+        "error": null,
+        "tier": "vision"
+      },
+      "calls": [
+        {
+          "seconds": 7.582,
+          "usage": {
+            "total_input_tokens": 9142,
+            "total_output_tokens": 333,
+            "total_cache_read_tokens": 5848,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 7043.32,
+            "avg_request_latency_ms": 7043.32,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "diagnostic",
+      "diagnostic": "콘솔 오류 1건: Optional analytics disabled",
+      "result": {
+        "success": true,
+        "passed": true,
+        "score": 7,
+        "issues": [
+          "체크 2번 실패 — 내용이 왼쪽 위에만 몰려 있어 화면 아래쪽 약 3분의 2가 비어 있고, 스타일이 없는 기본 브라우저 렌더 상태다"
+        ],
+        "error": null,
+        "tier": "vision"
+      },
+      "calls": [
+        {
+          "seconds": 7.438,
+          "usage": {
+            "total_input_tokens": 9326,
+            "total_output_tokens": 372,
+            "total_cache_read_tokens": 6859,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 6913.76,
+            "avg_request_latency_ms": 6913.76,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "missing",
+      "diagnostic": "",
+      "result": {
+        "success": true,
+        "passed": false,
+        "score": 2,
+        "issues": [
+          "체크 1번 실패 — 'Report' 제목만 보이고 'Revenue 100'은 이미지 어디에도 없음",
+          "체크 2번 실패 — 제목 아래 캔버스의 약 80%가 비어 있어 빈 공간이 지나치게 많고, 내용이 빠진 채 렌더링된 것으로 보임"
+        ],
+        "error": null,
+        "tier": "vision"
+      },
+      "calls": [
+        {
+          "seconds": 7.843,
+          "usage": {
+            "total_input_tokens": 9139,
+            "total_output_tokens": 349,
+            "total_cache_read_tokens": 6766,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 7319.34,
+            "avg_request_latency_ms": 7319.34,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "blank",
+      "diagnostic": "빈 화면(잉크 0.00%)",
+      "result": {
+        "success": true,
+        "passed": true,
+        "score": 10,
+        "issues": [],
+        "error": null,
+        "tier": "vision"
+      },
+      "calls": [
+        {
+          "seconds": 7.036,
+          "usage": {
+            "total_input_tokens": 9318,
+            "total_output_tokens": 273,
+            "total_cache_read_tokens": 6855,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 6511.29,
+            "avg_request_latency_ms": 6511.29,
+            "reasoning_tokens": null
+          }
+        }
+      ]
+    }
+  ],
+  "active_workflow": [
+    {
+      "name": "화면검수",
+      "function_id": "a33f45a7abc25eccbd1cd5f2402ffbcc",
+      "revision": "8dbfd076487166d3f544942f51fbe150240fc883f21815b006746fd39e74edcc",
+      "source_hash": "f34478377987ebc652bd9c5fb63821db1b1ec7647f06d9ab1f76303896a50724",
+      "source": "#!ibl edition=2\n[def:화면검수]($path,$intent,$criteria=\"web\") {\n  $화면 = [engines:render]{path:$path,viewports:[\"1280x800\",\"390x844\"]}\n  $대상 = $화면.items\n  $수집 = $대상 >> [table:each]{on_error:\"collect\"} { return [engines:image_read]{op:\"critic\",image_path:$it.path,intent:f\"{$intent} — {$it.label} 폭에서 성립하는가\",criteria:$criteria,prescreen:$it.prescreen} }\n  $값 = $수집 >> [table:each]{} {\n    [if:is_ok($it)] { return {ok:true,source:$대상[$i],value:unwrap($it)} }\n    return {ok:false,source:$대상[$i],error:error_of($it)}\n  }\n  $결과 = [self:script]{id:\"판정관용구\",args:{op:\"collect\",results:$값,keep:[]}}\n  return $결과\n}"
+    }
+  ]
+}

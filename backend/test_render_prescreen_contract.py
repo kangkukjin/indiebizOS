@@ -1,12 +1,4 @@
-"""검수 비용 계층화 계약 배터리 — 0층 기계 관측 + critic 무비용 단락 (2026-08-27).
-
-INSPECTION_COST_TIER_HANDOFF: render 행의 prescreen(관측 사실 문자열, ""=깨끗)과
-critic 의 prescreen 단락(차 있으면 비전 호출 0회, tier=prescreen 실패 verdict)이 계약.
-핵심 보증 둘: ① 깨끗한 화면에 오탐이 없다(빈 문자열) — 오탐은 유료 심사를 공짜 실패로
-바꿔치기하는 침묵 ② 단락은 API 키 없이 돈다 — 키 검사 앞이 아니면 계층화가 아니라 장식.
-
-★이 배터리는 backend/ 밖(data/packages)의 파일을 읽는다 — 라이브 트리에서 돌릴 것.
-"""
+"""렌더 관측을 손실 없이 critic에 전달하는 계약."""
 import json
 import os
 import sys
@@ -88,7 +80,7 @@ def test_html_console_and_pageerror_and_reqfail_captured(ra, tmp_path):
 
 @needs_browser
 def test_html_clean_page_has_empty_prescreen(ra, tmp_path):
-    """★오탐 금지: 깨끗한 페이지의 prescreen 은 빈 문자열 — 아니면 유료 심사가 통째로 우회된다."""
+    """★오탐 금지: 깨끗한 페이지의 진단은 빈 문자열이다."""
     p = tmp_path / "clean.html"
     p.write_text("<html><body style='font-size:40px;padding:60px'>"
                  "<h1>정상 페이지</h1><p>본문 내용이 충분히 그려진다.</p></body></html>",
@@ -125,27 +117,8 @@ def test_xlsx_formula_error_marker_flagged(ra, tmp_path):
 # ── 1층 단락: critic 의 prescreen param ───────────────────────────
 
 
-def test_critic_prescreen_shortcircuit_calls_no_model(gv, tmp_path, monkeypatch):
-    """★단락은 모델 호출 앞: 기어 상태와 무관하게 즉시 tier=prescreen 실패 verdict."""
-    def _boom(*a, **k):
-        raise AssertionError("0층 단락인데 모델이 호출됐다 — 비용 계층화 위반")
-    monkeypatch.setattr(gv, "_ai_call", _boom)
-    img = tmp_path / "x.png"
-    from PIL import Image
-    Image.new("RGB", (32, 32), "white").save(img)            # 단락 경로는 이미지를 읽지 않는다
-    out = gv.critique_image(
-        {"image_path": str(img), "intent": "웹 페이지 품질",
-         "prescreen": "콘솔 오류 2건: TypeError…; 빈 화면(잉크 0.00%)"}, ".")
-    assert "verdict_json:" in out["message"]
-    verdict = json.loads(out["message"].split("verdict_json:", 1)[1].strip())
-    assert verdict["passed"] is False
-    assert verdict["tier"] == "prescreen"
-    assert any("콘솔 오류" in i for i in verdict["issues"])
-    assert any("빈 화면" in i for i in verdict["issues"])
-
-
 def test_critic_without_prescreen_keeps_normal_path(gv, tmp_path, monkeypatch):
-    """단락이 정상 경로를 삼키지 않는다 — prescreen 없으면(빈 문자열 포함) 기어 호출로 간다."""
+    """진단이 없어도 실제 이미지를 기어로 보낸다."""
     calls = []
     monkeypatch.setattr(gv, "_ai_call", lambda *a, **k: calls.append(k) or None)
     img = tmp_path / "x.png"
@@ -162,10 +135,11 @@ def test_critic_without_prescreen_keeps_normal_path(gv, tmp_path, monkeypatch):
 
 
 def test_inspection_workflow_passes_prescreen():
-    import yaml
-    w = yaml.safe_load(open(os.path.join(ROOT, "data/idioms/화면검수.yaml"), encoding="utf-8"))
-    for k in ("do", "steps"):
-        assert "prescreen: '$it.prescreen'" in w[k], f"화면검수 {k} 에 0층 통과 배선 없음"
+    from pathlib import Path
+    installed = json.loads((Path(ROOT) / "data/idioms/installed.json").read_text())
+    source = (Path(ROOT) / "data/idioms" / installed["화면검수"]).read_text()
+    assert "prescreen:$it.prescreen" in source
+
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

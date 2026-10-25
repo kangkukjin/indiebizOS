@@ -118,7 +118,7 @@ _DEFAULT_VIEWPORT = {"width": 1280, "height": 720}
 #
 # 행 필드 `prescreen` = 렌더 중 공짜로 얻는 관측 사실의 요약 문자열("" = 깨끗).
 # 판단(취향)이 아니라 관측의 기계 요약 — truncated 와 같은 정직층 부류. 합격/불합격
-# 판정은 critic 층이 한다(prescreen 비었으면 비전 호출, 차 있으면 무비용 단락).
+# 판정은 critic 층이 이미지·목적·진단을 함께 보고 한다.
 # 문자열 하나인 이유: [table:each] 의 $it.필드 치환이 문자열에서 안전하다.
 
 def _clip(s, n=120):
@@ -556,7 +556,7 @@ def render_op_xlsx(tool_input, output_base="."):
         return out  # pdf 단계의 정직 오류 그대로
     for row in result["items"]:
         row["op"] = "xlsx"
-    # 0층: 재계산 PDF 텍스트의 수식 오류 표식 — sheet.yaml forbidden 의 무비용 선행판
+    # 0층: 재계산 PDF 텍스트의 수식 오류 표식 — 이미지 검수에 함께 전달할 진단
     try:
         import fitz
         doc = fitz.open(pdf_path)

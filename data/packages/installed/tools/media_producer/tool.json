@@ -243,7 +243,7 @@
           },
           "prescreen": {
             "type": "string",
-            "description": "(critic) render 행의 0층 기계 관측 문자열($it.prescreen) — 비어 있지 않으면 비전 호출 없이 즉시 실패 verdict(tier: prescreen, 비용 계층화)"
+            "description": "(critic) render 행의 0층 기계 관측 문자열($it.prescreen) — 이미지·목적과 함께 해석하며 존재만으로 실패 판정하지 않음"
           }
         },
         "required": [

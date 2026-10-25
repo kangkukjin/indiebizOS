@@ -154,8 +154,8 @@
   "engines:image_read": {
    "fields": {
     "description": "8583e4791a5c",
-    "target_description": "3358f0aa9d78",
-    "implementation": "65956c8b0ca2",
+    "target_description": "4a1b26ed663d",
+    "implementation": "c6fc4f7751b8",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
     "aliases": "ca395880f4b5",
@@ -165,8 +165,8 @@
     "router": "ebbb1532efbc",
     "tool": "4a72110db079"
    },
-   "reviewed": "2026-09-18",
-   "examples": 38
+   "reviewed": "2026-10-26",
+   "examples": 6
   },
   "engines:newspaper": {
    "fields": {
@@ -200,7 +200,7 @@
   "engines:render": {
    "fields": {
     "description": "32b30b5278aa",
-    "target_description": "43989b32978b",
+    "target_description": "3398e5f0b677",
     "implementation": "8a548bb26784",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -211,8 +211,8 @@
     "router": "ebbb1532efbc",
     "tool": "62dfd34b8325"
    },
-   "reviewed": "2026-10-11",
-   "examples": 29
+   "reviewed": "2026-10-26",
+   "examples": 12
   },
   "engines:tts": {
    "fields": {

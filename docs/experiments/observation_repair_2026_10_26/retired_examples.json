@@ -1,0 +1,20 @@
+{
+  "reason": "진단만으로 비전 검수 없이 실패한다고 주장한 용례. 원문은 역사로 보존하고 현행 검색에서 제외.",
+  "rows": [
+    {
+      "id": 4293,
+      "intent": "이 페이지 검수하되 기계 관문에 걸린 화면은 비전 심사 없이 바로 실패 처리해줘",
+      "code": "#!ibl edition=2\n$r = [engines:render]{path: \"index.html\", viewports: [\"1280x800\", \"390x844\"]}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"페이지가 ${it.label} 폭에서 성립하는가\", criteria: 'web', prescreen: $it.prescreen}\n}"
+    },
+    {
+      "id": 4294,
+      "intent": "Inspect this page but skip the paid vision check for screens that already failed the machine gate",
+      "code": "#!ibl edition=2\n$r = [engines:render]{path: \"landing.html\", viewports: [\"1440x900\", \"390x844\"]}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"landing page quality at ${it.label}\", criteria: 'web', prescreen: $it.prescreen}\n}"
+    },
+    {
+      "id": 4295,
+      "intent": "장부 렌더해서 쪽마다 심사하되 수식 오류나 빈 쪽은 비전 없이 걸러줘",
+      "code": "#!ibl edition=2\n$r = [engines:render]{op: \"xlsx\", path: \"거래장부.xlsx\"}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"장부 ${it.page} 쪽이 온전히 읽히는가\", criteria: 'sheet', prescreen: $it.prescreen}\n}"
+    }
+  ]
+}

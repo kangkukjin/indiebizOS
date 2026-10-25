@@ -1,6 +1,6 @@
 # 원격 PC 헬퍼 — 상주 PC·휴대 USB 사용 가이드
 
-원격 PC의 셸·파일·화면·재생은 `[limbs:guestpc]`, 등록·일시 중지·제거는 `[self:limb]`로 한다.
+원격 PC의 셸·파일·화면·재생은 `[limbs:guestpc]`, 등록·헬퍼 업데이트·일시 중지·제거는 `[self:limb]`로 한다.
 헬퍼는 대상 PC에서 실행되고 두뇌·신원은 중앙 허브에 남는다. 원격 PC도 허브로 아웃바운드
 연결하므로 대상 공유기의 포트를 열지 않는다. **먼저 대상 이름과 상주/휴대 모드를 확인한다.**
 현재 문맥에 이 가이드 전문과 환경 조회 결과가 있으면 매 명령마다 다시 읽거나 조회하지 않는다.
@@ -23,10 +23,11 @@
 | 중복 방지 | 같은 `request_id` + 같은 명령은 기존 접수증. 내용이 다르면 충돌 | 접수증으로 관측. 같은 명령 재전송 금지 |
 | 작업 후 | 연결 유지. 작업 마무리와 제거는 별개 | 필요할 때 `detach`로 프로세스 종료 |
 | 제거 | 명시적인 `self:limb remove`. `removal_pending`과 `removed` 구분 | `revoke`로 키 폐기 |
-| 헬퍼 교체 | Windows·macOS·Linux 모두 중앙 조종실 손발(USB)의 `헬퍼 교체` — 중앙 `helper/dist`와 다를 때만 보인다. 헬퍼가 받아 검증·교체·재기동하고 5분 안에 다시 연결하지 못하면 이전 판으로 되돌린다. AI 작업(`limbs:guestpc`)으로는 요청할 수 없다 | 해당 없음 |
+| 헬퍼 교체 | 사용자 요청 시 `[self:limb]{op:"update",target:"PC"}` — 버튼과 같은 중앙 절차. [업데이트·완료 확인](../../helper/README.md#사용자-요청의-헬퍼-업데이트) | 해당 없음 |
 
 `self:limb list`의 각 행에 `registration`이 있으면 상주형, null이면 휴대형이다.
 상주형 `registration.state/paused`, 공통 `connected/expired/revoked`를 확인한다.
+
 상주형에서 `detach`는 거절된다. 일시적으로 새 작업만 막으려면 `pause`를 쓴다.
 
 ```ibl

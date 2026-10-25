@@ -217,7 +217,7 @@
     },
     {
       "name": "limb_op",
-      "description": "PC 헬퍼 자격 원장. register/list/pause/remove는 상주 PC 관리, issue/revoke/approve는 기존 휴대형 발급·관리 (기본 issue).",
+      "description": "PC 헬퍼 자격 원장. register/list/pause/remove/update는 상주 PC 관리, issue/revoke/approve는 기존 휴대형 발급·관리 (기본 issue).",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -228,6 +228,7 @@
               "register",
               "remove",
               "pause",
+              "update",
               "issue",
               "list",
               "revoke",
@@ -253,7 +254,7 @@
           },
           "target": {
             "type": "string",
-            "description": "대상 키·device_id·별칭 (op=revoke/approve)"
+            "description": "대상 키·device_id·별칭 (op=revoke/approve/remove/pause); update는 PC 이름·device_id 필수"
           },
           "approved": {
             "type": "boolean",

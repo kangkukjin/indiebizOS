@@ -109,13 +109,23 @@ def helper_status(rec):
 
 
 def update_helper(target):
-    """One cockpit action: hand the PC the hub's current helper and let it replace itself."""
+    """Owner cockpit and AI share the published-helper update procedure."""
+    import principal
+    import member_runtime
+    if not principal.is_owner() or member_runtime.is_member():
+        raise PermissionError("helper_update_owner_required")
     rec = resolve(target)
     status = helper_status(rec)
     if status["state"] == "current":
         return {"success": True, "state": "current", "sha256": status["latest"]}
     if status["state"] == "updating":
-        return {"success": True, "state": "updating", "job_id": resident_store.pending(rec["device_id"], "update", settle=120)}
+        job_id = resident_store.pending(rec["device_id"], "update", settle=120)
+        tasks = resident_store.history(device=rec["device_id"], job=job_id, limit=1)["tasks"]
+        if not job_id or not tasks:
+            raise ValueError("helper_update_receipt_unavailable: 상태를 다시 조회하세요")
+        return {"success": True, "state": "updating", "job_id": job_id,
+                "task_ref": {"kind": "guestpc", "task_id": job_id},
+                "sha256": tasks[0]["summary"]["sha256"]}
     if status["state"] != "available":
         raise ValueError("helper_update_unavailable: 이 PC의 헬퍼는 스스로 교체하지 못합니다"
                          if status["state"] == "manual" else "helper_update_unavailable: 헬퍼 판을 알 수 없습니다")
@@ -136,7 +146,7 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     rec = resolve(target)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
-    if allow_update:  # only update_helper(); never reachable from an agent's command
+    if allow_update:  # only update_helper(); raw remote commands cannot select update payloads
         allowed = allowed | {"update"}
     if allow_media:  # only media_sessions(); 세션 grant 를 품은 봉투 — 에이전트 명령으로는 닿지 않는다
         allowed = allowed | {"media_session"}

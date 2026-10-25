@@ -585,7 +585,7 @@ def publish_test_mac_release(root, build, content):
     ("darwin", "mac-amd64-legacy", "go1.22.12"),
     ("windows", "win-resident.exe", "go1.26.1"),
 ])
-def test_helper_update_is_one_owner_action_and_never_an_agent_command(
+def test_helper_update_uses_published_release_and_rejects_raw_remote_command(
         registry, monkeypatch, tmp_path, os_name, build, go_version):
     rec = registry()
     dist = tmp_path / 'helper' / 'dist'

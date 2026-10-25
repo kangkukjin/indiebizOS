@@ -6,7 +6,7 @@
 USB를 빼도 연결을 유지한다. 기존 `issue` 휴대형·회원 모드는 별도로 유지한다.
 
 - `[limbs:guestpc]`: 셸·파일·화면·입력, 상주형 파일 전송·재생·깨우기·기록·취소.
-- `[self:limb]`: 목록·등록·새 작업 일시 중지·명시적 제거·기존 키 관리.
+- `[self:limb]`: 목록·등록·새 작업 일시 중지·명시적 제거·기존 키 관리·사용자 요청의 헬퍼 업데이트(`op:update`, `target` 필수).
 - 상주형은 작업별 cwd/env 분리, request_id 중복 방지, GUI mode:interactive 필수다.
 - 긴 작업은 접수증을 보존해 self:task로 확인한다. 실패 원문은 history에 남는다.
 - detach는 휴대형 프로세스 종료만 허용한다. 상주형 제거는 self:limb remove이며

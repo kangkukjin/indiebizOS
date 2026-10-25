@@ -4606,8 +4606,8 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[self:limb]{op: "list"}'
-        description: PC·폰·네트워크 기기 손발 등록 원장 관리 (op 분기) — 발급·목록·폐기·승인. USB 에 담아 낯선 PC 에 꽂는 헬퍼의 인가는 허브 로그인 비밀번호가 아니라 여기서 발급하는 limb key. 발급하면 USB 페이로드(헬퍼 설정+안내)를 만들어 경로를 돌려준다.
-        target_description: 'register는 outputs/pc-helper 공용 USB 폴더를 준비하고 경로를 돌려준다. OS별 실행파일과 중앙 연결 설정을 함께 USB에 복사하고 대상 PC에서 실행할 때 이름을 정해 등록한다. 같은 USB로 여러 PC를 등록하며 조종실 손발에서 목록·해제를 관리한다. TV 등 network-api 기기는 손발 패널에서 네트워크 등록하며 목록에 함께 나온다. 이 기기는 guestpc 대신 OS별 제어 가이드의 공용 스크립트를 허브에서 실행한다. 네트워크 기기의 remove/revoke는 연결 설정 삭제, pause/approve는 제어 중지·허용이다. 음악·파일·셸 작업은 중앙 AI가 guestpc로 실행한다. remove(target)는 접근을 즉시 차단하고 원격 헬퍼 자체 제거를 요청한다. 오프라인이면 removal_pending, 제거 확인 후 removed. pause(target,paused:true/false)는 새 작업 중지/재개. Android는 IndieBiz OS 앱 설치 시 setup_phone.sh --limb로 USB 각인하고 이후 원격 접속한다(indiebiz-v1). register는 PC 헬퍼용이며 iPhone/iPad 등록은 미지원이다. op=issue(기본): 새 손발 키 발급 + USB 페이로드 생성 — alias(손발 이름, 명령할 때 이 이름으로 대상 지정)만 정하면 된다. ttl_days(유효기간, 기본 0=무기한)·os(win/mac/linux — 지정 시 그 OS 실행파일만, 기본은 생략=빌드된 전 OS 동봉=휴대용) 선택. neighbor_id(기존 회원 이웃 id)를 주면 **회원 열쇠**로 발급 — 그 이웃에 기기를 결합해 외부 서비스 앱(/m/chat)이 그 사람 주체·레벨로 열린다(기기≠사람: 한 사람이 여러 기기). list: 발급한 손발과 연결 상태 및 control_observations의 본체·앱·사이트별 관측 개수. list+limb는 해당 이름·ID의 등록 행을 조회한다. 상주 PC의 helper는 조종실과 같은 state/current/latest/rolled_back 판정이다. state는 current/available/updating/manual/unknown이며 연결 상태와 별개다. Mac 최신판은 서명된 releases 배포본 기준이며 helper_dist_dir로 추정하지 않는다. list+target은 기기 이름·ID·__local__·app:<bundle id>·site:<domain>의 관측 본문을 observations와 items로 반환한다. revoke: target(키·device_id·별칭) 폐기(영구 차단). approve: target 을 수동으로 잠그거나(approved=false) 다시 열기 — 붙으면 자동승인이므로 평소엔 불필요, 특정 손발 일시 차단용. register+target+observations: 제어 관측 행(observed_at·environment·fact 필수, version·source·status·scope·supersedes 선택)의 추가·정정 — 기기 행은 등록 기록에, app:<bundle id>·site:<domain> 행은 data/control_observations.json 에 남고 지우지 않는다(status valid|recheck|refuted|superseded).'
+        description: PC·폰·네트워크 기기 손발 등록 원장 관리 (op 분기) — 발급·목록·폐기·승인·헬퍼 업데이트. USB 에 담아 낯선 PC 에 꽂는 헬퍼의 인가는 허브 로그인 비밀번호가 아니라 여기서 발급하는 limb key. 발급하면 USB 페이로드(헬퍼 설정+안내)를 만들어 경로를 돌려준다.
+        target_description: 'register는 outputs/pc-helper 공용 USB 폴더를 준비하고 경로를 돌려준다. OS별 실행파일과 중앙 연결 설정을 함께 USB에 복사하고 대상 PC에서 실행할 때 이름을 정해 등록한다. 같은 USB로 여러 PC를 등록하며 조종실 손발에서 목록·해제를 관리한다. TV 등 network-api 기기는 손발 패널에서 네트워크 등록하며 목록에 함께 나온다. 이 기기는 guestpc 대신 OS별 제어 가이드의 공용 스크립트를 허브에서 실행한다. 네트워크 기기의 remove/revoke는 연결 설정 삭제, pause/approve는 제어 중지·허용이다. 음악·파일·셸 작업은 중앙 AI가 guestpc로 실행한다. remove(target)는 접근을 즉시 차단하고 원격 헬퍼 자체 제거를 요청한다. 오프라인이면 removal_pending, 제거 확인 후 removed. pause(target,paused:true/false)는 새 작업 중지/재개. Android는 IndieBiz OS 앱 설치 시 setup_phone.sh --limb로 USB 각인하고 이후 원격 접속한다(indiebiz-v1). register는 PC 헬퍼용이며 iPhone/iPad 등록은 미지원이다. op=issue(기본): 새 손발 키 발급 + USB 페이로드 생성 — alias(손발 이름, 명령할 때 이 이름으로 대상 지정)만 정하면 된다. ttl_days(유효기간, 기본 0=무기한)·os(win/mac/linux — 지정 시 그 OS 실행파일만, 기본은 생략=빌드된 전 OS 동봉=휴대용) 선택. neighbor_id(기존 회원 이웃 id)를 주면 **회원 열쇠**로 발급 — 그 이웃에 기기를 결합해 외부 서비스 앱(/m/chat)이 그 사람 주체·레벨로 열린다(기기≠사람: 한 사람이 여러 기기). list: 발급한 손발과 연결 상태 및 control_observations의 본체·앱·사이트별 관측 개수. list+limb는 해당 이름·ID의 등록 행을 조회한다. 상주 PC의 helper는 조종실과 같은 state/current/latest/rolled_back 판정이다. state는 current/available/updating/manual/unknown이며 연결 상태와 별개다. Mac 최신판은 서명된 releases 배포본 기준이며 helper_dist_dir로 추정하지 않는다. update(target): 사용자가 해당 PC의 헬퍼 업데이트를 명시적으로 요청하면 주인 문맥에서 중앙의 정식 배포·교체 절차를 호출한다. 대상 이름/device_id는 필수다. 배포 파일·해시·전송 ID를 직접 지정하지 않는다. current는 최신판이며 추가 접수하지 않고, updating은 접수·진행 상태로 task_ref와 목표 sha256을 보존한다. self:task로 원 작업을 확인한 뒤 list+limb의 helper.current가 목표 sha256과 일치하는지 확인한다. 작업 결과의 updated/restarting만으로 완료를 보고하지 않는다. 휴대형·폰 APK·네트워크 기기 업데이트는 이 op의 대상이 아니다. 상세는 guest_helper.md. list+target은 기기 이름·ID·__local__·app:<bundle id>·site:<domain>의 관측 본문을 observations와 items로 반환한다. revoke: target(키·device_id·별칭) 폐기(영구 차단). approve: target 을 수동으로 잠그거나(approved=false) 다시 열기 — 붙으면 자동승인이므로 평소엔 불필요, 특정 손발 일시 차단용. register+target+observations: 제어 관측 행(observed_at·environment·fact 필수, version·source·status·scope·supersedes 선택)의 추가·정정 — 기기 행은 등록 기록에, app:<bundle id>·site:<domain> 행은 data/control_observations.json 에 남고 지우지 않는다(status valid|recheck|refuted|superseded).'
         group: identity
         target_key: op
         router: handler
@@ -4620,17 +4620,19 @@ nodes:
             issue: effect
             revoke: effect
             approve: effect
+            update: effect
           side_effect:
             list: false
           values:
             register: USB 헬퍼 폴더 준비 또는 기기·조작면 제어 관측 추가·정정 (target, observations)
             remove: 기기 등록 해제 (PC는 헬퍼 제거 요청, 네트워크 기기는 연결 설정 삭제; target)
             pause: 등록 기기 새 작업 중지·재개 (target, paused)
+            update: 사용자 요청으로 상주 PC 헬퍼를 중앙 정식 배포본으로 업데이트 (target 필수, task_ref 보존 후 재접속 지문 확인)
             issue: 새 손발 키 발급 + USB 페이로드 생성 (alias 만 필수, 기본=전 OS·무기한 휴대용)
             list: 손발 목록과 조작면 관측 개수; target 지정 시 해당 대상의 관측 본문
             revoke: 손발 키 폐기 — 영구 차단 (target = 키·device_id·별칭)
             approve: 손발 수동 잠금/열기 (target, approved) — 자동승인이라 평소 불필요
-        implementation: 허브 handler(limb_op) → limb_keys.py 원장(mint/list_keys/revoke/approve). issue 는 public_face.get_public_base() 주소 + 새 키로 outputs/limb_issue/<alias>/indiebiz-helper.json + 안내문을 쓰고, helper/dist 의 빌드된 실행파일을 동봉(os 생략=전 OS, 지정=그 OS 만).
+        implementation: 허브 handler(limb_op) → limb_keys.py 원장(mint/list_keys/revoke/approve). update는 사용자 출처·주인 권한을 확인한 뒤 조종실과 같은 resident_pcs.update_helper를 호출한다. issue 는 public_face.get_public_base() 주소 + 새 키로 outputs/limb_issue/<alias>/indiebiz-helper.json + 안내문을 쓰고, helper/dist 의 빌드된 실행파일을 동봉(os 생략=전 OS, 지정=그 OS 만).
         keywords:
         - 손발발급
         - USB헬퍼

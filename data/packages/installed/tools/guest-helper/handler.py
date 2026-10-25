@@ -923,6 +923,24 @@ def _resident_operation(tool_input):
         return {"success": False, "error": str(exc)}
 
 
+def _limb_update(tool_input):
+    """사용자 요청의 헬퍼 교체: 조종실과 같은 중앙 배포·접수 경로."""
+    import resident_pcs
+    import thread_context
+    import repair_context
+    target = tool_input.get("target")
+    if not isinstance(target, str) or not target.strip():
+        return {"success": False, "error": "update에는 target(PC 이름·device_id)이 필요합니다."}
+    if thread_context.get_task_origin() != "user":
+        return {"success": False, "error": "helper_update_user_request_required"}
+    if repair_context.active():
+        return {"success": False, "error": "helper_update_has_no_repair_sandbox"}
+    try:
+        return {**resident_pcs.update_helper(target.strip()), "op": "update", "target": target.strip()}
+    except (ValueError, PermissionError, OSError, KeyError) as exc:
+        return {"success": False, "op": "update", "target": target.strip(), "error": str(exc)}
+
+
 def _resident_registration(tool_input):
     """공용 USB 폴더 준비·상주 PC 해제·일시 중지."""
     import resident_pcs
@@ -1019,6 +1037,7 @@ _OP_DISPATCHERS = {
         "register": _resident_registration,
         "remove": _resident_registration,
         "pause": _resident_registration,
+        "update": _limb_update,
         "list": _limb_list,
         "revoke": _limb_revoke,
         "approve": _limb_approve,

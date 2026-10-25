@@ -61,6 +61,9 @@ SKIP_DIRS = {"__pycache__", "_archive", "node_modules", ".git", ".venv"}
 # bpy·mathutils 를 쓴다. 다른 .venv 코드의 같은 import 는 계속 결손으로 잡는다.
 EXTERNAL_RUNTIME_IMPORTS = {
     "data/packages/installed/tools/house-designer/render_blender.py": {"bpy", "mathutils"},
+    # Android 네이티브 능력 확인 뒤에만 import. 앱의 main/python/indiebiz_android.py가
+    # 제공하는 Chaquopy 브리지이며 데스크톱 .venv에 설치하는 배포판이 아니다.
+    "backend/services/phone_native_control.py": {"indiebiz_android"},
 }
 
 # ── 허용목록 ────────────────────────────────────────────────────────────────

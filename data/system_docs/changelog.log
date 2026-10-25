@@ -2872,3 +2872,5 @@
 2026-10-25 | 하드웨어 연결 개선 적용 확인: tv1→KHJoffice 순서로 신규 상주 헬퍼 업데이트·지문·재접속·정보 조회 성공. tv1 공개 상태 정상 전후 각10회 중앙값9.3422→8.18045초 관측(부하 미통제, AI 제외); 배포/재기동 pending2건은 별도 보존. Mac2대 오프라인 미배포, 실제 TV 미응답으로 실기기 재사용·복구 성능 미검증. docs/experiments/hardware_connection_latency_2026_10_25/README.md.
 
 2026-10-25 | 거실TV 전원 켜짐 후 검증: 허브 공개 상태10/10 전원 on 확인, 중앙값1.28초·최대1.4988초. 별도 동일 Manager 실기기 검사에서 HTTP pool/WebSocket 재사용·60초 유휴 정리·재연결·종료 회수 통과. 키/전원 변경 없음, 전후 속도 개선율·실제 키 효과·강제 단절 복구 미검증. 제품 코드 변경 없이 실측 도구·증거 기록. docs/experiments/hardware_connection_latency_2026_10_25/README.md.
+
+2026-10-25 | 의존성 점검 오탐 수리: Android 앱이 제공하는 indiebiz_android 브리지를 phone_native_control.py의 외부 런타임 import로 한정 분류. 다른 파일의 같은 import와 일반 의존성 결손 검출은 유지. 관련 회귀9통과·실제 .venv 의존성 감사 통과, 조종실 import_coverage 정상 갱신. backend 전수 회귀는 미실행.

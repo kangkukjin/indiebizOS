@@ -47,8 +47,8 @@ def test_database_duplicate_cannot_silently_remain_active(tmp_path, monkeypatch)
 
 
 def test_seed_is_bound_to_exact_callee_and_never_inherits_statistics():
-    source = '$return=$목록'
-    lesson = {'name': 'f', 'source_sha256': sha(source), 'source_edition': 1,
+    source = '#!ibl edition=2\n[def:f]($목록){return $목록}'
+    lesson = {'name': 'f', 'source_sha256': sha(source), 'source_edition': 2,
               'seed_intent': '빈 목록을 반환해줘', 'example': '#!ibl edition=2\nreturn [fn:f]{목록:[]}',
               'topic': '목록', 'returns': 'Record'}
     ex, = bundle.seed_examples([lesson], {'f': source})

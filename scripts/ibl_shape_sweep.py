@@ -24,14 +24,13 @@ fixture 가 없는(exempt) 액션은 합성 실행이 불가하므로 **실사�
 fixture 관측이 없는 액션에 한해 `source: usage` 로 적는다(fixture 관측이 있으면 그것이 이긴다).
 사용: .venv/bin/python scripts/ibl_shape_sweep.py [--only node:action] [--from-health]   (백엔드 8765 필요; --from-health 만이면 불필요)
 """
-import json, sys, time, urllib.request
+import json, sys, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 import sys
 sys.path.insert(0, str(ROOT / "backend"))
 import boot_paths  # noqa: F401
-API = "http://127.0.0.1:8765"
 OUT = ROOT / "data" / "ibl_return_shapes.json"
 # 관측 열 상한 — 표시용 절단이 아니다(카탈로그 줄의 표시 상한은 ibl_access 렌더러가 따로 가진다).
 # 옛 값 10 은 정적 검사기가 잘린 목록을 전체로 읽게 해 11번째 이후 열을 '없는 열'로 오신고했다(2026-09-18,
@@ -44,29 +43,7 @@ HEALTH_ROWS = 60          # 액션당 최근 실사용 성공 줄 수
 HEALTH_ROW_KEYS = 16      # pulse_db.record_action_health 가 한 줄에 적는 키 상한
 
 
-def _execute(code, timeout=90):
-    req = urllib.request.Request(
-        f"{API}/ibl/execute",
-        data=json.dumps({"code": code, "project_id": "정보센터", "agent_id": "__self_check__"}).encode(),
-        headers={"Content-Type": "application/json"})
-    return json.load(urllib.request.urlopen(req, timeout=timeout))
-
-
-def _final_envelope(resp):
-    d = resp.get("result", resp)
-    if isinstance(d, str):
-        try:
-            d = json.loads(d)
-        except Exception:
-            return None
-    if isinstance(d, dict) and "final_result" in d:
-        d = d["final_result"]
-    if isinstance(d, str):
-        try:
-            d = json.loads(d)
-        except Exception:
-            return None
-    return d if isinstance(d, dict) else None
+from ibl_check_client import execute as _execute, value_of as _final_envelope, item_rows
 
 
 def _cut(keys):
@@ -76,9 +53,7 @@ def _cut(keys):
 
 def _shape(env):
     """실측 모양 → (kind, keys, more). items=첫 dict 행들의 키 합집합(등장 순), table=columns. more=상한에 잘린 열 수."""
-    if not isinstance(env, dict):
-        return None, [], 0
-    items = env.get("items")
+    items = item_rows(env)
     if isinstance(items, list):
         keys = []
         for it in items[:5]:
@@ -87,24 +62,24 @@ def _shape(env):
                     if k not in keys and not str(k).startswith("_"):
                         keys.append(str(k))
         return ("items", *_cut(keys))
+    if not isinstance(env, dict):
+        return None, [], 0
     t = env.get("table")
     if isinstance(t, dict) and isinstance(t.get("columns"), list):
         return ("table", *_cut([str(c) for c in t["columns"]]))
     if isinstance(env.get("columns"), list) and isinstance(env.get("rows"), list):
         return ("table", *_cut([str(c) for c in env["columns"]]))
-    if env.get("success") is False or (env.get("error") and env.get("success") is not True):
-        return None, [], 0          # 실패 봉투의 키(error)는 모양이 아니다 — main 이 실패로 센다
     keys = scalar_keys(env)
     return ("scalar", keys, 0) if keys else (None, [], 0)
 
 
 def scalar_keys(env: dict, limit: int = 12) -> list:
-    """통화가 아닌 성공 봉투의 키 — 최상위(내부 표지 `_…`·success 제외) + dict 값은 `k.sub` 한 겹,
+    """통화가 아닌 성공 봉투의 키 — 최상위(내부 표지 `_…` 제외) + dict 값은 `k.sub` 한 겹,
     dict 배열은 `k[].sub` 한 겹. 순서 = 등장 순(모델이 읽는 순)."""
     out = []
     for k, v in env.items():
         k = str(k)
-        if k.startswith("_") or k == "success":
+        if k.startswith("_"):
             continue
         out.append(k)
         if isinstance(v, dict):
@@ -192,7 +167,7 @@ def main():
         except Exception:
             prev = {}
     shapes = dict(prev)
-    ok = fail = skip = 0
+    ok = fail = skip = harvested = 0
     if "--from-health" in sys.argv and "--only" not in sys.argv:
         harvested = harvest_from_health(shapes)
         print(f"  실사용 원장 수확: {harvested}건 (fixture 미관측 액션의 ⟨키⟩, source=usage)")
@@ -206,10 +181,6 @@ def main():
         except Exception as e:
             fail += 1
             print(f"  ✗ {key}: 전송 실패 {e}")
-            continue
-        if env is None or env.get("success") is False or (env.get("error") and env.get("success") is not True):
-            fail += 1
-            print(f"  ✗ {key}: {str((env or {}).get('error'))[:80]}")
             continue
         kind, keys, more = _shape(env)
         if not kind or not keys:
@@ -227,6 +198,7 @@ def main():
         "shapes": shapes,
     }, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"\n관측 {ok} · 통화 아님 {skip} · 실패 {fail} → {OUT} (총 {len(shapes)})")
+    return 1 if fail or not (ok or harvested) else 0
 
 
 def rekey_observations(shapes, mapping):
@@ -251,4 +223,4 @@ def rekey_catalog(mapping, path=OUT):
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main() or 0)

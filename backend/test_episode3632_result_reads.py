@@ -8,6 +8,7 @@ import pytest
 
 from test_struct_body_seam import aiops  # noqa: F401
 from supervision_store import TurnStore
+from test_ibl_check_client import packet
 
 
 @pytest.mark.parametrize("entry", ["json", "text", "external"])
@@ -41,22 +42,21 @@ def result_view(tmp_path, monkeypatch):
     return view
 
 
-@pytest.mark.parametrize("pipeline", [False, True])
 @pytest.mark.parametrize("field", ["text", "transcript", "content"])
-def test_advertised_path_and_next_read_restore_actual_body(result_view, pipeline, field):
+def test_advertised_path_and_next_read_restore_actual_body(result_view, field):
     body = "한글 원문🍀\n" * 8000
     source = {"success": True, field: body}
-    raw = {"final_result": json.dumps(source, ensure_ascii=False)} if pipeline else source
+    raw = packet(source)
     before = json.dumps(raw)
     projected = result_view.project_result(raw)
     ref = projected["result_ref"]
-    expected_path = (["final_result"] if pipeline else []) + [field]
-    assert ref["read_args"]["path"] == expected_path
+    expected_path = ["value", field]
+    assert ref["read_args"]["path"] == ["value"]
     # 문자열 경로는 원문 글자 좌표로 페이지한다(69회차 F69-2) — paths.chars 도 같은 좌표.
     assert ref["paths"] == [{"path": expected_path, "chars": len(body)}]
     assert ref["max_limit"] == 60000
     assert ref["read_args"]["limit"] == 60000
-    request, chunks = ref["read_args"], []
+    request, chunks = {**ref["read_args"], "path": expected_path}, []
     while request is not None:
         assert request["path"] == expected_path
         page = result_view.read_result(request)
@@ -69,7 +69,7 @@ def test_advertised_path_and_next_read_restore_actual_body(result_view, pipeline
 
 
 def test_root_pagination_and_limits(result_view):
-    raw = {"items": [{"text": "원문" * 20000}], "warning": "원문 경고"}
+    raw = packet({"items": [{"text": "원문" * 20000}], "warning": "원문 경고"})
     ref = result_view.project_result(raw)["result_ref"]
     request = {"id": ref["id"], "limit": 24000}
     chunks = []
@@ -104,9 +104,9 @@ def test_complete_parent_read_covers_children_without_blocking_reread(result_vie
     assert child["input_args"]["입력"]["path"] == ["value", 0, "content"]
 
 
-@pytest.mark.parametrize("path", [None, ["text"]])
+@pytest.mark.parametrize("path", [None, ["value", "text"]])
 def test_last_page_does_not_claim_the_whole_value_was_delivered(result_view, path):
-    raw = {"text": "한글🍀\n" * 2000}
+    raw = packet({"text": "한글🍀\n" * 2000})
     ref = result_view.project_result(raw)["result_ref"]
     args = {"id": ref["id"], **({"path": path} if path is not None else {})}
     first = result_view.read_result({**args, "limit": 400})
@@ -117,18 +117,16 @@ def test_last_page_does_not_claim_the_whole_value_was_delivered(result_view, pat
     assert tail["read_scope"]["end"] == tail["read_scope"]["total_chars"]
     assert "read_hint" not in tail
     joined = first["text"] + tail["text"]
-    assert (joined == raw["text"]) if path else (json.loads(joined) == raw)
+    assert (joined == raw["value"]["text"]) if path else (json.loads(joined) == raw)
 
 
-@pytest.mark.parametrize("edition", [1, 2])
-def test_list_body_paths_keep_original_indices_and_restore_selected_text(result_view, edition):
+def test_list_body_paths_keep_original_indices_and_restore_selected_text(result_view):
     rows = [{"title": "짧은 결과"}] + [
         {"title": f"자료 {i}", "content": f"근거 {i}🍀\n" * 200} for i in range(8)]
-    raw = ({"edition": 2, "success": True, "value": rows} if edition == 2 else
-           {"final_result": json.dumps(rows, ensure_ascii=False)})
+    raw = packet(rows)
     before = json.dumps(raw)
     ref = result_view.project_result(raw)["result_ref"]
-    prefix = ["value"] if edition == 2 else ["final_result"]
+    prefix = ["value"]
     assert ref["read_args"]["path"] == prefix
     assert [p["path"] for p in ref["paths"]] == [prefix + [i, "content"] for i in range(1, 7)]
     for entry in ref["paths"]:
@@ -160,7 +158,7 @@ def test_default_page_survives_real_mcp_and_provider_boundaries(result_view, bod
     """원문 조회→프로바이더→MCP 실물 함수. 재스필 없이 모든 페이지가 이어진다."""
     import mcp_server
     from ibl_result_transport import provider_tool_result
-    source = {"final_result": json.dumps({"text": body}, ensure_ascii=False)}
+    source = packet({"text": body})
     ref = result_view.project_result(source)["result_ref"]
     calls = []
 
@@ -180,7 +178,7 @@ def test_default_page_survives_real_mcp_and_provider_boundaries(result_view, bod
     monkeypatch.setattr(mcp_server, "_repeat_advisory", lambda *a: "")
     monkeypatch.delenv("MAX_MCP_OUTPUT_TOKENS", raising=False)
     # limit 자체를 생략해도 60K가 기본값이어야 한다.
-    request = {"id": ref["id"], "path": ["final_result", "text"]}
+    request = {"id": ref["id"], "path": ["value", "text"]}
     chunks = []
     while request is not None:
         page = json.loads(asyncio.run(mcp_server.execute_ibl(code="", read_result=request)))
@@ -198,8 +196,8 @@ def test_default_page_survives_real_mcp_and_provider_boundaries(result_view, bod
 
 def test_explicit_smaller_page_and_host_limit_still_apply(result_view, monkeypatch, tmp_path):
     import mcp_server
-    ref = result_view.project_result({"text": "원문" * 50000})["result_ref"]
-    page = result_view.read_result({"id": ref["id"], "path": ["text"], "limit": 25000})
+    ref = result_view.project_result(packet({"text": "원문" * 50000}))["result_ref"]
+    page = result_view.read_result({"id": ref["id"], "path": ["value", "text"], "limit": 25000})
     assert len(page["text"]) == 25000 and page["next_read"]["limit"] == 25000
     raw = json.dumps(page, ensure_ascii=False)
     monkeypatch.setenv("MAX_MCP_OUTPUT_TOKENS", "10000")

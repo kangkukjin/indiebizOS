@@ -204,9 +204,9 @@ class CalendarActionsMixin:
             if trigger_id:
                 try:
                     from trigger_engine import add_history
-                    # 판본 2 실행 결과는 final_result 가 아니라 value 에 값을 싣는다 — 옛 판은 그 이력 요약을 비웠다
+                    # 실행의 업무 값은 value에서 읽는다.
                     # (2026-10-01: "깨우지 않음" 같은 판정이 이력에 남지 않았다).
-                    _fr = (result.get("final_result", result.get("value", result))
+                    _fr = (result.get("value")
                            if isinstance(result, dict) else result)
                     _items = _fr.get("items") if isinstance(_fr, dict) else None
                     add_history(
@@ -292,7 +292,7 @@ class CalendarActionsMixin:
         if isinstance(task, dict) and task.get("owner_project_id"):
             owner = f"{task.get('owner_project_id')}/{task.get('owner_agent_id') or agent_id or ''}".rstrip("/")
         ok = bool(isinstance(result, dict) and result.get("success"))
-        fr = result.get("final_result", result) if isinstance(result, dict) else result
+        fr = result.get("value") if isinstance(result, dict) else result
         items = fr.get("items") if isinstance(fr, dict) else None
         try:
             from notification_manager import get_notification_manager
@@ -532,7 +532,7 @@ class CalendarActionsMixin:
                 asyncio.run(coro)
 
             self._log("WS 메시지 주입 완료 (에이전트 작업 시작됨)")
-            return {"success": True, "final_result": "WS를 통해 실행됨 (채팅창에 표시)", "visible": True}
+            return {"success": True, "value": "WS를 통해 실행됨 (채팅창에 표시)", "edition": 2, "visible": True}
 
         except Exception as e:
             import traceback

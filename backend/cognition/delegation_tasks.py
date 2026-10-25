@@ -128,7 +128,7 @@ def received(msg_dict: dict):
     """수신 측 — 봉투의 origin·chain(·allowed) 을 처리 동안 스레드 컨텍스트에 세우고 끝나면 복원.
 
     에피소드 시작(start_episode)이 출처를 읽으므로 **그 전에** 들어가야 한다.
-    allowed 가 있으면 처리 동안 allowed_nodes 로 세운다 — 실행 관문(판본 1·2)과 프롬프트 어휘 스코핑이 같은 집합을 읽고,
+    allowed 가 있으면 처리 동안 allowed_nodes 로 세운다 — 실행 관문과 프롬프트 어휘 스코핑이 같은 집합을 읽고,
     이 턴이 다시 위임하면 envelope() 이 그것을 부모 집합으로 상속한다."""
     from thread_context import get_allowed_nodes, set_allowed_nodes
     origin = msg_dict.get("origin") if isinstance(msg_dict, dict) else None

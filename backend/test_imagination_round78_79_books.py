@@ -160,7 +160,7 @@ def test_build_gate_reports_second_table_and_contract_only_keys(monkeypatch):
     sort['callable_contract']['params']['reverse_order'] = 'Bool'          # 판본 1 이 모르는 계약 인자
     issues = validate_v2_contracts({'nodes': {'table': {'actions': {'sort': sort}}}})
     assert any('두 벌' in i for i in issues), issues
-    assert any('reverse_order' in i and '판본 1' in i for i in issues), issues
+    assert any('reverse_order' in i and '핸들러 허용 키' in i for i in issues), issues
 
 
 def test_every_contract_vocab_is_accepted_by_edition_1():

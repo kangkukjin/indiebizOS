@@ -54,7 +54,6 @@ OWNER_FILES = {"backend/common/value_semantics.py"}
 # 조건 표면 모듈 — 값 판정이 직업인 자리(규칙 [B] 적용 + 위임 의무).
 # common.value_semantics 의 판정 심볼을 import 하는 모듈은 여기 등록돼야 한다.
 SURFACE_FILES = {
-    "backend/ibl/ibl_predicates.py",
     "backend/ibl/api_transforms.py",
     "backend/cognition/goal_evaluator.py",
     "backend/cognition/agent_goals.py",

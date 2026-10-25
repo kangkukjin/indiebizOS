@@ -10,7 +10,6 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from test_report_repair_contracts_2026_09_08 import load
-from idiom_experiment_cases import decoded
 from ibl_honesty import truncation_evidence
 from test_distill_source_recovery_2026_09_09 import _arm, completed_call
 
@@ -68,15 +67,27 @@ def test_sample_and_preview_do_not_become_source_truncation():
 
 def test_mcp_evidence_and_evaluator_header_survive_excerpt_budget():
     from cognitive_trace import serialize_tool_trace
-    envelope = {'success': True, 'final_result': json.dumps(source()), 'results': []}
+    from ibl_v2_adapters import Adapter, load_registry, decode_envelope
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    registry = load_registry(str(ROOT))
+    contract = registry['sense:crawl'].contract
+    registry['sense:crawl'] = Adapter(contract, lambda rt, args: decode_envelope(source(), contract['adapter']))
+    envelope = Runtime(compile_program('[sense:crawl]{url:"https://fixture.test/a"}', registry)).run()
+    assert envelope['success'] is False and envelope['diagnostic']['code'] == 'PARTIAL_SOURCE'
     blocks = [{'type': 'text', 'text': json.dumps(envelope)}]
     assert truncation_evidence(blocks)['truncations'] == [CUT]
     trace = serialize_tool_trace([{'name': 'execute_ibl', 'result': json.dumps(envelope)}], total_budget=1)
     assert '[절단 증거 1건: source;' in trace
 
 
+
+def test_business_truncation_fields_do_not_become_execution_evidence():
+    assert truncation_evidence({'edition': 2, 'success': True, 'value': source()}) == {}
+
+
 def test_parallel_provenance_survives_spilled_branch_payload():
-    envelope = {'success': True, 'results': [], 'final_result': {'items': []},
+    envelope = {'success': True, 'items': [],
                 'branches_honesty': [{'step': 1, 'branches': [
                     {'branch': 2, 'markers': {'truncated': True, 'truncations': [CUT]}}]}]}
     assert truncation_evidence(envelope)['truncations'] == [CUT]

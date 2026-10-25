@@ -74,15 +74,8 @@ def _quality_of_result(rt: Any) -> tuple:
         obj = json.loads(s) if isinstance(rt, str) else rt
         if not isinstance(obj, dict):
             return None, None
-        found = [_probe(obj), *(_probe(r) for r in (obj.get("results") or []))]
-        fr = obj.get("final_result")
-        if isinstance(fr, str):
-            try:
-                fr = json.loads(fr)
-            except ValueError:
-                fr = None
-        found.append(_probe(fr))
-        found.extend(_probe(r, "verdict") for r in (obj.get("criteria_steps") or []))
+        found = [_probe(obj)]
+        found.extend(_probe(row, "verdict") for row in (obj.get("criteria_steps") or []))
         for verdict in ("unjudged", "pass_after_retry"):
             matches = [r for r in found if r and r[0] == verdict]
             if matches:

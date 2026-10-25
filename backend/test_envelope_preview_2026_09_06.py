@@ -84,14 +84,18 @@ def test_app_surface_receives_full(tmp_path, task):
     assert len(_fr(out)) == 60 and "_preview" not in out
 
 
-def test_long_prose_is_capped_and_short_prose_is_not():
-    from ibl_envelope import preview_envelope, PREVIEW_DEFAULT
-    cap = PREVIEW_DEFAULT["prose_chars"]
-    long = "가" * (cap + 500)
-    out = preview_envelope({"success": True, "final_result": long})
-    assert out["final_result"].startswith("가" * 100) and "미리보기" in out["final_result"] and out["_preview"]["total_chars"] == cap + 500
-    short = preview_envelope({"success": True, "final_result": "짧은 산문"})
-    assert short["final_result"] == "짧은 산문" and "_preview" not in short
+def test_long_prose_is_capped_and_short_prose_is_not(tmp_path, monkeypatch):
+    import model_result_view as view
+    from supervision_store import TurnStore
+    from test_ibl_check_client import packet
+    monkeypatch.setattr(view, "evidence_store", lambda: TurnStore(tmp_path))
+    cap = view.display_policy()["prose_chars"]
+    text = "가" * (cap + 500)
+    out = view.project_result(packet(text))
+    assert len(out["value"]) <= cap and out["_preview"]
+    restored = view.read_result({"id": out["result_ref"]["id"], "path": ["value"]})
+    assert restored["text"] == text
+    assert view.project_result(packet("짧은 산문"))["value"] == "짧은 산문"
 
 
 def test_policy_is_data_and_core_reads_no_file():

@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from ibl.api_transforms import _apply_sort
-from ibl.ibl_predicates import Evaluator, PredicateError
+from common.expression_ops import binary
+from common.expression_ir import Fault
 
 
 _HANDLER = (Path(__file__).resolve().parent.parent / "data" / "packages" /
@@ -55,8 +56,8 @@ def test_round45_matrix_rejects_mixed_scalar_order_across_six_surfaces(
     for op in (">", "le"):
         with pytest.raises(data_ops._wdsl._WhereError):
             data_ops._wdsl._apply_op(op, left, right)
-    with pytest.raises(PredicateError):
-        Evaluator.compare(">", left, right)
+    with pytest.raises(Fault):
+        binary(">", left, right)
 
 
 _TEXT_BOUNDARIES = [
@@ -90,7 +91,7 @@ def test_text_whitespace_order_converges_across_filter_sort_and_predicate(
     rows = [{"id": "high", "v": high}, {"id": "low", "v": low}]
     assert data_ops._sort_records(rows, "v")[0]["id"] == "low", name
     assert _apply_sort(rows, {"by": "v", "order": "desc"})[0]["id"] == "high", name
-    assert Evaluator.compare(">", high, low), name
+    assert binary(">", high, low), name
 
 
 def test_string_where_form_rejects_native_number_against_text(data_ops):

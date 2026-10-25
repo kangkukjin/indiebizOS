@@ -35,9 +35,9 @@ def main():
                       "resume": shared["v2_resume"], "remote_script_v2": shared["v2_remote_script"]}
         elif args.command == "inventory":
             from workflow_store import list_workflows
-            result = {"workflows": [{"id": w["id"], "name": w["name"], "edition": w.get("edition", 1)}
+            result = {"workflows": [{"id": w["id"], "name": w["name"], "edition": w["edition"]}
                                     for w in list_workflows()],
-                      "changed": False, "note": "판본 1 자산은 새 id로 검증 후 등록합니다. 자동 의미 변환은 하지 않습니다."}
+                      "changed": False, "note": "현행 저장 프로그램 목록입니다."}
         else:
             if not args.source:
                 parser.error("source 파일이 필요합니다.")

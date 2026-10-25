@@ -48,11 +48,6 @@ def validate_v2_contracts(data):
                         issues.append(f'{qualified}: 결합 입력 {key}에 컨테이너 타입(array/object)을 선언하세요')
                     if key not in contract.get('params', {}):
                         issues.append(f'{qualified}: 결합 입력 {key}가 callable_contract.params에 없습니다')
-            if isinstance(entry, dict) and "legacy_callable_contract" in entry:
-                try:
-                    validate_contract(entry["legacy_callable_contract"])
-                except (ValueError, TypeError) as exc:
-                    issues.append(f"{name}:{action} legacy_callable_contract: {exc}")
             if isinstance(entry, dict) and "callable_contract" in entry:
                 try:
                     validate_contract(entry["callable_contract"])
@@ -60,7 +55,7 @@ def validate_v2_contracts(data):
                     issues.append(f"{name}:{action} callable_contract: {exc}")
                 # 손으로 쓴 계약이 op 허용값을 따로 적었다면 ops 선언과 같아야 한다 — 투영(project_ops)은
                 # 선언 계약의 값을 덮지 않으므로, 어긋나면 한쪽이 조용히 이긴다(76회차 T19).
-                # 별칭 표는 한 벌 — 액션 aliases 가 판본 1 정규화와 판본 2 계약 별칭의 단일 소스다(79회차 B79-8).
+                # 별칭 표는 한 벌 — 액션 aliases 가 핸들러 인자와 실행 계약 별칭의 단일 소스다(79회차 B79-8).
                 # 투영된 계약도 판본 2 검증기를 통과해야 한다(별칭이 선언 인자를 가리키는지 등).
                 from ibl_v2_contracts import alias_projection, declared_contract
                 _, alias_problems = alias_projection(entry["callable_contract"], entry)
@@ -74,15 +69,15 @@ def validate_v2_contracts(data):
                 if declared_ops is not None and op_values and sorted(declared_ops) != sorted(op_values):
                     issues.append(f"{name}:{action} callable_contract.enums.op {sorted(declared_ops)} ≠ ops.values {sorted(op_values)}")
             if entry.get("callable_contract"):
-                # 제안 어휘 ⊆ 판본 1 허용 키(79회차 B79-8): 계약이 아는 인자를 판본 1 검사가 "미인식"이라 부르면
-                # 경고가 자기 제안과 모순된다. 계약 인자는 액션 params(→스키마)나 aliases 로 판본 1 에도 선언하라.
+                # 제안 어휘 ⊆ 핸들러 허용 키(79회차 B79-8): 계약이 아는 인자를 핸들러 검사가 "미인식"이라 부르면
+                # 경고가 자기 제안과 모순된다. 계약 인자는 액션 params(→스키마)나 aliases 로 핸들러에도 선언하라.
                 from ibl_param_vocab import vocab_outside_allowed
                 try:
                     outside = vocab_outside_allowed(name, action, entry)
                 except Exception:  # 판정 재료(tool.json) 부재 — 다른 관문이 신선도를 본다
                     outside = set()
                 if outside:
-                    issues.append(f"{name}:{action}: 계약·제안 어휘 {sorted(outside)} 가 판본 1 허용 키에 없습니다 "
+                    issues.append(f"{name}:{action}: 계약·제안 어휘 {sorted(outside)} 가 핸들러 허용 키에 없습니다 "
                                   "— 액션 params 또는 aliases 에 선언하세요")
             support = entry.get("param_support") if isinstance(entry, dict) else None
             if support is not None:
@@ -117,8 +112,6 @@ def _param_support_problems(support, entry):
     if support.get("default") and support["default"] not in table:
         problems.append(f"기본값 {support['default']} 가 values 에 없습니다")
     return problems
-
-    return issues
 
 
 def check_v2_corpus(code, entry, issues, origin, session=None):

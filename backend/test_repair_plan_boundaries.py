@@ -75,7 +75,7 @@ def test_mixed_pipeline_never_promotes_unjudged(reverse):
     ]
     if reverse:
         steps.reverse()
-    assert _quality_of_result({"results": steps}) == ("unjudged", "뒤 단계 근거 없음")
+    assert _quality_of_result({"criteria_steps": [{**row, "verdict": row["criteria_verdict"]} for row in steps]}) == ("unjudged", "뒤 단계 근거 없음")
     assert _quality_of_result({"_criteria_retried": True}) == (None, None)
     assert _quality_of_result({"final_result": json.dumps(steps)}) == (None, None)
 

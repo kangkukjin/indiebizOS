@@ -1,30 +1,10 @@
-"""ibl_envelope.py — 실행 봉투 다이어트 (2026-08-22, 프로그램급 IBL M1 / 설계 §2.5-2).
-
-`execute_pipeline` 의 봉투 `{results: [{step, result(원형 문자열)}…], final_result}` 는 모든 step
-결과를 **원형으로** 모델에게 돌려준다 — 그리고 final_result 는 마지막 step 의 사본이라 같은 내용이
-두 번 실린다. 08-21 실측: 보고서류 에피소드 하나에 IBL 47회, 그 결과 전부가 컨텍스트에 쌓였다.
-
-여기서는 **에이전트 경계**(`_execute_ibl_unified` — 인프로세스 도구·MCP 재진입·/ibl/execute 공통)
-에서 `results[]` 를 step 별 *요약*(shape·count·bytes·preview)으로 접는다. `final_result`의
-실제 반환 데이터는 원형이며, 그 값이나 병렬 반환 목록 안의 fn 실행 봉투에는
-내부 results[]에도 같은 규칙을 적용한다. 업무 items/rows 안은 순회하지 않는다.
-  - 실패 step 은 원형 오류문을 그대로 싣는다(어디서 왜 — 진단 정보는 다이어트 대상이 아님).
-  - 내부 요약 함수의 verbose 인자는 원형 보존용이다. 모델 도구의 표시 옵션이 아니다.
-  - 표면(조종실·앱·폰·웹소켓)은 이미 final_result 만 읽는다 → 무영향.
-  - 봉투에 `_results_summarized: true` 표지 — results[]가 요약임을 알린다.
-    MCP도 전달 한도 초과 시 이 요약기를 쓰며, final_result는 verbose 여부와 무관하게 보존한다.
-"""
+"""도구 원천 결과의 모양 요약과 표시 예산. 실행 값은 현행 wire가 소유한다."""
 import json
 from typing import Any, Dict
 
 PREVIEW_CHARS = 160          # message/text 미리보기 길이
 PREVIEW_ITEM_CHARS = 300     # 첫 행(JSON) 미리보기 길이
 KEYS_MAX = 12
-
-_HINT = "results는 단계 요약, 최종 값은 final_result. 원문은 result_ref를 read_result로 조회. 재실행 금지."
-
-_FN_SUMMARY_DEPTH = 8  # 함수·병렬 반환의 중첩 상한; 비정상 봉투는 더 내려가지 않는다.
-
 
 def _clamp_names(names, out: Dict[str, Any], field: str) -> list:
     """이름 목록을 KEYS_MAX 로 자르되 **잘랐다고 신고한다**(침묵 클램프 금지).
@@ -220,74 +200,10 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
     return out
 
 
-def summarize_step(entry: Any) -> Any:
-    """results[] 원소 하나 — `result` 를 요약으로 바꾼다(나머지 메타·error 는 그대로)."""
-    if not isinstance(entry, dict) or "result" not in entry:
-        return entry
-    out = {k: v for k, v in entry.items() if k != "result"}
-    out.update(summarize_result(entry.get("result")))
-    return out
 
 
-def _diet_fn_result(raw: Any, depth: int) -> Any:
-    """반환 목록을 따라 엔진 소유 fn 봉투만 접는다. 업무 객체 내부는 순회하지 않는다."""
-    if depth >= _FN_SUMMARY_DEPTH:
-        return raw
-    obj = _parse_obj(raw)
-    if isinstance(obj, list):
-        # &는 분기 반환값의 목록이다. 객체/JSON 문자열 어느 표현이든 함수 봉투만
-        # 접고 일반 값은 원형으로 둔다. 변경 없는 JSON 문자열의 공백·직렬화도 보존한다.
-        thin = [_diet_fn_result(branch, depth + 1) for branch in obj]
-        if all(after is before for before, after in zip(obj, thin)):
-            return raw
-        return json.dumps(thin, ensure_ascii=False) if isinstance(raw, str) else thin
-    if not (isinstance(obj, dict)
-            and obj.get('fn_source') in ('idiom', 'def', 'workflow')
-            and isinstance(obj.get('fn'), str)
-            and isinstance(obj.get('steps_total'), int)
-            and isinstance(obj.get('results'), list)):
-        return raw
-    thin = diet_envelope(obj, _fn_depth=depth + 1)
-    if thin is obj:
-        return raw
-    return json.dumps(thin, ensure_ascii=False) if isinstance(raw, str) else thin
 
 
-def diet_envelope(result: Any, verbose: bool = False, *, _fn_depth: int = 0) -> Any:
-    """파이프 봉투의 results[] 를 요약으로. 봉투가 아니거나 verbose 면 원형.
-
-    ★거대 필드는 꼬리로 (2026-08-28): 에피소드 로그는 봉투 직렬화의 꼬리를 절단한다.
-    종전엔 results·final_result 가 가운데 있고 정직 표지(warning·traceback·statements_failed·
-    criteria_steps·_fallback_used…)가 dict 에 나중에 붙어 **표지 전부가 절단 구간에**
-    떨어졌다 — 08-28 실측: 트레이스백 프레임·품질 판정이 로그에서 확인 불능이었다.
-    JSON 키 순서는 소비자 계약이 아니므로(파서는 이름으로 읽는다) 여기 한 이음매의
-    재배열로 모든 생산자(성공·실패·중단 봉투)의 표지가 절단 생존이 된다."""
-    if verbose or not isinstance(result, dict):
-        return result
-    if result.get("_results_summarized"):
-        return result
-    from ibl_honesty import completion_evidence
-    incomplete = completion_evidence(result)
-    if incomplete:
-        result = {**result, "incomplete_steps": incomplete}
-    results = result.get("results")
-    if not isinstance(results, list) or not results:
-        return result
-    if result.get("_results_summarized"):
-        return result
-    out = dict(result)
-    out["results"] = [summarize_step(e) for e in results]
-    if 'final_result' in out:
-        # 함수 호출도 한 step이다. 최종 값 안의 fn 봉투를 그대로 두면 내부 원문을
-        # 모델에게 다시 보내 관용구가 줄인 작성량보다 반환량이 커진다. 실행·턴 변수의
-        # 원형은 건드리지 않고 복사본의 실행 기록만 접는다. 오류·정직 표지·반환값 보존.
-        out['final_result'] = _diet_fn_result(out['final_result'], _fn_depth)
-    out["_results_summarized"] = True
-    out["_hint"] = _HINT
-    for k in ("results", "final_result"):
-        if k in out:
-            out[k] = out.pop(k)          # 재삽입 = 직렬화 순서상 맨 뒤로
-    return out
 
 
 # ── 봉투 기본값 반전 — 에이전트 경계의 미리보기 (언어 개정 2026-09-06, 사용자 승인) ──────────────
@@ -318,9 +234,7 @@ def display_delivery_budget(raw: str, default: int) -> int:
     obj = _parse_obj(raw)
     if not isinstance(obj, dict):
         return default
-    final = obj.get("final_result", obj)
-    final = _parse_obj(final) if isinstance(final, str) else final
-    display = final.get("_display") if isinstance(final, dict) else None
+    display = obj.get("_display")
     cap = display.get("max_chars") if isinstance(display, dict) else None
     if not isinstance(cap, int) or isinstance(cap, bool) or cap <= 0:
         return default
@@ -453,24 +367,10 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
 
 
 def preview_envelope(result: Any, verbose: bool = False, policy: Dict[str, Any] = None) -> Any:
-    """에이전트 경계의 봉투 미리보기. verbose 또는 dict 아님이면 원형. final_result 가 있으면 그것을, 없으면(단일
-    step 원형) 봉투 자신의 items/rows 를 미리보기로. 전체 값은 호출자가 먼저 턴 저장소에 넣어 두었다.
-    policy: {rows, min_chars, prose_chars} — 없으면 PREVIEW_DEFAULT(코어는 정책 파일을 읽지 않는다)."""
+    """도구 데이터의 표시 사본. 실행 봉투를 추측하거나 업무 필드를 벗기지 않는다."""
     if verbose or not isinstance(result, dict):
         return result
     pol = {**PREVIEW_DEFAULT, **(policy or {})}
-    if "final_result" in result:
-        fr = result.get("final_result")
-        obj = _parse_obj(fr) if isinstance(fr, str) else fr
-        ser_len = len(fr) if isinstance(fr, str) else len(json.dumps(fr, ensure_ascii=False, default=str))
-        prev = _preview_currency(obj if obj is not None else fr, pol, ser_len)
-        if prev is None:
-            return result
-        out = dict(result)
-        out["final_result"] = prev if not isinstance(fr, str) or isinstance(prev, str) \
-            else json.dumps(prev, ensure_ascii=False, default=str)
-        out["_preview"] = {"of": "final_result", "total_chars": ser_len}
-        return out
-    ser_len = len(json.dumps(result, ensure_ascii=False, default=str))
-    prev = _preview_currency(result, pol, ser_len)
-    return prev if isinstance(prev, dict) else result
+    raw = json.dumps(result, ensure_ascii=False, default=str)
+    preview = _preview_currency(result, pol, len(raw))
+    return result if preview is None else preview

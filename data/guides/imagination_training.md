@@ -87,7 +87,7 @@ run_command: curl -s -X POST http://127.0.0.1:8765/ibl/validate -H "Content-Type
   이걸로 죽었다. 문장 param 이 아니라 **body 필드**여야 each/폴백/병렬 가지까지 전파된다.
   ```
   curl -s -X POST http://127.0.0.1:8765/ibl/execute -H "Content-Type: application/json" \
-       -d '{"code": "...", "project_id": "컨텐츠", "origin": "training"}'
+       -d '{"edition": 2, "code": "...", "project_id": "컨텐츠", "origin": "training"}'
   ```
 - ★**`origin: "training"` 을 반드시 실어라** (2026-08-23 신설). **리허설은 삶이 아니다** —
   훈련은 갭을 찾으려고 *일부러* 안 되는 문장·없는 종목(`ZZZZINVALID`)·빈 손을 밟는데,

@@ -129,9 +129,9 @@ def test_input_refs_resolve_stored_values_without_copying(tmp_path, monkeypatch)
     resolved, notes = view.resolve_input_refs({
         "x": {"$ref": v2["id"]}, "y": {"$ref": legacy["id"]},
         "z": {"$ref": v2["id"], "path": ["value", "rows", 1]}, "plain": 3})
-    assert resolved == {"x": rows, "y": {"items": [{"a": 1}]}, "z": {"id": 2}, "plain": 3}
+    assert resolved == {"x": rows, "y": {"final_result": {"items": [{"a": 1}]}}, "z": {"id": 2}, "plain": 3}
     assert [n["name"] for n in notes] == ["x", "y", "z"]
-    assert notes[0]["path"] == ["value_wire"] and notes[1]["path"] == ["final_result"] and notes[2]["path"] == ["value", "rows", 1]
+    assert notes[0]["path"] == ["value_wire"] and notes[1]["path"] == [] and notes[2]["path"] == ["value", "rows", 1]
     # 참조가 없으면 손대지 않는다
     assert view.resolve_input_refs({"plain": {"k": 1}}) == ({"plain": {"k": 1}}, [])
     with pytest.raises(ValueError):

@@ -10,7 +10,7 @@ import boot_paths  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from idiom_experiment_cases import decoded
+from common.currency import coerce_json_param as decoded
 
 CATALOG = json.loads((ROOT / 'data/idioms/curated.json').read_text())
 NEW = {'미처리만고르기', '묶어순위내기', '주소마다읽기'}

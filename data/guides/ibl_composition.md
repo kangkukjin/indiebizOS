@@ -51,10 +51,9 @@ PC·Android 반환의 `failure.cause`는 원 오류, `failure.recovery`는 구�
 적용 조건을 함께 보여준다. 업무의 완료 조건은 프로그램에 명시하며 계약 조회가 대신 판정하지 않는다.
 
 관용구 반환: 목록은 그대로, Record는 계약의 필드로 읽는다.
-`final_result`·`results` 실행 봉투는 값과 분리한다. 값 조회·재전달은 `result_ref.read_args`·`input_args`,
-중간 진단은 `evidence($값).events`의 `attachments.execution_ref.read_args`를 쓴다(재실행 없음).
-`failure_origin`의 `input_shape`는 입력 필드 불일치(책임 미확정), `unknown`은 원인 미확정,
-`definition`은 확인된 정의 구문 오류다. 입력/미확정 실패는 실행 실패로 남기되 정의 실패 점수에서 제외한다.
+실행 상태는 `success`·`diagnostic`, 업무 값은 `value`, 손실 없는 값은 `value_wire`에 있다.
+값 조회·재전달은 `result_ref.read_args`·`input_args`를 사용한다. 함수 실패 위치는
+진단의 `call_path`에서 확인한다. 표시 사본을 원문으로 취급하거나 원문 조회 때문에 도구를 재실행하지 않는다.
 
 모델 도구는 현재 문법이 기본이다. 아래 저장 가능한 예제의 `#!ibl edition=2`는 실행 의미를
 고정하는 파일 헤더다. HTTP·CLI·저장 원장에서도 같은 의미로 실행한다. 원시 HTTP는 헤더 또는 요청 `edition:2`로 원문 형식을 명시한다.

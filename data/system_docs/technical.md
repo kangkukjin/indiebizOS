@@ -147,8 +147,8 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 ### IBL 실행·번역 (/ibl) — api_ibl.py
 - `POST /ibl/execute` — 문장 실행. `POST /ibl/translate`(자연어→IBL, 조종실) · `POST /ibl/validate`(dry-run: 부작용 미리보기 + `typecheck`{ok, issues, types, fn_returns} — 정적 통화 검사, 2026-09-05; `/ibl/execute` 의 `check: true` 도 같은 검사만 돌려준다) · `POST /ibl/distill`(성공 실행을 해마에 증류) · `GET /ibl/actions/catalog` · `POST /ibl/read_guide` · `POST /ibl/embed`(폰-자아 해마 인코더 렌트) · `POST /ibl/recover`(표면 티켓 회수 — 아래)
 - **요청 봉투 = 행위자 3칸 + 표면**(2026-08-21): `agent_id`(발신 신원 — 없으면 `system_ai`, 이 표면은 전부 소유자 게이트 뒤다) · `task_id`(위임 체인 — 아웃오브프로세스 재진입이 부모 태스크를 복원하는 통로) · `origin`(출처. `user`=사람의 직접 명령, 포털 경유는 `portal`. 없으면 무출처로 원장에 남는다) · `surface`(`web`=원격런처/포털/폰 WebView — "소리가 어디서 나야 하는가"의 판정 축. 데스크탑은 보내지 않는다) · `project_id`/`project_path`.
-- **응답 봉투 = 다이어트**(2026-08-22 M1): `results[]` 는 step 요약(shape·count·bytes·columns·preview, 실패 step 은 오류문 원형), `final_result` 만 원형. 옛 모양은 `verbose: true`. 실패 시 `resume:{from_step, prev_ref}` 가 실리고 `execute_ibl(code, resume)` 로 앞 단 재실행 0으로 이어붙인다.
-- **자동 스필**: 이음매 통화가 200K자를 넘으면 `data/spill/` 참조 봉투로 바뀐다(소비자 투명 해소, cache 계급 24h GC). `[self:write]{spill: true}` 는 명시적 싱크.
+- **현행 실행 계약**: 요청은 `edition:2`를 명시한다. `success`·`executed`·`diagnostic`은 실행 상태, `value`는 업무 값, `value_wire`는 손실 없는 타입 전송이다. 모델 표시 사본에서 wire가 생략되면 `result_ref`의 저장 원문을 조회한다. 검사기는 표시 미리보기를 완전한 결과로 판정하지 않는다.
+- **원문과 재개**: 실행 원장이 완료한 호출과 증거를 보존한다. 중단 후 `resume:{run_id}`와 검증된 같은 code·inputs로 이어 실행하며 완료한 외부 작업을 재실행하지 않는다. `[self:write]{spill:true}`는 도구의 명시적 파일 싱크다.
 - **현재 문법 작성 검사**: 공통 컴파일러의 `issues/guards/functions/warnings/preflight`를 MCP·직결·HTTP·CLI가 공유한다.
   진단 `location`은 함수 원문별 좌표, `call_path`는 호출 경로다. 조종실은 기존 검사 API를 사용한다.
   Hypothesis는 `backend/requirements-dev.txt`의 개발 의존성이고 런타임 번들에 넣지 않는다.

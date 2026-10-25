@@ -264,15 +264,12 @@ def cctv_search(query: str, lat: float = None, lng: float = None,
     )
 
 
-def nearby(lat: float, lng: float, radius_km: float = 5.0, count: int = 5,
-           radius: float = None) -> str:
+def nearby(lat: float, lng: float, radius_km: float = 5.0, count: int = 5) -> str:
     """주변 CCTV 검색 — 한국이면 카카오 최우선, 해외는 UTIC/ITS/Windy.
 
-    radius_km: 검색 반경(km, 표준 단위). 레거시 radius(도) 호출도 수용해 km로 환산.
+    radius_km: 검색 반경(km, 표준 단위). 모든 호출은 km 단위로 전달한다.
     """
     common = load_module("cctv_common")
-    if radius is not None:  # 레거시 도(degree) 입력 → km 환산
-        radius_km = max(0.5, float(radius) * 111.0)
     all_results = []
 
     if _is_korea(lat, lng):
@@ -476,7 +473,7 @@ def cctv_refresh() -> str:
 # ── 도구 디스패처 ──────────────────────────────────────
 
 def _nearby_source(lat: float, lng: float, radius_km: float = None,
-                   count: int = 5, source: str = "auto", radius: float = None) -> str:
+                   count: int = 5, source: str = "auto") -> str:
     """같은 주변 카메라 찾기에서 공급처만 선택한다."""
     if source == "windy":
         windy = load_module("windy_webcam")
@@ -486,7 +483,7 @@ def _nearby_source(lat: float, lng: float, radius_km: float = None,
     if source != "auto":
         return json.dumps({"success": False, "error": "source는 auto 또는 windy여야 합니다"}, ensure_ascii=False)
     return nearby(lat, lng, radius_km=5 if radius_km is None else radius_km,
-                  count=count, radius=radius)
+                  count=count)
 
 
 _OP_DISPATCHERS = {

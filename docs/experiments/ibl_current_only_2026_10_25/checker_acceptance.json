@@ -1,0 +1,219 @@
+{
+  "date": "2026-10-25",
+  "baseline": "5f2299841f0769c0b690aeb46ed3c80b70376fe6",
+  "scope": [
+    "운영 검사기와 공통 HTTP 원문 조회",
+    "현행 결과 소비자·앱·예약·평가·증류",
+    "파서/빌드 검사·의존성·배포",
+    "운영 프롬프트·장기 문서·완료된 구판 시드/실험 하네스"
+  ],
+  "retirement_ledger": "checker_retirements.json",
+  "retired_files": 43,
+  "retired_seed_scripts": 26,
+  "retained": [
+    "현행 value wire 프로토콜",
+    "현재 JSON 도구 어댑터와 행 조건 표현식",
+    "역사 원문·실적·운영 코퍼스·현재 함수",
+    "권한·실패·절단·원문 복구·재개 검사"
+  ],
+  "tests": [
+    {
+      "scope": "백엔드 전체 not system 초기 실행",
+      "passed": 10270,
+      "failed": 46,
+      "skipped": 5,
+      "log": "/tmp/current-full-tests.log"
+    },
+    {
+      "scope": "전체 not system 후속 실행",
+      "passed": 10307,
+      "failed": 5,
+      "skipped": 5,
+      "seconds": 918.88,
+      "log": "/tmp/current-full-final.log"
+    },
+    {
+      "scope": "후속 전체 회귀의 실패 5건이 속한 파일 재검증",
+      "passed": 124,
+      "failed": 0,
+      "log": "/tmp/current-full-failures-recheck.log"
+    },
+    {
+      "scope": "관련 system 실행",
+      "passed": 32,
+      "failed": 5,
+      "note": "검사 중 구현 파일 지문 변경으로 5건 실패",
+      "log": "/tmp/current-system-final.log"
+    },
+    {
+      "scope": "관련 system 실패 5건 최종 지문으로 재검증",
+      "passed": 5,
+      "failed": 0,
+      "log": "/tmp/current-system-recheck.log"
+    },
+    {
+      "scope": "앞서 발견한 결과/원문 경계 실패 파일과 검사기",
+      "passed": 250,
+      "failed": 0,
+      "log": "/tmp/current-migrated-tests2.log"
+    },
+    {
+      "scope": "최종 검사기·native List·템플릿 생산자",
+      "passed": 33,
+      "failed": 0,
+      "log": "/tmp/current-final-producer-tests.log"
+    },
+    {
+      "scope": "템플릿 생산자 전이 소비자 9개 파일",
+      "passed": 115,
+      "failed": 0,
+      "log": "/tmp/current-launcher-consumers.log"
+    },
+    {
+      "scope": "원천 절단·평가 요약 직접 소비자 5개 파일",
+      "passed": 71,
+      "failed": 0,
+      "log": "/tmp/current-trace-consumers.log"
+    },
+    {
+      "scope": "현재 호출 용례 등록기와 공통 검사기",
+      "passed": 18,
+      "failed": 0,
+      "log": "/tmp/current-last-checkers.log"
+    }
+  ],
+  "test_claim": "전체 실행 자체를 0 실패로 표기하지 않는다. 발견된 실패를 수정하고 해당 기능/소비자를 재검증했다. 최종 미해결 회귀 실패 없음.",
+  "checks": {
+    "vocabulary_build_check": true,
+    "layers": true,
+    "import_coverage": {
+      "tested": 63,
+      "platform_skips": 3,
+      "failed": 0
+    },
+    "retired_contracts": true,
+    "value_semantics": true,
+    "typescript": true,
+    "vite_build": true,
+    "android_manifest_regenerated": true
+  },
+  "live_checker_roundtrips": [
+    {
+      "checker": "returns_drift_sweep",
+      "ok": true,
+      "edition": 2,
+      "protocol": "ibl-value/1"
+    },
+    {
+      "checker": "ibl_shape_sweep",
+      "ok": true,
+      "edition": 2,
+      "protocol": "ibl-value/1"
+    },
+    {
+      "checker": "currency_items_sweep",
+      "ok": true,
+      "edition": 2,
+      "protocol": "ibl-value/1"
+    },
+    {
+      "checker": "honesty_invariants_sweep",
+      "ok": true,
+      "edition": 2,
+      "protocol": "ibl-value/1"
+    }
+  ],
+  "live_health_status": "completed",
+  "limitations": [
+    "전체 주간 스윕의 외부 API 모집단을 별도로 재실행한 것은 아님. 건강 순찰과 실제 HTTP 공통 경계 및 스윕 main 회귀를 검증함.",
+    "실제 Android/Windows 설치와 Mac 헬퍼 재배포 없음.",
+    "응답 시간·토큰 절감률 미측정.",
+    "구판 코드가 담긴 과거 사건 문서는 역사 자료로 보존."
+  ],
+  "live_health": {
+    "healthy": false,
+    "events": [
+      {
+        "node": "__static__",
+        "action": "ibl_consistency",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "currency",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "golden_pipes",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "operators",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "red_safety",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "silent_failure_regression",
+        "success": true,
+        "response_ms": 7313,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "import_coverage",
+        "response_ms": 0,
+        "success": true,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "playwright_browsers",
+        "response_ms": 0,
+        "success": true,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "red_drift",
+        "success": false,
+        "response_ms": 1173,
+        "data_quality": "isolation_bypass",
+        "error_message": "‼ 방치  .worktrees/repair-repair_db71e7e037333b7f2e3b8b1acca3ee80  527.4시간, 변경 24건 · 미적용 수리 세션 / ‼ 방치  .worktrees/repair-task_21384f1d52104ce0ab43928068ec7c73  285.5시간, 변경 26건 · 미적용 수리 세션 / ‼ 방치  .worktrees/repair-task_235"
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "ibl_health_check",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      }
+    ]
+  },
+  "remaining_warning": "red_drift: 이전 미적용 수리 worktree 경고. 해당 작업의 변경을 삭제/적용하지 않음."
+}

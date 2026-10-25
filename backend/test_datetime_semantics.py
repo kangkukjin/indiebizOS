@@ -17,7 +17,8 @@ from common.value_semantics import (ValueKind, classify_value, compare_order,
                                     datetime_value, group_identity,
                                     relation_identity, sort_records, text_match,
                                     values_equal)
-from ibl.ibl_predicates import Evaluator, PredicateError
+from common.expression_ops import binary
+from common.expression_ir import Fault
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -71,8 +72,8 @@ def test_naive_vs_aware_is_undecidable_not_fabricated():
     """시간대를 모르는 시각과 아는 시각의 순서·동등을 지어내지 않는다."""
     assert compare_order("2026-08-25T10:00", "2026-08-25T10:00Z") is None
     assert not values_equal("2026-08-25T10:00", "2026-08-25T10:00Z")
-    with pytest.raises(PredicateError):
-        Evaluator.compare(">", "2026-08-25T10:00", "2026-08-25T10:00Z")
+    with pytest.raises(Fault):
+        binary(">", "2026-08-25T10:00", "2026-08-25T10:00Z")
 
 
 def test_date_vs_other_kinds_refused():
@@ -93,8 +94,8 @@ def test_filter_gt_on_dates(data_ops):
 
 
 def test_block_predicate_dates():
-    assert Evaluator.compare(">", "2026-08-26", "2026-08-25T10:00") is True
-    assert Evaluator.compare("==", "2026-08-25T01:00Z", "2026-08-25T01:00+00:00") is True
+    assert binary(">", "2026-08-26", "2026-08-25T10:00") is True
+    assert binary("==", "2026-08-25T01:00Z", "2026-08-25T01:00+00:00") is True
 
 
 def test_compute_expression_dates():

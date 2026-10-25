@@ -1,19 +1,7 @@
-"""정직 표지(honesty marker)의 단일 소스.
+"""도구의 부분 실패·자료 범위·출처 변경 표지를 보존하는 공통 계약.
 
-부분 실패·경로 변경이 일어났다는 *사실*을 나르는 봉투 키들이다. 이 목록이 한 곳에
-없어서 표지가 **조합 경계를 건널 때마다 그 자리에서 손으로 열거**됐고, 열거에서 빠진
-키는 조용히 사라졌다 — 같은 속(屬)의 결함이 네 번 반복됐다:
-
-  · B24-1(24회차) 병렬 — 가지 '전체 실패'만 신고, 가지 *안*의 부분 실패는 침묵
-  · B27-4(27회차) 블록 몸통 — skipped_steps·condition_errors·_caught 세 키만 건졌음
-  · F35-1(35회차) 폴백 — `_fallback_used` 가 봉투 최상위에 없어 첨 가지 결과로 착각됨
-  · B48-1/2(48회차) try · 병렬 — 아래 각 수리 지점의 주석 참조
-
-저장 원문 호환 명세(`docs/compatibility/ibl_legacy_language.md` — "정직 표지를 읽어라")가
-가르치는 키와 이 목록이 어깋나면 모델은 없는 표지를 찾게 된다 — 둘은 함께 움직인다.
-
-★이 모듈은 **잎**이다(형제 모듈을 import 하지 않는다) — workflow_engine · ibl_control_blocks ·
-workflow_parallel 이 서로를 순환 참조하지 않고 같은 목록을 볼 수 있게 하려고.
+도구가 선언한 자료 진단을 표시·요약 경계에서 유지한다. IBL 실행 상태는
+현행 success/diagnostic이 소유하며 업무 값의 표지를 실행 실패로 바꾸지 않는다.
 """
 from typing import Any, Dict, Optional
 
@@ -82,7 +70,7 @@ TRUNCATED_NEXT_STEP = (
     "하류 filter/select/take는 이미 없는 원천 행을 복구하지 못한다. "
     "요청한 상위 N개 표본이면 추가 수집은 불필요하다. "
     "전달 메시지만 잘렸고 전체 결과가 변수·파일에 남아 있으면 다시 수집하지 말고 "
-    "`$이름 >> [table:select]{columns: […]} >> [table:take]{n: …}` 또는 저장 파일에서 필요한 부분을 읽어라"
+    "`자료.items >> [table:select]{columns: […]} >> [table:take]{n: …}` 또는 저장 파일에서 필요한 부분을 읽어라"
 )
 
 
@@ -348,7 +336,7 @@ def completion_evidence(env: Any) -> list:
                 if k in value:
                     row[k] = value[k]
             found.append(row)
-        for key in ("results", "result", "final_result", "row_honesty", "markers", "branches", "branches_honesty"):
+        for key in ("results", "result", "row_honesty", "markers", "branches", "branches_honesty"):
             if key in value:
                 visit(value[key], f"{path}.{key}" if path else key, depth + 1)
 
@@ -392,12 +380,20 @@ def truncation_evidence(env: Any) -> Dict[str, Any]:
             return False
         preview = preview or bool(obj.get("_preview"))
         scoped = False
+        if obj.get("edition") == 2:
+            diagnostic = obj.get("diagnostic") or {}
+            details = diagnostic.get("details") or {} if isinstance(diagnostic, dict) else {}
+            if isinstance(details, dict):
+                scoped = visit(details.get("truncation"), depth + 1) or scoped
+            for event in obj.get("evidence") or []:
+                if isinstance(event, dict) and event.get("kind") == "tool_evidence":
+                    scoped = visit(event.get("markers"), depth + 1) or scoped
         for entry in obj.get("truncations") or []:
             if not isinstance(entry, dict):
                 continue
             record(entry)
             scoped = True
-        for key in ("final_result", "result", "results", "row_honesty",
+        for key in ("result", "results", "row_honesty",
                     "branches_honesty", "branches", "markers"):
             if key in obj:
                 scoped = visit(obj[key], depth + 1) or scoped

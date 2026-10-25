@@ -19,7 +19,8 @@ import boot_paths  # noqa: F401,E402
 from common import value_semantics as values
 from common.safe_expr import as_num
 from ibl.api_transforms import _apply_sort, _match_condition, _safe_compare
-from ibl.ibl_predicates import Evaluator, PredicateError
+from common.expression_ops import binary
+from common.expression_ir import Fault
 from cognition.agent_goals import AgentGoalsMixin
 from cognition.goal_evaluator import evaluate_range, select_case_branch
 
@@ -60,7 +61,7 @@ def test_equality_matrix_is_identical_in_filter_and_block_predicate(
         where_dsl, left, right, expected):
     assert values.values_equal(left, right) is expected
     assert where_dsl._apply_op("==", left, right) is expected
-    assert Evaluator.compare("==", left, right) is expected
+    assert binary("==", left, right) is expected
 
 
 @pytest.mark.parametrize("left,right,order", [
@@ -75,7 +76,7 @@ def test_order_matrix_is_shared_by_all_comparable_consumers(
     assert values.compare_order(left, right) is order
     expected_ge = order in (_GREATER, _EQUAL)
     assert where_dsl._apply_op(">=", left, right) is expected_ge
-    assert Evaluator.compare(">=", left, right) is expected_ge
+    assert binary(">=", left, right) is expected_ge
     assert _safe_compare(left, right, ">=") is expected_ge
 
 
@@ -92,8 +93,8 @@ def test_undefined_order_is_preserved_until_each_surface_translates_it(
     assert _safe_compare(left, right, "<=") is False
     with pytest.raises(where_dsl._WhereError):
         where_dsl._apply_op("<=", left, right)
-    with pytest.raises(PredicateError):
-        Evaluator.compare("<=", left, right)
+    with pytest.raises(Fault):
+        binary("<=", left, right)
 
 
 def test_null_order_is_no_match_not_an_error_in_filter(where_dsl):
@@ -101,8 +102,8 @@ def test_null_order_is_no_match_not_an_error_in_filter(where_dsl):
     assert values.compare_order(None, 1) is None
     assert where_dsl._apply_op("<=", None, 1) is False
     assert _safe_compare(None, 1, "<=") is False
-    with pytest.raises(PredicateError):
-        Evaluator.compare("<=", None, 1)
+    with pytest.raises(Fault):
+        binary("<=", None, 1)
 
 
 def test_numeric_observation_preserves_precision_and_rejects_nonfinite():
@@ -135,7 +136,7 @@ def test_malformed_numeric_text_is_not_silently_repaired(where_dsl, text):
     assert values.numeric_value(text) is None
     assert as_num(text) is None
     assert where_dsl._apply_op("==", text, 1000) is False
-    assert Evaluator.compare("==", text, 1000) is False
+    assert binary("==", text, 1000) is False
     assert _match_condition({"v": text}, {"field": "v", "eq": 1000}) is False
 
 
@@ -146,7 +147,7 @@ def test_answer_punctuation_policy_is_shared_by_all_equality_consumers(
         where_dsl, left, right):
     assert values.values_equal(left, right) is True
     assert where_dsl._apply_op("==", left, right) is True
-    assert Evaluator.compare("==", left, right) is True
+    assert binary("==", left, right) is True
     assert _match_condition({"v": left}, {"field": "v", "eq": right}) is True
     if not isinstance(left, bool):
         assert _scalar_sort_key(left) == _scalar_sort_key(right)
@@ -163,7 +164,7 @@ def test_answer_punctuation_policy_is_shared_by_all_equality_consumers(
 def test_structures_compose_scalar_equality_recursively(where_dsl, left, right, expected):
     assert values.values_equal(left, right) is expected
     assert where_dsl._apply_op("==", left, right) is expected
-    assert Evaluator.compare("==", left, right) is expected
+    assert binary("==", left, right) is expected
 
 
 def test_generated_algebra_contract_over_value_shapes():
@@ -224,7 +225,7 @@ def test_response_numeric_sort_keeps_unobserved_values_last(order, expected):
 
 def test_consumer_modules_cannot_reintroduce_local_scalar_policy(where_dsl):
     consumers = [
-        _ROOT / "backend/ibl/ibl_predicates.py",
+        _ROOT / "backend/common/expression_ops.py",
         _ROOT / "backend/ibl/api_transforms.py",
         _ROOT / "backend/cognition/agent_goals.py",
         _ROOT / "backend/cognition/goal_evaluator.py",
@@ -244,8 +245,6 @@ def test_consumer_modules_cannot_reintroduce_local_scalar_policy(where_dsl):
     # 호환용 옛 이름은 허용하되 몸통은 공통 엔진 위임뿐이어야 한다.
     assert "values_equal" in inspect.getsource(where_dsl._num_eq)
     assert "compare_order" in inspect.getsource(where_dsl._num_cmp)
-    from ibl import ibl_predicates as predicates
-    assert "numeric_value" in inspect.getsource(predicates._num)
     from common import safe_expr
     assert "numeric_value" in inspect.getsource(safe_expr.as_num)
 

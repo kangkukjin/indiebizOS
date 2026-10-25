@@ -7,7 +7,6 @@ import boot_paths  # noqa: F401
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from ibl_boundary_cases import literal as q
 from test_report_repair_contracts_2026_09_08 import load
 from test_names_first_recall_2026_09_05 import env, _add  # noqa: F401
 
@@ -17,9 +16,9 @@ from test_names_first_recall_2026_09_05 import env, _add  # noqa: F401
 
 
 def test_user_object_value_is_not_an_assignment_envelope():
-    from common.currency import value_result_payload
+    from common.currency import coerce_json_param
     obj = {'value': [1], 'assigned': 'user', 'success': True}
-    assert value_result_payload(obj) == (False, obj)
+    assert coerce_json_param(obj) == obj
 
 
 

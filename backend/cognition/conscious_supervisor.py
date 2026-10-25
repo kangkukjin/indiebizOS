@@ -1139,7 +1139,7 @@ def _find_checkpoint(value):
     if isinstance(value, dict):
         if isinstance(value.get("supervision_checkpoint"), dict):
             return value["supervision_checkpoint"]
-        for key in ("final_result", "result"):
+        for key in ("value",):
             found = _find_checkpoint(value.get(key))
             if found:
                 return found

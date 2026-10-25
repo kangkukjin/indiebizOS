@@ -270,8 +270,7 @@ def test_http_failure_closes_episode_and_task(tmp_path, monkeypatch, isolated):
         assert '작업이 중단되었습니다' in messages[1][0] and '시험 실패' in messages[1][0]
 
 
-@pytest.mark.parametrize('pipeline', [False, True])
-def test_auxiliary_rows_are_not_repeated_and_raw_is_recoverable(tmp_path, monkeypatch, pipeline):
+def test_auxiliary_rows_are_not_repeated_and_raw_is_recoverable(tmp_path, monkeypatch):
     import model_result_view as view
     store = TurnStore(tmp_path)
     monkeypatch.setattr(view, 'evidence_store', lambda: store)
@@ -279,19 +278,23 @@ def test_auxiliary_rows_are_not_repeated_and_raw_is_recoverable(tmp_path, monkey
     value = {'success': True, 'data': raw_data, 'count': 756,
              'items': [{'year': i, 'rate': i / 10} for i in range(14)],
              'warning': '다른 조사 계열과 비교 금지'}
-    raw = {'success': True, 'final_result': json.dumps(value),
-           'results': [{'step': 1, 'result': json.dumps(value)}]} if pipeline else value
+    from test_ibl_check_client import packet
+    raw = packet(value)
     before = json.dumps(raw)
     out = view.project_result(raw)
-    final = out['final_result'] if pipeline else out
+    final = out['value']
     final = json.loads(final) if isinstance(final, str) else final
-    assert len(json.dumps(out, ensure_ascii=False)) < 6000
-    assert final['_model_omitted']['data']['count'] == 756
+    # 값 표시 예산과 원문 참조 메타데이터를 포함한 사본은 전송 단계에서 최종 제한한다.
+    from ibl_result_transport import fit_tool_result
+    delivery = fit_tool_result(json.dumps(out, ensure_ascii=False), 16000)
+    assert len(delivery) <= 16000
+    assert json.loads(delivery)["result_ref"]["id"] == out["result_ref"]["id"]
+    assert out.get('_preview') and len(json.dumps(final['data'], ensure_ascii=False)) < len(json.dumps(raw_data, ensure_ascii=False))
     assert final['warning'] == value['warning'] and len(raw_data) == 756
     assert json.dumps(raw) == before
     ref = out['result_ref']['id']
     assert json.loads(store.read_evidence(ref, limit=None)['text']) == raw
-    path = ['final_result', 'items'] if pipeline else ['items']
+    path = ['value', 'items']
     page = view.read_result({'id': ref, 'path': path, 'limit': 200})
     text = page['text']
     while page['next_offset'] is not None:

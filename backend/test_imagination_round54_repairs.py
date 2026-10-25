@@ -270,7 +270,7 @@ def actions_cm(tmp_path, monkeypatch):
 def test_B54_3_deliver_result_to_chat_exists_and_reports_both_outcomes(actions_cm):
     cm = actions_cm
     task = {"title": "5초 뒤 시세", "owner_project_id": "투자", "owner_agent_id": ""}
-    ok = cm._deliver_result_to_chat(task, "", "[sense:stock]{}", {"success": True, "final_result": {"items": [1, 2]}})
+    ok = cm._deliver_result_to_chat(task, "", "[sense:stock]{}", {"edition": 2, "success": True, "value": {"items": [{"n": 1}, {"n": 2}]}})
     assert ok["delivered"] is True
     bad = cm._deliver_result_to_chat(task, "", "[sense:stock]{}", {"success": False, "error": "ZZZZ 종목 없음"})
     assert bad["delivered"] is True

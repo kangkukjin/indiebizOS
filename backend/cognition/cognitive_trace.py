@@ -86,30 +86,12 @@ def _merge_keywords(existing: str, new: str) -> str:
 
 
 def _unwrap_payload(obj: Any, depth: int = 0) -> Any:
-    """IBL 결과 envelope({"success":..,"results":[..]})을 재귀적으로 벗겨 페이로드만 남긴다.
-
-    병렬 실행 결과는 results[].result 안에 branch별 JSON이 문자열로 재포장돼
-    있어 한 겹으로는 안 벗겨진다 — 문자열이 JSON이면 파싱해 계속 내려간다."""
-    if depth > 6:
-        return obj
+    """전송 JSON만 해독한다. 실행 상태와 업무 객체의 필드는 원형으로 둔다."""
     if isinstance(obj, str):
-        s = obj.strip()
-        if s[:1] in "[{":
-            try:
-                return _unwrap_payload(json.loads(s), depth + 1)
-            except Exception:
-                return obj
-        return obj
-    if isinstance(obj, dict):
-        # 봉투 다이어트(2026-08-22 M1) 뒤엔 results[] 가 요약이라 증거는 final_result 에만 있다.
-        if obj.get("_results_summarized") and obj.get("final_result"):
-            return _unwrap_payload(obj["final_result"], depth + 1)
-        for k in ("results", "result"):
-            if obj.get(k):
-                return _unwrap_payload(obj[k], depth + 1)
-        return obj
-    if isinstance(obj, list):
-        return [_unwrap_payload(x, depth + 1) for x in obj]
+        try:
+            obj = json.loads(obj)
+        except (ValueError, TypeError):
+            return obj
     return obj
 
 

@@ -758,7 +758,7 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                         "[self:memory]{op: \\\"recall\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 정의를 열어 "
                         "명시 인자·return을 가진 [def:이름]($인자){…}로 새 정의를 검사한다. 과거 본문은 그대로 붙여 넣지 않는다. "
                         "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 "
-                        "step 요약만 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
+                        "실행 증거 요약을 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
                         + "\n".join(lines) + "\n</ibl_idioms>")
     except Exception as e:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")

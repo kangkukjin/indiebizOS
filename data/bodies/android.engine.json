@@ -284,15 +284,12 @@
     "ibl/ibl_envelope",
     "ibl/ibl_exec_goal",
     "ibl/ibl_exec_output",
-    "ibl/ibl_exec_sense",
     "ibl/ibl_executors",
     "ibl/ibl_file_script",
-    "ibl/ibl_function_result",
     "ibl/ibl_honesty",
     "ibl/ibl_member_library",
     "ibl/ibl_ops",
     "ibl/ibl_param_vocab",
-    "ibl/ibl_predicates",
     "ibl/ibl_progress",
     "ibl/ibl_quality",
     "ibl/ibl_remote_call",
@@ -556,8 +553,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 545,
-    "engine": 513,
+    "total": 542,
+    "engine": 510,
     "blocklist": 32
   }
 }

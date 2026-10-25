@@ -18,8 +18,8 @@ def execute_scheduled(steps, run_path, agent_id, edition=None, inputs=None, func
                                      **({"function_refs": function_refs} if function_refs is not None else {})},
                                      run_path, agent_id=agent_id)
             # 비동기 접수와 실제 작업 완료를 구분한다(파이프라인 성공=호출 성공).
-            values = [result.get("value"), result.get("final_result")]
-            values += [r.get("result") for r in result.get("results", [])]
+            value = result.get("value")
+            values = value if isinstance(value, list) else [value]
             queued_tasks = []
             for value in values:
                 if isinstance(value, str):

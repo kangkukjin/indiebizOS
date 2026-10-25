@@ -214,7 +214,7 @@ def _partial_message(raw, truncation):
         message += " 원천이 절단 사유를 밝히지 않았습니다. 범위 인자(offset·limit 등)가 있으면 나눠 읽으세요 — 인자는 describe 로 확인합니다."
     return message
 
-# 판본 1 도구의 평문 실패 규약(`return f"Error: …"`)은 legacy-envelope 프로토콜의 성질이다 — 도구별
+# 도구 어댑터의 평문 실패 규약(`return f"Error: …"`)은 legacy-envelope 프로토콜의 성질이다 — 도구별
 # 선언으로 전개하면 선언을 잊은 도구의 파일 부재·권한 실패가 ADAPTER_SHAPE(봉투 파손)로 오분류된다
 # (74회차 B74-5, 56회차 B56-3 과 같은 속). 선언된 text_error_prefixes 는 이 위에 더해진다.
 _LEGACY_TEXT_ERROR_PREFIXES = ("Error:",)

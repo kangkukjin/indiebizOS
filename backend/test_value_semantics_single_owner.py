@@ -7,14 +7,11 @@ from pathlib import Path
 import pytest
 
 from common import value_semantics as semantics
-from ibl import ibl_predicates
-from ibl.ibl_predicates import Evaluator, PredicateError
 
 
 _ROOT = Path(__file__).resolve().parent.parent
 _HANDLER = _ROOT / "data/packages/installed/tools/data-ops/handler.py"
 _WHERE = _ROOT / "data/packages/installed/tools/data-ops/where_dsl.py"
-_PREDICATES = _ROOT / "backend/ibl/ibl_predicates.py"
 _GROUP_KEYS = _ROOT / "data/packages/installed/tools/data-ops/group_keys.py"
 
 
@@ -44,8 +41,6 @@ def test_condition_equality_has_one_answer_on_every_surface(data_ops, left, righ
     assert semantics.values_equal(left, right)
     assert semantics.values_equal(right, left), "동등성은 대칭이어야 한다"
     assert data_ops._num_eq(left, right)
-    assert Evaluator.compare("==", left, right)
-    assert not Evaluator.compare("!=", left, right)
     order = semantics.compare_order(left, right)
     if order is not None:
         assert order is semantics.OrderResult.EQUAL
@@ -82,7 +77,6 @@ def test_text_order_and_sort_share_the_same_normalized_order(data_ops):
     for low, high in zip(_TEXT_ORDERABLE, _TEXT_ORDERABLE[1:]):
         assert semantics.compare_order(low, high) < 0
         assert data_ops._num_cmp(low, high) < 0
-        assert Evaluator.compare("<", low, high)
 
 
 @pytest.mark.parametrize("left,right", [
@@ -96,8 +90,6 @@ def test_undefined_order_is_never_fabricated_by_an_adapter(data_ops, left, right
     assert semantics.compare_order(left, right) is None
     with pytest.raises(data_ops._wdsl._WhereError):
         data_ops._num_cmp(left, right)
-    with pytest.raises(PredicateError):
-        Evaluator.compare(">", left, right)
 
 
 def test_group_relation_and_numeric_observation_are_common_exports(data_ops):
@@ -114,15 +106,10 @@ def test_adapters_only_translate_common_results(monkeypatch, data_ops):
     marker = object()
     monkeypatch.setattr(data_ops._wdsl, "values_equal", lambda _a, _b: marker)
     assert data_ops._num_eq("a", "b") is marker
-    monkeypatch.setattr(ibl_predicates, "values_equal", lambda _a, _b: True)
-    assert Evaluator.compare("==", "a", "b") is True
 
     monkeypatch.setattr(data_ops._wdsl, "compare_order",
                         lambda _a, _b: semantics.OrderResult.GREATER)
     assert data_ops._num_cmp("a", "b") == 1
-    monkeypatch.setattr(ibl_predicates, "compare_order",
-                        lambda _a, _b: semantics.OrderResult.LESS)
-    assert Evaluator.compare("<", "a", "b") is True
 
 
 def test_no_consumer_can_reintroduce_private_value_policy():
@@ -131,7 +118,7 @@ def test_no_consumer_can_reintroduce_private_value_policy():
         "_relation_scalar_identity", "_numeric_observations",
     }
     handler_path = _ROOT / "data/packages/installed/tools/data-ops/handler.py"
-    for path in (_WHERE, _PREDICATES, _GROUP_KEYS, handler_path):
+    for path in (_WHERE, _GROUP_KEYS, handler_path):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         local_defs = {node.name for node in ast.walk(tree)
                       if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}

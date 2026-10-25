@@ -40,9 +40,9 @@ python scripts/consciousness_schema_check.py   # 의식 출력 스키마 이름 
 `ibl_health_check.py`가 **`data/ibl_fixtures.json`**("올바른 파라미터 예 하나" — 단일 진실 소스)을 읽어 items/scalar 액션을 라이브 호출하고 산출 스키마를 단언한다. fixture 완전성은 `--check`가 강제하므로(items/scalar 액션은 fixture 또는 exempt 필수) **신규 액션이 검사망을 빠져나갈 수 없다**(effect=실행 불가 면제, transform=§1C 골든).
 
 **두 축**(2026-08-05 감사 ⑤): 액션 축(액션당 대표 예 하나)에 더해 **op 축**이 있다 — 키가 `node:action#op` 인 항목은 같은 액션 안의 다른 읽기 op 이다. 액션 fixture 하나로는 op 하나만 증명되므로(실측: 읽기 op 133개 중 37개만 닿았다), 읽기 op 전수를 `ops.fixture`/`ops.exempt` 로 덮게 `--check` 가 강제한다. **쓰기 op 에는 fixture 를 달 수 없다** — 무인 일일 루프가 매일 그 부작용을 실행하게 되기 때문이다. 판정:
-- **GREEN**: 실행에 성공한 원형 업무 값에 `items`가 비어있지 않은 dict 리스트(title 불요 — 열린 항목).
+- **GREEN**: 실행에 성공한 원형 업무 값이 비어있지 않은 Record 목록 또는 Record.items 목록(title 불요 — 열린 항목).
 - **YELLOW**: empty(데이터 의존)·실행 중 도구 실패·통화 없는 스칼라 응답·identity 등 환경 의존. *구조 결함 아님*.
-- **RED**: 컴파일·전송·원형 조회 실패, items 선언인데 문자열 반환 또는 목록은 있는데 items 미부착. GREEN이 하나도 없으면 통화 건강을 통과시키지 않는다.
+- **RED**: 컴파일·전송·원형 조회 실패, items 선언인데 List/Record.items가 아니거나 행이 Record가 아님. GREEN이 하나도 없으면 통화 건강을 통과시키지 않는다.
 
 수동 점검도 같은 검사기를 사용한다. 조종실의 시스템 상태 재검사 또는
 `POST /world-pulse/ibl-health-check`는 결과를 실제 `self_checks` 이력으로 갱신한다.
@@ -80,10 +80,10 @@ World Bank 차트는 조회 연도 범위를 명시해 기본 페이지 제한�
 | 증상 | 진단 | 처리 |
 |---|---|---|
 | `--check` 빨강(삼각 불일치) | src/tool.json/handler 키 어긋남 | 셋 **모두** 동기화 후 재빌드 (예: travel `poi` 폐기 시 enum·dispatcher·yaml 동시 제거) |
-| 목록 내는데 items 없음(RED) | 핸들러가 items 미방출 | 핸들러가 `items`를 **직접 방출**(native dict 그대로). 옛 키(records/table/blocks/data)를 내고 있으면 `items`로 rename(카드 shape면 키만, 표면 행 dict로). app `from:`도 같이 items로 flip |
-| `returns:items` 인데 비-items 키 방출 | 옛 통화 잔재 | records→items 순수 rename / table→items 행dict(`[{col:val}]`, 첫 키=x축) / document blocks→items(type+text) / native 키→items pop. **소비자가 view 재구성**하므로 생산자는 items만 |
+| items 선언과 실제 값 불일치(RED) | 반환 계약·어댑터 경로 확인 | native List<Record> 또는 선언한 Record.items를 확인한다. 검사기·생산자 중 실제 계약과 다른 쪽을 고치며 임의 포장을 추가하지 않는다. |
+| items 행이 문자열·숫자(RED) | 선언한 행 구조 불일치 | 의미 있는 열 이름의 Record로 생산하거나 실제 값에 맞는 반환 선언을 검토한다. 업무 의미를 숨기는 임의 변환을 검사기에 넣지 않는다. |
 | 과적 legacy items(raw+카드 동시 방출) | items-우선 소비자가 raw를 통화로 오독 | legacy raw items 제거, 카드/통화 shape만 items로. `grep '"items"' tool_*.py`로 점검(§7.5 photo·naver 선례) |
-| 침묵 빈결과 / 스키마 깨짐 | `_evaluate_result`가 못 잡음(error 키만 봄) | §1B 하니스(`ibl_health_check`)가 RED로 잡음 → 핸들러 수정 |
+| 빈 조회 / 스키마 깨짐 | 빈 items는 정상 값, 필수 모양 누락은 계약 위반 | 공통 HTTP 원형 조회 후 returns 선언과 대조 |
 | 핸들러 수정이 안 먹음(op 액션) | 동명 **레거시 도구** 분기를 고침 | 실제 `_<tool>_op` 디스패처 분기를 고쳐라 (예: collect는 `wc_query` 아니라 `_collect_op` query) |
 | 싱글턴 핸들러 reload 무시 | `tool_radio` 등 모듈 싱글턴 | `touch backend/api.py` (dev 재기동) |
 | bespoke 렌더러(STATIC escape) 빈 화면 | app `from:` 밖의 React/HTML이 옛 키 직독 | 그 소비자도 따로 flip(예: cctv `DirectionsInstrument.tsx` `r.cctvs`→`r.items`) |
@@ -109,15 +109,18 @@ World Bank 차트는 조회 연도 범위를 명시해 기본 페이지 제한�
 
 ---
 
-## 5. 자동화 로드맵 (매뉴얼 → 하니스)
+## 5. 검사기 계약
 
-1. ~~**키스톤**: src yaml 각 액션에 `returns:` 추가~~ ✅ **완료(2026-06-26)**.
-2. ~~**단일 통화(items) 이행**~~ ✅ **완료(2026-06-27, Phase 1~3h)**. records/table/document/currency 전부 items로 흡수, `_RETURNS_ENUM={items,transform,scalar,effect}`, 소비자가 view 재구성. `ibl_health_check.py §1B` 가 returns:items 대비 단언(GREEN 50/Y2/R0).
-3. ~~**통화 계약 하니스**: 안전 액션 직접 호출 → `returns` 대비 스키마 단언 + 골든 파이프~~ ✅ **존재(`ibl_health_check.py` §1B+§1C)**. 수동 실행. (compress 액션은 이행 중 대부분 은퇴.)
-6. ~~**폴링·AI 은퇴 + fixture 단일화**~~ ✅ **완료(2026-06-27, 10차)**. 전수 sweep(`run_self_check`)·AI 테스트계획(`generate_test_plan`)·매일 AI 턴(`trigger_ai_health_check`) 전부 삭제. 일일 경로 = `run_daily_health_check`(= `ibl_health_check.py` 1회 + RED 면 알림, AI 0). fixture 는 `data/ibl_fixtures.json` 단일 소스로 분리, `--check`가 items/scalar 완전성 강제. 어휘 생성/삭제 가이드(`new_action_checklist.md` 2.5단계 · `action_removal.md`)에 fixture 단계 합류.
+일일 건강 검사와 주간 반환·모양·정직성 검사는 `scripts/ibl_check_client.py`의
+현행 HTTP 호출·원형 조회를 공유한다. 요청은 edition:2, 자가점검 신원과 부모 실행
+자격을 사용한다. 성공 결과는 wire를 해독하고, 실패는 값 검사와 별도로 기록한다.
 
-4. ~~**배치(자동 카덴스)**~~ ✅ **완료(2026-06-27, 9차)**. `run_self_check`(world_pulse_health.py)가 사이클 끝에서 **`run_ibl_currency_check()`** 로 `scripts/ibl_health_check.py` 를 subprocess 호출 → §1B 통화 + §1C 골든 결과를 `self_checks`(node=`__ibl_health__`, action=`currency`/`golden_pipes`)에 기록 → x-ray 노출. 카덴스=`world_pulse_config.self_check.interval_hours`(**24h=하루 1회**). RED 통화 결함이 하루 1회 자동 감지. **★중요 교훈: 통화 단언은 liveness sweep에 얹으면 안 됨** — sweep의 최소 test_params(예: world_bank에 indicator 없이 query)는 통화-유효하지 않아 false-positive 투성이. 통화 검사는 *curated 좋은 params + 렌더러 경로*가 필요 → 단일 소스 `ibl_health_check.py`(probe 목록 1곳)를 그대로 호출(§2 거버넌스: probe 중복 0). 액션 liveness(sweep)와 통화 정합성(ibl_health_check)은 *다른 params·다른 경로*라 같은 sweep으로 못 합침.
-5. **검증(회귀 가드 작동 증명)**: 일부러 items 미방출하는 액션을 만들어 §1B가 RED로 잡는지 확인. (남은 옵션 과제.)
+`returns:items`는 native List<Record> 또는 Record.items의 Record 목록을 요구한다. table·blocks 같은 부가
+필드가 있어도 items 부재를 정상으로 바꾸지 않는다. 성공한 빈 목록·null은 실패가
+아니며 `??`를 작동시키지 않는다. 병렬 가지 실패는 진단과 함께 실행 실패로 남는다.
+
+검사기의 회귀는 실제 Runtime 결과와 실제 모델 표시/원문 조회 경계를 사용한다.
+원문 누락·페이지 단절·컴파일 실패·검사 0건을 정상으로 인증하지 않는다.
 
 ---
 

@@ -698,16 +698,9 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                                 import json
                                 _res_data = json.loads(_res)
                                 if isinstance(_res_data, dict):
-                                    # 1) 단일 step 결과인 경우
-                                    if _res_data.get("_ibl_user_action") == "todo_write":
-                                        _ibl_todos = _res_data.get("todos", [])
-                                    # 2) 파이프라인 결과인 경우 (final_result 확인)
-                                    elif "final_result" in _res_data:
-                                        _final = _res_data["final_result"]
-                                        if isinstance(_final, str) and _final.startswith("{"):
-                                            _final_data = json.loads(_final)
-                                            if isinstance(_final_data, dict) and _final_data.get("_ibl_user_action") == "todo_write":
-                                                _ibl_todos = _final_data.get("todos", [])
+                                    _value = _res_data.get("value") if _res_data.get("success") is True else None
+                                    if isinstance(_value, dict) and _value.get("_ibl_user_action") == "todo_write":
+                                        _ibl_todos = _value.get("todos", [])
                             except:
                                 pass
 
@@ -1075,16 +1068,9 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                                 import json
                                 _res_data = json.loads(_res)
                                 if isinstance(_res_data, dict):
-                                    # 1) 단일 step 결과인 경우
-                                    if _res_data.get("_ibl_user_action") == "todo_write":
-                                        _ibl_todos = _res_data.get("todos", [])
-                                    # 2) 파이프라인 결과인 경우 (final_result 확인)
-                                    elif "final_result" in _res_data:
-                                        _final = _res_data["final_result"]
-                                        if isinstance(_final, str) and _final.startswith("{"):
-                                            _final_data = json.loads(_final)
-                                            if isinstance(_final_data, dict) and _final_data.get("_ibl_user_action") == "todo_write":
-                                                _ibl_todos = _final_data.get("todos", [])
+                                    _value = _res_data.get("value") if _res_data.get("success") is True else None
+                                    if isinstance(_value, dict) and _value.get("_ibl_user_action") == "todo_write":
+                                        _ibl_todos = _value.get("todos", [])
                             except:
                                 pass
 

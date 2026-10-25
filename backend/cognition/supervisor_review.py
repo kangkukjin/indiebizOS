@@ -217,7 +217,7 @@ def missing_read_observation(name, payload, result):
             return [e for item in value for e in errors(item)]
         if isinstance(value, dict):
             found = [str(value["error"])] if value.get("error") else []
-            for key in ("results", "result", "final_result", "branches"):
+            for key in ("results", "result", "branches"):
                 if key in value:
                     found.extend(errors(value[key]))
             return found

@@ -139,9 +139,8 @@ def test_oversized_final_stays_recoverable_json(tmp_path, monkeypatch, success):
 
     monkeypatch.setattr(spill, "spill_dir", lambda: str(tmp_path))
     final = {"items": [{"id": 7, "body": "큰 값" * 20000}], "count": 1}
-    env = {"success": success, "steps_total": 2,
-           "results": [{"step": 1, "result": "중간 값" * 5000}],
-           "final_result": json.dumps(final, ensure_ascii=False)}
+    from test_ibl_check_client import packet
+    env = {**packet(final), "success": success}
     if not success:
         env.update(error="실패 상세" * 10000, resume={"from_step": 2, "vars_ref": "/tmp/live.json"})
     raw = json.dumps(env, ensure_ascii=False)
@@ -151,7 +150,7 @@ def test_oversized_final_stays_recoverable_json(tmp_path, monkeypatch, success):
     assert out["success"] is success and out["_spilled"] and out["_trimmed"]
     saved, error = spill.read_ref(out["ref"])
     assert error is None and json.loads(saved) == env
-    assert out["final_result_summary"]["count"] == 1
+    assert out["value_summary"]["count"] == 1
 
 
 # ---------------------------------------------------------------- B4 도구 집합
@@ -253,20 +252,23 @@ def test_transport_condensation_retains_original_reference_and_nested_failures(t
     monkeypatch.setattr(spill, "_root", lambda: str(tmp_path))
     rows = [{"text": "보고서" * 300} for _ in range(50)]
     inner = {"items": rows, "error_count": 3, "rows_unprocessed": 2, "halted": True}
-    env = {"success": True, "final_result": json.dumps(inner, ensure_ascii=False),
+    env = {"edition": 2, "success": False, "executed": True,
+           "diagnostic": {"code": "SOURCE_INCOMPLETE", "has_partial": True, "partial": inner},
            "result_ref": {"id": "execution-original"}}
     raw = json.dumps(env, ensure_ascii=False)
     out = json.loads(fit_tool_result(raw, 16000))
     assert out["result_ref"] == env["result_ref"]
-    shown = json.loads(out["final_result"])
+    shown = out["diagnostic"]["partial"]
     assert shown["error_count"] == 3 and shown["rows_unprocessed"] == 2 and shown["halted"]
     assert shown["_omitted_items"] > 0
     assert spill.read_ref(out["transport_ref"])[0] == raw
-    # 행 축소로도 안 맞는 중첩 병렬 산문: 미완료 증거는 참조 봉투에서도 보인다.
-    env["final_result"] = json.dumps([{"items": [{"text": "큰 산문" * 20000}],
-                                       "error_count": 3, "rows_unprocessed": 2}], ensure_ascii=False)
+    # 행 축소로도 안 맞는 산문: 신판 진단의 미완료 증거는 참조 봉투에서도 보인다.
+    env["diagnostic"]["partial"] = {"items": [{"text": "큰 산문" * 20000}],
+                                     "error_count": 3, "rows_unprocessed": 2}
     out = json.loads(fit_tool_result(json.dumps(env, ensure_ascii=False), 16000))
-    assert out["completion_issues"][0]["error_count"] == 3
+    assert out["success"] is False and out["executed"] is True
+    assert out["diagnostic"]["code"] == "SOURCE_INCOMPLETE"
+    assert out["diagnostic"]["partial"]["error_count"] == 3
 
 
 def test_plain_text_overflow_is_recoverable_and_body_action_count_is_not_metadata(tmp_path, monkeypatch):

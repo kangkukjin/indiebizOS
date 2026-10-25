@@ -119,23 +119,6 @@ def test_mcp_episode_usage_updates_parent_summary_and_restores_context(monkeypat
 
 
 
-@pytest.mark.parametrize("verbose", [False, True])
-def test_intermediate_partial_failure_survives_projection_and_alerts_supervisor(verbose):
-    from ibl_envelope import diet_envelope
-    from ibl_honesty import completion_evidence
-    from conscious_supervisor import _failed
-    inner = {"success": True, "items": [{"ok": True}], "rows_requested": 5,
-             "rows_processed": 4, "ok_count": 3, "error_count": 1, "rows_unprocessed": 1}
-    envelope = {"success": True, "results": [{"step": 1, "result": json.dumps(inner)}],
-                "final_result": {"success": True, "items": [{"done": True}]}}
-    compact = diet_envelope(envelope, verbose=verbose)
-    evidence = completion_evidence(compact)
-    assert evidence[0]["error_count"] == 1
-    assert evidence[0]["rows_unprocessed"] == 1
-    if not verbose:
-        assert compact["incomplete_steps"]
-    assert _failed(json.dumps(compact))
-    assert not _failed({"success": True, "items": [{"error_count": 10, "error": "user data"}]})
 
 
 def test_oneshots_overlap_with_isolated_prompts_buffers_and_metrics(monkeypatch):

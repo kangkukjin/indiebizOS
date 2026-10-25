@@ -92,19 +92,20 @@ def test_validator_requires_edition_2_only():
     none = av._validate_app_block("t", _block('[sense:search]{query: $q}'), QUALIFIED)
     assert any("edition: 2 선언 필수" in i for i in none), none
     legacy = av._validate_app_block("t", _block('[sense:search]{query: "$q"}', edition=1), QUALIFIED)
-    assert any("은퇴" in i for i in legacy), legacy
+    assert any("2 만 유효" in i for i in legacy), legacy
     inherited = av._validate_app_block("t", _block('[sense:search]{query: $q}'), QUALIFIED, {"edition": 2})
     assert inherited == [], inherited
 
 
-def test_validator_edition2_rejects_legacy_syntax_and_allows_item():
+def test_validator_uses_current_parser_and_preserves_literal_strings():
     av = _appview()
     row = av._validate_app_block("t", _block('[sense:search]{query: "{title}"}', edition=2), QUALIFIED)
-    assert any("$item" in i for i in row), row
+    assert row == []  # 일반 문자열은 문자 그대로의 값이다.
+    assert av._template_input_names('return "$literal {field}"') == set()
     hub = av._validate_app_block("t", _block('[sense:search]{query: $q}@hub', edition=2), QUALIFIED)
     assert hub == [], hub   # @노드 지정은 판본 2 도 받는다(2026-10-05 이월)
     pipe = av._validate_app_block("t", _block('[sense:search]{query: $q} | sort: title desc', edition=2), QUALIFIED)
-    assert any("파이프 축약" in i for i in pipe), pipe
+    assert any("문법 오류" in i for i in pipe), pipe
     item = av._validate_app_block("t", _block('[self:read]{path: $item.path, q: f"${q}"}', edition=2), QUALIFIED)
     assert item == [], item
     # 템플릿 안에서 묶인 이름(대입·람다 인자)은 입력이 아니다

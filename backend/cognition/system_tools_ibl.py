@@ -322,13 +322,13 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             "error": "code 파라미터가 필요합니다.",
             "usage": {
                 "단일": '[sense:search]{query: "AI 뉴스"}',
-                "파이프라인": '[sense:search]{query: "AI 뉴스"} >> [self:write]{path: "result.md"}',
+                "파이프라인": '$r=[sense:search]{query: "AI 뉴스"}; [self:write]{path: "result.json",content:$r,format:"json"}',
                 "병렬": '[sense:search]{query: "AI"} & [sense:search]{source: "gnews", query: "tech"}',
                 "폴백": '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL stock"}'
             }
         }, ensure_ascii=False)
 
-    # 판본 경계는 legacy 파싱·턴 변수 주입보다 앞에 둔다. 헤더/API 충돌도 효과 전에 거절한다.
+    # 원문 형식과 헤더/API 일치는 효과 전에 검사한다.
     from ibl_v2_entry import handle_request as _v2_request
     # inputs 값 자리의 {"$ref": result_ref.id, "path": [...]} — 앞 실행의 저장 결과를 복사 없이 넘긴다(2026-09-26).
     # 증거 저장소는 인지 층에서 풀고, 값과 출처 근거를 실행기에 함께 전달한다.

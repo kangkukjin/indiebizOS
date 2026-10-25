@@ -57,19 +57,17 @@ def memory_only_program(code):
 
 
 def empty_final_items(result):
-    """정상 종료한 빈 조회를 해결 절차의 성공 증거로 학습하지 않는다."""
+    """정상 실행의 빈 List/Record.items를 성공 증거로 학습하지 않는다."""
     import json
-    for _ in range(8):
-        if isinstance(result, str):
-            try:
-                result = json.loads(result)
-            except (ValueError, TypeError):
-                return False
-        elif isinstance(result, dict) and "final_result" in result:
-            result = result["final_result"]
-        else:
-            break
-    return isinstance(result, dict) and result.get("items") == []
+    if isinstance(result, str):
+        try:
+            result = json.loads(result)
+        except (ValueError, TypeError):
+            return False
+    if not isinstance(result, dict) or result.get("success") is not True:
+        return False
+    value = result.get("value")
+    return value == [] or (isinstance(value, dict) and value.get("items") == [])
 
 
 # ── 합성 접지 게이트 (2026-08-16) ─────────────────────────────────────────

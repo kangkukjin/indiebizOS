@@ -9,8 +9,6 @@ import boot_paths  # noqa: F401
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from ibl_boundary_cases_round3 import each
-from ibl_boundary_cases import literal as q
 
 
 def values():

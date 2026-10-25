@@ -15,7 +15,6 @@ import pytest
 from common.value_semantics import (group_identity, list_membership,
                                     relation_identity, text_match, values_equal)
 from ibl.api_transforms import _match_condition
-from ibl.ibl_predicates import Evaluator, PredicateError
 
 _HANDLER = (Path(__file__).resolve().parent.parent / "data" / "packages" /
             "installed" / "tools" / "data-ops" / "handler.py")
@@ -66,7 +65,6 @@ def test_round46_nfd_equals_nfc_across_value_surfaces(data_ops):
     left, right = NFD("가나"), "가나"
     assert values_equal(left, right) is True
     assert data_ops._wdsl._apply_op("matches", left, right) is True
-    assert Evaluator.compare("matches", left, right) is True
     assert relation_identity(left) == relation_identity(right)
     assert group_identity(left) == group_identity(right)
     # 구조 안쪽까지 재귀 승계
@@ -115,9 +113,9 @@ def test_round46_list_contains_is_element_membership(data_ops):
     assert apply_op("contains", [1000, 2000], "1,000") is True   # 원소 동등성은 eq 계약
 
 
-def test_round46_block_matches_rejects_structure_left_honestly():
-    with pytest.raises(PredicateError):
-        Evaluator.compare("matches", ["가나"], "가나")
+def test_round46_matches_rejects_structure_left_honestly(data_ops):
+    # 행 조건의 정규식은 구조 값을 산문으로 바꾸지 않는다.
+    assert data_ops._wdsl._apply_op("matches", ["가나"], "가나") is False
 
 
 # ── B46-5 — in 목록 멤버십의 동등성은 values_equal 한 벌 ─────────────────────

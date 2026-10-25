@@ -21,7 +21,7 @@ export const APP_PROJECT_ID = '앱모드';
  * 앱 모드에서 IBL 코드를 실행하고 결과 payload 를 견고하게 언랩한다.
  * `project_id:'앱모드'` 를 자동으로 실어 보낸다(저자가 잊을 수 없음).
  *
- * 응답 언랩: 단일 액션이면 결과가 최상위, 합성(`>>`) 다단계면 `final_result` 에 온다.
+ * 응답 언랩: 단일·합성 실행 모두 현행 봉투의 value를 읽는다.
  * 문자열이면 JSON 파싱을 시도한다(실패 시 문자열 유지).
  */
 export async function iblExecuteApp(code: string, options: { check?: boolean; allowIncomplete?: boolean } = {}): Promise<unknown> {
@@ -41,31 +41,18 @@ export async function iblExecuteApp(code: string, options: { check?: boolean; al
     if (d.success !== true || (d.source_complete === false && !options.allowIncomplete)) throw new Error(d.error || '실행 결과가 불완전합니다.');
     return d.value;
   }
-  let r: unknown =
-    d?.final_result ??
-    (d && typeof d === 'object' && 'result' in d ? (d as { result: unknown }).result : d);
-  if (typeof r === 'string') {
-    try { r = JSON.parse(r); } catch { /* keep string */ }
-  }
-  return r;
+  throw new Error('실행 응답에 현행 edition·success·value 계약이 없습니다.');
 }
 
 /**
  * 실패 봉투 판정 — 거절·오류는 예외가 아니라 HTTP 200 + `{success:false, error}` 로 온다.
- * 실패면 사유 문자열, 아니면 null. 응답 원형(`{result|final_result: …}`)과 JSON 문자열도 한 겹 벗겨 본다.
+ * 실패면 사유 문자열, 아니면 null. 실행 상태만 읽고 업무 값은 재판정하지 않는다.
  * ★쓰기·변경을 부른 자리는 반드시 이걸로 확인한다 — 안 보면 거절이 성공으로 보고된다(2026-10-06 신문 HTML 9일 미갱신).
  */
 export function iblFailure(r: unknown): string | null {
-  let o: unknown = r;
-  for (let depth = 0; depth < 2; depth++) {
-    if (typeof o === 'string') { try { o = JSON.parse(o); } catch { return null; } }
-    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
-    const e = o as { success?: unknown; error?: unknown; message?: unknown; result?: unknown; final_result?: unknown };
-    if (e.success === false || (typeof e.error === 'string' && e.error)) return String(e.error || e.message || '실패');
-    o = e.final_result ?? e.result;
-    if (o === undefined) return null;
-  }
-  return null;
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+  const e = r as { success?: unknown; error?: unknown; message?: unknown };
+  return e.success === false ? String(e.error || e.message || '실패') : null;
 }
 
 /**

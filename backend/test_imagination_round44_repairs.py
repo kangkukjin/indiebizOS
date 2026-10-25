@@ -7,7 +7,8 @@ import pytest
 
 from common.value_semantics import numeric_value
 from ibl.api_transforms import _apply_sort
-from ibl.ibl_predicates import Evaluator
+from common.expression_ops import binary
+from common.expression_ir import Fault
 
 
 _HANDLER = (Path(__file__).resolve().parent.parent / "data" / "packages" /
@@ -60,7 +61,7 @@ def test_round44_matrix_preserves_integer_order_across_six_surfaces(
     rows = [{"label": "high", "v": high}, {"label": "low", "v": low}]
     assert data_ops._sort_records(rows, "v")[0]["label"] == "low", name
     assert data_ops._sort_records(rows, "v", True)[0]["label"] == "high", name
-    assert Evaluator.compare(">", high, low), name
+    assert binary(">", high, low), name
 
 
 @pytest.mark.parametrize("value", [

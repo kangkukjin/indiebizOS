@@ -14,14 +14,11 @@
 사용: .venv/bin/python scripts/returns_drift_sweep.py
 """
 import json
-import time
-import urllib.request
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-API = "http://127.0.0.1:8765"
 
 
 def _load_declarations():
@@ -80,53 +77,16 @@ def _declared_of(name, decl, decl_op, default_op, code=""):
     return decl.get(base, "?"), "action"
 
 
-def _execute(code, timeout=60):
-    # agent_id="__self_check__" — 이 순찰의 실행이 action_health 에 source='self_check' 로
-    # 기록되게 (ibl_health_check 선례). 이게 없던 동안 주 1회 126 fixture 가 'usage' 로
-    # 적재돼 §1D 실사용 실패율을 오염시켰다(2026-08-21 ③ 조사 — 배터리·순찰이 실사용
-    # 계수에 섞이는 부류).
-    req = urllib.request.Request(
-        f"{API}/ibl/execute",
-        data=json.dumps({"code": code, "project_id": "정보센터",
-                         "agent_id": "__self_check__"}).encode(),
-        headers={"Content-Type": "application/json"})
-    return json.load(urllib.request.urlopen(req, timeout=timeout))
-
-
-def _final_envelope(resp):
-    d = resp.get("result", resp)
-    if isinstance(d, str):
-        try:
-            d = json.loads(d)
-        except Exception:
-            return None
-    if isinstance(d, dict) and "final_result" in d:
-        d = d["final_result"]
-    if isinstance(d, str):
-        try:
-            d = json.loads(d)
-        except Exception:
-            return None
-    return d if isinstance(d, dict) else None
+from ibl_check_client import execute as _execute, value_of as _final_envelope, item_rows
 
 
 def _actual_shape(env):
-    """실측 통화 모양: items / table / blocks / scalar(dict인데 통화 없음) / raw(비 dict).
-
-    ★2026-08-24: 바깥 세계가 죽은 것을 '약속 위반'으로 읽지 않는다. 외부 API 가
-    타임아웃·오류를 내면 봉투에 통화가 없으니 옛 판정은 scalar 였고, 그러면 items 를
-    약속한 액션이 매번 [B]('더 나쁨')로 신고됐다 — 실측 sense:book=data4library 30초
-    타임아웃. **부재≠파손을 계측층에도 적용**: 오류 봉투는 모양이 아니라 '실행 불능'
-    (failed)이다. 늑대를 외치는 관문은 다음 사람이 안 믿는다.
-    """
-    if env is None:
+    """검증된 성공 값의 모양. items는 Record 목록 하나이며 업무 키는 상태가 아니다."""
+    rows = item_rows(env)
+    if rows is not None:
+        return "items" if all(isinstance(row, dict) for row in rows) else "invalid_items"
+    if not isinstance(env, dict):
         return "raw"
-    if env.get("error") and not (
-            isinstance(env.get("items"), list) or isinstance(env.get("blocks"), list)
-            or isinstance(env.get("table"), dict) or isinstance(env.get("rows"), list)):
-        return "error"
-    if isinstance(env.get("items"), list):
-        return "items"
     t = env.get("table")
     if (isinstance(t, dict) and isinstance(t.get("rows"), list)) or (
             isinstance(env.get("rows"), list) and isinstance(env.get("columns"), list)):
@@ -136,39 +96,25 @@ def _actual_shape(env):
     return "scalar"
 
 
-CURRENCY = {"items", "table", "blocks"}
-
-# 차단기 쿨다운을 기다려 줄 상한 — 이보다 길면 기다리지 않고 '실행 불능'으로 적는다
-# (순찰이 한 액션 때문에 몇 분씩 서 있으면 그것대로 규율이 깨진다).
-# 실측 쿨다운은 90초까지 관측됐다(연속 3회 실패). 주 1회 순찰이 90초 서는 값은,
-# 사람이 멀쩡한 API 를 유령 신고 때문에 파헤치는 20분보다 싸다.
-_MAX_BREAKER_WAIT = 120
-
+CURRENCY = {"items"}
 
 def _is_drift(declared, actual):
     if declared in ("scalar", "effect") and actual in CURRENCY:
         return "over"
-    if declared in ("items", "table") and actual == "scalar":
+    if declared == "items" and actual != "items":
         return "under"
     return None
 
 
 def _try_once(code):
-    """1회 실행 → (shape, items_n, error, blocked_for). error 는 실행 불능만.
-
-    봉투 안의 오류(외부 API 다운 등)도 '실행 불능'으로 올린다 — 모양 판정 밖이다.
-    blocked_for = 차단기(circuit breaker) 쿨다운 잔여 초 · 아니면 None.
-    """
+    """1회 실행 → (shape, items_n, error). 업무 값의 오류 키는 상태가 아니다."""
     try:
         env = _final_envelope(_execute(code))
     except Exception as e:
-        return None, 0, e, None
+        return None, 0, e
     shape = _actual_shape(env)
-    if shape == "error":
-        blocked = env.get("retry_after_seconds") if env.get("blocked") else None
-        return None, 0, RuntimeError(f"봉투 오류: {str(env.get('error'))[:120]}"), blocked
-    n = len(env.get("items") or []) if isinstance(env, dict) else 0
-    return shape, n, None, None
+    n = len(item_rows(env) or [])
+    return shape, n, None
 
 
 # ── 런타임 모양 실측 (action_health.shape, 2026-08-24 B36-3) ─────────────────────
@@ -259,27 +205,14 @@ def main():
     fx = json.load(open(ROOT / "data" / "ibl_fixtures.json"))
     fixtures, exempt = fx["fixtures"], fx.get("exempt") or {}
     rows, failed, retried = [], [], []
-    _waited = set()   # 차단기 대기는 액션당 1회 — 순찰이 쿨다운마다 멈추지 않게
     for name, code in sorted(fixtures.items()):
         declared, level = _declared_of(name, decl, decl_op, default_op, code)
-        actual, n, err, blocked = _try_once(code)
-        if blocked is not None:
-            # ★2026-08-24: 차단기 연쇄를 독립 실패로 세지 않는다. 한 액션이 한 번
-            # 느려서 차단되면, 같은 액션의 **다른 op fixture 들이 API 를 부르지도 못한 채**
-            # 줄줄이 실패로 적힌다(실측: sense:book 1건 타임아웃 → book·#codes·#popular·
-            # #recommended·#trending 5건 신고. 바깥은 멀쩡했다 — 0.9초에 20,607건).
-            # 즉시 재시도는 쿨다운이 안 지나 무의미하므로 **한 액션당 한 번만** 기다린다.
-            act = name.split("#", 1)[0]
-            if act not in _waited and blocked <= _MAX_BREAKER_WAIT:
-                _waited.add(act)
-                print(f"  · {act} 차단기 대기 {blocked}s (연쇄 오탐 방지)")
-                time.sleep(blocked + 1)
-                actual, n, err, blocked = _try_once(code)
+        actual, n, err = _try_once(code)
         if err is not None or _is_drift(declared, actual):
             # 외부 API 일시 블립 흡수 — 1회 재시도 (골든 파이프 §1C 선례. 2026-08-20
             # sense:classic 실측: 같은 코드·fixture 가 1차 [B]→2차 정합 = 주 1회 거짓
             # 깃발. 진짜 회귀는 결정론적이라 재시도로 안 사라진다).
-            a2, n2, e2, _b2 = _try_once(code)
+            a2, n2, e2 = _try_once(code)
             if e2 is None:
                 if err is not None or not _is_drift(declared, a2):
                     retried.append(name)
@@ -290,7 +223,7 @@ def main():
         rows.append((name, declared, level, actual, n))
 
     over = [r for r in rows if r[1] in ("scalar", "effect") and r[3] in CURRENCY]
-    under = [r for r in rows if r[1] in ("items", "table") and r[3] == "scalar"]
+    under = [r for r in rows if r[1] == "items" and r[3] != "items"]
     exact = [r for r in rows if r not in over and r not in under]
     op_total, op_covered, op_exempt, op_unverified = _op_axis_report(
         decl, decl_op, default_op, op_values, fixtures, exempt)
@@ -307,7 +240,7 @@ def main():
     print(f"\n[A] 선언 scalar/effect 인데 통화 실측 (조합 가능한데 선언이 가림 — 건강 단언 사각) — {len(over)}건")
     for name, d, lvl, a, n in over:
         print(f"  🚩 {name}: 선언 {d}({lvl}) → 실측 {a}" + (f"[{n}행]" if a == "items" else ""))
-    print(f"\n[B] 선언 items/table 인데 scalar 실측 (약속 위반 — 더 나쁨) — {len(under)}건")
+    print(f"\n[B] 선언 items 인데 다른 모양 실측 (약속 위반 — 더 나쁨) — {len(under)}건")
     for name, d, lvl, a, n in under:
         print(f"  ‼️ {name}: 선언 {d}({lvl}) → 실측 {a}")
     if failed:

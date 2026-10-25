@@ -205,7 +205,7 @@ export async function runIBL(req: ActionReq): Promise<Json> {
       break;
     }
   }
-  // 합성(>>) 액션의 final_result 펼치기는 공용 코어(원격 ibl() 과 같은 규칙)
+  // 단일·합성 액션의 value 읽기는 공용 코어(원격 ibl() 과 같은 규칙)
   return unwrapFinalResult(raw) as Json;
 }
 

@@ -122,10 +122,11 @@ def test_member_crawl_preserves_source_and_reference(boundary, monkeypatch, limi
     result = web.execute('crawl_website', args)
     assert result['success'] and not result.get('truncated')
     assert result['items'][0]['text'] == body
-    projected = project_result(result)
+    from test_ibl_check_client import packet
+    projected = project_result(packet(result))
     assert len(json.dumps(projected, ensure_ascii=False)) < (limit or 60000) + 5000
     stored = json.loads(boundary.read_evidence(projected['result_ref']['id'], 0, None)['text'])
-    assert stored['items'][0]['text'] == body
+    assert stored['value']['items'][0]['text'] == body
     assert result['_display']['max_chars'] == (60000 if limit is None else limit)
 
 

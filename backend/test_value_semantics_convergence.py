@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from ibl.api_transforms import _apply_sort
-from ibl.ibl_predicates import Evaluator, PredicateError
+from common.expression_ops import binary
+from common.expression_ir import Fault
 
 
 _HANDLER = (Path(__file__).resolve().parent.parent / "data" / "packages" /
@@ -31,15 +32,15 @@ def test_structural_equality_converges_across_value_surfaces(data_ops):
     assert data_ops._group_identity(left) == data_ops._group_identity(right)
     assert data_ops._norm(left) == data_ops._norm(right)
     assert data_ops._num_eq(left, right)
-    assert Evaluator.compare("==", left, right)
-    assert not Evaluator.compare("!=", left, right)
+    assert binary("==", left, right)
+    assert not binary("!=", left, right)
 
 
 def test_structured_ordering_is_rejected_by_both_condition_languages(data_ops):
     with pytest.raises(data_ops._wdsl._WhereError):
         data_ops._wdsl._apply_op(">", {"a": 1}, {"a": 0})
-    with pytest.raises(PredicateError):
-        Evaluator.compare(">", {"a": 1}, {"a": 0})
+    with pytest.raises(Fault):
+        binary(">", {"a": 1}, {"a": 0})
 
 
 @pytest.mark.parametrize(

@@ -51,12 +51,13 @@ def test_collected_paragraphs_survive_filter_select_and_model_delivery(monkeypat
     filtered = dataops._op_filter(out, {"where": 'text contains "근거"'})
     selected = dataops._op_select(filtered, {"fields": ["text", "url"]})
     before = copy.deepcopy(selected)
-    model = project_result({"success": True, "final_result": selected})
+    from test_ibl_check_client import packet
+    model = project_result(packet(selected))
     # 종전에는 8문단만 보여 재조회를 강제했다. 24문단·약 1만 자는 한 번에 전달된다.
-    assert len(model["final_result"]["items"]) == 24
-    assert "_preview" not in model["final_result"]
+    assert len(model["value"]["items"]) == 24
+    assert "_preview" not in model["value"]
     assert selected == before
-    page = read_result({"id": model["result_ref"]["id"], "path": ["final_result", "items"]})
+    page = read_result({"id": model["result_ref"]["id"], "path": ["value", "items"]})
     assert json.loads(page["text"]) == selected["items"]
 
 

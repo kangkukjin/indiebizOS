@@ -16,6 +16,16 @@ from typing import Dict
 logger = logging.getLogger(__name__)
 
 
+def _sweep_env():
+    import os
+    from runtime_work import parent_token
+    env = dict(os.environ)
+    token = parent_token()
+    if token:
+        env["INDIEBIZ_RUNTIME_PARENT"] = token
+    return env
+
+
 def run_returns_drift_sweep() -> Dict:
     """returns 선언 ↔ 실측 출력 대조 (주간 카덴스, §8.5) — scripts/returns_drift_sweep.py.
 
@@ -41,7 +51,7 @@ def run_returns_drift_sweep() -> Dict:
         return {"error": "scripts/returns_drift_sweep.py 없음"}
     try:
         proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
-                              capture_output=True, text=True, timeout=600)
+                              capture_output=True, text=True, env=_sweep_env(), timeout=600)
     except Exception as e:
         return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
 
@@ -65,8 +75,10 @@ def run_returns_drift_sweep() -> Dict:
                    "op_unverified": unverified}
             # 미검증 op 경로는 드리프트(약속 위반)가 아니라 '조용한 미검증' — 깃발은
             # 세우되(ok=False 아님) 노트로 자백해 fixture/exempt 정비를 대장장이 입력으로.
-            ok = not over and not under
+            ok = bool(s.get("checked")) and not over and not under and not s.get("failed")
             parts = []
+            if not s.get("checked") or s.get("failed"):
+                parts.append(f"검사 미완: 성공 실측 {s.get('checked', 0)}, 실행 불능 {s.get('failed', 0)}")
             if over:
                 parts.append(f"선언 드리프트 — scalar/effect인데 통화 {len(over)}건: {', '.join(over[:5])}")
             if under:
@@ -115,7 +127,7 @@ def run_shape_sweep() -> Dict:
     try:
         # --from-health: fixture 없는(exempt) 스칼라·효과 액션의 ⟨키⟩ 를 실사용 원장에서 수확(F55-1).
         proc = subprocess.run([sys.executable, str(script), "--from-health"], cwd=str(_root),
-                              capture_output=True, text=True, timeout=900)
+                              capture_output=True, text=True, env=_sweep_env(), timeout=900)
     except Exception as e:
         return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
     tail = (proc.stdout or "").strip().splitlines()[-1:] or [""]
@@ -159,7 +171,7 @@ def run_param_sweep() -> Dict:
         return {"error": "scripts/ibl_param_sweep.py 없음"}
     try:
         proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
-                              capture_output=True, text=True, timeout=600)
+                              capture_output=True, text=True, env=_sweep_env(), timeout=600)
     except Exception as e:
         return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
     tail = (proc.stdout or "").strip().splitlines()[-1:] or [""]
@@ -201,7 +213,7 @@ def run_partner_sweep() -> Dict:
         return {"error": "scripts/ibl_partner_sweep.py 없음"}
     try:
         proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
-                              capture_output=True, text=True, timeout=600)
+                              capture_output=True, text=True, env=_sweep_env(), timeout=600)
     except Exception as e:
         return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
     tail = (proc.stdout or "").strip().splitlines()[-1:] or [""]
@@ -245,7 +257,7 @@ def run_honesty_sweep() -> Dict:
         return {"error": "scripts/honesty_invariants_sweep.py 없음"}
     try:
         proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
-                              capture_output=True, text=True, timeout=900)
+                              capture_output=True, text=True, env=_sweep_env(), timeout=900)
     except Exception as e:
         return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
     marker = None
@@ -264,11 +276,13 @@ def run_honesty_sweep() -> Dict:
             viol = s.get("violations") or []
             out = {"checked": s.get("checked"), "violations": viol,
                    "prefix_contract_sites": s.get("prefix_contract_sites")}
-            ok = not viol
+            ok = bool(s.get("checked")) and not viol and not s.get("failed")
             by = {}
             for v in viol:
                 by.setdefault(v.get("inv"), []).append(v.get("name"))
             note = " / ".join(f"{k} {len(v)}건: {', '.join(v[:4])}" for k, v in sorted(by.items())) or None
+            if not ok and not note:
+                note = f"검사 미완: 실측 {s.get('checked', 0)}, 실행 불능 {s.get('failed', 0)}"
             try:
                 save_self_check({"node": "__ibl_health__", "action": "honesty_invariants",
                                  "success": ok, "response_ms": 0,

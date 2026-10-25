@@ -231,8 +231,6 @@ def _resolve_reference(name, value, notes, at, store=None, legacy_fingerprints=F
             # 실패 봉투 자체는 업무 값이 아니다(69회차 B69-4). 명시 경로는 그대로 허용한다.
             raise ValueError(f"{where}: 참조한 실행은 실패해 업무 값이 없습니다(success=false). 성공한 가지는 "
                              "result_ref.partial_reads[].input_args로, 진단이 필요하면 path를 [\"diagnostic\"]로 명시하세요.")
-        elif isinstance(stored, dict) and "final_result" in stored:
-            selection = ["final_result"]
         else:
             selection = []
     else:
@@ -282,7 +280,7 @@ def resolve_input_refs(inputs, *, store=None, legacy_fingerprints=False):
     형태: {"$ref": result_ref.id, "path": [키·인덱스…]}. 이름의 값 자리뿐 아니라 그 안의 목록·레코드 원소에도 쓴다.
     판본 2 봉투의 업무 값(path 생략 또는 ["value", …])과 부분 결과(["diagnostic","partial", …])는 손실 없는 wire 를 풀어
     걷는다 — 저장 사본의 공개 투영은 표시용이다(69회차 B69-1). 실패 봉투의 기본 참조와 저장 시 가린 자리는 거절한다.
-    옛 봉투는 final_result, 둘 다 없으면 저장 본문 전체. 전송 절단 봉투의 스필 참조({"ref": {"path"…}, "_spilled": true})도 푼다.
+    실행 값이 아닌 저장 자료는 명시 경로 또는 저장 본문 전체. 전송 절단 봉투의 스필 참조({"ref": {"path"…}, "_spilled": true})도 푼다.
     값은 여전히 *명시 입력*이다 — 이전 턴 변수의 자동 주입이 아니라 모델이 이름·출처를 적은 것만 들어온다(2026-09-26).
     실패는 ValueError 로 — 호출자가 실행 전 거절 봉투로 돌려준다.
     legacy_fingerprints는 개정 전 실행 증거를 학습에서 대조할 때만 쓴다."""
@@ -431,7 +429,7 @@ def _failed_partial_references(ref, result):
 def _read_reference(ref, result):
     """표시 사본이 아닌 원 봉투에서 조회 가능한 큰 필드를 찾는다(최대 6개)."""
     typed_value = result.get("edition") == 2 and "value" in result
-    prefix = ["value"] if typed_value else ["final_result"] if "final_result" in result else []
+    prefix = ["value"] if typed_value else []
     # Failure recovery opens the diagnostic, never megabytes of provenance by default.
     if not prefix and result.get('edition') == 2:
         prefix = next(([k] for k in ('diagnostic', 'issues', 'error') if result.get(k)), [])
@@ -810,7 +808,12 @@ def project_v2_result(result):
             if twins:
                 out["_model_shared"] = {"fields": twins[:8], "omitted": max(0, len(twins) - 8),
                                         "note": "같은 내용이 두 필드로 실려 표시 사본에서 한 벌만 보였습니다(같은 값, 또는 본문과 그 문단 목록). 접힌 필드도 그 경로로 읽고 inputs $ref 로 참조할 수 있습니다."}
-            out["value"], preview = preview_value(out["value"], policy["prose_chars"], ref["id"])
+            budget = policy["prose_chars"]
+            display = out["value"].get("_display") if isinstance(out["value"], dict) else None
+            requested = display.get("max_chars") if isinstance(display, dict) else None
+            if type(requested) is int and requested > 0:
+                budget = min(budget, requested)
+            out["value"], preview = preview_value(out["value"], budget, ref["id"])
             if preview:
                 out["_preview"] = preview
         diagnostic = out.get("diagnostic")
@@ -848,70 +851,20 @@ def project_v2_result(result):
     out.pop("partial_wire", None)
     out["_hint"] = out["_hint"].replace("손실 없는 타입 전송은 value_wire입니다.",
                                       "손실 없는 타입은 저장 원본에 보존됩니다.")
+    from episode_logger import record_trajectory_event
+    text_view = ({**out, "images": [{"media_type": item.get("media_type", "image/png")} for item in images]}
+                 if images else out)
+    record_trajectory_event("context.result_projected", {
+        "raw_chars": len(raw), "model_chars": len(json.dumps(text_view, ensure_ascii=False)),
+        "image_count": len(images), "evidence_id": ref["id"]})
     return out
 
 
 def project_result(result, verbose=False):
+    """실행은 현행 표시 계약 하나, 조회·검사 메타데이터는 원형 그대로."""
     if isinstance(result, dict) and result.get("edition") == 2:
         return project_v2_result(result)
-    from ibl_envelope import diet_envelope, preview_envelope
-    if not isinstance(result, dict):
-        return result
-    store = evidence_store()
-    raw = json.dumps(result, ensure_ascii=False, indent=2, default=str)
-    ref = store.evidence(raw)
-    policy = display_policy()
-    out = diet_envelope(result, verbose=False)
-    # Preserve image bytes before text previewing can fold them into a result_ref.
-    # Work on a serialized copy; raw evidence and live IBL variables stay intact.
-    from image_envelopes import harvest_images
-    cleaned, images = harvest_images(json.dumps(out, ensure_ascii=False, default=str))
-    if images:
-        out = json.loads(cleaned)
-    # 오류 본문도 크롤 전문을 품을 수 있다. 상태·오류 위치를 남기고 전문은 증거로 읽는다.
-    if out.get("_results_summarized") and isinstance(out.get("results"), list):
-        out = dict(out)
-        rows = out["results"]
-        out["results"] = [_bound(row, policy["step_chars"]) for row in rows[:policy["step_rows"]]]
-        if len(rows) > policy["step_rows"]:
-            out["steps_omitted"] = len(rows) - policy["step_rows"]
-        from ibl_honesty import completion_evidence
-        errors = completion_evidence(result)
-        if errors:
-            out["completion_issues"] = _bound(errors, policy["issues_chars"])
-    # verbose는 새 실행의 중간 본문을 복제하는 스위치가 아니다. 전체는 read_result로 회수한다.
-    # 파이프 결과의 JSON 문자열을 한 번 해제해 items 밖 data까지 같은 표시 정책에 넣는다.
-    # 기존 final_result의 문자열/객체 타입과 작은 원문 바이트는 보존한다.
-    if "final_result" in out:
-        final = out["final_result"]
-        value = _decode_json(final)
-        compact = _project_currency(value, policy["metadata_chars"])
-        if compact != value:
-            # 작은 기존 객체/문자열은 그대로. 바뀐 사본은 객체로 보내 이중 escaping을 없앤다.
-            out = {**out, "final_result": compact}
-    else:
-        out = _project_currency(out, policy["metadata_chars"])
-    out = preview_envelope(out, verbose=False, policy=policy)
-    if not images and out == result and len(raw) < policy["min_chars"]:
-        return out
-    out = dict(out)
-    out["result_ref"] = _read_reference(ref, result)
-    out["_hint"] = ('파이프 최종 값은 final_result, 단일 결과는 이 객체입니다. 생략된 값은 result_ref로 조회. '
-                    'result_ref.paths는 실제 원문 경로이며 read_args로 바로 읽을 수 있습니다. '
-                    '같은 턴 $변수는 원자료를 보존하므로 선택·필터에 재사용하세요.')
-    if images:
-        out["images"] = [{"base64": e["b64"], "media_type": e.get("media_type", "image/png")}
-                         for e in images]
-        out["_hint"] += ' 이미지는 별도 이미지 블록으로 첨부됩니다. base64 원문을 분할 조회하지 마세요.'
-    # 문자열 JSON 속 중복도 정규화한 최종 값은 미리보기기가 소유한다.
-    from episode_logger import record_trajectory_event
-    text_view = ({**out, "images": [{"media_type": e.get("media_type", "image/png")} for e in images]}
-                 if images else out)
-    record_trajectory_event("context.result_projected", {"raw_chars": len(raw),
-                            "model_chars": len(json.dumps(text_view, ensure_ascii=False)),
-                            "image_count": len(images),
-                            "evidence_id": ref["id"], "verbose_requested": verbose})
-    return out
+    return result
 
 
 def observed_returns_of_alias(alias):

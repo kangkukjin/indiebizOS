@@ -9,8 +9,6 @@ import boot_paths  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from ibl_boundary_cases import literal as q
-from ibl_boundary_cases_round3 import each
 
 
 

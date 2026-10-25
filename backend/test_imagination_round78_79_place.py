@@ -381,7 +381,7 @@ def test_weekly_honesty_sweep_alarms_on_empty_source_variant():
     assert [p[0] for p in check_variant_empty("sense:used@source=danggeun", empty)] == ["G"]
     assert check_variant_empty("sense:used", empty) == []                 # 액션 fixture 는 일일 점검 몫
     assert check_variant_empty("sense:used@source=danggeun", {"items": [{"title": "x"}]}) == []
-    assert check_variant_empty("sense:used@source=danggeun", {"success": False, "error": "x", "items": []}) == []
+    assert check_variant_empty("sense:used@source=danggeun", {"success": False, "error": "x", "items": []})[0][0] == "G"
 
 
 # ── 길찾기 대안 경로 ──────────────────────────────────────────────────────

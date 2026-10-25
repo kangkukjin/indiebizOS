@@ -63,16 +63,12 @@ def seed_examples(lessons, resolved_sources):
 
 
 def run(apply=False):
-    import function_store
     from ibl_v2_store import definitions
     from ibl_v2_learning import check_source
     from ibl_v2_assets import seed
     pending, decisions = quarantine_rows()
     lessons = json.loads((ROOT / 'data/idioms/current_call_lessons.json').read_text())['idioms']
-    # Historical identity lookup only; these sources are never callable adapters.
-    sources = {row['name']: row['source'] for row in function_store.snapshot()['records'].values()
-               if row.get('edition') == 1}
-    sources.update(definitions())
+    sources = definitions()
     examples = seed_examples(lessons, sources)
     for example in examples:
         why = check_source(example['ibl_code'], False)

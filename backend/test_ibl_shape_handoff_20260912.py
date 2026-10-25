@@ -83,15 +83,16 @@ def test_projection_deduplicates_only_the_copy_and_preserves_evidence(tmp_path, 
     a["data"]["truncated"] = True
     a["warning"] = "source unavailable"
     failure = {"success": False, "error": "upstream failed", "source": "provider"}
-    raw = {"success": True, "final_result": json.dumps([json.dumps(a), json.dumps(failure)])}
+    from test_ibl_check_client import packet
+    raw = packet([a, failure])
     before = json.dumps(raw)
     result = view.project_result(raw)
-    assert isinstance(result["final_result"], list)
-    shown = result["final_result"][0]
+    assert isinstance(result["value"], list)
+    shown = result["value"][0]
     assert shown["data"]["prices"] == a["data"]["prices"]
     assert shown["data"]["truncated"] is True and shown["warning"] == a["warning"]
     assert shown["items"][0] == a["items"][0]
-    assert result["final_result"][1] == failure
+    assert result["value"][1] == failure
     assert len(json.dumps(result, ensure_ascii=False)) < len(json.dumps(raw, ensure_ascii=False))
     assert json.dumps(raw) == before
     assert json.loads(store.read_evidence(result["result_ref"]["id"], limit=None)["text"]) == raw

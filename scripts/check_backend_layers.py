@@ -83,12 +83,11 @@ LAYERS = {
         # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
         # 명시 배정이 우선한다. 디렉토리화 때 개명 후보.
         "api_engine", "api_pipeline", "api_transforms",
-        "capability_card", "channel_engine", "event_engine", "ibl_access", "ibl_control_blocks", "ibl_function_result",
+        "capability_card", "channel_engine", "event_engine", "ibl_access", "ibl_control_blocks",
         "ibl_engine", "ibl_envelope", "ibl_result_transport", "ibl_executors", "ibl_exec_output", "ibl_exec_goal",
         "ibl_honesty", "ibl_traceback", "ibl_quality", "ibl_typecheck",
-        "ibl_exec_sense", "ibl_ops", "ibl_param_vocab",
+        "ibl_ops", "ibl_param_vocab",
         "ibl_progress",
-        "ibl_predicates",
         "ibl_scanner", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
         "ibl_safety", "ibl_translate", "package_manager", "vocabulary_lifecycle", "vocabulary_desktop", "vocabulary_archive", "vocabulary_import", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
@@ -327,7 +326,7 @@ def cross_layer_cycles(graph):
 # 비-뿌리: ibl_control_blocks·ibl_exec_each 는 뿌리가 아니다. 층-밖 의존은 0이지만
 #   ibl_engine·ibl_executors·workflow_engine 을 끌어와 실제로는 엔진 한복판이다
 #   (2026-08-24 실측 — "의존 0인 9파일"은 *층-밖* 0이었지 분리 가능이 아니었다).
-PURE_CORE_ROOTS = ["ibl_v2_parser", "ibl_envelope", "ibl_predicates", "ibl_ops",
+PURE_CORE_ROOTS = ["ibl_v2_parser", "ibl_envelope", "ibl_ops",
                    "api_transforms"]
 # backend 아래 서브패키지: common 만 코어가 기대도 되는 잎 기질(통화·변수표기·HTML 유틸).
 _LEAF_PKG = "common"

@@ -1,3 +1,4 @@
+from test_ibl_check_client import packet
 """3364/3377에서 드러난 원인에 대한 행동 회귀. 모델 네트워크 호출 없음."""
 import importlib.util
 import json
@@ -134,7 +135,7 @@ def test_verbose_result_can_be_recovered_without_rerunning(tmp_path, monkeypatch
     store = TurnStore(tmp_path)
     monkeypatch.setattr(view, "evidence_store", lambda: store)
     body = {"items": [{"text": "data" * 100, "index": i} for i in range(60)]}
-    raw = {"success": True, "results": [{"step": 1, "result": json.dumps(body)}], "final_result": json.dumps(body)}
+    raw = packet(body)
     out = view.project_result(raw, verbose=True)
     assert len(json.dumps(out)) < len(json.dumps(raw)) / 2
     ref = out["result_ref"]
@@ -166,15 +167,14 @@ def test_display_policy_controls_model_copy_and_keeps_structured_diagnostics(tmp
     # 좁은 기본값의 첫 호출이 같은 정책 블록의 다른 설정 키를 가리지 않아야 한다.
     from ibl_envelope import PREVIEW_DEFAULT
     ibl_retyping.load_policy_block("envelope_preview", PREVIEW_DEFAULT)
-    original = {"success": False, "results": [{"step": 7, "type": "action", "error": "오류" * 500}],
-                "final_result": {"items": [{"text": "긴 산문" * 50} for _ in range(5)]}}
+    original = {**packet(None), "success": False,
+                "diagnostic": {"code": "VALUE", "message": "오류" * 500,
+                               "details": {"step": 7}, "partial": [{"text": "긴 산문" * 500}]}}
     out = view.project_result(original)
-    assert len(out["final_result"]["items"]) == 2
-    assert out["final_result"]["_preview"]["total"] == 5
-    assert out["results"][0]["step"] == 7 and out["results"][0]["type"] == "action"
-    assert "result_ref" in out["results"][0]["error"]
-    assert store.read_evidence(out["result_ref"]["id"], 0, None)["text"] == json.dumps(
-        original, ensure_ascii=False, indent=2)
+    assert out["success"] is False and out["diagnostic"]["code"] == "VALUE"
+    assert out["diagnostic"]["details"]["step"] == 7
+    assert "result_ref" in out
+    assert json.loads(store.read_evidence(out["result_ref"]["id"], 0, None)["text"]) == original
 
 
 def test_compact_environment_preserves_available_capabilities():

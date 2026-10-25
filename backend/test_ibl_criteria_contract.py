@@ -192,13 +192,10 @@ def c10_quality_of_result():
                         ensure_ascii=False)
     q, fb = _quality_of_result(single)
     check("단독 결과에서 추출", q == "pass_after_retry" and fb == "수치 누락", f"{q}, {fb}")
-    # 파이프 봉투: results[] step 기록(_quality_meta 승격 모양)
-    env = json.dumps({"success": True, "results": [
-        {"step": 1, "node": "table", "action": "brief",
-         "criteria_verdict": "pass_after_retry", "criteria_feedback": "3문장 초과"}],
-        "final_result": "보고"}, ensure_ascii=False)
+    env = json.dumps({"edition": 2, "success": True, "criteria_steps": [
+        {"verdict": "pass_after_retry", "criteria_feedback": "3문장 초과"}], "value": "보고"})
     q2, fb2 = _quality_of_result(env)
-    check("파이프 봉투에서 추출", q2 == "pass_after_retry" and fb2 == "3문장 초과", f"{q2}, {fb2}")
+    check("현행 품질 기록에서 추출", q2 == "pass_after_retry" and fb2 == "3문장 초과")
     # 표지 없는 성공 — (None, None)
     check("무표지=무신호", _quality_of_result('{"success": true, "items": []}') == (None, None))
 
@@ -214,17 +211,6 @@ def c11_truncation_survival():
     # ① _mark 머리
     marked = iq._mark({"success": True, "items": [{"x": 1}]}, {"criteria_verdict": "pass"})
     check("_mark 표지가 머리", list(marked.keys())[0] == "criteria_verdict", str(list(marked.keys())))
-    # Historical JSON receipts remain readable; no edition-1 code is replayed.
-    env = {'success': True, 'criteria_steps': [{'step': 1, 'verdict': 'pass'}],
-           'results': [{'step': 1, 'result': marked}], 'final_result': marked}
-    # ③ 경계 다이어트 후 거대 필드가 꼬리
-    from ibl_envelope import diet_envelope
-    dieted = diet_envelope(dict(env))
-    keys = list(dieted.keys())
-    check("results·final_result 가 꼬리", keys[-2:] == ["results", "final_result"], str(keys))
-    s = json.dumps(dieted, ensure_ascii=False)
-    check("직렬화에서 표지가 results 앞", s.index('"criteria_steps"') < s.index('"results"'))
-
 
 def _battery():
     c1_pass()

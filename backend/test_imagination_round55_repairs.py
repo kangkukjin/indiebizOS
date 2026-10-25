@@ -196,9 +196,9 @@ def test_F55_1_sweep_records_scalar_keys_with_one_nested_layer():
            "rooms": [{"name": "거실", "area": 30}], "_trace": 1}
     kind, keys, more = _sweep._shape(env)        # more = 상한에 잘린 열 수(09-18: 저장은 전체+more, 절단은 표시 쪽)
     assert kind == "scalar" and more == 0
-    assert keys[:3] == ["design", "design.site", "design.floors"] and "rooms[].name" in keys and "_trace" not in keys
+    assert keys[:4] == ["success", "design", "design.site", "design.floors"] and "rooms[].name" in keys and "_trace" not in keys
     assert _sweep._shape({"success": True, "items": [{"a": 1}]}) == ("items", ["a"], 0)
-    assert _sweep._shape({"success": False, "error": "x"}) == (None, [], 0)
+    assert _sweep._shape({"success": False, "error": "x"}) == ("scalar", ["success", "error"], 0)
 
 
 def test_F55_1_harvest_from_health_only_fills_unobserved(tmp_path):

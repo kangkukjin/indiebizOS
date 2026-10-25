@@ -11,6 +11,7 @@ import pytest
 import boot_paths  # noqa: F401
 from test_conscious_supervisor import supervisor  # noqa: F401
 from supervision_store import TurnStore
+from test_ibl_check_client import packet
 
 
 @pytest.fixture
@@ -22,9 +23,8 @@ def view(tmp_path, monkeypatch):
     return model_result_view
 
 
-@pytest.mark.parametrize('pipeline', [False, True])
 @pytest.mark.parametrize('shape', ['image_base64', 'image_data', 'images'])
-def test_large_image_survives_preview_native_and_mcp(view, monkeypatch, pipeline, shape):
+def test_large_image_survives_preview_native_and_mcp(view, monkeypatch, shape):
     import mcp_server
     from system_tools import _harvest_images
     from mcp.server.fastmcp import Image
@@ -36,8 +36,7 @@ def test_large_image_survives_preview_native_and_mcp(view, monkeypatch, pipeline
         photo['image_data'] = {'b64': blob, 'media_type': 'image/jpeg'}
     else:
         photo['images'] = [{'base64': blob, 'media_type': 'image/jpeg'}]
-    raw = ({'success': True, 'results': [{'step': 1, 'result': json.dumps(photo)}],
-            'final_result': json.dumps(photo)} if pipeline else photo)
+    raw = packet(photo)
     original = json.dumps(raw)
     projected = view.project_result(raw)
     serialized = json.dumps(projected)
@@ -60,19 +59,19 @@ def test_large_image_survives_preview_native_and_mcp(view, monkeypatch, pipeline
 
 def test_image_limit_is_explicit_and_original_remains_recoverable(view):
     blob = base64.b64encode(b'large-image' * 1000).decode()
-    raw = {'images': [{'base64': blob, 'media_type': 'image/png'} for _ in range(5)]}
+    raw = packet({'images': [{'base64': blob, 'media_type': 'image/png'} for _ in range(5)]})
     result = view.project_result(raw)
     assert len(result['images']) == 4
     assert result['images_omitted'] == 1
     saved = view.evidence_store().read_evidence(result['result_ref']['id'], 0, None)
-    assert len(json.loads(saved['text'])['images']) == 5
+    assert len(json.loads(saved['text'])['value']['images']) == 5
 
 
 def test_projection_counts_image_bytes_separately_from_model_text(view, monkeypatch):
     events = []
     monkeypatch.setattr('episode_logger.record_trajectory_event', lambda kind, data: events.append((kind, data)))
     blob = base64.b64encode(b'large-image' * 20000).decode()
-    view.project_result({'image_base64': blob, 'mime_type': 'image/jpeg'})
+    view.project_result(packet({'image_base64': blob, 'mime_type': 'image/jpeg'}))
     metrics = next(data for kind, data in events if kind == 'context.result_projected')
     assert metrics['image_count'] == 1
     assert metrics['model_chars'] < 5000 < metrics['raw_chars']
@@ -83,14 +82,14 @@ def test_result_pages_remain_json_with_real_repeat_guard(view, monkeypatch):
     import repeat_guard
     repeat_guard.reset_all()
     source = {'text': '본문' * 300}
-    ref = view.project_result({'text': '본문' * 50000})['result_ref']
+    ref = view.project_result(packet({'text': '본문' * 50000}))['result_ref']
     monkeypatch.setattr(mcp_server, '_post_backend', lambda route, body, timeout:
                         json.dumps(view.read_result(body['read_result'])) if 'read_result' in body
                         else json.dumps(source))
     # Old MCP keyed all code="" page reads alike and appended non-JSON at page 3.
     for offset in range(0, 6000, 1000):
         text = asyncio.run(mcp_server.execute_ibl(code='', read_result={
-            'id': ref['id'], 'path': ['text'], 'offset': offset, 'limit': 1000}))
+            'id': ref['id'], 'path': ['value', 'text'], 'offset': offset, 'limit': 1000}))
         page = json.loads(text)
         assert page['offset'] == offset and '_model_advisory' not in page
     for _ in range(3):

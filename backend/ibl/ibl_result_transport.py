@@ -2,7 +2,7 @@
 import json
 from itertools import chain
 
-from ibl_envelope import diet_envelope, display_delivery_budget, summarize_result
+from ibl_envelope import display_delivery_budget, summarize_result
 from ibl_honesty import HONESTY_KEYS, completion_evidence
 
 PER_ACTION_CHARS = 16_000
@@ -93,7 +93,7 @@ def fit_tool_result(raw: str, budget: int) -> str:
     dumps = lambda value: json.dumps(value, ensure_ascii=False)
 
     if isinstance(parsed, dict):
-        slim = diet_envelope(parsed)
+        slim = parsed
         # 기존 참조를 원형 그대로 남기기 위해 전송 참조는 별도 이름을 쓴다.
         for candidate in chain([slim], (_condense_items(slim, cap) for cap in (10, 5, 3, 1))):
             candidate = {**candidate, "transport_ref": saved["ref"], "_trimmed": saved["_trimmed"]}
@@ -106,7 +106,7 @@ def fit_tool_result(raw: str, budget: int) -> str:
         issues = completion_evidence(parsed)
         if issues:
             parsed = {**parsed, "completion_issues": issues}
-        keys = ("success", "source_complete", "error", "warning", "reason", "step", "steps_completed", "steps_total",
+        keys = ("success", "source_complete", "error", "warning", "reason", "edition", "executed", "diagnostic", "status",
                 "completion_issues",
                 "resume", "continuation", "suspended", "waiting", "task_ref", "verification", "capability_usage", "result_ref", "source_ref", *HONESTY_KEYS)
         for key in dict.fromkeys(keys):
@@ -120,10 +120,10 @@ def fit_tool_result(raw: str, budget: int) -> str:
                 saved[key] = preview
             else:
                 omitted[key] = {"chars": len(dumps(value)), "in_ref": True}
-        if "final_result" in parsed:
-            summary = summarize_result(parsed["final_result"])
-            if len(dumps({**saved, "final_result_summary": summary})) <= budget - 800:
-                saved["final_result_summary"] = summary
+        if "value" in parsed:
+            summary = summarize_result(parsed["value"])
+            if len(dumps({**saved, "value_summary": summary})) <= budget - 800:
+                saved["value_summary"] = summary
         if omitted:
             saved["_transport_omitted"] = omitted
     else:

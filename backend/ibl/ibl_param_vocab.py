@@ -167,10 +167,10 @@ def documented_vocab(action_config: dict, tool_name: str) -> Set[str]:
 
 
 def vocab_outside_allowed(node: str, action: str, action_config: dict) -> Set[str]:
-    """문서화 어휘(제안·계약 인자·계약 별칭) 가운데 판본 1 검사가 받지 않는 키 — 빌드 관문용.
+    """문서화 어휘(제안·계약 인자·계약 별칭) 가운데 핸들러 스키마가 받지 않는 키 — 빌드 관문용.
 
     이 집합이 비어 있지 않으면 같은 키를 한쪽은 "선언된 인자"로, 다른 쪽은 "미인식"으로 말한다(79회차 B79-8
-    자기모순 경고의 뿌리: 판본 2 계약엔 descending, 판본 1 스키마·핸들러엔 desc 만 있었다)."""
+    자기모순 경고의 뿌리: 판본 2 계약엔 descending, 핸들러 스키마엔 desc 만 있었다)."""
     allowed = allowed_param_keys(node, action, action_config)
     if allowed is None:
         return set()

@@ -13,8 +13,6 @@ import pytest
 
 from common.field_path import MISSING, parse_path, walk_path
 from ibl.api_transforms import _extract_path, _get_nested
-from ibl.ibl_predicates import _MISSING as PRED_MISSING
-from ibl.ibl_predicates import walk_path as pred_walk
 
 ROOT = Path(__file__).resolve().parent.parent
 CHECKER = ROOT / "scripts" / "check_field_path.py"
@@ -36,7 +34,6 @@ def test_same_path_same_answer_across_surfaces():
     """리스트 숫자 인덱스 경로가 전 표면에서 같은 값을 낸다 (옛 방언은 3표면이 실패)."""
     path = "items.0.title"
     assert walk_path(_DOC, path) == "가"
-    assert pred_walk(_DOC, path) == "가"
     assert _extract_path(_DOC, path) == "가"
     assert _get_nested(_DOC, path) == "가"
     import json
@@ -45,7 +42,6 @@ def test_same_path_same_answer_across_surfaces():
 def test_dict_digit_key_takes_precedence_over_index():
     """dict 의 "0" 은 문자열 키다 — 블록 술어의 문서화된 계약이 전 표면의 정본."""
     assert walk_path(_DOC, "meta.0") == "영키"
-    assert pred_walk(_DOC, "meta.0") == "영키"
     assert _get_nested(_DOC, "meta.0") == "영키"
 
 
@@ -53,9 +49,6 @@ def test_missing_vs_null_distinction_preserved():
     """결측(MISSING)과 값 null 은 다르다 — 술어의 exists() 계약이 산다."""
     assert walk_path(_DOC, "meta.n") is None
     assert walk_path(_DOC, "meta.x") is MISSING
-    assert pred_walk(_DOC, "meta.n") is None
-    assert pred_walk(_DOC, "meta.x") is PRED_MISSING
-    assert PRED_MISSING is MISSING  # 표지도 한 벌 — 두 표지는 두 방언의 씨앗
 
 
 def test_bracket_grammar_stays_surface_local():
@@ -63,7 +56,6 @@ def test_bracket_grammar_stays_surface_local():
     assert _extract_path({"data": [{"name": "가"}]}, "data[0].name") == "가"
     assert parse_path("data[0].name") == ["data[0]", "name"]          # 기본은 문자 그대로
     assert parse_path("data[0].name", brackets=True) == ["data", 0, "name"]
-    assert pred_walk({"data[0]": {"name": "나"}}, "data[0].name") == "나"  # 술어는 리터럴 키
 
 
 def test_flatten_field_accepts_index_path(data_ops):

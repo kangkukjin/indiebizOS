@@ -28,7 +28,7 @@ retired:
   - id: ibl-edition1-execution
     retired: 2026-10-25
     reason: 판본 1 프로그램 실행과 판본 2에서 구판 함수로 넘어가는 어댑터를 종료한다.
-    instead: 명시 판본 2만 실행한다. 구판 원문과 revision은 역사 조회로 보존한다.
+    instead: 작성·검사·실행은 현행 파서와 값/상태 계약 한 벌을 사용한다. 구판 원문과 revision은 역사 조회로 보존한다.
     phrases: ['from workflow_parallel import', 'from workflow_fallback import', 'from pipeline_state import', 'from ibl_exec_each import', 'def legacy_functions(', 'def function_adapters(']
   - id: body-matched-idiom-execution-statistics
     retired: 2026-10-24

@@ -865,7 +865,7 @@ class ChannelPoller:
                                            inputs={**(trigger.get('inputs') or {}), 'message': msg_ctx},
                                            function_refs=trigger.get('function_refs'))
                 success = not is_error_result(result)
-                final = result.get("final_result", result) if isinstance(result, dict) else result
+                final = result.get("value") if isinstance(result, dict) else result
                 rows = final.get("items") if isinstance(final, dict) else None
                 error = err_reason_of(result) if not success else None
                 try:

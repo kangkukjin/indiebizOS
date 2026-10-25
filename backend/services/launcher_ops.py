@@ -75,7 +75,7 @@ def project_op(params: dict) -> Any:
         rows = [p for p in pm.list_projects() if not p.get("in_trash") and p.get("type", "project") != "folder"]
         return _items(rows)
     if op == "templates":
-        return _items(pm.list_templates())
+        return _items([{"name": name} for name in pm.list_templates()])
     if op == "create":
         name = _need(params, "name")
         if not name:

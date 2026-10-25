@@ -15,11 +15,6 @@ def _value(raw):
             raise ValueError('공개 조사 도구 실행 실패')
         if value.get('edition') == 2 and 'value' in value:
             return value['value']
-        for key in ('final_result', 'result'):
-            if key in value:
-                return _value(value[key])
-        if 'results' in value and isinstance(value['results'], list) and value['results']:
-            return _value(value['results'][-1])
     return value
 
 

@@ -23,103 +23,31 @@ def _invs(declared, env):
     return sorted({inv for inv, _ in hs.check_envelope("x", declared, env)})
 
 
-# ── A. 거짓 성공 (B21-1 부류) ──────────────────────────────────────────────────
-def test_a_error_text_in_success_message():
-    assert _invs("scalar", {"success": True, "message": "오류: html은 필수입니다."}) == ["A"]
-    assert _invs("scalar", {"message": "Error: nope"}) == ["A"]
-
-
-def test_a_bare_string_error_is_flagged():
-    assert _invs("scalar", "렌더링 중 오류 발생: boom") == ["A"]
-    assert _invs("scalar", "Traceback (most recent call last):\n ...") == ["A"]
-
-
-def test_a_honest_failure_not_flagged():
-    # 실패를 error 채널로 말하면 정직 — A 아님
-    assert _invs("scalar", {"success": False, "error": "오류: html 필요"}) == []
-    assert _invs("scalar", {"error": "다운로드 실패: 403"}) == []
-
-
-def test_a_success_prose_not_overrejected():
-    assert _invs("scalar", "렌더링 완료: /tmp/a.png") == []
-    assert _invs("scalar", {"success": True, "message": "실패 0건 / 성공 3건"}) == []   # 접두 아님
-
-
-# ── B. 통화 부재 (V13-1·F16-2·B19-2 부류) ──────────────────────────────────────
-def test_b_declared_items_but_missing():
-    assert _invs("items", {"success": True, "goals": [{"a": 1}]}) == ["B"]
-    assert _invs("items", {"success": True, "items": None}) == ["B"]
-
-
-def test_b_table_shape_accepted():
-    assert _invs("table", {"success": True, "rows": [[1]], "columns": ["a"]}) == []
-    assert _invs("items", {"success": True, "table": {"rows": []}}) == []
-
-
-def test_b_failed_envelope_exempt():
-    # 실패 봉투는 오류 채널이 정본 — items 없어도 B 아님
-    assert _invs("items", {"success": False, "error": "API 죽음"}) == []
-
-
-def test_b_scalar_declared_free():
-    assert _invs("scalar", {"success": True, "value": 3}) == []
-
-
-# ── C. 0행 거짓 (F17·P14 빈손 계약) ────────────────────────────────────────────
-def test_c_zero_rows_success_is_honest():
-    assert _invs("items", {"success": True, "items": [], "count": 0, "message": "등록된 목표가 없습니다."}) == []
-
-
-def test_c_zero_rows_with_error_prefixed_message():
-    assert _invs("items", {"success": True, "items": [], "message": "Error: 결과 없음"}) == ["A", "C"]
-
-
-def test_c_zero_rows_folded_into_failure_without_error():
-    assert _invs("items", {"success": False, "items": []}) == ["C"]
-    # error 채널이 있으면 정당한 실패(each 의 입력 거절 등)
-    assert _invs("items", {"success": False, "items": [], "error": "each: do 가 필요합니다"}) == []
+def test_current_shape_is_checked_without_reinterpreting_business_status():
+    assert _invs("items", {"success": False, "error": "業務", "items": [{}]}) == []
+    assert _invs("items", {"items": []}) == []
+    assert _invs("items", {"table": {"rows": []}}) == ["B"]
+    assert _invs("items", {"items": [1]}) == ["B"]
+    assert _invs("items", "text") == ["B"]
+    assert _invs("scalar", {"message": "Error: quoted user text"}) == []
 
 
 # ── final_of: 응답 → 최종 봉투 ─────────────────────────────────────────────────
-def test_final_of_unwraps_pipeline_and_json_string():
-    assert hs.final_of({"success": True, "final_result": '{"items": []}'}) == {"items": []}
-    assert hs.final_of({"result": "2026-08-22"}) == "2026-08-22"
-    assert hs.final_of({"success": True, "items": [1]}) == {"success": True, "items": [1]}
+def test_final_of_preserves_business_fields():
+    from ibl_v2_ir import pack
+    value = {"result": "업무 값", "success": False, "items": []}
+    assert hs.final_of({"edition": 2, "success": True,
+                       "value_wire": {"protocol": "ibl-value/1", "data": pack(value)}}) == value
 
 
-# ── E. 병렬 봉투 (B24-1, 24회차 상상훈련) ──────────────────────────────────────
-def _pinvs(env, expect):
-    return [i for i, _ in hs.check_parallel_envelope(env, expect)]
-
-
-def test_e_parallel_branch_failure_must_be_reported():
-    # 한 가지 실패 — 신고 있고 부분 성공
-    ok = {"success": True, "branches_failed": [{"step": 1, "of": 2,
-          "failed": [{"branch": 2, "node": "sense", "action": "feed", "error": "…"}]}]}
-    assert _pinvs(ok, {"success": True, "failed": 1}) == []
-    # 옛 동작(신고 0) 은 위반이어야 한다 — 이게 B24-1 그 자체다
-    old = {"success": True}
-    assert _pinvs(old, {"success": True, "failed": 1}) == ["E"]
-
-
-def test_e_all_branches_failed_is_not_success():
-    old = {"success": True, "branches_failed": [{"step": 1, "of": 2,
-           "failed": [{"branch": 1}, {"branch": 2}]}]}
-    # 전 가지 실패인데 success:true → 위반(아무것도 못 가져온 것은 성공이 아니다)
-    assert _pinvs(old, {"success": False, "failed": 2}) == ["E"]
-    new = {**old, "success": False}
-    assert _pinvs(new, {"success": False, "failed": 2}) == []
-
-
-def test_e_healthy_parallel_is_untouched():
-    assert _pinvs({"success": True}, {"success": True, "failed": 0}) == []
-
-
-def test_e_probe_universe_is_network_free():
-    # 프로브가 외부 API 를 타면 블립이 판정을 흔든다 — 우주는 결정론이어야 한다.
-    for _n, code, _e in hs.PARALLEL_PROBES:
-        assert "http" not in code, code
-        assert " & " in code, code
+def test_parallel_probes_use_actual_runtime_results():
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    for name, code, expected in hs.PARALLEL_PROBES:
+        result = Runtime(compile_program(code, {})).run()
+        assert hs.check_parallel_envelope(result, expected) == [], (name, result)
+        assert hs.check_parallel_envelope({**result, "executed": False}, expected)
+        assert hs.check_parallel_envelope({**result, "success": not result["success"]}, expected)
 
 
 # ── D. 정적 부채 정규식 ────────────────────────────────────────────────────────

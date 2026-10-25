@@ -130,54 +130,10 @@ def coerce_json_param(value: Any) -> Any:
     return value
 
 
-def fn_result_payload(raw: Any, *, typed: bool = False) -> tuple:
-    """함수의 실행 기록과 반환값을 분리한다. 값은 final_result 한 곳에만 둔다.
-
-    실행기가 붙인 표식만 읽으므로 사용자 데이터의 fn/final_result 키를 벗기지
-    않는다. 실패 봉투는 값으로 바꾸지 않아 오류·트레이스백이 그대로 흐른다.
-    """
-    value, found = raw, False
-    for _ in range(20):
-        obj = coerce_json_param(value)
-        if not (isinstance(obj, dict) and obj.get('_fn_result') is True
-                and obj.get('success') is True and 'final_result' in obj):
-            break
-        found, value = True, obj['final_result']
-        if typed and obj.get('_return_encoding') == 'text':
-            return True, value
-        if typed and obj.get('_return_encoding') == 'json':
-            # 실행기가 명시한 직렬화만 해독한다. JSON처럼 생긴 사용자 문자열은 text다.
-            return True, json.loads(value) if isinstance(value, str) else value
-    return found, coerce_json_param(value) if found else raw
 
 
-def value_result_payload(raw: Any) -> tuple:
-    """식 할당·함수 반환의 값과 진단 봉투를 구별한다. 사용자 value 키는 벗기지 않는다.
-
-    파이프·변수 보간은 같은 표식을 읽는다. 목록을 value/items 양쪽에 복제해
-    소비자마다 고치는 대신, 관측하는 경계에서만 원형 값을 꺼낸다.
-    """
-    obj = coerce_json_param(raw)
-    if isinstance(obj, dict) and obj.get('_value_result') is True and 'value' in obj:
-        return True, obj['value']
-    return fn_result_payload(raw)
 
 
-def value_result_field_view(obj: Any, path: str) -> Any:
-    """구조 값의 경로는 값에서 읽는다. 기존 진단 필드는 충돌하지 않을 때 유지한다."""
-    is_value, value = value_result_payload(obj)
-    if not is_value or not path:
-        return obj
-    first = str(path).lstrip('.').split('.', 1)[0].rstrip('?')  # path-ok: 뷰 선택만; 경로 걷기는 field_path 소유
-    if isinstance(value, dict) and first in value:
-        return value
-    if isinstance(obj, dict) and first in obj:
-        return obj
-    if isinstance(value, str) and first in ('message', 'text', 'content'):
-        return {first: value}
-    if isinstance(value, (dict, list)):
-        return {'items': value} if isinstance(value, list) and first == 'items' else value
-    return obj
 
 
 def coerce_items_payload(value: Any) -> Any:
@@ -191,7 +147,6 @@ def coerce_items_payload(value: Any) -> Any:
     받는 모양: list(그대로) · {"items": [...]} 봉투 · 그 둘의 JSON 문자열.
     그 밖(빈 문자열·JSON 아님·스칼라)은 None — 호출자의 기존 진단 경로를 그대로 둔다.
     """
-    _, value = value_result_payload(value)
     if isinstance(value, list):
         return value
     if isinstance(value, dict):

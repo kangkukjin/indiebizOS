@@ -7,7 +7,8 @@ import pytest
 
 from common.value_semantics import numeric_value
 from ibl.api_transforms import _apply_sort
-from ibl.ibl_predicates import Evaluator, _num
+from common.expression_ops import binary
+from common.expression_ir import Fault
 
 
 _HANDLER = (Path(__file__).resolve().parent.parent / "data" / "packages" /
@@ -59,12 +60,11 @@ def test_round43_matrix_converges_numeric_ordering_surfaces(
     rows = [{"label": "high", "v": high}, {"label": "low", "v": low}]
     assert data_ops._sort_records(rows, "v")[0]["label"] == "low", name
     assert data_ops._sort_records(rows, "v", True)[0]["label"] == "high", name
-    assert Evaluator.compare(">", high, low), name
+    assert binary(">", high, low), name
 
 
 def test_percent_numeric_policy_has_one_source_and_reaches_response_sort():
     assert numeric_value("10%") == 10
-    assert _num("10%") == numeric_value("10%")
     assert numeric_value(" 2.5% ") == 2.5
     assert numeric_value("%") is None
     rows = [{"label": "high", "v": "10%"}, {"label": "low", "v": "2%"}]

@@ -341,7 +341,7 @@ def test_patch_parallel_proposals_have_distinct_sessions(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('result, expected', [
-    ({'success': True, 'final_result': {'items': [{'id': 1}]}}, True),
+    ({'edition': 2, 'success': True, 'value': {'items': [{'id': 1}]}}, True),
     ({'success': False, 'error': 'fixture failure'}, False),
     ('{"success": false, "message": "fixture failure"}', False),
 ])

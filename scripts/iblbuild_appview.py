@@ -58,39 +58,19 @@ APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes"
             # 선언 필수 — 구형 $key/{field} 문자열 치환(edition 1)은 모든 블록이 넘어간 같은 날 은퇴했다.
             "edition"}
 
-# 판본 2 템플릿 안에 남은 구형 행 치환 {field} — $·{ 뒤가 아닌 {이름} / {a.b}. 판본 2 레코드 {k: v} 는 콜론이 있어 걸리지 않는다.
-_LEGACY_ROW_RE = re.compile(r"(?<![\$\{\w])\{[A-Za-z_][\w.]*\}")
-# 판본 2 문자열 리터럴 안의 $이름 은 문자 그대로다 — 구형 "$key" 치환이 남은 자리(f-문자열 f"…${x}…" 은 제외)
-_STRING_LITERAL_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
-
-
-# 템플릿 안에서 묶이는 이름 — 대입 `$x = …`(비교 `==` 제외)과 람다 인자 `($a, $b) => …`. 입력이 아니다.
-_BOUND_ASSIGN_RE = re.compile(r"\$(\w+)\s*=(?!=)")
-_BOUND_LAMBDA_RE = re.compile(r"\(([^()]*)\)\s*=>")
-
-
-def _bound_names(t: str) -> set:
-    names = set(_BOUND_ASSIGN_RE.findall(t))
-    for params in _BOUND_LAMBDA_RE.findall(t):
-        names.update(re.findall(r"\$(\w+)", params))
-    return names
-
-
 def _template_input_names(t: str) -> set:
-    """판본 2 템플릿이 표면에서 받아야 하는 입력 이름 — 모든 $참조에서 템플릿 안에서 묶인 이름을 뺀 것(렌더 코어 templateNames 와 같은 규칙)."""
-    return set(re.findall(r"\$\{?(\w+)", t)) - _bound_names(t)
+    """실제 AST 참조만 센다. 일반 문자열의 $이름은 입력이 아니다."""
+    from ibl_v2_parser import parse
+    from common.expression_ops import free_names
+    from ibl_v2_learning import walk_nodes
+    try:
+        program = parse(t)
+    except Exception:
+        return set()  # 문법 진단은 템플릿 파서/컴파일 관문이 보고한다.
+    bound = {node.data["name"] for node in walk_nodes(program) if node.kind == "bind"}
+    return free_names(program) - bound
 
 
-def _quoted_dollar(t: str) -> bool:
-    """일반(f 접두 없는) 문자열 리터럴 안에 $이름 이 남아 있나 — 리터럴 단위로 본다(따옴표 사이를 건너 매칭하지 않게)."""
-    for m in _STRING_LITERAL_RE.finditer(t):
-        if m.start() > 0 and t[m.start() - 1] in "fF":
-            continue
-        if re.search(r"\$[A-Za-z_]", m.group(0)):
-            return True
-    return False
-# 판본 2 가 받지 않는 판본 1 전용 문법 — 파이프 축약(| sort: / | take: / | filter:). @노드 지정은 2026-10-05 부터 판본 2 도 받는다.
-_EDITION1_ONLY_RE = re.compile(r"\|\s*(sort|take|filter)\s*:")
 APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
 
 # === 뷰-어휘 문서-동기 가드 (2026-07-03, ibl.md '표현 언어의 층위' 조항 집행) ===
@@ -598,7 +578,7 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
     """단일 앱 블록(탭 또는 단독 계기) 검증 — 노드 app: 블록과 standalone 매니페스트 공용.
 
     action(IBL 템플릿) 필수 · view 어휘 · compose · inputs(key/type/select) ·
-    템플릿의 [node:action] 실존 · $key↔inputs 대응 · 템플릿 판본(edition 2 기본, 1 은 legacy_reason 필수).
+    템플릿의 [node:action] 실존 · $key↔inputs 대응 · 템플릿 형식(edition: 2 필수).
     """
     import re
     issues: list[str] = []
@@ -606,7 +586,7 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
     if edition is None:
         issues.append(f"{blabel}: edition: 2 선언 필수 — 템플릿은 치환 없는 판본 2 원문(원문+inputs)으로 실행된다")
     elif edition != 2:
-        issues.append(f"{blabel}: edition 은 2 만 유효 (현재 {edition!r}) — 구형 치환 경로(edition 1)는 2026-10-05 은퇴")
+        issues.append(f"{blabel}: edition 은 2 만 유효 (현재 {edition!r})")
     if not isinstance(blk.get("action"), str) and not blk.get("buttons"):
         issues.append(f"{blabel}: app.action(IBL 템플릿) 또는 buttons 필수")
     # action 있는 블록은 결과를 그릴 view 필수. 버튼 전용(action 없음)은 그릴 데이터가
@@ -662,12 +642,11 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
             if key not in input_keys:
                 issues.append(f"{blabel}: app 템플릿 $%s 에 대응하는 input 없음 ({t!r})" % key)
         if edition == 2:
-            if _LEGACY_ROW_RE.search(t):
-                issues.append(f"{blabel}: edition 2 템플릿에 구형 행 치환 {{필드}} — $item.필드 로 쓴다 ({t!r})")
-            if _quoted_dollar(t):
-                issues.append(f"{blabel}: edition 2 문자열 리터럴 안의 $이름 은 문자 그대로 간다 — 따옴표를 벗기거나(값) f\"…${{이름}}…\"(보간) ({t!r})")
-            if _EDITION1_ONLY_RE.search(t):
-                issues.append(f"{blabel}: edition 2 는 파이프 축약(| sort: / | take:)을 받지 않는다 — >> [table:sort]/[table:take] 조합으로 바꾼다 ({t!r})")
+            from ibl_v2_parser import parse
+            try:
+                parse(t)
+            except Exception as exc:
+                issues.append(f"{blabel}: 템플릿 문법 오류 — {exc}")
     return issues
 
 

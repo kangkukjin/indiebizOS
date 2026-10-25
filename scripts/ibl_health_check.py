@@ -22,157 +22,32 @@ def _abort_admission(detail):
                                           ensure_ascii=False))
     sys.exit(0)
 
+from ibl_check_client import execute as execute_checked, final_of, request, value_of, CheckFailure, item_rows
+
+
 def _request(fields, pid):
-    # agent_id=__self_check__ — 이 점검의 실행이 action_health 에 source='self_check' 로
-    # 기록되게 한다(없으면 'usage' 로 실려 §1D 실사용 통계를 자가 점검 실패로 오염 —
-    # channel_read 97% 거짓 시그널의 진범). postprocess(AI 압축)도 함께 스킵돼 점검 AI 0.
-    body = json.dumps({**fields, "project_id": pid,
-                       "agent_id": "__self_check__", "edition": 2}).encode()
-    headers = {"Content-Type": "application/json"}
-    # ★부모 자격 동반(2026-09-15) — 러너(스케줄러 잡·조종실 요청)가 쥔 실행 자격을 환경변수로
-    # 물려받아 X-Runtime-Parent 로 싣는다(cli_provider._identity_headers / mcp_server 와 같은
-    # 통로). 이게 없던 동안 재기동 drain(접수 중단) 중엔 이 점검의 호출이 '새 작업'으로 보여
-    # 전부 503 즉시 거절됐다 — drain 은 이 잡이 끝나길 기다리면서 잡의 호출은 거절하는 셈.
-    # 자식으로 실리면 drain 동안에도 접수된다(runtime_work.WorkRegistry.reserve: parent∈groups).
-    _parent = os.environ.get("INDIEBIZ_RUNTIME_PARENT")
-    if _parent:
-        headers["X-Runtime-Parent"] = _parent
-    req = urllib.request.Request(BASE + "/ibl/execute", data=body, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=45) as r:
-            out = json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode(errors="replace")
-        try:
-            payload = json.loads(raw)
-        except Exception:
-            payload = {}
-        if e.code == 503 and isinstance(payload, dict) and payload.get("executed") is False:
-            _abort_admission(str(payload.get("detail") or raw)[:160])
-        return {"_transport_error": f"HTTP {e.code}: {raw[:80]}"}
-    except Exception as e:
-        return {"_transport_error": str(e)}
-    return out
+    return request(fields, pid, base=BASE, timeout=45, on_admission=_abort_admission)
 
 
 def execute(code, pid=PID):
-    """HTTP 표시 사본 대신 저장된 원형 값을 조회한다. 도구는 한 번만 실행한다."""
-    result = _request({"code": code}, pid)
-    if not isinstance(result, dict) or result.get("success") is not True or "value_wire" in result:
-        return result
-    reference = result.get("result_ref") or {}
-    if not isinstance(reference, dict) or not reference.get("id"):
-        return {**result, "_protocol_error": "성공 응답에 원형 결과 참조가 없습니다."}
-    request = {"id": reference["id"], "path": ["value_wire"], "offset": 0, "limit": 60000}
-    chunks, offset, total = [], 0, None
+    return execute_checked(code, pid, request_page=_request)
+
+
+def classify_currency(result, declared):
+    """실행 상태와 업무 값을 분리하고 현행 returns 선언만 대조한다."""
     try:
-        while True:
-            page = _request({"code": "", "read_result": request}, pid)
-            if not isinstance(page, dict) or not isinstance(page.get("text"), str):
-                raise ValueError("원형 결과 조회 실패: " + str(page)[:160])
-            scope = page.get("read_scope") or {}
-            if (page.get("id") != reference["id"] or page.get("path") != ["value_wire"]
-                    or page.get("offset") != offset or scope.get("start") != offset
-                    or scope.get("end") != offset + len(page["text"])
-                    or type(page.get("chars")) is not int or page["chars"] > 4_000_000):
-                raise ValueError("원형 결과 페이지의 참조·범위가 일치하지 않습니다.")
-            if total is not None and total != page["chars"]:
-                raise ValueError("조회 중 원형 결과 길이가 바뀌었습니다.")
-            total = page["chars"]
-            chunks.append(page["text"])
-            offset += len(page["text"])
-            if offset == total:
-                if page.get("next_read") is not None:
-                    raise ValueError("완료한 결과에 다음 페이지가 있습니다.")
-                break
-            following = page.get("next_read")
-            if (not page["text"] or not isinstance(following, dict)
-                    or following.get("id") != reference["id"]
-                    or following.get("path") != ["value_wire"] or following.get("offset") != offset):
-                raise ValueError("원형 결과 페이지가 누락됐습니다.")
-            request = following
-        return {**result, "value_wire": json.loads("".join(chunks))}
-    except (ValueError, TypeError, KeyError) as exc:
-        return {**result, "_protocol_error": str(exc)}
-
-
-def final_of(result):
-    """실행 성공과 wire 계약을 확인한 뒤에만 값을 꺼낸다."""
-    if not isinstance(result, dict):
-        return {"_protocol_error": "실행 응답이 Record가 아닙니다."}
-    if result.get("_transport_error") or result.get("_protocol_error"):
-        return result
-    if result.get("success") is not True:
-        return {"_execution_error": result.get("error") or result.get("issues") or "실행 실패",
-                "executed": result.get("executed"), "diagnostic": result.get("diagnostic")}
-    wire = result.get("value_wire")
-    if not isinstance(wire, dict) or wire.get("protocol") not in ("ibl-value/1", "ibl-value/2"):
-        return {"_protocol_error": "성공 응답의 value_wire가 없거나 지원하지 않는 프로토콜입니다."}
-    try:
-        return unpack(wire["data"])
-    except Exception as exc:
-        return {"_protocol_error": str(exc)}
-
-
-# 기기 미가용(폰/맥 오프라인)·파라미터 부족 = 액션 정상, 테스트 한계 → liveness 면제(SKIP).
-# (backend world_pulse_health._evaluate_result 의 분류와 같은 취지 — 거짓 YELLOW 방지)
-_BENIGN_ERR = [
-    "필요합니다", "required", "missing", "파라미터", "입력해", "확인해", "확인하세요",
-    "를 입력", "을 입력", "가 필요", "이 필요",
-    "폰 네이티브", "폰에서", "phone_only", "맥에 연결", "INDIEBIZ_PHONE_URL",
-    "INDIEBIZ_MAC", "Chaquopy", "offline", "연결할 수 없",
-]
-
-def classify_currency(d, declared):
-    """returns 선언 대비 단언. declared=items면 통화 유효성 검사(단일 통화 이행 완료 — 옛
-    records/table/currency/document 선언은 전부 items로 흡수됨).
-    scalar/effect/transform은 통화 면제 — 단 liveness(에러 없이 살았나)는 본다(핸들러 크래시·
-    param 키 불일치 검출). 통화 계약이 없으므로 RED 는 안 만든다(에러=YELLOW, 정상/한계=SKIP).
-    아래 tbl/blk 읽기는 straggler(stock table·context7/report blocks 등 items 미선언 부가방출) 방어용."""
-    d = final_of(d)
-    if isinstance(d, dict):
-        for key in ("_transport_error", "_protocol_error"):
-            if key in d:
-                return "RED", f"{key}: {str(d[key])[:120]}"
-        if "_execution_error" in d:
-            level = "RED" if d.get("executed") is not True else "YELLOW"
-            return level, f"실행 실패: {str(d['_execution_error'])[:120]}"
+        value = value_of(result)
+    except CheckFailure as exc:
+        level = "YELLOW" if exc.key == "_execution_error" and exc.result.get("executed") is True else "RED"
+        return level, str(exc)[:160]
     if declared != "items":
-        # 통화 면제 — liveness만 본다.
-        if not isinstance(d, dict):
-            return "SKIP", f"{declared} (값 반환)"          # 스칼라 raw 값 = 정상
-        if d.get("_transport_error"):
-            return "YELLOW", "transport:" + d["_transport_error"][:40]
-        if d.get("_string") is not None:
-            return "SKIP", f"{declared} (텍스트 반환)"        # 스칼라 문자열 = 정상
-        if "error" in d:
-            err = str(d.get("error") or "")
-            if any(k in err for k in _BENIGN_ERR):
-                return "SKIP", f"{declared} (테스트 한계: {err[:35]})"
-            return "YELLOW", f"{declared} 에러: {err[:45]}"   # 핸들러 실제 실패 — 단 통화 RED 아님
-        return "SKIP", f"{declared} (alive)"
-    if not isinstance(d, dict):
-        return "YELLOW", "non-dict"
-    if d.get("_transport_error"): return "YELLOW", "transport:" + d["_transport_error"][:40]
-    if d.get("_string") is not None: return "RED", f"{declared} 선언인데 문자열 반환(통화 파괴?)"
-    tbl = d.get("table"); blk = d.get("blocks")
-    # 단일 통화 items 우선 — 비어있지 않은 dict 리스트면 통화 유효(title 불요, 열린 항목).
-    # derive_items(렌더러 경계)가 table/blocks도 items로 파생하므로 대부분 여기서 GREEN.
-    itm = d.get("items")
-    if isinstance(itm, list) and itm and all(isinstance(x, dict) for x in itm):
-        return "GREEN", f"items[{len(itm)}]" + ("" if declared == "items" else f" (선언 {declared})")
-    # 유효 통화 present → GREEN (선언과 다른 표현이 나와도 통화는 통화)
-    if isinstance(tbl, dict) and tbl.get("columns") and tbl.get("rows") is not None:
-        return "GREEN", f"table {len(tbl['rows'])}행" + ("" if declared == "table" else f" (선언 {declared})")
-    # 문서IR {blocks} — crawl·read(docx/pdf) → table:document. type 키 가진 블록 리스트.
-    if isinstance(blk, list) and blk and all(isinstance(x, dict) and "type" in x for x in blk):
-        return "GREEN", f"document blocks[{len(blk)}]" + ("" if declared == "document" else f" (선언 {declared})")
-    if isinstance(itm, list) and not itm: return "YELLOW", "items 빈(데이터 없음)"
-    if "error" in d: return "YELLOW", "error:" + str(d.get("error"))[:45]
-    # 통화 선언인데 통화 없음 — 목록형 산출이 있으면 명백한 계약 위반(통화 미부착)
-    listed = [k for k, v in d.items() if k != "notes" and isinstance(v, list) and v and all(isinstance(x, dict) for x in v)]
-    if listed: return "RED", f"{declared} 선언인데 '{listed[0]}' 목록만(통화 미부착)"
-    return "YELLOW", f"{declared} 선언인데 통화 없음(스칼라 응답? op 확인)"
+        return "SKIP", f"{declared} (값 반환)"
+    items = item_rows(value)
+    if items is None:
+        return "RED", "items 선언인데 List 또는 Record.items List가 없습니다."
+    if not all(isinstance(row, dict) for row in items):
+        return "RED", "items의 각 행은 Record여야 합니다."
+    return ("GREEN", f"items[{len(items)}]") if items else ("YELLOW", "items 빈(데이터 없음)")
 
 # 레지스트리의 returns 선언 적재 (단언 기준)
 import yaml as _yaml

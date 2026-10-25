@@ -435,32 +435,12 @@ def test_p13_document_open_dict_and_table():
     print("P13 OK — 열린 dict→table 블록·표 통화 입구·절단 꼬리 신고·records 카드 회귀 없음")
 
 
-def test_p14_fallback_empty_predicate():
-    """P14(⑯ 실험 7): ??가 빈 결과(total:0·items:[])를 성공으로 세어 폴백이 안 돌았다."""
-    from workflow_verdict import _is_empty_result, is_error_result
-    # 빈손 판정 — 구조 신호
-    assert _is_empty_result({"success": True, "items": [], "total": 0}) is True
-    assert _is_empty_result(json.dumps({"total": 0, "items": []})) is True
-    assert _is_empty_result({"success": True, "columns": ["a"], "rows": []}) is True
-    assert _is_empty_result({"success": True, "count": 0}) is True
-    # 빈손 아님 — 내용 있음·키 부재·비통화
-    assert _is_empty_result({"success": True, "items": [{"a": 1}]}) is False
-    assert _is_empty_result({"success": True, "message": "done"}) is False
-    assert _is_empty_result("자유 텍스트 응답") is False
-    assert _is_empty_result({"success": True, "truncated": False, "total": 5, "items": [{}]}) is False
-    # 에러와 빈손은 별개 축 (에러는 기존 술어가)
-    assert is_error_result({"success": False, "error": "x"}) and not _is_empty_result({"a": 1})
-    # grep/file_find 0건 = 이제 맨 문자열이 아니라 통화 봉투(술어가 잡을 수 있게)
-    with tempfile.TemporaryDirectory() as td:
-        g0 = json.loads(_sysess.execute({"pattern": "없는패턴XYZ", "path": td}, _Ctx("grep_files", td)))
-        assert g0.get("success") and g0.get("items") == [] and g0.get("total") == 0, g0
-        assert _is_empty_result(g0) is True
-        f0 = json.loads(_sysess.execute({"pattern": "*.없는확장자", "path": td}, _Ctx("glob_files", td)))
-        assert f0.get("success") and f0.get("items") == [] and _is_empty_result(f0) is True, f0
-        # ★>> 는 불변: 0건 위의 take 는 0건을 내는 것이 정답(에러도 폴백도 아님)
-        t0 = _run("data_take", {"_prev_result": json.dumps(g0, ensure_ascii=False), "n": 5})
-        assert t0.get("success") and t0.get("items") == [] and t0.get("count") == 0, t0
-    print("P14 OK — ?? 빈손 술어·0건 통화 봉투·>> 순차 의미 불변")
+def test_p14_fallback_preserves_successful_empty_values():
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    for source, expected in [('[] ?? 42', []), ('null ?? 42', None), ('(1/0) ?? 42', 42)]:
+        out = Runtime(compile_program(source, {})).run()
+        assert out['success'] and out['value'] == expected
 
 
 def test_p15_binary_transformers_carry_flags():

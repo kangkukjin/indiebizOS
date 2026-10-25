@@ -1,0 +1,830 @@
+{
+  "baseline": "5f2299841f0769c0b690aeb46ed3c80b70376fe6",
+  "retired": [
+    {
+      "path": "backend/ibl/ibl_envelope.py",
+      "symbol": "summarize_step",
+      "sha256": "ca60df7ef4b71a54ff8d09c05e7c763ccfb687668e5801198cdba752dde66450",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/ibl/ibl_envelope.py",
+      "symbol": "_diet_fn_result",
+      "sha256": "ed53b90d293aec58d80d53ca8a5dd33cc3d956db52951e4638f448259b199dd9",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/ibl/ibl_envelope.py",
+      "symbol": "diet_envelope",
+      "sha256": "283ea0ee2dc4a318e357d49fc96c97af77872aba4b2edac5877ea71498cd7fb4",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/common/currency.py",
+      "symbol": "fn_result_payload",
+      "sha256": "51b18a0ef6494bf529faa1884ac7c3f37f3c51a2a5ec355fd90a0bd3cca09c0c",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/common/currency.py",
+      "symbol": "value_result_payload",
+      "sha256": "e066b7d1724f24e3356404fb7618834c544d3c13c2178a33240c4045f34a3eae",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/common/currency.py",
+      "symbol": "value_result_field_view",
+      "sha256": "ea9b300642d7a5450761cdee0938068dcc734fbc448fa9a2a50dfdb4bb3e8e94",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/ibl/workflow_verdict.py",
+      "symbol": "_is_empty_result",
+      "sha256": "a4f630ddd96faf8c5c5fe495fa2a1a95976b1fdbd24f834f8addb5d6b22506bb",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/ibl/ibl_function_result.py",
+      "sha256": "d07cea0962af29bc1c86a82e2ac9001153595f9f6b8a1599f1c12a0c67a022af",
+      "reason": "구판 함수 결과 포장 전용; 현행 결과 경계 시험으로 대체"
+    },
+    {
+      "path": "backend/test_nested_fn_envelope.py",
+      "sha256": "4dcdf5994ab8de192922191ff18c28355f5503a4f2927485868ff7fcb2e9c837",
+      "reason": "구판 함수 결과 포장 전용; 현행 결과 경계 시험으로 대체"
+    },
+    {
+      "path": "backend/test_episode4118_4119_boundaries.py",
+      "sha256": "3df6a95d95d9cf28832c6847e92e7443e4aa6e369e6908019ac59c42072c3bb0",
+      "reason": "구판 함수 결과 포장 전용; 현행 결과 경계 시험으로 대체"
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "_envelope",
+      "sha256": "ddf2d9e2204b1499abf280ead4722b3ca4b44c234d6295cb4b30ada781a68bd9",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "test_e1_results_summarized_final_kept",
+      "sha256": "c65c36cc7b707ba9719cfafef5ce10a69fe895898d5af6229fe49b759726b81b",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "test_e2_verbose_idempotent_noop",
+      "sha256": "eb06a7cb205f599765374e6cab6ad9c48640653a6dab9b5aeb2335d76167b14c",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "test_e4_trace_evidence_prefers_final",
+      "sha256": "1334f0e1fd028fde5f23d2fd7b4ac8cfb9b1d9d629d12f9b1be36caaf3b860be",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "backend/test_episode3352_repairs.py",
+      "symbol": "test_intermediate_partial_failure_survives_projection_and_alerts_supervisor",
+      "sha256": "0532a723d3978469c39b557bf046b1e7bd390af80a6782e7c982246db30c416d",
+      "reason": "실행자가 없는 구판 결과 포장/판정; 현행 wire·값 보존·실패 전파 회귀로 대체"
+    },
+    {
+      "path": "scripts/ibl_boundary_cases.py",
+      "sha256": "a89ea4f0e44c3dbf2aae905cd93ae7a3ede2cf48daf07811ccb601812041f227",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/ibl_boundary_cases_round2.py",
+      "sha256": "a9e73a4a6f6ee6d3bfa35ddaddb6532ba2824a924fe0485f94ce96797ba30a3e",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/ibl_boundary_cases_round3.py",
+      "sha256": "153217b2aa81546aa8177743f28e01a39363f5ab85fd326ec71df532fcd702ec",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/ibl_boundary_cases_round4.py",
+      "sha256": "3bda813c1e0960f27ded6ae59939d85990b904f42421ccd8aefa26e77e948c20",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/ibl_boundary_cases_round5.py",
+      "sha256": "2a78ed68e535ec76300112e89a4da50c1e6f5b23cd868e238c9474b7cc966edf",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/ibl_boundary_cases_round6.py",
+      "sha256": "4d9ffe26815369319578c16c1fcf5e7a442af46d8c556bceea2ee76e32f96890",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/idiom_experiment_cases.py",
+      "sha256": "cfa5e661f97e0b9c1688a2903869831cb854223faebbabc9ec255eb038de84e5",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/idiom_value_cases.py",
+      "sha256": "cba7167ef42edb58a2fe3e6a978fc24e080d21a6823d118efae01a0b9a2535d5",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/idiom_exposure_cases.py",
+      "sha256": "78b96612f67b61ca27fcbfcb2044f3c77626d4395d0f0bb69f3e5e03823f2932",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/research_video_execution_budget.py",
+      "sha256": "b4b8b2af6a0f51ae590cc82f0797711b4d01045d63f2873eabdf9e7ec8c02d17",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "backend/test_idiom_exposure_repairs_2026_09_09.py",
+      "sha256": "4fe745e1327abff690db2384944da98d65fcc0b20ad8abe3de6216cdb95af2eb",
+      "reason": "완료된 구판 실험의 실행 문장·정답/봉투 판독. 현행 Runtime·값 보존·활성 자산 빌드 검사로 대체; 원문은 baseline Git에 보존"
+    },
+    {
+      "path": "scripts/migrate_app_templates_edition2.py",
+      "sha256": "3661505d6f1ae8857d901272a4d8dff89ad1dda4ac834836e9572c94170d7f6e",
+      "reason": "앱 원문 이관 완료. 현행 파서/컴파일러 검사만 유지하고 문자열 치환 이관기는 Git 이력으로 회수"
+    },
+    {
+      "path": "backend/ibl/ibl_predicates.py",
+      "sha256": "892fd7f9dd9a6bb2c2f4746f8b2a90f4a6949d990443fb82dc8c72b233527153",
+      "reason": "운영 호출자 없는 구판 조건 언어/소스 참조 분석기. 현행 AST·Runtime 조건 및 공통 경로 시험으로 기능 검증을 이관"
+    },
+    {
+      "path": "backend/ibl/ibl_exec_sense.py",
+      "sha256": "88260fa8285b1ad617f7ec4e6f8b9996fd02a175687258ed1771a0ecebeb5858",
+      "reason": "운영 호출자 없는 구판 조건 언어/소스 참조 분석기. 현행 AST·Runtime 조건 및 공통 경로 시험으로 기능 검증을 이관"
+    },
+    {
+      "path": "scripts/seed_ai_ops_words.py",
+      "sha256": "0859cdb1e5474a11e9d43cda13158fc17e238601ffd58443a7342437df061873",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_ai_ops_words.py",
+        "codes": 16,
+        "invalid": 3,
+        "examples": [
+          {
+            "code": "[sense:stock]{op: \"quote\", symbols: [\"005930\", \"000660\"]} >> [table:brief]{instruction: \"어제 대비 급변 종목 중심 요약\"}",
+            "issues": "[{'code': 'UNKNOWN_ARGUMENT', 'message': '알 수 없는 인자: symbols. 사용 가능한 인자: category, coin_id, criteria, end_date, interval, market, max_points, op, period, project_id, query, scope, search_type, start_date, target, ticker', 'source_span': {'source_hash': '69132128d04d35d24eb3ee7ec92240fb7d4f7c30de550f5bcca48a42f79edc79', 'start': 0, 'end': 57, 'line'"
+          },
+          {
+            "code": "[sense:realty]{source: \"zigbang\", region: \"오송\", deal: \"lease\"} >> [table:take]{n: 5} >> [table:brief]{instruction: \"조건에 최적인 매물 판정과 이유\"}",
+            "issues": "[{'code': 'TYPE', 'message': 'List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.', 'source_span': {'source_hash': '8ae91357ac013301b81c7b84fefed2a8346b300a32f13bdf975e3ee01c4a89cb', 'start': 66, 'end': 84, 'line': 1, 'column': 67}, 'call_path': [], 'expected': 'List<Unknown>', 'actual': 'Record', 'location': {'source_hash': '8ae91357ac"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_artifact_perception.py",
+      "sha256": "598d3ba912ea76b7b669cc916423bedfe6f389faf43e42dee5a1a6f8ef7efe3b",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_artifact_perception.py",
+        "codes": 13,
+        "invalid": 5,
+        "examples": [
+          {
+            "code": "[engines:render]{path: \"index.html\", viewports: [\"1280x800\", \"390x844\"]} >> [table:each]{do: \"[engines:image_read]{op: 'critic', image_path:",
+            "issues": "'{'가 필요합니다: <eof>"
+          },
+          {
+            "code": "[engines:render]{op: \"pdf\", path: \"슬라이드.pdf\"} >> [table:each]{do: \"[engines:image_read]{op: 'critic', image_path: '$it.path', intent: '슬라이드 ",
+            "issues": "'{'가 필요합니다: <eof>"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_body_commit.py",
+      "sha256": "db6ab65385bcbac3cc9124de23b2b26bdc7bf9e9ab4f303fd245b5f281af2f37",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_body_commit.py",
+        "codes": 5,
+        "invalid": 2,
+        "examples": [
+          {
+            "code": "[self:body]{op: \"diff\", path: \"backend/cognition\"} >> [self:body]{op: \"commit\", message: \"인지층 수리\", paths: [\"backend/cognition/agent_pipeline",
+            "issues": "[{'code': 'PIPE_COLLISION', 'message': '[self:body]은(는) 파이프 입력을 받지 않습니다. 앞 단계 값은 $x = … 로 받아 필요한 인자에 넘기세요(예: {인자: $x.text}).', 'source_span': {'source_hash': '5ad6b710ea8ea1d708e04a2a67f61346027db26dc53194ec8bdd91f39705fdea', 'start': 54, 'end': 146, 'line': 1, 'column': 55}, 'call_path': [], 'location': {'source_hash': '5ad6b710ea8ea1d708e04a2a67f"
+          },
+          {
+            "code": "[self:body]{op: \"changes\", days: 1} >> [self:body]{op: \"commit\", message: \"수리 마무리\", paths: [\"backend/ibl/ibl_safety.py\"]}",
+            "issues": "[{'code': 'PIPE_COLLISION', 'message': '[self:body]은(는) 파이프 입력을 받지 않습니다. 앞 단계 값은 $x = … 로 받아 필요한 인자에 넘기세요(예: {인자: $x.text}).', 'source_span': {'source_hash': '96f9272e5de959d274274dcf688b7aac4fc8844566d48cd51fb073e7436752c8', 'start': 39, 'end': 121, 'line': 1, 'column': 40}, 'call_path': [], 'location': {'source_hash': '96f9272e5de959d274274dcf688"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_document_sheet_transit.py",
+      "sha256": "cf31917382beba06719ee883208e16c9656839ca2b2a95b7288d21235fbd93d0",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_document_sheet_transit.py",
+        "codes": 30,
+        "invalid": 5,
+        "examples": [
+          {
+            "code": "[self:document]{path:\"contract.docx\"} >> [table:filter]{where:{editable:true}}",
+            "issues": "[{'code': 'TYPE', 'message': 'Callable가 필요하지만 {editable: Bool}입니다.', 'source_span': {'source_hash': '8e3cf65d99a69c30f29bf46eba371ea3604f937c6e8f9b98f278dfd9ec404c3b', 'start': 41, 'end': 78, 'line': 1, 'column': 42}, 'call_path': [], 'expected': 'Callable', 'actual': '{editable: Bool}', 'location': {'source_hash': '8e3cf65d99a69c30f29bf46eba371ea3"
+          },
+          {
+            "code": "[sense:navigate_route]{mode:\"transit\",origin:\"홍대입구역\",destination:\"여의도역\"} >> [table:sort]{by:\"transfer_count\"}",
+            "issues": "[{'code': 'TYPE', 'message': 'List<Record>가 필요하지만 Record⟨관측: message·summary·key_guides·map_data⟩입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.', 'source_span': {'source_hash': '94337a431e09cabd8778f0b2ff9593b35e0e71ef6f3817359d9e678e6a1d68f9', 'start': 76, 'end': 109, 'line': 1, 'column': 77}, 'call_path': [], 'expected': 'List<Record>', 'actual': 'Record⟨관"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_document_workspace_examples.py",
+      "sha256": "c44932c183c128eacebc01fb5eafef87aa3e413ff12c574567c1878f207fc64b",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_document_workspace_examples.py",
+        "codes": 3,
+        "invalid": 3,
+        "examples": [
+          {
+            "code": "[self:document]{op:\"open\", path:\"보고서.md\"}",
+            "issues": "[{'code': 'ARGUMENT_CONTRACT', 'message': \"op: 허용 값 ['inspect', 'edit']\", 'source_span': {'source_hash': '8c004cb5881c44dd66dcf79966e66e941b23be9d442cad777a2b4e65b16a5dcf', 'start': 0, 'end': 41, 'line': 1, 'column': 1}, 'call_path': [], 'location': {'source_hash': '8c004cb5881c44dd66dcf79966e66e941b23be9d442cad777a2b4e65b16a5dcf', 'start': 0, 'end"
+          },
+          {
+            "code": "[self:document]{op:\"capabilities\", args:{document_id:\"{{document_id}}\"}}",
+            "issues": "[{'code': 'ARGUMENT_CONTRACT', 'message': \"op: 허용 값 ['inspect', 'edit']\", 'source_span': {'source_hash': '335c310fb89905bfc890407cc30941c53fb45c6d0488b83f70a00a9b74917a78', 'start': 0, 'end': 72, 'line': 1, 'column': 1}, 'call_path': [], 'location': {'source_hash': '335c310fb89905bfc890407cc30941c53fb45c6d0488b83f70a00a9b74917a78', 'start': 0, 'end"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_f20_verdicts.py",
+      "sha256": "9a3a6883df67c40baeaf9f5baadd1efb7b9942ab28ab9c77293c5a7fef585e60",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_f20_verdicts.py",
+        "codes": 12,
+        "invalid": 7,
+        "examples": [
+          {
+            "code": "[sense:realty]{source: \"naver\", region: \"평택 비전동\", type: \"apt\", deal: \"trade\"} >> [table:since]{key: \"비전동매물\", by: \"url\"} >> [table:brief]{ins",
+            "issues": "[{'code': 'TYPE', 'message': 'Text가 필요하지만 Record⟨관측: message·rows_in⟩입니다.', 'source_span': {'source_hash': '112c231db0bb78628a94d0820010b2ecb4e0821548125128f7438dd136b9bac2', 'start': 180, 'end': 200, 'line': 1, 'column': 181}, 'call_path': [], 'expected': 'Text', 'actual': 'Record⟨관측: message·rows_in⟩', 'location': {'source_hash': '112c231db0bb786"
+          },
+          {
+            "code": "[sense:realty]{source: \"naver\", region: \"평택 비전동\", deal: \"rent\", lease: \"전세\"} >> [table:since]{key: \"비전동전세\", by: \"url\", watch: [\"price\"]} >> ",
+            "issues": "[{'code': 'TYPE', 'message': 'Text가 필요하지만 Record⟨관측: message·rows_in⟩입니다.', 'source_span': {'source_hash': 'ff209773e814eb777b0cad96aaff00412b273d5362d9186955e87f5138388990', 'start': 188, 'end': 208, 'line': 1, 'column': 189}, 'call_path': [], 'expected': 'Text', 'actual': 'Record⟨관측: message·rows_in⟩', 'location': {'source_hash': 'ff209773e814eb7"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_16.py",
+      "sha256": "31c0db7bae371b0788d9e8f788a5813e304bf98266303fa4a4ef80b1b2b9ea30",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_16.py",
+        "codes": 9,
+        "invalid": 5,
+        "examples": [
+          {
+            "code": "[self:webapp]{op: \"status\"} >> [table:filter]{where: \"alive == false\"}",
+            "issues": "[{'code': 'TYPE', 'message': 'Callable가 필요하지만 Text입니다.', 'source_span': {'source_hash': 'd0751bf9b5fc100ffacf583d168799c3498b4030fb793a60cfc5909fe1ade8f9', 'start': 31, 'end': 70, 'line': 1, 'column': 32}, 'call_path': [], 'expected': 'Callable', 'actual': 'Text', 'location': {'source_hash': 'd0751bf9b5fc100ffacf583d168799c3498b4030fb793a60cfc5909f"
+          },
+          {
+            "code": "[self:notebook]{op: \"list\"} >> [table:each]{do: \"[self:notebook]{op: 'sources', name: '$it.title'}\"}",
+            "issues": "'{'가 필요합니다: <eof>"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_21.py",
+      "sha256": "50fcf3f9fc7bb3566b0226c063ee2ed62afae9ee0a312c9aa0d29f1d6b47e224",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_21.py",
+        "codes": 8,
+        "invalid": 4,
+        "examples": [
+          {
+            "code": "[self:limb]{op: \"list\"} >> [table:filter]{where: \"revoked == false\"} >> [table:select]{columns: [\"alias\", \"device_id\", \"expires_at\"]}",
+            "issues": "[{'code': 'TYPE', 'message': 'Callable가 필요하지만 Text입니다.', 'source_span': {'source_hash': '63b5d73ef130b045bd5c94986646176e456e0251e4e970cb7f433c0eac428121', 'start': 27, 'end': 68, 'line': 1, 'column': 28}, 'call_path': [], 'expected': 'Callable', 'actual': 'Text', 'location': {'source_hash': '63b5d73ef130b045bd5c94986646176e456e0251e4e970cb7f433c0e"
+          },
+          {
+            "code": "[others:board]{op: \"list\"} >> [table:take]{n: 2} >> [table:each]{do: \"[others:feed]{op: 'read', hashtag: '$it.hashtag'}\"} >> [table:flatten]",
+            "issues": "'{'가 필요합니다: >>"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_23.py",
+      "sha256": "33ad6cafec712774d67edbcb07a705bec423fd6562699f4c7560355b907cfe4f",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_23.py",
+        "codes": 8,
+        "invalid": 3,
+        "examples": [
+          {
+            "code": "[on_error: skip] [sense:feed]{url: \"https://news.hada.io/rss/news\", limit: 5} >> [table:groupby]{by: \"meta\"} >> [table:take]{n: 2}",
+            "issues": "문장 사이에는 줄바꿈 또는 ;이 필요합니다."
+          },
+          {
+            "code": "$새것 = 0\n[repeat: until $새것 > 0, max: 2, every: \"1s\"]{$새것 = 1\n[sense:feed]{url: \"https://news.hada.io/rss/news\", limit: 3}}",
+            "issues": "']'가 필요합니다: ,"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_24.py",
+      "sha256": "627113663dd51b37507b1679d61d731237ba9704ad0ccd2ef4cceb8da77c2ad8",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_24.py",
+        "codes": 5,
+        "invalid": 3,
+        "examples": [
+          {
+            "code": "[table:each]{items: [{\"q\": \"AI\"}, {\"q\": \"반도체\"}], do: \"[sense:search]{source: 'ddg', query: '$it.q'} >> [table:take]{n: 2} >> [table:each]{do",
+            "issues": "'{'가 필요합니다: <eof>"
+          },
+          {
+            "code": "[sense:restaurant]{query: \"평택 죽백동 맛집\"} >> [table:take]{n: 3} >> [limbs:show_map]{markers: \"$items\"}",
+            "issues": "[{'code': 'PIPE_COLLISION', 'message': '[limbs:show_map]은(는) 파이프 입력을 받지 않습니다. 앞 단계 값은 $x = … 로 받아 필요한 인자에 넘기세요(예: {인자: $x.text}).', 'source_span': {'source_hash': 'a1a6d289dae3603256680a16191d81efe6869af65bedc010abaf8b421fd1785e', 'start': 64, 'end': 99, 'line': 1, 'column': 65}, 'call_path': [], 'location': {'source_hash': 'a1a6d289dae3603256680a1"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_25.py",
+      "sha256": "78a6fc9e01e513807c1b4835d60ca6e09266d042c09efe7267381f49c1ebd519",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_25.py",
+        "codes": 8,
+        "invalid": 3,
+        "examples": [
+          {
+            "code": "[if: sense:host{op: \"status\"}.cpu_percent > 80]{[self:notify_user]{message: \"CPU 과부하\"}}\n[else if: sense:host{op: \"status\"}.memory_percent > ",
+            "issues": "']'가 필요합니다: :"
+          },
+          {
+            "code": "[sense:book]{op: \"search\", query: \"인공지능\"} >> [if: count($items) > 10]{[table:take]{n: 5}} [else]{[table:take]{n: 2}} >> [table:select]{colum",
+            "issues": "[{'code': 'PIPE_TARGET', 'message': '파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.', 'source_span': {'source_hash': 'f996de78048ee8c50cbd9c2c8432d3659b17d5db229b81febf87b6599e5918f4', 'start': 0, 'end': 116, 'line': 1, 'column': 1}, 'call_path': [], 'location': {'source_hash': 'f996de78048ee8c50cbd9c2c8432d3659b17d5db229b81febf87b6599e5918f4', 'start': 0, 'end': 1"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_31.py",
+      "sha256": "19b079b692d7093f5737fe4440ef086e72d87045a575b85ee34fa799042aa19f",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_31.py",
+        "codes": 2,
+        "invalid": 2,
+        "examples": [
+          {
+            "code": "[sense:realty]{source: \"naver\", region: \"죽백동\", deal: \"lease\"} >> [table:take]{n: 3} >> [limbs:show_map]{markers: \"$items\"}",
+            "issues": "[{'code': 'TYPE', 'message': 'List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.', 'source_span': {'source_hash': '30b5f3146aa22fb8d9c98717c961ee51cf21641b9585cac2947adfe07a73e578', 'start': 65, 'end': 83, 'line': 1, 'column': 66}, 'call_path': [], 'expected': 'List<Unknown>', 'actual': 'Record', 'location': {'source_hash': '30b5f3146a"
+          },
+          {
+            "code": "[self:music]{op: \"library\", q: \"김광석\"} >> [table:take]{n: 3} >> [self:write]{path: \"김광석.txt\", content: \"$items.title\"}",
+            "issues": "[{'code': 'PIPE_COLLISION', 'message': '파이프 값은 [self:write]의 `content` 자리로 들어가는데 `content` 를 명시로도 주었습니다. 명시 `content` 를 빼거나, 파이프를 끊고 $x = … 로 받아 필드로 넘기세요.', 'source_span': {'source_hash': '9a9b4ac749d8440c89f44817b5576780a5b2f40c2400e13e6030eded7ee23b67', 'start': 63, 'end': 117, 'line': 1, 'column': 64}, 'call_path': [], 'location': {'source_hash'"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_53.py",
+      "sha256": "c98790e6a2ab474b4bf3ccde105e7798dca6c48dfe76c3b25f21c0d16502b004",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_53.py",
+        "codes": 7,
+        "invalid": 5,
+        "examples": [
+          {
+            "code": "$장부 = [self:sheet]{op: \"find\", path: \"실거래.xlsx\"}\n[sense:realty]{source: \"molit\", region: \"청주시 흥덕구\", type: \"apt\", deal: \"trade\"} >> [table:ta",
+            "issues": "[{'code': 'TYPE', 'message': 'Callable가 필요하지만 {field: Text, op: Text, value: Text}입니다.', 'source_span': {'source_hash': 'c78c653aa108cee02c9b4c9026cc808e45a3e01a29467a20ddcddb87a9bea9e9', 'start': 154, 'end': 235, 'line': 2, 'column': 106}, 'call_path': [], 'expected': 'Callable', 'actual': '{field: Text, op: Text, value: Text}', 'location': {'sour"
+          },
+          {
+            "code": "[self:sheet]{op: \"find\", path: \"실거래.xlsx\"} >> [table:filter]{where: \"price > 500000000\"} >> [table:sort]{by: \"price\", desc: true}",
+            "issues": "[{'code': 'TYPE', 'message': 'Callable가 필요하지만 Text입니다.', 'source_span': {'source_hash': 'b7d548673090791b080105d7d93f114dcd1beda9f5f2067763724adbbe8a9da4', 'start': 46, 'end': 88, 'line': 1, 'column': 47}, 'call_path': [], 'expected': 'Callable', 'actual': 'Text', 'location': {'source_hash': 'b7d548673090791b080105d7d93f114dcd1beda9f5f2067763724adb"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_round_54.py",
+      "sha256": "6f09578cef5d498566a927fde9e73b06f30bdeed6778124d0621a97af6e7fd0a",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_round_54.py",
+        "codes": 8,
+        "invalid": 4,
+        "examples": [
+          {
+            "code": "[self:trigger]{op: \"list\"} >> [table:filter]{where: \"enabled == true\"} >> [table:select]{columns: [\"name\", \"last_run\", \"run_count\"]}",
+            "issues": "[{'code': 'TYPE', 'message': 'Callable가 필요하지만 Text입니다.', 'source_span': {'source_hash': '2adcb06ec382d5dae122eb96b313bf66a35c4f4d6cd6b2cee57d08d7b8b3bea7', 'start': 30, 'end': 70, 'line': 1, 'column': 31}, 'call_path': [], 'expected': 'Callable', 'actual': 'Text', 'location': {'source_hash': '2adcb06ec382d5dae122eb96b313bf66a35c4f4d6cd6b2cee57d08d7"
+          },
+          {
+            "code": "[self:manage_events]{op: \"list\"} >> [table:filter]{where: {field: \"action\", op: \"eq\", value: \"run_pipeline\"}} >> [table:select]{columns: [\"t",
+            "issues": "[{'code': 'TYPE', 'message': 'Callable가 필요하지만 {field: Text, op: Text, value: Text}입니다.', 'source_span': {'source_hash': '06c994022fc7322fc14c46bf96fec0d78e6c01060d8435711f9f465b2a56d937', 'start': 36, 'end': 109, 'line': 1, 'column': 37}, 'call_path': [], 'expected': 'Callable', 'actual': '{field: Text, op: Text, value: Text}', 'location': {'source"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_imagination_rounds_6_12.py",
+      "sha256": "0d4be6b446d505f2cbd36b50947040aa383827a9faf5d3392704f87a84b37eca",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_imagination_rounds_6_12.py",
+        "codes": 50,
+        "invalid": 17,
+        "examples": [
+          {
+            "code": "[self:photo]{has_gps: true, limit: 20} >> [table:take]{n: 3} >> [limbs:show_map]{markers: \"$items\"}",
+            "issues": "[{'code': 'PIPE_COLLISION', 'message': '[limbs:show_map]은(는) 파이프 입력을 받지 않습니다. 앞 단계 값은 $x = … 로 받아 필요한 인자에 넘기세요(예: {인자: $x.text}).', 'source_span': {'source_hash': 'c24ef5817b769b5ac37ebbd1dd89a694ba530db57219412cac71193759a94068', 'start': 64, 'end': 99, 'line': 1, 'column': 65}, 'call_path': [], 'location': {'source_hash': 'c24ef5817b769b5ac37ebbd"
+          },
+          {
+            "code": "[limbs:cctv]{op: \"nearby\", source: \"windy\", lat: 36.62, lng: 127.33} >> [table:take]{n: 3} >> [limbs:show_map]{markers: \"$items\"}",
+            "issues": "[{'code': 'TYPE', 'message': 'List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.', 'source_span': {'source_hash': 'f169fd44ccff622132a5504fc0966b4aed1025baa72a60823210fb6573deead6', 'start': 72, 'end': 90, 'line': 1, 'column': 73}, 'call_path': [], 'expected': 'List<Unknown>', 'actual': 'Record', 'location': {'source_hash': 'f169fd44cc"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_inspection_tier.py",
+      "sha256": "469b26b6b71abfd0c9ffd63f59d623eec32cdc687d4d5a94a72e4a77786d50d4",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_inspection_tier.py",
+        "codes": 3,
+        "invalid": 3,
+        "examples": [
+          {
+            "code": "[engines:render]{path: \"index.html\", viewports: [\"1280x800\", \"390x844\"]} >> [table:each]{do: \"[engines:image_read]{op: 'critic', image_path:",
+            "issues": "'{'가 필요합니다: <eof>"
+          },
+          {
+            "code": "[engines:render]{path: \"landing.html\", viewports: [\"1440x900\", \"390x844\"]} >> [table:each]{do: \"[engines:image_read]{op: 'critic', image_pat",
+            "issues": "'{'가 필요합니다: <eof>"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_program_grade_m1m2.py",
+      "sha256": "83f46015fff9c4dbb767dc28eeb593e0a3d3f32bad1aab4e16e21515ad0f37af",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_program_grade_m1m2.py",
+        "codes": 14,
+        "invalid": 14,
+        "examples": [
+          {
+            "code": "$r = [sense:search]{source: \"gnews\", query: \"청주 부동산\"}\n[if: count($r) > 0]{[table:brief]{items: \"$r\", instruction: \"핵심 3문장\"} >> [self:notify_",
+            "issues": "[{'code': 'BUILTIN', 'message': '알 수 없는 내장 함수: count. 비슷한 내장 함수: len, contains, round', 'source_span': {'source_hash': '0df985ac0c18a19089f1e7639ace93e000b49c41ede5792a30908da55c52612f', 'start': 59, 'end': 64, 'line': 2, 'column': 6}, 'call_path': [], 'location': {'source_hash': '0df985ac0c18a19089f1e7639ace93e000b49c41ede5792a30908da55c52612f', '"
+          },
+          {
+            "code": "$m = [sense:realty]{source: \"naver\", region: \"죽백동\", deal: \"lease\"}\n[if: empty($m)]{[self:notify_user]{message: \"죽백동 전세 매물 0건\"}}\n[else]{[tabl",
+            "issues": "[{'code': 'BUILTIN', 'message': '알 수 없는 내장 함수: empty', 'source_span': {'source_hash': 'cd18b144fef507f8d753fbb37126424922af9b0752ffbca3833b886ee9a1d0a8', 'start': 72, 'end': 77, 'line': 2, 'column': 6}, 'call_path': [], 'location': {'source_hash': 'cd18b144fef507f8d753fbb37126424922af9b0752ffbca3833b886ee9a1d0a8', 'start': 72, 'end': 77, 'line': 2,"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_program_grade_m3m5.py",
+      "sha256": "c5788bab24935211ef1b9b37615d15480c1625584e8a453299e4b04d7456a553",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_program_grade_m3m5.py",
+        "codes": 12,
+        "invalid": 6,
+        "examples": [
+          {
+            "code": "[on_error: skip] [sense:search]{source: \"gnews\", query: \"반도체 수출\"} >> [table:ai]{instruction: \"광고·중복 제거\"} >> [self:write]{path: \"반도체_뉴스.json\"",
+            "issues": "문장 사이에는 줄바꿈 또는 ;이 필요합니다."
+          },
+          {
+            "code": "[on_error: null] [sense:realty]{source: \"naver\", region: \"죽백동\", deal: \"lease\"} >> [table:spreadsheet]{path: \"죽백동_전세.xlsx\"}",
+            "issues": "문장 사이에는 줄바꿈 또는 ;이 필요합니다."
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_program_grade_m6.py",
+      "sha256": "7b98d619833ba55842e830966399eb5373ffbcffd3f4e23ecdd47f14bfea9913",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_program_grade_m6.py",
+        "codes": 10,
+        "invalid": 7,
+        "examples": [
+          {
+            "code": "$n = 0\n[repeat: while $n < 10, max: 10]{$n = $n + 1\n[sense:feed]{url: \"https://news.hada.io/rss/news?page=$n\"} >> [table:since]{key: \"AI뉴스\"}",
+            "issues": "']'가 필요합니다: ,"
+          },
+          {
+            "code": "[sense:realty]{source: \"naver\", region: \"죽백동\", deal: \"lease\"} >> [if: count($items) > 10]{[table:take]{n: 10}} [else]{[table:sort]{by: \"pric",
+            "issues": "[{'code': 'PIPE_TARGET', 'message': '파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.', 'source_span': {'source_hash': '3853b2dadb5821e4c9b6be55ad97b742eef0b4f1ac278c2ec50f7d958ae0ffb2', 'start': 0, 'end': 144, 'line': 1, 'column': 1}, 'call_path': [], 'location': {'source_hash': '3853b2dadb5821e4c9b6be55ad97b742eef0b4f1ac278c2ec50f7d958ae0ffb2', 'start': 0, 'end': 1"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_render_xlsx.py",
+      "sha256": "9b2bcb83a3bd23eec15a8b8287899dd677d3f6b17070e1615996437afe4ce83f",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_render_xlsx.py",
+        "codes": 10,
+        "invalid": 4,
+        "examples": [
+          {
+            "code": "[engines:render]{op: \"xlsx\", path: \"거래장부.xlsx\"} >> [table:each]{do: \"[engines:image_read]{op: 'critic', image_path: '$it.path', intent: '장부 ",
+            "issues": "'{'가 필요합니다: <eof>"
+          },
+          {
+            "code": "[self:sheet]{op: \"append\", path: \"재고장.xlsx\", items: [{\"품목\": \"C형 부품\", \"수량\": 30}]} >> [engines:render]{op: \"xlsx\", path: \"재고장.xlsx\"} >> [table",
+            "issues": "'{'가 필요합니다: <eof>"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_table_since.py",
+      "sha256": "32cc97d8e2465cd96a2973533e54351d387abee2e608815317be893039bb74cc",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_table_since.py",
+        "codes": 10,
+        "invalid": 1,
+        "examples": [
+          {
+            "code": "[self:trigger]{op: \"create\", name: \"하다 새 글 감시\", cron: \"0 9 * * *\", do: \"[sense:feed]{url: 'https://news.hada.io/rss/news'} >> [table:since]{",
+            "issues": "[{'code': 'ARGUMENT_CONTRACT', 'message': \"pipeline: 문장 검사 실패: '{'가 필요합니다: <eof>\", 'source_span': {'source_hash': '7c9eaef648112e7fe4f48262335ec63fef24cd29ebccf50b051e2cf34f59c75a', 'start': 0, 'end': 216, 'line': 1, 'column': 1}, 'call_path': [], 'location': {'source_hash': '7c9eaef648112e7fe4f48262335ec63fef24cd29ebccf50b051e2cf34f59c75a', 'start"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_task_receipts_examples.py",
+      "sha256": "2ec3a72198a9ff3cefa092595bddd3402b76eaa30c8c1f1b06ab1760d77f8d20",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_task_receipts_examples.py",
+        "codes": 6,
+        "invalid": 3,
+        "examples": [
+          {
+            "code": "[self:task]{op: \"status\", ref: $receipt.task_ref}",
+            "issues": "[{'code': 'UNBOUND', 'message': '정의되지 않은 값: $receipt', 'source_span': {'source_hash': '6a38aacbc89125273890456a9206a3aae3f4c2338d9eefa1b5e3c5f1f41cfe2a', 'start': 31, 'end': 39, 'line': 1, 'column': 32}, 'call_path': [], 'location': {'source_hash': '6a38aacbc89125273890456a9206a3aae3f4c2338d9eefa1b5e3c5f1f41cfe2a', 'start': 31, 'end': 39, 'line': 1"
+          },
+          {
+            "code": "[self:task]{op: \"cancel\", ref: $job.task_ref}",
+            "issues": "[{'code': 'UNBOUND', 'message': '정의되지 않은 값: $job', 'source_span': {'source_hash': '413bea242037958e5dfba7c6b801546400f54f21e2ae5725ecff390499178c9c', 'start': 31, 'end': 35, 'line': 1, 'column': 32}, 'call_path': [], 'location': {'source_hash': '413bea242037958e5dfba7c6b801546400f54f21e2ae5725ecff390499178c9c', 'start': 31, 'end': 35, 'line': 1, 'c"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_workflow_pipe.py",
+      "sha256": "2094dd98f2c90669b5ae6d9d39f64b139a1911f43112b93880b7ff4a96db5add",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_workflow_pipe.py",
+        "codes": 4,
+        "invalid": 1,
+        "examples": [
+          {
+            "code": "[self:workflow]{op: \"run\", name: \"죽백동전세\"} >> [table:take]{n: 3}",
+            "issues": "[{'code': 'TYPE', 'message': 'List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.', 'source_span': {'source_hash': 'c552167c15793d1a9e7f1f0515d7e955a81fd0f5be5d389c2c3a351a641bc49c', 'start': 45, 'end': 63, 'line': 1, 'column': 46}, 'call_path': [], 'expected': 'List<Unknown>', 'actual': 'Record', 'location': {'source_hash': 'c552167c15"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_workflow_signature.py",
+      "sha256": "9dac00285f5b9d0104c6f1990c237450869aa842bd5a9ad49fbe457c7a3eb77d",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_workflow_signature.py",
+        "codes": 20,
+        "invalid": 6,
+        "examples": [
+          {
+            "code": "[self:workflow]{op: \"get\", name: \"동네 맛집\"}",
+            "issues": "[{'code': 'ARGUMENT_CONTRACT', 'message': \"op: 허용 값 ['list', 'detail', 'save', 'delete', 'run']\", 'source_span': {'source_hash': '6403c26b699d06c27c1358b8a2127b9aef2f3a01e2e8df7a0be7562bfa5e3d67', 'start': 0, 'end': 41, 'line': 1, 'column': 1}, 'call_path': [], 'location': {'source_hash': '6403c26b699d06c27c1358b8a2127b9aef2f3a01e2e8df7a0be7562bfa5"
+          },
+          {
+            "code": "$r = [sense:search]{source: \"gnews\", query: \"청주 부동산\"} >> [table:brief]{instruction: \"5문장 요지\"} >> [self:write]{path: \"청주_부동산.md\"}\n[limbs:os_o",
+            "issues": "[{'code': 'TYPE', 'message': 'List<Record> | Text가 필요하지만 Record⟨관측: message·rows_in⟩입니다.', 'source_span': {'source_hash': 'aa5ded9c03bbbd07d15c6d93f0c3a1318d23d728770a3ff2e5ca769c71d48a29', 'start': 97, 'end': 128, 'line': 1, 'column': 98}, 'call_path': [], 'expected': 'List<Record> | Text', 'actual': 'Record⟨관측: message·rows_in⟩', 'location': {'so"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/seed_union_dead_branch.py",
+      "sha256": "b7da7622b6c801aa819567c6006b5143ddf654ac1b3ab5c93e99d69e1309a469",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_union_dead_branch.py",
+        "codes": 2,
+        "invalid": 0,
+        "examples": []
+      }
+    },
+    {
+      "path": "scripts/seed_workflow_params.py",
+      "sha256": "b94a8688ebcd9cfcf308a7a73c88b5a5d13de93ef59494009190dd03ad0da279",
+      "reason": "완료된 일회성 시드에 현행 계약 불일치 또는 구판 문자열 참조·실패 가지 합성 기준 잔존. 현행 운영 코퍼스·등록 검수는 유지하고 재주입 스크립트만 Git 이력으로 회수",
+      "audit": {
+        "path": "scripts/seed_workflow_params.py",
+        "codes": 10,
+        "invalid": 0,
+        "examples": []
+      }
+    },
+    {
+      "path": "backend/test_app_template_inputs_2026_10_05.py",
+      "symbol": "test_validator_edition2_rejects_legacy_syntax_and_allows_item",
+      "sha256": "961df67dd80c528277fbdbf9901ce021ed3f23b3dddeaceea6dfda180def3314",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_condition_observability.py",
+      "symbol": "_patched",
+      "sha256": "e420aac675a7af49fa249f9d656007a00ce4dfb4888101b83ee07b90b68e9459",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_condition_observability.py",
+      "symbol": "test_source_ref_walks_list_index",
+      "sha256": "ee1dd541cdb11766b0e862b219c03942d5f43b0a523ddb2fbb497816cef0dbab",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_condition_observability.py",
+      "symbol": "test_source_and_var_resolvers_agree",
+      "sha256": "6a821a26d993bfd35fc6feecbda6158aaaa201b03db02ba4953797a57353b608",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_condition_observability.py",
+      "symbol": "test_absent_path_still_missing",
+      "sha256": "f27abbac8ac1868216a74c83ed88d3a436ea0297070e7a96ec897babadb2b1f4",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_condition_observability.py",
+      "symbol": "test_null_value_is_not_missing",
+      "sha256": "c1d6c3431a20ef8720e0d9217bfd126b9335e81ad484c24f12d77f3373940a9f",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_condition_observability.py",
+      "symbol": "test_hints_show_list_row_paths",
+      "sha256": "8ceb7906b42bd1edcfba35607d933299699eb7fe99200030886822496627a723",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_a_error_text_in_success_message",
+      "sha256": "f1136eb48d7012f35d6921d79602027389688e71df6d9db3935d280136a51428",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_a_bare_string_error_is_flagged",
+      "sha256": "23765f0e3af7a1fd36e37b3c5ea9ab03e19e2e4a45230a5bdae436fdbd1d49a6",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_a_honest_failure_not_flagged",
+      "sha256": "4975352d126a0a15fb47937e173df7e10a8dbe73f949c382a4dd7b780e67a3fc",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_a_success_prose_not_overrejected",
+      "sha256": "cea6f692ea414187e1ea8a67aca4674c67ea03039fea13dcf57da0a2c7402b02",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_b_declared_items_but_missing",
+      "sha256": "598af8729afc629bb3ec8cbce19f675669783439117d646e4fa96b467f8c6ab3",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_b_table_shape_accepted",
+      "sha256": "5f2c904c6890c5651dcc39ba10ea6fde2110fc1102c64dc3bc2a666bbe2bd84a",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_b_failed_envelope_exempt",
+      "sha256": "fd129c8a65f5069efca9e8c0f277c3d803abd0084c63df75f5513b478d40c8dd",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_b_scalar_declared_free",
+      "sha256": "acd2ae417bf1ae5db772c52fdd4d0934bd2fce5833a7c3a3883caee2e4ada25d",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_c_zero_rows_success_is_honest",
+      "sha256": "d36d347a873c9c9294111c80df25bed6d7b52d5cf0b57b202f0692b8b64d5690",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_c_zero_rows_with_error_prefixed_message",
+      "sha256": "499f6272245acaca78bb12c5e14c348cb929f78f04387028bbf1c1e088924a5a",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_c_zero_rows_folded_into_failure_without_error",
+      "sha256": "61bec1ee01ad16b08b4303297b62f7bb204eb6914943dad452b187203bf007c6",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_final_of_unwraps_pipeline_and_json_string",
+      "sha256": "f81846125cb7b792b0681fcd89824e7caf5a327ad4026eb5a607490fbd8add4e",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "_pinvs",
+      "sha256": "4aac2fa2b2e107a7d85ad165b201a8f60eacbb1eba01507aa79bb99f86d2cb48",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_e_parallel_branch_failure_must_be_reported",
+      "sha256": "6c86cdc5c0ee3c0841627ed1d8a140be770b8d740d4e3e3ff097505bbcd4dc03",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_e_all_branches_failed_is_not_success",
+      "sha256": "e2d6694d01eaf02fabaadf3c5dc983bfccb6dbd9f44bd58477c4eced494074ab",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_e_healthy_parallel_is_untouched",
+      "sha256": "8a220b6d6c1bf45d0702b2a9fcfd611c2340ec4f69510794025a91befe153828",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_honesty_invariants.py",
+      "symbol": "test_e_probe_universe_is_network_free",
+      "sha256": "329d8738580cc11c1a072c0463a587f2b699e0fcc76dcdcb96a4a18b0f9fb46e",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e4_condition_ref_does_not_swallow",
+      "sha256": "ff8ff636454b8d02bea2b0e76326ce48860ab7bc8812481e57891288a3c697a0",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "_fake_factory",
+      "sha256": "5a6a478e3f14b65aee029314db6f8bba8b9987d89ebee9781b79cd24e22f65ac",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "test_c7_static_validation",
+      "sha256": "f0808fc735d35c1555a306c3227c9e6c34fbd9ee94c93a5655382232bc77dc96",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_imagination_round46_repairs.py",
+      "symbol": "test_round46_block_matches_rejects_structure_left_honestly",
+      "sha256": "b8808eab0e6bd34bbab7d7c046f8b2b4fa4d16947e0e5f9ffa5b6d882032fcba",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    },
+    {
+      "path": "backend/test_pipe_currency_failures.py",
+      "symbol": "test_p14_fallback_empty_predicate",
+      "sha256": "d7eac92ce1eb946268e468c7c40fcf31e10af8ee7e90b57d90b9cf41bb8e3022",
+      "reason": "구판 전용 기대·시험 보조자 은퇴. 현행 값/조건/원문 회수·실패 전파 검사는 같은 기능의 현행 Runtime·공통 엔진 회귀로 유지"
+    }
+  ]
+}

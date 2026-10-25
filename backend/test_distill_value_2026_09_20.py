@@ -65,12 +65,12 @@ def test_missing_success_is_not_positive_evidence(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize('outcome', [{}, {'achieved': True, 'status': 'UNKNOWN'}])
-def test_incomplete_goal_evidence_costs_no_call(monkeypatch, tmp_path, outcome):
+def test_incomplete_goal_keeps_component_selection_opportunity(monkeypatch, tmp_path, outcome):
     rag, saved, asked, _ = _arm(monkeypatch, tmp_path, [])
     import thread_context
     monkeypatch.setattr(thread_context, 'get_goal_eval_outcome', lambda: outcome)
     assert not rag.distill_experience('검색', [call(SEARCH)], 0)
-    assert saved == asked == []
+    assert saved == [] and len(asked) == 1
 
 
 def test_evidence_excerpt_is_bounded_and_missing_is_explicit():

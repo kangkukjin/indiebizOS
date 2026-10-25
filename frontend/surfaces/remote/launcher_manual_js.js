@@ -170,8 +170,9 @@ function jMeta(ep){
   if(ep.total_ms!=null) m.push((ep.total_ms/1000).toFixed(1)+'초');
   const d=ep.unconscious_decision;
   if(d) m.push(d==='THINK'?'숙고':(d==='EXECUTE'?'실행':String(d)));
-  const r=ep.evaluation_result;
+  const r=ep.review_status==='APPROVED'?'ACHIEVED':ep.review_status==='REWORK'?'NOT_ACHIEVED':ep.review_status||ep.evaluation_result;
   if(r) m.push(r==='ACHIEVED'?'검수 승인':r==='NOT_ACHIEVED'?'기준 미충족':r==='UNKNOWN'?'검수 미완료':r==='NOT_RUN'?'미검수':String(r));
+  if(r) m.push(ep.goal_status==='ACHIEVED'?'목표 달성':ep.goal_status==='NOT_ACHIEVED'?'목표 미달':'목표 미확정');
   return m.join(' · ');
 }
 function jRender(){

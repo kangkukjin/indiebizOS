@@ -239,7 +239,7 @@ def process_pending(base, generation, execute=_execute):
             if current.get("status") in {"waiting_review", "waiting_execution"}:
                 # 저장한 단계(남은 개발 또는 검수)를 다음 스캔에서 재개한다.
                 continue
-            status = "completed" if evaluation.get("achieved") else "blocked"
+            status = "completed" if evaluation.get("goal_status") == "ACHIEVED" else "blocked"
             if answer.get("cancelled"):
                 status = "cancelled"
             response = answer.get("response", "")
@@ -316,7 +316,7 @@ def _receipt_completion(row, base):
     passed, reason = completion(session, row, base)
     _record_receipt_verdict(row, session, base, passed, reason)
     if not passed:
-        return {"response": reason, "evaluation": {"achieved": False, "status": "UNKNOWN",
+        return {"response": reason, "evaluation": {"achieved": False, "status": "UNKNOWN", "goal_status": "UNKNOWN", "review_status": "NOT_RUN",
                 "reason": reason, "method": "repair_receipts"}}
     commit = session.get("commit", {}).get("commit", "")
     response = row.get("response", "") + "\n\n[수리 완료] " + reason + (" (" + commit[:12] + ")" if commit else "")
@@ -326,7 +326,7 @@ def _receipt_completion(row, base):
     else:
         # 기존 전달 경로를 공유한다. 판정 실패와 완료는 서로 다른 표제를 사용한다.
         _deliver_blocked({**row, "reason": response, "completion_notice": True})
-    return {"response": response, "evaluation": {"achieved": True, "status": "ACHIEVED",
+    return {"response": response, "evaluation": {"achieved": True, "status": "ACHIEVED", "goal_status": "ACHIEVED", "review_status": "NOT_RUN",
             "reason": reason, "method": "repair_receipts"}}
 
 
@@ -335,7 +335,7 @@ def _record_receipt_verdict(row, session, base, passed, reason):
     from episode_logger import trajectory_scope, record_trajectory_event
     from restart_protocol import atomic_json
     status = "ACHIEVED" if passed else "UNKNOWN"
-    verdict = {"validator": "repair_receipts", "status": status, "achieved": passed,
+    verdict = {"validator": "repair_receipts", "status": status, "achieved": passed, "goal_status": status, "review_status": "NOT_RUN", "final": True,
                "reason": reason, "method": "repair_receipts", "commit": session.get("commit")}
     with trajectory_scope(task_id=row["task_id"], episode_id=row.get("episode_id")):
         record_trajectory_event("validation.completed", verdict)

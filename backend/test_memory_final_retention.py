@@ -100,10 +100,10 @@ def test_pipeline_queues_only_after_final_delivery(supervisor, monkeypatch, endi
 
 @pytest.mark.parametrize("evaluation,retained", [
     (None, True), ({"status": "ACHIEVED", "achieved": True}, True),
-    ({"status": "UNKNOWN"}, False), ({"status": "NOT_ACHIEVED"}, False),
-    ({"achieved": False}, False),
+    ({"status": "UNKNOWN"}, True), ({"status": "NOT_ACHIEVED"}, True),
+    ({"achieved": False}, True),
 ])
-def test_unapproved_turn_cannot_distill(memory_harness, monkeypatch, evaluation, retained):
+def test_task_outcome_does_not_discard_user_fact_evidence(memory_harness, monkeypatch, evaluation, retained):
     seen = []
     monkeypatch.setattr("thread_context.get_goal_eval_outcome", lambda: evaluation)
     monkeypatch.setattr(memory_harness.runner, "_distill_deep_memory", lambda *a: seen.append(a))

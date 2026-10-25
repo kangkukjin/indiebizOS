@@ -835,11 +835,28 @@ class CognitivePipelineMixin:
             _response_completed = not (cancel_check and cancel_check())
             if final_content and _response_completed:
                 # 평가 보완으로 본문이 달라졌으면 같은 턴 예산으로 채택한다. 승인 후 새 실행은 금지.
+                reviewed_content = final_content
                 final_content = yield from adopt_response(
                     _capability_guard, self, message, final_content, eval_tool_calls, history,
                     collect=_collect, images=images, supervisor=_supervisor,
                     allowed_set=allowed_set, cancel_check=cancel_check, allow_resume=False)
                 _response_completed = not (cancel_check and cancel_check())
+                if _eval_ran:
+                    from thread_context import get_goal_eval_outcome, set_goal_eval_outcome
+                    from supervision_store import digest
+                    if final_content != reviewed_content or not _response_completed:
+                        set_goal_eval_outcome(status="UNKNOWN", reason="검수 후 응답 변경 또는 전달 취소")
+                        from model_result_view import evidence_store
+                        store = _supervisor.store if _supervisor else evidence_store()
+                        path = store.directory / "review_status.json"
+                        prior = json.loads(path.read_text()) if path.exists() else {}
+                        path.write_text(json.dumps({**prior, **get_goal_eval_outcome(),
+                            "response": {"hash": digest(final_content), **store.evidence(final_content)},
+                            "learning": "components_only"}, ensure_ascii=False), encoding="utf-8")
+                    outcome = get_goal_eval_outcome() or {}
+                    record_trajectory_event("validation.completed", {
+                        "validator": "goal_eval", "final": True, **outcome,
+                        "response_hash": digest(final_content)})
                 if _response_completed:
                     yield {"type": "final", "content": final_content}
 

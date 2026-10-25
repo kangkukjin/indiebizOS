@@ -57,7 +57,8 @@ def _calls(monkeypatch, relation="CONTINUE", patch='{"task_framing": "문제: 20
 def _remember(runner, message, achieved=True, at=None):
     with actor_context(agent_id="agent_t", task_id="t0"):
         if achieved is not None:
-            set_goal_eval_outcome(achieved, 0, status="ACHIEVED" if achieved else "UNKNOWN")
+            set_goal_eval_outcome(achieved, 0, status="ACHIEVED" if achieved else "UNKNOWN",
+                                  goal_status="ACHIEVED" if achieved else "UNKNOWN")
         rec = fi.remember(runner, message, dict(FRAMING))
     if at:
         data = fi._load("agent_t")

@@ -124,7 +124,8 @@ def test_approval_delivers_exact_bytes_without_executor_call(supervisor, monkeyp
     assert events[-1] == {"type": "final", "content": original}
     assert [e["content"] for e in events if e["type"] == "text"] == [original]
     assert not supervisor.calls
-    assert tc.get_goal_eval_outcome()["achieved"] is True
+    assert tc.get_goal_eval_outcome()["review_status"] == "APPROVED"
+    assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
 
 
 @pytest.mark.parametrize("raw", ["", "{}", "```json\n{\"achieved\":true}\n```", "모델 오류", "[]",
@@ -134,7 +135,8 @@ def test_empty_or_malformed_judgment_never_passes(supervisor, monkeypatch, raw):
     events = finish(supervisor, "원래 결과")
     assert "검수 미승인" in events[-1]["content"]
     assert events[-1]["content"].startswith("원래 결과")
-    assert tc.get_goal_eval_outcome()["achieved"] is False
+    assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
+    assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
 
 
 def test_unread_tail_is_supplied_and_its_defect_can_fail_evaluation(supervisor, monkeypatch):
@@ -145,7 +147,8 @@ def test_unread_tail_is_supplied_and_its_defect_can_fail_evaluation(supervisor, 
     supervisor.config["max_repairs"] = 0
     events = finish(supervisor, "x" * 24000 + "뒤쪽 중요한 오류")
     assert "미승인" in events[-1]["content"]
-    assert tc.get_goal_eval_outcome()["achieved"] is False
+    assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
+    assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
 
 
 def test_long_response_is_evaluated_without_page_read_tools(supervisor, monkeypatch):
@@ -308,7 +311,8 @@ def test_turn_approval_alone_cannot_close_whole_pursuit(supervisor, monkeypatch)
     supervisor.request_done(binding, "이번 단계 완료")
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
     assert "전체 과제의 목표 달성" in finish(supervisor, "응답")[-1]["content"]
-    assert tc.get_goal_eval_outcome()["achieved"] is False
+    assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
+    assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
 
 
 def test_stale_response_approval_is_unknown(supervisor, monkeypatch):

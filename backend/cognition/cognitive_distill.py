@@ -543,19 +543,13 @@ JSON 배열로만 응답.
             except Exception as e:
                 log(f"[경험증류] 오류 (무시): {e}")
         # 2) 심층/의미 메모리 증류.
-        memory_approved = not evaluation or (
-            evaluation.get("status") not in {"UNKNOWN", "NOT_ACHIEVED"}
-            and evaluation.get("achieved", True)
-        )
         if not write_deep and deep_confirmed is None:
             log("[심층메모리] 주인이 직접 한 말이 아닌 턴(에이전트·예약·미선언) 또는 표면 제외 — 생략")
-        elif write_deep and memory_approved:
+        elif write_deep:
             try:
                 self._distill_deep_memory(user_message, response)
             except Exception as e:
                 log(f"[심층메모리] 오류 (무시): {e}")
-        elif write_deep:
-            log("[심층메모리] 검수 미완료 — 장기 기억 저장 생략")
         # 3) 포식 기억 증류(냄새지도).
         if write_forage:
             try:

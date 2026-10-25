@@ -27,6 +27,8 @@ interface EpisodeRow {
   ibl_calls: number | null;
   ibl_actions?: number | null;
   evaluation_result: string | null;
+  review_status?: string | null;
+  goal_status?: string;
 }
 
 function relTime(iso: string | null): string {
@@ -57,8 +59,9 @@ function DecisionBadge({ d }: { d: string | null }) {
   );
 }
 
-function EvalBadge({ r }: { r: string | null }) {
-  if (!r) return null;
+function EvalBadge({ r, review, goal }: { r: string | null; review?: string | null; goal?: string }) {
+  if (!r && !review) return null;
+  r = review ? (review === 'APPROVED' ? 'ACHIEVED' : review === 'REWORK' ? 'NOT_ACHIEVED' : review) : r;
   const achieved = r === 'ACHIEVED';
   const failed = r === 'NOT_ACHIEVED';
   const label = achieved ? '검수 승인' : failed ? '기준 미충족' : r === 'UNKNOWN' ? '검수 미완료' : r === 'NOT_RUN' ? '미검수' : r;
@@ -67,7 +70,7 @@ function EvalBadge({ r }: { r: string | null }) {
       achieved ? 'text-emerald-700 bg-emerald-50' : failed ? 'text-red-700 bg-red-50' : 'text-stone-600 bg-stone-100'
     }`}>
       {achieved ? <Check size={10} /> : <AlertTriangle size={10} />}
-      {label}
+      {label} · {goal === 'ACHIEVED' ? '목표 달성' : goal === 'NOT_ACHIEVED' ? '목표 미달' : '목표 미확정'}
     </span>
   );
 }
@@ -174,7 +177,7 @@ export function EpisodeJournal() {
                   </span>
                   {ep.total_ms != null && <span>· {(ep.total_ms / 1000).toFixed(1)}초</span>}
                   <DecisionBadge d={ep.unconscious_decision} />
-                  <EvalBadge r={ep.evaluation_result} />
+                  <EvalBadge r={ep.evaluation_result} review={ep.review_status} goal={ep.goal_status} />
                 </div>
               </div>
               {canAnalyze && (

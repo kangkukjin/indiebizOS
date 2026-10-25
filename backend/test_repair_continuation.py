@@ -110,7 +110,7 @@ def test_resume_once_with_original_goal_and_apply_result(tmp_path, consumer, out
         calls.append(item)
         assert journal.current() == item
         assert item["goal"] == row["goal"] and item["result"]["outcome"] == outcome
-        return {"response": "라이브 검증 완료", "evaluation": {"achieved": True}}
+        return {"response": "라이브 검증 완료", "evaluation": {"achieved": True, "goal_status": "ACHIEVED"}}
     module.process_pending(tmp_path, "g2", execute)
     assert not calls
     receipt(tmp_path, outcome=outcome)
@@ -130,7 +130,7 @@ def test_dead_worker_resumes_same_identity_without_recounting_failure(tmp_path, 
         calls.append(item)
         assert item["resume_task_id"] == row["resume_task_id"]
         assert len(item["failures"]) == 1
-        return {"response": "완료", "evaluation": {"achieved": True}}
+        return {"response": "완료", "evaluation": {"achieved": True, "goal_status": "ACHIEVED"}}
     module.process_pending(tmp_path, "dead", execute)
     assert not calls
     module.process_pending(tmp_path, "new", execute)
@@ -222,7 +222,7 @@ def test_unknown_evidence_returns_to_executor_and_rechecks_raw_proof(supervisor,
         if len(calls) == 1:
             return "UNKNOWN\nUNKNOWN_REASON: evidence\nC1 검사 결과 원문이 필요합니다."
         assert "중간 검사 실제 출력" in prompt
-        return "ACHIEVED"
+        return 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"시험의 완료 증거 확인","evidence":["시나리오의 실제 검사 결과"],"remaining":[]}'
     def stream(prompt, **kw):
         assert "부족한 증거만" in prompt
         supervisor.tool({"op": "evidence", "id": proof["id"]})
@@ -249,7 +249,7 @@ def test_evidence_recovery_does_not_spend_defect_repair(supervisor, monkeypatch)
         return ["UNKNOWN\nUNKNOWN_REASON: evidence\nC1 원문 필요",
                 'NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: ["0"]\n'
                 'DEFECTS: [{"criterion_id":"C1","evidence":"실제 화면에 한국어 잔존","repair":"누락 연결 수정"}]',
-                "ACHIEVED"][len(calls) - 1]
+                'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"시험의 완료 증거 확인","evidence":["시나리오의 실제 검사 결과"],"remaining":[]}'][len(calls) - 1]
     def stream(*a, **kw):
         repairs.append(1)
         supervisor.tool({"op": "keep", "reason": "증거 확보" if len(repairs) == 1 else "실제 결함 보완"})
@@ -289,7 +289,7 @@ def test_project_resume_uses_owner_pipeline_without_fake_user_message(tmp_path, 
         assert tc.get_task_origin() == "user"
         assert tc.get_current_task_id() == row["resume_task_id"]
         assert "원래 사용자가 승인" in kwargs["extra_role"]
-        tc.set_goal_eval_outcome(True, status="ACHIEVED")
+        tc.set_goal_eval_outcome(True, status="ACHIEVED", goal_status="ACHIEVED")
         yield {"type": "final", "content": "라이브 확인 완료"}
     runner = SimpleNamespace(config={"name": "데이터"}, cognitive_stream=stream)
     try:

@@ -221,7 +221,7 @@ def test_whole_pursuit_criteria_are_included_before_done(supervisor, monkeypatch
         contract = json.loads(prompt.split("## 달성 기준\n", 1)[1].split("\n\n", 1)[0])
         assert any(row["text"] == "전체 보고서 세 편 완성" for row in contract["criteria"])
         assert all(row["text"] != "정정 전 목표" for row in contract["criteria"])
-        return "ACHIEVED"
+        return 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"세 편의 원문 확인","evidence":["보고서 세 편"],"remaining":[]}'
 
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     finish(supervisor, "세 편의 결과")
@@ -301,7 +301,7 @@ def test_request_criteria_conflict_is_deferred_not_learned_as_success(supervisor
     supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('새 목표로 자동 재작업')
     finish(supervisor, '범위 밖이라 답하지 않았습니다')
     status = json.loads((supervisor.store.directory / 'review_status.json').read_text())
-    assert status['status'] == 'UNKNOWN' and status['learning'] == 'deferred'
+    assert status['status'] == 'UNKNOWN' and status['learning'] == 'components_only'
 
 
 def test_criteria_are_fixed_across_repair_and_handoff(supervisor):
@@ -355,6 +355,19 @@ def test_unlinked_free_prose_is_not_passed_as_repair_instructions(supervisor, mo
     decision = json.loads(invoke(supervisor))
     assert decision["status"] == "REWORK"
     assert "원문 수치로 수정" in decision["instruction"] and "미래 전망" not in decision["instruction"]
+
+@pytest.mark.parametrize('goal', ['ACHIEVED', 'NOT_ACHIEVED'])
+def test_approved_response_preserves_independent_goal_to_final_store(supervisor, monkeypatch, goal):
+    def evaluate(prompt, **kwargs):
+        return 'ACHIEVED\nGOAL_OUTCOME: ' + json.dumps({'status': goal, 'reason': '실제 결과',
+            'evidence': ['tool:1'], 'remaining': ['남은 작업'] if goal == 'NOT_ACHIEVED' else []})
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    assert finish(supervisor, '관측한 결과입니다')[-1]['content'] == '관측한 결과입니다'
+    outcome = tc.get_goal_eval_outcome()
+    assert outcome['review_status'] == 'APPROVED' and outcome['goal_status'] == goal
+    stored = json.loads((supervisor.store.directory / 'review_status.json').read_text())
+    assert stored['goal_status'] == goal and stored['goal_evidence'] == ['tool:1']
+
 
 if __name__ == "__main__":
     import sys

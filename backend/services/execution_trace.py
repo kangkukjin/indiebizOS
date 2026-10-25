@@ -69,12 +69,12 @@ def evaluation_observation(kind, data):
         return {"status": "not_evaluated" if data.get("path") == "none" else "unknown",
                 "source": kind}
     if kind == "validation.completed" and data.get("validator") == "goal_eval":
-        status = {"ACHIEVED": "achieved", "NOT_ACHIEVED": "not_achieved"}.get(data.get("status"), "unknown")
+        status = {"ACHIEVED": "achieved", "NOT_ACHIEVED": "not_achieved"}.get(data.get("goal_status"), "unknown")
         return {"status": status, "source": kind}
     if kind == "supervision.evaluation.finished":
         decision = data.get("decision")
         if isinstance(decision, dict):
-            status = {"APPROVED": "achieved", "REWORK": "not_achieved"}.get(decision.get("status"), "unknown")
+            status = {"ACHIEVED": "achieved", "NOT_ACHIEVED": "not_achieved"}.get(decision.get("goal_status"), "unknown")
             version, response_hash = decision.get("response_version"), decision.get("response_hash")
             return {"status": status, "source": kind,
                     "response_version": version if type(version) is int else None,

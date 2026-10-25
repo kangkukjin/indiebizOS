@@ -75,7 +75,7 @@ def test_publication_failure_is_not_achieved_and_does_not_notify(supervisor, tmp
     target.unlink()
     target.mkdir()  # cannot replace a directory with the approved file
     assert "전달하지 못했습니다" in finish(supervisor, "draft")[-1]["content"]
-    assert not sent and tc.get_goal_eval_outcome()["achieved"] is False
+    assert not sent and tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
 
 
 def test_cancellation_keeps_private_draft(supervisor, tmp_path, monkeypatch):

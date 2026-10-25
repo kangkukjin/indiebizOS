@@ -25,7 +25,7 @@ POLICY = """의식이 명시한 criteria_contract의 항목만 판정한다.
 본문/결과가 발췌됐다는 사실은 미실행의 증거가 아니다. 핵심 판단 근거가 부족하면 UNKNOWN이다.
 수정본도 원래 criteria 전체를 평가한다. 이전 피드백이 한 항목만 지적했어도 나머지 기준은 면제되지 않는다. 새로운 개선 목표를 만들지 않는다.
 pending_delivery의 초안 내용·알림도 결과물이다. 공개/알림은 승인 뒤 하네스가 수행한다.
-응답 형식: ACHIEVED면 한 줄로 끝낸다. UNKNOWN이면 이유 한 줄을 덧붙인다.
+응답 형식: 첫 줄 검수 판정 뒤 목표 판정 GOAL_OUTCOME을 별도로 기록한다. UNKNOWN이면 이유를 덧붙인다.
 UNKNOWN에는 UNKNOWN_REASON: evidence|criteria|blocked를 적는다. 발췌·누락 증거는 evidence,
 기준과 요청의 충돌은 criteria, 권한·외부 조건 때문에 진행할 수 없으면 blocked다.
 evidence이면 부족한 기준 id와 기존 evidence_index에서 확인할 증거 id를 함께 적는다.
@@ -391,7 +391,8 @@ def invoke(controller, prompt="", *, phase="final"):
     manifest = controller._evaluation_snapshot["response"]
     result = {"status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
               "reason": feedback, "severity": severity, "response_version": manifest["version"],
-              "response_hash": manifest["hash"], "instruction": "", "pursuit_status": "UNKNOWN"}
+              "response_hash": manifest["hash"], "instruction": "", "pursuit_status": "UNKNOWN",
+              **getattr(evaluator, "goal_outcome", {"goal_status": "UNKNOWN"})}
     if phase in {"workspace", "semantic"}:
         match = re.search(r"(?m)^WORKSPACE_COVERAGE:\s*(\[.*\])\s*$", feedback)
         try:
@@ -401,12 +402,14 @@ def invoke(controller, prompt="", *, phase="final"):
     if getattr(evaluator, "evaluation_retryable", False):
         result["retryable"] = True
     if controller.cancelled():
-        result.update(status="UNKNOWN", reason="평가 중 사용자가 취소했습니다")
+        result.update(status="UNKNOWN", reason="평가 중 사용자가 취소했습니다",
+                      goal_status="UNKNOWN", goal_reason="평가 중 사용자 취소", goal_evidence=[])
     if result["status"] == "APPROVED":
         delivery = controller._evaluation_snapshot["delivery"]
         if delivery:
             result["delivery_hash"] = delivery["hash"]
-        if controller.done_request and controller.done_request.get("goal_criteria"):
+        if (result.get("goal_status") == "ACHIEVED" and controller.done_request
+                and controller.done_request.get("goal_criteria")):
             result["pursuit_status"] = "APPROVED"
     if result["status"] == "REWORK":
         result["defects"] = parse_criterion_defects(feedback, packet["context"]["criteria_contract"])

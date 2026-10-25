@@ -181,7 +181,7 @@ class DistillQueue:
     @staticmethod
     def _execute(job: _Job):
         from thread_context import (set_current_agent_id, set_current_project_id,
-                                    set_current_agent_name, set_goal_eval_outcome,
+                                    set_current_agent_name, restore_goal_eval_outcome,
                                     set_current_task_id, clear_current_task_id,
                                     clear_goal_eval_outcome)
         p, ident = job.payload, job.ident
@@ -204,8 +204,7 @@ class DistillQueue:
             set_current_agent_name(ident["agent_name"])
         ge = p.get("goal_eval")
         if ge is not None:
-            set_goal_eval_outcome(ge.get("achieved", True), ge.get("severity", 0) or 0,
-                                  status=ge.get("status"), reason=ge.get("reason", ""))
+            restore_goal_eval_outcome(ge)
         else:
             clear_goal_eval_outcome()
 

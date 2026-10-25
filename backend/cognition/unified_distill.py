@@ -102,10 +102,8 @@ def snapshot(runner, payload, ident, descriptor=None, episode=None):
 def prepare(job):
     from distill_memory_adapters import prepare_deep, prepare_forage
     from ibl_usage_rag import prepare_experience
-    from thread_context import set_goal_eval_outcome, clear_goal_eval_outcome
+    from thread_context import restore_goal_eval_outcome, clear_goal_eval_outcome
     outcome = job.get('goal_eval')
-    approved = not outcome or (outcome.get('status') not in {'UNKNOWN', 'NOT_ACHIEVED'}
-                               and outcome.get('achieved') is True)
     result = {'sections': {}, 'skip_reasons': {}, 'snapshot': {
         k: job.get(k) for k in ('recorded_at', 'timezone', 'principal', 'goal_eval')}}
     makers = {
@@ -116,7 +114,7 @@ def prepare(job):
     }
     gates = {'execution': job.get('write_experience', True) and job.get('tool_calls')
              and (job.get('turn_cost') or {}).get('request_intent') != 'context_update',
-             'deep': job.get('write_deep', False) and approved,
+             'deep': job.get('write_deep', False),
              'forage': job.get('write_forage', True)}
     for kind, maker in makers.items():
         if not gates[kind]:
@@ -125,8 +123,7 @@ def prepare(job):
         try:
             if kind == 'execution':
                 if outcome is not None:
-                    set_goal_eval_outcome(outcome.get('achieved'), outcome.get('severity', 0),
-                                          status=outcome.get('status'), reason=outcome.get('reason', ''))
+                    restore_goal_eval_outcome(outcome)
                 else:
                     clear_goal_eval_outcome()
             section = maker()

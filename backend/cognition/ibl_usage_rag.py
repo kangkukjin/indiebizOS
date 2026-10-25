@@ -1011,14 +1011,6 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
     from thread_context import get_goal_eval_outcome, clear_goal_eval_outcome
     _ge = get_goal_eval_outcome()
     clear_goal_eval_outcome()
-    if _ge is not None and (_ge.get("achieved") is not True or _ge.get("status") == "UNKNOWN"):
-        if _ge.get("status") == "UNKNOWN":
-            print(f"[경험증류] 검수 미완료 — 재검수까지 학습 보류: {_ge.get('reason', '')} "
-                  f'"{user_message[:40]}"')
-        else:
-            print(f"[경험증류] 목표 미달성(severity={_ge.get('severity')}) — 증류 스킵: \"{user_message[:40]}\"")
-        return False
-
     from ibl_usage_db import IBLUsageDB
     if IBLUsageDB.hippo_disabled():
         return False
@@ -1111,6 +1103,7 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
         tool_log = json.dumps(rows, ensure_ascii=False)
         tool_log += '\n기존 용례 비교:\n' + json.dumps(value.comparison_examples(source_calls, known), ensure_ascii=False)
         tool_log += '\n검수·결과 증거(없음은 미검증):\n' + value.outcome_evidence(accepted_calls, _ge)
+        tool_log += '\n전체 목표 달성이 명시되지 않으면 성공한 부품 범위의 의도·적용 조건만 선택하세요.'
         if turn_cost:
             tool_log += "\n[전체 실행·감독 비용; IBL 호출 수와 범위가 다름]\n" + json.dumps(turn_cost, ensure_ascii=False)
         retry_block = ""
@@ -1162,7 +1155,10 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
         print(f"[경험증류] 저장 생략: {why}")
         return False
     intent = distilled.get("intent", "").strip()
-    component = distilled.get("scope") != "task" or _ge is None or prepared.get('partial_selection', False)
+    if distilled.get("scope") == "task" and (_ge or {}).get("goal_status") != "ACHIEVED":
+        print("[경험증류] 원래 목표의 달성 근거가 없어 전체 작업 성공 용례는 저장하지 않습니다")
+        return False
+    component = distilled.get("scope") != "task" or prepared.get('partial_selection', False)
     code, selection_note = select_distill_source({"call_ids": distilled["source_ids"]}, source_calls)
     code = code or ""
     print(f"[경험증류] 원문 선택: {selection_note}")

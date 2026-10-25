@@ -52,5 +52,25 @@ def test_journal_counts_training_calls_inside_user_episode(tmp_path, monkeypatch
         assert el.get_episode_journal(limit=1)[0]["id"] == 1
 
 
+def test_journal_preserves_review_goal_split_and_legacy_unknown(tmp_path, monkeypatch):
+    path = tmp_path / 'outcomes.db'
+    def connect():
+        conn = sqlite3.connect(path)
+        conn.row_factory = sqlite3.Row
+        return conn
+    monkeypatch.setattr(el, '_get_db', connect)
+    el._ensure_episode_tables()
+    with connect() as conn:
+        for eid in [1, 2]:
+            conn.execute("INSERT INTO episode_log(id,started_at,source) VALUES(?,'now','usage')", (eid,))
+            conn.execute("INSERT INTO episode_summary(episode_id,started_at,evaluation_result) VALUES(?,'now','ACHIEVED')", (eid,))
+        conn.execute("INSERT INTO trajectory_event(run_id,event_seq,episode_id,ts,kind,data,source) "
+                     "VALUES('test',1,2,'now','validation.completed',?,'usage')", (json.dumps({
+                         'final': True, 'review_status': 'APPROVED', 'goal_status': 'NOT_ACHIEVED'}),))
+    rows = {r['id']: r for r in el.get_episode_journal()}
+    assert rows[1]['goal_status'] == 'UNKNOWN'
+    assert rows[2]['review_status'] == 'APPROVED' and rows[2]['goal_status'] == 'NOT_ACHIEVED'
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

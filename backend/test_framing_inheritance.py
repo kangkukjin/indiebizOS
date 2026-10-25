@@ -41,6 +41,23 @@ def test_unchanged_repeat_preserves_criteria(monkeypatch):
     assert fi._patch({'framing': {'criteria': [{'text': 'same'}]}}, 'same', 'repeat') == {}
 
 
+def test_legacy_approval_requires_reframing_instead_of_assumed_success(tmp_path, monkeypatch):
+    from test_framing_inheritance_2026_10_07 import Runner, _remember, _calls
+    from thread_context import actor_context
+    monkeypatch.setattr(fi, "_store_root", lambda: tmp_path)
+    runner = Runner()
+    _remember(runner, "같은 보고서")
+    data = fi._load("agent_t")
+    for record in [data["last"], *data["repeat"].values()]:
+        record.pop("goal_status", None)
+        record["achieved"] = True  # 구기록의 승인만 있다.
+    fi._save("agent_t", data)
+    calls = _calls(monkeypatch)
+    with actor_context(agent_id="agent_t", task_id="next"):
+        runner._run_consciousness_or_reuse("같은 보고서", [], "")
+    assert runner.calls == 1 and calls == []
+
+
 if __name__ == "__main__":
     import sys
     import pytest

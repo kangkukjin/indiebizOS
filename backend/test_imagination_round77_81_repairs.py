@@ -168,11 +168,11 @@ def test_tts_receipt_is_composable(monkeypatch, tmp_path):
     assert value['duration'] == 1.5 and Path(value['path']).exists()
 
 
-def test_prescreen_verdict_is_structured():
+def test_missing_image_is_unavailable_even_with_prescreen():
     mod = module('media_producer', 'vision_read')
-    value = decode(mod.critique_image({'image_path': '/fixture.png', 'intent': 'fixture', 'prescreen': 'blank'}, '.'))
-    assert value['passed'] is False and value['score'] == 0
-    assert value['tier'] == 'prescreen'
+    value = json.loads(mod.critique_image({'image_path': '/fixture.png', 'intent': 'fixture', 'prescreen': 'blank'}, '.'))
+    assert value['success'] is False and '검수 불가' in value['error']
+    assert 'score' not in value and 'passed' not in value
 
 
 def test_performance_default_and_unknown_region(monkeypatch):

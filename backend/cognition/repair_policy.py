@@ -226,13 +226,17 @@ def finalize(controller, response):
     if passed and controller.delivery.manifest():
         passed, reason = False, "코드 외 공개 대기 산출물은 별도 확인이 필요합니다"
     status = "ACHIEVED" if passed else "UNKNOWN"
-    set_goal_eval_outcome(passed, 0, status=status, reason=reason, method="repair_receipts")
+    set_goal_eval_outcome(passed, 0, status=status, reason=reason, method="repair_receipts", goal_status=status,
+                          review_status="NOT_RUN", goal_reason=reason,
+                          goal_evidence=[receipt_reason] if passed else [])
     controller.store.put_response(response)
     controller.log("repair.completion", role="harness", status=status, method="repair_receipts", reason=reason)
     record_trajectory_event("validation.completed", {"validator": "repair_receipts", "status": status,
-                            "achieved": passed, "feedback_text": reason, "method": "repair_receipts"})
+                            "achieved": passed, "goal_status": status, "review_status": "NOT_RUN", "final": True,
+                            "feedback_text": reason, "method": "repair_receipts"})
     (controller.store.directory / "review_status.json").write_text(json.dumps({
-        "status": status, "reason": reason, "validator": "repair_receipts", "original_goal": controller.message,
+        "status": status, "goal_status": status, "review_status": "NOT_RUN",
+        "reason": reason, "validator": "repair_receipts", "original_goal": controller.message,
         "episode_id": controller.episode_id, "learning": "eligible" if passed else "deferred"}, ensure_ascii=False))
     print(f"[RepairCheck] 최종 판정: {status}")
     if not passed:

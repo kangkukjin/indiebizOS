@@ -448,7 +448,7 @@ def finish(response, tools=(), interrupted=False, clarification=False):
     from thread_context import get_goal_eval_outcome
     evaluation = get_goal_eval_outcome() or {}
     asks = clarification or any(t.get("name") == "ask_user_question" for t in tools)
-    if not b.row and (asks or evaluation.get("achieved") is False):
+    if not b.row and (asks or evaluation.get("goal_status") == "NOT_ACHIEVED"):
         out = b.output
         goal = out.get("goal_criteria") or out.get("achievement_criteria") or b.message
         b.bind(b.ledger.create((out.get("task_framing") or b.message).splitlines()[0][:60],

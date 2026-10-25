@@ -31,6 +31,24 @@ _VERDICT_WORD_RE = re.compile(r"\bNOT[\s_-]?ACHIEVED\b|\bACHIEVED\b|\bUNKNOWN\b"
 _SEVERITY_RE = re.compile(r"SEVERITY\s*[:：]\s*([123])", re.IGNORECASE)
 
 
+def parse_goal_outcome(text):
+    """응답 검수 표식과 별개인 원래 목표의 관측. 누락된 옛 판정은 미확정이다."""
+    result = {"goal_status": "UNKNOWN", "goal_reason": "목표 판정 근거 없음",
+              "goal_evidence": [], "remaining": []}
+    match = re.search(r"(?m)^GOAL_OUTCOME:\s*(\{.*\})\s*$", text or "")
+    try:
+        value = json.loads(match[1]) if match else None
+        if (isinstance(value, dict) and value.get("status") in {"ACHIEVED", "NOT_ACHIEVED", "UNKNOWN"}
+                and isinstance(value.get("reason"), str) and value["reason"].strip()
+                and isinstance(value.get("evidence"), list) and all(isinstance(x, str) for x in value["evidence"])
+                and isinstance(value.get("remaining"), list) and all(isinstance(x, str) for x in value["remaining"])):
+            result.update(goal_status=value["status"], goal_reason=value["reason"],
+                          goal_evidence=value["evidence"], remaining=value["remaining"])
+    except (ValueError, TypeError):
+        pass
+    return result
+
+
 def parse_eval_verdict(text: str) -> tuple:
     """평가자 응답에서 (achieved: bool|None, severity: int)를 관용적으로 파싱한다.
 
@@ -416,6 +434,7 @@ class CognitiveEvalMixin:
             (achieved: bool|None, feedback: str, severity: int). None은 검수 미완료.
             severity: 0=N/A(achieved), 1=경미, 2=중대, 3=치명
         """
+        self.goal_outcome = parse_goal_outcome("")
         try:
             contract = json.loads(criteria)
         except (TypeError, ValueError):
@@ -517,6 +536,7 @@ class CognitiveEvalMixin:
             self._log(f"[GoalEval] 평가 응답: {eval_response[:200]}")
 
             # 관용 파서 — 서두 문장·마크다운 장식 뒤로 밀린 판정도 흡수 (모듈 함수 참조)
+            self.goal_outcome = parse_goal_outcome(eval_response)
             achieved, severity = parse_eval_verdict(eval_response)
             if achieved is None:
                 self.evaluation_retryable = not bool(_VERDICT_WORD_RE.search(eval_response))
@@ -655,6 +675,7 @@ class CognitiveEvalMixin:
                    "content": f"🎯 달성 기준 평가 중 (라운드 {round_num}/{max_rounds})"}
             eval_start = _time.time()
 
+            self.goal_outcome = parse_goal_outcome("")
             # 생성된 파일 수집 (tool_calls의 file_path를 우선 활용)
             try:
                 created_files = self._collect_created_files(response, tool_calls=_trace_dicts)
@@ -683,7 +704,8 @@ class CognitiveEvalMixin:
                 record_trajectory_event("validation.completed", {
                     "validator": "goal_eval",
                     "round": round_num,
-                    "achieved": bool(achieved),
+                    "review_status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
+                    **getattr(self, "goal_outcome", parse_goal_outcome("")),
                     "status": "UNKNOWN" if achieved is None else "ACHIEVED" if achieved else "NOT_ACHIEVED",
                     "severity": int(severity or 0),
                     "elapsed_ms": int(eval_time * 1000),
@@ -706,12 +728,12 @@ class CognitiveEvalMixin:
             if achieved is None:
                 return unreviewed(feedback or "판정을 확보하지 못했습니다")
             if achieved:
-                set_goal_eval_outcome(True, 0, status="ACHIEVED", reason=feedback)
+                set_goal_eval_outcome(True, 0, status="ACHIEVED", reason=feedback, **self.goal_outcome)
                 return response
 
             # 마지막 라운드면 그냥 반환 — 미달성으로 끝났음을 증류 게이트에 알린다.
             if round_num >= max_rounds:
-                set_goal_eval_outcome(False, severity, status="NOT_ACHIEVED", reason=feedback)
+                set_goal_eval_outcome(False, severity, status="NOT_ACHIEVED", reason=feedback, **self.goal_outcome)
                 self._log(f"[GoalEval] 라운드 소진, 현재 응답 반환 (미달성 → 증류 제외)")
                 return response
 

@@ -144,7 +144,7 @@ def remember(runner, message: str, framing: dict, *, completed: bool = True) -> 
         return None
     from thread_context import get_goal_eval_outcome, get_current_task_id, get_task_origin
     evaluation = get_goal_eval_outcome() or {}
-    achieved = evaluation.get("achieved") if isinstance(evaluation, dict) else None
+    achieved = {"ACHIEVED": True, "NOT_ACHIEVED": False}.get(evaluation.get("goal_status"))
     pursuit_id = None
     try:
         from pursuit_bind import current as pursuit_current
@@ -166,7 +166,8 @@ def remember(runner, message: str, framing: dict, *, completed: bool = True) -> 
         "at": datetime.now().isoformat(timespec="seconds"),
         "task_id": get_current_task_id() or "",
         "origin": get_task_origin() or "",
-        "achieved": achieved if isinstance(achieved, bool) else None,
+        "achieved": achieved, "goal_status": evaluation.get("goal_status", "UNKNOWN"),
+        "review_status": evaluation.get("review_status", "NOT_RUN"),
         "completed": bool(completed),
         "episode_id": episode_id,
         "pursuit_id": pursuit_id,
@@ -312,7 +313,7 @@ def _candidate(runner, message: str, history: list):
     data = _load(key)
     repeat = (data.get("repeat") or {}).get(_message_hash(message))
     if repeat and repeat.get("framing"):
-        if repeat.get("achieved") is True and _age_s(repeat) <= REPEAT_MAX_AGE_S:
+        if repeat.get("goal_status") == "ACHIEVED" and _age_s(repeat) <= REPEAT_MAX_AGE_S:
             return "repeat", repeat
         # 같은 문장인데 직전이 달성이 아니었다 — 되풀이하지 않고 새로 규정한다.
         return None, "같은 문장의 직전 실행이 ACHIEVED 가 아님"

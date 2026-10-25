@@ -558,19 +558,36 @@ def clear_tool_calls():
     _thread_local.tool_calls = []
 
 
-# ============ Goal 평가 결과 (증류 게이트용) ============
-# 목표 평가 루프의 최종 판정을 증류 단계로 전달한다. 평가가 NOT_ACHIEVED로
-# 끝난(=목표 미달성) 실행의 IBL 패턴을 해마에 학습하면 실패가 코퍼스에 누적되어
-# 시간이 갈수록 추천 품질을 깎는다(복리 출혈). 증류 전에 이 판정을 보고 거른다.
-# None = 평가 안 함(EXECUTE/Reflex 등) → 증류 허용(기존 동작).
+# ============ 검수와 목표의 별도 관측 ============
+# 전체 성공의 학습에는 목표 달성 근거가 필요하다. 부분 실행과 사용자 사실은 각자의 근거로 판단한다.
 
-def set_goal_eval_outcome(achieved: bool, severity: int = 0, *, status=None, reason="", method=None):
-    """현재 스레드의 목표 평가 최종 판정 저장."""
-    _thread_local.goal_eval_outcome = {"achieved": bool(achieved), "severity": int(severity)}
-    if status is not None:
-        _thread_local.goal_eval_outcome.update(status=status, reason=reason)
+def set_goal_eval_outcome(achieved=None, severity=0, *, status=None, reason="", method=None,
+                          goal_status="UNKNOWN", review_status=None, goal_reason="",
+                          goal_evidence=None, remaining=None, response_hash=None):
+    """검수 승인과 관측된 목표 달성을 별도로 보존한다. 옛 bool은 달성 증거가 아니다."""
+    goal_status = goal_status if goal_status in {"ACHIEVED", "NOT_ACHIEVED", "UNKNOWN"} else "UNKNOWN"
+    review_status = review_status or ({"ACHIEVED": "APPROVED", "NOT_ACHIEVED": "REWORK",
+                                      "NOT_RUN": "NOT_RUN"}.get(status, "UNKNOWN"))
+    _thread_local.goal_eval_outcome = {
+        "achieved": {"ACHIEVED": True, "NOT_ACHIEVED": False}.get(goal_status),
+        "severity": int(severity), "status": status, "reason": reason,
+        "review_status": review_status, "goal_status": goal_status,
+        "goal_reason": goal_reason, "goal_evidence": list(goal_evidence or []),
+        "remaining": list(remaining or []), "response_hash": response_hash,
+    }
     if method is not None:
         _thread_local.goal_eval_outcome["method"] = method
+
+
+def restore_goal_eval_outcome(outcome):
+    """큐의 판정을 손실 없이 복원하되 구기록의 승인에서 목표 성공을 추론하지 않는다."""
+    import copy
+    value = copy.deepcopy(outcome) if isinstance(outcome, dict) else None
+    if value is not None:
+        value.setdefault("review_status", "UNKNOWN")
+        value.setdefault("goal_status", "UNKNOWN")
+        value["achieved"] = {"ACHIEVED": True, "NOT_ACHIEVED": False}.get(value["goal_status"])
+    _thread_local.goal_eval_outcome = value
 
 
 def get_goal_eval_outcome():

@@ -54,7 +54,7 @@ def test_real_pipeline_resumes_without_recall_classifier_or_planner(supervisor, 
     runner.ai.process_message_stream = lambda **kw: iter([{"type": "final", "content": "남은 검사 완료"}])
     supervisor.runner = runner
     monkeypatch.setattr("system_ai_core._switch_to_role", lambda *a: None)
-    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: "ACHIEVED")
+    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"시험의 완료 증거 확인","evidence":["시나리오의 실제 검사 결과"],"remaining":[]}')
     row = record(tmp_path, goal=supervisor.message, agent_id=supervisor.owner,
                  resume_task_id=supervisor.task, result={"outcome": "healthy"})
     from restart_protocol import atomic_json
@@ -90,7 +90,7 @@ def test_evaluator_timeout_resumes_only_review_after_restart(supervisor, tmp_pat
     module.process_pending(tmp_path, "new", lambda r: pytest.fail("재시도 시각 이전 호출"))
     row["retry_at"] = 0
     journal.save(row, tmp_path)
-    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: "ACHIEVED")
+    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"시험의 완료 증거 확인","evidence":["시나리오의 실제 검사 결과"],"remaining":[]}')
     def evaluate_only(item):
         supervisor.task = item["resume_task_id"]
         restore_review(supervisor, item)
@@ -147,7 +147,7 @@ def test_review_stream_runs_evaluator_without_executor(supervisor, tmp_path, mon
     supervisor.task = row["resume_task_id"]
     supervisor.runner._refresh_execution_prompt = lambda *a, **kw: None
     monkeypatch.setattr("system_ai_core._switch_to_role", lambda *a: None)
-    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: "ACHIEVED")
+    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"시험의 완료 증거 확인","evidence":["시나리오의 실제 검사 결과"],"remaining":[]}')
     with tc.actor_context(agent_id=supervisor.owner, task_id=supervisor.task, origin="user"), journal.resuming(row):
         events = list(review_stream(supervisor.runner, supervisor, row))
         assert tc.get_goal_eval_outcome()["achieved"]

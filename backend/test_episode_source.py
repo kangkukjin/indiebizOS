@@ -173,7 +173,8 @@ def test_training_does_not_change_trends_or_default_trajectory(tmp_path, monkeyp
                              'VALUES(?,1,?,0,?, ?,?)', (source, eid, 'probe', '{}', source))
         recent = EL.get_cognitive_trends()['recent']
         assert recent['episode_count'] == 1 and recent['avg_total_ms'] == 100
-        assert recent['execute_ratio'] == recent['evaluation_achieved_ratio'] == 1
+        assert recent['execute_ratio'] == 1
+        assert recent['evaluation_achieved_ratio'] is None  # 옛 검수 승인은 목표 관측이 아니다
         assert EL.get_trajectory(run_id='training') == []
         assert len(EL.get_trajectory(run_id='training', include_test=True)) == 1
         assert len(EL.get_trajectory(run_id='usage')) == 1

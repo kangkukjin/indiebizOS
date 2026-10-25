@@ -496,7 +496,7 @@ def test_creation_triggers_and_goal_eval_does_not_close(bound, monkeypatch):
 def test_mechanical_promotion_retains_pending_turn(bound, trigger):
     import thread_context as tc
     tc.clear_goal_eval_outcome()
-    if trigger == 'not_achieved': tc.set_goal_eval_outcome(False, 2)
+    if trigger == 'not_achieved': tc.set_goal_eval_outcome(False, 2, goal_status="NOT_ACHIEVED")
     packet = pb.finish('사용자 확인 필요', [], clarification=trigger == 'question')
     assert packet and bound.ledger.turns(packet['id'])[-1]['state'] == 'pending'
     tc.clear_goal_eval_outcome()

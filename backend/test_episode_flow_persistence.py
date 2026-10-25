@@ -39,6 +39,7 @@ def evaluation(controller, criterion=None):
     manifest = controller.store.manifest()
     return json.dumps({"status": "REWORK" if criterion else "APPROVED", "reason": "남은 구현" if criterion else "전체 확인",
                        "response_version": manifest["version"], "response_hash": manifest["hash"],
+                       "goal_status": "NOT_ACHIEVED" if criterion else "ACHIEVED",
                        "repair_scope": "research", "instruction": "다음 항목 구현",
                        "defects": [{"criterion_id": criterion, "evidence": "미구현", "repair": "구현"}] if criterion else []})
 

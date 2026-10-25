@@ -88,8 +88,10 @@ def test_transport_keeps_advertised_input_and_reuse_arguments(boundary):
 @pytest.mark.parametrize('kind,data,status', [
     ('cognition.evaluation', {'path': 'none'}, 'not_evaluated'),
     ('validation.completed', {'validator': 'goal_eval', 'status': 'UNKNOWN', 'achieved': False}, 'unknown'),
-    ('validation.completed', {'validator': 'goal_eval', 'status': 'NOT_ACHIEVED'}, 'not_achieved'),
-    ('supervision.evaluation.finished', {'decision': {'status': 'APPROVED', 'response_version': 2}}, 'achieved'),
+    ('validation.completed', {'validator': 'goal_eval', 'goal_status': 'NOT_ACHIEVED'}, 'not_achieved'),
+    ('validation.completed', {'validator': 'goal_eval', 'goal_status': 'ACHIEVED'}, 'achieved'),
+    ('validation.completed', {'validator': 'goal_eval', 'status': 'NOT_ACHIEVED'}, 'unknown'),
+    ('supervision.evaluation.finished', {'decision': {'status': 'APPROVED', 'response_version': 2}}, 'unknown'),
 ])
 def test_completed_task_and_recorded_goal_evaluation_are_separate_across_pages(trace, kind, data, status):
     from episode_logger import trajectory_run_id

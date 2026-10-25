@@ -854,6 +854,7 @@ class Supervisor:
     def finalize(self, response, history, collect, cancel_check=None, tool_calls=None):
         if not self.enabled:
             return response
+        from episode_logger import record_trajectory_event
         from supervisor_runtime import parse_decision, repair_message
         from final_evaluator import invoke, prepare, snapshot_error
         from repair_continuation import defer
@@ -954,7 +955,8 @@ class Supervisor:
                 record_trajectory_event("validation.completed", {
                     "validator": "goal_eval", "round": attempt + 1,
                     "status": {"APPROVED": "ACHIEVED", "REWORK": "NOT_ACHIEVED"}.get(decision["status"], "UNKNOWN"),
-                    "achieved": decision["status"] == "APPROVED",
+                    "review_status": decision["status"], "goal_status": decision.get("goal_status", "UNKNOWN"),
+                    "final": False,
                     "feedback_text": decision.get("reason", ""), "response_hash": manifest["hash"],
                     "response_version": manifest["version"], "store": str(self.store.directory),
                 })
@@ -1060,14 +1062,20 @@ class Supervisor:
         if finish_review(self, decision):
             status = "PENDING_EXECUTION" if self._review_row.get("phase") == "execution" else "PENDING_REVIEW"
         set_goal_eval_outcome(approved, 2 if status == "NOT_ACHIEVED" else 0,
-                              status=status, reason=decision.get("reason", ""))
+                              status=status, reason=decision.get("reason", ""), review_status=decision["status"],
+                              goal_status=decision.get("goal_status", "UNKNOWN") if not status.startswith("PENDING_") else "UNKNOWN",
+                              goal_reason=decision.get("goal_reason", ""),
+                              goal_evidence=decision.get("goal_evidence", []), remaining=decision.get("remaining", []),
+                              response_hash=self.store.manifest()["hash"])
+        from thread_context import get_goal_eval_outcome
+        outcome = get_goal_eval_outcome()
+        record_trajectory_event("validation.completed", {"validator": "goal_eval", "final": True, **outcome})
         # 과거 원문·승인 지문과 실패 범주를 보존해 다음 요청에서 재검수할 수 있다.
         (self.store.directory / "review_status.json").write_text(json.dumps({
-            "status": status, "reason": decision.get("reason", ""),
-            "stop_kind": decision.get("kind"), "response": self.store.manifest(),
+            **outcome, "stop_kind": decision.get("kind"), "response": self.store.manifest(),
             "original_goal": self.message, "episode_id": self.episode_id,
             "validator": "goal_eval",
-            "learning": "eligible" if approved else "deferred" if status == "UNKNOWN" else "rejected",
+            "learning": "eligible" if outcome["goal_status"] == "ACHIEVED" else "components_only",
         }, ensure_ascii=False), encoding="utf-8")
         print(f"[GoalEval] 최종 판정: {status}")
         final = self.store.text

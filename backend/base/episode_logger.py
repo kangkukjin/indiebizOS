@@ -1234,6 +1234,21 @@ def get_episode_journal(limit: int = 30, include_test: bool = False, *,
                 if observed:
                     # 진행 중에는 요약이 없다. 완료분도 실제 원장이 있으면 누락된 요약을 보완한다.
                     item["execution_rounds"] = max(item["execution_rounds"] or 0, observed)
+        # 최종 전달 이후의 두 판정만 투영한다. 구기록의 검수 승인을 목표 성공으로 바꾸지 않는다.
+        outcomes = {}
+        if items:
+            marks = ",".join("?" for _ in items)
+            for row in conn.execute(
+                    f"SELECT episode_id,data FROM trajectory_event WHERE episode_id IN ({marks}) "
+                    "AND kind='validation.completed' AND json_valid(data) "
+                    "AND json_extract(data,'$.final')=1 "
+                    + ("" if include_test else "AND COALESCE(source,'usage') NOT IN ('test','training') ")
+                    + "ORDER BY rowid", [item["id"] for item in items]):
+                outcomes[row["episode_id"]] = json.loads(row["data"])
+        for item in items:
+            outcome = outcomes.get(item["id"], {})
+            item["review_status"] = outcome.get("review_status")
+            item["goal_status"] = outcome.get("goal_status", "UNKNOWN")
         return items
     finally:
         if conn is not None:
@@ -1342,15 +1357,19 @@ def get_cognitive_trends(days: int = 7) -> dict:
               AND unconscious_decision IS NOT NULL
         """, (start, end)).fetchone()
 
-        # 평가 달성률
+        # 원래 목표의 달성률. 예전 응답 승인 요약은 목표 관측이 아니다.
         eval_row = conn.execute("""
             SELECT
                 COUNT(*) as total,
-                SUM(CASE WHEN evaluation_result = 'ACHIEVED' THEN 1 ELSE 0 END) as achieved
-            FROM episode_summary
-            WHERE started_at >= ? AND started_at < ?
-              AND COALESCE(source, 'usage') NOT IN ('test', 'training')
-              AND evaluation_result IS NOT NULL
+                SUM(json_extract(t.data, '$.goal_status') = 'ACHIEVED') as achieved
+            FROM trajectory_event t JOIN episode_summary s ON s.episode_id=t.episode_id
+            WHERE s.started_at >= ? AND s.started_at < ?
+              AND COALESCE(s.source, 'usage') NOT IN ('test', 'training')
+              AND t.rowid = (SELECT MAX(v.rowid) FROM trajectory_event v
+                  WHERE v.episode_id=t.episode_id AND v.kind='validation.completed'
+                  AND json_valid(v.data) AND json_extract(v.data,'$.final')=1
+                  AND COALESCE(v.source,'usage') NOT IN ('test','training'))
+              AND json_extract(t.data,'$.goal_status') IN ('ACHIEVED','NOT_ACHIEVED')
         """, (start, end)).fetchone()
 
         cnt = row["cnt"] or 0

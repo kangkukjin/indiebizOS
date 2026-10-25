@@ -58,10 +58,10 @@ def test_unknown_preserves_cause_and_defers_learning(supervisor, monkeypatch, ca
     outcome = tc.get_goal_eval_outcome()
     assert outcome["status"] == "UNKNOWN" and outcome["severity"] == 0
     status = json.loads((supervisor.store.directory / "review_status.json").read_text())
-    assert status["learning"] == "deferred" and status["stop_kind"] == "budget"
+    assert status["learning"] == "components_only" and status["stop_kind"] == "budget"
     from ibl_usage_rag import distill_experience
     assert not distill_experience("fixture", [], 0)
-    assert "재검수까지 학습 보류" in capsys.readouterr().out
+    assert status["goal_status"] == "UNKNOWN"
 
 
 def test_large_supervisor_result_is_pageable_without_losing_error(supervisor):
@@ -93,7 +93,8 @@ def test_distill_queue_preserves_unknown_reason_and_task():
     seen = []
     runner = SimpleNamespace(_after_response=lambda *a, **kw:
                              seen.append((tc.get_goal_eval_outcome(), tc.get_current_task_id())))
-    outcome = {"achieved": False, "severity": 0, "status": "UNKNOWN", "reason": "토큰 예산"}
+    outcome = {"achieved": None, "severity": 0, "status": "UNKNOWN", "reason": "토큰 예산",
+               "review_status": "UNKNOWN", "goal_status": "UNKNOWN"}
     try:
         DistillQueue._execute(_Job(1, runner, {"response": "후보", "goal_eval": outcome,
                                              "task_id": "task_3364"}, {}))
@@ -104,7 +105,7 @@ def test_distill_queue_preserves_unknown_reason_and_task():
         tc.restore(original)
 
 
-def test_deep_memory_rejects_unknown_before_experience_consumes_outcome(monkeypatch):
+def test_deep_memory_keeps_user_evidence_independent_of_task_outcome(monkeypatch):
     import ibl_usage_rag
     from cognitive_distill import CognitiveDistillMixin
     original = tc.snapshot()
@@ -116,7 +117,7 @@ def test_deep_memory_rejects_unknown_before_experience_consumes_outcome(monkeypa
     try:
         tc.set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="예산 중단")
         runner._after_response("영상", "완성했습니다", tool_calls=[{}], write_forage=False, guides_used=[])
-        assert seen == []
+        assert seen == ["완성했습니다"]
     finally:
         tc.restore(original)
 

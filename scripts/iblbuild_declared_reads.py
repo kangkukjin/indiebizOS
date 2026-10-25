@@ -325,8 +325,8 @@ def validate_declared_reads(data: dict, root: Path,
             if missing:
                 issues.append(
                     f"[{node_name}:{aname}] ({pkg_dir.name}): 선언된 인자 {missing} 를 구현이 한 번도 읽지 않는다 — "
-                    f"판본 2 가 받아 주고 결과는 그 인자를 무시한 채 성공한다. 구현하거나, 은퇴 낱말이면 "
-                    f"선언에서 빼고 retired_contracts 에 등록할 것(IBL 층이 소비하는 키면 DECLARED_UNREAD_ALLOW 에 사유와 함께)")
+                    f"실행 결과가 그 인자를 무시한 채 성공한다. 구현하거나 불필요한 인자는 "
+                    f"선언·교재에서 제거할 것(IBL 층이 소비하는 키면 DECLARED_UNREAD_ALLOW 에 사유와 함께)")
     return issues, stats
 
 

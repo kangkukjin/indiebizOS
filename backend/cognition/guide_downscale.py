@@ -11,7 +11,7 @@
 ## 무엇을 줄이나 — 세 부류, 우선순위 순
 
 1. **어휘와 어긋난 문장** — 죽은 `[node:action]` 참조(은퇴·제안 문맥은 면제, 빌드 가드와 같은
-   기준)·retired_contracts 금지 문구·끊긴 `backend/…py` 경로.
+   기준)·끊긴 `backend/…py` 경로. 현재 어휘 선언과 실재 파일만 대조한다.
 2. **완성 처방** — 자리표 골격이 아닌 완성 문장(no-concrete-sentences 규율). 기계가 못 재므로
    LLM 지시로만 두고, 손실은 3 의 기계 대조가 막는다.
 3. **쓰인 흔적 없는 절** — guide_registry.section_uses 가 관찰창 동안 0 인 `##` 절. 단 귀속이
@@ -47,7 +47,6 @@ BASE = Path(__file__).resolve().parents[2]
 DATA = BASE / "data"
 GUIDES_DIR = DATA / "guides"
 NODES_PATH = DATA / "ibl_nodes.yaml"
-RETIRED_CONTRACTS_PATH = DATA / "retired_contracts.yaml"
 AUDIT_FLAGS_PATH = DATA / "guide_audit_flags.json"
 STATE_PATH = DATA / "guide_downscale_state.json"
 FLAGS_PATH = DATA / "guide_downscale_flags.json"
@@ -81,18 +80,6 @@ def _live_actions() -> Set[Tuple[str, str]]:
         return set()
 
 
-def _retired_phrases() -> List[str]:
-    try:
-        import yaml
-        d = yaml.safe_load(RETIRED_CONTRACTS_PATH.read_text(encoding="utf-8")) or {}
-        out: List[str] = []
-        for ent in (d.get("retired") or []):
-            out += [str(p) for p in (ent.get("phrases") or []) if p]
-        return out
-    except Exception:
-        return []
-
-
 def _section_of(lines: List[str], idx: int) -> str:
     for j in range(idx, -1, -1):
         m = HEADING_RE.match(lines[j])
@@ -105,17 +92,12 @@ def build_markers(text: str, guide: str, live: Set[Tuple[str, str]], policy: Dic
     """세 부류의 위치 표식 — 전부 기계가 재는 것만(LLM 0)."""
     lines = text.split("\n")
     dead: List[str] = []
-    phrases: List[str] = []
     for i, ln in enumerate(lines):
-        if EXCUSED_RE.search(ln) or "retired-ok" in ln:
+        if EXCUSED_RE.search(ln):
             continue
         for n, a in ACTION_RE.findall(ln):
             if live and (n, a) not in live:
                 dead.append(f"L{i + 1}: [{n}:{a}] — 존재하지 않는 어휘")
-    for ph in _retired_phrases():
-        for i, ln in enumerate(lines):
-            if ph in ln and "retired-ok" not in ln:
-                phrases.append(f"L{i + 1}: 은퇴 문구 「{ph}」")
     broken: List[str] = []
     for rel in sorted(set(PATH_RE.findall(text))):
         if not (BASE / rel).exists():
@@ -133,7 +115,7 @@ def build_markers(text: str, guide: str, live: Set[Tuple[str, str]], policy: Dic
             title = m.group(2).strip()
             if uses.get(title, 0) == 0 and ACTION_RE.search(text[m.end():m.end() + 4000] or ""):
                 unused.append(title)
-    return {"dead_refs": dead, "retired_phrases": phrases, "broken_paths": broken,
+    return {"dead_refs": dead, "broken_paths": broken,
             "unused_sections": unused, "observed_turns": [str(turns)]}
 
 
@@ -217,7 +199,7 @@ def _prompt(guide: str, text: str, markers: Dict[str, List[str]], budget: int, o
     return (
         f"아래 가이드 `{guide}` 를 **뜻을 바꾸지 않고** 줄인다. {goal}\n\n"
         "줄이는 부류(우선순위 순) — 표식된 것만:\n"
-        "  1. 어휘와 어긋난 문장: 아래 [죽은 참조]·[은퇴 문구]·[끊긴 경로] 줄을 지우거나 한 줄로 접는다.\n"
+        "  1. 어휘와 어긋난 문장: 아래 [죽은 참조]·[끊긴 경로] 줄을 지우거나 한 줄로 접는다.\n"
         "  2. 완성 처방: 그대로 복붙할 완성 문장(구체 검색어·완성 본문)은 자리표 골격(`<대상>`·`{날짜}`)으로 바꾼다.\n"
         "  3. [미사용 절]: 절 제목은 그대로 두고 본문을 한 줄 요약으로 접는다(마지막에 '상세는 git 이력' 표기).\n\n"
         "지키는 것(기계가 대조한다 — 하나라도 어기면 이번 출력은 버려진다):\n"
@@ -227,7 +209,6 @@ def _prompt(guide: str, text: str, markers: Dict[str, List[str]], budget: int, o
         "  · 실측 기록·함정·사용자 판정 문장은 줄이되 지우지 않는다.\n"
         "  · 새 내용을 쓰지 않는다.\n\n"
         + _blk("죽은 참조", markers.get("dead_refs", [])) + "\n"
-        + _blk("은퇴 문구", markers.get("retired_phrases", [])) + "\n"
         + _blk("끊긴 경로", markers.get("broken_paths", [])) + "\n"
         + _blk("미사용 절 (관측 턴 " + ",".join(markers.get("observed_turns", ["0"])) + ")",
                markers.get("unused_sections", [])) + "\n\n"
@@ -265,7 +246,7 @@ def downscale_one(guide: str, policy: Dict, live: Optional[Set[Tuple[str, str]]]
         mark, text = m.group(0), text[m.end():]
 
     markers = build_markers(text, guide, live, policy)
-    has_target = any(markers[k] for k in ("dead_refs", "retired_phrases", "broken_paths", "unused_sections"))
+    has_target = any(markers[k] for k in ("dead_refs", "broken_paths", "unused_sections"))
     if not over and not has_target:
         return {"guide": guide, "ok": False, "before": before, "after": before,
                 "reason": "줄일 표식 없음(예산 안)", "markers": markers, "skipped": True}

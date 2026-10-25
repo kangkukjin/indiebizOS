@@ -105,5 +105,5 @@ check:true 시험은 실행기 호출을 금지한 상태에서 계획과 경고
 최종 검증(2026-09-23): 새 기능 회귀 37개 통과. 전체 백엔드 회귀는
 `.venv/bin/python3 -m pytest backend/ -o addopts='' -q`로 5,483개 통과·1개 건너뜀
 (490.72초, 경고 116건). 검수 정합은 fixture 148개·교재 11개에서 거짓 오류 0개였다.
-`check_backend_layers.py`, `check_retired_contracts.py`, `build_ibl_nodes.py --check`,
+`check_backend_layers.py`, `build_ibl_nodes.py --check`,
 `build_body_bundle.py android --check`도 통과했다.

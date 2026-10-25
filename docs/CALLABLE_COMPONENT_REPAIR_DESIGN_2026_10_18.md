@@ -286,7 +286,7 @@ UI에 다시 생기지 않게 한다. 화면 캡처는 기존 guestpc screen 경
 
 A는 독립 반영한다. B와 C는 계약 기반을 공유하고, D까지 완료돼야 하드웨어 부품화가
 완료다. 기존 가이드와 UI가 새 호출로 옮겨지기 전에 호환 경로를 제거하지 않는다.
-이후 호환 경로 은퇴는 실제 참조를 정리하고 `retired_contracts.yaml`의 기존 절차로 진행한다.
+이후 경로 정리는 실제 참조·교재를 현행 선언과 맞추고 빌드·행동 회귀로 검증한다.
 
 주요 변경 위치는 `ibl_routing.py`, `guide_registry.py`의 기존 반환 경계,
 `iblbuild_guide_wiring.py`, `registry.yaml`, 대상 Script·공용 모듈, PC 관용구·시드 등록,

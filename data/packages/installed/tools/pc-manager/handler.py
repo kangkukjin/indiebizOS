@@ -221,16 +221,8 @@ def _forage_flag(raw, default=False):
 
 
 def _forage_note(tool_input: dict) -> str:
-    """[self:forage]{op:note} — 지도(map) 단언 누적. 주인모델(layer=owner)은 2026-09-18 은퇴.
-    layer·table 은 2026-09-29 계약에서 걷었다(판본 2 check = UNKNOWN_ARGUMENT). 여기 남은 읽기는 판본 1 직행 호출이
-    옛 층을 적어 보낼 때 조용히 지도에 쓰지 않고 거절하는 이행 관문이다(IMPL_READ_ALLOW 사유)."""
+    """[self:forage]{op:note} — 장소에 붙는 단언을 기록한다."""
     import forage_memory as FM
-    layer = (tool_input.get("layer") or "map").strip().lower()
-    if layer != "map":
-        return json.dumps({"success": False, "retired": "owner_model",
-                           "error": "layer 는 map 뿐입니다 — 주인모델(owner)은 은퇴했습니다. 주인에 대한 사실은 "
-                                    "심층기억이 대화에서 직접 증류합니다. 포식 기억에는 장소(locus)에 붙는 단언만 적습니다."},
-                          ensure_ascii=False)
     prior = tool_input.get("prior_class")
     conf = tool_input.get("confidence")
     prov = tool_input.get("provenance")
@@ -239,7 +231,6 @@ def _forage_note(tool_input: dict) -> str:
             prov = json.loads(prov)
         except (ValueError, TypeError):
             prov = {"observed": [prov]}
-    # layer == map
     locus = tool_input.get("locus") or tool_input.get("folder_path")
     kind = tool_input.get("kind")
     claim = tool_input.get("claim") or tool_input.get("note")
@@ -281,9 +272,8 @@ def _forage_forget(tool_input: dict) -> str:
     entry_id = tool_input.get("id")
     if entry_id is None:
         return json.dumps({"success": False, "error": "forget 은 id 필요"}, ensure_ascii=False)
-    table = tool_input.get("table") or "forage_map"
     try:
-        return json.dumps(FM.forget(entry_id=int(entry_id), table=table), ensure_ascii=False)
+        return json.dumps(FM.forget(entry_id=int(entry_id)), ensure_ascii=False)
     except (TypeError, ValueError):
         return json.dumps({"success": False, "error": "id 는 정수"}, ensure_ascii=False)
 

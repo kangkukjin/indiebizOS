@@ -37,7 +37,6 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(GD, "BASE", tmp_path)
     monkeypatch.setattr(GD, "GUIDES_DIR", guides)
     monkeypatch.setattr(GD, "NODES_PATH", tmp_path / "ibl_nodes.yaml")
-    monkeypatch.setattr(GD, "RETIRED_CONTRACTS_PATH", tmp_path / "retired_contracts.yaml")
     monkeypatch.setattr(GD, "AUDIT_FLAGS_PATH", tmp_path / "guide_audit_flags.json")
     monkeypatch.setattr(GD, "STATE_PATH", tmp_path / "gd_state.json")
     monkeypatch.setattr(GD, "FLAGS_PATH", tmp_path / "gd_flags.json")
@@ -51,8 +50,6 @@ def env(tmp_path, monkeypatch):
     (tmp_path / "ibl_nodes.yaml").write_text(
         "nodes:\n  self:\n    actions:\n      read: {}\n      write: {}\n  sense:\n    actions:\n      search: {}\n",
         encoding="utf-8")
-    (tmp_path / "retired_contracts.yaml").write_text(
-        "retired:\n  - id: x\n    phrases: ['옛 방식']\n", encoding="utf-8")
     commits = []
     monkeypatch.setattr(GD, "COMMIT_FN", lambda paths, msg: (commits.append((paths, msg)) or True))
     p = guides / "report.md"
@@ -70,7 +67,7 @@ POLICY = {"guide_budget_bytes": 36000, "downscale_per_run": 2, "section_unused_m
 def test_markers_are_mechanical(env):
     m = GD.build_markers(ORIGINAL, "report.md", LIVE, POLICY)
     assert any("[self:ghost]" in x for x in m["dead_refs"])
-    assert any("옛 방식" in x for x in m["retired_phrases"])
+    assert set(m) == {"dead_refs", "broken_paths", "unused_sections", "observed_turns"}
     assert not m["broken_paths"], "실존 경로는 끊긴 것이 아니다"
     assert m["unused_sections"] == [], "귀속이 돌지 않았으면 '미사용'을 말하지 않는다(못 봤음)"
 
@@ -124,11 +121,30 @@ def test_downscale_one_leaves_file_untouched_on_gate_failure(env):
 
 def test_downscale_one_skips_clean_guide_within_budget(env):
     clean = ORIGINAL.replace("[self:ghost]{} 를 쓰라 (이 문장은 죽은 어휘를 정본처럼 가르친다).", "없음")
-    clean = clean.replace("## 3. 옛 방식", "## 3. 기타")
     env.path.write_text(clean, encoding="utf-8")
     called = []
     r = GD.downscale_one("report.md", POLICY, LIVE, ai_call=lambda p: called.append(p))
-    assert r.get("skipped") and not called, "예산 안·표식 없음 = 강한 시냅스, 건드리지 않는다(모델 호출 0)"
+    assert r.get("skipped") and not called, "과거를 설명하는 산문 자체는 정리나 모델 호출의 이유가 아니다"
+
+
+def test_markers_follow_current_declarations_and_paths(env):
+    text = "[fixture:read]{} 를 호출한다. `backend/missing.py` 참조."
+    missing = GD.build_markers(text, "report.md", LIVE, POLICY)
+    assert len(missing["dead_refs"]) == len(missing["broken_paths"]) == 1
+    (env.root / "backend" / "missing.py").write_text("# current implementation\n")
+    present = GD.build_markers(text, "report.md", LIVE | {("fixture", "read")}, POLICY)
+    assert not present["dead_refs"] and not present["broken_paths"]
+
+
+def test_weekly_flagged_current_guide_skips_model(env):
+    clean = ORIGINAL.replace("[self:ghost]{} 를 쓰라 (이 문장은 죽은 어휘를 정본처럼 가르친다).", "과거 작업 기록.")
+    env.path.write_text(clean, encoding="utf-8")
+    (env.root / "guide_audit_flags.json").write_text(json.dumps({"flags": [{"guide": "report.md"}]}))
+    called = []
+    result = GD.run_guide_downscale(force=True, ai_call=lambda p: called.append(p))
+    assert result["success"] and not result["done"]
+    assert not called and not env.commits
+    assert env.path.read_text(encoding="utf-8") == clean
 
 
 def test_pick_targets_budget_and_flags(env):

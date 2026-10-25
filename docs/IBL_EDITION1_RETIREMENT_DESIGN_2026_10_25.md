@@ -250,7 +250,7 @@ dependencies + callers + disposition + evidence`를 기록한다. 이는 일회�
 최종 언어 전환은 전체 backend 검사와 해당 문서의 언어·값/스크립트·원장·배포 system 묶음을 실행한다.
 프론트 변경은 `npx tsc -p tsconfig.app.json`, backend 변경은 Android 몸 번들 재생성과 관련 기기 검사를 포함한다.
 어휘 설명·스키마가 바뀌면 소스 YAML에서 빌드하고 `build_ibl_nodes.py --check`를 실행한다.
-은퇴 계약은 `data/retired_contracts.yaml`과 기존 검사기에 등록하며 문서·오류·도움말까지 갱신한다.
+문서·오류·도움말을 현행 계약에 맞춰 갱신하고 현재 선언·구현·결과를 검증한다. 변경 사유는 git·changelog에 남긴다.
 
 최종 인수는 다음 조건을 모두 충족해야 한다.
 

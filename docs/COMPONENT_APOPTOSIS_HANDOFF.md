@@ -1,5 +1,9 @@
 # 구성요소 수준의 죽음 + 야간 하향 정규화 — 설계 핸드오프
 
+현재 구현(2026-10-25): 주간 가이드 정리는 현행 어휘·실재 경로·절 사용 관측·크기 예산만
+사용한다. 계약 변경은 선언·구현·교재를 갱신하고 빌드·회귀로 검증한다. 아래 초기 설계의
+문구 등록부 대조는 종료했으며 과거 판단의 기록으로만 남긴다.
+
 *작성: 2026-09-02 (Claude Code). 사용자 지시 "1번부터 설계해봐. 4번도 같이." → 같은 날 **⚖ 2건 승인 + 구현 완료**(미커밋).*
 
 > **구현 현황 (2026-09-02)** — `backend/cognition/component_lifecycle.py`(일일 전이·집행·판정 큐·번들 입구
@@ -115,8 +119,7 @@ guides:
 - `candidate` 표식 = 가이드 첫 줄 HTML 주석(`freshness_note` 가 붙이는 자리와 같은 문법):
   `<!-- lifecycle: candidate since YYYY-MM-DD — 무주입·무참조 N일. 쓰이면 자동 복귀 -->`.
   `read_guide` 검색엔 계속 걸린다(숨김 아님).
-- `retired` = `git mv data/guides/X.md data/guides/_retired/X.md` + `retired_contracts.yaml` 한 줄(있는
-  집행기 재사용) + 커밋 라벨 `apoptosis(guide): X`. `_retired/` 는 `search_guide` 색인 밖.
+- `retired` = `git mv data/guides/X.md data/guides/_retired/X.md` + `lifecycle_state.json` 수명 기록 + 커밋 라벨 `apoptosis(guide): X`. `_retired/` 는 `search_guide` 색인 밖.
   되살리기 = `git mv` 한 번.
 
 ## B. 가이드 층 — 하향 정규화(#4)
@@ -164,8 +167,8 @@ guides:
   (어휘는 `ibl_actions.yaml` src 에 — 빌드가 파생물로 내리고 카탈로그 desc **뒤에** 한 줄 표식. 숨김 X).
 - `retired`:
   - **어휘 → 항상 판정 큐**(언어 개정). 큐 항목에 증거와 **후계 후보**(같은 노드의 desc 유사 액션)를 실어
-    사용자가 한 줄로 판정할 수 있게. 판정 후 집행은 있는 절차(`retired_contracts.yaml`·코퍼스 이관·
-    `--check` 코퍼스 생존 가드·좀비 청소).
+    사용자가 한 줄로 판정할 수 있게. 판정 후 집행은 현재 선언 갱신·코퍼스 이관·
+    `--check` 코퍼스 생존 가드·참조 정리로 수행한다.
   - **워크플로우·스크립트 → 가역 층 규칙(⚖1)**: `_retired/` 이동 + 등록부 한 줄 + 라벨 커밋.
 - 부활: candidate 상태에서 §2-3 신호 1건 → `lifecycle` 필드 제거 + `lifecycle_revivals.jsonl` 한 줄
   (무엇이·얼마 만에 — 이게 쌓이면 `candidate_after_days` 를 늘릴 근거가 데이터로 생긴다).

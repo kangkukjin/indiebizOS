@@ -94,7 +94,7 @@ passthrough_rows)를 읽고 어느 가지가 왜 비었는지 판단**할 것.
   기다릴 땐 `recover{wait: 초}`(상한=`common/spill.py` `TICKET_MAX_WAIT_S`) 한 번으로 — 셸 `sleep` 은 전경이 막히고 배경은 즉시
   돌아와 대기가 몇 초 간격 폴링으로 무너진다(2026-09-01 실측: 도구 호출의 36%가 기다림).
 - ★zsh 로 봉투 JSON 을 다룰 때 `echo "$JSON"` 금지(백슬래시 훼손) — printf/파일로.
-- ★어휘·문법을 고치면: 가드 시험 신설, 옛 계약은 `data/retired_contracts.yaml` 등록,
+- ★어휘·문법을 고치면: 가드 시험 신설, 현행 선언·구현과 작성 예제 대조,
   `python3 scripts/build_ibl_nodes.py` 재생성(+android 번들), ibl.md 언어의 경계 갱신,
   36회차류 옛 계약 시험 개정. 이번 아크에서 몸의 관문들(값 판정·은퇴·단일 러너)이 개정
   작업 자체의 결함을 세 번 적발했다 — 관문이 물면 관문이 옳다고 먼저 가정할 것.

@@ -342,14 +342,14 @@ ledger의 표본 범위를 검사하는 현재 회귀 묶음이다.
 
 **연결된 실패:** 옛 규칙과 대체 규칙의 동시 적용, 검사 통과 뒤 교재·실행 경로의 재분기.
 1~2단계에서 바뀐 계약의 조회·검사·표시·교재 경로를 같은 소유자에 연결한다. 제거 목록은 해당 커밋 본문에 남기며,
-은퇴한 외부 계약의 문구는 기존 `data/retired_contracts.yaml`과 관문을 사용한다.
+교재·오류·도움말은 현재 선언과 구현에 맞춘다. 검사는 현행 계약과 결과를 기준으로 한다.
 
 ```bash
-.venv/bin/python3 scripts/check_retired_contracts.py
+.venv/bin/python3 scripts/build_ibl_nodes.py --check
 .venv/bin/python3 -m pytest backend/test_ibl_current_surfaces.py backend/test_conscious_supervisor.py -k 'current or real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call' -q -o addopts=''
 ```
 
-**기준선:** 은퇴 계약 관문 통과, **52 passed, 45 deselected**. G3는 등록된 은퇴 문구와
+**당시 기준선:** **52 passed, 45 deselected**. 현재 G3는 선언·구현 정합과
 선택된 현재 작성·저장·예약·평가 경로를 검사한다. 임의의 죽은 코드가 없다는 증명은 아니다.
 **끝:** 변경별 제거 목록의 각 항목이 실제 diff에 있거나, 남긴 소비자·호환 이유가 기록되어야
 한다. G3와 변경한 호출자의 행동 시험이 통과해야 한다. 파서 통합·코퍼스 일괄 번역으로 확대하지 않는다.

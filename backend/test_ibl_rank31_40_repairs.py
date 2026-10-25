@@ -150,14 +150,6 @@ def test_forage_reconcile_false_does_not_mutate(monkeypatch, raw, expected):
     assert calls == [{'apply': expected}]
 
 
-def test_forage_invalid_layer_rejected_before_write(monkeypatch):
-    mod = load('pc-manager')
-    calls = []
-    monkeypatch.setitem(sys.modules, 'forage_memory', SimpleNamespace(note_map=lambda **k: calls.append(k) or {'success': True}))
-    result = json.loads(mod.execute({'op': 'note', 'layer': 'owenr', 'locus': '/fixture', 'kind': 'identity', 'claim': 'fixture'}, SimpleNamespace(tool_name='forage_op')))
-    assert result['success'] is False and not calls
-
-
 def test_forage_note_string_flags(monkeypatch):
     mod = load('pc-manager')
     calls = []

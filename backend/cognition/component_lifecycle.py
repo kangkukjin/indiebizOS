@@ -5,7 +5,7 @@
 세대 교체가 없는 한 개체(indiebizOS)는 게놈이 정리될 기회가 없다. 그래서 죽음을
 **구성요소 수준**으로 들여온다 — 가이드·워크플로우·스크립트·낱말이 생존 신호 없이
 쌓이면 사람이 손으로 다이어트해야 했다(2026-08-17 81KB · 09-02 가이드 셋 67→21·62→30·
-79→34KB). 죽음의 **집행기**(retired_contracts·코퍼스 이관·좀비 청소)는 있었고
+79→34KB). 구성요소의 **정리 절차**(코퍼스 이관·참조 정리)는 있었고
 **신호와 방아쇠**가 없었다. 여기가 그 자리다. 정본: docs/COMPONENT_APOPTOSIS_HANDOFF.md.
 
 ## 원리 (생물학 → 규율)
@@ -635,7 +635,7 @@ def compute_transitions(today: Optional[str] = None, apply: bool = True,
             if apply and key not in st["verdict_queued"]:
                 text = (f"어휘 {meta['name']} 은퇴? — candidate {cand['since']} 이후 "
                         f"{_days_between(cand['since'], today)}일 무신호 · {cand.get('evidence')}. "
-                        f"판정=은퇴면 retired_contracts.yaml 한 줄 + 코퍼스 이관(있는 절차)")
+                        f"판정=은퇴면 현재 어휘 선언·참조·활성 용례를 정리하고 build_ibl_nodes.py --check로 검증")
                 if queue_verdict(key, text):
                     st["verdict_queued"][key] = today
                     out["verdicts"].append(key)

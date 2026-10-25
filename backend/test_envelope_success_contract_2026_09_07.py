@@ -71,8 +71,7 @@ def test_engine_boundary_stamps_router_result(monkeypatch):
         return {"rows": 3, "note": "success 를 말하지 않는 옛 봉투"}   # 42함수의 모양
 
     monkeypatch.setattr(ibl_engine, "_route_handler", _fake_router)
-    out = _execute_ibl_unified({"code": '[table:take]{items: [{"a": 1}], n: 1}',
-                                "verbose": True}, str(_ROOT))
+    out = ibl_engine.execute_ibl({'_node':'self','action':'time','params':{}}, str(_ROOT))
     if isinstance(out, str):
         out = json.loads(out)
     assert out.get("success") is True and out.get("rows") == 3, out
@@ -88,8 +87,7 @@ def test_engine_boundary_marks_error_envelope_false(monkeypatch):
         return {"error": "옛 봉투의 실패 — success 를 안 달았다"}
 
     monkeypatch.setattr(ibl_engine, "_route_handler", _fake_router)
-    out = _execute_ibl_unified({"code": '[table:take]{items: [{"a": 1}], n: 1}',
-                                "verbose": True}, str(_ROOT))
+    out = ibl_engine.execute_ibl({'_node':'self','action':'time','params':{}}, str(_ROOT))
     if isinstance(out, str):
         out = json.loads(out)
     assert out.get("success") is False, out

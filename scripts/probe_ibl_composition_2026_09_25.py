@@ -124,7 +124,7 @@ def library_audit():
             results.append({'name': name, 'status': p.report()['status'], 'issues': p.issues})
         except (Fault, ValueError) as exc:
             results.append({'name': name, 'status': 'invalid', 'error': str(exc)})
-    return {'registered_actions_and_legacy_functions': len(registry),
+    return {'registered_actions': len(registry),
             'native_definitions': len(sources), 'definitions': results}
 
 

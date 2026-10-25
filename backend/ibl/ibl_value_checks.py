@@ -10,7 +10,7 @@ _depth = ContextVar("ibl_code_check_depth", default=0)
 # 관문 scripts/iblbuild_schedule_rules.py 가 이 표와 어휘의 value_validator 선언, 런타임 입구가 같은 함수를
 # 부르는지를 대조한다(75회차 후속 B75-4 밭 이관).
 VALIDATOR_READS = {
-    "trigger": ("op", "type", "cron", "config"),
+    "trigger": ("op", "type", "cron", "config", "id", "trigger_id"),
     "schedule": ("at", "date", "time", "start_time", "minutes", "seconds", "repeat",
                  "weekdays", "month", "day", "interval_hours"),
     "calendar": ("op", "date", "time", "start_time", "repeat", "weekdays", "month", "day", "interval_hours"),
@@ -31,7 +31,7 @@ def _validator_problem(validator, values):
         if op == "update" and "cron" not in known and "config" not in known:
             return None  # 규칙을 안 바꾸는 수정 — 저장된 규칙은 등록 때 이미 판정됐다
         from trigger_engine import resolve_trigger_config
-        return resolve_trigger_config(known, known.get("type", "schedule")).get("error")
+        return resolve_trigger_config(known).get("error")
     if validator == "schedule":
         from calendar_rules import schedule_request
         # "이미 지난 시각"은 실행 순간의 사실이라 문장 계약이 아니다(check 는 시각에 따라 뒤집히지 않는다).

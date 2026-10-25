@@ -4,7 +4,7 @@ from ibl_v2_ir import Fault
 from ibl_v2_parser import parse
 
 
-def check_source(source, function_body=False, *, registry=None, library=None):
+def check_source(source, function_body=False, *, registry=None, library=None, owned_vocabulary=False):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_store import definitions, definition_name
@@ -12,7 +12,9 @@ def check_source(source, function_body=False, *, registry=None, library=None):
         source_edition(source, 2)
         if function_body:
             definition_name(source)
-        plan = compile_program(source, load_registry() if registry is None else registry,
+        if registry is None:
+            registry = _owned_registry() if owned_vocabulary else load_registry()
+        plan = compile_program(source, registry,
                                definitions=definitions() if library is None else library)
         return "; ".join(i["message"] for i in plan.issues) or None
     except (Fault, ValueError) as exc:
@@ -60,3 +62,36 @@ def record_functions(plan, result):
                                      dependency_revision=plan.fingerprint, source_complete=complete,
                                      observed={'keys': event.get('returns_keys', []),
                                                'kind': event.get('returns_kind')})
+
+
+def _owned_registry():
+    """Compile imported examples without waking packages or granting execution."""
+    import json
+    from ibl_registry import load_nodes_owned
+    from vocabulary_state import inventory
+    from ibl_v2_adapters import Adapter, load_registry, validate_contract
+    from ibl_v2_contracts import declared_contract, handler_contract
+    registry = load_registry()
+    schemas = {}
+    for package in inventory()["packages"].values():
+        path = package["path"] / "tool.json"
+        if not path.is_file():
+            continue
+        schema = json.loads(path.read_text())
+        entries = schema if isinstance(schema, list) else schema.get("tools", [schema])
+        for entry in entries:
+            schemas[entry.get("name")] = (entry.get("input_schema") or {}).get("properties", {})
+
+    def inspection_only(*args, **kwargs):
+        raise Fault("INSPECTION_ONLY", "보유 어휘 검사용 계약은 실행할 수 없습니다.", kind="permission")
+
+    for node, group in load_nodes_owned().get("nodes", {}).items():
+        for action, config in group.get("actions", {}).items():
+            key = f"{node}:{action}"
+            if key in registry:
+                continue
+            contract = declared_contract(config) or handler_contract(
+                node, action, config, schemas.get(config.get("tool")))
+            if contract:
+                registry[key] = Adapter(validate_contract(contract), inspection_only)
+    return registry

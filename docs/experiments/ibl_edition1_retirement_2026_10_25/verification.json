@@ -1,0 +1,197 @@
+{
+  "scope": "All backend tests including system-marked suites; external device installations not certified.",
+  "pytest": {
+    "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile --ff -rs",
+    "exit_code": 0,
+    "passed": 11510,
+    "skipped": 18,
+    "warnings": 174,
+    "seconds": 843.23,
+    "log_sha256": "2e1d8539934c8cf1f19713dab1386b4f6782d68ed064f59fbf31454deceb7dd1",
+    "skip_reasons": [
+      "SKIPPED [1] backend/test_narration_injection.py:18: 로컬 전용 스크립트 테스트 — .venv/bin/python3 backend/test_narration_injection.py 로 직접 실행",
+      "SKIPPED [1] backend/test_spreadsheet_formats.py:278: explicit local conversion test",
+      "SKIPPED [1] backend/test_pc_chrome_control.py:130: Windows PowerShell required; same fixture can run on registered Windows PC",
+      "SKIPPED [1] backend/test_idiom_vocabulary_tier_2026_09_07.py:51: 상시 관용구 0건",
+      "SKIPPED [4] backend/test_spreadsheet_print_live.py:39: explicit local app acceptance",
+      "SKIPPED [1] backend/test_names_first_recall_2026_09_05.py:110: 관용구 원장이 비어 있음",
+      "SKIPPED [1] backend/test_document_imports_live.py:16: 로컬 문서 엔진 실인수",
+      "SKIPPED [1] backend/test_member_desktop_integration.py:26: set MEMBER_DESKTOP_TEST_BINARY to the built Go executor",
+      "SKIPPED [1] backend/test_spreadsheet_engine_live.py:51: explicit local engine acceptance",
+      "SKIPPED [1] backend/test_spreadsheet_recovery_live.py:15: explicit local engine acceptance",
+      "SKIPPED [1] backend/test_spreadsheet_scale_live.py:17: explicit scale measurement",
+      "SKIPPED [1] backend/test_document_office_live.py:14: 로컬 ONLYOFFICE 실인수 명시 실행",
+      "SKIPPED [1] backend/test_spreadsheet_functions_live.py:51: explicit engine test",
+      "SKIPPED [1] backend/test_spreadsheet_links_live.py:15: explicit local engine acceptance",
+      "SKIPPED [1] backend/test_pc_control.py:324: Windows UIAutomation assemblies required; native fixture also supports remote validation"
+    ]
+  },
+  "retired_test_inventory": {
+    "tests": 258,
+    "helpers": 7,
+    "new_skips_or_xfails": false,
+    "note": "Not a claim of assertion-by-assertion equivalence with the retired interpreter."
+  },
+  "checks": [
+    {
+      "command": "frontend/npx tsc -p tsconfig.app.json",
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "scripts/build_ibl_nodes.py --check",
+      "exit_code": 0,
+      "log_sha256": "35731f1762ad36a91ea63e6445c046c73c221962ccf090c19cc574d5159b97cf"
+    },
+    {
+      "command": "scripts/build_body_bundle.py android",
+      "exit_code": 0,
+      "log_sha256": "5818382580b57e0d9925c57afdac4a2b2dbe502b2de08c8b10f460a334c37606"
+    },
+    {
+      "command": "scripts/check_backend_layers.py",
+      "exit_code": 0,
+      "log_sha256": "8e6cb36458760c89c554ad75b81757f6a6ebb12d9c8f6b8f498bf8a1f7590975"
+    },
+    {
+      "command": "scripts/check_retired_contracts.py",
+      "exit_code": 0,
+      "log_sha256": "0b0766ba085bff5d268e41881c0fb7dec8544aed7db1b8088caef3b9429b9aa5"
+    },
+    {
+      "command": "scripts/check_honesty_propagation.py",
+      "exit_code": 0,
+      "log_sha256": "1cf423a676aff551ca5876fa8bf79c7125d2de9ed2cce41a387043389223812d"
+    },
+    {
+      "command": "scripts/check_validate_parity.py",
+      "exit_code": 0,
+      "log_sha256": "49813196807bd8e358f2c00a8279d6bf2036b49940e9c6441ce5c0fa812a7637"
+    }
+  ],
+  "separate_existing_audit": {
+    "command": ".venv/bin/python3 scripts/check_public_routes.py",
+    "exit_code": 1,
+    "findings": [
+      "GET /launcher/ui/",
+      "POST /m/enroll/exchange",
+      "GET /m/desktop/installers",
+      "GET /m/desktop/download"
+    ],
+    "note": "Unclassified routes reported by the audit; relevant route and audit source files are unchanged from the design commit.",
+    "unchanged_files": [
+      "backend/surface/api_launcher_web.py",
+      "backend/surface/api_member_desktop.py",
+      "scripts/check_public_routes.py"
+    ]
+  },
+  "external_deployment": "Android manifest regenerated. No phone or remote PC installation updated or certified.",
+  "live_api": {
+    "phase": "ACTIVE",
+    "generation": "2563d40754244b76dec2a70633927aa3",
+    "ping": {
+      "ok": true,
+      "kind": "mac"
+    },
+    "capabilities": {
+      "editions": [
+        2
+      ],
+      "default_edition": 2,
+      "explicit_edition_required": true,
+      "model_authoring_edition": 2,
+      "value_protocols": [
+        "ibl-value/1",
+        "ibl-value/2"
+      ],
+      "v2_resume": true,
+      "resume_protocols": [
+        "ibl-resume/1"
+      ],
+      "v2_remote_script": true,
+      "call_protocols": [
+        "ibl-script-call/1"
+      ],
+      "v2_budget": {
+        "steps": 100000,
+        "rows": 10000,
+        "seconds": null,
+        "depth": 64,
+        "request_max": {
+          "steps": 10000000,
+          "rows": 100000
+        }
+      }
+    },
+    "checks": [
+      {
+        "name": "current",
+        "request": {
+          "edition": 2,
+          "code": "return 2 + 3"
+        },
+        "result": {
+          "success": true,
+          "executed": true,
+          "edition": 2,
+          "value": 5
+        }
+      },
+      {
+        "name": "retired",
+        "request": {
+          "edition": 1,
+          "code": "[self:time]{}"
+        },
+        "result": {
+          "success": false,
+          "ok": false,
+          "executed": false,
+          "status": "invalid",
+          "edition": 2,
+          "error": "EDITION_RETIRED: 판본 1 실행은 종료됐습니다. 과거 기록은 열람만 가능합니다.",
+          "diagnostic": {
+            "code": "EDITION_RETIRED",
+            "kind": "compile",
+            "message": "EDITION_RETIRED: 판본 1 실행은 종료됐습니다. 과거 기록은 열람만 가능합니다.",
+            "frames": [],
+            "has_partial": false,
+            "partial": null,
+            "evidence": [],
+            "details": {},
+            "rule": "EDITION_RETIRED",
+            "severity": "error",
+            "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+          }
+        }
+      },
+      {
+        "name": "unmarked",
+        "request": {
+          "code": "[self:time]{}"
+        },
+        "result": {
+          "success": false,
+          "ok": false,
+          "executed": false,
+          "status": "invalid",
+          "edition": 2,
+          "error": "EDITION_REQUIRED: 실행 원문에 edition:2 또는 #!ibl edition=2를 명시하세요.",
+          "diagnostic": {
+            "code": "EDITION_REQUIRED",
+            "kind": "compile",
+            "message": "EDITION_REQUIRED: 실행 원문에 edition:2 또는 #!ibl edition=2를 명시하세요.",
+            "frames": [],
+            "has_partial": false,
+            "partial": null,
+            "evidence": [],
+            "details": {},
+            "rule": "EDITION_REQUIRED",
+            "severity": "error",
+            "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+          }
+        }
+      }
+    ]
+  }
+}

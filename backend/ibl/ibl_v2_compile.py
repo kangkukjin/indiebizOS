@@ -255,6 +255,8 @@ class Compiler:
         if name in self.external:
             return self.external[name]
         if name not in self.definitions:
+            if name in getattr(self.definitions, 'retired_names', set()):
+                raise Fault('EDITION_RETIRED', f'구판 함수 {name}은 실행할 수 없습니다. 판본 2 정의로 이관하세요.', kind='compile')
             return None
         from ibl_v2_parser import Parser
         from ibl_v2_store import definition_name
@@ -929,7 +931,9 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
     # nested forward definitions, without inventing caller-local parameters.
     while set(compiler.functions) - compiler.checked:
         sid = sorted(set(compiler.functions) - compiler.checked)[0]
+        reachable_effects = set(compiler.effects)
         compiler.function(sid, {})
+        compiler.effects = reachable_effects  # Validation alone does not invoke a definition.
     dependencies = {"source": digest(compiler.source), "libraries": digest({k: compiler.definitions[k] for k in sorted(compiler.external)}),
                     "calls": compiler.call_dependencies,
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
@@ -942,8 +946,6 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")} |
                               {Path(__file__).parents[1] / 'base' / name for name in ('file_script.py', 'script_process.py', 'script_workspace.py')})})}
     refs = [getattr(compiler.definitions, 'references', {}).get(name) for name in sorted(compiler.external)]
-    refs += [getattr(compiler.definitions, 'legacy_references', {}).get(key[3:])
-             for key in sorted(compiler.used_actions) if key.startswith('fn:')]
     refs += [ref for key in sorted(compiler.used_actions)
              for ref in registry[key].contract.get('function_refs', [])]
     dependencies['function_refs'] = list({(r['function_id'], r['revision']): r for r in refs if r}.values())

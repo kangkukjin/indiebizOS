@@ -140,6 +140,8 @@ def test_exported_bundle_runs_without_original_package(tmp_path, pid, tool, para
     payload = export_directory(PACKAGES / pid, pid)
     manifest, files, examples = unpack(payload)
     assert manifest["id"] == pid and examples
+    from ibl_edition import source_edition
+    assert all(source_edition(example['ibl_code']) == 2 for example in examples)
     for name, content in files.items():
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)

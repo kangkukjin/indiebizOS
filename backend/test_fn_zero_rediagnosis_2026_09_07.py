@@ -164,28 +164,6 @@ def test_expand_카드는_호출이_먼저이고_실행_0을_말한다():
     assert "실행 0" in listing
 
 
-def test_원인_미확정_관용구_실패는_정의_수정을_강요하지_않는다(monkeypatch, tmp_path):
-    import ibl_control_blocks as cb
-
-    class _DB:
-        def find_phrase_by_alias(self, name):
-            return {"ibl_code": '[self:read]{path: "${경로}"}\n[table:count]{}', "alias": name}
-        def update_success_by_code(self, *_a, **_k):
-            pass
-        def phrase_aliases(self, n):
-            return []
-    import ibl_usage_db
-    monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", lambda: _DB())
-    import workflow_engine
-    monkeypatch.setattr(workflow_store, "get_workflow", lambda name: None)
-    monkeypatch.setattr(workflow_engine, "execute_pipeline",
-                        lambda *a, **k: {"success": False, "error": "Step 1 에러: 파일 없음"})
-    from test_function_support import use_legacy
-    use_legacy(monkeypatch, {"읽고세기": _DB().find_phrase_by_alias("읽고세기")["ibl_code"]})
-    out = cb._execute_fn({"_node": "fn", "action": "읽고세기", "params": {"경로": "/없음"}}, str(tmp_path), "t")
-    assert out["success"] is False and out["fn_source"] == "idiom"
-    assert "def" not in out and "미확정" in out["hint"]
-    assert out["failure_origin"]["definition_failure"] is False
 
 
 if __name__ == "__main__":

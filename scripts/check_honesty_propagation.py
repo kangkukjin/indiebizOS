@@ -62,8 +62,7 @@ OWNER_MODULE = "ibl_honesty"
 #:  자기 표지를 손으로 열거하지 않으므로 여기 없다 — 그 둘은 규칙 [A]가 지킨다.
 #:  명단을 넓게 잡았다가 오탐이 나면 관문은 곧 무시당한다(첫 census 실측 3건이 그랬다).
 BOUNDARY_FILES = {
-    "backend/ibl/workflow_engine.py",       # 파이프 · 독립 문장 — 전 경계의 표지가 여기로 모인다
-    "backend/ibl/ibl_control_blocks.py",    # [try] · [repeat:] — 회차·몸 경계에서 걷어 올린다
+    "backend/ibl/ibl_v2_adapters.py",  # JSON marker -> native Evidence, before every leaf result
 }
 
 

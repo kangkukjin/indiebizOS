@@ -16,26 +16,11 @@ def known_examples(db):
 
 def url_only_head(code):
     """주소만 바뀐 원시 호출. 옵션·합성·질의·instruction의 차이는 지우지 않는다."""
-    from ibl_parser import parse
     from ibl_edition import source_edition
-    if source_edition(code) == 2:
-        from ibl_v2_experience import url_only_head as v2_head
-        return v2_head(code)
-    try:
-        steps = parse(code)
-        if len(steps) != 1:
-            return None
-        step = steps[0]
-        if set(step) - {'_node', 'action', 'target', 'params', '_assign_name'}:
-            return None
-        params = step.get('params', {})
-        if (set(params) == {'url'} and isinstance(params['url'], str)
-                and params['url'].startswith(('https://', 'http://')) and '$' not in params['url']
-                and not step.get('target')):
-            return step.get('_node'), step.get('action')
-    except Exception:
-        pass
-    return None
+    if source_edition(code) != 2:
+        return None
+    from ibl_v2_experience import url_only_head as current_head
+    return current_head(code)
 
 
 def redundant_reason(codes, known):

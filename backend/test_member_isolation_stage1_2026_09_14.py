@@ -129,8 +129,9 @@ def test_engine_gate_refuses_member_before_handler(monkeypatch, tmp_path):
     called = {"n": 0}
     monkeypatch.setattr(ibl_engine, "_route_handler", lambda *a, **k: called.__setitem__("n", called["n"] + 1) or {"success": True})
     from system_tools import _execute_ibl_unified
-    with P.narrow(P.member("7", 4, "devA"), "t"):
-        out = _execute_ibl_unified({"code": '[sense:weather]{city: "서울"}'}, str(tmp_path), agent_id="member:7")
+    import member_runtime, threading
+    with P.narrow(P.member("7", 4, "devA"), "t"), member_runtime.turn_scope(tmp_path, "devA", "t", threading.Event(), {}):
+        out = _execute_ibl_unified({"edition": 2, "code": '[sense:weather]{city: "서울"}'}, str(tmp_path), agent_id="member:7")
     if isinstance(out, str):
         try:
             out = json.loads(out)

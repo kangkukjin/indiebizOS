@@ -17,64 +17,14 @@ from api_ibl import validate_code
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_multiline_values_and_each_return_are_the_same_program():
-    code = '''$rows = [
-      {id:"007", price:"3", qty:2},
-      {id:"008", price:"4", qty:1}
-    ]
-    [table:each]{items:$rows,parallel:2} {
-      $return = [{
-        id:$it.id, label:"고정", active:true,
-        total:($it.price *
-               $it.qty), missing:null
-      }]
-    }
-    >> [table:select]{columns:["id","label","active","total","missing"]}
-    '''
-    expected = [{'id': v, 'label': '고정', 'active': True, 'total': n, 'missing': None}
-                for v, n in [('007', 6), ('008', 4)]]
-    run(code, expected)
-    restored = unpack(json.loads(json.dumps(pack(compile_code(code)))))
-    assert restored.tree
-    check = validate_code(code)
-    assert check['valid'] and check['typecheck']['ok'], check
-    assert not check['typecheck']['issues'], check
-    assert not validate_code(code.replace('"missing"]', '"typo"]'))['typecheck']['ok']
 
 
-@pytest.mark.parametrize('op', ['>>', '|'])
-@pytest.mark.parametrize('leading', [True, False])
-def test_pipeline_layout(op, leading):
-    sep = '\n' + op + ' ' if leading else ' ' + op + '\n'
-    tail = '[table:take]{n:1}' if op == '>>' else 'take: 1'
-    run('[table:take]{items:[{id:1},{id:2}],n:2}' + sep + tail, [{'id': 1}])
 
 
-def test_fallback_and_parallel_layout():
-    run('''([table:take]{items:[{id:1}],n:1})
-    & ([table:take]{items:[{id:2}],n:1})
-    >> [table:union]''', [{'id': 1}, {'id': 2}])
-    run('''[table:take]{items:[{id:1}],n:1}
-    ?? [table:take]{items:[{id:2}],n:1}''', [{'id': 1}])
 
 
-def test_multiline_string_contents_are_preserved():
-    run('''[table:take]{items:[{text:"first\n  # content >> [not:code]\nlast", yes:true}],n:1}''',
-        [{'text': 'first\n  # content >> [not:code]\nlast', 'yes': True}])
 
 
-@pytest.mark.parametrize('body', [
-    '$local=$outside >> [table:take]{n:1}; $local >> [table:select]{columns:["id"]}',
-    '[table:take]{items:$outside.items,n:1}',
-])
-@pytest.mark.parametrize('quoted', [False, True])
-def test_do_external_and_local_references_validate_like_runtime(body, quoted):
-    code = '$outside=[table:take]{items:[{id:7}],n:1};'
-    code += ('[table:each]{items:[{}],do:' + json.dumps(body) + '}' if quoted else
-             '[table:each]{items:[{}]} {' + body + '}')
-    check = validate_code(code)
-    assert check['valid'] and check['typecheck']['ok'], check
-    run(code, [{'id': 7}])
 
 
 @pytest.mark.parametrize('expr,expected', [
@@ -87,11 +37,6 @@ def test_value_copy_and_numeric_observation(expr, expected):
     assert eval_expr(compile_expr(expr)[0], {'id': '007', 'n': '3'}) == expected
 
 
-def test_each_value_results_keep_data_keys_and_empty_result():
-    run('[table:each]{items:[{id:"007"}]} {$return=[{id:$it.id, obj:{value:3,items:[]}}]}',
-        [{'id': '007', 'obj': {'value': 3, 'items': []}}])
-    run('[table:each]{items:[{id:1}]} {$return=[]}', [])
-    run('[table:each]{items:[{id:1}]} {$return=[{n:2}]}; $return=[{end:true}]', [{'end': True}])
 
 
 @pytest.mark.parametrize('schema,expected', [
@@ -112,9 +57,9 @@ def test_schema_checks_names_without_guessing_values():
 
 def test_schema_static_fields_and_runtime_missing_field(aiops, monkeypatch):
     mod, seen = aiops
-    code = '[self:struct]{schema:"tip(제목), when(날짜)",text:"원문"} >> [table:select]{columns:["tip","when"]}'
-    check = validate_code(code)
-    assert check['valid'] and not check['typecheck']['issues'], check
+    code = '$r = [self:struct]{schema:"tip(제목), when(날짜)",text:"원문"}\n$r.items >> [table:select]{columns:["tip","when"]}'
+    check = validate_code('#!ibl edition=2\n'+code)
+    assert check['valid'] and not check['issues'], check
     out = json.loads(mod._struct({'schema': 'tip(제목), when(날짜)', 'text': '원문'}))
     assert out['success'] is False and out['error_type'] == 'schema'
     assert 'when' in out['error']
@@ -138,8 +83,8 @@ def test_ai_schema_applies_after_index_merge(aiops, monkeypatch):
     assert len(calls) == 1
     assert not json.loads(mod._transform({**params, 'fields': ['id']}))['success']
     assert len(calls) == 1  # 모순은 호출 전에 거절
-    code = '[table:ai]{items:[{id:"007"}],instruction:"선정",schema:"selected(불리언), reason(사유)"} >> [table:select]{columns:["id","selected","reason"]}'
-    assert not validate_code(code)['typecheck']['issues']
+    code = '$r = [table:ai]{items:[{id:"007"}],instruction:"선정",schema:"selected(불리언), reason(사유)"}\n$r.items >> [table:select]{columns:["id","selected","reason"]}'
+    assert not validate_code('#!ibl edition=2\n'+code)['issues']
 
 
 @pytest.fixture
@@ -208,16 +153,6 @@ def test_missing_source_and_items_only_are_explicit_failures(aiops, sink, tmp_pa
     assert 'prompt' not in seen
 
 
-def test_block_local_slots_do_not_reuse_outer_types():
-    code = '''$outer=[{wrong:1}]
-    [if:1==1] {
-      $local=[{right:1}]
-      $local >> [table:select]{columns:["right"]}
-    }'''
-    assert validate_code(code)['typecheck']['ok']
-    run(code, [{'right': 1}])
-    bad = validate_code(code.replace('columns:["right"]', 'columns:["wrong"]'))
-    assert not bad['typecheck']['ok']
 
 
 def test_oversized_source_fails_before_model(aiops, tmp_path):

@@ -95,17 +95,13 @@ def c2_nonai_fail():
 
 
 def c3_pipe():
-    print("C3. 파이프가 quality 트레이스백 승계")
-    iq._call_judge = FakeJudge('{"pass": false, "reason": "기준 미달"}')
-    with actor_context(agent_id="test", origin="test"):
-        env = execute_pipeline(ibl_parse(
-            '[table:take]{items: [{"a": 1}], n: 1, criteria: "행이 5개"} >> [table:take]{n: 1}'), ".")
-    tb = env.get("traceback")
-    check("파이프 실패", env.get("success") is False, str(env)[:200])
-    check("traceback 승계", isinstance(tb, dict) and tb.get("error_type") == "quality", str(tb)[:250])
-    if isinstance(tb, dict):
-        f0 = (tb.get("frames") or [{}])[0]
-        check("pipeline 프레임(step 1)", f0.get("kind") == "pipeline" and f0.get("step") == 1, str(f0))
+    from ibl_v2_entry import handle_request
+    judge = FakeJudge(J_PASS)
+    iq._call_judge = judge
+    env = handle_request({'edition': 2, 'code':
+        '[table:take]{items:[{a:1}],n:1,criteria:"행이 5개"} >> [table:take]{n:1}'})
+    check('미선언 전역 criteria는 도구 실행 전에 거절', not env['success'] and not env['executed'])
+    check('몰래 판정자를 호출하지 않음', not judge.prompts)
 
 
 def c4_unjudgeable():
@@ -183,7 +179,7 @@ def c8_honesty():
 
 def c9_distill_exclusion_chain():
     print("C9. 증류 배제 사슬 — quality 실패 봉투는 is_error_result=True")
-    from ibl.workflow_engine import is_error_result
+    from workflow_verdict import is_error_result
     fail = {"success": False, "error": "criteria 미달: x", "criteria_verdict": "fail"}
     check("dict 실패 판정", is_error_result(fail) is True)
     check("JSON 문자열 실패 판정", is_error_result(json.dumps(fail, ensure_ascii=False)) is True)
@@ -220,14 +216,9 @@ def c11_truncation_survival():
     # ① _mark 머리
     marked = iq._mark({"success": True, "items": [{"x": 1}]}, {"criteria_verdict": "pass"})
     check("_mark 표지가 머리", list(marked.keys())[0] == "criteria_verdict", str(list(marked.keys())))
-    # ② 파이프 최상위 승격 — 통과 판정도 봉투에 보인다
-    iq._call_judge = FakeJudge(J_PASS)
-    with actor_context(agent_id="test", origin="test"):
-        env = execute_pipeline(ibl_parse(
-            '[table:take]{items: [{"a": 1}], n: 1, criteria: "행이 1개"} >> [table:take]{n: 1}'), ".")
-    cs = env.get("criteria_steps")
-    check("criteria_steps 승격", isinstance(cs, list) and cs
-          and cs[0].get("step") == 1 and cs[0].get("verdict") == "pass", str(cs))
+    # Historical JSON receipts remain readable; no edition-1 code is replayed.
+    env = {'success': True, 'criteria_steps': [{'step': 1, 'verdict': 'pass'}],
+           'results': [{'step': 1, 'result': marked}], 'final_result': marked}
     # ③ 경계 다이어트 후 거대 필드가 꼬리
     from ibl_envelope import diet_envelope
     dieted = diet_envelope(dict(env))

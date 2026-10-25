@@ -80,68 +80,28 @@ def test_회차와_마지막_움직임이_보인다():
 
 
 @pytest.mark.parametrize("parallel", [1, "auto", 2], ids=["sequential", "auto", "parallel"])
-def test_단일step_프로그램도_자기_좌표를_신고한다(parallel, monkeypatch):
-    """①의 뿌리 — `[table:each]` 한 문장을 실제로 돌려 좌표·회차를 함께 확인한다.
+def test_단일step_프로그램도_자기_좌표를_신고한다(parallel, monkeypatch, tmp_path):
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from ibl_run_journal import Journal
+    seen=[]
+    def observe(rt,args):
+        seen.append(args['n'])
+        return args['n']
+    adapter=Adapter({'version':1,'params':{'n':'Number'},'result':'Number','effects':['read_external']},observe)
+    option='' if parallel=='auto' else f',parallel:{parallel}'
+    source='[table:each]{items:[1,2]'+option+'}{[test:observe]{n:$it}}'
+    plan=compile_program(source,{'test:observe':adapter})
+    assert not plan.issues,plan.report()
+    with Journal(tmp_path,plan.fingerprint) as journal:
+        out=Runtime(plan,journal=journal).run()
+        calls=journal.db.execute('SELECT id,receipt FROM calls').fetchall()
+    assert out['success'] and sorted(seen)==[1,2],out
+    assert len(calls)==2 and len({row[0] for row in calls})==2
+    assert all(row[1] for row in calls)
+    assert out['resume']['run_id']==journal.run_id
 
-    사고 당일과 같은 모양(단일 step + 하위 2단 파이프)이라, 옛 코드에서는
-    `[self:struct]` 자리의 하위 좌표가 프로그램 좌표로 올라왔다.
-
-    순차 실행은 마지막 입력 행 B, 병렬 실행은 마지막으로 신고한 행을 보인다.
-    읽기 전용 본문의 기본값은 자동 병렬이므로 입력 순서를 진행 순서로 가정하면 안 된다.
-    병렬에서는 B의 하위 파이프까지 끝난 뒤 A를 신고시켜 역순을 확정한다.
-    """
-    from system_tools_ibl import _execute_ibl_unified_impl
-    import ibl_progress
-    import workflow_engine
-
-    row_order = []
-    second_finished = threading.Event()
-    real_beat = ibl_progress.beat
-    real_pipeline = workflow_engine.execute_pipeline
-
-    def observed_beat(detail):
-        if parallel != 1 and detail.get("row") == 1:
-            assert second_finished.wait(10), "병렬 두 번째 행이 실행되지 않았다"
-        real_beat(detail)
-        if "row" in detail:
-            row_order.append(detail["row"])
-
-    def observed_pipeline(*args, **kwargs):
-        result = real_pipeline(*args, **kwargs)
-        if (kwargs.get("context") or {}).get("_each_do"):
-            second_finished.set()
-        return result
-
-    monkeypatch.setattr(ibl_progress, "beat", observed_beat)
-    monkeypatch.setattr(workflow_engine, "execute_pipeline", observed_pipeline)
-    t = _fresh()
-    _prev, _prevp = tc.get_surface_ticket(), tc.get_progress_ticket()
-    try:
-        tc.set_surface_ticket(t)
-        tc.set_progress_ticket(None)
-        code = ('[table:each]{items: [{"id": "A"}, {"id": "B"}], '
-                'do: "[table:take]{items:[{value:1}],n:1} >> [table:take]{n:1}", on_error: "continue"'
-                + ("}" if parallel == "auto" else f", parallel: {parallel}}}"))
-        result = json.loads(_execute_ibl_unified_impl({"code": code}, _ROOT))
-        assert result["success"] and result["rows_processed"] == 2, result
-        assert result["error_count"] == 0, result
-        assert result["items"] == [{"value": 1}, {"value": 1}], result
-        expected_order = [1, 2] if parallel == 1 else [2, 1]
-        assert row_order == expected_order
-        p = _progress(t)
-        # 좌표 = 프로그램의 것 (하위 파이프의 step 2/2 가 아니다)
-        assert p.get("action") == "[table:each]", p
-        assert (p.get("step"), p.get("of")) == (1, 1), p
-        # 회차 = 마지막으로 손댄 행 (여기까지 왔다는 증거)
-        d = p.get("detail") or {}
-        assert d.get("rows") == 2 and d.get("row") == expected_order[-1], d
-        assert d.get("row_label") == ("B" if parallel == 1 else "A"), d
-        assert (d.get("substep"), d.get("substeps")) == (2, 2), d
-        assert d.get("subaction") == "[table:take]", d
-    finally:
-        tc.set_surface_ticket(_prev)
-        tc.set_progress_ticket(_prevp)
-        _cleanup(t)
 
 
 def test_티켓_없는_실행은_아무_파일도_안_만든다():

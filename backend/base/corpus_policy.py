@@ -1,7 +1,6 @@
 """Consumer boundary for stored IBL editions; never rewrites historical source.
 
-Edition 1 remains executable through its explicit compatibility paths. It is
-not a current-authoring answer or a current-model training target. This is a
+Edition 1 is historical data only, never an executable or training candidate. This is a
 qualification boundary, not a claim of semantic or runtime verification.
 """
 import json
@@ -42,11 +41,8 @@ def exclusion_reason(row):
 
 
 def callable_exclusion_reason(row):
-    """Names may expose compatibility calls, but never held or invalid definitions."""
-    reason = exclusion_reason(row)
-    if reason == 'legacy_source':
-        reason = review_exclusion_reason(row)
-    return None if reason == 'review_compatibility' else reason
+    """Historical source never becomes an executable recall candidate."""
+    return exclusion_reason(row)
 
 
 def review_exclusion_reason(row):

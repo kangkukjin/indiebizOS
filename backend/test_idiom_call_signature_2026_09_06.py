@@ -23,9 +23,9 @@ def _executor_signature(code: str):
 
 def test_원장_문이_서명을_계산해_저장한다():
     """add_example 로 들어온 프로그램은 서명을 갖는다 — 기록기가 아니라 문이 계산한다."""
-    code = '$본 = [self:read]{path: "$경로"}; $본 >> [table:take]{n: "$개수"}'
+    code = '#!ibl edition=2\n[def:읽기]($경로,$개수){$본=[self:read]{path:$경로}\nreturn $본.items >> [table:take]{n:$개수}}'
     assert ibl_usage_db._signature_of(code) is not None, "서명 계산자가 조립 뿌리에서 안 꽂혔다"
-    assert set(ibl_usage_db._signature_of(code).split()) == set(_executor_signature(code))
+    assert set(ibl_usage_db._signature_of(code).split()) == {'경로','개수'}
 
 
 def test_저장_서명_규약_NULL과_빈문자열을_가른다():

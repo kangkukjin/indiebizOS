@@ -276,8 +276,92 @@ def finish(args):
     return out
 
 
+def match_context(args):
+    """본문 문맥 선택은 값 연산이다. 구판 IBL 프로그램을 실행하지 않는다."""
+    from common.row_conditions import _match
+    from common.pkg_utils import load_sibling
+    package = Path(__file__).resolve().parents[1] / 'packages/installed/tools/data-ops'
+    context_module = load_sibling(str(package / 'handler.py'), 'dataops_filter_context')
+    source = decode(args['source'])
+    envelope = dict(source) if isinstance(source, dict) else {}
+    records = rows(source)
+    context = integer(args.get('context', 0), '문맥')
+    limit = integer(args['limit'], '개수')
+    where = {'field': 'text', 'op': 'matches', 'value': args['pattern']}
+    # Validate even empty input; malformed patterns must not become empty success.
+    _match({'text': ''}, where)
+    kept, info = context_module.select_context(records, where,
+        {'before': context, 'after': context, 'by': 'url', 'limit': limit}, _match)
+    envelope.update(items=kept, count=len(kept), match_info=info)
+    if info['omitted_matches']:
+        envelope['truncations'] = list(envelope.get('truncations') or []) + [{
+            'scope': 'selection', 'source': 'filter.context', 'unit': 'matches',
+            'retained': info['selected_matches'], 'total': info['total_matches']}]
+    return envelope
+
+
+def collect_values(args):
+    """명시적으로 수집한 행 결과를 펼친다. 실행·재시도·구문 해석은 하지 않는다."""
+    collected = rows(args['results'])
+    items, failures, markers, displays, row_markers = [], [], [], [], []
+    renamed = {}
+    for row in collected:
+        origin = row.get('source') or {}
+        keep = {key: origin[key] for key in args.get('keep', []) if key in origin}
+        if row.get('ok') is not True:
+            failure = {**keep, '_error': row.get('error')}
+            items.append(failure)
+            failures.append(failure)
+            continue
+        value = row['value']
+        if isinstance(value, list):
+            children = value
+        elif isinstance(value, dict) and isinstance(value.get('items'), list):
+            children = value['items']
+            markers.extend(truncation_evidence(value).get('truncations', []))
+        else:
+            # 읽기·심사처럼 Record를 반환하는 생산자는 행 하나로 보존한다.
+            children = [value]
+        from ibl_honesty import markers_of
+        if isinstance(value, dict):
+            honesty = markers_of(value)
+            if honesty:
+                row_markers.append({'row': len(displays) + 1, 'markers': honesty})
+        displays.append(value.get('_display') if isinstance(value, dict) and isinstance(value.get('items'), list) else None)
+        for child in children:
+            if not isinstance(child, dict):
+                raise ValueError('수집 결과의 행은 Record여야 합니다.')
+            merged = dict(keep)
+            for key, value in child.items():
+                target = key
+                while target in merged:
+                    target += '_2'
+                if target != key:
+                    renamed[key] = target
+                merged[target] = value
+            items.append(merged)
+    out = {'items': items, 'count': len(items), 'total': len(items),
+           'error_count': len(failures), 'errors': failures,
+           'ok_count': len(collected) - len(failures),
+           'rows_requested': len(collected), 'rows_processed': len(collected),
+           'partial': bool(failures)}
+    if markers:
+        out.update(truncated=True, truncations=markers)
+    from common.currency import collected_item_display
+    display = collected_item_display(displays)
+    if display:
+        out['_display'] = display
+    if row_markers:
+        out['row_honesty'] = row_markers
+    if renamed:
+        out['collect_renamed'] = renamed
+    return out
+
+
 def run(args):
-    return {"urls": urls, "prepare": prepare, "select": select, "finish": finish}[args["op"]](args)
+    return {"urls": urls, "prepare": prepare, "select": select,
+            "finish": finish, "match": match_context,
+            "collect": collect_values}[args["op"]](args)
 
 
 if __name__ == "__main__":

@@ -90,25 +90,8 @@ def test_b5_caller_injection():
     print("B5 OK — 괄호형 주입 + 통짜 참조 원시 타입 보존")
 
 
-def test_b6_each_row_ref():
-    from ibl_executors import _each_substitute, _each_foreign_vars
-    out, missing = _each_substitute('[self:x]{t: "${it.t}건"}', {"t": "A"}, "it")
-    assert out == '[self:x]{t: "A건"}' and not missing, (out, missing)
-    # 없는 필드는 정직하게 신고
-    _out2, missing2 = _each_substitute('[self:x]{t: "${it.nope}"}', {"t": "A"}, "it")
-    assert missing2 == ["nope"], missing2
-    # 유령 변수 판정도 괄호형을 본다
-    assert _each_foreign_vars('[self:x]{t: "${ghost}"}', "it") == ["ghost"]
-    assert _each_foreign_vars('[self:x]{t: "${it.t}"}', "it") == []
-    print("B6 OK — each 행 참조 괄호형 치환·유령 변수 판정")
 
 
-def test_b7_blocks_execute():
-    r = execute_pipeline(parse('$n = 5\n$m = ${n} + 1'), ".")
-    assert r.get("success") and '"value": 6' in str(r.get("final_result")), r
-    r2 = execute_pipeline(parse('$n = 5\n[if: ${n} > 3]{ $hit = 1 }'), ".")
-    assert r2.get("success") and '"matched_value": 5' in str(r2.get("final_result")), r2
-    print("B7 OK — 식 할당·if 조건의 괄호형 바인딩(실행 검증)")
 
 
 def test_b8_items_binding():
@@ -120,55 +103,8 @@ def test_b8_items_binding():
     print("B8 OK — $items 집합 바인딩 예약어의 괄호형")
 
 
-def test_b9_mixed_and_spaces():
-    # 한 문장에 두 표기 혼용
-    assert _free_vars(parse('[sense:search]{query: "$city ${topic}"}')) == ["city", "topic"]
-    # 괄호 안 공백 관용
-    assert find_names("${ n }") == ["n"]
-    assert sub_ref("${ n }건", "n", lambda p: "5") == "5건"
-    # 저장 → 시그니처 → 인자 없이 거절까지 종단
-    out = execute_workflow_action("workflow", {
-        "op": "save", "workflow_id": "_t_brace", "name": "_t_brace",
-        "do": '[table:take]{items: [{"a": 1}, {"a": 2}], n: "${count}"}',
-    }, ".")
-    try:
-        assert out.get("params_required") == ["count"], out
-        bad = execute_workflow_action("workflow", {"op": "run", "workflow_id": "_t_brace"}, ".")
-        assert not bad.get("success") and bad.get("params_missing") == ["count"], bad
-        good = execute_workflow_action("workflow", {
-            "op": "run", "workflow_id": "_t_brace", "params": {"count": 1}}, ".")
-        assert good.get("success") and good.get("count") == 1, good
-    finally:
-        workflow_engine.delete_workflow("_t_brace")
-    print("B9 OK — 표기 혼용·공백 관용·저장→시그니처→거절/실행 종단")
 
 
-def test_b10_경계_실패는_처방을_말한다():
-    """`$it.n.md` 는 '없는 필드'가 아니라 '경계를 못 그은 것' — 오류문이 그걸 말해야 한다.
-
-    ba2cd50c(each 가 안 쓰이던 이유 — 오류문이 \"다음에 뭘 하라\"를 안 말했다)와 같은 부류.
-    실측(48회차): 이 처방이 없어 실행기가 언어의 구멍으로 오진하고 우회했다.
-    """
-    from common.ibl_vars import boundary_hint
-    # 실재하는 접두 경로가 있으면 = 경계 문제 → 처방
-    h = boundary_hint("n.md", {"n"}, "it")
-    assert "${it.n}.md" in h, h
-    assert "괄호" in h, h
-    # 진짜 없는 필드면 = 잡음 금지 (빈 문자열)
-    assert boundary_hint("folder", {"path", "name"}, "it") == ""
-    assert boundary_hint("", {"n"}, "it") == ""
-    # 변수 이름도 그대로 실린다(each 는 as, 블록은 $변수 이름)
-    assert "${r.file}.bak" in boundary_hint("file.bak", {"file"}, "r")
-
-    # 종단 — each 가 실제로 그 처방을 봉투에 싣는가
-    from ibl_parser import parse
-    from workflow_engine import execute_pipeline
-    env = execute_pipeline(parse(
-        '[table:each]{items: [{"n": "a"}], do: "[self:read]{path: \'/tmp/x_$it.n.md\'}"}'
-    ), ".")
-    _err = str(env)
-    assert "${it.n}" in _err, _err[:400]
-    print("B10 OK — 경계 실패가 ${...} 처방을 말한다")
 
 
 def test_b11_교재가_표기_형태를_전부_가르친다():

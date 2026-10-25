@@ -150,11 +150,11 @@ def test_workflow_rejects_path_escape_and_symlink(tmp_path, monkeypatch):
 def test_workflow_failed_replace_preserves_old_file(tmp_path, monkeypatch):
     import workflow_store as mod
     monkeypatch.setattr(mod, '_get_workflows_path', lambda: tmp_path)
-    mod.save_workflow({'id': 'test', 'steps': ['[self:time]{}']})
+    mod.save_workflow({'id':'test','code':'#!ibl edition=2\n[def:test](){return 1}','edition':2})
     before = (tmp_path / 'catalog.json').read_bytes()
     monkeypatch.setattr(mod.os, 'replace', lambda *a: (_ for _ in ()).throw(OSError('disk failure')))
     with pytest.raises(OSError):
-        mod.save_workflow({'id': 'test', 'steps': ['[self:time]{}', '[self:time]{}']})
+        mod.save_workflow({'id':'test','code':'#!ibl edition=2\n[def:test](){return 2}','edition':2})
     assert (tmp_path / 'catalog.json').read_bytes() == before
     assert list(tmp_path.rglob('.function-*')) == []
 

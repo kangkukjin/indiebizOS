@@ -676,13 +676,10 @@ class AgentCommunicationMixin:
                         result = {"success": False, "status": "cancelled", "error": "실행 전 취소됨"}
                     else:
                         from ibl_v2_entry import handle_request
-                        from workflow_engine import execute_pipeline
+                        from ibl_edition import retired_result
                         code = request['code']
                         result = (handle_request(request, str(self.project_path), self.config.get('id'),
-                                                 cancel_check=cancelled) if isinstance(code, str) else None)
-                        if result is None:
-                            # 판본 판정이 명시적으로 1일 때만 레거시 실행. v2 실패는 폴백하지 않는다.
-                            result = execute_pipeline(code, str(self.project_path), agent_id=self.config.get('id'))
+                                                 cancel_check=cancelled) if isinstance(code, str) else retired_result())
             except Exception as exc:
                 from logging_utils import mask_secrets
                 result = {"success": False, "error": mask_secrets(str(exc))}

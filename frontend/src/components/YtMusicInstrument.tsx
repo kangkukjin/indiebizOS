@@ -39,7 +39,7 @@ async function runIBL<T = Record<string, unknown>>(code: string): Promise<T & { 
   try {
     const res = await fetch(IBL_ENDPOINT, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...iblSurface, code, project_id: PROJECT_ID }),
+      body: JSON.stringify({ ...iblSurface, code, ...(/^\s*#!ibl/.test(code) ? {} : { edition: 2 }), project_id: PROJECT_ID }),
     });
     checkRemoteSession(res.status);  // 원격 세션 만료 처리 — 정본 헬퍼(lib/instrument.iblExecuteApp)와 같은 규약
     return await res.json();

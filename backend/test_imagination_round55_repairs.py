@@ -39,7 +39,7 @@ def _load(name, path):
 # ───────────────────────── G55-1 each collect ─────────────────────────
 
 import ibl_engine  # noqa: E402
-from ibl.ibl_exec_each import _execute_table_each  # noqa: E402
+from test_ibl_v2_core import value
 
 PARENTS = [{"id": "d1", "name": "집A", "floors": 2}, {"id": "d2", "name": "집B", "floors": 1}]
 SCALAR_REPORT = {"success": True, "coverage_ratio": 23.33, "building_area": 70, "floors": [{"f": 1}], "_internal": 1}
@@ -47,54 +47,32 @@ EFFECT_DRAWING = {"success": True, "path": "/x/front.png", "format": "png"}
 CURRENCY = {"success": True, "items": [{"date": "d1"}, {"date": "d2"}]}
 
 
-def _run(do, params=None, result=None):
-    orig = ibl_engine.execute_ibl
-
-    def _fake(ti, pp, agent_id=None, **kw):
-        return dict(result) if isinstance(result, dict) else result
-    ibl_engine.execute_ibl = _fake
-    try:
-        return _execute_table_each({"items": PARENTS, "do": do, **(params or {})}, ".")
-    finally:
-        ibl_engine.execute_ibl = orig
-
-
-def test_G55_1_collect_promotes_scalar_result_to_row():
-    out = _run("[engines:arch_report]{design_id: $it.id}", {"collect": True}, SCALAR_REPORT)
-    assert out["success"] is not False, out
-    rows = out["items"]
-    assert len(rows) == 2 and out["collected_rows"] == 2
-    assert rows[0]["name"] == "집A" and rows[0]["coverage_ratio"] == 23.33   # 원 행 + 결과 키
-    assert "success" not in rows[0] and "_internal" not in rows[0]          # 잉여·내부 표지는 행이 아니다
-    assert "passthrough_rows" not in out                                     # 승격했으니 통과 신고가 아니다
-    # 원 행 이름이 먼저 — 겹친 결과 키(floors)는 _2 로 밀리고 봉투가 말한다
-    assert rows[0]["floors"] == 2 and rows[0]["floors_2"] == [{"f": 1}]
-    assert out["collect_renamed"] == {"floors": "floors_2"}
-    assert "collect" in out["message"] and "floors_2" in out["message"]
+def test_collection_explicitly_preserves_business_keys_and_origins():
+    module=_load('_native_collect55', Path(__file__).resolve().parents[1]/'data/scripts/judgment_idioms.py')
+    out=module.collect_values({'keep':['id','name','floors'],'results':[{'ok':True,'source':row,'value':SCALAR_REPORT} for row in PARENTS]})
+    assert len(out['items'])==2
+    assert out['items'][0]['coverage_ratio']==23.33
+    assert out['items'][0]['name']=='집A'
+    # success and private-looking user keys are data after the native boundary.
+    assert out['items'][0]['success'] is True
+    assert out['items'][0]['_internal']==1
+    assert out['collect_renamed']
 
 
-def test_G55_1_collect_effect_envelope_same_as_union_row():
-    """대조 실측의 핵심 — 같은 효과 봉투를 union 과 each 가 같은 규칙으로 행으로 만든다."""
-    from common.currency import effect_row
-    ops = _load("_t55_dataops", _PKGS / "data-ops" / "handler.py")
-    union_row = ops._effect_row(EFFECT_DRAWING)
-    assert union_row == effect_row(EFFECT_DRAWING)
-    out = _run("[engines:arch_elevation]{design_id: $it.id}", {"collect": "true"}, EFFECT_DRAWING)
-    assert [r["path"] for r in out["items"]] == ["/x/front.png", "/x/front.png"]
-    assert out["items"][0]["id"] == "d1" and "success" not in out["items"][0]
+def test_effect_result_can_be_explicitly_promoted_to_a_row():
+    assert value('$rows >> [table:each]{return {id:$it.id,path:$drawing.path}}',
+                 inputs={'rows':PARENTS,'drawing':EFFECT_DRAWING}) == [
+                     {'id':'d1','path':'/x/front.png'},{'id':'d2','path':'/x/front.png'}]
 
 
-def test_G55_1_default_unchanged_and_currency_ignores_collect():
-    out = _run("[engines:arch_report]{design_id: $it.id}", None, SCALAR_REPORT)
-    assert out["passthrough_rows"] == 2 and "coverage_ratio" not in out["items"][0]
-    out2 = _run("[sense:weather]{city: $it.name}", {"collect": True}, CURRENCY)
-    assert [r["date"] for r in out2["items"]] == ["d1", "d2", "d1", "d2"]
-    assert out2["rows_replaced"] == 2 and "collected_rows" not in out2
+def test_default_map_retains_the_actual_result():
+    assert value('$rows >> [table:each]{return $report}',inputs={'rows':PARENTS,'report':SCALAR_REPORT}) == [SCALAR_REPORT,SCALAR_REPORT]
+    assert value('$rows >> [table:each]{mode:"flat_map"}{return $currency.items}',inputs={'rows':PARENTS,'currency':CURRENCY}) == CURRENCY['items']*2
 
 
-def test_G55_1_collect_bare_scalar_goes_to_value():
-    out = _run("[self:ask]{q: $it.name}", {"collect": True}, "답변 산문")
-    assert out["items"][0]["value"] == "답변 산문" and out["items"][0]["id"] == "d1"
+def test_scalar_projection_is_explicit():
+    assert value('$rows >> [table:each]{return {id:$it.id,value:"답변 산문"}}',inputs={'rows':PARENTS}) == [
+        {'id':'d1','value':'답변 산문'},{'id':'d2','value':'답변 산문'}]
 
 
 # ───────────────────────── G55-2 document as: images ─────────────────────────

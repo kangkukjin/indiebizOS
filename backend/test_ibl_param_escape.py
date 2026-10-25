@@ -76,7 +76,7 @@ def test_e3_unknown_escape_preserved():
 
 def test_e4_condition_ref_does_not_swallow():
     """E4: 조건 참조식이 파라미터 손실을 params={} 로 눙치지 않는다."""
-    from ibl_executors import _parse_source_ref
+    from ibl_exec_sense import _parse_source_ref
     got = _parse_source_ref('sense:stock{ticker: "N"VDA"}.price')
     assert got is None or got[2].get("ticker"), (
         "파라미터를 잃은 채 유효한 참조인 척했다: %r" % (got,)

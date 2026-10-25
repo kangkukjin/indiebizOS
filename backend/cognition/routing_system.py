@@ -179,16 +179,12 @@ def _delegate_workflow(agent_id: str, params: dict, project_path: str) -> Any:
     if not steps:
         return {"error": "params.steps가 필요합니다. 파이프라인 단계를 정의해주세요."}
 
-    from ibl_edition import pin_source, source_edition
+    from ibl_edition import pin_source, require_current
     try:
-        if isinstance(steps, str):
-            edition = source_edition(pin_source(steps, params.get("edition")))
-        elif isinstance(steps, list):
-            edition = 1
-            if source_edition('', params.get("edition")) != 1 or params.get("inputs") is not None:
-                raise ValueError("steps 배열은 판본 1입니다. edition·inputs를 쓰려면 IBL 원문을 전달하세요.")
-        else:
-            raise ValueError("steps/do는 IBL 원문 또는 판본 1 단계 배열이어야 합니다.")
+        if not isinstance(steps, str):
+            raise ValueError('EDITION_RETIRED: steps 배열 위임은 종료됐습니다.')
+        steps = pin_source(steps, params.get('edition'))
+        edition = require_current(steps)
         request = {"code": steps, "edition": edition}
         if "inputs" in params:
             if not isinstance(params["inputs"], dict):

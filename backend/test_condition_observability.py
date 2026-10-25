@@ -30,60 +30,18 @@ def _patched(monkeypatch, value=2500.0, branch_result=None):
                                                   else {"ok": True}))
 
 
-def test_if_matched_meta(monkeypatch):
-    _patched(monkeypatch, value=2500.0)
-    r = ex._execute_condition(
-        {"branches": [{"condition": "sense:kospi > 2400", "action": {"x": 1}}]}, "/tmp", "t")
-    assert r["matched"] == "sense:kospi > 2400" and r["matched_value"] == 2500.0, r
 
 
-def test_if_else_meta(monkeypatch):
-    _patched(monkeypatch, value=100.0)
-    r = ex._execute_condition(
-        {"branches": [{"condition": "sense:kospi > 2400", "action": {"x": 1}},
-                      {"action": {"y": 2}}]}, "/tmp", "t")
-    assert r["matched"] == "else", r
 
 
-def test_if_nondict_passthrough(monkeypatch):
-    """비-dict 분기 결과는 감싸지 않는다 — 통화 계약 보존."""
-    _patched(monkeypatch, value=2500.0, branch_result="평문 결과")
-    r = ex._execute_condition(
-        {"branches": [{"condition": "sense:kospi > 2400", "action": {"x": 1}}]}, "/tmp", "t")
-    assert r == "평문 결과"
 
 
-def test_if_meta_no_overwrite(monkeypatch):
-    """분기 결과가 이미 matched 키를 가지면 침범하지 않는다 (setdefault 계약)."""
-    _patched(monkeypatch, value=1.0, branch_result={"matched": "고유값"})
-    r = ex._execute_condition(
-        {"branches": [{"condition": "sense:x == 1", "action": {"x": 1}}]}, "/tmp", "t")
-    assert r["matched"] == "고유값"
 
 
-def test_case_matched_meta(monkeypatch):
-    _patched(monkeypatch, value="비")
-    r = ex._execute_case(
-        {"source": "sense:weather", "branches": [
-            {"pattern": "비", "action": {"x": 1}},
-            {"pattern": "맑음", "action": {"y": 2}}]}, "/tmp", "t")
-    assert r["matched"] == "비" and r["matched_value"] == "비", r
 
 
-def test_case_default_meta(monkeypatch):
-    _patched(monkeypatch, value="눈")
-    r = ex._execute_case(
-        {"source": "sense:weather",
-         "branches": [{"pattern": "비", "action": {"x": 1}}],
-         "default": {"z": 3}}, "/tmp", "t")
-    assert r["matched"] == "default" and r["matched_value"] == "눈", r
 
 
-def test_bool_compat_wrapper(monkeypatch):
-    """ibl_engine 재수출 계약 — _evaluate_sense_condition 은 여전히 bool 을 반환."""
-    monkeypatch.setattr(ex, "_get_sense_value_checked", lambda s, p, a: (2500.0, None))
-    assert ex._evaluate_sense_condition("sense:kospi > 2400", "/tmp", "t") is True
-    assert ex._evaluate_sense_condition("sense:kospi < 2400", "/tmp", "t") is False
 
 
 def test_since_seeded_flag(monkeypatch):

@@ -35,7 +35,7 @@ def test_unknown_adapter_is_distinct_from_invalid_and_keeps_provenance():
 def test_legacy_reference_is_retrievable_but_neither_executable_nor_quoted():
     from ibl_usage_db import UsageExample
     from ibl_usage_rag import IBLUsageRAG, _top_for_execution
-    old = UsageExample(987, '시각', '[self:time]', 'self', 'single', 1, .98, 'fixture', -1)
+    old = UsageExample(987, '시각', '[self:time]{}', 'self', 'single', 1, .98, 'fixture', -1)
     new = UsageExample(988, '시각', NEW, 'self', 'single', 1, .98, 'fixture', -1)
     root = ET.fromstring(IBLUsageRAG._format_references(None, [old, new]))
     before, after = root.findall('ref')

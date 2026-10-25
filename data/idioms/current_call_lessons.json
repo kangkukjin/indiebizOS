@@ -3,8 +3,8 @@
   "idioms": [
     {
       "name": "좁혀서읽기",
-      "source_edition": 1,
-      "source_sha256": "79b7102edeae2036d38da49267b14a0a2effb3718252d79ed5fa29f2292f890b",
+      "source_edition": 2,
+      "source_sha256": "2194e84e52fae0d809021f1808575208b164d39bca2966800ee99218c9434269",
       "inputs": "패턴·루트·파일패턴을 명시한다. 앞 3곳을 일치 줄부터 30줄씩 읽는다. 반환 Record의 items에 파일·줄번호·본문이 있다. 지정한 모든 대상의 확인·미확인이 필요하면 대상별좁혀읽기를 describe한 뒤 대상:[{name,pattern}]·루트로 호출한다.",
       "example": "#!ibl edition=2\nreturn [fn:좁혀서읽기]{패턴:\"TODO\",루트:\"backend\",파일패턴:\"*.py\"}",
       "returns": "Record",
@@ -15,8 +15,8 @@
     },
     {
       "name": "주소마다읽기",
-      "source_edition": 1,
-      "source_sha256": "24e537a45209e43f56caea9bdbe899dee82799d94ff61530c5299b329e69ac92",
+      "source_edition": 2,
+      "source_sha256": "030d151bb56805ff508f448d6f3fc3110377bf026bcecca9bb43090224cb3bea",
       "inputs": "url을 가진 목록과 0 이상 개수를 명시한다. 반환 Record에 items와 수집 진단이 있다. 원천 누락은 실패·partial 증거로 전달된다. URL 문자열이 같은 정상 행만 중복 제거하고 원천 실패 행은 개수 밖에서 보존한다.",
       "example": "#!ibl edition=2\nreturn [fn:주소마다읽기]{목록:[{title:\"참고 문서\",url:\"https://example.com/\"}],개수:1}",
       "returns": "Record",
@@ -51,8 +51,8 @@
     },
     {
       "name": "본문에서찾기",
-      "source_edition": 1,
-      "source_sha256": "55fffca39cdcd67b64af112991f4e63c43d895f0cc6f389eb16921bb411f5c90",
+      "source_edition": 2,
+      "source_sha256": "c6ba120e0430ad3fe300e4b17744b50328bd75c816d99025385f895d2ad47cff",
       "inputs": "원문 문단 목록·정규식 패턴·문맥 폭·선택 개수를 명시한다. items는 문단이며 match_info 등 일치·원천 정보도 반환 Record에서 직접 읽는다. 중간 실행 진단은 evidence의 execution_ref로 조회한다.",
       "example": "#!ibl edition=2\nreturn [fn:본문에서찾기]{목록:[{url:\"https://example.com/\",text:\"앞 문단\"},{url:\"https://example.com/\",text:\"핵심 근거\"}],패턴:\"핵심\",문맥:1,개수:1}",
       "returns": "Record",
@@ -63,8 +63,8 @@
     },
     {
       "name": "관련자료골라읽기",
-      "source_edition": 1,
-      "source_sha256": "f6bb449934ba621aab23336190eff2aca6fbf942ec3d56748657c4de2454f50b",
+      "source_edition": 2,
+      "source_sha256": "a200f633d253e4cfa41bc9866ee38a240f52d4ba3593c97aa8dea6ef33db9776",
       "inputs": "title·summary·url이 있는 목록과 질문·개수를 명시한다. 불확실 후보도 읽으며 반환 Record에 원문·판정·수집 진단이 있다. URL 문자열이 같은 정상 행만 중복 제거하고 원천 실패 행은 개수 밖에서 보존한다.",
       "example": "#!ibl edition=2\nreturn [fn:관련자료골라읽기]{목록:[{title:\"연구 방법\",summary:\"방법과 한계를 설명한다\",url:\"https://example.com/\"}],질문:\"연구 방법과 한계\",개수:1}",
       "returns": "Record",
@@ -75,8 +75,8 @@
     },
     {
       "name": "의미로본문찾기",
-      "source_edition": 1,
-      "source_sha256": "018f8d99dc5b81666670f0e4b704eaf0fdb3383c04bc1876d2cd19944a755ba4",
+      "source_edition": 2,
+      "source_sha256": "880927325d4f8a87a2fdafc3f5f822a6132209b5562225d8a8119a356732e8fd",
       "inputs": "url·text가 있는 문단 목록과 질문·개수·문맥 폭을 명시한다. 반환 Record에 원문·선별·판정 진단이 있다.",
       "example": "#!ibl edition=2\nreturn [fn:의미로본문찾기]{목록:[{url:\"https://example.com/\",text:\"이 연구는 표본 크기의 한계를 밝힌다.\"}],질문:\"연구의 한계\",개수:1,문맥:0}",
       "returns": "Record",

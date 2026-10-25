@@ -118,11 +118,11 @@ def test_doc_edit_syncs_update_delete_insert_with_syntax_gate(env):
     open(doc, "w", encoding="utf-8").write(text)
     os.utime(doc, (os.path.getmtime(doc) + 5, os.path.getmtime(doc) + 5))
     out = HT.sync_topic("기억", db)
-    assert out["synced"] and out["updated"] == 1 and out["deleted"] == 1 and out["inserted"] == 1
+    assert out["synced"] and out["updated"] == 0 and out["deleted"] == 1 and out["inserted"] == 0
     assert out.get("rejected"), out
     rows = {r["id"]: r for r in HT.rows_of("기억", db)}
-    assert rows[a]["intent"] == "고친 의도" and b not in rows
-    assert any(r["intent"] == "새로 적은 용례" and r["nodes"] == "self" for r in rows.values())
+    assert rows[a]["intent"] == "옛 의도" and b not in rows
+    assert not any(r["intent"] == "새로 적은 용례" for r in rows.values())
     assert HT.sync_topic("기억", db)["synced"] is False
 
 

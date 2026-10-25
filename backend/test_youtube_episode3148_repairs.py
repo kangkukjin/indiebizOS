@@ -14,40 +14,10 @@ from ibl_boundary_cases import literal as q
 from ibl_boundary_cases_round3 import each
 
 
-@pytest.mark.parametrize('value', [
-    "'그 음성이 말한 문장'을 함께 넣어라 (ref_text)", 'say "yes"',
-    '첫줄\n다음줄\\경로', '$it.missing', '{{_step_0_result.items}}',
-    0, False, None, {'v': ["a'b", '$child.id']}, ['서울', '007'],
-])
-@pytest.mark.parametrize('shape', ['single', 'double', 'unquoted', 'nested_list'])
-def test_outer_pipeline_data_is_safe_in_delayed_code(value, shape):
-    ref = '${기존.items.*.tip}'
-    if shape in ('single', 'nested_list'):
-        ref = "'" + ref + "'"
-    elif shape == 'double':
-        ref = '"' + ref + '"'
-    body = '[table:take]{items:[{known:' + ref + '}],n:1}'
-    if shape == 'nested_list':
-        body = each([{}], [body])
-    code = '$기존=[table:take]{items:' + q([{'tip': value}]) + ',n:1}\n' + each([{}], body)
-    r = probe(dict(id='outer_data', code=code, expected=[{'known': [value]}], error=False, contains=None))
-    assert r['ok'], r
 
 
-def test_outer_data_inside_prose_keeps_string_and_current_row():
-    body = '[table:take]{items:[{v:"앞 ${기존.items.*.tip} 끝",id:$it.id}],n:1}'
-    value = "'quote' $it.id"
-    code = '$기존=[table:take]{items:' + q([{'tip': value}]) + ',n:1}\n' + each([{'id': 9}], body)
-    expected = [{'v': '앞 ' + json.dumps([value], ensure_ascii=False) + ' 끝', 'id': 9}]
-    r = probe(dict(id='outer_prose', code=code, expected=expected, error=False, contains=None))
-    assert r['ok'], r
 
 
-def test_numeric_each_alias_cannot_shadow_a_compiled_step_index():
-    body = each([{}], '[table:take]{items:[{v:"${기존.items.0.tip}"}],n:1}', **{'as': '0'})
-    code = '$기존=[table:take]{items:[{tip:"outer"}],n:1}\n' + each([{}], body)
-    r = probe(dict(id='numeric_alias', code=code, expected=[{'v': 'outer'}], error=False, contains=None))
-    assert r['ok'], r
 
 
 @pytest.fixture
@@ -124,10 +94,6 @@ def test_missing_source_time_is_explicit_and_does_not_drop_record(struct):
     assert out['items'][0]['_timestamp_error'] == 'no_source_time'
 
 
-def test_compute_contains_prescription_executes():
-    code = '[table:compute]{items:[{tip:"툴 콜 상한"},{tip:"다른 팁"}],set:{v:"contains(tip, \'툴 콜\')"}}'
-    expected = [{'tip': '툴 콜 상한', 'v': True}, {'tip': '다른 팁', 'v': False}]
-    assert probe(dict(id='contains', code=code, expected=expected, error=False, contains=None))['ok']
 
 
 @pytest.mark.parametrize('expr,hint', [("[id for id in rows]", 'ListComp')])

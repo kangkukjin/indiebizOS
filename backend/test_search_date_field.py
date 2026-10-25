@@ -128,8 +128,7 @@ def test_batch_preserves_successful_results_and_reports_failed_queries(monkeypat
 def test_valid_empty_search_can_be_assigned_filtered_and_combined(monkeypatch, tmp_path, web_handler):
     import json
     import ibl_engine
-    from ibl_parser import parse
-    from workflow_engine import execute_pipeline
+    from ibl_v2_entry import handle_request
     from tool_context import ToolContext
     parser = pytest.importorskip('feedparser')
     feed = parser.parse(b'<rss version="2.0"><channel><title>Search</title></channel></rss>')
@@ -147,12 +146,12 @@ def test_valid_empty_search_can_be_assigned_filtered_and_combined(monkeypatch, t
     monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
     code = ('$empty = [sense:search]{source:"gnews",query:"empty"}\n'
             '$other = [{title:"kept"}]\n'
-            '$empty & $other >> [table:union]{} >> [table:filter]{where:"title == kept"}')
-    out = execute_pipeline(parse(code), str(tmp_path))
+            '($empty.items + $other) >> [table:filter]{where:($r)=>$r.title=="kept"}')
+    out = handle_request({'code':code,'edition':2}, str(tmp_path))
     assert out['success'] and not out.get('statements_failed'), out
-    result = out['final_result']
+    result = out['value']
     result = json.loads(result) if isinstance(result, str) else result
-    assert result['items'] == [{'title': 'kept'}]
+    assert result == [{'title': 'kept'}]
 
 
 if __name__ == "__main__":

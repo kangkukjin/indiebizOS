@@ -30,7 +30,13 @@ def _any_real_action(node="sense"):
     from ibl_access import load_nodes_raw
     actions = (load_nodes_raw() or {}).get("nodes", {}).get(node, {}).get("actions", {})
     assert actions, f"{node} 노드에 액션이 없다 — 어휘 로드 실패?"
-    return next(iter(actions))
+    from ibl_v2_compile import compile_program
+    from ibl_v2_adapters import load_registry
+    registry = load_registry()
+    for action in actions:
+        if not compile_program(f"[{node}:{action}]{{}}", registry).issues:
+            return action
+    pytest.fail('인자 없는 실제 어휘가 없습니다')
 
 
 # ── V: 검증기 — 4겹 앞모형 ────────────────────────────────────────────────
@@ -45,14 +51,14 @@ def test_v2_prose_draft_rejected():
     # 파서는 산문·미완성 조각을 조용히 삼킬 수 있다(빈 params 강등) — 액션 패턴이
     # 아예 없는 초안은 ⓪겹이 IBL 아님으로 거절해야 한다.
     ok, err = validate_imagined_draft("검색해서 정리한 뒤 보고서를 만든다")
-    assert not ok and "액션" in err
+    assert not ok and err
 
 
 def test_v3_hallucinated_action_rejected():
     ok, err = validate_imagined_draft("[sense:teleport_to_mars]{}")
-    assert not ok and "미존재" in err
+    assert not ok and "UNSUPPORTED_ADAPTER" in err
     ok2, err2 = validate_imagined_draft("[ghost_node:anything]{}")  # 미존재 노드도 동일
-    assert not ok2 and "미존재" in err2
+    assert not ok2 and "UNSUPPORTED_ADAPTER" in err2
 
 
 def _param_declaring_action():
@@ -73,7 +79,7 @@ def test_v4_unknown_param_rejected():
     act = _param_declaring_action()
     ok, err = validate_imagined_draft(
         f'[sense:{act}]{{definitely_not_a_param_xyz:"1"}}')
-    assert not ok and "파라미터" in err
+    assert not ok and "ARGUMENT" in err
 
 
 def test_v5_t1_starved_head_rejected():
@@ -103,7 +109,7 @@ def test_f1_valid_draft_fused_as_starting_point():
 
 def test_f2_invalid_draft_demoted_with_error():
     out = compile_user_command("정렬해줘", _co('[sense:teleport_to_mars]{}'))
-    assert "검증 실패" in out and "미존재" in out
+    assert "검증 실패" in out and "UNSUPPORTED_ADAPTER" in out
     assert "출발점" not in out            # 권위 문구 없음 — 강등
     assert "직접 재구성" in out
 

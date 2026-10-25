@@ -285,7 +285,7 @@ def test_engine_health_agrees_with_string_failure(monkeypatch):
     rows = []
     monkeypatch.setattr(ibl_engine, '_route_handler', lambda *a, **k: json.dumps({'success': False, 'message': 'fixture failure'}))
     monkeypatch.setattr(pulse_db, 'record_action_health', lambda *a, **k: rows.append((a,k)))
-    _execute_ibl_unified({'code': '[table:take]{items:[{a:1}],n:1}', 'verbose': True}, str(ROOT))
+    ibl_engine.execute_ibl({'_node':'self','action':'time','params':{}}, str(ROOT))
     assert rows
     args, kwargs = rows[-1]
     assert kwargs.get('success', args[2] if len(args) > 2 else None) is False

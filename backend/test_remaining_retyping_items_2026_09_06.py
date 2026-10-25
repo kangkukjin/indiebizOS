@@ -39,15 +39,6 @@ def test_shape_folds_slots_only():
     assert len(statements(PROG)) == 2
 
 
-def test_named_shape_is_announced_in_envelope(tmp_path, task, monkeypatch):
-    import fn_recognizer
-    monkeypatch.setattr(fn_recognizer, "_aliased_shapes", lambda: {fn_recognizer.shape(PROG): "둘줄취하기"})
-    out = _run(SAME_SHAPE, tmp_path, task)
-    assert out.get("success") is True
-    assert out["fn_hint"]["alias"] == "둘줄취하기" and "[fn:둘줄취하기]" in out["fn_hint"]["note"]
-    # 이미 이름으로 부르는 프로그램·단문에는 붙지 않는다
-    assert fn_recognizer.fn_hint_for("[fn:둘줄취하기]{}") is None
-    assert fn_recognizer.fn_hint_for('[table:take]{items: [{"x": 1}], n: 1}') is None
 
 
 def test_repeated_unnamed_program_is_counted_from_corpus(monkeypatch):
@@ -58,13 +49,6 @@ def test_repeated_unnamed_program_is_counted_from_corpus(monkeypatch):
     assert hint["seen"] == 3 and "4번째" in hint["note"] and "증류" in hint["note"]
 
 
-def test_same_text_typed_twice_in_a_turn_is_flagged(tmp_path, task):
-    body = "\n".join(f"{i:03d} 새 내용이라 첫 자리에서는 아무 출처와도 겹치지 않는 긴 줄이다 {i}" for i in range(80))
-    first = _run('[self:write]{path: "%s", content: "$file:0"}' % (tmp_path / "a.md"), tmp_path, task, files=[body])
-    assert first.get("success") is not False and "retyped" not in first
-    second = _run('[self:write]{path: "%s", content: "$file:0"}' % (tmp_path / "b.md"), tmp_path, task, files=[body])
-    rt = second.get("retyped")
-    assert rt and rt["level"] == "warn" and "이번 턴에 이미 친 내용" in rt["sources"], second
 
 
 def test_outside_tools_are_metered():

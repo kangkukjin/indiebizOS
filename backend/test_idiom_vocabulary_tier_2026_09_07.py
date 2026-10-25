@@ -71,34 +71,19 @@ def test_skeleton_keeps_control_blocks():
     '$x = [table:take]{items: [], n: 1}; [on_error:skip] $x >> [table:take]{n: 1}',
 ])
 def test_scoped_map_keeps_control_words_but_filters_real_nodes(tmp_path, monkeypatch, body):
-    """제어문 때문에 이름이 사라지지 않고, each 안의 금지 노드는 계속 걸러진다."""
     import sqlite3
     import ibl_access as access
     import runtime_utils
-    from ibl_parser import parse_function_body
-
-    parse_function_body(body)
-    (tmp_path / "data").mkdir()
-    with sqlite3.connect(tmp_path / "data" / "ibl_usage.db") as conn:
-        conn.execute("CREATE TABLE ibl_examples (intent, ibl_code, success_count, fail_count, "
-                     "topic, alias, returns, signature, always_on, created_at)")
-        conn.executemany("INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?,?,?,?)", [
-            ("제어문이 있는 상시 관용구", body, 0, 0, "시험", "제어문시험", "", "", 1, "2026-09-08"),
-            ("중첩된 외부 노드가 필요한 관용구",
-             '$x = [table:take]{items: [], n: 1}; $return = $x >> '
-             '[table:each]{do: "[sense:crawl]{url: \'$it.url\'}"}',
-             0, 0, "시험", "금지노드시험", "", "", 1, "2026-09-08"),
-        ])
-    monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
-    monkeypatch.setattr(access, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     from test_function_support import import_memory
-    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as fixture_db:
-        import_memory(fixture_db)
-    for allowed in ({"self", "others", "table"},
-                    {"self", "others", "table", "sense", "limbs", "engines"}):
-        block = access.idioms_map(allowed)
-        assert "[fn:제어문시험]" in block
-        assert ("[fn:금지노드시험]" in block) == ("sense" in allowed)
+    (tmp_path/'data').mkdir()
+    with sqlite3.connect(tmp_path/'data/ibl_usage.db') as conn:
+        conn.execute('CREATE TABLE ibl_examples(intent,ibl_code,success_count,fail_count,topic,alias,returns,signature,always_on,created_at)')
+        conn.execute('INSERT INTO ibl_examples VALUES(?,?,?,?,?,?,?,?,?,?)',('구판',body,0,0,'시험','구판제어문','','',1,'2026-09-08'))
+        import_memory(conn)
+    monkeypatch.setattr(runtime_utils,'get_base_path',lambda:tmp_path)
+    monkeypatch.setattr(access,'_idioms_cache',{'t':0.0,'text':None,'key':None})
+    assert '구판제어문' not in access.idioms_map(None)
+
 
 
 def test_function_registration_does_not_require_promotion_context():

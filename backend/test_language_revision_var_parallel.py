@@ -65,21 +65,8 @@ def test_P1_변수_병렬_파싱():
     assert par[0].get("_vars") == {"a": 1, "b": 3}, par[0].get("_vars")
 
 
-def test_P2_두_변수의_통화가_실제로_흐른다():
-    """파싱만 되고 값이 안 흐르면 '되는 척'이다 — 이항 변환자가 소비하는지까지 본다."""
-    res = _run(_TWO + '$a & $b >> [table:join]{on: "title"}')
-    assert res.get("success") is True, res.get("error")
-    fr = _final(res)
-    assert isinstance(fr, dict) and fr.get("count") == 2, fr
-    # 두 분기가 같은 두 행을 냈으므로 title 로 조인하면 두 행이 짝을 이룬다 —
-    # 값이 안 흘렀다면 0행이다(파싱만 되고 '되는 척' 하는 상태의 구분자).
-    assert len(fr.get("items") or []) == 2, fr
 
 
-def test_P3_변수와_액션을_섞는다():
-    res = _run('$a = [self:script]{op: "list"} >> [table:take]{n: 1}\n'
-               '$a & [self:script]{op: "list"} >> [table:union]')
-    assert res.get("success") is True, res.get("error")
 
 
 def test_P4_미할당은_파싱_시점_정직_에러():
@@ -88,15 +75,6 @@ def test_P4_미할당은_파싱_시점_정직_에러():
     assert "$없는것" in str(e.value) and "할당" in str(e.value)
 
 
-def test_P5_안_탄_분기의_변수는_그_분기만_실패한다():
-    """V49-1 규약 — 빈 값으로 접지 않는다. 그리고 부분 실패는 봉투가 말한다."""
-    res = _run('$a = [self:script]{op: "list"} >> [table:take]{n: 1}\n'
-               '[if: 1 > 2]{$k = [self:script]{op: "list"}}\n'
-               '$k & $a >> [table:union]')
-    assert res.get("branches_failed"), "부분 실패가 봉투에 없다(침묵 금지)"
-    failed = res["branches_failed"][0]["failed"][0]
-    assert "$k" in failed["error"] and "기록" in failed["error"], failed
-    assert res.get("warning"), "부분 실패인데 warning 이 없다"
 
 
 def test_P6_표기_규약이_머리_자리와_한_벌이다():

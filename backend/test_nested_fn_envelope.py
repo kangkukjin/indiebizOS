@@ -132,22 +132,6 @@ def test_parallel_walk_visits_nested_returns_but_not_business_records():
     assert diet_envelope(plain)['final_result'] is plain['final_result']
 
 
-def test_parallel_fn_from_actual_parser_and_executor():
-    from test_ibl_functions import _run
-    env = _run('[def: 앞둘]{[x:rows]{} >> [x:take]{n: 2}}\n'
-               '[fn:앞둘]{} & [fn:앞둘]{}')
-    assert env['success'], env
-    original = copy.deepcopy(env)
-    out = diet_envelope(env)
-    before = json.loads(env['final_result'])
-    after = json.loads(out['final_result'])
-    for raw, thin in zip(before, after):
-        raw = json.loads(raw) if isinstance(raw, str) else raw
-        thin = json.loads(thin) if isinstance(thin, str) else thin
-        assert thin['_results_summarized']
-        assert thin['items'] == raw['items'] == [{'a': 1}, {'a': 2}]
-        assert thin['final_result'] == raw['final_result']
-    assert env == original
 
 
 def test_parallel_fn_model_view_keeps_full_evidence_readable(tmp_path, monkeypatch):

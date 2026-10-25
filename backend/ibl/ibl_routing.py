@@ -571,8 +571,8 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     # [table:each] — 문장을 값으로 받는 고차 변환자. 다른 table 변환자와 달리 패키지가 아니라
     # 엔진 층에 산다(하위 문장 실행이 execute_ibl 재귀 — 패키지가 엔진을 import 하면 층 역전).
     elif func_name == "table_each":
-        from ibl_executors import _execute_table_each
-        return _execute_table_each(dict(params), project_path, agent_id=agent_id)
+        from ibl_edition import retired_result
+        return retired_result()
     elif func_name == "table_reduce":
         from ibl_control_blocks import _execute_table_reduce
         return _execute_table_reduce(dict(params), project_path, agent_id=agent_id)
@@ -602,16 +602,16 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
 
     # Phase 13: 출력 노드 (순환 import 방지를 위해 lazy import)
     elif func_name == "output_gui":
-        from ibl_executors import _output_gui
+        from ibl_exec_output import _output_gui
         return _output_gui(params.get("content", ""), params, project_path)
     elif func_name == "output_open":
-        from ibl_executors import _output_open
+        from ibl_exec_output import _output_open
         return _output_open(params.get("path", ""), params, project_path)
     elif func_name == "output_clipboard":
-        from ibl_executors import _output_clipboard
+        from ibl_exec_output import _output_clipboard
         return _output_clipboard(params.get("content", ""), params)
     elif func_name == "output_download":
-        from ibl_executors import _output_download
+        from ibl_exec_output import _output_download
         return _output_download(params.get("url", ""), params, project_path)
 
     # Phase 17: 시스템 AI 전용 함수
@@ -705,7 +705,7 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         from ibl_engine import _goal_kill
         return _goal_kill(params.get("goal_id", ""), params, project_path)
     elif func_name == "delete_goal":
-        from ibl_executors import _goal_delete
+        from ibl_exec_goal import _goal_delete
         return _goal_delete(params.get("goal_id", ""), params, project_path)
 
     # Phase 26b: 시도 기록 (전략 전환 + 라운드 메모리)

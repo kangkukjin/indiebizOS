@@ -100,52 +100,11 @@ def test_f2_forward_reference_binds_and_unknown_stays_unbound():
 
 
 # ---------------------------------------------------------------- F3 실행
-def test_f3_call_with_params_return_and_flowing_currency():
-    calls = []
-    out = _run('$r = [fn:앞둘]{k: 2}\n[def: 앞둘]{[x:rows]{} >> [x:take]{n: "$k"}}', calls)
-    assert out["success"], out.get("error")
-    assert out["results"][0]["node"] == "?" and _step_env(out, 0)["defined"] == "앞둘"   # 정의가 앞으로 끌려 올라왔다
-    fn_env = _step_env(out, 1)
-    assert fn_env["fn"] == "앞둘" and fn_env["fn_source"] == "def" and fn_env["params_injected"] == ["k"]
-    assert "params_warning" not in fn_env                                  # 배관 키(_raw)는 인자로 새지 않는다
-    assert [r["a"] for r in fn_env["items"]] == [1, 2]                    # 인자 k=2 가 몸의 $k 에 들어갔다
-    assert [c["action"] for c in calls] == ["rows", "take"]
-    assert _final(out)["items"] == fn_env["items"]                        # 반환값은 몸의 값, 함수 진단은 results[]에 보존
-    # 앞 통화가 몸의 첫 문장으로 흐른다 + $return 규약
-    calls.clear()
-    out = _run('[x:rows]{} >> [fn:둘]{}\n[def: 둘]{$t = [x:take]{n: 2}\n$return = $t}', calls)
-    assert out["success"], out.get("error")
-    fn_env = _step_env(out, len(out["results"]) - 1)
-    assert fn_env["returned"] == "$return" and [r["a"] for r in fn_env["items"]] == [1, 2]
-    assert calls[-1]["action"] == "take" and json.loads(calls[-1]["params"]["_prev_result"])["items"] == ROWS["items"]
 
 
-def test_f3_real_engine_assign_only_body():
-    # 실제 실행기 경로: [def:] 는 정의 신고, 몸이 식 할당뿐인 함수는 도구 없이 돈다
-    st = parse('[def: 두배]{$x = $n * 2\n$return = $x}\n$r = [fn:두배]{n: 21}')
-    d = ibl_engine.execute_ibl(st[0], ".", None)
-    assert d["success"] and d["defined"] == "두배" and d["signature"] == ["n"]
-    r = ibl_engine.execute_ibl(st[1], ".", None)
-    assert r["success"] and r["returned"] == "$return"
-    assert str(r["final_result"]).strip() in ("42", "42.0")                # $return 의 값 그대로
 
 
 # ---------------------------------------------------------------- F4 정직
-def test_f4_honest_failures_and_workflow_fallback(monkeypatch):
-    out = _run('[fn:두배]{}\n[def: 두배]{$x = $n * 2\n$return = $x}')
-    assert not out["success"] and "인자 누락" in _fn_error(out) and "$n" in _fn_error(out)
-    out = _run('[fn:나중]{}\n[def: 나중]{todo}')
-    assert not out["success"] and "todo" in _fn_error(out)
-    out = _run('[fn:무한]{}\n[def: 무한]{[fn:무한]{}}')
-    assert not out["success"] and "깊이 상한" in json.dumps(out, ensure_ascii=False)
-    out = _run('[fn:없는이름]{}')
-    assert not out["success"] and "정의가 없고" in _fn_error(out)
-    from function_library import register
-    register('저장된것', '', edition=1, legacy={'name': '저장된것', 'do': '[self:time]{}'})
-    monkeypatch.setattr(workflow_engine, "execute_workflow", lambda wid, pp, params=None, **kw: {"success": True, "workflow_id": wid, "got": params})
-    out = _run('[fn:저장된것]{city: "수원"}')
-    fn_env = _step_env(out, 0)
-    assert fn_env["fn_source"] == "function" and fn_env["got"] == {"city": "수원"}
 
 
 # ---------------------------------------------------------------- F5 검증기
@@ -167,31 +126,6 @@ if __name__ == "__main__":
 
 
 # ---------------------------------------------------------------- F6 관용구 = 이름 붙은 함수 (2026-09-05)
-def test_f6_fn_resolves_named_idiom_after_def_and_workflow(monkeypatch):
-    import ibl_usage_db as mod
-    calls = []
-    monkeypatch.setattr(workflow_store, "get_workflow", lambda wid: None)
-    monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
-    monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
-    monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias",
-                        lambda self, name: {"id": 1, "intent": "앞 둘 뽑기", "alias": name,
-                                            "ibl_code": '[x:rows]{q: "${질의}"} >> [x:take]{n: 2}', "topic": "개발"} if name == "앞둘뽑기" else None)
-    monkeypatch.setattr(mod.IBLUsageDB, "phrase_aliases", lambda self, limit=12: ["앞둘뽑기"])
-    from test_function_support import use_legacy
-    use_legacy(monkeypatch, {'앞둘뽑기': '[x:rows]{q: "${질의}"} >> [x:take]{n: 2}'})
-    used = []
-    monkeypatch.setattr('capability_history.record_function_call',
-                        lambda ref, run, call, **kw: used.append((ref, kw['success'])))
-    monkeypatch.setattr(mod.IBLUsageDB, "update_success_by_code", lambda self, code, ok, **kw: used.append((code, ok)) or True)
-    out = _run('[fn:앞둘뽑기]{질의: "a"}', calls)
-    fn_env = _step_env(out, 0)
-    assert fn_env["success"] and fn_env["fn_source"] == "idiom" and fn_env["params_required"] == ["질의"]
-    assert calls[0]["params"]["q"] == "a"                                 # ${슬롯} 이 시그니처 — 인자가 들어갔다
-    assert used and used[0][1] is True                                     # 이름으로 부른 관용구는 쓰인 것(귀속)
-    out = _run('[fn:앞둘뽑기]{}')
-    assert "인자 누락" in _fn_error(out)
-    out = _run('[fn:없는것]{}')
-    assert "관용구 이름: 앞둘뽑기" in _fn_error(out)
 
 
 def test_f6_idiom_name_sanitize_and_unique():

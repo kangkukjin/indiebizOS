@@ -1,0 +1,12 @@
+#!ibl edition=2
+[def:각각읽고요약]($목록,$개수,$지시) {
+  $대상 = $목록 >> [table:take]{n:$개수}
+  $수집 = $대상 >> [table:each]{on_error:"collect"} { $본문 = [sense:crawl]{url:$it.url}
+return [table:brief]{items:$본문.items,instruction:$지시} }
+  $값 = $수집 >> [table:each]{} {
+    [if:is_ok($it)] { return {ok:true,source:$대상[$i],value:unwrap($it)} }
+    return {ok:false,source:$대상[$i],error:error_of($it)}
+  }
+  $결과 = [self:script]{id:"판정관용구",args:{op:"collect",results:$값,keep:["title", "url"]}}
+  return $결과
+}

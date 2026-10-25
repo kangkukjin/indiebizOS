@@ -184,15 +184,8 @@ class MemberRunner(AgentRunner):
         if len(json.dumps(request, ensure_ascii=False).encode()) > 4 * 1024 * 1024:
             return json.dumps({"success": False, "error": "입력은 합계 4MB 이하여야 합니다"}, ensure_ascii=False)
         source = getattr(self, "config", {}).get("_member_sentences", "")
-        # Explicit old saved calls retain their stored meaning; new calls obtain
-        # only member-provided functions through the scoped library adapter.
-        from ibl_edition import source_edition
         sources = getattr(self, "config", {}).get("_member_libraries", [source])
-        if source_edition(request.get("code", ""), request.get("edition")) == 1:
-            from ibl_parser import parse
-            old_source = "\n".join(s for s in sources if source_edition(s) == 1)
-            if old_source and all(s.get("_def") for s in parse(old_source)):
-                request["code"] = old_source + "\n" + request.get("code", "")
+        sources = [item for item in sources if item]
         with library(sources):
             return _execute_ibl_unified(request, str(self.project_path),
                 agent_id=principal.current().key(), cancel_check=member_runtime.current()["cancel"].is_set)

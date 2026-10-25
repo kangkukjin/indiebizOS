@@ -31,7 +31,7 @@ async function runBody(op: string, extra: Record<string, unknown> = {}) {
     .filter(([, v]) => v !== undefined && v !== '' && v !== null)
     .map(([k, v]) => `${k}: ${typeof v === 'string' ? JSON.stringify(v) : v}`)
     .join(', ');
-  const res = await api.executeIBL(`[self:body]{${parts}}`, MANUAL_PROJECT_ID);
+  const res = await api.executeIBL(`[self:body]{${parts}}`, MANUAL_PROJECT_ID, ".", true);
   return {
     items: deepFind<Row[]>(res, 'items') ?? [],
     text: deepFind<string>(res, 'text') ?? '',

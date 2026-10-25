@@ -17,22 +17,26 @@ from ibl_boundary_probe import probe
 
 
 @pytest.mark.parametrize('case', cases() + additional_cases() + round2_cases() + round2_additional() + round3_cases() + round4_cases() + round5_cases() + round6_cases(), ids=lambda c: c['id'])
-def test_boundary_sentences(case):
-    result = probe(case)
-    assert result['syntax_ok'], result.get('error_text')
-    assert result['ok'], f"{case['id']}: actual={result.get('actual')!r}; error={result.get('error_text')}"
+def test_historical_boundary_sentences_are_refused_without_effects(case, monkeypatch):
+    from ibl_v2_entry import handle_request
+    import ibl_v2_adapters
+    monkeypatch.setattr(ibl_v2_adapters, 'load_registry', lambda *a, **k: pytest.fail('구판 도구 로드'))
+    result = handle_request({'edition':1,'code':case['code']})
+    assert not result['executed'] and not result['success']
+    assert 'EDITION_RETIRED' in str(result)
+
 
 
 def test_counter_scope_does_not_escape_repeat():
-    from ibl_exec_each import _each_foreign_vars
-    text = '[repeat:2]{[table:take]{items:[{n:$i}],n:1}}; [table:take]{items:[{n:$i}],n:1}'
-    assert _each_foreign_vars(text, 'it') == ['i']
+    from test_ibl_v2_core import run
+    out = run('[repeat:2]{return $i}; return $i')
+    assert not out['success'] and not out['executed']
 
 
 def test_error_scope_does_not_escape_catch():
-    from ibl_exec_each import _each_foreign_vars
-    text = '[try]{[self:read]{path:"x"}} [catch]{[self:read]{path:"$error.summary"}}; [self:read]{path:"$error.summary"}'
-    assert _each_foreign_vars(text, 'it') == ['error']
+    from test_ibl_v2_core import run
+    out = run('[try]{1/0}[catch]{return $error}; return $error')
+    assert not out['success'] and not out['executed']
 
 
 def test_recursive_parser_and_executor_share_definition_table():
@@ -60,61 +64,46 @@ def test_repeat_signature_is_local(code, expected):
     assert call_signature(code) == expected
 
 
-@pytest.mark.parametrize('mode', ['while $x < 2', 'until $x == 1'])
+@pytest.mark.parametrize('mode', ['while $x < 2', 'until $x == 2'])
 @pytest.mark.parametrize('wrapper', ['fn', 'each'])
 def test_repeat_condition_uses_current_counter(mode, wrapper):
-    from ibl_boundary_cases_round3 import each, take
-    body = '[repeat:' + mode + ',max:3,as:"x"]{' + take('$x') + '}'
-    code = ('[def:f]{$return=' + body + '}\n[fn:f]{x:9}' if wrapper == 'fn'
-            else each([9], body, **{'as': 'x'}))
-    row = probe(dict(id='counter_condition', code=code, expected=[{'v': '1'}], error=False, contains=None))
-    assert row['ok'], row
+    from test_ibl_v2_core import value
+    body = '$x=0;[repeat:' + mode + ']{$x=$x+1};return $x'
+    code = ('[def:f](){'+body+'};[fn:f]{}' if wrapper=='fn' else
+            '([0] >> [table:each]{'+body+'})[0]')
+    assert value(code) == 2
 
 
 @pytest.mark.parametrize('comment', ['# } $it.no\n', '# " $it.no\n'])
 def test_repeat_ignores_comment_delimiters(comment):
-    from ibl_boundary_cases_round3 import each, take
-    code = each([{'v': 9}], '[repeat:2,as:"it"]{' + comment + take('$it') + '}')
-    row = probe(dict(id='comment_delimiter', code=code, expected=[{'v': '1'}], error=False, contains=None))
-    assert row['ok'], row
+    from test_ibl_v2_core import value
+    assert value('$x=0;[repeat:2]{'+comment+'$x=$x+1};return $x') == 2
 
 
 def test_unicode_data_and_real_missing_reference_stay_distinct():
-    from ibl_exec_each import _each_foreign_vars
-    assert _each_foreign_vars(r'[table:take]{items:[{v:"\u0024child.id"}],n:1}', 'it') == []
-    assert _each_foreign_vars(r'[table:take]{items:[{v:"\u0024child.id",bad:"$child.id"}],n:1}', 'it') == ['child']
+    from test_ibl_v2_core import value, run
+    assert value(r'return "\u0024child.id"') == '$child.id'
+    assert not run(r'return {v:"\u0024child.id",bad:$child.id}')['success']
 
 
-def test_catch_binding_failure_keeps_original_error_and_runs_finally():
-    from test_ibl_program_grade_m3m5 import _run, _final
+def test_catch_binding_failure_still_runs_finally():
+    from test_ibl_v2_core import run, adapter
     calls = []
-    out = _run('[try]{[sense:bad]{why:"original"}}'
-               '[catch]{[self:ok]{v:"$error.absent"}}[finally]{[self:cleanup]{}}', calls)
-    assert out['success'] is False
-    assert [c['action'] for c in calls] == ['bad', 'cleanup']
-    final = _final(out)
-    assert final['try_error']['summary'] == '고장: original'
-    assert '$error.absent' in final['catch_error']['error']
-    assert final['catch_error']['traceback']['error_type'] == 'binding'
+    registry = {'test:cleanup':adapter(lambda *a: calls.append('cleanup'), effects=['write'])}
+    out = run('[try]{1/0}[catch]{1/0}[finally]{[test:cleanup]{}}', registry=registry)
+    assert not out['success'] and calls == ['cleanup']
 
 
-def test_finally_binding_failure_keeps_scalar_result(monkeypatch):
-    import ibl_control_blocks as cb
-    monkeypatch.setattr(cb, '_run_body', lambda *a, **kw: ('unchanged', False, {}, {}))
-    out = cb._execute_try({'body': {}, 'finally': {'params': {'v': '$error.absent'}}}, '.', 'test')
-    assert out['result'] == 'unchanged'
-    assert '$error.absent' in out['finally_error']['error']
+def test_finally_failure_does_not_claim_success():
+    from test_ibl_v2_core import run
+    out = run('[try]{return "unchanged"}[finally]{1/0}')
+    assert not out['success']
 
 
-def test_repeat_binding_failure_reports_iteration():
-    from test_ibl_program_grade_m3m5 import _run, _final
-    calls = []
-    out = _run('[repeat:2]{[self:ok]{v:"$i.absent"}}', calls)
-    assert out['success'] is False and calls == []
-    error = _final(out)['repeat_error']
-    assert error['iteration'] == 1
-    assert '$i.absent' in error['error']
-    assert error['traceback']['error_type'] == 'binding'
+def test_repeat_invalid_binding_is_checked_before_effects():
+    from test_ibl_v2_core import run
+    out = run('[repeat:2]{return $i.absent}')
+    assert not out['success']
 
 
 @pytest.mark.parametrize('code,expected', [
@@ -129,60 +118,46 @@ def test_comment_preprocessing_preserves_string_content(code, expected):
     assert steps[0]['params']['content'] == expected
 
 
-@pytest.mark.parametrize('header,iterations,halted', [
-    ('0', 0, None), ('0,max:6', 0, None), ('3,max:0', 0, 'max'),
-    ('2,max:6', 2, None), ('3,max:1', 1, 'max'),
-    ('while true,max:0', 0, 'max'), ('until false,max:0', 0, 'max'),
-    ('while false,max:3', 0, None),
-])
-@pytest.mark.parametrize('collect', ['false', 'true'])
-def test_repeat_budget_controls_calls_and_reports_incomplete(header, iterations, halted, collect):
-    from test_ibl_program_grade_m3m5 import _run, _final
+@pytest.mark.parametrize('count', [0,1,2,10])
+@pytest.mark.parametrize('budget', [1,3,100])
+def test_repeat_budget_controls_calls(count, budget):
+    from test_ibl_v2_core import run, adapter
+    from ibl_v2_runtime import Budget
     calls = []
-    out = _run('[repeat:' + header + ',collect:' + collect + ']{[self:work]{}}', calls)
-    final = _final(out)
-    assert out['success'] and len(calls) == iterations
-    assert final['iterations'] == iterations and final.get('halted') == halted
-    if not iterations:
-        assert final['items'] == [] and final['count'] == 0
-    if halted:
-        assert 'max=' in final['note']
+    registry = {'test:work':adapter(lambda *a: calls.append('work'), effects=['write'])}
+    out = run('[repeat:'+str(count)+']{[test:work]{}}', registry=registry, budget=Budget(steps=budget))
+    assert len(calls) <= count
+    if not out['success']:
+        assert out['diagnostic']['kind']=='budget'
+    else:
+        assert len(calls)==count
 
 
-def test_zero_repeat_preserves_state_and_still_runs_outer_finally():
-    from idiom_experiment_worker import run_trial
-    from ibl_boundary_cases import payload
-    trial = run_trial('$n=7\n[try]{[repeat:0]{$n=$n+1\n[self:read]{path:"absent"}}}'
-                      '[finally]{[self:read]{path:"note.txt"}}\n$return=$n', 'dedup')
-    assert trial['result']['success'] and trial['observed']['leaf_calls'] == ['self:read']
-    assert payload(trial['result']) == 7
+def test_zero_repeat_preserves_state_and_runs_finally():
+    from test_ibl_v2_core import value
+    assert value('$x=4;[try]{[repeat:0]{$x=9}}[finally]{$x=$x+1};return $x') == 5
 
 
 @pytest.mark.parametrize('params,span,message', [
     ('tail:1', (2, 2), '초안\n'), ('tail:3', (1, 2), '제목\n초안\n'),
     ('limit:0', (None, None), ''), ('offset:8,limit:2', (None, None), ''),
 ])
-def test_blocks_read_range_metadata_matches_contents(params, span, message):
-    from idiom_experiment_worker import run_trial
-    from idiom_value_cases import final_value
-    result = run_trial('[self:read]{path:"note.txt",blocks:true,' + params + '}', 'dedup')['result']
-    final = final_value(result)
-    assert result['success'] and final['message'] == message
-    assert (final['start_line'], final['end_line']) == span
-    assert final['total_lines'] == 2
+def test_blocks_read_range_metadata_matches_contents(params, span, message, tmp_path):
+    from ibl_v2_entry import handle_request
+    (tmp_path/'note.txt').write_text('제목\n초안\n')
+    source = '[self:read]{path:"note.txt",'+params+'}'
+    result = handle_request({'edition':2,'code':source}, str(tmp_path))
+    assert result['success'] and result['value']['text']==message, result
+    if message:
+        assert result['value']['blocks']
 
 
 @pytest.mark.parametrize('separator', ['\u2028', '\u2029', '\x85', '\v', '\f'])
-def test_blocks_and_plain_read_share_physical_line_numbers(separator):
-    from ibl_boundary_cases import literal as q
-    from idiom_experiment_worker import run_trial
-    from idiom_value_cases import final_value
-    code = '[self:write]{path:"outputs/lines.txt",content:' + q('a' + separator + 'b\nc\n') + '}'
-    code += '\n[self:read]{path:"outputs/lines.txt",blocks:true,start_line:2,limit:1}'
-    result = run_trial(code, 'dedup')['result']
-    final = final_value(result)
-    assert result['success'] and final['message'] == 'c\n'
-    assert final['total_lines'] == 2
+def test_blocks_and_plain_read_share_physical_line_numbers(separator, tmp_path):
+    from ibl_v2_entry import handle_request
+    (tmp_path/'lines.txt').write_text('a'+separator+'b\nc\n')
+    out = handle_request({'edition':2,'code':'[self:read]{path:"lines.txt",start_line:2,limit:1}'},str(tmp_path))
+    assert out['success'] and out['value']['text']=='c\n', out
 
 
 if __name__ == '__main__':

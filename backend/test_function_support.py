@@ -33,8 +33,17 @@ def import_memory(conn):
         name, code = row['alias'], row['ibl_code']
         edition = source_edition(code)
         old = function_store.resolve(name, edition=edition, include_inactive=True)
-        ref = register(name, code, row.get('intent', ''), edition=edition,
-                 expected_revision=(old or {}).get('revision'))
+        if edition == 1:
+            import uuid
+            record = {'schema':1,'function_id':(old or {}).get('function_id') or uuid.uuid4().hex,
+                      'name':name,'edition':1,'source':code,'description':row.get('intent','')}
+            ref = function_store.publish([{'record':record,'state':'retired',
+                'expected_revision':(old or {}).get('revision')}])['functions'][0]
+        else:
+            register_fixture_dependencies(code)
+            ref = register(name, code, row.get('intent', ''), edition=edition,
+                           legacy={k:row[k] for k in ('always_on','topic') if k in row},
+                           expected_revision=(old or {}).get('revision'))
         if 'provenance' in columns and 'id' in columns:
             provenance = json.loads(row.get('provenance') or '{}')
             provenance['function_ref'] = ref
@@ -50,9 +59,30 @@ def test_fixture_import_is_explicit(tmp_path):
         conn.execute('INSERT INTO ibl_examples VALUES(?,?,?)', ('fixture', '$return=1', 'test'))
         assert function_store.resolve('fixture') is None
         import_memory(conn)
-        assert function_store.resolve('fixture')['source'] == '$return=1'
+        assert function_store.resolve('fixture', include_inactive=True)['source'] == '$return=1'
+        assert function_store.resolve('fixture', include_inactive=True)['state'] == 'retired'
 
 
 if __name__ == '__main__':
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+def current_source(name):
+    root = Path(__file__).resolve().parents[1]
+    from ibl_v2_store import definition_name
+    sources = {row['alias']:row['ibl_code'] for row in json.loads((root/'data/idioms/ibl_v2_seeds.json').read_text()) if row.get('alias')}
+    for path in (root/'data/idioms').glob('retirement_*.ibl'):
+        source=path.read_text();sources[definition_name(source)]=source
+    return sources[name]
+
+
+def register_fixture_dependencies(source):
+    import re
+    from function_library import register
+    for name in set(re.findall(r'\[fn:([^\]]+)\]',source)):
+        if function_store.resolve(name,edition=2,include_inactive=True) is not None:
+            continue
+        dependency=current_source(name)
+        register_fixture_dependencies(dependency)
+        register(name,dependency)

@@ -1,0 +1,11 @@
+#!ibl edition=2
+[def:위치마다읽기]($위치,$개수,$줄수) {
+  $대상 = $위치 >> [table:take]{n:$개수}
+  $수집 = $대상 >> [table:each]{on_error:"collect"} { return [self:read]{path:$it.파일,start_line:$it.줄번호,limit:$줄수} }
+  $값 = $수집 >> [table:each]{} {
+    [if:is_ok($it)] { return {ok:true,source:$대상[$i],value:unwrap($it)} }
+    return {ok:false,source:$대상[$i],error:error_of($it)}
+  }
+  $결과 = [self:script]{id:"판정관용구",args:{op:"collect",results:$값,keep:["파일", "줄번호"]}}
+  return $결과
+}

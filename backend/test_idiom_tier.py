@@ -374,11 +374,12 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     import ibl_usage_rag as rag
     import ibl_usage_db as mod
     import thread_context
+    current = '#!ibl edition=2\n[def:찾아읽고고치기]($패턴,$루트,$파일,$앞,$뒤){[self:grep]{pattern:$패턴,root_path:$루트}\n[self:read]{path:$파일}\nreturn [self:edit]{path:$파일,old_string:$앞,new_string:$뒤}}'
     calls = []
     def fake_search(self, query, top_k=5, **kw):
         calls.append(kw)
         if kw.get("aliased_only"):
-            ex = _Ex("; ".join(PHRASE), "찾아 읽고 고친다", 0.8, "phrase", "개발/프론트")
+            ex = _Ex(current, "찾아 읽고 고친다", 0.8, "phrase", "개발/프론트")
             ex.alias, ex.signature, ex.returns = "찾아읽고고치기", "패턴 루트 파일 앞 뒤", "effect"
             return [ex]
         return [_Ex(PIPE, "검색", 0.7)]
@@ -386,9 +387,9 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
     monkeypatch.setattr(mod.IBLUsageDB, "search_hybrid", fake_search)
     monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias", lambda self, name, edition=1:
-                        None if edition == 2 else {
-                            "alias": name, "ibl_code": "; ".join(PHRASE),
-                            "signature": "패턴 루트 파일 앞 뒤", "returns": "effect"})
+                        None if edition != 2 else {
+                            "alias": name, "ibl_code": current,
+                            "signature": "패턴 루트 파일 앞 뒤", "returns": "Record"})
     monkeypatch.setattr(rag, "_own_only", lambda r: r)
     monkeypatch.setattr(rag, "_extract_implementations_from_refs", lambda x: "")
     r = rag.IBLUsageRAG(); r.clear_cache()
@@ -396,25 +397,25 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     xml, top_score, top_code = rag.build_execution_memory("컴포넌트 고쳐줘")
     assert top_code == '' and top_score == 0.7  # 구형 원문은 반사 실행하지 않는다
     assert any(k.get("exclude_category") == "phrase" for k in calls)  # 낱말 채널은 관용구 제외
-    assert 'kind="phrase"' in xml and 'sentences="3"' in xml
+    assert 'kind="phrase"' in xml and 'sentences="1"' in xml
     assert 'slots="패턴, 루트, 파일, 앞, 뒤"' in xml and 'name="찾아읽고고치기"' in xml
     # 이름 먼저(2026-09-05 판정을 회상 채널에도, 2026-09-06): 본문은 안 싣는다 — 서명 한 줄만
     assert '[fn:찾아읽고고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"} → Record' in xml
     assert "[def: " not in xml and PHRASE[0] not in xml
-    assert thread_context.get_phrase_recall() == ["; ".join(PHRASE)]
+    assert thread_context.get_phrase_recall() == [current]
     # 문턱(2026-09-06): 본문을 안 싣게 됐으니 낱말의 저신뢰 바닥까지 연다 — 안 보이면 못 부른다
     calls.clear()
     def low(self, query, top_k=5, **kw):
         if not kw.get("aliased_only"):
             return []
-        ex = _Ex("; ".join(PHRASE), score=0.5, category="phrase")
+        ex = _Ex(current, score=0.5, category="phrase")
         ex.alias, ex.signature, ex.returns = "이름", "", ""
         return [ex]
     monkeypatch.setattr(mod.IBLUsageDB, "search_hybrid", low)
     r.clear_cache()
     assert len(r.search_phrases("x")) == 1        # 0.5 ≥ 저신뢰 바닥(0.45)
     def lower(self, query, top_k=5, **kw):
-        ex = _Ex("; ".join(PHRASE), score=0.3, category="phrase")
+        ex = _Ex(current, score=0.3, category="phrase")
         ex.alias = "이름"
         return [ex] if kw.get("aliased_only") else []
     monkeypatch.setattr(mod.IBLUsageDB, "search_hybrid", lower)
@@ -439,6 +440,9 @@ if __name__ == "__main__":
 
 # ---------------------------------------------------------------- P7 교재 상시 블록
 def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
+    import ibl_v2_adapters
+    current_registry=ibl_v2_adapters.load_registry()
+    monkeypatch.setattr(ibl_v2_adapters,'load_registry',lambda *a,**k:current_registry)
     """상시 블록은 **어휘 층**만 싣는다 — `always_on=1` (2026-09-07 사용자 판정).
 
     옛 판은 이름 붙은 것 전부를 사용 횟수 순으로 실었다. 그 결과가 사흘에 38건·34건 실행 0 이었다.
@@ -452,7 +456,8 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
     conn.execute("ALTER TABLE ibl_examples ADD COLUMN signature TEXT")
     conn.execute("ALTER TABLE ibl_examples ADD COLUMN always_on INTEGER DEFAULT 0")
-    rows = [("어디 있는지 모르는 것을 읽어야 할 때", "; ".join(PHRASE), 5, 1, "찾아고치기", "패턴 루트 파일 앞 뒤", 1),
+    current = '#!ibl edition=2\n[def:찾아고치기]($패턴,$루트,$파일,$앞,$뒤){[self:grep]{pattern:$패턴,root_path:$루트}\n[self:read]{path:$파일}\nreturn [self:edit]{path:$파일,old_string:$앞,new_string:$뒤}}'
+    rows = [("어디 있는지 모르는 것을 읽어야 할 때", current, 5, 1, "찾아고치기", "패턴 루트 파일 앞 뒤", 1),
             ("등록만 — 소개 안 함", '[sense:search]{query: "${q}"}; [table:take]{n: 3}', 9, 0, "등록만이름", "q", 0),
             ("낱말", PIPE, 9, 0, "", None, 0)]
     for intent, code, sc, fc, alias, sig, on in rows:
@@ -472,13 +477,15 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     from test_function_support import import_memory
     with sqlite3.connect(tmp_path / "data/ibl_usage.db") as imported:
         import_memory(imported)
+    (tmp_path/'data/idioms').mkdir()
+    (tmp_path/'data/idioms/curated.json').write_text(json.dumps({'idioms':[{'name':'찾아고치기','body':current,'always_on':True}]}))
     block = A.idioms_map(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
     assert "[개발]" in block
     # 항목 = 호출 · 언제 · 골격 (뜻 한 줄이 아니라 **부를 조건**)
-    assert '- [fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block
+    assert '판본 2 (execute_ibl edition:2): [fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block
     assert "  언제: 어디 있는지 모르는 것을 읽어야 할 때" in block
-    assert "  골격: self:grep → self:read → self:edit" in block
+    assert "  골격: def → self:grep → self:read → self:edit" in block
     assert "· 사용 6회" not in block  # 옛 행의 통계를 새 판본 실적으로 옮기지 않는다.
     # 층 — 등록만 인 것도, 이름 없는 낱말도 싣지 않는다
     assert "등록만이름" not in block and PIPE not in block

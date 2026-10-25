@@ -202,18 +202,6 @@ def test_context_options_reject_misuse(options):
     assert filtered(ROWS, **options)["success"] is False
 
 
-def test_named_idiom_runs_real_parser_filter_and_preserves_diagnostics():
-    sys.path.insert(0, str(ROOT / "scripts"))
-    from idiom_experiment_worker import run_trial
-    from idiom_experiment_cases import decoded
-    code = '$문단=' + json.dumps(ROWS, ensure_ascii=False) + '; '
-    code += '[fn:본문에서찾기]{목록:$문단,패턴:"hit",문맥:1,개수:2}'
-    out = run_trial(code, "dedup")
-    assert out["result"]["success"], out
-    final = decoded(out["result"]["final_result"])
-    assert final["items"] == [ROWS[i] for i in (0, 1, 2, 4)]
-    assert final["match_info"]["omitted_matches"] == 1
-    assert out["observed"]["brief"] == 0
 
 
 def test_handler_and_ibl_declared_modes(crawler, monkeypatch):

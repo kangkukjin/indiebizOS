@@ -28,8 +28,8 @@ def known(code, ident=1):
 ])
 def test_known_programs_cost_zero_model_calls(monkeypatch, tmp_path, source, existing):
     rag, saved, asked, runs = _arm(monkeypatch, tmp_path, [])
-    monkeypatch.setattr(value, 'known_examples', lambda db: [known(existing)])
-    assert not rag.distill_experience('반복 요청', [call(source)], 0)
+    monkeypatch.setattr(value, 'known_examples', lambda db: [known('#!ibl edition=2\n' + existing)])
+    assert not rag.distill_experience('반복 요청', [call('#!ibl edition=2\n'+source)], 0)
     assert saved == asked == runs == []
 
 
@@ -158,9 +158,9 @@ def test_db_migration_provenance_and_component_retention(monkeypatch, tmp_path):
     monkeypatch.setattr(mod.IBLUsageDB, '_index_single', lambda *args: None)
     monkeypatch.setattr(mod.IBLUsageDB, 'is_semantic_available', lambda self: False)
     db = mod.IBLUsageDB()
-    seed = db.add_example('기존 씨앗', '[self:time]', source='manual_seed')
-    first = db.add_example('부분 절차', SEARCH, source='distilled_component', provenance={'task_id': 'fixture'})
-    second = db.add_example('부분 절차 2', CRAWL, source='distilled_component')
+    seed = db.add_example('기존 씨앗', '#!ibl edition=2\n[self:time]', source='manual_seed')
+    first = db.add_example('부분 절차', '#!ibl edition=2\n'+SEARCH, source='distilled_component', provenance={'task_id': 'fixture'})
+    second = db.add_example('부분 절차 2', '#!ibl edition=2\n'+CRAWL, source='distilled_component')
     with db._get_connection() as conn:
         assert json.loads(conn.execute('SELECT provenance FROM ibl_examples WHERE id=?', (first,)).fetchone()[0]) == {'task_id': 'fixture'}
     stats = db.consolidate_distilled(cap=1)

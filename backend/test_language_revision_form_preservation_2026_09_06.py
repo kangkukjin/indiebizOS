@@ -90,13 +90,13 @@ def test_binding_items_path_on_table_form_derives(tmp_path):
 
 
 def test_engine_end_to_end_select_then_read(tmp_path):
-    f = tmp_path / "one.md"
-    f.write_text("hello", encoding="utf-8")
-    from system_tools import _execute_ibl_unified
-    code = ('$a = [table:take]{items: [{"name": "one", "path": "%s"}], n: 1} >> [table:select]{columns: ["name", "path"]}\n'
-            '$b = [self:read]{path: "${a.items.0.path}"}' % str(f))
-    out = json.loads(_execute_ibl_unified({"code": code}, str(tmp_path), agent_id="probe"))
-    assert out.get("success") is True, out.get("error")
+    f=tmp_path/'one.md';f.write_text('hello')
+    from ibl_v2_entry import handle_request
+    code='$a=$rows >> [table:select]{columns:["name","path"]}\nreturn [self:read]{path:$a[0].path}'
+    out=handle_request({'code':code,'edition':2,'inputs':{'rows':[{'name':'one','path':str(f)}]}},str(tmp_path))
+    assert out['success'],out
+    assert out['value']['text']=='hello'
+
 
 
 if __name__ == "__main__":

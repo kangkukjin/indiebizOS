@@ -1,0 +1,11 @@
+#!ibl edition=2
+[def:의미로본문찾기]($목록,$질문,$개수,$문맥=0) {
+  $원본 = $목록
+  $준비 = [self:script]{id:"판정관용구",args:{op:"prepare",mode:"body",source:$원본,origin:$원본,question:$질문,limit:$개수,context:$문맥}}
+  $판정 = $준비.items >> [table:each]{mode:"flat_map"} {
+    $답 = [table:judge]{items:$it.items,instruction:$준비.instruction}
+    return $답.items
+  }
+  $선별 = [self:script]{id:"판정관용구",args:{op:"select",mode:"body",prepared:$준비.plan,judged:{items:$판정,error_count:0},limit:$개수,context:$문맥}}
+  return $선별.selection
+}

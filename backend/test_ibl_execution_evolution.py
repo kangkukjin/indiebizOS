@@ -121,36 +121,6 @@ def test_empty_envelope_and_non_identifier_key(script):
     assert out["items"] == [{"user.payload": {"items": []}}]
 
 
-def test_actual_stdin_through_function_each_and_spill(script, tmp_path, monkeypatch):
-    import ibl_engine
-    import workflow_engine
-    from ibl_parser import parse_with_vars
-    from common import spill
-    monkeypatch.setattr(spill, "_root", lambda: str(tmp_path / "spill"))
-    original = ibl_engine._execute_ibl_impl
-    def leaf(ti, project, agent_id=None):
-        if ti.get("_node") == "self" and ti.get("action") == "script":
-            return script.op_run(ti["params"])
-        return original(ti, project, agent_id)
-    monkeypatch.setattr(ibl_engine, "_execute_ibl_impl", leaf)
-    code = '''[def:전달]{
-      [self:script]{op:"run",id:"echo",args:{op:"accept"},input_as:"data"}
-    }
-    [table:each]{items:[{id:"a",payload:{x:1},user:"reader"}],limit:1,collect:true} {
-      [table:take]{items:[$it],n:1} >> [fn:전달]{}
-    }'''
-    result = workflow_engine.execute_pipeline(parse_with_vars(code)[0], str(tmp_path))
-    assert result["success"], result
-    body = result["final_result"]
-    if isinstance(body, str):
-        body = json.loads(body)
-    assert body["items"][0]["data"]["items"] == [{"id": "a", "payload": {"x": 1}, "user": "reader"}]
-    envelope = {"items": [{"text": "가" * 70000}], "partial": True, "errors": ["fixture"]}
-    ref = spill.spill_write(json.dumps(envelope, ensure_ascii=False))
-    from workflow_binding import _auto_inject_prev
-    ti = _auto_inject_prev({"params": {"id": "echo", "input_as": "data"}}, ref)
-    out = script.op_run(ti["params"])
-    assert out["items"][0]["data"] == envelope
 
 
 def test_expired_spill_and_non_run_input_as_fail_before_execution(script, monkeypatch):

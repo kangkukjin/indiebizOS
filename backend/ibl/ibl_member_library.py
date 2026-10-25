@@ -18,7 +18,13 @@ def library(source):
 def definitions():
     from ibl_edition import source_edition
     from ibl_v2_parser import parse
-    sources = [s for s in _source.get() if source_edition(s) == 2]
+    from ibl_edition import require_current
+    sources = list(_source.get())
+    for item in sources:
+        try:
+            require_current(item, source_edition(item))
+        except ValueError as exc:
+            raise Fault('EDITION_RETIRED', str(exc), kind='compile') from exc
     source = "\n".join(sources)
     statements = parse(source).data["statements"]
     if any(s.kind != "def" for s in statements):
@@ -30,39 +36,3 @@ def definitions():
             raise Fault("DUPLICATE_FUNCTION", f"중복 함수: {name}", kind="compile")
         out[name] = source[s.start:s.end]
     return out
-
-
-def adapters(project_path, agent_id):
-    from ibl_edition import source_edition
-    from ibl_parser import parse
-    from ibl_engine import execute_ibl
-    from ibl_v2_adapters import Adapter
-    from ibl_v2_compat import plain_arguments, decode_function_result
-    from workflow_contract import pipe_input_param
-    source = "\n".join(s for s in _source.get() if source_edition(s) == 1)
-    if not source:
-        return {}
-    statements = parse(source)
-    if any(not s.get("_def") for s in statements):
-        raise Fault("MEMBER_LIBRARY", "저장 문장에는 함수 정의만 허용됩니다.", kind="compile")
-    result = {}
-    for s in statements:
-        name = s["name"]
-        contract = {"version": 1, "params": {p: "Unknown" for p in s.get("signature", [])},
-                    "result": "Unknown", "effects": ["unknown"],
-                    "compatibility": "legacy-function-value/1", "implementation_fingerprint": digest(source),
-                    "adapter": {"protocol": "legacy-envelope", "value_path": "/final_result"}}
-        receiver = pipe_input_param(s.get("body"))
-        from ibl_v2_compat import forwarding_contract
-        contract.update(forwarding_contract(s.get("body", []), contract["params"], receiver))
-        if receiver in contract["params"]:
-            contract["pipe_input"] = receiver
-        def run(runtime, args, name=name, contract=contract):
-            # Parse only the pinned definitions and a literal function name.
-            # Arguments enter as values, never interpolated into source.
-            call = parse(source + "\n[fn:" + name + "]{}")[-1]
-            call["params"] = plain_arguments(args)
-            raw = execute_ibl(call, project_path, agent_id=agent_id)
-            return decode_function_result(raw)
-        result["fn:" + name] = Adapter(contract, run)
-    return result

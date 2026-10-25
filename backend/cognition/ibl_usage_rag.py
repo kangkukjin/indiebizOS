@@ -19,7 +19,6 @@ from typing import List, Optional, Set
 logger = logging.getLogger(__name__)
 
 
-from legacy_example_projection import current_form_of_legacy_call  # noqa: E402,F401
 
 
 def _top_for_execution(results):
@@ -139,8 +138,7 @@ def _current_phrase_rows(db, results):
         if not alias or alias in seen:
             continue
         seen.add(alias)
-        row = (db.find_phrase_by_alias(alias, edition=2)
-               or db.find_phrase_by_alias(alias, edition=1))
+        row = db.find_phrase_by_alias(alias, edition=2)
         if not row:
             continue  # The definition was removed after the cached search.
         selected = copy.copy(ex)
@@ -285,7 +283,7 @@ class IBLUsageRAG:
             return [], []
         hits = [r for r in _own_only(res or []) if r.score >= self.PHRASE_MIN_SCORE]
         # 코퍼스 심사 판정 hold·quarantine 인 이름은 제시하지 않는다(2026-09-26) — 용례 채널의 exclusion_reason 과
-        # 같은 원장이다. 판본 1(legacy_source)은 다리로 부를 수 있으니 이름은 남긴다.
+        # 구판 원문은 역사로만 남으며 현재 함수 호출을 공급하지 않는다.
         from corpus_policy import callable_exclusion_reason
         hits = [r for r in hits if not callable_exclusion_reason(r)]
         fresh = [r for r in hits if (getattr(r, "alias", "") or "") not in exposed]
@@ -329,7 +327,7 @@ class IBLUsageRAG:
                      "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
                      "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:이름]($인자){...} 로 고쳐 부른다. "
                      "여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
-        note += " edition은 저장 원문의 실행 의미다. projected_from=1 표시는 옛 판본의 호출 한 줄을 현재 검사기로 확인해 현재 문장으로 옮긴 용례다(인자 값은 예시). 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하라. 회상 줄의 `→ 반환`이 반환 계약이고 `⟨관측: …⟩`은 실제 실행이 돌려준 필드다. 그 줄에 반환이 없을 때만 describe로 확인하라."
+        note += " edition은 저장 원문의 실행 의미다. 판본 1 원문은 역사 조회용이며 자동 변환하거나 실행하지 않는다. 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하라. 회상 줄의 `→ 반환`이 반환 계약이고 `⟨관측: …⟩`은 실제 실행이 돌려준 필드다. 그 줄에 반환이 없을 때만 describe로 확인하라."
         from ibl_edition import source_edition
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
@@ -343,11 +341,7 @@ class IBLUsageRAG:
                 attrs += f' applicability="{_xml_attr(condition)}"'
             from corpus_policy import exclusion_reason
             reason = exclusion_reason(ex)
-            projected = current_form_of_legacy_call(ex.ibl_code) if reason == 'legacy_source' else None
-            if projected:
-                attrs += ' edition="2" projected_from="1"'
-            else:
-                attrs += f' edition="{source_edition(ex.ibl_code)}"'
+            attrs += f' edition="{source_edition(ex.ibl_code)}"'
             if getattr(ex, 'source', '') == 'distilled_component':
                 attrs += ' scope="component"'
             # success_rate >= 0 이면 시도 이력 있음(0.0=전부 실패 포함) → 표시.
@@ -362,8 +356,8 @@ class IBLUsageRAG:
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             from hippo_tree import reference_needs_expansion
-            body = projected or ex.ibl_code
-            if not projected and (reason or reference_needs_expansion(body)):
+            body = ex.ibl_code
+            if reason or reference_needs_expansion(body):
                 attrs += f' id="{ex.id}" body_omitted="true"'
                 if reason:
                     attrs += f' authoring_excluded="{_xml_attr(reason)}"'
@@ -375,6 +369,9 @@ class IBLUsageRAG:
                         '원문 속 수치·결론은 재검증한다.')
             lines.append(f'  <ref {attrs}><![CDATA[{_cdata(body)}]]></ref>')
         for ex in phrases:
+            from corpus_policy import callable_exclusion_reason
+            if callable_exclusion_reason(ex):
+                continue
             alias = (getattr(ex, "alias", "") or "").strip()
             if not alias:
                 continue                      # 이름 없는 것은 부를 수 없다 — 본문을 실으면 베끼기가 된다
@@ -412,8 +409,7 @@ class IBLUsageRAG:
             else:
                 body = (f"[fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
                         f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
-            # Stored body edition and the taught call edition are different.
-            # Current calls to an old function use its explicit Record bridge.
+            # Only current definitions become executable name references.
             attrs += ' call_edition="2"'
             body = "#!ibl edition=2\n" + body
             lines.append(f'  <ref {attrs}><![CDATA[\n{_cdata(body)}\n]]></ref>')

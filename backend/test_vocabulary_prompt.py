@@ -16,6 +16,8 @@ def prompt_box(box, monkeypatch):
     import ibl_access
     import ibl_registry
     import ibl_routing
+    import tool_loader
+    monkeypatch.setattr(tool_loader, "build_tool_package_map", lambda: {n:n for n in ("base","awake","asleep")})
     import prompt_builder
 
     actions = {name: {"tool": name, "router": "handler", "description": f"{name} 전용 설명"}
@@ -99,7 +101,12 @@ def test_idiom_cache_tracks_activation_without_local_invalidation(prompt_box):
             intent TEXT, ibl_code TEXT, success_count INTEGER, fail_count INTEGER,
             topic TEXT, alias TEXT, always_on INTEGER, created_at TEXT)""")
         conn.execute("INSERT INTO ibl_examples VALUES (?, ?, 3, 0, '검증', '잠드는관용구', 1, '2026')",
-                     ("검증용", '[sense:awake]{}; [sense:awake]{}'))
+                     ("검증용", '#!ibl edition=2\n[def:잠드는관용구](){[sense:awake]{}; [sense:awake]{}}'))
+    import json
+    teaching = prompt_box / 'data/idioms/curated.json'
+    teaching.parent.mkdir(exist_ok=True)
+    teaching.write_text(json.dumps({'idioms':[{'name':'잠드는관용구','always_on':True,
+        'body':'#!ibl edition=2\n[def:잠드는관용구](){[sense:awake]{}; [sense:awake]{}}'}]}))
     before_file = db.read_bytes()
     from test_function_support import import_memory
     with sqlite3.connect(prompt_box / 'data/ibl_usage.db') as fixture_db:

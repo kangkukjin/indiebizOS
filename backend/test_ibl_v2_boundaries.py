@@ -69,8 +69,8 @@ def test_file_map_collect_preserves_failure_coverage(tmp_path):
     assert rows[0].value['text']=='a'
 
 
-def test_edition_entry_conflict_fail_closed_and_v1_unaffected():
-    assert handle_request({'code':'[self:time]{}'}) is None
+def test_edition_entry_requires_explicit_current_edition():
+    assert 'EDITION_REQUIRED' in str(handle_request({'code':'[self:time]{}'}))
     r=handle_request({'code':'#!ibl edition=2\nreturn 1','edition':1})
     assert not r['success'] and not r['executed']
     assert handle_request({'code':'return 1','edition':2,'files':['x']})['status']=='invalid'
@@ -150,9 +150,10 @@ def test_workflow_save_load_and_legacy_id_guard(tmp_path,monkeypatch):
     assert definitions()=={'double':'[def:double]($x){return $x*2}'}
     assert action('run',{'edition':2,'name':'double','params':{'x':4}},'.')['value']==8
     assert not execute_workflow('double')['success']
-    workflow_store.save_workflow({'id':'old','name':'old','steps':['[self:time]{}']})
-    assert not action('save',{'edition':2,'workflow_id':'old','code':'[def:old](){return 1}'},'.')['success']
-    assert workflow_store.get_workflow('old').get('edition',1)==1
+    import pytest
+    with pytest.raises(ValueError, match='EDITION_RETIRED'):
+        workflow_store.save_workflow({'id':'old','name':'old','steps':['[self:time]{}']})
+    assert workflow_store.get_workflow('old') is None
 
 
 def test_member_and_remote_script_protocol_rejected_before_exchange(monkeypatch):

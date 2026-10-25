@@ -162,10 +162,9 @@ def forward_to_phone(phone_url: str, node: str, action: str, params: dict,
     if params.get("_ibl_edition") == 2:
         from ibl_remote_call import forward
         return forward(phone_url, node, action, params, agent_id, "phone")
-    code = f"[{node}:{action}]"
+    code = f"#!ibl edition=2\n[{node}:{action}]"
     if params:
-        from ibl_code_ir import transport_params
-        code += json.dumps(transport_params(params), ensure_ascii=False)
+        code += json.dumps(params, ensure_ascii=False)
     payload = {"code": code}
     if agent_id:
         payload["agent_id"] = agent_id
@@ -254,10 +253,9 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,
         return {"error": f"[{node}:{action}]은 집 PC(맥)에서 실행되는 액션인데 위임 대상이 "
                          "설정돼 있지 않습니다. (집 PC가 켜져 있고 INDIEBIZ_MAC_URL 이 설정돼 있어야 합니다.)",
                 "mac_unreachable": True}
-    code = f"[{node}:{action}]"
+    code = f"#!ibl edition=2\n[{node}:{action}]"
     if params:
-        from ibl_code_ir import transport_params
-        code += json.dumps(transport_params(params), ensure_ascii=False)
+        code += json.dumps(params, ensure_ascii=False)
     payload = {"code": code, "project_id": "앱모드"}
     if agent_id:
         payload["agent_id"] = agent_id  # 호출자 신원 전파 — 맥서 폰-자아로 기록(미동봉 시만 system_ai 폴백)
@@ -501,14 +499,11 @@ from ibl_routing import (
     _execute_launcher_command, search_guide,
     _route_driver,
 )
-from ibl_executors import (
-    _load_nodes,
-    _output_gui, extract_path_from_prev,
-    _output_open, _output_clipboard, _output_download,
-    _goal_list, _goal_status, _goal_kill,
-    _log_attempt, _get_attempts, _summarize_attempts,
-    _execute_goal_block, _execute_condition, _execute_case,
-    _evaluate_sense_condition, _get_sense_value,
+from ibl_exec_output import (
+    _output_gui, extract_path_from_prev, _output_open, _output_clipboard, _output_download,
+)
+from ibl_exec_goal import (
+    _goal_list, _goal_status, _goal_kill, _log_attempt, _get_attempts, _summarize_attempts,
 )
 
 
@@ -678,122 +673,12 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                      f"[self:workflow]에 저장해 id 로 참조하세요.",
         }
 
-    # 함수(언어 개정 2026-09-05): [def:] 정의는 실행 시 무동작(정의 신고), [fn:이름] 호출은 닫힌 스코프의 몸통 실행.
-    if tool_input.get("_def"):
-        _sig = list(tool_input.get("signature") or [])
-        return {"success": True, "defined": tool_input.get("name"), "signature": _sig,
-                "todo": bool(tool_input.get("todo")),
-                "message": f"[def: {tool_input.get('name')}] 정의됨" + (" (todo — 몸통 없음)" if tool_input.get("todo") else
-                           f" — 시그니처 {', '.join('$' + n for n in _sig) or '(인자 없음)'}")}
-    if tool_input.get("_node") == "fn":
-        from ibl_control_blocks import _execute_fn
-        return _execute_fn(tool_input, project_path, agent_id)
-
-    # Phase 26: Goal Block 실행
-    if tool_input.get("_goal"):
-        return _execute_goal_block(tool_input, project_path, agent_id)
-
-    # Phase 26: 조건문 (if/else) 실행
-    if tool_input.get("_condition"):
-        return _execute_condition(tool_input, project_path, agent_id)
-
-    # Phase 26: Case문 실행
-    if tool_input.get("_case"):
-        return _execute_case(tool_input, project_path, agent_id)
-
-    # 프로그램급 IBL M3·M4: try/catch/finally · repeat (2026-08-22)
-    if tool_input.get("_try"):
-        from ibl_control_blocks import _execute_try
-        return _execute_try(tool_input, project_path, agent_id)
-    if tool_input.get("_repeat"):
-        from ibl_control_blocks import _execute_repeat
-        return _execute_repeat(tool_input, project_path, agent_id)
-    if tool_input.get("_assign"):
-        from ibl_control_blocks import _execute_assign
-        _asg = _execute_assign(tool_input, project_path, agent_id)
-        if tool_input.get("_literal_head") and isinstance(_asg, dict) and _asg.get("success", True):
-            # 값 구성 리터럴 파이프 머리(언어 개정 2026-09-09) — 이름에 묶지 않고 값을 곧장 통화로
-            return _as_currency(_asg.get("value"))
-        return _asg
-    if tool_input.get("_var_emit"):
-        # `$변수 >> [액션]` 파이프 머리 (언어 개정 2026-08-27, 사용자 판정) — 변수의 저장
-        # 결과를 통화로 방출. 값은 실행기가 _vars 로 실어 준 _var_values(원 step 결과
-        # 그대로)에서 읽는다 — 파이프의 _to_prev_currency 가 종전 규약대로 나른다.
-        # `.path` 가 붙으면 원형 추출(치환 의미론 개정과 같은 눈 — 문자열화하지 않는다).
-        _name = tool_input.get("name")
-        _vals = tool_input.get("_var_values") or {}
-        _vpath = (tool_input.get("path") or "").lstrip(".")
-        # 끝의 `?` = 옵셔널 방출(언어 개정 2026-08-28) — 분기 미진입으로 아직 기록 전인
-        # 변수를 오류 대신 **빈 통화**로 흘린다(조건 프로그램의 연쇄 오류 차단). 결측은
-        # 침묵이 아니라 note 로 말한다. 물음표 없는 참조는 종전대로 정직 오류(V49-1).
-        _opt = _vpath.endswith("?")
-        if _opt:
-            _vpath = _vpath[:-1]
-        if _name not in _vals:
-            _ve = (tool_input.get("_var_errors") or {}).get(_name)   # 할당 문장이 죽은 경우(2026-09-05)
-            if _opt:
-                return {"success": True, "items": [], "rows_in": 0,
-                        "note": (f"${_name} 미기록(분기 미진입 등) — 옵셔널 참조라 빈 통화로 흘립니다."
-                                 if not _ve else
-                                 f"${_name} 의 할당 문장(step {_ve['step']})이 실패해 값이 없습니다 — "
-                                 f"옵셔널 참조라 빈 통화로 흘립니다. 원인: {_ve['error']}")}
-            if _ve:
-                return {"success": False, "_derived_from": _name,
-                        "error": f"변수 ${_name} 의 할당 문장(step {_ve['step']})이 실패해 값이 없습니다 — "
-                                 f"원인: {_ve['error']}"}
-            if tool_input.get("_free"):
-                # 함수 몸의 시그니처 슬롯인데 호출자가 안 채웠다(언어 개정 2026-09-07).
-                # "아직 기록 전" 이라 말하면 고칠 자리를 몸에서 찾게 된다 — 고칠 자리는 호출문이다.
-                return {"success": False, "params_missing": [_name],
-                        "error": f"인자 누락: ${_name} — 이 이름은 함수 몸의 시그니처 슬롯입니다. "
-                                 f"부를 때 {{{_name}: 값}} 으로 통화를 넘기세요."}
-            # 파서가 미할당은 걸렀으므로 여기는 "아직 기록 전"(안 탄 분기 등) — V49-1 규약.
-            return {"success": False,
-                    "error": f"변수 ${_name} 이(가) 아직 값을 기록하지 않았습니다 — "
-                             f"할당 문장이 실행되지 않은 경로(분기 미진입 등)입니다."}
-        if _vpath:
-            from workflow_binding import _extract_result_field_obj
-            try:
-                _out = _extract_result_field_obj(_vals[_name], _vpath + ("?" if _opt else ""))
-            except ValueError as e:
-                return {"success": False, "error": str(e)}
-            return _as_currency(_out)
-        if tool_input.get("_free"):
-            # 호출자가 인자로 실은 값은 **step 결과 봉투가 아니라 평범한 값**(items 리스트·
-            # 산문·스칼라)이다 — 통화로 감싸 흘린다(언어 개정 2026-09-07).
-            return _as_currency(_vals[_name])
-        from common.currency import value_result_payload
-        _is_value, _value = value_result_payload(_vals[_name])
-        if _is_value:
-            return _as_currency(_value)
-        # 통짜 `$변수` 는 저장된 step 결과 원형 그대로 — 감싸지 않는다. 변수가 병렬
-        # (`$p = [A] & [B]`) 결과를 들고 있으면 그 맨 list 가 곧 "입력 여러 개" 계약이다.
-        return _vals[_name]
-
-    # 병렬(`[A] & [B]`)도 여기서 받는다 — 소유자(파이프 실행기)에게 위임 (30회차 B30-1).
-    # 파서는 병렬을 `{"_parallel": [...]}` 한 step 으로 낸다. 최상위 경로는 파이프 실행기가
-    # 잡아 주지만, **블록 몸**(`[try]{[A] & [B]}`·`[repeat:]{…}`)은 _run_body 가 dict 몸을
-    # 이 함수로 곧장 넘기므로 여기 분기가 없으면 아래 `action` 검사까지 떨어져
-    # "action 파라미터가 필요합니다"(node·action=null)라는 **엉뚱한 문구**로 죽었다.
-    # 이 파일 위쪽 형제들(_goal/_condition/_case/_try/_repeat/_assign)이 이미 같은 이유로
-    # 여기 모여 있다 — system_tools_ibl.py 가 "전 표면 블록 실행 봉쇄 부류"라 이름 붙인 그것.
-    # 병렬 의미론은 복제하지 않고 execute_pipeline 에 그대로 맡긴다(러너는 하나).
-    if tool_input.get("_parallel"):
-        from workflow_engine import execute_pipeline
-        _env = execute_pipeline([tool_input], project_path,
-                                context={"_prev_result": tool_input.get("_prev_result")}
-                                if tool_input.get("_prev_result") else None,
-                                agent_id=agent_id)
-        if isinstance(_env, dict) and not _env.get("success", True):
-            return {"success": False, "error": _env.get("error") or "병렬 실행 실패",
-                    "results": _env.get("results")}
-        _fr = _env.get("final_result") if isinstance(_env, dict) else _env
-        if isinstance(_fr, str):
-            try:
-                _fr = json.loads(_fr)
-            except Exception:
-                pass
-        return _fr
+    # This router accepts leaf calls only. Native control flow belongs to Runtime.
+    if (tool_input.get('_node') == 'fn' or any(key in tool_input for key in
+            ('_def', '_goal', '_condition', '_case', '_try', '_repeat', '_assign',
+             '_var_emit', '_parallel', '_fallback_chain'))):
+        from ibl_edition import retired_result
+        return retired_result()
 
     # (2026-08-05 감사 D11) 옛 노드타입 모드(_node_type: info/store/exec/output) 디스패치 삭제 —
     # 그 노드들은 레지스트리에 없어 정상 경로의 "알 수 없는 노드" 오류로 수렴한다.
@@ -859,8 +744,10 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     _deny = _requires_gate(node, action, action_config, _resolve_op(action_config, _raw_params), _raw_params)
     if _deny:
         return _deny
-    from ibl_code_ir import receive_params
-    params = receive_params(tool_input.get("params", {}))
+    params = tool_input.get("params", {})
+    if "_ibl_ir" in params:
+        from ibl_edition import retired_result
+        return retired_result()
     # 중첩 깊이를 params 에 실어 라우터가 볼 수 있게 한다 (_prev_result 와 같은 관습 —
     # '_' 접두 키는 파라미터 어휘 가드에서 제외된다). [table:each] 가 하위 문장에 깊이를
     # 이어 붙이는 데 쓴다.

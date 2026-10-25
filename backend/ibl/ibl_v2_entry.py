@@ -1,6 +1,5 @@
-"""Public edition 2 boundary. Kept separate from the legacy execution path."""
+"""Public boundary for the sole executable IBL edition."""
 from ibl_v2_ir import Fault, projection
-from ibl_v2_parser import edition_of
 
 
 from repair_execution_scope import scoped as repair_scoped
@@ -29,16 +28,15 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
 def _handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
     source = request.get("code") or request.get("pipeline") or ""
     try:
-        if edition_of(source, request.get("edition")) != 2:
-            if request.get('budget') is not None:
-                raise Fault("EDITION_ARGUMENT", "budget은 판본 2에서만 사용할 수 있습니다.", kind="compile")
-            if request.get("function_refs") is not None:
-                raise Fault("EDITION_ARGUMENT", "function_refs는 판본 2 요청에서만 사용할 수 있습니다.", kind="compile")
-            if request.get("inputs") is not None:
-                raise Fault("EDITION_ARGUMENT", "inputs는 판본 2에서만 사용할 수 있습니다.", kind="compile")
-            if request.get("declared_inputs") is not None:
-                raise Fault("EDITION_ARGUMENT", "declared_inputs는 판본 2에서만 사용할 수 있습니다.", kind="compile")
-            return None
+        from ibl_edition import require_current
+        try:
+            require_current(source, request.get("edition"))
+            if request.get('steps') is not None:
+                raise ValueError('EDITION_RETIRED: steps 배열 실행은 종료됐습니다.')
+            if isinstance(request.get('resume'), dict) and set(request['resume']) & {'vars_ref', 'prev_ref', 'from_step'}:
+                raise ValueError('EDITION_RETIRED: 구판 진행 위치로 재개할 수 없습니다.')
+        except ValueError as exc:
+            raise Fault(str(exc).split(':', 1)[0], str(exc), kind='compile') from exc
         incompatible = [k for k in ("files", "files_from") if request.get(k) is not None]
         if incompatible:
             raise Fault("EDITION_ARGUMENT", "판본 2는 명시 inputs를 사용합니다. 지원하지 않는 인자: " + ", ".join(incompatible), kind="compile")
@@ -80,6 +78,10 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                 if refs is not None and refs != recorded:
                     raise Fault('RESUME_CHANGED', '함수 참조가 원 실행과 다릅니다.', kind='protocol')
                 refs = recorded
+        if reuse:
+            reuse_refs = recorded_function_refs(journal_root(project_path), {'run_id': reuse['run_id']})
+            if any(ref.get('edition') == 1 for ref in (reuse_refs or [])):
+                raise Fault('EDITION_RETIRED', '구판 함수에 의존한 실행은 재사용할 수 없습니다.', kind='compile')
         if is_member() and refs:
             raise Fault('MEMBER_LIBRARY', '회원은 동봉한 함수 정의만 사용할 수 있습니다.', kind='permission')
         if plan is None or refs is not None:
@@ -166,7 +168,7 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
 
 def capabilities():
     from ibl_v2_runtime import Budget
-    return {"editions": [1, 2], "default_edition": 1, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1", "ibl-value/2"],
+    return {"editions": [2], "default_edition": 2, "explicit_edition_required": True, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1", "ibl-value/2"],
             "v2_resume": True, "resume_protocols": ["ibl-resume/1"], "v2_remote_script": True, "call_protocols": ["ibl-script-call/1"],
             "v2_budget": {"steps": 100000, "rows": 10000, "seconds": None, "depth": 64,
                           "request_max": dict(Budget.REQUEST_LIMITS)}}

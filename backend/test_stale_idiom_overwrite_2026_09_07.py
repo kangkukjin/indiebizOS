@@ -67,9 +67,9 @@ class _FakeDB:
     def _index_single(self, example_id, intent, ibl_code):
         self.indexed.append((example_id, intent, ibl_code))
 
-    def find_phrase_by_alias(self, name):
+    def find_phrase_by_alias(self, name, edition=1):
         from ibl_name_search import find_phrase_by_alias
-        return find_phrase_by_alias(self, name)
+        return find_phrase_by_alias(self, name, edition=edition)
 
     def add(self, alias, code, *, topic=TOPIC, ok=0, fail=0, bypass=0, intent="뜻"):
         with self._get_connection() as conn:
@@ -82,7 +82,8 @@ class _FakeDB:
             if ok or fail:
                 from function_store import resolve, reference
                 from capability_history import record_function_call
-                ref = reference(resolve(alias, edition=1))
+                from ibl_edition import source_edition
+                ref = reference(resolve(alias, edition=source_edition(code), include_inactive=True))
                 for i in range(ok + fail):
                     record_function_call(ref, f"fixture-{alias}-{i}", "call", success=i < ok,
                                          dependency_revision="fixture", source_complete=True)
@@ -113,11 +114,6 @@ def _no_shape_cache():
 
 
 # ─────────────────────────────────────────────────────── A1~A3 덮어쓸 자리 판정
-def test_a1_같은_이름_실행0_은_덮어쓸_자리다(db):
-    from ibl_idiom import stale_unrun_row
-    rid = db.add("유튜브팁보고서작성", OLD)
-    hit = stale_unrun_row("유튜브팁보고서작성", db, NEW, TOPIC)
-    assert hit and int(hit["id"]) == rid
 
 
 def test_a1_같은_골격이면_덮을_것이_없다(db):
@@ -126,16 +122,6 @@ def test_a1_같은_골격이면_덮을_것이_없다(db):
     assert stale_unrun_row("유튜브팁보고서작성", db, NEW, TOPIC) is None
 
 
-def test_a1_한_번이라도_돈_정의는_덮지_않는다(db):
-    from ibl_idiom import stale_unrun_row, unique_fn_name
-    db.add("유튜브팁보고서작성", OLD, ok=1)
-    assert stale_unrun_row("유튜브팁보고서작성", db, NEW, TOPIC) is None
-    # 옛 길(이름2)이 그대로 살아 있다 — 실행 이력은 남의 것이라 지우지 않는다
-    assert unique_fn_name("유튜브팁보고서작성", db, NEW) == "유튜브팁보고서작성2"
-    # 실패만 있어도 이력이다(첫 호출이 죽었다는 사실 자체가 정보)
-    db2_id = db.add("실패한이름", OLD, fail=2)
-    assert db.row(db2_id)["fail_count"] == 2
-    assert stale_unrun_row("실패한이름", db, NEW, TOPIC) is None
 
 
 def test_a2_다른_가지의_같은_이름은_남의_함수다(db):
@@ -148,53 +134,11 @@ def monkeypatch_programs(fn_recognizer, programs):
     fn_recognizer._aliased_programs = lambda: list(programs)
 
 
-def test_a3_이름이_달라도_변형이면_그_이름을_물려받는다(db):
-    """정의를 열어 값·문장을 고쳐 돌린 모양 — 여기서 새 이름을 지으면 낡은 쪽이 이름을 붙든 채 남는다."""
-    from ibl_idiom import stale_unrun_row
-    변형 = OLD + '\n$선정 = $정보 >> [table:ai]{op: "judge", criteria: "${기준}"}'
-    rid = db.add("유튜브팁보고서작성", OLD)
-    import fn_recognizer
-    r = db.row(rid)
-    # variant_of 의 후보는 실 원장(싱글톤)에서 온다 — 시험에선 그 자리만 임시 원장으로 바꾼다
-    monkeypatch_programs(fn_recognizer, [(r["alias"], r["ibl_code"])])
-    hit = stale_unrun_row("반성기가지은아주다른이름", db, 변형, TOPIC)
-    assert hit and int(hit["id"]) == rid and hit["alias"] == "유튜브팁보고서작성"
 
 
-def test_a3b_문장_서명이_달라진_개정은_회상_우회로_잡는다(db, monkeypatch):
-    """09-07 유튜브팁의 실물 드리프트(검색 2→3갈래)는 문장 서명이 달라져 variant_of 가 못 잡는다 —
-    그 자리를 '회상됐는데 부르지 않은 이름' 이 받는다. 관계 없는 턴은 머리 열이 안 겹쳐 걸리지 않는다."""
-    from ibl_idiom import stale_unrun_row
-    import fn_recognizer
-    rid = db.add("유튜브팁보고서작성", OLD)
-    monkeypatch_programs(fn_recognizer, [(db.row(rid)["alias"], OLD)])
-    assert fn_recognizer.variant_of(NEW) is None                      # ② 는 여기 못 닿는다(정직하게 기록)
-    db.alias_of_code = lambda code: "유튜브팁보고서작성" if code == OLD else ""
-    monkeypatch.setattr("thread_context.get_phrase_recall", lambda: [OLD], raising=False)
-    calls = NEW.split("\n")
-    hit = stale_unrun_row("아주다른이름", db, NEW, TOPIC, calls)
-    assert hit and int(hit["id"]) == rid
-    # 이름으로 불렀으면 우회가 아니다
-    assert stale_unrun_row("아주다른이름", db, NEW, TOPIC,
-                           calls + ['[fn:유튜브팁보고서작성]{주제: "AI"}']) is None
-    # 관계 없는 턴은 잡지 않는다
-    assert stale_unrun_row("아주다른이름", db, NEW, TOPIC, ['[self:time]{}']) is None
 
 
 # ─────────────────────────────────────────────────────────── A4 실제 덮어쓰기
-def test_a4_덮어쓰기는_id를_지키고_본문을_간다(db):
-    from ibl_name_search import replace_example
-    rid = db.add("유튜브팁보고서작성", OLD, bypass=3)
-    out = replace_example(db, rid, intent="새 뜻", ibl_code=NEW, nodes="sense,table",
-                          topic=TOPIC, alias="유튜브팁보고서작성", returns="items")
-    assert out == rid                                    # 새 행이 아니다 — 이름·회상 귀속이 끊기지 않는다
-    r = db.row(rid)
-    assert r["ibl_code"] == NEW and r["intent"] == "새 뜻" and r["returns"] == "items"
-    assert r["bypass_count"] == 0                        # 거부당한 것은 옛 본문 — 새 본문은 아직 거부당한 적 없다
-    assert r["success_count"] == 0 and r["fail_count"] == 0   # 새 본문도 아직 안 돌았다(거짓 이력을 만들지 않는다)
-    assert db.indexed and db.indexed[-1][0] == rid       # 벡터 색인도 새 본문으로
-    with db._get_connection() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM ibl_examples").fetchone()[0] == 1
 
 
 def test_a4_파싱_불가_본문은_덮지_않는다(db):

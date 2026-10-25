@@ -168,11 +168,13 @@ def test_member_rejects_unpublished_description_before_execution(tmp_path, monke
     assert result["success"] is False and not (tmp_path / "no.txt").exists()
 
 
-def test_describe_preserves_legacy_plain_text(tmp_path):
+def test_describe_does_not_execute_retired_source(tmp_path):
     (tmp_path / "plain.txt").write_text("007")
     result = request(tmp_path, edition=1, code='[self:read]{path:"plain.txt"}', describe=["self:read"])
-    assert result["result"] == "007"
-    assert result["descriptions"][0]["action"] == "self:read"
+    assert not result['success'] and not result.get('executed')
+    assert 'EDITION_RETIRED' in str(result)
+    assert (tmp_path / "plain.txt").read_text() == '007'
+
 
 
 def test_member_combined_call_keeps_member_execution_context(tmp_path):

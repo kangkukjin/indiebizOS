@@ -18,7 +18,7 @@ def _run(code, tmp_path, task, channel="agent", **extra):
     with actor_context(agent_id="probe", task_id=task):
         set_call_channel(channel, override=True)
         try:
-            return json.loads(_execute_ibl_unified({"code": code, **extra}, str(tmp_path), agent_id="probe"))
+            return json.loads(_execute_ibl_unified({"code": code, "edition":2, **extra}, str(tmp_path), agent_id="probe"))
         finally:
             clear_call_channel()
 
@@ -34,31 +34,27 @@ ITEMS = json.dumps(ROWS, ensure_ascii=False)
 
 
 def _fr(out):
-    fr = out.get("final_result")
+    fr = out.get("value", out.get("final_result"))
     return json.loads(fr) if isinstance(fr, str) else fr
 
 
-def test_large_items_are_previewed_but_turn_var_keeps_full(tmp_path, task):
-    out = _run(f'$표 = [table:take]{{items: {ITEMS}, n: 60}} >> [table:take]{{n: 60}}', tmp_path, task)
-    assert out.get("success") is True
-    fr = _fr(out)
-    assert len(fr["items"]) == 8 and fr["_preview"]["total"] == 60 and "단지" in fr["_preview"]["columns"]
-    assert "read_result" in fr["_preview"]["note"] and out["_preview"]["of"] == "final_result"
-    # 전체는 턴 변수에 — 좁혀 요구하면 그만큼 온다
-    nxt = _run('$표 >> [table:take]{n: 3}', tmp_path, task)
-    assert len(_fr(nxt)["items"]) == 3 and "_preview" not in _fr(nxt)
-    # 60행 전부는 앞 작업의 증거를 읽는다. 실행을 반복할 필요가 없다.
-    page = _run('', tmp_path, task, read_result={"id": out["result_ref"]["id"], "limit": 24000})
-    raw = page["text"]
-    while page["next_offset"] is not None:
-        page = _run('', tmp_path, task, read_result={"id": out["result_ref"]["id"], "offset": page["next_offset"], "limit": 24000})
-        raw += page["text"]
-    assert _fr(json.loads(raw))["items"] == ROWS
+def test_large_items_use_explicit_reference_without_reexecution(tmp_path, task):
+    out = _run('return $rows',tmp_path,task,inputs={'rows':ROWS})
+    assert out['success'] and 'result_ref' in out
+    ref=out['result_ref']
+    next_value=_run('$입력 >> [table:take]{n:3}',tmp_path,task,inputs=ref['input_args'])
+    assert next_value['success'] and next_value['value']==ROWS[:3]
+    page=_run('',tmp_path,task,read_result={'id':ref['id'],'limit':24000})
+    raw=page['text']
+    while page['next_offset'] is not None:
+        page=_run('',tmp_path,task,read_result={'id':ref['id'],'offset':page['next_offset'],'limit':24000})
+        raw+=page['text']
+    assert json.loads(raw)['value']==ROWS
 
 
 def test_small_results_are_untouched(tmp_path, task):
     out = _run('[table:take]{items: [{"a": 1}, {"a": 2}, {"a": 3}], n: 3}', tmp_path, task)
-    assert "_preview" not in out and len(out.get("items") or _fr(out)["items"]) == 3
+    assert "_preview" not in out and len(_fr(out)) == 3
 
 
 def test_filtered_paragraphs_reach_model_without_another_read(tmp_path, task):
@@ -66,23 +62,26 @@ def test_filtered_paragraphs_reach_model_without_another_read(tmp_path, task):
     rows = [{"type": "paragraph", "text": f"본문 {i}: " + "확인된 내용 " * 6} for i in range(50)]
     items = json.dumps(rows, ensure_ascii=False)
     out = _run(f'$본문 = [table:take]{{items: {items}, n: 50}}\n'
-               '$본문 >> [table:filter]{where: "type == paragraph"} >> [table:take]{n: 50}',
+               '$본문 >> [table:filter]{where:($r)=>$r.type=="paragraph"} >> [table:take]{n: 50}',
                tmp_path, task)
     assert out["success"], out
     assert 4000 < len(json.dumps(_fr(out), ensure_ascii=False)) < 6000
     delivered = json.loads(provider_tool_result(json.dumps(out, ensure_ascii=False)))
-    assert _fr(delivered)["items"] == rows and "_preview" not in _fr(delivered)
+    assert _fr(delivered) == rows and "_preview" not in _fr(delivered)
 
 
 def test_single_step_large_result_is_previewed(tmp_path, task):
-    out = _run(f'[table:take]{{items: {ITEMS}, n: 60}}', tmp_path, task)
-    items = out.get("items")
-    assert isinstance(items, list) and len(items) == 8 and out["_preview"]["total"] == 60
+    rows = ROWS * 100
+    out = _run('return $rows', tmp_path, task, inputs={'rows': rows})
+    assert out['success'], out
+    items = out.get('value')
+    assert isinstance(items, list) and len(items) < len(rows) and out['_preview']
+    assert out['result_ref']['id']
 
 
 def test_app_surface_receives_full(tmp_path, task):
     out = _run(f'[table:take]{{items: {ITEMS}, n: 60}} >> [table:take]{{n: 60}}', tmp_path, task, channel="app")
-    assert len(_fr(out)["items"]) == 60 and "_preview" not in out
+    assert len(_fr(out)) == 60 and "_preview" not in out
 
 
 def test_long_prose_is_capped_and_short_prose_is_not():

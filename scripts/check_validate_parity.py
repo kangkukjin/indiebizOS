@@ -129,37 +129,27 @@ def _all_actions_known(steps) -> bool:
 
 
 def check(items, strict: bool, verbose: bool, typecheck: bool = False):
-    bad = []
-    seen = 0
+    """Compare the current compiler with the public validation boundary."""
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from function_library import definitions
+    from ibl_edition import source_edition
+    registry, library = load_registry(), definitions()
+    seen, bad = 0, []
     for label, code in items:
-        try:
-            parse(code)
-        except IBLSyntaxError:
-            continue                      # 문법 오류는 검수의 몫이 아니다(파서가 이미 정직 거절)
-        except Exception:
-            continue
+        if label.startswith('corpus#') and source_edition(code) != 2:
+            continue  # Historical source is neither executable nor an authoring fixture.
+        plan = compile_program(code, registry, definitions=library)
+        if plan.issues:
+            continue  # A real compile error is not a false red.
         seen += 1
         try:
-            v = validate_code(code)
-        except Exception as e:
-            bad.append((label, code, f"검수기 예외: {e}"))
+            result = validate_code('#!ibl edition=2\n'+code)
+        except Exception as exc:
+            bad.append((label, code, f'검수기 예외: {exc}'))
             continue
-        if typecheck:
-            # --typecheck: 실행되는 문장(fixture·교재·코퍼스)에 정적 통화 검사 error 가 나면 규칙이 틀린 것이다.
-            _tc = v.get("typecheck") or {}
-            _errs = [i for i in (_tc.get("issues") or []) if i.get("severity") == "error"]
-            if _errs and _all_actions_known(v.get("steps")):
-                bad.append((label, code, "typecheck: " + " / ".join(
-                    f"문장{i.get('statement')} step{i.get('step')} [{i.get('at')}] {i.get('message')}" for i in _errs[:3])))
-        if v.get("valid"):
-            continue
-        if v.get("syntax_error"):
-            continue
-        if not _all_actions_known(v.get("steps")):
-            continue                      # 사전에 없는 액션 — 참인 빨강
-        errs = [f"[{s.get('node')}:{s.get('action')}] {s.get('error')}"
-                for s in (v.get("steps") or []) if s.get("valid") is False]
-        bad.append((label, code, " / ".join(errs) or "(오류문 없음)"))
+        if not result.get('valid'):
+            bad.append((label, code, str(result.get('issues') or result.get('error'))))
     return seen, bad
 
 
@@ -169,9 +159,10 @@ def main() -> int:
     verbose = "--verbose" in args
     typecheck = "--typecheck" in args
     if "--self-test" in args:
-        s, b = check([("self", "$q = [self:time]\n$q >> [table:take]{n: 1}"),
-                      ("self2", "$a = [self:time]\n$b = [self:time]\n$a & $b >> [table:union]")],
-                     True, True)
+        s, b = check([('self', '$q=[1,2]\n$q >> [table:take]{n:1}'),
+                      ('self2', '$a=[1]\n$b=[2]\nreturn $a + $b')], True, True)
+        if s != 2:
+            raise RuntimeError('parity self-test fixtures did not compile')
         print(f"[validate-parity] self-test: {s} checked, {len(b)} false-red")
         return 1 if b else 0
     total_bad = []

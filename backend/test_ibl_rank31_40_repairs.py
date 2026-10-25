@@ -41,7 +41,7 @@ def trigger(tmp_path, monkeypatch):
 
 def test_trigger_type_change_removes_old_timer(trigger):
     mod, calls = trigger
-    old = mod._create_trigger('fixture', {'cron': '0 9 * * *', 'pipeline': '[self:time]{}'})['trigger']
+    old = mod._create_trigger('fixture', {'cron': '0 9 * * *', 'pipeline': '#!ibl edition=2\n[self:time]{}'})['trigger']
     calls.clear()
     config = {'channel_type': 'email', 'repeat': 'sender-specific-value'}
     result = mod._update_trigger(old['id'], {'type': 'channel', 'config': config})
@@ -58,14 +58,14 @@ def test_trigger_type_change_removes_old_timer(trigger):
 def test_trigger_preserves_non_schedule_config(trigger, kind):
     mod, calls = trigger
     config = {'repeat': 'message-rule', 'time': 'source-field', 'path': '/fixture'}
-    result = mod._create_trigger('fixture', {'type': kind, 'config': config, 'pipeline': '[self:time]{}'})
+    result = mod._create_trigger('fixture', {'type': kind, 'config': config, 'pipeline': '#!ibl edition=2\n[self:time]{}'})
     assert result['trigger']['config'] == config
     assert not calls
 
 
 def test_trigger_invalid_type_does_not_save(trigger):
     mod, calls = trigger
-    result = mod._create_trigger('bad', {'type': 'scheduel', 'pipeline': '[self:time]{}'})
+    result = mod._create_trigger('bad', {'type': 'scheduel', 'pipeline': '#!ibl edition=2\n[self:time]{}'})
     assert result.get('error')
     assert mod.load_triggers()['triggers'] == []
 
@@ -349,19 +349,19 @@ def test_channel_trigger_project_and_result_history(tmp_path, monkeypatch, resul
     import channel_poller as mod
     import calendar_actions
     import trigger_engine
-    import workflow_engine
+    import ibl_scheduled
     poller = object.__new__(mod.ChannelPoller)
     poller._log = lambda *a: None
     runs, calls = [], []
     monkeypatch.setattr(mod, 'threading', SimpleNamespace(Thread=lambda target, **k: SimpleNamespace(start=target)))
     monkeypatch.setattr(calendar_actions.CalendarActionsMixin, '_owner_run_path', staticmethod(lambda pid: str(tmp_path / pid)))
-    monkeypatch.setattr(workflow_engine, 'execute_pipeline', lambda steps, path, **k: runs.append((path, k)) or result)
+    monkeypatch.setattr(ibl_scheduled, 'execute_scheduled', lambda source, path, agent, **k: runs.append((path, k)) or result)
     monkeypatch.setattr(trigger_engine, 'add_history', lambda *a, **k: calls.append((a, k)))
     mod.ChannelPoller._fire_channel_pipeline.__wrapped__(poller, {
-        'id': 'fixture', 'name': 'fixture', 'pipeline': '[self:time]{}', 'project_id': 'project'
+        'id': 'fixture', 'name': 'fixture', 'pipeline': '#!ibl edition=2\n[self:time]{}', 'project_id': 'project'
     }, 'gmail', 'sender', 'subject', 'body')
     assert runs[0][0] == str(tmp_path / 'project')
-    assert 'subject' in runs[0][1]['context']['_prev_result']
+    assert 'subject' in runs[0][1]['inputs']['message']
     assert len(calls) == 1 and calls[0][0][2] is expected
     if not expected:
         assert calls[0][1]['error']
@@ -403,10 +403,10 @@ def test_channel_trigger_dry_run_uses_type_specific_config(monkeypatch):
     from api_ibl import validate_code
     import trigger_engine
     payload = '[self:trigger]{op:"create", type:"channel", name:"fixture", config:{repeat:"source-rule"}, do:"[self:time]{}"}'
-    assert validate_code(payload)['valid']
+    assert validate_code('#!ibl edition=2\n' + payload)['valid']
     monkeypatch.setattr(trigger_engine, 'load_triggers', lambda: {'triggers': [
-        {'id': 'fixture', 'type': 'channel'}]})
-    assert validate_code('[self:trigger]{op:"update", id:"fixture", config:{repeat:"source-rule"}}')['valid']
+        {'id': 'fixture', 'type': 'channel', 'pipeline': '#!ibl edition=2\n[self:time]{}'}]})
+    assert validate_code('#!ibl edition=2\n[self:trigger]{op:"update", id:"fixture", config:{repeat:"source-rule"}}')['valid']
 
 
 def test_failed_patch_verification_reaches_restart_controller(tmp_path, monkeypatch):

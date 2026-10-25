@@ -28,17 +28,8 @@ def final(r):
 
 
 # ── ① 리터럴 파이프 머리 ────────────────────────────────────────────────────────
-def test_literal_list_head_flows_as_items_currency():
-    r = execute('[{a: 1, b: "x >> y"}, {a: 2, b: "z"}] >> [table:select]{columns: ["a"]}')
-    assert r["success"], r.get("error")
-    assert final(r)["items"] == [{"a": 1}, {"a": 2}]        # 문자열 속 `>>` 는 구조가 아니다
 
 
-def test_literal_head_with_variable_reference_writes_json():
-    r = execute('$최신 = [self:file_find]{path:"drafts",pattern:"*.md"} >> [table:sort]{by:"mtime",desc:true} >> [table:take]{n:1}\n'
-                '[{path: "${최신.items.0.path}", start_line: 11}] >> [self:write]{path:"outputs/result.json", format:"json"}')
-    assert r["success"], r.get("error")
-    assert "1행" in final(r)["message"]
 
 
 def test_literal_head_parses_as_nameless_assign_and_actions_are_untouched():
@@ -59,12 +50,6 @@ def test_bare_literal_statement_without_pipe_is_still_rejected():
 
 
 # ── ② 폴백 괄호 가지의 변수 머리 ───────────────────────────────────────────────
-def test_fallback_branch_may_start_with_a_variable_pipe():
-    r = execute('$q = [self:read]{path:"locations.json"}\n'
-                '($q >> [table:filter]{where: "줄번호 > 100"}) ?? ($q >> [table:take]{n: 1})')
-    assert r["success"], r.get("error")
-    out = final(r)
-    assert out["items"] == [{"파일": "notes/01.txt", "줄번호": 4}] and out.get("_fallback_used") == 2
 
 
 def test_fallback_bare_variable_is_still_not_an_attempt():
@@ -83,55 +68,16 @@ def test_fallback_container_carries_branch_vars_like_parallel():
 
 
 # ── ③ rename 후보 집합 ─────────────────────────────────────────────────────────
-def test_rename_candidate_set_keeps_the_one_present_column():
-    r = execute('[self:read]{path:"locations.json"} >> [table:rename]{map: {파일: "file", path: "file", 줄번호: "line", lineno: "line"}}')
-    assert r["success"], r.get("error")
-    assert final(r)["items"][0] == {"file": "notes/01.txt", "line": 4}
 
 
-def test_rename_candidate_set_with_no_present_column_is_an_honest_error():
-    r = execute('[self:read]{path:"locations.json"} >> [table:rename]{map: {p: "file", path: "file"}}')
-    assert not r["success"] and "후보" in r["error"] and "하나도 없습니다" in r["error"]
 
 
-def test_rename_two_present_columns_to_one_name_still_refused_and_single_absent_still_refused():
-    r = execute('[self:read]{path:"locations.json"} >> [table:rename]{map: {파일: "k", 줄번호: "k"}}')
-    assert not r["success"] and "함께 접힙니다" in r["error"]
-    r = execute('[self:read]{path:"locations.json"} >> [table:rename]{map: {없는열: "file"}}')
-    assert not r["success"] and "없는열" in r["error"]
 
 
-@pytest.mark.parametrize('code', [
-    '[{파일:"a.txt"}] >> [table:rename]{map:{파일:"file",path:"file"}}',
-    '[table:rename]{items:[{파일:"a.txt"}],map:{파일:"file",path:"file"}}',
-    '[{파일:"a.txt",extra:1}] >> [table:select]{columns:["파일"]} '
-    '>> [table:rename]{columns:{파일:"file",path:"file"}}',
-    '$q=[{path:"a.txt"}]; ($q >> [table:filter]{where:"path eq missing"} '
-    '>> [table:rename]{map:{파일:"file",path:"file"}}) '
-    '?? ($q >> [table:rename]{map:{파일:"file",path:"file"}})',
-])
-def test_rename_candidate_compositions_validate_and_execute(code):
-    from api_ibl import validate_code
-    code += ' >> [table:select]{columns:["file"]}'
-    checked = validate_code(code)
-    assert checked['valid'] and checked['typecheck']['ok'], checked
-    assert not checked['typecheck']['issues'], checked
-    r = execute(code)
-    assert r['success'], r
-    assert final(r)['items'] == [{'file': 'a.txt'}]
 
 
-@pytest.mark.parametrize('head', ['[] >> ', '[{}] >> '])
-def test_rename_unobserved_candidate_columns_do_not_reject_empty_input(head):
-    r = execute(head + '[table:rename]{map:{파일:"file",path:"file"}}')
-    assert r['success'], r
-    assert final(r)['items'] == ([] if head.startswith('[]') else [{}])
 
 
-def test_rename_atomic_swap_keeps_both_values():
-    r = execute('[{a:1,b:2}] >> [table:rename]{map:{a:"b",b:"a"}}')
-    assert r['success'], r
-    assert final(r)['items'] == [{'b': 1, 'a': 2}]
 
 
 if __name__ == "__main__":

@@ -47,7 +47,9 @@ def _as_workflow(row):
     data.update({k: row[k] for k in ('name', 'edition', 'function_id', 'revision', 'description') if k in row})
     data['id'] = next(iter(row.get('legacy_ids') or []), row['function_id'])
     data['state'] = row.get('state')
-    data['runnable'] = row.get('state') == 'active' and not row.get('problem')
+    data['runnable'] = row.get('edition') == 2 and row.get('state') == 'active' and not row.get('problem')
+    if row.get('edition') == 1:
+        data['problem'] = 'EDITION_RETIRED: 판본 1 기록은 열람만 가능합니다.'
     if row.get('problem'):
         data['problem'] = row['problem']
     if row.get('edition') == 2:
@@ -178,7 +180,8 @@ def save_workflow(workflow: dict) -> str:
     wf_id = workflow.get('id') or _slugify(workflow.get('name', 'workflow'))
     _workflow_path(wf_id)  # Retain identifier validation for legacy callers.
     old = get_workflow(wf_id)
-    edition = workflow.get('edition', 1)
+    from ibl_edition import require_current
+    edition = require_current(workflow.get('code'), workflow.get('edition'))
     if old and old.get('edition', 1) != edition:
         raise ValueError('다른 언어 판본은 새 ID로 저장하세요.')
     source = workflow.get('code', '') if edition == 2 else ''

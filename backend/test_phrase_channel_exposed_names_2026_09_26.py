@@ -13,7 +13,7 @@ import ibl_usage_rag as R
 
 
 def _row(alias, score):
-    return SimpleNamespace(alias=alias, score=score, ibl_code=f"[def:{alias}](){{}}", intent=alias,
+    return SimpleNamespace(alias=alias, score=score, ibl_code=f"#!ibl edition=2\n[def:{alias}](){{return 1}}", intent=alias,
                            source="manual_seed", success_rate=-1, avg_ms=-1, avg_tokens=-1,
                            signature="", returns="", category="phrase", topic="", id=alias)
 

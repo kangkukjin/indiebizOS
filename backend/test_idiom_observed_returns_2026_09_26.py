@@ -89,7 +89,7 @@ def test_idiom_rows_carry_observation_in_returns_column(tmp_path):
     out = _current_idiom_rows(conn, rows, "COALESCE(returns,'')", "signature")
     by = {r[5]: r for r in out}
     assert len(by["보고"]) == 8 and by["보고"][6] == "Record⟨관측: status·report⟩"
-    assert by["옛것"][6] == "Record"  # 판본 1 은 봉투 전체
+    assert "옛것" not in by  # 구판은 역사로 보존하며 현재 호출 교재에서 제외한다.
 
 
 def test_call_line_shows_observation_to_the_model():

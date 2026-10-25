@@ -6,8 +6,10 @@ from pathlib import Path
 import boot_paths  # noqa: F401
 import pytest
 
-from api_ibl import validate_code
-from test_idiom_composition_2026_09_07 import run  # noqa: F401
+from api_ibl import validate_request_code
+
+def validate_code(code):
+    return validate_request_code(code, edition=2)
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDE = ROOT / 'data/guides/ibl_composition.md'
@@ -286,25 +288,24 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
     ('[table:brief]{items:[{text:"x"}],instruction:"요약"}', False, True),
 ])
 def test_validation_sees_function_effects_without_execution(body, side_effect, ai_call):
-    out = validate_code('[def:f]{' + body + '}; [fn:f]{}')
+    out = validate_code('[def:f](){' + body + '}; [fn:f]{}')
     assert out['valid'], out
     assert out['has_side_effect'] is side_effect
     assert out['has_ai_call'] is ai_call
 
 
 def test_validation_resolves_function_inside_each_and_catches_unknown_action():
-    code = '[def:f]{[table:take]{items:[{id:1}],n:1}}; [table:each]{items:[{}]}{[fn:f]{}}'
+    code = '[def:f](){[table:take]{items:[{id:1}],n:1}}; [table:each]{items:[{}]}{[fn:f]{}}'
     out = validate_code(code)
     assert out['valid'] and not out['has_side_effect'], out
     assert not validate_code(code.replace('table:take', 'table:no_such_action'))['valid']
-    assert not validate_code('[def:f]{todo};[fn:f]{}')['valid']
-    recursive = validate_code('[def:f]{[fn:f]{}};[fn:f]{}')
-    assert recursive['has_side_effect']
-    assert any('상한' in row['effect'] for row in recursive['steps'])
+    assert not validate_code('[def:f](){todo};[fn:f]{}')['valid']
+    recursive = validate_code('[def:f](){[fn:f]{}};[fn:f]{}')
+    assert recursive['preflight']['unknowns'] or not recursive['valid']
 
 
 def test_validation_does_not_invent_effects_for_unused_definition():
-    out = validate_code('[def:unused]{[self:write]{path:"never-written.txt",content:"x"}};'
+    out = validate_code('[def:unused](){[self:write]{path:"never-written.txt",content:"x"}};'
                         '[table:take]{items:[],n:1}')
     assert out['valid'] and not out['has_side_effect'], out
 
@@ -314,22 +315,18 @@ def test_validation_does_not_invent_effects_for_unused_definition():
     ['[table:take]{items:[],n:1}'],
     [{'_node': 'table', 'action': 'take', 'params': {'items': [], 'n': 1}}],
 ])
-def test_validation_accepts_saved_workflow_body_shapes(monkeypatch, raw):
+def test_validation_rejects_old_saved_workflow_body_shapes(monkeypatch, raw):
     import workflow_store
     monkeypatch.setattr(workflow_store, 'get_workflow', lambda name: {'steps': raw})
     out = validate_code('[fn:saved]{}')
-    assert out['valid'] and not out['has_side_effect'], out
+    assert not out['valid'] and not out['executed']
 
 
-def test_validation_honors_workflow_before_idiom(run, monkeypatch):
+def test_validation_uses_catalog_only(monkeypatch):
     import workflow_store
-    monkeypatch.setattr(workflow_store, 'get_workflow',
-                        lambda name: {'problem': '몸통 손상'})
-    out = validate_code('[fn:정렬해추리기]{}')
-    assert not out['valid']
-    assert '몸통 손상' in out['steps'][0]['error']
-    monkeypatch.setattr(workflow_store, 'get_workflow', lambda name: None)
-    assert not validate_code('[fn:no_such_function]{}')['valid']
+    monkeypatch.setattr(workflow_store, 'get_workflow', lambda name: pytest.fail('old definition fallback'))
+    out = validate_code('[fn:no_such_function]{}')
+    assert not out['valid'] and not out['executed']
 
 
 @pytest.mark.parametrize('all_failed', [False, True])

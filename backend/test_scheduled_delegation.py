@@ -39,7 +39,7 @@ def scheduled(tmp_path, monkeypatch):
     host = CalendarActionsMixin()
     host._log = lambda text: None
     task = {"id": "evt_test", "title": "[IBL] forage_resurvey_fixture",
-            "action_params": {"trigger_id": "trg_test", "pipeline":
+            "action_params": {"trigger_id": "trg_test", "edition":2, "pipeline":
                 '[others:delegate]{scope:"cross", agent_id:"fixture/조사자", '
                 'message:"프로젝트 폴더를 재조사해 기억을 갱신해라"}'}}
     yield SimpleNamespace(host=host, task=task, notices=notices,
@@ -70,7 +70,7 @@ def test_ownerless_schedule_delegates_with_durable_parent(scheduled):
 
 @pytest.mark.parametrize("failure", [False, True])
 def test_non_delegating_pipeline_preserves_context_without_system_task(scheduled, monkeypatch, failure):
-    import workflow_engine
+    import ibl_v2_entry
     tc.set_current_task_id("caller_task")
     tc.set_current_agent_id("caller")
     caller_origin = "user"
@@ -86,7 +86,7 @@ def test_non_delegating_pipeline_preserves_context_without_system_task(scheduled
             raise RuntimeError("pipeline failed")
         return {"success": True}
 
-    monkeypatch.setattr(workflow_engine, "execute_pipeline", execute)
+    monkeypatch.setattr(ibl_v2_entry, "handle_request", execute)
     result = scheduled.host._action_run_pipeline(scheduled.task)
     assert result["success"] is (not failure)
     assert not memory.MEMORY_DB_PATH.exists()

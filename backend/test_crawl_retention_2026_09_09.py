@@ -155,12 +155,12 @@ def test_saved_full_document_flows_through_ibl_and_next_turn_call(crawl, monkeyp
     crawler, calls = crawl
     _wire_crawler_to_ibl(crawler, monkeypatch)
     task = 'crawl-retained-fixture'
-    shown = _run('$원문=[sense:crawl]{url:"' + URL + '",max_length:500}', tmp_path, task)
+    shown = _run('[sense:crawl]{url:"' + URL + '",max_length:500}', tmp_path, task)
     assert shown.get('_preview') or _fr(shown).get('_preview')
     # 같은 턴의 다음 호출: 모델에 안 보인 끝 문단을 저장 변수에서 골라 온다.
-    tail = _run('$원문 >> [table:filter]{where:"text contains \'tail-proof\'"}', tmp_path, task)
+    tail = _run('$입력.items >> [table:filter]{where:($r)=>contains($r.text,"tail-proof")}', tmp_path, task, inputs=shown['result_ref']['input_args'])
     final = _fr(tail) or tail
-    assert 'tail-proof' in json.dumps(final['items'], ensure_ascii=False)
+    assert 'tail-proof' in json.dumps(final, ensure_ascii=False)
     assert calls == [URL]
     app = _run('[sense:crawl]{url:"' + URL + '"}', tmp_path, task, channel='app')
     assert 'tail-proof' in json.dumps(app, ensure_ascii=False) and not app.get('_preview')
@@ -187,44 +187,42 @@ def test_first_crawl_displays_60k_past_eighth_paragraph_and_reaches_providers(
         crawl, monkeypatch, tmp_path, paragraphs, assigned):
     import importlib
     import mcp_server
-    crawler, calls = crawl
-    text = '\n\n'.join(f'{i:02d}:' + '가' * 1997 for i in range(paragraphs)) + 'tail-proof'
-    monkeypatch.setattr(crawler, '_parse_html', lambda html, url: ('제목', text))
-    _wire_crawler_to_ibl(crawler, monkeypatch)
-    task = f'crawl-first-60k-{paragraphs}-{assigned}'
-    code = ('$원문=' if assigned else '') + '[sense:crawl]{url:"' + URL + '"}'
-    out = _run(code, tmp_path, task)
-    final = _fr(out) or out
-    saved = json.loads(Path(final['source_ref']['path']).read_text())
-    shown_text = ''.join(row['text'] for row in final['items'])
-    full_text = ''.join(row['text'] for row in saved['items'])
-    assert shown_text == full_text[:60000]
-    assert len(final['items']) > 8 and saved['text'] == text
-    assert 'text' not in final  # 중복 본문을 전송하지 않는다
-    if len(full_text) > 60000:
-        assert final['_preview']['total'] == len(saved['items'])
-        assert final['_preview']['shown'] == len(final['items'])
-        assert len(final['items']) < len(saved['items'])  # 빈 문단 껍데기도 보내지 않는다
-    else:
-        assert final['items'] == saved['items'] and 'tail-proof' in shown_text
-    raw = json.dumps(out, ensure_ascii=False)
-    assert len(raw) > 16000
-    for module, name in [('anthropic', 'AnthropicProvider'), ('openai', 'OpenAIProvider'),
-                         ('ollama', 'OllamaProvider')]:
-        cls = getattr(importlib.import_module(f'providers.{module}'), name)
-        assert cls._truncate_tool_result(object.__new__(cls), raw) == raw
-    monkeypatch.delenv('MAX_MCP_OUTPUT_TOKENS', raising=False)
-    assert mcp_server._trim_for_agent(raw, actions=1) == raw
-    # 명시한 호스트 제한은 여전히 지키고 저장 원문 참조를 남긴다.
-    monkeypatch.setenv('MAX_MCP_OUTPUT_TOKENS', '10000')
-    limited_raw = mcp_server._trim_for_agent(raw, actions=1)
-    limited = json.loads(limited_raw)
-    assert len(limited_raw) <= 16000 and limited['_trimmed']
-    assert (_fr(limited) or limited)['source_ref'] == final['source_ref']
-    if assigned:
-        tail = _run('$원문 >> [table:filter]{where:"text contains \'tail-proof\'"}', tmp_path, task)
-        assert 'tail-proof' in json.dumps((_fr(tail) or tail)['items'], ensure_ascii=False)
-    assert calls == [URL]
+    crawler,calls=crawl
+    text='\n\n'.join(f'{i:02d}:'+'가'*1997 for i in range(paragraphs))+'tail-proof'
+    monkeypatch.setattr(crawler,'_parse_html',lambda html,url:('제목',text))
+    _wire_crawler_to_ibl(crawler,monkeypatch)
+    task=f'crawl-current-{paragraphs}-{assigned}'
+    call='[sense:crawl]{url:"'+URL+'"}'
+    code=('$원문='+call+'\nreturn $원문') if assigned else call
+    out=_run(code,tmp_path,task)
+    assert out['success'],out
+    reference=out['result_ref']
+    args={'id':reference['id'],'limit':60000}
+    raw_full=''
+    while True:
+        page=_run('',tmp_path,task,read_result=args)
+        raw_full+=page['text']
+        if page['next_offset'] is None:
+            break
+        args['offset']=page['next_offset']
+    full=json.loads(raw_full)['value']
+    saved=json.loads(Path(full['source_ref']['path']).read_text())
+    assert saved['text']==text and 'tail-proof' in json.dumps(full,ensure_ascii=False)
+    assert len(saved['items'])>8
+    raw=json.dumps(out,ensure_ascii=False)
+    for module,name in [('anthropic','AnthropicProvider'),('openai','OpenAIProvider'),('ollama','OllamaProvider')]:
+        cls=getattr(importlib.import_module(f'providers.{module}'),name)
+        delivered=json.loads(cls._truncate_tool_result(object.__new__(cls),raw))
+        assert delivered['result_ref']['id']==reference['id']
+    monkeypatch.setenv('MAX_MCP_OUTPUT_TOKENS','10000')
+    limited_raw=mcp_server._trim_for_agent(raw,actions=1)
+    assert len(limited_raw)<=16000
+    assert json.loads(limited_raw)['result_ref']['id']==reference['id']
+    tail=_run('$입력.items >> [table:filter]{where:($r)=>contains($r.text,"tail-proof")}',
+              tmp_path,task,inputs=reference['input_args'])
+    assert tail['success'] and 'tail-proof' in json.dumps(tail['value'],ensure_ascii=False)
+    assert calls==[URL]
+
 
 
 def test_long_single_row_and_nested_body_are_bounded_without_mutating_source():
@@ -239,19 +237,6 @@ def test_long_single_row_and_nested_body_are_bounded_without_mutating_source():
     assert truncation_evidence(shown)['truncations'] == raw['truncations']
 
 
-def test_idiom_reads_tail_in_same_program_without_refetch(crawl):
-    sys.path.insert(0, str(ROOT / 'scripts'))
-    from idiom_experiment_worker import run_trial
-    from idiom_experiment_cases import decoded
-    crawler, calls = crawl
-    code = ('$목록=[{url:"' + URL + '"},{url:"' + URL + '"}]; '
-            '[fn:주소마다읽기]{목록:$목록,개수:2} '
-            '>> [table:filter]{where:"text contains \'tail-proof\'"}')
-    trial = run_trial(code, 'dedup', source_results={URL: lambda p: crawler.crawl_website(**p)})
-    assert trial['result']['success'], trial
-    final = decoded(trial['result']['final_result'])
-    assert 'tail-proof' in json.dumps(final['items']) and calls == [URL]
-    assert not truncation_evidence(trial['result'])
 
 
 def test_pdf_extraction_preserves_long_text(crawl, monkeypatch):

@@ -162,7 +162,7 @@ def corpus_entries(root: Path, include_db: bool = False):
     오탐이 폭증한다 — 어휘/op 생존처럼 오탐이 없는 검사만 켠다.
     반환: (출처이름, 항목) 이터레이터. 없으면 아무것도 내지 않는다."""
     import json
-    from corpus_policy import review_exclusion_reason
+    from corpus_policy import exclusion_reason
     tdir = root / "data" / "training"
     if tdir.is_dir():
         for f in sorted(tdir.glob("*.json")):
@@ -173,7 +173,7 @@ def corpus_entries(root: Path, include_db: bool = False):
             if not isinstance(entries, list):
                 continue
             for e in entries:
-                if isinstance(e, dict) and not review_exclusion_reason(e):
+                if isinstance(e, dict) and not exclusion_reason(e):
                     yield f.name, e
     if not include_db:
         return
@@ -194,5 +194,5 @@ def corpus_entries(root: Path, include_db: bool = False):
     for intent, code, alias, category, provenance in rows:
         entry = {"intent": intent, "ibl_code": code, "alias": alias, "category": category,
                  "provenance": provenance}
-        if not review_exclusion_reason(entry):
+        if not exclusion_reason(entry):
             yield "ibl_usage.db", entry

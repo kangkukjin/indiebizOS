@@ -9,7 +9,7 @@ from member_app_actions import compile_apps, resolve
 
 
 def test_all_nested_actions_options_and_root_actions_have_ids():
-    source = [{'id': 'documents', 'inputs': [{'key': 'path'}],
+    source = [{'id': 'documents', 'edition':2, 'inputs': [{'key': 'path'}],
         'action': '[self:list]{path: $path}',
         'view': [{'item_click': {'action': '[self:read]{path: $item.path}'},
                   'button': {'action': '[self:write]{path: $item.path, content: $text}'},
@@ -35,7 +35,7 @@ def test_all_nested_actions_options_and_root_actions_have_ids():
 
 
 def test_numeric_inputs_cannot_become_code():
-    _, registry = compile_apps([{'id': 'test', 'action': '[sense:search]{query: $query, limit: $limit}'}])
+    _, registry = compile_apps([{'id': 'test', 'edition':2, 'action': '[sense:search]{query: $query, limit: $limit}'}])
     assert resolve(registry, 'test', {'query': 'q', 'limit': 3})['inputs'] == {'query': 'q', 'limit': 3}
     for raw in ['1} >> [self:config]{}', '{}', '"word"', 'NaN']:
         r = resolve(registry, 'test', {'query': 'q', 'limit': raw})
@@ -95,7 +95,7 @@ def test_web_renderer_preserves_literal_rows_and_never_posts_raw_code():
     from pathlib import Path
     if not shutil.which('node'):
         pytest.skip('node required')
-    wire, _ = compile_apps([{'id': 'files', 'inputs': [{'key': 'folder', 'default': '.'}],
+    wire, _ = compile_apps([{'id': 'files', 'edition':2, 'inputs': [{'key': 'folder', 'default': '.'}],
         'action': '[self:list]{path: $folder}',
         'view': [{'button': {'action': '[self:read]{path: $item.path}'}}]}])
     prelude = "const INSTRUMENTS=" + json.dumps(wire) + ";const CUR={inst:INSTRUMENTS[0]};" + r'''
@@ -137,3 +137,32 @@ def test_session_cancel_during_execution_keeps_cancelled_semantics(tmp_path, mon
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, '-q']))
+
+
+def test_shipped_member_apps_compile_as_current_templates():
+    from pathlib import Path
+    import yaml
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_types import UNKNOWN
+    source=yaml.safe_load((Path(__file__).resolve().parents[1]/'data/member_apps.yaml').read_text())
+    _, declarations=compile_apps(source)
+    registry=load_registry()
+    count=0
+    for spec in declarations.values():
+        if 'request' in spec: continue
+        code=next(v for k,v in spec.items() if k=='action' or k.endswith('_action'))
+        types={name:UNKNOWN for name in spec['names']}
+        if spec['rows']: types['item']=UNKNOWN
+        plan=compile_program(code,registry,input_types=types)
+        assert not plan.issues, (code, plan.issues)
+        count+=1
+    assert count==15
+
+
+def test_unmarked_or_retired_member_app_is_rejected():
+    for edition in [None,1]:
+        spec={'id':'old','action':'[self:read]{path:"$path"}'}
+        if edition:spec['edition']=edition
+        with pytest.raises(ValueError,match='EDITION_'):
+            compile_apps([spec])

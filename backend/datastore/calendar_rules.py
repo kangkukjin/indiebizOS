@@ -258,6 +258,12 @@ def calendar_request(params, now=None, *, executable=False, check_past=True) -> 
 def normalized_event(event, changed=None):
     """Normalize before mutation; old date-only recurrences remain readable."""
     out = dict(event)
+    if out.get('enabled', True) and out.get('action') == 'run_pipeline':
+        from ibl_edition import pin_source, require_current
+        params = dict(out.get('action_params') or {})
+        source = pin_source(params.get('pipeline'), params.get('edition'))
+        require_current(source, params.get('edition'))
+        out['action_params'] = {**params, 'pipeline': source}
     if not out.get("action") and out.get("repeat", "none") == "none" and not out.get("date"):
         return out
     cfg = {k: out[k] for k in ("repeat", "date", "time", "month", "day", "weekdays", "interval_hours")

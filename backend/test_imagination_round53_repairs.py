@@ -84,17 +84,12 @@ def _dj(s):
 
 def test_B53_1_var_pipe_head_validates_green():
     from api_ibl import validate_code
-    for code in ('$q = [self:read]{path: "x.json"}\n$q.items >> [table:take]{n: 1}',
-                 '$q = [self:time]\n$q >> [table:take]{n: 1}',
-                 '$a = [self:time]\n$b = [self:time]\n$a & $b >> [table:union]'):
-        v = validate_code(code)
-        assert v["valid"] is True, (code, v)
-        kinds = [s["kind"] for s in v["steps"]]
-        assert "var" in kinds, kinds
-        assert all(s.get("node") != "" for s in v["steps"]), v["steps"]
-    # 미할당 변수는 파서의 정직 에러(검수가 아니라 문법)
-    v = validate_code('$없음.items >> [table:take]{n: 1}')
-    assert v["valid"] is False and v.get("syntax_error")
+    for code in ('$q = [self:read]{path:"x.json"}\n$q.items >> [table:take]{n:1}',
+                 '$q=[1,2]\n$q >> [table:take]{n:1}',
+                 '$a=[1]\n$b=[2]\nreturn $a + $b'):
+        result=validate_code('#!ibl edition=2\n'+code)
+        assert result['valid'], result
+
 
 
 def test_B53_1_validate_code_is_the_router_body():
@@ -326,8 +321,8 @@ def test_B51_4_promotion_wording_separates_route_markers():
     assert "경로·출처" in s and "부분 실패" not in s, s
     s2 = describe_promoted(["error_count", "passthrough_rows"])
     assert "부분 실패·절단(error_count)" in s2 and "passthrough_rows" in s2, s2
-    src = open(os.path.join(_HERE, "ibl", "workflow_engine.py"), encoding="utf-8").read()
-    assert "describe_promoted" in src and "부분 실패·절단을 신고했습니다" not in src
+    src = open(os.path.join(_HERE, "ibl", "ibl_v2_adapters.py"), encoding="utf-8").read()
+    assert "completion_evidence" in src and "truncation_evidence" in src
 
 
 def test_S53_sheet_append_zero_rows_is_empty_handed_success():

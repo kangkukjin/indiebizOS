@@ -26,15 +26,19 @@ def compile_apps(instruments):
     apps, registry = copy.deepcopy(instruments), {}
     for app in apps:
         declarations = {}
-        def walk(obj, path, inputs):
+        def walk(obj, path, inputs, edition=None):
             if isinstance(obj, list):
                 for i, value in enumerate(obj):
-                    walk(value, path + [str(i)], inputs)
+                    walk(value, path + [str(i)], inputs, edition)
             elif isinstance(obj, dict):
+                edition = obj.get('edition', edition)
                 inputs = {**inputs, **{i['key']: i for i in obj.get('inputs', [])},
                           **{i['key']: i for i in obj.get('fields', []) if 'key' in i}}
                 for key, value in list(obj.items()):
                     if ((key == 'action' or key.endswith('_action')) and isinstance(value, str)) or key == 'request':
+                        if key != 'request':
+                            from ibl_edition import require_current
+                            require_current(value, edition)
                         identity = ':'.join(path + ([] if key in ('action', 'request') else [key]))
                         # 모드/버튼의 기존 ID를 유지하고 하위 동작은 선언 경로로 구별한다.
                         code = value if isinstance(value, str) else value.get('message', '')
@@ -55,12 +59,12 @@ def compile_apps(instruments):
                     elif isinstance(value, (dict, list)):
                         if key == 'modes':
                             for i, mode in enumerate(value):
-                                walk(mode, [app['id'], mode.get('id', str(i))], inputs)
+                                walk(mode, [app['id'], mode.get('id', str(i))], inputs, edition)
                         elif key == 'buttons':
                             for i, button in enumerate(value):
-                                walk(button, path + ['button', str(i)], inputs)
+                                walk(button, path + ['button', str(i)], inputs, edition)
                         else:
-                            walk(value, path + [key], inputs)
+                            walk(value, path + [key], inputs, edition)
         walk(app, [app['id']], {})
         app['client_actions'] = declarations
     return apps, registry

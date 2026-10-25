@@ -29,47 +29,10 @@ def ops():
     return mod
 
 
-@pytest.mark.parametrize('shape', ['plain', 'if', 'repeat', 'try', 'function', 'nested', 'parallel'])
-def test_raw_body_composes_and_preserves_source_values(shape):
-    rows = [{'id': '007', 'text': '$5 "quote"\n{}', 'n': 3}]
-    body = '[table:select]{items:[$v],columns:{source:{id:"id",text:"text"},n:"n*2",xs:["id",false,null]}}'
-    code = '[table:each]{items:' + json.dumps(rows) + ',as:v,parallel:2} {' + body + '}'
-    expected = [{'source': {'id': '007', 'text': rows[0]['text']}, 'n': 6, 'xs': ['007', False, None]}]
-    if shape == 'if':
-        code = '[if: 1 == 1]{' + code + '}'
-    elif shape == 'repeat':
-        code = '[repeat: 1,collect:true]{' + code + '}'
-    elif shape == 'try':
-        code = '[try]{' + code + '}[catch]{[table:take]{items:[],n:1}}'
-    elif shape == 'function':
-        code = '[def:f]{' + code + '}; [fn:f]{}'
-    elif shape == 'nested':
-        code = '[table:each]{items:[{}],as:outer} {' + code + '}'
-    elif shape == 'parallel':
-        code = '(' + code + ') & (' + code + ') >> [table:union]'
-        expected *= 2
-    run(code, expected)
 
 
-@pytest.mark.parametrize('body', [
-    '[if: 1 == 1]{$x >> [table:take]{n:1}}',
-    '[repeat: 1,collect:true]{$x >> [table:take]{n:1}}',
-    '[try]{$x >> [table:take]{n:1}}[catch]{[table:take]{items:[],n:1}}',
-    '[if: 1 == 1]{[if: 2 == 2]{$x >> [table:take]{n:1}}}',
-    '[if: 1 == 1]{$a=$x >> [table:take]{n:1};$a >> [table:take]{n:1}}',
-    '[table:each]{items:[{}]} {$x >> [table:take]{n:1}}',
-])
-def test_outer_pipeline_in_every_body(body):
-    run('$x=[table:take]{items:[{id:7}],n:1};' + body, [{'id': 7}])
 
 
-def test_raw_and_quoted_body_are_equivalent():
-    body = '$a=[table:take]{items:[$it],n:1}; $a >> [table:compute]{set:{n:"id+1"}}'
-    for do in ['do:' + json.dumps(body), None]:
-        code = '[table:each]{items:[{id:1},{id:2}]' + (',' + do if do else '') + '}'
-        if do is None:
-            code += ' {' + body + '}'
-        run(code, [{'id': 1, 'n': 2}, {'id': 2, 'n': 3}])
 
 
 @pytest.mark.parametrize('code', [
@@ -84,13 +47,6 @@ def test_malformed_or_unknown_body_is_rejected(code):
         parse(code)
 
 
-def test_structure_literals_in_assignment_compute_and_reduce():
-    run('$x=[1,2]; $return={"xs":$x,"ok":True}', {'xs': [1, 2], 'ok': True})
-    run('[table:compute]{items:[{id:2}],set:{obj:"{\'id\':id,\'xs\':[id,False]}"}}',
-        [{'id': 2, 'obj': {'id': 2, 'xs': [2, False]}}])
-    from ibl_control_blocks import _execute_table_reduce
-    result = _execute_table_reduce({'items': [{'id': 2}, {'id': 3}], 'init': [], 'step': 'acc + [id]'}, str(ROOT))
-    assert result['value'] == [2, 3]
 
 
 @pytest.mark.parametrize('expr', ['[x for x in xs]', "{x+1:1}", "{'a':1,'a':2}",
@@ -181,13 +137,6 @@ def test_block_scope_is_reset_and_functions_remain_closed():
     assert 'x' in steps[0]['signature']
 
 
-@pytest.mark.parametrize('header', ['if:1 == 1', 'case: self:time'])
-def test_branch_pipeline_keeps_currency_inside_each(header):
-    branch = '$x >> [table:compute]{set:{n:"id+1"}}'
-    body = ('[if:1 == 1]{' + branch + '}' if header.startswith('if') else
-            '[case: $x.items.0.id]{"1": ' + branch + ', default: [table:take]{items:[],n:1}}')
-    run('[table:each]{items:[{id:1}]} {$x=[table:take]{items:[$it],n:1};' + body + '}',
-        [{'id': 1, 'n': 2}])
 
 
 if __name__ == '__main__':

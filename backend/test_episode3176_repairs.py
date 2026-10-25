@@ -13,26 +13,8 @@ from idiom_experiment_worker import load
 from test_names_first_recall_2026_09_05 import env, _add  # noqa: F401
 
 
-@pytest.mark.parametrize('rows', [[], [{'v': 0}], [{'v': False}], [{'v': None}],
-                                  [{'v': '007'}], [{'v': '$items'}], [{'v': "'한글\n"}]])
-@pytest.mark.parametrize('sink', ['$q >> [table:take]{n:10}',
-                                  '$q.items >> [table:take]{n:10}',
-                                  '[table:take]{items:$q,n:10}',
-                                  '[table:take]{items:${q.value},n:10}',
-                                  '$qq=$q\n$qq >> [table:take]{n:10}'])
-def test_assignment_alias_preserves_collection_across_consumers(rows, sink):
-    code = '$r=[table:take]{items:' + q(rows) + ',n:10}\n$q=$r.items\n' + sink
-    result = probe(dict(id='alias', code=code, expected=rows, error=False, contains=None))
-    assert result['ok'], result
 
 
-@pytest.mark.parametrize('value', [{'value': [1, 2]}, {'message': '원문'}, {'items': [3]}, {'field': False}])
-def test_path_assignment_preserves_object_keys(value):
-    code = '$r=[table:take]{items:[{data:' + q(value) + '}],n:1}\n$q=$r.items.0.data\n$qq=$q\n[table:take]{items:[{v:${qq.value}}],n:1}'
-    # value라는 실제 데이터 키가 있으면 그 키를 읽는다. 그 밖에는 이전 .value 메타 접근도 유지.
-    expected = value['value'] if 'value' in value else value
-    result = probe(dict(id='object', code=code, expected=[{'v': expected}], error=False, contains=None))
-    assert result['ok'], result
 
 
 def test_user_object_value_is_not_an_assignment_envelope():
@@ -41,12 +23,6 @@ def test_user_object_value_is_not_an_assignment_envelope():
     assert value_result_payload(obj) == (False, obj)
 
 
-@pytest.mark.parametrize('condition', ['$q.flag == true', 'count($q.items) == 1'])
-def test_assignment_paths_are_identical_in_conditions(condition):
-    code = ('$r=[table:take]{items:[{data:{flag:true,items:[1]}}],n:1}\n'
-            '$q=$r.items.0.data\n[if:' + condition + ']{[table:take]{items:[{ok:true}],n:1}}')
-    result = probe(dict(id='condition', code=code, expected=[{'ok': True}], error=False, contains=None))
-    assert result['ok'], result
 
 
 def test_recall_exposes_parent_functions_as_currency_without_bodies(env):
@@ -94,65 +70,6 @@ def test_list_and_find_share_file_fields(tmp_path, name):
     assert result['success'] and result['items'] == [{'name': name}]
 
 
-@pytest.mark.parametrize('sequence', [13, 27, 36])
-def test_actual_episode_failure_sentence_unchanged(sequence, env, tmp_path, monkeypatch):
-    import hashlib
-    import ibl_engine
-    import workflow_engine
-    import episode_logger
-    from ibl_parser import parse_with_vars
-    from tool_context import ToolContext
-    tree, db = env
-    _add(db, '지역 기록', '[self:time]{}', '보고서/부동산 발굴')
-    _add(db, '공통 함수', '$return=[self:read]{path:$파일}', '보고서', alias='공통읽기', category='phrase')
-    memory = tree.recall('보고서/부동산 발굴', db)
-    fixtures = json.loads((Path(__file__).parents[1] / 'docs/experiments/episode3176_failures.json').read_text())
-    fixture = next(f for f in fixtures['fixtures'] if f['event_seq'] == sequence)
-    assert hashlib.sha256(fixture['code'].encode()).hexdigest() == fixture['code_sha256']
-    queue = [dict(slug='a', name='A', unit='a', tier=1, visits=0, last_visited='', verdict='보류'),
-             dict(slug='b', name='B', unit='b', tier=1, visits=1, last_visited='2026-09-07', verdict='관심')]
-    (tmp_path / 'region.json').write_text('{}')
-    root = Path(__file__).parents[1]
-    dataops = load('_ep3176_actual_dataops', root / 'data/packages/installed/tools/data-ops/handler.py')
-    fs = load('_ep3176_actual_fs', root / 'data/packages/installed/tools/system_essentials/handler.py')
-    original = ibl_engine._execute_ibl_impl
-
-    def leaf(step, project, agent_id=None):
-        node, action = step.get('_node'), step.get('action')
-        params = dict(step.get('params') or {})
-        if node == 'table':
-            return dataops.execute(params, ToolContext(project, 'data_' + action))
-        if node == 'self' and action == 'memory':
-            return memory
-        if node == 'self' and action == 'read':
-            path = params.get('path', '')
-            if path == 'rotation-fixture.json':
-                return {'queue': queue, 'explore_first': True}
-            if path == 'cfg-fixture.json':
-                return {'items': [{'config': 'fixture'}]}
-            assert path.endswith(('_thesis.md', 'housing_report_2026-09-08_서산시.md'))
-            return 'fixture report'
-        if node == 'self' and action == 'list':
-            return fs.execute({**params, 'path': str(tmp_path)}, ToolContext(project, 'list_directory'))
-        if node == 'sense' and action == 'realty':
-            assert params['op'] == 'codes'
-            return {'items': [{'지역': '당진'}, {'지역': '서산'}, {'지역': '서울'}]}
-        assert any(step.get(k) for k in ['_assign', '_var_emit']), step
-        return original(step, project, agent_id)
-
-    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
-    monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
-    monkeypatch.setattr(episode_logger, 'record_trajectory_event', lambda *a, **k: None)
-    prefix = '$rot=[self:read]{path:"rotation-fixture.json"}\n$cfg=[self:read]{path:"cfg-fixture.json"}\n'
-    steps, _ = parse_with_vars(prefix + fixture['code'])
-    result = workflow_engine.execute_pipeline(steps, str(tmp_path))
-    assert result['success'], result
-    from ibl_boundary_cases import payload
-    final = payload(result)
-    if sequence == 27:
-        assert [r['slug'] for r in final if 'slug' in r] == ['a', 'b']
-    if sequence == 36:
-        assert final == [{'지역': '당진'}, {'지역': '서산'}]
 
 
 if __name__ == '__main__':

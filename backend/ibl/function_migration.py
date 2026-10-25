@@ -148,6 +148,8 @@ def prepare(entries, resolutions=None):
             record['installation_source_hash'] = _body_hash(record)
         states = {c.get('state', 'active') for c in candidates}
         state = next((s for s in ('quarantine', 'hold', 'invalid') if s in states), 'active')
+        if edition == 1 and state == 'active':
+            state = 'retired'
         changes.append({'record': record, 'expected_revision': None, 'state': state,
                         'legacy_ids': list(dict.fromkeys(x for c in candidates for x in c.get('legacy_ids', [])))})
         ref = {'scope_id': record['scope_id'], 'function_id': fid, 'revision': store.digest(record), 'name': name, 'edition': edition}

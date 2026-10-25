@@ -192,10 +192,10 @@ def test_B54_8_direct_config_is_normalized_and_validated(te):
     assert "error" in n({"repeat": "daily", "time": "25:00"})
     assert "error" in n({"repeat": "once"})                              # date 없음
     assert "error" in n("daily")
-    r = te._create_trigger("w", {"pipeline": "[sense:host]{op: 'status'}",
+    r = te._create_trigger("w", {"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}",
                                  "config": {"repeat": "weekly", "weekdays": ["fri"], "time": "18:00"}})
     assert r["trigger"]["config"]["weekdays"] == [4]
-    bad = te._create_trigger("w2", {"pipeline": "[sense:host]{op: 'status'}", "config": {"repeat": "once"}})
+    bad = te._create_trigger("w2", {"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "config": {"repeat": "once"}})
     assert "error" in bad
 
 
@@ -203,20 +203,20 @@ def test_B54_1_create_stores_project_and_hands_owner_to_calendar(te):
     assert te.project_id_of_path("/x/projects/투자") == "투자"
     assert te.project_id_of_path("/x/data") == ""
     assert te.project_id_of_path(".") == "" and te.project_id_of_path(None) == ""
-    r = te._create_trigger("p", {"pipeline": "[sense:host]{op: 'status'}", "cron": "0 9 * * *"},
+    r = te._create_trigger("p", {"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "cron": "0 9 * * *"},
                            project_path="/x/projects/투자")
     assert r["trigger"]["project_id"] == "투자"
     assert te._synced_for_test[-1][1].get("project_id") == "투자"
-    r2 = te._create_trigger("s", {"pipeline": "[sense:host]{op: 'status'}", "cron": "0 9 * * *"},
+    r2 = te._create_trigger("s", {"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "cron": "0 9 * * *"},
                             project_path="/x/data")
     assert "project_id" not in r2["trigger"]
-    r3 = te.execute_trigger("trigger", {"op": "create", "name": "q", "pipeline": "[sense:host]{op: 'status'}",
+    r3 = te.execute_trigger("trigger", {"op": "create", "name": "q", "pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}",
                                         "cron": "0 9 * * *"}, project_path="/x/projects/컨텐츠")
     assert r3["trigger"]["project_id"] == "컨텐츠"
 
 
 def test_B54_6_F54_4_history_carries_currency_fields_and_updates_record(te):
-    r = te._create_trigger("h", {"pipeline": "[sense:host]{op: 'status'}", "cron": "0 9 * * *"})
+    r = te._create_trigger("h", {"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "cron": "0 9 * * *"})
     tid = r["trigger"]["id"]
     te.add_history(tid, "[IBL] h", False, "{'error': 'boom'}", 12, error="boom", count=0, shape="items")
     te.add_history(tid, "[IBL] h", True, "{...}", 5, count=3, shape="items")
@@ -228,7 +228,7 @@ def test_B54_6_F54_4_history_carries_currency_fields_and_updates_record(te):
 
 
 def test_B54_4_concurrent_add_history_loses_no_rows(te):
-    r = te._create_trigger("c", {"pipeline": "[sense:host]{op: 'status'}", "cron": "0 9 * * *"})
+    r = te._create_trigger("c", {"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "cron": "0 9 * * *"})
     tid = r["trigger"]["id"]
     ths = [threading.Thread(target=te.add_history, args=(tid, "c", True, str(i), i)) for i in range(8)]
     [t.start() for t in ths]
@@ -291,7 +291,7 @@ def test_B54_1_owner_run_path_resolves_project_and_system_ai_path_for_ownerless(
     assert cm._owner_run_path("") != "."
 
 
-def test_B54_1_legacy_fire_runs_in_owner_project(actions_cm, monkeypatch, tmp_path):
+def test_B54_1_native_fire_runs_in_owner_project(actions_cm, monkeypatch, tmp_path):
     """소유 에이전트 없는 스케줄(트리거·표면 등록)의 발화는 소유 프로젝트 경로에서 execute_pipeline."""
     import types
     seen = {}
@@ -303,20 +303,17 @@ def test_B54_1_legacy_fire_runs_in_owner_project(actions_cm, monkeypatch, tmp_pa
             return proj if pid == "투자" else tmp_path / "projects" / pid
 
     monkeypatch.setitem(sys.modules, "project_manager", types.SimpleNamespace(ProjectManager=_PM))
-    monkeypatch.setitem(sys.modules, "ibl_parser", types.SimpleNamespace(
-        parse=lambda code: [{"_node": "sense", "action": "host", "params": {}}],
-        IBLSyntaxError=ValueError))
-
-    def _exec(steps, project_path=".", context=None, agent_id=None):
+    import ibl_scheduled
+    def _exec(code, project_path=".", *args, **kwargs):
         seen["project_path"] = project_path
-        return {"success": True, "final_result": {"items": [1]}}
-
-    monkeypatch.setitem(sys.modules, "workflow_engine", types.SimpleNamespace(execute_pipeline=_exec))
+        assert code.startswith('#!ibl edition=2')
+        return {"success": True, "value": {"items": [1]}}
+    monkeypatch.setattr(ibl_scheduled, 'execute_scheduled', _exec)
     hist = []
     monkeypatch.setitem(sys.modules, "trigger_engine", types.SimpleNamespace(
         add_history=lambda **kw: hist.append(kw)))
     task = {"id": "e1", "title": "[IBL] x", "action": "run_pipeline",
-            "action_params": {"pipeline": "[sense:host]{op: 'status'}", "trigger_id": "trg_1"},
+            "action_params": {"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "trigger_id": "trg_1"},
             "owner_project_id": "투자"}
     r = actions_cm._action_run_pipeline(task)
     assert r["success"] is True
@@ -367,37 +364,37 @@ def fake_cm(monkeypatch):
 
 def test_B54_2_schedule_owner_is_project_path_first(fake_cm):
     from system_ai_plans import _execute_schedule
-    r = json.loads(_execute_schedule({"pipeline": "[sense:host]{op: 'status'}", "repeat": "daily", "time": "09:00"},
+    r = json.loads(_execute_schedule({"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "repeat": "daily", "time": "09:00"},
                                      agent_id="system_ai", project_path="/x/projects/투자"))
     assert r["success"] is True
     ev = fake_cm.added[-1]
     assert ev["owner_project_id"] == "투자" and ev["owner_agent_id"] == ""
-    r2 = json.loads(_execute_schedule({"pipeline": "[sense:host]{op: 'status'}", "repeat": "daily", "time": "09:00"},
+    r2 = json.loads(_execute_schedule({"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "repeat": "daily", "time": "09:00"},
                                       agent_id="system_ai", project_path="/x/data"))
     assert r2["success"] is True and fake_cm.added[-1]["owner_project_id"] == "__system_ai__"
-    r3 = json.loads(_execute_schedule({"pipeline": "[sense:host]{op: 'status'}", "repeat": "daily", "time": "09:00"},
+    r3 = json.loads(_execute_schedule({"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "repeat": "daily", "time": "09:00"},
                                       agent_id="agent_7", project_path="/x/projects/투자"))
     assert fake_cm.added[-1]["owner_agent_id"] == "agent_7" and r3["success"] is True
 
 
 def test_F54_2_schedule_at_in_the_past_is_refused(fake_cm):
     from system_ai_plans import _execute_schedule
-    r = json.loads(_execute_schedule({"pipeline": "[sense:host]{op: 'status'}", "at": "00:00"},
+    r = json.loads(_execute_schedule({"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "at": "00:00"},
                                      agent_id="system_ai", project_path="/x/projects/투자"))
     assert r["success"] is False and "이미 지났습니다" in r["error"]
     past = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    r2 = json.loads(_execute_schedule({"pipeline": "[sense:host]{op: 'status'}", "date": past, "time": "09:00"},
+    r2 = json.loads(_execute_schedule({"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "date": past, "time": "09:00"},
                                       agent_id="system_ai", project_path="/x/projects/투자"))
     assert r2["success"] is False
     future = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-    r3 = json.loads(_execute_schedule({"pipeline": "[sense:host]{op: 'status'}", "date": future, "time": "09:00"},
+    r3 = json.loads(_execute_schedule({"pipeline": "#!ibl edition=2\n[sense:host]{op: 'status'}", "date": future, "time": "09:00"},
                                       agent_id="system_ai", project_path="/x/projects/투자"))
     assert r3["success"] is True and fake_cm.added[-1]["event_date"] == future
 
 
 def test_B54_5_manage_events_do_becomes_run_pipeline(fake_cm):
     from system_ai_tools import _execute_manage_events
-    code = "[sense:stock]{op: 'quote', ticker: '005930'} >> [self:write]{path: 'a.json', format: 'json'}"
+    code = "#!ibl edition=2\n$quote=[sense:stock]{op:'quote',ticker:'005930'}\n[self:write]{path:'a.json',content:json($quote)}"
     r = json.loads(_execute_manage_events({"op": "create", "title": "t", "date": "2030-01-01 14:00",
                                            "event_action": code}, project_path="/x/projects/투자"))
     assert r["success"] is True, r
@@ -426,15 +423,15 @@ def test_F54_3_split_date_time():
 
 def test_F54_1_validate_sees_cron_like_the_engine():
     from api_ibl import validate_code
-    ok = validate_code('[self:trigger]{op: "create", name: "x", cron: "0 9 * * 1-5", do: "[sense:host]{op: \'status\'}"}')
-    assert ok["valid"] is True, ok
-    bad = validate_code('[self:trigger]{op: "create", name: "x", cron: "30 */2 * * *", do: "[sense:host]{op: \'status\'}"}')
-    assert bad["valid"] is False
-    assert any("cron/config" in (st.get("error") or "") for st in bad["steps"])
-    bad2 = validate_code('[self:trigger]{op: "create", name: "x", config: {repeat: "once"}, do: "[sense:host]{op: \'status\'}"}')
-    assert bad2["valid"] is False
-    lst = validate_code('[self:trigger]{op: "list"}')
-    assert lst["valid"] is True
+    def check(extra):
+        code='#!ibl edition=2\n[self:trigger]{op:"create",name:"x",'+extra+',do:"#!ibl edition=2\\nreturn 1"}'
+        return validate_code(code)
+    assert check('cron:"0 9 * * 1-5"')['valid']
+    bad=check('cron:"30 */2 * * *"')
+    assert not bad['valid'] and 'cron' in str(bad['issues'])
+    assert not check('config:{repeat:"once"}')['valid']
+    assert validate_code('#!ibl edition=2\n[self:trigger]{op:"list"}')['valid']
+
 
 
 if __name__ == "__main__":

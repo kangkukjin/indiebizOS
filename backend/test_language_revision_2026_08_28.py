@@ -76,40 +76,14 @@ def _each(rows, do, on_error):
     return out if isinstance(out, dict) else json.loads(out)
 
 
-def test_L7_keep_flows_failed_rows_marked():
-    rows = [{"a": 1}, {"a": 2}]
-    out = _each(rows, "[self:time]{x: '$it.없는필드'}", "keep")
-    assert out.get("success", True) is True
-    marked = [r for r in out["items"] if isinstance(r, dict) and r.get("_error")]
-    assert len(marked) == 2 and marked[0]["a"] == 1
-    assert out["error_count"] == 2
-    assert out.get("errors")          # 진단층은 keep 이어도 그대로(경계 규약 예외 없음)
 
 
-def test_L8_continue_keeps_old_contract():
-    rows = [{"a": 1}]
-    out = _each(rows, "[self:time]{x: '$it.없는필드'}", "continue")
-    # 전량 실패 = 종전대로 문장 실패(keep 만 전량 실패도 통화로 흘린다)
-    assert out.get("success") is False
-    assert not out.get("items")
 
 
 # ── ② if 블록 파이프 불일치 = 통과 ─────────────────────────────
 
-def test_L9_if_no_match_passes_prev_currency():
-    from ibl.ibl_executors import _execute_condition
-    prev = json.dumps({"success": True, "items": [{"a": 1}], "count": 1}, ensure_ascii=False)
-    out = _execute_condition({"branches": [{"condition": "1 == 2", "action": None}],
-                              "params": {"_prev_result": prev}}, ".", None)
-    assert isinstance(out, dict)
-    assert out.get("items") == [{"a": 1}]
-    assert out.get("_if_skipped") == ["1 == 2"]
 
 
-def test_L10_if_no_match_standalone_unchanged():
-    from ibl.ibl_executors import _execute_condition
-    out = _execute_condition({"branches": [{"condition": "1 == 2", "action": None}]}, ".", None)
-    assert out.get("message") == "모든 조건 불일치, 실행할 분기 없음"
 
 
 # ── ③ blocks 조건부 절 when ───────────────────────────────────

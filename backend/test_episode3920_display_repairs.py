@@ -9,7 +9,6 @@ import pytest
 import boot_paths  # noqa: F401
 
 from ibl_envelope import preview_envelope
-from ibl_exec_each import _execute_table_each
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,13 +34,10 @@ def _paragraphs(url, cap=16000):
 
 
 def _collect(monkeypatch, results, parallel=1):
-    import workflow_engine
-    iterator = iter(results)
-    monkeypatch.setattr(workflow_engine, "execute_pipeline", lambda *a, **kw: {
-        "success": True, "final_result": json.dumps(next(iterator), ensure_ascii=False)})
-    return _execute_table_each({"items": [{"url": f"https://test/{i}"} for i in range(len(results))],
-                               "do": "[sense:crawl]{url:$it.url}", "keep": ["url"],
-                               "on_error": "keep", "parallel": parallel}, ".")
+    module = _load('display_judgment', ROOT/'data/scripts/judgment_idioms.py')
+    return module.collect_values({'results':[
+        {'ok':True,'source':{'url':f'https://test/{i}'},'value':result}
+        for i,result in enumerate(results)]})
 
 
 @pytest.mark.parametrize("parallel", [1, 2])
@@ -85,15 +81,10 @@ def test_mixed_collection_does_not_claim_all_rows_are_paragraphs(monkeypatch, ot
 
 
 def test_partial_failure_remains_visible_with_paragraph_policy(monkeypatch):
-    import workflow_engine
-    results = iter([
-        {"success": False, "error": "접근 제한"},
-        {"success": True, "final_result": _paragraphs("https://test/b")},
-    ])
-    monkeypatch.setattr(workflow_engine, "execute_pipeline", lambda *a, **kw: next(results))
-    out = _execute_table_each({"items": [{"url": "a"}, {"url": "b"}],
-                               "do": "[sense:crawl]{url:$it.url}", "on_error": "keep",
-                               "parallel": 1}, ".")
+    module = _load('display_judgment_failure', ROOT/'data/scripts/judgment_idioms.py')
+    out = module.collect_values({'results':[
+        {'ok':False,'source':{'url':'a'},'error':'접근 제한'},
+        {'ok':True,'source':{'url':'b'},'value':_paragraphs('https://test/b')}]})
     model = preview_envelope(out)
     assert model["error_count"] == 1 and model["errors"][0]["_error"] == "접근 제한"
     assert model["items"][0]["_error"] == "접근 제한"

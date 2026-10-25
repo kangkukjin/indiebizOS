@@ -587,8 +587,7 @@ class AgentGoalsMixin:
         Returns:
             (result_text: str, cost: float)
         """
-        from ibl_parser import parse
-        from ibl_engine import execute_ibl
+        from ibl_v2_entry import handle_request
 
         if not self.ai:
             return "AI 미초기화", 0.0
@@ -636,16 +635,10 @@ class AgentGoalsMixin:
                 ibl_code = ibl_match.group(0)
                 self._log(f"[Goal] AI 생성 IBL: {ibl_code}")
 
-                # 파싱 + 실행
-                parsed = parse(ibl_code)
-                if parsed:
-                    step = parsed[0]
-                    result = execute_ibl(step, self.project_path, self.config.get("id", ""))
-                    result_text = str(result)[:500] if result else "실행 완료"
-                    cost = self._estimate_action_cost(step)
-                    return f"IBL: {ibl_code} → {result_text}", cost + 0.02
-                else:
-                    return f"IBL 파싱 실패: {ibl_code}", 0.02
+                result = handle_request({'edition': 2, 'code': ibl_code},
+                                        str(self.project_path), self.config.get('id', ''))
+                result_text = str(result)[:500]
+                return f"IBL: {ibl_code} → {result_text}", self._estimate_action_cost({}) + 0.02
             else:
                 # IBL 코드 없이 텍스트 응답만 온 경우
                 return f"AI 응답 (IBL 미포함): {response[:300]}", 0.02

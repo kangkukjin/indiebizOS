@@ -90,15 +90,15 @@ def test_judge_real_loader_and_structured_criteria_pipe(monkeypatch):
 
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key-not-a-secret")
     monkeypatch.setattr(requests, "post", post)
-    code = ('[table:judge]{items:[{id:1,text:"환불"},{id:2,text:"문의"}], '
+    code = ('$r=[table:judge]{items:[{id:1,text:"환불"},{id:2,text:"문의"}], '
             'instruction:"요청 종류", type:"choice", criteria:{refund:"환불",other:"기타"}} '
-            '>> [table:filter]{where:{field:"judgment_result_value",op:"eq",value:"refund"}}')
-    result = _execute_ibl_unified({"code": code}, "/tmp")
+            '\n$r.items >> [table:filter]{where:($row)=>$row.judgment_result_value=="refund"}')
+    result = _execute_ibl_unified({"code": code,"edition":2}, "/tmp")
     result = json.loads(result) if isinstance(result, str) else result
     assert result["success"], result
-    final = result["final_result"]
+    final = result["value"]
     final = json.loads(final) if isinstance(final, str) else final
-    rows = final["items"]
+    rows = final
     assert len(calls) == 1 and len(rows) == 1 and rows[0]["id"] == 1
     assert rows[0]["judgment_result_value"] == "refund"
 
@@ -492,45 +492,6 @@ def test_p15_binary_transformers_carry_flags():
     print("P15 OK — 이항 변환자 truncated OR·total 합 승계·join 무-total·문서 꼬리 종단")
 
 
-def test_p16_fallback_matrix_and_mixed_grammar():
-    """P16(⑯ 후속 — 미측정 경계): ?? 3단 우선순위 매트릭스 + `A ?? B >> C` 결합 순위.
-
-    우선순위 규칙(7라운드 구현): 내용 있는 성공 > 첫 빈손 > 마지막 에러.
-    """
-    from ibl_parser import parse
-    # 결합 순위: A ?? B >> C = (A ?? B) >> C — 폴백 체인이 첫 step, C 는 둘째 step
-    steps = parse('[sense:a]{} ?? [sense:b]{} >> [table:take]{n: 2}')
-    assert len(steps) == 2 and len(steps[0].get("_fallback_chain") or []) == 2
-    assert steps[1].get("action") == "take"
-
-    import ibl_engine
-    from ibl.workflow_engine import _execute_fallback
-    EMPTY = {"success": True, "items": [], "total": 0}
-    OK = {"success": True, "items": [{"x": 1}]}
-    ERR = {"success": False, "error": "boom"}
-
-    def _matrix(scripted):
-        chain = [{"node": "sense", "action": f"a{i}"} for i in range(len(scripted))]
-        script = {f"a{i}": r for i, r in enumerate(scripted)}
-        orig = ibl_engine.execute_ibl
-        ibl_engine.execute_ibl = lambda ti, pp, agent_id=None: dict(script[ti.get("action")])
-        try:
-            result, log = _execute_fallback(chain, "/tmp", "")
-        finally:
-            ibl_engine.execute_ibl = orig
-        return result, [e["status"] for e in log]
-
-    r, st = _matrix([EMPTY, OK])                 # 빈손 → 다음이 내용 있으면 그것
-    assert r.get("items") == [{"x": 1}] and st == ["empty", "ok"], (r, st)
-    r, st = _matrix([EMPTY, ERR, OK])            # 3단: 중간 고장 넘어 성공까지
-    assert r.get("items") == [{"x": 1}] and st == ["empty", "error", "ok"], (r, st)
-    r, st = _matrix([EMPTY, ERR])                # 성공 없음: 첫 빈손 > 마지막 에러
-    assert r.get("success") and r.get("items") == [] and "_all_failed" not in r, r
-    r, st = _matrix([EMPTY, EMPTY])              # 전부 빈손: 정직한 0건 원형(에러 위장 금지)
-    assert r.get("success") and r.get("items") == [] and "_all_failed" not in r, r
-    r, st = _matrix([ERR, ERR])                  # 전부 고장: 에러 + _all_failed 표식
-    assert r.get("success") is False and r.get("_all_failed") is True, r
-    print("P16 OK — (A??B)>>C 결합·3단 매트릭스(성공>첫 빈손>마지막 에러)·전부 빈손=정직 0건")
 
 
 def test_p17_script_list_preflight(tmp_path, monkeypatch):
@@ -636,139 +597,23 @@ def test_p18_sheet_semantic_silence():
     print("P18 OK — 합계 행 의심 신고·수식 덮어쓰기 기록·서식 승계·헤더 오인 힌트·오탐 없음")
 
 
-def test_p19_totals_detection_baseline():
-    """P19(실험 11 측정 라운드): 여섯 장부 모양 기준선 — 오탐 0·미탐 0.
-
-    규칙(실험 11 후보 채택): 세로 집계 = 자기 행을 참조하지 않는 수식(함수 이름 무관)
-    + 물음의 반전(보강④) = 전 시트에서 "새 행을 참조하지 않는 집계"를 찾는다.
-    """
-    _sheet = _load("_t_sheet19", os.path.join(_PKG, "system_essentials", "sheet_ops.py"))
-    import openpyxl
-
-    def mk(rows, extra_sheet=None):
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "장부"
-        for r in rows:
-            ws.append(r)
-        if extra_sheet:
-            w2 = wb.create_sheet(extra_sheet[0])
-            for r in extra_sheet[1]:
-                w2.append(r)
-        return wb
-
-    def probe(wb):
-        with tempfile.TemporaryDirectory() as td:
-            xp = os.path.join(td, "f.xlsx")
-            wb.save(xp)
-            r = _sheet.op_append({"path": xp, "sheet": "장부", "header_row": 1,
-                                  "items": [{"품목": "Z", "수량": 1}]})
-            assert r.get("success"), r
-            return bool(r.get("aggregates_missing_new_rows") or r.get("totals_row_suspected"))
-
-    H = ["품목", "수량", "단가", "금액"]
-    # F1 표준 바닥 합계 → ⚠️
-    assert probe(mk([H, ["A", 1, 10, "=B2*C2"], ["B", 2, 20, "=B3*C3"],
-                     ["합계", None, None, "=SUM(D2:D3)"]])) is True, "F1 미탐"
-    # F2 가로 합계 열(월계) — 합계 행 없음 → 무경고 (실험 11 의 오탐 해소)
-    assert probe(mk([H, ["김", 35, 40, "=SUM(B2:C2)"], ["이", 30, 42, "=SUM(B3:C3)"],
-                     ["박", 35, 40, "=SUM(B4:C4)"]])) is False, "F2 오탐"
-    # F3 수동 덧셈(=D2+D3) → ⚠️ (함수 이름 무관 — 축은 행)
-    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40],
-                     ["누계", None, None, "=D2+D3"]])) is True, "F3 미탐"
-    # F4 상단 합계(2행) → ⚠️ (마지막 행만 보던 옛 규칙의 미탐 — 전체 스캔이 잡음)
-    assert probe(mk([H, ["총계", None, None, "=SUM(D3:D5)"], ["A", 1, 10, "=B3*C3"],
-                     ["B", 2, 20, "=B4*C4"], ["C", 3, 30, "=B5*C5"]])) is True, "F4 미탐"
-    # F5 중간 소계(그룹) 뒤 데이터 계속 → ⚠️ (소계가 새 행을 못 셈 — 실험 11 의 별개 위험)
-    assert probe(mk([H, ["개발A", 1, 10, 10], ["개발B", 2, 20, 40],
-                     ["소계", None, None, "=SUM(D2:D3)"], ["영업A", 5, 5, 25]])) is True, "F5 미탐"
-    # F6 전각공백 라벨 + SUMPRODUCT → ⚠️ (목록 밖 함수 — 행 축이 잡음)
-    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40],
-                     ["합\u3000계", None, None, "=SUMPRODUCT(B2:B3,C2:C3)"]])) is True, "F6 미탐"
-    # 교차 시트(실험 10 의 요약!COUNTA 부류 — 프로토타입의 한계를 구현이 넘음)
-    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40]],
-                    extra_sheet=("요약", [["품목수", "=COUNTA(장부!A2:A3)"]]))) is True, "교차시트 미탐"
-    # F7 상수표 참조(견적서형 — 실험 12 보강⑤): =$B$1*$C$1 은 집계가 아니다 → 무경고
-    wb7 = mk([H, ["A", 10, "=$B$1*$C$1", None], ["B", 25, "=$B$1*$C$1", None]])
-    wb7.active.insert_rows(1)
-    wb7.active["B1"] = 1000
-    wb7.active["C1"] = 0.1
-    # (헤더가 2행이 되므로 header_row=2 로 별도 probe)
-    with tempfile.TemporaryDirectory() as td:
-        xp = os.path.join(td, "f7.xlsx")
-        wb7.save(xp)
-        r7 = _sheet.op_append({"path": xp, "sheet": "장부", "header_row": 2,
-                               "items": [{"품목": "Z", "수량": 1}]})
-        assert r7.get("success") and not r7.get("aggregates_missing_new_rows"), ("F7 오탐", r7.get("aggregates_missing_new_rows"))
-    # F10 절대범위 합계(=SUM($D$2:$D$3)) → 여전히 잡혀야 함 (⑤를 넓히면 미탐되는 자리)
-    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40],
-                     ["합계", None, None, "=SUM($D$2:$D$3)"]])) is True, "F10 미탐"
-    # F11 절대 단일 참조(=$D$2*1.1) → 집계 아님 → 무경고
-    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, "=$D$2*1.1"]])) is False, "F11 오탐"
-    # F9 대형 무라벨(실험 12 ⑳-1): 스캔 상한 밖 합계 — 침묵 대신 scan_truncated 신고
-    wb9 = mk([H])
-    for i in range(3050):
-        wb9.active.append([f"거래{i}", 1, 10, 10])
-    wb9.active.append([None, "=SUM(B2:B3051)", None, None])  # 라벨 없음
-    with tempfile.TemporaryDirectory() as td:
-        xp = os.path.join(td, "f9.xlsx")
-        wb9.save(xp)
-        r9 = _sheet.op_append({"path": xp, "sheet": "장부", "header_row": 1,
-                               "items": [{"품목": "Z", "수량": 1}]})
-        assert r9.get("success") and r9.get("scan_truncated") is True, r9.get("scan_truncated")
-        assert "상한" in r9.get("warning", ""), r9.get("warning")
-    print("P19 OK — 기준선 11픽스처: F1~F6 + 교차시트 + F7 상수참조 무오탐 + F10 절대범위 + F11 + F9 상한 신고")
 
 
-def test_p20_workflow_save_syntax_gate():
-    """P20(2026-08-17): workflow save 가 do 를 검증 없이 저장 — 깨진 문장이 success:true 로
-    등록되고 run 에서야 엉뚱하게 실행됐다(지연 실패). P17 의 register pre-flight 를 문장에 적용.
+def test_p20_workflow_save_syntax_gate(tmp_path, monkeypatch):
+    import workflow_store
+    from workflow_engine import execute_workflow_action
+    monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: tmp_path)
+    def save(name, code):
+        return execute_workflow_action('save', {'name':name,'edition':2,'code':code}, str(tmp_path))
+    for source in ('[self:read]{path: "', '[self:read]{path:"a"', '워크플로우 만들어줘', '[self:read]{path:"a"}}', ''):
+        result=save('broken', source)
+        assert not result['success'], result
+    assert not workflow_store.list_workflows()
+    code='#!ibl edition=2\n[def:p20]($경로){return [self:read]{path:$경로}}'
+    result=save('p20',code)
+    assert result['success'],result
+    assert workflow_store.get_workflow('p20')['code']==code
 
-    ★파서만으론 못 잡는다: 파서는 닫히지 않은 따옴표를 관대하게 흡수해
-    `[self:read]{path: "` 를 path:"" 로 통과시킨다 → 등록 관문이 균형을 따로 본다."""
-    from ibl import workflow_engine as _wf
-    tmp = tempfile.mkdtemp()
-    orig_env = os.environ.get("INDIEBIZ_BASE_PATH")
-    os.environ["INDIEBIZ_BASE_PATH"] = tmp
-    try:
-        def save(**p):
-            p.setdefault("op", "save")
-            return _wf.execute_workflow_action("workflow", p, ".")
-
-        # 실측 재현: 따옴표가 잘린 do → 저장 거부 (전엔 success:true)
-        r = save(name="p20_broken", steps='[self:read]{path: "')
-        assert r.get("success") is False and "따옴표" in r["error"], r
-        # 중괄호 잘림 · 산문 · 짝 없는 } 도 같은 관문에서 거부
-        assert save(name="p20_brace", steps='[self:read]{path: "a"').get("success") is False
-        assert save(name="p20_prose", steps="워크플로우 만들어줘").get("success") is False
-        assert save(name="p20_extra", steps='[self:read]{path:"a"}}').get("success") is False
-        # 배열 do 는 원소 하나만 깨져도 거부 (부분 저장 없음)
-        assert save(name="p20_arr", steps=['[sense:weather]{city:"서울"}',
-                                           '[self:write]{path:"']).get("success") is False
-        # 몸통 자체가 없으면 거부 — run 에서야 "steps 가 없습니다" 를 만나던 부류
-        assert save(name="p20_nobody").get("success") is False
-        # 거부된 것은 하나도 파일로 남지 않는다
-        assert not list((_workflow_store._get_workflows_path()).glob("p20_*.yaml")), "거부인데 저장됨"
-
-        # 정상 문장은 그대로 저장된다 (회귀 없음)
-        assert save(name="p20_ok", steps='[sense:weather]{city: "서울"}').get("success") is True
-        assert save(name="p20_pipe",
-                    steps='[sense:search]{query:"a"} >> [table:take]{n:3}').get("success") is True
-        # ★미할당 $변수는 합법 — 호출자 params 주입 자리라 관문이 막으면 안 된다
-        assert save(name="p20_var",
-                    steps='[sense:search]{query: $q} >> [table:take]{n: 3}').get("success") is True
-        # 주석·멀티라인 문자열(본문 속 `#`)도 통과
-        assert save(name="p20_multi",
-                    steps='# 주석\n[self:write]{path:"a", content: "l1\n# 제목\nl2"}'
-                    ).get("success") is True
-        # 저장본은 run 이 읽어 실행 가능한 형태로 남는다 (파싱만 했지 실행은 안 함)
-        assert _wf.get_workflow("p20_var")["steps"], "몸통 유실"
-    finally:
-        if orig_env is None:
-            os.environ.pop("INDIEBIZ_BASE_PATH", None)
-        else:
-            os.environ["INDIEBIZ_BASE_PATH"] = orig_env
-    print("P20 OK — save 등록 관문(따옴표·중괄호·산문·빈 몸통 거부 / $변수·주석·멀티라인 통과)")
 
 
 def test_p21_grep_missing_path_loud():
@@ -813,7 +658,7 @@ def test_p22_copy_empty_hands_vs_no_currency():
     → 3갈래 분간: 통화 없음=거절(받은 봉투 진단 동봉) · 0행=빈손 성공 · 행은 있으나
       레코드 아님=별도 거절. 성공 문자열은 "Error:" 로 시작하지 않아야 파이프가 성공으로 읽는다."""
     import importlib
-    wf = importlib.import_module("workflow_engine")
+    wf = importlib.import_module("workflow_verdict")
     _copyops = _load("_t_copyops", os.path.join(_PKG, "system_essentials", "copy_ops.py"))
 
     def copy_with(prev):
@@ -977,63 +822,8 @@ def test_p26_spill_resolved_at_injection_seam():
     print("P26 OK — 스필 해소가 주입 이음매 하나에 · groupby 관통 · 평범 통화 무변경 · 만료 무침묵")
 
 
-def test_p27_each_substitution_respects_syntactic_slot():
-    """P27(27회차 B27-3): each 의 $it 치환이 자리의 문법을 안 보고 늘 맨몸 텍스트였다.
-
-    파라미터 자리는 저자가 따옴표를 쓰므로 우연히 맞았고, 조건 자리는 따옴표를 쓸 수 없어
-    깨졌다 — `each × [if:]` 라는 가장 자연스러운 교차가 통째로 말할 수 없는 문장이었다.
-    """
-    from ibl_exec_each import _each_substitute, _inside_string
-    row = {"영역": "backend/ibl", "파일": "a.py", "n": 3, "플래그": True, "빈것": None,
-           "제목": "그는 \"안녕\" 이라 했다"}
-    # ① 조건 자리(따옴표 밖) — 문자열은 따옴표를 얻는다
-    out, miss = _each_substitute("[if: $it.영역 matches 'backend']{[self:time]}", row, "it")
-    assert not miss and out.startswith('[if: "backend/ibl" matches'), out
-    # ② 숫자·불리언·null 은 맨몸 — 조건의 크기 비교가 문자열로 변질되지 않게
-    assert _each_substitute("[if: $it.n > 1]{x}", row, "it")[0] == "[if: 3 > 1]{x}"
-    assert _each_substitute("[if: $it.플래그]{x}", row, "it")[0] == "[if: true]{x}"
-    assert _each_substitute("[if: $it.빈것 == null]{x}", row, "it")[0] == "[if: null == null]{x}"
-    # ③ 파라미터 자리(따옴표 안)는 옛 규약 그대로 — 본문만, 따옴표 추가 없음(무회귀)
-    p, _ = _each_substitute("[self:notify_user]{message: '$it.파일'}", row, "it")
-    assert p == "[self:notify_user]{message: 'a.py'}", p
-    # ④ 따옴표 밖이라도 값 속 따옴표는 이스케이프되어 문장을 깨지 않는다
-    q, _ = _each_substitute("[if: $it.제목 matches 'x']{y}", row, "it")
-    assert q.count('[if: "') == 1 and q.endswith("matches 'x']{y}"), q
-    # ⑤ 자리 판정기 자체 — 이스케이프된 따옴표에 속지 않는다
-    assert _inside_string("{a: 'x', b: $it", 14) is False
-    assert _inside_string("{a: 'x$it", 6) is True
-    assert _inside_string("{a: 'it\\'s', b: $it", 18) is False
-    # ⑥ 없는 필드는 여전히 정직하게 missing (조용한 빈 값 금지 — F14-1 무회귀)
-    _, m2 = _each_substitute("[if: $it.없는것 > 1]{x}", row, "it")
-    assert m2 == ["없는것"], m2
-    print("P27 OK — each 치환이 자리의 문법을 따른다(조건=리터럴·파라미터=본문·수·불리언 맨몸)")
 
 
-def test_p28_repeat_carries_body_honesty():
-    """P28(27회차 B27-4): [repeat:] 경계가 몸통의 정직 신고(skipped_steps)를 삼켰다.
-
-    `[on_error: skip|null]` 의 계약은 "봉투 skipped_steps 로 신고되니 조용한 성공이 아니다".
-    그 신고가 몸통 봉투에 실리고 repeat 봉투는 iterations/items 만 조립해 경계에서 증발했다 —
-    24회차의 병렬 판정(부분 성공은 실패를 지우지 않는다)이 안 닿은 나머지 경계.
-    """
-    from ibl_control_blocks import _execute_repeat
-    from ibl_parser import parse
-    # 문장 모양은 파서가 정본 — 손으로 지은 step dict 는 실제와 어긋난다
-    # ① 몸통이 매 회차 step 을 건너뛰면 바깥도 그 사실을 말한다
-    out = _execute_repeat(parse('[repeat: 2, collect: true]{[on_error: null] '
-                                '[sense:crawl]{url: "https://invalid.invalid.invalid"} '
-                                '>> [table:take]{n: 1}}')[0], ".", None)
-    assert out.get("success") is True and out.get("count") == 0, out
-    sk = out.get("skipped_steps")
-    assert isinstance(sk, list) and len(sk) == 2, out          # 수리 전엔 키 자체가 없었다
-    assert {e["iteration"] for e in sk} == {1, 2}, sk          # 어느 회차였는지가 진단의 절반
-    assert "회차에서 step 을 건너뛰었습니다" in (out.get("note") or ""), out.get("note")
-    # ② 아무 일 없으면 조용하다 — 없는 것을 지어내지 않는다
-    # (몸통은 도구를 안 부르는 식 할당 — 이 하네스엔 활성 프로젝트가 없다)
-    clean = _execute_repeat(parse('[repeat: 2, collect: true]{$x = 1}')[0], ".", None)
-    assert clean.get("success") is True and "skipped_steps" not in clean, clean
-    assert "건너뛰" not in (clean.get("note") or ""), clean.get("note")
-    print("P28 OK — repeat 이 몸통의 skipped_steps 를 회차와 함께 승계 · 무사고 회차는 조용함")
 
 
 def test_p29_empty_hand_contract_is_one_rule():
@@ -1161,64 +951,6 @@ def test_P31_blocks_의_변수_주입도_원형으로_읽힌다():
     print("P31 OK — blocks 의 변수 주입도 원형으로(구조 필드만, 산문 불가침)")
 
 
-def test_P32_정렬_파이프는_file_find_통화를_비우지_않는다():
-    """P32 — `| sort: title` · `| sort: title asc` · `>> [table:sort]{by}` 가 file_find 의
-    items 를 **비운다**는 신고(2026-09-03, 칩 task_5a88cb26)의 회귀 고정물.
-
-    실측: 변환자도 설탕 파서도 멀쩡했다. 0 은 세는 쪽이 만든 숫자다 — 신고자의 계수기가
-    /ibl/execute 응답의 **최상위** `items` 를 읽었는데, 단일 액션은 통화가 최상위에 오지만
-    파이프(2단계+)는 봉투(results[]/final_result)로 나가고 통화는 `final_result`
-    **JSON 문자열** 안에 산다(렌더 코어 unwrapFinalResult · ibl_health_check 가 그 규칙으로
-    푼다). 같은 계수기로 재면 `| sort: title desc` 도 0 이다 — asc/desc 차이가 아니었다.
-    그 오독으로 계기(folder_survey.yaml)의 정렬이 떨어져 나갔다.
-
-    ★이 시험이 지키는 것: ① 네 표기가 같은 한 블록으로 펼쳐진다(설탕=표면, 동사=정본)
-    ② 파이프 봉투에서 통화를 *규칙대로* 꺼내면 원천 count 그대로·정렬된 채 나온다
-    (asc 는 기본, desc 는 뒤집힘) ③ step 요약도 같은 수를 신고한다.
-    파이프 통화의 자리(final_result)가 바뀌면 여기가 먼저 알린다.
-    """
-    from ibl_parser import parse
-    from ibl.workflow_engine import execute_pipeline
-    FORMS = {
-        "verb":  '[self:file_find]{pattern: "*.md", path: "%s"} >> [table:sort]{by: "title"}',
-        "plain": '[self:file_find]{pattern: "*.md", path: "%s"} | sort: title',
-        "asc":   '[self:file_find]{pattern: "*.md", path: "%s"} | sort: title asc',
-        "desc":  '[self:file_find]{pattern: "*.md", path: "%s"} | sort: title desc',
-    }
-
-    def _currency(env):
-        # 파이프 봉투의 통화 자리 — 렌더 코어 unwrapFinalResult 와 같은 규칙(문자열이면 JSON)
-        fr = env.get("final_result") if isinstance(env, dict) else None
-        return json.loads(fr) if isinstance(fr, str) else fr
-
-    with tempfile.TemporaryDirectory() as td:
-        for n in ("b.md", "c.md", "a.md"):
-            with open(os.path.join(td, n), "w", encoding="utf-8") as f:
-                f.write(n)
-        steps = {k: parse(v % td) for k, v in FORMS.items()}
-        # ① 설탕 세 표기 = 동사 한 블록. desc 만 desc:true 를 얹는다.
-        for k in ("plain", "asc"):
-            assert steps[k][1] == steps["verb"][1], (k, steps[k][1])
-        assert steps["verb"][1]["params"] == {"by": "title"}, steps["verb"][1]
-        assert steps["desc"][1]["params"] == {"by": "title", "desc": True}, steps["desc"][1]
-        # ② 통화는 비지 않는다 — 원천 3건 그대로, 순서만 바뀐다
-        for k, st in steps.items():
-            env = execute_pipeline(st, td)
-            assert env.get("success") is True, (k, env)
-            cur = _currency(env)
-            titles = [i.get("title") for i in (cur or {}).get("items") or []]
-            expect = ["a.md", "b.md", "c.md"]
-            assert titles == (expect[::-1] if k == "desc" else expect), (k, titles, env)
-            assert cur.get("count") == 3, (k, cur)
-            # ③ 에이전트 경계(/ibl/execute·MCP)가 입히는 봉투 다이어트 뒤에도 step 요약과
-            #    통화가 서로를 반박하지 않는다 — 요약은 count 3, 통화는 그대로 3건.
-            from ibl_envelope import diet_envelope
-            thin = diet_envelope(env, verbose=False)
-            last = (thin.get("results") or [])[-1]
-            assert last.get("action") == "sort" and last.get("count") == 3, (k, last)
-            assert last.get("shape") == "items", (k, last)
-            assert [i.get("title") for i in _currency(thin)["items"]] == titles, k
-    print("P32 OK — 정렬 설탕/동사 네 표기 모두 file_find 통화를 보존 · 통화는 final_result 에")
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

@@ -368,7 +368,7 @@ def test_execution_store_commit_failure_has_one_row_and_projection_receipt(env):
             raise OSError('document write failed')
     env.monkeypatch.setattr(module, '_tree_refresh', render)
     db = module.IBLUsageDB()
-    kwargs = dict(intent='시각 조회', ibl_code='[self:time]', candidate_key='execution-once')
+    kwargs = dict(intent='시각 조회', ibl_code='#!ibl edition=2\n[self:time]', candidate_key='execution-once')
     with pytest.raises(OSError):
         db.add_example(**kwargs)
     assert projection_pending(path)

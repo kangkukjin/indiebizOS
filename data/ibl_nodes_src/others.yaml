@@ -9,7 +9,7 @@
             mode: Text
             scope: Text
             workflow: Text
-            steps: List|Text
+            steps: Text
             edition: Number
             inputs: Record
             from_agent: Text
@@ -54,7 +54,7 @@
         # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
         open_params: false
         params: {agent_id: string, message: string, mode: string, scope: string, workflow: string,
-                 steps: [array, string], edition: integer, inputs: object,
+                 steps: string, edition: integer, inputs: object,
                  from_agent: string, items: [array, object, string],
                  role: string, allowed: [array, string], context: [object, array, string],
                  request_id: string, worker_ref: object, workspace: object}
@@ -78,7 +78,7 @@
           원문·edition·inputs를 작업 원장에 보존하고 같은 큐의 대상 러너가 실행기로 직접 전달한다.
           AI 재해석·창 연결 불필요. message는 기록용 설명이며 실행 지시로 재해석하지 않는다.
           판본 2 inputs는 명시 입력, 생략한 edition은 코드 헤더/작성 문맥에 고정한다.
-          단계 배열은 판본 1이며 edition=2·inputs와 함께 사용할 수 없다.
+          판본 2 원문만 받으며 구판 단계 배열은 EDITION_RETIRED로 거절한다.
           실행 결과·영수증은 같은 task 결과에 보존한다. 명시 async 자식은 접수증으로 별도 조회한다.
           봉투(origin·chain)는 delegation_tasks.envelope, 상태 투영은 task_view.
         keywords:

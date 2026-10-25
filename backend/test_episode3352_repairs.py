@@ -115,36 +115,8 @@ def test_mcp_episode_usage_updates_parent_summary_and_restores_context(monkeypat
     assert len(parent.steps) == 1 and parent.steps[0]["input"] == 40
 
 
-def test_each_parallel_workers_inherit_cost_context(monkeypatch):
-    from ibl_exec_each import _execute_table_each as execute_each
-    import workflow_engine
-
-    def child(*a, **k):
-        ProviderMetrics().record_usage(1, {"prompt_tokens": 10, "completion_tokens": 2})
-        return {"success": True, "final_result": {"items": [{"ok": True}]}}
-    monkeypatch.setattr(workflow_engine, "execute_pipeline", child)
-    with turn_token_scope("worker", "parallel-3352"):
-        result = execute_each({"items": [{"x": 1}, {"x": 2}], "parallel": 2,
-                               "do": "[self:time]"}, ".")
-        assert result["ok_count"] == 2
-        assert read_turn_tokens() == 24
 
 
-def test_each_budget_cut_reports_true_processed_count_and_keeps_results(monkeypatch):
-    import ibl_exec_each as each
-    import workflow_engine
-    monkeypatch.setattr(each, "_EACH_MAX_SUBSTEPS", 2)
-    done = []
-    def child(*a, **k):
-        done.append(1)
-        return {"success": True, "final_result": {"items": [{"ok": True}]}}
-    monkeypatch.setattr(workflow_engine, "execute_pipeline", child)
-    result = each._execute_table_each({"items": [{"x": i} for i in range(5)],
-                                "do": "[self:time]", "limit": 5}, ".")
-    assert not result["success"] and result["error_type"] == "budget"
-    assert len(done) == result["rows_processed"] == result["ok_count"] == 2
-    assert result["rows_requested"] == 5 and result["rows_unprocessed"] == 3
-    assert result["skipped"] == 3 and len(result["items"]) == 2
 
 
 @pytest.mark.parametrize("verbose", [False, True])

@@ -17,7 +17,7 @@ from cognitive_eval import CognitiveEvalMixin
 from supervision_store import TurnStore, digest
 
 ROOT = Path(__file__).resolve().parents[1]
-DRAFT = '$자료 = [table:take]{items:[{k:1},{k:2}],n:2}'
+DRAFT = '#!ibl edition=2\nreturn [table:take]{items:[{k:1},{k:2}],n:2}'
 FRAMING = {'task_framing': '자료 확인', 'achievement_criteria': '수치 검증', 'imagined_ibl': DRAFT}
 
 
@@ -150,19 +150,19 @@ def test_http_command_without_task_runs_plan_review_final_and_mcp(tmp_path, monk
         identities.append((task, el.EpisodeLogger.current().trajectory.run_id))
         assert task and controller.task == task and load_draft() == DRAFT
         # 네트워크 모델만 대역. 실제 MCP 재진입 수신 핸들러→워커→IBL→변수를 두 번 돈다.
-        def bridge(code):
-            return asyncio.run(execute_ibl_code(IBLRequest(code=code,
+        def bridge(code, inputs=None):
+            return asyncio.run(execute_ibl_code(IBLRequest(code=code,edition=2,inputs=inputs,
                 project_path=str(tmp_path), agent_id='project:agent_test', task_id=task,
                 episode_id=el.EpisodeLogger.current().episode_id,
                 parent_run_id=el.EpisodeLogger.current().trajectory.run_id)))
         first = bridge('$초안')
-        assert first.get('success') is True and first['turn_vars']['live'] == ['자료'], first
-        second = bridge('$자료 >> [table:take]{n:1}')
-        assert second.get('success') is True and '자료' in second['turn_vars']['injected'], second
+        assert first.get('success') is True and first['value']==[{'k':1},{'k':2}],first
+        second = bridge('$입력 >> [table:take]{n:1}',first['result_ref']['input_args'])
+        assert second.get('success') is True and second['value']==[{'k':1}],second
         # The supervisor now revalidates stale reasons before paying for a model.
         # Exercise an actual unresolved failure chain rather than injecting a label.
         for _ in range(2):
-            failed = bridge('$자료 >> [table:select]{columns:["없는열"]}')
+            failed = bridge('$입력 >> [table:select]{columns:["없는열"]}',first['result_ref']['input_args'])
             assert failed.get('success') is False, failed
         controller.review('repeated_failure')
         yield {'type': 'text', 'content': original}

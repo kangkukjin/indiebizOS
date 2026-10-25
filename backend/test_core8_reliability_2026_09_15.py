@@ -192,15 +192,14 @@ def test_invalid_item_rows_fail_at_ibl_boundary(tmp_path, action):
 
 @pytest.mark.parametrize('currency', [{'items': []}, {'items': [{'id': 'partial'}]},
                                     {'table': {'columns': ['id'], 'rows': []}}])
-def test_union_stop_and_all_failed(currency, tmp_path):
-    from ibl_parser import parse
-    from workflow_engine import execute_pipeline
-    failed = {'success': False, 'error': 'failed', **currency}
-    for branches, param in [([{'success': True, 'items': [{'id': 'ok'}]}, failed], 'on_error:"stop"'),
-                            ([failed, failed], '')]:
-        result = execute_pipeline(parse('[table:union]{' + param + '}'), str(tmp_path),
-                                  context={'_prev_result': json.dumps(branches)})
-        assert result['success'] is False, result
+def test_union_stop_and_all_failed(currency):
+    from ibl_v2_adapters import decode_envelope
+    from ibl_v2_ir import Fault
+    for payload in ({**currency,'success':False,'error':'all failed'},
+                    {**currency,'success':False,'error':'stopped'}):
+        with pytest.raises(Fault):
+            decode_envelope(payload,{'protocol':'legacy-envelope'})
+
 
 
 @pytest.fixture

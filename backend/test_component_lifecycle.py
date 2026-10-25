@@ -299,7 +299,7 @@ def test_guide_retirement_moves_file_and_removes_index_entry_and_commits(env):
 
 def _idiom():
     from function_library import register
-    return register('wf', '[self:time]{}', edition=1)
+    return register('wf', '#!ibl edition=2\n[def:wf](){return [self:time]{} }', edition=2)
 
 
 def test_idiom_and_script_retirement(env):

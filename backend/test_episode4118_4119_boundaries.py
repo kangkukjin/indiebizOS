@@ -1,4 +1,4 @@
-"""Search episodes: actual legacy function/pipeline/adapter boundaries, isolated I/O."""
+"""Historical result readback and current JSON adapter boundaries, isolated I/O."""
 import importlib.util
 import json
 from pathlib import Path
@@ -7,7 +7,6 @@ import boot_paths  # noqa: F401
 import pytest
 
 from common.currency import fn_result_payload
-from ibl_control_blocks import _execute_fn
 from ibl_function_result import compact_execution
 from ibl_v2_adapters import decode_envelope
 from ibl_v2_ir import Fault
@@ -20,52 +19,17 @@ BODY = ('$return = $목록 >> [table:filter]{where:{field:"text",op:"matches",va
 
 @pytest.fixture
 def boundary(monkeypatch, tmp_path):
-    import ibl_engine
-    import ibl_usage_db
     import supervision_store
-    import workflow_store
-    from tool_context import ToolContext
-    spec = importlib.util.spec_from_file_location(
-        "_episode4119_dataops", ROOT / "data/packages/installed/tools/data-ops/handler.py")
-    dataops = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dataops)
-    state = {"code": BODY, "feedback": [], "events": [], "leaf_calls": 0}
-    store = TurnStore(tmp_path / "evidence")
-    monkeypatch.setattr(supervision_store, "current_evidence_store", lambda: store)
-    monkeypatch.setattr("episode_logger.record_trajectory_event",
-                        lambda kind, data=None: state["events"].append((kind, data)))
-    monkeypatch.setattr(workflow_store, "get_workflow", lambda name: None)
-
-    class DB:
-        def find_phrase_by_alias(self, name):
-            return {"ibl_code": state["code"], "alias": name}
-
-        def update_success_by_code(self, code, ok, **kw):
-            state["feedback"].append(ok)
-            return True
-
-    monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", DB)
-    from test_function_support import use_legacy
-    use_legacy(monkeypatch, lambda: {'발췌': state['code']})
-    monkeypatch.setattr('capability_history.record_function_call',
-                        lambda ref, run, call, **kw: state['feedback'].append(kw['success'])
-                        if kw.get('source_complete') else None)
-    original = ibl_engine._execute_ibl_impl
-
-    def leaf(request, project, agent=None):
-        if request.get("_node") == "table" and request.get("action") == "filter":
-            state["leaf_calls"] += 1
-            return dataops.execute(request.get("params") or {}, ToolContext(project, "data_filter"))
-        return original(request, project, agent)
-
-    monkeypatch.setattr(ibl_engine, "_execute_ibl_impl", leaf)
-
-    def run(value, code=None):
-        if code is not None:
-            state["code"] = code
-        return _execute_fn({"_node": "fn", "action": "발췌", "params": {
-            "목록": value, "패턴": "wanted"}}, str(tmp_path), "test")
-
+    store = TurnStore(tmp_path / 'evidence')
+    monkeypatch.setattr(supervision_store, 'current_evidence_store', lambda: store)
+    state = {'leaf_calls':0}
+    def run(value):
+        # A deterministic JSON tool fixture, not a language interpreter. Old
+        # completed envelopes remain readable after their executor is removed.
+        state['leaf_calls'] += 1
+        selected = {'items':[row for row in value['items'] if 'wanted' in row['text']]}
+        return compact_execution({'success':True,'_fn_result':True,'final_result':selected,
+            'results':[{'step':1,'result':value},{'step':2,'result':selected}]})
     return run, state, store
 
 
@@ -75,7 +39,6 @@ def test_large_intermediates_fold_after_return_selection_and_are_readable(bounda
                       {"text": "wanted quote", "url": "two"}]}
     out = run(rows)
     assert out["success"], out
-    assert state["feedback"] == [True]
     found, value = fn_result_payload(out)
     assert found and value["items"] == [{"text": "wanted quote", "url": "two"}]
     assert len(json.dumps(out)) < 15000
@@ -93,58 +56,21 @@ def test_large_intermediates_fold_after_return_selection_and_are_readable(bounda
     assert state["leaf_calls"] == 1  # readback never reruns the function
 
 
-def test_wrong_parallel_branch_is_input_mismatch_not_bad_definition(boundary):
-    run, state, store = boundary
-    out = run([{"success": True, "source": "search", "items": [{"title": "candidate"}]},
-               {"items": [{"text": "wanted", "url": "apply"}]}])
-    assert out["success"] is False
-    assert out["failure_origin"]["kind"] == "input_shape"
-    assert out["failure_origin"]["parameter"] == "목록"
-    assert out["failure_origin"]["input_contract"]["missing_fields"] == ["text"]
-    assert "넘긴 값" in out["hint"] and "def" not in out
-    assert state["feedback"] == [False]
-    ev = next(data for kind, data in state["events"] if kind == "ibl.function_feedback")
-    assert ev["success"] is False and ev["attributed"] is False
-    with pytest.raises(Fault) as caught:
-        decode_envelope(out, {"value_path": ""})
-    details = caught.value.details
-    assert details["failure_origin"] == out["failure_origin"]
-    assert details["execution_ref"]["id"] == out["execution_ref"]["id"]
-    assert "def" not in details
-    fixed = run({"items": [{"text": "wanted", "url": "apply"}]})
-    assert fixed["success"] and state["feedback"] == [False, True]
+@pytest.mark.parametrize('source', [BODY, '[table:filter]{',
+    '$x={items:[{title:"wrong field"}]};$return=$x', '[def:f]{$return=1}'])
+def test_historical_functions_are_not_replayed_or_credited(source, monkeypatch):
+    from ibl_v2_entry import handle_request
+    import ibl_engine
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **k: pytest.fail('historical effect'))
+    monkeypatch.setattr('capability_history.record_function_call', lambda *a, **k: pytest.fail('historical credit'))
+    out = handle_request({'edition':1,'code':source})
+    assert not out['success'] and not out['executed'] and 'EDITION_RETIRED' in str(out)
 
 
-def test_internal_bad_shape_is_not_misattributed_to_caller(boundary):
-    run, state, _ = boundary
-    code = ('$x = {items:[{title:"wrong field"}]}\n'
-            '$return = $x >> [table:filter]{where:{field:"text",op:"matches",value:"wanted"}}')
-    out = run({"items": [{"text": "wanted", "url": "good"}]}, code)
-    assert out["success"] is False
-    assert out["failure_origin"]["kind"] == "unknown"
-    assert state["feedback"] == [False] and "def" not in out
-
-
-def test_confirmed_definition_syntax_failure_still_has_feedback_and_definition(boundary):
-    run, state, _ = boundary
-    out = run({}, '[table:filter]{')
-    assert out["success"] is False
-    assert out["failure_origin"] == {"kind": "definition", "definition_failure": True}
-    assert state["feedback"] == [False]
-    assert out["def"].startswith("[def:")
-    with pytest.raises(Fault) as caught:
-        decode_envelope(out, {"value_path": ""})
-    assert caught.value.details["def"] == out["def"]
-
-
-def test_opaque_failure_keeps_evidence_without_false_blame(boundary, monkeypatch):
-    run, state, _ = boundary
-    monkeypatch.setattr("workflow_engine.execute_pipeline", lambda *a, **k: {
-        "success": False, "error": "원천 접근 실패", "results": [], "final_result": None})
-    out = run({})
-    assert out["success"] is False and out["error"] == "원천 접근 실패"
-    assert out["failure_origin"]["kind"] == "unknown"
-    assert state["feedback"] == [False] and "def" not in out
+def test_current_definition_error_is_reported_before_tools():
+    from ibl_v2_entry import handle_request
+    out=handle_request({'edition':2,'code':'[def:f](){[table:filter]{'} )
+    assert not out['success'] and not out['executed']
 
 
 @pytest.mark.parametrize("value", [None, 3, "본문", [1, 2], {"results": ["business data"]}])
@@ -201,7 +127,7 @@ def test_parallel_failure_keeps_small_success_values_and_original_steps(boundary
     assert len(partial) == 2
     assert len(json.dumps(out, ensure_ascii=False)) < 30000
     for part in partial:
-        assert part["items"] == [{"text": "wanted", "url": part["items"][0]["url"]}]
+        assert part["final_result"]["items"] == [{"text": "wanted", "url": part["final_result"]["items"][0]["url"]}]
         stored = store.read_evidence(part["execution_ref"]["id"], 0, None)
         assert "noise" * 90000 in stored["text"]
     assert state["leaf_calls"] == 2

@@ -689,66 +689,13 @@ _DRAFT_ACTION_RE = _re.compile(r'\[([a-z_-]+):([a-z_0-9-]+)\]')
 
 
 def validate_imagined_draft(code: str) -> tuple:
-    """상상실행 초안의 기계 앞모형 검증. 반환 (ok: bool, error: str).
-
-    검사 4겹 — ①파서(문법) ②액션 실재(환각 어휘) ③파라미터 어휘(미인식 키)
-    ④T1/T2 통화 타입(안 흐르는 파이프). 전부 기존 자산 재사용, LLM 0.
-    검사기 자체가 미가용이면 그 겹은 보수적 통과(초안은 힌트일 뿐 — 실행기의
-    정직 거절이 최종 심판이라 여기서 턴을 깨지 않는다)."""
-    code = (code or "").strip()
-    if not code:
-        return (False, "빈 초안")
-    # ⓪ 액션 존재 — 파서는 산문·미완성 조각을 조용히 삼킬 수 있으니(빈 params 강등 등),
-    #   [node:action] 이 하나도 없는 초안은 IBL 이 아니라고 먼저 거절한다.
-    if not _DRAFT_ACTION_RE.search(code):
-        return (False, "IBL 액션([node:action])이 없는 초안")
-    # ① 문법
-    try:
-        from ibl_parser import parse
-        parsed = parse(code)
-    except ImportError:
-        return (True, "")
-    except Exception as e:
-        return (False, f"파싱 실패: {e}")
-    # ② 액션 실재 (미존재 노드/액션 = 환각 — ibl_usage_rag._validate_ibl_actions 와 같은 판정)
-    try:
-        from ibl_access import load_nodes_raw
-        nodes = (load_nodes_raw() or {}).get("nodes", {})
-        if nodes:
-            for n, a in _DRAFT_ACTION_RE.findall(code):
-                if a not in ((nodes.get(n) or {}).get("actions") or {}):
-                    return (False, f"미존재 액션 [{n}:{a}]")
-    except Exception:
-        pass
-    # ③ 파라미터 어휘
-    try:
-        from ibl_param_vocab import check_code_params
-        issues = check_code_params(code)
-        if issues:
-            detail = ", ".join(f"{i['action']}({','.join(i['unknown'])})" for i in issues)
-            return (False, f"미인식 파라미터: {detail}")
-    except Exception:
-        pass
-    # ④ 통화 타입 (T1 머리 변환자 기아 · T2 이음매 기아 — 실행기와 한 벌)
-    try:
-        from ibl_pipe_types import head_transform_error, seam_starvation_error
-        err = head_transform_error(parsed)
-        if err:
-            return (False, err)
-        seam = seam_starvation_error(parsed)
-        if seam:
-            return (False, seam[1])
-    except Exception:
-        pass
-    # ⑤ 정적 통화 검사(ibl_typecheck, 2026-09-05) — 확정 error 만(미상은 통과), 실행 관문과 한 벌
-    try:
-        from ibl_typecheck import typecheck_code, format_issues
-        _tc = typecheck_code(code)
-        if not _tc.get("ok") and _tc.get("issues"):
-            return (False, "통화 검사: " + format_issues(_tc["issues"]))
-    except Exception:
-        pass
-    return (True, "")
+    """새 작성 초안도 실행과 같은 컴파일러로 검수한다. 도구는 실행하지 않는다."""
+    if not isinstance(code, str) or not code.strip():
+        return False, '빈 초안'
+    from ibl_edition import authoring_request
+    from ibl_v2_entry import handle_request
+    checked = handle_request(authoring_request({'code': code, 'check': True}))
+    return bool(checked.get('ok')), '' if checked.get('ok') else str(checked.get('issues') or checked.get('error'))
 
 
 def draft_adoption(draft_code: str, tool_calls: list):

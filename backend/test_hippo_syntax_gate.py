@@ -42,7 +42,7 @@ PY = sys.executable
 MALFORMED_ROW = ('{"intent": "최근 출시된 AI 소프트웨어의 기능·평가·비교 조사", '
                  '"code": "[sense:search]{query: ""OpenClaw 2.0" AI release", limit: 10} '
                  '& [sense:search]{query: "OpenClaw 2.0 review", limit: 10}"}')
-GOOD = '[sense:search]{query: "OpenClaw 2.0 review", limit: 10}'
+GOOD = '#!ibl edition=2\n[sense:search]{query: "OpenClaw 2.0 review", limit: 10}'
 
 
 # ---------------------------------------------------------------- G1 정규화

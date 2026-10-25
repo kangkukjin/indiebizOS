@@ -37,8 +37,10 @@ def search_aliased(db, query: str, top_k: int = 5, alpha: float = None,
                       COALESCE(returns_observed,'') AS returns_observed,
                       COALESCE(provenance,'{}') AS provenance
                FROM ibl_examples WHERE COALESCE(alias,'') != ''""").fetchall()
-    from function_memory import project_rows
+    from function_memory import project_rows, catalog_search_rows
     metas = {int(r["id"]): r for r in project_rows(rows)}
+    for row in catalog_search_rows(list(metas.values())):
+        metas[row['id']] = row
     if not metas:
         return []
     ids = list(metas)

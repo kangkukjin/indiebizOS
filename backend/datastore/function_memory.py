@@ -62,3 +62,34 @@ def project_rows(rows):
         if not row.get('function_problem'):
             result.append(row)
     return result
+
+
+def catalog_search_rows(existing):
+    """Discover current definitions lacking corpus rows, without borrowing old evidence.
+
+    Negative numeric search IDs identify catalog candidates only; function_ref is
+    their durable identity. No historical row, embedding or usage is reassigned.
+    """
+    import re
+    from capability_history import function_statistics
+    from ibl_signature_slot import signature_of
+    from ibl_edition import pin_source
+    from common.ibl_language_tokens import CONTROL_NODES
+    represented = {row.get('function_ref', {}).get('function_id') for row in existing}
+    result = []
+    for row in store.snapshot()['records'].values():
+        if (row.get('edition') != 2 or row.get('state') != 'active' or row.get('problem')
+                or row['function_id'] in represented):
+            continue
+        ref = store.reference(row)
+        source = pin_source(row['source'], 2)
+        stats = function_statistics(ref)
+        result.append({'id': -int(row['function_id'][:12], 16), 'alias': row['name'],
+            'intent': row.get('description', ''), 'ibl_code': source,
+            'nodes': ','.join(sorted(set(re.findall(r'\[([a-z_-]+):', source)) - CONTROL_NODES)),
+            'category': 'phrase', 'difficulty': 1, 'source': 'function_catalog',
+            'topic': (row.get('legacy') or {}).get('topic', ''),
+            'signature': signature_of(source), 'returns': '', 'avg_ms': -1, 'avg_tokens': -1,
+            'provenance': json.dumps({'function_ref':ref}, ensure_ascii=False),
+            'function_ref': ref, **stats})
+    return result

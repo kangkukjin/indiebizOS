@@ -15,28 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / 'docs/experiments/long_sentence_imagination/round_3'
 
 
+NATIVE = {'본문에서찾기': (ROOT / 'data/idioms/retirement_04.ibl').read_text()}
+
+
 @pytest.fixture(scope='module')
-def registry(tmp_path_factory):
-    import ibl_usage_db as db_module
-    import workflow_store
-    root = tmp_path_factory.mktemp('round3')
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(db_module, 'DB_PATH', str(root / 'usage.db'))
-        patch.setattr(db_module.IBLUsageDB, '_instance', None)
-        patch.setattr(db_module.IBLUsageDB, '_index_batch', lambda *a, **k: None)
-        patch.setattr(db_module.IBLUsageDB, '_index_single', lambda *a, **k: None)
-        patch.setattr(db_module, '_tree_refresh', lambda *a, **k: None)
-        patch.setattr(workflow_store, '_get_workflows_path', lambda: root / 'workflows')
-        entry = next(e for e in json.loads((ROOT / 'data/idioms/curated.json').read_text())['idioms']
-                     if e['name'] == '본문에서찾기')
-        db_module.IBLUsageDB().add_examples_batch([{
-            'intent': entry['when'], 'ibl_code': entry['body'], 'alias': entry['name'],
-            'category': 'phrase', 'nodes': 'table'}])
-        yield load_registry(str(ROOT))
+def registry():
+    return load_registry(str(ROOT))
 
 
 def execute(code, registry, inputs=None, **kwargs):
-    plan = compile_program(code, registry, inputs)
+    plan = compile_program(code, registry, inputs, definitions=NATIVE)
     assert not plan.issues, [(i['code'], i['message']) for i in plan.issues]
     return Runtime(plan, inputs, **kwargs).run()
 
@@ -101,12 +89,8 @@ def test_number_diagnostic_and_recovery(registry):
     assert result['success'] and result['value'] is None
 
 
-def test_legacy_filter_contract_and_reuse(registry, tmp_path, monkeypatch):
-    import ibl_v2_compat
-    # Preserve the body semantics and expose selected values with separate evidence.
-    spec = registry['fn:본문에서찾기']
-    assert spec.contract['effects'] == ['pure']
-    assert spec.contract['params']['패턴'] == 'Text'
+def test_native_filter_contract_and_reuse(registry, tmp_path, monkeypatch):
+    assert 'fn:본문에서찾기' not in registry
     rows = [{'text': f'hit {i}', 'url': 'https://example.test', 'paragraph_index': i} for i in range(3)]
     out = execute('[fn:본문에서찾기]{목록:$rows,패턴:"hit",문맥:0,개수:1}', registry, {'rows': rows})
     assert out['success'], out
@@ -114,7 +98,7 @@ def test_legacy_filter_contract_and_reuse(registry, tmp_path, monkeypatch):
     assert out['value']['match_info']['total_matches'] == 3
     assert out['value']['match_info']['omitted_matches'] == 2
     assert 'final_result' not in out['value']
-    assert any((event.get('attachments') or {}).get('execution_ref') for event in out['evidence'])
+    assert any(event['kind']=='function_result' and event.get('name')=='본문에서찾기' for event in out['evidence'])
     calls = []
     local = {**registry, 't:read': Adapter({'version': 1, 'params': {}, 'result': 'List<Record>',
              'effects': ['read_external']}, lambda rt, args: calls.append(1) or rows)}
@@ -127,17 +111,6 @@ def test_legacy_filter_contract_and_reuse(registry, tmp_path, monkeypatch):
                       reusable=reusable_receipts(tmp_path, run_id), reuse_run=run_id)
     assert changed['reuse']['reused_calls'] == 1 and calls == [1]
     assert changed['value']['items'] == rows[:2]
-    from ibl_parser import parse_function_body
-    body = '$return=$목록 >> [table:filter]{where:{field:"text",op:"matches",value:$패턴},context:{}}'
-    steps = parse_function_body(body)
-    assert not ibl_v2_compat.forwarding_contract(None, [], None)
-    bare = parse_function_body(body.replace(',context:{}', ''))
-    assert not ibl_v2_compat.forwarding_contract(bare, ['목록', '패턴'], '목록')
-    assert ibl_v2_compat.forwarding_contract(steps, ['목록', '패턴'], '목록')['effects'] == ['pure']
-    for extra in [{'_node': 'self', 'action': 'write', 'params': {}}, {'criteria': 'check'}]:
-        assert not ibl_v2_compat.forwarding_contract(steps + [extra], ['목록', '패턴'], '목록')
-    steps[1]['criteria'] = 'extra model'
-    assert not ibl_v2_compat.forwarding_contract(steps, ['목록', '패턴'], '목록')
 
 
 def test_model_missing_duplicate_invalid_diagnostics(registry, monkeypatch):

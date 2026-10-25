@@ -90,12 +90,22 @@ def validate_payload(manifest: dict, files: dict) -> list:
     examples = json.loads(files['examples.json'])
     if not isinstance(examples, list) or not examples:
         raise ValueError("시딩 용례가 하나 이상 필요합니다")
-    from ibl_parser import parse
+    from ibl_edition import source_edition
+    from ibl_parser import parse as historical_parse
+    from ibl_v2_parser import parse as current_parse
+    from ibl_v2_ir import Fault
     for example in examples:
         if not isinstance(example, dict) or not isinstance(example.get('intent'), str) or not example['intent'].strip():
             raise ValueError("용례에는 자연어 intent가 필요합니다")
         code = example.get('ibl_code')
-        if not isinstance(code, str) or not parse(code):
+        if not isinstance(code, str) or not code.strip():
+            raise ValueError("용례의 IBL 문장이 올바르지 않습니다")
+        try:
+            parsed = (current_parse(code).data['statements'] if source_edition(code, example.get('edition')) == 2
+                      else historical_parse(code))
+        except Fault as exc:
+            raise ValueError(f'용례의 IBL 문장이 올바르지 않습니다: {exc}') from exc
+        if not parsed:
             raise ValueError("용례의 IBL 문장이 올바르지 않습니다")
         if not set(re.findall(r"\[([a-z_]+:[a-z_0-9]+)\]", code)) & actions.keys():
             raise ValueError("용례는 동봉한 묶음의 어휘를 사용해야 합니다")
@@ -183,10 +193,39 @@ def export_directory(path: Path, package_id: str) -> bytes:
         for key, cfg in fragment_actions(files['ibl_actions.yaml']).items():
             fixture = cfg.get('fixture')
             if fixture:
-                examples.append({'intent': cfg.get('description', key), 'ibl_code': fixture,
+                examples.append({'intent': cfg.get('description', key), 'ibl_code': _current_fixture(fixture),
                                  'nodes': key.split(':')[0], 'category': 'single'})
         files['examples.json'] = json.dumps(examples, ensure_ascii=False).encode()
     return pack(manifest, files)
+
+
+def _current_fixture(source):
+    """Generate a new example from a literal tool fixture, never rewrite an archive.
+
+    Complex or parameterized fixture programs require an authored examples.json.
+    Current compilation and ownership are checked again by the import seed gate.
+    """
+    from ibl_edition import explicit_source
+    from ibl_v2_parser import parse
+    from ibl_v2_ir import Node
+    current = explicit_source(source, 2)
+    statements = parse(current).data['statements']
+    if len(statements) != 1 or statements[0].kind != 'call':
+        raise ValueError('복합 fixture는 판본 2 examples.json으로 작성하세요.')
+    pending = [statements[0].data['params']]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, Node):
+            if value.kind not in {'literal', 'record', 'list'}:
+                raise ValueError('동적 fixture는 판본 2 examples.json으로 작성하세요.')
+            pending.append(value.data)
+        elif isinstance(value, dict):
+            pending.extend(value.values())
+        elif isinstance(value, (list, tuple)):
+            pending.extend(value)
+        elif isinstance(value, str) and '$' in value:
+            raise ValueError('치환 fixture는 판본 2 examples.json으로 작성하세요.')
+    return current
 
 
 def convert_legacy(text: str) -> bytes:

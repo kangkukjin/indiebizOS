@@ -1,0 +1,5 @@
+#!ibl edition=2
+[def:관문배터리돌리기]() {
+  $관문 = [self:script]{id:"빌드검증",args:{gates:["layers","paths","items"]}}
+  return $관문.items >> [table:filter]{where:($행)=>$행.ok==false} >> [table:select]{columns:["gate","summary"]}
+}

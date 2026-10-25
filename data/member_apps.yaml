@@ -1,4 +1,5 @@
 - id: report
+  edition: 2
   name: 정기보고
   icon: 📑
   web_only: true
@@ -25,28 +26,30 @@
       empty: 아직 이 기기에 작성한 보고서가 없습니다.
       card: {title: '{name}', lines: ['{path}']}
       item_click:
-        action: '[self:read]{path:"{path}",blocks:true}'
-        view: [{type: blocks, from: items}]
+        action: '[self:read]{path:$item.path}'
+        view: [{type: blocks, from: blocks}]
 - id: member_files
+  edition: 2
   name: 내 파일
   icon: 📁
   modes:
   - id: list
     name: 목록
     inputs: [{key: path, placeholder: 폴더 경로, default: '.'}]
-    action: '[self:list]{path:"$path"}'
+    action: '[self:list]{path:$path}'
     view: [{type: list_action, from: items, title: '{name}', sub: '{type} · {path}'}]
   - id: read
     name: 읽기
     inputs: [{key: path, placeholder: 읽을 파일 경로}]
-    action: '[self:read]{path:"$path"}'
+    action: '[self:read]{path:$path}'
     view: [{type: kv, rows: [{k: 내용, v: '{text}'}]}]
   - id: write
     name: 저장
     inputs: [{key: path, placeholder: 저장할 파일 경로}, {key: content, placeholder: 내용}]
-    action: '[self:write]{path:"$path",content:"$content"}'
+    action: '[self:write]{path:$path,content:$content}'
     view: [{type: kv, rows: [{k: 저장 경로, v: '{path}'}]}]
 - id: member_programs
+  edition: 2
   name: 내 프로그램
   icon: ⚙️
   modes:
@@ -58,9 +61,10 @@
   - id: run
     name: 실행
     inputs: [{key: id, placeholder: 등록된 프로그램 이름}]
-    action: '[self:script]{op:"run",id:"$id"}'
+    action: '[self:script]{op:"run",id:$id}'
     view: [{type: kv, rows: [{k: 실행 결과, v: '{stdout}'}]}]
 - id: member_documents
+  edition: 2
   name: 문서
   icon: 📄
   web_only: true
@@ -69,13 +73,13 @@
     name: 읽기
     note: 이 기기에서 선택한 문서만 읽습니다. PDF·Word·Excel·텍스트를 지원합니다.
     inputs: [{key: path, type: file, placeholder: 문서 선택, required: true}]
-    action: '[self:read]{path:"$path",blocks:true}'
-    view: [{type: blocks, from: items}]
+    action: '[self:read]{path:$path}'
+    view: [{type: blocks, from: blocks}]
   - id: fields
     name: 양식 확인
     note: PDF 또는 Word 양식에서 채울 수 있는 항목을 확인합니다.
     inputs: [{key: path, type: file, placeholder: 양식 선택, required: true}]
-    action: '[self:fill]{path:"$path"}'
+    action: '[self:fill]{path:$path}'
     view: [{type: list_action, from: items, title: '{name}', sub: '{type}'}]
   - id: fill
     name: 양식 채우기
@@ -87,14 +91,15 @@
       type: select
       label: 채울 항목 선택
       required: true
-      options_action: '[self:fill]{path:"$path"}'
+      options_action: '[self:fill]{path:$path}'
       options_from: items
       option_value: name
       option_label: name
     - {key: value, placeholder: 넣을 내용, required: true}
-    action: '[self:fill]{path:"$path",data:{"$field":"$value"}}'
+    action: '[self:fill]{path:$path,data:from_entries([[$field,$value]])}'
     view: [{type: kv, rows: [{k: 완성된 문서, v: '{path}'}]}]
 - id: member_search
+  edition: 2
   name: 공개 웹 검색
   icon: 🔎
   web_only: true
@@ -102,15 +107,16 @@
   - id: search
     name: 검색
     inputs: [{key: query, placeholder: 검색할 내용, required: true}]
-    action: '[sense:search]{query:"$query",source:"ddg"}'
+    action: '[sense:search]{query:$query,source:"ddg"}'
     view:
     - type: card_list
       from: items
       card: {title: '{title}', lines: ['{url}', '{summary}']}
       item_click:
-        action: '[sense:crawl]{url:"{url}"}'
-        view: [{type: blocks, from: items}]
+        action: '[sense:crawl]{url:$item.url}'
+        view: [{type: blocks, from: blocks}]
 - id: member_location
+  edition: 2
   name: 내 위치
   icon: 📍
   web_only: true

@@ -86,14 +86,14 @@ LAYERS = {
         "capability_card", "channel_engine", "event_engine", "ibl_access", "ibl_control_blocks", "ibl_function_result",
         "ibl_engine", "ibl_envelope", "ibl_result_transport", "ibl_executors", "ibl_exec_output", "ibl_exec_goal",
         "ibl_honesty", "ibl_traceback", "ibl_quality", "ibl_pipe_types", "ibl_typecheck", "ibl_value_types", "ibl_preflight",
-        "ibl_exec_each", "ibl_exec_sense", "ibl_ops", "ibl_param_vocab", "ibl_code_binding", "ibl_code_ir",
+        "ibl_exec_sense", "ibl_ops", "ibl_param_vocab", "ibl_code_binding", "ibl_code_ir",
         "ibl_progress",
         "ibl_predicates",
         "ibl_parser", "ibl_scanner", "ibl_parser_blocks", "ibl_parser_values", "ibl_parser_scope", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
         "ibl_safety", "ibl_translate", "package_manager", "vocabulary_lifecycle", "vocabulary_desktop", "vocabulary_archive", "vocabulary_import", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
-        "workflow_parallel", "workflow_fallback", "workflow_contract",
-        "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
+        "workflow_contract",
+        "workflow_binding", "workflow_verdict", "workflow_store",
     },
     "cognition": {
         "member_cli",
@@ -163,7 +163,6 @@ BASELINE = {
     "auto_response -> portal_warehouse",
     "channel_engine -> api_gmail",
     "channel_engine -> indienet",
-    "ibl_executors -> goal_evaluator",
 }
 
 

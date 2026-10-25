@@ -24,12 +24,6 @@ def test_only_used_transitive_native_definitions_and_contracts_pin_plan():
     assert compile_program('return 21').fingerprint == compile_program('return 21', {'x:y':contract}, definitions={'c':unused}).fingerprint
 
 
-def test_legacy_static_transitive_assets_are_bounded():
-    from ibl_dependencies import legacy_snapshot
-    assets = {'a': {'code':'[fn:b]{}'}, 'b':{'code':'[self:time]'}}
-    before = legacy_snapshot('a', assets)
-    assert legacy_snapshot('a', {**assets, 'c':{'code':'[self:time]'}}) == before
-    assert legacy_snapshot('a', {**assets, 'b':{'code':'[self:time]{format:"date"}'}}) != before
 
 
 def test_script_snapshot_tracks_imports_and_dynamic_selection(tmp_path):

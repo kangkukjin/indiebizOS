@@ -157,70 +157,14 @@ def test_c1_parser_block_vars():
     assert blk["branches"][0]["action"]["params"]["message"] == "$r.items.0.title"  # 몸은 실행 직전 값 치환(M6 개정)
 
 
-def test_c2_engine_var_predicates_and_body_binding():
-    calls = []
-    out = _run('$r = [sense:search]{query: "x"}\n'
-               '[if: count($r) > 0 and $r.items.0.title matches "속보|긴급"]{[self:notify_user]{message: "$r.items.0.title"}}\n'
-               '[else]{[self:time]}', calls)
-    assert out["success"], out
-    acts = [c.get("action") for c in calls]
-    assert acts == ["search", "notify_user"], acts
-    assert calls[1]["params"]["message"] == "속보: 화재"
-    final = json.loads(out["final_result"]) if isinstance(out["final_result"], str) else out["final_result"]
-    assert final["matched"].startswith("count($r) > 0") and final["matched_value"] == 2, final
-    # 거짓 → else
-    calls.clear()
-    out = _run('$r = [sense:search]{query: "x"}\n[if: $r.count > 5]{[self:notify_user]{}} [else]{[self:time]}', calls)
-    assert out["success"] and [c.get("action") for c in calls] == ["search", "time"]
-    # 빈 통화 술어
-    calls.clear()
-    out = _run('$e = [sense:empty]{}\n[if: empty($e) or not exists($e.items.0)]{[self:a]{}} [else]{[self:b]{}}', calls)
-    assert out["success"] and [c.get("action") for c in calls] == ["empty", "a"]
 
 
-def test_c3_unassigned_var_is_undecidable():
-    calls = []
-    out = _run('$r = [sense:search]{query: "x"}\n[if: count($zz) > 0]{[self:a]{}} [else]{[self:b]{}}', calls)
-    assert out["success"] is False, out
-    fr = out["final_result"]
-    fr = json.loads(fr) if isinstance(fr, str) else fr
-    assert fr["condition_errors"] and "$zz" in fr["condition_errors"][0]["error"]
-    assert [c.get("action") for c in calls] == ["search"]          # else 보류 — a·b 어느 쪽도 실행 안 됨
 
 
-def test_c4_ai_predicate():
-    calls = []
-    out = _run('$r = [sense:search]{query: "x"}\n'
-               '[if: [table:brief]{instruction: "관련 있으면 yes 아니면 no"} == "yes"]{[self:a]{}} [else]{[self:b]{}}', calls)
-    assert out["success"], out
-    assert [c.get("action") for c in calls] == ["search", "brief", "a"], calls
-    calls.clear()
-    out = _run('[if: [table:brief]{instruction: "q"} == "yes"]{[self:a]{}} [else]{[self:b]{}}\n[self:c]{}',
-               calls, brief_answer="no")
-    assert [c.get("action") for c in calls] == ["brief", "b", "c"]
-    # yes/no 밖의 답 → 불일치지만 판정 가능(문자열 비교) — 거짓으로 else
-    calls.clear()
-    out = _run('[if: [table:brief]{instruction: "q"} == "yes"]{[self:a]{}} [else]{[self:b]{}}\n[self:c]{}',
-               calls, brief_answer="잘 모르겠습니다")
-    assert [c.get("action") for c in calls] == ["brief", "b", "c"]
 
 
-def test_c5_case_var_source():
-    calls = []
-    out = _run('$r = [sense:search]{query: "x"}\n[case: $r.count]{"2": [self:two]{}, default: [self:other]{}}', calls)
-    assert out["success"], out
-    assert [c.get("action") for c in calls] == ["search", "two"], calls
-    calls.clear()
-    out = _run('$r = [sense:search]{query: "x"}\n[case: $r.nope]{"2": [self:two]{}, default: [self:other]{}}', calls)
-    assert out["success"] is False and [c.get("action") for c in calls] == ["search"]   # 경로 부재 = 판정 불능, default 보류
 
 
-def test_c6_nested_block_inherits_vars():
-    calls = []
-    out = _run('$r = [sense:search]{query: "x"}\n'
-               '[if: count($r) > 0]{[if: $r.count == 2]{[self:inner]{}} [else]{[self:no]{}}}', calls)
-    assert out["success"], out
-    assert [c.get("action") for c in calls] == ["search", "inner"], calls
 
 
 def test_c7_static_validation():
@@ -232,16 +176,6 @@ def test_c7_static_validation():
     assert validate_condition('[table:brief]{instruction: "a and b"} == "yes"') is None
 
 
-def test_c8_legacy_forms(monkeypatch):
-    monkeypatch.setattr(ex, "_get_sense_value_checked", lambda s, p, a: (2500.0, None))
-    monkeypatch.setattr(ex, "_run_branch", lambda action, ti, p, a: {"ok": True})
-    r = ex._execute_condition({"branches": [{"condition": "sense:kospi{op: \"quote\"}.data.price > 2400", "action": {"x": 1}}]}, "/tmp", "t")
-    assert r["ok"] and r["matched_value"] == 2500.0
-    r = ex._execute_condition({"branches": [{"condition": "sense:flag", "action": {"x": 1}}, {"action": {"y": 1}}]}, "/tmp", "t")
-    assert r["matched"] == "sense:flag"
-    monkeypatch.setattr(ex, "_get_sense_value_checked", lambda s, p, a: (None, "필드 경로 '.x' 가 결과에 없습니다"))
-    r = ex._execute_condition({"branches": [{"condition": "sense:kospi.x > 1", "action": {"x": 1}}, {"action": {"y": 1}}]}, "/tmp", "t")
-    assert r["success"] is False and r["condition_errors"]      # 읽기 실패 = 판정 불능, else 보류 (B10 유지)
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

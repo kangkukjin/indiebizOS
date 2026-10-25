@@ -27,8 +27,8 @@ def test_describe_preserves_leaf_usage_but_not_old_core_grammar():
     assert read["callable_contract"]["enums"]["channel_type"] == ["email", "nostr", "gmail"]
     from ibl_access import load_nodes_raw
     each = load_nodes_raw()['nodes']['table']['actions']['each']
-    assert definitions['table:each']['target_description'] == each['authoring_hint']
-    assert definitions['table:each']['target_description'] != each['target_description']
+    assert definitions['table:each']['target_description'] == each['target_description']
+    assert each['target_description_edition'] == 2
     assert '$return' not in definitions['table:each']['target_description']
 
 
@@ -91,11 +91,17 @@ def test_missing_account_preserves_gate_and_read_specific_guidance(tmp_path, mon
     assert "신원은 바뀌지 않습니다" in out["hint"]
 
 
-def test_legacy_error_hint_recognizes_declared_callable_arguments():
-    from system_tools_ibl import _enrich_error_with_param_hint
-    result = _enrich_error_with_param_hint({"success": False, "error": "계정 없음"},
-        '[others:channel_read]{channel_type:"email",max_results:5}')
-    assert "선언한 키가 아니라" not in result["_param_hint"]
+def test_current_error_preserves_provider_cause_with_declared_arguments(registry):
+    from ibl_v2_ir import Fault
+    def unavailable(*args):
+        raise Fault('UNAVAILABLE', '계정 없음')
+    contract = registry['others:channel_read'].contract
+    plan = compile_program('[others:channel_read]{channel_type:"email",max_results:5}',
+                           {'others:channel_read': Adapter(contract, unavailable)})
+    assert not plan.issues
+    result = Runtime(plan).run()
+    assert not result['success'] and '계정 없음' in str(result)
+    assert 'UNKNOWN_ARGUMENT' not in str(result)
 
 
 @pytest.mark.parametrize("params", [{"limit": 5}, {"max_results": 5}])

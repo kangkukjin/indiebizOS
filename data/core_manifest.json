@@ -130,7 +130,6 @@
       "폴더변화.py"
     ],
     "idioms": [
-      "AI시대_보고서_출처_뉴스_갱신.yaml",
       "android_control.ibl",
       "android_control_check.ibl",
       "installed.json",
@@ -138,9 +137,22 @@
       "pc_control_check.ibl",
       "pc_control_execute.ibl",
       "pc_read_batch.ibl",
+      "retirement_01.ibl",
+      "retirement_02.ibl",
+      "retirement_03.ibl",
+      "retirement_04.ibl",
+      "retirement_05.ibl",
+      "retirement_06.ibl",
+      "retirement_07.ibl",
+      "retirement_08.ibl",
+      "retirement_09.ibl",
+      "retirement_10.ibl",
+      "retirement_11.ibl",
+      "retirement_12.ibl",
+      "retirement_13.ibl",
+      "retirement_14.ibl",
       "프로젝트재조사.yaml",
-      "프로젝트재조사확인.yaml",
-      "화면검수.yaml"
+      "프로젝트재조사확인.yaml"
     ],
     "vocab_fragments": [
       "engines.yaml",

@@ -303,7 +303,7 @@ class CalendarManagerBase:
                 candidate = normalized_event({**evt, **{k: v for k, v in kwargs.items() if k in valid_keys}}, kwargs)
                 for key, value in candidate.items():
                     if key in valid_keys:
-                        if key == "action_params" and isinstance(value, dict) and isinstance(value.get("pipeline"), str):
+                        if candidate.get("enabled", True) and key == "action_params" and isinstance(value, dict) and isinstance(value.get("pipeline"), str):
                             from ibl_edition import pin_source
                             value = {**value, "pipeline": pin_source(value["pipeline"], value.get("edition"))}
                         evt[key] = value

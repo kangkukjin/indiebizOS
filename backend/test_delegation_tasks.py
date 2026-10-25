@@ -200,7 +200,7 @@ def test_app_button_can_start_system_delegation(world, monkeypatch, surface):
     tc.clear_all_context()
     register_all()
     result = asyncio.run(execute_ibl_code(IBLRequest(
-        code='[others:delegate]{scope:"system",message:"보고서 써줘",from_agent:"정기보고앱"}',
+        code='#!ibl edition=2\n[others:delegate]{scope:"system",message:"보고서 써줘",from_agent:"정기보고앱"}',
         project_path=world.project_path, surface=surface)))
     assert queued, result
     msg = queued[0]
@@ -217,7 +217,7 @@ def test_scheduled_pipeline_can_start_system_delegation(world, monkeypatch):
     tc.clear_all_context()
     register_all()
     result = execute_scheduled(
-        '[others:delegate]{scope:"system",message:"보고서 써줘"}', world.project_path, None)
+        '#!ibl edition=2\n[others:delegate]{scope:"system",message:"보고서 써줘"}', world.project_path, None)
     assert queued, result
     msg = queued[0]
     assert msg["envelope"]["chain"] == ["scheduler"]

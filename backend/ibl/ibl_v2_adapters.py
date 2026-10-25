@@ -506,6 +506,4 @@ def load_registry(project_path=".", agent_id=None):
                                   if contract.get('model_reuse') else None,
                                   invocation_identity if adapter['protocol'] == 'ibl-script/2' else None,
                                   script_contract if adapter['protocol'] == 'ibl-script/2' else None)
-    from ibl_v2_compat import function_adapters
-    result.update(function_adapters(project_path, agent_id))
     return result

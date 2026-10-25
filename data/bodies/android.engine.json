@@ -284,7 +284,6 @@
     "ibl/ibl_document_value",
     "ibl/ibl_engine",
     "ibl/ibl_envelope",
-    "ibl/ibl_exec_each",
     "ibl/ibl_exec_goal",
     "ibl/ibl_exec_output",
     "ibl/ibl_exec_sense",
@@ -338,7 +337,6 @@
     "ibl/member_files",
     "ibl/member_profile",
     "ibl/package_manager",
-    "ibl/pipeline_state",
     "ibl/repair_execution_scope",
     "ibl/reusable_catalog",
     "ibl/tool_batch",
@@ -353,8 +351,6 @@
     "ibl/workflow_binding",
     "ibl/workflow_contract",
     "ibl/workflow_engine",
-    "ibl/workflow_fallback",
-    "ibl/workflow_parallel",
     "ibl/workflow_store",
     "ibl/workflow_verdict",
     "ibl_embedding_trainer",
@@ -570,8 +566,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 559,
-    "engine": 527,
+    "total": 555,
+    "engine": 523,
     "blocklist": 32
   }
 }

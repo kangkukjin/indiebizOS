@@ -617,14 +617,14 @@
    "fields": {
     "description": "aa87d2790fbe",
     "target_description": "81b2a7d62c6b",
-    "implementation": "426051c894a0",
+    "implementation": "eb179ab60e66",
     "returns": "9a5e13f69efc",
     "target_key": "4423a660687c",
-    "params": "a347042f21cb",
+    "params": "99dc0be32120",
     "aliases": "d84e35f4f510",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-24",
+   "reviewed": "2026-10-25",
    "examples": 55
   },
   "others:family_news": {
@@ -1633,18 +1633,18 @@
   },
   "self:workflow": {
    "fields": {
-    "description": "52a58c2caa4e",
-    "target_description": "de610c1f5dd9",
+    "description": "bf279e8c728b",
+    "target_description": "130876187f00",
     "implementation": "7438bc5a92a5",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
     "params": "f06cac358f64",
     "aliases": "1bb934bf4227",
-    "ops": "6e80bd12876b",
+    "ops": "431c4a56e0df",
     "side_effect": "b5bea41b6c62",
     "router": "adcb3a461920"
    },
-   "reviewed": "2026-10-24",
+   "reviewed": "2026-10-25",
    "examples": 72
   },
   "self:workspace": {
@@ -2378,15 +2378,14 @@
   "table:each": {
    "fields": {
     "description": "ab0f726c5036",
-    "target_description": "e605a7d7d628",
-    "implementation": "c86d8be05a15",
+    "target_description": "ff8dfefaaa6c",
+    "implementation": "eec14e358f64",
     "returns": "5450ffb2cf8a",
-    "target_key": "8dd79be12d30",
     "side_effect": "b5bea41b6c62",
     "runs_on": "519dd933e8a2",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-21",
+   "reviewed": "2026-10-25",
    "examples": 118
   },
   "table:filter": {

@@ -49,35 +49,21 @@ def test_i3_no_binding_no_noise():
     assert _items_bound_note({"_items_bound": {}}, "그냥 실패") == "그냥 실패"
 
 
-def test_i4_engine_wires_the_note_into_the_envelope():
-    """엔진이 실제로 그 번역기를 불러야 한다 — 함수만 있고 배선이 없으면 사용자는 못 본다."""
-    import workflow_engine
-    src = open(workflow_engine.__file__, encoding="utf-8").read()
-    assert "_items_bound_note(tool_input, err_msg)" in src, \
-        "step 실패 경로가 집합 바인딩 번역기를 안 부른다"
 
 
 def test_i5_unknown_param_is_named_at_failure():
-    """실패 순간에 '네가 준 이 키는 안 읽혔다' 를 말한다 — F31-1 의 심장."""
-    import json
-    from system_tools_ibl import _enrich_error_with_param_hint
-    out = _enrich_error_with_param_hint(
-        {"success": False, "error": "prompt(지시/질문)가 필요합니다."},
-        '[self:ask]{question: "하늘색"}')
-    hint = (out if isinstance(out, dict) else json.loads(out)).get("_param_hint") or ""
-    assert "question" in hint, f"받은 미인식 키를 안 알려준다: {hint}"
-    assert "prompt" in hint, f"받는 키 목록을 안 알려준다: {hint}"
+    from ibl_v2_entry import handle_request
+    out=handle_request({'code':'[self:ask]{question:"하늘색"}','edition':2,'check':True})
+    assert not out['ok'] and 'question' in str(out['issues'])
+    assert 'UNKNOWN_ARGUMENT' in str(out['issues'])
+
 
 
 def test_i6_declared_keys_are_not_flagged():
-    """정당한 키는 신고하지 않는다 — 자주 틀리는 경고는 침묵보다 나쁘다(모듈 철칙)."""
-    import json
-    from system_tools_ibl import _enrich_error_with_param_hint
-    out = _enrich_error_with_param_hint(
-        {"success": False, "error": "아무 이유"},
-        '[self:ask]{prompt: "하늘색"}')
-    hint = (out if isinstance(out, dict) else json.loads(out)).get("_param_hint") or ""
-    assert "선언한 키가 아니라" not in hint, f"정당한 키를 신고했다: {hint}"
+    from ibl_v2_entry import handle_request
+    out=handle_request({'code':'[self:ask]{prompt:"하늘색"}','edition':2,'check':True})
+    assert out['ok'], out
+
 
 
 def test_i7_mixed_items_ref_substitutes_and_marks():
@@ -127,14 +113,6 @@ def test_i10_sole_var_and_scalar_path_do_not_mark():
     assert "_list_in_text" not in scalar, scalar.get("_list_in_text")
 
 
-def test_i11_block_body_marks_the_same_way():
-    """블록 몸의 `$변수`(실행기 치환)도 같은 표식 — 파이프와 블록이 다른 규칙이면 사용자는 모른다."""
-    from ibl_executors import _subst_var_refs
-    body = [{"_node": "self", "action": "notify_user",
-             "params": {"message": "목록: $r 확인"}}]
-    out = _subst_var_refs(body, {"r": {"items": [{"a": 1}, {"a": 2}]}})
-    assert out[0]["params"]["message"].startswith("목록: [{"), out[0]["params"]["message"]
-    assert out[0].get("_list_in_text") == [{"param": "message", "ref": "$r", "rows": 2}], out[0].get("_list_in_text")
 
 
 def test_i12_failure_note_and_envelope_warning_speak_the_mark():
@@ -149,25 +127,6 @@ def test_i12_failure_note_and_envelope_warning_speak_the_mark():
     assert "무시" in w, "정당한 용법(AI 에 데이터 먹이기)을 틀렸다고 읽게 하면 안 된다"
 
 
-def test_i13_engine_wires_the_mark_into_the_envelope(monkeypatch):
-    """I13: 실제 봉투에 표식·경고가 함께 남고, 다음 실행으로 새지 않는다."""
-    import ibl_engine
-    from workflow_engine import execute_pipeline
-    from ibl_parser import parse
-
-    def fake(step, *_args, **_kwargs):
-        if step["action"] == "read":
-            return {"items": [{"title": "a"}, {"title": "b"}]}
-        return {"success": True, "message": "saved"}
-
-    monkeypatch.setattr(ibl_engine, "execute_ibl", fake)
-    out = execute_pipeline(parse('$곡 = [self:read]{path:"fixture"}; '
-                                 '[self:write]{path:"out",content:"목록: $곡 끝"}'))
-    assert out["success"]
-    assert out["list_in_text"][0]["refs"][0]["rows"] == 2
-    assert "[목록→글자]" in out["warning"] and "$곡" in out["warning"]
-    clean = execute_pipeline(parse('[self:write]{path:"out",content:"고정"}'))
-    assert clean["success"] and "list_in_text" not in clean and "warning" not in clean
 
 
 def test_i14_caller_params_list_embed_is_reported():

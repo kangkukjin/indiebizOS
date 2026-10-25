@@ -11,12 +11,12 @@ def definitions(view=None):
     view = store.snapshot() if view is None else view
     result = Library()
     result.references = {}
-    result.legacy_references = {}
+    result.retired_names = set()
     result.generation = view['generation']
     for row in view['records'].values():
-        if row.get('edition') == 1 and row.get('state') == 'active' and not row.get('problem'):
+        if row.get('edition') == 1:
             for name in [row['name'], *row.get('legacy_ids', [])]:
-                result.legacy_references[name] = store.reference(row)
+                result.retired_names.add(name)
         if row.get('edition') != 2 or row.get('state') == 'retired':
             continue
         name = row['name']
@@ -39,8 +39,6 @@ def _validate_changes(before, after, changed):
     from ibl_v2_compile import compile_program
     from ibl_v2_store import definition_name
     from ibl_v2_ir import Fault
-    from ibl_param_vocab import code_syntax_error
-    from function_consumers import legacy_issues
     try:
         registry = load_registry()
         with store.using(before):
@@ -69,27 +67,13 @@ def _validate_changes(before, after, changed):
             if errors:
                 raise ValueError('저장 전 검사 거절: ' + errors[0]['message'])
         else:
-            from ibl_parser_blocks import _FN_RESERVED_NAMES
-            if not row.get('legacy') and (not row['name'].isidentifier() or row['name'] in _FN_RESERVED_NAMES):
-                raise ValueError('관용구 이름이 판본 1 문법에 맞지 않습니다.')
-            legacy = row.get('legacy')
-            if legacy is not None:
-                from workflow_store import _validate_sentence
-                why = _validate_sentence(legacy.get('do') or legacy.get('steps') or legacy.get('pipeline'))
-            else:
-                why = code_syntax_error(row['source'], True)
-            if why:
-                raise ValueError(why)
+            raise ValueError('EDITION_RETIRED: 판본 1 함수는 활성 등록·개정·재활성화할 수 없습니다.')
     broken = []
     for fid, old in before['records'].items():
         if fid in changed or old.get('state') != 'active':
             continue
         if old.get('edition') == 1:
-            errors = legacy_issues(old, after) if not legacy_issues(old, before) else []
-            if errors:
-                broken.append({'name': old['name'], 'origin': '관용구:' + fid,
-                               'code': 'FUNCTION', 'message': errors[0]})
-            continue
+            continue  # Historical records cannot be executed.
         if not issues(old['source'], prior):
             errors = issues(old['source'], following)
             if errors:
@@ -120,7 +104,9 @@ def register(name, source, description='', provenance=None, *, expected_revision
             if prior['hash'] != store.digest(request_payload):
                 raise ValueError('동일 변경 요청 ID의 내용이 다릅니다.')
             return prior['result']['functions'][0]
-    edition = edition or source_edition(source)
+    from ibl_edition import require_current
+    require_current(source, edition)
+    edition = 2
     view = store.snapshot()
     old = store.resolve(name, function_id=function_id, edition=edition, view=view, include_inactive=True)
     if old:
@@ -177,6 +163,7 @@ def retire(identifier, expected_revision=None):
 def reference_library(refs):
     """Resolve a closed, pinned library; do not fill missing entries from current."""
     from ibl_v2_store import Library
+    from ibl_v2_ir import Fault
     from member_runtime import is_member
     if is_member():
         raise ValueError('회원 호출은 동봉한 관용구 정의만 사용할 수 있습니다.')
@@ -184,11 +171,13 @@ def reference_library(refs):
         raise ValueError('function_refs는 관용구 참조 목록이어야 합니다.')
     view, result = store.snapshot(), Library()
     result.references = {}
-    result.legacy_references = {}
+    result.retired_names = set()
     result.pinned_view = {'generation': view['generation'], 'records': {}}
     for ref in refs:
         if not isinstance(ref, dict):
             raise ValueError('잘못된 관용구 참조입니다.')
+        if ref.get('edition') == 1:
+            raise Fault('EDITION_RETIRED', '구판 함수 참조는 실행할 수 없습니다.', kind='compile')
         if ref.get('scope_id') != store.catalog()['scope_id']:
             raise ValueError('다른 소유 범위의 관용구 참조를 찾을 수 없습니다.')
         active = store.resolve(function_id=ref.get('function_id'), view=view)
@@ -197,6 +186,8 @@ def reference_library(refs):
         row = store.revision(active['function_id'], ref.get('revision'))
         if ref.get('name') != row['name'] or ref.get('edition', 2) != row['edition']:
             raise ValueError('관용구 참조의 이름 또는 판본이 다릅니다.')
+        if row['edition'] != 2:
+            raise Fault('EDITION_RETIRED', '구판 고정 참조는 실행할 수 없습니다.', kind='compile')
         row['state'] = 'active'
         row['legacy_ids'] = active.get('legacy_ids', [])
         result.pinned_view['records'][row['function_id']] = row
@@ -205,29 +196,7 @@ def reference_library(refs):
             result.references[row['name']] = store.reference(row)
         else:
             for name in [row['name'], *row['legacy_ids']]:
-                result.legacy_references[name] = store.reference(row)
-    return result
-
-
-def record_legacy_call(row, result):
-    """An actual compatibility call gets identity-based evidence, never body matching."""
-    if not isinstance(result, dict):
-        return result
-    from capability_history import record_function_call
-    from ibl_function_result import source_partial
-    ref = store.reference(row)
-    run_id = uuid.uuid4().hex
-    complete = not source_partial(result)
-    record_function_call(ref, run_id, 'legacy-call', success=result.get('success', False),
-                         dependency_revision=store.digest(store.snapshot()), source_complete=complete,
-                         observed={'failure_origin': result.get('failure_origin')})
-    from episode_logger import record_trajectory_event
-    record_trajectory_event('ibl.function_feedback', {'function_ref': ref,
-                            'success': result.get('success', False), 'source_complete': complete,
-                            'attributed': bool(result.get('success') or (result.get('failure_origin') or {}).get('definition_failure')),
-                            'failure_origin': result.get('failure_origin'),
-                            'run_id': run_id, 'call_id': 'legacy-call'})
-    result.update(function_ref=ref, function_call={'run_id': run_id, 'call_id': 'legacy-call'})
+                result.retired_names.add(name)
     return result
 
 

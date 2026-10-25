@@ -28,7 +28,7 @@ export async function iblExecuteApp(code: string, options: { check?: boolean; al
   const res = await fetch(`${API}/ibl/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...iblSurface, code, project_id: APP_PROJECT_ID, ...(options.check ? { check: true } : {}) }),
+    body: JSON.stringify({ ...iblSurface, code, ...(/^\s*#!ibl/.test(code) ? {} : { edition: 2 }), project_id: APP_PROJECT_ID, ...(options.check ? { check: true } : {}) }),
   });
   checkRemoteSession(res.status);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);

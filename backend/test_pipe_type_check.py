@@ -60,14 +60,6 @@ def test_p6_unknown_action_is_conservative():
     assert head_transform_error([]) is None
 
 
-def test_p7_pipeline_rejects_before_execution():
-    from workflow_engine import execute_pipeline
-    res = execute_pipeline(parse('[table:dedup]{by: "a"} >> [table:take]{n: 3}'),
-                           project_path=".")
-    assert res.get("success") is False
-    assert res.get("steps_completed") == 0, "실행 전에 거절돼야 한다"
-    assert "변환자" in (res.get("error") or "")
-    assert (res.get("traceback") or {}).get("error_type") == "binding"
 
 
 # ── T2. 이음매 기아 (2026-08-30) ─────────────────────────────────────────────
@@ -126,18 +118,6 @@ def test_t2_abstains_are_conservative():
          {"_node": "table", "action": "take", "params": {"n": 1}}]) is None
 
 
-def test_t2_pipeline_rejects_before_execution():
-    from workflow_engine import execute_pipeline
-    res = execute_pipeline(
-        parse('[limbs:browser]{op: "click", ref: "b1"} >> [table:filter]{where: "a > 1"}'),
-        project_path=".")
-    assert res.get("success") is False
-    assert res.get("steps_completed") == 0, "실행 전에 거절돼야 한다"
-    assert "굶습니다" in (res.get("error") or "")
-    tb = res.get("traceback") or {}
-    assert tb.get("error_type") == "binding"
-    frames = tb.get("frames") or []
-    assert frames and frames[-1].get("step") == 2, "프레임은 굶는 변환자 자리"
 
 
 def _unified(monkeypatch, tmp_path, code):
@@ -148,27 +128,11 @@ def _unified(monkeypatch, tmp_path, code):
     thread_context.clear_all_context()
     monkeypatch.setattr(unified, "_ibl_debug_log", lambda *args: None)
     try:
-        return json.loads(unified._execute_ibl_unified_impl({"code": code}, str(tmp_path)))
+        return json.loads(unified._execute_ibl_unified_impl({"code": code,"edition":2}, str(tmp_path)))
     finally:
         thread_context.restore(snap)
 
 
-def test_unified_pipeline_has_no_extra_head_check(monkeypatch, tmp_path):
-    import ibl_pipe_types
-    import ibl_engine
-    calls = []
-    original = ibl_pipe_types.head_transform_issue
-
-    def counted(*args, **kwargs):
-        calls.append(kwargs)
-        return original(*args, **kwargs)
-
-    monkeypatch.setattr(ibl_pipe_types, "head_transform_issue", counted)
-    monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *a, **kw: {"items": [{"a": 1}]})
-    result = _unified(monkeypatch, tmp_path,
-                      '[sense:search]{query:"sample"} >> [table:take]{n:1}')
-    assert result.get("success") is True
-    assert len(calls) == 2, "check 탐침과 실행기 각각 한 번; 중간 호출은 불필요하다"
 
 
 def test_unified_abstained_checker_keeps_execution_guards(monkeypatch, tmp_path):
@@ -180,31 +144,15 @@ def test_unified_abstained_checker_keeps_execution_guards(monkeypatch, tmp_path)
     monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *a, **kw: executed.append(a))
     for code in (
         '[table:take]{n:1}',
-        '[table:dedup]{by:"a"} >> [table:take]{n:1}',
+        '[self:write]{path:"x",content:[1]}',
         '[limbs:browser]{op:"click",ref:"b1"} >> [table:take]{n:1}',
     ):
         result = _unified(monkeypatch, tmp_path, code)
         assert result.get("success") is False
-        assert result["traceback"]["error_type"] == "binding"
+        assert result.get('issues') or result.get('diagnostic')
     assert executed == [], "검사기가 기권해도 부작용 전 거절해야 한다"
 
 
-def test_every_independent_head_is_checked_before_any_execution(monkeypatch, tmp_path):
-    import ibl_engine
-    from ibl_typecheck import typecheck_code
-    from workflow_engine import execute_pipeline
-    executed = []
-    monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *a, **k: executed.append(a))
-    code = '$a = [sense:search]{query:"x"}\n[table:union]{}'
-    checked = typecheck_code(code)
-    assert not checked["ok"] and not checked.get("abstained"), checked
-    issue = next(i for i in checked["issues"] if i["severity"] == "error")
-    assert issue["statement"] == 2 and issue["step"] == 2
-    assert "$a & $b" in issue["message"]
-    out = execute_pipeline(parse(code), str(tmp_path))
-    assert not out["success"] and out["steps_completed"] == 0
-    assert out["traceback"]["frames"][-1]["step"] == 2
-    assert executed == []
 
 
 def test_incoming_currency_does_not_cross_an_independent_boundary():
@@ -222,7 +170,7 @@ def test_unified_rejects_single_input_union_before_running_searches(monkeypatch,
     code = ('$a = [sense:search]{query:"a"}\n$b = [sense:search]{query:"b"}\n'
             '$a >> [table:union]{with:$b}')
     out = _unified(monkeypatch, tmp_path, code)
-    assert not out['success'] and '$a & $b' in str(out), out
+    assert not out['success'] and out.get('issues'), out
     assert executed == []
 
 

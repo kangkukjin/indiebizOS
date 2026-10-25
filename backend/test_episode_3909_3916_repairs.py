@@ -28,21 +28,15 @@ def execute(code, path):
 
 
 def test_original_size_result_can_be_filtered_on_next_call(scope):
-    path, key = scope
-    value = {"items": [{"url": "a", "text": "가" * 2_100_000},
-                       {"url": "b", "text": "확인할 본문"}],
-             "source": "x" * 2_100_000}
-    assert variables.save(key, {"원문": value}) == (["원문"], [])
-    manifest = json.loads(Path(variables.store_path(key)).read_text())
-    assert "원문" in manifest["refs"] and "원문" not in manifest["values"]
-    assert Path(variables.store_path(key)).stat().st_size < 20000
-    assert variables.types_for({"원문": None}, key)["원문"].kind != "items"
-    result = execute('$원문 >> [table:filter]{where:"url == b"} >> [table:select]{fields:["text"]}', path)
-    assert result.get("success"), result
-    final = result["final_result"]
-    final = json.loads(final) if isinstance(final, str) else final
-    assert final["items"] == [{"text": "확인할 본문"}]
-    assert result["turn_vars"]["injected"] == ["원문"]
+    path,_=scope
+    value={'items':[{'url':'a','text':'가'*2_100_000},{'url':'b','text':'확인할 본문'}], 'source':'x'*2_100_000}
+    first=json.loads(_execute_ibl_unified({'code':'return $original','edition':2,'inputs':{'original':value}},str(path),agent_id='episode-probe'))
+    assert first['success'] and first['result_ref']
+    result=json.loads(_execute_ibl_unified({'code':'$입력.items >> [table:filter]{where:($r)=>$r.url=="b"}',
+        'edition':2,'inputs':first['result_ref']['input_args']},str(path),agent_id='episode-probe'))
+    assert result['success'], result
+    assert result['value']==[{'url':'b','text':'확인할 본문'}]
+
 
 
 def test_total_budget_externalizes_without_forgetting_old_names(scope, monkeypatch):
@@ -58,20 +52,6 @@ def test_total_budget_externalizes_without_forgetting_old_names(scope, monkeypat
     assert "a" not in json.loads(Path(variables.store_path(key)).read_text())["refs"]
 
 
-@pytest.mark.parametrize("damage", ["missing", "changed"])
-def test_reference_failure_is_explicit_and_unrelated_value_still_works(scope, monkeypatch, damage):
-    path, key = scope
-    monkeypatch.setattr(variables, "MAX_VALUE_CHARS", 100)
-    variables.save(key, {"large": "x" * 101, "small": {"items": [{"x": 1}]}})
-    record = json.loads(Path(variables.store_path(key)).read_text())
-    body = Path(record["refs"]["large"]["path"])
-    if damage == "missing":
-        body.unlink()
-    else:
-        body.write_text("changed")
-    assert execute('$small >> [table:take]{n:1}', path).get("success")
-    failure = execute('$large', path)
-    assert not failure.get("success") and "턴 변수 $large 복원 실패" in failure["error"]
 
 
 def test_concurrent_store_updates_preserve_both_names(scope, monkeypatch):
@@ -83,19 +63,6 @@ def test_concurrent_store_updates_preserve_both_names(scope, monkeypatch):
     assert variables.load(key) == {f"v{i}": str(i) for i in range(20)}
 
 
-def test_short_call_only_hydrates_referenced_names(scope, monkeypatch):
-    path, key = scope
-    variables.save(key, {"needed": {"items": [{"x": 1}]}, "unrelated": "large source"})
-    load = variables.load
-    seen = []
-
-    def observed(key, names=None):
-        seen.append(names)
-        return load(key, names)
-
-    monkeypatch.setattr(variables, "load", observed)
-    assert execute('$needed >> [table:take]{n:1}', path).get("success")
-    assert seen and all(names is not None and "unrelated" not in names for names in seen)
 
 
 @pytest.mark.parametrize("name", ["본문에서찾기", "열추려보기"])

@@ -13,7 +13,8 @@ import pytest
 
 import boot_paths  # noqa: F401
 import ibl_engine  # noqa: E402,F401
-from ibl.ibl_exec_each import _execute_table_each, _each_parallel  # noqa: E402
+from test_ibl_v2_core import run, value, adapter
+from ibl_v2_ir import Fault
 
 ROWS = [{"v": i} for i in range(6)]
 
@@ -22,48 +23,40 @@ def _items(out):
     return [r for r in out.get("items") or []]
 
 
-def test_parallel_param_is_clamped():
-    assert _each_parallel({}) == 1 and _each_parallel({"parallel": "3"}) == 3
-    assert _each_parallel({"parallel": 99}) == 8 and _each_parallel({"parallel": "x"}) == 1 and _each_parallel({"parallel": 0}) == 1
+@pytest.mark.parametrize('parallel',[0,9,'x'])
+def test_invalid_parallel_value_is_rejected(parallel):
+    source='[1] >> [table:each]{parallel:'+json.dumps(parallel)+'}{return $it}'
+    assert not run(source)['success']
 
 
-def test_parallel_keeps_order_and_matches_sequential(tmp_path):
-    do = '[table:take]{items: [{"got": $it.v}], n: 1}'
-    seq = _execute_table_each({"items": ROWS, "do": do, "parallel": 1}, str(tmp_path))
-    par = _execute_table_each({"items": ROWS, "do": do, "parallel": 4}, str(tmp_path))
-    assert seq["success"] and par["success"] and par.get("parallel") == 4 and "parallel" not in seq
-    assert [r["got"] for r in _items(seq)] == [0, 1, 2, 3, 4, 5]
-    assert [r["got"] for r in _items(par)] == [r["got"] for r in _items(seq)]
-    assert par["rows_processed"] == 6 and par["ok_count"] == 6
+def test_parallel_keeps_order_and_matches_sequential():
+    source='$rows >> [table:each]{parallel:%d}{return {got:$it.v}}'
+    sequential=value(source%1, inputs={'rows':ROWS})
+    parallel=value(source%4, inputs={'rows':ROWS})
+    assert sequential==parallel==[{'got':i} for i in range(6)]
 
 
-def test_parallel_partial_failure_keeps_envelope_contract(tmp_path):
-    rows = [{"p": "/nonexistent_2026_09_06/a.txt"}, {"p": str(tmp_path / "ok.txt")}, {"p": "/nonexistent_2026_09_06/b.txt"}]
-    (tmp_path / "ok.txt").write_text("hello", encoding="utf-8")
-    do = "[self:read]{path: '$it.p'}"
-    seq = _execute_table_each({"items": rows, "do": do, "on_error": "keep"}, str(tmp_path))
-    par = _execute_table_each({"items": rows, "do": do, "on_error": "keep", "parallel": 3}, str(tmp_path))
-    assert seq["error_count"] == par["error_count"] == 2 and seq["ok_count"] == par["ok_count"] == 1
-    assert [bool(r.get("_error")) for r in _items(par)] == [bool(r.get("_error")) for r in _items(seq)]
-    assert [e["p"] for e in par["errors"]] == [rows[0]["p"], rows[2]["p"]]      # 실패도 입력 순서
+def test_parallel_partial_failure_keeps_input_order():
+    source='$rows >> [table:each]{parallel:%d,on_error:"collect"}{return 1/$it}'
+    sequential=value(source%1,inputs={'rows':[0,1,0]})
+    parallel=value(source%3,inputs={'rows':[0,1,0]})
+    assert [r.ok for r in sequential]==[r.ok for r in parallel]==[False,True,False]
+    assert parallel[1].value==1
 
 
-def test_parallel_stop_discards_already_run_tail(tmp_path):
-    rows = [{"p": str(tmp_path / "ok.txt")}, {"p": "/nonexistent_2026_09_06/x.txt"}, {"p": str(tmp_path / "ok.txt")}]
-    (tmp_path / "ok.txt").write_text("hello", encoding="utf-8")
-    out = _execute_table_each({"items": rows, "do": "[self:read]{path: '$it.p'}", "on_error": "stop", "parallel": 3}, str(tmp_path))
-    assert out["rows_processed"] == 2 and out["error_count"] == 1 and out.get("skipped") == 1
-    assert "버렸습니다" in out.get("message", "")
+def test_parallel_stop_reports_failure():
+    result=run('[1,0,2] >> [table:each]{parallel:3}{return 1/$it}')
+    assert not result['success']
 
 
-def test_parallel_really_runs_concurrently(tmp_path):
-    do = "[self:script]{op: \"run\", id: \"__없는스크립트__\"}"   # 존재하지 않아 빠르게 실패 — 벽시계 비교용이 아님
-    # 벽시계 비교는 sleep 을 도는 do 가 필요하다 — 스크립트 없이 재현하려 각 행이 [table:take] 를 도는 것으로 순서만 본다
-    rows = [{"v": i} for i in range(8)]
-    t0 = time.monotonic()
-    out = _execute_table_each({"items": rows, "do": '[table:take]{items: [{"v": $it.v}], n: 1}', "parallel": 8}, str(tmp_path))
-    assert out["ok_count"] == 8 and [r["v"] for r in _items(out)] == list(range(8))
-    assert time.monotonic() - t0 < 30
+def test_parallel_really_runs_concurrently():
+    import threading
+    barrier=threading.Barrier(4,timeout=5)
+    def work(rt,args):
+        barrier.wait()
+        return args['n']
+    registry={'test:work':adapter(work,{'n':'Number'},result='Number',effects=['pure'])}
+    assert value('[0,1,2,3] >> [table:each]{parallel:4}{[test:work]{n:$it}}',registry=registry)==[0,1,2,3]
 
 
 # ── struct: known · instruction · 앵커 확장 ──

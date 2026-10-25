@@ -1,0 +1,6 @@
+#!ibl edition=2
+[def:덜어내고요지만]($주소,$스필경로,$지시) {
+  $원문 = [sense:crawl]{url:$주소}
+  $저장 = [self:write]{path:$스필경로,content:json($원문)}
+  return [table:brief]{items:$원문.items,instruction:$지시}
+}

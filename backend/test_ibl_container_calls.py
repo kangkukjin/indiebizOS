@@ -300,15 +300,16 @@ def test_real_file_adapter_nested_arguments_and_public_resume(tmp_path, monkeypa
     assert second["success"] and target.read_text() == "external change"
 
 
-def test_episode4071_original_shape_runs_real_legacy_idiom_without_retry(memory, tmp_path, monkeypatch):
+def test_episode4071_runs_native_idiom_without_retry(memory, tmp_path, monkeypatch):
     import ibl_engine
     import ibl_run_journal
     from ibl_v2_entry import handle_request
     root = Path(__file__).resolve().parents[1]
     entries = json.loads((root / "data/idioms/curated.json").read_text())["idioms"]
     body = next(e["body"] for e in entries if e["name"] == "본문에서찾기")
-    memory.add_examples_batch([{"intent": "원문 문단의 가격과 사양 확인", "ibl_code": body,
-                               "alias": "본문에서찾기", "category": "phrase"}])
+    from test_function_support import current_source
+    from function_library import register
+    register('본문에서찾기', current_source('본문에서찾기'))
     monkeypatch.setattr(ibl_run_journal, "journal_root", lambda _: tmp_path / "runs")
     original, calls = ibl_engine.execute_ibl, []
     def leaf(ti, *args, **kwargs):

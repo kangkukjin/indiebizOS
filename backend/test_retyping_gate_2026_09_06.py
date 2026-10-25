@@ -17,7 +17,7 @@ from thread_context import actor_context
 
 def _run(code, tmp_path, task, **extra):
     with actor_context(agent_id="probe", task_id=task):
-        raw = _execute_ibl_unified({"code": code, **extra}, str(tmp_path), agent_id="probe")
+        raw = _execute_ibl_unified({"code": code, "edition":2, **extra}, str(tmp_path), agent_id="probe")
     try:
         return json.loads(raw)
     except Exception:
@@ -37,35 +37,10 @@ def _prose():
     return "\n".join(f"- {r['단지']} 전세 보증금 {r['보증금']}만원 · [매물 보기]({r['url']}) — 조건 검토 대상" for r in ROWS)
 
 
-def test_body_retyping_turn_var_data_is_flagged(tmp_path, task):
-    first = _run(f'$표 = [table:take]{{items: {ITEMS}, n: 25}}', tmp_path, task)
-    assert first.get("success") is True and first["turn_vars"]["live"] == ["표"]
-    out = _run('[self:write]{path: "%s", content: "$file:0"}' % (tmp_path / "report.md"), tmp_path, task,
-               files=[_prose()])
-    rt = out.get("retyped")
-    assert rt and rt["level"] == "warn", out
-    assert rt["data_tokens"].split("/")[0] != "0" and "$표" in json.dumps(rt, ensure_ascii=False)
-    assert "가리켜라" in rt["hint"]
-    assert (tmp_path / "report.md").exists()          # warn 은 실행을 막지 않는다
 
 
-def test_body_retyping_from_unnamed_previous_result_shadow(tmp_path, task):
-    first = _run(f'[table:take]{{items: {ITEMS}, n: 25}}', tmp_path, task)      # 이름 없는 결과
-    assert first.get("success") is True
-    out = _run('[self:write]{path: "%s", content: "$file:0"}' % (tmp_path / "r2.md"), tmp_path, task, files=[_prose()])
-    rt = out.get("retyped")
-    assert rt and rt["level"] == "warn" and "직전 결과" in rt["sources"], out
 
 
-def test_whole_file_rewrite_is_refused_even_without_task(tmp_path):
-    target = tmp_path / "big.md"
-    body = "\n".join(f"{i:03d} 이 줄은 파일에 이미 있는 내용이라 다시 칠 이유가 없다 — 줄범위 edit 이 맞다 {i}" for i in range(220))
-    target.write_text(body, encoding="utf-8")
-    out = json.loads(_execute_ibl_unified({"code": '[self:write]{path: "%s", content: "$file:0"}' % target,
-                                           "files": [body]}, str(tmp_path), agent_id="probe_no_task"))
-    assert out.get("success") is False and out.get("error_type") == "retyping", out
-    assert out["retyped"]["level"] == "refuse" and out["retyped"]["file_verbatim_chars"] >= 8000
-    assert target.read_text(encoding="utf-8") == body      # 실행 전 거절
 
 
 def test_short_anchor_edit_is_not_flagged(tmp_path, task):
@@ -78,16 +53,17 @@ def test_short_anchor_edit_is_not_flagged(tmp_path, task):
 
 def test_new_content_without_sources_is_not_flagged(tmp_path, task):
     prose = "\n".join(f"새로 짓는 문장 {i} — 어디에도 없던 판단이다, 숫자도 없이 길게 쓴다 아무 데도 없는 글" for i in range(40))
-    out = _run('[self:write]{path: "%s", content: "$file:0"}' % (tmp_path / "fresh.md"), tmp_path, task, files=[prose])
-    assert out.get("success") is not False and "retyped" not in out, out
+    out = _run('[self:write]{path: "%s", content: $text}' % (tmp_path / "fresh.md"), tmp_path, task, inputs={'text':prose})
+    assert out.get("success") is True and "retyped" not in out, out
+    assert (tmp_path / "fresh.md").read_text() == prose
 
 
 def test_draft_handoff_runs_stored_draft(tmp_path, task):
     from ibl_turn_vars import save_draft
     with actor_context(agent_id="probe", task_id=task):
-        assert save_draft('$d = [table:take]{items: [{"k": 1}], n: 1}')
+        assert save_draft('#!ibl edition=2\nreturn [{k:1}]')
     out = _run("$초안", tmp_path, task)
-    assert out.get("success") is True and out["turn_vars"]["live"] == ["d"], out
+    assert out.get("success") is True and out["value"] == [{"k":1}], out
     other = _run("$초안", tmp_path, f"{task}_none")
     assert "초안이 없습니다" in other.get("error", "")
 

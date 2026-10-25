@@ -1,9 +1,6 @@
-"""
-ibl_exec_sense.py — 조건/case 의 소스 참조 평가: `node:action{…}.field` 파싱·실행·점 경로 추출·필드 힌트.
+"""Historical source-reference parsing and field diagnostics, with no execution.
 
-2026-08-23 ibl_executors.py 에서 이사(1500줄 규칙). 재수출 = ibl_executors.
-★_evaluate_condition_and_value 는 파사드(ibl_executors)에 남긴다 — 시험이
-  `ex._get_sense_value_checked` 를 monkeypatch 하므로 그 참조가 파사드 전역을 거쳐야 한다.
+Current programs use explicit values through the edition-2 runtime.
 """
 import os
 import re
@@ -13,88 +10,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 _FIELD_MISSING = object()  # 경로 부재 표지 — "값이 null"(정당한 부재)과 구별 (★B10-case)
-
-
-def _get_sense_value(source: str, project_path: str, agent_id: str) -> Any:
-    """
-    case/if의 source 표현을 평가하여 실제 값 반환.
-
-    지원하는 형태:
-        node:action                      예: self:time
-        node:action{params}              예: sense:price{symbol: "^KS11"}
-        node:action{params}.field        예: sense:price{symbol: "^KS11"}.close
-        node:action.field                예: self:time.hour
-
-    sense뿐 아니라 self/limbs/others/engines 모두 허용한다.
-    field가 지정된 경우 결과 dict에서 점 표기법으로 추출하고,
-    없으면 기존 동작(`value` → `result` → str)을 유지한다.
-    판정 불능 사유가 필요한 호출자는 _get_sense_value_checked 를 쓴다.
-    """
-    value, _err = _get_sense_value_checked(source, project_path, agent_id)
-    return value
-
-
-def _get_sense_value_checked(source: str, project_path: str, agent_id: str) -> Tuple[Any, Optional[str]]:
-    """_get_sense_value 의 검침판 — (값, 판정불능 사유)를 돌려준다.
-
-    ★B10-case (2026-08-17 상상훈련 11회차): 판정 불능(파싱 실패·실행 예외·필드 경로
-    부재)과 "필드는 실존하되 값이 null"(정당한 부재)을 구별한다 — 후자는 (None, None).
-    옛 코드는 셋 다 None 으로 접어 case 의 default 가 판정 불능을 "불일치"로 단정했다.
-    """
-    parsed = _parse_source_ref(source)
-    if parsed is None:
-        return None, f"source 표현을 해석하지 못했습니다: '{source}'."
-    node, action, params, field = parsed
-
-    try:
-        from ibl_engine import execute_ibl
-        step = {"_node": node, "action": action, "params": params}
-        result = execute_ibl(step, project_path, agent_id)
-    except Exception as e:
-        return None, f"'{node}:{action}' 실행 실패: {e}."
-
-    # 핸들러 다수가 JSON *문자열* 봉투를 반환한다 — 파싱 없이 점 추출하면 문자열에
-    # 막혀 None → 조건이 조용히 거짓이 된다(센서 필드 조건 전멸 부류).
-    if isinstance(result, str):
-        try:
-            _p = json.loads(result)
-            if isinstance(_p, (dict, list)):
-                result = _p
-        except Exception:
-            pass
-
-    if field is not None:
-        value = _extract_dotted_field_checked(result, field)
-        if value is _FIELD_MISSING:
-            # ★F20-2 (2026-08-22 상상훈련 20회차): 카탈로그 ⟨열⟩ 은 **items 기준**인데
-            # 조건 좌변은 봉투 최상위만 봤다. 같은 액션의 같은 개념이 두 이름이라
-            # (sense:host — 봉투 `disk_root.percent` / items `disk_percent`) 카탈로그에
-            # 적힌 이름으로 조건을 걸면 판정 불능이 되고 **else 까지 보류돼 문장이
-            # 통째로 죽었다**. `cpu_percent` 만 두 곳 이름이 우연히 같아 교재 대표
-            # 예시가 돌고 있었다. 액션마다 봉투에 미러를 넣는 대신(=액션 수만큼 반복될
-            # 덧대기) 조건 언어가 통화를 보게 한다 — 어휘 증식 0, 전 액션 일반 적용.
-            # ★1행일 때만: 여러 행이면 어느 행의 값인지 언어가 정할 수 없다(정직 실패 유지).
-            _items = result.get("items") if isinstance(result, dict) else None
-            if isinstance(_items, list) and len(_items) == 1 and isinstance(_items[0], dict):
-                value = _extract_dotted_field_checked(_items[0], field)
-        if value is _FIELD_MISSING:
-            # F13-4 (2026-08-19 상상훈련 13회차): 사용 가능한 경로를 동반한다 —
-            # filter/sort 오류문 선례. 없으면 자가교정에 단독 프로브 1왕복이 더 든다.
-            hints = _field_path_hints(result)
-            hint_txt = f" 사용 가능한 필드: {hints}" if hints else ""
-            return None, (f"필드 경로 '.{field}' 가 결과에 없습니다 — 경로를 확인하세요"
-                          f"(예: stock quote 는 .data.current_price — 봉투 최상위가 아닙니다).{hint_txt}")
-        return value, None
-
-    if isinstance(result, dict):
-        # 경로 없는 소스 참조의 값: value → result → message(산문 emitter·AI 술어 [table:brief]
-        # 의 계약, 2026-08-22 M2) → 봉투 문자열. 옛 str(result) 폴백은 brief 의 yes/no 를
-        # '{"success": true, "message": "yes"}' 로 감싸 비교가 늘 거짓이 되게 했다.
-        for _k in ("value", "result", "message"):
-            if _k in result and result[_k] is not None:
-                return result[_k], None
-        return str(result), None
-    return result, None
 
 
 def _field_path_hints(result: Any, max_paths: int = 24) -> List[str]:

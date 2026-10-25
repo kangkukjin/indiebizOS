@@ -82,9 +82,10 @@ def test_hub_only_request_does_not_require_limb_connection(tmp_path, monkeypatch
     monkeypatch.setattr(member_bridge, 'connected', lambda _: False)
     monkeypatch.setattr(member_bridge, 'request', lambda *a, **kw: pytest.fail('hub-only call contacted device'))
     # table core is intentionally unavailable; validate execution reached gate, rather than no-body precheck.
-    result = MemberSessionManager(tmp_path).turn('a', 'd', 4, 'a', '허브 요청', local_task_id='t', code='[self:write]{path:"a",content:"b"}')
+    result = MemberSessionManager(tmp_path).turn('a', 'd', 4, 'a', '허브 요청', local_task_id='t', code='#!ibl edition=2\n[self:write]{path:"a",content:"b"}')
     assert not result['success']
-    assert result.get('app_result', {}).get('error_type') == 'no_body'
+    assert result['app_result']['diagnostic']['code']=='TOOL'
+    assert '기기가 연결되어 있지 않습니다' in result['app_result']['error']
 
 
 def test_report_never_claims_success_without_readable_sources(tmp_path, monkeypatch):

@@ -12,7 +12,8 @@ def add_examples_batch(db, examples, *, owned_vocabulary=False):
         return 0
 
     bad = [(ex['ibl_code'], _syntax_reason(
-        ex['ibl_code'], function_body=bool(ex.get('alias')) or ex.get('category') == "phrase"))
+        ex['ibl_code'], function_body=bool(ex.get('alias')) or ex.get('category') == "phrase",
+        owned_vocabulary=owned_vocabulary))
         for ex in examples]
     bad = [(c, r) for c, r in bad if r]
     if bad:

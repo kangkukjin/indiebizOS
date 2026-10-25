@@ -49,68 +49,18 @@ def test_new_bodies_are_closed_non_ai_procedures():
         assert '[goal' not in e['body'] and '[if' not in e['body']
 
 
-def test_unprocessed_composite_keys_keep_first_candidate_and_original_columns():
-    result, _ = run('$후보=[{id:1,kind:"a",값:"기존"},{id:1,kind:"b",값:"첫째"},'
-                    '{id:1,kind:"b",값:"중복"},{id:2,kind:"a",값:"둘째"}]; '
-                    '$완료=[{id:1,kind:"a"},{id:1,kind:"a"}]; '
-                    '[fn:미처리만고르기]{후보:$후보,처리됨:$완료,키:["id","kind"]}')
-    assert result['items'] == [{'id': 1, 'kind': 'b', '값': '첫째'}, {'id': 2, 'kind': 'a', '값': '둘째'}]
 
 
-@pytest.mark.parametrize('candidates,done,expected', [
-    ([], [{'id': 1}], []), ([{'id': 1}, {'id': 1}], [], [{'id': 1}]),
-    ([{'id': 1}], [{'id': 1}], []), ([], [], []),
-])
-def test_unprocessed_empty_and_all_processed(candidates, done, expected):
-    result, _ = run('$후보=' + json.dumps(candidates) + '; $완료=' + json.dumps(done) + '; '
-                    '[fn:미처리만고르기]{후보:$후보,처리됨:$완료,키:"id"}')
-    assert result['items'] == expected
 
 
-def test_grouped_ranking_composite_keys_and_counts():
-    result, _ = run('$목록=[{부서:"가",항목:"교통",금액:10},{부서:"가",항목:"교통",금액:30},'
-                    '{부서:"가",항목:"식비",금액:50},{부서:"나",항목:"교통",금액:5}]; '
-                    '[fn:묶어순위내기]{목록:$목록,묶음:["부서","항목"],값열:"금액",개수:2}')
-    assert result['items'] == [{'부서': '가', '항목': '식비', '합계': 50, '건수': 1},
-                               {'부서': '가', '항목': '교통', '합계': 40, '건수': 2}]
 
 
-def test_grouped_ranking_does_not_invent_numbers_for_missing_values():
-    result, _ = run('$목록=[{종류:"가",값:10},{종류:"가",값:null},{종류:"가",값:"미상"},'
-                    '{종류:"나",값:null}]; '
-                    '[fn:묶어순위내기]{목록:$목록,묶음:"종류",값열:"값",개수:10}')
-    rows = {r['종류']: r for r in result['items']}
-    assert rows['가']['합계'] == 10 and rows['가']['건수'] == 3
-    assert rows['나']['합계'] is None
 
 
-@pytest.mark.parametrize('code', [
-    '$목록=[]; [fn:묶어순위내기]{목록:$목록,묶음:"종류",값열:"값",개수:5}',
-    '$목록=[{종류:"가",값:1}]; [fn:묶어순위내기]{목록:$목록,묶음:"종류",값열:"값",개수:0}',
-    '$목록=[]; [fn:주소마다읽기]{목록:$목록,개수:5}',
-    '$목록=[self:read]{path:"input.json"}; [fn:주소마다읽기]{목록:$목록,개수:0}',
-])
-def test_empty_results_do_not_expand_into_full_read(code):
-    result, observed = run(code)
-    assert result['items'] == [] and observed['crawl'] == []
 
 
-def test_url_gather_preserves_raw_text_sources_and_failures_without_summary():
-    result, observed = run('$목록=[self:read]{path:"input.json"}; [fn:주소마다읽기]{목록:$목록,개수:3}')
-    assert sorted(observed['crawl']) == ['https://fixture.test/a', 'https://fixture.test/bad', 'https://fixture.test/c']
-    assert [(r['title'], r['url']) for r in result['items']] == [
-        ('first', 'https://fixture.test/a'), ('broken', 'https://fixture.test/bad'), ('third', 'https://fixture.test/c')]
-    assert result['items'][0]['text'] == 'SOURCE:https://fixture.test/a'
-    assert result['items'][1]['_error'] and result['error_count'] == 1
 
 
-def test_unprocessed_then_raw_read_composes_by_named_results():
-    result, observed = run('$후보=[self:read]{path:"input.json"}; $완료=[{url:"https://fixture.test/a"}]; '
-                          '$새것=[fn:미처리만고르기]{후보:$후보,처리됨:$완료,키:"url"}; '
-                          '[fn:주소마다읽기]{목록:$새것,개수:2}')
-    assert observed['fn_calls'] == ['미처리만고르기', '주소마다읽기']
-    assert observed['crawl'] == ['https://fixture.test/bad', 'https://fixture.test/c']
-    assert len(result['items']) == 2
 
 
 def test_crawl_handler_converts_raw_paragraphs_without_model_call(tmp_path, monkeypatch):
@@ -136,13 +86,22 @@ def test_crawl_handler_converts_raw_paragraphs_without_model_call(tmp_path, monk
 
 @pytest.mark.parametrize('compact', [False, True])
 def test_selected_idioms_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, monkeypatch, compact):
+    import ibl_v2_adapters
+    current_registry=ibl_v2_adapters.load_registry()
+    monkeypatch.setattr(ibl_v2_adapters,'load_registry',lambda *a,**k:current_registry)
     import ibl_access
     import runtime_utils
     from ibl_usage_db import _signature_of
     from ibl_typecheck import return_type_of
+    from test_function_support import current_source
+    import copy
+    catalog=copy.deepcopy(CATALOG)
+    for entry in catalog['idioms']:
+        if entry.get('always_on',True):
+            entry['body']=current_source(entry['name'])
     (tmp_path / 'data/idioms').mkdir(parents=True)
-    (tmp_path / 'data/idioms/curated.json').write_text(json.dumps(CATALOG, ensure_ascii=False))
-    entries = [e for e in CATALOG['idioms'] if e.get('always_on', True)]
+    (tmp_path / 'data/idioms/curated.json').write_text(json.dumps(catalog, ensure_ascii=False))
+    entries = [e for e in catalog['idioms'] if e.get('always_on', True)]
     with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as con:
         con.execute('CREATE TABLE ibl_examples (intent,ibl_code,success_count,fail_count,topic,alias,returns,signature,always_on,created_at)')
         for e in entries:

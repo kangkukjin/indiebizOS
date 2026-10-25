@@ -97,65 +97,26 @@ def test_d4_var_binding_parser():
     print("D4(파서) OK — $var 가 실제 step 인덱스로 치환")
 
 
-def test_d4_var_binding_engine():
-    """D4(엔진): 문서화된 예제가 실제로 앞 문장 결과를 받는다 (예전엔 빈 문자열)."""
+
+
+def test_d5_recursive_acl(tmp_path, monkeypatch):
     import ibl_engine
-    import workflow_engine
-
-    calls = []
-    _orig = ibl_engine.execute_ibl
-
-    def _fake_execute(tool_input, project_path, agent_id=None, **kw):
-        calls.append(tool_input)
-        if tool_input.get("action") == "web_search":
-            return "검색결과A"
-        return {"success": True, "sent": tool_input.get("params", {}).get("body")}
-
-    ibl_engine.execute_ibl = _fake_execute
-    try:
-        steps = parse('$result = [sense:web_search]{query: "AI"}\n'
-                      '[others:channel_send]{channel_type: "telegram", body: "$result"}')
-        out = workflow_engine.execute_pipeline(steps, ".")
-    finally:
-        ibl_engine.execute_ibl = _orig
-
-    assert out["success"], out
-    body = calls[1]["params"]["body"]
-    assert body == "검색결과A", f"body={body!r} — 빈 문자열이면 D4 회귀"
-    print("D4(엔진) OK — 문장 경계를 넘어 $var 결과 주입")
-
-
-def test_d5_recursive_acl():
-    """D5: 병렬/폴백/if/case 내부의 금지 노드가 ACL 에 걸린다 (예전엔 무검사 통과)."""
-    from system_tools_ibl import _collect_step_nodes, _execute_ibl_unified
     import thread_context
-
-    # 수집기 단위 검증
-    nodes = set()
-    _collect_step_nodes(parse('[sense:a1]{} & [self:read]{path: "x"}'), nodes)
-    assert nodes == {"sense", "self"}, nodes
-    nodes = set()
-    _collect_step_nodes(parse('[sense:a1]{} ?? [limbs:call]{tool: "t"}'), nodes)
-    assert nodes == {"sense", "limbs"}, nodes
-    nodes = set()
-    _collect_step_nodes(parse('[if: sense:kospi < 2400]{\n[self:read]{path: "x"}\n}'), nodes)
-    assert "sense" in nodes and "self" in nodes, nodes
-    nodes = set()
-    _collect_step_nodes(parse('[case: sense:market_status]{\n"상승장": [goal: "매수"]{max_rounds: 2},\ndefault: [goal: "관망"]{max_rounds: 1}\n}'), nodes)
-    assert "sense" in nodes, nodes
-
-    # 통합 경로 검증 — sense 만 허용된 에이전트가 병렬 안에 self 를 숨겨도 거부
-    thread_context.set_allowed_nodes({"sense"})
+    from ibl_v2_entry import handle_request
+    routed=[]
+    monkeypatch.setattr(ibl_engine, '_route_handler', lambda *a,**k:routed.append(a))
+    prior=thread_context.snapshot()
     try:
-        raw = _execute_ibl_unified(
-            {"code": '[sense:web_search]{query: "a"} & [self:read]{path: "/etc/x"}'},
-            ".", agent_id="restricted-test")
+        thread_context.set_allowed_nodes({'sense'})
+        for code in ('[self:read]{path:"forbidden"}',
+                     '[def:f](){return [self:read]{path:"forbidden"}}\n[fn:f]{}',
+                     '[table:each]{items:[1]}{[self:read]{path:"forbidden"}}'):
+            out=handle_request({'code':code,'edition':2},str(tmp_path),agent_id='restricted-test')
+            assert not out['success'],out
+        assert routed==[]
     finally:
-        thread_context.set_allowed_nodes(None)
-    obj = json.loads(raw)
-    assert obj.get("denied") or obj.get("error"), obj
-    assert "self" in raw, raw
-    print("D5 OK — 복합 스텝 재귀 ACL (병렬/폴백/if/case)")
+        thread_context.restore(prior)
+
 
 
 def test_d6_sync_handler_timeout():

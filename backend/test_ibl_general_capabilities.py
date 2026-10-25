@@ -225,11 +225,11 @@ def test_phrase_surfaces_share_call_and_preserve_applicability():
 @pytest.mark.parametrize("review,excluded", [({"decision": "hold"}, True),
                                            ({"decision": "quarantine"}, True),
                                            ({"static_status": "invalid"}, True),
-                                           ({"decision": "compatibility"}, False), ({}, False)])
-def test_callable_exposure_policy_is_shared_by_editions(source, review, excluded):
+                                           ({"decision": "compatibility"}, True), ({}, False)])
+def test_callable_exposure_requires_current_edition_and_eligible_review(source, review, excluded):
     from corpus_policy import callable_exclusion_reason
     assert bool(callable_exclusion_reason({"ibl_code": source,
-                                          "provenance": {"corpus_review": review}})) is excluded
+                                          "provenance": {"corpus_review": review}})) is (excluded or not source.startswith("#!ibl edition=2"))
 
 
 def test_current_idiom_list_does_not_fall_back_to_old_held_definition(tmp_path):

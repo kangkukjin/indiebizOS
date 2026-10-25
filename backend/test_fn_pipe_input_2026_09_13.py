@@ -21,50 +21,14 @@ def execute(code):
     return decoded(trial['result']['final_result']), trial['observed']
 
 
-def test_filtered_pipe_matches_explicit_input_with_sources_and_failure_rows():
-    prefix = '[self:read]{path:"input.json"} >> [table:take]{n:4}'
-    piped, seen = execute(prefix + ' >> [fn:주소마다읽기]{개수:3}')
-    named, _ = execute('$주소=' + prefix + '; [fn:주소마다읽기]{목록:$주소,개수:3}')
-    assert piped['items'] == named['items']
-    assert piped['error_count'] == named['error_count'] == 1
-    assert len(piped['items']) == 3
-    assert sorted(seen['crawl']) == ['https://fixture.test/a', 'https://fixture.test/bad', 'https://fixture.test/c']
-    assert piped['items'][1]['_error']
 
 
-@pytest.mark.parametrize('head,args', [
-    ('[]', '개수:3'),
-    ('[{url:"https://fixture.test/a"}]', '개수:0'),
-    ('[{url:"https://fixture.test/a"}]', '목록:[],개수:3'),
-])
-def test_empty_pipe_explicit_empty_and_zero_limit_never_crawl(head, args):
-    result, seen = execute(head + ' >> [fn:주소마다읽기]{' + args + '}')
-    assert result['items'] == [] and seen['crawl'] == []
 
 
-def test_explicit_list_wins_over_a_different_pipe():
-    result, seen = execute('[{url:"https://fixture.test/a"}] >> '
-                           '[fn:주소마다읽기]{목록:[{url:"https://fixture.test/c"}],개수:1}')
-    assert seen['crawl'] == ['https://fixture.test/c']
-    assert result['items'][0]['url'] == 'https://fixture.test/c'
 
 
-@pytest.mark.parametrize('code,missing', [
-    ('[fn:주소마다읽기]{개수:3}', '목록'),
-    ('[] >> [fn:주소마다읽기]{}', '개수'),
-    ('$앞=[]; [fn:주소마다읽기]{개수:3}', '목록'),
-])
-def test_no_input_other_missing_arg_and_statement_boundary_still_fail(code, missing):
-    trial = run_trial(code, 'dedup')
-    assert trial['result']['success'] is False
-    assert missing in json.dumps(trial['result'], ensure_ascii=False)
-    assert trial['observed']['crawl'] == []
 
 
-def test_local_function_uses_the_same_rule_without_idiom_names():
-    result, _ = execute('[def:잘라반환]{ $자료 >> [table:take]{n:$수} }\n'
-                        '[{v:1},{v:2}] >> [fn:잘라반환]{수:1}')
-    assert result['items'] == [{'v': 1}]
 
 
 @pytest.mark.parametrize('body', [

@@ -151,12 +151,6 @@ def test_legacy_check_refuses_unknown_action():
     assert report['ok'] is False, report
 
 
-def test_else_retains_observed_value(monkeypatch):
-    import ibl_executors as e
-    monkeypatch.setattr(e, '_run_branch', lambda *args: {'success': True})
-    out = e._execute_condition({'branches': [{'condition': '5 > 10', 'action': {}},
-                                            {'condition': None, 'action': {'fixture': True}}]}, str(ROOT), '')
-    assert out['matched'] == 'else' and out['matched_value'] == 5
 
 
 def test_copy_list_pipeline_executes(tmp_path):

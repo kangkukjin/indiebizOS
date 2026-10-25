@@ -298,21 +298,25 @@ def code_is_own(code: str) -> bool:
 
 
 
-def code_is_owned(code: str) -> bool:
-    """배포 용례 시딩의 소유 판정. 잠든 보유도 허용하되 미지/다른 몸 어휘는 거절."""
+def load_nodes_owned() -> Dict:
+    """Static teaching catalog, including sleeping packages; never an execution catalog."""
     with open(_get_nodes_path(), encoding="utf-8") as stream:
         data = yaml.safe_load(stream) or {}
-    nodes = data.get("nodes", {})
     from runtime_utils import detect_body
     profile = detect_body().get("profile")
+    for node, group in data.get("nodes", {}).items():
+        for action, cfg in list(group.get("actions", {}).items()):
+            if (not cfg or cfg.get("router") == "stub"
+                    or (profile == "phone" and not _phone_runnable(node, action))
+                    or (profile != "phone" and cfg.get("runs_on") == "phone_only")):
+                del group["actions"][action]
+    return data
+
+
+def code_is_owned(code: str) -> bool:
+    """배포 용례 시딩의 소유 판정. 잠든 보유도 허용하되 미지/다른 몸 어휘는 거절."""
+    nodes = load_nodes_owned().get("nodes", {})
     for node, action in _ACT_RE.findall(_outside_strings(code)):
-        if node in CONTROL_NODES:
-            continue
-        cfg = nodes.get(node, {}).get("actions", {}).get(action)
-        if not cfg or cfg.get("router") == "stub":
-            return False
-        if profile == "phone" and not _phone_runnable(node, action):
-            return False
-        if profile != "phone" and cfg.get("runs_on") == "phone_only":
+        if node not in CONTROL_NODES and action not in nodes.get(node, {}).get("actions", {}):
             return False
     return True

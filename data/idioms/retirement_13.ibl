@@ -1,0 +1,12 @@
+#!ibl edition=2
+[def:화면검수]($path,$intent,$criteria="web") {
+  $화면 = [engines:render]{path:$path,viewports:["1280x800","390x844"]}
+  $대상 = $화면.items
+  $수집 = $대상 >> [table:each]{on_error:"collect"} { return [engines:image_read]{op:"critic",image_path:$it.path,intent:f"{$intent} — {$it.label} 폭에서 성립하는가",criteria:$criteria,prescreen:$it.prescreen} }
+  $값 = $수집 >> [table:each]{} {
+    [if:is_ok($it)] { return {ok:true,source:$대상[$i],value:unwrap($it)} }
+    return {ok:false,source:$대상[$i],error:error_of($it)}
+  }
+  $결과 = [self:script]{id:"판정관용구",args:{op:"collect",results:$값,keep:[]}}
+  return $결과
+}

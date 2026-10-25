@@ -62,41 +62,10 @@ def test_six_failure_classes_are_rejected(code, values, missing):
     assert any(missing in i["message"] for i in result["issues"] if i["severity"] == "error")
 
 
-def test_cross_call_value_and_type_survive_together(isolated):
-    key = variables.turn_key("shape-test")
-    variables.save(key, {"종목": json.dumps([quote("A"), quote("B")])})
-    failed = run('$종목 >> [table:select]{fields:["symbol"]}', isolated)
-    assert failed["error_type"] == "typecheck"
-    good = run('$표 = $종목 >> [table:flatten]{field:"items"} >> [table:select]{fields:["symbol"]}', isolated)
-    assert good.get("success"), good
-    assert good["turn_vars"]["live"] == ["표"]
-    assert good["turn_vars"]["types"]["표"]["columns"] == ["symbol"]
-    assert run('$표 >> [table:select]{fields:["symbol"]}', isolated).get("success")
 
 
-def test_reassignment_empty_heterogeneous_and_resume(isolated):
-    key = variables.turn_key("shape-test")
-    variables.save(key, {"a": {"items": [{"old": 1}]}})
-    assert run('$a = [table:take]{items:[{new:2}],n:1}\n$a >> [table:select]{fields:["new"]}', isolated).get("success")
-    assert variables.types_for(variables.load(key), key)["a"].cols == ["new"]
-    variables.save(key, {"a": {"items": []}})
-    assert run('$a >> [table:select]{fields:["absent"]}', isolated).get("success")
-    variables.save(key, {"a": {"items": [{"x": 1}, {"y": 2}]}})
-    assert run('$a >> [table:select]{fields:["y"]}', isolated).get("success")
-    resume = isolated / "resume.json"
-    resume.write_text(json.dumps({"a": json.dumps({"items": [{"override": 3}]})}))
-    assert run('$a >> [table:select]{fields:["override"]}', isolated, resume={"vars_ref": str(resume)}).get("success")
 
 
-def test_partial_success_and_old_store(isolated):
-    output = run('$ok = [table:take]{items:[{x:1}],n:1}\n'
-                 '$bad = [self:read]{path:"/nonexistent_shape_handoff/file"}', isolated)
-    assert output.get("success") is False
-    assert output["turn_vars"]["types"]["ok"]["columns"] == ["x"]
-    assert "bad" not in output["turn_vars"]["types"]
-    key = variables.turn_key("shape-test")
-    Path(variables.store_path(key)).write_text(json.dumps({"old": json.dumps({"items": [{"v": 1}]})}))
-    assert run('$old >> [table:select]{fields:["v"]}', isolated).get("success")
 
 
 def test_structured_type_is_lossless_beyond_display_limit():
@@ -114,18 +83,6 @@ def test_unknown_dynamic_and_large_inputs_are_not_closed():
     assert check('$a >> [table:select]{fields:["unknown"]}', {"a": {"items": [{"x": 1}] * 21000}})["ok"]
 
 
-def test_source_rows_remain_available_and_oversize_reassignment_cannot_reuse_old_value(isolated, monkeypatch):
-    key = variables.turn_key("shape-test")
-    value = {"items": [{"title": "short"}], "data": [{"original": "full evidence"}]}
-    variables.save(key, {"a": value})
-    assert run('$a >> [table:select]{fields:["original"]}', isolated).get("success")
-    monkeypatch.setattr(variables, "MAX_VALUE_CHARS", 10)
-    replacement = {"items": [{"new_column": "new evidence"}]}
-    kept, skipped = variables.save(key, {"a": replacement})
-    assert kept == ["a"] and not skipped
-    assert json.loads(variables.load(key)["a"]) == replacement
-    assert not run('$a >> [table:select]{fields:["original"]}', isolated).get("success")
-    assert run('$a >> [table:select]{fields:["new_column"]}', isolated).get("success")
 
 
 def test_observed_catalog_and_other_search_modes_are_not_closed():

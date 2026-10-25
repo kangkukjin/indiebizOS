@@ -17,7 +17,7 @@ class Library(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.origins, self.conflicts = {}, {}
-        self.references, self.legacy_references = {}, {}
+        self.references, self.retired_names = {}, set()
 
     def add(self, name, source, origin):
         if name in self.conflicts:
@@ -111,7 +111,9 @@ def _action(action_name, params, project_path):
             wf_id = params.get("workflow_id") or _resolve_workflow_id(params.get("name") or params.get("id") or "")
             wf = get_workflow(wf_id)
             if not wf or wf.get("edition") != 2:
-                raise Fault("EDITION_BOUNDARY", "판본 2 저장본이 아닙니다.", kind="compile")
+                raise Fault("EDITION_RETIRED", "판본 2의 활성 저장본으로 이관해야 합니다.", kind="compile")
+            if wf.get('state') != 'active':
+                raise Fault('FUNCTION_INACTIVE', '활성 함수만 실행할 수 있습니다.', kind='compile')
             name = definition_name(wf["code"])
             inputs = {} if params.get("params") is None else params["params"]
             if not isinstance(inputs, dict) or any(not isinstance(k, str) or not k.isidentifier() for k in inputs):

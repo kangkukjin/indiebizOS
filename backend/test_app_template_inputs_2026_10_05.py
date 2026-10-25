@@ -72,7 +72,7 @@ def test_item_record_and_explicit_null_are_values():
 
 def test_declared_inputs_rejected_on_edition_1_and_bad_names():
     r = _run({"code": "[table:take]{items: $rows, n: 1}", "edition": 1, "declared_inputs": ["rows"]})
-    assert r["success"] is False and "판본 2" in r["error"]
+    assert r["success"] is False and "EDITION_RETIRED" in r["error"]
     bad = _run({"code": "$it", "inputs": {}, "declared_inputs": ["it"]})
     assert bad["success"] is False and "declared_inputs" in bad["error"]
 
@@ -171,7 +171,7 @@ def test_member_resolve_edition2_passes_inputs_without_substitution():
 
 def test_member_resolve_never_substitutes_and_keeps_input_types():
     from member_app_actions import compile_apps, resolve
-    _, registry = compile_apps([{"id": "t", "action": '[sense:search]{query: $query, limit: $limit}'}])
+    _, registry = compile_apps([{"id": "t", "edition": 2, "action": '[sense:search]{query: $query, limit: $limit}'}])
     r = resolve(registry, "t", {"query": '1} >> [self:config]{}', "limit": 3})
     assert r["code"] == '[sense:search]{query: $query, limit: $limit}' and r["edition"] == 2
     assert r["inputs"] == {"query": '1} >> [self:config]{}', "limit": 3}

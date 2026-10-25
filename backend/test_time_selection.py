@@ -89,21 +89,21 @@ def test_t1_migration_adds_avg_ms(tmp_path, monkeypatch):
 # ── T2: EWMA 귀속 — 성공 실행시간만, 실패·미측정은 불변 ────────────────────
 
 def test_t2_ewma_success_only(db):
-    eid = db.add_example("메일 확인", "[sense:email]{}", source="distilled")
+    eid = db.add_example("메일 확인", "#!ibl edition=2\nreturn 1", source="distilled")
     assert _avg_ms(db, eid) == -1.0  # 출생 미측정
 
-    ok = db.update_success_by_code("[sense:email]{}", True, elapsed_ms=1000)
+    ok = db.update_success_by_code("#!ibl edition=2\nreturn 1", True, elapsed_ms=1000)
     assert ok and _avg_ms(db, eid) == 1000.0  # 첫 관측=그대로 채택
 
-    db.update_success_by_code("[sense:email]{}", True, elapsed_ms=2000)
+    db.update_success_by_code("#!ibl edition=2\nreturn 1", True, elapsed_ms=2000)
     assert _avg_ms(db, eid) == pytest.approx(1300.0)  # 0.7*1000 + 0.3*2000
 
     # 실패의 시간은 빠르기가 아니다 — avg_ms 불변, fail_count 만 증가
-    db.update_success_by_code("[sense:email]{}", False, elapsed_ms=99999)
+    db.update_success_by_code("#!ibl edition=2\nreturn 1", False, elapsed_ms=99999)
     assert _avg_ms(db, eid) == pytest.approx(1300.0)
 
     # 미측정 성공(다른 진입 경로) — 카운트만, EWMA 불변
-    db.update_success_by_code("[sense:email]{}", True, elapsed_ms=None)
+    db.update_success_by_code("#!ibl edition=2\nreturn 1", True, elapsed_ms=None)
     assert _avg_ms(db, eid) == pytest.approx(1300.0)
 
     with db._get_connection() as conn:
@@ -113,7 +113,7 @@ def test_t2_ewma_success_only(db):
 
 
 def test_t2b_birth_measurement(db):
-    eid = db.add_example("빠른 조회", "[sense:price]{}", source="distilled", avg_ms=4200.0)
+    eid = db.add_example("빠른 조회", "#!ibl edition=2\nreturn 2", source="distilled", avg_ms=4200.0)
     assert _avg_ms(db, eid) == 4200.0
 
 
@@ -156,10 +156,10 @@ def test_t4_dedup_prefers_faster_at_equal_trust():
 def test_t5_reference_xml_shows_avg_ms():
     from ibl_usage_db import UsageExample
     from ibl_usage_rag import IBLUsageRAG
-    measured = UsageExample(id=1, intent="메일 확인", ibl_code="[sense:email]{}",
+    measured = UsageExample(id=1, intent="메일 확인", ibl_code="#!ibl edition=2\nreturn 1",
                             nodes="sense", category="single", difficulty=1,
                             score=0.9, source="distilled", success_rate=1.0, avg_ms=1300.0)
-    unmeasured = UsageExample(id=2, intent="가격 조회", ibl_code="[sense:price]{}",
+    unmeasured = UsageExample(id=2, intent="가격 조회", ibl_code="#!ibl edition=2\nreturn 2",
                               nodes="sense", category="single", difficulty=1,
                               score=0.88, source="distilled", success_rate=-1.0, avg_ms=-1.0)
     xml = IBLUsageRAG()._format_references([measured, unmeasured])
@@ -178,22 +178,22 @@ def _avg_tokens(db, example_id):
 
 
 def test_t6_token_ewma_success_only(db):
-    eid = db.add_example("파일 정리", "[self:files]{}", source="distilled")
+    eid = db.add_example("파일 정리", "#!ibl edition=2\nreturn 3", source="distilled")
     assert _avg_tokens(db, eid) == -1.0
 
-    db.update_success_by_code("[self:files]{}", True, elapsed_ms=500, tokens=10000)
+    db.update_success_by_code("#!ibl edition=2\nreturn 3", True, elapsed_ms=500, tokens=10000)
     assert _avg_tokens(db, eid) == 10000.0 and _avg_ms(db, eid) == 500.0
 
-    db.update_success_by_code("[self:files]{}", True, tokens=20000)  # 시간 미측정 턴
+    db.update_success_by_code("#!ibl edition=2\nreturn 3", True, tokens=20000)  # 시간 미측정 턴
     assert _avg_tokens(db, eid) == pytest.approx(13000.0)  # 0.7*10000 + 0.3*20000
     assert _avg_ms(db, eid) == 500.0                       # 미측정 축은 불변(독립)
 
-    db.update_success_by_code("[self:files]{}", False, tokens=999999)  # 실패=불반영
+    db.update_success_by_code("#!ibl edition=2\nreturn 3", False, tokens=999999)  # 실패=불반영
     assert _avg_tokens(db, eid) == pytest.approx(13000.0)
 
 
 def test_t6b_birth_tokens(db):
-    eid = db.add_example("검색 요약", "[sense:search]{}", source="distilled",
+    eid = db.add_example("검색 요약", "#!ibl edition=2\nreturn 4", source="distilled",
                          avg_ms=3000.0, avg_tokens=15000.0)
     assert _avg_tokens(db, eid) == 15000.0
 
@@ -240,11 +240,11 @@ def test_t8_dedup_token_axis():
 def test_t9_reference_xml_shows_avg_tokens():
     from ibl_usage_db import UsageExample
     from ibl_usage_rag import IBLUsageRAG
-    ex = UsageExample(id=1, intent="메일 확인", ibl_code="[sense:email]{}",
+    ex = UsageExample(id=1, intent="메일 확인", ibl_code="#!ibl edition=2\nreturn 1",
                       nodes="sense", category="single", difficulty=1,
                       score=0.9, source="distilled", success_rate=1.0,
                       avg_ms=1300.0, avg_tokens=12500.0)
-    bare = UsageExample(id=2, intent="가격 조회", ibl_code="[sense:price]{}",
+    bare = UsageExample(id=2, intent="가격 조회", ibl_code="#!ibl edition=2\nreturn 2",
                         nodes="sense", category="single", difficulty=1,
                         score=0.88, source="distilled", success_rate=-1.0)
     xml = IBLUsageRAG()._format_references([ex, bare])

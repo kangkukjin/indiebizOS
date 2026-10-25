@@ -37,13 +37,6 @@ def test_known_truncation_and_repeated_batch_are_nonblocking():
     assert result['preflight']['declared_ai_visits_upper_bound'] == 2
 
 
-def test_default_limit_matches_executor():
-    from ibl_exec_each import _EACH_DEFAULT_LIMIT
-    n = _EACH_DEFAULT_LIMIT + 1
-    result = checked(f'[table:each]{{items:{json.dumps(list(range(n)))}}}'
-                     '{[$it] >> ' + AI + '}')
-    assert rules(result)['each_input_limit']['facts'] == {
-        'input_rows': n, 'limit': _EACH_DEFAULT_LIMIT, 'omitted_rows': 1}
 
 
 @pytest.mark.parametrize('limit', ['$a.count', '3', '30'])
@@ -239,38 +232,8 @@ def test_analysis_failure_keeps_existing_type_errors(monkeypatch):
     assert any(i['severity'] == 'error' for i in result['issues'])
 
 
-def test_check_true_exposes_plan_without_execution(monkeypatch, tmp_path):
-    import ibl_engine
-    import system_tools_ibl as unified
-    import thread_context
-    import workflow_engine
-
-    def forbidden(*args, **kwargs):
-        pytest.fail('정적 검사에서 실행기를 호출했습니다')
-
-    monkeypatch.setattr(ibl_engine, 'execute_ibl', forbidden)
-    monkeypatch.setattr(workflow_engine, 'execute_pipeline', forbidden)
-    monkeypatch.setattr(unified, '_ibl_debug_log', lambda *args: None)
-    snapshot = thread_context.snapshot()
-    thread_context.clear_all_context()
-    try:
-        result = json.loads(unified._execute_ibl_unified_impl(
-            {'code': ROWS + ' >> [table:each]{limit:2}{[$it] >> ' + AI + '}', 'check': True},
-            str(tmp_path)))
-    finally:
-        thread_context.restore(snapshot)
-    assert result['preflight']['declared_ai_visits_upper_bound'] == 2
-    assert 'each_input_limit' in rules(result)
 
 
-def test_execution_warning_summary_preserves_rule_and_evidence():
-    from system_tools_ibl import _attach_precheck
-    result = checked(ROWS + ' >> [table:each]{limit:1}{[$it] >> ' + AI + '}')
-    output = {'success': True}
-    _attach_precheck(output, result)
-    warning = output['precheck_warnings'][0]
-    assert warning['rule'] == 'each_input_limit'
-    assert warning['facts']['omitted_rows'] == 2
 
 
 if __name__ == '__main__':

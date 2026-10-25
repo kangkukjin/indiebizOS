@@ -10,19 +10,8 @@ from ibl_edition import source_edition, explicit_source
 
 
 def inventory():
-    from ibl_usage_db import IBLUsageDB
-    from ibl_v2_adapters import load_registry
-    registry = load_registry()
-    with IBLUsageDB()._get_connection() as conn:
-        rows = [dict(r) for r in conn.execute("SELECT id, alias, ibl_code FROM ibl_examples")]
-    return {"examples": {str(e): sum(source_edition(r["ibl_code"]) == e for r in rows) for e in (1, 2)},
-            "functions": [{"id": r["id"], "name": r["alias"], "edition": source_edition(r["ibl_code"]),
-                           "v2_connection": "native" if source_edition(r["ibl_code"]) == 2 else
-                           ("legacy-envelope" if f'fn:{r["alias"]}' in registry else "requires_review")}
-                          for r in rows if r["alias"]],
-            "actions": {"native": sorted(k for k, a in registry.items() if not a.contract.get("compatibility")),
-                        "compatibility": sorted(k for k, a in registry.items() if a.contract.get("compatibility"))},
-            "changed": False}
+    from ibl_edition1_inventory import inventory as read_inventory
+    return read_inventory(Path(__file__).resolve().parents[1])
 
 
 def seed(path, apply=False):

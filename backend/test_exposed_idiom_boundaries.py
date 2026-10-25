@@ -13,14 +13,9 @@ NAMES = ("주소마다읽기", "관련자료골라읽기", "의미로본문찾�
 
 
 @pytest.fixture
-def call(memory, monkeypatch, tmp_path):
+def call(installed_functions, monkeypatch, tmp_path):
     import ibl_engine
     from ibl_v2_entry import handle_request
-    for entry in CATALOG:
-        if entry["name"] in NAMES:
-            assert memory.add_examples_batch([{
-                "intent": entry["when"], "ibl_code": entry["body"],
-                "alias": entry["name"], "category": "phrase"}]) == 1
     calls = {"judge": 0, "crawl": []}
     original = ibl_engine._execute_ibl_impl
 
@@ -37,7 +32,7 @@ def call(memory, monkeypatch, tmp_path):
             calls["crawl"].append(params["url"])
             if params["url"].endswith("/bad"):
                 return {"success": False, "error": "수집 실패"}
-            return {"success": True, "items": [{"text": "본문", "url": params["url"]}]}
+            return {"success": True, "text":"본문", "title":"title", "url":params["url"], "items": [{"text": "본문", "url": params["url"]}]}
         return original(ti, project, agent_id)
 
     monkeypatch.setattr(ibl_engine, "_execute_ibl_impl", leaf)
@@ -94,7 +89,8 @@ def test_duplicate_and_beyond_limit_source_errors_are_retained(call, name, count
     assert not out["success"] and not out["source_complete"]
     assert out["diagnostic"]["code"] == "PARTIAL_SOURCE", out.get("error")
     partial = unpack(out["partial_wire"]["data"])
-    assert [r for r in partial["items"] if r.get("_error")] == failures
+    assert partial.get("source_error_items", [r for r in partial["items"] if r.get("_error")]) == failures
+    assert not call.calls["crawl"]
     assert "https://fixture.test/unread" not in call.calls["crawl"]
 
 

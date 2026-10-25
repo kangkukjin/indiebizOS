@@ -87,7 +87,7 @@ def set_code_validator(fn) -> None:
     _CODE_VALIDATOR = fn
 
 
-def _syntax_reason(ibl_code: str, function_body: bool = False) -> Optional[str]:
+def _syntax_reason(ibl_code: str, function_body: bool = False, *, owned_vocabulary=False) -> Optional[str]:
     """구문 사유 한 줄 (유효하면 None). 미등록이면 예외 — fail-closed.
 
     function_body: 관용구 골격처럼 **함수 몸**으로 읽을 것인가(2026-09-07 언어 개정) — 그 자리에선
@@ -98,6 +98,8 @@ def _syntax_reason(ibl_code: str, function_body: bool = False) -> Optional[str]:
             "진입점이 `import boot_paths` 를 거쳤는지 확인할 것(배선처=boot_paths.wire_ledger_syntax_gate)."
         )
     try:
+        if owned_vocabulary:
+            return _CODE_VALIDATOR(ibl_code, function_body, owned_vocabulary=True)
         return _CODE_VALIDATOR(ibl_code, function_body)
     except Exception as e:
         # 검증자 자체가 고장 = 검증 불가 = 거절. 침묵 통과는 관문의 자살.

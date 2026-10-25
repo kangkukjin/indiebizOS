@@ -798,13 +798,15 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
             from corpus_policy import callable_exclusion_reason
             candidates = conn.execute(
                 'SELECT ibl_code,provenance FROM ibl_examples WHERE alias=? ORDER BY updated_at DESC,rowid DESC', (name,)).fetchall()
-            if candidates and callable_exclusion_reason({'ibl_code': candidates[0][0], 'provenance': candidates[0][1]}):
+            reason = (callable_exclusion_reason({'ibl_code': candidates[0][0], 'provenance': candidates[0][1]})
+                      if candidates else '')
+            if reason and reason != 'legacy_source':
                 continue
         try:
             current = function_store.resolve(name, view=view)
         except (ValueError, OSError):
             continue
-        if current is None:
+        if current is None or current.get('edition') != 2:
             continue
         stats = function_statistics(function_store.reference(current))
         selected = list(row[:8])
@@ -813,7 +815,7 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
         selected[1] = (pin_source(current['source'], 2) if current['edition'] == 2 else current['source'])
         selected[2:4] = [stats['success_count'], stats['fail_count']]
         from ibl_returns_observed import returns_display
-        selected[6] = 'Record' if current['edition'] == 1 else returns_display('', stats.get('returns_observed'))
+        selected[6] = returns_display('', stats.get('returns_observed'))
         selected[7] = signature_of(selected[1])
         result.append(tuple(selected))
     return result

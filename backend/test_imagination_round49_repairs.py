@@ -97,18 +97,6 @@ def test_B49_1_자리표_굴절은_경로형과_괄호형까지_본다():
     assert REF_RE.sub("1", "${이름}과 $맨몸.경로") == "1과 1"
 
 
-@pytest.mark.parametrize("code", [
-    CODE_B49_1,
-    '$n = 2\n[sense:host]{op: "apps", limit: 2} >> [table:each]{do: "[sense:host]{op: \\"apps\\", limit: $n}"}',
-])
-def test_B49_1_검수가_실행되는_문장을_통과시킨다(code):
-    """종단 — dry-run 이 실행 가능한 문장에 valid:true 를 낸다(거짓 빨강 소멸)."""
-    import asyncio
-    from api_ibl import validate_ibl, ValidateRequest
-    out = asyncio.get_event_loop_policy().new_event_loop().run_until_complete(
-        validate_ibl(ValidateRequest(code=code)))
-    bad = [s for s in out.get("steps", []) if s.get("valid") is False]
-    assert out.get("valid") is True, (out.get("syntax_error"), bad)
 
 
 # ─────────────────────────── B49-2 ───────────────────────────
@@ -149,53 +137,10 @@ def _run(code: str):
     return execute_ibl(parse(code)[0], root, "test")
 
 
-@pytest.mark.parametrize("code,name", [
-    ('[if: 1 == 1]{$k = 7}', "k"),
-    ('[repeat: 2, max: 3]{$r = [self:time]}', "r"),
-    ('[try]{$k = 7}[catch]{[self:time]}', "k"),
-])
-def test_V49_1_블록_몸의_할당이_경계를_넘는다(code, name):
-    """★V49-1 (사용자 판정 A, 2026-08-27) — **블록은 스코프를 만들지 않는다.**
-
-    49회차 판에서 이 세 칸은 정반대를 못박고 있었다(`vars_dropped` 에 이름이 뜨는 것을
-    성공으로 봤다). 그때의 수리는 *정직성만* 이었고 의미론은 판정으로 남겼는데, 판정이
-    A(파이썬식)로 내려와 계약이 뒤집혔다 — 이제 경계는 떨구지 않고 **넘긴다**.
-    """
-    out = _run(code)
-    assert isinstance(out, dict), out
-    assert name in (out.get("_var_updates") or {}), out
-    assert name not in (out.get("vars_dropped") or []), out
 
 
-def test_V49_1_종단_뒤_문장이_그_값을_읽는다():
-    """종단 — 파서의 팬텀 슬롯부터 실행기의 되쓰기까지 한 줄로."""
-    from ibl_parser import parse_with_vars, BORN_SLOT_BASE
-    from workflow_engine import execute_pipeline
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    code = '[if: 1 == 1]{$k = 7}\n[if: $k == 7]{[self:time]}[else]{[sense:host]{op: "status"}}'
-    steps, variables = parse_with_vars(code)
-    assert variables.get("k", 0) >= BORN_SLOT_BASE, variables      # 팬텀 슬롯 발급
-    assert steps[0].get("_born_vars") == {"k": variables["k"]}, steps[0]
-    env = execute_pipeline(steps, root, agent_id="test")
-    assert env.get("success") is True, env.get("error")
 
 
-def test_V49_1_안_탄_분기는_침묵하지_않는다():
-    """★슬롯이 있다고 값이 있는 것은 아니다 — 안 탄 분기의 변수는 **미할당**이어야 한다.
-
-    이 자리가 이 수리의 가장 큰 위험이었다: 팬텀 슬롯을 발급해 놓고 `step_results.get(i, "")`
-    로 읽으면, 분기가 안 타서 한 번도 안 쓰인 슬롯이 **빈 문자열**로 조건에 들어간다
-    (판정 불능이어야 할 자리가 조용히 거짓이 된다 — 이 저장소가 가장 오래 싸운 부류).
-    그래서 미기록 슬롯은 `_var_values` 에 아예 싣지 않는다.
-    """
-    from ibl_parser import parse_with_vars
-    from workflow_engine import execute_pipeline
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    steps, _ = parse_with_vars('[if: 1 == 2]{$k = 7}\n'
-                               '[if: $k == 7]{[self:time]}[else]{[sense:host]{op: "status"}}')
-    env = execute_pipeline(steps, root, agent_id="test")
-    assert env.get("success") is False, env
-    assert "판정 불능" in json.dumps(env, ensure_ascii=False, default=str)
 
 
 def test_V49_1_바깥_이름의_재할당은_팬텀_슬롯을_뺏기지_않는다():
@@ -207,63 +152,12 @@ def test_V49_1_바깥_이름의_재할당은_팬텀_슬롯을_뺏기지_않는�
     assert "_born_vars" not in steps[1], steps[1]     # 재할당엔 새 슬롯을 발급하지 않는다
 
 
-def test_V49_1_중첩_블록에서_태어난_이름은_아직_못_나간다():
-    """수용된 한계 — 깊이 2 이상의 출생은 안쪽 파이프의 인덱스 공간에 갇힌다.
-
-    바깥 블록의 `_var_updates` 는 **자기 몸의 바로 그 단계**만 걷는다(안쪽 블록의 되쓰기는
-    안쪽 step_results 에 쓰인다). 그래서 여기서는 A 가 아직 끝까지 가지 않는다 —
-    다만 **조용히 사라지지는 않는다**: `vars_dropped` 가 그 이름을 말한다.
-    """
-    out = _run('[repeat: 1, max: 2]{[if: 1 == 1]{$z = 5}}')
-    assert isinstance(out, dict), out
-    assert "z" in (out.get("vars_dropped") or []), out
 
 
-def test_B49_2_바깥에_있던_이름의_재할당은_신고_대상이_아니다():
-    """대조군 — 되쓸 슬롯이 있는 이름은 정상 승계라 표지가 붙으면 소음이 된다.
-
-    (`$n = 0` 을 미리 두고 몸에서 재할당하는 교재 M6 용법이 바로 이 경로다.)"""
-    from ibl_parser import parse
-    from ibl_engine import execute_ibl
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    steps = parse('$n = 0\n[repeat: 2, max: 3]{$n = $n + 1}')
-    rep = [s for s in steps if isinstance(s, dict) and s.get("_repeat")][0]
-    rep = {**rep, "_var_values": {"n": "0"}}
-    out = execute_ibl(rep, root, "test")
-    assert isinstance(out, dict), out
-    assert "n" not in (out.get("vars_dropped") or []), out
-    assert (out.get("_var_updates") or {}).get("n") is not None, out
 
 
-@pytest.mark.parametrize("code,name", [
-    ('[if: 1 == 1]{$k = [self:time]}', "k"),
-    ('[try]{$t = [self:time]}[catch]{[self:time]}', "t"),
-])
-def test_V49_1_몸_결과가_평문_스칼라여도_되쓴다(code, name):
-    """★2026-08-27(범위밖 판정턴) — 위 배터리가 못 본 자리.
-
-    `test_V49_1_블록_몸의_할당이_경계를_넘는다` 는 `$k = 7`(식 할당 → dict 봉투)만 밟아
-    초록이었는데, 몸이 **평문 스칼라**를 내는 `$k = [self:time]` 은 되쓰기가
-    `isinstance(out, dict)` 뒤에 있어 통째로 사라졌다. `vars_dropped` 표지조차 dict
-    전용이라(통화 불침범 판정) 이 경로는 **완전 침묵**이었고, 뒤 문장은 "판정 불능" 으로
-    엉뚱한 곳을 탓했다 — B48-1 이 `_caught` 에서 고친 "평문 스칼라라는 세 번째 모양"의
-    같은 부류, 같은 처방(되쓸 것이 있을 때만 승격).
-    """
-    out = _run(code)
-    assert isinstance(out, dict), out
-    assert (out.get("_var_updates") or {}).get(name), out
-    assert name not in (out.get("vars_dropped") or []), out
 
 
-def test_V49_1_스칼라_할당도_뒤_문장이_읽는다():
-    """종단 — 승격이 `step_results` 되쓰기까지 이어지나(수리 전엔 '판정 불능'으로 죽었다)."""
-    from ibl_parser import parse_with_vars
-    from workflow_engine import execute_pipeline
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    steps, _ = parse_with_vars('[if: 1 == 1]{$k = [self:time]}\n'
-                               '[if: $k matches ":"]{[self:time]}[else]{[sense:host]{op: "status"}}')
-    env = execute_pipeline(steps, root, agent_id="test")
-    assert env.get("success") is True, env.get("error")
 
 
 if __name__ == "__main__":

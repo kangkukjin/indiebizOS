@@ -583,10 +583,6 @@ def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = No
 
 # IBL 통합 실행 본체는 system_tools_ibl.py 로 이동 (2026-07-18 모듈화) — 재수출로 경로 불변.
 from system_tools_ibl import (  # noqa: E402,F401
-    _replace_file_refs_in_steps,
-    _replace_file_refs_in_dict,
-    _replace_file_refs_in_list,
-    _enrich_error_with_param_hint,
     _execute_ibl_unified,
 )
 

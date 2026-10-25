@@ -16,11 +16,11 @@ def v2(code):
 
 
 @pytest.mark.parametrize('wrapper', ['', 'return ', '$글 = '])
-def test_url_change_across_editions_is_free(wrapper):
+def test_old_edition_does_not_suppress_current_teaching(wrapper):
     old = '[sense:crawl]{url:"https://example.org/old"}'
     new = v2(wrapper + '[sense:crawl]{url:"https://example.org/new"}')
-    assert value.redundant_reason([new], [{'id': 1, 'ibl_code': old}])
-    assert value.redundant_reason([old], [{'id': 1, 'ibl_code': new}])
+    assert value.redundant_reason([new], [{'id': 1, 'ibl_code': old}]) is None
+    assert value.redundant_reason([old], [{'id': 1, 'ibl_code': new}]) is None
     assert not value.url_only_head(v2('return [sense:crawl]{url:"https://example.org/new",mode:"full"}'))
 
 

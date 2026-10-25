@@ -47,13 +47,12 @@ def wire_ledger_syntax_gate() -> None:
     except Exception:
         return  # 원장이 없는 몸이면 꽂을 문도 없다
 
-    def _validator(ibl_code: str, function_body: bool = False):
+    def _validator(ibl_code: str, function_body: bool = False, *, owned_vocabulary=False):
         from ibl_edition import source_edition
         if source_edition(ibl_code) == 2:
             from ibl_v2_learning import check_source
-            return check_source(ibl_code, function_body)
-        from ibl_param_vocab import code_syntax_error
-        return code_syntax_error(ibl_code, function_body)
+            return check_source(ibl_code, function_body, owned_vocabulary=owned_vocabulary)
+        return 'EDITION_RETIRED: 구판 원문은 새 실행 교재로 등록할 수 없습니다.'
 
     ibl_usage_db.set_code_validator(_validator)
 
@@ -75,8 +74,7 @@ def wire_ledger_signature() -> None:
         if source_edition(ibl_code) == 2:
             from ibl_v2_learning import signature
             return signature(ibl_code)
-        from workflow_contract import call_signature
-        return call_signature(ibl_code)
+        return []  # Historical signatures are not executable contracts.
 
     ibl_usage_db.set_signature_computer(_signature)
 

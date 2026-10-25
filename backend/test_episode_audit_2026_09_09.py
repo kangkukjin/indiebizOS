@@ -18,9 +18,9 @@ def run(tmp_path, monkeypatch):
     monkeypatch.setattr(ibl_turn_vars, "store_path", lambda key: str(tmp_path / f"{key}.json"))
     task = f"task_test_{uuid.uuid4().hex}"
 
-    def execute(code):
+    def execute(code, **extra):
         with actor_context(agent_id="probe", task_id=task):
-            raw = _execute_ibl_unified({"code": code, "verbose": True}, str(tmp_path), agent_id="probe")
+            raw = _execute_ibl_unified({"code": code,"edition":2,"verbose": True,**extra}, str(tmp_path), agent_id="probe")
         return json.loads(raw)
 
     return execute
@@ -28,15 +28,14 @@ def run(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("text", ['[{"id":1},{"id":2}]', '[]', '본문 $literal', '0', 'false', ''])
 def test_single_read_assignment_keeps_original_value(run, tmp_path, text):
-    path = tmp_path / "source.txt"
-    path.write_text(text, encoding="utf-8")
-    first = run('$1차 = [self:read]' + json.dumps({"path": str(path)}))
-    assert first["success"] and first["turn_vars"]["live"] == ["1차"], first
-    # 원본을 지워도 다음 호출은 값을 보유한다 — 재실행·재과금 경로가 아니다.
+    path=tmp_path/'source.txt';path.write_text(text)
+    first=run('[self:read]'+json.dumps({'path':str(path)}))
+    assert first['success'],first
     path.unlink()
-    second = run('$1차')
-    assert second["success"] and second["turn_vars"]["injected"] == ["1차"], second
-    assert second["final_result"] == text
+    second=run('return $입력',inputs=first['result_ref']['input_args'])
+    assert second['success'],second
+    assert second['value']['text']==text
+
 
 
 def test_failed_single_read_never_becomes_a_live_variable(run, tmp_path):
@@ -44,7 +43,7 @@ def test_failed_single_read_never_becomes_a_live_variable(run, tmp_path):
     assert first["success"] is False
     assert "없음" not in first.get("turn_vars", {}).get("live", [])
     second = run('$없음')
-    assert "할당되지" in second["error"]
+    assert not second['success'] and 'UNBOUND' in str(second)
 
 
 def _package_module(filename):
@@ -121,8 +120,8 @@ def test_zigbang_preserves_detail_fields_for_numeric_filter(run, monkeypatch):
     rows = out["items"]
     assert [r["deposit"] for r in rows] == [10000, 20000]
     assert rows[1]["rent"] == 0 and rows[1]["area_m2"] == 84 and rows[1]["floor"] == 2
-    filtered = run('[table:filter]' + json.dumps({"items": rows, "where": "deposit >= 20000"}))
-    assert [r["itemId"] for r in filtered["items"]] == [2]
+    filtered = run('$rows >> [table:filter]{where:($r)=>$r.deposit>=20000}',inputs={'rows':rows})
+    assert [r["itemId"] for r in filtered["value"]] == [2]
 
 
 @pytest.mark.parametrize("body_fails", [False, True])
@@ -134,12 +133,13 @@ def test_named_idiom_records_its_own_result_once(run, monkeypatch, tmp_path, bod
 
     body = ('[table:take]{items:[{x:1}],n:1}' if not body_fails else
             '[self:read]' + json.dumps({"path": str(tmp_path / "missing_body.txt")}))
-    from test_function_support import use_legacy
-    use_legacy(monkeypatch, {"직전보고서찾아읽기": body})
+    from function_library import register
+    body='#!ibl edition=2\n[def:직전보고서찾아읽기](){return '+body+'}'
+    register('직전보고서찾아읽기',body)
     row = {"id": 1, "alias": "직전보고서찾아읽기", "ibl_code": body}
     hits = []
     monkeypatch.setattr(workflow_store, "get_workflow", lambda name: None)
-    monkeypatch.setattr(ibl_usage_db.IBLUsageDB, "find_phrase_by_alias", lambda self, name: row)
+    monkeypatch.setattr(ibl_usage_db.IBLUsageDB, "find_phrase_by_alias", lambda self, name, **kw: row)
     monkeypatch.setattr(ibl_usage_db.IBLUsageDB, "alias_of_code", lambda self, code: row["alias"])
     monkeypatch.setattr(ibl_usage_db.IBLUsageDB, "update_success_by_code",
                         lambda self, code, ok, **kw: hits.append((code, ok, kw)) or True)
@@ -157,20 +157,25 @@ def test_named_idiom_records_its_own_result_once(run, monkeypatch, tmp_path, bod
     with episode_logger._get_db() as conn:
         recorded = [json.loads(r[0]) for r in conn.execute(
             "SELECT data FROM trajectory_event WHERE kind='ibl.started'")]
-        feedback = [json.loads(r[0]) for r in conn.execute(
-            "SELECT data FROM trajectory_event WHERE kind='ibl.function_feedback'")]
     assert any(r["fn_count"] == 1 and "fn:직전보고서찾아읽기" in r["actions"] for r in recorded)
+    from capability_history import connection
+    from function_store import resolve
+    current = resolve('직전보고서찾아읽기', edition=2)
+    with connection() as conn:
+        feedback = [dict(row) for row in conn.execute(
+            'SELECT * FROM function_calls WHERE function_id=? AND revision=?',
+            (current['function_id'], current['revision']))]
     assert len(feedback) == 1
-    assert feedback[0]["success"] is (not body_fails)
-    assert feedback[0]["attributed"] is (not body_fails)
-    if body_fails:
-        assert feedback[0]["failure_origin"]["kind"] == "unknown"
-    assert feedback[0]["function_ref"]["revision"]
-    assert feedback[0]["call_id"]
+    assert bool(feedback[0]['success']) is (not body_fails)
+    assert feedback[0]['dependency_revision']
+    assert feedback[0]['run_id'] and feedback[0]['call_id']
     rag.record_recall_outcome(body, 0.95, [{
         "tool_name": "execute_ibl", "input": {"code": program}, "success": False,
     }], turn_tokens=1000)
     assert [(c, ok) for c, ok, _ in hits] == expected
+    with connection() as conn:
+        assert conn.execute('SELECT COUNT(*) FROM function_calls WHERE function_id=?',
+                            (current['function_id'],)).fetchone()[0] == 1
 
 
 if __name__ == "__main__":

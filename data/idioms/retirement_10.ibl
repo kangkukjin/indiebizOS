@@ -1,0 +1,5 @@
+#!ibl edition=2
+[def:좁혀서읽기]($패턴,$루트,$파일패턴) {
+  $검색 = [self:grep]{pattern:$패턴,path:$루트,file_pattern:$파일패턴,limit:6}
+  return [fn:위치마다읽기]{위치:$검색.items,개수:3,줄수:30}
+}

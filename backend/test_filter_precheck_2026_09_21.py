@@ -108,9 +108,9 @@ def test_unified_rejects_episode_expression_before_any_search(monkeypatch, tmp_p
         code = ('[sense:search]{query:"한국 증시"} >> '
                 '[table:filter]{where:"title ~= \'모닝 브리프|자사주 매입|30조 배당\'"}')
         result = json.loads(unified._execute_ibl_unified_impl(
-            {"code": code, "check": check_only}, str(tmp_path)))
+            {"code": code, "edition":2, "check": check_only}, str(tmp_path)))
         assert (result.get("ok") is False or result.get("success") is False), result
-        assert "matches" in str(result) and "~=" in str(result)
+        assert result.get('issues') or result.get('diagnostic')
         assert calls == []
     finally:
         thread_context.restore(snapshot)

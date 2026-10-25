@@ -223,7 +223,7 @@ def test_stored_app_inputs_do_not_hide_breaking_function_revision(tmp_path, monk
     first = register('value', '#!ibl edition=2\n[def:value]($x){return $x}')
     folder = tmp_path / 'data/instruments'
     folder.mkdir(parents=True)
-    (folder / 'app.yaml').write_text('action: "[fn:value]{x:$choice}"')
+    (folder / 'app.yaml').write_text('edition: 2\naction: "[fn:value]{x:$choice}"')
     with pytest.raises(ValueError, match='저장 소비자'):
         register('value', '#!ibl edition=2\n[def:value]($y){return $y}', expected_revision=first['revision'])
 
@@ -240,14 +240,11 @@ def test_memory_projection_keeps_new_revision_observations_separate():
     assert 'current' in row['returns_observed'] and 'old' not in row['returns_observed']
 
 
-def test_legacy_caller_blocks_incompatible_revision_and_retirement():
-    ref = register('old', '$return = $x', edition=1)
-    register('caller', '$return = [fn:old]{x:1}', edition=1)
-    with pytest.raises(ValueError, match='호출자'):
-        register('old', '$return = $y', edition=1, expected_revision=ref['revision'])
-    with pytest.raises(ValueError, match='호출자'):
-        retire('old')
-    assert store.resolve('old')['revision'] == ref['revision']
+def test_legacy_registration_is_rejected_before_publication():
+    before = store.catalog()
+    with pytest.raises(ValueError, match='EDITION_RETIRED'):
+        register('old', '$return = $x', edition=1)
+    assert store.catalog() == before
 
 
 def test_retired_identity_does_not_shadow_a_new_identity():

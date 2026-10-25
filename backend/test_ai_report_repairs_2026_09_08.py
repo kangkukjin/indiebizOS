@@ -16,18 +16,6 @@ $사례 = [table:compute]{items:[{id:4}],set:{x:2}};
 '''
 
 
-def test_parenthesized_variable_pipeline_runs_and_keeps_source():
-    from workflow_engine import execute_pipeline
-    steps = parse(PROGRAM)
-    assert steps[-2]['_vars'] == {'기술': 0, '사례': 1}
-    before = json.dumps(steps)
-    result = execute_pipeline(steps, str(ROOT))
-    assert result['success'], result
-    final = result['final_result']
-    final = json.loads(final) if isinstance(final, str) else final
-    assert [r['id'] for r in final['items']] == [2, 3, 4]
-    assert json.dumps(steps) == before
-    assert typecheck_code(PROGRAM)['ok']
 
 
 @pytest.mark.parametrize('ref', ['$기술', '${기술}', '${기술.items}'])
@@ -92,30 +80,6 @@ def test_ledger_reports_corrupt_rows_even_when_filter_would_hide_them(ledger, tm
         assert path.read_bytes() == before
 
 
-@pytest.mark.parametrize('parallel', [1, 2])
-def test_collect_preserves_four_summaries_and_warns_before_work(monkeypatch, parallel):
-    import ibl_engine
-    from ibl_exec_each import _execute_table_each
-    def fake(ti, *args, **kwargs):
-        if ti.get('action') == 'crawl':
-            return {'success': True, 'items': [{'text': '원문'}]}
-        return '보존할 요약'
-    monkeypatch.setattr(ibl_engine, 'execute_ibl', fake)
-    params = {'items': [{'url': f'https://example.com/{i}'} for i in range(4)],
-              'do': '[sense:crawl]{url:"$it.url"} >> [table:brief]{instruction:"요약"}',
-              'parallel': parallel}
-    code = '[table:each]' + json.dumps(params, ensure_ascii=False)
-    check = typecheck_code(code)
-    assert check['ok'] and any('collect:true' in i.get('hint', '') for i in check['issues'])
-    old = _execute_table_each(params, str(ROOT))
-    assert old['passthrough_rows'] == 4 and 'collect:true' in old['message']
-    params['collect'] = True
-    out = _execute_table_each(params, str(ROOT))
-    assert out['success'] and out['collected_rows'] == 4
-    assert [r['value'] for r in out['items']] == ['보존할 요약'] * 4
-    assert 'passthrough_rows' not in out
-    check = typecheck_code('[table:each]' + json.dumps(params, ensure_ascii=False))
-    assert not any('collect:true' in i.get('hint', '') for i in check['issues'])
 
 
 if __name__ == '__main__':

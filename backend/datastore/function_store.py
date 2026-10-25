@@ -188,7 +188,7 @@ def publish(changes, *, expected_generation=None, request_id=None, root=None,
     A change is {record, expected_revision, state?, legacy_ids?}. The record
     contains no derived signatures or usage statistics. None expects creation.
     """
-    if not isinstance(changes, list) or not changes:
+    if not isinstance(changes, list) or (not changes and migration is None):
         raise ValueError('변경할 관용구가 없습니다.')
     import yaml
     request_hash = digest(request_payload if request_payload is not None else {'changes': changes, 'migration': migration})

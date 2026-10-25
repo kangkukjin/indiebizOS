@@ -64,7 +64,7 @@ def test_code_uses_same_receipt_and_queue_without_ai_and_preserves_literal_input
     before = w.runner.db.get_task(task_id)
     assert before['parent_task_id'] == 'parent-task' and before['status'] == 'pending'
     assert json.loads(before['delegation_context'])['ibl_request'] == {
-        'code': 'return $값', 'edition': 2, 'inputs': {'값': value}}
+        'code': '#!ibl edition=2\nreturn $값', 'edition': 2, 'inputs': {'값': value}}
     drain(w)
     child = w.runner.db.get_task(task_id)
     result = json.loads(child['result'])
@@ -91,7 +91,7 @@ def test_target_permission_and_inherited_restriction_identity_are_preserved(code
         return {'success': True, 'value': 7}
     monkeypatch.setattr(ibl_v2_entry, 'handle_request', execute)
     drain(w)
-    assert observed == [({'code': 'return 7', 'edition': 2}, str(w.project), 'target', receipt['task_id'],
+    assert observed == [({'code': '#!ibl edition=2\nreturn 7', 'edition': 2}, str(w.project), 'target', receipt['task_id'],
                          {'self', 'table', 'others', 'sense'}, 'member:member-fixture', 'training')]
     assert principal.is_owner()
     assert tc.get_allowed_nodes() == {'self', 'table', 'others', 'sense', 'engines'}
@@ -172,10 +172,10 @@ def test_explicit_async_child_reports_are_retained_without_ai_continuation(code_
     assert ctx['responses'][0]['response'] == '판단 결과' and 'ibl_request' in ctx
 
 
-def test_explicit_legacy_array_still_executes_directly(code_world):
+def test_explicit_legacy_array_rejects_before_creating_work(code_world):
     receipt = submit(code_world, ['[self:time]{}'], edition=1)
-    drain(code_world)
-    assert code_world.runner.db.get_task(receipt['task_id'])['status'] == 'completed'
+    assert not receipt['success'] and 'EDITION_RETIRED' in receipt['error']
+    assert not code_world.cls.internal_messages
 
 
 def test_conflicting_edition_rejects_before_creating_work(code_world):

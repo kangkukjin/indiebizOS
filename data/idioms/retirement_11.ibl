@@ -1,0 +1,9 @@
+#!ibl edition=2
+[def:잘라각각종합]($목록,$덩이지시,$종합지시) {
+  $덩이 = [table:chunk]{items:$목록,size:15000}
+  $부분 = $덩이.items >> [table:each]{mode:"flat_map"} {
+    $답 = [table:brief]{items:[$it],instruction:$덩이지시}
+    return $답.items
+  }
+  return [table:brief]{items:$부분,instruction:$종합지시}
+}

@@ -15,28 +15,6 @@ RIGHT = '[{id: 1, tag: "a", y: 30}]'
 CALL = f'[table:join]{{left: {LEFT}, right: {RIGHT}, on: ["id", "tag"]}}'
 
 
-@pytest.mark.parametrize('prefix', ['', '$joined = '])
-@pytest.mark.parametrize('key', ['"id"', '["id", "tag"]'])
-def test_direct_join_checked_and_executed(monkeypatch, tmp_path, prefix, key):
-    import ibl_engine
-    import workflow_engine
-    from tool_context import ToolContext
-    spec = importlib.util.spec_from_file_location('_direct_dataops', ROOT / 'data/packages/installed/tools/data-ops/handler.py')
-    dataops = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dataops)
-
-    def leaf(ti, project, agent=None):
-        assert ti['_node'] == 'table'
-        return dataops.execute(ti['params'], ToolContext(project, 'data_' + ti['action']))
-    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
-    code = prefix + f'[table:join]{{left: {LEFT}, right: {RIGHT}, on: {key}}} >> [table:select]{{columns: ["x", "y"]}}'
-    checked = typecheck_code(code)
-    assert checked['ok'] and 'abstained' not in checked, checked
-    out = workflow_engine.execute_pipeline(parse(code), str(tmp_path))
-    assert out['success'], out
-    result = out['final_result']
-    result = json.loads(result) if isinstance(result, str) else result
-    assert result['items'] == ([{'x': 10, 'y': 30}] if key.startswith('[') else [{'x': 10, 'y': 30}, {'x': 20, 'y': 30}])
 
 
 def test_direct_inputs_override_effect_and_keep_missing_input_guard():
@@ -158,35 +136,6 @@ def test_single_table_rejected_but_variable_bundles_and_empty_branches_work():
     assert typecheck_code('[self:read]{path:"unknown.json"} >> [table:union]{}')['ok']
 
 
-@pytest.mark.parametrize('body', [
-    '[{items:[]},{items:[{id:1}]}]',
-    '[{table:{columns:["id"],rows:[]}},{table:{columns:["id"],rows:[[1]]}}]',
-])
-def test_literal_list_pipe_and_explicit_bundle_follow_runtime(monkeypatch, tmp_path, body):
-    import ibl_engine
-    from workflow_engine import execute_pipeline
-    from tool_context import ToolContext
-    spec = importlib.util.spec_from_file_location('_literal_bundle_dataops', ROOT / 'data/packages/installed/tools/data-ops/handler.py')
-    dataops = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dataops)
-    original_execute = ibl_engine._execute_ibl_impl
-
-    def leaf(ti, project, agent=None):
-        if ti.get('_node') == 'table':
-            return dataops.execute(ti['params'], ToolContext(project, 'data_' + ti['action']))
-        return original_execute(ti, project, agent)
-
-    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
-    for code, valid in ((f'$bundle = {body}\n$bundle >> [table:union]{{}}', False),
-                        (f'[table:union]{{inputs:{body}}}', True)):
-        checked = typecheck_code(code)
-        assert checked['ok'] == valid and not checked.get('abstained'), checked
-        out = execute_pipeline(parse(code), str(tmp_path))
-        assert bool(out['success'] and not out.get('statements_failed')) == valid, out
-        if valid:
-            result = out['final_result']
-            result = json.loads(result) if isinstance(result, str) else result
-            assert result['items'] == [{'id': 1}]
 
 
 if __name__ == '__main__':

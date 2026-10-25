@@ -47,27 +47,21 @@ def test_def_block_signature_includes_pipe_head_slot():
 
 
 def test_two_currencies_flow_in_by_name():
-    """실행 — 통화 둘이 이름으로 몸에 들어가 합쳐진다(중복 하나가 접힌다)."""
-    st = parse('[def: 합치기]{' + PARALLEL + '}\n'
-               '$r = [fn:합치기]{옛것: [{"k": 1}, {"k": 2}], 새것: [{"k": 2}, {"k": 3}]}')
-    ibl_engine.execute_ibl(st[0], ".", None)
-    out = ibl_engine.execute_ibl(st[1], ".", None)
-    assert out["success"], out.get("error")
-    fr = out.get("final_result")
-    if isinstance(fr, str):
-        fr = json.loads(fr)
-    rows = fr["items"] if isinstance(fr, dict) else fr      # $return 은 값 그대로(리스트) 또는 통화 봉투
-    assert [r["k"] for r in rows] == [1, 2, 3]
+    from ibl_v2_entry import handle_request
+    code='[def:합치기]($옛것,$새것){return $옛것 + $새것 >> [table:dedup]{by:"k"}}\n[fn:합치기]{옛것:[{k:1},{k:2}],새것:[{k:2},{k:3}]}'
+    out=handle_request({'code':code,'edition':2})
+    assert out['success'],out
+    assert [r['k'] for r in out['value']['items']]==[1,2,3]
+
 
 
 def test_missing_slot_points_at_the_call_not_the_body():
-    """인자를 안 주면 '인자 누락' — '아직 값을 기록하지 않았습니다'로 말하면 몸을 고치러 간다."""
-    st = parse('[def: 합치기]{' + PARALLEL + '}\n$r = [fn:합치기]{옛것: []}')
-    ibl_engine.execute_ibl(st[0], ".", None)
-    out = ibl_engine.execute_ibl(st[1], ".", None)
-    assert not out.get("success")
-    blob = json.dumps(out, ensure_ascii=False)
-    assert "인자 누락" in blob and "새것" in blob
+    from ibl_v2_entry import handle_request
+    code='[def:합치기]($옛것,$새것){return $옛것 + $새것}\n[fn:합치기]{옛것:[]}'
+    out=handle_request({'code':code,'edition':2})
+    assert not out['success'] and '새것' in str(out['issues'])
+    assert 'MISSING_ARGUMENT' in str(out['issues'])
+
 
 
 def test_return_type_of_reads_function_bodies():

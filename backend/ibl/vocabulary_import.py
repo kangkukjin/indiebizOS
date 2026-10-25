@@ -52,6 +52,11 @@ def _undo_seed(source: str):
 
 def import_package(content: bytes) -> dict:
     manifest, files, examples = unpack(content)
+    from ibl_edition import require_current, source_edition, explicit_source
+    for example in examples:
+        edition = source_edition(example['ibl_code'], example.get('edition'))
+        require_current(example['ibl_code'], edition)
+    examples = [{**ex, 'ibl_code': explicit_source(ex['ibl_code'], ex.get('edition'))} for ex in examples]
     pid = manifest['id']
     root = Path(get_base_path())
     fingerprint = digest(json.dumps(manifest, sort_keys=True, ensure_ascii=False).encode())

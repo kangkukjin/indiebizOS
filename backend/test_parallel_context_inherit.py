@@ -44,30 +44,25 @@ def restore_parent_context():
         thread_context.restore(snap)
 
 
-def _branches():
-    return [{"node": "sense", "action": "probe_a"}, {"node": "sense", "action": "probe_b"}]
+def _native_parallel(observe):
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    contract = {'version': 1, 'params': {}, 'result': 'Record', 'effects': ['read_external']}
+    registry = {'test:observe': Adapter(contract, lambda *a, **k: observe())}
+    plan = compile_program('[test:observe]{} & [test:observe]{}', registry)
+    result = Runtime(plan).run()
+    assert result['success'], result
+    return result['value']
 
 
 def _run_and_capture(monkeypatch):
-    """병렬 가지 안에서 본 (in_rehearsal, task_origin, project_id) 를 걷어 온다."""
-    import ibl_engine
     import thread_context
-    import workflow_parallel as wp
-
-    seen = []
-
-    def _fake_execute(tool_input, project_path=None):
-        seen.append({
-            "action": tool_input.get("action"),
-            "in_rehearsal": thread_context.in_rehearsal(),
-            "origin": thread_context.get_task_origin(),
-            "project_id": thread_context.get_current_project_id(),
-        })
-        return {"items": [{"x": 1}]}
-
-    monkeypatch.setattr(ibl_engine, "execute_ibl", _fake_execute)
-    wp._execute_parallel(_branches(), None, "")
-    return seen
+    def observe():
+        return {'in_rehearsal': thread_context.in_rehearsal(),
+                'origin': thread_context.get_task_origin(),
+                'project_id': thread_context.get_current_project_id()}
+    return _native_parallel(observe)
 
 
 def test_R1_리허설_표식이_병렬_가지로_건너간다(monkeypatch):
@@ -110,7 +105,6 @@ def test_R4_경계는_열거가_아니라_통째_승계여야_한다(monkeypatch
     import thread_context as tc
     import ibl_engine
     from ibl_routing import _run_sync_with_timeout
-    from workflow_parallel import _execute_parallel
     from execution_workers import create_executor
 
     marker = contextvars.ContextVar("future_worker_marker", default=None)
@@ -123,8 +117,7 @@ def test_R4_경계는_열거가_아니라_통째_승계여야_한다(monkeypatch
 
     expected = observe()
     if boundary == "parallel":
-        monkeypatch.setattr(ibl_engine, "execute_ibl", observe)
-        result = _execute_parallel(_branches(), None, "")
+        result = _native_parallel(observe)
         assert len(result) == 2
         assert all(row["items"] == expected["items"] for row in result)
     elif boundary == "tool-thread":

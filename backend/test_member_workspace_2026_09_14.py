@@ -126,7 +126,7 @@ def test_app_executes_real_ibl_without_model_initialization(tmp_path, monkeypatc
             return {'success': True, 'saved': True}
         return {'success': True, 'files': [{'name': 'local.txt'}]}
     monkeypatch.setattr(member_bridge, 'request', exchange)
-    out = MemberSessionManager(tmp_path).turn('a','d',4,'member','앱 실행',local_task_id='local-task',code='[self:list]{path:"."}')
+    out = MemberSessionManager(tmp_path).turn('a','d',4,'member','앱 실행',local_task_id='local-task',code='#!ibl edition=2\n[self:list]{path:"."}')
     assert out['success'], out
     assert out['memory_saved'] and out['app_result']
     assert any(c == {'op': 'list', 'path': '.'} for c in sent)

@@ -150,10 +150,13 @@ def test_member_current_authoring_libraries_and_private_journal(tmp_path, monkey
     runner.config = {'_member_libraries': ['#!ibl edition=2\n[def:double]($x){return $x*2}',
                                          '[def:old]{[self:write]{path:"old.txt",content:"$text"}}']}
     with p.narrow(p.member('A', 4, 'dev')), mr.turn_scope(tmp_path, 'dev', 'task', threading.Event(), {}):
+        denied_library = json.loads(runner._member_tool('execute_ibl', {'code': 'return 1'}))
+        assert not denied_library['success'] and 'EDITION_RETIRED' in denied_library['error']
+        runner.config['_member_libraries'] = runner.config['_member_libraries'][:1]
         out = json.loads(runner._member_tool('execute_ibl', {'code': '[fn:double]{x:$x}', 'inputs': {'x': 3}}))
         assert out['edition'] == 2 and out['value'] == 6, out
         legacy = json.loads(runner._member_tool('execute_ibl', {'code': '[fn:old]{text:"member"}'}))
-        assert legacy['success'], legacy
+        assert not legacy['success'] and 'old' in legacy['error'], legacy
         assert list((tmp_path / 'ibl_runs').glob('*.sqlite'))
         prompt = runner._build_agent_prompt_split('member role')[0]
         assert '($목록,$단가)' in prompt and 'data/common_prompts' not in prompt

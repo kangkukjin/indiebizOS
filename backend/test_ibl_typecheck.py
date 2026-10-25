@@ -261,18 +261,14 @@ def test_observed_column_warning_is_reported_once_and_script_list_columns_are_kn
 
 
 def test_precheck_warnings_ride_the_execution_envelope():
-    from system_tools_ibl import _attach_precheck
-    tc = {"ok": True, "issues": [{"severity": "warning", "statement": 3, "step": 7, "at": "table:select",
-                                  "message": "'id' 은(는) 관측된 열에 없습니다", "hint": "columns 를 보라"},
-                                 {"severity": "error", "message": "x"}]}
-    ok = {"success": True}
-    _attach_precheck(ok, tc)
-    assert ok["precheck_warnings"] == [{"statement": 3, "step": 7, "at": "table:select",
-                                        "message": "'id' 은(는) 관측된 열에 없습니다", "hint": "columns 를 보라"}]
-    assert "precheck_note" not in ok
-    failed = {"success": False, "error": "Step 7 에러"}
-    _attach_precheck(failed, tc)
-    assert failed["precheck_warnings"] and "precheck_note" in failed
-    clean = {"success": True}
-    _attach_precheck(clean, {"ok": True, "issues": []})
-    assert "precheck_warnings" not in clean
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    for tail, success in [('return $s', True), ('return 1 / 0', False)]:
+        plan = compile_program('$x=1; $s=f"literal $x"; ' + tail, registry={}, definitions={})
+        assert not plan.issues
+        result = Runtime(plan).run()
+        assert result['success'] is success
+        warnings = result['precheck_warnings']
+        assert any(w['code'] == 'FORMAT_UNINTERPOLATED' and w['severity'] == 'warning' for w in warnings)
+    clean = Runtime(compile_program('return 1', registry={}, definitions={})).run()
+    assert 'precheck_warnings' not in clean

@@ -125,16 +125,6 @@ def test_content_approval_binds_read_sources_and_current_bytes(supervisor, tmp_p
     assert "바뀌었" in validate(supervisor, decision)
 
 
-def test_auto_each_preserves_mutation_order_and_explicit_preferences(monkeypatch):
-    from ibl_exec_each import _each_parallel
-    monkeypatch.setattr("ibl_safety.load_safety_map", lambda: {
-        ("sense","crawl"): True, ("table","brief"): True, ("self","write"):False})
-    code = "[sense:crawl] >> [table:brief]"
-    assert _each_parallel({"do":code}) == 4
-    assert _each_parallel({"do":code,"parallel":1}) == 1
-    assert _each_parallel({"do":code,"on_error":"stop"}) == 1
-    assert _each_parallel({"do":code+" >> [self:write]"}) == 1
-    assert _each_parallel({"do":"[fn:unknown]"}) == 1
 
 
 def test_transformed_rows_cannot_inherit_old_criteria_and_counters():

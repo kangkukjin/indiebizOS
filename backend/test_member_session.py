@@ -84,9 +84,9 @@ def test_declarative_file_read_accepts_plain_text_result(tmp_path, monkeypatch, 
     monkeypatch.setattr(member_bridge, 'request', exchange)
     result = member_session.MemberSessionManager(tmp_path).turn(
         'member', 'device', 4, 'name', '파일 읽기', local_task_id='local-task',
-        code='[self:read]{path:"proof.txt"}',
+        code='#!ibl edition=2\n[self:read]{path:"proof.txt"}',
     )
     assert result['success'], result
-    assert result['app_result'] == content
+    assert result['app_result']['value']['text'] == content
     assert result['memory_saved']
     assert any(command['op'] == 'read' for command in sent)

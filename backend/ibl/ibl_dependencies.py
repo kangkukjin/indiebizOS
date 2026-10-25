@@ -1,4 +1,4 @@
-"""Dependency snapshots for declared script and legacy callable boundaries."""
+"""Dependency snapshots for declared scripts and JSON handler boundaries."""
 import ast
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -172,59 +172,3 @@ def script_contract(base, args):
             'result': contract['result'], 'effects': contract['effects'],
             'per_run': contract.get('per_run', False) or contract['effects'] != ['pure'],
             'script_contract': contract}
-
-
-def legacy_selection(name, assets):
-    """Resolve static transitive calls; opaque generated source stays conservative."""
-    from ibl_parser import parse
-    selected, pending, dynamic = {}, [name], False
-    strings = set()
-    def scan(value):
-        nonlocal dynamic
-        if isinstance(value, dict):
-            if value.get('_node') == 'fn':
-                target = value.get('action')
-                if target in assets:
-                    pending.append(target)
-                else:
-                    dynamic = True
-            for v in value.values():
-                scan(v)
-        elif isinstance(value, (list, tuple)):
-            for v in value:
-                scan(v)
-        elif isinstance(value, str) and '[' in value and ':' in value and value not in strings:
-            strings.add(value)
-            try:
-                parsed = parse(value)
-            except Exception:
-                dynamic = True
-                return
-            # Only visit parsed structure, not its original string again.
-            for step in parsed:
-                scan(step)
-    while pending and not dynamic:
-        key = pending.pop()
-        if key in selected:
-            continue
-        selected[key] = assets.get(key)
-        if selected[key] is None:
-            continue
-        scan(selected[key])
-    return assets if dynamic else selected
-
-def legacy_snapshot(name, assets):
-    return digest(legacy_selection(name, assets))
-
-
-def legacy_runtime_snapshot():
-    """Legacy function effects are opaque: pin their declared interpreter realm."""
-    from runtime_utils import get_base_path
-    from ibl_registry import load_nodes_installed
-    root = get_base_path()
-    paths = list(Path(__file__).parent.glob('*.py'))
-    paths += list((root / 'backend/common').glob('*.py'))
-    paths += [p for p in (root/'data/packages/installed/tools').rglob('*.py')
-              if '__pycache__' not in p.parts and not p.name.startswith('test_')]
-    return digest({'files': {str(p): digest(p.read_bytes().hex()) for p in sorted(paths)},
-                   'vocabulary': load_nodes_installed(), 'scripts': script_snapshot({})})

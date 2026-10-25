@@ -15,12 +15,15 @@ def test_translation_preserves_complete_source_and_rejects_prose():
 
 
 def test_new_storage_pins_context_without_changing_existing_source():
-    assert pin_source('return 1') == 'return 1'
+    with pytest.raises(ValueError, match='EDITION_RETIRED'):
+        pin_source('return 1')
     with source_context(2):
         assert pin_source('return 1') == '#!ibl edition=2\nreturn 1'
-        assert pin_source('#!ibl edition=1\n[self:time]{}').startswith('#!ibl edition=1')
+        with pytest.raises(ValueError, match='EDITION_RETIRED'):
+            pin_source('#!ibl edition=1\n[self:time]{}')
         assert pin_source('') == ''
-    assert pin_source('return 1') == 'return 1'
+    with pytest.raises(ValueError, match='EDITION_RETIRED'):
+        pin_source('return 1')
 
 
 def test_scheduled_source_preserves_inputs_actor_and_origin(tmp_path, monkeypatch):

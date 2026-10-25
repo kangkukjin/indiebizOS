@@ -32,6 +32,8 @@ def test_anchor_is_last_leaf_action_and_ignores_fn_and_blocks():
 
 
 def _fixture_usage(tmp_path, body, alias="위치마다읽기", topic="찾기"):
+    from test_function_support import current_source
+    body = current_source(alias)
     from ibl_usage_db import _signature_of     # 저장 서명은 원장 규약 그대로(표시·실행이 한 벌)
     (tmp_path / "data/idioms").mkdir(parents=True)
     catalog = {"version": 1, "demote": {}, "idioms": [{
@@ -47,6 +49,9 @@ def _fixture_usage(tmp_path, body, alias="위치마다읽기", topic="찾기"):
 
 
 def test_catalog_line_stands_under_anchor_and_switch_strips_both(tmp_path, monkeypatch):
+    import ibl_v2_adapters
+    current_registry=ibl_v2_adapters.load_registry()
+    monkeypatch.setattr(ibl_v2_adapters,'load_registry',lambda *a,**k:current_registry)
     import ibl_access
     import runtime_utils
     _fixture_usage(tmp_path, NEW)
@@ -60,8 +65,8 @@ def test_catalog_line_stands_under_anchor_and_switch_strips_both(tmp_path, monke
     monkeypatch.setattr(ibl_registry, "code_is_own", lambda code: True)
     env = ibl_access.build_environment()
     lines = env.splitlines()
-    i = next(k for k, l in enumerate(lines) if l.strip().startswith("self:read ::"))
-    assert lines[i + 1].strip().startswith("↳ 관용구 [fn:위치마다읽기]{위치: "), lines[i + 1]
+    i = next(k for k, l in enumerate(lines) if l.strip().startswith('self:script ::'))
+    assert lines[i + 1].strip().startswith("↳ 관용구 판본 2 (execute_ibl edition:2): [fn:위치마다읽기]{위치: "), lines[i + 1]
     assert "<ibl_idioms" in env and env.count("↳ 관용구") == 1     # 다른 잎 액션 옆에는 서지 않는다
     hidden = ibl_access.build_environment(expose_idioms=False)
     assert "↳ 관용구" not in hidden and "<ibl_idioms" not in hidden
@@ -119,24 +124,6 @@ class _DB:
         pass
 
 
-def test_update_idiom_signature_change_needs_resign_and_names_old_callers(tmp_path, monkeypatch, capsys):
-    import ibl_usage_db
-    from register_idiom import update_idiom
-    monkeypatch.setattr(ibl_usage_db, "_tree_refresh", lambda *a, **k: None)
-    db = _DB(tmp_path / "usage.db")
-    rid = db.add("위치마다읽기", OLD)
-    from function_library import register
-    register("위치마다읽기", OLD, WHEN)
-    caller = db.add("", '[self:grep]{pattern:"x"} >> [fn:위치마다읽기]{개수:3,줄수:5}', source="idiom_registry")
-    with pytest.raises(ValueError, match="--resign"):
-        update_idiom(db, "위치마다읽기", NEW, "서명 개정 시험")
-    assert update_idiom(db, "위치마다읽기", NEW, "서명 개정 시험", resign=True) is True
-    row = db.find_phrase_by_alias("위치마다읽기")
-    assert row["ibl_code"] == NEW and "위치" in json.loads(row["signature"]) if row["signature"].startswith("[") else True
-    with db._get_connection() as c:
-        assert c.execute("SELECT count(*) FROM ibl_idiom_revisions WHERE example_id=?", (rid,)).fetchone()[0] == 1
-    out = capsys.readouterr().out
-    assert f"#{caller}" in out and "옛 서명" in out      # 옛 서명으로 부르는 용례를 이름으로 짚어 준다
 
 
 if __name__ == "__main__":

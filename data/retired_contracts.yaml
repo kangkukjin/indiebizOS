@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: ibl-edition1-execution
+    retired: 2026-10-25
+    reason: 판본 1 프로그램 실행과 판본 2에서 구판 함수로 넘어가는 어댑터를 종료한다.
+    instead: 명시 판본 2만 실행한다. 구판 원문과 revision은 역사 조회로 보존한다.
+    phrases: ['from workflow_parallel import', 'from workflow_fallback import', 'from pipeline_state import', 'from ibl_exec_each import', 'def legacy_functions(', 'def function_adapters(']
   - id: body-matched-idiom-execution-statistics
     retired: 2026-10-24
     reason: 본문 문자열·회상된 이름으로 관용구 실행 실적을 다시 귀속하던 경로를 제거했다.

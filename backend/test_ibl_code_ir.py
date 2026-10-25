@@ -28,22 +28,22 @@ def values():
 @pytest.mark.parametrize('value', values())
 @pytest.mark.parametrize('shape', ['direct', 'renamed', 'nested', 'function', 'pipeline', 'parallel'])
 def test_value_survives_equivalent_program_shapes(value, shape):
-    alias = '행' if shape == 'renamed' else 'it'
-    body = '[table:take]{items:[{v:$' + alias + '.v}],n:1}'
-    rows = [{'v': value}]
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    body = 'return {v:$it.v}'
+    if shape == 'renamed':
+        body = '$행=$it; return {v:$행.v}'
     if shape == 'nested':
-        body = each([{}], body, **{'as': 'child'})
+        body = '$outer=$it; return ([0] >> [table:each]{return {v:$outer.v}})[0]'
+    source = '$rows >> [table:each]{parallel:' + ('4' if shape=='parallel' else '1') + '}{' + body + '}'
     if shape == 'function':
-        code = '[def:f]{$return=' + each([{}], '[table:take]{items:[{v:$입력}],n:1}') + '}\n[fn:f]{입력:' + q(value) + '}'
-    elif shape == 'pipeline':
-        code = '$r=[table:take]{items:' + q(rows) + ',n:1}\n' + each([{}], '[table:take]{items:[{v:${r.items.0.v}}],n:1}')
-    else:
-        if shape == 'parallel':
-            rows = rows * 4
-        code = each(rows, body, **{'as': alias, 'parallel': 4 if shape == 'parallel' else 1})
-    expected = [{'v': value}] * (4 if shape == 'parallel' else 1)
-    result = probe(dict(id='invariant', code=code, expected=expected, error=False, contains=None))
-    assert result['ok'], (code, result.get('actual'), result.get('error_text'))
+        source = '[def:f]($input){return {v:$input.v}}; $rows >> [table:each]{return [fn:f]{input:$it}}'
+    if shape == 'pipeline':
+        source = '$r=$rows; $r >> [table:each]{return {v:$it.v}}'
+    rows = [{'v':value}] * (4 if shape=='parallel' else 1)
+    plan = compile_program(source, {}, {'rows':rows})
+    out = Runtime(plan, {'rows':rows}).run()
+    assert out['success'] and out['value'] == rows, out
 
 
 def test_rows_bind_without_parsing_again(monkeypatch):
@@ -73,23 +73,12 @@ def test_partial_string_binding_does_not_rescan_inserted_data():
     assert second.tree[0]['params']['items'] == [{'v': '${b} / done'}]
 
 
-def test_wire_parameters_preserve_code_and_values():
-    from ibl_code_ir import transport_params, receive_params
-    from ibl_exec_each import _execute_table_each
-    import workflow_engine
-    from unittest.mock import patch
-    plan = bind_code('[table:take]{items:[{v:$outer,row:$it.id}],n:1}',
-                     lambda n, p: (True, ['$items', "'quote'"]) if n == 'outer' else (False, None))
-    sent = transport_params({'items': [{'id': 2}], 'do': plan})
-    received = receive_params(json.loads(json.dumps(sent)))
-    assert isinstance(received['do'], Code)
-    observed = []
-    def execute(steps, *a, **kw):
-        observed.extend(steps[0]['params']['items'])
-        return {'success': True, 'final_result': {'items': observed}}
-    with patch.object(workflow_engine, 'execute_pipeline', execute):
-        out = _execute_table_each(received, '.')
-    assert out['success'] and observed == [{'v': ['$items', "'quote'"], 'row': 2}]
+def test_old_wire_parameters_cannot_dispatch():
+    from ibl_engine import _execute_ibl_impl
+    for version in [1,999]:
+        out = _execute_ibl_impl({'_node':'self','action':'time',
+            'params':{'_ibl_ir':{'version':version,'params':['value',{}]}}}, '.')
+        assert out['code']=='EDITION_RETIRED' and not out['executed']
 
 
 def test_unknown_wire_version_is_rejected():
@@ -109,95 +98,57 @@ def test_literal_grammar_matches_existing_parser(raw):
     assert compile_code(code).tree[0]['params']['items'] == expected
 
 
+def native_run(source, inputs=None):
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    result = Runtime(compile_program(source, {}, inputs or {}), inputs or {}).run()
+    assert result['success'], result
+    return result['value']
+
+
 def test_live_execution_does_not_use_legacy_source_substitution(monkeypatch):
     import ibl_code_binding
     monkeypatch.setattr(ibl_code_binding, 'bind_scoped_code', lambda *a, **k: pytest.fail('옛 코드 치환 경로 사용'))
-    code = '$r=[table:take]{items:[{v:"outer"}],n:1}\n' + each(
-        [{'v': "$it.no 'quote'"}], '[table:take]{items:[{outer:${r.items.0.v},row:$it.v}],n:1}')
-    out = probe(dict(id='no_legacy', code=code,
-                     expected=[{'outer': 'outer', 'row': "$it.no 'quote'"}], error=False, contains=None))
-    assert out['ok'], out
+    value = native_run('$r="outer"; $rows >> [table:each]{return {outer:$r,row:$it.v}}',
+                       {'rows':[{'v':"$it.no 'quote'"}]})
+    assert value == [{'outer':'outer','row':"$it.no 'quote'"}]
 
 
 @pytest.mark.parametrize('nested', [False, True])
 def test_outer_and_local_step_zero_are_different_scopes(nested):
-    body = ('$local=[table:take]{items:[{v:7}],n:1}\n'
-            '[table:take]{items:[{a:${outer.items.0.v},b:${local.items.0.v}}],n:1}')
+    body = '$local=7; return {a:$outer,b:$local}'
     if nested:
-        body = each([{}], body)
-    code = '$outer=[table:take]{items:[{v:99}],n:1}\n' + each([{}], body)
-    out = probe(dict(id='scope_ids', code=code, expected=[{'a': 99, 'b': 7}], error=False, contains=None))
-    assert out['ok'], out
+        body = 'return ([0] >> [table:each]{' + body + '})[0]'
+    assert native_run('$outer=99; [0] >> [table:each]{'+body+'}') == [{'a':99,'b':7}]
 
 
 def test_outer_result_and_row_in_expression_use_values():
-    code = '$outer=[table:take]{items:[{v:99}],n:1}\n' + each(
-        [{'n': 3}], '$x=${outer.items.0.v} + $it.n\n[table:take]{items:[{v:$x}],n:1}')
-    out = probe(dict(id='capture_expr', code=code, expected=[{'v': '102'}], error=False, contains=None))
-    assert out['ok'], (out['actual'], out['error_text'])
+    assert native_run('$outer=99; [{n:3}] >> [table:each]{return {v:$outer+$it.n}}') == [{'v':102}]
 
 
-@pytest.mark.parametrize('parallel', [1, 4])
+@pytest.mark.parametrize('parallel', [1,4])
 def test_hundred_rows_parse_the_body_once(monkeypatch, parallel):
-    import ibl_parser
-    import workflow_engine
-    from ibl_exec_each import _execute_table_each
-    original = ibl_parser.parse_with_vars
-    calls = []
-    def parse(*args, **kwargs):
-        calls.append(args[0])
-        return original(*args, **kwargs)
-    monkeypatch.setattr(ibl_parser, 'parse_with_vars', parse)
-    monkeypatch.setattr(workflow_engine, 'execute_pipeline', lambda steps, *a, **k:
-                        {'success': True, 'final_result': {'items': steps[0]['params']['items']}})
-    rows = [{'v': n} for n in range(100)]
-    out = _execute_table_each({'items': rows, 'limit': 100, 'parallel': parallel,
-                              'do': '[table:take]{items:[{v:$it.v}],n:1}'}, '.')
-    assert out['success'] and out['items'] == rows
-    assert len(calls) == 1
+    import ibl_v2_parser
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    rows = [{'v':n} for n in range(100)]
+    source = '$rows >> [table:each]{parallel:'+str(parallel)+'}{return {v:$it.v}}'
+    plan = compile_program(source, {}, {'rows':rows})
+    monkeypatch.setattr(ibl_v2_parser, 'parse', lambda *a, **k: pytest.fail('행마다 재파싱'))
+    out = Runtime(plan, {'rows':rows}).run()
+    assert out['success'] and out['value'] == rows
 
 
-def test_episode3148_failed_sentence_replays_with_fixed_external_responses(monkeypatch, tmp_path):
+def test_episode3148_historical_sentence_is_immutable_and_not_replayed(monkeypatch):
     import hashlib
+    from ibl_v2_entry import handle_request
     import ibl_engine
-    import episode_logger
-    import workflow_engine
-    from ibl_parser import parse
-    from ibl_exec_each import _execute_table_each
-    from idiom_experiment_worker import load
-    from tool_context import ToolContext
     root = Path(__file__).resolve().parents[1]
-    fixture = json.loads((root / 'docs/experiments/ibl_ir_episode3148_fixture.json').read_text())
+    fixture = json.loads((root/'docs/experiments/ibl_ir_episode3148_fixture.json').read_text())
     assert hashlib.sha256(fixture['code'].encode()).hexdigest() == fixture['code_sha256']
-    dataops = load('_ir_replay_dataops', root / 'data/packages/installed/tools/data-ops/handler.py')
-    original = ibl_engine._execute_ibl_impl
-    seen = []
-    def leaf(step, project, agent_id=None):
-        node, action = step.get('_node'), step.get('action')
-        params = dict(step.get('params') or {})
-        if step.get('_var_emit'):
-            return original(step, project, agent_id)
-        if node == 'table' and action == 'each':
-            return _execute_table_each(params, project, agent_id)
-        if node == 'table':
-            return dataops.execute(params, ToolContext(project, 'data_' + action))
-        if node == 'limbs' and action == 'youtube':
-            return {'items': [{'video_id': params['video_id']}], 'success': True}
-        if node == 'self' and action == 'struct':
-            assert params['known'] == fixture['known']
-            seen.append(params['known'])
-            return {'items': [{'tip': 'fixture tip', 'timestamp': '00:12'}], 'success': True}
-        pytest.fail(f'허용하지 않은 외부 작업: {node}:{action}')
-    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
-    monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
-    monkeypatch.setattr(episode_logger, 'record_trajectory_event', lambda *a, **k: None)
-    seed = ('$신선=[table:take]{items:' + q(fixture['videos']) + ',n:4}\n'
-            '$기존팁=[table:take]{items:' + q([{'tip': v} for v in fixture['known']]) + ',n:3}\n')
-    # 보존한 사건 원문은 해시로 검증하고 현재 어휘로 재생한다.
-    replay_code = fixture['code'].replace('sense:video', 'limbs:youtube')
-    out = workflow_engine.execute_pipeline(parse(seed + replay_code), str(tmp_path))
-    final = json.loads(out['final_result']) if isinstance(out.get('final_result'), str) else out.get('final_result')
-    assert out['success'] and len(final['items']) == 4 and len(seen) == 4, out
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **k: pytest.fail('과거 문장 재실행'))
+    out = handle_request({'edition':1,'code':fixture['code']})
+    assert not out['executed'] and 'EDITION_RETIRED' in str(out)
 
 
 if __name__ == '__main__':

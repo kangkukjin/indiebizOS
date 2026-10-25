@@ -28,36 +28,6 @@ def execute(code, case="embedded_latest", seed=2026090901):
     return run(dict(code=code, case_id=case, seed=seed, registry=REGISTRY))
 
 
-@pytest.mark.parametrize(
-    "program",
-    [
-        CALL + ' >> [self:write]{path:"outputs/excerpt.txt"}',
-        "$part = "
-        + CALL
-        + '\n$part >> [self:write]{path:"outputs/excerpt.txt"}',
-        "$part = "
-        + CALL
-        + '\n[self:write]{path:"outputs/excerpt.txt",content:"$part"}',
-        "$part = "
-        + CALL
-        + '\n[self:write]{path:"outputs/excerpt.txt",content:$part.text}',
-        "$part = "
-        + CALL
-        + '\n[self:write]{path:"outputs/excerpt.txt",content:$part.final_result}',
-        "[def: 감싸기]{$return = " + CALL + "}\n"
-        '[fn:감싸기]{} >> [self:write]{path:"outputs/excerpt.txt"}',
-    ],
-)
-def test_named_scalar_reaches_actual_file_without_execution_record(program):
-    out = execute(program + "\n" + QUEUE)
-    assert out["runtime_ok"], out["verdict"]
-    assert out["quality_ok"], out["verdict"]
-    text = out["artifacts"]["outputs/excerpt.txt"]
-    assert len(text.splitlines()) == 13  # 읽기 범위 헤더 + 본문 12줄
-    assert '"results"' not in text and '"fn"' not in text
-    assert out["observed"]["fn_calls"]  # 펼친 정답으로 우회하지 않았다
-    fn_steps = [r for r in out["result"]["results"] if r.get("node") == "fn"]
-    assert fn_steps and json.loads(fn_steps[0]["result"])["fn_source"]
 
 
 @pytest.mark.parametrize(
@@ -94,29 +64,6 @@ def test_return_projection_keeps_values_and_does_not_mutate_diagnostics(value):
     assert fn_result_payload(business) == (False, business)
 
 
-def test_saved_workflow_called_as_function_uses_same_value_gate(monkeypatch):
-    import workflow_engine
-    import workflow_store
-    from ibl_control_blocks import _execute_fn
-    from workflow_binding import _to_prev_currency
-
-    monkeypatch.setattr(
-        workflow_store, "get_workflow", lambda name: {"name": name}
-    )
-    monkeypatch.setattr(
-        workflow_engine,
-        "execute_workflow",
-        lambda *a, **k: {
-            "success": True,
-            "final_result": "저장 함수 본문",
-            "results": [{"step": 1}],
-        },
-    )
-    from function_library import register
-    register("저장된함수", "[self:time]", edition=1, legacy={"name":"저장된함수", "do":"[self:time]"})
-    out = _execute_fn({"action": "저장된함수", "params": {}}, ".", "test")
-    assert _to_prev_currency(out) == "저장 함수 본문"
-    assert out["fn_source"] == "function" and out["results"]
 
 
 @pytest.mark.local
@@ -181,7 +128,7 @@ def test_current_block_body_uses_edition_checked_call_teaching(tmp_path, monkeyp
         import_memory(fixture_db)
     block = ibl_access.idioms_map(None)
     assert lesson["example"] not in block
-    assert '[fn:위치마다읽기]' in block and '→ Record' in block
+    assert '[fn:위치마다읽기]' not in block
     assert '앞 통화' not in block
 
     current = {
@@ -193,18 +140,11 @@ def test_current_block_body_uses_edition_checked_call_teaching(tmp_path, monkeyp
     (tmp_path / 'data/idioms/current_call_lessons.json').write_text(json.dumps({'idioms': [current]}))
     monkeypatch.setattr(ibl_access, '_idioms_cache', {'text': None, 't': 0, 'key': None})
     block = ibl_access.idioms_map(None)
-    assert current['inputs'] in block
-    assert current['example'].split('\n', 1)[1] in block
+    assert current['inputs'] not in block
+    assert current['example'].split('\n', 1)[1] not in block
     assert lesson['example'] not in block
 
 
-def test_correct_artifact_with_incidental_error_does_not_require_repair():
-    out = execute(
-        GOLD["direct_ledger"] + '\n[self:mkdir]{path:"outputs"}',
-        "direct_ledger",
-    )
-    assert out["quality_ok"]
-    assert not out["runtime_ok"] and out["result"]["error"]
 
 
 def test_trial_stops_at_correct_result_even_if_runtime_has_warning(
@@ -274,15 +214,6 @@ def test_equivalent_body_is_accepted_but_trace_and_wrong_body_are_rejected(
     assert returned_body({"items": []}) == []
 
 
-def test_korean_error_field_is_a_valid_location_failure():
-    examples = json.loads(
-        (EVIDENCE / "oracle_difference_examples.json").read_text()
-    )
-    example = next(
-        e for e in examples if e["id"] == "direct_context_1_exposed"
-    )
-    out = execute(example["code"], "direct_context")
-    assert out["quality_ok"], out["verdict"]
 
 
 if __name__ == "__main__":

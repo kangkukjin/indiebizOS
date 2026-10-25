@@ -17,7 +17,7 @@ REPO = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.system
 
 
-def packet():
+def packet(edition=2):
     fragment = {'node': 'sense', 'actions': {'lego_probe': {
         'description': '공유 묶음 시험', 'router': 'handler', 'tool': 'lego_probe',
         'returns': 'items', 'side_effect': False, 'fixture': '[sense:lego_probe]{}',
@@ -27,7 +27,7 @@ def packet():
     return pack({'id': 'lego-probe', 'version': '1.0.0'}, {
         'handler.py': b'def execute(tool_input, context):\n    # lego_probe\n    return {"items": [{"value": "ok"}]}\n',
         'ibl_actions.yaml': yaml.safe_dump(fragment, allow_unicode=True).encode(),
-        'examples.json': json.dumps([{'intent': '공유 어휘 시험', 'ibl_code': '[sense:lego_probe]{}'}]).encode()})
+        'examples.json': json.dumps([{'intent': '공유 어휘 시험', 'ibl_code': ('#!ibl edition=2\n' if edition == 2 else '') + '[sense:lego_probe]{}'}]).encode()})
 
 
 @pytest.fixture
@@ -85,6 +85,16 @@ def test_roundtrip_seed_sleep_wake(runtime):
     assert result['status'] == 'sleeping' and result['seeded'] == 1
     assert code_is_owned('[sense:lego_probe]{}')
     assert not code_is_own('[sense:lego_probe]{}')
+    from ibl_v2_learning import check_source, _owned_registry
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_ir import Fault
+    source = '#!ibl edition=2\n[sense:lego_probe]{}'
+    assert check_source(source, owned_vocabulary=True) is None
+    assert check_source(source) is not None
+    assert check_source(source + '\nreturn $missing', owned_vocabulary=True) is not None
+    assert 'sense:lego_probe' not in load_registry()
+    with pytest.raises(Fault, match='실행할 수 없습니다'):
+        _owned_registry()['sense:lego_probe'].run(None, {})
     with pytest.raises(ValueError, match='잠들어'):
         tool_loader.load_tool_handler('lego_probe')
     assert import_package(payload)['status'] == 'already_owned'
@@ -164,5 +174,35 @@ def test_legacy_text_converts_without_executing_code():
     converted, _, examples = unpack(convert_legacy(text))
     assert converted['id'] == manifest['id'] and len(examples) == 1
 
+
+def test_legacy_examples_are_readable_but_rejected_before_install(runtime, monkeypatch):
+    import vocabulary_import as receiver
+    payload = packet(edition=1)
+    assert unpack(payload)[2][0]['ibl_code'] == '[sense:lego_probe]{}'
+    monkeypatch.setattr(receiver, 'read_state', lambda: pytest.fail('mutation boundary entered'))
+    with pytest.raises(ValueError, match='EDITION_RETIRED'):
+        receiver.import_package(payload)
+    assert not (runtime/'data/packages/not_installed/tools/lego-probe').exists()
+
+
+@pytest.mark.parametrize('source', [
+    '[sense:lego_probe]{} >> [table:take]{n:1}',
+    '[sense:lego_probe]{q:$x}', '[sense:lego_probe]{q:"$x"}',
+])
+def test_export_requires_authored_current_examples_for_dynamic_fixtures(source):
+    from vocabulary_archive import _current_fixture
+    with pytest.raises(ValueError, match='examples.json'):
+        _current_fixture(source)
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_invalid_current_example_is_archive_validation_error():
+    manifest, files, _ = unpack(packet())
+    files['examples.json'] = json.dumps([{
+        'intent': '잘못된 현재 문장',
+        'ibl_code': '#!ibl edition=2\n[sense:lego_probe]{x:',
+    }]).encode()
+    with pytest.raises(ValueError, match='IBL 문장'):
+        pack(manifest, files)

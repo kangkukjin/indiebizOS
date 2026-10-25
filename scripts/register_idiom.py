@@ -15,10 +15,9 @@
 (단일 경로 `add_examples_batch`) — 낱말이 문장 안에 있는 모습을 본 적 있어야 실제로 불린다
 (실측 상관 r=0.72, ibl_access._partners 주석).
 
-판본(2026-09-26): 본문 첫 줄 `#!ibl edition=2` 면 판본 2 정의(`[def:이름]($인자){…}`)로 검사한다 —
-파싱·닫힘·어휘 계약은 `ibl_v2_learning.check_source`, 이름·언제·슬롯 관문은 판본 공통. 같은 이름이
-판본별로 한 행씩 있을 수 있다(예: 열추려보기 ed1 상시 + ed2 조합). --update/--refresh 는 새 본문의
-판본과 같은 행을 고친다. always_on 은 이름 단위다(지도는 판본 2 몸이 있으면 그것을 보여준다).
+현재 등록·개정·소개는 판본 2 본문(`#!ibl edition=2`)만 받는다.
+판본 1 원문과 실적은 역사 자료로 보존하며 실행·승격하지 않는다.
+같은 이름의 옛 기록을 새 정의로 덮어쓰거나 그 실적을 승계하지 않는다.
 
 쓰기:
   python3 scripts/register_idiom.py --list
@@ -102,9 +101,9 @@ def _gates(name: str, when: str, code: str, *, metadata_only=False):
 
 
 def _find(db, name: str, edition: int = None):
-    """이름→행. edition=None 이면 판본 2 우선, 없으면 판본 1(현재 실행기의 해소 순서와 같다)."""
+    """현재 등록 표면은 판본 2만 찾는다. 명시 판본 1 조회는 역사 감사용이다."""
     if edition is None:
-        return _find(db, name, 2) or _find(db, name, 1)
+        return _find(db, name, 2)
     try:
         return db.find_phrase_by_alias(name, edition=edition)
     except TypeError:                      # 옛 시험 대역(edition 인자 없음)
@@ -140,6 +139,12 @@ def cmd_list(_a):
 
 def cmd_add(a):
     code = open(a.body, encoding="utf-8").read().strip() if os.path.exists(a.body) else a.body
+    from ibl_edition import require_current
+    try:
+        require_current(code, _edition(code))
+    except ValueError as exc:
+        print(f"✗ 등록 거절 — {exc}")
+        return 1
     info, why = _gates(a.add, a.when, code)
     if why:
         print(f"✗ 등록 거절 — {why}")
@@ -173,7 +178,8 @@ def update_idiom(db, name, code, reason, when="", resign=False):
     from workflow_contract import call_signature
     from ibl_usage_db import _signature_of, _tree_refresh
 
-    edition = _edition(code)
+    from ibl_edition import require_current
+    edition = require_current(code, _edition(code))
     old = _find(db, name, edition)
     if not old:
         raise ValueError(f"'{name}' 의 판본 {edition} 정의가 없다(같은 판본의 본문만 개정한다 — 다른 판본은 --add)")

@@ -117,222 +117,38 @@ def tmp_spill(tmp_path, monkeypatch):
 
 
 # ═══ M3 ═══
-def test_t1_try_catch_error_binding():
-    calls = []
-    out = _run('[try]{[sense:bad]{why: "크롤 실패"}} [catch]{[self:notify]{message: "대체: $error.summary"}}', calls)
-    assert out["success"], out
-    acts = [c["action"] for c in calls]
-    assert acts == ["bad", "notify"]
-    assert calls[1]["params"]["message"] == "대체: 고장: 크롤 실패"
-    fr = _final(out)
-    assert fr["_caught"]["summary"] == "고장: 크롤 실패" and fr["did"] == "notify"
 
 
-def test_t2_try_success_finally_runs():
-    calls = []
-    out = _run('[try]{[sense:rows]{}} [catch]{[self:no]{}} [finally]{[self:cleanup]{}}', calls)
-    assert out["success"] and [c["action"] for c in calls] == ["rows", "cleanup"]
-    assert _final(out)["items"][0]["title"] == "a"          # finally 는 결과를 바꾸지 않는다
 
 
-def test_t3_try_and_catch_both_fail():
-    calls = []
-    out = _run('[try]{[sense:bad]{why: "1차"}} [catch]{[sense:bad]{why: "2차"}}', calls)
-    assert out["success"] is False
-    fr = _final(out)
-    assert fr["try_error"]["summary"] == "고장: 1차" and fr["catch_error"]["summary"] == "고장: 2차"
-    # 예외도 실패로
-    out = _run('[try]{[sense:boom]{}} [catch]{[self:ok]{}}', [])
-    assert out["success"] and _final(out)["_caught"]["error"].startswith("RuntimeError")
 
 
-def test_t4_on_error_skip():
-    calls = []
-    out = _run('[on_error: skip] [sense:rows]{} >> [sense:bad]{} >> [self:sink]{}', calls)
-    assert out["success"] and out["skipped_steps"] == [2] and "건너뛰었" in out["warning"], out
-    assert out["results"][1]["skipped"] == "skip"
-    prev = json.loads(calls[2]["params"]["_prev_result"])
-    assert len(prev["items"]) == 3                           # 직전(step1) 통화가 step3 에
-    # 기본(stop)은 현행 그대로
-    out = _run('[sense:rows]{} >> [sense:bad]{} >> [self:sink]{}', [])
-    assert out["success"] is False and out["steps_completed"] == 1
 
 
-def test_t5_on_error_null():
-    calls = []
-    out = _run('[on_error: null] [sense:bad]{} >> [self:sink]{}', calls)
-    assert out["success"] and out["skipped_steps"] == [1]
-    assert json.loads(calls[1]["params"]["_prev_result"]) == {"items": []}
 
 
-def test_t5b_on_error_null_assignment():
-    """`[on_error: null] $x = [실패]` — 접두가 할당 앞에 서도 파싱되고, 변수는 대체 통화(빈 items)를 든다
-    (2026-09-05 ep2827: 있을 수도 없을 수도 있는 상태 파일을 변수에 두는 관용구가 문법적으로 막혀 있었다)."""
-    calls = []
-    out = _run("[on_error: null] $x = [sense:bad]{}\n$x >> [self:sink]{}", calls)
-    assert out["success"], out
-    assert out["skipped_steps"] == [1]
-    sink = [c for c in calls if c.get("action") == "sink"]
-    assert len(sink) == 1 and json.loads(sink[0]["params"]["_prev_result"]) == {"items": []}
-    # skip 도 같은 규약 — 실패 step 을 건너뛰고 직전 통화(step1 의 rows)가 변수 값
-    calls = []
-    out = _run("[on_error: skip] $y = [sense:rows]{} >> [sense:bad]{}\n$y >> [self:sink]{}", calls)
-    assert out["success"] and out["skipped_steps"] == [2], out
-    sink = [c for c in calls if c.get("action") == "sink"]
-    assert len(sink) == 1 and len(json.loads(sink[0]["params"]["_prev_result"])["items"]) == 3
 
 
-def test_t5c_derived_failures_cite_root():
-    """할당 문장이 죽으면 뒤의 `$x` 참조 실패가 *원인*을 인용하고, 봉투 error 가 뿌리·연쇄를 가른다
-    (ep2827: '독립 문장 8개 실패' 뒤에 뿌리 1개가 숨어 다이제스트에 원인이 없었다)."""
-    calls = []
-    out = _run('$x = [sense:rows]{} >> [sense:bad]{why: "근본"}\n$x >> [self:sink]{}\n$x >> [self:sink]{}', calls)
-    assert out["success"] is False and out["statements_failed"] == 3, out
-    assert out["root_failures"] and out["root_failures"][0]["var"] == "x"
-    assert "뿌리 1" in out["error"] and "근본" in out["error"] and "연쇄 2" in out["error"], out["error"]
-    # 연쇄 문장의 step 기록도 원인을 인용한다("아직 값을 기록하지 않았습니다" 가 아니라)
-    derived = [r for r in out["results"] if isinstance(r, dict) and "할당 문장(step 2)" in json.dumps(r, ensure_ascii=False)]
-    assert len(derived) == 2, out["results"]
-    assert not any(c.get("action") == "sink" for c in calls)
 
 
-def test_root_cause_survives_long_cascade_preview():
-    from pipeline_state import PipelineState
-    state = PipelineState(steps=[], context=None, prev_result="")
-    state.var_errors["비교요청"] = {"step": 26, "error": "후보 입력 상한 초과"}
-    out = {"error": "뒤쪽 변수 누락·try/catch 실패 " * 100}
-    state.root_note(out)
-    assert "후보 입력 상한 초과" in out["error"][:200]
-    assert "try/catch 실패" in out["error"]
-    assert out["root_failures"][0]["step"] == 26
 
 
-def test_t6_fallback_paren_branch():
-    calls = []
-    out = _run('[sense:bad]{} ?? ([sense:rows]{} >> [sense:take]{n: 2})', calls)
-    assert out["success"], out
-    assert [c["action"] for c in calls] == ["bad", "rows", "take"]
-    fr = _final(out)
-    assert len(fr["items"]) == 2 and fr["_fallback_used"] == 2
 
 
 # ═══ M4 ═══
-def test_r1_repeat_count_collect():
-    calls = []
-    out = _run('[repeat: 3, collect: true]{[sense:rows]{page: "$i"} >> [sense:take]{n: 1}}', calls)
-    assert out["success"], out
-    pages = [c["params"].get("page") for c in calls if c["action"] == "rows"]
-    assert pages == ["0", "1", "2"]
-    fr = _final(out)
-    assert fr["iterations"] == 3 and fr["count"] == 3 and "halted" not in fr
 
 
-def test_r2_repeat_until_body_var():
-    calls, state = [], {}
-    out = _run('[repeat: until $st.status == "done", max: 10]{$st = [self:status]{}}', calls, state)
-    assert out["success"], out
-    fr = _final(out)
-    assert fr["iterations"] == 3 and "halted" not in fr and fr["last"]["status"] == "done"
 
 
-def test_r3_repeat_until_max_halt():
-    calls, state = [], {"calls": -100}
-    out = _run('[repeat: until $st.status == "done", max: 2]{$st = [self:status]{}}', calls, state)
-    assert out["success"], out
-    fr = _final(out)
-    assert fr["halted"] == "max" and fr["iterations"] == 2 and "max=2" in fr["note"]
 
 
-def test_r4_repeat_while_outer_var_and_body_failure():
-    calls = []
-    out = _run('$q = [sense:rows]{}\n[repeat: while count($q) > 0, max: 3]{[self:work]{}}', calls)
-    fr = _final(out)
-    assert fr["iterations"] == 3 and fr["halted"] == "max"
-    out = _run('$q = [sense:rows]{}\n[repeat: while count($q) > 5, max: 3]{[self:work]{}}', calls)
-    assert _final(out)["iterations"] == 0
-    out = _run('[repeat: 3]{[sense:bad]{}}', [])
-    assert out["success"] is False and _final(out)["halted"] == "error" and _final(out)["iterations"] == 1
-    # every 상한·판정 불능
-    out = _run('[repeat: until $nope == 1, max: 3]{[self:work]{}}', [])
-    assert out["success"] is False and _final(out)["halted"] == "condition_error"
 
 
-def test_r5_each_통화를_그대로_낸다():
-    """★2026-08-23 언어 개정: each 의 평탄화는 `collect` 라는 knob 이 아니라 **기본 동작**이다.
-    (옛 판은 `collect: true` 를 켜야 평탄했고, 끄면 `원 행+_ok+_result` 봉투였다.)"""
-    calls = []
-    # ① do 가 통화를 내면 그 행들이 그대로 흐른다 — 감싸기 없음
-    out = _run('[sense:rows]{} >> [table:each]{do: "[sense:rows]{}"}', calls)
-    assert out["success"], out
-    fr = _final(out)
-    assert fr["rows_processed"] == 3
-    assert [r["title"] for r in fr["items"]] == ["a", "b", "c"] * 3, fr
-    assert "passthrough_rows" not in fr
-    # ② do 가 통화를 안 내면(효과·스칼라) 원 행이 흐르고, 봉투가 그 사실을 말한다
-    out = _run('[sense:rows]{} >> [table:each]{do: "[self:echo]{t: \'$it.title\'}"}', calls)
-    fr = _final(out)
-    assert [r["title"] for r in fr["items"]] == ["a", "b", "c"], fr
-    assert fr["passthrough_rows"] == 3
-    assert "원 행" in fr["message"], fr
 
 
 # ═══ M5 ═══
-def test_d1_reduce():
-    r = cb._execute_table_reduce({"items": ROWS["items"], "init": 0, "step": "acc + n", "as": "합"}, ".")
-    assert r["success"] and r["value"] == 6 and r["items"] == [{"합": 6}] and r["message"] == "6"
-    r = cb._execute_table_reduce({"items": ROWS["items"], "init": "", "step": 'acc + title + ","'}, ".")
-    assert r["value"] == "a,b,c,"
-    r = cb._execute_table_reduce({"items": ROWS["items"], "step": "max(acc, n) if i > 0 else n"}, ".")
-    assert r["value"] == 3
-    r = cb._execute_table_reduce({"items": ROWS["items"], "step": "acc + 없는열"}, ".")
-    assert r["success"] is False and "없는열" in r["error"]
-    r = cb._execute_table_reduce({"items": ROWS["items"], "step": "__import__('os')"}, ".")
-    assert r["success"] is False and "식 오류" in r["error"]
-    # 파이프 안에서
-    out = _run('[sense:rows]{} >> [table:reduce]{init: 0, step: "acc + n"}', [])
-    assert _final(out)["value"] == 6
 
 
-def test_s1_auto_spill_transparent(tmp_spill, monkeypatch):
-    """스필의 계약 = **봉투는 가벼워지고 뒤 step 은 원래 데이터를 그대로 본다**.
-
-    ★2026-08-23 개정(B27-2, 27회차): 이 시험은 원래 *메커니즘*을 단언했다 —
-    "핸들러가 받는 `_prev_result` 는 참조 봉투(`items: []` + `_spilled`)이고, 소비처가
-    각자 해소한다". 그런데 그 모양은 계약이 아니라 **그 시점의 구현**이었고, 실제로는
-    소비처마다 해소기를 복제해야만 성립하는 약속이라 구멍이 남았다(`_op_groupby` 는
-    `_rows_for_field` 로 들어가는데 해소기는 형제 입구 `_get_items` 에만 있었다.
-    `_prev_result` 를 읽는 7개 패키지 중 해소기를 가진 것은 둘뿐이었다).
-    27회차 수리가 해소를 **주입 이음매 하나**(`workflow_binding._auto_inject_prev`)로
-    옮겨서, 이제 핸들러는 *해소된 본문*을 받는다 — 해소기 없는 패키지도 계약을 상속한다.
-
-    그래서 단언을 계약 쪽으로 옮긴다:
-      · 스필은 여전히 일어나고 원장(`results[].spilled`)이 그것을 기록한다 (경량화의 근거)
-      · 뒤 step 은 **자기 해소기 없이도** 원래 50행을 그대로 본다 (교재가 약속한 투명성)
-      · 스필 파일은 디스크에 실재한다 (참조가 허공을 가리키지 않는다)
-    ★이 배터리의 가짜 핸들러는 해소기가 **없다** — 그래서 이 단언이 곧 "새 패키지도
-      공짜로 상속한다"의 회귀 증명이다.
-    """
-    monkeypatch.setattr(spill_mod, "AUTO_SPILL_THRESHOLD", 500)
-    calls = []
-    out = _run('[sense:big]{} >> [sense:take]{n: 2} >> [self:show]{markers: "$items"}', calls)
-    assert out["success"], out
-    spilled = out["results"][0]["spilled"]
-    assert spilled["kind"] == "items" and spilled["count"] == 50
-    assert os.path.isfile(spilled["path"]), "스필 참조가 실재하지 않는 파일을 가리킨다"
-    # 뒤 step 이 받는 것 = 참조가 아니라 원래 통화 (이음매가 해소했다)
-    seen = json.loads(calls[1]["params"]["_prev_result"])
-    assert len(seen["items"]) == 50, f"뒤 step 이 원래 데이터를 못 봤다: {str(seen)[:200]}"
-    assert "ref" not in seen and not seen.get("_spilled"), \
-        "이음매를 지났는데도 참조가 핸들러까지 샜다 — 소비처마다 해소기를 두어야 하는 옛 모양"
-    assert len(calls[2]["params"]["markers"]) == 2          # $items 바인딩이 참조 너머를 읽음(step2 결과는 작아 스필 안 됨)
-    # 마지막 step 결과는 스필하지 않는다 (final_result 원형)
-    out = _run('[sense:big]{}', [])
-    assert "spilled" not in json.dumps(out)
-    # data-ops 변환자 _get_items 투명 해소
-    dataops = _load("_t_dataops_pg", _PKG / "data-ops" / "handler.py")
-    env = spill_mod.spill_write(json.dumps(ROWS), tag="t")
-    recs, _ = dataops._get_items(env)
-    assert recs and recs[0]["title"] == "a"
 
 
 def test_s1b_mixed_spill_envelope_preserves_sibling_metadata(tmp_spill):
@@ -354,46 +170,10 @@ def test_s1b_mixed_spill_envelope_preserves_sibling_metadata(tmp_spill):
     assert resolved["preview"] == mixed["preview"]
     assert "ref" not in resolved and "_spilled" not in resolved
 
-    tool_input = workflow_engine._auto_inject_prev(
-        {"params": {}}, json.dumps(mixed, ensure_ascii=False))
-    seen = json.loads(tool_input["params"]["_prev_result"])
-    assert seen["items"] == payload["items"]
-    assert seen["saved_to_file"] is True
-    assert seen["file_path"] == mixed["file_path"]
-
-
-def test_s2_resume(tmp_spill, monkeypatch):
-    # The executor stub needs matching static vocabulary; missing actions are now rejected.
-    import ibl_typecheck
-    original_definition = ibl_typecheck._action_def
-    fake_names = {'sense:rows', 'sense:take', 'sense:bad', 'sense:x', 'self:sink', 'self:fixed'}
-    monkeypatch.setattr(ibl_typecheck, '_action_def', lambda node, action:
-                        {'returns': 'items', 'pipe_in': True} if f'{node}:{action}' in fake_names
-                        else original_definition(node, action))
-    from system_tools_ibl import _execute_ibl_unified
-    calls, state = [], {}
-    orig = ibl_engine.execute_ibl
-    ibl_engine.execute_ibl = _fake_factory(calls, state, orig)
-    try:
-        code = '[sense:rows]{} >> [sense:take]{n: 2} >> [sense:bad]{} >> [self:sink]{}'
-        out = json.loads(_execute_ibl_unified({"code": code}, ".", agent_id="t"))
-        assert out["success"] is False and out["resume"]["from_step"] == 3, out
-        ref = out["resume"]["prev_ref"]
-        assert os.path.isfile(ref["path"]) and ref["count"] == 2
-        # 재개: step 3 부터, 앞 단 재실행 없음 — 여기선 step3 을 다시 실패시키지 않도록 code 를 고친 상황을 흉내
-        calls.clear()
-        fixed = '[sense:rows]{} >> [sense:take]{n: 2} >> [self:fixed]{} >> [self:sink]{}'
-        out2 = json.loads(_execute_ibl_unified({"code": fixed, "resume": {"from_step": 3, "prev_ref": ref}}, ".", agent_id="t"))
-        assert out2["success"] and out2["resumed_from"] == 3, out2
-        assert [c["action"] for c in calls] == ["fixed", "sink"]
-        assert len(json.loads(calls[0]["params"]["_prev_result"])["items"]) == 2
-        assert [r["step"] for r in out2["results"]] == [3, 4]
-        # 앞 단 $변수 참조가 남아 있으면 거절
-        bad = '$r = [sense:rows]{}\n[sense:take]{n: 2} >> [sense:x]{} >> [self:sink]{m: "$r.items.0.title"}'
-        out3 = json.loads(_execute_ibl_unified({"code": bad, "resume": {"from_step": 3, "prev_ref": ref}}, ".", agent_id="t"))
-        assert "resume 불가" in out3["error"]
-    finally:
-        ibl_engine.execute_ibl = orig
+    from ibl_v2_compat import plain_arguments
+    seen = plain_arguments({'payload':resolved})['payload']
+    assert seen['items'] == payload['items']
+    assert seen['saved_to_file'] is True and seen['file_path'] == mixed['file_path']
 
 
 def test_s3_spill_gc(tmp_spill):

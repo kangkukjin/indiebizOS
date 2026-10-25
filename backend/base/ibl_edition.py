@@ -24,6 +24,25 @@ def explicit_source(source, requested=None):
     return source
 
 
+def require_current(source, requested=None):
+    """Execution eligibility is separate from immutable historical identity."""
+    if not isinstance(source, str):
+        raise ValueError('EDITION_RETIRED: 판본 1 steps 실행은 종료됐습니다. 판본 2 원문으로 이관하세요.')
+    edition = source_edition(source, requested)
+    if edition != 2:
+        if requested is None and not source.lstrip().startswith('#!ibl'):
+            raise ValueError('EDITION_REQUIRED: 실행 원문에 edition:2 또는 #!ibl edition=2를 명시하세요.')
+        raise ValueError('EDITION_RETIRED: 판본 1 실행은 종료됐습니다. 과거 기록은 열람만 가능합니다.')
+    return edition
+
+
+def retired_result():
+    """Non-executable historical entry points share a stable refusal."""
+    return {'edition': 1, 'ok': False, 'success': False, 'executed': False,
+            'status': 'invalid', 'code': 'EDITION_RETIRED',
+            'error': 'EDITION_RETIRED: 판본 1 실행은 종료됐습니다. 판본 2 원문으로 이관하세요.'}
+
+
 def program_hash(source, edition=1):
     # Preserve every v1 trajectory join; distinguish identical text interpreted
     # under another edition. Source text itself remains unchanged in storage.
@@ -73,4 +92,5 @@ def pin_source(source, requested=None):
     if not isinstance(source, str) or not source.strip():
         return source
     declared = source_edition(source, requested) if requested is not None or source.lstrip().startswith("#!ibl") else _current_edition.get()
+    require_current(source, declared)
     return explicit_source(source, declared)

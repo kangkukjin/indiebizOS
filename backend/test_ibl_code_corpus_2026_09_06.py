@@ -48,14 +48,15 @@ def test_choke_point_writes_corpus_joined_to_trajectory_by_hash(tmp_path):
 
     db_path, original = _tmp_db(tmp_path)
     try:
-        code = "[self:time]"
+        code = "#!ibl edition=2\n[self:time]"
         with el.trajectory_scope(task_id="task_corpus_probe"):
             _execute_ibl_unified({"code": code}, str(tmp_path), agent_id="probe")
         rows = _rows(db_path)
         assert len(rows) == 1
         row = rows[0]
         assert row["code"] == code and row["masked"] == 0
-        assert row["code_sha256"] == hashlib.sha256(code.encode("utf-8")).hexdigest()
+        from ibl_edition import program_hash
+        assert row["code_sha256"] == program_hash(code, 2)
         assert row["code_chars"] == len(code)
         assert (row["seen_count"], row["success_count"], row["fail_count"]) == (1, 1, 0)
         assert row["last_success"] == 1 and row["last_agent"] == "probe"
@@ -152,7 +153,7 @@ def test_usage_source_sticks_over_later_test_rows(tmp_path, monkeypatch):
 
     db_path, original = _tmp_db(tmp_path)
     try:
-        code = "[self:time]"
+        code = "#!ibl edition=2\n[self:time]"
         monkeypatch.setattr(el, "_episode_source", lambda: "usage")
         assert el.record_ibl_code(code, success=True)
         monkeypatch.setattr(el, "_episode_source", lambda: "test")

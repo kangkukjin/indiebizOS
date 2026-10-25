@@ -98,8 +98,8 @@ def registry(tmp_path, monkeypatch):
     return register_idiom, db
 
 
-OLD = '$return = [table:take]{n: "${개수}"}'
-NEW = '$고유 = [table:dedup]{by: "id"}\n$return = $고유 >> [table:take]{n: "${개수}"}'
+OLD = '#!ibl edition=2\n[def:시험추리기]($목록,$개수){return $목록 >> [table:take]{n:$개수}}'
+NEW = '#!ibl edition=2\n[def:시험추리기]($목록,$개수){$고유=$목록 >> [table:dedup]{by:"id"}\nreturn $고유.items >> [table:take]{n:$개수}}'
 
 
 def test_used_idiom_revised_with_history_and_same_identity(registry):
@@ -155,10 +155,10 @@ def test_invalid_final_expression_runs_no_earlier_tool(monkeypatch, tmp_path):
         pytest.fail('실행 전 거절할 식 때문에 수집이나 쓰기가 실행됨')
     monkeypatch.setattr(ibl_engine, 'execute_ibl', forbidden)
     monkeypatch.setattr(workflow_engine, 'execute_pipeline', forbidden)
-    result = json.loads(_execute_ibl_unified_impl({'code':
+    result = json.loads(_execute_ibl_unified_impl({'edition':2,'code':
         '$자료 = [sense:search]{query: "회귀 fixture"}\n'
         '$자료 >> [table:compute]{set: {source: "[title for title in rows]"}}'}, str(tmp_path)))
-    assert result['success'] is False and result['error_type'] == 'typecheck', result
+    assert not result['success'] and (result.get('issues') or result.get('diagnostic')),result
 
 
 if __name__ == '__main__':

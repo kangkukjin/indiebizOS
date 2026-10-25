@@ -77,7 +77,7 @@ def test_browser_has_two_surfaces_and_no_owner_controls():
     assert 'id="gearLever"' not in html and 'data-view="settings"' not in html
 
 
-def test_real_member_ibl_write_uses_member_device_even_with_hub_target(tmp_path, monkeypatch):
+def test_real_member_ibl_write_uses_member_device_and_rejects_hub_target(tmp_path, monkeypatch):
     import member_session
     import member_bridge
     import vocabulary_state
@@ -100,11 +100,15 @@ def test_real_member_ibl_write_uses_member_device_even_with_hub_target(tmp_path,
     token = P.set_transport(P.OWNER)
     try:
         out = MemberSessionManager(tmp_path).turn('member-a', 'device-a', 4, '회원', '보고서 저장',
-            local_task_id='local-task', code='[self:write]{path:"reports/mine.md",content:"회원 보고서"}@hub')
+            local_task_id='local-task', code='#!ibl edition=2\n[self:write]{path:"reports/mine.md",content:"회원 보고서"}')
     finally:
         P.reset_transport(token)
     assert out['success'], out
     assert files == {'reports/mine.md': '회원 보고서'}
+    denied = MemberSessionManager(tmp_path).turn('member-a', 'device-a', 4, '회원', '금지된 노드',
+        local_task_id='local-task', code='#!ibl edition=2\n[self:write]{path:"forbidden.md",content:"x"}@hub')
+    assert not denied['success'] and '주인 전용' in denied['error']
+    assert 'forbidden.md' not in files
     assert not list(tmp_path.rglob('mine.md'))
     assert not (tmp_path / 'outputs').exists()
 

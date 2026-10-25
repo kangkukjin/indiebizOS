@@ -108,20 +108,16 @@ def test_unrepresentable_fraction_is_null_with_an_honest_error(data_ops):
     _strict_json(result)
 
 
-def test_compute_reduce_and_assign_share_the_finite_result_gate(data_ops):
+def test_compute_and_reduce_share_the_finite_result_gate(data_ops):
     computed = data_ops._op_compute(
         {"items": [{"v": 1e308}]}, {"set": {"value": "v * 2"}})
     reduced = blocks._execute_table_reduce(
         {"items": [{"v": 1e308}, {"v": 1e308}], "step": "acc + v"}, "")
-    assigned = blocks._execute_assign(
-        {"name": "x", "expr": "$v * 2", "_var_values": {"v": {"value": 1e308}}},
-        "", "")
 
     assert computed["items"][0]["value"] is None
     assert computed["compute_errors"] == 1 and "비유한 수" in computed["note"]
     assert reduced["success"] is False and reduced["rows_done"] == 1
-    assert assigned["success"] is False and "비유한 수" in assigned["error"]
-    for result in (computed, reduced, assigned):
+    for result in (computed, reduced):
         _strict_json(result)
 
 

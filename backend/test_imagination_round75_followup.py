@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-DO = "[self:time]{}"
+DO = "#!ibl edition=2\n[self:time]{}"
 FUTURE = (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d")
 
 

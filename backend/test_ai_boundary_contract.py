@@ -204,8 +204,7 @@ def test_inspection_and_criteria_never_call_a_judge(monkeypatch, transform):
 
 def test_each_stops_before_remaining_requests_and_downstream_on_partial_response(tmp_path, monkeypatch):
     import ibl_engine
-    import workflow_engine
-    from ibl_parser import parse_with_vars
+    from ibl_v2_entry import handle_request
 
     calls = []
     def model(*args):
@@ -220,10 +219,10 @@ def test_each_stops_before_remaining_requests_and_downstream_on_partial_response
             pytest.fail("downstream consumer ran after incomplete response")
         return original(ti, project, agent_id)
     monkeypatch.setattr(ibl_engine, "_execute_ibl_impl", leaf)
-    code = '[table:each]{items:' + json.dumps(SOURCE * 3) + ',limit:3,parallel:1,on_error:"stop"}{'
+    code = '[table:each]{items:' + json.dumps(SOURCE * 3) + ',parallel:1,on_error:"stop"}{'
     code += '[table:ai]{items:[$it],instruction:"번역",contract:' + json.dumps(CONTRACT) + '}}'
-    code += ' >> [self:script]{op:"run",id:"must_not_run"}'
-    result = workflow_engine.execute_pipeline(parse_with_vars(code)[0], str(tmp_path))
+    code += '; [self:script]{op:"run",id:"must_not_run"}'
+    result = handle_request({'code':code,'edition':2}, str(tmp_path))
     assert not result["success"], result
     assert len(calls) == 1
 

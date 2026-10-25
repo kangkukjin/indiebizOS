@@ -31,15 +31,15 @@ def example(code, alias='', **extra):
             'category': 'phrase' if alias else 'composition', 'nodes': 'table', **extra}
 
 
-def test_same_name_editions_have_independent_lookup_and_execution(memory):
+def test_new_registration_excludes_old_edition_and_executes_native(memory):
     old = '$return = $목록 >> [table:take]{n:$개수}'
     new = '#!ibl edition=2\n[def:앞부분]($목록,$개수=1){$목록 >> [table:take]{n:$개수}}'
-    assert memory.add_examples_batch([example(old, '앞부분'), example(new, '앞부분')]) == 2
-    assert memory.find_phrase_by_alias('앞부분')['ibl_code'] == old
+    assert memory.add_examples_batch([example(old, '앞부분'), example(new, '앞부분')]) == 1
+    assert memory.find_phrase_by_alias('앞부분') is None
     assert memory.find_phrase_by_alias('앞부분', edition=2)['ibl_code'] == new
     result = handle_request({'edition': 2, 'code': '[fn:앞부분]{목록:["007",2]}'})
     assert result['success'] and result['value'] == ['007'], result
-    assert memory.find_phrase_by_alias('앞부분')['success_count'] == 0
+    assert memory.find_phrase_by_alias('앞부분') is None
     assert memory.find_phrase_by_alias('앞부분', edition=2)['success_count'] == 1
 
 
@@ -51,30 +51,25 @@ def test_native_local_override_does_not_credit_stored_function(memory):
     assert memory.find_phrase_by_alias('값', edition=2)['success_count'] == 0
 
 
-def test_legacy_function_reuses_body_and_returns_selected_value(memory):
+@pytest.mark.parametrize('check', [True, False])
+def test_legacy_function_cannot_be_registered_or_called(memory, check, monkeypatch):
+    import ibl_engine
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **k: pytest.fail('effect'))
     code = '$return = $목록 >> [table:take]{n:$개수}'
-    assert memory.add_examples_batch([example(code, '예전앞부분')]) == 1
-    result = handle_request({'edition': 2, 'code': '$r=[fn:예전앞부분]{목록:[{id:"007"},{id:"b"}],개수:1}\nreturn $r.items'})
-    assert result['success'] and result['value'] == [{'id': '007'}], result
-    checked = handle_request({'edition': 2, 'code': '[fn:예전앞부분]{목록:[],개수:1}', 'check': True})
-    assert checked['status'] == 'incomplete'
-    from model_result_view import read_result
-    guards = json.loads(read_result(checked['guards_ref']['read_args'])['text'])
-    assert any(g.get('boundary') == 'legacy-function-value/1' for g in guards)
+    assert memory.add_examples_batch([example(code, '예전앞부분')]) == 0
+    result = handle_request({'edition': 2, 'code': '[fn:예전앞부분]{목록:[],개수:1}', 'check':check})
+    assert not result.get('success', result.get('ok', False)) and not result['executed']
 
 
-def test_legacy_pipe_receiver_survives_bridge_and_rejects_collision(memory):
-    code = '$return = $목록 >> [table:take]{n:$개수}'
-    assert memory.add_examples_batch([example(code, '앞부분호환')]) == 1
-    result = handle_request({'edition': 2, 'code':
-        '$r = [{id:"007"},{id:"b"}] >> [fn:앞부분호환]{개수:1}; return $r.items'})
-    assert result['success'] and result['value'] == [{'id': '007'}], result
-    bad = handle_request({'edition': 2, 'check': True, 'code':
-        '[] >> [fn:앞부분호환]{목록:[],개수:1}'})
-    assert any(i['code'] == 'PIPE_COLLISION' for i in bad['issues'])
-    missing = handle_request({'edition': 2, 'check': True, 'code':
-        '[fn:앞부분호환]{개수:1}'})
-    assert any(i['code'] == 'MISSING_ARGUMENT' for i in missing['issues'])
+def test_native_pipe_receiver_rejects_collision_and_missing_argument(memory):
+    code = '#!ibl edition=2\n[def:앞부분]($목록,$개수){return $목록 >> [table:take]{n:$개수}}'
+    assert memory.add_examples_batch([example(code, '앞부분')]) == 1
+    result = handle_request({'edition': 2, 'code': '[{id:"007"},{id:"b"}] >> [fn:앞부분]{개수:1}'})
+    assert result['success'] and result['value'] == [{'id':'007'}]
+    for code, issue in [('[] >> [fn:앞부분]{목록:[],개수:1}', 'PIPE_COLLISION'),
+                        ('[fn:앞부분]{개수:1}', 'MISSING_ARGUMENT')]:
+        out = handle_request({'edition': 2, 'code': code, 'check':True})
+        assert any(i['code'] == issue for i in out['issues'])
 
 
 def test_health_query_declared_options_reach_handler(memory, monkeypatch):
@@ -95,39 +90,29 @@ def test_health_query_declared_options_reach_handler(memory, monkeypatch):
     assert any(i['code'] == 'UNKNOWN_ARGUMENT' for i in bad['issues'])
 
 
-def test_member_legacy_pipe_contract_uses_same_body_rule(monkeypatch):
-    from ibl_member_library import library, adapters
-    from ibl_v2_compile import compile_program
-    from ibl_v2_runtime import Runtime
-    import ibl_engine
-    seen = []
-    def execute(call, *args, **kwargs):
-        seen.append(call['params'])
-        return {'success': True, 'items': call['params']['목록'][:call['params']['개수']]}
-    monkeypatch.setattr(ibl_engine, 'execute_ibl', execute)
+def test_member_legacy_library_rejected_before_tools():
+    from ibl_member_library import library, definitions
+    from ibl_v2_ir import Fault
     with library('[def:앞부분]{$return = $목록 >> [table:take]{n:$개수}}'):
-        registry = adapters(None, None)
-    plan = compile_program('[{id:"007"}] >> [fn:앞부분]{개수:1}', registry)
-    result = Runtime(plan).run()
-    assert result['success'] and result['value']['items'] == [{'id': '007'}], result
-    assert seen == [{'개수': 1, '목록': [{'id': '007'}]}]
+        with pytest.raises(Fault) as error:
+            definitions()
+        assert error.value.code=='EDITION_RETIRED'
 
 
-def test_legacy_asset_change_keeps_pinned_bridge_original(memory):
+def test_legacy_fixture_changes_cannot_enable_execution(memory, monkeypatch):
+    from test_function_support import use_legacy
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
-    old = '$return = $목록 >> [table:take]{n:1}'
-    memory.add_examples_batch([example(old, '옛것')])
-    plan = compile_program('[fn:옛것]{목록:[]}', load_registry())
-    with memory._get_connection() as conn:
-        conn.execute("UPDATE ibl_examples SET ibl_code=? WHERE alias='옛것'", (old.replace('n:1', 'n:2'),))
-        conn.commit()
-    result = Runtime(plan).run()
-    assert result['success'], result
-    assert result['value']['items'] == []
-    import function_store
-    assert function_store.resolve('옛것', edition=1)['source'] == old
+    from ibl_v2_store import definitions
+    codes = {'옛것':'$return = $목록 >> [table:take]{n:1}'}
+    use_legacy(monkeypatch, lambda: codes)
+    for changed in [False, True]:
+        if changed:
+            codes['옛것'] = codes['옛것'].replace('n:1','n:2')
+        result = handle_request({'edition':2,'code':'[fn:옛것]{목록:[]}'})
+        assert not result['success'] and not result['executed']
+        assert 'EDITION_RETIRED' in str(result)
 
 
 def test_declared_handler_bridge_keeps_whole_record_and_does_not_pipe_guess(memory, monkeypatch):

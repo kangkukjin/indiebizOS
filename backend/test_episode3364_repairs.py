@@ -27,30 +27,6 @@ def test_supervisor_executes_with_resource_owner_and_restores_manager(supervisor
         assert tc.get_current_agent_id() == supervisor.supervisor_id
 
 
-def test_parallel_branches_share_episode_and_tokens_without_cross_turn_leak(monkeypatch):
-    import episode_logger as ep
-    from providers.base import ProviderMetrics, turn_token_scope, read_turn_tokens
-    from workflow_parallel import _execute_parallel
-    monkeypatch.setattr(ep, "record_trajectory_event", lambda *a, **kw: None)
-    parent = ep._Episode("worker", "parallel", task_id="parallel-3364")
-    token = ep._current_episode.set(parent)
-
-    def action(step, path):
-        ProviderMetrics().record_usage(1, {"prompt_tokens": 41, "completion_tokens": 3})
-        return {"success": True}
-
-    monkeypatch.setattr("ibl_engine.execute_ibl", action)
-    previous_tokens = read_turn_tokens()
-    try:
-        with turn_token_scope("worker", "parallel-3364"):
-            result = _execute_parallel([{"action": "a"}, {"action": "b"}], ".", "")
-            assert all(r["success"] for r in result)
-            assert read_turn_tokens() == 88
-        assert len(parent.steps) == 2
-        assert sum(s["input"] + s["output"] for s in parent.steps) == 88
-    finally:
-        ep._current_episode.reset(token)
-    assert read_turn_tokens() == previous_tokens
 
 
 def test_explicit_hard_budget_preserves_final_reserve(supervisor):

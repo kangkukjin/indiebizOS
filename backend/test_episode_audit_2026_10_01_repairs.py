@@ -317,14 +317,19 @@ def test_fstring_bare_dollar_name_warns():
 
 
 # ---------------------------------------------------------------- 옛 용례 투영
-def test_legacy_single_call_is_projected_only_when_current_checker_accepts():
-    from ibl_usage_rag import current_form_of_legacy_call
-    shown = current_form_of_legacy_call('[limbs:youtube]{op: "summarize", url: "https://www.youtube.com/watch?v=example"}')
-    assert shown == '#!ibl edition=2\nreturn [limbs:youtube]{op: "summarize", url: "https://www.youtube.com/watch?v=example"}'
-    # 여러 문장·파이프·변수·없는 낱말은 투영하지 않는다.
-    assert current_form_of_legacy_call('[sense:search]{query: "a"} >> [table:take]{n: 3}') is None
-    assert current_form_of_legacy_call('[sense:search]{query: $q}') is None
-    assert current_form_of_legacy_call('[sense:없는낱말]{query: "a"}') is None
+def test_legacy_single_call_is_historical_without_automatic_translation():
+    import xml.etree.ElementTree as ET
+    from ibl_usage_db import UsageExample
+    from ibl_usage_rag import IBLUsageRAG
+    for code in ('[limbs:youtube]{op: "summarize", url: "https://www.youtube.com/watch?v=example"}',
+                 '[sense:search]{query: "a"} >> [table:take]{n: 3}',
+                 '[sense:search]{query: $q}', '[sense:없는낱말]{query: "a"}'):
+        old = UsageExample(987, '과거 용례', code, 'sense', 'single', 1, .98, 'fixture', -1)
+        ref = ET.fromstring(IBLUsageRAG._format_references(None, [old])).find('ref')
+        assert ref.attrib['edition'] == '1'
+        assert ref.attrib['authoring_excluded'] == 'legacy_source'
+        assert 'projected_from' not in ref.attrib and code not in ref.text
+        assert '#987' in ref.text
 
 
 # ---------------------------------------------------------------- Codex 누출 차단

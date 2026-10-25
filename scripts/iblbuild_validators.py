@@ -511,50 +511,32 @@ def _check_action(
 
 
 def _load_corpus_param_keys(root: Path) -> dict[str, set[str]] | None:
-    """학습 코퍼스를 실제 IBL 파서로 파싱 → {qualified: set(top-level param 키)}.
-    파서/코퍼스 미가용 시 None (검사 건너뜀)."""
-    backend = root / "backend"
-    try:
-        if str(backend) not in sys.path:
-            sys.path.insert(0, str(backend))
-            import boot_paths  # noqa: F401 — 층 디렉토리 등재
-
-        import ibl_parser  # type: ignore
-    except Exception:
-        return None
-
+    """Current executable teaching only; archived source does not define API keys."""
+    backend = root / 'backend'
+    if str(backend) not in sys.path:
+        sys.path.insert(0, str(backend))
+    import boot_paths  # noqa: F401
+    from ibl_v2_parser import parse
+    from ibl_v2_ir import Node, Fault
+    out, found = {}, False
     def walk(obj):
-        res = []
-        if isinstance(obj, dict):
-            if "_node" in obj and "action" in obj:
-                res.append(obj)
-            for v in obj.values():
-                res += walk(v)
-        elif isinstance(obj, list):
-            for v in obj:
-                res += walk(v)
-        return res
-
-    out: dict[str, set[str]] = {}
-    found_any = False
-    for rel in CORPUS_FILES:
-        f = root / rel
-        if not f.is_file():
-            continue
+        if isinstance(obj, Node):
+            if obj.kind == 'call':
+                data = obj.data
+                params = data['params'].data.get('fields', {})
+                out.setdefault(data['node']+':'+data['action'], set()).update(params)
+            walk(obj.data)
+        elif isinstance(obj, dict):
+            for value in obj.values(): walk(value)
+        elif isinstance(obj, (list,tuple)):
+            for value in obj: walk(value)
+    for _, entry in _corpus_entries(root):
+        found = True
         try:
-            entries = json.loads(f.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        found_any = True
-        for e in entries:
-            try:
-                parsed = ibl_parser.parse(e.get("ibl_code", ""))
-            except Exception:
-                continue
-            for st in walk(parsed):
-                q = f"{st.get('_node')}:{st.get('action')}"
-                out.setdefault(q, set()).update((st.get("params") or {}).keys())
-    return out if found_any else None
+            walk(parse(entry.get('ibl_code', '')))
+        except Fault:
+            continue  # The adjacent corpus syntax gate reports the invalid source.
+    return out if found else None
 
 
 

@@ -125,30 +125,6 @@ def test_R5_document_0행은_blocks_탓이_아니다():
 
 # ── B29-3: 병렬 타임아웃 신고 ────────────────────────────────────────────
 
-def test_R6_병렬_전체_타임아웃이_내부_문구를_흘리지_않는다(monkeypatch):
-    import ibl_engine
-    import workflow_parallel as wp
-
-    monkeypatch.setattr(wp, "_action_timeout_budget", lambda: 1)
-    monkeypatch.setattr(wp, "PARALLEL_TIMEOUT_GRACE", 0.0)
-
-    def _slow(tool_input, project_path=None):
-        import time
-        if tool_input.get("action") == "slow":
-            time.sleep(5)                       # 타임아웃보다 확실히 길다
-        return {"items": [{"x": 1}]}
-
-    # _execute_parallel 은 호출 시점에 `from ibl_engine import execute_ibl` 한다 —
-    # 그래서 패치는 원 모듈 쪽에 걸어야 한다.
-    monkeypatch.setattr(ibl_engine, "execute_ibl", _slow)
-    branches = [{"node": "sense", "action": "fast"}, {"node": "sense", "action": "slow"}]
-    out = wp._execute_parallel(branches, None, "")   # prev_result 는 문자열 계약
-
-    assert len(out) == 2
-    errs = " ".join(str(r.get("error", "")) for r in out if isinstance(r, dict))
-    assert "futures unfinished" not in errs      # 내부 문구 누출 금지
-    assert "실행 시간 초과" in errs                # 정직한 신고가 실제로 실행된다
-    assert "sense:slow" in errs                   # 어느 가지인지 말한다
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

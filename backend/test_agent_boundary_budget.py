@@ -115,36 +115,22 @@ def test_verbose_small_envelope_keeps_explicit_final_result():
     assert _mcp()._trim_for_agent(raw) == raw
 
 
-def test_negative_take_survives_verbose_turn_variable_delivery(tmp_path, monkeypatch):
-    """ep3219: 엔진은 4행을 냈지만 verbose 원장 10행 뒤의 최종 값이 MCP에서 잘렸다."""
-    from common import spill
+def test_tail_slice_survives_explicit_reference_delivery(tmp_path, monkeypatch):
     from system_tools import _execute_ibl_unified
     from thread_context import actor_context
-
-    monkeypatch.setattr(spill, "spill_dir", lambda: str(tmp_path))
-    rows = [{"id": n, "body": "원장 내용" * 160} for n in range(1, 11)]
-    ledger = tmp_path / "ledger.json"
-    rules = tmp_path / "rules.md"
-    ledger.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
-    rules.write_text("방법론 규칙\n" * 1500, encoding="utf-8")
-    code = ('$규칙 = [self:read]{path:' + json.dumps(str(rules)) + '}\n'
-            '$원장 = [self:read]{path:' + json.dumps(str(ledger)) + '}')
-    with actor_context(agent_id="probe", task_id="task_take_delivery"):
-        first = json.loads(_execute_ibl_unified({"code": code}, str(tmp_path), agent_id="probe"))
-        assert first["success"], first
-        raw = _execute_ibl_unified({"code": '$규칙\n$원장 >> [table:take]{n: -4}', "verbose": True},
-                                   str(tmp_path), agent_id="probe")
-    original = json.loads(raw)
-    assert original["results"][1]["count"] == 10
-    assert "result_ref" in original
-    delivered = _mcp()._trim_for_agent(raw, actions=1)
-    assert len(delivered) <= _mcp()._agent_budget_chars(1)
-    out = json.loads(delivered)
-    final = json.loads(out["final_result"])
-    assert final["count"] == 4 and final["items"] == rows[-4:]
-    assert out["results"][1]["count"] == 10 and out["results"][2]["count"] == 4
-    assert out["_results_summarized"]
-    assert "final_result" in original and "result" not in original["results"][1]
+    rows = [{"id":n,"body":"원장 내용"*160} for n in range(1,11)]
+    with actor_context(agent_id='probe',task_id='task_take_delivery'):
+        first=json.loads(_execute_ibl_unified({'code':'return $rows','edition':2,'inputs':{'rows':rows}},str(tmp_path)))
+        assert first['success'],first
+        raw=_execute_ibl_unified({'code':'return $입력[-4:]','edition':2,
+            'inputs':first['result_ref']['input_args']},str(tmp_path))
+    original=json.loads(raw)
+    assert original['success'], original
+    assert original['value']==rows[-4:]
+    delivered=_mcp()._trim_for_agent(raw,actions=1)
+    assert len(delivered)<=_mcp()._agent_budget_chars(1)
+    out=json.loads(delivered)
+    assert out['value']==rows[-4:] and 'result_ref' in out
 
 
 @pytest.mark.parametrize("success", [True, False])

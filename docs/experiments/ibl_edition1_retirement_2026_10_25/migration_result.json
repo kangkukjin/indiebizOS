@@ -1,0 +1,15 @@
+{
+  "catalog_counts": {
+    "2:active": 59,
+    "1:retired": 23,
+    "1:hold": 1,
+    "2:hold": 1
+  },
+  "immutable_old_revisions_verified": 23,
+  "complete": true,
+  "history_preserved": {
+    "rows": 3899,
+    "sha256": "84f8e8a6681aad685a2b8d20a356c1539257bade07a908d54d60bebad7224351",
+    "digest_recipe": "SHA256 UTF-8 json.dumps(sqlite tuples from SELECT * FROM ibl_examples ORDER BY id, ensure_ascii=False, sort_keys=True)"
+  }
+}

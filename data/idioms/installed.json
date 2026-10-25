@@ -5,8 +5,20 @@
   "PC조회묶음": "pc_read_batch.ibl",
   "Android제어확인": "android_control_check.ibl",
   "Android제어": "android_control.ibl",
-  "AI시대 보고서 출처 뉴스 갱신": "AI시대_보고서_출처_뉴스_갱신.yaml",
   "프로젝트재조사": "프로젝트재조사.yaml",
   "프로젝트재조사확인": "프로젝트재조사확인.yaml",
-  "화면검수": "화면검수.yaml"
+  "화면검수": "retirement_13.ibl",
+  "관문배터리돌리기": "retirement_01.ibl",
+  "최신파일읽기": "retirement_02.ibl",
+  "최신범위읽기": "retirement_03.ibl",
+  "본문에서찾기": "retirement_04.ibl",
+  "주소마다읽기": "retirement_05.ibl",
+  "의미로본문찾기": "retirement_06.ibl",
+  "관련자료골라읽기": "retirement_07.ibl",
+  "각각읽고요약": "retirement_08.ibl",
+  "위치마다읽기": "retirement_09.ibl",
+  "좁혀서읽기": "retirement_10.ibl",
+  "잘라각각종합": "retirement_11.ibl",
+  "덜어내고요지만": "retirement_12.ibl",
+  "AI시대출처뉴스갱신": "retirement_14.ibl"
 }

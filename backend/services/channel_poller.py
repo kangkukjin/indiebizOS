@@ -854,16 +854,16 @@ class ChannelPoller:
 
         def _run():
             try:
-                from ibl_parser import parse as ibl_parse, IBLSyntaxError
-                from workflow_engine import execute_pipeline
-                steps = ibl_parse(pipeline)  # 구문 실패도 바깥 except에서 실패 이력으로 남긴다.
+                from ibl_scheduled import execute_scheduled
                 msg_ctx = f"[{contact_type}] {contact_value}: {subject or ''} {content or ''}".strip()
                 self._log(f"채널 트리거 발화: {trigger.get('name')} ← {contact_type} 메시지")
                 from calendar_actions import CalendarActionsMixin
                 from workflow_verdict import is_error_result, err_reason_of
                 run_path = CalendarActionsMixin._owner_run_path(trigger.get("project_id"))
-                result = execute_pipeline(steps, run_path, context={"_prev_result": msg_ctx},
-                                          agent_id="system_ai")
+                result = execute_scheduled(pipeline, run_path, "system_ai",
+                                           edition=trigger.get('edition'),
+                                           inputs={**(trigger.get('inputs') or {}), 'message': msg_ctx},
+                                           function_refs=trigger.get('function_refs'))
                 success = not is_error_result(result)
                 final = result.get("final_result", result) if isinstance(result, dict) else result
                 rows = final.get("items") if isinstance(final, dict) else None

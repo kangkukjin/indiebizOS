@@ -95,7 +95,8 @@
     "value_semantics": true,
     "typescript": true,
     "vite_build": true,
-    "android_manifest_regenerated": true
+    "android_manifest_regenerated": true,
+    "pre_commit": "all_passed"
   },
   "live_checker_roundtrips": [
     {
@@ -215,5 +216,63 @@
       }
     ]
   },
-  "remaining_warning": "red_drift: 이전 미적용 수리 worktree 경고. 해당 작업의 변경을 삭제/적용하지 않음."
+  "remaining_warning": "red_drift: 이전 미적용 수리 worktree 경고. 해당 작업의 변경을 삭제/적용하지 않음.",
+  "implementation_commit": "4c07c018",
+  "dashboard": {
+    "checked_at": "2026-10-25T20:15:33.078976",
+    "healthy": true,
+    "stale": false,
+    "items": [
+      {
+        "key": "ibl_consistency",
+        "label": "어휘 정합 — 선언·구현·도구 일치",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T20:15:33.074793"
+      },
+      {
+        "key": "red_safety",
+        "label": "자기수정 안전장치 — 게이트·그랜트·롤백 기능",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T20:15:33.077724"
+      },
+      {
+        "key": "silent_failure_regression",
+        "label": "침묵-실패 회귀 — 현행 문법·실패 전파·도구 통화",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T20:15:33.078336"
+      },
+      {
+        "key": "import_coverage",
+        "label": "의존성 커버리지 — 코드 import ↔ .venv 실재",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T20:15:33.078976"
+      },
+      {
+        "key": "currency",
+        "label": "통화 규약 — 실행 결과 형태",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T20:15:33.075610"
+      },
+      {
+        "key": "golden_pipes",
+        "label": "파이프 흐름 — 액션 조합(>>)",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T20:15:33.076281"
+      },
+      {
+        "key": "description_drift",
+        "label": "설명 정합 — 어휘 설명 최신성",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-19T14:24:57.670899"
+      }
+    ],
+    "action_count": 172
+  }
 }

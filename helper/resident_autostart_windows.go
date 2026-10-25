@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"os/user"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -26,9 +27,15 @@ func residentWindowsAutostart(cfg *Config, exe string, remove bool) error {
 	if current != "" {
 		return residentWriteRun(registry.CURRENT_USER, residentRunKey, name, exe, remove)
 	}
-	query := exec.Command("schtasks", "/Query", "/TN", name)
+	query := exec.Command("schtasks", "/Query", "/TN", name, "/XML")
 	configureResidentDetached(query)
-	if query.Run() == nil {
+	if existing, queryErr := query.Output(); queryErr == nil {
+		if !remove {
+			currentUser, userErr := user.Current()
+			if userErr == nil && residentLoginTaskMatches(residentWindowsOutput(existing), exe, currentUser.Uid, currentUser.Username) {
+				return nil
+			}
+		}
 		args := []string{"/Create", "/F", "/IT", "/SC", "ONLOGON", "/TN", name, "/TR", `"` + exe + `"`}
 		if remove {
 			args = []string{"/Delete", "/F", "/TN", name}
@@ -124,6 +131,18 @@ func residentWindowsRestart(cfg *Config) error {
 }
 
 func residentWindowsOutput(raw []byte) string {
+	// schtasks /XML may emit a UTF-16LE document even with redirected output.
+	start := 0
+	if len(raw) >= 2 && raw[0] == 0xff && raw[1] == 0xfe {
+		start = 2
+	}
+	if start == 2 || (len(raw) >= 4 && raw[0] == '<' && raw[1] == 0 && raw[3] == 0) {
+		units := make([]uint16, 0, (len(raw)-start)/2)
+		for i := start; i+1 < len(raw); i += 2 {
+			units = append(units, uint16(raw[i])|uint16(raw[i+1])<<8)
+		}
+		return strings.TrimSpace(string(utf16.Decode(units)))
+	}
 	if utf8.Valid(raw) {
 		return strings.TrimSpace(string(raw))
 	}

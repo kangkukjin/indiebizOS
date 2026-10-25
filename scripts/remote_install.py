@@ -18,9 +18,19 @@ import shutil
 import subprocess
 import uuid
 
+# Whole-file build outputs only. Translation memory and source documents can
+# contain human edits; they must never be treated as disposable build output.
+GENERATED_FILES = frozenset({
+    "frontend/i18n/catalog.json", "frontend/i18n/remote.json", "frontend/i18n/xray.json",
+    "data/core_manifest.json", "data/member_manifest.json", "data/package_meta.json",
+    "data/phone_manifest.json", "data/shell_shadow.json", "data/ibl_fixtures.json",
+    "data/ibl_nodes.yaml", "data/guides/codebase_map.md",
+})
+
 
 def git(root, *args):
-    out = subprocess.check_output(["git", "-C", str(root), *args], text=True)
+    # Git emits UTF-8 paths; Windows' locale default (cp1252) cannot decode Korean names.
+    out = subprocess.check_output(["git", "-C", str(root), *args], text=True, encoding="utf-8")
     return out if "-z" in args else out.strip()
 
 
@@ -30,10 +40,43 @@ def backup_root(root):
     return path
 
 
+def generated_changes(root):
+    """Inspect without writing; staged edits and non-generated changes block."""
+    if git(root, "diff", "--cached", "--name-only", "-z"):
+        raise ValueError("Tracked local staged changes exist; preserve or commit them first")
+    names = set(git(root, "diff", "--name-only", "-z").split("\0")) - {""}
+    blocked = names - GENERATED_FILES
+    for name in names & GENERATED_FILES:
+        path = root / name
+        if path.is_symlink() or not path.is_file() or any(p.is_symlink() for p in path.parents):
+            blocked.add(name)
+    if blocked:
+        raise ValueError("Tracked local changes exist; resolve before update: " + ", ".join(sorted(blocked)))
+    return sorted(names)
+
+
+def preserve_generated(root, names):
+    """Keep exact bytes before restoring build outputs to the current commit."""
+    if not names:
+        return None
+    backup = backup_root(root)
+    for name in names:
+        source, destination = root / name, backup / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    # Recheck the complete change set before restoring anything.
+    if generated_changes(root) != names or any(
+            (root / name).read_bytes() != (backup / name).read_bytes() for name in names):
+        raise ValueError(f"Local changes moved during backup; inspect {backup}")
+    subprocess.run(["git", "--literal-pathspecs", "-C", str(root), "restore",
+                    "--source=HEAD", "--worktree", "--", *names], check=True)
+    print(json.dumps({"backup": str(backup), "preserved_generated": names}), flush=True)
+    return backup
+
+
 def update(root):
     """Fast forward only; preserve colliding local files, never reset/clean/stash."""
-    if git(root, "status", "--porcelain", "--untracked-files=no"):
-        raise ValueError("Tracked local changes exist; resolve before update")
+    generated = generated_changes(root)
     before = git(root, "rev-parse", "HEAD")
     subprocess.run(["git", "-C", str(root), "fetch", "origin"], check=True)
     target = git(root, "rev-parse", "origin/main")
@@ -56,6 +99,7 @@ def update(root):
                 collisions.add(text)
                 break
     collisions = sorted(collisions)
+    generated_backup = preserve_generated(root, generated)
     backup = None
     for name in collisions:
         source = root / name
@@ -69,7 +113,9 @@ def update(root):
     subprocess.run(["git", "-C", str(root), "merge", "--ff-only", target], check=True)
     after = git(root, "rev-parse", "HEAD")
     print(json.dumps({"before": before, "target": target, "after": after,
-                      "backup": str(backup) if backup else None, "preserved": collisions}))
+                      "backup": str(backup) if backup else None, "preserved": collisions,
+                      "generated_backup": str(generated_backup) if generated_backup else None,
+                      "preserved_generated": generated}))
     if after != target:
         raise ValueError("HEAD does not match the fetched target")
 
@@ -105,7 +151,8 @@ def make_plan(root, run_id, python, npm):
     script = str(root / "scripts" / "remote_install.py")
     vpy = str(root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python3"))
     env = {"PATH": str(Path(npm).parent) + os.pathsep + os.environ.get("PATH", ""),
-           "PIP_NO_INPUT": "1", "GIT_TERMINAL_PROMPT": "0"}
+           "PIP_NO_INPUT": "1", "GIT_TERMINAL_PROMPT": "0",
+           "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
     steps = []
 
     def step(name, argv, verify=None, cwd=None, timeout=3600):
@@ -158,8 +205,8 @@ def main():
                 raise ValueError("Install Python 3.10..3.13 first")
             if not (root / "scripts/bootstrap.py").is_file():
                 raise ValueError("Not an IndieBiz source checkout")
-            if git(root, "status", "--porcelain", "--untracked-files=no"):
-                raise ValueError("Tracked local changes exist")
+            generated = generated_changes(root)
+            print(json.dumps({"preservable_generated": generated}))
             subprocess.run([args.npm, "--version"], check=True)
             node = shutil.which("node", path=str(Path(args.npm).parent))
             if not node:

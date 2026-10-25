@@ -42,7 +42,8 @@ def classify(state, controller, generation, runtime=None, health=None, base=None
 
 
 def wait_for_boot(base, code_root, controller, *, generation=None, port=8765, timeout=300,
-                  interval=1, adapter=None, clock=time.monotonic, sleep=time.sleep):
+                  interval=1, adapter=None, clock=time.monotonic, sleep=time.sleep,
+                  launcher=None):
     base = Path(base)
     adapter = adapter or ProcessAdapter(base, code_root, port)
     start = clock()
@@ -51,6 +52,13 @@ def wait_for_boot(base, code_root, controller, *, generation=None, port=8765, ti
         if not adapter.alive(controller):
             return {"status": "failed", "reason": "controller_exited", "controller": controller}
         state = read_json(control_dir(base) / "state.json", {})
+        # Windows venv python.exe can be a redirector. Only adopt the recorded
+        # controller when it belongs to the process tree we actually spawned.
+        # A live but unrelated controller or a reused PID remains untrusted.
+        if launcher and controller == launcher:
+            candidate = state.get("controller")
+            if candidate and candidate != controller and candidate in adapter.tree(launcher):
+                controller = candidate
         last = classify(state, controller, generation)
         if last["status"] == "failed":
             return last

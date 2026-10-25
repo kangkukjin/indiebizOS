@@ -98,5 +98,30 @@ def test_restart_during_http_observation_invalidates_success(tmp_path):
     assert result["status"] == "timeout" and result["reason"] == "state_changed_during_probe"
 
 
+def test_spawned_windows_launcher_can_bind_its_actual_controller(tmp_path):
+    state = receipt(tmp_path)
+    persist(tmp_path, state)
+    launcher = {'pid': 40, 'born': 99}
+    adapter = Adapter(tmp_path, state)
+    adapter.tree = lambda ident: [launcher, state['controller'], state['worker']]
+    out = probe.wait_for_boot(tmp_path, ROOT, launcher, launcher=launcher, adapter=adapter,
+                              sleep=lambda _: pytest.fail('verified child was not recognized'))
+    assert out['status'] == 'succeeded' and out['controller'] == state['controller']
+
+
+@pytest.mark.parametrize('other', [{'pid': 42, 'born': 99}, {'pid': 77, 'born': 100}])
+def test_launcher_never_adopts_reused_or_unrelated_controller(tmp_path, other):
+    state = receipt(tmp_path)
+    persist(tmp_path, state)
+    launcher = {'pid': 40, 'born': 99}
+    adapter = Adapter(tmp_path, state)
+    adapter.tree = lambda ident: [launcher, other]
+    tick = [0]
+    out = probe.wait_for_boot(tmp_path, ROOT, launcher, launcher=launcher, adapter=adapter,
+                              timeout=1, clock=lambda: tick[0], sleep=lambda _: tick.__setitem__(0, 2))
+    assert out['status'] == 'timeout' and out['reason'] == 'different_controller'
+    assert adapter.calls == 0
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

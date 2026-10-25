@@ -22,7 +22,7 @@ import sys
 import tempfile
 import time
 from remote_boot import wait_for_boot
-from restart_process import identity
+from restart_process import alive, identity, signal_owned, tree
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API_PY = os.path.join(ROOT, "backend", "api.py")
@@ -67,6 +67,10 @@ def main() -> int:
     env["INDIEBIZ_API_PORT"] = str(PORT)
     env["PYTHONUTF8"] = "1"            # 윈도우 러너 cp1252 콘솔에서 한글 로그 죽지 않게
     base = env.get("INDIEBIZ_BASE_PATH", ROOT)
+    previous = controller_state(base)
+    if any(alive(previous.get(key)) for key in ("controller", "worker")):
+        print("[boot-smoke] refused: this installation already has a live controller or worker", flush=True)
+        return 2
 
     py = _python()
     log_fd, log_path = tempfile.mkstemp(prefix="boot_smoke_", suffix=".log")
@@ -79,9 +83,11 @@ def main() -> int:
             stdout=log_f,
             stderr=subprocess.STDOUT,
         )
+        launched, result = None, {}
         try:
             t0 = time.monotonic()
-            result = wait_for_boot(base, ROOT, identity(proc.pid), port=PORT,
+            launched = identity(proc.pid)
+            result = wait_for_boot(base, ROOT, launched, launcher=launched, port=PORT,
                                    timeout=DEADLINE_S, interval=2)
             if result["status"] != "succeeded":
                 print("[boot-smoke] FAILED — " + json.dumps(result), flush=True)
@@ -92,11 +98,25 @@ def main() -> int:
             return 0
 
         finally:
-            proc.terminate()
+            # Terminating just the Windows venv redirector leaves its actual
+            # controller/worker behind. Capture and stop only our birth-bound tree.
+            owned = tree(launched) if launched else []
+            # A redirector can exit after the observer bound its real child.
+            for key in ("controller", "worker"):
+                for member in tree(result.get(key)):
+                    if member not in owned:
+                        owned.append(member)
+            for member in owned:
+                signal_owned(member)
             try:
                 proc.wait(timeout=15)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                for member in owned:
+                    signal_owned(member, force=True)
+                proc.wait(timeout=5)
+            for member in owned:
+                if alive(member):
+                    signal_owned(member, force=True)
 
 
 if __name__ == "__main__":

@@ -171,7 +171,7 @@ function jMeta(ep){
   const d=ep.unconscious_decision;
   if(d) m.push(d==='THINK'?'숙고':(d==='EXECUTE'?'실행':String(d)));
   const r=ep.evaluation_result;
-  if(r) m.push(r==='ACHIEVED'?'달성':'미달');
+  if(r) m.push(r==='ACHIEVED'?'검수 승인':r==='NOT_ACHIEVED'?'기준 미충족':r==='UNKNOWN'?'검수 미완료':r==='NOT_RUN'?'미검수':String(r));
   return m.join(' · ');
 }
 function jRender(){
@@ -187,7 +187,7 @@ function jRender(){
     h+=(open?'▾ ':'▸ ')+esc(ep.user_message||'(요청 없음)')+'</button>';
     h+='<button onclick="jAnalyze('+ep.id+')" title="이 주행을 시스템 AI로 분석 — 잘된 점·문제점·고칠 것" style="flex-shrink:0;font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">🔬 분석</button>';
     h+='</div>';
-    h+='<div style="font-size:11px;color:var(--dim);margin-top:4px">'+esc(jMeta(ep))+'</div>';
+    h+='<div title="이번 응답의 검수 결과입니다. 중단 사유 보고가 승인된 경우에도 원래 작업은 미완료일 수 있습니다. 실제 결과는 상세 기록에서 확인하세요." style="font-size:11px;color:var(--dim);margin-top:4px">'+esc(jMeta(ep))+'</div>';
     if(open){
       h+='<div style="margin-top:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg3);max-height:320px;overflow:auto">';
       if(!st||st.s==='loading') h+='<p class="muted" style="padding:8px 10px;margin:0">실행기억 불러오는 중…</p>';

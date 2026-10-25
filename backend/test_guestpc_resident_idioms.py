@@ -99,6 +99,26 @@ def test_resume_receipt_does_not_submit_and_can_recover_target(pc):
     assert wrong['status'] == 'target_mismatch'
 
 
+def test_bare_task_reference_can_be_polled_and_projected_without_optional_fields(pc):
+    job = shell(pc)
+    before = len(pc.history())
+    code = '''$r = [fn:외부PC작업확인]{작업:$ref}
+return {status:$r.status,exit:$r.exit,progress:$r.progress,result:$r.result}'''
+    out = pc(code, ref=job['task_ref'])
+    assert out['status'] == 'queued' and out['exit'] is None
+    pc.complete(job, {'exit': 0, 'output': '한글'})
+    out = pc(code, ref=job['task_ref'])
+    assert out['status'] == 'succeeded' and out['exit'] == 0
+    assert out['result']['output'] == '한글' and len(pc.history()) == before
+
+
+def test_invalid_task_reference_returns_empty_observation_without_submission(pc):
+    out = pc('''$r = [fn:외부PC작업확인]{작업:{kind:"other",task_id:"missing"}}
+return {status:$r.status,exit:$r.exit,progress:$r.progress,result:$r.result}''')
+    assert out == {'status': 'invalid_input', 'exit': None, 'progress': None, 'result': None}
+    assert not pc.calls
+
+
 def test_prepared_target_is_pinned_and_mismatch_never_submits(pc):
     prepared = pc('[fn:외부PC준비]{PC:"시험PC",환경조회:false,작업폴더:"/tmp",환경:{AUDIT:"pinned"}}')
     out = pc('[fn:외부PC작업실행]{PC:"시험PC",명령:"echo ok",준비:$prep}', prep=prepared)

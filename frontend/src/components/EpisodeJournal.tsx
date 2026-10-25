@@ -61,9 +61,9 @@ function EvalBadge({ r }: { r: string | null }) {
   if (!r) return null;
   const achieved = r === 'ACHIEVED';
   const failed = r === 'NOT_ACHIEVED';
-  const label = achieved ? '달성' : failed ? '미달' : r === 'UNKNOWN' ? '검수 미완료' : r === 'NOT_RUN' ? '미검수' : r;
+  const label = achieved ? '검수 승인' : failed ? '기준 미충족' : r === 'UNKNOWN' ? '검수 미완료' : r === 'NOT_RUN' ? '미검수' : r;
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${
+    <span title="이번 응답의 검수 결과입니다. 중단 사유 보고가 승인된 경우에도 원래 작업은 미완료일 수 있습니다. 실제 결과는 상세 기록에서 확인하세요." className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${
       achieved ? 'text-emerald-700 bg-emerald-50' : failed ? 'text-red-700 bg-red-50' : 'text-stone-600 bg-stone-100'
     }`}>
       {achieved ? <Check size={10} /> : <AlertTriangle size={10} />}

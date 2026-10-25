@@ -88,6 +88,8 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 반환값 전체를 보존한다. `observation.command_ok`가 true가 아니면 작업 확인으로 이어간다.
 별도 `execute_ibl` 호출에는 이전 변수가 자동으로 이어지지 않는다.
 `inputs:{작업:실제로_받은_반환값}`으로 전달한다. 예시 ID·경로는 실제 관측값으로 바꾼다.
+`작업`은 전체 접수증 또는 `{kind:"guestpc",task_id:"실제 ID"}` 참조를 받는다.
+`self:task`의 참조 인자는 `ref`다(`task_ref`는 반환 필드).
 
 <!-- example:guestpc_check -->
 ```ibl
@@ -96,6 +98,8 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 ```
 
 - `ok`는 조회 성공, `command_ok`는 작업 성공, `settled`는 종료 확인이다.
+- `exit`·`progress`·`result`·`failure`는 실패 응답에도 있으며 미관측이면 null이다.
+  잘못된 참조는 `invalid_input`으로 반환하고 원격 명령을 접수하지 않는다.
 - 상주형 `succeeded/failed`는 실제 결과의 성패다. 휴대형 `succeeded`는 회신 도착이므로
   종료 코드까지 확인한다. 관용구가 두 모드의 차이를 처리한다.
 - `failed/cancelled/interrupted`는 종료된 실패·취소다. `unknown`은 결과 불명이며 재전송하지 않는다.

@@ -67,18 +67,6 @@ def test_l2_declaration_load_is_items_read_exempt():
 
 
 # ---------------------------------------------------------------- L3
-def test_l3_typecheck_passes_load_pipe_and_does_not_borrow_list_columns(monkeypatch):
-    import ibl_access
-    import ibl_typecheck as TC
-    monkeypatch.setattr(ibl_access, "_return_shapes",
-                        lambda: {"self:lecture": {"kind": "items", "keys": ["title", "meta", "summary", "url"]}})
-    r = TC.typecheck_code('[self:lecture]{op: "load", lecture_id: "x"} >> [table:take]{n: -6}')
-    assert r["ok"] and not [i for i in r["issues"] if i["severity"] == "error"], r["issues"]
-    assert r["types"][0].startswith("(1) items")
-    r2 = TC.typecheck_code('[self:lecture]{op: "load", lecture_id: "x"} >> [table:select]{columns: ["제목", "speaker_note"]}')
-    assert not r2["issues"], r2["issues"]                                         # list 의 관측 열로 경고하지 않는다
-    r3 = TC.typecheck_code('[self:lecture]{op: "list"} >> [table:select]{columns: ["없는열"]}')
-    assert any(i["severity"] == "warning" for i in r3["issues"])                  # fixture op 자신은 종전대로 관측 열
 
 
 if __name__ == "__main__":

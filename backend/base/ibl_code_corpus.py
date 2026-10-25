@@ -21,7 +21,7 @@ _CORPUS_DDL = """
         last_agent TEXT,
         last_origin TEXT,
         source TEXT,
-        edition INTEGER NOT NULL DEFAULT 1
+        edition INTEGER NOT NULL DEFAULT 2
     );
     CREATE INDEX IF NOT EXISTS idx_ibl_corpus_last_seen ON ibl_code_corpus(last_seen);
 """
@@ -35,7 +35,8 @@ def _ensure_corpus_table() -> None:
         try:
             conn.executescript(_CORPUS_DDL)
             if "edition" not in {r[1] for r in conn.execute("PRAGMA table_info(ibl_code_corpus)")}:
-                conn.execute("ALTER TABLE ibl_code_corpus ADD COLUMN edition INTEGER NOT NULL DEFAULT 1")
+                conn.execute("ALTER TABLE ibl_code_corpus ADD COLUMN edition INTEGER")
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_ibl_corpus_current ON ibl_code_corpus(last_seen) WHERE edition=2 AND masked=0')
             conn.commit()
         finally:
             conn.close()
@@ -48,7 +49,7 @@ def _ensure_corpus_table() -> None:
 
 
 def record_ibl_code(code: str, success: bool, elapsed_ms=None, error="",
-                    agent: str = "", origin: str = "", edition: int = 1) -> bool:
+                    agent: str = "", origin: str = "", edition: int = 2) -> bool:
     """IBL 문장 원문 한 건을 코퍼스에 누적(upsert). 관측 훅 — 실패해도 실행을 깨지 않는다.
 
     반환 True=기록됨, False=빈 코드이거나 기록 실패(호출자는 무시해도 된다)."""
@@ -95,6 +96,7 @@ def record_ibl_code(code: str, success: bool, elapsed_ms=None, error="",
                  ok, 1 - ok, ok, ms, err, str(agent or "")[:80], str(origin or "")[:40],
                  el._episode_source(), edition),
             )
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_ibl_corpus_current ON ibl_code_corpus(last_seen) WHERE edition=2 AND masked=0')
             conn.commit()
         finally:
             conn.close()

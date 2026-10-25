@@ -9,7 +9,6 @@ import time
 from ibl_v2_adapters import load_registry
 from ibl_v2_compile import compile_program
 from ibl_v2_runtime import Runtime
-from ibl_edition import source_context
 
 HERE=Path(__file__).resolve().parent
 
@@ -19,8 +18,7 @@ def main():
   started=time.monotonic()
   code=(HERE/'current'/f'{name}.ibl').read_text()
   plan=compile_program(code,registry)
-  with source_context(2):
-   result=Runtime(plan).run()
+  result=Runtime(plan).run()
   value=result.get('value',{})
   summary={'name':name,'check_status':plan.report()['status'],'issues':plan.issues,
            'success':result.get('success'),'source_complete':result.get('source_complete'),

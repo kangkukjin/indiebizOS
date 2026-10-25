@@ -9,19 +9,12 @@ import boot_paths  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from idiom_experiment_worker import run_trial
 from idiom_experiment_cases import decoded
 
 CATALOG = json.loads((ROOT / 'data/idioms/curated.json').read_text())
 NEW = {'열추려보기', '정렬해추리기'}
 
 
-def run(code):
-    trial = run_trial(code, 'dedup')
-    assert trial['result']['success'], trial['result'].get('error')
-    assert trial['observed']['brief'] == 0
-    assert set(trial['observed']['leaf_calls']) <= {'table:select', 'table:sort', 'table:take'}
-    return decoded(trial['result']['final_result'])
 
 
 def test_bodies_have_no_hidden_ai_or_writes():

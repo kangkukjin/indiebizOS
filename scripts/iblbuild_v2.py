@@ -124,8 +124,7 @@ def _param_support_problems(support, entry):
 def check_v2_corpus(code, entry, issues, origin, session=None):
     from ibl_edition import source_edition
     try:
-        if source_edition(code, entry.get("edition")) != 2:
-            return False
+        source_edition(code, entry.get("edition", 2))
         from ibl_v2_learning import check_source
         kwargs = {}
         if session is not None:
@@ -187,7 +186,7 @@ def corpus_entries(root: Path, include_db: bool = False):
         columns = {r[1] for r in con.execute("PRAGMA table_info(ibl_examples)")}
         provenance = "provenance" if "provenance" in columns else "'{}'"
         rows = con.execute("SELECT intent, ibl_code, COALESCE(alias,''), COALESCE(category,''), "
-                           + provenance + " FROM ibl_examples").fetchall()
+                           + provenance + " FROM ibl_current_examples").fetchall()
         con.close()
     except Exception:
         return

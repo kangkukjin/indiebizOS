@@ -255,8 +255,6 @@ class Compiler:
         if name in self.external:
             return self.external[name]
         if name not in self.definitions:
-            if name in getattr(self.definitions, 'retired_names', set()):
-                raise Fault('EDITION_RETIRED', f'구판 함수 {name}은 실행할 수 없습니다. 판본 2 정의로 이관하세요.', kind='compile')
             return None
         from ibl_v2_parser import Parser
         from ibl_v2_store import definition_name

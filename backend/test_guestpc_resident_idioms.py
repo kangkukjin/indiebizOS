@@ -22,7 +22,6 @@ def pc(registry, monkeypatch, tmp_path):
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
     from ibl_v2_store import definition_name
-    from ibl_edition import source_context
 
     spec = importlib.util.spec_from_file_location('guestpc_idiom_handler',
         ROOT / 'data/packages/installed/tools/guest-helper/handler.py')
@@ -58,8 +57,7 @@ def pc(registry, monkeypatch, tmp_path):
     def run(code, **inputs):
         plan = compile_program(code, adapters, definitions=definitions, inputs=inputs)
         assert not plan.issues, plan.issues
-        with source_context(2):
-            result = Runtime(plan, inputs, **getattr(run, 'runtime_options', {})).run()
+        result = Runtime(plan, inputs, **getattr(run, 'runtime_options', {})).run()
         assert result['success'], {k: result.get(k) for k in ('error', 'diagnostic')}
         return result['value']
 

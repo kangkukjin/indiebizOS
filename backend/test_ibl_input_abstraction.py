@@ -78,7 +78,7 @@ def test_real_memory_round_trip_and_actual_success_count(memory):
     code, name, returns = finalize_candidate(source_rows([(1, candidate)])[0], '하나더')
     assert memory.add_examples_batch([{'intent':'하나 더하기', 'ibl_code':code,
                                       'category':'phrase', 'alias':name, 'returns':returns}]) == 1
-    stored = memory.find_phrase_by_alias(name, edition=2)
+    stored = memory.find_phrase_by_alias(name)
     assert stored['success_count'] == 0 and stored['signature'] == 'n'
     from function_library import definitions
     plan = compile_program('[fn:하나더]{n:20}', definitions=definitions())
@@ -86,7 +86,7 @@ def test_real_memory_round_trip_and_actual_success_count(memory):
     assert result['value'] == 21
     result["resume"] = {"run_id": "fixture-actual-call"}
     record_functions(plan, result)
-    assert memory.find_phrase_by_alias(name, edition=2)['success_count'] == 1
+    assert memory.find_phrase_by_alias(name)['success_count'] == 1
 
 
 def test_named_function_is_not_distilled_again_under_candidate_name():
@@ -169,6 +169,6 @@ def test_function_that_handles_external_failure_counts_as_success(memory, monkey
     assert result['source_complete'] is False
     result["resume"] = {"run_id": "fixture-actual-call"}
     record_functions(plan, result)
-    row = memory.find_phrase_by_alias('버티기', edition=2)
+    row = memory.find_phrase_by_alias('버티기')
     assert row['success_count'] == 0 and row['fail_count'] == 0
     # 외부 자료가 불완전한 실행은 완전 성공 실적과 분리한다.

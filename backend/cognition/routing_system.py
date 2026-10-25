@@ -182,7 +182,7 @@ def _delegate_workflow(agent_id: str, params: dict, project_path: str) -> Any:
     from ibl_edition import pin_source, require_current
     try:
         if not isinstance(steps, str):
-            raise ValueError('EDITION_RETIRED: steps 배열 위임은 종료됐습니다.')
+            raise ValueError('SOURCE_TYPE: 위임할 code는 원문 문자열이어야 합니다.')
         steps = pin_source(steps, params.get('edition'))
         edition = require_current(steps)
         request = {"code": steps, "edition": edition}

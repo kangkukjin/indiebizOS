@@ -34,29 +34,16 @@ CADENCE_HOURS = 168        # 주 1회 — 커밋 게이트가 학습 파일을 �
 _MAX_REPORT = 12           # 원인 어휘는 소수라 앞부분이면 충분
 
 
-def _walk_leaves(obj: Any, out: List[dict]):
-    if isinstance(obj, dict):
-        if "_node" in obj and "action" in obj:
-            out.append(obj)
-        for v in obj.values():
-            _walk_leaves(v, out)
-    elif isinstance(obj, list):
-        for v in obj:
-            _walk_leaves(v, out)
 
 
 def audit_corpus_vocab() -> Dict:
     """라이브 코퍼스 전수 감사. 반환: {total, dead, unparsable, flags}."""
     import sqlite3
-    import yaml
-    from ibl_parser import parse
-    from ibl_edition import source_edition
     from corpus_policy import exclusion_reason
 
-    nodes = (yaml.safe_load(_NODES_PATH.read_text(encoding="utf-8")) or {}).get("nodes", {})
     conn = sqlite3.connect(_DB_PATH.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
     conn.row_factory = sqlite3.Row
-    rows = [dict(r) for r in conn.execute("SELECT * FROM ibl_examples")]
+    rows = [dict(r) for r in conn.execute("SELECT * FROM ibl_current_examples")]
     conn.close()
 
     flags: List[Dict] = []
@@ -65,63 +52,33 @@ def audit_corpus_vocab() -> Dict:
     excluded = 0
     registry = definitions = None
     registry_error = None
-    aliases = {r.get('alias') for r in rows if r.get('alias')}
     for row in rows:
         rid, intent, code = row['id'], row['intent'], row['ibl_code']
         excluded += bool(exclusion_reason(row))
         try:
-            edition = source_edition(code, row.get('edition'))
-        except ValueError as exc:
-            current['invalid'] += 1
-            flags.append({'id': rid, 'kind': 'edition_conflict', 'detail': str(exc)[:160]})
-            continue
-        if edition == 2:
-            try:
-                from ibl_v2_compile import compile_program
-                from ibl_v2_adapters import load_registry
-                from ibl_v2_store import definitions as load_definitions, definition_name
-                if registry is None and registry_error is None:
-                    try:
-                        registry, definitions = load_registry(), load_definitions()
-                    except Exception as exc:
-                        registry_error = exc
-                if registry_error:
-                    raise registry_error
-                if row.get('alias') and definition_name(code) != row['alias']:
-                    raise ValueError('alias/definition name mismatch')
-                checked = compile_program(code, registry, definitions=definitions).report()
-                current[checked['status']] += 1
-                if checked['status'] == 'invalid':
-                    flags.append({'id': rid, 'kind': 'current_invalid', 'intent': str(intent)[:60],
-                                  'issues': checked['issues']})
-            except Exception as exc:
-                from ibl_v2_ir import Fault
-                status = ('invalid' if isinstance(exc, ValueError)
-                          or isinstance(exc, Fault) and exc.kind == 'compile' else 'failed')
-                current[status] += 1
-                flags.append({'id': rid, 'kind': 'current_' + status, 'detail': str(exc)[:160]})
-            continue
-        try:
-            if row.get('alias'):
-                from ibl_parser import parse_function_body
-                parsed = parse_function_body(code or "")
-            else:
-                parsed = parse(code or "")
-        except Exception as e:
-            unparsable += 1
-            flags.append({"id": rid, "kind": "unparsable",
-                          "intent": str(intent)[:60], "detail": str(e)[:80]})
-            continue
-        leaves: List[dict] = []
-        _walk_leaves(parsed, leaves)
-        for st in leaves:
-            n, a = st.get("_node"), st.get("action")
-            if n == 'fn' and (a in aliases or st.get('_fn_ref')):
-                continue
-            if n not in nodes or a not in (nodes.get(n, {}).get("actions") or {}):
-                dead += 1
-                flags.append({"id": rid, "kind": "dead_vocab", "vocab": f"{n}:{a}",
-                              "intent": str(intent)[:60]})
+            from ibl_v2_compile import compile_program
+            from ibl_v2_adapters import load_registry
+            from ibl_v2_store import definitions as load_definitions, definition_name
+            if registry is None and registry_error is None:
+                try:
+                    registry, definitions = load_registry(), load_definitions()
+                except Exception as exc:
+                    registry_error = exc
+            if registry_error:
+                raise registry_error
+            if row.get('alias') and definition_name(code) != row['alias']:
+                raise ValueError('alias/definition name mismatch')
+            checked = compile_program(code, registry, definitions=definitions).report()
+            current[checked['status']] += 1
+            if checked['status'] == 'invalid':
+                flags.append({'id': rid, 'kind': 'current_invalid', 'intent': str(intent)[:60],
+                              'issues': checked['issues']})
+        except Exception as exc:
+            from ibl_v2_ir import Fault
+            status = ('invalid' if isinstance(exc, ValueError)
+                      or isinstance(exc, Fault) and exc.kind == 'compile' else 'failed')
+            current[status] += 1
+            flags.append({'id': rid, 'kind': 'current_' + status, 'detail': str(exc)[:160]})
     return {"total": len(rows), "dead": dead, "unparsable": unparsable, "flags": flags,
             "current": current, "authoring_excluded": excluded}
 

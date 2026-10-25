@@ -6,7 +6,7 @@ import boot_paths  # noqa: F401
 import pytest
 
 import ibl_distill_value as value
-from test_distill_source_recovery_2026_09_09 import _arm
+from test_distill_source_recovery_2026_09_09 import _arm, completed_call
 
 SEARCH = '$자료 = [sense:search]{query:"공개 문서"}'
 SELECT = '$자료 >> [table:select]{columns:["title","url"]}'
@@ -14,11 +14,12 @@ CRAWL = '[sense:crawl]{url:"https://example.test/old"}'
 
 
 def call(code, **extra):
-    return dict(tool_name='execute_ibl', input={'code': code}, success=True, **extra)
+    return completed_call(code, **extra)
 
 
 def known(code, ident=1):
-    return {'id': ident, 'intent': '기존 용례', 'ibl_code': code}
+    from ibl_edition import explicit_source
+    return {'id': ident, 'intent': '기존 용례', 'ibl_code': explicit_source(code,2)}
 
 
 @pytest.mark.parametrize('source,existing', [
@@ -51,7 +52,7 @@ def test_new_composition_and_options_are_not_erased():
 ])
 def test_rejected_selection_never_retries_or_writes(monkeypatch, tmp_path, reply):
     rag, saved, asked, runs = _arm(monkeypatch, tmp_path, [{'intent': '검색', 'topic': '시험', **reply}])
-    assert not rag.distill_experience('자료 찾기', [call(SEARCH), call(SELECT)], 0)
+    assert not rag.distill_experience('자료 찾기', [call(SEARCH + '\nreturn $자료.items')], 0)
     assert len(asked) == 1 and saved == runs == []
 
 
@@ -75,7 +76,7 @@ def test_incomplete_goal_evidence_costs_no_call(monkeypatch, tmp_path, outcome):
 def test_evidence_excerpt_is_bounded_and_missing_is_explicit():
     result = {'items': [{'text': '긴 결과' * 1000}]}
     payload = json.loads(value.outcome_evidence([(3, call(SEARCH, result=result)),
-                                                (5, call(SELECT))], None))
+                                                (5, call(SELECT, result=None))], None))
     assert payload['goal_evaluation'] is None
     first, missing = payload['call_results']
     assert first['tool_call_index'] == 3 and first['excerpt_truncated']
@@ -88,7 +89,7 @@ def test_recall_shows_conditions_and_component_without_private_origin():
     import xml.etree.ElementTree as ET
     from ibl_usage_db import UsageExample
     from ibl_usage_rag import IBLUsageRAG
-    entry = UsageExample(1, '자료 조회', SEARCH, 'sense', 'single', 1, .7,
+    entry = UsageExample(1, '자료 조회', '#!ibl edition=2\n'+SEARCH, 'sense', 'single', 1, .7,
                          'distilled_component', -1,
                          provenance=json.dumps({'task_id': 'private-task', 'applicability': '행에 "url" 필드가 있을 때'}))
     xml = IBLUsageRAG._format_references(None, [entry])
@@ -103,7 +104,7 @@ def test_input_budget_preserves_original_and_calls_no_model(monkeypatch, tmp_pat
     rag, saved, asked, _ = _arm(monkeypatch, tmp_path, [])
     tc = call(SEARCH)
     assert not rag.distill_experience('긴 요청' * value.MAX_INPUT_CHARS, [tc], 0)
-    assert saved == asked == [] and tc['input']['code'] == SEARCH
+    assert saved == asked == [] and tc['input']['code'] == '#!ibl edition=2\n'+SEARCH
 
 
 def test_selected_dependencies_and_origin_are_preserved(monkeypatch, tmp_path):
@@ -111,14 +112,14 @@ def test_selected_dependencies_and_origin_are_preserved(monkeypatch, tmp_path):
     monkeypatch.setattr(thread_context, 'get_current_task_id', lambda: 'task-fixture')
     rag, saved, asked, runs = _arm(monkeypatch, tmp_path, [
         {'intent': '검색 결과 열 추리기', 'source_ids': [2], 'scope': 'component', 'topic': '시험'}])
-    assert rag.distill_experience('자료 찾기', [call(SEARCH), call(SELECT), call('[self:time]')], 0)
+    assert rag.distill_experience('자료 찾기', [call(SEARCH), call(SEARCH + '\nreturn $자료.items >> [table:select]{columns:["title","url"]}'), call('[self:time]')], 0)
     assert len(asked) == len(saved) == 1
     entry = saved[0]
-    assert entry['ibl_code'] == SEARCH + '\n' + SELECT
-    assert runs[0][2] == [SEARCH, SELECT]
+    assert entry['ibl_code'] == '#!ibl edition=2\n'+SEARCH+'\nreturn $자료.items >> [table:select]{columns:["title","url"]}'
+    assert runs[0][2] == [entry['ibl_code']]
     evidence = entry['provenance']
     assert evidence['task_id'] == 'task-fixture'
-    assert [r['tool_call_index'] for r in evidence['sources']] == [1, 2]
+    assert [r['tool_call_index'] for r in evidence['sources']] == [2]
     assert all(len(r['sha256']) == 64 for r in evidence['sources'])
     exported = json.loads((tmp_path / 'data/training/ibl_distilled.json').read_text())
     assert exported[0]['provenance'] == evidence
@@ -132,16 +133,11 @@ def test_duplicate_selected_after_model_does_not_write(monkeypatch, tmp_path):
 
 
 def test_unavailable_comparison_or_validation_fails_closed(monkeypatch, tmp_path):
-    rag, saved, asked, runs = _arm(monkeypatch, tmp_path, [{'intent': '검색', 'source_ids': [1]}])
-    import ibl_param_vocab
-    def broken(*args):
-        raise RuntimeError('unavailable')
-    monkeypatch.setattr(ibl_param_vocab, 'check_code_params', broken)
-    assert not rag.distill_experience('검색', [call(SEARCH)], 0)
-    assert len(asked) == 1 and saved == runs == []
-    monkeypatch.setattr(value, 'known_examples', broken)
-    assert not rag.distill_experience('검색', [call(SEARCH)], 0)
-    assert len(asked) == 1
+    rag,saved,asked,runs = _arm(monkeypatch,tmp_path,[])
+    import ibl_v2_learning
+    monkeypatch.setattr(ibl_v2_learning, 'check_source', lambda code: 'validation unavailable')
+    assert not rag.distill_experience('검색',[call(SEARCH)],0)
+    assert asked==saved==runs==[]
 
 
 def test_db_migration_provenance_and_component_retention(monkeypatch, tmp_path):
@@ -180,8 +176,9 @@ def test_release_copy_keeps_private_provenance_local(monkeypatch, tmp_path):
     monkeypatch.setattr(publisher, 'DATA', tmp_path)
     monkeypatch.setattr(publisher, '_iter_model_files', lambda: [])
     with sqlite3.connect(tmp_path / 'ibl_usage.db') as conn:
-        conn.execute('CREATE TABLE ibl_examples (ibl_code TEXT, provenance TEXT)')
-        conn.execute('INSERT INTO ibl_examples VALUES (?, ?)', (SEARCH, '{"task_id":"private-task"}'))
+        conn.execute('CREATE TABLE ibl_examples (ibl_code TEXT, provenance TEXT, executable INTEGER)')
+        conn.execute('INSERT INTO ibl_examples VALUES (?, ?,1)', (SEARCH, '{"task_id":"private-task"}'))
+        conn.execute("INSERT INTO ibl_examples VALUES ('historical original','{}',0)")
     (tmp_path / 'training').mkdir()
     original = json.dumps([{'ibl_code': SEARCH, 'provenance': {'task_id': 'private-task'}}])
     (tmp_path / 'training/ibl_distilled.json').write_text(original)
@@ -189,6 +186,7 @@ def test_release_copy_keeps_private_provenance_local(monkeypatch, tmp_path):
     assert publisher.build_zip(archive) == 2
     with zipfile.ZipFile(archive) as bundle:
         assert b'private-task' not in bundle.read('ibl_usage.db')
+        assert b'historical original' not in bundle.read('ibl_usage.db')
         assert 'provenance' not in json.loads(bundle.read('training/ibl_distilled.json'))[0]
     with sqlite3.connect(tmp_path / 'ibl_usage.db') as conn:
         assert 'private-task' in conn.execute('SELECT provenance FROM ibl_examples').fetchone()[0]

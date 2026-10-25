@@ -5,7 +5,8 @@ fresh 설치(특히 윈도우)엔 해마의 세 조각이 다 없다(맥 개발�
   ② 모델 가중치(model.safetensors 422MB) — .gitignore·미번들
   ③ 용례 + 미리계산 벡터(ibl_hippo_index.json / ibl_hippo_vecs.f32 / training/ibl_distilled.json)
 
-이 모듈이 첫 실행에 ②③을 GitHub Release 에셋에서 userData 로 내려받고, ①을 pip 로 설치한다.
+이 모듈이 첫 실행에 ②만 GitHub Release 에셋에서 userData 로 내려받고, ①을 pip 로 설치한다.
+③의 실행 자료는 현행 카탈로그·훈련 파일의 저장소 설치 경로가 소유한다.
 전부 백그라운드·멱등·시끄럽게(로그). 이미 갖춰졌으면 아무것도 안 한다. 실패해도 부팅·본체엔
 영향 없이 키워드(FTS5) 폴백으로 계속.
 
@@ -21,6 +22,7 @@ import os
 import threading
 import tempfile
 import zipfile
+import shutil
 from pathlib import Path
 from urllib.request import urlopen, Request
 
@@ -62,7 +64,7 @@ def ensure_runtime_libs() -> bool:
 
 
 def download_model(url: str = None) -> bool:
-    """모델+벡터+용례 zip 을 받아 userData/data 아래 전개. 이미 있으면 즉시 True."""
+    """모델 zip에서 models/ibl_embedding 파일만 설치한다. 용례·DB는 설치하지 않는다. 이미 있으면 즉시 True."""
     if _model_present():
         return True
     url = url or os.environ.get("INDIEBIZ_HIPPOCAMPUS_URL") or DEFAULT_URL
@@ -83,7 +85,18 @@ def download_model(url: str = None) -> bool:
         print(f"[해마공급] 다운로드 완료 {total / 1024 / 1024:.0f}MB → 전개 중")
         with zipfile.ZipFile(tmp) as z:
             # zip 은 data/ 기준 상대경로: models/ibl_embedding/…, ibl_hippo_index.json, training/…
-            z.extractall(data_dir)
+            # Only model files belong to this installer. Executable examples are
+            # installed through the current catalog/storage path, never by replacing
+            # a live database or importing arbitrary training files from an archive.
+            for member in z.infolist():
+                path = Path(member.filename)
+                if (member.is_dir() or path.is_absolute() or '..' in path.parts
+                        or path.parts[:2] != ('models', 'ibl_embedding')):
+                    continue
+                target = data_dir / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(member) as source, target.open('wb') as dest:
+                    shutil.copyfileobj(source, dest)
         tmp.unlink(missing_ok=True)
         ok = _model_present()
         print(f"[해마공급] 전개 {'완료' if ok else '실패(모델 파일 없음 — zip 레이아웃 확인)'}")

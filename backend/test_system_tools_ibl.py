@@ -70,10 +70,7 @@ def test_old_code_only_handle_still_works_and_revised_code_uses_saved_inputs(sto
 
 
 @pytest.mark.parametrize("source,requested,expected", [
-    ("[fn:値]{}", None, 1),
-    ("[fn:値]{}", 1, 1),
     ("[fn:値]{}", 2, 2),
-    ("#!ibl edition=1\n[fn:値]{}", None, 1),
     ("#!ibl edition=2\n[fn:値]{}", None, 2),
 ])
 def test_describe_matches_execution_edition(

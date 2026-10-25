@@ -541,78 +541,10 @@ def _load_corpus_param_keys(root: Path) -> dict[str, set[str]] | None:
 
 
 def validate_corpus_vocab(data: dict, root: Path) -> list[str] | None:
-    """학습 코퍼스가 **아직 존재하는 어휘**만 가르치는지 + 전부 파싱되는지.
-
-    2026-08-22 실측 배경: 라이브 코퍼스(ibl_usage.db)는 어휘 은퇴 때마다 이관돼 왔지만
-    `data/training/ibl_training_balanced_20260516.json` 은 부분적으로만 따라와, 은퇴 어휘
-    20여 종 208항목을 3개월간 안고 있었다. 트레이너는 DB 와 이 파일을 **둘 다** 읽으므로
-    다음 풀 재학습이 죽은 어휘를 그대로 되살린다. 아무도 안 보고 있었다 — param 정합
-    검사는 같은 파일을 읽으면서도 "이 액션이 아직 있나" 는 묻지 않았고, 파싱 실패는
-    `except: continue` 로 조용히 넘겼다(그 침묵이 파싱 불가 용례 1건을 살려 뒀다).
-
-    파서/코퍼스 미가용 시 None (검사 건너뜀)."""
-    backend = root / "backend"
-    try:
-        if str(backend) not in sys.path:
-            sys.path.insert(0, str(backend))
-            import boot_paths  # noqa: F401
-        import ibl_parser  # type: ignore
-    except Exception:
-        return None
-
-    def walk(obj):
-        res = []
-        if isinstance(obj, dict):
-            if "_node" in obj and "action" in obj:
-                res.append(obj)
-            for v in obj.values():
-                res += walk(v)
-        elif isinstance(obj, list):
-            for v in obj:
-                res += walk(v)
-        return res
-
-    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
-    issues: list[str] = []
-    seen_any = False
-    v2_session = {}  # One pinned vocabulary/library per full validation pass.
-    for fname, e in _corpus_entries(root, include_db=True):
-        seen_any = True
-        code = e.get("ibl_code") or ""
-        intent = str(e.get("intent") or "")[:40]
-        # 관용구 골격은 **함수 몸**이다 — 미할당 `$이름` 이 자리를 가리지 않고 시그니처다
-        # (언어 개정 2026-09-07). 최상위 문법으로 읽으면 파이프 머리·병렬 분기 슬롯을 오타로 본다.
-        _is_body = bool(e.get("alias")) or e.get("category") == "phrase"
-        if check_v2_corpus(code, e, issues, fname, v2_session):
-            continue
-        try:
-            parsed = (ibl_parser.parse_function_body(code) if _is_body else ibl_parser.parse(code))
-        except Exception as ex:
-            issues.append(f"{fname}: 파싱 불가 — {intent} :: {str(ex)[:60]}")
-            continue
-        for st in walk(parsed):
-            n, a = st.get("_node"), st.get("action")
-            if n == "fn" or st.get("_def"):
-                continue                    # [fn:이름]/[def:] 는 함수 호출·정의(언어 개정 2026-09-05) — 어휘가 아니다
-            ac = (nodes.get(n, {}).get("actions") or {}).get(a) if n in nodes else None
-            if ac is None:
-                issues.append(f"{fname}: 죽은 어휘 [{n}:{a}] — {intent}")
-                continue
-            # ★2026-08-22 (20회차 B20-1): 액션이 살아 있어도 **op 가 죽어 있으면**
-            # 코퍼스는 실행 불가능한 문장을 가르친다. 액션 은퇴는 이관돼 왔지만 op
-            # 은퇴(stock price→quote, output file→self:write 흡수 …)는 아무도 안 봤고,
-            # 해마가 그 형태를 회상시키면 번역기가 죽은 문장을 뱉는다 — 실패는 실행
-            # 시점에야 드러난다. 액션 생존과 같은 자로 op 생존도 잰다(새 검사 아님, 같은 루프).
-            _ops = (ac.get("ops") or {}).get("values") if isinstance(ac, dict) else None
-            if _ops:
-                _op = (st.get("params") or {}).get("op")
-                if isinstance(_op, str) and _op and _op not in _ops:
-                    issues.append(
-                        f"{fname}: 죽은 op [{n}:{a}]{{op: '{_op}'}} — {intent} "
-                        f"(사용 가능: {sorted(_ops)})")
-    if not seen_any:
-        return None
-    # 같은 어휘가 수십 건 반복되므로 앞부분만 보여준다(원인은 어휘 하나다).
+    """Use the runtime compiler for every active training source."""
+    issues, session = [], {}
+    for origin, entry in _corpus_entries(root, include_db=True):
+        check_v2_corpus(entry.get('ibl_code', ''), entry, issues, origin, session)
     return issues
 
 
@@ -1103,32 +1035,6 @@ def validate_standard_core(data: dict, root: Path) -> list[str]:
             "(STANDARD_CORE_NODES). 기능어 코어 변경은 언어 개정 — ibl.md '언어의 경계' 조항과 "
             "이 선언을 함께 갱신할 것."
         )
-    from iblbuild_common import backend_module_path
-    parser_path = backend_module_path(root, "ibl_parser")
-    try:
-        src = parser_path.read_text(encoding="utf-8")
-    except OSError:
-        issues.append(f"표준-코어 가드: 파서를 읽지 못함 ({parser_path})")
-        return issues
-    m = re.search(r"def _pipe_block\(.*?(?=\ndef |\Z)", src, re.S)
-    body = m.group(0) if m else ""
-    targets = set(re.findall(r"\[(\w+):(\w+)\]", body))
-    if not targets:
-        issues.append(
-            "표준-코어 가드: 파서 _pipe_block 에서 desugar 타깃([x:y] 코드젠 리터럴)을 찾지 못함 — "
-            "함수 이동/개명 시 이 가드도 함께 갱신할 것"
-        )
-    for node_name, action_name in sorted(targets):
-        if node_name not in STANDARD_CORE_NODES:
-            issues.append(
-                f"표준-코어 가드: 파서 desugar 가 비표준 노드 [{node_name}:{action_name}] 를 코드젠 — "
-                "문법 설탕은 기능어 코어(STANDARD_CORE_NODES)로만 펼칠 수 있음"
-            )
-        elif action_name not in ((nodes.get(node_name) or {}).get("actions") or {}):
-            issues.append(
-                f"표준-코어 가드: 파서 desugar 타깃 [{node_name}:{action_name}] 가 레지스트리에 없음 — "
-                "표준 코어 액션 개명 시 ibl_parser._pipe_block 도 함께 (언어 개정)"
-            )
     return issues
 
 

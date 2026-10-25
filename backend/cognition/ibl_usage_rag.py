@@ -138,7 +138,7 @@ def _current_phrase_rows(db, results):
         if not alias or alias in seen:
             continue
         seen.add(alias)
-        row = db.find_phrase_by_alias(alias, edition=2)
+        row = db.find_phrase_by_alias(alias)
         if not row:
             continue  # The definition was removed after the cached search.
         selected = copy.copy(ex)
@@ -327,8 +327,7 @@ class IBLUsageRAG:
                      "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
                      "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:이름]($인자){...} 로 고쳐 부른다. "
                      "여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
-        note += " edition은 저장 원문의 실행 의미다. 판본 1 원문은 역사 조회용이며 자동 변환하거나 실행하지 않는다. 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하라. 회상 줄의 `→ 반환`이 반환 계약이고 `⟨관측: …⟩`은 실제 실행이 돌려준 필드다. 그 줄에 반환이 없을 때만 describe로 확인하라."
-        from ibl_edition import source_edition
+        note += " 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하라. 회상 줄의 `→ 반환`이 반환 계약이고 `⟨관측: …⟩`은 실제 실행이 돌려준 필드다. 그 줄에 반환이 없을 때만 describe로 확인하라."
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
             # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가
@@ -341,7 +340,7 @@ class IBLUsageRAG:
                 attrs += f' applicability="{_xml_attr(condition)}"'
             from corpus_policy import exclusion_reason
             reason = exclusion_reason(ex)
-            attrs += f' edition="{source_edition(ex.ibl_code)}"'
+            attrs += ' edition="2"'
             if getattr(ex, 'source', '') == 'distilled_component':
                 attrs += ' scope="component"'
             # success_rate >= 0 이면 시도 이력 있음(0.0=전부 실패 포함) → 표시.
@@ -392,8 +391,7 @@ class IBLUsageRAG:
             condition = applicability_note(getattr(ex, 'provenance', '{}'))
             if condition:
                 attrs += f' applicability="{_xml_attr(condition)}"'
-            edition = source_edition(ex.ibl_code)
-            attrs += f' edition="{edition}"'
+            attrs += ' edition="2"'
             if known and names:
                 attrs += f' slots="{_xml_attr(", ".join(names))}"'
             if ex.success_rate >= 0:
@@ -816,7 +814,10 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
         code = (tc.get("input") or {}).get("code", "")
         if code:
             from ibl_edition import explicit_source
-            ibl_codes.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
+            try:
+                ibl_codes.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
+            except ValueError:
+                continue  # Invalid source is not execution evidence.
 
     # 관용구 실적은 실행 자리의 ID·revision·call_id에만 귀속된다.
     from thread_context import clear_phrase_recall
@@ -897,13 +898,23 @@ def _fn_called(alias: str, ibl_calls: list) -> bool:
 
 
 def _beyond_fn_calls(ibl_calls: list, alias: str) -> list:
-    """`[fn:alias]{…}` 호출만으로 된 문장을 뺀 나머지 — 부른 뒤 *더한* 문장들."""
-    pat = re.compile(r'(?:\$[\w가-힣]+\s*=\s*)?\[fn:\s*' + re.escape(alias) + r'\s*\]\s*\{[^}]*\}')
+    """Return complete programs that do more than call this stored function."""
+    from ibl_v2_parser import parse
+    from ibl_v2_learning import walk_nodes
+    from ibl_v2_ir import Fault
     out = []
     for code in ibl_calls or []:
-        rest = pat.sub("", code or "")
-        rest = re.sub(r'^[\s;>&|?]+$', "", rest.strip())
-        if rest.strip():
+        try:
+            statements = parse(code).data['statements']
+            only_calls = bool(statements)
+            for statement in statements:
+                node = statement.data['value'] if statement.kind in {'bind', 'return'} else statement
+                calls = [n for n in walk_nodes(node) if n.kind == 'call']
+                only_calls = only_calls and node.kind == 'call' and len(calls) == 1 and (
+                    node.data['node'], node.data['action']) == ('fn', alias)
+            if not only_calls:
+                out.append(code)
+        except (ValueError, Fault):
             out.append(code)
     return out
 
@@ -926,8 +937,8 @@ def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
 # ── 접지·구문 관문은 ibl_distill_gates.py 로 분할(2026-09-06, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
 from ibl_distill_gates import (  # noqa: E402,F401
     _strip_strings, _composed, _actions_of, _heads_grounded, _composition_grounded,
-    _head_seq, _is_subseq, _restore_var_assignments, _syntax_gate_with_restore,
-    _recover_distill_selection, select_distill_source,
+    _head_seq, _is_subseq, _complete_source_gate,
+    select_distill_source,
 )
 
 
@@ -970,13 +981,6 @@ JSON: {{"decision":"keep|skip", "benefit":"기존 용례 대비 구체적으로 
 "applicability":"적용 조건과 이번 값의 한계", "intent":"선택한 절차의 의도", "source_ids":[1], "scope":"task|component",
 "topic":"가지/경로", "name":"입력 함수 후보에만 제안할 이름", "retyped":[], "mergeable":[]}}
 독립 실행 원문이 없으면 decision="skip", source_ids:[]로 둔다. 원문은 기존 실행 원장에 보존된다."""
-
-
-# ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
-from ibl_idiom import (  # noqa: E402,F401
-    _blank_slots, _sig, _sentence_matches, _normalize_slot_quoting, _phrase_grounded,
-    _phrase_private_reason, _phrase_used, _distill_phrase,
-)
 
 
 def distill_experience(user_message: str, tool_calls: list, top_score: float,
@@ -1028,7 +1032,7 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
     evidence_notes = []
     import json
     from ibl_honesty import truncation_evidence, completion_evidence
-    from legacy_example_projection import checked_program_sources
+    from checked_program_sources import checked_program_sources
     checked_sources = checked_program_sources(tool_calls)
     for tool_index, tc in enumerate(tool_calls, 1):
         if not isinstance(tc, dict):
@@ -1076,7 +1080,7 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
                 retry_notes.append(f"  - {code[:200]}" + (f" — 첫 미달 사유: {fb}" if fb else ""))
 
     from ibl_distill_gates import memory_only_program
-    if not ibl_calls or (_ge is None and all(memory_only_program(code, (tc.get("input") or {}).get("edition"))
+    if not ibl_calls or (_ge is None and all(memory_only_program(code)
                                            for code, (_, tc) in zip(ibl_calls, accepted_calls))):
         return False
 
@@ -1178,14 +1182,11 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
 
     phrase_ok = False
     _alias, _returns = "", ""
-    from ibl_edition import source_edition
-    edition = source_edition(code)
     if committed:
         # 재시도는 새 함수 생성이 아니다. 먼저 저장된 이름으로 색인·학습 파일을 복구한다.
         code, _alias, _returns = (committed[k] for k in ('ibl_code', 'alias', 'returns'))
         intent, _topic = committed['intent'], committed['topic']
-        edition = source_edition(code)
-    elif edition == 2:
+    else:
         from ibl_v2_learning import check_source
         if check_source(code) or code not in source_calls:
             return False
@@ -1196,46 +1197,6 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
         except (ValueError, StopIteration) as exc:
             print(f'[경험증류] 입력 함수 증거 검사 실패: {exc}')
             return False
-    else:
-        from ibl_param_vocab import normalize_corpus_code
-        code = normalize_corpus_code(code)
-        code, _syntax_err = _syntax_gate_with_restore(code, ibl_calls, "[경험증류]")
-        if _syntax_err:
-            print(f"[경험증류] 파싱 불가 — 추가 모델 호출 없이 보류: {_syntax_err}")
-            return phrase_ok
-
-        if not _heads_grounded(code, ibl_calls):
-            print(f"[경험증류] 머리 접지 실패(실행에 없던 액션) — 증류 스킵: {code[:80]}")
-            return phrase_ok
-
-        if not _composition_grounded(code, ibl_calls):
-            print(f"[경험증류] 합성 접지 실패(실행에 없던 합성) — 증류 스킵: {code[:80]}")
-            return phrase_ok
-
-        code = re.sub(r',\s*_raw:\s*(?:true|false)', '', code)
-        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*,\s*', '{', code)
-        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*\}', '{}', code)
-
-        if not _validate_ibl_actions(code):
-            return phrase_ok
-
-        try:
-            from ibl_param_vocab import check_code_params
-            _param_issues = check_code_params(code)
-            if _param_issues:
-                print(f"[경험증류] 미인식 파라미터 — 증류 스킵: "
-                      f"{[(i['action'], i['unknown']) for i in _param_issues]}")
-                return phrase_ok
-        except Exception as exc:
-            print(f"[경험증류] 인자 검증 불가 — 저장 보류: {exc}")
-            return phrase_ok
-
-        from ibl_idiom import example_entrance_reason
-        _entrance_why = example_entrance_reason(intent, code)
-        if _entrance_why:
-            print(f"[경험증류] 입구 관문 — 증류 스킵: {_entrance_why}")
-            return phrase_ok
-
     node_pattern = re.compile(r'\[([a-z_-]+):')
     nodes = ",".join(sorted(set(node_pattern.findall(code))))
 
@@ -1275,7 +1236,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     try:
         existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
         existing = [e for e in existing if not candidate_key or e.get("provenance", {}).get("candidate_key") != candidate_key]
-        existing.append({"intent": intent, "ibl_code": code, "edition": edition, "alias": _alias, "returns": _returns, "category": category, "source": "distilled_component" if component else "distilled", "provenance": evidence})
+        existing.append({"intent": intent, "ibl_code": code, "edition": 2, "alias": _alias, "returns": _returns, "category": category, "source": "distilled_component" if component else "distilled", "provenance": evidence})
         temp = distilled_path.with_suffix(".distill.tmp")
         temp.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
         temp.replace(distilled_path)
@@ -1365,7 +1326,7 @@ def _consolidate_distilled_json(cap: int = HIPPO_JSON_CAP) -> dict:
         if not code or not _validate_ibl_actions(code):
             return False
         try:
-            from ibl_parser import parse as _ibl_parse
+            from ibl_v2_parser import parse as _ibl_parse
             _ibl_parse(code)
         except Exception:
             return False

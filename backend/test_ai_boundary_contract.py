@@ -160,20 +160,8 @@ def test_bounded_repetition_scan_is_honest():
     assert inspect_inputs([deep], mode="each", limit_chars=60000)["repetition_scan"] == "partial"
 
 
-def test_static_contract_and_inspection_use_dictionary_metadata():
-    params = json.dumps({"items": SOURCE, "instruction": "번역", "contract": CONTRACT, "inspect": "each"})
-    result = typecheck_code("[table:ai]" + params)
-    assert result["ok"], result
-    assert result["preflight"]["declared_ai_visits_upper_bound"] == 0
-    bad = json.dumps({"items": SOURCE, "instruction": "번역", "contract": CONTRACT, "fields": ["input"]})
-    result = typecheck_code("[table:ai]" + bad)
-    assert not result["ok"] and any("contract" in i["message"] for i in result["issues"])
 
 
-def test_dynamic_contract_is_deferred_not_rejected():
-    code = '$c=' + json.dumps(CONTRACT) + '\n[table:ai]{items:' + json.dumps(SOURCE)
-    result = typecheck_code(code + ',instruction:"번역",contract:$c}')
-    assert result["ok"], result
 
 
 @pytest.mark.parametrize("path", ["a..b", "a.*", "a[0]", " a", ".a"])
@@ -182,24 +170,8 @@ def test_invalid_paths_rejected_by_shared_parser(path):
         validate_contract({"covers": [{"input": path, "output": "result", "key": "id"}]})
 
 
-def test_inspection_preserves_columns_and_still_rejects_wrong_currency():
-    code = '[{source:"x"}] >> [table:ai]{instruction:"번역",inspect:"each",fields:["result"]}'
-    assert typecheck_code(code + ' >> [table:select]{columns:["source"]}')["ok"]
-    assert not typecheck_code(code + ' >> [table:select]{columns:["result"]}')["ok"]
-    code = '[{source:"x"}] >> [table:brief]{instruction:"요약"} >> [table:ai]{instruction:"x",inspect:"each"}'
-    assert not typecheck_code(code)["ok"]
 
 
-def test_inspection_and_criteria_never_call_a_judge(monkeypatch, transform):
-    import ibl_quality
-    monkeypatch.setattr(ibl_quality, "_judge", lambda *a: pytest.fail("quality model called"))
-    params = {"inspect": "each", "criteria": "정확한 번역", "instruction": "번역", "items": SOURCE}
-    checked = typecheck_code("[table:ai]" + json.dumps(params))
-    assert not checked["ok"]
-    result = ibl_quality.apply_criteria("정확한 번역", transform(inspect="each"),
-                                       {"params": params}, "table", "ai", ".", None,
-                                       lambda *a: pytest.fail("inspection retried"))
-    assert result["error_type"] == "input_inspection" and not transform.calls
 
 
 def test_each_stops_before_remaining_requests_and_downstream_on_partial_response(tmp_path, monkeypatch):

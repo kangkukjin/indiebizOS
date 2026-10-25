@@ -59,9 +59,6 @@ class IBLRequest(BaseModel):
     reuse: Optional[dict] = None       # 고친 프로그램이 이전 실행 {run_id}의 읽기 영수증을 재사용(2026-09-26).
     code_edits: Optional[List[dict]] = None  # code 가 $checked·$rejected 참조일 때 그 원문의 조각 치환(긴문장 L18-7).
     budget: Optional[dict] = None      # 판본 2 요청 단위 steps/rows 상한.
-    # 옛 클라이언트에 명시 거절을 돌려주기 위한 필드다. 읽기·치환은 수행하지 않는다.
-    files: Optional[List[str]] = None
-    files_from: Optional[List[str]] = None
     project_id: Optional[str] = None   # 수동/앱 모드 등 표면이 자기 프로젝트를 지정
     project_path: str = "."
     agent_id: Optional[str] = None     # 발신 신원(channel_send/read 게이트). out-of-process 프로바이더(Claude Code)가
@@ -148,6 +145,7 @@ class DistillRequest(BaseModel):
     증류된다 — 해마가 이미 잘 아는 패턴은 다시 학습하지 않는다."""
     intent: str
     code: str
+    task_ref: dict
     top_score: float = 0.0
 
 class ApproveRequest(BaseModel):
@@ -323,10 +321,6 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["budget"] = req.budget
                     if req.code_edits is not None:
                         _ti["code_edits"] = req.code_edits
-                    if req.files is not None:
-                        _ti["files"] = req.files
-                    if req.files_from is not None:
-                        _ti["files_from"] = req.files_from
                     if req.check:
                         _ti["check"] = True
                     from supervision_bus import current as supervisor_current
@@ -766,14 +760,17 @@ async def distill_ibl(req: DistillRequest):
     top_score < 0.7 일 때만 일반화해 ibl_distilled.json + 해마 인덱스에 축적된다.
     """
     intent = (req.intent or "").strip()
-    code = (req.code or "").strip()
-    if not intent or not code:
+    code = req.code or ""
+    if not intent or not code.strip():
         return {"distilled": False, "reason": "intent/code 가 비어 있습니다."}
 
     try:
         from ibl_usage_rag import distill_experience
-        # 수동 모드 성공 = execute_ibl 성공 1건으로 모델링
-        tool_calls = [{"tool_name": "execute_ibl", "input": {"code": code}, "success": True}]
+        from ibl_continuations import completed_call
+        call = completed_call(req.task_ref, code)
+        if call is None:
+            return {"distilled": False, "reason": "이 원문의 완료된 실행 영수증이 필요합니다. 실행 결과를 확인하세요."}
+        tool_calls = [call]
         # ★워커 스레드에서 — 증류는 내부에서 경량 LLM(반성)을 블로킹 호출한다.
         #   translate 와 같은 부류(이벤트 루프 기아 → /health 무응답 → keeper 오발).
         import asyncio

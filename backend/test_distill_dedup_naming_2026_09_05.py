@@ -23,14 +23,6 @@ APPLY = '[self:patch]{op: "apply", proposal_id: "p_20260905_162707"}'
 
 
 # ---------------------------------------------------------------- D1
-def test_d1_same_program_by_blank_signature():
-    from ibl_idiom import same_program
-    code = STATUS + "\n" + APPLY
-    assert same_program(code, [STATUS, '[self:patch]{op: "apply", proposal_id: "$제안번호"}'])
-    assert same_program(STATUS + "; " + APPLY, [STATUS, '[self:patch]{op: "apply", proposal_id: "${제안}"}'])
-    assert not same_program(code, [STATUS])                                          # 문장 수 다름
-    assert not same_program(code, [STATUS, '[self:patch]{op: "discard", proposal_id: "$p"}'])   # op 다름
-    assert not same_program("", [STATUS])
 
 
 # ---------------------------------------------------------------- D2
@@ -46,11 +38,11 @@ def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path,
     monkeypatch.setattr(hippo_tree, "DOC_DIR", str(tmp_path / "tree"))
     os.makedirs(tmp_path / "tree" / "몸 자기점검·수리")
     (tmp_path / "tree" / "몸 자기점검·수리" / hippo_tree.DOC_NAME).write_text("# x\n", encoding="utf-8")
-    code = STATUS + "\n" + APPLY
+    code = "#!ibl edition=2\n" + STATUS + "\n" + APPLY
     import ibl_distill_value
     monkeypatch.setattr(ibl_distill_value, "known_examples", lambda db: [])
     reply = {"decision": "keep", "benefit": "상태 확인 뒤 적용하는 절차", "applicability": "유효한 제안 ID",
-             "source_ids": [1, 2], "intent": "제안된 수리안을 적용한다", "code": code, "code_name": "수리제안적용하기", "topic": "몸 자기점검·수리",
+             "source_ids": [1], "intent": "제안된 수리안을 적용한다", "code": code, "code_name": "수리제안적용하기", "topic": "몸 자기점검·수리",
              "phrase": [STATUS, '[self:patch]{op: "apply", proposal_id: "${제안번호}"}'], "slots": {"제안번호": "p_20260905_162707"},
              "phrase_name": "수리제안적용하기"}
     fake = types.ModuleType("consciousness_agent")
@@ -65,8 +57,8 @@ def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path,
     monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias", lambda self, n: None)
     monkeypatch.setattr(rag, "_validate_ibl_actions", lambda code: True)
     monkeypatch.setattr(ibl_param_vocab, "check_code_params", lambda code: [])
-    calls = [{"tool_name": "execute_ibl", "input": {"code": STATUS}, "success": True},
-             {"tool_name": "execute_ibl", "input": {"code": APPLY}, "success": True}]
+    from test_distill_source_recovery_2026_09_09 import completed_call
+    calls = [completed_call(code)]
     assert rag.distill_experience("#repair 적용해줘", calls, top_score=0.3) is True
     # ★정책 반전(2026-09-07): 자동 경로는 관용구도 이름도 만들지 않는다 — 상시 프롬프트에 서는
     #   이름은 곧 어휘이고, 어휘는 자동으로 늘지 않는다. 그래서 '관용구와 낱말이 겹치니 하나만
@@ -80,20 +72,15 @@ def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path,
 
 # ---------------------------------------------------------------- N1 · R1
 def test_n1_name_shape_rule_is_now_a_gate_not_prose():
-    """"이름은 사건이 아니라 모양" — 반성기 프롬프트의 산문이던 규약이 **등록 관문**이 됐다(2026-09-07).
-
-    셀 수 있으면 관문이 실패시킨다(카운터 심고 두고 보기 금지)."""
     import ibl_usage_rag as rag
-    p = rag._build_distill_prompt("u", "  1. " + STATUS, "", "")
-    assert "phrase_name" not in p                       # 모델에게 짓게 하지 않는다
-    sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), "scripts"))
+    assert 'phrase_name' not in rag._build_distill_prompt('u', STATUS, '', '')
+    sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), 'scripts'))
     import register_idiom
-    # 인자는 액션의 선언대로(09-18 인자 검사 조이기): [self:patch] 의 제안 번호 키는 proposal_id — 옛 예의 `id` 는 선언에 없는 키였다.
-    good = '[self:patch]{op: "status"}; [self:patch]{op: "apply", proposal_id: "${제안번호}"}'
-    assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때",
-                                 '[self:patch]{op: "apply", id: "${제안번호}"}')[1] == "존재하지 않는 액션 또는 인자"
-    assert register_idiom._gates("오버레이레이아웃무관허용및재적용", "제안을 적용해야 할 때", good)[0] is not None  # 문법적으로 유효한 긴 이름도 저장 가능.
-    assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때", good)[1] is None
+    for name in ('제안적용하기', '오버레이레이아웃무관허용및재적용'):
+        source = '#!ibl edition=2\n[def:'+name+']($제안번호){return [self:patch]{op:"apply",proposal_id:$제안번호}}'
+        assert register_idiom._gates(name, '제안을 적용해야 할 때', source)[1] is None
+    bad = '#!ibl edition=2\n[def:제안적용하기](){return $누락}'
+    assert register_idiom._gates('제안적용하기', '', bad)[0] is None
 
 
 def test_r1_repair_fragment_preserves_capabilities_and_check_receipts():

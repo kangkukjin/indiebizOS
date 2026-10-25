@@ -32,21 +32,10 @@ SAME_SHAPE = ('$m = [table:take]{items: [{"x": 9}, {"x": 8}], n: 2}\n'
               '$n = $m >> [table:take]{n: 2}')          # 슬롯 값만 다르다(리터럴·숫자·변수 이름)
 
 
-def test_shape_folds_slots_only():
-    from fn_recognizer import shape, statements
-    assert shape(PROG) == shape(SAME_SHAPE)
-    assert shape(PROG) != shape('$a = [table:take]{items: [{"x": 1}], n: 2}\n$b = $a >> [table:select]{columns: ["x"]}')
-    assert len(statements(PROG)) == 2
 
 
 
 
-def test_repeated_unnamed_program_is_counted_from_corpus(monkeypatch):
-    import fn_recognizer
-    monkeypatch.setattr(fn_recognizer, "_aliased_shapes", lambda: {})
-    monkeypatch.setattr(fn_recognizer, "corpus_stats", lambda code: {"seen_count": 3, "success_count": 2})
-    hint = fn_recognizer.fn_hint_for(PROG)
-    assert hint["seen"] == 3 and "4번째" in hint["note"] and "증류" in hint["note"]
 
 
 

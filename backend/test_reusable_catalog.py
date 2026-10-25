@@ -204,29 +204,10 @@ def test_saved_candidate_rechecks_dependencies_and_access(tmp_path, monkeypatch)
     assert discovery_payload([row])['candidates'][0]['error'] == row['error']
 
 
-def test_installed_intent_uses_matching_source_and_rejects_conflicting_teaching(tmp_path, monkeypatch):
-    import json
-    from function_migration import installed_descriptions
-    monkeypatch.setattr('runtime_utils.get_base_path', lambda: tmp_path)
-    monkeypatch.setattr('thread_context.get_repair_workspace', lambda **kwargs: None)
-    root = tmp_path/'data/idioms'
-    root.mkdir(parents=True)
-    source = '[def:opaque](){return 1}'
-    (root/'part.ibl').write_text(source)
-    row = {'alias': 'opaque', 'source_file': 'part.ibl', 'intent': '본체 음량 조절'}
-    (root/'parts_seeds.json').write_text(json.dumps([row]))
-    descriptions = installed_descriptions({'opaque': source})
-    assert ranked('본체 음량 낮춰', [{'id': 'fn:opaque', 'description': descriptions['opaque']}])
-    assert installed_descriptions({'opaque': '[def:opaque](){return 2}'}) == {}
-    (root/'other_seeds.json').write_text(json.dumps([{**row, 'intent': '다른 의미'}]))
-    assert installed_descriptions({'opaque': source}) == {}
-    (root/'other_seeds.json').write_text(json.dumps([{**row, 'source_file': '../outside.ibl'}]))
-    assert installed_descriptions({'opaque': source}) == descriptions
 
 
 def test_shipped_functions_have_task_descriptions(installed_functions):
     from ibl_v2_store import installed_definitions
-    from function_migration import installed_descriptions
     definitions = installed_definitions()
     import function_store
     descriptions = {r['name']: r['description'] for r in function_store.snapshot()['records'].values() if r['edition'] == 2}

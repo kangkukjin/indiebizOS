@@ -55,7 +55,7 @@ def test_legacy_save_cannot_remove_a_current_function(store):
     result = execute_workflow_action('save', {'workflow_id': 'base', 'name': 'base',
                                              'edition': 1, 'do': '[self:time]{}'}, PROJECT)
     assert result['success'] is False
-    assert '판본' in result['error']
+    assert 'code가 필요' in result['error']
     assert run('return [fn:caller]{x:4}')['value'] == 4
 
 

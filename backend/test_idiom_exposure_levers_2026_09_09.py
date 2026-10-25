@@ -66,34 +66,13 @@ def test_catalog_line_stands_under_anchor_and_switch_strips_both(tmp_path, monke
     env = ibl_access.build_environment()
     lines = env.splitlines()
     i = next(k for k, l in enumerate(lines) if l.strip().startswith('self:script ::'))
-    assert lines[i + 1].strip().startswith("↳ 관용구 판본 2 (execute_ibl edition:2): [fn:위치마다읽기]{위치: "), lines[i + 1]
+    assert lines[i + 1].strip().startswith("↳ 관용구 [fn:위치마다읽기]{위치: "), lines[i + 1]
     assert "<ibl_idioms" in env and env.count("↳ 관용구") == 1     # 다른 잎 액션 옆에는 서지 않는다
     hidden = ibl_access.build_environment(expose_idioms=False)
     assert "↳ 관용구" not in hidden and "<ibl_idioms" not in hidden
     assert "self:read ::" in hidden and "self:write ::" in hidden   # 어휘 목록 자체는 그대로
 
 
-@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
-def test_validate_catalog_runs_every_producer_example_through_the_gate():
-    import curate_idioms
-    catalog = json.loads((ROOT / "data/idioms/curated.json").read_text())
-    entry = next(e for e in catalog["idioms"] if e["name"] == "위치마다읽기")
-    assert entry["examples"], "생산자가 다른 용례가 선정집에 있어야 한다(지렛대 3)"
-    assert "grep" not in entry["when"].split("(")[0]          # '언제'는 생산자가 아니라 입력 모양으로 시작한다(지렛대 2)
-    piped = copy.deepcopy(catalog)
-    next(e for e in piped["idioms"] if e["name"] == "위치마다읽기")["examples"].append(
-        {"intent": "파이프로 위치 전달", "code": '[self:read]{path:"a.json"} >> [fn:위치마다읽기]{개수:3,줄수:5}'})
-    curate_idioms.validate_catalog(piped)
-    bad = copy.deepcopy(piped)
-    next(e for e in bad["idioms"] if e["name"] == "위치마다읽기")["examples"][-1]["code"] = (
-        '[self:read]{path:"a.json"} >> [fn:위치마다읽기]{개수:3}')
-    with pytest.raises(ValueError, match="인자"):
-        curate_idioms.validate_catalog(bad)
-    bad = copy.deepcopy(piped)
-    next(e for e in bad["idioms"] if e["name"] == "위치마다읽기")["examples"][-1]["code"] = (
-        '[fn:위치마다읽기]{개수:3,줄수:5}')
-    with pytest.raises(ValueError, match="인자"):
-        curate_idioms.validate_catalog(bad)
 
 
 class _DB:

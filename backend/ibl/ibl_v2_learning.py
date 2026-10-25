@@ -95,3 +95,27 @@ def _owned_registry():
             if contract:
                 registry[key] = Adapter(validate_contract(contract), inspection_only)
     return registry
+
+
+def call_sites(source):
+    return [node for node in walk_nodes(parse(source)) if node.kind == 'call']
+
+
+def call_parameters(node):
+    from common.expression_ir import record_fields
+    from ibl_v2_analysis import constant_value
+    return {key: constant_value(value) for key, value in record_fields(node.data['params']).items()}
+
+from common.expression_ir import Node
+
+def walk_nodes(value):
+    """Visit syntax nodes in source order without evaluating expressions."""
+    if isinstance(value, Node):
+        yield value
+        yield from walk_nodes(value.data)
+    elif isinstance(value, dict):
+        for child in value.values():
+            yield from walk_nodes(child)
+    elif isinstance(value, (tuple, list)):
+        for child in value:
+            yield from walk_nodes(child)

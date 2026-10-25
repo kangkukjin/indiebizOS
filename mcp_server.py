@@ -264,8 +264,6 @@ async def execute_ibl(code: str, project_path: str = "",
                       reuse: Optional[dict] = None,
                       budget: Optional[dict] = None,
                       code_edits: Optional[List[dict]] = None,
-                      files: Optional[List[str]] = None,
-                      files_from: Optional[List[str]] = None,
                       recover: Optional[str] = None,
                       wait: float = 0,
                       check: bool = False,
@@ -306,12 +304,11 @@ async def execute_ibl(code: str, project_path: str = "",
     recover는 기존 실행을 조회하므로 그 실행의 출처를 변경하지 않습니다.
 
     project_path를 비우면 현재 프로젝트를 사용합니다. 실행은 판본 2만 지원합니다.
-    생략하면 현재 문법(2)이며 명시한 판본 1은 실행하지 않습니다.
+    작성 요청의 기본 형식은 edition:2입니다.
     resume={run_id}는 동일한 현재 프로그램의 실행 영수증으로 재개합니다.
     reuse={run_id}는 고친 프로그램에서 이전 실행의 같은 읽기·선언 모델 호출(액션·인자·구현·모델 설정 동일)의 성공 영수증을 재사용합니다.
     reuse={run_id,models:false}면 모델만 새로 판단합니다.
     inputs 값 자리의 {"$ref": result_ref.id, "path": [...]}는 저장된 결과를 복사 없이 전달합니다.
-    files·files_from은 종료된 인자로 거절됩니다. inputs·명시 값·저장된 실행 영수증을 사용합니다.
     """
     # ctx 는 FastMCP 가 자동 주입(모델에 노출 안 됨). HTTP 경로면 헤더에서 신원을 꺼낸다.
     if origin is not None and origin != "training":
@@ -353,10 +350,6 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["reuse"] = reuse  # 고친 프로그램의 읽기 영수증 재사용(2026-09-26)
     if code_edits is not None:
         payload["code_edits"] = code_edits  # 참조한 원문의 조각 치환(긴문장 L18-7)
-    if files is not None:
-        payload["files"] = files
-    if files_from is not None:
-        payload["files_from"] = files_from
     if check:
         payload["check"] = True   # 정적 통화 검사만(실행 없음) — 2026-09-05
     if agent_id:
@@ -419,9 +412,9 @@ async def execute_ibl(code: str, project_path: str = "",
     # ★회수(recover) 폴링은 반복이 정상 사용이라 가드를 안 태운다(F51-1).
     if code.strip() and not recover and not is_observation_request(payload):
         guard_key = agent_id or task_id or "stdio"
-        from repeat_guard import files_digest as _files_digest
+        from repeat_guard import inputs_digest as _inputs_digest
         advisory = _repeat_advisory(
-            guard_key, f"{code.strip()}|{effective_path}|{_files_digest(files, files_from)}")
+            guard_key, f"{code.strip()}|{effective_path}|{_inputs_digest(inputs)}")
         if advisory:
             from repeat_guard import append_advisory
             text = append_advisory(text, advisory)

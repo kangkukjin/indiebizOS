@@ -50,51 +50,14 @@ import boot_paths  # noqa: F401,E402
 CODE_B49_1 = '$n = 2\n[table:each]{items: [{a: 1}], do: "[sense:host]{op: \\"apps\\", limit: $n}"}'
 
 
-def _do_param_of(code: str) -> str:
-    """파서를 태운 뒤 each step 의 `do` param — 자리표가 이미 박힌 *실제* 모양."""
-    from ibl_parser import parse
-    for st in parse(code):
-        if isinstance(st, dict) and st.get("action") == "each":
-            return st["params"]["do"]
-    raise AssertionError(f"each step 을 못 찾음: {code}")
 
 
-def test_B49_1_파서가_do_속_변수를_자리표로_바꿔_둔다():
-    """결함의 전제 — 검수가 보는 do 에는 `$n` 이 없고 `{{_step_N_result}}` 가 있다."""
-    do = _do_param_of(CODE_B49_1)
-    assert "$n" not in do, do
-    assert "_step_" in do and "_result" in do, do
 
 
-def test_B49_1_옛_재시도는_이_모양을_못_푼다():
-    """이빨 — 수리 전의 `$` 전용 재시도로는 여전히 파싱이 죽는다(결함 재현)."""
-    import re
-    from ibl_parser import parse as _parse, IBLSyntaxError
-    do = _do_param_of(CODE_B49_1)
-    with pytest.raises(IBLSyntaxError):
-        _parse(do)                                    # 자리표 그대로 → 죽는다
-    with pytest.raises(IBLSyntaxError):
-        _parse(re.sub(r"\$\w+(?:\.\w+)*", "1", do))   # 옛 재시도 → 여전히 죽는다
 
 
-def test_B49_1_자리표를_메우면_재파싱이_산다():
-    """수리 — 자리표를 먼저 메우고 남은 맨 `$참조`를 정본 REF_RE 로 훑으면 파싱된다."""
-    from workflow_binding import blank_step_refs
-    from common.ibl_vars import REF_RE
-    from ibl_parser import parse as _parse
-    do = _do_param_of(CODE_B49_1)
-    inner = _parse(REF_RE.sub("1", blank_step_refs(do)))
-    assert inner and inner[0].get("action") == "host", inner
 
 
-def test_B49_1_자리표_굴절은_경로형과_괄호형까지_본다():
-    """방언 방지 — `.path` 붙은 자리표도, `${이름}` 괄호형 참조도 한 벌이 처리한다."""
-    from workflow_binding import blank_step_refs
-    from common.ibl_vars import REF_RE
-    assert blank_step_refs("a {{_step_3_result.items.0.title}} b") == "a 1 b"
-    assert blank_step_refs("{{_step_0_result}}", repl="X") == "X"
-    assert blank_step_refs("자리표 없음") == "자리표 없음"
-    assert REF_RE.sub("1", "${이름}과 $맨몸.경로") == "1과 1"
 
 
 
@@ -130,11 +93,6 @@ def test_B49_2_표지는_단일_소스에_등재돼_있다():
     assert markers_of({"vars_dropped": []}) == {}      # 빈 값은 소음
 
 
-def _run(code: str):
-    from ibl_parser import parse
-    from ibl_engine import execute_ibl
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return execute_ibl(parse(code)[0], root, "test")
 
 
 
@@ -143,13 +101,6 @@ def _run(code: str):
 
 
 
-def test_V49_1_바깥_이름의_재할당은_팬텀_슬롯을_뺏기지_않는다():
-    """대조군 — 교재 M6 의 `$n = 0` 뒤 `[repeat:]{$n = $n + 1}` 은 진짜 슬롯을 그대로 쓴다."""
-    from ibl_parser import parse_with_vars, BORN_SLOT_BASE
-    steps, variables = parse_with_vars('$n = 0\n[repeat: 2, max: 3]{$n = $n + 1}')
-    assert variables["n"] == 0, variables            # 문장 0 의 진짜 슬롯
-    assert variables["n"] < BORN_SLOT_BASE
-    assert "_born_vars" not in steps[1], steps[1]     # 재할당엔 새 슬롯을 발급하지 않는다
 
 
 

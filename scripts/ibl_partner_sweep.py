@@ -51,80 +51,56 @@ TOP_N = 2        # 한 줄에 싣는 동반 수 상한(카탈로그 폭 예산)
 MIN_COUNT = 3    # 1~2회는 한 세션의 버릇일 수 있다
 
 
-def _qa(step) -> str:
-    """액션 스텝이면 'node:action', 아니면 None."""
-    if isinstance(step, dict) and "_node" in step and "action" in step:
-        return f"{step['_node']}:{step['action']}"
-    return None
 
 
-def _heads(step) -> list:
-    """그 스텝이 통화를 내보내는 '앞자리' 액션들 — 병렬이면 가지 전부, 단일이면 자기 자신."""
-    if not isinstance(step, dict):
+
+
+
+
+def _heads(node, *, first=False):
+    from common.expression_ir import Node
+    if not isinstance(node, Node):
         return []
-    if step.get("_parallel"):
-        out = []
-        for b in step.get("branches") or []:
-            out.extend(_heads(b))
-        return out
-    if step.get("_fallback_chain"):
-        out = []
-        for b in step.get("_fallback_chain") or []:
-            out.extend(_heads(b))
-        return out
-    q = _qa(step)
-    return [q] if q else []
+    if node.kind == 'call':
+        return [f"{node.data['node']}:{node.data['action']}"]
+    if node.kind == 'pipe':
+        return _heads(node.data['left' if first else 'right'], first=first)
+    if node.kind in ('parallel', 'fallback'):
+        return _heads(node.data['left'], first=first) + _heads(node.data['right'], first=first)
+    if node.kind in ('bind', 'return', 'expr'):
+        return _heads(node.data.get('value'), first=first)
+    return []
 
 
-def _collect(steps, pairs, parse):
-    """파서 산출을 걸으며 인접쌍을 모은다. steps = 한 파이프(문장)의 스텝 목록."""
-    if not isinstance(steps, list):
-        steps = [steps]
-    prev = []
-    for step in steps:
-        if not isinstance(step, dict):
-            continue
-        # 줄바꿈·`;` 로 나뉜 독립 문장은 이어진 게 아니다 — 사슬을 끊는다.
-        if step.get("_seq_boundary"):
-            prev = []
-        heads = _heads(step)
-        for a in prev:
-            for b in heads:
-                if a != b:                      # 자기 자신으로 가는 `>>` = 접힐 자리(제외)
-                    pairs[a][f">>{b}"] += 1
-        if step.get("_parallel"):
-            # ★한 문장에서 한 번만 센다 — 가지마다 세면 3갈래 자기병렬이 6표가 되어
-            #   `&같은액션` 이 `>>` 파트너를 부당하게 밀어낸다(같은 사건은 한 표).
-            branches = [h for b in (step.get("branches") or []) for h in _heads(b)]
-            for a in set(branches):
-                for tok in {("&같은액션" if a == b else f"&{b}") for b in branches if b != a or branches.count(a) > 1}:
-                    pairs[a][tok] += 1
-        if step.get("_fallback_chain"):
-            chain = [h for b in (step.get("_fallback_chain") or []) for h in _heads(b)]
-            for a, b in zip(chain, chain[1:]):
-                if a != b:
-                    pairs[a][f"??{b}"] += 1
-        # 블록(조건·반복·try)의 몸은 그 자체가 문장이다 — 사슬을 잇지 않고 따로 건다.
-        for key in ("branches", "body", "then", "else", "action", "steps"):
-            val = step.get(key)
-            if step.get("_parallel") and key == "branches":
-                continue
-            if isinstance(val, (list, dict)) and not step.get("_fallback_chain"):
-                _collect(val, pairs, parse)
-        if isinstance(step.get("condition"), (list, dict)):
-            _collect(step["condition"], pairs, parse)
-        # `[table:each]{do: "…"}` 의 do 는 문자열에 담긴 진짜 문장이다 — 파싱해서 함께 센다.
-        do = (step.get("params") or {}).get("do") if isinstance(step.get("params"), dict) else None
-        if isinstance(do, str) and "[" in do:
-            try:
-                _collect(parse(do), pairs, parse)
-            except Exception:
-                pass
-        prev = heads or prev
+def _collect(program, pairs, parse=None):
+    """Observe composition directly in the current AST, never source substitution."""
+    from common.expression_ir import Node
+    def walk(value, parent=None):
+        if isinstance(value, Node):
+            if value.kind in ('pipe', 'fallback'):
+                for a in _heads(value.data['left']):
+                    for b in _heads(value.data['right'], first=True):
+                        if a != b:
+                            pairs[a][('>>' if value.kind == 'pipe' else '??')+b] += 1
+            if value.kind == 'parallel' and parent != 'parallel':
+                branches = _heads(value, first=True)
+                for a in set(branches):
+                    for token in {('&같은액션' if a == b else '&'+b)
+                                  for b in branches if b != a or branches.count(a) > 1}:
+                        pairs[a][token] += 1
+            for child in value.data.values():
+                walk(child, value.kind)
+        elif isinstance(value, dict):
+            for child in value.values():
+                walk(child, parent)
+        elif isinstance(value, (list, tuple)):
+            for child in value:
+                walk(child, parent)
+    walk(program)
 
 
 def observe(top_n: int = TOP_N, min_count: int = MIN_COUNT):
-    from ibl_parser import parse
+    from ibl_v2_parser import parse
 
     corpus = _codes_from_corpus()
     execs, trunc, malformed = _codes_from_episodes()

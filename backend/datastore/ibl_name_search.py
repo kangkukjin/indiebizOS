@@ -36,7 +36,7 @@ def search_aliased(db, query: str, top_k: int = 5, alpha: float = None,
                       signature, COALESCE(returns,'') AS returns,
                       COALESCE(returns_observed,'') AS returns_observed,
                       COALESCE(provenance,'{}') AS provenance
-               FROM ibl_examples WHERE COALESCE(alias,'') != ''""").fetchall()
+               FROM ibl_current_examples WHERE COALESCE(alias,'') != ''""").fetchall()
     from function_memory import project_rows, catalog_search_rows
     metas = {int(r["id"]): r for r in project_rows(rows)}
     for row in catalog_search_rows(list(metas.values())):
@@ -117,7 +117,7 @@ def update_intent(db, example_id: int, intent: str) -> bool:
     if not example_id or not intent:
         return False
     with db._get_connection() as conn:
-        row = conn.execute("SELECT ibl_code, COALESCE(alias,'') AS alias FROM ibl_examples WHERE id = ?",
+        row = conn.execute("SELECT ibl_code, COALESCE(alias,'') AS alias FROM ibl_current_examples WHERE id = ?",
                            (example_id,)).fetchone()
         if not row:
             return False
@@ -136,7 +136,7 @@ def alias_of_code(db, ibl_code: str) -> str:
         return ""
     with db._get_connection() as conn:
         row = conn.execute(
-            "SELECT COALESCE(alias,'') FROM ibl_examples WHERE ibl_code = ? AND COALESCE(alias,'') != '' "
+            "SELECT COALESCE(alias,'') FROM ibl_current_examples WHERE ibl_code = ? AND COALESCE(alias,'') != '' "
             "ORDER BY updated_at DESC LIMIT 1", (ibl_code,)).fetchone()
     return (row[0] or "").strip() if row else ""
 
@@ -152,9 +152,9 @@ def phrase_aliases(db, limit: int = 12) -> List[str]:
                               if r.get('state') == 'active' and not r.get('problem')))[:limit]
 
 
-def find_phrase_by_alias(db, name: str, edition: int = 1) -> Optional[Dict]:
+def find_phrase_by_alias(db, name: str) -> Optional[Dict]:
     from function_memory import lookup
-    return lookup(db, name, edition) if name else None
+    return lookup(db, name) if name else None
 
 
 def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: str = "",
@@ -180,13 +180,9 @@ def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: s
         return 0
     now = datetime.now().isoformat()
     with db._get_connection() as conn:
-        old = conn.execute("SELECT COALESCE(topic,'') AS topic, ibl_code, provenance FROM ibl_examples WHERE id = ?",
+        old = conn.execute("SELECT COALESCE(topic,'') AS topic, ibl_code, provenance FROM ibl_current_examples WHERE id = ?",
                            (example_id,)).fetchone()
         if not old:
-            return 0
-        from ibl_edition import source_edition
-        if source_edition(old["ibl_code"]) != source_edition(ibl_code):
-            logger.warning("판본 변경은 기존 행 덮어쓰기 대신 새 판본 행으로 등록해야 합니다.")
             return 0
         if alias:
             import json
@@ -224,5 +220,5 @@ def record_bypass(db, alias: str) -> int:
         conn.commit()
         if not cur.rowcount:
             return 0
-        row = conn.execute("SELECT COALESCE(bypass_count,0) FROM ibl_examples WHERE alias = ?", (alias,)).fetchone()
+        row = conn.execute("SELECT COALESCE(bypass_count,0) FROM ibl_current_examples WHERE alias = ?", (alias,)).fetchone()
     return int(row[0]) if row else 0

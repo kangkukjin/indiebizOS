@@ -11,7 +11,6 @@ from test_ibl_expression_revision_2026_09_08 import run
 from test_struct_body_seam import aiops  # noqa: F401 — 원샷/원문 추출 스텁
 from common.record_schema import schema_fields, records_schema_error
 from common.safe_expr import compile_expr, eval_expr
-from ibl_code_ir import compile_code, pack, unpack
 from api_ibl import validate_code
 
 ROOT = Path(__file__).resolve().parents[1]

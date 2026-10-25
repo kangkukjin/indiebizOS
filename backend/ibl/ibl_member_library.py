@@ -16,15 +16,14 @@ def library(source):
 
 
 def definitions():
-    from ibl_edition import source_edition
     from ibl_v2_parser import parse
     from ibl_edition import require_current
     sources = list(_source.get())
     for item in sources:
         try:
-            require_current(item, source_edition(item))
+            require_current(item)
         except ValueError as exc:
-            raise Fault('EDITION_RETIRED', str(exc), kind='compile') from exc
+            raise Fault('LIBRARY_FORMAT', str(exc), kind='compile') from exc
     source = "\n".join(sources)
     statements = parse(source).data["statements"]
     if any(s.kind != "def" for s in statements):

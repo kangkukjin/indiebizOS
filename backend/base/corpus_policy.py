@@ -1,12 +1,7 @@
-"""Consumer boundary for stored IBL editions; never rewrites historical source.
-
-Edition 1 is historical data only, never an executable or training candidate. This is a
-qualification boundary, not a claim of semantic or runtime verification.
-"""
+"""Review eligibility for current source projections; history is stored separately."""
 import json
 from collections import Counter
 
-from ibl_edition import source_edition
 
 
 def applicability_note(raw):
@@ -31,12 +26,6 @@ def exclusion_reason(row):
     code = field(row, 'ibl_code', '')
     if not isinstance(code, str) or not code.strip():
         return 'missing_source'
-    try:
-        edition = source_edition(code, field(row, 'edition'))
-    except ValueError:
-        return 'edition_conflict'
-    if edition != 2:
-        return 'legacy_source'
     return review_exclusion_reason(row)
 
 

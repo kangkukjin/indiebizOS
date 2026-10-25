@@ -17,7 +17,7 @@ class Library(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.origins, self.conflicts = {}, {}
-        self.references, self.retired_names = {}, set()
+        self.references = {}
 
     def add(self, name, source, origin):
         if name in self.conflicts:
@@ -46,7 +46,7 @@ def installed_definitions():
     """Installed definitions are catalog entries, never a runtime file fallback."""
     import function_store
     return {r['name']: r['source'] for r in function_store.snapshot()['records'].values()
-            if r.get('edition') == 2 and r.get('state') == 'active'
+            if r.get('state') == 'active'
             and r.get('origin') == 'core' and not r.get('problem')}
 
 
@@ -96,8 +96,6 @@ def _action(action_name, params, project_path):
             import function_store
             wf_id = params.get('workflow_id') or params.get('id') or name
             previous = get_workflow(wf_id)
-            if previous and previous.get('edition', 1) != 2:
-                raise Fault('MIGRATION_ID', '다른 언어 판본은 새 ID로 저장하세요.', kind='compile')
             description = params.get('description', (previous or {}).get('description', ''))
             ref = register(name, source, description, edition=2,
                            function_id=(previous or {}).get('function_id'),
@@ -110,8 +108,8 @@ def _action(action_name, params, project_path):
         if action_name == "run":
             wf_id = params.get("workflow_id") or _resolve_workflow_id(params.get("name") or params.get("id") or "")
             wf = get_workflow(wf_id)
-            if not wf or wf.get("edition") != 2:
-                raise Fault("EDITION_RETIRED", "판본 2의 활성 저장본으로 이관해야 합니다.", kind="compile")
+            if not wf:
+                raise Fault("FUNCTION_MISSING", "등록된 함수를 찾을 수 없습니다.", kind="compile")
             if wf.get('state') != 'active':
                 raise Fault('FUNCTION_INACTIVE', '활성 함수만 실행할 수 있습니다.', kind='compile')
             name = definition_name(wf["code"])

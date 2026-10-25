@@ -22,8 +22,9 @@ SINGLE = '[self:ledger]{path: "outputs/x/_covered.json", op: "select", target: "
 MULTI = ('$원장 = [self:ledger]{path: "outputs/x/_covered.json", op: "select"}; '
          '$검색 = [limbs:youtube]{op: "search", query: "AI", limit: 12} >> [table:dedup]{by: "video_id"}; '
          '$검색 >> [self:write]{path: "outputs/x/r.md"}')
-PHRASE = ('$원장 = [self:ledger]{path: "${원장경로}", op: "select"}; '
-          '$검색 = [limbs:youtube]{op: "search", query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}')
+PHRASE = ('#!ibl edition=2\n[def:팁영상수집]($원장경로,$주제){'
+          '[self:ledger]{path:$원장경로,op:"select",target:"covered"}\n'
+          'return [limbs:youtube]{op:"search",query:$주제,limit:12}}')
 
 
 def _mk_db(path):
@@ -34,12 +35,15 @@ def _mk_db(path):
             nodes TEXT DEFAULT '', category TEXT DEFAULT 'single', difficulty INTEGER DEFAULT 1,
             source TEXT DEFAULT 'synthetic', success_count INTEGER DEFAULT 0, fail_count INTEGER DEFAULT 0,
             avg_ms REAL DEFAULT -1.0, avg_tokens REAL DEFAULT -1.0, tags TEXT DEFAULT '',
-            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, topic TEXT DEFAULT '', alias TEXT DEFAULT '');
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, topic TEXT DEFAULT '', alias TEXT DEFAULT '', executable INTEGER DEFAULT 1);
+        CREATE VIEW ibl_current_examples AS SELECT * FROM ibl_examples WHERE executable=1;
     """)
     conn.commit(); conn.close()
 
 
 def _add(db, intent, code, topic, category="single", alias="", ok=0):
+    from ibl_edition import pin_source
+    code = pin_source(code)
     now = datetime.now().isoformat()
     conn = sqlite3.connect(db)
     cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, alias, success_count, created_at, updated_at, topic) "
@@ -69,15 +73,14 @@ def test_recall_shows_names_not_bodies(env):
     text = out["text"]
     assert "## 부를 수 있는 함수" in text and "[fn:팁영상수집]{원장경로: \"…\", 주제: \"…\"}" in text
     assert "✓3" in text
-    assert "[def: 팁영상수집]{" not in text and "limbs:youtube" not in text.split("## 용례")[0].split("## 부를 수 있는 함수")[1]
-    # 구형 한 문장도 현재 작성 정답으로 노출하지 않는다. 명시 expand는 보존한다.
-    assert SINGLE.replace("`", "'") not in text and f'expand:"#{s_id}"' in text
+    assert "[def:팁영상수집](" not in text and "limbs:youtube" not in text.split("## 용례")[0].split("## 부를 수 있는 함수")[1]
+    assert "[self:ledger]" in text
     assert "[self:write]" not in text and f"expand:\"#{m_id}\"" in text and "문장 3" in text
     assert "## 주행 1건" in text and "expand:\"주행\"" in text
     # JSON 봉투도 본문을 감춘다(모델은 text 만 읽지 않는다)
     items = {r["id"]: r for r in out["items"]}
-    assert 'expand' in items[s_id]["ibl_code"]
-    assert items[s_id]['authoring_excluded'] == 'legacy_source'
+    assert "[self:ledger]" in items[s_id]["ibl_code"]
+    assert "authoring_excluded" not in items[s_id]
     assert "expand" in items[m_id]["ibl_code"] and "[self:write]" not in items[m_id]["ibl_code"]
     ph = out["phrases"][0]
     assert ph["alias"] == "팁영상수집" and ph["call"].startswith("[fn:팁영상수집]") and "expand" in ph["ibl_code"]
@@ -92,8 +95,8 @@ def test_expand_opens_one_body(env):
     HT.note_run(t, "오늘 주행", [SINGLE, MULTI], ok=True, db_path=db)
     body = HT.recall(t, db, expand="팁영상수집")["text"]
     # 2026-09-07: 카드는 호출 한 줄이 먼저, 정의는 뒤(ep2952 — 정의가 먼저 보이자 실행자가 베껴 변형을 쳤다)
-    assert body.startswith("호출: [fn:팁영상수집]{") and "[def: 팁영상수집]{" in body and "[limbs:youtube]" in body and 'op: "search"' in body
-    assert body.index("호출:") < body.index("[def: 팁영상수집]{")
+    assert body.startswith("호출: [fn:팁영상수집]{") and "[def:팁영상수집](" in body and "[limbs:youtube]" in body and 'op:"search"' in body
+    assert body.index("호출:") < body.index("[def:팁영상수집](")
     one = HT.recall(t, db, expand=f"#{m_id}")["text"]
     assert "[self:write]" in one
     runs = HT.recall(t, db, expand="주행")["text"]

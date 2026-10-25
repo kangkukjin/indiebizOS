@@ -15,7 +15,6 @@ import time
 from ibl_v2_adapters import Adapter, Adapted, decode_envelope, load_registry
 from ibl_v2_compile import compile_program
 from ibl_v2_runtime import Runtime
-from ibl_edition import source_context
 from ibl_v2_ir import Fault
 
 HERE=Path(__file__).resolve().parent
@@ -153,8 +152,7 @@ def evaluate(name,variant,base,tmp):
  try:
   registry=registry_for(base,leaves,name)
   plan=compile_program(code,registry,inputs)
-  with source_context(2):
-   result=Runtime(plan,inputs).run()
+  result=Runtime(plan,inputs).run()
   try:validate(name,variant,result,leaves,inputs);passed=True;error=None
   except AssertionError as exc:passed=False;error=str(exc)[:2500]
   return dict(name=name,variant=variant,passed=passed,error=error,

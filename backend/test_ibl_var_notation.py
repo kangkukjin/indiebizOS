@@ -25,13 +25,10 @@ import sys
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
-import workflow_binding
 
 import workflow_engine  # noqa: E402
 from common.ibl_vars import (find_names, sub_ref, is_sole_ref, split_ref, REF_RE)  # noqa: E402
-from ibl_parser import parse  # noqa: E402
-from workflow_engine import execute_pipeline, execute_workflow_action  # noqa: E402
-from workflow_contract import _free_vars, apply_caller_params  # noqa: E402
+from workflow_engine import execute_workflow_action
 
 
 def test_b1_notation_module():
@@ -54,53 +51,16 @@ def test_b2_korean_suffix_boundary():
     print("B2 OK — $n건=변수 n건 / ${n}건=변수 n + 글자 건")
 
 
-def test_b3_parser():
-    # 괄호형 할당 + 참조
-    steps = parse('${r} = [sense:time]{}\n[self:notify_user]{message: "${r}"}')
-    assert steps[0].get("_assign_name") == "r", steps[0]
-    assert steps[1]["params"]["message"] == "{{_step_0_result}}", steps[1]
-
-    # 괄호형 경로
-    steps = parse('$r = [sense:time]{}\n[limbs:os_open]{path: "${r.file}"}')
-    assert steps[1]["params"]["path"] == "{{_step_0_result.file}}", steps[1]
-
-    # 미할당 괄호형은 리터럴로 남는다 — 그 자리가 인자 자리다
-    steps = parse('[table:take]{n: "${count}건"}')
-    assert steps[0]["params"]["n"] == "${count}건", steps[0]
-    print("B3 OK — 파서 괄호형 할당·참조·경로, 미할당은 리터럴")
-
-
-def test_b4_signature():
-    assert _free_vars(parse('[table:take]{n: "${count}건"}')) == ["count"]
-    assert _free_vars(parse('[table:take]{n: "$count건"}')) == ["count건"]
-    # 숫자로 시작하는 이름은 인자로 세지 않는다 — 가격·금액 리터럴 오탐 방지
-    assert _free_vars(parse('[self:notify_user]{message: "$100 짜리"}')) == []
-    # `$file:N` 은 파서의 파일 참조 플레이스홀더 — 인자가 아니다
-    assert _free_vars(parse('[self:write]{path: "a.py", content: $file:0}')) == []
-    print("B4 OK — 시그니처가 괄호형을 인자로 인식 / $100 은 인자 아님")
-
-
-def test_b5_caller_injection():
-    steps = parse('[table:take]{n: "${count}", note: "상한 ${count}건"}')
-    steps, meta = apply_caller_params(steps, {"count": 5})
-    p = steps[0]["params"]
-    assert p["n"] == 5 and isinstance(p["n"], int), f"괄호형 통짜 참조 타입 소실: {p['n']!r}"
-    assert p["note"] == "상한 5건", p["note"]
-    assert meta.get("params_injected") == ["count"], meta
-    print("B5 OK — 괄호형 주입 + 통짜 참조 원시 타입 보존")
 
 
 
 
 
 
-def test_b8_items_binding():
-    assert workflow_binding._ITEMS_REF.match("${items}"), "괄호형 $items 미인식"
-    m = workflow_binding._ITEMS_REF.match("${items.name}")
-    assert m and (m.group(1) or m.group(2)) == "name", m
-    m2 = workflow_binding._ITEMS_REF.match("$items.name")
-    assert m2 and (m2.group(1) or m2.group(2)) == "name", m2
-    print("B8 OK — $items 집합 바인딩 예약어의 괄호형")
+
+
+
+
 
 
 

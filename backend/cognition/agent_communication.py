@@ -676,10 +676,9 @@ class AgentCommunicationMixin:
                         result = {"success": False, "status": "cancelled", "error": "실행 전 취소됨"}
                     else:
                         from ibl_v2_entry import handle_request
-                        from ibl_edition import retired_result
                         code = request['code']
-                        result = (handle_request(request, str(self.project_path), self.config.get('id'),
-                                                 cancel_check=cancelled) if isinstance(code, str) else retired_result())
+                        result = handle_request(request, str(self.project_path), self.config.get('id'),
+                                                 cancel_check=cancelled)
             except Exception as exc:
                 from logging_utils import mask_secrets
                 result = {"success": False, "error": mask_secrets(str(exc))}

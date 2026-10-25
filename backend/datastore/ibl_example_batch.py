@@ -57,8 +57,8 @@ def add_examples_batch(db, examples, *, owned_vocabulary=False):
         for ex in examples:
             cursor = conn.execute(
                 """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic, alias, signature, returns, provenance)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic, alias, signature, returns, provenance, executable)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)""",
                 (
                     ex['intent'], ex['ibl_code'],
                     ex.get('nodes', ''), ex.get('category', 'single'),

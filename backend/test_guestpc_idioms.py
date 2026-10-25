@@ -19,7 +19,6 @@ def remote(monkeypatch, tmp_path):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
-    from ibl_edition import source_context
 
     state = dict(connected=True, state='running', result=None, fail_observation=False,
                  helper_exited=True, os='windows')
@@ -60,8 +59,7 @@ def remote(monkeypatch, tmp_path):
     def run(code, **inputs):
         plan = compile_program(code, registry, inputs=inputs, definitions=definitions)
         assert not plan.issues, plan.report()
-        with source_context(2):
-            out = Runtime(plan, inputs).run()
+        out = Runtime(plan, inputs).run()
         assert out['success'], out
         return out['value']
 

@@ -55,7 +55,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
-        "capability_history", "control_observations", "function_store", "function_memory",
+        "capability_history", "control_observations", "function_store", "ibl_example_index", "function_memory",
         "member_activity",
         "research_store", "research_questions", "research_evidence", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context",
@@ -75,7 +75,7 @@ LAYERS = {
         "websocket_manager", "xray_stream", "media_store",
     },
     "ibl": {
-        "reusable_catalog", "function_library", "function_consumers", "function_migration",
+        "reusable_catalog", "function_library", "function_consumers", "function_install",
         "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
         "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "tool_batch", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies",
         "member_bridge", "member_profile", "member_files",
@@ -85,15 +85,15 @@ LAYERS = {
         "api_engine", "api_pipeline", "api_transforms",
         "capability_card", "channel_engine", "event_engine", "ibl_access", "ibl_control_blocks", "ibl_function_result",
         "ibl_engine", "ibl_envelope", "ibl_result_transport", "ibl_executors", "ibl_exec_output", "ibl_exec_goal",
-        "ibl_honesty", "ibl_traceback", "ibl_quality", "ibl_pipe_types", "ibl_typecheck", "ibl_value_types", "ibl_preflight",
-        "ibl_exec_sense", "ibl_ops", "ibl_param_vocab", "ibl_code_binding", "ibl_code_ir",
+        "ibl_honesty", "ibl_traceback", "ibl_quality", "ibl_typecheck",
+        "ibl_exec_sense", "ibl_ops", "ibl_param_vocab",
         "ibl_progress",
         "ibl_predicates",
-        "ibl_parser", "ibl_scanner", "ibl_parser_blocks", "ibl_parser_values", "ibl_parser_scope", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
+        "ibl_scanner", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
         "ibl_safety", "ibl_translate", "package_manager", "vocabulary_lifecycle", "vocabulary_desktop", "vocabulary_archive", "vocabulary_import", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
         "workflow_contract",
-        "workflow_binding", "workflow_verdict", "workflow_store",
+        "workflow_verdict", "workflow_store",
     },
     "cognition": {
         "member_cli",
@@ -104,13 +104,13 @@ LAYERS = {
         "associative_recall",
         "capability_guard", "capability_guard_runtime",
         "member_local_tools", "member_runner", "member_session", "client_workflows",
-        "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
+        "agent_cognitive", "agent_communication", "agent_goals",
         "weekly_audits",
         "agent_pipeline", "dialogue_continuation", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view", "model_value_preview",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "final_evaluator", "repair_readiness", "repair_policy", "repair_check_runner", "repair_resume", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
-        "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "legacy_example_projection", "ibl_idiom", "ibl_distill_gates", "ibl_distill_value", "ibl_v2_experience",
+        "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "checked_program_sources", "ibl_idiom", "ibl_distill_gates", "ibl_distill_value", "ibl_v2_experience",
         "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "prompt_builder", "prompt_composition", "repair_verdict_distill", "turn_scope", "reflex_execution",
         "pursuit_bind", "pursuit_tools", "pursuit_maintenance", "todo_bridge", "reframe", "framing_inheritance", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",
@@ -327,7 +327,7 @@ def cross_layer_cycles(graph):
 # 비-뿌리: ibl_control_blocks·ibl_exec_each 는 뿌리가 아니다. 층-밖 의존은 0이지만
 #   ibl_engine·ibl_executors·workflow_engine 을 끌어와 실제로는 엔진 한복판이다
 #   (2026-08-24 실측 — "의존 0인 9파일"은 *층-밖* 0이었지 분리 가능이 아니었다).
-PURE_CORE_ROOTS = ["ibl_parser", "ibl_envelope", "ibl_predicates", "ibl_ops",
+PURE_CORE_ROOTS = ["ibl_v2_parser", "ibl_envelope", "ibl_predicates", "ibl_ops",
                    "api_transforms"]
 # backend 아래 서브패키지: common 만 코어가 기대도 되는 잎 기질(통화·변수표기·HTML 유틸).
 _LEAF_PKG = "common"
@@ -379,10 +379,11 @@ def pure_core_leaks(backend_dir, roots=PURE_CORE_ROOTS):
     while i < len(order):
         m = order[i]
         i += 1
-        # 판정: common.* 은 허용, ibl 층 모듈은 허용, 그 밖은 숙주 도달 = 위반
+        # common.*·ibl 층과 순수 파일 형식 경계(ibl_edition)는 허용. 그 밖은 숙주 도달이다.
+        # ibl_edition의 전이 의존도 아래에서 계속 검사한다.
         if m.startswith(f"{_LEAF_PKG}."):
             pass
-        elif m.startswith(_HOST_PKGS) or layer_of(m) != "ibl":
+        elif m.startswith(_HOST_PKGS) or (layer_of(m) != "ibl" and m != "ibl_edition"):
             chain, x = [], m
             while x:
                 chain.append(x)
@@ -541,13 +542,13 @@ def self_test() -> int:
     assert layer_of("migrate_bar") is None
     assert layer_of("retire_bar") is None
     assert layer_of("api") == "ASSEMBLY"
-    assert layer_of("ibl_parser") == "ibl"
+    assert layer_of("ibl_v2_parser") == "ibl"
     # 교차층 순환 검출: data ↔ surface 인공 순환
     fake_cyc = {"conversation_db": {"api_xray"}, "api_xray": {"conversation_db"}}
     bad = cross_layer_cycles(fake_cyc)
     assert len(bad) == 1 and set(bad[0][1]) == {"conversation_db", "api_xray"}, bad
     # 같은 층 안 순환은 허용 (파서 쌍 부류)
-    fake_ok = {"ibl_parser": {"ibl_parser_blocks"}, "ibl_parser_blocks": {"ibl_parser"}}
+    fake_ok = {"ibl_v2_parser": {"ibl_v2_ir"}, "ibl_v2_ir": {"ibl_v2_parser"}}
     assert cross_layer_cycles(fake_ok) == [], "같은 층 순환이 오탐"
     # 물리 위치 = 층 선언 (물리 이동 후 불변식)
     assert misplaced_modules(BACKEND) == [], misplaced_modules(BACKEND)[:5]
@@ -581,9 +582,9 @@ def self_test() -> int:
         assert bad == ["conversation_db ← ibl_ops"], bad
         # ③ 전이 도달도 잡힌다 (파서 → 엔진 → 사전)
         w("ibl", "ibl_engine.py", "from ibl_registry import x\n")
-        w("ibl", "ibl_parser.py", "from ibl_engine import x\n")
-        bad, _ = pure_core_leaks(td, roots=["ibl_parser"])
-        assert bad == ["ibl_registry ← ibl_engine ← ibl_parser"], bad
+        w("ibl", "ibl_v2_parser.py", "from ibl_engine import x\n")
+        bad, _ = pure_core_leaks(td, roots=["ibl_v2_parser"])
+        assert bad == ["ibl_registry ← ibl_engine ← ibl_v2_parser"], bad
     core_bad, core_n = pure_core_leaks(BACKEND)
     assert core_bad == [], core_bad
     assert core_n >= len(PURE_CORE_ROOTS), core_n

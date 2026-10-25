@@ -115,7 +115,7 @@ def test_image_critic_provenance_is_runtime_owned(monkeypatch):
     monkeypatch.setattr(mod, '_ai_call', lambda *a, **kw: json.dumps(
         {'passed': False, 'score': 2, 'issues': ['cut off'], 'tier': 'prescreen', 'rubric': 'fake'}))
     out = mod.critique_image({'image_path': '/fixture.png', 'intent': 'test'}, '.')
-    verdict = json.loads(out.split('verdict_json:', 1)[1])
+    verdict = json.loads(out['message'].split('verdict_json:', 1)[1])
     assert verdict['tier'] == 'vision' and verdict['rubric'].startswith('preset:general')
 
 

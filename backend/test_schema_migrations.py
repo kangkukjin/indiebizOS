@@ -32,14 +32,11 @@ def _usage_db():
     return conn
 
 
-def test_t1_rewrites_and_stamps_version():
+def test_usage_initialization_preserves_all_original_source():
     conn = _usage_db()
-    assert sm.current_version(conn) == 0
-    assert sm.apply(conn, "ibl_usage") == sm.latest_version("ibl_usage")
-    codes = [r[0] for r in conn.execute("SELECT ibl_code FROM ibl_examples ORDER BY id")]
-    assert codes == ['[self:storage]{op: "scan", path: "/x"}', '[sense:cctv]{op: "nearby"}',
-                     '[self:folder_note]{op: "get"}', '[self:storage]{op: "scan"}']
-    assert sm.current_version(conn) == sm.latest_version("ibl_usage")
+    before = list(conn.execute('SELECT * FROM ibl_examples ORDER BY id'))
+    assert sm.apply(conn, 'ibl_usage') == 0
+    assert list(conn.execute('SELECT * FROM ibl_examples ORDER BY id')) == before
 
 
 def test_t2_reapply_is_idempotent():
@@ -83,17 +80,12 @@ def test_t5_unknown_db_name_raises():
         sm.apply(sqlite3.connect(":memory:"), "nope")
 
 
-def test_t6_scope_signature_refresh_preserves_body_and_statistics():
-    conn = sqlite3.connect(':memory:')
-    conn.execute('CREATE TABLE ibl_examples (id INTEGER PRIMARY KEY, alias TEXT, '
-                 'ibl_code TEXT, signature TEXT, success_count INTEGER)')
-    code = '[try]{[self:read]{path:"x"}}[catch]{[self:read]{path:"$error.summary"}}'
-    conn.execute('INSERT INTO ibl_examples VALUES (1, ?, ?, ?, 7)', ('재시도', code, 'error'))
-    conn.execute('PRAGMA user_version=2')
-    conn.commit()
+def test_usage_existing_schema_does_not_rewrite_history():
+    conn = _usage_db()
+    conn.execute('PRAGMA user_version=3')
+    before = list(conn.execute('SELECT * FROM ibl_examples ORDER BY id'))
     assert sm.apply(conn, 'ibl_usage') == 3
-    assert conn.execute('SELECT ibl_code, signature, success_count FROM ibl_examples').fetchone() == (code, '', 7)
-    assert sm.apply(conn, 'ibl_usage') == 3
+    assert list(conn.execute('SELECT * FROM ibl_examples ORDER BY id')) == before
 
 
 if __name__ == "__main__":

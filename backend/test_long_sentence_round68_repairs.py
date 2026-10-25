@@ -30,7 +30,7 @@ def test_l68_1_each_over_union_of_empty_list_and_items_envelope_is_checked_not_c
     code = ('#!ibl edition=2\n$x = []\n'
             '[if:1 > 0] { $x = [{묘사들:"a"}] >> [table:ai]{instruction:"주제", schema:"주제(Text)", preserve_rows:true} }\n'
             'return $x >> [table:each]{ return $it.주제 }')
-    out = handle_request({"code": code, "edition": 2, "check": True, "project_id": "수동모드"}, project_path=str(ROOT.parent))
+    out = handle_request({"code": code, "edition": 2, "check": True}, project_path=str(ROOT.parent))
     assert "기반 오류" not in (out.get("error") or ""), out.get("error")
     assert out.get("status") in ("valid", "incomplete"), out
 

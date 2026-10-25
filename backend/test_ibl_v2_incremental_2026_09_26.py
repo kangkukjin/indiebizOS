@@ -218,7 +218,7 @@ def test_catalog_entry_is_the_single_resolution_rule(monkeypatch):
     assert ibl_typecheck.catalog_entry("t", "x", {"op": "$dyn"})["keys"] == ["a"]
     assert ibl_typecheck.catalog_entry("t", "s", {}) is None  # 판본 1 검사기는 ⟨키⟩를 열로 쓰지 않는다
     assert ibl_typecheck.catalog_entry("t", "s", {}, kinds=("scalar",))["keys"] == ["k"]
-    assert ibl_typecheck._catalog_cols("t", "x", {"op": "list"}) == ["b"]
+    assert ibl_typecheck.catalog_entry("t", "x", {"op": "list"})["keys"] == ["b"]
 
 
 if __name__ == "__main__":

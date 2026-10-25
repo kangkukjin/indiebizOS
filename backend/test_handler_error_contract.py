@@ -179,23 +179,6 @@ def test_b35_3_container_goes_only_where_array_or_object_is_declared():
     assert "개짜리 사전이 왔습니다" not in (out.get("error") or ""), out
 
 
-def test_b35_1_parser_keeps_leading_zero_identifiers():
-    """B35-1 2단계: 앞 0 이 붙은 정수 리터럴은 수량이 아니라 식별자다.
-
-    파서가 `ticker: 005930` 을 int 5930 으로 만들면 앞 0 은 **아래층 어디서도**
-    못 되살린다 — 35회차가 \"str() 변환도 불가\"라며 관문 수리를 막다른 길로 판정한
-    근거가 이것이었다. 정보가 사라지는 자리에서 지킨다.
-    파급 실측: 코퍼스 3,610 문장 파스 트리 대조 변화 0건."""
-    from ibl_parser import parse
-    p = parse('[sense:stock]{op: \"quote\", ticker: 005930}')[0]["params"]
-    assert p["ticker"] == "005930" and isinstance(p["ticker"], str), p
-    # ★평범한 숫자는 그대로 숫자여야 한다(좌표·개수가 문자열이 되면 그게 새 결함)
-    q = parse('[limbs:screen]{op: \"click\", x: 300, y: 200}')[0]["params"]
-    assert q["x"] == 300 and isinstance(q["x"], int), q
-    r = parse('[table:take]{n: 0}')[0]["params"]
-    assert r["n"] == 0 and isinstance(r["n"], int), r
-    s = parse('[sense:weather]{lat: 0.5}')[0]["params"]
-    assert s["lat"] == 0.5 and isinstance(s["lat"], float), s
 
 
 def test_v21_1_render_html_eats_pipe_currency():

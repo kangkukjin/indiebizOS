@@ -149,7 +149,7 @@ def stub_usage_db(monkeypatch):
 
 
 def _tc(code, success=True):
-    return {"tool_name": "execute_ibl", "input": {"code": code}, "success": success,
+    return {"tool_name": "execute_ibl", "input": {"code": code, "edition": 2}, "success": success,
             "elapsed_ms": 12}
 
 

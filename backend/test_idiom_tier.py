@@ -33,7 +33,7 @@ import boot_paths  # noqa: E402,F401
 GREP = '[self:grep]{pattern: "notebook", root_path: "/Users/me/Desktop/AI/indiebizOS/frontend/src", limit: 60}'
 READ = '[self:read]{path: "/Users/me/Desktop/AI/indiebizOS/frontend/src/components/GenericInstrument.tsx", start_line: 440, end_line: 620}'
 EDIT = '[self:edit]{path: "/Users/me/Desktop/AI/indiebizOS/frontend/src/components/GenericInstrument.tsx", old_string: "a", new_string: "b"}'
-PIPE = '[sense:search]{query: "AI 팁", limit: 12} >> [table:take]{n: 5}'
+PIPE = '#!ibl edition=2\n$s=[sense:search]{query: "AI 팁", limit: 12}\nreturn $s.items >> [table:take]{n: 5}'
 CALLS = [GREP, READ, EDIT, PIPE]
 PHRASE = ['[self:grep]{pattern: "${패턴}", root_path: "${루트}", limit: 60}',
           '[self:read]{path: "${파일}", start_line: 440, end_line: 620}',
@@ -43,66 +43,28 @@ SLOTS = {"패턴": "notebook", "루트": "/Users/me/Desktop/AI/indiebizOS/fronte
 
 
 # ---------------------------------------------------------------- P1 접지
-def test_p1_ordered_subsequence_with_slots_grounds():
-    import ibl_usage_rag as rag
-    assert rag._phrase_grounded(PHRASE, SLOTS, CALLS) is None
-    # 값이 달라도(수치·문자열) 머리·키가 같으면 접지 — 값만 추상화
-    assert rag._phrase_grounded([PHRASE[0].replace("60", "10")], SLOTS, CALLS) is None
-    # 부분열: 가운데를 건너뛰어도 순서만 맞으면 통과
-    assert rag._phrase_grounded([PHRASE[0], PHRASE[2]], SLOTS, CALLS) is None
 
 
-def test_p1_reorder_and_unexecuted_rejected():
-    import ibl_usage_rag as rag
-    why = rag._phrase_grounded([PHRASE[2], PHRASE[0]], SLOTS, CALLS)
-    assert why and "순서" in why
-    why = rag._phrase_grounded([PHRASE[0], '[self:write]{path: "${파일}", content: "x"}'], SLOTS, CALLS)
-    assert why and "실행에 없음" in why
-    # 인자 키는 부분집합이면 된다(모델이 선택 인자를 빼도 골격) — 실행에 없던 키는 거절
-    assert rag._phrase_grounded(['[self:grep]{pattern: "${패턴}", limit: 60}'], SLOTS, CALLS) is None
-    why = rag._phrase_grounded(['[self:grep]{pattern: "${패턴}", depth: 3}'], SLOTS, CALLS)
-    assert why and "실행에 없음" in why
-    # op(동사)는 값이 같아야 한다 — 머리·키가 같아도 op 가 다르면 다른 문장
-    calls = ['[self:memory]{op: "recall", node: "x"}', '[self:memory]{op: "store", node: "x"}']
-    assert rag._phrase_grounded(['[self:memory]{op: "recall", node: "${가지}"}', '[self:memory]{op: "store", node: "${가지}"}'], {"가지": "x"}, calls) is None
-    why = rag._phrase_grounded(['[self:memory]{op: "store", node: "${가지}"}', '[self:memory]{op: "recall", node: "${가지}"}'], {"가지": "x"}, calls)
-    assert why and "순서" in why
-    # & 병렬문은 가지의 부분집합이면 접지, >> 파이프는 길이·연산자·머리 열이 같아야
-    par = '[sense:search]{source: "gnews", query: "a", limit: 12} & [sense:search]{source: "naver", query: "b", limit: 10} & [sense:stock]{op: "quote", ticker: "^TNX"}'
-    assert rag._phrase_grounded(['[sense:search]{source: "gnews", query: "${질의}", limit: 12} & [sense:stock]{op: "quote", ticker: "${지수}"}'], {"질의": "a", "지수": "^TNX"}, [par]) is None
-    assert rag._phrase_grounded(['[sense:search]{query: "${질의}"} >> [table:take]{n: 5}'], {"질의": "AI 팁"}, CALLS) is None
-    assert rag._phrase_grounded(['[sense:search]{query: "${질의}"} >> [table:take]{n: 5} >> [table:sort]{by: "x"}'], {"질의": "AI 팁"}, CALLS)
-    # 별개 호출을 >> 로 봉합한 문장은 실행에 없다
-    why = rag._phrase_grounded([PHRASE[0] + " >> " + PHRASE[1]], SLOTS, CALLS)
-    assert why
 
 
-def test_p1_slot_quoting_normalized():
-    import ibl_usage_rag as rag
-    slots = {"개수": "12", "위도": 36.64, "폴더": "~workspace/out"}
-    assert rag._normalize_slot_quoting('[table:take]{n: ${개수}}', slots) == '[table:take]{n: $개수}'
-    assert rag._normalize_slot_quoting('[self:file_find]{path: ${폴더}, lat: ${위도}}', slots) == '[self:file_find]{path: "${폴더}", lat: $위도}'
-    assert rag._normalize_slot_quoting('[self:read]{path: "${폴더}/a.md"}', slots) == '[self:read]{path: "${폴더}/a.md"}'   # 따옴표 안은 그대로
-    from ibl_param_vocab import code_syntax_error
-    assert code_syntax_error(rag._normalize_slot_quoting('[sense:place]{query: "x", lat: ${위도}, limit: ${개수}}', slots)) is None
 
 
-def test_p1_def_body_newlines_survive_one_line_join():
+def test_current_definition_document_preserves_source_exactly():
     import hippo_tree
-    from ibl_param_vocab import code_syntax_error
-    sent = '[def: 줄이기]{\n  $선별 = [table:ai]{instruction: "x", fields: ["a"]}\n  $return = $선별 >> [table:brief]{instruction: "$지시"}\n}'
-    one = hippo_tree.join_sentences(['$본문 = [fn:줄이기]{지시: "${지시}"}', sent])
-    assert "\n" not in one and "$선별 = [table:ai]" in one and "; $return = $선별" in one
-    assert code_syntax_error(one) is None                      # 한 줄 표기가 그대로 파싱된다
-    assert hippo_tree.split_sentences(one)[1].startswith("[def: 줄이기]")
+    source = '#!ibl edition=2\n[def:문장]($x){\n# comment\nreturn {text:"`hello`", value:$x}\n}'
+    row={'id':1,'intent':'그대로', 'alias':'문장','ibl_code':source}
+    text=hippo_tree.render_phrases([row])
+    known,fresh=hippo_tree.parse_phrases(text)
+    assert known[0]['ibl_code']==source and fresh==[]
 
 
-def test_p1_private_path_rejected_and_slot_names():
-    import ibl_usage_rag as rag
+def test_private_path_policy_and_explicit_parameter_names():
+    from ibl_idiom import _phrase_private_reason
     import hippo_tree
-    assert rag._phrase_private_reason(hippo_tree.join_sentences(PHRASE)) is None
-    assert "홈 경로" in (rag._phrase_private_reason(READ) or "")
-    assert hippo_tree.slot_names(hippo_tree.join_sentences(PHRASE)) == ["패턴", "루트", "파일", "앞", "뒤"]
+    source='#!ibl edition=2\n[def:f]($경로){return [self:read]{path:$경로}}'
+    assert _phrase_private_reason(source) is None
+    assert '홈 경로' in _phrase_private_reason(READ)
+    assert hippo_tree.slot_names(source)==['경로']
 
 
 # ---------------------------------------------------------------- P2 증류
@@ -144,7 +106,8 @@ def _arm(monkeypatch, reply, recall=None):
     return saved
 
 
-TOOL_CALLS = [{"tool_name": "execute_ibl", "input": {"code": c}, "success": True} for c in CALLS]
+from test_distill_source_recovery_2026_09_09 import completed_call
+TOOL_CALLS = [completed_call(c) for c in CALLS]
 
 
 def test_p2_phrase_is_not_saved_automatically(monkeypatch, tmp_path):
@@ -176,16 +139,6 @@ def test_p2_word_saved_without_a_name(monkeypatch, isolated_distill_training):
     assert not isolated_distill_training.with_suffix('.distill.tmp').exists()
 
 
-def test_p2_gates_still_reject_on_the_manual_path(monkeypatch):
-    """관문은 살아 있다 — 방아쇠만 사람에게 갔다. 수동 경로(_distill_phrase)를 직접 두드려 확인한다."""
-    import ibl_usage_rag as rag
-    for phrase, slots in (([PHRASE[2], PHRASE[0]], SLOTS),      # 순서 뒤집힘 = 실행에 없던 모양
-                          ([PHRASE[0]], SLOTS),                  # 한 문장 = 낱말이지 관용구가 아니다
-                          ([GREP, READ], {})):                   # 슬롯으로 안 비운 홈 경로 = 개인 명사
-        saved = _arm(monkeypatch, {"intent": "x", "code": "", "topic": "개발/프론트",
-                                   "phrase": phrase, "slots": slots})
-        got = rag._distill_phrase("x", {"phrase": phrase, "slots": slots}, CALLS, "개발/프론트", TOOL_CALLS)
-        assert got is False and saved == []
 
 
 def test_p2_prompt_no_longer_asks_for_idioms():
@@ -197,13 +150,6 @@ def test_p2_prompt_no_longer_asks_for_idioms():
 
 
 # ---------------------------------------------------------------- P3 회상 사용·귀속
-def test_p3_phrase_used_half_rule():
-    import ibl_usage_rag as rag
-    code = "; ".join(PHRASE)
-    assert rag._phrase_used(code, CALLS) is True
-    assert rag._phrase_used(code, [GREP, PIPE]) is False          # 3문장 중 1 → 미달
-    assert rag._phrase_used(code, [GREP, READ]) is True           # 2/3 → 사용
-    assert rag._phrase_used(code, [EDIT, GREP, READ]) is True     # 순서 보존 부분열(grep, read)
 
 
 def test_p3_known_phrase_called_by_name_skips_new_phrase(monkeypatch):
@@ -216,19 +162,6 @@ def test_p3_known_phrase_called_by_name_skips_new_phrase(monkeypatch):
     assert rag.distill_experience("x", calls, top_score=0.3) is False and saved == []
 
 
-def test_p3_retyped_but_not_called_is_not_use(monkeypatch):
-    """`_phrase_used` 의 뜻은 살아 있다 — 부르지 않고 베낀 턴은 **사용이 아니다**(회상 귀속·우회 집계가 읽는다).
-
-    옛 판은 이 계약을 '자동 증류를 스킵하느냐'로 확인했다. 자동 증류가 없어진 뒤(2026-09-07)에는
-    판정기 자체를 두드린다 — 계약이 사라진 게 아니라 그것을 읽는 자리가 바뀌었다."""
-    import ibl_usage_rag as rag
-    code = "; ".join(PHRASE)
-    assert rag._phrase_used(code, CALLS) is True                      # 본문이 실행됐다 = 사용
-    assert rag._phrase_used(code, [f'[fn:찾아고치기]{{패턴: "p"}}']) is False   # 이름만 있고 본문이 안 돌면 아니다
-    saved = _arm(monkeypatch, {"intent": "x", "code": "", "topic": "개발/프론트", "phrase": PHRASE, "slots": SLOTS},
-                 recall=[code])
-    rag.distill_experience("x", TOOL_CALLS, top_score=0.3)
-    assert [s for s in saved if s.get("category") == "phrase"] == []   # 자동 경로는 어느 쪽이든 뽑지 않는다
 
 
 def test_p3_recall_outcome_attributes_to_used_phrase(monkeypatch):
@@ -262,13 +195,17 @@ def _mk_db(path):
 
 
 def _add(db, intent, code, topic, category="single", ok=0, alias=""):
+    from ibl_edition import pin_source
+    code = pin_source(code)
     now = datetime.now().isoformat()
     conn = sqlite3.connect(db)
     try:
         conn.execute("SELECT alias FROM ibl_examples LIMIT 1")
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
-    cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, created_at, updated_at, topic, alias) VALUES (?,?,?,?,?,?,?,?)",
+    from ibl_example_index import ensure_current_examples
+    ensure_current_examples(conn)
+    cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, created_at, updated_at, topic, alias, executable) VALUES (?,?,?,?,?,?,?,?,1)",
                        (intent, code, category, ok, now, now, topic, alias))
     if alias:
         conn.execute("ALTER TABLE ibl_examples ADD COLUMN provenance TEXT DEFAULT '{}'") if 'provenance' not in {r[1] for r in conn.execute('PRAGMA table_info(ibl_examples)')} else None
@@ -297,39 +234,26 @@ def env(tmp_path, monkeypatch):
     return HT, db
 
 
-def test_p4_phrase_section_roundtrip_and_map(env):
-    HT, db = env
-    _add(db, "검색해 상위 5건", PIPE, "개발/프론트", "pipeline")
-    pid = _add(db, "찾아 읽고 고친다", "; ".join(PHRASE), "개발/프론트", "phrase", ok=2, alias="찾아고치기")
-    path = HT.refresh_topic("개발/프론트", db)
-    text = open(path, encoding="utf-8").read()
-    assert "## 용례" in text and "## 관용구" in text
-    assert text.index("## 용례") < text.index("## 관용구") < text.index("## 갱신 기록")
-    assert f"### 찾아고치기 — 찾아 읽고 고친다 · 문장 3 · 슬롯 패턴, 루트, 파일, 앞, 뒤 ‹#{pid} · " in text
-    assert '호출: `[fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"} → Record`' in text   # 관용구 = 이름 붙은 함수
-    assert "1. `" + PHRASE[0] + "`" in text
-    # 용례 절엔 관용구가 섞이지 않는다
-    sec = text[text.index("## 용례"):text.index("## 관용구")]
-    assert "${패턴}" not in sec
-    known, fresh = HT.parse_phrases(text)
-    assert known == [{"intent": "찾아 읽고 고친다", "ibl_code": "; ".join(PHRASE), "id": pid, "alias": "찾아고치기"}] and fresh == []
-    # 사람이 머리의 이름을 바꾸면 색인이 따라온다
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.replace("### 찾아고치기 — ", "### 찾아서고치기 — "))
-    os.utime(path, (os.path.getmtime(path) + 5, os.path.getmtime(path) + 5))
-    sync = HT.sync_topic("개발/프론트", db)
-    assert sync["updated"] == 0 and sync["rejected"]
-    assert HT.rows_of("개발/프론트", db, kind="phrase")[0]["alias"] == "찾아고치기"
-    assert "개발/프론트 (1 · 관용구 1)" in HT.map_text(db)
-    r = HT.recall("개발/프론트", db)
-    # recall의 items는 용례와 호출 가능한 함수를 함께 싣는다. count는 통화 행수다.
-    assert r["count"] == len(r["items"]) == 2 and r["example_count"] == 1
-    assert r["phrase_count"] == 1 and r["phrases"][0]["id"] == pid
+def test_phrase_section_roundtrip_and_map(env):
+    HT,db=env
+    source='#!ibl edition=2\n[def:보존]($x){return $x}'
+    _add(db,'목록에서 첫 행',PIPE,'개발/프론트','pipeline')
+    pid=_add(db,'값을 보존한다',source,'개발/프론트','phrase',alias='보존')
+    path=HT.refresh_topic('개발/프론트',db)
+    text=open(path).read()
+    known,fresh=HT.parse_phrases(text)
+    assert known[0]['ibl_code']==source and known[0]['id']==pid and fresh==[]
+    open(path,'w').write(text.replace('### 보존 —','### 변경 —'))
+    os.utime(path,(os.path.getmtime(path)+5,)*2)
+    out=HT.sync_topic('개발/프론트',db)
+    assert out['rejected'] and out['updated']==0
+    assert HT.rows_of('개발/프론트',db,kind='phrase')[0]['alias']=='보존'
+    assert '개발/프론트 (1 · 관용구 1)' in HT.map_text(db)
 
 
 def test_p4_human_block_inserted_and_removed_block_deleted(env):
     HT, db = env
-    pid = _add(db, "찾아 읽고 고친다", "; ".join(PHRASE), "개발/프론트", "phrase")
+    pid = _add(db, "값 보존", "#!ibl edition=2\nreturn 1", "개발/프론트", "phrase")
     path = HT.refresh_topic("개발/프론트", db)
     text = open(path, encoding="utf-8").read()
     # 사람이 새 블록을 적는다(#id 없음) + 기존 블록을 지운다
@@ -386,8 +310,7 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
     monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
     monkeypatch.setattr(mod.IBLUsageDB, "search_hybrid", fake_search)
-    monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias", lambda self, name, edition=1:
-                        None if edition != 2 else {
+    monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias", lambda self, name: {
                             "alias": name, "ibl_code": current,
                             "signature": "패턴 루트 파일 앞 뒤", "returns": "Record"})
     monkeypatch.setattr(rag, "_own_only", lambda r: r)
@@ -395,7 +318,7 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     r = rag.IBLUsageRAG(); r.clear_cache()
     monkeypatch.setattr(r, "_is_ibl_relevant", lambda q: True)
     xml, top_score, top_code = rag.build_execution_memory("컴포넌트 고쳐줘")
-    assert top_code == '' and top_score == 0.7  # 구형 원문은 반사 실행하지 않는다
+    assert top_code == '' and top_score == 0.7  # 여러 문장은 명시적으로 펼쳐 읽는다
     assert any(k.get("exclude_category") == "phrase" for k in calls)  # 낱말 채널은 관용구 제외
     assert 'kind="phrase"' in xml and 'sentences="1"' in xml
     assert 'slots="패턴, 루트, 파일, 앞, 뒤"' in xml and 'name="찾아읽고고치기"' in xml
@@ -458,12 +381,15 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     conn.execute("ALTER TABLE ibl_examples ADD COLUMN always_on INTEGER DEFAULT 0")
     current = '#!ibl edition=2\n[def:찾아고치기]($패턴,$루트,$파일,$앞,$뒤){[self:grep]{pattern:$패턴,root_path:$루트}\n[self:read]{path:$파일}\nreturn [self:edit]{path:$파일,old_string:$앞,new_string:$뒤}}'
     rows = [("어디 있는지 모르는 것을 읽어야 할 때", current, 5, 1, "찾아고치기", "패턴 루트 파일 앞 뒤", 1),
-            ("등록만 — 소개 안 함", '[sense:search]{query: "${q}"}; [table:take]{n: 3}', 9, 0, "등록만이름", "q", 0),
+            ("등록만 — 소개 안 함", '#!ibl edition=2\n[def:등록만이름]($q){return $q}', 9, 0, "등록만이름", "q", 0),
             ("낱말", PIPE, 9, 0, "", None, 0)]
     for intent, code, sc, fc, alias, sig, on in rows:
         conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, fail_count, created_at, "
                      "updated_at, topic, alias, signature, always_on) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                      (intent, code, "phrase" if alias else "pipeline", sc, fc, now, now, "개발", alias, sig, on))
+    from ibl_example_index import ensure_current_examples
+    ensure_current_examples(conn)
+    conn.execute("UPDATE ibl_examples SET executable=1")
     conn.commit(); conn.close()
     (tmp_path / "data").mkdir()
     os.replace(db, str(tmp_path / "data" / "ibl_usage.db"))
@@ -483,7 +409,7 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
     assert "[개발]" in block
     # 항목 = 호출 · 언제 · 골격 (뜻 한 줄이 아니라 **부를 조건**)
-    assert '판본 2 (execute_ibl edition:2): [fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block
+    assert '[fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block
     assert "  언제: 어디 있는지 모르는 것을 읽어야 할 때" in block
     assert "  골격: def → self:grep → self:read → self:edit" in block
     assert "· 사용 6회" not in block  # 옛 행의 통계를 새 판본 실적으로 옮기지 않는다.
@@ -497,33 +423,8 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
 
 # ── 2026-09-06 속편: 이름은 경제로 판정 · 이름의 뜻이 intent ─────────────────────────────────────
 
-def test_p3_uncallable_by_saved_chars():
-    from ibl_idiom import uncallable_reason, saved_chars, MIN_SAVED_CHARS
-    # 얼어 있는 본문이 호출문보다 짧으면 부를 값이 없다
-    tiny = '$x = $값; $return = $x'
-    sig = ["값"]
-    assert saved_chars(tiny, sig) < MIN_SAVED_CHARS
-    assert uncallable_reason(sig, 2, tiny) is not None
-    # 얼어 있는 본문이 길면(지시문·고정 인자) 부를 값이 있다
-    fat = ('[sense:search]{source: "gnews", query: "$질의", limit: 10} >> [table:dedup]{by: "url"} >> '
-           '[table:ai]{instruction: "사건 단위로 분류하고 한 줄 요지를 쓴다. 중복은 합치고 날짜를 붙인다", '
-           'fields: ["label", "date", "title", "summary", "url"]}; [self:write]{path: "$경로", content: "$요지"}')
-    assert uncallable_reason(["질의", "경로", "요지"], 2, fat) is None
-    # code 없이 부르면 옛 판정만(하위 호환)
-    assert uncallable_reason(sig, 2) is None
 
 
-def test_p3_meaning_becomes_intent_on_the_manual_path(monkeypatch):
-    """저장되는 intent 는 *이 사건의 요약*이 아니라 *부를 조건*이다 — 수동 경로에서도 그대로."""
-    import ibl_usage_rag as rag
-    saved = _arm(monkeypatch, {})
-    got = rag._distill_phrase("USB 연결된 폰에서 계기 트리 혼종 문제를 진단하고 수리한다",
-                              {"phrase": PHRASE, "slots": SLOTS, "phrase_name": "찾아읽고고치기",
-                               "phrase_meaning": "패턴으로 파일을 찾아 매칭 자리 주변을 읽고 지정한 줄을 고친다"},
-                              CALLS, "개발/프론트", TOOL_CALLS)
-    assert got is True and saved
-    assert saved[0]["intent"] == "패턴으로 파일을 찾아 매칭 자리 주변을 읽고 지정한 줄을 고친다"
-    assert saved[0]["alias"] == "찾아읽고고치기"
 
 
 def test_p3_registration_requires_the_when_line():
@@ -533,5 +434,5 @@ def test_p3_registration_requires_the_when_line():
     assert "phrase_meaning" not in p                    # 더는 모델에게 짓게 하지 않는다
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
     import register_idiom
-    info, why = register_idiom._gates("찾아고치기2", "", "; ".join(PHRASE))
+    info, why = register_idiom._gates("찾아고치기2", "", "#!ibl edition=2\n[def:찾아고치기2]($x){return $x}")
     assert info is not None and why is None  # 함수 등록에는 소개 맥락이 필수가 아니다.

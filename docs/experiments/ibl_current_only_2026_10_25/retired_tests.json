@@ -1,0 +1,1871 @@
+{
+  "baseline": "6bf56363",
+  "removed": [
+    {
+      "path": "backend/test_idiom_expansion_2026_09_09.py",
+      "symbol": "test_new_bodies_are_closed_non_ai_procedures",
+      "sha256": "5d4eef5fceda15ea2f09bcb4930339c2099e6363af5ece16c02420ce9968ecef",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "_run",
+      "sha256": "cda7874df3633ca67f3c8110b4eed8dbabbd0be479676e5a8d4974b00ab06765",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_program_grade.py",
+      "symbol": "test_c1_parser_block_vars",
+      "sha256": "69d5a0cddbd75d9813b8a0f973ae0cfc191375e0b5881b6bb51d513eb1d4ccc5",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_youtube_channel_resolution.py",
+      "symbol": "test_at_handle_is_literal_inside_ibl_params",
+      "sha256": "efa664c7f51e576be8088aec330659599f5ca14e39925075c1c314e771b67eca",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_edition1_retirement.py",
+      "symbol": "test_direct_legacy_dispatch_is_closed",
+      "sha256": "f26e4a1115679df1494ca6a2324b93c970c22ba7612e03c361f0204fae10b0ed",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_parallel.py",
+      "symbol": "_run",
+      "sha256": "2b3e475343578435083c55ecb8c9a0b2e3e0303033b8d0a32e90fc7f3ae95ed6",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_parallel.py",
+      "symbol": "test_P1_변수_병렬_파싱",
+      "sha256": "7af738aa608752e0b6456ae4eeab107b3de7b347be01727d75d4ac5904f6ddf6",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_parallel.py",
+      "symbol": "test_P4_미할당은_파싱_시점_정직_에러",
+      "sha256": "9906c5878f226d0e994d73b59faf75d7b31a347474bddebac1776064728ae0b8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_parallel.py",
+      "symbol": "test_P6_표기_규약이_머리_자리와_한_벌이다",
+      "sha256": "a832f160c3815df0750286a4cf74cc72cfa7aa6fd2f7c8039d16746c5337754e",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_parallel.py",
+      "symbol": "test_P7_폴백_거절문은_목록이_아니라_규칙을_말한다",
+      "sha256": "3d9635876625298e179d2e5fd06b4eb4190f2489421a4fe075fe0bca9484137d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_failure_grammar_honesty.py",
+      "symbol": "_parse",
+      "sha256": "5d74c05514fe3451a3eea045cf8369056f968104ab757028e1e4a88dc716df1a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e1_newline_escape_decoded",
+      "sha256": "da851fee05898ad8d5df1792bc40fc8e386875c9b403ea1a3807d5a9d738ef09",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e1b_quote_and_backslash_still_right",
+      "sha256": "d469c95c4ebd5ab36b2da3569e431fc4a5df8f953fe52ddddc77af7e6f257ae7",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e1c_codepoint_escapes",
+      "sha256": "175dba0c2c60e6b74c8b0a3c662405cef576884ac8f41cfc5c1e2d90998c7011",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e2_raw_quote_rejected_not_truncated",
+      "sha256": "802c1362a20cf6da1368da4cf8c3500a1bd4a36d8cd04174312fcb00c34bb93a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e2b_escaped_report_survives_whole",
+      "sha256": "eb08cbcbec6c85c67ca51471c22325bd3bda97f0bee6444809b65b91be07b798",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e3_unknown_escape_preserved",
+      "sha256": "6f585a03ad04d8779f86cbb267d7cfdd53c1c76665dd7d4b92f15a4b4f720db4",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e5_healthy_inputs_unchanged",
+      "sha256": "34099d1c5aa4ec0fd3e92f7c2e5f083d027ef619c8ac66c84a6bc3b698b654cc",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_param_escape.py",
+      "symbol": "test_e6_multiline_indent_preserved",
+      "sha256": "da48481b5c5edb0e0fb5bf61bae843d6c78cffd6757f5f23ae21aae1cc3a3afa",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_ai_detection_reads_dictionary_not_content_action_names",
+      "sha256": "d4b75920e33c1a6cc506454d41e52b5f5ba443560a74d908c68f928fa67de6b2",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_missing_function_and_action_are_not_free",
+      "sha256": "3f5887ef55758a5a8459ede0ce3daa33c57caae52abe79a72562e407c71322b5",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_analysis_budget_and_bounded_diagnostics",
+      "sha256": "4d2f7b0033dc9b4cb30cddbc7b6ea5e4c2624606d46d1188c72525747530dee2",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_literal_dollar_data_does_not_bind_a_variable",
+      "sha256": "ae51da1947b458afaeb1ae43f87d3de8b6d69cfa91149079af2d3061c94627c1",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_analysis_failure_keeps_existing_type_errors",
+      "sha256": "990c64d3aabeb856874438d59175b2b7c4be7b6393b8ab392ba612b093e8cacb",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_fn_pipe_input_2026_09_13.py",
+      "symbol": "test_no_binding_for_ambiguous_or_nonleading_input",
+      "sha256": "5aca904c5af4aff86997c0be6ca28a2843184315ea9f0c44c53d460c28fd1837",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round53_repairs.py",
+      "symbol": "test_B53_3_var_payload_derives_items_and_skips_untransformed",
+      "sha256": "c6f6d9a0e5774f7121dea34faaf02d17ff06e93b690f917ec407beb32a305b42",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "_reject",
+      "sha256": "6ef1de1aa305371dc048820256d6db0699313ef78ca79e03d5657fcfbecce0a5",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P6_정상_문장은_그대로_통과한다",
+      "sha256": "2ef9ac54679d3aa3c4a42d90484cff29983f631b2e59392aa4fc3645d70e42c8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P7_단어_문자로_시작하지_않는_키도_맨몸으로_받는다",
+      "sha256": "15dd402a8ac846cf660523267943c0902f216fe2ade58c9737b176da9d2f2cb7",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P6_병렬_뒤_할당은_원인과_처방을_말한다",
+      "sha256": "6fd300c208500b2aaa9f2cdec4d0b436b73535af97e07f67de1ad7a362ca2bbb",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P7_할당이_아닌_잔여는_처방을_붙이지_않는다",
+      "sha256": "b88d7f6596d9455a470741f0637eaefb5bc0d55b8c48fe12d36ff9c2e1170e2c",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P1_키_뒤_군더더기_따옴표는_키_표기_오류로_진단된다",
+      "sha256": "987804e20d0a956c405888321f40398df55435ef372b5eb7cc7d0bccbf53b8e1",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P2_키_앞_따옴표_미닫힘도_키_표기로_진단된다",
+      "sha256": "7b8a7870a0ab153d2166664d6aa563681c0890de857611959bb7de7daddd322e",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P3_구분자_오류를_각각_구별한다",
+      "sha256": "fc09dd62a73b1841642c24cc569a62fc3d5de118c216c7d14433bcbd0e32d56c",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P4_진짜_값_이스케이프_문제는_종전대로_안내한다",
+      "sha256": "5ec87c359945e32ba43aadb620012f9d6eed1e0a614a3d79120974e610ee6ee2",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "test_P5_멈춘_자리는_늘_보고된다",
+      "sha256": "7bad8aaea4204121c8af300fb749dfa8214d13fd97fa5942e345bb80a3ffd937",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_block_body_parse_failure_2026_09_08.py",
+      "symbol": "test_invalid_nonempty_branch_is_a_syntax_error",
+      "sha256": "175528a435e29bd33b279d7a14fcf667529ae13f2fd660d2b1155b80361690da",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_block_body_parse_failure_2026_09_08.py",
+      "symbol": "test_report_guard_cannot_discard_unparsed_outer_variable_pipeline",
+      "sha256": "728d936df4b2a8f5567d26830f60ba493d01bfc64f954926364ef79dcf207be3",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_block_body_parse_failure_2026_09_08.py",
+      "symbol": "test_explicit_empty_branch_remains_empty",
+      "sha256": "3283bbdca673a4de15a342f93d652739d3def46edecaa075fe51a143f689904c",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_block_body_parse_failure_2026_09_08.py",
+      "symbol": "test_valid_branch_keeps_its_write_action",
+      "sha256": "662f1472633d783fa35744be28721c5632188663cc1b5a97c7c0e3b77134baf6",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_audit_repairs.py",
+      "symbol": "test_variable_payload_preserves_empty_currency",
+      "sha256": "8f7cae74b77e3ec559ca5137848a2f1d4a80d0cd6ae78a29340bcfe5e1aab75f",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_audit_repairs.py",
+      "symbol": "test_short_summary_does_not_replace_empty_currency",
+      "sha256": "8f76f288c8b36cc4e7f7842cb69746869a12c762eca5033ab05be37ae1a84d96",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round36_repairs.py",
+      "symbol": "test_try_catch_reports_unparseable_body_not_missing_catch",
+      "sha256": "11eb53b8bfa2d0efee163f6328263ed7c503331c6a2340a6ecb1a537bb4732f0",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_idiom_value_2026_09_08.py",
+      "symbol": "test_inline_arithmetic_gets_relevant_diagnosis",
+      "sha256": "57bd28efe2a1eb3db7317008583b01d306187b4397ae33b07d745f33f82b5e42",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_free_var_signature_2026_09_07.py",
+      "symbol": "test_free_vars_are_signature_everywhere",
+      "sha256": "5a84cd894ec88ddb8007a70caa152cd7a57caaacca71909dd569049469ed4170",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_free_var_signature_2026_09_07.py",
+      "symbol": "test_toplevel_still_rejects_unassigned",
+      "sha256": "e191a435f22ce03150292141ab23e98529a3669b2098d5f11a3a8af5c553c99f",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_free_var_signature_2026_09_07.py",
+      "symbol": "test_def_block_signature_includes_pipe_head_slot",
+      "sha256": "b68166bc21e5f3ed5560ff0aa4fcae97f109c75e73661115733fb2ea38b9f567",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_round6_contracts.py",
+      "symbol": "test_partial_currency_binding_preserves_data_and_plan",
+      "sha256": "e93b188a83a69a2dd28979389aae02649d8fa3becd06c52948d601ed278accba",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_round6_contracts.py",
+      "symbol": "test_legacy_currency_binding_leaves_other_source_names_alone",
+      "sha256": "752a3ae055e81c6aaf4fbeb55243442c55fae1c23574549482976b9c28353d3e",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_round6_contracts.py",
+      "symbol": "test_currency_reference_keeps_legacy_whitespace_and_column_contract",
+      "sha256": "16c564261da174876fe10f7982d07b741588edc49a0c96afe5318f82ea217019",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_round6_contracts.py",
+      "symbol": "test_empty_interpolation_does_not_turn_text_into_list",
+      "sha256": "8d1d7d0727d6eb2e4929cbf93cc7fcb126c782089be01d9cb56b7d2fe7f8172d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_client_agent_contract.py",
+      "symbol": "test_published_action_quotes_cannot_inject_another_ibl_leaf",
+      "sha256": "86936aae9cf82a53a160746ae98ff13f18da379bf0eac4730a8ccf19f979be9a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_idiom_exposure_repairs_2026_09_09.py",
+      "symbol": "test_return_projection_keeps_values_and_does_not_mutate_diagnostics",
+      "sha256": "6f48bad48e559e26980e6b888f7cb93f93423328ba08fc2bfb7e5b67bbbf7260",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_episode3781_3783_repairs.py",
+      "symbol": "test_quoted_query_and_each_guidance_parse_without_extra_round",
+      "sha256": "ea2d663624fefadce348f4a6f2d5f6c7c775a808b59cccb382bf4777c3226454",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_lang_revision_2026_09_04.py",
+      "symbol": "test_l1_unquoted_braced_variable_parses_like_bare",
+      "sha256": "53ab6868e0f44c878cef25fb43e697ef829c725dd9fca4952d2a30991dedac7f",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_lang_revision_2026_09_04.py",
+      "symbol": "test_l2_prose_result_message_and_text",
+      "sha256": "af2ee6a513ea76826d29494eb5b2b146314dbdf178bd837508808c1e93da03db",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_p1_lone_or_head_transform_rejected",
+      "sha256": "82b6a4fde344217dfb5b78d45e776ddbffed3551c0c7f70d6e7c96521ba27552",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_p2_head_transform_with_items_passes",
+      "sha256": "f204d3752bae8a0fc541822f04b0f32f1b5decfb18f1fe5d782803e8bdc6592a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_p3_producer_then_transform_passes",
+      "sha256": "627e95e6329759f84091c2612520c5ed962ac3bd07f6fb30e74cf579605d4f5d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_p4_incoming_currency_passes",
+      "sha256": "45e78091cc52131a2da19f168020b5c4b64b539f8bbb7a597deb4aea2c7d9774",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_p5_special_heads_out_of_scope",
+      "sha256": "bdce91b4da955c0bb95258f8e25455c016cd161fee74d3172a00869b6b4b897c",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_t2_effect_into_transform_rejected",
+      "sha256": "f6c8fc8fa50cee9667c573a4e42ac9b15a450364ce9d031136807515266afa98",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_t2_op_override_resolved_not_action_level",
+      "sha256": "41ec57e614905b819273b6e36931e0cfbdd3e9ef60448a3dbd679612bc5c701a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_t2_returns_variants_param_conditional",
+      "sha256": "c950b74cdbe4fbbbd645239216e6cbef6aa9d9ced1e1c08b78cc6ba4e4e3c9c0",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_t2_abstains_are_conservative",
+      "sha256": "fd87408c16184e45c6ef2f653e5f898d29c0a38921fa3a52a4d765742d0ee76f",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_incoming_currency_does_not_cross_an_independent_boundary",
+      "sha256": "aae185bb4da2e3caa3dbe03e09ee5d70bddcdfc2765a69033eb266d6c8f18ba7",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_program_grade_m3m5.py",
+      "symbol": "_run",
+      "sha256": "50c7e7be9a207709ca08fffb2d80f42fb8c1540b642c7d66b9fd2b0c48f765d5",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_code_ir.py",
+      "symbol": "test_rows_bind_without_parsing_again",
+      "sha256": "116413f030fd5df71f6a13f66faf521cec317e54b84a3296c682bf5643299865",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_code_ir.py",
+      "symbol": "test_compiled_program_and_captures_survive_json_and_copy",
+      "sha256": "ddfc7699dc85c0cf1c92aacfcc5f89c48d33ff4dd803a4c5c4652be114c1d7b4",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_code_ir.py",
+      "symbol": "test_partial_string_binding_does_not_rescan_inserted_data",
+      "sha256": "d6b508adf61633da50d5e758f8230bcac4fda42bec2bd1684172a272f5ceeec1",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_code_ir.py",
+      "symbol": "test_unknown_wire_version_is_rejected",
+      "sha256": "fec4e64bc5b3277101cdfd4abef44ba81eb01cf60e39d22d611af21afc11bfd8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_code_ir.py",
+      "symbol": "test_literal_grammar_matches_existing_parser",
+      "sha256": "61f8eb8d211b73bb73cfc9634c3fb97143c1cede76d393f7d3ef0faffe168869",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_code_ir.py",
+      "symbol": "test_live_execution_does_not_use_legacy_source_substitution",
+      "sha256": "4f659e6de9c4532ebb385fbedcb49b0c307238888ae5b96159ad525d470de696",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_var_notation.py",
+      "symbol": "test_b3_parser",
+      "sha256": "71ef6cf8e4df7dae6002502e0e08ff94d1864ef2ca0f8894998c7a3141c8a5a8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_var_notation.py",
+      "symbol": "test_b4_signature",
+      "sha256": "55ccd31f2a013a3abe0b1011ad0b06cdb6779d36e6cc15a8ef48a5daa3074cda",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_var_notation.py",
+      "symbol": "test_b5_caller_injection",
+      "sha256": "d941a7ed9ff91f055afa4a06706f09f199d7a442325f576844898f246c760618",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_var_notation.py",
+      "symbol": "test_b8_items_binding",
+      "sha256": "f107390c2008526d52c6ab2d1753fd97b3a653b5fb011f5c081de1c74b20c201",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "check",
+      "sha256": "9087c7a5341c939786019723c788d20d5866402c41a688247ee27eca4e18d019",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_six_failure_classes_are_rejected",
+      "sha256": "ca8411e5246438c42043845d0c53ee6ba8ca51cbe3161095d16cd4b49039a3e6",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_structured_type_is_lossless_beyond_display_limit",
+      "sha256": "1477977db901dbfb9bf53159f56feef0692bf2e9358fcd1a66384f0e515e66a1",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_unknown_dynamic_and_large_inputs_are_not_closed",
+      "sha256": "083a90e7a8ac2448af6e60357bef08d1215107e2b267a75a605190dda96f8ae6",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_transform_replaces_old_items_type_but_preserves_source_evidence",
+      "sha256": "88a68d76c56cfefc96b5cec55f588a38bcaeb13c030ac2cf88781cd7b16ec198",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_flatten_preserves_nested_identity_null_literal_and_collisions",
+      "sha256": "f5434db9ebdbbed238c607b4ed74f073851f75bece16624b8fe2cbc306b6d9cb",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_normal_envelope_and_union_operations_remain_valid",
+      "sha256": "2a5b882a1efe8bb7f64b41e2c4145c5c0df0bb7a67b52aebb54166e141998cc2",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_episode_3909_3916_repairs.py",
+      "symbol": "test_quote_error_gives_valid_recovery_without_rewriting_input",
+      "sha256": "5b6ed0408f3362ee6c12eee95ad699279030d8ff2b030a5f83cb5b45397b3c5b",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_semantics.py",
+      "symbol": "test_V1_통짜_경로_참조는_원형이다",
+      "sha256": "d06501965c2484a4b1a4721daee8b9fd2822b38a661b789237cab199e16252eb",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_semantics.py",
+      "symbol": "test_V2_bare_참조는_v4_계약_그대로",
+      "sha256": "a8f9ed097e80c4818e7252e746c45cb5d9b6378685346015f998e7fbaf1c382d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_semantics.py",
+      "symbol": "test_V3_문장_속_참조는_문자열화",
+      "sha256": "a5d2f625ca424525014f59c604c99106bab19778fadb8f08c8009c6ae272fa0f",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_semantics.py",
+      "symbol": "test_V4_변수_파이프_머리_탈당의",
+      "sha256": "dc89d74c412b422de58b9f733b9e0ddb6a24768601c173fecbf075cbaf044b37",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_var_semantics.py",
+      "symbol": "test_V5_미할당_머리는_파싱_에러_예약어는_비적용",
+      "sha256": "467428bb5b4bb93759f07d7d2904436a5cd90b86904c458b1285a963dbc9dcd7",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i1_binding_leaves_a_mark",
+      "sha256": "8dd131240242c197d19ef96a7dcaa24e70bbc939819f862cadc524ab76bed0a8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i2_failure_says_what_was_bound",
+      "sha256": "082698f68b4bc438708781cd1e391a5b14426eff18c82218ae36f532ead3f310",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i3_no_binding_no_noise",
+      "sha256": "d80cd8e55f79c97245b6726f40d819810e4e9307c110749f95c87824700aabb3",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i7_mixed_items_ref_substitutes_and_marks",
+      "sha256": "648f7e3f6345e7d0c922ac15d2b796bc9ba18a0c5c0d896b2bb6853cc608deaa",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i8_standalone_reference_still_binds",
+      "sha256": "88b91527bf2fb72e2298c8e61b727318b97756b8f91e77589d4d85550afa95de",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i9_var_in_text_marks_with_name",
+      "sha256": "43287d2ee168e80d6d9a4efb0acff0c5136c26cd0e3a77893942135f15efa1a1",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i10_sole_var_and_scalar_path_do_not_mark",
+      "sha256": "22d56db109f53b2a14102f25f31274948404e38237d8446c5f061287f069504d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i12_failure_note_and_envelope_warning_speak_the_mark",
+      "sha256": "78a00862deda9a0ab4dc0d128b101a9c546d2380964386564b00633f06f332d8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i15_parser_keeps_the_variable_name_for_the_mark",
+      "sha256": "6dbe1c7c56446bb66b8d68448893a3e1abc14a7217720edd6a58717f00c4b73a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_reusable_catalog.py",
+      "symbol": "test_installed_intent_uses_matching_source_and_rejects_conflicting_teaching",
+      "sha256": "2472198ef38aa1ba84fe5401449d0756c764f5f031554f2612c93f70623ea9c3",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_expression_revision_2026_09_08.py",
+      "symbol": "run",
+      "sha256": "bf6658c5a3487e3e799d3810691bad1185d9a8bab98cc40bc5701863bb95edb5",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_expression_revision_2026_09_08.py",
+      "symbol": "test_malformed_or_unknown_body_is_rejected",
+      "sha256": "de12beb0dc3992f07a708502b847a6c7156ab7dacfa50ea760715aae0b710861",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_expression_revision_2026_09_08.py",
+      "symbol": "test_raw_nested_code_transmission_and_capture",
+      "sha256": "9281f07caf462ecf6f8c36144a513bb23bbaa7e82d6a677c4114ef02bc9ba1ac",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_expression_revision_2026_09_08.py",
+      "symbol": "test_block_scope_is_reset_and_functions_remain_closed",
+      "sha256": "cf6cc2e8ac1e074c201653bfde568a33e196a9a691226499b98030cfdefeb9a8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_direct_currency_inputs_2026_09_08.py",
+      "symbol": "test_direct_inputs_override_effect_and_keep_missing_input_guard",
+      "sha256": "d8bbcc3d26b42d96fa9d450874ab6efb97d462e92638f088b056d011af3a172f",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_direct_currency_inputs_2026_09_08.py",
+      "symbol": "test_multiple_input_forms_agree_with_runtime",
+      "sha256": "f1996934c443a760717e9122e5952cb7d0df3b38667cb43ac21bde076a6a7424",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_direct_currency_inputs_2026_09_08.py",
+      "symbol": "test_single_table_rejected_but_variable_bundles_and_empty_branches_work",
+      "sha256": "e0d3eeced0c8bce000ac423265e986275ca5a314b43d0bbb563af86f79a52906",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_foreign_comment_diagnosis.py",
+      "symbol": "test_foreign_comment_is_rejected_with_the_remedy",
+      "sha256": "f0cb197b4f76c9390b6f59d8d766702dccf080ac987700c0483e8130cab32c9e",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_foreign_comment_diagnosis.py",
+      "symbol": "test_hash_comment_and_markdown_body_still_parse",
+      "sha256": "9516909409b83cce1ef227dfa29445970d7d25c35142d77767ae6198623e535d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_limits_2026_09_09.py",
+      "symbol": "test_literal_head_parses_as_nameless_assign_and_actions_are_untouched",
+      "sha256": "cee9d0df893c42dd835b02672b79b8a6ec507f5a6d6e5a18a3b3c180cc5200b7",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_limits_2026_09_09.py",
+      "symbol": "test_bare_literal_statement_without_pipe_is_still_rejected",
+      "sha256": "2d5f65f105b35fbe17729c83c3a1f3ec13f1e5e5662b898d8d854fb693dd89e0",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_limits_2026_09_09.py",
+      "symbol": "test_fallback_bare_variable_is_still_not_an_attempt",
+      "sha256": "b4c6869f6053534e870987d25441e64f8af9ce1ad5df9e7e5d78717658ff055b",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_limits_2026_09_09.py",
+      "symbol": "test_fallback_container_carries_branch_vars_like_parallel",
+      "sha256": "1c6982130e9d22739fa57396d807eb3ee79b3dec61474dca4a302643abcdca4a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_functions.py",
+      "symbol": "_run",
+      "sha256": "d24529fe276d334ac440c398822b72a58ccb961d3ccb049ff1f2b4b6b3528751",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_functions.py",
+      "symbol": "test_f1_def_block_parses_signature_and_todo",
+      "sha256": "82dd55b3113ea97a9305115b15442e8f41a6206b5156e0f5033bd71cfd8ac83b",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_functions.py",
+      "symbol": "test_f2_forward_reference_binds_and_unknown_stays_unbound",
+      "sha256": "541048c57731649cf071b8dd1de34275a2c625d677f8dd095dac79734c215340",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ai_report_repairs_2026_09_08.py",
+      "symbol": "test_parenthesized_reference_forms",
+      "sha256": "c981faebf1c8312cdca0eb048f6bf76dc435b2e2923032c5be6aed0f1cf47f60",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ai_report_repairs_2026_09_08.py",
+      "symbol": "test_parenthesized_free_slot_in_function_and_missing_variable",
+      "sha256": "7c11f58dc454da5a6382ef64c005133f812e0d0e616072955100cfa7c0817c80",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ai_report_repairs_2026_09_08.py",
+      "symbol": "test_unclosed_container_never_becomes_string",
+      "sha256": "590221cd3b33cfcfce5d8c24898998da435e40fcb722b7440b41edfa0dbbdda8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_managed_records.py",
+      "symbol": "test_injected_runtime_metadata_and_explicit_principal",
+      "sha256": "d2cef21c8089eeceba8e42c64961526b71643020ef4122a525c4cc534e3b67c9",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_document_sheet_transit_2026_09_15.py",
+      "symbol": "test_public_ibl_document_and_sheet_dispatch",
+      "sha256": "a59404ec566addb46cca99ef8a873bdaa7d0c4801ecdb293390b84a3794aaf09",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_parser_boundaries.py",
+      "symbol": "test_before_refactor_boundary_contract",
+      "sha256": "d01e0b19c27b52f2144542c3b4b89a3b509bc70989ba57efd0e5e9bc38fd31d5",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_parser_boundaries.py",
+      "symbol": "test_json_fallback_and_capture_bypass_do_not_depend_on_optional_json5",
+      "sha256": "3c92a19745e155053c9654639b87837ebc177f1bb19e290a743e129609dc49b5",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_handler_error_contract.py",
+      "symbol": "test_b35_1_parser_keeps_leading_zero_identifiers",
+      "sha256": "f08f1362bd38d7ba4b235d344f962139e1eaafc81dc53b35504d4166d852712d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_seam_repairs_2026_09_05.py",
+      "symbol": "test_var_path_items_derives_from_table_currency",
+      "sha256": "b57a90c615562a16bff05cd3469726cde5f4ef8ff14c69565fd1364bd9817aec",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_seam_repairs_2026_09_05.py",
+      "symbol": "test_var_path_items_keeps_direct_items_and_honest_error",
+      "sha256": "6a4c1d9d056ec89ecf933c57b954a2a0d771da40c54072828f43e0d6b7cd3519",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_boundary_probe.py",
+      "symbol": "test_recursive_parser_and_executor_share_definition_table",
+      "sha256": "4f6fe3704470242d329b5eab8987349843936ecdc9dcc287014d4aca0e61e12d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_boundary_probe.py",
+      "symbol": "test_dynamic_arrays_reject_bad_separators",
+      "sha256": "afbb022153c63496803310e8b93d311d9f28d55583839f25fdf6fcf9694065c8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_boundary_probe.py",
+      "symbol": "test_comment_preprocessing_preserves_string_content",
+      "sha256": "7c9b096f94179ae645c635fa2c5c16f33e48e43b2bf786d21fc2a914471b075e",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_form_preservation_2026_09_06.py",
+      "symbol": "test_binding_items_path_on_table_form_derives",
+      "sha256": "e113e3300b3855c03d46cf54975def0d1de9a7448d0921fbc4f59085dae12bf0",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_partner_shapes.py",
+      "symbol": "test_sweep_excludes_self_pipe_but_keeps_self_parallel",
+      "sha256": "f5dcc3ca06e9f12fdd3b46200c54b464810ea61e7c3ec963b3a9ebcb37d07c63",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_partner_shapes.py",
+      "symbol": "test_sweep_does_not_chain_across_independent_statements",
+      "sha256": "6accc0ddbbe0629a4ac5e9f5add8c07a9f9f07fa79d3d3ae7d9a0c21b75a75c7",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_partner_shapes.py",
+      "symbol": "test_sweep_counts_sentences_inside_each_do",
+      "sha256": "e71259dbfb8cc62308da5860ce84114c791eedbefe6c0438fe2e7c6f3e15b7e0",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_turn_variable_text_2026_09_09.py",
+      "symbol": "test_partial_binding_updates_text_and_preserves_data_after_transport",
+      "sha256": "2d57c738d76be0ba21eb109dae62d558863d30870114f9b736d9e21a4382fd8a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_silent_failures.py",
+      "symbol": "test_d1_mixed_operators_rejected",
+      "sha256": "5c0cf7f34d184be85ff4381f2141f01a0da296066ed4817826c8aaeff166e481",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_silent_failures.py",
+      "symbol": "test_d2_leftover_text_rejected",
+      "sha256": "0c15bb6e266331f528d45e25c5297d9c73734150765ef18fdc59ec49a384cd5d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_silent_failures.py",
+      "symbol": "test_d3_string_protected_comment_strip",
+      "sha256": "c83925afc40aec8c3387ecc5ae454a375c9b64cc75a335bd9e5df5fe88d5f30a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_silent_failures.py",
+      "symbol": "test_d4_var_binding_parser",
+      "sha256": "02615944caffea31d9c0b415ee2a691b9c36083c5fc45b02123309bd91305f7c",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_language_revision_2026_08_28.py",
+      "symbol": "test_L4_optional_path_suffix",
+      "sha256": "1707341c5b6286e3b51d5b6c2eee44a1128d0e5fc1302d6294e95e3c76893f5c",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_currency_failures.py",
+      "symbol": "test_p26_spill_resolved_at_injection_seam",
+      "sha256": "f1b817c9b6df57eb4b5e6e082b274d5c8a07c39cb15561c81929a4e68e009baa",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round49_repairs.py",
+      "symbol": "_do_param_of",
+      "sha256": "7f9b28f4c0d3e1cd32d40a8fb735d3f888c4f4fcfe4109dddad4947f33c6b378",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round49_repairs.py",
+      "symbol": "test_B49_1_옛_재시도는_이_모양을_못_푼다",
+      "sha256": "a5428b610a39cfd86a2dd4189881357bcb41dc1c47bd3ba48c51f64f33e39a15",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round49_repairs.py",
+      "symbol": "test_B49_1_자리표를_메우면_재파싱이_산다",
+      "sha256": "797ff09b2abe78491764fa4cf47e3d42102eff14a06fa9145fe2500dcdd2d33a",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round49_repairs.py",
+      "symbol": "test_B49_1_자리표_굴절은_경로형과_괄호형까지_본다",
+      "sha256": "94e5102d518c1a7f90b898ad37b64caa3b38dcdf310d93e74bd47298d1ec1ec8",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round49_repairs.py",
+      "symbol": "_run",
+      "sha256": "6bceb57c6da1504060b449bbf7f2498a5b6efe09358867c4e2b372b4cd8d7fdd",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round49_repairs.py",
+      "symbol": "test_V49_1_바깥_이름의_재할당은_팬텀_슬롯을_뺏기지_않는다",
+      "sha256": "912cbc02c4f75cdfa8ea6b2939cd18f3dc7f471879c38dc7fcff56c481d9030d",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_imagination_round49_repairs.py",
+      "symbol": "test_B49_1_파서가_do_속_변수를_자리표로_바꿔_둔다",
+      "sha256": "3efd1e9f9a6efed7cab8a26c91e4be7c59f87461c5bdfd038c3cb0d1f403d925",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_idiom_call_signature_2026_09_06.py",
+      "symbol": "_executor_signature",
+      "sha256": "40658937da2dfa7c446f4e67651f9484f54cb70455557ed116a120b8a74c25ef",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_idiom_call_signature_2026_09_06.py",
+      "symbol": "test_표시_서명이_실행_요구와_같다",
+      "sha256": "eb519375ee6e713a0134bf931dd75f794e08f951858bf9734bc025fb12815373",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_idiom_exposure_repairs_2026_09_09.py",
+      "symbol": "test_current_block_body_uses_edition_checked_call_teaching",
+      "sha256": "f69cbd941c1131f1c416cc7ca5c7bf3b81b458176e9ae636dafab4fe8ff4be57",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_items_binding_honesty.py",
+      "symbol": "test_i14_caller_params_list_embed_is_reported",
+      "sha256": "93331176b610195d7ca43a18d02699fe9fd05567b49ca73f1098c6c2450c8647",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_idiom_composition_2026_09_07.py",
+      "symbol": "test_prompt_shows_executable_call_and_composition",
+      "sha256": "c129d96b28a3a5d1b546af5052bb557dee0ce99ef58098b185f25e286b1f6173",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_boundary_probe.py",
+      "symbol": "test_repeat_signature_is_local",
+      "sha256": "f1af7c954220a0a0f4ea775982b64350786c1caca991212b5244cd545db7d6ec",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_filter_precheck_2026_09_21.py",
+      "symbol": "test_dynamic_condition_defers_until_binding_and_regex_anchor_is_not_dynamic",
+      "sha256": "97549c853dacd770806eb6c4bc600b77f93ec665491556526f87779d6c2c2a56",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_p6_unknown_action_is_conservative",
+      "sha256": "a649fa0e0a3da4f78df207a9527966a8efc110208f1f8b8f5f7d73ad13c38b62",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_type_display_groups_identical_branches",
+      "sha256": "9b8d1783155cc5efafc5dd3a8b45b25165e10d74f089c1ba1685a83ec76b7c87",
+      "reason": "삭제한 구판 구현의 AST/실행 API를 직접 검증하던 시험·보조함수. 현행 의미론은 test_ibl_v2_*에서 검증."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_known_truncation_and_repeated_batch_are_nonblocking",
+      "sha256": "ee453ef76c94d28b34a8db0c030f6e4a34788094d23708869284fb92c27a9509",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_full_count_and_current_row_have_no_new_warnings",
+      "sha256": "0a0ece67e95314294dfd6dce38dd0c26bfc96e3588a3c6cec777b7b611924bad",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_zero_iterations_do_not_visit_ai",
+      "sha256": "637ccaf80b8c76c942b4db2f0d8284b44828624c8112630f3d2bb609bb2ce14d",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_pipeline_input_takes_precedence_over_explicit_items",
+      "sha256": "469ff26ea850c6b7d24f9f0afb1f16c25fb91c1ae2af62986cd65ce207dbf7f1",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_unknown_pipeline_is_not_replaced_by_literal_parameter",
+      "sha256": "4f406a56446f9363da38c0b37d43c865824b57f85248c9ef59e0761bea6120de",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_dynamic_bound_is_unknown_not_zero_or_error",
+      "sha256": "862bced88c22f1373c48b267e0adc030749fc1bc7554af64aa85441ad67661bb",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_filter_output_count_is_not_inferred_from_preserved_columns",
+      "sha256": "6bcf36dc7c19cb4253c011fbb4ecb54d6fc0a463e3135581304ec0b8bb60e683",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_branch_assignment_invalidates_old_named_and_slot_counts",
+      "sha256": "d129ad4fdfd6ee78359d6b0a7ea318b9ada2d6317ba8dd916a4600902eda1a1f",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_nested_repeat_multiplies_upper_bound",
+      "sha256": "c8107ea8a08c2049fd5b50150fbe0f42d1e94947ed5fc6984ccae31a08652b1f",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_loop_dependent_constructed_input_is_not_called_invariant",
+      "sha256": "849c736dfac477a9734b6cf28c503ef47ad61b413a19eb72534b9bb5f012e80b",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_current_row_envelope_keeps_loop_dependency",
+      "sha256": "eef66a0a94d753c28d1c7d78b0c93a9e84d7ea3d286026e1af6067db1a24bf92",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_changed_outer_variable_is_not_assumed_constant_in_repeat",
+      "sha256": "4269a4cd5da5d3aeeb31fba821b9dba7cdf1d6d92842b6785c7152d4a0d0ba82",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_local_function_parameters_forward_def_and_unused_body",
+      "sha256": "dac4d71ba8bf04d0a0aaa0122a142c053162d30b7c77ece71e891340bc196ad0",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_function_implicit_pipe",
+      "sha256": "b355456e1c35daf3e7ec9fea6fc51ec10c5b21424e2548941f07465dee3191ea",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_function_return_count",
+      "sha256": "8a362f41343656933b58bb46448da84371ac26082f44b536befa2eb560c016ed",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_conditional_return_overwrite_invalidates_previous_count",
+      "sha256": "81de97bd113f7506b44d81e4a25c178dbd1028d2db79531e9b7cbc2152bdda2b",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_bad_nested_body_preserves_other_plan_sites",
+      "sha256": "333c23817bada1f69d6736b5743b1048a3aaef91f728b6e1ee1ce9728c227d4f",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_external_function_body_is_only_read",
+      "sha256": "4a45bca8d2ff6176bc0492499ed3f67742e3c78e6450926ad0057be8983934d8",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_recursive_function_stops_with_unknown_bound",
+      "sha256": "dca4dd8c117218bdc6be4e8cc15d169f74f83d7cf53126025ad8d4f1e53fda9b",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_exclusive_branches_are_conservatively_summed",
+      "sha256": "c320f2a05d9050b33b0394d64cb875ce4b5f56a43ec9e5d84f40834aad82278b",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_parallel_and_fallback_visit_both_branches",
+      "sha256": "556d821eeeef0df0bfa87602fecdc8afc7bb84c2b7880df4687952a68824e136",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_try_finally_does_not_use_old_outer_limit",
+      "sha256": "aab7c9a4b7c3921cffcb933f7a3bbc7a1b362846c1becd98308717cea00ee475",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "test_runtime_envelope_items_count_is_known",
+      "sha256": "a80ee277bb813ca81bd99bafbefa2a0e654590dec4bcf0c9029bd29d1f628bdd",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t1_word_types_from_declaration_and_catalog",
+      "sha256": "a85883e9b4fab3603337d4ba8da5f87a39b9966c7e176241b2278be04ad79f1e",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t2_flow_keep_subset_add_reset",
+      "sha256": "bbfa30158635358e83af7297ba5668709201e1330fa94871ce91336a2b0f88dc",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t3_union_same_kind",
+      "sha256": "8cde9a472058048ddfa8f2baa0b8de971deb1d82b4ac9c138eca648bdec45131",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t4_join_pair",
+      "sha256": "62f004df6f2aa44997aa693d97d7870f862bbc4c590cef06daa2b3aef7688f8e",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t5_variable_paths",
+      "sha256": "1afd53ff1f571ca1f165f65e5eac173d75b6860f318a08fb9bac22af593749d7",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t6_born_in_branch_warning",
+      "sha256": "b9945863622c8f69bb7928e310ceb174704c60d656add2778227309e38262964",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t7_fn_returns_def_and_registered_source",
+      "sha256": "0986b574fcd361827dbb9187151b8b0259961a0c345414ba73cd484773fb6736",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t8_each_do_columns",
+      "sha256": "b62e96d0a1927dd89dd68417f7aa18b11433d73bece25de11c9366ed5f4d87c8",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t9_unknown_is_never_error",
+      "sha256": "456f32e7496122e59d2d88b3cf94011045ac9049bacd8a320f848710597a864a",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t9_absent_action_is_a_known_error",
+      "sha256": "d40425e084d2a2ed19482bd82896c1e06d3c1b56d6f1006405e31bc705e95b41",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t10_closed_vs_observed_columns",
+      "sha256": "d840a940e2380908d190665cb938fe9f2a04f58bcf3946ccbf75507054fe0301",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t11_syntax_error_and_abstain",
+      "sha256": "bab7e330b59af9f8aac1e54aa35d8f70fbf1dd8b92343878b0b6aec0514de323",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_t12_return_type_of",
+      "sha256": "d80f9ff995269ea1ce2f3ae0fec5b63151e5f03b77b66bc62a7cc4ae855696f2",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_rename_closed_columns_reject_missing_candidates_and_collisions",
+      "sha256": "dcc3a7c15194f26be43ba925034b9313a5494a6f365e547477f79c3530f91895",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_rename_observed_columns_never_become_certain_errors",
+      "sha256": "5a8d1821c17993ad168d9c9dfc24c8073c6b844af00c3065c585a78e3357ad5f",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_rename_unknown_input_or_dynamic_map_defers_to_execution",
+      "sha256": "fd82bdcad89b648a35557fdec5dcdd2704b2df462e96ec568a36a21145b6d1f2",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_rename_output_columns_still_catch_downstream_typo",
+      "sha256": "05c6082c3e0e8bffb20b2750cee1fc2a7c11eadddb270d2cf570dd83ead87429",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_observed_column_warning_is_reported_once_and_script_list_columns_are_known",
+      "sha256": "8b96cc448a96cbdf0a91701748c18329bf0dddb197c120b54ae7f068412cd2e6",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "test_precheck_warnings_ride_the_execution_envelope",
+      "sha256": "6b275abf64c5718a49622787253604e9a8a06c9bf43abb866a2576375b6e4883",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_unknown_inputs_have_items_returns",
+      "sha256": "71d303e7dd8fe0faee07594d96c8f4d5001e3238ed65d951505c66f7bd66cc65",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_row_transform_declares_items_for_unknown_input",
+      "sha256": "2ff02dbbc9b77c217fe6bae8b86a9fe8d3513ac2a6d75e0619fa6436dbdf5f94",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_assignment_preserves_reference_and_loop_binding_types",
+      "sha256": "222f3b1533347e6ce8fa707acec50ac6be2960d767ee4aee9aa03fa7057d08a5",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_left_columns_do_not_override_items_emission",
+      "sha256": "e7bea71dc43f92a0371b90bc4ed01c9c1a08f19fd1df93f8f86d151255a44cbd",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_def_and_external_function_cannot_hide_definite_errors",
+      "sha256": "bd6d6d2f6516938046c4c742fa7643ed8b6cc4131b5bb52a99ebd93ce35b26af",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_function_incoming_currency_and_unknown_arguments_remain_valid",
+      "sha256": "6c612298ba5673f2497e06b53daf0285de58cf0a46dd69317564245e40f23a98",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_catalog_rejects_invalid_params_in_body_and_every_example",
+      "sha256": "6c3e22ce30a44de5704dc198adf57d90290ea7d778f9a8921a9f65dc26c10bf0",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_conditional_includes_skipped_input_but_not_with_else",
+      "sha256": "1e47de7908e11746e638c1a596ed49b3a1758eb8cbe136b039aa891ce0ea90da",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "test_metadata_refresh_legacy_name_preserves_registration",
+      "sha256": "933e326bb7a6537fb2b69deb55d4ab8f1f687c86fe48ae45498f641ef35a3cb5",
+      "reason": "구판의 암묵 슬롯·문자열 술어·열 격자·each limit 분석 계약 은퇴. 현행 정적 검사/예산 계약은 test_ibl_v2_types, test_ibl_v2_preflight 및 현행 검사 시험으로 대체."
+    },
+    {
+      "path": "backend/test_idiom_expansion_2026_09_09.py",
+      "symbol": "test_selected_idioms_exposed_in_map_and_leaf_actions_with_scope_filter",
+      "sha256": "941ea66f7d8b9e3aaaa2d6751c01912e784c01021827dc1f604dd22ff3d1f6a0",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_filter_precheck_2026_09_21.py",
+      "symbol": "test_invalid_condition_rejected_in_check_and_runtime_even_without_rows",
+      "sha256": "2e34c5f80ba017ec493c9550c3eb4e1d4dfb2b24497392cba527b462f104737f",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_filter_precheck_2026_09_21.py",
+      "symbol": "test_valid_forms_keep_check_execution_parity",
+      "sha256": "e1d23e9d13fd098ac03001698f50236b6c0e94036caeda78fe7b11521619e0a0",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_filter_precheck_2026_09_21.py",
+      "symbol": "test_alias_and_all_boolean_fields_are_checked",
+      "sha256": "c4d00893959ccdbf4131a99a8546f955d5b90b217dae287635ef75a7b0b78e63",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_filter_precheck_2026_09_21.py",
+      "symbol": "test_search_punctuation_is_not_an_operator",
+      "sha256": "7a868143923372048c0605d513fc6ad0e2e0e30cbc14e9a2c87d7c48002786db",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_filter_precheck_2026_09_21.py",
+      "symbol": "test_function_body_condition_errors_are_not_lost",
+      "sha256": "4bea0d7a02ba830d703e1cee4b79d8d7d274db3a761dac2a87a361ed264dfd75",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "checked",
+      "sha256": "7470b82e3ade94567afccdcb2f4a1aff913847f8f792f38330b8a5e2b61477dd",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_lecture_load_items_2026_09_05.py",
+      "symbol": "test_l3_typecheck_passes_load_pipe_and_does_not_borrow_list_columns",
+      "sha256": "232c289b32848f15ccb934addc5df3c875bd178027f7377f6b8a3f6d0a62d4c7",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_imagination_audit_repairs.py",
+      "symbol": "test_definite_branch_assignment",
+      "sha256": "e7e3e2a91640431d1c0a93687a979b767ef9da1834104889ee20658aac8cdccd",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_imagination_audit_repairs.py",
+      "symbol": "test_legacy_check_refuses_unknown_action",
+      "sha256": "953b338235e7f641db1a16620df17acbc87362468e4b0a660e329642a0f8ebc2",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_imagination_audit_repairs.py",
+      "symbol": "test_cloudflare_items_contract_keeps_write_effects",
+      "sha256": "488c4fab3662a1be0a0d2587c798553164a46a2a114c2f2cdb1ddc9a3f84d508",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_free_var_signature_2026_09_07.py",
+      "symbol": "test_return_type_of_reads_function_bodies",
+      "sha256": "9c9e4aeeae71f59385541c40e4150bccfa90c20908b9f70336c3407333e30794",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_pipe_type_check.py",
+      "symbol": "test_nested_independent_head_and_valid_block_passthrough",
+      "sha256": "693e5a655a6311a2d3b453ee708f7a2e4b8503decb6c539ff346cfd87e12a3b4",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_observed_catalog_and_other_search_modes_are_not_closed",
+      "sha256": "e95c2161e8a7eff6695ccb63dbc39b65c1e3bae5b40c408942d4facf34841ae4",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ibl_shape_handoff_20260912.py",
+      "symbol": "test_compute_diagnostic_teaches_the_working_form",
+      "sha256": "61e8aa7b90aa6698aabd5517ea3b87ba5ebe49710353498f371797c1c62e61d8",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_report_repair_contracts_2026_09_08.py",
+      "symbol": "test_dict_compute_allowed_after_expression_revision",
+      "sha256": "6a1c986033a47848ec0326a0cf1cf3cdc61a491a5d30f43d61d1830bb5dfbe2e",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_report_repair_contracts_2026_09_08.py",
+      "symbol": "test_preflight_matches_runtime_and_defers_dynamic",
+      "sha256": "caa3879bb8c18644514f4b5503aa9b15223ef3f1b32ac74a9a640e4611025beb",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_report_repair_contracts_2026_09_08.py",
+      "symbol": "test_bad_expression_in_named_body_is_not_hidden_or_cached",
+      "sha256": "43ad14204f466d25c19bcc4d35c95d3be4234d9a4f4050b6d97357981bd3ca0e",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_judgment_idiom_registration.py",
+      "symbol": "test_inferred_returns_and_catalog_examples",
+      "sha256": "8f2bc6d773c7b300710c5b4a7034f98919094d3fe26be3f9d903b519bbd16cd7",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ibl_expression_revision_2026_09_08.py",
+      "symbol": "test_preflight_checks_nested_projection_and_raw_body",
+      "sha256": "2aceca963816fe21e1fc0e301734211e7d3a8ca782029ec83bfcf364da8e4bbe",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_direct_currency_inputs_2026_09_08.py",
+      "symbol": "test_variable_inputs_are_typed_not_blindly_exempted",
+      "sha256": "da42888f6b38e5f11dffd2a4bc79ba49d716788ca1abe47d55196e1c402c6ceb",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_dead_seam_and_op_check_2026_09_18.py",
+      "symbol": "_warn",
+      "sha256": "6a6c4c58ef4dca6372f3e6b940b6ecf6b9622c5082479e06ff900a108ad67471",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_dead_seam_and_op_check_2026_09_18.py",
+      "symbol": "test_empty_non_consumer_after_seam_warns",
+      "sha256": "f8f340ab9798b825efdca9e235c688c7a2a393df82323bd058719ff4474474fc",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_dead_seam_and_op_check_2026_09_18.py",
+      "symbol": "test_legit_seams_stay_quiet",
+      "sha256": "179a4ab81baaf6e478bc85840ca8150ce84fc63eb578efb39a1d92f5d983e096",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_dead_seam_and_op_check_2026_09_18.py",
+      "symbol": "test_unknown_op_is_a_typecheck_error",
+      "sha256": "fe5ca6ff650422877394f7fb64a119fa93148c4f9b9a75602fca28bd9561b5f2",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ibl_typecheck.py",
+      "symbol": "_tc",
+      "sha256": "866dc0bb907d8d78c4529c9b627f0951ede1bebaddf1c92c9ab0f0734a496995",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ai_boundary_contract.py",
+      "symbol": "test_static_contract_and_inspection_use_dictionary_metadata",
+      "sha256": "3f2cb901d4d4a8a1cbf48cf82b2338d8a17c84796b6a539bdb12c58a670f9930",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ai_boundary_contract.py",
+      "symbol": "test_dynamic_contract_is_deferred_not_rejected",
+      "sha256": "c355c0026955160e0df112fc51c2ab920ff0c5d67db14cff4b42eaf2de9c3c02",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ai_boundary_contract.py",
+      "symbol": "test_inspection_preserves_columns_and_still_rejects_wrong_currency",
+      "sha256": "dcc34d7ccd5461d7a536571fc91dc1a9e565697069b5d65a7845cee9467f4d10",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_ai_boundary_contract.py",
+      "symbol": "test_inspection_and_criteria_never_call_a_judge",
+      "sha256": "ab6f8bf53246c76182db96f1bcabfb24e7852befb63baebc9e6d4f722286daef",
+      "reason": "구판 정적 검사 API/문자열 술어/암묵 변수 계약에 결합한 시험. 해당 도구의 직접 동작 시험은 유지하고 현행 컴파일러 시험을 사용."
+    },
+    {
+      "path": "backend/test_episode_audit_2026_10_01_repairs.py",
+      "symbol": "test_legacy_single_call_is_historical_without_automatic_translation",
+      "sha256": "2e5743da448e3bf64da88a2a8be3b7db9245200f67cbfd3446695cda4afcef57",
+      "reason": "구판 행을 일반 회상 결과로 노출하는 계약 은퇴; 저장소에서 현행 후보만 선택하며 이력은 명시 조회."
+    },
+    {
+      "path": "backend/test_idiom_composition_2026_09_07.py",
+      "symbol": "module",
+      "sha256": "fc795fce4dc1c38655d1f72474a37446263a7d129ddbee967dc83716d29aa1ba",
+      "reason": "삭제된 curate_idioms 구판 합성기를 시험하던 모듈. 현행 등록은 function_library compiler gate로 검증."
+    },
+    {
+      "path": "backend/test_idiom_call_signature_2026_09_06.py",
+      "symbol": "test_부를_수_없는_모양은_이름을_못_받는다",
+      "sha256": "52fc99f66362a8c2f9e31b912c6ed812822fa82da7c4e223e793cfc8c4faed83",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_name_gate_parity_2026_09_07.py",
+      "symbol": "test_g1_개인명사가_박힌_몸은_낱말_경로에서도_이름을_못_받는다",
+      "sha256": "61c7d55794842007f930d1d1266e59fcd1cf00f01f0ba905965478fe57295d27",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_stale_idiom_overwrite_2026_09_07.py",
+      "symbol": "_no_shape_cache",
+      "sha256": "6575b20be3c17f7e2c2046cb3b7891448ba61f580ce53d1334562b81d694abf1",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_stale_idiom_overwrite_2026_09_07.py",
+      "symbol": "test_a1_같은_골격이면_덮을_것이_없다",
+      "sha256": "86b3586968f50e398d74f824098c7a796ae91acf3afd42910207cb67536a0ffe",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_stale_idiom_overwrite_2026_09_07.py",
+      "symbol": "test_a2_다른_가지의_같은_이름은_남의_함수다",
+      "sha256": "31ffbf98eade91724a5188791b77ba30ee6c8f080e9280e7ef74239c5d543c57",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_stale_idiom_overwrite_2026_09_07.py",
+      "symbol": "monkeypatch_programs",
+      "sha256": "7f28f549e1137a59b97a5eea03511e2dd9ce3f0c4bf8137d1ef2aae4df55b68a",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_stale_idiom_overwrite_2026_09_07.py",
+      "symbol": "test_b3_부르지_않고_베낀_턴은_증류를_막지_않는다",
+      "sha256": "6c0a04393a12066274aa832811b3f41b4d6fc3eba43c8b3e873266cc26c996a5",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p1_ordered_subsequence_with_slots_grounds",
+      "sha256": "6c7fc93201156b103d44e8ddaac65b3ab97c49a42283e271063e17f0d9a4d2b2",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p1_reorder_and_unexecuted_rejected",
+      "sha256": "25f6e0b5c900d29e356834199de569ea541bac83077177bf66f3b480e657059a",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p1_slot_quoting_normalized",
+      "sha256": "c30796faf24fb983441883ed1782a0a29ed7eb1078a0340a6a68eb83712bf419",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p2_gates_still_reject_on_the_manual_path",
+      "sha256": "7681fce8013a3fa579e09ea2501d22edd1cdd9b309cafc5c0a5ebf7fac164530",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p3_phrase_used_half_rule",
+      "sha256": "5191c44917064491b479dfb5baaf3b0061be2bf67959653c828dfece269b7c1e",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p3_retyped_but_not_called_is_not_use",
+      "sha256": "9699da8b7410f677b4e404bb1a0fb7cdb1915fcfd6ff17214e6bfd20644b0a62",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p3_uncallable_by_saved_chars",
+      "sha256": "e84a1d9803b91613b3925a94ec65cf5ec272151a4cc948ee951b6c220cf388a5",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_tier.py",
+      "symbol": "test_p3_meaning_becomes_intent_on_the_manual_path",
+      "sha256": "2b6765794cb98e84798a4eaf6d80600839337c25415f947fcf66abe286d55abb",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_frozen_incident_gate_2026_09_07.py",
+      "symbol": "test_no_slot_is_a_macro_not_a_function",
+      "sha256": "380c117cdc56201130aa1ac6d0c7a907ca8b9be14bf2b5ad44bdebe3750d7286",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_frozen_incident_gate_2026_09_07.py",
+      "symbol": "test_signature_as_long_as_the_body",
+      "sha256": "e23b95fb981f87a5c02753a73667d358c0cccbcf3ec7c58dd37cfa9ac63913a3",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_frozen_incident_gate_2026_09_07.py",
+      "symbol": "test_path_literals",
+      "sha256": "66e0be7a39373b6b90bf0572ca53556038739ce454d2e911e96d8043386197a3",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_frozen_incident_gate_2026_09_07.py",
+      "symbol": "test_promoted_vocabulary_all_pass_the_gate",
+      "sha256": "13ff388426af41880efdf1d2da1e94109b1cb716930c810d3d63b7f614aa6fdc",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_distill_dedup_naming_2026_09_05.py",
+      "symbol": "test_d1_same_program_by_blank_signature",
+      "sha256": "4fcc2ce257a35a570dfdc48f51c19edb8ae8baaf7e24f0141f7c127f3c894d1e",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_fn_zero_rediagnosis_2026_09_07.py",
+      "symbol": "test_변형도_이름으로_인식된다",
+      "sha256": "1529457b003d2d55454176b6552c40469afc49cc889b1c918daae4468cb66bc3",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_fn_zero_rediagnosis_2026_09_07.py",
+      "symbol": "test_슬롯_값이_실행문에_없으면_이름을_받지_못한다",
+      "sha256": "275d44ef01dca9aa458d6621c899c53c984acc11385a37379e0587244a8997f7",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_remaining_retyping_items_2026_09_06.py",
+      "symbol": "test_shape_folds_slots_only",
+      "sha256": "40f339e9a752ea00d7f65e9b690ac5996b8fec8ffa5d4d34fd11238f8e70b072",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_remaining_retyping_items_2026_09_06.py",
+      "symbol": "test_repeated_unnamed_program_is_counted_from_corpus",
+      "sha256": "df12671c26f512781389cf95c7481e066893af000bdce737156c25792dc04ee3",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_fn_telemetry_2026_09_14.py",
+      "symbol": "test_fn_recognizer_ignores_test_only_corpus",
+      "sha256": "a6ae242449c6ac2c0e90f564d48fd82e848b4449c584c8d3841e78232989ebd8",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_ibl_functions.py",
+      "symbol": "test_f6_idiom_name_sanitize_and_unique",
+      "sha256": "9a30a6c43002d70ce804b155c9d67d712b547d4a6d90a6a237bbe1ecfe2154b6",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g1_executed_statements_ground_verbatim",
+      "sha256": "b8d367094280de0b493970cc5ecfcbc0ad269a95ed680dd92feb0d839a41b395",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g1b_slotted_statements_still_ground",
+      "sha256": "e874c257631107957c45197235cf2f22f6739453de1caed7574181152af78300",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g2_unexecuted_head_rejected",
+      "sha256": "cd52059e5385affd1e1033580d85fcf67be85dedbfb5cc5528cc23b2ddfd9e9b",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g3_welded_flow_across_statements_rejected",
+      "sha256": "4b67b260499cf6104e9bbdbd5a80b8d40e3161471e2ee2252ae2862680b177e3",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g4_reordered_rejected",
+      "sha256": "170bdc4935095ea3ec23090cec052ab20131b03237307a321dc488c4ec042fd9",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g5_prose_rejected_binding_grounded",
+      "sha256": "3228ccbb66a53bce1cafb099590b18d0a18b221657025b87b3c2d65295f4947a",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g6_extra_param_key_rejected",
+      "sha256": "1e3d7c5a647bc00b4fc0e3cf807ef69d65b0f2727db5e67a8fc3c6e248042466",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "test_g7_statement_split_does_not_swallow_failures",
+      "sha256": "2ab37ea00fa6dbeef7a8d31e8ba95d2a1ee5add48b9fa5712c078fefbbf3318d",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_retyping_gate_2026_09_06.py",
+      "symbol": "test_policy_is_data_and_prompts_carry_the_rules",
+      "sha256": "29df43a474cc92acfef357f256c0f09c4d105cc66f39da3e91764c01904a2c1d",
+      "reason": "구판 암묵 슬롯 합성/턴 그림자/자동 함수 작명 구현이 실행 경로에서 사라져 전용 시험 은퇴. 현행 입력 추상화·지역 범위·함수 원장 시험 유지."
+    },
+    {
+      "path": "backend/test_report_repair_contracts_2026_09_08.py",
+      "symbol": "test_expression_contract_is_data_not_action_name",
+      "sha256": "2017e7158c55fae465dc2e41ac3993591465e7e2e3edcd6f8523104b86a532b8",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_imagination_round55_repairs.py",
+      "symbol": "test_F55_1_catalog_label_and_typecheck_ignore",
+      "sha256": "b386dbeb673f0317880165d038df0b93f683d871029299e2b5d79c8d1c8dff10",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode3352_repairs.py",
+      "symbol": "test_selection_closes_transitive_dependencies_without_another_model_call",
+      "sha256": "78779e918b7e75362b494a85259136ff5702fe297f070eb14e6300292c5af3bd",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode3352_repairs.py",
+      "symbol": "test_dependency_uses_latest_prior_definition_and_rejects_future_producer",
+      "sha256": "134ba033f44360eba2115b9992737f2aa021eb2765646a6191df2bd8f613b3f7",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode3352_repairs.py",
+      "symbol": "test_recovered_dependencies_reach_corpus_without_allowing_fabricated_pipes",
+      "sha256": "d7213d6094ec52876df662799a71605269a5cba7418d8786fc303800b988085c",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode3395_roots.py",
+      "symbol": "test_primary_distill_selects_component_before_file_tail",
+      "sha256": "0d628e33cefe51b968cb3aa44ad6799c04cb37f66e7a936e2e3fb2779468d3fd",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_3909_3916_repairs.py",
+      "symbol": "test_original_size_result_can_be_filtered_on_next_call",
+      "sha256": "398c720963a3812403c623ca12bfe81d4506145717622cafa0de86ad925db0f3",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_3909_3916_repairs.py",
+      "symbol": "test_total_budget_externalizes_without_forgetting_old_names",
+      "sha256": "e2b57b6bb822924585787a6c6f28a18b4622dc133e49000dba5a9f710118fc5e",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_3909_3916_repairs.py",
+      "symbol": "test_concurrent_store_updates_preserve_both_names",
+      "sha256": "9ffba9fb1d16b0987fcba1b4533cd266afbef35017cf0ed4b9c47727794dc13a",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_3909_3916_repairs.py",
+      "symbol": "test_selected_korean_function_source_passes_grounding",
+      "sha256": "3b3b8d02f72dc4b1b0d8fb5c8351a0aab43384c703e158a180c8fc6851f6d48c",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_audit_2026_09_09.py",
+      "symbol": "test_single_read_assignment_keeps_original_value",
+      "sha256": "3ae1717788b08c033cff21cc35390bd480b99e7f809ce497e9367534a008ea2f",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_audit_2026_09_09.py",
+      "symbol": "test_failed_single_read_never_becomes_a_live_variable",
+      "sha256": "cc6756e750c015be5fc07bac66266b89be930a7ced57afcfa770ffb796cceff5",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_audit_2026_09_09.py",
+      "symbol": "test_zigbang_preserves_detail_fields_for_numeric_filter",
+      "sha256": "449b487fbf851a973f1cfa665ef5ca0689078ecaa915e97abcdc86c5c05578b9",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_episode_audit_2026_09_09.py",
+      "symbol": "test_named_idiom_records_its_own_result_once",
+      "sha256": "76e95a84679c5451399e6a505889d2a3a252c4f08cb1391fe425a6bdbdd0e925",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_fn_zero_rediagnosis_2026_09_07.py",
+      "symbol": "test_작명_경로가_사라졌고_값_접지_관문은_남았다",
+      "sha256": "e661e74594e7a30d47860c47bc5359315067bf93e993688afcf6d049624691f3",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_name_gate_parity_2026_09_07.py",
+      "symbol": "test_g3_스윕_대상은_관문이_고른다",
+      "sha256": "4fd66a1dfdeeae6308f4cf86373ceca0f96e63663698b4600451c1098136d27e",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_name_gate_parity_2026_09_07.py",
+      "symbol": "test_g4_실행_이력이_섞이면_멈춘다",
+      "sha256": "70ee069b938d2abedb3cd2979d6c6d4a9550a3dd9feb333b22bc34f95c30e3bf",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_idiom_exposure_levers_2026_09_09.py",
+      "symbol": "test_validate_catalog_runs_every_producer_example_through_the_gate",
+      "sha256": "ff81f0703aa03411c8d91b2330922ce03f85a8ec49c79b457781e7a02705fbd8",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_idiom_value_2026_09_08.py",
+      "symbol": "test_pruned_catalog_keeps_only_intended_recommendations",
+      "sha256": "15dff07d0cac5e0902064ca3cda2d6185124b92ef8008fa4c4a3d9e048bdb342",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_reflex_rules_2026_09_26.py",
+      "symbol": "test_legacy_stays_historical",
+      "sha256": "aa49d20782dd66f2bd520c7430a56c7da0083b308d15306f8eb792b69f20cc74",
+      "reason": "은퇴한 구판의 실행 상태 주입·소스 합성·자동 작명·정적 격자·선정집 재생 계약. 현행 컴파일러/독립 호출/카탈로그/현재 저장소 시험으로 대체; 제품 잎 기능 검사는 유지."
+    },
+    {
+      "path": "backend/test_turn_vars_2026_09_06.py",
+      "symbol": "module",
+      "sha256": "ba3ba23b890653a1a1cb163eeb71b61a48e55af7914bc121f52c79b3ece0ff80",
+      "reason": "은퇴한 턴 변수 자동 주입 계약의 마지막 시험. 현행 런타임은 호출 내 명시 변수만 소유."
+    },
+    {
+      "path": "backend/test_language_revision_var_parallel.py",
+      "symbol": "empty module shell",
+      "sha256": "65bac645aad8d8a3b70f22730f5e4464fa1e6a4968c6efbb1ce8d20b4ae2d96f",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_ibl_preflight.py",
+      "symbol": "empty module shell",
+      "sha256": "a35afc165faf4b206800cfa4e3690463b9c82515e9fdbe23ad3a5ba7ba2c8f5b",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_parser_residue_diagnosis.py",
+      "symbol": "empty module shell",
+      "sha256": "4a9faa93ae1ac13cc009e802a169683b94548b75187ce3a19a372142201507dd",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_block_body_parse_failure_2026_09_08.py",
+      "symbol": "empty module shell",
+      "sha256": "30f80d5242023cba672ebbb6202999c6d01c9af88de9709bb6aa746e391964ee",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_idiom_value_2026_09_08.py",
+      "symbol": "empty module shell",
+      "sha256": "1dd4ba11a4ceb5786c411350bc8f89cc46302df63a8b0f07ed1db74dcf301fef",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_ibl_round6_contracts.py",
+      "symbol": "empty module shell",
+      "sha256": "2f41f591e73c3f136f2f1120d381ba7f207e8d586a95e024146d087d3e7ee864",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_idiom_return_repairs.py",
+      "symbol": "empty module shell",
+      "sha256": "af98495d017483339d80c60b9da0b577ee5f812161de9b8310c3a7ee4e391a4a",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_language_limits_2026_09_09.py",
+      "symbol": "empty module shell",
+      "sha256": "20b6d6ef1a701ac1cf0a28251e4ff71a0866c745c5c8d5bd9b039ac24544187d",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_idiom_grounding_statement_unit_2026_09_07.py",
+      "symbol": "empty module shell",
+      "sha256": "7a21241f76644d9e6f08f2c235c0dc8c213d485ae4e7a3a8a338af21d54155d9",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_ibl_parser_boundaries.py",
+      "symbol": "empty module shell",
+      "sha256": "f5c0cf50158de7e486541f92402d0c1f82b54bd8f0e618fdb03f4f6979d5a4c5",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_turn_variable_text_2026_09_09.py",
+      "symbol": "empty module shell",
+      "sha256": "db062f6a9271a8084ae7360cb1be338832cd3744a0d420a4d15da4f652069242",
+      "reason": "해당 모듈의 구판 시험을 위 항목들에 기록하여 제거한 뒤 남은 빈 껍데기. 다른 시험의 import 없음 확인."
+    },
+    {
+      "path": "backend/test_distill_entrance_gate_2026_09_18.py",
+      "symbol": "edition-1 distillation entrance tests",
+      "sha256": "d35951a84f7cadef27ed8ea2c144d241e3a6934a3e16022d0e521e40336c2d84",
+      "reason": "구판 합성 경로의 1000자 상한은 현행 전체 원문 선택 계약이 아님. 현행 입력 추출 함수의 개인정보 검사는 유지하며 test_name_gate_parity의 실제 함수 후보 검사로 검증."
+    },
+    {
+      "path": "backend/test_idiom_exposure_repairs_2026_09_09.py",
+      "symbol": "execute",
+      "sha256": "1e6ee5821675f284b9f03bea042ab2d8fc6c1fd2621459ebda58672851606ee7",
+      "reason": "현행 실행을 지원하지 않는 완료된 노출 실험 하네스와 그 중단 정책 시험."
+    },
+    {
+      "path": "backend/test_idiom_exposure_repairs_2026_09_09.py",
+      "symbol": "test_trial_stops_at_correct_result_even_if_runtime_has_warning",
+      "sha256": "4e22832172cdc4a96da6dd3a15bb9d5451c03860977266a5e8a1ebe073cc59ff",
+      "reason": "현행 실행을 지원하지 않는 완료된 노출 실험 하네스와 그 중단 정책 시험."
+    },
+    {
+      "path": "backend/test_ibl_debug_log_folding_2026_09_07.py",
+      "symbol": "module",
+      "sha256": "fa12af897811abdd329ff2795e7f7d6e1074e238aa2782e189cd8daa76870e59",
+      "reason": "운영 호출자가 사라진 구판 디버그 원문 로그 접기. 현행 기록은 trajectory_event와 ibl_code_corpus의 실행 ID/hash로 검증한다."
+    },
+    {
+      "path": "backend/test_log_truncation_mark.py",
+      "symbol": "test_ibl_debug_uses_the_same_mark_as_tool_use",
+      "sha256": "79c8a594c5128ffd39061fd213b931564f4ba01f739ae31da31b98f33e764d21",
+      "reason": "호출자가 없는 IBL_DEBUG 함수 삭제. 공통 로그 절단과 도구 로그 검사는 같은 모듈에 유지."
+    }
+  ]
+}

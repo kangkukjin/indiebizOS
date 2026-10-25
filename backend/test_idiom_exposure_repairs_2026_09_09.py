@@ -11,7 +11,6 @@ import boot_paths  # noqa: F401
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from idiom_exposure_cases import GOLD, judge, setup, returned_body
-from idiom_exposure_worker import run
 
 EVIDENCE = ROOT / "docs/experiments/idiom_exposure_2026_09_09"
 REGISTRY = json.loads((EVIDENCE / "registry.json").read_text())
@@ -24,44 +23,10 @@ QUEUE = (
 )
 
 
-def execute(code, case="embedded_latest", seed=2026090901):
-    return run(dict(code=code, case_id=case, seed=seed, registry=REGISTRY))
 
 
 
 
-@pytest.mark.parametrize(
-    "value",
-    [
-        "본문\n",
-        "",
-        {"items": []},
-        {"items": [{"id": 1}]},
-        [1, 2],
-        {"success": True, "path": "saved"},
-    ],
-)
-def test_return_projection_keeps_values_and_does_not_mutate_diagnostics(value):
-    from common.currency import fn_result_payload
-    from workflow_binding import _to_prev_currency
-
-    env = dict(
-        success=True,
-        _fn_result=True,
-        final_result=value,
-        results=[{"step": 1}],
-    )
-    before = json.dumps(env)
-    assert fn_result_payload(env) == (True, value)
-    actual = _to_prev_currency(env)
-    assert (actual if isinstance(value, str) else json.loads(actual)) == value
-    assert json.dumps(env) == before
-    failed = dict(env, success=False, error="실패", traceback={"frames": []})
-    assert fn_result_payload(failed) == (False, failed)
-    business = dict(
-        fn="업무 필드", fn_source="idiom", final_result=value, success=True
-    )
-    assert fn_result_payload(business) == (False, business)
 
 
 
@@ -85,101 +50,10 @@ def test_current_lesson_matches_operational_registry():
     )  # 운영 몸을 옛 교재로 되돌리지 않는다
 
 
-def test_current_block_body_uses_edition_checked_call_teaching(tmp_path, monkeypatch):
-    import hashlib
-    import ibl_access
-    import runtime_utils
-    from workflow_contract import call_signature
-
-    catalog = json.loads((ROOT / "data/idioms/curated.json").read_text())
-    lesson = next(e for e in catalog["idioms"] if e["name"] == "위치마다읽기")
-    row = {"intent": lesson["when"], "ibl_code": lesson["body"], "alias": lesson["name"],
-           "returns": "items", "signature": " ".join(call_signature(lesson["body"]))}
-    # 상시 소개는 현재 호출 문법이다. 몸이 같은 구형 교재도 현재 호출의
-    # 반환 봉투·파이프 계약을 검토하기 전에는 예시를 그대로 가르치지 않는다.
-    (tmp_path / "data/idioms").mkdir(parents=True)
-    (tmp_path / "data/idioms/curated.json").write_text(json.dumps(catalog))
-    with sqlite3.connect(tmp_path / "data/ibl_usage.db") as con:
-        con.execute(
-            "CREATE TABLE ibl_examples (intent,ibl_code,success_count,fail_count,"
-            "topic,alias,returns,signature,always_on,created_at)"
-        )
-        con.execute(
-            "INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (
-                row["intent"],
-                row["ibl_code"],
-                1,
-                0,
-                "찾기",
-                row["alias"],
-                row["returns"],
-                row["signature"],
-                1,
-                "2026-09-09",
-            ),
-        )
-    monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
-    monkeypatch.setattr(
-        ibl_access, "_idioms_cache", {"text": None, "t": 0, "key": None}
-    )
-    from test_function_support import import_memory
-    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as fixture_db:
-        import_memory(fixture_db)
-    block = ibl_access.idioms_map(None)
-    assert lesson["example"] not in block
-    assert '[fn:위치마다읽기]' not in block
-    assert '앞 통화' not in block
-
-    current = {
-        'name': lesson['name'], 'source_edition': 1,
-        'source_sha256': hashlib.sha256(lesson['body'].encode()).hexdigest(),
-        'inputs': '위치 목록·개수·줄수를 명시하고 전체 Record를 받는다.',
-        'example': '#!ibl edition=2\nreturn [fn:위치마다읽기]{위치:[],개수:0,줄수:1}',
-    }
-    (tmp_path / 'data/idioms/current_call_lessons.json').write_text(json.dumps({'idioms': [current]}))
-    monkeypatch.setattr(ibl_access, '_idioms_cache', {'text': None, 't': 0, 'key': None})
-    block = ibl_access.idioms_map(None)
-    assert current['inputs'] not in block
-    assert current['example'].split('\n', 1)[1] not in block
-    assert lesson['example'] not in block
 
 
 
 
-def test_trial_stops_at_correct_result_even_if_runtime_has_warning(
-    tmp_path, monkeypatch
-):
-    import idiom_exposure_study as study
-
-    calls = []
-
-    def model(*args):
-        calls.append(args)
-        return {"result": '{"code":"test"}', "wall_ms": 1}
-
-    monkeypatch.setattr(study, "call_model", model)
-    monkeypatch.setattr(
-        study,
-        "execute",
-        lambda *a: {
-            "quality_ok": True,
-            "runtime_ok": False,
-            "verdict": "품질 기준 통과",
-            "result": {"success": False, "error": "부수 오류"},
-        },
-    )
-    record = study.trial(
-        tmp_path,
-        {"cases": study.CASES, "max_repairs": 1},
-        {
-            "case": "direct_ledger",
-            "repeat": 0,
-            "arm": "exposed",
-            "seed": 1,
-        },
-    )
-    assert len(calls) == len(record["attempts"]) == 1
 
 
 def test_equivalent_body_is_accepted_but_trace_and_wrong_body_are_rejected(

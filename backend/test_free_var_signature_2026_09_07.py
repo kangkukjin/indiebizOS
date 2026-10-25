@@ -15,35 +15,15 @@ import pytest
 
 import boot_paths  # noqa: E402,F401
 import ibl_engine  # noqa: E402
-from ibl_parser import parse, parse_function_body, IBLSyntaxError  # noqa: E402
-from workflow_contract import call_signature  # noqa: E402
 
 PIPE_HEAD = '$추림 = $목록 >> [table:take]{n: 2}; $return = $추림'
 PARALLEL = '$합 = $옛것 & $새것 >> [table:union] >> [table:dedup]{by: "k"}; $return = $합'
 
 
-@pytest.mark.parametrize("body,want", [
-    (PIPE_HEAD, ["목록"]),
-    (PARALLEL, ["옛것", "새것"]),
-    ('$합 = $옛것 & $새것 >> [table:union] >> [table:dedup]{by: "${키}"}; $return = $합',
-     ["옛것", "새것", "키"]),                      # 파이프 머리·분기·파라미터 값이 한 서명에 섞인다
-])
-def test_free_vars_are_signature_everywhere(body, want):
-    parse_function_body(body)                       # 함수 몸으로는 파싱된다
-    assert call_signature(body) == want             # 서명 계산도 같은 눈으로 본다
 
 
-@pytest.mark.parametrize("body", [PIPE_HEAD, PARALLEL])
-def test_toplevel_still_rejects_unassigned(body):
-    """최상위는 종전대로 거절 — 여기서 관대해지면 오타가 실행까지 간다(V49-1 규약)."""
-    with pytest.raises(IBLSyntaxError) as e:
-        parse(body)
-    assert "할당되지" in str(e.value)
 
 
-def test_def_block_signature_includes_pipe_head_slot():
-    st = parse('[def: 합치기]{' + PARALLEL + '}\n$r = [fn:합치기]{옛것: [], 새것: []}')
-    assert st[0]["signature"] == ["옛것", "새것"]
 
 
 def test_two_currencies_flow_in_by_name():
@@ -64,10 +44,6 @@ def test_missing_slot_points_at_the_call_not_the_body():
 
 
 
-def test_return_type_of_reads_function_bodies():
-    """서명의 반환 모양 계산도 함수 몸 모드 — 종전엔 파이프 머리 슬롯에서 '?'로 주저앉았다."""
-    from ibl_typecheck import return_type_of
-    assert return_type_of(PARALLEL) != "?"
 
 
 if __name__ == "__main__":

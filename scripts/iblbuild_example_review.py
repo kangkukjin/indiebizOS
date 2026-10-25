@@ -74,7 +74,7 @@ def examples_of(q: str, root: Path = ROOT) -> list:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         pat = re.compile(r"\[" + re.escape(q) + r"\]|\b" + re.escape(q) + r"\{")   # 조건식의 `node:action{…}` 꼴 포함
         return [(i, it, c) for i, it, c in con.execute(
-            "select id, intent, ibl_code from ibl_examples where ibl_code like ?", (f"%{q}%",)) if pat.search(c)]
+            "select id, intent, ibl_code from ibl_current_examples where ibl_code like ?", (f"%{q}%",)) if pat.search(c)]
     except Exception:
         return []
 

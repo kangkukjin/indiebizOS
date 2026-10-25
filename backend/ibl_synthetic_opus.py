@@ -231,7 +231,7 @@ def main():
 
     # DB에서 추출
     conn = sqlite3.connect(str(DB_PATH), timeout=10)
-    rows = conn.execute("SELECT intent, ibl_code FROM ibl_examples ORDER BY id").fetchall()
+    rows = conn.execute("SELECT intent, ibl_code FROM ibl_current_examples ORDER BY id").fetchall()
     conn.close()
 
     groups: Dict[str, List[str]] = {}

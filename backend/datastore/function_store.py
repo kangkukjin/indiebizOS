@@ -109,12 +109,12 @@ def catalog(root=None):
     root = Path(root) if root is not None else storage_root()
     path = _safe(root / 'catalog.json', root)
     if not path.exists():
-        return {'schema': 1, 'scope_id': digest(str(root.resolve())), 'generation': 0,
-                'functions': {}, 'requests': {}, 'migration': {}}
+        return {'schema': 2, 'scope_id': digest(str(root.resolve())), 'generation': 0,
+                'functions': {}, 'requests': {}}
     data = json.loads(path.read_text(encoding='utf-8'))
-    if (not isinstance(data, dict) or data.get('schema') != 1
+    if (not isinstance(data, dict) or data.get('schema') != 2
             or type(data.get('generation')) is not int or not isinstance(data.get('functions'), dict)):
-        raise ValueError('관용구 카탈로그 형식이 잘못되었습니다.')
+        raise ValueError('관용구 저장 형식이 맞지 않습니다. 설치 단계에서 저장소를 갱신하세요.')
     return data
 
 
@@ -154,17 +154,13 @@ def snapshot(root=None, *, index=None):
     return {'generation': index['generation'], 'records': records}
 
 
-def resolve(name=None, *, function_id=None, edition=None, root=None, view=None, include_inactive=False):
+def resolve(name=None, *, function_id=None, root=None, view=None, include_inactive=False):
     view = snapshot(root) if view is None else view
     rows = list(view['records'].values())
     if function_id is not None:
         rows = [r for r in rows if r['function_id'] == function_id]
     else:
         rows = [r for r in rows if name == r.get('name') or name in r.get('legacy_ids', [])]
-    if edition is not None:
-        rows = [r for r in rows if r.get('edition') == edition]
-    elif any(r.get('edition') == 2 for r in rows):
-        rows = [r for r in rows if r.get('edition') == 2]
     if function_id is None and any(r.get('state') != 'retired' for r in rows):
         rows = [r for r in rows if r.get('state') != 'retired']
     if len(rows) > 1:
@@ -182,16 +178,16 @@ def reference(row):
 
 
 def publish(changes, *, expected_generation=None, request_id=None, root=None,
-            migration=None, request_payload=None):
+            request_payload=None):
     """CAS and compiler validation happen under the same catalog lock.
 
     A change is {record, expected_revision, state?, legacy_ids?}. The record
     contains no derived signatures or usage statistics. None expects creation.
     """
-    if not isinstance(changes, list) or (not changes and migration is None):
+    if not isinstance(changes, list) or not changes:
         raise ValueError('변경할 관용구가 없습니다.')
     import yaml
-    request_hash = digest(request_payload if request_payload is not None else {'changes': changes, 'migration': migration})
+    request_hash = digest(request_payload if request_payload is not None else {'changes': changes})
     with transaction(root) as root:
         before = catalog(root)
         if request_id and request_id in before.get('requests', {}):
@@ -216,7 +212,7 @@ def publish(changes, *, expected_generation=None, request_id=None, root=None,
             old = before['functions'].get(fid)
             if (old or {}).get('revision') != change.get('expected_revision'):
                 raise ValueError('관용구 판본 충돌: 새 정의를 읽고 다시 개정하세요.')
-            if record.get('schema') != 1 or record.get('edition') not in (1, 2) or not record.get('name'):
+            if record.get('schema') != 1 or record.get('edition') != 2 or not record.get('name'):
                 raise ValueError('관용구 정의 형식이 잘못되었습니다.')
             record['source_hash'] = digest(record.get('source', ''))
             rid = digest(record)
@@ -235,7 +231,7 @@ def publish(changes, *, expected_generation=None, request_id=None, root=None,
         for fid, row in records.items():
             if row.get('state') == 'retired':
                 continue
-            key = (row['edition'], row['name'])
+            key = row['name']
             if key in names and names[key] != fid:
                 raise ValueError(f'관용구 이름 충돌: {row["name"]}')
             names[key] = fid
@@ -249,8 +245,6 @@ def publish(changes, *, expected_generation=None, request_id=None, root=None,
             else:
                 _atomic(path, yaml.safe_dump(record, allow_unicode=True, sort_keys=True))
         after['generation'] += 1
-        if migration is not None:
-            after['migration'] = migration
         result = {'generation': after['generation'], 'functions': refs}
         if request_id:
             after.setdefault('requests', {})[request_id] = {'hash': request_hash, 'result': result}
@@ -280,7 +274,7 @@ def project_memory(row, *, view=None):
         if current is None or ref.get('scope_id') != current.get('scope_id'):
             raise ValueError('현재 소유 범위에 참조한 관용구가 없습니다.')
         from ibl_edition import pin_source
-        result.update(ibl_code=(pin_source(current['source'], 2) if current['edition'] == 2 else current['source']), alias=current['name'],
+        result.update(ibl_code=pin_source(current['source'], 2), alias=current['name'],
                       function_ref=reference(current), evidence_revision=ref['revision'],
                       evidence_stale=current['revision'] != ref['revision'])
         from capability_history import function_statistics
@@ -296,15 +290,23 @@ def project_memory(row, *, view=None):
     return result
 
 
-def memory_reference(name, edition=1):
+def memory_reference(name):
     """Compatibility view, sourced from a definition rather than a memory row."""
-    row = resolve(name, edition=edition)
+    row = resolve(name)
     if row is None:
         return None
     from ibl_edition import pin_source
-    return {'id': None, 'alias': row['name'], 'ibl_code': (pin_source(row['source'], 2) if row['edition'] == 2 else row['source']),
+    return {'id': None, 'alias': row['name'], 'ibl_code': pin_source(row['source'], 2),
             'intent': row.get('description', ''), 'category': 'phrase', 'topic': '',
             'returns': '', 'returns_observed': '', 'signature': None,
             'provenance': json.dumps({'function_ref': reference(row)}, ensure_ascii=False),
             'function_ref': reference(row), 'success_count': 0, 'fail_count': 0,
             'bypass_count': 0}
+
+
+def history_snapshot(root=None):
+    root = Path(root) if root is not None else storage_root()
+    path = _safe(root / 'history.json', root)
+    if not path.exists():
+        return {'generation': 0, 'records': {}}
+    return snapshot(root, index=json.loads(path.read_text(encoding='utf-8')))

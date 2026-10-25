@@ -6,7 +6,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 import boot_paths  # noqa: F401
 
 from common.pkg_utils import load_sibling
-from ibl_parser import parse
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,10 +16,6 @@ def _module():
     return load_sibling(str(YOUTUBE / "handler.py"), "tool_youtube")
 
 
-def test_at_handle_is_literal_inside_ibl_params():
-    nodes = parse('[limbs:youtube]{op: "channel", handle: "@zenandmotor"}')
-    assert nodes[0]["params"]["handle"] == "@zenandmotor"
-    assert nodes[0].get("target", "") == ""
 
 
 def test_channel_reference_normalization():

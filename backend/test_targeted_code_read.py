@@ -21,7 +21,6 @@ def target(name):
 
 
 def run(project, targets, **params):
-    from ibl_edition import source_context
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
@@ -30,8 +29,7 @@ def run(project, targets, **params):
     plan = compile_program(code, load_registry(str(project)), inputs=inputs,
                            definitions={"대상별좁혀읽기": SOURCE})
     assert not plan.issues, plan.report()
-    with source_context(2):
-        return Runtime(plan, inputs).run()
+    return Runtime(plan, inputs).run()
 
 
 def test_fourth_target_is_not_lost_and_overlapping_ranges_are_read_once(tmp_path):

@@ -1634,18 +1634,17 @@
   "self:workflow": {
    "fields": {
     "description": "bf279e8c728b",
-    "target_description": "130876187f00",
+    "target_description": "5f8de3e91b7c",
     "implementation": "7438bc5a92a5",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
-    "params": "f06cac358f64",
-    "aliases": "1bb934bf4227",
+    "params": "26a64f338ef8",
     "ops": "431c4a56e0df",
     "side_effect": "b5bea41b6c62",
     "router": "adcb3a461920"
    },
    "reviewed": "2026-10-25",
-   "examples": 72
+   "examples": 0
   },
   "self:workspace": {
    "fields": {

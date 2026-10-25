@@ -9,10 +9,10 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from idiom_experiment_worker import load, run_trial
+from test_report_repair_contracts_2026_09_08 import load
 from idiom_experiment_cases import decoded
 from ibl_honesty import truncation_evidence
-from test_distill_source_recovery_2026_09_09 import _arm
+from test_distill_source_recovery_2026_09_09 import _arm, completed_call
 
 URL = 'https://fixture.test/a'
 CUT = {'scope': 'source', 'source': URL, 'unit': 'characters',
@@ -27,11 +27,6 @@ def source(truncated=True):
     return out
 
 
-def run(code, payload=None):
-    trial = run_trial(code, 'dedup', source_results={URL: payload or source()})
-    assert trial['result']['success'], trial
-    assert trial['observed']['brief'] == 0
-    return trial['result'], decoded(trial['result']['final_result'])
 
 
 
@@ -97,12 +92,15 @@ def test_unresolved_source_never_reaches_distiller_or_training(monkeypatch, tmp_
 
 
 def test_repaired_call_is_learned_instead_of_earlier_cut(monkeypatch, tmp_path):
-    old = '[sense:crawl]{url:"' + URL + '"}'
-    fixed = '[sense:crawl]{url:"' + URL + '",max_length:23218}'
+    old = '#!ibl edition=2\n[sense:crawl]{url:"' + URL + '"}'
+    fixed = '#!ibl edition=2\n[sense:crawl]{url:"' + URL + '",max_length:23218}'
     rag, stored, asked, _ = _arm(monkeypatch, tmp_path,
                                 [{'intent': '문서 수집', 'source_ids': [1], 'topic': '시험'}])
-    calls = [dict(tool_name='execute_ibl', input={'code': old}, success=True, result=source()),
-             dict(tool_name='execute_ibl', input={'code': fixed}, success=True, result=source(False))]
+    calls = [completed_call(old), completed_call(fixed)]
+    calls[0]['result'].update(source())
+    calls[0]['result']['source_complete'] = False
+    calls[1]['result'].update(source(False))
+
     assert rag.distill_experience('문서 수집', calls, 0.0)
     assert stored[0]['ibl_code'] == fixed
     assert old not in asked[0]['prompt']
@@ -111,10 +109,11 @@ def test_repaired_call_is_learned_instead_of_earlier_cut(monkeypatch, tmp_path):
 @pytest.mark.parametrize('evidence', [{'preview': True}, {'truncations': [{'scope': 'selection'}]},
                                      {'truncations': [{'scope': 'unknown'}]}])
 def test_preview_and_sample_remain_learnable_with_scope(monkeypatch, tmp_path, evidence):
-    code = '[table:take]{items:[{x:1},{x:2}],n:1}'
+    code = '#!ibl edition=2\n[table:take]{items:[{x:1},{x:2}],n:1}'
     rag, stored, asked, _ = _arm(monkeypatch, tmp_path,
                                 [{'intent': '앞 한 행 표본', 'source_ids': [1], 'topic': '시험'}])
-    call = dict(tool_name='execute_ibl', input={'code': code}, success=True, evidence=evidence)
+    call = completed_call(code)
+    call['evidence'] = evidence
     assert rag.distill_experience('앞 한 행', [call], 0.0) and stored
     if 'truncations' in evidence:
         assert '전량 수집·완전한 조사의 성공 용례로 일반화하지 말고' in asked[0]['prompt']

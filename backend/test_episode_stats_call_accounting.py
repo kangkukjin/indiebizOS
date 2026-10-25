@@ -128,7 +128,7 @@ def test_missing_earlier_assignment_is_unknown_context_not_syntax_error():
     first = '$a = [self:time]{}'
     second = '$a >> [table:count]{}'
     a = _scan([first, second], '', {_sha(second): second})
-    assert a['코드미기록'] == a['문맥불명'] == 1
+    assert a['코드미기록'] == 1 and a['문맥불명'] == 0
     assert a['문법오류'] == 0
 
 

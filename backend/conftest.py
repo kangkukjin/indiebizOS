@@ -244,7 +244,7 @@ def isolated_distill_training(tmp_path, monkeypatch):
 def installed_functions(isolated_runtime_stores, monkeypatch):
     """Explicit boot import for tests exercising shipped reusable functions."""
     import function_store
-    from function_migration import installed_sources, prepare
+    from function_install import installed_sources, prepare
     root = Path(__file__).resolve().parents[1]
     import ibl_registry
     monkeypatch.setattr(ibl_registry, '_nodes_path', root / 'data/ibl_nodes.yaml')

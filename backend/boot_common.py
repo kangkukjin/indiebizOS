@@ -47,7 +47,7 @@ def wire_local_subsystems(profile: str = None) -> dict:
         results["function_catalog"] = "skipped"
     else:
         try:
-            from function_migration import install
+            from function_install import install
             from runtime_utils import get_base_path
             results["function_catalog"] = install(get_base_path())
         except Exception as exc:

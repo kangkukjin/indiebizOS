@@ -18,22 +18,21 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
 
-RECALLED = ('$원장 = [self:ledger]{path: "outputs/x/_covered.json", op: "select", target: "covered"}; '
-            '$검색 = [limbs:youtube]{op: "search", query: "${주제}", limit: 12} >> [table:dedup]{by: "video_id"}')
-COPY_RUN = ['$원장 = [self:ledger]{path: "outputs/x/_covered.json", op: "select", target: "covered"}',
-            '$검색 = [limbs:youtube]{op: "search", query: "AI 데이터 분석", limit: 12} >> [table:dedup]{by: "video_id"}',
-            '[self:write]{path: "outputs/x/report.md", content: "…"}']
-CALL_ONLY_RUN = ['[fn:팁영상수집]{주제: "AI 데이터 분석"}']
-CALL_PLUS_RUN = ['$후보 = [fn:팁영상수집]{주제: "AI 데이터 분석"}',
-                 '$후보 >> [table:take]{n: 4} >> [self:write]{path: "outputs/x/report.md"}']
+RECALLED = '#!ibl edition=2\n[def:팁영상수집]($주제){return [sense:search]{query:$주제}}'
+COPY_RUN = ['#!ibl edition=2\nreturn [sense:search]{query:"AI"}']
+CALL_ONLY_RUN = ['#!ibl edition=2\nreturn [fn:팁영상수집]{주제:"AI"}']
+CALL_PLUS_RUN = ['#!ibl edition=2\n$후보=[fn:팁영상수집]{주제:"AI"}\nreturn $후보.items >> [table:take]{n:4}']
 
 
 def _calls(codes):
-    return [{"tool_name": "execute_ibl", "input": {"code": c}, "success": True} for c in codes]
+    from test_distill_source_recovery_2026_09_09 import completed_call
+    return [completed_call(c) for c in codes]
 
 
 def _arm(monkeypatch, alias="팁영상수집", reply=None):
     """증류·귀속의 바깥(모델·DB·트리)을 가짜로 — 게이트 판정만 본다."""
+    from function_library import register
+    register('팁영상수집', RECALLED)
     import ibl_usage_db as mod
     import thread_context
     import hippo_tree

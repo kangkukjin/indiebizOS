@@ -14,11 +14,8 @@ import boot_paths  # noqa: F401
 
 import hippo_tree
 import ibl_usage_db
-from workflow_contract import call_signature
 
 
-def _executor_signature(code: str):
-    return call_signature(code)
 
 
 def test_원장_문이_서명을_계산해_저장한다():
@@ -35,37 +32,8 @@ def test_저장_서명_규약_NULL과_빈문자열을_가른다():
     assert ibl_usage_db.parse_signature("a b") == (["a", "b"], True)
 
 
-def test_표시_서명이_실행_요구와_같다():
-    """이름 붙은 모든 용례: 회상·상시 블록이 보여 주는 슬롯 == `[fn:]` 이 요구하는 인자."""
-    import sqlite3
-    db = Path(__file__).resolve().parent.parent / "data" / "ibl_usage.db"
-    if not db.exists():
-        return
-    con = sqlite3.connect(str(db))
-    rows = con.execute("SELECT id, alias, ibl_code, signature FROM ibl_examples "
-                       "WHERE COALESCE(alias,'') != ''").fetchall()
-    con.close()
-    bad = []
-    for rid, alias, code, sig in rows:
-        try:
-            want = _executor_signature(code)
-        except Exception:
-            continue                       # 파스 불가 몸은 서명 미상 — 표시 쪽이 '미상'으로 말한다
-        shown = hippo_tree.slot_names(code, sig)
-        if sorted(shown) != sorted(want):
-            bad.append(f"#{rid} {alias}: 표시 {shown} != 실행 {want}")
-    assert not bad, ("가르친 서명대로 부르면 거절된다 — 서명의 소스가 갈라졌다:\n  " + "\n  ".join(bad))
 
 
-def test_부를_수_없는_모양은_이름을_못_받는다():
-    from ibl_idiom import uncallable_reason
-    assert uncallable_reason([]) is None                       # 인자 없는 함수는 정당하다
-    assert uncallable_reason(["경로", "줄"]) is None
-    assert uncallable_reason([f"인자{i}" for i in range(9)])    # 상한 초과
-    assert uncallable_reason(["보고서내용"], sentences=5)       # 인자가 전부 본문
-    assert uncallable_reason(["경로", "새코드"], sentences=2)   # 아낄 문장이 없다
-    assert uncallable_reason(["경로", "새코드"], sentences=5) is None   # 앞뒤 문장을 아껴 준다
-    assert uncallable_reason(["본문지시"], sentences=5) is None         # 지시는 본문이 아니다
 
 
 def test_이름_채널은_카테고리가_아니라_부를_수_있는가로_고른다():

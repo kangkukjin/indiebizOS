@@ -662,6 +662,19 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     Returns:
         실행 결과
     """
+    fields = {'_node', 'action', 'params', '_depth', '_wf_stack', 'target_node'}
+    if not isinstance(tool_input, dict) or set(tool_input) - fields:
+        return {'success': False, 'executed': False, 'code': 'REQUEST_FIELDS',
+                'error': '단일 액션 요청은 node, action, params와 라우팅 정보만 받습니다.'}
+    if not isinstance(tool_input.get('params', {}), dict):
+        return {'success': False, 'executed': False, 'code': 'PARAMS',
+                'error': 'params는 Record여야 합니다.'}
+    metadata = {'_prev_result', '_project_path', '_path_guard', '_wf_stack', '_depth',
+                '_resolved_name', '_resolved', '_ibl_context', '_expect_pid', '_ibl_edition', '_raw'}
+    if any(not isinstance(key, str) or (key.startswith('_') and key not in metadata)
+           for key in tool_input.get('params', {})):
+        return {'success': False, 'executed': False, 'code': 'PARAMS',
+                'error': '정의되지 않은 내부 호출 메타데이터입니다.'}
     # 중첩 깊이 초과 — 조용히 멈추지 않고 명시 오류로 반환한다(침묵 금지 계약).
     _depth = tool_input.get("_depth") or 0
     if _depth > MAX_NEST_DEPTH:
@@ -672,13 +685,6 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                      f"문장 안에 문장을 넣는 깊이를 줄이거나, 긴 절차는 "
                      f"[self:workflow]에 저장해 id 로 참조하세요.",
         }
-
-    # This router accepts leaf calls only. Native control flow belongs to Runtime.
-    if (tool_input.get('_node') == 'fn' or any(key in tool_input for key in
-            ('_def', '_goal', '_condition', '_case', '_try', '_repeat', '_assign',
-             '_var_emit', '_parallel', '_fallback_chain'))):
-        from ibl_edition import retired_result
-        return retired_result()
 
     # (2026-08-05 감사 D11) 옛 노드타입 모드(_node_type: info/store/exec/output) 디스패치 삭제 —
     # 그 노드들은 레지스트리에 없어 정상 경로의 "알 수 없는 노드" 오류로 수렴한다.
@@ -745,9 +751,6 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     if _deny:
         return _deny
     params = tool_input.get("params", {})
-    if "_ibl_ir" in params:
-        from ibl_edition import retired_result
-        return retired_result()
     # 중첩 깊이를 params 에 실어 라우터가 볼 수 있게 한다 (_prev_result 와 같은 관습 —
     # '_' 접두 키는 파라미터 어휘 가드에서 제외된다). [table:each] 가 하위 문장에 깊이를
     # 이어 붙이는 데 쓴다.

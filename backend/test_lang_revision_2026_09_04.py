@@ -16,22 +16,6 @@ sys.path.insert(0, BACKEND)
 import boot_paths  # noqa: E402,F401
 
 
-def test_l1_unquoted_braced_variable_parses_like_bare():
-    from ibl_parser import parse
-    from ibl_param_vocab import code_syntax_error
-    for code in ('[table:take]{n: ${개수}}', '[sense:place]{query: "x", lat: ${위도}, lng: $경도, limit: ${개수}}',
-                 '$n = 3\n[table:take]{n: ${n}}'):
-        assert code_syntax_error(code) is None, code
-    st = parse('[table:take]{n: ${개수}, m: $개수}')
-    steps = st if isinstance(st, list) else st.get("steps") or [st]
-    params = next(s for s in _walk(steps) if s.get("action") == "take")["params"]
-    assert params["n"] == "${개수}" and params["m"] == "$개수"
-    # 할당된 변수는 두 표기가 같은 참조 — 파서가 같은 step 자리표로 치환한다
-    a = parse('$x = [self:time]\n[table:take]{n: $x}')
-    b = parse('$x = [self:time]\n[table:take]{n: ${x}}')
-    pa = next(s for s in _walk(a) if s.get("action") == "take")["params"]["n"]
-    pb = next(s for s in _walk(b) if s.get("action") == "take")["params"]["n"]
-    assert pa == pb and "{{_step_" in str(pa)
 
 
 def _walk(obj):
@@ -45,16 +29,6 @@ def _walk(obj):
             yield from _walk(v)
 
 
-def test_l2_prose_result_message_and_text():
-    from workflow_binding import _extract_result_field_obj, _extract_result_field
-    prose = "불릿 셋으로 요약한 산문이다."
-    assert _extract_result_field_obj(prose, "message") == prose
-    assert _extract_result_field_obj(prose, "text") == prose
-    assert _extract_result_field_obj(prose, "message?") == prose
-    assert _extract_result_field(prose, "message") == prose
-    with pytest.raises(ValueError):
-        _extract_result_field_obj(prose, "count")          # 산문에 다른 경로는 종전대로 정직 오류
-    assert _extract_result_field_obj('{"message": "봉투 산문", "count": 1}', "message") == "봉투 산문"
 
 
 def test_l3_search_youtube_queries_fanout():

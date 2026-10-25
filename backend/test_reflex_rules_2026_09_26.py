@@ -38,17 +38,13 @@ def test_current_multi_statement_or_long_is_hidden(code):
     assert _top_for_execution([_ex(2, code)]) == (.8, '')
 
 
-def test_legacy_stays_historical():
-    assert exclusion_reason({'ibl_code': LEGACY}) == 'legacy_source'
-    assert not reference_needs_expansion(LEGACY)            # 노출 규칙은 판본을 모른다 — 자격 규칙이 거른다
-    assert _top_for_execution([_ex(3, LEGACY)]) == (.8, '')
 
 
 def test_sentence_count_is_edition_aware_and_split_sentences_is_untouched():
     assert (sentence_count(ONE), sentence_count(MANY), sentence_count(DEF)) == (1, 3, 1)
     assert sentence_count(LEGACY) == 1 and sentence_count('[a:b]{}; [c:d]{}') == 2
     assert split_sentences(MANY) == [MANY]                   # 증류·관용구 기계의 전제(test_ibl_v2_assets) 그대로
-    broken = '#!ibl edition=9\nreturn 1'
+    broken = 'return [broken'
     assert sentence_count(broken) == 0 and reference_needs_expansion(broken)
 
 

@@ -150,9 +150,9 @@ def test_unjudged_reaches_actual_distillation_prompt(monkeypatch, tmp_path):
     from test_distill_source_recovery_2026_09_09 import _arm
     rag, stored, asked, runs = _arm(monkeypatch, tmp_path, [])
     prepared = rag.prepare_experience("근거 있는 요약", [{
-        "tool_name": "execute_ibl", "input": {"code": '[table:ai]{instruction:"근거 포함"}'},
+        "tool_name": "execute_ibl", "input": {"code": '#!ibl edition=2\n[table:ai]{items:[],instruction:"근거 포함"}'},
         "success": True, "quality": "unjudged", "quality_feedback": "필수 근거 없음",
-        "result": {"items": [{"text": "매우 긴 결과" * 1000}], "criteria_verdict": "unjudged"},
+        "result": {"success": True, "executed": True, "source_complete": True, "items": [{"text": "매우 긴 결과" * 1000}], "criteria_verdict": "unjudged"},
     }], 0)
     assert prepared
     assert '"quality": "unjudged"' in prepared["prompt"]

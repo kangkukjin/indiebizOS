@@ -389,28 +389,6 @@ def test_revoked_effect_role_blocks_send(tmp_path, owner):
         assert conn.execute('SELECT state FROM deliveries').fetchone()[0] == 'blocked'
 
 
-def test_injected_runtime_metadata_and_explicit_principal(space, owner, monkeypatch):
-    import importlib.util
-    from pathlib import Path
-    import record_store
-    import vocabulary_state
-    path = Path(__file__).parents[1] / 'data/packages/installed/tools/record-ops/handler.py'
-    spec = importlib.util.spec_from_file_location('record_handler_test', path)
-    handler = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(handler)
-    monkeypatch.setattr(record_store, 'root_path', lambda: space)
-    monkeypatch.setattr(vocabulary_state, 'is_active', lambda *a, **k: True)
-    assert handler.execute({'op': 'describe', 'space': 'shop', '_prev_result': {}, '_wf_stack': []}, None)['success']
-    assert not handler.execute({'op': 'describe', 'space': 'shop', 'actor': 'owner'}, None)['success']
-    from ibl_engine import execute_ibl
-    from ibl_parser import parse
-    import ibl_registry
-    # 활성 선택을 테스트에서 바꿨으므로 같은 revision의 과거 사전을 재사용하지 않는다.
-    monkeypatch.setattr(ibl_registry, '_nodes', None)
-    monkeypatch.setattr(ibl_registry, '_nodes_revision', None)
-    result = execute_ibl(parse('[self:record]{op:"describe",space:"shop"}')[0], '')
-    assert result.get('success'), result
-    assert result['items']
 
 
 def test_shared_capability_closes_when_dependency_changes(tmp_path, monkeypatch):

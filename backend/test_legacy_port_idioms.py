@@ -125,7 +125,7 @@ def test_register_idiom_gates_understand_edition_2(monkeypatch):
     assert why is None
     info, why = _gates('좁혀서읽기', '충분히 긴 부를 조건 설명',
                        '$h = [self:grep]{pattern: "${패턴}", path: "${루트}", limit: 6}; $return = $h >> [table:take]{n: 3}')
-    assert why is None and info['edition'] == 1
+    assert info is None and why
 
 
 if __name__ == '__main__':

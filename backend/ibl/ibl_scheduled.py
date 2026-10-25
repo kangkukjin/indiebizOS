@@ -14,10 +14,9 @@ def execute_scheduled(steps, run_path, agent_id, edition=None, inputs=None, func
             tc.clear_called_agent()
             tc.set_call_channel("scheduler", override=True)
             from ibl_v2_entry import handle_request
-            from ibl_edition import retired_result
-            result = (handle_request({"code": steps, "edition": edition, "inputs": inputs,
+            result = handle_request({"code": steps, "edition": edition, "inputs": inputs,
                                      **({"function_refs": function_refs} if function_refs is not None else {})},
-                                     run_path, agent_id=agent_id) if isinstance(steps, str) else retired_result())
+                                     run_path, agent_id=agent_id)
             # 비동기 접수와 실제 작업 완료를 구분한다(파이프라인 성공=호출 성공).
             values = [result.get("value"), result.get("final_result")]
             values += [r.get("result") for r in result.get("results", [])]

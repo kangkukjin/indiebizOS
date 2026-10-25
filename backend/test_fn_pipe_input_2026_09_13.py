@@ -8,17 +8,7 @@ import boot_paths  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from idiom_experiment_worker import run_trial
 from idiom_experiment_cases import decoded
-from ibl_parser import parse_function_body
-from workflow_contract import pipe_input_param
-
-
-def execute(code):
-    trial = run_trial(code, 'dedup')
-    assert trial['result']['success'], trial['result']
-    assert trial['observed']['brief'] == 0
-    return decoded(trial['result']['final_result']), trial['observed']
 
 
 
@@ -31,19 +21,14 @@ def execute(code):
 
 
 
-@pytest.mark.parametrize('body', [
-    '$a & $b >> [table:union]',
-    '$a.items >> [table:take]{n:$n}',
-    '$a\n[table:take]{n:$n}',
-    '[table:take]{n:$n}\n$a >> [table:take]{n:1}',
-])
-def test_no_binding_for_ambiguous_or_nonleading_input(body):
-    assert pipe_input_param(parse_function_body(body)) is None
 
 
-def test_model_map_explains_pipe_and_explicit_precedence():
+
+
+def test_model_map_explains_current_pipe_input():
     from ibl_access import _pipe_input_note
-    assert _pipe_input_note('$입력 >> [table:take]{n:$수}') == '앞 통화 → 입력 (명시 인자 우선)'
+    source = '#!ibl edition=2\n[def:추림]($입력,$수){return $입력 >> [table:take]{n:$수}}'
+    assert _pipe_input_note(source) == '앞 값 → 입력 (같은 인자 동시 명시 금지)'
 
 
 if __name__ == '__main__':

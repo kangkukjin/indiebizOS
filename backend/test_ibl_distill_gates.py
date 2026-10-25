@@ -18,10 +18,9 @@ from ibl_distill_gates import memory_only_program
     ('return [self:memory]{op:"read",memory_id:[fn:동적호출]{}}', 2, False),
     ('return "[self:memory]{op:recall}"', 2, False),
     ('return [self:memory]{op:', 2, False),
-    ('#!ibl edition=2\nreturn [self:memory]{op:"read",memory_id:1}', 1, False),
 ])
 def test_memory_only_inspection_respects_source_edition(code, edition, expected):
-    assert memory_only_program(code, edition) is expected
+    assert memory_only_program(code) is expected
 
 
 if __name__ == '__main__':

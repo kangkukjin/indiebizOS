@@ -108,6 +108,7 @@ def _mk_db(path):
                  "fail_count INTEGER DEFAULT 0, tags TEXT, created_at TEXT, updated_at TEXT, avg_ms REAL, avg_tokens REAL, "
                  "topic TEXT DEFAULT '', alias TEXT DEFAULT '', returns TEXT DEFAULT '')")
     conn.execute("INSERT INTO ibl_examples (intent, ibl_code, topic, created_at, updated_at) VALUES ('x', '[self:time]{}', '개발', '2026-09-05', '2026-09-05')")
+    conn.execute('CREATE VIEW ibl_current_examples AS SELECT * FROM ibl_examples')
     conn.commit(); conn.close()
 
 

@@ -1,96 +1,55 @@
-"""Source edition identity shared by storage, recall and execution boundaries."""
+"""Current source format at persistence and transport boundaries."""
 import hashlib
 import re
 
+CURRENT_EDITION = 2
+_HEADER = re.compile(r"\A\s*#!ibl[ \t]+edition=(\d+)[ \t]*(?:\n|$)")
+
 
 def source_edition(source, requested=None):
-    header = re.match(r"\A\s*#!ibl[ \t]+edition=(\d+)[ \t]*(?:\n|$)", source)
-    if source.lstrip().startswith("#!ibl") and not header:
-        raise ValueError("EDITION_HEADER: 파일 헤더는 #!ibl edition=1 또는 2입니다.")
+    if not isinstance(source, str):
+        raise ValueError('SOURCE_TYPE: code는 IBL 원문 문자열이어야 합니다.')
+    header = _HEADER.match(source)
+    if source.lstrip().startswith('#!ibl') and not header:
+        raise ValueError('EDITION_HEADER: 파일 헤더는 #!ibl edition=2입니다.')
     declared = int(header[1]) if header else None
-    if requested is not None and (type(requested) is not int or requested not in (1, 2)):
-        raise ValueError("EDITION: 지원 판본은 1과 2입니다.")
-    if declared is not None and declared not in (1, 2):
-        raise ValueError("EDITION: 지원하지 않는 파일 판본입니다.")
-    if declared is not None and requested is not None and declared != requested:
-        raise ValueError("EDITION_CONFLICT: 파일 헤더와 API edition이 다릅니다.")
-    return requested or declared or 1
-
-
-def explicit_source(source, requested=None):
-    edition = source_edition(source, requested)
-    if edition == 2 and not source.lstrip().startswith("#!ibl"):
-        return "#!ibl edition=2\n" + source
-    return source
+    if requested is not None and (type(requested) is not int or requested != CURRENT_EDITION):
+        raise ValueError('EDITION_UNSUPPORTED: 지원하는 원문 형식은 edition=2입니다.')
+    if declared is not None and declared != CURRENT_EDITION:
+        raise ValueError('EDITION_UNSUPPORTED: 지원하지 않는 파일 형식입니다.')
+    if declared is None and requested is None:
+        raise ValueError('EDITION_REQUIRED: edition:2 또는 #!ibl edition=2가 필요합니다.')
+    return CURRENT_EDITION
 
 
 def require_current(source, requested=None):
-    """Execution eligibility is separate from immutable historical identity."""
-    if not isinstance(source, str):
-        raise ValueError('EDITION_RETIRED: 판본 1 steps 실행은 종료됐습니다. 판본 2 원문으로 이관하세요.')
-    edition = source_edition(source, requested)
-    if edition != 2:
-        if requested is None and not source.lstrip().startswith('#!ibl'):
-            raise ValueError('EDITION_REQUIRED: 실행 원문에 edition:2 또는 #!ibl edition=2를 명시하세요.')
-        raise ValueError('EDITION_RETIRED: 판본 1 실행은 종료됐습니다. 과거 기록은 열람만 가능합니다.')
-    return edition
+    return source_edition(source, requested)
 
 
-def retired_result():
-    """Non-executable historical entry points share a stable refusal."""
-    return {'edition': 1, 'ok': False, 'success': False, 'executed': False,
-            'status': 'invalid', 'code': 'EDITION_RETIRED',
-            'error': 'EDITION_RETIRED: 판본 1 실행은 종료됐습니다. 판본 2 원문으로 이관하세요.'}
-
-
-def program_hash(source, edition=1):
-    # Preserve every v1 trajectory join; distinguish identical text interpreted
-    # under another edition. Source text itself remains unchanged in storage.
-    identity = source if edition == 1 else f"ibl-edition:{edition}\0{source}"
-    return hashlib.sha256(identity.encode("utf-8", "replace")).hexdigest()
-
-
-def authoring_request(request):
-    """New model-authored code uses current IBL; stored source keeps its edition.
-
-    Do not call this from saved workflow/schedule readers. A header or explicit
-    edition is authoritative; syntax errors never trigger legacy execution.
-    """
-    source = request.get("code") or request.get("pipeline") or ""
-    if request.get("edition") is not None or source.lstrip().startswith("#!ibl"):
-        return request
-    return {**request, "edition": 2}
-
-
-from contextlib import contextmanager
-from contextvars import ContextVar
-_current_edition = ContextVar("ibl_source_edition", default=1)
-
-
-@contextmanager
-def source_context(edition):
-    token = _current_edition.set(edition)
-    try:
-        yield
-    finally:
-        _current_edition.reset(token)
-
-
-def text_result(text, **fields):
-    """Wrap a producer-confirmed text success before envelope heuristics run.
-
-    Legacy programs keep their exact string. Current callers receive an explicit
-    envelope, so JSON-looking business text cannot turn into status or fields.
-    Declared structural fields may accompany the current envelope; legacy text stays intact.
-    Failures must not pass through this helper.
-    """
-    return {**fields, "success": True, "message": text} if _current_edition.get() == 2 else text
+def explicit_source(source, requested=None):
+    source_edition(source, requested)
+    return source if source.lstrip().startswith('#!ibl') else '#!ibl edition=2\n' + source
 
 
 def pin_source(source, requested=None):
-    """새 저장 코드만 작성 문맥에 고정한다. 기존 원문 조회에는 사용하지 않는다."""
-    if not isinstance(source, str) or not source.strip():
-        return source
-    declared = source_edition(source, requested) if requested is not None or source.lstrip().startswith("#!ibl") else _current_edition.get()
-    require_current(source, declared)
-    return explicit_source(source, declared)
+    """Newly authored source is stored with an explicit format, never inferred on read."""
+    if source == "":
+        return ""
+    return explicit_source(source, CURRENT_EDITION if requested is None else requested)
+
+
+def program_hash(source, edition=CURRENT_EDITION):
+    source_edition(source, edition)
+    return hashlib.sha256(f'ibl-edition:{CURRENT_EDITION}\0{source}'.encode('utf-8', 'replace')).hexdigest()
+
+
+def authoring_request(request):
+    source = request.get('code') or request.get('pipeline') or ''
+    if request.get('edition') is not None or (isinstance(source, str) and source.lstrip().startswith('#!ibl')):
+        return request
+    return {**request, 'edition': CURRENT_EDITION}
+
+
+def text_result(text, **fields):
+    """A producer-confirmed text result has the same shape in every caller."""
+    return {**fields, 'success': True, 'message': text}

@@ -29,23 +29,8 @@ def _load(name, path):
 
 
 # ── ① 변수 경로의 .items 파생 ──
-def test_var_path_items_derives_from_table_currency():
-    from workflow_binding import _extract_result_field_obj as ext
-    table_env = json.dumps({"success": True, "table": {"columns": ["a", "b"], "rows": [[1, 2], [3, 4]]}})
-    assert ext(table_env, "items") == [{"a": 1, "b": 2}, {"a": 3, "b": 4}]
-    assert ext(table_env, "items.1.a") == 3
-    assert ext(table_env, "items.*.b") == [2, 4]
-    # 최상위 columns/rows 형도, blocks(document) 통화도 같은 판정기
-    assert ext(json.dumps({"columns": ["x"], "rows": [[9]]}), "items") == [{"x": 9}]
-    assert ext(json.dumps({"blocks": [{"type": "p", "text": "t"}]}), "items.0.text") == "t"
 
 
-def test_var_path_items_keeps_direct_items_and_honest_error():
-    from workflow_binding import _extract_result_field_obj as ext
-    assert ext(json.dumps({"items": [{"k": 1}], "table": {"columns": ["k"], "rows": [[5]]}}), "items.0.k") == 1
-    with pytest.raises(ValueError, match="items"):
-        ext(json.dumps({"success": True, "path": "/x"}), "items")      # 효과 봉투 — 통화 아님, 종전대로 정직 오류
-    assert ext(json.dumps({"success": True, "path": "/x"}), "items?") is None
 
 
 # ── ② ledger items_file 이 write format:"json" 봉투를 받는다 ──

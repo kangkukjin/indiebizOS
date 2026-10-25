@@ -53,7 +53,7 @@ args (stdin JSON):
     tool_use/IBL_DEBUG의 이중 표현만 합치고 같은 코드를 재실행한 횟수는 보존한다.
   · 도구 줄이 0일 때는 상태로 갈라 적는다 — 도구없음(읽히는 방언인데 안 씀=사실) /
     끊김(Episode ORPHAN) / 로그없음 / 형식밖(모르는 방언 = 0 은 관측이 아니라 무지).
-  · IBL 조합 판정은 정규식이 아니라 실제 파서(ibl_parser.parse)로 한다. 파서를 못 부르면
+  · IBL 조합 판정은 정규식이 아니라 실제 파서(ibl_v2_parser.parse)로 한다. 파서를 못 부르면
     조합 칸을 비우고 상태에 적는다 — 열등한 숫자를 조용히 내지 않는다.
   · 조합 = 한 문장이 2단계 이상이거나 병렬(&)·폴백(??)·블록을 품은 것.
   · 로그는 상한이 있어 잘린다(현행 표식 episode_logger.TRUNC_MARK_RE, 2026-08-22 이전 행은
@@ -106,7 +106,7 @@ def _load_backend():
         sys.path.insert(0, be)
     try:
         import boot_paths  # noqa: F401
-        from ibl_parser import parse_with_vars as parse
+        from ibl_v2_parser import parse
     except Exception:
         return None, None
     try:
@@ -116,42 +116,29 @@ def _load_backend():
     return parse, TRUNC_MARK_RE
 
 
-def _statements(steps):
-    """파서가 낸 평탄한 step 목록을 _seq_boundary 로 문장 단위로 되접는다."""
-    out, cur = [], []
-    for st in steps:
-        if cur and isinstance(st, dict) and st.get("_seq_boundary"):
-            out.append(cur)
-            cur = []
-        cur.append(st)
-    if cur:
-        out.append(cur)
-    return out
 
 
 def _measure(code, parse, variables=None):
-    """IBL 코드 한 덩이 → (조합 지표, 이 코드까지의 변수 맵). 파싱 실패는 None 이 아니라 예외로 알린다.
-
-    variables = 앞 호출들이 할당한 `$변수` 맵(parse_with_vars 의 preset_vars) — 턴 안의 호출은 앞
-    호출의 변수를 이어 쓰므로 격리 파싱은 미할당 오탐을 낸다(2026-09-07). 반환 맵은 다음 코드에 넘긴다."""
-    steps, out_vars = parse(code, dict(variables or {}))
+    """Measure current syntax without executing it or carrying state across calls."""
+    from ibl_v2_learning import walk_nodes
+    tree = parse(code)
     m = {"문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
-    for stmt in _statements(steps):
-        m["문장"] += 1
-        depth = len(stmt)
-        par = sum(1 for s in stmt if isinstance(s, dict) and "_parallel" in s)
-        fb = sum(1 for s in stmt if isinstance(s, dict) and "_fallback_chain" in s)
-        blk = sum(1 for s in stmt if isinstance(s, dict) and any(k in s for k in BLOCK_KEYS))
-        m["seq"] += max(0, depth - 1)
-        m["par"] += par
-        m["fb"] += fb
-        m["블록"] += blk
-        m["each"] += sum(1 for s in stmt if isinstance(s, dict)
-                         and s.get("_node") == "table" and s.get("action") == "each")
-        m["최대단계"] = max(m["최대단계"], depth)
-        if depth >= 2 or par or fb or blk:
-            m["조합"] += 1
-    return m, out_vars
+    for stmt in tree.data['statements']:
+        nodes = list(walk_nodes(stmt))
+        seq = sum(n.kind == 'pipe' for n in nodes)
+        par = sum(n.kind == 'parallel' for n in nodes)
+        fb = sum(n.kind == 'fallback' for n in nodes)
+        blocks = sum(n.kind in {'if', 'repeat', 'try', 'def', 'goal'} for n in nodes)
+        each = sum(n.kind == 'call' and (n.data['node'], n.data['action']) == ('table', 'each') for n in nodes)
+        m['문장'] += 1
+        m['조합'] += bool(seq or par or fb or blocks or each)
+        m['seq'] += seq
+        m['par'] += par
+        m['fb'] += fb
+        m['블록'] += blocks
+        m['each'] += each
+        m['최대단계'] = max(m['최대단계'], seq + 1)
+    return m, {}
 
 
 def _result_chars(payload, trunc_re):
@@ -464,7 +451,7 @@ def _scan(log, parse, trunc_re=None, traj=None, corpus=None):
     calls = _select_calls(log_codes, trunc_re, traj, corpus)
     sources = {c["source"] for c in calls}
     acc["_코드소스"] = next(iter(sources)) if len(sources) == 1 else "mixed"
-    variables = {}                     # 턴 변수 문맥 — 실행 순서대로 앞 호출의 할당을 잇는다
+    variables = {}                     # 각 호출은 닫힌 원문; 호출 간 실행 상태를 재구성하지 않는다
     incomplete_context = False
     for call in calls:
         acc[call["kind"]] += 1

@@ -98,6 +98,8 @@ def _syntax_reason(ibl_code: str, function_body: bool = False, *, owned_vocabula
             "진입점이 `import boot_paths` 를 거쳤는지 확인할 것(배선처=boot_paths.wire_ledger_syntax_gate)."
         )
     try:
+        from ibl_edition import require_current
+        require_current(ibl_code)
         if owned_vocabulary:
             return _CODE_VALIDATOR(ibl_code, function_body, owned_vocabulary=True)
         return _CODE_VALIDATOR(ibl_code, function_body)

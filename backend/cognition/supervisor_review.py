@@ -184,19 +184,24 @@ def missing_read_observation(name, payload, result):
     if (not str(name or "").endswith("execute_ibl") or not isinstance(payload, dict)
             or not isinstance(payload.get("code"), str)):
         return False
-    from ibl_parser import parse
+    from ibl_v2_parser import parse
+    from common.expression_ir import Node
 
-    def reads_only(step):
-        if not isinstance(step, dict):
+    def reads_only(node):
+        if not isinstance(node, Node):
             return False
-        if step.get("_parallel"):
-            return bool(step.get("branches")) and all(reads_only(s) for s in step["branches"])
-        return (step.get("_node") == "self" and step.get("action") == "read"
-                and not any(k.startswith("_") and k != "_node" for k in step))
+        if node.kind == 'parallel':
+            return reads_only(node.data['left']) and reads_only(node.data['right'])
+        if node.kind in ('return', 'expr'):
+            return reads_only(node.data['value'])
+        if node.kind != 'call' or (node.data['node'], node.data['action']) != ('self', 'read'):
+            return False
+        from ibl_v2_learning import walk_nodes
+        return not any(n.kind in ('call', 'invoke') for n in walk_nodes(node.data['params']))
 
     try:
-        program = parse(payload["code"])
-        if not program or not all(reads_only(s) for s in program):
+        program = parse(payload['code']).data['statements']
+        if not program or not all(reads_only(n) for n in program):
             return False
     except Exception:
         return False

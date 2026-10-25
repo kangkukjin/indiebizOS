@@ -7,9 +7,8 @@ import boot_paths  # noqa: F401
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from ibl_boundary_probe import probe
 from ibl_boundary_cases import literal as q
-from idiom_experiment_worker import load
+from test_report_repair_contracts_2026_09_08 import load
 from test_names_first_recall_2026_09_05 import env, _add  # noqa: F401
 
 
@@ -29,7 +28,7 @@ def test_recall_exposes_parent_functions_as_currency_without_bodies(env):
     tree, db = env
     child = '보고서/부동산 발굴'
     _add(db, '지역별 기록', '[self:time]{}', child)
-    pid = _add(db, '최신 보고서 읽기', '$return=[self:read]{path:$파일}', '보고서', category='phrase', alias='공통읽기', ok=2)
+    pid = _add(db, '최신 보고서 읽기', '#!ibl edition=2\n[def:공통읽기]($파일){return [self:read]{path:$파일}}', '보고서', category='phrase', alias='공통읽기', ok=2)
     _add(db, '관계없는 함수', '[self:time]{}', '오디오', category='phrase', alias='관계없음')
     out = tree.recall(child, db)
     entry = next(r for r in out['items'] if r['id'] == pid)

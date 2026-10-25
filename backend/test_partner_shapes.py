@@ -64,53 +64,10 @@ def test_legend_says_absence_is_not_prohibition():
     assert "table:*" in ibl_access.CATALOG_LEGEND
 
 
-def test_sweep_excludes_self_pipe_but_keeps_self_parallel():
-    """② 자기→자기 `>>` 는 접힐 자리(제외), 같은 액션의 `&` 는 접은 모양(유지)."""
-    sys.path.insert(0, _SCRIPTS)
-    import collections
-    from ibl_partner_sweep import _collect
-    from ibl_parser import parse
-
-    pairs = collections.defaultdict(collections.Counter)
-    _collect(parse('[limbs:browser]{op: "click"} >> [limbs:browser]{op: "type"}'), pairs, parse)
-    assert ">>limbs:browser" not in pairs["limbs:browser"]
-
-    pairs = collections.defaultdict(collections.Counter)
-    _collect(parse('[sense:stock]{op: "quote", ticker: "A"} & [sense:stock]{op: "quote", ticker: "B"}'),
-             pairs, parse)
-    assert pairs["sense:stock"]["&같은액션"] == 1, "같은 사건은 한 표 — 가지마다 세면 자기병렬이 부풀어 `>>` 파트너를 밀어낸다"
-
-    pairs = collections.defaultdict(collections.Counter)
-    _collect(parse('[sense:stock]{ticker: "A"} & [sense:stock]{ticker: "B"} & [sense:stock]{ticker: "C"}'),
-             pairs, parse)
-    assert pairs["sense:stock"]["&같은액션"] == 1
 
 
-def test_sweep_does_not_chain_across_independent_statements():
-    """④ 줄바꿈으로 나뉜 두 문장은 이어진 게 아니다 — 사슬을 끊지 않으면 거짓 동반이 생긴다."""
-    sys.path.insert(0, _SCRIPTS)
-    import collections
-    from ibl_partner_sweep import _collect
-    from ibl_parser import parse
-
-    pairs = collections.defaultdict(collections.Counter)
-    _collect(parse('[self:patch]{path: "a"}\n[sense:search]{query: "b"} >> [table:filter]{where: "c"}'),
-             pairs, parse)
-    assert ">>sense:search" not in pairs["self:patch"]
-    assert pairs["sense:search"][">>table:filter"] == 1
 
 
-def test_sweep_counts_sentences_inside_each_do():
-    """`[table:each]{do: "…"}` 의 do 는 문자열에 담긴 진짜 문장이다 — 안 세면 고차 조합이 통째로 안 보인다."""
-    sys.path.insert(0, _SCRIPTS)
-    import collections
-    from ibl_partner_sweep import _collect
-    from ibl_parser import parse
-
-    pairs = collections.defaultdict(collections.Counter)
-    _collect(parse('[table:each]{items: [{a: 1}], do: "[sense:realty]{region: \'$it.a\'} >> [table:take]{n: 2}"}'),
-             pairs, parse)
-    assert pairs["sense:realty"][">>table:take"] == 1
 
 
 def test_sweep_declares_derived_and_reports_observation_limits():
@@ -135,3 +92,31 @@ def test_weekly_cadence_registered():
 if __name__ == "__main__":                      # 러너는 하나 — pytest
     import pytest
     raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))
+
+
+def test_current_ast_observes_only_connected_calls_and_block_bodies():
+    sys.path.insert(0, _SCRIPTS)
+    from collections import defaultdict, Counter
+    from ibl_v2_parser import parse
+    from ibl_partner_sweep import _collect
+    pairs=defaultdict(Counter)
+    _collect(parse('[a:start]{}\n[b:first]{} >> ([c:middle]{} >> [d:end]{})'),pairs)
+    assert not pairs['a:start']
+    assert pairs['b:first']=={'>>c:middle':1}
+    assert pairs['c:middle']=={'>>d:end':1}
+    pairs=defaultdict(Counter)
+    _collect(parse('[a:x]{} & [a:x]{} & [a:x]{}'),pairs)
+    assert pairs['a:x']=={'&같은액션':1}
+    pairs=defaultdict(Counter)
+    _collect(parse('[table:each]{items:[1]}{[a:read]{} >> [b:use]{}}'),pairs)
+    assert pairs['a:read']=={'>>b:use':1}
+
+
+def test_parameter_observer_reads_current_ast_without_parsing_text_as_code():
+    sys.path.insert(0,_SCRIPTS)
+    from ibl_v2_parser import parse
+    from ibl_param_sweep import _walk
+    found=[]
+    _walk(parse('[a:call]{message:"[x:fake]{z:1}", count:3}\n[table:each]{items:[1]}{[b:call]{flag:true}}'),found)
+    assert [(node,action) for node,action,_ in found]==[('a','call'),('table','each'),('b','call')]
+    assert found[0][2]=={'message':'[x:fake]{z:1}','count':3}

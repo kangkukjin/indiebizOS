@@ -226,7 +226,6 @@ def test_consumer_modules_cannot_reintroduce_local_scalar_policy(where_dsl):
     consumers = [
         _ROOT / "backend/ibl/ibl_predicates.py",
         _ROOT / "backend/ibl/api_transforms.py",
-        _ROOT / "backend/ibl/ibl_parser.py",
         _ROOT / "backend/cognition/agent_goals.py",
         _ROOT / "backend/cognition/goal_evaluator.py",
         _ROOT / "backend/common/safe_expr.py",

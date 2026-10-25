@@ -27,58 +27,14 @@ import boot_paths  # noqa: E402,F401
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def test_V1_통짜_경로_참조는_원형이다():
-    from ibl.workflow_binding import _sub_step_refs
-    stored = {0: json.dumps({"queue": [{"a": 1}, {"a": 2}], "n": 5,
-                             "meta": {"k": "v"}}, ensure_ascii=False)}
-    assert _sub_step_refs("{{_step_0_result.queue}}", stored, {}, None, None) == [{"a": 1}, {"a": 2}]
-    assert _sub_step_refs("{{_step_0_result.meta}}", stored, {}, None, None) == {"k": "v"}
-    # 스칼라도 원형 — "5" 가 아니라 5 (int 선언 param 에 그대로 들어간다)
-    assert _sub_step_refs("{{_step_0_result.n}}", stored, {}, None, None) == 5
 
 
-def test_V2_bare_참조는_v4_계약_그대로():
-    from ibl.workflow_binding import _sub_step_refs
-    stored = {0: json.dumps({"success": True, "message": "산문 정본이다 " * 30}, ensure_ascii=False)}
-    out = _sub_step_refs("{{_step_0_result}}", stored, {}, None, None)
-    assert isinstance(out, str) and "산문 정본이다" in out and "success" not in out
 
 
-def test_V3_문장_속_참조는_문자열화():
-    from ibl.workflow_binding import _sub_step_refs
-    stored = {0: json.dumps({"n": 5, "row": [1, 2]}, ensure_ascii=False)}
-    out = _sub_step_refs("값은 {{_step_0_result.n}} 이고 행은 {{_step_0_result.row}} 다",
-                         stored, {}, None, None)
-    assert out == "값은 5 이고 행은 [1, 2] 다"
 
 
-def test_V4_변수_파이프_머리_탈당의():
-    from ibl_parser import parse_with_vars
-    steps, _ = parse_with_vars(
-        '$표 = [table:take]{items: [{a: 1}], n: 1}\n$표 >> [table:sort]{by: "a"}')
-    emits = [s for s in steps if isinstance(s, dict) and s.get("_var_emit")]
-    assert len(emits) == 1 and emits[0]["name"] == "표"
-    assert emits[0]["_vars"] == {"표": 0}
-    # `.path` 붙은 머리도 된다
-    steps2, _ = parse_with_vars(
-        '$표 = [table:take]{items: [{a: 1}], n: 1}\n$표.items >> [table:sort]{by: "a"}')
-    e2 = [s for s in steps2 if isinstance(s, dict) and s.get("_var_emit")][0]
-    assert e2["path"].lstrip(".") == "items"
 
 
-def test_V5_미할당_머리는_파싱_에러_예약어는_비적용():
-    from ibl_parser import parse_with_vars
-    # ★파서와 같은 평면 경로로 — ibl.ibl_parser_values 로 받으면 모듈 이중 정체로
-    #   예외 클래스가 다른 객체가 되어 raises 가 못 잡는다(싱글턴 이중 임포트 부류).
-    from ibl_parser_values import IBLSyntaxError
-    with pytest.raises(IBLSyntaxError, match="할당되지 않았습니다"):
-        parse_with_vars('$유령 >> [table:sort]{by: "a"}')
-    # `$items` 는 집합 바인딩 예약어 — 머리 탈당의 대상이 아니다(그 규약의 판정대로 흐름)
-    try:
-        steps, _ = parse_with_vars('$items >> [table:sort]{by: "a"}')
-        assert not any(isinstance(s, dict) and s.get("_var_emit") for s in steps)
-    except IBLSyntaxError:
-        pass                                    # 예약어 경로의 정직 거절도 수용 — emit 만 아니면 된다
 
 
 

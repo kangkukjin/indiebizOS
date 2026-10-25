@@ -19,82 +19,14 @@ import time
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
-from ibl_parser import parse, parse_step, IBLSyntaxError  # noqa: E402
 
 
-def test_d1_mixed_operators_rejected():
-    """D1: '[a]{} ?? [b]{} & [c]{}' 는 예전에 b 가 조용히 사라졌다 → 이제 파스 에러."""
-    try:
-        parse('[sense:web_search]{query: "a"} ?? [sense:crawl]{url: "b"} & [sense:search]{source: "gnews", query: "c"}')
-        raise AssertionError("혼용은 IBLSyntaxError 여야 함")
-    except IBLSyntaxError as e:
-        assert "섞을 수 없습니다" in str(e)
-    # 반대 순서도 동일
-    try:
-        parse('[sense:a1]{} & [sense:a2]{} ?? [sense:a3]{}')
-        raise AssertionError("혼용은 IBLSyntaxError 여야 함")
-    except IBLSyntaxError:
-        pass
-    # 순수 병렬·순수 폴백은 그대로 동작 (회귀 없음)
-    p = parse('[sense:a1]{} & [sense:a2]{} & [sense:a3]{}')
-    assert len(p[0]["branches"]) == 3
-    p = parse('[sense:a1]{} ?? [sense:a2]{}')
-    assert len(p[0]["_fallback_chain"]) == 2
-    print("D1 OK — & / ?? 혼용 명시 거부, 순수 형태 회귀 없음")
 
 
-def test_d2_leftover_text_rejected():
-    """D2: '[a:b]{} [c:d]{}' (>> 누락)는 예전에 c:d 가 침묵 유실 → 이제 에러."""
-    try:
-        parse('[sense:web_search]{query: "a"} [self:file]{path: "b.md"}')
-        raise AssertionError(">> 누락은 IBLSyntaxError 여야 함")
-    except IBLSyntaxError as e:
-        assert "해석되지 않은" in str(e)
-    # 앞쪽 잔여 텍스트도 거부
-    try:
-        parse('실행해줘 [sense:web_search]{query: "a"}')
-        raise AssertionError("앞 잔여 텍스트는 IBLSyntaxError 여야 함")
-    except IBLSyntaxError:
-        pass
-    # @별칭·빈 괄호·인라인 주석은 정상 (기존 관대함 유지)
-    s = parse_step('[self:read]{path: "a.md"}@폰2')
-    assert s["target_node"] == "폰2"
-    assert parse_step('[self:open]()')["action"] == "open"
-    assert parse('[sense:web_search]{query: "a"} # 검색')[0]["action"] == "web_search"
-    print("D2 OK — 잔여 텍스트 명시 거부, @별칭/주석 회귀 없음")
 
 
-def test_d3_string_protected_comment_strip():
-    """D3: multi-line string 파라미터 안의 '# 헤딩'·빈 줄이 예전엔 삭제됐다 → 보존."""
-    code = '''# 진짜 주석은 제거
-[self:write]{path: "t.md", content: "제목
-# 마크다운 헤딩
-
-## 소제목
-본문 don't 포함"}'''
-    p = parse(code)
-    c = p[0]["params"]["content"]
-    assert "# 마크다운 헤딩" in c
-    assert "## 소제목" in c
-    assert "\n\n" in c            # 문자열 안 빈 줄도 내용
-    assert "don't" in c           # 아포스트로피가 문자열 상태를 깨지 않음
-    assert p[0]["params"]["path"] == "t.md"
-    # 문자열 밖 주석·빈 줄은 여전히 제거
-    p2 = parse('# 주석1\n\n[sense:web_search]{query: "a"}\n# 주석2')
-    assert len(p2) == 1
-    print("D3 OK — 문자열 내부 보호, 밖 주석 제거 유지")
 
 
-def test_d4_var_binding_parser():
-    """D4(파서): $var → 할당 문장의 최종 step 인덱스 {{_step_N_result}}."""
-    p = parse('$result = [sense:web_search]{query: "AI"}\n'
-              '[others:channel_send]{channel_type: "telegram", body: "$result"}')
-    assert p[1]["params"]["body"] == "{{_step_0_result}}"
-    # 파이프라인 할당은 마지막 step 을 가리킴
-    p = parse('$r = [sense:web_search]{query: "A"} >> [table:take]{n: 3}\n'
-              '[others:channel_send]{channel_type: "telegram", body: "$r"}')
-    assert p[2]["params"]["body"] == "{{_step_1_result}}"
-    print("D4(파서) OK — $var 가 실제 step 인덱스로 치환")
 
 
 

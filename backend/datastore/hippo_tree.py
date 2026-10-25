@@ -60,7 +60,6 @@ PHRASES_NOTE = ("<!-- 기계가 읽는 절: 관용구 = 독립 문장 2~8개의 
 PHRASE_HEAD_RE = re.compile(r"^### (?:(\S+) — )?(.*?) · 문장 (\d+)(?: · 슬롯 (.*?))?(?:\s*‹#(\d+)[^›]*›)?\s*$")
 PHRASE_CALL_RE = re.compile(r"^호출: `(.+)`\s*$")
 PHRASE_LINE_RE = re.compile(r"^\d+\. `(.+)`\s*$")
-SLOT_RE = re.compile(r"\$\{([^}]+)\}")
 MARKER_RE = tree_doc.marker_re("hippo-topic", "topic")
 GUIDE_RE = re.compile(r"(?m)^guide:\s*(.+?)\s*$")
 LINE_RE = re.compile(r'^- (.*?)\s+→\s+`(.+?)`\s*‹#(\d+)[^›]*›\s*$')      # 색인된 줄
@@ -230,7 +229,7 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
             "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, updated_at, "
             "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, COALESCE(returns,'') AS returns, signature, "
             "COALESCE(bypass_count,0) AS bypass_count, COALESCE(provenance,'{}') AS provenance "
-            "FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
+            "FROM ibl_current_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
         from ibl_usage_db import execution_success_rate
         import function_store
@@ -250,7 +249,7 @@ def _counts(db_path: Optional[str], phrase: bool) -> Dict[str, int]:
     conn = _conn(db_path)
     try:
         rows = conn.execute(
-            "SELECT COALESCE(topic,'') AS t, COUNT(*) AS c FROM ibl_examples WHERE COALESCE(category,'') "
+            "SELECT COALESCE(topic,'') AS t, COUNT(*) AS c FROM ibl_current_examples WHERE COALESCE(category,'') "
             + ("=" if phrase else "!=") + " ? GROUP BY t", (PHRASE_CATEGORY,)).fetchall()
         return {norm_topic(r["t"]): r["c"] for r in rows}
     except sqlite3.OperationalError:
@@ -306,7 +305,7 @@ def render_line(r: Dict[str, Any]) -> str:
     if s or f:
         meta.append(f"✓{s}/✗{f}")
     meta.append((r.get("created_at") or "")[:10])
-    code = _one_line(r.get("ibl_code")).replace("`", "'")
+    code = json.dumps(r.get("ibl_code") or "", ensure_ascii=False).replace("`", "\\u0060")
     return f"- {_one_line(r.get('intent'))} → `{code}` {tree_doc.meta(meta)}"
 
 
@@ -319,87 +318,16 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
 # ─────────────────────────── 관용구 (phrase) ───────────────────────────
 
 def split_sentences(code: str) -> List[str]:
-    """`;` 또는 줄바꿈으로 이은 독립 문장들로 자른다 — 따옴표·중괄호 안은 경계가 아니다.
-
-    ★2026-09-05: 줄바꿈도 경계다(파서 `_extract_statements` 가 `;` 를 개행과 같은 것으로 접는다). 종전엔 `;` 만
-    봐서 여러 줄 프로그램(팁 보고서 15단계)이 '문장 1' 로 잡혀 이름 먼저 회상이 본문을 그대로 내보내고
-    자동 작명이 건너뛰었다."""
-    from ibl_edition import source_edition
-    if source_edition(code or "") == 2:
-        return [code] if code.strip() else []
-    return _scan_sentences(code)
+    """A stored program is one closed unit for selection and reuse."""
+    return [code] if isinstance(code, str) and code.strip() else []
 
 
-def _scan_sentences(code: str) -> List[str]:
-    """스캐너 본체 — 따옴표·괄호(`{[(`) 밖의 `;`/줄바꿈이 경계. 판본 1 문장과 판본 2 최상위 문장이 같은 규칙을 쓴다
-    (판본 2 문법도 '문장 사이에는 줄바꿈 또는 ;' — ibl_v2_parser.Parser.program)."""
-    out, buf, q, depth = [], [], None, 0
-    i, n = 0, len(code or "")
-    while i < n:
-        ch = code[i]
-        if q:
-            buf.append(ch)
-            if ch == "\\" and i + 1 < n:
-                buf.append(code[i + 1]); i += 2; continue
-            if ch == q:
-                q = None
-        elif ch in "\"'":
-            q = ch; buf.append(ch)
-        elif ch in "{[(":
-            depth += 1; buf.append(ch)
-        elif ch in "}])":
-            depth = max(0, depth - 1); buf.append(ch)
-        elif (ch == ";" or ch == "\n") and depth == 0:
-            out.append("".join(buf).strip()); buf = []
-        else:
-            buf.append(ch)
-        i += 1
-    tail = "".join(buf).strip()
-    if tail:
-        out.append(tail)
-    return [s for s in out if s]
 
 
-def _sentence_one_line(s: str) -> str:
-    """문장 하나를 한 줄로 — 괄호 안(깊이>0)·따옴표 밖의 줄바꿈은 독립 문장 경계 `;` 로(함수 정의 몸 `[def: x]{줄들}` 보존,
-    2026-09-05), 그 밖의 공백 줄바꿈은 한 칸으로."""
-    out, q, depth, i, n = [], None, 0, 0, len(s or "")
-    while i < n:
-        ch = s[i]
-        if q:
-            out.append(ch)
-            if ch == "\\" and i + 1 < n:
-                out.append(s[i + 1]); i += 2; continue
-            if ch == q:
-                q = None
-        elif ch in "\"'":
-            q = ch; out.append(ch)
-        elif ch in "{[(":
-            depth += 1; out.append(ch)
-        elif ch in "}])":
-            depth = max(0, depth - 1); out.append(ch)
-        elif ch == "\n":
-            j = len(out) - 1
-            while j >= 0 and out[j] in " \t":
-                j -= 1
-            prev = out[j] if j >= 0 else ""
-            k = i + 1
-            while k < n and s[k] in " \t\r\n":
-                k += 1
-            nxt = s[k] if k < n else ""
-            if depth > 0 and prev not in "{;([,&|>" and nxt not in "}])" and not s[k:k + 2] == ">>":
-                out.append("; ")
-            else:
-                out.append(" ")
-            i = k; continue
-        else:
-            out.append(ch)
-        i += 1
-    return re.sub(r"[ \t]+", " ", "".join(out)).strip()
 
 
 def join_sentences(sentences: List[str]) -> str:
-    return "; ".join(_sentence_one_line(s) for s in sentences if s and s.strip())
+    return '\n'.join(s for s in sentences if s and s.strip())
 
 
 def _parse_signature(raw) -> tuple:
@@ -412,27 +340,18 @@ def _parse_signature(raw) -> tuple:
 
 
 def slot_names(code: str, signature: Any = None) -> List[str]:
-    """호출 서명의 슬롯.
-
-    ★정본은 저장된 `signature`(2026-09-06) — 실행기(`[fn:]` 인자 누락 판정)가 원장 문에서 계산한 것이다.
-    아래 `${이름}` 정규식은 서명이 아직 계산되지 않은 옛 행·파서 없는 몸을 위한 폴백일 뿐이다.
-    두 규칙이 갈라져 표시가 `{}` 인데 실행은 인자를 요구하면, 가르친 대로 부른 호출이 거절된다
-    (09-06 실측: 이름 붙은 45건 중 10건 불일치, 5건은 표시가 빈 서명).
-
-    몸 안에서 `$이름 = …` 로 태어나는 변수와 경로 참조(`${원장.items.*.id}`)는 슬롯이 아니다."""
+    """Stored compiler signature, or explicit parameters in a current definition."""
     names, known = _parse_signature(signature)
     if known:
         return names
-    assigned = set(re.findall(r"(?m)^\s*\$\{?([\w가-힣]+)\}?\s*=", code or "")) | \
-               set(re.findall(r"[;\n]\s*\$\{?([\w가-힣]+)\}?\s*=", code or ""))
-    seen, out = set(), []
-    for m in SLOT_RE.findall(code or ""):
-        k = m.strip()
-        base = re.split(r"[.\[]", k, 1)[0]
-        if not k or k in seen or base in assigned or "." in k or "*" in k:
-            continue
-        seen.add(k); out.append(k)
-    return out
+    from common.expression_parser import parse
+    try:
+        statements = parse(code).data['statements']
+        if len(statements) == 1 and statements[0].kind == 'def':
+            return [name for name, default in statements[0].data['params'].items() if default is None]
+    except Exception:
+        pass
+    return []
 
 
 def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = None,
@@ -443,25 +362,15 @@ def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = 
         return ""
     slots = slot_names(code or "", signature)
     args = ", ".join(f'{s}: "…"' for s in slots)
-    from ibl_edition import source_edition
-    edition = source_edition(code or "")
-    prefix = "판본 2 (execute_ibl edition:2): " if edition == 2 and not call_only else ""
-    if edition == 1:
-        returns = "Record"  # Current calls retain the legacy execution envelope.
-    else:
-        from ibl_returns_observed import returns_display
-        returns = returns_display(returns, observed)
+    prefix = ''
+    from ibl_returns_observed import returns_display
+    returns = returns_display(returns, observed)
     return prefix + f"[fn:{alias}]{{{args}}}" + (f" → {returns}" if returns else "")
 
 
 def phrase_def_block(alias: str, code: str) -> str:
-    """관용구를 고쳐 쓰는 정의 블록 — 프로그램에 붙여 넣는 `[def: 이름]{ 문장들 }` (여러 줄)."""
-    from ibl_edition import source_edition
-    if source_edition(code or "") == 2:
-        return code
-    sents = split_sentences(code or "")
-    body = "\n".join("  " + s for s in sents)
-    return f"[def: {alias or '이름'}]{{\n{body}\n}}"
+    """Stored functions already carry their explicit definition and signature."""
+    return code
 
 
 def phrase_expand_card(r: Dict[str, Any]) -> str:
@@ -512,7 +421,8 @@ def render_phrase(r: Dict[str, Any]) -> str:
     if alias:
         lines.append(f"호출: `{phrase_call_line(alias, code, (r.get('returns') or '').strip(), r.get('signature'))}`")
     for i, sent in enumerate(sents, 1):
-        lines.append(f"{i}. `{_one_line(sent).replace('`', chr(39))}`")
+        encoded = json.dumps(sent, ensure_ascii=False).replace("`", "\\u0060")
+        lines.append(f"{i}. `{encoded}`")
     return "\n".join(lines)
 
 
@@ -554,7 +464,7 @@ def parse_phrases(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
             continue                                   # 호출 예시 줄은 파생(이름+슬롯) — 색인 대상이 아니다
         lm = PHRASE_LINE_RE.match(line)
         if lm and cur is not None:
-            cur["sentences"].append(lm.group(1).strip())
+            cur["sentences"].append(_document_source(lm.group(1).strip()))
     _flush()
     return known, fresh
 
@@ -813,6 +723,17 @@ def refresh_all(db_path: Optional[str] = None) -> List[str]:
 
 # ─────────────────────────── 문서 → 색인 (사람이 고친 줄) ───────────────────────────
 
+def _document_source(text):
+    if text.startswith('"'):
+        try:
+            source = json.loads(text)
+            if isinstance(source, str):
+                return source
+        except ValueError:
+            pass
+    return text
+
+
 def parse_section(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     _h, sec, _t = _split_section(text)
     known, fresh = [], []
@@ -821,11 +742,11 @@ def parse_section(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
             continue
         m = LINE_RE.match(line)
         if m:
-            known.append({"intent": m.group(1).strip(), "ibl_code": m.group(2).strip(), "id": int(m.group(3))})
+            known.append({"intent": m.group(1).strip(), "ibl_code": _document_source(m.group(2).strip()), "id": int(m.group(3))})
             continue
         m = NEW_LINE_RE.match(line)
         if m and m.group(1).strip() and m.group(2).strip():
-            fresh.append({"intent": m.group(1).strip(), "ibl_code": m.group(2).strip()})
+            fresh.append({"intent": m.group(1).strip(), "ibl_code": _document_source(m.group(2).strip())})
     return known, fresh
 
 
@@ -866,10 +787,10 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
     updated = deleted = inserted = 0
     rejected: List[str] = []
     definition_rejected = False
-    try:
-        from ibl_usage_db import _syntax_reason
-    except Exception:
-        _syntax_reason = lambda code: None   # noqa: E731
+    from ibl_usage_db import _syntax_reason
+    from ibl_edition import pin_source
+    indexing = []
+    gone = []
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
     try:
         conn.execute("BEGIN IMMEDIATE")
@@ -899,46 +820,49 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
                 conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, alias=?, updated_at=? WHERE id=?",
                              (k["intent"], k["ibl_code"], (k.get("alias") if "alias" in k else r.get("alias")) or "", now, k["id"]))
             updated += 1
-            _index(db_path, k["id"], k["intent"], k["ibl_code"])
+            indexing.append((k["id"], k["intent"], k["ibl_code"]))
         gone = [r["id"] for r in plan["delete"]]
         if gone:
             ph = ",".join("?" * len(gone))
             conn.execute(f"DELETE FROM ibl_examples WHERE id IN ({ph})", gone)
             deleted += len(gone)
-            try:
-                vconn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
-                import sqlite_vec
-                vconn.enable_load_extension(True); sqlite_vec.load(vconn); vconn.enable_load_extension(False)
-                vconn.execute(f"DELETE FROM ibl_examples_vec WHERE rowid IN ({ph})", gone); vconn.commit(); vconn.close()
-            except Exception:
-                pass
         for f in plan["insert"]:
             if f.get('alias') or f.get('category') == PHRASE_CATEGORY:
                 definition_rejected = True
                 rejected.append('관용구 정의는 공통 등록으로 추가하세요. 문서의 후보 원문은 보존합니다.')
+                continue
+            try:
+                f["ibl_code"] = pin_source(f["ibl_code"])
+            except ValueError as exc:
+                rejected.append(str(exc))
                 continue
             why = _syntax_reason(f["ibl_code"])
             if why:
                 rejected.append(f"{f['ibl_code'][:40]}: {why}")
                 continue
             nodes = ",".join(sorted(set(re.findall(r"\[([a-z_-]+):", f["ibl_code"]))))
-            if f.get("category") == PHRASE_CATEGORY:
-                n_s = len(split_sentences(f["ibl_code"]))
-                if not (PHRASE_MIN_SENTENCES <= n_s <= PHRASE_MAX_SENTENCES):
-                    rejected.append(f"{f['ibl_code'][:40]}: 관용구 문장 수 {n_s} (허용 {PHRASE_MIN_SENTENCES}~{PHRASE_MAX_SENTENCES})")
-                    continue
-                cat = PHRASE_CATEGORY
-            else:
-                cat = "pipeline" if (">>" in f["ibl_code"] or "&" in f["ibl_code"]) else "single"
+            cat = "pipeline" if (">>" in f["ibl_code"] or "&" in f["ibl_code"]) else "single"
             cur = conn.execute(
-                "INSERT INTO ibl_examples (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic, alias) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO ibl_examples (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic, alias, executable) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,1)",
                 (f["intent"], f["ibl_code"], nodes, cat, 1, "manual", "doc", now, now, topic, f.get("alias") or ""))
             inserted += 1
-            _index(db_path, cur.lastrowid, f["intent"], f["ibl_code"])
+            indexing.append((cur.lastrowid, f["intent"], f["ibl_code"]))
         conn.commit()
     finally:
         conn.close()
+    for ident, intent, source in indexing:
+        _index(db_path, ident, intent, source)
+    if gone:
+        try:
+            import sqlite_vec
+            with sqlite3.connect(db_path or _default_db_path(), timeout=10) as vconn:
+                vconn.enable_load_extension(True)
+                sqlite_vec.load(vconn)
+                vconn.enable_load_extension(False)
+                vconn.execute(f"DELETE FROM ibl_examples_vec WHERE rowid IN ({','.join('?' for _ in gone)})", gone)
+        except sqlite3.OperationalError:
+            pass
     if not definition_rejected:
         refresh_topic(topic, db_path)
     out = {"synced": True, "updated": updated, "deleted": deleted, "inserted": inserted}
@@ -1097,23 +1021,16 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
 
 
 def v2_statements(code: str) -> List[str]:
-    """판본 2 프로그램의 최상위 문장들 — 헤더(`#!ibl …`)·주석 줄을 빼고 `_scan_sentences` 로 자른다.
-
-    `split_sentences` 는 증류·관용구 기계의 전제대로 판본 2 를 한 단위로 돌려준다(test_ibl_v2_assets) — 그건 그대로 두고,
-    노출·반사 판정에 쓰는 문장 수만 여기서 센다. 파서는 ibl 층이라 data 층에서 부르지 않는다(층 가드)."""
-    body = "\n".join(ln for ln in (code or "").splitlines()
-                     if ln.strip() and not ln.lstrip().startswith("#"))
-    return _scan_sentences(body)
+    from common.expression_parser import parse
+    return [code[n.start:n.end] for n in parse(code).data['statements']]
 
 
 def sentence_count(code: str) -> int:
-    """판본을 아는 문장 수 — 판본 2 는 최상위 문장, 판본 1 은 split_sentences. 판본 헤더가 깨졌으면 0."""
-    from ibl_edition import source_edition
+    from common.expression_parser import parse
     try:
-        ed = source_edition(code or "")
-    except ValueError:
+        return len(parse(code).data['statements'])
+    except Exception:
         return 0
-    return len(v2_statements(code)) if ed == 2 else len(split_sentences(code))
 
 
 def reference_needs_expansion(code: str) -> bool:
@@ -1134,8 +1051,7 @@ def reference_needs_expansion(code: str) -> bool:
 def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
     """JSON 봉투: 긴 본문·여러 문장·이름 있는 함수의 정의는 명시 expand로만 연다."""
     out = dict(r)
-    from ibl_edition import source_edition
-    out["edition"] = source_edition(r.get("ibl_code") or "")
+    out["edition"] = 2
     code = r.get("ibl_code") or ""
     n = sentence_count(code)
     alias = (r.get("alias") or "").strip()
@@ -1154,15 +1070,14 @@ def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _current_names(groups, db_path):
-    """Use the same edition precedence as a current fn call; IDs still open history."""
-    from ibl_edition import source_edition
+    """Resolve named examples through the current function catalog."""
     names = {r.get('alias') for group in groups for r in group if r.get('alias')}
     if not names:
         return groups
     conn = _conn(db_path)
     try:
         definitions = [dict(r) for r in conn.execute(
-            "SELECT * FROM ibl_examples WHERE alias != '' ORDER BY updated_at DESC")]
+            "SELECT * FROM ibl_current_examples WHERE alias != '' ORDER BY updated_at DESC")]
     finally:
         conn.close()
     from ibl_usage_db import execution_success_rate
@@ -1171,8 +1086,7 @@ def _current_names(groups, db_path):
         row['success_rate'] = execution_success_rate(row.get('success_count', 0) or 0,
                                                     row.get('fail_count', 0) or 0)
         alias = row['alias']
-        if alias not in selected or (source_edition(row['ibl_code']) == 2
-                                     and source_edition(selected[alias]['ibl_code']) != 2):
+        if alias not in selected:
             selected[alias] = row
     seen, out = set(), []
     for group in groups:
@@ -1191,6 +1105,16 @@ def _current_names(groups, db_path):
 def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = None,
            *, synchronize: bool = True) -> Dict[str, Any]:
     topic = norm_topic(topic)
+    explicit_id = re.fullmatch(r'#(\d+)', (expand or '').strip())
+    if explicit_id:
+        with _conn(db_path) as conn:
+            row = conn.execute("SELECT * FROM ibl_examples WHERE id=? AND COALESCE(topic,'')=?",
+                               (int(explicit_id[1]), topic)).fetchone()
+        if row is not None and not row['executable']:
+            record = dict(row)
+            return {'success': True, 'topic': topic, 'historical': True, 'executable': False,
+                    'items': [record], 'count': 1, 'expand': expand,
+                    'text': record['intent'] + '\n' + record['ibl_code']}
     if synchronize:
         sync_topic(topic, db_path)
     path = doc_path(topic)

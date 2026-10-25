@@ -16,12 +16,12 @@ import associative_recall as AR
 
 
 def _tc(code, ok=True):
-    return {"tool_name": "execute_ibl", "input": {"code": code}, "success": ok}
+    return {"tool_name": "execute_ibl", "input": {"code": code, "edition": 2}, "success": ok}
 
 
 def test_hippocampus_usage_is_executed_pairs_or_fn_call():
     join = {"items": [
-        {"id": "1", "code": '[sense:price]{query: "x"}', "kind": "word", "alias": ""},
+        {"id": "1", "code": '#!ibl edition=2\n[sense:price]{query: "x"}', "kind": "word", "alias": ""},
         {"id": "2", "code": '[self:read]{path: "a"} >> [table:take]{n: 3}', "kind": "word", "alias": ""},
         {"id": "3", "code": '[self:blog]{op: "posts"}', "kind": "phrase", "alias": "블로그정리"},
     ]}
@@ -83,7 +83,7 @@ def test_hippocampus_detail_presents_selected_examples(monkeypatch):
     """상세 판은 XML 에 실린 용례와 같은 목록을 제시로 돌려주고, 튜플 판은 종전 계약 그대로다."""
     import ibl_usage_rag as rag
     from types import SimpleNamespace
-    ex = [SimpleNamespace(id=11, intent="가격", ibl_code='[sense:price]{query: "x"}', score=0.9, success_rate=-1.0,
+    ex = [SimpleNamespace(id=11, intent="가격", ibl_code='#!ibl edition=2\n[sense:price]{query: "x"}', score=0.9, success_rate=-1.0,
                           avg_ms=-1.0, avg_tokens=-1.0, topic="", source="", alias="")]
     monkeypatch.setattr(rag, "_search_active", lambda db, **kw: ex)
     monkeypatch.setattr(rag, "_own_only", lambda r: r)
@@ -93,9 +93,9 @@ def test_hippocampus_detail_presents_selected_examples(monkeypatch):
     monkeypatch.setattr(rag, "_extract_implementations_from_refs", lambda xml: "")
     monkeypatch.setattr("hippo_tree.reference_needs_expansion", lambda body: False)
     d = rag.build_execution_memory_detail("가격 알려줘", None)
-    assert d["presented"] == [{"id": "11", "code": '[sense:price]{query: "x"}', "kind": "word", "alias": ""}]
-    assert d["top_code"] == '' and "<execution_memory" in d["xml"]
-    assert 'authoring_excluded="legacy_source"' in d['xml']
+    assert d["presented"] == [{"id": "11", "code": '#!ibl edition=2\n[sense:price]{query: "x"}', "kind": "word", "alias": ""}]
+    assert d["top_code"] == ex[0].ibl_code and "<execution_memory" in d["xml"]
+    assert 'authoring_excluded' not in d['xml']
     assert rag.build_execution_memory("가격 알려줘", None) == (d["xml"], d["top_score"], d["top_code"])
 
 

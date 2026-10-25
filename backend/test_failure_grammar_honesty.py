@@ -43,9 +43,6 @@ import boot_paths  # noqa: F401
 
 # ── B30-2 / B30-3: 차단기 판정은 한 벌 ────────────────────────────────
 
-def _parse(code):
-    from ibl_parser import parse
-    return parse(code)
 
 
 

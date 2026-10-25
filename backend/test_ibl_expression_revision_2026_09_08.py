@@ -10,15 +10,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from ibl_boundary_probe import probe
-from ibl_parser import parse, IBLSyntaxError
 from common.safe_expr import compile_expr, eval_expr
 
 
-def run(code, expected):
-    result = probe(dict(id='expression_revision', code=code, expected=expected,
-                        error=False, contains=None))
-    assert result['ok'], (result.get('actual'), result.get('error_text'), code)
 
 
 @pytest.fixture
@@ -35,16 +29,6 @@ def ops():
 
 
 
-@pytest.mark.parametrize('code', [
-    '[table:each]{items:[],do:"[table:take]"}{[table:take]}',
-    '[table:each]{items:[]}{}',
-    '[table:each]{items:[]}{[table:take]',
-    '[if:1==1]{$typo >> [table:take]}',
-    '$x=[table:take]{items:[],n:1};[if:1==1]{$typo >> [table:take]}',
-])
-def test_malformed_or_unknown_body_is_rejected(code):
-    with pytest.raises(IBLSyntaxError):
-        parse(code)
 
 
 
@@ -112,32 +96,20 @@ def test_invalid_relation_options_fail(ops, params):
     assert result['success'] is False
 
 
-def test_preflight_checks_nested_projection_and_raw_body():
-    from ibl_typecheck import typecheck_code
-    good = '[table:select]{items:[{id:1}],columns:{source:{id:"id"}}} >> [table:select]{columns:["source"]}'
-    assert typecheck_code(good)['ok']
-    assert not typecheck_code(good.replace('id:"id"', 'id:"missing"'))['ok']
-    assert not typecheck_code('[table:each]{items:[]} { 문장이아님 }')['ok']
-    assert not typecheck_code('[table:each]{items:[]} { [table:select]{columns:{x:"[x for x in xs]"}} }')['ok']
 
 
-def test_raw_nested_code_transmission_and_capture():
-    from ibl_code_ir import compile_code, bind_code, pack, unpack
-    plan = compile_code('[table:each]{items:[$rows],as:v} { $input >> [table:select]{columns:{id:"id"}} }')
-    restored = unpack(json.loads(json.dumps(pack(plan))))
-    bound = bind_code(restored, lambda name, path: (True, [{'id': '007'}]) if name == 'input' else (False, None))
-    assert bound.tree[0]['params']['do'].tree[0]['_var_values']['input'] == [{'id': '007'}]
 
 
-def test_block_scope_is_reset_and_functions_remain_closed():
-    parse('$x=[table:take]{items:[],n:1};[if:1==1]{$x >> [table:take]}')
-    with pytest.raises(IBLSyntaxError):
-        parse('[if:1==1]{$x >> [table:take]}')
-    steps = parse('$x=[table:take]{items:[],n:1};[def:f]{[if:1==1]{$x >> [table:take]}}')
-    assert 'x' in steps[0]['signature']
 
 
 
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, '-q']))
+
+
+def run(code, expected):
+    from ibl_v2_entry import handle_request
+    result = handle_request({'code': code, 'edition': 2})
+    assert result['success'], result
+    assert result['value'] == expected

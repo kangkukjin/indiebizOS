@@ -85,8 +85,6 @@ def validate_consumers(before, after, changed, registry, prior_registry=None):
                 if matches and (following['state'] != 'active' or previous['name'] != following['name']):
                     raise ValueError(f'저장 소비자가 관용구를 참조합니다: {location}')
             continue
-        if source_edition(program) == 1:
-            continue  # Historical/blocked source is not executable.
         try:
             types = input_types(program)
             if compile_program(program, prior_registry if prior_registry is not None else registry, definitions=old, input_types=types).issues:

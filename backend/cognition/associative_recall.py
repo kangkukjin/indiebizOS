@@ -488,7 +488,10 @@ def _ibl_codes(tool_calls) -> List[str]:
             code = (tc.get("input") or {}).get("code", "")
             if code:
                 from ibl_edition import explicit_source
-                out.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
+                try:
+                    out.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
+                except ValueError:
+                    continue
     return out
 
 

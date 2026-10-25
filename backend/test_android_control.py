@@ -23,7 +23,6 @@ def flow(tmp_path, monkeypatch):
     from ibl_v2_runtime import Runtime
     from ibl_run_journal import Journal
     from ibl_v2_store import installed_definitions
-    from ibl_edition import source_context
     from script_workspace import request_scope
     # Pin an isolated copy: dynamic exec otherwise fingerprints unrelated live scripts.
     import ibl_dependencies
@@ -86,7 +85,7 @@ def flow(tmp_path, monkeypatch):
         plan = compile_program('#!ibl edition=2\n' + code, registry, inputs=inputs,
                                definitions=installed_definitions())
         assert not plan.issues, plan.report()
-        with source_context(2), request_scope(str(tmp_path)), Journal(tmp_path / 'runs', plan.fingerprint) as journal:
+        with request_scope(str(tmp_path)), Journal(tmp_path / 'runs', plan.fingerprint) as journal:
             result = Runtime(plan, inputs, journal=journal).run()
         assert result['success'], result
         return result['value']

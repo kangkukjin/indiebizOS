@@ -6,28 +6,12 @@ from ibl_typecheck import typecheck_code
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
-def _warn(code):
-    return [i["message"] for i in typecheck_code(code)["issues"] if i["severity"] == "warning" and "이음매" in i["message"]]
 
 
-def test_empty_non_consumer_after_seam_warns():
-    assert _warn('[sense:here] >> [sense:restaurant]{}')
-    assert _warn('[sense:weather]{city: "서울"} >> [table:brief]{instruction: "한 줄"} >> [self:notify_user]{}')
 
 
-def test_legit_seams_stay_quiet():
-    assert not _warn('[sense:search]{query: "AI"} >> [self:write]{path: "a.md"}')                     # pipe_in 소비자
-    assert not _warn('[sense:search]{query: "AI"} >> [table:take]{n: 3} >> [table:brief]{instruction: "요지"}')
-    assert not _warn('[engines:web]{op: "build", site_id: "s"} >> [engines:web]{op: "deploy", site_id: "s"}')   # 성공 의존
-    assert not _warn('[limbs:android]{op: "snapshot"} >> [limbs:android]{op: "tap", query: "전송"}')
-    assert not _warn('[sense:here] ; [sense:restaurant]{}')                                           # 문장 경계는 이음매 아님
-    assert not _warn('[sense:realty]{region: "청주"} >> [table:take]{n: 3} >> [self:notify_user]{message: "$items.title"}')
 
 
-def test_unknown_op_is_a_typecheck_error():
-    r = typecheck_code('[sense:stock]{op: "nope", ticker: "005930"}')
-    assert not r["ok"] and any("사용 가능" in i["message"] for i in r["issues"])
-    assert typecheck_code('[sense:stock]{op: "quote", ticker: "005930"}')["ok"]
 
 
 def test_pipe_in_declaration_matches_handlers_that_read_prev():

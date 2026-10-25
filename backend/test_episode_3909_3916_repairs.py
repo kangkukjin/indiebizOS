@@ -27,53 +27,17 @@ def execute(code, path):
     return json.loads(_execute_ibl_unified({"code": code}, str(path), agent_id="episode-probe"))
 
 
-def test_original_size_result_can_be_filtered_on_next_call(scope):
-    path,_=scope
-    value={'items':[{'url':'a','text':'가'*2_100_000},{'url':'b','text':'확인할 본문'}], 'source':'x'*2_100_000}
-    first=json.loads(_execute_ibl_unified({'code':'return $original','edition':2,'inputs':{'original':value}},str(path),agent_id='episode-probe'))
-    assert first['success'] and first['result_ref']
-    result=json.loads(_execute_ibl_unified({'code':'$입력.items >> [table:filter]{where:($r)=>$r.url=="b"}',
-        'edition':2,'inputs':first['result_ref']['input_args']},str(path),agent_id='episode-probe'))
-    assert result['success'], result
-    assert result['value']==[{'url':'b','text':'확인할 본문'}]
-
-
-
-def test_total_budget_externalizes_without_forgetting_old_names(scope, monkeypatch):
-    _, key = scope
-    monkeypatch.setattr(variables, "MAX_STORE_CHARS", 50)
-    values = {"a": {"items": [{"x": "old" * 30}]}, "b": "latest" * 20}
-    variables.save(key, {"a": values["a"]})
-    variables.save(key, {"b": values["b"]})
-    restored = variables.load(key)
-    assert json.loads(restored["a"]) == values["a"] and restored["b"] == values["b"]
-    variables.save(key, {"a": "new"})
-    assert variables.load(key)["a"] == "new"
-    assert "a" not in json.loads(Path(variables.store_path(key)).read_text())["refs"]
 
 
 
 
-def test_concurrent_store_updates_preserve_both_names(scope, monkeypatch):
-    path, key = scope
-    # worker 스레드의 contextvar에 기대지 않고 동일 저장 루트를 명시한다.
-    monkeypatch.setattr(spill, "spill_dir", lambda: str(path))
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        list(pool.map(lambda i: variables.save(key, {f"v{i}": str(i)}), range(20)))
-    assert variables.load(key) == {f"v{i}": str(i) for i in range(20)}
 
 
 
 
-@pytest.mark.parametrize("name", ["본문에서찾기", "열추려보기"])
-def test_selected_korean_function_source_passes_grounding(name):
-    calls = ['$원문 = [sense:crawl]{url:"https://example.com"}',
-             f'$원문 >> [fn:{name}]{{}}']
-    selected, note = select_distill_source({"call_ids": [2]}, calls)
-    assert selected == "\n".join(calls), note
-    assert _heads_grounded(selected, calls)
-    assert _composition_grounded(selected, calls)
-    assert not _heads_grounded('$원문 >> [fn:안쓴함수]{}', calls)
+
+
+
 
 
 def test_new_function_pipeline_and_heads_only_in_quotes_comments_are_rejected():
@@ -83,12 +47,6 @@ def test_new_function_pipeline_and_heads_only_in_quotes_comments_are_rejected():
         ['[self:write]{path:"x",content:"[fn:안쓴함수]{}"} # [fn:안쓴함수]'])
 
 
-def test_quote_error_gives_valid_recovery_without_rewriting_input():
-    from ibl_parser import parse, IBLSyntaxError
-    with pytest.raises(IBLSyntaxError, match="바깥을 작은따옴표"):
-        parse('[sense:search]{queries:[""Data work" full text"]}')
-    parsed = parse('''[sense:search]{queries:['"Data work" full text']}''')
-    assert parsed[0]["params"]["queries"] == ['"Data work" full text']
 
 
 def test_mcp_supervision_limit_and_execution_schema_match_backend():

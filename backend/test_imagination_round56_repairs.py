@@ -139,11 +139,9 @@ def test_actual_text_success_file_operations_do_not_report_failure_after_writing
     assert not run('[self:copy]{src:"missing",dest:"other"}')['success']
 
 
-def test_old_time_semantics_stay_text(tmp_path):
-    from ibl_edition import source_context
+def test_time_uses_current_text_result(tmp_path):
     from ibl_engine import execute_ibl
-    with source_context(1):
-        assert execute_ibl({'_node': 'self', 'action': 'time', 'params': {'format': 'literal'}}, str(tmp_path)) == 'literal'
+    assert execute_ibl({'_node': 'self', 'action': 'time', 'params': {'format': 'literal'}}, str(tmp_path)) == {'success': True, 'message': 'literal'}
 
 
 def test_builder_detects_missing_pair_bridge_and_container_declaration():

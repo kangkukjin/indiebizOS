@@ -10,15 +10,12 @@ def known_examples(db):
     """임베딩·모델 호출 없이 현재 용례를 읽는다. 조회 실패는 호출측에서 보류한다."""
     with db._get_connection() as conn:
         return [dict(row) for row in conn.execute(
-            "SELECT id, intent, ibl_code FROM ibl_examples "
+            "SELECT id, intent, ibl_code FROM ibl_current_examples "
             "WHERE fail_count = 0 OR success_count > 0 ORDER BY id DESC")]
 
 
 def url_only_head(code):
     """주소만 바뀐 원시 호출. 옵션·합성·질의·instruction의 차이는 지우지 않는다."""
-    from ibl_edition import source_edition
-    if source_edition(code) != 2:
-        return None
     from ibl_v2_experience import url_only_head as current_head
     return current_head(code)
 
@@ -30,8 +27,6 @@ def redundant_reason(codes, known):
         from ibl_v2_parser import parse
         from ibl_v2_experience import structure
         try:
-            if source_edition(source) != 2:
-                return None
             body = parse(source).data['statements']
             if len(body) == 1 and body[0].kind == 'def':
                 data = {k: v for k, v in body[0].data.items() if k != 'name'}
@@ -125,12 +120,12 @@ def source_rows(calls):
     from hippo_tree import split_sentences
     rows = []
     for tool_index, tc in calls:
-        from ibl_edition import source_edition, explicit_source
-        source = explicit_source(tc['input']['code'], tc['input'].get('edition'))
-        statements = [source] if source_edition(source) == 2 else split_sentences(source)
+        from ibl_edition import explicit_source
+        source = explicit_source(tc['input']['code'], 2)
+        statements = [source]
         for statement_index, code in enumerate(statements, 1):
             rows.append({'id': len(rows) + 1, 'code': code, 'tool_call_index': tool_index,
-                         'statement_index': statement_index, 'edition': source_edition(code),
+                         'statement_index': statement_index, 'edition': 2,
                          **({'abstraction': tc['_ibl_abstraction']} if tc.get('_ibl_abstraction') else {})})
     return rows
 
@@ -175,7 +170,7 @@ def note_selected_run(topic, intent, code, component, calls, reply, turn_cost, c
     import hippo_tree
     from cognitive_trace import ibl_call_cost
     statements = hippo_tree.split_sentences(code)
-    if not topic or len(statements) < 2:
+    if not topic or hippo_tree.sentence_count(code) < 2:
         return
     try:
         cost = ibl_call_cost(calls)

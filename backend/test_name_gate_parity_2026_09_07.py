@@ -34,15 +34,6 @@ HOME_BODY = GREP + "\n" + READ          # 두 문장, 홈 경로가 슬롯으로
 
 
 # ───────────────────────────────────────────────────── G1·G2 작명 경로 짝맞춤
-def test_g1_개인명사가_박힌_몸은_낱말_경로에서도_이름을_못_받는다(monkeypatch):
-    saved = _arm(monkeypatch, {"intent": "찾아 읽기", "code": HOME_BODY, "topic": "개발/프론트",
-                               "phrase": [], "slots": {}})
-    import ibl_usage_rag as rag
-    rag.distill_experience("찾아 읽기", TOOL_CALLS, top_score=0.3)
-    assert saved == [], "홈 경로가 박힌 몸이 코퍼스에 들어왔다 — 입구 관문(G2 개정)이 막아야 한다"   # G1 은 그 귀결: 이름도 없다
-    from ibl_idiom import example_entrance_reason
-    assert "홈 경로" in example_entrance_reason("찾아 읽기", HOME_BODY)
-    assert example_entrance_reason("찾아 읽기", '[self:grep]{pattern: "x", root_path: "backend"}') is None   # 개인 명사 없는 몸은 들어온다
 
 
 def test_g1_슬롯으로_비운_몸은_수동_경로에서_이름을_받는다():
@@ -53,14 +44,14 @@ def test_g1_슬롯으로_비운_몸은_수동_경로에서_이름을_받는다()
     import sys as _sys, os as _os
     _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "scripts"))
     import register_idiom
-    slotted = ('[self:grep]{pattern: "${패턴}", root_path: "${루트}", limit: 60}; '
-               '[self:read]{path: "${파일}", start_line: 440, end_line: 620}')
+    slotted = ('#!ibl edition=2\n[def:찾아읽기]($패턴,$루트,$파일){'
+               '[self:grep]{pattern:$패턴,root_path:$루트}\nreturn [self:read]{path:$파일}}')
     info, why = register_idiom._gates("찾아읽기", "어디 있는지 모르는 것을 읽어야 할 때", slotted)
     assert why is None and info["signature"] == ["패턴", "루트", "파일"], (why, info)
 
     private = ('[self:grep]{pattern: "x", root_path: "/Users/kangkukjin/Desktop", limit: 60}; '
                '[self:read]{path: "/Users/kangkukjin/Desktop/a.py", start_line: 1, end_line: 20}')
-    assert register_idiom._gates("찾아읽기2", "어디 있는지 모르는 것을 읽어야 할 때", private)[0] is not None  # 개인 함수 정의는 저장 가능; 소개 선정과 분리.
+    assert register_idiom._gates("찾아읽기2", "어디 있는지 모르는 것을 읽어야 할 때", '#!ibl edition=2\n[def:찾아읽기2](){'+private+'}')[0] is not None  # 개인 함수 정의는 저장 가능; 소개 선정과 분리.
 
 def test_g1_입력함수도_개인명사_관문을_통과해야_한다(monkeypatch):
     """본문을 추출한 새 경로도 개인 명사를 허용하지 않는다. 주석 이름 검사는 하지 않는다."""
@@ -98,42 +89,8 @@ def _db(tmp_path, rows):
     return p
 
 
-def test_g3_스윕_대상은_관문이_고른다(tmp_path, monkeypatch):
-    import migrate_private_body_aliases as m
-    _arm_migration(m, monkeypatch, tmp_path, [
-        (1, "굳은 것", HOME_BODY, "굳은이름", 0, 0),
-        (2, "비워진 것", '[self:grep]{pattern: "${패턴}"}\n[self:read]{path: "${파일}"}', "성한이름", 0, 0),
-        (3, "이름 없는 것", HOME_BODY, "", 0, 0),
-    ])
-    conn = m._conn()
-    try:
-        got = {h["alias"] for h, _ in m.targets(conn)}
-    finally:
-        conn.close()
-    assert got == {"굳은이름"}                     # 비워진 몸도, 이름 없는 행도 건드리지 않는다
-    assert m.strip(dry=False) == 1
-    conn = m._conn()
-    try:
-        rows = {r["id"]: dict(r) for r in conn.execute("SELECT id, alias, ibl_code FROM ibl_examples")}
-    finally:
-        conn.close()
-    assert rows[1]["alias"] == "" and rows[1]["ibl_code"] == HOME_BODY   # 이름만 떼고 본문은 남긴다
-    assert rows[2]["alias"] == "성한이름"
 
 
-def test_g4_실행_이력이_섞이면_멈춘다(tmp_path, monkeypatch):
-    import migrate_private_body_aliases as m
-    _arm_migration(m, monkeypatch, tmp_path, [
-        (1, "굳었지만 돈 것", HOME_BODY, "돈이름", 2, 0),
-        (2, "굳은 것", HOME_BODY, "굳은이름", 0, 0),
-    ])
-    assert m.strip(dry=False) == 0                 # 한 건도 쓰지 않는다
-    conn = m._conn()
-    try:
-        aliases = {r[0] for r in conn.execute("SELECT alias FROM ibl_examples")}
-    finally:
-        conn.close()
-    assert aliases == {"돈이름", "굳은이름"}
 
 
 if __name__ == "__main__":

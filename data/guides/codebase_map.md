@@ -42,8 +42,8 @@ indiebizOS/
 │   │   └── boot_status.py / pulse_db.py / file_index.py / focus_map.py / xray_stream.py …
 │   │
 │   ├── ibl/             # 언어(파서·엔진·라우팅·도구 로딩)
-│   │   ├── ibl_parser.py (+ ibl_parser_blocks.py / ibl_parser_values.py) # 구문 파서·블록·값
-│   │   ├── ibl_engine.py     # 실행 엔진 코어 (조합 연산자 `>>`·`&`·`??`, 재귀 깊이 상한 3)
+│   │   ├── ibl_v2_parser.py / ibl_v2_compile.py / ibl_v2_runtime.py # 현행 구문·검사·실행
+│   │   ├── ibl_engine.py     # 현행 실행기의 잎 도구 호출 경계
 │   │   ├── ibl_executors.py / ibl_routing.py # 실행기 · 9종 라우터(handler·system·driver 등)
 │   │   ├── ibl_access.py     # 접근 계층 (설치된 어휘만 로드 — 남의 어휘 배제)
 │   │   ├── ibl_safety.py     # 부작용 선언(dry-run 게이팅 — 반환값 추론 아닌 자체 선언)

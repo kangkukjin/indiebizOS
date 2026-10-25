@@ -175,13 +175,11 @@ def test_legacy_text_converts_without_executing_code():
     assert converted['id'] == manifest['id'] and len(examples) == 1
 
 
-def test_legacy_examples_are_readable_but_rejected_before_install(runtime, monkeypatch):
+def test_unsupported_package_source_stops_before_install(runtime, monkeypatch):
     import vocabulary_import as receiver
-    payload = packet(edition=1)
-    assert unpack(payload)[2][0]['ibl_code'] == '[sense:lego_probe]{}'
     monkeypatch.setattr(receiver, 'read_state', lambda: pytest.fail('mutation boundary entered'))
-    with pytest.raises(ValueError, match='EDITION_RETIRED'):
-        receiver.import_package(payload)
+    with pytest.raises(ValueError, match='EDITION_REQUIRED'):
+        packet(edition=1)
     assert not (runtime/'data/packages/not_installed/tools/lego-probe').exists()
 
 

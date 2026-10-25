@@ -447,28 +447,17 @@ def _corpus_action_keys(node: str, action: str) -> Optional[Set[str]]:
             conn = sqlite3.connect(str(db_path), timeout=10)
             try:
                 rows = conn.execute(
-                    "SELECT ibl_code FROM ibl_examples WHERE ibl_code LIKE ? LIMIT 400",
+                    "SELECT ibl_code FROM ibl_current_examples WHERE ibl_code LIKE ? LIMIT 400",
                     (f"%[{qualified}]%",)).fetchall()
             finally:
                 conn.close()
-            from ibl_parser import parse as _parse
+            from ibl_v2_learning import call_sites, call_parameters
             found: Set[str] = set()
-
-            def _walk(o):
-                if isinstance(o, dict):
-                    if o.get("_node") == node and o.get("action") == action:
-                        for k in (o.get("params") or {}):
-                            if isinstance(k, str):
-                                found.add(k)
-                    for v in o.values():
-                        _walk(v)
-                elif isinstance(o, list):
-                    for v in o:
-                        _walk(v)
-
             for (code,) in rows:
                 try:
-                    _walk(_parse(code))
+                    for call in call_sites(code):
+                        if call.data['node'] == node and call.data['action'] == action:
+                            found.update(call_parameters(call))
                 except Exception:
                     continue
             keys = found
@@ -479,35 +468,19 @@ def _corpus_action_keys(node: str, action: str) -> Optional[Set[str]]:
 
 
 def check_code_params(code: str) -> List[dict]:
-    """IBL 코드 문자열의 모든 statement 를 정적 검사 (증류 게이트/도구용).
-    각 항목: {"action": "node:action", "unknown": [...], "message": ...}"""
+    from ibl_v2_learning import call_sites, call_parameters
     try:
-        from ibl_parser import parse
-        parsed = parse(code)
+        calls = call_sites(code)
     except Exception:
-        return []
-
-    def walk(obj):
-        res = []
-        if isinstance(obj, dict):
-            if "_node" in obj and "action" in obj:
-                res.append(obj)
-            for v in obj.values():
-                res += walk(v)
-        elif isinstance(obj, list):
-            for v in obj:
-                res += walk(v)
-        return res
-
-    issues: List[dict] = []
-    for st in walk(parsed):
-        node = st.get("_node") or ""
-        action = st.get("action") or ""
-        if not node or not action or node == "fn":
-            continue                        # [fn:이름] 의 인자는 함수 시그니처가 검사한다
-        w = check_params(node, action, st.get("params") or {})
-        if w:
-            issues.append({"action": f"{node}:{action}", **w})
+        return []  # Syntax validity is checked separately by the compiler gate.
+    issues = []
+    for call in calls:
+        node, action = call.data['node'], call.data['action']
+        if node == 'fn':
+            continue
+        issue = check_params(node, action, call_parameters(call))
+        if issue:
+            issues.append({'action': f'{node}:{action}', **issue})
     return issues
 
 
@@ -543,35 +516,14 @@ def normalize_corpus_code(code: str) -> str:
 
 
 def code_syntax_error(code: str, function_body: bool = False) -> Optional[str]:
-    """이 코드가 IBL 로 파싱되나 — 안 되면 사유 한 줄, 되면 None.
-
-    ★해마 적재의 구문 관문. 이 모듈·증류 경로의 다른 검사들(어휘 소유·액션 실존·인자)는
-    전부 `[node:action]` 정규식 수준이라, IBL 이 아닌 문자열이라도 그 안에 액션 모양이
-    들어 있으면 다 통과시킨다 — 실측(2026-09-02): JSON 봉투가 통째로 code 칸에 들어온 행이
-    code_is_own·액션 실존·check_code_params 셋을 전부 통과했다. '파싱되나'를 묻는 곳이
-    한 군데도 없었던 것이 그 행이 원장에 들어온 이유다.
-
-    check_code_params 가 파싱 실패에 [] 를 돌려주는 것과 헷갈리지 말 것 — 그건
-    '인자 문제 없음'이지 '유효한 코드'가 아니다. 순서상 이 관문이 먼저다.
-    """
-    s = (code or "").strip()
-    if not s:
-        return "빈 코드"
+    from ibl_v2_parser import parse
     try:
-        from ibl_edition import source_edition
-        if source_edition(s) == 2:
-            from ibl_v2_parser import parse as parse_v2
-            parse_v2(s)
-            return None
-        # 관용구 골격·워크플로 몸은 **함수 몸**이다 — 미할당 `$이름` 이 자리를 가리지 않고
-        # 시그니처다(언어 개정 2026-09-07). 최상위 문법으로 읽으면 파이프 머리 슬롯
-        # (`$목록 >> [table:take]`)을 오타로 보고 원장 입구에서 거절한다.
-        from ibl_parser import parse, parse_function_body
-        parse_function_body(s) if function_body else parse(s)
+        if not isinstance(code, str) or not code.strip():
+            return '빈 코드'
+        parse(code)
         return None
-    except Exception as e:
-        first = str(e).splitlines()[0] if str(e) else e.__class__.__name__
-        return first[:200]
+    except Exception as exc:
+        return str(exc).splitlines()[0][:200]
 
 
 

@@ -3,7 +3,6 @@ import copy
 import uuid
 
 import function_store as store
-from ibl_edition import source_edition
 
 
 def definitions(view=None):
@@ -11,13 +10,9 @@ def definitions(view=None):
     view = store.snapshot() if view is None else view
     result = Library()
     result.references = {}
-    result.retired_names = set()
     result.generation = view['generation']
     for row in view['records'].values():
-        if row.get('edition') == 1:
-            for name in [row['name'], *row.get('legacy_ids', [])]:
-                result.retired_names.add(name)
-        if row.get('edition') != 2 or row.get('state') == 'retired':
+        if row.get('state') == 'retired':
             continue
         name = row['name']
         if row.get('state') != 'active' or row.get('problem'):
@@ -44,7 +39,7 @@ def _validate_changes(before, after, changed):
         with store.using(before):
             prior_registry = load_registry()
     except (Fault, ValueError):
-        if any(r.get('edition') == 2 and r.get('state') == 'active'
+        if any(r.get('state') == 'active'
                for view in (before, after) for r in view['records'].values()):
             raise
         registry = prior_registry = {}
@@ -60,20 +55,15 @@ def _validate_changes(before, after, changed):
         row = after['records'][fid]
         if row.get('state') != 'active':
             continue
-        if row['edition'] == 2:
-            if definition_name(row['source']) != row['name']:
-                raise ValueError('관용구 이름과 정의 머리가 다릅니다.')
-            errors = issues(row['source'], following)
-            if errors:
-                raise ValueError('저장 전 검사 거절: ' + errors[0]['message'])
-        else:
-            raise ValueError('EDITION_RETIRED: 판본 1 함수는 활성 등록·개정·재활성화할 수 없습니다.')
+        if definition_name(row['source']) != row['name']:
+            raise ValueError('관용구 이름과 정의 머리가 다릅니다.')
+        errors = issues(row['source'], following)
+        if errors:
+            raise ValueError('저장 전 검사 거절: ' + errors[0]['message'])
     broken = []
     for fid, old in before['records'].items():
         if fid in changed or old.get('state') != 'active':
             continue
-        if old.get('edition') == 1:
-            continue  # Historical records cannot be executed.
         if not issues(old['source'], prior):
             errors = issues(old['source'], following)
             if errors:
@@ -108,20 +98,17 @@ def register(name, source, description='', provenance=None, *, expected_revision
     require_current(source, edition)
     edition = 2
     view = store.snapshot()
-    old = store.resolve(name, function_id=function_id, edition=edition, view=view, include_inactive=True)
+    old = store.resolve(name, function_id=function_id, view=view, include_inactive=True)
     if old:
         if workflow_id and old.get('legacy_ids') and workflow_id not in old['legacy_ids'] and workflow_id != old['name']:
             raise ValueError('같은 이름은 다른 저장 ID로 등록할 수 없습니다. 현재 관용구 ID로 개정하세요.')
         # Repeated seeding is a reference attachment, never a blind overwrite.
         if expected_revision is None:
             from ibl_edition import pin_source
-            same_source = old.get('source') == source or (edition == 2 and
-                pin_source(old.get('source', ''), 2) == pin_source(source, 2))
+            same_source = pin_source(old.get('source', ''), 2) == pin_source(source, 2)
             if same_source and old.get('legacy') == legacy:
                 return store.reference(old)
             raise ValueError('관용구가 이미 있습니다. 현재 revision을 읽고 명시적으로 개정하세요.')
-        if old.get('edition') != edition:
-            raise ValueError('언어 판본 변경은 새 관용구로 등록하세요.')
     elif expected_revision is not None:
         raise ValueError('개정할 관용구가 없습니다.')
     fid = old['function_id'] if old else (function_id or uuid.uuid4().hex)
@@ -171,13 +158,10 @@ def reference_library(refs):
         raise ValueError('function_refs는 관용구 참조 목록이어야 합니다.')
     view, result = store.snapshot(), Library()
     result.references = {}
-    result.retired_names = set()
     result.pinned_view = {'generation': view['generation'], 'records': {}}
     for ref in refs:
         if not isinstance(ref, dict):
             raise ValueError('잘못된 관용구 참조입니다.')
-        if ref.get('edition') == 1:
-            raise Fault('EDITION_RETIRED', '구판 함수 참조는 실행할 수 없습니다.', kind='compile')
         if ref.get('scope_id') != store.catalog()['scope_id']:
             raise ValueError('다른 소유 범위의 관용구 참조를 찾을 수 없습니다.')
         active = store.resolve(function_id=ref.get('function_id'), view=view)
@@ -186,17 +170,11 @@ def reference_library(refs):
         row = store.revision(active['function_id'], ref.get('revision'))
         if ref.get('name') != row['name'] or ref.get('edition', 2) != row['edition']:
             raise ValueError('관용구 참조의 이름 또는 판본이 다릅니다.')
-        if row['edition'] != 2:
-            raise Fault('EDITION_RETIRED', '구판 고정 참조는 실행할 수 없습니다.', kind='compile')
         row['state'] = 'active'
         row['legacy_ids'] = active.get('legacy_ids', [])
         result.pinned_view['records'][row['function_id']] = row
-        if row['edition'] == 2:
-            result.add(row['name'], row['source'], '관용구:' + row['function_id'])
-            result.references[row['name']] = store.reference(row)
-        else:
-            for name in [row['name'], *row['legacy_ids']]:
-                result.retired_names.add(name)
+        result.add(row['name'], row['source'], '관용구:' + row['function_id'])
+        result.references[row['name']] = store.reference(row)
     return result
 
 

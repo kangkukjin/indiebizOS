@@ -24,8 +24,8 @@ def export(root, destination):
     with sqlite3.connect((root / 'data/ibl_usage.db').as_uri() + '?mode=ro', uri=True) as conn:
         conn.row_factory = sqlite3.Row
         rows = [dict(r) for r in conn.execute(
-            'SELECT id,intent,ibl_code,nodes,category,alias,provenance FROM ibl_examples ORDER BY id')]
-    sources = [('data/ibl_usage.db:ibl_examples', rows, destination / 'ibl_examples_export.json')]
+            'SELECT id,intent,ibl_code,nodes,category,alias,provenance FROM ibl_current_examples ORDER BY id')]
+    sources = [('data/ibl_usage.db:ibl_current_examples', rows, destination / 'ibl_examples_export.json')]
     for path in sorted((root / 'data/training').glob('*.json')):
         sources.append((str(path.relative_to(root)), json.loads(path.read_text()), training / path.name))
     report = {'policy': 'current-edition/1', 'semantic_verification_claimed': False, 'sources': []}

@@ -176,11 +176,11 @@ def _first_op(tmpl, fa):
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
         import boot_paths  # noqa: F401 — 층 디렉토리 등재
-        from ibl_parser import parse
+        from ibl_v2_learning import call_sites, call_parameters
         from ibl_ops import resolve_op
         adef = ((_nodes.get("nodes") or {}).get(fa[0], {}).get("actions") or {}).get(fa[1]) or {}
-        st = (parse(tmpl) or [{}])[0]
-        return resolve_op(adef, st.get("params") or {})
+        calls = call_sites(tmpl)
+        return resolve_op(adef, call_parameters(calls[0]) if calls else {})
     except Exception:
         return None
 

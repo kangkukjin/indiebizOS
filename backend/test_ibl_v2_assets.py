@@ -35,12 +35,12 @@ def test_new_registration_excludes_old_edition_and_executes_native(memory):
     old = '$return = $목록 >> [table:take]{n:$개수}'
     new = '#!ibl edition=2\n[def:앞부분]($목록,$개수=1){$목록 >> [table:take]{n:$개수}}'
     assert memory.add_examples_batch([example(old, '앞부분'), example(new, '앞부분')]) == 1
-    assert memory.find_phrase_by_alias('앞부분') is None
-    assert memory.find_phrase_by_alias('앞부분', edition=2)['ibl_code'] == new
+    assert memory.find_phrase_by_alias('앞부분') is not None
+    assert memory.find_phrase_by_alias('앞부분')['ibl_code'] == new
     result = handle_request({'edition': 2, 'code': '[fn:앞부분]{목록:["007",2]}'})
     assert result['success'] and result['value'] == ['007'], result
-    assert memory.find_phrase_by_alias('앞부분') is None
-    assert memory.find_phrase_by_alias('앞부분', edition=2)['success_count'] == 1
+    assert memory.find_phrase_by_alias('앞부분') is not None
+    assert memory.find_phrase_by_alias('앞부분')['success_count'] == 1
 
 
 def test_native_local_override_does_not_credit_stored_function(memory):
@@ -48,7 +48,7 @@ def test_native_local_override_does_not_credit_stored_function(memory):
     assert memory.add_examples_batch([example(code, '값')]) == 1
     result = handle_request({'edition': 2, 'code': '[def:값](){return 2}\n[fn:값]{}'})
     assert result['value'] == 2
-    assert memory.find_phrase_by_alias('값', edition=2)['success_count'] == 0
+    assert memory.find_phrase_by_alias('값')['success_count'] == 0
 
 
 @pytest.mark.parametrize('check', [True, False])
@@ -96,7 +96,7 @@ def test_member_legacy_library_rejected_before_tools():
     with library('[def:앞부분]{$return = $목록 >> [table:take]{n:$개수}}'):
         with pytest.raises(Fault) as error:
             definitions()
-        assert error.value.code=='EDITION_RETIRED'
+        assert error.value.code=='LIBRARY_FORMAT'
 
 
 def test_legacy_fixture_changes_cannot_enable_execution(memory, monkeypatch):
@@ -112,7 +112,7 @@ def test_legacy_fixture_changes_cannot_enable_execution(memory, monkeypatch):
             codes['옛것'] = codes['옛것'].replace('n:1','n:2')
         result = handle_request({'edition':2,'code':'[fn:옛것]{목록:[]}'})
         assert not result['success'] and not result['executed']
-        assert 'EDITION_RETIRED' in str(result)
+        assert 'FUNCTION' in str(result)
 
 
 def test_declared_handler_bridge_keeps_whole_record_and_does_not_pipe_guess(memory, monkeypatch):
@@ -158,7 +158,7 @@ def test_bridge_errors_and_large_values_are_not_success(memory, monkeypatch):
 def test_compiler_gate_rejects_unbound_v2_and_accepts_explicit_function(memory):
     assert memory.add_examples_batch([example('#!ibl edition=2\nreturn $missing')]) == 0
     assert memory.add_examples_batch([example('#!ibl edition=2\n[def:f]($x){return $x}', 'f')]) == 1
-    assert memory.find_phrase_by_alias('f', edition=2)['signature'] == 'x'
+    assert memory.find_phrase_by_alias('f')['signature'] == 'x'
 
 
 def test_recall_labels_editions_and_expands_definition_without_wrapping(memory):
@@ -229,7 +229,12 @@ def test_corpus_distinguishes_identical_text_editions_and_joins_trajectory(tmp_p
         return conn
     monkeypatch.setattr(el, '_get_db', connection)
     el._ensure_episode_tables()
-    el.record_ibl_code('return 3', False, edition=1)
+    import hashlib
+    old_hash = hashlib.sha256(b'return 3').hexdigest()
+    with connection() as conn:
+        conn.execute("INSERT INTO ibl_code_corpus(code_sha256,code,code_chars,first_seen,last_seen,edition) VALUES(?,?,?,?,?,?)",
+                     (old_hash, 'return 3', 8, 'historical', 'historical', 1))
+    assert el.record_ibl_code('return 3', False, edition=1) is False
     with el.trajectory_scope(task_id='edition-test'):
         _execute_ibl_unified({'edition': 2, 'code': 'return 3'}, str(tmp_path))
     with connection() as conn:

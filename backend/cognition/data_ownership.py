@@ -83,6 +83,7 @@ DECLARATIONS: List[tuple] = [
     ("data/ibl_usage.db",           "해마 코퍼스(ibl_usage_db)",                 "state"),
     ("data/ibl_hippo_index.json",   "해마 색인 export(파생)",                    "derived"),
     ("data/ibl_hippo_vecs.f32",     "해마 벡터 export(파생)",                    "derived"),
+    ("data/ibl_history/**",         "명시 이관한 IBL 과거 원문 — 실행·학습 집합 밖", "state"),
     ("data/training/**",            "학습 코퍼스(gitignore — 몸)",               "state"),
     ("data/models/**",              "fine-tuned 모델(cloud_training 산출)",      "derived"),
 

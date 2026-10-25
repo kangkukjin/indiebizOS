@@ -151,7 +151,7 @@ def test_member_current_authoring_libraries_and_private_journal(tmp_path, monkey
                                          '[def:old]{[self:write]{path:"old.txt",content:"$text"}}']}
     with p.narrow(p.member('A', 4, 'dev')), mr.turn_scope(tmp_path, 'dev', 'task', threading.Event(), {}):
         denied_library = json.loads(runner._member_tool('execute_ibl', {'code': 'return 1'}))
-        assert not denied_library['success'] and 'EDITION_RETIRED' in denied_library['error']
+        assert not denied_library['success'] and 'EDITION_REQUIRED' in denied_library['error']
         runner.config['_member_libraries'] = runner.config['_member_libraries'][:1]
         out = json.loads(runner._member_tool('execute_ibl', {'code': '[fn:double]{x:$x}', 'inputs': {'x': 3}}))
         assert out['edition'] == 2 and out['value'] == 6, out

@@ -43,7 +43,7 @@ def main() -> int:
         rows = conn.execute(
             """SELECT id, intent, ibl_code, nodes, category, difficulty,
                       source, success_count, fail_count, avg_ms, avg_tokens, provenance
-               FROM ibl_examples ORDER BY id"""
+               FROM ibl_current_examples ORDER BY id"""
         ).fetchall()
     rows, rejected = current_examples(rows)
     print(f"[export_hippo] 현재 판본 자격 제외: {rejected}")

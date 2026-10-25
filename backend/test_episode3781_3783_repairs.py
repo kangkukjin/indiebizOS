@@ -145,12 +145,6 @@ def test_snapshot_numeric_ax_value_is_readable(monkeypatch):
         assert result['snapshot'][0]['value'] == str(number)
 
 
-def test_quoted_query_and_each_guidance_parse_without_extra_round():
-    from ibl_parser import parse
-    code = "[sense:search]{query:'\"정확한 구절\" 추가어'}"
-    assert parse(code)[0]['params']['query'] == '"정확한 구절" 추가어'
-    parsed = parse('[table:each]{items:[{url:"x"}],do:"[sense:crawl]{url:$it.url}"}')
-    assert parsed
 
 
 if __name__ == '__main__':

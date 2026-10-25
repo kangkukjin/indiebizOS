@@ -31,7 +31,6 @@ import ibl_engine
 import ibl_executors as ex
 import workflow_engine
 from ibl_envelope import diet_envelope
-from ibl_parser import parse
 from ibl_predicates import validate_condition
 
 _PKG = Path(__file__).resolve().parent.parent / "data" / "packages" / "installed" / "tools"
@@ -67,13 +66,6 @@ def _fake_factory(calls, brief_answer="Yes."):
     return _fake
 
 
-def _run(code, calls, **kw):
-    orig = ibl_engine.execute_ibl
-    ibl_engine.execute_ibl = _fake_factory(calls, **kw)
-    try:
-        return workflow_engine.execute_pipeline(parse(code), ".")
-    finally:
-        ibl_engine.execute_ibl = orig
 
 
 # ═══ M1 ═══════════════════════════════════════════════════════════════════════
@@ -146,15 +138,6 @@ def test_e4_trace_evidence_prefers_final():
 
 
 # ═══ M2 ═══════════════════════════════════════════════════════════════════════
-def test_c1_parser_block_vars():
-    steps = parse('$r = [sense:search]{query: "x"}\n'
-                  '[if: count($r) > 0 and $r.items.0.title matches "속보"]{[self:notify_user]{message: "$r.items.0.title"}}\n'
-                  '[else]{[self:time]}')
-    assert len(steps) == 2
-    blk = steps[1]
-    assert blk["_condition"] and blk["_vars"] == {"r": 0}, blk
-    assert blk["branches"][0]["condition"] == 'count($r) > 0 and $r.items.0.title matches "속보"'   # 텍스트 치환 없음
-    assert blk["branches"][0]["action"]["params"]["message"] == "$r.items.0.title"  # 몸은 실행 직전 값 치환(M6 개정)
 
 
 

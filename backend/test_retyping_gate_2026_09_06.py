@@ -83,15 +83,6 @@ def test_cost_line_reports_retyping_and_pointing():
     assert "되받아쓰기 2.5K자(1회 경고)" in line and "가리킴 3회" in line and "[fn:] 1회" in line
 
 
-def test_policy_is_data_and_prompts_carry_the_rules():
-    from pathlib import Path
-    from ibl_retyping import load_policy
-    pol = load_policy()
-    assert pol["refuse_file_verbatim_chars"] == 8000 and pol["warn_data_min_tokens"] == 20
-    root = Path(__file__).resolve().parent.parent / "data" / "common_prompts"
-    assert "미충족 항목만" in (root / "evaluator_prompt.md").read_text(encoding="utf-8")
-    frag = (root / "fragments" / "12_ibl_only.md").read_text(encoding="utf-8")
-    assert "경로 + 요지 3줄" in frag and "있는 것은 치지 말고 가리켜라" in frag
 
 
 if __name__ == "__main__":

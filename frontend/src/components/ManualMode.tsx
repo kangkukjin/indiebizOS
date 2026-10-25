@@ -159,6 +159,7 @@ export default function ManualMode() {
   const [showRefs, setShowRefs] = useState(false);
   const [validation, setValidation] = useState<IblValidateResult | null>(null);
   const [execResult, setExecResult] = useState<string | null>(null);
+  const [learnableRun, setLearnableRun] = useState<{code: string; taskRef: Record<string, unknown>} | null>(null);
   const [confirmSideEffect, setConfirmSideEffect] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [learned, setLearned] = useState(false);          // 사용자가 이 결과를 학습시켰음
@@ -333,12 +334,17 @@ export default function ManualMode() {
     if (!iblCode.trim()) return;
     setErr(null);
     setExecResult(null);
+    setLearnableRun(null);
+    setLearned(false);
     setExecuting(true);
     try {
       const res = await api.executeIBL(iblCode, MANUAL_PROJECT_ID, ".", true);
       setExecResult(typeof res === 'string' ? res : JSON.stringify(res, null, 2));
-      const outcome = res as {success?: boolean; error?: string} | null;
+      const outcome = res as {success?: boolean; error?: string; executed?: boolean; source_complete?: boolean; task_ref?: Record<string, unknown>} | null;
       const ok = outcome?.success !== false && !outcome?.error;
+      if (outcome?.success === true && outcome.executed === true && outcome.source_complete === true && outcome.task_ref) {
+        setLearnableRun({code: iblCode, taskRef: outcome.task_ref});
+      }
       setHistory((h) => [{ intent, code: iblCode, ok }, ...h].slice(0, 8));
       // 자동 학습하지 않는다 — '실행 성공'은 '결과가 좋다'가 아니다.
       // 사용자가 결과를 보고 만족하면 '학습' 버튼으로 직접 증류한다(handleLearn).
@@ -403,10 +409,14 @@ export default function ManualMode() {
   // 학습(증류) — 사용자가 결과를 인정했을 때만 명시적으로 호출. intent가 있어야 함.
   const handleLearn = async () => {
     if (!intent.trim() || !iblCode.trim() || distilling || learned) return;
+    if (!learnableRun || learnableRun.code !== iblCode) {
+      setErr('현재 원문을 실행하고 완료된 결과를 확인한 뒤 학습하세요.');
+      return;
+    }
     setDistilling(true);
     try {
       // 사용자가 직접 인정한 예시이므로 임계값에 막히지 않게 강제 학습(top_score=0)
-      const d = await api.distillIBL(intent.trim(), iblCode, 0);
+      const d = await api.distillIBL(intent.trim(), iblCode, learnableRun.taskRef, 0);
       if (d.distilled) setLearned(true);
       else setErr(d.reason || '학습할 수 없습니다.');
     } catch (e) {
@@ -950,7 +960,7 @@ export default function ManualMode() {
               <div className="flex items-center gap-2 pt-0.5">
                 <button
                   onClick={handleLearn}
-                  disabled={distilling}
+                  disabled={distilling || executing || !learnableRun || learnableRun.code !== iblCode}
                   className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs flex items-center gap-1.5 disabled:opacity-40 hover:bg-indigo-500 transition"
                 >
                   {distilling ? <Loader2 size={13} className="animate-spin" /> : <BookOpen size={13} />}

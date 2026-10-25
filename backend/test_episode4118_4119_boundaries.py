@@ -64,7 +64,7 @@ def test_historical_functions_are_not_replayed_or_credited(source, monkeypatch):
     monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **k: pytest.fail('historical effect'))
     monkeypatch.setattr('capability_history.record_function_call', lambda *a, **k: pytest.fail('historical credit'))
     out = handle_request({'edition':1,'code':source})
-    assert not out['success'] and not out['executed'] and 'EDITION_RETIRED' in str(out)
+    assert not out['success'] and not out['executed'] and 'EDITION_UNSUPPORTED' in str(out)
 
 
 def test_current_definition_error_is_reported_before_tools():

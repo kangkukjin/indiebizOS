@@ -22,15 +22,6 @@ def load(name, path):
     return module
 
 
-def test_inferred_returns_and_catalog_examples():
-    from curate_idioms import validate_catalog
-    from ibl_typecheck import typecheck_code
-    infos = validate_catalog({"idioms": list(ENTRIES.values())})
-    for name, entry in ENTRIES.items():
-        assert infos[name]["returns"] == "items⟨열 미상⟩"
-        result = typecheck_code(f"[def: {name}]{{\n{entry['body']}\n}}\n"
-                                + entry["example"] + ' >> [table:select]{columns:["url"]}')
-        assert result["ok"] and not result.get("abstained"), result
 
 
 class Registry:
@@ -60,15 +51,15 @@ def test_metadata_refresh_preserves_history_and_is_idempotent(tmp_path, monkeypa
         for i, (name, entry) in enumerate(ENTRIES.items(), 1):
             conn.execute("INSERT INTO ibl_examples VALUES(?,?,?,?,?,?,?,?,?,?)",
                          (i, name, entry["when"], entry["body"], "scalar", "[]", "수집", 1, 7, 2))
+    from test_function_support import current_source
+    with db._get_connection() as conn:
+        for name in NAMES:
+            conn.execute('UPDATE ibl_examples SET ibl_code=? WHERE alias=?', (current_source(name), name))
     for name in NAMES:
         before = db.find_phrase_by_alias(name)
-        assert refresh_idiom_metadata(db, name)
-        after = db.find_phrase_by_alias(name)
-        assert after["returns"] == "items⟨열 미상⟩"
-        assert {k: v for k, v in after.items() if k not in ("returns", "signature")} == {
-            k: v for k, v in before.items() if k not in ("returns", "signature")}
         assert not refresh_idiom_metadata(db, name)
-    assert refreshed == ["수집"] * 4
+        assert db.find_phrase_by_alias(name) == before
+    assert refreshed == []
 
 
 

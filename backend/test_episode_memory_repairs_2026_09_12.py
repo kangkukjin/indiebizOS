@@ -55,9 +55,9 @@ def test_long_single_artifact_is_hidden_but_source_is_preserved():
     assert ex.ibl_code == code  # 명시 expand를 위한 원본은 그대로
     hidden = hippo_tree._hide_body({"id": 123, "ibl_code": code})
     assert '과거 결론' not in hidden['ibl_code']
-    ex.ibl_code = '[table:take]{n:3}'
-    assert ex.ibl_code not in rag._format_references([ex])
-    assert _top_for_execution([ex]) == (.8, '')  # short legacy code is historical too
+    ex.ibl_code = '#!ibl edition=2\n[table:take]{items:[1],n:3}'
+    assert ex.ibl_code in rag._format_references([ex])
+    assert _top_for_execution([ex]) == (.99, ex.ibl_code)
 
 
 def _ops():

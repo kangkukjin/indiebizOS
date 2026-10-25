@@ -73,10 +73,14 @@ def _public_copy(src: Path, staging: Path) -> Path:
             with closing(sqlite3.connect(target)) as dest:
                 origin.backup(dest)
                 columns = {row[1] for row in dest.execute('PRAGMA table_info(ibl_examples)')}
+                if 'executable' not in columns:
+                    raise ValueError('Current executable projection is required before export')
+                dest.execute('PRAGMA secure_delete=ON')
+                dest.execute('DELETE FROM ibl_examples WHERE executable=0')
                 if 'provenance' in columns:
-                    dest.execute('PRAGMA secure_delete=ON')
                     dest.execute("UPDATE ibl_examples SET provenance='{}' WHERE provenance != '{}' ")
                 dest.commit()
+                dest.execute('VACUUM')
     else:
         rows = json.loads(src.read_text(encoding='utf-8'))
         target.write_text(json.dumps([{k: v for k, v in row.items() if k != 'provenance'}

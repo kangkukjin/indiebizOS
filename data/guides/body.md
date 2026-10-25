@@ -77,7 +77,7 @@ revision을 확보하고, 실제 검사를 끝낸 뒤 같은 값을 제출한다
 [self:body]{}                                          # 최근 7일 몸 변화
 [self:body]{days: 30, path: "backend/cognition"}       # 인지층 한 달 변화
 [self:body]{op: "log", days: 7}                        # 이번 주 커밋들
-[self:body]{op: "file", path: "backend/ibl/ibl_parser.py"}  # 이 파일 일생 (이동 포함)
+[self:body]{op: "file", path: "backend/ibl/ibl_v2_parser.py"}  # 이 파일 일생 (이동 포함)
 [self:body]{op: "diff", path: "backend/ibl"}             # 지금 미커밋 변경의 실제 줄
 [self:body]{op: "diff", commit: "a8fd28b", lines: 60}   # 그 커밋이 바꾼 줄
 [self:body]{op: "diff", ref: "HEAD~3"}                  # 최근 3커밋 구간
@@ -129,7 +129,7 @@ DB 파일·스키마를 찾을 필요 없이 같은 `trajectory`에서 목록과
 <!-- example:body_commit -->
 ```ibl
 [self:body]{op: "diff", path: "backend/ibl"}                       # 먼저 무엇이 바뀌었나 본다
-[self:body]{op: "commit", message: "파서 escape 수리", paths: ["backend/ibl/ibl_parser.py"]}
+[self:body]{op: "commit", message: "파서 escape 수리", paths: ["backend/ibl/ibl_v2_parser.py"]}
 ```
 
 - **paths 필수** — "전부 커밋"이라는 굴절은 없다. 동시 세션이 같은 저장소를 쓰므로, 각인은 언제나 자기가 만진 경로를 이름으로 부른다. 신규·수정·삭제 모두 경로로 지정.

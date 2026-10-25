@@ -23,8 +23,6 @@ import boot_paths  # noqa: F401 — 층 디렉토리 등재
 from thread_context import actor_context  # noqa: E402
 import ibl_quality as iq  # noqa: E402 — 엔진과 같은 flat 인스턴스를 패치해야 한다
 from ibl_engine import execute_ibl  # noqa: E402
-from ibl.workflow_engine import execute_pipeline  # noqa: E402
-from ibl_parser import parse as ibl_parse  # noqa: E402
 from ibl_honesty import markers_of  # noqa: E402
 
 PASS = FAIL = 0

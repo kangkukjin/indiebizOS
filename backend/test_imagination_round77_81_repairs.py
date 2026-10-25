@@ -170,9 +170,7 @@ def test_tts_receipt_is_composable(monkeypatch, tmp_path):
 
 def test_prescreen_verdict_is_structured():
     mod = module('media_producer', 'vision_read')
-    from ibl_edition import source_context
-    with source_context(2):
-        value = decode(mod.critique_image({'image_path': '/fixture.png', 'intent': 'fixture', 'prescreen': 'blank'}, '.'))
+    value = decode(mod.critique_image({'image_path': '/fixture.png', 'intent': 'fixture', 'prescreen': 'blank'}, '.'))
     assert value['passed'] is False and value['score'] == 0
     assert value['tier'] == 'prescreen'
 

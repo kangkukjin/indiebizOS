@@ -15,10 +15,11 @@ def test_both_stores_share_qualification_and_exports_cannot_mix(tmp_path):
     with sqlite3.connect(root / 'data/ibl_usage.db') as conn:
         conn.execute('CREATE TABLE ibl_examples(id,intent,ibl_code,nodes,category,alias,provenance)')
         conn.executemany('INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?)', [tuple(r.values()) for r in rows])
-    (root / 'data/training/examples.json').write_text(json.dumps(rows))
+        conn.execute('CREATE VIEW ibl_current_examples AS SELECT * FROM ibl_examples WHERE id=2')
+    (root / 'data/training/examples.json').write_text(json.dumps([rows[1]]))
     report = export(root, tmp_path / 'export')
     assert [r['accepted'] for r in report['sources']] == [1, 1]
-    assert [r['excluded'] for r in report['sources']] == [{'legacy_source': 1}] * 2
+    assert [r['excluded'] for r in report['sources']] == [{}] * 2
     for path in (tmp_path / 'export/ibl_examples_export.json', tmp_path / 'export/training/examples.json'):
         assert json.loads(path.read_text()) == [rows[1]]
     with pytest.raises(ValueError, match='fresh'):

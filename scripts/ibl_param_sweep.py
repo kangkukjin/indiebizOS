@@ -10,7 +10,7 @@
 
 무엇을: 선언 스키마를 손으로 쓰지 않는다(선행 명사 스키마 금지 — 헌법 '명사의 자리').
 대신 **쓰인 흔적을 측정**한다 — 교재(코퍼스 ibl_usage.db)와 실행(episode_log 의 완전
-관측 execute_ibl 코드)을 진짜 파서(ibl_parser.parse)로 뜯어 액션별·op별 인자 키의 빈도를
+관측 execute_ibl 코드)을 진짜 파서(ibl_v2_parser.parse)로 뜯어 액션별·op별 인자 키의 빈도를
 `data/ibl_param_shapes.json` 에 적고, ibl_access 가 카탈로그 줄에 ⟨인자: a·b·(c)⟩ 로 붙인다
 (괄호 = 가끔 쓰이는 선택 인자, 괄호 없음 = 거의 항상 함께 오는 인자).
 
@@ -48,60 +48,33 @@ TRUNC_LEGACY = re.compile(r"\.\.\.$")
 CODE = re.compile(r'"code"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
-def _walk(steps, out):
-    """파서 산출(중첩 블록 포함)에서 (node, action, params) 를 전부 꺼낸다."""
-    if isinstance(steps, dict):
-        if "_node" in steps and "action" in steps and isinstance(steps.get("params"), dict):
-            out.append((steps["_node"], steps["action"], steps["params"]))
-        for v in steps.values():
-            if isinstance(v, (dict, list)):
-                _walk(v, out)
-    elif isinstance(steps, list):
-        for s in steps:
-            _walk(s, out)
+def _walk(program, out):
+    from ibl_v2_learning import walk_nodes, call_parameters
+    out.extend((node.data['node'], node.data['action'], call_parameters(node))
+               for node in walk_nodes(program) if node.kind == 'call')
 
 
 def _codes_from_corpus():
     if not CORPUS.exists():
         return []
     try:
-        return [r[0] for r in sqlite3.connect(CORPUS).execute("SELECT ibl_code FROM ibl_examples") if r[0]]
+        return [r[0] for r in sqlite3.connect(CORPUS).execute("SELECT ibl_code FROM ibl_current_examples") if r[0]]
     except sqlite3.Error as e:
         print(f"[경고] 코퍼스 읽기 실패: {e}")
         return []
 
 
 def _codes_from_episodes():
-    """완전 관측된 execute_ibl 코드만. 절단·깨짐은 따로 센다."""
-    codes, trunc, malformed = [], 0, 0
+    """Complete current source observations, selected by their stored format index."""
     if not EPISODES.exists():
-        return codes, trunc, malformed
-    try:
-        rows = sqlite3.connect(EPISODES).execute("SELECT log FROM episode_log WHERE log LIKE '%execute_ibl%'")
-    except sqlite3.Error as e:
-        print(f"[경고] episode_log 읽기 실패: {e}")
-        return codes, trunc, malformed
-    for (log,) in rows:
-        for line in (log or "").splitlines():
-            m = TOOL.search(line)
-            if not m or "execute_ibl" not in m.group(1):
-                continue
-            arg = m.group(2)
-            c = CODE.search(arg)
-            if c:
-                try:
-                    codes.append(json.loads('"' + c.group(1) + '"'))
-                except Exception:
-                    codes.append(c.group(1))
-            elif TRUNC.search(arg) or TRUNC_LEGACY.search(arg):
-                trunc += 1
-            else:
-                malformed += 1
-    return codes, trunc, malformed
+        return [], 0, 0
+    with sqlite3.connect(EPISODES) as conn:
+        rows = conn.execute('SELECT code FROM ibl_code_corpus WHERE edition=2 AND masked=0')
+        return [r[0] for r in rows], 0, 0
 
 
 def observe(min_ratio: float = 0.05):
-    from ibl_parser import parse
+    from ibl_v2_parser import parse
 
     corpus = _codes_from_corpus()
     execs, trunc, malformed = _codes_from_episodes()

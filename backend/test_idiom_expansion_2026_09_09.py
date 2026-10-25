@@ -10,7 +10,6 @@ import boot_paths  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from idiom_experiment_worker import run_trial
 from idiom_experiment_cases import decoded
 
 CATALOG = json.loads((ROOT / 'data/idioms/curated.json').read_text())
@@ -24,29 +23,8 @@ SCRIPT_CALL = re.compile(r'\[self:script\]\{op:"run",id:"([^"]+)",args:\{op:"([a
 PURE_SCRIPT_OPS = {('판정관용구', 'urls'), ('판정관용구', 'finish')}
 
 
-def run(code):
-    trial = run_trial(code, 'dedup')
-    assert trial['result']['success'], trial['result'].get('error')
-    assert trial['observed']['brief'] == 0
-    assert set(trial['observed']['leaf_calls']) <= LEAVES | {'self:read', 'self:write', 'self:script'}
-    return decoded(trial['result']['final_result']), trial['observed']
 
 
-def test_new_bodies_are_closed_non_ai_procedures():
-    from ibl_parser import parse_function_body
-    for e in CATALOG['idioms']:
-        if e['name'] not in NEW:
-            continue
-        # 본문 계약은 상시 노출 선정과 독립적이다. 내려간 관용구도 호출 가능하다.
-        parse_function_body(e['body'])
-        actions = set(re.findall(r'\[([a-z_]+:[a-z_]+)', e['body']))
-        scripts = set(SCRIPT_CALL.findall(e['body']))
-        assert scripts <= PURE_SCRIPT_OPS
-        assert e['body'].count('[self:script]') == len(SCRIPT_CALL.findall(e['body']))
-        actions.discard('self:script')
-        assert actions and actions <= LEAVES
-        assert not re.search(r'\b(criteria|instruction|prompt|do)\s*:', e['body'])
-        assert '[goal' not in e['body'] and '[if' not in e['body']
 
 
 
@@ -65,7 +43,7 @@ def test_new_bodies_are_closed_non_ai_procedures():
 
 def test_crawl_handler_converts_raw_paragraphs_without_model_call(tmp_path, monkeypatch):
     from types import SimpleNamespace
-    from idiom_experiment_worker import load
+    from test_report_repair_contracts_2026_09_08 import load
     from tool_context import ToolContext
     import consciousness_agent
     import oneshot_facade
@@ -84,48 +62,6 @@ def test_crawl_handler_converts_raw_paragraphs_without_model_call(tmp_path, monk
                                {'type': 'paragraph', 'text': '첫 문단'}, {'type': 'paragraph', 'text': '둘째 문단'}]
 
 
-@pytest.mark.parametrize('compact', [False, True])
-def test_selected_idioms_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, monkeypatch, compact):
-    import ibl_v2_adapters
-    current_registry=ibl_v2_adapters.load_registry()
-    monkeypatch.setattr(ibl_v2_adapters,'load_registry',lambda *a,**k:current_registry)
-    import ibl_access
-    import runtime_utils
-    from ibl_usage_db import _signature_of
-    from ibl_typecheck import return_type_of
-    from test_function_support import current_source
-    import copy
-    catalog=copy.deepcopy(CATALOG)
-    for entry in catalog['idioms']:
-        if entry.get('always_on',True):
-            entry['body']=current_source(entry['name'])
-    (tmp_path / 'data/idioms').mkdir(parents=True)
-    (tmp_path / 'data/idioms/curated.json').write_text(json.dumps(catalog, ensure_ascii=False))
-    entries = [e for e in catalog['idioms'] if e.get('always_on', True)]
-    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as con:
-        con.execute('CREATE TABLE ibl_examples (intent,ibl_code,success_count,fail_count,topic,alias,returns,signature,always_on,created_at)')
-        for e in entries:
-            con.execute('INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?,?,?,?)',
-                        (e['when'], e['body'], 0, 0, e['topic'], e['name'], return_type_of(e['body']),
-                         _signature_of(e['body']), 1, '2026-09-09'))
-    monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
-    monkeypatch.setattr(ibl_access, '_get_nodes_path', lambda: ROOT / 'data/ibl_nodes.yaml')
-    monkeypatch.setattr(ibl_access, '_idioms_cache', {'text': None, 't': 0, 'key': None, 'anchors': {}})
-    from test_function_support import import_memory
-    with sqlite3.connect(tmp_path / 'data/ibl_usage.db') as fixture_db:
-        import_memory(fixture_db)
-    env = ibl_access.build_environment(compact=compact)
-    assert env.count('↳ 관용구') == len(entries)
-    for e in entries:
-        assert f"[fn:{e['name']}]" in ibl_access.idioms_map(None)
-    for name in ('원장에누적', '위치마다읽기', '최신범위읽기', '묶어순위내기',
-                 '고치고확인하기', '미처리만고르기'):
-        assert f'[fn:{name}]' not in env
-    assert '[fn:좁혀서읽기]' in env
-    core = ibl_access.build_environment(allowed_nodes=['self', 'others', 'table'])
-    assert '[fn:주소마다읽기]' not in core and '[fn:열추려보기]' in core
-    hidden = ibl_access.build_environment(expose_idioms=False)
-    assert '↳ 관용구' not in hidden and '<ibl_idioms' not in hidden
 
 
 def test_explicit_reload_invalidates_idiom_map_and_leaf_lines(monkeypatch):

@@ -21,7 +21,6 @@ import boot_paths  # noqa: F401,E402
 
 from common.field_path import MISSING, walk_path  # noqa: E402
 from common.ibl_vars import find_refs  # noqa: E402
-from ibl.workflow_binding import _extract_result_field_obj  # noqa: E402
 
 
 # ── ④ 열 벡터 `*` ──────────────────────────────────────────────
@@ -44,16 +43,6 @@ def test_L3_star_dict_key_precedence():
     assert walk_path({"*": {"v": 7}}, "*.v") == 7
 
 
-def test_L4_optional_path_suffix():
-    raw = json.dumps({"a": 1})
-    assert _extract_result_field_obj(raw, "b?") is None
-    assert _extract_result_field_obj("평문 텍스트", "b?") is None
-    with pytest.raises(ValueError):
-        _extract_result_field_obj(raw, "b")   # 물음표 없으면 종전대로 정직 오류
-    # 벡터+옵셔널 조합
-    raw2 = json.dumps({"items": [{"id": "a"}]})
-    assert _extract_result_field_obj(raw2, "items.*.id") == ["a"]
-    assert _extract_result_field_obj(raw2, "items.*.없는필드?") is None
 
 
 def test_L5_braced_extended_refs_parse():

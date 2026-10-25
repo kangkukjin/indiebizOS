@@ -72,7 +72,7 @@ def test_item_record_and_explicit_null_are_values():
 
 def test_declared_inputs_rejected_on_edition_1_and_bad_names():
     r = _run({"code": "[table:take]{items: $rows, n: 1}", "edition": 1, "declared_inputs": ["rows"]})
-    assert r["success"] is False and "EDITION_RETIRED" in r["error"]
+    assert r["success"] is False and "EDITION_UNSUPPORTED" in r["error"]
     bad = _run({"code": "$it", "inputs": {}, "declared_inputs": ["it"]})
     assert bad["success"] is False and "declared_inputs" in bad["error"]
 

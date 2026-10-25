@@ -149,7 +149,7 @@ GUARD_INPUT_PATTERNS = [
 
     # ── backend (2026-07-25 신규) ──
     # validate_corpus_params 가 (root/"backend").glob("*.py") 를 통째로 읽고,
-    # 표준-코어 가드=ibl_parser.py, 뷰-렌더러 가드=launcher_web_render.py,
+    # 표준-코어 가드=ibl_v2_parser.py, 뷰-렌더러 가드=launcher_web_render.py,
     # launcher-가드=ibl_routing.py, OS-가드=backend 파일 12종,
     # iblbuild_common=ibl_param_vocab.py, derive=common/auth_manager.py 를 읽는다.
     r"backend/.*\.py",

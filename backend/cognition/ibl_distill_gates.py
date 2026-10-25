@@ -13,44 +13,37 @@
 import re
 
 
-def memory_only_program(code, edition=None):
+def memory_only_program(code):
     """기억 확인만 한 실행은 해결 절차로 배우지 않는다. 실행 권한 판정이 아니다.
 
-    실제 호출 판본의 파서를 사용한다. 동적 op·외부 함수 등 확인하지 못한
+    현행 AST를 검사한다. 동적 op·외부 함수 등 확인하지 못한
     호출은 기억 전용이라고 추측하지 않고 기존 경험 선별로 넘긴다.
     """
-    from ibl_edition import source_edition
     from common.expression_ir import Fault
     from ibl_access import load_nodes_raw
     from ibl_ops import resolve_op
     try:
-        if source_edition(code, edition) == 2:
-            from common.expression_ir import Node, record_fields
-            from ibl_v2_parser import parse
-            steps = []
-
-            def walk(value):
-                if isinstance(value, Node):
-                    if value.kind == "call":
-                        data = value.data
-                        fields = record_fields(data["params"])
-                        op = fields.get("op")
-                        params = {"op": op.data["value"]} if op and op.kind == "literal" else {}
-                        if op and op.kind != "literal":
-                            raise ValueError("동적 op는 기억 전용으로 단정하지 않는다")
-                        steps.append((data["node"], data["action"], params))
-                    walk(value.data)
-                elif isinstance(value, dict):
-                    for child in value.values():
-                        walk(child)
-                elif isinstance(value, (list, tuple)):
-                    for child in value:
-                        walk(child)
-
-            walk(parse(code))
-        else:
-            from cognitive_trace import _ibl_steps
-            steps = _ibl_steps(code)
+        from common.expression_ir import Node, record_fields
+        from ibl_v2_parser import parse
+        steps = []
+        def walk(value):
+            if isinstance(value, Node):
+                if value.kind == "call":
+                    data = value.data
+                    fields = record_fields(data["params"])
+                    op = fields.get("op")
+                    params = {"op": op.data["value"]} if op and op.kind == "literal" else {}
+                    if op and op.kind != "literal":
+                        raise ValueError("동적 op는 기억 전용으로 단정하지 않는다")
+                    steps.append((data["node"], data["action"], params))
+                walk(value.data)
+            elif isinstance(value, dict):
+                for child in value.values():
+                    walk(child)
+            elif isinstance(value, (list, tuple)):
+                for child in value:
+                    walk(child)
+        walk(parse(code))
         if not steps:
             return False
         nodes = load_nodes_raw().get("nodes", {})
@@ -115,27 +108,7 @@ def recall_used(reference, calls):
     검색어·파일 경로 같은 작업 대상은 달라도 된다. 문자열 속 코드, 미해석 블록의
     분기·반복·지연 본문은 실행 증거로 추정하지 않는다. 점수·저장소는 건드리지 않는다.
     """
-    from ibl_parser import parse, IBLSyntaxError
-
-    def signatures(code, strict=False):
-        from ibl_edition import source_edition
-        if source_edition(code or '') == 2:
-            from ibl_v2_experience import recall_signatures
-            return recall_signatures(code, strict)
-        try:
-            steps = parse(code or "")
-        except (IBLSyntaxError, ValueError, TypeError, KeyError):
-            return []
-        result = []
-        for step in steps:
-            if step.get('_node') and step.get('action'):
-                params = step.get('params') or {}
-                result.append((step['_node'], step['action'],
-                               {key: params[key] for key in ('op', 'mode', 'source', 'store', 'format', 'do')
-                                if key in params}))
-            elif strict and not step.get('_var_emit'):
-                return []
-        return result
+    from ibl_v2_experience import recall_signatures as signatures
 
     expected = signatures(reference, strict=True)
     actual = [sig for code in calls for sig in signatures(code)]
@@ -229,181 +202,32 @@ def _is_subseq(small: tuple, big: tuple) -> bool:
     return all(x in it for x in small)
 
 
-def _restore_var_assignments(code: str, ibl_calls: list):
-    """떨어진 `$이름 = ` 을 실행 이력에서 되살린다 → (코드, 복원한 이름 목록).
-
-    되살릴 게 없으면 코드를 그대로 돌려준다(무해). 삽입은 원문 오프셋에 하므로
-    줄바꿈·`;` 등 원래 표기는 보존된다.
-    """
-    from common.ibl_vars import ASSIGN_RE, find_names
-    import hippo_tree
-    try:
-        stmts = hippo_tree.split_sentences(code)
-    except Exception:
-        return code, []
-    if len(stmts) < 2:
-        return code, []
-
-    def _assign_of(s):
-        m = ASSIGN_RE.match((s or "").strip())
-        return (m.group(1) or m.group(2), m.group(3)) if m else (None, None)
-
-    assigned = {n for n, _ in (_assign_of(s) for s in stmts) if n}
-    missing = [n for n in find_names(code) if n != "items" and n not in assigned]
-    if not missing:
-        return code, []
-    # 이름이 처음 쓰이는 문장 — 복원은 그 앞에서만(할당이 참조보다 뒤면 여전히 미할당이다)
-    first_use = {}
-    for i, s in enumerate(stmts):
-        for n in find_names(s):
-            first_use.setdefault(n, i)
-    # 실행 이력의 할당문: 우변 머리 열 → 좌변 이름들
-    executed = []
-    for call in ibl_calls or []:
-        try:
-            call_stmts = hippo_tree.split_sentences(call or "")
-        except Exception:
-            continue
-        for s in call_stmts:
-            n, rhs = _assign_of(s)
-            if n in missing:
-                executed.append((n, _head_seq(rhs)))
-    if not executed:
-        return code, []
-
-    out, cursor, restored, taken = [], 0, [], set()
-    for i, s in enumerate(stmts):
-        idx = code.index(s, cursor)
-        out.append(code[cursor:idx])
-        heads = _head_seq(s)
-        if _assign_of(s)[0] or not heads:
-            out.append(s)
-        else:
-            cands = {n for n, rhs_heads in executed
-                     if n not in taken and first_use.get(n, i) >= i and _is_subseq(heads, rhs_heads)}
-            if len(cands) == 1:              # 후보가 갈리면 손대지 않는다
-                name = cands.pop()
-                taken.add(name)
-                restored.append(name)
-                out.append(f"${name} = {s}")
-            else:
-                out.append(s)
-        cursor = idx + len(s)
-    out.append(code[cursor:])
-    return "".join(out), restored
 
 
-def _syntax_gate_with_restore(code: str, ibl_calls: list, tag: str):
-    """구문 관문 + 할당 앞점 복원 → (코드, 사유 or None). 두 증류 경로의 단일 주인."""
-    from ibl_param_vocab import code_syntax_error
-    err = code_syntax_error(code)
-    if err and "할당되지 않았습니다" in err:
-        fixed, restored = _restore_var_assignments(code, ibl_calls)
-        if restored and code_syntax_error(fixed) is None:
-            print(f"{tag} 할당 앞점 복원(실행 이력 접지): "
-                  + " · ".join(f"${n}" for n in restored))
-            return fixed, None
-    return code, err
+def _complete_source_gate(code: str, ibl_calls: list, tag: str):
+    """Validate the complete selected source without combining separate runs."""
+    from ibl_v2_learning import check_source
+    return code, check_source(code)
 
 
 def _close_source_dependencies(ids: list, ibl_calls: list):
-    """선택한 성공 원문의 빠진 생산자를 실행 순서대로 닫는다. 새 코드는 생성하지 않는다."""
-    from common.ibl_vars import ASSIGN_RE, find_names
-    from workflow_contract import call_signature
-    import hippo_tree
-
-    contracts = {}
-
-    def contract(index):
-        if index in contracts:
-            return contracts[index]
-        call = ibl_calls[index - 1]
-        from ibl_edition import source_edition
-        if source_edition(call) == 2:
-            from ibl_v2_learning import check_source
-            why = check_source(call)
+    """Every selected source is a closed current program."""
+    from ibl_v2_learning import check_source
+    try:
+        for index in ids:
+            why = check_source(ibl_calls[index - 1])
             if why:
-                raise ValueError(why)
-            result = (set(), set())
-        else:
-            exports, required = set(), set()
-            for stmt in hippo_tree.split_sentences(call):
-                free = set(call_signature(stmt))
-                assignment = ASSIGN_RE.match(stmt.strip())
-                name = (assignment.group(1) or assignment.group(2)) if assignment else None
-                if name and name in find_names(assignment.group(3)):
-                    free.add(name)
-                required.update(free - exports)
-                if name:
-                    exports.add(name)
-            result = (exports, required)
-        contracts[index] = result
-        return result
-
-    selected = set(ids)
-
-    def include(i):
-        for name in contract(i)[1]:
-            producer = next((j for j in range(i - 1, 0, -1)
-                             if name in contract(j)[0]), None)
-            if producer is None:
-                raise ValueError(f"외부 변수 ${name}의 앞선 생산자가 없습니다")
-            if producer not in selected:
-                selected.add(producer)
-                include(producer)
-
-    try:
-        for i in ids:
-            include(i)
+                return None, why
     except Exception as exc:
-        return None, f'원문 의존성 해석 실패: {exc}'
-    return sorted(selected), None
+        return None, str(exc)
+    return sorted(set(ids)), None
 
 
-def _recover_distill_selection(intent: str, code: str, error: str,
-                               ibl_calls: list, ask):
-    """한 번만 원문 선택을 다시 묻는다. 모델은 번호만, 코드는 성공 실행 이력이 소유한다.
-
-    ep3219/3223/3224: 자유 재작성 중 액션 뒤 필드 접근·빠진 변수 생산자·중첩 따옴표
-    손상으로 증류가 끝났다. 구문을 느슨하게 하거나 코드를 또 쓰게 하지 않고, 같은
-    의도를 충족하는 원문 호출(의존 호출 포함)을 고르게 한다. 복구 실패는 적재하지 않는다.
-    """
-    import json
-    from runtime_utils import parse_first_json
-    from ibl_param_vocab import code_syntax_error
-    from workflow_contract import call_signature
-
-    prompt = f"""IBL 용례의 구문 검사에 실패했다. 같은 의도의 용례를 성공 실행 원문에서 복구하라.
-의도: {intent}
-검사 오류: {error}
-거절된 코드(참고일 뿐, 다시 쓰지 마라):
-{code}
-
-성공한 실제 호출 목록(JSON; id는 이 목록에서만 유효):
-{json.dumps([{"id": i + 1, "code": c} for i, c in enumerate(ibl_calls)], ensure_ascii=False)}
-
-규칙:
-- 코드를 작성하지 말고 call_ids에 선택한 호출 번호만 적어라. 각 호출의 원문 전체가 그대로 쓰인다.
-- 번호는 실행 순서대로, 중복 없이 고른다. 필요한 변수의 할당 호출도 그 앞에 함께 고른다.
-- 별개 호출을 새 파이프로 연결하지 않는다. 함수 호출·do 안 따옴표·필드 접근은 원문 그대로다.
-- 이 코드만으로 위 의도를 충족해야 한다. 의도를 더 작은 일로 바꾸거나 준비·저장·알림만 고르지 마라.
-- files/턴 밖 변수/모델이 읽고 판단한 결과에 의존해 독립 실행할 수 없으면 call_ids를 빈 목록으로 둔다.
-- 여러 호출을 고를 때에도 실행에 없던 합성은 허용되지 않는다. 가능하면 독립된 한 호출을 고른다.
-응답은 JSON 하나: {{"call_ids": [1], "reason": "이 선택이 같은 의도를 충족하는 이유, 또는 선택 불가 이유"}}
-"""
-    try:
-        response = ask(prompt=prompt, system_prompt="성공한 IBL 원문을 번호로 선택한다. JSON만 출력하라.",
-                       role="background")
-        selection = parse_first_json(response or "")
-    except Exception as exc:
-        return None, f"원문 선택 호출 실패: {exc}"
-    return select_distill_source(selection, ibl_calls)
 
 
 def select_distill_source(selection, ibl_calls):
     """Validate IDs and dependency closure without paying for a second generation."""
     from ibl_param_vocab import code_syntax_error
-    from workflow_contract import call_signature
 
     if not isinstance(selection, dict):
         return None, "원문 선택 응답이 JSON 객체가 아님"
@@ -416,22 +240,4 @@ def select_distill_source(selection, ibl_calls):
             or ids != sorted(set(ids))):
         return None, "call_ids는 범위 안의 중복 없는 실행 순서여야 함"
     from ibl_v2_experience import select_program
-    v2 = select_program(ids, ibl_calls)
-    if v2 is not None:
-        return v2
-    ids, dependency_error = _close_source_dependencies(ids, ibl_calls)
-    if dependency_error:
-        return None, dependency_error
-    # 모델이 함께 낸 code가 있어도 읽지 않는다. 개행은 독립 호출의 경계를 보존한다.
-    restored = "\n".join(ibl_calls[i - 1] for i in ids)
-    err = code_syntax_error(restored)
-    if err:
-        return None, f"선택 원문 구문 거절: {err}"
-    # 파서는 인자 문자열의 미할당 변수를 리터럴로 남길 수 있다. 저장할 용례는
-    # 함수 몸이 아니므로 그 자유 변수도 닫혀야 한다(서명 판정의 단일 소스 재사용).
-    free = call_signature(restored)
-    if free:
-        return None, "선택 원문에 외부 변수 남음: " + ", ".join(free)
-    if "$file:" in restored:
-        return None, "선택 원문에 files 인자가 필요한 참조 남음"
-    return restored, "호출 " + ", ".join(map(str, ids))
+    return select_program(ids, ibl_calls)

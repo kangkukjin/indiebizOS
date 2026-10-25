@@ -284,7 +284,7 @@ def collect_references(inv: Dict[str, Dict]) -> Dict[str, Set[str]]:
         if USAGE_DB_PATH.exists():
             conn = sqlite3.connect(str(USAGE_DB_PATH), timeout=5)
             rows = conn.execute(
-                "SELECT ibl_code FROM ibl_examples WHERE source != 'synthetic'").fetchall()
+                "SELECT ibl_code FROM ibl_current_examples WHERE source != 'synthetic'").fetchall()
             conn.close()
             for (code,) in rows:
                 for n, a in ACTION_RE.findall(code or ""):

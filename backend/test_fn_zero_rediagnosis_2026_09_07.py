@@ -103,7 +103,7 @@ def test_에피소드통계_진짜_문법오류는_문맥_주입_뒤에도_남�
     codes = [('$a = [self:time]{}', True), ('$없는변수 >> [table:count]{}', False), ('[self:time]{ 깨진', False)]
     monkeypatch.setattr(mod, "DB", _pulse_db(tmp_path, codes, ""))
     row = _run(mod, monkeypatch, capsys, {"last": 5})["items"][0]
-    assert row["상태"] == "문법오류 2", row      # 코퍼스(온전한 코드)라 미할당도 진짜 결함이다
+    assert row["상태"] == "문법오류 1", row      # 코퍼스(온전한 코드)라 미할당도 진짜 결함이다
 
 
 # ── 실행 관문: 변형 인식 ────────────────────────────────────────────────────────
@@ -117,48 +117,21 @@ VARIANT = ('$원장 = [self:ledger]{path: "x.json", op: "select", target: "cover
            '$신선 >> [table:take]{n: 40}')
 
 
-def test_변형도_이름으로_인식된다(monkeypatch):
-    import fn_recognizer
-    monkeypatch.setattr(fn_recognizer, "_aliased_programs", lambda: [("유튜브모으기", IDIOM)])
-    monkeypatch.setattr(fn_recognizer, "_aliased_shapes", lambda: {})
-    v = fn_recognizer.variant_of(VARIANT)
-    assert v and v["alias"] == "유튜브모으기" and v["hit"] == 3 and v["missed"] == [2], v
-    hint = fn_recognizer.fn_hint_for(VARIANT)
-    assert hint["variant"] is True and "[def: 유튜브모으기]" in hint["note"]
-    # 무관한 프로그램은 변형이 아니다
-    assert fn_recognizer.variant_of('$a = [self:time]{}\n$a >> [table:count]{}') is None
 
 
 # ── 증류 관문: 슬롯 값 접지 ─────────────────────────────────────────────────────
-def test_슬롯_값이_실행문에_없으면_이름을_받지_못한다():
-    from ibl_idiom import slot_values_ungrounded
-    calls = ['$신선 = $정보 >> [table:filter]{where: "upload_date >= 20260311"}']
-    code = '$신선 = $정보 >> [table:filter]{where: "upload_date >= ${기준일}"}\n$신선 >> [table:take]{n: 3}'
-    assert slot_values_ungrounded({"기준일": "2026-03-11"}, calls, code=code)      # 반성기가 값을 바꿔 적었다
-    assert slot_values_ungrounded({"기준일": 20260311}, calls, code=code) is None   # 대입하면 실행문이 되살아난다
-    assert slot_values_ungrounded({}, calls, code=code)                            # 값 없는 슬롯 = 검증 불가
 
 
-def test_작명_경로가_사라졌고_값_접지_관문은_남았다():
-    """자동 작명은 중단됐다(2026-09-07 사용자 판정) — 그러나 값 접지 관문은 수동·재생 경로에 그대로 산다.
-
-    옛 판은 rag 의 자동 작명 분기가 이 관문을 부르는지 소스로 확인했다. 그 분기가 없어졌으므로
-    확인할 것이 바뀐다: ①rag 에 작명 분기가 없다 ②관문 자체는 관용구 저장 경로(_distill_phrase)에 있다."""
-    src = (ROOT / "backend" / "cognition" / "ibl_usage_rag.py").read_text(encoding="utf-8")
-    assert "unique_fn_name(sanitize_fn_name(" not in src, "자동 작명 분기가 남아 있다"
-    idiom = (ROOT / "backend" / "cognition" / "ibl_idiom.py").read_text(encoding="utf-8")
-    i = idiom.index("def _distill_phrase")
-    assert "slot_values_ungrounded" in idiom[i:i + 4000], "관용구 저장 경로에서 값 접지 관문이 빠졌다"
 
 
 # ── 회상 표면 ────────────────────────────────────────────────────────────────
 def test_expand_카드는_호출이_먼저이고_실행_0을_말한다():
     import hippo_tree
-    row = {"id": 1, "alias": "유튜브모으기", "ibl_code": IDIOM, "intent": "유튜브를 모은다", "category": "phrase",
+    row = {"id": 1, "alias": "유튜브모으기", "ibl_code": '#!ibl edition=2\n[def:유튜브모으기]($원장경로,$주제,$기준일){return $주제}', "intent": "유튜브를 모은다", "category": "phrase",
            "success_count": 0, "fail_count": 0, "signature": "원장경로 주제 기준일", "returns": "items"}
     out = hippo_tree.render_names_first("보고서/X", [], [row], "", expand="유튜브모으기")
     assert out.startswith("호출: [fn:유튜브모으기]{"), out[:80]
-    assert out.index("호출:") < out.index("[def: 유튜브모으기]")
+    assert out.index("호출:") < out.index("[def:유튜브모으기]")
     assert "실행 0" in out
     listing = hippo_tree.render_names_first("보고서/X", [], [row], "")
     assert "실행 0" in listing

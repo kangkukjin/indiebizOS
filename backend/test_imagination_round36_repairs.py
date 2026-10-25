@@ -10,7 +10,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import boot_paths  # noqa: F401,E402
 
 from ibl_param_vocab import check_params  # noqa: E402
-from ibl_parser import IBLSyntaxError, parse  # noqa: E402
 from ibl_registry import load_nodes_installed  # noqa: E402
 from ibl_routing import _route_handler  # noqa: E402
 
@@ -88,17 +87,6 @@ def test_pipeline_only_items_warns_before_execution_and_guides_pipeline(
         f"items 씨앗이 거절됐다: {out.get('error')}"
 
 
-def test_try_catch_reports_unparseable_body_not_missing_catch():
-    with pytest.raises(IBLSyntaxError) as caught:
-        parse('[try]{[self:time]} [catch]{지원하지않는문장}')
-    message = str(caught.value)
-    assert "catch 블록은 있지만" in message
-    assert "몸에는 IBL 문장" in message
-    assert "하나 이상 필요" not in message
-
-    parsed = parse('[try]{[self:time]} [catch]{$return = 0}')
-    assert parsed[0]["catch"]["_assign"] is True
-    assert parse('[try]{[self:time]} [catch]{$return = []}')[0]['catch']['_assign'] is True
 
 
 if __name__ == "__main__":

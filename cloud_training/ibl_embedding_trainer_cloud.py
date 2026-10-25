@@ -81,7 +81,7 @@ def extract_examples_from_db() -> List[Dict]:
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.execute(
-        "SELECT id, intent, ibl_code, nodes, category, provenance FROM ibl_examples ORDER BY id"
+        "SELECT id, intent, ibl_code, nodes, category, provenance FROM ibl_current_examples ORDER BY id"
     )
     examples = [dict(row) for row in cursor.fetchall()]
     conn.close()

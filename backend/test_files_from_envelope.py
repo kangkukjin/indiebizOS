@@ -47,14 +47,14 @@ def test_missing_path_is_honest_error(tmp_path):
 def test_non_list_and_non_str_rejected(monkeypatch, key, value):
     monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **k: pytest.fail('tools loaded'))
     result = handle_request({'edition': 2, 'code': 'return 1', key: value})
-    assert not result['executed'] and 'EDITION_ARGUMENT' in str(result)
+    assert not result['executed'] and 'REQUEST_FIELDS' in str(result)
 
 
 def test_cap_enforced(monkeypatch):
     # Removed transport is refused before loading or reading any supplied path.
     monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **k: pytest.fail('tools loaded'))
     result = handle_request({'edition': 2, 'code': 'return 1', 'files_from': ['large.md'] * 1000})
-    assert not result['executed'] and 'EDITION_ARGUMENT' in str(result)
+    assert not result['executed'] and 'REQUEST_FIELDS' in str(result)
 
 
 def test_substitution_uses_merged_list():

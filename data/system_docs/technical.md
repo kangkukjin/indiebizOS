@@ -153,7 +153,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
   진단 `location`은 함수 원문별 좌표, `call_path`는 호출 경로다. 조종실은 기존 검사 API를 사용한다.
   Hypothesis는 `backend/requirements-dev.txt`의 개발 의존성이고 런타임 번들에 넣지 않는다.
   도입·구/신 진단 대응: `docs/IBL_AUTHORING_SUPPORT_IMPLEMENTATION_2026_09_24.md`.
-- **형 보존 턴 변수**(2026-09-12 `8f943a61`): `execute_ibl` 경로의 정적 검사는 `typecheck(given=…)` 로 앞 호출이 남긴 턴 변수의 형(`ibl_turn_vars.types_for`, `turn_vars.live` 의 `types`)을 이어받아 검사하고, 구조 추론은 `ibl_value_types` 가 소유한다(행의 열·바깥 봉투·중첩 필드·병렬 분기·빈 결과 구별, 예산 초과는 미상). `/ibl/validate` 의 `typecheck_code` 는 코드만 보므로 이 문맥이 없다. 실행기가 읽는 열 인자 별칭(select 의 columns/cols/fields, compute 의 columns/expr)은 사전의 `flow.columns_param_aliases` 로 선언해 검사기가 같은 우선순위를 본다 — 검사기 코드에 액션 이름을 넣지 않는다. 정본 `docs/IBL_SHAPE_HANDOFF_2026_09_12.md`.
+- **실행 범위와 형 검사**: 각 프로그램의 명시 입력과 지역 변수는 현행 컴파일러가 검사한다. 호출 사이에 암묵 턴 변수를 이어 붙이지 않는다. 재개는 실행 원장의 검증된 기록을 사용한다.
 - **원문 조회 계약**(2026-09-12 ep3632, `db1e14aa`·`310d7aad`): 큰 결과의 표시 참조 `result_ref` 는 실제 큰 필드 `paths`·`max_limit`·바로 쓸 `read_args` 를 싣고, `execute_ibl(code:"", read_result:…)` 조회 응답의 `next_read` 는 같은 ID·경로·페이지 크기에 다음 offset 을 보존한다(마지막 페이지 null, 옛 `next_offset` 유지). 문자 한도·스키마는 `backend/base/result_read_contract.py` 가 소유해 네이티브 도구와 FastMCP 가 같은 스키마를 내며, 기본·상한은 60,000자 — 응답이 `_display.max_chars` 로 페이지 예산을 선언해 액션당 16K 전송 접힘에 본문·`next_read` 가 잘리지 않는다. 파일 입구의 `~workspace/…` 는 `runtime_utils.expand_body_path` 로 해소한다(`self:struct` 의 `file`, 봉투의 `saved_to_file.file_path`). 정본 `docs/EPISODE3632_READ_CONTRACT_2026_09_12.md`.
 - **공통 완료 대기**: API는 `BaseProvider._execute_tool_to_completion`, CLI는 공통 MCP에서 `tool_completion.await_completion`을 사용한다. 기본 총시간 마감은 없다. IBL 판본 2의 기본 시간 예산도 없으며 단계·행·깊이 예산, 명시적 시간 예산, 사용자 취소는 유지한다. MCP는 HTTP 연결이 끊기면 기존 티켓을 회수하며 재제출하지 않는다. 연속 통신 장애는 별도로 120초 후 미확인 결과와 티켓을 반환한다. 상세: [공통 완료 대기](../../docs/PROVIDER_NEUTRAL_COMPLETION_WAIT_2026_09_24.md).
   CLI 무출력 감시는 턴별 `completion_channel`의 살아 있는 대기자 lease를 확인한다. 신호와 출력이 모두 없을 때만 무응답으로 종료하며, 사용자 취소는 stdout과 독립적으로 확인하고 IBL 실행기의 협력적 취소에 전달한다. Codex는 MCP 직접 호출, Claude Code는 MCP 자동 백그라운드 전환 비활성화로 같은 계약을 지킨다.
@@ -283,7 +283,7 @@ execute_ibl(code='$r=[sense:search]{query:"AI"}; $r.items >> [table:each]{mode:"
 execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:notify_user]{message:"CPU 과부하"} }')
 ```
 
-문법 정본은 **ibl.md**, 주 작성 교재는 `data/guides/ibl_composition.md`, 상시 실행기 교재는 `data/common_prompts/fragments/12_ibl_only.md`(에이전트 + 조종실 번역기 공용, **캐시 없음 = 수정 즉시 라이브**)다. 새 저장 코드는 `#!ibl edition=2`, 실행 전 검사는 `check:true`를 쓴다. 낱말 스캔(따옴표 경계·연산자 분할·소스 머리)은 `backend/ibl/ibl_scanner.py` 한 벌을 파서 셋이 공유하고 JSON5 복호는 `ibl_parser_values._try_json_like` 한 곳이다(2026-09-11, 골든 코퍼스 `backend/testdata/ibl_parser_boundaries.json`).
+문법 정본은 **ibl.md**, 주 작성 교재는 `data/guides/ibl_composition.md`, 상시 실행기 교재는 `data/common_prompts/fragments/12_ibl_only.md`(에이전트 + 조종실 번역기 공용, **캐시 없음 = 수정 즉시 라이브**)다. 새 저장 코드는 `#!ibl edition=2`, 실행 전 검사는 `check:true`를 쓴다. 표현식 파싱과 값 의미론은 `backend/common/`이 소유하며 현행 IBL 파서와 컴파일러가 이를 사용한다.
 
 **어휘 등록**: 코어·패키지 소스를 빌드한 `ibl_nodes.yaml`만 공개 사전이다. `api_registry.yaml`은 내부 API 연결 정의이며 독립 액션을 추가하지 않는다.
 
@@ -438,7 +438,7 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(88) → `datastore`(88) → `ibl`(88) → `cognition`(94) → `services`(91) → `surface`(96). `.py` 총 621개(test 제외).
+  `base`(88) → `datastore`(89) → `ibl`(78) → `cognition`(93) → `services`(91) → `surface`(96). `.py` 총 608개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(31) · `backend/providers/`(14, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

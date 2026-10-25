@@ -9,10 +9,8 @@ import boot_paths  # noqa: F401
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from ibl_boundary_probe import probe
 from ibl_boundary_cases_round3 import each
 from ibl_boundary_cases import literal as q
-from ibl_code_ir import compile_code, bind_code, Code, Literal, pack, unpack
 
 
 def values():
@@ -46,31 +44,10 @@ def test_value_survives_equivalent_program_shapes(value, shape):
     assert out['success'] and out['value'] == rows, out
 
 
-def test_rows_bind_without_parsing_again(monkeypatch):
-    import ibl_parser
-    plan = compile_code('[table:take]{items:[{v:$it.v}],n:1}')
-    before = pack(plan)
-    monkeypatch.setattr(ibl_parser, 'parse_function_body', lambda *_: pytest.fail('행 바인딩 중 재파싱'))
-    for value in values():
-        bound = bind_code(plan, lambda name, path: (True, value))
-        assert bound.tree[0]['params']['items'][0]['v'] == value
-    assert pack(plan) == before
 
 
-def test_compiled_program_and_captures_survive_json_and_copy():
-    plan = bind_code('[table:take]{items:[{v:$outer, row:$it.id}],n:1}',
-                     lambda name, path: (True, "$it.id 'quoted'") if name == 'outer' else (False, None))
-    for restored in [copy.deepcopy(plan), unpack(json.loads(json.dumps(pack(plan))))]:
-        bound = bind_code(restored, lambda name, path: (True, 7) if name == 'it' else (False, None))
-        assert bound.tree[0]['params']['items'] == [{'v': "$it.id 'quoted'", 'row': 7}]
-        assert isinstance(bound.tree[0]['params']['items'][0]['v'], Literal)
 
 
-def test_partial_string_binding_does_not_rescan_inserted_data():
-    plan = compile_code('[table:take]{items:[{v:"${a} / ${b}"}],n:1}')
-    first = bind_code(plan, lambda n, p: (True, '${b}') if n == 'a' else (False, None))
-    second = bind_code(first, lambda n, p: (True, 'done') if n == 'b' else (False, None))
-    assert second.tree[0]['params']['items'] == [{'v': '${b} / done'}]
 
 
 def test_old_wire_parameters_cannot_dispatch():
@@ -78,24 +55,11 @@ def test_old_wire_parameters_cannot_dispatch():
     for version in [1,999]:
         out = _execute_ibl_impl({'_node':'self','action':'time',
             'params':{'_ibl_ir':{'version':version,'params':['value',{}]}}}, '.')
-        assert out['code']=='EDITION_RETIRED' and not out['executed']
+        assert out['code']=='PARAMS' and not out['executed']
 
 
-def test_unknown_wire_version_is_rejected():
-    from ibl_code_ir import receive_params
-    with pytest.raises(ValueError, match='버전'):
-        receive_params({'_ibl_ir': {'version': 999}})
 
 
-@pytest.mark.parametrize('raw', ['1e-3', '-2.5e+4', '0x10', '.25', '+3',
-                                '"\\uD83D\\uDE80"', "'\\x41'", '"\\d+"',
-                                '[1e2, {v:"\\uD83D\\uDE80"}]', '[1, /* { ignored } */ 2]',
-                                '{a:1/* note */, /* other */ b:2}'])
-def test_literal_grammar_matches_existing_parser(raw):
-    from ibl_parser import parse_function_body
-    code = '[table:take]{items:[{v:' + raw + '}],n:1}'
-    expected = parse_function_body(code)[0]['params']['items']
-    assert compile_code(code).tree[0]['params']['items'] == expected
 
 
 def native_run(source, inputs=None):
@@ -106,12 +70,6 @@ def native_run(source, inputs=None):
     return result['value']
 
 
-def test_live_execution_does_not_use_legacy_source_substitution(monkeypatch):
-    import ibl_code_binding
-    monkeypatch.setattr(ibl_code_binding, 'bind_scoped_code', lambda *a, **k: pytest.fail('옛 코드 치환 경로 사용'))
-    value = native_run('$r="outer"; $rows >> [table:each]{return {outer:$r,row:$it.v}}',
-                       {'rows':[{'v':"$it.no 'quote'"}]})
-    assert value == [{'outer':'outer','row':"$it.no 'quote'"}]
 
 
 @pytest.mark.parametrize('nested', [False, True])
@@ -148,7 +106,7 @@ def test_episode3148_historical_sentence_is_immutable_and_not_replayed(monkeypat
     assert hashlib.sha256(fixture['code'].encode()).hexdigest() == fixture['code_sha256']
     monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **k: pytest.fail('과거 문장 재실행'))
     out = handle_request({'edition':1,'code':fixture['code']})
-    assert not out['executed'] and 'EDITION_RETIRED' in str(out)
+    assert not out['executed'] and 'EDITION_UNSUPPORTED' in str(out)
 
 
 if __name__ == '__main__':

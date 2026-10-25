@@ -79,7 +79,7 @@ def test_scoped_map_keeps_control_words_but_filters_real_nodes(tmp_path, monkeyp
     with sqlite3.connect(tmp_path/'data/ibl_usage.db') as conn:
         conn.execute('CREATE TABLE ibl_examples(intent,ibl_code,success_count,fail_count,topic,alias,returns,signature,always_on,created_at)')
         conn.execute('INSERT INTO ibl_examples VALUES(?,?,?,?,?,?,?,?,?,?)',('구판',body,0,0,'시험','구판제어문','','',1,'2026-09-08'))
-        import_memory(conn)
+        conn.execute("CREATE VIEW ibl_current_examples AS SELECT rowid AS id,* FROM ibl_examples WHERE 0")
     monkeypatch.setattr(runtime_utils,'get_base_path',lambda:tmp_path)
     monkeypatch.setattr(access,'_idioms_cache',{'t':0.0,'text':None,'key':None})
     assert '구판제어문' not in access.idioms_map(None)
@@ -90,7 +90,7 @@ def test_function_registration_does_not_require_promotion_context():
     """함수 등록과 지도 노출용 맥락은 서로 다른 책임이다."""
     sys.path.insert(0, os.path.join(_REPO, "scripts"))
     import register_idiom
-    info, why = register_idiom._gates("좁혀서읽기2", "", '[self:grep]{pattern: "x"} >> [table:take]{n: 1}')
+    info, why = register_idiom._gates("좁혀서읽기2", "", '#!ibl edition=2\n[def:좁혀서읽기2](){return [self:grep]{pattern: "x"}}')
     assert info is not None and not why
 
 
@@ -98,8 +98,9 @@ def test_entry_gate_reads_idiom_bodies_as_functions():
     """원장 입구 관문도 관용구를 함수 몸으로 읽는다 — 아니면 파이프 머리 슬롯이 오타로 거절된다."""
     from ibl_param_vocab import code_syntax_error
     body = '$추림 = $목록 >> [table:take]{n: 8}; $return = $추림'
-    assert code_syntax_error(body) is not None                    # 최상위로는 오타
-    assert code_syntax_error(body, function_body=True) is None    # 함수 몸으로는 시그니처
+    from ibl_v2_learning import check_source
+    assert check_source(body) is not None                    # 최상위로는 오타
+    assert code_syntax_error('#!ibl edition=2\n[def:추리기]($목록){return $목록 >> [table:take]{n:8}}', function_body=True) is None    # 함수 몸으로는 시그니처
 
 
 if __name__ == "__main__":

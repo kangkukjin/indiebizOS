@@ -242,7 +242,7 @@ def test_memory_projection_keeps_new_revision_observations_separate():
 
 def test_legacy_registration_is_rejected_before_publication():
     before = store.catalog()
-    with pytest.raises(ValueError, match='EDITION_RETIRED'):
+    with pytest.raises(ValueError, match='EDITION_UNSUPPORTED'):
         register('old', '$return = $x', edition=1)
     assert store.catalog() == before
 
@@ -268,3 +268,29 @@ def test_memory_reference_cannot_cross_scope():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_regular_snapshot_and_execution_do_not_read_history(tmp_path, monkeypatch):
+    import function_store
+    from function_library import register, compile_current
+    from pathlib import Path
+    ref=register('current', '#!ibl edition=2\n[def:current](){return 3}')
+    root=function_store.storage_root()
+    (root/'history.json').write_text('invalid historical index')
+    original=Path.read_text
+    def read(path,*args,**kwargs):
+        assert path.name!='history.json', 'normal execution consulted history'
+        return original(path,*args,**kwargs)
+    monkeypatch.setattr(Path,'read_text',read)
+    assert function_store.resolve('current')['function_id']==ref['function_id']
+    assert compile_current('[fn:current]{}').report()['ok']
+
+
+def test_history_detail_name_does_not_resolve_current_catalog(monkeypatch):
+    import function_store
+    import workflow_engine
+    historical={'function_id':'old', 'name':'historic', 'source':'unparseable', 'legacy_ids':[]}
+    monkeypatch.setattr(function_store,'history_snapshot',lambda: {'records':{'old':historical}})
+    monkeypatch.setattr(function_store,'snapshot',lambda: pytest.fail('history looked up active catalog'))
+    out=workflow_engine.execute_workflow_action('detail',{'name':'historic','history':True},'.')
+    assert out['source']=='unparseable' and out['runnable'] is False

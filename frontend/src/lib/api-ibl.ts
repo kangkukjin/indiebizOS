@@ -163,10 +163,10 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
     },
 
     /** 성공한 실행을 해마에 증류(학습). top_score는 번역 시 해마 최고 참조 점수. */
-    async distillIBL(intent: string, code: string, topScore = 0) {
+    async distillIBL(intent: string, code: string, taskRef: Record<string, unknown>, topScore = 0) {
       return client.request<{ distilled: boolean; reason?: string }>('/ibl/distill', {
         method: 'POST',
-        body: JSON.stringify({ intent, code, top_score: topScore }),
+        body: JSON.stringify({ intent, code, task_ref: taskRef, top_score: topScore }),
       });
     },
 

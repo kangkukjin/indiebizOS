@@ -88,7 +88,7 @@ def test_pipeline_persists_usage_before_distill_even_on_failure(tmp_path, monkey
         if fails:
             raise RuntimeError('model unavailable')
         from thread_context import append_tool_call
-        append_tool_call('execute_ibl', {'code': '[self:memory]{op:"recall",node:"Library"}'}, True)
+        append_tool_call('execute_ibl', {'edition':2, 'code': '[self:memory]{op:"recall",node:"Library"}'}, True)
         yield {'type': 'final', 'content': 'Library'}
     runner = Runner(tmp_path, stream)
     queued = []

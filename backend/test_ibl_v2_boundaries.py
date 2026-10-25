@@ -151,7 +151,7 @@ def test_workflow_save_load_and_legacy_id_guard(tmp_path,monkeypatch):
     assert action('run',{'edition':2,'name':'double','params':{'x':4}},'.')['value']==8
     assert not execute_workflow('double')['success']
     import pytest
-    with pytest.raises(ValueError, match='EDITION_RETIRED'):
+    with pytest.raises(ValueError, match='SOURCE_TYPE'):
         workflow_store.save_workflow({'id':'old','name':'old','steps':['[self:time]{}']})
     assert workflow_store.get_workflow('old') is None
 
@@ -233,7 +233,12 @@ def test_model_and_mcp_authoring_defaults_agree(monkeypatch, source, edition, ex
         return await mcp_server.execute_ibl(source, edition=edition)
     anyio.run(call)
     assert len(seen) == 2
-    assert all(source_edition(p['code'], p.get('edition')) == expected for p in seen)
+    for p in seen:
+        if expected == 2:
+            assert source_edition(p['code'], p.get('edition')) == 2
+        else:
+            with pytest.raises(ValueError, match='EDITION_UNSUPPORTED'):
+                source_edition(p['code'], p.get('edition'))
     assert 'edition' not in request if edition is None else request['edition'] == edition
 
 

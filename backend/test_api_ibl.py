@@ -184,6 +184,21 @@ def test_catalog_teaches_same_current_contract_as_describe():
             assert shown['ops'] is None
 
 
+
+def test_manual_learning_uses_recorded_current_call(monkeypatch):
+    from api_ibl import DistillRequest, distill_ibl
+    import ibl_continuations, ibl_usage_rag
+    call = {'tool_name': 'execute_ibl', 'input': {'edition': 2, 'code': 'return 7'},
+            'result': {'success': True, 'executed': True, 'source_complete': True, 'value': 7}}
+    captured = []
+    monkeypatch.setattr(ibl_continuations, 'completed_call', lambda ref, source: call if source == 'return 7' else None)
+    monkeypatch.setattr(ibl_usage_rag, 'distill_experience', lambda intent, calls, score: captured.append(calls) or True)
+    assert asyncio.run(distill_ibl(DistillRequest(intent='seven', code='return 7', task_ref={})))['distilled']
+    assert captured == [[call]]
+    assert not asyncio.run(distill_ibl(DistillRequest(intent='eight', code='return 8', task_ref={})))['distilled']
+    assert len(captured) == 1
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

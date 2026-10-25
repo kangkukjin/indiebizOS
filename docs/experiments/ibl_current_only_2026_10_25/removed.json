@@ -1,0 +1,245 @@
+{
+  "baseline": "6bf56363",
+  "modules": [
+    {
+      "path": "backend/ibl/ibl_parser.py",
+      "sha256": "b13bbb0f87e5e12c82a6bb28931a58aa0f92e0873756e7c7243cfbb622388a73",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/ibl_parser_values.py",
+      "sha256": "322ff96cbac7e74ac4b19483511785028db0a702da018c27433ce6383872fb1e",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/ibl_parser_scope.py",
+      "sha256": "e640a0ed097531ab0d1597541d0ddf87bbd5a04b1bbd0bf39b0f80ca069f64bf",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/ibl_parser_blocks.py",
+      "sha256": "28051c189e3e9e7f4e2de35ddf222d0cf2c7481db14d5d0d43b38a9edabb8bf4",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/ibl_preflight.py",
+      "sha256": "6b817b896190b4b010db3d168985cc1070f8150bf5ad67c0d9bbb139457fcf46",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/ibl_code_ir.py",
+      "sha256": "d82cd2c88539b16e223cb638d82ab779120ccb63de975c6361d8b23f7026fb79",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/ibl_code_binding.py",
+      "sha256": "40cd15a11c78f04a957e91c2f04889f5d36c536868bb06e19b26bc9599c8ee85",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/workflow_binding.py",
+      "sha256": "81b7bfc945b4832b4a7c5e541f1a5e7474f09c7ae1ffb2a1d8476ee1a878ad6f",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/function_migration.py",
+      "sha256": "ad2bc854328bc254b9c7321363341f53ecd658854d6ef388093de17f1bc3be75",
+      "reason": "운영 소비자를 현행 AST/계약으로 이관; 구현 원본은 이전 Git revision에 보존"
+    },
+    {
+      "path": "backend/ibl/ibl_pipe_types.py",
+      "sha256": "97a604ff7fc7dee3a01cfc4513cd3d155cdb578a335919c4d6704abdfdc894b8",
+      "reason": "구판 정적 타입/통화 검사; 현행 compile_program이 검사 소유"
+    },
+    {
+      "path": "backend/ibl/ibl_value_types.py",
+      "sha256": "81f103d5a26be511b2b765bf58c689839803e826774d905b1ff8223bf89e1929",
+      "reason": "구판 정적 타입/통화 검사; 현행 compile_program이 검사 소유"
+    },
+    {
+      "path": "backend/test_distill_var_assignment_2026_09_06.py",
+      "sha256": "99b8fee6985d29109a9e6bec997173087ffcf45979b1b423ee3bd046505f5d9d",
+      "reason": "서로 다른 실행의 구판 턴 변수 복원 시험. 현행 증류는 닫힌 한 프로그램을 선택하며 source_complete 시험으로 검증."
+    },
+    {
+      "path": "scripts/migrate_ibl_edition1.py",
+      "sha256": "52abc8afa6925d282b7c0be532b41729c76756230afee67cc9452b6bb5811789",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/ibl_edition1_inventory.py",
+      "sha256": "cccc824bc7587c5c2a329e56cf033e32486b816eebfb0a6666567a257934bc6e",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "backend/test_ibl_edition1_migration.py",
+      "sha256": "f30acdbf1496cad29639af10ded57e8092ec065eacf2824c51175305b69b0d3c",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/seed_each_literal.py",
+      "sha256": "546d031709920c491d9f966917410c4aa388249a260d1505a80eb9097c70eb0b",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/seed_research_batch_search.py",
+      "sha256": "dff72d5ea2b46dae5cf1cd3b0cac261d8a7e8a3e086a3974b81ae03838214b2c",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/seed_snapshot_row.py",
+      "sha256": "429180c92183f2b8fb49d52fe0b936dcb76c26fc47d0d6993dbdc226dfedd654",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/repair_workflow_prose_seeds.py",
+      "sha256": "bf13e9f1cbe589cf0b8c4675f25a57fed56c62f47baef1345fda97e8df698a0d",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/repair_self_check_stale_run.py",
+      "sha256": "0738a7d54bbaefa09700112b7aa4f18c2615cc02e5fd9723a6b08d8a92a19c99",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/review_corpus_2026_09_09.py",
+      "sha256": "2ff4d03bfabe3864df58410a4c2dc68ec0fb1b44aac304c1c0d85bcd488f6910",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/seed_youtube_channel.py",
+      "sha256": "cf55cc37e33e997e395b52fcee78a7374934aa5c61b6ca455325e37612494c3f",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/audit_ibl_corpus_v2.py",
+      "sha256": "fdbca12fc1287dcee59edf73106196655d5d664e59393b83b24842e0c6a27561",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/curate_idioms.py",
+      "sha256": "dbb5102105498f78666a423418cde58d556ebd7bdb8a2f613d1d9ba5a5a4a4e2",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/seed_multi_statement.py",
+      "sha256": "4c89e2bbbf6d54335e8b42d6b9f968072b03d5ffcc5f945e5f5540895552e31b",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/ibl_boundary_probe.py",
+      "sha256": "3422e542c90c349b6c81dc989cb75964403c9c3abaaab4632296f5fa28a64c97",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/ibl_boundary_replay_round6.py",
+      "sha256": "d86cb169874273e99a58442409955b08a915fbb8eee184af076004075411d9bb",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/repair_corpus_nested_quotes.py",
+      "sha256": "0bff4c68310334f9bf72310e23a97e94c203f17c42bacd195fa24dae0909c79c",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/apply_corpus_leaf_review.py",
+      "sha256": "11afb19e7af30a32fb36271f6263d21e06fc9ebe3842a38c58916ebd5330f6cd",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/repair_training_dead_vocab.py",
+      "sha256": "b16926818c7cbb5739e2349c27979c6959c31a2ec59299a836f434ac64f9c4f6",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/seed_self_check_source.py",
+      "sha256": "e4c4bbc6b138e938d0770f9c9ca8a0ae0815f6d23ad0d118261777622bba7355",
+      "reason": "구판 전용 이관·시딩·감사 실행 도구; 이전 Git revision에서만 재현. 현행 신규 등록은 function_install/컴파일러 관문 소유."
+    },
+    {
+      "path": "scripts/migrate_functions.py",
+      "sha256": "226d76a18ef1f4cc2d33eff935076bac29ba89f9919e609cd48459031dc82057",
+      "reason": "완료된 구판 전용 이관/실험 도구 은퇴. 원본과 재현 환경은 이전 Git revision에 보존."
+    },
+    {
+      "path": "scripts/migrate_each_currency_contract.py",
+      "sha256": "7868911e098ad7e102d74054a66c2b62ca2294d6498292bcc19914367f57c81f",
+      "reason": "완료된 구판 전용 이관/실험 도구 은퇴. 원본과 재현 환경은 이전 Git revision에 보존."
+    },
+    {
+      "path": "scripts/experiment_ai_tips_onepass.py",
+      "sha256": "e0ac8ebde0ce8bb7605b69f47a830a6ffe47ab8b4577bce17eed534f72f6ff32",
+      "reason": "완료된 구판 전용 이관/실험 도구 은퇴. 원본과 재현 환경은 이전 Git revision에 보존."
+    },
+    {
+      "path": "backend/cognition/fn_recognizer.py",
+      "sha256": "300c30dc59e0b459cf849c8104e1b04e9021fdcf230f53bfdca82e45527f4be5",
+      "reason": "현행 실행/입력 추상화에서 호출되지 않는 구판 암묵 슬롯 합성·재타이핑 인식·일회성 수리 코드와 해당 시험 은퇴."
+    },
+    {
+      "path": "scripts/replay_idioms.py",
+      "sha256": "9b3e118512443024f1c127590f0e2a5c98addbe63c7c565df9d26ffa065910af",
+      "reason": "현행 실행/입력 추상화에서 호출되지 않는 구판 암묵 슬롯 합성·재타이핑 인식·일회성 수리 코드와 해당 시험 은퇴."
+    },
+    {
+      "path": "scripts/backfill_idiom_signature.py",
+      "sha256": "7be44f87e1d56169247b9ad4a932924d172dbad2ba98044fa8ff6eb3ca59e88a",
+      "reason": "현행 실행/입력 추상화에서 호출되지 않는 구판 암묵 슬롯 합성·재타이핑 인식·일회성 수리 코드와 해당 시험 은퇴."
+    },
+    {
+      "path": "backend/retire_frozen_aliases.py",
+      "sha256": "a236dc8da68a7401a9ab280d832d33dab4b519d0bf2aed56f8e1e7a30c5eeeab",
+      "reason": "현행 실행/입력 추상화에서 호출되지 않는 구판 암묵 슬롯 합성·재타이핑 인식·일회성 수리 코드와 해당 시험 은퇴."
+    },
+    {
+      "path": "backend/migrate_private_body_aliases.py",
+      "sha256": "ded30bafd37e1e47645fce0e2681d8db03352a68767441895c3b3d8598b36435",
+      "reason": "현행 실행/입력 추상화에서 호출되지 않는 구판 암묵 슬롯 합성·재타이핑 인식·일회성 수리 코드와 해당 시험 은퇴."
+    },
+    {
+      "path": "scripts/test_apply_corpus_leaf_review.py",
+      "sha256": "eef98b86341c1fee46b9283da2ff8321f55c160de3c713c87a7ee199e476921d",
+      "reason": "현행 실행/입력 추상화에서 호출되지 않는 구판 암묵 슬롯 합성·재타이핑 인식·일회성 수리 코드와 해당 시험 은퇴."
+    },
+    {
+      "path": "backend/migrate_alias_retirement.py",
+      "sha256": "47076de6833fb87fed1e8047f2b4224d9f2e9d2e63d71c390669b964765c5ee5",
+      "reason": "완료된 구판 별칭 치환 배치. 현재 실행·시딩과 분리하며 Git 이력에만 보존."
+    },
+    {
+      "path": "scripts/migrate_limbs_round2_training.py",
+      "sha256": "879664f073fbae2c1ed812dfb070b0a198f03713082a2a36ce0293816d703c30",
+      "reason": "완료된 구판 별칭 치환 배치. 현재 실행·시딩과 분리하며 Git 이력에만 보존."
+    },
+    {
+      "path": "scripts/idiom_experiment_worker.py",
+      "sha256": "e693981d05a7c5a56f84140f724bded43d4686a1d2a2ed4b2626255dba8e9045",
+      "reason": "완료된 구판 실험의 거절 전용 진입점·호출자. 실험 결과와 소스는 Git/실험 문서에 보존; 현행 런타임 시험을 사용."
+    },
+    {
+      "path": "scripts/idiom_exposure_worker.py",
+      "sha256": "8d5ff97e07036991d59e7879a406a1874957b13d2cd0418567a0ddfeb0190600",
+      "reason": "완료된 구판 실험의 거절 전용 진입점·호출자. 실험 결과와 소스는 Git/실험 문서에 보존; 현행 런타임 시험을 사용."
+    },
+    {
+      "path": "scripts/idiom_experiment.py",
+      "sha256": "3013e92557ff291b76c431ecd5fa96992c74c9b254d0141983bc061fbc7b6a61",
+      "reason": "완료된 구판 실험의 거절 전용 진입점·호출자. 실험 결과와 소스는 Git/실험 문서에 보존; 현행 런타임 시험을 사용."
+    },
+    {
+      "path": "scripts/idiom_experiment_report.py",
+      "sha256": "aea03896bc8251820c21512cd66dd2be47c2f037f68822126b80b5cc7e3f9654",
+      "reason": "완료된 구판 실험의 거절 전용 진입점·호출자. 실험 결과와 소스는 Git/실험 문서에 보존; 현행 런타임 시험을 사용."
+    },
+    {
+      "path": "scripts/idiom_boundary_experiment.py",
+      "sha256": "d71d9c3a3d92dde84fbb3dfcaaac657b56da428c0fe04dd4d5a030042dfef000",
+      "reason": "완료된 구판 실험의 거절 전용 진입점·호출자. 실험 결과와 소스는 Git/실험 문서에 보존; 현행 런타임 시험을 사용."
+    },
+    {
+      "path": "scripts/idiom_exposure_study.py",
+      "sha256": "995c402d7cc5755052182511807d64fc7c1a0a662a61ead4e8f340c3fe31ca7b",
+      "reason": "완료된 구판 실험의 거절 전용 진입점·호출자. 실험 결과와 소스는 Git/실험 문서에 보존; 현행 런타임 시험을 사용."
+    }
+  ]
+}

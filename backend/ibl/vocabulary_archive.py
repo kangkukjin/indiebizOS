@@ -91,7 +91,6 @@ def validate_payload(manifest: dict, files: dict) -> list:
     if not isinstance(examples, list) or not examples:
         raise ValueError("시딩 용례가 하나 이상 필요합니다")
     from ibl_edition import source_edition
-    from ibl_parser import parse as historical_parse
     from ibl_v2_parser import parse as current_parse
     from ibl_v2_ir import Fault
     for example in examples:
@@ -101,8 +100,8 @@ def validate_payload(manifest: dict, files: dict) -> list:
         if not isinstance(code, str) or not code.strip():
             raise ValueError("용례의 IBL 문장이 올바르지 않습니다")
         try:
-            parsed = (current_parse(code).data['statements'] if source_edition(code, example.get('edition')) == 2
-                      else historical_parse(code))
+            source_edition(code, example.get('edition'))
+            parsed = current_parse(code).data['statements']
         except Fault as exc:
             raise ValueError(f'용례의 IBL 문장이 올바르지 않습니다: {exc}') from exc
         if not parsed:

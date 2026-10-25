@@ -46,11 +46,9 @@ def current(monkeypatch, tmp_path):
     seeds = json.loads((ROOT / 'data/idioms/ibl_v2_seeds.json').read_text())
     definitions = {e['alias']: e['ibl_code'] for e in seeds if e.get('alias')}
     def execute(code):
-        from ibl_edition import source_context
         plan = compile_program(code, registry, definitions=definitions)
         assert not plan.issues, plan.report()
-        with source_context(2):
-            return Runtime(plan).run()
+        return Runtime(plan).run()
     execute.calls, execute.recover = calls, False
     return execute
 
@@ -356,7 +354,6 @@ def domain_runtime(monkeypatch, tmp_path):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
-    from ibl_edition import source_context
     calls = []
     def leaf(ti, *args, **kwargs):
         node, action, params = ti['_node'], ti['action'], ti['params']
@@ -382,8 +379,7 @@ def domain_runtime(monkeypatch, tmp_path):
     def execute(name):
         plan = compile_program(DOMAIN_EXAMPLES[name], registry)
         assert not plan.issues, plan.report()
-        with source_context(2):
-            out = Runtime(plan).run()
+        out = Runtime(plan).run()
         assert out['success'], out
         return out
     execute.registry, execute.calls = registry, calls

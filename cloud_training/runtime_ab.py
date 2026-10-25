@@ -20,7 +20,7 @@ from datastore.ibl_usage_db import IBLUsageDB
 from sentence_transformers import SentenceTransformer
 import numpy as np
 T = C.T
-rows = sqlite3.connect(str(REPO / "data/ibl_usage.db")).execute("select intent, ibl_code from ibl_examples order by id").fetchall()
+rows = sqlite3.connect(str(REPO / "data/ibl_usage.db")).execute("select intent, ibl_code from ibl_current_examples order by id").fetchall()
 docs = [IBLUsageDB._prepare_search_text(i, c) for i, c in rows]
 pats = [T.normalize_code_to_pattern(c) for _, c in rows]
 intents = [i.strip() for i, _ in rows]

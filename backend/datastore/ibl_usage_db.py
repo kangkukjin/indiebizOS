@@ -240,6 +240,8 @@ class IBLUsageDB:
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN topic TEXT DEFAULT ''")
         if "alias" not in cols:   # 관용구 이름(2026-09-05, 관용구=이름 붙은 함수) — [fn:이름] 으로 부른다. 낱말은 빈 값
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
+        from ibl_example_index import ensure_current_examples
+        ensure_current_examples(conn)
         if "returns" not in cols:  # 함수 서명의 반환 모양(2026-09-05, ibl_typecheck.describe) — `items⟨title·url⟩`/`prose`/`?`
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN returns TEXT DEFAULT ''")
         if "signature" not in cols:
@@ -263,35 +265,8 @@ class IBLUsageDB:
         import schema_migrations
         schema_migrations.apply(conn, "ibl_usage")
 
-        # FTS5 키워드 인덱스
-        conn.execute("""
-            CREATE VIRTUAL TABLE IF NOT EXISTS ibl_examples_fts USING fts5(
-                intent, ibl_code,
-                content='ibl_examples',
-                content_rowid='id',
-                tokenize='unicode61'
-            )
-        """)
-
-        # FTS5 동기화 트리거
-        conn.executescript("""
-            CREATE TRIGGER IF NOT EXISTS ibl_examples_ai AFTER INSERT ON ibl_examples BEGIN
-                INSERT INTO ibl_examples_fts(rowid, intent, ibl_code)
-                VALUES (new.id, new.intent, new.ibl_code);
-            END;
-
-            CREATE TRIGGER IF NOT EXISTS ibl_examples_ad AFTER DELETE ON ibl_examples BEGIN
-                INSERT INTO ibl_examples_fts(ibl_examples_fts, rowid, intent, ibl_code)
-                VALUES ('delete', old.id, old.intent, old.ibl_code);
-            END;
-
-            CREATE TRIGGER IF NOT EXISTS ibl_examples_au AFTER UPDATE ON ibl_examples BEGIN
-                INSERT INTO ibl_examples_fts(ibl_examples_fts, rowid, intent, ibl_code)
-                VALUES ('delete', old.id, old.intent, old.ibl_code);
-                INSERT INTO ibl_examples_fts(rowid, intent, ibl_code)
-                VALUES (new.id, new.intent, new.ibl_code);
-            END;
-        """)
+        from ibl_example_index import ensure_search_index
+        ensure_search_index(conn)
 
         # ★실행 로그 테이블(ibl_execution_logs)은 2026-08-31 에 제거했다.
         # 스키마만 있고 호출자 0·0행으로 2026-07-03 부터 죽어 있었다. 같은 사실을
@@ -574,8 +549,8 @@ class IBLUsageDB:
             else:
                 cursor = conn.execute(
                     """INSERT INTO ibl_examples
-                       (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns, signature, provenance)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                       (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns, signature, provenance, executable)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)""",
                     (intent, ibl_code, nodes, category, difficulty, source, tags,
                      float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
                      float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
@@ -620,9 +595,9 @@ class IBLUsageDB:
         from ibl_name_search import search_aliased as _sa
         return _sa(self, query, top_k=top_k, alpha=alpha, allowed_nodes=allowed_nodes)
 
-    def find_phrase_by_alias(self, name: str, edition: int = 1) -> Optional[Dict]:
+    def find_phrase_by_alias(self, name: str) -> Optional[Dict]:
         from ibl_name_search import find_phrase_by_alias as _f
-        return _f(self, name, edition=edition)
+        return _f(self, name)
 
     def record_observed_returns(self, ibl_code: str, keys, kind: str = "record", source: str = "run") -> bool:
         """실행이 실제로 돌려준 최상위 필드를 그 정의 행에 병합(2026-09-26) — 회상 줄 `→ Record⟨관측: …⟩` 의 재료."""
@@ -831,7 +806,7 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             rows = [dict(r) for r in conn.execute(
                 "SELECT id, intent, ibl_code, success_count, fail_count, avg_ms, avg_tokens, created_at "
-                "FROM ibl_examples WHERE source IN ('distilled', 'distilled_component')"
+                "FROM ibl_current_examples WHERE source IN ('distilled', 'distilled_component')"
             ).fetchall()]
 
         stats = {"distilled": len(rows), "pruned_bad": 0, "deduped": 0,
@@ -921,7 +896,7 @@ class IBLUsageDB:
             conn.commit()
 
             rows = conn.execute(
-                "SELECT id, intent, ibl_code FROM ibl_examples ORDER BY id"
+                "SELECT id, intent, ibl_code FROM ibl_current_examples ORDER BY id"
             ).fetchall()
             conn.close()
 
@@ -1206,10 +1181,10 @@ class IBLUsageDB:
                     return []
                 fts_query = ' OR '.join(tokens)
                 rows = conn.execute("""
-                    SELECT e.id, bm25(ibl_examples_fts) as score
-                    FROM ibl_examples_fts fts
-                    JOIN ibl_examples e ON e.id = fts.rowid
-                    WHERE ibl_examples_fts MATCH ?
+                    SELECT e.id, bm25(ibl_current_fts) as score
+                    FROM ibl_current_fts fts
+                    JOIN ibl_current_examples e ON e.id = fts.rowid
+                    WHERE ibl_current_fts MATCH ?
                     ORDER BY score
                     LIMIT ?
                 """, (fts_query, top_k)).fetchall()
@@ -1330,7 +1305,7 @@ class IBLUsageDB:
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
                            source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias,
                            signature, COALESCE(returns,'') AS returns, COALESCE(returns_observed,'') AS returns_observed, provenance
-                    FROM ibl_examples WHERE id IN ({placeholders})""",
+                    FROM ibl_current_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
             meta_map = {row['id']: dict(row) for row in rows}

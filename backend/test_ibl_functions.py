@@ -20,7 +20,6 @@ import ibl_engine  # noqa: E402
 import ibl_executors as ex  # noqa: E402
 import ibl_control_blocks as cb  # noqa: E402
 import workflow_engine  # noqa: E402
-from ibl_parser import parse, IBLSyntaxError  # noqa: E402
 
 ROWS = {"items": [{"a": 1}, {"a": 2}, {"a": 3}]}
 
@@ -49,14 +48,6 @@ def _fake_factory(calls):
     return _fake
 
 
-def _run(code, calls=None):
-    calls = calls if calls is not None else []
-    orig = ibl_engine.execute_ibl
-    ibl_engine.execute_ibl = _fake_factory(calls)
-    try:
-        return workflow_engine.execute_pipeline(parse(code), ".")
-    finally:
-        ibl_engine.execute_ibl = orig
 
 
 def _final(out):
@@ -79,24 +70,9 @@ def _fn_error(out):
 
 
 # ---------------------------------------------------------------- F1 파서
-def test_f1_def_block_parses_signature_and_todo():
-    st = parse('[def: 두배]{\n$x = $n * 2\n$return = $x\n}')
-    assert len(st) == 1 and st[0]["_def"] and st[0]["name"] == "두배" and st[0]["signature"] == ["n"]
-    assert isinstance(st[0]["body"], list) and st[0]["todo"] is False
-    st = parse('[def: 나중]{todo}')
-    assert st[0]["todo"] is True and st[0]["body"] is None and st[0]["signature"] == []
-    for bad in ('[def: a]{[x:y]}\n[def: a]{[x:y]}', '[def: if]{[x:y]}', '$v = [def: a]{[x:y]}', '[def: a]{}'):
-        with pytest.raises(IBLSyntaxError):
-            parse(bad)
 
 
 # ---------------------------------------------------------------- F2 앞당김
-def test_f2_forward_reference_binds_and_unknown_stays_unbound():
-    st = parse('[fn:모으기]{q: "a"}\n[fn:없음]{}\n[def: 모으기]{[x:rows]{q: "$q"} >> [x:take]{n: 2}}')
-    assert st[0].get("_def")                                                # 정의는 앞으로 끌려 올라온다
-    call, unknown = st[1], st[2]
-    assert call["_node"] == "fn" and call["_fn_ref"]["name"] == "모으기" and call["_fn_ref"]["params"] == ["q"]
-    assert "_fn_ref" not in unknown and "body" not in call["_fn_ref"]      # 몸통은 step 에 없다(정의 표 참조)
 
 
 # ---------------------------------------------------------------- F3 실행
@@ -126,16 +102,3 @@ if __name__ == "__main__":
 
 
 # ---------------------------------------------------------------- F6 관용구 = 이름 붙은 함수 (2026-09-05)
-
-
-def test_f6_idiom_name_sanitize_and_unique():
-    from ibl_idiom import sanitize_fn_name, unique_fn_name
-    assert sanitize_fn_name("뉴스 모아 쓰기!", "x") == "뉴스모아쓰기"
-    assert sanitize_fn_name("", "뉴스 모아 선별하고 절 본문 쓰기") == "뉴스모아선별하고절본문쓰"
-    assert sanitize_fn_name("if", "의도") == "의도" and sanitize_fn_name("123", "") .startswith("관용구")
-
-    class DB:
-        def find_phrase_by_alias(self, n):
-            return {"ibl_code": "A"} if n == "이름" else ({"ibl_code": "B"} if n == "이름2" else None)
-    assert unique_fn_name("이름", DB(), "A") == "이름"          # 같은 골격이면 같은 이름
-    assert unique_fn_name("이름", DB(), "C") == "이름3"         # 다른 골격이 이름·이름2 를 차지하면 이름3

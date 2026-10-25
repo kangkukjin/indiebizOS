@@ -3,7 +3,6 @@ import json
 import sqlite3
 
 import function_store as store
-from ibl_edition import source_edition
 
 
 def attach(name, source, intent, provenance=None, *, expected_revision=None, reason=''):
@@ -22,19 +21,17 @@ def attach(name, source, intent, provenance=None, *, expected_revision=None, rea
     return provenance
 
 
-def lookup(db, name, edition=1):
-    current = store.memory_reference(name, edition)
+def lookup(db, name):
+    current = store.memory_reference(name)
     if current is None:
         return None
     try:
         with db._get_connection() as conn:
-            rows = conn.execute('SELECT * FROM ibl_examples WHERE alias=? ORDER BY updated_at DESC,id DESC', (name,)).fetchall()
+            rows = conn.execute('SELECT * FROM ibl_current_examples WHERE alias=? ORDER BY updated_at DESC,id DESC', (name,)).fetchall()
         for item in rows:
             row = dict(item)
             from corpus_policy import callable_exclusion_reason
             if callable_exclusion_reason(row):
-                continue
-            if source_edition(row['ibl_code']) != edition:
                 continue
             provenance = json.loads(row.get('provenance') or '{}')
             ref = provenance.get('function_ref')
@@ -78,7 +75,7 @@ def catalog_search_rows(existing):
     represented = {row.get('function_ref', {}).get('function_id') for row in existing}
     result = []
     for row in store.snapshot()['records'].values():
-        if (row.get('edition') != 2 or row.get('state') != 'active' or row.get('problem')
+        if (row.get('state') != 'active' or row.get('problem')
                 or row['function_id'] in represented):
             continue
         ref = store.reference(row)

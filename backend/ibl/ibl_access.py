@@ -653,7 +653,7 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
     import re as _re
     import sqlite3
     import time
-    from ibl_parser_blocks import _FN_RESERVED_NAMES
+    from common.ibl_language_tokens import CONTROL_NODES as _FN_RESERVED_NAMES
     from vocabulary_state import revision
     from runtime_utils import get_base_path
     db_path = get_base_path() / "data" / "ibl_usage.db"
@@ -688,7 +688,7 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
             _sig = "signature" if "signature" in _cols else "NULL"
             rows = conn.execute(
                 f"SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,''), {_ret}, {_sig} "
-                "FROM ibl_examples WHERE COALESCE(alias,'') != '' AND COALESCE(always_on,0) = 1 "
+                "FROM ibl_current_examples WHERE COALESCE(alias,'') != '' AND COALESCE(always_on,0) = 1 "
                 "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
                 (IDIOMS_MAP_ROWS,)).fetchall()
             rows = _current_idiom_rows(conn, rows, _ret, _sig)
@@ -797,22 +797,22 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
         if 'provenance' in columns:
             from corpus_policy import callable_exclusion_reason
             candidates = conn.execute(
-                'SELECT ibl_code,provenance FROM ibl_examples WHERE alias=? ORDER BY updated_at DESC,rowid DESC', (name,)).fetchall()
+                'SELECT ibl_code,provenance FROM ibl_current_examples WHERE alias=? ORDER BY updated_at DESC,id DESC', (name,)).fetchall()
             reason = (callable_exclusion_reason({'ibl_code': candidates[0][0], 'provenance': candidates[0][1]})
                       if candidates else '')
-            if reason and reason != 'legacy_source':
+            if reason:
                 continue
         try:
             current = function_store.resolve(name, view=view)
         except (ValueError, OSError):
             continue
-        if current is None or current.get('edition') != 2:
+        if current is None:
             continue
         stats = function_statistics(function_store.reference(current))
         selected = list(row[:8])
         selected[0] = current.get('description') or selected[0]
         from ibl_edition import pin_source
-        selected[1] = (pin_source(current['source'], 2) if current['edition'] == 2 else current['source'])
+        selected[1] = pin_source(current['source'], 2)
         selected[2:4] = [stats['success_count'], stats['fail_count']]
         from ibl_returns_observed import returns_display
         selected[6] = returns_display('', stats.get('returns_observed'))
@@ -823,8 +823,7 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
 
 def _current_lesson(lesson, source):
     import hashlib
-    from ibl_edition import source_edition
-    if (lesson and lesson.get('source_edition') == source_edition(source)
+    if (lesson and lesson.get('source_edition') == 2
             and lesson.get('source_sha256') == hashlib.sha256(source.encode()).hexdigest()):
         return lesson
     return {}
@@ -839,7 +838,7 @@ def _idiom_anchors(allowed: Optional[Set[str]]) -> dict:
 def _anchor_action(code: str) -> str:
     """몸의 **마지막 잎 액션**(결과를 내는 낱말) — 관용구가 어느 낱말 옆에 서는지는 몸이 정한다."""
     import re as _re
-    from ibl_parser_blocks import _FN_RESERVED_NAMES
+    from common.ibl_language_tokens import CONTROL_NODES as _FN_RESERVED_NAMES
     last = ""
     for node, act in _re.findall(r'\[([a-z_]+):\s*([a-z_]+)', code or ""):
         if node in _FN_RESERVED_NAMES or node == "fn":
@@ -860,20 +859,10 @@ def _anchor_line(r, authoring=False) -> str:
 
 
 def _pipe_input_note(code: str) -> str:
-    """실행기와 같은 몸 판정으로 파이프 대체 가능 인자만 안내한다."""
-    from ibl_parser import IBLSyntaxError, parse_function_body
-    from workflow_contract import pipe_input_param
-    try:
-        name = pipe_input_param(parse_function_body(code))
-    except IBLSyntaxError:
-        return ""  # 한 저장본의 구문 부패로 다른 관용구의 지도까지 잃지 않는다.
-    return f"앞 통화 → {name} (명시 인자 우선)" if name else ""
+    return _authoring_pipe_note(code)
 
 
 def _authoring_pipe_note(code):
-    from ibl_edition import source_edition
-    if source_edition(code) != 2:
-        return ''  # Compatibility adapters have no implicit pipe receiver.
     from ibl_v2_parser import parse
     from ibl_v2_ir import Fault
     try:

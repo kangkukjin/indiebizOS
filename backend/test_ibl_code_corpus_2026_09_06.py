@@ -79,7 +79,7 @@ def test_failure_through_choke_point_counts_fail_and_keeps_reason(tmp_path):
 
     db_path, original = _tmp_db(tmp_path)
     try:
-        code = "[nonode:nothing]{x: 1}"
+        code = "#!ibl edition=2\n[nonode:nothing]{x: 1}"
         with el.trajectory_scope(task_id="task_corpus_fail"):
             _execute_ibl_unified({"code": code}, str(tmp_path), agent_id="probe")
         rows = _rows(db_path)
@@ -128,7 +128,8 @@ def test_secret_masked_but_key_is_raw_hash(tmp_path):
         r = rows[0]
         assert secret not in r["code"] and r["masked"] == 1
         assert secret not in (r["last_error"] or "")
-        assert r["code_sha256"] == hashlib.sha256(code.encode("utf-8")).hexdigest()
+        from ibl_edition import program_hash
+        assert r["code_sha256"] == program_hash(code, 2)
         assert r["code_chars"] == len(code)
     finally:
         el._get_db = original

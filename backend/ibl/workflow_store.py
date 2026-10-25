@@ -47,26 +47,23 @@ def _as_workflow(row):
     data.update({k: row[k] for k in ('name', 'edition', 'function_id', 'revision', 'description') if k in row})
     data['id'] = next(iter(row.get('legacy_ids') or []), row['function_id'])
     data['state'] = row.get('state')
-    data['runnable'] = row.get('edition') == 2 and row.get('state') == 'active' and not row.get('problem')
-    if row.get('edition') == 1:
-        data['problem'] = 'EDITION_RETIRED: 판본 1 기록은 열람만 가능합니다.'
+    data['runnable'] = row.get('state') == 'active' and not row.get('problem')
     if row.get('problem'):
         data['problem'] = row['problem']
-    if row.get('edition') == 2:
-        data['code'] = row.get('source', '')
-        from ibl_v2_parser import parse
-        try:
-            node = parse(data['code']).data['statements'][0]
-            data['params_required'] = [k for k, v in node.data['params'].items() if v is None]
-        except Exception as exc:
-            data.update(runnable=False, problem=str(exc))
-    elif 'legacy' not in row:
-        data['do'] = row.get('source', '')
+    data['code'] = row.get('source', '')
+    from ibl_v2_parser import parse
+    try:
+        node = parse(data['code']).data['statements'][0]
+        data['params_required'] = [k for k, v in node.data['params'].items() if v is None]
+    except Exception as exc:
+        data.update(runnable=False, problem=str(exc))
     return data
 
 
-def list_workflows() -> List[Dict]:
+def list_workflows(*, history=False) -> List[Dict]:
     import function_store
+    if history:
+        return [{**r, 'runnable': False} for r in function_store.history_snapshot()['records'].values()]
     return [_as_workflow(r) for r in function_store.snapshot()['records'].values()]
 
 
@@ -101,77 +98,18 @@ def _workflow_path(workflow_id: str) -> Path:
     return path
 
 
-def get_workflow(workflow_id: str) -> Optional[Dict]:
+def get_workflow(workflow_id: str, *, history=False) -> Optional[Dict]:
     import function_store
     try:
         _workflow_path(workflow_id)
+        if history:
+            return next((r for r in list_workflows(history=True) if workflow_id in (r['function_id'], r['name'], *r.get('legacy_ids', []))), None)
         row = function_store.resolve(workflow_id, include_inactive=True)
         if row is None:
             row = function_store.resolve(function_id=workflow_id, include_inactive=True)
         return _as_workflow(row) if row else None
     except (ValueError, OSError) as exc:
         return {'id': workflow_id, 'runnable': False, 'problem': str(exc)}
-
-
-# === 등록 시점 문법 관문 (2026-08-17) ===
-# save 가 do 를 검증 없이 저장해 "저장은 됐는데 돌리면 깨지는" 지연 실패를 냈다
-# (실측: 따옴표가 잘린 do — `[self:read]{path: "` — 가 success:true 로 저장되고
-# run 에서야 엉뚱하게 실행됐다). [self:script]{op:"register"} 의 pre-flight 선례를
-# 문장에 적용한다: 등록=문법 관문, 실행 가능성은 런타임 몫이라 파싱만 하고 실행 안 함.
-#
-# ★파서만으로는 못 잡는다(실측): 파서는 닫히지 않은 따옴표·중괄호를 관대하게 흡수해
-#   위 잘린 문장을 query:"" 로 통과시킨다(_extract_bracket 의 "닫는 bracket 못 찾으면
-#   원본 반환"). 그 관대함은 실행 경로의 기존 계약이라 건드리지 않고, 등록 관문에서만
-#   균형을 따로 본다.
-
-_SENTENCE_KEYS = ("steps", "pipeline", "do")
-
-
-def _unclosed_reason(code: str) -> Optional[str]:
-    """따옴표·중괄호 균형 검사. 반환: 오류 사유|None.
-
-    문자열 상태를 줄 경계 너머로 승계하는 파서의 스캐너를 그대로 쓴다
-    (주석 줄을 스캔에서 빼는 규칙도 _preprocess 와 동일 — 주석 속 따옴표가
-    상태를 오염시키지 않게)."""
-    from ibl_parser import _scan_line_state
-    depth, in_string, string_char = 0, False, None
-    for line in str(code).split('\n'):
-        stripped = line.strip()
-        if not in_string and (not stripped or stripped.startswith('#')):
-            continue
-        d, in_string, string_char = _scan_line_state(stripped, in_string, string_char)
-        depth += d
-    if in_string:
-        return f"따옴표({string_char})가 닫히지 않았습니다"
-    if depth > 0:
-        return "중괄호 {가 닫히지 않았습니다"
-    if depth < 0:
-        return "여는 중괄호 없이 }가 있습니다"
-    return None
-
-
-def _validate_sentence(raw) -> Optional[str]:
-    """저장 전 do(문장 또는 문장 배열) 문법 검사. 반환: 오류문|None.
-
-    미할당 $변수는 합법(호출자 params 주입 자리)이라 파서가 리터럴로 통과시킨다.
-    이미 파싱된 dict step 은 파서를 지나온 값이므로 통과."""
-    from ibl_parser import parse as ibl_parse, IBLSyntaxError
-    sentences = raw if isinstance(raw, list) else [raw]
-    if not sentences:
-        return "do 가 비어 있습니다 — 저장할 IBL 문장이 필요합니다."
-    for one in sentences:
-        if isinstance(one, dict):
-            continue
-        if not isinstance(one, str) or not one.strip():
-            return "do 에 빈 문장이 있습니다 — 저장할 IBL 문장이 필요합니다."
-        reason = _unclosed_reason(one)
-        if reason:
-            return f"do 문법 오류 — {reason}: {one[:120]}"
-        try:
-            ibl_parse(one)
-        except IBLSyntaxError as e:
-            return f"do 문법 오류 — {e}"
-    return None
 
 
 @serialized_mutation
@@ -182,12 +120,9 @@ def save_workflow(workflow: dict) -> str:
     old = get_workflow(wf_id)
     from ibl_edition import require_current
     edition = require_current(workflow.get('code'), workflow.get('edition'))
-    if old and old.get('edition', 1) != edition:
-        raise ValueError('다른 언어 판본은 새 ID로 저장하세요.')
-    source = workflow.get('code', '') if edition == 2 else ''
-    legacy = None if edition == 2 else {k: v for k, v in workflow.items() if k != 'id'}
+    source = workflow['code']
     function_store.register_memory(workflow.get('name') or wf_id, source, workflow.get('description', ''),
-        edition=edition, legacy=legacy, workflow_id=wf_id,
+        edition=edition, workflow_id=wf_id,
         function_id=(old or {}).get('function_id'),
         expected_revision=workflow.get('expected_revision', (old or {}).get('revision')),
         state=workflow.get('state'), reason=workflow.get('reason', ''),

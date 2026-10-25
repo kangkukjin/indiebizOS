@@ -2,13 +2,12 @@
 import json
 from pathlib import Path
 import function_store
-from function_migration import prepare, prepared_snapshot
 
 
 def legacy_library(codes):
-    return prepared_snapshot(prepare([
-        {'key': 'fixture:' + name, 'name': name, 'edition': 1, 'source': code,
-         'description': '', 'origin': 'user'} for name, code in codes.items()]))
+    # Deliberately malformed/historical snapshot for isolation tests. No converter.
+    return {'generation': 0, 'records': {name: {'function_id': name, 'name': name,
+            'source': source, 'edition': 1, 'state': 'retired'} for name, source in codes.items()}}
 
 
 def use_legacy(monkeypatch, codes):
@@ -22,28 +21,20 @@ def use_legacy(monkeypatch, codes):
 
 
 def import_memory(conn):
-    """Migrate minimal old SQL fixtures explicitly, with latest row resolution."""
-    import sqlite3
-    from ibl_edition import source_edition
+    """Publish explicit current fixtures and attach their immutable references."""
     from function_library import register
     cursor = conn.execute("SELECT * FROM ibl_examples WHERE COALESCE(alias,'') != ''")
     columns = [c[0] for c in cursor.description]
+    id_sql = '' if 'id' in columns else 'rowid AS id,'
+    conn.execute(f'CREATE VIEW IF NOT EXISTS ibl_current_examples AS SELECT {id_sql}* FROM ibl_examples')
     for raw in cursor.fetchall():
         row = dict(zip(columns, raw))
         name, code = row['alias'], row['ibl_code']
-        edition = source_edition(code)
-        old = function_store.resolve(name, edition=edition, include_inactive=True)
-        if edition == 1:
-            import uuid
-            record = {'schema':1,'function_id':(old or {}).get('function_id') or uuid.uuid4().hex,
-                      'name':name,'edition':1,'source':code,'description':row.get('intent','')}
-            ref = function_store.publish([{'record':record,'state':'retired',
-                'expected_revision':(old or {}).get('revision')}])['functions'][0]
-        else:
-            register_fixture_dependencies(code)
-            ref = register(name, code, row.get('intent', ''), edition=edition,
-                           legacy={k:row[k] for k in ('always_on','topic') if k in row},
-                           expected_revision=(old or {}).get('revision'))
+        old = function_store.resolve(name, include_inactive=True)
+        register_fixture_dependencies(code)
+        ref = register(name, code, row.get('intent', ''),
+                       legacy={k:row[k] for k in ('always_on','topic') if k in row},
+                       expected_revision=(old or {}).get('revision'))
         if 'provenance' in columns and 'id' in columns:
             provenance = json.loads(row.get('provenance') or '{}')
             provenance['function_ref'] = ref
@@ -56,11 +47,11 @@ def test_fixture_import_is_explicit(tmp_path):
     import sqlite3
     with sqlite3.connect(tmp_path / 'memory.db') as conn:
         conn.execute('CREATE TABLE ibl_examples(alias,ibl_code,intent)')
-        conn.execute('INSERT INTO ibl_examples VALUES(?,?,?)', ('fixture', '$return=1', 'test'))
+        conn.execute('INSERT INTO ibl_examples VALUES(?,?,?)', ('fixture', '#!ibl edition=2\n[def:fixture](){return 1}', 'test'))
         assert function_store.resolve('fixture') is None
         import_memory(conn)
-        assert function_store.resolve('fixture', include_inactive=True)['source'] == '$return=1'
-        assert function_store.resolve('fixture', include_inactive=True)['state'] == 'retired'
+        assert function_store.resolve('fixture', include_inactive=True)['source'] == '#!ibl edition=2\n[def:fixture](){return 1}'
+        assert function_store.resolve('fixture', include_inactive=True)['state'] == 'active'
 
 
 if __name__ == '__main__':
@@ -81,7 +72,7 @@ def register_fixture_dependencies(source):
     import re
     from function_library import register
     for name in set(re.findall(r'\[fn:([^\]]+)\]',source)):
-        if function_store.resolve(name,edition=2,include_inactive=True) is not None:
+        if function_store.resolve(name,include_inactive=True) is not None:
             continue
         dependency=current_source(name)
         register_fixture_dependencies(dependency)

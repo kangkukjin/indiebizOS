@@ -41,7 +41,8 @@ def test_protocol_rejects_invalid_values(bad):
 
 
 def test_edition_conflict_and_default():
-    assert edition_of('return 1') == 1
+    with pytest.raises(Fault, match='edition:2'):
+        edition_of('return 1')
     assert edition_of('#!ibl edition=2\nreturn 1') == 2
     for requested in [1, 3, True]:
         with pytest.raises(Fault):

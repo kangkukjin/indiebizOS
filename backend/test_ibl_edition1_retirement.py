@@ -52,11 +52,11 @@ def execute(native, judgment, name, inputs, mocks):
 
 @pytest.mark.parametrize('payload,code', [
     ({'code':'[self:time]{}'}, 'EDITION_REQUIRED'),
-    ({'code':'[self:time]{}','edition':1}, 'EDITION_RETIRED'),
-    ({'code':'#!ibl edition=1\n[self:time]{}'}, 'EDITION_RETIRED'),
-    ({'code':'#!ibl edition=1\n[self:time]{}','edition':2}, 'EDITION_CONFLICT'),
-    ({'code':'return 1','edition':2,'steps':[{}]}, 'EDITION_RETIRED'),
-    ({'code':'return 1','edition':2,'resume':{'vars_ref':'x'}}, 'EDITION_RETIRED'),
+    ({'code':'[self:time]{}','edition':1}, 'EDITION_UNSUPPORTED'),
+    ({'code':'#!ibl edition=1\n[self:time]{}'}, 'EDITION_UNSUPPORTED'),
+    ({'code':'#!ibl edition=1\n[self:time]{}','edition':2}, 'EDITION_UNSUPPORTED'),
+    ({'code':'return 1','edition':2,'steps':[{}]}, 'REQUEST_FIELDS'),
+    ({'code':'return 1','edition':2,'resume':{'vars_ref':'x'}}, 'RESUME_ARGUMENT'),
 ])
 @pytest.mark.parametrize('check',[False,True])
 def test_retired_request_never_loads_tools(monkeypatch, payload, code, check):
@@ -66,15 +66,6 @@ def test_retired_request_never_loads_tools(monkeypatch, payload, code, check):
     assert code in str(out)
 
 
-def test_direct_legacy_dispatch_is_closed(monkeypatch):
-    from ibl_engine import _execute_ibl_impl
-    from workflow_engine import execute_pipeline
-    from ibl_routing import _route_system
-    for marker in ('_def','_goal','_condition','_case','_try','_repeat','_assign','_var_emit','_parallel'):
-        result = _execute_ibl_impl({marker:True},'.')
-        assert result['code']=='EDITION_RETIRED' and not result['executed']
-    assert execute_pipeline([{'_node':'self','action':'write'}])['code']=='EDITION_RETIRED'
-    assert _execute_ibl_impl({'_node':'fn','action':'old'},'.')['code']=='EDITION_RETIRED'
 
 
 def test_native_candidates_compile_without_legacy_adapters(native):

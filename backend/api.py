@@ -167,13 +167,11 @@ except Exception as _e:
 async def lifespan(app: FastAPI):
     """앱 시작/종료 시 실행"""
 
+    from function_store import catalog
+    catalog()  # 저장 형식은 서비스 시작 전에 검증한다. 이관은 설치 작업의 책임이다.
+
     # 부팅 프로파일: 여기 도달 = 모듈 임포트 전부 끝. 이후 각 boot_status.record 의
     # elapsed 가 단계별 소요를 말한다(느린 부팅 신고는 이 원장을 읽는 것으로 시작).
-    # A stopped, partially applied catalog/consumer migration must not start timers.
-    import function_store
-    migration = function_store.catalog().get('migration', {}).get('edition1_retirement')
-    if migration and not migration.get('complete'):
-        raise RuntimeError('IBL 이관 배치가 미완료입니다. scripts/migrate_ibl_edition1.py --apply로 재개하세요.')
     boot_status.set_process_start(_PROC_T0)
     boot_status.record("import", True,
                        detail=f"모듈 임포트 {_boot_time.monotonic() - _PROC_T0:.1f}s")

@@ -28,18 +28,19 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
 def _handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
     source = request.get("code") or request.get("pipeline") or ""
     try:
+        fields = {'code', 'pipeline', 'edition', 'inputs', 'declared_inputs', 'check', 'resume',
+                  'reuse', 'budget', 'value_protocols', 'function_refs', 'approval', 'origin'}
+        unknown = set(request) - fields
+        if unknown:
+            raise Fault('REQUEST_FIELDS', '지원하지 않는 요청 필드: ' + ', '.join(sorted(unknown)), kind='compile')
         from ibl_edition import require_current
         try:
             require_current(source, request.get("edition"))
-            if request.get('steps') is not None:
-                raise ValueError('EDITION_RETIRED: steps 배열 실행은 종료됐습니다.')
-            if isinstance(request.get('resume'), dict) and set(request['resume']) & {'vars_ref', 'prev_ref', 'from_step'}:
-                raise ValueError('EDITION_RETIRED: 구판 진행 위치로 재개할 수 없습니다.')
         except ValueError as exc:
             raise Fault(str(exc).split(':', 1)[0], str(exc), kind='compile') from exc
-        incompatible = [k for k in ("files", "files_from") if request.get(k) is not None]
-        if incompatible:
-            raise Fault("EDITION_ARGUMENT", "판본 2는 명시 inputs를 사용합니다. 지원하지 않는 인자: " + ", ".join(incompatible), kind="compile")
+        if request.get('resume') is not None:
+            from ibl_run_journal import Journal
+            Journal('.', '', request['resume'])  # Validate the handle before loading tools.
         protocols = request.get('value_protocols')
         if protocols is not None and (not isinstance(protocols, list) or not protocols
                 or any(p not in ('ibl-value/1', 'ibl-value/2') for p in protocols)):
@@ -78,10 +79,6 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                 if refs is not None and refs != recorded:
                     raise Fault('RESUME_CHANGED', '함수 참조가 원 실행과 다릅니다.', kind='protocol')
                 refs = recorded
-        if reuse:
-            reuse_refs = recorded_function_refs(journal_root(project_path), {'run_id': reuse['run_id']})
-            if any(ref.get('edition') == 1 for ref in (reuse_refs or [])):
-                raise Fault('EDITION_RETIRED', '구판 함수에 의존한 실행은 재사용할 수 없습니다.', kind='compile')
         if is_member() and refs:
             raise Fault('MEMBER_LIBRARY', '회원은 동봉한 함수 정의만 사용할 수 있습니다.', kind='permission')
         if plan is None or refs is not None:
@@ -136,15 +133,13 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
             journal.announce(plan.fingerprint)
             from ibl_continuations import remember, finished
             remember(journal, request, project_path, agent_id, input_evidence)
-            from ibl_edition import source_context
             original_cancel = cancel_check
             cancelled = lambda: (journal.root / (journal.run_id + '.cancel')).is_file() or bool(original_cancel and original_cancel())
-            with source_context(2):
-                result = Runtime(plan, inputs, cancel_check=cancelled, journal=journal,
-                                 budget=budget,
-                                 reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
-                                 input_evidence=input_evidence, value_protocols=protocols,
-                                 reuse_models=reuse.get("models", True) if reuse else True).run()
+            result = Runtime(plan, inputs, cancel_check=cancelled, journal=journal,
+                             budget=budget,
+                             reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
+                             input_evidence=input_evidence, value_protocols=protocols,
+                             reuse_models=reuse.get("models", True) if reuse else True).run()
             finished(journal, result, project_path)
         try:
             from ibl_v2_learning import record_functions

@@ -223,7 +223,7 @@ def generate_for_package(package_id: str) -> int:
     conn = _sqlite3.connect(DB_PATH)
     conn.row_factory = _sqlite3.Row
     existing = set()
-    for row in conn.execute("SELECT intent as i, ibl_code as c FROM ibl_examples").fetchall():
+    for row in conn.execute("SELECT intent as i, ibl_code as c FROM ibl_current_examples").fetchall():
         existing.add(relation_identity(row['i']))
         existing.add(row['c'])
     conn.close()
@@ -296,7 +296,7 @@ def remove_for_package(package_id: str) -> dict:
     needles = [f"[{n}:{a}]" for n, a in keys]
     to_delete = []
     with db._get_connection() as conn:
-        for row in conn.execute("SELECT id, ibl_code FROM ibl_examples").fetchall():
+        for row in conn.execute("SELECT id, ibl_code FROM ibl_current_examples").fetchall():
             code = row["ibl_code"] or ""
             if any(needle in code for needle in needles):
                 to_delete.append(row["id"])
@@ -739,7 +739,7 @@ def generate_all(stages: List[int] = None) -> Dict[str, int]:
             from ibl_usage_db import DB_PATH
             conn = sqlite3.connect(DB_PATH, timeout=10)
             conn.row_factory = sqlite3.Row
-            rows = conn.execute("SELECT intent, ibl_code, nodes, category, difficulty, tags FROM ibl_examples").fetchall()
+            rows = conn.execute("SELECT intent, ibl_code, nodes, category, difficulty, tags FROM ibl_current_examples").fetchall()
             source = [dict(r) for r in rows]
             conn.close()
             print(f"[Generator] Stage 3: DB에서 {len(source)}개 기존 용례 로드")

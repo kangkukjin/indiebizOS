@@ -194,7 +194,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
             "type": "object",
             "properties": {
                 "edition": {"type": "integer", "enum": [2], "default": 2,
-                            "description": "실행 지원은 판본 2뿐입니다. 판본 1 기록은 열람만 가능합니다."},
+                            "description": "원문 형식은 edition:2입니다."},
                 "function_refs": {"type": "array", "items": {"type": "object"}, "description": "판본 고정 실행: function_id/revision/name/edition 참조의 전이 의존 전체 목록. 생략하면 현재 정의, resume은 원 실행 판본."},
                 "value_protocols": {"type": "array", "items": {"type": "string", "enum": ["ibl-value/1", "ibl-value/2"]}, "description": "소비 가능한 값 프로토콜. 생략하면 둘 다 지원. 외부 객체 참조는 /2이며 실행 종료 때 만료."},
                 "inputs": {"type": "object", "description": "명시 이름→값. result_ref.input_args를 그대로 사용 가능. 예: {입력:{\"$ref\":\"결과 id\"}}와 code의 $입력. $ref는 inputs 자체가 아닌 이름의 값 자리. path 생략=최종 값, path 지정=원 봉투의 키·인덱스. 이전 턴 변수 자동 주입 없음."},

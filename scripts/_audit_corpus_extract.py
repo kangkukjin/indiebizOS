@@ -10,7 +10,7 @@ try:
     import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 except ImportError:
     pass
-import ibl_parser  # type: ignore
+from ibl_v2_learning import call_sites, call_parameters
 
 node_filter = sys.argv[1] if len(sys.argv) > 1 else None
 files = [
@@ -30,27 +30,15 @@ for e in entries:
     code = e.get('ibl_code', '')
     intent = e.get('intent', '')
     try:
-        parsed = ibl_parser.parse(code)
+        parsed = call_sites(code)
     except Exception:
         continue
-    # parsed may be a list of statements / nested; walk for node:action dicts
-    def walk(obj):
-        out = []
-        if isinstance(obj, dict):
-            if '_node' in obj and 'action' in obj:
-                out.append(obj)
-            for v in obj.values():
-                out += walk(v)
-        elif isinstance(obj, list):
-            for v in obj:
-                out += walk(v)
-        return out
-    for st in walk(parsed):
-        nd, act = st.get('_node'), st.get('action')
+    for st in parsed:
+        nd, act = st.data['node'], st.data['action']
         if node_filter and nd != node_filter:
             continue
         key = f"{nd}:{act}"
-        params = st.get('params', {}) or {}
+        params = call_parameters(st)
         d = data[key]
         d['count'] += 1
         for pk in params:

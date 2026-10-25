@@ -1,20 +1,17 @@
 """system_tools IBL 통합 실행 계층 (2026-07-18 모듈화 — 1500줄 규칙)
 
 system_tools.py 에서 verbatim 이동: execute_ibl 단일도구의 실행 본체
-(_execute_ibl_unified — 첨부파일 참조 치환·엔진 위임·param 힌트 보강).
+(_execute_ibl_unified — 검사 원문 참조·현행 엔진 위임·결과 투영).
 system_tools 가 재수출하므로 기존 `from system_tools import _execute_ibl_unified` 불변.
 """
 import runtime_work
 import json
 import hashlib
-import os
 import re
 import time
-from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from typing import Dict, Optional
 
 from common.value_semantics import dumps_public_result
-from episode_logger import truncate_for_log
 from result_read_contract import is_observation_request
 
 
@@ -32,58 +29,6 @@ from result_read_contract import is_observation_request
 _action_fail_counter: Dict[str, dict] = {}
 _ACTION_FAIL_LIMIT = 3       # 연속 N번 실패 시 차단(open)
 _ACTION_OPEN_SECONDS = 90    # open 상태 유지 시간(초). 경과 후 half-open 시험 허용.
-
-# 블록 문장 표지 — 이것들은 '액션 하나'가 아니다(엔진의 디스패치 표지와 같은 목록).
-_BLOCK_MARKERS = ("_goal", "_condition", "_case", "_try", "_repeat", "_assign", "_parallel")
-
-
-
-
-
-# IBL_DEBUG 로그 디듀프 — 동일 코드 반복(=UI 라이브-상태 폴링)을 시간창으로 접어
-# 디버그 로그 도배를 막는다. 일회성 명령·서로 다른 조회는 영향 없음.
-_ibl_log_seen: Dict[str, float] = {}       # 코드 → 마지막으로 **찍은** 시각
-_ibl_log_folded: Dict[str, int] = {}       # 그 뒤 창 안에서 접은 실행 수
-_IBL_LOG_WINDOW = 30.0       # 같은 코드 재로그 최소 간격(초)
-_IBL_DEBUG_CAP = 2000        # providers/claude_code.py _TOOLUSE_CAP_IBL 과 같은 값
-
-
-def _ibl_debug_log(code: str, capped: str, files_tag: str = "") -> None:
-    """IBL 코드 디버그 줄 — 폭주는 접되 **조용히 접지 않는다**(2026-09-07).
-
-    옛 판은 30초 창 안의 동일 코드를 말없이 버렸다. 폴링 도배는 막았지만, **실패 뒤
-    같은 명령을 다시 보내는 것**(디버깅의 기본 몸짓)도 같이 접혔다 — 로그를 가장
-    열심히 읽는 바로 그 순간이다.
-
-    실측(2026-09-07): 같은 `[self:memory]{op:"save"…}` 가 15초 안에 네 번 실행돼
-    (실패 2 + **성공 2 = 기억 원장 2행**) 로그에는 한 줄만 남았다. 로그만 보면
-    "한 번 실행"이라, 원인을 시스템의 이중 저장으로 오진할 수 있었다(action_health
-    5건과 대조해서야 갈렸다). 부작용 액션의 실행 횟수를 감추는 로그는 거짓말이다.
-
-    그래서 창 자체는 유지하되(도배 방지) **접은 수를 창 만료 때 한 줄로 신고한다** —
-    침묵 클램프 금지와 같은 규약. 창은 마지막 *출력* 시각 기준이라, 계속 도는 폴링도
-    30초마다 두 줄(코드 + 접힘 수)로 자기 존재를 밝힌다.
-    """
-    # 접기 키 = 코드 + files 지문. 코드가 같아도 $file 본문이 다르면 다른 실행이다
-    # (2026-09-18 ep3861: 서로 다른 [self:edit] 다섯 건이 "같은 코드 5회 생략"으로 접혔다).
-    if files_tag:
-        code = f"{code} files#{files_tag}"
-        capped = f"{capped} files#{files_tag}"
-    now = time.monotonic()
-    # ① 창이 지난 코드는 접힘 수를 신고하고 물러난다(무한 성장 정리도 겸한다)
-    for key in [k for k, t in _ibl_log_seen.items() if now - t > _IBL_LOG_WINDOW]:
-        _ibl_log_seen.pop(key, None)
-        folded = _ibl_log_folded.pop(key, 0)
-        if folded:
-            print(f"[IBL_DEBUG] (같은 코드 {folded}회 생략 — {int(_IBL_LOG_WINDOW)}s 창) "
-                  f"code={truncate_for_log(key, 200)}")
-    # ② 창 안의 재실행은 접고, 창 밖(또는 처음)이면 찍는다
-    if code in _ibl_log_seen:
-        _ibl_log_folded[code] = _ibl_log_folded.get(code, 0) + 1
-        return
-    print(f"[IBL_DEBUG] code={capped}")
-    _ibl_log_seen[code] = now
-
 
 def reset_action_breaker(key: Optional[str] = None) -> int:
     """액션 서킷 브레이커를 수동으로 리셋한다.
@@ -115,31 +60,6 @@ def get_action_breaker_state() -> Dict[str, dict]:
     return out
 
 
-# $file:N 참조 — 한 번의 바인딩으로 끝낸다(2026-09-06 ep2884 실측):
-# 옛 판은 인덱스 순서로 str.replace 를 *반복* 해 `$file:1` 이 `$file:10` 의 접두를 먼저 먹었고
-# (시험 파일 제안에 episode_logger 본문+"0" 이 실렸다), 앞선 치환이 넣은 본문을 뒤 인덱스가
-# 다시 훑었다. IR은 가장 긴 숫자를 한 토큰으로 읽고 삽입된 본문을 데이터로 보존한다.
-
-
-
-
-
-
-
-
-
-
-# files_from 파일당 상한 — 자동 스필 임계(200K자)와 같은 자릿수로 묶는다.
-# 이 봉투는 "본문을 도구 호출 JSON 밖으로" 가 목적이지 대용량 스트리밍이 아니다.
-_FILES_FROM_CAP_BYTES = 2 * 1024 * 1024
-
-
-
-
-
-
-
-
 def _usage_origin(agent_id) -> str:
     """실행 출처 분류 — 계수의 origin 축.
 
@@ -169,10 +89,9 @@ def _usage_origin(agent_id) -> str:
 # ============ 통합 도구 실행 함수 ============
 
 
-
 def _preview_boundary(result, tool_input: dict):
     """봉투 기본값 반전(2026-09-06 승인) — 모델 경계에서만 큰 구조 데이터를 미리보기로. 앱·원격 표면(호출 통로
-    "app")은 렌더를 위해 전체를 받는다. 전체 값은 _attach_turn_vars 가 이미 턴 저장소(변수·그림자)에 두었다."""
+    "app")은 렌더를 위해 전체를 받는다. 전체 값은 현재 실행의 증거 저장소에서 참조한다."""
     try:
         from thread_context import get_call_channel
         if get_call_channel() == "app":
@@ -184,10 +103,6 @@ def _preview_boundary(result, tool_input: dict):
         from episode_logger import record_trajectory_event
         record_trajectory_event("context.projection_failed", {"error": str(exc)})
         return result
-
-
-
-
 
 
 _CHECKED_CODE_RE = re.compile(r"\s*\$checked:([0-9a-f]{64})\s*")
@@ -516,9 +431,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             try:
                 edition = source_edition(code, tool_input.get("edition"))
             except ValueError:
-                edition = tool_input.get("edition") if type(tool_input.get("edition")) is int else 1
+                edition = None
             record_trajectory_event("ibl.started", {
-                "code_sha256": program_hash(code, edition),
+                "code_sha256": (program_hash(code, edition) if edition is not None
+                                else hashlib.sha256(code.encode("utf-8")).hexdigest()),
                 "code_chars": len(code),
                 "edition": edition,
                 # 조회 종류를 원문·티켓 없이 보존한다. 빈 코드 해시만으로는
@@ -573,7 +489,7 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             record_trajectory_event("ibl.finished", _finished)
             # 원문 코퍼스 — 궤적은 해시만 싣는 계약이라 원문은 여기(같은 해시로 조인).
             # 2026-09-06 부활. 실패 사유는 봉투의 error 한 줄(캡·마스킹은 기록기 몫).
-            if not tool_input.get("check"):
+            if edition is not None and not tool_input.get("check"):
                 record_ibl_code(
                     code, success=not failed, elapsed_ms=_finished["elapsed_ms"],
                     error=(obj.get("error") if failed and isinstance(obj, dict) else ""),

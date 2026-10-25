@@ -918,7 +918,7 @@ def observed_returns_of_alias(alias):
     """관용구의 관측 반환 필드(returns_observed JSON) — describe 응답에만 전체를 싣는다."""
     try:
         from ibl_usage_db import IBLUsageDB
-        row = IBLUsageDB().find_phrase_by_alias(alias, edition=2)
+        row = IBLUsageDB().find_phrase_by_alias(alias)
         raw = (row or {}).get("returns_observed") or ""
         obs = json.loads(raw) if raw else {}
         return obs if isinstance(obs, dict) and obs.get("keys") else {}
@@ -960,8 +960,8 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
     if any(not isinstance(name, str) or name.count(":") != 1
            or any(not part.strip() for part in name.split(":")) for name in names):
         raise ValueError('describe는 ["node:action"] 또는 ["fn:함수이름"] 형식입니다. 함수 이름 앞에 fn:을 붙이세요.')
-    if edition is None:
-        edition = 2  # 모델의 새 작성·계약 조회 기본 판본과 일치한다.
+    from ibl_edition import require_current
+    require_current(program or "", 2 if edition is None else edition)
     allowed = resolve_allowed_nodes(allowed_nodes)
     nodes = load_nodes_raw().get("nodes", {})
     answer = []
@@ -969,7 +969,7 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
     local = None
     for name in dict.fromkeys(names):
         node, action = name.split(":", 1)
-        if node == "fn" and edition == 2:
+        if node == "fn":
             from ibl_v2_store import describe, program_functions
             if local is None:
                 # 함께 온 코드의 지역 정의가 저장 함수보다 먼저 — 실행기의 이름 해소 순서와 같다.
@@ -999,21 +999,20 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
         if not isinstance(spec, dict) or (allowed is not None and node not in allowed) or not self_can_run(node, action, spec):
             answer.append({"action": name, "error": "사용 가능한 액션이 아닙니다"})
         else:
-            if edition == 2:
-                from ibl_v2_adapters import load_registry
-                if runtime_registry is None:
-                    runtime_registry = load_registry()
-                adapter = runtime_registry.get(name)
-                if adapter is None:
-                    answer.append({"action": name, "error": "현재 실행 계약이 없는 액션입니다"})
-                    continue
-                # Inspection consumes the same schema-resolved contract as the
-                # compiler. Never independently reconstruct legacy parameters.
-                spec = current_action_definition(spec, adapter.contract)
-                observed = observed_returns(name)
-                if observed:
-                    spec = {**spec, "observed_returns": observed,
-                            "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."}
+            from ibl_v2_adapters import load_registry
+            if runtime_registry is None:
+                runtime_registry = load_registry()
+            adapter = runtime_registry.get(name)
+            if adapter is None:
+                answer.append({"action": name, "error": "현재 실행 계약이 없는 액션입니다"})
+                continue
+            # Inspection consumes the same schema-resolved contract as the
+            # compiler. Never independently reconstruct legacy parameters.
+            spec = current_action_definition(spec, adapter.contract)
+            observed = observed_returns(name)
+            if observed:
+                spec = {**spec, "observed_returns": observed,
+                        "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."}
             answer.append({"action": name, "definition": spec})
     result = {"actions": answer, "executed": False}
     from guide_registry import callable_control_briefs

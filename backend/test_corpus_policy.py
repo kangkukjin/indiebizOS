@@ -12,8 +12,6 @@ NEW = '#!ibl edition=2\nreturn [self:time]{}'
 
 
 @pytest.mark.parametrize('change,reason', [
-    ({'ibl_code': '[self:time]'}, 'legacy_source'),
-    ({'edition': 1}, 'edition_conflict'),
     ({'ibl_code': ''}, 'missing_source'),
     ({'provenance': '[]'}, 'invalid_provenance'),
     ({'provenance': '{'}, 'invalid_provenance'),
@@ -32,22 +30,15 @@ def test_unknown_adapter_is_distinct_from_invalid_and_keeps_provenance():
     assert current_examples([row]) == ([row], {})
 
 
-def test_legacy_reference_is_retrievable_but_neither_executable_nor_quoted():
+def test_current_reference_is_quoted_and_selectable():
     from ibl_usage_db import UsageExample
     from ibl_usage_rag import IBLUsageRAG, _top_for_execution
-    old = UsageExample(987, '시각', '[self:time]{}', 'self', 'single', 1, .98, 'fixture', -1)
-    new = UsageExample(988, '시각', NEW, 'self', 'single', 1, .98, 'fixture', -1)
-    root = ET.fromstring(IBLUsageRAG._format_references(None, [old, new]))
-    before, after = root.findall('ref')
-    assert '[self:time]' not in before.text
-    assert '#987' in before.text and before.attrib['authoring_excluded'] == 'legacy_source'
-    # Current edition: a single statement is quoted inline and is the reflex candidate.
-    # Only the explicit-expansion policy (length / several statements) can still hide it — not the edition itself
-    # (2026-09-26: edition-based hiding + legacy exclusion together left zero reflex candidates).
-    assert 'authoring_excluded' not in after.attrib and 'body_omitted' not in after.attrib
-    assert 'return [self:time]{}' in after.text
-    assert _top_for_execution([old]) == (.80, '')
-    assert _top_for_execution([new]) == (.98, NEW)
+    current = UsageExample(988, '시각', NEW, 'self', 'single', 1, .98, 'fixture', -1)
+    root = ET.fromstring(IBLUsageRAG._format_references(None, [current]))
+    ref = root.find('ref')
+    assert 'authoring_excluded' not in ref.attrib and 'body_omitted' not in ref.attrib
+    assert 'return [self:time]{}' in ref.text
+    assert _top_for_execution([current]) == (.98, NEW)
 
 
 def test_weekly_audit_routes_editions_and_distinguishes_unknown(tmp_path, monkeypatch):
@@ -66,6 +57,7 @@ def test_weekly_audit_routes_editions_and_distinguishes_unknown(tmp_path, monkey
             (4, 'boundary', NEW, '', '{}'),
             (5, 'local definition', '[def:local]{[self:time]} ; [fn:local]{}', '', '{}'),
         ])
+        conn.execute('CREATE VIEW ibl_current_examples AS SELECT * FROM ibl_examples WHERE id IN (2,3,4)')
     contract = {'version': 1, 'params': {}, 'required': [], 'result': 'Record',
                 'effects': ['unknown'], 'compatibility': 'legacy-envelope/1',
                 'adapter': {'protocol': 'legacy-envelope', 'value_path': ''}}
@@ -77,9 +69,9 @@ def test_weekly_audit_routes_editions_and_distinguishes_unknown(tmp_path, monkey
         'self:time': ibl_v2_adapters.Adapter(contract, forbidden)})
     monkeypatch.setattr(ibl_v2_store, 'definitions', lambda: {})
     result = audit.audit_corpus_vocab()
-    assert result['total'] == 5 and result['dead'] == result['unparsable'] == 0
+    assert result['total'] == 3 and result['dead'] == result['unparsable'] == 0
     assert result['current'] == {'valid': 1, 'incomplete': 1, 'invalid': 1, 'failed': 0}
-    assert result['authoring_excluded'] == 2
+    assert result['authoring_excluded'] == 0
     monkeypatch.setattr(ibl_v2_adapters, 'load_registry', lambda: (_ for _ in ()).throw(OSError('broken')))
     assert audit.audit_corpus_vocab()['current']['failed'] == 3
 
@@ -93,8 +85,8 @@ def test_name_recall_resolves_native_version_and_drops_deleted_names():
     current = {'id': 2, 'alias': 'same', 'ibl_code': NEW, 'returns': 'Record',
                'success_count': 0, 'fail_count': 0}
     class DB:
-        def find_phrase_by_alias(self, name, edition=1):
-            return current if (name, edition) == ('same', 2) else None
+        def find_phrase_by_alias(self, name):
+            return current if name == 'same' else None
     hits = _current_phrase_rows(DB(), [old, old, gone])
     assert len(hits) == 1 and hits[0].ibl_code == NEW and hits[0].id == 2
     assert hits[0].success_rate == hits[0].avg_ms == hits[0].avg_tokens == -1
@@ -109,10 +101,11 @@ def test_tree_current_name_prefers_native_but_keeps_legacy_call_envelope(tmp_pat
         conn.executemany('INSERT INTO ibl_examples VALUES (?,?,?,?)', [
             (1, 'same', '[self:time]', '2026-09-24'),
             (2, 'same', NEW, '2026-09-23')])
+        conn.execute('CREATE VIEW ibl_current_examples AS SELECT * FROM ibl_examples WHERE id=2')
     old = {'id': 1, 'alias': 'same', 'ibl_code': '[self:time]'}
     groups = hippo_tree._current_names([[old], [old]], str(db))
     assert groups[0][0]['id'] == 2 and groups[1] == []
-    assert hippo_tree.phrase_call_line('old', '[self:time]', 'prose').endswith('→ Record')
+    assert hippo_tree.phrase_call_line('old', '[self:time]', 'prose').endswith('→ prose')
 
 
 if __name__ == '__main__':

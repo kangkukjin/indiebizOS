@@ -184,7 +184,7 @@ Claude Code는 CLI 기본 정책, API는 모델별 입력 예산을 사용한다
   - 값·`source_complete`·증거는 분리한다. `value_wire`가 컨테이너 타입을 보존하고, `result_ref`로 큰 결과를 다시 읽으며, 중단 뒤에는 `resume:{run_id}`와 같은 code·inputs로 이어 완료한 외부 작업을 재실행하지 않는다.
   - 명세는 **ibl.md**, 주 작성 교재는 `data/guides/ibl_composition.md`, 상시 실행기 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 과거 문법은 `docs/compatibility/`다.
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
-- **어휘 스캔 한 벌**(2026-09-11 `c96e6481`): 따옴표 경계·연산자 분할·소스 머리 인식은 `backend/ibl/ibl_scanner.py` 하나를 파서 셋(`ibl_parser`·`ibl_parser_blocks`·`ibl_parser_values`)이 공유하고, JSON5→JSON 복호는 `ibl_parser_values._try_json_like` 한 곳이다 — 골든 경계 코퍼스 `backend/testdata/ibl_parser_boundaries.json`.
+- **구문과 실행의 단일 경로**: 현행 `ibl_v2_parser`·컴파일러·실행기를 사용한다. 표현식 파싱과 값 의미론은 `backend/common/`이 소유한다. 저장된 함수와 실행 용례도 같은 컴파일러로 검사하며, 이전 형식의 구현은 실행 번들에 포함하지 않는다.
 - **값 의미론 단일 코어**(2026-08-25): `common/value_semantics.py`가 값 분류(null/bool/number/**datetime**/text/structure/other — datetime 은 2026-08-27 신설), JSON 구조 순회(dict=무순서 쌍·list=순서 열), 조건 동등성, 4상태 순서(작음/같음/큼/판정불능), 숫자 관측, 정렬 버킷(숫자→날짜→문자열→결측), groupby 엄격 식별자와 join/merge/dedup 관계 식별자를 한 벌로 소유한다. `table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`·집계·관계 연산은 의미를 재구현하지 않고 공통 결과를 자기 오류 봉투로 번역만 한다. `test_value_semantics_single_owner.py`가 대칭·추이·동등/순서/정렬 일치와 사적 정책 함수 재도입 금지를 지킨다.
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 172): handler 135 · system 27 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
@@ -560,7 +560,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 172 액션** (sense 39·self 58·limbs 13·others 20·engines 19·table 23)
-- backend **.py 621개**(test 제외, git 추적 기준) — 층 디렉토리 `base 88 · datastore 88 · ibl 88 · cognition 94 · services 91 · surface 96`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **101개**(guide_db 등록 **97**)
+- backend **.py 608개**(test 제외, git 추적 기준) — 층 디렉토리 `base 88 · datastore 89 · ibl 78 · cognition 93 · services 91 · surface 96`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **101개**(guide_db 등록 **97**)
 - op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 24·미선언 89)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

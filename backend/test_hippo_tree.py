@@ -19,22 +19,26 @@ def _mk_db(path):
     conn.executescript("""
         CREATE TABLE ibl_examples (
             id INTEGER PRIMARY KEY AUTOINCREMENT, intent TEXT NOT NULL, ibl_code TEXT NOT NULL,
-            nodes TEXT DEFAULT '', category TEXT DEFAULT 'single', difficulty INTEGER DEFAULT 1,
+            nodes TEXT DEFAULT '', alias TEXT DEFAULT '', category TEXT DEFAULT 'single', difficulty INTEGER DEFAULT 1,
             source TEXT DEFAULT 'synthetic', success_count INTEGER DEFAULT 0, fail_count INTEGER DEFAULT 0,
             avg_ms REAL DEFAULT -1.0, avg_tokens REAL DEFAULT -1.0, tags TEXT DEFAULT '',
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
     """)
+    from ibl_example_index import ensure_current_examples
+    ensure_current_examples(conn)
     conn.commit(); conn.close()
 
 
 def _add(db, intent, code, topic="", ok=0):
+    from ibl_edition import explicit_source
+    code = explicit_source(code, 2)
     now = datetime.now().isoformat()
     conn = sqlite3.connect(db)
     try:
         conn.execute("SELECT topic FROM ibl_examples LIMIT 1")
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE ibl_examples ADD COLUMN topic TEXT DEFAULT ''")
-    cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, success_count, created_at, updated_at, topic) VALUES (?,?,?,?,?,?)",
+    cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, success_count, created_at, updated_at, topic, executable) VALUES (?,?,?,?,?,?,1)",
                        (intent, code, ok, now, now, topic))
     conn.commit(); conn.close()
     return cur.lastrowid
@@ -106,8 +110,8 @@ def test_refresh_renders_topic_doc_and_map(env):
 
 def test_doc_edit_syncs_update_delete_insert_with_syntax_gate(env):
     HT, db = env
-    a = _add(db, "옛 의도", '[self:memory]{op: "search", query: "x"}', "기억")
-    b = _add(db, "지울 용례", '[self:memory]{op: "read", memory_id: 1}', "기억")
+    a = _add(db, "옛 의도", '[self:time]{}', "기억")
+    b = _add(db, "지울 용례", '[self:time]{format:"%Y"}', "기억")
     HT.refresh_topic("기억", db)
     doc = HT.doc_path("기억")
     text = _read(doc).replace("옛 의도", "고친 의도")
@@ -118,11 +122,11 @@ def test_doc_edit_syncs_update_delete_insert_with_syntax_gate(env):
     open(doc, "w", encoding="utf-8").write(text)
     os.utime(doc, (os.path.getmtime(doc) + 5, os.path.getmtime(doc) + 5))
     out = HT.sync_topic("기억", db)
-    assert out["synced"] and out["updated"] == 0 and out["deleted"] == 1 and out["inserted"] == 0
+    assert out["synced"] and out["updated"] == 1 and out["deleted"] == 1 and out["inserted"] == 1
     assert out.get("rejected"), out
     rows = {r["id"]: r for r in HT.rows_of("기억", db)}
-    assert rows[a]["intent"] == "옛 의도" and b not in rows
-    assert not any(r["intent"] == "새로 적은 용례" for r in rows.values())
+    assert rows[a]["intent"] == "고친 의도" and b not in rows
+    assert any(r["intent"] == "새로 적은 용례" for r in rows.values())
     assert HT.sync_topic("기억", db)["synced"] is False
 
 

@@ -788,38 +788,6 @@ def test_p25_envelope_shape_uses_one_currency_judge():
     print("P25 OK — 봉투 shape 판정이 이음매(derive_items)와 같은 판정기 · 효과 오폭 없음")
 
 
-def test_p26_spill_resolved_at_injection_seam():
-    """P26(27회차 B27-2): 스필 해소기가 입구가 아니라 소비처마다 흩어져 구멍이 남았다.
-
-    교재의 약속은 "뒤 step 은 참조를 투명하게 해소해 원래 데이터를 그대로 본다" 인데,
-    `_op_groupby` 는 `_rows_for_field` 로 들어가고 해소기는 형제 입구 `_get_items` 에만 있었다.
-    """
-    import tempfile
-    from workflow_binding import _auto_inject_prev
-    body = json.dumps({"success": True,
-                       "items": [{"영역": "backend"}, {"영역": "docs"}, {"영역": "backend"}]},
-                      ensure_ascii=False)
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
-        f.write(body)
-        spilled_path = f.name
-    ref_env = json.dumps({"success": True, "path": spilled_path, "items": [], "spilled": True,
-                          "ref": {"path": spilled_path, "kind": "items", "count": 3,
-                                  "bytes": len(body)}}, ensure_ascii=False)
-    # ① 이음매가 참조를 본문으로 되돌린다 — 모든 패키지가 계약을 상속한다
-    ti = _auto_inject_prev({"params": {}}, ref_env)
-    assert json.loads(ti["params"]["_prev_result"])["items"] == json.loads(body)["items"], ti
-    # ② 해소된 통화를 groupby 가 실제로 먹는가 (수리 전엔 "통화를 찾지 못했습니다")
-    g = _run("data_groupby", {"_prev_result": ti["params"]["_prev_result"], "by": "영역"})
-    # 형태 보존(2026-09-06): items 입력이라 그룹 행도 items 로 방출한다
-    assert g.get("success") and sorted(list(r.values()) for r in g.get("items") or []) == [["backend", 2], ["docs", 1]], g
-    # ③ 스필이 아닌 평범한 통화는 손대지 않는다(빠른 경로)
-    plain = json.dumps({"items": [{"a": 1}]}, ensure_ascii=False)
-    assert _auto_inject_prev({"params": {}}, plain)["params"]["_prev_result"] == plain
-    # ④ 만료·부재는 삼키지 않고 참조를 그대로 흘려보낸다 — 새 침묵 경로 0
-    os.unlink(spilled_path)
-    gone = _auto_inject_prev({"params": {}}, ref_env)
-    assert gone["params"]["_prev_result"] == ref_env, gone
-    print("P26 OK — 스필 해소가 주입 이음매 하나에 · groupby 관통 · 평범 통화 무변경 · 만료 무침묵")
 
 
 

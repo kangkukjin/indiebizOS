@@ -60,20 +60,6 @@ def test_consolidation_selects_original_and_keeps_relative_time(monkeypatch):
     assert merged[0]["content"] == source
 
 
-def test_primary_distill_selects_component_before_file_tail(monkeypatch, tmp_path):
-    from test_distill_source_recovery_2026_09_09 import _arm
-    rag, saved, asked, _ = _arm(monkeypatch, tmp_path, [{
-        "intent": "뉴스 후보 수집", "source_ids": [2], "scope": "component",
-        "code": "...url...", "topic": "시험"}])
-    source = ('$x = [sense:search]{query:"AI"}\n'
-              '$x >> [table:take]{n:3}\n'
-              '[self:write]{path:"/tmp/report.md",content:"$file:0"}')
-    assert rag.distill_experience("보고서 작성", [{"tool_name": "execute_ibl",
-        "input": {"code": source}, "success": True}], 0.0)
-    assert len(asked) == 1 and len(saved) == 1
-    assert saved[0]["ibl_code"] == source.split('\n[self:write]')[0]
-    assert saved[0]["source"] == "distilled_component" and saved[0]["alias"] == ""
-    assert saved[0]["avg_tokens"] == -1
 
 
 def test_counts_use_verified_unique_final_rows(tmp_path):

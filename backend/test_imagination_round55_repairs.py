@@ -222,15 +222,6 @@ def test_F55_1_harvest_from_health_only_fills_unobserved(tmp_path):
     assert "engines:arch_create" not in shapes                   # 실패 봉투는 수확 안 함
 
 
-def test_F55_1_catalog_label_and_typecheck_ignore(monkeypatch):
-    import ibl_access, ibl_typecheck
-    fake = {"engines:arch_report": {"kind": "scalar", "keys": ["coverage_ratio", "building_area"]},
-            "sense:weather": {"kind": "items", "keys": ["date", "max_temp"]}}
-    monkeypatch.setattr(ibl_access, "_return_shapes", lambda: fake)
-    assert ibl_access._shape_suffix("engines:arch_report") == " ⟨키: coverage_ratio·building_area⟩"
-    assert ibl_access._shape_suffix("sense:weather") == " ⟨열: date·max_temp⟩"
-    assert ibl_typecheck._catalog_cols("engines", "arch_report", {}) is None
-    assert ibl_typecheck._catalog_cols("sense", "weather", {}) == ["date", "max_temp"]
 
 
 def test_F55_1_action_health_records_keys(tmp_path, monkeypatch):

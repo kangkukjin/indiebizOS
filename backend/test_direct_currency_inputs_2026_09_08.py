@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pytest
 import boot_paths  # noqa: F401
-from ibl_parser import parse
 from ibl_typecheck import typecheck_code
-from ibl_pipe_types import head_transform_error, seam_starvation_error
 
 ROOT = Path(__file__).resolve().parents[1]
 LEFT = '[{id: 1, tag: "a", x: 10}, {id: 1, tag: "b", x: 20}]'
@@ -17,27 +15,8 @@ CALL = f'[table:join]{{left: {LEFT}, right: {RIGHT}, on: ["id", "tag"]}}'
 
 
 
-def test_direct_inputs_override_effect_and_keep_missing_input_guard():
-    code = '[self:write]{path: "unused", content: "x"} >> ' + CALL
-    assert seam_starvation_error(parse(code)) is None
-    assert typecheck_code(code)['ok']
-    assert head_transform_error(parse(f'[table:join]{{left: {LEFT}, on: "id"}}'))
-    assert head_transform_error(parse('[table:take]{left: [], right: [], n: 1}'))
-    assert typecheck_code('[table:join]{left: [], right: [], on: "id"}')['ok']
 
 
-def test_variable_inputs_are_typed_not_blindly_exempted():
-    a = f'$a = [table:take]{{items: {LEFT}, n: 2}}; '
-    b = f'$b = [table:take]{{items: {RIGHT}, n: 2}}; '
-    call = '[table:join]{left: "$a", right: "$b", on: "id"}'
-    assert typecheck_code(a + b + call)['ok']
-    bad = typecheck_code(a + '$b = [self:write]{path:"unused", content:"x"}; ' + call)
-    assert not bad['ok'], bad
-    bad_col = typecheck_code(CALL + ' >> [table:select]{columns: ["missing"]}')
-    assert not bad_col['ok'], bad_col
-    # join의 동명 비키 열 접미사는 단순 union 선언만으로 확정할 수 없다.
-    collision = f'[table:join]{{left: {LEFT}, right: {LEFT}, on: ["id", "tag"]}} >> [table:select]{{columns: ["x_2"]}}'
-    assert typecheck_code(collision)['ok']
 
 
 def test_shared_workspace_file_and_missing_ledger_hint(monkeypatch, tmp_path):
@@ -91,49 +70,8 @@ def test_registered_nesting_script_paths_and_no_partial_write(monkeypatch, tmp_p
     assert r.returncode == 2 and '경로' in json.loads(r.stdout)['error']
 
 
-@pytest.mark.parametrize('action,extra', [('union', ''), ('join', ',on:"id"'), ('merge', ',by:"id"')])
-@pytest.mark.parametrize('supplied', [
-    'left:{items:[{id:1,x:10}]},right:{items:[{id:1,y:20}]}',
-    'table1:{items:[{id:1,x:10}]},table2:{items:[{id:1,y:20}]}',
-    'a:{items:[{id:1,x:10}]},b:{items:[{id:1,y:20}]}',
-    'inputs:[{items:[{id:1,x:10}]},{items:[{id:1,y:20}]}]',
-])
-def test_multiple_input_forms_agree_with_runtime(action, extra, supplied):
-    from tool_context import ToolContext
-    spec = importlib.util.spec_from_file_location('_multi_input_dataops', ROOT / 'data/packages/installed/tools/data-ops/handler.py')
-    dataops = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dataops)
-    code = f'[table:{action}]{{{supplied}{extra}}}'
-    checked = typecheck_code(code)
-    assert checked['ok'] and not checked.get('abstained'), checked
-    params = parse(code)[0]['params']
-    out = dataops.execute(params, ToolContext(str(ROOT), 'data_' + action))
-    assert out['success'] and out['items'], out
 
 
-def test_single_table_rejected_but_variable_bundles_and_empty_branches_work():
-    from ibl_parser import parse_with_vars, RESUME_SLOT_BASE
-    from ibl_typecheck import typecheck
-    from ibl_value_types import infer_value
-    steps, variables = parse_with_vars('$a >> [table:union]{with:$b}',
-                                      preset_vars={'a': RESUME_SLOT_BASE, 'b': RESUME_SLOT_BASE + 1})
-    given = {n: infer_value({'items': [{'id': 1}]}) for n in ('a', 'b')}
-    bad = typecheck(steps, variables, given=given)
-    assert not bad['ok'] and not bad.get('abstained')
-    assert any('$a & $b' in i.get('hint', '') for i in bad['issues'])
-    good, names = parse_with_vars('$a & $b >> [table:union]{}',
-                                 preset_vars={'a': RESUME_SLOT_BASE, 'b': RESUME_SLOT_BASE + 1})
-    assert typecheck(good, names, given=given)['ok']
-    for body in ('[{items:[]},{items:[{id:1}]}]',
-                 '[{table:{columns:["id"],rows:[]}},{table:{columns:["id"],rows:[[1]]}}]'):
-        result = typecheck_code(f'$bundle = {body}\n$bundle >> [table:union]{{}}')
-        assert not result['ok'] and not result.get('abstained'), result
-        result = typecheck_code(f'[table:union]{{inputs:{body}}}')
-        assert result['ok'] and not result.get('abstained'), result
-    assert not typecheck_code('[table:union]{inputs:[]}')['ok']
-    assert not typecheck_code('[table:union]{inputs:[{items:[]}]}')['ok']
-    assert typecheck_code('[table:union]{inputs:[{items:[]},{items:[]}]}')['ok']
-    assert typecheck_code('[self:read]{path:"unknown.json"} >> [table:union]{}')['ok']
 
 
 

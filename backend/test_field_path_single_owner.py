@@ -15,7 +15,6 @@ from common.field_path import MISSING, parse_path, walk_path
 from ibl.api_transforms import _extract_path, _get_nested
 from ibl.ibl_predicates import _MISSING as PRED_MISSING
 from ibl.ibl_predicates import walk_path as pred_walk
-from ibl.workflow_binding import _extract_result_field
 
 ROOT = Path(__file__).resolve().parent.parent
 CHECKER = ROOT / "scripts" / "check_field_path.py"
@@ -41,7 +40,6 @@ def test_same_path_same_answer_across_surfaces():
     assert _extract_path(_DOC, path) == "가"
     assert _get_nested(_DOC, path) == "가"
     import json
-    assert _extract_result_field(json.dumps(_DOC, ensure_ascii=False), path) == "가"
 
 
 def test_dict_digit_key_takes_precedence_over_index():
@@ -76,10 +74,6 @@ def test_flatten_field_accepts_index_path(data_ops):
     assert [r["v"] for r in res["items"]] == [1, 2]
 
 
-def test_binding_missing_still_reports_honestly():
-    with pytest.raises(ValueError) as err:
-        _extract_result_field('{"a": {"b": 1}}', "a.x")
-    assert "'x'" in str(err.value) and "사용 가능" in str(err.value)
 
 
 def test_extract_xml_fallback_preserved():

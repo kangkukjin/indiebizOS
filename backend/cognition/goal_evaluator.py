@@ -100,7 +100,6 @@ def select_case_branch(sense_value: Any, branches: List[Dict],
         # range가 없으면 pattern 문자열에서 동적 파싱 시도
         if not range_expr and pattern and _is_numeric(sense_value):
             try:
-                from ibl_parser import parse_range_expression
                 range_expr = parse_range_expression(pattern)
             except Exception:
                 pass
@@ -284,3 +283,49 @@ def format_cost_confirmation(goal_name: str, estimated_cost: float,
     parts.append("진행하시겠습니까?")
 
     return "\n".join(parts)
+
+
+def parse_range_expression(expr: str) -> Optional[Dict]:
+    """
+    범위 표현식 파싱 (case문에서 사용)
+
+    지원 형식:
+        "> 20%"  → {"op": "gt", "value": 20.0, "unit": "%"}
+        ">= 100" → {"op": "gte", "value": 100.0, "unit": ""}
+        "< 10%"  → {"op": "lt", "value": 10.0, "unit": "%"}
+        "<= 50"  → {"op": "lte", "value": 50.0, "unit": ""}
+        "== 0"   → {"op": "eq", "value": 0.0, "unit": ""}
+        "10~20%" → {"op": "range", "min": 10.0, "max": 20.0, "unit": "%"}
+
+    Returns:
+        범위 dict 또는 None (범위 표현식이 아님)
+    """
+    expr = expr.strip()
+
+    for pattern, op_name in _RANGE_PATTERNS:
+        m = pattern.match(expr)
+        if m:
+            if op_name == 'range':
+                return {
+                    "op": "range",
+                    "min": numeric_value(m.group(1)),
+                    "max": numeric_value(m.group(2)),
+                    "unit": m.group(3)
+                }
+            else:
+                return {
+                    "op": op_name,
+                    "value": numeric_value(m.group(1)),
+                    "unit": m.group(2)
+                }
+
+    return None
+
+_RANGE_PATTERNS = [
+    (re.compile(r'^>=\s*(\d+(?:\.\d+)?)\s*(%?)$'), 'gte'),
+    (re.compile(r'^>\s*(\d+(?:\.\d+)?)\s*(%?)$'), 'gt'),
+    (re.compile(r'^<=\s*(\d+(?:\.\d+)?)\s*(%?)$'), 'lte'),
+    (re.compile(r'^<\s*(\d+(?:\.\d+)?)\s*(%?)$'), 'lt'),
+    (re.compile(r'^==\s*(\d+(?:\.\d+)?)\s*(%?)$'), 'eq'),
+    (re.compile(r'^(\d+(?:\.\d+)?)\s*~\s*(\d+(?:\.\d+)?)\s*(%?)$'), 'range'),
+]

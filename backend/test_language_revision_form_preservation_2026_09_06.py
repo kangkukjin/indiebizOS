@@ -80,13 +80,6 @@ def test_explicit_table_input_keeps_table_form():
     assert tbl["columns"] == ["g", "n"] and tbl["rows"] == [["x", 2]]
 
 
-def test_binding_items_path_on_table_form_derives(tmp_path):
-    """`${a.items.0.path}` — 파서가 넘기는 경로는 점으로 시작한다(.items.0.path). 09-05 수리의 가드가
-    그 점 때문에 한 번도 돌지 않았던 자리(ep2882 3번 호출)."""
-    from workflow_binding import _extract_result_field_obj
-    raw = json.dumps({"success": True, "columns": ["name", "path"], "rows": [["a", "/x/a.md"]]})
-    assert _extract_result_field_obj(raw, ".items.0.path") == "/x/a.md"
-    assert _extract_result_field_obj(raw, "items.0.path") == "/x/a.md"
 
 
 def test_engine_end_to_end_select_then_read(tmp_path):

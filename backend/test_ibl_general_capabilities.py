@@ -221,7 +221,7 @@ def test_phrase_surfaces_share_call_and_preserve_applicability():
     assert "never-show" not in ET.tostring(xml, encoding="unicode") + phrase_expand_card(row)
 
 
-@pytest.mark.parametrize("source", ['[self:time]', '#!ibl edition=2\n[def:f](){return 1}'])
+@pytest.mark.parametrize("source", ['#!ibl edition=2\n[def:f](){return 1}'])
 @pytest.mark.parametrize("review,excluded", [({"decision": "hold"}, True),
                                            ({"decision": "quarantine"}, True),
                                            ({"static_status": "invalid"}, True),
@@ -229,7 +229,7 @@ def test_phrase_surfaces_share_call_and_preserve_applicability():
 def test_callable_exposure_requires_current_edition_and_eligible_review(source, review, excluded):
     from corpus_policy import callable_exclusion_reason
     assert bool(callable_exclusion_reason({"ibl_code": source,
-                                          "provenance": {"corpus_review": review}})) is (excluded or not source.startswith("#!ibl edition=2"))
+                                          "provenance": {"corpus_review": review}})) is excluded
 
 
 def test_current_idiom_list_does_not_fall_back_to_old_held_definition(tmp_path):
@@ -241,6 +241,7 @@ def test_current_idiom_list_does_not_fall_back_to_old_held_definition(tmp_path):
             ('old', '[self:time]', 5, 0, '', 'f', 'Record', '', '{}', '2026-01-01'),
             ('new', '#!ibl edition=2\n[def:f](){return 1}', 0, 0, '', 'f', 'Number', '',
              json.dumps({'corpus_review': {'decision': 'hold'}}), '2026-09-27')])
+        conn.execute('CREATE VIEW ibl_current_examples AS SELECT rowid AS id,* FROM ibl_examples WHERE intent="new"')
         rows = conn.execute('SELECT intent,ibl_code,success_count,fail_count,topic,alias,returns,signature FROM ibl_examples').fetchall()
         assert _current_idiom_rows(conn, rows, 'returns', 'signature') == []
 
@@ -293,6 +294,7 @@ def test_idiom_map_cache_expires_on_review_change_in_wal(tmp_path, monkeypatch):
         conn.execute('CREATE TABLE ibl_examples(intent,ibl_code,success_count,fail_count,topic,alias,returns,signature,provenance,updated_at,created_at,always_on)')
         conn.execute('INSERT INTO ibl_examples VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
                      ('pure', source, 1, 0, '', 'f', 'Number', '', '{}', 'now', 'now', 1))
+        conn.execute('CREATE VIEW ibl_current_examples AS SELECT rowid AS id,* FROM ibl_examples')
         conn.commit()
         assert '[fn:f]' in ibl_access.idioms_map(None)
         conn.execute('UPDATE ibl_examples SET provenance=?', (json.dumps({"corpus_review": {"decision": "hold"}}),))

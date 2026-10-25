@@ -101,6 +101,27 @@ def test_lost_child_is_reported_instead_of_waiting_forever(tmp_path, monkeypatch
     assert C.task_status(first['task_ref'])['state'] == T.FAILED
 
 
+
+@pytest.mark.parametrize('code', ['return 7', 'return 1 / 0'])
+def test_learning_reads_completed_receipt_and_exact_source(tmp_path, monkeypatch, code):
+    import ibl_run_journal, ibl_v2_adapters, ibl_v2_store
+    monkeypatch.setattr(ibl_run_journal, 'runs_root', lambda: tmp_path / 'runs')
+    monkeypatch.setattr(ibl_v2_store, 'definitions', lambda: {})
+    monkeypatch.setattr(ibl_v2_adapters, 'load_registry', lambda *a: {})
+    request = {'edition': 2, 'code': code}
+    result = handle_request(request, str(tmp_path))
+    call = C.completed_call(result['task_ref'], code)
+    if result['success']:
+        assert call['input'] == request
+        assert call['result']['value'] == 7
+    else:
+        assert call is None
+    assert C.completed_call(result['task_ref'], code + '\nreturn 8') is None
+    assert C.completed_call({**result['task_ref'], 'owner': str(tmp_path / 'other')}, code) is None
+    assert C.completed_call({**result['task_ref'], 'task_id': '../foreign'}, code) is None
+    assert C.completed_call({**result['task_ref'], 'kind': 'script'}, code) is None
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))

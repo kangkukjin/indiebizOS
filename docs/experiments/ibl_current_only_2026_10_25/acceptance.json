@@ -1,0 +1,76 @@
+{
+  "baseline": "6bf56363",
+  "status": "verified",
+  "storage": {
+    "functions": 60,
+    "historical_functions": 24,
+    "examples": 1503,
+    "original_rows_hash": "1fb2bbf1d1464125199b5e295d30a99fccb1a16ed1c031797a00d71e5db95086",
+    "catalog_before": "4846b51d68fd59abea02a27ddf25634ef95026bcd00fef5a75b6a9a76715062e"
+  },
+  "original_columns_preserved": true,
+  "historical_examples": 2396,
+  "refreshed_topic_documents": 81,
+  "current_function_compile": {
+    "active": 59,
+    "hold": 1,
+    "issues": 0
+  },
+  "training": [
+    {
+      "path": "data/training/ibl_distilled.json",
+      "current": 37,
+      "historical": 643,
+      "original_sha256": "0a9f283d3ca3341eb31af06458931603c95ff9ded9735d919977b670170e894f"
+    },
+    {
+      "path": "data/training/ibl_training_balanced_20260516.json",
+      "current": 855,
+      "historical": 1018,
+      "original_sha256": "b17398e547f6f847901268e293c969fa0b99c2fa23032082c099a66df37cc055"
+    }
+  ],
+  "checks": {
+    "layers": "passed",
+    "vocabulary_and_derived_docs": "passed",
+    "retired_contracts": "passed",
+    "doc_drift_flags": 0,
+    "targeted_current_helpers": "30 passed",
+    "historical_harness_removal_and_native_features": "23 passed",
+    "full_backend": {
+      "passed": 10512,
+      "failed": 3,
+      "skipped": 18,
+      "seconds": 878.93,
+      "failures": "Edits during the run removed a scanned file and two obsolete test contracts; final-state related modules rechecked: 43 passed."
+    },
+    "final_related_recheck": "43 passed",
+    "manual_learning_and_execution": "47 passed; additional API receipt test included in 43-pass recheck",
+    "http_mcp_boundary": "37 passed",
+    "install_storage_export": "9 passed",
+    "frontend_types": "passed",
+    "red_safety_selftest": "31 passed",
+    "android_bundle": "rebuilt",
+    "frontend_build": "passed (TypeScript + Vite)"
+  },
+  "limits": [
+    "Android bundle rebuilt; no physical-device installation",
+    "No Windows live install",
+    "No latency or token reduction percentage measured"
+  ],
+  "runtime_audit": {
+    "current_records": 60,
+    "current_check_ok": true,
+    "normal_history_reads": [],
+    "removed_modules_loaded": [],
+    "explicit_history_records": 24
+  },
+  "live": {
+    "health": "healthy",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "explicit_record_result": true,
+    "local_function_result": 42,
+    "external_effects": "none in acceptance programs",
+    "manual_learning": "real persisted receipt tested offline; no paid model distillation performed"
+  }
+}

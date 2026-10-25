@@ -172,7 +172,7 @@ def test_describe_does_not_execute_retired_source(tmp_path):
     (tmp_path / "plain.txt").write_text("007")
     result = request(tmp_path, edition=1, code='[self:read]{path:"plain.txt"}', describe=["self:read"])
     assert not result['success'] and not result.get('executed')
-    assert 'EDITION_RETIRED' in str(result)
+    assert 'EDITION_UNSUPPORTED' in str(result)
     assert (tmp_path / "plain.txt").read_text() == '007'
 
 

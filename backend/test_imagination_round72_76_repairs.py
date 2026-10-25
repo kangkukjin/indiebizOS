@@ -395,7 +395,7 @@ def test_json_reader_exposes_structure_and_time_declares_offset(tmp_path):
     raw = json.loads(mod.execute({'path': str(path), 'blocks': True}, ctx))
     assert raw['structured_data']['items'] == [{'n': 3}]
     ctx.tool_name = 'get_current_time'
-    assert re.search(r'[+-]\d{4}$', mod.execute({}, ctx))
+    assert re.search(r'[+-]\d{4}$', mod.execute({}, ctx)['message'])
 
 
 if __name__ == "__main__":

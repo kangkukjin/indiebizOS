@@ -153,19 +153,6 @@ def test_B53_2_items_injection_gate_selftest_and_clean():
 
 # ─────────────────────────── B53-3 · 변수 직렬화 = 통화 ───────────────────────────
 
-def test_B53_3_var_payload_derives_items_and_skips_untransformed():
-    from workflow_binding import _v4_var_payload
-    env = {"success": True, "data": {"symbol": "x", "current_price": 1, "open": 2, "high": 3},
-           "summary": "다이제스트", "columns": ["symbol", "current_price"], "rows": [["x", 1]],
-           "_untransformed": ["data"]}
-    out = json.loads(_v4_var_payload(json.dumps(env, ensure_ascii=False)))
-    assert out == [{"symbol": "x", "current_price": 1}], out          # 선별된 열만 — data 누출 없음
-    # columns/rows 만 있는 변환자 결과(자백 없음)도 통화로
-    out2 = json.loads(_v4_var_payload(json.dumps({"success": True, "columns": ["a"], "rows": [[1]]})))
-    assert out2 == [{"a": 1}]
-    # 통화가 아닌 효과 봉투는 원형 유지(안전 방향)
-    raw = json.dumps({"success": True, "business": {"id": 12}})
-    assert json.loads(_v4_var_payload(raw)) == {"success": True, "business": {"id": 12}}
 
 
 def test_B53_3_transformer_confesses_row_shaped_sibling_dict():

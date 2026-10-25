@@ -58,7 +58,6 @@ SURFACE_FILES = {
     "backend/ibl/api_transforms.py",
     "backend/cognition/goal_evaluator.py",
     "backend/cognition/agent_goals.py",
-    "backend/ibl/ibl_parser.py",
     "backend/common/safe_expr.py",
     "backend/common/row_conditions.py",
     "data/packages/installed/tools/data-ops/handler.py",

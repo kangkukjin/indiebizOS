@@ -568,11 +568,6 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         # ⑩ 몸의 명사 생애주기(런처 항목·채팅방·창고·채널 설정·미디어) — 구현은 서비스층, 조립 루트(boot_common)가 주입(의존 역전)
         return system_capability(func_name)(dict(params))
 
-    # [table:each] — 문장을 값으로 받는 고차 변환자. 다른 table 변환자와 달리 패키지가 아니라
-    # 엔진 층에 산다(하위 문장 실행이 execute_ibl 재귀 — 패키지가 엔진을 import 하면 층 역전).
-    elif func_name == "table_each":
-        from ibl_edition import retired_result
-        return retired_result()
     elif func_name == "table_reduce":
         from ibl_control_blocks import _execute_table_reduce
         return _execute_table_reduce(dict(params), project_path, agent_id=agent_id)

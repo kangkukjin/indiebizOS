@@ -415,25 +415,12 @@ def _ibl_op_safety_map() -> dict:
 
 
 def _ibl_steps(code: str):
-    """코드 → [(node, action, params)] 전수(병렬·폴백·블록 안까지). 파싱 실패면 None(호출자가 정규식 폴백)."""
+    """Inspect every current call site, including nested expressions."""
     try:
-        from ibl_parser import parse
-        steps = parse(code)
+        from ibl_v2_learning import call_sites, call_parameters
+        return [(call.data['node'], call.data['action'], call_parameters(call)) for call in call_sites(code)]
     except Exception:
         return None
-    out = []
-
-    def walk(o):
-        if isinstance(o, dict):
-            if o.get("_node") and o.get("action"):
-                out.append((str(o["_node"]), str(o["action"]), o.get("params") if isinstance(o.get("params"), dict) else {}))
-            for v in o.values():
-                walk(v)
-        elif isinstance(o, list):
-            for v in o:
-                walk(v)
-    walk(steps)
-    return out
 
 
 def _action_safe(node: str, action: str, params: dict, safety: dict, op_safety: dict) -> bool:

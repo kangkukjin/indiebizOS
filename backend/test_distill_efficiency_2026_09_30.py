@@ -16,12 +16,20 @@ def v2(code):
 
 
 @pytest.mark.parametrize('wrapper', ['', 'return ', '$글 = '])
-def test_old_edition_does_not_suppress_current_teaching(wrapper):
-    old = '[sense:crawl]{url:"https://example.org/old"}'
-    new = v2(wrapper + '[sense:crawl]{url:"https://example.org/new"}')
-    assert value.redundant_reason([new], [{'id': 1, 'ibl_code': old}]) is None
-    assert value.redundant_reason([old], [{'id': 1, 'ibl_code': new}]) is None
-    assert not value.url_only_head(v2('return [sense:crawl]{url:"https://example.org/new",mode:"full"}'))
+def test_current_index_excludes_history_before_comparison(wrapper, tmp_path):
+    import sqlite3
+    from contextlib import contextmanager
+    from ibl_example_index import ensure_current_examples
+    conn=sqlite3.connect(':memory:');conn.row_factory=sqlite3.Row
+    conn.execute('CREATE TABLE ibl_examples(id INTEGER PRIMARY KEY,intent,ibl_code,alias,fail_count,success_count)')
+    conn.execute('INSERT INTO ibl_examples VALUES(1,?,? ,?,0,1)', ('history','unparseable history',''))
+    ensure_current_examples(conn)
+    class DB:
+        @contextmanager
+        def _get_connection(self):
+            yield conn
+    assert value.known_examples(DB()) == []
+    assert value.redundant_reason([v2(wrapper+'[sense:crawl]{url:"https://example.org/new"}')],value.known_examples(DB())) is None
 
 
 def test_v2_usage_matches_operations_and_explicit_edition():
@@ -74,20 +82,15 @@ def execution(codes):
 
 
 def test_budget_selects_closed_component_without_truncating_code():
-    codes = ['[self:read]{path:"' + 'x' * 30000 + '"}',
-             '$자료 = [sense:search]{query:"공개 자료"}',
-             '$자료 >> [table:select]{columns:["title"]}']
-    original = execution(codes)
-    prepared = ud.fit_input({'snapshot': {}, 'skip_reasons': {}, 'sections': {'execution': original}})
-    section = prepared['sections']['execution']
-    assert section['partial_selection'] is True
-    assert section['source_calls'] == codes[1:]
-    assert [r['original_id'] for r in section['rows']] == [2, 3]
-    assert [r['id'] for r in section['rows']] == [1, 2]
-    assert section['omitted_source_ids'] == [1]
-    assert [r['tool_call_index'] for r in section['outcome']['call_results']] == [2, 3]
-    assert original['source_calls'] == codes
-    assert prepared['input_bytes'] <= ud.MAX_INPUT_BYTES
+    codes=[v2('[self:read]{path:"'+'x'*30000+'"}'),
+           v2('$資料=[sense:search]{query:"公開資料"}\nreturn $資料.items')]
+    original=execution(codes)
+    prepared=ud.fit_input({'snapshot':{},'skip_reasons':{},'sections':{'execution':original}})
+    section=prepared['sections']['execution']
+    assert section['source_calls']==codes[1:]
+    assert section['omitted_source_ids']==[1]
+    assert section['rows'][0]['original_id']==2
+    assert original['source_calls']==codes and prepared['input_bytes']<=ud.MAX_INPUT_BYTES
 
 
 def test_budget_cannot_keep_consumer_when_producer_does_not_fit():
@@ -135,13 +138,11 @@ def test_compaction_preserves_decision_receipts_and_replay(env):
 
 
 def test_unified_preparation_does_not_persist_whole_corpus(monkeypatch, tmp_path):
-    from test_distill_source_recovery_2026_09_09 import _arm
+    from test_distill_source_recovery_2026_09_09 import _arm, completed_call
     rag, _, _, _ = _arm(monkeypatch, tmp_path, [])
     monkeypatch.setattr(value, 'known_examples', lambda db: [
         {'id': i, 'intent': '다른 용례', 'ibl_code': '[self:time]'} for i in range(100)])
-    section = rag.prepare_experience('공개 자료 검색', [{'tool_name': 'execute_ibl',
-        'input': {'code': '[sense:search]{query:"자료"}'}, 'success': True,
-        'result': {'items': [{'title': '자료'}]}}], 0, unified=True)
+    section = rag.prepare_experience('공개 자료 검색', [completed_call('[sense:search]{query:"자료"}')], 0, unified=True)
     assert section and 'known' not in section and 'prompt' not in section
     assert section['user_message'] == '공개 자료 검색'
 

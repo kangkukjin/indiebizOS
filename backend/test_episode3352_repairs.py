@@ -165,40 +165,10 @@ def test_oneshots_overlap_with_isolated_prompts_buffers_and_metrics(monkeypatch)
     assert provider._pending_map_tags == [] and provider.metrics.total_input_tokens == 0
 
 
-def test_selection_closes_transitive_dependencies_without_another_model_call():
-    from ibl_distill_gates import _recover_distill_selection
-    calls = ['$a = [self:time]', '$b = $a >> [table:select]{columns:["date"]}',
-             '$b >> [table:take]{n:1}']
-    seen = []
-    def ask(**kwargs):
-        seen.append(kwargs)
-        return '{"call_ids":[3]}'
-    code, note = _recover_distill_selection("날짜", "broken", "missing", calls, ask)
-    assert code == "\n".join(calls) and note == "호출 1, 2, 3"
-    assert len(seen) == 1
 
 
-def test_dependency_uses_latest_prior_definition_and_rejects_future_producer():
-    from ibl_distill_gates import _close_source_dependencies
-    calls = ['$x = [self:time]', '$x = [self:time]', '$x >> [table:take]{n:1}']
-    assert _close_source_dependencies([3], calls) == ([2, 3], None)
-    ids, reason = _close_source_dependencies([1], [calls[2], calls[0]])
-    assert ids is None and "앞선 생산자" in reason
 
 
-def test_recovered_dependencies_reach_corpus_without_allowing_fabricated_pipes(monkeypatch, tmp_path):
-    from test_distill_source_recovery_2026_09_09 import _arm
-    from ibl_distill_gates import _composition_grounded
-    sources = ['$x = [sense:search]{query:"fixture"} >> [table:take]{n:2}',
-               '$x >> [table:select]{columns:["title"]}']
-    rag, stored, asked, _ = _arm(monkeypatch, tmp_path, [
-        {"intent": "검색 제목 확인", "source_ids": [2]},
-    ])
-    calls = [{"tool_name": "execute_ibl", "input": {"code": c}, "success": True} for c in sources]
-    assert rag.distill_experience("검색 제목 확인", calls, 0)
-    assert stored[0]["ibl_code"] == "\n".join(sources) and len(asked) == 1
-    assert not _composition_grounded('[sense:search]{query:"fixture"} >> [self:read]{path:"x"}',
-                                     [sources[0], '[self:read]{path:"x"}'])
 
 
 def test_project_sender_alias_joins_same_ledger():

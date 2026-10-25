@@ -82,6 +82,27 @@ def task_status(ref):
                   progress={'resume': result.get('resume'), 'waiting': result.get('waiting')})
 
 
+def completed_call(ref, source):
+    """Read a successful owned execution for explicit learning; never invent a result."""
+    import re
+    from ibl_run_journal import journal_root
+    from ibl_v2_ir import unpack
+    if (not isinstance(ref, dict) or ref.get('kind') != 'ibl_run' or
+            not isinstance(ref.get('owner'), str) or
+            not re.fullmatch('[0-9a-f]{32}', str(ref.get('task_id', '')))):
+        return None
+    path = journal_root(ref['owner']) / (ref['task_id'] + '.sqlite')
+    row = _read(path.absolute())
+    if not row:
+        return None
+    saved, result = row
+    request = unpack(saved['request'])
+    if (request.get('code') != source or result.get('success') is not True or
+            result.get('executed') is not True or result.get('source_complete') is not True):
+        return None
+    return {'tool_name': 'execute_ibl', 'input': request, 'result': result, 'success': True}
+
+
 def task_cancel(ref):
     import task_receipts as T
     from ibl_run_journal import journal_root

@@ -28,7 +28,6 @@ for _p in ("", "base", "cognition", "datastore", "ibl", "services", "surface", "
         sys.path.insert(0, _d)
 
 import boot_paths  # noqa: F401,E402  (독립 스크립트 규약)
-from ibl_parser import parse, IBLSyntaxError  # noqa: E402
 
 PROMPT = os.path.join(os.path.dirname(BACKEND), "data", "common_prompts",
                       "fragments", "12_ibl_only.md")
@@ -47,27 +46,8 @@ TAIL_CASES = [
 ]
 
 
-@pytest.mark.parametrize("code,mark", HEAD_CASES + TAIL_CASES)
-def test_foreign_comment_is_rejected_with_the_remedy(code, mark):
-    """거절하되 가르친다 — 표식 이름과 `#` 정답 형태가 오류문에 함께 온다."""
-    with pytest.raises(IBLSyntaxError) as ei:
-        parse(code)
-    msg = str(ei.value)
-    assert mark in msg, f"어떤 표식이 문제인지 안 적혀 있다: {msg}"
-    assert "`#`" in msg, f"정답 형태(`#`)가 오류문에 없다 — 자가교정을 못 이끈다: {msg}"
 
 
-def test_hash_comment_and_markdown_body_still_parse():
-    """대조군 — 진짜 주석과 문자열 속 `#` 는 그대로 산다(과잉 차단 방지).
-
-    ★문자열 보호(D3)를 되밟는다: content 안의 마크다운 헤딩이 주석으로 오인되면
-    [self:write] 본문이 조용히 손상된다.
-    """
-    parse('# 진짜 주석\n[sense:search]{query: "a"}')
-    parse('[sense:search]{query: "a"} >> [table:take]{n: 3}')
-    steps = parse('[self:write]{path: "x.md", content: "# 마크다운 헤딩\n본문"}')
-    body = steps[0]["params"]["content"]
-    assert "# 마크다운 헤딩" in body and "본문" in body, f"문자열 속 헤딩이 깎였다: {body!r}"
 
 
 def test_prompt_documents_the_single_comment_mark():

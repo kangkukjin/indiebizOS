@@ -47,7 +47,6 @@ import boot_paths  # noqa: E402,F401
 
 try:
     from api_ibl import validate_code          # noqa: E402
-    from ibl_parser import parse, IBLSyntaxError  # noqa: E402
     from ibl_engine import get_node_actions    # noqa: E402
 except Exception as e:  # 관문 고장 = 무검사가 아니라 실패 (fail-closed)
     print(f"[validate-parity] ✗ 검수기 로드 실패 — 관문을 돌릴 수 없습니다: {e}")
@@ -108,7 +107,7 @@ def corpus():
         return []
     conn = sqlite3.connect(CORPUS)
     try:
-        rows = conn.execute("SELECT id, ibl_code FROM ibl_examples").fetchall()
+        rows = conn.execute("SELECT id, ibl_code FROM ibl_current_examples").fetchall()
     finally:
         conn.close()
     return [(f"corpus#{r[0]}", r[1]) for r in rows if isinstance(r[1], str) and r[1].strip()]
@@ -133,12 +132,9 @@ def check(items, strict: bool, verbose: bool, typecheck: bool = False):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from function_library import definitions
-    from ibl_edition import source_edition
     registry, library = load_registry(), definitions()
     seen, bad = 0, []
     for label, code in items:
-        if label.startswith('corpus#') and source_edition(code) != 2:
-            continue  # Historical source is neither executable nor an authoring fixture.
         plan = compile_program(code, registry, definitions=library)
         if plan.issues:
             continue  # A real compile error is not a false red.

@@ -30,14 +30,9 @@ sys.path.insert(0, BACKEND)
 import boot_paths  # noqa: E402,F401
 
 # 낡은 본문(검색 2갈래) / 새 본문(검색 3갈래 + 심사 한 칸) — 유튜브팁 보고서의 실제 드리프트 모양을 줄인 것
-OLD = ('$검색 = [limbs:youtube]{op: "search", query: "${주제} ${키1}", limit: 12} & '
-       '[limbs:youtube]{op: "search", query: "${주제} ${키2}", limit: 12} >> [table:union]\n'
-       '$정보 = $검색 >> [table:each]{do: "[limbs:youtube]{op: \'info\', video_id: \'$it.video_id\'}", limit: 45}')
-NEW = ('$검색 = [limbs:youtube]{op: "search", query: "${주제} ${키1}", limit: 20} & '
-       '[limbs:youtube]{op: "search", query: "${주제} ${키2}", limit: 20} & '
-       '[limbs:youtube]{op: "search", query: "${주제} ${키3}", limit: 20} >> [table:union]\n'
-       '$정보 = $검색 >> [table:each]{do: "[limbs:youtube]{op: \'info\', video_id: \'$it.video_id\'}", limit: 70}\n'
-       '$선정 = $정보 >> [table:ai]{op: "judge", criteria: "${기준}"}')
+OLD = '#!ibl edition=2\n[def:유튜브팁보고서작성]($주제){return [sense:search]{query:$주제}}'
+NEW = '#!ibl edition=2\n[def:유튜브팁보고서작성]($주제){return [sense:search]{query:$주제,limit:20}}'
+
 TOPIC = "보고서/유튜브 AI 팁"
 
 
@@ -55,7 +50,8 @@ class _FakeDB:
             avg_tokens REAL DEFAULT -1.0, tags TEXT DEFAULT '', created_at TEXT, updated_at TEXT,
             topic TEXT DEFAULT '', alias TEXT DEFAULT '', returns TEXT DEFAULT '', signature TEXT,
             returns_observed TEXT DEFAULT '', provenance TEXT DEFAULT '',
-            bypass_count INTEGER DEFAULT 0)""")
+            bypass_count INTEGER DEFAULT 0, executable INTEGER DEFAULT 1)""")
+        conn.execute('CREATE VIEW ibl_current_examples AS SELECT * FROM ibl_examples WHERE executable=1')
         conn.commit()
         conn.close()
 
@@ -67,9 +63,9 @@ class _FakeDB:
     def _index_single(self, example_id, intent, ibl_code):
         self.indexed.append((example_id, intent, ibl_code))
 
-    def find_phrase_by_alias(self, name, edition=1):
+    def find_phrase_by_alias(self, name):
         from ibl_name_search import find_phrase_by_alias
-        return find_phrase_by_alias(self, name, edition=edition)
+        return find_phrase_by_alias(self, name)
 
     def add(self, alias, code, *, topic=TOPIC, ok=0, fail=0, bypass=0, intent="뜻"):
         with self._get_connection() as conn:
@@ -83,7 +79,7 @@ class _FakeDB:
                 from function_store import resolve, reference
                 from capability_history import record_function_call
                 from ibl_edition import source_edition
-                ref = reference(resolve(alias, edition=source_edition(code), include_inactive=True))
+                ref = reference(resolve(alias, include_inactive=True))
                 for i in range(ok + fail):
                     record_function_call(ref, f"fixture-{alias}-{i}", "call", success=i < ok,
                                          dependency_revision="fixture", source_complete=True)
@@ -102,36 +98,17 @@ def db(tmp_path, monkeypatch):
     return _FakeDB(tmp_path / "usage.db")
 
 
-@pytest.fixture(autouse=True)
-def _no_shape_cache():
-    """fn_recognizer 의 60초 캐시는 시험 사이에 새는 전역 — 매번 비운다."""
-    import fn_recognizer
-    _orig = fn_recognizer._aliased_programs
-    fn_recognizer._CACHE.update(t=0.0, shapes={}, programs=[])
-    yield
-    fn_recognizer._aliased_programs = _orig
-    fn_recognizer._CACHE.update(t=0.0, shapes={}, programs=[])
 
 
 # ─────────────────────────────────────────────────────── A1~A3 덮어쓸 자리 판정
 
 
-def test_a1_같은_골격이면_덮을_것이_없다(db):
-    from ibl_idiom import stale_unrun_row
-    db.add("유튜브팁보고서작성", NEW)
-    assert stale_unrun_row("유튜브팁보고서작성", db, NEW, TOPIC) is None
 
 
 
 
-def test_a2_다른_가지의_같은_이름은_남의_함수다(db):
-    from ibl_idiom import stale_unrun_row
-    db.add("유튜브팁보고서작성", OLD, topic="다른/가지")
-    assert stale_unrun_row("유튜브팁보고서작성", db, NEW, TOPIC) is None
 
 
-def monkeypatch_programs(fn_recognizer, programs):
-    fn_recognizer._aliased_programs = lambda: list(programs)
 
 
 
@@ -167,27 +144,11 @@ def test_b2_표면이_거부를_말한다(db):
     assert "실행 0" in card and "거부 4회" in card
     assert card.index("호출:") < card.index("[def:")           # 호출 한 줄이 여전히 먼저(09-07 관문 1)
     # 거부가 없으면 그 말은 없다 — 아직 안 써 본 새 정의를 낡았다고 하지 않는다
-    fresh = db.add("새이름", NEW)
+    fresh = db.add("새이름", NEW.replace("유튜브팁보고서작성", "새이름"))
     assert "거부" not in hippo_tree.phrase_expand_card(db.row(fresh))
 
 
 # ───────────────────────────────────────────── B3 베낀 턴은 '썼다' 가 아니다
-def test_b3_부르지_않고_베낀_턴은_증류를_막지_않는다(monkeypatch):
-    """옛 문은 머리 열이 절반 넘게 겹치면 '회상된 관용구를 썼다' 로 읽어 갱신본의 증류를 스킵했다."""
-    import ibl_idiom
-    calls = [c for c in OLD.split("\n")]
-    assert ibl_idiom._phrase_used(OLD, calls) is True           # 머리 열은 겹친다(베꼈으니까)
-    seen = {}
-    monkeypatch.setattr(ibl_idiom, "_phrase_grounded", lambda *a, **k: seen.setdefault("reached", True) or "관문까지 왔다")
-    monkeypatch.setattr("thread_context.get_phrase_recall", lambda: [OLD], raising=False)
-    ok = ibl_idiom._distill_phrase("의도", {"phrase": [OLD, NEW], "slots": {"주제": "AI"}},
-                                   calls, TOPIC, [], None)
-    assert ok is False and seen.get("reached")                  # 스킵이 아니라 관문까지 갔다
-    # 이름으로 부른 턴이면 옛 문 그대로 — 진짜 재사용은 새 관용구를 뽑지 않는다
-    seen.clear()
-    ok = ibl_idiom._distill_phrase("의도", {"phrase": [OLD, NEW], "slots": {"주제": "AI"}},
-                                   calls + ["[fn:유튜브팁보고서작성]{주제: \"AI\"}"], TOPIC, [], None)
-    assert ok is False and not seen.get("reached")              # 접지 관문 전에 스킵됐다
 
 
 if __name__ == "__main__":

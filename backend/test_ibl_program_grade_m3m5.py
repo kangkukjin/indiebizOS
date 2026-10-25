@@ -37,7 +37,6 @@ import ibl_engine
 import ibl_executors as ex
 import ibl_control_blocks as cb
 import workflow_engine
-from ibl_parser import parse
 from common import spill as spill_mod
 
 _PKG = Path(__file__).resolve().parent.parent / "data" / "packages" / "installed" / "tools"
@@ -94,15 +93,6 @@ def _fake_factory(calls, state, orig=None):
     return _fake
 
 
-def _run(code, calls=None, state=None, context=None):
-    calls = calls if calls is not None else []
-    state = state if state is not None else {}
-    orig = ibl_engine.execute_ibl
-    ibl_engine.execute_ibl = _fake_factory(calls, state, orig)
-    try:
-        return workflow_engine.execute_pipeline(parse(code), ".", context=context)
-    finally:
-        ibl_engine.execute_ibl = orig
 
 
 def _final(out):

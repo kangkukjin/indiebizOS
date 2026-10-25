@@ -136,8 +136,8 @@ def test_critic_prescreen_shortcircuit_calls_no_model(gv, tmp_path, monkeypatch)
     out = gv.critique_image(
         {"image_path": str(img), "intent": "웹 페이지 품질",
          "prescreen": "콘솔 오류 2건: TypeError…; 빈 화면(잉크 0.00%)"}, ".")
-    assert "verdict_json:" in out
-    verdict = json.loads(out.split("verdict_json:", 1)[1].strip())
+    assert "verdict_json:" in out["message"]
+    verdict = json.loads(out["message"].split("verdict_json:", 1)[1].strip())
     assert verdict["passed"] is False
     assert verdict["tier"] == "prescreen"
     assert any("콘솔 오류" in i for i in verdict["issues"])

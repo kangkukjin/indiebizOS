@@ -51,10 +51,10 @@ def _load_corpus():
         raise RuntimeError("sqlite-vec 연결 불가 (미설치?)")
     try:
         conn.execute("BEGIN")
-        total = conn.execute("SELECT COUNT(*) FROM ibl_examples").fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM ibl_current_examples").fetchone()[0]
         rows = conn.execute(
             "SELECT e.id, e.intent, e.ibl_code, v.embedding "
-            "FROM ibl_examples e JOIN ibl_examples_vec v ON v.rowid = e.id ORDER BY e.id"
+            "FROM ibl_current_examples e JOIN ibl_examples_vec v ON v.rowid = e.id ORDER BY e.id"
         ).fetchall()
     finally:
         conn.close()

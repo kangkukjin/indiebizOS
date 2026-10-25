@@ -31,7 +31,7 @@ def _seed_examples(examples: list, source: str) -> int:
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
     with db._get_connection() as conn:
-        previous = {row[0] for row in conn.execute('SELECT ibl_code FROM ibl_examples WHERE source=?', (source,))}
+        previous = {row[0] for row in conn.execute('SELECT ibl_code FROM ibl_current_examples WHERE source=?', (source,))}
     batch = [{k: ex[k] for k in ('intent', 'ibl_code', 'nodes', 'category', 'difficulty', 'tags') if k in ex}
              for ex in examples if ex['ibl_code'] not in previous]
     for ex in batch:
@@ -46,7 +46,7 @@ def _undo_seed(source: str):
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
     with db._get_connection() as conn:
-        ids = [row[0] for row in conn.execute('SELECT id FROM ibl_examples WHERE source=?', (source,))]
+        ids = [row[0] for row in conn.execute('SELECT id FROM ibl_current_examples WHERE source=?', (source,))]
     db._delete_examples(ids)
 
 

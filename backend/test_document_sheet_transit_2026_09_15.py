@@ -317,27 +317,6 @@ def test_sheet_structural_rejection(workbook, kind):
     assert not workbook.with_name('book_range.xlsx').exists()
 
 
-def test_public_ibl_document_and_sheet_dispatch(proposal, workbook):
-    from ibl_engine import execute_ibl as execute
-
-    def execute_ibl(call, directory):
-        from ibl_parser import parse
-        code = '[' + call['_node'] + ':' + call['action'] + ']' + json.dumps(
-            {k: v for k, v in call.items() if k not in ('_node', 'action')}, ensure_ascii=False)
-        result = execute(parse(code)[0], directory)
-        return json.loads(result) if isinstance(result, str) else result
-
-    doc = execute_ibl({'_node': 'self', 'action': 'document', 'op': 'inspect', 'path': str(proposal)}, str(proposal.parent))
-    assert doc['success'] and doc['items'][0]['block_id'] == 'word/document.xml#p0', doc
-    out = execute_ibl({'_node': 'self', 'action': 'document', 'op': 'edit', 'path': str(proposal),
-                      'expected_sha256': doc['sha256'], 'edits': [{'block_id': doc['items'][0]['block_id'],
-                      'old_string': '9월 30일', 'new_string': '10월 15일'}]}, str(proposal.parent))
-    assert out['success'] and Path(out['path']).exists(), out
-    sheet = execute_ibl({'_node': 'self', 'action': 'sheet', 'op': 'range', 'path': str(workbook), 'range': 'A2:C2'}, str(workbook.parent))
-    assert sheet['success'] and sheet['items'][2]['formula'] == '=A2*B2', sheet
-    written = execute_ibl({'_node': 'self', 'action': 'sheet', 'op': 'range_write', 'path': str(workbook),
-                          'range': 'A2', 'values': [[555]], 'expected_sha256': sheet['sha256']}, str(workbook.parent))
-    assert written['success'] and openpyxl.load_workbook(written['path']).active['A2'].value == 555, written
 
 
 if __name__ == '__main__':

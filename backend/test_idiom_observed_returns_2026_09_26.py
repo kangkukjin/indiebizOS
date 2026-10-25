@@ -80,7 +80,9 @@ def test_idiom_rows_carry_observation_in_returns_column(tmp_path):
     from test_function_support import import_memory
     from function_store import resolve, reference
     from capability_history import record_function_call
-    import_memory(conn)
+    from function_library import register
+    register('보고', code)
+    conn.execute('CREATE VIEW ibl_current_examples AS SELECT rowid AS id,* FROM ibl_examples WHERE alias="보고"')
     record_function_call(reference(resolve('보고')), 'observation-fixture', 'call', success=True,
                          dependency_revision='fixture', source_complete=True,
                          observed={'kind':'record', 'keys':['status','report']})

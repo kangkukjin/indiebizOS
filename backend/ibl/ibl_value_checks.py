@@ -78,23 +78,17 @@ def value_problems(contract, values, registry=None, definitions=None):
         try:
             from ibl_edition import source_edition
             edition = source_edition(code, known.get("edition") if code.lstrip().startswith("#!ibl") else known.get("edition", 2))
-            if edition == 2:
-                from ibl_v2_compile import compile_program
-                from ibl_v2_adapters import load_registry
-                inputs = known.get("inputs", {})
-                plan = compile_program(code, registry if registry is not None else load_registry(),
-                                       inputs if isinstance(inputs, dict) else {}, definitions or {})
-                # 안쪽 진단의 처방을 함께 싣는다 — 바깥 ARGUMENT_CONTRACT 의 범용 안내("인자 관계를 확인")가
-                # 중첩 문장의 고칠 방향을 가리지 않게(72회차 후속).
-                from ibl_v2_analysis import HINTS
-                errors.extend(f"{name}: {issue['message']} ({issue['code']})"
-                              + (f" — {HINTS[issue['code']]}" if issue['code'] in HINTS else "")
-                              for issue in plan.issues[:5])
-            else:
-                from workflow_engine import preflight_sentence
-                result = preflight_sentence(code, known.get("inputs"))
-                if not result.get("runnable"):
-                    errors.append(f"{name}: {result.get('problem')}")
+            from ibl_v2_compile import compile_program
+            from ibl_v2_adapters import load_registry
+            inputs = known.get("inputs", {})
+            plan = compile_program(code, registry if registry is not None else load_registry(),
+                                   inputs if isinstance(inputs, dict) else {}, definitions or {})
+            # 안쪽 진단의 처방을 함께 싣는다 — 바깥 ARGUMENT_CONTRACT 의 범용 안내("인자 관계를 확인")가
+            # 중첩 문장의 고칠 방향을 가리지 않게(72회차 후속).
+            from ibl_v2_analysis import HINTS
+            errors.extend(f"{name}: {issue['message']} ({issue['code']})"
+                          + (f" — {HINTS[issue['code']]}" if issue['code'] in HINTS else "")
+                          for issue in plan.issues[:5])
         except Exception as exc:
             errors.append(f"{name}: 문장 검사 실패: {exc}")
         finally:

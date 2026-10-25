@@ -6,9 +6,7 @@ from pathlib import Path
 import boot_paths  # noqa: F401
 import pytest
 
-from ibl_parser import parse_with_vars, RESUME_SLOT_BASE
-from ibl_typecheck import typecheck, typecheck_code
-from ibl_value_types import T, infer_value
+from ibl_typecheck import typecheck_code
 import ibl_turn_vars as variables
 from thread_context import actor_context
 from system_tools import _execute_ibl_unified
@@ -27,10 +25,6 @@ def history(symbol):
     return {"success": True, "data": {"symbol": symbol, "prices": rows}, "items": rows}
 
 
-def check(code, values=None):
-    values = values or {}
-    steps, names = parse_with_vars(code, preset_vars={n: RESUME_SLOT_BASE + i for i, n in enumerate(values)})
-    return typecheck(steps, names, given={n: infer_value(v) for n, v in values.items()})
 
 
 @pytest.fixture
@@ -44,22 +38,6 @@ def run(code, tmp_path, **extra):
     return json.loads(_execute_ibl_unified({"code": code, **extra}, str(tmp_path), agent_id="shape-test"))
 
 
-@pytest.mark.parametrize("code,values,missing", [
-    ('$뉴스 = [sense:search]{source:"gnews",queries:["A","B"]}\n'
-     '$뉴스 >> [table:select]{fields:["source","published"]}', {}, "source"),
-    ('$종목 >> [table:select]{fields:["symbol","current_price"]}',
-     {"종목": [quote("A"), quote("B")]}, "symbol"),
-    ('[table:compute]{items:[{x:1}],expr:"y = x + 1"}', {}, "expr"),
-    ('$유가주 >> [table:flatten]{field:"items"} >> [table:filter]{where:"date >= 2026-09-03"}'
-     ' >> [table:select]{fields:["symbol","date","close"]}',
-     {"유가주": [history("A"), history("B")]}, "symbol"),
-    ('[sense:stock]{op:"history",ticker:"A",period:"1mo"} >> [table:flatten]{field:"items"}', {}, "items"),
-    ('[table:compute]{items:[{"변화%":1}],set:{결과:"변화% / 100"}}', {}, "결과"),
-])
-def test_six_failure_classes_are_rejected(code, values, missing):
-    result = check(code, values)
-    assert not result["ok"], result
-    assert any(missing in i["message"] for i in result["issues"] if i["severity"] == "error")
 
 
 
@@ -68,41 +46,16 @@ def test_six_failure_classes_are_rejected(code, values, missing):
 
 
 
-def test_structured_type_is_lossless_beyond_display_limit():
-    value = {"items": [{f"col{i}": i for i in range(30)}]}
-    original = infer_value(value)
-    restored = T.from_data(json.loads(json.dumps(original.to_data())))
-    assert restored.cols == original.cols and restored.closed
-    assert check('$a >> [table:select]{fields:["col29"]}', {"a": value})["ok"]
-    assert not check('$a >> [table:select]{fields:["col30"]}', {"a": value})["ok"]
-
-
-def test_unknown_dynamic_and_large_inputs_are_not_closed():
-    assert typecheck_code('[sense:stock]{op:"$dynamic"} >> [table:select]{fields:["anything"]}')["ok"]
-    assert not infer_value({"items": [{"x": 1}] * 21000}).closed
-    assert check('$a >> [table:select]{fields:["unknown"]}', {"a": {"items": [{"x": 1}] * 21000}})["ok"]
 
 
 
 
-def test_observed_catalog_and_other_search_modes_are_not_closed():
-    assert typecheck_code('[sense:search]{source:"gnews",query:"A"} >> [table:select]{fields:["source"]}')["ok"]
-    assert typecheck_code('[sense:search]{source:"gnews",queries:["A"],curate:3} >> [table:select]{fields:["extra"]}')["ok"]
-    assert typecheck_code('[sense:search]{source:"gnews",queries:[],query:"A"} >> [table:select]{fields:["source"]}')["ok"]
 
 
-def test_transform_replaces_old_items_type_but_preserves_source_evidence():
-    code = '$a >> [table:select]{fields:["x"]} >> [table:select]{fields:["y"]}'
-    assert not check(code, {"a": {"items": [{"x": 1, "y": 2}]}})["ok"]
-    assert check(code, {"a": {"items": [{"x": 1, "y": 2}], "data": [{"y": 2}]}})["ok"]
 
 
-def test_type_display_groups_identical_branches():
-    from ibl_value_types import display_type
-    shown = display_type(infer_value([quote(str(i)) for i in range(20)]))
-    assert shown["branch_count"] == 20 and len(shown["branches"]) == 1
-    assert shown["branches"][0]["count"] == 20
-    assert len(json.dumps(shown)) < 1800
+
+
 
 
 @pytest.fixture
@@ -113,32 +66,10 @@ def dataops():
     return module
 
 
-def test_flatten_preserves_nested_identity_null_literal_and_collisions(dataops):
-    branches = [history("A"), history("B")]
-    result = dataops._op_flatten(branches, {"field": "items", "keep": ["data.symbol"]})
-    assert [row["data.symbol"] for row in result["items"]] == ["A", "B"]
-    values = [{"data.symbol": None, "data": {"symbol": "nested"}, "items": [{"data.symbol": "child"}]}]
-    out = dataops._op_flatten(values, {"field": "items", "keep": ["data.symbol"]})
-    assert out["items"][0] == {"data.symbol": "child", "data.symbol_2": None}
-    assert dataops._op_flatten(branches, {"field": "items", "keep": ["data.missing"]})["success"] is False
-    result = check('$a >> [table:flatten]{field:"items",keep:["data.symbol"]} >> '
-                   '[table:select]{fields:["data.symbol","date"]}', {"a": branches})
-    assert result["ok"], result
 
 
-def test_normal_envelope_and_union_operations_remain_valid():
-    values = {"a": [quote("A"), quote("B")]}
-    for code in ('$a >> [table:select]{fields:["data"]}',
-                 '$a >> [table:union] >> [table:select]{fields:["symbol"]}',
-                 '$a >> [table:flatten]{field:"items"} >> [table:select]{fields:["symbol"]}'):
-        assert check(code, values)["ok"], code
 
 
-def test_compute_diagnostic_teaches_the_working_form():
-    failed = typecheck_code('[table:compute]{items:[{x:1}],expr:"y=x+1"}')
-    hint = failed["issues"][0]["hint"]
-    assert "set:" in hint and "col(" in hint
-    assert typecheck_code('''[table:compute]{items:[{"변화%":1}],set:{결과:'col("변화%") / 100'}}''')["ok"]
 
 
 def test_projection_deduplicates_only_the_copy_and_preserves_evidence(tmp_path, monkeypatch):

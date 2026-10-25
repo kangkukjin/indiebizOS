@@ -1015,3 +1015,11 @@ retired:
     instead: each 블록 본문을 사용하며 chunk는 직접 text 또는 items 입력도 받는다.
     phrases:
       - '변환자라 파이프 머리에 홀로 설 수 없다 — 본문을 직접 주려면'
+
+  - id: ibl-retired-runtime-selection
+    retired: 2026-10-25
+    reason: 현행 실행에 구판 전용 거절과 이름 집합을 전달하던 구조를 제거했다.
+    instead: 현행 입력 스키마와 현행 카탈로그만 해소한다. 과거 자료는 명시 역사 조회로 연다.
+    phrases:
+      - 'retired_result('
+      - 'retired_names'

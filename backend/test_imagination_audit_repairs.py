@@ -23,13 +23,6 @@ def obj(value):
     return json.loads(value) if isinstance(value, str) else value
 
 
-@pytest.mark.parametrize('rows', [[], [{'path': '/one'}]])
-def test_variable_payload_preserves_empty_currency(rows):
-    from workflow_binding import _v4_var_payload
-    raw = json.dumps({'success': True, 'annotations': rows, 'items': rows, 'count': len(rows)})
-    if rows:  # different nonempty payloads remain a structured envelope by contract
-        raw = json.dumps({'success': True, 'items': rows, 'count': len(rows)})
-    assert json.loads(_v4_var_payload(raw)) == rows
 
 
 @pytest.mark.parametrize('args,needle,count', [
@@ -134,21 +127,8 @@ def test_history_omitted_limit_preserves_all_observations(monkeypatch):
     assert len(selected['items']) == 10 and selected['truncations'][0]['scope'] == 'selection'
 
 
-@pytest.mark.parametrize('code,warning', [
-    ('$x = 1; [if: $x > 0]{$k = 10}[else]{$k = 20}; [table:take]{items:[{v:"$k"}],n:1}', False),
-    ('$x = 1; [if: $x > 0]{$k = 10}; [table:take]{items:[{v:"$k"}],n:1}', True),
-    ('[try]{$k = 10}[catch]{$k = 20}; [table:take]{items:[{v:"$k"}],n:1}', False),
-])
-def test_definite_branch_assignment(code, warning):
-    from ibl_typecheck import typecheck_code
-    report = typecheck_code(code)
-    assert any('분기 몸' in i['message'] for i in report['issues']) is warning, report
 
 
-def test_legacy_check_refuses_unknown_action():
-    from ibl_typecheck import typecheck_code
-    report = typecheck_code('[sense:nosuchaction]{}')
-    assert report['ok'] is False, report
 
 
 
@@ -193,9 +173,6 @@ def test_old_notice_signature_is_migrated_on_comparison():
     assert task['failure_notice']['repeated'] == 3
 
 
-def test_short_summary_does_not_replace_empty_currency():
-    from workflow_binding import _v4_var_payload
-    assert json.loads(_v4_var_payload(json.dumps({'items': [], 'message': '0건 조회'}))) == []
 
 
 def test_recurrence_fields_are_not_silently_ignored():
@@ -205,15 +182,6 @@ def test_recurrence_fields_are_not_silently_ignored():
         assert key in result['error']
 
 
-def test_cloudflare_items_contract_keeps_write_effects():
-    from ibl_typecheck import typecheck_code
-    from ibl_v2_adapters import load_registry
-    from ibl_v2_compile import compile_program
-    code = '[limbs:cloudflare_api]{endpoint:"zones"} >> [table:take]{n:1}'
-    assert typecheck_code(code)['ok']
-    report = compile_program('$cf=[limbs:cloudflare_api]{endpoint:"zones"}\n'
-                             'return $cf.items >> [table:take]{n:1}', load_registry()).report()
-    assert report['status'] != 'invalid' and 'write_external' in report['effects']
 
 
 if __name__ == '__main__':

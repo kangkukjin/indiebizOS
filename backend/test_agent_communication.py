@@ -100,7 +100,6 @@ def test_target_permission_and_inherited_restriction_identity_are_preserved(code
 @pytest.mark.parametrize('code', ['return [limbs:browser]{op:"snapshot"}', 'return $없는값'])
 def test_denied_or_invalid_code_is_failed_without_model_or_legacy_fallback(code_world, monkeypatch, code):
     import workflow_engine
-    monkeypatch.setattr(workflow_engine, 'execute_pipeline', lambda *a, **kw: pytest.fail('v2 실패 폴백'))
     receipt = submit(code_world, code)
     drain(code_world)
     row = code_world.runner.db.get_task(receipt['task_id'])
@@ -174,13 +173,13 @@ def test_explicit_async_child_reports_are_retained_without_ai_continuation(code_
 
 def test_explicit_legacy_array_rejects_before_creating_work(code_world):
     receipt = submit(code_world, ['[self:time]{}'], edition=1)
-    assert not receipt['success'] and 'EDITION_RETIRED' in receipt['error']
+    assert not receipt['success'] and 'SOURCE_TYPE' in receipt['error']
     assert not code_world.cls.internal_messages
 
 
 def test_conflicting_edition_rejects_before_creating_work(code_world):
     receipt = submit(code_world, '#!ibl edition=1\n[self:time]{}')
-    assert not receipt['success'] and 'EDITION_CONFLICT' in receipt['error']
+    assert not receipt['success'] and 'EDITION_UNSUPPORTED' in receipt['error']
     assert not code_world.cls.internal_messages
 
 

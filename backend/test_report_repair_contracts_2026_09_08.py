@@ -50,39 +50,10 @@ def test_missing_date_and_provider_failure(youtube):
     assert youtube._snapshot_row(failed) is failed
 
 
-@pytest.mark.parametrize('slot', ['set', 'columns', 'expr'])
-def test_dict_compute_allowed_after_expression_revision(slot):
-    from ibl_typecheck import typecheck_code
-    code = ('$자료 = [sense:search]{query: "자료"}\n'
-            f'$자료 >> [table:compute]{{{slot}: {{source: "{{\'title\': title}}"}}}}')
-    tc = typecheck_code(code)
-    assert tc['ok'], tc
 
 
-def test_preflight_matches_runtime_and_defers_dynamic():
-    from ibl_typecheck import typecheck_code
-    prefix = '[table:compute]{items: [{x: 4}], '
-    for spec in ['set: {y: "x * 2"}', 'expr: "x * 2", as: "y"',
-                 'set: {y: "x * 2"}, columns: {ignored: "{bad}"}']:
-        tc = typecheck_code(prefix + spec + '}')
-        assert tc['ok'], tc
-    # 동적 함수 인자 속의 식은 호출 때 검수한다. 임의 추측으로 거절하지 않는다.
-    assert typecheck_code('[def: 계산]{$return = [table:compute]{set: "${계산식}"}}')['ok']
-    bad = typecheck_code(prefix + 'expr: "x +", as: "y"}')
-    assert not bad['ok'], bad
 
 
-def test_expression_contract_is_data_not_action_name(monkeypatch):
-    import ibl_typecheck as tc
-    real = tc._action_def
-    monkeypatch.setattr(tc, '_action_def', lambda n, a: {
-        'returns': 'transform', 'flow': {'accepts': 'items', 'emits': 'items',
-                                       'scalar_expr_params': ['formula']}
-    } if a == 'custom_formula' else real(n, a))
-    checker = tc._Checker()
-    checker._type_action({'params': {'formula': '[x for x in rows]', 'items': [{'x': 1}]}},
-                         'custom', 'custom_formula', None, 0)
-    assert any('ListComp' in i['message'] for i in checker.issues)
 
 
 @pytest.fixture
@@ -129,22 +100,13 @@ def test_invalid_revision_leaves_old_body(registry, code, reason):
     assert db.row(rid)['ibl_code'] == OLD and db.row(rid)['success_count'] == 3
 
 
-def test_bad_expression_in_named_body_is_not_hidden_or_cached(monkeypatch):
-    import ibl_typecheck as tc
-    bad = '$return = [table:compute]{set: {source: "[title for title in rows]"}}'
-    assert not tc.typecheck_code('[def: 수리대상]{' + bad + '}')['ok']
-    monkeypatch.setattr(tc, '_external_fn_code', lambda name: bad)
-    for _ in range(2):
-        out = tc.typecheck_code('[fn:수리대상]{}')
-        assert not out['ok'], out
 
 
 def test_registration_does_not_ignore_severity(registry):
     reg, _db = registry
     info, why = reg._gates('시험추리기', '입력 목록을 받아 출처를 생성할 때',
-                          '$자료 = [table:take]{n: "${개수}"}\n'
-                          '$return = $자료 >> [table:compute]{set: {source: "[x for x in rows]"}}')
-    assert info is None and '타입 오류' in why
+                          '#!ibl edition=2\n[def:시험추리기](){return $없는값}')
+    assert info is None and '검사 실패' in why
 
 
 def test_invalid_final_expression_runs_no_earlier_tool(monkeypatch, tmp_path):
@@ -154,7 +116,6 @@ def test_invalid_final_expression_runs_no_earlier_tool(monkeypatch, tmp_path):
     def forbidden(*a, **kw):
         pytest.fail('실행 전 거절할 식 때문에 수집이나 쓰기가 실행됨')
     monkeypatch.setattr(ibl_engine, 'execute_ibl', forbidden)
-    monkeypatch.setattr(workflow_engine, 'execute_pipeline', forbidden)
     result = json.loads(_execute_ibl_unified_impl({'edition':2,'code':
         '$자료 = [sense:search]{query: "회귀 fixture"}\n'
         '$자료 >> [table:compute]{set: {source: "[title for title in rows]"}}'}, str(tmp_path)))

@@ -317,19 +317,6 @@ def test_fstring_bare_dollar_name_warns():
 
 
 # ---------------------------------------------------------------- 옛 용례 투영
-def test_legacy_single_call_is_historical_without_automatic_translation():
-    import xml.etree.ElementTree as ET
-    from ibl_usage_db import UsageExample
-    from ibl_usage_rag import IBLUsageRAG
-    for code in ('[limbs:youtube]{op: "summarize", url: "https://www.youtube.com/watch?v=example"}',
-                 '[sense:search]{query: "a"} >> [table:take]{n: 3}',
-                 '[sense:search]{query: $q}', '[sense:없는낱말]{query: "a"}'):
-        old = UsageExample(987, '과거 용례', code, 'sense', 'single', 1, .98, 'fixture', -1)
-        ref = ET.fromstring(IBLUsageRAG._format_references(None, [old])).find('ref')
-        assert ref.attrib['edition'] == '1'
-        assert ref.attrib['authoring_excluded'] == 'legacy_source'
-        assert 'projected_from' not in ref.attrib and code not in ref.text
-        assert '#987' in ref.text
 
 
 # ---------------------------------------------------------------- Codex 누출 차단
@@ -368,7 +355,7 @@ def test_cancel_check_is_polled_by_interval_not_by_step(tmp_path):
 
 
 def test_distillation_recovers_checked_program_source_from_the_check_call():
-    from legacy_example_projection import checked_program_sources
+    from checked_program_sources import checked_program_sources
     handle = "$checked:" + "ab" * 32
     calls = [
         {"tool_name": "execute_ibl", "input": {"code": "return 1 + 1", "check": True},

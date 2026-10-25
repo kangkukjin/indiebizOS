@@ -1,15 +1,7 @@
-"""Stored function management and current-edition execution.
-
-Historical source is readable through workflow_store. Parsed edition-1 steps
-have no interpreter; the old entry point is a diagnostic-only tombstone.
-"""
+"""Stored current functions and explicit historical inspection."""
 from workflow_store import list_workflows, get_workflow, _resolve_workflow_id
-from ibl_edition import retired_result
 
 
-def execute_pipeline(steps, project_path='.', context=None, agent_id=None):
-    """Retired Python entry point; never interprets steps or invokes a tool."""
-    return retired_result()
 
 
 def preflight_sentence(code, inputs=None):
@@ -24,8 +16,6 @@ def execute_workflow(workflow_id, project_path='.', params=None, stack=None,
     wf = definition if definition is not None else get_workflow(workflow_id)
     if not wf:
         return {'success': False, 'error': f'워크플로우를 찾을 수 없습니다: {workflow_id}'}
-    if wf.get('edition', 1) != 2:
-        return retired_result()
     if wf.get('state') not in (None, 'active'):
         return {'success': False, 'executed': False, 'error': '관용구가 활성 상태가 아닙니다.', 'state': wf['state']}
     from ibl_v2_store import action
@@ -38,12 +28,13 @@ def execute_workflow_action(action, params, project_path):
         action = (params.get('op') or '').strip()
     action = {'list_workflows': 'list', 'get_workflow': 'detail', 'get': 'detail',
               'save_workflow': 'save', 'delete_workflow': 'delete'}.get(action, action)
-    workflow_id = params.get('workflow_id') or _resolve_workflow_id(params.get('name') or params.get('id') or '')
+    identifier = params.get('workflow_id') or params.get('name') or params.get('id') or ''
+    workflow_id = identifier if params.get('history') is True else _resolve_workflow_id(identifier)
     if action == 'list':
-        rows = list_workflows()
+        rows = list_workflows(history=params.get('history') is True)
         return {'items': rows, 'workflows': rows, 'count': len(rows)}
     if action == 'detail':
-        return get_workflow(workflow_id) or {'success': False, 'error': '워크플로우를 찾을 수 없습니다.'}
+        return get_workflow(workflow_id, history=params.get('history') is True) or {'success': False, 'error': '워크플로우를 찾을 수 없습니다.'}
     if action == 'delete':
         from workflow_store import delete_workflow
         try:
@@ -52,8 +43,6 @@ def execute_workflow_action(action, params, project_path):
             return {'success': False, 'error': str(exc),
                     **({'broken_callers': exc.broken_callers} if hasattr(exc, 'broken_callers') else {})}
     if action == 'save':
-        if params.get('edition') == 1 or not isinstance(params.get('code'), str):
-            return retired_result()
         from ibl_v2_store import action as current_action
         return current_action('save', params, project_path)
     if action in ('run', 'run_pipeline'):
@@ -61,9 +50,7 @@ def execute_workflow_action(action, params, project_path):
             return execute_workflow(workflow_id, project_path, params.get('params'),
                                     function_refs=params.get('function_refs'))
         from ibl_v2_entry import handle_request
-        source = params.get('code') or params.get('pipeline') or params.get('steps')
-        if not isinstance(source, str):
-            return retired_result()
+        source = params.get('code') or params.get('pipeline')
         return handle_request({'code': source, 'edition': params.get('edition'),
                                'inputs': params.get('inputs'),
                                'function_refs': params.get('function_refs')}, project_path)

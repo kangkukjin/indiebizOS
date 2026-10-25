@@ -49,7 +49,7 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
         name = row['alias']
         if definition_name(row['ibl_code']) != name:
             raise ValueError('등록 이름과 정의가 다릅니다')
-        old = db.find_phrase_by_alias(name, edition=2)
+        old = db.find_phrase_by_alias(name)
         if old and old['ibl_code'].strip() != row['ibl_code'].strip() and not revise_reason.strip():
             raise ValueError(f'{name}: 이미 다른 정의가 있습니다. 명시적 개정이 필요합니다')
         library[name] = row['ibl_code']
@@ -93,7 +93,7 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
     if revise_reason.strip():
         from register_idiom import update_idiom
         for row in functions:
-            if db.find_phrase_by_alias(row['alias'], edition=2):
+            if db.find_phrase_by_alias(row['alias']):
                 if update_idiom(db, row['alias'], row['ibl_code'], revise_reason,
                                 when=row['intent'], resign=True):
                     revised.append(row['alias'])

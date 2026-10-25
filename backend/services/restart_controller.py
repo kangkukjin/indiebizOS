@@ -165,7 +165,7 @@ class Controller:
             if req.get("version") != STATE_VERSION or req.get("expected_generation") != s["generation"]:
                 self.finish("stale_generation")
                 return
-            if req["operation"] == "shutdown":
+            if req["operation"] == "shutdown" and not req["policy"].get("drain_before_shutdown"):
                 atomic_json(self.base / "data/.intentional_shutdown", {"request_id": req["request_id"]})
                 self.begin_stop(intentional=True, force=True)
                 return
@@ -214,7 +214,10 @@ class Controller:
                 if code_manifest(self.code_root) != s["target_manifest"]:
                     self.defer("artifact_changed_after_check")
                     return
-                self.begin_stop()
+                shutting_down = s["request"]["operation"] == "shutdown"
+                if shutting_down:
+                    atomic_json(self.base / "data/.intentional_shutdown", {"request_id": s["request"]["request_id"]})
+                self.begin_stop(intentional=shutting_down)
             elif self.clock() >= s["deadline"]:
                 if s["request"]["policy"].get("force") is True and snap is not None:
                     self.begin_stop(force=True)
@@ -367,7 +370,7 @@ class Controller:
         # 잠금 대기 중 이전 제어자가 남긴 최종 상태를 다시 읽는다.
         self.state = read_json(self.home / "state.json") or self.state
         try:
-            self.save(controller=identity(os.getpid()))
+            self.save(controller=identity(os.getpid()), shutdown_drain=True)
             legacy = read_json(self.home / "legacy.json")
             if (self.state["phase"] == "STOPPED" and legacy
                     and self.adapter.alive(legacy.get("worker"))
@@ -431,6 +434,8 @@ def main(argv=None, code_root=None):
     code_root = Path(code_root) if code_root else Path(__file__).resolve().parents[2]
     base = Path(os.environ.get("INDIEBIZ_BASE_PATH", code_root))
     if args.action in {"start", "serve"}:
+        from update_maintenance import check_start
+        check_start(base)
         return Controller(base, code_root).run(start=args.action == "start")
     if args.action == "wait":
         while read_json(control_dir(base) / "state.json", {}).get("phase") != "STOPPED":

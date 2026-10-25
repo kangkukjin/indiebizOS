@@ -80,6 +80,7 @@
     "base/tool_completion",
     "base/trace_read",
     "base/trajectory_payload",
+    "base/update_maintenance",
     "base/warehouse_paths",
     "base/window_requests",
     "base/write_ledger",
@@ -553,8 +554,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 542,
-    "engine": 510,
+    "total": 543,
+    "engine": 511,
     "blocklist": 32
   }
 }

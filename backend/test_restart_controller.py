@@ -268,3 +268,31 @@ def test_controller_death_around_state_write(setup, edge, phase):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_update_shutdown_drains_work_before_stopping(setup):
+    ctl, adapter, _ = setup
+    adapter.busy = 1
+    submit(ctl, operation='shutdown', policy={'drain_before_shutdown': True, 'drain_timeout_s': 60, 'force': False})
+    ticks(ctl, 5)
+    assert ctl.state['phase'] == 'DRAINING' and adapter.stops == 0
+    assert not (ctl.base / 'data/.intentional_shutdown').exists()
+    adapter.busy = 0
+    ticks(ctl, 5)
+    assert ctl.state['phase'] == 'STOPPED'
+    assert ctl.state['last_result']['outcome'] == 'intentional_shutdown'
+    assert ctl.state['last_result']['effect_unknown'] is False
+    assert adapter.spawns == 0
+
+
+def test_update_shutdown_timeout_preserves_work_and_reopens_admission(setup):
+    ctl, adapter, clock = setup
+    adapter.busy = 1
+    submit(ctl, operation='shutdown', policy={'drain_before_shutdown': True, 'drain_timeout_s': 1, 'force': False})
+    ticks(ctl, 3)
+    clock[0] += 2
+    ticks(ctl, 5)
+    assert ctl.state['phase'] == 'ACTIVE' and adapter.accepting
+    assert adapter.stops == 0
+    assert ctl.state['last_result']['outcome'] == 'deferred'
+    assert not (ctl.base / 'data/.intentional_shutdown').exists()

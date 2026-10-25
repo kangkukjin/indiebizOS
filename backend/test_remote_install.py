@@ -99,3 +99,22 @@ if __name__ == "__main__":
     import sys
     import pytest
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_plan_keeps_driver_when_target_script_is_replaced(repos, monkeypatch):
+    import os
+    import sys
+    from pathlib import Path
+    _, target = repos
+    plan = installer.make_plan(target, 'source-change', sys.executable, '/runtime/bin/npm')
+    steps = {row['id']: row for row in plan['steps']}
+    assert list(steps).index('quiesce') < list(steps).index('update')
+    assert list(steps)[-1] == 'resume-runtime'
+    script = Path(steps['preflight']['argv'][1])
+    assert target / 'data/_backups' in script.parents
+    (target / 'scripts').mkdir()
+    (target / 'scripts/remote_install.py').write_text('raise RuntimeError("replaced")')
+    env = {**os.environ, **plan['env'], 'PYTHONPATH': str(Path(__file__).resolve().parent)}
+    result = subprocess.run([sys.executable, str(script), 'verify-head', '--root', str(target)],
+                            env=env, text=True, capture_output=True)
+    assert result.returncode == 0, result.stdout + result.stderr

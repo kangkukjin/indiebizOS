@@ -1125,7 +1125,7 @@
   "self:limb": {
    "fields": {
     "description": "029bd0d50efd",
-    "target_description": "038e65caaffe",
+    "target_description": "c22cf6c5b5ec",
     "implementation": "7d822e4d3499",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1137,8 +1137,8 @@
     "router": "ebbb1532efbc",
     "tool": "2e81dde1acfc"
    },
-   "reviewed": "2026-10-21",
-   "examples": 18
+   "reviewed": "2026-10-26",
+   "examples": 11
   },
   "self:list": {
    "fields": {

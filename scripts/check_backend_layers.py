@@ -39,6 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
+        "update_maintenance",
         "recall_relevance",
         "output_publish", "phone_execution_contract",
         "research_context",

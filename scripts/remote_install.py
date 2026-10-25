@@ -5,15 +5,16 @@ Needs Git, supported Python and Node/npm already installed. No credentials or
 runtime installers are downloaded implicitly. The generic executor is remote_steps.
 """
 import sys
+import os
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+sys.path.insert(0, str(Path(os.environ.get('INDIEBIZ_UPDATE_ROOT', Path(__file__).resolve().parents[1])) / "backend"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import boot_paths  # noqa: F401,E402
 
 import argparse
 from datetime import datetime
 import json
-import os
 import shutil
 import subprocess
 import uuid
@@ -76,6 +77,8 @@ def preserve_generated(root, names):
 
 def update(root):
     """Fast forward only; preserve colliding local files, never reset/clean/stash."""
+    from remote_update_runtime import stopped
+    stopped(root)
     generated = generated_changes(root)
     before = git(root, "rev-parse", "HEAD")
     subprocess.run(["git", "-C", str(root), "fetch", "origin"], check=True)
@@ -148,14 +151,24 @@ def reconcile_packages(root):
 
 def make_plan(root, run_id, python, npm):
     root = root.resolve()
-    script = str(root / "scripts" / "remote_install.py")
+    # The updater must survive replacement of its own source checkout. Keep the
+    # driver used by this plan for resumed steps and later runtime restoration.
+    driver = backup_root(root) / 'driver'
+    driver.mkdir()
+    for name in ('remote_install.py', 'remote_update_runtime.py', 'remote_boot.py'):
+        shutil.copy2(Path(__file__).parent / name, driver / name)
+    shutil.copy2(Path(__file__).resolve().parents[1] / 'backend/base/update_maintenance.py', driver / 'update_maintenance.py')
+    script = str(driver / "remote_install.py")
+    lifecycle = [python, str(driver / 'remote_update_runtime.py')]
     vpy = str(root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python3"))
     env = {"PATH": str(Path(npm).parent) + os.pathsep + os.environ.get("PATH", ""),
            "PIP_NO_INPUT": "1", "GIT_TERMINAL_PROMPT": "0",
-           "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+           "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", "INDIEBIZ_UPDATE_ROOT": str(root)}
     steps = []
 
-    def step(name, argv, verify=None, cwd=None, timeout=3600):
+    def step(name, argv, verify=None, cwd=None, timeout=3600, guarded=True):
+        if guarded:
+            argv = [*lifecycle, 'guard-run', '--root', str(root), '--run-id', run_id, '--', *argv]
         row = {"id": name, "argv": argv, "timeout": timeout}
         if verify:
             row["verify"] = verify
@@ -163,7 +176,8 @@ def make_plan(root, run_id, python, npm):
             row["cwd"] = str(cwd)
         steps.append(row)
 
-    step("preflight", [python, script, "preflight", "--root", str(root), "--npm", npm])
+    step("preflight", [python, script, "preflight", "--root", str(root), "--npm", npm], guarded=False)
+    step('quiesce', [*lifecycle, 'quiesce', '--root', str(root), '--run-id', run_id], guarded=False, timeout=660)
     step("update", [python, script, "update", "--root", str(root)],
          [python, script, "verify-head", "--root", str(root)])
     step("packages", [python, script, "packages", "--root", str(root)])
@@ -179,6 +193,8 @@ def make_plan(root, run_id, python, npm):
     step("imports", [vpy, str(root / "scripts/check_import_coverage.py")])
     step("pip-check", [vpy, "-m", "pip", "check"])
     step("head-check", [python, script, "verify-head", "--root", str(root)])
+    step('resume-runtime', [*lifecycle, 'resume', '--root', str(root), '--run-id', run_id, '--npm', npm],
+         verify=[*lifecycle, 'verify', '--root', str(root), '--run-id', run_id], guarded=False, timeout=660)
     return {"version": 1, "run_id": run_id, "cwd": str(root), "env": env, "steps": steps}
 
 

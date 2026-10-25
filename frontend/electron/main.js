@@ -1,4 +1,5 @@
 import { usesDevServer } from './renderer-mode.js';
+import { installUpdateControl } from './update-control.js';
 /**
  * Electron 메인 프로세스
  * 앱 생명주기·메인 창·IPC·트레이·런처 WebSocket
@@ -692,6 +693,17 @@ if (!_gotSingleLock) {
 // 앱 준비
 app.whenReady().then(async () => {
   if (!_gotSingleLock) return;
+  let updateControl;
+  if (!app.isPackaged) {
+    try {
+      updateControl = installUpdateControl({ app, BrowserWindow, root: getBasePath(), mode: isDev ? 'dev' : 'preview' });
+    } catch (error) {
+      suppressSystemCleanup();
+      console.error('[Update]', error.message);
+      app.quit();
+      return;
+    }
+  }
   console.log('[Electron] 앱 시작');
   embeddedBridge = installEmbeddedBrowser(getBasePath(), () => mainWindow);
 
@@ -840,6 +852,7 @@ app.whenReady().then(async () => {
 
   // 윈도우 생성
   createWindow();
+  mainWindow.webContents.once('did-finish-load', () => updateControl?.ready());
 
   // Launcher WS 브릿지: 백엔드 → Electron 메인 프로세스 직접 연결
   // 메인 프로세스에서 유지하므로 어떤 창이 열려있든 항상 활성화

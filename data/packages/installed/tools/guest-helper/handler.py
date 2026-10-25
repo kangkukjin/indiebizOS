@@ -836,6 +836,11 @@ def _limb_list(tool_input: dict) -> dict:
         rows = [r for r in rows if r.get("device_id") == limb_filter or r.get("alias") == limb_filter]
     for r in rows:
         r["connected"] = r["device_id"] in live_ids
+        if r.get("registration") and (r["registration"].get("kind") != "phone"):
+            # Same release selection as the cockpit (signed releases on Mac).
+            # Do not infer update availability from helper/dist or connectivity.
+            import resident_pcs
+            r["helper"] = resident_pcs.helper_status(r)
         if not r.get("registration"):
             payload_dir = _payload_dir_for(r.get("alias", ""), r["device_id"])
             r["payload_dir"] = payload_dir if os.path.isdir(payload_dir) else None

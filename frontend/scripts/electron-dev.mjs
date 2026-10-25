@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { identityPath } from './dev-server-identity.mjs';
+import { checkUpdateAdmission } from '../electron/update-control.js';
 
 const frontendRoot = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
 const require = createRequire(import.meta.url);
@@ -51,6 +52,7 @@ export async function runDesktop({
   createServer = createRenderer, launch = launchElectron,
   signals = process, log = console.log,
 } = {}) {
+  checkUpdateAdmission(path.dirname(root));
   let server;
   let child;
   let stopped = false;

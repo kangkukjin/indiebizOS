@@ -171,9 +171,9 @@ def run_ibl_health_check() -> List[Dict]:
     if reds:
         note += " — " + "; ".join(f"{d.get('name')}:{str(d.get('reason'))[:60]}" for d in reds[:5])
     out.append({"node": "__ibl_health__", "action": "currency",
-                "success": r == 0, "response_ms": 0,
-                "data_quality": "ok" if r == 0 else "currency_broken",
-                "error_message": None if r == 0 else note})
+                "success": g > 0 and r == 0, "response_ms": 0,
+                "data_quality": "ok" if g > 0 and r == 0 else "currency_broken",
+                "error_message": None if g > 0 and r == 0 else note})
     # §1C 골든파이프
     gp = s.get("golden_pipes") or {}
     passed, total = int(gp.get("passed", 0)), int(gp.get("total", 0))
@@ -221,7 +221,7 @@ def run_ibl_health_check() -> List[Dict]:
                     "data_quality": "ok" if rs_ok else "error",
                     "error_message": None if rs_ok else rs_note})
     # §1E 침묵-실패 회귀 스위트 (2026-08-08 — 3방식 실험 12회의 상설 전환) —
-    # 문법층 D1~D6 + 통화층 P1~P19. 캠페인이 부류 단위로 닫은 침묵 실패들이
+    # 현행 문법·실패 전파와 도구 통화. 부류 단위로 닫은 침묵 실패들이
     # 다시 열리면 12시간 내 여기서 깃발이 선다. subprocess=테스트가 패키지 모듈을
     # 자체 로드하므로 라이브 프로세스 무접촉(red_safety 와 같은 이유).
     out.append(_run_silent_failure_regression(_root))
@@ -334,12 +334,13 @@ def _run_playwright_browsers(_root) -> Dict:
 
 
 def _run_silent_failure_regression(_root) -> Dict:
-    """침묵-실패 회귀 순찰(§1E) — 두 회귀 파일을 백엔드 인터프리터로 실행해 한 항목으로 기록.
+    """침묵-실패 회귀 순찰(§1E) — 현행 언어·도구 회귀 파일을 백엔드 인터프리터로 실행해 한 항목으로 기록.
 
-    성공=둘 다 rc 0. 실패 시 어느 파일의 어떤 케이스인지 출력 꼬리를 동반한다.
+    성공=모든 스위트 rc 0. 실패 시 어느 파일의 어떤 케이스인지 출력 꼬리를 동반한다.
     """
     import subprocess
-    suites = ["backend/test_ibl_silent_failures.py", "backend/test_pipe_currency_failures.py"]
+    suites = ["backend/test_ibl_v2_core.py", "backend/test_ibl_silent_failures.py",
+              "backend/test_pipe_currency_failures.py"]
     t0 = _time.time()
     for rel in suites:
         script = _root / rel
@@ -348,7 +349,7 @@ def _run_silent_failure_regression(_root) -> Dict:
                     "success": False, "response_ms": 0, "data_quality": "error",
                     "error_message": f"{rel} 없음"}
         try:
-            proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+            proc = subprocess.run([sys.executable, "-m", "pytest", str(script)], cwd=str(_root),
                                   capture_output=True, text=True, timeout=180)
         except Exception as e:
             return {"node": "__static__", "action": "silent_failure_regression",
@@ -1053,7 +1054,7 @@ def get_ibl_health_status() -> Dict:
     KEYS = [
         ("__static__", "ibl_consistency", "어휘 정합 — 선언·구현·도구 일치"),
         ("__static__", "red_safety", "자기수정 안전장치 — 게이트·그랜트·롤백 기능"),
-        ("__static__", "silent_failure_regression", "침묵-실패 회귀 — 문법 D1~D6 + 통화 P1~P19"),
+        ("__static__", "silent_failure_regression", "침묵-실패 회귀 — 현행 문법·실패 전파·도구 통화"),
         ("__static__", "import_coverage", "의존성 커버리지 — 코드 import ↔ .venv 실재"),
         ("__ibl_health__", "currency", "통화 규약 — 실행 결과 형태"),
         ("__ibl_health__", "golden_pipes", "파이프 흐름 — 액션 조합(>>)"),

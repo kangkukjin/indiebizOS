@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """IBL 건강 점검 — 매뉴얼 §1 절차를 그대로 실행(외부 도구 의존 없이 /ibl/execute + 레지스트리만)."""
 import json, time, urllib.request, urllib.error, subprocess, sys, os
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+import boot_paths  # noqa: E402,F401
+from ibl_v2_ir import unpack
 
 BASE = "http://localhost:8765"
 PID = "하드웨어"
@@ -18,12 +22,12 @@ def _abort_admission(detail):
                                           ensure_ascii=False))
     sys.exit(0)
 
-def execute(code, pid=PID):
+def _request(fields, pid):
     # agent_id=__self_check__ — 이 점검의 실행이 action_health 에 source='self_check' 로
     # 기록되게 한다(없으면 'usage' 로 실려 §1D 실사용 통계를 자가 점검 실패로 오염 —
     # channel_read 97% 거짓 시그널의 진범). postprocess(AI 압축)도 함께 스킵돼 점검 AI 0.
-    body = json.dumps({"code": code, "project_id": pid,
-                       "agent_id": "__self_check__"}).encode()
+    body = json.dumps({**fields, "project_id": pid,
+                       "agent_id": "__self_check__", "edition": 2}).encode()
     headers = {"Content-Type": "application/json"}
     # ★부모 자격 동반(2026-09-15) — 러너(스케줄러 잡·조종실 요청)가 쥔 실행 자격을 환경변수로
     # 물려받아 X-Runtime-Parent 로 싣는다(cli_provider._identity_headers / mcp_server 와 같은
@@ -48,21 +52,67 @@ def execute(code, pid=PID):
         return {"_transport_error": f"HTTP {e.code}: {raw[:80]}"}
     except Exception as e:
         return {"_transport_error": str(e)}
-    d = out.get("result", out)
-    if isinstance(d, str):
-        try: d = json.loads(d)
-        except Exception: return {"_string": d}
-    return d
+    return out
 
-def final_of(d):
-    """파이프 결과면 final_result를 dict로."""
-    if isinstance(d, dict) and "final_result" in d:
-        fr = d["final_result"]
-        if isinstance(fr, str):
-            try: return json.loads(fr)
-            except Exception: return {"_string": fr}
-        return fr
-    return d
+
+def execute(code, pid=PID):
+    """HTTP 표시 사본 대신 저장된 원형 값을 조회한다. 도구는 한 번만 실행한다."""
+    result = _request({"code": code}, pid)
+    if not isinstance(result, dict) or result.get("success") is not True or "value_wire" in result:
+        return result
+    reference = result.get("result_ref") or {}
+    if not isinstance(reference, dict) or not reference.get("id"):
+        return {**result, "_protocol_error": "성공 응답에 원형 결과 참조가 없습니다."}
+    request = {"id": reference["id"], "path": ["value_wire"], "offset": 0, "limit": 60000}
+    chunks, offset, total = [], 0, None
+    try:
+        while True:
+            page = _request({"code": "", "read_result": request}, pid)
+            if not isinstance(page, dict) or not isinstance(page.get("text"), str):
+                raise ValueError("원형 결과 조회 실패: " + str(page)[:160])
+            scope = page.get("read_scope") or {}
+            if (page.get("id") != reference["id"] or page.get("path") != ["value_wire"]
+                    or page.get("offset") != offset or scope.get("start") != offset
+                    or scope.get("end") != offset + len(page["text"])
+                    or type(page.get("chars")) is not int or page["chars"] > 4_000_000):
+                raise ValueError("원형 결과 페이지의 참조·범위가 일치하지 않습니다.")
+            if total is not None and total != page["chars"]:
+                raise ValueError("조회 중 원형 결과 길이가 바뀌었습니다.")
+            total = page["chars"]
+            chunks.append(page["text"])
+            offset += len(page["text"])
+            if offset == total:
+                if page.get("next_read") is not None:
+                    raise ValueError("완료한 결과에 다음 페이지가 있습니다.")
+                break
+            following = page.get("next_read")
+            if (not page["text"] or not isinstance(following, dict)
+                    or following.get("id") != reference["id"]
+                    or following.get("path") != ["value_wire"] or following.get("offset") != offset):
+                raise ValueError("원형 결과 페이지가 누락됐습니다.")
+            request = following
+        return {**result, "value_wire": json.loads("".join(chunks))}
+    except (ValueError, TypeError, KeyError) as exc:
+        return {**result, "_protocol_error": str(exc)}
+
+
+def final_of(result):
+    """실행 성공과 wire 계약을 확인한 뒤에만 값을 꺼낸다."""
+    if not isinstance(result, dict):
+        return {"_protocol_error": "실행 응답이 Record가 아닙니다."}
+    if result.get("_transport_error") or result.get("_protocol_error"):
+        return result
+    if result.get("success") is not True:
+        return {"_execution_error": result.get("error") or result.get("issues") or "실행 실패",
+                "executed": result.get("executed"), "diagnostic": result.get("diagnostic")}
+    wire = result.get("value_wire")
+    if not isinstance(wire, dict) or wire.get("protocol") not in ("ibl-value/1", "ibl-value/2"):
+        return {"_protocol_error": "성공 응답의 value_wire가 없거나 지원하지 않는 프로토콜입니다."}
+    try:
+        return unpack(wire["data"])
+    except Exception as exc:
+        return {"_protocol_error": str(exc)}
+
 
 # 기기 미가용(폰/맥 오프라인)·파라미터 부족 = 액션 정상, 테스트 한계 → liveness 면제(SKIP).
 # (backend world_pulse_health._evaluate_result 의 분류와 같은 취지 — 거짓 YELLOW 방지)
@@ -79,6 +129,14 @@ def classify_currency(d, declared):
     scalar/effect/transform은 통화 면제 — 단 liveness(에러 없이 살았나)는 본다(핸들러 크래시·
     param 키 불일치 검출). 통화 계약이 없으므로 RED 는 안 만든다(에러=YELLOW, 정상/한계=SKIP).
     아래 tbl/blk 읽기는 straggler(stock table·context7/report blocks 등 items 미선언 부가방출) 방어용."""
+    d = final_of(d)
+    if isinstance(d, dict):
+        for key in ("_transport_error", "_protocol_error"):
+            if key in d:
+                return "RED", f"{key}: {str(d[key])[:120]}"
+        if "_execution_error" in d:
+            level = "RED" if d.get("executed") is not True else "YELLOW"
+            return level, f"실행 실패: {str(d['_execution_error'])[:120]}"
     if declared != "items":
         # 통화 면제 — liveness만 본다.
         if not isinstance(d, dict):
@@ -268,356 +326,213 @@ def verify_instrument(inst_id):
     return worst, results
 
 
-if "--instrument" in sys.argv:
-    _idx = sys.argv.index("--instrument")
-    _inst = sys.argv[_idx + 1] if _idx + 1 < len(sys.argv) else ""
-    if not _inst:
-        print("사용법: python scripts/ibl_health_check.py --instrument <id>", file=sys.stderr)
-        sys.exit(2)
-    _worst, _rows = verify_instrument(_inst)
-    print("=" * 72)
-    print(f"단일-계기 verify: {_inst}")
-    print("=" * 72)
-    for _label, _v, _r in _rows:
-        print(f"  [{_v:6}] {_label:36} {_r}")
-    _fail = _worst in ("YELLOW", "RED")
-    print(f"\n  ▶ 판정: {_worst}  {'❌ 실패' if _fail else ('⚠️ 검증 밖' if _worst == 'N_A' else '✅ 통과')}")
-    sys.exit(1 if _fail else 0)
+from ibl_health_programs import PIPES, OPERATORS, pipe_ok, operator_result
+
+def main():
+    if "--instrument" in sys.argv:
+        _idx = sys.argv.index("--instrument")
+        _inst = sys.argv[_idx + 1] if _idx + 1 < len(sys.argv) else ""
+        if not _inst:
+            print("사용법: python scripts/ibl_health_check.py --instrument <id>", file=sys.stderr)
+            sys.exit(2)
+        _worst, _rows = verify_instrument(_inst)
+        print("=" * 72)
+        print(f"단일-계기 verify: {_inst}")
+        print("=" * 72)
+        for _label, _v, _r in _rows:
+            print(f"  [{_v:6}] {_label:36} {_r}")
+        _fail = _worst in ("YELLOW", "RED")
+        print(f"\n  ▶ 판정: {_worst}  {'❌ 실패' if _fail else ('⚠️ 검증 밖' if _worst == 'N_A' else '✅ 통과')}")
+        sys.exit(1 if _fail else 0)
 
 
-# ── §1A 정적 정합성 ──
-print("="*72); print("§1A 정적 정합성 (build --check)"); print("="*72)
-r = subprocess.run([sys.executable, "scripts/build_ibl_nodes.py", "--check"],
-                   capture_output=True, text=True, cwd=os.getcwd())
-# ★판정=returncode 단일 소스. 옛 문구 스크레이핑("검증 통과" in stdout and "불일치" not in
-# stdout)은 --check 의 실패 출력이 전부 stderr 로 가므로 "불일치" 검사가 공허하게 항상 참 —
-# 게이트 1(validate 롤업)의 성공 문구 유무만 봤고, 나머지 가드(코퍼스 param·fixture 완전성·
-# enum·포크/OS·launcher·교재·뷰·앱-템플릿·파생물 바이트 비교)가 실패해도 GREEN 이 샜다.
-# world_pulse_health.run_ibl_health_check 의 검증자 튼튼화(2026-07-03, 스크레이핑→계약)와 동류.
-static_ok = (r.returncode == 0)
-for line in r.stdout.splitlines():
-    if any(w in line for w in ("통과","불일치","실패","✗","액션")): print("  " + line.strip())
-if not static_ok:  # 실패 사유는 stderr 에 있다 — RED 인데 이유가 안 보이는 로그 방지
-    _err = [l for l in (r.stderr or "").splitlines() if any(w in l for w in ("불일치","실패","✗"))]
-    for line in _err[:40]: print("  " + line.strip())
-print("  → 정적:", "GREEN ✅" if static_ok else "RED ❌")
+    # ── §1A 정적 정합성 ──
+    print("="*72); print("§1A 정적 정합성 (build --check)"); print("="*72)
+    r = subprocess.run([sys.executable, "scripts/build_ibl_nodes.py", "--check"],
+                       capture_output=True, text=True, cwd=os.getcwd())
+    # ★판정=returncode 단일 소스. 옛 문구 스크레이핑("검증 통과" in stdout and "불일치" not in
+    # stdout)은 --check 의 실패 출력이 전부 stderr 로 가므로 "불일치" 검사가 공허하게 항상 참 —
+    # 게이트 1(validate 롤업)의 성공 문구 유무만 봤고, 나머지 가드(코퍼스 param·fixture 완전성·
+    # enum·포크/OS·launcher·교재·뷰·앱-템플릿·파생물 바이트 비교)가 실패해도 GREEN 이 샜다.
+    # world_pulse_health.run_ibl_health_check 의 검증자 튼튼화(2026-07-03, 스크레이핑→계약)와 동류.
+    static_ok = (r.returncode == 0)
+    for line in r.stdout.splitlines():
+        if any(w in line for w in ("통과","불일치","실패","✗","액션")): print("  " + line.strip())
+    if not static_ok:  # 실패 사유는 stderr 에 있다 — RED 인데 이유가 안 보이는 로그 방지
+        _err = [l for l in (r.stderr or "").splitlines() if any(w in l for w in ("불일치","실패","✗"))]
+        for line in _err[:40]: print("  " + line.strip())
+    print("  → 정적:", "GREEN ✅" if static_ok else "RED ❌")
 
-# ── §1B 통화 무결성 (fixture 전수 probe) ──
-# fixture('올바른 파라미터 예 하나')는 data/ibl_fixtures.json 이 단일 진실 소스.
-# build_ibl_nodes.py --check 가 items/scalar 액션의 fixture 완전성을 강제하므로(신규 액션이
-# 빠질 수 없음), 여기서 그 목록을 그대로 실행하면 행동 건강 커버리지가 구성에 의해 완전하다.
-# ★op 축(2026-08-05 감사 ⑤): 키가 `node:action#op` 인 항목은 **한 액션 안의 다른 읽기 op**다.
-# 액션당 fixture 하나로는 op 하나만 증명된다 — `[self:music]` 의 fixture 가 sources 를 돌 때
-# library·track·folders·playlists·playlist 는 한 번도 안 돌았다. 읽기 op 전수 커버리지도
-# --check 가 강제하므로(fixture 또는 사유 있는 exempt) 여기 실행 목록이 곧 op 축 커버리지다.
-# ★read-only 게이트(2026-08-05): 이 절은 일일 무인 루프(world_pulse self-check)에서 돌므로
-# side_effect 액션의 fixture 는 실행하지 않는다(--instrument 경로와 같은 ibl_safety 게이트).
-# 현행 32개는 전부 읽기 op(list/status/search…)로 실측 확인됐지만 그건 저술 관습일 뿐 코드가
-# 보증하지 않는다 — 무인 실행은 관습이 아니라 구조가 막는다(자가점검 계약 "부작용 없는 액션").
-# 그 32개의 행동 검사는 수동 전수 실행 --all-fixtures 로(어휘 저술·커밋 전 점검용).
-_FIX = json.load(open("data/ibl_fixtures.json", encoding="utf-8"))
-PRODUCERS = sorted(_FIX["fixtures"].items())   # [(name, code), ...] — name = node:action[#op]
-EXEMPT = _FIX.get("exempt", {})
+    # ── §1B 통화 무결성 (fixture 전수 probe) ──
+    # fixture('올바른 파라미터 예 하나')는 data/ibl_fixtures.json 이 단일 진실 소스.
+    # build_ibl_nodes.py --check 가 items/scalar 액션의 fixture 완전성을 강제하므로(신규 액션이
+    # 빠질 수 없음), 여기서 그 목록을 그대로 실행하면 행동 건강 커버리지가 구성에 의해 완전하다.
+    # ★op 축(2026-08-05 감사 ⑤): 키가 `node:action#op` 인 항목은 **한 액션 안의 다른 읽기 op**다.
+    # 액션당 fixture 하나로는 op 하나만 증명된다 — `[self:music]` 의 fixture 가 sources 를 돌 때
+    # library·track·folders·playlists·playlist 는 한 번도 안 돌았다. 읽기 op 전수 커버리지도
+    # --check 가 강제하므로(fixture 또는 사유 있는 exempt) 여기 실행 목록이 곧 op 축 커버리지다.
+    # ★read-only 게이트(2026-08-05): 이 절은 일일 무인 루프(world_pulse self-check)에서 돌므로
+    # side_effect 액션의 fixture 는 실행하지 않는다(--instrument 경로와 같은 ibl_safety 게이트).
+    # 현행 32개는 전부 읽기 op(list/status/search…)로 실측 확인됐지만 그건 저술 관습일 뿐 코드가
+    # 보증하지 않는다 — 무인 실행은 관습이 아니라 구조가 막는다(자가점검 계약 "부작용 없는 액션").
+    # 그 32개의 행동 검사는 수동 전수 실행 --all-fixtures 로(어휘 저술·커밋 전 점검용).
+    _FIX = json.load(open("data/ibl_fixtures.json", encoding="utf-8"))
+    PRODUCERS = sorted(_FIX["fixtures"].items())   # [(name, code), ...] — name = node:action[#op]
+    EXEMPT = _FIX.get("exempt", {})
 
 
-def _qual_action(name):
-    """fixture 키 'node:action[#op]' → (node, action). op 축(감사 ⑤) 도입 후 필요."""
-    base = name.split("#", 1)[0]
-    return tuple(base.split(":", 1))
-print("\n" + "="*72); print("§1B 통화 무결성 (returns 선언 대비 단언)"); print("="*72)
-from collections import defaultdict
-buckets = defaultdict(list)
-_ALL_FIXTURES = "--all-fixtures" in sys.argv
-_safety = _load_safety_map()
-_op_safety = _load_op_safety_map()
-if not _safety and not _ALL_FIXTURES:
-    # 안전 지도 적재 실패 = 전 fixture 생략 — 침묵하면 §1B 가 아무것도 안 재고도 '건강'으로 보인다
-    buckets["YELLOW"].append(("__safety_map__", "ibl_safety 적재 실패 — read-only 게이트 판정 불가(전 fixture 생략)"))
-gated = 0
-for name, code in PRODUCERS:
-    fa = _qual_action(name)
-    # ★op 단위 게이트(2026-08-05 감사 ③): fixture 코드가 고른 op 로 판정한다.
-    # 액션 롤업으로 재면 읽기 op fixture 가 쓰기 액션에 갇혀 통째로 생략됐다.
-    _op = _first_op(code, fa)
-    declared = _op_returns_of(fa, _op)
-    if not _ALL_FIXTURES and _is_safe(fa, _op, _safety, _op_safety) is not True:
-        gated += 1
-        verdict, reason = "SKIP", "부작용 op — read-only 게이트로 실행 생략(수동: --all-fixtures)"
-    else:
-        _d = execute(code)
-        verdict, reason = classify_currency(_d, declared)
-        # 봉투 규모 불변식(ibl_honesty.scope_violation): total>items 인데 truncated 침묵 = YELLOW.
-        # 원천 명사의 결함이라 GREEN 통화라도 건강하지 않다 — 하류가 매 파이프에 거짓 절단 경고를 단다.
-        try:
-            from ibl_honesty import scope_violation as _scope_violation
-            _sv = _scope_violation(_d)
-            if _sv and verdict == "GREEN":
-                verdict, reason = "YELLOW", f"봉투 규모 불변식: {_sv}"
-        except Exception:
-            pass
-    buckets[verdict].append((name, reason))
-    print(f"  [{verdict:6}] {name:24} returns:{declared:9} {reason}")
-# 커버리지 — fixture 완전성(--check 강제)을 그대로 반영. 면제는 사유와 함께 명시.
-# 액션 축(returns:items|scalar 전수)과 op 축(읽기 op 전수)을 따로 센다 — 둘 다 --check 가
-# 강제하므로 여기 숫자는 "구성에 의해 완전"이고, 늘어나는 건 저술량뿐이다(감사 ⑤).
-exec_actions = sorted(k for k, v in RETURNS.items() if v in ("items", "scalar"))
-act_fx = [k for k in _FIX["fixtures"] if "#" not in k]
-act_ex = [k for k in EXEMPT if "#" not in k]
-op_fx = [k for k in _FIX["fixtures"] if "#" in k]
-op_ex = [k for k in EXEMPT if "#" in k]
-covered = len(act_fx) + len(act_ex)
-print(f"\n  액션 축: 실행대상(items/scalar) {len(exec_actions)}개 = fixture {len(act_fx)}개 + 면제 {len(act_ex)}개"
-      f" {'✅ 완전' if covered == len(exec_actions) else '❌ 누락 ' + str(len(exec_actions) - covered)}")
-print(f"  op 축: 읽기 op 추가 커버 {len(op_fx) + len(op_ex)}개 = fixture {len(op_fx)}개 + 면제 {len(op_ex)}개"
-      f" (--check 의 읽기-op 완전성 가드가 강제)")
-if gated:
-    print(f"  read-only 게이트 생략 {gated}개 (부작용 op — 행동 검사는 --all-fixtures 수동 실행)")
-if EXEMPT:
-    print("  면제(실행 인자·기기 의존):", ", ".join(f"{k}({v})" for k, v in sorted(EXEMPT.items())))
+    def _qual_action(name):
+        """fixture 키 'node:action[#op]' → (node, action). op 축(감사 ⑤) 도입 후 필요."""
+        base = name.split("#", 1)[0]
+        return tuple(base.split(":", 1))
+    print("\n" + "="*72); print("§1B 통화 무결성 (returns 선언 대비 단언)"); print("="*72)
+    from collections import defaultdict
+    buckets = defaultdict(list)
+    _ALL_FIXTURES = "--all-fixtures" in sys.argv
+    _safety = _load_safety_map()
+    _op_safety = _load_op_safety_map()
+    if not _safety and not _ALL_FIXTURES:
+        # 안전 지도 적재 실패 = 전 fixture 생략 — 침묵하면 §1B 가 아무것도 안 재고도 '건강'으로 보인다
+        buckets["YELLOW"].append(("__safety_map__", "ibl_safety 적재 실패 — read-only 게이트 판정 불가(전 fixture 생략)"))
+    gated = 0
+    for name, code in PRODUCERS:
+        fa = _qual_action(name)
+        # ★op 단위 게이트(2026-08-05 감사 ③): fixture 코드가 고른 op 로 판정한다.
+        # 액션 롤업으로 재면 읽기 op fixture 가 쓰기 액션에 갇혀 통째로 생략됐다.
+        _op = _first_op(code, fa)
+        declared = _op_returns_of(fa, _op)
+        if not _ALL_FIXTURES and _is_safe(fa, _op, _safety, _op_safety) is not True:
+            gated += 1
+            verdict, reason = "SKIP", "부작용 op — read-only 게이트로 실행 생략(수동: --all-fixtures)"
+        else:
+            _d = execute(code)
+            verdict, reason = classify_currency(_d, declared)
+            # 봉투 규모 불변식(ibl_honesty.scope_violation): total>items 인데 truncated 침묵 = YELLOW.
+            # 원천 명사의 결함이라 GREEN 통화라도 건강하지 않다 — 하류가 매 파이프에 거짓 절단 경고를 단다.
+            try:
+                from ibl_honesty import scope_violation as _scope_violation
+                _sv = _scope_violation(final_of(_d))
+                if _sv and verdict == "GREEN":
+                    verdict, reason = "YELLOW", f"봉투 규모 불변식: {_sv}"
+            except Exception:
+                pass
+        buckets[verdict].append((name, reason))
+        print(f"  [{verdict:6}] {name:24} returns:{declared:9} {reason}")
+    # 커버리지 — fixture 완전성(--check 강제)을 그대로 반영. 면제는 사유와 함께 명시.
+    # 액션 축(returns:items|scalar 전수)과 op 축(읽기 op 전수)을 따로 센다 — 둘 다 --check 가
+    # 강제하므로 여기 숫자는 "구성에 의해 완전"이고, 늘어나는 건 저술량뿐이다(감사 ⑤).
+    exec_actions = sorted(k for k, v in RETURNS.items() if v in ("items", "scalar"))
+    act_fx = [k for k in _FIX["fixtures"] if "#" not in k]
+    act_ex = [k for k in EXEMPT if "#" not in k]
+    op_fx = [k for k in _FIX["fixtures"] if "#" in k]
+    op_ex = [k for k in EXEMPT if "#" in k]
+    covered = len(act_fx) + len(act_ex)
+    print(f"\n  액션 축: 실행대상(items/scalar) {len(exec_actions)}개 = fixture {len(act_fx)}개 + 면제 {len(act_ex)}개"
+          f" {'✅ 완전' if covered == len(exec_actions) else '❌ 누락 ' + str(len(exec_actions) - covered)}")
+    print(f"  op 축: 읽기 op 추가 커버 {len(op_fx) + len(op_ex)}개 = fixture {len(op_fx)}개 + 면제 {len(op_ex)}개"
+          f" (--check 의 읽기-op 완전성 가드가 강제)")
+    if gated:
+        print(f"  read-only 게이트 생략 {gated}개 (부작용 op — 행동 검사는 --all-fixtures 수동 실행)")
+    if EXEMPT:
+        print("  면제(실행 인자·기기 의존):", ", ".join(f"{k}({v})" for k, v in sorted(EXEMPT.items())))
 
-# ── §1C 골든 파이프 (문법+통화 흐름) ──
-PIPES = [
-  ("naver>>filter>>take", '[sense:search]{source: "naver", query: "AI"} >> [table:filter]{where: {field: "title", op: "ne", value: ""}} >> [table:take]{n: 3}', "items"),
-  ("world_bank>>chart",   '[sense:world_bank]{indicator: "인구", country: "한국"} >> [table:chart]{chart_type: "line"}', "chart"),
-  ("paper>>take>>document",'[sense:paper]{query: "transformer"} >> [table:take]{n: 5} >> [table:document]{format: "html"}', "doc"),
-  ("legal>>dedup>>take",  '[sense:legal]{query: "도로교통법"} >> [table:dedup]{} >> [table:take]{n: 3}', "items"),
-  ("kosis>>take",         '[sense:kosis]{query: "인구"} >> [table:take]{n: 5}', "items"),
-]
-print("\n" + "="*72); print("§1C 골든 파이프 (문법+통화 흐름)"); print("="*72)
-
-def _pipe_ok(fr, kind):
-    if kind == "items":
-        return isinstance(fr, dict) and isinstance(fr.get("items"), list) and len(fr["items"]) > 0
-    if kind == "chart":
-        return isinstance(fr, dict) and fr.get("success") is True
-    # doc — bool() 필수: or 체인이 None(실패)이나 경로 문자열(성공)을 그대로 반환해 += 가 터진다
-    return bool(isinstance(fr, dict) and (fr.get("success") is True or fr.get("path") or fr.get("file")))
-
-pipe_pass = 0
-pipe_fails = []
-for name, code, kind in PIPES:
-    fr = final_of(execute(code))
-    ok = _pipe_ok(fr, kind)
-    if not ok:
-        # 외부 API 일시 블립 흡수 — 1회 재시도. 이 절의 목적은 문법·통화 흐름 회귀지
-        # 외부 API liveness 가 아니다(arXiv 가 00:05 UTC 인덱스 갱신 창에서 상습 블립
-        # → 아침 09:05 KST 점검마다 4/5 거짓 경보, 2026-08-06 진단). 진짜 회귀는
-        # 결정론적이라 재시도로 안 사라진다.
-        time.sleep(3)
+    # ── §1C 골든 파이프 (문법+통화 흐름) ──
+    print("\n" + "="*72); print("§1C 골든 파이프 (명시 값 흐름)"); print("="*72)
+    pipe_pass = 0
+    pipe_fails = []
+    for name, code, kind in PIPES:
         fr = final_of(execute(code))
-        ok = _pipe_ok(fr, kind)
-        if ok:
-            print(f"  [RETRY] {name} — 1차 블립, 재시도로 통과")
-    pipe_pass += ok
-    if not ok:
-        pipe_fails.append(name)
-    print(f"  [{'PASS' if ok else 'FAIL':4}] {name:24} {('items='+str(len(fr.get('items',[]))) if isinstance(fr,dict) and isinstance(fr.get('items'),list) else list(fr.keys())[:4] if isinstance(fr,dict) else fr)}")
+        ok = pipe_ok(fr, kind)
+        if not ok:
+            # 외부 API 일시 블립 흡수 — 1회 재시도. 이 절의 목적은 문법·통화 흐름 회귀지
+            # 외부 API liveness 가 아니다(arXiv 가 00:05 UTC 인덱스 갱신 창에서 상습 블립
+            # → 아침 09:05 KST 점검마다 4/5 거짓 경보, 2026-08-06 진단). 진짜 회귀는
+            # 결정론적이라 재시도로 안 사라진다.
+            time.sleep(3)
+            fr = final_of(execute(code))
+            ok = pipe_ok(fr, kind)
+            if ok:
+                print(f"  [RETRY] {name} — 1차 블립, 재시도로 통과")
+        pipe_pass += ok
+        if not ok:
+            pipe_fails.append(name + ": " + str(fr)[:160])
+        print(f"  [{'PASS' if ok else 'FAIL':4}] {name:24} {('items='+str(len(fr.get('items',[]))) if isinstance(fr,dict) and isinstance(fr.get('items'),list) else list(fr.keys())[:4] if isinstance(fr,dict) else fr)}")
 
-# ── §1C-3 거울 키 압력계 (통화 정합 — 봉투가 변환을 따라왔는가) ──
-# 왜 별도 절인가: §1C 는 `items` 만 본다. B15-1(2026-08-20 15회차)은 items 는 옳은데
-# **도메인 이름으로 병기된 거울 키**(`triggers` 등)가 변환 전 전량을 그대로 들고 있어
-# "take(1) 했는데 전 건이 나온다"로 읽힌 사건이다 — items 만 보는 눈엔 안 보인다.
-# `_emit_items` 의 재투영으로 부류는 닫혔고, 이 절은 **압력계**다: 재투영이 "거울 키를
-# 마음껏 만들어도 된다"는 면허로 오독되지 않게 개수를 남긴다(하우스 교리는 단일 통화).
-# 재투영이 못 미치는 형제 컬렉션(종류가 다른 원장·파생 원천)은 봉투가 `_untransformed`
-# 로 **자백**한다(2026-08-20 사용자 판정) — 드롭도 재투영도 아닌 세 번째 답. 이 절은 그
-# 자백도 함께 찍어, 자백이 조용히 늘어나는 것까지 눈에 보이게 한다.
-MIRROR_PIPES = [
-  ("trigger list>>take", '[self:trigger]{op: "list"} >> [table:take]{n: 1}'),
-  ("switch list>>take",  '[self:switch]{op: "list"} >> [table:take]{n: 1}'),
-  ("agents>>take",       '[others:agents] >> [table:take]{n: 1}'),
-]
+    print("\n" + "="*72); print("§1C-2 연산자 (?? · & — 동작 단언)"); print("="*72)
+    op_pass = 0
+    for name, code, expected in OPERATORS:
+        try:
+            ok, detail = operator_result(execute(code), expected)
+        except Exception as e:
+            ok, detail = False, f"단언 예외: {e}"
+        ok = bool(ok)
+        op_pass += ok
+        print(f"  [{'PASS' if ok else 'FAIL':4}] {name:22} {detail}")
 
-def _mirror_report(fr):
-    """(재투영된 거울 수, 변환 안 된 거울 키들) — 후자가 봉투의 남은 거짓말.
-
-    stale 판정은 **포함(containment)**으로 좁힌다: 현재 통화 행을 전부 품은 채 더 긴
-    리스트 = '같은 행인데 변환을 안 따라온 원본'(=B15-1 회귀). 단순히 '더 길다'로 재면
-    종류가 다른 형제 원장(trigger list 의 existing_schedules)이 매일 WARN 을 울려
-    압력계가 곧 무시된다 — 거짓 경보를 내는 계기는 죽은 계기다.
-    """
-    if not isinstance(fr, dict):
-        return 0, []
-    cur = fr.get("items")
-    if not isinstance(cur, list):
-        cur = []
-    stale = []
-    for k, v in fr.items():
-        if k in ("items", "rows", "columns", "table") or not isinstance(v, list):
-            continue
-        if len(v) > len(cur) and cur and all(r in v for r in cur):
-            stale.append(k)
-    return len(fr.get("_mirrored") or []), sorted(stale)
-
-print("\n" + "="*72); print("§1C-3 거울 키 압력계 (재투영 계수 + 남은 stale 뷰)"); print("="*72)
-mirror_total = 0
-mirror_warn = []
-for name, code in MIRROR_PIPES:
-    fr = final_of(execute(code))
-    n_mirror, stale = _mirror_report(fr)
-    mirror_total += n_mirror
-    if stale:
-        mirror_warn.append(f"{name}:{','.join(stale)}")
-    confessed = fr.get("_untransformed") or [] if isinstance(fr, dict) else []
-    print(f"  [{'WARN' if stale else 'OK  '}] {name:22} 재투영={n_mirror} "
-          f"자백={confessed or '-'} 남은 stale={stale or '-'}")
-if mirror_warn:
-    print(f"  ⚠ 변환 안 따라온 거울 키(회귀 의심): {'; '.join(mirror_warn)}")
-
-
-# ── §1C-2 연산자 (문법 자체 — 최종 통화가 아니라 *동작*을 본다) ──
-# 왜 별도 절인가: §1C 는 final_result 의 모양만 보므로 "폴백을 탔는가/단축했는가" 를 못 본다.
-# `??` 가 몇 달간 죽은 채 살아 있던 이유가 정확히 이 사각지대였다(NameError → 아무도 안 봄).
-# 각 케이스는 시도 로그(attempts)·분기 수를 직접 단언한다.
-def _attempts_of(d):
-    """파이프 결과에서 fallback step 의 시도 로그를 꺼낸다(없으면 [])."""
-    for r in (d.get("results") or []) if isinstance(d, dict) else []:
-        if r.get("type") == "fallback":
-            return r.get("attempts") or []
-    return []
-
-def _op_fallback_string_err(d):
-    """앞이 **문자열** 에러여도 폴백해야 한다 — 실패 판정 단일화(is_error_result)의 회귀 테스트.
-    이전엔 `??` 만 문자열 에러를 성공으로 세어, 1차가 status:ok 로 기록되고 폴백을 안 탔다."""
-    a = _attempts_of(d)
-    return (len(a) == 2 and a[0].get("status") == "error" and a[1].get("status") == "ok",
-            f"attempts={[x.get('status') for x in a]}")
-
-def _op_fallback_shortcut(d):
-    """앞이 성공하면 폴백을 타지 않아야 한다(단축 평가)."""
-    a = _attempts_of(d)
-    return (len(a) == 1 and a[0].get("status") == "ok",
-            f"attempts={[x.get('status') for x in a]}")
-
-def _op_parallel_merge(d):
-    """병렬 두 분기가 실제로 합류해 단일 통화가 되는지."""
-    fr = final_of(d)
-    n = len(fr.get("items", [])) if isinstance(fr, dict) and isinstance(fr.get("items"), list) else 0
-    return (n > 0, f"merged items={n}")
-
-def _op_seq_continues(d):
-    """`;` — 앞 문장이 실패해도 뒤 문장이 실행돼야 한다("되든 안 되든 다음").
-    동시에 실패를 숨기지 않아야 한다(success=False + statements_failed)."""
-    if not isinstance(d, dict):
-        return False, f"파이프 결과 아님: {str(d)[:60]}"
-    done, tot = d.get("steps_completed"), d.get("steps_total")
-    return (done == tot and tot == 2 and d.get("statements_failed") == 1
-            and d.get("success") is False,
-            f"steps={done}/{tot} failed={d.get('statements_failed')} success={d.get('success')}")
-
-def _op_seq_boundary_isolates(d):
-    """`;` 경계=독립 — 앞 문장이 **성공**해도 그 결과가 뒤 문장으로 넘어가면 안 된다.
-    프로브(2026-09-15 개정): 성공하는 검색 ; 빈 입력의 chart. 누수면 chart 가 앞 문장의 items 를
-    받아 성공해 버리고(2/2 success=True), 단절돼 있으면 chart 가 '데이터가 비어있습니다'로 실패한다
-    (1/2 success=False — 실패가 정답인 단언). 옛 프로브의 `; [table:take]` 는 09-05 정적 통화
-    검사가 머리 변환자로 실행 전에 거절해 실행기 층을 못 봤다 — chart 는 입력 없이도 형태가 옳아
-    관문을 지난다. _op_seq_continues 는 실패 경로만 보므로 이 사각(성공 경로 누수)은 이 케이스만
-    잡는다(2026-07-19 실측으로 발견된 회귀 가드)."""
-    if not isinstance(d, dict):
-        return False, f"파이프 결과 아님: {str(d)[:60]}"
-    done, tot = d.get("steps_completed"), d.get("steps_total")
-    return (d.get("success") is False and done == 1 and tot == 2,
-            f"steps={done}/{tot} success={d.get('success')} (뒤 문장이 앞 결과를 못 받아 실패=정답)")
-
-def _op_pipe_still_stops(d):
-    """회귀 가드 — `>>` 는 문장 *안*에서 여전히 실패 시 중단해야 한다(`;` 와 뒤섞이면 안 됨)."""
-    if not isinstance(d, dict):
-        return False, f"파이프 결과 아님: {str(d)[:60]}"
-    return (d.get("success") is False and d.get("steps_completed") == 0,
-            f"steps={d.get('steps_completed')}/{d.get('steps_total')} success={d.get('success')}")
-
-def _op_json_string_failure(d):
-    """handler 도구의 실패는 `format_json` 때문에 **JSON 문자열**로 온다 — 그것도 실패로 봐야 한다.
-    이 판정이 없던 동안 handler 실패가 전부 성공으로 샜다(2026-07-18 블로그 파이프에서 실측).
-    프로브(2026-09-15 개정): 빈 query 의 `[sense:search]` — 형태는 옳아 정적 통화 검사를 지나고,
-    핸들러가 `{"success": false, "error": "검색어(query)가 필요합니다."}` 문자열을 낸다. 옛 프로브
-    `[table:document]{} >> take` 는 09-05 정적 검사가 '굶는 변환자'로 실행 전에 거절해 이 실행기
-    층 판정에 닿지 못했다(steps=None → 5/7 고정)."""
-    if not isinstance(d, dict):
-        return False, f"파이프 결과 아님: {str(d)[:60]}"
-    return (d.get("success") is False and d.get("steps_completed") == 0,
-            f"steps={d.get('steps_completed')}/{d.get('steps_total')} success={d.get('success')}")
-
-OPERATORS = [
-  ("JSON문자열 실패감지", '[sense:search]{source: "naver", query: ""} >> [table:take]{n: 1}', _op_json_string_failure),
-  ("; 실패해도 다음문장", '[self:read]{path: "__없는파일__.md"} ; [sense:search]{source: "naver", query: "AI"}', _op_seq_continues),
-  ("; 경계=prev 단절",    '[sense:search]{source: "naver", query: "AI"} ; [table:chart]{chart_type: "line"}', _op_seq_boundary_isolates),
-  (">> 실패시 중단(회귀)", '[self:read]{path: "__없는파일__.md"} >> [table:take]{n: 1}', _op_pipe_still_stops),
-  ("?? 문자열에러→폴백", '[self:read]{path: "__없는파일__.md"} ?? [sense:search]{source: "naver", query: "AI"}', _op_fallback_string_err),
-  ("?? 성공→단축평가",   '[sense:search]{source: "naver", query: "AI"} ?? [self:read]{path: "__없는파일__.md"}', _op_fallback_shortcut),
-  ("& 병렬 합류",        '[sense:search]{source: "naver", query: "AI"} & [sense:search]{query: "AI"} >> [table:merge]{by: "title"}', _op_parallel_merge),
-]
-print("\n" + "="*72); print("§1C-2 연산자 (?? · & — 동작 단언)"); print("="*72)
-op_pass = 0
-for name, code, assertion in OPERATORS:
+    # ── §1D 런타임 건강 ──
+    # 최근 7일 + 실사용(usage)만 — 백엔드 대시보드(get_action_health_summary)와 같은 창.
+    # 필터가 없던 동안 전 역사를 무기한 합산해 화석이 영원히 상위에 남았다(run_pipeline 86%
+    # = 은퇴한 옛 12h sweep 의 5~6월 잔재, 6주간 호출 0건인데 계속 표시 — 2026-08-04 실측).
+    print("\n" + "="*72); print("§1D 런타임 건강 (최근 7일 실사용, 실패율 상위)"); print("="*72)
     try:
-        ok, detail = assertion(execute(code))
+        import sqlite3
+        c = sqlite3.connect("data/world_pulse.db")
+        rows = c.execute("""SELECT node||':'||action AS a,
+                                   SUM(CASE WHEN success IN (1,'1','true','True') THEN 1 ELSE 0 END) AS ok,
+                                   COUNT(*) AS tot
+                            FROM action_health
+                            WHERE source = 'usage'
+                              AND timestamp >= strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime', '-7 days')
+                            GROUP BY a
+                            HAVING tot-ok > 0
+                            ORDER BY CAST(tot-ok AS FLOAT)/tot DESC LIMIT 10""").fetchall()
+        if not rows: print("  (실패 기록 없음)")
+        for a, ok, tot in rows:
+            print(f"  {a:28} 실패 {tot-ok}/{tot} ({100*(tot-ok)/tot:.0f}%)")
+        # 호출 통로 내역 (2026-08-21 ③ 조사 — channel 컬럼 신설 이후 행만. agent=에이전트
+        # 도구 루프 / app=앱·조종실·원격 직접 실행 / scheduler=캘린더 발화 / ?=신설 전 구 행).
+        try:
+            ch = c.execute("""SELECT COALESCE(channel,'?') AS ch,
+                                     SUM(CASE WHEN success IN (1,'1','true','True') THEN 0 ELSE 1 END) AS bad,
+                                     COUNT(*) AS tot
+                              FROM action_health
+                              WHERE source = 'usage'
+                                AND timestamp >= strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime', '-7 days')
+                              GROUP BY ch ORDER BY tot DESC""").fetchall()
+            if ch:
+                print("  통로별: " + " · ".join(f"{name} 실패 {bad}/{tot}" for name, bad, tot in ch))
+        except Exception:
+            pass  # channel 컬럼 이전 스키마
+        c.close()
     except Exception as e:
-        ok, detail = False, f"단언 예외: {e}"
-    ok = bool(ok)
-    op_pass += ok
-    print(f"  [{'PASS' if ok else 'FAIL':4}] {name:22} {detail}")
+        print("  (조회 실패:", e, ") — 스키마 다를 수 있음")
 
-# ── §1D 런타임 건강 ──
-# 최근 7일 + 실사용(usage)만 — 백엔드 대시보드(get_action_health_summary)와 같은 창.
-# 필터가 없던 동안 전 역사를 무기한 합산해 화석이 영원히 상위에 남았다(run_pipeline 86%
-# = 은퇴한 옛 12h sweep 의 5~6월 잔재, 6주간 호출 0건인데 계속 표시 — 2026-08-04 실측).
-print("\n" + "="*72); print("§1D 런타임 건강 (최근 7일 실사용, 실패율 상위)"); print("="*72)
-try:
-    import sqlite3
-    c = sqlite3.connect("data/world_pulse.db")
-    rows = c.execute("""SELECT node||':'||action AS a,
-                               SUM(CASE WHEN success IN (1,'1','true','True') THEN 1 ELSE 0 END) AS ok,
-                               COUNT(*) AS tot
-                        FROM action_health
-                        WHERE source = 'usage'
-                          AND timestamp >= strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime', '-7 days')
-                        GROUP BY a
-                        HAVING tot-ok > 0
-                        ORDER BY CAST(tot-ok AS FLOAT)/tot DESC LIMIT 10""").fetchall()
-    if not rows: print("  (실패 기록 없음)")
-    for a, ok, tot in rows:
-        print(f"  {a:28} 실패 {tot-ok}/{tot} ({100*(tot-ok)/tot:.0f}%)")
-    # 호출 통로 내역 (2026-08-21 ③ 조사 — channel 컬럼 신설 이후 행만. agent=에이전트
-    # 도구 루프 / app=앱·조종실·원격 직접 실행 / scheduler=캘린더 발화 / ?=신설 전 구 행).
-    try:
-        ch = c.execute("""SELECT COALESCE(channel,'?') AS ch,
-                                 SUM(CASE WHEN success IN (1,'1','true','True') THEN 0 ELSE 1 END) AS bad,
-                                 COUNT(*) AS tot
-                          FROM action_health
-                          WHERE source = 'usage'
-                            AND timestamp >= strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime', '-7 days')
-                          GROUP BY ch ORDER BY tot DESC""").fetchall()
-        if ch:
-            print("  통로별: " + " · ".join(f"{name} 실패 {bad}/{tot}" for name, bad, tot in ch))
-    except Exception:
-        pass  # channel 컬럼 이전 스키마
-    c.close()
-except Exception as e:
-    print("  (조회 실패:", e, ") — 스키마 다를 수 있음")
+    # ── 종합 ──
+    print("\n" + "="*72); print("종합 판정"); print("="*72)
+    print(f"  §1A 정적:        {'✅' if static_ok else '❌'}")
+    print(f"  §1B 통화:        GREEN {len(buckets['GREEN'])} / YELLOW {len(buckets['YELLOW'])} / RED {len(buckets['RED'])}")
+    print(f"  §1C 골든파이프:  {pipe_pass}/{len(PIPES)} PASS")
+    print(f"  §1C-2 연산자:    {op_pass}/{len(OPERATORS)} PASS")
+    if buckets["RED"]:
+        print("\n  ⚠️ RED (통화 결함 — 처리 필요):")
+        for n, r in buckets["RED"]: print(f"     - {n}: {r}")
+    verdict = "건강 ✅" if (static_ok and buckets["GREEN"] and not buckets["RED"] and pipe_pass == len(PIPES)
+                          and op_pass == len(OPERATORS)) else "주의 ⚠️"
+    print(f"\n  ▶ IBL 구조 건강: {verdict}")
 
-# ── 종합 ──
-print("\n" + "="*72); print("종합 판정"); print("="*72)
-print(f"  §1A 정적:        {'✅' if static_ok else '❌'}")
-print(f"  §1B 통화:        GREEN {len(buckets['GREEN'])} / YELLOW {len(buckets['YELLOW'])} / RED {len(buckets['RED'])}")
-print(f"  §1C 골든파이프:  {pipe_pass}/{len(PIPES)} PASS")
-print(f"  §1C-2 연산자:    {op_pass}/{len(OPERATORS)} PASS")
-if buckets["RED"]:
-    print("\n  ⚠️ RED (통화 결함 — 처리 필요):")
-    for n, r in buckets["RED"]: print(f"     - {n}: {r}")
-verdict = "건강 ✅" if (static_ok and not buckets["RED"] and pipe_pass == len(PIPES)
-                      and op_pass == len(OPERATORS)) else "주의 ⚠️"
-print(f"\n  ▶ IBL 구조 건강: {verdict}")
+    # ── 기계 판독 요약 — world_pulse_health.run_ibl_health_check 가 이 한 줄을 파싱한다.
+    # 사람용 로그의 문구가 바뀌어도 계약이 깨지지 않도록 구조화 출력을 병행(마커 없으면 파서가 fail 처리).
+    _summary = {
+        "static_ok": bool(static_ok),
+        "currency": {
+            "green": len(buckets["GREEN"]), "yellow": len(buckets["YELLOW"]), "red": len(buckets["RED"]),
+            "reds": [{"name": n, "reason": r} for n, r in buckets["RED"]],
+        },
+        "golden_pipes": {"passed": int(pipe_pass), "total": len(PIPES), "fails": pipe_fails},
+        "operators": {"passed": int(op_pass), "total": len(OPERATORS)},
+    }
+    print("\n@@HEALTH_JSON@@ " + json.dumps(_summary, ensure_ascii=False))
 
-# ── 기계 판독 요약 — world_pulse_health.run_ibl_health_check 가 이 한 줄을 파싱한다.
-# 사람용 로그의 문구가 바뀌어도 계약이 깨지지 않도록 구조화 출력을 병행(마커 없으면 파서가 fail 처리).
-_summary = {
-    "static_ok": bool(static_ok),
-    "currency": {
-        "green": len(buckets["GREEN"]), "yellow": len(buckets["YELLOW"]), "red": len(buckets["RED"]),
-        "reds": [{"name": n, "reason": r} for n, r in buckets["RED"]],
-    },
-    "golden_pipes": {"passed": int(pipe_pass), "total": len(PIPES), "fails": pipe_fails},
-    "operators": {"passed": int(op_pass), "total": len(OPERATORS)},
-}
-print("\n@@HEALTH_JSON@@ " + json.dumps(_summary, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()

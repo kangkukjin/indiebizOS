@@ -42,7 +42,7 @@ _DIGESTS = {}
 
 
 def helper_binary(capabilities):
-    """The helper/dist executable matching what this PC runs now, or None.
+    """Select the published executable matching what this PC runs now, or None.
 
     A Mac helper built by Go 1.22 is the legacy build (macOS 10.15~11); the regular
     one would not start there, so the build line is kept, never inferred from the OS."""
@@ -55,7 +55,26 @@ def helper_binary(capabilities):
     if name == "mac-amd64" and str(caps.get("go") or "").startswith("go1.22"):
         name = "mac-amd64-legacy"
     from runtime_utils import get_base_path
-    path = Path(get_base_path()) / "helper" / "dist" / ("indiebiz-helper-" + name)
+    helper = Path(get_base_path()) / "helper"
+    if caps.get("os") == "darwin":
+        # Only the explicit owner release pipeline publishes this pointer after
+        # verifying both the helper and its embedded worker against the pinned
+        # certificate. An ad-hoc development build is never an update candidate.
+        try:
+            policy = json.loads((helper / "mac_signing.json").read_text())
+            manifest = json.loads((helper / "releases" / name / "current.json").read_text())
+            sha = manifest.get("sha256", "")
+            certificate = policy.get("certificate_sha1", "")
+            if (manifest.get("schema") != 1 or manifest.get("build") != name
+                    or not re.fullmatch(r"[a-f0-9]{64}", sha)
+                    or not re.fullmatch(r"[A-F0-9]{40}", certificate)
+                    or manifest.get("certificate_sha1") != certificate):
+                return None
+            path = helper / "releases" / name / sha / "indiebiz-helper"
+            return path if _digest(path) == sha else None
+        except (OSError, ValueError, TypeError, AttributeError):
+            return None
+    path = helper / "dist" / ("indiebiz-helper-" + name)
     return path if path.is_file() else None
 
 

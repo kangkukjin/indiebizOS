@@ -1,0 +1,230 @@
+{
+  "date": "2026-10-25",
+  "targeted_tests": {
+    "passed": 170
+  },
+  "transitive_tests": {
+    "passed_initial": 3444,
+    "skipped": 1,
+    "sandbox_failures": 46,
+    "sandbox_errors": 9,
+    "failed_nodes_retested_passed": 55
+  },
+  "live_http_probes": [
+    {
+      "name": "naver>>filter>>take",
+      "ok": true
+    },
+    {
+      "name": "world_bank>>chart",
+      "ok": true
+    },
+    {
+      "name": "paper>>take>>document",
+      "ok": true
+    },
+    {
+      "name": "legal>>dedup>>take",
+      "ok": true
+    },
+    {
+      "name": "kosis>>take",
+      "ok": true
+    },
+    {
+      "name": "도구 실패 전파",
+      "ok": true
+    },
+    {
+      "name": "; 미처리 실패는 중단",
+      "ok": true
+    },
+    {
+      "name": "; 값은 명시 전달",
+      "ok": true
+    },
+    {
+      "name": ">> 실패시 중단",
+      "ok": true
+    },
+    {
+      "name": "?? 도구 실패→폴백",
+      "ok": true
+    },
+    {
+      "name": "?? 성공→단축평가",
+      "ok": true
+    },
+    {
+      "name": "?? 빈 목록은 성공",
+      "ok": true
+    },
+    {
+      "name": "?? null은 성공",
+      "ok": true
+    },
+    {
+      "name": "catch 명시 복구",
+      "ok": true
+    },
+    {
+      "name": "& 가지별 값 보존",
+      "ok": true
+    },
+    {
+      "name": "web catalog",
+      "ok": true
+    },
+    {
+      "name": "cctv",
+      "ok": true
+    }
+  ],
+  "import_coverage": {
+    "tested": 63,
+    "failures": []
+  },
+  "cockpit_check": {
+    "checked_at": "2026-10-25T18:52:15.887116",
+    "healthy": true,
+    "stale": false,
+    "items": [
+      {
+        "key": "ibl_consistency",
+        "label": "어휘 정합 — 선언·구현·도구 일치",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T18:52:15.883099"
+      },
+      {
+        "key": "red_safety",
+        "label": "자기수정 안전장치 — 게이트·그랜트·롤백 기능",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T18:52:15.885896"
+      },
+      {
+        "key": "silent_failure_regression",
+        "label": "침묵-실패 회귀 — 현행 문법·실패 전파·도구 통화",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T18:52:15.886541"
+      },
+      {
+        "key": "import_coverage",
+        "label": "의존성 커버리지 — 코드 import ↔ .venv 실재",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T18:52:15.887116"
+      },
+      {
+        "key": "currency",
+        "label": "통화 규약 — 실행 결과 형태",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T18:52:15.884008"
+      },
+      {
+        "key": "golden_pipes",
+        "label": "파이프 흐름 — 액션 조합(>>)",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-25T18:52:15.884624"
+      },
+      {
+        "key": "description_drift",
+        "label": "설명 정합 — 어휘 설명 최신성",
+        "ok": true,
+        "detail": null,
+        "checked_at": "2026-10-19T14:24:57.670899"
+      }
+    ],
+    "action_count": 172
+  },
+  "health_run": {
+    "healthy": false,
+    "events": [
+      {
+        "node": "__static__",
+        "action": "ibl_consistency",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "currency",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "golden_pipes",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "operators",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "red_safety",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "silent_failure_regression",
+        "success": true,
+        "response_ms": 7621,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "import_coverage",
+        "response_ms": 0,
+        "success": true,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "playwright_browsers",
+        "response_ms": 0,
+        "success": true,
+        "data_quality": "ok",
+        "error_message": null
+      },
+      {
+        "node": "__static__",
+        "action": "red_drift",
+        "success": false,
+        "response_ms": 1632,
+        "data_quality": "isolation_bypass",
+        "error_message": "‼ 방치  .worktrees/repair-repair_db71e7e037333b7f2e3b8b1acca3ee80  526.0시간, 변경 24건 · 미적용 수리 세션 / ‼ 방치  .worktrees/repair-task_21384f1d52104ce0ab43928068ec7c73  284.1시간, 변경 26건 · 미적용 수리 세션 / ‼ 방치  .worktrees/repair-task_235"
+      },
+      {
+        "node": "__ibl_health__",
+        "action": "ibl_health_check",
+        "success": true,
+        "response_ms": 0,
+        "data_quality": "ok",
+        "error_message": null
+      }
+    ]
+  },
+  "remaining_unrelated_warning": "red_drift: 오래된 미적용 수리 작업 공간. 삭제/변경하지 않음."
+}

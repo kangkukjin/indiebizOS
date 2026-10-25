@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-"""Audit edition boundaries and seed reviewed v2 examples without rewriting v1."""
+"""검토한 현행 용례를 등록하고 현재 검색 색인을 확인한다."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 import boot_paths  # noqa: E402,F401
 import argparse
 import json
-from ibl_edition import source_edition, explicit_source
-
-
-def inventory():
-    from ibl_edition1_inventory import inventory as read_inventory
-    return read_inventory(Path(__file__).resolve().parents[1])
+from ibl_edition import explicit_source
 
 
 def seed(path, apply=False):
@@ -23,7 +18,7 @@ def seed(path, apply=False):
     if not isinstance(examples, list):
         raise ValueError("seed 파일은 용례 목록이어야 합니다.")
     with db._get_connection() as conn:
-        known = {(r[0], r[1]) for r in conn.execute("SELECT intent, ibl_code FROM ibl_examples")}
+        known = {(r[0], r[1]) for r in conn.execute("SELECT intent, ibl_code FROM ibl_current_examples")}
     pending = []
     for example in examples:
         code = explicit_source(example["ibl_code"], 2)
@@ -47,7 +42,7 @@ def seed(path, apply=False):
     if vector_ready:
         with db._get_connection() as conn:
             rows = [dict(row) for ex in examples for row in conn.execute(
-                "SELECT id,intent,ibl_code FROM ibl_examples WHERE intent=? AND ibl_code=?",
+                "SELECT id,intent,ibl_code FROM ibl_current_examples WHERE intent=? AND ibl_code=?",
                 (ex['intent'], explicit_source(ex['ibl_code'], 2)))]
         vec = db._get_vec_connection()
         try:
@@ -66,18 +61,17 @@ def seed(path, apply=False):
         if indexed != len(rows):
             raise RuntimeError(f"시맨틱 색인 미완료: {indexed}/{len(rows)}")
     return {"pending": len(pending), "inserted": inserted, "changed": inserted > 0,
-            "semantic_indexed": indexed, "index_mode": "semantic+fts" if vector_ready else "fts_or_preview",
-            "legacy_rewritten": 0}
+            "semantic_indexed": indexed, "index_mode": "semantic+fts" if vector_ready else "fts_or_preview"}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["inventory", "seed"])
+    parser.add_argument("command", choices=["seed"])
     parser.add_argument("source", nargs="?", default=str(Path(__file__).resolve().parents[1] / "data/idioms/ibl_v2_seeds.json"))
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--output")
     args = parser.parse_args()
-    result = inventory() if args.command == "inventory" else seed(args.source, args.apply)
+    result = seed(args.source, args.apply)
     raw = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     if args.output:
         Path(args.output).write_text(raw)

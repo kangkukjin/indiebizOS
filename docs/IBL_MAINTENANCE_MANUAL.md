@@ -3,9 +3,11 @@
 **목적**: IBL의 **어휘·문법·통화** 상태를 정기/온디맨드로 **점검 → 기록 → 문제 분류·처리**하는 단일 절차서.
 이 문서를 보면서 검사를 돌리고, 결과를 남기고, 문제를 부류별로 처리한다.
 
-> **★2026-06-27 단일 통화(items) 이행 완료**: 옛 2층 통화(records/table) + document/currency 가 **`items` 하나**로 흡수됐다. 컬렉션 통화는 이제 `{"items": [ {…열린 dict…} ]}` 하나뿐. `returns:` enum = `{items, transform, scalar, effect}`. 옛 형태는 생산자가 items 행dict로 내고 소비자가 view(table/prose/cards)로 재구성한다. 상세=`docs/SINGLE_CURRENCY_MIGRATION_HANDOFF.md` · `architecture_single_currency_items` 메모. 이 매뉴얼은 그에 맞춰 갱신됨(아래 records/table 표현은 전부 items로 읽을 것).
-
-**왜 필요한가**: 정적 검사(`--check`)는 *어휘 삼각 정합성*만, world_pulse self-check(`_evaluate_result`)는 *error 키 유무*만 본다 — **"items 통화가 유효 모양으로 `>>` 흐른다"는 불변식은 둘 다 안 본다.** 이 공백을 메우는 게 **`scripts/ibl_health_check.py`**(§1B 통화 단언 + §1C 골든 파이프). 즉 통화 회귀 가드는 *이제 존재한다*(기계적·AI 0). 매뉴얼은 그 하니스를 언제·어떻게 돌리고 빨간 것을 어떻게 처리하는지의 절차서다. 남은 졸업 과제=하니스를 자동 카덴스에 배선(§5).
+현재 실행은 명시적인 값 전달을 사용한다. 도구의 `returns:items`는 반환 Record의
+`items` 필드를 검사하고, 목록 변환자는 `$result.items >> ...`처럼 명시적으로 연결한다.
+검사기는 `/ibl/execute`에 `edition:2`와 자가점검 신원을 보내며, 표시 사본의
+`result_ref`에서 `value_wire`를 페이지 조회하여 원형 값을 검사한다. 도구를 재실행하거나
+잘린 미리보기를 완전한 결과로 취급하지 않는다. 성공 상태와 업무 값은 별도로 판단한다.
 
 ---
 
@@ -38,25 +40,25 @@ python scripts/consciousness_schema_check.py   # 의식 출력 스키마 이름 
 `ibl_health_check.py`가 **`data/ibl_fixtures.json`**("올바른 파라미터 예 하나" — 단일 진실 소스)을 읽어 items/scalar 액션을 라이브 호출하고 산출 스키마를 단언한다. fixture 완전성은 `--check`가 강제하므로(items/scalar 액션은 fixture 또는 exempt 필수) **신규 액션이 검사망을 빠져나갈 수 없다**(effect=실행 불가 면제, transform=§1C 골든).
 
 **두 축**(2026-08-05 감사 ⑤): 액션 축(액션당 대표 예 하나)에 더해 **op 축**이 있다 — 키가 `node:action#op` 인 항목은 같은 액션 안의 다른 읽기 op 이다. 액션 fixture 하나로는 op 하나만 증명되므로(실측: 읽기 op 133개 중 37개만 닿았다), 읽기 op 전수를 `ops.fixture`/`ops.exempt` 로 덮게 `--check` 가 강제한다. **쓰기 op 에는 fixture 를 달 수 없다** — 무인 일일 루프가 매일 그 부작용을 실행하게 되기 때문이다. 판정:
-- **GREEN**: 결과(또는 `final_result`)에 `items`가 비어있지 않은 dict 리스트(title 불요 — 열린 항목).
-- **YELLOW**: empty(데이터 의존)·전송오류·통화 없는 스칼라 응답·identity 등 환경 의존. *구조 결함 아님*.
-- **RED**: items 선언인데 문자열 반환(통화 파괴) 또는 목록은 있는데 items 미부착(계약 위반).
+- **GREEN**: 실행에 성공한 원형 업무 값에 `items`가 비어있지 않은 dict 리스트(title 불요 — 열린 항목).
+- **YELLOW**: empty(데이터 의존)·실행 중 도구 실패·통화 없는 스칼라 응답·identity 등 환경 의존. *구조 결함 아님*.
+- **RED**: 컴파일·전송·원형 조회 실패, items 선언인데 문자열 반환 또는 목록은 있는데 items 미부착. GREEN이 하나도 없으면 통화 건강을 통과시키지 않는다.
 
-수동 단발 probe(특정 액션 점검 시):
-```bash
-curl -s -X POST localhost:8765/ibl/execute -H 'Content-Type: application/json' \
-  -d '{"code":"[sense:radio]{op:\"search\",query:\"jazz\"}","project_id":"<아무 프로젝트>"}' \
-  | python3 -c "import sys,json;r=json.load(sys.stdin);d=r.get('result',r);d=json.loads(d) if isinstance(d,str) else d;print('items' in d, len(d.get('items',[])))"
-```
-핸들러가 `format_json`으로 JSON *문자열*을 반환해도 엔진이 파이프 때 파싱하므로 통화는 흐른다(probe는 문자열도 `json.loads`로 풀 것). 옛 records/table/blocks 키를 직독하지 말 것 — 전부 items로 흡수됐다.
+수동 점검도 같은 검사기를 사용한다. 조종실의 시스템 상태 재검사 또는
+`POST /world-pulse/ibl-health-check`는 결과를 실제 `self_checks` 이력으로 갱신한다.
+표시만 바꾸거나 지난 실패 기록을 삭제해서 정상으로 만들지 않는다.
 
 ### 1C. 문법·파이프 흐름 — 골든 파이프
-스텝 간 통화가 실제 흐르는지 단발 단언으로는 못 본다. 고정 골든 파이프 몇 개를 돌려 *최종* 통화 스키마를 단언:
+프로그램과 단언의 정본은 `scripts/ibl_health_programs.py`다. 예:
+```ibl
+#!ibl edition=2
+$result = [sense:search]{source:"naver",query:"AI"}
+return $result.items >> [table:filter]{where:($row)=>$row.title != ""} >> [table:take]{n:3}
 ```
-[sense:search_naver]{query:"AI"} >> [table:filter]{where:"title != "} >> [table:take]{n:3}
-[sense:world_bank]{indicator:"GDP",country:"한국"} >> [table:chart]{chart_type:"line"}
-```
-→ 최종 결과에 items(또는 chart/document 산출 success·path)가 살아있나. ★table·document 흡수 후에도 골든이 통과해야 함: `world_bank>>chart`(items 행dict→소비자가 table 재구성)·`crawl>>document`(items type/text→prose). 외부 API 의존 파이프는 flaky → *내용*이 아니라 *통화 모양*만 본다.
+World Bank 차트는 조회 연도 범위를 명시해 기본 페이지 제한으로 잘린 원천을
+완전한 자료로 오인하지 않는다. 논문 검색→목록 선택→문서 생성도 실제 파일 경로를 확인한다.
+순수 연산자 검사는 `;`와 `>>`의 실패 중단, 명시적 복구, `??`의 정상 빈 값 보존,
+`&`의 가지별 값 보존을 단언한다. 실패가 정답인 검사도 실제 실행 단계에 도달했는지 확인한다.
 
 ### 1D. 런타임 건강 — 이미 수집됨 (재호출 말 것)
 - **x-ray** (`api_xray.py`): action_health 3단계(verified/assumed/failed)·펄스·인지·메모리·에피소드 집계. WebSocket/GET 온디맨드.

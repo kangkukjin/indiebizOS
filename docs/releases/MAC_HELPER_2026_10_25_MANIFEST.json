@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "build": "mac-amd64",
+  "source_sha256": "dd6cee62458ff3e399caf96ab7d9055f781d1da8c74a56081966c04b404b8d63",
+  "sha256": "be9b61fef96a39ac73b281c238885f4f6a702848097f16cd5108e93d0f39f048",
+  "worker_sha256": "fa8a34482b71516f014a38643e7fded8813e351bd130899c7ecbfb3d096d52ae",
+  "certificate_sha1": "6EE4CDA7D4F240D9CB35FCAE77B1FE56FCA7F4F2",
+  "toolchain": {
+    "go": "go version go1.26.5 darwin/arm64",
+    "clang": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+    "sdk": "26.5"
+  },
+  "reused": false,
+  "reuse_verified": true,
+  "deployment": {
+    "device": "guestpc-3fd796167b18",
+    "job_id": "0516dfd5cf874d24913c58752313d6bf",
+    "state": "current",
+    "rolled_back": false
+  },
+  "installed_signature_verification": {
+    "job_id": "2d6eb2a0320b408988f9aa3bc257ffe0",
+    "exit": 0,
+    "codesign_verify_strict": true,
+    "designated_requirement": "identifier \"com.indiebiz.helper\" and certificate leaf = H\"6ee4cda7d4f240d9cb35fcae77b1fe56fca7f4f2\"",
+    "sha256": "be9b61fef96a39ac73b281c238885f4f6a702848097f16cd5108e93d0f39f048",
+    "pending_update_record_absent": true
+  }
+}

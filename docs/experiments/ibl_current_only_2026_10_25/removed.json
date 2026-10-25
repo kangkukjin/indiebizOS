@@ -240,6 +240,51 @@
       "path": "scripts/idiom_exposure_study.py",
       "sha256": "995c402d7cc5755052182511807d64fc7c1a0a662a61ead4e8f340c3fe31ca7b",
       "reason": "완료된 구판 실험의 거절 전용 진입점·호출자. 실험 결과와 소스는 Git/실험 문서에 보존; 현행 런타임 시험을 사용."
+    },
+    {
+      "path": "scripts/probe_corpus_v2_values.py",
+      "sha256": "2028f6b03f95d730061ffbc92c0ae6787e3a45375fb61c9df5a7027796653010",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/classify_corpus_surfaces.py",
+      "sha256": "3832fdb797ebac57a2f40b9c8e38e4945e37f5eacc4322bde020f6f2a094fa12",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/ibl_corpus_surfaces.py",
+      "sha256": "651bc38e5bb59b31f6f87b8e750674205320d1215420514f6846d1eca8c3290a",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/close_corpus_audit.py",
+      "sha256": "5c20c7b5de8ab1caa4c1e5007a843191c50dd5b0416a4d2575e0ac0cfd06b278",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/test_audit_ibl_corpus_v2.py",
+      "sha256": "de5d3de729c0ae672555141e237f5889106223e0ba29349ca7ae01919bcc7976",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/test_close_corpus_audit.py",
+      "sha256": "9cf897066185ed2e97ef8d4ef22207bbd5c1b26b98675d5c0d60e3a9e0e492ba",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/seed_web_collection_2026_09_15.py",
+      "sha256": "47a8bec7020bcab76136251bb437881b68f479331d431e460c5eea1dcd2e1b8f",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/experiment_ibl_expressiveness.py",
+      "sha256": "b0a7ae6ecce3c9e4d3e43e4f11bdc1d2041e28b07fcf1d2b61c9c620f2363e86",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
+    },
+    {
+      "path": "scripts/test_review_corpus_2026_09_09.py",
+      "sha256": "1a5292bf616ddf4539aca0629d54a703ec8d8b4dfe6dcc6d8706dee1cc227ef1",
+      "reason": "완료된 구판 코퍼스 감사의 잔여 호출자. 삭제된 실행 도구를 되살리지 않고 함께 은퇴; 원본은 dc21a8d0 Git revision에 보존."
     }
   ]
 }

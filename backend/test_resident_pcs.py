@@ -566,6 +566,21 @@ def test_job_lost_in_a_dead_long_poll_is_offered_again_once_per_sync(registry):
     assert [e['kind'] for e in resident_store.history(job=lost)['events']].count('redelivered') == 1
 
 
+def publish_test_mac_release(root, build, content):
+    helper = root / 'helper'
+    helper.mkdir(exist_ok=True)
+    certificate = 'A' * 40
+    (helper / 'mac_signing.json').write_text(json.dumps({'certificate_sha1': certificate}))
+    sha = hashlib.sha256(content).hexdigest()
+    releases = helper / 'releases' / build
+    folder = releases / sha
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / 'indiebiz-helper').write_bytes(content)
+    (releases / 'current.json').write_text(json.dumps({
+        'schema': 1, 'build': build, 'sha256': sha, 'certificate_sha1': certificate}))
+    return folder / 'indiebiz-helper'
+
+
 @pytest.mark.parametrize("os_name,build,go_version", [
     ("darwin", "mac-amd64-legacy", "go1.22.12"),
     ("windows", "win-resident.exe", "go1.26.1"),
@@ -579,6 +594,9 @@ def test_helper_update_is_one_owner_action_and_never_an_agent_command(
     (dist / ('indiebiz-helper-' + build)).write_bytes(b'legacy build')
     import runtime_utils
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
+    if os_name == 'darwin':
+        publish_test_mac_release(tmp_path, 'mac-amd64', b'regular build')
+        publish_test_mac_release(tmp_path, build, b'legacy build')
     legacy = hashlib.sha256(b'legacy build').hexdigest()
 
     def report(**caps):
@@ -615,7 +633,31 @@ def test_helper_update_is_one_owner_action_and_never_an_agent_command(
     assert pcs.update_helper(rec['device_id'])['state'] == 'current'
     # 되돌려진 교체는 같은 판을 다시 권하되 실패했음을 알린다.
     (dist / ('indiebiz-helper-' + build)).write_bytes(b'legacy build 2')
+    if os_name == 'darwin':
+        publish_test_mac_release(tmp_path, build, b'legacy build 2')
     newer = hashlib.sha256(b'legacy build 2').hexdigest()
     status = report(helper_sha256=legacy, go=go_version, self_update=True,
                     helper_update={'outcome': 'rolled_back', 'to': newer})
     assert status['state'] == 'available' and status['rolled_back'] is True
+
+
+def test_mac_update_ignores_development_build_and_rejects_invalid_release(registry, monkeypatch, tmp_path):
+    import runtime_utils
+    monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
+    dist = tmp_path / 'helper/dist'
+    dist.mkdir(parents=True)
+    (dist / 'indiebiz-helper-mac-amd64').write_bytes(b'adhoc')
+    caps = {'os': 'darwin', 'arch': 'amd64', 'go': 'go1.26.5'}
+    assert pcs.helper_binary(caps) is None
+    binary = publish_test_mac_release(tmp_path, 'mac-amd64', b'signed')
+    assert pcs.helper_binary(caps) == binary
+    (dist / 'indiebiz-helper-mac-amd64').write_bytes(b'new adhoc development build')
+    assert pcs.helper_binary(caps) == binary
+    pointer = binary.parent.parent / 'current.json'
+    manifest = json.loads(pointer.read_text())
+    manifest['certificate_sha1'] = 'B' * 40
+    pointer.write_text(json.dumps(manifest))
+    assert pcs.helper_binary(caps) is None
+    publish_test_mac_release(tmp_path, 'mac-amd64', b'signed')
+    binary.write_bytes(b'tampered')
+    assert pcs.helper_binary(caps) is None

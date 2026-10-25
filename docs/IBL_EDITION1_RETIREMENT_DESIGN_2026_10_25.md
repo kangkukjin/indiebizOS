@@ -1,6 +1,9 @@
 # IBL 판본 1 실행 지원 종료 설계
 
 작성: 2026-10-25. 상태: **정본 구현·로컬 이관·전체 회귀 완료**.
+위 완료는 구판 실행 지원 종료 범위다. 구판 판별·거절·역사 조회 의존까지 정상 경로에서
+제거하는 후속 목표와 인수 기준은 [현행 IBL만으로 작동하는 시스템 수리 계획](IBL_CURRENT_ONLY_REPAIR_PLAN_2026_10_25.md)을 따른다.
+후속 수리는 계획 수립 상태이며, 아래 구현 이력을 전체 구조 정리 완료로 해석하지 않는다.
 목적 정본: [IBL 진화 목적](IBL_EVOLUTION_PURPOSE.md).
 상위 구조: [구조 수렴 설계](IBL_SYSTEM_CONSOLIDATION_DESIGN.md).
 저장 계약: [함수 원장 통합](IBL_FUNCTION_MEMORY_UNIFICATION_DESIGN_2026_10_24.md).

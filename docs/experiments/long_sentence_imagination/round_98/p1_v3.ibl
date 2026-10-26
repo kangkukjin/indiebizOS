@@ -1,0 +1,184 @@
+#!ibl edition=2
+[def:실행]($러너경로,$요청) {
+  [try] { return [self:script]{path:$러너경로,args:$요청,timeout:300} }
+  [catch] { return {observed:false,error:$error.message,error_code:get($error,"code",null)} }
+}
+[def:관측]($러너경로,$경로,$enabled,$timeout) {
+  $r=[fn:실행]{러너경로:$러너경로,요청:{op:"pytest",path:$경로,enabled:$enabled,timeout:$timeout}}
+  $cases=get($r,"cases",[])
+  $실패=$cases >> [table:filter]{where:($c)=>$c.outcome=="failed"}
+  $collected=get($r,"collected",0)
+  $skipped=get($r,"skipped",0)
+  $ran=get($r,"observed",false)==true and $collected>0 and $collected>$skipped
+  return {observed:get($r,"observed",false)==true,tests_ran:$ran,command:get($r,"command",null),exit_code:get($r,"exit_code",null),
+    collected:$collected,passed:get($r,"passed",0),failed:get($r,"failed",0),skipped:$skipped,cases:$cases,failed_cases:$실패,
+    output_ref:get($r,"output_ref",null),error:get($r,"error",null),timeout:get($r,"timeout",false),candidate_sha256:get($r,"candidate_sha256",null)}
+}
+[def:원인좁히기]($러너경로,$정본,$경로,$관측) {
+  $src=[fn:실행]{러너경로:$러너경로,요청:{op:"source",path:$정본+"/"+$경로,function:"fold_receipt"}}
+  $hist=[]
+  [try] { $h=[self:body]{op:"file",path:$경로,limit:5}; $hist=get($h,"items",[]) } [catch] { $hist=[{error:$error.message}] }
+  $forage=null
+  [try] { $f=[self:forage]{op:"recall",locus:$정본+"/"+$경로}; $forage={own_count:get($f,"own_count",null),locus_exists:get($f,"locus_exists",null)} }
+  [catch] { $forage={error:$error.message} }
+  $lines=get($src,"lines",[])
+  $returns=$lines >> [table:filter]{where:($l)=>contains($l.text,"return")}
+  $msgs=$관측.failed_cases >> [table:each] { return $it.name+": "+$it.message }
+  $hyp="미확정"
+  [if:len($관측.failed_cases)>0 and len($returns)>0] {
+    $hyp="실패 시험이 None 입력에 unverified 를 기대하는데 함수가 모든 비-True 를 failed 로 접는다(명시 False 와 미관측 None 을 가르지 않음)"
+  }
+  return {evidence:{failures:$msgs,function_lines:len($lines),source_sha:get($src,"sha256",null),history:$hist,forage:$forage},
+    candidate_locations:$returns,hypothesis:$hyp,unknowns:["사본 파일은 미추적이라 이력·포식 기억이 없다","시험 밖 입력 조합의 기대값은 요구 표로만 안다"]}
+}
+[def:제안]($경로,$old,$new,$사유) {
+  [try] {
+    $p=[self:patch]{op:"propose",path:$경로,old_string:$old,new_string:$new,reason:$사유}
+    $checks=get($p,"checks",[])
+    $passed=$checks >> [table:filter]{where:($c)=>$c.passed==true}
+    return {ok:get($p,"success",false)==true,proposal_id:get($p,"proposal_id",null),verified:get($p,"verified",null),
+      checks_total:len($checks),checks_passed:len($passed),worktree:get($p,"worktree",null),target:get($p,"target",null),
+      diff_ref:get($p,"diff",null),receipt_candidate_hash:get($p,"candidate_hash",null),error:get($p,"error",null)}
+  }
+  [catch] { return {ok:false,proposal_id:null,verified:null,checks_total:0,checks_passed:0,worktree:null,target:null,diff_ref:null,
+    receipt_candidate_hash:null,error:$error.message,error_code:get($error,"code",null)} }
+}
+[def:키찾기]($pid) {
+  [try] {
+    $all=[self:patch]{op:"status"}
+    $items=get($all,"items",[])
+    $mine=$items >> [table:filter]{where:($item)=>$item.proposal_id==$pid}
+    return {ok:true,all_items:len($items),key:(len($mine)==1 ? $mine[0].key : null),error:null}
+  }
+  [catch] { return {ok:false,all_items:null,key:null,error:$error.message} }
+}
+[def:상태]($key) {
+  [if:$key==null] { return {found:false,status:null,verified:null,files:[],item_count:0,live_comparison:null,candidate_hash:null,error:"key 없음"} }
+  [try] {
+    $one=[self:patch]{op:"status",key:$key}
+    $items=get($one,"items",[])
+    [if:len($items)!=1] { return {found:false,status:null,verified:null,files:[],item_count:len($items),live_comparison:null,candidate_hash:null,error:"항목 수 불일치"} }
+    $item0=$items[0]
+    return {found:true,status:get($item0,"status",null),verified:get($item0,"verified",null),files:get($item0,"files",[]),item_count:1,
+      live_comparison:get($item0,"live_comparison",null),candidate_hash:get($item0,"candidate_hash",null),error:null}
+  }
+  [catch] { return {found:false,status:null,verified:null,files:[],item_count:null,live_comparison:null,candidate_hash:null,error:$error.message} }
+}
+[def:독립검증]($러너경로,$정본,$worktree,$경로,$검증자,$씨앗) {
+  [if:$worktree==null] { return {observed:false,error:"worktree 없음"} }
+  return [fn:실행]{러너경로:$러너경로,요청:{op:"verify",path:$정본+"/"+$worktree+"/"+$경로,verifier:$검증자,seed:$씨앗}}
+}
+[def:변경파일]($러너경로,$worktree,$기준선,$허용파일) {
+  [if:$worktree==null] { return {observed:false,files:[],all:[],error:"worktree 없음"} }
+  $r=[fn:실행]{러너경로:$러너경로,요청:{op:"changed",worktree:$worktree,exclude:$기준선,allowed:$허용파일}}
+  return {observed:get($r,"observed",false)==true,files:get($r,"delta",[]),all:get($r,"files",[]),error:get($r,"error",null)}
+}
+[def:근거연결]($영수증sha,$현재sha,$verified) {
+  [if:$영수증sha==null or $현재sha==null] { return {link:"미확인",reason:"영수증 또는 현재 후보의 내용 해시가 없음"} }
+  [if:$영수증sha!=$현재sha] { return {link:"불가",reason:"검사한 판본과 현재 후보의 내용 해시가 다름 — 현재 후보는 미검증"} }
+  [if:$verified!=true] { return {link:"불가",reason:"같은 판본이지만 영수증이 통과가 아님"} }
+  return {link:"재사용가능",reason:"같은 내용 해시의 통과 영수증"}
+}
+[def:판정]($기계,$독립,$관측,$범위파일,$허용파일,$근거) {
+  $req="미검증"
+  [if:get($독립,"observed",false)==true and get($독립,"requirement_met",null)==true] { $req="달성" }
+  [if:get($독립,"observed",false)==true and get($독립,"requirement_met",null)==false] { $req="미달" }
+  $tests="미검증"
+  [if:get($관측,"observed",false)==true and get($관측,"tests_ran",false)==true and get($관측,"failed",0)==0 and get($관측,"exit_code",1)==0] { $tests="통과" }
+  [if:get($관측,"observed",false)==true and get($관측,"tests_ran",false)==true and (get($관측,"failed",0)>0 or get($관측,"exit_code",0)!=0)] { $tests="실패" }
+  $scope="미확인"
+  $extra=$범위파일 >> [table:filter]{where:($f)=>$f.rel!=$허용파일}
+  [if:len($범위파일)>0 and len($extra)==0] { $scope="준수" }
+  [if:len($extra)>0] { $scope="위반" }
+  $evidence=get($근거,"link","미확인")
+  $overall="미검증"
+  [if:$req=="미달"] { $overall="미달" }
+  [if:$req=="달성" and $scope=="위반"] { $overall="범위 조건 미달" }
+  [if:$req=="달성" and $scope=="준수" and $evidence=="재사용가능" and $tests=="통과"] { $overall="달성" }
+  return {machine_check:$기계,tests:$tests,requirement:$req,scope:$scope,extra_files:$extra,evidence:$evidence,evidence_reason:get($근거,"reason",null),applied:"미실행",overall:$overall}
+}
+[def:폐기]($pid,$key) {
+  [try] {
+    $d=[self:patch]{op:"discard",proposal_id:$pid}
+    $after={items:[]}
+    [if:$key!=null] { $after=[self:patch]{op:"status",key:$key} }
+    $items=get($after,"items",[])
+    return {ok:get($d,"success",false)==true,after_items:len($items),after_status:(len($items)==1 ? $items[0].status : null),error:get($d,"error",null)}
+  }
+  [catch] { return {ok:false,after_items:null,after_status:null,error:$error.message} }
+}
+[def:탐침]($러너경로,$정본,$경로,$old,$new,$사유,$검증자,$씨앗,$표지,$추가파일,$추가내용,$keep) {
+  $p=[fn:제안]{경로:$경로,old:$old,new:$new,사유:$사유}
+  $기계="미검증"
+  [if:$p.verified==true] { $기계="통과" }
+  [if:$p.verified==false] { $기계="실패" }
+  $k=[fn:키찾기]{pid:$p.proposal_id}
+  $s=[fn:상태]{key:$k.key}
+  $ch0=[fn:변경파일]{러너경로:$러너경로,worktree:$p.worktree,기준선:[],허용파일:$경로}
+  $write=null
+  [if:$추가파일!=null and $p.worktree!=null] {
+    $write=[fn:실행]{러너경로:$러너경로,요청:{op:"write",path:$정본+"/"+$p.worktree+"/"+$추가파일,content:$추가내용,append:true}}
+  }
+  $iv=[fn:독립검증]{러너경로:$러너경로,정본:$정본,worktree:$p.worktree,경로:$경로,검증자:$검증자,씨앗:$씨앗}
+  $obs={observed:false,error:"worktree 없음"}
+  [if:$p.worktree!=null] { $obs=[fn:관측]{러너경로:$러너경로,경로:$정본+"/"+$p.worktree+"/"+$경로,enabled:true,timeout:240} }
+  $ch=[fn:변경파일]{러너경로:$러너경로,worktree:$p.worktree,기준선:$ch0.all,허용파일:$경로}
+  $근거하네스=[fn:근거연결]{영수증sha:get($iv,"sha256",null),현재sha:get($obs,"candidate_sha256",null),verified:get($iv,"requirement_met",null)}
+  $근거제품=[fn:근거연결]{영수증sha:$p.receipt_candidate_hash,현재sha:get($obs,"candidate_sha256",null),verified:$p.verified}
+  $j=[fn:판정]{기계:$기계,독립:$iv,관측:$obs,범위파일:$ch.files,허용파일:$경로,근거:$근거하네스}
+  $d=null
+  [if:$keep!=true] { $d=[fn:폐기]{pid:$p.proposal_id,key:$k.key} }
+  $write요약=null
+  [if:$write!=null] { $write요약={observed:get($write,"observed",null),sha_before:get($write,"sha_before",null),sha_after:get($write,"sha_after",null),size_before:get($write,"size_before",null),size_after:get($write,"size_after",null),error:get($write,"error",null)} }
+  return {label:$표지,proposal:$p,key:$k.key,status_all_items:$k.all_items,product_status:$s,extra_write:$write요약,independent:$iv,observation:$obs,
+    changed:$ch,checkout_drift:len($ch0.all),evidence_harness:$근거하네스,evidence_product:$근거제품,verdict:$j,discard:$d}
+}
+$러너=[self:write]{path:"~turn/runner.py",content:$러너본문}
+$보고=[]
+$요약={}
+[if:$변형==null] {
+  $기준선=[fn:관측]{러너경로:$러너.path,경로:$정본+"/"+$경로,enabled:true,timeout:240}
+  $진단=[fn:원인좁히기]{러너경로:$러너.path,정본:$정본,경로:$경로,관측:$기준선}
+  $a=[fn:탐침]{러너경로:$러너.path,정본:$정본,경로:$경로,old:$old,new:$new_correct,사유:$사유_a,검증자:$검증자,씨앗:$씨앗,표지:"a 올바른 구현만 수정",추가파일:null,추가내용:null,keep:true}
+  $b=[fn:탐침]{러너경로:$러너.path,정본:$정본,경로:$경로,old:$old,new:$new_none_first,사유:$사유_b,검증자:$검증자,씨앗:$씨앗,표지:"b None만 고치고 False 우선순위 훼손",추가파일:null,추가내용:null,keep:false}
+  $c=[fn:탐침]{러너경로:$러너.path,정본:$정본,경로:$경로,old:$weak_old,new:$weak_new,사유:$사유_c,검증자:$검증자,씨앗:$씨앗,표지:"c 잘못된 구현에 맞춰 시험 기대값 변경",추가파일:null,추가내용:null,keep:false}
+  $d=[fn:탐침]{러너경로:$러너.path,정본:$정본,경로:$경로,old:$old,new:$new_correct,사유:$사유_d,검증자:$검증자,씨앗:$씨앗,표지:"d 올바른 구현과 함께 판정기까지 변경",추가파일:$판정기경로,추가내용:$추가내용,keep:false}
+  $a경로=$정본+"/"+$a.proposal.worktree+"/"+$경로
+  $e관측=[fn:관측]{러너경로:$러너.path,경로:$a경로,enabled:false,timeout:240}
+  $e=[fn:판정]{기계:"해당없음",독립:{observed:false},관측:$e관측,범위파일:$a.changed.files,허용파일:$경로,근거:{link:"미확인",reason:"독립 검증 없음"}}
+  $f관측=[fn:관측]{러너경로:$러너.path,경로:$a경로,enabled:true,timeout:0.01}
+  $f=[fn:판정]{기계:"해당없음",독립:{observed:false},관측:$f관측,범위파일:$a.changed.files,허용파일:$경로,근거:{link:"미확인",reason:"독립 검증 없음"}}
+  $보고=[{section:"baseline",data:$기준선},{section:"diagnosis",data:$진단},{section:"probe_a",data:$a},{section:"probe_b",data:$b},
+    {section:"probe_c",data:$c},{section:"probe_d",data:$d},{section:"probe_e",data:{observation:$e관측,verdict:$e}},{section:"probe_f",data:{observation:$f관측,verdict:$f,prior_failed:$기준선.failed}}]
+  $요약={baseline_failed:$기준선.failed,baseline_observed:$기준선.observed,a:$a.verdict.overall,b:$b.verdict.overall,c:$c.verdict.overall,d:$d.verdict.overall,e:$e.overall,f:$f.overall,
+    a_kept:{proposal_id:$a.proposal.proposal_id,key:$a.key,worktree:$a.proposal.worktree,sha256:get($a.observation,"candidate_sha256",null),verified:$a.proposal.verified,independent_sha256:get($a.independent,"sha256",null),baseline_files:$a.changed.all},
+    product_receipt_hash_present:$a.proposal.receipt_candidate_hash!=null,status_all_items:$a.status_all_items,applied:"미실행"}
+}
+[if:$변형!=null] {
+  $w경로=$정본+"/"+$변형.worktree+"/"+$경로
+  $전=[fn:실행]{러너경로:$러너.path,요청:{op:"sha",path:$w경로}}
+  $근거전=[fn:근거연결]{영수증sha:$변형.receipt.sha256,현재sha:get($전,"sha256",null),verified:$변형.receipt.verified}
+  $w=[fn:실행]{러너경로:$러너.path,요청:{op:"write",path:$w경로,old:$new_correct,new:$new_none_first,keep_mtime:true}}
+  $후=[fn:실행]{러너경로:$러너.path,요청:{op:"sha",path:$w경로}}
+  $근거후=[fn:근거연결]{영수증sha:$변형.receipt.sha256,현재sha:get($후,"sha256",null),verified:$변형.receipt.verified}
+  $s=[fn:상태]{key:$변형.key}
+  $근거제품=[fn:근거연결]{영수증sha:$s.candidate_hash,현재sha:get($후,"sha256",null),verified:$s.verified}
+  $재사용판정=[fn:판정]{기계:(($s.verified==true) ? "통과(제품 상태 표시)" : "미검증"),독립:{observed:false},관측:{observed:false},범위파일:[{rel:$경로}],허용파일:$경로,근거:$근거후}
+  $iv=[fn:독립검증]{러너경로:$러너.path,정본:$정본,worktree:$변형.worktree,경로:$경로,검증자:$검증자,씨앗:$씨앗}
+  $obs=[fn:관측]{러너경로:$러너.path,경로:$w경로,enabled:true,timeout:240}
+  $근거신규=[fn:근거연결]{영수증sha:get($iv,"sha256",null),현재sha:get($obs,"candidate_sha256",null),verified:get($iv,"requirement_met",null)}
+  $ch=[fn:변경파일]{러너경로:$러너.path,worktree:$변형.worktree,기준선:$변형.baseline_files,허용파일:$경로}
+  $신규판정=[fn:판정]{기계:"미검증(제품 재검사 없음)",독립:$iv,관측:$obs,범위파일:$ch.files,허용파일:$경로,근거:$근거신규}
+  $d=[fn:폐기]{pid:$변형.proposal_id,key:$변형.key}
+  $같은크기=get($w,"size_before",null)==get($w,"size_after",null)
+  $같은mtime=get($w,"mtime_before",null)==get($w,"mtime_after",null)
+  $보고=[{section:"before_mutation",data:{sha:$전,evidence:$근거전}},{section:"mutation",data:{write:$w,same_size:$같은크기,same_mtime:$같은mtime}},
+    {section:"after_mutation_reuse",data:{sha:$후,evidence_harness_receipt:$근거후,product_status:$s,evidence_product:$근거제품,verdict:$재사용판정}},
+    {section:"after_mutation_fresh",data:{independent:$iv,observation:$obs,changed:$ch,evidence:$근거신규,verdict:$신규판정}},{section:"discard",data:$d}]
+  $요약={before:$근거전.link,after_reuse:$근거후.link,after_reuse_verdict:$재사용판정.overall,product_verified_shown:$s.verified,product_link:$근거제품.link,
+    fresh_verdict:$신규판정.overall,fresh_cases_ok:get($iv,"cases_ok",null),same_size:$같은크기,same_mtime:$같은mtime,discarded:$d.ok,applied:"미실행"}
+}
+$wr=[self:write]{path:$보고경로,content:$보고}
+$re=[self:read]{path:$보고경로}
+$재독=len(get(get($re,"data",{}),"items",[]))
+return {saved:$보고경로,sections:len($보고),reread_sections:$재독,summary:$요약}

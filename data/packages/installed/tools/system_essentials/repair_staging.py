@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import os
+from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -1145,16 +1146,20 @@ def op_status(ti):
             continue
         if ti.get("key") and s.get("key") != ti["key"]:
             continue
-        items.append({
+        item = {
             "key": s.get("key"), "status": s.get("status"), "kind": s.get("kind") or "repair",
             "proposal_id": s.get("proposal_id"), "reason": s.get("reason"),
-            "verified": s.get("verified"),
+            "verified": s.get("verified"), "candidate_hash": s.get("candidate_hash"),
             "files": [r.get("rel") for r in (s.get("files") or {}).values()],
             "worktree": s.get("worktree"), "created_at": s.get("created_at"),
             "applied_at": s.get("applied_at"), "current": s.get("key") == key,
             "live_comparison": (staged_live_comparison(repo, s)
                                 if s.get("status") in ("staging", "apply_scheduled") else None),
-        })
+        }
+        # key 조회만 현재 사본을 다시 센다(전체 목록은 세션 수 × 재고 해시라 비싸다).
+        if ti.get("key") and s.get("status") == "staging" and s.get("candidate_hash"):
+            item.update(_candidate.freshness(repo, s))
+        items.append(item)
     # ★현재 태스크의 세션을 맨 앞에 — 자기 상태가 남의 세션 더미에 파묻히지 않게
     #   (2026-08-31 ep2461: 재실행 턴이 55KB 목록 속 자기 예약분을 못 알아봤다).
     items.sort(key=lambda i: not i["current"])
@@ -1162,14 +1167,17 @@ def op_status(ti):
     props = [i for i in pending if i.get("kind") == "proposal"]
     scheduled = [i for i in items if i["status"] == "apply_scheduled"]
     msg = (f"스테이징 세션 {len(items)}건 (미정리 {len(pending)}건 · 그중 제안 "
-           f"{len(props)}건). live_comparison은 조회 시 내용 비교이며 기능 부재·활성화·커밋 판정이 아닙니다.")
+           f"{len(props)}건). live_comparison은 조회 시 내용 비교이며 기능 부재·활성화·커밋 판정이 아닙니다. "
+           "verified 는 candidate_hash 판본의 기계 검증이며, key 조회는 현재 사본 해시를 다시 세어 "
+           "verified_current 로 답합니다.")
     if props:
         msg += (" 제안 적용은 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} "
                 "— 수리(REPAIR) 경로에서만 통과합니다.")
     out = {"success": True, "items": items,
            "proposals": [{"proposal_id": i.get("proposal_id") or i["key"],
                           "files": i["files"], "reason": i.get("reason"),
-                          "verified": i.get("verified"), "created_at": i["created_at"]}
+                          "verified": i.get("verified"), "candidate_hash": i.get("candidate_hash"),
+                          "created_at": i["created_at"]}
                          for i in props],
            "message": msg}
     requested = ti.get("key") or key
@@ -1209,6 +1217,7 @@ def op_status(ti):
         out["message"] += (f" ★옛 원장(patch_proposals)에 좌초된 제안 {len(stranded)}건이 "
                            f"있습니다 — 통합 전 세대라 apply 가 못 봅니다. 다시 propose 하세요.")
     return out
+
 
 
 def op_discard(ti):
@@ -1381,14 +1390,19 @@ def op_propose(ti):
         sess = load_session(repo, key)
         wt_abs = os.path.join(repo, sess["worktree"])
         diff = _git(["diff", "--", rel_target], wt_abs).stdout
+        if not diff.strip():
+            diff = _candidate.text_diff(repo, rel_target, st_abs)
         verified, checks = verify(repo, sess)
+        candidate_hash = _candidate.candidate_hash(repo, sess)
         sess.update({"kind": "proposal", "proposal_id": ts, "reason": reason,
-                     "verified": verified, "checks": checks, "diff": diff[:8000]})
+                     "verified": verified, "checks": checks, "diff": diff[:8000],
+                     "candidate_hash": candidate_hash})
         _save_session(repo, sess)
 
         return {
-            "success": True, "proposal_id": ts, "target": rel_target,
+            "success": True, "proposal_id": ts, "key": key, "target": rel_target,
             "verified": verified, "checks": checks, "worktree": sess["worktree"],
+            "candidate_hash": candidate_hash,
             "verdict": ("기계 검증 통과 ✓" if verified else "기계 검증 실패 ✗ — checks 확인"),
             "diff": diff[:4000] + ("\n…(diff 잘림)" if len(diff) > 4000 else ""),
             "note": ("이 변경은 격리 사본에만 있고 라이브는 무변경입니다. "

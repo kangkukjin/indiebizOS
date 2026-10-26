@@ -338,6 +338,46 @@ def commit(repo, session, body):
         return result
 
 
+def freshness(repo, session):
+    """key 조회에서 사본의 현재 재고 해시를 다시 센다 — 검증 뒤 사본이 바뀌었으면 verified 는
+    현재 후보의 것이 아니다(긴문장 98회차 L98-1: 제안 뒤 사본을 바꿔도 status 가 verified:true·
+    files 1건을 그대로 보였다). files 도 현재 델타로 갱신한다(범위 밖 변경이 드러나게)."""
+    stored = session.get("candidate_hash")
+    try:
+        now = digest(collect(repo, session))
+    except (ValueError, OSError) as exc:
+        return {"candidate_hash": stored, "candidate_hash_now": None, "verified_current": None,
+                "verified_note": "현재 사본 해시를 세지 못했습니다: " + str(exc)[:200]}
+    out = {"candidate_hash": stored, "candidate_hash_now": now, "verified_current": now == stored,
+           "files": [r.get("rel") for r in (session.get("files") or {}).values()]}
+    if now != stored:
+        out["verified"] = False
+        out["verified_note"] = ("검증 뒤 사본이 바뀌었습니다 — 기계 검증 영수증은 candidate_hash 판본의 것입니다. "
+                                "현재 후보는 미검증이며 apply 가 다시 검증하거나 새로 propose 하세요.")
+    return out
+
+
+def candidate_hash(repo, session):
+    """검증 직후 사본 재고 해시 — 제안 영수증을 판본에 묶는다(readiness.candidate_hash 와 같은 계산)."""
+    try:
+        return digest(collect(repo, session))
+    except (ValueError, OSError):
+        return None
+
+
+def text_diff(repo, rel, staged_abs):
+    """미추적 대상은 사본의 `git diff` 가 비어 있다(98회차 L98-3: 독립 AI 가 "diff 빈 문자열" 을 스스로 보고).
+    라이브 원문(없으면 신규)과 사본 본문을 텍스트로 대조한다."""
+    import difflib
+    live = Path(repo) / rel
+    try:
+        before = live.read_text(encoding="utf-8").splitlines(True) if live.is_file() else []
+        after = Path(staged_abs).read_text(encoding="utf-8").splitlines(True)
+    except (OSError, UnicodeDecodeError):
+        return ""
+    return "".join(difflib.unified_diff(before, after, ("a/" + rel) if before else "/dev/null", "b/" + rel))
+
+
 @contextmanager
 def locked(repo, key, *, nonblocking=False):
     """동시 적용/편집 진입을 직렬화한다. OS 미지원이면 쓰기 경로를 열지 않는다."""

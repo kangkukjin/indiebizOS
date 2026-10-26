@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-26", impl: "6ea22c2dcf27c87f"}  # 재감사: 수리 사본의 정본 입력 변경(새 비무시 파일·등록 산출물 포함)을 전부 차단. 경로 관문·회원 변환·기기 실행·TV 전경 제한 유지.
+        path_audited: {at: "2026-10-26", impl: "4b8b215735a3af5b"}  # 재감사(98회차): 제안 영수증 candidate_hash·key·status key 재계산·미추적 대상 diff 추가. 경로 관문·회원 변환·기기 실행·TV 전경 제한 변경 없음.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +151,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-26", impl: "6ea22c2dcf27c87f"}  # 재감사: 수리 사본의 정본 입력 변경(새 비무시 파일·등록 산출물 포함)을 전부 차단. 경로 관문·회원 변환·기기 실행·TV 전경 제한 유지.
+        path_audited: {at: "2026-10-26", impl: "4b8b215735a3af5b"}  # 재감사(98회차): 제안 영수증 candidate_hash·key·status key 재계산·미추적 대상 diff 추가. 경로 관문·회원 변환·기기 실행·TV 전경 제한 변경 없음.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -231,7 +231,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-26", impl: "6ea22c2dcf27c87f"}  # 재감사: 수리 사본의 정본 입력 변경(새 비무시 파일·등록 산출물 포함)을 전부 차단. 경로 관문·회원 변환·기기 실행·TV 전경 제한 유지.
+        path_audited: {at: "2026-10-26", impl: "4b8b215735a3af5b"}  # 재감사(98회차): 제안 영수증 candidate_hash·key·status key 재계산·미추적 대상 diff 추가. 경로 관문·회원 변환·기기 실행·TV 전경 제한 변경 없음.
         target_key: path
       list:
         callable_contract:
@@ -570,7 +570,7 @@ nodes:
             apply: 조건별 검사 뒤 고정 묶음 정본 반영. backend 는 턴 종료 후 적용
             status: 사본·적용·활성 확인·커밋 상태와 실패 원인·재개 정보. key로 해당 수리 조회
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: verification_plan의 실제 검사·선택한 의미 조건 검토 후 고정 묶음 정본 적용 — 적용 전 거절은 라이브 무변경이며 적용 후 실패는 applied·stage·activation·commit·recovery로 구분한다. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: verification_plan의 실제 검사·선택한 의미 조건 검토 후 고정 묶음 정본 적용 — 적용 전 거절은 라이브 무변경이며 적용 후 실패는 applied·stage·activation·commit·recovery로 구분한다. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: 스테이징 세션 + 적용 대기 제안 목록(verified 는 candidate_hash 판본의 기계 검증, key 조회는 현재 사본 해시를 다시 세어 verified_current·현재 files 로 답함) / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
         aliases:
           # 관습어 수용 — 핸들러 _patch_op 이 읽던 별칭을 데이터로 (2026-08-29 구현-읽기 감사 상환).
           old_string: [old]
@@ -975,7 +975,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-26", impl: "6ea22c2dcf27c87f"}  # 재감사: 수리 사본의 정본 입력 변경(새 비무시 파일·등록 산출물 포함)을 전부 차단. 경로 관문·회원 변환·기기 실행·TV 전경 제한 유지.
+        path_audited: {at: "2026-10-26", impl: "4b8b215735a3af5b"}  # 재감사(98회차): 제안 영수증 candidate_hash·key·status key 재계산·미추적 대상 diff 추가. 경로 관문·회원 변환·기기 실행·TV 전경 제한 변경 없음.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

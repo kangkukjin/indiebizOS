@@ -1,0 +1,208 @@
+[
+ {
+  "section": "before_mutation",
+  "data": {
+   "sha": {
+    "op": "sha",
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_230826_d7dd08e3f019408f9ac96b84fa232e65/backend/test_repair_training_subject_copy.py",
+    "observed": true,
+    "sha256": "f7a0c65a020c6591f46a6220a561afdee3911d63a171753d3ad5ba8e4b286228",
+    "size": 2196
+   },
+   "evidence": {
+    "link": "재사용가능",
+    "reason": "같은 내용 해시의 통과 영수증"
+   }
+  }
+ },
+ {
+  "section": "mutation",
+  "data": {
+   "write": {
+    "op": "write",
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_230826_d7dd08e3f019408f9ac96b84fa232e65/backend/test_repair_training_subject_copy.py",
+    "observed": true,
+    "sha_before": "f7a0c65a020c6591f46a6220a561afdee3911d63a171753d3ad5ba8e4b286228",
+    "sha_after": "f39d1f21ec014b067f2a1c320b9b18ceef1730377f15dec8db07063b91b13248",
+    "size_before": 2196,
+    "size_after": 2196,
+    "mtime_before": "1793023709219339335",
+    "mtime_after": "1793023709219339335"
+   },
+   "same_size": true,
+   "same_mtime": true
+  }
+ },
+ {
+  "section": "after_mutation_reuse",
+  "data": {
+   "sha": {
+    "op": "sha",
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_230826_d7dd08e3f019408f9ac96b84fa232e65/backend/test_repair_training_subject_copy.py",
+    "observed": true,
+    "sha256": "f39d1f21ec014b067f2a1c320b9b18ceef1730377f15dec8db07063b91b13248",
+    "size": 2196
+   },
+   "evidence_harness_receipt": {
+    "link": "불가",
+    "reason": "검사한 판본과 현재 후보의 내용 해시가 다름 — 현재 후보는 미검증"
+   },
+   "product_status": {
+    "found": true,
+    "status": "staging",
+    "verified": true,
+    "files": [
+     "backend/test_repair_training_subject_copy.py"
+    ],
+    "item_count": 1,
+    "live_comparison": {
+     "matching": 0,
+     "base_unchanged": 1,
+     "diverged": 0,
+     "unknown": 0
+    },
+    "candidate_hash": null,
+    "error": null
+   },
+   "evidence_product": {
+    "link": "미확인",
+    "reason": "영수증 또는 현재 후보의 내용 해시가 없음"
+   },
+   "verdict": {
+    "machine_check": "통과(제품 상태 표시)",
+    "tests": "미검증",
+    "requirement": "미검증",
+    "scope": "준수",
+    "extra_files": [],
+    "evidence": "불가",
+    "evidence_reason": "검사한 판본과 현재 후보의 내용 해시가 다름 — 현재 후보는 미검증",
+    "applied": "미실행",
+    "overall": "미검증"
+   }
+  }
+ },
+ {
+  "section": "after_mutation_fresh",
+  "data": {
+   "independent": {
+    "op": "verify",
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_230826_d7dd08e3f019408f9ac96b84fa232e65/backend/test_repair_training_subject_copy.py",
+    "observed": true,
+    "verifier_exit": 0,
+    "cases_ok": 27,
+    "cases_total": 27,
+    "requirement_met": false,
+    "permutation_invariant": true,
+    "allowed_diff": {
+     "outside_function_unchanged": true,
+     "function_body_changed": true
+    },
+    "counterexamples": 0,
+    "pytest": {
+     "exit_code": 1,
+     "collected": 4,
+     "passed": 3,
+     "failed": 1,
+     "skipped": 0
+    },
+    "sha256": "f39d1f21ec014b067f2a1c320b9b18ceef1730377f15dec8db07063b91b13248"
+   },
+   "observation": {
+    "observed": true,
+    "tests_ran": true,
+    "command": "INDIEBIZ_REPAIR_TRAINING_SUBJECT=1 /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pytest /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_230826_d7dd08e3f019408f9ac96b84fa232e65/backend/test_repair_training_subject_copy.py -q",
+    "exit_code": 1,
+    "collected": 4,
+    "passed": 3,
+    "failed": 1,
+    "skipped": 0,
+    "cases": 4,
+    "failed_cases": 1,
+    "output_ref": 783,
+    "error": null,
+    "timeout": false,
+    "candidate_sha256": "f39d1f21ec014b067f2a1c320b9b18ceef1730377f15dec8db07063b91b13248"
+   },
+   "changed": {
+    "observed": true,
+    "files": [
+     {
+      "rel": "backend/test_repair_training_subject_copy.py"
+     }
+    ],
+    "all": [
+     {
+      "rel": ".venv"
+     },
+     {
+      "rel": "backend/test_repair_training_subject_copy.py"
+     },
+     {
+      "rel": "data/guide_db.json"
+     },
+     {
+      "rel": "data/guides/cloudflare.md"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_48/artifacts/agent/display.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_48/artifacts/trainer/out/display.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_48/artifacts/trainer/out_b/display.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_48/artifacts/trainer/out_flaky/display.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_68/evidence/after2_base_목록.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_68/evidence/agent_after_목록.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_68/evidence/agent_목록.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_68/evidence/trainer_base_목록.csv"
+     },
+     {
+      "rel": "docs/experiments/long_sentence_imagination/round_68/evidence/trainer_variant_목록.csv"
+     },
+     {
+      "rel": "frontend/i18n/catalog.json"
+     },
+     {
+      "rel": "frontend/i18n/translations.json"
+     }
+    ],
+    "error": null
+   },
+   "evidence": {
+    "link": "불가",
+    "reason": "같은 판본이지만 영수증이 통과가 아님"
+   },
+   "verdict": {
+    "machine_check": "미검증(제품 재검사 없음)",
+    "tests": "실패",
+    "requirement": "미달",
+    "scope": "준수",
+    "extra_files": [],
+    "evidence": "불가",
+    "evidence_reason": "같은 판본이지만 영수증이 통과가 아님",
+    "applied": "미실행",
+    "overall": "미달"
+   }
+  }
+ },
+ {
+  "section": "discard",
+  "data": {
+   "ok": true,
+   "after_items": 1,
+   "after_status": "discarded",
+   "error": null
+  }
+ }
+]

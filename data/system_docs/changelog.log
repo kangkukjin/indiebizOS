@@ -2923,3 +2923,4 @@
 
 2026-10-26 | 97회차 후속 감사 수리: 새 비무시 파일·등록 산출물의 추가도 정본 충돌로 복원(conftest·설정·UI·문서 반례). 적용 거절의 작업자 생존은 red_apply의 명시적 applied:false에만 허용하고 미관측·red_verify 실패는 복구 유지. P2의 상대경로 NOT_FOUND·없는 activation 필드 진단을 정정, 정본 절대경로·동일 작업 활성 영수증·정확한 Git 커밋/바이트·완료 통지를 대조. 라이브 P2 source_complete=true·6항목 달성·6행 재독. 관련 신규 경계 24건 확인. 상세 검증 범위는 docs/experiments/long_sentence_imagination/round_97/report.md §7.
 2026-10-26 | 97회차 후속 최종 검증: 비system 종합 10547통과·9생략·실패0, 관련 system77통과. IBL 파생 정합·backend 층·Android 몸 번들 확인. 공통 수리와 회차 기록을 정본 main에 반영. 전체 system·frontend tsc는 미실행.
+2026-10-26 | 긴문장 98회차(고친 것과 통과시킨 것 구별) 수리 3건: 제안 영수증에 사본 재고 해시(candidate_hash)를 싣고 status key 조회가 현재 해시를 다시 세어 verified_current·현재 files 로 답함(L98-1) · 수리 검사 프로세스가 소스 옆 __pycache__ 를 읽지 않게 PYTHONPYCACHEPREFIX 를 빈 런타임으로(같은 크기·mtime 의 다른 내용 함정, L98-2) · 미추적 대상 propose 의 빈 diff 를 텍스트 대조로 보완(L98-3) · propose 응답에 세션 key 포함(status 전체 목록 훑기 제거, L98-5). 회귀 test_repair_proposal_receipt 2건·test_repair_process 2건. 재감사 4건.

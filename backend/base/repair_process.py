@@ -28,6 +28,9 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False):
     clean.update(TMPDIR=str(runtime), TMP=str(runtime), TEMP=str(runtime),
                  INDIEBIZ_BASE_PATH=str(root), INDIEBIZ_MODEL_CONFIG_ROOT=str(model_root),
                  INDIEBIZ_REPAIR_CHILD="1", PYTHONDONTWRITEBYTECODE="1",
+                 # 소스 옆 __pycache__ 는 mtime+size 로만 검증돼 같은 크기·같은 시각의 다른 내용에
+                 # 옛 바이트코드를 돌려준다(긴문장 98회차 L98-2). 검사는 빈 런타임 캐시만 본다.
+                 PYTHONPYCACHEPREFIX=str(runtime / "cache/pycache"),
                  XDG_CACHE_HOME=str(runtime / "cache"), ELECTRON_DISABLE_SANDBOX="1")
     # Go on macOS ignores XDG_CACHE_HOME for its default build cache. Host
     # overrides can also point outside the sandbox; all toolchain writes belong

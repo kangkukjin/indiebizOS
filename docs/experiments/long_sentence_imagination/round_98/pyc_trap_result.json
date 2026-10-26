@@ -1,0 +1,23 @@
+{
+ "env_unset": true,
+ "A_v1": [
+  27,
+  0,
+  "f7a0c65a020c6591"
+ ],
+ "pyc_after_A": [
+  "test_repair_training_subject_copy.cpython-313-pytest-9.1.1.pyc",
+  "test_repair_training_subject_copy.cpython-313.pyc"
+ ],
+ "B_same_mtime_size_v1": [
+  27,
+  0,
+  "f39d1f21ec014b06"
+ ],
+ "B_v2": [
+  15,
+  0,
+  "f39d1f21ec014b06"
+ ],
+ "size": 2196
+}

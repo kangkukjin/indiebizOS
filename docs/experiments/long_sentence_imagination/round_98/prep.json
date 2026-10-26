@@ -1,0 +1,54 @@
+{
+ "started_at": "22:54:49",
+ "deadline": "23:54:49",
+ "budget_min": 60,
+ "head": "aa4a2501 docs: 자기 수리 긴문장 후속 훈련 설계",
+ "dirty": {
+  "data/guide_db.json": "0c14287c7301c29d",
+  "data/guides/cloudflare.md": "d8af756069547394",
+  "frontend/i18n/catalog.json": "e35550d0a8660b1e",
+  "frontend/i18n/translations.json": "1faba5c9d5af5c24",
+  "backend/test_repair_training_subject_copy.py": "16c736c2639b50b5"
+ },
+ "subject_canonical_sha16": "e58db41e7add0acf",
+ "subject_copy_sha16": "16c736c2639b50b5",
+ "copy_tracked": false,
+ "copy_cleanup": "회차 종료 뒤 삭제(미추적·비무시 → 다른 세션 apply 의 충돌 입력이 될 수 있음; apply_scheduled 0 확인)",
+ "harness": {
+  "verify_subject.py": "fd563843150f370d",
+  "seed_copy_original.py": "16c736c2639b50b5",
+  "control_correct_copy.py": "f7a0c65a020c6591"
+ },
+ "harness_access_control": "없음(같은 사용자·같은 파일시스템). 경로 분리만. 독립성 판단은 AI 도구 기록의 harness 경로 읽기 유무로 보고",
+ "backend": {
+  "phase": "ACTIVE",
+  "generation": "9c568dfcf2ec5d50e4cf25f8a0efaa5d",
+  "worker_pid": 54074,
+  "last_outcome": "restarted"
+ },
+ "repair_sessions": {
+  "discarded": 56,
+  "applied": 107,
+  "staging": 19
+ },
+ "apply_scheduled": 0,
+ "worktrees": 16,
+ "concurrent_live_task": {
+  "episode": 5548,
+  "task": "task_sysai_eb513703",
+  "what": "사용자 출처 원격 PC(맥26) 설치 작업, 22:36 시작·진행 중(guestpc remote_steps 대기). 로컬 backend 쓰기 관측 없음",
+  "risk": "독립 AI 요청이 같은 system_ai 에 큐잉될 수 있음 → 예산 안 미시작이면 미실행으로 기록"
+ },
+ "model": "system_ai provider claude_code/opus(97회차와 동일 가정; 접수 응답에서 확인)",
+ "allowed_edit": "backend/test_repair_training_subject_copy.py 의 fold_receipt 본문만",
+ "test_command": "INDIEBIZ_REPAIR_TRAINING_SUBJECT=1 .venv/bin/python3 -m pytest backend/test_repair_training_subject_copy.py -q",
+ "expected": {
+  "cases": {
+   "failed": 19,
+   "unverified": 7,
+   "achieved": 1
+  },
+  "copy_baseline": "20/27, pytest 4수집/3통과/1실패/exit1",
+  "control": "27/27, 4/4, exit0"
+ }
+}

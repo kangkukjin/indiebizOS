@@ -16,12 +16,15 @@ backend .py·가이드 수는 디스크가 아니라 `git ls-files` 로 센다: 
 스크래치 파일이 수치에 섞이면 신선 clone CI 의 --check 가 영구 빨간불이 된다
 (2026-07-26 신선 clone 게이트와 같은 부류). 패키지 수는 기존 자기상 가드와 같은
 보유 디렉토리 두 곳의 합집합을 실측한다(활성 선택은 로컬 원장).
+수리 자식에서는 후보 수집과 같이 Git 제외 규칙 밖의 신규 파일도 세고 삭제 파일은 뺀다.
+사본의 Git 메타데이터는 쓰기 금지이므로 인덱스에 먼저 올리게 요구하지 않는다.
 
 대상 문서·마커는 DOC_TARGETS 가 단일 진실 — 새 문서에 파생 구간을 만들면 여기 등재.
 """
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import yaml
@@ -41,13 +44,18 @@ PKG_TABLE_END = "<!-- PACKAGES_TABLE:END -->"
 
 def _git_ls(root: Path, pathspec: str) -> list[str] | None:
     try:
+        candidate = os.environ.get("INDIEBIZ_REPAIR_CHILD") == "1"
+        args = ["git", "ls-files"]
+        if candidate:
+            args += ["--cached", "--others", "--exclude-standard"]
         out = subprocess.run(
-            ["git", "ls-files", "--", pathspec],
+            args + ["--", pathspec],
             cwd=root, capture_output=True, text=True, timeout=20,
         )
         if out.returncode != 0:
             return None
-        return [ln for ln in out.stdout.splitlines() if ln.strip()]
+        return sorted({ln for ln in out.stdout.splitlines() if ln.strip()
+                       and (not candidate or (root / ln).is_file())})
     except Exception:
         return None
 
@@ -68,9 +76,9 @@ def collect_doc_facts(root: Path, data: dict | None) -> dict | None:
         return None
     per = {n: len(b.get("actions") or {}) for n, b in nodes.items() if isinstance(b, dict)}
 
-    # backend .py — git 추적 + 테스트(test_*) 제외 (CI 안정성: 미추적 스크래치 배제)
-    tracked = _git_ls(root, "backend/*.py") or []
-    if not tracked:  # git 불가 폴백 — 있는 그대로 세되, 같은 규칙
+    # backend .py — 추적/수리 후보 집합 + 테스트(test_*) 제외
+    tracked = _git_ls(root, "backend/*.py")
+    if tracked is None:  # git 불가 폴백 — 빈 추적 집합은 디스크 전체로 확대하지 않는다
         tracked = [str(p.relative_to(root)) for p in root.glob("backend/**/*.py")
                    if "__pycache__" not in p.parts]
     py_files = [p for p in tracked if not Path(p).name.startswith("test_")]

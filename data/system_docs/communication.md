@@ -2,7 +2,7 @@
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
 owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py, chat_streams.py, chat_runs.py, execution_workers.py, vocabulary_state.py, vocabulary_lifecycle.py
-last_updated: 2026-10-21
+last_updated: 2026-10-24
 see_also: [architecture.md, scheduler_guide.md, technical.md]
 ---
 

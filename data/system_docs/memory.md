@@ -9,7 +9,7 @@ owner_code: >
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
   tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-10-22
+last_updated: 2026-10-26
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -80,6 +80,12 @@ see_also: [architecture.md, ibl.md]
 종류별 검증·저장은 분리하며 저장 재시도는 첫 판단과 mutation 영수증을 재사용한다.
 원문·코드·파일 단서를 새로 만들어 기억하지 않는다. 상세와 한계:
 [가치 우선 통합 증류](../../docs/UNIFIED_DISTILL_2026_09_21.md).
+존대·긴 문서·요청형·접속사 같은 표면 형식으로 후보를 미리 탈락시키는 선판정은 2026-10-26에 제거했다.
+원문 전체와 단위별 위치·해시·인용 표시를 같은 증류 입력에 보존하고, 예산을 넘으면 문맥을 잘라
+저자를 추정하지 않고 기존 완결 구획 예산 계약으로 보류한다. 발화자 소유권·원문 ID·지속 가치·저장 판본
+검증은 유지한다. 부분 성과의 증류는 실제 성공한 호출만 고르고, 전체 작업 용례는 명시적 목표 달성 증거
+(`goal_status`)가 있어야 한다. 사용자 사실은 작업의 성패로 일괄 폐기하지 않는다.
+[관측 수리 4단계](../../docs/OBSERVATION_BASED_REPAIR_DESIGN_2026_10_26.md#12-구현관측-기록).
 입력 예산에는 실행 근거를 먼저 넣고 분류 목차를 먼저 덜어낸다. 문장부호만 있는 단위는
 사용자 사실 후보에서 제외한다. 해마의 사용 관측·top-1 되먹임은 액션 이름의 교집합 대신
 동작 선택 인자와 호출 순서를 함께 대조한다. [3949~3951 수리](../../docs/EPISODES_3949_3951_REPAIRS_2026_09_21.md).

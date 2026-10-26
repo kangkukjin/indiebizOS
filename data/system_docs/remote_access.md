@@ -2,7 +2,7 @@
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, 상주 PC·폰 손발, 미디어 연결, NAS 연동
 owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_surface_remote.py, launcher_react.py, nas_*.py
-last_updated: 2026-10-21
+last_updated: 2026-10-26
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 

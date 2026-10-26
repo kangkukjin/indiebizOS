@@ -2,7 +2,7 @@
 title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행에 주입, 평가자는 기준·증거 입력 사용)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-10-21
+last_updated: 2026-10-26
 see_also: [architecture.md, memory.md, ibl.md]
 ---
 

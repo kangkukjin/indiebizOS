@@ -25,10 +25,12 @@ def asset_sources():
                if p.is_file() and p.suffix in {'.html', '.js', '.css', '.json'}}
     sources.update({'static/' + name: _ROOT / 'backend/static' / name for name in STATIC_INPUTS})
     # Owner JSX is compiled into a display-only module; every compiler input is sealed.
-    for path in (_ROOT / 'frontend/i18n/remote.json', _ROOT / 'backend/static/ui_i18n/remote.json'):
-        if path.is_file():
-            sources['i18n/remote.json'] = path
-            break
+    for surface in ('remote', 'xray'):
+        for directory in ('frontend/i18n', 'backend/static/ui_i18n'):
+            path = _ROOT / directory / f'{surface}.json'
+            if path.is_file():
+                sources[f'i18n/{surface}.json'] = path
+                break
     owner = _ROOT / 'frontend'
     for path in (owner / 'src').rglob('*'):
         if path.is_file() and path.suffix in {'.ts', '.tsx', '.css', '.json'}:

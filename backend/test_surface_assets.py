@@ -1,6 +1,7 @@
 """화면 판본의 원자성·무재기동 반영·소스/배포 분리 계약."""
 import boot_paths  # noqa: F401
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 
@@ -154,6 +155,47 @@ def test_owner_shared_behavior_changes_display_not_execution_host(tmp_path):
     preload = target / 'electron/preload.js'
     preload.write_text(preload.read_text() + '\n// changed native execution contract\n')
     assert host() != before
+
+
+@pytest.mark.parametrize('packaged', [False, True])
+def test_xray_translation_bundle_is_registered_and_sealed(tmp_path, monkeypatch, packaged):
+    from launcher_surface_remote import localized_html
+
+    source = tmp_path / 'frontend/surfaces'
+    source.mkdir(parents=True)
+    store = tmp_path / 'releases'
+    monkeypatch.setattr(assets, '_ROOT', tmp_path)
+    monkeypatch.setattr(assets, '_SOURCE', source)
+    monkeypatch.setattr(assets, '_STORE', store)
+    monkeypatch.setattr(assets, 'STATIC_INPUTS', ())
+    monkeypatch.setattr(assets, '_cache', {})
+    directory = tmp_path / ('backend/static/ui_i18n' if packaged else 'frontend/i18n')
+    directory.mkdir(parents=True)
+    raw = '<html>원문</html>'
+    bundle = {'source_hash': hashlib.sha256(raw.encode()).hexdigest(),
+              'html': '<html>Translated X-Ray</html>'}
+    path = directory / 'xray.json'
+    path.write_text(json.dumps(bundle))
+    assert assets.asset_sources()['i18n/xray.json'] == path
+    if not packaged:
+        fallback = tmp_path / 'backend/static/ui_i18n/xray.json'
+        fallback.parent.mkdir(parents=True)
+        fallback.write_text('{}')
+        assert assets.asset_sources()['i18n/xray.json'] == path
+    monkeypatch.setattr(builder, 'render_all', lambda: {'xray': localized_html(raw, 'xray')})
+    version = builder.build(store, activate=True)
+    assert localized_html(raw, 'xray') == bundle['html']
+    assert localized_html(raw + 'changed', 'xray') == raw + 'changed'
+    manifest = json.loads((store / version / 'manifest.json').read_text())
+    assert 'i18n/xray.json' in manifest['assets']
+    path.write_text('{}')
+    assert localized_html(raw, 'xray') == bundle['html']
+    with assets.source_build():
+        assert localized_html(raw, 'xray') == raw
+    (store / version / 'assets/i18n/xray.json').write_text('tampered')
+    assets._cache.clear()
+    with pytest.raises(ValueError, match='지문'):
+        assets.read_asset('i18n/xray.json')
 
 
 if __name__ == "__main__":

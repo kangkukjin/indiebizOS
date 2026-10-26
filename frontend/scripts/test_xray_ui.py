@@ -1,5 +1,4 @@
 """X-Ray acceptance: actual compiled page and route, isolated fixture API data."""
-import asyncio
 import hashlib
 import json
 import os
@@ -17,6 +16,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 import boot_paths  # noqa: E402,F401
 from api_xray import xray_app  # noqa: E402
 from launcher_surface_remote import localized_html  # noqa: E402
+import surface_assets  # noqa: E402
 
 USER_TEXT = "사용자 원문 — 새로고침"
 DATA = {
@@ -39,6 +39,15 @@ FIXTURES = {
 }
 
 
+@pytest.fixture(scope="module", autouse=True)
+def isolated_surface_store(tmp_path_factory):
+    # Verify this checkout's initial bundle without selecting a live UI release.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(surface_assets, '_STORE', tmp_path_factory.mktemp('xray-surfaces'))
+        patch.setattr(surface_assets, '_cache', {})
+        yield
+
+
 @pytest.fixture(scope="module")
 def server():
     class Handler(BaseHTTPRequestHandler):
@@ -52,7 +61,7 @@ def server():
                         body = response.read()
                     assert body == json.loads((ROOT / "frontend/i18n/xray.json").read_text())["html"].encode()
                 else:
-                    body = asyncio.run(xray_app()).body
+                    body = xray_app().body
                 kind = "text/html; charset=utf-8"
             elif path == "/host":
                 body = b'''<select id="language"><option>en</option><option>ko</option></select>
@@ -101,7 +110,7 @@ def test_source_hash_route_and_missing_translation_fallback():
     raw = (ROOT / "data/xray/index.html").read_text()
     bundle = json.loads((ROOT / "frontend/i18n/xray.json").read_text())
     assert bundle["source_hash"] == hashlib.sha256(raw.encode()).hexdigest()
-    assert asyncio.run(xray_app()).body.decode() == bundle["html"]
+    assert xray_app().body.decode() == bundle["html"]
     assert localized_html(raw + "<!--changed-->", "xray") == raw + "<!--changed-->"
     catalog = json.loads((ROOT / "frontend/i18n/catalog.json").read_text())
     messages = [m for m in catalog["messages"].values() if m["context"].startswith("xray:")]

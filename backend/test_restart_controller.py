@@ -295,6 +295,48 @@ def test_controller_death_around_state_write(setup, edge, phase):
         assert adapter.accepting and adapter.running
 
 
+def test_rejected_apply_without_live_write_keeps_new_worker_active(setup, monkeypatch):
+    """L97-6b(긴문장 97회차): 쓰기 직전 재검증 실패(라이브 무변경)는 복구 불가가 아니라 거절이다 — 작업자를 죽이지 않는다."""
+    ctl, adapter, _ = setup
+    rejection = {"applied": False, "verified": False, "success": False,
+                 "error": "쓰기 직전 재검증 실패(workspace_ready) — 라이브 무변경"}
+    def helper(action, state):
+        return ({"ok": True, "result": rejection} if action == "apply"
+                else {"ok": True, "result": {"verified": False}}), []
+    monkeypatch.setattr(adapter, "helper", helper)
+    from restart_red import reservation
+    job_path = ctl.base / "data/system_ai_state/repair_sessions/task.apply.json"
+    job = {"repo": str(ctl.base), "key": "task", "task_id": "task",
+           "scheduled_at": "first", "readiness_hash": "ready"}
+    atomic_json(job_path, job)
+    atomic_json(job_path.with_name("task.json"), {"status": "apply_scheduled", "scheduled_at": "first"})
+    submit(ctl, operation="red_apply", payload={"job_path": str(job_path), "reservation": reservation(job)})
+    ticks(ctl, 30)
+    assert ctl.state["phase"] == "ACTIVE", ctl.state
+    assert ctl.state["last_result"]["outcome"] == "apply_rejected"
+    assert ctl.state["red_outcome"] == rejection
+    assert adapter.running and adapter.accepting and adapter.spawns == 1
+
+
+@pytest.mark.parametrize('operation,outcome', [
+    ('red_apply', None), ('red_apply', {}), ('red_apply', {'applied': None}),
+    ('red_apply', {'applied': True}), ('red_verify', None),
+    ('red_verify', {'applied': False}),
+])
+def test_failed_verify_without_explicit_apply_rejection_still_recovers(setup, monkeypatch, operation, outcome):
+    """미관측 적용·이미 쓴 코드의 검증 실패를 '무변경 거절'로 승격하지 않는다."""
+    ctl, adapter, _ = setup
+    ctl.start_generation(code_manifest(ctl.code_root))
+    ctl.save(request={'operation': operation, 'request_id': 'verify-probe'}, red_outcome=outcome)
+    adapter.spawn(ctl.state)
+    adapter.accepting = False
+    monkeypatch.setattr(adapter, 'helper', lambda *a: ({'ok': True, 'result': {'verified': False}}, []))
+    ctl.tick()
+    assert ctl.state['phase'] == 'RECOVERING'
+    assert ctl.state['recovery_reason'] == 'red_verification_failed'
+    assert not adapter.accepting
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
 
@@ -361,4 +403,3 @@ def test_controller_presence_distinguishes_missing_from_stopped(tmp_path):
     atomic_json(base / "data/.intentional_shutdown", {})
     assert controller_presence(base, state)["revive"] is False
     assert controller_presence(base, {})["verdict"] == "no_state"
-

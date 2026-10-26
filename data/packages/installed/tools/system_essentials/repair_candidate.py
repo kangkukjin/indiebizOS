@@ -171,11 +171,14 @@ def collect(repo, session):
 
 
 def conflicts(repo, session, current=None):
-    current = current if current is not None else inventory(Path(repo) / session["worktree"], session.get("artifact_paths", []))
+    """검사 기준선 이후의 정본 입력 변경을 적용 전에 거절한다."""
     live = inventory(repo, session.get("artifact_paths", []))
-    # 보수적 의존 범위: 사본의 전체 추적/비무시 입력. 예약 후 조용한 동기화는 없다.
-    return [p for p in set(session["baseline"]) | set(live)
-            if live.get(p) != session["baseline"].get(p)]
+    # 새 파일도 설정 탐색·glob·문서 입력을 바꾼다. 폴더·확장자로 무관함을 추정하지 않는다.
+    # inventory의 추적/비무시 파일과 명시한 배치 산출물 전체가 의존 범위다.
+    # 관측 로그는 미등록·Git 무시 출력에 보존한다. 충돌 거절 시 몸의 생존은 제어자가 맡는다.
+    baseline = session["baseline"]
+    return sorted(p for p in set(baseline) | set(live)
+                  if live.get(p) != baseline.get(p))
 
 
 def invalidate(session):

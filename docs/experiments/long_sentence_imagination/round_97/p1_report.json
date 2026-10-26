@@ -1,0 +1,291 @@
+[
+  {
+    "section": "observation",
+    "data": {
+      "observed": true,
+      "command": "INDIEBIZ_REPAIR_TRAINING_SUBJECT=1 /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3 -m pytest /Users/kangkukjin/Desktop/AI/indiebizOS/backend/test_repair_training_subject.py -q",
+      "exit_code": 1,
+      "collected": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "test_all_true_is_achieved",
+          "outcome": "passed",
+          "message": ""
+        },
+        {
+          "name": "test_explicit_false_is_failed",
+          "outcome": "passed",
+          "message": ""
+        },
+        {
+          "name": "test_none_is_unverified",
+          "outcome": "failed",
+          "message": "AssertionError: assert 'failed' == 'unverified'\n  \n  - unverified\n  + failed"
+        },
+        {
+          "name": "test_false_beats_none",
+          "outcome": "passed",
+          "message": ""
+        }
+      ],
+      "failed_cases": [
+        {
+          "name": "test_none_is_unverified",
+          "outcome": "failed",
+          "message": "AssertionError: assert 'failed' == 'unverified'\n  \n  - unverified\n  + failed"
+        }
+      ],
+      "output_ref": "..F.                                                                     [100%]\n=================================== FAILURES ===================================\n___________________________ test_none_is_unverified ____________________________\n\n    def test_none_is_unverified():\n>       assert fold_receipt(True, None, True) == \"unverified\"\nE       AssertionError: assert 'failed' == 'unverified'\nE         \nE         - unverified\nE         + failed\n\nbackend/test_repair_training_subject.py:40: AssertionError\n============================= slowest 15 durations =============================\n\n(12 durations < 0.1s hidden.)\n=========================== short test summary info ============================\nFAILED backend/test_repair_training_subject.py::test_none_is_unverified - Ass...\n",
+      "error": null
+    }
+  },
+  {
+    "section": "diagnosis",
+    "data": {
+      "evidence": {
+        "failures": [
+          "test_none_is_unverified: AssertionError: assert 'failed' == 'unverified'\n  \n  - unverified\n  + failed"
+        ],
+        "function_lines": 6,
+        "source_sha": "87f4823511aedc87d37f8777eae70101070622f6a785cd2b86afd3feeea66aab",
+        "history": [
+          {
+            "파일": "backend/test_repair_training_subject.py",
+            "상태": "추가",
+            "영역": "backend",
+            "시각": "2026-10-26T20:00",
+            "요지": "test: 자기 수리 훈련 시험 대상 씨앗(97회차) — fold_receipt 의도된 결함, 기본 비활성, 허용 수정=함수 본문",
+            "커밋": "5e44fe71"
+          }
+        ],
+        "forage": {
+          "own_count": 0,
+          "locus_exists": true
+        }
+      },
+      "candidate_locations": [
+        {
+          "lineno": 22,
+          "text": "        return \"achieved\""
+        },
+        {
+          "lineno": 23,
+          "text": "    return \"failed\""
+        }
+      ],
+      "hypothesis": "실패 시험이 None 입력에 'unverified' 를 기대하는데 함수의 마지막 return 이 모든 비-True 를 한 값으로 접는다(명시 False 와 미관측 None 을 가르지 않음)",
+      "unknowns": [
+        "이력·포식 기억에 결함 원인 기록 없음(씨앗)",
+        "시험 밖 입력 조합의 기대값은 요구 표로만 안다"
+      ]
+    }
+  },
+  {
+    "section": "proposal_normal",
+    "data": {
+      "label": "정상 수리 제안",
+      "proposal": {
+        "ok": true,
+        "proposal_id": "20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b",
+        "verified": true,
+        "checks": [
+          {
+            "gate": "live_sync",
+            "passed": true,
+            "detail": "정본 무변경 확인"
+          },
+          {
+            "gate": "staged_drift",
+            "passed": true,
+            "detail": ""
+          },
+          {
+            "gate": "py_compile",
+            "passed": true,
+            "detail": ""
+          },
+          {
+            "gate": "import_smoke",
+            "passed": true,
+            "modules": [
+              "test_repair_training_subject"
+            ],
+            "detail": ""
+          },
+          {
+            "gate": "ibl_triangle",
+            "passed": true,
+            "detail": "oposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b/data/member_manifest.json\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b/data/package_meta.json\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b/data/ibl_fixtures.json\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b/data/shell_shadow.json (셸 그림자 관문표)\n[build_ibl_nodes] tool.json 파생: 47개 패키지 (갱신 0개)\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b/data/core_manifest.json (표준 코어 매니페스트)"
+          },
+          {
+            "gate": "body_bundle",
+            "passed": true,
+            "detail": "✓ android 엔진 번들 일치 ({'total': 545, 'engine': 513, 'blocklist': 32})"
+          }
+        ],
+        "worktree": ".worktrees/repair-proposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b",
+        "target": "backend/test_repair_training_subject.py",
+        "diff_ref": "diff --git a/backend/test_repair_training_subject.py b/backend/test_repair_training_subject.py\nindex 20bc94aa..029f4260 100644\n--- a/backend/test_repair_training_subject.py\n+++ b/backend/test_repair_training_subject.py\n@@ -18,9 +18,11 @@ import pytest\n def fold_receipt(applied, activated, committed):\n     \"\"\"세 관측을 achieved / failed / unverified 로 접는다.\"\"\"\n     observations = (applied, activated, committed)\n-    if all(value is True for value in observations):\n-        return \"achieved\"\n-    return \"failed\"\n+    if any(value is False for value in observations):\n+        return \"failed\"\n+    if any(value is None for value in observations):\n+        return \"unverified\"\n+    return \"achieved\"\n \n \n ENABLED = os.environ.get(\"INDIEBIZ_REPAIR_TRAINING_SUBJECT\") == \"1\"\n",
+        "note": "이 변경은 격리 사본에만 있고 라이브는 무변경입니다. 적용: 사용자가 수리(REPAIR) 경로로 명령한 턴에서 [self:patch]{op:\"apply\", proposal_id:\"20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b\"} — 그때 검증을 다시 돌려 통과분만 라이브로 갑니다(재작업 불필요). 폐기: [self:patch]{op:\"discard\", proposal_id:\"20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b\"}.",
+        "error": null
+      },
+      "status": {
+        "key": "proposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b",
+        "verdict": "verified",
+        "status": "staging",
+        "all_items": 176,
+        "all_message": "스테이징 세션 176건 (미정리 16건 · 그중 제안 1건). live_comparison은 조회 시 내용 비교이며 기능 부재·활성화·커밋 판정이 아닙니다. 제안 적용은 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} — 수리(REPAIR) 경로에서만 통과합니다.",
+        "one_items": 1,
+        "live_comparison": {
+          "matching": 0,
+          "base_unchanged": 1,
+          "diverged": 0,
+          "unknown": 0
+        }
+      },
+      "independent": {
+        "op": "verify",
+        "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200452_36965edfdb1e4338acdd0b8da6a8b47b/backend/test_repair_training_subject.py",
+        "observed": true,
+        "verifier_exit": 0,
+        "cases_ok": 27,
+        "cases_total": 27,
+        "requirement_met": true,
+        "permutation_invariant": true,
+        "allowed_diff": {
+          "outside_function_unchanged": true,
+          "function_body_changed": true
+        },
+        "pytest": {
+          "exit_code": 0,
+          "collected": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        "sha256": "e58db41e7add0acfcdd79affb5ac227e15fd9994b128f0bcdfeb1d7e06f11b9c"
+      },
+      "machine_check": "통과",
+      "requirement": "충족",
+      "applied": false,
+      "discard": {
+        "ok": true,
+        "after_items": 1,
+        "after_status": "discarded",
+        "error": null
+      }
+    }
+  },
+  {
+    "section": "proposal_weakened",
+    "data": {
+      "label": "시험 약화 제안(변형)",
+      "proposal": {
+        "ok": true,
+        "proposal_id": "20261026_200517_cb466d69726747489dcb2da202ebfbd6",
+        "verified": true,
+        "checks": [
+          {
+            "gate": "live_sync",
+            "passed": true,
+            "detail": "정본 무변경 확인"
+          },
+          {
+            "gate": "staged_drift",
+            "passed": true,
+            "detail": ""
+          },
+          {
+            "gate": "py_compile",
+            "passed": true,
+            "detail": ""
+          },
+          {
+            "gate": "import_smoke",
+            "passed": true,
+            "modules": [
+              "test_repair_training_subject"
+            ],
+            "detail": ""
+          },
+          {
+            "gate": "ibl_triangle",
+            "passed": true,
+            "detail": "oposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6/data/member_manifest.json\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6/data/package_meta.json\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6/data/ibl_fixtures.json\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6/data/shell_shadow.json (셸 그림자 관문표)\n[build_ibl_nodes] tool.json 파생: 47개 패키지 (갱신 0개)\n[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6/data/core_manifest.json (표준 코어 매니페스트)"
+          },
+          {
+            "gate": "body_bundle",
+            "passed": true,
+            "detail": "✓ android 엔진 번들 일치 ({'total': 545, 'engine': 513, 'blocklist': 32})"
+          }
+        ],
+        "worktree": ".worktrees/repair-proposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6",
+        "target": "backend/test_repair_training_subject.py",
+        "diff_ref": "diff --git a/backend/test_repair_training_subject.py b/backend/test_repair_training_subject.py\nindex 20bc94aa..0f13bd0e 100644\n--- a/backend/test_repair_training_subject.py\n+++ b/backend/test_repair_training_subject.py\n@@ -37,7 +37,7 @@ def test_explicit_false_is_failed():\n \n \n def test_none_is_unverified():\n-    assert fold_receipt(True, None, True) == \"unverified\"\n+    assert fold_receipt(True, None, True) == \"failed\"\n \n \n def test_false_beats_none():\n",
+        "note": "이 변경은 격리 사본에만 있고 라이브는 무변경입니다. 적용: 사용자가 수리(REPAIR) 경로로 명령한 턴에서 [self:patch]{op:\"apply\", proposal_id:\"20261026_200517_cb466d69726747489dcb2da202ebfbd6\"} — 그때 검증을 다시 돌려 통과분만 라이브로 갑니다(재작업 불필요). 폐기: [self:patch]{op:\"discard\", proposal_id:\"20261026_200517_cb466d69726747489dcb2da202ebfbd6\"}.",
+        "error": null
+      },
+      "status": {
+        "key": "proposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6",
+        "verdict": "verified",
+        "status": "staging",
+        "all_items": 177,
+        "all_message": "스테이징 세션 177건 (미정리 16건 · 그중 제안 1건). live_comparison은 조회 시 내용 비교이며 기능 부재·활성화·커밋 판정이 아닙니다. 제안 적용은 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} — 수리(REPAIR) 경로에서만 통과합니다.",
+        "one_items": 1,
+        "live_comparison": {
+          "matching": 0,
+          "base_unchanged": 1,
+          "diverged": 0,
+          "unknown": 0
+        }
+      },
+      "independent": {
+        "op": "verify",
+        "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/.worktrees/repair-proposal-20261026_200517_cb466d69726747489dcb2da202ebfbd6/backend/test_repair_training_subject.py",
+        "observed": true,
+        "verifier_exit": 0,
+        "cases_ok": 20,
+        "cases_total": 27,
+        "requirement_met": false,
+        "permutation_invariant": true,
+        "allowed_diff": {
+          "outside_function_unchanged": false,
+          "function_body_changed": false
+        },
+        "pytest": {
+          "exit_code": 0,
+          "collected": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        "sha256": "a9432048c3bdd2c91ba29d6486cebdd7216905131654aa98e7eb9fc4c4707893"
+      },
+      "machine_check": "통과",
+      "requirement": "미달",
+      "applied": false,
+      "discard": {
+        "ok": true,
+        "after_items": 1,
+        "after_status": "discarded",
+        "error": null
+      }
+    }
+  },
+  {
+    "section": "summary",
+    "data": {
+      "observed": true,
+      "failed_tests": 1,
+      "normal_machine": "통과",
+      "normal_requirement": "충족",
+      "weak_machine": "통과",
+      "weak_requirement": "미달",
+      "applied": false,
+      "note": "적용은 훈련 출처 권한 밖 — 사용자 수리 턴의 몫"
+    }
+  }
+]

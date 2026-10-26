@@ -1,0 +1,56 @@
+#!ibl edition=2
+[def:실행]($러너경로,$요청) {
+  [try] { return [self:script]{path:$러너경로,args:$요청,timeout:300} }
+  [catch] { return {observed:false,error:$error.message} }
+}
+[def:읽기JSON]($p) {
+  [try] {
+    $r=[self:read]{path:$p,format:"json"}
+    return {found:true,data:$r.data,error:null}
+  }
+  [catch] { return {found:false,data:{},error:$error.message} }
+}
+[def:삼값]($cond_true,$cond_false) {
+  [if:$cond_false==true] { return "failed" }
+  [if:$cond_true==true] { return "achieved" }
+  return "unverified"
+}
+$러너=[self:write]{path:"~turn/runner.py",content:$러너본문}
+$st={items:[]}
+[try] { $st=[self:patch]{op:"status",key:$key} }
+[catch] { $st={items:[],error:$error.message} }
+$items=get($st,"items",[])
+# 상대 경로는 프로젝트 기준이다. 정본 절대 루트를 입력받아 두 원장을 읽는다.
+$sf=[fn:읽기JSON]{p:$정본+"/data/system_ai_state/repair_sessions/"+$key+".json"}
+$cf=[fn:읽기JSON]{p:$정본+"/data/system_ai_state/repair_continuations/"+$key+".json"}
+$sd=$sf.data
+$cd=$cf.data
+$identity=get($sd,"key",null)==$key and get($cd,"task_id",null)==$key
+$applied=[fn:삼값]{cond_true:get($sd,"status",null)=="applied",cond_false:get($sd,"status",null)=="discarded" or get($sd,"status",null)=="staging"}
+# 존재하지 않는 session.activation 대신 이 세션의 제어자 결과·세대·검증 영수증을 쓴다.
+$result=get($cd,"result",{})
+$activation=get($result,"report",{})
+$generation=get($activation,"generation",null)
+$active=[fn:삼값]{cond_true:$identity and get($sd,"verified",null)==true and get($result,"outcome",null)=="healthy" and get($activation,"outcome",null)=="healthy" and $generation!=null,cond_false:get($result,"outcome",null)=="failed" or get($activation,"outcome",null)=="failed"}
+# 다른 이력의 존재를 성공으로 세지 않는다. 영수증의 정확한 커밋·대상 바이트를 대조한다.
+$commit=get($sd,"commit",{})
+$git=[fn:실행]{러너경로:$러너.path,요청:{op:"commit",path:$경로,repo:$정본,commit:get($commit,"commit",null)}}
+$committed=[fn:삼값]{cond_true:get($commit,"success",null)==true and get($git,"observed",false)==true and get($git,"matches",null)==true,cond_false:get($commit,"success",null)==false or (get($git,"observed",false)==true and get($git,"matches",null)==false)}
+$eval=get($cd,"evaluation",{})
+$cont_status=get($cd,"status",null)
+$notified=[fn:삼값]{cond_true:$identity and $cont_status=="completed" and get($cd,"pending_delivery",null)==false and get($eval,"goal_status",null)=="ACHIEVED" and get($eval,"method",null)=="repair_receipts",cond_false:$cont_status=="blocked" or $cont_status=="cancelled"}
+$py=[fn:실행]{러너경로:$러너.path,요청:{op:"pytest",path:$경로,repo:$정본}}
+$iv=[fn:실행]{러너경로:$러너.path,요청:{op:"verify",path:$경로,repo:$정본,verifier:$검증자,seed:$씨앗}}
+$function=[fn:삼값]{cond_true:get($iv,"observed",false)==true and get($iv,"requirement_met",null)==true and get($py,"observed",false)==true and get($py,"exit_code",null)==0,cond_false:(get($iv,"observed",false)==true and get($iv,"requirement_met",null)==false) or (get($py,"observed",false)==true and get($py,"exit_code",null)!=0)}
+$report=[
+  {item:"applied",verdict:$applied,evidence:{session_status:get($sd,"status",null),applied_at:get($sd,"applied_at",null),read_error:$sf.error}},
+  {item:"activation",verdict:$active,evidence:{report:$activation,identity_match:$identity,read_error:$cf.error}},
+  {item:"commit",verdict:$committed,evidence:$git},
+  {item:"completion_notice",verdict:$notified,evidence:{continuation_status:$cont_status,evaluation:$eval,pending_delivery:get($cd,"pending_delivery",null),read_error:$cf.error}},
+  {item:"live_function",verdict:$function,evidence:{pytest:$py,independent:$iv}},
+  {item:"status_query",verdict:(len($items)==1 and get($items[0],"key",null)==$key ? "achieved" : "unverified"),evidence:{items:len($items),error:get($st,"error",null)}}
+]
+$w=[self:write]{path:$보고경로,content:$report}
+$re=[self:read]{path:$w.path,format:"json"}
+assert $re.data.items==$report,"보고서 재독 불일치"
+return {saved:$w.path,rows:len($report),reread:len($re.data.items),verdicts:map($report,($row)=>$row.item+"="+$row.verdict)}

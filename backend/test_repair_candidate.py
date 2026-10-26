@@ -110,5 +110,66 @@ def test_artifact_only_receipt_checks_live_bytes_without_empty_git_commit(setup,
     assert not completion(saved, {}, root)[0]
 
 
+@pytest.mark.parametrize('relative', [
+    'conftest.py', 'pyproject.toml', 'frontend/surfaces/new.js',
+    'frontend/i18n/new.json', 'data/new_rules.json', 'docs/new_inputs.md',
+    'backend/new_module.py',
+])
+def test_new_live_input_invalidates_readiness_before_any_write(setup, relative):
+    """새 설정·문서·소스도 파일 탐색과 검사 결과를 바꿀 수 있다."""
+    root, wt, st, sess = setup
+    (wt / 'a.txt').write_text('fixed')
+    ready(root, st, sess)
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('new input')
+    assert st._candidate.conflicts(str(root), sess) == [relative]
+    with pytest.raises(ValueError, match='정본 충돌'):
+        st._candidate.validate(str(root), sess)
+    assert not st._perform_apply(str(root), sess, [], None, None)['applied']
+    assert (root / 'a.txt').read_text() == 'before'
+    assert path.read_text() == 'new input'
+
+
+def test_new_root_conftest_changes_pytest_and_invalidates_readiness(setup):
+    import os
+    import sys
+
+    root, wt, st, sess = setup
+    (root / 'test_probe.py').write_text('def test_probe():\n    assert True\n')
+    st._candidate.refresh(str(root), sess)
+    (wt / 'a.txt').write_text('fixed')
+    ready(root, st, sess)
+    (root / 'conftest.py').write_text(
+        'def pytest_collection_modifyitems(items):\n'
+        '    raise RuntimeError("new live verification input")\n')
+    env = {**os.environ, 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'}
+    command = [sys.executable, '-m', 'pytest', 'test_probe.py', '-p', 'no:cacheprovider']
+    staged = subprocess.run(command, cwd=wt, env=env, capture_output=True, text=True, timeout=30)
+    live = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=30)
+    assert staged.returncode == 0, staged.stdout + staged.stderr
+    assert live.returncode != 0 and 'new live verification input' in live.stdout
+    with pytest.raises(ValueError, match='conftest.py'):
+        st._candidate.validate(str(root), sess)
+
+
+def test_unregistered_ignored_output_is_not_a_repair_input(setup):
+    root, wt, st, sess, _ = artifacts(setup)
+    ready(root, st, sess)
+    (root / 'outputs/observation.json').write_text('{"observed":true}')
+    assert st._candidate.conflicts(str(root), sess) == []
+    assert st._candidate.validate(str(root), sess)
+
+
+def test_new_registered_artifact_destination_blocks_application(setup):
+    root, wt, st, sess, paths = artifacts(setup)
+    ready(root, st, sess)
+    (root / paths[1]).write_text('concurrent result')
+    assert paths[1] in st._candidate.conflicts(str(root), sess)
+    assert not st._perform_apply(str(root), sess, [], None, None)['applied']
+    assert (root / paths[1]).read_text() == 'concurrent result'
+    assert (root / paths[0]).read_bytes() == b'old'
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

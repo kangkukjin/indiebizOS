@@ -31,6 +31,10 @@ from thread_context import (
 SYSTEM_OWNER = "system"
 KIND = "delegation"   # 접수증 통화의 작업 종류(task_receipts)
 TERMINAL_STATES = frozenset({"succeeded", "failed", "cancelled"})
+# 쉼 상태 — 사용자 입력 없이는 더 바뀌지 않는다(자기수리 차단·사용자 대기). 종료는 아니지만 응답(result)은 이미
+# 원장에 적혀 있고(api_repair_continuation._settle), 대기자가 더 기다릴 이유가 없다(긴문장 97회차 L97-3:
+# 차단된 수리의 접수증이 result:null 이라 호출자가 사유를 못 보고 wait 가 상한까지 돌았다).
+RESTING_STATES = frozenset({"blocked", "waiting_user"})
 # 동기 위임 기본 대기 상한(초). 옛 임시 에이전트 경로도 모델 턴 전체를 막았으므로 같은 규모.
 # 상한이 끝나도 작업을 실패·취소로 바꾸지 않고 같은 task 의 현재 상태를 돌려준다.
 SYNC_WAIT_SECONDS = 600
@@ -296,7 +300,8 @@ def task_view(owner: str, task_id: str, agent_id: str = None):
         "completed_at": row.get("completed_at"),
         "pending_children": row.get("pending_delegations") or 0,
         "children": children,
-        "result": (row.get("result") or "") if terminal and state != "failed" else None,
+        "result": ((row.get("result") or "") if (terminal and state != "failed") or state in RESTING_STATES
+                   else None),
         "error": (row.get("result") or "") if state == "failed" else None,
         "status_url": status_url(owner, task_id, agent_id),
     }
@@ -307,7 +312,7 @@ def wait_for_task(owner: str, task_id: str, timeout: float, agent_id: str = None
     deadline = time.monotonic() + max(0.0, float(timeout or 0))
     while True:
         view = task_view(owner, task_id, agent_id)
-        if view is None or view["state"] in TERMINAL_STATES:
+        if view is None or view["state"] in TERMINAL_STATES or view["state"] in RESTING_STATES:
             return view
         left = deadline - time.monotonic()
         if left <= 0:
@@ -340,6 +345,9 @@ def task_status(ref: dict) -> dict:
     if state not in T.TERMINAL and requested(owner, ref['task_id']):
         state = T.CANCEL_REQUESTED
     progress = {"pending_children": v["pending_children"], "children": v["children"], "status": v["status"]}
+    if v["state"] in RESTING_STATES and v.get("result"):
+        # 쉼 상태(사용자 대기)의 응답 — 투영의 result 칸은 성공 전용 계약이라 진행 칸에 싣는다(L97-3).
+        progress["note"] = v["result"]
     if state in T.TERMINAL:
         _note_collected(v.get("parent_task_ref"), ref["task_id"])
     return T.view(ref, state, progress=progress, result=v.get("result"), error=v.get("error"),

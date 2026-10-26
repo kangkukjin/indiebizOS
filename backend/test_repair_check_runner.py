@@ -1,6 +1,7 @@
 """Go 검사부터 의미 근거·정본 적용까지 실제 수리 사본에서 확인한다."""
 import shlex
 import shutil
+import sys
 
 import boot_paths  # noqa: F401
 import pytest
@@ -64,6 +65,20 @@ def test_semantic_without_current_pass_stops_before_model(repair, monkeypatch, s
     assert "go test" in result["error"] and result["missing_criteria"] == ["C1"]
     repeated = policy.prepare(controller, str(root), session, st.verify, st._candidate)
     assert repeated["reused"]
+
+
+def test_leading_env_assignment_reaches_the_test_process(repair):
+    """L97-1(97회차): 앞머리 `VAR=값` 대입이 시험 프로세스 환경에 닿아야 명시적으로 켜는 시험이 영수증을 남긴다."""
+    root, wt, st, session, controller = repair
+    (wt / "test_env_prefix_probe.py").write_text(
+        "import os\n\n\ndef test_env_prefix():\n    assert os.environ.get('INDIEBIZ_TRAINING_PROBE') == 'on'\n")
+    python = shlex.quote(sys.executable)
+    without = execute(str(root), session, st._candidate, f"{python} -m pytest test_env_prefix_probe.py -q", controller)
+    assert without["status"] == "failed", without
+    record = execute(str(root), session, st._candidate,
+                     f"INDIEBIZ_TRAINING_PROBE=on {python} -m pytest test_env_prefix_probe.py -q", controller)
+    assert record["status"] == "passed", record
+    assert record["test_report"]["tests"] == 1 and record["test_report"]["failures"] == 0
 
 
 if __name__ == "__main__":

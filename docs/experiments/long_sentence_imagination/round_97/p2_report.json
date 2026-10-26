@@ -1,0 +1,64 @@
+[
+  {
+    "item": "applied",
+    "verdict": "unverified",
+    "evidence": {
+      "session_status": null,
+      "applied_at": null
+    }
+  },
+  {
+    "item": "activation",
+    "verdict": "unverified",
+    "evidence": null
+  },
+  {
+    "item": "commit",
+    "verdict": "unverified",
+    "evidence": {
+      "session_commit": null,
+      "history": []
+    }
+  },
+  {
+    "item": "completion_notice",
+    "verdict": "unverified",
+    "evidence": {
+      "continuation_status": null,
+      "phase": null,
+      "reason": null,
+      "policy": null
+    }
+  },
+  {
+    "item": "live_function",
+    "verdict": "failed",
+    "evidence": {
+      "pytest": {
+        "exit": 1,
+        "collected": 4,
+        "passed": 3,
+        "failed": 1
+      },
+      "independent": {
+        "cases_ok": 20,
+        "requirement_met": false,
+        "allowed_diff": {
+          "outside_function_unchanged": true,
+          "function_body_changed": false
+        }
+      }
+    }
+  },
+  {
+    "item": "status_query",
+    "verdict": "achieved",
+    "evidence": {
+      "items": 1,
+      "session_files": [
+        "backend/test_repair_training_subject.py"
+      ],
+      "error": null
+    }
+  }
+]

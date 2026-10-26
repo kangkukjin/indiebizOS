@@ -341,6 +341,14 @@ class Controller:
                     if done is None:
                         return
                     if not done.get("ok") or not done.get("result", {}).get("verified"):
+                        if (done.get("ok") and (s.get("request") or {}).get("operation") == "red_apply"
+                                and (self.state.get("red_outcome") or {}).get("applied") is False
+                                and code_manifest(self.code_root) == s["manifest"]):
+                            # 쓰기 전 재검증 실패 = 라이브 무변경(긴문장 97회차 L97-6b). "되돌릴 것이 없다" 를
+                            # "복구 불가" 로 읽어 살아 있는 작업자를 죽이고 FAILED 로 가지 않는다 — 거절로 닫는다.
+                            self.adapter.command(self.state, "activate")
+                            self.finish("apply_rejected")
+                            return
                         self.save(phase="RECOVERING", recovery_reason="red_verification_failed")
                         return
                 if (self.base / "data/.intentional_shutdown").exists():

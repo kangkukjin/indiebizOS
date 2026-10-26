@@ -1,0 +1,50 @@
+#!ibl edition=2
+[def:실행]($러너경로,$요청) {
+  [try] { return [self:script]{path:$러너경로,args:$요청,timeout:300} }
+  [catch] { return {observed:false,error:$error.message} }
+}
+[def:읽기JSON]($p) {
+  [try] { $r=[self:read]{path:$p}; return {found:true,data:get($r,"data",null),text:get($r,"text",null)} }
+  [catch] { return {found:false,data:null,text:null,error:$error.message} }
+}
+[def:삼값]($cond_true,$cond_false) {
+  [if:$cond_true==true] { return "achieved" }
+  [if:$cond_false==true] { return "failed" }
+  return "unverified"
+}
+$러너=[self:write]{path:"~turn/runner.py",content:$러너본문}
+# 1. 세션 원장(status key) — 훈련 출처라 소유자 전용 칸은 비어 있을 수 있다
+$st={items:[]}
+[try] { $st=[self:patch]{op:"status",key:$key} } [catch] { $st={items:[],error:$error.message} }
+$items=get($st,"items",[])
+$sess=(len($items)==1 ? $items[0] : {})
+# 2. 세션 파일·continuation 파일 직접 읽기(읽기 전용)
+$sf=[fn:읽기JSON]{p:$세션파일}
+$cf=[fn:읽기JSON]{p:$인계파일}
+$sd=(($sf.found==true and $sf.data!=null) ? $sf.data : {})
+$cd=(($cf.found==true and $cf.data!=null) ? $cf.data : {})
+# 3. git 각인 — 대상 파일 이력
+$hist=[]
+[try] { $h=[self:body]{op:"file",path:$경로,limit:5}; $hist=get($h,"items",[]) } [catch] { $hist=[{error:$error.message}] }
+$수리커밋=$hist >> [table:filter]{where:($c)=>get($c,"커밋",null)!=$씨앗커밋}
+# 4. 정본 파일 기능 확인(새 프로세스 pytest + 독립 27건) — '정본 파일 기능 확인' 으로만 분류
+$py=[fn:실행]{러너경로:$러너.path,요청:{op:"pytest",path:$경로}}
+$iv=[fn:실행]{러너경로:$러너.path,요청:{op:"verify",path:$경로,verifier:$검증자,seed:$씨앗}}
+# 5. 항목별 3값
+$applied=[fn:삼값]{cond_true:get($sd,"status",null)=="applied" or get($sess,"status",null)=="applied",cond_false:get($sd,"status",null)=="discarded" or get($sd,"status",null)=="staging"}
+$commit_hash=get(get($sd,"commit",{}),"commit",null)
+$committed=[fn:삼값]{cond_true:$commit_hash!=null and len($수리커밋)>=1,cond_false:$commit_hash==null and len($수리커밋)==0 and get($sd,"status",null)=="applied"}
+$activation=get($sd,"activation",null)
+$active=[fn:삼값]{cond_true:$activation!=null and get($activation,"state",null)=="passed",cond_false:$activation!=null and get($activation,"state",null)=="failed"}
+$cont_status=get($cd,"status",null)
+$notified=[fn:삼값]{cond_true:$cont_status=="completed",cond_false:$cont_status=="blocked" or $cont_status=="cancelled"}
+$function=[fn:삼값]{cond_true:get($iv,"requirement_met",null)==true and get($py,"exit_code",null)==0,cond_false:get($iv,"requirement_met",null)==false or get($py,"exit_code",null)!=0}
+$report=[{item:"applied",verdict:$applied,evidence:{session_status:get($sd,"status",null),applied_at:get($sd,"applied_at",null)}},
+  {item:"activation",verdict:$active,evidence:$activation},
+  {item:"commit",verdict:$committed,evidence:{session_commit:$commit_hash,history:$수리커밋}},
+  {item:"completion_notice",verdict:$notified,evidence:{continuation_status:$cont_status,phase:get($cd,"phase",null),reason:get($cd,"reason",null),policy:get($cd,"repair_policy",null)}},
+  {item:"live_function",verdict:$function,evidence:{pytest:{exit:get($py,"exit_code",null),collected:get($py,"collected",null),passed:get($py,"passed",null),failed:get($py,"failed",null)},independent:{cases_ok:get($iv,"cases_ok",null),requirement_met:get($iv,"requirement_met",null),allowed_diff:get($iv,"allowed_diff",null)}}},
+  {item:"status_query",verdict:(len($items)==1 ? "achieved" : "unverified"),evidence:{items:len($items),session_files:get($sess,"files",null),error:get($st,"error",null)}}]
+$w=[self:write]{path:$보고경로,content:$report}
+$re=[self:read]{path:$보고경로}
+return {saved:$보고경로,rows:len($report),reread:len(get(get($re,"data",{}),"items",[])),verdicts:$report >> [table:each] { return $it.item+"="+$it.verdict }}

@@ -2,6 +2,7 @@
 import json
 import shlex
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import boot_paths  # noqa: F401
@@ -11,6 +12,73 @@ from test_conscious_supervisor import supervisor  # noqa: F401
 import repair_policy as policy
 from repair_check_runner import execute
 from repair_test_results import invocation, summary
+
+
+@pytest.mark.parametrize('case,item,expected', [
+    ('complete', 'activation', 'achieved'),
+    ('missing_session', 'applied', 'unverified'),
+    ('missing_continuation', 'completion_notice', 'unverified'),
+    ('wrong_commit', 'commit', 'failed'),
+    ('unconfirmed_notice', 'completion_notice', 'unverified'),
+    ('missing_function', 'live_function', 'unverified'),
+    ('failed_function', 'live_function', 'failed'),
+    ('wrong_identity', 'activation', 'unverified'),
+])
+def test_p2_observes_exact_receipts_from_another_project(tmp_path, monkeypatch, case, item, expected):
+    """P2의 실제 IBL·파일 입구를 실행한다. 다른 프로젝트의 상대경로·미관측 오판을 막는다."""
+    from ibl_v2_adapters import Adapter, load_registry
+    from ibl_v2_entry import handle_request
+
+    root = tmp_path / 'canonical'
+    project = tmp_path / 'study'
+    project.mkdir()
+    key = 'receipt-probe'
+    session = {'key': key, 'status': 'applied', 'verified': True,
+               'commit': {'success': True, 'commit': 'abcdef12'}}
+    continuation = {'task_id': key, 'status': 'completed', 'pending_delivery': False,
+                    'result': {'outcome': 'healthy', 'report': {'outcome': 'healthy', 'generation': 'g1'}},
+                    'evaluation': {'goal_status': 'ACHIEVED', 'method': 'repair_receipts'}}
+    if case == 'unconfirmed_notice':
+        continuation['evaluation'] = {}
+    if case == 'wrong_identity':
+        continuation['task_id'] = 'another-task'
+    for folder, value in [('repair_sessions', session), ('repair_continuations', continuation)]:
+        path = root / 'data/system_ai_state' / folder / (key + '.json')
+        path.parent.mkdir(parents=True)
+        if (case, folder) not in {('missing_session', 'repair_sessions'),
+                                  ('missing_continuation', 'repair_continuations')}:
+            path.write_text(json.dumps(value))
+
+    def script(runtime, args, target_node=None):
+        op = args['args']['op']
+        if op == 'commit':
+            return {'observed': True, 'matches': case != 'wrong_commit'}
+        if case == 'missing_function':
+            return {'observed': False, 'error': 'probe unavailable'}
+        if op == 'pytest':
+            return {'observed': True, 'exit_code': 1 if case == 'failed_function' else 0}
+        return {'observed': True, 'requirement_met': True}
+
+    registry = load_registry(str(project))
+    for name, run in [('self:script', script),
+                      ('self:patch', lambda *a, **kw: {'items': [{'key': key}]})]:
+        registry[name] = Adapter(registry[name].contract, run)
+    monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **kw: registry)
+    source = Path(__file__).resolve().parents[1] / 'docs/experiments/long_sentence_imagination/round_97/p2_v1.ibl'
+    output = tmp_path / 'report.json'
+    request = {'edition': 2, 'origin': 'training', 'code': source.read_text(), 'inputs': {
+        '러너본문': '# fixture only', '정본': str(root), 'key': key,
+        '경로': str(root / 'subject.py'), '검증자': 'fixture', '씨앗': 'fixture', '보고경로': str(output)}}
+    result = handle_request(request, project_path=str(project))
+    assert result['success'], result.get('error')
+    rows = json.loads(output.read_text())
+    verdicts = {r['item']: r['verdict'] for r in rows}
+    assert verdicts[item] == expected, verdicts
+    assert result['value']['reread'] == 6
+    if case == 'complete':
+        assert set(verdicts.values()) == {'achieved'}
+    if case.startswith('missing_') and case != 'missing_function':
+        assert any(r['evidence'].get('read_error') for r in rows)
 
 
 @pytest.fixture

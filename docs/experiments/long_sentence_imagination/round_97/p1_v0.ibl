@@ -1,0 +1,99 @@
+#!ibl edition=2
+[def:실행]($러너경로,$요청) {
+  [try] { return [self:script]{path:$러너경로,args:$요청,timeout:300} }
+  [catch] { return {observed:false,error:$error.message,error_code:get($error,"code",null)} }
+}
+[def:관측]($러너경로,$경로) {
+  $r=[fn:실행]{러너경로:$러너경로,요청:{op:"pytest",path:$경로}}
+  $cases=get($r,"cases",[])
+  $실패=$cases >> [table:filter]{where:($c)=>$c.outcome=="failed"}
+  return {observed:get($r,"observed",false)==true,command:get($r,"command",null),exit_code:get($r,"exit_code",null),
+    collected:get($r,"collected",0),passed:get($r,"passed",0),failed:get($r,"failed",0),skipped:get($r,"skipped",0),
+    cases:$cases,failed_cases:$실패,output_ref:get($r,"output_ref",null),error:get($r,"error",null)}
+}
+[def:진단]($러너경로,$경로,$관측) {
+  $src=[fn:실행]{러너경로:$러너경로,요청:{op:"source",path:$경로,function:"fold_receipt"}}
+  $hist=[]
+  [try] { $h=[self:body]{op:"file",path:$경로,limit:5}; $hist=get($h,"items",[]) } [catch] { $hist=[{error:$error.message}] }
+  $forage=null
+  [try] { $f=[self:forage]{op:"recall",locus:"/Users/kangkukjin/Desktop/AI/indiebizOS/"+$경로}; $forage={own_count:get($f,"own_count",null),locus_exists:get($f,"locus_exists",null)} }
+  [catch] { $forage={error:$error.message} }
+  $lines=get($src,"lines",[])
+  $returns=$lines >> [table:filter]{where:($l)=>contains($l.text,"return")}
+  $msgs=$관측.failed_cases >> [table:each] { return $it.name+": "+$it.message }
+  $hyp="미확정"
+  [if:len($관측.failed_cases)>0 and len($returns)>0] {
+    $hyp="실패 시험이 None 입력에 'unverified' 를 기대하는데 함수의 마지막 return 이 모든 비-True 를 한 값으로 접는다(명시 False 와 미관측 None 을 가르지 않음)"
+  }
+  return {evidence:{failures:$msgs,function_lines:len($lines),source_sha:get($src,"sha256",null),history:$hist,forage:$forage},
+    candidate_locations:$returns,hypothesis:$hyp,unknowns:["이력·포식 기억에 결함 원인 기록 없음(씨앗)","시험 밖 입력 조합의 기대값은 요구 표로만 안다"]}
+}
+[def:제안]($경로,$old,$new,$사유) {
+  [try] {
+    $p=[self:patch]{op:"propose",path:$경로,old_string:$old,new_string:$new,reason:$사유}
+    return {ok:get($p,"success",false)==true,proposal_id:get($p,"proposal_id",null),verified:get($p,"verified",null),
+      checks:get($p,"checks",[]),worktree:get($p,"worktree",null),target:get($p,"target",null),diff_ref:get($p,"diff",null),
+      note:get($p,"note",null),error:get($p,"error",null)}
+  }
+  [catch] { return {ok:false,proposal_id:null,verified:null,checks:[],worktree:null,target:null,diff_ref:null,note:null,
+    error:$error.message,error_code:get($error,"code",null)} }
+}
+[def:상태]($pid) {
+  [try] {
+    $all=[self:patch]{op:"status"}
+    $mine=get($all,"items",[]) >> [table:filter]{where:($i)=>$i.proposal_id==$pid}
+    $key=null
+    [if:len($mine)==1] { $key=$mine[0].key }
+    $one=null
+    [if:$key!=null] { $one=[self:patch]{op:"status",key:$key} }
+    $v=null
+    [if:len($mine)==1] { $v=get($mine[0],"verified",null) }
+    $verdict="unverified"
+    [if:$v==true] { $verdict="verified" }
+    [if:$v==false] { $verdict="failed" }
+    return {key:$key,verdict:$verdict,status:(len($mine)==1 ? $mine[0].status : null),
+      all_items:len(get($all,"items",[])),all_message:get($all,"message",null),
+      one_items:(($one!=null) ? len(get($one,"items",[])) : null),
+      live_comparison:(len($mine)==1 ? get($mine[0],"live_comparison",null) : null)}
+  }
+  [catch] { return {key:null,verdict:"unverified",status:null,all_items:null,all_message:null,one_items:null,live_comparison:null,error:$error.message} }
+}
+[def:독립검증]($러너경로,$worktree,$경로,$검증자,$씨앗) {
+  [if:$worktree==null] { return {observed:false,error:"worktree 없음"} }
+  return [fn:실행]{러너경로:$러너경로,요청:{op:"verify",path:"/Users/kangkukjin/Desktop/AI/indiebizOS/"+$worktree+"/"+$경로,verifier:$검증자,seed:$씨앗}}
+}
+[def:폐기]($pid,$key) {
+  [try] {
+    $d=[self:patch]{op:"discard",proposal_id:$pid}
+    $after=null
+    [if:$key!=null] { $after=[self:patch]{op:"status",key:$key} }
+    $items=get($after,"items",[])
+    return {ok:get($d,"success",false)==true,after_items:len($items),after_status:(len($items)==1 ? $items[0].status : null),error:get($d,"error",null)}
+  }
+  [catch] { return {ok:false,after_items:null,after_status:null,error:$error.message} }
+}
+[def:제안한바퀴]($러너경로,$경로,$old,$new,$사유,$검증자,$씨앗,$표지) {
+  $p=[fn:제안]{경로:$경로,old:$old,new:$new,사유:$사유}
+  $s=[fn:상태]{pid:$p.proposal_id}
+  $iv=[fn:독립검증]{러너경로:$러너경로,worktree:$p.worktree,경로:$경로,검증자:$검증자,씨앗:$씨앗}
+  $요구충족="미검증"
+  [if:get($iv,"observed",false)==true and get($iv,"requirement_met",null)==true] { $요구충족="충족" }
+  [if:get($iv,"observed",false)==true and get($iv,"requirement_met",null)==false] { $요구충족="미달" }
+  $기계="미검증"
+  [if:$p.verified==true] { $기계="통과" }
+  [if:$p.verified==false] { $기계="실패" }
+  $d=[fn:폐기]{pid:$p.proposal_id,key:$s.key}
+  return {label:$표지,proposal:$p,status:$s,independent:$iv,machine_check:$기계,requirement:$요구충족,applied:false,discard:$d}
+}
+$러너=[self:write]{path:"~turn/runner.py",content:$러너본문}
+$관측=[fn:관측]{러너경로:$러너.path,경로:$경로}
+$진단=[fn:진단]{러너경로:$러너.path,경로:$경로,관측:$관측}
+$정상=[fn:제안한바퀴]{러너경로:$러너.path,경로:$경로,old:$old,new:$new,사유:$사유,검증자:$검증자,씨앗:$씨앗,표지:"정상 수리 제안"}
+$약화=[fn:제안한바퀴]{러너경로:$러너.path,경로:$경로,old:$약화old,new:$약화new,사유:$약화사유,검증자:$검증자,씨앗:$씨앗,표지:"시험 약화 제안(변형)"}
+$보고=[{section:"observation",data:$관측},{section:"diagnosis",data:$진단},{section:"proposal_normal",data:$정상},{section:"proposal_weakened",data:$약화},
+  {section:"summary",data:{observed:$관측.observed,failed_tests:len($관측.failed_cases),normal_machine:$정상.machine_check,normal_requirement:$정상.requirement,
+    weak_machine:$약화.machine_check,weak_requirement:$약화.requirement,applied:false,note:"적용은 훈련 출처 권한 밖 — 사용자 수리 턴의 몫"}}]
+$w=[self:write]{path:$보고경로,content:$보고}
+$re=[self:read]{path:$보고경로}
+$재독=len(get(get($re,"data",{}),"items",[]))
+return {saved:$보고경로,sections:len($보고),reread_sections:$재독,summary:$보고[4].data}

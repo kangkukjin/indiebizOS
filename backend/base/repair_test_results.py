@@ -28,6 +28,15 @@ def invocation(command, workspace):
     # the test process's exit code behind tail/grep's exit code.
     if not tokens or any(re.fullmatch(r"[;&|<>()]+", t) or "`" in t or "$" in t for t in tokens):
         return None
+    # POSIX 앞머리 환경변수 대입(VAR=값 …)은 실행 파일이 아니라 자식 환경이다(긴문장 97회차 L97-1:
+    # 명시적으로 켜는 시험의 `INDIEBIZ_…=1 python -m pytest …` 가 첫 토큰을 실행 파일로 읽혀 영수증 없이
+    # apply 가 막혔다). 값의 확장·치환은 위 토큰 검사가 이미 거절했고, 대입만 있고 명령이 없으면 영수증이 아니다.
+    env = {}
+    while tokens and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[0], re.S):
+        name, value = tokens.pop(0).split("=", 1)
+        env[name] = value
+    if not tokens:
+        return None
     executable = Path(tokens[0]).name
     pytest = executable in {"pytest", "pytest3"} or (
         executable.startswith("python") and tokens[1:3] == ["-m", "pytest"])
@@ -42,7 +51,7 @@ def invocation(command, workspace):
         tokens.insert(2, "-json")
         if not any(t == "-count" or t.startswith("-count=") for t in tokens):
             tokens.insert(3, "-count=1")
-        return {"argv": tokens, "cwd": str(cwd), "kind": "go", "report": None}
+        return {"argv": tokens, "cwd": str(cwd), "kind": "go", "report": None, "env": env}
     if any(t.startswith(("--junit", "--test-reporter", "--collect-only")) for t in tokens):
         raise ValueError("검사 보고서 옵션은 호스트가 지정합니다. 명령에서 보고서/수집 전용 옵션을 제거하세요")
     report = Path(workspace).resolve() / "data/spill/repair_checks" / (uuid.uuid4().hex + ".xml")
@@ -52,7 +61,7 @@ def invocation(command, workspace):
     else:
         tokens.insert(1, "--test-reporter=tap")
     return {"argv": tokens, "cwd": str(cwd), "kind": "pytest" if pytest else "node",
-            "report": str(report) if pytest else None}
+            "report": str(report) if pytest else None, "env": env}
 
 
 def summary(spec, output, exit_code):

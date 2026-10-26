@@ -76,5 +76,24 @@ def test_go_multiple_packages_cannot_hide_build_failure(tmp_path):
     assert not got["passed"] and got["failures"] == 1
 
 
+def test_leading_env_assignments_become_child_env_not_executable(tmp_path):
+    """L97-1: 명시적으로 켜는 시험의 `VAR=1 python -m pytest …` 는 단일 pytest 영수증이다."""
+    spec = invocation("INDIEBIZ_REPAIR_TRAINING_SUBJECT=1 .venv/bin/python3 -m pytest backend/test_x.py -q", tmp_path)
+    assert spec["kind"] == "pytest"
+    assert spec["env"] == {"INDIEBIZ_REPAIR_TRAINING_SUBJECT": "1"}
+    assert spec["argv"][:3] == [".venv/bin/python3", "-m", "pytest"]
+    assert spec["argv"][-1].startswith("--junitxml=")
+    go = invocation("CGO_ENABLED=0 GOFLAGS=-mod=mod go test ./...", tmp_path)
+    assert go["kind"] == "go" and go["env"] == {"CGO_ENABLED": "0", "GOFLAGS": "-mod=mod"}
+    assert invocation("pytest backend/test_x.py", tmp_path)["env"] == {}
+
+
+@pytest.mark.parametrize("command", [
+    "X=1", "X=1 Y=2", "X=$HOME pytest backend/test_x.py", "X=`id` pytest backend/test_x.py",
+    "X=1 pytest backend/test_x.py | tail -1", "X=1; pytest backend/test_x.py"])
+def test_env_assignment_without_a_single_test_command_is_not_a_receipt(tmp_path, command):
+    assert invocation(command, tmp_path) is None
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

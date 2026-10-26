@@ -696,6 +696,26 @@ def test_missing_task_is_told_apart_from_lost_task(world, monkeypatch):
     assert s_never.value.status_code == 404 and "접수 기록이" in s_never.value.detail
 
 
+def test_resting_blocked_task_view_carries_result_and_wait_returns(world):
+    """L97-3(긴문장 97회차): 차단된 자기수리 작업은 쉼 상태다 — 접수증에 응답이 실리고 대기가 거기서 멈춘다."""
+    import sqlite3
+    memory.create_task("blocked1", "user@gui", "gui", "수리해줘 #repair")
+    conn = sqlite3.connect(str(memory.MEMORY_DB_PATH))
+    conn.execute("UPDATE tasks SET status='blocked', result=? WHERE task_id='blocked1'", ("[자기수리 미완료] 검사 영수증 없음",))
+    conn.commit(); conn.close()
+    view = world.dt.task_view("system", "blocked1")
+    assert view["state"] == "blocked" and view["error"] is None
+    assert view["result"] == "[자기수리 미완료] 검사 영수증 없음"
+    started = time.time()
+    waited = world.dt.wait_for_task("system", "blocked1", 2.0)
+    assert waited["state"] == "blocked" and time.time() - started < 1.0
+    projected = world.dt.task_status({"kind": "delegation", "owner": "system", "task_id": "blocked1"})
+    assert projected["state"] == "running" and projected["terminal"] is False
+    assert projected["result"] is None   # 투영의 result 칸은 성공 전용 계약 — 바꾸지 않는다
+    assert projected["progress"]["status"] == "blocked"
+    assert projected["progress"]["note"] == "[자기수리 미완료] 검사 영수증 없음"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
 

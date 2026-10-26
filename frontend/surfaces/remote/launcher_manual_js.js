@@ -170,10 +170,11 @@ function jMeta(ep){
   if(ep.total_ms!=null) m.push((ep.total_ms/1000).toFixed(1)+'초');
   const d=ep.unconscious_decision;
   if(d) m.push(d==='THINK'?'숙고':(d==='EXECUTE'?'실행':String(d)));
+  const labels=m.map(esc);
   const r=ep.review_status==='APPROVED'?'ACHIEVED':ep.review_status==='REWORK'?'NOT_ACHIEVED':ep.review_status||ep.evaluation_result;
-  if(r) m.push(r==='ACHIEVED'?'검수 승인':r==='NOT_ACHIEVED'?'기준 미충족':r==='UNKNOWN'?'검수 미완료':r==='NOT_RUN'?'미검수':String(r));
-  if(r) m.push(ep.goal_status==='ACHIEVED'?'목표 달성':ep.goal_status==='NOT_ACHIEVED'?'목표 미달':'목표 미확정');
-  return m.join(' · ');
+  if(r) labels.push(r==='ACHIEVED'?systemText('검수 승인'):r==='NOT_ACHIEVED'?systemText('기준 미충족'):r==='UNKNOWN'?systemText('검수 미완료'):r==='NOT_RUN'?systemText('미검수'):esc(String(r)));
+  if(r) labels.push(systemText(ep.goal_status==='ACHIEVED'?'목표 달성':ep.goal_status==='NOT_ACHIEVED'?'목표 미달':'목표 미확정'));
+  return labels.join(' · ');
 }
 function jRender(){
   const b=document.getElementById('jBody'); if(!b) return;
@@ -188,7 +189,7 @@ function jRender(){
     h+=(open?'▾ ':'▸ ')+esc(ep.user_message||'(요청 없음)')+'</button>';
     h+='<button onclick="jAnalyze('+ep.id+')" title="이 주행을 시스템 AI로 분석 — 잘된 점·문제점·고칠 것" style="flex-shrink:0;font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">🔬 분석</button>';
     h+='</div>';
-    h+='<div title="이번 응답의 검수 결과입니다. 중단 사유 보고가 승인된 경우에도 원래 작업은 미완료일 수 있습니다. 실제 결과는 상세 기록에서 확인하세요." style="font-size:11px;color:var(--dim);margin-top:4px">'+esc(jMeta(ep))+'</div>';
+    h+='<div title="이번 응답의 검수 결과입니다. 중단 사유 보고가 승인된 경우에도 원래 작업은 미완료일 수 있습니다. 실제 결과는 상세 기록에서 확인하세요." style="font-size:11px;color:var(--dim);margin-top:4px">'+jMeta(ep)+'</div>';
     if(open){
       h+='<div style="margin-top:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg3);max-height:320px;overflow:auto">';
       if(!st||st.s==='loading') h+='<p class="muted" style="padding:8px 10px;margin:0">실행기억 불러오는 중…</p>';

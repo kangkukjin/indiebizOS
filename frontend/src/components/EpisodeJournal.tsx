@@ -64,13 +64,12 @@ function EvalBadge({ r, review, goal }: { r: string | null; review?: string | nu
   r = review ? (review === 'APPROVED' ? 'ACHIEVED' : review === 'REWORK' ? 'NOT_ACHIEVED' : review) : r;
   const achieved = r === 'ACHIEVED';
   const failed = r === 'NOT_ACHIEVED';
-  const label = achieved ? '검수 승인' : failed ? '기준 미충족' : r === 'UNKNOWN' ? '검수 미완료' : r === 'NOT_RUN' ? '미검수' : r;
   return (
     <span title="이번 응답의 검수 결과입니다. 중단 사유 보고가 승인된 경우에도 원래 작업은 미완료일 수 있습니다. 실제 결과는 상세 기록에서 확인하세요." className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${
       achieved ? 'text-emerald-700 bg-emerald-50' : failed ? 'text-red-700 bg-red-50' : 'text-stone-600 bg-stone-100'
     }`}>
       {achieved ? <Check size={10} /> : <AlertTriangle size={10} />}
-      {label} · {goal === 'ACHIEVED' ? '목표 달성' : goal === 'NOT_ACHIEVED' ? '목표 미달' : '목표 미확정'}
+      {achieved ? '검수 승인' : failed ? '기준 미충족' : r === 'UNKNOWN' ? '검수 미완료' : r === 'NOT_RUN' ? '미검수' : r} · {goal === 'ACHIEVED' ? '목표 달성' : goal === 'NOT_ACHIEVED' ? '목표 미달' : '목표 미확정'}
     </span>
   );
 }

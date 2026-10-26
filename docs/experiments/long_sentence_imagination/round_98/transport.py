@@ -1,18 +1,19 @@
 """Preserve HTTP requests/responses; all task composition remains in .ibl. (97회차, 87 판 재사용)"""
 import argparse, json, time, uuid, urllib.error, urllib.request
 from pathlib import Path
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 OUT = ROOT / "outputs/long_sentence_imagination/2026-10-26_98회차"
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("request", type=Path); ap.add_argument("label")
     ap.add_argument("--timeout", type=int, default=600)
+    ap.add_argument("--out", type=Path, default=OUT)
     a = ap.parse_args()
     body = json.loads(a.request.read_text())
     body.setdefault("ticket", uuid.uuid4().hex); body.setdefault("origin", "training")
     body.setdefault("edition", 2); body.setdefault("project_id", "study")
     rec = {"request": body, "started": time.time()}
-    path = OUT / "runs" / f"{a.label}.json"; path.write_text(json.dumps(rec, ensure_ascii=False, indent=2))
+    path = a.out / "runs" / f"{a.label}.json"; path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps(rec, ensure_ascii=False, indent=2))
     req = urllib.request.Request("http://127.0.0.1:8765/ibl/execute", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
     try:

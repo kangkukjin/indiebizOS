@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-27",
+  "execution": "isolated real IBL/patch/pytest; history and forage are empty fixtures",
+  "related_tests": {
+    "passed": 89,
+    "seconds": 125.59
+  },
+  "final_harness_tests": {
+    "passed": 16,
+    "seconds": 48.69
+  },
+  "full_programs": [
+    {
+      "scope_files": [
+        "backend/base/repair_test_results.py",
+        "backend/test_repair_training_subject_copy.py"
+      ],
+      "verdicts": {
+        "a": "달성",
+        "b": "미달",
+        "c": "미달",
+        "d": "범위 조건 미달",
+        "e": "미검증",
+        "f": "미검증"
+      },
+      "a_product_evidence": "재사용가능",
+      "c_scope": "위반",
+      "d_current": false,
+      "d_harness_files": [
+        {
+          "rel": "backend/base/repair_test_results.py"
+        },
+        {
+          "rel": "backend/test_repair_training_subject_copy.py"
+        }
+      ],
+      "variant_before": "재사용가능",
+      "variant_after": "불가",
+      "variant_same_size": true,
+      "variant_same_mtime": true,
+      "variant_fresh_cases": 15,
+      "discarded": true
+    },
+    {
+      "scope_files": [
+        "backend/cognition/bystander.py",
+        "backend/test_repair_training_subject_copy.py"
+      ],
+      "verdicts": {
+        "a": "달성",
+        "b": "미달",
+        "c": "미달",
+        "d": "범위 조건 미달",
+        "e": "미검증",
+        "f": "미검증"
+      },
+      "a_product_evidence": "재사용가능",
+      "c_scope": "위반",
+      "d_current": false,
+      "d_harness_files": [
+        {
+          "rel": "backend/cognition/bystander.py"
+        },
+        {
+          "rel": "backend/test_repair_training_subject_copy.py"
+        }
+      ],
+      "variant_before": "재사용가능",
+      "variant_after": "불가",
+      "variant_same_size": true,
+      "variant_same_mtime": true,
+      "variant_fresh_cases": 15,
+      "discarded": true
+    }
+  ]
+}

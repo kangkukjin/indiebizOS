@@ -13,6 +13,10 @@
 독립 AI ep5550 158.7초·도구 9(Bash 5·execute_ibl 3·Write 1)·입력 1,219,096·출력 12,295·하네스 읽기 0: 재현→self:edit 상대경로 거절→status→propose(본문만, 6관문)→사본 pytest·자기 진리표 27/27→diff→보고. 도구 통과/요구 충족/미확인/범위 밖 네 칸 분리. **미추적 대상 propose 의 diff 빈 문자열을 스스로 보고(L98-3)**. 판정기 수정 시도 0.
 발견: L98-1 제안 영수증·status 가 검사한 판본과 미연결 · L98-2 소스 옆 바이트코드 캐시(같은 크기·mtime) · L98-3 미추적 diff 빈 문자열 · L98-4 러너 큰 정수가 보고 쓰기에서 JSON 경계 거절→전체 재실행(resume 은 소스 변경 거절) · L98-5 제안 ID→key 에 status 전체 191건 조회 · L97-5 원인 확정(csv CRLF vs eol=lf·`.venv` 심링크) · L97-2 범위 위반은 사본 변경 목록으로 기계 판별 가능.
 수리(훈련 종료·티켓 회수 뒤): L98-1 `propose` 응답·세션에 `candidate_hash`, `status{key}` 가 현재 해시 재계산→`verified_current`·현재 files·불일치면 verified:false · L98-2 `repair_process.prepare` `PYTHONPYCACHEPREFIX` 빈 런타임 · L98-3 텍스트 대조 diff · L98-5 propose 응답 `key`. 회귀 `test_repair_proposal_receipt` 2·`test_repair_process` 2(1 system). 헬퍼는 `repair_candidate` 로(1500줄 규칙). 재감사 4건. 적용·활성·커밋·통지는 전부 미실행(별도 실기).
+후속 검증기 수리(2026-10-27): v4는 제품 사본 해시와 파일 해시를 분리하고, 추가 변경 뒤 status를 회수한다.
+함수 밖 원문·기존 dirty 파일 재수정·pytest 재작성 캐시를 검사하며, 정상 근거 재사용과 교체 뒤 거절을 전체 IBL로 대조한다.
+고정 과제 범위 검사를 기존 적용 관문에 연결해 정상 반영/커밋과 범위 위반·후검사 교체의 차단을 임시 저장소에서 확인한다.
+운영 재기동·통지의 새 실기와 자연어 허용 범위의 일반 자동 강제는 미구현/미실행을 유지한다. 상세는 보고서 §8.
 [과제](experiments/long_sentence_imagination/round_98/task.md) · [보고서](experiments/long_sentence_imagination/round_98/report.md) · [증거](experiments/long_sentence_imagination/round_98/evidence.jsonl).
 
 ## 97회차 — 자기 수리를 재기동과 커밋까지: 관측→격리 제안→사용자 실기 자동 완료 (2026-10-26, 훈련 완료·수리 4건·되먹임 달성)

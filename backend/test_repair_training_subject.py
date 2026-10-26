@@ -18,9 +18,11 @@ import pytest
 def fold_receipt(applied, activated, committed):
     """세 관측을 achieved / failed / unverified 로 접는다."""
     observations = (applied, activated, committed)
-    if all(value is True for value in observations):
-        return "achieved"
-    return "failed"
+    if any(value is False for value in observations):
+        return "failed"
+    if any(value is None for value in observations):
+        return "unverified"
+    return "achieved"
 
 
 ENABLED = os.environ.get("INDIEBIZ_REPAIR_TRAINING_SUBJECT") == "1"

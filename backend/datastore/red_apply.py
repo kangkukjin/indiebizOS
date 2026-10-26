@@ -372,19 +372,27 @@ def main() -> int:
     # 코드 루트의 backend 를 sys.path 에 — red_grant/thread_context/episode_logger 등
     sys.path.insert(0, str(CODE_ROOT / "backend"))
     import boot_paths  # noqa: F401
-    from red_grant import issue_grant
-    from thread_context import set_current_task_id, set_current_agent_id
-
     from restart_protocol import code_manifest, control_dir, read_json, request
+    from restart_red import inspect_job, reservation, request_id
     if read_json(control_dir(repo) / "state.json"):
-        import hashlib
-        rid = "red-" + hashlib.sha256((job["key"] + job["scheduled_at"]).encode()).hexdigest()[:40]
+        manifest = code_manifest(CODE_ROOT)
+        try:
+            current = inspect_job(repo, job_path, reservation(job))
+        except ValueError as exc:
+            _log(f"옛 적용 예약 종료: {exc}")
+            return 0
+        session = read_json(Path(job_path).with_name(job["key"] + ".json")) or {}
+        if (current.get("done_at") or current.get("applied")
+                or session.get("status") != "apply_scheduled"
+                or session.get("scheduled_at") != job["scheduled_at"]):
+            _log("취소·완료·교체된 적용 예약 — 인계하지 않습니다")
+            return 0
+        rid = request_id(job)
         req = request(repo, "red_apply", request_id=rid, operation="red_apply",
-                      artifact_digest=code_manifest(CODE_ROOT)["digest"],
-                      payload={"job_path": str(Path(job_path).resolve())})
-        job["restart_request_id"] = req["request_id"]
-        from restart_protocol import atomic_json
-        atomic_json(job_path, job)
+                      artifact_digest=manifest["digest"],
+                      payload={"job_path": str(Path(job_path).resolve()), "reservation": reservation(job)})
+        # 예약 파일은 예약자와 제어자가 소유한다. 대기 전 사본을 다시 쓰면 새 예약이나
+        # 이미 기록된 적용 영수증을 덮는다. 요청 이후 교체도 제어자가 판본으로 거절한다.
         _log(f"제어자에게 적용 인계: {req['request_id']}")
         return 0
 

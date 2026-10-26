@@ -9,13 +9,29 @@ from pathlib import Path
 from restart_protocol import atomic_json, read_json
 
 
-def inspect_job(base, path):
+def reservation(job):
+    """요청이 승인받은 예약 판본. 같은 경로의 다음 예약과 구분한다."""
+    return {k: job.get(k) for k in ("key", "task_id", "scheduled_at", "readiness_hash")}
+
+
+def request_id(job):
+    return "red-" + hashlib.sha256((job["key"] + job["scheduled_at"]).encode()).hexdigest()[:40]
+
+
+def inspect_job(base, path, expected=None):
     root, path = Path(base).resolve(), Path(path).resolve()
     if not path.is_relative_to(root / "data/system_ai_state/repair_sessions"):
         raise ValueError("RED 잡이 예약 디렉토리 밖에 있습니다")
     job = read_json(path)
     if not isinstance(job, dict) or Path(job.get("repo", "")).resolve() != root:
         raise ValueError("RED 잡의 저장소가 일치하지 않습니다")
+    if expected is not None and (reservation(job) != expected or not all(expected.values())):
+        raise ValueError("RED 적용 요청의 예약 판본이 교체됐습니다")
+    if expected is not None:
+        session = read_json(path.with_name(job["key"] + ".json")) or {}
+        if (session.get("scheduled_at") != job["scheduled_at"]
+                or session.get("status") not in {"apply_scheduled", "applying", "applied"}):
+            raise ValueError("RED 적용 세션의 예약 판본이 취소·교체됐습니다")
     return job
 
 
@@ -26,7 +42,7 @@ def manifest_path(base, req):
         if not path.is_relative_to(Path(base).resolve() / "data/system_ai_state/red_backups"):
             raise ValueError("RED 백업 경로 오류")
         return path
-    job = inspect_job(base, payload["job_path"])
+    job = inspect_job(base, payload["job_path"], payload.get("reservation"))
     key = re.sub(r"[^A-Za-z0-9_-]", "_", job.get("task_id") or job["key"])[:48]
     return Path(base) / "data/system_ai_state/red_backups" / key / "manifest.json"
 
@@ -35,14 +51,16 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest() if Path(path).exists() else None
 
 
-def apply_job(base, path):
+def apply_job(base, path, expected=None):
     from red_apply import _load_handler
     from red_grant import issue_grant
     from thread_context import actor_context
-    job = inspect_job(base, path)
+    job = inspect_job(base, path, expected)
     handler = _load_handler(job)
     staging = handler._staging_mod()
     session = staging.read_session(str(base), job["key"]) or {}
+    if expected is not None and session.get("scheduled_at") != job["scheduled_at"]:
+        return {"success": False, "applied": False, "error": "적용 세션의 예약 판본이 교체됐습니다"}
     if (not job.get("readiness_hash") or
             job["readiness_hash"] != staging._candidate.digest(session.get("readiness"))):
         return {"success": False, "applied": False, "error": "예약의 준비 판정이 없거나 변경됐습니다"}
@@ -134,7 +152,7 @@ def verify_after_boot(base, state):
               "owner": manifest.get("owner", "system_ai"), "files": list(manifest.get("files", {}))}
     if req.get("operation") == "red_apply":
         from red_apply import _run_post_verify, _load_handler
-        job = inspect_job(base, req["payload"]["job_path"])
+        job = inspect_job(base, req["payload"]["job_path"], req["payload"].get("reservation"))
         applied = job.get("controller_apply") or {}
         if applied.get("verified") is False and not state.get("rollback_attempted"):
             atomic_json(path.with_name("result.json"), dict(

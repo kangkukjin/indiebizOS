@@ -534,6 +534,10 @@ def verify(repo: str, sess: dict):
         _save_session(repo, sess)
 
     # 4. frontend 타입검사 — RED 구역에 frontend 가 있으므로 .ts/.tsx 도 이 층을 지난다.
+    bundle = _gates.body_bundle(wt_abs, rels + del_rels, _sandbox_check)
+    if bundle:
+        checks.append(bundle)
+
     #    삭제도 방아쇠에 넣는다: 지워진 모듈을 아직 import 하는 쪽은 파이썬만 고아 검사가
     #    있고(delete_no_orphan_imports) 프런트는 없었는데, 격리 사본엔 이미 그 파일이
     #    없으므로 tsc 가 그대로 잡는다.
@@ -724,9 +728,15 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
            "active_verify_cmd": (active_verify_cmd or "").strip(),
            "handler_path": os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                         "handler.py")}
+    from restart_red import request_id
+    from restart_protocol import atomic_json
+    job["restart_request_id"] = request_id(job)
+    sess["status"] = "apply_scheduled"
+    sess["scheduled_at"] = job["scheduled_at"]
+    sess["checks"] = checks
     try:
-        with open(job_path, "w", encoding="utf-8") as f:
-            json.dump(job, f, ensure_ascii=False, indent=2)
+        atomic_json(job_path, job)
+        _save_session(repo, sess)
         if not os.environ.get("INDIEBIZ_REPAIR_NO_SPAWN"):   # 테스트 심 — 수행자는 직접 기동
             log = open(job_path + ".log", "ab")
             from runtime_work import service_scope
@@ -735,15 +745,14 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
                                  stdout=log, stderr=log, start_new_session=True, cwd=repo)
     except Exception as e:
         print(f"[수리 스테이징] 지연 적용 예약 실패: {e}")
+        sess["status"] = "staging"
+        sess.pop("scheduled_at", None)
+        _save_session(repo, sess)
         try:
             os.remove(job_path)
         except OSError:
             pass
         return None
-    sess["status"] = "apply_scheduled"
-    sess["scheduled_at"] = job["scheduled_at"]
-    sess["checks"] = checks
-    _save_session(repo, sess)
     rels = [r.get("rel") for r in (sess.get("files") or {}).values()]
     # ★"기다리는 그 턴이 곧 당신이다" 를 기계가 들이민다 (2026-08-25, ep1934 실측)
     #   — 옛 문구는 "이 턴이 닫힌 뒤 적용된다"까지만 말했다. 사실로는 맞지만, 예약을 낸
@@ -924,6 +933,17 @@ def op_apply(ti):
     controller = current()
     if not controller or not controller.repair_granted:
         return {"success": False, "applied": False, "error": "사본 준비를 판정할 수리 감독이 없습니다"}
+    # 검사·봉인할 후보를 확정하기 전에 파생물을 만든다. verify 안에서 만들면 검사한
+    # 후보 지문이 바뀌어 재시험을 요구하거나, 빠진 번들이 각인 관문에서야 발견된다.
+    bundle = _gates.body_bundle(os.path.join(repo, sess["worktree"]),
+                               [r["rel"] for r in sess["files"].values()],
+                               _sandbox_check, regenerate=True)
+    if bundle:
+        _candidate.collect(repo, sess)
+        _save_session(repo, sess)
+        if not bundle["passed"]:
+            return {"success": False, "applied": False, "checks": [bundle],
+                    "error": "폰 번들 사본 생성 실패. 같은 사본에서 보완하세요"}
     sess["activation_commands"] = {k: str(ti.get(k) or "").strip()
                                     for k in ("verify_cmd", "active_verify_cmd")}
     if "verification_plan" in ti:

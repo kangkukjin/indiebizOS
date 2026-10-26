@@ -203,6 +203,29 @@ def verify_instrument(inst_id):
 
 from ibl_health_programs import PIPES, OPERATORS, pipe_ok, operator_result
 
+def run_contract_drift():
+    """§1B-2 — 등록 스크립트·관용구의 선언 반환 계약을 실측과 대조(검사기 해소·판정 재사용).
+
+    컴파일은 현행 관용구 원장과 같은 읽기 관점(compile_current), 실행은 검사기가 pure 로 판정한
+    표본만 이 프로세스에서 한다(외부 호출·쓰기 없음). 어느 단계가 죽어도 점검 전체를 죽이지 않고
+    error 로 보고한다 — 침묵하면 '대조 0건'이 건강처럼 보인다."""
+    try:
+        from ibl_contract_drift import collect, summarize
+        from function_library import compile_current
+        from ibl_v2_runtime import Runtime
+        root = os.getcwd()
+        samples = json.load(open("data/ibl_contract_samples.json", encoding="utf-8"))
+        scripts = _yaml.safe_load(open("data/scripts/registry.yaml", encoding="utf-8")) or {}
+        rows = collect(samples, scripts, lambda code: compile_current(code, root),
+                       lambda plan: Runtime(plan).run())
+        return {**summarize(rows), "rows": rows}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"[:300], "compared": 0}
+
+
+from ibl_contract_drift import describe as _drift_line  # noqa: E402
+
+
 def main():
     if "--instrument" in sys.argv:
         _idx = sys.argv.index("--instrument")
@@ -311,6 +334,19 @@ def main():
     if EXEMPT:
         print("  면제(실행 인자·기기 의존):", ", ".join(f"{k}({v})" for k, v in sorted(EXEMPT.items())))
 
+    # ── §1B-2 계약 대조 (선언 반환 계약 ↔ 실측 값) ──
+    # §1B 는 returns(items|scalar) 수준만 단언한다. 검사기가 믿는 callable_contract 의 반환형과 실제 값은
+    # 아무도 대조하지 않아, 판정관용구가 {items,count}를 돌려주는데 계약은 필드 없는 Record 인 결함을
+    # 사람이 손으로 찾았다(31ea17f0). 표본을 검사기로 컴파일해 Plan.result_type 을 얻고, 검사기가 pure 로
+    # 판정한 표본만 실행해 같은 타입 규칙으로 대조한다. 실행하지 않은 대상은 사유와 함께 세어 남긴다.
+    print("\n" + "="*72); print("§1B-2 계약 대조 (선언 반환 계약 ↔ 실측)"); print("="*72)
+    contract_drift = run_contract_drift()
+    for row in contract_drift.get("rows", []):
+        detail = row.get("reason") or ", ".join(row.get("paths") or []) or ""
+        print(f"  [{row['verdict']:14}] {row['target']:28} {detail}")
+    contract_drift.pop("rows", None)
+    print(f"  → {_drift_line(contract_drift)}")
+
     # ── §1C 골든 파이프 (문법+통화 흐름) ──
     print("\n" + "="*72); print("§1C 골든 파이프 (명시 값 흐름)"); print("="*72)
     pipe_pass = 0
@@ -388,6 +424,7 @@ def main():
     print(f"  §1B 통화:        GREEN {len(buckets['GREEN'])} / YELLOW {len(buckets['YELLOW'])} / RED {len(buckets['RED'])}")
     print(f"  §1C 골든파이프:  {pipe_pass}/{len(PIPES)} PASS")
     print(f"  §1C-2 연산자:    {op_pass}/{len(OPERATORS)} PASS")
+    print(f"  §1B-2 계약대조:  {_drift_line(contract_drift)}")
     if buckets["RED"]:
         print("\n  ⚠️ RED (통화 결함 — 처리 필요):")
         for n, r in buckets["RED"]: print(f"     - {n}: {r}")
@@ -405,6 +442,7 @@ def main():
         },
         "golden_pipes": {"passed": int(pipe_pass), "total": len(PIPES), "fails": pipe_fails},
         "operators": {"passed": int(op_pass), "total": len(OPERATORS)},
+        "contract_drift": contract_drift,
     }
     print("\n@@HEALTH_JSON@@ " + json.dumps(_summary, ensure_ascii=False))
 

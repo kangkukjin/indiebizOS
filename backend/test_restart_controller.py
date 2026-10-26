@@ -201,6 +201,33 @@ def test_syntax_failure_keeps_active(setup):
     assert not adapter.stops
 
 
+@pytest.mark.parametrize("moment", ["before_check", "during_drain", "drain_completion"])
+def test_superseded_red_reservation_never_stops_active_worker(setup, moment, monkeypatch):
+    from restart_red import reservation
+    ctl, adapter, _ = setup
+    job_path = ctl.base / "data/system_ai_state/repair_sessions/task.apply.json"
+    job = {"repo": str(ctl.base), "key": "task", "task_id": "task",
+           "scheduled_at": "first", "readiness_hash": "ready"}
+    atomic_json(job_path, job)
+    atomic_json(job_path.with_name("task.json"), {"status": "apply_scheduled", "scheduled_at": "first"})
+    submit(ctl, operation="red_apply", payload={"job_path": str(job_path), "reservation": reservation(job)})
+    if moment != "before_check":
+        ticks(ctl, 2)
+        assert ctl.state["phase"] == "DRAINING"
+    if moment == "drain_completion":
+        command = adapter.command
+        def reschedule(state, action):
+            if action == "drain":
+                atomic_json(job_path, {**job, "scheduled_at": "second"})
+            return command(state, action)
+        monkeypatch.setattr(adapter, "command", reschedule)
+    else:
+        atomic_json(job_path, {**job, "scheduled_at": "second"})
+    ticks(ctl)
+    assert not adapter.stops and not adapter.spawns and adapter.accepting
+    assert ctl.state["last_result"]["outcome"] == ("check_failed" if moment == "before_check" else "deferred")
+
+
 def test_crash_does_not_replay_user_work(setup):
     ctl, adapter, _ = setup
     ctl.save(last_owners={"active_roots": 1, "live_episode_ids": []})

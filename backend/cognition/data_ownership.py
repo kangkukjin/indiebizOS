@@ -63,6 +63,7 @@ DECLARATIONS: List[tuple] = [
     ("data/*_role.txt",             "역할 저술물(appmaker·forage·system_ai)",    "source"),
     ("data/system_ai_memo.txt",     "사용자 메모(시스템 AI 참조)",               "source"),
     ("data/world_pulse_config.example.json", "설정 예시(저술물)",                "source"),
+    ("data/ibl_contract_samples.json", "반환 계약 대조 표본(자가점검 §1B-2, ibl_contract_drift)", "source"),
 
     # 빌드 파생 (derived — 재생성 가능, 직접 편집 금지 부류)
     ("data/ibl_nodes.yaml",         "build_ibl_nodes 산출물",                    "derived"),

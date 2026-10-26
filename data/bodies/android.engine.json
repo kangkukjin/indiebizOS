@@ -124,6 +124,7 @@
     "cognition/guide_audit",
     "cognition/guide_downscale",
     "cognition/guide_feedback",
+    "cognition/health_probes",
     "cognition/history_checkpoint",
     "cognition/ibl_description_audit",
     "cognition/ibl_distill_gates",
@@ -278,6 +279,7 @@
     "ibl/ibl_access",
     "ibl/ibl_callable_contract",
     "ibl/ibl_continuations",
+    "ibl/ibl_contract_drift",
     "ibl/ibl_control_blocks",
     "ibl/ibl_dependencies",
     "ibl/ibl_document_value",
@@ -554,8 +556,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 543,
-    "engine": 511,
+    "total": 545,
+    "engine": 513,
     "blocklist": 32
   }
 }

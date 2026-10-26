@@ -25,7 +25,8 @@ def main(path):
         try:
             from restart_red import apply_job, verify_after_boot
             if spec["action"] == "apply":
-                result = apply_job(spec["base"], spec["state"]["request"]["payload"]["job_path"])
+                payload = spec["state"]["request"]["payload"]
+                result = apply_job(spec["base"], payload["job_path"], payload.get("reservation"))
             else:
                 result = {"verified": verify_after_boot(spec["base"], spec["state"])}
             atomic_json(path.with_suffix(".done"), {"ok": True, "result": result})

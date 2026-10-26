@@ -263,6 +263,25 @@ def _live_build_inputs_touched(repo: str, paths=None) -> bool:
         return True
 
 
+def body_bundle(worktree, rels, run, *, regenerate=False):
+    """검사 전에 사본의 폰 번들을 만들고, 검증 중에는 변경 없이 신선도를 확인한다."""
+    if not any(r.startswith("backend/") or r in {
+            "scripts/build_body_bundle.py", "scripts/check_backend_layers.py"} for r in rels):
+        return None
+    if not os.path.isfile(os.path.join(worktree, "scripts/build_body_bundle.py")):
+        return None  # 번들 빌더가 없는 다른 저장소/최소 시험 사본
+    args = [sys.executable, "scripts/build_body_bundle.py", "android"]
+    if not regenerate:
+        args.append("--check")
+    try:
+        p = run(args, cwd=worktree, capture_output=True, text=True,
+                timeout=BUILD_TIMEOUT, env=_smoke_env(worktree))
+        return {"gate": "body_bundle", "passed": p.returncode == 0,
+                "detail": ((p.stdout or "") + (p.stderr or "")).strip()[-1200:]}
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"gate": "body_bundle", "passed": False, "detail": str(exc)}
+
+
 def sync_live_derived(repo: str):
     """라이브 파생물을 **라이브에서** 재생성한다. 관문 레코드(dict) 또는 None.
 

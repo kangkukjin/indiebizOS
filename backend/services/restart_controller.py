@@ -136,6 +136,19 @@ class Controller:
     def defer(self, note):
         self.save(resume_pending=True, defer_note=note)
 
+    def red_reservation_current(self):
+        req = self.state.get("request") or {}
+        if req.get("operation") != "red_apply":
+            return True
+        payload = req["payload"]
+        try:
+            from restart_red import inspect_job
+            inspect_job(self.base, payload["job_path"], payload.get("reservation"))
+            return True
+        except (ValueError, OSError) as exc:
+            self.defer("repair_reservation_changed: " + str(exc))
+            return False
+
     def tick(self):
         s = self.state
         phase = s["phase"]
@@ -209,7 +222,7 @@ class Controller:
                 preflight(self.code_root, manifest)
                 if req["operation"] == "red_apply":
                     from restart_red import inspect_job
-                    inspect_job(self.base, req["payload"]["job_path"])
+                    inspect_job(self.base, req["payload"]["job_path"], req["payload"].get("reservation"))
             except Exception as exc:
                 self.finish("check_failed", error=str(exc))
                 return
@@ -231,6 +244,8 @@ class Controller:
                 if response.get("accepting") is True:
                     self.finish("deferred", note=self.state.get("defer_note"))
                 return
+            if not self.red_reservation_current():
+                return
             if not self.adapter.alive(s.get("worker")):
                 self.save(phase="RECOVERING", recovery_reason="active_crash", deadline=self.clock() + 30)
                 return
@@ -241,6 +256,10 @@ class Controller:
                 snap = None
             if snap is not None and snap.get("accepting") is False and all(snap[k] == 0 for k in
                     ("active_roots", "active_children", "pending_finalizers")):
+                # 마지막 턴이 drain 응답 사이에 예약을 교체할 수 있다. 모든 작업이
+                # 닫힌 뒤 다시 대조해야 옛 요청 때문에 현역을 멈추지 않는다.
+                if not self.red_reservation_current():
+                    return
                 if code_manifest(self.code_root) != s["target_manifest"]:
                     self.defer("artifact_changed_after_check")
                     return

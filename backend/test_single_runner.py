@@ -123,8 +123,9 @@ def test_r3_patrol_batteries_are_collected():
     위임되지만, 배터리 자신이 수집 0건이면 순찰은 **아무것도 안 돌고 rc 0** 을 받는다.
     (그 조합이 정확히 이 파일이 막으려는 사고다.)
     """
-    health = os.path.join(_ROOT, "backend", "cognition", "world_pulse_health.py")
-    src = open(health, encoding="utf-8").read()
+    import inspect
+    from world_pulse_health import _run_silent_failure_regression
+    src = inspect.getsource(_run_silent_failure_regression)
     m = re.search(r'suites\s*=\s*\[([^\]]+)\]', src)
     assert m, "순찰의 배터리 목록(suites)을 찾지 못했다 — 이름이 바뀌었으면 이 가드도 갱신할 것"
     rels = re.findall(r'"([^"]+\.py)"', m.group(1))

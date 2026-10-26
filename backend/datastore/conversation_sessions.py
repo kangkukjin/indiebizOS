@@ -149,6 +149,9 @@ def ensure_schema(conn, table):
     turn_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversation_turns)")}
     if "stream_content" not in turn_cols:
         conn.execute("ALTER TABLE conversation_turns ADD COLUMN stream_content TEXT NOT NULL DEFAULT ''")
+    # 실행 중 진행 좌표(IBL 현재 액션·회차·마지막 움직임) — 사건이 아니라 턴의 현재값(마지막 것만 뜻이 있다).
+    if "progress" not in turn_cols:
+        conn.execute("ALTER TABLE conversation_turns ADD COLUMN progress TEXT NOT NULL DEFAULT ''")
     conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS one_running_conversation_turn
         ON conversation_turns(session_id) WHERE state='running'""")
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_events (
@@ -315,8 +318,24 @@ def record_event(payload):
             conn.execute("UPDATE conversation_turns SET stream_content=substr(stream_content || ?, -64000) WHERE id=?",
                          (str(payload.get("content", "")), b.turn_id))
             return
+        if kind == "progress":
+            # 진행은 턴의 현재값 — 사건으로 쌓지 않는다(초당 수 건·마지막 것만 뜻이 있다). 표면이 폴링으로 읽는다.
+            conn.execute("UPDATE conversation_turns SET progress=? WHERE id=?",
+                         (json.dumps(payload, ensure_ascii=False, default=str), b.turn_id))
+            return
+        if kind == "tool_start":
+            # 도구 호출 앞의 중간 서술은 사건으로 남긴다 — 최종 응답이 와도 "지나온 과정"이 대화에 보이도록(2026-10-26).
+            row = conn.execute("SELECT stream_content FROM conversation_turns WHERE id=?", (b.turn_id,)).fetchone()
+            draft = (row[0] if row else "") or ""
+            if draft.strip():
+                interim = {"type": "interim_text", "content": draft,
+                           "session_id": b.session_id, "turn_id": b.turn_id}
+                conn.execute("INSERT INTO conversation_events(session_id,turn_id,created_at,payload) VALUES (?,?,?,?)",
+                             (b.session_id, b.turn_id, now(), json.dumps(interim, ensure_ascii=False)))
         if kind in ("tool_start", "response", "error", "cancelled"):
             conn.execute("UPDATE conversation_turns SET stream_content='' WHERE id=?", (b.turn_id,))
+        if kind in ("tool_result", "response", "error", "cancelled"):
+            conn.execute("UPDATE conversation_turns SET progress='' WHERE id=?", (b.turn_id,))
         conn.execute("INSERT INTO conversation_events(session_id,turn_id,created_at,payload) VALUES (?,?,?,?)",
                      (b.session_id, b.turn_id, now(), json.dumps(payload, ensure_ascii=False, default=str)))
 

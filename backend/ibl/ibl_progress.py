@@ -60,10 +60,18 @@ def claim(total: int = 0) -> Optional[str]:
         return None
 
 
-def report_step(ticket: Optional[str], step: int, of: int, action: str) -> None:
-    """소유자의 좌표 갱신 — best-effort(신고가 본 실행을 깨지 않는다)."""
+def report_step(ticket: Optional[str], step: int, of: int, action: str,
+                detail: Optional[dict] = None) -> None:
+    """소유자의 좌표 갱신 — best-effort(신고가 본 실행을 깨지 않는다).
+
+    detail 은 이 좌표가 속한 회차(each 의 row/rows 등) — 버스(채팅 표면)에만 동봉한다(2026-10-26).
+    티켓의 detail 칸은 beat 의 몫이라 여기서 건드리지 않는다(좌표는 소유하고 움직임은 공유한다).
+    """
     from supervision_bus import progress
-    progress({"step": step, "of": of, "action": action})
+    payload = {"step": step, "of": of, "action": action}
+    if detail:
+        payload["detail"] = dict(detail)
+    progress(payload)
     if not ticket:
         return
     try:

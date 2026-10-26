@@ -191,7 +191,7 @@ def test_migrate_legacy_turn_schema_preserves_rows_and_events(tmp_path, table):
                      'VALUES (?,?,?,?)', ('old-session', 'old-turn', 'start', '{"type":"start"}'))
         sessions.ensure_schema(conn, table)
         row = conn.execute('SELECT * FROM conversation_turns').fetchone()
-        assert tuple(row) == (*original, '')
+        assert tuple(row) == (*original, '', '')   # stream_content · progress (2026-10-26)
     with sessions.scope(sessions.Binding(str(path), 'old-session', 'owner', 'old-turn')):
         sessions.record_event({'type': 'stream_chunk', 'content': 'resumed draft'})
         with sessions.connection(path) as conn:
@@ -242,8 +242,11 @@ def test_events_survive_without_a_connected_window(project):
     asyncio.run(emit())
     from chat_session_service import snapshot
     result=snapshot(store,binding.session_id)
-    assert [e['type'] for e in result['events']] == ['tool_start','tool_result']
+    # 도구 호출 앞의 초안('working')은 interim_text 사건으로 남는다 — 최종 응답이 지우지 않는다(2026-10-26).
+    assert [e['type'] for e in result['events']] == ['interim_text','tool_start','tool_result']
+    assert result['events'][0]['content'] == 'working'
     assert result['turn']['stream_content'] == ''
+    assert result['turn']['progress'] is None
 
 
 def test_cli_keys_separate_sessions_and_return_to_original(project):

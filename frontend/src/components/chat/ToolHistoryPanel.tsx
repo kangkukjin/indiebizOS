@@ -1,10 +1,56 @@
 /**
  * 도구 실행 히스토리 패널 (Claude Desktop 스타일)
  */
+import { useEffect, useState } from 'react';
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import type { ToolActivity } from './types';
+import type { ToolActivity, ToolProgress } from './types';
 import { parseImagePaths } from '../../lib/message-images';
+
+/** 마지막 움직임 경과를 사람 말로 — 멈춤과 느림을 가르는 유일한 증거라 초 단위로 흐른다 */
+function formatAge(seconds: number): string {
+  if (seconds < 2) return '지금';
+  if (seconds < 60) return `${seconds}초 전`;
+  const m = Math.floor(seconds / 60), s = seconds % 60;
+  return s ? `${m}분 ${s}초 전` : `${m}분 전`;
+}
+
+/** 진행 신고(ibl_progress)를 한 줄로 — 현재 액션 · 호출 번호 · each 회차 · 하위 step */
+function describeProgress(p: ToolProgress): string {
+  const parts: string[] = [];
+  if (p.action) {
+    if (p.of) parts.push(`${p.action} (${p.step}/${p.of})`);
+    else if (p.step) parts.push(`${p.action} · ${p.step}번째 호출`);
+    else parts.push(p.action);
+  }
+  const d = (p.detail || {}) as Record<string, unknown>;
+  if (d.row && d.rows) parts.push(`each ${d.row}/${d.rows}행${d.row_label ? `(${d.row_label})` : ''}`);
+  if (d.substep && d.substeps) parts.push(`하위 ${d.substep}/${d.substeps} ${d.subaction ?? ''}`.trim());
+  const known = new Set(['row', 'rows', 'row_label', 'substep', 'substeps', 'subaction']);
+  const rest = Object.entries(d).filter(([k]) => !known.has(k)).map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : String(v)}`);
+  if (rest.length) parts.push(rest.join(' '));
+  return parts.join(' · ');
+}
+
+/** 실행 중인 도구 카드 아래의 진행 줄 — 1초마다 "마지막 움직임" 경과가 흐른다 */
+function ProgressLine({ progress, waitText }: { progress: ToolProgress; waitText: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const age = Math.max(0, Math.round((now - progress.at) / 1000));
+  const text = describeProgress(progress) || '진행 중';
+  // 30초 넘게 움직임이 없으면 색으로 알린다 — "죽었나, 오래 걸리나"를 사람이 바로 가른다.
+  const ageClass = age >= 120 ? 'text-red-500' : age >= 30 ? 'text-amber-600' : waitText;
+  return (
+    <div className={`px-3 py-2 flex items-center gap-2 text-[11px] ${waitText}`} data-testid="tool-progress">
+      <Loader2 size={12} className="animate-spin shrink-0" />
+      <span className="font-mono break-all">{text}</span>
+      <span className={`ml-auto shrink-0 whitespace-nowrap ${ageClass}`}>마지막 움직임 {formatAge(age)}</span>
+    </div>
+  );
+}
 
 interface ToolHistoryPanelProps {
   toolHistory: ToolActivity[];
@@ -113,12 +159,16 @@ export function ToolHistoryPanel({ toolHistory, variant = 'warm' }: ToolHistoryP
             );
           })()}
 
-          {/* 실행 중일 때 로딩 표시 */}
+          {/* 실행 중일 때: 진행 신고가 있으면 현재 액션·마지막 움직임, 없으면 로딩 표시 */}
           {tool.status === 'running' && !tool.result && (
-            <div className={`px-3 py-3 flex items-center justify-center gap-2 ${styles.waitText}`}>
-              <Loader2 size={12} className="animate-spin" />
-              <span className="text-[11px]">결과를 기다리는 중...</span>
-            </div>
+            tool.progress ? (
+              <ProgressLine progress={tool.progress} waitText={styles.waitText} />
+            ) : (
+              <div className={`px-3 py-3 flex items-center justify-center gap-2 ${styles.waitText}`}>
+                <Loader2 size={12} className="animate-spin" />
+                <span className="text-[11px]">결과를 기다리는 중...</span>
+              </div>
+            )
           )}
         </div>
       ))}

@@ -353,12 +353,33 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
                 status: 'done',
                 isError: failed,
                 input: updated[idx].input ?? data.input,
+                progress: undefined,
               };
             }
             toolHistoryRef.current = updated;
             return updated;
           });
           if (data.todos) setTodos(data.todos);
+          break;
+        }
+
+        case 'progress': {
+          // IBL 안쪽의 진행 신고 — 실행 중인 도구 카드(보통 execute_ibl) 아래에 현재 액션·회차·마지막 움직임을 단다.
+          // 시각은 받은 순간의 클라이언트 시계로 찍는다(서버 시계 차를 안 탄다).
+          setToolHistory(prev => {
+            let idx = -1;
+            for (let i = prev.length - 1; i >= 0; i--) {
+              if (prev[i].status === 'running') { idx = i; break; }
+            }
+            if (idx === -1) return prev;
+            const updated = [...prev];
+            updated[idx] = {
+              ...updated[idx],
+              progress: { action: data.action, step: data.step, of: data.of, detail: data.detail, at: Date.now() },
+            };
+            toolHistoryRef.current = updated;
+            return updated;
+          });
           break;
         }
 
@@ -373,8 +394,13 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
           const interimIds = new Set(interimMessageIdsRef.current);
           if (data.type === 'response') interimMessageIdsRef.current.clear();
           setMessages(prev => {
-            // 자동 보고는 진행 중인 사용자 턴의 초안을 지우지 않는다.
-            const adopted = data.type === 'response' ? prev.filter(m => !interimIds.has(m.id)) : prev;
+            // 중간 서술(도구 호출 앞의 초안)은 최종 응답이 와도 남긴다 — Claude Code 처럼 "지나온 과정"이 대화에 보이도록
+            // (2026-10-26). 다만 최종 본문이 그 초안을 그대로 품고 있으면(프로바이더가 누적 텍스트를 최종으로 돌려준 경우)
+            // 같은 글이 두 번 보이므로 그 초안만 거둔다.
+            const finalText = typeof data.content === 'string' ? data.content : '';
+            const adopted = data.type === 'response'
+              ? prev.filter(m => !interimIds.has(m.id) || !(m.content && finalText.includes(m.content)))
+              : prev;
             // id 기반 중복 방지 (이력 로드 후 동일 메시지가 WS로 다시 올 수 있음)
             if (data.message_id && adopted.some(m => m.id === newMsgId)) return adopted;
             return [...adopted, {

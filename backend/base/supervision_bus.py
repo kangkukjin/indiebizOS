@@ -49,10 +49,41 @@ def wrap(execute):
     return call
 
 
+_progress_sinks = {}   # task_id → callable(detail): 채팅 표면 등 "지금 무엇을 하는가"를 보고 싶은 쪽
+
+
+def register_progress_sink(task_id, sink):
+    """이 작업(task_id)의 진행 신고(ibl_progress report_step/beat)를 받을 수신자를 등록한다 (2026-10-26).
+
+    감독 컨트롤러와 별개의 두 번째 통로다 — 컨트롤러는 의식의 검수용, 수신자는 사람의 화면용.
+    실행이 어느 스레드(MCP 재진입·오프로드 풀·병렬 가지)에서 돌든 thread_context 의 task_id 로 찾는다.
+    """
+    if not task_id or sink is None:
+        return
+    with _lock:
+        _progress_sinks[task_id] = sink
+
+
+def unregister_progress_sink(task_id, sink=None):
+    with _lock:
+        if sink is None or _progress_sinks.get(task_id) == sink:   # == : 바운드 메서드는 접근마다 새 객체
+            _progress_sinks.pop(task_id, None)
+
+
 def progress(detail):
     controller = current()
     if controller:
         controller.progress(detail)
+    task = identity()[1]
+    if not task:
+        return
+    with _lock:
+        sink = _progress_sinks.get(task)
+    if sink is not None:
+        try:
+            sink(detail)
+        except Exception:
+            pass   # 신고가 본 실행을 깨지 않는다(ibl_progress 와 같은 규율)
 
 
 TOOL_SCHEMA = {

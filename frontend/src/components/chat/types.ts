@@ -21,6 +21,19 @@ export interface DocumentAttachment {
   fileType: string;
 }
 
+/** IBL 안쪽의 진행 신고(ibl_progress report_step/beat) — execute_ibl 한 호출이 도는 동안 "지금 어느 낱말인가" */
+export interface ToolProgress {
+  /** 현재 액션 `node:action` (좌표 소유자의 신고) */
+  action?: string;
+  /** 호출 번호(1부터). of 는 0=미지 — 함수·each 안의 호출은 정적으로 셀 수 없다 */
+  step?: number;
+  of?: number;
+  /** 회차 등 움직임(beat) — row/rows/row_label, substep/substeps/subaction 등 자리마다 다른 키 */
+  detail?: Record<string, unknown>;
+  /** 마지막 움직임 시각(클라이언트 시계 ms) — 멈춤과 느림을 가르는 유일한 증거 */
+  at: number;
+}
+
 export interface ToolActivity {
   /** 프로바이더가 부여한 호출 id — 병렬 호출의 start↔result 페어링 키(없을 수 있음) */
   id?: string;
@@ -30,6 +43,8 @@ export interface ToolActivity {
   result?: string;
   /** 호출이 실패했나 — backend tool_result.is_error 그대로. 미표명이면 undefined */
   isError?: boolean;
+  /** 실행 중 진행 좌표 — 끝나면 비운다 */
+  progress?: ToolProgress;
 }
 
 export interface TodoItem {

@@ -1,5 +1,6 @@
 """채팅 실행 서비스 — HTTP/WS 라우트와 독립된 대화·작업 기록·스트림 전달."""
 import re
+import time
 import uuid
 import asyncio
 import contextvars
@@ -99,6 +100,49 @@ def tool_event_payload(event: dict, agent: str) -> dict:
                 if isinstance(inputs.get("todos"), list):
                     payload["todos"] = inputs["todos"]
     return payload
+
+
+_PROGRESS_FIELDS = ("step", "of", "action", "detail")
+_PROGRESS_BEAT_MIN_INTERVAL_S = 0.2
+
+
+def progress_event_payload(event: dict, agent: str) -> dict:
+    """IBL 진행 신고(ibl_progress report_step/beat)를 표면 계약으로 옮긴다 (2026-10-26).
+
+    표면은 execute_ibl 카드 아래에 현재 액션(step/action)·회차(detail)·마지막 움직임 시각(at)을 그린다.
+    """
+    payload = {"type": "progress", "agent": agent, "at": float(event.get("at") or time.time())}
+    for key in _PROGRESS_FIELDS:
+        if event.get(key) is not None:
+            payload[key] = event[key]
+    return payload
+
+
+def make_progress_sink(put):
+    """supervision_bus 진행 신고 → 이 런의 이벤트 큐(put). 워커·MCP 재진입 스레드에서 불린다.
+
+    좌표(step/action 이 실린 신고)는 바로 싣고 기억해 둔다. 움직임(detail 만인 beat)은 마지막 좌표를
+    덧붙여 싣되 _PROGRESS_BEAT_MIN_INTERVAL_S 안의 연속 beat 은 접는다 — 좌표는 소유하고 움직임은
+    공유한다는 ibl_progress 규율을 표면까지 그대로 가져온다.
+    """
+    state = {"coord": {}, "last_beat": 0.0}
+
+    def sink(detail):
+        if not isinstance(detail, dict) or not detail:
+            return
+        now = time.time()
+        if "action" in detail or "step" in detail:
+            state["coord"] = {k: detail[k] for k in ("step", "of", "action") if k in detail}
+            event = {"type": "progress", **state["coord"], "at": now}
+            if isinstance(detail.get("detail"), dict):
+                event["detail"] = dict(detail["detail"])   # 좌표가 품은 회차(each 행 안의 액션)
+        else:
+            if now - state["last_beat"] < _PROGRESS_BEAT_MIN_INTERVAL_S:
+                return
+            state["last_beat"] = now
+            event = {"type": "progress", **state["coord"], "detail": dict(detail), "at": now}
+        put(event)
+    return sink
 
 
 def is_cancelled(client_id: str) -> bool:
@@ -535,6 +579,12 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             _set_origin(utterance_author)  # 주인의 말만 'user'(RED 수리 그랜트 전제조건) — 예약 주입은 미세팅
             # 텍스트 청크 합산 — 청크마다 로그를 찍지 않고 종료 한 줄에 총량만 싣는다.
             _text_chunks = _text_chars = 0
+            # IBL 안쪽의 진행(액션 경계·each 회차)을 이 런의 큐로 — execute_ibl 한 호출이 몇 분을 돌아도
+            # 화면이 "지금 어느 낱말인가"를 본다. task_id 로 찾으므로 MCP 재진입·병렬 가지도 닿는다.
+            from supervision_bus import register_progress_sink, unregister_progress_sink
+            _progress_sink = make_progress_sink(
+                lambda ev: asyncio.run_coroutine_threadsafe(event_queue.put(ev), loop))
+            register_progress_sink(task_id, _progress_sink)
 
             try:
                 # (2026-08-15 4라운드 감사) cancel_check 배선 — 이전엔 이 경로만 None 이라
@@ -574,7 +624,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         # 길이가 아니라 총량이므로 합산해 스트림 종료 한 줄에 싣는다.
                         _text_chunks += 1
                         _text_chars += len(str(event.get("content", "")))
-                    elif event_type not in ("tool_start", "tool_result", "thinking", "final", "cognition"):
+                    elif event_type not in ("tool_start", "tool_result", "thinking", "final", "cognition", "progress"):
                         print(f"[WS run_stream] 이벤트 수신: {event_type}")
                     asyncio.run_coroutine_threadsafe(
                         event_queue.put(event),
@@ -593,6 +643,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     loop
                 )
             finally:
+                unregister_progress_sink(task_id, _progress_sink)
                 if not stream_error and not stream_cancelled and not filter_internal_markers(final_content):
                     stream_error = "최종 응답 없이 작업이 종료되었습니다. 다시 시도해주세요."
                     asyncio.run_coroutine_threadsafe(
@@ -717,6 +768,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     "content": event.get("content", ""),
                     "agent": agent_name
                 })
+
+            elif event_type == "progress":
+                # IBL 진행 신고 — 실행 중인 도구 카드 아래 현재 액션·회차·마지막 움직임
+                await manager.send_message(client_id, progress_event_payload(event, agent_name))
 
             elif event_type == "cognition":
                 # 자율주행 작업전 공개(계기판) — 실행 직전 판단/확신/연상 노출
@@ -895,6 +950,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             from thread_context import set_task_origin_for_author as _set_origin
             _set_origin(utterance_author)  # 주인의 말만 'user'(RED 수리 그랜트 전제조건) — 예약 주입은 미세팅
             from system_ai_core import get_system_ai_runner
+            from supervision_bus import register_progress_sink, unregister_progress_sink
+            _progress_sink = make_progress_sink(
+                lambda ev: asyncio.run_coroutine_threadsafe(event_queue.put(ev), loop))
+            register_progress_sink(task_id, _progress_sink)   # 프로젝트 경로와 같은 통로
             gen = None
             try:
                 runner = get_system_ai_runner()
@@ -933,6 +992,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     loop
                 )
             finally:
+                unregister_progress_sink(task_id, _progress_sink)
                 # 조기 종료(취소·예외)여도 제너레이터 finally(모델 복원·메모리 쓰기) 실행 보장
                 if gen is not None:
                     gen.close()
@@ -1031,6 +1091,9 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     "content": event.get("content", ""),
                     "agent": "system_ai"
                 })
+
+            elif event_type == "progress":
+                await manager.send_message(client_id, progress_event_payload(event, "system_ai"))
 
             elif event_type == "tool_start":
                 await manager.send_message(client_id, tool_event_payload(event, "system_ai"))

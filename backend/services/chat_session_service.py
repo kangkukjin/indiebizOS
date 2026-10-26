@@ -63,6 +63,8 @@ def snapshot(store, sid, before=None):
     with sessions.connection(store.path) as conn:
         turn = conn.execute("SELECT * FROM conversation_turns WHERE session_id=? ORDER BY started_at DESC,id DESC LIMIT 1", (sid,)).fetchone()
         result["turn"] = dict(turn) if turn else None
+        if result["turn"] is not None:
+            result["turn"]["progress"] = _progress_view(result["turn"].get("progress"))
         result["events"] = []
         if turn:
             import json
@@ -78,6 +80,25 @@ def snapshot(store, sid, before=None):
         except (OSError, ValueError):
             pass
     return result
+
+
+def _progress_view(raw):
+    """턴의 progress 칸(JSON 문자열) → dict + age_s(서버 시계 기준 마지막 움직임 경과) — 표면은 시계 차를 안 탄다."""
+    if not raw:
+        return None
+    import json
+    import time
+    try:
+        prog = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(prog, dict):
+        return None
+    try:
+        prog["age_s"] = max(0.0, time.time() - float(prog.get("at") or 0))
+    except (TypeError, ValueError):
+        pass
+    return prog
 
 
 def respond_panel(binding, action, message):

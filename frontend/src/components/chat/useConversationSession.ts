@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import type { ChatSession } from './ChatSession';
-import type { ChatMessage, ToolActivity, TodoItem, QuestionItem, PlanModeState } from './types';
+import type { ChatMessage, ToolActivity, ToolProgress, TodoItem, QuestionItem, PlanModeState } from './types';
 import { fileToBase64, isTextFile } from './chatUtils';
 export interface SessionTarget { target: string; project_id?: string; agent_id?: string; before?: string }
 export interface SavedSession { id: string; title: string; running?: boolean; created_at?: string; updated_at?: string }
@@ -11,8 +11,10 @@ interface Event { type: string; id?: string; name?: string; input?: Record<strin
 interface Snapshot {
  messages: { id: string; role: string; content: string; timestamp: string; images: string[] }[];
  panels?: { todo?: {todos?: TodoItem[]}; question?: {status?:string;questions?:QuestionItem[]}; plan_mode?: PlanModeState };
- has_older: boolean; turn: { id: string; state: string; stream_content?: string } | null; events: Event[];
+ has_older: boolean; turn: { id: string; state: string; stream_content?: string; progress?: TurnProgress | null } | null; events: Event[];
 }
+/** 턴의 현재 진행(백엔드 conversation_turns.progress) — age_s 는 서버 시계 기준 마지막 움직임 경과 */
+interface TurnProgress { action?: string; step?: number; of?: number; detail?: Record<string, unknown>; age_s?: number }
 export const sessionQuery = (t: SessionTarget) => new URLSearchParams(Object.entries(t).filter(([,v]) => v !== undefined) as [string,string][]).toString();
 export const sessionCall = <T,>(path: string, target: SessionTarget, method = 'GET', body?: object) => api.request<T>(
  `/chat-sessions${path}${method === 'GET' ? `?${sessionQuery(target)}` : ''}`,
@@ -47,19 +49,32 @@ export function useConversationSession(id: string, target: SessionTarget, active
   void poll(); return () => { disposed = true; clearTimeout(timer); };
  }, [id,query,active]);
  const tools: ToolActivity[] = []; let thinking = '', todos: TodoItem[] = [], questions: QuestionItem[] = [];
+ const interim: ChatMessage[] = [];   // 도구 호출 앞의 중간 서술(interim_text) — 최종 응답이 와도 남긴다
  for (const e of snapshot?.events || []) {
   if (e.type === 'tool_start') tools.push({ id:e.id, name:e.name || '도구', input:e.input, status:'running' });
   if (e.type === 'tool_result') { const tool = [...tools].reverse().find(t => e.id ? t.id === e.id : t.name === e.name && t.status === 'running');
-   if (tool) Object.assign(tool, { result:e.result, isError:e.is_error, status:'done' }); if (e.todos) todos = e.todos; }
+   if (tool) Object.assign(tool, { result:e.result, isError:e.is_error, status:'done', progress:undefined }); if (e.todos) todos = e.todos; }
   if (e.type === 'thinking') thinking = e.content || '';
+  if (e.type === 'interim_text' && e.content && snapshot?.turn) interim.push({ id:`${snapshot.turn.id}-interim-${interim.length}`, role:'assistant', content:e.content, timestamp:new Date() });
   if (e.questions) questions = e.questions;
  }
  if (snapshot?.panels?.todo?.todos) todos = snapshot.panels.todo.todos;
  if (snapshot?.panels?.question) questions = snapshot.panels.question.status === 'pending' ? snapshot.panels.question.questions || [] : [];
  const running = snapshot?.turn?.state === 'running';
+ // 진행 좌표는 실행 중인 마지막 도구(보통 execute_ibl)에 단다. 시각은 서버의 경과(age_s)를 클라이언트 시계로 옮긴다.
+ const prog = snapshot?.turn?.progress;
+ if (running && prog) { const t = [...tools].reverse().find(t => t.status === 'running');
+  if (t) t.progress = { action:prog.action, step:prog.step, of:prog.of, detail:prog.detail, at:Date.now() - Math.round((prog.age_s ?? 0) * 1000) } as ToolProgress; }
  const failure = [...(snapshot?.events || [])].reverse().find(e => e.type === 'error');
  const lastAssistant = messages.map(m => m.role).lastIndexOf('assistant');
- return { messages:messages.map((m,i) => i === lastAssistant && snapshot?.turn?.state === 'completed' && tools.length ? {...m,toolActivities:tools} : m),
+ const shown = messages.map((m,i) => i === lastAssistant && snapshot?.turn?.state === 'completed' && tools.length ? {...m,toolActivities:tools} : m);
+ if (interim.length) {
+  // 실행 중이면 끝에, 끝났으면 마지막 답 앞에 — 최종 본문이 초안을 그대로 품으면(누적 텍스트가 최종이 된 경우) 그 초안은 거둔다.
+  const final = lastAssistant >= 0 && !running ? shown[lastAssistant] : undefined;
+  const kept = interim.filter(m => !(final?.content && final.content.includes(m.content)));
+  if (running || lastAssistant < 0) shown.push(...kept); else shown.splice(lastAssistant, 0, ...kept);
+ }
+ return { messages:shown,
   loading:sending || running, canSteer:false, streamingContent:running ? snapshot?.turn?.stream_content : '',
   toolHistory:running ? tools : [], thinkingText:running ? thinking : '', todos, questions, planMode:snapshot?.panels?.plan_mode,
   error:error || failure?.message || failure?.content || (snapshot?.turn?.state === 'interrupted' ? '앱 재시작으로 실행이 중단됐습니다. 기록을 확인하고 이어서 요청하세요.' : undefined),

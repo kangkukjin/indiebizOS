@@ -22,6 +22,10 @@ from common.expression_eval import Binding, ExpressionEvaluator
 #: 취소 확인 간격(초). 확인 함수가 파일·프로세스를 보는 경로가 있어 걸음마다 부르지 않는다.
 _CANCEL_CHECK_INTERVAL_S = 0.02
 
+#: 진행 신고 최소 간격(초). 같은 액션·같은 부류의 신고는 이 간격 안에서 하나로 접는다 — 천 행짜리
+#: each 가 천 번 티켓 파일을 다시 쓰지 않도록. 액션이 바뀌면 간격과 무관하게 바로 신고한다.
+_PROGRESS_MIN_INTERVAL_S = 0.25
+
 #: 미지정 입력(declared_inputs − inputs)의 값 자리 표식. 레코드(호출 인자)에서는 그 필드가 빠지고,
 #: f-문자열 보간에서는 빈 문자열이 된다. 컴파일러가 그 두 자리 밖의 사용을 거절하므로 업무 값으로 새지 않는다.
 OMITTED = object()
@@ -136,6 +140,10 @@ class Runtime(ExpressionEvaluator):
         self.replay, self.recorded = replay, list(recordings or [])
         self.lock = threading.RLock()
         self.local = threading.local()
+        # 진행 신고(ibl_progress) — 표면 티켓 소유권·호출 번호·부류별 마지막 신고 (2026-10-26).
+        self._progress_ticket = None
+        self._progress_calls = 0
+        self._progress_last = {}   # 부류("action"/"row") → (키, monotonic)
         from execution_commit import current_scope, CommitScope
         self.commit_scope = current_scope() or CommitScope()
         self.owns_commit_scope = current_scope() is None
@@ -455,8 +463,16 @@ class Runtime(ExpressionEvaluator):
         mode, collect = options.get("mode", "map"), options.get("on_error", "stop") == "collect"
         def row(index):
             self.budget.tick(row=True)
+            # 회차는 이 스레드의 현재값으로 둔다 — 행 안의 액션 좌표 신고가 자기 회차를 동봉한다(병렬 가지는 각자 스레드).
+            detail = self._row_detail(index + 1, len(items), items[index])
+            previous_detail = getattr(self.local, "row_detail", None)
+            self.local.row_detail = detail
+            self._report_row(detail)
             local = {**env, "it": Binding(items[index], args.evidence), "i": Binding(index)}
-            result = self.frame(node.data["body"], local)
+            try:
+                result = self.frame(node.data["body"], local)
+            finally:
+                self.local.row_detail = previous_detail
             if mode == "flat_map":
                 guard(result.value, "List", "flat_map 반환")
             return result
@@ -583,8 +599,52 @@ class Runtime(ExpressionEvaluator):
                 return self._timed_invoke(node, args, piped)
         return self._timed_invoke(node, args, piped)
 
+    def _progress_due(self, kind, key):
+        """같은 부류·같은 키의 신고는 _PROGRESS_MIN_INTERVAL_S 에 하나. 키가 바뀌면 즉시."""
+        now = time.monotonic()
+        with self.lock:
+            last_key, last_at = self._progress_last.get(kind, (None, 0.0))
+            if key == last_key and now - last_at < _PROGRESS_MIN_INTERVAL_S:
+                return False
+            self._progress_last[kind] = (key, now)
+            return True
+
+    def _report_action(self, key):
+        """액션 호출 경계의 좌표 신고 — 채팅 표면·표면 티켓이 "지금 어느 낱말을 실행 중인가"를 본다.
+
+        of 는 0(미지) — 함수·each 안의 호출은 정적으로 셀 수 없어 거짓 분모를 만들지 않는다.
+        """
+        with self.lock:
+            self._progress_calls += 1
+            n = self._progress_calls
+        if not self._progress_due("action", key):
+            return
+        try:
+            from ibl_progress import report_step
+            report_step(self._progress_ticket, n, 0, key, detail=getattr(self.local, "row_detail", None))
+        except Exception:
+            pass
+
+    def _row_detail(self, index, count, item):
+        label = item if isinstance(item, (str, int, float)) else None
+        detail = {"row": index, "rows": count}
+        if label is not None:
+            detail["row_label"] = str(label)[:40]
+        return detail
+
+    def _report_row(self, detail):
+        """[table:each] 회차 신고 — 좌표는 건드리지 않고 detail 만(규약 정본=ibl_progress)."""
+        if not self._progress_due("row", (detail["row"], detail["rows"])):
+            return
+        try:
+            from ibl_progress import beat
+            beat(detail)
+        except Exception:
+            pass
+
     def _timed_invoke(self, node, args, piped):
         started = time.monotonic()
+        self._report_action(f"{node.data['node']}:{node.data['action']}")
         try:
             return self._invoke(node, args, piped)
         finally:
@@ -938,6 +998,11 @@ class Runtime(ExpressionEvaluator):
                     "error": rejection_message("실행 전 검사에서 거절했습니다", self.plan.issues)}
         if set(self.inputs) != set(self.plan.input_types):
             return {"edition": 2, "success": False, "error": "컴파일 시 입력 서명과 실행 입력이 다릅니다.", "executed": False}
+        try:
+            from ibl_progress import claim
+            self._progress_ticket = claim()   # 표면 티켓이 있으면 좌표 소유권(없으면 None — 신고는 버스로만)
+        except Exception:
+            self._progress_ticket = None
         try:
             from ibl_v2_types import infer, compatible
             for key, value in self.inputs.items():

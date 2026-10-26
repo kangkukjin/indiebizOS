@@ -19,7 +19,7 @@ import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
 import { ui, uiMessage, UiSystemText, useLocale } from '../i18n/ui';
 import { IS_WEB_SURFACE } from '../lib/backend-origin';
-import { NodePresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
+import { NodePresence, ControllerPresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
 import { PursuitLedger } from './launcher-components/PursuitLedger';
 import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus, RecallPreviewResult } from '../lib/api-ibl';
@@ -497,6 +497,8 @@ export default function ManualMode() {
               <Stethoscope size={14} className="shrink-0" /> 시스템 상태
               {/* 폰 접속상태 — PC(맥)에선 이게 제일 중요해 접힌 줄에 상시 표시 */}
               <NodePresence />
+              {/* 재기동 제어자 부재 — 평소엔 비어 있고, 워커만 살아남았을 때만 켜진다(2026-10-26) */}
+              <ControllerPresence />
               {dashboard && (
                 <span className={`inline-flex items-center gap-1 text-[11px] font-normal px-2 py-0.5 rounded shrink-0 ${
                   dashboard.ibl_health.healthy == null ? 'text-stone-500 bg-stone-100'

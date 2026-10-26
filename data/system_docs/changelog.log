@@ -2912,3 +2912,4 @@
 2026-10-26: 최종 평가의 산출물 변경 감지 지문을 디스크 원문 기준으로 통일(마스킹된 증거 지문과 비교해 '평가 중 산출물 변경' 오판, ep5045·5518). 비밀 마스킹 sk- 접두는 낱말 안(risk-)에서 제외.
 
 2026-10-26 | 문서 갱신: 한영 README와 system_docs(anatomy·architecture·technical·memory)를 10-22 이후 커밋에 맞춤 — 판본 1 실행 종료·관용구 단일 원장, 병렬 분기·scope:task 위임·확정 IBL 직접 실행, 상주 PC 즉시 보고·헬퍼 중앙 배포·서명 배포본 판정·TV 연결 재사용·드라이버 호출 요약·Android 단건 지연, 검수 승인/목표 달성 분리·화면 검수·반복 관측·증류 선판정 제거·세션 초기화·은퇴 문구 스캐너 은퇴. 마커 구간·드리프트·파일 크기 검사 통과, 산문만 변경. last_updated를 마지막 실질 변경일로 맞춤.
+2026-10-26: 재기동 제어자 무음 사망(pid 39960, 06:40 ACTIVE 저장 직후 외부 종료·흔적 0) 수리 — 제어자 자기 수명 기록 controller.log(stdout 무관, SIGHUP 무시), controller_presence 판정을 api.py status 첫 줄·/health restart_controller·조종실 '제어자 부재' 경고등에, 런처 ensureKeeper 가 15초 주기로 부재 시 같은 api.py start 로 되살림(STOPPED·의도적 종료 제외). 회귀 test_real_controller_killed_pending_request_is_served_after_revival.

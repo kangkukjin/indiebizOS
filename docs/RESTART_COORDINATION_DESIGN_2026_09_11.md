@@ -262,6 +262,41 @@ OS 자동 시작 서비스는 이번에 추가하지 않았다. 워커 교체는
 import한 코드를 갱신하지 않으므로, 제어자 코드 자체를 바꾼 뒤에는 전체 앱 종료·재실행이
 필요하다. R1은 이 제한을 별도의 경쟁 keeper로 숨기지 않는다.
 
+#### 제어자 무음 사망의 가시화와 회복 (2026-10-26 개정)
+
+실측: 제어자 pid 39960(10-25 17:55 출생)이 10-26 06:40:04 ACTIVE 관측 저장 직후 사라졌다.
+`Controller.run`의 tick 루프는 예외를 삼키므로 코드 안에서 흔적 없이 루프를 빠져나갈 길은
+없고, 그 시각에 세션 도구 호출·스케줄 작업·메모리 압박 이벤트도 없었다. 남은 것은 신호에
+의한 외부 종료(SIGHUP 류는 기본 동작이 무음 종료다)인데, 제어자는 종료 기록·감시자·고정된
+stdout 목적지가 모두 없어서 어느 쪽인지 지문이 남지 않았다. 워커는 `start_new_session`으로
+떠 있어 살아남았고, 그래서 파일 변경 요청과 `restart --wait` 요청이 5시간 접수함에 머물렀다.
+런처가 띄운 제어자는 10-24 16:29에 다른 보유자에게 owner.lock을 양보하고 0으로 끝났으며 런처는
+그 뒤 다시 보지 않았다.
+
+수리는 세 겹이며 "자기 죽음 이후 단계를 자기 계획에 넣지 않는다"를 지킨다.
+
+- 기록: 제어자가 `data/restart_control/controller.log`에 시작(이전 제어자 생존·상태 나이·stdout
+  목적지)·잠금 양보·tick 예외(traceback)·신호·종료 사유를 직접 쓴다(2MB 회전). stdout 쓰기
+  실패는 제어자를 죽이지 않는다. SIGHUP은 기록하고 무시한다(시작한 터미널·세션보다 오래 산다).
+  옛 `controller_stdout.log`는 아무도 쓰지 않던 빈 파일이라 없앴다. 조종실 '시스템 로그'에서
+  `제어자` 로 읽는다.
+- 탐지: `restart_process.controller_presence`가 pid+출생시각으로 제어자 생존을 판정한다
+  (`controller_alive | controller_missing | stopped | unknown`). `api.py status`는 첫 줄에
+  이 판정을 말하고 부재면 3으로 끝난다. 워커의 `/health`가 `restart_controller` 로 같은 판정을
+  싣고, 조종실 '시스템 상태' 줄은 `controller_missing`일 때만 "제어자 부재" 경고등을 켠다.
+- 회복: 런처(`backend-process.js ensureKeeper`)가 15초마다 state.json·pid 생존·의도적 종료
+  표식만 보고 부재(pid 사망, 또는 ACTIVE가 3분째 저장 없음=pid 재사용 의심)면 같은
+  `api.py start`를 띄운다. start는 보유자가 있으면 양보하므로 멱등이고, STOPPED·의도적 종료
+  표식에서는 아무것도 하지 않는다(종료 뒤 부활 금지). 되살린 제어자는 새 세대를 만들지 않고
+  ACTIVE 상태를 입양한 뒤 대기 요청을 처리한다. 세션 셸에서 띄운 제어자에는 런처 감시만이
+  죽음을 넘어 살아 있는 프로세스다. 워커가 자기 감독자를 띄우는 길은 택하지 않았다 — 그 자식은
+  워커의 process_tree에 잡혀 다음 STOPPING에서 함께 죽는다.
+
+회귀: `test_restart_process.py::test_real_controller_killed_pending_request_is_served_after_revival`
+(SIGKILL → 판정 부재 → 대기 요청 미처리 확인 → start 로 입양 → 요청 처리·로그 확인),
+`test_restart_controller.py`의 로그/판정 단위 시험, `frontend/electron/controller-watch.test.mjs`
+(런처 판정 함수).
+
 
 ## 자기수리의 적용 후 인계
 

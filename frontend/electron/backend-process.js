@@ -12,6 +12,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import { initUserData } from './bootstrap.js';
+import { controllerVerdict, shouldAttemptRevive, pidAlive } from './controller-watch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +23,11 @@ const API_PORT = Number(process.env.INDIEBIZ_API_PORT || 8765);
 // 이 창이 시작한 제어자 프로세스와 공통 요청 명령. 워커 상태는 제어자가 소유한다.
 let pythonProcess = null;
 let backendCommand = null;
+// 백엔드·제어자 stdout 을 받는 파일 스트림 — 앱 수명 동안 하나(되살린 제어자도 같은 파일에 쓴다).
+let backendLog = null;
+// 제어자 감시 타이머와 마지막 되살리기 시각 (ensureKeeper)
+let keeperTimer = null;
+let lastReviveMs = 0;
 
 /**
  * Python 백엔드 시작
@@ -130,7 +136,6 @@ async function startPythonBackend() {
   // 에피소드 메모리가 못 담는 로그 — 부팅 에러·백그라운드 서비스·500 traceback —
   // 를 여기 남기고, 조종실 '시스템 로그' 뷰어(/config/system-logs)가 읽는다.)
   const runtimeLogPath = path.join(basePath, 'data', 'backend_runtime.log');
-  let backendLog = null;
   try {
     fs.mkdirSync(path.dirname(runtimeLogPath), { recursive: true });
     if (fs.existsSync(runtimeLogPath) && fs.statSync(runtimeLogPath).size > 50 * 1024 * 1024) {
@@ -143,8 +148,27 @@ async function startPythonBackend() {
   }
 
   // 창과 분리된 제어자가 워커의 죽음을 넘어 정리·복구를 완료한다.
-  backendCommand = { pythonPath, pythonArgs, backendPath, basePath };
-  pythonProcess = spawn(pythonPath, pythonArgs, {
+  backendCommand = { pythonPath, pythonArgs, backendPath, basePath, runtimePath, nodePath };
+  spawnController({ initial: true });
+
+  // 서버 준비 대기
+  if (!await waitForServer()) {
+    throw new Error("백엔드 실행 준비를 확인하지 못했습니다. 재기동 제어 상태와 시스템 로그를 확인하세요.");
+  }
+}
+
+/**
+ * 제어자 프로세스 하나를 띄운다 — 첫 시작과 되살리기(ensureKeeper)가 같은 명령을 쓴다.
+ * `api.py start` 는 owner.lock 보유자가 있으면 즉시 0 으로 양보하므로 중복 호출이 안전하다.
+ */
+function spawnController({ initial = false, reason = 'start' } = {}) {
+  const { pythonPath, pythonArgs, backendPath, basePath, runtimePath, nodePath } = backendCommand;
+  if (pythonProcess) return pythonProcess;   // 이 창이 띄운 제어자가 아직 살아 있다
+  if (!initial) {
+    console.warn(`[Python] 제어자 되살리기 (${reason})`);
+    try { if (backendLog) backendLog.write(`===== [${new Date().toISOString()}] 제어자 되살리기 (${reason}) =====\n`); } catch (e) { /* 무시 */ }
+  }
+  pythonProcess = spawn(pythonPath, [...pythonArgs, 'start'], {
     cwd: backendPath,
     detached: process.platform !== 'win32',
     env: {
@@ -186,11 +210,12 @@ async function startPythonBackend() {
     const msg = `[Python] 프로세스 종료: ${code}`;
     console.log(msg);
     try {
-      if (backendLog) { backendLog.write(`===== 백엔드 종료 (code=${code}) =====\n`); backendLog.end(); backendLog = null; }
+      // 스트림은 닫지 않는다 — 되살린 제어자가 같은 파일에 이어 쓴다.
+      if (backendLog) backendLog.write(`===== 제어자 프로세스 종료 (code=${code}, ${reason}) =====\n`);
     } catch (e) { /* 무시 */ }
 
-    // 비정상 종료 시 사용자에게 알림 (앱 시작 직후 종료된 경우)
-    if (code !== 0 && code !== null) {
+    // 비정상 종료 시 사용자에게 알림 (앱 시작 직후 종료된 경우). 되살리기의 실패는 대화상자 대신 로그.
+    if (code !== 0 && code !== null && initial) {
       console.error(`[Python] 백엔드가 비정상 종료되었습니다 (코드: ${code})`);
 
       // 모듈 에러일 가능성 (의존성 미설치)
@@ -209,9 +234,10 @@ async function startPythonBackend() {
 
   pythonProcess.on('error', (err) => {
     console.error(`[Python] 프로세스 에러: ${err.message}`);
+    pythonProcess = null;
 
     // Python을 찾을 수 없는 경우 사용자에게 알림
-    if (err.code === 'ENOENT') {
+    if (err.code === 'ENOENT' && initial) {
       dialog.showErrorBox(
         'Python을 찾을 수 없습니다',
         'IndieBiz를 실행하려면 Python이 설치되어 있어야 합니다.\n\n' +
@@ -220,11 +246,7 @@ async function startPythonBackend() {
       );
     }
   });
-
-  // 서버 준비 대기
-  if (!await waitForServer()) {
-    throw new Error("백엔드 실행 준비를 확인하지 못했습니다. 재기동 제어 상태와 시스템 로그를 확인하세요.");
-  }
+  return pythonProcess;
 }
 
 /**
@@ -279,10 +301,35 @@ function getBasePath() {
 }
 
 /**
- * 기존 호출부 호환. 감독은 startPythonBackend가 시작한 제어자가 맡는다.
+ * 제어자 감시 — 앱이 떠 있는 동안 제어자 부재(pid 사망·ACTIVE 침묵)를 보고 같은 `api.py start` 로 되살린다.
+ *
+ * 2026-10-26 pid 39960 무음 사망의 수리. 경쟁 감시 데몬이 아니다: 판정은 제어자가 쓰는 state.json
+ * 정본과 pid 생존뿐이고, 조치는 제어자 자신의 시작 명령 하나다(잠금 보유자가 있으면 양보).
+ * 의도적 종료 표식이 있거나 STOPPED 면 아무것도 하지 않는다 — 종료 뒤 부활 금지.
  */
+const KEEPER_TICK_MS = 15000;
 function ensureKeeper() {
-  // startPythonBackend가 동일 제어자를 시작한다. 경쟁 감시 데몬을 추가하지 않는다.
+  if (keeperTimer || !backendCommand) return;
+  const basePath = backendCommand.basePath;
+  const statePath = path.join(basePath, 'data', 'restart_control', 'state.json');
+  const marker = path.join(basePath, 'data', '.intentional_shutdown');
+  keeperTimer = setInterval(() => {
+    let state = null;
+    try { state = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch (e) { return; }
+    const verdict = controllerVerdict(state, pidAlive, { intentional: fs.existsSync(marker) });
+    if (!shouldAttemptRevive(verdict, lastReviveMs)) return;
+    lastReviveMs = Date.now();
+    try {
+      spawnController({ reason: verdict.reason + (verdict.pid ? ` pid=${verdict.pid}` : '') });
+    } catch (e) {
+      console.error('[Python] 제어자 되살리기 실패:', e.message);
+    }
+  }, KEEPER_TICK_MS);
+  if (typeof keeperTimer.unref === 'function') keeperTimer.unref();
+}
+
+function stopKeeper() {
+  if (keeperTimer) { clearInterval(keeperTimer); keeperTimer = null; }
 }
 
 /**
@@ -292,6 +339,7 @@ let _systemCleaned = false;
 function fullSystemCleanup() {
   if (_systemCleaned) return;
   _systemCleaned = true;
+  stopKeeper();  // 종료 의도 기록 전에 감시를 멈춘다 — 종료 뒤 `start` 가 새 세대를 띄우면 안 된다
   console.log('[Electron] 시스템 전체 정리 시작');
   const basePath = getBasePath();
   try {

@@ -738,12 +738,21 @@ async def health_check():
         live_turns = live_episode_ids()
     except Exception:
         live_turns_observation = "unknown"
+    # restart_controller — "워커(나)는 살아 있으나 제어자가 없다"를 여기서 드러낸다(2026-10-26 pid 39960 무음
+    # 사망: 11:38 편집이 재기동으로 안 올라오고 restart --wait 가 접수함에 머물렀다). 판정은 pid+출생시각.
+    try:
+        from restart_process import controller_presence
+        presence = controller_presence(BASE_PATH)
+        controller = {k: presence.get(k) for k in ("verdict", "controller", "controller_alive", "state_age_s", "phase")}
+    except Exception as exc:
+        controller = {"verdict": "unknown", "error": f"{type(exc).__name__}: {exc}"}
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "base_path": str(BASE_PATH),
         "live_turns": live_turns,
         "live_turns_observation": live_turns_observation,
+        "restart_controller": controller,
     }
 
 

@@ -9,11 +9,41 @@ import secrets
 import signal
 import sys
 import time
+import traceback
 from pathlib import Path
 
 from restart_protocol import (STATE_VERSION, OwnerLock, atomic_json, code_manifest,
                               control_dir, preflight, read_json, request)
-from restart_process import ProcessAdapter, identity, signal_owned
+from restart_process import ProcessAdapter, alive, controller_presence, identity, signal_owned
+
+LOG_LIMIT = 2 * 1024 * 1024
+
+
+def log(home, message):
+    """제어자의 자기 수명 기록 — `data/restart_control/controller.log`.
+
+    2026-10-26 제어자 pid 39960 이 06:40:04 ACTIVE 관측 저장 직후 소리 없이 사라졌다. stdout 은
+    시작한 주체마다 달랐고(런처 파이프·세션 스크래치 파일·터미널), 종료 기록도 감시자도 없어서
+    원인 지문이 하나도 남지 않았다. 그래서 시작·잠금 양보·tick 예외·신호·종료를 제어자 자신이
+    한 파일에 남긴다. stdout 쓰기 실패(닫힌 파이프 EPIPE 등)는 제어자를 죽이지 않는다.
+    """
+    line = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] pid={os.getpid()} {message}"
+    try:
+        path = Path(home) / "controller.log"
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            if path.stat().st_size > LOG_LIMIT:
+                os.replace(path, path.with_name("controller.log.old"))
+        except OSError:
+            pass
+        with path.open("a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+    try:
+        print(line, flush=True)
+    except (OSError, ValueError):
+        pass
 
 
 class Controller:
@@ -363,13 +393,25 @@ class Controller:
             if not start or not (self.base / "data/.intentional_shutdown").exists():
                 if start and observed.get("phase") == "FAILED":
                     request(self.base, "explicit_start_retry", artifact_digest=code_manifest(self.code_root)["digest"])
+                log(self.home, f"owner.lock 보유자 있음 — 양보하고 종료(start={start}, phase={observed.get('phase')}, "
+                               f"controller={observed.get('controller')})")
                 return 0
             if time.monotonic() >= acquire_deadline:
+                log(self.home, "의도적 종료 중 owner.lock 대기 40초 초과 — 종료(2)")
                 return 2
             time.sleep(0.05)
         # 잠금 대기 중 이전 제어자가 남긴 최종 상태를 다시 읽는다.
         self.state = read_json(self.home / "state.json") or self.state
+        exit_note = "STOPPED 도달"
         try:
+            previous = controller_presence(self.base, self.state)
+            log(self.home, f"제어자 시작 start={start} phase={self.state.get('phase')} generation={self.state.get('generation')} "
+                           f"이전 제어자={previous['controller']} 생존={previous['controller_alive']} "
+                           f"상태 나이={previous['state_age_s']}s stdout={_stdout_target()}")
+            if previous["verdict"] == "controller_missing":
+                # 이전 제어자가 기록 없이 사라진 경우다. 영속 상태를 그대로 입양한다(새 세대 아님).
+                log(self.home, f"이전 제어자 pid={previous['controller'].get('pid')} 가 종료 기록 없이 사라졌다 "
+                               f"(마지막 상태 갱신 {previous['state_age_s']}s 전, 워커 생존={previous['worker_alive']}) — 입양")
             self.save(controller=identity(os.getpid()), shutdown_drain=True)
             legacy = read_json(self.home / "legacy.json")
             if (self.state["phase"] == "STOPPED" and legacy
@@ -392,20 +434,42 @@ class Controller:
                 preflight(self.code_root, manifest)
                 self.start_generation(manifest)
             def shutdown(signum, frame):
+                log(self.home, f"신호 {signal.Signals(signum).name} 수신 — 의도적 종료 표식 기록")
                 atomic_json(self.base / "data/.intentional_shutdown", {"signal": signum})
             signal.signal(signal.SIGTERM, shutdown)
             signal.signal(signal.SIGINT, shutdown)
+            if hasattr(signal, "SIGHUP"):
+                # 시작한 터미널/세션이 닫혀도 제어자는 워커보다 오래 살아야 한다(워커는 새 세션이라 면역).
+                # 기본 동작(무음 종료) 대신 기록하고 계속 돈다.
+                signal.signal(signal.SIGHUP, lambda signum, frame: log(self.home, "신호 SIGHUP 수신 — 무시하고 계속"))
             while self.state["phase"] != "STOPPED":
                 try:
                     self.tick()
                 except Exception as exc:
                     # 관측/일시 I/O 실패는 재기동 권한이 아니다. 상태를 유지한다.
-                    print(f"[restart_controller] {self.state['phase']}: {type(exc).__name__}: {exc}", flush=True)
+                    log(self.home, f"{self.state['phase']}: {type(exc).__name__}: {exc}\n{traceback.format_exc().rstrip()}")
                 if self.state["phase"] != "STOPPED":
                     time.sleep(0.5)
             return 0
+        except BaseException as exc:
+            exit_note = f"루프 밖 예외 {type(exc).__name__}: {exc}\n{traceback.format_exc().rstrip()}"
+            raise
         finally:
+            log(self.home, f"제어자 종료 — {exit_note} phase={self.state.get('phase')}")
             self.lock.close()
+
+
+def _stdout_target():
+    """이 제어자의 stdout 이 어디로 가는지(파이프·파일·/dev/null) — 다음 무음 사망 때 시작 주체를 추적하는 지문."""
+    try:
+        if os.path.exists("/proc/self/fd/1"):
+            return os.readlink("/proc/self/fd/1")
+        import fcntl
+        if hasattr(fcntl, "F_GETPATH"):
+            return fcntl.fcntl(1, fcntl.F_GETPATH, b"\0" * 1024).rstrip(b"\0").decode(errors="replace")
+        return "fd1"
+    except Exception:
+        return "closed"
 
 
 def compact_status(state: dict) -> dict:
@@ -435,7 +499,11 @@ def main(argv=None, code_root=None):
     base = Path(os.environ.get("INDIEBIZ_BASE_PATH", code_root))
     if args.action in {"start", "serve"}:
         from update_maintenance import check_start
-        check_start(base)
+        try:
+            check_start(base)
+        except ValueError as exc:
+            log(control_dir(base), f"{args.action} 거절 — {exc}")
+            raise
         return Controller(base, code_root).run(start=args.action == "start")
     if args.action == "wait":
         while read_json(control_dir(base) / "state.json", {}).get("phase") != "STOPPED":
@@ -444,8 +512,18 @@ def main(argv=None, code_root=None):
     if args.action == "status":
         state = read_json(control_dir(base) / "state.json", {})
         state.pop("control_token", None)
+        # 죽은 pid 를 그대로 보여 주던 status — 제어자 생존을 pid+출생시각으로 판정해 맨 앞에 말한다.
+        presence = controller_presence(base, state)
+        state["presence"] = presence
+        if presence["verdict"] == "controller_missing":
+            print(f"[restart_controller] 제어자 부재: pid={presence['controller'].get('pid')} 죽음, 워커 생존={presence['worker_alive']}, "
+                  f"상태 {presence['state_age_s']}s 전 멈춤 — 요청은 처리되지 않는다. "
+                  f"복구: {sys.executable} backend/api.py start (런처가 떠 있으면 자동)")
+        else:
+            print(f"[restart_controller] 제어자 {presence['verdict']} pid={(presence['controller'] or {}).get('pid')} "
+                  f"phase={presence['phase']} 상태 나이={presence['state_age_s']}s")
         print(state if args.full else compact_status(state))
-        return 0
+        return 3 if presence["verdict"] == "controller_missing" else 0
     manifest = code_manifest(code_root)
     req = request(base, "cli_" + args.action, operation=args.action,
                   request_id=args.request_id, artifact_digest=manifest["digest"],

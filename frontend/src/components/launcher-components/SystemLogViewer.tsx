@@ -17,6 +17,7 @@ const FILES: { key: string; label: string }[] = [
   { key: 'keeper', label: 'keeper' },
   { key: 'tunnel', label: '터널' },
   { key: 'electron', label: 'Electron' },
+  { key: 'controller', label: '제어자' },
 ];
 
 export function SystemLogViewer() {

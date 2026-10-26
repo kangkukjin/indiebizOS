@@ -7,6 +7,7 @@ export { DraggableIcon } from './DraggableIcon';
 export { DraggableTrash } from './DraggableTrash';
 export { ContextMenu } from './ContextMenu';
 export { NodePresence } from './NodePresence';
+export { ControllerPresence } from './ControllerPresence';
 export { ActiveProjects } from './ActiveProjects';
 export { ModelGearLever } from './ModelGearLever';
 export { LimbSwitch } from './LimbSwitch';

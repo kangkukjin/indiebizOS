@@ -171,6 +171,58 @@ class ProcessAdapter:
         return None, [identity(child.pid)]
 
 
+_presence_cache = {}
+
+
+def _state_cached(base):
+    """state.json 을 mtime 기준으로 캐시해 읽는다(/health 같은 뜨거운 길에서 230KB 재파싱 방지)."""
+    path = control_dir(base) / "state.json"
+    try:
+        stamp = path.stat().st_mtime_ns
+    except OSError:
+        return {}
+    if _presence_cache.get("key") != (str(path), stamp):
+        _presence_cache.update(key=(str(path), stamp), state=read_json(path, {}) or {})
+    return _presence_cache["state"]
+
+
+def controller_presence(base, state=None, now=None):
+    """"워커는 살아 있으나 제어자가 없다"를 드러낸다 — 2026-10-26 제어자 pid 39960 무음 사망.
+
+    판정은 pid+출생시각(`alive`)이다. 죽은 pid 를 그대로 보여 주던 `api.py status` 와 제어자를
+    모르던 `/health` 가 같은 한 벌을 쓴다. 관측 실패(AccessDenied)는 죽음이 아니라 unknown 이다.
+      verdict: controller_alive | controller_missing | stopped | no_state | unknown
+      revive : 제어자를 다시 띄워야 하는가(STOPPED·의도적 종료 표식은 제외).
+    """
+    state = _state_cached(base) if state is None else state
+    now = time.time() if now is None else now
+    out = {"phase": state.get("phase"), "generation": state.get("generation"),
+           "controller": state.get("controller"), "worker": state.get("worker"),
+           "controller_alive": None, "worker_alive": None,
+           "state_age_s": None, "verdict": "no_state", "revive": False}
+    if not state.get("phase"):
+        return out
+    if state.get("updated_at"):
+        out["state_age_s"] = round(max(0.0, now - float(state["updated_at"])), 1)
+    for key in ("controller", "worker"):
+        try:
+            out[key + "_alive"] = alive(state.get(key))
+        except Exception as exc:  # AccessDenied 등 — 관측 실패
+            out[key + "_alive"] = None
+            out.setdefault("errors", []).append(f"{key}: {type(exc).__name__}: {exc}")
+    intentional = (Path(base) / "data/.intentional_shutdown").exists()
+    if out["controller_alive"] is None:
+        out["verdict"] = "unknown"
+    elif out["controller_alive"]:
+        out["verdict"] = "controller_alive"
+    elif state.get("phase") == "STOPPED" or intentional:
+        out["verdict"] = "stopped"
+    else:
+        out["verdict"] = "controller_missing"
+        out["revive"] = True
+    return out
+
+
 _daemon_cache = {}
 
 

@@ -1181,6 +1181,7 @@ async def get_system_logs(file: str = "runtime", lines: int = 300, errors_only: 
         "keeper": base / "backend_keeper.log",     # 감독 데몬 + keeper 가 스폰한 백엔드
         "tunnel": base / "cloudflared.log",        # 터널
         "electron": base / "electron_dev.log",     # Electron 재시작 스크립트 로그
+        "controller": base / "restart_control" / "controller.log",  # 재기동 제어자 자기 수명 기록(2026-10-26)
     }
     p = whitelist.get(file)
     if p is None:

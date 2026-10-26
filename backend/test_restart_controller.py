@@ -1,9 +1,11 @@
 """R1 장애 주입: 상태 기록 양쪽 사망/관측 불능/직렬화/의도적 종료. 외부 송신 없음."""
 import copy
+import os
 from pathlib import Path
 
 import pytest
-from restart_controller import Controller
+from restart_controller import Controller, log
+from restart_process import controller_presence, identity
 from restart_protocol import atomic_json, code_manifest, control_dir, request
 
 
@@ -296,3 +298,40 @@ def test_update_shutdown_timeout_preserves_work_and_reopens_admission(setup):
     assert adapter.stops == 0
     assert ctl.state['last_result']['outcome'] == 'deferred'
     assert not (ctl.base / 'data/.intentional_shutdown').exists()
+
+
+def test_controller_log_survives_broken_stdout(tmp_path, monkeypatch):
+    """2026-10-26: 제어자의 유일한 출력이 print 였고 stdout 은 시작 주체마다 달랐다. 닫힌 파이프가
+    tick 예외 보고를 죽음으로 바꾸면 안 되고, 기록은 stdout 과 무관하게 controller.log 에 남아야 한다."""
+    class Broken:
+        def write(self, _):
+            raise BrokenPipeError(32, "Broken pipe")
+        def flush(self):
+            raise BrokenPipeError(32, "Broken pipe")
+    monkeypatch.setattr("sys.stdout", Broken())
+    home = control_dir(tmp_path)
+    log(home, "tick 예외 보고")
+    text = (home / "controller.log").read_text(encoding="utf-8")
+    assert "tick 예외 보고" in text and f"pid={os.getpid()}" in text
+
+
+def test_controller_presence_distinguishes_missing_from_stopped(tmp_path):
+    """status·/health 가 공유하는 판정: 죽은 pid 는 그대로 보여 주지 않고 '제어자 부재'로 말한다."""
+    import subprocess
+    import sys
+    gone = subprocess.Popen([sys.executable, "-c", "pass"])
+    dead = identity(gone.pid)
+    gone.wait()
+    me = identity(os.getpid())
+    base = tmp_path
+    state = {"phase": "ACTIVE", "controller": dead, "worker": me, "updated_at": 50.0, "generation": "g"}
+    missing = controller_presence(base, state, now=100.0)
+    assert missing["verdict"] == "controller_missing" and missing["revive"] is True
+    assert missing["worker_alive"] is True and missing["controller_alive"] is False
+    assert missing["state_age_s"] == 50.0
+    assert controller_presence(base, dict(state, controller=me))["verdict"] == "controller_alive"
+    assert controller_presence(base, dict(state, phase="STOPPED"))["verdict"] == "stopped"
+    atomic_json(base / "data/.intentional_shutdown", {})
+    assert controller_presence(base, state)["revive"] is False
+    assert controller_presence(base, {})["verdict"] == "no_state"
+

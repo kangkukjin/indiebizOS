@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 
 import pytest
-from restart_process import ProcessAdapter, alive, identity, signal_owned, tree
+from restart_process import ProcessAdapter, alive, controller_presence, identity, signal_owned, tree
 from restart_protocol import atomic_json, code_manifest, control_dir, read_json, request
 
 pytestmark = pytest.mark.system
@@ -209,6 +209,33 @@ def test_real_timeout_drain_and_identical_request_after_controller_restart(runti
     time.sleep(0.8)
     assert state()["generation"] == generation
     assert (base / "effects").read_text().splitlines() == ["done"]
+
+
+def test_real_controller_killed_pending_request_is_served_after_revival(runtime):
+    """2026-10-26 pid 39960: 제어자만 죽고 워커가 남으면 요청이 접수함에 머문다. 판정이 그 상태를
+    말해야 하고, 죽음을 넘어 살아 있는 쪽(런처 감시)이 같은 `api.py start` 를 띄우면 그 요청이
+    새 세대 없이 입양된 상태에서 처리돼야 한다."""
+    base, port, launch, state = runtime
+    first = state()
+    ident = first["controller"]
+    signal_owned(ident, force=True)          # SIGKILL — 종료 기록을 남길 기회가 없는 죽음
+    eventually(lambda: not alive(ident))
+    presence = controller_presence(base)
+    assert presence["verdict"] == "controller_missing" and presence["revive"] is True
+    assert presence["worker_alive"] is True and presence["controller_alive"] is False
+    assert http(port, "/health")["status"] == "healthy"   # 워커는 멀쩡히 응답한다
+    request(base, "edit-while-headless", request_id="headless")
+    time.sleep(1.0)
+    assert read_json(control_dir(base) / "results/headless.json") is None   # 아무도 처리하지 않는다
+    assert state()["generation"] == first["generation"]
+    launch()                                 # = 런처 ensureKeeper 가 하는 일: api.py start
+    result = eventually(lambda: read_json(control_dir(base) / "results/headless.json"), timeout=40)
+    assert result["outcome"] == "restarted"
+    eventually(lambda: state().get("phase") == "ACTIVE" and state().get("generation") != first["generation"])
+    assert controller_presence(base)["verdict"] == "controller_alive"
+    text = (control_dir(base) / "controller.log").read_text(encoding="utf-8")
+    assert "종료 기록 없이 사라졌다" in text and f"pid={ident['pid']}" in text
+    assert sum(alive(read_json(p)) for p in (control_dir(base) / "workers").glob("*.json")) == 1
 
 
 def test_real_worker_crash_reaps_orphan_tool_without_replay(runtime):

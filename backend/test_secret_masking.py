@@ -101,3 +101,10 @@ def test_password_instructions_without_values_stay_readable():
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_sk_prefix_inside_a_word_is_not_a_key():
+    """risk-/task-/mask- 로 끝나는 낱말 뒤 슬러그는 키가 아니다(ep5518 Bloomberg URL 오탐)."""
+    url = "https://www.bloomberg.com/news/articles/2026-10-23/data-centers-face-downgrade-risk-amid-local-pushback-s-p-says"
+    assert mask_secrets(url) == url
+    _assert_masked("key: sk-aB3xY7zQ1wK9m2Lt4Rn8", "sk-aB3xY7zQ1wK9m2Lt4Rn8", "sk-a")

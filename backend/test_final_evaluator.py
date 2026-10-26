@@ -500,6 +500,25 @@ def test_computed_written_artifacts_reach_first_evaluation(supervisor, tmp_path)
     assert snapshot_error(supervisor)
 
 
+def test_masked_secret_in_artifact_is_not_a_change_during_evaluation(supervisor, tmp_path):
+    """증거 마스킹(****)은 디스크 원문을 바꾸지 않는다. 지문이 가려진 본문 기준이면 마스킹이 닿은
+    산출물은 평가 뒤 늘 '변경'으로 오판돼 판정이 비워진다(ep5045·5518 AI 동향 보고서 URL)."""
+    from final_evaluator import prepare, snapshot_error
+    report = tmp_path / '보고.md'
+    secret = 'sk-' + 'aB3xY7zQ1wK9m2Lt4Rn8' * 2
+    report.write_text('## 출처\n- 키 노출 사례: ' + secret + '\n', encoding='utf-8')
+    raw = supervisor.store.evidence(json.dumps({'evidence': [
+        {'kind': 'invoke', 'action': 'self:write', 'targets': {'path': str(report)}}]}))
+    key = supervisor._start('execute_ibl', {'code': '[self:write]{path:$out+"/보고.md",content:$data}'})
+    supervisor._finish(key, json.dumps({'edition': 2, 'executed': True, 'result_ref': raw}))
+    supervisor.store.put_response('보고서를 저장했습니다.')
+    packet = prepare(supervisor)
+    assert secret not in packet['files'] and '****' in packet['files']
+    assert snapshot_error(supervisor) is None
+    report.write_text('바뀜', encoding='utf-8')
+    assert snapshot_error(supervisor)
+
+
 @pytest.mark.parametrize('phase', ['final', 'workspace', 'semantic'])
 def test_apply_evaluation_uses_stage_policy_without_demanding_final_response(supervisor, monkeypatch, phase):
     from final_evaluator import invoke, prepare, APPLY_POLICY, FINAL_POLICY

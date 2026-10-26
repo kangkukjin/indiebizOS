@@ -238,7 +238,10 @@ def prepare(controller, tool_calls=None):
         text = controller.store.read_evidence(artifact["evidence_id"], 0, None)["text"]
         from cognitive_eval import bounded_attachment
         files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
-        snapshots[path] = {"hash": digest(text), "mode": "text"}
+        # 모델엔 비밀이 가려진 증거 본문을 주되, 변경 감지 지문은 디스크 원문 기준이다.
+        # 가려진 본문의 지문을 쓰면 마스킹이 한 번이라도 닿은 산출물은 평가 뒤 원문과 늘 어긋나
+        # "평가 중 산출물이 변경됐습니다"로 판정이 비워진다(ep5045·5518 AI 동향 보고서).
+        snapshots[path] = {"hash": artifact["hash"], "mode": "text"}
     evaluator = Evaluator()
     with controller.evaluation_stage("visual"):
         images = evaluator._collect_visual_artifacts(artifact_response, tool_calls=calls)

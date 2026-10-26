@@ -106,7 +106,7 @@ _SECRET_FIELD_RE = re.compile(
 # 값 형식 기반: 필드명 없이도 형태만으로 자격증명임이 확실한 토큰들
 _SECRET_TOKEN_RES = [re.compile(p) for p in (
     r'AIza[0-9A-Za-z_-]{35}',                       # Google API 키
-    r'sk-[A-Za-z0-9_-]{20,}',                       # OpenAI/Anthropic 류
+    r'(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}',       # OpenAI/Anthropic 류 — risk-/task- 같은 낱말 꼬리 제외
     r'(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}',    # GitHub 토큰
     r'github_pat_[A-Za-z0-9_]{20,}',
     r'xox[baprs]-[A-Za-z0-9-]{10,}',                # Slack

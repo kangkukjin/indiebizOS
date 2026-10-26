@@ -8,6 +8,7 @@
 """
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -25,20 +26,25 @@ def _load(name, path):
     return mod
 
 
-def test_status_is_compact_by_default_and_full_on_request(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize('controller_present', [False, True])
+def test_status_is_compact_by_default_and_full_on_request(tmp_path, monkeypatch, capsys, controller_present):
     import restart_controller as RC
     files = {f"backend/m{i}.py": "a" * 64 for i in range(800)}
     state = {"phase": "ACTIVE", "control_token": "secret", "defer_note": "x", "last_result": {"outcome": "restarted"},
              "manifest": {"digest": "d1", "files": files}, "target_manifest": {"digest": "d2", "files": files}}
+    if controller_present:
+        state['controller'] = RC.identity(os.getpid())
+    expected_status = 0 if controller_present else 3
     ctl = RC.control_dir(tmp_path)
     ctl.mkdir(parents=True, exist_ok=True)
     (ctl / "state.json").write_text(json.dumps(state), encoding="utf-8")
     monkeypatch.setenv("INDIEBIZ_BASE_PATH", str(tmp_path))
-    assert RC.main(["status"]) == 0
+    assert RC.main(["status"]) == expected_status
     out = capsys.readouterr().out
     assert len(out) < 2000 and "secret" not in out
     assert "'phase': 'ACTIVE'" in out and "'digest': 'd1'" in out and "'files': 800" in out and "restarted" in out
-    assert RC.main(["status", "--full"]) == 0
+    assert ('제어자 부재' in out) is (not controller_present)
+    assert RC.main(["status", "--full"]) == expected_status
     full = capsys.readouterr().out
     assert len(full) > 100_000 and "backend/m799.py" in full and "secret" not in full
 

@@ -516,7 +516,7 @@ def main(argv=None, code_root=None):
         presence = controller_presence(base, state)
         state["presence"] = presence
         if presence["verdict"] == "controller_missing":
-            print(f"[restart_controller] 제어자 부재: pid={presence['controller'].get('pid')} 죽음, 워커 생존={presence['worker_alive']}, "
+            print(f"[restart_controller] 제어자 부재: pid={(presence['controller'] or {}).get('pid')} 죽음, 워커 생존={presence['worker_alive']}, "
                   f"상태 {presence['state_age_s']}s 전 멈춤 — 요청은 처리되지 않는다. "
                   f"복구: {sys.executable} backend/api.py start (런처가 떠 있으면 자동)")
         else:

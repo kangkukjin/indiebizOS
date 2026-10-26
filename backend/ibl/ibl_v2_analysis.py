@@ -393,9 +393,8 @@ def access_type(compiler, node, base, key, key_type=None):
 def row_flow_type(compiler, node, contract, args, fields, values, result, env, names, readonly):
     """Preserve row observations using the vocabulary's existing flow contract."""
     flow = contract.get('analysis', {}).get('flow', {})
-    source = args.get(contract.get('pipe_input'), UNKNOWN)
-    if source.kind == 'Record':
-        source = dict(source.fields).get('items', UNKNOWN)
+    from ibl_v2_types import rows_type
+    source = rows_type(args.get(contract.get('pipe_input'), UNKNOWN))
     schema_param = flow.get('schema_param') or contract.get('analysis', {}).get('schema_param')
     if schema_param:
         from common.record_schema import schema_fields, schema_types

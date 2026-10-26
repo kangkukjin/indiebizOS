@@ -58,5 +58,25 @@ def test_registered_contract_is_read_only_and_fresh():
     assert contract['effects'] == ['read_external'] and contract['per_run']
     assert (ROOT / 'data/scripts' / entry['file']).is_file()
 
+
+@pytest.mark.parametrize('empty', [False, True])
+def test_registered_lookup_composes_as_rows(source, monkeypatch, tmp_path, empty):
+    from ibl_v2_adapters import Adapter, load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from ibl_dependencies import script_contract
+    monkeypatch.setattr(source, 'api_call', lambda *a, **kw: {
+        'header': {'resultCode': '00'},
+        'body': {'totalCount': 0 if empty else 1,
+                 'items': [] if empty else [{'ITEM_SEQ': '123', 'ITEM_NAME': 'fixture'}]}})
+    registry = load_registry(str(tmp_path))
+    registry['self:script'] = Adapter(registry['self:script'].contract,
+        lambda rt, args: source.lookup(args['args']), specialize=script_contract)
+    plan = compile_program('[self:script]{id:"의약품허가조회",args:{query:"fixture"}}'
+                           ' >> [table:select]{columns:["id","title"]}', registry)
+    assert not plan.issues, plan.report()
+    out = Runtime(plan).run()
+    assert out['success'] and out['value'] == ([] if empty else [{'id': '123', 'title': 'fixture'}]), out
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

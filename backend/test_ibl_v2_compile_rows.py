@@ -72,6 +72,69 @@ def test_declared_rows_do_not_hide_runtime_shape_failure():
     assert out['diagnostic']['code'] == 'TYPE_CONTRACT'
 
 
+@pytest.mark.parametrize('flag', [False, True])
+@pytest.mark.parametrize('consumer,expected', [
+    ('[table:select]{columns:["n"]}', [{'n': 2}]),
+    ('[table:filter]{where:($r)=>$r.n>0}', [{'n': 2}]),
+    ('[table:sort]{by:"n"}', [{'n': 2}]),
+    ('[table:take]{n:1}', [{'n': 2}]),
+    ('[table:compute]{set:($r)=>{n:$r.n+1}}', [{'n': 3}]),
+    ('[table:each]{return $it.n}', [2]),
+])
+def test_branch_list_and_envelope_share_row_consumers(tmp_path, flag, consumer, expected):
+    code = ('$rows=[{n:2}]\n[if:$flag]{$rows={items:[{n:2}],count:1}}\n'
+            'return $rows >> ' + consumer)
+    plan = compile_program(code, load_registry(str(tmp_path)), {'flag': flag})
+    assert not plan.issues, plan.issues
+    out = Runtime(plan, {'flag': flag}).run()
+    assert out['success'] and out['value'] == expected, out
+
+
+@pytest.mark.parametrize('bad', ['{count:2}', '{items:3}', 'null', '7', '"rows"'])
+@pytest.mark.parametrize('consumer', [
+    '[table:each]{return $it.n}', '[table:select]{columns:["n"]}',
+])
+def test_non_row_branch_rejected_before_any_effect(tmp_path, bad, consumer):
+    calls = []
+    registry = load_registry(str(tmp_path))
+    registry['fixture:effect'] = Adapter(
+        {'version': 1, 'params': {}, 'result': 'Number', 'effects': ['write_external']},
+        lambda *_: calls.append(True) or 1)
+    code = ('[fixture:effect]\n$rows=[{n:2}]\n[if:$flag]{$rows=' + bad + '}\n'
+            'return $rows >> ' + consumer)
+    plan = compile_program(code, registry, {'flag': False})
+    assert any(i['code'] == 'TYPE' for i in plan.issues), plan.report()
+    out = Runtime(plan, {'flag': False}).run()
+    assert not out['executed'] and not calls
+
+
+@pytest.mark.parametrize('empty', ['[]', '{items:[]}'])
+def test_branch_empty_rows_preserve_element_type(tmp_path, empty):
+    from ibl_v2_types import declared, compatible
+    registry = load_registry(str(tmp_path))
+    code = ('$rows=' + empty + '\n[if:$flag]{$rows={items:[{n:2}]}}\n'
+            'return $rows >> [table:each]{return $it.n + 1}')
+    for flag, expected in [(False, []), (True, [3])]:
+        plan = compile_program(code, registry, {'flag': flag})
+        assert not plan.issues, plan.issues
+        assert compatible(plan.result_type, declared('List<Number>'))
+        out = Runtime(plan, {'flag': flag}).run()
+        assert out['success'] and out['value'] == expected, out
+
+
+def test_branch_row_flow_survives_legacy_transform(tmp_path):
+    registry = load_registry(str(tmp_path))
+    source = ('$rows=[{n:2}]\n[if:$flag]{$rows={items:[{n:3}]}}\n'
+              '$unique=$rows >> [table:dedup]{by:"n"}\n'
+              'return $unique >> [table:each]{return $it.n + 1}')
+    for flag, expected in [(False, [3]), (True, [4])]:
+        plan = compile_program(source, registry, {'flag': flag})
+        assert not plan.issues, plan.issues
+        assert str(plan.result_type) == 'List<Number>'
+        out = Runtime(plan, {'flag': flag}).run()
+        assert out['success'] and out['value'] == expected, out
+
+
 @pytest.mark.system
 def test_round32_whole_program_and_missing_source(tmp_path):
     fixture = Path(__file__).resolve().parents[1] / 'docs/experiments/long_sentence_imagination/round_32'

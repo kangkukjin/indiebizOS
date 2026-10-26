@@ -37,6 +37,11 @@ stdin 객체→결과 파일, `registered-json/1` 등록 실행은 stdin 객체�
 읽을 반환 필드를 적는다. 효과를 확정하지 못하면 `unknown`을 유지한다. `보고서HTML`은
 src·dst와 선택 인자, 결과 items의 path·bytes·table_structure를 이 계약으로 검사한다.
 HTML 생성·표 구조 보존은 시각 검수나 공개 승인과 다르며 `publication_pending`을 확인한다.
+행 목록을 반환하는 부품은 `result: {items: 'List<Record>'}`처럼 연결할 필드를 선언한다.
+`result: Record`만으로는 `items`의 존재를 보장하지 않는다. op마다 필수 인자·추가 반환 필드가
+다르면 `variants`로 선언한다. `판정관용구`는 모든 op의 items·count와 prepare의 plan,
+select의 selection, match의 match_info를 선언하므로 `본문에서찾기`의 결과를
+`.items` 추출 없이 `table:select`·`table:each` 등 행 연산에 바로 연결할 수 있다.
 
 ### 실행 성공과 작업 판정
 
@@ -342,7 +347,7 @@ Python·Bash·Node 인터프리터는 그대로 지원한다. 기존 등록의 s
 callable_contract:
   version: 1
   params: {x: Number}
-  result: Record
+  result: {n: Number}
   effects: [pure]
   adapter: {protocol: ibl-script/2}
 ```

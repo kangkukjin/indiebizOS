@@ -119,7 +119,12 @@ NEVER = Type("Never")
 
 
 def rows_type(typ):
-    """행 목록이 필요한 자리에서 레코드 봉투({items:[…]})는 그 행 목록으로 읽는다(값 쪽은 rows_value)."""
+    """행 목록 자리의 봉투를 해소한다. 분기마다 해소하되 잘못된 갈래도 보존한다."""
+    if typ.kind == "Union":
+        result = NEVER
+        for member in alternatives(typ):
+            result = join(result, rows_type(member))
+        return result
     if typ.kind == "Record":
         items = dict(typ.fields).get("items")
         if items is not None and items.kind == "List":

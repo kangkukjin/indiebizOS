@@ -67,6 +67,9 @@ return $결과
 변수는 값 그 자체다. 데이터의 `error`, `success`, `items`는 일반 키다.
 목록은 0/1/N건 모두 목록이며 `.items` 같은 가상 필드는 없다. 길이는 `len($x)`다.
 행 목록을 받는 자리(filter·sort·take·select·compute 의 items, `table:each`)는 `items` 행 목록을 가진 Record 봉투도 그대로 받는다(2026-09-30 개정 — 통화는 `{items:[…]}` 하나다. join·groupby·dedup·judge 의 결과나 JSON 배열을 읽은 `.data`를 `.items` 없이 이어 쓴다). `items` 목록이 없는 Record 는 받지 않는다. `[table:sort]`의 `by`는 필드 이름 또는 목록(다단계, 앞의 키가 먼저)이다. `[table:join]`은 `right`를 명시하면 파이프 값이 `left`다.
+분기 결과가 목록 또는 `items` 봉투여도 각 갈래를 같은 행 타입으로 해석한다. 비목록 갈래는
+`each`를 포함해 실행 전 오류이며, 미확정 값은 실행 시 검사한다. 등록 부품의 반환이 단순
+`Record`로만 선언되면 행 목록을 보장하지 않으므로 실제 `items` 필드를 계약에 선언한다.
 레코드와 목록은 불변이고 변수만 재바인딩한다. 외부 입력은 `inputs`로 명시하며 이전 턴 변수는 자동 주입하지 않는다.
 큰 본문은 `[self:read]{path:...}`의 `.text`를 전달한다. 일반 외부 값은 `inputs`로 받는다.
 `files`, `files_from`는 실행 인자로 받지 않는다. 외부 값은 `inputs`로 전달한다. 현재 실행은 반환된 `resume:{run_id}`와 동일한 code·inputs로 이어간다.

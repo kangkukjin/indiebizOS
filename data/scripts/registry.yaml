@@ -1251,7 +1251,7 @@ python_libraries:
     required_any:
     - - query
       - id
-    result: Record
+    result: {success: Bool, items: 'List<Record>'}
     version: 1
   description: '식약처 의약품 제품 허가정보(전문·일반)를 조회. args: query(제품명) 또는 id(품목기준코드), page(기본1),
     limit(1~100). items에 id·title·manufacturer·classification·ingredients_text·url·raw,
@@ -1451,7 +1451,20 @@ python_libraries:
     params: {op: Text, mode: Text, source: Unknown, origin: Unknown, question: Text, limit: Number, context: Number, prepared: Record, judged: Record, selection: Record, result: Record, results: 'List<Record>', keep: 'List<Text>', pattern: Text}
     required: [op]
     enums: {op: [urls, prepare, select, finish, match, collect]}
-    result: Record
+    result: {items: 'List<Record>', count: Number}
+    integers: [limit, context]
+    minimum: {limit: 0, context: 0}
+    variants:
+    - {when: {op: urls}, required: [op, source]}
+    - when: {op: prepare}
+      required: [op, source, mode, question, limit]
+      enums: {mode: [search, body]}
+      nonempty: [question]
+      result: {items: 'List<Record>', count: Number, instruction: Text, plan: {items: 'List<Record>', count: Number, instruction: Text, source: {items: 'List<Record>'}}}
+    - {when: {op: select}, required: [op, prepared, judged, mode, limit], enums: {mode: [search, body]}, result: {items: 'List<Record>', count: Number, selection: {items: 'List<Record>', count: Number}}}
+    - {when: {op: finish}, required: [op, selection, result]}
+    - {when: {op: match}, required: [op, source, pattern, limit], result: {items: 'List<Record>', count: Number, match_info: Record}}
+    - {when: {op: collect}, required: [op, results]}
   description: '추가 op=match(source,pattern,limit,context): 출처 경계 안에서 문맥 선택. collect(results,keep): 명시 행 결과의 값·실패·원천 절단을 보존하며 펼침. 수집·Jev 관용구의 결정론적 URL 선택·입력 분할·원문 복원. 판정 호출은 IBL table:judge가 소유한다.
     보통 주소마다읽기·관련자료골라읽기·의미로본문찾기로 호출한다. args: op(urls|prepare|select|finish), mode(search|body),
     source(items 봉투 또는 행 목록), origin(prepare 선택: 중복 제거 전 원천 봉투), question(prepare:

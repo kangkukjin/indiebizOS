@@ -849,7 +849,9 @@ class Compiler:
             self.issue(node, "CONCURRENCY", "parallel은 1~8 정수입니다.")
         old_returns, self.returns = self.returns, []
         outer_writes, self.write_log = self.write_log, set()
-        local = {**env, "it": items.item or UNKNOWN, "i": NUMBER}
+        # Invalid unions have already been diagnosed by need(). Their tuple of
+        # alternatives is not an element type for the callback's local binding.
+        local = {**env, "it": (items.item or UNKNOWN) if items.kind == "List" else UNKNOWN, "i": NUMBER}
         visit = self.visit_unreachable if items.positions == () else self.visit
         result = visit(node.data["body"], local, names, frozenset(env) | RESERVED)
         for t in self.returns:
@@ -888,24 +890,8 @@ class Compiler:
 
 
 def _rows_of(typ):
-    """each 입력의 행 목록 타입. Union(`$x=[]` 뒤 분기에서 `{items:[…]}` 봉투로 재대입 등)은 갈래마다
-    행 목록으로 읽고 원소 타입을 합류한다. 68회차 L68-1: Union.item(멤버 tuple)이 그대로 `$it` 타입이 되어
-    검사기가 AttributeError 로 죽었다 — 진단도 트레이스백도 없이."""
-    typ = rows_type(typ)
-    if typ.kind != "Union":
-        return typ
-    element, positions = NEVER, ()
-    for member in alternatives(typ):
-        rows = rows_type(member)
-        if rows.kind == "List":
-            if rows.positions == ():
-                continue  # 정적으로 빈 갈래는 원소를 보태지 않는다(join 의 빈 목록 규칙과 같음)
-            element = join(element, rows.item or UNKNOWN)
-            positions = None
-        else:
-            element = join(element, UNKNOWN)
-            positions = None
-    return Type("List", item=element if element != NEVER else UNKNOWN, positions=positions)
+    """each와 표 연산은 같은 봉투·분기 해소를 사용한다. 비목록 갈래를 지우지 않는다."""
+    return rows_type(typ)
 
 
 @compilation_dependencies()

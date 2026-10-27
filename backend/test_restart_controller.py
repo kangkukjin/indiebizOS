@@ -90,6 +90,48 @@ def ticks(controller, count=15):
         controller.tick()
 
 
+@pytest.mark.parametrize("previous_phase", ["STOPPED", "FAILED"])
+def test_cold_start_publishes_new_owner_and_preparation_atomically(tmp_path, monkeypatch, previous_phase):
+    from restart_protocol import read_json
+    from test_remote_boot import probe
+    monkeypatch.setattr("restart_controller.signal.signal", lambda *args: None)
+    (tmp_path / "backend").mkdir()
+    (tmp_path / "backend/app.py").write_text("VALUE = 1\n")
+    adapter = Adapter()
+    adapter.base, adapter.running = tmp_path, False
+    ctl = Controller(tmp_path, tmp_path, adapter)
+    ctl.save(phase=previous_phase, generation="old", worker=None,
+             controller={"pid": 99999999, "born": 1})
+    class Death(BaseException):
+        pass
+    def prepare(*args, **kwargs):
+        state = read_json(ctl.home / "state.json")
+        assert state["controller"] == identity(os.getpid())
+        assert state["phase"] == "STARTING" and state["generation"] is None
+        assert probe.classify(state, state["controller"], None)["status"] == "waiting"
+        raise Death()
+    monkeypatch.setattr(ctl, "prepare_candidate", prepare)
+    with pytest.raises(Death):
+        ctl.run(start=True)
+    # A new controller can finish the persisted preparation without spawning twice.
+    recovered = Controller(tmp_path, tmp_path, adapter)
+    ticks(recovered, 4)
+    assert recovered.state["phase"] == "ACTIVE" and adapter.spawns == 1
+    assert recovered.state["generation"] != "old"
+
+
+def test_cold_start_preparation_failure_is_terminal_and_does_not_spawn(tmp_path, monkeypatch):
+    adapter = Adapter()
+    adapter.base, adapter.running = tmp_path, False
+    ctl = Controller(tmp_path, tmp_path, adapter)
+    ctl.save(phase="STARTING", generation=None, preparing_start=True)
+    monkeypatch.setattr(ctl, "prepare_candidate", lambda *a, **k: (_ for _ in ()).throw(ValueError("bad source")))
+    ctl.tick()
+    assert ctl.state["phase"] == "FAILED" and adapter.spawns == 0
+    assert ctl.state["last_result"]["outcome"] == "start_prepare_failed"
+    assert "bad source" in ctl.state["last_result"]["error"]
+
+
 def submit(controller, **kw):
     return request(controller.base, "test", **kw)
 

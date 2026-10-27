@@ -561,6 +561,8 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 실행 입력은 봉인 manifest, 비실행 파일은 정본 바이트로 대조한다. root에 기록하는 결말은 해당 `red_apply` 요청에만
 묶이며 이후 일반 재기동·종료가 과거 수리를 다시 열지 않는다. 원 증상 재검사 미확인은 공통 완료 판정에서 거절한다.
 종결 작업의 미전달 통지만 남아도 ACTIVE의 idle 스캔이 전달을 재시도하며 완료 판정·실행은 반복하지 않는다.
+명시적 콜드 시작은 새 제어자 신원과 `STARTING`·미정 세대를 한 번에 기록한 뒤 후보를 준비한다.
+준비 중 제어자가 죽으면 같은 의도를 회수하며, 준비 실패는 `start_prepare_failed`로 끝나고 워커를 띄우지 않는다.
 세대 정리는 활성·직전·대기 후보와 최근 3개를 남기며, 세대 안에 생긴 데이터 잔류는 정본으로 회수한다.
 
 제어 기반(G6): `api.py start` 는 `control_launcher` 가 정본의 제어 파일(`control_base.CONTROL_FILES`)을
@@ -568,6 +570,9 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 `restart_controller.py` 를 exec 한다. 기반 밖 모듈은 현역 세대(없으면 정본)에서 읽는다(`install_support_path`).
 제어 파일이 바뀌면 현역 제어자가 새 기반을 봉인·검증하고 `--takeover` 인계(토큰·상태 사본 `state.pre-<id>.json`)를
 한다. 인수 실패는 이전 기반이 잠금을 되찾아 계속 소유하며 그 기반은 `current.json.failed` 에 남는다.
+자동 워커 후보는 현재 제어자가 인수한 기반의 파일과 정본이 일치할 때만 게시한다. 승인 사본만 만들었거나
+인계가 실패한 상태에서는 기다린다. 제어자·후보 감시·helper 전용 변경(`CONTROL_ONLY_FILES`)은 인계만 하고
+워커를 교체하지 않으며, 공유 프로토콜·일반 워커 코드 변경은 인계 뒤 기존 정착·봉인·교체 절차를 따른다.
 수리 root 원장(G3·G5): `repair_root`(`data/system_ai_state/repair_roots/`)가 단계·시도·소유자(fencing)·다음 행동·
 재개 조건·수리/서비스/전달 결과를 한 곳에 쓰고, `repair_outcomes.progress`·`task_state`·완료 통지가 투영을 읽는다.
 G4: `repair_candidate.test_weakening`(시험 삭제·assert 감소·skip 추가는 의미 검토 없이 승인 불가)·

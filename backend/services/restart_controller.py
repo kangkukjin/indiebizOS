@@ -118,6 +118,7 @@ class Controller:
         result = self.result(outcome, **details)
         # ACTIVE의 첫 조치는 activate 재전달이다. 이 저장 직후 죽어도 관문이 남지 않는다.
         self.save(phase=phase, request=None, red_job_path=None, last_result=result, resume_pending=False,
+                  preparing_start=False,
                   candidate=None if phase in {"ACTIVE", "FAILED", "STOPPED"} else self.state.get("candidate"))
         self._notify_repair_root(result, request)
 
@@ -182,6 +183,7 @@ class Controller:
         if rollback:
             previous = None  # 실패한 후보는 복구 지점이 아니다
         self.save(phase="STARTING", generation=secrets.token_hex(16),
+                  preparing_start=False,
                   code_digest=candidate["generation"], generation_dir=candidate["generation_dir"],
                   source_digest=candidate.get("source_digest"),
                   manifest={"digest": candidate["generation"], "files": candidate.get("file_count")},
@@ -316,10 +318,10 @@ class Controller:
                       interrupted_owners=[], effect_unknown=False, previous_digest=s["code_digest"])
             return
         if self._development():
+            self._control_watch()
             if self._watcher is None:
                 self._watcher = self.candidates().Watcher(self)
             self._watcher.tick()
-            self._control_watch()
 
     def _candidate_for(self, req):
         """요청이 가리키는 봉인 후보를 확인하거나, 없으면 정본에서 지금 준비한다. None = 다음 tick 재시도."""
@@ -524,6 +526,14 @@ class Controller:
     def _tick_starting(self):
         s = self.state
         import generation_store as gens
+        if s.get("preparing_start"):
+            try:
+                candidate = self.prepare_candidate("start")
+            except Exception as exc:
+                self.finish("start_prepare_failed", phase="FAILED", error=f"{type(exc).__name__}: {exc}")
+                return
+            self.start_generation(candidate)
+            return
         receipt = self.adapter.receipt(s)
         if receipt is None:
             record = read_json(self.home / "workers" / (s["generation"] + ".json"))
@@ -728,26 +738,29 @@ class Controller:
                 # 이전 제어자가 기록 없이 사라진 경우다. 영속 상태를 그대로 입양한다(새 세대 아님).
                 log(self.home, f"이전 제어자 pid={previous['controller'].get('pid')} 가 종료 기록 없이 사라졌다 "
                                f"(마지막 상태 갱신 {previous['state_age_s']}s 전, 워커 생존={previous['worker_alive']}) — 입양")
-            self.save(controller=identity(os.getpid()), shutdown_drain=True,
-                      control_base=self.control_base_id or self.state.get("control_base"))
             legacy = read_json(self.home / "legacy.json")
-            if (self.state["phase"] == "STOPPED" and legacy
-                    and self.adapter.alive(legacy.get("worker"))
-                    and self.adapter.alive(legacy.get("serving_worker"))):
-                self.save(**legacy, phase="ACTIVE")
+            adopt_legacy = (self.state["phase"] == "STOPPED" and legacy
+                            and self.adapter.alive(legacy.get("worker"))
+                            and self.adapter.alive(legacy.get("serving_worker")))
+            owner = {"controller": identity(os.getpid()), "shutdown_drain": True,
+                     "control_base": self.control_base_id or self.state.get("control_base")}
+            if start and self.state["phase"] in {"STOPPED", "FAILED"} and not adopt_legacy:
+                if self.adapter.alive(self.state.get("worker")):
+                    return 2
+                (self.base / "data/.intentional_shutdown").unlink(missing_ok=True)
+                # New ownership and its boot intent are one observation. Old terminal
+                # state/generation must never be attributed to the new controller.
+                owner.update(phase="STARTING", generation=None, worker=None, request=None,
+                             preparing_start=True, rollback_attempted=False)
+            if adopt_legacy:
+                owner = {**legacy, **owner, "phase": "ACTIVE"}
+            self.save(**owner)
+            if adopt_legacy:
                 request(self.base, "legacy_takeover", request_id="takeover-" + legacy["generation"])
             keeper = self.state.get("legacy_keeper")
             if keeper and self.adapter.alive(keeper):
                 # 영수증의 출생 신원을 재검증한다. 포트/이름 전수 kill을 하지 않는다.
                 signal_owned(keeper)
-            if start and self.state["phase"] in {"STOPPED", "FAILED"}:
-                if self.adapter.alive(self.state.get("worker")):
-                    return 2
-                marker = self.base / "data/.intentional_shutdown"
-                marker.unlink(missing_ok=True)
-                candidate = self.prepare_candidate("start")
-                self.save(request=None, rollback_attempted=False)
-                self.start_generation(candidate)
             def shutdown(signum, frame):
                 log(self.home, f"신호 {signal.Signals(signum).name} 수신 — 의도적 종료 표식 기록")
                 atomic_json(self.base / "data/.intentional_shutdown", {"signal": signum})

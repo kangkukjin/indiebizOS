@@ -101,6 +101,8 @@ def runtime(tmp_path):
     def state():
         return read_json(control_dir(repo) / "state.json", {})
 
+    # Shared control/worker modules belong to the initial generation, not a live setup edit.
+    _control_fixture(repo)
     launch()
     eventually(lambda: state().get("phase") == "ACTIVE", timeout=40)
     yield repo, port, launch, state
@@ -185,7 +187,6 @@ def _control_fixture(repo):
 
 def test_control_base_handover_keeps_worker_and_survives_failed_takeover(runtime):
     repo, port, launch, state = runtime
-    _control_fixture(repo)
     base_id, note = control_base.ensure(repo, repo, support_root=repo)
     assert base_id, note
     # 기반 id 를 아는 제어자로 바꿔 띄운다(이전 제어자는 종료).
@@ -231,6 +232,9 @@ def test_control_base_handover_keeps_worker_and_survives_failed_takeover(runtime
     assert control_base.read_current(repo)["current"] == new_id
     assert (control_dir(repo) / f"state.pre-{new_id}.json").exists()
     assert http(port, "/health")["status"] == "healthy"
+    # Wait beyond a full source quiet period: control-only edits must not trigger a later worker swap.
+    time.sleep(5)
+    assert state()["worker"] == worker and alive(worker) and state()["phase"] == "ACTIVE"
     # 새 제어자가 교체도 소유한다.
     (repo / "backend/feature.py").write_text("VALUE = 9\n")
     eventually(lambda: (Path(state()["generation_dir"]) / "backend/feature.py").read_text() == "VALUE = 9\n", timeout=60)

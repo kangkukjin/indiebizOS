@@ -62,6 +62,22 @@ class Watcher:
             if watch:
                 ctl.save(watch={})
             return None
+        if ctl.control_base_id:
+            import control_base
+            accepted = control_base.manifest_of(control_base.base_dir(ctl.base, ctl.control_base_id))
+            # The worker watcher must not race ahead of a pending or failed control handover.
+            if not accepted or any(inventory["files"].get(src) != accepted["files"].get(src)
+                                   for src, _ in control_base._entries()):
+                return None
+            active = gens.read_manifest(state.get("generation_dir")) if state.get("generation_dir") else None
+            if active:
+                files = active["files"]
+                changed = {rel for rel in files.keys() | inventory["files"].keys()
+                           if files.get(rel) != inventory["files"].get(rel)}
+                if changed <= control_base.CONTROL_ONLY_FILES:
+                    if watch:
+                        ctl.save(watch={})
+                    return None
         failed = (state.get("failed_sources") or {}).get(digest)
         candidate = state.get("candidate") or {}
         if failed or candidate.get("source_digest") == digest:

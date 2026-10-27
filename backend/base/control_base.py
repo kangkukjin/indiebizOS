@@ -36,6 +36,13 @@ CONTROL_FILES = (
     "backend/datastore/restart_red.py",
     "backend/datastore/repair_root.py",
 )
+# These modules run only in the controller/helper. Shared protocol, bootstrap and
+# datastore modules still require a worker generation after control acceptance.
+CONTROL_ONLY_FILES = frozenset({
+    "backend/services/restart_controller.py",
+    "backend/services/restart_candidates.py",
+    "backend/services/restart_helper.py",
+})
 LAYER_DIRS = ["base", "datastore", "ibl", "cognition", "services", "surface"]
 SELFTEST_TIMEOUT_S = 120
 

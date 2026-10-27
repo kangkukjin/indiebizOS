@@ -16,8 +16,8 @@ actions:
         backend/common/expression_functions.py: 0d5ef11ac2b3aa49807b08b2a22b927d259f0721af562d186b25a4ce410e1887 # 재감사 2026-10-09: 순수 문자열 원문 보존·공백 검색 수리. 값 식만 변경, I/O·인증·주체·경로 접근 추가 없음.
         backend/common/expression_ir.py: 4be347066adc6835063f132637b5bc13d9392540d2e0640c12b738255fdb343f # 재감사 2026-10-27: 부품 참조·적용 호스트 분리. ValueEvaluator 도구 거절·외부 Callable 전송 거절 시험 통과; I/O·인증·주체·경로 권한 추가 없음.
         backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-        backend/common/expression_ops.py: 7dc48c9a4e114a576458ec8900e5a392468c4026fb61d7d438d33f5985ab93c9 # 재감사 2026-10-27: 부품 참조·적용 호스트 분리. ValueEvaluator 도구 거절·외부 Callable 전송 거절 시험 통과; I/O·인증·주체·경로 권한 추가 없음.
-        backend/common/expression_parser.py: 5961d21cd4057181d8bdb5b07ef5167fa5290d1e86184671b0f119abaa0fa92d # 재감사 2026-10-27: 부품 참조·적용 호스트 분리. ValueEvaluator 도구 거절·외부 Callable 전송 거절 시험 통과; I/O·인증·주체·경로 권한 추가 없음.
+        backend/common/expression_ops.py: b4cb049e8652313480c7d6e26fb8dd579be1801aa07e34d83fe0ecbee7e4a7a5 # 재감사 2026-10-27: 명시 부품 계약 구문·수정 계승 신원 매핑. 값 호스트 권한과 파일/회원 격리 경로 불변.
+        backend/common/expression_parser.py: 3b0a2cdfdc5717f97d3a4ace7d43f6bae4491b8346697f40049f7ea921099740 # 재감사 2026-10-27: 명시 부품 계약 구문·수정 계승 신원 매핑. 값 호스트 권한과 파일/회원 격리 경로 불변.
         backend/base/principal.py: d7f943517c8ca857a01f8330c5b4a2695b2a999a8aa18962e380778bce3cc58a # 재감사 2026-10-15: PC별 회원 ID 설명만 수정. 인증·권한·실행 로직 불변.
         backend/base/runtime_utils.py: a2cc50cf1dcafb3f83d32c298787dbd3e5fb4ef4276ff0c8bbc77bf449cd1198
         backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df

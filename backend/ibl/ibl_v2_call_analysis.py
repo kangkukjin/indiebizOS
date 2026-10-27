@@ -65,10 +65,10 @@ class CallAnalysis:
                 return UNKNOWN
             self.analysis_stats[category + '_bodies'] += 1
             outer = (self.issues, self.guards, self.warnings, self.effects,
-                     self.used_actions, self.write_log, self.call_path,
+                     self.used_actions, self.access_log, self.call_path,
                      self.pure_calls, self.call_effects)
             self.issues, self.guards, self.warnings = [], [], []
-            self.effects, self.used_actions, self.write_log = set(), set(), set()
+            self.effects, self.used_actions, self.access_log = set(), set(), set()
             self.call_path, self.pure_calls, self.call_effects = [], [], {}
             self.summary_active.add(key)
             try:
@@ -82,20 +82,20 @@ class CallAnalysis:
                         item['call_path'] = item.get('call_path', [])[1:]
                     diagnostics.append(compact)
                 cached = (result, frozenset(self.effects), frozenset(self.used_actions),
-                          frozenset(self.write_log), diagnostics)
+                          frozenset(self.access_log), diagnostics)
                 if self.analysis_cache_enabled:
                     self.function_cache[key] = cached
             finally:
                 self.summary_active.remove(key)
                 (self.issues, self.guards, self.warnings, self.effects,
-                 self.used_actions, self.write_log, self.call_path,
+                 self.used_actions, self.access_log, self.call_path,
                  self.pure_calls, self.call_effects) = outer
         else:
             self.analysis_stats[category + '_reuses'] += 1
         result, effects, actions, writes, diagnostics = cached
         self.effects.update(effects)
         self.used_actions.update(actions)
-        self.write_log.update(writes)
+        self.access_log.update(writes)
         self.call_effects.setdefault(call.id, set()).update(effects or {'pure'})
         for target, items in zip((self.issues, self.guards, self.warnings), diagnostics):
             merge_diagnostics(target, items, [*self.call_path, frame])
@@ -141,6 +141,13 @@ class CallAnalysis:
 
     def apply_callable(self, node, typ, types, nodes, env=None, names=None, readonly=frozenset(),
                        *, piped=None, require_pure=False):
+        from ibl_v2_requirements import application
+        required = application(self, node, typ, types, require_pure or node in self.pure_calls)
+        if required is not None:
+            effects = {'pure'} if require_pure or node in self.pure_calls else {'unknown'}
+            self.effects.update(effects)
+            self.call_effects.setdefault(node.id, set()).update(effects)
+            return required
         outer_effects, self.effects = self.effects, set()
         try:
             return self._apply_callable(node, typ, types, nodes, env, names, readonly, piped)
@@ -174,7 +181,21 @@ class CallAnalysis:
                 continue
             category = contract[0]
             named = isinstance(types, Type)
-            if category in ('function', 'action'):
+            if category == 'requirement':
+                _, params, returned, effects = contract
+                if isinstance(params, tuple) != (not named):
+                    self.issue(node, 'ARGUMENT_STYLE', '명시 콜백 계약의 인자 방식과 다릅니다.')
+                elif not named:
+                    if len(types) != len(params):
+                        self.issue(node, 'ARITY', '명시 콜백 계약의 인자 수와 다릅니다.')
+                    for actual, expected in zip(types, params):
+                        self.need(node, actual, expected)
+                else:
+                    self.need(node, types, params)
+                self.effects.update(effects)
+                self.call_effects.setdefault(node.id, set()).update(effects)
+                current = returned
+            elif category in ('function', 'action'):
                 if not named:
                     self.issue(node, 'ARGUMENT_STYLE', '이 부품은 명명 인자 {...}로 적용하세요.')
                     current = UNKNOWN

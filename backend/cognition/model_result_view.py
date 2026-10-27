@@ -32,7 +32,7 @@ def repeat_observation(result):
     if not isinstance(value, dict) or value.get("edition") != 2 or value.get("executed") is not True:
         return value
     fields = ("success", "executed", "source_complete", "error", "diagnostic",
-              "status", "suspended", "waiting", "partial_wire", "run_status")
+              "status", "suspended", "waiting", "partial_wire", "run_status", "completion", "repair")
     observed = {key: value[key] for key in fields if key in value}
     # typed wire는 값의 종류를, value는 생산자의 작업 상태 구조를 보존한다.
     for key in ("value_wire", "value"):
@@ -374,6 +374,8 @@ def input_ref_evidence(stored, *, certified_id=None):
         # `error` or `source_complete` key is ordinary data.
         out["incomplete"] = stored.get("source_complete") is False
         out["execution_success"] = stored.get("success")
+        if isinstance(stored.get('completion'), dict):
+            out['completion'] = stored['completion']
         out["run_id"] = (stored.get("resume") or {}).get("run_id")
     else:
         from ibl_honesty import completion_evidence, truncation_evidence

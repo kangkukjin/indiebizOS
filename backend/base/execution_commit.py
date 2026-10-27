@@ -10,13 +10,36 @@ from threading import RLock
 
 _current = ContextVar("execution_commit", default=None)
 _observed_at = ContextVar("observation_timestamp", default=None)
+_obligations = ContextVar("observation_obligations", default=None)
+
+
+class ObservationActions(dict):
+    """Keep existing observation producers on the same scope-owned mapping."""
+    def __init__(self, scope):
+        super().__init__()
+        self.scope = scope
+
+    def __setitem__(self, key, action):
+        with self.scope.lock:
+            current = _obligations.get()
+            if current:
+                self.scope.obligations[key] = frozenset(current)
+                self.scope.origins[key] = dict(current)
+            else:
+                self.scope.obligations.pop(key, None)
+                self.scope.origins.pop(key, None)
+            super().__setitem__(key, action)
 
 
 class CommitScope:
     def __init__(self):
         self.lock = RLock()
         self.state = {}
-        self.actions = {}
+        self.obligations = {}
+        self.origins = {}
+        self.certified = set()
+        self.certified_evidence = {}
+        self.actions = ObservationActions(self)
         self.committed = 0
         self.commit_failed = False
 
@@ -32,10 +55,29 @@ class CommitScope:
                            else "program_failed"),
             }
 
-    def commit(self):
+    def stage(self, key, action, *, obligations):
+        """Opt in a local observation to named runtime completion duties."""
+        if not obligations or any(not isinstance(v, str) for v in obligations):
+            raise ValueError('관측 확정에는 의무 id가 필요합니다.')
+        with self.lock:
+            self.actions[key] = action
+            self.obligations[key] = frozenset(obligations)
+
+    def commit(self, *, satisfied=None, evidence=None, allow_unscoped=False):
         with self.lock:
             self.commit_failed = False
+            global_commit = satisfied is None
+            if global_commit:
+                satisfied, evidence = self.certified, self.certified_evidence
             for key, action in list(self.actions.items()):
+                if key in self.obligations:
+                    if not self.obligations[key] <= satisfied:
+                        continue
+                elif not (global_commit or allow_unscoped):
+                    continue
+                if satisfied is not None and any(origin not in (evidence or {}).get(name, ())
+                                                 for name, origin in self.origins.get(key, {}).items()):
+                    continue
                 try:
                     action()
                 except Exception:
@@ -51,14 +93,16 @@ def current_scope():
 
 
 @contextmanager
-def bind_scope(scope, observed_at=None):
+def bind_scope(scope, observed_at=None, *, obligations=None):
     token = _current.set(scope)
     clock_token = _observed_at.set(observed_at)
+    obligation_token = _obligations.set(obligations)
     try:
         yield scope
     finally:
         _current.reset(token)
         _observed_at.reset(clock_token)
+        _obligations.reset(obligation_token)
 
 
 def observation_timestamp():
@@ -72,8 +116,11 @@ def committed_program(fn):
         scope = inherited or CommitScope()
         with bind_scope(scope):
             result = fn(*args, **kwargs)
-            if inherited is None and result.get("success") and result.get("source_complete", True):
-                scope.commit()
+            if inherited is None and result.get("success"):
+                if result.get("source_complete", True):
+                    scope.commit()
+                elif scope.certified:
+                    scope.commit(satisfied=scope.certified, evidence=scope.certified_evidence)
             scope.report(result, owner=inherited is None)
             return result
     return wrapped

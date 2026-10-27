@@ -47,9 +47,13 @@ class Plan:
     # 호출 인자 자리에서는 그 인자가 생략되고, f-문자열 보간에서는 빈 문자열이다(2026-10-05, 표면 바인딩 개정 ①).
     unspecified: frozenset = frozenset()
 
+    function_scopes: dict = field(default_factory=dict)
+    accesses: set = field(default_factory=set)
+
     REPORT_GUARDS_CAP = 24
 
     def report(self):
+        from ibl_v2_access import describe_accesses
         status = "invalid" if self.issues else ("incomplete" if self.guards else "valid")
         # 보고서는 모델 경계(액션당 16K)에 들어야 한다. 4082 실측: 저장 관용구 호출 한 줄의 check 가 guards 62개(76KB)
         # + 스크립트 의존 스냅샷(64KB) = 14만 자로 스필돼 모델이 파일을 다시 읽었다. guards 는 상한 뒤 수만,
@@ -65,6 +69,7 @@ class Plan:
                 "guards_omitted": max(0, len(own) - self.REPORT_GUARDS_CAP),
                 "result_type": str(self.result_type), "result_contract": describe_type(self.result_type), "effects": sorted(self.effects), "functions": self.function_contracts,
                 "plan_hash": self.fingerprint, "dependencies": dependencies,
+                "accesses": describe_accesses(self.accesses, self.effects),
                 "source_hash": digest(self.source[:self.dependencies["source_map"][0]["end"]]),
                 "capabilities": ["ibl-edition/2", "ibl-value/1"],
                 **({"unspecified_inputs": sorted(self.unspecified)} if self.unspecified else {}),
@@ -94,8 +99,8 @@ class Compiler(CallAnalysis):
         self.function_contracts = {}
         self.used_actions = set()
         self.call_dependencies = {}
-        # 방문 중 만난 선언 쓰기 자원 — 병렬 가지·each 병렬 본문이 괄호로 묶어 충돌을 본다(70회차 B70-2).
-        self.write_log = set()
+        # 방문 중 만난 읽기/쓰기 자원과 미확정 의무 — 병렬 가지·each 병렬 본문이 괄호로 묶어 충돌을 본다(70회차 B70-2).
+        self.access_log = set()
         self.reachable = True
         self.catch_value_faults = False
         self.default_scope = frozenset()  # 기본값 식을 검사하는 동안의 인자 이름들
@@ -104,6 +109,8 @@ class Compiler(CallAnalysis):
         self.pure_calls, self.call_effects = [], {}
         self.constant_bindings = {}
         self.init_call_analysis()
+        self.requirements, self.required_calls = {}, {}
+        self.requirement_depth = 0
 
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
@@ -131,6 +138,8 @@ class Compiler(CallAnalysis):
                 and node.data["name"] not in env)
 
     def need(self, node, actual, expected):
+        from ibl_v2_requirements import require
+        require(self, node, actual, expected)
         if actual.kind == "Unknown":
             item = {"source_span": span(self.source, node), "expected": str(expected),
                     "actual": str(actual), "call_path": copy.deepcopy(self.call_path)}
@@ -292,6 +301,7 @@ class Compiler(CallAnalysis):
 
     def _function(self, sid, args, call=None):
         node = self.functions[sid]
+        self.requirements.setdefault(sid, {})
         if sid in self.stack:
             self.issue(node, "RECURSION", f"재귀 호출은 지원하지 않습니다: {node.data['name']}")
             return UNKNOWN
@@ -313,7 +323,21 @@ class Compiler(CallAnalysis):
                 self.default_scope = frozenset(params)
                 dtype = self.visit(default, {}, {}, frozenset(), False)
                 self.default_scope = frozenset()
-            env[name] = args.get(name, dtype)
+            from ibl_v2_requirements import parameter
+            env[name] = args.get(name, parameter(sid, name) if default is None else dtype)
+        explicit = {}
+        from ibl_v2_analysis import constant_value
+        from ibl_v2_requirements import annotation
+        for name, declaration in node.data.get('annotations', {}).items():
+            try:
+                expected = declared(constant_value(declaration))
+            except ValueError as exc:
+                self.issue(declaration, 'TYPE', str(exc))
+                continue
+            annotation(self, declaration, env[name], expected)
+            explicit[name] = describe_type(expected)
+            if env[name].kind == 'Unknown':
+                env[name] = expected
         parameter_types = {k: str(v) for k, v in env.items()}
         parameter_contracts = {k: describe_type(v) for k, v in env.items()}
         result = self.sequence(node.data["body"], env, self.function_scopes[sid])
@@ -334,12 +358,17 @@ class Compiler(CallAnalysis):
         self.stack.pop()
         self.call_path.pop()
         self.checked.add(sid)
-        observed = {'params': parameter_types, 'result': str(result),
+        from ibl_v2_access import describe_accesses
+        observed = {'accesses': describe_accesses(self.access_log, effects), 'params': parameter_types, 'result': str(result),
                     'param_contracts': parameter_contracts,
                     'result_contract': describe_type(result)}
         summary = self.function_contracts.setdefault(sid, {
             'name': node.data['name'], 'params': parameter_types.copy(),
+            'accesses': observed['accesses'],
             'param_contracts': observed['param_contracts'],
+            'requirements': self.requirements.get(sid, {}),
+            'requirements_protocol': 'ibl-requirements/1',
+            'declared_requirements': explicit,
             'result_contract': observed['result_contract'],
             'required': [k for k,v in params.items() if v is None],
             'pipe_input': next(iter(params), None),
@@ -600,15 +629,15 @@ class Compiler(CallAnalysis):
             writes, conflict = set(), set()
             for branch in parallel_branches(node):
                 old_returns, self.returns = self.returns, []
-                outer_writes, self.write_log = self.write_log, set()
+                outer_writes, self.access_log = self.access_log, set()
                 result = sub(branch, env.copy())
                 for t in self.returns:
                     result = t if result == UNIT_T else join(result, t)
                 self.returns = old_returns
                 types.append(result)
-                branch_writes, self.write_log = self.write_log, outer_writes | self.write_log
-                from ibl_callable_contract import resource_conflicts
-                conflict.update(resource_conflicts(writes, branch_writes))
+                branch_writes, self.access_log = self.access_log, outer_writes | self.access_log
+                from ibl_v2_access import conflicts
+                conflict.update(conflicts(writes, branch_writes))
                 writes.update(branch_writes)
             if conflict:
                 self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
@@ -632,7 +661,11 @@ class Compiler(CallAnalysis):
             self.pure(d["value"])
             self.need(node, sub(d["value"]), BOOL)
             a, b = narrow(env, d["value"]), narrow(env, d["value"], False)
-            ta, tb = sub(d["body"], a), sub(d["otherwise"], b)
+            self.requirement_depth += 1
+            try:
+                ta, tb = sub(d["body"], a), sub(d["otherwise"], b)
+            finally:
+                self.requirement_depth -= 1
             self.merge_continuations(env, [(d["body"], a), (d["otherwise"], b)])
             return join(ta, tb)
         if kind == "case":
@@ -770,7 +803,7 @@ class Compiler(CallAnalysis):
         if key == "table:each":
             return self.each(node, args, env, names, piped)
         if d["node"] == "fn":
-            sid = self.resolve_function(d["action"], names)
+            sid = d.get("symbol") or self.resolve_function(d["action"], names)
             if sid:
                 d["symbol"] = sid
                 params = self.functions[sid].data["params"]
@@ -860,10 +893,10 @@ class Compiler(CallAnalysis):
         from ibl_callable_contract import resource_values, UNRESOLVED
         resource_args = {k: static_text(t) if static_text(t) is not None else UNRESOLVED
                          for k, t in args.items()}
-        resources = resource_values(contract.get("write_resources", {}), resource_args,
-                                    spec.resource_identity)
-        if self.reachable and resources:
-            self.write_log.update(resources)
+        from ibl_v2_access import accesses
+        if self.reachable:
+            self.access_log.update(accesses(spec, contract, {**contract.get('defaults', {}), **resource_args}, key,
+                                           runtime=getattr(self, 'resource_runtime', False), argument_types=args))
         result_type = declared(contract["result"])
         from ibl_v2_adapters import observed_result
         # A dynamic shape selector is present, not absent. Keep its marker
@@ -927,7 +960,7 @@ class Compiler(CallAnalysis):
         if type(options["parallel"]) is not int or not 1 <= options["parallel"] <= 8:
             self.issue(node, "CONCURRENCY", "parallel은 1~8 정수입니다.")
         old_returns, self.returns = self.returns, []
-        outer_writes, self.write_log = self.write_log, set()
+        outer_writes, self.access_log = self.access_log, set()
         # Invalid unions have already been diagnosed by need(). Their tuple of
         # alternatives is not an element type for the callback's local binding.
         local = {**env, "it": (items.item or UNKNOWN) if items.kind == "List" else UNKNOWN, "i": NUMBER}
@@ -936,12 +969,12 @@ class Compiler(CallAnalysis):
         for t in self.returns:
             result = t if result == UNIT_T else join(result, t)
         self.returns = old_returns
-        body_writes, self.write_log = self.write_log, outer_writes | self.write_log
+        body_writes, self.access_log = self.access_log, outer_writes | self.access_log
         single = items.positions is not None and len(items.positions) <= 1
-        if type(options["parallel"]) is int and options["parallel"] > 1 and body_writes and not single:
+        if type(options["parallel"]) is int and options["parallel"] > 1 and any(a.mode == "write" and a.resources for a in body_writes) and not single:
             # 반복마다 같은 자원 — 병렬 반복들이 서로 덮어쓴다. 원소에 따라 정해지는 자원은 여기 오지 않는다.
             self.issue(node, "PARALLEL_WRITE_CONFLICT",
-                       f"each 병렬 반복이 모두 같은 선언 자원에 씁니다: {sorted(body_writes)}")
+                       f"each 병렬 반복이 모두 같은 선언 자원에 씁니다: {sorted(a.action for a in body_writes if a.mode == "write")}")
         if options["mode"] == "effect":
             return UNIT_T
         if options["mode"] == "flat_map":
@@ -974,7 +1007,7 @@ def _rows_of(typ):
 
 
 @compilation_dependencies()
-def compile_program(source, registry=None, inputs=None, definitions=None, *, declared_inputs=None, input_types=None):
+def compile_program(source, registry=None, inputs=None, definitions=None, *, declared_inputs=None, input_types=None, value_protocols=None):
     """declared_inputs: 표면이 템플릿에서 참조하는 입력 이름 전부. inputs 에 없는 이름은 '미지정'으로 컴파일된다.
     input_types: 값 없는 입력의 타입 선언(저술 시점 검사용) — 실행 요청에는 쓰지 않는다."""
     from ibl_v2_adapters import Adapter
@@ -997,18 +1030,18 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
         remaining = set(compiler.functions) - compiler.checked
         if remaining:
             sid = sorted(remaining)[0]
-            reachable_effects = set(compiler.effects)
+            reachable_effects, accesses_before = set(compiler.effects), set(compiler.access_log)
             compiler.function(sid, {})
-            compiler.effects = reachable_effects
+            compiler.effects, compiler.access_log = reachable_effects, accesses_before
         else:
             lid = next(iter(set(compiler.lambda_nodes) - compiler.lambda_checked))
             node = compiler.lambda_nodes[lid]
             typ = compiler.lambda_contracts[lid]
-            outer = compiler.effects, compiler.write_log, compiler.reachable
-            compiler.effects, compiler.write_log, compiler.reachable = set(), set(), False
+            outer = compiler.effects, compiler.access_log, compiler.reachable
+            compiler.effects, compiler.access_log, compiler.reachable = set(), set(), False
             compiler.apply_callable(node, typ, [UNKNOWN] * len(node.data['params']),
                                     [node] * len(node.data['params']))
-            compiler.effects, compiler.write_log, compiler.reachable = outer
+            compiler.effects, compiler.access_log, compiler.reachable = outer
     dependencies = {"source": digest(compiler.source), "libraries": digest({k: compiler.definitions[k] for k in sorted(compiler.external)}),
                     "calls": compiler.call_dependencies,
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
@@ -1045,7 +1078,14 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
         preflight['warnings_omitted'] = preflight.get('warnings_omitted', 0) + max(0, len(merged) - 32)
     preflight['analysis'] = compiler.analysis_stats
     preflight['actions'] = sorted(compiler.used_actions)  # 검사 단계의 문맥 사전경고가 읽는다(L33-3)
-    return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
+    plan = Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,
                 digest(dependencies), dependencies, compiler.function_contracts, preflight,
                 compiler.definitions, compiler.unspecified)
+
+    plan.function_scopes = compiler.function_scopes
+    plan.accesses = compiler.access_log
+    if value_protocols is not None:
+        from ibl_v2_requirements import require_wire
+        plan = require_wire(plan, value_protocols)
+    return plan

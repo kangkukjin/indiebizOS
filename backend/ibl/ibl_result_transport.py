@@ -107,7 +107,7 @@ def fit_tool_result(raw: str, budget: int) -> str:
         if issues:
             parsed = {**parsed, "completion_issues": issues}
         keys = ("success", "source_complete", "error", "warning", "reason", "edition", "executed", "diagnostic", "status",
-                "completion_issues",
+                "completion_issues", "completion",
                 "resume", "continuation", "suspended", "waiting", "task_ref", "verification", "capability_usage", "result_ref", "source_ref", *HONESTY_KEYS)
         for key in dict.fromkeys(keys):
             if key not in parsed:

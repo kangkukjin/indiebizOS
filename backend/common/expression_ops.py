@@ -242,13 +242,14 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
     raise Fault("BUILTIN", f"직접 실행할 수 없는 내장 함수: {name}")
 
 
-def callable_identity(value):
+def callable_identity(value, *, node_map=None):
     """Private request identity, bounded by unique captured values (not DAG paths).
 
     Ordinary values keep their existing tagged wire identity. Callable nodes contribute
     only hashes and definition references; captures never enter public reports.
     """
     from common.expression_ir import digest, pack
+    node_map = node_map or {}
     memo = {}
     active = set()
     def visit(item):
@@ -260,10 +261,10 @@ def callable_identity(value):
                 raise Fault('CALLABLE_CYCLE', '순환 부품 캡처는 지원하지 않습니다.')
             active.add(identity)
             if isinstance(item, Closure):
-                data = {'body': item.body.id, 'params': item.params,
+                data = {'body': node_map.get(item.body.id, item.body.id), 'params': item.params,
                         'captures': {k: visit(b.value) for k, b in sorted(item.env.items())}}
             elif isinstance(item, CallableRef):
-                data = {'node': item.node, 'action': item.action, 'symbol': item.symbol}
+                data = {'node': item.node, 'action': item.action, 'symbol': node_map.get(item.symbol, item.symbol)}
             else:
                 data = {'builtin': item.name}
             result = ['callable', digest(pack(data))]

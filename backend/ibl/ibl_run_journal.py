@@ -106,13 +106,13 @@ def model_reuse_identity(declaration):
                             for p in paths if p.is_file()}})
 
 
-def call_resources(spec, contract, args, mode):
+def call_resources(spec, contract, args, mode, *, allow_bare=None):
     """Resolve a complete declared footprint; None means an unknown resource set."""
     declaration = contract.get(mode + '_resources')
     if not declaration:
         return None
     from ibl_callable_contract import resource_values
-    resolved = resource_values(declaration, args, spec.resource_identity, allow_bare=mode != 'write')
+    resolved = resource_values(declaration, args, spec.resource_identity, allow_bare=mode != 'write' if allow_bare is None else allow_bare)
     if resolved is None:
         return None
     resources = []
@@ -194,7 +194,9 @@ def request_fingerprints(request):
 
 
 class Journal:
-    def __init__(self, root, identity, resume=None):
+    def __init__(self, root, identity, resume=None, *, repair=None, repair_record=None):
+        self.repair, self.repair_record = repair, repair_record
+        self.repair_plan, self.node_map = None, {}
         if resume is not None and (not isinstance(resume, dict) or set(resume) != {"run_id"}):
             raise Fault("RESUME_ARGUMENT", "resume에는 반환된 run_id만 지정하세요.", kind="compile")
         self.run_id = resume["run_id"] if resume else uuid.uuid4().hex
@@ -239,6 +241,10 @@ class Journal:
                     self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {declaration}')
             old = self.db.execute("SELECT identity,blocked FROM meta").fetchone()
             if self.resuming:
+                if self.repair and old is not None and not old[1]:
+                    from ibl_v2_repair import activate
+                    activate(self, self.repair, self.repair_record, self.identity)
+                    old = self.db.execute("SELECT identity,blocked FROM meta").fetchone()
                 if old is None or old[0] != self.identity:
                     raise Fault("RESUME_CHANGED", "소스·입력·함수·도구 구현·권한이 원래 실행과 다릅니다.", kind="protocol")
                 if old[1]:
@@ -246,6 +252,9 @@ class Journal:
             else:
                 self.db.execute("INSERT INTO meta VALUES(?,NULL)", (self.identity,))
                 self.db.commit()
+            if self.resuming and self.db.execute("SELECT 1 FROM sqlite_master WHERE name='repair_snapshot'").fetchone():
+                record = json.loads(self.db.execute('SELECT record FROM repair_snapshot').fetchone()[0])
+                self.node_map = record.get('node_map', {})
             now = time.time()
             if not self.db.execute('SELECT 1 FROM lifecycle').fetchone():
                 self.db.execute('INSERT INTO lifecycle(created,updated,ended,status,reason) VALUES(?,?,NULL,?,NULL)',
@@ -297,7 +306,10 @@ class Journal:
         with self.lock:
             row = self.db.execute("SELECT request,receipt,request_parts FROM calls WHERE id=?", (call_id,)).fetchone()
             if row:
-                if row[0] != request_hash:
+                from ibl_v2_repair import inherited_request
+                inherited = bool(self.node_map) and inherited_request(
+                    json.loads(row[2]) if row[2] else None, request_parts)
+                if row[0] != request_hash and not inherited:
                     before = json.loads(row[2]) if row[2] else None
                     changes = ({key: {'before': before.get(key), 'after': request_parts.get(key)}
                                 for key in sorted(set(before) | set(request_parts))
@@ -321,6 +333,8 @@ class Journal:
                     self.db.commit()
                     return None
                 return receipt
+            if self.node_map:
+                raise Fault('REPAIR_DIVERGED', '수정 계승 중 원 실행에 없는 외부 호출을 만났습니다. 새 효과를 시작하지 않습니다.', kind='protocol')
             if cleanup:
                 self.db.execute("UPDATE meta SET blocked=?", ("취소·예산 중단 후 finally가 외부 정리를 시작했습니다. 같은 실행의 재개는 허용하지 않습니다.",))
             # Invalidate reads that preceded this mutation, including unfinished
@@ -392,7 +406,7 @@ class Journal:
                    if excluded else {})}
 
 
-def identity(plan, inputs, project_path, agent_id, *, input_evidence=None):
+def identity(plan, inputs, project_path, agent_id, *, input_evidence=None, policy=None):
     import principal
     import member_runtime
     from thread_context import get_allowed_nodes
@@ -401,6 +415,7 @@ def identity(plan, inputs, project_path, agent_id, *, input_evidence=None):
     # 권한은 순서 없는 내부 메타데이터다. None(무제한)과 빈 집합은 구분한다.
     allowed = None if allowed is None else sorted(set(allowed))
     return digest({"protocol": "ibl-resume/1", "plan": plan.fingerprint, "inputs": pack(inputs),
+                   **({"policy": policy} if policy else {}),
                    **({"input_evidence": input_evidence} if input_evidence else {}),
                    "project": str(Path(project_path).resolve()), "agent": agent_id,
                    "principal": [p.key(), p.device_id, p.level], "allowed": allowed,

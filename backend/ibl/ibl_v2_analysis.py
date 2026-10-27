@@ -8,6 +8,7 @@ from ibl_v2_expr import number
 
 # 공통 값 경계가 판정한 원인을 사용한다. 오류 문장을 다시 해석하지 않는다.
 JSON_RUNTIME_HINTS = {
+    "CALLABLE_REQUIREMENT": "함수의 declared_requirements에 맞는 인자 방식·반환 타입·효과를 가진 콜백을 전달하세요.",
     "precision_loss": "자릿수가 긴 정확한 소수는 JSON 숫자로 전달하면 정밀도를 잃습니다. round(값, 자릿수)로 자릿수를 정하세요. 원값 그대로가 필요할 때만 text()를 씁니다.",
     "unsupported_type": "진단 path의 Unit·함수 등은 일반 JSON 값이 아닙니다. 필요한 필드를 선택하거나 명시적인 업무 값으로 바꾸세요. "
                         "오류 보고서는 catch 안에서 $error.code·kind·message·has_partial·evidence를 선택하고 부분값 생략을 표시하세요. "
@@ -28,6 +29,7 @@ def runtime_hint(fault):
         "진단의 경로와 값 타입을 확인하고 JSON으로 표현할 값을 명시적으로 선택하세요.")
 
 HINTS = {
+    "CALLABLE_REQUIREMENT": "함수의 declared_requirements에 맞는 인자 방식·반환 타입·효과를 가진 콜백을 전달하세요.",
     "FORMAT_UNINTERPOLATED": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
     "NOT_FOUND": "요청한 파일·디렉토리가 없습니다. 경로를 확인하거나 원천을 다시 요청하세요. 선택 자료라면 catch로 부재를 명시하세요.",
     "TARGET_NODE": "@별칭 노드 지정은 [node:action]{…}@별칭 처럼 도구 호출 바로 뒤에만 씁니다. 함수 호출·each 블록은 지정하는 몸 없이 현재 몸에서 돕니다.",
@@ -332,7 +334,7 @@ def numeric_operand(compiler, node, typ):
         for member in alternatives(typ):
             numeric_operand(compiler, node, member)
     elif typ.kind in ('Text', 'Unknown'):
-        compiler.need(node, UNKNOWN, NUMBER)
+        compiler.need(node, typ if typ.kind == 'Unknown' else UNKNOWN, NUMBER)
     elif typ.kind != 'Number':
         advice = {}
         if typ.kind == 'Null':

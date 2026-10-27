@@ -261,6 +261,21 @@ def infer(value):
 
 
 def declared(spec):
+    if isinstance(spec, dict) and set(spec) == {'$callable'}:
+        value = spec['$callable']
+        if not isinstance(value, dict) or set(value) != {'params', 'result', 'effects'}:
+            raise ValueError('$callable은 params·result·effects를 선언합니다.')
+        params = value['params']
+        if isinstance(params, list):
+            params = tuple(declared(v) for v in params)
+        elif isinstance(params, dict):
+            params = Type('Record', tuple((k, declared(v)) for k,v in params.items()), open=False)
+        else:
+            raise ValueError('콜백 params는 위치 목록 또는 명명 Record입니다.')
+        effects = value['effects']
+        if not isinstance(effects, list) or not effects or set(effects) - {'pure', 'read_external', 'write_external', 'model', 'unknown'}:
+            raise ValueError('콜백 effects가 잘못되었습니다.')
+        return Type('Callable', item=('requirement', params, declared(value['result']), tuple(sorted(effects))))
     if isinstance(spec, dict) and set(spec) == {"$list"}:
         return Type("List", item=declared(spec["$list"]))
     if isinstance(spec, dict):
@@ -337,10 +352,16 @@ def describe_type(typ, budget=None):
         return {'type': typ.kind, 'details_omitted': True}
     budget[0] -= 1
     result = {'type': typ.kind}
+    if typ.kind == 'Unknown' and isinstance(typ.item, tuple) and typ.item[0] in ('parameter', 'application'):
+        result.update(variable=typ.item[2], relation=typ.item[0])
     if typ.kind == 'Callable':
         if not typ.item:
             return {**result, 'contract': 'runtime', 'effects': ['unknown']}
-        if typ.item[0] == 'builtin':
+        if typ.item[0] == 'requirement':
+            _, params, returned, effects = typ.item
+            result.update(params=[describe_type(t, budget) for t in params] if isinstance(params, tuple) else describe_type(params, budget),
+                          result=describe_type(returned, budget), effects=list(effects), contract='required')
+        elif typ.item[0] == 'builtin':
             from common.expression_ops import BUILTINS
             from common.expression_functions import CONTRACTS
             name = typ.item[1]

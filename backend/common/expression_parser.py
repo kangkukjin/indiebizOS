@@ -402,20 +402,22 @@ class Parser:
             fn = self.name()
             self.pop("]")
             self.pop("(")
-            params = {}
+            params, annotations = {}, {}
             self.nl()
             while self.t.text != ")":
                 self.pop("$")
                 p = self.name()
                 if p in params:
                     self.fail("중복 함수 인자입니다.")
+                if self.accept(":"):
+                    annotations[p] = self.expr()
                 params[p] = self.expr() if self.accept("=") else None
                 if not self.accept(","):
                     break
                 self.nl()
             self.pop(")")
             self.nl()
-            return self.node("def", start, name=fn, params=params, body=self.block())
+            return self.node("def", start, name=fn, params=params, body=self.block(), **({"annotations": annotations} if annotations else {}))
         if name in ("if", "case", "repeat"):
             self.pop(":")
             mode = self.pop().text if name == "repeat" and self.t.text in ("while", "until") else "count"

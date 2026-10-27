@@ -111,7 +111,12 @@ def _covered_seconds(spans):
 class Runtime(ExpressionEvaluator):
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
                  recordings=None, replay=False, journal=None, reusable=None, reuse_run=None,
-                 input_evidence=None, value_protocols=None, reuse_models=True):
+                 input_evidence=None, value_protocols=None, reuse_models=True, strict_composition=False, completion=None):
+        from ibl_v2_completion import validate
+        self.completion = validate(completion)
+        from uuid import uuid4
+        self.completion_scope = uuid4().hex + ":"
+        self.strict_composition = strict_composition
         self.value_protocols = set(value_protocols or ("ibl-value/1", "ibl-value/2"))
         self.resources = ExitStack()
         self.foreign_sessions = {}
@@ -150,7 +155,7 @@ class Runtime(ExpressionEvaluator):
 
     def event(self, node, kind, parents=(), *, coalesce=False, **extra):
         with self.lock:
-            key = (node.id, kind, tuple(sorted(parents)))
+            key = (node.id, kind, tuple(sorted(parents)), tuple(extra.get('selected_parents', ())))
             if coalesce and key in self.expression_events:
                 eid = self.expression_events[key]
                 self.trace[eid - 1]['evaluations'] = self.trace[eid - 1].get('evaluations', 1) + 1
@@ -233,11 +238,12 @@ class Runtime(ExpressionEvaluator):
                 if isinstance(exc, Fault):
                     raise
                 raise Fault("VALUE", str(exc), node) from exc
-            eid = self.event(node, node.kind, result.evidence | dependencies, coalesce=True)
+            eid = self.event(node, node.kind, result.evidence | dependencies, coalesce=True,
+                             **({"selected_parents": sorted(result.evidence)} if node.kind in ("fallback", "sequence") else {}))
             roots = frozenset({eid})
             return Binding(result.value, roots)
         except Returned as returned:
-            roots = returned.binding.evidence | dependencies
+            roots = returned.binding.evidence if node.kind == "sequence" else returned.binding.evidence | dependencies
             returned.binding = Binding(returned.binding.value, frozenset(roots))
             raise
         except Fault as exc:
@@ -290,13 +296,17 @@ class Runtime(ExpressionEvaluator):
                 try:
                     result = sub(statement)
                 except Returned as returned:
-                    returned.binding = Binding(returned.binding.value, returned.binding.evidence | parents)
+                    selected = returned.binding.evidence | getattr(self.local, 'control', frozenset())
+                    eid = self.event(node, 'selection', selected | parents, coalesce=True, selected_parents=sorted(selected))
+                    returned.binding = Binding(returned.binding.value, frozenset({eid}))
                     raise
                 except Fault as exc:
                     exc.evidence = sorted(set(exc.evidence) | parents)
                     raise
                 parents.update(result.evidence)
-            return Binding(result.value, frozenset(parents))
+            selected = result.evidence | getattr(self.local, 'control', frozenset())
+            eid = self.event(node, 'selection', selected | parents, coalesce=True, selected_parents=sorted(selected))
+            return Binding(result.value, frozenset({eid}))
         if kind == "bind":
             env[d["name"]] = sub(d["value"])
             return Binding(UNIT, env[d["name"]].evidence)
@@ -332,6 +342,8 @@ class Runtime(ExpressionEvaluator):
                 return Binding(result.value, result.evidence | {eid})
         if kind == "parallel":
             nodes = list(parallel_branches(node))
+            from ibl_v2_access import admit
+            admit(self, node, [(n, env) for n in nodes])
             results = self.fanout(node, len(nodes), lambda i: self.frame(nodes[i], env.copy()), min(8, len(nodes)))
             return Binding([b.value for b in results], self.parents(results))
         if kind == "call":
@@ -422,7 +434,7 @@ class Runtime(ExpressionEvaluator):
         route = getattr(self.local, 'route', ())
         # Definition/capture identity supplements source position and loop route.
         # It is an identity hash, never a capability or a serialized closure.
-        identity = callable_identity(target)
+        identity = callable_identity(target, node_map=self.journal.node_map if self.journal else None)
         components = getattr(self.local, 'components', ())
         self.local.components = (*components, identity)
         self.local.route = (*route, ('apply', node.id, self.ordinal('apply:' + node.id)))
@@ -490,6 +502,9 @@ class Runtime(ExpressionEvaluator):
         for name, default in params.items():
             if name not in local:
                 local[name] = self.eval(default, {})
+        if definition.data.get('annotations'):
+            from ibl_v2_requirements import runtime_annotations
+            runtime_annotations(self, definition, local)
         entry = next((e for e in self.plan.dependencies.get('source_map', [])[1:]
                       if e['start'] <= definition.start < e['end']), {})
         function_ref = entry.get('function_ref')
@@ -558,6 +573,10 @@ class Runtime(ExpressionEvaluator):
             if mode == "flat_map":
                 guard(result.value, "List", "flat_map 반환")
             return result
+        if options.get("parallel", 1) > 1 and len(items) > 1:
+            from ibl_v2_access import admit
+            admit(self, node, [(node.data["body"], {**env, "it": Binding(item), "i": Binding(i)})
+                               for i, item in enumerate(items)])
         results = self.fanout(node, len(items), row, options.get("parallel", 1), collect)
         if mode == "effect":
             value = UNIT
@@ -793,7 +812,7 @@ class Runtime(ExpressionEvaluator):
         # 인자 전체는 여기서 한 번만 훑는다(긴문장 L18-1). 요청 해시·재사용 열쇠·차원별 지문이 저마다 인자를
         # 다시 포장·직렬화해 행 목록을 네 번 훑었고, 2천 행 표 변환 한 번이 0.3초였다(실제 표 처리는 그 2%).
         # 신원에는 인자의 지문만 싣는다 — 같은 인자면 같은 지문이므로 재사용·재개 판정의 뜻은 그대로다.
-        request = {"action": key, "args": {"digest": digest_packed(request_value(args.value))},
+        request = {"action": key, "args": {"digest": digest_packed(request_value(args.value, node_map=self.journal.node_map if self.journal else None))},
                    "plan": self.plan.fingerprint}
         if getattr(self.local, "components", ()):
             request["components"] = digest(self.local.components)
@@ -833,6 +852,9 @@ class Runtime(ExpressionEvaluator):
         eid = self.event(node, "invoke", parents, action=key,
                          effects=contract["effects"], request_hash=request_hash,
                          **({"targets": dict(list(targets.items())[:8])} if targets else {}))
+        observation_obligations = {self.completion_scope + o['id']: eid for o in self.completion if any(
+            s['action'] == key and all(args.value.get(k) == v for k,v in s['targets'].items())
+            for s in o['sources'])}
         tool_evidence = {}
         external = contract["effects"] != ["pure"]
         read_only = (contract["effects"] == ["read_external"] or
@@ -866,7 +888,15 @@ class Runtime(ExpressionEvaluator):
                 self.foreign_evidence = frozenset({failure})
             return exc
 
-        call_id = digest([getattr(self.local, "route", ()), node.id, self.ordinal(node.id)])
+        route = getattr(self.local, "route", ())
+        mapped_node = node.id
+        if self.journal and self.journal.node_map:
+            mapping = self.journal.node_map
+            mapped_node = mapping.get(node.id, node.id)
+            def remap(value):
+                return tuple(remap(v) for v in value) if isinstance(value, tuple) else mapping.get(value, value) if isinstance(value, str) else value
+            route = remap(route)
+        call_id = digest([route, mapped_node, self.ordinal(node.id)])
         receipt, source = None, "journal"
         if self.journal and external:
             receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None,
@@ -941,7 +971,7 @@ class Runtime(ExpressionEvaluator):
                 spec.authorize()
             from execution_commit import bind_scope
             self.local.invocation_id = call_id
-            with bind_scope(self.commit_scope, receipt.get("observed_at")):
+            with bind_scope(self.commit_scope, receipt.get("observed_at"), obligations=observation_obligations):
                 spec.run(self, copy.deepcopy(args.value), **run_extra)
         if receipt is not None:
             if stateful:
@@ -981,7 +1011,7 @@ class Runtime(ExpressionEvaluator):
                 with capture_usage() as usage:
                     try:
                         from thread_context import invocation_scope
-                        with bind_scope(self.commit_scope, observed_at), invocation_scope(
+                        with bind_scope(self.commit_scope, observed_at, obligations=observation_obligations), invocation_scope(
                                 self.journal.run_id if self.journal else None, call_id, request_hash):
                             value = spec.run(self, copy.deepcopy(args.value), **run_extra)
                     finally:
@@ -1087,10 +1117,16 @@ class Runtime(ExpressionEvaluator):
         return {**projection(exc.view(self.plan.source)), **self._partial_transport(exc.partial)}
 
     def _run(self):
+        from ibl_v2_requirements import require_wire
+        self.plan = require_wire(self.plan, self.value_protocols)
         if self.plan.issues:
             from ibl_v2_analysis import rejection_message, compact_check
-            return {**compact_check(self.plan), "success": False,
-                    "error": rejection_message("실행 전 검사에서 거절했습니다", self.plan.issues)}
+            rejected = {**compact_check(self.plan), "success": False,
+                        "error": rejection_message("실행 전 검사에서 거절했습니다", self.plan.issues)}
+            wire = next((issue for issue in self.plan.issues if issue['code'] == 'VALUE_PROTOCOL'), None)
+            if wire:
+                rejected['diagnostic'] = {**wire, 'kind': 'protocol'}
+            return rejected
         if set(self.inputs) != set(self.plan.input_types):
             return {"edition": 2, "success": False, "error": "컴파일 시 입력 서명과 실행 입력이 다릅니다.", "executed": False}
         try:
@@ -1098,6 +1134,7 @@ class Runtime(ExpressionEvaluator):
             self._progress_ticket = claim()   # 표면 티켓이 있으면 좌표 소유권(없으면 None — 신고는 버스로만)
         except Exception:
             self._progress_ticket = None
+        result = None
         try:
             from ibl_v2_types import infer, compatible
             for key, value in self.inputs.items():
@@ -1132,6 +1169,11 @@ class Runtime(ExpressionEvaluator):
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,
                     "usage": {"steps": self.budget.used_steps, "rows": self.budget.used_rows,
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
+        if self.completion:
+            from ibl_v2_completion import evaluate
+            out['completion'] = evaluate(self, result, out['success'])
+            out['usage'].update(steps=self.budget.used_steps, rows=self.budget.used_rows,
+                                elapsed_ms=round((time.monotonic() - self.budget.started) * 1000))
         checks = [e for e in self.trace if e.get('kind') == 'assertion']
         entries = self.plan.dependencies.get('source_map', [])[1:]
         used = [{'id': 'fn:' + e['name'], 'success': e['success'], 'source_hash': digest(self.plan.source[source['start']:source['end']]), 'function_ref': source.get('function_ref')}
@@ -1193,14 +1235,27 @@ class Runtime(ExpressionEvaluator):
         if notes:
             out['execution_notes'] = notes[:20]
             out['execution_notes_omitted'] = max(0, len(notes) - 20)
-        if self.owns_commit_scope and out.get("success") and out.get("source_complete"):
+        if self.completion:
+            with self.commit_scope.lock:
+                for obligation in out['completion']['obligations']:
+                    name = self.completion_scope + obligation['id']
+                    if obligation['status'] == 'satisfied':
+                        self.commit_scope.certified.add(name)
+                        self.commit_scope.certified_evidence[name] = obligation['evidence_refs']
+        if self.owns_commit_scope and out.get('success'):
             try:
-                self.commit_scope.commit()
+                if out.get('source_complete'):
+                    self.commit_scope.commit()
+                elif self.completion:
+                    self.commit_scope.commit(satisfied=self.commit_scope.certified,
+                                             evidence=self.commit_scope.certified_evidence)
             except Exception as exc:
                 out.update(success=False, error=f"관측 원장 확정 실패: {exc}")
         self.commit_scope.report(out, owner=self.owns_commit_scope)
         if self.plan.preflight.get('warnings'):
             out['precheck_warnings'] = self.plan.preflight['warnings']
+        if self.journal and self.journal.repair_plan:
+            out['repair'] = self.journal.repair_plan
         if self.reuse_run:
             out["reuse"] = {"run_id": self.reuse_run, "reused_calls": self.reused_calls, "candidates": len(self.reusable)}
             if self.reuse_skipped_total:

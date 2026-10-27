@@ -52,6 +52,9 @@ class IBLRequest(BaseModel):
     approval: Optional[str] = None
     value_protocols: Optional[List[str]] = None
     function_refs: Optional[List[dict]] = None
+    composition: Optional[str] = None
+    completion: Optional[List[dict]] = None
+    repair: Optional[dict] = None
     describe: Optional[List[str]] = None
     read_result: Optional[dict] = None
     check: bool = False                # 현재 컴파일러의 정적 검사만 수행(실행 없음)
@@ -299,6 +302,9 @@ async def execute_ibl_code(req: IBLRequest):
                     # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서
                     # 옛 호출의 tool_input 모양을 바꾸지 않는다(무회귀).
                     _ti = {"code": req.code}
+                    for field in ("composition", "completion", "repair"):
+                        if getattr(req, field) is not None:
+                            _ti[field] = getattr(req, field)
                     if req.edition is not None:
                         _ti["edition"] = req.edition
                     if req.function_refs is not None:

@@ -266,6 +266,9 @@ async def execute_ibl(code: str, project_path: str = "",
                       edition: Optional[int] = None,
                       value_protocols: Optional[List[str]] = None,
                       function_refs: Optional[List[dict]] = None,
+                      composition: Optional[str] = None,
+                      completion: Optional[List[dict]] = None,
+                      repair: Optional[dict] = None,
                       inputs: Optional[dict] = None,
                       ctx: Context = None,
                       origin: Optional[Literal["training"]] = None):
@@ -322,6 +325,9 @@ async def execute_ibl(code: str, project_path: str = "",
     if runtime_parent:
         payload["_runtime_parent"] = runtime_parent
     from ibl_edition import authoring_request
+    for field, value in (("composition", composition), ("completion", completion), ("repair", repair)):
+        if value is not None:
+            payload[field] = value
     if function_refs is not None:
         payload["function_refs"] = function_refs
     if value_protocols is not None:

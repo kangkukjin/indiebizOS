@@ -18,8 +18,9 @@ def remember(journal, request, project_path, agent_id, input_evidence=None):
     from thread_context import get_allowed_nodes, get_task_origin, get_current_task_id, snapshot
     from ibl_v2_ir import pack
     journal.db.execute('CREATE TABLE IF NOT EXISTS continuation(request TEXT, result TEXT)')
-    if not journal.resuming:
-        payload = {'request': pack({k: v for k, v in request.items() if k not in ('approval', 'resume')}),
+    repairing = bool(getattr(journal, 'repair_plan', None))
+    if not journal.resuming or repairing:
+        payload = {'request': pack({k: v for k, v in request.items() if k not in ('approval', 'resume', 'repair')}),
                    'project_path': str(Path(project_path).resolve()), 'agent_id': agent_id,
                    'allowed': sorted(get_allowed_nodes()) if get_allowed_nodes() is not None else None,
                    'origin': get_task_origin(), 'task_id': get_current_task_id(),
@@ -27,7 +28,10 @@ def remember(journal, request, project_path, agent_id, input_evidence=None):
                    'context': {k: v for k, v in snapshot().items() if k in (
                        'project_id', 'agent_name', 'call_channel', 'delegation_chain')},
                    'automatic': principal.current() == principal.OWNER}
-        journal.db.execute('INSERT INTO continuation(request,result) VALUES(?,NULL)', (json.dumps(payload),))
+        if repairing:
+            journal.db.execute('UPDATE continuation SET request=?,result=NULL', (json.dumps(payload),))
+        else:
+            journal.db.execute('INSERT INTO continuation(request,result) VALUES(?,NULL)', (json.dumps(payload),))
         journal.db.commit()
 
 

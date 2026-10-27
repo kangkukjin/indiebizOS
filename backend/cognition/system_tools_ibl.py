@@ -106,7 +106,7 @@ def _preview_boundary(result, tool_input: dict):
 
 
 _CHECKED_CODE_RE = re.compile(r"\s*\$checked:([0-9a-f]{64})\s*")
-_SAVED_REQUEST_KEYS = ("inputs", "budget", "edition", "value_protocols", "reuse", "function_refs")
+_SAVED_REQUEST_KEYS = ("inputs", "budget", "edition", "value_protocols", "reuse", "function_refs", "composition", "completion", "repair")
 
 
 def _offer_checked_code(checked, code, request=None) -> None:
@@ -123,6 +123,8 @@ def _offer_checked_code(checked, code, request=None) -> None:
         from model_result_view import evidence_store
         saved = {key: request[key] for key in _SAVED_REQUEST_KEYS
                  if request is not None and key in request}
+        if saved.get('repair') and checked.get('repair', {}).get('plan_hash'):
+            saved['repair'] = {**saved['repair'], 'plan_hash': checked['repair']['plan_hash']}
         ref = evidence_store().evidence(json.dumps(
             {"kind": "checked_program", "code": code, "request": saved}, ensure_ascii=False))
     except (OSError, ValueError, TypeError):

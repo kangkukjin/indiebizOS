@@ -112,9 +112,17 @@ def sql_page(source, path, table, columns, where, args, cursor=None, limit=50):
     return guarded(source, read)
 
 
-def jsonl_page(source, path, cursor=None, limit=50, predicate=lambda row: True):
-    """Fixed open-file upper bound. Offsets identify repeated identical lines separately."""
+def jsonl_page(source, path, cursor=None, limit=50, predicate=lambda row: True, *, scan_bytes=None):
+    """Page matching rows, with a separately declared bounded scan budget.
+
+    A scan may finish without matches, or pause without proving absence. One
+    complete line (at most LINE_BYTES + 1) may cross the byte/time boundary so
+    every continuation advances. Frozen file bounds and offsets remain stable.
+    """
     def read():
+        budget = JSON_BYTES if scan_bytes is None else scan_bytes
+        if type(budget) is not int or not 1 <= budget <= 16 * 1024 * 1024:
+            raise ReadFault('malformed', 'invalid_scan_budget')
         if cursor and cursor.get("absent"):
             if Path(path).exists():
                 raise ReadFault("partial", "cursor_expired")
@@ -138,8 +146,10 @@ def jsonl_page(source, path, cursor=None, limit=50, predicate=lambda row: True):
             rows, diagnostics, scanned = [], [], 0
             discarding = (cursor or {}).get("discarding", False)
             deadline = time.monotonic() + SQL_SECONDS
-            while stream.tell() < high and len(rows) < limit and scanned < JSON_BYTES:
-                if time.monotonic() > deadline:
+            timed_out = False
+            while stream.tell() < high and len(rows) < limit and scanned < budget:
+                if scanned and time.monotonic() > deadline:
+                    timed_out = True
                     break
                 offset = stream.tell()
                 line = stream.readline(min(LINE_BYTES + 1, high - offset))
@@ -162,9 +172,12 @@ def jsonl_page(source, path, cursor=None, limit=50, predicate=lambda row: True):
             water["after"] = stream.tell()
             water["discarding"] = discarding
             water["done"] = water["after"] >= high
+            stop = ('end' if water['done'] else 'row_limit' if len(rows) >= limit
+                    else 'time_budget' if timed_out else 'scan_budget')
             return result(source, rows, status="partial" if diagnostics or not water["done"] else None,
                           reason=("page_budget" if not water["done"] and not diagnostics else None) or ",".join(sorted(set(diagnostics))) or None,
-                          high_water=water, more=not water["done"], scanned_bytes=scanned)
+                          high_water=water, more=not water["done"], scanned_bytes=scanned,
+                          scan_budget=budget, stop_reason=stop, scan_complete=water['done'])
     return guarded(source, read)
 
 

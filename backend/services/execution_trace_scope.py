@@ -1,5 +1,6 @@
 """Trusted read scopes resolved from registered metadata, never from request paths."""
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,41 @@ class ScopeResolver:
         self.supervision = self.root / "data" / "spill" / "supervision"
         self.system_db = Path(system_db) if system_db else (
             Path(os.environ.get("INDIEBIZ_USERDATA") or self.root / "data") / "system_ai_memory.db")
+
+    def store_id(self, recorded):
+        """Map an owner-recorded data address, never grant access to generation files.
+
+        A retired generation's data view can disappear. Its exact supervision
+        namespace still names the canonical store; arbitrary basename matches,
+        traversals and symlinks below the canonical store remain forbidden.
+        """
+        from supervision_store import trace_directory
+        path = Path(recorded)
+        if '..' in path.parts:
+            raise ReadFault('forbidden', 'access_denied')
+        try:
+            parts = path.relative_to(self.supervision).parts
+            if len(parts) != 1:
+                raise ValueError
+        except ValueError:
+            parts = path.relative_to(self.root / 'data/restart_control/generations').parts
+            if (len(parts) != 5 or not re.fullmatch(r'[0-9a-f]{32}', parts[0])
+                    or parts[1:4] != ('data', 'spill', 'supervision')):
+                raise ReadFault('forbidden', 'access_denied')
+        store_id = parts[-1]
+        trace_directory(self.supervision, store_id)
+        return store_id
+
+    def validate_store(self, store_id, task_id):
+        from supervision_store import read_trace_events
+        binding = read_trace_events(self.supervision, store_id, limit=1)
+        if not binding['rows']:
+            raise ReadFault(binding['status'] if binding['status'] != 'empty' else 'missing',
+                            binding.get('reason') or 'store_identity_missing')
+        if binding['rows'][0].get('_offset') != 0:
+            raise ReadFault('partial', 'store_identity_missing')
+        if binding['rows'][0].get('task_id') != task_id:
+            raise ReadFault('forbidden', 'supervision_task_mismatch')
 
     def scopes(self, access):
         # Read the existing owner's metadata without ProjectManager's mkdir/init.

@@ -410,7 +410,10 @@ def op_trajectory(tool_input):
     events의 data에는 hash/ref/길이와 부작용 경로만 있다.
     """
     if tool_input.get("view", "events") != "events":
-        return _read_trajectory_view(tool_input, _repo_root())
+        # Trace owns user data, not the checkout containing this package.
+        # Match the HTTP consumer even in a sealed generation / installed body.
+        from runtime_utils import get_base_path
+        return _read_trajectory_view(tool_input, str(get_base_path()))
     if tool_input.get("cursor") or tool_input.get("source_ref"):
         return {"success": False, "message": "cursor/source_ref는 view: trace/document에서 사용하세요."}
     notes = []

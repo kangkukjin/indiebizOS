@@ -222,3 +222,25 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
     raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))
+
+
+
+def test_generation_without_existing_ledger_writes_to_data_root(tmp_path, monkeypatch):
+    from write_ledger import read_trace_page
+    body = tmp_path / 'body'
+    monkeypatch.delenv('INDIEBIZ_RUNTIME_STATE_DIR', raising=False)
+    monkeypatch.setenv('INDIEBIZ_BASE_PATH', str(body))
+    monkeypatch.setattr('member_runtime.is_member', lambda: False)
+    monkeypatch.setattr(wl, '_actor', lambda: {'task': 'scope'})
+    monkeypatch.setattr('episode_logger.record_trajectory_event',
+                        lambda *a, **k: {'episode_id': 77, 'run_id': 'run', 'event_seq': 1})
+    for generation in ('first', 'second'):
+        code = tmp_path / generation
+        anchor = code / 'data/write_ledger.jsonl'
+        monkeypatch.setattr(wl, '_LEDGER_PATH', anchor)
+        monkeypatch.setattr(wl, '_LEDGER_DEFAULT', anchor)
+        wl.log_write(body / 'data/value.json', gate=generation)
+        assert not code.exists()
+    page = read_trace_page([77])
+    assert [r['gate'] for r in page['rows']] == ['first', 'second']
+    assert page['scan_complete'] and (body / 'data/write_ledger.jsonl').exists()

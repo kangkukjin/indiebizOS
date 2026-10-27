@@ -163,15 +163,16 @@ class ExecutionTrace:
                     diagnostics.append("store_links:" + str(store_links.get("reason") or store_links["status"]))
                 for link in store_links["rows"]:
                     try:
-                        relative = Path(link["store"]).relative_to(self.resolver.supervision)
-                        if len(relative.parts) != 1:
-                            raise ValueError
-                        from supervision_store import trace_directory
-                        trace_directory(self.resolver.supervision, relative.name)
-                        if len(stores) >= 32 and relative.name not in stores:
+                        store_id = self.resolver.store_id(link['store'])
+                        if len(stores) >= 32 and store_id not in stores:
                             raise ReadFault("partial", "store_budget")
-                        stores.setdefault(relative.name, {})
-                    except (ValueError, ReadFault):
+                        self.resolver.validate_store(store_id, ident['task_id'])
+                        stores.setdefault(store_id, {})
+                    except ReadFault as exc:
+                        diagnostics.append('store:' + exc.reason)
+                        sources.append({'source': 'store_reference', 'status': exc.status,
+                                        'reason': exc.reason, 'observed_at': stamp()})
+                    except ValueError:
                         diagnostics.append("forbidden_or_excess_store_reference")
 
             traj = read_trajectory_page(self.resolver.pulse, ident["episode_ids"], positions.get("trajectory"), limit)
@@ -199,13 +200,7 @@ class ExecutionTrace:
                 if row["kind"].startswith("supervision.") and data.get("store"):
                     # The stored path is only a proposed handle. Resolve against one allowed root.
                     try:
-                        path = Path(data["store"])
-                        relative = path.relative_to(self.resolver.supervision)
-                        if len(relative.parts) != 1:
-                            raise ValueError
-                        store_id = relative.name
-                        from supervision_store import trace_directory
-                        trace_directory(self.resolver.supervision, store_id)
+                        store_id = self.resolver.store_id(data['store'])
                         if len(stores) >= 32 and store_id not in stores:
                             raise ReadFault("partial", "store_budget")
                         if store_id not in stores:
@@ -360,6 +355,7 @@ class ExecutionTrace:
             if previous and (previous["ref"] != fingerprint(source_ref) or previous["offset"] != offset):
                 raise ReadFault("forbidden", "invalid_reference")
             if ref["source"] == "supervision":
+                self.resolver.validate_store(ref['store_id'], resolved['identity']['task_id'])
                 page = read_trace_document(self.resolver.supervision, ref["store_id"], ref["record"], offset, limit, previous.get("water"))
             elif ref["source"] == "episode" and ref["record"] in resolved["identity"]["episode_ids"]:
                 page = read_episode_text(self.resolver.pulse, ref["record"], offset, limit)

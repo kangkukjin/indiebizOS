@@ -77,7 +77,8 @@ def test_no_ended_episode_is_empty_not_current(body, journal):
 
 def test_trace_to_log_document_keeps_identity_pagination_and_readonly(body, trace, monkeypatch):
     service, root = trace
-    monkeypatch.setattr(body, "_repo_root", lambda: str(root))
+    monkeypatch.setattr(body, "_repo_root", lambda: None)
+    monkeypatch.setenv("INDIEBIZ_BASE_PATH", str(root))
     before = source_files(root)
     out = body.op_trajectory({"view": "trace", "episode_id": 1, "limit": 2})
     assert out["success"] and out["items"] and out["next_cursor"]
@@ -100,7 +101,8 @@ def test_first_trace_page_links_response_without_scanning_all_events(body, trace
     store.put_response("검토한 최종 답변")
     (store.directory / "review_status.json").write_text(json.dumps({
         "status": "ACHIEVED", "response": store.manifest()}))
-    monkeypatch.setattr(body, "_repo_root", lambda: str(root))
+    monkeypatch.setattr(body, "_repo_root", lambda: None)
+    monkeypatch.setenv("INDIEBIZ_BASE_PATH", str(root))
     before = source_files(root)
     out = body.op_trajectory({"view": "trace", "episode_id": 1, "limit": 1})
     assert out["next_cursor"]  # 전 사건을 읽지 않은 첫 페이지에서도 응답에 바로 닿는다.

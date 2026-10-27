@@ -57,6 +57,41 @@ def test_maintenance_bundle_wires_spill_gc_evidence():
     assert "spill.gc_evidence(" in src and "result['spill']" in src
 
 
+
+
+def test_generation_code_uses_data_root_and_explicit_scope_precedence(tmp_path):
+    # A real child import bypasses pytest's spill monkeypatch; the module's code
+    # address simulates two retired generations without copying the repository.
+    import json, subprocess, sys
+    from pathlib import Path
+    body = tmp_path / 'body'
+    state = tmp_path / 'state'
+    scope = tmp_path / 'private'
+    script = """
+import json, sys
+from common import spill
+body, state, scope = sys.argv[1:]
+import os
+os.environ['INDIEBIZ_BASE_PATH'] = body
+os.environ.pop('INDIEBIZ_RUNTIME_STATE_DIR', None)
+results=[]
+for generation in ('first', 'second'):
+    spill.__file__ = body + '/generations/' + generation + '/backend/common/spill.py'
+    results.append(spill.spill_dir())
+os.environ['INDIEBIZ_RUNTIME_STATE_DIR'] = state
+results.append(spill.spill_dir())
+token = spill._spill_root.set(scope)
+results.append(spill.spill_dir())
+spill._spill_root.reset(token)
+print(json.dumps(results))
+"""
+    env = {**os.environ, 'PYTHONPATH': str(Path(__file__).parent)}
+    completed = subprocess.run([sys.executable, '-c', script, str(body), str(state), str(scope)],
+                               env=env, capture_output=True, text=True, check=True)
+    assert json.loads(completed.stdout) == [str(body / 'data/spill')] * 2 + [str(state / 'spill'), str(scope)]
+    assert not (body / 'generations').exists()
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23 규약)
     import sys
     sys.exit(pytest.main([__file__, *sys.argv[1:]]))

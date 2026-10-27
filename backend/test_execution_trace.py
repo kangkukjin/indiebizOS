@@ -385,5 +385,122 @@ def test_store_discovery_error_remains_visible_on_final_page(trace):
     assert 'store_links:malformed_store_link' in last['diagnostics']
 
 
+
+@pytest.mark.parametrize('generation', ['1' * 32, '2' * 32])
+def test_retired_generation_address_keeps_scoped_evidence(trace, generation):
+    svc, root = trace
+    store, evidence = add_store(svc, root)
+    old = root / 'data/restart_control/generations' / generation / 'data/spill/supervision' / store.directory.name
+    assert not old.exists()
+    with sqlite3.connect(root / 'data/world_pulse.db') as conn:
+        conn.execute("UPDATE trajectory_event SET data=json_set(data,'$.store',?) WHERE kind LIKE 'supervision.%'", (str(old),))
+    before = source_files(root)
+    result = pages(svc, episode_id=1, limit=1)
+    refs = [ref for page in result for ref in page['links']['evidence']]
+    assert refs and not any('forbidden_store_reference' in p['diagnostics'] for p in result)
+    doc = svc.document(ACCESS, refs[0]['source_ref'], episode_id=1)
+    assert doc['text'] == 'PRIVATE EVIDENCE' * 10
+    assert svc.document(ACCESS, refs[0]['source_ref'], episode_id=2)['status'] == 'forbidden'
+    assert source_files(root) == before and not store.coverage and not store.evidence_coverage
+    # Rebinding the same directory to another task cannot preserve access.
+    event_path = store.directory / 'events.jsonl'
+    event_path.write_text(json.dumps({'seq': 1, 'task_id': 'other-task'}) + '\n')
+    assert svc.document(ACCESS, refs[0]['source_ref'], episode_id=1)['status'] == 'forbidden'
+
+
+@pytest.mark.parametrize('address', ['outside', 'bad-generation', 'traversal', 'wrong-namespace', 'other-task', 'symlink'])
+def test_generation_reference_does_not_expand_authority(trace, address):
+    svc, root = trace
+    store, _ = add_store(svc, root)
+    sid = store.directory.name
+    path = root / 'data/restart_control/generations' / ('1' * 32) / 'data/spill/supervision' / sid
+    if address == 'outside':
+        path = root.parent / 'outside' / sid
+    elif address == 'bad-generation':
+        path = root / 'data/restart_control/generations/invalid/data/spill/supervision' / sid
+    elif address == 'traversal':
+        path = root / 'data/restart_control/generations' / ('1' * 32) / '../data/spill/supervision' / sid
+    elif address == 'wrong-namespace':
+        path = root / 'data/restart_control/generations' / ('1' * 32) / 'data/other/supervision' / sid
+    elif address == 'other-task':
+        (store.directory / 'events.jsonl').write_text(json.dumps({'task_id': 'other-task'}) + '\n')
+    else:
+        moved = store.directory.with_name('b' * 32)
+        store.directory.rename(moved)
+        store.directory.symlink_to(moved, target_is_directory=True)
+    with sqlite3.connect(root / 'data/world_pulse.db') as conn:
+        conn.execute("UPDATE trajectory_event SET data=json_set(data,'$.store',?) WHERE kind LIKE 'supervision.%'", (str(path),))
+    result = svc.query(ACCESS, episode_id=1)
+    assert result['partial'] and not result['links']['evidence']
+    assert not any(d['label'] == 'supervision response' for d in result['links']['documents'])
+
+
+@pytest.mark.parametrize('limit', [1, 2, 100])
+def test_filtered_jsonl_pages_measure_scan_separately_from_results(trace, monkeypatch, limit):
+    import trace_read, write_ledger
+    svc, root = trace
+    monkeypatch.setattr(trace_read, 'JSON_BYTES', 80)
+    monkeypatch.setattr(write_ledger, '_ROTATE_BYTES', 4096)
+    path = root / 'data/write_ledger.jsonl'
+    rows = [{'episode_id': 9, 'n': i} for i in range(50)] + [{'episode_id': 1, 'n': i} for i in range(3)]
+    path.write_text(''.join(json.dumps(r) + '\n' for r in rows))
+    cursor, seen, scans = None, [], []
+    for _ in range(5):
+        page = write_ledger.read_trace_page([1], cursor, limit, path)
+        seen.extend(r['n'] for r in page['rows']); scans.append(page['scanned_bytes'])
+        assert page['rows'] or page['scan_complete'], page
+        cursor = page['high_water']
+        if not page['more']:
+            break
+    assert seen == [0, 1, 2] and page['scan_complete'] and page['stop_reason'] == 'end'
+    assert sum(scans) == path.stat().st_size
+    # No matches prove absence only after consuming the frozen snapshot.
+    empty = write_ledger.read_trace_page([88], None, limit, path)
+    assert empty['status'] == 'empty' and empty['scan_complete'] and not empty['more']
+
+
+def test_scan_exhaustion_is_partial_and_always_advances(trace, monkeypatch):
+    import trace_read
+    _, root = trace
+    path = root / 'data/scan.jsonl'
+    path.write_text(''.join(json.dumps({'n': i}) + '\n' for i in range(20)))
+    page = trace_read.jsonl_page('scan', path, predicate=lambda r: False, scan_bytes=10)
+    assert page['status'] == 'partial' and not page['scan_complete']
+    assert page['stop_reason'] == 'scan_budget' and page['high_water']['after'] > 0
+    ticks = iter(range(100))
+    monkeypatch.setattr(trace_read.time, 'monotonic', lambda: next(ticks))
+    timed = trace_read.jsonl_page('scan', path, predicate=lambda r: False)
+    assert timed['stop_reason'] == 'time_budget' and timed['high_water']['after'] > 0
+    assert timed['more'] and timed['rows'] == []
+
+
+def test_missing_generation_store_is_missing_not_permission_denial(trace):
+    import shutil
+    svc, root = trace
+    store, _ = add_store(svc, root)
+    shutil.rmtree(store.directory)
+    page = svc.query(ACCESS, episode_id=1)
+    missing = [s for s in page['sources'] if s['source'] == 'store_reference']
+    assert missing and missing[0]['status'] == 'missing'
+    assert not page['links']['evidence'] and page['partial']
+
+
+def test_multiple_generation_aliases_do_not_duplicate_store_rows(trace):
+    svc, root = trace
+    store, _ = add_store(svc, root)
+    for seq, generation in [(10, '1' * 32), (11, '2' * 32)]:
+        recorded = root / 'data/restart_control/generations' / generation / 'data/spill/supervision' / store.directory.name
+        with sqlite3.connect(root / 'data/world_pulse.db') as conn:
+            data = {'store': str(recorded), 'seq': 1}
+            conn.execute('INSERT INTO trajectory_event VALUES(?,?,?,?,?,?,?,?,?)',
+                         (trajectory_run_id('shared-task'), seq, 1, 'shared-task', '', '',
+                          'supervision.tool.finished', json.dumps(data), 'usage'))
+    result = pages(svc, episode_id=1, limit=1)
+    events = [e for p in result for e in p['events']]
+    assert len([e for e in events if e['source'] == 'supervision']) == 1
+    observations = [link for e in events for link in e['links'] if link.get('relation') == 'supervision_observation']
+    assert len(observations) == 3
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

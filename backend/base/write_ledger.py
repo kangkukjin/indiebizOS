@@ -44,7 +44,10 @@ def _ledger_path() -> Path:
     if _LEDGER_PATH != _LEDGER_DEFAULT:
         return _LEDGER_PATH
     state = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
-    return Path(state) / "write_ledger.jsonl" if state else _LEDGER_PATH
+    if state:
+        return Path(state) / "write_ledger.jsonl"
+    from runtime_utils import get_base_path
+    return get_base_path() / "data" / "write_ledger.jsonl"
 _ROTATE_BYTES = 8 * 1024 * 1024   # 1세대 로테이션 (~40k행)
 
 # 심장박동 가족 — 폴링·상태 갱신이 분 단위로 두드리는 파일(상대경로). 행위자 없는
@@ -168,7 +171,13 @@ def read_rows(days: int = 7):
 
 
 def read_trace_page(episode_ids, cursor=None, limit=50, path=None):
-    """Only explicit episode joins are scoped. Legacy task/run strings are insufficient."""
-    from trace_read import jsonl_page
+    """Explicit episode joins; scan the bounded retained file, not 1 MB result pages.
+
+    Sparse matches must not force clients to pull empty pages for each internal
+    chunk. The shared reader still yields on its time/byte budget and reports
+    incomplete scans. No index, writer change or unbounded scan is introduced.
+    """
+    from trace_read import jsonl_page, LINE_BYTES
     return jsonl_page("writes", path or _ledger_path(), cursor, limit,
-                      predicate=lambda row: row.get("episode_id") in episode_ids)
+                      predicate=lambda row: row.get("episode_id") in episode_ids,
+                      scan_bytes=_ROTATE_BYTES + LINE_BYTES)

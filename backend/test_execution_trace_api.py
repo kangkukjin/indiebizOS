@@ -64,5 +64,22 @@ def test_remote_launcher_auth_fails_closed(client, monkeypatch):
     assert not auth.is_public_remote_path('GET', '/world-pulse/episodes/1/trace')
 
 
+def test_http_generation_evidence_uses_same_scope_contract(client, trace):
+    import json, sqlite3
+    from test_execution_trace import add_store
+    service, root = trace
+    store, _ = add_store(service, root)
+    recorded = root / 'data/restart_control/generations' / ('1' * 32) / 'data/spill/supervision' / store.directory.name
+    with sqlite3.connect(root / 'data/world_pulse.db') as conn:
+        conn.execute("UPDATE trajectory_event SET data=json_set(data,'$.store',?) WHERE kind LIKE 'supervision.%'", (str(recorded),))
+    result = client.post('/world-pulse/episodes/1/trace', json={'limit': 100})
+    assert result.status_code == 200
+    ref = result.json()['links']['evidence'][0]['source_ref']
+    doc = client.post('/world-pulse/episodes/1/trace/document', json={'source_ref': ref})
+    assert doc.status_code == 200 and doc.json()['text'] == 'PRIVATE EVIDENCE' * 10
+    assert client.post('/world-pulse/episodes/2/trace/document', json={'source_ref': ref}).status_code == 403
+    assert not store.coverage and not store.evidence_coverage
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, '-q']))

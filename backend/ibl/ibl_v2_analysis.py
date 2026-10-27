@@ -473,8 +473,10 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
         if field is None:
             continue
         if any(t.kind == 'Callable' for t in alternatives(args.get(param, UNKNOWN))):
-            value = compiler.apply_callable(field, args[param], [row if row.observed else UNKNOWN],
+            value = compiler.apply_callable(field, args[param], [row],
                                             [field], env, names, readonly, require_pure=True)
+            if param in flow.get('row_condition_params', []):
+                compiler.need(field, value, Type('Bool'))
             if param == flow.get('columns_param'):
                 projected = value
         elif param not in flow.get('row_condition_params', []):

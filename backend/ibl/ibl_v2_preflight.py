@@ -253,6 +253,9 @@ def analyze(compiler, root, inputs):
                 return Facts()
             if kind == 'function':
                 fn = compiler.functions[target[1]]
+                if fn.data.get('semantic_interface'):
+                    unknown(node, '저장 의미 인터페이스: 실행 비용 상한은 미확정')
+                    return Facts()
                 owner, action = 'fn', fn.data['name']
             else:
                 owner, action = target[1].split(':', 1)
@@ -374,6 +377,9 @@ def analyze(compiler, root, inputs):
                 unknown(node, '재귀 함수')
                 return Facts()
             fn = compiler.functions[sid]
+            if fn.data.get('semantic_interface'):
+                unknown(node, '저장 의미 인터페이스: 실행 비용 상한은 미확정')
+                return Facts()
             params = fn.data['params']
             if piped is not None and params:
                 args[next(iter(params))] = piped

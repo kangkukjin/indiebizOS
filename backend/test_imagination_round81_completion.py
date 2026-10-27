@@ -95,7 +95,12 @@ def test_callback_fault_retains_row_and_field(op, argument):
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
     source = '[table:' + op + ']{items:[{missing:1},{}],' + argument + '}'
-    result = Runtime(compile_program(source, load_registry())).run()
+    registry = load_registry()
+    assert compile_program(source, registry).issues  # Known sparse row fails the shared callback contract.
+    from ibl_v2_types import Type, UNKNOWN
+    dynamic = source.replace('[{missing:1},{}]', '$rows')
+    plan = compile_program(dynamic, registry, input_types={'rows': Type('List', item=UNKNOWN)})
+    result = Runtime(plan, {'rows': [{'missing': 1}, {}]}).run()
     assert not result['success']
     details = result['diagnostic']['details']
     assert details['row_index'] == 1

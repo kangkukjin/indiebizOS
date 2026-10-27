@@ -18,6 +18,8 @@ class Library(dict):
         super().__init__(*args, **kwargs)
         self.origins, self.conflicts = {}, {}
         self.references = {}
+        self.interfaces = {}
+        self.interface_limits = {}
 
     def add(self, name, source, origin):
         if name in self.conflicts:
@@ -28,6 +30,14 @@ class Library(dict):
         else:
             self[name] = source
             self.origins[name] = origin
+
+    def interfaces_only(self):
+        """Authoring view with no implementation text; execution needs full definitions."""
+        import copy
+        result = copy.deepcopy(self)
+        for name in result:
+            result[name] = None
+        return result
 
     def owners(self, name):
         return list(self.conflicts.get(name) or ([self.origins[name]] if name in self.origins and name in self else []))
@@ -183,6 +193,31 @@ def _describe(name, allowed_nodes=None):
     if name not in sources:
         adapter = registry.get('fn:'+name)
         return {'callable_contract': adapter.contract} if adapter else {'error':'등록된 함수가 없습니다'}
+    interface = sources.interfaces.get(name)
+    from ibl_v2_ir import digest
+    if interface and all(k in registry and digest(registry[k].contract) == revision
+                         for k, revision in interface['contracts'].items()):
+        from ibl_v2_compile import Compiler
+        from ibl_v2_requirements import finish
+        from ibl_v2_component import compiled_contracts
+        from ibl_v2_ir import digest
+        compiler = Compiler('', registry, {}, sources.interfaces_only())
+        sid = compiler.resolve_function(name, {})
+        compiler.function(sid, {})
+        finish(compiler)
+        if compiler.issues:
+            return {'error': '함수 인터페이스 검사 실패', 'issues': compiler.issues}
+        components = compiled_contracts(compiler)
+        return {'function_ref': sources.references.get(name),
+                'function_refs': [sources.references[n] for n in compiler.external if n in sources.references],
+                'semantic_interface': interface, 'status': 'parameterized',
+                'plan_hash': digest([interface, sources.references]), 'hash_kind': 'semantic-interface',
+                'source_hash': interface['source_hash'],
+                'callable_contract': compiler.function_contracts[sid],
+                'component_contract': components[sid], 'components': components,
+                'guards': compiler.guards, 'guards_total': len(compiler.guards),
+                'guards_inner': 0, 'warnings': compiler.warnings,
+                'note': '인자를 대입해 결과·효과·완료 의무를 검사합니다. 실행 영수증은 포함하지 않습니다.'}
     plan = compile_program(sources[name], registry, definitions=sources)
     report = plan.report()
     node = next((n for n in plan.root.data['statements'] if n.kind == 'def' and n.data['name'] == name), None)
@@ -197,4 +232,5 @@ def _describe(name, allowed_nodes=None):
             'status': report['status'], 'guards': report['guards'],
             'guards_total': report['guards_total'], 'guards_inner': report['guards_inner'],
             'plan_hash': plan.fingerprint,
-            'source_hash': report['source_hash'], 'warnings': report['warnings']}
+            'source_hash': report['source_hash'], 'warnings': report['warnings'],
+            'semantic_limit': sources.interface_limits.get(name, 'source checking required')}

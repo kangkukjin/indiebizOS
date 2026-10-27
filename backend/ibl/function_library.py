@@ -20,6 +20,8 @@ def definitions(view=None):
             continue
         result.add(name, row['source'], '관용구:' + row['function_id'])
         result.references[name] = store.reference(row)
+        from ibl_v2_semantic_store import attach
+        attach(result, row, view)
     return result
 
 
@@ -43,6 +45,11 @@ def _validate_changes(before, after, changed):
                for view in (before, after) for r in view['records'].values()):
             raise
         registry = prior_registry = {}
+    # Untrusted mutation records cannot lend one another invented interfaces.
+    after = copy.deepcopy(after)
+    for fid in changed:
+        after['records'][fid].pop('semantic_interface', None)
+        after['records'][fid].pop('semantic_limit', None)
     prior, following = definitions(before), definitions(after)
 
     def issues(source, library):
@@ -51,6 +58,7 @@ def _validate_changes(before, after, changed):
         except (Fault, ValueError) as exc:
             return [{'message': str(exc)}]
 
+    derived = {}
     for fid in changed:
         row = after['records'][fid]
         if row.get('state') != 'active':
@@ -60,6 +68,8 @@ def _validate_changes(before, after, changed):
         errors = issues(row['source'], following)
         if errors:
             raise ValueError('저장 전 검사 거절: ' + errors[0]['message'])
+        from ibl_v2_semantic_store import certify
+        derived[fid] = certify(row, following, registry)
     broken = []
     for fid, old in before['records'].items():
         if fid in changed or old.get('state') != 'active':
@@ -78,6 +88,7 @@ def _validate_changes(before, after, changed):
     # Persistent external consumers use their existing store, never a new registry.
     from function_consumers import validate_consumers
     validate_consumers(before, after, changed, registry, prior_registry)
+    return derived
 
 
 def register(name, source, description='', provenance=None, *, expected_revision=None,
@@ -175,6 +186,9 @@ def reference_library(refs):
         result.pinned_view['records'][row['function_id']] = row
         result.add(row['name'], row['source'], '관용구:' + row['function_id'])
         result.references[row['name']] = store.reference(row)
+    from ibl_v2_semantic_store import attach
+    for row in result.pinned_view['records'].values():
+        attach(result, row, result.pinned_view)
     return result
 
 

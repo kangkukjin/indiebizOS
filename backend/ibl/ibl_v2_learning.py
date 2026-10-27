@@ -44,9 +44,15 @@ def record_functions(plan, result):
     for event in events.values():
         if event.get("kind") != "function_result":
             continue
-        entry = next((s for s in entries if s["start"] <= event["definition_start"] < s["end"]), None)
-        if entry and entry.get('function_ref'):
-            ref = entry['function_ref']
+        ref = event.get('function_ref')
+        if ref is not None and ref not in plan.dependencies.get('function_refs', []):
+            continue
+        if ref is None:
+            entry = next((s for s in entries if s["start"] <= event["definition_start"] < s["end"]), None)
+            ref = (entry or {}).get('function_ref')
+        if ref:
+            # Interface-only plans have no lower source coordinates. Attribute
+            # the runtime's exact pinned identity rather than reopening a body.
             event['function_ref'] = ref
             run_id = (result.get('task_ref') or {}).get('task_id') or (result.get('resume') or {}).get('run_id')
             if run_id:

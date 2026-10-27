@@ -51,6 +51,7 @@ class Plan:
     accesses: set = field(default_factory=set)
     components: dict = field(default_factory=dict)
     node_effects: dict = field(default_factory=dict)
+    semantic_functions: dict = field(default_factory=dict)
 
     REPORT_GUARDS_CAP = 24
 
@@ -293,9 +294,16 @@ class Compiler(CallAnalysis):
             return self.external[name]
         if name not in self.definitions:
             return None
+        from ibl_v2_semantic_store import resolve
+        resolved = resolve(self, name)
+        if resolved is not None:
+            return resolved
         from ibl_v2_parser import Parser
         from ibl_v2_store import definition_name
         code = self.definitions[name]
+        if code is None:
+            reason = getattr(self.definitions, 'interface_limits', {}).get(name, 'interface unavailable')
+            raise Fault('SEMANTIC_INTERFACE_REQUIRED', f'{name}: {reason}', kind='compile')
         if definition_name(code) != name:
             raise Fault("LIBRARY_NAME", f"등록 이름과 정의 이름이 다릅니다: {name}", kind="compile")
         offset = len(self.source) + 1
@@ -928,39 +936,8 @@ class Compiler(CallAnalysis):
         if contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args:
             # 행 목록 자리의 봉투는 그 행 목록이다 — join·groupby·dedup 의 결과를 그대로 이어 받는다.
             args["items"] = rows_type(args["items"])
-        for k, t in args.items():
-            if k in params:
-                self.need(node, t, declared(params[k]))
-        self.effects.update(contract["effects"])
-        self.call_effects.setdefault(node.id, set()).update(contract["effects"])
-        # 자원 정체 = 타입 검사가 아는 컴파일 시 값(리터럴·변수·기본값·특수화 인자·정적 보간). 같은 값이면 같은 자원이다.
-        from ibl_callable_contract import resource_values, UNRESOLVED
-        resource_args = {k: static_text(t) if static_text(t) is not None else UNRESOLVED
-                         for k, t in args.items()}
-        from ibl_v2_access import accesses
-        if self.reachable:
-            self.access_log.update(accesses(spec, contract, {**contract.get('defaults', {}), **resource_args}, key,
-                                           runtime=getattr(self, 'resource_runtime', False), argument_types=args))
-        result_type = declared(contract["result"])
-        from ibl_v2_adapters import observed_result
-        # A dynamic shape selector is present, not absent. Keep its marker
-        # so observations from the default shape cannot leak into it.
-        result_type = observed_result(key, spec.contract, values, result_type)
-        from ibl_v2_adapters import declared_rows_result
-        result_type = declared_rows_result(spec.contract, values, result_type)
-        from ibl_v2_analysis import row_flow_type
-        result_type = row_flow_type(self, node, contract, args, fields, values,
-                                    result_type, env, names, readonly)
-        if (result_type.kind == "Record" and "items" not in dict(result_type.fields)
-                and contract.get("analysis", {}).get("flow", {}).get("emits") == "items"):
-            # 출력 형태는 flow.emits가 소유한다. 입력 봉투를 하나 받든 여러
-            # 출처를 결합하든 같은 행 목록이다. 문서·건수 Record에는 적용하지
-            # 않으며 명시된 items 타입과 실행 시 실제 값 검사는 그대로 둔다.
-            result_type = Type("Record", (*result_type.fields, ("items", Type("List", item=UNKNOWN))),
-                               open=result_type.open, observed=result_type.observed)
-        if result_type.kind == "Unknown":
-            self.need(node, UNKNOWN, UNKNOWN)
-        return result_type
+        from ibl_v2_semantic import apply_primitive
+        return apply_primitive(self, node, key, spec, contract, args, fields, values, env, names, readonly)
 
     def arguments(self, node, args, params, receiver, piped, hint=None):
         if piped is not None:
@@ -1092,7 +1069,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
             compiler.apply_callable(node, typ, [UNKNOWN] * len(node.data['params']),
                                     [node] * len(node.data['params']))
             compiler.effects, compiler.access_log, compiler.reachable = outer
-    dependencies = {"source": digest(compiler.source), "libraries": digest({k: compiler.definitions[k] for k in sorted(compiler.external)}),
+    dependencies = {"source": digest(compiler.source), "libraries": digest({k: (compiler.semantic_functions[compiler.external[k]] if compiler.external[k] in compiler.semantic_functions else compiler.definitions[k]) for k in sorted(compiler.external)}),
                     "calls": compiler.call_dependencies,
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
                     "source_map": compiler.source_map, "contracts": digest({k: registry[k].contract for k in sorted(compiler.used_actions)}),
@@ -1143,4 +1120,5 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
     if value_protocols is not None:
         from ibl_v2_requirements import require_wire
         plan = require_wire(plan, value_protocols)
+    plan.semantic_functions = compiler.semantic_functions
     return plan

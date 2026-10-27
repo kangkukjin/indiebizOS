@@ -95,6 +95,8 @@ def compiled_contracts(compiler):
     for sid, contract in compiler.function_contracts.items():
         result[sid] = normalize({'name': contract['name'], 'revision': contract['source_hash']}, contract,
                                 producer='function', completion=compiler.component_declarations[sid].get('completion'))
+        if 'semantic_interface' in contract:
+            result[sid]['semantic_interface'] = contract['semantic_interface']
     from ibl_v2_learning import walk_nodes
     from ibl_v2_types import describe_type
     for lid, typ in compiler.lambda_contracts.items():

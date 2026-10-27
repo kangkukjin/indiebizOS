@@ -28,6 +28,8 @@ def merge_diagnostics(target, entries, prefix=()):
 class CallAnalysis:
     def init_call_analysis(self):
         self.function_cache = {}
+        self.semantic_functions = {}
+        self.semantic_abilities = {}
         self.analysis_stats = {kind + suffix: 0 for kind in ('function', 'lambda', 'builtin', 'action')
                                for suffix in ('_bodies', '_reuses')}
         self.summary_active = set()
@@ -41,8 +43,13 @@ class CallAnalysis:
         frame = {'function': definition.data['name'],
                  'call': span(self.source, call) if call else None,
                  'definition': span(self.source, definition)}
+        def analyze():
+            if sid in self.semantic_functions:
+                from ibl_v2_semantic import apply_function
+                return apply_function(self, sid, args, call)
+            return self._function(sid, args, call)
         return self.summary(('function', sid, tuple(sorted(args.items()))), call or definition,
-                            frame, lambda: self._function(sid, args, call), 'function')
+                            frame, analyze, 'function')
 
     def summary(self, identity, call, frame, analyze, category):
         """One compile-local summary boundary for every callable producer.
@@ -187,7 +194,20 @@ class CallAnalysis:
                 continue
             category = contract[0]
             named = isinstance(types, Type)
-            if category == 'requirement':
+            if category == 'semantic':
+                from ibl_v2_semantic import apply
+                _, identity, captures, params = contract
+                if piped is not None and not named:
+                    types = [piped, *types]
+                actual = dict(types.fields) if named else dict(zip(params, types))
+                if named:
+                    virtual = Node(node.kind, node.start, node.end, {'open_arguments': types.open})
+                    self.arguments(virtual, actual, dict.fromkeys(params), next(iter(params), None), piped)
+                elif len(types) != len(params):
+                    self.issue(node, 'ARITY', '의미 인터페이스 콜백 인자가 다릅니다.')
+                current = apply(self, self.semantic_abilities[identity], {**dict(captures), **actual}, node)
+                self.call_effects.setdefault(node.id, set()).update(self.effects or {'pure'})
+            elif category == 'requirement':
                 _, params, returned, effects = contract
                 if isinstance(params, tuple) != (not named):
                     self.issue(node, 'ARGUMENT_STYLE', '명시 콜백 계약의 인자 방식과 다릅니다.')

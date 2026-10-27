@@ -105,6 +105,9 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                 with function_store.using(view):
                     plan = compile_program(source, load_registry(project_path, agent_id), inputs,
                                            pinned if pinned is not None else definitions(), declared_inputs=declared)
+        if not request.get("check") or repair or request.get("resume"):
+            from ibl_v2_semantic_store import execution_plan
+            plan = execution_plan(plan)
         from ibl_v2_requirements import require_wire
         plan = require_wire(plan, protocols)
         from approval_tokens import request_digest

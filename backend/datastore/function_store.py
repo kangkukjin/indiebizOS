@@ -182,7 +182,8 @@ def publish(changes, *, expected_generation=None, request_id=None, root=None,
     """CAS and compiler validation happen under the same catalog lock.
 
     A change is {record, expected_revision, state?, legacy_ids?}. The record
-    contains no derived signatures or usage statistics. None expects creation.
+    may carry compiler-certified relations; caller-supplied relations are replaced.
+    None expects creation. Usage statistics remain outside the definition.
     """
     if not isinstance(changes, list) or not changes:
         raise ValueError('변경할 관용구가 없습니다.')
@@ -237,7 +238,21 @@ def publish(changes, *, expected_generation=None, request_id=None, root=None,
             names[key] = fid
         if _validator is None:
             raise ValueError('관용구 컴파일 관문이 배선되지 않았습니다.')
-        _validator(snapshot(root, index=before), {'records': records, 'generation': before['generation'] + 1}, seen)
+        derived = _validator(snapshot(root, index=before), {'records': records, 'generation': before['generation'] + 1}, seen)
+        # Only the compiler gate may supply derived module interfaces. Hash the
+        # certified data into the same immutable revision, never a second store.
+        certified_writes = []
+        refs = []
+        for fid, _, record in writes:
+            record.pop('semantic_interface', None)
+            record.pop('semantic_limit', None)
+            if derived and fid in derived:
+                record.update(derived[fid])
+            rid = digest(record)
+            after['functions'][fid]['revision'] = rid
+            certified_writes.append((fid, rid, record))
+            refs.append(reference({**record, 'revision': rid}))
+        writes = certified_writes
         for fid, rid, record in writes:
             path = _safe(root / 'revisions' / fid / (rid + '.yaml'), root)
             if path.exists():

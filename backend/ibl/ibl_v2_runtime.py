@@ -112,6 +112,8 @@ class Runtime(ExpressionEvaluator):
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
                  recordings=None, replay=False, journal=None, reusable=None, reuse_run=None,
                  input_evidence=None, value_protocols=None, reuse_models=True, strict_composition=False, completion=None):
+        from ibl_v2_semantic_store import execution_plan
+        plan = execution_plan(plan)
         from ibl_v2_completion import validate
         self.completion = validate(completion)
         self.execution_started = False

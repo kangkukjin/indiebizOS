@@ -167,7 +167,12 @@ def test_nullable_filter_reports_row(predicate):
     from ibl_v2_ir import Fault
     from ibl_v2_compile import compile_program
     source = 'return [{alive:true},{alive:null}] >> [table:filter]{where:($r)=>'+predicate+'}'
-    result = Runtime(compile_program(source, load_registry())).run()
+    registry = load_registry()
+    assert compile_program(source, registry).issues  # Known nullable row is rejected before execution.
+    from ibl_v2_types import Type, UNKNOWN
+    dynamic = source.replace('[{alive:true},{alive:null}]', '$rows')
+    plan = compile_program(dynamic, registry, input_types={'rows': Type('List', item=UNKNOWN)})
+    result = Runtime(plan, {'rows': [{'alive': True}, {'alive': None}]}).run()
     assert not result["success"]
     assert result["diagnostic"]["details"]["row_index"] == 1
 

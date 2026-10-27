@@ -121,7 +121,7 @@ def candidates(query, limit=3):
     for row in found:
         if row['id'].startswith('fn:'):
             definition = describe(row['id'][3:], allowed)
-            row['contract'] = definition.get('callable_contract')
+            row['contract'] = definition.get('semantic_interface') or definition.get('callable_contract')
             row['contract_known'] = bool(row['contract'])
             if definition.get('error'):
                 row['error'] = definition['error']

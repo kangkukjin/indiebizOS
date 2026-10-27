@@ -1,0 +1,207 @@
+{
+  "baseline_commit": "5009ae09926359583af5754ab6bd7a581b2294a4",
+  "scope": "synthetic adapters; temporary catalogs and journals; no real external effects",
+  "higher_order_contract": {
+    "definition": "[def:choose]($x,$pred){[if:$pred($x)]{return $x}[else]{return null}}",
+    "local_issues": [],
+    "local_run": {
+      "success": true,
+      "value": 2,
+      "source_complete": true,
+      "diagnostic": null
+    },
+    "standalone_issues": [
+      "PURE_EXPRESSION"
+    ],
+    "save": {
+      "accepted": false,
+      "message": "저장 전 검사 거절: 이 자리의 호출은 순수해야 합니다(효과: unknown)."
+    },
+    "numeric_input_contract": {
+      "x": {
+        "type": "Unknown"
+      }
+    },
+    "numeric_runtime_guards": [
+      {
+        "source_span": {
+          "source_hash": "cdf2432a74b6597d39779fd62d98ecf448b309c09da05bf2d12dc07f605a5801",
+          "start": 30,
+          "end": 32,
+          "line": 1,
+          "column": 31
+        },
+        "expected": "Number",
+        "actual": "Unknown",
+        "call_path": [
+          {
+            "function": "absolute",
+            "call": null,
+            "definition": {
+              "source_hash": "cdf2432a74b6597d39779fd62d98ecf448b309c09da05bf2d12dc07f605a5801",
+              "start": 0,
+              "end": 34,
+              "line": 1,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 1,
+              "end_column": 35,
+              "offset_encoding": "unicode-codepoints"
+            }
+          },
+          {
+            "function": "abs",
+            "call": {
+              "source_hash": "cdf2432a74b6597d39779fd62d98ecf448b309c09da05bf2d12dc07f605a5801",
+              "start": 26,
+              "end": 33,
+              "line": 1,
+              "column": 27,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 1,
+              "end_column": 34,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": null
+          }
+        ],
+        "location": {
+          "source_hash": "cdf2432a74b6597d39779fd62d98ecf448b309c09da05bf2d12dc07f605a5801",
+          "start": 30,
+          "end": 32,
+          "line": 1,
+          "column": 31,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 1,
+          "end_column": 33,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "code": "RUNTIME_GUARD",
+        "rule": "RUNTIME_GUARD",
+        "severity": "information",
+        "message": "실행 중 Number 계약을 확인합니다.",
+        "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+      }
+    ]
+  },
+  "resource_composition": {
+    "dynamic_source": "$keys=[audit:keys]{}; [def:save]($key){return [audit:write]{key:$key}}; return [fn:save]{key:$keys[0]} & [fn:save]{key:$keys[1]}",
+    "static_write_write_issues": [
+      "PARALLEL_WRITE_CONFLICT"
+    ],
+    "static_read_write_issues": [],
+    "dynamic_write_write_issues": [],
+    "dynamic_run": {
+      "success": true,
+      "value": [
+        1,
+        1
+      ],
+      "source_complete": true,
+      "diagnostic": null
+    },
+    "maximum_concurrent_writes": 2,
+    "resource_keys": [
+      "same",
+      "same"
+    ]
+  },
+  "edited_recovery": {
+    "original": "$sent=[audit:send]{id:\"delivery\"}; return 10 / $divisor",
+    "edited": "$sent=[audit:send]{id:\"delivery\"}; return 10 / ($divisor + 1)",
+    "initial": {
+      "success": false,
+      "source_complete": true,
+      "diagnostic": "VALUE"
+    },
+    "same_code_resume": {
+      "success": false,
+      "source_complete": true,
+      "diagnostic": "VALUE"
+    },
+    "writes_after_same_resume": 1,
+    "changed_code_resume": "RESUME_CHANGED",
+    "reuse_receipts": 0,
+    "edited_reuse": {
+      "success": true,
+      "value": 10.0,
+      "source_complete": true,
+      "diagnostic": null
+    },
+    "writes_after_edit": 2
+  },
+  "completion_composition": {
+    "source": "$r=([audit:primary]{} ?? [audit:mirror]{}); return $r",
+    "issues": [],
+    "fallback": {
+      "success": true,
+      "value": {
+        "items": [
+          1,
+          2
+        ],
+        "complete": true
+      },
+      "source_complete": false,
+      "state_commit": {
+        "status": "not_committed",
+        "actions": 1,
+        "committed": 0,
+        "reason": "partial_source"
+      },
+      "diagnostic": null
+    },
+    "tool_failures_preserved": 1,
+    "recovered_events": 1,
+    "direct_mirror": {
+      "success": true,
+      "value": {
+        "items": [
+          1,
+          2
+        ],
+        "complete": true
+      },
+      "source_complete": true,
+      "state_commit": {
+        "status": "committed",
+        "actions": 1,
+        "committed": 1,
+        "reason": ""
+      },
+      "diagnostic": null
+    },
+    "committed_observations_total": 1,
+    "note": "Synthetic mirrors return identical data; the language has no declared equivalence obligation here."
+  },
+  "output_boundary": {
+    "source": "[audit:send]{}; return {callback:abs}",
+    "issues": [],
+    "result_contract": {
+      "type": "Record",
+      "fields": {
+        "callback": {
+          "type": "Callable",
+          "builtin": "abs",
+          "arity": {
+            "minimum": 1,
+            "maximum": 1
+          },
+          "effects": [
+            "pure"
+          ]
+        }
+      },
+      "open": false
+    },
+    "run": {
+      "success": false,
+      "source_complete": true,
+      "diagnostic": "VALUE_PROTOCOL"
+    },
+    "write_calls_before_transport_failure": 1
+  }
+}

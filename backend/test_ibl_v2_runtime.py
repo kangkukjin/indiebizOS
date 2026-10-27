@@ -17,6 +17,114 @@ from ibl_v2_runtime import Budget, Runtime
 ROUND = Path(__file__).resolve().parents[1] / 'docs/experiments/long_sentence_imagination/round_39'
 
 
+def test_parallel_late_receipt_does_not_rewind_progress(monkeypatch):
+    """A slower reused branch must not replace the newer branch's coordinate."""
+    import threading
+    import ibl_progress
+    from ibl_v2_adapters import Adapter
+
+    calls = []
+    adapter = Adapter({'version': 1, 'params': {'n': 'Number'},
+                       'result': 'Number', 'effects': ['read_external']},
+                      lambda rt, args: calls.append(args['n']) or args['n'])
+    plan = compile_program('[1,2] >> [table:each]{parallel:2} '
+                           '{ return [test:read]{n:$it} }', {'test:read': adapter})
+    first = Runtime(plan)
+    assert first.run()['success']
+    receipts = {r['reuse_key']: r for r in first.recordings}
+    first_started, second_reused = threading.Event(), threading.Event()
+    seen = []
+
+    def report(ticket, step, of, action, detail=None, reused=False):
+        seen.append({'step': step, 'detail': detail, 'reused': reused})
+        if detail['row'] == 2 and reused:
+            second_reused.set()
+
+    class DelayedReuse(Runtime):
+        def _timed_invoke(self, node, args, piped):
+            if args.value['n'] == 2:
+                assert first_started.wait(3)
+            return super()._timed_invoke(node, args, piped)
+
+        def _invoke(self, node, args, piped):
+            if args.value['n'] == 1:
+                first_started.set()
+                assert second_reused.wait(3)
+            return super()._invoke(node, args, piped)
+
+    monkeypatch.setattr(ibl_progress, 'report_step', report)
+    runtime = DelayedReuse(plan, reusable=receipts, reuse_run='previous')
+    result = runtime.run()
+    assert result['success'] and result['value'] == [1, 2], result
+    assert runtime.reused_calls == 2 and sorted(calls) == [1, 2]
+    assert [p['step'] for p in seen] == sorted(p['step'] for p in seen), seen
+    assert seen[-1]['detail']['row'] == 2 and seen[-1]['reused'], seen
+
+
+def test_parallel_compute_does_not_claim_another_branch_action_finished(monkeypatch):
+    """A compute beat is not proof that another concurrent call has finished."""
+    import threading
+    import ibl_progress
+    from ibl_v2_adapters import Adapter
+
+    active, computing = threading.Event(), threading.Event()
+    seen = []
+
+    def read(rt, args):
+        active.set()
+        assert computing.wait(3)
+        return 1
+
+    class OrderedRows(Runtime):
+        def each(self, node, env, args, piped):
+            assert active.wait(3)
+            return super().each(node, env, args, piped)
+
+    def beat(detail):
+        seen.append(dict(detail))
+        if detail.get('row') == 2:
+            computing.set()
+
+    monkeypatch.setattr(ibl_progress, 'beat', beat)
+    adapter = Adapter({'version': 1, 'params': {}, 'result': 'Number',
+                       'effects': ['read_external']}, read)
+    plan = compile_program('[test:read]{} & ([1,2] >> [table:each] { return $it*2 })',
+                           {'test:read': adapter})
+    assert not plan.issues, plan.report()
+    result = OrderedRows(plan).run()
+    assert result['success'], result
+    assert all(d.get('phase') != 'compute' for d in seen), seen
+
+
+@pytest.mark.parametrize('count', [0, 25, 2500])
+def test_saved_pure_each_program_reuses_reads_and_publishes_last_coordinate(tmp_path, monkeypatch, count):
+    """Run the unchanged S7 program, then reuse it with empty/small/full inputs."""
+    import ibl_progress
+    source = (Path(__file__).resolve().parents[1] /
+              'docs/experiments/long_sentence_imagination/round_100/subjects/s7_reuse_pure.ibl').read_text()
+    fixture = tmp_path / 'fixture.txt'
+    fixture.write_text('progress fixture\n')
+    inputs = {'파일': str(fixture), '목록': list(range(1, count + 1))}
+    seen = []
+    monkeypatch.setattr(ibl_progress, 'report_step',
+                        lambda ticket, step, of, action, **kw: seen.append({'step': step, 'action': action, **kw}))
+    monkeypatch.setattr(ibl_progress, 'beat', lambda detail: seen.append({'beat': detail}))
+    first = handle_request({'edition': 2, 'code': source, 'inputs': inputs}, project_path=str(tmp_path))
+    assert first['success'], first
+    seen.clear()
+    second = handle_request({'edition': 2, 'code': source, 'inputs': inputs,
+                             'reuse': {'run_id': first['resume']['run_id']}}, project_path=str(tmp_path))
+    assert second['success'] and second['value'] == first['value'], second
+    assert second['value']['n'] == count and second['reuse']['reused_calls'] == 3, second
+    expected = sum(len(f'{i}-{i*7}-{len(fixture.read_text())}') for i in inputs['목록'])
+    assert second['value']['s'] == expected
+    rows = [e for e in seen if 'beat' in e]
+    if count:
+        before = seen[:seen.index(rows[0])]
+        assert before[-1]['step'] == 3 and before[-1]['reused'], before
+        assert all(e['beat'].get('phase') == 'compute' for e in rows[1:]), rows[:3]
+
+
 @pytest.mark.parametrize("mode", ["map", "effect"])
 def test_caught_validation_partial_has_explicit_json_boundary(tmp_path, mode):
     """L86: a successful assertion is Unit, not a completed device operation."""

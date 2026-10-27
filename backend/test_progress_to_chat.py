@@ -261,3 +261,78 @@ def test_HTTP_턴_수신자는_버스에_등록되면_신고를_받는다(task, 
     with sessions.connection(path) as conn:
         prog = json.loads(conn.execute("SELECT progress FROM conversation_turns").fetchone()[0])
     assert prog["step"] == 4 and prog["action"] == "self:script" and prog["detail"]["rows"] == 5 and prog["reused"] is False, prog
+
+
+def test_progress_publication_is_serial_and_unregister_closes_late_calls(task):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    entered, release, second_entered = threading.Event(), threading.Event(), threading.Event()
+    seen = []
+
+    def put(event):
+        if event['step'] == 1:
+            entered.set()
+            assert release.wait(3)
+        seen.append(event['step'])
+
+    sink = supervision_bus.ProgressSink(put)
+    supervision_bus.register_progress_sink(task, sink)
+
+    def second():
+        second_entered.set()
+        sink({'step': 2, 'action': 'read'})
+
+    with ThreadPoolExecutor(2) as pool:
+        first = pool.submit(sink, {'step': 1, 'action': 'read'})
+        assert entered.wait(3)
+        later = pool.submit(second)
+        assert second_entered.wait(3)
+        release.set()
+        first.result(timeout=3)
+        later.result(timeout=3)
+    assert seen == [1, 2]
+    supervision_bus.unregister_progress_sink(task, sink)
+    sink({'step': 3, 'action': 'read'})  # 해제 전에 다른 스레드가 집어 둔 수신자
+    assert seen == [1, 2]
+
+
+def test_finished_turn_clears_progress_and_rejects_late_updates(tmp_path):
+    sessions, path = _session_db(tmp_path)
+    binding = sessions.Binding(str(path), 's1', 'owner', 'turn1')
+    sink = sessions.progress_sink(binding)
+    sink({'step': 1, 'action': 'self:read'})
+    store = sessions.SessionStore(path, 'messages', 'owner', create_legacy=False)
+    store.finish(binding)
+    sink({'step': 2, 'action': 'self:read'})
+    with sessions.connection(path) as conn:
+        state, progress = conn.execute('SELECT state,progress FROM conversation_turns').fetchone()
+    assert state == 'completed' and progress == ''
+
+
+def test_chat_card_renders_reuse_and_compute_without_protocol_labels():
+    """Render the real React tool card with a backend progress payload."""
+    import subprocess
+    from pathlib import Path
+    js = r'''
+const esbuild=require('./frontend/node_modules/esbuild');
+const result=esbuild.buildSync({stdin:{contents:`
+  import React from 'react';
+  import {renderToStaticMarkup} from 'react-dom/server';
+  import {ToolHistoryPanel} from './src/components/chat/ToolHistoryPanel';
+  const cases=[
+    {action:'self:read',step:3,of:0,reused:true,detail:{row:2,rows:5,phase:'compute'},at:Date.now()},
+    {action:'self:write',step:4,of:0,reused:false,detail:{row:3,rows:5},at:Date.now()}
+  ];
+  process.stdout.write(JSON.stringify(cases.map(progress => renderToStaticMarkup(
+    React.createElement(ToolHistoryPanel,{toolHistory:[{name:'execute_ibl',status:'running',progress}]})))));
+`,resolveDir:process.cwd()+'/frontend',loader:'tsx'},bundle:true,write:false,platform:'node',
+  format:'cjs',jsx:'automatic',define:{'import.meta.env':'{}'},logLevel:'silent'});
+new Function('require',result.outputFiles[0].text)(require);
+'''
+    result = subprocess.run(['node', '-e', js], capture_output=True, text=True,
+                            cwd=Path(__file__).resolve().parents[1], timeout=30, check=True)
+    reused, normal = json.loads(result.stdout)
+    assert 'self:read(재사용)' in reused and '2/5행 계산 중' in reused
+    assert 'phase=' not in reused and 'compute' not in reused
+    assert 'self:write' in normal and '재사용' not in normal and '계산 중' not in normal

@@ -125,24 +125,8 @@ def make_progress_sink(put):
     덧붙여 싣되 _PROGRESS_BEAT_MIN_INTERVAL_S 안의 연속 beat 은 접는다 — 좌표는 소유하고 움직임은
     공유한다는 ibl_progress 규율을 표면까지 그대로 가져온다.
     """
-    state = {"coord": {}, "last_beat": 0.0}
-
-    def sink(detail):
-        if not isinstance(detail, dict) or not detail:
-            return
-        now = time.time()
-        if "action" in detail or "step" in detail:
-            state["coord"] = {k: detail[k] for k in ("step", "of", "action", "reused") if k in detail}
-            event = {"type": "progress", **state["coord"], "at": now}
-            if isinstance(detail.get("detail"), dict):
-                event["detail"] = dict(detail["detail"])   # 좌표가 품은 회차(each 행 안의 액션)
-        else:
-            if now - state["last_beat"] < _PROGRESS_BEAT_MIN_INTERVAL_S:
-                return
-            state["last_beat"] = now
-            event = {"type": "progress", **state["coord"], "detail": dict(detail), "at": now}
-        put(event)
-    return sink
+    from supervision_bus import ProgressSink
+    return ProgressSink(put, _PROGRESS_BEAT_MIN_INTERVAL_S)
 
 
 def is_cancelled(client_id: str) -> bool:

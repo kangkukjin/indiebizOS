@@ -151,6 +151,8 @@ class Runtime(ExpressionEvaluator):
         # 진행 신고(ibl_progress) — 표면 티켓 소유권·호출 번호·부류별 마지막 신고 (2026-10-26).
         self._progress_ticket = None
         self._progress_calls = 0
+        self._progress_lock = threading.RLock()
+        self._progress_active = set()
         self._progress_last = {}   # 부류("action"/"row") → (키, monotonic)
         self._progress_pending = None   # 접힌 좌표(step, 액션, 회차) — 다음 beat 앞에서 흘려 보낸다(100회차 L100-3)
         from execution_commit import current_scope, CommitScope
@@ -741,49 +743,49 @@ class Runtime(ExpressionEvaluator):
         접기 키는 (액션, 회차) — 같은 액션이라도 행이 바뀌거나 each 를 벗어나면 즉시 신고한다(2026-10-27 99회차 수리 검토):
         액션 이름만으로 접으면 each 밖 첫 좌표가 삼켜져 티켓의 옛 행(detail)이 그 액션 내내 남는다(긴 모델 호출이면 분 단위 거짓).
         """
-        with self.lock:
+        # 번호 할당부터 버스/티켓 발행까지 한 순서로 보낸다. 실행 자체는 잠그지 않는다.
+        with self._progress_lock:
             self._progress_calls += 1
             n = self._progress_calls
-        self.local.progress_call_no = n
-        detail = getattr(self.local, "row_detail", None)
-        if not self._progress_due("action", (key, tuple(sorted(detail.items())) if detail else None)):
-            # 접힌 좌표는 버리지 않고 보류한다(2026-10-28 긴문장 100회차 L100-3): 읽기 3연속이 접혀 표면이 "step 1" 에 머물렀고,
-            # 그 뒤 순수 each 가 2초 돌아도 좌표가 안 바뀌어 거짓이 됐다. 다음 움직임(beat) 앞에서 마지막 좌표를 흘려 보낸다.
-            with self.lock:
+            self.local.progress_call_no = n
+            detail = getattr(self.local, "row_detail", None)
+            if not self._progress_due("action", (key, tuple(sorted(detail.items())) if detail else None)):
+                # 접힌 최신 좌표는 다음 계산 beat 앞에서 보낸다.
                 self._progress_pending = (n, key, detail)
-            return
-        with self.lock:
+                return n
             self._progress_pending = None
-        try:
-            from ibl_progress import report_step
-            report_step(self._progress_ticket, n, 0, key, detail=detail)
-        except Exception:
-            pass
+            try:
+                from ibl_progress import report_step
+                report_step(self._progress_ticket, n, 0, key, detail=detail)
+            except Exception:
+                pass
+            return n
 
     def _flush_pending_coordinate(self):
-        with self.lock:
+        with self._progress_lock:
             pending, self._progress_pending = self._progress_pending, None
-        if not pending:
-            return
-        n, key, detail = pending
-        try:
-            from ibl_progress import report_step
-            report_step(self._progress_ticket, n, 0, key, detail=detail)
-        except Exception:
-            pass
+            if not pending:
+                return
+            n, key, detail = pending
+            try:
+                from ibl_progress import report_step
+                report_step(self._progress_ticket, n, 0, key, detail=detail)
+            except Exception:
+                pass
 
     def _report_reused(self, key):
         """영수증 재사용으로 끝난 호출의 좌표 — "(재사용)" 표식(100회차 L100-3): 실행하지 않은 읽기가 "진행 중"으로 보이면 거짓이다."""
         n = getattr(self.local, "progress_call_no", None)
-        if n is None:
-            return
-        with self.lock:
+        with self._progress_lock:
+            # 늦게 끝난 이전 가지의 영수증으로 최신 좌표/보류 좌표를 덮지 않는다.
+            if n is None or n != self._progress_calls:
+                return
             self._progress_pending = None
-        try:
-            from ibl_progress import report_step
-            report_step(self._progress_ticket, n, 0, key, detail=getattr(self.local, "row_detail", None), reused=True)
-        except Exception:
-            pass
+            try:
+                from ibl_progress import report_step
+                report_step(self._progress_ticket, n, 0, key, detail=getattr(self.local, "row_detail", None), reused=True)
+            except Exception:
+                pass
 
     def _row_detail(self, index, count, item):
         label = item if isinstance(item, (str, int, float)) else None
@@ -798,24 +800,31 @@ class Runtime(ExpressionEvaluator):
         pure: 이 each 에 들어온 뒤 아직 액션 호출이 없다 — 좌표의 액션은 끝난(또는 재사용된) 것이므로 둘째 행부터 detail 에
         phase:"compute" 를 실어 표면이 "계산 중"으로 읽게 한다(100회차 L100-3, S7 순수 each 2500행 동안 "self:read 진행 중"이
         떠 있었다). 첫 행은 아직 모른다(행 안 액션이 ms 뒤 올 수 있다) — 표식 없이 둔다."""
-        if pure:
-            # 이 each 에 아직 액션이 없다 — 그 앞에서 접혀 보류된 좌표(읽기 3연속의 마지막)를 먼저 흘려 보낸다.
-            # 행 안에 액션이 있는 each 에서는 접기 규약(같은 행 안 같은 액션은 하나)을 그대로 둔다.
-            self._flush_pending_coordinate()
-        if not self._progress_due("row", (detail["row"], detail["rows"])):
-            return
-        try:
-            from ibl_progress import beat
-            beat({**detail, "phase": "compute"} if pure and detail.get("row", 1) > 1 else detail)
-        except Exception:
-            pass
+        with self._progress_lock:
+            # 다른 병렬 가지의 호출이 아직 실행 중이면 "액션 뒤 계산 중"이라고 할 수 없다.
+            pure = pure and not self._progress_active
+            if pure:
+                self._flush_pending_coordinate()
+            if not self._progress_due("row", (detail["row"], detail["rows"])):
+                return
+            try:
+                from ibl_progress import beat
+                beat({**detail, "phase": "compute"} if pure and detail.get("row", 1) > 1 else detail)
+            except Exception:
+                pass
 
     def _timed_invoke(self, node, args, piped):
         started = time.monotonic()
-        self._report_action(f"{node.data['node']}:{node.data['action']}")
+        previous = getattr(self.local, "progress_call_no", None)
+        with self._progress_lock:
+            call_no = self._report_action(f"{node.data['node']}:{node.data['action']}")
+            self._progress_active.add(call_no)
         try:
             return self._invoke(node, args, piped)
         finally:
+            with self._progress_lock:
+                self._progress_active.discard(call_no)
+                self.local.progress_call_no = previous
             with self.lock:
                 ended = time.monotonic()
                 cell = self.tool_time.setdefault(node.id, [0, 0.0, f"{node.data['node']}:{node.data['action']}", []])

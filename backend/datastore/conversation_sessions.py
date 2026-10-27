@@ -304,7 +304,7 @@ class SessionStore:
 
     def finish(self, binding, state="completed", error=None):
         with connection(self.path) as conn:
-            conn.execute("UPDATE conversation_turns SET state=?,finished_at=?,error=? WHERE id=?",
+            conn.execute("UPDATE conversation_turns SET state=?,finished_at=?,error=?,progress='' WHERE id=?",
                          (state, now(), error, binding.turn_id))
             touch(conn, binding.session_id)
 
@@ -316,29 +316,18 @@ def progress_sink(binding, min_beat_interval_s=0.2):
     같은 저장소에 턴을 열지만 수신자가 없어 progress 가 영원히 빈 칸이었다(100회차 독립 AI 턴 433초 전이 0 vs 버스 신고 1).
     규율은 WS 와 같다 — 좌표(step/action)는 바로 쓰고 기억하며, 움직임(detail 만인 beat)은 마지막 좌표를 덧붙여 쓰되 짧은 연속은 접는다.
     실행 스레드(MCP 재진입·병렬 가지)에서 불리므로 current() 가 아니라 받은 binding 으로 쓴다. 턴이 끝나면 clear_progress."""
-    state = {"coord": {}, "last_beat": 0.0}
+    from supervision_bus import ProgressSink
 
-    def sink(detail):
-        if not isinstance(detail, dict) or not detail or not binding or not binding.turn_id:
+    def put(event):
+        if not binding or not binding.turn_id:
             return
-        now = time.time()
-        if "action" in detail or "step" in detail:
-            state["coord"] = {k: detail[k] for k in ("step", "of", "action", "reused") if k in detail}
-            event = {"type": "progress", **state["coord"], "at": now}
-            if isinstance(detail.get("detail"), dict):
-                event["detail"] = dict(detail["detail"])
-        else:
-            if now - state["last_beat"] < min_beat_interval_s:
-                return
-            state["last_beat"] = now
-            event = {"type": "progress", **state["coord"], "detail": dict(detail), "at": now}
         try:
             with connection(binding.db_path) as conn:
                 conn.execute("UPDATE conversation_turns SET progress=? WHERE id=? AND state='running'",
                              (json.dumps(event, ensure_ascii=False, default=str), binding.turn_id))
         except Exception:
             pass   # 신고가 본 실행을 깨지 않는다
-    return sink
+    return ProgressSink(put, min_beat_interval_s)
 
 
 def clear_progress(binding):

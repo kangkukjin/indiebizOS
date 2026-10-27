@@ -14,7 +14,7 @@ interface Snapshot {
  has_older: boolean; turn: { id: string; state: string; stream_content?: string; progress?: TurnProgress | null } | null; events: Event[];
 }
 /** 턴의 현재 진행(백엔드 conversation_turns.progress) — age_s 는 서버 시계 기준 마지막 움직임 경과 */
-interface TurnProgress { action?: string; step?: number; of?: number; detail?: Record<string, unknown>; age_s?: number }
+interface TurnProgress { action?: string; step?: number; of?: number; reused?: boolean; detail?: Record<string, unknown>; age_s?: number }
 export const sessionQuery = (t: SessionTarget) => new URLSearchParams(Object.entries(t).filter(([,v]) => v !== undefined) as [string,string][]).toString();
 export const sessionCall = <T,>(path: string, target: SessionTarget, method = 'GET', body?: object) => api.request<T>(
  `/chat-sessions${path}${method === 'GET' ? `?${sessionQuery(target)}` : ''}`,
@@ -64,7 +64,7 @@ export function useConversationSession(id: string, target: SessionTarget, active
  // 진행 좌표는 실행 중인 마지막 도구(보통 execute_ibl)에 단다. 시각은 서버의 경과(age_s)를 클라이언트 시계로 옮긴다.
  const prog = snapshot?.turn?.progress;
  if (running && prog) { const t = [...tools].reverse().find(t => t.status === 'running');
-  if (t) t.progress = { action:prog.action, step:prog.step, of:prog.of, detail:prog.detail, at:Date.now() - Math.round((prog.age_s ?? 0) * 1000) } as ToolProgress; }
+  if (t) t.progress = { action:prog.action, step:prog.step, of:prog.of, reused:prog.reused, detail:prog.detail, at:Date.now() - Math.round((prog.age_s ?? 0) * 1000) } as ToolProgress; }
  const failure = [...(snapshot?.events || [])].reverse().find(e => e.type === 'error');
  const lastAssistant = messages.map(m => m.role).lastIndexOf('assistant');
  const shown = messages.map((m,i) => i === lastAssistant && snapshot?.turn?.state === 'completed' && tools.length ? {...m,toolActivities:tools} : m);

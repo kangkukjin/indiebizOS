@@ -29,10 +29,17 @@ def test_unverified_symptom_cannot_close_applied_repair(repair, monkeypatch, ent
                                                'phase': 'verify_remaining'}, root)
         assert answer['evaluation']['goal_status'] == 'UNKNOWN'
     else:
-        policy.finalize(controller, '수정했습니다')
+        from thread_context import actor_context
+        from repair_continuation import read
+        # Exercise user-requested continuation independently of prior tests.
+        controller.runner.config = {'id': controller.owner}
+        monkeypatch.setattr('principal.is_owner', lambda: True)
+        with actor_context(origin='user'):
+            policy.finalize(controller, '수정했습니다')
         assert get_goal_eval_outcome()['goal_status'] == 'UNKNOWN'
         projected = repair_root.projection(root, session['key'])
         assert projected['stage'] == 'incomplete' and projected['resume_condition']
+        assert read(controller.task, root)['status'] == 'blocked'
 
 
 def test_executor_cannot_downgrade_semantic_criterion(repair, monkeypatch):

@@ -18,15 +18,18 @@ function formatAge(seconds: number): string {
 /** 진행 신고(ibl_progress)를 한 줄로 — 현재 액션 · 호출 번호 · each 회차 · 하위 step */
 function describeProgress(p: ToolProgress): string {
   const parts: string[] = [];
+  const d = p.detail || {};
+  const computing = d.phase === 'compute';
   if (p.action) {
-    if (p.of) parts.push(`${p.action} (${p.step}/${p.of})`);
-    else if (p.step) parts.push(`${p.action} · ${p.step}번째 호출`);
-    else parts.push(p.action);
+    let action = p.action;
+    if (p.reused) action += '(재사용)';
+    if (p.of) action += ` (${p.step}/${p.of})`;
+    else if (p.step) action += ` · ${p.step}번째 호출`;
+    parts.push(action + (computing ? ' 뒤' : ''));
   }
-  const d = (p.detail || {}) as Record<string, unknown>;
-  if (d.row && d.rows) parts.push(`each ${d.row}/${d.rows}행${d.row_label ? `(${d.row_label})` : ''}`);
+  if (d.row && d.rows) parts.push(`each ${d.row}/${d.rows}행${d.row_label ? `(${d.row_label})` : ''}${computing ? ' 계산 중' : ''}`);
   if (d.substep && d.substeps) parts.push(`하위 ${d.substep}/${d.substeps} ${d.subaction ?? ''}`.trim());
-  const known = new Set(['row', 'rows', 'row_label', 'substep', 'substeps', 'subaction']);
+  const known = new Set(['row', 'rows', 'row_label', 'substep', 'substeps', 'subaction', 'phase']);
   const rest = Object.entries(d).filter(([k]) => !known.has(k)).map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : String(v)}`);
   if (rest.length) parts.push(rest.join(' '));
   return parts.join(' · ');

@@ -592,6 +592,10 @@ requirements에 결과의 Number/Bool 요구가 모두 기록되지만 독립 �
 
 ### A4. D4 — 미선언 자원의 병렬 정책
 
+아래는 **§11 수리 이전의 관측**이다. 현행 계약은 opt-in과 무관하게 미해소 R/W·W/W를
+시작 전에 거절한다(§11.3 D4, `ibl.md`의 병렬 자원 규약). `composition`은 호환 표기이며
+보장 스위치가 아니다. 10-28 재감사에서 효력이 없던 `conflicts(strict=)` 내부 인자도 제거했다.
+
 ```ibl
 [t:write]{key:"shared"} & [t:write]{key:"shared"}
 ```

@@ -122,6 +122,39 @@ def test_pending_delegation_is_not_completed_by_http_wrapper(http_chat, monkeypa
     assert api.get_system_ai_task(response.task_id)["state"] == "waiting_children"
 
 
+@pytest.mark.parametrize('fail', [False, True])
+def test_http_route_progress_is_visible_during_turn_and_cleared_after(http_chat, monkeypatch, fail):
+    import json
+    import ibl_progress
+    import supervision_bus
+    observed = {}
+
+    def respond(**kwargs):
+        binding = sessions.current()
+        task_id = tc.get_current_task_id()
+        ibl_progress.report_step(None, 3, 0, 'self:read', reused=True)
+        ibl_progress.beat({'row': 2, 'rows': 5, 'phase': 'compute'})
+        with sessions.connection(binding.db_path) as conn:
+            progress = json.loads(conn.execute('SELECT progress FROM conversation_turns WHERE id=?',
+                                               (binding.turn_id,)).fetchone()[0])
+        observed.update(binding=binding, task=task_id, progress=progress)
+        if fail:
+            raise RuntimeError('controlled failure')
+        return 'done', []
+
+    monkeypatch.setattr(api, 'process_system_ai_message', respond)
+    monkeypatch.setattr(api.threading, 'Thread', lambda target, **kw: SimpleNamespace(start=target))
+    receipt = api.chat_with_system_ai(api.ChatMessage(message='progress', origin='training', background=True))
+    view = api.get_system_ai_task(receipt.task_id)
+    assert view['state'] == ('failed' if fail else 'succeeded')
+    assert observed['progress']['step'] == 3 and observed['progress']['reused']
+    assert observed['progress']['detail'] == {'row': 2, 'rows': 5, 'phase': 'compute'}
+    assert observed['task'] not in supervision_bus._progress_sinks
+    with sessions.connection(observed['binding'].db_path) as conn:
+        assert conn.execute('SELECT progress FROM conversation_turns WHERE id=?',
+                            (observed['binding'].turn_id,)).fetchone()[0] == ''
+
+
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

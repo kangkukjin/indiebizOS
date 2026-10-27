@@ -1,0 +1,110 @@
+{
+  "base": {
+    "seconds": 41.62,
+    "ticket": "1cd132d2eecd452795aa67573842de53",
+    "accepted": [
+      "S1",
+      "S3",
+      "S4a",
+      "S4b",
+      "S5",
+      "S6",
+      "S7a",
+      "S7b"
+    ],
+    "expected_policy_refusals": [
+      "S2"
+    ],
+    "expected_budget_refusals": [],
+    "all_nested_tickets_done": true,
+    "coordinate_regressions": 0,
+    "reuse_count": 3,
+    "sample_reuse_note": "실행이 아직 돌고 있습니다 — step 3 self:read(재사용) 뒤 · each 139/2500행(139) 계산 중(마지막 움직임 2026-10-28T05:"
+  },
+  "parallel": {
+    "seconds": 25.94,
+    "ticket": "67a9876b4a094105bf3d431343cd0abd",
+    "accepted": [
+      "S4a",
+      "S4b",
+      "S5"
+    ],
+    "expected_policy_refusals": [
+      "S1",
+      "S2",
+      "S3",
+      "S6"
+    ],
+    "expected_budget_refusals": [
+      "S7a",
+      "S7b"
+    ],
+    "all_nested_tickets_done": true,
+    "coordinate_regressions": 0,
+    "reuse_count": 3,
+    "sample_reuse_note": "실행이 아직 돌고 있습니다 — step 3 self:read(재사용) 뒤 · each 86/5000행(86) 계산 중(마지막 움직임 2026-10-28T05:02"
+  },
+  "parallel_small": {
+    "seconds": 22.53,
+    "ticket": "34b5f57521d641bdb862fb8c00e86c36",
+    "accepted": [
+      "S4a",
+      "S4b",
+      "S5",
+      "S7a",
+      "S7b"
+    ],
+    "expected_policy_refusals": [
+      "S1",
+      "S2",
+      "S3",
+      "S6"
+    ],
+    "expected_budget_refusals": [],
+    "all_nested_tickets_done": true,
+    "coordinate_regressions": 0,
+    "reuse_count": 3,
+    "sample_reuse_note": "실행이 아직 돌고 있습니다 — step 3 self:read(재사용) 뒤 · each 181/1000행(181) 계산 중(마지막 움직임 2026-10-28T05:"
+  },
+  "generation": {
+    "generation": "ef71c509cfe5c34c784a54c24e63b912",
+    "code_digest": "43a872edf0528f81c3eaafd70c2f3b2c",
+    "matches": {
+      "backend/ibl/ibl_v2_runtime.py": true,
+      "backend/ibl/ibl_v2_access.py": true,
+      "backend/base/supervision_bus.py": true,
+      "backend/datastore/conversation_sessions.py": true,
+      "backend/services/chat_streams.py": true
+    }
+  },
+  "tests": {
+    "targeted": {
+      "tests": 105,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 11.62
+    },
+    "system": {
+      "tests": 56,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 166.525
+    },
+    "regression": {
+      "tests": 10976,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 9,
+      "seconds": 900.232
+    },
+    "fixture_recheck": {
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 7.101
+    }
+  }
+}

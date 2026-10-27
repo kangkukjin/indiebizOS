@@ -1,6 +1,7 @@
 """인지 감독의 실행 이음매. 아래층은 컨트롤러 구현을 모르며 agent+task로만 찾는다."""
 import json
 import threading
+import time
 
 _lock = threading.RLock()
 _channels = {}
@@ -52,6 +53,42 @@ def wrap(execute):
 _progress_sinks = {}   # task_id → callable(detail): 채팅 표면 등 "지금 무엇을 하는가"를 보고 싶은 쪽
 
 
+class ProgressSink:
+    """좌표 기억·beat 접기·발행 순서를 HTTP와 WS가 함께 쓰는 수신자."""
+
+    def __init__(self, put, min_beat_interval_s=0.2):
+        self.put = put
+        self.min_beat_interval_s = min_beat_interval_s
+        self.coord = {}
+        self.last_beat = 0.0
+        self.lock = threading.RLock()
+        self.closed = False
+
+    def __call__(self, detail):
+        if not isinstance(detail, dict) or not detail:
+            return
+        with self.lock:
+            if self.closed:
+                return
+            now = time.time()
+            if "action" in detail or "step" in detail:
+                self.coord = {k: detail[k] for k in ("step", "of", "action", "reused") if k in detail}
+                event = {"type": "progress", **self.coord, "at": now}
+                if isinstance(detail.get("detail"), dict):
+                    event["detail"] = dict(detail["detail"])
+            else:
+                if now - self.last_beat < self.min_beat_interval_s:
+                    return
+                self.last_beat = now
+                event = {"type": "progress", **self.coord, "detail": dict(detail), "at": now}
+            self.put(event)
+
+    def close(self):
+        """진행 중인 발행을 마치고 이후 신고를 닫는다. 이후 표면을 비워도 되살아나지 않는다."""
+        with self.lock:
+            self.closed = True
+
+
 def register_progress_sink(task_id, sink):
     """이 작업(task_id)의 진행 신고(ibl_progress report_step/beat)를 받을 수신자를 등록한다 (2026-10-26).
 
@@ -67,7 +104,11 @@ def register_progress_sink(task_id, sink):
 def unregister_progress_sink(task_id, sink=None):
     with _lock:
         if sink is None or _progress_sinks.get(task_id) == sink:   # == : 바운드 메서드는 접근마다 새 객체
-            _progress_sinks.pop(task_id, None)
+            removed = _progress_sinks.pop(task_id, None)
+        else:
+            removed = None
+    if isinstance(removed, ProgressSink):
+        removed.close()
 
 
 def progress(detail):

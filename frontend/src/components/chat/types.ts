@@ -28,6 +28,8 @@ export interface ToolProgress {
   /** 호출 번호(1부터). of 는 0=미지 — 함수·each 안의 호출은 정적으로 셀 수 없다 */
   step?: number;
   of?: number;
+  /** 호출을 새로 실행하지 않고 영수증으로 재사용했는가 */
+  reused?: boolean;
   /** 회차 등 움직임(beat) — row/rows/row_label, substep/substeps/subaction 등 자리마다 다른 키 */
   detail?: Record<string, unknown>;
   /** 마지막 움직임 시각(클라이언트 시계 ms) — 멈춤과 느림을 가르는 유일한 증거 */

@@ -50,7 +50,7 @@ def accesses(spec, contract, args, action, *, runtime=False, argument_types=None
     return result
 
 
-def conflicts(left, right, *, unresolved=False, strict=False):
+def conflicts(left, right, *, unresolved=False):
     from ibl_run_journal import resources_overlap
     result = set()
     for a in left:
@@ -151,7 +151,7 @@ def admit(runtime, node, branches):
                         node, kind='protocol', details={'issues': compiler.issues[:4]})
         current = frozenset(with_unknown(compiler.access_log, compiler.effects))
         for previous in summaries:
-            overlap = conflicts(previous, current, unresolved=True, strict=runtime.strict_composition)
+            overlap = conflicts(previous, current, unresolved=True)
             if overlap:
                 raise Fault('PARALLEL_RESOURCE_CONFLICT',
                             '병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 가지를 순차(;·parallel:1)로 돌리거나, '

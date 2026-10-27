@@ -375,7 +375,7 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
             const updated = [...prev];
             updated[idx] = {
               ...updated[idx],
-              progress: { action: data.action, step: data.step, of: data.of, detail: data.detail, at: Date.now() },
+              progress: { action: data.action, step: data.step, of: data.of, reused: data.reused, detail: data.detail, at: Date.now() },
             };
             toolHistoryRef.current = updated;
             return updated;

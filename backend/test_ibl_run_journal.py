@@ -220,5 +220,32 @@ def test_known_file_write_preserves_external_read_receipt(tmp_path):
     assert len(reusable_receipts(tmp_path / 'runs', run_id)) == 1
 
 
+@pytest.mark.parametrize('has_surface', [False, True], ids=['no-ticket', 'nested-run'])
+def test_announce_cannot_replace_an_owned_surface_handle(tmp_path, monkeypatch, has_surface):
+    import common.spill
+    import thread_context
+    from ibl_progress import claim
+
+    events = []
+    previous = thread_context.get_surface_ticket(), thread_context.get_progress_ticket()
+    monkeypatch.setattr(common.spill, 'ticket_progress', lambda ticket, data: events.append((ticket, data)))
+    try:
+        thread_context.set_surface_ticket('ticket' if has_surface else None)
+        thread_context.set_progress_ticket(None)
+        with Journal(tmp_path, 'outer-plan') as outer:
+            outer.announce('outer-plan')
+            assert claim() == ('ticket' if has_surface else None)
+            assert thread_context.get_surface_ticket() is None
+            with Journal(tmp_path, 'inner-plan') as inner:
+                inner.announce('inner-plan')
+            expected = [('ticket', {'edition': 2, 'resume': {'run_id': outer.run_id},
+                                    'plan_hash': 'outer-plan'})] if has_surface else []
+            assert events == expected
+            assert thread_context.get_progress_ticket() == ('ticket' if has_surface else None)
+    finally:
+        thread_context.set_surface_ticket(previous[0])
+        thread_context.set_progress_ticket(previous[1])
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

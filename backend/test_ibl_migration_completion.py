@@ -226,15 +226,25 @@ def test_remote_receiver_is_owner_only_and_does_not_preview_values(monkeypatch):
     assert receive({**payload, 'params':{'_ibl_context':{}}}, '.')['error_type'] == 'capability'
 
 
-def test_checkpoint_handle_is_published_before_effect(tmp_path, monkeypatch):
+@pytest.mark.parametrize('previous_progress', [None, 'older-ticket'])
+def test_checkpoint_handle_is_published_before_effect(tmp_path, monkeypatch, previous_progress):
     import thread_context
     import common.spill
     events = []
-    monkeypatch.setattr(thread_context, 'get_progress_ticket', lambda: 'ticket')
+    previous = thread_context.get_surface_ticket(), thread_context.get_progress_ticket()
     monkeypatch.setattr(common.spill, 'ticket_progress', lambda ticket, data: events.append((ticket, data)))
-    with Journal(tmp_path, 'p') as journal:
-        journal.announce('plan')
-        assert events == [('ticket', {'edition':2, 'resume':{'run_id':journal.run_id}, 'plan_hash':'plan'})]
+    try:
+        # api_ibl supplies the surface ticket; Runtime claims it after announce.
+        thread_context.set_surface_ticket('ticket')
+        thread_context.set_progress_ticket(previous_progress)
+        with Journal(tmp_path, 'p') as journal:
+            journal.announce('plan')
+            assert events == [('ticket', {'edition':2, 'resume':{'run_id':journal.run_id}, 'plan_hash':'plan'})]
+            assert thread_context.get_surface_ticket() == 'ticket'
+            assert thread_context.get_progress_ticket() == previous_progress
+    finally:
+        thread_context.set_surface_ticket(previous[0])
+        thread_context.set_progress_ticket(previous[1])
 
 
 @pytest.mark.parametrize('payload', [

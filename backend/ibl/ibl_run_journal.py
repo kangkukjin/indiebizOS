@@ -277,9 +277,13 @@ class Journal:
             return
         data = {"edition": 2, "resume": {"run_id": self.run_id}, "plan_hash": plan_hash}
         try:
-            from thread_context import get_progress_ticket
+            # 표면 티켓은 아직 집히기 전이다(claim 은 Runtime._run) — 소유 슬롯이 비었으면 이 실행은 바깥 실행 안에서
+            # 도는 것이라 바깥 티켓에 내 손잡이를 쓰지 않는다. 종전의 progress_ticket 읽기는 이 시점엔 항상 None 이어서
+            # 손잡이가 티켓에 닿은 적이 없었다(2026-10-27, 99회차 수리 중 확인). 뒤따르는 좌표 신고는 손잡이를
+            # 보존한다(spill.ticket_progress 병합) — 끊긴 표면이 running 회수에서 run_id 를 되찾는 통로.
+            from thread_context import get_surface_ticket
             from common.spill import ticket_progress
-            ticket = get_progress_ticket()
+            ticket = get_surface_ticket()
             if ticket:
                 ticket_progress(ticket, data)
             from episode_logger import record_trajectory_event

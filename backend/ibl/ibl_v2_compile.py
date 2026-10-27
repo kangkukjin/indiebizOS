@@ -681,6 +681,8 @@ class Compiler:
             # A dynamic shape selector is present, not absent. Keep its marker
             # so observations from the default shape cannot leak into it.
             result_type = observed_result(key, spec.contract, values, result_type)
+            from ibl_v2_adapters import declared_rows_result
+            result_type = declared_rows_result(spec.contract, values, result_type)
             from ibl_v2_analysis import row_flow_type
             result_type = row_flow_type(self, node, contract, args, fields, values,
                                         result_type, env, names, readonly)

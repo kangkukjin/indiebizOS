@@ -192,6 +192,15 @@ def task_state(task, base=None):
                     and (r.get("resume_task_id") == task or task in r.get("review_task_ids", []))), None)
     if not row:
         return None
+    if row.get("status") == "waiting_apply" and row.get("job_path"):
+        # 제어자가 FAILED여서 ACTIVE 재개 콜백이 아직 오지 않아도 종료 영수증은
+        # 이미 사실이다. 조회만으로 새 실행을 만들지 않고 실패를 기다림과 구분한다.
+        try:
+            result = outcome(row, base)
+        except (OSError, ValueError):
+            return "blocked"
+        if result and result.get("outcome") != "healthy":
+            return "blocked"
     return {"waiting_apply": "waiting", "waiting_review": "waiting", "waiting_execution": "waiting", "running": "waiting", "continued": "waiting",
             "blocked": "blocked", "cancelled": "cancelled", "completed": "completed"}.get(row["status"])
 

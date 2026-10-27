@@ -49,6 +49,13 @@ def prepare(controller, repo, session, verify, candidate):
     missing = sorted(set(criteria) - {p["criterion_id"] for p in plan})
     if missing:
         return failure("plan", "검사에 연결되지 않은 기능 기준이 있습니다", missing_criteria=missing)
+    semantic_required = {cid for cid, c in criteria.items()
+                         if c.get("verification_method") == "semantic"}
+    missing_semantic = sorted(semantic_required - {
+        p["criterion_id"] for p in plan if p.get("method") == "semantic"})
+    if missing_semantic:
+        return failure("plan", "의미 검토가 지정된 기준은 시험 통과만으로 승인할 수 없습니다",
+                       missing_criteria=missing_semantic)
     wt = Path(repo) / session["worktree"]
     before = candidate.collect(repo, session)
     env = candidate.environment(wt)
@@ -77,6 +84,10 @@ def prepare(controller, repo, session, verify, candidate):
     # 명령 실행은 호스트의 기존 격리 실행기를 사용하고 과거 같은 후보의 영수증을 재사용한다.
     from repair_check_runner import check as run_check
     for item in plan:
+        drift = candidate.conflicts(repo, session)
+        if drift:
+            return finish(failure("conflict", "검사 사이 정본이 변경됐습니다. 남은 검사를 실행하지 않습니다",
+                                  changed_files=sorted(drift)))
         if item.get("method", "test") == "semantic":
             semantic.append(criteria[item["criterion_id"]])
             continue
@@ -89,6 +100,10 @@ def prepare(controller, repo, session, verify, candidate):
             return finish(failure("test", "관련 검사가 통과하지 않았습니다", checks=[record],
                                   missing_criteria=[item["criterion_id"]]))
         coverage.append({"criterion_id": item["criterion_id"], "status": "passed", "evidence_ids": [record["id"]]})
+    drift = candidate.conflicts(repo, session)
+    if drift:
+        return finish(failure("conflict", "검사 중 정본이 변경됐습니다. 적용 관문을 실행하지 않습니다",
+                              changed_files=sorted(drift)))
     ok, checks = verify(repo, session)
     after = candidate.collect(repo, session)
     if before != after or env != candidate.environment(wt):

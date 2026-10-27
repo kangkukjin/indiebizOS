@@ -83,3 +83,18 @@ def test_leading_env_assignment_reaches_the_test_process(repair):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('command', ['false | cat', 'false; echo hidden'])
+def test_shell_failure_is_not_hidden_by_last_success(repair, command):
+    root, wt, st, session, controller = repair
+    result = execute(str(root), session, st._candidate, command, controller)
+    assert result['status'] == 'failed' and result['exit_code'] != 0
+    assert 'hidden' not in result['output']
+
+
+def test_explicit_shell_failure_recovery_remains_supported(repair):
+    root, wt, st, session, controller = repair
+    result = execute(str(root), session, st._candidate, 'false || echo recovered', controller)
+    assert result['exit_code'] == 0 and 'recovered' in result['output']
+    assert result['status'] == 'unverified'

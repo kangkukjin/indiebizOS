@@ -1,5 +1,6 @@
 """기존 수리 사본의 명령·검사 영수증. 적용과 일반 셸이 같은 기록을 쓴다."""
 import os
+import shutil
 import subprocess
 import uuid
 from pathlib import Path
@@ -20,7 +21,9 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
     try:
         # 앞머리 대입(VAR=값)은 판정기가 떼어 spec["env"] 에 담는다 — 자식 환경에 얹어야 시험 프로세스에 닿는다.
         child_env = {**os.environ, **spec["env"]} if spec and spec.get("env") else None
-        result = run(spec["argv"] if spec else ["/bin/sh", "-c", command], wt,
+        shell = ([shutil.which("bash"), "-e", "-o", "pipefail", "-c", command]
+                 if shutil.which("bash") else ["/bin/sh", "-e", "-c", command])
+        result = run(spec["argv"] if spec else shell, wt,
                      cwd=spec["cwd"] if spec else str(wt), timeout=timeout, check=cancelled, env=child_env)
         output = result.stdout + result.stderr
         exit_code = result.returncode

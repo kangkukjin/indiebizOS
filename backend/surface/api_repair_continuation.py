@@ -113,6 +113,9 @@ def _project_runner(row):
 
 
 def _execute(row):
+    if str(row.get("agent_id", "")).startswith("research:"):
+        from research_threads import resume_repair
+        return resume_repair(row)
     if not row["system_ai"]:
         from api_agents import _run_agent_command
         return _run_agent_command(row["project_id"], row["agent_id"], _project_runner(row),
@@ -141,6 +144,10 @@ def _execute(row):
 
 def _deliver_blocked(row):
     text = row["reason"] if row.get("completion_notice") else "[자기수리 미완료] " + row["reason"]
+    if str(row.get("agent_id", "")).startswith("research:"):
+        from research_threads import repair_notice
+        repair_notice(row, text)
+        return
     if row["system_ai"]:
         from system_ai_memory import save_conversation
         save_conversation("assistant", text)

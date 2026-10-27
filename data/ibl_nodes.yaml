@@ -4621,6 +4621,9 @@ nodes:
             revoke: effect
             approve: effect
             update: effect
+            register: effect
+            remove: effect
+            pause: effect
           side_effect:
             list: false
           values:

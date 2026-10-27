@@ -127,6 +127,10 @@ nodes:
             revoke: effect
             approve: effect
             update: effect
+            # 등록·해제·중지는 {registration}/{observations} 봉투를 낸다 — 액션 items 상속은 거짓 통화였다.
+            register: effect
+            remove: effect
+            pause: effect
           side_effect:
             list: false
           values:

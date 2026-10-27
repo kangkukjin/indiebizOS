@@ -31,6 +31,9 @@ JSON 봉투를 선언한 도구는 실패도 `success:false,error,error_type`으
 반환은 기존 Record를 유지한다. `result`에 `items: List<Record>`를 선언하면 주요 행 연산은
 봉투를 직접 받으며, 목록과 봉투가 갈리는 분기도 같은 규칙으로 해석한다.
 필드 없는 `Record` 선언은 행 목록을 보장하지 않는다. 실제 출력에 맞게 반환 계약을 보강하고,
+유도 계약의 정적 검사는 어휘의 통화 선언(`ops.returns` 우선, 없으면 액션 `returns`)이 items인 호출을
+`items` 봉투로 해소한다(실행 반환 검사는 그대로). 스칼라 관측이 있으면 관측이 이긴다. 그래서 op별
+통화가 액션 기본과 다르면 `ops.returns`에 정직하게 적는다 — 상속된 거짓 items는 `.items` 없는 조합을 통과시킨다.
 행이 아닌 값이 섞인 분기는 명시적으로 처리한다. 내부 프로토콜 이름을 바꿀 필요는 없다.
 빌드는 단항 입력 자리와 봉투 근거 연결이 빠진 선언도 거부한다.
 
@@ -88,3 +91,9 @@ callable_contract의 `execution: {concurrency: reentrant}`는 동일 구현의 �
 나타내지만 현재 자동 실행기는 순차로 처리한다. 명시적 IBL `&`의 기존 의미는 바꾸지 않는다.
 중첩 프로그램은 실행할 검사 계획의 효과를 검사하며, 미상·동적 코드·재개는 자동 병렬에서
 순차 장벽이다. 단독 호출에는 병렬 판정을 위한 추가 컴파일을 하지 않는다.
+
+## 실측 기록 (자동 누적)
+
+> 실행 에이전트가 턴 종료 후 덧붙인다.
+- 2026-10-27 실측: handler_contract로 유도한 계약은 수리 전에는 어휘의 `returns: items`·`ops.returns` 선언을 읽지 않고 반환을 필드 없는 Record로 두었다. 이 때문에 행 목록 판정은 관측 기록 `data/ibl_return_shapes.json`에만 의존했다.
+- 2026-10-27 실측: `data/ibl_return_shapes.json`은 git에서 추적하지 않는 실행 관측 기록이고 fixture가 있는 op만 담는다. 그래서 사본이나 새 설치에서는 미관측 op의 행 연산(예: `sense:book→take`, `sense:weather→filter`)이 거절된다. 수리 전 사본에서 재현해 확인했다.

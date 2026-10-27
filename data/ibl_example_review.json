@@ -1131,14 +1131,14 @@
     "target_key": "0cacf69ab63c",
     "params": "348a8b9e4530",
     "aliases": "399fa2f32490",
-    "ops": "e2433459f201",
+    "ops": "0daccb5f7be5",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "2e81dde1acfc"
    },
-   "reviewed": "2026-10-26",
-   "examples": 21
+   "reviewed": "2026-10-27",
+   "examples": 22
   },
   "self:list": {
    "fields": {

@@ -361,6 +361,33 @@ def observed_result(key, contract, params, result_type):
     return result_type
 
 
+
+def declared_rows_result(contract, params, result_type):
+    """어휘가 이 호출의 통화를 items 로 선언했으면 봉투 Record 에 행 목록 `items` 를 정적으로 붙인다.
+
+    관측(data/ibl_return_shapes.json)은 실행 기록이라 저장소에 없고 fixture 없는 op 은 관측되지 않는다 —
+    관측만 행을 말하면 같은 선언의 op 이 사본·새 설치·미관측 op 에서 `.items` 없이 이어지지 않았다
+    (`[self:notebook]{op:"search"} >> [table:select]` 의 TYPE 거절). 선언은 행의 존재를, 관측은 열 이름을 말한다.
+    이미 필드가 있는 결과(선언 계약·관측 키·관측 열)는 그대로 둔다 — 스칼라 관측이 선언을 이긴다.
+    op 이 동적이면 모든 op 이 행을 낼 때만 붙인다. 실행 반환 검사(contract.result)는 그대로라
+    선언과 다른 봉투는 다음 행 연산의 실행 검사가 정직하게 거절한다."""
+    rows = (contract.get("analysis") or {}).get("row_ops")
+    if (not rows or (contract.get("adapter") or {}).get("protocol") != "legacy-envelope"
+            or result_type.kind != "Record" or result_type.fields):
+        return result_type
+    if rows is not True:
+        from ibl_callable_contract import UNRESOLVED
+        op = {**contract.get("defaults", {}), **params}.get("op")
+        choices = (contract.get("enums") or {}).get("op") or ()
+        if op is UNRESOLVED:
+            if not choices or any(c not in rows for c in choices):
+                return result_type
+        elif op not in rows:
+            return result_type
+    from ibl_v2_types import Type, UNKNOWN
+    return Type("Record", (("items", Type("List", item=UNKNOWN)),), open=True)
+
+
 def load_registry(project_path=".", agent_id=None):
     from ibl_registry import load_nodes_installed
     from ibl_engine import execute_ibl
@@ -391,6 +418,13 @@ def load_registry(project_path=".", agent_id=None):
                                     "schema_input_fields_param": action_config.get("schema_input_fields_param"),
                                     "schema_param": action_config.get("schema_param"),
                                     "flow": action_config.get("flow", {})}
+            from ibl_ops import op_names, op_returns
+            # 어휘의 통화 선언(op 별 선언 우선, 없으면 액션 returns — 건강검진·드리프트 스윕과 같은 해소).
+            # 정적 행 해소(declared_rows_result)가 읽는다. 실행 반환 검사(contract.result)는 바꾸지 않는다.
+            names = op_names(action_config)
+            contract["analysis"]["row_ops"] = (
+                [op for op in names if op_returns(action_config, op) == "items"] if names
+                else action_config.get("returns") == "items")
             if action_config.get('requires'):
                 # 같은 선언을 관문과 사전 안내가 읽는다. 검사에서는 gate/exists/토큰을 호출하지 않는다.
                 contract['analysis']['approval_policy'] = {

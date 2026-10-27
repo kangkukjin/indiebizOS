@@ -335,3 +335,39 @@ def test_perspective_update_requires_own_user_evidence_and_preserves_edits(world
     view = service.project_operation({'op': 'thread_messages', 'project_ref': store.uid, 'thread_ref': tid})
     assert [item['origin'] for item in view['perspective_history']] == ['user', 'agent']
     assert view['perspective_history'][1]['body'] == doc
+
+
+def test_repair_resumes_original_research_thread_without_fake_user_message(world, monkeypatch):
+    import research_threads as service
+    import repair_continuation
+    import thread_context
+    from project_manager import ProjectManager
+    from research_store import ResearchStore
+    project = ProjectManager().create_project('연구 수리 재개', project_kind='research')
+    store = ResearchStore(project['path'])
+    tid = store.create_thread('원래 주제')['id']
+    other = store.create_thread('다른 주제')['id']
+    run, _ = store.begin_run(tid, '수리해줘', 'original')
+    store.write_response(tid, run, '적용 예약', 'completed')
+    row = {'task_id': run, 'root_task_id': run, 'resume_task_id': 'repair_resume_test',
+           'project_id': project['id'], 'agent_id': f'research:{store.uid}:{tid}', 'goal': '수리해줘'}
+    monkeypatch.setattr(repair_continuation, 'cancelled', lambda *a: False)
+    def stream(actual, thread, resumed, message, cancel):
+        from research_context import current
+        assert actual.uid == store.uid and thread == tid and message == '수리해줘'
+        assert current()['thread_id'] == tid and not cancel.is_set()
+        thread_context.set_goal_eval_outcome(True, 0, status='ACHIEVED', goal_status='ACHIEVED')
+        yield {'type': 'final', 'content': '수리 완료'}
+    monkeypatch.setattr(service, '_run_stream', stream)
+    result = service.resume_repair(row)
+    assert result['evaluation']['goal_status'] == 'ACHIEVED'
+    messages = store.messages(tid)['items']
+    assert [m['content'] for m in messages] == ['수리해줘', '적용 예약', '수리 완료']
+    assert [m['role'] for m in messages].count('user') == 1
+    assert not store.messages(other)['items']
+    service.repair_notice(row, '검사와 커밋 확인')
+    service.repair_notice(row, '검사와 커밋 확인')
+    assert len(store.messages(tid)['items']) == 4
+    assert store.thread(tid)['active_run'] is None
+    with pytest.raises(ValueError, match='원래 대화'):
+        service.repair_notice({**row, 'agent_id': f'research:{store.uid}:{other}'}, '잘못된 대화')

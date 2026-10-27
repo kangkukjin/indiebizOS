@@ -72,6 +72,59 @@ def test_declared_rows_do_not_hide_runtime_shape_failure():
     assert out['diagnostic']['code'] == 'TYPE_CONTRACT'
 
 
+
+@pytest.fixture
+def no_observations(monkeypatch):
+    """관측 원장은 저장소 밖 실행 기록이다 — 선언만으로 해소되는지 본다."""
+    import ibl_typecheck
+    monkeypatch.setattr(ibl_typecheck, 'catalog_entry', lambda *a, **k: None)
+
+
+@pytest.mark.parametrize('code', [
+    '[self:notebook]{op:"search", query:"x"} >> [table:select]{columns:["text"]}',
+    '[self:notebook]{op:"search", query:"x"} >> [table:each]{return $it}',
+    '[sense:book]{query:"x"} >> [table:take]{n:3}',
+    '[sense:weather]{city:"수원"} >> [table:filter]{where:($r)=>true}',
+])
+def test_vocabulary_row_declaration_composes_without_observation(tmp_path, no_observations, code):
+    plan = compile_program(code, load_registry(str(tmp_path)))
+    assert not plan.issues, plan.issues
+
+
+@pytest.mark.parametrize('code', [
+    '[self:limb]{op:"register"} >> [table:select]{columns:["a"]}',
+    '[self:blog]{op:"stats"} >> [table:select]{columns:["a"]}',
+    '[self:time] >> [table:select]{columns:["a"]}',
+    '[def:f]($o) { return [self:blog]{op:$o} >> [table:select]{columns:["a"]} }\n[fn:f]{o:"search"}',
+])
+def test_non_row_or_undetermined_ops_stay_rejected(tmp_path, no_observations, code):
+    plan = compile_program(code, load_registry(str(tmp_path)))
+    assert any(i['code'] == 'TYPE' for i in plan.issues), plan.issues
+
+
+def test_scalar_observation_overrides_row_declaration(tmp_path, monkeypatch):
+    import ibl_typecheck
+    monkeypatch.setattr(ibl_typecheck, 'catalog_entry',
+                        lambda *a, **k: {'kind': 'scalar', 'keys': ['answer']})
+    plan = compile_program('[self:notebook]{op:"search", query:"x"} >> [table:select]{columns:["a"]}',
+                           load_registry(str(tmp_path)))
+    assert any(i['code'] == 'TYPE' for i in plan.issues), plan.issues
+
+
+def test_row_declaration_is_static_and_runtime_still_checks_rows():
+    contract = {'version': 1, 'params': {}, 'required': [], 'result': 'Record',
+                'effects': ['pure'], 'adapter': {'protocol': 'legacy-envelope', 'value_path': ''},
+                'analysis': {'row_ops': True}}
+    registry = {'fixture:rows': Adapter(contract, lambda rt, a: {'count': 2})}
+    plan = compile_program('[fixture:rows] >> [table:each]{return $it}', registry)
+    assert not plan.issues, plan.issues
+    out = Runtime(plan).run()
+    assert not out['success'] and out['diagnostic']['code'] == 'TYPE_CONTRACT', out
+    registry = {'fixture:rows': Adapter(contract, lambda rt, a: {'items': [{'n': 3}], 'count': 1})}
+    out = Runtime(compile_program('[fixture:rows] >> [table:each]{return $it.n}', registry)).run()
+    assert out['success'] and out['value'] == [3], out
+
+
 @pytest.mark.parametrize('flag', [False, True])
 @pytest.mark.parametrize('consumer,expected', [
     ('[table:select]{columns:["n"]}', [{'n': 2}]),
@@ -163,3 +216,28 @@ def test_round32_whole_program_and_missing_source(tmp_path):
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_all_derived_vocabulary_row_declarations_resolve_without_observations(tmp_path, no_observations):
+    """현재 설치 사전 전체의 op 선언을 대조한다. 실제 핸들러 실행을 증명하지는 않는다."""
+    from ibl_v2_adapters import declared_rows_result
+    from ibl_v2_types import declared
+    checked = 0
+    for key, adapter in load_registry(str(tmp_path)).items():
+        contract = adapter.contract
+        if 'row_ops' not in (contract.get('analysis') or {}):
+            continue
+        if ((contract.get('adapter') or {}).get('protocol') != 'legacy-envelope'
+                or declared(contract['result']).kind != 'Record'):
+            continue  # 명시적 List와 script 판본은 기존 전용 해소 계약을 따른다.
+        row_ops = contract['analysis']['row_ops']
+        for op in (contract.get('enums') or {}).get('op') or [None]:
+            base = declared(contract['result'])
+            actual = declared_rows_result(contract, {'op': op} if op is not None else {}, base)
+            expected = row_ops is True or isinstance(row_ops, list) and op in row_ops
+            if expected:
+                assert dict(actual.fields)['items'].kind == 'List', (key, op, actual)
+            else:
+                assert actual == base, (key, op, actual)
+            checked += 1
+    assert checked > 0

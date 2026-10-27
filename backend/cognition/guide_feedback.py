@@ -125,6 +125,19 @@ def should_review(guide: str, live: set) -> tuple:
     return True, f"마지막 검토 {age}일 전"
 
 
+def _pending_repair_apply():
+    """예약된 사본은 모든 추적 입력의 판본을 고정한다. 후처리는 제안만 남긴다."""
+    from repair_continuation import state_root
+    from restart_protocol import read_json
+    for path in (state_root() / "repair_sessions").glob("*.json"):
+        if path.name.endswith(".apply.json"):
+            continue
+        session = read_json(path) or {}
+        if session.get("status") in {"apply_scheduled", "applying"}:
+            return True
+    return False
+
+
 def _verify_fix(old: str, new: str, live: set) -> Optional[str]:
     """사실 수정 제안이 *기계적으로* 옳은지 확인. 통과하면 None, 아니면 거절 사유.
 
@@ -190,12 +203,13 @@ def _apply_fix(path: Path, old: str, new: str) -> bool:
     return True
 
 
-def _queue_proposal(guide: str, issue: str, evidence: str = "") -> None:
+def _queue_proposal(guide: str, issue: str, evidence: str = "", *, feedback=None) -> None:
     try:
         with open(PROPOSALS_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps({
                 "at": date.today().isoformat(), "guide": guide,
                 "issue": issue[:400], "evidence": evidence[:300],
+                **({"feedback": feedback} if feedback is not None else {}),
             }, ensure_ascii=False) + "\n")
     except Exception as e:
         logger.debug(f"[GuideFeedback] 제안 기록 실패 (무시): {e}")
@@ -360,6 +374,14 @@ def review_used_guides(guides: List[str], user_message: str, response: str,
         if not out:
             continue
         result["reviewed"].append(guide)
+
+        if _pending_repair_apply():
+            # 내용을 버리거나 적용 후 검사를 무효화하지 않는다. 기존 제안 저장소는
+            # Git 무시 런타임 기록이며, 이 자리에서 가이드 바이트는 변경하지 않는다.
+            _queue_proposal(guide, "수리 적용 예약 중 가이드 되먹임 보류",
+                            feedback=out)
+            result["proposed"] += 1
+            continue
 
         obs = [str(o) for o in (out.get("observations") or []) if o][:4]
         if obs:

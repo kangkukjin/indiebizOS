@@ -138,6 +138,21 @@ def verify_after_boot(base, state):
     req = state.get("request") or {}
     if req.get("operation") not in {"red_apply", "red_verify"}:
         return True
+    if (req.get("operation") == "red_apply"
+            and (state.get("red_outcome") or {}).get("applied") is False):
+        # 쓰기 전 거절은 세션을 staging으로 되돌린다. 이때 활성 예약을 요구하는
+        # manifest_path를 호출하면 거절이 예외로 바뀌고 정상 작업자까지 죽는다.
+        # 예약의 신원과 실제 적용 영수증은 계속 대조하되 원래 거절을 보존한다.
+        payload = req["payload"]
+        job = inspect_job(base, payload["job_path"])
+        expected = payload.get("reservation")
+        if expected is not None and reservation(job) != expected:
+            raise ValueError("RED 적용 요청의 예약 판본이 교체됐습니다")
+        if (job.get("controller_apply") or {}).get("applied") is not False:
+            raise ValueError("RED 적용 거절 영수증이 일치하지 않습니다")
+        job["done_at"] = state.get("updated_at")
+        atomic_json(payload["job_path"], job)
+        return False
     from red_watchdog import _touches_safety, _run_safety_selftest
     path = manifest_path(base, req)
     manifest = read_json(path)

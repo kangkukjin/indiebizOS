@@ -345,3 +345,11 @@ def test_activate_schedules_independent_resume_only_when_idle(tmp_path, monkeypa
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_terminal_controller_failure_is_not_reported_as_waiting(tmp_path):
+    row = record(tmp_path)
+    assert journal.task_state(row['task_id'], tmp_path) == 'waiting'
+    receipt(tmp_path, outcome='deferred_verify_failed')
+    assert journal.task_state(row['task_id'], tmp_path) == 'blocked'
+    assert journal.read(row['task_id'], tmp_path)['status'] == 'waiting_apply'

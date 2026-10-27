@@ -85,8 +85,11 @@ def stream(store, tid, run, message, cancel):
                 yield {'type': 'error', 'content': '시작 전에 취소 요청을 받아 실행하지 않았습니다'}
                 return
             from research_context import capture_stream
+            from repair_continuation import current, resume_context
+            continuation = current()
             yield from capture_stream(runner.cognitive_stream(
                 message, history, images=images or None, cancel_check=cancel.is_set,
+                extra_role=resume_context(continuation) if continuation else '',
                 agent_name=name, utterance_author='owner'))
         finally:
             EpisodeLogger.end_episode()

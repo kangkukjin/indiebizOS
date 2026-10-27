@@ -403,3 +403,33 @@ def test_controller_presence_distinguishes_missing_from_stopped(tmp_path):
     atomic_json(base / "data/.intentional_shutdown", {})
     assert controller_presence(base, state)["revive"] is False
     assert controller_presence(base, {})["verdict"] == "no_state"
+
+
+def test_real_boot_verifier_accepts_rejected_session_as_rejection(setup, monkeypatch):
+    """거절 뒤 staging인 실제 예약 원장을 통과한다. verify 결과를 가짜로 주지 않는다."""
+    from restart_red import reservation, verify_after_boot
+    ctl, adapter, _ = setup
+    job_path = ctl.base / 'data/system_ai_state/repair_sessions/task.apply.json'
+    job = {'repo': str(ctl.base), 'key': 'task', 'task_id': 'task',
+           'scheduled_at': 'first', 'readiness_hash': 'ready'}
+    atomic_json(job_path, job)
+    atomic_json(job_path.with_name('task.json'), {'status': 'apply_scheduled', 'scheduled_at': 'first'})
+    rejection = {'applied': False, 'verified': False, 'success': False, 'error': 'input conflict'}
+    def helper(action, state):
+        if action == 'apply':
+            atomic_json(job_path.with_name('task.json'), {'status': 'staging'})
+            atomic_json(job_path, {**job, 'controller_apply': rejection})
+            return {'ok': True, 'result': rejection}, []
+        return {'ok': True, 'result': {'verified': verify_after_boot(ctl.base, state)}}, []
+    monkeypatch.setattr(adapter, 'helper', helper)
+    submit(ctl, operation='red_apply', payload={'job_path': str(job_path), 'reservation': reservation(job)})
+    ticks(ctl, 30)
+    assert ctl.state['phase'] == 'ACTIVE' and adapter.running and adapter.accepting
+    assert ctl.state['last_result']['outcome'] == 'apply_rejected'
+    from restart_protocol import read_json
+    assert read_json(job_path)['done_at'] is not None
+    # 같은 경로의 다른 예약은 거절 영수증을 빌려 쓸 수 없다.
+    state = {**ctl.state, 'request': {'operation': 'red_apply',
+             'payload': {'job_path': str(job_path), 'reservation': {**reservation(job), 'scheduled_at': 'other'}}}}
+    with pytest.raises(ValueError, match='판본'):
+        verify_after_boot(ctl.base, state)

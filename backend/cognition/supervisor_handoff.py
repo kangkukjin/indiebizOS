@@ -26,6 +26,8 @@ def criteria_contract(message, framing):
                      "user_quote": quote if mandatory else "", "fallback": row.get("fallback", ""),
                      "verification_phase": row.get("verification_phase", "workspace"),
                      "activation_plan": row.get("activation_plan", "")})
+        if "verification_method" in row:
+            rows[-1]["verification_method"] = row["verification_method"]
     if not rows and (framing or {}).get("achievement_criteria"):
         values = framing["achievement_criteria"]
         for value in values if isinstance(values, list) else [values]:

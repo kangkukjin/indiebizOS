@@ -144,6 +144,12 @@ def task_status(ref):
         row = store.conversations.get_task(ref['task_id'])
         if not row or not str(row.get('requester_channel', '')).startswith('research:'):
             return task_receipts.view(ref, 'unknown')
+        from repair_continuation import task_state
+        repair = task_state(ref['task_id'])
+        if repair:
+            state = {'waiting': 'waiting_children', 'blocked': 'failed',
+                     'cancelled': 'cancelled', 'completed': 'succeeded'}[repair]
+            return task_receipts.view(ref, state, result=row.get('result'))
         states = {'completed': 'succeeded', 'running': 'running', 'failed': 'failed', 'cancelled': 'cancelled', 'interrupted': 'interrupted'}
         return task_receipts.view(ref, states.get(row['status'], 'unknown'), result=row.get('result'),
                                   error=row.get('result') if row['status'] == 'failed' else None)
@@ -394,3 +400,102 @@ def steer(store, tid, message, request, attachments):
                        "VALUES (?,?,?,'research',?,?,'user','complete')", (*source, message, tid, run))
             store.event(db, 'chat.steer', {'request_id': request, 'message': message}, tid, run)
     return {'success': True, 'steered': True, 'items': [], 'message': '추가 지시를 접수했습니다. 다음 도구 결과 또는 응답 후 이어서 반영합니다'}
+
+
+def _repair_target(row):
+    """영속 수리 신원을 원래 연구 대화·요청과 대조한다."""
+    parts = str(row.get('agent_id', '')).split(':')
+    if len(parts) != 3 or parts[0] != 'research':
+        raise ValueError('연구 수리 신원이 아닙니다')
+    project, tid = parts[1:]
+    path = ProjectManager().get_project_path(row['project_id'])
+    store = ResearchStore(path)
+    if store.uid != project:
+        raise ValueError('연구 수리 프로젝트 신원이 다릅니다')
+    store.thread(tid)
+    task = store.conversations.get_task(row.get('root_task_id') or row['task_id'])
+    if not task or not str(task.get('requester_channel', '')).startswith('research:' + tid + ':'):
+        raise ValueError('연구 수리의 원래 대화 요청을 확인하지 못했습니다')
+    return store, tid
+
+
+def repair_notice(row, text):
+    """원래 답변은 보존하고 같은 연구 대화에만 멱등 완료/차단 기록을 추가한다."""
+    import hashlib
+    from research_store import now
+    store, tid = _repair_target(row)
+    notice = hashlib.sha256((row['task_id'] + text).encode()).hexdigest()
+    with store.connect(True) as db:
+        store.check_epoch(db)
+        if db.execute("SELECT 1 FROM research_events WHERE kind='repair.notice' AND thread_id=? AND payload=?",
+                      (tid, json.dumps({'id': notice}))).fetchone():
+            return
+        original = db.execute("SELECT from_agent_id,to_agent_id FROM messages WHERE thread_id=? "
+                              "AND research_run=? AND research_role='assistant' ORDER BY id LIMIT 1",
+                              (tid, row.get('root_task_id') or row['task_id'])).fetchone()
+        if not original:
+            raise ValueError('원래 연구 수리 답변이 없습니다')
+        db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_role,research_status) "
+                   "VALUES (?,?,?,'research',?,'assistant','completed')", (*original, text, tid))
+        store.event(db, 'repair.notice', {'id': notice}, tid, row['task_id'])
+        db.execute('UPDATE research_threads SET updated_at=? WHERE id=?', (now(), tid))
+
+
+def resume_repair(row):
+    """상주 agents.yaml 에 없는 연구 실행자는 원래 주제의 실행 경로로 재구성한다."""
+    from repair_continuation import cancelled
+    from research_store import now, ResearchConflict
+    store, tid = _repair_target(row)
+    run = row['resume_task_id']
+    if not _run_stream:
+        raise RuntimeError('연구 실행기가 초기화되지 않았습니다')
+    with _lock, store.connect(True) as db:
+        store.check_epoch(db)
+        thread = store.thread(tid, db)
+        if thread['active_run'] not in (None, run) or thread['archived'] or thread['trashed']:
+            raise ResearchConflict('원래 연구 대화가 진행 중이거나 보관됐습니다')
+        prior = db.execute('SELECT status FROM tasks WHERE task_id=?', (run,)).fetchone()
+        if prior and prior['status'] not in {'running', 'interrupted'}:
+            raise ResearchConflict('이미 종료한 연구 수리 실행입니다. 기존 결과를 확인하세요')
+        if not prior:
+            db.execute('INSERT INTO tasks(task_id,requester,requester_channel,original_request,delegated_to,status,parent_task_id) '
+                       'VALUES (?,?,?,?,?,?,?)', (run, 'user@gui', 'research:' + tid + ':repair:' + run,
+                                                 row['goal'], row['agent_id'], 'running', row['task_id']))
+            original = db.execute("SELECT from_agent_id,to_agent_id FROM messages WHERE thread_id=? "
+                                  "AND research_run=? AND research_role='assistant' ORDER BY id LIMIT 1",
+                                  (tid, row.get('root_task_id') or row['task_id'])).fetchone()
+            if not original:
+                raise ValueError('원래 연구 수리 답변이 없습니다')
+            db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_run,research_role,research_status) "
+                       "VALUES (?,?,'','research',?,?,'assistant','running')", (*original, tid, run))
+        db.execute('UPDATE research_threads SET active_run=?,updated_at=? WHERE id=?', (run, now(), tid))
+        cancel = threading.Event()
+        _active[run] = {'cancel': cancel, 'path': str(store.path), 'thread': tid}
+    class Cancellation:
+        def is_set(self):
+            return cancel.is_set() or cancelled(row)
+    snapshot = thread_context.snapshot()
+    context = {'project_uid': store.uid, 'thread_id': tid, 'run_id': run,
+               'path': str(store.path), 'epoch': store.epoch, 'mode': thread['mode']}
+    text, final = '', None
+    try:
+        with scope(context):
+            for event in _run_stream(store, tid, run, row['goal'], Cancellation()):
+                if event.get('type') == 'text':
+                    text += str(event.get('content') or '')
+                elif event.get('type') == 'final':
+                    final = str(event.get('content') or '')
+                elif event.get('type') == 'error':
+                    raise RuntimeError(event.get('content') or '연구 수리 재개 실패')
+            text = final if final is not None else text
+            evaluation = thread_context.get_goal_eval_outcome() or {}
+            state = 'cancelled' if Cancellation().is_set() else 'completed'
+            store.write_response(tid, run, text, state)
+            return {'response': text, 'evaluation': evaluation, 'cancelled': state == 'cancelled'}
+    except Exception as exc:
+        store.write_response(tid, run, text + '\n\n수리 재개 오류: ' + str(exc), 'failed')
+        raise
+    finally:
+        with _lock:
+            _active.pop(run, None)
+        thread_context.restore(snapshot)

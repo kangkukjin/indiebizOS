@@ -203,7 +203,8 @@ class AgentCognitiveMixin(
         try:
             import importlib.util
             from runtime_utils import get_base_path
-            sp = _os.path.join(str(get_base_path()), "data", "packages", "installed",
+            from runtime_utils import get_installed_packages_root
+            sp = _os.path.join(str(get_installed_packages_root()),
                                "tools", "health-record", "storage.py")
             spec = importlib.util.spec_from_file_location("_health_storage_chart", sp)
             hs = importlib.util.module_from_spec(spec)

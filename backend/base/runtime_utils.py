@@ -76,6 +76,42 @@ def get_data_path() -> Path:
     return p
 
 
+# ── 코드 root / 데이터 root / 정본 root 의 분리 (2026-10-27, 자기수리 재설계 G1) ──────────
+# 실행 워커는 봉인된 세대 폴더(INDIEBIZ_CODE_ROOT)의 코드로 돈다. 사용자 데이터는 그대로
+# INDIEBIZ_BASE_PATH 아래이고, 편집·git 의 정본은 INDIEBIZ_SOURCE_ROOT 다. 세대 밖(개발 직기동·
+# 폰·시험)에서는 세 값이 모두 같은 저장소라 종전 동작과 같다.
+def get_code_root() -> Path:
+    """실행 중인 코드의 root — 세대 폴더이거나(제어자 기동) 이 파일이 사는 저장소."""
+    env = os.environ.get("INDIEBIZ_CODE_ROOT")
+    return Path(env) if env else Path(__file__).resolve().parent.parent.parent
+
+
+def get_source_root() -> Path:
+    """편집·각인(git)의 정본 root. 세대에서 돌 때도 쓰기·커밋은 여기로 간다."""
+    env = os.environ.get("INDIEBIZ_SOURCE_ROOT")
+    if env:
+        return Path(env)
+    return get_code_root() if not os.environ.get("INDIEBIZ_CODE_ROOT") else get_base_path()
+
+
+def in_generation() -> bool:
+    return bool(os.environ.get("INDIEBIZ_CODE_ROOT"))
+
+
+def get_installed_packages_root() -> Path:
+    """실행이 읽는 설치 패키지 root(data/packages/installed). 세대에서는 봉인 사본, 아니면 데이터 root."""
+    if in_generation():
+        return get_code_root() / "data" / "packages" / "installed"
+    return get_base_path() / "data" / "packages" / "installed"
+
+
+def get_vocabulary_path() -> Path:
+    """실행이 읽는 어휘 사전(data/ibl_nodes.yaml). 쓰기(빌드)는 get_source_root() 아래로 간다."""
+    if in_generation():
+        return get_code_root() / "data" / "ibl_nodes.yaml"
+    return get_base_path() / "data" / "ibl_nodes.yaml"
+
+
 def in_test_process() -> bool:
     """이 프로세스가 자기시험인가 — **시험이 만든 흔적은 몸의 삶이 아니다**.
 

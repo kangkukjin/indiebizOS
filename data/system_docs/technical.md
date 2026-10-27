@@ -438,7 +438,7 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(89) → `datastore`(89) → `ibl`(81) → `cognition`(94) → `services`(91) → `surface`(96). `.py` 총 613개(test 제외).
+  `base`(91) → `datastore`(90) → `ibl`(81) → `cognition`(94) → `services`(93) → `surface`(96). `.py` 총 618개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(31) · `backend/providers/`(14, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -537,6 +537,39 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 가 띄움)는 예약 턴의 종료·증류를 기다린 뒤 `restart_protocol.request(operation="red_apply")` 로 인계만 하고,
 적용·부팅 후 검증·검증된 백업 복원·재부팅은 제어자가 `restart_red`·`restart_helper` 로 수행한다.
 `quiescent_reload`·`reload_gate` 는 진단·호환 입구로만 남아 중단 권한이 없다(uvicorn `reload=False`).
+
+### 봉인 세대 실행과 제어 기반 (2026-10-27, 자기수리 재설계 G1~G6)
+
+정본 설계: [자기수리 전체 구조 재설계](../../docs/SELF_REPAIR_SYSTEM_REDESIGN_2026_10_27.md). 워커는 가변 checkout 이
+아니라 **봉인 세대**(`generation_store`, `data/restart_control/generations/<id>/`)에서 돈다. 세대 = 실행 입력
+(backend/·scripts/·mcp_server.py·requirements*·data/packages/installed/·data/ibl_nodes_src/·data/ibl_nodes.yaml, 추적+
+비무시 파일, 시험 파일 제외)의 사본 + `.venv` APFS 복제(clonefile, 바이트 독립) + 정본 데이터로 가는 링크 뷰
+(data/ 의 나머지·frontend·.env 등; 패키지 안 `data/`·git 무시 항목은 링크). 파일은 읽기 전용으로 봉인되고 세대 ID 는
+파일 지문+의존 환경 신원+프로토콜 판본이다(HEAD 가 같아도 dirty 가 다르면 다른 세대). 워커 환경:
+`INDIEBIZ_CODE_ROOT`(세대)·`INDIEBIZ_SOURCE_ROOT`(정본)·`INDIEBIZ_BASE_PATH`(데이터)·`PYTHONPYCACHEPREFIX`(세대별 캐시).
+`runtime_utils.get_code_root/get_source_root/get_installed_packages_root/get_vocabulary_path` 가 코드/정본/데이터를 가르고,
+어휘·설치 패키지 읽기는 세대, 쓰기·git·파생물 재생성은 정본으로 간다.
+
+제어자 흐름: ACTIVE 의 감시(`restart_candidates.Watcher`, 개발 모드)가 정본 변경을 2초 정착 뒤 봉인·구문검사해
+`development_files` 요청을 내고, CHECKING→DRAINING→STOPPING→STARTING 이 그 후보를 띄운다. 교체 전 실패는
+현역 유지+`failed_sources`(같은 입력 재시도 없음), 교체 후 실패(부팅·검증)는 직전 세대 복구(`rolled_back`),
+크래시는 같은 세대 재기동. `red_apply` 는 새 `PUBLISHING` 단계에서 현역을 살려 둔 채 수행자가 정본 반영·커밋을
+하고(`restart_red.apply_job` → `commit_applied`), 그 정본으로 후보를 봉인해 교체한다 — 거절·수행자 사망·충돌은
+현역 무변경. 은퇴한 결과: `artifact_changed_before_start`·`artifact_changed_after_check`·`boot_artifact_changed`.
+새 결과: `publish_conflict`·`candidate_unstable`·`apply_interrupted_recovered`·`apply_timeout`.
+세대 정리는 활성·직전·대기 후보와 최근 3개를 남기며, 세대 안에 생긴 데이터 잔류는 정본으로 회수한다.
+
+제어 기반(G6): `api.py start` 는 `control_launcher` 가 정본의 제어 파일(`control_base.CONTROL_FILES`)을
+`data/restart_control/control_base/<id>/` 로 봉인·자기검사(별도 프로세스 import)한 뒤 그 사본의
+`restart_controller.py` 를 exec 한다. 기반 밖 모듈은 현역 세대(없으면 정본)에서 읽는다(`install_support_path`).
+제어 파일이 바뀌면 현역 제어자가 새 기반을 봉인·검증하고 `--takeover` 인계(토큰·상태 사본 `state.pre-<id>.json`)를
+한다. 인수 실패는 이전 기반이 잠금을 되찾아 계속 소유하며 그 기반은 `current.json.failed` 에 남는다.
+수리 root 원장(G3·G5): `repair_root`(`data/system_ai_state/repair_roots/`)가 단계·시도·소유자(fencing)·다음 행동·
+재개 조건·수리/서비스/전달 결과를 한 곳에 쓰고, `repair_outcomes.progress`·`task_state`·완료 통지가 투영을 읽는다.
+G4: `repair_candidate.test_weakening`(시험 삭제·assert 감소·skip 추가는 의미 검토 없이 승인 불가)·
+`active_generation_bytes`(활성 세대 바이트 ↔ 봉인 묶음 대조)·`repair_policy.regression_evidence`(수정 전 실패→후 통과).
+시험: `test_generation_store`·`test_restart_generations`·`test_repair_root`·`test_self_repair_redesign_seams`(단위),
+`test_restart_generation_process`(실제 프로세스: 저장→교체, 부팅 실패→복구, 제어 기반 인계·인계 실패).
 
 
 ### 회원 앱 배관 (2026-09-14)

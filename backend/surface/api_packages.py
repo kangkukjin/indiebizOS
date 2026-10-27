@@ -619,7 +619,8 @@ async def get_ibl_nodes():
         import yaml as _yaml
         from runtime_utils import get_base_path
 
-        nodes_path = get_base_path() / "data" / "ibl_nodes.yaml"
+        from runtime_utils import get_vocabulary_path
+        nodes_path = get_vocabulary_path()
         if not nodes_path.exists():
             return {"nodes": [], "always_allowed": [], "node_groups": {}}
 

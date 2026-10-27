@@ -85,6 +85,11 @@ def active_check(row, base=None):
     if row["active_verify"]["state"] == "passed":
         _commit_ready(row, base)
     row["phase"] = "verify_remaining" if row["active_verify"]["state"] == "passed" else "repair_active"
+    try:
+        import repair_root
+        repair_root.note_active_check(Path(base or get_base_path()), _root_id(row), "active_verify_cmd", row["active_verify"])
+    except Exception:
+        pass
     return save(row, base)
 
 
@@ -142,6 +147,59 @@ def _execute(row):
             EpisodeLogger.end_episode()
 
 
+def _root_id(row):
+    import repair_root
+    return repair_root.key(row.get("root_task_id") or row["task_id"])
+
+
+def _deliver(row, text, base=None, *, completion=False):
+    """사용자 전달 — 완료 기록과 직교하는 결과. 실패하면 같은 event id 로 다음 스캔이 전달만 재시도한다.
+    completion=False 면 기존 차단 통지 형식([자기수리 미완료] 접두는 _deliver_blocked 가 붙인다)."""
+    import repair_root
+    base = Path(base or get_base_path())
+    event = repair_root.delivery_event_id(_root_id(row), ("done:" if completion else "blocked:") + text)
+    try:
+        _deliver_blocked({**row, "reason": text, **({"completion_notice": True} if completion else {})})
+    except Exception as exc:
+        from logging_utils import mask_secrets
+        row_now = read(row["task_id"], base) or row
+        save({**row_now, "delivery_pending": {"text": text, "event_id": event, "completion": completion,
+                                              "error": mask_secrets(str(exc))[:300]}}, base)
+        try:
+            repair_root.note_delivery(base, _root_id(row), "failed", event, mask_secrets(str(exc)))
+        except Exception:
+            pass
+        print(f"[수리 재개] 전달 실패 — 완료 기록은 유지, 전달만 재시도: {mask_secrets(str(exc))}")
+        return False
+    try:
+        repair_root.note_delivery(base, _root_id(row), "delivered", event)
+    except Exception:
+        pass
+    return True
+
+
+def retry_deliveries(base):
+    """종결된 인계의 미전달 통지만 다시 보낸다. 완료 판정·개발·적용은 반복하지 않는다."""
+    for path in sorted(directory(base).glob("*.json")):
+        row = read_json(path)
+        pending = (row or {}).get("delivery_pending")
+        if not row or not pending or row.get("status") not in TERMINAL:
+            continue
+        lock = OwnerLock(path.with_suffix(".lock"))
+        if not lock.acquire():
+            continue
+        try:
+            row = read_json(path) or row
+            if not row.get("delivery_pending"):
+                continue
+            if _deliver(row, row["delivery_pending"]["text"], base, completion=bool(row["delivery_pending"].get("completion"))):
+                row = read(row["task_id"], base) or row
+                row.pop("delivery_pending", None)
+                save(row, base)
+        finally:
+            lock.close()
+
+
 def _deliver_blocked(row):
     text = row["reason"] if row.get("completion_notice") else "[자기수리 미완료] " + row["reason"]
     if str(row.get("agent_id", "")).startswith("research:"):
@@ -190,6 +248,7 @@ def _settle(row, status, response, base):
 
 def process_pending(base, generation, execute=_execute):
     """파일당 한 소유자. 프로세스 사망 뒤에는 같은 인계를 현재 상태 대조부터 재개한다."""
+    retry_deliveries(base)
     for path in sorted(directory(base).glob("*.json")):
         lock = OwnerLock(path.with_suffix(".lock"))
         if not lock.acquire():
@@ -217,7 +276,8 @@ def process_pending(base, generation, execute=_execute):
                     continue
                 row = claim(row, generation, result, base)
             if row["status"] == "blocked":
-                _deliver_blocked(row)
+                _close_root(row, base, complete=False, reason=row["reason"])
+                _deliver(row, row["reason"], base)
                 _settle(row, "blocked", row["reason"], base)
                 continue
             if row.get("phase") not in {"review", "execution"}:
@@ -231,7 +291,9 @@ def process_pending(base, generation, execute=_execute):
                            reason="활성 검사 환경이 차단되었습니다. 코드 수리 세션을 추가로 열지 않습니다. "
                            "환경 복구 후 실패한 검사만 다시 실행하세요. " + receipt.get("output_path", ""))
                 save(row, base)
-                _deliver_blocked(row)
+                _close_root(row, base, complete=False, reason=row["reason"],
+                            resume_condition="환경 복구 뒤 retry_environment 로 실패한 활성 검사만 재실행")
+                _deliver(row, row["reason"], base)
                 _settle(row, "blocked", row["reason"], base)
                 continue
             with resuming(row):
@@ -253,7 +315,8 @@ def process_pending(base, generation, execute=_execute):
             save({**current, "status": status, "evaluation": evaluation,
                   "reason": evaluation.get("reason", "완료 검증을 확인하지 못했습니다")}, base)
             if status == "blocked":
-                _deliver_blocked(read(row["task_id"], base))
+                _close_root(row, base, complete=False, reason=evaluation.get("reason", "완료 검증을 확인하지 못했습니다"))
+                _deliver(read(row["task_id"], base) or row, evaluation.get("reason", "완료 검증을 확인하지 못했습니다"), base)
             _settle(row, status, response, base)
         except Exception as exc:
             # 실패를 '완료'로 만들거나 매 activate마다 다시 모델을 호출하지 않는다.
@@ -326,15 +389,25 @@ def _receipt_completion(row, base):
         return {"response": reason, "evaluation": {"achieved": False, "status": "UNKNOWN", "goal_status": "UNKNOWN", "review_status": "NOT_RUN",
                 "reason": reason, "method": "repair_receipts"}}
     commit = session.get("commit", {}).get("commit", "")
+    from repair_policy import symptom_recheck
+    recheck, recheck_note = symptom_recheck(session, row, base)
     response = row.get("response", "") + "\n\n[수리 완료] " + reason + (" (" + commit[:12] + ")" if commit else "")
-    if row.get("system_ai"):
-        from system_ai_memory import save_conversation
-        save_conversation("assistant", response)
-    else:
-        # 기존 전달 경로를 공유한다. 판정 실패와 완료는 서로 다른 표제를 사용한다.
-        _deliver_blocked({**row, "reason": response, "completion_notice": True})
+    if recheck != "verified":
+        response += "\n[원 증상 재검사 미확인] " + recheck_note
+    _close_root(row, base, complete=True, reason=reason, symptom_recheck={"verdict": recheck, "note": recheck_note})
+    # 완료 기록 뒤의 전달 실패는 전달만 회수한다(G5).
+    _deliver(row, response, base, completion=True)
     return {"response": response, "evaluation": {"achieved": True, "status": "ACHIEVED", "goal_status": "ACHIEVED", "review_status": "NOT_RUN",
             "reason": reason, "method": "repair_receipts"}}
+
+
+def _close_root(row, base, *, complete, reason, symptom_recheck=None, resume_condition=None):
+    try:
+        import repair_root
+        repair_root.close(Path(base or get_base_path()), _root_id(row), complete=complete, reason=reason,
+                          symptom_recheck=symptom_recheck, resume_condition=resume_condition)
+    except Exception as exc:
+        print(f"[수리 재개] root 종결 기록 실패(무시): {exc}")
 
 
 def _record_receipt_verdict(row, session, base, passed, reason):

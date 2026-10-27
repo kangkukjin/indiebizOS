@@ -35,7 +35,19 @@ def progress(session):
                            + (" — " + (receipt.get("output") or record.get("error") or "")[:2000]))
     elif applied and not complete:
         result["error"] = "정본 반영 후 각인 미완료: " + str(commit.get("error") or commit.get("message") or "커밋 영수증이 없습니다")
+    result["root"] = _root_projection(session)
     return result
+
+
+def _root_projection(session):
+    """단일 전이 원장(repair_root)의 투영 — 단계·다음 행동·재개 조건·서비스/전달 결과. 없으면 None."""
+    try:
+        import repair_root
+        from runtime_utils import get_base_path
+        root_id = repair_root.root_of_session(session)
+        return repair_root.projection(get_base_path(), root_id) if root_id else None
+    except Exception:
+        return None
 
 
 def finish(session, result):

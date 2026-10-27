@@ -81,9 +81,21 @@ def apply_job(base, path, expected=None):
             atomic_json(path, manifest)
         path_job = Path(path)
         out = staging.perform_scheduled_apply(str(base), job["key"], prepare=prepare, finalize=lambda path: None)
+        if out.get("applied"):
+            # 2026-10-27 재설계: 각인은 활성 전에 한다 — 수리 델타 반영·커밋 → 그 정본으로 세대 봉인 → 교체.
+            out["commit"] = staging.commit_applied(str(base), job["key"])
+            sealed = (staging.read_session(str(base), job["key"]) or {}).get("sealed") or {}
+            out["published_files"] = {rel: (item.get("after") or {}).get("sha") for rel, item in sealed.items()
+                                      if item.get("after")}
+            out["deleted_files"] = [rel for rel, item in sealed.items() if item.get("after") is None]
         # 적용 거절도 기록한다. 이미 적용된 잡은 staging의 기존 멱등 계약을 따른다.
         job.update(controller_apply=out, applied=bool(out.get("applied")))
         atomic_json(path_job, job)
+        try:
+            import repair_root
+            repair_root.note_publish(base, job, out)
+        except Exception as exc:  # 원장 전이 실패가 적용 영수증을 지우면 안 된다
+            print(f"[restart_red] 수리 root 전이 실패(무시): {type(exc).__name__}: {exc}")
         return out
 
 
@@ -132,6 +144,19 @@ def recover_code(base, state):
         return True
     except (OSError, ValueError, KeyError):
         return False
+
+
+def close_rejected_job(base, payload, state):
+    """쓰기 전 거절(라이브 무변경)의 잡을 종결 표식(done_at)으로 닫는다. 예약 신원과 거절 영수증을 대조한다."""
+    job = inspect_job(base, payload["job_path"])
+    expected = payload.get("reservation")
+    if expected is not None and reservation(job) != expected:
+        raise ValueError("RED 적용 요청의 예약 판본이 교체됐습니다")
+    if (job.get("controller_apply") or {}).get("applied") is not False:
+        raise ValueError("RED 적용 거절 영수증이 일치하지 않습니다")
+    job["done_at"] = state.get("updated_at")
+    atomic_json(payload["job_path"], job)
+    return job
 
 
 def verify_after_boot(base, state):

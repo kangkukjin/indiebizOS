@@ -33,6 +33,7 @@ from xray_stream import _ws  # noqa: E402
 
 BASE_PATH = get_base_path()
 DATA_PATH = BASE_PATH / "data"
+from runtime_utils import get_installed_packages_root as _installed_root, get_vocabulary_path as _vocab_path
 
 
 # ============================================================
@@ -113,7 +114,7 @@ def _collect_ibl_stats() -> Dict:
 
         # 3) ibl_nodes.yaml에서 전체 액션 목록 로드 (assumed 판정용)
         all_registered = set()  # {(node, action), ...}
-        nodes_yaml = DATA_PATH / "ibl_nodes.yaml"
+        nodes_yaml = _vocab_path()
         if nodes_yaml.exists():
             try:
                 with open(nodes_yaml, "r", encoding="utf-8") as f:
@@ -293,7 +294,7 @@ def _collect_project_stats() -> List[Dict]:
 
 def _collect_package_stats() -> Dict:
     """패키지 상태 요약"""
-    tools_dir = DATA_PATH / "packages" / "installed" / "tools"
+    tools_dir = _installed_root() / "tools"
 
     tool_names = sorted([d.name for d in tools_dir.iterdir() if d.is_dir() and not d.name.startswith('.')]) if tools_dir.exists() else []
 
@@ -579,7 +580,7 @@ def _collect_tool_inventory() -> Dict[str, Any]:
     #    동일한 패키지 소스에서 로딩하므로 여기서도 같은 방식으로 수집
     agent_tool_names = []
     try:
-        pkg_base = BASE_PATH / "data" / "packages" / "installed" / "tools"
+        pkg_base = _installed_root() / "tools"
         lang_tools = [
             ("python-exec", "execute_python"),
             ("nodejs", "execute_node"),
@@ -615,7 +616,7 @@ def _collect_tool_inventory() -> Dict[str, Any]:
     ibl_nodes = {}
     total_actions = 0
     try:
-        nodes_yaml = DATA_PATH / "ibl_nodes.yaml"
+        nodes_yaml = _vocab_path()
         if nodes_yaml.exists():
             with open(nodes_yaml, 'r', encoding='utf-8') as f:
                 nodes_data = yaml.safe_load(f)

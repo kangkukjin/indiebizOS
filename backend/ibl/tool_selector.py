@@ -22,8 +22,9 @@ from typing import List, Dict, Any
 BACKEND_PATH = Path(__file__).parent.parent
 from runtime_utils import get_base_path as _get_base_path
 DATA_PATH = _get_base_path() / "data"
-INSTALLED_TOOLS_PATH = DATA_PATH / "packages" / "installed" / "tools"
-IBL_NODES_PATH = DATA_PATH / "ibl_nodes.yaml"
+from runtime_utils import get_installed_packages_root as _installed_root, get_vocabulary_path as _vocab_path
+INSTALLED_TOOLS_PATH = _installed_root() / "tools"   # 세대에서는 봉인 사본(G1)
+IBL_NODES_PATH = _vocab_path()
 
 # 캐시 설정
 _tools_cache: List[Dict[str, Any]] = []

@@ -108,7 +108,8 @@ def _build_reverse_node_map() -> dict:
     from runtime_utils import get_base_path
 
     result = {}
-    path = get_base_path() / "data" / "ibl_nodes.yaml"
+    from runtime_utils import get_vocabulary_path
+    path = get_vocabulary_path()
     if not path.exists():
         return result
 

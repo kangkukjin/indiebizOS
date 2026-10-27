@@ -27,7 +27,9 @@ def enforce_derived_freshness() -> Dict:
     드리프트 = 재생성으로 닫고 초록(파생물은 기계 소유물), 소스 결함 = 빨강."""
     import os as _os
     import subprocess as _sp
-    root = Path(__file__).parent.parent.parent
+    # 파생물은 정본(편집·git) 쪽을 재생성한다 — 세대 사본은 읽기 전용 봉인이다(2026-10-27 G1).
+    from runtime_utils import get_source_root
+    root = Path(get_source_root())
     build = root / "scripts" / "build_ibl_nodes.py"
     t0 = _time.time()
     ev = {"node": "__static__", "action": "derived_freshness", "success": True,
@@ -37,6 +39,7 @@ def enforce_derived_freshness() -> Dict:
     try:
         env = dict(_os.environ)
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        env.pop("INDIEBIZ_CODE_ROOT", None)  # 빌더는 자기 트리(정본)를 본다
         chk = _sp.run([sys.executable, str(build), "--check"], cwd=str(root),
                       capture_output=True, text=True, timeout=300, env=env)
         if chk.returncode != 0:

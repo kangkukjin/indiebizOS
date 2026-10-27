@@ -182,14 +182,24 @@ def test_failed_red_post_verification_never_reports_healthy(tmp_path, monkeypatc
     assert result["outcome"] == "verification_failed" and result["recovered"] is False
 
 
-def test_manifest_drift_requires_new_check(setup):
+def test_source_change_during_drain_does_not_defer_sealed_candidate(setup):
+    """2026-10-27 세대 전환: 교체 대상은 봉인 사본이다. drain 중 정본이 바뀌어도 그 후보는 그대로 가고,
+    바뀐 정본은 다음 후보가 된다(옛 계약 'artifact_changed_after_check → deferred' 은퇴)."""
+    import generation_store as gens
     ctl, adapter, _ = setup
     submit(ctl)
     ticks(ctl, 2)
+    assert ctl.state["phase"] == "DRAINING"
+    sealed = ctl.state["candidate"]["generation_dir"]
     (ctl.base / "backend/app.py").write_text("value = 2\n")
-    ticks(ctl, 2)
-    assert ctl.state["last_result"]["outcome"] == "deferred"
-    assert not adapter.stops and adapter.accepting
+    ticks(ctl, 6)
+    assert ctl.state["phase"] == "ACTIVE" and ctl.state["last_result"]["outcome"] == "restarted"
+    assert adapter.spawns == 1 and ctl.state["generation_dir"] == sealed
+    # 활성 세대의 바이트는 봉인 때의 것이다 — 편집이 현역 바이트를 바꾸지 않는다(G1).
+    assert (Path(sealed) / "backend/app.py").read_text() == "value = 1\n"
+    gens.verify(sealed)
+    # 바뀐 정본은 정착 뒤 다음 후보가 된다(G1: 저장 후 자동 반영).
+    assert gens.execution_inventory(ctl.base)["digest"] != ctl.state["source_digest"]
 
 
 def test_syntax_failure_keeps_active(setup):
@@ -213,19 +223,22 @@ def test_superseded_red_reservation_never_stops_active_worker(setup, moment, mon
     submit(ctl, operation="red_apply", payload={"job_path": str(job_path), "reservation": reservation(job)})
     if moment != "before_check":
         ticks(ctl, 2)
-        assert ctl.state["phase"] == "DRAINING"
+        # 2026-10-27: red_apply 는 현역을 살려 둔 채 PUBLISHING 에서 정본 반영부터 한다(drain 은 그 뒤).
+        assert ctl.state["phase"] == "PUBLISHING"
     if moment == "drain_completion":
-        command = adapter.command
-        def reschedule(state, action):
-            if action == "drain":
+        helper = adapter.helper
+        def reschedule(action, state):
+            if action == "apply":
                 atomic_json(job_path, {**job, "scheduled_at": "second"})
-            return command(state, action)
-        monkeypatch.setattr(adapter, "command", reschedule)
+            return helper(action, state)
+        monkeypatch.setattr(adapter, "helper", reschedule)
     else:
         atomic_json(job_path, {**job, "scheduled_at": "second"})
     ticks(ctl)
     assert not adapter.stops and not adapter.spawns and adapter.accepting
-    assert ctl.state["last_result"]["outcome"] == ("check_failed" if moment == "before_check" else "deferred")
+    assert ctl.state["phase"] == "ACTIVE"
+    # 교체된 예약은 적용 전에 거절된다 — 현역 유지(G2), 수리 세션은 보존.
+    assert ctl.state["last_result"]["outcome"] in {"check_failed", "apply_rejected"}
 
 
 def test_crash_does_not_replay_user_work(setup):
@@ -315,7 +328,8 @@ def test_rejected_apply_without_live_write_keeps_new_worker_active(setup, monkey
     assert ctl.state["phase"] == "ACTIVE", ctl.state
     assert ctl.state["last_result"]["outcome"] == "apply_rejected"
     assert ctl.state["red_outcome"] == rejection
-    assert adapter.running and adapter.accepting and adapter.spawns == 1
+    # 거절은 현역을 건드리지 않는다 — 정지도 재기동도 없다(G2: 교체 전 실패는 현역 유지).
+    assert adapter.running and adapter.accepting and adapter.spawns == 0 and adapter.stops == 0
 
 
 @pytest.mark.parametrize('operation,outcome', [

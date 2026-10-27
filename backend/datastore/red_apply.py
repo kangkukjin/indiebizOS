@@ -343,8 +343,10 @@ def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) ->
 def _load_handler(job: dict):
     """system_essentials handler 로드 — 안전판(prepare/finalize)을 재사용하기 위해.
     _REPO_ROOT 는 대상 repo 로 맞춘다(가짜 저장소 테스트에서 코드 루트와 갈라진다)."""
+    # 실행 코드 root(봉인 세대)의 handler 를 읽는다 — 수행자가 어느 기반에서 뜨든 검증된 판본이다.
+    code_root = Path(os.environ.get("INDIEBIZ_CODE_ROOT") or CODE_ROOT)
     hpath = str(
-        CODE_ROOT / "data" / "packages" / "installed" / "tools"
+        code_root / "data" / "packages" / "installed" / "tools"
         / "system_essentials" / "handler.py")
     spec = importlib.util.spec_from_file_location("se_handler_deferred", hpath)
     handler = importlib.util.module_from_spec(spec)

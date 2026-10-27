@@ -163,7 +163,8 @@ def normalize_ref(value, kind: Optional[str] = None, task_id=None, owner: Option
 def _packages_root() -> Optional[Path]:
     try:
         from runtime_utils import get_base_path
-        return Path(get_base_path()) / "data" / "packages" / "installed" / "tools"
+        from runtime_utils import get_installed_packages_root
+        return get_installed_packages_root() / "tools"
     except Exception:
         return None
 

@@ -9,6 +9,7 @@
     "base/codex_rollout",
     "base/coding_process",
     "base/completion_lease",
+    "base/control_base",
     "base/control_conditions",
     "base/corpus_policy",
     "base/desktop_notify",
@@ -24,6 +25,7 @@
     "base/execution_commit",
     "base/execution_workers",
     "base/file_script",
+    "base/generation_store",
     "base/hardware_registry",
     "base/history_excerpt",
     "base/ibl_code_corpus",
@@ -242,6 +244,7 @@
     "datastore/red_watchdog",
     "datastore/repair_context",
     "datastore/repair_continuation",
+    "datastore/repair_root",
     "datastore/research_evidence",
     "datastore/research_lifecycle",
     "datastore/research_questions",
@@ -366,6 +369,7 @@
     "services/coding_git",
     "services/coding_projects",
     "services/coding_worker_tools",
+    "services/control_launcher",
     "services/document_creation",
     "services/document_formats",
     "services/document_hwp",
@@ -420,6 +424,7 @@
     "services/resident_terminal",
     "services/resident_terminal_lan",
     "services/resource_links",
+    "services/restart_candidates",
     "services/scheduler",
     "services/session_lease",
     "services/spreadsheet_changes",
@@ -561,8 +566,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 550,
-    "engine": 518,
+    "total": 555,
+    "engine": 523,
     "blocklist": 32
   }
 }

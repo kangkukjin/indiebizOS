@@ -1100,8 +1100,8 @@ def _get_nodes_path() -> Path:
     """원본 사전집(ibl_nodes.yaml)의 경로. 경로 앵커는 runtime_utils.get_base_path 하나 —
     INDIEBIZ_BASE_PATH 해석을 여기서 다시 짜지 않는다 (2026-08-24 앵커 단일화).
     ★이 함수는 test_corrupt_not_absent 의 몽키패치 지점이므로 모듈 수준을 유지한다."""
-    from runtime_utils import get_base_path
-    return get_base_path() / "data" / "ibl_nodes.yaml"
+    from runtime_utils import get_vocabulary_path
+    return get_vocabulary_path()
 
 
 def load_nodes_raw() -> dict:

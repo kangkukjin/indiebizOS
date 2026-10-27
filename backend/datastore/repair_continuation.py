@@ -192,6 +192,13 @@ def task_state(task, base=None):
                     and (r.get("resume_task_id") == task or task in r.get("review_task_ids", []))), None)
     if not row:
         return None
+    try:
+        import repair_root
+        projected = repair_root.projection(Path(base) if base else get_base_path(), row.get("root_task_id") or row["task_id"])
+    except Exception:
+        projected = None
+    if projected and projected.get("terminal") and row.get("status") in TERMINAL:
+        return {"complete": "completed", "incomplete": "blocked", "cancelled": "cancelled"}.get(projected["stage"])
     if row.get("status") == "waiting_apply" and row.get("job_path"):
         # 제어자가 FAILED여서 ACTIVE 재개 콜백이 아직 오지 않아도 종료 영수증은
         # 이미 사실이다. 조회만으로 새 실행을 만들지 않고 실패를 기다림과 구분한다.

@@ -104,6 +104,7 @@ class Supervisor:
         self.original_pursuit = None
         self.pursuit = None
         self.repair_granted = False
+        self.apply_scheduled = None   # 적용 예약 접수증 뒤의 도구 호출은 실행하지 않는다(G3: 하네스가 턴을 닫는다)
         self.usage = {"input": 0, "output": 0}
         self.final_usage = {"input": 0, "output": 0}
         self.phase_usage = {}
@@ -514,6 +515,12 @@ class Supervisor:
         if identity()[0] == self.supervisor_id:
             return json.dumps({"success": False, "not_executed": True,
                                "error": "의식의 직접 도구는 supervision execute 작업대를 통해 호출하세요"}, ensure_ascii=False)
+        if self.apply_scheduled and name != "supervision":
+            # 접수 결과는 하네스의 턴 종료 사건이다. 기다리는 대상이 곧 이 턴이므로 더 실행하지 않는다.
+            return json.dumps({"success": False, "not_executed": True, "apply_scheduled": self.apply_scheduled,
+                               "supervisor_instruction": "적용이 예약됐습니다. 이 턴에서는 더 실행하지 않습니다 — 지금 응답을 "
+                               "마치고 실행 구간을 닫으세요. 적용·활성·완료는 인계 원장이 재기동 뒤 이어서 확인합니다."},
+                              ensure_ascii=False)
         notice = self.boundary()
         if notice:
             # 아직 실행하지 않았다. 새 지시를 읽은 모델이 다시 선택한 호출만 실행한다.

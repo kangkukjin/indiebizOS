@@ -39,7 +39,8 @@ def _get_base_path() -> Path:
 
 
 def _get_nodes_path() -> Path:
-    return _get_base_path() / "data" / "ibl_nodes.yaml"
+    from runtime_utils import get_vocabulary_path
+    return get_vocabulary_path()
 
 
 # === 캐시 ===

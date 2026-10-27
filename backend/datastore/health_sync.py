@@ -51,7 +51,8 @@ def _ensure_db():
     보장(맥·폰 공통). sync 가 self:health 보다 먼저 돌아도 테이블이 있게. 스키마 정의 DRY(미복제)."""
     try:
         import importlib.util
-        sp = os.path.join(str(get_base_path()), "data", "packages", "installed",
+        from runtime_utils import get_installed_packages_root
+        sp = os.path.join(str(get_installed_packages_root()),
                           "tools", "health-record", "storage.py")
         spec = importlib.util.spec_from_file_location("_health_storage", sp)
         mod = importlib.util.module_from_spec(spec)

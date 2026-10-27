@@ -39,7 +39,8 @@ def _load_lecture_store():
         # dev 모드: backend/ 의 부모(indiebizOS) 기준
         base = str(Path(__file__).resolve().parent.parent.parent)
 
-    pkg_dir = Path(base) / "data" / "packages" / "installed" / "tools" / "lecture_workspace"
+    from runtime_utils import get_installed_packages_root
+    pkg_dir = get_installed_packages_root() / "tools" / "lecture_workspace"
     if not pkg_dir.exists():
         raise RuntimeError(f"lecture_workspace 패키지가 없습니다: {pkg_dir}")
 
@@ -290,7 +291,8 @@ def _load_handler():
     base = os.environ.get("INDIEBIZ_BASE_PATH")
     if not base:
         base = str(Path(__file__).resolve().parent.parent.parent)
-    pkg_dir = Path(base) / "data" / "packages" / "installed" / "tools" / "lecture_workspace"
+    from runtime_utils import get_installed_packages_root
+    pkg_dir = get_installed_packages_root() / "tools" / "lecture_workspace"
     if str(pkg_dir) not in sys.path:
         sys.path.insert(0, str(pkg_dir))
     if "lecture_ws_handler" in sys.modules:
@@ -361,7 +363,8 @@ def _load_slide_ai():
     base = os.environ.get("INDIEBIZ_BASE_PATH")
     if not base:
         base = str(Path(__file__).resolve().parent.parent.parent)
-    pkg_dir = Path(base) / "data" / "packages" / "installed" / "tools" / "lecture_workspace"
+    from runtime_utils import get_installed_packages_root
+    pkg_dir = get_installed_packages_root() / "tools" / "lecture_workspace"
     if str(pkg_dir) not in sys.path:
         sys.path.insert(0, str(pkg_dir))
     if "slide_ai" in sys.modules:
@@ -443,7 +446,8 @@ def _load_export_module():
     base = os.environ.get("INDIEBIZ_BASE_PATH")
     if not base:
         base = str(Path(__file__).resolve().parent.parent.parent)
-    pkg_dir = Path(base) / "data" / "packages" / "installed" / "tools" / "lecture_workspace"
+    from runtime_utils import get_installed_packages_root
+    pkg_dir = get_installed_packages_root() / "tools" / "lecture_workspace"
     if str(pkg_dir) not in sys.path:
         sys.path.insert(0, str(pkg_dir))
     if "lecture_export" in sys.modules:

@@ -34,7 +34,8 @@ def package_words(pid):
     nodes = _fragment(pid)
     words = {f"{node}:{name}": cfg for node, meta in nodes.items()
              for name, cfg in (meta or {}).get("actions", {}).items()}
-    path = get_base_path() / "data" / "ibl_nodes.yaml"
+    from runtime_utils import get_vocabulary_path
+    path = get_vocabulary_path()
     if path.exists():
         for node, meta in (yaml.safe_load(path.read_text()) or {}).get("nodes", {}).items():
             for name, cfg in meta.get("actions", {}).items():

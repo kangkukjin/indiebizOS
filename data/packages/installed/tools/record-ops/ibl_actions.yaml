@@ -19,7 +19,7 @@ actions:
         backend/common/expression_ops.py: b4cb049e8652313480c7d6e26fb8dd579be1801aa07e34d83fe0ecbee7e4a7a5 # 재감사 2026-10-27: 명시 부품 계약 구문·수정 계승 신원 매핑. 값 호스트 권한과 파일/회원 격리 경로 불변.
         backend/common/expression_parser.py: 3b0a2cdfdc5717f97d3a4ace7d43f6bae4491b8346697f40049f7ea921099740 # 재감사 2026-10-27: 명시 부품 계약 구문·수정 계승 신원 매핑. 값 호스트 권한과 파일/회원 격리 경로 불변.
         backend/base/principal.py: d7f943517c8ca857a01f8330c5b4a2695b2a999a8aa18962e380778bce3cc58a # 재감사 2026-10-15: PC별 회원 ID 설명만 수정. 인증·권한·실행 로직 불변.
-        backend/base/runtime_utils.py: a2cc50cf1dcafb3f83d32c298787dbd3e5fb4ef4276ff0c8bbc77bf449cd1198
+        backend/base/runtime_utils.py: 071e1a0a1a90c7f7510eb7ab1c63ed9cc5f11d9bb566d7afd935dd2d5716d059 # 재감사 2026-10-27: 코드/정본/데이터 root 해소자(get_code_root·get_source_root·get_installed_packages_root·get_vocabulary_path) 추가만. get_base_path·회원 경로·권한 로직 불변.
         backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
         backend/common/ibl_vars.py: c34c6be2bd233867b0a2cd9e675249d0a5f49459831cd2abcdb4ef1ea6b9944e
         backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5

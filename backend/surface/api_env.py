@@ -271,7 +271,8 @@ def _build_usage_map() -> Dict[str, Dict[str, Any]]:
     # 1) ibl_nodes.yaml: tool 이름 → [(액션 코드, 짧은 설명)]
     tool_to_actions: Dict[str, list] = {}
     try:
-        nodes = yaml.safe_load((data_path / "ibl_nodes.yaml").read_text(encoding="utf-8"))["nodes"]
+        from runtime_utils import get_vocabulary_path
+        nodes = yaml.safe_load(get_vocabulary_path().read_text(encoding="utf-8"))["nodes"]
         for node_name, node in nodes.items():
             for action_name, action in (node.get("actions") or {}).items():
                 tool = action.get("tool")
@@ -283,8 +284,9 @@ def _build_usage_map() -> Dict[str, Dict[str, Any]]:
         pass
 
     # 2) 패키지 스캔: 키가 등장하는 파일 + 그 파일에 같이 있는 도구 이름 → 액션 귀속
-    pkg_roots = [data_path / "packages" / "installed" / "tools",
-                 data_path / "packages" / "installed" / "extensions"]
+    from runtime_utils import get_installed_packages_root
+    pkg_roots = [get_installed_packages_root() / "tools",
+                 get_installed_packages_root() / "extensions"]
     for root in pkg_roots:
         if not root.exists():
             continue

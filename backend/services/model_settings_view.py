@@ -31,7 +31,9 @@ def describe_model_settings(gear):
                      "실행 모델의 이미지 입력 미지원·미확인 때 대체합니다. 이미지 추출과 의식의 최종 시각 검수에도 사용합니다."))
 
     data = Path(get_base_path()) / "data"
-    audio_path = data / "packages/installed/tools/android/audio_models.yaml"
+    from runtime_utils import get_installed_packages_root, in_generation
+    installed = get_installed_packages_root() if in_generation() else data / "packages/installed"
+    audio_path = installed / "tools/android/audio_models.yaml"
     audio, audio_error = {}, ""
     try:
         audio = yaml.safe_load(audio_path.read_text(encoding="utf-8")) or {}

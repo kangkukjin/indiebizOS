@@ -71,6 +71,9 @@ _DANGEROUS_RE = re.compile('|'.join(DANGEROUS_PATTERNS_RE), re.IGNORECASE)
 # 개조는 data/ 차원(어휘·yaml·상태)에서 끝내거나, 코어가 정말 필요하면 사람에게 제안.
 # repo 루트는 backend+frontend 동시 존재로 독립 탐지 — 설치 위치·경로 깊이에 안 흔들림.
 def _find_repo_root():
+    env = os.environ.get("INDIEBIZ_SOURCE_ROOT")  # 세대 사본에서 돌 때 편집·git 의 정본(2026-10-27 G1)
+    if env and (Path(env) / "backend").is_dir():
+        return Path(env)
     p = Path(__file__).resolve()
     for anc in p.parents:
         if (anc / "backend").is_dir() and (anc / "frontend").is_dir():

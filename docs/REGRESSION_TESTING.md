@@ -68,6 +68,7 @@ import 그래프의 전이 소비자와, 변경 경로를 문자열로 가리키
 | 변경 대상 | 함께 실행할 파일/항목 |
 | --- | --- |
 | 재기동·프로세스 소유권·작업 수명·공통 저장소/동시성 | `backend/test_restart_process.py` |
+| 봉인 세대 교체·부팅 실패 복구·제어 기반 인계(실제 프로세스) | `backend/test_restart_generation_process.py` |
 | IBL 파서·타입·실행·값/와이어·어댑터·스크립트·권한 | `backend/test_python_libraries.py` |
 | 어휘 계약·레지스트리·설치/배포·활성화·시딩·캐시 무효화 | `backend/test_vocabulary_archive.py`, `backend/test_vocabulary_bundle_split.py` |
 | v2 런타임·원장·읽기 재사용·렌더(긴문장 회차 전체 프로그램 재생) | `backend/test_long_sentence_round6_tasks.py`, `backend/test_long_sentence_round15_repairs.py::test_original_round15_full_program_recovers_without_recollecting`, `backend/test_long_sentence_round3_repairs.py::test_full_report_and_six_source_reuse` |

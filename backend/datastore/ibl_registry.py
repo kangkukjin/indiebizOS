@@ -97,8 +97,8 @@ def _get_nodes_path() -> Path:
     global _nodes_path
     if _nodes_path:
         return _nodes_path
-    from runtime_utils import get_base_path
-    _nodes_path = get_base_path() / "data" / "ibl_nodes.yaml"
+    from runtime_utils import get_vocabulary_path
+    _nodes_path = get_vocabulary_path()
     return _nodes_path
 
 

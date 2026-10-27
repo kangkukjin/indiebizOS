@@ -141,6 +141,9 @@ DECLARATIONS: List[tuple] = [
     ("data/warehouse_directory_cache.json", "창고 둘러보기 캐시",                "cache"),
 
     ("data/restart_control/**", "단일 현역 재기동 제어자(상태·요청·결과·커널 잠금)", "state"),
+    ("data/restart_control/generations/**", "봉인 실행 세대(generation_store — 코드 사본·의존 복제, 읽기 전용)", "derived"),
+    ("data/restart_control/control_base/**", "제어 기반 고정 판본(control_base — 제어자·helper 사본)", "derived"),
+    ("data/system_ai_state/repair_roots/**", "수리 root 원장(repair_root — 단계·시도·소유자·다음 행동)", "state"),
     ("data/coding/**", "코딩 앱 상태(과제·사건 DB·과제별 작업 공간·실행 런타임)", "state"),
     ("data/media/**", "미디어 세션 최소 이력(media_store — 토큰·SDP 없음)", "state"),
 

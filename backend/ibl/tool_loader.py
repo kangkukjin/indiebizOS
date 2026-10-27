@@ -51,7 +51,8 @@ def get_base_path() -> Path:
 
 def get_tools_path() -> Path:
     """설치된 도구 패키지 경로 반환"""
-    return get_base_path() / "data" / "packages" / "installed" / "tools"
+    from runtime_utils import get_installed_packages_root
+    return get_installed_packages_root() / "tools"
 
 
 def _scan_tool_json_mtimes() -> Dict[str, float]:
@@ -151,7 +152,8 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
     """
     import yaml
 
-    yaml_path = get_base_path() / "data" / "ibl_nodes.yaml"
+    from runtime_utils import get_vocabulary_path
+    yaml_path = get_vocabulary_path()
     if not yaml_path.exists():
         return None
 

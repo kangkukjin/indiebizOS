@@ -58,7 +58,7 @@ def test_Q4_installed_uvicorn_adapter():
 
 def test_Q5_api_delegates_before_import_side_effects():
     src = (ROOT / "backend/api.py").read_text()
-    assert src.index("controller_main(code_root=") < src.index("from fastapi import")
+    assert src.index("_launch_controller(code_root=") < src.index("from fastapi import")
     tree = ast.parse(src)
     calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
              and isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name)

@@ -57,7 +57,8 @@ _REPAIR_CUES = (
 
 def _repo_root() -> Optional[str]:
     """backend 의 부모 = 레포 루트. .git 없으면(폰 몸 등) None."""
-    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from runtime_utils import get_source_root
+    root = str(get_source_root())
     return root if os.path.isdir(os.path.join(root, ".git")) else None
 
 

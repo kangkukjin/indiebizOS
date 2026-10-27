@@ -23,8 +23,8 @@ if os.environ.get("INDIEBIZ_MANAGED_WORKER") == "1":
 if __name__ == "__main__" and not _managed_entry:
     sys.path.insert(0, str(Path(__file__).parent))
     import boot_paths
-    from restart_controller import main as controller_main
-    raise SystemExit(controller_main(code_root=Path(__file__).parent.parent))
+    from control_launcher import launch as _launch_controller
+    raise SystemExit(_launch_controller(code_root=Path(__file__).parent.parent, argv=sys.argv[1:]))
 # 자식 도구가 api.py를 실행하면 제어 요청으로 돌아오게 한다. 기동 허가는 1회용이다.
 os.environ.pop("INDIEBIZ_MANAGED_WORKER", None)
 

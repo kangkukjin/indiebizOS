@@ -1,6 +1,6 @@
 # 자기수리 전체 구조 재설계 — 고칠 수 있는 몸과 복구 가능한 실행 기반
 
-상태: **사용자 검토를 반영한 개정 설계, 재설계 구현은 미착수.** 2026-10-27 최초 조사 뒤 Fable 의견과 사용자의 전체 완성 요구를 반영했다. 미커밋 개발·저장 후 자동 반영을 유지하면서, 불변 실행·지속 작업·요구 검증·수리 기반 갱신·종단 인수를 하나의 구현 범위로 고정한다. 이번 개정은 문서만 변경하며 운영 코드 수정, 실제 수리 실행, 재기동을 하지 않았다.
+상태: **G1~G6 구현·격리 시험장 인수 완료(2026-10-27 저녁, §11). 실모델 결함군 수리와 승인된 운영 실기는 미수행.** 같은 날 오전의 개정 설계(아래 본문)는 그대로 두고 구현 결과·남은 한계를 §11 에 적는다. 미커밋 개발·저장 후 자동 반영을 유지하면서, 불변 실행·지속 작업·요구 검증·수리 기반 갱신·종단 인수를 하나의 구현 범위로 고정한다.
 
 조사 기준 HEAD: `867aee439615a65b1f1d864092a8fb42584f8c46`. 기존 IBL 조합·진행 표시 등의 미커밋 변경이 함께 있었으므로 깨끗한 릴리스의 전수 감사라고 주장하지 않는다. 수리 핵심 파일의 현재 코드와 이 문서의 관측을 구분한다.
 
@@ -331,6 +331,54 @@ root에는 요청·기준 판본·후보/산출물 ID·현재 단계·단계 rev
 후속 구현은 매 묶음마다 바뀐 책임, 없어지는 경로, 생산자부터 마지막 소비자까지의 실제 시험, 남은 한계를 커밋에 남긴다. 각 단계의 검사를 연결할 때만 보호 기능을 옮기고 옛 경로를 지운다. 새 모델 역할·새 원장·새 재시도 분기를 기존 것 위에 계속 얹는 방식은 택하지 않는다. 구현 방법을 더 단순하게 바꾸는 것은 가능하지만, G1~G6와 일상 개발 방식의 보존을 약화하는 변경은 단순한 구현 선택으로 처리하지 않는다.
 
 이 시스템에 필요한 자기수리의 기준은 **AI가 패치를 만들 수 있는가**에 더해 **수리 도중 실패해도 서비스와 근거를 보존하고, 사람의 재지시 없이 가능한 다음 단계로 진행하며, 원래 문제가 해결된 같은 판본을 확인하고 닫을 수 있는가**다. 투자 단위를 여기에 맞춰야 한다.
+
+## 11. 구현 결과 (2026-10-27)
+
+§9 의 묶음 1A·1B·2·3·4 를 한 작업으로 구현했고 묶음 5 의 첫 층(결정적 회귀·실제 프로세스 장애 시험)을 통과했다. 둘째 층(외부 개입 없는 실모델의 서로 다른 결함군 수리)과 셋째 층(승인된 운영 실기)은 **이번에 수행하지 않았다** — 아래 "남은 인수" 에 조건을 적는다. 기존 부분 구현·45개 검사 통과·97회차 성공을 새 기준의 통과로 소급하지 않는다는 §1.1 의 원칙은 유지한다.
+
+### 11.1 바뀐 책임과 소유 위치
+
+| 책임 | 구현 | 은퇴한 경로 |
+| --- | --- | --- |
+| 불변 실행 판본 | `backend/base/generation_store.py` — 실행 입력(backend·scripts·mcp_server·requirements·`data/packages/installed`·`data/ibl_nodes_src`·`data/ibl_nodes.yaml`; 추적+비무시, 시험 파일 제외)의 사본, `.venv` APFS 복제(`clonefile`, 바이트 독립·공간 0), 정본 데이터 링크 뷰, 파일 읽기 전용 봉인, 복사 전후 원천 재고·사본 재해시 삼중 대조, 세대 ID = 파일 지문+의존 환경 신원+프로토콜 판본 | 가변 checkout 직접 부팅, 실행 중 원래 checkout 재독 |
+| 코드/데이터/정본 root | `runtime_utils.get_code_root/get_source_root/get_installed_packages_root/get_vocabulary_path`; 어휘·설치 패키지 읽기 26개 자리를 세대로, git·파생물 재생성·수리 적용의 쓰기는 정본(`INDIEBIZ_SOURCE_ROOT`)으로; 수리 자식 환경은 사본이 전부(`INDIEBIZ_CODE_ROOT` 제거) | `get_base_path()` 한 앵커로 코드와 데이터를 같이 찾던 자리 |
+| 저장 후 자동 반영 | `backend/services/restart_candidates.py` — ACTIVE 감시가 정본 재고 지문을 2초 정착 뒤 봉인·구문검사해 `development_files` 요청 발급; `failed_sources`(같은 입력 재시도 없음) | "편집은 모아서" 규율, `artifact_changed_before_start/after_check`·`boot_artifact_changed` FAILED |
+| 교체·복구 | `restart_controller` — CHECKING 이 봉인 후보를 검증, STOPPING 뒤 같은 후보 기동, 부팅/검증 실패는 `previous` 세대 복구(`rolled_back`), 크래시는 같은 세대 재기동, 복구 세대까지 없을 때만 FAILED | 복구 수단으로서의 `recover_code`(커밋된 수리에는 쓰지 않음; 미커밋 직접 RED 쓰기 `red_verify` 만 백업 복원 유지) |
+| 자기수리 반영 | 새 `PUBLISHING` 단계: 현역을 살려 둔 채 수행자(`restart_helper`→`restart_red.apply_job`)가 정본 반영·**커밋**(`commit_applied`, 수리 델타만, 타인 인덱스 보존) → 그 정본으로 세대 봉인 → 수리 대상 경로의 바이트 대조(`publish_conflict`) → drain·교체 → 활성 뒤 검증 | "가변 정본 적용 → 활성 → 각인" 순서, 적용 거절이 현역을 죽이던 경로 |
+| 수리 한 건의 전이 | `backend/datastore/repair_root.py` — 단계(diagnose→prepare→check→publish→deploy_wait→activate→verify_active→complete|incomplete)·시도·소유자 fencing·revision·다음 행동·재개 조건·수리/서비스/전달 결과; 생산자 이음새(op_apply·예약·apply_job·제어자 finish·활성 확인·완료 종결·전달)와 투영(`repair_outcomes.progress.root`, `task_state`) | 입구별 자체 완료 판정(종결 뒤), 전달 실패가 완료를 가리는 경로 |
+| 접수 뒤 턴 종료 | `conscious_supervisor.run_tool` — 예약 접수증 뒤의 도구 호출은 실행하지 않고 턴 종료를 지시(`apply_scheduled`) | `do_not_wait` 경고문 의존 |
+| 요구 근거 | `repair_candidate.test_weakening`(시험 삭제·assert 감소·skip/xfail 추가 → 의미 검토 없이 승인 불가), `repair_policy.regression_evidence`(같은 검사의 수정 전 실패·후 통과 연결, 없으면 unknown), `active_generation_bytes`(활성 세대 ↔ 봉인 묶음), `symptom_recheck`(활성 확인 통과 | 사본 재현 | 미확인 사유) | 명령-ID 연결만으로 조건 충족 확정 |
+| 수리 기반 갱신 | `backend/base/control_base.py` + `backend/services/control_launcher.py` — 제어 파일 14개를 `control_base/<id>/` 로 봉인·별도 프로세스 자기검사·`current.json` 승인, `api.py start` 가 그 사본을 exec; 현역 제어자가 제어 파일 변경을 봉인·검증 후 `--takeover` 인계(상태 사본 `state.pre-<id>.json`), 인수 실패는 이전 기반이 잠금 회수·`failed` 기록 | 새 checkout 의 helper 에 현재 복구를 맡기는 결합, 정상 수리의 필수 단계로 남은 수동 앱 재시작 |
+
+### 11.2 G1~G6 인수 연결표
+
+| ID | 확인한 관측 | 시험 |
+| --- | --- | --- |
+| G1 | 커밋 없는 저장이 정착 뒤 새 세대로 자동 교체되고 현역 세대 바이트는 편집·같은 크기·같은 mtime 의 다른 내용에도 그대로다. 복사 중 변경은 후보 무게시. 패키지 상태·git 무시 항목·정본 데이터는 링크로 하나다 | `test_generation_store`(10) · `test_restart_generations::test_saved_edit_*`, `test_edits_during_swap_*`, `test_production_mode_*` · 실제 프로세스 `test_restart_generation_process::test_saved_edit_swaps_generation_and_active_bytes_are_frozen` |
+| G2 | 구문 오류는 현역 유지+`failed_sources`, 부팅 실패는 직전 세대 복구(`rolled_back`)·실패 원천 재시도 없음·고치면 다음 후보, 복구 세대까지 실패하면 FAILED(루프 없음), 크래시는 같은 세대 재기동, 거절·충돌·수행자 사망·PUBLISHING 양쪽 사망에도 현역 무변경 | `test_restart_generations`(16) · 기존 `test_restart_controller`(34, 계약 바뀐 3건 재작성) · 실제 프로세스 `test_bad_boot_rolls_back_*`, `test_syntax_error_*` · 기존 `test_restart_process`(실제 사망 행렬 전부 통과) |
+| G3 | root 원장의 revision·fencing·종결 뒤 재개=새 시도, 제어자 결과→단계 사상; 예약 접수 뒤 도구 호출 차단; 기존 인계(접수 직후·사망·중복·취소) 회귀 유지 | `test_repair_root`(5) · `test_self_repair_redesign_seams::test_tool_calls_after_scheduled_apply_*` · 기존 `test_repair_continuation`·`test_repair_resume`·`test_repair_task_state` |
+| G4 | 시험 약화는 시험 통과만으로 승인 불가, 활성 세대 바이트 대조(일치/불일치/대상 밖), 정본 반영 뒤 같은 경로 재변경은 `publish_conflict`(커밋 보존·현역 유지), 기존 정본 충돌·무시 소스·후보 교체 관문 유지 | `test_self_repair_redesign_seams`(약화 2·활성 바이트 1) · `test_restart_generations::test_repair_publish_conflict_*` · 기존 `test_repair_candidate`·`test_repair_workspace_completion`·`test_repair_receipt_flow` |
+| G5 | 재현 근거(수정 전 실패→후 통과) 연결, 원 증상 재검사 판정이 완료 보고·root 에 남고 없으면 "미확인" 사유, 완료 기록 뒤 전달 실패는 전달만 같은 event id 로 재시도(완료·실행 반복 없음), 미완료는 재개 조건과 함께 닫힘 | `test_self_repair_redesign_seams`(재현 근거 2·전달 분리 1) · `test_repair_root::test_delivery_is_orthogonal_*`, `test_unknown_stage_rejected_*` |
+| G6 | 제어 기반 봉인·자기검사·선택·실패 표시; 실제 프로세스에서 제어 파일 변경 → 새 기반 인계(워커 무중단·pid 교체·상태 사본), 인수 거절 주입 시 이전 기반이 계속 소유하고 실패 기반 기록, 인계 뒤 새 제어자가 교체도 소유 | `test_restart_generations::test_control_base_snapshot_verify_and_select` · 실제 프로세스 `test_control_base_handover_keeps_worker_and_survives_failed_takeover` · `test_quiescent_reload::test_Q5`(런처 위임) |
+
+관련 기존 묶음(`test_repair_staging` 실 pytest 자식 배터리 포함)과 backend 비system 전수는 같은 날 실행했다 — 결과는 커밋 메시지와 §11.4 에 적는다.
+
+### 11.3 알려진 한계 (주장하지 않는 것)
+
+- **의존 환경**: 세대의 `.venv` 는 APFS `clonefile` 로 바이트가 독립이지만 다른 파일시스템에서는 심볼릭 링크로 내려가며(`manifest.environment.isolation=symlink`) 그때 환경 변경은 신원 드리프트로만 보인다. `node_modules` 는 격리하지 않았다. 외부 서비스·모델 API 는 고정 대상이 아니다.
+- **`__file__` 기준 데이터 쓰기**: 세대 안 `data/` 에 새로 생긴 항목은 세대 뷰에 남는다(`residue`). 은퇴 세대를 정리할 때 정본으로 회수하되 같은 경로가 정본에 있으면 덮지 않고 남긴다. 알려진 자리(business 패키지 `hidden_dm_peers.json`·`showcase_state.json`)는 봉인 시점 링크로 정본을 본다.
+- **스냅샷 원자성**: 복사 전후 재고와 사본 재해시가 같을 때만 봉인한다 — 이는 "최종 내용이 복사 구간 동안 바뀌지 않았다" 의 증명이고, 편집기의 다중 파일 저장 도중 한 순간의 재고도 일관된 한 세대다. 그 틈은 2초 정착·구문검사·부팅 검증·복구가 받친다.
+- **제어자의 지원 코드**: 기반 밖 모듈(`red_apply`·`episode_logger` 등)은 제어자 시작 시점의 현역 세대(없으면 정본)에서 import 되어 그 프로세스 수명 동안 고정된다. 인계 뒤 새 제어자는 그때의 현역 세대로 다시 고정한다.
+- **소비자의 자체 판정 제거는 부분**: `repair_outcomes.progress` 는 root 투영을 덧붙이고 `task_state` 는 종결된 root 를 우선하지만, 비종결 상태의 파생 판정(stage/action)은 기존 계산을 유지한다. 전면 교체는 구정책 수리가 끝난 뒤의 몫이다(§9 "기존 진행 수리는 정책 판본을 유지한다").
+- **후보 준비의 부작용 차단(§5.4 inspect/prepare 분리)**: 후보 검사는 봉인 사본의 바이트 검증·구문검사까지다. 운영 DB 쓰기 없는 import 스모크·격리 데이터 부팅은 구현하지 않았고, 부팅 실패는 교체 후 복구가 받는다.
+- **packages/reload 의미**: 세대에서는 `handler.py` 라이브 교체가 없다 — 변경은 다음 세대다(`RELOAD_DOES_NOT_COVER` 가 말한다). 패키지 설치·활성 상태(`package_manager`·`activation.json`)는 데이터 root 그대로이며 UI 목록과 실행 세대가 교체 전까지 잠시 다를 수 있다.
+
+### 11.4 남은 인수와 조건
+
+1. **실모델 결함군 수리(§8 둘째 층)**: 외부에서 중간 코드를 고쳐주지 않는 시스템 AI 가 backend·패키지/어휘·UI·설정 의존·제어 기반 변경을 각각 수리해 root 원장이 `complete` 로 닫히는 것을 본다. 조건: 사용자 승인·모델 비용 동의. 이번 세션은 모델을 부르지 않았다.
+2. **승인된 운영 실기(§8 셋째 층)**: 실제 운영 앱에서 원 요청→활성·원 증상 소멸·전달. 조건: 격리 시험장 인수(이번 완료) 뒤 사용자 승인.
+3. **운영 전환 확인 — 수행(2026-10-27 21:37~21:40 KST)**: `api.py start` 가 제어 기반 `51ae890d…`(정본 제어 파일 13개 봉인·자기검사 통과)에서 제어자를 exec 했고, 정본 작업 트리(HEAD `044632ce` + dirty 56개)를 세대 `16f094d7…`(파일 1308, `.venv` clonefile)으로 봉인해 약 20초 뒤 ACTIVE(`restarted`)·`/health` healthy·워커 실행 경로가 세대 폴더임을 확인했다. 세대 안 데이터 잔류·manifest 밖 코드 파일 0. 운영 중 backend 파일 한 개를 편집하자 감시가 정착 뒤 후보 세대 `6dfebe7f…`를 준비해 교체 요청을 냈고(저장 후 자동 반영의 실측), 그 직후 `shutdown --wait` 가 STOPPED(`intentional_shutdown`)로 끝났다 — 대기 요청은 의도적 종료로 닫혔다. 이 실측은 운영 전환의 부팅·종료·감시 경로를 확인한 것이며 §8 셋째 층(원 요청→원 증상 소멸→전달)의 실기는 아니다.
+4. **같은 날 다른 세션의 작업과의 공존**: 공유 작업 트리의 미커밋 변경(dirty 56)이 세대에 그대로 들어간다 — 세대는 "그 순간의 정본 작업 트리" 이며 커밋 상태를 가리지 않는다(설계 §5.1). 실패하면 `failed_sources` 가 그 지문을 적고 다음 저장이 다음 후보가 된다.
 
 ## 조사 재현과 검증 범위
 

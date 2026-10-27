@@ -23,10 +23,11 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False):
     clean.update(source)
     # Git 대상은 cwd가 정한다. 호스트의 Git 디렉터리 override는 넘기지 않는다.
     for key in list(clean):
-        if key.startswith("GIT_"):
-            clean.pop(key)
+        if key.startswith("GIT_") or key == "INDIEBIZ_CODE_ROOT":
+            clean.pop(key)  # 사본의 코드는 사본 자신이다 — 세대 코드 root 를 물려주지 않는다
     clean.update(TMPDIR=str(runtime), TMP=str(runtime), TEMP=str(runtime),
                  INDIEBIZ_BASE_PATH=str(root), INDIEBIZ_MODEL_CONFIG_ROOT=str(model_root),
+                 INDIEBIZ_SOURCE_ROOT=str(root),
                  INDIEBIZ_REPAIR_CHILD="1", PYTHONDONTWRITEBYTECODE="1",
                  # 소스 옆 __pycache__ 는 mtime+size 로만 검증돼 같은 크기·같은 시각의 다른 내용에
                  # 옛 바이트코드를 돌려준다(긴문장 98회차 L98-2). 검사는 빈 런타임 캐시만 본다.

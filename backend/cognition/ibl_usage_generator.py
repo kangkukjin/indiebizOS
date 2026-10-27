@@ -158,7 +158,8 @@ def generate_for_package(package_id: str) -> int:
     from runtime_utils import get_base_path
 
     # 1. 패키지의 ibl_actions.yaml에서 등록된 액션 목록 확인
-    pkg_path = get_base_path() / "data" / "packages" / "installed" / "tools" / package_id
+    from runtime_utils import get_installed_packages_root
+    pkg_path = get_installed_packages_root() / "tools" / package_id
     actions_file = pkg_path / "ibl_actions.yaml"
     if not actions_file.exists():
         return 0

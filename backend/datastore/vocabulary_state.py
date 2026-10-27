@@ -49,6 +49,15 @@ def valid_id(value: str) -> str:
     return value
 
 
+def _location_root(root: Path, location: str) -> Path:
+    """installed 는 실행 코드 root(봉인 세대)의 사본, not_installed·활성 상태는 데이터 root(2026-10-27 G1)."""
+    if location == "installed":
+        from runtime_utils import get_base_path as _base, get_installed_packages_root
+        if Path(root).resolve() == Path(_base()).resolve():
+            return get_installed_packages_root()
+    return Path(root) / "data" / "packages" / location
+
+
 def inventory(root: Path = None) -> dict:
     """두 보관 폴더가 보유 정본. 내용은 import하지 않고 정의만 읽는다."""
     root = Path(root or get_base_path())
@@ -60,7 +69,7 @@ def inventory(root: Path = None) -> dict:
     with LOCK:
         paths = []
         for location in ("installed", "not_installed"):
-            base = root / "data" / "packages" / location / "tools"
+            base = _location_root(root, location) / "tools"
             if base.exists():
                 paths.extend((p, location) for p in sorted(base.iterdir())
                              if p.is_dir() and not p.name.startswith("."))

@@ -496,6 +496,7 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 1. **자기 죽음 이후에 실행돼야 하는 단계는, 죽음을 넘는 프로세스가 소유한다.**
    옛 keeper 규약("작업 전 표식 세우고, 작업 후 지운다")은 자기수리에서 **원리적으로 완주 불가**였다 — backend 를 고치는 시스템 AI 는 그 backend 안에서 살아서, 편집이 부른 리로드가 회수 단계를 실행할 턴을 죽인다(실측: 표식이 남아 감시가 몇 시간 멎음). 2026-08-17 개정에서 표식은 **기계 소유**가 됐다: 쓰기 직전 자동으로 서고(내용이 소유자 표시이자 심장박동), 회수는 워치독이 어느 결말에서든 하고, 놓쳐도 keeper 가 `PAUSE_TTL` 900초 만료로 감시를 재개한다. → 평범한 `backend/*.py` 편집엔 **이제 아무 의례도 필요 없다**.
    **2026-09-11 R0/R1(`6c07cdbc`·`b32e563a`) — 죽음을 넘는 프로세스가 하나로 모였다.** keeper 의 감시 루프·부팅 유예·`PAUSE_TTL` 은 은퇴했고(`scripts/backend_keeper.sh` 는 `api.py serve` 를 exec 하는 호환 입구일 뿐 아무것도 이를 띄우지 않는다), uvicorn 자동 리로드도 껐다(`reload=False`). 접수 차단·종료 대기·preflight·재기동·RED 복구를 **한 현역 제어자**(`backend/services/restart_controller.py`)가 소유하고, 진입점(`backend/api.py` CLI `start|serve|restart|shutdown|status|wait` · `start.sh` · Electron `backend-process.js` · keeper 셸)은 전부 같은 계약으로 합류한다. 실제 일의 접수·해제는 `runtime_work.WorkRegistry` 한 RLock 안에서 이루어지고(파일 표식 TTL 이 차단을 풀지 않는다), 사망 판정은 `restart_process` 의 **PID+출생 신원**으로만 한다 — macOS 는 NTP 보정 전 커널 출생값을 써야 한다, `psutil` 표시값으로 판정하면 시계 보정 뒤 살아 있는 워커가 종료 대상에서 빠진다(`8bdab5b2`, `docs/RESTART_CLOCK_IDENTITY_2026_09_12.md`). 상주 서비스(AnyIO 풀·tqdm 모니터·Playwright 드라이버·자동 종료 타이머의 대기)는 미완료 작업으로 세지 않되 프로세스 영수증은 남긴다(`dc23d304`, `docs/RUNTIME_SERVICE_LIFETIME_2026_09_12.md`). 제어 상태는 `data/restart_control/`(원자 교체+fsync·커널 파일 잠금·비밀 포함이라 git 제외). 정본 `docs/RESTART_COORDINATION_DESIGN_2026_09_11.md` §9, 진입점 지도·운영 명령은 technical.md.
+   **2026-10-27 세대 전환(docs/SELF_REPAIR_SYSTEM_REDESIGN_2026_10_27.md) — 죽음을 넘는 프로세스가 *불변 판본*을 띄운다.** 워커는 가변 checkout 이 아니라 봉인 세대(`generation_store`)에서 돌고, 편집은 현역 바이트를 바꾸지 못한 채 다음 후보가 된다. 교체 전 실패는 현역 유지, 교체 후 실패는 직전 세대 복구, 자기수리 반영은 현역을 살려 둔 채 정본 반영·각인 뒤 그 정본의 세대로 교체(`PUBLISHING`). 제어자도 검증된 기반 사본(`control_base`)에서 돌아 자기 갱신에 복구 경로가 남고, 수리 한 건의 단계·소유자·다음 행동은 root 원장(`repair_root`) 하나가 쓴다.
 2. **죽음을 넘긴 판정은 다음 턴의 입이 닫는다.**
    수리의 성패는 자기 턴이 죽은 뒤에 난다 — 워치독이 `result.json` 에 적지만 읽는 쪽이 없어서 "성공한 수리"와 "그냥 멎은 수리"가 사용자 자리에서 구별되지 않았다. `red_report.py` 가 미보고 판정을 회수해 다음 턴 0단계 연상에 `<repair_outcome>` 으로 얹는다(없으면 0토큰·한 번만). **누구의 입이 닫는가 = 수리한 그 에이전트**(2026-08-25 사용자 확정) — 주인 열쇠(`red_report.owner_key`, 시스템 AI 는 예약 id 하나로 접는다)를 쓰기 시점에 원장(manifest·session)에 박고 회상이 자기 것만 줍는다. 회수는 한 번뿐이라, 남이 먼저 주우면 표식만 찍히고 명령한 창에서는 영영 안 보인다.
 3. **'누가 도는가'는 원장 한 벌에만 묻지 않는다 — 그 한 벌은 지워질 수 있다.**
@@ -559,7 +560,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 172 액션** (sense 39·self 58·limbs 13·others 20·engines 19·table 23)
-- backend **.py 613개**(test 제외, git 추적 기준) — 층 디렉토리 `base 89 · datastore 89 · ibl 81 · cognition 94 · services 91 · surface 96`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **97**)
+- backend **.py 618개**(test 제외, git 추적 기준) — 층 디렉토리 `base 91 · datastore 90 · ibl 81 · cognition 94 · services 93 · surface 96`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **97**)
 - op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 24·미선언 89)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

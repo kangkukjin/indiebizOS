@@ -712,7 +712,8 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
     job_path = os.path.join(repo, SESSION_DIRNAME, f"{key}.apply.json")
     # 수행자 스크립트는 코드 루트(이 모듈이 사는 저장소) 기준 — 대상 repo 에 없으면
     # (테스트의 가짜 저장소 등) 코드 루트 것을 쓴다.
-    script = os.path.join(repo, "backend", "datastore", "red_apply.py")
+    code_root = os.environ.get("INDIEBIZ_CODE_ROOT")  # 봉인 세대의 수행자(정본은 편집 중일 수 있다)
+    script = os.path.join(code_root or repo, "backend", "datastore", "red_apply.py")
     if not os.path.exists(script):
         code_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                                  *[os.pardir] * 5))
@@ -738,6 +739,7 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
     try:
         atomic_json(job_path, job)
         _save_session(repo, sess)
+        _root_note("note_scheduled", repo, sess, {**job, "_path": job_path})
         if not os.environ.get("INDIEBIZ_REPAIR_NO_SPAWN"):   # 테스트 심 — 수행자는 직접 기동
             log = open(job_path + ".log", "ab")
             from runtime_work import service_scope
@@ -951,6 +953,7 @@ def op_apply(ti):
         sess["verification_plan"] = ti["verification_plan"]
     approval = controller.prepare_repair(repo, sess, verify, _candidate)
     _save_session(repo, sess)
+    _root_note("note_prepared", repo, sess, approval)
     if not approval.get("success"):
         return approval
     checks = sess["readiness"]["checks"]
@@ -972,11 +975,26 @@ def op_apply(ti):
     if _reload_triggering(sess):
         out = _schedule_deferred_apply(repo, sess, checks, verify_cmd, active_verify_cmd)
         if out is not None:
+            # 접수증을 돌려준 뒤에는 하네스가 이 턴을 닫는다 — 경고문이 아니라 도구 경계가 집행한다(G3).
+            try:
+                controller.apply_scheduled = {"key": sess["key"], "job": out.get("worktree"), "at": time.time()}
+            except Exception:
+                pass
             return out
         return {"success": False, "applied": False, "error": "적용 예약 실패. 사본을 보존했습니다. 즉시 적용하지 않습니다"}
     sess["apply_task_id"] = _grant_identity()[0] or sess["key"]
     out = _perform_apply(repo, sess, checks, prepare, finalize)
     return _complete_immediate(repo, sess, out, ti)
+
+
+def _root_note(method, repo, *args):
+    """수리 root 원장 전이(G3). 원장 실패가 수리 동작을 바꾸면 안 되므로 삼키고 한 줄 남긴다."""
+    try:
+        import repair_root
+        return getattr(repair_root, method)(repo, *args)
+    except Exception as exc:
+        print(f"[수리 스테이징] root 원장 {method} 실패(무시): {type(exc).__name__}: {exc}")
+        return None
 
 
 def _complete_immediate(repo, sess, result, ti):
@@ -998,7 +1016,12 @@ def _complete_immediate(repo, sess, result, ti):
     committed = commit_applied(repo, sess["key"])
     sess = read_session(repo, sess["key"]) or sess
     sess["commit"] = committed
-    return _outcomes.finish(sess, result)
+    out = _outcomes.finish(sess, result)
+    if committed.get("success"):
+        _root_note("note_publish", repo, {"key": sess["key"], "repo": repo, "task_id": sess.get("root_task_id")},
+                   {**result, "commit": committed, "published_files": {
+                       rel: (item.get("after") or {}).get("sha") for rel, item in (sess.get("sealed") or {}).items() if item.get("after")}})
+    return out
 
 
 def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):

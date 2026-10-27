@@ -72,7 +72,7 @@
 감사 §2-1 목록. 서버만 보고 할 수 있는 것은 없고 전부 React 화면이다: 신문 `issue()`→`[engines:newspaper]{wait:true}`, 강의 REST 18개→`self:lecture/slide/material/deck`, 창고 이웃 3종→`[others:neighbor]`, 매니저 agents/command→`others:agents/delegate`, PC list/analyze→`self:list/storage`, 사진 save/open→`self:copy/limbs:os_open`, 스위치→`self:switch`, 주행기록·트레이스 창→`self:body trajectory`. 죽은 코드 삭제(`api-business.ts` 31메서드, `api_gmail.py`, `gen_newspaper.py`×2, scheduler tasks 래퍼, 원격 `CUSTOM_RENDERERS`)는 파괴적 → 사용자 판정.
 
 ## 3 이 코드베이스에서 배운 함정 (다음 세션이 다시 밟지 않게)
-- **백엔드 편집은 모아서**: 연속 편집이 재기동 도중 닿으면 제어자 `FAILED`(artifact_changed_before_start), 자동 재시도 없음. 복구 `nohup .venv/bin/python3 backend/api.py start &`. 판정은 `/health` 가 아니라 `data/restart_control/state.json`.
+- **(은퇴 2026-10-27) 백엔드 편집은 모아서**: 봉인 세대 전환 뒤 교체 도중 편집은 다음 후보가 될 뿐이다(`SELF_REPAIR_SYSTEM_REDESIGN_2026_10_27.md`). 옛 사실: 연속 편집이 재기동 도중 닿으면 제어자 `FAILED`(artifact_changed_before_start), 자동 재시도 없음. 복구 `nohup .venv/bin/python3 backend/api.py start &`. 판정은 `/health` 가 아니라 `data/restart_control/state.json`.
 - **계약을 바꾼 액션**(description·ops·target_description)은 `--check` 가 용례 재검토를 요구 → `scripts/iblbuild_example_review.py --show X` 읽고 `--ack X`. description 은 200자 한도.
 - **`path_audited.dependencies`**(record-ops 등)에 든 backend 파일(`common/expression_parser.py` 등)을 고치면 지문 불일치 → 재감사 뒤 해시·`at` 갱신(사유 주석).
 - 커밋 전 파생물: `build_ibl_nodes.py`(ibl_nodes.yaml·문서 마커 구간), `build_member_shell.py`(helper/member_app.html — 렌더 코어·회원 브리지 바뀌면), `build_body_bundle.py android`(backend 모듈 추가 시). 새 backend 모듈은 `scripts/check_backend_layers.py` LAYERS 등재, base 층은 ibl 층 import 금지.

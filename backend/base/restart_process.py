@@ -15,7 +15,10 @@ from restart_protocol import atomic_json, control_dir, read_json
 IS_WINDOWS = os.name == "nt"
 
 
-from common.completion_contract import process_birth_time as _birth_time
+try:  # 제어 기반 사본은 common/ 패키지 없이 평면 사본(completion_contract.py)을 둔다(G6)
+    from completion_contract import process_birth_time as _birth_time
+except ImportError:
+    from common.completion_contract import process_birth_time as _birth_time
 
 
 def identity(pid):
@@ -107,7 +110,18 @@ class ProcessAdapter:
         return None
 
     def spawn(self, state):
+        """워커를 봉인 세대(generation_dir)에서 띄운다. 세대가 없으면(옛 상태) 가변 checkout 에서."""
+        gen_dir = state.get("generation_dir")
+        root, python = self.code_root, sys.executable
         env = os.environ.copy()
+        if gen_dir and Path(gen_dir).is_dir():
+            import generation_store
+            root = Path(gen_dir)
+            python = generation_store.python_executable(root)
+            cache = self.home / "pycache" / str(state.get("code_digest") or "unknown")
+            env.update(INDIEBIZ_CODE_ROOT=str(root), INDIEBIZ_SOURCE_ROOT=str(self.code_root),
+                       PYTHONPYCACHEPREFIX=str(cache))
+            env.pop("PYTHONDONTWRITEBYTECODE", None)
         env.update(INDIEBIZ_BASE_PATH=str(self.base), INDIEBIZ_API_PORT=str(self.port),
                    INDIEBIZ_RUNTIME_GENERATION=state["generation"],
                    INDIEBIZ_RUNTIME_DIGEST=state["code_digest"],
@@ -116,8 +130,8 @@ class ProcessAdapter:
         logpath = self.base / "data/backend_runtime.log"
         with logpath.open("ab") as log:
             child = subprocess.Popen(
-                [sys.executable, str(self.code_root / "backend/base/restart_child.py")],
-                cwd=self.code_root / "backend", env=env, stdout=log, stderr=log,
+                [python, str(root / "backend/base/restart_child.py")],
+                cwd=root / "backend", env=env, stdout=log, stderr=log,
                 start_new_session=not IS_WINDOWS)
         self.children[child.pid] = child
 
@@ -163,9 +177,16 @@ class ProcessAdapter:
         if last:
             return {"ok": False, "error": "RED 수행자 bootstrap 실패"}, []
         # 파일별 커널 잠금/receipt로 spawn-저장 사이 제어자 사망도 멱등이다.
+        # 수행자는 제어자 자신의 기반(이 파일이 사는 트리)에서 뜨고, 나머지 코드는 현역 세대에서 읽는다.
         script = Path(__file__).resolve().parents[1] / "services/restart_helper.py"
+        env = dict(os.environ, INDIEBIZ_BASE_PATH=str(self.base), INDIEBIZ_SOURCE_ROOT=str(self.code_root))
+        gen_dir = state.get("generation_dir")
+        if gen_dir and Path(gen_dir).is_dir():
+            env["INDIEBIZ_CODE_ROOT"] = str(gen_dir)
+        else:
+            env.pop("INDIEBIZ_CODE_ROOT", None)
         with (self.base / "data/backend_runtime.log").open("ab") as log:
-            child = subprocess.Popen([sys.executable, str(script), str(path)],
+            child = subprocess.Popen([sys.executable, str(script), str(path)], env=env,
                                      stdout=log, stderr=log, start_new_session=not IS_WINDOWS)
         self.children[str(path)] = child
         return None, [identity(child.pid)]

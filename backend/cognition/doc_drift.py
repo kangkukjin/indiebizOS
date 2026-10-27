@@ -34,6 +34,8 @@ from typing import Dict, List
 logger = logging.getLogger(__name__)
 
 _ROOT = Path(__file__).parent.parent.parent
+# git 은 정본에만 있다 — 세대 사본에서 돌 때도 ls-files 는 정본을 묻는다(2026-10-27 G1).
+from runtime_utils import get_source_root as _source_root
 _STATE_PATH = _ROOT / "data" / ".doc_drift_state.json"
 _FLAGS_PATH = _ROOT / "data" / "doc_drift_flags.json"
 
@@ -287,7 +289,7 @@ def _untracked_script_flags(entries, tracked) -> List[Dict]:
 def _tracked_script_files():
     """data/scripts 아래 git 추적 파일 이름 집합 — 실패는 None(=못 봄, unchecked 행)."""
     try:
-        r = subprocess.run(["git", "-C", str(_ROOT), "ls-files", "-z", "data/scripts"],
+        r = subprocess.run(["git", "-C", str(_source_root()), "ls-files", "-z", "data/scripts"],
                            capture_output=True, text=True, timeout=10)
     except Exception:
         return None

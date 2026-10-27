@@ -111,6 +111,14 @@ def prepare(controller, repo, session, verify, candidate):
                               changed_files=sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))))
     if not ok:
         return finish(failure("gate", "필수 기계 검사가 통과하지 않았습니다", checks=checks))
+    # G4: 시험 약화는 시험 통과로 숨길 수 없다 — 의미 검토가 그 변경을 보지 않으면 승인하지 않는다.
+    weakening = candidate.test_weakening(repo, session) if hasattr(candidate, "test_weakening") else []
+    if weakening and not semantic:
+        return finish(failure("test_weakening", "시험을 삭제·약화하는 변경은 시험 통과만으로 승인할 수 없습니다. "
+                              "오래된 계약 수정이면 해당 기준에 method:'semantic' 검토를 붙이세요",
+                              weakened=weakening, missing_criteria=sorted(criteria)))
+    session["test_weakening"] = weakening
+    regression = regression_evidence(session, plan)
     decision = {"status": "APPROVED", "method": "tests", "workspace_coverage": coverage}
     if semantic:
         current_hash = candidate.digest(before)
@@ -150,9 +158,49 @@ def prepare(controller, repo, session, verify, candidate):
                 and activation.get("command") not in session.get("activation_commands", {}).values()):
             return finish(failure("activation_plan", "활성 확인 계획이 없습니다", missing_criteria=[c["id"]]))
     candidate.seal(repo, session, checks, decision, contract)
+    session["readiness"]["regression_evidence"] = regression
+    session["readiness"]["test_weakening"] = weakening
     controller.log("repair.workspace_ready", role="harness", method=decision["method"],
-                   candidate_hash=candidate.digest(before), criteria=contract)
-    return finish({"success": True, "ready": True, "applied": False, "method": decision["method"]})
+                   candidate_hash=candidate.digest(before), criteria=contract,
+                   regression_evidence=regression, test_weakening=weakening)
+    return finish({"success": True, "ready": True, "applied": False, "method": decision["method"],
+                   "regression_evidence": regression, "test_weakening": weakening})
+
+
+def regression_evidence(session, plan):
+    """같은 검사가 수정 전 실패·수정 후 통과했는가(G5 원 증상 재검사의 사본 측 근거).
+
+    실행자가 사본에서 같은 명령을 실패시킨 영수증(다른 candidate_hash)이 있으면 before_failed 로 연결한다.
+    없으면 unknown — 통과만으로 재현을 주장하지 않는다."""
+    records = session.get("execution_checks") or []
+    out = []
+    for item in plan:
+        if item.get("method", "test") != "test":
+            continue
+        command = item.get("command")
+        passed = next((r for r in reversed(records) if r.get("command") == command and r.get("status") == "passed"), None)
+        failed = next((r for r in reversed(records) if r.get("command") == command and r.get("status") == "failed"
+                       and (not passed or r.get("candidate_hash") != passed.get("candidate_hash"))), None)
+        out.append({"criterion_id": item.get("criterion_id"), "command": command,
+                    "before_failed_check": failed.get("id") if failed else None,
+                    "after_passed_check": passed.get("id") if passed else None,
+                    "status": "reproduced" if failed and passed else "unknown"})
+    return out
+
+
+def symptom_recheck(session, row, base):
+    """원 증상 재검사 판정(G5): 활성 확인 통과 | 사본 재현(수정 전 실패·후 통과) | 미확인(사유)."""
+    ready = session.get("readiness") or {}
+    active = (session.get("activation_checks") or {}).get("active_verify_cmd") or {}
+    if active.get("state") == "passed" or ((row or {}).get("active_verify") or {}).get("state") == "passed":
+        return "verified", "활성 세대에서 active_verify_cmd 통과"
+    reproduced = [r for r in ready.get("regression_evidence") or [] if r.get("status") == "reproduced"]
+    if reproduced:
+        return "verified", "사본에서 같은 검사가 수정 전 실패·수정 후 통과(" + ", ".join(
+            sorted({r.get("criterion_id") or "" for r in reproduced})) + ")"
+    if ready.get("activation_commands", {}).get("active_verify_cmd"):
+        return "unverified", "active_verify_cmd 가 아직 통과 영수증을 남기지 않았습니다"
+    return "unverified", "원 증상의 수정 전 실패 영수증과 활성 확인 명령이 모두 없습니다 — 검사 통과만으로 재현을 주장하지 않습니다"
 
 
 def normalize_coverage(decision, observations, supporting):
@@ -254,10 +302,23 @@ def finalize(controller, response):
         "reason": reason, "validator": "repair_receipts", "original_goal": controller.message,
         "episode_id": controller.episode_id, "learning": "eligible" if passed else "deferred"}, ensure_ascii=False))
     print(f"[RepairCheck] 최종 판정: {status}")
+    recheck, recheck_note = symptom_recheck(session, row, get_base_path())
+    try:
+        import repair_root
+        root_id = repair_root.root_of_session(session) or row.get("root_task_id") or controller.task
+        if session:
+            repair_root.close(get_base_path(), root_id, complete=passed, reason=reason,
+                              symptom_recheck={"verdict": recheck, "note": recheck_note},
+                              resume_condition=None if passed else "실패 원인을 같은 사본에서 고친 뒤 #repair 후속으로 재개")
+    except Exception as exc:
+        print(f"[RepairCheck] 수리 root 종결 기록 실패(무시): {exc}")
     if not passed:
         from repair_resume import preserve_unfinished
         preserve_unfinished(controller, session, response, reason)
-    return response + ("" if passed else "\n\n[수리 미완료] " + reason)
+    tail = "" if passed else "\n\n[수리 미완료] " + reason
+    if passed and recheck != "verified":
+        tail += "\n\n[원 증상 재검사 미확인] " + recheck_note
+    return response + tail
 
 
 def completion(session, row, base):
@@ -289,6 +350,14 @@ def completion(session, row, base):
         return False, "활성 확인 영수증이 없습니다: " + field
     sealed = session.get("sealed") or {}
     artifacts_only = bool(sealed) and all(item.get("artifact") for item in sealed.values())
+    # G4: 검사·정본 커밋·활성 판본이 같은 변경을 가리켜야 한다 — 활성 세대의 바이트를 대조한다.
+    try:
+        from red_apply import _load_handler as _lh
+        verdict, detail = _lh({"repo": str(base)})._staging_mod()._candidate.active_generation_bytes(base, session)
+    except Exception as exc:
+        verdict, detail = "unknown", f"활성 바이트 대조 실패: {exc}"
+    if verdict == "mismatch":
+        return False, detail
     commit = committed.get("commit", "")
     if artifacts_only and (not committed.get("artifacts_only") or committed.get("bundle_hash") != ready.get("bundle_hash")):
         return False, "산출물 적용 영수증이 일치하지 않습니다"

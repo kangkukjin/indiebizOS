@@ -48,7 +48,8 @@ def _ensure_db():
     sync 가 self:finance 보다 먼저 돌아도 표가 있게 — 스키마 정의는 복제하지 않는다."""
     try:
         import importlib.util
-        sp = os.path.join(str(get_base_path()), "data", "packages", "installed",
+        from runtime_utils import get_installed_packages_root
+        sp = os.path.join(str(get_installed_packages_root()),
                           "tools", "finance-record", "finance_storage.py")
         spec = importlib.util.spec_from_file_location("_finance_storage", sp)
         mod = importlib.util.module_from_spec(spec)

@@ -27,6 +27,6 @@
 임시 파일은 모두 `ai_out/` 아래에 두었습니다(관측 스크립트, 사본, 원자료, 보고서 생성 스크립트).
 
 파일:
-- [report.json](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/report.json)
-- [실행별 원자료](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw)
-- [observe.py](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/observe.py)
+- [report.json](<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/report.json)
+- [실행별 원자료](<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw)
+- [observe.py](<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/observe.py)

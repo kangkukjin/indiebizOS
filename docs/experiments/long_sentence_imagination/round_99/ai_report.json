@@ -5,8 +5,8 @@
   "launch": "POST http://127.0.0.1:8765/ibl/execute {code, inputs, ticket(hex24), project_id:'앱모드', origin:'training'} 를 스레드로 띄움",
   "observe": "같은 ticket 으로 POST /ibl/recover 를 목표 0.2초 간격으로 반복 조회(wait 없음). 결말은 _recovered_from_ticket 표식이 붙은 원 봉투",
   "source_checked": "backend/surface/api_ibl.py (/execute, /recover), backend/common/spill.py (ticket_progress·ticket_beat·_progress_note·ticket_recover)",
-  "observer": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/observe.py",
-  "raw_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw",
+  "observer": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/observe.py",
+  "raw_dir": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw",
   "not_referenced": "trainer/·runs/·docs 폴더와 정답은 열지 않음",
   "total_samples_executed_runs": 307
  },
@@ -17,27 +17,27 @@
   "rejection_evidence": {
    "S1_orig_p1": {
     "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
-    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_orig_p1.json"
+    "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_orig_p1.json"
    },
    "S1_orig_p3": {
     "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
-    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_orig_p3.json"
+    "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_orig_p3.json"
    },
    "S3_orig_p1": {
     "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
-    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_orig_p1.json"
+    "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_orig_p1.json"
    },
    "S3_orig_p3": {
     "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
-    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_orig_p3.json"
+    "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_orig_p3.json"
    },
    "S6_orig_p1": {
     "error": "실행 전 검사에서 거절했습니다: 정의되지 않은 값: $병렬 (UNBOUND) 외 2건",
-    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_orig_p1.json"
+    "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_orig_p1.json"
    },
    "S6_orig_p3": {
     "error": "실행 전 검사에서 거절했습니다: 정의되지 않은 값: $병렬 (UNBOUND) 외 2건",
-    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_orig_p3.json"
+    "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_orig_p3.json"
    }
   },
   "workaround": "parallel:$병렬 만 리터럴 1·3 으로 바꾼 사본(ai_out/variants/*.ibl)으로 실행. 다른 문장은 원문 그대로. 아래 S1·S3·S6 판정은 이 사본의 관측이다.",
@@ -192,7 +192,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_p1.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_p1.json"
   },
   "S1_p3": {
    "program": "s1_sequential_p3.ibl",
@@ -329,7 +329,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_p3.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_p3.json"
   },
   "S2": {
    "program": "s2_parallel.ibl",
@@ -454,7 +454,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S2.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S2.json"
   },
   "S3_p1": {
    "program": "s3_fail_midway_p1.ibl",
@@ -552,7 +552,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_p1.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_p1.json"
   },
   "S3_p3": {
    "program": "s3_fail_midway_p3.ibl",
@@ -649,7 +649,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_p3.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_p3.json"
   },
   "S4_first": {
    "program": "s4_reuse.ibl",
@@ -742,7 +742,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S4_first.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S4_first.json"
   },
   "S4_reuse": {
    "program": "s4_reuse.ibl",
@@ -823,7 +823,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S4_reuse.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S4_reuse.json"
   },
   "S5": {
    "program": "s5_long_single.ibl",
@@ -898,7 +898,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S5.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S5.json"
   },
   "S6_p1": {
    "program": "s6_each_in_fn_p1.ibl",
@@ -1011,7 +1011,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_p1.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_p1.json"
   },
   "S6_p3": {
    "program": "s6_each_in_fn_p3.ibl",
@@ -1100,7 +1100,7 @@
      "note": null
     }
    ],
-   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_p3.json"
+   "raw": "<REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_p3.json"
   }
  },
  "verdicts": {

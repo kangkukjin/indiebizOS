@@ -48,7 +48,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ && ls -la . subjects ai_out 2>&1; cat subjects/README.md; for f in subjects/*; do echo \\\"=== ",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ && ls -la . subjects ai_out 2>&1; cat subjects/README.md; for f in subjects/*; do echo \\\"=== ",
    "is_error": null
   },
   {
@@ -56,7 +56,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ && ls -la . subjects ai_out 2>&1; cat subjects/README.md; for f in subjects/*; do echo \\\"=== ",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ && ls -la . subjects ai_out 2>&1; cat subjects/README.md; for f in subjects/*; do echo \\\"=== ",
    "is_error": null
   },
   {
@@ -88,7 +88,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && grep -rn '\\\"/ibl/recover\\\\|/ibl/execute\\\\|\\\"/ibl/' --include=*.py . | grep -v test_ | grep -i 'router\\\\.\\\\|@app\\\\|@' | head -20\", \"de",
+   "input": "{\"command\": \"cd <REPO>/backend && grep -rn '\\\"/ibl/recover\\\\|/ibl/execute\\\\|\\\"/ibl/' --include=*.py . | grep -v test_ | grep -i 'router\\\\.\\\\|@app\\\\|@' | head -20\", \"de",
    "is_error": null
   },
   {
@@ -96,7 +96,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && grep -rn '\\\"/ibl/recover\\\\|/ibl/execute\\\\|\\\"/ibl/' --include=*.py . | grep -v test_ | grep -i 'router\\\\.\\\\|@app\\\\|@' | head -20\", \"de",
+   "input": "{\"command\": \"cd <REPO>/backend && grep -rn '\\\"/ibl/recover\\\\|/ibl/execute\\\\|\\\"/ibl/' --include=*.py . | grep -v test_ | grep -i 'router\\\\.\\\\|@app\\\\|@' | head -20\", \"de",
    "is_error": null
   },
   {
@@ -120,7 +120,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && grep -rn --include='*.py' -E '@(router|app)\\\\.(get|post)\\\\(\\\".*(recover|execute)' . | grep -v '/test_' | head -20\", \"description\": \"F",
+   "input": "{\"command\": \"cd <REPO>/backend && grep -rn --include='*.py' -E '@(router|app)\\\\.(get|post)\\\\(\\\".*(recover|execute)' . | grep -v '/test_' | head -20\", \"description\": \"F",
    "is_error": null
   },
   {
@@ -128,7 +128,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && grep -rn --include='*.py' -E '@(router|app)\\\\.(get|post)\\\\(\\\".*(recover|execute)' . | grep -v '/test_' | head -20\", \"description\": \"F",
+   "input": "{\"command\": \"cd <REPO>/backend && grep -rn --include='*.py' -E '@(router|app)\\\\.(get|post)\\\\(\\\".*(recover|execute)' . | grep -v '/test_' | head -20\", \"description\": \"F",
    "is_error": null
   },
   {
@@ -152,7 +152,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && sed -n 1,60p surface/api_ibl.py | grep -n 'prefix\\\\|router =' ; sed -n 100,470p surface/api_ibl.py\", \"description\": \"Read execute and",
+   "input": "{\"command\": \"cd <REPO>/backend && sed -n 1,60p surface/api_ibl.py | grep -n 'prefix\\\\|router =' ; sed -n 100,470p surface/api_ibl.py\", \"description\": \"Read execute and",
    "is_error": null
   },
   {
@@ -160,7 +160,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && sed -n 1,60p surface/api_ibl.py | grep -n 'prefix\\\\|router =' ; sed -n 100,470p surface/api_ibl.py\", \"description\": \"Read execute and",
+   "input": "{\"command\": \"cd <REPO>/backend && sed -n 1,60p surface/api_ibl.py | grep -n 'prefix\\\\|router =' ; sed -n 100,470p surface/api_ibl.py\", \"description\": \"Read execute and",
    "is_error": null
   },
   {
@@ -192,7 +192,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && grep -n 'def ticket_\\\\|progress' common/spill.py | head -60; grep -rn 'port' api.py | grep -i '8765\\\\|port *=' | head; lsof -iTCP -sT",
+   "input": "{\"command\": \"cd <REPO>/backend && grep -n 'def ticket_\\\\|progress' common/spill.py | head -60; grep -rn 'port' api.py | grep -i '8765\\\\|port *=' | head; lsof -iTCP -sT",
    "is_error": null
   },
   {
@@ -200,7 +200,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && grep -n 'def ticket_\\\\|progress' common/spill.py | head -60; grep -rn 'port' api.py | grep -i '8765\\\\|port *=' | head; lsof -iTCP -sT",
+   "input": "{\"command\": \"cd <REPO>/backend && grep -n 'def ticket_\\\\|progress' common/spill.py | head -60; grep -rn 'port' api.py | grep -i '8765\\\\|port *=' | head; lsof -iTCP -sT",
    "is_error": null
   },
   {
@@ -224,7 +224,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && sed -n 283,480p common/spill.py; grep -n 'class IBLRequest' -A40 surface/api_ibl.py | grep -n 'ticket\\\\|origin\\\\|project'\", \"descript",
+   "input": "{\"command\": \"cd <REPO>/backend && sed -n 283,480p common/spill.py; grep -n 'class IBLRequest' -A40 surface/api_ibl.py | grep -n 'ticket\\\\|origin\\\\|project'\", \"descript",
    "is_error": null
   },
   {
@@ -232,7 +232,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend && sed -n 283,480p common/spill.py; grep -n 'class IBLRequest' -A40 surface/api_ibl.py | grep -n 'ticket\\\\|origin\\\\|project'\", \"descript",
+   "input": "{\"command\": \"cd <REPO>/backend && sed -n 283,480p common/spill.py; grep -n 'class IBLRequest' -A40 surface/api_ibl.py | grep -n 'ticket\\\\|origin\\\\|project'\", \"descript",
    "is_error": null
   },
   {
@@ -264,7 +264,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"mkdir -p /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw && cat > /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagin",
+   "input": "{\"command\": \"mkdir -p <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw && cat > <REPO>/outputs/long_sentence_imagin",
    "is_error": null
   },
   {
@@ -272,7 +272,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"mkdir -p /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw && cat > /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagin",
+   "input": "{\"command\": \"mkdir -p <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw && cat > <REPO>/outputs/long_sentence_imagin",
    "is_error": null
   },
   {
@@ -296,7 +296,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json;d=json.load(open('raw/S5_probe.json'))\\nr=d['result'];pri",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json;d=json.load(open('raw/S5_probe.json'))\\nr=d['result'];pri",
    "is_error": null
   },
   {
@@ -304,7 +304,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json;d=json.load(open('raw/S5_probe.json'))\\nr=d['result'];pri",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json;d=json.load(open('raw/S5_probe.json'))\\nr=d['result'];pri",
    "is_error": null
   },
   {
@@ -344,7 +344,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport re\\np='observe.py'; s=open(p).read()\\ns=s.replace('if env.",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport re\\np='observe.py'; s=open(p).read()\\ns=s.replace('if env.",
    "is_error": null
   },
   {
@@ -352,7 +352,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport re\\np='observe.py'; s=open(p).read()\\ns=s.replace('if env.",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport re\\np='observe.py'; s=open(p).read()\\ns=s.replace('if env.",
    "is_error": null
   },
   {
@@ -376,7 +376,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S1_p1','S3_p1','S6_p1']:\\n  r=json.load(open(",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S1_p1','S3_p1','S6_p1']:\\n  r=json.load(open(",
    "is_error": null
   },
   {
@@ -384,7 +384,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S1_p1','S3_p1','S6_p1']:\\n  r=json.load(open(",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S1_p1','S3_p1','S6_p1']:\\n  r=json.load(open(",
    "is_error": null
   },
   {
@@ -424,7 +424,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && mkdir -p variants && for f in s1_sequential s3_fail_midway s6_each_in_fn; do for p i",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && mkdir -p variants && for f in s1_sequential s3_fail_midway s6_each_in_fn; do for p i",
    "is_error": null
   },
   {
@@ -432,7 +432,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && mkdir -p variants && for f in s1_sequential s3_fail_midway s6_each_in_fn; do for p i",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && mkdir -p variants && for f in s1_sequential s3_fail_midway s6_each_in_fn; do for p i",
    "is_error": null
   },
   {
@@ -464,7 +464,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF' 2>&1 | cut -c1-200\\nimport json,observe\\nsrc=open('../subjects/sle",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF' 2>&1 | cut -c1-200\\nimport json,observe\\nsrc=open('../subjects/sle",
    "is_error": null
   },
   {
@@ -472,7 +472,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF' 2>&1 | cut -c1-200\\nimport json,observe\\nsrc=open('../subjects/sle",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF' 2>&1 | cut -c1-200\\nimport json,observe\\nsrc=open('../subjects/sle",
    "is_error": null
   },
   {
@@ -504,7 +504,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\ndef L(n): return json.load(open(f'raw/{n}.json'))\\nf",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\ndef L(n): return json.load(open(f'raw/{n}.json'))\\nf",
    "is_error": null
   },
   {
@@ -512,7 +512,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\ndef L(n): return json.load(open(f'raw/{n}.json'))\\nf",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\ndef L(n): return json.load(open(f'raw/{n}.json'))\\nf",
    "is_error": null
   },
   {
@@ -552,7 +552,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  r=json.load(open(f'ra",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  r=json.load(open(f'ra",
    "is_error": null
   },
   {
@@ -560,7 +560,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  r=json.load(open(f'ra",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 - <<'EOF'\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  r=json.load(open(f'ra",
    "is_error": null
   },
   {
@@ -584,7 +584,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  dt=json.load(open(f'raw/{",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  dt=json.load(open(f'raw/{",
    "is_error": null
   },
   {
@@ -592,7 +592,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  dt=json.load(open(f'raw/{",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && python3 -c \\\"\\nimport json\\nfor n in ['S3_p1','S3_p3']:\\n  dt=json.load(open(f'raw/{",
    "is_error": null
   },
   {
@@ -624,7 +624,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && cat > build_report.py <<'EOF'\\nimport json, glob, statistics, datetime\\nfrom pathlib",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && cat > build_report.py <<'EOF'\\nimport json, glob, statistics, datetime\\nfrom pathlib",
    "is_error": null
   },
   {
@@ -632,7 +632,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && cat > build_report.py <<'EOF'\\nimport json, glob, statistics, datetime\\nfrom pathlib",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && cat > build_report.py <<'EOF'\\nimport json, glob, statistics, datetime\\nfrom pathlib",
    "is_error": null
   },
   {
@@ -656,7 +656,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/x\\\\[\\\"recovered\\\"\\\\]/x.get(\\\"recovered\\\", x[\\\"status\\\"] is None)/g' bui",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/x\\\\[\\\"recovered\\\"\\\\]/x.get(\\\"recovered\\\", x[\\\"status\\\"] is None)/g' bui",
    "is_error": null
   },
   {
@@ -664,7 +664,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/x\\\\[\\\"recovered\\\"\\\\]/x.get(\\\"recovered\\\", x[\\\"status\\\"] is None)/g' bui",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/x\\\\[\\\"recovered\\\"\\\\]/x.get(\\\"recovered\\\", x[\\\"status\\\"] is None)/g' bui",
    "is_error": null
   },
   {
@@ -696,7 +696,7 @@
    "type": "handoff.tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/같은 초에 고정된 채 약 5.7초 유지/같은 초에 고정된 채 약 5.5초(표본 기준) 유지/; s/probe 실행도 동일(약 5",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/같은 초에 고정된 채 약 5.7초 유지/같은 초에 고정된 채 약 5.5초(표본 기준) 유지/; s/probe 실행도 동일(약 5",
    "is_error": null
   },
   {
@@ -704,7 +704,7 @@
    "type": "tool_start",
    "name": "Bash",
    "content": null,
-   "input": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/같은 초에 고정된 채 약 5.7초 유지/같은 초에 고정된 채 약 5.5초(표본 기준) 유지/; s/probe 실행도 동일(약 5",
+   "input": "{\"command\": \"cd <REPO>/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out && sed -i '' 's/같은 초에 고정된 채 약 5.7초 유지/같은 초에 고정된 채 약 5.5초(표본 기준) 유지/; s/probe 실행도 동일(약 5",
    "is_error": null
   },
   {

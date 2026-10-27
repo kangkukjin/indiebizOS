@@ -254,15 +254,21 @@
     {
       "id": "cloudflare",
       "name": "Cloudflare 서비스 가이드",
-      "description": "Cloudflare Pages, Workers, R2 스토리지, D1 데이터베이스, Tunnel 설정 및 관리.",
+      "description": "Cloudflare API 호출 계약([limbs:cloudflare_api])·토큰 권한, Tunnel/공개 얼굴 발급기, Workers Static Assets(Pages 대체)·Wrangler/cf CLI, R2·D1·Browser Run(크롤) 한도, 폐기 달력. Cloudflare 자원을 조회·배포·발급할 때 읽을 것.",
       "keywords": [
         "cloudflare",
+        "클라우드플레어",
         "workers",
+        "wrangler",
         "r2",
         "d1",
         "tunnel",
-        "CDN",
-        "서버"
+        "터널",
+        "browser run",
+        "크롤",
+        "cdn",
+        "공개 얼굴",
+        "static assets"
       ],
       "file": "cloudflare.md",
       "topic": "웹앱·홈페이지"

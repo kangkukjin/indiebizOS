@@ -1,5 +1,5 @@
 """Shared pure tree evaluator; hosts supply budgets and evidence hooks."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 import copy
 from common.expression_ir import Fault, UNIT
 from common.value_semantics import integer_value, TextView
@@ -11,6 +11,44 @@ from common.expression_ops import (Builtin, Closure, binary, boolean, number,
 class Binding:
     value: object
     evidence: frozenset = frozenset()
+    # Interpreter-owned provenance, never accepted from business JSON. Unknown
+    # transforms leave parts empty and conservatively retain whole-value roots.
+    parts: dict | None = field(default=None, compare=False, repr=False)
+    control: frozenset = frozenset()
+    origins: tuple = ()
+    shape: frozenset = frozenset()
+
+    @property
+    def shape_evidence(self):
+        return self.control | self.shape | (self.evidence if self.parts is None else frozenset())
+
+    def with_shape(self, roots):
+        return replace(self, shape=self.shape | frozenset(roots))
+
+    def with_roots(self, roots):
+        return replace(self, evidence=frozenset(roots))
+
+    def controlled(self, roots):
+        roots = frozenset(roots)
+        return replace(self, evidence=self.evidence | roots, control=self.control | roots)
+
+    def select(self, key):
+        from common.expression_ir import ResultValue
+        if isinstance(self.value, (list, tuple)) and isinstance(key, int) and key < 0:
+            key += len(self.value)
+        value = self.value.value if isinstance(self.value, ResultValue) and key == 'value' else self.value[key]
+        return (self.parts or {}).get(key, Binding(value, self.evidence, origins=tuple(
+            (eid, (*path, key)) for eid, path in self.origins))).controlled(self.control)
+
+    @classmethod
+    def record(cls, parts):
+        return cls({k: v.value for k, v in parts.items()},
+                   frozenset(e for v in parts.values() for e in v.evidence), parts)
+
+    @classmethod
+    def sequence(cls, values):
+        return cls([v.value for v in values],
+                   frozenset(e for v in values for e in v.evidence), dict(enumerate(values)))
 
 
 class ExpressionEvaluator:
@@ -54,7 +92,7 @@ class ExpressionEvaluator:
         if kind == "conditional":
             condition = sub(d["condition"])
             result = sub(d["yes"] if boolean(condition.value) else d["no"])
-            return Binding(result.value, self.parents([condition, result]))
+            return result.controlled(condition.evidence)
         if kind == "comparison_chain":
             bindings = [sub(d["values"][0])]
             for op, value in zip(d["operators"], d["values"][1:]):
@@ -70,24 +108,26 @@ class ExpressionEvaluator:
             # Do not hoist children out of their branch or auto-parallelize.
             values = [sub(v) for v in d["values"]]
             result = [b.value for b in values]
-            return Binding(tuple(result) if d.get("legacy_tuple") else result, self.parents(values))
+            return Binding(tuple(result), self.parents(values), dict(enumerate(values))) if d.get("legacy_tuple") else Binding.sequence(values)
         if kind == "record":
             if "entries" in d:
-                out, bindings = {}, []
+                out, bindings, shape = {}, [], set()
                 for key, value in d["entries"]:
                     binding = sub(value)
                     bindings.append(binding)
                     if key is None:
                         if not isinstance(binding.value, dict):
                             raise Fault("RECORD_REQUIRED", "펼침에는 Record가 필요합니다.", value)
+                        shape.update(binding.shape_evidence)
+                        out = {k: v.controlled(binding.shape_evidence) for k, v in out.items()}
                         for field, item in binding.value.items():
                             self.expression_tick()
-                            out[field] = item
+                            out[field] = binding.select(field)
                     else:
-                        out[key] = binding.value
-                return Binding(out, self.parents(bindings))
+                        out[key] = binding
+                return Binding.record(out).with_shape(shape).with_roots(self.parents(bindings))
             values = {k: sub(v) for k, v in d["fields"].items()}
-            return Binding({k: b.value for k, b in values.items()}, self.parents(values.values()))
+            return Binding.record(values)
         if kind == "slice":
             base = sub(d["base"])
             bounds = [sub(d[k]) if d[k] is not None else Binding(None) for k in ("lower", "upper", "stride")]
@@ -108,6 +148,9 @@ class ExpressionEvaluator:
             selected = range(*slice(*edges).indices(len(view.normalized))) if view else result
             for _ in selected:
                 self.expression_tick()
+            if not view:
+                indices = range(*slice(*edges).indices(len(base.value)))
+                return Binding.sequence([base.select(i) for i in indices]).controlled(self.parents(bounds) | base.shape_evidence)
             return Binding(result, self.parents([base, *bounds]))
         if kind in ("field", "index"):
             base = sub(d["base"])
@@ -138,7 +181,7 @@ class ExpressionEvaluator:
                             details={"field": key.value, "actual_type": type(base.value).__name__})
             if d["base"].kind == "ref" and d["base"].data["name"] == "error" and key.value == "partial":
                 self.event(node, "handled_partial", base.evidence)
-            return Binding(view.select(key.value) if view else base.value[key.value], self.parents([base, key]))
+            return Binding(view.select(key.value), self.parents([base, key])) if view else base.select(key.value).controlled(key.evidence)
         if kind == "unary":
             value = sub(d["value"])
             out = not boolean(value.value) if d["op"] in ("not", "!") else value.value if d.get("legacy") else number(value.value)
@@ -164,7 +207,7 @@ class ExpressionEvaluator:
             return Binding(binary(op, a.value, b.value, legacy=d.get("legacy", False)), self.parents([a, b]))
         if kind == "lambda":
             captures = {name: env[name] for name in free_names(node) if name in env}
-            return Binding(Closure(tuple(d["params"]), d["body"], captures), self.parents(captures.values()))
+            return Binding(Closure(tuple(d["params"]), d["body"], captures))
         if kind == "builtin":
             return Binding(Builtin(d["name"]))
         if kind == "pure_call":
@@ -177,7 +220,7 @@ class ExpressionEvaluator:
                 args = [sub(a) for a in d["args"]]
             apply = getattr(self, 'apply_component', None)
             result = apply(node, fn, args) if apply else self.callback(fn.value, args)
-            return Binding(result.value, result.evidence | fn.evidence)
+            return result.controlled(fn.evidence)
         if kind == "format":
             parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
             return Binding("".join(scalar_text(p.value) for p in parts), self.parents(parts))
@@ -192,12 +235,33 @@ class ExpressionEvaluator:
                 if not isinstance(rows, list):
                     raise Fault("LIST_REQUIRED", "reduce에는 List가 필요합니다.")
                 acc = args[1]
-                for row in rows:
+                for i, row in enumerate(rows):
                     self.expression_row()
-                    acc = self.callback(args[2].value, [acc, Binding(row, args[0].evidence)])
-                return acc
+                    acc = self.callback(args[2].value, [acc, args[0].select(i)])
+                return acc.controlled(args[0].shape_evidence | args[2].evidence)
+            if fn.name == 'get' and isinstance(args[0].value, dict) and isinstance(args[1].value, str):
+                key = args[1].value
+                selected = args[0].select(key) if key in args[0].value else args[2] if len(args) > 2 else Binding(None)
+                return selected.controlled(args[1].evidence | (args[0].control if key in args[0].value else args[0].shape_evidence))
+            if fn.name == 'unwrap':
+                from common.expression_ir import ResultValue
+                if isinstance(args[0].value, ResultValue) and args[0].value.ok:
+                    return args[0].select('value')
             if fn.name == "evidence":
                 return Binding(self.evidence(args[0].evidence), self.parents(args))
+            if fn.name in ('map', 'filter'):
+                applied = []
+                def apply(f, row):
+                    binding = self.callback(f, [args[0].select(len(applied))])
+                    applied.append(binding)
+                    return binding.value
+                # Value validation, errors and iteration budgets stay in the
+                # one value library; only its successful result gains sidecars.
+                pure_call(fn.name, [a.value for a in args], tick=self.expression_tick, callback=apply)
+                if fn.name == 'map':
+                    return Binding.sequence(applied).controlled(args[0].shape_evidence | args[1].evidence)
+                selected = [args[0].select(i) for i, test in enumerate(applied) if test.value]
+                return Binding.sequence(selected).controlled(self.parents(applied) | args[0].shape_evidence | args[1].evidence)
             return Binding(pure_call(fn.name, [a.value for a in args], tick=self.expression_tick,
                                      callback=lambda f, row: self.callback(f, [Binding(row, self.parents(args))]).value), self.parents(args))
         if not isinstance(fn, Closure) or len(args) != len(fn.params):

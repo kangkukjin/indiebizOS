@@ -114,6 +114,8 @@ class Runtime(ExpressionEvaluator):
                  input_evidence=None, value_protocols=None, reuse_models=True, strict_composition=False, completion=None):
         from ibl_v2_completion import validate
         self.completion = validate(completion)
+        self.execution_started = False
+        self.last_out = None
         from uuid import uuid4
         self.completion_scope = uuid4().hex + ":"
         self.strict_composition = strict_composition
@@ -239,12 +241,12 @@ class Runtime(ExpressionEvaluator):
                     raise
                 raise Fault("VALUE", str(exc), node) from exc
             eid = self.event(node, node.kind, result.evidence | dependencies, coalesce=True,
-                             **({"selected_parents": sorted(result.evidence)} if node.kind in ("fallback", "sequence") else {}))
+                             selected_parents=sorted(result.evidence | self.local.control))
             roots = frozenset({eid})
-            return Binding(result.value, roots)
+            return result.controlled(self.local.control).with_roots(roots)
         except Returned as returned:
             roots = returned.binding.evidence if node.kind == "sequence" else returned.binding.evidence | dependencies
-            returned.binding = Binding(returned.binding.value, frozenset(roots))
+            returned.binding = returned.binding.controlled(self.local.control).with_roots(roots)
             raise
         except Fault as exc:
             if exc.node is None:
@@ -283,7 +285,7 @@ class Runtime(ExpressionEvaluator):
             fn = sub(d["fn"])
             args = [piped, *[sub(a) for a in d["args"]]]
             result = self.apply_component(node, fn, args)
-            return Binding(result.value, result.evidence | fn.evidence | self.parents(args))
+            return result.controlled(fn.evidence)
         value = self.expression(node, env)
         if value is not NotImplemented:
             if unspecified and kind == "record" and isinstance(value.value, dict) \
@@ -298,7 +300,7 @@ class Runtime(ExpressionEvaluator):
                 except Returned as returned:
                     selected = returned.binding.evidence | getattr(self.local, 'control', frozenset())
                     eid = self.event(node, 'selection', selected | parents, coalesce=True, selected_parents=sorted(selected))
-                    returned.binding = Binding(returned.binding.value, frozenset({eid}))
+                    returned.binding = returned.binding.with_roots({eid})
                     raise
                 except Fault as exc:
                     exc.evidence = sorted(set(exc.evidence) | parents)
@@ -306,7 +308,7 @@ class Runtime(ExpressionEvaluator):
                 parents.update(result.evidence)
             selected = result.evidence | getattr(self.local, 'control', frozenset())
             eid = self.event(node, 'selection', selected | parents, coalesce=True, selected_parents=sorted(selected))
-            return Binding(result.value, frozenset({eid}))
+            return result.with_roots({eid})
         if kind == "bind":
             env[d["name"]] = sub(d["value"])
             return Binding(UNIT, env[d["name"]].evidence)
@@ -339,13 +341,13 @@ class Runtime(ExpressionEvaluator):
                     raise
                 eid = self.event(node, "recovered", exc.evidence, error=projection(exc.view(self.plan.source)))
                 result = sub(d["right"])
-                return Binding(result.value, result.evidence | {eid})
+                return result.with_roots(result.evidence | {eid})
         if kind == "parallel":
             nodes = list(parallel_branches(node))
             from ibl_v2_access import admit
             admit(self, node, [(n, env) for n in nodes])
             results = self.fanout(node, len(nodes), lambda i: self.frame(nodes[i], env.copy()), min(8, len(nodes)))
-            return Binding([b.value for b in results], self.parents(results))
+            return Binding.sequence(results)
         if kind == "call":
             args = sub(d["params"])
             if d["node"] == "table" and d["action"] == "each":
@@ -359,9 +361,9 @@ class Runtime(ExpressionEvaluator):
             try:
                 result = self.eval(d["body"] if boolean(condition.value) else d["otherwise"],
                                    env, control=condition.evidence)
-                return Binding(result.value, result.evidence | condition.evidence)
+                return result.controlled(condition.evidence)
             except Returned as returned:
-                returned.binding = Binding(returned.binding.value, returned.binding.evidence | condition.evidence)
+                returned.binding = returned.binding.controlled(condition.evidence)
                 raise
         if kind == "case":
             condition = sub(d["value"])
@@ -375,9 +377,9 @@ class Runtime(ExpressionEvaluator):
                     break
             try:
                 result = self.eval(target, env, control=parents)
-                return Binding(result.value, result.evidence | parents)
+                return result.controlled(parents)
             except Returned as returned:
-                returned.binding = Binding(returned.binding.value, returned.binding.evidence | parents)
+                returned.binding = returned.binding.controlled(parents)
                 raise
         if kind == "try":
             return self.try_block(node, env)
@@ -415,7 +417,7 @@ class Runtime(ExpressionEvaluator):
                 # of a rebound value leaves the loop.
                 for name, binding in env.items():
                     if name != "i" and binding is not before.get(name):
-                        env[name] = Binding(binding.value, binding.evidence | parents)
+                        env[name] = binding.controlled(parents)
                 if old_i is None:
                     env.pop("i", None)
                 else:
@@ -459,13 +461,13 @@ class Runtime(ExpressionEvaluator):
                     args = self.inject(node, args, next(iter(target.params), None), piped)
                     if set(args.value) != set(target.params):
                         raise Fault('FUNCTION_ARGUMENTS', '람다 명명 인자가 계약과 다릅니다.', node)
-                    args = [Binding(args.value[p], args.evidence) for p in target.params]
+                    args = [args.select(p) for p in target.params]
                 result = self.apply_closure(target, args)
             else:
                 if named:
                     raise Fault('ARGUMENT_STYLE', '내장 함수는 위치 인자 (...)로 적용하세요.', node)
                 result = self.callback(target, args)
-            return Binding(result.value, result.evidence | fn.evidence)
+            return result.controlled(fn.evidence)
         finally:
             self.local.route = route
             self.local.components = components
@@ -498,7 +500,7 @@ class Runtime(ExpressionEvaluator):
         if unknown or missing:
             raise Fault("FUNCTION_ARGUMENTS", "함수 인자가 계약과 다릅니다.", node,
                         details={"unknown": sorted(unknown), "missing": missing})
-        local = {k: Binding(v, args.evidence) for k, v in args.value.items()}
+        local = {k: args.select(k) for k in args.value}
         for name, default in params.items():
             if name not in local:
                 local[name] = self.eval(default, {})
@@ -513,10 +515,11 @@ class Runtime(ExpressionEvaluator):
         try:
             result = self.frame(definition.data["body"], local)
             eid = self.event(node, "function_result", result.evidence | args.evidence,
+                             selected_parents=sorted(result.evidence),
                              name=d["action"], definition_start=definition.start, success=True,
                              function_ref=function_ref,
                              **returned_shape(result.value))
-            return Binding(result.value, frozenset({eid}))
+            return result.with_roots({eid})
         except Fault as exc:
             eid = self.event(node, "function_result", exc.evidence,
                              name=d["action"], definition_start=definition.start, success=False,
@@ -541,7 +544,7 @@ class Runtime(ExpressionEvaluator):
             d = node.data
             callee = f"[{d['node']}:{d['action']}]" if d.get("node") and d.get("action") else ""
             raise Fault("PIPE_COLLISION", pipe_collision_message(callee, receiver), node)
-        return Binding({**args.value, receiver: piped.value}, args.evidence | piped.evidence)
+        return Binding.record({**{k: args.select(k) for k in args.value}, receiver: piped})
 
     def expression_tick(self):
         # Pure work shares the step/time/cancellation budget. The row budget
@@ -558,6 +561,7 @@ class Runtime(ExpressionEvaluator):
         from ibl_v2_types import rows_value
         items = guard(rows_value(options["items"]), "List", "each.items")
         mode, collect = options.get("mode", "map"), options.get("on_error", "stop") == "collect"
+        coverage = args.select("items").shape_evidence | args.control
         def row(index):
             self.budget.tick(row=True)
             # 회차는 이 스레드의 현재값으로 둔다 — 행 안의 액션 좌표 신고가 자기 회차를 동봉한다(병렬 가지는 각자 스레드).
@@ -565,7 +569,7 @@ class Runtime(ExpressionEvaluator):
             previous_detail = getattr(self.local, "row_detail", None)
             self.local.row_detail = detail
             self._report_row(detail)
-            local = {**env, "it": Binding(items[index], args.evidence), "i": Binding(index)}
+            local = {**env, "it": args.select("items").select(index) if isinstance(options["items"], list) else Binding(items[index], args.evidence), "i": Binding(index)}
             try:
                 result = self.frame(node.data["body"], local)
             finally:
@@ -584,6 +588,10 @@ class Runtime(ExpressionEvaluator):
             value = [v for result in results for v in result.value]
         else:
             value = [b.value for b in results]
+        if mode == 'map':
+            return Binding.sequence(results).controlled(coverage)
+        if mode == 'flat_map':
+            return Binding.sequence([result.select(i) for result in results for i in range(len(result.value))]).controlled(coverage)
         return Binding(value, self.parents(results) | args.evidence)
 
     def fanout(self, node, count, fn, workers, collect=False):
@@ -616,7 +624,7 @@ class Runtime(ExpressionEvaluator):
         def accept(i, future=None):
             try:
                 result = future.result() if future else run(i)
-                results[i] = Binding(ResultValue(True, result.value), result.evidence) if collect else result
+                results[i] = Binding(ResultValue(True, result.value), result.evidence, {'value': result}) if collect else result
                 states[i] = "ok"
                 return True
             except Fault as exc:
@@ -656,9 +664,9 @@ class Runtime(ExpressionEvaluator):
                 recovered = self.event(node, "recovered", exc.evidence, code=exc.code)
                 try:
                     result = self.eval(d["catch"], env, control={recovered})
-                    result = Binding(result.value, result.evidence | {recovered})
+                    result = result.with_roots(result.evidence | {recovered})
                 except Returned as returned:
-                    returned.binding = Binding(returned.binding.value, returned.binding.evidence | {recovered})
+                    returned.binding = returned.binding.with_roots(returned.binding.evidence | {recovered})
                     raise
                 finally:
                     if old is None:
@@ -684,10 +692,10 @@ class Runtime(ExpressionEvaluator):
             finally:
                 self.local.cleanup = previous_cleanup
         if isinstance(primary, Returned):
-            primary.binding = Binding(primary.binding.value, primary.binding.evidence | cleanup_result.evidence)
+            primary.binding = primary.binding.controlled(cleanup_result.evidence)
         if primary is not None:
             raise primary
-        return Binding(result.value, result.evidence | cleanup_result.evidence)
+        return result.controlled(cleanup_result.evidence)
 
     def ordinal(self, key):
         counts = getattr(self.local, "counts", None)
@@ -1098,9 +1106,34 @@ class Runtime(ExpressionEvaluator):
             self.foreign_evidence = frozenset({eid})
         return Binding(value, frozenset({eid}))
 
+    def failed_execution(self, exc):
+        """Late infrastructure errors retain the same execution and receipts."""
+        from ibl_v2_completion import undetermined
+        diagnostic = projection(exc.view(self.plan.source)) if isinstance(exc, Fault) else {
+            'code': 'EXECUTION_FINALIZATION', 'kind': 'protocol', 'message': str(exc)}
+        out = {**(self.last_out or {}), 'edition': 2, 'success': False, 'executed': True,
+               'error': str(exc), 'diagnostic': diagnostic, 'evidence': self.trace,
+               'source_complete': not any(e.get('incomplete') for e in self.trace),
+               'source_map': self.source_map, 'recordings': self.recordings,
+               'plan_hash': self.plan.fingerprint}
+        if self.completion:
+            out['completion'] = undetermined(self.completion, exc)
+        if self.journal:
+            out['resume'] = {'run_id': self.journal.run_id}
+            try:
+                out['run_status'] = self.journal.complete(out)
+            except Exception as finalization:
+                out['finalization_error'] = str(finalization)
+        return out
+
     def run(self):
-        with self.resources, execution_scope():
-            return self._run()
+        try:
+            with self.resources, execution_scope():
+                return self._run()
+        except Exception as exc:
+            if not self.execution_started:
+                raise
+            return self.failed_execution(exc)
 
     def _partial_transport(self, value):
         """Nested failures use the same lossless partial protocol as the root."""
@@ -1134,6 +1167,7 @@ class Runtime(ExpressionEvaluator):
             self._progress_ticket = claim()   # 표면 티켓이 있으면 좌표 소유권(없으면 None — 신고는 버스로만)
         except Exception:
             self._progress_ticket = None
+        self.execution_started = True
         result = None
         try:
             from ibl_v2_types import infer, compatible
@@ -1144,12 +1178,11 @@ class Runtime(ExpressionEvaluator):
             env = {}
             for key, value in self.inputs.items():
                 note = self.input_evidence.get(key)
-                roots = frozenset()
                 if note:
-                    eid = self.event(self.plan.root, "input_ref", origin=note,
-                                     incomplete=(note.get("evidence") or {}).get("incomplete") is True)
-                    roots = frozenset({eid})
-                env[key] = Binding(value, roots)
+                    from ibl_v2_completion import reference_binding
+                    env[key] = reference_binding(self, value, note)
+                else:
+                    env[key] = Binding(value)
             result = self.frame(self.plan.root, env)
             if wire_protocol(result.value) not in self.value_protocols:
                 raise Fault('VALUE_PROTOCOL_UNSUPPORTED', '소비자가 외부 참조 wire를 지원하지 않습니다. 실행 안에서 값/파일로 변환하세요.', kind='protocol', details={'value_preview': projection(result.value)})
@@ -1169,9 +1202,14 @@ class Runtime(ExpressionEvaluator):
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,
                     "usage": {"steps": self.budget.used_steps, "rows": self.budget.used_rows,
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
+        self.last_out = out
         if self.completion:
             from ibl_v2_completion import evaluate
-            out['completion'] = evaluate(self, result, out['success'])
+            try:
+                out['completion'] = evaluate(self, result, out['success'])
+            except Exception as exc:
+                from ibl_v2_completion import undetermined
+                out['completion'] = undetermined(self.completion, exc)
             out['usage'].update(steps=self.budget.used_steps, rows=self.budget.used_rows,
                                 elapsed_ms=round((time.monotonic() - self.budget.started) * 1000))
         checks = [e for e in self.trace if e.get('kind') == 'assertion']

@@ -276,6 +276,8 @@ def declared(spec):
         if not isinstance(effects, list) or not effects or set(effects) - {'pure', 'read_external', 'write_external', 'model', 'unknown'}:
             raise ValueError('콜백 effects가 잘못되었습니다.')
         return Type('Callable', item=('requirement', params, declared(value['result']), tuple(sorted(effects))))
+    if isinstance(spec, dict) and set(spec) == {'$result'}:
+        return Type('Result', item=declared(spec['$result']))
     if isinstance(spec, dict) and set(spec) == {"$list"}:
         return Type("List", item=declared(spec["$list"]))
     if isinstance(spec, dict):

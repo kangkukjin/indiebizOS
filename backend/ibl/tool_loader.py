@@ -196,7 +196,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 "edition": {"type": "integer", "enum": [2], "default": 2,
                             "description": "원문 형식은 edition:2입니다."},
                 "composition": {"type": "string", "enum": ["ibl-composition/1"], "description": "병렬 가지 전체의 읽기/쓰기 독립성을 실행 전에 확보합니다. 미선언·미지 자원도 순서를 명시해야 합니다."},
-                "completion": {"type": "array", "items": {"type": "object"}, "description": "명시 완료 의무 [{id,predicate,sources:[{action,targets}],required?}]. 순수 predicate의 $value와 실행 근거로 판정하며 source_complete 감사 이력과 구분합니다."},
+                "completion": {"type": "array", "items": {"type": "object"}, "description": "명시 완료 의무 [{id,predicate,sources:[{action,targets}],required?,scope?}]. scope는 출력 필드/인덱스 경로이며 지정 시 predicate의 $value는 그 부분 값입니다. 순수 판정과 부분별 값/제어 근거를 사용하고 source_complete 감사 이력과 구분합니다."},
                 "repair": {"type": "object", "description": "동일 실행의 순수 후미 수리. 먼저 check:true와 {run_id}, 실행은 {run_id,plan_hash:검사결과}. 앞 효과·입력·권한·구현 변경과 불명 효과는 거절합니다."},
                 "function_refs": {"type": "array", "items": {"type": "object"}, "description": "판본 고정 실행: function_id/revision/name/edition 참조의 전이 의존 전체 목록. 생략하면 현재 정의, resume은 원 실행 판본."},
                 "value_protocols": {"type": "array", "items": {"type": "string", "enum": ["ibl-value/1", "ibl-value/2"]}, "description": "소비 가능한 값 프로토콜. 생략하면 둘 다 지원. 외부 객체 참조는 /2이며 실행 종료 때 만료."},

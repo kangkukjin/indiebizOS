@@ -17,17 +17,20 @@ def origin(typ):
     return None
 
 
+def emit(compiler, sid, name, condition, expected, depth):
+    key = (sid, name, repr(condition), expected, depth)
+    compiler.requirement_log.setdefault(key, (sid, name, condition, expected, depth))
+
+
 def require(compiler, node, actual, expected):
     identity = origin(actual)
-    if not identity:
+    if not identity or not compiler.reachable:
         return
     kind, sid, name = identity
-    entry = compiler.requirements.setdefault(sid, {}).setdefault(name, [])
     condition = {'kind': 'result' if kind == 'application' else 'value',
                  'expected': describe_type(expected),
                  'at': node.start, 'conditional': bool(compiler.requirement_depth)}
-    if condition not in entry:
-        entry.append(condition)
+    emit(compiler, sid, name, condition, expected, compiler.requirement_depth)
 
 
 def application(compiler, node, typ, types, pure=False):
@@ -35,13 +38,12 @@ def application(compiler, node, typ, types, pure=False):
     if not identity or identity[0] != 'parameter':
         return None
     _, sid, name = identity
-    entry = compiler.requirements.setdefault(sid, {}).setdefault(name, [])
     named = isinstance(types, Type)
     condition = {'kind': 'callable', 'argument_style': 'named' if named else 'positional',
                  'arguments': describe_type(types) if named else [describe_type(t) for t in types],
                  'effects': ['pure'] if pure else ['input-dependent'],
                  'at': node.start, 'conditional': bool(compiler.requirement_depth)}
-    entry.append(condition)
+    emit(compiler, sid, name, condition, Type('Callable'), compiler.requirement_depth)
     compiler.required_calls[node.id] = condition
     return Type('Unknown', item=('application', sid, name))
 
@@ -62,8 +64,17 @@ def wire_obligations(typ, protocols=('ibl-value/1', 'ibl-value/2'), *, typed_pat
         elif value.kind == 'Unknown':
             pending.append(path)
         elif value.kind == 'Union':
+            alternatives = []
             for member in value.item:
+                before = len(failures)
                 walk(member, path, ancestors)
+                alternatives.append(failures[before:])
+                del failures[before:]
+            if alternatives and all(alternatives):
+                # All alternatives fail, possibly at different nested paths.
+                failures.append(path)
+            else:
+                pending.extend(p for paths in alternatives for p in paths)
         elif value.kind == 'Record':
             for name, member in value.fields:
                 walk(member, path + (name,), ancestors)
@@ -118,11 +129,52 @@ def require_wire(plan, protocols=None):
 
 def annotation(compiler, node, actual, expected):
     """Use the same Type and callable application engine for explicit contracts."""
-    from ibl_v2_types import NEVER, declared
-    if expected.kind != 'Callable' or not expected.item or expected.item[0] != 'requirement':
+    from ibl_v2_types import NEVER, compatible
+    if actual == NEVER or expected.kind == 'Unknown':
+        return
+    if actual.kind == 'Union':
+        for member in actual.item:
+            annotation(compiler, node, member, expected)
+        return
+    if expected.kind == 'Union':
+        choices = [v for v in expected.item if compatible(actual, v)]
+        failures = []
+        for choice in choices:
+            old_issues, old_guards = compiler.issues, compiler.guards
+            old_log = compiler.requirement_log
+            compiler.issues, compiler.guards, compiler.requirement_log = [], [], {}
+            try:
+                annotation(compiler, node, actual, choice)
+                issues, guards, requirements = compiler.issues, compiler.guards, compiler.requirement_log
+            finally:
+                compiler.issues, compiler.guards, compiler.requirement_log = old_issues, old_guards, old_log
+            if not issues:
+                compiler.guards.extend(guards)
+                compiler.requirement_log.update(requirements)
+                return
+            failures.extend(issues)
+        if failures:
+            compiler.issue(node, 'CALLABLE_REQUIREMENT', '어느 계약 대안도 충족하지 않습니다.', issues=failures)
+        else:
+            compiler.need(node, actual, expected)
+        return
+    if actual.kind == 'Unknown' or actual.kind != expected.kind:
         compiler.need(node, actual, expected)
         return
-    if actual.kind == 'Unknown':
+    if expected.kind == 'Record':
+        fields = dict(actual.fields)
+        for key, member in expected.fields:
+            if key in fields:
+                annotation(compiler, node, fields[key], member)
+            else:
+                compiler.need(node, actual, expected)
+        return
+    if expected.kind in ('List', 'Result'):
+        members = actual.positions if actual.kind == 'List' and actual.positions is not None else (actual.item or UNKNOWN,)
+        for member in members:
+            annotation(compiler, node, member, expected.item or UNKNOWN)
+        return
+    if expected.kind != 'Callable' or not expected.item or expected.item[0] != 'requirement':
         compiler.need(node, actual, expected)
         return
     _, params, result, effects = expected.item
@@ -132,7 +184,7 @@ def annotation(compiler, node, actual, expected):
         args = list(params) if isinstance(params, tuple) else params
         nodes = [node] * len(args) if isinstance(args, list) else Node('record', node.start, node.end, {'fields': {}})
         returned = compiler.apply_callable(node, actual, args, nodes, require_pure=effects == ('pure',))
-        compiler.need(node, returned, result)
+        annotation(compiler, node, returned, result)
         if compiler.effects - set(effects) - {'pure'}:
             compiler.issue(node, 'CALLABLE_REQUIREMENT', '콜백 효과가 명시 계약을 넘습니다.',
                            expected=list(effects), actual=sorted(compiler.effects))
@@ -157,3 +209,57 @@ def runtime_annotations(runtime, definition, values):
     if compiler.issues or compiler.guards:
         raise Fault('CALLABLE_REQUIREMENT', '함수 입구의 명시 계약을 충족했는지 확인할 수 없습니다.',
                     definition, kind='protocol', details={'issues': compiler.issues, 'guards': compiler.guards})
+
+
+def intersection(left, right):
+    """A bounded satisfiability meet; empty Lists/failed Results remain possible."""
+    from ibl_v2_types import NEVER, join
+    if left.kind == 'Unknown':
+        return right
+    if right.kind == 'Unknown' or left == right:
+        return left
+    if left.kind == 'Union' or right.kind == 'Union':
+        choices = left.item if left.kind == 'Union' else (left,)
+        others = right.item if right.kind == 'Union' else (right,)
+        result = NEVER
+        for a in choices:
+            for b in others:
+                result = join(result, intersection(a, b))
+        return result
+    if left.kind != right.kind:
+        return NEVER
+    if left.kind == 'Record':
+        fields = dict(left.fields)
+        for key, value in right.fields:
+            member = intersection(fields.get(key, UNKNOWN), value)
+            if member == NEVER:
+                return NEVER
+            fields[key] = member
+        return Type('Record', tuple(sorted(fields.items())), open=left.open and right.open)
+    # Callable signature/effect implications are checked by application, not by
+    # pretending nominal compatibility proves a higher-order contract.
+    return left
+
+
+def finish(compiler):
+    """Publish the same compositional constraints to check/describe/storage."""
+    from ibl_v2_types import NEVER
+    unconditional = {}
+    for sid, name, entry, expected, depth in compiler.requirement_log.values():
+        condition = {**entry, 'conditional': bool(depth)}
+        bucket = compiler.requirements.setdefault(sid, {}).setdefault(name, [])
+        if condition not in bucket:
+            bucket.append(condition)
+        # Different callback applications need not return the same type.
+        if depth or entry['kind'] == 'result':
+            continue
+        key = sid, name
+        previous = unconditional.get(key, UNKNOWN)
+        merged = intersection(previous, expected)
+        if merged == NEVER and previous != NEVER:
+            node = compiler.functions.get(sid) or Node('requirement', entry['at'], entry['at'])
+            compiler.issue(node, 'REQUIREMENT_CONFLICT', '같은 입력의 무조건 요구를 함께 만족시킬 수 없습니다.',
+                           parameter=name, requirements=bucket)
+        unconditional[key] = merged
+    for sid, contract in compiler.function_contracts.items():
+        contract['requirements'] = compiler.requirements.get(sid, {})

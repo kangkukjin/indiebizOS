@@ -1,3 +1,5 @@
+import { iblOutcomeError, completionStatus } from './ibl-completion';
+import type { CompletionObligation } from './ibl-completion';
 import { iblSurface, checkRemoteSession } from './remote-session';
 /**
  * 앱 모드 계기(instrument) 공용 헬퍼 — 커스텀 계기가 IBL/AI 를 부르는 **정본 경로**.
@@ -24,11 +26,11 @@ export const APP_PROJECT_ID = '앱모드';
  * 응답 언랩: 단일·합성 실행 모두 현행 봉투의 value를 읽는다.
  * 문자열이면 JSON 파싱을 시도한다(실패 시 문자열 유지).
  */
-export async function iblExecuteApp(code: string, options: { check?: boolean; allowIncomplete?: boolean } = {}): Promise<unknown> {
+export async function iblExecuteApp(code: string, options: { check?: boolean; allowIncomplete?: boolean; completion?: CompletionObligation[] } = {}): Promise<unknown> {
   const res = await fetch(`${API}/ibl/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...iblSurface, code, ...(/^\s*#!ibl/.test(code) ? {} : { edition: 2 }), project_id: APP_PROJECT_ID, ...(options.check ? { check: true } : {}) }),
+    body: JSON.stringify({ ...iblSurface, code, ...(/^\s*#!ibl/.test(code) ? {} : { edition: 2 }), project_id: APP_PROJECT_ID, ...(options.check ? { check: true } : {}), ...(options.completion ? { completion: options.completion } : {}) }),
   });
   checkRemoteSession(res.status);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -38,7 +40,8 @@ export async function iblExecuteApp(code: string, options: { check?: boolean; al
     return d;
   }
   if (d?.edition === 2) {
-    if (d.success !== true || (d.source_complete === false && !options.allowIncomplete)) throw new Error(d.error || '실행 결과가 불완전합니다.');
+    const error = iblOutcomeError(d, options.allowIncomplete);
+    if (error) throw new Error(error);
     return d.value;
   }
   throw new Error('실행 응답에 현행 edition·success·value 계약이 없습니다.');
@@ -51,6 +54,8 @@ export async function iblExecuteApp(code: string, options: { check?: boolean; al
  */
 export function iblFailure(r: unknown): string | null {
   if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+  const state = completionStatus(r);
+  if (state === 'unsatisfied' || state === 'undetermined') return `필수 완료 의무: ${state}`;
   const e = r as { success?: unknown; error?: unknown; message?: unknown };
   return e.success === false ? String(e.error || e.message || '실패') : null;
 }
@@ -74,7 +79,8 @@ export async function askSystemAI(message: string): Promise<string> {
   });
   const d = await res.json();
   if (d?.edition === 2) {
-    if (d.success !== true || d.source_complete === false) throw new Error(d.error || '실행 결과가 불완전합니다.');
+    const error = iblOutcomeError(d);
+    if (error) throw new Error(error);
     return d.value;
   }
   return String(d?.response ?? '');

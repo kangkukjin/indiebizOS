@@ -21,6 +21,9 @@ def tool_result_is_error(raw: str) -> bool:
         return not text or text == "None" or any(
             word in text.lower() for word in ("error:", "exception:", "failed:", "traceback"))  # vj-ok: 평문 오류 호환 표지, IBL 업무 값 비교가 아님
     if isinstance(result, dict):
+        from ibl_honesty import completion_status
+        if completion_status(result) in ('unsatisfied', 'undetermined'):
+            return True
         success = result.get("success")
         if type(success) is bool:
             return not success

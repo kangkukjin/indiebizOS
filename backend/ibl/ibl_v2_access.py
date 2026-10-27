@@ -68,6 +68,7 @@ def conflicts(left, right, *, unresolved=False, strict=False):
 def runtime_type(value, compiler):
     """Retain actual bindings once per shared value DAG; exhaustion stays unknown."""
     from common.expression_ops import CallableRef, Closure
+    from common.expression_ir import ResultValue
     # Dataset structure is bounded; known scalar targets and callable identities
     # must not disappear merely because an earlier binding consumed that budget.
     if isinstance(value, str):
@@ -75,6 +76,9 @@ def runtime_type(value, compiler):
     if isinstance(value, CallableRef):
         node = Node('callable_ref', 0, 0, {'node': value.node, 'action': value.action})
         return compiler.reference_type(node, {value.action: value.symbol} if value.symbol else {})
+    if isinstance(value, ResultValue):
+        from ibl_v2_types import NEVER
+        return Type('Result', item=runtime_type(value.value, compiler) if value.ok else NEVER)
     if not isinstance(value, (list, dict, Closure)):
         return infer(value)
     memo = getattr(compiler, 'runtime_types', None)

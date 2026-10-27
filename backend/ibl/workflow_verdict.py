@@ -38,6 +38,9 @@ def is_error_result(result) -> bool:
     잠정 규칙이며, **최상위 result 에만** 적용한다(중첩 dict 의 error 키는 보지 않는다).
     """
     if isinstance(result, dict):
+        from ibl_honesty import completion_status
+        if completion_status(result) in ('unsatisfied', 'undetermined'):
+            return True
         if result.get("status") == "not_implemented":
             return False
         if result.get("success") is False:
@@ -74,6 +77,10 @@ def err_reason_of(result) -> str:
     """
     if not isinstance(result, dict):
         return str(result)
+    from ibl_honesty import completion_status
+    status = completion_status(result)
+    if status in ('unsatisfied', 'undetermined'):
+        return f"필수 완료 의무: {status}"
     for k in ("error", "message"):
         v = result.get(k)
         if isinstance(v, str) and v.strip():

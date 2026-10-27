@@ -27,6 +27,7 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
 
 def _handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
     source = request.get("code") or request.get("pipeline") or ""
+    runtime = None
     try:
         fields = {'code', 'pipeline', 'edition', 'inputs', 'declared_inputs', 'check', 'resume',
                   'reuse', 'budget', 'value_protocols', 'function_refs', 'approval', 'origin', 'composition', 'completion', 'repair'}
@@ -156,11 +157,12 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
             remember(journal, request, project_path, agent_id, input_evidence)
             original_cancel = cancel_check
             cancelled = lambda: (journal.root / (journal.run_id + '.cancel')).is_file() or bool(original_cancel and original_cancel())
-            result = Runtime(plan, inputs, cancel_check=cancelled, journal=journal,
+            runtime = Runtime(plan, inputs, cancel_check=cancelled, journal=journal,
                              budget=budget, completion=completion, strict_composition=request.get('composition') == 'ibl-composition/1',
                              reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
                              input_evidence=input_evidence, value_protocols=protocols,
-                             reuse_models=reuse.get("models", True) if reuse else True).run()
+                             reuse_models=reuse.get("models", True) if reuse else True)
+            result = runtime.run()
             finished(journal, result, project_path)
         try:
             from ibl_v2_learning import record_functions
@@ -169,11 +171,15 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
             pass  # Usage accounting never retries an already executed program.
         return result
     except (Fault, ValueError, OSError) as exc:
+        if runtime is not None and runtime.execution_started:
+            return runtime.failed_execution(exc)
         if not isinstance(exc, Fault):
             exc = Fault('FUNCTION_LIBRARY', str(exc), kind='protocol')
         from ibl_v2_analysis import syntax_report
         return projection(syntax_report(exc, source))
     except Exception as exc:
+        if runtime is not None and runtime.execution_started:
+            return runtime.failed_execution(exc)
         # A compiler/infrastructure exception is never an affirmative check.
         # 68회차: 응답엔 한 줄만 남고 로그엔 아무것도 없어 어느 구문이 죽였는지 이분 탐색해야 했다 — 스택을 남긴다.
         import logging

@@ -29,6 +29,7 @@ def runtime_hint(fault):
         "진단의 경로와 값 타입을 확인하고 JSON으로 표현할 값을 명시적으로 선택하세요.")
 
 HINTS = {
+    "REQUIREMENT_CONFLICT": "같은 입력의 무조건 요구를 함께 만족시킬 수 없습니다. 별개 입력으로 나누거나 조건/복구 경계를 명시하세요.",
     "CALLABLE_REQUIREMENT": "함수의 declared_requirements에 맞는 인자 방식·반환 타입·효과를 가진 콜백을 전달하세요.",
     "FORMAT_UNINTERPOLATED": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
     "NOT_FOUND": "요청한 파일·디렉토리가 없습니다. 경로를 확인하거나 원천을 다시 요청하세요. 선택 자료라면 catch로 부재를 명시하세요.",

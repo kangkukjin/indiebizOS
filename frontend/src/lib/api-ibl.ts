@@ -1,3 +1,4 @@
+import type { CompletionObligation } from './ibl-completion';
 import { iblSurface } from './remote-session';
 /**
  * api-ibl.ts - 수동 모드(IBL 컴파일러 프론트엔드) API
@@ -150,10 +151,10 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
     },
 
     /** 검수를 마친 IBL 코드를 실제 실행한다. projectId로 표면별 프로젝트 컨텍스트를 지정. */
-    async executeIBL(code: string, projectId?: string, projectPath = '.', authoring = false, inputs?: Record<string, unknown>) {
+    async executeIBL(code: string, projectId?: string, projectPath = '.', authoring = false, inputs?: Record<string, unknown>, completion?: CompletionObligation[]) {
       return client.request<unknown>('/ibl/execute', {
         method: 'POST',
-        body: JSON.stringify({ ...iblSurface, code, ...(authoring && !/^\s*#!ibl/.test(code) ? {edition: 2} : {}), inputs, project_id: projectId ?? null, project_path: projectPath }),
+        body: JSON.stringify({ ...iblSurface, code, ...(authoring && !/^\s*#!ibl/.test(code) ? {edition: 2} : {}), inputs, completion, project_id: projectId ?? null, project_path: projectPath }),
       });
     },
 

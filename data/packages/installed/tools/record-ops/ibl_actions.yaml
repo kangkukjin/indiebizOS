@@ -12,7 +12,7 @@ actions:
       at: '2026-10-05'
       impl: 3c31b0566918933b
       dependencies:
-        backend/common/expression_eval.py: 3c9c44557edf4f55323eebc6c12fc1a7cd09cd980400b9ddf870e62b76a0797b # 재감사 2026-10-27: 부품 참조·적용 호스트 분리. ValueEvaluator 도구 거절·외부 Callable 전송 거절 시험 통과; I/O·인증·주체·경로 권한 추가 없음.
+        backend/common/expression_eval.py: 7abc0265260355f91433f49aeed56c0792b07e77045485d9dae17542bfdff875 # 재감사 2026-10-27: Binding 부분 근거·제어·참조 좌표와 구조적 전달. ValueEvaluator 도구 거절 및 외부 Callable 전송 거절 시험 통과; I/O·인증·주체·경로 권한 추가 없음.
         backend/common/expression_functions.py: 0d5ef11ac2b3aa49807b08b2a22b927d259f0721af562d186b25a4ce410e1887 # 재감사 2026-10-09: 순수 문자열 원문 보존·공백 검색 수리. 값 식만 변경, I/O·인증·주체·경로 접근 추가 없음.
         backend/common/expression_ir.py: 4be347066adc6835063f132637b5bc13d9392540d2e0640c12b738255fdb343f # 재감사 2026-10-27: 부품 참조·적용 호스트 분리. ValueEvaluator 도구 거절·외부 Callable 전송 거절 시험 통과; I/O·인증·주체·경로 권한 추가 없음.
         backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9

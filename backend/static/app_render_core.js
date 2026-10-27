@@ -147,9 +147,36 @@ function statusGlyph(s) {
   return s === 'sent' ? '✓' : s === 'pending' ? '⏳' : s === 'failed' ? '⚠' : '';
 }
 
+/** Required completion duties belong to the envelope, never to business values. */
+function completionStatus(env) {
+  if (!env || env.edition !== 2 || !Object.prototype.hasOwnProperty.call(env, 'completion')) return null;
+  var c = env.completion;
+  if (!c || c.protocol !== 'ibl-completion/1' || !Array.isArray(c.obligations)) return 'undetermined';
+  if (c.obligations.some(function(o) { return !o || typeof o !== 'object' || Array.isArray(o) ||
+      ('required' in o && typeof o.required !== 'boolean'); })) return 'undetermined';
+  var required = c.obligations.filter(function(o) { return o.required !== false; });
+  if (!required.length) return null;
+  var state = required.some(function(o) { return o.status === 'unsatisfied'; }) ? 'unsatisfied'
+    : required.every(function(o) { return o.status === 'satisfied'; }) ? 'satisfied' : 'undetermined';
+  return c.status === state ? state : 'undetermined';
+}
+
+function iblOutcomeError(env, allowIncomplete = false) {
+  if (!env || typeof env !== 'object' || Array.isArray(env)) return '실행 응답이 없습니다.';
+  if (env.success !== true) return String(env.error || '실행 실패');
+  var state = completionStatus(env);
+  if (state === 'unsatisfied' || state === 'undetermined') return '필수 완료 의무: ' + state;
+  if (env.source_complete === false && state !== 'satisfied' && !allowIncomplete) return '실행 결과가 불완전합니다.';
+  return null;
+}
+
 /** 합성(>>) 응답의 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 */
 function unwrapFinalResult(data) {
-  if (data && data.edition === 2 && data.success === true && data.source_complete !== false && Object.prototype.hasOwnProperty.call(data, 'value')) {
+  var state = completionStatus(data);
+  if (state === 'unsatisfied' || state === 'undetermined') {
+    return Object.assign({}, data, {error: iblOutcomeError(data)});
+  }
+  if (data && data.edition === 2 && !iblOutcomeError(data) && Object.prototype.hasOwnProperty.call(data, 'value')) {
     return data.value;
   }
   if (data && typeof data === 'object' && 'final_result' in data) {
@@ -465,7 +492,7 @@ function dateInputType(t) { return t === 'datetime' ? 'datetime-local' : t; }
 /* --- ESM export (데스크탑 Vite 전용 — 원격 인라인 시 이 블록만 제거된다. 파일의 마지막) --- */
 export {
   jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requiredInputMessage, requestCode, approvalChallenge, viewList,
-  emptyText, trendUp, statusGlyph, unwrapFinalResult,
+  emptyText, trendUp, statusGlyph, unwrapFinalResult, completionStatus, iblOutcomeError,
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,
   composeChannelOptions, isSlowNet, preloadOf, mediaModel, shuffleNext,

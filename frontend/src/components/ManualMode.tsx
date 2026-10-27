@@ -17,6 +17,7 @@ import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert,
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
+import { iblOutcomeError } from '../lib/ibl-completion';
 import { ui, uiMessage, UiSystemText, useLocale } from '../i18n/ui';
 import { IS_WEB_SURFACE } from '../lib/backend-origin';
 import { NodePresence, ControllerPresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
@@ -341,8 +342,10 @@ export default function ManualMode() {
       const res = await api.executeIBL(iblCode, MANUAL_PROJECT_ID, ".", true);
       setExecResult(typeof res === 'string' ? res : JSON.stringify(res, null, 2));
       const outcome = res as {success?: boolean; error?: string; executed?: boolean; source_complete?: boolean; task_ref?: Record<string, unknown>} | null;
-      const ok = outcome?.success !== false && !outcome?.error;
-      if (outcome?.success === true && outcome.executed === true && outcome.source_complete === true && outcome.task_ref) {
+      const outcomeError = iblOutcomeError(outcome);
+      const ok = outcomeError === null;
+      if (outcomeError) setErr(outcomeError);
+      if (outcome?.success === true && outcome.executed === true && ok && outcome.task_ref) {
         setLearnableRun({code: iblCode, taskRef: outcome.task_ref});
       }
       setHistory((h) => [{ intent, code: iblCode, ok }, ...h].slice(0, 8));

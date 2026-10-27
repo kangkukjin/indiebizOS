@@ -295,6 +295,26 @@ def merge_into(env: Any, into: Optional[dict]) -> None:
             into[k] = v
 
 
+def completion_status(env):
+    """Interpret only the execution envelope's required duties, never its value."""
+    if not isinstance(env, dict) or env.get('edition') != 2 or 'completion' not in env:
+        return None
+    completion = env['completion']
+    if (not isinstance(completion, dict) or completion.get('protocol') != 'ibl-completion/1'
+            or not isinstance(completion.get('obligations'), list)):
+        return 'undetermined'
+    duties = completion['obligations']
+    if any(not isinstance(o, dict) or type(o.get('required', True)) is not bool for o in duties):
+        return 'undetermined'
+    required = [o for o in duties if o.get('required', True)]
+    if not required:
+        return None
+    states = [o.get('status') for o in required]
+    status = ('unsatisfied' if 'unsatisfied' in states else
+              'satisfied' if all(s == 'satisfied' for s in states) else 'undetermined')
+    return status if completion.get('status') == status else 'undetermined'
+
+
 def completion_evidence(env: Any) -> list:
     """실행 봉투의 미완료 경계만 수집. 사용자 items/text 속 오류라는 단어는 판정하지 않는다.
 
@@ -303,7 +323,7 @@ def completion_evidence(env: Any) -> list:
     import json
     found = []
 
-    def visit(value, path="", depth=0):
+    def visit(value, path="", depth=0, recorded_boundary=False):
         if depth > 16:
             return
         if isinstance(value, str):
@@ -313,14 +333,24 @@ def completion_evidence(env: Any) -> list:
                 return
         if isinstance(value, list):
             for i, row in enumerate(value):
-                visit(row, f"{path}[{i}]", depth + 1)
+                visit(row, f"{path}[{i}]", depth + 1, recorded_boundary)
             return
         if not isinstance(value, dict):
             return
+        if recorded_boundary and value.get('completion_status') in ('unsatisfied', 'undetermined'):
+            found.append(value)
+            return
+        status = completion_status(value)
+        if status is not None:
+            if status != 'satisfied':
+                found.append({'at': path or 'result', 'completion_status': status,
+                              'obligations': value.get('completion', {}).get('obligations', [])
+                              if isinstance(value.get('completion'), dict) else []})
+            return  # audit failures remain in the envelope; they are a different axis
         recorded = value.get("incomplete_steps")
         if isinstance(recorded, list) and recorded:
             # 이미 모은 경계 증거는 그대로 읽는다. 매 요약 때 원본까지 다시 세어 증식하지 않는다.
-            visit(recorded, f"{path}.incomplete_steps" if path else "incomplete_steps", depth + 1)
+            visit(recorded, f"{path}.incomplete_steps" if path else "incomplete_steps", depth + 1, True)
             return
         counts = {k: value[k] for k in ("error_count", "rows_unprocessed", "rows_dropped")
                   if isinstance(value.get(k), int) and not isinstance(value[k], bool) and value[k] > 0}

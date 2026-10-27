@@ -110,6 +110,7 @@ class Compiler(CallAnalysis):
         self.constant_bindings = {}
         self.init_call_analysis()
         self.requirements, self.required_calls = {}, {}
+        self.requirement_log = {}
         self.requirement_depth = 0
 
     def issue(self, node, code, message, **details):
@@ -398,7 +399,12 @@ class Compiler(CallAnalysis):
         if node is None:
             return UNIT_T
         d, kind = node.data, node.kind
-        sub = lambda n, e=env: self.visit(n, e, names, readonly, final)
+        def sub(n, e=env, conditional=False):
+            self.requirement_depth += int(conditional)
+            try:
+                return self.visit(n, e, names, readonly, final)
+            finally:
+                self.requirement_depth -= int(conditional)
         if kind == "sequence":
             return self.sequence(node, env, names, readonly, final)
         if kind == "literal":
@@ -519,15 +525,19 @@ class Compiler(CallAnalysis):
             right_env = (narrow(env, d["left"], op in ("and", "&&"))
                          if kind == "binary" and op in ("and", "&&", "or", "||") else env)
             values = ([sub(d["value"])] if kind == "unary"
-                      else [sub(d["left"]), sub(d["right"], right_env)])
+                      else [sub(d["left"]), sub(d["right"], right_env, op in ("and", "or", "&&", "||"))])
             never = next((t for t in values if t.kind == "Never"), None)
             if never is not None:
                 # 도달할 수 없는 값이 낀 연산은 통째로 도달 불가다. 남은 피연산자를 숫자로 검사하면
                 # 이어 붙이기의 문자열 리터럴이 거짓 NUMBER_REQUIRED 가 된다(긴문장 10회차 L10-3).
                 return never
             if op in ("and", "or", "&&", "||", "!", "not"):
-                for t in values:
-                    self.need(node, t, BOOL)
+                for i, t in enumerate(values):
+                    self.requirement_depth += int(i > 0)
+                    try:
+                        self.need(node, t, BOOL)
+                    finally:
+                        self.requirement_depth -= int(i > 0)
                 return BOOL
             if op in ("==", "!=", "<", ">", "<=", ">=", "in"):
                 return BOOL
@@ -555,8 +565,8 @@ class Compiler(CallAnalysis):
             # 결과 타입은 두 가지의 합이다(73회차 G73-1 언어 개정).
             self.pure(node)
             self.need(d["condition"], sub(d["condition"]), BOOL)
-            return join(sub(d["yes"], narrow(env, d["condition"])),
-                        sub(d["no"], narrow(env, d["condition"], False)))
+            return join(sub(d["yes"], narrow(env, d["condition"]), True),
+                        sub(d["no"], narrow(env, d["condition"], False), True))
         if kind == "builtin":
             if d["name"] not in BUILTINS:
                 from common.expression_ops import unknown_builtin_message
@@ -646,10 +656,10 @@ class Compiler(CallAnalysis):
             previous = self.catch_value_faults
             self.catch_value_faults = True
             try:
-                left = sub(d["left"], env.copy())
+                left = sub(d["left"], env.copy(), True)
             finally:
                 self.catch_value_faults = previous
-            return join(left, sub(d["right"], env.copy()))
+            return join(left, sub(d["right"], env.copy(), True))
         if kind == "call":
             arg_type = sub(d["params"])
             args = dict(arg_type.fields)
@@ -676,10 +686,10 @@ class Compiler(CallAnalysis):
                 self.pure(condition)
                 sub(condition)
                 child = env.copy()
-                types.append(sub(body, child))
+                types.append(sub(body, child, True))
                 environments.append((body, child))
             child = env.copy()
-            types.append(sub(d["otherwise"], child))
+            types.append(sub(d["otherwise"], child, True))
             environments.append((d["otherwise"], child))
             self.merge_continuations(env, environments)
             result = types[0]
@@ -709,7 +719,7 @@ class Compiler(CallAnalysis):
             if count == 0:
                 self.visit_unreachable(d["body"], local, names, readonly, final)
             else:
-                sub(d["body"], local)
+                sub(d["body"], local, not (d["mode"] == "until" or type(count) is int and count > 0))
             if d["mode"] == "until":
                 # Post-test conditions may use values definitely assigned by
                 # the body, including new bindings. Conditional ones still fail.
@@ -728,10 +738,10 @@ class Compiler(CallAnalysis):
             previous = self.catch_value_faults
             self.catch_value_faults = True  # try also returns a Result without catch
             try:
-                ta = sub(d["body"], a)
+                ta = sub(d["body"], a, True)
             finally:
                 self.catch_value_faults = previous
-            tb = sub(d["catch"], b)
+            tb = sub(d["catch"], b, True)
             if "error" in env:
                 b["error"] = env["error"]
             else:
@@ -1058,6 +1068,8 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
              for ref in registry[key].contract.get('function_refs', [])]
     dependencies['function_refs'] = list({(r['function_id'], r['revision']): r for r in refs if r}.values())
     compiler.check_purity()
+    from ibl_v2_requirements import finish
+    finish(compiler)
     finish_diagnostics(compiler)
     for entry in compiler.warnings:
         old = entry['source_span']

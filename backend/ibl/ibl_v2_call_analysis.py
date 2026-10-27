@@ -66,10 +66,11 @@ class CallAnalysis:
             self.analysis_stats[category + '_bodies'] += 1
             outer = (self.issues, self.guards, self.warnings, self.effects,
                      self.used_actions, self.access_log, self.call_path,
-                     self.pure_calls, self.call_effects)
+                     self.pure_calls, self.call_effects, self.requirement_log, self.requirement_depth)
             self.issues, self.guards, self.warnings = [], [], []
             self.effects, self.used_actions, self.access_log = set(), set(), set()
             self.call_path, self.pure_calls, self.call_effects = [], [], {}
+            self.requirement_log, self.requirement_depth = {}, 0
             self.summary_active.add(key)
             try:
                 result = analyze()
@@ -82,17 +83,22 @@ class CallAnalysis:
                         item['call_path'] = item.get('call_path', [])[1:]
                     diagnostics.append(compact)
                 cached = (result, frozenset(self.effects), frozenset(self.used_actions),
-                          frozenset(self.access_log), diagnostics)
+                          frozenset(self.access_log), diagnostics, tuple(self.requirement_log.values()))
                 if self.analysis_cache_enabled:
                     self.function_cache[key] = cached
             finally:
                 self.summary_active.remove(key)
                 (self.issues, self.guards, self.warnings, self.effects,
                  self.used_actions, self.access_log, self.call_path,
-                 self.pure_calls, self.call_effects) = outer
+                 self.pure_calls, self.call_effects, self.requirement_log, self.requirement_depth) = outer
         else:
             self.analysis_stats[category + '_reuses'] += 1
-        result, effects, actions, writes, diagnostics = cached
+        result, effects, actions, writes, diagnostics, requirements = cached
+        for sid, name, condition, expected, depth in requirements:
+            own = identity[0] == 'function' and sid == identity[1]
+            from ibl_v2_requirements import emit
+            emit(self, sid, name, condition, expected,
+                 depth + (0 if own else self.requirement_depth))
         self.effects.update(effects)
         self.used_actions.update(actions)
         self.access_log.update(writes)
@@ -189,9 +195,11 @@ class CallAnalysis:
                     if len(types) != len(params):
                         self.issue(node, 'ARITY', '명시 콜백 계약의 인자 수와 다릅니다.')
                     for actual, expected in zip(types, params):
-                        self.need(node, actual, expected)
+                        from ibl_v2_requirements import annotation
+                        annotation(self, node, actual, expected)
                 else:
-                    self.need(node, types, params)
+                    from ibl_v2_requirements import annotation
+                    annotation(self, node, types, params)
                 self.effects.update(effects)
                 self.call_effects.setdefault(node.id, set()).update(effects)
                 current = returned

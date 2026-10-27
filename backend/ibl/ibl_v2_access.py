@@ -58,7 +58,7 @@ def conflicts(left, right, *, unresolved=False, strict=False):
             if a.mode == b.mode == 'read':
                 continue
             if a.resources is None or b.resources is None:
-                if not unresolved or not (strict or a.declared and b.declared):
+                if not unresolved:
                     continue
             if resources_overlap(a.resources, b.resources):
                 result.add((a.action, b.action))
@@ -119,7 +119,9 @@ def describe_accesses(access_log, effects=()):
                      'resource_state': 'unresolved' if access.resources is None else 'resolved',
                      'resource_hash': digest(access.resources) if access.resources is not None else None,
                      'declared': access.declared,
-                     'relations': [{'realm': realm, 'argument': name, 'variable': list(variable)}
+                     'relations': [{'realm': realm, 'argument': name, 'variable': list(variable[:3]),
+                                    'path': list(variable[3]) if len(variable) > 3 else [],
+                                    **({'application': variable[4]} if len(variable) > 4 else {})}
                                    for realm, name, variable in access.relations]})
     rows.sort(key=lambda row: (row['action'], row['mode'], str(row['resource_hash']), str(row['relations'])))
     return {'protocol': 'ibl-access/1', 'entries': rows[:24], 'omitted': max(0, len(rows) - 24)}

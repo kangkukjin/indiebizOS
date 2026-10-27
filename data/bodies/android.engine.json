@@ -318,6 +318,8 @@
     "ibl/ibl_v2_compat",
     "ibl/ibl_v2_compile",
     "ibl/ibl_v2_completion",
+    "ibl/ibl_v2_component",
+    "ibl/ibl_v2_component_runtime",
     "ibl/ibl_v2_contracts",
     "ibl/ibl_v2_entry",
     "ibl/ibl_v2_expr",
@@ -327,6 +329,7 @@
     "ibl/ibl_v2_parser",
     "ibl/ibl_v2_preflight",
     "ibl/ibl_v2_repair",
+    "ibl/ibl_v2_repair_graph",
     "ibl/ibl_v2_requirements",
     "ibl/ibl_v2_runtime",
     "ibl/ibl_v2_store",
@@ -566,8 +569,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 555,
-    "engine": 523,
+    "total": 558,
+    "engine": 526,
     "blocklist": 32
   }
 }

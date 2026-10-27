@@ -97,6 +97,9 @@ def test_parallel_program_preserves_receipts_and_terminal_results(worker_program
     execute, seen, db = worker_program
     source = (Path(__file__).resolve().parents[1] /
               'docs/experiments/long_sentence_imagination/round_92/main_v0.ibl').read_text()
+    # Task creation has an opaque write footprint. Submit explicitly in order;
+    # the accepted workers and read-only result waits still overlap.
+    source = source.replace('[table:each]{parallel:4}', '[table:each]{parallel:1}', 1)
     a = {'id': 'a', 'message': 'slow A', 'context': {'revision': 7}}
     b = {'id': 'b', 'message': 'fast B', 'context': {'revision': 8}}
     requests = {'duplicate': [a, b, a], 'reverse': [b, a],

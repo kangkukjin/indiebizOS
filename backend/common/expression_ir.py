@@ -24,6 +24,7 @@ class ResultValue:
     ok: bool
     value: object = UNIT
     error: object = None
+    failure: object = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)

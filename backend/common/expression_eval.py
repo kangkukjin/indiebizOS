@@ -17,6 +17,8 @@ class Binding:
     control: frozenset = frozenset()
     origins: tuple = ()
     shape: frozenset = frozenset()
+    failure: object = field(default=None, compare=False, repr=False)
+    certificates: tuple = field(default=(), compare=False, repr=False)
 
     @property
     def shape_evidence(self):
@@ -37,8 +39,11 @@ class Binding:
         if isinstance(self.value, (list, tuple)) and isinstance(key, int) and key < 0:
             key += len(self.value)
         value = self.value.value if isinstance(self.value, ResultValue) and key == 'value' else self.value[key]
-        return (self.parts or {}).get(key, Binding(value, self.evidence, origins=tuple(
+        selected = (self.parts or {}).get(key, Binding(value, self.evidence, origins=tuple(
             (eid, (*path, key)) for eid, path in self.origins))).controlled(self.control)
+        certs = tuple({**c, 'scope': c['scope'][1:]} for c in self.certificates
+                      if c.get('scope') and c['scope'][0] == key)
+        return replace(selected, certificates=selected.certificates + certs) if certs else selected
 
     @classmethod
     def record(cls, parts):
@@ -243,7 +248,15 @@ class ExpressionEvaluator:
                 key = args[1].value
                 selected = args[0].select(key) if key in args[0].value else args[2] if len(args) > 2 else Binding(None)
                 return selected.controlled(args[1].evidence | (args[0].control if key in args[0].value else args[0].shape_evidence))
-            if fn.name == 'unwrap':
+            if fn.name == 'propagate' and args[0].failure is not None:
+                from common.expression_ops import propagate_failure
+                propagate_failure(args[0].failure)
+            if fn.name == 'error_of':
+                from common.expression_ir import ResultValue
+                first = args[0].value
+                if isinstance(first, ResultValue) and not first.ok:
+                    return Binding(first.error, args[0].evidence, failure=first.failure)
+            if fn.name in ('unwrap', 'propagate'):
                 from common.expression_ir import ResultValue
                 if isinstance(args[0].value, ResultValue) and args[0].value.ok:
                     return args[0].select('value')

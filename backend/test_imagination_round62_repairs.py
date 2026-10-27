@@ -31,6 +31,7 @@ EXAMPLES = {
     'sum': ('[7,2,4]', 13),
     'is_ok': ('$results[0]', True),
     'unwrap': ('$results[0]', 5),
+    'propagate': ('$results[0]', 5),
     'error_of': ('$results[1]', None),
     'evidence': ('7', None),
     'reduce': ('[1,2,3],0,($acc,$row)=>$acc+$row', 6),

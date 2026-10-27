@@ -44,8 +44,11 @@ def test_resume_skips_completed_calls_and_distinguishes_identical_occurrences(tm
 
 def test_resume_parallel_nested_occurrences_have_stable_identity(tmp_path):
     calls = []
-    source = '[repeat:2]{[table:each]{items:[1,1],parallel:2}{[test:write]{n:$it}}}'
-    plan = compile_program(source, {'test:write': effect(lambda rt, a: calls.append(a['n']) or a['n'])})
+    source = '[repeat:2]{[table:each]{items:[{n:1,id:"a"},{n:1,id:"b"}],parallel:2}{[test:write]{n:$it.n,id:$it.id}}}'
+    independent = Adapter({'version': 1, 'params': {'n': 'Number', 'id': 'Text'},
+                           'result': 'Number', 'effects': ['write_external'],
+                           'write_resources': {'record': 'id'}}, lambda rt, a: calls.append(a['n']) or a['n'])
+    plan = compile_program(source, {'test:write': independent})
     assert not plan.issues
     with Journal(tmp_path, plan.fingerprint) as j:
         first = Runtime(plan, journal=j).run()

@@ -87,9 +87,10 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
         if request.get('resume') or repair:
             recorded = recorded_function_refs(journal_root(project_path), request.get('resume') or {'run_id': repair.get('run_id')})
             if recorded is not None:
-                if refs is not None and refs != recorded:
+                if not repair and refs is not None and refs != recorded:
                     raise Fault('RESUME_CHANGED', '함수 참조가 원 실행과 다릅니다.', kind='protocol')
-                refs = recorded
+                if refs is None:
+                    refs = recorded
         if is_member() and refs:
             raise Fault('MEMBER_LIBRARY', '회원은 동봉한 함수 정의만 사용할 수 있습니다.', kind='permission')
         if plan is None or refs is not None:

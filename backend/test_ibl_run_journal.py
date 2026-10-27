@@ -19,7 +19,8 @@ def _plan(calls, source=None):
         return args['id']
     def adapter(fn, params):
         return Adapter({'version': 1, 'params': params, 'result': 'Text',
-                        'effects': ['write_external'], 'implementation_fingerprint': 'v1'}, fn)
+                        'effects': ['write_external'], 'implementation_fingerprint': 'v1',
+                        **({'write_resources': {'record': 'id'}} if 'id' in params else {})}, fn)
     registry = {'t:delete': adapter(action, {'id': 'Text'}),
                 't:delegate': adapter(lambda rt, a: calls.append('delegate') or 'child', {}),
                 't:cleanup': adapter(lambda rt, a: calls.append('cleanup') or 'done', {})}

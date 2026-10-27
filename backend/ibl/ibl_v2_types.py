@@ -356,6 +356,8 @@ def describe_type(typ, budget=None):
     result = {'type': typ.kind}
     if typ.kind == 'Unknown' and isinstance(typ.item, tuple) and typ.item[0] in ('parameter', 'application'):
         result.update(variable=typ.item[2], relation=typ.item[0])
+        if len(typ.item) > 3 and typ.item[3]:
+            result['path'] = list(typ.item[3])
     if typ.kind == 'Callable':
         if not typ.item:
             return {**result, 'contract': 'runtime', 'effects': ['unknown']}

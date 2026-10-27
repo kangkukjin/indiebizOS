@@ -295,11 +295,7 @@ def merge_into(env: Any, into: Optional[dict]) -> None:
             into[k] = v
 
 
-def completion_status(env):
-    """Interpret only the execution envelope's required duties, never its value."""
-    if not isinstance(env, dict) or env.get('edition') != 2 or 'completion' not in env:
-        return None
-    completion = env['completion']
+def _completion_group(completion):
     if (not isinstance(completion, dict) or completion.get('protocol') != 'ibl-completion/1'
             or not isinstance(completion.get('obligations'), list)):
         return 'undetermined'
@@ -313,6 +309,27 @@ def completion_status(env):
     status = ('unsatisfied' if 'unsatisfied' in states else
               'satisfied' if all(s == 'satisfied' for s in states) else 'undetermined')
     return status if completion.get('status') == status else 'undetermined'
+
+
+def completion_status(env):
+    """One policy for request duties and invocation-owned component duties."""
+    if not isinstance(env, dict) or env.get('edition') != 2:
+        return None
+    states = [_completion_group(env['completion'])] if 'completion' in env else []
+    if 'component_completion' in env:
+        components = env['component_completion']
+        if (not isinstance(components, dict) or components.get('protocol') != 'ibl-component-outcomes/1'
+                or not isinstance(components.get('instances'), list)):
+            states.append('undetermined')
+        else:
+            duties = []
+            for instance in components['instances']:
+                states.append(_completion_group(instance))
+                if isinstance(instance, dict) and isinstance(instance.get('obligations'), list):
+                    duties.extend(instance['obligations'])
+            states.append(_completion_group({'protocol': 'ibl-completion/1',
+                                              'obligations': duties, 'status': components.get('status')}))
+    return next((state for state in ('unsatisfied', 'undetermined', 'satisfied') if state in states), None)
 
 
 def completion_evidence(env: Any) -> list:

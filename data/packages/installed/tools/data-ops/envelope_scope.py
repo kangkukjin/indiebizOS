@@ -78,7 +78,8 @@ def _reproject_mirrors(out, originals, new_rows):
                 untouched.append(k)
     if untouched:
         out["_untransformed"] = sorted(untouched)
-    return out
+    from common.value_relations import invalidate_display_relations
+    return invalidate_display_relations(out)
 
 
 def _restate_scope(out, prior_len, new_len, *, population=False):

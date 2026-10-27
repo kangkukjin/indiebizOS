@@ -119,6 +119,7 @@ class Runtime(ExpressionEvaluator):
         from uuid import uuid4
         self.completion_scope = uuid4().hex + ":"
         self.strict_composition = strict_composition
+        self.component_outcomes = []
         self.value_protocols = set(value_protocols or ("ibl-value/1", "ibl-value/2"))
         self.resources = ExitStack()
         self.foreign_sessions = {}
@@ -513,7 +514,9 @@ class Runtime(ExpressionEvaluator):
         depth = getattr(self.local, "depth", 0)
         self.local.depth = depth + 1
         try:
-            result = self.frame(definition.data["body"], local)
+            from ibl_v2_component_runtime import execute
+            result = execute(self, d['symbol'], node, {k: v.value for k, v in local.items()},
+                             lambda: self.frame(definition.data["body"], local))
             eid = self.event(node, "function_result", result.evidence | args.evidence,
                              selected_parents=sorted(result.evidence),
                              name=d["action"], definition_start=definition.start, success=True,
@@ -601,6 +604,7 @@ class Runtime(ExpressionEvaluator):
         route = getattr(self.local, "route", ()) + ((node.id, self.ordinal("fanout:" + node.id)),)
         components = getattr(self.local, "components", ())
         pure_required = getattr(self.local, "pure_required", False)
+        obligations = getattr(self.local, 'obligations', ())
         def run(i):
             previous = getattr(self.local, "parallel", False)
             previous_depth = getattr(self.local, "depth", 0)
@@ -608,6 +612,8 @@ class Runtime(ExpressionEvaluator):
             previous_counts = getattr(self.local, "counts", {})
             previous_components = getattr(self.local, "components", ())
             previous_pure = getattr(self.local, "pure_required", False)
+            previous_obligations = getattr(self.local, 'obligations', ())
+            self.local.obligations = obligations
             self.local.components, self.local.pure_required = components, pure_required
             previous_control = getattr(self.local, "control", frozenset())
             self.local.route, self.local.counts = route + (i,), {}
@@ -621,6 +627,7 @@ class Runtime(ExpressionEvaluator):
                 self.local.route, self.local.counts = previous_route, previous_counts
                 self.local.control = previous_control
                 self.local.components, self.local.pure_required = previous_components, previous_pure
+                self.local.obligations = previous_obligations
         def accept(i, future=None):
             try:
                 result = future.result() if future else run(i)
@@ -631,7 +638,7 @@ class Runtime(ExpressionEvaluator):
                 errors[i], states[i] = exc, "failed"
                 if collect and exc.catchable:
                     eid = self.event(node, "collected_error", exc.evidence, index=i, incomplete=True)
-                    results[i] = Binding(ResultValue(False, error=exc.view(self.plan.source)), frozenset({eid}))
+                    results[i] = Binding(ResultValue(False, error=exc.view(self.plan.source), failure=exc), frozenset({eid}))
                     return True
                 return False
         bounded_fanout(count, workers, run, accept, role="ibl_v2")
@@ -660,7 +667,7 @@ class Runtime(ExpressionEvaluator):
                 if not exc.catchable or d["catch"] is None:
                     raise
                 old = env.get("error")
-                env["error"] = Binding(exc.view(self.plan.source), frozenset(exc.evidence))
+                env["error"] = Binding(exc.view(self.plan.source), frozenset(exc.evidence), failure=exc)
                 recovered = self.event(node, "recovered", exc.evidence, code=exc.code)
                 try:
                     result = self.eval(d["catch"], env, control={recovered})
@@ -706,7 +713,8 @@ class Runtime(ExpressionEvaluator):
         return value
 
     def invoke(self, node, args, piped):
-        spec = self.plan.registry[f"{node.data['node']}:{node.data['action']}"]
+        key = f"{node.data['node']}:{node.data['action']}"
+        spec = self.plan.registry[key]
         if spec.stateful and spec.stateful(args.value):
             # Serialize invocation AND receipt/evidence, so another branch cannot
             # observe the object mutation before its evidence has been committed.
@@ -804,6 +812,18 @@ class Runtime(ExpressionEvaluator):
         contract = selected(spec.contract, args.value)
         if spec.specialize and not node.data.get('target'):
             contract = spec.specialize(contract, args.value)
+        if contract.get('completion'):
+            from ibl_v2_component import normalize as component_contract
+            from ibl_v2_component_runtime import execute
+            definition = component_contract({'name': key, 'revision': digest([contract, dependency])},
+                                            contract, producer='vocabulary')
+            return execute(self, key, node, args.value,
+                           lambda: self._invoke_contract(node, args, spec, contract, dependency), contract=definition)
+        return self._invoke_contract(node, args, spec, contract, dependency)
+
+    def _invoke_contract(self, node, args, spec, contract, dependency):
+        key = f"{node.data['node']}:{node.data['action']}"
+        from ibl_callable_contract import problems
         from ibl_value_checks import value_problems
         if getattr(self.local, 'pure_required', False) and set(contract['effects']) - {'pure'}:
             raise Fault('PURE_EXPRESSION', '순수 콜백 자리에서 효과 있는 부품을 호출할 수 없습니다.', node)
@@ -853,16 +873,14 @@ class Runtime(ExpressionEvaluator):
         parents = args.evidence | (self.foreign_evidence if stateful else frozenset())
         # 실행 시점에 실제로 넘어간 짧은 글자 인자 — 평가 원장이 계산된 경로·주소를 본다(ep4211:
         # `path:$out+"/report.md"` 는 코드 글자에 없어 재독이 '안 한 일'로 판정됐다). 이름을 고르지 않고
-        # 길이로만 가른다: 긴 글자는 본문이지 대상이 아니다. 순수 계산 호출은 싣지 않는다.
-        targets = ({name: value for name, value in list(args.value.items())[:24]
-                    if isinstance(value, str) and value and len(value) <= 300}
-                   if contract["effects"] != ["pure"] else {})
+        # 길이로만 가른다: 긴 글자는 본문이지 대상이 아니다. 순수 부품도 완료 원천의 신원이 필요하다.
+        targets = {name: value for name, value in list(args.value.items())[:24]
+                   if isinstance(value, str) and value and len(value) <= 300}
         eid = self.event(node, "invoke", parents, action=key,
                          effects=contract["effects"], request_hash=request_hash,
                          **({"targets": dict(list(targets.items())[:8])} if targets else {}))
-        observation_obligations = {self.completion_scope + o['id']: eid for o in self.completion if any(
-            s['action'] == key and all(args.value.get(k) == v for k,v in s['targets'].items())
-            for s in o['sources'])}
+        from ibl_v2_component_runtime import observation_duties
+        observation_obligations = observation_duties(self, key, args.value, eid)
         tool_evidence = {}
         external = contract["effects"] != ["pure"]
         read_only = (contract["effects"] == ["read_external"] or
@@ -1070,6 +1088,7 @@ class Runtime(ExpressionEvaluator):
                 exc = failed(error)
                 receipt = {"request_hash": request_hash, "action": key, "reuse_key": reuse_key,
                            "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial),
+                           "effects": list(contract["effects"]),
                            **({'evidence': {'model_usage': copy.deepcopy(usage)}} if usage else {})}
                 # Keep resolved values, including pure calculations made before the failed leaf.
                 # Callables are not portable values; never turn their display form into input.
@@ -1212,6 +1231,12 @@ class Runtime(ExpressionEvaluator):
                 out['completion'] = undetermined(self.completion, exc)
             out['usage'].update(steps=self.budget.used_steps, rows=self.budget.used_rows,
                                 elapsed_ms=round((time.monotonic() - self.budget.started) * 1000))
+        from ibl_v2_component_runtime import report as component_report
+        component_report(self, out, result)
+        from ibl_v2_component_runtime import export_certificates
+        certificates = export_certificates(self, result)
+        if certificates['obligations'] or certificates['uninspected']:
+            out['component_certificates'] = certificates
         checks = [e for e in self.trace if e.get('kind') == 'assertion']
         entries = self.plan.dependencies.get('source_map', [])[1:]
         used = [{'id': 'fn:' + e['name'], 'success': e['success'], 'source_hash': digest(self.plan.source[source['start']:source['end']]), 'function_ref': source.get('function_ref')}

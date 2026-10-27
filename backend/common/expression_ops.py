@@ -14,7 +14,7 @@ from common.expression_ir import Fault, Node, ResultValue, Unit, projection
 BUILTINS = {"len": (1, 1), "has": (2, 2), "get": (2, 3), "json": (1, 1),
             "number": (1, 2), "text": (1, 1), "abs": (1, 1), "round": (1, 2),
             "min": (1, 1000), "max": (1, 1000), "sum": (1, 1),
-            "is_ok": (1, 1), "unwrap": (1, 1), "error_of": (1, 1),
+            "is_ok": (1, 1), "unwrap": (1, 1), "error_of": (1, 1), "propagate": (1, 1),
             "evidence": (1, 1), "reduce": (3, 3)}
 
 BUILTINS.update({name: spec[:2] for name, spec in CONTRACTS.items()})
@@ -227,6 +227,10 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
             numbers.append(number(value))
         numbers = arithmetic_numbers(numbers)
         return {"min": min, "max": max, "sum": sum}[name](numbers)
+    if name == 'propagate':
+        if isinstance(first, ResultValue) and first.ok:
+            return first.value
+        propagate_failure(first.failure if isinstance(first, ResultValue) else None)
     if name in ("is_ok", "unwrap", "error_of"):
         if not isinstance(first, ResultValue):
             raise Fault("RESULT_REQUIRED", f"{name}에는 Result가 필요합니다.")
@@ -279,3 +283,13 @@ def callable_identity(value, *, node_map=None):
             return ['list', [visit(v) for v in item]]
         return pack(item)
     return visit(value)
+
+
+def propagate_failure(failure):
+    """Only interpreter-owned failure capabilities can re-enter control flow."""
+    if not isinstance(failure, Fault):
+        raise Fault('FAILURE_CAPABILITY', '원래 실패의 실행 문맥이 없습니다. 전송된 진단은 재전파 권한이 아닙니다.', kind='protocol')
+    clone = Fault(failure.code, str(failure), failure.node, kind=failure.kind,
+                  partial=failure.partial, details=dict(failure.details))
+    clone.frames, clone.evidence = list(failure.frames), list(failure.evidence)
+    raise clone

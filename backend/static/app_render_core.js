@@ -148,9 +148,7 @@ function statusGlyph(s) {
 }
 
 /** Required completion duties belong to the envelope, never to business values. */
-function completionStatus(env) {
-  if (!env || env.edition !== 2 || !Object.prototype.hasOwnProperty.call(env, 'completion')) return null;
-  var c = env.completion;
+function completionGroup(c) {
   if (!c || c.protocol !== 'ibl-completion/1' || !Array.isArray(c.obligations)) return 'undetermined';
   if (c.obligations.some(function(o) { return !o || typeof o !== 'object' || Array.isArray(o) ||
       ('required' in o && typeof o.required !== 'boolean'); })) return 'undetermined';
@@ -159,6 +157,24 @@ function completionStatus(env) {
   var state = required.some(function(o) { return o.status === 'unsatisfied'; }) ? 'unsatisfied'
     : required.every(function(o) { return o.status === 'satisfied'; }) ? 'satisfied' : 'undetermined';
   return c.status === state ? state : 'undetermined';
+}
+
+function completionStatus(env) {
+  if (!env || env.edition !== 2) return null;
+  var states = Object.prototype.hasOwnProperty.call(env, 'completion') ? [completionGroup(env.completion)] : [];
+  if (Object.prototype.hasOwnProperty.call(env, 'component_completion')) {
+    var c = env.component_completion;
+    if (!c || c.protocol !== 'ibl-component-outcomes/1' || !Array.isArray(c.instances)) states.push('undetermined');
+    else {
+      var duties = [];
+      c.instances.forEach(function(i) {
+        states.push(completionGroup(i));
+        if (i && Array.isArray(i.obligations)) duties = duties.concat(i.obligations);
+      });
+      states.push(completionGroup({protocol:'ibl-completion/1', obligations:duties, status:c.status}));
+    }
+  }
+  return ['unsatisfied','undetermined','satisfied'].find(function(s) { return states.includes(s); }) || null;
 }
 
 function iblOutcomeError(env, allowIncomplete = false) {

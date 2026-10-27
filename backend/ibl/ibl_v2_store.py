@@ -192,6 +192,8 @@ def _describe(name, allowed_nodes=None):
             'function_refs': ([sources.references[name]] if name in sources.references else []) +
                              plan.dependencies.get('function_refs', []),
             'callable_contract': plan.function_contracts[node.id],
+            'component_contract': plan.components[node.id],
+            'components': plan.components,
             'status': report['status'], 'guards': report['guards'],
             'guards_total': report['guards_total'], 'guards_inner': report['guards_inner'],
             'plan_hash': plan.fingerprint,

@@ -106,3 +106,28 @@ def test_completion_issue_survives_repeated_summary():
     evidence = completion_evidence(env)
     assert evidence
     assert completion_evidence({'incomplete_steps': evidence}) == evidence
+
+
+@pytest.mark.parametrize('status,expected', [('satisfied', False), ('unsatisfied', True), ('undetermined', True)])
+def test_component_duties_use_all_shared_consumers(status, expected):
+    import json
+    import subprocess
+    from pathlib import Path
+    from conscious_supervisor import _failed
+    from ibl_result_transport import tool_result_is_error
+    from workflow_verdict import is_error_result
+    env = {'edition': 2, 'success': True, 'source_complete': True, 'value': 2,
+           'component_completion': {'protocol': 'ibl-component-outcomes/1', 'status': status, 'instances': [
+               {'protocol': 'ibl-completion/1', 'status': status,
+                'obligations': [{'id': 'same-local-id', 'required': True, 'status': status}]}]}}
+    assert bool(completion_evidence(env)) is expected
+    assert _failed(env) is expected
+    assert is_error_result(env) is expected
+    assert tool_result_is_error(json.dumps(env)) is expected
+    script = """const fs=require('fs'),vm=require('vm'),c={};vm.createContext(c);
+vm.runInContext(fs.readFileSync('backend/static/app_render_core.js','utf8').split('/* --- ESM export')[0],c);
+let env=JSON.parse(fs.readFileSync(0,'utf8'));process.stdout.write(JSON.stringify([c.completionStatus(env),!!c.iblOutcomeError(env,true)]));"""
+    response = subprocess.run(['node', '-e', script], input=json.dumps(env), text=True, capture_output=True,
+                              cwd=Path(__file__).resolve().parents[1], check=True, timeout=30)
+    assert json.loads(response.stdout) == [status, expected]
+    assert completion_evidence({'edition': 2, 'success': True, 'value': env}) == []

@@ -1,6 +1,6 @@
 """CAS-bound pure-tail repair within the existing journal and execution lineage.
 
-Only an unchanged structural prefix and a pure final expression are admitted.
+Only the compiler-proven pure suffix can change; effect dependencies stay fixed.
 Logical operation identity is the original AST path in this lineage, not an
 action/argument hash. Reordering, inserted effects and uncertain receipts stop.
 """
@@ -21,7 +21,8 @@ def structural(value):
         return {k: structural(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [structural(v) for v in value]
-    return value
+    from ibl_v2_ir import pack
+    return pack(value)
 
 
 def node_paths(value, path=()):
@@ -36,34 +37,20 @@ def node_paths(value, path=()):
             yield from node_paths(child, path + (i,))
 
 
-def pure_tail(node):
-    forbidden = {'call', 'named_call', 'parallel', 'repeat', 'try', 'assert', 'def', 'bind'}
-    if node.kind in forbidden:
-        return False
-    if node.kind == 'pure_call' and node.data['fn'].kind != 'builtin':
-        return False
-    def children(value):
-        if isinstance(value, Node):
-            return pure_tail(value)
-        if isinstance(value, dict):
-            return all(children(v) for v in value.values())
-        if isinstance(value, (list, tuple)):
-            return all(children(v) for v in value)
-        return True
-    return children(node.data)
-
-
 def snapshot(plan, inputs, project_path, agent_id, input_evidence=None, policy=None):
     from ibl_run_journal import identity
     from dataclasses import replace
     # Source coordinates and plan hashes change with editing. Executable assets,
     # language semantics, authority and input evidence must remain identical.
-    deps = {k: v for k, v in plan.dependencies.items() if k not in ('source', 'source_map', 'calls')}
+    deps = {k: v for k, v in plan.dependencies.items() if k not in ('source', 'source_map', 'calls', 'libraries', 'function_refs')}
     deps['calls'] = sorted(digest(v) for v in plan.dependencies.get('calls', {}).values())
     stable = replace(plan, fingerprint=digest(deps))
     context = identity(stable, inputs, project_path, agent_id, input_evidence=input_evidence)
     source = plan.source[:plan.dependencies['source_map'][0]['end']]
-    return {'source': source, 'library_source': plan.source[len(source):], 'context': digest([context, policy]), 'plan': plan.fingerprint}
+    from ibl_v2_repair_graph import frontier
+    return {'source': source, 'library_source': plan.source[len(source):],
+            'context': digest([context, policy]), 'plan': plan.fingerprint,
+            'frontier': frontier(plan, source), 'function_refs': plan.dependencies.get('function_refs', [])}
 
 
 def remember(journal, record):
@@ -98,25 +85,18 @@ def propose(db, record, handle):
     old = json.loads(db.execute('SELECT record FROM repair_snapshot').fetchone()[0])
     if old['context'] != record['context']:
         raise Fault('REPAIR_CHANGED', '입력·주체·권한·부품·계약·구현·완료 의무가 달라졌습니다.', kind='permission')
-    before, after = (parse(r['source']).data['statements'] for r in (old, record))
-    if (not before or not after or before[-1].kind != 'return' or after[-1].kind != 'return'
-            or structural(before[:-1]) != structural(after[:-1]) or not pure_tail(before[-1]) or not pure_tail(after[-1])):
-        raise Fault('REPAIR_UNSUPPORTED', '같은 실행 접두부와 마지막 순수 반환식 수정만 지원합니다.', kind='protocol')
+    from ibl_v2_repair_graph import mapping as frontier_mapping
+    mapping = frontier_mapping(old.get('frontier'), record.get('frontier'))
     if db.execute('SELECT 1 FROM calls WHERE receipt IS NULL').fetchone():
         raise Fault('EFFECT_UNCERTAIN', '완료 불명 효과는 자동 계승하거나 재실행하지 않습니다.', kind='protocol')
     rows = db.execute('SELECT id,request,receipt,state_change FROM calls ORDER BY rowid').fetchall()
-    if any('value' not in json.loads(r[2]) for r in rows):
-        raise Fault('REPAIR_UNSUPPORTED', '실패·승인 대기 효과의 변경 재개는 지원하지 않습니다.', kind='protocol')
-    old_library, new_library = (parse(r.get('library_source', '')).data['statements'] for r in (old, record))
-    if structural(old_library) != structural(new_library):
-        raise Fault('REPAIR_CHANGED', '저장 부품의 본문이 변경되었습니다.', kind='protocol')
-    # Library AST offsets are relative to the expanded source, not its slice.
-    old_expanded = parse(old['source'] + old.get('library_source', '')).data['statements']
-    new_expanded = parse(record['source'] + record.get('library_source', '')).data['statements']
-    old_nodes = before[:-1] + old_expanded[len(before):]
-    new_nodes = after[:-1] + new_expanded[len(after):]
-    old_paths, new_paths = dict(node_paths(old_nodes)), dict(node_paths(new_nodes))
-    mapping = {new_paths[p]: old_paths[p] for p in old_paths}
+    # A completed read failure is an observation of this execution. The fixed
+    # prefix replays its original Fault through the same recovery branch.
+    # Failed writes and incomplete/approval receipts still cannot be inherited.
+    if any('value' not in (receipt := json.loads(r[2]))
+           and (r[3] or 'error' not in receipt or receipt.get('effects') != ['read_external'])
+           for r in rows):
+        raise Fault('REPAIR_UNSUPPORTED', '실패한 쓰기·승인 대기 효과의 변경 재개는 지원하지 않습니다.', kind='protocol')
     # A second repair keeps the first execution's node identities.
     for new, prior in list(mapping.items()):
         if new.split(':')[0] in ('named_call', 'pure_call'):
@@ -127,7 +107,7 @@ def propose(db, record, handle):
     fingerprint = digest([original_identity, record, rows, mapping])
     plan = {'protocol': 'ibl-repair/1', 'run_id': handle['run_id'], 'plan_hash': fingerprint,
             'status': 'ready', 'steps': [{'call_id': r[0], 'kind': 'inherit_completed_effect' if r[3] else 'inherit_completed_read'} for r in rows],
-            'new_computation': 'pure_tail', 'external_state': 'not_revalidated'}
+            'new_computation': 'proven_pure_suffix', 'external_state': 'not_revalidated'}
     return plan, mapping
 
 
@@ -160,6 +140,8 @@ def activate(journal, handle, record, expected_identity):
     journal.db.execute('INSERT INTO repair_lineage VALUES(?,?)', (plan['plan_hash'], json.dumps(plan)))
     journal.db.execute('UPDATE meta SET identity=?', (expected_identity,))
     journal.db.execute('UPDATE repair_snapshot SET record=?', (json.dumps({**record, 'node_map': mapping}),))
+    if journal.db.execute("SELECT 1 FROM sqlite_master WHERE name='function_snapshot'").fetchone():
+        journal.db.execute('UPDATE function_snapshot SET refs=?', (json.dumps(record.get('function_refs', [])),))
     journal.db.commit()
     journal.repair_plan, journal.node_map = plan, mapping
 

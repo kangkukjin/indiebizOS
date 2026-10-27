@@ -137,6 +137,25 @@ def test_uncertain_effect_and_busy_lineage_do_not_retry(execute):
     assert calls == ['delivery']
 
 
+
+@pytest.mark.parametrize('effects', [['write_external'], ['unknown'], ['model']])
+def test_failed_non_read_receipt_does_not_authorize_repair(execute, effects, monkeypatch):
+    from ibl_v2_ir import Fault
+    run, calls, adapter = execute
+    adapter.contract['effects'] = effects
+    def fail(rt, args):
+        calls.append(args['id'])
+        raise Fault('FAILED_EFFECT', 'operation failed')
+    monkeypatch.setattr('ibl_v2_adapters.load_registry',
+                        lambda *a, **kw: {'t:send': Adapter(adapter.contract, fail)})
+    prefix = '[try]{[t:send]{id:"delivery"}}[catch]{};'
+    first = run(prefix + 'return 10/$n')
+    assert not first['success'] and calls == ['delivery'], first
+    check = run(prefix + 'return 10/($n+1)', check=True,
+                repair={'run_id': first['resume']['run_id']})
+    assert not check.get('ok') and check['diagnostic']['code'] == 'REPAIR_UNSUPPORTED', check
+    assert calls == ['delivery']
+
 def test_repaired_continuation_retains_new_source(execute):
     import json
     import sqlite3
@@ -175,3 +194,32 @@ def test_checked_handle_carries_exact_repair_plan(execute, monkeypatch, tmp_path
 if __name__ == '__main__':
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('depth', [1, 3, 6, 10, 14, 30])
+def test_semantic_pure_component_repair_after_effect(execute, depth):
+    run, calls, _ = execute
+    def program(denominator):
+        defs = '[def:p0]($x){return 10/(' + denominator + ')};'
+        defs += ';'.join(f'[def:p{i}]($x){{return [fn:p{i-1}]{{x:$x}}}}' for i in range(1, depth+1))
+        return defs + ';$sent=[t:send]{id:"delivery"};$value=[fn:p' + str(depth) + ']{x:$n};return {value:$value}'
+    first = run(program('$x'))
+    assert not first['success'] and calls == ['delivery'], first
+    handle = {'run_id': first['resume']['run_id']}
+    checked = run(program('$x+1'), check=True, repair=handle)
+    assert checked['ok'], checked
+    out = run(program('$x+1'), repair={**handle, 'plan_hash': checked['repair']['plan_hash']})
+    assert out['success'] and out['value'] == {'value': 10} and calls == ['delivery'], out
+    again = run(program('$x+2'), check=True, repair={'run_id': handle['run_id']})
+    assert again['ok'], again
+    final = run(program('$x+2'), repair={**handle, 'plan_hash': again['repair']['plan_hash']})
+    assert final['success'] and final['value'] == {'value': 5} and calls == ['delivery'], final
+
+
+def test_pure_dependency_of_effect_cannot_change(execute):
+    run, calls, _ = execute
+    source = '[def:target](){return "delivery"};$sent=[t:send]{id:[fn:target]{}};return 1/$n'
+    first = run(source)
+    changed = source.replace('"delivery"', '"other"').replace('1/$n', '1')
+    out = run(changed, check=True, repair={'run_id': first['resume']['run_id']})
+    assert not out.get('ok') and calls == ['delivery'], out

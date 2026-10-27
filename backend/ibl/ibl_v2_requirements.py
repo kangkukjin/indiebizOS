@@ -8,13 +8,26 @@ from ibl_v2_ir import Node
 
 
 def parameter(sid, name):
-    return Type('Unknown', item=('parameter', sid, name))
+    return Type('Unknown', item=('parameter', sid, name, ()))
 
 
 def origin(typ):
     if typ.kind == 'Unknown' and isinstance(typ.item, tuple) and typ.item[0] in ('parameter', 'application'):
         return typ.item
     return None
+
+
+
+def project(typ, key):
+    """Keep a finite projection on the same symbolic input or application."""
+    identity = origin(typ)
+    if not identity or not isinstance(key, (str, int)) or isinstance(key, bool):
+        return UNKNOWN
+    kind, sid, name, *tail = identity
+    path = tail[0] if tail else ()
+    if len(path) >= 64:
+        return UNKNOWN
+    return Type('Unknown', item=(kind, sid, name, (*path, key), *tail[1:]))
 
 
 def emit(compiler, sid, name, condition, expected, depth):
@@ -26,26 +39,31 @@ def require(compiler, node, actual, expected):
     identity = origin(actual)
     if not identity or not compiler.reachable:
         return
-    kind, sid, name = identity
+    kind, sid, name, *tail = identity
     condition = {'kind': 'result' if kind == 'application' else 'value',
                  'expected': describe_type(expected),
-                 'at': node.start, 'conditional': bool(compiler.requirement_depth)}
+                 'at': node.start, 'conditional': bool(compiler.requirement_depth),
+                 'path': list(tail[0]) if tail else [],
+                 **({'application': tail[1]} if kind == 'application' and len(tail) > 1 else {})}
     emit(compiler, sid, name, condition, expected, compiler.requirement_depth)
 
 
 def application(compiler, node, typ, types, pure=False):
     identity = origin(typ)
-    if not identity or identity[0] != 'parameter':
+    if not identity:
         return None
-    _, sid, name = identity
+    _, sid, name, *tail = identity
     named = isinstance(types, Type)
     condition = {'kind': 'callable', 'argument_style': 'named' if named else 'positional',
                  'arguments': describe_type(types) if named else [describe_type(t) for t in types],
                  'effects': ['pure'] if pure else ['input-dependent'],
-                 'at': node.start, 'conditional': bool(compiler.requirement_depth)}
+                 'at': node.start, 'conditional': bool(compiler.requirement_depth),
+                 'path': list(tail[0]) if tail else []}
     emit(compiler, sid, name, condition, Type('Callable'), compiler.requirement_depth)
     compiler.required_calls[node.id] = condition
-    return Type('Unknown', item=('application', sid, name))
+    return Type('Unknown', item=('application', sid, name, (),
+        __import__('ibl_v2_ir').digest([node.id, identity,
+            types._key.hex() if named else [t._key.hex() for t in types]])))
 
 
 def wire_obligations(typ, protocols=('ibl-value/1', 'ibl-value/2'), *, typed_paths=False):
@@ -251,9 +269,9 @@ def finish(compiler):
         if condition not in bucket:
             bucket.append(condition)
         # Different callback applications need not return the same type.
-        if depth or entry['kind'] == 'result':
+        if depth:
             continue
-        key = sid, name
+        key = sid, name, tuple(entry.get('path', ())), entry.get('application')
         previous = unconditional.get(key, UNKNOWN)
         merged = intersection(previous, expected)
         if merged == NEVER and previous != NEVER:

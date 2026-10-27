@@ -32,7 +32,7 @@ def repeat_observation(result):
     if not isinstance(value, dict) or value.get("edition") != 2 or value.get("executed") is not True:
         return value
     fields = ("success", "executed", "source_complete", "error", "diagnostic",
-              "status", "suspended", "waiting", "partial_wire", "run_status", "completion", "repair")
+              "status", "suspended", "waiting", "partial_wire", "run_status", "completion", "component_completion", "component_certificates", "repair")
     observed = {key: value[key] for key in fields if key in value}
     # typed wire는 값의 종류를, value는 생산자의 작업 상태 구조를 보존한다.
     for key in ("value_wire", "value"):
@@ -376,6 +376,8 @@ def input_ref_evidence(stored, *, certified_id=None):
         out["execution_success"] = stored.get("success")
         if isinstance(stored.get('completion'), dict):
             out['completion'] = stored['completion']
+        if isinstance(stored.get('component_certificates'), dict):
+            out['component_certificates'] = stored['component_certificates']
         out["run_id"] = (stored.get("resume") or {}).get("run_id")
     else:
         from ibl_honesty import completion_evidence, truncation_evidence
@@ -739,17 +741,6 @@ def model_usage(usage):
     return out
 
 
-def _mirrored_rows(value):
-    """생산자가 본문의 미러라고 선언한 문단 목록 필드 이름. 선언·본문·목록이 다 있을 때만."""
-    display = value.get("_display")
-    mirrors = display.get("mirror_fields") if isinstance(display, dict) else None
-    if (isinstance(mirrors, list) and mirrors and isinstance(mirrors[0], str)
-            and isinstance(value.get(mirrors[0]), str) and value[mirrors[0]]
-            and isinstance(value.get("items"), list) and value["items"]):
-        return "items"
-    return None
-
-
 def _fold_twin_fields(value, where, notes, depth=0):
     """같은 큰 값을 두 이름으로 실은 형제 필드는 표시 사본에서 한 벌만 보인다(ep4214: 자막 segments·items).
 
@@ -763,14 +754,17 @@ def _fold_twin_fields(value, where, notes, depth=0):
     if not isinstance(value, dict):
         return value
     seen, out = {}, {}
-    mirrored = _mirrored_rows(value)
-    for key, item in value.items():
-        if key == mirrored:
-            # 생산자가 "text 는 items 의 미러"라고 선언했다(_display.mirror_fields). 옛 판본 표시는 이 선언으로
-            # 한쪽을 접었는데 판본 2 표시는 둘 다 실었다(ep4212: 본문 372자에 문단 목록 4.2K자).
-            # 모델에는 본문을 보이고 문단 목록은 가리킨다 — 실행기 안의 값과 저장본은 그대로다.
-            out[key] = {"$model_mirror_of": value["_display"]["mirror_fields"][0], "rows": len(item)}
-            notes.append({"path": where + [key], "mirror_of": where + [value["_display"]["mirror_fields"][0]]})
+    from common.value_relations import mirrored_text_fields
+    mirrors = mirrored_text_fields(value)
+    # The collection carries selected rows and their metadata. Never fold it
+    # behind a prose field, even if that prose is a verified display duplicate.
+    display = value.get('_display')
+    entries = (sorted(value.items(), key=lambda pair: pair[0] != 'items')
+               if isinstance(display, dict) and display.get('mirror_fields') else value.items())
+    for key, item in entries:
+        if key in mirrors:
+            out[key] = {"$model_mirror_of": "items"}
+            notes.append({"path": where + [key], "mirror_of": where + ["items"]})
             continue
         if isinstance(item, (list, dict)) and item:
             raw = json.dumps(item, ensure_ascii=False, sort_keys=True, default=str)

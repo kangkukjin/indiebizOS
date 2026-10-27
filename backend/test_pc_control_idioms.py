@@ -243,7 +243,7 @@ def test_batch_rejects_mutations_before_target_resolution(flow):
     assert state['calls'] == []
 
 
-def test_tv_guide_starts_independent_preparation_together_without_duplicate_queries(flow):
+def test_tv_guide_sequences_opaque_control_without_duplicate_queries(flow):
     import re
     import threading
     run, state = flow
@@ -252,17 +252,15 @@ def test_tv_guide_starts_independent_preparation_together_without_duplicate_quer
         {'tab_id': 'A', 'url': 'https://www.youtube.com/', 'name': 'YouTube'}]}]
     state['native'] = {'action': 'chrome_launch', 'surface': 'app:com.google.Chrome',
                        'running': True, 'windows': windows}
-    barrier = threading.Barrier(3)
     seen = []
     def reached(branch):
         seen.append(branch)
-        barrier.wait(timeout=15)
     state['startup_hook'] = reached
     guide = (ROOT / 'data/guides/tv_control.md').read_text()
     code = re.search(r'<!-- example:tv_pc_startup -->\s*```ibl\n(.*?)```', guide, re.S)[1]
     code = code.replace('등록된 TV의 device_id', 'tv-1').replace('연결된 Windows PC의 device_id', 'pc-1')
     result = run(code)
-    assert sorted(seen) == ['browser', 'search', 'tv']
+    assert seen == ['tv', 'browser', 'search']
     assert result[0]['result']['power'] == 'on'
     assert result[1]['result']['status'] == 'completed', result
     assert result[1]['result']['result']['windows'] == windows

@@ -294,8 +294,8 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
         cap = display.get("max_chars")
         cap = cap if isinstance(cap, int) and not isinstance(cap, bool) and cap > 0 else int(pol["prose_chars"])
         if isinstance(out.get("items"), list) and (meta or serialized_len > cap):
-            mirrors = display.get("mirror_fields") or []
-            omitted = [k for k in mirrors if isinstance(k, str) and k != "items" and isinstance(out.get(k), str)]
+            from common.value_relations import mirrored_text_fields
+            omitted = list(mirrored_text_fields(obj))
             for k in omitted:
                 out.pop(k)
             if omitted:

@@ -168,7 +168,9 @@ def script_contract(base, args):
         return {**base, 'result': 'Record', 'effects': ['write_external'],
                 'nested_contracts': {'args': contract}}
     # Nested input aliases/defaults use the same boundary resolver as the runner.
-    return {**base, 'nested_contracts': {'args': contract},
+    from ibl_v2_component import lift_completion
+    completion = lift_completion(contract.get('completion', []), 'args')
+    return {**base, 'nested_contracts': {'args': contract}, 'completion': completion,
             'result': contract['result'], 'effects': contract['effects'],
             'per_run': contract.get('per_run', False) or contract['effects'] != ['pure'],
             'script_contract': contract}

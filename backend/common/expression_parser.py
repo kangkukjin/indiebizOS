@@ -417,7 +417,11 @@ class Parser:
                 self.nl()
             self.pop(")")
             self.nl()
-            return self.node("def", start, name=fn, params=params, body=self.block(), **({"annotations": annotations} if annotations else {}))
+            contract = self.record() if self.accept(":") else None
+            self.nl()
+            return self.node("def", start, name=fn, params=params, body=self.block(),
+                             **({"annotations": annotations} if annotations else {}),
+                             **({"contract": contract} if contract is not None else {}))
         if name in ("if", "case", "repeat"):
             self.pop(":")
             mode = self.pop().text if name == "repeat" and self.t.text in ("while", "until") else "count"

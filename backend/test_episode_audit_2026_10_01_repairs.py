@@ -261,7 +261,7 @@ def test_negative_base_fractional_power_is_an_error_not_a_complex_number(tmp_pat
     assert out["success"] is False and out["diagnostic"]["code"] == "NUMBER_REQUIRED"
 
 
-def test_declared_mirror_rows_are_folded_in_the_model_copy():
+def test_declared_mirror_without_current_value_proof_keeps_rows():
     from model_result_view import _fold_twin_fields
     page = {"url": "https://example.com", "text": "본문 " * 40,
             "items": [{"type": "paragraph", "text": "본문", "url": "https://example.com", "paragraph_index": i}
@@ -270,8 +270,8 @@ def test_declared_mirror_rows_are_folded_in_the_model_copy():
     notes = []
     shown = _fold_twin_fields([page, dict(page)], ["value"], notes)
     assert shown[0]["text"] == page["text"]
-    assert shown[0]["items"] == {"$model_mirror_of": "text", "rows": 40}
-    assert notes[0] == {"path": ["value", 0, "items"], "mirror_of": ["value", 0, "text"]}
+    assert shown[0]["items"] == page["items"]
+    assert notes == []  # 선언만으로 행을 숨기지 않는다(ep5557).
     # 선언이 없거나 본문이 없으면 목록을 그대로 둔다.
     plain = {"items": page["items"], "text": page["text"]}
     assert _fold_twin_fields(plain, ["value"], [])["items"] == page["items"]

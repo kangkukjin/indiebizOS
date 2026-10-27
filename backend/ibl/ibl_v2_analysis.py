@@ -388,7 +388,9 @@ def access_type(compiler, node, base, key, key_type=None):
             return select_type(base, key)[0]
         return base.item if base.kind == 'List' else TEXT
     if base.kind == 'Unknown':
-        compiler.need(node, UNKNOWN, Type('Record') if node.kind == 'field' else UNKNOWN)
+        from ibl_v2_requirements import project
+        compiler.need(node, base, Type('Record') if node.kind == 'field' else UNKNOWN)
+        return project(base, key)
     else:
         hint = HINTS['FIELD_TYPE']
         if base.kind == 'Record' and 'items' in dict(base.fields):
@@ -587,6 +589,9 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
         if name == 'has':
             return BOOL
         from ibl_v2_types import select_type, NULL
+        if len(types) == 2 and types[0].kind == 'Unknown' and types[1].literal is not None:
+            from ibl_v2_requirements import project
+            return project(types[0], types[1].literal)
         return select_type(types[0], types[1], types[2] if len(types) > 2 else NULL)[0]
     if name in ('number', 'abs', 'round'):
         if name == 'number' and len(types) == 2:
@@ -597,6 +602,12 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
         if name == 'round':
             need(1, NUMBER)
         return NUMBER
+    if name == 'propagate':
+        if types and types[0].kind == 'Record':
+            from ibl_v2_types import NEVER
+            return NEVER
+        need(0, Type('Result', item=UNKNOWN))
+        return types[0].item or UNKNOWN if types and types[0].kind == 'Result' else UNKNOWN
     if name in ('is_ok', 'unwrap', 'error_of'):
         need(0, Type('Result', item=UNKNOWN))
         if name == 'is_ok':

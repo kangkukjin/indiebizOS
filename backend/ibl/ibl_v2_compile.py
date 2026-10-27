@@ -49,6 +49,8 @@ class Plan:
 
     function_scopes: dict = field(default_factory=dict)
     accesses: set = field(default_factory=set)
+    components: dict = field(default_factory=dict)
+    node_effects: dict = field(default_factory=dict)
 
     REPORT_GUARDS_CAP = 24
 
@@ -70,6 +72,8 @@ class Plan:
                 "result_type": str(self.result_type), "result_contract": describe_type(self.result_type), "effects": sorted(self.effects), "functions": self.function_contracts,
                 "plan_hash": self.fingerprint, "dependencies": dependencies,
                 "accesses": describe_accesses(self.accesses, self.effects),
+                "components": {key: {name: c[name] for name in ('protocol', 'identity', 'producer', 'dependencies', 'completion')}
+                               for key, c in self.components.items()},
                 "source_hash": digest(self.source[:self.dependencies["source_map"][0]["end"]]),
                 "capabilities": ["ibl-edition/2", "ibl-value/1"],
                 **({"unspecified_inputs": sorted(self.unspecified)} if self.unspecified else {}),
@@ -112,6 +116,9 @@ class Compiler(CallAnalysis):
         self.requirements, self.required_calls = {}, {}
         self.requirement_log = {}
         self.requirement_depth = 0
+        self.node_effects = {}
+        self.component_declarations = {}
+        self.component_variants = {}
 
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
@@ -314,6 +321,13 @@ class Compiler(CallAnalysis):
         outer_effects, self.effects = self.effects, set()
         outer_actions, self.used_actions = self.used_actions, set()
         params = node.data["params"]
+        from ibl_v2_component import declaration
+        if sid not in self.component_declarations:
+            try:
+                self.component_declarations[sid] = declaration(node)
+            except Fault as exc:
+                self.issue(node, exc.code, str(exc))
+                self.component_declarations[sid] = {}
         env = {}
         for name, default in params.items():
             if name in RESERVED:
@@ -396,6 +410,16 @@ class Compiler(CallAnalysis):
         return result
 
     def visit(self, node, env, names, readonly=frozenset(), final=False, piped=None, piped_node=None):
+        if node is None:
+            return UNIT_T
+        outer, self.effects = self.effects, set()
+        try:
+            return self._visit(node, env, names, readonly, final, piped, piped_node)
+        finally:
+            self.node_effects.setdefault(node.id, set()).update(self.effects)
+            self.effects |= outer
+
+    def _visit(self, node, env, names, readonly=frozenset(), final=False, piped=None, piped_node=None):
         if node is None:
             return UNIT_T
         d, kind = node.data, node.kind
@@ -875,6 +899,7 @@ class Compiler(CallAnalysis):
                        for k, v in fields.items()}
             selectors = {**values, **{k: v for k, v in partial.items() if v is not UNRESOLVED}}
             contract = spec.specialize(contract, selectors)
+        self.component_variants.setdefault(key, {})[digest(contract)] = contract
         from ibl_value_checks import value_problems
         for problem in ([] if arg_type.open else problems(contract, values)) + value_problems(contract, values, self.registry, self.definitions):
             self.issue(node, 'ARGUMENT_CONTRACT', problem)
@@ -1097,6 +1122,9 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
 
     plan.function_scopes = compiler.function_scopes
     plan.accesses = compiler.access_log
+    plan.node_effects = compiler.node_effects
+    from ibl_v2_component import compiled_contracts
+    plan.components = compiled_contracts(compiler)
     if value_protocols is not None:
         from ibl_v2_requirements import require_wire
         plan = require_wire(plan, value_protocols)

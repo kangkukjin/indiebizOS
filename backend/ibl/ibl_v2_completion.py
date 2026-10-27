@@ -69,7 +69,22 @@ def reference_binding(runtime, value, note):
         path = tuple(note.get('path', ()))
         if path == ('value_wire',):
             path = ('value',)
-        return Binding(value, frozenset({eid}), origins=((eid, path),))
+        certificates = []
+        evidence = note.get('evidence') or {}
+        if evidence.get('execution_success') is True:
+            for cert in (evidence.get('component_certificates') or {}).get('obligations', []):
+                origin = ('value', *cert.get('scope', []))
+                if origin[:len(path)] == path and cert.get('status') == 'satisfied':
+                    relative = origin[len(path):]
+                    try:
+                        selected = value
+                        for key in relative:
+                            selected = selected[key]
+                        if digest(pack(selected)) == cert.get('value_hash'):
+                            certificates.append({**cert, 'scope': list(relative)})
+                    except (KeyError, IndexError, TypeError, Fault):
+                        pass
+        return Binding(value, frozenset({eid}), origins=((eid, path),), certificates=tuple(certificates))
     trie = {}
     for ref in note['refs']:
         branch = trie
@@ -122,14 +137,14 @@ def undetermined(specs, error):
                             for s in specs]}
 
 
-def evaluate(runtime, result, success):
+def evaluate(runtime, result, success, *, specs=None):
     # An unresolved mutation is global even when its output was discarded.
     unsafe = any(e.get('kind') == 'assertion' and e.get('passed') is False for e in runtime.trace) or any(e['kind'] == 'tool_failure' and any(
         p.get('kind') == 'invoke' and p['id'] in e['parents'] and
         set(p.get('effects', [])) - {'pure', 'read_external', 'model'}
         for p in runtime.trace) for e in runtime.trace)
     obligations, selected = [], set()
-    for spec in runtime.completion:
+    for spec in runtime.completion if specs is None else specs:
         status, reason, value_hash, sources = 'undetermined', 'execution_failed', None, []
         diagnostic = None
         try:
@@ -156,10 +171,11 @@ def evaluate(runtime, result, success):
                         continue
                     evidence = (event.get('origin') or {}).get('evidence') or {}
                     old = evidence.get('completion') or {}
+                    certificates = (evidence.get('component_certificates') or {}).get('obligations', [])
                     if evidence.get('execution_success') is True and any(
                             o.get('status') == 'satisfied' and o.get('condition_hash') == condition_hash(spec)
                             and origin_path == ('value', *o.get('scope', []))
-                            and o.get('value_hash') == value_hash for o in old.get('obligations', [])):
+                            and o.get('value_hash') == value_hash for o in [*old.get('obligations', []), *certificates]):
                         inherited.append(event['id'])
                 sources.extend(inherited)
                 incomplete = any(e.get('incomplete') and e['id'] not in inherited for e in events)

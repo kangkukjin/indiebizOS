@@ -27,7 +27,8 @@ TV 앱의 전원·입력, 볼륨, 앱, 방향키 탭은 열 때 상태를 자동
 `youtube_replace`는 스크립트 ID가 아니라 `PC제어` 함수의 action이다.
 
 TV에 연결된 Windows PC를 쓰기로 결정했다면, 아래처럼 **TV 켜기·Chrome 준비·후보 검색**을
-한 프로그램의 독립 분기로 실행한다. 예시의 TV·PC ID와 검색어는 확인한 값으로 바꾼다.
+한 프로그램에서 명시한 순서로 실행한다. TV/PC 제어 스크립트의 전체 자원 범위가
+미확정이므로 독립 병렬로 가정하지 않는다. 예시의 TV·PC ID와 검색어는 확인한 값으로 바꾼다.
 Chrome의 `url`은 새로 기동할 때만 쓰며 이미 실행 중이면 현재 탭을 그대로 돌려준다.
 
 <!-- example:tv_pc_startup -->
@@ -42,9 +43,10 @@ Chrome의 `url`은 새로 기동할 때만 쓰며 이미 실행 중이면 현재
   $창 = [fn:PC제어]{대상:$대상,요청:{action:"chrome_launch",url:"https://www.youtube.com/"}}
   return {kind:"browser",result:$창}
 }
-return [fn:TV준비]{대상:"등록된 TV의 device_id"}
-  & [fn:브라우저준비]{대상:"연결된 Windows PC의 device_id"}
-  & [limbs:youtube]{op:"search",query:"가을밤 인디 음악",limit:5}
+$TV = [fn:TV준비]{대상:"등록된 TV의 device_id"}
+$브라우저 = [fn:브라우저준비]{대상:"연결된 Windows PC의 device_id"}
+$후보 = [limbs:youtube]{op:"search",query:"가을밤 인디 음악",limit:5}
+return [$TV,$브라우저,$후보]
 ```
 
 PC 결과의 `status == "completed"`와 `verified == true`를 확인하고 **그 결과의 `result.windows`**에서

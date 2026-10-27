@@ -289,9 +289,13 @@ def test_input_text_and_triple_quote_source_preserve_bytes(ibl):
     assert (workspace() / '리터럴.py').read_bytes() == raw_literal.encode('utf-8')
 
 
-def test_parallel_calls_keep_turn_context_and_independent_results(ibl):
+def test_opaque_parallel_rejects_and_explicit_sequence_keeps_turn_context(ibl):
     assert ibl('[self:write]{path:"~turn/a.py",content:$code}', {'code': RESULT})['success']
     out = ibl('[1,2] >> [table:each]{parallel:2}{return [self:script]{path:"~turn/a.py",args:{n:$it}}}')
+    # Opaque file scripts cannot claim independent effects from differing args.
+    assert not out['success'] and out['diagnostic']['code'] == 'PARALLEL_RESOURCE_CONFLICT', out
+    assert not list((workspace().parent / 'executions').glob('*/result.json'))
+    out = ibl('[1,2] >> [table:each]{parallel:1}{return [self:script]{path:"~turn/a.py",args:{n:$it}}}')
     assert out['success'] and out['value'] == [{'n': 1}, {'n': 2}], out
     records = list((workspace().parent / 'executions').glob('*/result.json'))
     assert len(records) == 2

@@ -23,7 +23,13 @@ def registry():
     # 원장 쓰기는 저장소 안으로 제한된다. 새 checkout에는 outputs가 아직 없다.
     (ROOT / 'outputs').mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='ibl-replay-test-', dir=ROOT / 'outputs') as tmp:
-        yield load_registry(tmp), tmp
+        from dataclasses import replace
+        base = load_registry(tmp)
+        # The frozen script leaf only returns NEWS; it never runs a script.
+        # Give that fixture its actual read contract, not a production unknown write.
+        spec = base['self:script']
+        base['self:script'] = replace(spec, contract={**spec.contract, 'effects': ['read_external']})
+        yield base, tmp
 
 
 CASES = [(name, variant) for name in replay.NAMES

@@ -453,6 +453,30 @@ CLI의 MCP 재진입은 현재 실행의 에이전트·작업·프로젝트를 �
 실행자 초기화와 제공자 준비 완료도 확인했다. 이 초기화 검증은 유료 모델 생성을 요청하지 않았다.
 
 
+### 현행 평가 모델 조건 (2026-10-28 문서 정정)
+
+연구 대화의 **실행 모델 선택**과 실행 뒤 **공통 목표 평가**를 구별한다. `ResearchRunner`는 일반 실행
+설정을 그대로 사용한다. 연구 전용 CLI→평가 모델 치환과 API 필수 검사는 `96a9a6d4`에서 제거됐으며,
+별도 API 평가 모델이 없다는 이유만으로 연구 대화 진입을 거절하지 않는다. 주 실행 제공자는 선택한
+기어·핀의 모델과 인증 등 실행 준비가 필요하다.
+
+| 경우 | 실제 조건 |
+| --- | --- |
+| 공통 목표 평가 진입 | 의식 출력과 실행 결과가 있고, `force_role`이나 질문 확인 빠른 응답 경로가 아닌 경우. 감독 경로는 활성 상태와 비어 있지 않은 달성 기준을 확인하며, 비감독 대체 경로는 달성 기준과 `goal_eval.enabled`를 확인한다. 기준 없음·취소·특정 자기수리 완료 등은 평가를 생략할 수 있다. |
+| 텍스트 평가 제공자 | `evaluate` 역할의 기어·핀 제공자를 먼저 해소하고, 얻지 못하면 system 원샷 제공자 → 의식 제공자 순으로 대체를 시도한다. CLI도 허용한다. |
+| 이미지 평가 제공자 | 평가 역할에서 이미지 지원이 명시되고 준비된 제공자 → 비전 슬롯 순으로 찾는다. 없으면 오류이며 텍스트 전용 모델로 대체하지 않는다. |
+| API 설정이 필요한 때 | 실제 선택된 제공자가 API 키를 요구하는 경우다. Claude Code·Codex 계열 CLI와 Ollama는 API 키 불요 유형이지만, 설치·로그인·서버 가용성 등의 준비는 별개다. |
+| 평가를 완료하지 못한 때 | 제공자를 얻지 못하거나 응답이 없으면 평가 미완료/UNKNOWN·재시도 가능 상태로 다룬다. 성공 판정이나 모든 연구 대화에 대한 API 설정 필수 오류로 바꾸지 않는다. |
+
+근거: [research_runner.py](../backend/cognition/research_runner.py),
+[agent_pipeline.py](../backend/cognition/agent_pipeline.py),
+[conscious_supervisor.py](../backend/cognition/conscious_supervisor.py),
+[cognitive_eval.py](../backend/cognition/cognitive_eval.py),
+[consciousness_agent.py](../backend/cognition/consciousness_agent.py),
+[model_resolver.py](../backend/base/model_resolver.py).
+배경 요약 등 다른 역할 호출은 이 평가 조건과 별개다. 이 정정은 코드와 기존 기록 확인이며,
+새 훈련·모델 호출이나 현재 제공자의 응답 가능 여부 검증을 수행했다는 뜻은 아니다.
+
 ## 21 일반 프로젝트를 기준으로 통합 (2026-10-10)
 
 연구 대화 하나 = 독립 에이전트 하나. 새 대화는 독립 신원과 이력을 만들며, 선택한 대화에서

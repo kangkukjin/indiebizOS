@@ -1087,6 +1087,9 @@ saved:true 영수증을 받은 경우에만 memory_saved를 보고한다. 지속
 
 허브의 내용 로그·IBL 원문 코퍼스는 회원 문맥에서 기록하지 않는다. 스필·도구 증거·감독 중간 파일은 턴 경로에
 모으고, 생성기가 끝난 뒤 지운다. thread_context는 주체뿐 아니라 이 경로·취소·예산도 워커에 전달한다.
+이 내용 로그·임시 파일 규칙은 관리자 작업 원장의 무보관을 뜻하지 않는다. `member_activity.sqlite3`는
+수신 요청 메시지 본문을 영속 저장하며 TTL·PC 등록 해제 연동 삭제가 없다. 30일 사용량 합산이나
+완료 결과 RAM 정리와도 별개다. 현행 범위는 [회원 계약](../guides/member_contract.md#중앙-기어와-사용-기록-2026-10-15-개정)을 따른다.
 회원 ZIP 가져오기는 scripts/import_member_archive.py. 대화는 system_ai_memory.db, 지속 기억은
 system_ai_state/memory_system_ai.db, 프로그램은 scripts/registry.yaml에 붙는다. 원본 에피소드·해마·포식·IBL
 문장과 의존성 정보는 data/member_imports/<archive digest>에 보존한다. 가져오기 중 코드를 실행하거나 패키지를 설치하지 않는다.

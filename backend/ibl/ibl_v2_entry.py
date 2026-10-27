@@ -195,5 +195,5 @@ def capabilities():
             "requirements_protocols": ["ibl-requirements/1"], "access_protocols": ["ibl-access/1"],
             "composition_protocols": ["ibl-composition/1"], "completion_protocols": ["ibl-completion/1"],
             "repair_protocols": ["ibl-repair/1"], "v2_resume": True, "resume_protocols": ["ibl-resume/1"], "v2_remote_script": True, "call_protocols": ["ibl-script-call/1"],
-            "v2_budget": {"steps": 100000, "rows": 10000, "seconds": None, "depth": 64,
+            "v2_budget": {"steps": Budget.steps, "rows": Budget.rows, "seconds": Budget.seconds, "depth": Budget.depth,
                           "request_max": dict(Budget.REQUEST_LIMITS)}}

@@ -60,11 +60,13 @@ def test_step_costs_are_exclusive_and_bounded(registry, parallel):
 def test_original_normalization_with_explicit_budget(registry):
     code = (FIXTURE / 'drafts/p1_v0.ibl').read_text().split('$규칙문 =')[0] + '\nreturn $정규'
     inputs = {'폴더': str(FIXTURE / 'input/ledger')}
-    failed = run(code, registry, inputs)
+    failed = run(code, registry, inputs, budget=Budget.from_request({'steps': 100000}))
     assert not failed['success'] and failed['diagnostic']['code'] == 'BUDGET'
     passed = run(code, registry, inputs, budget=Budget.from_request({'steps': 300000}))
     assert passed['success'] and len(passed['value']) == 2698
     assert sum(r['금액'] for r in passed['value']) == 49259480 - 82000
+    default = run(code, registry, inputs)
+    assert default['success'] and default['value'] == passed['value']
 
 
 def test_hidden_collision_is_static_and_runtime_before_model(registry, monkeypatch):

@@ -151,6 +151,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                        지정 시 해당 노드만 description/enum에 포함.
     """
     import yaml
+    from ibl_v2_runtime import Budget
 
     from runtime_utils import get_vocabulary_path
     yaml_path = get_vocabulary_path()
@@ -218,7 +219,10 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 },
                 "resume": {"type": "object", "description": "현재 IBL은 반환된 {run_id}와 동일 code·inputs로 재개. 완료 영수증을 재사용하며 결과 불명 외부 작업은 재실행하지 않는다. 기존 저장 코드의 재개 인자도 보존."},
                 "reuse": {"type": "object", "description": "고친 프로그램용 {run_id, models?:Bool}: 이전 실행의 같은 읽기·선언된 모델 성공 결과를 자동 재사용. 입력·지시·구현·모델 설정 변경은 새로 실행. models:false면 모델은 새로 판단. 쓰기는 반복 실행하며 resume과 병용 불가."},
-                "budget": {"type": "object", "description": "판본 2 실행 예산: steps 기본 100000(최대 1000000), rows 기본 10000(최대 100000). 양의 정수. 예산의 20% 이상 쓴 실행은 usage.steps_by_line에 비싼 줄 표시(전문은 read_result path [\"usage\"]). 생략한 차원은 기본값."},
+                "budget": {"type": "object", "description": (
+                    f"판본 2 실행 예산: steps 기본 {Budget.steps}(최대 {Budget.REQUEST_LIMITS['steps']}), "
+                    f"rows 기본 {Budget.rows}(최대 {Budget.REQUEST_LIMITS['rows']}). 양의 정수. "
+                    "예산의 20% 이상 쓴 실행은 usage.steps_by_line에 비싼 줄 표시(전문은 read_result path [\"usage\"]). 생략한 차원은 기본값.")},
                 "describe": {"type": "array", "items": {"type": "string"}, "maxItems": 6,
                              "description": "액션 이름 1~6개의 계약 조회. code가 비면 조회만, 있으면 조회 성공 후 한 번 실행하고 descriptions를 반환."},
                 "read_result": read_result_schema(),

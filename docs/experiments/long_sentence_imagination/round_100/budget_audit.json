@@ -1,0 +1,143 @@
+{
+  "source": "docs/experiments/long_sentence_imagination/round_100/subjects/s7_reuse_pure.ibl",
+  "source_sha256": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc",
+  "default_budget": {
+    "steps": 1000000,
+    "rows": 10000
+  },
+  "before": {
+    "success": false,
+    "steps_used": 100001,
+    "steps_limit": 100000
+  },
+  "runs": {
+    "default_5000": {
+      "seconds": 3.8,
+      "budget_argument_present": false,
+      "run_id": "3df3da642717415e98ffe1598f250234",
+      "value": {
+        "reads": 3,
+        "lens": [
+          17,
+          17,
+          17
+        ],
+        "n": 5000,
+        "s": 62308
+      },
+      "usage": {
+        "steps": 170067,
+        "rows": 5000,
+        "elapsed_ms": 3743,
+        "limits": {
+          "steps": 1000000,
+          "rows": 10000
+        }
+      },
+      "reused_reads": 0
+    },
+    "default_5000_reuse": {
+      "seconds": 3.74,
+      "budget_argument_present": false,
+      "run_id": "0e80f4c28fcb421daa43680976dcb871",
+      "value": {
+        "reads": 3,
+        "lens": [
+          17,
+          17,
+          17
+        ],
+        "n": 5000,
+        "s": 62308
+      },
+      "usage": {
+        "steps": 170067,
+        "rows": 5000,
+        "elapsed_ms": 3699,
+        "limits": {
+          "steps": 1000000,
+          "rows": 10000
+        }
+      },
+      "reused_reads": 3
+    },
+    "default_10000": {
+      "seconds": 6.47,
+      "budget_argument_present": false,
+      "run_id": "b4d82e83eea04796b5292650a85384bc",
+      "value": {
+        "reads": 3,
+        "lens": [
+          17,
+          17,
+          17
+        ],
+        "n": 10000,
+        "s": 127309
+      },
+      "usage": {
+        "steps": 340067,
+        "rows": 10000,
+        "elapsed_ms": 6425,
+        "limits": {
+          "steps": 1000000,
+          "rows": 10000
+        }
+      },
+      "reused_reads": 0
+    }
+  },
+  "generation": {
+    "id": "1c4be03a91ab089b757fd4a76944341c",
+    "code_digest": "b83821bf641f0304ec8fd0d165371cb8",
+    "verified_files": [
+      "backend/ibl/ibl_v2_runtime.py",
+      "backend/ibl/ibl_v2_entry.py",
+      "backend/ibl/tool_loader.py"
+    ]
+  },
+  "tests": {
+    "targeted": {
+      "tests": 114,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 42.077,
+      "exit_code": 0
+    },
+    "system": {
+      "tests": 56,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 271.701,
+      "exit_code": 0
+    },
+    "normalization": {
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 10.263,
+      "exit_code": 0
+    },
+    "concurrent_recheck": {
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.889,
+      "exit_code": 0
+    },
+    "regression": {
+      "tests": 10994,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 9,
+      "seconds": 923.015,
+      "exit_code": 1
+    }
+  },
+  "regression_snapshot_valid": false,
+  "regression_interference": "Concurrent edits to function storage, compiler/analysis/component/preflight/store modules and backend layer declarations; live-store guard exited 1 despite all test cases passing"
+}

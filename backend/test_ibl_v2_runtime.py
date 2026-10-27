@@ -96,8 +96,8 @@ def test_parallel_compute_does_not_claim_another_branch_action_finished(monkeypa
     assert all(d.get('phase') != 'compute' for d in seen), seen
 
 
-@pytest.mark.parametrize('count', [0, 25, 2500])
-def test_saved_pure_each_program_reuses_reads_and_publishes_last_coordinate(tmp_path, monkeypatch, count):
+@pytest.mark.parametrize('count', [0, 25, 2500, 5000, 10000])
+def test_saved_pure_each_program_reuses_reads_and_publishes_last_coordinate(tmp_path, monkeypatch, record_property, count):
     """Run the unchanged S7 program, then reuse it with empty/small/full inputs."""
     import ibl_progress
     source = (Path(__file__).resolve().parents[1] /
@@ -110,10 +110,12 @@ def test_saved_pure_each_program_reuses_reads_and_publishes_last_coordinate(tmp_
                         lambda ticket, step, of, action, **kw: seen.append({'step': step, 'action': action, **kw}))
     monkeypatch.setattr(ibl_progress, 'beat', lambda detail: seen.append({'beat': detail}))
     first = handle_request({'edition': 2, 'code': source, 'inputs': inputs}, project_path=str(tmp_path))
+    record_property('first_usage', json.dumps(first.get('usage'), ensure_ascii=False))
     assert first['success'], first
     seen.clear()
     second = handle_request({'edition': 2, 'code': source, 'inputs': inputs,
                              'reuse': {'run_id': first['resume']['run_id']}}, project_path=str(tmp_path))
+    record_property('reuse_usage', json.dumps(second.get('usage'), ensure_ascii=False))
     assert second['success'] and second['value'] == first['value'], second
     assert second['value']['n'] == count and second['reuse']['reused_calls'] == 3, second
     expected = sum(len(f'{i}-{i*7}-{len(fixture.read_text())}') for i in inputs['목록'])
@@ -168,9 +170,16 @@ $failure=[try] {{
 
 
 def test_public_budget_limit_matches_check_and_runtime():
-    maximum = capabilities()['v2_budget']['request_max']
+    advertised = capabilities()['v2_budget']
+    maximum = advertised['request_max']
     assert maximum == {'steps': 10_000_000, 'rows': 100_000}
-    assert Budget.from_request(None).steps == 100_000
+    assert Budget.from_request(None).steps == 1_000_000
+    for supplied in (None, {}, {'rows': 5000}):
+        checked = handle_request({'edition': 2, 'code': 'return 1', 'budget': supplied, 'check': True})
+        assert checked['ok'] and checked['budget']['steps'] == advertised['steps'] == 1_000_000
+        result = handle_request({'edition': 2, 'code': 'return 1', 'budget': supplied})
+        assert result['success'] and result['usage']['limits'] == checked['budget']
+    assert advertised['rows'] == 10_000 and advertised['depth'] == 64 and advertised['seconds'] is None
     for steps in (1_000_001, maximum['steps']):
         checked = handle_request({'edition': 2, 'code': 'return 1', 'budget': {'steps': steps}, 'check': True})
         assert checked['ok'] and checked['budget']['steps'] == steps
@@ -178,6 +187,15 @@ def test_public_budget_limit_matches_check_and_runtime():
         assert result['success'] and result['usage']['limits']['steps'] == steps
     failed = handle_request({'edition': 2, 'code': 'return 1', 'budget': {'steps': maximum['steps'] + 1}})
     assert not failed.get('executed') and 'BUDGET_ARGUMENT' in str(failed)
+
+
+@pytest.mark.parametrize('budget,dimension', [({'steps': 2}, 'steps'), ({'rows': 2}, 'rows')])
+def test_explicit_small_budget_still_stops_work(budget, dimension):
+    result = handle_request({'edition': 2, 'code': '[1,2,3] >> [table:each] { return $it*2 }',
+                             'budget': budget})
+    assert not result['success'] and result['diagnostic']['code'] == 'BUDGET', result
+    exceeded = result['diagnostic']['details']['exceeded'][dimension]
+    assert exceeded == {'used': 3, 'limit': 2}
 
 
 @pytest.mark.system

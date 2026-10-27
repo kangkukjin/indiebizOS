@@ -428,6 +428,7 @@ def test_goal_teaching_runs_current_control_grammar(domain_runtime, name, expect
 
 def test_teaching_budget_matches_runtime_contract():
     from ibl_v2_runtime import Budget
+    from tool_loader import build_execute_ibl_tool
     full = (FRAGMENTS / '12_ibl_only.md').read_text()
     compact = (FRAGMENTS / '12_ibl_compact.md').read_text()
     defaults = re.search(r'기본 (\d+)만 계산 단계·(\d+)만 반복 행·함수 깊이 (\d+)', full)
@@ -438,6 +439,9 @@ def test_teaching_budget_matches_runtime_contract():
     assert (int(maxima[1].replace(',', '')) * 10000, int(maxima[2]) * 10000) == (
         Budget.REQUEST_LIMITS['steps'], Budget.REQUEST_LIMITS['rows'])
     assert budget.seconds is None and '프로그램 전체의 기본 시간 제한은 없음' in full
+    description = build_execute_ibl_tool()['input_schema']['properties']['budget']['description']
+    for dimension in ('steps', 'rows'):
+        assert f'{dimension} 기본 {getattr(budget, dimension)}(최대 {Budget.REQUEST_LIMITS[dimension]})' in description
 
 
 if __name__ == '__main__':

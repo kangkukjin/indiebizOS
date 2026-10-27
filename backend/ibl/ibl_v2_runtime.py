@@ -39,7 +39,7 @@ class Returned(BaseException):
 @dataclass
 class Budget:
     REQUEST_LIMITS = {"steps": 10_000_000, "rows": 100_000}
-    steps: int = 100000
+    steps: int = 1_000_000
     rows: int = 10000
     seconds: float | None = None
     depth: int = 64

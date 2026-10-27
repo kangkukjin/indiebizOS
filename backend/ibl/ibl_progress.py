@@ -61,7 +61,7 @@ def claim(total: int = 0) -> Optional[str]:
 
 
 def report_step(ticket: Optional[str], step: int, of: int, action: str,
-                detail: Optional[dict] = None) -> None:
+                detail: Optional[dict] = None, reused: bool = False) -> None:
     """소유자의 좌표 갱신 — best-effort(신고가 본 실행을 깨지 않는다).
 
     detail 은 이 좌표가 속한 회차(each 의 row/rows 등) — 버스(채팅 표면)와 티켓 **둘 다**에 같은 신고로
@@ -72,7 +72,8 @@ def report_step(ticket: Optional[str], step: int, of: int, action: str,
     지운다(each 밖으로 나간 좌표에 옛 행이 남으면 거짓) — common.spill.ticket_progress.
     """
     from supervision_bus import progress
-    payload = {"step": step, "of": of, "action": action}
+    # reused 는 늘 싣는다(참/거짓) — 티켓은 신고 키만 병합하므로 빠뜨리면 앞 호출의 "(재사용)" 이 다음 좌표에 남는다(100회차 L100-3).
+    payload = {"step": step, "of": of, "action": action, "reused": bool(reused)}
     if detail:
         payload["detail"] = dict(detail)
     progress(payload)

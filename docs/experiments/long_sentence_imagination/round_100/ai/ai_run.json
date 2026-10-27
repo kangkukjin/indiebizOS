@@ -1,0 +1,51 @@
+{
+ "episode_before": 5558,
+ "sent_at": "2026-10-28 00:50:36",
+ "task_id": "task_sysai_7b502398",
+ "status_url": "/system-ai/tasks/task_sysai_7b502398",
+ "seconds": 1500.0,
+ "episode_after": 5559,
+ "new_episodes": [
+  {
+   "id": 5559,
+   "started_at": "2026-10-28T00:50:36.578021",
+   "source": "training",
+   "total_ms": 431186
+  }
+ ],
+ "accepted": {
+  "response": "작업을 시작했습니다.",
+  "timestamp": "2026-10-28T00:50:36.327389",
+  "provider": "claude_code",
+  "model": "opus",
+  "task_id": "task_sysai_7b502398",
+  "state": "queued",
+  "status_url": "/system-ai/tasks/task_sysai_7b502398"
+ },
+ "polls_total": 663584,
+ "polls_head": [
+  {
+   "t": 20.0,
+   "status": "pending"
+  },
+  {
+   "t": 40.1,
+   "status": "pending"
+  },
+  {
+   "t": 60.1,
+   "status": "pending"
+  }
+ ],
+ "polls_tail": [
+  {
+   "t": 1500.0,
+   "status": "completed"
+  },
+  {
+   "t": 1500.0,
+   "status": "completed"
+  }
+ ],
+ "sender_note": "송신기 결함: 종료 판정을 view['status'] 로 봤는데 접수증은 state='succeeded'/status='completed' — 1500초 동안 즉시 반환 폴링을 반복했다(원본 32MB → 요약으로 교체). 턴 자체는 00:57:48 완료(episode 5559, 431초)."
+}

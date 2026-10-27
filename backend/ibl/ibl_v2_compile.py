@@ -436,6 +436,9 @@ class Compiler(CallAnalysis):
                 import re
                 if re.search(r"\$[\w]+\.[\w]", d["value"]):
                     self.warn(node, "LITERAL_DOLLAR", "이 문자열의 $변수.필드는 판본 2에서 문자 그대로입니다. 값 참조나 f 문자열의 ${표현식}을 사용하세요.")
+                elif re.search(r"\{\$[\w]+\}|\$\{", d["value"]):
+                    # 100회차 L100-7: 평문 "w_{$it}.txt" 는 보간이 아니라 글자다 — 병렬 each 에서 전 행이 같은 파일에 쓰는 거절로만 드러났다.
+                    self.warn(node, "LITERAL_BRACE", "평문 문자열의 {$이름}·${…}은 보간되지 않고 문자 그대로입니다. 보간은 f\"…${식}…\" 만입니다.")
                 return Type("Text", literal=d["value"])
             if type(d["value"]) is int:
                 return Type("Number", literal=d["value"])
@@ -633,7 +636,9 @@ class Compiler(CallAnalysis):
                                    expected=str(join(join(TEXT, NUMBER), BOOL)), actual=str(t))
                     elif t.kind == "Unknown":
                         self.need(part, t, join(join(TEXT, NUMBER), BOOL))
-                    known.append(static_text(t))
+                    # 정수 리터럴 보간은 실행의 scalar_text 와 같은 글자다 — 가지별 경로의 자원 정체(100회차 L100-2).
+                    known.append(static_text(t) if static_text(t) is not None
+                                 else (str(t.literal) if t.kind == "Number" and type(t.literal) is int else None))
                 else:
                     known.append(part if isinstance(part, str) else None)
                     if isinstance(part, str) and _BARE_DOLLAR_NAME.search(part):
@@ -675,6 +680,10 @@ class Compiler(CallAnalysis):
                 writes.update(branch_writes)
             if conflict:
                 self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
+            if len(types) > 1 and any("unknown" in self.node_effects.get(b.id, set()) for b in parallel_branches(node)):
+                self.warn(node, "PARALLEL_RESOURCE_UNKNOWN",
+                          "병렬 가지에 효과 미상 호출(파일 스크립트 등)이 있어 실행 시 자원 독립성을 확정할 수 없어 거절됩니다. "
+                          "순차(;)로 돌리거나 효과를 선언한 등록 스크립트를 쓰세요.")
             return ordered_list(types)
         if kind == "fallback":
             previous = self.catch_value_faults
@@ -1006,6 +1015,12 @@ class Compiler(CallAnalysis):
         self.returns = old_returns
         body_writes, self.access_log = self.access_log, outer_writes | self.access_log
         single = items.positions is not None and len(items.positions) <= 1
+        if type(options["parallel"]) is int and options["parallel"] > 1 and not single and "unknown" in self.node_effects.get(node.data["body"].id, set()):
+            # 100회차 L100-1: 효과 미상 호출(파일 스크립트 등)이 든 병렬 반복은 실행 입장(admit)에서 가지가 둘 이상이면 반드시 거절된다 —
+            # 검사가 침묵하면 작성자는 실행에서야 안다. 정책은 실행이 정하고 여기서는 미리 말한다.
+            self.warn(node, "PARALLEL_RESOURCE_UNKNOWN",
+                      "병렬 반복 안에 효과 미상 호출(파일 스크립트 등)이 있어 실행 시 가지가 둘 이상이면 자원 독립성을 확정할 수 없어 거절됩니다. "
+                      "순차(parallel:1)로 돌리거나 효과를 선언한 등록 스크립트를 쓰세요.")
         if type(options["parallel"]) is int and options["parallel"] > 1 and any(a.mode == "write" and a.resources for a in body_writes) and not single:
             # 반복마다 같은 자원 — 병렬 반복들이 서로 덮어쓴다. 원소에 따라 정해지는 자원은 여기 오지 않는다.
             self.issue(node, "PARALLEL_WRITE_CONFLICT",

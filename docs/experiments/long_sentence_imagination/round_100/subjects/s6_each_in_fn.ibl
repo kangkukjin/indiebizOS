@@ -1,0 +1,7 @@
+#!ibl edition=2
+[def:돌기]($경로) {
+  return [10,20,30] >> [table:each]{parallel:$병렬} { return [self:script]{path:$경로,args:{s:0.7,i:$it},timeout:30} }
+}
+$sl=[self:write]{path:"~turn/sleeper.py",content:$본문}
+$r=[fn:돌기]{경로:$sl.path}
+return {rows:len($r),items:$r}

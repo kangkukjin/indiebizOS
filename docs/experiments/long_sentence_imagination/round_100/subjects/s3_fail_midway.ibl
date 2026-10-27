@@ -1,0 +1,4 @@
+#!ibl edition=2
+$sl=[self:write]{path:"~turn/sleeper.py",content:$본문}
+$rows=[1,2,3,4,5,6] >> [table:each]{parallel:$병렬} { return [self:script]{path:$sl.path,args:{s:0.7,i:$it,fail_at:4},timeout:30} }
+return {rows:len($rows),items:$rows}

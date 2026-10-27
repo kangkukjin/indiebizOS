@@ -35,6 +35,8 @@ HINTS = {
     "NOT_FOUND": "요청한 파일·디렉토리가 없습니다. 경로를 확인하거나 원천을 다시 요청하세요. 선택 자료라면 catch로 부재를 명시하세요.",
     "TARGET_NODE": "@별칭 노드 지정은 [node:action]{…}@별칭 처럼 도구 호출 바로 뒤에만 씁니다. 함수 호출·each 블록은 지정하는 몸 없이 현재 몸에서 돕니다.",
     "UNSPECIFIED_INPUT": "선언됐지만 제공되지 않은 표면 입력(declared_inputs − inputs)은 호출 인자 자리(인자 생략)와 f-문자열 보간(빈 문자열)에서만 쓸 수 있습니다. 값이 필요하면 표면 입력에 default 를 선언하거나 호출 앞 문장에서 조건 값으로 정하세요.",
+    "LITERAL_BRACE": "평문 문자열은 치환하지 않습니다. 보간은 f\"…${식}…\" 로 쓰고, 문자 그대로 의도했다면 경고를 무시하세요.",
+    "PARALLEL_RESOURCE_UNKNOWN": "효과 미상 호출은 가지별 자원을 알 수 없어 병렬 입장에서 거절됩니다. 순차로 돌리거나 효과를 선언한 등록 스크립트(script.md)를 쓰세요.",
     "LITERAL_DOLLAR": "일반 문자열은 치환하지 않습니다. 값 참조 또는 f 문자열의 ${표현식}으로 옮기거나, 문자 그대로 의도했다면 경고를 무시하세요.",
     "RECORD_LENGTH": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
     "INPUTS": 'inputs는 {입력:값}이며 코드는 $입력을 사용합니다. 결과 참조는 inputs:{입력:{"$ref":"결과 id"}}처럼 이름의 값 자리에 둡니다.',
@@ -641,6 +643,11 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
         return UNKNOWN
     if name == 'text':
         need(0, join(join(TEXT, NUMBER), BOOL))
+        # 컴파일 시 값이 정해진 글자·정수는 글자 리터럴로 전달한다 — 자원 정체(가지별 경로)의 재료(100회차 L100-2).
+        if types and types[0].kind == 'Text' and isinstance(types[0].literal, str):
+            return Type('Text', literal=types[0].literal)
+        if types and types[0].kind == 'Number' and type(types[0].literal) is int:
+            return Type('Text', literal=str(types[0].literal))
         return TEXT
     if name == 'json':
         return TEXT

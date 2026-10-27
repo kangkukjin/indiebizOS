@@ -317,3 +317,73 @@ def test_시작_표식은_청소보다_먼저_쓰고_청소는_드물다(monkeyp
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+# ── 2026-10-28 긴문장 100회차 L100-3 — 순수 each 동안의 좌표 정직성 ────────────────────────────────────────
+def test_접힌_좌표는_beat_앞에서_흘러가고_순수_each_는_계산_중으로_보인다(monkeypatch):
+    """S7 실측: 읽기 3연속이 0.25초 접기에 삼켜져 표면이 'step 1 self:read' 에 머물렀고, 그 뒤 순수 each 2500행(2초)이
+    도는 내내 note 가 '진행 중' 이라 말했다. 접기 간격은 **기본값 그대로** 둔다(R99-1 교훈)."""
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    import ibl_progress
+    t = _fresh()
+    prev = tc.get_surface_ticket(), tc.get_progress_ticket()
+    adapter = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number', 'effects': ['read_external']},
+                      lambda rt, args: args["n"])
+    seen = []
+    original_beat = ibl_progress.beat
+    def spy_beat(detail):
+        original_beat(detail)
+        env = ticket_recover(t)
+        seen.append((dict(detail), dict(env.get("progress") or {}), env.get("note") or ""))
+    monkeypatch.setattr(ibl_progress, "beat", spy_beat)
+    plan = compile_program("$a=[test:r]{n:1}; $b=[test:r]{n:2}; $c=[test:r]{n:3}\n"
+                           "$rows=[1,2,3] >> [table:each] { return $it*2 }\nreturn len($rows)", {"test:r": adapter})
+    assert not plan.issues, plan.report()
+    try:
+        tc.set_surface_ticket(t)
+        tc.set_progress_ticket(None)
+        out = Runtime(plan).run()
+    finally:
+        tc.set_surface_ticket(prev[0])
+        tc.set_progress_ticket(prev[1])
+    try:
+        assert out["success"] and out["value"] == 3, out
+        assert len(seen) == 3, seen
+        for detail, prog, note in seen:
+            assert prog.get("step") == 3 and prog.get("action") == "test:r", ("접힌 2·3번째 읽기가 흘러가지 않았다", prog)
+            if detail["row"] == 1:
+                assert "phase" not in (prog.get("detail") or {}), ("첫 행은 아직 모른다 — 표식 없음", prog)
+                continue
+            assert (prog.get("detail") or {}).get("phase") == "compute", prog
+            assert "계산 중" in note and "뒤" in note and "진행 중" not in note, note
+    finally:
+        _cleanup(t)
+
+
+def test_note_는_재사용과_계산_중을_구별한다():
+    from common.spill import _progress_note
+    note = _progress_note({"step": 2, "of": 0, "action": "self:read", "reused": True,
+                           "detail": {"row": 5, "rows": 9, "phase": "compute"}, "updated_at": "T"})
+    assert "step 2 self:read(재사용) 뒤" in note and "each 5/9행 계산 중" in note and "진행 중" not in note, note
+    plain = _progress_note({"step": 2, "of": 0, "action": "self:script", "reused": False,
+                            "detail": {"row": 5, "rows": 9}, "updated_at": "T"})
+    assert "(재사용)" not in plain and "step 2 self:script · each 5/9행 진행 중" in plain, plain
+
+
+def test_beat_의_phase_는_그_beat_의_것이다():
+    """액션 없는 행의 '계산 중' 이 다음 행(액션 있는 beat)에 남지 않는다."""
+    t = _fresh()
+    try:
+        ticket_progress(t, {"step": 1, "of": 0, "action": "self:read", "reused": False})
+        ticket_beat(t, {"row": 1, "rows": 2, "phase": "compute"})
+        assert _progress(t)["detail"].get("phase") == "compute"
+        ticket_beat(t, {"row": 2, "rows": 2})
+        assert "phase" not in _progress(t)["detail"], _progress(t)
+        ticket_progress(t, {"step": 2, "of": 0, "action": "self:write", "reused": True})
+        assert _progress(t).get("reused") is True and "detail" not in _progress(t)
+        ticket_progress(t, {"step": 3, "of": 0, "action": "self:write", "reused": False})
+        assert _progress(t).get("reused") is False, "재사용 표식은 좌표마다 새로 정해진다"
+    finally:
+        _cleanup(t)

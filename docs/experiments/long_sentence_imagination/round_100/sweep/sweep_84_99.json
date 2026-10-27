@@ -1,0 +1,1156 @@
+{
+ "summary": {
+  "files": 69,
+  "ok_true": 8,
+  "only_unbound": 46,
+  "with_other": 15,
+  "http_or_transport_errors": 0,
+  "other_code_totals": {
+   "TYPE": 12,
+   "PURE_EXPRESSION": 1,
+   "READONLY": 2,
+   "BUILTIN": 1,
+   "SYNTAX": 3,
+   "FUNCTION": 7,
+   "PARAMETERS": 1
+  }
+ },
+ "rows": [
+  {
+   "round": 84,
+   "file": "base_v0.ibl",
+   "chars": 8095,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 2.22,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 14,
+   "unbound": 12,
+   "other_codes": {
+    "TYPE": 1,
+    "PURE_EXPRESSION": 1
+   },
+   "other_samples": {
+    "TYPE": [
+     "List<Record> | Text가 필요하지만 Null | Text입니다."
+    ],
+    "PURE_EXPRESSION": [
+     "이 자리의 호출은 순수해야 합니다(효과: read_external)."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 84,
+   "file": "base_v1.ibl",
+   "chars": 8109,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.5,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 13,
+   "unbound": 12,
+   "other_codes": {
+    "TYPE": 1
+   },
+   "other_samples": {
+    "TYPE": [
+     "Bool | Number | Text가 필요하지만 Null | Text입니다."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 84,
+   "file": "base_v2.ibl",
+   "chars": 8113,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 1.09,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 13,
+   "unbound": 12,
+   "other_codes": {
+    "TYPE": 1
+   },
+   "other_samples": {
+    "TYPE": [
+     "List<Record> | Text가 필요하지만 Null | Text입니다."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 84,
+   "file": "base_v3.ibl",
+   "chars": 8487,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 1.83,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 13,
+   "unbound": 12,
+   "other_codes": {
+    "TYPE": 1
+   },
+   "other_samples": {
+    "TYPE": [
+     "List<Record> | Text가 필요하지만 Null | Text입니다."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 85,
+   "file": "base_v0.ibl",
+   "chars": 1716,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 1.91,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 6,
+   "unbound": 6,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 85,
+   "file": "base_v1.ibl",
+   "chars": 1703,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 1.85,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 5,
+   "unbound": 5,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 85,
+   "file": "recover_v0.ibl",
+   "chars": 1591,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.9,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 9,
+   "unbound": 8,
+   "other_codes": {
+    "READONLY": 1
+   },
+   "other_samples": {
+    "READONLY": [
+     "읽기 전용 바인딩: $md"
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 85,
+   "file": "recover_v1.ibl",
+   "chars": 1621,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.81,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 10,
+   "unbound": 8,
+   "other_codes": {
+    "TYPE": 2
+   },
+   "other_samples": {
+    "TYPE": [
+     "Text가 필요하지만 List<Text>입니다.",
+     "List<Text>가 필요하지만 Text입니다."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 85,
+   "file": "recover_v2.ibl",
+   "chars": 1621,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 1.07,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 8,
+   "unbound": 8,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 85,
+   "file": "recover_v3.ibl",
+   "chars": 1673,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.36,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 9,
+   "unbound": 8,
+   "other_codes": {
+    "BUILTIN": 1
+   },
+   "other_samples": {
+    "BUILTIN": [
+     "알 수 없는 내장 함수: parse_json"
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 85,
+   "file": "recover_v4.ibl",
+   "chars": 1642,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.59,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 8,
+   "unbound": 8,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 86,
+   "file": "base_v0.ibl",
+   "chars": 2623,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.87,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 6,
+   "unbound": 6,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 86,
+   "file": "boundaries_v0.ibl",
+   "chars": 1791,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.67,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 4,
+   "unbound": 4,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 86,
+   "file": "boundaries_v1.ibl",
+   "chars": 1946,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.67,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 4,
+   "unbound": 4,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 86,
+   "file": "unit_error_minimal_v0.ibl",
+   "chars": 132,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.22,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 86,
+   "file": "unit_error_minimal_v1.ibl",
+   "chars": 125,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.2,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 87,
+   "file": "base_v0.ibl",
+   "chars": 11625,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 1.14,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 13,
+   "unbound": 13,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 87,
+   "file": "probe_chrome_b.ibl",
+   "chars": 305,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.5,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 3,
+   "unbound": 3,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 87,
+   "file": "probe_p2_read.ibl",
+   "chars": 160,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.65,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 2,
+   "unbound": 2,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 87,
+   "file": "probe_p3_step1.ibl",
+   "chars": 142,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.65,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 2,
+   "unbound": 2,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 87,
+   "file": "probe_p3_step2.ibl",
+   "chars": 249,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.71,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 2,
+   "unbound": 2,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 87,
+   "file": "probe_p8.ibl",
+   "chars": 102,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.57,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 1,
+   "unbound": 1,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 87,
+   "file": "probes.ibl",
+   "chars": 895,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.72,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 4,
+   "unbound": 4,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 88,
+   "file": "base_v0.ibl",
+   "chars": 3602,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.21,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 1,
+   "unbound": 0,
+   "other_codes": {
+    "SYNTAX": 1
+   },
+   "other_samples": {
+    "SYNTAX": [
+     "')'가 필요합니다: ,"
+    ]
+   },
+   "error": "\"')'가 필요합니다: ,\""
+  },
+  {
+   "round": 88,
+   "file": "base_v1.ibl",
+   "chars": 3600,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.27,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 22,
+   "unbound": 18,
+   "other_codes": {
+    "TYPE": 4
+   },
+   "other_samples": {
+    "TYPE": [
+     "Text가 필요하지만 List<Unknown>입니다.",
+     "Text가 필요하지만 List<Unknown>입니다.",
+     "Text가 필요하지만 List<Unknown>입니다."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 88,
+   "file": "base_v2.ibl",
+   "chars": 3595,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.27,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 18,
+   "unbound": 18,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 88,
+   "file": "continuation_v0.ibl",
+   "chars": 4063,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.27,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 27,
+   "unbound": 27,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "complete_v0.ibl",
+   "chars": 9752,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.43,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 34,
+   "unbound": 34,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "complete_v1.ibl",
+   "chars": 9768,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.42,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 34,
+   "unbound": 34,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "complete_v2.ibl",
+   "chars": 9789,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.41,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 34,
+   "unbound": 34,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "complete_v3.ibl",
+   "chars": 10144,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.59,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 34,
+   "unbound": 34,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "functions_v0.ibl",
+   "chars": 8681,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.4,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "functions_v1.ibl",
+   "chars": 8697,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.39,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "functions_v2.ibl",
+   "chars": 8718,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.39,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "functions_v3.ibl",
+   "chars": 9073,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.39,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 89,
+   "file": "main_v0.ibl",
+   "chars": 1070,
+   "edition_line": "$prior={}",
+   "seconds": 0.23,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 41,
+   "unbound": 34,
+   "other_codes": {
+    "FUNCTION": 7
+   },
+   "other_samples": {
+    "FUNCTION": [
+     "등록된 함수가 없습니다: 자료운영합류",
+     "등록된 함수가 없습니다: 비용검토",
+     "등록된 함수가 없습니다: 일정검토"
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 90,
+   "file": "functions.ibl",
+   "chars": 9073,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.39,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 90,
+   "file": "observe.ibl",
+   "chars": 264,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.22,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 1,
+   "unbound": 1,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 90,
+   "file": "start.ibl",
+   "chars": 245,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.24,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 2,
+   "unbound": 2,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 91,
+   "file": "functions.ibl",
+   "chars": 9073,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.45,
+   "ok": true,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 0,
+   "unbound": 0,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 91,
+   "file": "observe.ibl",
+   "chars": 264,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.22,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 1,
+   "unbound": 1,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 91,
+   "file": "start.ibl",
+   "chars": 245,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.21,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 2,
+   "unbound": 2,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 92,
+   "file": "main_v0.ibl",
+   "chars": 565,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.25,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 1,
+   "unbound": 1,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 93,
+   "file": "main_v0.ibl",
+   "chars": 544,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.31,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 4,
+   "unbound": 4,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 94,
+   "file": "main_v0.ibl",
+   "chars": 2835,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.23,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 1,
+   "unbound": 0,
+   "other_codes": {
+    "SYNTAX": 1
+   },
+   "other_samples": {
+    "SYNTAX": [
+     "식을 읽을 수 없습니다: ."
+    ]
+   },
+   "error": "\"식을 읽을 수 없습니다: .\""
+  },
+  {
+   "round": 94,
+   "file": "main_v1.ibl",
+   "chars": 2842,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.3,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 18,
+   "unbound": 18,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 94,
+   "file": "main_v2.ibl",
+   "chars": 3118,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.45,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 20,
+   "unbound": 20,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 95,
+   "file": "main_v0.ibl",
+   "chars": 3389,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.22,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 1,
+   "unbound": 0,
+   "other_codes": {
+    "SYNTAX": 1
+   },
+   "other_samples": {
+    "SYNTAX": [
+     "보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요."
+    ]
+   },
+   "error": "\"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\""
+  },
+  {
+   "round": 95,
+   "file": "main_v1.ibl",
+   "chars": 3389,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.28,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 7,
+   "unbound": 7,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 95,
+   "file": "main_v2.ibl",
+   "chars": 3420,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.28,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 7,
+   "unbound": 7,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 96,
+   "file": "main_v0.ibl",
+   "chars": 2702,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.32,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 18,
+   "unbound": 16,
+   "other_codes": {
+    "TYPE": 2
+   },
+   "other_samples": {
+    "TYPE": [
+     "Text가 필요하지만 List<Text>입니다.",
+     "List<Text>가 필요하지만 Text입니다."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 96,
+   "file": "main_v1.ibl",
+   "chars": 2702,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.32,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 16,
+   "unbound": 16,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 96,
+   "file": "main_v2.ibl",
+   "chars": 2707,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.32,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 16,
+   "unbound": 16,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 96,
+   "file": "main_v3.ibl",
+   "chars": 2707,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.33,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 16,
+   "unbound": 16,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 96,
+   "file": "main_v4.ibl",
+   "chars": 2707,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.32,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 16,
+   "unbound": 16,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 97,
+   "file": "p1_v0.ibl",
+   "chars": 5657,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.41,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 19,
+   "unbound": 18,
+   "other_codes": {
+    "PARAMETERS": 1
+   },
+   "other_samples": {
+    "PARAMETERS": [
+     "람다 인자는 중복·예약 이름을 쓸 수 없습니다."
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 97,
+   "file": "p1_v1.ibl",
+   "chars": 5651,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.39,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 18,
+   "unbound": 18,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 97,
+   "file": "p2_v0.ibl",
+   "chars": 3568,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.32,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 13,
+   "unbound": 13,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 97,
+   "file": "p2_v1.ibl",
+   "chars": 3858,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.33,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 18,
+   "unbound": 18,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 98,
+   "file": "p1_v0.ibl",
+   "chars": 12093,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.52,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 66,
+   "unbound": 65,
+   "other_codes": {
+    "READONLY": 1
+   },
+   "other_samples": {
+    "READONLY": [
+     "읽기 전용 바인딩: $i"
+    ]
+   },
+   "error": null
+  },
+  {
+   "round": 98,
+   "file": "p1_v1.ibl",
+   "chars": 12117,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.67,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 65,
+   "unbound": 65,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 98,
+   "file": "p1_v2.ibl",
+   "chars": 12402,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.52,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 65,
+   "unbound": 65,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 98,
+   "file": "p1_v3.ibl",
+   "chars": 12641,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.54,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 67,
+   "unbound": 67,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 98,
+   "file": "p1_v4.ibl",
+   "chars": 13175,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.51,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 70,
+   "unbound": 70,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 99,
+   "file": "p1_v0.ibl",
+   "chars": 6263,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.41,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 24,
+   "unbound": 24,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 99,
+   "file": "p1_v1.ibl",
+   "chars": 6248,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.42,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 24,
+   "unbound": 24,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 99,
+   "file": "p1_v2.ibl",
+   "chars": 6193,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.41,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 24,
+   "unbound": 24,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 99,
+   "file": "p1_v3.ibl",
+   "chars": 6238,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.42,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 23,
+   "unbound": 23,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  },
+  {
+   "round": 99,
+   "file": "p1_v4.ibl",
+   "chars": 6426,
+   "edition_line": "#!ibl edition=2",
+   "seconds": 0.56,
+   "ok": false,
+   "http_error": null,
+   "transport_error": null,
+   "issue_count": 23,
+   "unbound": 23,
+   "other_codes": {},
+   "other_samples": {},
+   "error": null
+  }
+ ],
+ "at": "2026-10-28 00:44:00"
+}

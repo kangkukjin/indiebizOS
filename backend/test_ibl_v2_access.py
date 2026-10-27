@@ -101,3 +101,45 @@ def test_large_unrelated_value_cannot_hide_known_resource_targets():
 if __name__ == '__main__':
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+# ── 2026-10-28 긴문장 100회차 L100-2 — 가지별 항목이 정수여도 독립 자원의 병렬성은 보존한다 ──────────────────────
+@pytest.mark.parametrize('path', ['f"k${$it}"', '"k"+text($it)'])
+def test_numeric_items_resolve_distinct_resources_per_branch(path):
+    """실측: `[1,2,3] >> each{parallel:3}{[t:write]{key:f"k${$it}"}}` 가 PARALLEL_RESOURCE_CONFLICT 로 거절됐다 —
+    글자 항목(["a","b"])은 통과하는데 정수 항목은 infer() 가 리터럴을 버려 가지별 자원이 미해소였다."""
+    barrier = threading.Barrier(3)
+    def write(rt, a):
+        barrier.wait(timeout=2)
+        return 1
+    plan = compile_program('[1,2,3] >> [table:each]{parallel:3} { return [t:write]{key:' + path + '} }', registry(write))
+    assert not plan.issues, plan.report()
+    out = Runtime(plan).run()
+    assert out['success'], out
+
+
+def test_numeric_items_same_resource_still_conflict():
+    plan = compile_program('[1,2,3] >> [table:each]{parallel:3} { return [t:write]{key:"k"+text($it - $it)} }', registry(lambda rt, a: 1))
+    assert not plan.issues, plan.report()
+    assert Runtime(plan).run()['diagnostic']['code'] == 'PARALLEL_RESOURCE_CONFLICT'
+
+
+def test_unknown_effect_in_parallel_is_warned_at_check_time():
+    """L100-1 ①: 효과 미상 호출(파일 스크립트 등)이 든 병렬 반복·가지는 실행 입장에서 반드시 거절되는데 check 는 침묵했다."""
+    opaque = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number', 'effects': ['unknown']}, lambda rt, a: 1)
+    plan = compile_program('[1,2] >> [table:each]{parallel:2} { return [t:opaque]{n:$it} }', {'t:opaque': opaque})
+    assert not plan.issues, plan.report()
+    assert any(w['code'] == 'PARALLEL_RESOURCE_UNKNOWN' for w in plan.preflight.get('warnings', [])), plan.warnings
+    plan = compile_program('[t:opaque]{n:1} & [t:opaque]{n:2}', {'t:opaque': opaque})
+    assert any(w['code'] == 'PARALLEL_RESOURCE_UNKNOWN' for w in plan.preflight.get('warnings', [])), plan.warnings
+    plan = compile_program('[1,2] >> [table:each] { return [t:opaque]{n:$it} }', {'t:opaque': opaque})
+    assert not any(w['code'] == 'PARALLEL_RESOURCE_UNKNOWN' for w in plan.preflight.get('warnings', [])), "순차 반복은 경고 없음"
+    out = Runtime(compile_program('[1,2] >> [table:each]{parallel:2} { return [t:opaque]{n:$it} }', {'t:opaque': opaque})).run()
+    assert out['diagnostic']['code'] == 'PARALLEL_RESOURCE_CONFLICT' and '등록 스크립트' in out['diagnostic']['message'], out['diagnostic']
+
+
+def test_plain_string_brace_is_warned():
+    """L100-7: 평문 "w_{$it}.txt" 는 보간이 아니라 글자 — 전 행이 같은 파일에 써 PARALLEL_WRITE_CONFLICT 로만 드러났다."""
+    plan = compile_program('[1,2] >> [table:each]{parallel:2} { return [t:write]{key:"w_{$it}"} }', registry(lambda rt, a: 1))
+    assert any(w['code'] == 'LITERAL_BRACE' for w in plan.preflight.get('warnings', [])), plan.warnings
+    assert any(i['code'] == 'PARALLEL_WRITE_CONFLICT' for i in plan.issues), plan.issues

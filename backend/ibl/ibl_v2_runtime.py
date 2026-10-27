@@ -152,6 +152,7 @@ class Runtime(ExpressionEvaluator):
         self._progress_ticket = None
         self._progress_calls = 0
         self._progress_last = {}   # 부류("action"/"row") → (키, monotonic)
+        self._progress_pending = None   # 접힌 좌표(step, 액션, 회차) — 다음 beat 앞에서 흘려 보낸다(100회차 L100-3)
         from execution_commit import current_scope, CommitScope
         self.commit_scope = current_scope() or CommitScope()
         self.owns_commit_scope = current_scope() is None
@@ -565,13 +566,14 @@ class Runtime(ExpressionEvaluator):
         items = guard(rows_value(options["items"]), "List", "each.items")
         mode, collect = options.get("mode", "map"), options.get("on_error", "stop") == "collect"
         coverage = args.select("items").shape_evidence | args.control
+        calls_at_entry = self._progress_calls
         def row(index):
             self.budget.tick(row=True)
             # 회차는 이 스레드의 현재값으로 둔다 — 행 안의 액션 좌표 신고가 자기 회차를 동봉한다(병렬 가지는 각자 스레드).
             detail = self._row_detail(index + 1, len(items), items[index])
             previous_detail = getattr(self.local, "row_detail", None)
             self.local.row_detail = detail
-            self._report_row(detail)
+            self._report_row(detail, pure=(self._progress_calls == calls_at_entry))
             local = {**env, "it": args.select("items").select(index) if isinstance(options["items"], list) else Binding(items[index], args.evidence), "i": Binding(index)}
             try:
                 result = self.frame(node.data["body"], local)
@@ -742,12 +744,44 @@ class Runtime(ExpressionEvaluator):
         with self.lock:
             self._progress_calls += 1
             n = self._progress_calls
+        self.local.progress_call_no = n
         detail = getattr(self.local, "row_detail", None)
         if not self._progress_due("action", (key, tuple(sorted(detail.items())) if detail else None)):
+            # 접힌 좌표는 버리지 않고 보류한다(2026-10-28 긴문장 100회차 L100-3): 읽기 3연속이 접혀 표면이 "step 1" 에 머물렀고,
+            # 그 뒤 순수 each 가 2초 돌아도 좌표가 안 바뀌어 거짓이 됐다. 다음 움직임(beat) 앞에서 마지막 좌표를 흘려 보낸다.
+            with self.lock:
+                self._progress_pending = (n, key, detail)
             return
+        with self.lock:
+            self._progress_pending = None
         try:
             from ibl_progress import report_step
             report_step(self._progress_ticket, n, 0, key, detail=detail)
+        except Exception:
+            pass
+
+    def _flush_pending_coordinate(self):
+        with self.lock:
+            pending, self._progress_pending = self._progress_pending, None
+        if not pending:
+            return
+        n, key, detail = pending
+        try:
+            from ibl_progress import report_step
+            report_step(self._progress_ticket, n, 0, key, detail=detail)
+        except Exception:
+            pass
+
+    def _report_reused(self, key):
+        """영수증 재사용으로 끝난 호출의 좌표 — "(재사용)" 표식(100회차 L100-3): 실행하지 않은 읽기가 "진행 중"으로 보이면 거짓이다."""
+        n = getattr(self.local, "progress_call_no", None)
+        if n is None:
+            return
+        with self.lock:
+            self._progress_pending = None
+        try:
+            from ibl_progress import report_step
+            report_step(self._progress_ticket, n, 0, key, detail=getattr(self.local, "row_detail", None), reused=True)
         except Exception:
             pass
 
@@ -758,13 +792,21 @@ class Runtime(ExpressionEvaluator):
             detail["row_label"] = str(label)[:40]
         return detail
 
-    def _report_row(self, detail):
-        """[table:each] 회차 신고 — 좌표는 건드리지 않고 detail 만(규약 정본=ibl_progress)."""
+    def _report_row(self, detail, pure=False):
+        """[table:each] 회차 신고 — 좌표는 건드리지 않고 detail 만(규약 정본=ibl_progress).
+
+        pure: 이 each 에 들어온 뒤 아직 액션 호출이 없다 — 좌표의 액션은 끝난(또는 재사용된) 것이므로 둘째 행부터 detail 에
+        phase:"compute" 를 실어 표면이 "계산 중"으로 읽게 한다(100회차 L100-3, S7 순수 each 2500행 동안 "self:read 진행 중"이
+        떠 있었다). 첫 행은 아직 모른다(행 안 액션이 ms 뒤 올 수 있다) — 표식 없이 둔다."""
+        if pure:
+            # 이 each 에 아직 액션이 없다 — 그 앞에서 접혀 보류된 좌표(읽기 3연속의 마지막)를 먼저 흘려 보낸다.
+            # 행 안에 액션이 있는 each 에서는 접기 규약(같은 행 안 같은 액션은 하나)을 그대로 둔다.
+            self._flush_pending_coordinate()
         if not self._progress_due("row", (detail["row"], detail["rows"])):
             return
         try:
             from ibl_progress import beat
-            beat(detail)
+            beat({**detail, "phase": "compute"} if pure and detail.get("row", 1) > 1 else detail)
         except Exception:
             pass
 
@@ -1007,6 +1049,7 @@ class Runtime(ExpressionEvaluator):
             from ibl_v2_ir import unpack
             self.event(node, "receipt_reused", [eid], call_id=call_id, source=source,
                        **({"run_id": self.reuse_run} if source == "reuse" else {}))
+            self._report_reused(key)
             if source == "reuse":
                 receipt = {**receipt, "request_hash": request_hash}
                 with self.lock:

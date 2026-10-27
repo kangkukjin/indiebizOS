@@ -1,0 +1,113 @@
+{
+ "progress_trace": [
+  {
+   "t": 9.6,
+   "key": "{\"action\": \"self:script\", \"detail\": {\"row\": 1, \"row_label\": \"1\", \"rows\": 4}, \"of\": 0, \"step\": 2}",
+   "progress": {
+    "type": "progress",
+    "step": 2,
+    "of": 0,
+    "action": "self:script",
+    "reused": false,
+    "at": 1793118536.970222,
+    "detail": {
+     "row": 1,
+     "rows": 4,
+     "row_label": "1"
+    }
+   }
+  },
+  {
+   "t": 11.6,
+   "key": "{\"action\": \"self:script\", \"detail\": {\"row\": 2, \"row_label\": \"2\", \"rows\": 4}, \"of\": 0, \"step\": 3}",
+   "progress": {
+    "type": "progress",
+    "step": 3,
+    "of": 0,
+    "action": "self:script",
+    "reused": false,
+    "at": 1793118539.052672,
+    "detail": {
+     "row": 2,
+     "rows": 4,
+     "row_label": "2"
+    }
+   }
+  },
+  {
+   "t": 13.6,
+   "key": "{\"action\": \"self:script\", \"detail\": {\"row\": 3, \"row_label\": \"3\", \"rows\": 4}, \"of\": 0, \"step\": 4}",
+   "progress": {
+    "type": "progress",
+    "step": 4,
+    "of": 0,
+    "action": "self:script",
+    "reused": false,
+    "at": 1793118541.171034,
+    "detail": {
+     "row": 3,
+     "rows": 4,
+     "row_label": "3"
+    }
+   }
+  },
+  {
+   "t": 16.2,
+   "key": "{\"action\": \"self:script\", \"detail\": {\"row\": 4, \"row_label\": \"4\", \"rows\": 4}, \"of\": 0, \"step\": 5}",
+   "progress": {
+    "type": "progress",
+    "step": 5,
+    "of": 0,
+    "action": "self:script",
+    "reused": false,
+    "at": 1793118543.282861,
+    "detail": {
+     "row": 4,
+     "rows": 4,
+     "row_label": "4"
+    }
+   }
+  },
+  {
+   "t": 19.7,
+   "key": null,
+   "progress": null
+  }
+ ],
+ "states": [
+  {
+   "t": 1.5,
+   "found_turn": "6cdd456f294a41ce8892fedcfe94365b"
+  },
+  {
+   "t": 1.5,
+   "state": "running"
+  },
+  {
+   "t": 19.7,
+   "state": "completed"
+  }
+ ],
+ "turn": {
+  "id": "6cdd456f294a41ce8892fedcfe94365b",
+  "state": "running",
+  "started_at": "2026-10-27T16:28:48.569395+00:00",
+  "session_id": "legacy-16313d21d3e652e4b085200b6316fe95"
+ },
+ "started": "01:28:47",
+ "final": {
+  "state": "completed",
+  "progress": "",
+  "finished_at": "2026-10-27T16:29:06.995627+00:00",
+  "error": null
+ },
+ "seconds": 19.7,
+ "event_kinds": {
+  "handoff.started": 1,
+  "handoff.tool_start": 1,
+  "handoff.tool_result": 1,
+  "handoff.finished": 1
+ },
+ "events_total": 4,
+ "progress_nonnull": 4
+}

@@ -102,7 +102,7 @@ def tool_event_payload(event: dict, agent: str) -> dict:
     return payload
 
 
-_PROGRESS_FIELDS = ("step", "of", "action", "detail")
+_PROGRESS_FIELDS = ("step", "of", "action", "detail", "reused")   # reused: 영수증 재사용으로 끝난 호출(100회차 L100-3)
 _PROGRESS_BEAT_MIN_INTERVAL_S = 0.2
 
 
@@ -132,7 +132,7 @@ def make_progress_sink(put):
             return
         now = time.time()
         if "action" in detail or "step" in detail:
-            state["coord"] = {k: detail[k] for k in ("step", "of", "action") if k in detail}
+            state["coord"] = {k: detail[k] for k in ("step", "of", "action", "reused") if k in detail}
             event = {"type": "progress", **state["coord"], "at": now}
             if isinstance(detail.get("detail"), dict):
                 event["detail"] = dict(detail["detail"])   # 좌표가 품은 회차(each 행 안의 액션)

@@ -1,0 +1,3825 @@
+{
+ "title": "긴 IBL 실행 중 회수 표면(/ibl/recover progress) 정직성 실측 — 100회차 subjects S1~S7",
+ "executed_at": "2026-10-28 00:52~00:54 (KST)",
+ "method": {
+  "launch": "POST http://127.0.0.1:8765/ibl/execute {code, edition:2, inputs, origin:'training', project_id:'수동모드', ticket:<무작위 hex16>} 를 스레드에서 동기 호출(+S4b·S7b 는 reuse:{run_id}).",
+  "sampling": "같은 ticket 으로 POST /ibl/recover {ticket} 를 목표 0.1초 간격(실측 평균 0.14~0.21초, 최대 1.02초)으로 실행 종료까지 반복하고 종료 직후 1회 더 조회. 표본마다 status·progress(step/of/action/detail/updated_at)·note 를 기록.",
+  "why_http": "MCP execute_ibl 은 결말까지 돌려주지 않는 동기 호출이라, 실행 중 표본은 HTTP 실행+별도 폴링으로만 얻을 수 있었다. ticket 은 이 요청 계층의 전송 필드다(api_ibl.py IBLRequest.ticket).",
+  "inputs": "본문=sleeper.py 원문, 파일=subjects/fixture.txt 절대경로, 목록=[1..2500](S7). S1·S3·S6 의 parallel:$병렬 은 1 로 치환한 사본(추가로 S1 을 3 으로 1회). S2 는 원문 그대로(parallel:3).",
+  "tools": "ai_out/sampler.py(표본기), summarize.py·build_report.py(집계). 원 표본 전량은 ai_out/samples/<편>.json, 집계본 ai_out/runs_compiled.json.",
+  "not_read": "trainer/·runs/·sweep/·docs 폴더와 정답은 열지 않음. 구현은 진입점·요청 필드 확인용으로 backend/surface/api_ibl.py 만 읽음.",
+  "sampling_caveat": "표본 간격(약 0.15초)보다 짧은 단계(write·read 수십 ms)는 표본에 안 잡힐 수 있다 — 표본에 없는 좌표는 '관측 공백'이며 표면이 보고하지 않았다는 증거가 아니다. updated_at 은 초 단위 해상도다."
+ },
+ "runs_summary": [
+  {
+   "name": "S1",
+   "program": "s1_sequential.ibl",
+   "variant": "parallel:1",
+   "run_id": "c7498787784f482bb18fbe1e826bf30b",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 27.823,
+   "value": {
+    "rows": 6,
+    "items": [
+     {
+      "i": 1,
+      "slept": 0.7
+     },
+     {
+      "i": 2,
+      "slept": 0.7
+     },
+     {
+      "i": 3,
+      "slept": 0.7
+     },
+     {
+      "i": 4,
+      "slept": 0.7
+     },
+     {
+      "i": 5,
+      "slept": 0.7
+     },
+     {
+      "i": 6,
+      "slept": 0.7
+     }
+    ]
+   },
+   "diagnostic_code": null,
+   "error": null,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 183,
+    "samples_with_progress": 173,
+    "first_sample_t": 0.001,
+    "last_sample_t": 27.927,
+    "mean_gap_s": 0.153,
+    "max_gap_s": 0.261
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 1,
+    "rows_seen_max": 6,
+    "rows_total_values": [
+     6
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "173/173",
+    "distinct_updated_at": 6,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   }
+  },
+  {
+   "name": "S1p3",
+   "program": "s1_sequential.ibl",
+   "variant": "parallel:3 (추가 확인)",
+   "run_id": "c45c4753c5f0453e9cb38e5d2fb98de7",
+   "reuse_of": null,
+   "success": false,
+   "run_status": "interrupted",
+   "http_wall_s": 0.838,
+   "value": null,
+   "diagnostic_code": "PARALLEL_RESOURCE_CONFLICT",
+   "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 8,
+    "samples_with_progress": 1,
+    "first_sample_t": 0.0,
+    "last_sample_t": 0.904,
+    "mean_gap_s": 0.129,
+    "max_gap_s": 0.181
+   },
+   "observed": {
+    "steps_seen": [
+     1
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "1/1",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "diagnostic",
+     "edition",
+     "error",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "request_inputs",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage"
+    ]
+   }
+  },
+  {
+   "name": "S2",
+   "program": "s2_parallel.ibl",
+   "variant": "원문 그대로(parallel:3)",
+   "run_id": "25fa4ebe30de47a8ad49bca101e6bfdd",
+   "reuse_of": null,
+   "success": false,
+   "run_status": "interrupted",
+   "http_wall_s": 2.925,
+   "value": null,
+   "diagnostic_code": "PARALLEL_RESOURCE_CONFLICT",
+   "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 15,
+    "samples_with_progress": 4,
+    "first_sample_t": 0.001,
+    "last_sample_t": 2.941,
+    "mean_gap_s": 0.21,
+    "max_gap_s": 1.024
+   },
+   "observed": {
+    "steps_seen": [
+     1
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "4/4",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "diagnostic",
+     "edition",
+     "error",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "request_inputs",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage"
+    ]
+   }
+  },
+  {
+   "name": "S3",
+   "program": "s3_fail_midway.ibl",
+   "variant": "parallel:1",
+   "run_id": "5008cf311a5d418fa8a2aaef3a959a50",
+   "reuse_of": null,
+   "success": false,
+   "run_status": "interrupted",
+   "http_wall_s": 11.287,
+   "value": null,
+   "diagnostic_code": "SCRIPT_EXIT",
+   "error": "Script 종료 코드 3. stderr 원문을 확인하세요.",
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 75,
+    "samples_with_progress": 65,
+    "first_sample_t": 0.001,
+    "last_sample_t": 11.357,
+    "mean_gap_s": 0.153,
+    "max_gap_s": 0.522
+   },
+   "observed": {
+    "steps_seen": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 1,
+    "rows_seen_max": 4,
+    "rows_total_values": [
+     6
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "65/65",
+    "distinct_updated_at": 4,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "diagnostic",
+     "edition",
+     "error",
+     "evidence",
+     "executed",
+     "partial_wire",
+     "plan_hash",
+     "recordings",
+     "request_inputs",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage"
+    ]
+   }
+  },
+  {
+   "name": "S4a",
+   "program": "s4_reuse.ibl",
+   "variant": "첫 실행",
+   "run_id": "ffdea0a6891b4852a2c9b6ed951e4b69",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.734,
+   "value": {
+    "reads": 3,
+    "lens": [
+     0,
+     0,
+     0
+    ],
+    "slept": 2.5
+   },
+   "diagnostic_code": null,
+   "error": null,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 43,
+    "samples_with_progress": 35,
+    "first_sample_t": 0.0,
+    "last_sample_t": 5.802,
+    "mean_gap_s": 0.138,
+    "max_gap_s": 0.22
+   },
+   "observed": {
+    "steps_seen": [
+     2,
+     5
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": null,
+    "note_has_coord_ratio": "35/35",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   }
+  },
+  {
+   "name": "S4b",
+   "program": "s4_reuse.ibl",
+   "variant": "reuse:{run_id:S4a}",
+   "run_id": "e0b38cd4b4144da8a0e978b64cd91d23",
+   "reuse_of": "ffdea0a6891b4852a2c9b6ed951e4b69",
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.514,
+   "value": {
+    "reads": 3,
+    "lens": [
+     0,
+     0,
+     0
+    ],
+    "slept": 2.5
+   },
+   "diagnostic_code": null,
+   "error": null,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 41,
+    "samples_with_progress": 30,
+    "first_sample_t": 0.0,
+    "last_sample_t": 5.603,
+    "mean_gap_s": 0.14,
+    "max_gap_s": 0.205
+   },
+   "observed": {
+    "steps_seen": [
+     2,
+     5
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": null,
+    "note_has_coord_ratio": "30/30",
+    "distinct_updated_at": 2,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "reuse",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   }
+  },
+  {
+   "name": "S5",
+   "program": "s5_long_single.ibl",
+   "variant": "",
+   "run_id": "14cd9d717ec54863b523ffa31576b378",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 8.592,
+   "value": {
+    "slept": 5.0
+   },
+   "diagnostic_code": null,
+   "error": null,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 60,
+    "samples_with_progress": 48,
+    "first_sample_t": 0.0,
+    "last_sample_t": 8.632,
+    "mean_gap_s": 0.146,
+    "max_gap_s": 0.233
+   },
+   "observed": {
+    "steps_seen": [
+     2
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": null,
+    "note_has_coord_ratio": "48/48",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   }
+  },
+  {
+   "name": "S6",
+   "program": "s6_each_in_fn.ibl",
+   "variant": "parallel:1",
+   "run_id": "e50f7346deb74c69b5cb79ca07056b13",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 8.693,
+   "value": {
+    "rows": 3,
+    "items": [
+     {
+      "i": 10,
+      "slept": 0.7
+     },
+     {
+      "i": 20,
+      "slept": 0.7
+     },
+     {
+      "i": 30,
+      "slept": 0.7
+     }
+    ]
+   },
+   "diagnostic_code": null,
+   "error": null,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 61,
+    "samples_with_progress": 50,
+    "first_sample_t": 0.001,
+    "last_sample_t": 8.743,
+    "mean_gap_s": 0.146,
+    "max_gap_s": 0.234
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 1,
+    "rows_seen_max": 3,
+    "rows_total_values": [
+     3
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 3,
+    "note_has_coord_ratio": "50/50",
+    "distinct_updated_at": 3,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   }
+  },
+  {
+   "name": "S7a",
+   "program": "s7_reuse_pure.ibl",
+   "variant": "목록=1..2500, 첫 실행",
+   "run_id": "b76c242cbc7444188da00c1e45a3ed95",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.07,
+   "value": {
+    "reads": 3,
+    "lens": [
+     45,
+     45,
+     45
+    ],
+    "n": 2500,
+    "s": 29808
+   },
+   "diagnostic_code": null,
+   "error": null,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 36,
+    "samples_with_progress": 29,
+    "first_sample_t": 0.001,
+    "last_sample_t": 5.123,
+    "mean_gap_s": 0.146,
+    "max_gap_s": 0.207
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     4
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 56,
+    "rows_seen_max": 2486,
+    "rows_total_values": [
+     2500
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 2500,
+    "note_has_coord_ratio": "29/29",
+    "distinct_updated_at": 5,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   }
+  },
+  {
+   "name": "S7b",
+   "program": "s7_reuse_pure.ibl",
+   "variant": "목록=1..2500, reuse:{run_id:S7a}",
+   "run_id": "95a6b5a240f34817ac30e985ac9ffc99",
+   "reuse_of": "b76c242cbc7444188da00c1e45a3ed95",
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.133,
+   "value": {
+    "reads": 3,
+    "lens": [
+     45,
+     45,
+     45
+    ],
+    "n": 2500,
+    "s": 29808
+   },
+   "diagnostic_code": null,
+   "error": null,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 38,
+    "samples_with_progress": 28,
+    "first_sample_t": 0.001,
+    "last_sample_t": 5.222,
+    "mean_gap_s": 0.141,
+    "max_gap_s": 0.188
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     4
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 42,
+    "rows_seen_max": 2468,
+    "rows_total_values": [
+     2500
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 2500,
+    "note_has_coord_ratio": "28/28",
+    "distinct_updated_at": 5,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "reuse",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   }
+  }
+ ],
+ "judgments": {
+  "1_call_number_no_regression": {
+   "verdict": "참(관측 범위 내) — 진행 표본 463개 중 step 역행 0건",
+   "evidence": {
+    "S1": "step 1→2→3→4→5→6→7 (self:write 후 each 행마다 self:script 한 번씩 증가)",
+    "S3": "2→3→4→5",
+    "S6": "1→2→3→4",
+    "S4a/S4b": "2→5",
+    "S7a/S7b": "1→4",
+    "S5": "2"
+   },
+   "samples": [
+    {
+     "t": 1.228,
+     "wall": "00:52:50.501",
+     "status": "running",
+     "step": 1,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:52:50",
+     "note_coord": "step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:52:50)"
+    },
+    {
+     "t": 1.338,
+     "wall": "00:52:50.611",
+     "status": "running",
+     "step": 2,
+     "action": "self:script",
+     "row": 1,
+     "rows": 6,
+     "row_label": "1",
+     "updated_at": "2026-10-28T00:52:50",
+     "note_coord": "step 2 self:script · each 1/6행(1) 진행 중(마지막 움직임 2026-10-28T00:52:50)"
+    },
+    {
+     "t": 4.813,
+     "wall": "00:52:54.086",
+     "status": "running",
+     "step": 3,
+     "action": "self:script",
+     "row": 2,
+     "rows": 6,
+     "row_label": "2",
+     "updated_at": "2026-10-28T00:52:54",
+     "note_coord": "step 3 self:script · each 2/6행(2) 진행 중(마지막 움직임 2026-10-28T00:52:54)"
+    },
+    {
+     "t": 9.241,
+     "wall": "00:52:58.513",
+     "status": "running",
+     "step": 4,
+     "action": "self:script",
+     "row": 3,
+     "rows": 6,
+     "row_label": "3",
+     "updated_at": "2026-10-28T00:52:58",
+     "note_coord": "step 4 self:script · each 3/6행(3) 진행 중(마지막 움직임 2026-10-28T00:52:58)"
+    },
+    {
+     "t": 14.517,
+     "wall": "00:53:03.789",
+     "status": "running",
+     "step": 5,
+     "action": "self:script",
+     "row": 4,
+     "rows": 6,
+     "row_label": "4",
+     "updated_at": "2026-10-28T00:53:03",
+     "note_coord": "step 5 self:script · each 4/6행(4) 진행 중(마지막 움직임 2026-10-28T00:53:03)"
+    },
+    {
+     "t": 18.718,
+     "wall": "00:53:07.991",
+     "status": "running",
+     "step": 6,
+     "action": "self:script",
+     "row": 5,
+     "rows": 6,
+     "row_label": "5",
+     "updated_at": "2026-10-28T00:53:07",
+     "note_coord": "step 6 self:script · each 5/6행(5) 진행 중(마지막 움직임 2026-10-28T00:53:07)"
+    },
+    {
+     "t": 23.28,
+     "wall": "00:53:12.553",
+     "status": "running",
+     "step": 7,
+     "action": "self:script",
+     "row": 6,
+     "rows": 6,
+     "row_label": "6",
+     "updated_at": "2026-10-28T00:53:12",
+     "note_coord": "step 7 self:script · each 6/6행(6) 진행 중(마지막 움직임 2026-10-28T00:53:12)"
+    }
+   ],
+   "caveats": [
+    "progress.of 는 모든 표본에서 0 이며(전체 단계 수 미상), note 에는 of 가 나타나지 않는다.",
+    "S7a·S7b 에서 step 2·3(두·세 번째 self:read)은 표본에 한 번도 나타나지 않았고, 이어진 3.8초 동안의 순수 each 내내 좌표가 'step 1 self:read' 로 남아 있었다(아래 4·추가관측 참조). 역행은 아니지만 좌표가 실제 하는 일을 가리키지 않는다."
+   ]
+  },
+  "2_row_numbers_in_range_and_total": {
+   "verdict": "참 — 반복이 있는 편 모두 row 는 1..N, rows 는 정확한 N, 행 번호 비감소. 반복 없는 편(S4·S5)은 행 회차 없음(정상).",
+   "evidence": {
+    "S1": "row 1..6 전부 관측, rows=6 (6/6)",
+    "S3": "row 1..4 관측(4에서 실패), rows=6",
+    "S6": "함수 안 each 도 row 1..3, rows=3, row_label=10/20/30(항목 값)",
+    "S7a": "row 56..2486 표본, rows=2500",
+    "S7b": "row 42..2468 표본, rows=2500",
+    "S2/S1p3": "each 진입 전 실패로 행 회차 안 보임(해당 실행에서 each 미실행)"
+   },
+   "samples": [
+    {
+     "t": 1.697,
+     "wall": "00:53:33.599",
+     "status": "running",
+     "step": 2,
+     "action": "self:script",
+     "row": 1,
+     "rows": 3,
+     "row_label": "10",
+     "updated_at": "2026-10-28T00:53:33",
+     "note_coord": "step 2 self:script · each 1/3행(10) 진행 중(마지막 움직임 2026-10-28T00:53:33)"
+    },
+    {
+     "t": 3.73,
+     "wall": "00:53:35.632",
+     "status": "running",
+     "step": 3,
+     "action": "self:script",
+     "row": 2,
+     "rows": 3,
+     "row_label": "20",
+     "updated_at": "2026-10-28T00:53:35",
+     "note_coord": "step 3 self:script · each 2/3행(20) 진행 중(마지막 움직임 2026-10-28T00:53:35)"
+    },
+    {
+     "t": 6.068,
+     "wall": "00:53:37.970",
+     "status": "running",
+     "step": 4,
+     "action": "self:script",
+     "row": 3,
+     "rows": 3,
+     "row_label": "30",
+     "updated_at": "2026-10-28T00:53:37",
+     "note_coord": "step 4 self:script · each 3/3행(30) 진행 중(마지막 움직임 2026-10-28T00:53:37)"
+    },
+    {
+     "t": 8.743,
+     "wall": "00:53:40.645",
+     "status": "done(envelope)",
+     "step": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null
+    },
+    {
+     "t": 1.093,
+     "wall": "00:53:47.860",
+     "status": "running",
+     "step": 1,
+     "action": "self:read",
+     "row": 56,
+     "rows": 2500,
+     "row_label": "56",
+     "updated_at": "2026-10-28T00:53:47",
+     "note_coord": "step 1 self:read · each 56/2500행(56) 진행 중(마지막 움직임 2026-10-28T00:53:47)"
+    },
+    {
+     "t": 4.804,
+     "wall": "00:53:51.571",
+     "status": "running",
+     "step": 1,
+     "action": "self:read",
+     "row": 2486,
+     "rows": 2500,
+     "row_label": "2486",
+     "updated_at": "2026-10-28T00:53:51",
+     "note_coord": "step 1 self:read · each 2486/2500행(2486) 진행 중(마지막 움직임 2026-10-28T00:53:51)"
+    }
+   ],
+   "caveats": [
+    "parallel>1 의 행 회차는 미확인 — parallel:3 실행(S2 원문, S1 사본)이 모두 PARALLEL_RESOURCE_CONFLICT 로 each 시작 전 거절되어 동시 행의 표시를 볼 수 없었다.",
+    "S7 의 마지막 행 2500 자체는 표본 간격 때문에 관측되지 않음(관측 공백)."
+   ]
+  },
+  "3_midway_failure_point_in_outcome": {
+   "verdict": "참(결말 봉투에 남음) — 단 진행 좌표 형태로는 남지 않고 진단 형태로 남는다",
+   "evidence": {
+    "last_running_sample": {
+     "t": 9.557,
+     "wall": "00:53:29.973",
+     "status": "running",
+     "step": 5,
+     "action": "self:script",
+     "row": 4,
+     "rows": 6,
+     "row_label": "4",
+     "updated_at": "2026-10-28T00:53:29",
+     "note_coord": "step 5 self:script · each 4/6행(4) 진행 중(마지막 움직임 2026-10-28T00:53:29)"
+    },
+    "final_envelope": {
+     "run_status": "interrupted",
+     "diagnostic_code": "SCRIPT_EXIT",
+     "source_span": {
+      "source_hash": "cacefa90481a6539e37b83ec2828f2cd48a1111e44c95d3e20ddc75421a914ac",
+      "start": 127,
+      "end": 195,
+      "line": 3,
+      "column": 58
+     },
+     "coverage": [
+      "ok",
+      "ok",
+      "ok",
+      "failed",
+      "pending",
+      "pending"
+     ],
+     "error_indices_0based": [
+      "3"
+     ],
+     "stderr_tail": "의도된 실패: 항목 4\n",
+     "partial": [
+      {
+       "i": 1,
+       "slept": 0.7
+      },
+      {
+       "i": 2,
+       "slept": 0.7
+      },
+      {
+       "i": 3,
+       "slept": 0.7
+      }
+     ]
+    },
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "diagnostic",
+     "edition",
+     "error",
+     "evidence",
+     "executed",
+     "partial_wire",
+     "plan_hash",
+     "recordings",
+     "request_inputs",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage"
+    ]
+   },
+   "caveats": [
+    "종료 뒤 recover 응답에는 progress·note 키가 없다(최상위 키 목록 참조). 마지막 좌표 'step 5 self:script · each 4/6행' 은 결말에 보존되지 않고, 대신 coverage[3]=failed·errors 키 '3'(0 기반)·stderr '항목 4'·source_span line 3 이 실패 지점을 가리킨다. 진행 표시는 1 기반 행(4/6), 진단은 0 기반 색인(3)이라 읽는 사람이 환산해야 한다.",
+    "S2·S1p3 의 실행 거절도 결말에 diagnostic PARALLEL_RESOURCE_CONFLICT·source_span line 3 으로 남았다(마지막 진행 표본은 step 1 self:write)."
+   ]
+  },
+  "4_reuse_rerun_same_progress": {
+   "verdict": "S7: 첫 실행과 같은 진행 모양으로 보임(참) — 재사용 표식은 표면에 없음. S4: 읽기 재사용이 일어나지 않은 것으로 보여 '새 읽기 0' 조건 자체가 성립하지 않음. 명시적 '새 읽기 호출 수' 는 미확인.",
+   "evidence": {
+    "S7a_vs_S7b_progress": "둘 다 step 1 self:read → (each 동안) 'step 1 self:read · each r/2500행' → step 4 table:reduce. 값 동일 {n:2500, s:29808, lens:[45,45,45]}.",
+    "S7_reuse_indication": {
+     "S7a_read_ms_by_line": {
+      "2": 41,
+      "3": 139,
+      "4": 29
+     },
+     "S7b_read_ms_by_line": {
+      "2": 3,
+      "3": 2,
+      "4": 1
+     },
+     "note": "S7b 의 읽기 소요가 1~3ms 로 급감 → 재사용 정황. 그러나 봉투·run 원장(calls=3, uncertain_calls=0)·continuation(read_calls=3)·궤적 사건 어디에도 '재사용 n건/새 호출 0건' 같은 명시 카운터는 찾지 못했다(resumed=false)."
+    },
+    "S7b_reused_read_shown_running": "그렇다(간접) — S7b 의 each 3.8초 동안 note 가 'step 1 self:read · each 42/2500행 … 진행 중' 이라고 말한다. 재사용(1~3ms)으로 끝난 읽기의 이름이 순수 계산 구간 내내 '진행 중' 좌표로 남았다. 같은 현상이 재사용 없는 S7a 에도 있으므로 재사용 고유 결함이 아니라 '순수 each 가 좌표를 갱신하지 않고 마지막 도구 좌표를 물려받는' 일반 현상으로 보인다.",
+    "S4": {
+     "S4a_continuation": {
+      "read_calls": 0,
+      "state_change_possible": true,
+      "read_exclusions": [
+       {
+        "reason": "unknown_write_resources",
+        "write_call_id": "b3bb59ee0c8df3982fc81617e18787a900d0b5ca42b306b12b5aa1d4442aeeb9",
+        "action": "self:script",
+        "location": {
+         "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e",
+         "start": 148,
+         "end": 206,
+         "line": 6,
+         "column": 4
+        },
+        "excluded_calls": 3
+       }
+      ],
+      "read_exclusions_total": 1
+     },
+     "S4a_read_ms": {
+      "3": 101,
+      "4": 40,
+      "5": 58
+     },
+     "S4b_read_ms": {
+      "3": 47,
+      "4": 25,
+      "5": 32
+     },
+     "note": "S4a 가 이미 read_exclusions(reason unknown_write_resources, self:script, excluded_calls 3)를 신고하고 reuse_args 를 내지 않았다. S4b 읽기 소요도 S4a 와 같은 규모(수십 ms) — 읽기는 새로 실행된 것으로 보인다. 진행 모양은 S4a·S4b 동일(step 2 self:read → step 5 self:script)."
+    }
+   },
+   "samples": {
+    "S7a": [
+     {
+      "t": 0.925,
+      "wall": "00:53:47.693",
+      "status": "running",
+      "step": 1,
+      "action": "self:read",
+      "row": null,
+      "rows": null,
+      "row_label": null,
+      "updated_at": "2026-10-28T00:53:47",
+      "note_coord": "step 1 self:read 진행 중(마지막 움직임 2026-10-28T00:53:47)"
+     },
+     {
+      "t": 1.093,
+      "wall": "00:53:47.860",
+      "status": "running",
+      "step": 1,
+      "action": "self:read",
+      "row": 56,
+      "rows": 2500,
+      "row_label": "56",
+      "updated_at": "2026-10-28T00:53:47",
+      "note_coord": "step 1 self:read · each 56/2500행(56) 진행 중(마지막 움직임 2026-10-28T00:53:47)"
+     },
+     {
+      "t": 4.916,
+      "wall": "00:53:51.683",
+      "status": "running",
+      "step": 4,
+      "action": "table:reduce",
+      "row": null,
+      "rows": null,
+      "row_label": null,
+      "updated_at": "2026-10-28T00:53:51",
+      "note_coord": "step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T00:53:51)"
+     }
+    ],
+    "S7b": [
+     {
+      "t": 1.267,
+      "wall": "00:54:08.578",
+      "status": "running",
+      "step": 1,
+      "action": "self:read",
+      "row": 42,
+      "rows": 2500,
+      "row_label": "42",
+      "updated_at": "2026-10-28T00:54:08",
+      "note_coord": "step 1 self:read · each 42/2500행(42) 진행 중(마지막 움직임 2026-10-28T00:54:08)"
+     },
+     {
+      "t": 5.034,
+      "wall": "00:54:12.345",
+      "status": "running",
+      "step": 4,
+      "action": "table:reduce",
+      "row": null,
+      "rows": null,
+      "row_label": null,
+      "updated_at": "2026-10-28T00:54:12",
+      "note_coord": "step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T00:54:12)"
+     }
+    ],
+    "S4a": [
+     {
+      "t": 0.904,
+      "wall": "00:53:41.758",
+      "status": "running",
+      "step": 2,
+      "action": "self:read",
+      "row": null,
+      "rows": null,
+      "row_label": null,
+      "updated_at": "2026-10-28T00:53:41",
+      "note_coord": "step 2 self:read 진행 중(마지막 움직임 2026-10-28T00:53:41)"
+     },
+     {
+      "t": 1.173,
+      "wall": "00:53:42.028",
+      "status": "running",
+      "step": 5,
+      "action": "self:script",
+      "row": null,
+      "rows": null,
+      "row_label": null,
+      "updated_at": "2026-10-28T00:53:41",
+      "note_coord": "step 5 self:script 진행 중(마지막 움직임 2026-10-28T00:53:41)"
+     }
+    ],
+    "S4b": [
+     {
+      "t": 1.335,
+      "wall": "00:54:02.947",
+      "status": "running",
+      "step": 2,
+      "action": "self:read",
+      "row": null,
+      "rows": null,
+      "row_label": null,
+      "updated_at": "2026-10-28T00:54:02",
+      "note_coord": "step 2 self:read 진행 중(마지막 움직임 2026-10-28T00:54:02)"
+     },
+     {
+      "t": 1.444,
+      "wall": "00:54:03.055",
+      "status": "running",
+      "step": 5,
+      "action": "self:script",
+      "row": null,
+      "rows": null,
+      "row_label": null,
+      "updated_at": "2026-10-28T00:54:03",
+      "note_coord": "step 5 self:script 진행 중(마지막 움직임 2026-10-28T00:54:03)"
+     }
+    ]
+   },
+   "side_finding": "S4 프로그램은 get($a,\"content\",\"\") 를 쓰지만 self:read 는 text 를 돌려줘 lens 가 [0,0,0] 이다(프로그램 쪽 필드 이름 문제, 표면과 무관)."
+  },
+  "5_long_single_step_last_movement_frozen": {
+   "verdict": "참 — 얼어 있다. 다만 note 가 그 사실을 스스로 밝힌다.",
+   "evidence": {
+    "S5": "t=1.59s~8.63s(약 7초, 진행 표본 48개) 동안 updated_at=2026-10-28T00:52:34 고정, step 2 self:script 고정. 5초 수면 중 박동(heartbeat) 갱신 없음.",
+    "note_text": "실행이 아직 돌고 있습니다 — step 2 self:script 진행 중(마지막 움직임 2026-10-28T00:52:34). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+   },
+   "samples": [
+    {
+     "t": 0.0,
+     "wall": "00:52:32.819",
+     "status": "running",
+     "step": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null
+    },
+    {
+     "t": 1.592,
+     "wall": "00:52:34.411",
+     "status": "running",
+     "step": 2,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:52:34",
+     "note_coord": "step 2 self:script 진행 중(마지막 움직임 2026-10-28T00:52:34)"
+    },
+    {
+     "t": 8.632,
+     "wall": "00:52:41.451",
+     "status": "done(envelope)",
+     "step": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null
+    }
+   ],
+   "caveats": [
+    "updated_at 은 초 해상도라 1초 미만 움직임은 구분 불가.",
+    "S1 에서도 행 사이 4~5초 동안 updated_at 이 고정(행 경계에서만 갱신)."
+   ]
+  },
+  "6_note_contains_coordinates": {
+   "verdict": "참 — progress 가 있는 표본 463/463 의 note 에 'step N action[ · each r/N행(label)] 진행 중(마지막 움직임 시각)' 이 들어 있다.",
+   "evidence": {
+    "progress_samples_with_coord_in_note": {
+     "S1": "173/173",
+     "S1p3": "1/1",
+     "S2": "4/4",
+     "S3": "65/65",
+     "S4a": "35/35",
+     "S4b": "30/30",
+     "S5": "48/48",
+     "S6": "50/50",
+     "S7a": "29/29",
+     "S7b": "28/28"
+    }
+   },
+   "samples": [
+    "실행이 아직 돌고 있습니다 — step 2 self:script · each 1/6행(1) 진행 중(마지막 움직임 2026-10-28T00:52:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요.",
+    "실행이 아직 돌고 있습니다 — step 1 self:read · each 56/2500행(56) 진행 중(마지막 움직임 2026-10-28T00:53:47). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요.",
+    "실행이 아직 돌고 있습니다 — step 2 self:script 진행 중(마지막 움직임 2026-10-28T00:52:34). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+   ],
+   "caveats": [
+    "progress 가 아직 없는 시작 직후(약 0.8~2.4초)의 note 는 좌표 없이 '실행이 아직 돌고 있습니다' 만 말한다.",
+    "폴링이 실행 요청 등록보다 앞선 첫 표본은 status='unknown' 으로 나왔다(S1·S1p3·S3·S7a·S7b 의 t≈0) — 표본기의 경쟁 조건이며 표면 결함으로 판단하지 않음.",
+    "note 의 좌표가 정확하다는 뜻은 아니다: S7 순수 each 구간의 'self:read' 표기(4번 참조)."
+   ]
+  }
+ },
+ "additional_observations": [
+  "parallel:3 each 는 S2(원문)·S1p3 모두 실행 시 PARALLEL_RESOURCE_CONFLICT(병렬 가지의 읽기/쓰기 자원 독립성 미확보)로 거절. 실행 중 진행 표면은 거절 직전까지 'step 1 self:write' 만 보였다. check 단계가 아니라 실행 단계에서 거절됨.",
+  "S1 의 행당 소요가 약 4.4초(sleeper 수면 0.7초) — 스크립트 실행 오버헤드가 수면보다 크다. S3 는 행당 약 2.5초. 진행 표면 판정과 별개의 비용 관측.",
+  "S7 의 step 은 each 2500행 동안 증가하지 않는다(순수 계산은 도구 호출이 아님). S1 의 each 는 행마다 step 이 1씩 증가 — step 은 '도구 호출 번호' 로 동작한다."
+ ],
+ "unverified": [
+  "parallel>1 에서 동시 행의 row 표시와 step 단조성(실행이 거절되어 관측 불가)",
+  "재사용 실행의 '새 읽기 호출 0' 을 명시하는 카운터(표면·봉투·원장에서 찾지 못함; S7 은 소요 시간 정황만)",
+  "S7 의 step 2·3 이 짧게라도 보고되었는지(표본 간격보다 짧은 구간일 수 있음; 다만 each 구간의 좌표가 step 1 로 남은 점은 관측 사실)"
+ ],
+ "files": {
+  "raw_samples_dir": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples",
+  "compiled": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/runs_compiled.json",
+  "sampler": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/sampler.py"
+ },
+ "runs_detail": [
+  {
+   "name": "S1",
+   "program": "s1_sequential.ibl",
+   "variant": "parallel:1",
+   "ticket": "02bce1ff3c7a90cc",
+   "run_id": "c7498787784f482bb18fbe1e826bf30b",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 27.823,
+   "value": {
+    "rows": 6,
+    "items": [
+     {
+      "i": 1,
+      "slept": 0.7
+     },
+     {
+      "i": 2,
+      "slept": 0.7
+     },
+     {
+      "i": 3,
+      "slept": 0.7
+     },
+     {
+      "i": 4,
+      "slept": 0.7
+     },
+     {
+      "i": 5,
+      "slept": 0.7
+     },
+     {
+      "i": 6,
+      "slept": 0.7
+     }
+    ]
+   },
+   "error": null,
+   "diagnostic_code": null,
+   "diagnostic_source_span": null,
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 3,
+     "ms": 26497,
+     "calls": 6,
+     "actions": [
+      "self:script"
+     ],
+     "source_hash": "a5e88a35a11ee9dac48a15039a3902221adc961edfc3225187965aae87c8f4f2"
+    },
+    {
+     "line": 2,
+     "ms": 99,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "a5e88a35a11ee9dac48a15039a3902221adc961edfc3225187965aae87c8f4f2"
+    }
+   ],
+   "recordings_count": 7,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 183,
+    "samples_with_progress": 173,
+    "first_sample_t": 0.001,
+    "last_sample_t": 27.927,
+    "mean_gap_s": 0.153,
+    "max_gap_s": 0.261
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 1,
+    "rows_seen_max": 6,
+    "rows_total_values": [
+     6
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "173/173",
+    "distinct_updated_at": 6,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.001,
+     "wall": "00:52:49.274",
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    },
+    {
+     "t": 0.141,
+     "wall": "00:52:49.414",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.228,
+     "wall": "00:52:50.501",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:52:50",
+     "note_coord": "step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:52:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:52:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.338,
+     "wall": "00:52:50.611",
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": 1,
+     "rows": 6,
+     "row_label": "1",
+     "updated_at": "2026-10-28T00:52:50",
+     "note_coord": "step 2 self:script · each 1/6행(1) 진행 중(마지막 움직임 2026-10-28T00:52:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 2 self:script · each 1/6행(1) 진행 중(마지막 움직임 2026-10-28T00:52:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.813,
+     "wall": "00:52:54.086",
+     "status": "running",
+     "step": 3,
+     "of": 0,
+     "action": "self:script",
+     "row": 2,
+     "rows": 6,
+     "row_label": "2",
+     "updated_at": "2026-10-28T00:52:54",
+     "note_coord": "step 3 self:script · each 2/6행(2) 진행 중(마지막 움직임 2026-10-28T00:52:54)",
+     "note": "실행이 아직 돌고 있습니다 — step 3 self:script · each 2/6행(2) 진행 중(마지막 움직임 2026-10-28T00:52:54). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 9.241,
+     "wall": "00:52:58.513",
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "self:script",
+     "row": 3,
+     "rows": 6,
+     "row_label": "3",
+     "updated_at": "2026-10-28T00:52:58",
+     "note_coord": "step 4 self:script · each 3/6행(3) 진행 중(마지막 움직임 2026-10-28T00:52:58)",
+     "note": "실행이 아직 돌고 있습니다 — step 4 self:script · each 3/6행(3) 진행 중(마지막 움직임 2026-10-28T00:52:58). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 14.517,
+     "wall": "00:53:03.789",
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": 4,
+     "rows": 6,
+     "row_label": "4",
+     "updated_at": "2026-10-28T00:53:03",
+     "note_coord": "step 5 self:script · each 4/6행(4) 진행 중(마지막 움직임 2026-10-28T00:53:03)",
+     "note": "실행이 아직 돌고 있습니다 — step 5 self:script · each 4/6행(4) 진행 중(마지막 움직임 2026-10-28T00:53:03). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 18.718,
+     "wall": "00:53:07.991",
+     "status": "running",
+     "step": 6,
+     "of": 0,
+     "action": "self:script",
+     "row": 5,
+     "rows": 6,
+     "row_label": "5",
+     "updated_at": "2026-10-28T00:53:07",
+     "note_coord": "step 6 self:script · each 5/6행(5) 진행 중(마지막 움직임 2026-10-28T00:53:07)",
+     "note": "실행이 아직 돌고 있습니다 — step 6 self:script · each 5/6행(5) 진행 중(마지막 움직임 2026-10-28T00:53:07). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 23.28,
+     "wall": "00:53:12.553",
+     "status": "running",
+     "step": 7,
+     "of": 0,
+     "action": "self:script",
+     "row": 6,
+     "rows": 6,
+     "row_label": "6",
+     "updated_at": "2026-10-28T00:53:12",
+     "note_coord": "step 7 self:script · each 6/6행(6) 진행 중(마지막 움직임 2026-10-28T00:53:12)",
+     "note": "실행이 아직 돌고 있습니다 — step 7 self:script · each 6/6행(6) 진행 중(마지막 움직임 2026-10-28T00:53:12). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 27.927,
+     "wall": "00:53:17.200",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S1.json"
+  },
+  {
+   "name": "S1p3",
+   "program": "s1_sequential.ibl",
+   "variant": "parallel:3 (추가 확인)",
+   "ticket": "f99c912ae7e951ec",
+   "run_id": "c45c4753c5f0453e9cb38e5d2fb98de7",
+   "reuse_of": null,
+   "success": false,
+   "run_status": "interrupted",
+   "http_wall_s": 0.838,
+   "value": null,
+   "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+   "diagnostic_code": "PARALLEL_RESOURCE_CONFLICT",
+   "diagnostic_source_span": {
+    "source_hash": "a7608c1fe7a11cf093ef1bc8486566bbf1234d643ef02c67b8c79e8e5db44b7c",
+    "start": 93,
+    "end": 187,
+    "line": 3,
+    "column": 24
+   },
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 50,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "a7608c1fe7a11cf093ef1bc8486566bbf1234d643ef02c67b8c79e8e5db44b7c"
+    }
+   ],
+   "recordings_count": 1,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 8,
+    "samples_with_progress": 1,
+    "first_sample_t": 0.0,
+    "last_sample_t": 0.904,
+    "mean_gap_s": 0.129,
+    "max_gap_s": 0.181
+   },
+   "observed": {
+    "steps_seen": [
+     1
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "1/1",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "diagnostic",
+     "edition",
+     "error",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "request_inputs",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.0,
+     "wall": "00:54:12.613",
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    },
+    {
+     "t": 0.129,
+     "wall": "00:54:12.741",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 0.795,
+     "wall": "00:54:13.407",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:54:13",
+     "note_coord": "step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:54:13)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:54:13). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 0.904,
+     "wall": "00:54:13.516",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S1p3.json"
+  },
+  {
+   "name": "S2",
+   "program": "s2_parallel.ibl",
+   "variant": "원문 그대로(parallel:3)",
+   "ticket": "c6a5d378bb07274e",
+   "run_id": "25fa4ebe30de47a8ad49bca101e6bfdd",
+   "reuse_of": null,
+   "success": false,
+   "run_status": "interrupted",
+   "http_wall_s": 2.925,
+   "value": null,
+   "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+   "diagnostic_code": "PARALLEL_RESOURCE_CONFLICT",
+   "diagnostic_source_span": {
+    "source_hash": "9804435f9d0aaaeea8d31157237025abd22bb112e6451955affc922140f8198d",
+    "start": 93,
+    "end": 187,
+    "line": 3,
+    "column": 24
+   },
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 509,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "9804435f9d0aaaeea8d31157237025abd22bb112e6451955affc922140f8198d"
+    }
+   ],
+   "recordings_count": 1,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 15,
+    "samples_with_progress": 4,
+    "first_sample_t": 0.001,
+    "last_sample_t": 2.941,
+    "mean_gap_s": 0.21,
+    "max_gap_s": 1.024
+   },
+   "observed": {
+    "steps_seen": [
+     1
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "4/4",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "diagnostic",
+     "edition",
+     "error",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "request_inputs",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.001,
+     "wall": "00:53:17.351",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.383,
+     "wall": "00:53:19.733",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:53:19",
+     "note_coord": "step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:53:19)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:53:19). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.941,
+     "wall": "00:53:20.292",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S2.json"
+  },
+  {
+   "name": "S3",
+   "program": "s3_fail_midway.ibl",
+   "variant": "parallel:1",
+   "ticket": "fb6a0557dc22bdac",
+   "run_id": "5008cf311a5d418fa8a2aaef3a959a50",
+   "reuse_of": null,
+   "success": false,
+   "run_status": "interrupted",
+   "http_wall_s": 11.287,
+   "value": null,
+   "error": "Script 종료 코드 3. stderr 원문을 확인하세요.",
+   "diagnostic_code": "SCRIPT_EXIT",
+   "diagnostic_source_span": {
+    "source_hash": "cacefa90481a6539e37b83ec2828f2cd48a1111e44c95d3e20ddc75421a914ac",
+    "start": 127,
+    "end": 195,
+    "line": 3,
+    "column": 58
+   },
+   "diagnostic_coverage": [
+    "ok",
+    "ok",
+    "ok",
+    "failed",
+    "pending",
+    "pending"
+   ],
+   "diagnostic_error_indices": [
+    "3"
+   ],
+   "stderr_tail": "의도된 실패: 항목 4\n",
+   "partial": [
+    {
+     "i": 1,
+     "slept": 0.7
+    },
+    {
+     "i": 2,
+     "slept": 0.7
+    },
+    {
+     "i": 3,
+     "slept": 0.7
+    }
+   ],
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 3,
+     "ms": 9571,
+     "calls": 4,
+     "actions": [
+      "self:script"
+     ],
+     "source_hash": "cacefa90481a6539e37b83ec2828f2cd48a1111e44c95d3e20ddc75421a914ac"
+    },
+    {
+     "line": 2,
+     "ms": 47,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "cacefa90481a6539e37b83ec2828f2cd48a1111e44c95d3e20ddc75421a914ac"
+    }
+   ],
+   "recordings_count": 5,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 75,
+    "samples_with_progress": 65,
+    "first_sample_t": 0.001,
+    "last_sample_t": 11.357,
+    "mean_gap_s": 0.153,
+    "max_gap_s": 0.522
+   },
+   "observed": {
+    "steps_seen": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 1,
+    "rows_seen_max": 4,
+    "rows_total_values": [
+     6
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 6,
+    "note_has_coord_ratio": "65/65",
+    "distinct_updated_at": 4,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "diagnostic",
+     "edition",
+     "error",
+     "evidence",
+     "executed",
+     "partial_wire",
+     "plan_hash",
+     "recordings",
+     "request_inputs",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.001,
+     "wall": "00:53:20.418",
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    },
+    {
+     "t": 0.198,
+     "wall": "00:53:20.615",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.718,
+     "wall": "00:53:22.135",
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": 1,
+     "rows": 6,
+     "row_label": "1",
+     "updated_at": "2026-10-28T00:53:22",
+     "note_coord": "step 2 self:script · each 1/6행(1) 진행 중(마지막 움직임 2026-10-28T00:53:22)",
+     "note": "실행이 아직 돌고 있습니다 — step 2 self:script · each 1/6행(1) 진행 중(마지막 움직임 2026-10-28T00:53:22). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.222,
+     "wall": "00:53:24.638",
+     "status": "running",
+     "step": 3,
+     "of": 0,
+     "action": "self:script",
+     "row": 2,
+     "rows": 6,
+     "row_label": "2",
+     "updated_at": "2026-10-28T00:53:24",
+     "note_coord": "step 3 self:script · each 2/6행(2) 진행 중(마지막 움직임 2026-10-28T00:53:24)",
+     "note": "실행이 아직 돌고 있습니다 — step 3 self:script · each 2/6행(2) 진행 중(마지막 움직임 2026-10-28T00:53:24). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 6.964,
+     "wall": "00:53:27.381",
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "self:script",
+     "row": 3,
+     "rows": 6,
+     "row_label": "3",
+     "updated_at": "2026-10-28T00:53:27",
+     "note_coord": "step 4 self:script · each 3/6행(3) 진행 중(마지막 움직임 2026-10-28T00:53:27)",
+     "note": "실행이 아직 돌고 있습니다 — step 4 self:script · each 3/6행(3) 진행 중(마지막 움직임 2026-10-28T00:53:27). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 9.557,
+     "wall": "00:53:29.973",
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": 4,
+     "rows": 6,
+     "row_label": "4",
+     "updated_at": "2026-10-28T00:53:29",
+     "note_coord": "step 5 self:script · each 4/6행(4) 진행 중(마지막 움직임 2026-10-28T00:53:29)",
+     "note": "실행이 아직 돌고 있습니다 — step 5 self:script · each 4/6행(4) 진행 중(마지막 움직임 2026-10-28T00:53:29). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 11.357,
+     "wall": "00:53:31.774",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S3.json"
+  },
+  {
+   "name": "S4a",
+   "program": "s4_reuse.ibl",
+   "variant": "첫 실행",
+   "ticket": "91bffc73ba19e9c2",
+   "run_id": "ffdea0a6891b4852a2c9b6ed951e4b69",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.734,
+   "value": {
+    "reads": 3,
+    "lens": [
+     0,
+     0,
+     0
+    ],
+    "slept": 2.5
+   },
+   "error": null,
+   "diagnostic_code": null,
+   "diagnostic_source_span": null,
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true,
+    "read_exclusions": [
+     {
+      "reason": "unknown_write_resources",
+      "write_call_id": "b3bb59ee0c8df3982fc81617e18787a900d0b5ca42b306b12b5aa1d4442aeeb9",
+      "action": "self:script",
+      "location": {
+       "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e",
+       "start": 148,
+       "end": 206,
+       "line": 6,
+       "column": 4
+      },
+      "excluded_calls": 3
+     }
+    ],
+    "read_exclusions_total": 1
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 4647,
+     "calls": 1,
+     "actions": [
+      "self:script"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 3,
+     "ms": 101,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 5,
+     "ms": 58,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 2,
+     "ms": 54,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 4,
+     "ms": 40,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    }
+   ],
+   "recordings_count": 5,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 43,
+    "samples_with_progress": 35,
+    "first_sample_t": 0.0,
+    "last_sample_t": 5.802,
+    "mean_gap_s": 0.138,
+    "max_gap_s": 0.22
+   },
+   "observed": {
+    "steps_seen": [
+     2,
+     5
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": null,
+    "note_has_coord_ratio": "35/35",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.0,
+     "wall": "00:53:40.855",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 0.904,
+     "wall": "00:53:41.758",
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:read",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:53:41",
+     "note_coord": "step 2 self:read 진행 중(마지막 움직임 2026-10-28T00:53:41)",
+     "note": "실행이 아직 돌고 있습니다 — step 2 self:read 진행 중(마지막 움직임 2026-10-28T00:53:41). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.173,
+     "wall": "00:53:42.028",
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:53:41",
+     "note_coord": "step 5 self:script 진행 중(마지막 움직임 2026-10-28T00:53:41)",
+     "note": "실행이 아직 돌고 있습니다 — step 5 self:script 진행 중(마지막 움직임 2026-10-28T00:53:41). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.802,
+     "wall": "00:53:46.656",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S4a.json"
+  },
+  {
+   "name": "S4b",
+   "program": "s4_reuse.ibl",
+   "variant": "reuse:{run_id:S4a}",
+   "ticket": "5a66997ac3d00912",
+   "run_id": "e0b38cd4b4144da8a0e978b64cd91d23",
+   "reuse_of": "ffdea0a6891b4852a2c9b6ed951e4b69",
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.514,
+   "value": {
+    "reads": 3,
+    "lens": [
+     0,
+     0,
+     0
+    ],
+    "slept": 2.5
+   },
+   "error": null,
+   "diagnostic_code": null,
+   "diagnostic_source_span": null,
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true,
+    "read_exclusions": [
+     {
+      "reason": "unknown_write_resources",
+      "write_call_id": "b3bb59ee0c8df3982fc81617e18787a900d0b5ca42b306b12b5aa1d4442aeeb9",
+      "action": "self:script",
+      "location": {
+       "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e",
+       "start": 148,
+       "end": 206,
+       "line": 6,
+       "column": 4
+      },
+      "excluded_calls": 3
+     }
+    ],
+    "read_exclusions_total": 1
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 4081,
+     "calls": 1,
+     "actions": [
+      "self:script"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 3,
+     "ms": 47,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 2,
+     "ms": 47,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 5,
+     "ms": 32,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    },
+    {
+     "line": 4,
+     "ms": 25,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e"
+    }
+   ],
+   "recordings_count": 5,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 41,
+    "samples_with_progress": 30,
+    "first_sample_t": 0.0,
+    "last_sample_t": 5.603,
+    "mean_gap_s": 0.14,
+    "max_gap_s": 0.205
+   },
+   "observed": {
+    "steps_seen": [
+     2,
+     5
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": null,
+    "note_has_coord_ratio": "30/30",
+    "distinct_updated_at": 2,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "reuse",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.0,
+     "wall": "00:54:01.611",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.335,
+     "wall": "00:54:02.947",
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:read",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:54:02",
+     "note_coord": "step 2 self:read 진행 중(마지막 움직임 2026-10-28T00:54:02)",
+     "note": "실행이 아직 돌고 있습니다 — step 2 self:read 진행 중(마지막 움직임 2026-10-28T00:54:02). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.444,
+     "wall": "00:54:03.055",
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:54:03",
+     "note_coord": "step 5 self:script 진행 중(마지막 움직임 2026-10-28T00:54:03)",
+     "note": "실행이 아직 돌고 있습니다 — step 5 self:script 진행 중(마지막 움직임 2026-10-28T00:54:03). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.603,
+     "wall": "00:54:07.214",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S4b.json"
+  },
+  {
+   "name": "S5",
+   "program": "s5_long_single.ibl",
+   "variant": "",
+   "ticket": "eb1052ab91cfd512",
+   "run_id": "14cd9d717ec54863b523ffa31576b378",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 8.592,
+   "value": {
+    "slept": 5.0
+   },
+   "error": null,
+   "diagnostic_code": null,
+   "diagnostic_source_span": null,
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 3,
+     "ms": 7023,
+     "calls": 1,
+     "actions": [
+      "self:script"
+     ],
+     "source_hash": "0f25ddc4c6379ce0a825453529f559806fdeb04059ff2ec4a39fc58ac2ef0a2a"
+    },
+    {
+     "line": 2,
+     "ms": 48,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "0f25ddc4c6379ce0a825453529f559806fdeb04059ff2ec4a39fc58ac2ef0a2a"
+    }
+   ],
+   "recordings_count": 2,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 60,
+    "samples_with_progress": 48,
+    "first_sample_t": 0.0,
+    "last_sample_t": 8.632,
+    "mean_gap_s": 0.146,
+    "max_gap_s": 0.233
+   },
+   "observed": {
+    "steps_seen": [
+     2
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": null,
+    "rows_seen_max": null,
+    "rows_total_values": [],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": null,
+    "note_has_coord_ratio": "48/48",
+    "distinct_updated_at": 1,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.0,
+     "wall": "00:52:32.819",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.592,
+     "wall": "00:52:34.411",
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:52:34",
+     "note_coord": "step 2 self:script 진행 중(마지막 움직임 2026-10-28T00:52:34)",
+     "note": "실행이 아직 돌고 있습니다 — step 2 self:script 진행 중(마지막 움직임 2026-10-28T00:52:34). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 8.632,
+     "wall": "00:52:41.451",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S5.json"
+  },
+  {
+   "name": "S6",
+   "program": "s6_each_in_fn.ibl",
+   "variant": "parallel:1",
+   "ticket": "08143e424b77a037",
+   "run_id": "e50f7346deb74c69b5cb79ca07056b13",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 8.693,
+   "value": {
+    "rows": 3,
+    "items": [
+     {
+      "i": 10,
+      "slept": 0.7
+     },
+     {
+      "i": 20,
+      "slept": 0.7
+     },
+     {
+      "i": 30,
+      "slept": 0.7
+     }
+    ]
+   },
+   "error": null,
+   "diagnostic_code": null,
+   "diagnostic_source_span": null,
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "read_calls": 0,
+    "state_change_possible": true
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 3,
+     "ms": 7062,
+     "calls": 3,
+     "actions": [
+      "self:script"
+     ],
+     "source_hash": "911f804dbd5683c9077a58d03c41a5fa9588fb9b456d68c89e83e4232b1e817f"
+    },
+    {
+     "line": 5,
+     "ms": 118,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "911f804dbd5683c9077a58d03c41a5fa9588fb9b456d68c89e83e4232b1e817f"
+    }
+   ],
+   "recordings_count": 4,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 61,
+    "samples_with_progress": 50,
+    "first_sample_t": 0.001,
+    "last_sample_t": 8.743,
+    "mean_gap_s": 0.146,
+    "max_gap_s": 0.234
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 1,
+    "rows_seen_max": 3,
+    "rows_total_values": [
+     3
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 3,
+    "note_has_coord_ratio": "50/50",
+    "distinct_updated_at": 3,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.001,
+     "wall": "00:53:31.903",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.559,
+     "wall": "00:53:33.461",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:53:33",
+     "note_coord": "step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:53:33)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:write 진행 중(마지막 움직임 2026-10-28T00:53:33). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.697,
+     "wall": "00:53:33.599",
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": 1,
+     "rows": 3,
+     "row_label": "10",
+     "updated_at": "2026-10-28T00:53:33",
+     "note_coord": "step 2 self:script · each 1/3행(10) 진행 중(마지막 움직임 2026-10-28T00:53:33)",
+     "note": "실행이 아직 돌고 있습니다 — step 2 self:script · each 1/3행(10) 진행 중(마지막 움직임 2026-10-28T00:53:33). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.73,
+     "wall": "00:53:35.632",
+     "status": "running",
+     "step": 3,
+     "of": 0,
+     "action": "self:script",
+     "row": 2,
+     "rows": 3,
+     "row_label": "20",
+     "updated_at": "2026-10-28T00:53:35",
+     "note_coord": "step 3 self:script · each 2/3행(20) 진행 중(마지막 움직임 2026-10-28T00:53:35)",
+     "note": "실행이 아직 돌고 있습니다 — step 3 self:script · each 2/3행(20) 진행 중(마지막 움직임 2026-10-28T00:53:35). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 6.068,
+     "wall": "00:53:37.970",
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "self:script",
+     "row": 3,
+     "rows": 3,
+     "row_label": "30",
+     "updated_at": "2026-10-28T00:53:37",
+     "note_coord": "step 4 self:script · each 3/3행(30) 진행 중(마지막 움직임 2026-10-28T00:53:37)",
+     "note": "실행이 아직 돌고 있습니다 — step 4 self:script · each 3/3행(30) 진행 중(마지막 움직임 2026-10-28T00:53:37). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 8.743,
+     "wall": "00:53:40.645",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S6.json"
+  },
+  {
+   "name": "S7a",
+   "program": "s7_reuse_pure.ibl",
+   "variant": "목록=1..2500, 첫 실행",
+   "ticket": "02e743dccf3dcca9",
+   "run_id": "b76c242cbc7444188da00c1e45a3ed95",
+   "reuse_of": null,
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.07,
+   "value": {
+    "reads": 3,
+    "lens": [
+     45,
+     45,
+     45
+    ],
+    "n": 2500,
+    "s": 29808
+   },
+   "error": null,
+   "diagnostic_code": null,
+   "diagnostic_source_span": null,
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "reuse_args": {
+     "reuse": {
+      "run_id": "b76c242cbc7444188da00c1e45a3ed95"
+     }
+    },
+    "read_calls": 3,
+    "state_change_possible": false
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 206,
+     "calls": 1,
+     "actions": [
+      "table:reduce"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    },
+    {
+     "line": 3,
+     "ms": 139,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    },
+    {
+     "line": 2,
+     "ms": 41,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    },
+    {
+     "line": 4,
+     "ms": 29,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    }
+   ],
+   "recordings_count": 3,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 36,
+    "samples_with_progress": 29,
+    "first_sample_t": 0.001,
+    "last_sample_t": 5.123,
+    "mean_gap_s": 0.146,
+    "max_gap_s": 0.207
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     4
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 56,
+    "rows_seen_max": 2486,
+    "rows_total_values": [
+     2500
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 2500,
+    "note_has_coord_ratio": "29/29",
+    "distinct_updated_at": 5,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.001,
+     "wall": "00:53:46.768",
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    },
+    {
+     "t": 0.191,
+     "wall": "00:53:46.958",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 0.925,
+     "wall": "00:53:47.693",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:53:47",
+     "note_coord": "step 1 self:read 진행 중(마지막 움직임 2026-10-28T00:53:47)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read 진행 중(마지막 움직임 2026-10-28T00:53:47). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.093,
+     "wall": "00:53:47.860",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 56,
+     "rows": 2500,
+     "row_label": "56",
+     "updated_at": "2026-10-28T00:53:47",
+     "note_coord": "step 1 self:read · each 56/2500행(56) 진행 중(마지막 움직임 2026-10-28T00:53:47)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 56/2500행(56) 진행 중(마지막 움직임 2026-10-28T00:53:47). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.209,
+     "wall": "00:53:47.976",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 172,
+     "rows": 2500,
+     "row_label": "172",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 172/2500행(172) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 172/2500행(172) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.376,
+     "wall": "00:53:48.143",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 281,
+     "rows": 2500,
+     "row_label": "281",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 281/2500행(281) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 281/2500행(281) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.485,
+     "wall": "00:53:48.253",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 334,
+     "rows": 2500,
+     "row_label": "334",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 334/2500행(334) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 334/2500행(334) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.641,
+     "wall": "00:53:48.409",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 462,
+     "rows": 2500,
+     "row_label": "462",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 462/2500행(462) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 462/2500행(462) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.764,
+     "wall": "00:53:48.532",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 570,
+     "rows": 2500,
+     "row_label": "570",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 570/2500행(570) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 570/2500행(570) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.922,
+     "wall": "00:53:48.690",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 689,
+     "rows": 2500,
+     "row_label": "689",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 689/2500행(689) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 689/2500행(689) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.042,
+     "wall": "00:53:48.809",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 748,
+     "rows": 2500,
+     "row_label": "748",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 748/2500행(748) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 748/2500행(748) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.198,
+     "wall": "00:53:48.966",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 841,
+     "rows": 2500,
+     "row_label": "841",
+     "updated_at": "2026-10-28T00:53:48",
+     "note_coord": "step 1 self:read · each 841/2500행(841) 진행 중(마지막 움직임 2026-10-28T00:53:48)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 841/2500행(841) 진행 중(마지막 움직임 2026-10-28T00:53:48). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.315,
+     "wall": "00:53:49.083",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 900,
+     "rows": 2500,
+     "row_label": "900",
+     "updated_at": "2026-10-28T00:53:49",
+     "note_coord": "step 1 self:read · each 900/2500행(900) 진행 중(마지막 움직임 2026-10-28T00:53:49)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 900/2500행(900) 진행 중(마지막 움직임 2026-10-28T00:53:49). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.508,
+     "wall": "00:53:49.276",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 976,
+     "rows": 2500,
+     "row_label": "976",
+     "updated_at": "2026-10-28T00:53:49",
+     "note_coord": "step 1 self:read · each 976/2500행(976) 진행 중(마지막 움직임 2026-10-28T00:53:49)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 976/2500행(976) 진행 중(마지막 움직임 2026-10-28T00:53:49). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.62,
+     "wall": "00:53:49.387",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1059,
+     "rows": 2500,
+     "row_label": "1059",
+     "updated_at": "2026-10-28T00:53:49",
+     "note_coord": "step 1 self:read · each 1059/2500행(1059) 진행 중(마지막 움직임 2026-10-28T00:53:49)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1059/2500행(1059) 진행 중(마지막 움직임 2026-10-28T00:53:49). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.817,
+     "wall": "00:53:49.584",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1121,
+     "rows": 2500,
+     "row_label": "1121",
+     "updated_at": "2026-10-28T00:53:49",
+     "note_coord": "step 1 self:read · each 1121/2500행(1121) 진행 중(마지막 움직임 2026-10-28T00:53:49)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1121/2500행(1121) 진행 중(마지막 움직임 2026-10-28T00:53:49). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.958,
+     "wall": "00:53:49.725",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1174,
+     "rows": 2500,
+     "row_label": "1174",
+     "updated_at": "2026-10-28T00:53:49",
+     "note_coord": "step 1 self:read · each 1174/2500행(1174) 진행 중(마지막 움직임 2026-10-28T00:53:49)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1174/2500행(1174) 진행 중(마지막 움직임 2026-10-28T00:53:49). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.112,
+     "wall": "00:53:49.880",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1254,
+     "rows": 2500,
+     "row_label": "1254",
+     "updated_at": "2026-10-28T00:53:49",
+     "note_coord": "step 1 self:read · each 1254/2500행(1254) 진행 중(마지막 움직임 2026-10-28T00:53:49)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1254/2500행(1254) 진행 중(마지막 움직임 2026-10-28T00:53:49). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.238,
+     "wall": "00:53:50.005",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1324,
+     "rows": 2500,
+     "row_label": "1324",
+     "updated_at": "2026-10-28T00:53:50",
+     "note_coord": "step 1 self:read · each 1324/2500행(1324) 진행 중(마지막 움직임 2026-10-28T00:53:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1324/2500행(1324) 진행 중(마지막 움직임 2026-10-28T00:53:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.406,
+     "wall": "00:53:50.173",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1407,
+     "rows": 2500,
+     "row_label": "1407",
+     "updated_at": "2026-10-28T00:53:50",
+     "note_coord": "step 1 self:read · each 1407/2500행(1407) 진행 중(마지막 움직임 2026-10-28T00:53:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1407/2500행(1407) 진행 중(마지막 움직임 2026-10-28T00:53:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.519,
+     "wall": "00:53:50.287",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1477,
+     "rows": 2500,
+     "row_label": "1477",
+     "updated_at": "2026-10-28T00:53:50",
+     "note_coord": "step 1 self:read · each 1477/2500행(1477) 진행 중(마지막 움직임 2026-10-28T00:53:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1477/2500행(1477) 진행 중(마지막 움직임 2026-10-28T00:53:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.688,
+     "wall": "00:53:50.456",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1589,
+     "rows": 2500,
+     "row_label": "1589",
+     "updated_at": "2026-10-28T00:53:50",
+     "note_coord": "step 1 self:read · each 1589/2500행(1589) 진행 중(마지막 움직임 2026-10-28T00:53:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1589/2500행(1589) 진행 중(마지막 움직임 2026-10-28T00:53:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.806,
+     "wall": "00:53:50.573",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1704,
+     "rows": 2500,
+     "row_label": "1704",
+     "updated_at": "2026-10-28T00:53:50",
+     "note_coord": "step 1 self:read · each 1704/2500행(1704) 진행 중(마지막 움직임 2026-10-28T00:53:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1704/2500행(1704) 진행 중(마지막 움직임 2026-10-28T00:53:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.963,
+     "wall": "00:53:50.730",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1810,
+     "rows": 2500,
+     "row_label": "1810",
+     "updated_at": "2026-10-28T00:53:50",
+     "note_coord": "step 1 self:read · each 1810/2500행(1810) 진행 중(마지막 움직임 2026-10-28T00:53:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1810/2500행(1810) 진행 중(마지막 움직임 2026-10-28T00:53:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.075,
+     "wall": "00:53:50.842",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1940,
+     "rows": 2500,
+     "row_label": "1940",
+     "updated_at": "2026-10-28T00:53:50",
+     "note_coord": "step 1 self:read · each 1940/2500행(1940) 진행 중(마지막 움직임 2026-10-28T00:53:50)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1940/2500행(1940) 진행 중(마지막 움직임 2026-10-28T00:53:50). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.232,
+     "wall": "00:53:50.999",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2031,
+     "rows": 2500,
+     "row_label": "2031",
+     "updated_at": "2026-10-28T00:53:51",
+     "note_coord": "step 1 self:read · each 2031/2500행(2031) 진행 중(마지막 움직임 2026-10-28T00:53:51)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2031/2500행(2031) 진행 중(마지막 움직임 2026-10-28T00:53:51). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.344,
+     "wall": "00:53:51.112",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2164,
+     "rows": 2500,
+     "row_label": "2164",
+     "updated_at": "2026-10-28T00:53:51",
+     "note_coord": "step 1 self:read · each 2164/2500행(2164) 진행 중(마지막 움직임 2026-10-28T00:53:51)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2164/2500행(2164) 진행 중(마지막 움직임 2026-10-28T00:53:51). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.5,
+     "wall": "00:53:51.267",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2290,
+     "rows": 2500,
+     "row_label": "2290",
+     "updated_at": "2026-10-28T00:53:51",
+     "note_coord": "step 1 self:read · each 2290/2500행(2290) 진행 중(마지막 움직임 2026-10-28T00:53:51)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2290/2500행(2290) 진행 중(마지막 움직임 2026-10-28T00:53:51). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.617,
+     "wall": "00:53:51.384",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2378,
+     "rows": 2500,
+     "row_label": "2378",
+     "updated_at": "2026-10-28T00:53:51",
+     "note_coord": "step 1 self:read · each 2378/2500행(2378) 진행 중(마지막 움직임 2026-10-28T00:53:51)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2378/2500행(2378) 진행 중(마지막 움직임 2026-10-28T00:53:51). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.804,
+     "wall": "00:53:51.571",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2486,
+     "rows": 2500,
+     "row_label": "2486",
+     "updated_at": "2026-10-28T00:53:51",
+     "note_coord": "step 1 self:read · each 2486/2500행(2486) 진행 중(마지막 움직임 2026-10-28T00:53:51)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2486/2500행(2486) 진행 중(마지막 움직임 2026-10-28T00:53:51). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.916,
+     "wall": "00:53:51.683",
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "table:reduce",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:53:51",
+     "note_coord": "step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T00:53:51)",
+     "note": "실행이 아직 돌고 있습니다 — step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T00:53:51). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.123,
+     "wall": "00:53:51.890",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S7a.json"
+  },
+  {
+   "name": "S7b",
+   "program": "s7_reuse_pure.ibl",
+   "variant": "목록=1..2500, reuse:{run_id:S7a}",
+   "ticket": "d0710cd9168a8c85",
+   "run_id": "95a6b5a240f34817ac30e985ac9ffc99",
+   "reuse_of": "b76c242cbc7444188da00c1e45a3ed95",
+   "success": true,
+   "run_status": "completed",
+   "http_wall_s": 5.133,
+   "value": {
+    "reads": 3,
+    "lens": [
+     45,
+     45,
+     45
+    ],
+    "n": 2500,
+    "s": 29808
+   },
+   "error": null,
+   "diagnostic_code": null,
+   "diagnostic_source_span": null,
+   "diagnostic_coverage": null,
+   "diagnostic_error_indices": [],
+   "stderr_tail": null,
+   "partial": null,
+   "continuation": {
+    "reuse_args": {
+     "reuse": {
+      "run_id": "95a6b5a240f34817ac30e985ac9ffc99"
+     }
+    },
+    "read_calls": 3,
+    "state_change_possible": false
+   },
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 145,
+     "calls": 1,
+     "actions": [
+      "table:reduce"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    },
+    {
+     "line": 2,
+     "ms": 3,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    },
+    {
+     "line": 3,
+     "ms": 2,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    },
+    {
+     "line": 4,
+     "ms": 1,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc"
+    }
+   ],
+   "recordings_count": 3,
+   "sampling": {
+    "target_interval_s": 0.1,
+    "sample_count": 38,
+    "samples_with_progress": 28,
+    "first_sample_t": 0.001,
+    "last_sample_t": 5.222,
+    "mean_gap_s": 0.141,
+    "max_gap_s": 0.188
+   },
+   "observed": {
+    "steps_seen": [
+     1,
+     4
+    ],
+    "step_monotonic": true,
+    "rows_seen_min": 42,
+    "rows_seen_max": 2468,
+    "rows_total_values": [
+     2500
+    ],
+    "row_monotonic": true,
+    "rows_in_range": true,
+    "expected_rows": 2500,
+    "note_has_coord_ratio": "28/28",
+    "distinct_updated_at": 5,
+    "recover_after_end_keys": [
+     "_recovered_from_ticket",
+     "continuation",
+     "edition",
+     "evidence",
+     "executed",
+     "plan_hash",
+     "recordings",
+     "resume",
+     "resumed",
+     "reuse",
+     "run_status",
+     "source_complete",
+     "source_map",
+     "success",
+     "task_ref",
+     "usage",
+     "value",
+     "value_wire"
+    ]
+   },
+   "transitions": [
+    {
+     "t": 0.001,
+     "wall": "00:54:07.311",
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    },
+    {
+     "t": 0.161,
+     "wall": "00:54:07.471",
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.267,
+     "wall": "00:54:08.578",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 42,
+     "rows": 2500,
+     "row_label": "42",
+     "updated_at": "2026-10-28T00:54:08",
+     "note_coord": "step 1 self:read · each 42/2500행(42) 진행 중(마지막 움직임 2026-10-28T00:54:08)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 42/2500행(42) 진행 중(마지막 움직임 2026-10-28T00:54:08). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.382,
+     "wall": "00:54:08.693",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 131,
+     "rows": 2500,
+     "row_label": "131",
+     "updated_at": "2026-10-28T00:54:08",
+     "note_coord": "step 1 self:read · each 131/2500행(131) 진행 중(마지막 움직임 2026-10-28T00:54:08)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 131/2500행(131) 진행 중(마지막 움직임 2026-10-28T00:54:08). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.544,
+     "wall": "00:54:08.855",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 269,
+     "rows": 2500,
+     "row_label": "269",
+     "updated_at": "2026-10-28T00:54:08",
+     "note_coord": "step 1 self:read · each 269/2500행(269) 진행 중(마지막 움직임 2026-10-28T00:54:08)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 269/2500행(269) 진행 중(마지막 움직임 2026-10-28T00:54:08). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.659,
+     "wall": "00:54:08.970",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 399,
+     "rows": 2500,
+     "row_label": "399",
+     "updated_at": "2026-10-28T00:54:08",
+     "note_coord": "step 1 self:read · each 399/2500행(399) 진행 중(마지막 움직임 2026-10-28T00:54:08)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 399/2500행(399) 진행 중(마지막 움직임 2026-10-28T00:54:08). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.81,
+     "wall": "00:54:09.120",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 517,
+     "rows": 2500,
+     "row_label": "517",
+     "updated_at": "2026-10-28T00:54:09",
+     "note_coord": "step 1 self:read · each 517/2500행(517) 진행 중(마지막 움직임 2026-10-28T00:54:09)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 517/2500행(517) 진행 중(마지막 움직임 2026-10-28T00:54:09). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.921,
+     "wall": "00:54:09.232",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 615,
+     "rows": 2500,
+     "row_label": "615",
+     "updated_at": "2026-10-28T00:54:09",
+     "note_coord": "step 1 self:read · each 615/2500행(615) 진행 중(마지막 움직임 2026-10-28T00:54:09)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 615/2500행(615) 진행 중(마지막 움직임 2026-10-28T00:54:09). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.071,
+     "wall": "00:54:09.382",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 730,
+     "rows": 2500,
+     "row_label": "730",
+     "updated_at": "2026-10-28T00:54:09",
+     "note_coord": "step 1 self:read · each 730/2500행(730) 진행 중(마지막 움직임 2026-10-28T00:54:09)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 730/2500행(730) 진행 중(마지막 움직임 2026-10-28T00:54:09). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.184,
+     "wall": "00:54:09.494",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 851,
+     "rows": 2500,
+     "row_label": "851",
+     "updated_at": "2026-10-28T00:54:09",
+     "note_coord": "step 1 self:read · each 851/2500행(851) 진행 중(마지막 움직임 2026-10-28T00:54:09)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 851/2500행(851) 진행 중(마지막 움직임 2026-10-28T00:54:09). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.359,
+     "wall": "00:54:09.670",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 956,
+     "rows": 2500,
+     "row_label": "956",
+     "updated_at": "2026-10-28T00:54:09",
+     "note_coord": "step 1 self:read · each 956/2500행(956) 진행 중(마지막 움직임 2026-10-28T00:54:09)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 956/2500행(956) 진행 중(마지막 움직임 2026-10-28T00:54:09). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.476,
+     "wall": "00:54:09.786",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1075,
+     "rows": 2500,
+     "row_label": "1075",
+     "updated_at": "2026-10-28T00:54:09",
+     "note_coord": "step 1 self:read · each 1075/2500행(1075) 진행 중(마지막 움직임 2026-10-28T00:54:09)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1075/2500행(1075) 진행 중(마지막 움직임 2026-10-28T00:54:09). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.641,
+     "wall": "00:54:09.951",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1200,
+     "rows": 2500,
+     "row_label": "1200",
+     "updated_at": "2026-10-28T00:54:09",
+     "note_coord": "step 1 self:read · each 1200/2500행(1200) 진행 중(마지막 움직임 2026-10-28T00:54:09)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1200/2500행(1200) 진행 중(마지막 움직임 2026-10-28T00:54:09). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.759,
+     "wall": "00:54:10.069",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1314,
+     "rows": 2500,
+     "row_label": "1314",
+     "updated_at": "2026-10-28T00:54:10",
+     "note_coord": "step 1 self:read · each 1314/2500행(1314) 진행 중(마지막 움직임 2026-10-28T00:54:10)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1314/2500행(1314) 진행 중(마지막 움직임 2026-10-28T00:54:10). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.902,
+     "wall": "00:54:10.213",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1420,
+     "rows": 2500,
+     "row_label": "1420",
+     "updated_at": "2026-10-28T00:54:10",
+     "note_coord": "step 1 self:read · each 1420/2500행(1420) 진행 중(마지막 움직임 2026-10-28T00:54:10)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1420/2500행(1420) 진행 중(마지막 움직임 2026-10-28T00:54:10). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.015,
+     "wall": "00:54:10.326",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1511,
+     "rows": 2500,
+     "row_label": "1511",
+     "updated_at": "2026-10-28T00:54:10",
+     "note_coord": "step 1 self:read · each 1511/2500행(1511) 진행 중(마지막 움직임 2026-10-28T00:54:10)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1511/2500행(1511) 진행 중(마지막 움직임 2026-10-28T00:54:10). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.172,
+     "wall": "00:54:10.483",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1597,
+     "rows": 2500,
+     "row_label": "1597",
+     "updated_at": "2026-10-28T00:54:10",
+     "note_coord": "step 1 self:read · each 1597/2500행(1597) 진행 중(마지막 움직임 2026-10-28T00:54:10)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1597/2500행(1597) 진행 중(마지막 움직임 2026-10-28T00:54:10). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.297,
+     "wall": "00:54:10.607",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1663,
+     "rows": 2500,
+     "row_label": "1663",
+     "updated_at": "2026-10-28T00:54:10",
+     "note_coord": "step 1 self:read · each 1663/2500행(1663) 진행 중(마지막 움직임 2026-10-28T00:54:10)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1663/2500행(1663) 진행 중(마지막 움직임 2026-10-28T00:54:10). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.462,
+     "wall": "00:54:10.773",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1742,
+     "rows": 2500,
+     "row_label": "1742",
+     "updated_at": "2026-10-28T00:54:10",
+     "note_coord": "step 1 self:read · each 1742/2500행(1742) 진행 중(마지막 움직임 2026-10-28T00:54:10)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1742/2500행(1742) 진행 중(마지막 움직임 2026-10-28T00:54:10). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.577,
+     "wall": "00:54:10.887",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1792,
+     "rows": 2500,
+     "row_label": "1792",
+     "updated_at": "2026-10-28T00:54:10",
+     "note_coord": "step 1 self:read · each 1792/2500행(1792) 진행 중(마지막 움직임 2026-10-28T00:54:10)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1792/2500행(1792) 진행 중(마지막 움직임 2026-10-28T00:54:10). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.74,
+     "wall": "00:54:11.051",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1889,
+     "rows": 2500,
+     "row_label": "1889",
+     "updated_at": "2026-10-28T00:54:11",
+     "note_coord": "step 1 self:read · each 1889/2500행(1889) 진행 중(마지막 움직임 2026-10-28T00:54:11)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1889/2500행(1889) 진행 중(마지막 움직임 2026-10-28T00:54:11). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.867,
+     "wall": "00:54:11.177",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 1945,
+     "rows": 2500,
+     "row_label": "1945",
+     "updated_at": "2026-10-28T00:54:11",
+     "note_coord": "step 1 self:read · each 1945/2500행(1945) 진행 중(마지막 움직임 2026-10-28T00:54:11)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1945/2500행(1945) 진행 중(마지막 움직임 2026-10-28T00:54:11). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.027,
+     "wall": "00:54:11.338",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2013,
+     "rows": 2500,
+     "row_label": "2013",
+     "updated_at": "2026-10-28T00:54:11",
+     "note_coord": "step 1 self:read · each 2013/2500행(2013) 진행 중(마지막 움직임 2026-10-28T00:54:11)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2013/2500행(2013) 진행 중(마지막 움직임 2026-10-28T00:54:11). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.142,
+     "wall": "00:54:11.453",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2074,
+     "rows": 2500,
+     "row_label": "2074",
+     "updated_at": "2026-10-28T00:54:11",
+     "note_coord": "step 1 self:read · each 2074/2500행(2074) 진행 중(마지막 움직임 2026-10-28T00:54:11)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2074/2500행(2074) 진행 중(마지막 움직임 2026-10-28T00:54:11). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.318,
+     "wall": "00:54:11.628",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2151,
+     "rows": 2500,
+     "row_label": "2151",
+     "updated_at": "2026-10-28T00:54:11",
+     "note_coord": "step 1 self:read · each 2151/2500행(2151) 진행 중(마지막 움직임 2026-10-28T00:54:11)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2151/2500행(2151) 진행 중(마지막 움직임 2026-10-28T00:54:11). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.428,
+     "wall": "00:54:11.739",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2226,
+     "rows": 2500,
+     "row_label": "2226",
+     "updated_at": "2026-10-28T00:54:11",
+     "note_coord": "step 1 self:read · each 2226/2500행(2226) 진행 중(마지막 움직임 2026-10-28T00:54:11)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2226/2500행(2226) 진행 중(마지막 움직임 2026-10-28T00:54:11). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.616,
+     "wall": "00:54:11.927",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2309,
+     "rows": 2500,
+     "row_label": "2309",
+     "updated_at": "2026-10-28T00:54:11",
+     "note_coord": "step 1 self:read · each 2309/2500행(2309) 진행 중(마지막 움직임 2026-10-28T00:54:11)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2309/2500행(2309) 진행 중(마지막 움직임 2026-10-28T00:54:11). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.741,
+     "wall": "00:54:12.052",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2382,
+     "rows": 2500,
+     "row_label": "2382",
+     "updated_at": "2026-10-28T00:54:12",
+     "note_coord": "step 1 self:read · each 2382/2500행(2382) 진행 중(마지막 움직임 2026-10-28T00:54:12)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2382/2500행(2382) 진행 중(마지막 움직임 2026-10-28T00:54:12). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.92,
+     "wall": "00:54:12.231",
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:read",
+     "row": 2468,
+     "rows": 2500,
+     "row_label": "2468",
+     "updated_at": "2026-10-28T00:54:12",
+     "note_coord": "step 1 self:read · each 2468/2500행(2468) 진행 중(마지막 움직임 2026-10-28T00:54:12)",
+     "note": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2468/2500행(2468) 진행 중(마지막 움직임 2026-10-28T00:54:12). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.034,
+     "wall": "00:54:12.345",
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "table:reduce",
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": "2026-10-28T00:54:12",
+     "note_coord": "step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T00:54:12)",
+     "note": "실행이 아직 돌고 있습니다 — step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T00:54:12). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.222,
+     "wall": "00:54:12.533",
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "row_label": null,
+     "updated_at": null,
+     "note_coord": null,
+     "note": null
+    }
+   ],
+   "raw_samples_file": "<REPO>/outputs/long_sentence_imagination/2026-10-28_100회차/ai_out/samples/S7b.json"
+  }
+ ]
+}

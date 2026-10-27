@@ -1,0 +1,4 @@
+#!ibl edition=2
+$sl=[self:write]{path:"~turn/sleeper.py",content:$본문}
+$z=[self:script]{path:$sl.path,args:{s:5,i:"long"},timeout:30}
+return {slept:$z.slept}

@@ -1,0 +1,6 @@
+아래 IBL 프로그램을 execute_ibl 도구로 그대로 한 번만 실행해 줘(수정·조사·다른 도구 사용 없이). 끝나면 반환값의 rows 숫자만 한 줄로 답해.
+
+#!ibl edition=2
+$sl=[self:write]{path:"~turn/s.py",content:"import json,os,sys,time;a=json.load(sys.stdin);time.sleep(float(a.get('s',1)));p=os.environ.get('INDIEBIZ_SCRIPT_RESULT');open(p,'w').write(json.dumps({'i':a.get('i')}))"}
+$rows=[1,2,3,4] >> [table:each] { return [self:script]{path:$sl.path,args:{s:1.5,i:$it},timeout:30} }
+return {rows:len($rows)}

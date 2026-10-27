@@ -1,0 +1,39 @@
+{
+ "progress_trace": [],
+ "states": [
+  {
+   "t": 1.0,
+   "found_turn": "3760e1f7c30b4572b213f610adbf8616"
+  },
+  {
+   "t": 1.0,
+   "state": "running"
+  },
+  {
+   "t": 433.2,
+   "state": "completed"
+  }
+ ],
+ "turn": {
+  "id": "3760e1f7c30b4572b213f610adbf8616",
+  "state": "running",
+  "started_at": "2026-10-27T15:50:36.332684+00:00",
+  "session_id": "legacy-16313d21d3e652e4b085200b6316fe95"
+ },
+ "started": "00:50:35",
+ "final": {
+  "state": "completed",
+  "progress": "",
+  "finished_at": "2026-10-27T15:57:48.019346+00:00",
+  "error": null
+ },
+ "seconds": 433.2,
+ "event_kinds": {
+  "handoff.started": 1,
+  "handoff.tool_start": 27,
+  "handoff.tool_result": 27,
+  "handoff.finished": 1
+ },
+ "events_total": 56,
+ "progress_nonnull": 0
+}

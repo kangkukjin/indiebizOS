@@ -1,0 +1,1447 @@
+[
+  {
+    "section": "S1",
+    "data": {
+      "label": "S1 순차 each 6행 · v2_병렬3",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 1,
+        "with_coord": 0,
+        "dips": 0,
+        "monotonic": null,
+        "actions": [],
+        "max_step": 0,
+        "note_has_action_any": false,
+        "note_has_action_all": null
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 6,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": false,
+        "as_expected": false,
+        "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 0.49,
+        "polls": 3,
+        "env_keys": [
+          "continuation",
+          "diagnostic",
+          "edition",
+          "error",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "request_inputs",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 20, \"rows\": 0, \"elapsed_ms\": 360, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:93:187\", \"steps\": 3, \"location\": {\"source_hash\": \"a7608c1fe7a11cf093ef1bc8486566bbf1234d643ef02c67b8c79e8e5db44b7c\", \"start\": 93, \"end\": 187, \"line\": 3, \"column\": 24}}, {\"node_id\": \"bind:16:69\", \"steps\": 1, \"location\": {\"source_hash\": \"a7608c1fe7a11cf093ef1bc8486566bbf1234d64",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.16,
+        "idx": 1,
+        "step_prev": null,
+        "step": null,
+        "of": null,
+        "action": null,
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": null,
+        "has_progress": false,
+        "repeat": 1,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "e941bb4c12da433e86c7add92791125e",
+      "run_id": "b5aa0f17ac5b4e6c881ad895d3af8bc0"
+    }
+  },
+  {
+    "section": "S2",
+    "data": {
+      "label": "S2 병렬 each 6행(parallel 3)",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 1,
+        "with_coord": 0,
+        "dips": 0,
+        "monotonic": null,
+        "actions": [],
+        "max_step": 0,
+        "note_has_action_any": false,
+        "note_has_action_all": null
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 6,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": false,
+        "as_expected": false,
+        "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 0.47,
+        "polls": 3,
+        "env_keys": [
+          "continuation",
+          "diagnostic",
+          "edition",
+          "error",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "request_inputs",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 20, \"rows\": 0, \"elapsed_ms\": 437, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:93:187\", \"steps\": 3, \"location\": {\"source_hash\": \"9804435f9d0aaaeea8d31157237025abd22bb112e6451955affc922140f8198d\", \"start\": 93, \"end\": 187, \"line\": 3, \"column\": 24}}, {\"node_id\": \"bind:16:69\", \"steps\": 1, \"location\": {\"source_hash\": \"9804435f9d0aaaeea8d31157237025abd22bb112",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.16,
+        "idx": 1,
+        "step_prev": null,
+        "step": null,
+        "of": null,
+        "action": null,
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": null,
+        "has_progress": false,
+        "repeat": 1,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "83064743358042c6be1fc6a2c9ae004a",
+      "run_id": "5c84e25509574a018b306aa470f30116"
+    }
+  },
+  {
+    "section": "S3",
+    "data": {
+      "label": "S3 중간 실패(4행 exit 3) · v2_병렬3",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 1,
+        "with_coord": 0,
+        "dips": 0,
+        "monotonic": null,
+        "actions": [],
+        "max_step": 0,
+        "note_has_action_any": false,
+        "note_has_action_all": null
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 6,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": false,
+        "as_expected": true,
+        "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 0.48,
+        "polls": 3,
+        "env_keys": [
+          "continuation",
+          "diagnostic",
+          "edition",
+          "error",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "request_inputs",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 20, \"rows\": 0, \"elapsed_ms\": 390, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:93:197\", \"steps\": 3, \"location\": {\"source_hash\": \"94579c707d7952d9130cb8d327f321df241b0406d4649350c1d6d7af697c8682\", \"start\": 93, \"end\": 197, \"line\": 3, \"column\": 24}}, {\"node_id\": \"bind:16:69\", \"steps\": 1, \"location\": {\"source_hash\": \"94579c707d7952d9130cb8d327f321df241b0406",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": {
+        "error_present": true,
+        "coverage_present": false,
+        "last_row_le_fail": null,
+        "last_row": null
+      },
+      "last_snapshot": {
+        "t": 0.16,
+        "idx": 1,
+        "step_prev": null,
+        "step": null,
+        "of": null,
+        "action": null,
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": null,
+        "has_progress": false,
+        "repeat": 1,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "4bd7751bd146499c9b48a0c50f47048e",
+      "run_id": "255b0b10d4914c1aaba7738ccbe098eb"
+    }
+  },
+  {
+    "section": "S4a",
+    "data": {
+      "label": "S4 첫 실행(읽기 3+잠들기)",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 3,
+        "with_coord": 2,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:write",
+          "self:script"
+        ],
+        "max_step": 5,
+        "note_has_action_any": true,
+        "note_has_action_all": true
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 0,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": true,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 3.91,
+        "polls": 25,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 110, \"rows\": 0, \"elapsed_ms\": 3736, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:148:206\", \"steps\": 51, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e\", \"start\": 148, \"end\": 206, \"line\": 6, \"column\": 4}}, {\"node_id\": \"pure_call:229:254\", \"steps\": 2, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f6",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.62,
+        "idx": 3,
+        "step_prev": 1,
+        "step": 5,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-28T01:02:01",
+        "has_progress": true,
+        "repeat": 20,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 5 self:script 진행 중(마지막 움직임 2026-10-28T01:02:01). 이 시각은 진행 좌표의 갱신 시각이"
+      },
+      "runner_error": null,
+      "ticket": "e687ebbd2d6744938f25cf38298a709d",
+      "run_id": "dd797922f83b472a817d1bcfe61b91b0"
+    }
+  },
+  {
+    "section": "S4b",
+    "data": {
+      "label": "S4 재사용 재실행",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 3,
+        "with_coord": 2,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:read",
+          "self:script"
+        ],
+        "max_step": 5,
+        "note_has_action_any": true,
+        "note_has_action_all": true
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 0,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": true,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 3.94,
+        "polls": 25,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "reuse",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": "{\"run_id\": \"dd797922f83b472a817d1bcfe61b91b0\", \"reused_calls\": 0, \"candidates\": 0, \"skipped\": [{\"action\": \"self:read\", \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e\", \"start\": 73, \"end\": 94, \"line\": 3, \"column\": 4}, \"reason\": \"no_matching_receipt\", \"ca",
+        "usage": "{\"steps\": 111, \"rows\": 0, \"elapsed_ms\": 3897, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:148:206\", \"steps\": 52, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e\", \"start\": 148, \"end\": 206, \"line\": 6, \"column\": 4}}, {\"node_id\": \"pure_call:229:254\", \"steps\": 2, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f6",
+        "receipt_reused": null,
+        "reused_calls": 0
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.8,
+        "idx": 3,
+        "step_prev": 2,
+        "step": 5,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-28T01:02:06",
+        "has_progress": true,
+        "repeat": 19,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 5 self:script 진행 중(마지막 움직임 2026-10-28T01:02:06). 이 시각은 진행 좌표의 갱신 시각이"
+      },
+      "runner_error": null,
+      "ticket": "b2dd2b1e39774d788be6ae2907a22a95",
+      "run_id": "dd797922f83b472a817d1bcfe61b91b0"
+    }
+  },
+  {
+    "section": "S4_reuse",
+    "data": {
+      "reused_second": null,
+      "reused_first": null,
+      "max_step_first": 5,
+      "max_step_second": 5,
+      "same_progress": true,
+      "reads_hidden": false
+    }
+  },
+  {
+    "section": "S5",
+    "data": {
+      "label": "S5 긴 단일 단계(잠들기 5초)",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 2,
+        "with_coord": 1,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:script"
+        ],
+        "max_step": 2,
+        "note_has_action_any": true,
+        "note_has_action_all": true
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 0,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": true,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 6.25,
+        "polls": 40,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 118, \"rows\": 0, \"elapsed_ms\": 6199, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:73:132\", \"steps\": 100, \"location\": {\"source_hash\": \"0f25ddc4c6379ce0a825453529f559806fdeb04059ff2ec4a39fc58ac2ef0a2a\", \"start\": 73, \"end\": 132, \"line\": 3, \"column\": 4}}, {\"node_id\": \"bind:16:69\", \"steps\": 1, \"location\": {\"source_hash\": \"0f25ddc4c6379ce0a825453529f559806fdeb",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.47,
+        "idx": 2,
+        "step_prev": null,
+        "step": 2,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-28T01:02:11",
+        "has_progress": true,
+        "repeat": 36,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 2 self:script 진행 중(마지막 움직임 2026-10-28T01:02:11). 이 시각은 진행 좌표의 갱신 시각이"
+      },
+      "runner_error": null,
+      "ticket": "7b688ccf14f24507b4ab56102cc896d7",
+      "run_id": "efc2f42e42af4c459c72e4d5353f1f2a"
+    }
+  },
+  {
+    "section": "S5_frozen",
+    "data": {
+      "running_snapshots": 1,
+      "distinct_updated_at": 1,
+      "repeated_polls": 36,
+      "frozen": true
+    }
+  },
+  {
+    "section": "S6",
+    "data": {
+      "label": "S6 함수 안 each 3행 · v2_병렬3",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 1,
+        "with_coord": 0,
+        "dips": 0,
+        "monotonic": null,
+        "actions": [],
+        "max_step": 0,
+        "note_has_action_any": false,
+        "note_has_action_all": null
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 3,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": false,
+        "as_expected": false,
+        "error": "병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.",
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 0.47,
+        "polls": 3,
+        "env_keys": [
+          "continuation",
+          "diagnostic",
+          "edition",
+          "error",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "request_inputs",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 24, \"rows\": 0, \"elapsed_ms\": 401, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:55:144\", \"steps\": 3, \"location\": {\"source_hash\": \"5c3aa5b7e528de7598e3a48a3d7f8888903acede08c3c570f6f23f3dec485ba4\", \"start\": 55, \"end\": 144, \"line\": 3, \"column\": 24}}, {\"node_id\": \"bind:147:200\", \"steps\": 1, \"location\": {\"source_hash\": \"5c3aa5b7e528de7598e3a48a3d7f8888903ace",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.15,
+        "idx": 1,
+        "step_prev": null,
+        "step": null,
+        "of": null,
+        "action": null,
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": null,
+        "has_progress": false,
+        "repeat": 1,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "f950aec971324b22a902b7f357b3742a",
+      "run_id": "1f1bb901b4604ddda03fea621c1632be"
+    }
+  },
+  {
+    "section": "S7a",
+    "data": {
+      "label": "S7 첫 실행(읽기 3+순수 each N행)",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 12,
+        "with_coord": 11,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:read"
+        ],
+        "max_step": 1,
+        "note_has_action_any": true,
+        "note_has_action_all": true
+      },
+      "rows": {
+        "any_detail": true,
+        "rows_seen": 11,
+        "rows_expected": 2500,
+        "out_of_range": 0,
+        "max_row": 2431,
+        "all_seen": false,
+        "seen": [
+          {
+            "row": 36,
+            "rows": 2500,
+            "label": "36"
+          },
+          {
+            "row": 270,
+            "rows": 2500,
+            "label": "270"
+          },
+          {
+            "row": 510,
+            "rows": 2500,
+            "label": "510"
+          },
+          {
+            "row": 766,
+            "rows": 2500,
+            "label": "766"
+          },
+          {
+            "row": 981,
+            "rows": 2500,
+            "label": "981"
+          },
+          {
+            "row": 1205,
+            "rows": 2500,
+            "label": "1205"
+          },
+          {
+            "row": 1440,
+            "rows": 2500,
+            "label": "1440"
+          },
+          {
+            "row": 1683,
+            "rows": 2500,
+            "label": "1683"
+          },
+          {
+            "row": 1927,
+            "rows": 2500,
+            "label": "1927"
+          },
+          {
+            "row": 2178,
+            "rows": 2500,
+            "label": "2178"
+          },
+          {
+            "row": 2431,
+            "rows": 2500,
+            "label": "2431"
+          }
+        ]
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 2.21,
+        "polls": 14,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 85067, \"rows\": 2500, \"elapsed_ms\": 2139, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"pure_call:135:144\", \"steps\": 5000, \"location\": {\"source_hash\": \"0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc\", \"start\": 135, \"end\": 144, \"line\": 5, \"column\": 45}}, {\"node_id\": \"pure_call:149:160\", \"steps\": 5000, \"location\": {\"source_hash\": \"0f9cc3f142706",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 2.05,
+        "idx": 12,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 2431,
+          "rows": 2500,
+          "row_label": "2431"
+        },
+        "row": 2431,
+        "rows": 2500,
+        "row_label": "2431",
+        "updated_at": "2026-10-28T01:02:21",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2431/2500행(2431) 진행 중(마지막 움직임 2026-10-28T01:02:21"
+      },
+      "runner_error": null,
+      "ticket": "9a4e0eca8976446dbe383377ca84b7db",
+      "run_id": "b5b05b0186b14e8f9ac96d9beb4d5451"
+    }
+  },
+  {
+    "section": "S7b",
+    "data": {
+      "label": "S7 재사용 재실행",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 13,
+        "with_coord": 12,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:read",
+          "table:reduce"
+        ],
+        "max_step": 4,
+        "note_has_action_any": true,
+        "note_has_action_all": true
+      },
+      "rows": {
+        "any_detail": true,
+        "rows_seen": 11,
+        "rows_expected": 2500,
+        "out_of_range": 0,
+        "max_row": 2348,
+        "all_seen": false,
+        "seen": [
+          {
+            "row": 164,
+            "rows": 2500,
+            "label": "164"
+          },
+          {
+            "row": 395,
+            "rows": 2500,
+            "label": "395"
+          },
+          {
+            "row": 633,
+            "rows": 2500,
+            "label": "633"
+          },
+          {
+            "row": 857,
+            "rows": 2500,
+            "label": "857"
+          },
+          {
+            "row": 1098,
+            "rows": 2500,
+            "label": "1098"
+          },
+          {
+            "row": 1312,
+            "rows": 2500,
+            "label": "1312"
+          },
+          {
+            "row": 1534,
+            "rows": 2500,
+            "label": "1534"
+          },
+          {
+            "row": 1771,
+            "rows": 2500,
+            "label": "1771"
+          },
+          {
+            "row": 2016,
+            "rows": 2500,
+            "label": "2016"
+          },
+          {
+            "row": 2113,
+            "rows": 2500,
+            "label": "2113"
+          },
+          {
+            "row": 2348,
+            "rows": 2500,
+            "label": "2348"
+          }
+        ]
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 2.47,
+        "polls": 15,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "reuse",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": "{\"run_id\": \"b5b05b0186b14e8f9ac96d9beb4d5451\", \"reused_calls\": 3, \"candidates\": 1}",
+        "usage": "{\"steps\": 85067, \"rows\": 2500, \"elapsed_ms\": 2285, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"pure_call:135:144\", \"steps\": 5000, \"location\": {\"source_hash\": \"0f9cc3f142706c886c787b5c29539f67371fc060a023a7cc3ccb393211c1bacc\", \"start\": 135, \"end\": 144, \"line\": 5, \"column\": 45}}, {\"node_id\": \"pure_call:149:160\", \"steps\": 5000, \"location\": {\"source_hash\": \"0f9cc3f142706",
+        "receipt_reused": null,
+        "reused_calls": 3
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 2.3,
+        "idx": 13,
+        "step_prev": 1,
+        "step": 4,
+        "of": 0,
+        "action": "table:reduce",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-28T01:02:24",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T01:02:24). 이 시각은 진행 좌표의 갱신 시각"
+      },
+      "runner_error": null,
+      "ticket": "d51d1aa2c02e4db6a2664669c0b95031",
+      "run_id": "b5b05b0186b14e8f9ac96d9beb4d5451"
+    }
+  },
+  {
+    "section": "S7_reuse",
+    "data": {
+      "reused_first": null,
+      "reused_second": null,
+      "reused_calls_second": 3,
+      "reused_count_second": 3,
+      "reuse_established": true,
+      "max_step_first": 1,
+      "max_step_second": 4,
+      "actions_first": [
+        "self:read"
+      ],
+      "actions_second": [
+        "self:read",
+        "table:reduce"
+      ],
+      "read_snapshots_first": 11,
+      "read_snapshots_second": 11,
+      "read_visible_second": true,
+      "rows_seen_first": 11,
+      "rows_seen_second": 11,
+      "any_detail_first": true,
+      "seconds_first": 2.21,
+      "seconds_second": 2.47,
+      "polls_first": 14,
+      "polls_second": 15
+    }
+  },
+  {
+    "section": "S7a_snapshots",
+    "data": [
+      {
+        "t": 0.16,
+        "idx": 1,
+        "step_prev": null,
+        "step": null,
+        "of": null,
+        "action": null,
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": null,
+        "has_progress": false,
+        "repeat": 1,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      {
+        "t": 0.46,
+        "idx": 2,
+        "step_prev": null,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 36,
+          "rows": 2500,
+          "row_label": "36"
+        },
+        "row": 36,
+        "rows": 2500,
+        "row_label": "36",
+        "updated_at": "2026-10-28T01:02:19",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 36/2500행(36) 진행 중(마지막 움직임 2026-10-28T01:02:19). 이"
+      },
+      {
+        "t": 0.62,
+        "idx": 3,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 270,
+          "rows": 2500,
+          "row_label": "270"
+        },
+        "row": 270,
+        "rows": 2500,
+        "row_label": "270",
+        "updated_at": "2026-10-28T01:02:19",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 270/2500행(270) 진행 중(마지막 움직임 2026-10-28T01:02:19)."
+      },
+      {
+        "t": 0.78,
+        "idx": 4,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 510,
+          "rows": 2500,
+          "row_label": "510"
+        },
+        "row": 510,
+        "rows": 2500,
+        "row_label": "510",
+        "updated_at": "2026-10-28T01:02:19",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 510/2500행(510) 진행 중(마지막 움직임 2026-10-28T01:02:19)."
+      },
+      {
+        "t": 0.94,
+        "idx": 5,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 766,
+          "rows": 2500,
+          "row_label": "766"
+        },
+        "row": 766,
+        "rows": 2500,
+        "row_label": "766",
+        "updated_at": "2026-10-28T01:02:19",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 766/2500행(766) 진행 중(마지막 움직임 2026-10-28T01:02:19)."
+      },
+      {
+        "t": 1.09,
+        "idx": 6,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 981,
+          "rows": 2500,
+          "row_label": "981"
+        },
+        "row": 981,
+        "rows": 2500,
+        "row_label": "981",
+        "updated_at": "2026-10-28T01:02:20",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 981/2500행(981) 진행 중(마지막 움직임 2026-10-28T01:02:20)."
+      },
+      {
+        "t": 1.25,
+        "idx": 7,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1205,
+          "rows": 2500,
+          "row_label": "1205"
+        },
+        "row": 1205,
+        "rows": 2500,
+        "row_label": "1205",
+        "updated_at": "2026-10-28T01:02:20",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1205/2500행(1205) 진행 중(마지막 움직임 2026-10-28T01:02:20"
+      },
+      {
+        "t": 1.4,
+        "idx": 8,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1440,
+          "rows": 2500,
+          "row_label": "1440"
+        },
+        "row": 1440,
+        "rows": 2500,
+        "row_label": "1440",
+        "updated_at": "2026-10-28T01:02:20",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1440/2500행(1440) 진행 중(마지막 움직임 2026-10-28T01:02:20"
+      },
+      {
+        "t": 1.56,
+        "idx": 9,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1683,
+          "rows": 2500,
+          "row_label": "1683"
+        },
+        "row": 1683,
+        "rows": 2500,
+        "row_label": "1683",
+        "updated_at": "2026-10-28T01:02:20",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1683/2500행(1683) 진행 중(마지막 움직임 2026-10-28T01:02:20"
+      },
+      {
+        "t": 1.72,
+        "idx": 10,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1927,
+          "rows": 2500,
+          "row_label": "1927"
+        },
+        "row": 1927,
+        "rows": 2500,
+        "row_label": "1927",
+        "updated_at": "2026-10-28T01:02:20",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1927/2500행(1927) 진행 중(마지막 움직임 2026-10-28T01:02:20"
+      },
+      {
+        "t": 1.88,
+        "idx": 11,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 2178,
+          "rows": 2500,
+          "row_label": "2178"
+        },
+        "row": 2178,
+        "rows": 2500,
+        "row_label": "2178",
+        "updated_at": "2026-10-28T01:02:20",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2178/2500행(2178) 진행 중(마지막 움직임 2026-10-28T01:02:20"
+      },
+      {
+        "t": 2.05,
+        "idx": 12,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 2431,
+          "rows": 2500,
+          "row_label": "2431"
+        },
+        "row": 2431,
+        "rows": 2500,
+        "row_label": "2431",
+        "updated_at": "2026-10-28T01:02:21",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2431/2500행(2431) 진행 중(마지막 움직임 2026-10-28T01:02:21"
+      }
+    ]
+  },
+  {
+    "section": "S7b_snapshots",
+    "data": [
+      {
+        "t": 0.15,
+        "idx": 1,
+        "step_prev": null,
+        "step": null,
+        "of": null,
+        "action": null,
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": null,
+        "has_progress": false,
+        "repeat": 1,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      {
+        "t": 0.46,
+        "idx": 2,
+        "step_prev": null,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 164,
+          "rows": 2500,
+          "row_label": "164"
+        },
+        "row": 164,
+        "rows": 2500,
+        "row_label": "164",
+        "updated_at": "2026-10-28T01:02:22",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 164/2500행(164) 진행 중(마지막 움직임 2026-10-28T01:02:22)."
+      },
+      {
+        "t": 0.62,
+        "idx": 3,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 395,
+          "rows": 2500,
+          "row_label": "395"
+        },
+        "row": 395,
+        "rows": 2500,
+        "row_label": "395",
+        "updated_at": "2026-10-28T01:02:22",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 395/2500행(395) 진행 중(마지막 움직임 2026-10-28T01:02:22)."
+      },
+      {
+        "t": 0.78,
+        "idx": 4,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 633,
+          "rows": 2500,
+          "row_label": "633"
+        },
+        "row": 633,
+        "rows": 2500,
+        "row_label": "633",
+        "updated_at": "2026-10-28T01:02:22",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 633/2500행(633) 진행 중(마지막 움직임 2026-10-28T01:02:22)."
+      },
+      {
+        "t": 0.93,
+        "idx": 5,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 857,
+          "rows": 2500,
+          "row_label": "857"
+        },
+        "row": 857,
+        "rows": 2500,
+        "row_label": "857",
+        "updated_at": "2026-10-28T01:02:22",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 857/2500행(857) 진행 중(마지막 움직임 2026-10-28T01:02:22)."
+      },
+      {
+        "t": 1.08,
+        "idx": 6,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1098,
+          "rows": 2500,
+          "row_label": "1098"
+        },
+        "row": 1098,
+        "rows": 2500,
+        "row_label": "1098",
+        "updated_at": "2026-10-28T01:02:23",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1098/2500행(1098) 진행 중(마지막 움직임 2026-10-28T01:02:23"
+      },
+      {
+        "t": 1.24,
+        "idx": 7,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1312,
+          "rows": 2500,
+          "row_label": "1312"
+        },
+        "row": 1312,
+        "rows": 2500,
+        "row_label": "1312",
+        "updated_at": "2026-10-28T01:02:23",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1312/2500행(1312) 진행 중(마지막 움직임 2026-10-28T01:02:23"
+      },
+      {
+        "t": 1.39,
+        "idx": 8,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1534,
+          "rows": 2500,
+          "row_label": "1534"
+        },
+        "row": 1534,
+        "rows": 2500,
+        "row_label": "1534",
+        "updated_at": "2026-10-28T01:02:23",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1534/2500행(1534) 진행 중(마지막 움직임 2026-10-28T01:02:23"
+      },
+      {
+        "t": 1.55,
+        "idx": 9,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 1771,
+          "rows": 2500,
+          "row_label": "1771"
+        },
+        "row": 1771,
+        "rows": 2500,
+        "row_label": "1771",
+        "updated_at": "2026-10-28T01:02:23",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 1771/2500행(1771) 진행 중(마지막 움직임 2026-10-28T01:02:23"
+      },
+      {
+        "t": 1.71,
+        "idx": 10,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 2016,
+          "rows": 2500,
+          "row_label": "2016"
+        },
+        "row": 2016,
+        "rows": 2500,
+        "row_label": "2016",
+        "updated_at": "2026-10-28T01:02:23",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2016/2500행(2016) 진행 중(마지막 움직임 2026-10-28T01:02:23"
+      },
+      {
+        "t": 1.98,
+        "idx": 11,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 2113,
+          "rows": 2500,
+          "row_label": "2113"
+        },
+        "row": 2113,
+        "rows": 2500,
+        "row_label": "2113",
+        "updated_at": "2026-10-28T01:02:23",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2113/2500행(2113) 진행 중(마지막 움직임 2026-10-28T01:02:23"
+      },
+      {
+        "t": 2.14,
+        "idx": 12,
+        "step_prev": 1,
+        "step": 1,
+        "of": 0,
+        "action": "self:read",
+        "detail": {
+          "row": 2348,
+          "rows": 2500,
+          "row_label": "2348"
+        },
+        "row": 2348,
+        "rows": 2500,
+        "row_label": "2348",
+        "updated_at": "2026-10-28T01:02:24",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 1 self:read · each 2348/2500행(2348) 진행 중(마지막 움직임 2026-10-28T01:02:24"
+      },
+      {
+        "t": 2.3,
+        "idx": 13,
+        "step_prev": 1,
+        "step": 4,
+        "of": 0,
+        "action": "table:reduce",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-28T01:02:24",
+        "has_progress": true,
+        "repeat": 0,
+        "note_has_action": true,
+        "note_head": "실행이 아직 돌고 있습니다 — step 4 table:reduce 진행 중(마지막 움직임 2026-10-28T01:02:24). 이 시각은 진행 좌표의 갱신 시각"
+      }
+    ]
+  },
+  {
+    "section": "S1_snapshots",
+    "data": [
+      {
+        "t": 0.16,
+        "idx": 1,
+        "step_prev": null,
+        "step": null,
+        "of": null,
+        "action": null,
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": null,
+        "has_progress": false,
+        "repeat": 1,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      }
+    ]
+  }
+]

@@ -73,6 +73,10 @@ def runtime_type(value, compiler):
     # must not disappear merely because an earlier binding consumed that budget.
     if isinstance(value, str):
         return Type('Text', literal=value)
+    if type(value) is int:
+        # 가지별 항목이 정수면 그 값이 자원 정체의 재료다(2026-10-28 긴문장 100회차 L100-2):
+        # infer() 는 리터럴 없는 Number 를 돌려줘 f"…${$it}"·text($it) 로 만든 경로가 미해소 → 독립 자원인데 거절됐다.
+        return Type('Number', literal=value)
     if isinstance(value, CallableRef):
         node = Node('callable_ref', 0, 0, {'node': value.node, 'action': value.action})
         return compiler.reference_type(node, {value.action: value.symbol} if value.symbol else {})
@@ -150,7 +154,9 @@ def admit(runtime, node, branches):
             overlap = conflicts(previous, current, unresolved=True, strict=runtime.strict_composition)
             if overlap:
                 raise Fault('PARALLEL_RESOURCE_CONFLICT',
-                            '병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 순서를 명시하세요.',
+                            '병렬 가지의 읽기/쓰기 자원 독립성을 확보할 수 없습니다. 가지를 순차(;·parallel:1)로 돌리거나, '
+                            '가지마다 자원이 글자로 정해지게 하세요(리터럴·`+`·f"${…}"). 효과 미상 호출(파일 스크립트 등)은 '
+                            '효과를 선언한 등록 스크립트로 바꾸어야 병렬이 됩니다.',
                             node, kind='protocol', details={'actions': sorted(overlap)})
         summaries.add(current)
         if len(summaries) > 1024:

@@ -1,0 +1,53 @@
+{
+ "episode_before": 5559,
+ "sent_at": "2026-10-28 01:28:48",
+ "t0": 1793118528.552779,
+ "polls": [
+  {
+   "t": 18.8,
+   "status": "succeeded"
+  }
+ ],
+ "accepted": {
+  "response": "작업을 시작했습니다.",
+  "timestamp": "2026-10-28T01:28:48.566512",
+  "provider": "claude_code",
+  "model": "opus",
+  "task_id": "task_sysai_2d231b99",
+  "state": "queued",
+  "status_url": "/system-ai/tasks/task_sysai_2d231b99"
+ },
+ "task_id": "task_sysai_2d231b99",
+ "status_url": "/system-ai/tasks/task_sysai_2d231b99",
+ "final": {
+  "task_ref": {
+   "kind": "delegation",
+   "owner": "system",
+   "task_id": "task_sysai_2d231b99"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_c3c6bd68fc36e13cab3b",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "system_ai",
+  "requester_channel": "gui",
+  "created_at": "2026-10-27 16:28:48",
+  "completed_at": "2026-10-27 16:29:06",
+  "pending_children": 0,
+  "children": [],
+  "result": "4",
+  "error": null,
+  "status_url": "/system-ai/tasks/task_sysai_2d231b99"
+ },
+ "seconds": 18.8,
+ "episode_after": 5560,
+ "new_episodes": [
+  {
+   "id": 5560,
+   "started_at": "2026-10-28T01:28:48.572406",
+   "source": "training",
+   "total_ms": 18420
+  }
+ ]
+}

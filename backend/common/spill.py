@@ -387,6 +387,7 @@ def ticket_beat(ticket: str, detail: dict) -> bool:
             d = prog.get("detail")
             if not isinstance(d, dict):
                 d = {}
+            d.pop("phase", None)   # 국면은 이 beat 의 몫 — 앞 beat 의 "계산 중" 이 액션 있는 행에 남지 않게(100회차 L100-3)
             d.update(detail)
             prog["detail"] = d
             prog["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -403,24 +404,28 @@ def _progress_note(prog: dict) -> str:
     호출 번호만 알고 전체 수는 모른다고 of=0 을 보낸다 — 거짓 분모를 만들지 않는 것과 좌표를 숨기는 것은
     다른 일인데, `step and of` 조건이 둘을 묶어 note 에서 step/action 이 영원히 사라졌다(원시 progress 엔 있었다)."""
     parts = []
+    d = prog.get("detail") if isinstance(prog.get("detail"), dict) else {}
+    computing = d.get("phase") == "compute"   # 액션 없는 each — 좌표의 액션은 끝났고 지금은 계산 중(100회차 L100-3)
     if prog.get("step") or prog.get("action"):
         coord = f"step {prog['step']}" if prog.get("step") else ""
         if coord and prog.get("of"):
             coord += f"/{prog['of']}"
-        parts.append(f"{coord} {prog.get('action') or ''}".strip())
-    d = prog.get("detail") if isinstance(prog.get("detail"), dict) else {}
+        label = f"{coord} {prog.get('action') or ''}".strip()
+        if prog.get("reused"):
+            label += "(재사용)"   # 영수증으로 끝난 호출 — 실행하지 않은 읽기를 "진행 중"이라 말하지 않는다
+        parts.append(label + (" 뒤" if computing else ""))
     if d.get("row") and d.get("rows"):
         row = f"each {d['row']}/{d['rows']}행"
         if d.get("row_label"):
             row += f"({d['row_label']})"
-        parts.append(row)
+        parts.append(row + (" 계산 중" if computing else ""))
     if d.get("substep") and d.get("substeps"):
         parts.append(f"하위 step {d['substep']}/{d['substeps']} "
                      f"{d.get('subaction') or ''}".strip())
     if not parts:
         return ("실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 "
                 f"wait 초(≤{TICKET_MAX_WAIT_S})를 주세요. 셸 sleep 폴링은 쓰지 마세요.")
-    return (f"실행이 아직 돌고 있습니다 — {' · '.join(parts)} 진행 중"
+    return (f"실행이 아직 돌고 있습니다 — {' · '.join(parts)}{'' if computing else ' 진행 중'}"
             f"(마지막 움직임 {prog.get('updated_at')}). "
             f"이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. "
             f"끝날 때까지 기다리려면 같은 회수에 wait 초(≤{TICKET_MAX_WAIT_S})를 주세요 — "

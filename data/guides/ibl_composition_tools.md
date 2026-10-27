@@ -128,6 +128,7 @@ stdout은 진단, 결과 파일은 값이다. 수정·재현·권한은 [Script 
 
 실행 응답의 `resume:{run_id}`와 동일 `code`·`inputs`를 다음 execute_ibl 호출에 보낸다.
 `run_id`는 `resume`·`continuation.reuse_args` 안에만 있고 응답 최상위 칸은 없다(2026-10-27 실측).
+재사용 수는 응답의 `reuse` 봉투(`reused_calls`·`skipped`)에 있다 — `receipt_reused`는 증거 사건 이름이지 봉투 칸이 아니다(2026-10-28 실측).
 완료한 도구 호출은 저장된 값으로 복원한다. 반복의 같은 인자도 서로 다른 호출로 기록한다.
 코드·입력·도구 구현이 달라지거나 외부 작업의 완료를 확인하지 못하면 재개하지 않는다.
 `RESUME_DIVERGED`의 `details.changed/fingerprints`는 변경 차원의 지문이다. 옛 기록은 `dimensions_known:false`다.

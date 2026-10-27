@@ -1,0 +1,7 @@
+#!ibl edition=2
+$a=[self:read]{path:$파일}
+$b=[self:read]{path:$파일}
+$c=[self:read]{path:$파일}
+$rows=$목록 >> [table:each] { return {i:$it,t:text($it)+"-"+text($it*7)+"-"+text(len(get($a,"text","")))} }
+$agg=$rows >> [table:reduce]{init:0,step:"acc + len(t)",as:"s"}
+return {reads:3,lens:[len(get($a,"text","")),len(get($b,"text","")),len(get($c,"text",""))],n:len($rows),s:get($agg,"value",null)}

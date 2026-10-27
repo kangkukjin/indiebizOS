@@ -1,0 +1,12 @@
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "ea6f95594a0e35826c3bc6832be18ab6", "code_digest": "5094ab66242dea1b3ec8b695f79de706", "outcome": "restarted", "request_id": null, "at": "00:47:06"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "ea6f95594a0e35826c3bc6832be18ab6", "code_digest": "5094ab66242dea1b3ec8b695f79de706", "outcome": "restarted", "request_id": null, "at": "00:47:53"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "ea6f95594a0e35826c3bc6832be18ab6", "code_digest": "5094ab66242dea1b3ec8b695f79de706", "outcome": "restarted", "request_id": null, "at": "00:49:08"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "ea6f95594a0e35826c3bc6832be18ab6", "code_digest": "5094ab66242dea1b3ec8b695f79de706", "outcome": "restarted", "request_id": null, "at": "00:49:08"}
+{"waited_s": 4.0, "timeout": true, "phase": "STOPPING", "generation": "ea6f95594a0e35826c3bc6832be18ab6", "code_digest": "5094ab66242dea1b3ec8b695f79de706", "outcome": "restarted", "request_id": "38a849ff778d378110baddf59a823fce", "at": "00:49:34"}
+{"waited_s": 0.1, "phase": "ACTIVE", "generation": "78a9cc2458783bc283459ce518016ee3", "code_digest": "38a849ff778d378110baddf59a823fce", "outcome": "restarted", "request_id": null, "at": "00:50:35"}
+{"waited_s": 2.0, "phase": "ACTIVE", "generation": "78a9cc2458783bc283459ce518016ee3", "code_digest": "38a849ff778d378110baddf59a823fce", "outcome": "restarted", "request_id": null, "at": "01:01:08"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "78a9cc2458783bc283459ce518016ee3", "code_digest": "38a849ff778d378110baddf59a823fce", "outcome": "restarted", "request_id": null, "at": "01:01:55"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "78a9cc2458783bc283459ce518016ee3", "code_digest": "38a849ff778d378110baddf59a823fce", "outcome": "restarted", "request_id": null, "at": "01:01:55"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "78a9cc2458783bc283459ce518016ee3", "code_digest": "38a849ff778d378110baddf59a823fce", "outcome": "restarted", "request_id": null, "at": "01:02:25"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "73259f49e8bea2e3eaf74a7ba7787d79", "code_digest": "4ad6d1f0bad75a15d8a2835bbbe1967e", "outcome": "restarted", "request_id": null, "at": "01:28:04"}
+{"waited_s": 0.0, "phase": "ACTIVE", "generation": "73259f49e8bea2e3eaf74a7ba7787d79", "code_digest": "4ad6d1f0bad75a15d8a2835bbbe1967e", "outcome": "restarted", "request_id": null, "at": "01:28:45"}

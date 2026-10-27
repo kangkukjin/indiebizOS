@@ -223,3 +223,41 @@ def test_스냅샷의_progress_는_dict_와_경과초(tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+# ── 2026-10-28 긴문장 100회차 L100-5 — HTTP 턴(/system-ai/chat)의 진행 수신자 ─────────────────────────────────
+def test_HTTP_턴_수신자는_진행을_턴_현재값으로_쓰고_끝나면_비운다(tmp_path, monkeypatch):
+    sessions, path = _session_db(tmp_path)
+    binding = sessions.Binding(str(path), "s1", "owner", "turn1")
+    clock = {"t": 100.0}
+    monkeypatch.setattr(sessions.time, "time", lambda: clock["t"])
+    sink = sessions.progress_sink(binding)
+    sink({"step": 1, "of": 0, "action": "self:read", "reused": False})
+    sink({"row": 1, "rows": 3})                     # 첫 beat — 좌표를 덧붙여 쓴다
+    sink({"row": 2, "rows": 3})                     # 0.2초 안 연속 beat 은 접는다
+    with sessions.connection(path) as conn:
+        prog = json.loads(conn.execute("SELECT progress FROM conversation_turns").fetchone()[0])
+    assert prog["type"] == "progress" and prog["action"] == "self:read" and prog["step"] == 1, prog
+    assert prog["detail"] == {"row": 1, "rows": 3}, ("beat 접기", prog)
+    clock["t"] += 1
+    sink({"row": 3, "rows": 3, "phase": "compute"})
+    sink({"step": 2, "of": 0, "action": "self:write", "reused": True, "detail": {"row": 3, "rows": 3}})
+    with sessions.connection(path) as conn:
+        prog = json.loads(conn.execute("SELECT progress FROM conversation_turns").fetchone()[0])
+        assert prog["action"] == "self:write" and prog["reused"] is True and prog["detail"]["row"] == 3, prog
+        assert conn.execute("SELECT count(*) FROM conversation_events").fetchone()[0] == 0, "진행은 사건으로 쌓지 않는다"
+    sessions.clear_progress(binding)
+    with sessions.connection(path) as conn:
+        assert conn.execute("SELECT progress FROM conversation_turns").fetchone()[0] == ""
+
+
+def test_HTTP_턴_수신자는_버스에_등록되면_신고를_받는다(task, tmp_path):
+    sessions, path = _session_db(tmp_path)
+    binding = sessions.Binding(str(path), "s1", "owner", "turn1")
+    sink = sessions.progress_sink(binding)
+    supervision_bus.register_progress_sink(task, sink)
+    from ibl_progress import report_step
+    report_step(None, 4, 0, "self:script", detail={"row": 2, "rows": 5})
+    with sessions.connection(path) as conn:
+        prog = json.loads(conn.execute("SELECT progress FROM conversation_turns").fetchone()[0])
+    assert prog["step"] == 4 and prog["action"] == "self:script" and prog["detail"]["rows"] == 5 and prog["reused"] is False, prog

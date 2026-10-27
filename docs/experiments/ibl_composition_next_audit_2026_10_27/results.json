@@ -1,0 +1,540 @@
+{
+  "D1_symbolic_paths": {
+    "concrete_field_predicate": {
+      "completion": null,
+      "diagnostic": null,
+      "executed": true,
+      "issues": [],
+      "source_complete": true,
+      "state_commit": null,
+      "success": true,
+      "value": 1
+    },
+    "explicit_annotation_accepted": true,
+    "registration": {
+      "independent_field_predicate": "rejected",
+      "unsatisfiable_field": "accepted"
+    },
+    "reports": {
+      "application_conflict": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [
+                {
+                  "action": "<input-dependent>",
+                  "declared": false,
+                  "mode": "write",
+                  "relations": [],
+                  "resource_hash": null,
+                  "resource_state": "unresolved"
+                }
+              ],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "unknown"
+            ],
+            "name": "f",
+            "requirements": {
+              "p": [
+                {
+                  "argument_style": "positional",
+                  "arguments": [
+                    {
+                      "type": "Number"
+                    }
+                  ],
+                  "at": 15,
+                  "conditional": false,
+                  "effects": [
+                    "input-dependent"
+                  ],
+                  "kind": "callable"
+                },
+                {
+                  "at": 28,
+                  "conditional": false,
+                  "expected": {
+                    "type": "Number"
+                  },
+                  "kind": "result"
+                },
+                {
+                  "at": 39,
+                  "conditional": false,
+                  "expected": {
+                    "type": "Bool"
+                  },
+                  "kind": "result"
+                }
+              ]
+            },
+            "result_contract": {
+              "type": "Bool"
+            }
+          }
+        ],
+        "guards": 2,
+        "issues": []
+      },
+      "field": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "pure"
+            ],
+            "name": "f",
+            "requirements": {},
+            "result_contract": {
+              "type": "Number"
+            }
+          }
+        ],
+        "guards": 2,
+        "issues": []
+      },
+      "field_conflict": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "pure"
+            ],
+            "name": "f",
+            "requirements": {},
+            "result_contract": {
+              "type": "Bool"
+            }
+          }
+        ],
+        "guards": 4,
+        "issues": []
+      },
+      "field_predicate": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [
+                {
+                  "action": "<input-dependent>",
+                  "declared": false,
+                  "mode": "write",
+                  "relations": [],
+                  "resource_hash": null,
+                  "resource_state": "unresolved"
+                }
+              ],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "unknown"
+            ],
+            "name": "f",
+            "requirements": {},
+            "result_contract": {
+              "type": "Number"
+            }
+          }
+        ],
+        "guards": 3,
+        "issues": [
+          "PURE_EXPRESSION"
+        ]
+      },
+      "scalar": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "pure"
+            ],
+            "name": "f",
+            "requirements": {
+              "x": [
+                {
+                  "at": 23,
+                  "conditional": false,
+                  "expected": {
+                    "type": "Number"
+                  },
+                  "kind": "value"
+                }
+              ]
+            },
+            "result_contract": {
+              "type": "Number"
+            }
+          }
+        ],
+        "guards": 1,
+        "issues": []
+      },
+      "scalar_predicate": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "pure"
+            ],
+            "name": "f",
+            "requirements": {
+              "p": [
+                {
+                  "argument_style": "positional",
+                  "arguments": [
+                    {
+                      "type": "Number"
+                    }
+                  ],
+                  "at": 16,
+                  "conditional": false,
+                  "effects": [
+                    "pure"
+                  ],
+                  "kind": "callable"
+                },
+                {
+                  "at": 12,
+                  "conditional": false,
+                  "expected": {
+                    "type": "Bool"
+                  },
+                  "kind": "result"
+                }
+              ]
+            },
+            "result_contract": {
+              "type": "Number"
+            }
+          }
+        ],
+        "guards": 1,
+        "issues": []
+      }
+    },
+    "resource_relation_reports": {
+      "field": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [
+                {
+                  "action": "t:write",
+                  "declared": true,
+                  "mode": "write",
+                  "relations": [],
+                  "resource_hash": null,
+                  "resource_state": "unresolved"
+                }
+              ],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "write_external"
+            ],
+            "name": "w",
+            "requirements": {},
+            "result_contract": {
+              "type": "Number"
+            }
+          }
+        ],
+        "guards": 2,
+        "issues": []
+      },
+      "scalar": {
+        "functions": [
+          {
+            "accesses": {
+              "entries": [
+                {
+                  "action": "t:write",
+                  "declared": true,
+                  "mode": "write",
+                  "relations": [
+                    {
+                      "argument": "key",
+                      "realm": "record",
+                      "variable": [
+                        "parameter",
+                        "def:0:41",
+                        "key"
+                      ]
+                    }
+                  ],
+                  "resource_hash": null,
+                  "resource_state": "unresolved"
+                }
+              ],
+              "omitted": 0,
+              "protocol": "ibl-access/1"
+            },
+            "declared_requirements": {},
+            "effects": [
+              "write_external"
+            ],
+            "name": "w",
+            "requirements": {
+              "key": [
+                {
+                  "at": 21,
+                  "conditional": false,
+                  "expected": {
+                    "type": "Text"
+                  },
+                  "kind": "value"
+                }
+              ]
+            },
+            "result_contract": {
+              "type": "Number"
+            }
+          }
+        ],
+        "guards": 1,
+        "issues": []
+      }
+    },
+    "sources": {
+      "application_conflict": "[def:f]($p){$x=$p(1);$a=abs($x);return not $x}",
+      "field": "[def:f]($x){return abs($x.n)}",
+      "field_conflict": "[def:f]($x){$a=abs($x.n);return not $x.n}",
+      "field_predicate": "[def:f]($cfg){[if:$cfg.p(1)]{return 1}[else]{return 0}}",
+      "scalar": "[def:f]($x){return abs($x)}",
+      "scalar_predicate": "[def:f]($p){[if:$p(1)]{return 1}[else]{return 0}}"
+    }
+  },
+  "D2_modular_completion": {
+    "definition": "[def:fetch](){return [t:down]{} ?? [t:good]{}}",
+    "flat_33_duties": "COMPLETION_CONTRACT",
+    "function_contract_keys": [
+      "accesses",
+      "actions",
+      "declared_requirements",
+      "default_expressions",
+      "definition",
+      "effects",
+      "name",
+      "param_contracts",
+      "params",
+      "pipe_input",
+      "required",
+      "requirements",
+      "requirements_protocol",
+      "result",
+      "result_contract",
+      "source_hash",
+      "specializations",
+      "specializations_omitted"
+    ],
+    "request_duty": {
+      "id": "result",
+      "predicate": "$value==2",
+      "sources": [
+        {
+          "action": "t:good",
+          "targets": {}
+        }
+      ]
+    },
+    "source": "return [fn:fetch]{}",
+    "with_request_contract": {
+      "completion": "satisfied",
+      "diagnostic": null,
+      "executed": true,
+      "issues": [],
+      "source_complete": false,
+      "state_commit": "committed",
+      "success": true,
+      "value": 2
+    },
+    "without_request_contract": {
+      "completion": null,
+      "diagnostic": null,
+      "executed": true,
+      "issues": [],
+      "source_complete": false,
+      "state_commit": "not_committed",
+      "success": true,
+      "value": 2
+    }
+  },
+  "D3_modular_repair": {
+    "binding": {
+      "after": "[def:calc]($x,$d){return $x/$d};$sent=[t:send]{id:\"delivery\"};$v=$sent/($n+1);return $v",
+      "before": "[def:calc]($x,$d){return $x/$d};$sent=[t:send]{id:\"delivery\"};$v=$sent/$n;return $v",
+      "diagnostic": "REPAIR_UNSUPPORTED",
+      "first": {
+        "completion": null,
+        "diagnostic": "VALUE",
+        "executed": true,
+        "issues": [],
+        "source_complete": true,
+        "state_commit": null,
+        "success": false,
+        "value": null
+      },
+      "repair_ready": false,
+      "writes": 1
+    },
+    "function": {
+      "after": "[def:calc]($x,$d){return $x/$d};$sent=[t:send]{id:\"delivery\"};return [fn:calc]{x:$sent,d:$n+1}",
+      "before": "[def:calc]($x,$d){return $x/$d};$sent=[t:send]{id:\"delivery\"};return [fn:calc]{x:$sent,d:$n}",
+      "diagnostic": "REPAIR_UNSUPPORTED",
+      "first": {
+        "completion": null,
+        "diagnostic": "VALUE",
+        "executed": true,
+        "issues": [],
+        "source_complete": true,
+        "state_commit": null,
+        "success": false,
+        "value": null
+      },
+      "repair_ready": false,
+      "writes": 1
+    },
+    "inline": {
+      "after": "[def:calc]($x,$d){return $x/$d};$sent=[t:send]{id:\"delivery\"};return $sent/($n+1)",
+      "before": "[def:calc]($x,$d){return $x/$d};$sent=[t:send]{id:\"delivery\"};return $sent/$n",
+      "diagnostic": null,
+      "first": {
+        "completion": null,
+        "diagnostic": "VALUE",
+        "executed": true,
+        "issues": [],
+        "source_complete": true,
+        "state_commit": null,
+        "success": false,
+        "value": null
+      },
+      "repair_ready": true,
+      "writes": 1
+    }
+  },
+  "D4_resource_default": {
+    "declared_default": {
+      "calls": 0,
+      "completion": null,
+      "diagnostic": null,
+      "executed": false,
+      "issues": [
+        "PARALLEL_WRITE_CONFLICT"
+      ],
+      "max_concurrent_writes": 0,
+      "source_complete": null,
+      "state_commit": null,
+      "success": false,
+      "value": null
+    },
+    "undeclared_default": {
+      "calls": 2,
+      "completion": null,
+      "diagnostic": null,
+      "executed": true,
+      "issues": [],
+      "max_concurrent_writes": 2,
+      "source_complete": true,
+      "state_commit": null,
+      "success": true,
+      "value": [
+        1,
+        1
+      ]
+    },
+    "undeclared_strict": {
+      "calls": 0,
+      "completion": null,
+      "diagnostic": "PARALLEL_RESOURCE_CONFLICT",
+      "executed": true,
+      "issues": [],
+      "max_concurrent_writes": 0,
+      "source_complete": true,
+      "state_commit": null,
+      "success": false,
+      "value": null
+    }
+  },
+  "D5_failure_composition": {
+    "function_contract": {
+      "accesses": {
+        "entries": [
+          {
+            "action": "t:read",
+            "declared": false,
+            "mode": "read",
+            "relations": [],
+            "resource_hash": null,
+            "resource_state": "unresolved"
+          }
+        ],
+        "omitted": 0,
+        "protocol": "ibl-access/1"
+      },
+      "declared_requirements": {},
+      "effects": [
+        "read_external"
+      ],
+      "name": "read",
+      "requirements": {},
+      "result_contract": {
+        "type": "Number"
+      }
+    },
+    "original_error_retained_as_details": "SOURCE_MISSING",
+    "outcomes": {
+      "collect_unwrap": {
+        "completion": null,
+        "diagnostic": null,
+        "executed": true,
+        "issues": [],
+        "source_complete": false,
+        "state_commit": null,
+        "success": true,
+        "value": "UNWRAP_ERR"
+      },
+      "direct": {
+        "completion": null,
+        "diagnostic": null,
+        "executed": true,
+        "issues": [],
+        "source_complete": false,
+        "state_commit": null,
+        "success": true,
+        "value": "SOURCE_MISSING"
+      }
+    },
+    "sources": {
+      "collect_unwrap": "[try]{$r=[table:each]{items:[1],on_error:\"collect\"}{return [t:read]{}};return unwrap($r[0])}[catch]{return $error.code}",
+      "direct": "[try]{return [t:read]{}}[catch]{return $error.code}"
+    }
+  }
+}

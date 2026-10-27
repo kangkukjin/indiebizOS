@@ -322,7 +322,7 @@ def finalize(controller, response):
 
 
 def completion(session, row, base):
-    """정본 바이트·각인·활성 영수증을 검증한다. 모델이나 셸 검사를 다시 실행하지 않는다."""
+    """정본 바이트·각인·활성·원 증상 영수증으로 완료를 판정한다. 검사를 다시 실행하지 않는다."""
     import hashlib
     import subprocess
     ready = session.get("readiness") or {}
@@ -385,4 +385,7 @@ def completion(session, row, base):
                 return False, "삭제 각인을 확인하지 못했습니다: " + rel
         elif actual.returncode or hashlib.sha256(actual.stdout).hexdigest() != item["after"]["sha"]:
             return False, "각인 내용이 검사한 변경과 다릅니다: " + rel
-    return True, "관련 검사·정본 반영·활성 확인·커밋 완료"
+    recheck, note = symptom_recheck(session, row, base)
+    if recheck != "verified":
+        return False, "원 증상 재검사 미확인: " + note
+    return True, "관련 검사·정본 반영·활성 확인·커밋·원 증상 재검사 완료"

@@ -94,6 +94,8 @@ def test_artifact_scope_and_symlinks_rejected(setup, path):
 
 def test_artifact_only_receipt_checks_live_bytes_without_empty_git_commit(setup, monkeypatch):
     from types import SimpleNamespace
+    import shlex
+    import sys
     from repair_policy import completion
     root, wt, st, sess, paths = artifacts(setup)
     sess['repair_policy'] = 2
@@ -105,6 +107,11 @@ def test_artifact_only_receipt_checks_live_bytes_without_empty_git_commit(setup,
     assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root) == before
     monkeypatch.setattr('red_apply._load_handler', lambda job: SimpleNamespace(_staging_mod=lambda: st))
     saved = st.read_session(str(root), sess['key'])
+    expected = {path: (root / path).read_bytes().hex() for path in paths}
+    command = shlex.quote(sys.executable) + ' -c ' + shlex.quote(
+        'from pathlib import Path; assert all(Path(p).read_bytes().hex() == h for p, h in ' + repr(expected) + '.items())')
+    checked = st._candidate.activation(str(root), saved, 'active_verify_cmd', command, st._save_session)
+    assert checked['state'] == 'passed'
     assert completion(saved, {}, root)[0]
     (root / paths[0]).write_bytes(b'tampered')
     assert not completion(saved, {}, root)[0]

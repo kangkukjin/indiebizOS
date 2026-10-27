@@ -23,13 +23,17 @@ def launch(code_root, argv=None):
     state = read_json(control_dir(base) / "state.json", {}) or {}
     support = state.get("generation_dir") if state.get("generation_dir") and Path(state["generation_dir"]).is_dir() else code_root
     path, cid, note = control_base.select(code_root, base, support_root=support)
-    from restart_controller import log
     if path is None:
+        from restart_controller import log
         log(control_dir(base), f"승인된 제어 기반 없음({note}) — 정본에서 직접 기동")
         from restart_controller import main
         return main(argv, code_root=code_root)
     script = path / "backend/services/restart_controller.py"
-    log(control_dir(base), f"제어 기반 {cid}({note}) 에서 제어자 기동: {script}")
+    # 선택한 정상 기반을 실행하기 전에 손상됐을 수 있는 checkout 제어자를 import하지 않는다.
+    try:
+        print(f"제어 기반 {cid}({note}) 에서 제어자 기동: {script}", flush=True)
+    except (OSError, ValueError):
+        pass
     env = dict(os.environ, INDIEBIZ_BASE_PATH=str(base), INDIEBIZ_SOURCE_ROOT=str(code_root))
     args = [sys.executable, str(script), *argv]
     if "--code-root" not in argv:

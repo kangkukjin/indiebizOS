@@ -374,6 +374,9 @@ def run():
         # 실제 프로세스로 검증 — 코드 루트(실저장소)와 데이터 루트(가짜 repo)가 갈라진다.
         v10 = tmp / "backend" / "cognition" / "victim10.py"
         v10.write_text("TEN = 'orig'\n")
+        subprocess.run(['git', 'add', '--', str(v10.relative_to(tmp))], cwd=tmp, check=True)
+        subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm',
+                        'S10 baseline', '--', str(v10.relative_to(tmp))], cwd=tmp, check=True)
         task10 = _grant(h, "task_red_apply_proc")
         s10 = h._red_stage(str(v10), for_write=True)
         Path(s10).write_text("TEN = 'deferred'\n")
@@ -395,7 +398,7 @@ def run():
                  "RED_APPLY_UNREACHABLE_CONFIRM_S": "0", "RED_APPLY_GATE_SETTLE_S": "0",
                  "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
         env10.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
-        p10 = subprocess.run([sys.executable, "-c", "import sys,json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(sys.argv[2]) / 'backend'))\nimport boot_paths\nfrom restart_controller import Controller\nfrom restart_protocol import code_manifest, request, read_json\nfrom test_restart_controller import Adapter\njob_path=Path(sys.argv[1]); job=json.loads(job_path.read_text()); base=Path(job['repo'])\nadapter=Adapter(); adapter.base=base; ctl=Controller(base,base,adapter)\nctl.save(phase='ACTIVE',generation='fixture',worker={'pid':11,'born':1},code_digest=code_manifest(base)['digest'],control_token='fixture')\nrequest(base,'red_apply',operation='red_apply',payload={'job_path':str(job_path)})\nfor _ in range(20):\n ctl.tick()\nresult=read_json(job_path).get('controller_apply', {})\nassert result.get('applied'), (result,ctl.state)\nassert ctl.state['phase']=='ACTIVE',ctl.state\n", str(job10), str(REPO)], capture_output=True, text=True, timeout=180, env=env10)
+        p10 = subprocess.run([sys.executable, "-c", "import sys,json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(sys.argv[2]) / 'backend'))\nimport boot_paths\nfrom restart_controller import Controller\nfrom restart_protocol import code_manifest, request, read_json\nfrom test_restart_controller import Adapter\njob_path=Path(sys.argv[1]); job=json.loads(job_path.read_text()); base=Path(job['repo'])\nadapter=Adapter(); adapter.base=base; ctl=Controller(base,base,adapter)\nctl.save(phase='ACTIVE',generation='fixture',worker={'pid':11,'born':1},code_digest=code_manifest(base)['digest'],control_token='fixture')\nrequest(base,'red_apply',operation='red_apply',payload={'job_path':str(job_path)})\nfor _ in range(20):\n ctl.tick()\nresult=read_json(job_path).get('controller_apply', {})\nassert result.get('applied'), (result,ctl.state)\nassert result.get('commit', {}).get('success'), (result,ctl.state)\nassert ctl.state['phase']=='ACTIVE',ctl.state\n", str(job10), str(REPO)], capture_output=True, text=True, timeout=180, env=env10)
         check("S10_process_applies", p10.returncode == 0 and v10.read_text() == "TEN = 'deferred'\n",
               ((p10.stdout or "") + (p10.stderr or ""))[-400:])
         sess10 = st.read_session(str(tmp), st.task_key(task10))
@@ -555,6 +558,9 @@ def run():
         h._REPO_ROOT = tmp5
         v13 = tmp5 / "backend" / "cognition" / "victim13.py"
         v13.write_text("T13 = 'orig'\n")
+        subprocess.run(['git', 'add', '--', str(v13.relative_to(tmp5))], cwd=tmp5, check=True)
+        subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm',
+                        'S13 baseline', '--', str(v13.relative_to(tmp5))], cwd=tmp5, check=True)
         task13 = _grant(h, "task_wait_contract")
         s13 = h._red_stage(str(v13), for_write=True)
         Path(s13).write_text("T13 = 'patched'\n")
@@ -585,7 +591,7 @@ def run():
                  "RED_APPLY_VERIFY_HEALTH_WAIT_S": "0",
                  "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
         env13.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
-        p13 = subprocess.run([sys.executable, "-c", "import sys,json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(sys.argv[2]) / 'backend'))\nimport boot_paths\nfrom restart_controller import Controller\nfrom restart_protocol import code_manifest, request, read_json\nfrom test_restart_controller import Adapter\njob_path=Path(sys.argv[1]); job=json.loads(job_path.read_text()); base=Path(job['repo'])\nadapter=Adapter(); adapter.base=base; ctl=Controller(base,base,adapter)\nctl.save(phase='ACTIVE',generation='fixture',worker={'pid':11,'born':1},code_digest=code_manifest(base)['digest'],control_token='fixture')\nrequest(base,'red_apply',operation='red_apply',payload={'job_path':str(job_path)})\nfor _ in range(20):\n ctl.tick()\nresult=read_json(job_path).get('controller_apply', {})\nassert result.get('applied'), (result,ctl.state)\nassert ctl.state['phase']=='ACTIVE',ctl.state\n", str(job13), str(REPO)], capture_output=True, text=True, timeout=180, env=env13)
+        p13 = subprocess.run([sys.executable, "-c", "import sys,json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(sys.argv[2]) / 'backend'))\nimport boot_paths\nfrom restart_controller import Controller\nfrom restart_protocol import code_manifest, request, read_json\nfrom test_restart_controller import Adapter\njob_path=Path(sys.argv[1]); job=json.loads(job_path.read_text()); base=Path(job['repo'])\nadapter=Adapter(); adapter.base=base; ctl=Controller(base,base,adapter)\nctl.save(phase='ACTIVE',generation='fixture',worker={'pid':11,'born':1},code_digest=code_manifest(base)['digest'],control_token='fixture')\nrequest(base,'red_apply',operation='red_apply',payload={'job_path':str(job_path)})\nfor _ in range(20):\n ctl.tick()\nresult=read_json(job_path).get('controller_apply', {})\nassert result.get('applied'), (result,ctl.state)\nassert result.get('commit', {}).get('success'), (result,ctl.state)\nassert ctl.state['phase']=='ACTIVE',ctl.state\n", str(job13), str(REPO)], capture_output=True, text=True, timeout=180, env=env13)
         check("S13b_process_applied", p13.returncode == 0 and v13.read_text() == "T13 = 'patched'\n",
               ((p13.stdout or "") + (p13.stderr or ""))[-400:])
         check("S13b_verify_cmd_actually_ran", "activation_checked" in json.loads(job13.read_text()).get("post_verify", {}).get("output", "") and not (tmp5 / "verify_ran.txt").exists(),

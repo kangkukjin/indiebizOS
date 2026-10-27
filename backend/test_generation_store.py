@@ -52,6 +52,20 @@ def test_inventory_excludes_tests_caches_state_and_links_them(tmp_path):
     assert ".env" not in files and "data/guides/a.md" not in files
 
 
+def test_publication_compares_non_code_and_deleted_paths_without_requiring_them_in_manifest(tmp_path):
+    root = _repo(tmp_path)
+    deleted = ['backend/base/util.py', 'data/guides/old.md']
+    (root / deleted[0]).unlink()
+    published = {rel: gens._sha(root / rel) for rel in ('backend/app.py', 'backend/test_app.py', 'data/guides/a.md')}
+    store = tmp_path / 'store'
+    manifest = gens.snapshot(root, store)
+    generation = store / manifest['generation']
+    assert gens.publication_conflicts(generation, published, deleted) == []
+    (root / 'data/guides/a.md').write_text('concurrent edit')
+    (root / deleted[1]).symlink_to(root / 'missing')
+    assert gens.publication_conflicts(generation, published, deleted) == ['data/guides/a.md', 'data/guides/old.md']
+
+
 def test_snapshot_is_idempotent_and_dirty_content_changes_identity(tmp_path):
     root = _repo(tmp_path)
     store = tmp_path / "store"

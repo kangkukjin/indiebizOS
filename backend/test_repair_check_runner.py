@@ -42,6 +42,8 @@ func TestChangedBehavior(t *testing.T) {
             {"criterion_id": "C1", "status": "passed", "evidence_ids": [record["id"]]}]}
     monkeypatch.setattr(policy, "semantic_review", review)
     result = st.op_apply({"_repo_root": str(root), "_grant_key": session["key"],
+                          "active_verify_cmd": shlex.quote(sys.executable) + " -c " + shlex.quote(
+                              'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"'),
                           "verification_plan": [{"criterion_id": "C1", "method": method, "command": cmd}]})
     assert result.get("complete"), result
     assert len(reviews) == (method == "semantic")

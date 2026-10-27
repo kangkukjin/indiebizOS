@@ -180,6 +180,9 @@ def test_repair_publish_keeps_worker_then_swaps_to_candidate_with_commit(setup, 
     assert ("verify", "STARTING", True, False) in phases or any(p[0] == "verify" for p in phases)
     manifest = gens.read_manifest(ctl.state["generation_dir"])
     assert manifest["extra"]["commit"] == "abc123" and manifest["extra"]["reason"] == "red_apply"
+    import repair_root
+    assert repair_root.projection(ctl.base, 'task')['stage'] == 'activate'
+    assert ctl.state['red_job_path'] is None
 
 
 def test_repair_publish_conflict_after_commit_keeps_active_without_swap(setup, monkeypatch):
@@ -196,6 +199,53 @@ def test_repair_publish_conflict_after_commit_keeps_active_without_swap(setup, m
     ticks(ctl, 6)
     assert ctl.state["phase"] == "ACTIVE" and ctl.state["last_result"]["outcome"] == "publish_conflict"
     assert adapter.spawns == 0 and adapter.stops == 0
+
+
+@pytest.mark.parametrize('case', ['commit_failed', 'file_missing', 'deleted_reappears'])
+def test_rejected_publication_keeps_active_and_watcher_cannot_bypass_it(setup, monkeypatch, case):
+    ctl, adapter, clock = setup
+    original = ctl.state['generation_dir']
+    job_path, job, res = _schedule_job(ctl)
+    def helper(action, state):
+        assert action == 'apply'
+        path = ctl.base / 'backend/app.py'
+        path.write_text('value = 2\n')
+        out = {'applied': True, 'commit': {'success': True, 'commit': 'abc'},
+               'published_files': {'backend/app.py': gens._sha(path)}, 'deleted_files': []}
+        if case == 'commit_failed':
+            out['commit'] = {'success': False, 'error': 'index locked'}
+        elif case == 'file_missing':
+            path.unlink()
+        else:
+            out.update(published_files={}, deleted_files=['backend/app.py'])
+        return {'ok': True, 'result': out}, []
+    monkeypatch.setattr(adapter, 'helper', helper)
+    request(ctl.base, 'red_apply', operation='red_apply', payload={'job_path': str(job_path), 'reservation': res})
+    ticks(ctl, 6)
+    expected = 'publish_commit_failed' if case == 'commit_failed' else 'publish_conflict'
+    assert ctl.state['last_result']['outcome'] == expected
+    settle(ctl, clock)
+    ticks(ctl, 12)
+    assert ctl.state['phase'] == 'ACTIVE' and ctl.state['generation_dir'] == original
+    assert adapter.stops == adapter.spawns == 0
+    import repair_root
+    view = repair_root.projection(ctl.base, 'task')
+    assert view['repair_outcome'] == expected and view['service_health'] == 'unchanged_active'
+    assert view['resume_condition']
+
+
+def test_unrelated_restart_does_not_reopen_completed_repair(setup):
+    import repair_root
+    ctl, adapter, clock = setup
+    job_path, job, res = _schedule_job(ctl)
+    repair_root.close(ctl.base, 'task', complete=True, reason='verified')
+    before = repair_root.read(ctl.base, 'task')
+    # 상태 파일에 옛 경로가 남은 제어자도 다음 일반 재기동에서 회수해야 한다.
+    ctl.save(red_job_path=str(job_path))
+    request(ctl.base, 'ordinary restart')
+    ticks(ctl, 12)
+    assert ctl.state['last_result']['outcome'] == 'restarted'
+    assert repair_root.read(ctl.base, 'task') == before
 
 
 def test_helper_death_during_publish_keeps_worker_and_recovers_canonical(setup, monkeypatch):

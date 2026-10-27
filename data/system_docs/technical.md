@@ -556,7 +556,11 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 크래시는 같은 세대 재기동. `red_apply` 는 새 `PUBLISHING` 단계에서 현역을 살려 둔 채 수행자가 정본 반영·커밋을
 하고(`restart_red.apply_job` → `commit_applied`), 그 정본으로 후보를 봉인해 교체한다 — 거절·수행자 사망·충돌은
 현역 무변경. 은퇴한 결과: `artifact_changed_before_start`·`artifact_changed_after_check`·`boot_artifact_changed`.
-새 결과: `publish_conflict`·`candidate_unstable`·`apply_interrupted_recovered`·`apply_timeout`.
+새 결과: `publish_commit_failed`·`publish_conflict`·`candidate_unstable`·`apply_interrupted_recovered`·`apply_timeout`.
+커밋 실패와 반영 파일의 누락·내용 충돌·삭제 파일 재등장은 현역 유지로 끝나며 같은 입력의 자동 감시 재배포도 차단한다.
+실행 입력은 봉인 manifest, 비실행 파일은 정본 바이트로 대조한다. root에 기록하는 결말은 해당 `red_apply` 요청에만
+묶이며 이후 일반 재기동·종료가 과거 수리를 다시 열지 않는다. 원 증상 재검사 미확인은 공통 완료 판정에서 거절한다.
+종결 작업의 미전달 통지만 남아도 ACTIVE의 idle 스캔이 전달을 재시도하며 완료 판정·실행은 반복하지 않는다.
 세대 정리는 활성·직전·대기 후보와 최근 3개를 남기며, 세대 안에 생긴 데이터 잔류는 정본으로 회수한다.
 
 제어 기반(G6): `api.py start` 는 `control_launcher` 가 정본의 제어 파일(`control_base.CONTROL_FILES`)을

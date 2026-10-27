@@ -2,6 +2,7 @@
 import boot_paths  # noqa: F401
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -33,6 +34,8 @@ def test_semantic_mixed_check_and_visual_evidence_apply(repair, monkeypatch, anc
         'workspace_coverage': [{'criterion_id': 'C1', 'status': 'passed', 'evidence_ids': [anchor, visual]}]})
     st._save_session(str(root), session)
     result = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
+                         'active_verify_cmd': shlex.quote(sys.executable) + ' -c ' + shlex.quote(
+                             'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"'),
                          'verification_plan': [{'criterion_id': 'C1', 'method': 'semantic'}]})
     assert result['complete'], result
     saved = st.read_session(str(root), session['key'])

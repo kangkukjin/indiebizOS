@@ -8,6 +8,33 @@ import repair_policy as policy
 from supervisor_handoff import criteria_contract
 
 
+@pytest.mark.parametrize('entry', ['receipt', 'finalize'])
+def test_unverified_symptom_cannot_close_applied_repair(repair, monkeypatch, entry):
+    from test_repair_receipt_flow import command
+    import api_repair_continuation as consumer
+    import repair_root
+    from thread_context import get_goal_eval_outcome
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    cmd = command(wt)
+    applied = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
+                           'verification_plan': [{'criterion_id': 'C1', 'command': cmd}]})
+    assert applied['applied'] and applied['commit']['success']
+    saved = st.read_session(str(root), session['key'])
+    assert policy.symptom_recheck(saved, {}, root)[0] == 'unverified'
+    assert not policy.completion(saved, {}, root)[0]
+    if entry == 'receipt':
+        monkeypatch.setattr(consumer, '_deliver', lambda *a, **k: pytest.fail('unverified completion notice'))
+        answer = consumer._receipt_completion({'task_id': session['key'], 'repair_policy': 2,
+                                               'phase': 'verify_remaining'}, root)
+        assert answer['evaluation']['goal_status'] == 'UNKNOWN'
+    else:
+        policy.finalize(controller, '수정했습니다')
+        assert get_goal_eval_outcome()['goal_status'] == 'UNKNOWN'
+        projected = repair_root.projection(root, session['key'])
+        assert projected['stage'] == 'incomplete' and projected['resume_condition']
+
+
 def test_executor_cannot_downgrade_semantic_criterion(repair, monkeypatch):
     root, wt, st, session, controller = repair
     controller._final_criteria_contract = criteria_contract('전수 대조해줘', {'criteria': [

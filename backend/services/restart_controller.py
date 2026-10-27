@@ -114,16 +114,18 @@ class Controller:
         return value
 
     def finish(self, outcome, phase="ACTIVE", **details):
+        request = self.state.get("request") or {}
         result = self.result(outcome, **details)
         # ACTIVE의 첫 조치는 activate 재전달이다. 이 저장 직후 죽어도 관문이 남지 않는다.
-        self.save(phase=phase, request=None, last_result=result, resume_pending=False,
+        self.save(phase=phase, request=None, red_job_path=None, last_result=result, resume_pending=False,
                   candidate=None if phase in {"ACTIVE", "FAILED", "STOPPED"} else self.state.get("candidate"))
-        self._notify_repair_root(result)
+        self._notify_repair_root(result, request)
 
-    def _notify_repair_root(self, result):
+    def _notify_repair_root(self, result, request):
         """red_apply 요청의 결말을 수리 root 원장에 전이한다(활성 단계의 소유자는 제어자다)."""
-        req_payload = (self.state.get("request") or {}).get("payload") or {}
-        job_path = req_payload.get("job_path") or (self.state.get("red_job_path"))
+        if request.get("operation") != "red_apply":
+            return
+        job_path = (request.get("payload") or {}).get("job_path")
         if not job_path:
             return
         try:
@@ -414,6 +416,12 @@ class Controller:
                 return
             s = self.state
         result = s["red_outcome"]
+        if not (result.get("commit") or {}).get("success"):
+            error = (result.get("commit") or {}).get("error") or "정본 반영 후 커밋 영수증이 없습니다"
+            # 파일 감시가 같은 미각인 변경을 일반 개발 후보로 우회 배포하지 않게 한다.
+            self.record_failed_source(gens.execution_inventory(self.code_root)["digest"], "publish_commit_failed", error)
+            self.finish("publish_commit_failed", error=error)
+            return
         try:
             candidate = self.prepare_candidate("red_apply", extra={"request_id": s["request"]["request_id"],
                                                                    "commit": (result.get("commit") or {}).get("commit")})
@@ -427,11 +435,10 @@ class Controller:
         except Exception as exc:
             self.finish("publish_check_failed", error=f"{type(exc).__name__}: {exc}")
             return
-        manifest = gens.read_manifest(candidate["generation_dir"]) or {}
-        published = result.get("published_files") or {}
-        mismatch = sorted(rel for rel, sha in published.items()
-                          if rel in manifest.get("files", {}) and manifest["files"][rel] != sha)
+        mismatch = gens.publication_conflicts(candidate["generation_dir"], result.get("published_files") or {},
+                                             result.get("deleted_files") or [])
         if mismatch:
+            self.record_failed_source(candidate["source_digest"], "publish_conflict", ", ".join(mismatch))
             self.finish("publish_conflict", changed_files=mismatch,
                         error="정본 반영 뒤 같은 경로가 다시 바뀌어 후보가 수리 커밋과 다릅니다")
             return

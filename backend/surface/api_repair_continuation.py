@@ -347,9 +347,10 @@ def kick():
     try:
         _last_scan = time.monotonic()
         candidates = [read_json(p) or {} for p in directory(base).glob("*.json")]
-        if not any(r.get("status") not in TERMINAL and
-                   (r.get("phase") not in {"review", "execution"} or cancelled(r, base) or
-                    r.get("retry_at") is not None and r["retry_at"] <= time.time())
+        if not any((r.get("status") in TERMINAL and r.get("delivery_pending")) or
+                   (r.get("status") not in TERMINAL and
+                    (r.get("phase") not in {"review", "execution"} or cancelled(r, base) or
+                     r.get("retry_at") is not None and r["retry_at"] <= time.time()))
                    for r in candidates if r.get("authorized_origin") == "user"):
             _lock.release()
             return

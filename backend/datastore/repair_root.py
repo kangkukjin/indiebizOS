@@ -255,6 +255,10 @@ def note_controller_result(base, job_path, result, state):
         return transition(base, root_id, stage="check", outcome=outcome, service="unchanged_active",
                           reason=result.get("error"), next_action="거절 사유에 따라 같은 후보를 재조정한다",
                           resume_condition="정본 충돌·입력 변경이 해소되면 재검증")
+    if outcome == "publish_commit_failed":
+        return transition(base, root_id, stage="publish", outcome=outcome, service="unchanged_active",
+                          reason=result.get("error"), next_action="커밋 실패 원인을 해소하고 기존 반영 영수증에서 각인만 회수한다",
+                          resume_condition="수리 델타의 커밋 성공 후 후보를 다시 준비한다")
     if outcome in {"apply_interrupted_recovered", "apply_interrupted_manual_recovery", "apply_timeout"}:
         return transition(base, root_id, stage="publish", outcome=outcome, service="unchanged_active",
                           reason=result.get("error"),

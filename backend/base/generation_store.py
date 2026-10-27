@@ -359,6 +359,28 @@ def verify(generation_dir, *, files=None):
     return manifest
 
 
+def publication_conflicts(generation_dir, published, deleted):
+    """수리 델타의 생성·수정·삭제를 후보와 대조한다. 비실행 파일은 정본 바이트로 확인한다."""
+    manifest = read_manifest(generation_dir) or {}
+    files = manifest.get("files") or {}
+    source = Path(manifest["source_root"])
+    conflicts = set()
+    for rel, expected in {**published, **dict.fromkeys(deleted)}.items():
+        # 존재 여부에 따라 실행 경로를 분류하면 사라진 파일을 검사에서 빠뜨린다.
+        code = (rel in CODE_FILES or any(rel.startswith(d + "/") for d in CODE_DIRS)) and not _excluded(rel)
+        actual = files.get(rel) if code else None
+        path = source / rel
+        if not code:
+            try:
+                actual = _sha(path) if path.is_file() else None
+            except OSError:
+                conflicts.add(rel)
+                continue
+        if actual != expected or (expected is None and (rel in files or os.path.lexists(path))):
+            conflicts.add(rel)
+    return sorted(conflicts)
+
+
 def python_executable(generation_dir):
     """세대의 인터프리터 — 복제된 .venv 가 있으면 그것(의존 바이트가 세대에 고정), 없으면 현재 것."""
     g = Path(generation_dir)

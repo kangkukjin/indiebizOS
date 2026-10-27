@@ -1,0 +1,22 @@
+{
+ "checked_at": "2026-10-28T05:24+09:00",
+ "candidate": "77회차(2026-10-19) A 기본→변형 ep4956/4957(최초)·ep4960/4961(수리 후), B 기본만 ep4962",
+ "same": {
+  "model": "ClaudeCode/opus(77: 'ClaudeCode/opus(최대 기어)' / 지금 data/system_ai_config.json provider=claude_code model=opus)",
+  "entry": "POST /system-ai/chat origin=training, rehearsal 세션 공유",
+  "D1": "963fa9a4… 동일",
+  "R1": "48da9590… 동일",
+  "R3": "d570b774… 동일"
+ },
+ "different": {
+  "request_text": "77은 10-19 설계 문안(반말, '각 PC에서 파일을 다루는 권한…'), 101은 10-28 설계 문안(존댓말, '회원별 실행 위치…' 항목 명시, '판단 메모와 담당자 점검 목록을 지정한 출력 폴더에')",
+  "D2": "65201528→f2a2cc51 (738→759줄)",
+  "D3": "cadfda74→e72bd2c5 (89→237줄, 10-20 드라이버 1층 추가)",
+  "D4": "6c8eeba0→3f89e5f7 (332→356줄)",
+  "R2": "720d2eae→f99f597c (126→129줄)",
+  "B_variant": "77 은 B 후속(B2) 없음·B1 요청 문안도 다름",
+  "code": "77 정본 293d49f0 → 101 정본 950d976c + 미커밋 diff 3d0bc10a…; 77 이후 평가 지침(L77-1/L77-5) 수리·자기수리 세대·IBL 공통 부품 등 다수 변경",
+  "measurement": "77 은 harness/collect.py 로 task_id 별 usage; 101 은 같은 방식이나 세대 digest·대화 id·접근 기록 추가"
+ },
+ "verdict": "조건 불일치(요청 문안·자료 4/7 판본·코드 다수 변경) → 이번 A/B 를 새 기준선으로 확정. 77 수치는 '과거 참고'로만 보고에 병기하고 판본 간 차이로 귀속하지 않는다."
+}

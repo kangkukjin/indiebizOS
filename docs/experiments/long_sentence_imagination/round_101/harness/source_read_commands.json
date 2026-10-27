@@ -1,0 +1,27 @@
+{
+  "source": "기존 trajectory_event와 도구 입력 spill의 읽기 전용 회수; 실행한 명령이 아니라 과거 호출 증거",
+  "commands": [
+    {
+      "turn": "A2",
+      "task_id": "task_sysai_ed32ceb1",
+      "event_seq": 42,
+      "timestamp": "2026-10-28T05:33:55.524197",
+      "tool": "Bash",
+      "payload_sha256": "e719f208c73a6b6b95a3557ad32689404eb2cf512d085b63a000f2a9f7e36d62",
+      "command": "cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차; ls -la --time-style=full-iso inputs/A ai_out/A 2>/dev/null || ls -lT inputs/A ai_out/A; wc -l inputs/A/*.md; grep -n \"오프라인\\|offline\\|로컬 AI\\|로컬에서\\|단절\\|격리\\|다른 회원\\|타 회원\\|섞이\\|공유 경로\\|OS 계정\\|OS 사용자\" inputs/A/D*.md | cut -c1-200",
+      "description": "Verify inputs unchanged and grep offline/isolation lines",
+      "classification": "조건 관련 원문 검색"
+    },
+    {
+      "turn": "B2",
+      "task_id": "task_sysai_813cf7db",
+      "event_seq": 52,
+      "timestamp": "2026-10-28T05:43:28.417907",
+      "tool": "Bash",
+      "payload_sha256": "54df1ecfadc3220f91c17330c5578b4f7ab1c9591263eca737e91abd3701f265",
+      "command": "B=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/inputs/B; R1=$(ls $B/R1_*.md); for r in 27 93 98 116 123 293 298 330 369 487 489; do printf \"R1 L%s: \" $r; sed -n \"${r}p\" \"$R1\" | cut -c1-80; done; for r in 62 65 118; do printf \"R2 L%s: \" $r; sed -n \"${r}p\" $B/R2_*.md | cut -c1-80; done; for r in 11 33 41 44; do printf \"R3 L%s: \" $r; sed -n \"${r}p\" $B/R3_*.md | cut -c1-80; done",
+      "description": "Verify sampled citations in revision file",
+      "classification": "저장 뒤 원문 인용 검수"
+    }
+  ]
+}

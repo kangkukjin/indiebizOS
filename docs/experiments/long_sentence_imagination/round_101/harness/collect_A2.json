@@ -1,0 +1,169 @@
+{
+ "usage_note": "model.usage accounting=billable_usage 를 call_id 로 중복 제거해 role·model 별 합산. input 에 캐시가 포함되는지는 공급자 계약(ClaudeCode: input/cache_read/cache_create 별도 보고)에 따르며 여기서 캐시를 다시 더하지 않는다. 훈련자(운영 세션) 토큰은 미측정.",
+ "tasks": [
+  {
+   "task_id": "task_sysai_ed32ceb1",
+   "episodes": [
+    {
+     "id": 5565,
+     "source": "training",
+     "agent": "system_ai",
+     "task_id": "task_sysai_ed32ceb1",
+     "total_ms": 184800,
+     "started_at": "2026-10-28T05:33:18.004426",
+     "ended_at": "2026-10-28T05:36:22.805547"
+    }
+   ],
+   "event_kinds": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 7,
+    "supervision.recall.finished": 7,
+    "model.call_started": 6,
+    "model.input": 6,
+    "model.round": 9,
+    "model.usage": 6,
+    "model.call_finished": 6,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherited": 1,
+    "supervision.framing": 1,
+    "model.response_snapshot": 11,
+    "supervision.tool.started": 4,
+    "supervision.tool.finished": 4,
+    "capability.judged": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "supervision.decision": 1,
+    "validation.completed": 3,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+   },
+   "usage_by_role": {
+    "oneshot:classify|deepseek-flash|OpenAI": {
+     "calls": 2,
+     "input": 11131,
+     "cache_read": 3840,
+     "cache_create": 0,
+     "output": 5,
+     "reasoning": 0,
+     "latency_ms": 1549
+    },
+    "oneshot:background|deepseek-flash|OpenAI": {
+     "calls": 1,
+     "input": 8640,
+     "cache_read": 1280,
+     "cache_create": 0,
+     "output": 1646,
+     "reasoning": 0,
+     "latency_ms": 8827
+    },
+    "execution|opus|ClaudeCode": {
+     "calls": 1,
+     "input": 894150,
+     "cache_read": 849405,
+     "cache_create": 44737,
+     "output": 16543,
+     "reasoning": 3397,
+     "latency_ms": 157012
+    },
+    "oneshot:classify|deepseek-flash|DeepSeekProvider": {
+     "calls": 1,
+     "input": 4675,
+     "cache_read": 768,
+     "cache_create": 0,
+     "output": 80,
+     "reasoning": 0,
+     "latency_ms": 1114
+    },
+    "oneshot:evaluate|opus|ClaudeCode": {
+     "calls": 1,
+     "input": 37283,
+     "cache_read": 5903,
+     "cache_create": 31378,
+     "output": 1189,
+     "reasoning": 521,
+     "latency_ms": 12653
+    }
+   },
+   "usage_total": {
+    "calls": 6,
+    "input": 955879,
+    "cache_read": 861196,
+    "cache_create": 76115,
+    "output": 19463,
+    "reasoning": 3918
+   },
+   "tool_calls": 4,
+   "tool_names": {
+    "Bash": 2,
+    "Write": 2
+   },
+   "tools": [
+    {
+     "seq": 42,
+     "ts": "2026-10-28T05:33:55.524197",
+     "name": "Bash",
+     "chars": 419,
+     "excerpt": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차; ls -la --time-style=full-iso inputs/A ai_out/A 2>/dev/null || ls -lT inputs/A ai_out/A; wc -l inputs/A/*.md; grep -n \\\"오프라인\\\\|offline\\\\|로컬 AI\\\\|로컬에서\\\\|단절\\\\|격리\\\\|다른 회원\\\\|타 회원\\\\|섞이\\\\|공유 경로\\\\|OS ",
+     "full_available": true
+    },
+    {
+     "seq": 48,
+     "ts": "2026-10-28T05:35:33.052531",
+     "name": "Write",
+     "chars": 9662,
+     "excerpt": "{\"file_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/ai_out/A/판단메모_수정_오프라인_격리.md\", \"content\": \"# 판단 메모(수정본) — 출장 중 오프라인 작업과 직원 간 폴더 격리 조건 반영\\n\\n- 작성일: 2026-10-28\\n- 처음 결과는 보존함. 이 파일은 그 위에 새 조건을 얹은 수정본임.\\n  - 판단 메모: [판단메모.md](판단메모.md)\\n  - 점검 목록: [",
+     "full_available": true
+    },
+    {
+     "seq": 51,
+     "ts": "2026-10-28T05:35:50.330260",
+     "name": "Write",
+     "chars": 2510,
+     "excerpt": "{\"file_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/ai_out/A/점검목록_수정_오프라인_격리.md\", \"content\": \"# 담당자 점검 목록(수정본) — 오프라인·직원 간 격리 조건 추가\\n\\n- 처음 점검 목록 [점검목록.md](점검목록.md)의 A~H 항목은 **그대로 유지**합니다. 아래는 바뀐 항목과 추가 항목입니다.\\n- 판단 메모: [판단메모_수정_오프라인_격리.md](판단메모_",
+     "full_available": true
+    },
+    {
+     "seq": 56,
+     "ts": "2026-10-28T05:35:53.227832",
+     "name": "Bash",
+     "chars": 265,
+     "excerpt": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/ai_out/A; ls -lT; grep -n \\\"^## \\\\|^### \\\" 판단메모_수정_오프라인_격리.md 점검목록_수정_오프라인_격리.md\", \"description\": \"Confirm originals preserved and reread new file structure\"}",
+     "full_available": true
+    }
+   ],
+   "input_path_tokens": {
+    "inputs/A/": 1,
+    "ai_out/A/": 2
+   },
+   "forbidden_access": [],
+   "cost_summary": {
+    "check_rejections": 0,
+    "evaluation_calls": 1,
+    "evaluation_checkpoint_s": 0.000442,
+    "evaluation_model_s": 13.178,
+    "evaluation_prepare_s": 0.009164,
+    "evaluation_visual_s": 0.00064,
+    "evaluation_wait_s": 0.000534,
+    "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/7ca7214940ef434da35fc36a97a0cf62/events.jsonl",
+    "execution_calls": 4,
+    "execution_failures": 0,
+    "execution_tool_s": 1.4100000000000001,
+    "internal_tool_failures": 0,
+    "request_intent": "task",
+    "source_failures": 0,
+    "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+    "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+    "wall_s": 184.366
+   }
+  }
+ ]
+}

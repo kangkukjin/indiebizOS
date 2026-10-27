@@ -1,0 +1,18 @@
+{
+ "folder": "ai_out/B",
+ "at": "2026-10-28 05:40:33",
+ "files": [
+  {
+   "file": "시작점검목록.md",
+   "bytes": 5549,
+   "sha256": "2c2bce203f5972aa7b18e35b445dee3846dc7dc1d4b552ba3498ccf6bb72cb97",
+   "mtime": "05:39:51"
+  },
+  {
+   "file": "판단메모.md",
+   "bytes": 20433,
+   "sha256": "8a11d60b3a740498ac4130cc69b92c26da415f210ab115a78ed8849357b79274",
+   "mtime": "05:39:51"
+  }
+ ]
+}

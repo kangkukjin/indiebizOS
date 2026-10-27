@@ -1,0 +1,97 @@
+{
+ "head": "950d976c6b4dea95eb7cee43cf485dffa2c4bd77",
+ "uncommitted_files": [
+  "backend/base/supervision_bus.py",
+  "backend/datastore/conversation_sessions.py",
+  "backend/ibl/ibl_v2_access.py",
+  "backend/ibl/ibl_v2_runtime.py",
+  "backend/services/chat_streams.py",
+  "backend/test_api_system_ai.py",
+  "backend/test_ibl_v2_access.py",
+  "backend/test_ibl_v2_runtime.py",
+  "backend/test_progress_to_chat.py",
+  "data/system_docs/changelog.log",
+  "data/system_docs/technical.md",
+  "docs/IBL_COMPOSITION_NEXT_DESIGN_AUDIT_2026_10_27.md",
+  "docs/LONG_SENTENCE_IMAGINATION_LEDGER.md",
+  "docs/experiments/long_sentence_imagination/round_100/report.md",
+  "frontend/src/components/chat/ChatView.tsx",
+  "frontend/src/components/chat/ToolHistoryPanel.tsx",
+  "frontend/src/components/chat/types.ts",
+  "frontend/src/components/chat/useConversationSession.ts"
+ ],
+ "uncommitted_diff_sha256": "3d0bc10a7aacab90802231d2cb9fc59928c455e87e94750b582d49ae0acc14e3",
+ "inputs_dirty": [],
+ "sources": [
+  {
+   "id": "D1",
+   "task": "A",
+   "file": "inputs/A/D1_MEMBER_DESKTOP_DESIGN_2026_10_15.md",
+   "source": "docs/MEMBER_DESKTOP_DESIGN_2026_10_15.md",
+   "sha256": "963fa9a4e629115ecc9cf98454bbfd2c671bb7bfeb4bed2fc9814c7caf02f278",
+   "bytes": 47206,
+   "lines": 328,
+   "collected_at": "2026-10-28T05:18:47+0900"
+  },
+  {
+   "id": "D2",
+   "task": "A",
+   "file": "inputs/A/D2_remote_access.md",
+   "source": "data/system_docs/remote_access.md",
+   "sha256": "f2a2cc51c6043eec454593d25f5079ec0950cb3ee16b6e9a6b50132100a89b74",
+   "bytes": 44111,
+   "lines": 759,
+   "collected_at": "2026-10-28T05:18:47+0900"
+  },
+  {
+   "id": "D3",
+   "task": "A",
+   "file": "inputs/A/D3_pc_control.md",
+   "source": "data/guides/pc_control.md",
+   "sha256": "e72bd2c58bb943daac887e1b26e01685d06be882bfd1bb8668947f5c0c2e3267",
+   "bytes": 22169,
+   "lines": 237,
+   "collected_at": "2026-10-28T05:18:47+0900"
+  },
+  {
+   "id": "D4",
+   "task": "A",
+   "file": "inputs/A/D4_anatomy.md",
+   "source": "data/system_docs/anatomy.md",
+   "sha256": "3f89e5f71cb24fb9564138fcdf0203575953a7a77e212deab127544e55d16679",
+   "bytes": 54100,
+   "lines": 356,
+   "collected_at": "2026-10-28T05:18:47+0900"
+  },
+  {
+   "id": "R1",
+   "task": "B",
+   "file": "inputs/B/R1_RESEARCH_PROJECT_DESIGN_2026_10_10.md",
+   "source": "docs/RESEARCH_PROJECT_DESIGN_2026_10_10.md",
+   "sha256": "48da959003a8d59318c9303c8e37504bb30d4b020ef3caeed766c95973546af7",
+   "bytes": 62695,
+   "lines": 558,
+   "collected_at": "2026-10-28T05:18:47+0900"
+  },
+  {
+   "id": "R2",
+   "task": "B",
+   "file": "inputs/B/R2_research_project.md",
+   "source": "data/guides/research_project.md",
+   "sha256": "f99f597ce4c83305caf396012e7c8f47fb2d3137b0ab0281a52490557334e472",
+   "bytes": 12077,
+   "lines": 129,
+   "collected_at": "2026-10-28T05:18:47+0900"
+  },
+  {
+   "id": "R3",
+   "task": "B",
+   "file": "inputs/B/R3_research_questions.md",
+   "source": "data/guides/research_questions.md",
+   "sha256": "d570b77438d97769272624e0db44397404679f0f01521f1486e53daaec4aab12",
+   "bytes": 3475,
+   "lines": 49,
+   "collected_at": "2026-10-28T05:18:47+0900"
+  }
+ ]
+}

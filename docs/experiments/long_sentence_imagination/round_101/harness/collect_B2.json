@@ -1,0 +1,168 @@
+{
+ "usage_note": "model.usage accounting=billable_usage 를 call_id 로 중복 제거해 role·model 별 합산. input 에 캐시가 포함되는지는 공급자 계약(ClaudeCode: input/cache_read/cache_create 별도 보고)에 따르며 여기서 캐시를 다시 더하지 않는다. 훈련자(운영 세션) 토큰은 미측정.",
+ "tasks": [
+  {
+   "task_id": "task_sysai_813cf7db",
+   "episodes": [
+    {
+     "id": 5567,
+     "source": "training",
+     "agent": "system_ai",
+     "task_id": "task_sysai_813cf7db",
+     "total_ms": 177047,
+     "started_at": "2026-10-28T05:41:04.642365",
+     "ended_at": "2026-10-28T05:44:01.690452"
+    }
+   ],
+   "event_kinds": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 7,
+    "supervision.recall.finished": 7,
+    "model.call_started": 6,
+    "model.input": 6,
+    "model.round": 10,
+    "model.usage": 6,
+    "model.call_finished": 6,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherited": 1,
+    "supervision.framing": 1,
+    "model.response_snapshot": 11,
+    "supervision.tool.started": 4,
+    "supervision.tool.finished": 4,
+    "capability.invalid_judgment": 1,
+    "capability.failed": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "supervision.decision": 1,
+    "validation.completed": 3,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+   },
+   "usage_by_role": {
+    "oneshot:classify|deepseek-flash|OpenAI": {
+     "calls": 2,
+     "input": 11345,
+     "cache_read": 3840,
+     "cache_create": 0,
+     "output": 5,
+     "reasoning": 0,
+     "latency_ms": 1438
+    },
+    "oneshot:background|deepseek-flash|OpenAI": {
+     "calls": 1,
+     "input": 7982,
+     "cache_read": 1280,
+     "cache_create": 0,
+     "output": 1528,
+     "reasoning": 0,
+     "latency_ms": 8066
+    },
+    "execution|opus|ClaudeCode": {
+     "calls": 1,
+     "input": 813220,
+     "cache_read": 775428,
+     "cache_create": 37782,
+     "output": 15633,
+     "reasoning": 3624,
+     "latency_ms": 152593
+    },
+    "oneshot:classify|deepseek-flash|DeepSeekProvider": {
+     "calls": 1,
+     "input": 4564,
+     "cache_read": 768,
+     "cache_create": 0,
+     "output": 172,
+     "reasoning": 0,
+     "latency_ms": 1448
+    },
+    "oneshot:evaluate|opus|ClaudeCode": {
+     "calls": 1,
+     "input": 33209,
+     "cache_read": 5903,
+     "cache_create": 27304,
+     "output": 975,
+     "reasoning": 306,
+     "latency_ms": 10525
+    }
+   },
+   "usage_total": {
+    "calls": 6,
+    "input": 870320,
+    "cache_read": 787219,
+    "cache_create": 65086,
+    "output": 18313,
+    "reasoning": 3930
+   },
+   "tool_calls": 4,
+   "tool_names": {
+    "Bash": 4
+   },
+   "tools": [
+    {
+     "seq": 42,
+     "ts": "2026-10-28T05:41:58.254764",
+     "name": "Bash",
+     "chars": 216,
+     "excerpt": "{\"command\": \"O=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/ai_out/B; ls -la $O; shasum -a 256 $O/*.md\", \"description\": \"Confirm earlier outputs exist and record hashes\"}",
+     "full_available": true
+    },
+    {
+     "seq": 47,
+     "ts": "2026-10-28T05:43:23.497287",
+     "name": "Bash",
+     "chars": 10831,
+     "excerpt": "{\"command\": \"O=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/ai_out/B; cat > $O/수정검토_원문변동과_한달뒤재개.md <<'EOF'\\n# 수정 검토 — 원문 변동·소실 대비와 한 달 뒤 재개\\n\\n작성: 2026-10-28 · 근거: inputs/B 사본 3편(R1 설계 558줄, R2 사용 가이드 129줄, R3 질문 가이드 49줄)과 SOURCES.md만 사용\\n처음 결과는 그대로 보존한다",
+     "full_available": true
+    },
+    {
+     "seq": 52,
+     "ts": "2026-10-28T05:43:28.417907",
+     "name": "Bash",
+     "chars": 512,
+     "excerpt": "{\"command\": \"B=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/inputs/B; R1=$(ls $B/R1_*.md); for r in 27 93 98 116 123 293 298 330 369 487 489; do printf \\\"R1 L%s: \\\" $r; sed -n \\\"${r}p\\\" \\\"$R1\\\" | cut -c1-80; done; for r in 62 65 118; do printf \\\"R2 L%s: ",
+     "full_available": true
+    },
+    {
+     "seq": 57,
+     "ts": "2026-10-28T05:43:33.352251",
+     "name": "Bash",
+     "chars": 270,
+     "excerpt": "{\"command\": \"F=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_101회차/ai_out/B/수정검토_원문변동과_한달뒤재개.md; sed -i '' 's/| R3 L11, L29-31, L38 |/| R3 L11-12, L29-31, L38 |/' $F; grep -n \\\"R3 L11\\\" $F\", \"description\": \"Fix one citation range\"}",
+     "full_available": true
+    }
+   ],
+   "input_path_tokens": {
+    "ai_out/B/": 1
+   },
+   "forbidden_access": [],
+   "cost_summary": {
+    "check_rejections": 0,
+    "evaluation_calls": 1,
+    "evaluation_checkpoint_s": 0.00043,
+    "evaluation_model_s": 11.052,
+    "evaluation_prepare_s": 0.006017,
+    "evaluation_visual_s": 0.000543,
+    "evaluation_wait_s": 0.000497,
+    "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/72eb1e12dd00450988b318fddfadf4e2/events.jsonl",
+    "execution_calls": 4,
+    "execution_failures": 0,
+    "execution_tool_s": 1.2659999999999998,
+    "internal_tool_failures": 0,
+    "request_intent": "task",
+    "source_failures": 0,
+    "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+    "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+    "wall_s": 176.622
+   }
+  }
+ ]
+}

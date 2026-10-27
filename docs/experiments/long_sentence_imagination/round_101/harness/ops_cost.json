@@ -1,0 +1,23 @@
+{
+ "prep": {
+  "t0": "05:15",
+  "answer_keys_fixed": "05:27:43",
+  "A1_sent": "05:28",
+  "notes": "환경·과거 기준선·사본·정답표 고정 ≈13분(상한 15)"
+ },
+ "operator_assist_agents": [
+  {
+   "task": "answer_key_A",
+   "tokens": 192694,
+   "tool_uses": 7,
+   "seconds": 509
+  },
+  {
+   "task": "answer_key_B",
+   "tokens": 145404,
+   "tool_uses": 8,
+   "seconds": 377
+  }
+ ],
+ "operator_session_tokens": "미측정(이 세션의 토큰은 계측 경로 없음)"
+}

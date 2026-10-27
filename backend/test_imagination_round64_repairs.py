@@ -130,8 +130,9 @@ def test_internal_fingerprint_support_does_not_expand_public_wire(value):
 def test_wrong_callback_arity_is_not_hidden_by_request_encoding():
     code = '''$rules=[2] >> [table:each]{on_error:"collect"}{return ($r)=>$r*$it}
     [{score:30}] >> [fixture:select]{columns:($row)=>{score:reduce([$row.score],0,unwrap($rules[0]))}}'''
-    out = execute(code, table_registry('select'))
-    assert not out['success'] and out['diagnostic']['code'] == 'CALLABLE', out
+    plan = compile_program(code, table_registry('select'))
+    assert [issue['code'] for issue in plan.issues] == ['ARITY'], plan.report()
+    assert Runtime(plan).run()['executed'] is False
 
 
 if __name__ == '__main__':

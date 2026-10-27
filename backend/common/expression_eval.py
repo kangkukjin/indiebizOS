@@ -168,9 +168,15 @@ class ExpressionEvaluator:
         if kind == "builtin":
             return Binding(Builtin(d["name"]))
         if kind == "pure_call":
-            args = [sub(a) for a in d["args"]]
-            fn = sub(d["fn"])
-            return self.callback(fn.value, args)
+            # Existing ref/builtin/lambda calls retain argument-first evaluation.
+            if d["fn"].kind in ("ref", "builtin", "lambda"):
+                args = [sub(a) for a in d["args"]]
+                fn = sub(d["fn"])
+            else:
+                fn = sub(d["fn"])
+                args = [sub(a) for a in d["args"]]
+            result = self.callback(fn.value, args)
+            return Binding(result.value, result.evidence | fn.evidence)
         if kind == "format":
             parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
             return Binding("".join(scalar_text(p.value) for p in parts), self.parents(parts))

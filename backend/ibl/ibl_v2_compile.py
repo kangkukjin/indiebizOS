@@ -1,8 +1,8 @@
 """Name resolution, structural preflight and immutable execution snapshots.
 
-Unknown is an explicit runtime guard, not a successful proof. No warm cache is
-used yet: every plan contains its source/definitions/contracts and dependency
-fingerprint, avoiding the legacy transitive-cache invalidation problem.
+Unknown is an explicit runtime guard, not a successful proof. Function analysis
+is shared only within one compiler; plans retain source, definitions, contracts
+and dependency fingerprints. No analysis cache survives between compilations.
 """
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -15,11 +15,11 @@ from ibl_dependencies import compilation_dependencies
 import re
 # f-문자열의 글자 부분에 남은 `$이름` — `$(`·`$5` 같은 다른 쓰임은 잡지 않는다.
 _BARE_DOLLAR_NAME = re.compile(r"\$[A-Za-z_\uac00-\ud7a3][\w\uac00-\ud7a3]*")
-from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
+from ibl_v2_analysis import (finish_diagnostics, numeric_operand,
                              assigned_names, location, access_type, HINTS)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL, rows_type,
                           infer, join, declared, compatible, alternatives,
-                          ordered_list, concat_lists, static_text, NEVER)
+                          ordered_list, concat_lists, static_text, NEVER, describe_type)
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
@@ -63,7 +63,7 @@ class Plan:
                 "status": status, "issues": self.issues, "guards": own[:self.REPORT_GUARDS_CAP],
                 "guards_total": len(self.guards), "guards_inner": len(self.guards) - len(own),
                 "guards_omitted": max(0, len(own) - self.REPORT_GUARDS_CAP),
-                "result_type": str(self.result_type), "effects": sorted(self.effects), "functions": self.function_contracts,
+                "result_type": str(self.result_type), "result_contract": describe_type(self.result_type), "effects": sorted(self.effects), "functions": self.function_contracts,
                 "plan_hash": self.fingerprint, "dependencies": dependencies,
                 "source_hash": digest(self.source[:self.dependencies["source_map"][0]["end"]]),
                 "capabilities": ["ibl-edition/2", "ibl-value/1"],
@@ -72,7 +72,10 @@ class Plan:
                 "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."}
 
 
-class Compiler:
+from ibl_v2_call_analysis import CallAnalysis
+
+
+class Compiler(CallAnalysis):
     def __init__(self, source, registry, inputs, definitions=None, declared_inputs=None, input_types=None):
         self.source, self.registry = source, registry
         self.definitions, self.external = definitions if definitions is not None else {}, {}
@@ -99,6 +102,7 @@ class Compiler:
         self.impure_spans = []
         self.pure_calls, self.call_effects = [], {}
         self.constant_bindings = {}
+        self.init_call_analysis()
 
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
@@ -134,11 +138,17 @@ class Compiler:
             return
         if any(start <= node.start and node.end <= end for start, end in self.impure_spans):
             return
-        if node.kind == "call" and node.data.get("node") == "fn" and node.data.get("body") is None:
+        if node.kind in ("call", "pure_call") and node.data.get("body") is None:
             # 순수 자리의 기준은 호출 문법이 아니라 효과다. 효과 없는 함수는 식과 같다 — 효과는 방문 뒤에 확인한다.
             if all(node is not seen for seen in self.pure_calls):
                 self.pure_calls.append(node)
             self.check_children(node.data.get("params"), self.pure)
+            self.check_children(node.data.get("args"), self.pure)
+            self.check_children(node.data.get("fn"), self.pure)
+            return
+        if node.kind == "pipe":
+            self.pure(node.data["left"])
+            self.pure(node.data["right"])
             return
         if node.kind not in PURE_KINDS:
             self.impure_spans.append((node.start, node.end))
@@ -147,7 +157,7 @@ class Compiler:
             if node.kind in ("if", "case"):
                 message = "이 자리에는 순수 식만 쓸 수 있습니다. 제어 블록 대신 조건 값을 쓰세요."
                 hint = "값을 고르는 분기는 `조건 ? 값1 : 값2`입니다. 예: ($a,$r)=>$r.n > $a ? $r.n : $a"
-            elif node.kind == "pipe":
+            elif node.kind == "call" and node.data.get("body") is not None:
                 hint = ("파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 "
                         "현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 "
                         "reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.")
@@ -270,7 +280,7 @@ class Compiler:
         self.external[name] = symbols[name]
         return symbols[name]
 
-    def function(self, sid, args, call=None):
+    def _function(self, sid, args, call=None):
         node = self.functions[sid]
         if sid in self.stack:
             self.issue(node, "RECURSION", f"재귀 호출은 지원하지 않습니다: {node.data['name']}")
@@ -295,6 +305,7 @@ class Compiler:
                 self.default_scope = frozenset()
             env[name] = args.get(name, dtype)
         parameter_types = {k: str(v) for k, v in env.items()}
+        parameter_contracts = {k: describe_type(v) for k, v in env.items()}
         result = self.sequence(node.data["body"], env, self.function_scopes[sid])
         for t in self.returns:
             result = t if result == UNIT_T else join(result, t)
@@ -313,9 +324,13 @@ class Compiler:
         self.stack.pop()
         self.call_path.pop()
         self.checked.add(sid)
-        observed = {'params': parameter_types, 'result': str(result)}
+        observed = {'params': parameter_types, 'result': str(result),
+                    'param_contracts': parameter_contracts,
+                    'result_contract': describe_type(result)}
         summary = self.function_contracts.setdefault(sid, {
             'name': node.data['name'], 'params': parameter_types.copy(),
+            'param_contracts': observed['param_contracts'],
+            'result_contract': observed['result_contract'],
             'required': [k for k,v in params.items() if v is None],
             'pipe_input': next(iter(params), None),
             'default_expressions': {k: self.source[v.start:v.end] for k, v in params.items() if v is not None},
@@ -329,6 +344,10 @@ class Compiler:
                 summary['params'][key] = 'Unknown'
         if summary['result'] != str(result):
             summary['result'] = 'Unknown'
+        if summary['result_contract'] != observed['result_contract']:
+            summary['result_contract'] = {'type': 'input-dependent', 'specializations': True}
+        if summary['param_contracts'] != observed['param_contracts']:
+            summary['param_contracts'] = {'specializations': True}
         if observed not in summary['specializations']:
             if len(summary['specializations']) < 32:
                 summary['specializations'].append(observed)
@@ -336,7 +355,7 @@ class Compiler:
                 summary['specializations_omitted'] += 1
         return result
 
-    def visit(self, node, env, names, readonly=frozenset(), final=False, piped=None):
+    def visit(self, node, env, names, readonly=frozenset(), final=False, piped=None, piped_node=None):
         if node is None:
             return UNIT_T
         d, kind = node.data, node.kind
@@ -496,28 +515,23 @@ class Compiler:
             if d["name"] not in BUILTINS:
                 from common.expression_ops import unknown_builtin_message
                 self.issue(node, "BUILTIN", unknown_builtin_message(d["name"]))
-            return Type("Callable")
+            return Type("Callable", item=("builtin", d["name"]))
         if kind == "pure_call":
             self.container_value(node)
-            fn = d["fn"]
-            self.need(fn, sub(fn), Type("Callable"))
-            types = [sub(a) for a in d["args"]]
-            if fn.kind == "builtin" and fn.data["name"] in BUILTINS:
-                name = fn.data["name"]
-                low, high = BUILTINS[name]
-                if not low <= len(types) <= high:
-                    wanted = f"{low}개" if low == high else f"{low}~{high}개"
-                    self.issue(node, "ARITY", f"{name}은 인자 {wanted}를 받습니다(받은 인자 {len(types)}개).")
-                return builtin_type(self, node, name, types, env, names, readonly)
-            return UNKNOWN
+            fn_type = sub(d["fn"])
+            nodes = list(d["args"])
+            types = [sub(a) for a in nodes]
+            if piped is not None:
+                types.insert(0, piped)
+                nodes.insert(0, piped_node or node)
+            return self.apply_callable(node, fn_type, types, nodes, env, names, readonly)
         if kind == "lambda":
             params = d["params"]
             if len(set(params)) != len(params) or RESERVED.intersection(params):
                 self.issue(node, "PARAMETERS", "람다 인자는 중복·예약 이름을 쓸 수 없습니다.")
-            local = {**env, **dict.fromkeys(params, UNKNOWN)}
             self.pure(d["body"])
-            sub(d["body"], local)
-            return Type("Callable")
+            typ = self.lambda_type(node, env, names, readonly)
+            return typ
         if kind == "format":
             known = []
             for part in d["parts"]:
@@ -545,7 +559,7 @@ class Compiler:
             return TEXT
         if kind == "pipe":
             left = sub(d["left"])
-            if d["right"].kind != "call":
+            if d["right"].kind not in ("call", "pure_call"):
                 details = {}
                 if d["right"].kind == "parallel":
                     details = {"actual": "parallel", "hint":
@@ -556,7 +570,7 @@ class Compiler:
                 self.issue(node, "PIPE_TARGET", "파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.",
                            **details)
                 return UNKNOWN
-            return self.visit(d["right"], env, names, readonly, final, piped=left)
+            return self.visit(d["right"], env, names, readonly, final, piped=left, piped_node=d["left"])
         if kind == "parallel":
             types = []
             writes, conflict = set(), set()
@@ -915,11 +929,20 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
         result = t if result == UNIT_T else join(result, t)
     # Unused definitions must also be well formed; validate to a fixed point for
     # nested forward definitions, without inventing caller-local parameters.
-    while set(compiler.functions) - compiler.checked:
-        sid = sorted(set(compiler.functions) - compiler.checked)[0]
-        reachable_effects = set(compiler.effects)
-        compiler.function(sid, {})
-        compiler.effects = reachable_effects  # Validation alone does not invoke a definition.
+    while (set(compiler.functions) - compiler.checked or
+           set(compiler.lambda_nodes) - compiler.lambda_checked):
+        remaining = set(compiler.functions) - compiler.checked
+        if remaining:
+            sid = sorted(remaining)[0]
+            reachable_effects = set(compiler.effects)
+            compiler.function(sid, {})
+            compiler.effects = reachable_effects
+        else:
+            lid = next(iter(set(compiler.lambda_nodes) - compiler.lambda_checked))
+            node = compiler.lambda_nodes[lid]
+            typ = compiler.lambda_contracts[lid]
+            compiler.apply_callable(node, typ, [UNKNOWN] * len(node.data['params']),
+                                    [node] * len(node.data['params']))
     dependencies = {"source": digest(compiler.source), "libraries": digest({k: compiler.definitions[k] for k in sorted(compiler.external)}),
                     "calls": compiler.call_dependencies,
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
@@ -937,11 +960,12 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
     dependencies['function_refs'] = list({(r['function_id'], r['revision']): r for r in refs if r}.values())
     for call in compiler.pure_calls:
         effects = compiler.call_effects.get(call.id)
-        if effects is not None and effects - {"pure"}:
+        if effects is None or effects - {"pure"}:
             compiler.issue(call, "PURE_EXPRESSION",
-                           f"이 자리의 [fn:{call.data['action']}] 호출은 효과가 없어야 합니다(이 함수의 효과: "
-                           f"{', '.join(sorted(effects - {'pure'}))}). 조건·조건 값·and/or·람다 본문·기본값은 실행 여부나 횟수가 갈리는 자리입니다.",
-                           hint="효과가 있는 호출은 앞 문장에서 $이름=[fn:…]{…}으로 받거나, 행마다 필요하면 table:each 본문에서 호출하세요.")
+                           "이 자리의 호출은 효과가 없어야 합니다(효과: "
+                           + ', '.join(sorted((effects or {'unknown'}) - {'pure'}))
+                           + "). 조건·조건 값·and/or·람다 본문·기본값은 순수 계산만 허용합니다.",
+                           hint="효과가 있는 호출은 앞 문장에서 받아 쓰거나 table:each 본문에서 호출하세요.")
     finish_diagnostics(compiler)
     for entry in compiler.warnings:
         old = entry['source_span']
@@ -960,6 +984,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
         merged = compiler.warnings + [w for w in preflight.get('warnings', []) if w not in compiler.warnings]
         preflight['warnings'] = merged[:32]
         preflight['warnings_omitted'] = preflight.get('warnings_omitted', 0) + max(0, len(merged) - 32)
+    preflight['analysis'] = compiler.analysis_stats
     preflight['actions'] = sorted(compiler.used_actions)  # 검사 단계의 문맥 사전경고가 읽는다(L33-3)
     return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,

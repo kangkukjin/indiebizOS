@@ -37,6 +37,10 @@
 조건 슬롯은 `flow.row_condition_params`로 선언한다. [검증·실행 공유 규약](../../docs/IBL_STATIC_TYPECHECK_HANDOFF.md).
 
 현재 값·결합·평문 반환 계약은 [어댑터 작성](ibl_v2_adapter.md)을 따른다.
+주 입력이 자연스러운 액션은 기존 `callable_contract.pipe_input` 또는 `pipe_in`·`pipe_text`로 선언한다.
+다중 입력·op별 상이한 입력·입력 없는 조회에는 임의 receiver를 만들지 않는다. describe의 해소된
+입력·타입·반환·효과를 확인하고 파이프/명시 입력의 값·빈값·오류·부분 근거 동등성을 검사한다.
+pure 선언을 추가할 때에는 조건·람다의 단락 평가에서도 외부 효과가 없는지 확인한다.
 
 ## 0.5단계: 역할과 통화 계약 — "올바른 어휘"의 정의
 

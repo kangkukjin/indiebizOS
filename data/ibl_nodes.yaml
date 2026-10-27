@@ -5722,12 +5722,12 @@ nodes:
           at: '2026-10-05'
           impl: 3c31b0566918933b
           dependencies:
-            backend/common/expression_eval.py: 6ade3d9b20d650c655398920e0980ccc124246876ed821a4aba4b9d79e695cdc
+            backend/common/expression_eval.py: 4e30ef4e81191dfa2858a3cc09f7f7a7abd6a91b260904d2b75211703c42a62e
             backend/common/expression_functions.py: 0d5ef11ac2b3aa49807b08b2a22b927d259f0721af562d186b25a4ce410e1887
             backend/common/expression_ir.py: a8f7cdaf84a48dee6a51faf021e151cd66b4c64d77737d11341d82204bd95b2f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: 2245b2c3a91fe0cf26c4c74f1fa063c359c94ca2388286e9741b6a16450e5eb0
-            backend/common/expression_parser.py: d476d9080c64ebfc5dcef324e0602e48753550f4b38f77092eced67391cdc7ce
+            backend/common/expression_parser.py: 4dc8e6673e201c2c6699a11f1efd4242f7cb9d29e469a9ad097e77fbd57e0f17
             backend/base/principal.py: d7f943517c8ca857a01f8330c5b4a2695b2a999a8aa18962e380778bce3cc58a
             backend/base/runtime_utils.py: a2cc50cf1dcafb3f83d32c298787dbd3e5fb4ef4276ff0c8bbc77bf449cd1198
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -6184,6 +6184,7 @@ nodes:
       grep:
         callable_contract:
           version: 1
+          pipe_input: pattern
           per_run: true
           params:
             pattern: Text
@@ -6300,7 +6301,7 @@ nodes:
         fixture: '[self:grep]{pattern: "provider", path: "."}'
         description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단 신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. context:N 이면 앞뒤 N줄(문맥 필드). 파일명 검색은 find.
         group: file
-        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴, ignore_case=true 면 대소문자 무시. path로 검색 루트, file_pattern 으로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). context=N 이면 매칭 앞뒤 N줄을 '문맥' 필드로(grep -A/-B/-C 의 자리 — 앞뒤를 보려고 셸로 가지 말 것). total은 items와 같은 단위(content는 일치 줄 수, files_with_matches/count는 파일 수). 파일 모드의 total_matches가 일치 줄 수다. 위치 탐색은 files_with_matches로 좁힌 뒤 필요한 파일·줄만 읽는다. content는 limit(기본 100, 최대 2000)건 표본 + total·total_complete(전수 계수 여부)·truncated 봉투 키. truncations.scope=selection은 요청 상한에 따른 선택, source는 검색 시간·크기·줄 본문 절단이다. 전수 계수 미가용 시 total은 관측치이며 전체 개수로 단정하지 않는다. 로그(*.log·회전본)·_backups·.worktrees·spill 은 기본 제외(봉투 excluded 로 신고) — 로그를 뒤지려면 include_logs:true. reuse에서도 매 실행 새로 검색하며, 같은 실행의 resume은 기록을 복원한다.
+        target_description: 검색 패턴(pattern, Text 파이프 입력 가능; 기본 정규식, 'a|b' OR 가능). regex=false면 리터럴, ignore_case=true 면 대소문자 무시. path로 검색 루트, file_pattern 으로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). context=N 이면 매칭 앞뒤 N줄을 '문맥' 필드로(grep -A/-B/-C 의 자리 — 앞뒤를 보려고 셸로 가지 말 것). total은 items와 같은 단위(content는 일치 줄 수, files_with_matches/count는 파일 수). 파일 모드의 total_matches가 일치 줄 수다. 위치 탐색은 files_with_matches로 좁힌 뒤 필요한 파일·줄만 읽는다. content는 limit(기본 100, 최대 2000)건 표본 + total·total_complete(전수 계수 여부)·truncated 봉투 키. truncations.scope=selection은 요청 상한에 따른 선택, source는 검색 시간·크기·줄 본문 절단이다. 전수 계수 미가용 시 total은 관측치이며 전체 개수로 단정하지 않는다. 로그(*.log·회전본)·_backups·.worktrees·spill 은 기본 제외(봉투 excluded 로 신고) — 로그를 뒤지려면 include_logs:true. reuse에서도 매 실행 새로 검색하며, 같은 실행의 resume은 기록을 복원한다.
         keywords:
         - 검색
         - 내용검색
@@ -6454,6 +6455,7 @@ nodes:
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       mkdir:
+        pipe_text: path
         write_resources:
           file: path
         lands_on: body
@@ -6469,7 +6471,7 @@ nodes:
         returns: effect
         description: 빈 폴더 생성 (mkdir -p 동등, 중간 경로 자동 생성·이미 있으면 조용히 통과). 삭제는 delete, 이동·이름변경은 move.
         group: file
-        target_description: 만들 폴더 경로 (절대 또는 상대). 중간 폴더가 없으면 함께 만든다. 이미 있어도 오류 아님.
+        target_description: 만들 폴더 경로(path, Text 파이프 입력 가능; 절대 또는 상대). 중간 폴더가 없으면 함께 만든다. 이미 있어도 오류 아님.
         router: handler
         tool: make_directory
         implementation: os.makedirs(exist_ok=True)로 빈 디렉토리 생성

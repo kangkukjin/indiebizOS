@@ -75,8 +75,8 @@ HINTS = {
     "IR": "지원하지 않는 구문입니다. 같은 뜻을 현재 문법(문법 전문)의 문장으로 다시 쓰고, 반복되면 실행 기반 오류로 보고하세요.",
     "PARALLEL_WRITE_CONFLICT": "병렬 가지·each 병렬 반복이 같은 자원에 쓰면 최종 내용이 실행마다 달라집니다. 순차로 쓰거나(;·기본 each) 가지마다 다른 파일에 쓴 뒤 합치세요.",
     "PARAMETERS": "람다 인자 이름은 서로 다르고 예약 이름($it·$i·$error)이 아니어야 합니다.",
-    "PIPE_TARGET": "파이프 오른쪽에는 앞 값을 첫 입력으로 받는 호출 하나를 둡니다. 식으로 가공하려면 앞 값을 $이름에 받은 뒤 쓰세요.",
-    "PURE_EXPRESSION": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(효과 없는 [fn:이름]은 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
+    "PIPE_TARGET": "파이프 오른쪽에는 앞 값을 첫 입력으로 받는 호출 하나를 둡니다. 내장 함수·람다는 첫 위치 인자로 받습니다: 값 >> abs(), 값 >> $f(다른값).",
+    "PURE_EXPRESSION": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(순수 계약의 도구·함수·파이프는 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
     "READONLY": "$i는 repeat의 반복 인덱스, $it는 table:each의 현재 항목, $error는 catch의 오류입니다. 이 이름들은 해당 블록 밖에서도 예약되어 대입할 수 없습니다. 결과를 저장하려면 $result 또는 $image처럼 다른 이름을 사용하세요. each 본문에서 본 바깥 변수도 새 이름에 받거나 each의 반환으로 모으세요.",
     "RECURSION": "재귀 대신 반복을 쓰세요: 횟수는 [repeat:n]{...}, 누적은 reduce(목록,초기값,($acc,$x)=>...), 원소별 처리는 [table:each]입니다.",
     "RESERVED": "함수 인자 이름에 $it·$i·$error를 쓰지 마세요. 다른 이름으로 받으세요.",
@@ -412,7 +412,6 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
             from common.record_schema import hidden_schema_fields, hidden_schema_message
             input_param = contract.get('analysis', {}).get('schema_input_fields_param')
             known_fields = set()
-            from ibl_v2_types import alternatives
             for variant in alternatives(source):
                 if variant.kind == 'List':
                     for row_variant in alternatives(variant.item):
@@ -456,9 +455,9 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
         field = fields.get(param)
         if field is None:
             continue
-        if field.kind == 'lambda' and len(field.data['params']) == 1:
-            local = {**env, field.data['params'][0]: row if row.observed else UNKNOWN}
-            value = compiler.visit(field.data['body'], local, names, readonly)
+        if any(t.kind == 'Callable' for t in alternatives(args.get(param, UNKNOWN))):
+            value = compiler.apply_callable(field, args[param], [row if row.observed else UNKNOWN],
+                                            [field], env, names, readonly)
             if param == flow.get('columns_param'):
                 projected = value
         elif param not in flow.get('row_condition_params', []):
@@ -480,10 +479,19 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
         output = row
         from ibl_v2_narrow import narrow
         for param in flow.get('row_condition_params', []):
-            predicate = fields.get(param)
-            if predicate is not None and predicate.kind == 'lambda' and len(predicate.data['params']) == 1:
-                name = predicate.data['params'][0]
-                output = narrow({name: row}, predicate.data['body'])[name]
+            candidates = list(alternatives(args.get(param, UNKNOWN)))
+            if candidates and all(t.kind == 'Callable' and t.item and t.item[0] == 'lambda'
+                                  for t in candidates):
+                from ibl_v2_types import NEVER
+                narrowed = NEVER
+                for candidate in candidates:
+                    predicate = compiler.lambda_nodes[candidate.item[1]]
+                    if len(predicate.data['params']) != 1:
+                        narrowed = row
+                        break
+                    name = predicate.data['params'][0]
+                    narrowed = join(narrowed, narrow({name: row}, predicate.data['body'])[name])
+                output = narrowed
                 break
     elif mode == 'subset' and projected and projected.kind == 'Record':
         output = projected
@@ -523,24 +531,17 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
         if name in ('map', 'filter') and types and types[0].kind == 'List':
             item = types[0].item or UNKNOWN
             callback = node.data['args'][1]
-            mapped = UNKNOWN
-            if callback.kind == 'lambda':
-                if len(callback.data['params']) != 1:
-                    compiler.issue(callback, 'ARITY', f'{name} 콜백은 인자 하나를 받습니다.')
-                else:
-                    local = {**(env or {}), callback.data['params'][0]: item}
-                    mapped = compiler.visit(callback.data['body'], local, names, readonly)
-                    if name == 'filter':
-                        compiler.need(callback.data['body'], mapped, BOOL)
+            mapped = compiler.apply_callable(callback, types[1], [item], [callback], env, names, readonly)
+            if name == 'filter':
+                compiler.need(callback, mapped, BOOL)
             return Type('List', item=item if name == 'filter' else mapped)
         if name == 'sorted' and types and types[0].kind == 'List':
             key_type = types[0].item or UNKNOWN
             key_node = node.data['args'][0]
             if len(types) > 1:
                 key_node = node.data['args'][1]
-                if key_node.kind == 'lambda' and len(key_node.data['params']) == 1:
-                    local = {**(env or {}), key_node.data['params'][0]: key_type}
-                    key_type = compiler.visit(key_node.data['body'], local, names, readonly)
+                if any(t.kind == 'Callable' for t in alternatives(types[1])):
+                    key_type = compiler.apply_callable(key_node, types[1], [key_type], [key_node], env, names, readonly)
                 elif key_node.kind == 'literal' and isinstance(key_node.data['value'], str):
                     # Field-name sorting uses the table's heterogeneous buckets,
                     # including textual fallback for structures and booleans.
@@ -599,7 +600,19 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
     if name == 'reduce':
         need(0, Type('List', item=UNKNOWN))
         need(2, Type('Callable'))
-        return UNKNOWN  # callback may change accumulator shape
+        if len(types) == 3:
+            item = types[0].item if types[0].kind == 'List' else UNKNOWN
+            # A fixed point keeps accumulator changes conservative, with bounded work.
+            accumulator = types[1]
+            for _ in range(4):
+                returned = compiler.apply_callable(nodes[2], types[2], [accumulator, item or UNKNOWN],
+                                                   [nodes[1], nodes[0]], env, names, readonly)
+                widened = join(accumulator, returned)
+                if widened == accumulator:
+                    return accumulator
+                accumulator = widened
+            compiler.need(node, UNKNOWN, UNKNOWN)
+        return UNKNOWN
     if name == 'text':
         need(0, join(join(TEXT, NUMBER), BOOL))
         return TEXT

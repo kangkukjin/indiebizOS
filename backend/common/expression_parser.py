@@ -179,7 +179,7 @@ class Parser:
                         self.pop("]")
                         left = self.node("index", left.start, base=left, key=key)
                 continue
-            if op == "(" and left.kind in ("ref", "builtin", "lambda"):
+            if op == "(" and left.kind not in BLOCK_STATEMENTS:
                 self.pop()
                 args = self.arguments(")")
                 left = self.node("pure_call", left.start, fn=left, args=args)
@@ -192,7 +192,8 @@ class Parser:
                 if self.t.text != ":":
                     if self.t.text in (">>", "&", "??"):
                         raise Fault("PURE_EXPRESSION", "조건 값의 가지에는 순수 식만 씁니다. "
-                                    "호출 결과를 먼저 $이름=[...]으로 받거나 [if] 블록을 쓰세요.",
+                                    "순수 파이프 가지는 괄호로 묶으세요: 조건 ? (값 >> abs()) : 다른값. "
+                                    "효과 있는 호출은 앞 문장이나 [if:] 블록에 둡니다.",
                                     Node("token", self.t.start, self.t.end), kind="compile")
                     self.fail("조건 값은 `조건 ? 참일 때 값 : 거짓일 때 값` 형태입니다. ':'가 필요합니다.")
                 self.pop()

@@ -266,6 +266,11 @@ class Runtime(ExpressionEvaluator):
                 parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
                 text = "".join("" if p.value is OMITTED else scalar_text(p.value) for p in parts)
                 return Binding(text, self.parents(parts))
+        if kind == "pure_call" and piped is not None:
+            fn = sub(d["fn"])
+            args = [piped, *[sub(a) for a in d["args"]]]
+            result = self.callback(fn.value, args)
+            return Binding(result.value, result.evidence | fn.evidence | self.parents(args))
         value = self.expression(node, env)
         if value is not NotImplemented:
             if unspecified and kind == "record" and isinstance(value.value, dict) \

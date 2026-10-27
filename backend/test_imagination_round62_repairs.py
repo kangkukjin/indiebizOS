@@ -92,9 +92,16 @@ def test_every_builtin_can_be_passed_as_an_existing_callable(name, placement):
 
 @pytest.mark.parametrize('name', BUILTINS)
 def test_indirect_builtin_arity_is_checked_before_argument_access(name):
-    result = run(f'$f={name}; return $f()')
-    assert not result['success']
-    assert result['diagnostic']['code'] == 'ARITY', result
+    # Known aliases now reject the same invalid arity as direct calls, before execution.
+    plan = compile_program(f'$f={name}; return $f()')
+    assert [issue['code'] for issue in plan.issues] == ['ARITY']
+    assert Runtime(plan).run()['executed'] is False
+    # The independent runtime boundary still checks before indexing arguments.
+    from ibl_v2_expr import Builtin
+    from ibl_v2_ir import Fault
+    with pytest.raises(Fault) as error:
+        Runtime(compile_program('return 1')).callback(Builtin(name), [])
+    assert error.value.code == 'ARITY'
 
 
 def test_builtin_reduce_callback_and_runtime_bound_reduce_alias():
@@ -122,7 +129,12 @@ def test_builtin_can_be_a_direct_declared_callback():
 
 
 def test_builtin_alias_runtime_errors_are_catchable():
-    result = run('$f=abs; [try]{return $f("invalid")}[catch]{return $error.code}')
+    known = compile_program('$f=abs; [try]{return $f("invalid")}[catch]{return $error.code}')
+    assert [issue['code'] for issue in known.issues] == ['NUMBER_REQUIRED']
+    registry = {'fixture:value': Adapter(
+        {'version': 1, 'params': {}, 'result': 'Text', 'effects': ['read_external']},
+        lambda rt, args: 'invalid')}
+    result = run('$x=[fixture:value]; $f=abs; [try]{return $f($x)}[catch]{return $error.code}', registry)
     assert result['success'] and result['value'] == 'NUMBER_REQUIRED', result
 
 

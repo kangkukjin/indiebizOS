@@ -4,6 +4,7 @@ Declared model calls, approval policies and static list cardinalities are observ
 Unknown cardinalities/definitions are explicitly reported, never counted as zero.
 """
 from dataclasses import dataclass
+import copy
 
 from ibl_v2_ir import Node, record_fields
 from ibl_v2_analysis import location
@@ -69,6 +70,9 @@ def analyze(compiler, root, inputs):
     visits, steps = 0, 0
     active = set()
     callers = []
+    summaries = {}
+    summary_hits = 0
+    warnings_omitted = 0
 
     def where(node):
         return location(compiler.source, compiler.source_map, node)
@@ -83,7 +87,7 @@ def analyze(compiler, root, inputs):
         if node is None:
             return Facts()
         steps += 1
-        if steps > 2000 or depth > 8:
+        if steps > 2000 or depth > 128:
             unknown(node, '분석 예산 초과')
             return Facts()
         d, kind = node.data, node.kind
@@ -110,7 +114,10 @@ def analyze(compiler, root, inputs):
                     break
             return result
         if kind == 'pipe':
-            return call(d['right'], env, loops, multiplier, depth, sub(d['left']), conditional)
+            source = sub(d['left'])
+            if d['right'].kind == 'call':
+                return call(d['right'], env, loops, multiplier, depth, source, conditional)
+            return sub(d['right'])
         if kind == 'call':
             return call(node, env, loops, multiplier, depth, conditional=conditional)
         if kind == 'repeat':
@@ -154,7 +161,7 @@ def analyze(compiler, root, inputs):
         return Facts(dependencies=dependencies)
 
     def call(node, env, loops, multiplier, depth, piped=None, conditional=False):
-        nonlocal visits
+        nonlocal visits, warnings, unknowns, summary_hits, warnings_omitted
         if node.kind != 'call':
             return Facts()
         d = node.data
@@ -193,13 +200,46 @@ def analyze(compiler, root, inputs):
             for name, default in params.items():
                 if name not in args:
                     args[name] = walk(default, {}, loops, multiplier, depth, conditional)
-            active.add(sid)
-            callers.append(where(node))
-            try:
-                return walk(fn.data['body'], args, loops, multiplier, depth + 1, conditional)
-            finally:
-                callers.pop()
-                active.remove(sid)
+            cache_key = (sid, tuple(sorted(args.items())), loops, multiplier, conditional)
+            saved = summaries.get(cache_key) if compiler.analysis_cache_enabled else None
+            if saved is None:
+                before_visits = visits
+                outer_warnings, outer_unknowns, outer_omitted = warnings, unknowns, warnings_omitted
+                warnings, unknowns, warnings_omitted = [], [], 0
+                active.add(sid)
+                callers.append(where(node))
+                try:
+                    result = walk(fn.data['body'], args, loops, multiplier, depth + 1, conditional)
+                    relative = copy.deepcopy(warnings)
+                    for entry in relative:
+                        facts = entry.get('facts', {})
+                        if 'callers' in facts:
+                            facts['callers'] = facts['callers'][len(callers):]
+                    saved = (result, visits - before_visits, relative, unknowns, warnings_omitted)
+                    if compiler.analysis_cache_enabled:
+                        summaries[cache_key] = saved
+                finally:
+                    callers.pop()
+                    active.remove(sid)
+                    warnings, unknowns, warnings_omitted = outer_warnings, outer_unknowns, outer_omitted
+            else:
+                summary_hits += 1
+                visits += saved[1]
+            warnings_omitted += saved[4]
+            for entry in saved[2]:
+                entry = copy.deepcopy(entry)
+                facts = entry.get('facts', {})
+                if 'callers' in facts:
+                    facts['callers'] = [*callers, where(node), *facts['callers']]
+                if entry not in warnings:
+                    if len(warnings) < 32:
+                        warnings.append(entry)
+                    else:
+                        warnings_omitted += 1
+            for entry in saved[3]:
+                if entry not in unknowns and len(unknowns) < 32:
+                    unknowns.append(entry)
+            return saved[0]
         spec = compiler.registry.get(key)
         if spec is None:
             unknown(node, '어휘 계약 미상')
@@ -266,7 +306,8 @@ def analyze(compiler, root, inputs):
     return {'status': 'partial' if unknowns else 'analyzed',
             'declared_ai_visits_upper_bound': None if unknowns else visits,
             'unknowns': unknowns, 'warnings': warnings[:32],
-            'warnings_omitted': max(0, len(warnings) - 32),
+            'analysis_steps': steps, 'function_summary_reuses': summary_hits,
+            'warnings_omitted': warnings_omitted + max(0, len(warnings) - 32),
             'note': '선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.'}
 
 

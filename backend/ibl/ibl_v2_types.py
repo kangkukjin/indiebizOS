@@ -157,7 +157,7 @@ def static_text(typ):
 @lru_cache(maxsize=8192)
 def plain(typ):
     """The same type without compile-time literal values, at every depth."""
-    if not isinstance(typ, Type):
+    if not isinstance(typ, Type) or typ.kind == "Callable":
         return typ
     item = tuple(plain(t) for t in typ.item) if isinstance(typ.item, tuple) else plain(typ.item)
     positions = None if typ.positions is None else tuple(plain(t) for t in typ.positions)
@@ -243,7 +243,9 @@ def infer(value):
         return ordered_list(infer(v) for v in value)
     if isinstance(value, dict):
         return Type("Record", tuple((k, infer(v)) for k, v in value.items()), open=False)
-    if isinstance(value, (Builtin, Closure)):
+    if isinstance(value, Builtin):
+        return Type("Callable", item=("builtin", value.name))
+    if isinstance(value, Closure):
         return Type("Callable")
     if isinstance(value, ResultValue):
         return Type("Result", item=infer(value.value) if value.ok else UNKNOWN)
@@ -317,3 +319,39 @@ def guard(value, spec, label):
         hint = " 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요." if expected.kind == "List" and actual.kind == "Record" else ""
         raise Fault("TYPE_CONTRACT", f"{label}: {expected}가 필요하지만 {actual}입니다.{hint}")
     return value
+
+
+def describe_type(typ, budget=None):
+    """Bounded structural contract view; never expose captured user values."""
+    if budget is None:
+        budget = [64]
+    if budget[0] <= 0:
+        return {'type': typ.kind, 'details_omitted': True}
+    budget[0] -= 1
+    result = {'type': typ.kind}
+    if typ.kind == 'Callable':
+        if not typ.item:
+            return {**result, 'contract': 'runtime', 'effects': ['unknown']}
+        if typ.item[0] == 'builtin':
+            from common.expression_ops import BUILTINS
+            from common.expression_functions import CONTRACTS
+            name = typ.item[1]
+            low, high = BUILTINS.get(name, (0, 0))
+            result.update(builtin=name, arity={'minimum': low, 'maximum': high}, effects=['pure'])
+            if name in CONTRACTS:
+                result.update(params=list(CONTRACTS[name][2]), result=CONTRACTS[name][3])
+        elif typ.item[0] == 'lambda':
+            result.update(params=list(typ.item[5]), definition_id=typ.item[1],
+                          effect_requirement='pure', result='input-dependent',
+                          captures={k: describe_type(v, budget) for k, v in typ.item[2][:16]})
+    elif typ.kind == 'Union':
+        result['alternatives'] = [describe_type(t, budget) for t in typ.item[:16]]
+        if len(typ.item) > 16:
+            result['alternatives_omitted'] = len(typ.item) - 16
+    elif typ.kind == 'Record':
+        result.update(fields={k: describe_type(v, budget) for k, v in typ.fields[:16]}, open=typ.open)
+        if len(typ.fields) > 16:
+            result['fields_omitted'] = len(typ.fields) - 16
+    elif isinstance(typ.item, Type):
+        result['item'] = describe_type(typ.item, budget)
+    return result

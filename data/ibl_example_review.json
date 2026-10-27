@@ -1048,7 +1048,7 @@
   "self:grep": {
    "fields": {
     "description": "a119975d8650",
-    "target_description": "26955e94de39",
+    "target_description": "c668f229db56",
     "implementation": "d6b099940478",
     "returns": "3c22349f8d0b",
     "target_key": "432ced8bd4f7",
@@ -1057,8 +1057,8 @@
     "router": "ebbb1532efbc",
     "tool": "77e19f549cc9"
    },
-   "reviewed": "2026-10-20",
-   "examples": 14
+   "reviewed": "2026-10-27",
+   "examples": 2
   },
   "self:health": {
    "fields": {
@@ -1223,15 +1223,15 @@
   "self:mkdir": {
    "fields": {
     "description": "a245ec3a2b8e",
-    "target_description": "c71b0c19964f",
+    "target_description": "a4960e4479d3",
     "implementation": "8ff7debcf275",
     "returns": "9a5e13f69efc",
     "target_key": "d070c7ecb482",
     "router": "ebbb1532efbc",
     "tool": "723bd4061920"
    },
-   "reviewed": "2026-09-18",
-   "examples": 8
+   "reviewed": "2026-10-27",
+   "examples": 2
   },
   "self:move": {
    "fields": {

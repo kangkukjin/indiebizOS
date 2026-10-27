@@ -23,6 +23,16 @@ JSON 봉투를 선언한 도구는 실패도 `success:false,error,error_type`으
 선언한다. 검사와 실행 모두 파이프로 주입되는 입력까지 포함해 판정한다.
 빌드는 pair/same-kind flow의 입력 연결과 컨테이너 타입 누락을 거부한다.
 
+파이프 입력은 자연스러운 주 입력이 있는 액션에만 선언한다. `self:grep`은 `pattern`,
+`self:mkdir`는 `path`다. 전자는 명시 계약의 `pipe_input`, 후자는 기존 `pipe_text`를 사용하며
+레지스트리·describe·검사·실행은 해소된 같은 계약을 읽는다. 설정만 받는 조회(`self:time.format`)는
+입력 자료의 흐름이 아니며, `self:move`의 source/destination과 op마다 입력이 달라지는 도구는
+임의로 첫 인자를 택하지 않는다. 목록을 Text로 몰래 바꾸지 않는다.
+명시 인자와 파이프의 0/1/N건·빈값·타입 오류·부분 실패 근거를 같은 경계에서 검사한다.
+
+순수 계약의 도구는 조건·람다·기본값과 파이프에서도 호출할 수 있다. pure는 실패 불가를 뜻하지
+않으며 권한·예산·취소·실행 근거를 우회하지 않는다. 값 전용 표현 호스트는 계속 도구를 실행하지 않는다.
+
 단항 `flow.accepts: items/prose` 계열도 명시 `pipe_input`을 선언한다. 기존 봉투 어댑터의
 `adapter.input_envelopes: [items]`는 그 입력 슬롯의 Record 또는 JSON Record가 원천 상태를
 담은 봉투임을 선언한다. 목록 자체와 목록 안 업무 필드는 상태로 해석하지 않는다.

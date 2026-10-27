@@ -1,6 +1,6 @@
 # IBL 조합 설계 재감사와 다음 수리계획
 
-작성: 2026-10-27. 상태: **지원 범위 구현·검증 완료 — 계약의 한계와 검사 결과는 §11**.
+작성: 2026-10-27. 상태: **한정 범위 구현 후 재감사 — 구현·연결 결함 6건과 구조적 잔여 1건 확인, 전체 수리 완료 아님(§12)**.
 기준 커밋: `5009ae09926359583af5754ab6bd7a581b2294a4`.
 정본: `/Users/kangkukjin/Desktop/AI/indiebizOS`, main.
 
@@ -354,7 +354,7 @@ IBL 실행기를 역으로 import하지 않고 기존 호스트 적용 인터페
 
 ## 10. 설계 작성 당시의 결과와 미실행
 
-아래는 구현 전 조사 기록이다. 구현 후 현황은 §11을 따른다.
+아래는 구현 전 조사 기록이다. 구현 당시 기록은 §11, 그 구현을 다시 대조한 최신 판단은 §12를 따른다.
 
 현재 구현에서 G1~G4/B1 다섯 조사 묶음을 두 번 실행해 같은 JSON 결과를 얻었다(두 명령 모두
 종료 0). 관측값 13개를 단언으로 대조했고, 계획서·재현 자료의 구조/링크·범위·공백을 검사했다.
@@ -369,6 +369,8 @@ IBL 실행기를 역으로 import하지 않고 기존 호스트 적용 인터페
 각 부품의 경계에서 드러나고 더 큰 프로그램에도 그대로 전달되는 것을 완료 기준으로 삼는다.
 
 ## 11. 구현 범위와 검증 기록
+
+> 구현 당시 기록이다. 아래 검증 집계는 유지하되, 계약의 완료 판단은 재감사 §12로 정정한다.
 
 2026-10-27 정본 main 작업. G1/B1의 조건부 요구·명시 매개변수 계약·소비자 wire 경계,
 G2의 공통 접근 요약/병렬 구간 입장 검사, G4의 명시 완료 봉투/선택 근거/범위별 관측 확정,
@@ -408,3 +410,211 @@ G3는 순수 후미 수리와 그 앞의 불변 부품/반복 경로만 지원�
 
 실제 서비스의 토큰·완료 시간 개선, 원격 기기 실기와 임의 외부 원천의 의미적 동등성은
 이 검사로 측정하지 않았다. frontend 구현을 변경하지 않아 tsc는 이번 검증 범위에 넣지 않았다.
+
+## 12. 구현 후 재감사 — 계획과 실제 보장의 차이
+
+2026-10-27, 구현 커밋 `80f22c26ceec546c6cf5b019ef18f8ff27e03367`을 정본 main 작업 트리에서
+재감사했다. **전체 수리계획 완료로 판단할 수 없다. 구현·연결 결함 6건(A1~A6), 구조적
+잔여 1건(A7)을 재현했다.** §11의 시험 통과는 사실이지만 §3·§6·§8·§9의 계약 보장과
+변환 행렬을 모두 입증하지 않는다. 문서 첫머리의 완료 상태를 이에 맞게 정정했다.
+
+이번에는 실행부를 수정하지 않았다. 조사 스크립트·관측 JSON·본 계획과 changelog만 변경했다.
+다른 세션의 progress/spill·교재·번역 등 미커밋 수정이 존재하는 트리에서 검사했으며,
+그 수정은 이번 커밋에 포함하지 않는다. 재현 어휘는 메모리 Adapter이고 외부 효과 횟수는
+Python 목록에 기록한다. 함수 저장과 Journal은 임시 디렉토리다. 실제 발송·계정 변경·모델
+호출은 없으며 실서비스 피해나 토큰 절감을 주장하지 않는다.
+
+재현: [probe.py](experiments/ibl_composition_reaudit_2026_10_27/probe.py),
+관측: [results.json](experiments/ibl_composition_reaudit_2026_10_27/results.json).
+
+```bash
+.venv/bin/python3 docs/experiments/ibl_composition_reaudit_2026_10_27/probe.py
+```
+
+이 스크립트의 종료 0은 **현재 결함이 관측대로 재현됨**을 뜻한다. 수리 인수의 초록이 아니다.
+frontend 검사는 설치된 TypeScript로 실제 `instrument.ts`를 변환해 실행하되 imports와
+fetch만 대체한다. 화면 실기나 실제 HTTP 요청을 대신했다고 주장하지 않는다.
+
+### 12.1 우선순위와 계획 대조
+
+P1은 명시 계약 위반·실행 사실 오표시·필수 의무 소비 누락, P2는 독립 검사·합성의 정확성 및
+지원 범위 문제다. A7은 잘못된 완료 인증이 아니라 보수적인 과잉 차단이며, A1도 런타임의
+권한 검사를 우회했다는 뜻은 아니다.
+
+| ID | 중요도 | 실제 관측 | 미충족 계획 |
+| --- | --- | --- | --- |
+| A1 | P1 | Record 안의 명시 pure 콜백 계약을 위반한 write가 실행됨 | G1 §3.2.3: 컨테이너를 지나는 요구·효과 보존 |
+| A2 | P1 | write 1회 뒤 완료 평가의 wire 오류가 공개 응답에서 `executed:false`로 바뀜 | B1 실행 경계, G3 실행 사실/영수증, G4 실패 봉투 보존 |
+| A3 | P1 | 필수 완료 `unsatisfied`를 supervisor 실패 보조 판정·앱 helper가 소비하지 않음 | G4 §8.4: UI/모델 표면의 소비까지 연결 |
+| A4 | P2 | 요약 재사용 여부에 따라 무조건 Number 요구가 조건부 요구로만 남음 | G1 요구 계약, §9 캐시 사용/미사용 동등성 |
+| A5 | P2 | 같은 입력에 무조건 Number와 Bool을 요구하는 독립 함수가 검사·저장됨 | G1 §3.2.4: 알려진 모순과 미확정 의무 구별 |
+| A6 | P2 | 전송 가능한 분기를 택한 `Callable\|Number` 결과를 확정 wire 실패로 사전 거절 | B1 확정 불일치와 실행 시 의무 구별 |
+| A7 | P2 / 구조 | 선택 결과의 불완전성이 독립 필수 의무까지 `undetermined`로 만듦 | G4 결과 범위·독립 의무·범위별 관측 확정 |
+
+### 12.2 A1 — 중첩 명시 콜백 계약의 검사 소실
+
+```ibl
+[def:f]($cfg:{p:{"$callable":{params:["Number"],result:"Bool",effects:["pure"]}}}){
+  return $cfg.p(1)
+}
+return [fn:f]{cfg:{p:($x)=>[t:write]{}}}
+```
+
+`t:write`는 Bool을 반환하는 `write_external` Adapter다. 직접 `$p`에 같은 계약을 붙이면
+잎 호출 0회로 거절하지만, Record 안에 넣으면 검사 오류 없이 실행 성공·write 1회다.
+전체 plan의 쓰기 효과는 보이지만 **명시 pure 요구 자체가 강제되지 않는다**.
+
+소유자: `backend/ibl/ibl_v2_requirements.py:119`의 `annotation`은 최상위 expected가
+Callable일 때만 공통 적용 분석을 부른다. Record는 `compiler.need`로 내려가고,
+`backend/ibl/ibl_v2_types.py:305`의 `compatible`은 내부 Callable의 인자·결과·효과 요구를
+검사하지 않는다. 런타임 명시 계약도 같은 annotation을 호출하므로 그 경계에서 보완되지 않는다.
+
+수리 조건: 단순히 이 Record 예제를 예외 처리하지 말고, Type의 구조를 따라 같은 Callable
+요구 검사를 적용해야 한다. Record/List/Result·반환 함수·저장/회수와 정적/동적 입구에서
+요구가 보존되고, 계약 검사 자체가 실행 효과나 자원 접근으로 누적되지 않아야 한다.
+
+### 12.3 A2 — 완료 평가 오류가 이미 일어난 효과를 숨김
+
+```ibl
+[t:send]{}
+return [table:each]{items:[1]}{return abs}
+```
+
+원천 `t:send`, predicate `true`인 completion 의무를 동봉한다. each의 List 원소는 실행
+경계까지 남는 wire 의무이며 최종 pack이 실패한다. completion이 없으면 `success:false`,
+`executed:true`, `VALUE_PROTOCOL`로 올바르게 반환한다. completion을 넣은 공개
+`handle_request` 경로는 동일한 합성 write를 **1회 실행한 뒤 `executed:false`**를 반환하고
+응답의 resume/task_ref도 없다.
+
+소유자: `backend/ibl/ibl_v2_completion.py:93`이 실행 실패 후에도 결과를 다시 `pack`하여
+지문을 만든다. `backend/ibl/ibl_v2_runtime.py:1174`의 완료 평가는 본 실행의 Fault 처리 밖에
+있다. 이 Fault가 `backend/ibl/ibl_v2_entry.py:171`의 일반 예외 경계로 나가 syntax_report가
+되고 실행 사실이 사라진다. Journal에 영수증이 전혀 기록되지 않았다는 주장은 아니다.
+
+수리 조건: 완료 판정 자체의 실패도 실행 결과 봉투 안에서 표현하고 이미 생성된 근거·영수증·
+실행 사실·재개 손잡이를 보존해야 한다. 전송 불가 결과의 hash 생성은 실패 경로를 파괴하면
+안 된다. 공개 호출자가 `executed:false`를 믿고 처음부터 재시도할 때의 중복 효과 위험은
+이 잘못된 응답에서 추론한 것이며 실제 외부 중복 발송을 관측한 것은 아니다.
+
+### 12.4 A3 — 전달된 완료 봉투를 기존 소비자가 판정에 쓰지 않음
+
+실제 Runtime에서 값 2, 필수 predicate `$value==3`을 실행하면 실행 자체는 성공하고
+`source_complete:true`, `completion.status:unsatisfied`다. 이 분리는 옳다. 문제는 그다음이다.
+
+- `backend/ibl/ibl_honesty.py:298`의 `completion_evidence`는 빈 목록을 반환한다.
+- 이를 사용하는 `backend/cognition/conscious_supervisor.py:1123`의 `_failed`는 False다.
+- `frontend/src/lib/instrument.ts:27`의 실제 `iblExecuteApp`을 실행하면 값 2를 정상 반환하며
+  completion을 버린다. 반대로 대체 경로가 명시 의무를 만족해도 `source_complete:false`이면
+  기본 옵션에서는 거절한다. 옵션 타입/요청 작성에도 completion 지정 통로가 없다.
+
+이는 해당 helper의 연결 누락이다. 전체 supervisor가 무조건 목표 완료를 승인한다거나
+모든 모델 표면이 봉투를 잃는다고 확대하지 않는다. 실행 성공, 원천 감사, 명시한 업무 의무는
+서로 다른 축이며 `success`나 `source_complete` 하나를 바꾸는 수리로 해결할 수 없다.
+
+수리 조건: 같은 완료 해석기를 실제 소비자에 연결한다. 필수/선택·unsatisfied/undetermined·
+의무 없는 과거 봉투를 구분하고, 대체 충족도 감사 실패를 지우지 않은 채 사용자가 선택한
+계약에 따라 처리해야 한다. 모델용 축약·HTTP/MCP 전달뿐 아니라 앱·조종실·원격 소비자의
+행동까지 인수한다. frontend가 이전 구현에서 변경되지 않은 사실은 이 요구의 완료 근거가 아니다.
+
+### 12.5 A4·A5 — 요구가 분석의 일급 계약보다 누적 보고 정보에 머무는 부분
+
+A4 재현:
+
+```ibl
+[def:g]($x){return abs($x)}
+[def:f]($flag,$x){
+  [if:$flag]{[fn:g]{x:$x}}
+  return [fn:g]{x:$x}
+}
+```
+
+마지막 호출 때문에 x는 무조건 Number여야 한다. 기본 요약 재사용에서는 `conditional:true`
+요구만 남고, 같은 Compiler의 분석 캐시만 끄면 `conditional:false` 요구도 남는다.
+`backend/ibl/ibl_v2_call_analysis.py:84`의 요약은 결과·효과·접근·진단을 보존하나 요구를
+재생하지 않는다. `backend/ibl/ibl_v2_requirements.py:20`은 요구를 외부 가변 표에 직접
+누적하고 첫 분석의 requirement_depth가 남는다. 구체적인 잘못된 호출을 모두 통과시킨다는
+주장은 아니다. 독립 describe/저장 계약의 정확성과 캐시 동등성부터 깨진 것이다.
+
+A5 재현:
+
+```ibl
+[def:impossible]($x){$n=abs($x);return not $x}
+```
+
+x의 요구 목록에는 무조건 Number와 무조건 Bool이 함께 남지만 검사 issues는 비고 실제
+임시 함수 등록 관문도 revision을 발급한다. IBL Bool/Number는 별개 타입이므로 만족 가능한
+입력이 없다. 이는 임의 종속 타입 추론 문제가 아니라 이미 수집한 유한한 모순을 닫지 않은 문제다.
+
+수리 조건: 요구 생성·대입·합성·모순 판정을 기존 Type/CallAnalysis의 공통 요약 경계에 둔다.
+재사용 시 호출 문맥에 맞는 조건을 대입하고, 분기 간의 합당한 대안과 같은 실행 경로의 모순을
+구별한다. 독립 검사/describe/저장/호환 개정이 이 결과를 같은 의미로 소비해야 한다.
+
+### 12.6 A6 — 혼합 wire 대안을 확정 불가로 취급
+
+`return $flag ? abs : 1`을 `flag:false`로 실행하면 실제 선택은 숫자지만 사전
+`VALUE_PROTOCOL`, `executed:false`다. 숫자만 반환하는 대조군은 성공한다.
+`backend/ibl/ibl_v2_requirements.py:64`의 Union 처리는 각 대안의 실패를 그대로 합쳐
+“가능한 전송 불가”를 “반드시 전송 불가”로 올린다. 같은 모듈의 List/Result 조건부 처리 및
+`Unknown/mixed alternatives remain duties`라는 설명과도 일치하지 않는다.
+
+수리 조건: Union의 모든 가능한 결과가 불가능한 경우와 일부만 불가능한 경우를 구분하고,
+후자는 실행 의무로 남긴다. 내부 Callable 반환과 최상위 wire 경계를 계속 구분한다.
+
+### 12.7 A7 — 독립 의무가 최종 값 전체의 근거 범위에 묶임
+
+```ibl
+return {good:[t:good]{},other:[t:partial]{}}
+```
+
+`good`은 완전한 2, `other`는 incomplete 메타가 붙은 7이다. 필수 good 의무는
+`$value.good==2`/원천 good, 선택 other 의무는 `$value.other==7`/원천 partial로 선언한다.
+두 의무 모두 `undetermined`다. 같은 good 필드만 반환하면 그 필수 의무는 satisfied다.
+
+`backend/ibl/ibl_v2_completion.py:56`에서 전체 결과의 selected_events를 한 번 구한 뒤
+`:81`에서 모든 의무에 동일한 incomplete 집합을 적용한다. 의무별 sources/evidence_refs는
+있지만 의무의 출력 경로·포괄 범위와 그 범위의 값/제어 의존을 묶는 계약이 없다.
+따라서 관측 확정기가 의무 ID별로 분리돼 있어도 good 의무가 satisfied가 되지 않아 이 경우의
+독립 확정을 얻지 못한다. 이번 probe는 의무 판정까지 재현했고 관측 저장소의 실제 확정은
+별도 재현하지 않았다.
+
+§11은 임의 부분 선택·변환에 인증을 자동 이식하지 않는 한계를 이미 밝혔다. 이 보수성은
+허위 인증보다 안전하지만, **§6·§8의 독립 완료 합성 목표를 완수했다는 뜻은 아니다.**
+현재 completion은 요청/최종 결과 봉투 중심이다. 함수 정의 자체가 보유하고 반환 값·Result·
+참조·저장/회수 경계에서 명시 범위와 함께 합성되는 완료 계약까지 구현됐다고 보기는 어렵다.
+
+수리 조건: 판정식의 참/거짓뿐 아니라 의무가 관할하는 출력 범위와 근거 의존을 명시하고,
+선택/제어 의존과 미확정 mutation의 전역 위험을 구별한다. 전체를 무조건 신뢰하거나
+임의 의미 동등성을 자동 증명하지 않는다. 이 공통 계약을 함수·Result·참조·관측 확정에
+같은 방식으로 연결해야 한다.
+
+### 12.8 남은 범위·다음 수리 순서·검증 판정
+
+| 계획 | 이번 판단 |
+| --- | --- |
+| G1 | 조건부 요구 표기·독립 저장 경로는 생겼지만 A1/A4/A5 때문에 독립 계약의 강제·일관성·모순 구별 미완료 |
+| B1 | 확정적인 Record/List Callable 사전 거절과 내부 Callable 사용은 기존 시험 통과. A6의 혼합값 구별과 A2의 실패 후 봉투 보존 미완료 |
+| G2 | 공통 접근 요약·동적 충돌 검사·R/W·독립 병렬·hardlink 등 기존 인수 통과. 이번 추가 조사에서 새 G2 반례는 확보하지 못함 |
+| G3 | 순수 후미 수리/CAS·완료 효과 비반복의 한정 구현. 새 효과/반복 재정렬/모호한 대응 거절은 명시된 안전 경계이며 새 결함으로 세지 않음. §8의 독립 부품 교체로 확장하는 단계는 여전히 미구현 |
+| G4 | 직접·함수·람다 fallback의 명시 충족은 성공. A2/A3/A7 때문에 실패 보존·실제 소비·독립 범위 합성 미완료 |
+| 종합 인수 | §9 전체 변환 행렬·모든 소비자·새 업무의 비용 개선까지 완료했다고 할 수 없음 |
+
+G2의 사전 미선언 자원 strict opt-in과 프로세스 밖 원자성 비보장은 공개된 이행/지원 한계다.
+G3의 deferred observation은 재개 시 재단계화 경로가 이미 있다(`ibl_v2_runtime.py:964` 부근).
+관측 복구가 통째로 없다고 오판하지 않는다. 이번 감사는 G2/G3의 무결함 증명도 아니다.
+
+다음 구현은 (1) A2 실행 사실 보존, (2) A1/A4/A5의 구조적 요구 합성과 A6의 wire 의무,
+(3) A7 범위 계약을 정한 뒤 A3 소비자까지 연결, (4) §9 변환/실패 경계 인수 순서로 진행한다.
+G3 확장은 이 계약이 안정된 뒤 증명 가능한 범위만 넓힌다. 기능별 봉투 필드를 더하는 것만으로
+끝내지 말고 **같은 계약이 생성·컨테이너·요약 재사용·저장·적용·실패·소비에서 유지되는가**를
+완료 기준으로 삼는다.
+
+이번 검증 기록:
+
+- 기존 `test_ibl_v2_requirements.py`, `test_ibl_v2_access.py`, `test_ibl_v2_completion.py`,
+  `test_ibl_v2_repair.py`: **46 통과**, 2.07초. 기존 시험은 이 반례들을 포함하지 않는다.
+- 새 audit probe: 두 번 실행 모두 종료 0, 출력 JSON 바이트 동일. 7개 반례 묶음과 직접 계약
+  거절·단독 숫자·단독 완료 의무·3종 fallback 포장 대조군을 확인했다.
+- 새 probe에는 실제 임시 함수 등록, 공개 handle_request, supervisor 실패 보조 판정,
+  실제 앱 helper의 TypeScript 실행이 포함된다. 외부 효과는 합성이고 브라우저/폰 실기는 아니다.
+- 실행부를 바꾸지 않은 감사이므로 backend 전수·system 전수·frontend tsc를 다시 실행하지 않았다.
+  §11의 과거 실행 집계를 이번 재감사에서 다시 실행한 것으로 읽으면 안 된다.

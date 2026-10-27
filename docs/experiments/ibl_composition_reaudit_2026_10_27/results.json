@@ -1,0 +1,280 @@
+{
+  "audited_commit": "80f22c26ceec546c6cf5b019ef18f8ff27e03367",
+  "findings": {
+    "A1_nested_callable_contract": {
+      "direct": {
+        "completion_status": null,
+        "diagnostic": null,
+        "executed": false,
+        "source_complete": null,
+        "success": false,
+        "value": null
+      },
+      "direct_source": "[def:f]($p:{\"$callable\":{params:[\"Number\"],result:\"Bool\",effects:[\"pure\"]}}){return $p(1)};return [fn:f]{p:($x)=>[t:write]{}}",
+      "nested": {
+        "completion_status": null,
+        "diagnostic": null,
+        "executed": true,
+        "source_complete": true,
+        "success": true,
+        "value": true
+      },
+      "nested_effect_calls": 1,
+      "nested_source": "[def:f]($cfg:{p:{\"$callable\":{params:[\"Number\"],result:\"Bool\",effects:[\"pure\"]}}}){return $cfg.p(1)};return [fn:f]{cfg:{p:($x)=>[t:write]{}}}"
+    },
+    "A2_post_effect_failure_receipt": {
+      "completion": [
+        {
+          "id": "r",
+          "predicate": "true",
+          "required": true,
+          "sources": [
+            {
+              "action": "t:send",
+              "targets": {}
+            }
+          ]
+        }
+      ],
+      "effect_calls": 1,
+      "public_has_resume": false,
+      "public_has_task_ref": false,
+      "public_with_completion": {
+        "completion_status": null,
+        "diagnostic": "VALUE_PROTOCOL",
+        "executed": false,
+        "source_complete": null,
+        "success": false,
+        "value": null
+      },
+      "source": "[t:send]{};return [table:each]{items:[1]}{return abs}",
+      "without_completion": {
+        "completion_status": null,
+        "diagnostic": "VALUE_PROTOCOL",
+        "executed": true,
+        "source_complete": true,
+        "success": false,
+        "value": null
+      }
+    },
+    "A3_completion_consumers": {
+      "actual_app_helper": [
+        {
+          "accepted": true,
+          "value": 2
+        },
+        {
+          "accepted": false,
+          "message": "실행 결과가 불완전합니다."
+        }
+      ],
+      "completion_evidence": [],
+      "fallback_wrapper_controls": [
+        {
+          "completion_status": "satisfied",
+          "diagnostic": null,
+          "executed": true,
+          "source_complete": false,
+          "success": true,
+          "value": 2
+        },
+        {
+          "completion_status": "satisfied",
+          "diagnostic": null,
+          "executed": true,
+          "source_complete": false,
+          "success": true,
+          "value": 2
+        },
+        {
+          "completion_status": "satisfied",
+          "diagnostic": null,
+          "executed": true,
+          "source_complete": false,
+          "success": true,
+          "value": 2
+        }
+      ],
+      "supervisor_failed": false,
+      "unsatisfied": {
+        "completion_status": "unsatisfied",
+        "diagnostic": null,
+        "executed": true,
+        "source_complete": true,
+        "success": true,
+        "value": 2
+      }
+    },
+    "A4_requirement_cache": {
+      "cached": {
+        "flag": [
+          {
+            "at": 46,
+            "conditional": false,
+            "expected": {
+              "type": "Bool"
+            },
+            "kind": "value"
+          }
+        ],
+        "x": [
+          {
+            "at": 23,
+            "conditional": true,
+            "expected": {
+              "type": "Number"
+            },
+            "kind": "value"
+          }
+        ]
+      },
+      "source": "[def:g]($x){return abs($x)};[def:f]($flag,$x){[if:$flag]{[fn:g]{x:$x}};return [fn:g]{x:$x}}",
+      "uncached": {
+        "flag": [
+          {
+            "at": 46,
+            "conditional": false,
+            "expected": {
+              "type": "Bool"
+            },
+            "kind": "value"
+          }
+        ],
+        "x": [
+          {
+            "at": 23,
+            "conditional": true,
+            "expected": {
+              "type": "Number"
+            },
+            "kind": "value"
+          },
+          {
+            "at": 23,
+            "conditional": false,
+            "expected": {
+              "type": "Number"
+            },
+            "kind": "value"
+          }
+        ]
+      }
+    },
+    "A5_inconsistent_requirements": {
+      "issues": [],
+      "registered": true,
+      "requirements": {
+        "x": [
+          {
+            "at": 28,
+            "conditional": false,
+            "expected": {
+              "type": "Number"
+            },
+            "kind": "value"
+          },
+          {
+            "at": 39,
+            "conditional": false,
+            "expected": {
+              "type": "Bool"
+            },
+            "kind": "value"
+          }
+        ]
+      },
+      "source": "[def:impossible]($x){$n=abs($x);return not $x}"
+    },
+    "A6_mixed_wire_union": {
+      "inputs": {
+        "flag": false
+      },
+      "mixed": {
+        "completion_status": null,
+        "diagnostic": "VALUE_PROTOCOL",
+        "executed": false,
+        "source_complete": null,
+        "success": false,
+        "value": null
+      },
+      "number_control": {
+        "completion_status": null,
+        "diagnostic": null,
+        "executed": true,
+        "source_complete": true,
+        "success": true,
+        "value": 1
+      },
+      "source": "return $flag ? abs : 1"
+    },
+    "A7_independent_completion_scope": {
+      "combined": {
+        "completion_status": "undetermined",
+        "diagnostic": null,
+        "executed": true,
+        "source_complete": false,
+        "success": true,
+        "value": {
+          "good": 2,
+          "other": 7
+        }
+      },
+      "completion": [
+        {
+          "id": "good",
+          "predicate": "$value.good==2",
+          "required": true,
+          "sources": [
+            {
+              "action": "t:good",
+              "targets": {}
+            }
+          ]
+        },
+        {
+          "id": "other",
+          "predicate": "$value.other==7",
+          "required": false,
+          "sources": [
+            {
+              "action": "t:partial",
+              "targets": {}
+            }
+          ]
+        }
+      ],
+      "independent_control": {
+        "completion_status": "satisfied",
+        "diagnostic": null,
+        "executed": true,
+        "source_complete": true,
+        "success": true,
+        "value": {
+          "good": 2
+        }
+      },
+      "obligations": [
+        {
+          "evidence_refs": [
+            2
+          ],
+          "id": "good",
+          "reason": "missing_evidence",
+          "required": true,
+          "status": "undetermined"
+        },
+        {
+          "evidence_refs": [
+            5
+          ],
+          "id": "other",
+          "reason": "missing_evidence",
+          "required": false,
+          "status": "undetermined"
+        }
+      ],
+      "source": "return {good:[t:good]{},other:[t:partial]{}}"
+    }
+  },
+  "meaning": "Counterexamples observed; exit 0 does not mean repair acceptance."
+}

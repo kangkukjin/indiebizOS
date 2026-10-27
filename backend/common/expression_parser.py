@@ -179,6 +179,12 @@ class Parser:
                         self.pop("]")
                         left = self.node("index", left.start, base=left, key=key)
                 continue
+            if op == "{" and left.kind not in BLOCK_STATEMENTS:
+                if left.kind == "callable_ref" and self.tokens[self.i - 1].text != ")":
+                    self.fail("참조 뒤의 즉시 적용은 괄호로 분리하세요: (&[node:action]){...}")
+                params = self.record()
+                left = self.node("named_call", left.start, fn=left, params=params)
+                continue
             if op == "(" and left.kind not in BLOCK_STATEMENTS:
                 self.pop()
                 args = self.arguments(")")
@@ -266,6 +272,14 @@ class Parser:
         if text in ("-", "+", "!", "not"):
             self.pop()
             return self.node("unary", start, op=text, value=self.expr(9))
+        if text == "&":
+            self.pop()
+            self.pop("[")
+            owner = self.name()
+            self.pop(":")
+            action = self.name()
+            self.pop("]")
+            return self.node("callable_ref", start, node=owner, action=action)
         if text == "$":
             self.pop()
             return self.node("ref", start, name=self.name())

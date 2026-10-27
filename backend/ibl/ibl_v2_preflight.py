@@ -4,11 +4,13 @@ Declared model calls, approval policies and static list cardinalities are observ
 Unknown cardinalities/definitions are explicitly reported, never counted as zero.
 """
 from dataclasses import dataclass
+from functools import cached_property
 import copy
 
 from ibl_v2_ir import Node, record_fields
 from ibl_v2_analysis import location
 from ibl_callable_contract import UNRESOLVED
+from common.expression_ops import free_names
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,17 @@ class Facts:
     count: object = None
     dependencies: frozenset = frozenset()
     value: object = UNRESOLVED
+    fields: tuple = ()
+    target: tuple = ()
+    open: bool = True
+
+    @cached_property
+    def _hash(self):
+        # Shared captures are a DAG, not an exponentially expanded hash tree.
+        return hash((self.count, self.dependencies, self.value, self.fields, self.target, self.open))
+
+    def __hash__(self):
+        return self._hash
 
 
 def _scalar(value):
@@ -70,7 +83,7 @@ def analyze(compiler, root, inputs):
     visits, steps = 0, 0
     active = set()
     callers = []
-    summaries = {}
+    summaries = compiler.function_cache  # one compile-local summary store, distinct observation mode
     summary_hits = 0
     warnings_omitted = 0
 
@@ -97,14 +110,48 @@ def analyze(compiler, root, inputs):
         if kind == 'ref':
             return env.get(d['name'], Facts())
         if kind == 'list':
-            deps = frozenset().union(*(sub(v).dependencies for v in d['values']))
-            return Facts(len(d['values']), deps)
+            values = [sub(v) for v in d['values']]
+            deps = frozenset().union(*(v.dependencies for v in values))
+            return Facts(len(values), deps, fields=tuple(enumerate(values)), open=False)
+        if kind == 'record':
+            fields, opened = {}, False
+            for key, child in d.get('entries', d.get('fields', {}).items()):
+                value = sub(child)
+                if key is None:
+                    if value.open:
+                        fields.clear()  # unknown spread may replace every earlier field
+                        opened = True
+                    fields.update(dict(value.fields))
+                else:
+                    fields[key] = value
+            return Facts(fields=tuple(fields.items()), open=opened)
+        if kind in ('field', 'index'):
+            base = sub(d['base'])
+            key = d['key'] if kind == 'field' else sub(d['key']).value
+            return dict(base.fields).get(key, Facts())
+        if kind == 'builtin':
+            return Facts(target=('builtin', d['name']))
+        if kind == 'callable_ref':
+            return Facts(target=('function', d['symbol']) if d.get('symbol') else
+                         ('action', d['node'] + ':' + d['action']))
+        if kind == 'lambda':
+            captures = tuple(sorted((k, env[k]) for k in free_names(node) if k in env))
+            return Facts(target=('lambda', node.id, captures))
+        if kind in ('pure_call', 'named_call'):
+            return application(node, env, loops, multiplier, depth, conditional)
+        if kind == 'conditional':
+            condition = sub(d['condition']).value
+            if type(condition) is bool:
+                return sub(d['yes'] if condition else d['no'])
+            yes, no = sub(d['yes']), sub(d['no'])
+            return yes if yes == no else Facts(target=('alternatives', yes, no))
+
         if kind == 'bind':
             env[d['name']] = sub(d['value'])
             return Facts()
         if kind == 'return':
             return sub(d['value'])
-        if kind in ('def', 'lambda'):
+        if kind == 'def':
             return Facts()
         if kind == 'sequence':
             result = Facts()
@@ -117,7 +164,7 @@ def analyze(compiler, root, inputs):
             source = sub(d['left'])
             if d['right'].kind == 'call':
                 return call(d['right'], env, loops, multiplier, depth, source, conditional)
-            return sub(d['right'])
+            return application(d['right'], env, loops, multiplier, depth, conditional, source)
         if kind == 'call':
             return call(node, env, loops, multiplier, depth, conditional=conditional)
         if kind == 'repeat':
@@ -160,15 +207,148 @@ def analyze(compiler, root, inputs):
         dependencies = frozenset().union(*(sub(c).dependencies for c in children(node)))
         return Facts(dependencies=dependencies)
 
-    def call(node, env, loops, multiplier, depth, piped=None, conditional=False):
+    def application(node, env, loops, multiplier, depth, conditional, piped=None):
+        if node.kind not in ('pure_call', 'named_call'):
+            unknown(node, '미확정 적용 대상')
+            return Facts()
+        d = node.data
+        target = walk(d['fn'], env, loops, multiplier, depth, conditional)
+        open_args = False
+        if node.kind == 'named_call':
+            params = walk(d['params'], env, loops, multiplier, depth, conditional)
+            args, open_args = dict(params.fields), params.open
+            if open_args:
+                unknown(node, '열린 명명 인자')
+        else:
+            args = [walk(n, env, loops, multiplier, depth, conditional) for n in d['args']]
+            if piped is not None:
+                args.insert(0, piped)
+        return apply_fact(node, target, args, env, loops, multiplier, depth, conditional,
+                          piped if isinstance(args, dict) else None, open_args)
+
+    def apply_fact(node, fact, args, env, loops, multiplier, depth, conditional, piped=None, open_args=False):
+        target = fact.target
+        if not target:
+            unknown(node, '호출 부품 계약 미상')
+            return Facts()
+        kind = target[0]
+        if kind == 'alternatives':
+            values = [apply_fact(node, v, args, env, loops, multiplier, depth, True, piped, open_args)
+                      for v in target[1:]]
+            return values[0] if all(v == values[0] for v in values) else Facts()
+        if kind == 'lambda':
+            body = compiler.lambda_nodes[target[1]]
+            params = body.data['params']
+            actual = dict(args) if isinstance(args, dict) else dict(zip(params, args))
+            if piped is not None and params:
+                actual[params[0]] = piped
+            if open_args:
+                for param in params:
+                    actual.setdefault(param, Facts())
+            actual = {**dict(target[2]), **actual}
+            return body_summary(node, target[1], body.data['body'], actual, loops, multiplier, depth, conditional)
+        if kind in ('function', 'action'):
+            if not isinstance(args, dict):
+                unknown(node, '명명 인자 계약 미상')
+                return Facts()
+            if kind == 'function':
+                fn = compiler.functions[target[1]]
+                owner, action = 'fn', fn.data['name']
+            else:
+                owner, action = target[1].split(':', 1)
+            data = {'node': owner, 'action': action,
+                    'params': Node('record', node.start, node.end, {'fields':{}})}
+            if kind == 'function':
+                data['symbol'] = target[1]
+            virtual = Node('call', node.start, node.end, data)
+            return call(virtual, env, loops, multiplier, depth, piped, conditional, args, open_args)
+        name = target[1]
+        if isinstance(args, dict):
+            unknown(node, '위치 인자 계약 미상')
+            return Facts()
+        if name == 'get' and len(args) >= 2:
+            if args[1].value is UNRESOLVED:
+                return Facts()
+            fields = dict(args[0].fields)
+            if args[1].value in fields:
+                return fields[args[1].value]
+            if args[0].open:
+                return Facts()
+            return args[2] if len(args) > 2 else Facts(value=None)
+        if name in ('map', 'filter', 'sorted', 'reduce') and args:
+            count = args[0].count
+            if count == 0:
+                return args[1] if name == 'reduce' else Facts(0)
+            callback = args[2] if name == 'reduce' and len(args) > 2 else args[1] if len(args) > 1 else None
+            if callback and callback.target:
+                row = next(iter(dict(args[0].fields).values()), Facts()) if count == 1 else Facts()
+                cb_args = [args[1], row] if name == 'reduce' else [row]
+                output = apply_fact(node, callback, cb_args, env, loops,
+                                    multiplier * count if multiplier is not None and count is not None else None,
+                                    depth + 1, conditional)
+                if name == 'map':
+                    return Facts(count, fields=((0, output),) if count == 1 else ())
+                if name == 'reduce':
+                    return output
+            return Facts(count)
+        return Facts(dependencies=frozenset().union(*(a.dependencies for a in args)))
+
+    def body_summary(node, sid, body, args, loops, multiplier, depth, conditional):
+        nonlocal visits, warnings, unknowns, summary_hits, warnings_omitted
+        if sid in active:
+            unknown(node, '재귀 부품')
+            return Facts()
+        cache_key = ('visits', sid, tuple(sorted(args.items())), loops, multiplier, conditional)
+        saved = summaries.get(cache_key) if compiler.analysis_cache_enabled else None
+        if saved is None:
+            before_visits = visits
+            outer_warnings, outer_unknowns, outer_omitted = warnings, unknowns, warnings_omitted
+            warnings, unknowns, warnings_omitted = [], [], 0
+            active.add(sid)
+            callers.append(where(node))
+            try:
+                result = walk(body, args, loops, multiplier, depth + 1, conditional)
+                relative = copy.deepcopy(warnings)
+                for entry in relative:
+                    facts = entry.get('facts', {})
+                    if 'callers' in facts:
+                        facts['callers'] = facts['callers'][len(callers):]
+                saved = (result, visits - before_visits, relative, unknowns, warnings_omitted)
+                if compiler.analysis_cache_enabled:
+                    summaries[cache_key] = saved
+            finally:
+                callers.pop()
+                active.remove(sid)
+                warnings, unknowns, warnings_omitted = outer_warnings, outer_unknowns, outer_omitted
+        else:
+            summary_hits += 1
+            visits += saved[1]
+        warnings_omitted += saved[4]
+        for entry in saved[2]:
+            entry = copy.deepcopy(entry)
+            facts = entry.get('facts', {})
+            if 'callers' in facts:
+                facts['callers'] = [*callers, where(node), *facts['callers']]
+            if entry not in warnings:
+                if len(warnings) < 32:
+                    warnings.append(entry)
+                else:
+                    warnings_omitted += 1
+        for entry in saved[3]:
+            if entry not in unknowns and len(unknowns) < 32:
+                unknowns.append(entry)
+        return saved[0]
+
+    def call(node, env, loops, multiplier, depth, piped=None, conditional=False, supplied=None, supplied_open=False):
         nonlocal visits, warnings, unknowns, summary_hits, warnings_omitted
         if node.kind != 'call':
             return Facts()
         d = node.data
         if 'entries' in d['params'].data:
             unknown(node, '펼침 인자의 값·효과는 실행 시 해소합니다.')
-        args = {k: walk(v, env, loops, multiplier, depth, conditional)
-                for k, v in record_fields(d['params']).items()}
+        args = (dict(supplied) if supplied is not None else
+                {k: walk(v, env, loops, multiplier, depth, conditional)
+                 for k, v in record_fields(d['params']).items()})
         key = d['node'] + ':' + d['action']
         if key == 'table:each':
             items = piped if piped is not None else args.get('items', Facts())
@@ -199,59 +379,24 @@ def analyze(compiler, root, inputs):
                 args[next(iter(params))] = piped
             for name, default in params.items():
                 if name not in args:
-                    args[name] = walk(default, {}, loops, multiplier, depth, conditional)
-            cache_key = (sid, tuple(sorted(args.items())), loops, multiplier, conditional)
-            saved = summaries.get(cache_key) if compiler.analysis_cache_enabled else None
-            if saved is None:
-                before_visits = visits
-                outer_warnings, outer_unknowns, outer_omitted = warnings, unknowns, warnings_omitted
-                warnings, unknowns, warnings_omitted = [], [], 0
-                active.add(sid)
-                callers.append(where(node))
-                try:
-                    result = walk(fn.data['body'], args, loops, multiplier, depth + 1, conditional)
-                    relative = copy.deepcopy(warnings)
-                    for entry in relative:
-                        facts = entry.get('facts', {})
-                        if 'callers' in facts:
-                            facts['callers'] = facts['callers'][len(callers):]
-                    saved = (result, visits - before_visits, relative, unknowns, warnings_omitted)
-                    if compiler.analysis_cache_enabled:
-                        summaries[cache_key] = saved
-                finally:
-                    callers.pop()
-                    active.remove(sid)
-                    warnings, unknowns, warnings_omitted = outer_warnings, outer_unknowns, outer_omitted
-            else:
-                summary_hits += 1
-                visits += saved[1]
-            warnings_omitted += saved[4]
-            for entry in saved[2]:
-                entry = copy.deepcopy(entry)
-                facts = entry.get('facts', {})
-                if 'callers' in facts:
-                    facts['callers'] = [*callers, where(node), *facts['callers']]
-                if entry not in warnings:
-                    if len(warnings) < 32:
-                        warnings.append(entry)
-                    else:
-                        warnings_omitted += 1
-            for entry in saved[3]:
-                if entry not in unknowns and len(unknowns) < 32:
-                    unknowns.append(entry)
-            return saved[0]
+                    args[name] = (Facts() if supplied_open else
+                                  walk(default, {}, loops, multiplier, depth, conditional))
+            return body_summary(node, sid, fn.data['body'], args, loops, multiplier, depth, conditional)
         spec = compiler.registry.get(key)
         if spec is None:
             unknown(node, '어휘 계약 미상')
             return Facts()
         from ibl_callable_contract import normalize, selected, UNRESOLVED
+        if supplied_open:
+            for name in spec.contract['params']:
+                args.setdefault(name, Facts())
         try:
             args = normalize(spec.contract, args)
             fields = normalize(spec.contract, record_fields(d['params']))
         except Exception:
             unknown(node, '인자 계약 해석 실패')
             return Facts()
-        values = {k: v.data['value'] if v.kind == 'literal' else UNRESOLVED for k, v in fields.items()}
+        values = {k: v.value for k, v in args.items()}
         contract = selected(spec.contract, values)
         from ibl_callable_contract import pipe_receiver
         receiver = pipe_receiver(contract, args)

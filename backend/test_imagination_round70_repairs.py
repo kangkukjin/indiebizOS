@@ -68,7 +68,9 @@ def test_distinct_or_unknown_resources_are_not_conflicts(source):
 def test_known_text_is_a_refinement_not_a_type():
     known = Type("Text", literal="a")
     assert str(known) == "Text" and static_text(known) == "a"
-    assert join(known, Type("Text", literal="b")) == TEXT
+    from ibl_v2_types import plain
+    choices = join(known, Type("Text", literal="b"))
+    assert plain(choices) == TEXT and choices.choices == ('a', 'b')
     assert static_text(join(known, Type("Text", literal="a"))) == "a"
     rows = [Type("Record", (("url", Type("Text", literal=u)), ("t", TEXT)), open=False) for u in ("x", "y")]
     assert str(join(*rows)) == "{url: Text, t: Text}"  # 필드 순서는 값이 없을 때와 같다

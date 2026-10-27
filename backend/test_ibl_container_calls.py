@@ -237,8 +237,14 @@ def test_local_function_shadows_registered_write_resources_but_keeps_argument_wr
 def test_pure_slots_remain_pure_even_through_a_container(source):
     reg = {"test:leaf": adapter(lambda rt, a: pytest.fail("pure slot must not execute"))}
     plan = compile_program(source, reg)
-    assert "PURE_EXPRESSION" in {issue["code"] for issue in plan.issues}
-    assert not Runtime(plan).run()["executed"]
+    if source.startswith('return ($r)=>'):
+        # Creating an effectful component is permitted; external serialization is not.
+        assert not plan.issues and not plan.effects
+        result = Runtime(plan).run()
+        assert result['diagnostic']['code'] == 'VALUE_PROTOCOL'
+    else:
+        assert "PURE_EXPRESSION" in {issue["code"] for issue in plan.issues}
+        assert not Runtime(plan).run()["executed"]
 
 
 @pytest.mark.parametrize("source,expected", [

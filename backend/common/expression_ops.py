@@ -28,6 +28,14 @@ class Closure:
 
 
 @dataclass(frozen=True)
+class CallableRef:
+    """A host-owned definition reference, without permissions or live runtime."""
+    node: str
+    action: str
+    symbol: str | None = None
+
+
+@dataclass(frozen=True)
 class Builtin:
     """An internal callable reference, never an ordinary JSON value."""
     name: str
@@ -232,3 +240,41 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
             raise Fault("ERROR_OF_OK", "Ok에는 오류가 없습니다.")
         return first.error
     raise Fault("BUILTIN", f"직접 실행할 수 없는 내장 함수: {name}")
+
+
+def callable_identity(value):
+    """Private request identity, bounded by unique captured values (not DAG paths).
+
+    Ordinary values keep their existing tagged wire identity. Callable nodes contribute
+    only hashes and definition references; captures never enter public reports.
+    """
+    from common.expression_ir import digest, pack
+    memo = {}
+    active = set()
+    def visit(item):
+        if isinstance(item, (Closure, CallableRef, Builtin)):
+            identity = id(item)
+            if identity in memo:
+                return memo[identity]
+            if identity in active:
+                raise Fault('CALLABLE_CYCLE', '순환 부품 캡처는 지원하지 않습니다.')
+            active.add(identity)
+            if isinstance(item, Closure):
+                data = {'body': item.body.id, 'params': item.params,
+                        'captures': {k: visit(b.value) for k, b in sorted(item.env.items())}}
+            elif isinstance(item, CallableRef):
+                data = {'node': item.node, 'action': item.action, 'symbol': item.symbol}
+            else:
+                data = {'builtin': item.name}
+            result = ['callable', digest(pack(data))]
+            memo[identity] = result
+            active.remove(identity)
+            return result
+        if isinstance(item, ResultValue):
+            return ["result", item.ok, visit(item.value), visit(item.error)]
+        if isinstance(item, dict) and all(isinstance(k, str) for k in item):
+            return ['record', [[k, visit(v)] for k, v in item.items()]]
+        if isinstance(item, (list, tuple)):
+            return ['list', [visit(v) for v in item]]
+        return pack(item)
+    return visit(value)

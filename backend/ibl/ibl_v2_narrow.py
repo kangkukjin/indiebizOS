@@ -10,6 +10,13 @@ def path(node):
     if node.kind == "field":
         base = path(node.data["base"])
         return (*base, node.data["key"]) if base else None
+    if node.kind == 'pure_call' and node.data['fn'].kind == 'builtin' and node.data['fn'].data['name'] == 'get':
+        args = node.data['args']
+        if (len(args) in (2, 3) and args[1].kind == 'literal'
+                and isinstance(args[1].data['value'], str)
+                and (len(args) == 2 or args[2].kind == 'literal' and args[2].data['value'] is None)):
+            base = path(args[0])
+            return (*base, args[1].data['value']) if base else None
     return None
 
 
@@ -43,6 +50,9 @@ def refine(typ, keys, test):
 
 def narrow(env, condition, truth=True):
     """Return a new environment; never change a sibling branch or caller."""
+    known = known_condition(condition, env)
+    if known is not None and known != truth:
+        return dict.fromkeys(env, NEVER)
     d = condition.data
     if condition.kind == "unary" and d["op"] in ("not", "!"):
         return narrow(env, d["value"], not truth)
@@ -55,6 +65,14 @@ def narrow(env, condition, truth=True):
         return {k: join(a[k], b[k]) for k in env}
     if condition.kind == "pure_call" and d["fn"].kind == "builtin" and d["fn"].data["name"] == "has":
         args = d["args"]
+        if len(args) == 2:
+            keys = path(args[0])
+            if keys and keys[0] in env and truth:
+                def can_have_field(typ):
+                    return None if typ.kind == "Record" and not typ.open and not typ.fields else typ
+                refined = refine(env[keys[0]], keys[1:], can_have_field)
+                if refined is None:
+                    return {**env, keys[0]: NEVER}
         if len(args) == 2 and args[1].kind == "literal" and isinstance(args[1].data["value"], str):
             keys, key = path(args[0]), args[1].data["value"]
             if keys and keys[0] in env:
@@ -65,8 +83,9 @@ def narrow(env, condition, truth=True):
                         return typ
                     fields = dict(typ.fields)
                     if truth:
-                        # join may have discarded optional fields. has proves
-                        # existence, but does not invent a type or non-nullness.
+                        if key not in fields and not typ.open:
+                            return None
+                        # Existence does not imply non-nullness.
                         fields.setdefault(key, UNKNOWN)
                         return replace(typ, fields=tuple(fields.items()))
                     return None if key in fields else typ
@@ -103,3 +122,60 @@ def narrow(env, condition, truth=True):
     # receive bottom, so unrelated mistakes are not hidden.
     result[keys[0]] = refined if refined is not None else NEVER
     return result
+
+
+def known_condition(node, env):
+    """Bounded scalar/shape proof; never evaluates callbacks or tool code.
+
+    Numeric input values are not folded: cardinality and literal comparisons
+    suffice to eliminate impossible optional-record paths without specializing
+    arbitrary computation or hiding source errors.
+    """
+    from common.expression_ops import binary, pure_call
+    from ibl_callable_contract import UNRESOLVED
+    def value(n, depth=0):
+        if depth > 32:
+            return UNRESOLVED
+        d = n.data
+        if n.kind == 'literal':
+            return d['value']
+        if n.kind == 'ref':
+            typ = env.get(d['name'], UNKNOWN)
+            if typ.kind == 'Null':
+                return None
+            return typ.literal if typ.kind in ('Text','Bool') and typ.literal is not None else UNRESOLVED
+        if n.kind == 'unary' and d['op'] in ('not','!'):
+            part = value(d['value'], depth+1)
+            return not part if type(part) is bool else UNRESOLVED
+        if n.kind == 'binary':
+            a, b = value(d['left'],depth+1), value(d['right'],depth+1)
+            if d['op'] in ('and','&&') and (a is False or b is False):
+                return False
+            if d['op'] in ('or','||') and (a is True or b is True):
+                return True
+            if d['op'] == 'in' and isinstance(b, list) and not b:
+                return False
+            if a is UNRESOLVED or b is UNRESOLVED:
+                return UNRESOLVED
+            try:
+                return binary(d['op'],a,b)
+            except Exception:
+                return UNRESOLVED
+        if n.kind == 'pure_call' and d['fn'].kind == 'builtin':
+            name = d['fn'].data['name']
+            args = d['args']
+            if len(args) == 1 and name == 'keys' and args[0].kind == 'ref':
+                typ = env.get(args[0].data['name'], UNKNOWN)
+                if typ.kind == 'Record' and not typ.open and len(typ.fields) <= 64:
+                    return [k for k, _ in typ.fields]
+            if len(args) == 1 and name == 'len' and args[0].kind == 'ref':
+                typ = env.get(args[0].data['name'], UNKNOWN)
+                if typ.kind == 'Record' and not typ.open:
+                    return len(typ.fields)
+                if typ.kind == 'List' and typ.positions is not None:
+                    return len(typ.positions)
+                if typ.kind == 'Text' and typ.literal is not None:
+                    return pure_call('len',[typ.literal])
+        return UNRESOLVED
+    result=value(node)
+    return result if type(result) is bool else None

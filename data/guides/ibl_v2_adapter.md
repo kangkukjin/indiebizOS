@@ -107,3 +107,16 @@ callable_contract의 `execution: {concurrency: reentrant}`는 동일 구현의 �
 > 실행 에이전트가 턴 종료 후 덧붙인다.
 - 2026-10-27 실측: handler_contract로 유도한 계약은 수리 전에는 어휘의 `returns: items`·`ops.returns` 선언을 읽지 않고 반환을 필드 없는 Record로 두었다. 이 때문에 행 목록 판정은 관측 기록 `data/ibl_return_shapes.json`에만 의존했다.
 - 2026-10-27 실측: `data/ibl_return_shapes.json`은 git에서 추적하지 않는 실행 관측 기록이고 fixture가 있는 op만 담는다. 그래서 사본이나 새 설치에서는 미관측 op의 행 연산(예: `sense:book→take`, `sense:weather→filter`)이 거절된다. 수리 전 사본에서 재현해 확인했다.
+
+
+## 실행 내부 부품 참조
+
+선언된 어휘는 `&[node:action]`으로 참조하고 `$op{이름:값}`으로 적용한다.
+직접 호출과 같은 정규화·조건부 계약·receiver·실행 관문을 사용한다. 참조 생성은
+도구 실행·승인 발급이 아니며, 권한은 `authorize`와 기존 잎 라우팅이 호출마다 확인한다.
+분석은 전달된 Callable의 잠재 효과와 실제 호출 효과를 구분한다. 값 콜백은 pure를 요구한다.
+명명 함수와 람다는 같은 컴파일 내부 분석 요약을 공유하고, 간접 호출도 현재 호출 위치·
+반복 경로에 독립 영수증을 갖는다. 대상/캡처 신원은 요청 지문에 포함된다.
+Callable은 실행 내부 값이다. 외부 Script·JSON·HTTP 인자로 넘기는 우회 직렬화를 만들지 않는다.
+
+부품 구성 예제는 [부품 조합 가이드](ibl_component_composition.md)를 따른다.

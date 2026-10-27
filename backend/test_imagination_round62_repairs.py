@@ -130,7 +130,8 @@ def test_builtin_can_be_a_direct_declared_callback():
 
 def test_builtin_alias_runtime_errors_are_catchable():
     known = compile_program('$f=abs; [try]{return $f("invalid")}[catch]{return $error.code}')
-    assert [issue['code'] for issue in known.issues] == ['NUMBER_REQUIRED']
+    assert not known.issues and any(g.get('recoverable') for g in known.guards)
+    assert Runtime(known).run()['value'] == 'NUMBER_REQUIRED'
     registry = {'fixture:value': Adapter(
         {'version': 1, 'params': {}, 'result': 'Text', 'effects': ['read_external']},
         lambda rt, args: 'invalid')}

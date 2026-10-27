@@ -220,8 +220,12 @@ def test_index_diagnostic_splits_fraction_from_range(registry):
     assert frac['details'] == {'index': '1.5', 'index_type': 'Number', 'length': 3, 'variable': 'xs'}
     out = diagnostic('$xs=[10,20,30]\nreturn $xs[round(2.7, 0)]', registry)
     assert '범위' in out['message'] and out['details']['index'] == 3 and out['details']['length'] == 3
-    bad = diagnostic('$pos = get({k:true}, "k", null)\nreturn [1,2,3][$pos]', registry)   # 정적 검사는 리터럴 Bool 을 먼저 막는다
-    assert bad['details']['index_type'] == 'Bool'
+    bad = compile_program('$pos = get({k:true}, "k", null)\nreturn [1,2,3][$pos]', registry)
+    assert any(i['code'] == 'TYPE' and i['actual'] == 'Bool' for i in bad.issues)
+    from ibl_v2_types import UNKNOWN
+    dynamic = compile_program('return [1,2,3][$pos]', registry, input_types={'pos': UNKNOWN})
+    observed = Runtime(dynamic, {'pos': True}).run()
+    assert observed['diagnostic']['details']['index_type'] == 'Bool'
 
 
 def test_arithmetic_table_in_teaching_matches_runtime(registry):

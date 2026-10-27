@@ -6,6 +6,7 @@ import hashlib
 from decimal import Decimal
 from ibl_v2_ir import Unit, ResultValue, Fault
 from ibl_v2_expr import Builtin, Closure
+from common.expression_ops import CallableRef
 
 
 @dataclass(frozen=True, eq=False, repr=False)
@@ -27,6 +28,8 @@ class Type:
     # unchanged, and join drops it. Consumers that need a statically known
     # identity (declared write resources) read it via static_text (70회차 B70-2).
     literal: object = None
+    # Finite selector values survive control-flow joins without becoming code.
+    choices: tuple | None = None
 
     @cached_property
     def _key(self):
@@ -39,7 +42,7 @@ class Type:
                 return tuple(ref(v) for v in value)
             return value
         value = (self.kind, ref(self.fields), ref(self.item), self.open,
-                 ref(self.positions), self.observed, self.literal)
+                 ref(self.positions), self.observed, self.literal, self.choices)
         return hashlib.sha256(repr(value).encode()).digest()
 
     def __hash__(self):
@@ -62,8 +65,8 @@ class Type:
                 if left._key != right._key:
                     return False
                 pending.extend(zip(
-                    (left.kind, left.fields, left.item, left.open, left.positions, left.observed, left.literal),
-                    (right.kind, right.fields, right.item, right.open, right.positions, right.observed, right.literal)))
+                    (left.kind, left.fields, left.item, left.open, left.positions, left.observed, left.literal, left.choices),
+                    (right.kind, right.fields, right.item, right.open, right.positions, right.observed, right.literal, right.choices)))
             elif isinstance(left, tuple) and isinstance(right, tuple):
                 if len(left) != len(right):
                     return False
@@ -177,8 +180,13 @@ def join(left, right):
         discriminated = any(a[k].kind == b[k].kind == "Bool"
                             and a[k].literal is not None and b[k].literal is not None
                             and a[k].literal != b[k].literal for k in a.keys() & b.keys())
-        if discriminated:
+        if discriminated or a.keys() != b.keys():
             return Type("Union", item=tuple(sorted({left, right}, key=_order_key)))
+    if left.kind == right.kind == "Text":
+        a = (left.literal,) if left.literal is not None else left.choices
+        b = (right.literal,) if right.literal is not None else right.choices
+        if a is not None and b is not None and len(set(a) | set(b)) <= 64:
+            return Type("Text", choices=tuple(sorted(set(a) | set(b))))
     if left.kind == right.kind and left.kind not in {"Record", "List", "Union"}:
         # Paths that meet with different known values only know the type; the
         # shape (field order, positions) is the one they had without values.
@@ -245,7 +253,7 @@ def infer(value):
         return Type("Record", tuple((k, infer(v)) for k, v in value.items()), open=False)
     if isinstance(value, Builtin):
         return Type("Callable", item=("builtin", value.name))
-    if isinstance(value, Closure):
+    if isinstance(value, (Closure, CallableRef)):
         return Type("Callable")
     if isinstance(value, ResultValue):
         return Type("Result", item=infer(value.value) if value.ok else UNKNOWN)
@@ -342,8 +350,17 @@ def describe_type(typ, budget=None):
                 result.update(params=list(CONTRACTS[name][2]), result=CONTRACTS[name][3])
         elif typ.item[0] == 'lambda':
             result.update(params=list(typ.item[5]), definition_id=typ.item[1],
-                          effect_requirement='pure', result='input-dependent',
+                          effects='input-dependent', result='input-dependent',
                           captures={k: describe_type(v, budget) for k, v in typ.item[2][:16]})
+        elif typ.item[0] == 'action':
+            _, key, params, required, receiver, effects, returned = typ.item
+            result.update(definition_id=key, argument_style='named', required=list(required),
+                          params={k: describe_type(v,budget) for k,v in params},
+                          pipe_input=receiver, effects=list(effects), result=describe_type(returned,budget))
+        elif typ.item[0] == 'function':
+            result.update(definition_id=typ.item[1], argument_style='named', params=list(typ.item[3]),
+                          required=list(typ.item[4]), pipe_input=next(iter(typ.item[3]),None),
+                          effects='input-dependent', result='input-dependent')
     elif typ.kind == 'Union':
         result['alternatives'] = [describe_type(t, budget) for t in typ.item[:16]]
         if len(typ.item) > 16:
@@ -355,3 +372,48 @@ def describe_type(typ, budget=None):
     elif isinstance(typ.item, Type):
         result['item'] = describe_type(typ.item, budget)
     return result
+
+
+def select_type(base, key, default=None):
+    """Structural projection. None default means strict access, not JSON null.
+
+    Return (selected type, may be absent). A known present null never selects
+    the default. Finite alternatives retain every candidate's callable contract.
+    """
+    if isinstance(key, Type):
+        choices = (key.literal,) if key.literal is not None else key.choices
+        if choices is not None:
+            result, missing = NEVER, False
+            for choice in choices:
+                value, absent = select_type(base, choice, default)
+                result, missing = join(result, value), missing or absent
+            return result, missing
+        key = None
+    if base == NEVER:
+        return NEVER, False
+    result, missing = NEVER, False
+    for member in alternatives(base):
+        if member.kind == 'Record':
+            fields = dict(member.fields)
+            if isinstance(key, str) and key in fields:
+                value, absent = fields[key], False
+            elif isinstance(key, str):
+                value, absent = (UNKNOWN if member.open else NEVER), True
+            else:
+                value, absent = UNKNOWN if member.open else NEVER, True
+                for field in fields.values():
+                    value = join(value, field)
+        elif member.kind == 'List':
+            if type(key) is int and member.positions is not None:
+                present = -len(member.positions) <= key < len(member.positions)
+                value, absent = (member.positions[key] if present else NEVER), not present
+            else:
+                value, absent = member.item or UNKNOWN, True
+        elif member.kind == 'Text':
+            value, absent = TEXT, True
+        else:
+            value, absent = UNKNOWN, True
+        if absent and default is not None:
+            value = join(value, default)
+        result, missing = join(result, value), missing or absent
+    return (UNKNOWN if result == NEVER and default is None else result), missing

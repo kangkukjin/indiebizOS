@@ -77,7 +77,7 @@ def test_value_branch_and_list_spread_hints(registry):
     issue = next(i for i in compile_program('return {p:[if:true]{1}[else]{0}}', registry).issues if i['code'] == 'VALUE_EXPRESSION')
     assert '?' in issue['hint'] and '조건 값' in issue['hint']
     issue = next(i for i in compile_program('return reduce([1,2],0,($a,$r)=>[if:$r > $a]{$r}[else]{$a})', registry).issues)
-    assert issue['code'] == 'PURE_EXPRESSION' and '? ' in issue['hint']
+    assert issue['code'] == 'VALUE_EXPRESSION' and '? ' in issue['hint']
     with pytest.raises(Fault) as refused:
         compile_program('return [**$a, 1]', registry, {'a': [0]})
     assert '$a + [값]' in str(refused.value)

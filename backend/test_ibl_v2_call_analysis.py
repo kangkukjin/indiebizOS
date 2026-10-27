@@ -119,14 +119,12 @@ def test_effect_based_pure_call_and_pipe(effect):
                               lambda rt,a: seen.append(a['x']) or a['x']+1)}
     source = 'return (($x)=>(($x >> [test:inc]) > 1)) (1)'
     plan = compile_program(source, reg)
-    if effect == 'pure':
-        assert not plan.issues, plan.report()
-        result = Runtime(plan).run()
-        assert result['success'], result
-        assert seen == [1]
-    else:
-        assert 'PURE_EXPRESSION' in {i['code'] for i in plan.issues}
-        assert not seen
+    assert not plan.issues, plan.report()
+    result = Runtime(plan).run()
+    assert result['success'], result
+    assert seen == [1]
+    checked = compile_program('return true and (' + source[len('return '):] + ')', reg)
+    assert bool(checked.issues) == (effect != 'pure')
 
 
 def test_short_circuit_pure_tools_and_value_host_isolation():
@@ -270,3 +268,246 @@ def test_table_callback_transport_preserves_projected_shape(tmp_path):
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+@pytest.mark.parametrize('transport', ['$op', '{f:$op}.f', 'get({f:$op},"f")',
+                                      '[$op][0]', '{**{f:$op}}.f',
+                                      '[fn:id]{x:$op}', '($flag ? $op : $op)'])
+@pytest.mark.parametrize('producer', ['&[t:read]', '&[fn:load]', '($x)=>[t:read]{x:$x}'])
+def test_component_named_transport_matrix(transport, producer):
+    calls = []
+    reg = {'t:read': Adapter({'version':1,'params':{'x':'Number'},'result':'Number',
+                              'effects':['read_external'],'pipe_input':'x'},
+                             lambda rt,a: calls.append(a['x']) or a['x'] + 1)}
+    prefix = '[def:id]($x){return $x}; '
+    if producer == '&[fn:load]':
+        prefix += '[def:load]($x){return [t:read]{x:$x}}; '
+    source = prefix + '$op=' + producer + '; return ' + transport + '{x:2}'
+    plan, value = evaluate(source, {'flag':True}, reg)
+    assert value == 3 and calls == [2]
+    assert plan.result_type == NUMBER and not plan.guards
+    assert plan.effects == {'read_external'}
+
+
+@pytest.mark.parametrize('depth', [6,10,14,30])
+def test_lambda_dag_uses_common_summaries(depth):
+    parts = ['$f0=($x)=>$x']
+    for n in range(1, depth):
+        parts.append(f'$f{n}=($x)=>($x>0 ? $f{n-1}($x) : $f{n-1}($x))')
+    plan, value = evaluate('; '.join(parts) + f'; return $f{depth-1}(1)')
+    assert value == 1
+    stats = plan.preflight['analysis']
+    assert stats['lambda_bodies'] == depth
+    assert stats['lambda_reuses'] == depth - 1
+    assert len(str(plan.report())) < 30000
+
+
+def test_get_presence_and_callable_return_relationships():
+    for source in ('return get({f:abs},"f")(-3)',
+                   '$r={f:abs}; return (($x)=>get($r,"f")($x))(-3)',
+                   '[def:pick]($r,$key){return get($r,$key)}; return [fn:pick]{r:{f:abs},key:"f"}(-3)',
+                   'return map([{f:abs}],($r)=>get($r,"f"))[0](-3)'):
+        plan, value = evaluate(source)
+        assert value == 3 and not plan.guards
+    _, value = evaluate('return [get({f:null},"f",2),get({},"f",2)]')
+    assert value == [None,2]
+
+
+def test_effectful_creation_and_pure_requirements():
+    reg = {'t:read': Adapter({'version':1,'params':{'x':'Number'},'result':'Number',
+                              'effects':['read_external']}, lambda rt,a:a['x'])}
+    plan, value = evaluate('$op=($x)=>[t:read]{x:$x}; return 1', registry=reg)
+    assert value == 1 and not plan.effects
+    for use in ('return map([1],$op)', 'return $op(1)>0 ? 1 : 2',
+                'return true and $op(1)>0', '[def:f]($v=$op(1)){return $v}; return [fn:f]'):
+        bad = compile_program('$op=($x)=>[t:read]{x:$x}; '+use,reg)
+        assert bad.issues, use
+    plan, value = evaluate('[def:keep]($op){return $op}; '
+                           '$op=[fn:keep]{op:($x)=>[t:read]{x:$x}}; return $op(2)',registry=reg)
+    assert value == 2 and plan.effects == {'read_external'}
+
+
+@pytest.mark.parametrize('effect', ['pure','read_external','write_external','model','unknown'])
+def test_reference_named_pipe_alias_and_variant_contracts(effect):
+    calls=[]
+    reg={'q:op':Adapter({'version':1,'params':{'x':'Number','op':'Text'},'required':['x'],
+                         'aliases':{'value':'x'},'result':'Number','effects':['unknown'],
+                         'pipe_input':'x','variants':[{'when':{'op':'go'},'effects':[effect]}]},
+                        lambda rt,a:calls.append(a) or a['x'])}
+    for source in ('$f=&[q:op]; return $f{value:3,op:"go"}',
+                   '$f=&[q:op]; return 3 >> $f{op:"go"}',
+                   '[def:apply]($f,$mode){return $f{x:3,op:$mode}}; return [fn:apply]{f:&[q:op],mode:"go"}'):
+        plan,value=evaluate(source,registry=reg)
+        assert value==3 and plan.effects=={effect},plan.report()
+    for source in ('$f{x:1,value:2}', '1 >> $f{x:2}', '$f{}', '$f{x:"bad"}', '$f{x:1,extra:2}'):
+        assert compile_program('$f=&[q:op]; '+source,reg).issues
+    assert len(calls)==3
+
+
+def test_leaf_authorization_is_checked_again_on_component_resume(tmp_path):
+    from ibl_run_journal import Journal
+    from ibl_v2_ir import Fault
+    allowed=[True]
+    calls=[]
+    def authorize():
+        if not allowed[0]:
+            raise Fault('DENIED','권한 변경',kind='protocol')
+    reg={'q:read':Adapter({'version':1,'params':{},'result':'Number','effects':['read_external']},
+                         lambda rt,a:calls.append(1) or 1,authorize=authorize)}
+    plan=compile_program('$f=&[q:read]; return $f{}',reg)
+    with Journal(tmp_path,plan.fingerprint) as journal:
+        first=Runtime(plan,journal=journal).run()
+    assert first['success'] and calls==[1]
+    allowed[0]=False
+    with Journal(tmp_path,plan.fingerprint,first['resume']) as journal:
+        second=Runtime(plan,journal=journal).run()
+    assert not second['success'] and second['diagnostic']['code']=='DENIED'
+    assert calls==[1]
+
+
+def test_runtime_pure_callback_guard_and_value_host_cannot_execute_tools():
+    from common.expression_eval import Binding, ValueEvaluator
+    from common.expression_ops import Closure
+    from ibl_v2_parser import parse
+    from ibl_v2_ir import Fault
+    calls=[]
+    body=parse('[q:read]').data['statements'][0]
+    reg={'q:read':Adapter({'version':1,'params':{},'result':'Number','effects':['read_external']},
+                         lambda rt,a:calls.append(1) or 1)}
+    runtime=Runtime(compile_program('return 1',reg))
+    with pytest.raises(Fault) as denied:
+        runtime.callback(Closure(('x',),body,{}),[Binding(1)])
+    assert denied.value.code=='PURE_EXPRESSION' and not calls
+    for source in ('&[q:read]','(&[q:read]){}'):
+        with pytest.raises(Fault):
+            ValueEvaluator().eval(parse(source).data['statements'][0],{})
+
+
+def test_result_transport_and_internal_callable_json_boundary():
+    plan,value=evaluate('$r=[table:each]{items:[1],on_error:"collect"}{return abs}; return unwrap($r[0])(-4)')
+    assert value==4 and plan.result_type==NUMBER
+    from ibl_v2_ir import pack, projection, Fault
+    from common.expression_ops import CallableRef, Closure
+    from common.expression_eval import Binding
+    from ibl_v2_parser import parse
+    closure=Closure((),parse('return 1'),{'secret':Binding('do-not-publish')})
+    assert 'do-not-publish' not in str(projection({'f':closure}))
+    with pytest.raises(Fault) as err:
+        pack({'data':[CallableRef('q','read')]})
+    assert err.value.details['path']==['data',0]
+
+
+def test_dependency_specializations_share_one_binder_without_overwriting_snapshots():
+    revisions={'a':1,'b':1}
+    calls=[]
+    reg={'q:read':Adapter({'version':1,'params':{'id':'Text'},'result':'Number','effects':['read_external']},
+                         lambda rt,a:calls.append(a['id']) or revisions[a['id']],
+                         dependency=lambda a:{'revision':revisions.get(a.get('id'))})}
+    code='[def:run]($f,$id){return $f{id:$id}}; $f=&[q:read]; return [[fn:run]{f:$f,id:"a"},[fn:run]{f:$f,id:"b"}]'
+    plan=compile_program(code,reg)
+    first=Runtime(plan)
+    assert first.run()['value']==[1,1] and calls==['a','b']
+    receipts={r['reuse_key']:r for r in first.recordings}
+    revisions['a']=2
+    result=Runtime(plan).run()
+    assert not result['success'] and result['diagnostic']['code']=='DEFINITION_CHANGED'
+    assert calls==['a','b']
+    refreshed=compile_program(code+' # new source revision',reg)
+    result=Runtime(refreshed,reusable=receipts,reuse_run='previous').run()
+    assert result['value']==[2,1] and calls==['a','b','a'], result
+    assert result['reuse']['reused_calls']==1
+
+
+@pytest.mark.parametrize('selection',['get($r,$k)','$r[$k]'])
+def test_finite_selector_and_optional_record_alternatives_keep_contract(selection):
+    plan,value=evaluate('$r={a:abs,b:abs}; $k=$flag ? "a" : "b"; return '+selection+'(-2)',{'flag':True})
+    assert value==2 and not plan.guards
+    plan,value=evaluate('$r=$flag ? {f:abs} : {}; return get($r,"f",abs)(-2)',{'flag':False})
+    assert value==2 and not plan.guards
+
+
+@pytest.mark.parametrize('kind', ['lambda', 'function'])
+def test_composed_calls_share_depth_budget(kind):
+    from ibl_v2_runtime import Budget
+    if kind == 'lambda':
+        source = ['$f0=($x)=>$x']
+        source += [f'$f{n}=($x)=>$f{n-1}($x)' for n in range(1,6)]
+        source += ['return $f5(1)']
+    else:
+        source = ['[def:f0]($x){return $x}']
+        source += [f'[def:f{n}]($x){{return [fn:f{n-1}]{{x:$x}}}}' for n in range(1,6)]
+        source += ['return (&[fn:f5]){x:1}']
+    plan = compile_program(';'.join(source), {})
+    assert not plan.issues, plan.report()
+    out = Runtime(plan, budget=Budget(depth=2)).run()
+    assert out['diagnostic']['code'] == 'BUDGET' and out['diagnostic']['kind'] == 'budget'
+
+
+def test_recovery_context_is_part_of_summary_and_does_not_hide_outer_type_errors():
+    prefix = '[def:pick]($r){return get($r,"a")}; '
+    code = '$v=[try]{[fn:pick]{r:null}}[catch]{3}; return $v'
+    plan, value = evaluate(prefix+code, registry={})
+    assert value == 3 and any(g.get('recoverable') for g in plan.guards)
+    bad = compile_program(prefix+code.replace('return $v','return [fn:pick]{r:null}'), {})
+    assert any(i['code']=='TYPE' for i in bad.issues)
+    _, value = evaluate('return get(null,"a") ?? 4', registry={})
+    assert value == 4
+
+
+def test_null_projection_and_empty_membership_keep_unreachable_values_unobserved():
+    _, value = evaluate('$r={x:null}; return get($r,"x")==null ? "empty" : ", "+get($r,"x")')
+    assert value == 'empty'
+    _, value = evaluate('$r={}; [if:$key in keys($r)]{return f"${get($r,$key)}"}; return "empty"',
+                        inputs={'key':'anything'})
+    assert value == 'empty'
+
+
+
+def test_private_callable_identity_cannot_be_forged_by_ordinary_json():
+    from common.expression_ops import callable_identity, Builtin
+    from common.expression_ir import pack
+    fn = Builtin('abs')
+    descriptor = callable_identity(fn)
+    assert descriptor != callable_identity(descriptor)
+    assert callable_identity({'f':fn}) != callable_identity({'f':descriptor})
+    ordinary = {'list':[1, None, True], 'nested':{'text':'x'}}
+    assert callable_identity(ordinary) == pack(ordinary)
+
+
+def test_unique_specialization_limit_is_explicit_and_does_not_limit_execution():
+    count = 4100
+    calls = ','.join(f'[fn:id]{{x:{n}}}' for n in range(count))
+    plan = compile_program('[def:id]($x){return $x}; return ['+calls+']', {})
+    assert not plan.issues, plan.report()
+    assert plan.preflight['analysis']['function_bodies'] == 4096
+    assert any(g.get('specializations_omitted') for g in plan.guards)
+    assert 'unknown' in plan.effects and plan.report()['status'] == 'incomplete'
+    result = Runtime(plan).run()
+    assert result['success'] and result['value'] == list(range(count))
+
+
+def test_candidate_limit_and_recursive_reference_are_explicit():
+    source = '$parts=['+','.join(f'()=>{n}' for n in range(65))+']; return $parts[$index]()'
+    plan = compile_program(source, {}, {'index':64})
+    assert not plan.issues, plan.report()
+    assert any(g.get('alternatives_omitted') == 1 for g in plan.guards)
+    assert 'unknown' in plan.effects
+    assert Runtime(plan, {'index':64}).run()['value'] == 64
+    recursive = compile_program('[def:f](){return (&[fn:f]){}}; return [fn:f]{}', {})
+    assert any(i['code']=='RECURSION' for i in recursive.issues)
+
+
+
+@pytest.mark.parametrize('target', ['[t:select]', '(&[t:select])'])
+@pytest.mark.parametrize('options,effects', [('{**$args}',{'unknown'}), ('{**{mode:"read"}}',{'read_external'})])
+def test_nested_spread_uncertainty_survives_contract_specialization(target, options, effects):
+    def specialize(contract, values):
+        options = values.get('options')
+        if isinstance(options, dict) and options.get('mode', 'read') == 'read':
+            return {**contract, 'effects':['read_external']}
+        return contract
+    spec = Adapter({'version':1, 'params':{'options':'Record'}, 'result':'Number', 'effects':['unknown']},
+                   lambda rt,a:1, specialize=specialize)
+    plan = compile_program('return '+target+'{options:'+options+'}', {'t:select':spec}, {'args':{}})
+    assert not plan.issues, plan.report()
+    assert plan.effects == effects

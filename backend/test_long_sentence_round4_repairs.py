@@ -65,13 +65,15 @@ def test_one_diagnostic_per_impure_expression(registry):
     plan = compile_program(code, registry)
     assert not plan.issues, plan.issues
     assert Runtime(plan).run()['value'] == ['a', 'b']
-    # 람다 본문은 여전히 순수 자리다 — 위반 하나에 진단 하나, 처방은 그대로.
-    impure = 'return [{n:1}] >> [table:filter]{where:($r)=>len([2] >> [table:each]{return $it}) > 0}'
+    # 순수성은 생성이 아닌 적용에서 검사한다. 순수 each 조합도 같은 효과 규칙을 쓴다.
+    pure = 'return [{n:1}] >> [table:filter]{where:($r)=>len([2] >> [table:each]{return $it}) > 0}'
+    assert Runtime(compile_program(pure, registry)).run()['value'] == [{'n': 1}]
+    impure = pure.replace('return $it', '[self:read]{path:"unused"}')
     issues = compile_program(impure, registry).issues
     assert len(issues) == 1 and issues[0]['code'] == 'PURE_EXPRESSION'
-    assert 'reduce(' in issues[0]['hint'] and '$변환' in issues[0]['hint']
-    two = ('return [($r)=>unique([1] >> [table:each]{return $it}),'
-           '($r)=>len([2] >> [table:each]{return $it})]')
+    assert 'table:each' in issues[0]['hint']
+    two = ('return [map([1],($r)=>[self:read]{path:"unused"}),'
+           'map([2],($r)=>[self:read]{path:"unused"})]')
     assert len(compile_program(two, registry).issues) == 2
 
 

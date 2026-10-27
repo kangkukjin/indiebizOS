@@ -109,7 +109,7 @@ def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-def pack(value):
+def pack(value, _path=()):
     from common.value_semantics import native_numeric_scalar
     value = native_numeric_scalar(value)
     if isinstance(value, ForeignRef):
@@ -117,7 +117,7 @@ def pack(value):
     if isinstance(value, Unit):
         return ["unit"]
     if isinstance(value, ResultValue):
-        return ["result", value.ok, pack(value.value), pack(value.error)]
+        return ["result", value.ok, pack(value.value, (*_path, "value")), pack(value.error, (*_path, "error"))]
     if type(value) is int and abs(value) > 2**53 - 1:
         return ["integer", str(value)]
     if value is None or type(value) in (bool, str, int):
@@ -129,10 +129,11 @@ def pack(value):
     if type(value) is float and math.isfinite(value):
         return ["scalar", value]
     if isinstance(value, (list, tuple)):
-        return ["list", [pack(v) for v in value]]
+        return ["list", [pack(v, (*_path, i)) for i, v in enumerate(value)]]
     if isinstance(value, dict) and all(isinstance(k, str) for k in value):
-        return ["record", [[k, pack(v)] for k, v in value.items()]]
-    raise Fault("VALUE_PROTOCOL", f"전송할 수 없는 값: {type(value).__name__}", kind="protocol")
+        return ["record", [[k, pack(v, (*_path, k))] for k, v in value.items()]]
+    raise Fault("VALUE_PROTOCOL", f"전송할 수 없는 실행 내부 값: {type(value).__name__}", kind="protocol",
+                details={"path": list(_path), "value_type": type(value).__name__})
 
 
 def unpack(value):
@@ -174,6 +175,11 @@ def unpack(value):
 
 def projection(value):
     """Human-readable view. `value_wire` is the authoritative typed value."""
+    from common.expression_ops import Builtin, Closure, CallableRef
+    if isinstance(value, (Builtin, Closure, CallableRef)):
+        definition = (value.name if isinstance(value, Builtin) else value.body.id if isinstance(value, Closure)
+                      else value.symbol or value.node + ':' + value.action)
+        return {'$ibl': 'callable', 'definition': definition, 'transportable': False}
     from common.value_semantics import native_numeric_scalar
     value = native_numeric_scalar(value)
     if isinstance(value, ForeignRef):

@@ -249,3 +249,54 @@ def test_announce_cannot_replace_an_owned_surface_handle(tmp_path, monkeypatch, 
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('wrap', ['&[t:delete]', '&[fn:remove]', '($id)=>[t:delete]{id:$id}'])
+def test_component_approval_resume_and_finally_keep_leaf_boundaries(tmp_path, wrap):
+    calls=[]
+    source=('[def:remove]($id){return [t:delete]{id:$id}}; '
+            '[def:job]($op,$id){return $op{id:$id}}; $op='+wrap+'; '
+            '[t:delegate]; [try]{'
+            '[fn:job]{op:$op,id:"A"}; [fn:job]{op:$op,id:"B"}'
+            '}[catch]{[t:cleanup]}[finally]{[t:cleanup]}')
+    plan=_plan(calls,source)
+    assert not plan.issues,plan.report()
+    result=_run(tmp_path,plan)
+    assert result['suspended'] and calls==['delegate']
+    for expected in (['delegate','A'],['delegate','A','B','cleanup']):
+        token=approval_tokens.issue(result['waiting']['approval_required']['challenge'])['token']
+        result=_run(tmp_path,plan,result['resume'],token)
+        assert calls==expected, result
+    assert result['success']
+    result=_run(tmp_path,plan,result['resume'])
+    assert result['success'] and calls==['delegate','A','B','cleanup']
+
+
+def test_changed_capture_cannot_create_new_receipt_on_resume(tmp_path):
+    calls=[]
+    registry={'t:write':Adapter({'version':1,'params':{},'result':'Number','effects':['write_external']},
+                                lambda rt,a:calls.append(1) or 1)}
+    plan=compile_program('$f=()=>[t:write]+$capture; return $f()',registry,{'capture':1})
+    with Journal(tmp_path,plan.fingerprint) as journal:
+        first=Runtime(plan,{'capture':1},journal=journal).run()
+    assert first['success'] and calls==[1]
+    with Journal(tmp_path,plan.fingerprint,first['resume']) as journal:
+        second=Runtime(plan,{'capture':2},journal=journal).run()
+    assert not second['success'] and second['diagnostic']['code']=='RESUME_DIVERGED',second
+    assert calls==[1]
+
+
+def test_indirect_unknown_effect_worker_loss_never_retries(tmp_path):
+    calls=[]
+    def crash(rt,args):
+        calls.append('started')
+        raise KeyboardInterrupt('worker lost after send')
+    registry={'t:unknown':Adapter({'version':1,'params':{},'result':'Number','effects':['unknown']},crash)}
+    plan=compile_program('$f=&[t:unknown]; return $f{}',registry)
+    with Journal(tmp_path,plan.fingerprint) as journal:
+        resume={'run_id':journal.run_id}
+        with pytest.raises(KeyboardInterrupt):
+            Runtime(plan,journal=journal).run()
+    with Journal(tmp_path,plan.fingerprint,resume) as journal:
+        result=Runtime(plan,journal=journal).run()
+    assert result['diagnostic']['code']=='EFFECT_UNCERTAIN' and calls==['started']

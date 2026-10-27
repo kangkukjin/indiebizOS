@@ -10,7 +10,7 @@ import copy
 import threading
 import time
 from execution_capacity import fanout as bounded_fanout, scope as execution_scope
-from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, digest_packed, pack, projection, span,
+from ibl_v2_ir import (Node, Fault, UNIT, Unit, ResultValue, digest, digest_packed, pack, projection, span,
                        parallel_branches)
 from ibl_v2_expr import (Builtin, Closure, binary, boolean, number, scalar_text,
                          pure_call, check_arity, free_names)
@@ -266,10 +266,17 @@ class Runtime(ExpressionEvaluator):
                 parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
                 text = "".join("" if p.value is OMITTED else scalar_text(p.value) for p in parts)
                 return Binding(text, self.parents(parts))
+        if kind == "callable_ref":
+            from common.expression_ops import CallableRef
+            return Binding(CallableRef(d['node'], d['action'], d.get('symbol')))
+        if kind == "named_call":
+            fn = sub(d['fn'])
+            args = sub(d['params'])
+            return self.apply_component(node, fn, args, piped)
         if kind == "pure_call" and piped is not None:
             fn = sub(d["fn"])
             args = [piped, *[sub(a) for a in d["args"]]]
-            result = self.callback(fn.value, args)
+            result = self.apply_component(node, fn, args)
             return Binding(result.value, result.evidence | fn.evidence | self.parents(args))
         value = self.expression(node, env)
         if value is not NotImplemented:
@@ -332,40 +339,8 @@ class Runtime(ExpressionEvaluator):
             if d["node"] == "table" and d["action"] == "each":
                 return self.each(node, env, args, piped)
             if d["node"] == "fn" and "symbol" in d:
-                definition = self.plan.functions[d["symbol"]]
-                params = definition.data["params"]
-                args = self.inject(node, args, next(iter(params), None), piped)
-                unknown = args.value.keys() - params.keys()
-                missing = [k for k, default in params.items() if k not in args.value and default is None]
-                if unknown or missing:
-                    raise Fault("FUNCTION_ARGUMENTS", "함수 인자가 계약과 다릅니다.", node,
-                                details={"unknown": sorted(unknown), "missing": missing})
-                local = {k: Binding(v, args.evidence) for k, v in args.value.items()}
-                for name, default in params.items():
-                    if name not in local:
-                        local[name] = self.eval(default, {})
-                entry = next((e for e in self.plan.dependencies.get('source_map', [])[1:]
-                              if e['start'] <= definition.start < e['end']), {})
-                function_ref = entry.get('function_ref')
-                depth = getattr(self.local, "depth", 0)
-                self.local.depth = depth + 1
-                try:
-                    result = self.frame(definition.data["body"], local)
-                    eid = self.event(node, "function_result", result.evidence | args.evidence,
-                                     name=d["action"], definition_start=definition.start, success=True,
-                                     function_ref=function_ref,
-                                     **returned_shape(result.value))
-                    return Binding(result.value, frozenset({eid}))
-                except Fault as exc:
-                    eid = self.event(node, "function_result", exc.evidence,
-                                     name=d["action"], definition_start=definition.start, success=False,
-                                     function_ref=function_ref)
-                    exc.evidence = [eid]
-                    exc.frames.append({"function": d["action"], "call": span(self.plan.source, node),
-                                       "definition": span(self.plan.source, definition)})
-                    raise
-                finally:
-                    self.local.depth = depth
+                from common.expression_ops import CallableRef
+                return self.apply_component(node, Binding(CallableRef('fn', d['action'], d['symbol'])), args, piped)
             return self.invoke(node, args, piped)
         if kind == "if":
             condition = sub(d["value"])
@@ -436,6 +411,108 @@ class Runtime(ExpressionEvaluator):
             return Binding(UNIT, frozenset(parents))
         raise Fault("IR", f"지원하지 않는 구문: {kind}", node, kind="protocol")
 
+    def apply_component(self, node, fn, args, piped=None):
+        from common.expression_ops import CallableRef, callable_identity
+        target = fn.value
+        if isinstance(target, Builtin) and not isinstance(args, Binding):
+            return self.callback(target, args)
+        named = isinstance(args, Binding)
+        if named and not isinstance(args.value, dict):
+            raise Fault('ARGUMENT_STYLE', '명명 적용은 Record 인자를 받습니다.', node)
+        route = getattr(self.local, 'route', ())
+        # Definition/capture identity supplements source position and loop route.
+        # It is an identity hash, never a capability or a serialized closure.
+        identity = callable_identity(target)
+        components = getattr(self.local, 'components', ())
+        self.local.components = (*components, identity)
+        self.local.route = (*route, ('apply', node.id, self.ordinal('apply:' + node.id)))
+        try:
+            if isinstance(target, CallableRef):
+                if not named:
+                    raise Fault('ARGUMENT_STYLE', '이 부품은 명명 인자 {...}로 적용하세요.', node)
+                key = target.symbol or target.node + ':' + target.action
+                metadata = dict(node.data.get('applications', {}).get(key, {}))
+                metadata.update(node=target.node, action=target.action, symbol=target.symbol)
+                virtual = Node('call', node.start, node.end, metadata)
+                if target.symbol:
+                    if target.symbol not in self.plan.functions:
+                        raise Fault('DEFINITION_CHANGED', '함수 참조가 현재 계획에 없습니다.', node, kind='protocol')
+                    result = self.call_function(virtual, args, piped)
+                else:
+                    if key not in self.plan.registry:
+                        raise Fault('DEFINITION_CHANGED', '어휘 참조가 현재 사전에 없습니다.', node, kind='protocol')
+                    result = self.invoke(virtual, args, piped)
+            elif isinstance(target, Closure):
+                if named:
+                    args = self.inject(node, args, next(iter(target.params), None), piped)
+                    if set(args.value) != set(target.params):
+                        raise Fault('FUNCTION_ARGUMENTS', '람다 명명 인자가 계약과 다릅니다.', node)
+                    args = [Binding(args.value[p], args.evidence) for p in target.params]
+                result = self.apply_closure(target, args)
+            else:
+                if named:
+                    raise Fault('ARGUMENT_STYLE', '내장 함수는 위치 인자 (...)로 적용하세요.', node)
+                result = self.callback(target, args)
+            return Binding(result.value, result.evidence | fn.evidence)
+        finally:
+            self.local.route = route
+            self.local.components = components
+
+    def callback(self, fn, args):
+        # A value-only combinator cannot acquire effectful execution simply
+        # because its callback was selected dynamically.
+        previous = getattr(self.local, 'pure_required', False)
+        self.local.pure_required = True
+        try:
+            return self.apply_closure(fn, args) if isinstance(fn, Closure) else super().callback(fn, args)
+        finally:
+            self.local.pure_required = previous
+
+    def apply_closure(self, fn, args):
+        depth = getattr(self.local, 'depth', 0)
+        self.local.depth = depth + 1
+        try:
+            return super().callback(fn, args)
+        finally:
+            self.local.depth = depth
+
+    def call_function(self, node, args, piped=None):
+        d = node.data
+        definition = self.plan.functions[d["symbol"]]
+        params = definition.data["params"]
+        args = self.inject(node, args, next(iter(params), None), piped)
+        unknown = args.value.keys() - params.keys()
+        missing = [k for k, default in params.items() if k not in args.value and default is None]
+        if unknown or missing:
+            raise Fault("FUNCTION_ARGUMENTS", "함수 인자가 계약과 다릅니다.", node,
+                        details={"unknown": sorted(unknown), "missing": missing})
+        local = {k: Binding(v, args.evidence) for k, v in args.value.items()}
+        for name, default in params.items():
+            if name not in local:
+                local[name] = self.eval(default, {})
+        entry = next((e for e in self.plan.dependencies.get('source_map', [])[1:]
+                      if e['start'] <= definition.start < e['end']), {})
+        function_ref = entry.get('function_ref')
+        depth = getattr(self.local, "depth", 0)
+        self.local.depth = depth + 1
+        try:
+            result = self.frame(definition.data["body"], local)
+            eid = self.event(node, "function_result", result.evidence | args.evidence,
+                             name=d["action"], definition_start=definition.start, success=True,
+                             function_ref=function_ref,
+                             **returned_shape(result.value))
+            return Binding(result.value, frozenset({eid}))
+        except Fault as exc:
+            eid = self.event(node, "function_result", exc.evidence,
+                             name=d["action"], definition_start=definition.start, success=False,
+                             function_ref=function_ref)
+            exc.evidence = [eid]
+            exc.frames.append({"function": d["action"], "call": span(self.plan.source, node),
+                               "definition": span(self.plan.source, definition)})
+            raise
+        finally:
+            self.local.depth = depth
+
     @staticmethod
     def parents(bindings):
         return frozenset(e for b in bindings for e in b.evidence)
@@ -495,11 +572,16 @@ class Runtime(ExpressionEvaluator):
         depth = getattr(self.local, "depth", 0)
         control = getattr(self.local, "control", frozenset())
         route = getattr(self.local, "route", ()) + ((node.id, self.ordinal("fanout:" + node.id)),)
+        components = getattr(self.local, "components", ())
+        pure_required = getattr(self.local, "pure_required", False)
         def run(i):
             previous = getattr(self.local, "parallel", False)
             previous_depth = getattr(self.local, "depth", 0)
             previous_route = getattr(self.local, "route", ())
             previous_counts = getattr(self.local, "counts", {})
+            previous_components = getattr(self.local, "components", ())
+            previous_pure = getattr(self.local, "pure_required", False)
+            self.local.components, self.local.pure_required = components, pure_required
             previous_control = getattr(self.local, "control", frozenset())
             self.local.route, self.local.counts = route + (i,), {}
             self.local.parallel, self.local.depth = True, depth
@@ -511,6 +593,7 @@ class Runtime(ExpressionEvaluator):
                 self.local.parallel, self.local.depth = previous, previous_depth
                 self.local.route, self.local.counts = previous_route, previous_counts
                 self.local.control = previous_control
+                self.local.components, self.local.pure_required = previous_components, previous_pure
         def accept(i, future=None):
             try:
                 result = future.result() if future else run(i)
@@ -618,15 +701,18 @@ class Runtime(ExpressionEvaluator):
         """액션 호출 경계의 좌표 신고 — 채팅 표면·표면 티켓이 "지금 어느 낱말을 실행 중인가"를 본다.
 
         of 는 0(미지) — 함수·each 안의 호출은 정적으로 셀 수 없어 거짓 분모를 만들지 않는다.
+        접기 키는 (액션, 회차) — 같은 액션이라도 행이 바뀌거나 each 를 벗어나면 즉시 신고한다(2026-10-27 99회차 수리 검토):
+        액션 이름만으로 접으면 each 밖 첫 좌표가 삼켜져 티켓의 옛 행(detail)이 그 액션 내내 남는다(긴 모델 호출이면 분 단위 거짓).
         """
         with self.lock:
             self._progress_calls += 1
             n = self._progress_calls
-        if not self._progress_due("action", key):
+        detail = getattr(self.local, "row_detail", None)
+        if not self._progress_due("action", (key, tuple(sorted(detail.items())) if detail else None)):
             return
         try:
             from ibl_progress import report_step
-            report_step(self._progress_ticket, n, 0, key, detail=getattr(self.local, "row_detail", None))
+            report_step(self._progress_ticket, n, 0, key, detail=detail)
         except Exception:
             pass
 
@@ -670,43 +756,47 @@ class Runtime(ExpressionEvaluator):
         if spec.contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args.value:
             from ibl_v2_types import rows_value
             args = Binding({**args.value, "items": rows_value(args.value["items"])}, args.evidence)
+        if spec.dependency and 'dependency_snapshot' not in node.data:
+            raise Fault('DEPENDENCY_CONTRACT', '동적 부품의 실행 자산은 먼저 명시 계약으로 검사해야 합니다.',
+                        node, kind='protocol')
         dependency = node.data.get('dependency_snapshot')
+        dependency_args = node.data.get('dependency_args', {})
+        if node.data.get('dependency_bindings'):
+            from common.value_semantics import values_equal
+            choices = [b for b in node.data['dependency_bindings']
+                       if all(k in args.value and values_equal(args.value[k], v) for k,v in b['args'].items())]
+            if not choices:
+                raise Fault('DEFINITION_CHANGED', '검사한 부품 인자·자산 선택과 다릅니다.', node, kind='protocol')
+            choice = max(choices, key=lambda b: len(b['args']))
+            dependency, dependency_args = choice['snapshot'], choice['args']
         deferred = isinstance(dependency, dict) and dependency.get('binding') == 'invocation'
         if deferred and not spec.invocation_dependency:
             raise Fault('DEPENDENCY_CONTRACT', '실행 시점 자산 바인딩에 지문 제공자가 없습니다.', node, kind='protocol')
-        if spec.dependency and not deferred and spec.dependency(node.data['dependency_args']) != dependency:
+        if spec.dependency and not deferred and spec.dependency(dependency_args) != dependency:
             raise Fault('DEFINITION_CHANGED', '참조한 실행 자산이 검사 이후 변경되었습니다.', node, kind='protocol')
         contract = selected(spec.contract, args.value)
         if spec.specialize and not node.data.get('target'):
             contract = spec.specialize(contract, args.value)
         from ibl_value_checks import value_problems
+        if getattr(self.local, 'pure_required', False) and set(contract['effects']) - {'pure'}:
+            raise Fault('PURE_EXPRESSION', '순수 콜백 자리에서 효과 있는 부품을 호출할 수 없습니다.', node)
         failures = problems(contract, args.value) + value_problems(contract, args.value, self.plan.registry, self.plan.definitions)
         failures += [f"필수 인자 누락: {k}" for k in contract.get("required", contract["params"]) if k not in args.value]
         if failures:
             raise Fault('ARGUMENT_CONTRACT', '; '.join(failures), node)
+        if not contract.get('open_params') and args.value.keys() - contract['params'].keys():
+            raise Fault('UNKNOWN_ARGUMENT', '계약에 없는 명명 인자입니다.', node)
         for name, value in args.value.items():
             guard(value, contract['params'].get(name, 'Unknown'), f'{key}.{name}')
-        def request_value(value):
-            if isinstance(value, Builtin):
-                return {"builtin": value.name}
-            if isinstance(value, Closure):
-                return {"closure_node": value.body.id, "params": list(value.params),
-                        "captures": {k: request_value(b.value) for k, b in sorted(value.env.items())}}
-            if isinstance(value, ResultValue):
-                # Collected results may contain internal callables. Encode
-                # them only for request identity; the public wire still
-                # rejects callables, including inside Result containers.
-                return ResultValue(value.ok, request_value(value.value), request_value(value.error))
-            if isinstance(value, dict):
-                return {k: request_value(v) for k, v in value.items()}
-            if isinstance(value, list):
-                return [request_value(v) for v in value]
-            return value
+        from common.expression_ops import callable_identity
+        request_value = callable_identity
         # 인자 전체는 여기서 한 번만 훑는다(긴문장 L18-1). 요청 해시·재사용 열쇠·차원별 지문이 저마다 인자를
         # 다시 포장·직렬화해 행 목록을 네 번 훑었고, 2천 행 표 변환 한 번이 0.3초였다(실제 표 처리는 그 2%).
         # 신원에는 인자의 지문만 싣는다 — 같은 인자면 같은 지문이므로 재사용·재개 판정의 뜻은 그대로다.
-        request = {"action": key, "args": {"digest": digest_packed(pack(request_value(args.value)))},
+        request = {"action": key, "args": {"digest": digest_packed(request_value(args.value))},
                    "plan": self.plan.fingerprint}
+        if getattr(self.local, "components", ()):
+            request["components"] = digest(self.local.components)
         target_node = node.data.get("target")   # @별칭 — 어느 몸에서 실행하나(같은 인자라도 다른 몸의 영수증과 섞이지 않게 신원에 싣는다)
         run_extra = {"target_node": target_node} if target_node else {}
         if target_node:
@@ -725,7 +815,7 @@ class Runtime(ExpressionEvaluator):
                             "target_node": target_node,
                             "contract": contract,
                             "model_identity": model_identity,
-                            "dependency": node.data.get("dependency_snapshot"),
+                            "dependency": dependency,
                             "semantics": {k: self.plan.dependencies[k]
                                           for k in ("core", "edition", "semantics", "expressions")}}
         if invocation_dependency is not None:

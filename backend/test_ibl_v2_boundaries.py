@@ -313,3 +313,23 @@ def test_current_contract_help_does_not_teach_legacy_parameters():
     config = load_nodes_installed()['nodes']['self']['actions']['script']
     line = render_action_line('self', 'script', config)
     assert '(args)' in line and 'Unknown' in line and 'input_as' not in line
+
+
+def test_public_program_uses_local_and_action_references_without_transporting_them(tmp_path):
+    (tmp_path/'source.txt').write_text('component boundary')
+    code=('''[def:copy]($load,$save,$source,$target){
+        $doc=$load{path:$source,format:"text"}
+        $save{path:$target,content:$doc.text}
+        return $doc.text
+    }
+    $job=&[fn:copy]
+    return $job{load:&[self:read],save:&[self:write],source:"source.txt",target:"outputs/copy.txt"}''')
+    request={'edition':2,'code':code}
+    checked=handle_request({**request,'check':True},str(tmp_path))
+    assert checked['ok'],checked
+    result=handle_request(request,str(tmp_path))
+    assert result['success'] and result['value']=='component boundary',result
+    assert (tmp_path/'outputs/copy.txt').read_text()=='component boundary'
+    refused=handle_request({'edition':2,'code':'return {part:&[self:read]}'},str(tmp_path))
+    assert not refused['success'] and refused['diagnostic']['code']=='VALUE_PROTOCOL',refused
+    assert refused['diagnostic']['details']['path']==['part']

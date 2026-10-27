@@ -175,7 +175,8 @@ class ExpressionEvaluator:
             else:
                 fn = sub(d["fn"])
                 args = [sub(a) for a in d["args"]]
-            result = self.callback(fn.value, args)
+            apply = getattr(self, 'apply_component', None)
+            result = apply(node, fn, args) if apply else self.callback(fn.value, args)
             return Binding(result.value, result.evidence | fn.evidence)
         if kind == "format":
             parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]

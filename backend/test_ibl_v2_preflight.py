@@ -167,3 +167,62 @@ def test_original_round28_check_has_two_call_bound_without_any_gate_or_tool(tmp_
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+@pytest.mark.parametrize('reference', ['&[t:model]', '&[fn:model]', '($x)=>[t:model]{x:$x}'])
+def test_indirect_model_visits_and_approval_follow_components(reference):
+    from ibl_v2_adapters import Adapter
+    reg = {'t:model': Adapter({'version':1,'params':{'x':'Number'},'result':'Number',
+                              'effects':['model'], 'analysis':{'approval_policy':{'requires':{'human_confirm':True}}}},
+                             lambda rt,a:a['x'])}
+    code = ('[def:model]($x){return [t:model]{x:$x}}; '
+            '[def:run]($op,$x){return $op{x:$x}}; $op=' + reference + '; '
+            '[table:each]{items:[1,2,3]}{[fn:run]{op:$op,x:$it}}')
+    plan = compile_program(code,reg)
+    assert not plan.issues, plan.report()
+    assert plan.preflight['declared_ai_visits_upper_bound'] == 3, plan.preflight
+    assert any(w['code']=='HUMAN_CONFIRM' for w in plan.preflight['warnings'])
+
+
+def test_indirect_reference_creation_is_not_a_model_visit():
+    from ibl_v2_adapters import Adapter
+    reg = {'t:model': Adapter({'version':1,'params':{},'result':'Number','effects':['model']},lambda rt,a:1)}
+    for code in ('$f=&[t:model]; return 1', '$f=()=>[t:model]; return 1'):
+        plan=compile_program(code,reg)
+        assert plan.preflight['declared_ai_visits_upper_bound']==0
+        assert not plan.effects
+
+
+@pytest.mark.parametrize('expression', [
+    'get($record,"f",()=>0)', '{f:()=>0,**$record}.f',
+    'get({f:()=>0},$key,()=>0)',
+])
+def test_unknown_selection_never_uses_default_as_proof_of_zero_visits(expression):
+    from ibl_v2_types import UNKNOWN, TEXT
+    plan = compile_program('return ('+expression+')()', {}, input_types={'record':UNKNOWN,'key':TEXT})
+    assert not plan.issues, plan.report()
+    assert plan.preflight['status'] == 'partial'
+    assert plan.preflight['declared_ai_visits_upper_bound'] is None
+
+
+def test_indirect_open_arguments_keep_possible_approval_and_defaults_uncertain():
+    from ibl_v2_types import UNKNOWN
+    result = checked('$f=&[custom:resource]; $f{**$args}', input_types={'args':UNKNOWN})
+    assert notices(result)[0]['facts']['requirement'] == 'possible'
+    result = checked('$f=&[custom:resource]; $f{**$args,op:"list"}', input_types={'args':UNKNOWN})
+    assert not notices(result)
+    plan = compile_program('[def:f]($cb=()=>0){return $cb()}; '
+                           '$f=&[fn:f]; return $f{**$args}', {}, input_types={'args':UNKNOWN})
+    assert plan.preflight['declared_ai_visits_upper_bound'] is None
+
+
+def test_shared_capture_graph_is_hashed_once_per_fact():
+    source = ['$f0=($x)=>$x']
+    for n in range(1,31):
+        source += [f'$a{n}=$f{n-1}', f'$b{n}=$f{n-1}',
+                   f'$f{n}=($x)=>($x>0 ? $a{n}($x) : $b{n}($x))']
+    plan = compile_program(';'.join(source)+'; return $f30(1)', {})
+    assert not plan.issues, plan.report()
+    assert plan.preflight['status'] == 'analyzed', plan.preflight
+    assert plan.preflight['analysis']['lambda_bodies'] == 31
+    assert plan.preflight['analysis_steps'] < 800

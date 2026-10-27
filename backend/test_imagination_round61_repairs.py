@@ -40,7 +40,8 @@ def test_index_distributes_over_list_and_text(choose, expected):
 @pytest.mark.parametrize('key,expected', [('title', '가족'), ('count', 2)])
 def test_dynamic_record_key_has_a_runtime_field_check(key, expected):
     plan, result = run('return {title:"가족",count:2}[$key]', {'key': key})
-    assert not plan.issues and plan.guards, plan.report()
+    assert not plan.issues, plan.report()
+    # Supplied finite keys now preserve their selected contract without a guard.
     assert result['success'] and result['value'] == expected, result
 
 

@@ -99,7 +99,13 @@ def test_vocabulary_row_declaration_composes_without_observation(tmp_path, no_ob
 ])
 def test_non_row_or_undetermined_ops_stay_rejected(tmp_path, no_observations, code):
     plan = compile_program(code, load_registry(str(tmp_path)))
-    assert any(i['code'] == 'TYPE' for i in plan.issues), plan.issues
+    if '[fn:f]{o:"search"}' in code:
+        # A selector passed through a function is now a known specialization,
+        # just like the same literal at the direct call site.
+        assert not plan.issues, plan.issues
+        assert plan.result_type.kind == 'List'
+    else:
+        assert any(i['code'] == 'TYPE' for i in plan.issues), plan.issues
 
 
 def test_scalar_observation_overrides_row_declaration(tmp_path, monkeypatch):

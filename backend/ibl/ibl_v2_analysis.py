@@ -60,10 +60,11 @@ HINTS = {
     # 컴파일 진단은 코드마다 고치는 법을 말한다 — 범용 문구로 떨어지는 코드는 가드가 막는다(70회차 F70-1).
     "ARGUMENT_CONTRACT": "describe로 이 액션의 인자 관계(함께 필요한 인자·택일·범위)를 확인하고 호출 인자를 맞추세요.",
     "ARITHMETIC": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요.",
+    "ARGUMENT_STYLE": "어휘·함수 참조는 $부품{이름:값}, 내장 함수는 $부품(값), 람다는 두 형식으로 적용합니다.",
     "ARITY": "내장 함수의 인자 개수를 확인하세요. 선택 인자는 뒤에서부터 생략합니다.",
     "RATE_LIMITED": "원천의 요청 한도입니다(원천 장애·결과 없음이 아님). $error.details.retry_after 초 뒤 같은 원천을 다시 부르거나, 급하면 ?? 로 다른 원천을 쓰세요. 같은 호출을 즉시 반복하지 마세요.",
     "BIND_RETURNS": "블록([try]·[if:]·[case:])의 값은 마지막 문장입니다. 값으로 받으려면 가지 끝의 return 을 떼고 값만 두세요(예: $w = [try] { …; {칸: 값} } [catch] { {칸: 값} }). 함수를 끝내려던 것이면 대입을 떼고 블록만 쓰세요.",
-    "BUILTIN": "문법 전문의 내장 함수 이름을 쓰세요. 지역·저장 함수는 값으로 넘기지 않고 [fn:이름]{인자:값}으로 부르며, 목록의 원소마다 부를 때는 [table:each]{ [fn:이름]{인자:$it} }입니다.",
+    "BUILTIN": "문법 전문의 내장 함수 이름을 쓰세요. 지역·저장 함수는 [fn:이름]{인자:값}으로 부르거나 &[fn:이름]으로 전달하며, 목록의 원소마다 부를 때는 [table:each]{ [fn:이름]{인자:$it} }입니다.",
     "CONCURRENCY": "each의 parallel은 1~8 사이의 정수 리터럴입니다.",
     "DUPLICATE_LIBRARY": "저장 정의·관용구 가운데 이 이름이 둘 이상입니다. [self:workflow]{op:\"list\"}로 같은 이름의 저장본을 찾아 하나를 새 이름으로 다시 저장하거나 지우세요. 겹친 이름만 부를 수 없고 다른 함수는 영향이 없습니다.",
     "DUPLICATE_FUNCTION": "같은 범위의 정의 이름은 하나만 둡니다. 역할이 다르면 이름을 바꾸고, 고친 정의라면 옛 정의를 지우세요.",
@@ -76,7 +77,7 @@ HINTS = {
     "PARALLEL_WRITE_CONFLICT": "병렬 가지·each 병렬 반복이 같은 자원에 쓰면 최종 내용이 실행마다 달라집니다. 순차로 쓰거나(;·기본 each) 가지마다 다른 파일에 쓴 뒤 합치세요.",
     "PARAMETERS": "람다 인자 이름은 서로 다르고 예약 이름($it·$i·$error)이 아니어야 합니다.",
     "PIPE_TARGET": "파이프 오른쪽에는 앞 값을 첫 입력으로 받는 호출 하나를 둡니다. 내장 함수·람다는 첫 위치 인자로 받습니다: 값 >> abs(), 값 >> $f(다른값).",
-    "PURE_EXPRESSION": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(순수 계약의 도구·함수·파이프는 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
+    "PURE_EXPRESSION": "조건·조건 값(?:)·and/or·기본값에는 효과 있는 호출을 넣지 않습니다(순수 계약의 도구·함수·파이프는 가능). 효과 있는 반복은 [table:each] 본문에 두고, 호출 결과를 먼저 $이름=[...]으로 받아 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
     "READONLY": "$i는 repeat의 반복 인덱스, $it는 table:each의 현재 항목, $error는 catch의 오류입니다. 이 이름들은 해당 블록 밖에서도 예약되어 대입할 수 없습니다. 결과를 저장하려면 $result 또는 $image처럼 다른 이름을 사용하세요. each 본문에서 본 바깥 변수도 새 이름에 받거나 each의 반환으로 모으세요.",
     "RECURSION": "재귀 대신 반복을 쓰세요: 횟수는 [repeat:n]{...}, 누적은 reduce(목록,초기값,($acc,$x)=>...), 원소별 처리는 [table:each]입니다.",
     "RESERVED": "함수 인자 이름에 $it·$i·$error를 쓰지 마세요. 다른 이름으로 받으세요.",
@@ -129,11 +130,17 @@ def constant_value(node, depth=0, *, partial_records=False, bindings=None):
     if node.kind == 'record':
         # 레코드 리터럴도 관측한다(75회차 후속): 옛 판은 `config:{repeat:"매일"}` 을 미상으로 봐 check 가
         # 값 검사를 건너뛰었다 — 등록 런타임은 같은 값을 거절했다. 모르는 전개(...$x)가 섞이면 미상.
-        from ibl_v2_ir import record_fields
-        if partial_records and any(k is None for k, _ in node.data.get("entries", ())):
-            return UNRESOLVED  # A spread may supply/override an omitted selector.
-        fields = {k: constant_value(v, depth + 1, partial_records=partial_records, bindings=bindings)
-                  for k, v in record_fields(node).items()}
+        fields = {}
+        for key, child in node.data.get('entries', node.data.get('fields', {}).items()):
+            value = constant_value(child, depth + 1, partial_records=partial_records, bindings=bindings)
+            if key is None:
+                if not isinstance(value, dict):
+                    # Both complete and partial observations must preserve an
+                    # unresolved spread; it may supply/replace any selector.
+                    return UNRESOLVED
+                fields.update(value)
+            else:
+                fields[key] = value
         return UNRESOLVED if not partial_records and any(v is UNRESOLVED for v in fields.values()) else fields
     return UNRESOLVED
 
@@ -349,10 +356,11 @@ def access_type(compiler, node, base, key, key_type=None):
         for value in values[1:]:
             result = join(result, value)
         return result
+    from ibl_v2_types import select_type
     if base.kind == 'Record' and isinstance(key, str):
         fields = dict(base.fields)
         if key in fields:
-            return fields[key]
+            return select_type(base, key)[0]
         if not base.open:
             compiler.issue(node, 'MISSING_FIELD',
                            f'선언된 필드가 없습니다: {key}. 선택 필드는 has/get을 쓰세요.')
@@ -366,13 +374,15 @@ def access_type(compiler, node, base, key, key_type=None):
         return UNKNOWN
     if base.kind == 'Record' and key is None and node.kind == 'index':
         compiler.need(node, key_type, TEXT)
-        compiler.need(node, UNKNOWN, UNKNOWN)
-        return UNKNOWN
+        selected, missing = select_type(base, key_type)
+        if missing:
+            compiler.need(node, UNKNOWN, UNKNOWN)
+        return selected
     if base.kind in ('List', 'Text') and node.kind == 'index':
         compiler.need(node, key_type, NUMBER)
         if (base.kind == 'List' and base.positions is not None
                 and type(key) is int and -len(base.positions) <= key < len(base.positions)):
-            return base.positions[key]
+            return select_type(base, key)[0]
         return base.item if base.kind == 'List' else TEXT
     if base.kind == 'Unknown':
         compiler.need(node, UNKNOWN, Type('Record') if node.kind == 'field' else UNKNOWN)
@@ -457,7 +467,7 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
             continue
         if any(t.kind == 'Callable' for t in alternatives(args.get(param, UNKNOWN))):
             value = compiler.apply_callable(field, args[param], [row if row.observed else UNKNOWN],
-                                            [field], env, names, readonly)
+                                            [field], env, names, readonly, require_pure=True)
             if param == flow.get('columns_param'):
                 projected = value
         elif param not in flow.get('row_condition_params', []):
@@ -531,7 +541,7 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
         if name in ('map', 'filter') and types and types[0].kind == 'List':
             item = types[0].item or UNKNOWN
             callback = node.data['args'][1]
-            mapped = compiler.apply_callable(callback, types[1], [item], [callback], env, names, readonly)
+            mapped = compiler.apply_callable(callback, types[1], [item], [callback], env, names, readonly, require_pure=True)
             if name == 'filter':
                 compiler.need(callback, mapped, BOOL)
             return Type('List', item=item if name == 'filter' else mapped)
@@ -541,7 +551,7 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
             if len(types) > 1:
                 key_node = node.data['args'][1]
                 if any(t.kind == 'Callable' for t in alternatives(types[1])):
-                    key_type = compiler.apply_callable(key_node, types[1], [key_type], [key_node], env, names, readonly)
+                    key_type = compiler.apply_callable(key_node, types[1], [key_type], [key_node], env, names, readonly, require_pure=True)
                 elif key_node.kind == 'literal' and isinstance(key_node.data['value'], str):
                     # Field-name sorting uses the table's heterogeneous buckets,
                     # including textual fallback for structures and booleans.
@@ -571,8 +581,10 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
     if name in ('has', 'get'):
         need(0, Type('Record'))
         need(1, TEXT)
-        # has/get are deliberately the dynamic/optional-field escape hatch.
-        return BOOL if name == 'has' else UNKNOWN
+        if name == 'has':
+            return BOOL
+        from ibl_v2_types import select_type, NULL
+        return select_type(types[0], types[1], types[2] if len(types) > 2 else NULL)[0]
     if name in ('number', 'abs', 'round'):
         if name == 'number' and len(types) == 2:
             # Invalid input is an ordinary fallback value only in this explicit form.
@@ -606,7 +618,7 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
             accumulator = types[1]
             for _ in range(4):
                 returned = compiler.apply_callable(nodes[2], types[2], [accumulator, item or UNKNOWN],
-                                                   [nodes[1], nodes[0]], env, names, readonly)
+                                                   [nodes[1], nodes[0]], env, names, readonly, require_pure=True)
                 widened = join(accumulator, returned)
                 if widened == accumulator:
                     return accumulator

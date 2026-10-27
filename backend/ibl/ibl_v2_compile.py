@@ -9,7 +9,7 @@ from pathlib import Path
 import copy
 from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches, record_fields
 from ibl_v2_parser import parse
-from ibl_v2_narrow import narrow
+from ibl_v2_narrow import narrow, known_condition
 from ibl_v2_expr import BUILTINS
 from ibl_dependencies import compilation_dependencies
 import re
@@ -23,7 +23,7 @@ from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL, rows_
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
-              "index", "slice", "builtin", "pure_call", "lambda", "format", "conditional"}
+              "index", "slice", "builtin", "pure_call", "named_call", "callable_ref", "lambda", "format", "conditional"}
 
 
 @dataclass
@@ -97,6 +97,7 @@ class Compiler(CallAnalysis):
         # 방문 중 만난 선언 쓰기 자원 — 병렬 가지·each 병렬 본문이 괄호로 묶어 충돌을 본다(70회차 B70-2).
         self.write_log = set()
         self.reachable = True
+        self.catch_value_faults = False
         self.default_scope = frozenset()  # 기본값 식을 검사하는 동안의 인자 이름들
         self.unit_warned = set()
         self.impure_spans = []
@@ -107,7 +108,14 @@ class Compiler(CallAnalysis):
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
                 "call_path": copy.deepcopy(self.call_path), **details}
-        if item not in self.issues:
+        # Value failures remain observable inside recovery expressions. Syntax,
+        # effects, permissions and definition contracts are still compile errors.
+        if self.catch_value_faults and code in {
+                'TYPE', 'NUMBER_REQUIRED', 'ARITHMETIC', 'FIELD_TYPE', 'MISSING_FIELD', 'FORMAT_TYPE'}:
+            item.update(expected='복구 경계 안에서 실행 시 확인', recoverable=True)
+            if item not in self.guards:
+                self.guards.append(item)
+        elif item not in self.issues:
             self.issues.append(item)
 
     def warn(self, node, code, message, **facts):
@@ -138,7 +146,9 @@ class Compiler(CallAnalysis):
             return
         if any(start <= node.start and node.end <= end for start, end in self.impure_spans):
             return
-        if node.kind in ("call", "pure_call") and node.data.get("body") is None:
+        if node.kind in ("lambda", "callable_ref"):
+            return  # creating a callable does not execute its latent body
+        if node.kind in ("call", "pure_call", "named_call") and node.data.get("body") is None:
             # 순수 자리의 기준은 호출 문법이 아니라 효과다. 효과 없는 함수는 식과 같다 — 효과는 방문 뒤에 확인한다.
             if all(node is not seen for seen in self.pure_calls):
                 self.pure_calls.append(node)
@@ -172,7 +182,7 @@ class Compiler(CallAnalysis):
         Calls own their argument checks and each/function return frames.
         값을 만드는 자리 — 객체·목록 값, 그리고 2026-09-30 개정으로 연산 피연산자·내장 함수 인자·
         보간·슬라이스 — 는 호출·조합을 원문 순서로 그 자리에서 평가한다. 실행 여부나 횟수가 갈리는
-        자리(조건·조건 값·and/or·람다 본문·기본값)는 각자의 방문에서 pure()가 재귀로 지키므로,
+        자리(조건·조건 값·and/or·기본값·순수 콜백 적용)는 각자의 방문에서 pure()가 재귀로 지키므로,
         값 자리로 감싸도 그 안에 효과를 숨길 수 없다.
         """
         if node.kind in ("call", "lambda"):
@@ -368,6 +378,8 @@ class Compiler(CallAnalysis):
                 if re.search(r"\$[\w]+\.[\w]", d["value"]):
                     self.warn(node, "LITERAL_DOLLAR", "이 문자열의 $변수.필드는 판본 2에서 문자 그대로입니다. 값 참조나 f 문자열의 ${표현식}을 사용하세요.")
                 return Type("Text", literal=d["value"])
+            if type(d["value"]) is int:
+                return Type("Number", literal=d["value"])
             return infer(d["value"])
         if kind == "ref":
             if d["name"] not in env:
@@ -404,10 +416,15 @@ class Compiler(CallAnalysis):
             for key in ("condition", "message", "details"):
                 self.pure(d[key])
             self.need(node, sub(d["condition"]), BOOL)
+            failure_possible = known_condition(d['condition'], env) is not True
             if d["message"] is not None:
-                self.need(node, sub(d["message"]), TEXT)
+                message_type = sub(d["message"])
+                if failure_possible:
+                    self.need(node, message_type, TEXT)
             if d["details"] is not None:
-                self.need(node, sub(d["details"]), Type("Record"))
+                details_type = sub(d["details"])
+                if failure_possible:
+                    self.need(node, details_type, Type("Record"))
             return UNIT_T
         if kind == "return":
             if final:
@@ -462,7 +479,7 @@ class Compiler(CallAnalysis):
             key_type = None
             if isinstance(key, Node):
                 key_type = sub(key)
-                key = key.data["value"] if key.kind == "literal" else None
+                key = key.data["value"] if key.kind == "literal" else key_type.literal
             return access_type(self, node, base, key, key_type)
         if kind in ("binary", "unary"):
             op = d["op"]
@@ -516,6 +533,13 @@ class Compiler(CallAnalysis):
                 from common.expression_ops import unknown_builtin_message
                 self.issue(node, "BUILTIN", unknown_builtin_message(d["name"]))
             return Type("Callable", item=("builtin", d["name"]))
+        if kind == "callable_ref":
+            return self.reference_type(node, names)
+        if kind == "named_call":
+            fn_type = sub(d["fn"])
+            arg_type = sub(d["params"])
+            return self.apply_callable(node, fn_type, arg_type, d["params"], env, names, readonly,
+                                       piped=piped)
         if kind == "pure_call":
             self.container_value(node)
             fn_type = sub(d["fn"])
@@ -529,7 +553,7 @@ class Compiler(CallAnalysis):
             params = d["params"]
             if len(set(params)) != len(params) or RESERVED.intersection(params):
                 self.issue(node, "PARAMETERS", "람다 인자는 중복·예약 이름을 쓸 수 없습니다.")
-            self.pure(d["body"])
+            self.container_value(d["body"])
             typ = self.lambda_type(node, env, names, readonly)
             return typ
         if kind == "format":
@@ -559,7 +583,7 @@ class Compiler(CallAnalysis):
             return TEXT
         if kind == "pipe":
             left = sub(d["left"])
-            if d["right"].kind not in ("call", "pure_call"):
+            if d["right"].kind not in ("call", "pure_call", "named_call"):
                 details = {}
                 if d["right"].kind == "parallel":
                     details = {"actual": "parallel", "hint":
@@ -590,126 +614,20 @@ class Compiler(CallAnalysis):
                 self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
             return ordered_list(types)
         if kind == "fallback":
-            return join(sub(d["left"], env.copy()), sub(d["right"], env.copy()))
+            previous = self.catch_value_faults
+            self.catch_value_faults = True
+            try:
+                left = sub(d["left"], env.copy())
+            finally:
+                self.catch_value_faults = previous
+            return join(left, sub(d["right"], env.copy()))
         if kind == "call":
             arg_type = sub(d["params"])
             args = dict(arg_type.fields)
             d["open_arguments"] = arg_type.open
             if arg_type.open:
                 self.need(d["params"], UNKNOWN, Type("Record"))
-            key = f"{d['node']}:{d['action']}"
-            if d.get("target") and (d["node"] == "fn" or key == "table:each"):
-                self.issue(node, "TARGET_NODE", f"노드 지정 @{d['target']} 은 도구 호출에만 붙습니다 — 함수·each 블록에는 쓸 수 없습니다.")
-            if key == "table:each":
-                return self.each(node, args, env, names, piped)
-            if d["node"] == "fn":
-                sid = self.resolve_function(d["action"], names)
-                if sid:
-                    d["symbol"] = sid
-                    params = self.functions[sid].data["params"]
-                    receiver = next(iter(params), None)
-                    self.arguments(node, args, params, receiver, piped)
-                    return self.function(sid, args, node)
-                conflict = getattr(self.definitions, "conflicts", {}).get(d["action"])
-                if conflict:
-                    # 겹친 저장 이름은 부르는 자리만 거절한다 — 무관한 프로그램은 돈다 (71회차 B71-1).
-                    self.issue(node, "DUPLICATE_LIBRARY",
-                               f"같은 이름의 저장 정의가 여럿이라 고를 수 없습니다: {d['action']} ({', '.join(conflict)})")
-                    return UNKNOWN
-                if key not in self.registry:
-                    self.issue(node, "FUNCTION", f"등록된 함수가 없습니다: {d['action']}")
-                    return UNKNOWN
-            spec = self.registry.get(key)
-            if not spec:
-                self.issue(node, "UNSUPPORTED_ADAPTER", f"판본 2 계약이 없는 어휘: {key}")
-                return UNKNOWN
-            from ibl_callable_contract import normalize, selected, problems, UNRESOLVED
-            try:
-                args = normalize(spec.contract, args)
-                fields = normalize(spec.contract, record_fields(d["params"]))
-            except Fault as exc:
-                self.issue(node, exc.code, str(exc))
-                return UNKNOWN
-            from ibl_v2_analysis import constant_value
-            values = {k: constant_value(v, bindings=self.constant_bindings) for k, v in fields.items()}
-            for arg in args:
-                values.setdefault(arg, UNRESOLVED)
-            if arg_type.open:
-                for arg in spec.contract['params']:
-                    values.setdefault(arg, UNRESOLVED)
-            # Argument relationships see the same receiver as runtime.invoke.
-            # The value is not known here, but its presence is statically known.
-            from ibl_callable_contract import pipe_receiver
-            receiver = pipe_receiver(spec.contract, values)
-            if piped is not None and receiver and receiver not in values:
-                values[receiver] = UNRESOLVED
-            self.used_actions.add(key)
-            if spec.dependency:
-                selectors = {k: v for k, v in values.items() if v is not UNRESOLVED}
-                snapshot = spec.dependency(selectors)
-                d['dependency_args'], d['dependency_snapshot'] = selectors, snapshot
-                self.call_dependencies[node.id] = snapshot
-            contract = selected(spec.contract, values)
-            if spec.specialize and not d.get('target'):
-                # Nested literal selectors remain known even when a sibling
-                # argument (e.g. window_id/source) is supplied at runtime.
-                # These partial values are only for contract selection, never
-                # dependency snapshots, receipts or execution arguments.
-                selectors = {**values, **{k: constant_value(v, partial_records=True, bindings=self.constant_bindings)
-                                         for k, v in fields.items()}}
-                contract = spec.specialize(contract, selectors)
-            from ibl_value_checks import value_problems
-            for problem in ([] if arg_type.open else problems(contract, values)) + value_problems(contract, values, self.registry, self.definitions):
-                self.issue(node, 'ARGUMENT_CONTRACT', problem)
-            if any(values.get(k) is UNRESOLVED for variant in spec.contract.get('variants', []) for k in variant['when']):
-                self.guards.append({'source_span': span(self.source, node), 'expected': '동적 인자에 따른 도구 계약은 실행 직전에 확인합니다.'})
-            if contract.get("compatibility"):
-                self.guards.append({"source_span": span(self.source, node),
-                                    "boundary": contract["compatibility"], "action": key,
-                                    "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인"})
-            params = contract["params"]
-            required = set(contract.get("required", params))
-            allowed = {k: None if k in required else UNIT for k in params}
-            if contract.get("open_params"):
-                allowed.update({k: UNIT for k in args if not k.startswith("_")})
-            self.arguments(node, args, allowed, pipe_receiver(contract, args), piped,
-                           hint=contract.get("unknown_param_hint"))
-            if contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args:
-                # 행 목록 자리의 봉투는 그 행 목록이다 — join·groupby·dedup 의 결과를 그대로 이어 받는다.
-                args["items"] = rows_type(args["items"])
-            for k, t in args.items():
-                if k in params:
-                    self.need(node, t, declared(params[k]))
-            self.effects.update(contract["effects"])
-            self.call_effects.setdefault(node.id, set()).update(contract["effects"])
-            # 자원 정체 = 타입 검사가 아는 컴파일 시 값(리터럴·변수·기본값·특수화 인자·정적 보간). 같은 값이면 같은 자원이다.
-            from ibl_callable_contract import resource_values, UNRESOLVED
-            resource_args = {k: static_text(t) if static_text(t) is not None else UNRESOLVED
-                             for k, t in args.items()}
-            resources = resource_values(contract.get("write_resources", {}), resource_args,
-                                        spec.resource_identity)
-            if self.reachable and resources:
-                self.write_log.update(resources)
-            result_type = declared(contract["result"])
-            from ibl_v2_adapters import observed_result
-            # A dynamic shape selector is present, not absent. Keep its marker
-            # so observations from the default shape cannot leak into it.
-            result_type = observed_result(key, spec.contract, values, result_type)
-            from ibl_v2_adapters import declared_rows_result
-            result_type = declared_rows_result(spec.contract, values, result_type)
-            from ibl_v2_analysis import row_flow_type
-            result_type = row_flow_type(self, node, contract, args, fields, values,
-                                        result_type, env, names, readonly)
-            if (result_type.kind == "Record" and "items" not in dict(result_type.fields)
-                    and contract.get("analysis", {}).get("flow", {}).get("emits") == "items"):
-                # 출력 형태는 flow.emits가 소유한다. 입력 봉투를 하나 받든 여러
-                # 출처를 결합하든 같은 행 목록이다. 문서·건수 Record에는 적용하지
-                # 않으며 명시된 items 타입과 실행 시 실제 값 검사는 그대로 둔다.
-                result_type = Type("Record", (*result_type.fields, ("items", Type("List", item=UNKNOWN))),
-                                   open=result_type.open, observed=result_type.observed)
-            if result_type.kind == "Unknown":
-                self.need(node, UNKNOWN, UNKNOWN)
-            return result_type
+            return self.named_target(node, arg_type, env, names, readonly, piped)
         if kind == "if":
             self.pure(d["value"])
             self.need(node, sub(d["value"]), BOOL)
@@ -774,7 +692,13 @@ class Compiler(CallAnalysis):
             # Catch observes partial progress, not a rollback to entry types.
             mutated = assigned_names(d["body"]) & env.keys()
             b.update(dict.fromkeys(mutated, UNKNOWN))
-            ta, tb = sub(d["body"], a), sub(d["catch"], b)
+            previous = self.catch_value_faults
+            self.catch_value_faults = True  # try also returns a Result without catch
+            try:
+                ta = sub(d["body"], a)
+            finally:
+                self.catch_value_faults = previous
+            tb = sub(d["catch"], b)
             if "error" in env:
                 b["error"] = env["error"]
             else:
@@ -821,6 +745,145 @@ class Compiler(CallAnalysis):
             once = d['mode'] == 'until' or (d['mode'] == 'count' and type(count) is int and count > 0)
             return once and recur(d['body'])
         return False
+
+    def named_target(self, node, arg_type, env, names, readonly, piped=None):
+        d = node.data
+        if d['node'] == 'fn' or (d['node'], d['action']) == ('table', 'each'):
+            return self._named_target(node, arg_type, env, names, readonly, piped)
+        frame = {'function': d['node'] + ':' + d['action'],
+                 'call': span(self.source, node), 'definition': None}
+        # Primitive contracts have no body to unfold. Their transfer summary
+        # retains the call site because adapter diagnostics/dependencies own it.
+        identity = ('action', node.id, frame['function'], arg_type, piped,
+                    digest(self.constant_bindings))
+        return self.summary(identity, node, frame,
+                            lambda: self._named_target(node, arg_type, env, names, readonly, piped),
+                            'action')
+
+    def _named_target(self, node, arg_type, env, names, readonly, piped=None):
+        d = node.data
+        args = dict(arg_type.fields)
+        d["open_arguments"] = arg_type.open
+        key = f"{d['node']}:{d['action']}"
+        if d.get("target") and (d["node"] == "fn" or key == "table:each"):
+            self.issue(node, "TARGET_NODE", f"노드 지정 @{d['target']} 은 도구 호출에만 붙습니다 — 함수·each 블록에는 쓸 수 없습니다.")
+        if key == "table:each":
+            return self.each(node, args, env, names, piped)
+        if d["node"] == "fn":
+            sid = self.resolve_function(d["action"], names)
+            if sid:
+                d["symbol"] = sid
+                params = self.functions[sid].data["params"]
+                receiver = next(iter(params), None)
+                self.arguments(node, args, params, receiver, piped)
+                return self.function(sid, args, node)
+            conflict = getattr(self.definitions, "conflicts", {}).get(d["action"])
+            if conflict:
+                # 겹친 저장 이름은 부르는 자리만 거절한다 — 무관한 프로그램은 돈다 (71회차 B71-1).
+                self.issue(node, "DUPLICATE_LIBRARY",
+                           f"같은 이름의 저장 정의가 여럿이라 고를 수 없습니다: {d['action']} ({', '.join(conflict)})")
+                return UNKNOWN
+            if key not in self.registry:
+                self.issue(node, "FUNCTION", f"등록된 함수가 없습니다: {d['action']}")
+                return UNKNOWN
+        spec = self.registry.get(key)
+        if not spec:
+            self.effects.add('unknown')
+            self.issue(node, "UNSUPPORTED_ADAPTER", f"판본 2 계약이 없는 어휘: {key}")
+            return UNKNOWN
+        from ibl_callable_contract import normalize, selected, problems, UNRESOLVED
+        try:
+            args = normalize(spec.contract, args)
+            fields = normalize(spec.contract, record_fields(d["params"]))
+        except Fault as exc:
+            self.issue(node, exc.code, str(exc))
+            return UNKNOWN
+        from ibl_v2_analysis import constant_value
+        values = {k: constant_value(v, bindings=self.constant_bindings) for k, v in fields.items()}
+        for arg in args:
+            if values.get(arg, UNRESOLVED) is UNRESOLVED:
+                values[arg] = args[arg].literal if args[arg].literal is not None else UNRESOLVED
+        if arg_type.open:
+            for arg in spec.contract['params']:
+                values.setdefault(arg, UNRESOLVED)
+        # Argument relationships see the same receiver as runtime.invoke.
+        # The value is not known here, but its presence is statically known.
+        from ibl_callable_contract import pipe_receiver
+        receiver = pipe_receiver(spec.contract, values)
+        if piped is not None and receiver and receiver not in values:
+            values[receiver] = UNRESOLVED
+        self.used_actions.add(key)
+        if spec.dependency:
+            selectors = {k: v for k, v in values.items() if v is not UNRESOLVED}
+            snapshot = spec.dependency(selectors)
+            d['dependency_args'], d['dependency_snapshot'] = selectors, snapshot
+            binding = {'args': selectors, 'snapshot': snapshot}
+            bindings = d.setdefault('dependency_bindings', [])
+            if binding not in bindings:
+                bindings.append(binding)
+            self.call_dependencies[node.id + ":" + key + ":" + digest(selectors)] = snapshot
+        contract = selected(spec.contract, values)
+        if spec.specialize and not d.get('target'):
+            # Nested literal selectors remain known even when a sibling
+            # argument (e.g. window_id/source) is supplied at runtime.
+            # These partial values are only for contract selection, never
+            # dependency snapshots, receipts or execution arguments.
+            partial = {k: constant_value(v, partial_records=True, bindings=self.constant_bindings)
+                       for k, v in fields.items()}
+            selectors = {**values, **{k: v for k, v in partial.items() if v is not UNRESOLVED}}
+            contract = spec.specialize(contract, selectors)
+        from ibl_value_checks import value_problems
+        for problem in ([] if arg_type.open else problems(contract, values)) + value_problems(contract, values, self.registry, self.definitions):
+            self.issue(node, 'ARGUMENT_CONTRACT', problem)
+        if any(values.get(k) is UNRESOLVED for variant in spec.contract.get('variants', []) for k in variant['when']):
+            self.guards.append({'source_span': span(self.source, node), 'expected': '동적 인자에 따른 도구 계약은 실행 직전에 확인합니다.'})
+        if contract.get("compatibility"):
+            self.guards.append({"source_span": span(self.source, node),
+                                "boundary": contract["compatibility"], "action": key,
+                                "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인"})
+        params = contract["params"]
+        required = set(contract.get("required", params))
+        allowed = {k: None if k in required else UNIT for k in params}
+        if contract.get("open_params"):
+            allowed.update({k: UNIT for k in args if not k.startswith("_")})
+        self.arguments(node, args, allowed, pipe_receiver(contract, args), piped,
+                       hint=contract.get("unknown_param_hint"))
+        if contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args:
+            # 행 목록 자리의 봉투는 그 행 목록이다 — join·groupby·dedup 의 결과를 그대로 이어 받는다.
+            args["items"] = rows_type(args["items"])
+        for k, t in args.items():
+            if k in params:
+                self.need(node, t, declared(params[k]))
+        self.effects.update(contract["effects"])
+        self.call_effects.setdefault(node.id, set()).update(contract["effects"])
+        # 자원 정체 = 타입 검사가 아는 컴파일 시 값(리터럴·변수·기본값·특수화 인자·정적 보간). 같은 값이면 같은 자원이다.
+        from ibl_callable_contract import resource_values, UNRESOLVED
+        resource_args = {k: static_text(t) if static_text(t) is not None else UNRESOLVED
+                         for k, t in args.items()}
+        resources = resource_values(contract.get("write_resources", {}), resource_args,
+                                    spec.resource_identity)
+        if self.reachable and resources:
+            self.write_log.update(resources)
+        result_type = declared(contract["result"])
+        from ibl_v2_adapters import observed_result
+        # A dynamic shape selector is present, not absent. Keep its marker
+        # so observations from the default shape cannot leak into it.
+        result_type = observed_result(key, spec.contract, values, result_type)
+        from ibl_v2_adapters import declared_rows_result
+        result_type = declared_rows_result(spec.contract, values, result_type)
+        from ibl_v2_analysis import row_flow_type
+        result_type = row_flow_type(self, node, contract, args, fields, values,
+                                    result_type, env, names, readonly)
+        if (result_type.kind == "Record" and "items" not in dict(result_type.fields)
+                and contract.get("analysis", {}).get("flow", {}).get("emits") == "items"):
+            # 출력 형태는 flow.emits가 소유한다. 입력 봉투를 하나 받든 여러
+            # 출처를 결합하든 같은 행 목록이다. 문서·건수 Record에는 적용하지
+            # 않으며 명시된 items 타입과 실행 시 실제 값 검사는 그대로 둔다.
+            result_type = Type("Record", (*result_type.fields, ("items", Type("List", item=UNKNOWN))),
+                               open=result_type.open, observed=result_type.observed)
+        if result_type.kind == "Unknown":
+            self.need(node, UNKNOWN, UNKNOWN)
+        return result_type
 
     def arguments(self, node, args, params, receiver, piped, hint=None):
         if piped is not None:
@@ -941,8 +1004,11 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
             lid = next(iter(set(compiler.lambda_nodes) - compiler.lambda_checked))
             node = compiler.lambda_nodes[lid]
             typ = compiler.lambda_contracts[lid]
+            outer = compiler.effects, compiler.write_log, compiler.reachable
+            compiler.effects, compiler.write_log, compiler.reachable = set(), set(), False
             compiler.apply_callable(node, typ, [UNKNOWN] * len(node.data['params']),
                                     [node] * len(node.data['params']))
+            compiler.effects, compiler.write_log, compiler.reachable = outer
     dependencies = {"source": digest(compiler.source), "libraries": digest({k: compiler.definitions[k] for k in sorted(compiler.external)}),
                     "calls": compiler.call_dependencies,
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
@@ -958,14 +1024,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
     refs += [ref for key in sorted(compiler.used_actions)
              for ref in registry[key].contract.get('function_refs', [])]
     dependencies['function_refs'] = list({(r['function_id'], r['revision']): r for r in refs if r}.values())
-    for call in compiler.pure_calls:
-        effects = compiler.call_effects.get(call.id)
-        if effects is None or effects - {"pure"}:
-            compiler.issue(call, "PURE_EXPRESSION",
-                           "이 자리의 호출은 효과가 없어야 합니다(효과: "
-                           + ', '.join(sorted((effects or {'unknown'}) - {'pure'}))
-                           + "). 조건·조건 값·and/or·람다 본문·기본값은 순수 계산만 허용합니다.",
-                           hint="효과가 있는 호출은 앞 문장에서 받아 쓰거나 table:each 본문에서 호출하세요.")
+    compiler.check_purity()
     finish_diagnostics(compiler)
     for entry in compiler.warnings:
         old = entry['source_span']

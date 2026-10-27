@@ -294,3 +294,66 @@ def test_history_detail_name_does_not_resolve_current_catalog(monkeypatch):
     monkeypatch.setattr(function_store,'snapshot',lambda: pytest.fail('history looked up active catalog'))
     out=workflow_engine.execute_workflow_action('detail',{'name':'historic','history':True},'.')
     assert out['source']=='unparseable' and out['runnable'] is False
+
+
+@pytest.mark.parametrize('domain', ['자료', '장치'])
+def test_program_component_local_store_recall_and_recompose(domain):
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_ir import Fault
+    process = '[def:처리]($source,$load,$check,$save){$raw=$load{source:$source}; $v=$check($raw); return $save{value:$v}}'
+    batch = ('[def:여러건]($sources,$job,$load,$check,$save){'
+             'return $sources >> [table:each]{on_error:"collect"}{'
+             'return $job{source:$it,load:$load,check:$check,save:$save}}}')
+    seen = []
+    def load(rt, args):
+        if args['source'] < 0:
+            raise Fault('MISSING_SOURCE', '시험 원천 누락')
+        return args['source']
+    registry = {
+        domain+':load': Adapter({'version':1,'params':{'source':'Number'},'result':'Number',
+                                'effects':['read_external']},load),
+        domain+':save': Adapter({'version':1,'params':{'value':'Number'},'result':'Number',
+                                'effects':['write_external']},lambda rt,a:seen.append(a['value']) or a['value'])}
+    call = ('return [fn:여러건]{sources:[2,-1,4],job:&[fn:처리],load:&['+domain+':load],'
+            'check:($v)=>$v*2,save:&['+domain+':save]}')
+    local = compile_program(process+'; '+batch+'; '+call,registry)
+    assert not local.issues,local.report()
+    result=Runtime(local).run()
+    assert result['success'] and seen==[4,8],result
+    for name, code in [('처리',process),('여러건',batch)]:
+        register(name,code,edition=2)
+    seen.clear()
+    stored = compile_program(call,registry,definitions=definitions())
+    assert not stored.issues,stored.report()
+    result=Runtime(stored).run()
+    assert result['success'] and seen==[4,8],result
+    assert len(stored.dependencies['function_refs'])==2
+    from ibl_v2_ir import unpack
+    rows=unpack(result['value_wire']['data'])
+    assert [r.ok for r in rows]==[True,False,True]
+    assert rows[1].error['code']=='MISSING_SOURCE'
+    seen.clear()
+    changed=compile_program(call.replace('($v)=>$v*2','($v)=>$v+10'),registry,definitions=definitions())
+    assert Runtime(changed).run()['success'] and seen==[12,14]
+    registry[domain+':load_alt'] = Adapter(registry[domain+':load'].contract, lambda rt,a:load(rt,a)+1)
+    registry[domain+':save_alt'] = Adapter(registry[domain+':save'].contract,
+        lambda rt,a:seen.append(('alternate',a['value'])) or a['value']+100)
+    swapped = call.replace(domain+':load]',domain+':load_alt]').replace(domain+':save]',domain+':save_alt]')
+    seen.clear()
+    alternative = compile_program(swapped,registry,definitions=definitions())
+    result = Runtime(alternative).run()
+    assert result['success'] and seen==[('alternate',6),('alternate',10)],result
+    assert [r.value for r in unpack(result['value_wire']['data']) if r.ok]==[106,110]
+    seen.clear()
+    invalid = compile_program(call.replace('($v)=>$v*2','($v)=>"wrong type"'),registry,definitions=definitions())
+    assert any(i['code']=='TYPE' for i in invalid.issues) and not seen
+
+
+def test_reference_consumers_block_retirement_and_reject_inactive_definition():
+    register('source', '[def:source]($x){return $x}',edition=2)
+    register('consumer', '[def:consumer](){return (&[fn:source]){x:3}}',edition=2)
+    assert run('[fn:consumer]')['value']==3
+    with pytest.raises(ValueError,match='호출자'):
+        retire('source')

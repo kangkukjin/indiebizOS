@@ -1,0 +1,7 @@
+#!ibl edition=2
+$sl=[self:write]{path:"~turn/sleeper.py",content:$본문}
+$a=[self:read]{path:$파일}
+$b=[self:read]{path:$파일}
+$c=[self:read]{path:$파일}
+$z=[self:script]{path:$sl.path,args:{s:2.5,i:"z"},timeout:30}
+return {reads:3,lens:[len(get($a,"content","")),len(get($b,"content","")),len(get($c,"content",""))],slept:$z.slept}

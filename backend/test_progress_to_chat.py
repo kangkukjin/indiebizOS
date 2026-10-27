@@ -118,10 +118,15 @@ def test_같은_액션의_연속_신고는_간격_안에서_접힌다(task, monk
     supervision_bus.register_progress_sink(task, seen.append)
     adapter = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number', 'effects': ['read_external']},
                       lambda rt, args: args['n'])
-    plan = compile_program('[table:each]{items:[1,2,3]}{[test:observe]{n:$it}}', {'test:observe': adapter})
+    # 행마다 같은 액션 두 번 — 행 안에서는 접히고, 행이 바뀌면(회차가 다른 좌표) 다시 신고한다(2026-10-27 개정:
+    # 접기 키=(액션, 회차). 액션 이름만으로 접으면 each 밖 첫 좌표가 삼켜져 티켓에 옛 행이 남았다).
+    plan = compile_program('[table:each]{items:[1,2,3]}{[test:observe]{n:$it}; [test:observe]{n:$it}}', {'test:observe': adapter})
+    assert not plan.issues, plan.report()
     out = Runtime(plan).run()
     assert out['success'], out
-    assert len([e for e in seen if "action" in e]) == 1, "같은 액션은 간격 안에서 한 번만"
+    actions = [e for e in seen if "action" in e]
+    assert len(actions) == 3, ("같은 액션은 같은 행 안에서만 접힌다", seen)
+    assert [e["detail"]["row"] for e in actions] == [1, 2, 3], actions
     assert len([e for e in seen if "row" in e]) == 3, "행은 키(번호)가 바뀌므로 매번"
 
 

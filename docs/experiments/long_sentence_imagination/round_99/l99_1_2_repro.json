@@ -1,0 +1,23 @@
+{
+ "after_beat": {
+  "step": 1,
+  "of": 0,
+  "action": "self:write",
+  "updated_at": "2026-10-27T09:54:04",
+  "detail": {
+   "row": 1,
+   "rows": 6,
+   "row_label": "1"
+  }
+ },
+ "after_action_report": {
+  "step": 2,
+  "of": 0,
+  "action": "self:script",
+  "updated_at": "2026-10-27T09:54:04"
+ },
+ "detail_survives_action_report": false,
+ "note_after_action": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요.",
+ "note_mentions_action_with_of0": false,
+ "note_with_of_nonzero": "실행이 아직 돌고 있습니다 — step 2/5 self:script 진행 중(마지막 움직임 x). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+}

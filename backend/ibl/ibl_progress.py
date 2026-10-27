@@ -64,8 +64,12 @@ def report_step(ticket: Optional[str], step: int, of: int, action: str,
                 detail: Optional[dict] = None) -> None:
     """소유자의 좌표 갱신 — best-effort(신고가 본 실행을 깨지 않는다).
 
-    detail 은 이 좌표가 속한 회차(each 의 row/rows 등) — 버스(채팅 표면)에만 동봉한다(2026-10-26).
-    티켓의 detail 칸은 beat 의 몫이라 여기서 건드리지 않는다(좌표는 소유하고 움직임은 공유한다).
+    detail 은 이 좌표가 속한 회차(each 의 row/rows 등) — 버스(채팅 표면)와 티켓 **둘 다**에 같은 신고로
+    동봉한다(2026-10-27, 긴문장 99회차 L99-1). 10-26 판은 "티켓의 detail 칸은 beat 의 몫"이라 티켓엔 좌표만
+    썼는데, 티켓이 progress 를 통째로 바꿔 beat 의 회차가 액션 경계마다 지워졌다(실측 0/N). 좌표는 소유하고
+    움직임은 공유한다 — 소유자가 자기 좌표의 **자리**(어느 행 안인가)를 말하는 것은 좌표의 일부고, 깊이의
+    움직임(행 전환·마지막 시각)은 여전히 beat 의 몫이다. 티켓은 좌표 신고의 detail 을 그대로 쓰고 없으면
+    지운다(each 밖으로 나간 좌표에 옛 행이 남으면 거짓) — common.spill.ticket_progress.
     """
     from supervision_bus import progress
     payload = {"step": step, "of": of, "action": action}
@@ -76,7 +80,7 @@ def report_step(ticket: Optional[str], step: int, of: int, action: str,
         return
     try:
         from common.spill import ticket_progress
-        ticket_progress(ticket, {"step": step, "of": of, "action": action})
+        ticket_progress(ticket, payload)
     except Exception:
         pass
 

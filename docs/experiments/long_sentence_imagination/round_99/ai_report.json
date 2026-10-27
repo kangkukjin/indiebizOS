@@ -1,0 +1,1524 @@
+{
+ "round": "99회차 (2026-10-27) — 실행 중 진행 표면 정직성 점검",
+ "generated_at": "2026-10-27T09:55:40",
+ "method": {
+  "launch": "POST http://127.0.0.1:8765/ibl/execute {code, inputs, ticket(hex24), project_id:'앱모드', origin:'training'} 를 스레드로 띄움",
+  "observe": "같은 ticket 으로 POST /ibl/recover 를 목표 0.2초 간격으로 반복 조회(wait 없음). 결말은 _recovered_from_ticket 표식이 붙은 원 봉투",
+  "source_checked": "backend/surface/api_ibl.py (/execute, /recover), backend/common/spill.py (ticket_progress·ticket_beat·_progress_note·ticket_recover)",
+  "observer": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/observe.py",
+  "raw_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw",
+  "not_referenced": "trainer/·runs/·docs 폴더와 정답은 열지 않음",
+  "total_samples_executed_runs": 307
+ },
+ "input_deviation": {
+  "finding": "S1·S3·S6 원문은 README 규약(inputs 병렬)대로는 실행되지 않는다 — 실행 전 검사 거절(executed:false).",
+  "S1/S3": "STATIC_OPTION: 'parallel는 컴파일 시 리터럴이어야 합니다' + CONCURRENCY",
+  "S6": "UNBOUND: 정의 [def:돌기] 안의 자유 변수 $병렬 (+STATIC_OPTION 등 2건)",
+  "rejection_evidence": {
+   "S1_orig_p1": {
+    "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
+    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_orig_p1.json"
+   },
+   "S1_orig_p3": {
+    "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
+    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_orig_p3.json"
+   },
+   "S3_orig_p1": {
+    "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
+    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_orig_p1.json"
+   },
+   "S3_orig_p3": {
+    "error": "실행 전 검사에서 거절했습니다: parallel는 컴파일 시 리터럴이어야 합니다. (STATIC_OPTION) 외 1건",
+    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_orig_p3.json"
+   },
+   "S6_orig_p1": {
+    "error": "실행 전 검사에서 거절했습니다: 정의되지 않은 값: $병렬 (UNBOUND) 외 2건",
+    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_orig_p1.json"
+   },
+   "S6_orig_p3": {
+    "error": "실행 전 검사에서 거절했습니다: 정의되지 않은 값: $병렬 (UNBOUND) 외 2건",
+    "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_orig_p3.json"
+   }
+  },
+  "workaround": "parallel:$병렬 만 리터럴 1·3 으로 바꾼 사본(ai_out/variants/*.ibl)으로 실행. 다른 문장은 원문 그대로. 아래 S1·S3·S6 판정은 이 사본의 관측이다.",
+  "S4_program_defect": "S4 는 len(get($a,'content','')) 를 쓰나 self:read 는 .text 를 반환 → lens=[0,0,0] (fixture 45자). 진행 판정에는 영향 없음."
+ },
+ "runs": {
+  "S1_p1": {
+   "program": "s1_sequential_p1.ibl",
+   "ticket": "def93a83c2ccd80ffbab7b55",
+   "run_id": "63739e8865214717bae6474dce2c4b92",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "rows": 6,
+    "items": [
+     {
+      "i": 1,
+      "slept": 0.7
+     },
+     {
+      "i": 2,
+      "slept": 0.7
+     },
+     {
+      "i": 3,
+      "slept": 0.7
+     },
+     {
+      "i": 4,
+      "slept": 0.7
+     },
+     {
+      "i": 5,
+      "slept": 0.7
+     },
+     {
+      "i": 6,
+      "slept": 0.7
+     }
+    ]
+   },
+   "wall_s": 14.884,
+   "samples": 48,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.31,
+   "interval_max_s": 1.363,
+   "running_samples": 47,
+   "steps_seen": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 2.379,
+   "transitions": [
+    {
+     "t": 0.456,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.758,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:39",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.035,
+     "status": "running",
+     "step": 3,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:41",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 6.665,
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:44",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 9.842,
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:46",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 10.561,
+     "status": "running",
+     "step": 6,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:48",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 13.201,
+     "status": "running",
+     "step": 7,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:50",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 15.033,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_p1.json"
+  },
+  "S1_p3": {
+   "program": "s1_sequential_p3.ibl",
+   "ticket": "669154a970a864085027e4b2",
+   "run_id": "ab7b4a9d35e54d948661acafec1bc02d",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "rows": 6,
+    "items": [
+     {
+      "i": 1,
+      "slept": 0.7
+     },
+     {
+      "i": 2,
+      "slept": 0.7
+     },
+     {
+      "i": 3,
+      "slept": 0.7
+     },
+     {
+      "i": 4,
+      "slept": 0.7
+     },
+     {
+      "i": 5,
+      "slept": 0.7
+     },
+     {
+      "i": 6,
+      "slept": 0.7
+     }
+    ]
+   },
+   "wall_s": 12.283,
+   "samples": 45,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.273,
+   "interval_max_s": 0.925,
+   "running_samples": 43,
+   "steps_seen": [
+    1,
+    2,
+    5,
+    6
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 4.452,
+   "transitions": [
+    {
+     "t": 0.331,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 0.544,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.081,
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:53",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.347,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:53",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.97,
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:56",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 8.682,
+     "status": "running",
+     "step": 6,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:01",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 12.355,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S1_p3.json"
+  },
+  "S2": {
+   "program": "s2_parallel.ibl",
+   "ticket": "515a5e1ec1ca434d036aa05f",
+   "run_id": "490effb213b943078f427cdd3f924c21",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "rows": 6,
+    "items": [
+     {
+      "i": 1,
+      "slept": 0.9
+     },
+     {
+      "i": 2,
+      "slept": 0.9
+     },
+     {
+      "i": 3,
+      "slept": 0.9
+     },
+     {
+      "i": 4,
+      "slept": 0.9
+     },
+     {
+      "i": 5,
+      "slept": 0.9
+     },
+     {
+      "i": 6,
+      "slept": 0.9
+     }
+    ]
+   },
+   "wall_s": 10.89,
+   "samples": 43,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.257,
+   "interval_max_s": 0.506,
+   "running_samples": 41,
+   "steps_seen": [
+    1,
+    2,
+    5
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 4.946,
+   "transitions": [
+    {
+     "t": 0.267,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 0.522,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 0.767,
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:51:47",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.019,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:51:47",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.96,
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:51:52",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 11.043,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S2.json"
+  },
+  "S3_p1": {
+   "program": "s3_fail_midway_p1.ibl",
+   "ticket": "924e2fc6b556530fd23b9a25",
+   "run_id": "f0b28af269dc423cbda8e0b659e0bbc7",
+   "result_success": false,
+   "run_status": "interrupted",
+   "error": "Script 종료 코드 3. stderr 원문을 확인하세요.",
+   "value": null,
+   "wall_s": 7.287,
+   "samples": 29,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.242,
+   "interval_max_s": 0.264,
+   "running_samples": 28,
+   "steps_seen": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 1.531,
+   "transitions": [
+    {
+     "t": 0.585,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.257,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:06",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.038,
+     "status": "running",
+     "step": 3,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:08",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.81,
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:09",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 6.435,
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:11",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 7.372,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_p1.json"
+  },
+  "S3_p3": {
+   "program": "s3_fail_midway_p3.ibl",
+   "ticket": "d928095e73e48ef17e0eac2d",
+   "run_id": "8df8184e0950432f91b1426ce46b55a7",
+   "result_success": false,
+   "run_status": "interrupted",
+   "error": "Script 종료 코드 3. stderr 원문을 확인하세요.",
+   "value": null,
+   "wall_s": 9.224,
+   "samples": 36,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.256,
+   "interval_max_s": 0.36,
+   "running_samples": 34,
+   "steps_seen": [
+    1,
+    2,
+    5
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 4.312,
+   "transitions": [
+    {
+     "t": 0.354,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 0.714,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.209,
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:13",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.462,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:13",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.794,
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:18",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 9.323,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S3_p3.json"
+  },
+  "S4_first": {
+   "program": "s4_reuse.ibl",
+   "ticket": "ae651352ce6a3767452eea1f",
+   "run_id": "08567d604fdb4f1b900c9f6c1e944a75",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "reads": 3,
+    "lens": [
+     0,
+     0,
+     0
+    ],
+    "slept": 2.5
+   },
+   "wall_s": 4.439,
+   "samples": 16,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.283,
+   "interval_max_s": 0.871,
+   "running_samples": 14,
+   "steps_seen": [
+    1,
+    5
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 3.337,
+   "transitions": [
+    {
+     "t": 0.395,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 0.603,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.048,
+     "status": "running",
+     "step": 1,
+     "of": 0,
+     "action": "self:write",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:51:59",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.919,
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:51:59",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.633,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S4_first.json"
+  },
+  "S4_reuse": {
+   "program": "s4_reuse.ibl",
+   "ticket": "137217c7807134c130eea929",
+   "run_id": "319807a408e4421488e4f5c92b7b8c68",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "reads": 3,
+    "lens": [
+     0,
+     0,
+     0
+    ],
+    "slept": 2.5
+   },
+   "wall_s": 5.8,
+   "samples": 20,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.256,
+   "interval_max_s": 0.447,
+   "running_samples": 18,
+   "steps_seen": [
+    5
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 3.873,
+   "transitions": [
+    {
+     "t": 1.134,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 1.337,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 1.868,
+     "status": "running",
+     "step": 5,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:04",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 5.99,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S4_reuse.json"
+  },
+  "S5": {
+   "program": "s5_long_single.ibl",
+   "ticket": "ba89d25c38dd424274845e15",
+   "run_id": "12b533235f4f453eb8a96914a05e8387",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "slept": 5.0
+   },
+   "wall_s": 7.95,
+   "samples": 30,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.261,
+   "interval_max_s": 0.428,
+   "running_samples": 28,
+   "steps_seen": [
+    2
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 5.534,
+   "transitions": [
+    {
+     "t": 0.523,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 0.739,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.338,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:52:11",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 8.08,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S5.json"
+  },
+  "S6_p1": {
+   "program": "s6_each_in_fn_p1.ibl",
+   "ticket": "5915372a089f759a82abb656",
+   "run_id": "b64e9b6c9f1d4b95a49b2da6edf45c24",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "rows": 3,
+    "items": [
+     {
+      "i": 10,
+      "slept": 0.7
+     },
+     {
+      "i": 20,
+      "slept": 0.7
+     },
+     {
+      "i": 30,
+      "slept": 0.7
+     }
+    ]
+   },
+   "wall_s": 4.634,
+   "samples": 20,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.245,
+   "interval_max_s": 0.267,
+   "running_samples": 18,
+   "steps_seen": [
+    2,
+    3,
+    4
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 1.495,
+   "transitions": [
+    {
+     "t": 0.132,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 0.343,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 0.757,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:22",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 2.506,
+     "status": "running",
+     "step": 3,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:24",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 3.513,
+     "status": "running",
+     "step": 4,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:25",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.79,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_p1.json"
+  },
+  "S6_p3": {
+   "program": "s6_each_in_fn_p3.ibl",
+   "ticket": "151ba219eedb39dd3986598e",
+   "run_id": "f20c7163c78c490cacf38fb7f01a3a6a",
+   "result_success": true,
+   "run_status": "completed",
+   "error": null,
+   "value": {
+    "rows": 3,
+    "items": [
+     {
+      "i": 10,
+      "slept": 0.7
+     },
+     {
+      "i": 20,
+      "slept": 0.7
+     },
+     {
+      "i": 30,
+      "slept": 0.7
+     }
+    ]
+   },
+   "wall_s": 4.279,
+   "samples": 20,
+   "interval_target_s": 0.2,
+   "interval_mean_s": 0.23,
+   "interval_max_s": 0.261,
+   "running_samples": 18,
+   "steps_seen": [
+    2
+   ],
+   "step_monotonic": true,
+   "updated_at_monotonic": true,
+   "of_values": [
+    0
+   ],
+   "detail_seen": false,
+   "note_has_coordinate": false,
+   "max_same_updated_at_while_running_s": 3.484,
+   "transitions": [
+    {
+     "t": 0.14,
+     "status": "unknown",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    },
+    {
+     "t": 0.352,
+     "status": "running",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 0.782,
+     "status": "running",
+     "step": 2,
+     "of": 0,
+     "action": "self:script",
+     "row": null,
+     "rows": null,
+     "updated_at": "2026-10-27T09:53:27",
+     "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+    },
+    {
+     "t": 4.518,
+     "status": "done(envelope)",
+     "step": null,
+     "of": null,
+     "action": null,
+     "row": null,
+     "rows": null,
+     "updated_at": null,
+     "note": null
+    }
+   ],
+   "raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw/S6_p3.json"
+  }
+ },
+ "verdicts": {
+  "1_call_number_no_regression": {
+   "verdict": "통과(관측 범위 안)",
+   "evidence": {
+    "S1_p1": {
+     "steps_seen": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+     ],
+     "monotonic": true,
+     "samples": 48,
+     "mean_interval_s": 0.31
+    },
+    "S1_p3": {
+     "steps_seen": [
+      1,
+      2,
+      5,
+      6
+     ],
+     "monotonic": true,
+     "samples": 45,
+     "mean_interval_s": 0.273
+    },
+    "S2": {
+     "steps_seen": [
+      1,
+      2,
+      5
+     ],
+     "monotonic": true,
+     "samples": 43,
+     "mean_interval_s": 0.257
+    },
+    "S3_p1": {
+     "steps_seen": [
+      2,
+      3,
+      4,
+      5
+     ],
+     "monotonic": true,
+     "samples": 29,
+     "mean_interval_s": 0.242
+    },
+    "S3_p3": {
+     "steps_seen": [
+      1,
+      2,
+      5
+     ],
+     "monotonic": true,
+     "samples": 36,
+     "mean_interval_s": 0.256
+    },
+    "S4_first": {
+     "steps_seen": [
+      1,
+      5
+     ],
+     "monotonic": true,
+     "samples": 16,
+     "mean_interval_s": 0.283
+    },
+    "S4_reuse": {
+     "steps_seen": [
+      5
+     ],
+     "monotonic": true,
+     "samples": 20,
+     "mean_interval_s": 0.256
+    },
+    "S5": {
+     "steps_seen": [
+      2
+     ],
+     "monotonic": true,
+     "samples": 30,
+     "mean_interval_s": 0.261
+    },
+    "S6_p1": {
+     "steps_seen": [
+      2,
+      3,
+      4
+     ],
+     "monotonic": true,
+     "samples": 20,
+     "mean_interval_s": 0.245
+    },
+    "S6_p3": {
+     "steps_seen": [
+      2
+     ],
+     "monotonic": true,
+     "samples": 20,
+     "mean_interval_s": 0.23
+    }
+   },
+   "notes": [
+    "실행 10건·표본 307개에서 step 역행 0건, updated_at 역행 0건.",
+    "step 은 프로그램 호출 번호(write=1, 이후 호출마다 +1)로 보이며 of 는 항상 0 — 전체 수(분모)는 보고되지 않는다.",
+    "병렬(S1_p3·S2·S3_p3·S6_p3)에서는 step 이 2→5 처럼 건너뛴다: 동시에 시작한 호출의 번호를 한 표본 사이에 지나친 것. 표본 간격(평균 약 0.25초)보다 짧은 전이는 미관측이며, 그 사이의 일시적 역행 가능성은 배제하지 못했다.",
+    "병렬 실행 중 좌표는 '가장 최근에 신고한 한 호출'만 보이며 동시에 도는 나머지 호출은 표면에 없다."
+   ]
+  },
+  "2_row_number_in_1_N": {
+   "verdict": "실패 — 행 회차가 전혀 보이지 않음",
+   "evidence": {
+    "S1_p1": {
+     "detail_seen": false,
+     "running_samples": 47
+    },
+    "S1_p3": {
+     "detail_seen": false,
+     "running_samples": 43
+    },
+    "S2": {
+     "detail_seen": false,
+     "running_samples": 41
+    },
+    "S3_p1": {
+     "detail_seen": false,
+     "running_samples": 28
+    },
+    "S3_p3": {
+     "detail_seen": false,
+     "running_samples": 34
+    },
+    "S4_first": {
+     "detail_seen": false,
+     "running_samples": 14
+    },
+    "S4_reuse": {
+     "detail_seen": false,
+     "running_samples": 18
+    },
+    "S5": {
+     "detail_seen": false,
+     "running_samples": 28
+    },
+    "S6_p1": {
+     "detail_seen": false,
+     "running_samples": 18
+    },
+    "S6_p3": {
+     "detail_seen": false,
+     "running_samples": 18
+    }
+   },
+   "notes": [
+    "each 를 쓰는 S1(6행)·S2(6행)·S3(6행)·S6(함수 안 3행) 모두 running 표본 전부에서 progress.detail 이 없음 → row/rows 미보고. 1..N 범위·전체 수 일치는 판정 대상이 없어 검증 불가.",
+    "코드상 ticket_beat 가 detail{row,rows} 를 병합하고 _progress_note 가 'each r/N행' 을 그리도록 되어 있으나, 이번 실행에서 그 신고는 한 번도 도착하지 않았다.",
+    "대신 step 번호가 행마다 하나씩 올라(S1_p1: 2..7 = 6행) 간접적으로 몇 번째 호출인지는 추정 가능하나, 이는 행 회차 표시가 아니다."
+   ]
+  },
+  "3_failure_point_kept_in_result": {
+   "verdict": "통과(결과 봉투 기준) / 진행 좌표는 결말에서 사라짐",
+   "evidence": {
+    "S3_p1": {
+     "code": "SCRIPT_EXIT",
+     "kind": "partial",
+     "source_span": {
+      "source_hash": "cacefa90481a6539e37b83ec2828f2cd48a1111e44c95d3e20ddc75421a914ac",
+      "start": 127,
+      "end": 195,
+      "line": 3,
+      "column": 58
+     },
+     "coverage": [
+      "ok",
+      "ok",
+      "ok",
+      "failed",
+      "pending",
+      "pending"
+     ],
+     "errors_keys(0기반)": [
+      "3"
+     ],
+     "partial_items": [
+      1,
+      2,
+      3
+     ],
+     "run_status": "interrupted",
+     "last_running_coordinate": {
+      "t": 6.435,
+      "status": "running",
+      "step": 5,
+      "of": 0,
+      "action": "self:script",
+      "row": null,
+      "rows": null,
+      "updated_at": "2026-10-27T09:53:11",
+      "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+     }
+    },
+    "S3_p3": {
+     "code": "SCRIPT_EXIT",
+     "kind": "partial",
+     "source_span": {
+      "source_hash": "94579c707d7952d9130cb8d327f321df241b0406d4649350c1d6d7af697c8682",
+      "start": 127,
+      "end": 195,
+      "line": 3,
+      "column": 58
+     },
+     "coverage": [
+      "ok",
+      "ok",
+      "ok",
+      "failed",
+      "ok",
+      "ok"
+     ],
+     "errors_keys(0기반)": [
+      "3"
+     ],
+     "partial_items": [
+      1,
+      2,
+      3,
+      5,
+      6
+     ],
+     "run_status": "interrupted",
+     "last_running_coordinate": {
+      "t": 5.794,
+      "status": "running",
+      "step": 5,
+      "of": 0,
+      "action": "self:script",
+      "row": null,
+      "rows": null,
+      "updated_at": "2026-10-27T09:53:18",
+      "note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+     }
+    }
+   },
+   "notes": [
+    "두 실행 모두 결말(실행 응답과 done 후 recover 봉투가 동일)에 SCRIPT_EXIT, 소스 위치 line 3 col 58, coverage[3]='failed'(=항목 4), errors 키 '3', stderr '의도된 실패: 항목 4' 가 남았다.",
+    "p1 은 실패 뒤 행 5·6 이 pending(미실행), p3 은 5·6 이 ok — 동시 실행분은 완료되어 partial 에 보존. 실패를 성공으로 덮지 않음(success:false, run_status interrupted).",
+    "단 ticket_finish 가 기록을 envelope 로 덮어써 done 이후 recover 에는 progress(step/action/updated_at)가 없다 — 마지막 진행 좌표(p1: step 5 self:script)는 결말에 남지 않고, 실패 지점은 diagnostic 으로만 남는다."
+   ]
+  },
+  "4_reuse_rerun_same_progress": {
+   "verdict": "미확인 — 재사용이 실제로 일어나지 않아 재사용 진행을 볼 수 없었음 (새 읽기 호출 0 조건 불충족)",
+   "evidence": {
+    "first": {
+     "run_id": "08567d604fdb4f1b900c9f6c1e944a75",
+     "steps_seen": [
+      1,
+      5
+     ],
+     "continuation.read_calls": 0,
+     "recordings": [
+      "self:write",
+      "self:read",
+      "self:read",
+      "self:read",
+      "self:script"
+     ],
+     "samples": 16
+    },
+    "reuse": {
+     "run_id": "319807a408e4421488e4f5c92b7b8c68",
+     "reuse_of": "08567d604fdb4f1b900c9f6c1e944a75",
+     "reused_calls": 0,
+     "candidates": 0,
+     "skipped": [
+      {
+       "action": "self:read",
+       "line": 3,
+       "reason": "no_matching_receipt"
+      },
+      {
+       "action": "self:read",
+       "line": 4,
+       "reason": "no_matching_receipt"
+      },
+      {
+       "action": "self:read",
+       "line": 5,
+       "reason": "no_matching_receipt"
+      }
+     ],
+     "recordings": [
+      "self:write",
+      "self:read",
+      "self:read",
+      "self:read",
+      "self:script"
+     ],
+     "steps_seen": [
+      5
+     ],
+     "samples": 20
+    }
+   },
+   "notes": [
+    "reuse:{run_id:첫 실행} 로 실행했으나 reused_calls=0, 세 self:read 모두 skipped reason=no_matching_receipt → 읽기 3회를 새로 수행. '새 읽기 호출 0' 은 달성되지 않았다.",
+    "첫 실행의 continuation.read_calls 가 0 이었다 — 재사용 가능한 읽기 영수증이 처음부터 남지 않은 것으로 보인다(원인 가설: 같은 프로그램의 효과 미상 self:script·쓰기 때문에 읽기가 재사용 후보에서 빠짐. 코드로 확인하지 않음).",
+    "표면 모양만 보면 두 실행 모두 마지막 좌표 step 5 self:script 로 같았고 step 2~4(읽기)는 둘 다 표본에 잡히지 않았다(읽기가 표본 간격보다 빠름). 재사용 시 번호가 유지·건너뛰기 되는지는 재사용이 0건이라 판정 불가."
+   ]
+  },
+  "5_long_single_step_last_motion_frozen": {
+   "verdict": "예 — 얼어 있음(하트비트 없음)",
+   "evidence": {
+    "S5": {
+     "max_same_updated_at_while_running_s": 5.534,
+     "wall_s": 7.95,
+     "samples": 30,
+     "transitions": [
+      [
+       0.523,
+       null,
+       null,
+       null
+      ],
+      [
+       0.739,
+       null,
+       null,
+       null
+      ],
+      [
+       2.338,
+       2,
+       "self:script",
+       "2026-10-27T09:52:11"
+      ],
+      [
+       8.08,
+       null,
+       null,
+       null
+      ]
+     ]
+    },
+    "S5_probe": {
+     "max_same_updated_at_while_running_s": 6.019,
+     "wall_s": 7.068,
+     "samples": 26,
+     "transitions": [
+      [
+       0.204,
+       null,
+       null,
+       null
+      ],
+      [
+       0.925,
+       1,
+       "self:write",
+       "2026-10-27T09:51:20"
+      ],
+      [
+       1.177,
+       2,
+       "self:script",
+       "2026-10-27T09:51:20"
+      ],
+      [
+       7.165,
+       null,
+       null,
+       null
+      ]
+     ]
+    }
+   },
+   "notes": [
+    "S5(5초 수면 한 호출) 동안 step 2 self:script, updated_at 이 같은 초에 고정된 채 약 5.5초(표본 기준) 유지 → 단계 시작 시각만 보이고 진행 중 박동은 없다. probe 실행도 동일(약 6.0초 고정).",
+    "S4(2.5초)·S6_p3 등 다른 긴 호출에서도 같은 모양. 정지와 느림을 이 필드만으로 구별할 수 없다.",
+    "_progress_note 에는 '변하지 않아도 긴 단계가 실행 중일 수 있다' 는 경고가 있으나 아래 (6)과 같이 그 문장 자체가 표시되지 않았다."
+   ]
+  },
+  "6_note_contains_coordinate": {
+   "verdict": "실패 — note 에 좌표가 한 번도 들어가지 않음",
+   "evidence": {
+    "S1_p1": false,
+    "S1_p3": false,
+    "S2": false,
+    "S3_p1": false,
+    "S3_p3": false,
+    "S4_first": false,
+    "S4_reuse": false,
+    "S5": false,
+    "S6_p1": false,
+    "S6_p3": false
+   },
+   "observed_note": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요.",
+   "notes": [
+    "progress 가 step=2 action=self:script 를 담고 있는 표본에서도 note 는 좌표 없는 일반 문장('실행이 아직 돌고 있습니다 — … wait 초(≤840)를 주세요').",
+    "원인(코드 확인): _progress_note 는 step 과 of 가 모두 참일 때만 좌표를 쓰는데 엔진이 of=0 을 신고한다. detail(row/rows)도 없어 회차 조각도 빠진다 → 결과적으로 좌표·회차·마지막 움직임이 모두 note 에서 사라진다."
+   ]
+  }
+ },
+ "other_observations": [
+  "실행 직후 첫 recover 표본이 status 'unknown'(기록 없음)인 경우가 10건 중 8건 — ticket_begin 이 실행 스레드에서 늦게 기록되어, 제출 직후 회수자는 '만료 또는 미탑재'로 보는 창이 약 0.1~1초 존재.",
+  "running 이지만 progress 가 아직 없는 구간(약 0.2~2초)이 매 실행 시작에 있다."
+ ],
+ "limits": [
+  "표본 간격 목표 0.2초(실측 평균 약 0.25초, HTTP 왕복 포함). 이보다 짧은 전이는 관측하지 못했다.",
+  "S1·S3·S6 은 원문이 아니라 parallel 리터럴 사본으로 실행했다.",
+  "각 조건 1회 실행. 반복 실행에서의 변동은 미확인."
+ ],
+ "criteria_check": {
+  "C1_six_programs_run_with_progress_samples": "S1(p1·p3)·S2·S3(p1·p3)·S4(첫·reuse)·S5·S6(p1·p3) 실행·표본 기록. S1/S3/S6 원문은 거절되어 사본 사용.",
+  "C2_verdicts_1_to_6": "작성",
+  "C3_S4_reuse_new_reads_0": "reuse 실행 수행, 새 읽기 호출 3(0 아님) — 불충족으로 기록",
+  "C4_saved_and_reread": "아래 저장 후 재파싱으로 확인"
+ }
+}

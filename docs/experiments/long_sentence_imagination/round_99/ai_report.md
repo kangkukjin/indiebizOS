@@ -1,0 +1,32 @@
+# 독립 AI 응답(ep5556, 세션 e81b7de7, 2026-10-27 09:49:45~09:56:22)
+
+진행 표면은 지금 어느 낱말을 실행 중인지만 정직하게 보여 줍니다. 몇 번째 행인지는 아예 보이지 않고, 마지막 움직임 시각은 긴 단계 동안 얼어 있습니다. 결과는 `report.json`에 저장했고, 다시 읽어 JSON으로 파싱되는 것까지 확인했습니다.
+
+**실행 방법:** 각 프로그램을 `POST /ibl/execute`에 ticket을 붙여 띄우고, 같은 ticket으로 `POST /ibl/recover`를 0.2초 간격으로 조회했습니다(실측 평균 0.23~0.31초). 실행 10건에서 표본 307개를 모았고, 출처는 training으로 표시했습니다.
+
+**S1·S3·S6는 원문 그대로는 돌지 않았습니다.** 실행 전 검사에서 거절됐습니다.
+- S1·S3: `parallel:$병렬` → `STATIC_OPTION`(parallel은 리터럴이어야 함)
+- S6: 함수 안의 `$병렬`이 정의되지 않음 → `UNBOUND`
+
+거절 기록은 `raw/*_orig_*.json`에 남겼습니다. 판정은 `parallel`만 1과 3으로 바꾼 사본(`ai_out/variants/`)으로 실행한 결과입니다.
+
+| 판정 | 결과 | 근거 |
+|---|---|---|
+| (1) 호출 번호 역행 | 통과(관측 범위 안) | 10건 모두 step 역행 0건, updated_at 역행 0건. 다만 전체 수 `of`가 항상 0이라 분모가 없습니다. 병렬 실행에서는 2→5처럼 건너뛰고, 동시에 도는 호출 중 하나만 보입니다. 표본 간격보다 짧은 전이는 보지 못했습니다. |
+| (2) 행 번호 1..N | 실패: 행 회차가 아예 안 보임 | each를 쓰는 S1·S2·S3·S6의 running 표본 전부에 `detail`(row/rows)이 없었습니다. 그래서 범위와 전체 수는 검증할 대상이 없었습니다. |
+| (3) S3 실패 지점 | 통과(결과 봉투 기준) | 결말에 `SCRIPT_EXIT`, 소스 위치(3행 58열), `coverage[3]="failed"`(항목 4), stderr "의도된 실패: 항목 4"가 남았습니다. 병렬 3에서는 5·6행 결과도 보존됐습니다. 다만 끝난 뒤의 회수에는 마지막 진행 좌표(step/action)가 남지 않습니다. |
+| (4) S4 재사용 재실행 | 미확인. "새 읽기 호출 0"은 불충족 | 재사용 실행에서 `reused_calls:0`이었고, 읽기 3회가 모두 `no_matching_receipt`로 새로 수행됐습니다. 첫 실행의 `read_calls`도 0이었습니다. 두 실행 모두 마지막 좌표는 step 5 `self:script`로 같았지만, 재사용이 실제로 일어나지 않아 재사용 시의 진행 모양은 판정할 수 없습니다. |
+| (5) S5 마지막 움직임 | 예, 얼어 있음 | step 2 `self:script` 동안 updated_at이 약 5.5초(시험 실행에서는 6.0초) 고정됐습니다. 하트비트가 없어 멈춤과 느림을 구별할 수 없습니다. |
+| (6) note의 좌표 | 실패 | note는 매번 좌표 없는 일반 문장("실행이 아직 돌고 있습니다…")이었습니다. 코드를 보니 step과 `of`가 모두 있어야 좌표를 쓰는데 `of=0`이 들어오고, 행 정보도 없습니다. |
+
+**그 밖의 관측**
+- 제출 직후 첫 회수는 10건 중 8건이 `unknown`(기록 없음)이었습니다. 실행 시작 기록이 늦게 쓰여, 약 0.1~1초 동안 "만료 또는 미탑재"로 보입니다.
+- S4 프로그램은 읽기 결과에서 `content`를 찾는데 실제 필드는 `.text`라서 `lens`가 `[0,0,0]`으로 나왔습니다. 진행 판정에는 영향이 없습니다.
+- 각 조건은 1회씩만 실행했고, 원인 설명은 코드를 읽어 세운 가설입니다. 코드는 수정하지 않았습니다.
+
+임시 파일은 모두 `ai_out/` 아래에 두었습니다(관측 스크립트, 사본, 원자료, 보고서 생성 스크립트).
+
+파일:
+- [report.json](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/report.json)
+- [실행별 원자료](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/raw)
+- [observe.py](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/observe.py)

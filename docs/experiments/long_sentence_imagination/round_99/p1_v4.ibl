@@ -1,0 +1,95 @@
+#!ibl edition=2
+[def:실행]($러너경로,$요청) {
+  [try] { return [self:script]{path:$러너경로,args:$요청,timeout:200} }
+  [catch] { return {observed:false,error:$error.message,snapshots:[],final:{success:null,error:null,receipt_reused:null,coverage:null},polls:0,seconds:null,run_id:null,after_status:null} }
+}
+[def:띄우기]($러너경로,$표지,$코드,$입력,$reuse) {
+  $r=[fn:실행]{러너경로:$러너경로,요청:{op:"launch",label:$표지,code:$코드,inputs:$입력,reuse:$reuse,poll_s:0.15,timeout:120}}
+  return {label:$표지,observed:get($r,"observed",true)!=false,error:get($r,"error",null),snapshots:get($r,"snapshots",[]),final:get($r,"final",{}),
+    polls:get($r,"polls",0),seconds:get($r,"seconds",null),run_id:get($r,"run_id",null),after_status:get($r,"after_status",null),ticket:get($r,"ticket",null)}
+}
+[def:좌표판정]($snaps) {
+  $with=$snaps >> [table:filter]{where:($s)=>get($s,"step",null)!=null}
+  $dips=$with >> [table:filter]{where:($s)=>get($s,"step_prev",null)!=null and $s.step<$s.step_prev}
+  $noted=$with >> [table:filter]{where:($s)=>$s.note_has_action==true}
+  $acts=$with >> [table:dedup]{by:"action"} >> [table:each] { return $it.action }
+  $mx=$with >> [table:reduce]{init:0,step:"max(acc, step)",as:"max_step"}
+  return {snapshots:len($snaps),with_coord:len($with),dips:len($dips),monotonic:(len($with)>0 ? len($dips)==0 : null),
+    actions:$acts,max_step:get($mx,"value",null),note_has_action_any:len($noted)>0,note_has_action_all:(len($with)>0 ? len($noted)==len($with) : null)}
+}
+[def:회차판정]($snaps,$n) {
+  $rows=$snaps >> [table:filter]{where:($s)=>get($s,"row",null)!=null}
+  $dd=$rows >> [table:each] { return {row:$it.row,rows:$it.rows,label:get($it,"row_label",null)} } >> [table:dedup]{by:"row"}
+  $seen=get($dd,"items",[])
+  $bad=$seen >> [table:filter]{where:($r)=>$r.row<1 or $r.row>$n or $r.rows!=$n}
+  $mx=$seen >> [table:reduce]{init:0,step:"max(acc, row)",as:"max_row"}
+  return {any_detail:len($rows)>0,rows_seen:len($seen),rows_expected:$n,out_of_range:len($bad),max_row:get($mx,"value",null),
+    all_seen:len($seen)==$n,seen:$seen}
+}
+[def:결말판정]($r,$기대성공) {
+  $f=$r.final
+  $ok=get($f,"success",null)
+  return {success:$ok,as_expected:($ok==$기대성공),error:get($f,"error",null),coverage:get($f,"coverage",null),
+    successful_indices:get($f,"successful_indices",null),after_status:$r.after_status,seconds:$r.seconds,polls:$r.polls,
+    env_keys:get($f,"env_keys",null),reuse_info:get($f,"reuse_info",null),usage:get($f,"usage",null),receipt_reused:get($f,"receipt_reused",null),reused_calls:get($f,"reused_calls",null)}
+}
+[def:마지막]($snaps) {
+  [if:len($snaps)==0] { return null }
+  return $snaps[len($snaps)-1]
+}
+[def:얼음판정]($snaps) {
+  $with=$snaps >> [table:filter]{where:($s)=>get($s,"updated_at",null)!=null}
+  $tt=$with >> [table:dedup]{by:"updated_at"}
+  $times=get($tt,"items",[])
+  $reps=$with >> [table:reduce]{init:0,step:"acc + repeat",as:"repeats"}
+  return {running_snapshots:len($with),distinct_updated_at:len($times),repeated_polls:get($reps,"value",0),
+    frozen:(len($with)>0 ? len($times)==1 : null)}
+}
+[def:탐침판정]($표지,$r,$n,$기대성공,$fail_at) {
+  $좌표=[fn:좌표판정]{snaps:$r.snapshots}
+  $회차=[fn:회차판정]{snaps:$r.snapshots,n:$n}
+  $결말=[fn:결말판정]{r:$r,기대성공:$기대성공}
+  $last=[fn:마지막]{snaps:$r.snapshots}
+  $lastrow=($last==null ? null : get($last,"row",null))
+  $실패보존=null
+  [if:$fail_at!=null] { $실패보존={error_present:$결말.error!=null,coverage_present:$결말.coverage!=null,last_row_le_fail:($lastrow==null ? null : $lastrow<=$fail_at),last_row:$lastrow} }
+  $verdict="미검증"
+  [if:$r.observed==false] { $verdict="미검증(러너 실패)" }
+  [if:$r.observed!=false and len($r.snapshots)==0] { $verdict="미검증(스냅샷 0 — 폴링 전 종료)" }
+  [if:$r.observed!=false and len($r.snapshots)>0] {
+    $verdict=($결말.as_expected and $좌표.monotonic==true and $회차.out_of_range==0 ? "달성" : "미달")
+    [if:$n>0 and $회차.any_detail==false] { $verdict="미달(회차 detail 없음)" }
+  }
+  return {label:$표지,verdict:$verdict,coord:$좌표,rows:$회차,ending:$결말,failure:$실패보존,last_snapshot:$last,runner_error:$r.error,ticket:$r.ticket,run_id:$r.run_id}
+}
+$러너=[self:write]{path:"~turn/runner.py",content:$러너본문}
+$기본={본문:$잠들기본문}
+$s1=[fn:띄우기]{러너경로:$러너.path,표지:"S1 순차 each",코드:get($주제,"s1"),입력:$기본,reuse:null}
+$j1=[fn:탐침판정]{표지:"S1 순차 each 6행 · "+$변형,r:$s1,n:6,기대성공:true,fail_at:null}
+$s2=[fn:띄우기]{러너경로:$러너.path,표지:"S2 병렬 each",코드:get($주제,"s2"),입력:{본문:$잠들기본문},reuse:null}
+$j2=[fn:탐침판정]{표지:"S2 병렬 each 6행(parallel 3)",r:$s2,n:6,기대성공:true,fail_at:null}
+$s3=[fn:띄우기]{러너경로:$러너.path,표지:"S3 중간 실패",코드:get($주제,"s3"),입력:$기본,reuse:null}
+$j3=[fn:탐침판정]{표지:"S3 중간 실패(4행 exit 3) · "+$변형,r:$s3,n:6,기대성공:false,fail_at:4}
+$s4a=[fn:띄우기]{러너경로:$러너.path,표지:"S4 첫 실행",코드:get($주제,"s4"),입력:{본문:$잠들기본문,파일:$파일},reuse:null}
+$s4b=[fn:띄우기]{러너경로:$러너.path,표지:"S4 재사용 재실행",코드:get($주제,"s4"),입력:{본문:$잠들기본문,파일:$파일},reuse:$s4a.run_id}
+$j4a=[fn:탐침판정]{표지:"S4 첫 실행(읽기 3+잠들기)",r:$s4a,n:0,기대성공:true,fail_at:null}
+$j4b=[fn:탐침판정]{표지:"S4 재사용 재실행",r:$s4b,n:0,기대성공:true,fail_at:null}
+$재사용={reused_second:get($s4b.final,"receipt_reused",null),reused_first:get($s4a.final,"receipt_reused",null),
+  max_step_first:$j4a.coord.max_step,max_step_second:$j4b.coord.max_step,
+  same_progress:($j4a.coord.max_step==$j4b.coord.max_step),
+  reads_hidden:(get($s4b.final,"receipt_reused",null)!=null and get($s4b.final,"receipt_reused",0)>=3 and $j4a.coord.max_step==$j4b.coord.max_step)}
+$s5=[fn:띄우기]{러너경로:$러너.path,표지:"S5 긴 단일 단계",코드:get($주제,"s5"),입력:{본문:$잠들기본문},reuse:null}
+$j5=[fn:탐침판정]{표지:"S5 긴 단일 단계(잠들기 5초)",r:$s5,n:0,기대성공:true,fail_at:null}
+$얼음=[fn:얼음판정]{snaps:$s5.snapshots}
+$s6=[fn:띄우기]{러너경로:$러너.path,표지:"S6 함수 안 each",코드:get($주제,"s6"),입력:$기본,reuse:null}
+$j6=[fn:탐침판정]{표지:"S6 함수 안 each 3행 · "+$변형,r:$s6,n:3,기대성공:true,fail_at:null}
+$보고=[{section:"S1",data:$j1},{section:"S2",data:$j2},{section:"S3",data:$j3},{section:"S4a",data:$j4a},{section:"S4b",data:$j4b},
+  {section:"S4_reuse",data:$재사용},{section:"S5",data:$j5},{section:"S5_frozen",data:$얼음},{section:"S6",data:$j6}]
+$요약={variant:$변형,parallel:$병렬,S1:$j1.verdict,S2:$j2.verdict,S3:$j3.verdict,S4a:$j4a.verdict,S4b:$j4b.verdict,S5:$j5.verdict,S6:$j6.verdict,
+  rows_seen:{S1:$j1.rows.rows_seen,S2:$j2.rows.rows_seen,S3:$j3.rows.rows_seen,S6:$j6.rows.rows_seen},
+  note_has_action:{S1:$j1.coord.note_has_action_any,S5:$j5.coord.note_has_action_any},
+  reuse_hidden:$재사용.reads_hidden,s5_frozen:$얼음.frozen,s3_failure:$j3.failure}
+$wr=[self:write]{path:$보고경로,content:$보고}
+$re=[self:read]{path:$보고경로}
+$재독=len(get(get($re,"data",{}),"items",[]))
+return {saved:$보고경로,sections:len($보고),reread_sections:$재독,summary:$요약}

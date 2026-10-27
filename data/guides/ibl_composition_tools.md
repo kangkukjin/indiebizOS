@@ -127,6 +127,7 @@ stdout은 진단, 결과 파일은 값이다. 수정·재현·권한은 [Script 
 스크립트 내부나 분석 예산 밖의 승인이 불필요하다는 뜻은 아니다. 실제 승인은 실행 관문에서 결정한다.
 
 실행 응답의 `resume:{run_id}`와 동일 `code`·`inputs`를 다음 execute_ibl 호출에 보낸다.
+`run_id`는 `resume`·`continuation.reuse_args` 안에만 있고 응답 최상위 칸은 없다(2026-10-27 실측).
 완료한 도구 호출은 저장된 값으로 복원한다. 반복의 같은 인자도 서로 다른 호출로 기록한다.
 코드·입력·도구 구현이 달라지거나 외부 작업의 완료를 확인하지 못하면 재개하지 않는다.
 `RESUME_DIVERGED`의 `details.changed/fingerprints`는 변경 차원의 지문이다. 옛 기록은 `dimensions_known:false`다.
@@ -247,6 +248,7 @@ grep과 search/crawl의 결과는 Record이므로 목록 조합에는 `.items`, 
 `evidence_summary`는 내부 도구·원천 실패를 상위 실행 성공과 구분한다. 오류의 `result_ref.read_args`는 진단을 먼저 연다. 가이드 재독 대신 변경 확인은 `read_guide`의 `if_hash`, 특정 절만 재확인할 때는 `section`을 쓴다. 본문이 문맥에서 사라졌으면 전문을 다시 읽는다.
 문단 위치는 `self:grep`의 `pattern`·`context`로 찾는다.
 액션의 인자가 불명확하면 `describe`의 `callable_contract`와 `target_description`을 함께 본다.
+반환 모양도 같은 곳에서 확인한다 — 변환자마다 목록(`filter`)과 `{items,count,success}` 봉투(`dedup`)가 다르고, 봉투에 `len()`을 쓰면 행 수가 아니라 키 수다(2026-10-27 실측).
 legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_description_edition: 1`을 표시해 새 판본 조회에서 제외한다.
 실패의 `diagnostic.details`에 사용 예시·허용 값·hint가 있으면 소스 탐색 전에 이를 확인한다.
 

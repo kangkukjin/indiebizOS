@@ -1,0 +1,9 @@
+긴 IBL 실행이 도는 동안 표면이 "지금 어느 낱말을 실행 중인가·몇 번째 행인가·마지막 움직임이 언제인가"를 정직하게 보여 주는지 확인해 줘.
+시험 프로그램 여섯 편이 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/subjects/ 에 있어
+(README.md 에 입력 설명, sleeper.py 는 잠들기 도우미, fixture.txt 는 S4 가 읽을 파일). 각 프로그램을 실제로 실행하고, 도는 동안 회수 표면(/ibl/recover 의 progress)이
+보고한 좌표(step/action)·회차(detail 의 row/rows)·마지막 움직임(updated_at)의 흐름을 기록해.
+판정할 것: (1) 좌표의 호출 번호가 역행하지 않는가 (2) 반복의 행 번호가 1..N 범위이고 전체 수가 맞는가 — 행 회차가 아예 안 보이면 그것도 적어 (3) 중간 실패(S3)의 실패 지점이 결말에 남는가
+(4) 같은 프로그램의 재사용 재실행(S4 를 reuse:{run_id} 로 두 번째 실행, 새 읽기 호출 0)이 첫 실행과 같은 진행으로 보이는가 (5) 긴 단일 단계(S5)의 "마지막 움직임"이 얼어 있는가
+(6) 사람이 읽는 한 줄(note)에 좌표가 들어 있는가. 확인할 수 없는 것은 미확인으로 남겨.
+결과는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-27_99회차/ai_out/report.json 에 JSON 으로 저장한 뒤 다시 읽어 확인해.
+다른 실행자의 trainer/runs/docs 폴더나 정답은 참조하지 마. 네 자신의 직전 결과·중간 참조는 재사용해도 돼.

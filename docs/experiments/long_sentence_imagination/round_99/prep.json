@@ -1,0 +1,28 @@
+{
+ "round": 99,
+ "started_at": "2026-10-27 09:23:14",
+ "deadline": "2026-10-27 10:23:14",
+ "budget_min": 60,
+ "format": "이음새 입장 회차 — 10-26 `6e312e3c` IBL 액션 진행→채팅 표면(progress sink·conversation_turns.progress) 첫 접촉. 전체 IBL 1편(탐침 7종 연결)+기본 변형(병렬 each)+독립 AI 1회(채팅 세션 표면, 표식 없음)",
+ "head": "c8e1f6ce fix: 98회차 수리 검증기의 판본·범위 대조를 바로잡음",
+ "dirty": [
+  "M data/guide_db.json",
+  " M data/guides/cloudflare.md",
+  " M frontend/i18n/catalog.json",
+  " M frontend/i18n/remote.json",
+  " M frontend/i18n/translations.json",
+  " M frontend/i18n/xray.json"
+ ],
+ "backend": {
+  "phase": "ACTIVE",
+  "generation": "e00fc9bc2ed1e84464d9122a5917a8f1",
+  "last_outcome": "restarted"
+ },
+ "episode_max_before": 5555,
+ "system_ai": {
+  "provider": "claude_code",
+  "model": "opus"
+ },
+ "baseline_tests": "test_progress_to_chat + test_each_progress_visibility 통과(09:27)",
+ "prep_written_at": "09:30:20"
+}

@@ -1,0 +1,612 @@
+[
+  {
+    "section": "S1",
+    "data": {
+      "label": "S1 순차 each 6행 · 기본",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 7,
+        "with_coord": 6,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:script"
+        ],
+        "max_step": 7,
+        "note_has_action_any": false,
+        "note_has_action_all": false
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 6,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 11.61,
+        "polls": 67,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 193, \"rows\": 6, \"elapsed_ms\": 10979, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:127:185\", \"steps\": 102, \"location\": {\"source_hash\": \"a5e88a35a11ee9dac48a15039a3902221adc961edfc3225187965aae87c8f4f2\", \"start\": 127, \"end\": 185, \"line\": 3, \"column\": 58}}, {\"node_id\": \"call:93:187\", \"steps\": 7, \"location\": {\"source_hash\": \"a5e88a35a11ee9dac48a15039a390222",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 9.77,
+        "idx": 7,
+        "step_prev": 6,
+        "step": 7,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-27T09:50:54",
+        "has_progress": true,
+        "repeat": 10,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "2cbc67ef17ad42fabdfda2fafb6b4e42",
+      "run_id": "0d3bb723043d45a08846bebce8cef39e"
+    }
+  },
+  {
+    "section": "S2",
+    "data": {
+      "label": "S2 병렬 each 6행(parallel 3)",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 4,
+        "with_coord": 3,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:write",
+          "self:script"
+        ],
+        "max_step": 5,
+        "note_has_action_any": false,
+        "note_has_action_all": false
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 6,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 10.41,
+        "polls": 64,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 345, \"rows\": 6, \"elapsed_ms\": 10147, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:127:185\", \"steps\": 254, \"location\": {\"source_hash\": \"9804435f9d0aaaeea8d31157237025abd22bb112e6451955affc922140f8198d\", \"start\": 127, \"end\": 185, \"line\": 3, \"column\": 58}}, {\"node_id\": \"field:146:154\", \"steps\": 6, \"location\": {\"source_hash\": \"9804435f9d0aaaeea8d31157237025",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 5.6,
+        "idx": 4,
+        "step_prev": 2,
+        "step": 5,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-27T09:51:02",
+        "has_progress": true,
+        "repeat": 29,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "6f404991d6d34e3294cc3427683dfd59",
+      "run_id": "3ab59e1d698b401ebdfe348bb190155a"
+    }
+  },
+  {
+    "section": "S3",
+    "data": {
+      "label": "S3 중간 실패(4행 exit 3) · 기본",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 5,
+        "with_coord": 4,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:script"
+        ],
+        "max_step": 5,
+        "note_has_action_any": false,
+        "note_has_action_all": false
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 6,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": false,
+        "as_expected": true,
+        "error": "Script 종료 코드 3. stderr 원문을 확인하세요.",
+        "coverage": [
+          "ok",
+          "ok",
+          "ok",
+          "failed",
+          "pending",
+          "pending"
+        ],
+        "successful_indices": [
+          0,
+          1,
+          2
+        ],
+        "after_status": "done",
+        "seconds": 7.04,
+        "polls": 40,
+        "env_keys": [
+          "continuation",
+          "diagnostic",
+          "edition",
+          "error",
+          "evidence",
+          "executed",
+          "partial_wire",
+          "plan_hash",
+          "recordings",
+          "request_inputs",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 121, \"rows\": 4, \"elapsed_ms\": 6811, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:127:195\", \"steps\": 55, \"location\": {\"source_hash\": \"cacefa90481a6539e37b83ec2828f2cd48a1111e44c95d3e20ddc75421a914ac\", \"start\": 127, \"end\": 195, \"line\": 3, \"column\": 58}}, {\"node_id\": \"call:93:197\", \"steps\": 5, \"location\": {\"source_hash\": \"cacefa90481a6539e37b83ec2828f2cd48",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": {
+        "error_present": true,
+        "coverage_present": true,
+        "last_row_le_fail": null,
+        "last_row": null
+      },
+      "last_snapshot": {
+        "t": 6.01,
+        "idx": 5,
+        "step_prev": 4,
+        "step": 5,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-27T09:51:14",
+        "has_progress": true,
+        "repeat": 4,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "edfb7a3b74294d89955d4a7558a87dbd",
+      "run_id": "b62466a0a1d544c2a33fcdeb14ccadcd"
+    }
+  },
+  {
+    "section": "S4a",
+    "data": {
+      "label": "S4 첫 실행(읽기 3+잠들기)",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 3,
+        "with_coord": 2,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:write",
+          "self:script"
+        ],
+        "max_step": 5,
+        "note_has_action_any": false,
+        "note_has_action_all": false
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 0,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": true,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 3.91,
+        "polls": 23,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 109, \"rows\": 0, \"elapsed_ms\": 3574, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:148:206\", \"steps\": 50, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e\", \"start\": 148, \"end\": 206, \"line\": 6, \"column\": 4}}, {\"node_id\": \"pure_call:229:254\", \"steps\": 2, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f6",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.82,
+        "idx": 3,
+        "step_prev": 1,
+        "step": 5,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-27T09:51:16",
+        "has_progress": true,
+        "repeat": 17,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "a51b8a284c9e485f9880859a87076080",
+      "run_id": "cef7e38e5c064d80a16e367d11851339"
+    }
+  },
+  {
+    "section": "S4b",
+    "data": {
+      "label": "S4 재사용 재실행",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 3,
+        "with_coord": 2,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:read",
+          "self:script"
+        ],
+        "max_step": 5,
+        "note_has_action_any": false,
+        "note_has_action_all": false
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 0,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": true,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 4.64,
+        "polls": 23,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "reuse",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": "{\"run_id\": \"cef7e38e5c064d80a16e367d11851339\", \"reused_calls\": 0, \"candidates\": 0, \"skipped\": [{\"action\": \"self:read\", \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e\", \"start\": 73, \"end\": 94, \"line\": 3, \"column\": 4}, \"reason\": \"no_matching_receipt\", \"ca",
+        "usage": "{\"steps\": 109, \"rows\": 0, \"elapsed_ms\": 3870, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:148:206\", \"steps\": 50, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f66c1e9c9aa932132f09dfa42403d3cba3c9e\", \"start\": 148, \"end\": 206, \"line\": 6, \"column\": 4}}, {\"node_id\": \"pure_call:229:254\", \"steps\": 2, \"location\": {\"source_hash\": \"b2b7e765e38f8614544a8cfa6b6f6",
+        "receipt_reused": null,
+        "reused_calls": 0
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 1.5,
+        "idx": 3,
+        "step_prev": 2,
+        "step": 5,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-27T09:51:22",
+        "has_progress": true,
+        "repeat": 16,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "18dfa3d48b774c56ab5670ca209208b2",
+      "run_id": "cef7e38e5c064d80a16e367d11851339"
+    }
+  },
+  {
+    "section": "S4_reuse",
+    "data": {
+      "reused_second": null,
+      "reused_first": null,
+      "max_step_first": 5,
+      "max_step_second": 5,
+      "same_progress": true,
+      "reads_hidden": false
+    }
+  },
+  {
+    "section": "S5",
+    "data": {
+      "label": "S5 긴 단일 단계(잠들기 5초)",
+      "verdict": "달성",
+      "coord": {
+        "snapshots": 2,
+        "with_coord": 1,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:script"
+        ],
+        "max_step": 2,
+        "note_has_action_any": false,
+        "note_has_action_all": false
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 0,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": true,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 6.43,
+        "polls": 38,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 111, \"rows\": 0, \"elapsed_ms\": 6042, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:73:132\", \"steps\": 93, \"location\": {\"source_hash\": \"0f25ddc4c6379ce0a825453529f559806fdeb04059ff2ec4a39fc58ac2ef0a2a\", \"start\": 73, \"end\": 132, \"line\": 3, \"column\": 4}}, {\"node_id\": \"bind:16:69\", \"steps\": 1, \"location\": {\"source_hash\": \"0f25ddc4c6379ce0a825453529f559806fdeb0",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 0.66,
+        "idx": 2,
+        "step_prev": null,
+        "step": 2,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-27T09:51:27",
+        "has_progress": true,
+        "repeat": 33,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "6b6cb5edfde74b1e8d61d4182f0e9543",
+      "run_id": "ace3af705e58490695d5e73fbc029d55"
+    }
+  },
+  {
+    "section": "S5_frozen",
+    "data": {
+      "running_snapshots": 1,
+      "distinct_updated_at": 1,
+      "repeated_polls": 33,
+      "frozen": true
+    }
+  },
+  {
+    "section": "S6",
+    "data": {
+      "label": "S6 함수 안 each 3행 · 기본",
+      "verdict": "미달(회차 detail 없음)",
+      "coord": {
+        "snapshots": 5,
+        "with_coord": 4,
+        "dips": 0,
+        "monotonic": true,
+        "actions": [
+          "self:write",
+          "self:script"
+        ],
+        "max_step": 4,
+        "note_has_action_any": false,
+        "note_has_action_all": false
+      },
+      "rows": {
+        "any_detail": false,
+        "rows_seen": 0,
+        "rows_expected": 3,
+        "out_of_range": 0,
+        "max_row": 0,
+        "all_seen": false,
+        "seen": []
+      },
+      "ending": {
+        "success": true,
+        "as_expected": true,
+        "error": null,
+        "coverage": null,
+        "successful_indices": null,
+        "after_status": "done",
+        "seconds": 3.96,
+        "polls": 25,
+        "env_keys": [
+          "continuation",
+          "edition",
+          "evidence",
+          "executed",
+          "plan_hash",
+          "recordings",
+          "resume",
+          "resumed",
+          "run_status",
+          "source_complete",
+          "source_map",
+          "success",
+          "task_ref",
+          "usage",
+          "value",
+          "value_wire"
+        ],
+        "reuse_info": null,
+        "usage": "{\"steps\": 112, \"rows\": 3, \"elapsed_ms\": 3774, \"limits\": {\"steps\": 100000, \"rows\": 10000}, \"steps_by_span\": [{\"node_id\": \"call:89:142\", \"steps\": 53, \"location\": {\"source_hash\": \"911f804dbd5683c9077a58d03c41a5fa9588fb9b456d68c89e83e4232b1e817f\", \"start\": 89, \"end\": 142, \"line\": 3, \"column\": 58}}, {\"node_id\": \"call:55:144\", \"steps\": 4, \"location\": {\"source_hash\": \"911f804dbd5683c9077a58d03c41a5fa9588",
+        "receipt_reused": null,
+        "reused_calls": null
+      },
+      "failure": null,
+      "last_snapshot": {
+        "t": 2.85,
+        "idx": 5,
+        "step_prev": 3,
+        "step": 4,
+        "of": 0,
+        "action": "self:script",
+        "detail": null,
+        "row": null,
+        "rows": null,
+        "row_label": null,
+        "updated_at": "2026-10-27T09:51:36",
+        "has_progress": true,
+        "repeat": 6,
+        "note_has_action": false,
+        "note_head": "실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요. 셸 sleep 폴링은 쓰지 마세요."
+      },
+      "runner_error": null,
+      "ticket": "7cb08199f3534de4878ed7ead3428bca",
+      "run_id": "2a3a80976cb948e49b5b9668d989d5ce"
+    }
+  }
+]

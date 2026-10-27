@@ -1,0 +1,41 @@
+{
+ "repro": "2026-10-27 수리 후 — l99_1_2_repro.json 과 같은 순서(spill 함수 단위)",
+ "after_beat": {
+  "edition": 2,
+  "resume": {
+   "run_id": "r-after"
+  },
+  "plan_hash": "h",
+  "updated_at": "2026-10-27T14:08:52",
+  "step": 1,
+  "of": 0,
+  "action": "self:write",
+  "detail": {
+   "row": 1,
+   "rows": 6,
+   "row_label": "1"
+  }
+ },
+ "after_action_report": {
+  "edition": 2,
+  "resume": {
+   "run_id": "r-after"
+  },
+  "plan_hash": "h",
+  "updated_at": "2026-10-27T14:08:52",
+  "step": 2,
+  "of": 0,
+  "action": "self:script",
+  "detail": {
+   "row": 1,
+   "rows": 6,
+   "row_label": "1"
+  }
+ },
+ "detail_survives_action_report": true,
+ "handle_survives_action_report": true,
+ "note_after_action": "실행이 아직 돌고 있습니다 — step 2 self:script · each 1/6행(1) 진행 중(마지막 움직임 2026-10-27T14:08:52). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요.",
+ "note_mentions_action_with_of0": true,
+ "detail_cleared_outside_each": true,
+ "note_with_of_nonzero": "실행이 아직 돌고 있습니다 — step 2/5 self:script 진행 중(마지막 움직임 x). 이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. 끝날 때까지 기다리려면 같은 회수에 wait 초(≤840)를 주세요 — 셸 sleep 폴링은 쓰지 마세요."
+}

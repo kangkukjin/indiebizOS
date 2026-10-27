@@ -147,6 +147,173 @@ def test_끝난_티켓은_진행이_안_덮인다():
         _cleanup(t)
 
 
+# ---------------------------------------------------------------------------------------------
+# 2026-10-27 긴문장 99회차 — 회수 티켓 표면에서 each 회차가 전무(L99-1)·note 에 좌표 없음(L99-2)·
+# 제출 직후 unknown 창(L99-5). 아래는 spill 함수 단위 + **실 Runtime 과 티켓의 교차** 시험 — 종전엔 이 파일이
+# spill 만, test_progress_to_chat 이 버스만 봐서 교차점이 없었다.
+
+
+def test_좌표_신고는_회차를_동봉하고_손잡이를_보존한다():
+    """L99-1 — 좌표 갱신이 beat 의 회차를 지우지 않고, each 밖 좌표는 옛 행을 남기지 않으며, 실행 손잡이는 산다."""
+    t = _fresh()
+    try:
+        ticket_progress(t, {"edition": 2, "resume": {"run_id": "r1"}, "plan_hash": "h"})   # 손잡이(announce)
+        ticket_progress(t, {"step": 1, "of": 0, "action": "self:write"})
+        ticket_beat(t, {"row": 2, "rows": 6, "row_label": "2"})
+        ticket_progress(t, {"step": 2, "of": 0, "action": "self:script", "detail": {"row": 2, "rows": 6, "row_label": "2"}})
+        p = _progress(t)
+        assert p["step"] == 2 and p["action"] == "self:script", p
+        assert p["detail"] == {"row": 2, "rows": 6, "row_label": "2"}, "행 안 액션 좌표가 회차를 지웠다"
+        assert p["resume"] == {"run_id": "r1"} and p["plan_hash"] == "h", "좌표 신고가 실행 손잡이를 지웠다"
+        ticket_progress(t, {"step": 3, "of": 0, "action": "self:read"})      # each 밖으로 나간 좌표
+        p = _progress(t)
+        assert "detail" not in p, "each 가 끝났는데 옛 행이 남았다"
+        assert p["resume"] == {"run_id": "r1"}, p
+    finally:
+        _cleanup(t)
+
+
+def test_note_는_분모_미지여도_좌표를_적는다():
+    """L99-2 — of=0(미지)이 좌표를 숨기지 않는다. 분모가 있으면 종전처럼 N/M."""
+    from common.spill import _progress_note
+    note = _progress_note({"step": 2, "of": 0, "action": "self:script", "updated_at": "x"})
+    assert "step 2 self:script" in note, note
+    assert "/0" not in note, "거짓 분모"
+    note = _progress_note({"step": 2, "of": 5, "action": "self:script", "updated_at": "x",
+                           "detail": {"row": 3, "rows": 6, "row_label": "c"}})
+    assert "step 2/5 self:script" in note and "each 3/6행(c)" in note, note
+
+
+@pytest.mark.parametrize("parallel", [1, 2], ids=["sequential", "parallel"])
+def test_실행_중_회수에_회차와_좌표가_함께_보인다(parallel, monkeypatch):
+    """L99-1·L99-2 교차 — 실 Runtime 이 표면 티켓을 집고 each 를 돌 때, 행 안에서 회수하면 좌표·회차·note 가 함께 있다."""
+    import ibl_v2_runtime
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    monkeypatch.setattr(ibl_v2_runtime, "_PROGRESS_MIN_INTERVAL_S", 0.0)
+    t = _fresh()
+    prev = tc.get_surface_ticket(), tc.get_progress_ticket()
+    seen = []
+    def observe(rt, args):
+        env = ticket_recover(t)
+        seen.append((args["n"], env.get("progress") or {}, env.get("note") or ""))
+        return args["n"]
+    adapter = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number', 'effects': ['read_external']}, observe)
+    option = f",parallel:{parallel}" if parallel > 1 else ""
+    plan = compile_program("[table:each]{items:[1,2,3]" + option + "}{[test:observe]{n:$it}}", {"test:observe": adapter})
+    assert not plan.issues, plan.report()
+    try:
+        tc.set_surface_ticket(t)
+        tc.set_progress_ticket(None)
+        out = Runtime(plan).run()
+    finally:
+        tc.set_surface_ticket(prev[0])
+        tc.set_progress_ticket(prev[1])
+    try:
+        assert out["success"], out
+        assert len(seen) == 3
+        for n, prog, note in seen:
+            assert prog.get("action") == "test:observe", (n, prog)
+            assert (prog.get("detail") or {}).get("rows") == 3, ("행 회차가 회수 표면에 없다", n, prog)
+            assert 1 <= prog["detail"]["row"] <= 3, prog
+            assert "each " in note and "/3행" in note and "test:observe" in note and "step " in note, note
+            if parallel == 1:
+                assert prog["detail"]["row"] == n and prog["step"] == n, (n, prog)
+        rows = sorted(p["detail"]["row"] for _, p, _ in seen) if parallel == 1 else None
+        assert rows in (None, [1, 2, 3]), rows
+    finally:
+        _cleanup(t)
+
+
+def test_실행_손잡이는_첫_액션_뒤에도_남는다(monkeypatch, tmp_path):
+    """수리 중 발견 — Journal.announce 가 집히기 전 표면 티켓에 run_id 손잡이를 쓰고, 좌표 신고가 그것을 지우지 않는다."""
+    import ibl_v2_runtime
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from ibl_run_journal import Journal
+    monkeypatch.setattr(ibl_v2_runtime, "_PROGRESS_MIN_INTERVAL_S", 0.0)
+    t = _fresh()
+    prev = tc.get_surface_ticket(), tc.get_progress_ticket()
+    seen = []
+    def observe(rt, args):
+        seen.append(dict((ticket_recover(t) or {}).get("progress") or {}))
+        return args["n"]
+    adapter = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number', 'effects': ['read_external']}, observe)
+    plan = compile_program("[test:observe]{n:1}", {"test:observe": adapter})
+    try:
+        tc.set_surface_ticket(t)
+        tc.set_progress_ticket(None)
+        with Journal(tmp_path, plan.fingerprint) as journal:
+            journal.announce(plan.fingerprint)
+            assert _progress(t).get("resume", {}).get("run_id") == journal.run_id, "손잡이가 티켓에 안 닿았다"
+            out = Runtime(plan, journal=journal).run()
+            run_id = journal.run_id
+    finally:
+        tc.set_surface_ticket(prev[0])
+        tc.set_progress_ticket(prev[1])
+    try:
+        assert out["success"], out
+        assert seen and seen[0].get("action") == "test:observe", seen
+        assert seen[0].get("resume") == {"run_id": run_id}, ("좌표 신고가 손잡이를 지웠다", seen)
+    finally:
+        _cleanup(t)
+
+
+def test_each_밖_같은_액션은_접히지_않고_옛_행을_지운다():
+    """검토 발견(2026-10-27) — 접기 간격(0.25초)을 **그대로 둔 채**: each 직후 같은 액션이 이어지면 종전엔 좌표 신고가
+    접혀 티켓에 each 의 마지막 행이 그 액션 내내 남았다. 접기 키에 회차를 넣어 each 밖 첫 좌표는 즉시 신고한다."""
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    t = _fresh()
+    prev = tc.get_surface_ticket(), tc.get_progress_ticket()
+    seen = []
+    def observe(rt, args):
+        env = ticket_recover(t)
+        seen.append((args["n"], dict(env.get("progress") or {}), env.get("note") or ""))
+        return args["n"]
+    adapter = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number', 'effects': ['read_external']}, observe)
+    plan = compile_program("[table:each]{items:[1,2]}{[test:a]{n:$it}}; [test:a]{n:9}", {"test:a": adapter})
+    assert not plan.issues, plan.report()
+    try:
+        tc.set_surface_ticket(t)
+        tc.set_progress_ticket(None)
+        out = Runtime(plan).run()
+    finally:
+        tc.set_surface_ticket(prev[0])
+        tc.set_progress_ticket(prev[1])
+    try:
+        assert out["success"], out
+        inside = [p for n, p, _ in seen if n in (1, 2)]
+        after = [(p, note) for n, p, note in seen if n == 9]
+        assert [p["detail"]["row"] for p in inside] == [1, 2], inside
+        assert len(after) == 1 and "detail" not in after[0][0], ("each 가 끝났는데 옛 행이 남았다", after)
+        assert "each " not in after[0][1] and "test:a" in after[0][1], after[0][1]
+    finally:
+        _cleanup(t)
+
+
+def test_시작_표식은_청소보다_먼저_쓰고_청소는_드물다(monkeypatch):
+    """L99-5 — ticket_begin 은 표식을 먼저 쓰고(gc 가 볼 때 이미 있다), gc 는 프로세스당 60초에 한 번."""
+    import common.spill as spill
+    tickets, saw = [], []
+    def fake_gc(*a, **k):
+        saw.append(os.path.exists(os.path.join(spill_dir(), f"ticket_{tickets[-1]}.json")))
+        return 0
+    monkeypatch.setattr(spill, "gc", fake_gc)
+    monkeypatch.setattr(spill, "_last_gc_at", 0.0)
+    try:
+        for _ in range(3):
+            tickets.append(uuid.uuid4().hex[:12])
+            assert ticket_begin(tickets[-1])
+        assert saw == [True], ("gc 가 표식 전에 돌았거나 매 티켓 돌았다", saw)
+    finally:
+        for t in tickets:
+            _cleanup(t)
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))

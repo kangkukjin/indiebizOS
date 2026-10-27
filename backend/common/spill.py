@@ -16,6 +16,7 @@ import contextvars
 _spill_root = contextvars.ContextVar("spill_root", default=None)
 
 import os
+import threading
 import time
 import uuid
 from typing import Any, Dict, Optional, Tuple
@@ -280,38 +281,80 @@ def _ticket_write(ticket: str, rec: dict) -> None:
         raise
 
 
+# 같은 프로세스의 병렬 가지(each parallel·&)가 한 티켓을 읽고-고치고-쓴다 — 잠금 없이는 서로의 갱신을 지운다(2026-10-27).
+# 결말(ticket_finish)도 같은 잠금 아래 — 늦게 읽은 진행 신고가 done 을 running 으로 되살리지 못하게.
+_TICKET_LOCK = threading.Lock()
+_GC_MIN_INTERVAL_S = 60.0
+_last_gc_at = 0.0
+
+
+def _gc_opportunistic() -> int:
+    """티켓 시작마다 부르던 gc 를 프로세스당 60초에 한 번으로 (2026-10-27, 긴문장 99회차 L99-5).
+
+    ticket_begin 은 async 핸들러 안에서 **동기로** 돈다 — 14K 파일 스필 디렉토리를 매 티켓 걷는 0.05~0.13초가
+    이벤트 루프 위에 얹혀 모든 요청(회수 포함)을 그만큼 늦췄다. 24h TTL 청소에 분 단위 지연은 뜻이 없다."""
+    global _last_gc_at
+    now = time.time()
+    if now - _last_gc_at < _GC_MIN_INTERVAL_S:
+        return 0
+    _last_gc_at = now
+    return gc()
+
+
 def ticket_begin(ticket: str) -> bool:
-    """실행 시작 표식 — running 상태를 남긴다(끝 표식과 같은 파일을 덮어쓴다)."""
+    """실행 시작 표식 — running 상태를 남긴다(끝 표식과 같은 파일을 덮어쓴다).
+
+    표식을 **먼저** 쓰고 청소는 뒤에(2026-10-27 L99-5): 제출 직후 첫 회수가 `unknown`("만료 또는 미탑재")으로
+    읽히는 창은 이 함수가 표식을 쓰기 전의 시간 전부다 — 그 앞에는 아무 일도 두지 않는다."""
     if not valid_ticket(ticket):
         return False
-    gc()
     from common.completion_contract import process_identity
     _ticket_write(ticket, {"status": "running", "owner": process_identity(),
                            "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+    _gc_opportunistic()
     return True
 
 
 def ticket_progress(ticket: str, progress: dict) -> bool:
-    """running 기록에 진행 상태를 덧쓴다 — 결말(done)은 절대 덮지 않는다 (2026-08-29 ⑨).
+    """running 기록의 진행 칸을 **병합**한다 — 결말(done)은 절대 덮지 않는다 (2026-08-29 ⑨).
 
     실측 배경: 120초 표면 대기를 넘긴 216초 실행을 recover 로 물었더니 `status:
     "running"` 뿐이라 3회 헛폴링 — 어디까지 왔는지 없는 대기는 눈 감은 대기다.
-    엔진의 최외곽 파이프라인이 step 경계마다 이 함수를 부른다. 진행 신고는
-    best-effort 다: 실패해도 조용히(진행 표식이 본 실행을 깨면 안 된다)."""
-    if not valid_ticket(ticket):
+    좌표 소유자(ibl_progress.report_step)가 액션 경계마다 이 함수를 부른다. 진행 신고는
+    best-effort 다: 실패해도 조용히(진행 표식이 본 실행을 깨면 안 된다).
+
+    **병합이다, 교체가 아니다 (2026-10-27, 긴문장 99회차 L99-1).** 종전엔 `progress` 를 통째로 바꿨다.
+    10-26 부터 판본 2 런타임이 each 행 **안** 모든 액션 경계에서 좌표를 신고하므로, 통째 교체는 beat 이
+    쓴 회차(detail)를 수 ms 만에 지웠다 — 회수 표면에서 each 회차가 0/N(09-01 수리 ② 의 라이브 회귀). 규칙:
+      · 신고에 든 키(step/of/action …)는 신고 값으로 갱신한다.
+      · 좌표 신고(step 또는 action 이 든 신고)의 detail 은 **신고가 품은 것**으로 — 없으면 지운다. 좌표가 each
+        밖으로 나갔는데 옛 행이 남으면 거짓이라, 소유자는 자기 좌표가 속한 회차를 동봉한다(report_step).
+      · 좌표가 아닌 신고(실행 손잡이 resume/plan_hash — ibl_run_journal.announce)는 detail 을 건드리지 않고,
+        좌표 신고도 손잡이를 지우지 않는다 — 끊긴 표면이 티켓으로 run_id 를 되찾는 통로."""
+    if not valid_ticket(ticket) or not isinstance(progress, dict):
         return False
     path = _ticket_path(ticket)
-    try:
-        with open(path, encoding="utf-8") as f:
-            rec = json.load(f)
-        if rec.get("status") != "running":
+    with _TICKET_LOCK:
+        try:
+            with open(path, encoding="utf-8") as f:
+                rec = json.load(f)
+            if rec.get("status") != "running":
+                return False
+            prog = rec.get("progress") if isinstance(rec.get("progress"), dict) else {}
+            incoming = dict(progress)
+            detail = incoming.pop("detail", None)
+            coordinate = "step" in incoming or "action" in incoming
+            prog.update(incoming)
+            if isinstance(detail, dict) and detail:
+                prog["detail"] = dict(detail)
+            elif coordinate:
+                prog.pop("detail", None)
+            prog["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            rec["progress"] = prog
+            _ticket_write(ticket, rec)
+            return True
+        except Exception:
             return False
-        rec["progress"] = dict(progress)
-        rec["progress"]["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
-        _ticket_write(ticket, rec)
-        return True
-    except Exception:
-        return False
 
 
 def ticket_beat(ticket: str, detail: dict) -> bool:
@@ -325,32 +368,40 @@ def ticket_beat(ticket: str, detail: dict) -> bool:
     if not valid_ticket(ticket) or not isinstance(detail, dict):
         return False
     path = _ticket_path(ticket)
-    try:
-        with open(path, encoding="utf-8") as f:
-            rec = json.load(f)
-        if rec.get("status") != "running":
+    with _TICKET_LOCK:
+        try:
+            with open(path, encoding="utf-8") as f:
+                rec = json.load(f)
+            if rec.get("status") != "running":
+                return False
+            prog = rec.get("progress")
+            if not isinstance(prog, dict):
+                prog = {}
+                rec["progress"] = prog
+            d = prog.get("detail")
+            if not isinstance(d, dict):
+                d = {}
+            d.update(detail)
+            prog["detail"] = d
+            prog["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            _ticket_write(ticket, rec)
+            return True
+        except Exception:
             return False
-        prog = rec.get("progress")
-        if not isinstance(prog, dict):
-            prog = {}
-            rec["progress"] = prog
-        d = prog.get("detail")
-        if not isinstance(d, dict):
-            d = {}
-        d.update(detail)
-        prog["detail"] = d
-        prog["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
-        _ticket_write(ticket, rec)
-        return True
-    except Exception:
-        return False
 
 
 def _progress_note(prog: dict) -> str:
-    """running 상태의 사람이 읽는 한 줄 — 좌표 + 회차(detail) + 마지막 움직임."""
+    """running 상태의 사람이 읽는 한 줄 — 좌표 + 회차(detail) + 마지막 움직임.
+
+    분모(of)가 미지(0)여도 좌표는 적는다 (2026-10-27, 긴문장 99회차 L99-2): 10-26 부터 판본 2 런타임은
+    호출 번호만 알고 전체 수는 모른다고 of=0 을 보낸다 — 거짓 분모를 만들지 않는 것과 좌표를 숨기는 것은
+    다른 일인데, `step and of` 조건이 둘을 묶어 note 에서 step/action 이 영원히 사라졌다(원시 progress 엔 있었다)."""
     parts = []
-    if prog.get("step") and prog.get("of"):
-        parts.append(f"step {prog['step']}/{prog['of']} {prog.get('action') or ''}".strip())
+    if prog.get("step") or prog.get("action"):
+        coord = f"step {prog['step']}" if prog.get("step") else ""
+        if coord and prog.get("of"):
+            coord += f"/{prog['of']}"
+        parts.append(f"{coord} {prog.get('action') or ''}".strip())
     d = prog.get("detail") if isinstance(prog.get("detail"), dict) else {}
     if d.get("row") and d.get("rows"):
         row = f"each {d['row']}/{d['rows']}행"
@@ -374,9 +425,10 @@ def ticket_finish(ticket: str, envelope) -> bool:
     """최종 봉투 보관 — 성공이든 실패든 **결말**을 남긴다(모름과 실패는 다른 사건)."""
     if not valid_ticket(ticket):
         return False
-    _ticket_write(ticket, {"status": "done",
-                          "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                          "envelope": envelope})
+    with _TICKET_LOCK:
+        _ticket_write(ticket, {"status": "done",
+                              "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                              "envelope": envelope})
     return True
 
 

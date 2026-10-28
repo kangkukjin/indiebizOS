@@ -5,12 +5,30 @@ import mimetypes
 import re
 from pathlib import Path
 
-from notebook_store import NotebookStore, build_chunks, extract_file, _paragraphs_with_loc
+from notebook_store import NotebookStore, CHUNK_HARD_MAX, extract_file, _paragraphs_with_loc
 from research_store import ResearchStore, ResearchConflict, identifier, json_text, now
 
 
 COVERAGE_LABELS = {'full': '확보한 본문', 'partial': '일부 본문', 'snippet': '검색 발췌', 'unknown': '확보 범위 미확인'}
 INDEX_LABELS = {'pending': '검색 준비 중', 'ready': '검색 가능', 'failed': '검색 준비 실패', 'unsupported': '텍스트 추출 불가'}
+
+
+def citation_chunks(paragraphs):
+    """검색의 text·loc를 불변 원문의 단일 구간으로 유지한다. 공백도 다시 쓰지 않는다."""
+    chunks = []
+    for loc, body in paragraphs:
+        remaining = body.strip()
+        while remaining:
+            end = min(len(remaining), CHUNK_HARD_MAX)
+            if end < len(remaining):
+                boundary = max(remaining.rfind('\n', 0, end), remaining.rfind(' ', 0, end))
+                if boundary > end // 2:
+                    end = boundary
+            piece = remaining[:end].strip()
+            if piece:
+                chunks.append((loc, piece))
+            remaining = remaining[end:].lstrip()
+    return chunks
 
 
 class ResearchLibrary:
@@ -172,6 +190,16 @@ class ResearchLibrary:
 
     def prepare_index(self):
         self._upgrade_web_snapshots()
+        # 추출 판본·원문·과거 인용은 그대로 둔다. 옛 문단 합성 색인만 다시 만든다.
+        migration = 'citation-paragraph-chunks-v1'
+        with self.store.connect() as db:
+            migrated = db.execute('SELECT 1 FROM research_migrations WHERE name=?', (migration,)).fetchone()
+        if not migrated:
+            with self.store.connect(True) as db:
+                self.store.check_epoch(db)
+                if not db.execute('SELECT 1 FROM research_migrations WHERE name=?', (migration,)).fetchone():
+                    db.execute("UPDATE research_jobs SET state='pending' WHERE state='ready'")
+                    db.execute('INSERT INTO research_migrations(name) VALUES (?)', (migration,))
         if not self.index.db_path.exists():
             with self.store.connect(True) as db:
                 self.store.check_epoch(db)
@@ -221,7 +249,7 @@ class ResearchLibrary:
         for vid in versions:
             try:
                 paras, revision = self.paragraphs(vid)
-                chunks = build_chunks(paras)
+                chunks = citation_chunks(paras)
                 v = self.version(vid)
                 # 버전마다 안정적인 가상 path. 재시도는 같은 소스에 다시 색인한다.
                 with self.index.scope():
@@ -304,6 +332,8 @@ class ResearchLibrary:
                 'blocks': [{'type': 'paragraph', 'text': visible}]}
 
     def search(self, query, limit=12):
+        """검색 한 행은 정확한 한 원문 위치다. 반환된 구간만 현재 실행의 읽기로 남긴다."""
+        self.prepare_index()
         visible, args = self._scope_sql()
         latest, latest_args = self._scope_sql('x')
         excluded, excluded_args = self._excluded_sql()
@@ -311,7 +341,7 @@ class ResearchLibrary:
             mapping = {r['index_source']: dict(r) for r in db.execute(
                 'SELECT j.index_source,v.id AS version_id,v.source_id,s.title,(SELECT MAX(revision) FROM research_extractions e WHERE e.version_id=v.id) AS extraction_revision FROM research_jobs j '
                 'JOIN research_versions v ON v.id=j.version_id JOIN research_sources s ON s.id=v.source_id '
-                f'WHERE {visible} AND {excluded}=0 AND v.rowid=(SELECT MAX(x.rowid) FROM research_versions x WHERE x.source_id=s.id AND {latest})',
+                f"WHERE j.state='ready' AND {visible} AND {excluded}=0 AND v.rowid=(SELECT MAX(x.rowid) FROM research_versions x WHERE x.source_id=s.id AND {latest})",
                 (*args, *excluded_args, *latest_args))}
             pending = db.execute(f"SELECT COUNT(*) FROM research_jobs j JOIN research_versions v ON v.id=j.version_id WHERE state!='ready' AND {visible}", args).fetchone()[0]
         # 후보 선정 전에 제한한다. 다른 대화의 상위 결과가 현재 대화 자료를 밀어내지 않는다.

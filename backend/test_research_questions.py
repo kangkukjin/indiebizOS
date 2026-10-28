@@ -88,6 +88,25 @@ def test_agent_new_reference_requires_read_and_receipts_cannot_be_forged(world):
     assert q['supporting'][0]['observed_in'] == [{'run_id': run}]
 
 
+def test_reference_errors_identify_failed_source_and_distinguish_recovery(world):
+    store, tid, questions = world
+    ref = reference(store, tid)
+    run, _ = store.begin_run(tid, '오류 복구', 'reference-errors')
+    change = {'expected_revision': 0, 'text': '효과?', 'supporting': [ref]}
+    with pytest.raises(ValueError) as unread:
+        questions.apply([change], origin='agent', run=run)
+    assert ref['version_ref'] in str(unread.value)
+    assert 'locator=p1' in str(unread.value) and '원문 일치는 확인' in str(unread.value)
+    assert 'self:notebook read' in str(unread.value)
+    with pytest.raises(ValueError) as mismatch:
+        questions.apply([{**change, 'supporting': [{**ref, 'locator': 'p2'}]}], origin='agent', run=run)
+    assert 'locator=p2' in str(mismatch.value) and '원문 위치와 일치하지' in str(mismatch.value)
+    assert not questions.read()['items']
+    with scope({'project_uid': store.uid, 'thread_id': tid, 'run_id': run}):
+        ResearchLibrary(store, tid).read(ref['version_ref'], revision=ref['extraction_revision'])
+    assert questions.apply([change], origin='agent', run=run)['items'][0]['supporting']
+
+
 def test_resolution_is_not_truth_and_new_information_reopens(world):
     store, tid, questions = world
     ref = reference(store, tid)

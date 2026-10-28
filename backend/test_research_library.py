@@ -78,6 +78,88 @@ def test_project_scoped_search_and_references(lib, tmp_path):
     assert foreign.search('경제')['items'][0]['version_ref'] == b['version_ref']
 
 
+def test_search_later_paragraph_registers_exact_evidence_without_reread(lib):
+    from research_questions import ResearchQuestions
+    tid = lib.store.create_thread('문단별 근거')['id']
+    local = ResearchLibrary(lib.store, tid)
+    paragraphs = [('¶13', '배경 설명입니다.'), ('¶14', '조사 방법입니다.'),
+                  ('¶15', '교역량이 증가했다. 다만 인과관계는 미확인이다.')]
+    receipt = local.capture('원본', title='교역 연구', paragraphs=paragraphs)
+    local.index_pending()
+    run, _ = lib.store.begin_run(tid, '교역량 조사', 'paragraph-search')
+    with scope({'project_uid': lib.store.uid, 'thread_id': tid, 'run_id': run}):
+        hit = local.search('교역량이', 1)['items'][0]
+    assert hit['loc'] == '¶15'
+    assert hit['text'] == paragraphs[2][1]
+    assert hit['citation'] == f"[자료:{receipt['version_ref']}:¶15]"
+    ref = {'version_ref': hit['version_ref'], 'extraction_revision': hit['extraction_revision'],
+           'locator': hit['loc'], 'quote': '교역량이 증가했다.'}
+    questions = ResearchQuestions(lib.store, tid)
+    saved = questions.apply([{'expected_revision': 0, 'text': '교역량 변화?',
+                              'supporting': [ref]}], origin='agent', run=run)['items'][0]
+    assert saved['supporting'][0]['observed_in'] == [{'run_id': run}]
+    # 검색되지 않은 이웃 문단까지 읽었다고 인정하지 않는다.
+    with pytest.raises(ValueError, match='읽은 뒤'):
+        questions.apply([{'expected_revision': 0, 'text': '방법?', 'supporting': [
+            {**ref, 'locator': '¶14', 'quote': paragraphs[1][1]}]}], origin='agent', run=run)
+
+
+def test_citation_chunks_preserve_whitespace_and_partial_read_receipts(lib):
+    from research_evidence import validate_reference
+    from research_library import citation_chunks
+    from notebook_store import CHUNK_HARD_MAX
+    body = ('긴문단 자료입니다.\n\t공백과 줄바꿈을 보존한다.  ' * 90) + ' 마지막미열람표식'
+    chunks = citation_chunks([('p.1', body), ('p.1', '같은 쪽의 다른 문단')])
+    assert len(chunks) > 2
+    assert all(text in body or text == '같은 쪽의 다른 문단' for _, text in chunks)
+    assert all(0 < len(text) <= CHUNK_HARD_MAX for _, text in chunks)
+    tid = lib.store.create_thread('긴 문단')['id']
+    local = ResearchLibrary(lib.store, tid)
+    receipt = local.capture(body, title='긴문단', paragraphs=[('p.1', body)])
+    local.index_pending()
+    run, _ = lib.store.begin_run(tid, '부분 조회', 'long-paragraph')
+    with scope({'project_uid': lib.store.uid, 'thread_id': tid, 'run_id': run}):
+        hit = local.search('긴문단', 1)['items'][0]
+    ref = {'version_ref': receipt['version_ref'], 'extraction_revision': 1,
+           'locator': hit['loc'], 'quote': hit['text']}
+    with lib.store.connect() as db:
+        assert validate_reference(lib.store, db, tid, ref, run=run)['quote'] == hit['text']
+        unseen = '마지막미열람표식' if '마지막미열람표식' not in hit['text'] else body[:1000]
+        with pytest.raises(ValueError, match='읽은 뒤'):
+            validate_reference(lib.store, db, tid, {**ref, 'quote': unseen}, run=run)
+
+
+def test_legacy_index_rebuild_preserves_extractions_and_old_access(lib, monkeypatch):
+    import research_library
+    from notebook_store import build_chunks
+    paragraphs = [('¶1', '이전 배경.'), ('¶2', '도서관 예산의 실제 근거.')]
+    receipt = lib.capture('불변 원본', title='도서관', paragraphs=paragraphs)
+    # 배포 전 문단 합성 색인과 읽기 기록을 만든다.
+    with monkeypatch.context() as patch:
+        patch.setattr(research_library, 'citation_chunks', build_chunks)
+        lib.index_pending()
+        with scope({'project_uid': lib.store.uid, 'run_id': 'old-run'}):
+            old = lib.search('도서관', 1)['items'][0]
+    assert old['loc'] == '¶1' and paragraphs[1][1] in old['text']
+    with lib.store.connect(True) as db:
+        before = [tuple(r) for r in db.execute('SELECT * FROM research_extractions')]
+        db.execute("DELETE FROM research_migrations WHERE name='citation-paragraph-chunks-v1'")
+    # 준비 중인 옛 색인은 현행 판본의 검색 결과로 내보내지 않는다.
+    pending = lib.search('도서관')
+    assert pending['items'] == [] and pending['pending'] == 1
+    lib.index_pending()
+    new = lib.search('도서관', 1)['items'][0]
+    assert new['loc'] == '¶2' and new['text'] == paragraphs[1][1]
+    assert new['extraction_revision'] == 1
+    assert lib.store.blob(lib.version(receipt['version_ref'])['blob']) == '불변 원본'.encode()
+    with lib.store.connect() as db:
+        assert [tuple(r) for r in db.execute('SELECT * FROM research_extractions')] == before
+        assert db.execute('SELECT locator,quote FROM research_access WHERE run_id=?',
+                          ('old-run',)).fetchone()[:] == ('¶1', old['text'])
+    lib.prepare_index()
+    assert lib.search('도서관')['pending'] == 0
+
+
 def test_capture_precedes_reduction_and_save_failure_closes_gate(lib, monkeypatch):
     import research_capture
     import research_context

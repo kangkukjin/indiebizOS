@@ -26,7 +26,11 @@ def validate_reference(store, db, tid, value, *, run=None, retained=None):
         raise ValueError('이 대화에 보존된 자료의 추출 판본만 인용할 수 있습니다')
     paragraphs = json.loads(store.blob(row['blob']))
     if not any(loc == ref['locator'] and ref['quote'] in text for loc, text in paragraphs):
-        raise ValueError('인용이 지정한 원문 위치와 일치하지 않습니다')
+        raise ValueError(
+            f"인용이 지정한 원문 위치와 일치하지 않습니다: version_ref={ref['version_ref']}, "
+            f"extraction_revision={ref['extraction_revision']}, locator={ref['locator']}. "
+            "self:notebook read로 이 추출 판본을 읽고 반환된 위치·원문으로 수정하세요. "
+            "문단 번호를 추측하여 재시도하지 마세요.")
     key = evidence_key(ref)
     previous = (retained or {}).get(key)
     observed = list(previous.get('observed_in', [])) if previous else []
@@ -34,6 +38,10 @@ def validate_reference(store, db, tid, value, *, run=None, retained=None):
         rows = db.execute('SELECT quote FROM research_access WHERE run_id=? AND version_id=? AND revision=? AND locator=?',
                           (run, ref['version_ref'], ref['extraction_revision'], ref['locator'])).fetchall()
         if not any(ref['quote'] in row['quote'] for row in rows):
-            raise ValueError('새 근거는 현재 실행에서 해당 자료 구간을 읽은 뒤 연결하세요')
+            raise ValueError(
+                f"새 근거는 현재 실행에서 해당 자료 구간을 읽은 뒤 연결하세요: "
+                f"version_ref={ref['version_ref']}, extraction_revision={ref['extraction_revision']}, "
+                f"locator={ref['locator']}. 원문 일치는 확인됐지만 이 위치의 읽기 증명이 없습니다. "
+                "self:notebook read로 해당 구간을 읽은 뒤 같은 근거를 저장하세요.")
         observed.append({'run_id': run})
     return {**ref, 'evidence_id': key, 'observed_in': observed}

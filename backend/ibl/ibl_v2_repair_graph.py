@@ -108,13 +108,18 @@ class Projection:
         return deps
 
     def opaque(self, node, env, control):
+        deps = self.boundary(node, env)
+        if self.plan.node_effects.get(node.id, {'unknown'}) - {'pure'}:
+            self.sink(node, deps | control)
+        return Value(deps)
+
+    def boundary(self, node, env):
+        """All possible failure causes, including captured callable bodies."""
         deps = self.full(node)
         for n in walk(node):
             if n.kind == 'ref' and n.data['name'] in env:
                 deps |= self.complete(env[n.data['name']])
-        if self.plan.node_effects.get(node.id, {'unknown'}) - {'pure'}:
-            self.sink(node, deps | control)
-        return Value(deps)
+        return deps
 
     def sink(self, node, deps):
         self.emissions.append(node.id)
@@ -131,6 +136,18 @@ class Projection:
         if kind == 'sequence':
             flow = self.flow(node, env, control)
             return self.merge([*flow.returns, *([flow.value] if flow.continues else [])])
+        if kind == 'try':
+            from ibl_v2_recovery import has_return
+            if has_return(node):
+                return self.opaque(node, env, control)
+            return self.flow(node, env, control).value
+        if kind == 'fallback':
+            left = self.expr(d['left'], env.copy(), control | own)
+            # Any failing computation in the left operand can select the right
+            # effect. Its successful output alone is insufficient evidence.
+            failure = self.complete(left)
+            right = self.expr(d['right'], env.copy(), control | own | failure)
+            return self.merge([left, right]).with_deps(own | failure)
         if kind in ('bind', 'return'):
             value = self.expr(d['value'], env, control | own).with_deps(own)
             if kind == 'bind':
@@ -246,6 +263,41 @@ class Projection:
         if node.kind == 'return':
             value = self.expr(d['value'], env, control | own).with_deps(own)
             return Flow(returns=[value], continues=False)
+        if node.kind == 'try':
+            from ibl_v2_analysis import assigned_names
+            body_env = env.copy()
+            body = self.flow(d['body'], body_env, control | own)
+            failure = self.flow_dependencies(body)
+            branches = [(body, body_env)]
+            if d['catch'] is not None:
+                caught_env = env.copy()
+                for name in assigned_names(d['body']) & env.keys():
+                    caught_env[name] = Value(failure | self.complete(env[name]))
+                caught_env['error'] = Value(failure)
+                caught = self.flow(d['catch'], caught_env, control | own | failure)
+                caught.value = caught.value.with_deps(failure)
+                caught.returns = [v.with_deps(failure) for v in caught.returns]
+                if 'error' in env:
+                    caught_env['error'] = env['error']
+                else:
+                    caught_env.pop('error', None)
+                branches.append((caught, caught_env))
+            result = self.join_flows(branches, env, own)
+            if d['final'] is not None:
+                # Cleanup runs on returns and faults alike: the body's result
+                # does not select it. Reads of partially assigned bindings do
+                # depend on all possible body/catch completion paths.
+                cleanup_deps = set().union(*(self.flow_dependencies(flow) for flow, _ in branches))
+                cleanup_env = env.copy()
+                for name in assigned_names(d['body']) | assigned_names(d['catch']):
+                    cleanup_env[name] = Value(cleanup_deps)
+                cleanup = self.flow(d['final'], cleanup_env, control | own)
+                for name in assigned_names(d['final']):
+                    if name in cleanup_env:
+                        env[name] = cleanup_env[name]
+                result.value = result.value.with_deps(cleanup.value.deps)
+                result.returns = [v.with_deps(cleanup.value.deps) for v in result.returns]
+            return result
         if node.kind == 'if':
             condition = self.expr(d['value'], env, control | own)
             guard = own | condition.deps
@@ -253,18 +305,23 @@ class Projection:
             for body in (d['body'], d['otherwise']):
                 local = env.copy()
                 branches.append((self.flow(body, local, control | guard), local))
-            continuing = [(flow, local) for flow, local in branches if flow.continues]
-            returned = [value.with_deps(guard) for flow, _ in branches for value in flow.returns]
-            if not continuing:
-                return Flow(returns=returned, continues=False)
-            names = set.intersection(*(set(local) for _, local in continuing))
-            merged = {name: self.merge([local[name] for _, local in continuing])
-                      for name in names}
-            env.clear()
-            env.update(merged)
-            result = self.merge([flow.value for flow, _ in continuing]).with_deps(guard)
-            return Flow(result, returned)
+            return self.join_flows(branches, env, guard)
         return Flow(self.expr(node, env, control))
+
+    def join_flows(self, branches, env, guard):
+        continuing = [(flow, local) for flow, local in branches if flow.continues]
+        returned = [value.with_deps(guard) for flow, _ in branches for value in flow.returns]
+        if not continuing:
+            return Flow(returns=returned, continues=False)
+        names = set.intersection(*(set(local) for _, local in continuing))
+        merged = {name: self.merge([local[name] for _, local in continuing]) for name in names}
+        env.clear()
+        env.update(merged)
+        result = self.merge([flow.value for flow, _ in continuing]).with_deps(guard)
+        return Flow(result, returned)
+
+    def flow_dependencies(self, flow):
+        return self.complete(self.merge([*flow.returns, *([flow.value] if flow.continues else [])]))
 
     @staticmethod
     def children(data):
@@ -360,7 +417,7 @@ def frontier(plan):
     except (ValueError, RecursionError):
         supported = False
     address = lambda nid: repr(projection.paths[nid])
-    return {'protocol': 'ibl-repair-frontier/3', 'supported': supported,
+    return {'protocol': 'ibl-repair-frontier/4', 'supported': supported,
             'retained': {address(nid): projection.signature(projection.nodes[nid])
                          for nid in projection.retained},
             'effects': sorted(address(nid) for nid in projection.effects),
@@ -370,7 +427,7 @@ def frontier(plan):
 
 
 def mapping(before, after):
-    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/3'
+    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/4'
             or after.get('protocol') != before.get('protocol')
             or not before.get('supported') or not after.get('supported')
             or before['retained'] != after['retained'] or before['effects'] != after['effects']

@@ -657,13 +657,9 @@ class Compiler(CallAnalysis):
             return parallel_type(self, node, [lambda branch=branch: sub(branch, env.copy())
                                               for branch in parallel_branches(node)])
         if kind == "fallback":
-            previous = self.catch_value_faults
-            self.catch_value_faults = True
-            try:
-                left = sub(d["left"], env.copy(), True)
-            finally:
-                self.catch_value_faults = previous
-            return join(left, sub(d["right"], env.copy(), True))
+            from ibl_v2_recovery import fallback_type
+            return fallback_type(self, lambda: sub(d['left'], env.copy()),
+                                 lambda: sub(d['right'], env.copy()))
         if kind == "call":
             arg_type = sub(d["params"])
             return self.named_target(node, arg_type, env, names, readonly, piped)
@@ -736,40 +732,8 @@ class Compiler(CallAnalysis):
                 self.merge_env(env, env.copy(), {k: v for k, v in local.items() if k != "i" or k in env})
             return UNIT_T
         if kind == "try":
-            a, b = env.copy(), {**env, "error": Type("Record")}
-            # A fault may happen before or after any shared-frame assignment.
-            # Catch observes partial progress, not a rollback to entry types.
-            mutated = assigned_names(d["body"]) & env.keys()
-            b.update(dict.fromkeys(mutated, UNKNOWN))
-            previous = self.catch_value_faults
-            self.catch_value_faults = True  # try also returns a Result without catch
-            try:
-                ta = sub(d["body"], a, True)
-            finally:
-                self.catch_value_faults = previous
-            tb = sub(d["catch"], b, True)
-            if "error" in env:
-                b["error"] = env["error"]
-            else:
-                b.pop("error", None)
-            paths = [(d["body"], a)]
-            cleanup_env = a.copy()
-            if d["catch"]:
-                paths.append((d["catch"], b))
-                self.merge_env(cleanup_env, a, b)
-            # Cleanup also observes failures partway through body/catch.
-            cleanup_mutated = (mutated | assigned_names(d["catch"])) & env.keys()
-            cleanup_env.update(dict.fromkeys(cleanup_mutated, UNKNOWN))
-            self.merge_continuations(env, paths)
-            # finally also runs on returning paths. Check it before excluding
-            # their bindings, then carry its assignments into the continuation.
-            self.visit(d["final"], cleanup_env, names, readonly, True)
-            for name in assigned_names(d["final"]):
-                if name in cleanup_env:
-                    env[name] = cleanup_env[name]
-                elif name in env:
-                    env[name] = UNKNOWN
-            return join(ta, tb) if d["catch"] else ta
+            from ibl_v2_recovery import source_recovery
+            return source_recovery(self, node, env, names, readonly, final)
         self.issue(node, "IR", f"지원하지 않는 구문: {kind}")
         return UNKNOWN
 

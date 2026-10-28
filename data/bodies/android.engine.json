@@ -328,6 +328,7 @@
     "ibl/ibl_v2_narrow",
     "ibl/ibl_v2_parser",
     "ibl/ibl_v2_preflight",
+    "ibl/ibl_v2_recovery",
     "ibl/ibl_v2_repair",
     "ibl/ibl_v2_repair_graph",
     "ibl/ibl_v2_requirements",
@@ -571,8 +572,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 560,
-    "engine": 528,
+    "total": 561,
+    "engine": 529,
     "blocklist": 32
   }
 }

@@ -79,7 +79,11 @@ def test_alternative_lists_join_corresponding_positions(flag):
     '$r=[{title:"A"},"date"]; $i=1; return $r[$i].title',
 ])
 def test_positions_do_not_erase_real_type_errors(code):
-    assert compile_program(code).issues
+    from ibl_v2_types import BOOL
+    assert compile_program(code.replace('[if:true]', '[if:$flag]'), input_types={'flag': BOOL}).issues
+    if '[if:true]' in code:
+        assert not compile_program(code).issues
+        assert compile_program(code.replace('[if:true]', '[if:false]')).issues
 
 
 def test_concat_does_not_merge_positions_as_control_flow_alternatives():

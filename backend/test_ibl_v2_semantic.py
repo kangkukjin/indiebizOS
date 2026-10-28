@@ -362,5 +362,166 @@ def test_resource_relation_survives_stored_string_composition(abilities):
     assert calls == []
 
 
+
+@pytest.mark.parametrize('row,expected', [({}, 0), ({'score': None}, 0), ({'score': 7}, 14)])
+def test_conditional_policy_survives_two_stored_promotions(abilities, monkeypatch, row, expected):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    policy = '[def:safe]($row,$policy){return has($row,"score") && $row.score != null ? $policy($row.score) : 0}'
+    upper = '[def:report]($row,$policy){return {row:$row,value:[fn:safe]{row:$row,policy:$policy}}}'
+    again = '[def:review]($row,$policy){return {now:[fn:report]{row:$row,policy:$policy},before:$row}}'
+    for name, source in [('safe', policy), ('report', upper), ('review', again)]:
+        register(name, '#!ibl edition=2\n' + source, edition=2)
+    library = definitions()
+    assert set(library.interfaces) == {'safe', 'report', 'review'}, library.interface_limits
+    code = 'return [fn:review]{row:$row,policy:($v)=>$v*2}'
+    with monkeypatch.context() as blocked:
+        blocked.setattr(Compiler, '_function', lambda *a, **k: pytest.fail('lower body analysis'))
+        plan = compile_program(code, reg, inputs={'row': row}, definitions=library.interfaces_only())
+    assert not plan.issues, plan.report()
+    assert calls == []
+    plan.definitions = library
+    result = Runtime(plan, inputs={'row': row}).run()
+    assert result['success'], result
+    oracle = {'now': {'row': row, 'value': expected}, 'before': row}
+    assert result['value'] == oracle
+    # Direct construction and one saved promotion use the same independent oracle.
+    direct = policy + upper + again + code
+    first = policy + upper + 'return {now:[fn:report]{row:$row,policy:($v)=>$v*2},before:$row}'
+    for candidate in (direct, first):
+        checked = compile_program(candidate, reg, inputs={'row': row})
+        assert not checked.issues, checked.report()
+        executed = Runtime(checked, {'row': row}).run()
+        assert executed['success'] and executed['value'] == oracle, executed
+
+
+def test_statement_branches_preserve_returns_bindings_and_effect_choice(abilities, monkeypatch):
+    from function_library import register, definitions
+    from ibl_v2_types import BOOL, UNKNOWN
+    reg, calls, _ = abilities
+    source = '[def:dispatch]($enabled,$items,$send){[if:$enabled]{$n=$send{items:$items};return {sent:$n}};return {skipped:$items}}'
+    register('dispatch', '#!ibl edition=2\n' + source, edition=2)
+    lib = definitions()
+    assert 'dispatch' in lib.interfaces, lib.interface_limits
+    for enabled, effects in [(False, set()), (True, {'write_external'})]:
+        code = 'return [fn:dispatch]{enabled:$enabled,items:[1],send:&[probe:publish]}'
+        with monkeypatch.context() as blocked:
+            blocked.setattr(Compiler, '_function', lambda *a, **k: pytest.fail('lower body analysis'))
+            plan = compile_program(code, reg, inputs={'enabled': enabled}, definitions=lib.interfaces_only())
+        assert not plan.issues, plan.report()
+        assert plan.effects - {'pure'} == effects
+        assert set(dict(plan.result_type.fields)) == ({'sent'} if enabled else {'skipped'})
+        plan.definitions = lib
+        result = Runtime(plan, inputs={'enabled': enabled}).run()
+        assert result['success'], result
+        assert result['value'] == ({'sent': 1} if enabled else {'skipped': [1]})
+    assert len(calls) == 1
+    uncertain = compile_program('return [fn:dispatch]{enabled:$enabled,items:[1],send:$send}', reg,
+        input_types={'enabled': BOOL, 'send': UNKNOWN}, definitions=lib.interfaces_only())
+    assert 'unknown' in uncertain.effects
+
+    branching = '[def:assigned]($enabled,$r){[if:$enabled]{$v=$r.left}[else]{$v=$r.right};return {v:$v,original:$r}}'
+    register('assigned', '#!ibl edition=2\n' + branching, edition=2)
+    plan = compile_program('return [fn:assigned]{enabled:true,r:{left:7,right:"other"}}', reg,
+                           definitions=definitions().interfaces_only())
+    assert not plan.issues, plan.report()
+    assert dict(plan.result_type.fields)['v'].kind == 'Number'
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_conditional_call_requirements_stay_conditional_and_pure(abilities, wrapped):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    expr = 'has($r,"score") ? $f{items:$r.score} : 0'
+    source = '[def:optional]($r,$f){return ' + ('{value:' + expr + '}' if wrapped else expr) + '}'
+    register('optional', '#!ibl edition=2\n' + source, edition=2)
+    lib = definitions().interfaces_only()
+    good = compile_program('return [fn:optional]{r:{},f:&[probe:publish]}', reg, definitions=lib)
+    assert not good.issues and not (good.effects - {'pure'}), good.report()
+    good.definitions = definitions()
+    out = Runtime(good).run()
+    assert out['success'] and out['value'] == ({'value': 0} if wrapped else 0), out
+    bad = compile_program('return [fn:optional]{r:{score:[1]},f:&[probe:publish]}', reg, definitions=lib)
+    assert any(i['code'] == 'PURE_EXPRESSION' for i in bad.issues), bad.report()
+    assert calls == []
+
+
+def test_conditional_numeric_and_projection_requirements_survive_storage(abilities):
+    from function_library import register, definitions
+    reg, _, _ = abilities
+    source = '[def:head]($rows){return len($rows)==0 ? null : $rows[0].score*2}'
+    register('head', '#!ibl edition=2\n' + source, edition=2)
+    lib = definitions().interfaces_only()
+    good = compile_program('return [fn:head]{rows:[{score:3}]}', reg, definitions=lib)
+    assert not good.issues, good.report()
+    empty = compile_program('return [fn:head]{rows:[]}', reg, definitions=lib)
+    assert not empty.issues and empty.result_type.kind == 'Null', empty.report()
+    bad = compile_program('return [fn:head]{rows:[{other:3}]}', reg, definitions=lib)
+    assert any(i['code'] == 'MISSING_FIELD' for i in bad.issues), bad.report()
+
+
+def test_conditional_saved_effect_repairs_without_repeating_publication(abilities, tmp_path):
+    from function_library import register, definitions
+    from ibl_v2_entry import handle_request
+    reg, calls, _ = abilities
+    save_layers()
+    source = '[def:maybe_send]($enabled,$writer,$items){[if:$enabled]{return $writer{items:$items}};return 0}'
+    register('maybe_send', '#!ibl edition=2\n' + source, edition=2)
+    source2 = '[def:publish_report]($enabled,$writer,$items){return {sent:[fn:maybe_send]{enabled:$enabled,writer:$writer,items:$items},items:$items}}'
+    register('publish_report', '#!ibl edition=2\n' + source2, edition=2)
+    code = '$rows=[fn:gather]{sources:["catalog"],read:&[probe:read],normalize:&[fn:normalizer],policy:($r)=>$r.score>3};'
+    code += '$report=[fn:publish_report]{enabled:true,writer:&[probe:publish],items:$rows};return 10/$n'
+    plan = compile_program(code, reg, inputs={'n': 0}, definitions=definitions().interfaces_only())
+    assert not plan.issues and 'write_external' in plan.effects, plan.report()
+    assert calls == []
+    failed = handle_request({'edition': 2, 'code': code, 'inputs': {'n': 0}}, str(tmp_path))
+    assert not failed['success'] and failed['component_completion']['status'] == 'satisfied', failed
+    before = list(calls)
+    assert [c[0] for c in before] == ['read', 'script', 'publish']
+    fixed = {'edition': 2, 'code': code.replace('10/$n', '10/($n+1)'), 'inputs': {'n': 0},
+             'repair': {'run_id': failed['resume']['run_id']}}
+    checked = handle_request({**fixed, 'check': True}, str(tmp_path))
+    assert checked.get('ok'), checked
+    assert calls == before
+    fixed['repair']['plan_hash'] = checked['repair']['plan_hash']
+    done = handle_request(fixed, str(tmp_path))
+    assert done['success'] and done['value'] == 10, done
+    # Pure normalization may be recomputed; completed external effects may not.
+    assert [c for c in calls if c[0] != 'script'] == [c for c in before if c[0] != 'script']
+
+
+
+def test_sequential_policies_share_continuations_without_expanding_paths(abilities, monkeypatch):
+    from function_library import register, definitions
+    from ibl_v2_semantic import derive
+    from ibl_v2_types import BOOL
+    reg, calls, _ = abilities
+
+    def source(count):
+        params = ','.join(['$x', *('$f' + str(i) for i in range(count))])
+        steps = ''.join('[if:$f' + str(i) + ']{$x=$x+1}[else]{$x=$x-1};' for i in range(count))
+        return '[def:policy](' + params + '){' + steps + 'return $x}'
+
+    # The observed counterexample was exponential growth at nine sequential
+    # decisions. A shared continuation makes definition growth linear.
+    small, large = derive(source(6)), derive(source(12))
+    assert len(json.dumps(large)) < 3 * len(json.dumps(small))
+    register('policy', '#!ibl edition=2\n' + source(12), edition=2)
+    lib = definitions()
+    code = 'return [fn:policy]{x:10,' + ','.join('f'+str(i)+':$f'+str(i) for i in range(12)) + '}'
+    with monkeypatch.context() as blocked:
+        blocked.setattr(Compiler, '_function', lambda *a, **k: pytest.fail('lower body analysis'))
+        plan = compile_program(code, reg, definitions=lib.interfaces_only(),
+                               input_types={'f'+str(i): BOOL for i in range(12)})
+    assert not plan.issues, plan.report()
+    assert plan.result_type.kind == 'Number'
+    assert plan.preflight['analysis']['lambda_bodies'] < 50
+    assert not calls
+    plan.definitions = lib
+    inputs = {'f'+str(i): i % 3 == 0 for i in range(12)}
+    out = Runtime(plan, inputs).run()
+    assert out['success'] and out['value'] == 10 + 4 - 8, out
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

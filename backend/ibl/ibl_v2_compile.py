@@ -9,17 +9,17 @@ from pathlib import Path
 import copy
 from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches, record_fields
 from ibl_v2_parser import parse
-from ibl_v2_narrow import narrow, known_condition
+from ibl_v2_narrow import known_condition
 from ibl_v2_expr import BUILTINS
 from ibl_dependencies import compilation_dependencies
 import re
 # f-문자열의 글자 부분에 남은 `$이름` — `$(`·`$5` 같은 다른 쓰임은 잡지 않는다.
 _BARE_DOLLAR_NAME = re.compile(r"\$[A-Za-z_\uac00-\ud7a3][\w\uac00-\ud7a3]*")
-from ibl_v2_analysis import (finish_diagnostics, numeric_operand,
+from ibl_v2_analysis import (finish_diagnostics,
                              assigned_names, location, access_type, HINTS)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL, rows_type,
                           infer, join, declared, compatible, alternatives,
-                          ordered_list, concat_lists, static_text, NEVER, describe_type)
+                          ordered_list, static_text, NEVER, describe_type)
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
@@ -286,6 +286,30 @@ class Compiler(CallAnalysis):
             return self.visit(node, env, names, readonly, final)
         finally:
             self.reachable = previous
+
+    def visit_branch(self, node, env, names, readonly, final, possible, *, pure=False):
+        if possible:
+            if pure:
+                self.pure(node)
+            return self.visit(node, env, names, readonly, final)
+        # Dead source still receives syntax/name/type checks, but cannot impose
+        # latent callback purity, executable effects or return types on the call.
+        if node is not None:
+            self.pure_calls = [call for call in self.pure_calls
+                               if not (node.start <= call.start and call.end <= node.end)]
+        outer = (self.effects, self.access_log, self.returns, self.pure_calls,
+                 self.call_effects)
+        self.effects, self.access_log, self.returns = set(), set(), []
+        self.pure_calls, self.call_effects = [], {}
+        dead = dict.fromkeys(env, NEVER)
+        try:
+            self.visit_unreachable(node, dead, names, readonly, final)
+            env.clear()
+            env.update(dict.fromkeys(dead, NEVER))
+        finally:
+            (self.effects, self.access_log, self.returns, self.pure_calls,
+             self.call_effects) = outer
+        return NEVER
 
     def resolve_function(self, name, names):
         if name in names:
@@ -554,54 +578,38 @@ class Compiler(CallAnalysis):
         if kind in ("binary", "unary"):
             op = d["op"]
             if kind == "binary" and op in ("and", "&&", "or", "||"):
-                self.pure(node)  # 오른쪽은 평가되지 않을 수 있다 — 효과의 실행 여부를 식에 숨기지 않는다.
-            else:
-                self.container_value(node)
-            right_env = (narrow(env, d["left"], op in ("and", "&&"))
-                         if kind == "binary" and op in ("and", "&&", "or", "||") else env)
-            values = ([sub(d["value"])] if kind == "unary"
-                      else [sub(d["left"]), sub(d["right"], right_env, op in ("and", "or", "&&", "||"))])
-            never = next((t for t in values if t.kind == "Never"), None)
-            if never is not None:
-                # 도달할 수 없는 값이 낀 연산은 통째로 도달 불가다. 남은 피연산자를 숫자로 검사하면
-                # 이어 붙이기의 문자열 리터럴이 거짓 NUMBER_REQUIRED 가 된다(긴문장 10회차 L10-3).
-                return never
-            if op in ("and", "or", "&&", "||", "!", "not"):
-                for i, t in enumerate(values):
-                    self.requirement_depth += int(i > 0)
-                    try:
-                        self.need(node, t, BOOL)
-                    finally:
-                        self.requirement_depth -= int(i > 0)
+                from ibl_v2_narrow import predicate, branch_environment
+                self.pure(d['left'])
+                left = sub(d['left'])
+                right_env, possible = branch_environment(env, predicate(d['left']), op in ('and', '&&'))
+                self.requirement_depth += 1
+                try:
+                    right = self.visit_branch(d['right'], right_env, names, readonly, final, possible, pure=True)
+                finally:
+                    self.requirement_depth -= 1
+                self.need(node, left, BOOL)
+                self.need(node, right, BOOL)
                 return BOOL
-            if op in ("==", "!=", "<", ">", "<=", ">=", "in"):
-                return BOOL
-            if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
-                if values[0].kind == "List":
-                    return concat_lists(*values)
-                texts = [static_text(t) for t in values]
-                if all(t is not None for t in texts):
-                    from common.value_semantics import normalized_text
-                    return Type("Text", literal=normalized_text("".join(texts)))
-                return TEXT
-            if op == "+" and any(t.kind in ("Unknown", "Union") for t in values):
-                # An unknown accumulator/callback operand may concatenate.
-                # Do not select numeric addition until both shapes are known.
-                if all(member.kind in ("Unknown", "List", "Text", "Number")
-                       for t in values for member in alternatives(t)):
-                    self.need(node, UNKNOWN, UNKNOWN)
-                    return UNKNOWN
+            self.container_value(node)
+            values = ([sub(d["value"])] if kind == "unary" else [sub(d["left"]), sub(d["right"])])
             operands = [d["value"]] if kind == "unary" else [d["left"], d["right"]]
-            for operand, typ in zip(operands, values):
-                numeric_operand(self, operand, typ)
-            return NUMBER
+            from ibl_v2_semantic import scalar_type
+            return scalar_type(self, node, op, values, operands)
         if kind == "conditional":
-            # `조건 ? 값1 : 값2` — 조건은 Bool 만(참거짓 흉내 없음), 고르지 않은 가지는 실행하지 않는다.
-            # 결과 타입은 두 가지의 합이다(73회차 G73-1 언어 개정).
-            self.pure(node)
-            self.need(d["condition"], sub(d["condition"]), BOOL)
-            return join(sub(d["yes"], narrow(env, d["condition"]), True),
-                        sub(d["no"], narrow(env, d["condition"], False), True))
+            from ibl_v2_narrow import predicate, branch_environment
+            self.pure(d['condition'])
+            self.need(d['condition'], sub(d['condition']), BOOL)
+            guard = predicate(d['condition'])
+            result = NEVER
+            self.requirement_depth += 1
+            try:
+                for truth, branch in ((True, 'yes'), (False, 'no')):
+                    local, possible = branch_environment(env, guard, truth)
+                    result = join(result, self.visit_branch(d[branch], local, names, readonly,
+                                                           final, possible, pure=True))
+            finally:
+                self.requirement_depth -= 1
+            return result
         if kind == "builtin":
             if d["name"] not in BUILTINS:
                 from common.expression_ops import unknown_builtin_message
@@ -709,16 +717,22 @@ class Compiler(CallAnalysis):
                 self.need(d["params"], UNKNOWN, Type("Record"))
             return self.named_target(node, arg_type, env, names, readonly, piped)
         if kind == "if":
-            self.pure(d["value"])
-            self.need(node, sub(d["value"]), BOOL)
-            a, b = narrow(env, d["value"]), narrow(env, d["value"], False)
+            from ibl_v2_narrow import predicate, branch_environment
+            self.pure(d['value'])
+            self.need(node, sub(d['value']), BOOL)
+            guard = predicate(d['value'])
+            paths, result = [], NEVER
             self.requirement_depth += 1
             try:
-                ta, tb = sub(d["body"], a), sub(d["otherwise"], b)
+                for truth, branch in ((True, 'body'), (False, 'otherwise')):
+                    local, possible = branch_environment(env, guard, truth)
+                    result = join(result, self.visit_branch(d[branch], local, names, readonly, final, possible))
+                    # Lexical definite assignment remains independent of actual inputs.
+                    paths.append((d[branch], local))
             finally:
                 self.requirement_depth -= 1
-            self.merge_continuations(env, [(d["body"], a), (d["otherwise"], b)])
-            return join(ta, tb)
+            self.merge_continuations(env, paths)
+            return result
         if kind == "case":
             self.pure(d["value"])
             sub(d["value"])

@@ -161,10 +161,13 @@ def test_non_row_branch_rejected_before_any_effect(tmp_path, bad, consumer):
         lambda *_: calls.append(True) or 1)
     code = ('[fixture:effect]\n$rows=[{n:2}]\n[if:$flag]{$rows=' + bad + '}\n'
             'return $rows >> ' + consumer)
-    plan = compile_program(code, registry, {'flag': False})
+    from ibl_v2_types import BOOL
+    plan = compile_program(code, registry, input_types={'flag': BOOL})
     assert any(i['code'] == 'TYPE' for i in plan.issues), plan.report()
     out = Runtime(plan, {'flag': False}).run()
     assert not out['executed'] and not calls
+    assert not compile_program(code, registry, {'flag': False}).issues
+    assert compile_program(code, registry, {'flag': True}).issues
 
 
 @pytest.mark.parametrize('empty', ['[]', '{items:[]}'])

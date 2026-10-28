@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ibl_v2_ir import Node, digest, record_fields, pack, unpack
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
-                          infer, ordered_list, concat_lists, describe_type, alternatives)
+                          infer, ordered_list, concat_lists, describe_type, alternatives, join, NEVER)
 
 PROTOCOL = 'ibl-semantic/1'
 
@@ -19,15 +19,58 @@ def edition():
     return digest({name: (root / name).read_text() for name in (
         'ibl_v2_semantic.py', 'ibl_v2_semantic_store.py', 'ibl_v2_types.py',
         'ibl_v2_analysis.py', 'ibl_v2_call_analysis.py', 'ibl_v2_adapters.py',
-        'ibl_v2_requirements.py')})
+        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_compile.py')})
 
 
 class Unsupported(ValueError):
     pass
 
 
+def lexical_inputs(node, bound=frozenset()):
+    """Free inputs of a continuation; local assignments are not captures."""
+    def scan(value, names):
+        names = set(names)
+        if value is None:
+            return set(), names, False
+        if not isinstance(value, Node):
+            children = value.values() if isinstance(value, dict) else value if isinstance(value, (list, tuple)) else ()
+            needed = set()
+            for child in children:
+                needed.update(scan(child, names)[0])
+            return needed, names, False
+        d = value.data
+        if value.kind == 'ref':
+            return {d['name']} - names, names, False
+        if value.kind == 'lambda':
+            return scan(d['body'], names | set(d['params']))[0], names, False
+        if value.kind == 'sequence':
+            needed = set()
+            for statement in d['statements']:
+                free, names, stopped = scan(statement, names)
+                needed.update(free)
+                if stopped:
+                    return needed, names, True
+            return needed, names, False
+        if value.kind == 'bind':
+            return scan(d['value'], names)[0], names | {d['name']}, False
+        if value.kind == 'return':
+            return scan(d['value'], names)[0], names, True
+        if value.kind == 'if':
+            yes, no = scan(d['body'], names), scan(d['otherwise'], names)
+            continuing = [v[1] for v in (yes, no) if not v[2]]
+            merged = set.intersection(*continuing) if continuing else names
+            return scan(d['value'], names)[0] | yes[0] | no[0], merged, not continuing
+        if value.kind == 'call' and (d['node'], d['action']) == ('table', 'each'):
+            needed = scan(d['params'], names)[0] | scan(d['body'], names | {'it', 'i'})[0]
+            return needed, names, False
+        return scan(d, names)[0], names, False
+    return scan(node, bound)[0]
+
+
 class Derivation:
-    def __init__(self):
+    def __init__(self, budget=None, pure=False):
+        self.budget = budget if budget is not None else [4096]
+        self.pure = pure
         self.terms, self.index, self.effects, self.checks = [], {}, [], []
         self.actions, self.functions = set(), set()
 
@@ -35,6 +78,9 @@ class Derivation:
         value = {'op': op, **fields}
         key = digest(value)
         if key not in self.index:
+            self.budget[0] -= 1
+            if self.budget[0] < 0:
+                raise Unsupported('finite relation budget exceeded')
             self.index[key] = len(self.terms)
             self.terms.append(value)
         return self.index[key]
@@ -57,7 +103,32 @@ class Derivation:
 
     def sequence(self, body, env):
         result = self.term('unit')
-        for statement in body.data['statements']:
+        for index, statement in enumerate(body.data['statements']):
+            if statement.kind == 'if':
+                d = statement.data
+                tail = body.data['statements'][index + 1:]
+                branches = [d['body'], d['otherwise']]
+                if tail:
+                    # Derive the continuation once. Branches pass their own values
+                    # to this latent ability instead of copying the remaining DAG.
+                    continuation = Node('sequence', statement.end, body.end, {'statements': tail})
+                    params = sorted(lexical_inputs(continuation))
+                    inner = Derivation(self.budget, pure=self.pure)
+                    interface = inner.ability(params, continuation)
+                    self.actions.update(inner.actions)
+                    self.functions.update(inner.functions)
+                    name = '@after:' + str(statement.start)
+                    env = {**env, name: self.term('ability', interface=interface, captures={}, params=params)}
+                    call = Node('named_call', statement.start, statement.end, {
+                        'fn': Node('ref', statement.start, statement.end, {'name': name}),
+                        'params': Node('record', statement.start, statement.end, {'fields': {
+                            k: Node('ref', statement.start, statement.end, {'name': k}) for k in params}})})
+                    follow = Node('return', statement.start, statement.end, {'value': call})
+                    branches = [Node('sequence', statement.start, body.end, {'statements': [
+                        *(branch.data['statements'] if branch else []), follow]}) for branch in branches]
+                branches = [branch or Node('sequence', statement.start, statement.end, {'statements': []})
+                            for branch in branches]
+                return self.choice(d['value'], *branches, env)
             if statement.kind == 'bind':
                 env[statement.data['name']] = self.expr(statement.data['value'], env)
                 result = self.term('unit')
@@ -69,7 +140,7 @@ class Derivation:
 
     def nested(self, params, body, env):
         # Lexical captures are ordinary input relations, never observed values.
-        inner = Derivation()
+        inner = Derivation(self.budget)
         from ibl_v2_expr import free_names
         needed = free_names(body, frozenset(params))
         captures = {k: v for k, v in env.items() if k in needed}
@@ -78,8 +149,38 @@ class Derivation:
         self.functions.update(inner.functions)
         return self.term('ability', interface=interface, captures=captures, params=list(params))
 
+    def pure_expr(self, node, env):
+        previous, self.pure = self.pure, True
+        try:
+            return self.expr(node, env)
+        finally:
+            self.pure = previous
+
+    def choice(self, condition, yes, no, env, *, pure=False):
+        from ibl_v2_narrow import predicate
+        test = self.pure_expr(condition, env)
+        branches = []
+        for body in (yes, no):
+            inner = Derivation(self.budget, pure=pure or self.pure)
+            interface = inner.ability(env, body)
+            self.actions.update(inner.actions)
+            self.functions.update(inner.functions)
+            branches.append(interface)
+        result = self.term('choose', test=test, guard=predicate(condition),
+                           captures=dict(env), yes=branches[0], no=branches[1])
+        self.effects.append(result)
+        return result
+
     def expr(self, node, env, piped=None):
         d, kind = node.data, node.kind
+        if kind == 'sequence':
+            return self.sequence(node, env)
+        if kind == 'conditional':
+            return self.choice(d['condition'], d['yes'], d['no'], env, pure=True)
+        if kind == 'if':
+            # Returns inside value blocks exit the enclosing function, not only
+            # the block. Keep those forms explicit until nonlocal exits are modeled.
+            raise Unsupported('if value block: use statement branches')
         if kind == 'literal':
             return self.term('constant', wire=pack(d['value']))
         if kind == 'ref':
@@ -99,10 +200,14 @@ class Derivation:
                 if key.kind != 'literal':
                     raise Unsupported('dynamic projection')
                 key = key.data['value']
-            return self.checked('project', base=self.expr(d['base'], env), key=key)
+            return self.checked('project', base=self.expr(d['base'], env), key=key, access=kind)
         if kind == 'binary':
             if d['op'] in ('and', 'or', '&&', '||'):
-                raise Unsupported('short circuit refinement')
+                conjunction = d['op'] in ('and', '&&')
+                literal = Node('literal', node.start, node.end, {'value': not conjunction})
+                result = self.choice(d['left'], d['right'] if conjunction else literal,
+                                     literal if conjunction else d['right'], env, pure=True)
+                return self.checked('boolean', value=result)
             return self.checked('scalar', operator=d['op'],
                              operands=[self.expr(d['left'], env), self.expr(d['right'], env)])
         if kind == 'unary':
@@ -144,7 +249,7 @@ class Derivation:
                 target, args, style = self.expr(d['fn'], env), self.expr(d['params'], env), 'named'
             else:
                 target, args, style = self.expr(d['fn'], env), [self.expr(v, env) for v in d['args']], 'positional'
-            result = self.term('apply', target=target, arguments=args, style=style, piped=piped)
+            result = self.term('apply', target=target, arguments=args, style=style, piped=piped, pure=self.pure)
             self.effects.append(result)
             return result
         raise Unsupported(kind)
@@ -199,7 +304,7 @@ def literal_node(typ, site):
 
 def apply(compiler, interface, args, site):
     """Substitute actual values/capabilities in a finite relation DAG."""
-    from ibl_v2_analysis import access_type, numeric_operand
+    from ibl_v2_analysis import access_type
     from ibl_v2_types import rows_type
     memo = {}
     interface_identity = digest(interface)
@@ -221,7 +326,9 @@ def apply(compiler, interface, args, site):
         elif op == 'list':
             out = ordered_list(value(v) for v in term['members'])
         elif op == 'project':
-            out = access_type(compiler, site, value(term['base']), term['key'])
+            projection = Node(term.get('access', 'field'), site.start, site.end, {})
+            out = access_type(compiler, projection, value(term['base']), term['key'],
+                              constant_type(term['key']))
         elif op == 'builtin':
             out = Type('Callable', item=('builtin', term['name']))
         elif op == 'reference':
@@ -246,7 +353,25 @@ def apply(compiler, interface, args, site):
                 piped = None
             # Each relation has its own identity even when multiple calls share a source site.
             call = Node('semantic_apply_' + digest([interface_identity, index])[:16], site.start, site.end, {})
-            out = compiler.apply_callable(call, target, supplied, nodes, piped=piped)
+            out = compiler.apply_callable(call, target, supplied, nodes, piped=piped,
+                                          require_pure=term.get('pure', False))
+        elif op == 'choose':
+            from ibl_v2_narrow import branch_environment
+            compiler.need(site, value(term['test']), BOOL)
+            captured = {k: value(v) for k, v in term['captures'].items()}
+            out = NEVER
+            compiler.requirement_depth += 1
+            try:
+                for truth, branch in ((True, 'yes'), (False, 'no')):
+                    refined, possible = branch_environment(captured, term['guard'], truth)
+                    if not possible:
+                        continue
+                    out = join(out, apply(compiler, term[branch], refined, site))
+            finally:
+                compiler.requirement_depth -= 1
+        elif op == 'boolean':
+            compiler.need(site, value(term['value']), BOOL)
+            out = BOOL
         elif op == 'map':
             rows = rows_type(value(term['items']))
             compiler.need(site, rows, Type('List', item=UNKNOWN))
@@ -264,29 +389,8 @@ def apply(compiler, interface, args, site):
                 out = Type('List', item=returned)
         elif op == 'scalar':
             operands = [value(i) for i in term['operands']]
-            operator = term['operator']
-            if operator in ('==', '!=', '<', '>', '<=', '>=', 'in'):
-                out = BOOL
-            elif operator in ('!', 'not'):
-                compiler.need(site, operands[0], BOOL)
-                out = BOOL
-            elif operator == '+' and len(operands) == 2 and operands[0].kind == operands[1].kind == 'List':
-                out = concat_lists(*operands)
-            elif operator == '+' and all(v.kind == 'Text' for v in operands):
-                from ibl_v2_types import static_text
-                from common.value_semantics import normalized_text
-                texts = [static_text(v) for v in operands]
-                out = (Type('Text', literal=normalized_text(''.join(texts)))
-                       if all(v is not None for v in texts) else TEXT)
-            elif operator == '+' and any(v.kind in ('Unknown', 'Union') for v in operands) and all(
-                    member.kind in ('Unknown', 'List', 'Text', 'Number')
-                    for operand in operands for member in alternatives(operand)):
-                compiler.need(site, UNKNOWN, UNKNOWN)
-                out = UNKNOWN
-            else:
-                for operand in operands:
-                    numeric_operand(compiler, site, operand)
-                out = NUMBER
+            out = scalar_type(compiler, site, term['operator'], operands,
+                              [literal_node(v, site) for v in operands])
         else:
             raise ValueError('Unknown semantic relation: ' + op)
         memo[index] = out
@@ -367,3 +471,42 @@ def apply_primitive(compiler, node, key, spec, contract, args, fields, values, e
     if result_type.kind == "Unknown":
         compiler.need(node, UNKNOWN, UNKNOWN)
     return result_type
+
+
+def scalar_type(compiler, node, op, values, operand_nodes):
+    """Shared scalar transfer; numeric observation belongs to value_semantics."""
+    from ibl_v2_analysis import numeric_operand
+    from ibl_v2_types import static_text
+    never = next((t for t in values if t.kind == "Never"), None)
+    if never is not None:
+        # 도달할 수 없는 값이 낀 연산은 통째로 도달 불가다. 남은 피연산자를 숫자로 검사하면
+        # 이어 붙이기의 문자열 리터럴이 거짓 NUMBER_REQUIRED 가 된다(긴문장 10회차 L10-3).
+        return never
+    if op in ("and", "or", "&&", "||", "!", "not"):
+        for i, t in enumerate(values):
+            compiler.requirement_depth += int(i > 0)
+            try:
+                compiler.need(node, t, BOOL)
+            finally:
+                compiler.requirement_depth -= int(i > 0)
+        return BOOL
+    if op in ("==", "!=", "<", ">", "<=", ">=", "in"):
+        return BOOL
+    if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
+        if values[0].kind == "List":
+            return concat_lists(*values)
+        texts = [static_text(t) for t in values]
+        if all(t is not None for t in texts):
+            from common.value_semantics import normalized_text
+            return Type("Text", literal=normalized_text("".join(texts)))
+        return TEXT
+    if op == "+" and any(t.kind in ("Unknown", "Union") for t in values):
+        # An unknown accumulator/callback operand may concatenate.
+        # Do not select numeric addition until both shapes are known.
+        if all(member.kind in ("Unknown", "List", "Text", "Number")
+               for t in values for member in alternatives(t)):
+            compiler.need(node, UNKNOWN, UNKNOWN)
+            return UNKNOWN
+    for operand, typ in zip(operand_nodes, values):
+        numeric_operand(compiler, operand, typ)
+    return NUMBER

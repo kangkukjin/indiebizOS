@@ -175,7 +175,12 @@ def test_mixed_wire_is_runtime_obligation(flag):
     calls = []
     reg = {'t:w': Adapter({'version': 1, 'params': {}, 'result': 'Number',
                            'effects': ['write_external']}, lambda rt, a: calls.append(1) or 1)}
-    plan = require_wire(compile_program('[t:w]{};return {x:($flag ? abs : 1)}', reg, {'flag': flag}))
+    from ibl_v2_types import BOOL
+    code = '[t:w]{};return {x:($flag ? abs : 1)}'
+    known = require_wire(compile_program(code, reg, {'flag': flag}))
+    assert bool(known.issues) is flag
+    assert not calls
+    plan = require_wire(compile_program(code, reg, input_types={'flag': BOOL}))
     assert not plan.issues
     assert plan.guards
     out = Runtime(plan, {'flag': flag}).run()

@@ -205,7 +205,10 @@ class CallAnalysis:
                     self.arguments(virtual, actual, dict.fromkeys(params), next(iter(params), None), piped)
                 elif len(types) != len(params):
                     self.issue(node, 'ARITY', '의미 인터페이스 콜백 인자가 다릅니다.')
-                current = apply(self, self.semantic_abilities[identity], {**dict(captures), **actual}, node)
+                bound = {**dict(captures), **actual}
+                frame = {'function': '<relation>', 'call': span(self.source, node), 'definition': None}
+                current = self.summary(('semantic', identity, tuple(sorted(bound.items()))), node, frame,
+                    lambda: apply(self, self.semantic_abilities[identity], bound, node), 'lambda')
                 self.call_effects.setdefault(node.id, set()).update(self.effects or {'pure'})
             elif category == 'requirement':
                 _, params, returned, effects = contract

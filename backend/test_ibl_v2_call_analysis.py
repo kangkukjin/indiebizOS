@@ -39,8 +39,12 @@ def test_captures_returned_functions_and_union_candidates():
                             '$a=[fn:make]{k:2}; $b=[fn:make]{k:4}; return [$a(3),$b(3)]')
     assert result == [5, 7]
     assert not plan.guards
-    bad = compile_program('$f=$flag ? abs : upper; return $f(3)', inputs={'flag': True})
+    from ibl_v2_types import BOOL
+    code = '$f=$flag ? abs : upper; return $f(3)'
+    bad = compile_program(code, input_types={'flag': BOOL})
     assert bad.issues  # every possible target must accept the argument
+    assert not compile_program(code, inputs={'flag': True}).issues
+    assert compile_program(code, inputs={'flag': False}).issues
 
 
 @pytest.mark.parametrize('source,expected', [

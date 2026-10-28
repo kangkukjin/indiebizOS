@@ -240,14 +240,44 @@ def isolated_distill_training(tmp_path, monkeypatch):
     return training
 
 
-@pytest.fixture
-def installed_functions(isolated_runtime_stores, monkeypatch):
-    """Explicit boot import for tests exercising shipped reusable functions."""
+@pytest.fixture(scope="session")
+def _installed_function_seed(tmp_path_factory):
+    """Certify shipped sources once per worker; retain only immutable file bytes.
+
+    This is a fresh installation on every pytest invocation, never a disk cache
+    from an earlier source revision. Installation tests still exercise publish
+    themselves. Consumers receive independent writable clones of this catalog.
+    """
     import function_store
     from function_install import installed_sources, prepare
-    root = Path(__file__).resolve().parents[1]
+    import workflow_store
     import ibl_registry
+
+    root = Path(__file__).resolve().parents[1]
+    seed = tmp_path_factory.mktemp("installed-functions")
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(workflow_store, '_get_workflows_path', lambda: seed)
+        patch.setenv('INDIEBIZ_RUNTIME_STATE_DIR', str(seed / 'runtime'))
+        patch.setattr(ibl_registry, '_nodes_path', root / 'data/ibl_nodes.yaml')
+        patch.setattr(ibl_registry, '_nodes', None)
+        plan = prepare(installed_sources(root), root=seed)
+        function_store.publish(plan['changes'], root=seed)
+    return tuple((path.relative_to(seed), path.read_bytes())
+                 for path in sorted(seed.rglob('*'))
+                 if path.is_file() and path.suffix in ('.json', '.yaml'))
+
+
+@pytest.fixture
+def installed_functions(_installed_function_seed, isolated_runtime_stores, monkeypatch):
+    """Clone a validated installation without sharing mutable state across tests."""
+    import function_store
+    import ibl_registry
+    root = Path(__file__).resolve().parents[1]
     monkeypatch.setattr(ibl_registry, '_nodes_path', root / 'data/ibl_nodes.yaml')
     monkeypatch.setattr(ibl_registry, '_nodes', None)
-    plan = prepare(installed_sources(root))
-    function_store.publish(plan['changes'])
+    target = function_store.storage_root(for_write=True)
+    for relative, contents in _installed_function_seed:
+        path = target / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(contents)
+    return target

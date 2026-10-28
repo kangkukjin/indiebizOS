@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-28",
+  "command": "python -m pytest backend/ -n auto --dist loadfile --ff",
+  "workers": 12,
+  "scope": "all backend tests, including system and local",
+  "before": {
+    "passed": 11438,
+    "skipped": 22,
+    "failed": 0,
+    "seconds": 1033.74,
+    "exit_code": 0,
+    "head": "c16a1178"
+  },
+  "after": {
+    "passed": 11441,
+    "skipped": 22,
+    "failed": 0,
+    "seconds": 451.14,
+    "exit_code": 0,
+    "base_head": "194f83b481a4193c02549ffbe2e6a1eec6cf5fd5"
+  },
+  "seconds_saved": 582.6,
+  "percent_reduction": 56.36,
+  "removed_test_cases": [],
+  "added_test_cases": [
+    "backend.test_conftest::test_installed_catalog_starts_pristine_after_other_test_mutation[catalog]",
+    "backend.test_conftest::test_installed_catalog_starts_pristine_after_other_test_mutation[revision]",
+    "backend.test_conftest::test_cloned_installation_accepts_real_publication"
+  ],
+  "same_skipped_test_cases": true,
+  "tracked_files_changed_during_run": [],
+  "file_seconds": {
+    "backend.test_pc_control": {
+      "before": 1023.287,
+      "after": 33.595
+    },
+    "backend.test_android_control": {
+      "before": 585.701,
+      "after": 143.956
+    },
+    "backend.test_phone_ui": {
+      "before": 469.698,
+      "after": 72.025
+    },
+    "backend.test_control_driver": {
+      "before": 388.97,
+      "after": 41.391
+    },
+    "backend.test_pc_control_idioms": {
+      "before": 379.526,
+      "after": 192.045
+    },
+    "backend.test_exposed_idiom_boundaries": {
+      "before": 305.925,
+      "after": 152.921
+    },
+    "backend.test_ibl_v2_runtime": {
+      "before": 227.802,
+      "after": 230.738
+    },
+    "backend.test_restart_process": {
+      "before": 197.335,
+      "after": 198.786
+    },
+    "backend.test_pc_chrome_control": {
+      "before": 183.386,
+      "after": 10.015
+    },
+    "backend.test_guide_registry": {
+      "before": 172.266,
+      "after": 27.451
+    },
+    "backend.test_callable_component_contracts": {
+      "before": 168.76,
+      "after": 22.456
+    },
+    "backend.test_phone_device": {
+      "before": 155.241,
+      "after": 18.9
+    }
+  },
+  "source_sha256": {
+    "backend/conftest.py": "2d8dab2c338c49c560d29b4a66bbc2dacd3e92b14b8ea08e1e85c1d6f7d54411",
+    "backend/test_conftest.py": "b863b61a68088255b5c72678bbee8c70f1d1bbc8b3ee13da980183d093dc950d"
+  },
+  "raw_evidence": {
+    "before": "outputs/l100_budget/full_recheck",
+    "after": "outputs/regression_performance_2026_10_28/full"
+  },
+  "xml_sha256": {
+    "outputs/l100_budget/full_recheck/results.xml": "506e83a39e057cead0219e122fe4f7e016b544c17280a47cf03b29ea820127f4",
+    "outputs/regression_performance_2026_10_28/full/results.xml": "0e5ad1e29c2723973b5a1e08d87dddc139e927a57e75bec60b0877f291d57f1a"
+  },
+  "limitations": "One full run before and after on the same host; wall time varies with host load. No persistent cross-invocation cache, test exclusions or weakened assertions."
+}

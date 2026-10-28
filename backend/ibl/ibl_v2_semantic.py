@@ -191,16 +191,16 @@ class Derivation:
             return self.term('list', members=[self.expr(v, env) for v in d['values']])
         if kind == 'record':
             entries = d.get('entries', list(d.get('fields', {}).items()))
-            if any(k is None for k, _ in entries):
-                raise Unsupported('record spread')
-            return self.term('record', fields={k: self.expr(v, env) for k, v in entries})
+            return self.checked('record', entries=[[k, self.expr(v, env)] for k, v in entries])
         if kind in ('field', 'index'):
             key = d['key']
-            if isinstance(key, Node):
-                if key.kind != 'literal':
-                    raise Unsupported('dynamic projection')
-                key = key.data['value']
-            return self.checked('project', base=self.expr(d['base'], env), key=key, access=kind)
+            base = self.expr(d['base'], env)
+            selector = self.expr(key, env) if isinstance(key, Node) else self.term('constant', wire=pack(key))
+            return self.checked('project', base=base, selector=selector, access=kind)
+        if kind == 'format':
+            parts = [self.expr(v, env) if isinstance(v, Node) else self.term('constant', wire=pack(v))
+                     for v in d['parts']]
+            return self.checked('format', parts=parts)
         if kind == 'binary':
             if d['op'] in ('and', 'or', '&&', '||'):
                 conjunction = d['op'] in ('and', '&&')
@@ -322,13 +322,15 @@ def apply(compiler, interface, args, site):
         elif op == 'unit':
             out = UNIT_T
         elif op == 'record':
-            out = Type('Record', tuple((k, value(v)) for k, v in term['fields'].items()), open=False)
+            out = record_type(compiler, [(k, value(v), site) for k, v in term['entries']])
         elif op == 'list':
             out = ordered_list(value(v) for v in term['members'])
         elif op == 'project':
             projection = Node(term.get('access', 'field'), site.start, site.end, {})
-            out = access_type(compiler, projection, value(term['base']), term['key'],
-                              constant_type(term['key']))
+            selector = value(term['selector'])
+            out = access_type(compiler, projection, value(term['base']), selector.literal, selector)
+        elif op == 'format':
+            out = format_type(compiler, [(value(v), site) for v in term['parts']])
         elif op == 'builtin':
             out = Type('Callable', item=('builtin', term['name']))
         elif op == 'reference':
@@ -471,6 +473,70 @@ def apply_primitive(compiler, node, key, spec, contract, args, fields, values, e
     if result_type.kind == "Unknown":
         compiler.need(node, UNKNOWN, UNKNOWN)
     return result_type
+
+
+def record_type(compiler, entries):
+    """Ordered record overlay shared by source and independently applied relations.
+
+    An open spread may replace earlier fields; later explicit fields restore
+    their guarantees. The field values keep callable/ref ownership information.
+    """
+    if all(key is not None for key, _, _ in entries):
+        return Type('Record', tuple((key, typ) for key, typ, _ in entries), open=False)
+    result = Type('Record', open=False)
+    for key, typ, site in entries:
+        if key is None:
+            compiler.need(site, typ, Type('Record'))
+        candidates = set()
+        for base in alternatives(result):
+            for patch in (alternatives(typ) if key is None else (typ,)):
+                fields, opened = dict(base.fields), base.open
+                if key is not None:
+                    fields[key] = patch
+                elif patch.kind == 'Record':
+                    if patch.open:
+                        fields = dict.fromkeys(fields, UNKNOWN)
+                    fields.update(dict(patch.fields))
+                    opened |= patch.open
+                else:
+                    fields = dict.fromkeys(fields, UNKNOWN)
+                    opened = True
+                candidates.add(Type('Record', tuple(fields.items()), open=opened))
+        # Keep finite alternatives, including optional fields and discriminants.
+        # Beyond the bound retain guaranteed common fields as an open record;
+        # do not turn uncertain overwrites into guarantees.
+        if len(candidates) > 64:
+            common = set.intersection(*(set(dict(v.fields)) for v in candidates))
+            fields = dict.fromkeys(common, NEVER)
+            for candidate in candidates:
+                for name in common:
+                    fields[name] = join(fields[name], dict(candidate.fields)[name])
+            result = Type('Record', tuple(sorted(fields.items())), open=True)
+            compiler.warn(site, 'RECORD_RELATION_LIMIT',
+                          '레코드 확장의 후보가 64개를 넘습니다. 공통 필드만 정적으로 보존합니다.')
+        else:
+            result = NEVER
+            for candidate in sorted(candidates, key=lambda v: v._key):
+                result = join(result, candidate)
+    return result
+
+
+def format_type(compiler, parts):
+    """Scalar interpolation; preserve known resource identity, never run a value."""
+    from ibl_v2_types import compatible, static_text
+    expected = join(join(TEXT, NUMBER), BOOL)
+    known = []
+    for typ, site in parts:
+        if not compatible(typ, expected):
+            compiler.issue(site, 'FORMAT_TYPE', f'보간에는 Text·Number·Bool이 필요하지만 {typ}입니다.',
+                           expected=str(expected), actual=str(typ))
+        elif typ.kind == 'Unknown':
+            compiler.need(site, typ, expected)
+        known.append(static_text(typ) if static_text(typ) is not None else
+                     (str(typ.literal) if typ.kind == 'Number' and type(typ.literal) is int else None))
+    if known and all(isinstance(part, str) for part in known):
+        return Type('Text', literal=''.join(known))
+    return TEXT
 
 
 def scalar_type(compiler, node, op, values, operand_nodes):

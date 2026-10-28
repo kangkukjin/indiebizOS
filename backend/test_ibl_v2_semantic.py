@@ -523,5 +523,253 @@ def test_sequential_policies_share_continuations_without_expanding_paths(abiliti
     assert out['success'] and out['value'] == 10 + 4 - 8, out
 
 
+ENRICH = r'''[def:enrich]($rows,$field,$policy){
+return [table:each]{items:$rows}{
+return {**$it,measured:$it[$field],accepted:$policy($it[$field]),label:f"${$it.id}:${$it[$field]}"}
+}}'''
+PREPARE = '''[def:prepare]($source,$read,$normalize,$field,$policy){
+$raw=$read{source:$source};
+$rows=$normalize{data:$raw.items};
+$enriched=[fn:enrich]{rows:$rows,field:$field,policy:$policy};
+return {**$raw,items:$enriched}
+}'''
+REVIEW = '''[def:review]($source,$read,$normalize,$field,$policy){
+$report=[fn:prepare]{source:$source,read:$read,normalize:$normalize,field:$field,policy:$policy};
+$chosen=[table:filter]{items:$report.items,where:($r)=>$r.accepted};
+return {**$report,items:$chosen,count:len($chosen)}
+}'''
+
+
+def test_shape_relationships_recombine_after_publication_and_provider_change(abilities, monkeypatch):
+    from function_library import register, definitions
+    from ibl_v2_store import Library
+    reg, calls, scripts = abilities
+    for name, source in [('normalizer', NORMALIZE), ('enrich', ENRICH), ('prepare', PREPARE)]:
+        register(name, '#!ibl edition=2\n' + source, edition=2)
+    original = Library.__getitem__
+
+    def no_lower_body(library, name):
+        if name in library.interfaces:
+            pytest.fail('lower body requested while composing: ' + name)
+        return original(library, name)
+
+    with monkeypatch.context() as blocked:
+        blocked.setattr(Library, '__getitem__', no_lower_body)
+        register('review', '#!ibl edition=2\n' + REVIEW, edition=2)
+    library = definitions()
+    assert set(library.interfaces) == {'normalizer', 'enrich', 'prepare', 'review'}, library.interface_limits
+    code = 'return [fn:review]{source:"catalog",read:&[probe:read],normalize:&[fn:normalizer],field:"score",policy:($n)=>$n>3}'
+    expected = {'origin': 'catalog', 'count': 1, 'items': [
+        {'id': 'b', 'score': 5, 'source': 'catalog', 'measured': 5, 'accepted': True, 'label': 'b:5'}]}
+    # Direct, one saved level and two saved levels use one independent oracle.
+    for prefix, lib in [(NORMALIZE + ENRICH + PREPARE + REVIEW, None),
+                        (PREPARE + REVIEW, library), ('', library)]:
+        checked = compile_program(prefix + code, reg, definitions=lib)
+        assert not checked.issues, checked.report()
+        assert Runtime(checked).run()['value'] == expected
+    calls.clear()
+    # A later provider adds business metadata and a different measured field.
+    fields = {'id': 'Text', 'score': 'Number', 'source': 'Text', 'bytes': 'Number', '$closed': True}
+    scripts['files_normalize'] = {**scripts['normalize'], 'callable_contract': {
+        **scripts['normalize']['callable_contract'], 'params': {'data': {'$list': fields}},
+        'result': {'$list': fields}, 'completion': [{'id': 'normalized', 'predicate': 'len($value)==2',
+            'sources': [{'action': 'probe:python', 'targets': {'id': 'files_normalize'}}]}]}}
+    reg['files:snapshot'] = Adapter({'version': 1, 'params': {'source': 'Text'},
+        'result': {'items': {'$list': fields}, 'origin': 'Text',
+                   'revision': 'Text', 'metadata': {'owner': 'Text', '$closed': True}, '$closed': True},
+        'effects': ['read_external']}, lambda rt, a: calls.append(('snapshot', a['source'])) or {
+            'items': [{'id': 'a', 'score': 1, 'source': a['source'], 'bytes': 4},
+                      {'id': 'b', 'score': 2, 'source': a['source'], 'bytes': 20}],
+            'origin': a['source'], 'revision': 'r2', 'metadata': {'owner': 'operator'}})
+    register('files_normalizer', '#!ibl edition=2\n[def:files_normalizer]($data){'
+             'return [probe:python]{id:"files_normalize",args:{data:$data}}}', edition=2)
+    library = definitions()
+    later = code.replace('probe:read', 'files:snapshot').replace('fn:normalizer', 'fn:files_normalizer')
+    later = later.replace('field:"score"', 'field:"bytes"').replace('$n>3', '$n>10')
+    with monkeypatch.context() as blocked:
+        blocked.setattr(Compiler, '_function', lambda *a, **k: pytest.fail('lower body analysis'))
+        plan = compile_program(later, reg, definitions=library.interfaces_only())
+        bad = compile_program(later.replace('field:"bytes"', 'field:"absent"'), reg,
+                              definitions=library.interfaces_only())
+    assert not plan.issues, plan.report()
+    assert any(i['code'] == 'MISSING_FIELD' for i in bad.issues), bad.report()
+    shape = dict(plan.result_type.fields)
+    assert shape['revision'] == TEXT and dict(shape['metadata'].fields)['owner'] == TEXT
+    assert dict(shape['items'].item.fields)['bytes'] == NUMBER
+    assert calls == []  # storage and both suitability checks never invoke a leaf
+    plan.definitions = library
+    result = Runtime(plan).run()
+    assert result['success'] and result['component_completion']['status'] == 'satisfied', result
+    assert result['value'] == {'origin': 'catalog', 'revision': 'r2', 'metadata': {'owner': 'operator'},
+        'count': 1, 'items': [{'id': 'b', 'score': 2, 'source': 'catalog', 'bytes': 20,
+                              'measured': 20, 'accepted': True, 'label': 'b:20'}]}
+    assert calls == [('snapshot', 'catalog'), ('script', 'files_normalize')]
+
+
+@pytest.mark.parametrize('expression,arguments,code', [
+    ('{**$x}', 'x:4', 'TYPE'),
+    ('f"${$x}"', 'x:{n:1}', 'FORMAT_TYPE'),
+    ('$x[$key]', 'x:{n:1},key:"missing"', 'MISSING_FIELD'),
+    ('$x[$key]', 'x:[1],key:"not-a-number"', 'TYPE'),
+])
+def test_shape_requirements_remain_when_result_is_discarded(abilities, expression, arguments, code):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    definition = '[def:check_shape]($x,$key="n"){$unused=' + expression + ';return 1}'
+    register('check_shape', '#!ibl edition=2\n' + definition, edition=2)
+    source = 'return [fn:check_shape]{' + arguments + '}'
+    for prefix, library in [(definition, None), ('', definitions().interfaces_only())]:
+        plan = compile_program(prefix + source, reg, definitions=library)
+        assert any(i['code'] == code for i in plan.issues), plan.report()
+    assert calls == []
+
+
+def test_record_overlay_order_and_foreign_lifetime_are_preserved(abilities):
+    from function_library import register, definitions
+    from ibl_v2_types import UNKNOWN
+    reg, calls, _ = abilities
+    source = '[def:overlay]($row,$patch){return {fixed:1,**$row,after:2,**$patch,last:3}}'
+    register('overlay', '#!ibl edition=2\n' + source, edition=2)
+    code = 'return [fn:overlay]{row:$row,patch:$patch}'
+    actuals = {'row': Type('Record', (('fixed', TEXT), ('ref', Type('ForeignRef'))), open=False),
+               'patch': Type('Record', (('after', TEXT),), open=True)}
+    for prefix, library in [(source, None), ('', definitions().interfaces_only())]:
+        plan = compile_program(prefix + code, reg, definitions=library, input_types=actuals)
+        shape = dict(plan.result_type.fields)
+        assert not plan.issues and plan.result_type.open, plan.report()
+        assert shape['fixed'] == UNKNOWN and shape['after'] == TEXT and shape['last'].literal == 3
+        # A closed empty patch cannot overwrite the ForeignRef carried by the spread.
+        actuals_closed = {**actuals, 'patch': Type('Record', open=False)}
+        wire = compile_program(prefix + code, reg, definitions=library, input_types=actuals_closed,
+                               value_protocols=['ibl-value/1'])
+        assert any(i['code'] == 'VALUE_PROTOCOL' for i in wire.issues), wire.report()
+    assert calls == []
+
+
+def test_dynamic_projection_keeps_callable_effect_and_argument_contract(abilities):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    source = '[def:invoke]($providers,$name,$items){$selected=$providers[$name];return $selected{items:$items}}'
+    register('invoke', '#!ibl edition=2\n' + source, edition=2)
+    lib = definitions().interfaces_only()
+    code = 'return [fn:invoke]{providers:{send:&[probe:publish]},name:"send",items:[1]}'
+    plan = compile_program(code, reg, definitions=lib)
+    assert not plan.issues and plan.effects - {'pure'} == {'write_external'}, plan.report()
+    bad = compile_program(code.replace('items:[1]', 'items:1'), reg, definitions=lib)
+    assert any(i['code'] == 'TYPE' for i in bad.issues), bad.report()
+    unknown = compile_program('return [fn:invoke]{providers:{send:$f},name:"send",items:[1]}', reg,
+                              definitions=lib, input_types={'f': Type('Callable')})
+    assert 'unknown' in unknown.effects and unknown.guards
+    assert calls == []
+
+
+def test_interpolated_resource_identity_survives_storage_and_repair(abilities, tmp_path):
+    from function_library import register, definitions
+    from ibl_v2_entry import handle_request
+    reg, calls, _ = abilities
+    reg['archive:write'] = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Number',
+        'effects': ['write_external'], 'write_resources': {'file': 'path'}},
+        lambda rt, a: calls.append(('write', a['path'])) or 1)
+    source = '[def:archive]($record,$field,$folder){return [archive:write]{path:f"${$folder}/${$record[$field]}.txt"}}'
+    register('archive', '#!ibl edition=2\n' + source, edition=2)
+    library = definitions().interfaces_only()
+    call = '[fn:archive]{record:{id:7},field:"id",folder:"folder"}'
+    safe = compile_program(call + ' & ' + call.replace('id:7', 'id:8'), reg, definitions=library)
+    assert not safe.issues and all(a.resources for a in safe.accesses), safe.report()
+    conflict = compile_program(call + ' & ' + call, reg, definitions=library)
+    assert any(i['code'] == 'PARALLEL_WRITE_CONFLICT' for i in conflict.issues), conflict.report()
+    assert calls == []
+    code = call + ';return 10/$n'
+    failed = handle_request({'edition': 2, 'code': code, 'inputs': {'n': 0}}, str(tmp_path))
+    assert not failed['success'] and calls == [('write', 'folder/7.txt')], failed
+    fixed = {'edition': 2, 'code': code.replace('10/$n', '10/($n+1)'), 'inputs': {'n': 0},
+             'repair': {'run_id': failed['resume']['run_id']}}
+    checked = handle_request({**fixed, 'check': True}, str(tmp_path))
+    assert checked.get('ok'), checked
+    fixed['repair']['plan_hash'] = checked['repair']['plan_hash']
+    done = handle_request(fixed, str(tmp_path))
+    assert done['success'] and done['value'] == 10, done
+    assert calls == [('write', 'folder/7.txt')]
+
+
+@pytest.mark.parametrize('flag', [False, True, None])
+def test_overlay_retains_finite_branch_fields_and_dynamic_selector(abilities, flag):
+    from function_library import register, definitions
+    from ibl_v2_types import BOOL, alternatives
+    reg, calls, _ = abilities
+    definition = '[def:overlay]($flag,$key){$row=$flag ? {id:1,left:2} : {id:3,right:4};return {**$row,selected:$row[$key]}}'
+    register('overlay', '#!ibl edition=2\n' + definition, edition=2)
+    for prefix, library in [(definition, None), ('', definitions().interfaces_only())]:
+        plan = compile_program(prefix + 'return [fn:overlay]{flag:$flag,key:"id"}', reg,
+            definitions=library, input_types={'flag': BOOL} if flag is None else None,
+            inputs={} if flag is None else {'flag': flag})
+        assert not plan.issues, plan.report()
+        candidates = list(alternatives(plan.result_type))
+        assert len(candidates) == (2 if flag is None else 1)
+        for candidate in candidates:
+            fields = dict(candidate.fields)
+            assert fields['id'].kind == fields['selected'].kind == 'Number'
+            assert ('left' in fields) != ('right' in fields)
+    assert calls == []
+
+
+
+def test_record_relation_limit_keeps_common_guarantees_and_reports_uncertainty(abilities):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    source = '[def:overlay]($row){return {**$row,last:3}}'
+    register('overlay', '#!ibl edition=2\n' + source, edition=2)
+    variants = Type('Union', item=tuple(Type('Record', (('id', NUMBER), ('field'+str(i), TEXT)), open=False)
+                                        for i in range(65)))
+    for prefix, library in [(source, None), ('', definitions().interfaces_only())]:
+        plan = compile_program(prefix + 'return [fn:overlay]{row:$row}', reg,
+                               definitions=library, input_types={'row': variants})
+        assert not plan.issues and plan.result_type.open, plan.report()
+        assert dict(plan.result_type.fields) == {'id': NUMBER, 'last': Type('Number', literal=3)}
+        assert any(w['code'] == 'RECORD_RELATION_LIMIT' for w in plan.preflight.get('warnings', [])), plan.report()
+    assert calls == []
+
+
+
+@pytest.mark.parametrize('invocation', ['[fn:label]{**$args}', '$f{**$args}'])
+def test_record_alternatives_remain_applicable_as_named_arguments(abilities, invocation):
+    from function_library import register, definitions
+    from ibl_v2_types import BOOL
+    reg, calls, _ = abilities
+    label = '[def:label]($id,$suffix="default"){return f"${$id}:${$suffix}"}'
+    caller = '[def:dispatch]($flag,$f){$args=$flag ? {id:1} : {id:2,suffix:"second"};return ' + invocation + '}'
+    for name, definition in [('label', label), ('dispatch', caller)]:
+        register(name, '#!ibl edition=2\n' + definition, edition=2)
+    source = 'return [fn:dispatch]{flag:$flag,f:&[fn:label]}'
+    library = definitions()
+    for prefix, lib in [(label + caller, None), ('', library.interfaces_only())]:
+        plan = compile_program(prefix + source, reg, definitions=lib, input_types={'flag': BOOL})
+        assert not plan.issues and plan.result_type.kind == 'Text', plan.report()
+        if lib is not None:
+            plan.definitions = library
+        for flag, expected in [(True, '1:default'), (False, '2:second')]:
+            result = Runtime(plan, {'flag': flag}).run()
+            assert result['success'] and result['value'] == expected, result
+    assert calls == []
+
+
+def test_named_record_alternatives_check_every_callback_candidate(abilities):
+    from function_library import register, definitions
+    from ibl_v2_types import BOOL
+    reg, calls, _ = abilities
+    # Different field sets must not erase the known bad `items` argument.
+    source = '[def:dispatch]($flag,$send){$args=$flag ? {items:[1]} : {items:7,extra:1};return $send{**$args}}'
+    register('dispatch', '#!ibl edition=2\n' + source, edition=2)
+    for prefix, lib in [(source, None), ('', definitions().interfaces_only())]:
+        plan = compile_program(prefix + 'return [fn:dispatch]{flag:$flag,send:&[probe:publish]}', reg,
+                               definitions=lib, input_types={'flag': BOOL})
+        assert {'TYPE', 'UNKNOWN_ARGUMENT'} <= {i['code'] for i in plan.issues}, plan.report()
+        assert 'write_external' in plan.effects
+    direct = compile_program('$args=$flag ? {items:[1]} : {items:7,extra:1};'
+                             'return [probe:publish]{**$args}', reg, input_types={'flag': BOOL})
+    assert {'TYPE', 'UNKNOWN_ARGUMENT'} <= {i['code'] for i in direct.issues}, direct.report()
+    assert calls == []
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

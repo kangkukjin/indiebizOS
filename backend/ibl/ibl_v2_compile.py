@@ -19,7 +19,7 @@ from ibl_v2_analysis import (finish_diagnostics,
                              assigned_names, location, access_type, HINTS)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL, rows_type,
                           infer, join, declared, compatible, alternatives,
-                          ordered_list, static_text, NEVER, describe_type)
+                          ordered_list, NEVER, describe_type)
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
@@ -533,28 +533,11 @@ class Compiler(CallAnalysis):
             return ordered_list(sub(v) for v in d["values"])
         if kind == "record":
             self.container_value(node)
-            if "entries" not in d:
-                # 미지정 입력에 매인 필드는 레코드(=호출 인자)에서 빠진다 — 핸들러의 기본값이 산다.
-                return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()
-                                            if not self.omitted(v, env)), open=False)
-            fields, opened = {}, False
-            for key, value in d["entries"]:
-                if key is not None and self.omitted(value, env):
-                    continue
-                typ = sub(value)
-                if key is None:
-                    self.need(value, typ, Type("Record"))
-                    if typ.kind == "Record":
-                        if typ.open:
-                            fields = {k: UNKNOWN for k in fields}
-                        fields.update(dict(typ.fields))
-                        opened |= typ.open
-                    else:
-                        fields = {k: UNKNOWN for k in fields}
-                        opened = True
-                else:
-                    fields[key] = typ
-            return Type("Record", tuple(fields.items()), open=opened)
+            from ibl_v2_semantic import record_type
+            entries = d.get("entries", list(d.get("fields", {}).items()))
+            # Omitted surface inputs are absent arguments, not Unknown values.
+            return record_type(self, [(k, sub(v), v) for k, v in entries
+                                      if k is None or not self.omitted(v, env)])
         if kind == "slice":
             self.container_value(node)
             base = sub(d["base"])
@@ -639,32 +622,22 @@ class Compiler(CallAnalysis):
             typ = self.lambda_type(node, env, names, readonly)
             return typ
         if kind == "format":
-            known = []
+            from ibl_v2_semantic import format_type
+            parts = []
             for part in d["parts"]:
-                if isinstance(part, Node) and self.omitted(part, env):
-                    known.append("")   # 미지정 입력의 보간은 빈 문자열(구형 표면 치환과 같은 뜻)
-                    continue
                 if isinstance(part, Node):
+                    if self.omitted(part, env):
+                        parts.append((Type("Text", literal=""), part))
+                        continue
                     self.container_value(part)
-                    t = sub(part)
-                    if not compatible(t, join(join(TEXT, NUMBER), BOOL)):
-                        self.issue(part, "FORMAT_TYPE", f"보간에는 Text·Number·Bool이 필요하지만 {t}입니다.",
-                                   expected=str(join(join(TEXT, NUMBER), BOOL)), actual=str(t))
-                    elif t.kind == "Unknown":
-                        self.need(part, t, join(join(TEXT, NUMBER), BOOL))
-                    # 정수 리터럴 보간은 실행의 scalar_text 와 같은 글자다 — 가지별 경로의 자원 정체(100회차 L100-2).
-                    known.append(static_text(t) if static_text(t) is not None
-                                 else (str(t.literal) if t.kind == "Number" and type(t.literal) is int else None))
+                    parts.append((sub(part), part))
                 else:
-                    known.append(part if isinstance(part, str) else None)
+                    parts.append((Type("Text", literal=part), node))
                     if isinstance(part, str) and _BARE_DOLLAR_NAME.search(part):
-                        # ep4214: f"…{json($html)}…" 가 문자 그대로 나갔다 — 보간은 ${식} 뿐이다.
                         self.warn(node, "FORMAT_UNINTERPOLATED",
                                   "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
                                   text=_BARE_DOLLAR_NAME.search(part)[0])
-            if known and all(isinstance(k, str) for k in known):
-                return Type("Text", literal="".join(known))
-            return TEXT
+            return format_type(self, parts)
         if kind == "pipe":
             left = sub(d["left"])
             if d["right"].kind not in ("call", "pure_call", "named_call"):
@@ -711,10 +684,6 @@ class Compiler(CallAnalysis):
             return join(left, sub(d["right"], env.copy(), True))
         if kind == "call":
             arg_type = sub(d["params"])
-            args = dict(arg_type.fields)
-            d["open_arguments"] = arg_type.open
-            if arg_type.open:
-                self.need(d["params"], UNKNOWN, Type("Record"))
             return self.named_target(node, arg_type, env, names, readonly, piped)
         if kind == "if":
             from ibl_v2_narrow import predicate, branch_environment
@@ -845,6 +814,11 @@ class Compiler(CallAnalysis):
         return False
 
     def named_target(self, node, arg_type, env, names, readonly, piped=None):
+        if arg_type.kind == 'Union':
+            result = NEVER
+            for arguments in alternatives(arg_type):
+                result = join(result, self.named_target(node, arguments, env, names, readonly, piped))
+            return result
         d = node.data
         if d['node'] == 'fn' or (d['node'], d['action']) == ('table', 'each'):
             return self._named_target(node, arg_type, env, names, readonly, piped)
@@ -862,6 +836,8 @@ class Compiler(CallAnalysis):
         d = node.data
         args = dict(arg_type.fields)
         d["open_arguments"] = arg_type.open
+        if arg_type.open:
+            self.need(d['params'], UNKNOWN, Type('Record'))
         key = f"{d['node']}:{d['action']}"
         if d.get("target") and (d["node"] == "fn" or key == "table:each"):
             self.issue(node, "TARGET_NODE", f"노드 지정 @{d['target']} 은 도구 호출에만 붙습니다 — 함수·each 블록에는 쓸 수 없습니다.")

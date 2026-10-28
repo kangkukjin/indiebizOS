@@ -154,6 +154,16 @@ class CallAnalysis:
 
     def apply_callable(self, node, typ, types, nodes, env=None, names=None, readonly=frozenset(),
                        *, piped=None, require_pure=False):
+        if isinstance(types, Type) and types.kind == 'Union':
+            result = NEVER
+            for arguments in alternatives(types):
+                branch_nodes = nodes
+                if isinstance(nodes, Node) and nodes.kind != 'record':
+                    from ibl_v2_semantic import literal_node
+                    branch_nodes = literal_node(arguments, node)
+                result = join(result, self.apply_callable(node, typ, arguments, branch_nodes, env, names, readonly,
+                                                         piped=piped, require_pure=require_pure))
+            return result
         from ibl_v2_requirements import application
         required = application(self, node, typ, types, require_pure or node in self.pure_calls)
         if required is not None:

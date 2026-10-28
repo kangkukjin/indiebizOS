@@ -1,0 +1,31 @@
+{
+  "command": [
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3",
+    "-m",
+    "pytest",
+    "backend/",
+    "-n",
+    "auto",
+    "--dist",
+    "loadfile",
+    "--ff",
+    "--junitxml=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/l100_budget/full_recheck/results.xml"
+  ],
+  "started_at_utc": "2026-10-28T10:24:02.714996+00:00",
+  "duration_seconds": 1035.87,
+  "exit_code": 0,
+  "head_before": "9c06f7abf44be9f9522fddbec5b70ef07d64da46",
+  "head_after": "c16a117891743b9f7c7c3b52b98a9ee0e103c00b",
+  "tracked_files_changed": [
+    "docs/LONG_SENTENCE_COMPOSITION_REPAIR_TRAINING_2026_10_28.md"
+  ],
+  "status_before": "M data/system_docs/changelog.log\n M data/system_docs/inventory.md",
+  "status_after": "M data/system_docs/changelog.log\n M data/system_docs/inventory.md",
+  "passed": 11438,
+  "skipped": 22,
+  "failures": 0,
+  "warnings": 80,
+  "pytest_seconds": 1033.74,
+  "scope": "backend/ including system",
+  "implementation_and_tests_unchanged": true
+}

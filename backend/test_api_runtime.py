@@ -73,6 +73,63 @@ def test_existing_limb_job_finishes_during_drain_with_auth(monkeypatch):
         assert reg.snapshot()['owners'] == []
 
 
+def test_resident_completion_unblocks_drain_with_auth_and_duplicate_ack(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import api_resident_pcs
+    import device_registry
+    import limb_keys
+    import resident_pcs
+    import resident_store
+
+    monkeypatch.setattr(limb_keys, '_store_path', lambda: tmp_path / 'keys.json')
+    monkeypatch.setattr(limb_keys, '_cache', None)
+    monkeypatch.setenv('INDIEBIZ_RUNTIME_STATE_DIR', str(tmp_path))
+    monkeypatch.setattr(device_registry, 'register', lambda *a, **k: None)
+    reg = rw.WorkRegistry('test')
+    reg.gate('ACTIVE')
+    monkeypatch.setattr(rw, '_registry', reg)
+    invitation = limb_keys.resident_invite('test-device')
+    rec = limb_keys.resident_enroll(invitation['key'], 'a' * 32)
+    auth = {'key': rec['key'], 'installation_id': 'a' * 32}
+    lease = reg.reserve('waiting-for-device')
+    task = resident_pcs.submit(rec['device_id'], {'op': 'info'}, 'existing')
+    jid = task['job_id']
+    resident_pcs.sync(**auth)  # Command delivered before draining.
+    resident_pcs.sync(**auth, events=[{
+        'job_id': jid, 'event_id': 'started', 'kind': 'started', 'payload': {}}])
+    pending = resident_pcs.submit(rec['device_id'], {'op': 'info'}, 'queued')
+    reg.gate('DRAINING')
+    app = FastAPI()
+    app.include_router(api_resident_pcs.router)
+    app.add_middleware(RuntimeAdmission)
+    event = {'job_id': jid, 'event_id': 'finished', 'kind': 'result',
+             'payload': {'success': True, 'value': 'done'}}
+    try:
+        with TestClient(app) as client:
+            invalid = client.post('/limb/resident/events', json={
+                **auth, 'installation_id': 'b' * 32, 'events': [event]})
+            assert invalid.status_code == 400
+            assert resident_store.wait_result(jid, 0) is None
+            for _ in range(2):  # A lost acknowledgement retries the same event.
+                response = client.post('/limb/resident/events', json={
+                    **auth, 'events': [event]})
+                assert response.status_code == 200
+                assert response.json()['ack'] == ['finished']
+                assert response.json()['jobs'] == []
+            assert resident_store.wait_result(jid, 0) == event['payload']
+            history = resident_store.history(job=jid)
+            assert history['tasks'][0]['state'] == 'succeeded'
+            assert len([e for e in history['events'] if e['kind'] == 'result']) == 1
+            assert resident_store.history(job=pending['job_id'])['tasks'][0]['state'] == 'queued'
+            assert reg.snapshot()['active_roots'] == 1
+            assert client.post('/limb/resident/enroll', json=auth).status_code == 503
+            assert client.post('/ibl/execute', json={'code': 'return 1'}).status_code == 503
+    finally:
+        lease.close()
+    assert reg.snapshot()['owners'] == []
+
+
 @pytest.mark.parametrize('operation', ['result', 'progress', 'phone_result'])
 def test_device_storage_does_not_block_event_loop(monkeypatch, operation):
     import threading

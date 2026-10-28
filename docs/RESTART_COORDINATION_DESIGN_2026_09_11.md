@@ -172,6 +172,7 @@ ACTIVE/ready/known이고 실행 digest가 현재 코드 manifest와 일치함을
 | 파일 관문 TTL | `runtime_work.WorkRegistry`의 동일 RLock 안에서 접수와 차단. 등록은 제출 전에, 해제는 실제 finally 뒤. 관리 워커는 TTL로 차단을 풀지 않음 |
 | GUI·HTTP·MCP 실행과 위임 | `chat_runs`, HTTP ASGI 수명, IBL/인지 실행, 위임 큐에서 예약. WS 분리·HTTP 타임아웃·취소 요청만으로 완료 처리하지 않음 |
 | 기존 작업의 MCP 재진입 | 살아 있는 실행 그룹에 연결된 임의 capability를 내부 헤더/stdio 환경으로 전달. 모델이 주는 task/episode ID는 접수 자격이 아님. 결과 조회·취소·steer는 drain 중 허용 |
+| 기존 원격 작업의 완료 통지 | `/limb/resident/events`도 동기화·결과 회수와 함께 drain 중 허용한다. 등록/설치 신원과 작업 소유권 검사는 유지하고 새 작업은 접수하지 않는다. 사건 ACK가 유실돼 재전송돼도 결과는 한 번만 반영하며, 완료 통지를 기다리는 턴이 재기동 대기를 해소할 수 있어야 한다. `test_api_runtime`의 실제 원장·인증·중복 ACK 검사와 `test_limb_client`의 수신 대기 중 독립 결과 전송 검사로 검증한다. |
 | 도구·최종 저장 | 실제 Thread/ThreadPool/async task/subprocess 종료와 증류 큐 finally 추적. 별도 서비스 루프는 제외하고 폴러가 작업을 접수하는 경계에서 등록. 도구 프로세스 영수증으로 워커 사망 뒤 발견했던 자손도 회수 |
 | RED 예약 적용·검증·복구 | `red_apply`가 예약 턴 종료를 기다린 뒤 요청. 제어자가 drain/종료 뒤 `restart_helper`에 실제 적용/검증을 맡김. 수행자 receipt 뒤 사망은 재적용하지 않고 검증된 백업만 복원. 이전 코드 digest 재대조 후 재부팅·검증 |
 | Electron·start.sh·전체 창 닫기 | 같은 `api.py start/shutdown --wait` 계약. 의도적 종료를 먼저 내구 기록하고 소유 프로세스만 종료. 종료와 즉시 재실행이 겹치면 이전 제어자 잠금 해제까지 대기 |

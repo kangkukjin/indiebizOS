@@ -360,14 +360,23 @@ def test_event_endpoint_acks_without_delivering_queued_commands(hub, phone_env):
     assert c.step(inline=True, wait=0)['jobs'][0]['id'] == task['job_id']
 
 
-def test_results_upload_while_command_receiver_is_blocked(hub, phone_env):
+def test_results_upload_while_command_receiver_is_blocked(hub, phone_env, monkeypatch):
     import threading
+    import runtime_work as rw
+    from api_runtime import RuntimeAdmission
+    hub.app.add_middleware(RuntimeAdmission)
+    reg = rw.WorkRegistry('draining-hub')
+    reg.gate('ACTIVE')
+    monkeypatch.setattr(rw, '_registry', reg)
     rec = _enroll_phone()
     c = _client(hub, rec, lambda *a: {})
     task = pcs.submit(rec['device_id'], {'op': 'ibl', 'ibl': 'return 1'}, 'report-once')
     # Take ownership through the normal receiver, then leave the result in durable spool.
     c.step(inline=True, wait=0)
     c._event_push_supported = True
+    # The receiver can remain connected while the hub drains for restart.
+    # Completion uploads must still reach the authenticated event endpoint.
+    reg.gate('DRAINING')
     blocked, release, uploaded = threading.Event(), threading.Event(), threading.Event()
     post = c._post
     def send(path, payload, timeout):

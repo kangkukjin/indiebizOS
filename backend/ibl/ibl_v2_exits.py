@@ -12,7 +12,7 @@ def value_control(node):
     if node is None:
         return False
     d, kind = node.data, node.kind
-    if kind in ('sequence', 'if', 'try', 'repeat', 'fallback'):
+    if kind in ('sequence', 'if', 'case', 'try', 'repeat', 'fallback'):
         return True
     if kind in ('bind', 'return'):
         return value_control(d['value'])

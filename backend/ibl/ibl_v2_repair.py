@@ -151,7 +151,7 @@ def activate(journal, handle, record, expected_identity):
 def continuation_sites(record):
     """Certified source loop/call pairs, translated to the original lineage."""
     frontier = record.get('frontier', {})
-    if frontier.get('protocol') != 'ibl-repair-frontier/6':
+    if frontier.get('protocol') != 'ibl-repair-frontier/7':
         return set()
     mapping, nodes = record.get('node_map', {}), frontier['nodes']
     result = set()

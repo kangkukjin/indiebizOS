@@ -315,6 +315,7 @@
     "ibl/ibl_v2_adapters",
     "ibl/ibl_v2_analysis",
     "ibl/ibl_v2_call_analysis",
+    "ibl/ibl_v2_case",
     "ibl/ibl_v2_compat",
     "ibl/ibl_v2_compile",
     "ibl/ibl_v2_completion",
@@ -574,8 +575,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 563,
-    "engine": 531,
+    "total": 564,
+    "engine": 532,
     "blocklist": 32
   }
 }

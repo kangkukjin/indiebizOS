@@ -141,7 +141,7 @@ class Projection:
         if self.remaining < 0:
             raise ValueError('repair dependency budget exceeded')
         d, kind, own = node.data, node.kind, self.atom(node)
-        if kind in ('sequence', 'if', 'try', 'repeat', 'fallback', 'bind', 'return'):
+        if kind in ('sequence', 'if', 'case', 'try', 'repeat', 'fallback', 'bind', 'return'):
             outcome = self.flow(node, env, control)
             return self.merge([*outcome.returns, *([outcome.value] if outcome.continues else [])])
         if kind == 'ref':
@@ -332,6 +332,20 @@ class Projection:
                 result.value = result.value.with_deps(cleanup.value.deps)
                 result.returns = [v.with_deps(cleanup.value.deps) for v in result.returns]
             return result
+        if node.kind == 'case':
+            selector = self.expr(d['value'], env, control | own)
+            guard = own | self.complete(selector)
+            branches = []
+            for expected, body in [*d['branches'], (None, d['otherwise'])]:
+                if expected is not None:
+                    guard |= self.complete(self.expr(expected, env, control | guard))
+                local = env.copy()
+                flow = self.flow(body, local, control | guard)
+                flow.value = flow.value.with_deps(guard)
+                flow.returns = [value.with_deps(guard) for value in flow.returns]
+                local = {name: value.with_deps(guard) for name, value in local.items()}
+                branches.append((flow, local))
+            return self.join_flows(branches, env, own)
         if node.kind == 'if':
             condition = self.expr(d['value'], env, control | own)
             guard = own | condition.deps
@@ -499,7 +513,7 @@ def frontier(plan):
     except (ValueError, RecursionError):
         supported = False
     address = lambda nid: repr(projection.paths[nid])
-    return {'protocol': 'ibl-repair-frontier/6', 'supported': supported,
+    return {'protocol': 'ibl-repair-frontier/7', 'supported': supported,
             'retained': {address(nid): projection.signature(projection.nodes[nid])
                          for nid in projection.retained},
             'iteration_effects': sorted([address(loop), address(call)] for loop, call in projection.iteration_effects),
@@ -510,7 +524,7 @@ def frontier(plan):
 
 
 def mapping(before, after):
-    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/6'
+    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/7'
             or after.get('protocol') != before.get('protocol')
             or not before.get('supported') or not after.get('supported')
             or before['retained'] != after['retained'] or before['effects'] != after['effects']

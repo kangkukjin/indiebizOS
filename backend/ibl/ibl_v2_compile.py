@@ -693,23 +693,8 @@ class Compiler(CallAnalysis):
             self.merge_continuations(env, paths)
             return result
         if kind == "case":
-            self.pure(d["value"])
-            sub(d["value"])
-            environments, types = [], []
-            for condition, body in d["branches"]:
-                self.pure(condition)
-                sub(condition)
-                child = env.copy()
-                types.append(sub(body, child, True))
-                environments.append((body, child))
-            child = env.copy()
-            types.append(sub(d["otherwise"], child, True))
-            environments.append((d["otherwise"], child))
-            self.merge_continuations(env, environments)
-            result = types[0]
-            for t in types[1:]:
-                result = join(result, t)
-            return result
+            from ibl_v2_case import source_case
+            return source_case(self, node, env, names, readonly, final)
         if kind == "repeat":
             from ibl_v2_repeat import source_repeat
             return source_repeat(self, node, env, names, readonly, final)

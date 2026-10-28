@@ -19,7 +19,7 @@ def edition():
     return digest({name: (root / name).read_text() for name in (
         'ibl_v2_semantic.py', 'ibl_v2_semantic_store.py', 'ibl_v2_types.py',
         'ibl_v2_analysis.py', 'ibl_v2_call_analysis.py', 'ibl_v2_adapters.py',
-        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_exits.py', 'ibl_v2_recovery.py', 'ibl_v2_repeat.py', 'ibl_v2_compile.py')})
+        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_case.py', 'ibl_v2_exits.py', 'ibl_v2_recovery.py', 'ibl_v2_repeat.py', 'ibl_v2_compile.py')})
 
 
 class Unsupported(ValueError):
@@ -61,6 +61,14 @@ def lexical_inputs(node, bound=frozenset()):
             continuing = [v[1] for v in (yes, no) if not v[2]]
             merged = set.intersection(*continuing) if continuing else names
             return scan(d['value'], names)[0] | yes[0] | no[0], merged, not continuing
+        if value.kind == 'case':
+            paths = [scan(body, names) for _, body in d['branches']] + [scan(d['otherwise'], names)]
+            continuing = [path[1] for path in paths if not path[2]]
+            merged = set.intersection(*continuing) if continuing else names
+            needed = scan(d['value'], names)[0]
+            for test, _ in d['branches']:
+                needed |= scan(test, names)[0]
+            return needed | set().union(*(path[0] for path in paths)), merged, not continuing
         if value.kind == 'pipe':
             left = scan(d['left'], names)
             right = scan(d['right'], left[1])
@@ -190,6 +198,8 @@ class Derivation:
         if kind == 'if':
             empty = Node('sequence', node.end, node.end, {'statements': []})
             return self.choice(d['value'], d['body'], d['otherwise'] or empty, env)
+        if kind == 'case':
+            return self.case(node, env)
         if kind == 'try':
             return self.recovery(node, env)
         if kind == 'repeat':
@@ -224,6 +234,24 @@ class Derivation:
                                empty=False, exits=True, value_param=value_param, piped=piped)
         else:
             return self.finish(self.expr(node, env, piped), env)
+        self.effects.append(result)
+        return result
+
+    def case(self, node, env):
+        from ibl_v2_narrow import predicate
+        d = node.data
+        selector = self.pure_expr(d['value'], env)
+        def latent(body, pure=False):
+            inner = Derivation(self.budget, pure=self.pure or pure, exits=not pure)
+            body = body or Node('sequence', node.end, node.end, {'statements': []})
+            interface = inner.ability(sorted(set(env) | lexical_inputs(body)), body)
+            self.actions.update(inner.actions)
+            self.functions.update(inner.functions)
+            return interface
+        branches = [{'expected': latent(test, True), 'guard': predicate(test), 'body': latent(body)}
+                    for test, body in d['branches']]
+        result = self.term('case', selector=selector, guard=predicate(d['value']), captures=dict(env),
+                           branches=branches, otherwise=latent(d['otherwise']))
         self.effects.append(result)
         return result
 
@@ -306,7 +334,7 @@ class Derivation:
             return self.sequence(node, env)
         if kind == 'fallback':
             return self.term('normal_value', outcome=self.outcome(node, env))
-        if kind in ('if', 'try', 'repeat'):
+        if kind in ('if', 'case', 'try', 'repeat'):
             # Source validation excludes control blocks from pure/container
             # positions. At value boundaries, outcome/continue owns their exits.
             raise Unsupported('control value requires an exit continuation')
@@ -516,6 +544,10 @@ def apply(compiler, interface, args, site):
             result = value(term['value'])
             out = (Exits(returned=result, state=bindings) if term['returned']
                    else Exits(None if result == NEVER else (result, bindings), state=bindings))
+        elif op == 'case':
+            from ibl_v2_case import relation_case
+            selector = value(term['selector'])
+            out = relation_case(compiler, term, {k: value(v) for k, v in term['captures'].items()}, selector, site, apply)
         elif op == 'repeat':
             from ibl_v2_repeat import relation_repeat
             out = relation_repeat(compiler, term, {k: value(v) for k, v in term['captures'].items()}, site, apply)

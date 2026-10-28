@@ -1,5 +1,7 @@
 """기존 대화/연구 사건을 실행 인계로 읽는다. 새 작업 큐나 효과 재실행기는 아니다."""
+import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 
 import conversation_sessions as sessions
@@ -58,6 +60,7 @@ class Handoff:
         self.binding = binding if binding and binding.turn_id else None
         self.research = None
         self.sources = []
+        self.previews = {}
         if not self.binding:
             from research_context import current
             context = current()
@@ -110,8 +113,33 @@ class Handoff:
                 return [(r[0], states.get(r[0], "interrupted"), {"type": r[1], **json.loads(r[2])}) for r in rows]
         return []
 
+    def _source_ref(self, turn):
+        """발췌로 확인하지 못한 사건은 새 세션에서도 원문으로 돌아갈 수 있어야 한다."""
+        if self.binding:
+            return {"path": str(self.binding.db_path), "table": "conversation_events",
+                    "where": {"session_id": self.binding.session_id, "turn_id": turn},
+                    "column": "payload", "order_by": "id"}
+        if self.research:
+            return {"path": str(Path(self.research["path"]) / "conversations.db"),
+                    "table": "research_events",
+                    "where": {"thread_id": self.research["thread_id"], "run_id": turn},
+                    "column": "payload", "order_by": "sequence"}
+        return {"turn_id": turn}
+
+    def _preview_reminder(self, row, fingerprint):
+        """전달된 발췌의 반복을 짧은 미확정 관측으로 바꾼다. 완료/복구 확인은 아니다."""
+        return {"turn_id": row["turn_id"], "state": row["state"], "partial": True,
+                "unchanged_preview": True, "fingerprint": fingerprint,
+                "request": _text(row.get("request", ""), 240),
+                "tool_states": dict(Counter(call["state"] for call in row["tools"])),
+                "pending_steering_count": len(row["pending_steering"]),
+                "source_ref": self._source_ref(row["turn_id"]),
+                "note": "같은 발췌가 앞선 완료 턴에 전달됨. 전체 확인·목표 완료를 뜻하지 않는다. "
+                        "관련 작업을 이어가거나 효과를 재실행하기 전 원문과 현재 상태를 확인하라."}
+
     def recovery(self):
-        grouped, acknowledged = {}, set()
+        grouped, acknowledged, presented = {}, set(), {}
+        self.sources, self.previews = [], {}
         for turn, state, event in self._previous():
             group = grouped.setdefault(turn, {"turn_id": turn, "state": state, "events": []})
             group["events"].append(event)
@@ -124,7 +152,9 @@ class Handoff:
             # 모델 응답 확정과 표면 저장은 별개다. 표면이 중단됐다면 이전 인계도 확인하지 않는다.
             if finish.get("success") and group["state"] == "completed":
                 acknowledged.update(finish.get("recovered", []))
+                presented.update(finish.get("recovery_previews", {}))
         recovered = []
+        fingerprints = {}
         for turn, group in grouped.items():
             if turn in acknowledged:
                 continue
@@ -138,6 +168,10 @@ class Handoff:
             pending = [{"id": k, "instruction": v} for k, v in accepted.items() if k not in completed]
             if group["state"] not in {"failed", "interrupted", "cancelled", "running"} and not pending:
                 continue
+            # 발췌 밖의 변경도 다시 전달한다. _calls/_text의 축약 이전 원문을 지문화한다.
+            fingerprints[turn] = hashlib.sha256(json.dumps(
+                {**group, "events": events}, ensure_ascii=False,
+                sort_keys=True, default=str).encode()).hexdigest()
             group.update(pending_steering=pending, tools=_calls(events))
             starts = [e for e in events if e.get("type") == "handoff.started"]
             if starts:
@@ -146,12 +180,23 @@ class Handoff:
             if finishes:
                 group["last_response"] = finishes[-1].get("response", "")
             recovered.append(group)
-        self.sources = []
         if not recovered:
             return ""
         # 완전히 전달한 턴만 인계 확인한다. 발췌 밖의 조향/도구는 다음 실행에도 남는다.
         rows, remaining = [], 18000
         for row in reversed(recovered):
+            turn = row["turn_id"]
+            fingerprint = fingerprints[turn]
+            if presented.get(turn) == fingerprint:
+                reminder = self._preview_reminder(row, fingerprint)
+                size = len(json.dumps(reminder, ensure_ascii=False))
+                if size <= remaining:
+                    rows.append(reminder)
+                    self.previews[turn] = fingerprint
+                    remaining -= size
+                if len(rows) >= 5:
+                    break
+                continue
             raw = json.dumps(row, ensure_ascii=False, default=str)
             if len(raw) <= remaining:
                 rows.append(row)
@@ -159,7 +204,9 @@ class Handoff:
                 remaining -= len(raw)
             elif not rows:
                 rows.append({"turn_id": row["turn_id"], "partial": True,
+                             "fingerprint": fingerprint, "source_ref": self._source_ref(turn),
                              "excerpt": _text(row, 15000)})
+                self.previews[turn] = fingerprint
                 break
             if len(rows) >= 5:
                 break
@@ -181,4 +228,5 @@ class Handoff:
 
     def finish(self, success, response=""):
         self.record("finished", {"success": success, "recovered": self.sources if success else [],
+                                 "recovery_previews": self.previews if success else {},
                                  "response": _text(response, 8000)})

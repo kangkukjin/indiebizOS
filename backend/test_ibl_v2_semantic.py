@@ -1016,7 +1016,7 @@ def test_parallel_result_keeps_foreign_ref_lifetime_boundary(abilities):
 
 
 
-def test_partial_parallel_function_edit_is_rejected_without_repeating_writes(abilities, tmp_path):
+def test_partial_parallel_function_edit_resumes_without_repeating_writes(abilities, tmp_path):
     import threading
     from function_library import register
     from ibl_v2_entry import handle_request
@@ -1037,10 +1037,14 @@ def test_partial_parallel_function_edit_is_rejected_without_repeating_writes(abi
     fixed = {'edition': 2, 'code': code.replace('? $n : 1', '? ($n+1) : 1'), 'inputs': {'n': 0},
              'repair': {'run_id': failed['resume']['run_id']}}
     checked = handle_request({**fixed, 'check': True}, str(tmp_path))
-    # This is a documented limit, not a successful partial repair. The current
-    # frontier locks effect-bearing definitions, even when only their tail changes.
-    # Relaxing it without tracking result-to-effect dependencies would be unsound.
-    assert not checked.get('ok') and checked['diagnostic']['code'] == 'REPAIR_UNSUPPORTED', checked
+    assert checked['ok'], checked
+    assert sorted(calls) == [('write', 'one'), ('write', 'two')]
+    fixed['repair']['plan_hash'] = checked['repair']['plan_hash']
+    repaired = handle_request(fixed, str(tmp_path))
+    assert repaired['success'] and repaired['value'] == [10, 10], repaired
+    assert sorted(calls) == [('write', 'one'), ('write', 'two')]
+    resumed = handle_request({**fixed, 'repair': None, 'resume': failed['resume']}, str(tmp_path))
+    assert resumed['success'] and resumed['value'] == [10, 10], resumed
     assert sorted(calls) == [('write', 'one'), ('write', 'two')]
 
 

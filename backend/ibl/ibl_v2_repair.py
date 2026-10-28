@@ -1,6 +1,6 @@
-"""CAS-bound pure-tail repair within the existing journal and execution lineage.
+"""CAS-bound result-computation repair within the existing journal and execution lineage.
 
-Only the compiler-proven pure suffix can change; effect dependencies stay fixed.
+Only result computations outside effect dependencies may change.
 Logical operation identity is the original AST path in this lineage, not an
 action/argument hash. Reordering, inserted effects and uncertain receipts stop.
 """
@@ -50,7 +50,7 @@ def snapshot(plan, inputs, project_path, agent_id, input_evidence=None, policy=N
     from ibl_v2_repair_graph import frontier
     return {'source': source, 'library_source': plan.source[len(source):],
             'context': digest([context, policy]), 'plan': plan.fingerprint,
-            'frontier': frontier(plan, source), 'function_refs': plan.dependencies.get('function_refs', [])}
+            'frontier': frontier(plan), 'function_refs': plan.dependencies.get('function_refs', [])}
 
 
 def remember(journal, record):
@@ -107,7 +107,7 @@ def propose(db, record, handle):
     fingerprint = digest([original_identity, record, rows, mapping])
     plan = {'protocol': 'ibl-repair/1', 'run_id': handle['run_id'], 'plan_hash': fingerprint,
             'status': 'ready', 'steps': [{'call_id': r[0], 'kind': 'inherit_completed_effect' if r[3] else 'inherit_completed_read'} for r in rows],
-            'new_computation': 'proven_pure_suffix', 'external_state': 'not_revalidated'}
+            'new_computation': 'effect_independent_results', 'external_state': 'not_revalidated'}
     return plan, mapping
 
 

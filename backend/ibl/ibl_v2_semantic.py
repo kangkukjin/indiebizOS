@@ -19,7 +19,7 @@ def edition():
     return digest({name: (root / name).read_text() for name in (
         'ibl_v2_semantic.py', 'ibl_v2_semantic_store.py', 'ibl_v2_types.py',
         'ibl_v2_analysis.py', 'ibl_v2_call_analysis.py', 'ibl_v2_adapters.py',
-        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_recovery.py', 'ibl_v2_compile.py')})
+        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_recovery.py', 'ibl_v2_repeat.py', 'ibl_v2_compile.py')})
 
 
 class Unsupported(ValueError):
@@ -63,6 +63,13 @@ def lexical_inputs(node, bound=frozenset()):
             continuing = [v[1] for v in (yes, no) if not v[2]]
             merged = set.intersection(*continuing) if continuing else names
             return scan(d['value'], names)[0] | yes[0] | no[0], merged, not continuing
+        if value.kind == 'repeat':
+            body = scan(d['body'], names | {'i'})
+            scope = body[1] if d['mode'] == 'until' else names | ({'i'} if d['mode'] == 'while' else set())
+            count = d['value'].data.get('value') if d['value'].kind == 'literal' and d['mode'] == 'count' else None
+            guaranteed = d['mode'] == 'until' or type(count) is int and count > 0
+            after = ((body[1] - {'i'}) | (names & {'i'})) if guaranteed else names
+            return body[0] | scan(d['value'], scope)[0], after, guaranteed and body[2]
         if value.kind == 'try':
             body = scan(d['body'], names)
             caught = scan(d['catch'], names | {'error'})
@@ -127,8 +134,8 @@ class Derivation:
                                    captures={k: env[k] for k in interface['params']})
                 self.effects.append(result)
                 return result
-            if statement.kind == 'try':
-                outcome = self.recovery(statement, env)
+            if statement.kind in ('try', 'repeat'):
+                outcome = self.recovery(statement, env) if statement.kind == 'try' else self.repeat(statement, env)
                 tail = Node('sequence', statement.end, body.end,
                             {'statements': body.data['statements'][index + 1:]})
                 inner = Derivation(self.budget, pure=self.pure, exits=self.exits)
@@ -201,6 +208,19 @@ class Derivation:
         self.effects.append(result)
         return result
 
+    def repeat(self, node, env):
+        d = node.data
+        parts = {}
+        for part, body in (('condition', d['value']), ('body', d['body'])):
+            inner = Derivation(self.budget, pure=self.pure or part == 'condition', exits=part == 'body')
+            params = sorted(set(env) | lexical_inputs(body, {'i'}) | {'i'})
+            parts[part] = inner.ability(params, body)
+            self.actions.update(inner.actions)
+            self.functions.update(inner.functions)
+        result = self.term('repeat', mode=d['mode'], captures=dict(env), **parts)
+        self.effects.append(result)
+        return result
+
     def nested(self, params, body, env):
         # Lexical captures are ordinary input relations, never observed values.
         inner = Derivation(self.budget)
@@ -238,14 +258,14 @@ class Derivation:
         d, kind = node.data, node.kind
         if kind == 'sequence':
             return self.sequence(node, env)
-        if kind == 'try':
+        if kind in ('try', 'repeat'):
             # Returns in value blocks are nonlocal; do not reinterpret them as
             # a block result. Statement recovery exports those exits explicitly.
             from ibl_v2_recovery import has_return
             if has_return(node):
                 raise Unsupported('nonlocal return in recovery value block')
             from ibl_v2_analysis import assigned_names
-            outcome = self.recovery(node, env)
+            outcome = self.recovery(node, env) if kind == 'try' else self.repeat(node, env)
             for name in sorted(assigned_names(node)):
                 env[name] = self.term('recovery_binding', outcome=outcome, name=name)
             result = self.term('recovery_value', outcome=outcome)
@@ -472,6 +492,9 @@ def apply(compiler, interface, args, site):
             result = value(term['value'])
             out = (Exits(returned=result, state=bindings) if term['returned']
                    else Exits((result, bindings), state=bindings))
+        elif op == 'repeat':
+            from ibl_v2_repeat import relation_repeat
+            out = relation_repeat(compiler, term, {k: value(v) for k, v in term['captures'].items()}, site, apply)
         elif op == 'recover':
             from ibl_v2_recovery import relation_recovery
             out = relation_recovery(compiler, term, {k: value(v) for k, v in term['captures'].items()}, site, apply)

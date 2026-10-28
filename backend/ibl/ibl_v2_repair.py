@@ -107,7 +107,9 @@ def propose(db, record, handle):
     fingerprint = digest([original_identity, record, rows, mapping])
     plan = {'protocol': 'ibl-repair/1', 'run_id': handle['run_id'], 'plan_hash': fingerprint,
             'status': 'ready', 'steps': [{'call_id': r[0], 'kind': 'inherit_completed_effect' if r[3] else 'inherit_completed_read'} for r in rows],
-            'new_computation': 'effect_independent_results', 'external_state': 'not_revalidated'}
+            'new_computation': 'effect_independent_results', 'external_state': 'not_revalidated',
+            'new_effects': ('certified_iteration_continuations_only'
+                            if record['frontier'].get('iteration_effects') else 'none')}
     return plan, mapping
 
 
@@ -144,6 +146,22 @@ def activate(journal, handle, record, expected_identity):
         journal.db.execute('UPDATE function_snapshot SET refs=?', (json.dumps(record.get('function_refs', [])),))
     journal.db.commit()
     journal.repair_plan, journal.node_map = plan, mapping
+
+
+def continuation_sites(record):
+    """Certified source loop/call pairs, translated to the original lineage."""
+    frontier = record.get('frontier', {})
+    if frontier.get('protocol') != 'ibl-repair-frontier/5':
+        return set()
+    mapping, nodes = record.get('node_map', {}), frontier['nodes']
+    result = set()
+    for loop, call in frontier.get('iteration_effects', []):
+        loop, call = nodes[loop], nodes[call]
+        result.add((mapping.get(loop, loop), mapping.get(call, call)))
+        if call.split(':')[0] in ('named_call', 'pure_call'):
+            synthetic = 'call:' + call.split(':', 1)[1]
+            result.add((mapping.get(loop, loop), mapping.get(synthetic, synthetic)))
+    return result
 
 
 def inherited_request(before, after):

@@ -397,10 +397,15 @@ class Runtime(ExpressionEvaluator):
             i, parents = 0, set(count.evidence if count else ())
             before = env.copy()
             old_i = env.get("i")
+            route = getattr(self.local, 'route', ())
+            occurrence = self.ordinal('repeat:' + node.id)
+            counts = self.local.counts
             try:
                 while count is None or i < count.value:
                     # The pre-test condition and body share this iteration's
                     # index, never an outer index or the previous iteration's.
+                    self.local.route = (*route, ('iteration', node.id, occurrence, i))
+                    self.local.counts = {}
                     env["i"] = Binding(i)
                     if mode == "while":
                         cond = sub(d["value"])
@@ -419,6 +424,7 @@ class Runtime(ExpressionEvaluator):
                         if boolean(cond.value):
                             break
             finally:
+                self.local.route, self.local.counts = route, counts
                 # The final while/until decision also controls which version
                 # of a rebound value leaves the loop.
                 for name, binding in env.items():
@@ -622,7 +628,9 @@ class Runtime(ExpressionEvaluator):
             self.local.obligations = obligations
             self.local.components, self.local.pure_required = components, pure_required
             previous_control = getattr(self.local, "control", frozenset())
-            self.local.route, self.local.counts = route + (i,), {}
+            self.local.route = (route + (('iteration', node.id, 0, i),)
+                                if node.kind == 'call' else route + (i,))
+            self.local.counts = {}
             self.local.parallel, self.local.depth = True, depth
             self.local.control = control
             try:
@@ -981,7 +989,9 @@ class Runtime(ExpressionEvaluator):
             receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None,
                                          reusable=reusable_read, state_change=state_change, resources=footprint,
                                          request_parts=request_fingerprints(request),
-                                         call_info={"action": key, "location": span(self.plan.source, node)})
+                                         call_info={"action": key, "location": span(self.plan.source, node)},
+                                         iteration_sites=[v[1] for v in route if isinstance(v, tuple) and v[0] == 'iteration'],
+                                         source_node=mapped_node)
         if self.replay and external and receipt is None:
             with self.lock:
                 receipt = next((r for r in self.recorded if r["request_hash"] == request_hash), None)

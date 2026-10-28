@@ -30,9 +30,15 @@ class Value:
     target: object = None
     fields: dict | None = None
     members: list | None = None
+    evaluation: set | None = None
+
+    @property
+    def evaluated(self):
+        return self.deps if self.evaluation is None else self.evaluation
 
     def with_deps(self, deps):
-        return Value(self.deps | deps, self.target, self.fields, self.members)
+        return Value(self.deps | deps, self.target, self.fields, self.members,
+                     None if self.evaluation is None else self.evaluation | deps)
 
 
 @dataclass
@@ -51,7 +57,8 @@ class Projection:
         self.resolved = {n.id: n for n in walk([plan.root, plan.functions])}
         self.definitions = {n.id: n for n in walk(self.root) if n.kind == 'def'}
         self.effects, self.retained, self.active = {}, set(), set()
-        self.emissions = []
+        self.emissions, self.exits = [], []
+        self.iterations, self.iteration_effects = [], set()
         self.remaining = 8192
         # Definitions have their own stable address; body edits never shift a
         # caller's executable index. Nested nodes retain their structural paths.
@@ -123,6 +130,7 @@ class Projection:
 
     def sink(self, node, deps):
         self.emissions.append(node.id)
+        self.iteration_effects.update((loop, node.id) for loop in self.iterations)
         self.effects.setdefault(node.id, set()).update(deps | self.atom(node))
         self.retained.update(deps | self.atom(node))
 
@@ -136,6 +144,11 @@ class Projection:
         if kind == 'sequence':
             flow = self.flow(node, env, control)
             return self.merge([*flow.returns, *([flow.value] if flow.continues else [])])
+        if kind == 'repeat':
+            from ibl_v2_recovery import has_return
+            if has_return(node):
+                return self.opaque(node, env, control)
+            return self.flow(node, env, control).value
         if kind == 'try':
             from ibl_v2_recovery import has_return
             if has_return(node):
@@ -154,7 +167,9 @@ class Projection:
                 env[d['name']] = value
             return value
         if kind == 'ref':
-            return env.get(d['name'], Value()).with_deps(own)
+            held = env.get(d['name'], Value())
+            # Reading a carried value does not execute its producer again.
+            return Value(held.deps | own, held.target, held.fields, held.members, own)
         if kind in ('literal', 'builtin'):
             return Value(own)
         if kind == 'lambda':
@@ -167,15 +182,15 @@ class Projection:
             fields, prior = {}, set()
             for key, child in record_fields(node).items():
                 fields[key] = self.expr(child, env, control | prior)
-                prior |= fields[key].deps
-            return Value(own | prior, fields=fields)
+                prior |= fields[key].evaluated
+            return Value(own | set().union(*(v.deps for v in fields.values())), fields=fields, evaluation=own | prior)
         if kind == 'list':
             members, prior = [], set()
             for child in d['values']:
                 value = self.expr(child, env, control | prior)
                 members.append(value)
-                prior |= value.deps
-            return Value(own | prior, members=members)
+                prior |= value.evaluated
+            return Value(own | set().union(*(v.deps for v in members)), members=members, evaluation=own | prior)
         if kind in ('field', 'index'):
             base = self.expr(d['base'], env, control)
             key = d['key']
@@ -193,7 +208,9 @@ class Projection:
             left = self.expr(d['left'], env, control)
             return self.expr(d['right'], env, control | left.deps, left).with_deps(own)
         if kind == 'parallel':
+            exit_scope = len(self.exits)
             values = [self.expr(branch, env.copy(), control | own) for branch in parallel_branches(node)]
+            del self.exits[exit_scope:]
             return Value(own | set().union(*(v.deps for v in values)), members=values)
         if kind == 'call' and (d['node'], d['action']) == ('table', 'each'):
             args = self.expr(d['params'], env, control)
@@ -201,16 +218,15 @@ class Projection:
             if items is None:
                 return self.opaque(node, env, control)
             local = {**env, 'it': Value(self.complete(items)), 'i': Value(items.deps)}
-            before = len(self.emissions)
-            result = self.expr(d['body'], local, control | own | args.deps | items.deps)
-            fields = record_fields(d['params'])
-            parallel = fields.get('parallel')
-            concurrency = parallel.data['value'] if parallel and parallel.kind == 'literal' else 1
-            # A later batch/iteration may depend on completion of the previous
-            # one. Only a statically bounded single fanout can separate its tails.
-            if not (items.members is not None and len(items.members) <= concurrency):
-                for key in set(self.emissions[before:]):
-                    self.sink(self.nodes[key], result.deps)
+            self.iterations.append(node.id)
+            exit_scope = len(self.exits)
+            try:
+                result = self.expr(d['body'], local, control | own | args.deps | items.deps)
+            finally:
+                del self.exits[exit_scope:]
+                self.iterations.pop()
+            # Completion between rounds/batches is enforced by execution, not
+            # equality of result-only code. Selection and inputs remain fixed.
             return Value(own | args.deps | items.deps | self.complete(result))
         if kind in ('call', 'named_call', 'pure_call'):
             return self.apply(node, env, control, piped)
@@ -221,8 +237,8 @@ class Projection:
             for child in self.children(d):
                 value = self.expr(child, env, control | prior)
                 values.append(value)
-                prior |= self.complete(value)
-            return Value(own | prior)
+                prior |= value.evaluated
+            return Value(own | set().union(*(self.complete(v) for v in values)))
         return self.opaque(node, env, control)
 
     def merge(self, values):
@@ -258,11 +274,14 @@ class Projection:
                 if not outcome.continues:
                     return Flow(returns=returned, continues=False)
                 result = outcome.value.with_deps(prior)
-                prior |= outcome.value.deps
+                prior |= outcome.value.evaluated
             return Flow(result, returned)
         if node.kind == 'return':
+            self.exits.append(own | control)
             value = self.expr(d['value'], env, control | own).with_deps(own)
             return Flow(returns=[value], continues=False)
+        if node.kind == 'repeat':
+            return self.repeat(node, env, control)
         if node.kind == 'try':
             from ibl_v2_analysis import assigned_names
             body_env = env.copy()
@@ -308,13 +327,55 @@ class Projection:
             return self.join_flows(branches, env, guard)
         return Flow(self.expr(node, env, control))
 
+    def repeat(self, node, env, control):
+        from ibl_v2_analysis import assigned_names
+        d, own = node.data, self.atom(node)
+        initial = env.copy()
+        mutated = assigned_names(d['body']) - {'i'}
+        state = {**env, 'i': Value(own)}
+        guard = set(own)
+        if d['mode'] == 'count':
+            guard |= self.complete(self.expr(d['value'], env, control | own))
+        before, exits_before = len(self.emissions), len(self.exits)
+        self.iterations.append(node.id)
+        try:
+            while True:
+                local = state.copy()
+                if d['mode'] == 'while':
+                    guard |= self.complete(self.expr(d['value'], local, control | guard))
+                body = self.flow(d['body'], local, control | guard)
+                if d['mode'] == 'until' and body.continues:
+                    guard |= self.complete(self.expr(d['value'], local, control | guard))
+                candidate = state.copy()
+                for name in mutated & initial.keys():
+                    candidate[name] = self.merge([state[name], local.get(name, state[name])])
+                stable = all(self.complete(candidate[k]) == self.complete(state[k]) for k in state)
+                state = candidate
+                if stable or not body.continues:
+                    break
+            # Early return selection also determines which later rounds exist.
+            # Return values themselves remain result computations.
+            guard |= set().union(*self.exits[exits_before:])
+            for key in set(self.emissions[before:]):
+                self.sink(self.nodes[key], control | guard)
+        finally:
+            self.iterations.pop()
+        count = d['value'].data.get('value') if d['mode'] == 'count' and d['value'].kind == 'literal' else None
+        guaranteed = d['mode'] == 'until' or type(count) is int and count > 0
+        for name in mutated:
+            if name in local and (guaranteed or name in initial):
+                env[name] = (local[name] if guaranteed else self.merge([initial[name], local[name]])).with_deps(guard)
+        # Later caller effects still depend on completion of the whole loop.
+        result = Value(self.flow_dependencies(body) | guard)
+        return Flow(result, body.returns, body.continues or not guaranteed)
+
     def join_flows(self, branches, env, guard):
         continuing = [(flow, local) for flow, local in branches if flow.continues]
         returned = [value.with_deps(guard) for flow, _ in branches for value in flow.returns]
         if not continuing:
             return Flow(returns=returned, continues=False)
         names = set.intersection(*(set(local) for _, local in continuing))
-        merged = {name: self.merge([local[name] for _, local in continuing]) for name in names}
+        merged = {name: self.merge([local[name] for _, local in continuing]).with_deps(guard) for name in names}
         env.clear()
         env.update(merged)
         result = self.merge([flow.value for flow, _ in continuing]).with_deps(guard)
@@ -346,7 +407,7 @@ class Projection:
             for child in d['args']:
                 value = self.expr(child, env, control | target.deps | prior)
                 values.append(value)
-                prior |= value.deps
+                prior |= value.evaluated
             if piped is not None:
                 values.insert(0, piped)
             args = Value(set().union(*(v.deps for v in values)), members=values)
@@ -376,9 +437,11 @@ class Projection:
                     return self.opaque(node, env, control)
             entry |= self.atom(definition)
             self.active.add(definition.id)
+            exit_scope = len(self.exits)
             try:
                 value = self.expr(definition.data['body'], local, control | entry)
             finally:
+                del self.exits[exit_scope:]
                 self.active.remove(definition.id)
             return value.with_deps(entry)
         # Primitive and unresolved calls consume their whole argument values.
@@ -417,9 +480,10 @@ def frontier(plan):
     except (ValueError, RecursionError):
         supported = False
     address = lambda nid: repr(projection.paths[nid])
-    return {'protocol': 'ibl-repair-frontier/4', 'supported': supported,
+    return {'protocol': 'ibl-repair-frontier/5', 'supported': supported,
             'retained': {address(nid): projection.signature(projection.nodes[nid])
                          for nid in projection.retained},
+            'iteration_effects': sorted([address(loop), address(call)] for loop, call in projection.iteration_effects),
             'effects': sorted(address(nid) for nid in projection.effects),
             'nodes': {address(nid): nid for nid in projection.paths},
             'completion': {address(nid): digest(structural(n.data.get('contract')))
@@ -427,10 +491,11 @@ def frontier(plan):
 
 
 def mapping(before, after):
-    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/4'
+    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/5'
             or after.get('protocol') != before.get('protocol')
             or not before.get('supported') or not after.get('supported')
             or before['retained'] != after['retained'] or before['effects'] != after['effects']
+            or before.get('iteration_effects') != after.get('iteration_effects')
             or before['completion'] != after['completion']):
         raise Fault('REPAIR_UNSUPPORTED', '효과의 입력·계산·조건·호출 좌표·완료 의무를 보존하는 수정만 계승합니다.', kind='protocol')
     return {nid: before['nodes'][path] for path, nid in after['nodes'].items() if path in before['nodes']}

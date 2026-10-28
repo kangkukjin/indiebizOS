@@ -699,38 +699,8 @@ class Compiler(CallAnalysis):
                 result = join(result, t)
             return result
         if kind == "repeat":
-            self.pure(d["value"])
-            count = d["value"].data.get("value") if d["mode"] == "count" and d["value"].kind == "literal" else None
-            if count is not None and (type(count) is not int or count < 0):
-                self.issue(d["value"], "REPEAT_COUNT", "repeat 횟수는 0 이상의 정수입니다.")
-            # Count is evaluated outside the new index scope. While sees the
-            # first iteration's environment before any body assignment.
-            if d["mode"] == "count":
-                self.need(node, sub(d["value"]), NUMBER)
-            elif d["mode"] == "while":
-                sub_env = {**env, "i": NUMBER}
-                self.need(node, sub(d["value"], sub_env), BOOL)
-            mutated = assigned_names(d["body"]) & env.keys()
-            local = {**env, "i": NUMBER}
-            # Later iterations may see a different shape. Widen before checking
-            # the body rather than certify a stale first-iteration type.
-            if count not in (0, 1):
-                local.update(dict.fromkeys(mutated, UNKNOWN))
-            if d["mode"] == "while":
-                self.need(node, sub(d["value"], local), BOOL)
-            if count == 0:
-                self.visit_unreachable(d["body"], local, names, readonly, final)
-            else:
-                sub(d["body"], local, not (d["mode"] == "until" or type(count) is int and count > 0))
-            if d["mode"] == "until":
-                # Post-test conditions may use values definitely assigned by
-                # the body, including new bindings. Conditional ones still fail.
-                self.need(node, sub(d["value"], local), BOOL)
-            if d["mode"] == "until" or (type(count) is int and count > 0):
-                env.update({k: v for k, v in local.items() if k != "i"})
-            elif count != 0:
-                self.merge_env(env, env.copy(), {k: v for k, v in local.items() if k != "i" or k in env})
-            return UNIT_T
+            from ibl_v2_repeat import source_repeat
+            return source_repeat(self, node, env, names, readonly, final)
         if kind == "try":
             from ibl_v2_recovery import source_recovery
             return source_recovery(self, node, env, names, readonly, final)

@@ -101,22 +101,23 @@ def test_callback_from_record_preserves_captures_and_effect_dependency(execute):
     assert out['success'] and out['value'] == 10 and calls == ['delivery'], out
 
 
-def test_sequential_iteration_keeps_previous_tail_as_next_effect_condition(execute):
+def test_sequential_iteration_rechecks_previous_tail_before_next_effect(execute):
     run, calls, _ = execute
     code = ('[def:step]($x){[t:send]{id:"delivery"};return 10/$x};'
             'return [table:each]{items:[0,1]}{return [fn:step]{x:$it}}')
     first = run(code)
     assert not first['success'] and calls == ['delivery'], first
-    out = run(code.replace('10/$x', '10/($x+1)'), check=True, repair=first['resume'])
-    assert not out.get('ok') and calls == ['delivery'], out
+    out = repair(run, first, code.replace('10/$x', '10/($x+1)'))
+    assert out['success'] and out['value'] == [10, 5] and calls == ['delivery', 'delivery'], out
 
 
-@pytest.mark.parametrize('edition', [1, 2, 3])
+
+@pytest.mark.parametrize('edition', [1, 2, 3, 4])
 def test_old_frontier_cannot_silently_gain_new_repair_authority(edition):
     from ibl_v2_repair_graph import mapping
     from ibl_v2_ir import Fault
     with pytest.raises(Fault, match='효과'):
-        mapping({'protocol': f'ibl-repair-frontier/{edition}'}, {'protocol': 'ibl-repair-frontier/4'})
+        mapping({'protocol': f'ibl-repair-frontier/{edition}'}, {'protocol': 'ibl-repair-frontier/5'})
 
 
 def test_stored_effectful_revision_repairs_inside_three_composed_abilities(

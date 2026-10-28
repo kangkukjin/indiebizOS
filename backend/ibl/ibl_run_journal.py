@@ -197,6 +197,7 @@ class Journal:
     def __init__(self, root, identity, resume=None, *, repair=None, repair_record=None):
         self.repair, self.repair_record = repair, repair_record
         self.repair_plan, self.node_map = None, {}
+        self.continuation_sites = set()
         if resume is not None and (not isinstance(resume, dict) or set(resume) != {"run_id"}):
             raise Fault("RESUME_ARGUMENT", "resume에는 반환된 run_id만 지정하세요.", kind="compile")
         self.run_id = resume["run_id"] if resume else uuid.uuid4().hex
@@ -255,6 +256,8 @@ class Journal:
             if self.resuming and self.db.execute("SELECT 1 FROM sqlite_master WHERE name='repair_snapshot'").fetchone():
                 record = json.loads(self.db.execute('SELECT record FROM repair_snapshot').fetchone()[0])
                 self.node_map = record.get('node_map', {})
+                from ibl_v2_repair import continuation_sites
+                self.continuation_sites = continuation_sites(record)
             now = time.time()
             if not self.db.execute('SELECT 1 FROM lifecycle').fetchone():
                 self.db.execute('INSERT INTO lifecycle(created,updated,ended,status,reason) VALUES(?,?,NULL,?,NULL)',
@@ -302,7 +305,7 @@ class Journal:
 
     @durable
     def begin(self, call_id, request_hash, cleanup=False, *, reusable=False, state_change=True,
-              resources=None, request_parts=None, call_info=None):
+              resources=None, request_parts=None, call_info=None, iteration_sites=(), source_node=None):
         with self.lock:
             row = self.db.execute("SELECT request,receipt,request_parts FROM calls WHERE id=?", (call_id,)).fetchone()
             if row:
@@ -333,7 +336,7 @@ class Journal:
                     self.db.commit()
                     return None
                 return receipt
-            if self.node_map:
+            if self.node_map and not any((loop, source_node) in self.continuation_sites for loop in iteration_sites):
                 raise Fault('REPAIR_DIVERGED', '수정 계승 중 원 실행에 없는 외부 호출을 만났습니다. 새 효과를 시작하지 않습니다.', kind='protocol')
             if cleanup:
                 self.db.execute("UPDATE meta SET blocked=?", ("취소·예산 중단 후 finally가 외부 정리를 시작했습니다. 같은 실행의 재개는 허용하지 않습니다.",))

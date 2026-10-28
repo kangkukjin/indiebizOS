@@ -1,0 +1,35 @@
+#!ibl edition=2
+[def:LS103Compare]($demand,$quotes,$policy,$libraries,$asof,$choose){
+  $results=$libraries >> [table:each]{
+    $lib=$it
+    $rows=filter($demand,($r)=>$r.library==$lib.id)
+    $lines=$rows >> [table:each]{return $choose{line:$it,quotes:$quotes,asof:$asof,policy:$policy}}
+    $cost=sum(map($lines,($r)=>$r.cost))
+    return {library:$lib.id,lines:$lines,total_cost:$cost,over_budget:$cost>$lib.budget}
+  }
+  return {libraries:$results,total_cost:sum(map($results,($r)=>$r.total_cost))}
+}
+[def:LS103Region]($root,$vendor,$previous){
+  $data=[fn:LS102Read]{root:$root}
+  $demand=[fn:LS102Demand]{data:$data}
+  $raw=[self:read]{path:$vendor}
+  $new=[self:script]{id:"LS103Normalize",args:{items:$raw.data.items}}
+  $ordered=sorted($data.quotes+$new,"item")
+  $groups=[table:groupby]{items:$ordered,by:"item",agg:{n:["count"]}}
+  $index=reduce($groups.items,{offset:0,pairs:[]},($a,$g)=>{offset:$a.offset+$g.n,pairs:$a.pairs+[[$g.item,$ordered[$a.offset:$a.offset+$g.n]]]})
+  $quotes=from_entries($index.pairs)
+  $donors=from_entries(map(filter($demand,($r)=>$r.library=="L1"),($r)=>[$r.item,$r]))
+  $receivers=filter($demand,($r)=>$r.library=="L3")
+  $possible=map($receivers,($r)=>{item:$r.item,from:"L1",to:"L3",quantity:min(max(0,get($donors,$r.item).available-get($donors,$r.item).requested),$r.shortage)})
+  $transfers=map(filter($possible,($r)=>$r.quantity>0),($r)=>{**$r,cost:$r.quantity*7,delivery:"2026-10-29"})
+  $moved=from_entries(map($transfers,($r)=>[$r.item,$r.quantity]))
+  $adjusted=map($demand,($r)=>{**$r,available:$r.available+($r.library=="L3" ? get($moved,$r.item,0) : $r.library=="L1" ? -get($moved,$r.item,0) : 0),shortage:max(0,$r.shortage-($r.library=="L3" ? get($moved,$r.item,0) : 0))})
+  $deadline=($qs)=>(map($qs,($q)=>{**$q,cost:$q.cost+get($q,"shipping",0)}) >> [table:sort]{by:["delivery","cost","vendor"]})[0]
+  $budget=($qs)=>(map($qs,($q)=>{**$q,cost:$q.cost+get($q,"shipping",0)}) >> [table:sort]{by:["cost","delivery","vendor"]})[0]
+  $choose=&[fn:LS102Choose]
+  $base={deadline:[fn:LS103Compare]{demand:$demand,quotes:$quotes,policy:$deadline,libraries:$data.policy.libraries,asof:$data.policy.as_of,choose:$choose},budget:[fn:LS103Compare]{demand:$demand,quotes:$quotes,policy:$budget,libraries:$data.policy.libraries,asof:$data.policy.as_of,choose:$choose}}
+  $with={deadline:[fn:LS103Compare]{demand:$adjusted,quotes:$quotes,policy:$deadline,libraries:$data.policy.libraries,asof:$data.policy.as_of,choose:$choose},budget:[fn:LS103Compare]{demand:$adjusted,quotes:$quotes,policy:$budget,libraries:$data.policy.libraries,asof:$data.policy.as_of,choose:$choose}}
+  $prior=[self:read]{path:$previous}
+  return {base:$base,with_transfer:$with,transfers:$transfers,transfer_cost:sum(map($transfers,($r)=>$r.cost)),sources:{original:$data.sources,vendor:$vendor,previous:$previous},previous_total:$prior.data.total_cost}
+}
+return [fn:LS103Region]{root:$root,vendor:$vendor,previous:$previous}

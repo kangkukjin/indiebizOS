@@ -1,0 +1,10 @@
+[def:LS104RegionalReview]($region){
+  $options=[
+    {name:"base_deadline",cost:$region.base.deadline.total_cost},
+    {name:"base_budget",cost:$region.base.budget.total_cost},
+    {name:"transfer_deadline",cost:$region.with_transfer.deadline.total_cost+$region.transfer_cost},
+    {name:"transfer_budget",cost:$region.with_transfer.budget.total_cost+$region.transfer_cost}
+  ]
+  $ranked=sorted($options,"cost")
+  return {options:$ranked,recommended:$ranked[0],previous_total:$region.previous_total,transfer_cost:$region.transfer_cost,transfer_quantity:sum(map($region.transfers,($t)=>$t.quantity)),sources:$region.sources}
+}

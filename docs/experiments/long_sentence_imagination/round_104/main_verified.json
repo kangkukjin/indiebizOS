@@ -1,0 +1,11 @@
+{
+  "run_id": "1baa4e1ce1934ecabf3223354a053d1e",
+  "line_field_checks": 6000,
+  "before_dispatch": 2,
+  "after_dispatch": 3,
+  "preserved_prefix": true,
+  "resume_unchanged": true,
+  "unsafe_rejected": true,
+  "total_cost": 358134,
+  "date_checks": 600
+}

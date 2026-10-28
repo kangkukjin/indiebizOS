@@ -1,0 +1,12 @@
+{
+  "line_field_checks": 16800,
+  "rows": 2400,
+  "dispatch_unchanged": true,
+  "recommended": {
+    "name": "transfer_budget",
+    "cost": 359478.0
+  },
+  "transfer_quantity": 147,
+  "transfer_cost": 1029,
+  "region_consumed_by_saved_review": true
+}

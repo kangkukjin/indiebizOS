@@ -1,0 +1,451 @@
+{
+  "describe": {
+    "elapsed_s": 2.3372111320495605,
+    "sha256": "662ab3fc72e6268e22ea657fa9ea4303e2b4718bcf1ed3f55e70f9cb0dd0016b",
+    "success": null,
+    "ok": null,
+    "error": null,
+    "resume": null,
+    "repair": null,
+    "plan_hash": null,
+    "functions": [
+      {
+        "action": "fn:LS102Plan",
+        "function_ref": {
+          "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+          "function_id": "bd60b63039fe414d9e0d21ed1d9cde2d",
+          "revision": "1561350ad04d4a82a0b217a9f3d88d4cf5452220e6ced1355e90a87875de4a5b",
+          "name": "LS102Plan",
+          "edition": 2
+        },
+        "function_refs": [
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "bd60b63039fe414d9e0d21ed1d9cde2d",
+            "revision": "1561350ad04d4a82a0b217a9f3d88d4cf5452220e6ced1355e90a87875de4a5b",
+            "name": "LS102Plan",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "1d7de52d11074301869a5964c826246a",
+            "revision": "5eecab363e623b45746124ef4c7285e59257bb8cd468f465ee0c5dfc8f14c80f",
+            "name": "LS102Choose",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "145dc423b1bd4ee6be7caa2b6155f469",
+            "revision": "4dbbfd662cadc3fe1b3ecb931d926ac5336dc2482d3fdb4d1bcf45d30064ec90",
+            "name": "LS102Demand",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "b6979a0ab34348df83e2a09e9051c6bd",
+            "revision": "75473a0b5b57ad727ad8f094c114d51a14a52ee69732e3448db59c257f7198d3",
+            "name": "LS102Library",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "ec16d07c280c416ea25a17e0a0755c1f",
+            "revision": "781dc8fd715a7567c2fbf116f0d6f4dc9d1f9aa038f62d2d0e866f359f82ad4c",
+            "name": "LS102Read",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "c9bff917a1e94d0aa7c81ed804a2f53f",
+            "revision": "e7a59c70685cb2923e0575e8f1beff67720bd81699345cf8f1bce20f430387f2",
+            "name": "LS102Report",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "0888d5dc3d645cdeb3a861375db84e43",
+            "revision": "24edf74f0d3d99fad7e453d60625bfa1bac7c5bad172f95a18f9c4c0036c7bc4",
+            "name": "중복빼고추리기",
+            "edition": 2
+          }
+        ]
+      },
+      {
+        "action": "fn:LS102Report",
+        "function_ref": {
+          "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+          "function_id": "c9bff917a1e94d0aa7c81ed804a2f53f",
+          "revision": "e7a59c70685cb2923e0575e8f1beff67720bd81699345cf8f1bce20f430387f2",
+          "name": "LS102Report",
+          "edition": 2
+        },
+        "function_refs": [
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "c9bff917a1e94d0aa7c81ed804a2f53f",
+            "revision": "e7a59c70685cb2923e0575e8f1beff67720bd81699345cf8f1bce20f430387f2",
+            "name": "LS102Report",
+            "edition": 2
+          }
+        ]
+      },
+      {
+        "action": "fn:LS102Demand",
+        "function_ref": {
+          "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+          "function_id": "145dc423b1bd4ee6be7caa2b6155f469",
+          "revision": "4dbbfd662cadc3fe1b3ecb931d926ac5336dc2482d3fdb4d1bcf45d30064ec90",
+          "name": "LS102Demand",
+          "edition": 2
+        },
+        "function_refs": [
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "145dc423b1bd4ee6be7caa2b6155f469",
+            "revision": "4dbbfd662cadc3fe1b3ecb931d926ac5336dc2482d3fdb4d1bcf45d30064ec90",
+            "name": "LS102Demand",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "0888d5dc3d645cdeb3a861375db84e43",
+            "revision": "24edf74f0d3d99fad7e453d60625bfa1bac7c5bad172f95a18f9c4c0036c7bc4",
+            "name": "중복빼고추리기",
+            "edition": 2
+          }
+        ]
+      }
+    ]
+  },
+  "describe_fixed": {
+    "elapsed_s": 0.9349188804626465,
+    "sha256": "10a17a4c8cbde13259c453f17aa3f284157a1d1280483b78bc6f8536e0b27b95",
+    "success": null,
+    "ok": null,
+    "error": null,
+    "resume": null,
+    "repair": null,
+    "plan_hash": null,
+    "functions": [
+      {
+        "action": "fn:LS102Plan",
+        "function_ref": {
+          "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+          "function_id": "bd60b63039fe414d9e0d21ed1d9cde2d",
+          "revision": "1561350ad04d4a82a0b217a9f3d88d4cf5452220e6ced1355e90a87875de4a5b",
+          "name": "LS102Plan",
+          "edition": 2
+        },
+        "function_refs": [
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "bd60b63039fe414d9e0d21ed1d9cde2d",
+            "revision": "1561350ad04d4a82a0b217a9f3d88d4cf5452220e6ced1355e90a87875de4a5b",
+            "name": "LS102Plan",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "1d7de52d11074301869a5964c826246a",
+            "revision": "5eecab363e623b45746124ef4c7285e59257bb8cd468f465ee0c5dfc8f14c80f",
+            "name": "LS102Choose",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "145dc423b1bd4ee6be7caa2b6155f469",
+            "revision": "4dbbfd662cadc3fe1b3ecb931d926ac5336dc2482d3fdb4d1bcf45d30064ec90",
+            "name": "LS102Demand",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "b6979a0ab34348df83e2a09e9051c6bd",
+            "revision": "75473a0b5b57ad727ad8f094c114d51a14a52ee69732e3448db59c257f7198d3",
+            "name": "LS102Library",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "ec16d07c280c416ea25a17e0a0755c1f",
+            "revision": "781dc8fd715a7567c2fbf116f0d6f4dc9d1f9aa038f62d2d0e866f359f82ad4c",
+            "name": "LS102Read",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "c9bff917a1e94d0aa7c81ed804a2f53f",
+            "revision": "e2522f3f13b417b37c618d0b924e79ba031bd1c6b5b8f4b2ef25955755adaf75",
+            "name": "LS102Report",
+            "edition": 2
+          },
+          {
+            "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+            "function_id": "0888d5dc3d645cdeb3a861375db84e43",
+            "revision": "24edf74f0d3d99fad7e453d60625bfa1bac7c5bad172f95a18f9c4c0036c7bc4",
+            "name": "중복빼고추리기",
+            "edition": 2
+          }
+        ]
+      }
+    ]
+  },
+  "main_original": {
+    "elapsed_s": 10.94289779663086,
+    "sha256": "a3ed20a6fdcb99ed7f25028f88e8db0368fc2e4480b3be83a1324374d93f0063",
+    "success": false,
+    "ok": null,
+    "error": "필드가 없습니다: label",
+    "resume": {
+      "run_id": "1baa4e1ce1934ecabf3223354a053d1e"
+    },
+    "repair": null,
+    "plan_hash": "8629f3081151ad679a3d5284134a697ef235f0ff96713c5559fe1728a3289af9"
+  },
+  "save_report_fixed": {
+    "elapsed_s": 165.46186804771423,
+    "sha256": "053e14574f0eff1a098989fb7354e3decbd01c7b0e197db1db6e7560b86e2295",
+    "success": true,
+    "ok": null,
+    "error": null,
+    "resume": {
+      "run_id": "1de4959526584cbd93ebbdcead74ef5a"
+    },
+    "repair": null,
+    "plan_hash": "6882ea71b44f98026526aec3f1019454251298cfe641fb907fe0cee6893004c4",
+    "saved": {
+      "success": true,
+      "edition": 2,
+      "workflow_id": "LS102Report",
+      "name": "LS102Report",
+      "function_ref": {
+        "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+        "function_id": "c9bff917a1e94d0aa7c81ed804a2f53f",
+        "revision": "e2522f3f13b417b37c618d0b924e79ba031bd1c6b5b8f4b2ef25955755adaf75",
+        "name": "LS102Report",
+        "edition": 2
+      },
+      "check_summary": {
+        "ok": true,
+        "executed": false,
+        "issues": [],
+        "effects": []
+      }
+    }
+  },
+  "unsafe_check": {
+    "elapsed_s": 0.8721511363983154,
+    "sha256": "1b36243dedde6cfe32821536ead4960484075b43422f6b6684a9cf31b484d7e9",
+    "success": false,
+    "ok": false,
+    "error": "입력·주체·권한·부품·계약·구현·완료 의무가 달라졌습니다.",
+    "resume": null,
+    "repair": null,
+    "plan_hash": null
+  },
+  "repair_check": {
+    "elapsed_s": 0.6573910713195801,
+    "sha256": "6a1cb83c79f36cdb7d73cdc716f98629a059bb8d78c2dc87f41e245ff8913fb6",
+    "success": null,
+    "ok": true,
+    "error": null,
+    "resume": null,
+    "repair": {
+      "protocol": "ibl-repair/1",
+      "run_id": "1baa4e1ce1934ecabf3223354a053d1e",
+      "plan_hash": "6bd4d329ba6bf468f1bdb3125c993c2bad912ef9318169de8539f8839badac89",
+      "status": "ready",
+      "steps": [
+        {
+          "call_id": "7ad5f8d632dcc1d351ae3af04def83b1084ab9635bd6bf045104172e0db1b949",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "aedf2bb3484fb17762f0ea4a03787dd14af86981e0d3a35c4c7cdbeb42219f53",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "12a70fb25ef3134c45304fc2900407510ef1f45628f70b6e0e73139b67571ca9",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "e1bfa6e8626d66c0996b980aef31adf2f682b5cc8d258dff50d1ae2f173b911c",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "77d08e9ef4c09d46a5683cfe4f21d1b85a3eb518e729e2ac9af0f08b961b72da",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "9d7f0484c4232b76a11e117bad607768759cdfcadb0715d10897eb5a8031da0e",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "0956c56bc1e26e6595f8e96e6caf3c5d448795a42309846ecec6d62d9da0ac24",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "b2ca55640328a44015aa6e310187124dcb102a58547401e65d9423df72db69ce",
+          "kind": "inherit_completed_effect"
+        },
+        {
+          "call_id": "71d9890f17e5da4c5a4288c0321fd7e9c46a7f4cd2325dd3bd1aaf61d2206c42",
+          "kind": "inherit_completed_effect"
+        }
+      ],
+      "new_computation": "effect_independent_results",
+      "external_state": "not_revalidated",
+      "new_effects": "certified_iteration_continuations_only"
+    },
+    "plan_hash": "66c96b253949e58d86fcc842e04d44ad1de23e4276b3d33662bbf39bde95a9b3"
+  },
+  "main_repaired": {
+    "elapsed_s": 14.61677885055542,
+    "sha256": "11555ce3300e5015259c293b31ee4e90ea4f7498b076041274b7dddf9ad0f686",
+    "success": true,
+    "ok": null,
+    "error": null,
+    "resume": {
+      "run_id": "1baa4e1ce1934ecabf3223354a053d1e"
+    },
+    "repair": {
+      "protocol": "ibl-repair/1",
+      "run_id": "1baa4e1ce1934ecabf3223354a053d1e",
+      "plan_hash": "6bd4d329ba6bf468f1bdb3125c993c2bad912ef9318169de8539f8839badac89",
+      "status": "ready",
+      "steps": [
+        {
+          "call_id": "7ad5f8d632dcc1d351ae3af04def83b1084ab9635bd6bf045104172e0db1b949",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "aedf2bb3484fb17762f0ea4a03787dd14af86981e0d3a35c4c7cdbeb42219f53",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "12a70fb25ef3134c45304fc2900407510ef1f45628f70b6e0e73139b67571ca9",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "e1bfa6e8626d66c0996b980aef31adf2f682b5cc8d258dff50d1ae2f173b911c",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "77d08e9ef4c09d46a5683cfe4f21d1b85a3eb518e729e2ac9af0f08b961b72da",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "9d7f0484c4232b76a11e117bad607768759cdfcadb0715d10897eb5a8031da0e",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "0956c56bc1e26e6595f8e96e6caf3c5d448795a42309846ecec6d62d9da0ac24",
+          "kind": "inherit_completed_read"
+        },
+        {
+          "call_id": "b2ca55640328a44015aa6e310187124dcb102a58547401e65d9423df72db69ce",
+          "kind": "inherit_completed_effect"
+        },
+        {
+          "call_id": "71d9890f17e5da4c5a4288c0321fd7e9c46a7f4cd2325dd3bd1aaf61d2206c42",
+          "kind": "inherit_completed_effect"
+        }
+      ],
+      "new_computation": "effect_independent_results",
+      "external_state": "not_revalidated",
+      "new_effects": "certified_iteration_continuations_only"
+    },
+    "plan_hash": "66c96b253949e58d86fcc842e04d44ad1de23e4276b3d33662bbf39bde95a9b3"
+  },
+  "main_resumed": {
+    "elapsed_s": 13.983862161636353,
+    "sha256": "e82005735a2dcb29667ee4ef765ec27659d41c7ed750e66ee9a45f035447f49e",
+    "success": true,
+    "ok": null,
+    "error": null,
+    "resume": {
+      "run_id": "1baa4e1ce1934ecabf3223354a053d1e"
+    },
+    "repair": null,
+    "plan_hash": "66c96b253949e58d86fcc842e04d44ad1de23e4276b3d33662bbf39bde95a9b3"
+  },
+  "region_original": {
+    "elapsed_s": 5.796813726425171,
+    "sha256": "e800a0a4ec32f9634b935e0bbc0fefedf3714e014efe5e8c0cf1ac8787e75866",
+    "success": false,
+    "ok": null,
+    "error": "script 출력 계약 위반: script 반환: List<Record>가 필요하지만 Text입니다.",
+    "resume": {
+      "run_id": "01f18fed8f9b43ffac4aa297a8439292"
+    },
+    "repair": null,
+    "plan_hash": "f66fcbe9b3d23217267d241435edc010d1170fe5ad324d41c07e25ba6c8fc66f"
+  },
+  "package_price_original": {
+    "elapsed_s": 1.9069008827209473,
+    "sha256": "0b8ca631b87de638ef79f289c6098b2a68f7667c280efd79a36f2aec6400aedd",
+    "success": false,
+    "ok": null,
+    "error": "script 출력 계약 위반: script 반환: List<Record>가 필요하지만 Text입니다.",
+    "resume": {
+      "run_id": "be109e8b22034d0aa6e5d84f6a84006b"
+    },
+    "repair": null,
+    "plan_hash": "e2a0e6bb6a5b9a6c8783819e480a9e8f5f8df4ac4256bbfe294d2a16fefb3e61"
+  },
+  "numeric_blank_original": {
+    "elapsed_s": 2.075026273727417,
+    "sha256": "24f715d39f1d41078ef1fc595a4fe6b752a069138be8d39076cb4514cc10ccc1",
+    "success": true,
+    "ok": null,
+    "error": null,
+    "resume": {
+      "run_id": "2123883809af461e9158c62ee7a56fed"
+    },
+    "repair": null,
+    "plan_hash": "41711f0c721a62c81ad89a4066202bacbc350dce4d72428cdb620ee023efe636"
+  },
+  "save_review": {
+    "elapsed_s": 2.0030148029327393,
+    "sha256": "d50a348db1b53d0fa19d6f63f54476c51bdf9ff6adfe5781fc683aef3b6f12b4",
+    "success": true,
+    "ok": null,
+    "error": null,
+    "resume": {
+      "run_id": "0f364fa096004aa8b498ee4925dffef5"
+    },
+    "repair": null,
+    "plan_hash": "3900442cbd442b318d3e7c2ff5a9c95366b10989f9402030dd9b7e04e3e64de4",
+    "saved": {
+      "success": true,
+      "edition": 2,
+      "workflow_id": "LS104RegionalReview",
+      "name": "LS104RegionalReview",
+      "function_ref": {
+        "scope_id": "407bbba5c0897ff178d2f23b54b58f6e7d18255c9917c598289306cc38241249",
+        "function_id": "8688c95815be468599b7677bca4f98dd",
+        "revision": "764b51a1f3ae361ea12f39f7b208133de92d38f3575005b7eda40db51548927a",
+        "name": "LS104RegionalReview",
+        "edition": 2
+      },
+      "check_summary": {
+        "ok": true,
+        "executed": false,
+        "issues": [],
+        "effects": []
+      }
+    }
+  },
+  "region_repaired": {
+    "elapsed_s": 47.68872022628784,
+    "sha256": "f005de1ec7bcfc73a5e696aaa7c0b15376e9eec8d87ce066b256155bfd0598e9",
+    "success": true,
+    "ok": null,
+    "error": null,
+    "resume": {
+      "run_id": "a645caacfa8d4fb7981cbcafeaf42a7a"
+    },
+    "repair": null,
+    "plan_hash": "0a373b9bb6198085751a1cad330aca67450f9936da463d210b1626d9cb6caf2b"
+  }
+}

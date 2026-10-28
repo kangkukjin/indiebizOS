@@ -1,0 +1,3 @@
+$region=[fn:LS103Region]{root:$root,vendor:$vendor,previous:$previous}
+$review=[fn:LS104RegionalReview]{region:$region}
+return {region:$region,review:$review}

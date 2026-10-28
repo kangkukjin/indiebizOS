@@ -1,0 +1,24 @@
+{
+  "line_field_checks": 16800,
+  "rows": 2400,
+  "total_costs": {
+    "base": {
+      "deadline": 381321.0,
+      "budget": 374056.0
+    },
+    "with_transfer": {
+      "deadline": 366465.0,
+      "budget": 359478.0
+    }
+  },
+  "transfer_quantity": 147,
+  "transfer_cost": 1029,
+  "status_mapping": {
+    "selected": "ready",
+    "transfer": "stock only when shortage=0 and transfer_in>0"
+  },
+  "source_hash_checks": 11,
+  "dispatch_unchanged": true,
+  "dispatch_sha256": "3e4dbb80d0b38dcf79a8eb6ad9001b46f57de7da30ad504faa7f112f2fdebdbe",
+  "baseline_tool_event_seq": 42
+}

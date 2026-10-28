@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-28T22:35:43.800033+09:00",
+  "main_trainer": "repaired same run, complete",
+  "main_ai": "succeeded",
+  "variant_trainer": "failed: original normalizers",
+  "variant_ai": "succeeded",
+  "remaining_jobs": []
+}

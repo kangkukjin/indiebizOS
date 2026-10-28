@@ -1,0 +1,162 @@
+{
+  "ai": {
+    "task_id": "task_sysai_30576ce0",
+    "run_id": "run_050dca072a1cb62a0c9b",
+    "state": "succeeded",
+    "episode_id": 5580,
+    "total_ms": 286478,
+    "roles": {
+      "oneshot:classify": {
+        "input": 16356,
+        "output": 8,
+        "cache_read": 4608,
+        "cache_create": 0
+      },
+      "consciousness": {
+        "input": 117318,
+        "output": 3650,
+        "cache_read": 57341,
+        "cache_create": 59973
+      },
+      "execution": {
+        "input": 2050650,
+        "output": 14951,
+        "cache_read": 1968651,
+        "cache_create": 81963
+      },
+      "oneshot:evaluate": {
+        "input": 169739,
+        "output": 1473,
+        "cache_read": 5903,
+        "cache_create": 163834
+      }
+    },
+    "usage_events": 6,
+    "tools": {
+      "Bash": 11,
+      "execute_ibl": 6
+    },
+    "event_counts": {
+      "request.received": 1,
+      "cognition.supervisor_selected": 1,
+      "supervision.turn.opened": 1,
+      "supervision.recall.started": 7,
+      "supervision.recall.finished": 7,
+      "model.call_started": 6,
+      "model.input": 6,
+      "model.round": 24,
+      "model.usage": 6,
+      "model.call_finished": 6,
+      "recall.presented": 1,
+      "cognition.route": 1,
+      "framing.inherit_declined": 1,
+      "supervision.model.started": 1,
+      "model.response_snapshot": 47,
+      "supervision.ownership.acquired": 1,
+      "supervision.ownership.released": 1,
+      "supervision.tool.supervisor": 1,
+      "supervision.model.finished": 1,
+      "supervision.framing": 1,
+      "supervision.tool.started": 17,
+      "supervision.tool.finished": 17,
+      "seam": 8,
+      "ibl.started": 6,
+      "ibl.finished": 6,
+      "ibl.checkpoint": 5,
+      "supervision.progress": 10,
+      "side_effect.write": 3,
+      "context.result_projected": 5,
+      "capability.judged": 1,
+      "cognition.evaluation": 1,
+      "supervision.evaluation.stage_started": 4,
+      "supervision.evaluation.stage_finished": 4,
+      "supervision.evaluation.started": 1,
+      "supervision.evaluation.finished": 1,
+      "supervision.decision": 1,
+      "validation.completed": 3,
+      "supervision.response.delivered": 1,
+      "recall.used": 1,
+      "supervision.cost.summary": 1,
+      "supervision.turn.closed": 1,
+      "run.ended": 1
+    },
+    "compaction_events": []
+  },
+  "ai_variant": {
+    "task_id": "task_sysai_a2e75864",
+    "run_id": "run_de9a1ad93e914ada4806",
+    "state": "succeeded",
+    "episode_id": 5582,
+    "total_ms": 241693,
+    "roles": {
+      "oneshot:classify": {
+        "input": 10868,
+        "output": 5,
+        "cache_read": 3840,
+        "cache_create": 0
+      },
+      "oneshot:background": {
+        "input": 11207,
+        "output": 1777,
+        "cache_read": 1280,
+        "cache_create": 0
+      },
+      "execution": {
+        "input": 2787059,
+        "output": 20796,
+        "cache_read": 2695935,
+        "cache_create": 91096
+      },
+      "oneshot:evaluate": {
+        "input": 156549,
+        "output": 1851,
+        "cache_read": 5903,
+        "cache_create": 150644
+      }
+    },
+    "usage_events": 5,
+    "tools": {
+      "Bash": 11,
+      "execute_ibl": 3
+    },
+    "event_counts": {
+      "request.received": 1,
+      "cognition.supervisor_selected": 1,
+      "supervision.turn.opened": 1,
+      "supervision.recall.started": 7,
+      "supervision.recall.finished": 7,
+      "model.call_started": 5,
+      "model.input": 5,
+      "model.round": 18,
+      "model.usage": 5,
+      "model.call_finished": 5,
+      "recall.presented": 1,
+      "cognition.route": 1,
+      "framing.inherited": 1,
+      "supervision.framing": 1,
+      "model.response_snapshot": 36,
+      "supervision.tool.started": 14,
+      "supervision.tool.finished": 14,
+      "seam": 2,
+      "ibl.started": 3,
+      "ibl.checkpoint": 3,
+      "supervision.progress": 7,
+      "context.result_projected": 3,
+      "ibl.finished": 3,
+      "side_effect.write": 2,
+      "cognition.evaluation": 1,
+      "supervision.evaluation.stage_started": 4,
+      "supervision.evaluation.stage_finished": 4,
+      "supervision.evaluation.started": 1,
+      "supervision.evaluation.finished": 1,
+      "supervision.decision": 1,
+      "validation.completed": 3,
+      "supervision.response.delivered": 1,
+      "recall.used": 1,
+      "supervision.cost.summary": 1,
+      "supervision.turn.closed": 1,
+      "run.ended": 1
+    },
+    "compaction_events": []
+  }
+}

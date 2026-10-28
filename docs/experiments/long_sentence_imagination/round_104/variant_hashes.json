@@ -1,0 +1,11 @@
+{
+  "RULES_VARIANT.txt": "bdc7d541f4a5f4bea5734dbb35ade22d4c642faa331383666b40cf0eb5745db5",
+  "new_vendor.json": "f8a26d97f75257d85855e7250d7ddac4465412efb31aefd7063be52bede44113",
+  "source/quotes_ab.json": "79c07724046fb8f3788bb9d969403f22c21a2a40887ebf2f98fa088b0208a7eb",
+  "source/policy.json": "1ce05a0813f06bd6f8ae5e8af7ff3370769267a99587fc16810eeb28ebc6a7b4",
+  "source/stock.json": "4ecdf6a47fdcef59e7026aac1006c6c9bc10265640e924d6a0c597a554c5e125",
+  "source/aliases.json": "b22f7dc878b16770ba03fc1801a3009a4cb0c7921f957af6be84210b86a34d51",
+  "source/RULES.txt": "bb46b116b36332b5a2d7ec6e38e0e636192d304c22a171cfb32884c0319882f2",
+  "source/quotes_c_archive.txt": "f5544d96bc220d0bdb65bc9fe05d7e641ca9a9db349783e5e86ba710c89a09d2",
+  "source/requests.csv": "f7203a0c1f0bd20d980fa41b0e6fe77c30f5f46a89e2bbda86db7d0258e16ce0"
+}

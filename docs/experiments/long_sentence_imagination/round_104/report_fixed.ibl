@@ -1,0 +1,4 @@
+[def:LS102Report]($lib,$lines,$cost,$ready,$receipt){
+  $label=get($lib,"label",null)
+  return {library:$lib.id,label:($label==null or $label=="" ? $lib.id : $label),lines:$lines,total_cost:$cost,ready:$ready,receipt:$receipt}
+}

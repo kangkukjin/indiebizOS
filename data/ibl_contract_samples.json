@@ -3,10 +3,12 @@
   "scripts": {
     "LS102Normalize": [
       {"kind": "rows", "payload": [{"item": "alias-K", "quantity": "3", "note": "preserve"}], "aliases": {"alias-K": "K"}},
-      {"kind": "jsonl", "payload": "{\"item\":\"K\",\"pack\":\"2\",\"unit_price\":null}\n", "aliases": {}}
+      {"kind": "jsonl", "payload": "{\"item\":\"K\",\"pack\":\"2\",\"unit_price\":null}\n", "aliases": {}},
+      {"kind": "rows", "payload": [{"item": "K", "unit_price": "70.5"}, {"item": "K", "unit_price": ""}], "aliases": {}}
     ],
     "LS103Normalize": [
-      {"items": [{"item": "K", "pack": "5", "pack_price": "675", "shipping": "80"}]}
+      {"items": [{"item": "K", "pack": "5", "pack_price": "675", "shipping": "80"}]},
+      {"items": [{"item": "K", "pack": "5", "pack_price": "677.5", "shipping": "80.5"}, {"item": "K", "pack": "5", "pack_price": "", "shipping": "80.5"}]}
     ],
     "판정관용구": [
       {"op": "urls", "source": {"items": [{"url": "https://example.test", "text": "needle", "title": "title"}]}},

@@ -4,6 +4,10 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 104회차 — 교육 키트 공급 재훈련: 표시 누락·가격 형식·남은 발송 재개 (2026-10-28, 훈련·수리 완료)
+
+22:11:17~22:35:43 원본 훈련(준비 포함 24분 27초), 단일 회차의 주 과제+지역 변형. 양 실행자 주600행/변형2400행 독립 대조 일치. **L104-1** 저장 보고 함수의 누락/null/빈 표시 이름 처리 수리, 같은 run의 기존 출고2건 보존+남은1건 완료·resume 불변·금액 변경 repair 거절. **L104-2** 정규화2부품의 소수 절삭·문자열 금액 실패·빈 가격 처리 수리, 지역 계획을 새 저장 비교 능력에서 소비. 관련84검사 통과. 독립 발견·전이/비용 개선은 미검증. [보고서](experiments/long_sentence_imagination/round_104/report.md) · [과제](experiments/long_sentence_imagination/round_104/task.md).
+
 ## 103회차 — 지역 조달 비교·재고 이동 재조합 (2026-10-28, 원본 훈련 완료)
 
 [과제](experiments/long_sentence_imagination/round_103/task.md). 102회차 완료 능력과 결과 계승. 양 실행자 2400계획행/16800필드 대조 통과, 이전 원장 불변. 훈련자 지역 능력을 저장·재발견해 새 제안서 조합에서 실제 소비. [보고서](experiments/long_sentence_imagination/round_103/report.md). AI는 Python 재사용, 독립 전이는 미검증.

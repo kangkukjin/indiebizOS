@@ -1,0 +1,11 @@
+{
+  "line_field_checks": 6000,
+  "date_checks": 600,
+  "source_hash_checks": 7,
+  "dispatch": 3,
+  "total_cost": 358134,
+  "status_mapping": {
+    "confirmed": "ready"
+  },
+  "independent_oracle": true
+}

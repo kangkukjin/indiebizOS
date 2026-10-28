@@ -58,6 +58,30 @@ GUIDES_DIR = DATA_PATH / "guides"
 DB_PATH = DATA_PATH / "guide_usage.db"
 CACHE_PATH = DATA_PATH / "guide_dates_cache.json"
 
+# 계획 작성자의 절차 교재. 실행자의 추천 목록·자동 주입에서는 제외한다.
+CONSCIOUSNESS_ONLY = frozenset({"deep_research.md"})
+
+
+def execution_guides(names):
+    return [name for name in dict.fromkeys(names or []) if name not in CONSCIOUSNESS_ONLY]
+
+
+def execution_guide_map(text):
+    """의식과 공유하는 회상 묶음 중 실행자에게 가는 목차만 투영한다."""
+    def clean(match):
+        lines = []
+        for line in match.group(2).splitlines():
+            if not any(name in line for name in CONSCIOUSNESS_ONLY):
+                lines.append(line)
+                continue
+            label, separator, names = line.partition(":")
+            if separator:
+                remaining = execution_guides([name.strip() for name in names.split(",")])
+                if remaining:
+                    lines.append(label + ": " + ", ".join(remaining))
+        return match.group(1) + "\n".join(lines) + match.group(3)
+    return re.sub(r"(<guide_map\b[^>]*>)(.*?)(</guide_map>)", clean, text, flags=re.S)
+
 _lock = threading.Lock()
 _date_cache: Optional[Dict[str, Dict]] = None
 

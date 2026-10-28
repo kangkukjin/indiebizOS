@@ -185,6 +185,7 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
         "previous_assumptions": ch.current.get("assumptions") or [],
         "previous_criteria": ch.current.get("achievement_criteria", ""),
         "previous_request_intent": ch.current.get("request_intent", "task"),
+        "previous_research_plan": ch.current.get("_research_plan"),
         "broken_assumption": (broken or "").strip()[:2000],
         "evidence": (evidence or "").strip()[:4000],
         "progress": (progress or "").strip()[:4000],
@@ -284,6 +285,10 @@ def render_for_executor(env: dict) -> str:
     crit = (out.get("achievement_criteria") or "").strip()
     if crit:
         lines.append("충족 기준(갱신): " + crit)
+    from research_planning import execution_block
+    research = execution_block(out)
+    if research:
+        lines.append(research)
     if out.get("_repair_declared_mid_turn"):
         lines.append("주의: 새 규정은 시스템 코어 수정이 필요하다고 봤지만 이 턴에는 수리 권한이 없다 — "
                      "코어를 고치지 말고 진단·제안까지만 하고, 수리는 사용자에게 #repair 로 다시 명령받으라고 보고하라.")

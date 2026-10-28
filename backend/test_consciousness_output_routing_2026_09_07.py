@@ -58,7 +58,7 @@ def _fill(keys) -> dict:
             target[name] = [_sentinel(key)]
         elif name == "criteria":
             target[name] = [{"text": _sentinel(key), "user_quote": "", "fallback": "한계를 명시"}]
-        elif name.startswith("needs_"):
+        elif name.startswith("needs_") or name == "deep_research":
             target[name] = True
         else:
             target[name] = _sentinel(key)
@@ -128,8 +128,10 @@ def _assembled_text(co: dict) -> str:
 # 불리언 키 = 뒤집었을 때 소비처의 답이 달라지는지로 본다.
 def _bool_probes():
     from cognitive_consciousness import CognitiveConsciousnessMixin
+    from research_planning import requested
     holder = CognitiveConsciousnessMixin()
     return {
+        "deep_research": lambda v: requested({"deep_research": v}),
         "needs_clarification": lambda v: holder._consciousness_clarification(
             {"needs_clarification": v, "clarification_question": "질문"}),
         "needs_repair": lambda v: holder._consciousness_needs_repair({"needs_repair": v}),
@@ -169,7 +171,7 @@ def test_every_prompt_key_reaches_a_consumer(tmp_path):
     dead = []
     for key in sorted(keys):
         name = key.rpartition(".")[2]
-        if name.startswith("needs_"):
+        if name.startswith("needs_") or name == "deep_research":
             probe = probes.get(name)
             if probe is None:
                 dead.append(f"{key} (불리언인데 소비처 프로브 미등록)")

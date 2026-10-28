@@ -13,6 +13,7 @@
 - `expert_choice` (문자열, 한 문장 — 이 분야의 함정 하나, 이름 하나 포함; 세상의 방식 줄을 되풀이하지 않는다)
 - `capability_focus` (객체: `hint` 문자열, `highlight_actions` 는 **IBL 액션 이름만** — `self:read`·`sense:search` 같은 `node:action` 꼴. 직전 규정에 있던 이름을 유지하고, 모르는 이름은 짓지 말고 생략한다. 산문 금지)
 - `guide_files` (문자열 목록)
+- `deep_research` (참/거짓) — 새 요청이 심층연구로 바뀌면 참. 하네스가 의식을 깨워 연구계획을 작성한다. 단순 조회·비교나 연구 기능 수리는 해당하지 않는다. 의식용 연구 가이드를 실행자에게 추천하지 않는다.
 - `needs_clarification` (참/거짓), `clarification_question` (문자열)
 
 ## mode = repeat — 같은 문장의 정기 실행

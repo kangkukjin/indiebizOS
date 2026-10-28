@@ -474,6 +474,10 @@ class CognitiveEvalMixin:
             )
 
         # 규정과 독립된 사용자 정정으로 기준의 의미·충돌을 확인한다.
+        from research_planning import evaluation_block
+        prompt += evaluation_block(consciousness_output,
+                                   getattr(self, "project_path", None)
+                                   or getattr(getattr(self, "ai", None), "project_path", None))
         # 계승 규정에는 history_summary가 없고, 새 규정의 요약도 정정을 누락할 수 있다.
         from history_excerpt import conversation_excerpt
         conversation = conversation_excerpt(conversation_history)

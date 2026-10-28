@@ -97,6 +97,7 @@ LAYERS = {
         "workflow_verdict", "workflow_store",
     },
     "cognition": {
+        "research_planning",
         "member_cli",
         "member_codex",
         "research_runner",

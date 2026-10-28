@@ -354,8 +354,11 @@ def framing_patch(out, previous=None, broken="", evidence="", task=""):
             break
         if a.get("status") == "broken" and not any(x["text"] == a.get("text") for x in assumptions):
             assumptions.append(a)
-    meta = {k: out[k] for k in ("guide_files", "imagined_ibl", "expert_choice", "capability_focus", "_amend_count") if k in out}
+    meta = {k: out[k] for k in ("guide_files", "imagined_ibl", "expert_choice", "capability_focus", "_amend_count",
+                              "deep_research", "_research_plan") if k in out}
     meta["_repair_framing"] = bool(out.get("needs_repair"))
+    if isinstance(meta.get("_research_plan"), dict):
+        meta["_research_plan"] = {k: v for k, v in meta["_research_plan"].items() if k != "body"}
     return {"framing": out.get("task_framing", ""), "approach": out.get("approach", ""),
             "assumptions": assumptions, "framing_meta": meta}
 

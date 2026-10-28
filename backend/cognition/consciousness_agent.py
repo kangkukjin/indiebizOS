@@ -180,6 +180,8 @@ class ConsciousnessAgent:
         supervisor=None,
         validate_framing=None,
         pursuit_state=None,
+        project_path=None,
+        previous_research_plan=None,
     ) -> Optional[Dict]:
         """의식 에이전트 실행 — 메타 판단 수행
 
@@ -307,6 +309,11 @@ class ConsciousnessAgent:
                             "자동 정정도 실패해 실행을 중단했습니다. 다시 시도해 주세요.") from retry_exc
                     record_trajectory_event("consciousness.contract_corrected", {"scope": result.get("scope", "turn")})
             if result:
+                from research_planning import prepare
+                result = prepare(self, result, input_text, supervisor=supervisor,
+                                 project_path=project_path,
+                                 previous_plan=previous_research_plan,
+                                 validate_framing=validate_framing)
                 import json as _json
                 print(f"[ConsciousnessAgent] 파싱 결과:\n{_json.dumps(result, ensure_ascii=False, indent=2)}")
             else:

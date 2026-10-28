@@ -364,6 +364,7 @@ def invoke(controller, prompt="", *, phase="final"):
         return json.dumps({"status": "UNKNOWN", "reason": "사용자가 취소했습니다"})
     controller.log("evaluation.started", role="evaluate", tools=0)
     evaluator = Evaluator()
+    evaluator.project_path = getattr(controller, "project_path", None)
     achieved, feedback, severity = evaluator._evaluate_achievement(
         controller.message, packet["criteria"], packet["response"], packet["files"],
         consciousness_output=controller.framing,

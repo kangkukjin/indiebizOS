@@ -1069,6 +1069,11 @@ def _search_guide(query: str, params: dict) -> Any:
     except (OSError, ValueError, KeyError, TypeError):
         return {"error": "가이드 목차를 읽을 수 없습니다.", "error_code": "GUIDE_CATALOG_INVALID"}
 
+    from guide_registry import CONSCIOUSNESS_ONLY
+    # 직접 파일 호명은 열람 기능으로 남기되 작업 추천·키워드 검색에는 의식용 교재를 섞지 않는다.
+    if query not in CONSCIOUSNESS_ONLY:
+        guides = [g for g in guides if g.get("file") not in CONSCIOUSNESS_ONLY]
+
     if not query:
         return {
             "guides": [{"id": g["id"], "name": g["name"], "description": g["description"]} for g in guides],

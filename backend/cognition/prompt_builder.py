@@ -627,7 +627,8 @@ def _build_dynamic_context(
     parts.append(f"# 현재 시각\n{datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
     if execution_memory:
-        parts.append(execution_memory)
+        from guide_registry import execution_guide_map
+        parts.append(execution_guide_map(execution_memory))
 
     # 배경 참고만 담는다. 명령을 *형성*하는 것(문제 설정·쓸 액션·가이드 지시·충족 기준)은
     # 여기 두지 않는다 — 그건 compile_user_command()가 사용자 명령에 융합한다(의식 경로).
@@ -639,7 +640,8 @@ def _build_dynamic_context(
         if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
-        guide_files = list(dict.fromkeys(consciousness_output.get("guide_files") or []))
+        from guide_registry import execution_guides
+        guide_files = execution_guides(consciousness_output.get("guide_files"))
         if guide_files:
             primary = guide_files[0]
             block = builder._guide_block(primary)
@@ -808,7 +810,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
             aug.append(f"실행 초안(검증 실패 — {err}):\n" + draft +
                        "\n이 초안은 그대로 쓰지 말 것. 위 오류를 감안해 직접 재구성하라.")
 
-    guide_files = list(dict.fromkeys(co.get("guide_files") or []))
+    from guide_registry import execution_guides
+    guide_files = execution_guides(co.get("guide_files"))
     if guide_files:
         aug.append(
             "주 가이드: " + guide_files[0]
@@ -823,6 +826,11 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     achievement_criteria = (co.get("achievement_criteria") or "").strip()
     if achievement_criteria:
         aug.append(f"충족 기준: {achievement_criteria}")
+
+    from research_planning import execution_block
+    research = execution_block(co)
+    if research:
+        aug.append(research)
 
     user_cmd = (user_message or "").strip()
     if not aug:

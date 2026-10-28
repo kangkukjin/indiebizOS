@@ -39,7 +39,7 @@ REPEAT_KEEP = 40                      # 자아별 문장 기록 보존 수
 PATCHABLE_TEXT = ("task_framing", "achievement_criteria", "expert_choice", "clarification_question")
 PATCHABLE_LIST = ("assumptions", "guide_files", "criteria")
 PATCHABLE_DICT = ("capability_focus",)
-PATCHABLE_BOOL = ("needs_clarification",)
+PATCHABLE_BOOL = ("needs_clarification", "deep_research")
 PATCHABLE = set(PATCHABLE_TEXT) | set(PATCHABLE_LIST) | set(PATCHABLE_DICT) | set(PATCHABLE_BOOL)
 # 저장본에서 벗기는 키 — 권한·턴 전용 표식
 STRIP_ALWAYS = ("needs_repair", "_repair_policy", "_framing_source", "_inherited_from",
@@ -345,6 +345,11 @@ def _inherit(runner, message, history, record_trajectory_event):
         record_trajectory_event("framing.inherit_declined", {"mode": None, "reason": found})
         return None
     previous = found
+    from research_planning import requested
+    if requested(previous.get("framing")):
+        record_trajectory_event("framing.inherit_declined", {
+            "mode": mode, "reason": "심층연구의 계획 선택·갱신은 의식이 담당"})
+        return None
     t0 = time.monotonic()
     if mode == "followup":
         relation = _judge_relation(previous, message, history=history)
@@ -368,6 +373,10 @@ def _inherit(runner, message, history, record_trajectory_event):
     if mode == "followup":
         framing.pop("imagined_ibl", None)         # 직전 메시지의 초안이지 이번 것이 아니다
     framing.update(patch)
+    if requested(framing):
+        record_trajectory_event("framing.inherit_declined", {
+            "mode": mode, "reason": "심층연구로 변경되어 의식의 계획 작성 필요"})
+        return None
     framing["_framing_source"] = "inherited_" + mode
     framing["_inherited_from"] = {"episode_id": previous.get("episode_id"), "at": previous.get("at"),
                                   "task_id": previous.get("task_id")}

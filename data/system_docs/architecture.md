@@ -137,6 +137,7 @@ Claude Code는 CLI 기본 정책, API는 모델별 입력 예산을 사용한다
 - **안정부(system_prompt)** — 현재 날짜(일 단위) → `base_prompt_v6.md` → `<system_structure>` 정체성 코어 → 조건부 프래그먼트(`06_git`·`09_delegation`·`10_system_ai_delegation`) → IBL 환경(`ibl_access.build_environment`: 압축 문법서 + 허용 노드의 액션 카탈로그 + 상시 관용구) → 프로젝트 에이전트만 `<project_memory>`(폴더 포식 문서) → `# Role`(`system_ai_role.txt` / `agent_<이름>_role.txt`) → `# Notes` / `# 시스템 메모`.
 - **가변부(`<turn_context>`, 사용자 메시지 앞)** — 분 단위 시각 → 실행기억(해마 회상 + 심층 지도 + 가이드 목차) → 모델명 → 의식이 고른 주 가이드 본문(첫 항목만)·추가 후보 이름 → 수리 턴 교리(RED 그랜트 때만).
 - **사용자 명령** — `compile_user_command`가 원문과 시스템 실행 지침(의식 보강)을 출처별로 나눠 전달한다(THINK 경로). 보강의 문제 규정·기준 출처·전문가의 선택·전제·액션·수행 절차·실행 초안·가이드·충족 기준은 당위 앵커 아래 실행 지시로 유지하되, 수량·대상·판정은 원문·실제 입력과 대조한다. 생성된 계획을 사용자 발언으로 인용하지 않으며 최종 평가도 이 대응을 검사한다.
+- **심층연구만의 사전 계획** — 의식이 `deep_research=true`로 판단하면 `research_planning.prepare`가 의식에게 심층연구 가이드를 공급하여 주제별 계획을 작성하게 한다. 하네스가 작업공간의 `outputs/research_plans/<판본>/research_plan.md`를 저장·재열람하고 시각·지문·본문을 실행자에게 전달한다. 계획 실패는 실행으로 폴백하지 않는다. 실행자는 같은 파일에 진행·근거를 갱신하며 중요한 변경은 재규정으로 의식에게 돌린다. 후속 심층연구는 경량 규정 계승을 우회해 최신 계획을 의식이 읽고 새 판본을 작성한다. 최종 평가자는 초기 저장본과 현재 파일을 함께 대조한다. 가이드 자체는 실행자의 목차·자동 주입·검색 추천에서 제외하며 일반 작업에는 이 계획 호출·저장을 추가하지 않는다.
 
 의식·의식 감독·무의식·최종 평가자·경험 증류·가이드 순찰·IBL 번역·자동응답은 각자 다른 조립을 갖는다. **어느 에이전트가 무엇을 어떤 순서로 읽는지는 런처 안경 메뉴 → 프롬프트 구성** 표면이 정본 빌더를 그대로 불러 조각별 분량과 본문으로 보여준다(`backend/cognition/prompt_composition.py`, `/prompt-composition/*`). 문서의 조립 순서 서술이 표면과 어긋나면 표면이 맞다. 안경 메뉴의 도구 창(프롬프트 구성·가이드 파일·내 어휘)은 Electron 에서 런처 안 모달이 아니라 **독립 OS 창**이다(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별; IPC `open-tool-window`), 웹 표면은 같은 창의 해시 라우트(`#/prompt-composition`·`#/guides`·`#/vocabulary`). 가이드 파일 창은 `data/guides/*.md` 를 등록(guide_db)·신선도·예산과 함께 보여 주고 본문을 고쳐 저장한다(`/guides`, `guide_registry.guide_catalog` — 폴더가 정본이라 '등록만 있고 파일 없음'·'파일만 있고 미등록'을 숨기지 않는다). 정본 `docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md`.
 
@@ -560,7 +561,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 172 액션** (sense 39·self 58·limbs 13·others 20·engines 19·table 23)
-- backend **.py 630개**(test 제외, git 추적 기준) — 층 디렉토리 `base 91 · datastore 90 · ibl 92 · cognition 94 · services 93 · surface 96`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **97**)
+- backend **.py 631개**(test 제외, git 추적 기준) — 층 디렉토리 `base 91 · datastore 90 · ibl 92 · cognition 95 · services 93 · surface 96`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **97**)
 - op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 24·미선언 89)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

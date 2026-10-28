@@ -144,9 +144,10 @@ def _recall_bundle(sample: str) -> str:
 
 
 def _recall_section(sample: str, layer: str = "turn") -> Dict[str, Any]:
+    from guide_registry import execution_guide_map
     return _section("execution_memory", "실행기억 (해마 회상 + 심층 지도·선택 기억 + 가이드 목차)", layer, "memory",
                     "associative_recall.begin → route — 공급원 정책 표 SOURCES(해마·심층·가이드·손발·수리·판정·세계)",
-                    _recall_bundle(sample),
+                    execution_guide_map(_recall_bundle(sample)),
                     note="샘플 메시지로 실제 회상한 결과. 메시지마다 내용·분량이 달라진다(LLM 0, 임베딩 검색).")
 
 
@@ -473,7 +474,7 @@ def _assemble_consciousness(sample: str) -> Dict[str, Any]:
                      "(_load_prompt + _build_input); 감독이 살아 있으면 supervisor.plan 으로 위임",
             "output_keys": ["task_framing", "achievement_criteria", "expert_choice", "capability_focus",
                             "guide_files", "assumptions", "imagined_ibl", "needs_clarification", "needs_repair",
-                            "history_summary"]}
+                            "history_summary", "deep_research"]}
 
 
 def _agent_block(name: str, role: str, notes: str) -> str:

@@ -639,17 +639,20 @@ def _build_dynamic_context(
         if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
-        guide_files = consciousness_output.get("guide_files", [])
-        missing_guides = []
-        for guide in dict.fromkeys(guide_files):
-            block = builder._guide_block(guide)
+        guide_files = list(dict.fromkeys(consciousness_output.get("guide_files") or []))
+        if guide_files:
+            primary = guide_files[0]
+            block = builder._guide_block(primary)
             if block:
                 parts.append(block)
             else:
-                missing_guides.append(guide)
-        if missing_guides:
-            parts.append("# 가이드 본문 미제공\n" + ", ".join(missing_guides)
-                         + "\nread_guide로 확인하라. 읽지 못하면 미확인 사실과 작업 영향을 밝혀라.")
+                parts.append("# 가이드 본문 미제공\n" + primary
+                             + "\nread_guide로 확인하라. 읽지 못하면 미확인 사실과 작업 영향을 밝혀라.")
+            if guide_files[1:]:
+                parts.append("# 추가 가이드 후보 (본문 미주입)\n" + ", ".join(guide_files[1:])
+                             + "\n주 가이드로 부족한 별도 절차가 있을 때만 read_guide로 필요한 절을 읽는다. "
+                               "후보 전체를 먼저 읽지 않는다.")
+
     else:
         if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
@@ -805,13 +808,17 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
             aug.append(f"실행 초안(검증 실패 — {err}):\n" + draft +
                        "\n이 초안은 그대로 쓰지 말 것. 위 오류를 감안해 직접 재구성하라.")
 
-    guide_files = co.get("guide_files") or []
+    guide_files = list(dict.fromkeys(co.get("guide_files") or []))
     if guide_files:
         aug.append(
-            "참고할 가이드: " + ", ".join(dict.fromkeys(guide_files))
+            "주 가이드: " + guide_files[0]
             + " — 현재 목차의 catalog_revision과 같은 전문이 있으면 그 본문을 따르고, "
               "지문이 없거나 다르거나 본문이 잘림·요약됐으면 read_guide로 열어 따르라."
         )
+        if guide_files[1:]:
+            aug.append("추가 가이드 후보: " + ", ".join(guide_files[1:])
+                       + " — 본문은 자동 주입하지 않는다. 주 가이드로 부족한 별도 절차가 생길 때만 "
+                         "read_guide로 필요한 절을 읽는다.")
 
     achievement_criteria = (co.get("achievement_criteria") or "").strip()
     if achievement_criteria:

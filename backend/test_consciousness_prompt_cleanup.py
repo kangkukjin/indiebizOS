@@ -104,7 +104,9 @@ def test_guide_delivery_handles_missing_empty_and_duplicate_files(tmp_path, monk
     text = pb._build_dynamic_context(co)
     assert text.count("고유한 필수 절차") == 1
     assert "# 가이드 전문 끝: ready.md" in text
-    assert "# 가이드 본문 미제공\nmissing.md, empty.md" in text
+    assert "# 추가 가이드 후보 (본문 미주입)\nmissing.md, empty.md" in text
+    for name in ("missing.md", "empty.md"):
+        assert "# 가이드 본문 미제공\n" + name in pb._build_dynamic_context({"guide_files": [name]})
     assert injected == ["ready.md"]
     cmd = pb.compile_user_command("작업", co)
     assert cmd.count("ready.md") == 1

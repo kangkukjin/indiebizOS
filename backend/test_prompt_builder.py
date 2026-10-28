@@ -58,6 +58,51 @@ def test_generated_history_is_labeled_without_changing_selected_facts():
     assert result[0]['_history_replacement'] is True
 
 
+
+@pytest.mark.parametrize("names", [[], ["primary.md"],
+                                  ["primary.md", "extra.md", "primary.md", "extra.md"]])
+def test_only_primary_guide_is_loaded_and_recorded(tmp_path, monkeypatch, names):
+    import prompt_builder as pb
+    import guide_registry
+
+    guides = tmp_path / "data/guides"
+    guides.mkdir(parents=True)
+    (guides / "primary.md").write_text("PRIMARY_CONTENT")
+    (guides / "extra.md").write_text("EXTRA_CONTENT" * 3000)
+    monkeypatch.setattr(pb, "get_base_path", lambda: tmp_path)
+    builder = pb.PromptBuilder(tmp_path)
+    monkeypatch.setattr(pb, "get_prompt_builder", lambda: builder)
+    monkeypatch.setattr(pb, "_repair_turn_block", lambda _: "")
+    monkeypatch.setattr(guide_registry, "freshness_note", lambda _: "")
+    monkeypatch.setattr(guide_registry, "catalog_revision", lambda: "fixture")
+    injected, recorded, loaded = [], [], []
+    monkeypatch.setattr(guide_registry, "mark_injected", injected.append)
+    monkeypatch.setattr(guide_registry, "record_use", lambda name, origin: recorded.append(name))
+    read = builder._load_guide_file
+
+    def track(name):
+        loaded.append(name)
+        return read(name)
+
+    monkeypatch.setattr(builder, "_load_guide_file", track)
+    context = pb._build_dynamic_context({"guide_files": names})
+    command = pb.compile_user_command("fixture", {"guide_files": names})
+    expected = ["primary.md"] if names else []
+    assert loaded == recorded == injected == expected
+    assert context.count("PRIMARY_CONTENT") == bool(names)
+    assert "EXTRA_CONTENT" not in context
+    assert "EXTRA_CONTENT" not in command
+    if len(names) > 1:
+        assert context.count("extra.md") == command.count("extra.md") == 1
+        assert "본문 미주입" in context and "추가 가이드 후보:" in command
+    # A missing primary is reported; a large secondary is never silently promoted.
+    if names:
+        (guides / "primary.md").unlink()
+        missing = pb._build_dynamic_context({"guide_files": names})
+        assert "# 가이드 본문 미제공\nprimary.md" in missing
+        assert "EXTRA_CONTENT" not in missing
+
+
 if __name__ == '__main__':
     import sys
     import pytest

@@ -163,11 +163,11 @@ def _model_name_section(model_name: str) -> Dict[str, Any]:
 
 
 def _guides_section() -> Dict[str, Any]:
-    return _section("guide_files", "의식이 고른 가이드 본문", "turn", "dynamic",
+    return _section("guide_files", "주 가이드 본문·추가 후보", "turn", "dynamic",
                     "data/guides/<name>.md ← consciousness_output.guide_files (prompt_builder._guide_block)",
                     "", condition="THINK 경로에서 의식이 guide_files 를 지정한 턴",
                     included=False,
-                    note="가이드마다 본문 전체 + 신선도 주석. 없는 가이드는 '# 가이드 본문 미제공' 목록으로.")
+                    note="첫 가이드만 본문 전체 + 신선도 주석. 추가 후보는 이름만 제공하고 필요한 절을 요청 시 읽는다. 주 가이드가 없으면 본문 미제공으로 표시한다.")
 
 
 def _repair_section(layer: str = "turn") -> Dict[str, Any]:

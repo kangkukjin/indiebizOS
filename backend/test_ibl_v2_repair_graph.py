@@ -111,11 +111,12 @@ def test_sequential_iteration_keeps_previous_tail_as_next_effect_condition(execu
     assert not out.get('ok') and calls == ['delivery'], out
 
 
-def test_old_frontier_cannot_silently_gain_new_repair_authority():
+@pytest.mark.parametrize('edition', [1, 2])
+def test_old_frontier_cannot_silently_gain_new_repair_authority(edition):
     from ibl_v2_repair_graph import mapping
     from ibl_v2_ir import Fault
     with pytest.raises(Fault, match='효과'):
-        mapping({'protocol': 'ibl-repair-frontier/1'}, {'protocol': 'ibl-repair-frontier/2'})
+        mapping({'protocol': f'ibl-repair-frontier/{edition}'}, {'protocol': 'ibl-repair-frontier/3'})
 
 
 def test_stored_effectful_revision_repairs_inside_three_composed_abilities(
@@ -205,6 +206,130 @@ def test_unresolved_callable_container_retains_body_effect_intent(execute, conta
     changed = code.replace('[t:send]{id:$id}', '[t:send]{id:"other"}').replace('return 1/$n', 'return 1')
     out = run(changed, check=True, repair=first['resume'])
     assert not out.get('ok') and calls == ['delivery'], out
+
+
+@pytest.mark.parametrize('flag', ['true', 'false'])
+@pytest.mark.parametrize('shape', ['return', 'join', 'early'])
+def test_conditional_internal_result_repairs_without_repeating_selected_effect(execute, flag, shape):
+    run, calls, _ = execute
+    if shape == 'return':
+        body = ('[if:$flag]{[t:send]{id:"yes"};return 10/$n}'
+                '[else]{[t:send]{id:"no"};return 20/$n}')
+    elif shape == 'join':
+        body = ('[if:$flag]{[t:send]{id:"yes"};$answer=10/$n}'
+                '[else]{[t:send]{id:"no"};$answer=20/$n};return $answer')
+    else:
+        body = ('[if:$flag]{[t:send]{id:"yes"};return 10/$n};'
+                '[t:send]{id:"no"};return 20/$n')
+    code = '[def:step]($flag,$n){' + body + '};return [fn:step]{flag:' + flag + ',n:$n}'
+    first = run(code)
+    selected = 'yes' if flag == 'true' else 'no'
+    assert not first['success'] and calls == [selected], first
+    fixed = code.replace('/$n', '/($n+1)')
+    out = repair(run, first, fixed)
+    assert out['success'] and out['value'] == (10 if flag == 'true' else 20), out
+    assert calls == [selected]
+
+
+def test_returning_branch_tail_is_not_a_condition_of_fallthrough_effect(execute):
+    run, calls, _ = execute
+    code = ('[def:step]($flag,$n){[if:$flag]{[t:send]{id:"first"};return 10/$n};'
+            '[t:send]{id:"later"};return 20};return [fn:step]{flag:true,n:$n}')
+    first = run(code)
+    assert not first['success'] and calls == ['first'], first
+    out = repair(run, first, code.replace('10/$n', '10/($n+1)'))
+    assert out['success'] and out['value'] == 10 and calls == ['first'], out
+
+
+@pytest.mark.parametrize('change', [
+    ('[if:$n==0]', '[if:$n!=0]'),
+    ('$id="yes"', '$id="changed"'),
+    ('return 10', 'return 20'),
+])
+def test_branch_condition_joined_input_and_return_to_effect_stay_fixed(execute, change):
+    run, calls, _ = execute
+    code = ('[def:choose]($n){[if:$n==0]{$id="yes"}[else]{$id="no"};'
+            '[t:send]{id:$id};return 10};$value=[fn:choose]{n:$n};'
+            '[t:send]{id:f"result-${$value}"};return 1/$n')
+    first = run(code)
+    assert not first['success'] and calls == ['yes', 'result-10'], first
+    out = run(code.replace(*change).replace('return 1/$n', 'return 1'),
+              check=True, repair=first['resume'])
+    assert not out.get('ok') and calls == ['yes', 'result-10'], out
+
+
+def test_many_conditionals_share_the_following_dependency_computation(execute):
+    run, calls, _ = execute
+    prefix = '[t:send]{id:"delivery"};'
+    choices = ''.join(f'[if:$n==0]{{$x{i}=1}}[else]{{$x{i}=2}};' for i in range(40))
+    code = '[def:report]($n){' + prefix + choices + 'return $x39/$n};return [fn:report]{n:$n}'
+    first = run(code)
+    assert not first['success'] and calls == ['delivery'], first
+    out = repair(run, first, code.replace('$x39/$n', '$x39/($n+1)'))
+    assert out['success'] and out['value'] == 1 and calls == ['delivery'], out
+
+
+
+def test_branch_return_consumed_by_caller_effect_remains_fixed(execute):
+    run, calls, _ = execute
+    code = ('[def:choose]($flag){[if:$flag]{[t:send]{id:"first"};return "left"}'
+            '[else]{return "right"}};$answer=[fn:choose]{flag:true};'
+            '[t:send]{id:$answer};return 1/$n')
+    first = run(code)
+    assert not first['success'] and calls == ['first', 'left'], first
+    changed = code.replace('return "left"', 'return "other"').replace('return 1/$n', 'return 1')
+    out = run(changed, check=True, repair=first['resume'])
+    assert not out.get('ok') and calls == ['first', 'left'], out
+
+
+def test_removing_early_return_cannot_enable_an_unrecorded_effect(execute):
+    run, calls, _ = execute
+    code = ('[def:step]($flag,$n){[if:$flag]{[t:send]{id:"first"};return 10/$n};'
+            '[t:send]{id:"later"};return 20};return [fn:step]{flag:true,n:$n}')
+    first = run(code)
+    assert not first['success'] and calls == ['first'], first
+    changed = code.replace('return 10/$n', '$ignored=10/($n+1)')
+    out = run(changed, check=True, repair=first['resume'])
+    assert not out.get('ok') and calls == ['first'], out
+
+
+def test_stored_conditional_revision_keeps_bodyless_upper_check_and_effect_receipt(
+        tmp_path, monkeypatch, component_catalog):
+    from function_library import register, definitions
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compile import compile_program, Compiler
+    from ibl_v2_entry import handle_request
+    calls = []
+    registry = {'archive:publish': Adapter(
+        {'version': 1, 'params': {'id': 'Text'}, 'result': 'Number', 'effects': ['write_external']},
+        lambda rt, args: calls.append(args['id']) or 7)}
+    monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **kw: registry)
+    monkeypatch.setattr('tool_batch.prepared_plan', lambda *a: None)
+    source = ('[def:publish]($id,$flag,$n){[if:$flag]{'
+              '$receipt=[archive:publish]{id:$id};return {receipt:$receipt,ratio:10/$n}}'
+              '[else]{return {receipt:0,ratio:0}}}')
+    original = register('publish', '#!ibl edition=2\n' + source, edition=2)
+    register('review', '#!ibl edition=2\n[def:review]($id,$flag,$n){return [fn:publish]{id:$id,flag:$flag,n:$n}}', edition=2)
+    request = {'edition': 2, 'code': 'return [fn:review]{id:"document",flag:true,n:$n}', 'inputs': {'n': 0}}
+    with monkeypatch.context() as boundary:
+        def no_body(*args, **kwargs):
+            raise AssertionError('upper check expanded a lower function')
+        boundary.setattr(Compiler, '_function', no_body)
+        plan = compile_program(request['code'], registry, inputs=request['inputs'],
+                               definitions=definitions().interfaces_only())
+        assert not plan.issues and calls == [], plan.report()
+    first = handle_request(request, str(tmp_path))
+    assert not first['success'] and calls == ['document'], first
+    register('publish', '#!ibl edition=2\n' + source.replace('10/$n', '10/($n+1)'),
+             edition=2, function_id=original['function_id'], expected_revision=original['revision'])
+    plan = compile_program(request['code'], registry, inputs=request['inputs'], definitions=definitions())
+    updated = {**request, 'function_refs': plan.dependencies['function_refs'], 'repair': first['resume']}
+    checked = handle_request({**updated, 'check': True}, str(tmp_path))
+    assert checked['ok'] and calls == ['document'], checked
+    final = handle_request({**updated, 'repair': {**first['resume'], 'plan_hash': checked['repair']['plan_hash']}}, str(tmp_path))
+    assert final['success'] and final['value'] == {'receipt': 7, 'ratio': 10} and calls == ['document'], final
+    resumed = handle_request({**request, 'resume': first['resume']}, str(tmp_path))
+    assert resumed['success'] and resumed['value'] == final['value'] and calls == ['document'], resumed
 
 
 if __name__ == '__main__':

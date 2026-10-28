@@ -1016,7 +1016,8 @@ def test_parallel_result_keeps_foreign_ref_lifetime_boundary(abilities):
 
 
 
-def test_partial_parallel_function_edit_resumes_without_repeating_writes(abilities, tmp_path):
+@pytest.mark.parametrize('branch_statement', [False, True])
+def test_partial_parallel_function_edit_resumes_without_repeating_writes(abilities, tmp_path, branch_statement):
     import threading
     from function_library import register
     from ibl_v2_entry import handle_request
@@ -1029,12 +1030,14 @@ def test_partial_parallel_function_edit_resumes_without_repeating_writes(abiliti
         return 1
     reg['archive:write'] = Adapter(reg['archive:write'].contract, write)
     register('fanout', '#!ibl edition=2\n' + FANOUT, edition=2)
-    code = ('[def:step]($path,$n){[archive:write]{path:$path};return 10/($path=="two" ? $n : 1)};'
-            '$worker=($path)=>[fn:step]{path:$path,n:$n};'
+    step = ('[def:step]($path,$n){[if:$path=="two"]{[archive:write]{path:$path};return 10/$n}'
+            '[else]{[archive:write]{path:$path};return 10}};' if branch_statement else
+            '[def:step]($path,$n){[archive:write]{path:$path};return 10/($path=="two" ? $n : 1)};')
+    code = (step + '$worker=($path)=>[fn:step]{path:$path,n:$n};'
             'return [fn:fanout]{items:["one","two"],worker:$worker}')
     failed = handle_request({'edition': 2, 'code': code, 'inputs': {'n': 0}}, str(tmp_path))
     assert not failed['success'] and sorted(calls) == [('write', 'one'), ('write', 'two')], failed
-    fixed = {'edition': 2, 'code': code.replace('? $n : 1', '? ($n+1) : 1'), 'inputs': {'n': 0},
+    fixed = {'edition': 2, 'code': code.replace('? $n : 1', '? ($n+1) : 1').replace('10/$n', '10/($n+1)'), 'inputs': {'n': 0},
              'repair': {'run_id': failed['resume']['run_id']}}
     checked = handle_request({**fixed, 'check': True}, str(tmp_path))
     assert checked['ok'], checked

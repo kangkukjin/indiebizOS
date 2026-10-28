@@ -35,6 +35,13 @@ class Value:
         return Value(self.deps | deps, self.target, self.fields, self.members)
 
 
+@dataclass
+class Flow:
+    value: Value = field(default_factory=Value)
+    returns: list = field(default_factory=list)
+    continues: bool = True
+
+
 class Projection:
     def __init__(self, plan):
         from ibl_v2_repair import node_paths
@@ -122,15 +129,8 @@ class Projection:
             raise ValueError('repair dependency budget exceeded')
         d, kind, own = node.data, node.kind, self.atom(node)
         if kind == 'sequence':
-            prior, result = set(), Value()
-            for statement in d['statements']:
-                if statement.kind == 'def':
-                    continue
-                result = self.expr(statement, env, control | prior)
-                prior |= result.deps
-                if statement.kind == 'return':
-                    break
-            return result.with_deps(prior)
+            flow = self.flow(node, env, control)
+            return self.merge([*flow.returns, *([flow.value] if flow.continues else [])])
         if kind in ('bind', 'return'):
             value = self.expr(d['value'], env, control | own).with_deps(own)
             if kind == 'bind':
@@ -207,6 +207,64 @@ class Projection:
                 prior |= self.complete(value)
             return Value(own | prior)
         return self.opaque(node, env, control)
+
+    def merge(self, values):
+        if not values:
+            return Value()
+        if all(value is values[0] for value in values):
+            return values[0]
+        # A join with no unique callable target is opaque, but the possible
+        # implementations remain dependencies when its value is consumed.
+        return Value(set().union(*(self.complete(value) for value in values)))
+
+    def flow(self, node, env, control):
+        """Join continuing paths once; returned paths cannot gate later effects.
+
+        Conditions and evaluation completion belong to each path. We do not
+        evaluate a condition or infer that an observed branch is the only one.
+        The suffix is analyzed once after joining continuing bindings, avoiding
+        exponential duplication across consecutive independent conditionals.
+        """
+        if node is None:
+            return Flow()
+        self.remaining -= 1
+        if self.remaining < 0:
+            raise ValueError('repair dependency budget exceeded')
+        d, own = node.data, self.atom(node)
+        if node.kind == 'sequence':
+            prior, result, returned = set(), Value(), []
+            for statement in d['statements']:
+                if statement.kind == 'def':
+                    continue
+                outcome = self.flow(statement, env, control | prior)
+                returned.extend(value.with_deps(prior) for value in outcome.returns)
+                if not outcome.continues:
+                    return Flow(returns=returned, continues=False)
+                result = outcome.value.with_deps(prior)
+                prior |= outcome.value.deps
+            return Flow(result, returned)
+        if node.kind == 'return':
+            value = self.expr(d['value'], env, control | own).with_deps(own)
+            return Flow(returns=[value], continues=False)
+        if node.kind == 'if':
+            condition = self.expr(d['value'], env, control | own)
+            guard = own | condition.deps
+            branches = []
+            for body in (d['body'], d['otherwise']):
+                local = env.copy()
+                branches.append((self.flow(body, local, control | guard), local))
+            continuing = [(flow, local) for flow, local in branches if flow.continues]
+            returned = [value.with_deps(guard) for flow, _ in branches for value in flow.returns]
+            if not continuing:
+                return Flow(returns=returned, continues=False)
+            names = set.intersection(*(set(local) for _, local in continuing))
+            merged = {name: self.merge([local[name] for _, local in continuing])
+                      for name in names}
+            env.clear()
+            env.update(merged)
+            result = self.merge([flow.value for flow, _ in continuing]).with_deps(guard)
+            return Flow(result, returned)
+        return Flow(self.expr(node, env, control))
 
     @staticmethod
     def children(data):
@@ -302,7 +360,7 @@ def frontier(plan):
     except (ValueError, RecursionError):
         supported = False
     address = lambda nid: repr(projection.paths[nid])
-    return {'protocol': 'ibl-repair-frontier/2', 'supported': supported,
+    return {'protocol': 'ibl-repair-frontier/3', 'supported': supported,
             'retained': {address(nid): projection.signature(projection.nodes[nid])
                          for nid in projection.retained},
             'effects': sorted(address(nid) for nid in projection.effects),
@@ -312,7 +370,8 @@ def frontier(plan):
 
 
 def mapping(before, after):
-    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/2'
+    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/3'
+            or after.get('protocol') != before.get('protocol')
             or not before.get('supported') or not after.get('supported')
             or before['retained'] != after['retained'] or before['effects'] != after['effects']
             or before['completion'] != after['completion']):

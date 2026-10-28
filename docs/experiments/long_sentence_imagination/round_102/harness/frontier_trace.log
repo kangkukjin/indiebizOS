@@ -1,0 +1,25 @@
+FULL record None [('pure_call', 'builtin'), ('pure_call', 'builtin'), ('pure_call', 'builtin'), ('pure_call', 'builtin'), ('pure_call', 'builtin'), ('pure_call', 'builtin')]
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 357, in flow
+    return Flow(self.expr(node, env, control, piped))
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 220, in expr
+    return self.opaque(node, env, control)
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 118, in opaque
+    deps = self.boundary(node, env)
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 125, in boundary
+    deps = self.full(node)
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_102회차/harness/inspect_frontier.py", line 13, in full
+    print('FULL',node.kind,node.data.get('name'),dynamic[:6]);print(''.join(traceback.format_stack(limit=5)))
+
+FULL lambda None [('pure_call', 'builtin'), ('pure_call', 'builtin')]
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 439, in apply
+    value = self.expr(child, env, control | target.deps | prior)
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 210, in expr
+    return self.apply(node, env, control, piped)
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 486, in apply
+    deps |= self.complete(value)
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_repair_graph.py", line 108, in complete
+    deps |= self.full(node)
+  File "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_102회차/harness/inspect_frontier.py", line 13, in full
+    print('FULL',node.kind,node.data.get('name'),dynamic[:6]);print(''.join(traceback.format_stack(limit=5)))
+
+retained 560 nodes 560

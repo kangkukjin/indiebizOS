@@ -1,0 +1,36 @@
+{
+  "L102-1": {
+    "kind": "구현 결함",
+    "status": "훈련 종료 후 수리 예정",
+    "observation": "live generation self:script register rejects an existing canonical data/scripts file; trainer and AI both observed",
+    "cause": "script_ops.op_register resolves input path but compares relative_to with unresolved generation data/scripts symlink",
+    "trainer_workaround": "same current source API in an isolated process, LS102_LOCAL=1; assisted environment workaround, not baseline HTTP success"
+  },
+  "L102-2": {
+    "kind": "과도한 비용",
+    "status": "훈련 종료 후 수리 예정",
+    "observation": "AI new workflow save 167.685s; trainer new identity 121.767s, Read118.38s, Demand119.79s",
+    "cause": "function_library validates all unchanged functions and persistent consumers before every new unrelated name publication",
+    "quality_to_keep": "validate newly saved definition, certification, CAS, name collisions, revisions, breaking revisions and retirements"
+  },
+  "authoring": [
+    "v0 unknown ceil replaced with integer remainder rounding",
+    "v2 date key retained rather than numeric min on text; quote index avoids repeated whole quotation scans",
+    "initial script registration path outside data/scripts was author error, canonical path rejection is L102-1",
+    "one save hit 30s lock timeout during AI publication, not a persistent deadlock",
+    "diagnostic faulthandler cleanup hung after completed Identity publication; helper process terminated after durable success was verified"
+  ],
+  "limits": [
+    "generic future requests with distinct need_by for one item require earliest-date aggregation improvement",
+    "baseline source_complete=false retains intentional latest-source failure; business backup policy independently validated",
+    "no cost saving claim without same-condition repair comparison",
+    "bodyless boundary proven separately by 5 existing isolated regression cases, not by author non-reading"
+  ],
+  "L102-3": {
+    "kind": "복구 지원 공백",
+    "status": "원본에서 REPAIR_UNSUPPORTED",
+    "observation": "출고 후 순수 보고 label 수정도 거절; frontier supported=true지만 전체560노드 보존, 보고14노드까지 포함",
+    "suspected_owner": "실제 trace: opaque spread record와 map callback 내 builtin pure_call까지 Projection.full이 모든 함수로 확장. fallback 원인이라는 초기 추정은 정정.",
+    "follow_up": "훈련 종료 후 callable 대상에 따른 최소 재현과 안전성 반례로 수리"
+  }
+}

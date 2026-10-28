@@ -1,0 +1,42 @@
+{
+  "probe_failed": {
+    "success": false,
+    "ok": null,
+    "error": "문자열 연산에는 Text가 필요합니다. 변환은 text()/json()으로 명시하세요.",
+    "diagnostic": {
+      "code": "TEXT_REQUIRED",
+      "kind": "partial",
+      "message": "문자열 연산에는 Text가 필요합니다. 변환은 text()/json()으로 명시하세요.",
+      "rule": null
+    },
+    "resume": {
+      "run_id": "a21aab19d8484b4abcfdfc4c1784d024"
+    }
+  },
+  "probe_unsafe_check": {
+    "success": false,
+    "ok": false,
+    "error": "입력·주체·권한·부품·계약·구현·완료 의무가 달라졌습니다.",
+    "diagnostic": {
+      "code": "REPAIR_CHANGED",
+      "kind": "permission",
+      "message": "입력·주체·권한·부품·계약·구현·완료 의무가 달라졌습니다.",
+      "rule": "REPAIR_CHANGED"
+    },
+    "resume": null
+  },
+  "probe_repair_check": {
+    "success": false,
+    "ok": false,
+    "error": "효과의 입력·계산·조건·호출 좌표·완료 의무를 보존하는 수정만 계승합니다.",
+    "diagnostic": {
+      "code": "REPAIR_UNSUPPORTED",
+      "kind": "protocol",
+      "message": "효과의 입력·계산·조건·호출 좌표·완료 의무를 보존하는 수정만 계승합니다.",
+      "rule": "REPAIR_UNSUPPORTED"
+    },
+    "resume": null
+  },
+  "original_ledger_count": 2,
+  "safe_repair_baseline": "rejected; no repeated effect"
+}

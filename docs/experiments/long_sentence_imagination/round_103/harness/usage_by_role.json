@@ -1,0 +1,30 @@
+{
+  "source": "model.usage only; no cumulative snapshot or cost-summary addition",
+  "roles": {
+    "oneshot:classify": {
+      "input": 11420,
+      "output": 3,
+      "cache_read": 3840,
+      "cache_create": 0
+    },
+    "consciousness": {
+      "input": 152289,
+      "output": 5163,
+      "cache_read": 94262,
+      "cache_create": 58021
+    },
+    "execution": {
+      "input": 4009310,
+      "output": 29082,
+      "cache_read": 3884659,
+      "cache_create": 124595
+    },
+    "oneshot:evaluate": {
+      "input": 171556,
+      "output": 1140,
+      "cache_read": 5903,
+      "cache_create": 165651
+    }
+  },
+  "author_tokens": null
+}

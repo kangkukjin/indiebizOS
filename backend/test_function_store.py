@@ -357,3 +357,34 @@ def test_reference_consumers_block_retirement_and_reject_inactive_definition():
     assert run('[fn:consumer]')['value']==3
     with pytest.raises(ValueError,match='호출자'):
         retire('source')
+
+def test_new_name_does_not_revalidate_unrelated_callers(monkeypatch):
+    """A monotonic name addition keeps existing bindings and consumer meaning."""
+    first = register('value', source())
+    import ibl_v2_compile
+    original = ibl_v2_compile.compile_program
+    checked = []
+
+    def compile_new(program, *args, **kwargs):
+        checked.append(program)
+        assert program != source(), 'unrelated definition recompiled'
+        return original(program, *args, **kwargs)
+
+    def unrelated_consumers():
+        pytest.fail('new unrelated name scanned persistent consumers')
+        yield
+
+    monkeypatch.setattr(ibl_v2_compile, 'compile_program', compile_new)
+    monkeypatch.setattr('function_consumers.stored_programs', unrelated_consumers)
+    added = register('new_value', source('new_value', 2))
+    assert added['function_id'] != first['function_id']
+    assert store.resolve('value')['revision'] == first['revision']
+    assert checked and all(program == source('new_value', 2) for program in checked)
+
+
+def test_new_definition_still_checks_existing_dependency_contract():
+    register('input_required', '#!ibl edition=2\n[def:input_required]($x){return $x}')
+    before = store.catalog()
+    with pytest.raises(ValueError, match='저장 전 검사'):
+        register('bad_caller', '#!ibl edition=2\n[def:bad_caller](){return [fn:input_required]{}}')
+    assert store.catalog() == before

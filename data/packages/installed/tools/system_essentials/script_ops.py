@@ -451,7 +451,9 @@ def op_register(tool_input):
     # 본문은 data/scripts/ 에만 산다 — 여기 있어야 버전 관리되고 다른 기기에서도 돈다.
     # (옛날엔 outputs/ 아래라 .gitignore 에 걸려 백업조차 없었다.)
     try:
-        rel = p.relative_to(_path("_SCRIPT_DIR")).as_posix()
+        # A sealed generation shares this directory through a symlink. Compare
+        # both resolved paths, while still rejecting links escaping the boundary.
+        rel = p.relative_to(_path("_SCRIPT_DIR").resolve()).as_posix()
     except ValueError:
         return {"success": False,
                 "error": f"등록 스크립트는 data/scripts/ 안에 있어야 합니다 (지금: {p}).",

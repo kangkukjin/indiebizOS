@@ -86,3 +86,29 @@ def test_reregistration_preserves_birth_and_legacy_unknown(ops, tmp_path, monkey
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+@pytest.mark.parametrize('input_view', ['source', 'generation'])
+def test_register_through_generation_data_link_keeps_real_boundary(ops, tmp_path, monkeypatch, input_view):
+    source = tmp_path / 'source' / 'data' / 'scripts'
+    source.mkdir(parents=True)
+    generation = tmp_path / 'generation'
+    (generation / 'data').mkdir(parents=True)
+    view = generation / 'data' / 'scripts'
+    view.symlink_to(source, target_is_directory=True)
+    (source / 'new.py').write_text('print("{}")')
+    registry = {}
+    monkeypatch.setattr(ops, '_ROOT', generation)
+    monkeypatch.setattr(ops, '_SCRIPT_DIR', view)
+    monkeypatch.setattr(ops, '_read_registry', lambda: registry)
+    monkeypatch.setattr(ops, '_write_registry', lambda value: registry.update(value))
+    path = (source if input_view == 'source' else view) / 'new.py'
+    result = ops.op_register({'id': 'new', 'path': str(path)})
+    assert result['success'], result
+    assert registry['new']['file'] == 'new.py'
+
+    outside = tmp_path / 'outside.py'
+    outside.write_text('print("outside")')
+    (source / 'escape.py').symlink_to(outside)
+    denied = ops.op_register({'id': 'escape', 'path': str(view / 'escape.py')})
+    assert not denied['success'] and 'data/scripts' in denied['error']
+    assert 'escape' not in registry

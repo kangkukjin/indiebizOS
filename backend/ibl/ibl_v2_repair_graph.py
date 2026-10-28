@@ -86,7 +86,12 @@ class Projection:
             resolved = self.resolved.get(n.id, n)
             symbol = resolved.data.get('symbol')
             targets = [symbol] if symbol in self.definitions else []
-            if n.kind in ('named_call', 'pure_call'):
+            # Builtins have a fixed target. Their argument/callback nodes are
+            # still walked below, including any dynamic calls they contain.
+            # Treating len/max inside an opaque record or callback as an unknown
+            # user function would freeze every unrelated result computation.
+            if (n.kind in ('named_call', 'pure_call')
+                    and n.data['fn'].kind != 'builtin'):
                 targets = list(self.definitions)
             for target in targets:
                 if target not in seen:

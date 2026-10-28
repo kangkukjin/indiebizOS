@@ -1,0 +1,12 @@
+{
+  "closed": "2026-10-28T21:04:09.820538+09:00",
+  "ai_task": "task_sysai_dd58d3c4",
+  "ai_status": "succeeded",
+  "trainer_base": "succeeded",
+  "probe_run": "a21aab19d8484b4abcfdfc4c1784d024",
+  "probe_status": "failed, no active worker; safe repair rejected",
+  "repair_boundary": "partial: unsafe rejected, safe unsupported",
+  "dispatch_count": 2,
+  "probe_dispatch_count": 2,
+  "original_code_unchanged": true
+}

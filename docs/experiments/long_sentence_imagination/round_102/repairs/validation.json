@@ -1,0 +1,39 @@
+{
+  "baseline_new_regressions": {
+    "failed": 5,
+    "passed": 3
+  },
+  "direct_related": {
+    "passed": 126
+  },
+  "member_audit": {
+    "passed": 38
+  },
+  "first_full": {
+    "passed": 11446,
+    "failed": 3,
+    "skipped": 22,
+    "seconds": 445.13
+  },
+  "audit_repair": {
+    "passed": 32
+  },
+  "final_full": {
+    "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile --ff",
+    "passed": 11449,
+    "failed": 0,
+    "skipped": 22,
+    "warnings": 80,
+    "seconds": 461.6
+  },
+  "vocabulary_check": "passed before final user origin metadata; commit hook rechecks final tree",
+  "android_manifest": "rebuilt",
+  "layer_check": "passed",
+  "live_http_repair": "passed",
+  "live_region_after_demand": "passed with explicit steps 2000000",
+  "original_inputs_and_ledgers": "unchanged",
+  "final_origin_metadata_tests": {
+    "passed": 38,
+    "seconds": 56.04
+  }
+}

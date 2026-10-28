@@ -1,0 +1,21 @@
+{
+  "task_ref": {
+    "kind": "delegation",
+    "owner": "system",
+    "task_id": "task_sysai_cbf18984"
+  },
+  "parent_task_ref": null,
+  "run_id": "run_7693511c42b808d0c567",
+  "parent_run_id": null,
+  "state": "succeeded",
+  "status": "completed",
+  "delegated_to": "system_ai",
+  "requester_channel": "gui",
+  "created_at": "2026-10-28 12:04:10",
+  "completed_at": "2026-10-28 12:14:36",
+  "pending_children": 0,
+  "children": [],
+  "result": "세 도서관 지역 공급 비교 계획과 제안서를 만들었습니다. 다만 네 가지 안 모두 L3가 예산 150,000을 넘기 때문에, 모든 도서관이 예산 안에 드는 안은 없습니다. 실제 주문·발송은 하지 않았고 출고 요청도 다시 등록하지 않았습니다.\n\n**비교 결과** (네 안 모두 보류 0건, 필요일을 넘기는 줄 0)\n\n| 안 | 구매비 | 이동비 | 총합 | 예산 초과 |\n|---|---:|---:|---:|---|\n| 기본 / 납기 우선 | 717,400 | 0 | 717,400 | L1·L2·L3 (267,400) |\n| 기본 / 예산 우선 | 490,646 | 0 | 490,646 | L3 (87,829) |\n| 이동 / 납기 우선 | 683,300 | 1,029 | 684,329 | L1·L2·L3 (234,329) |\n| 이동 / 예산 우선 | 458,301 | 1,029 | **459,330** | L3 (56,513) |\n\n- **새 업체 D:** 비용은 포장 수를 올림한 구매비에 운송비를 더해 계산했고, 부족이 0인 품목은 0원입니다. D는 납기가 10-30으로 가장 빨라서, 납기 우선안에서는 부족이 있는 모든 품목에 D가 뽑힙니다. 그 결과 L1과 L2도 예산을 넘습니다.\n- **L3 보류 해소:** D 납기가 L3 필요일(11-01)보다 빨라서, 102회차에 보류됐던 L3 품목 171개가 이번에는 모두 조달 가능해졌습니다.\n- **두 정책의 차이:** 기본 시나리오에서 389개 품목의 업체 선택이 달라집니다. 예산 우선안이 226,754원 싸고, 대신 최대 6일 늦게 도착합니다. 늦어진 날짜도 모두 필요일 안입니다.\n- **재고 이동 (L1→L3):** 40개 품목, 147개, 이동비 1,029원입니다. L1에서는 예약재고를 빼고 L1 자체 요청을 채우고 남는 양만 보냈습니다. 이 40개 품목은 L3 부족이 이동만으로 모두 채워집니다. 이동하면 총액이 납기 우선안에서 33,071원, 예산 우선안에서 31,316원 줄어듭니다.\n\n**권고는 \"이동 + 예산 우선\"안입니다.** L1(117,515)과 L2(135,302)는 예산 안에 듭니다. L3는 206,513원으로 여전히 56,513원을 넘으므로, 증액·품목 축소·분할 조달 중 하나를 정해 주셔야 합니다.\n\n**검증과 보관**\n- 102회차 처리 능력은 dry_run으로만 재사용했고, 결과가 102회차와 같았습니다.\n- 102회차 원천·산출물의 파일 지문이 작업 전후 모두 같고, 출고 기록 파일은 그대로 두 줄입니다.\n- 이번 계산 코드와 별개로 짠 검산 코드로 원천에서 다시 계산해 2,400줄, 이동 40건, 합계를 대조했고 불일치는 0입니다.\n- 관용구 `fn:AI103_지역공급계획`으로 저장했습니다. 저장한 관용구로 두 번 실행했을 때 계획 내용과 품목별 CSV가 서로 같았습니다. 다른 행사에서는 자료 폴더, 새 업체 파일, 출력 폴더만 바꿔 쓰면 됩니다.\n- 저장할 때 다른 프로세스가 관용구 원장을 잠그고 있어서 첫 시도가 실패했고, 잠금이 풀린 뒤 다시 저장했습니다.\n\n**확인이 필요한 점**\n- C 최신 견적 파일이 없어서 이번에도 보관 사본(10-27 12:00)을 썼고, 해당 줄은 `from_archive`로 표시했습니다.\n- A·B 견적의 `confirmed_copy=false`를 확인 대상에 넣을지는 아직 답을 받지 못했습니다. 그래서 기존 규칙대로 C에만 적용했습니다. 이 결정에 따라 권고안에서 36줄이 달라질 수 있습니다.\n\n파일은 모두 `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/ai/`에 있습니다.\n- [proposal.md](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/ai/proposal.md) — 제안서\n- [plan.json](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/ai/plan.json) — 비교 계획 (도서관별 내역, 이동 목록, 자료 출처와 지문)\n- [plan_lines.csv](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/ai/plan_lines.csv) — 네 안 × 600줄 품목표\n- [AI103_regional_plan.py](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/ai/AI103_regional_plan.py) — 계산 스크립트\n- [README_AI103.md](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/ai/README_AI103.md) — 재사용 안내\n- [verify/](/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/ai/verify) — 검산 코드와 결과, 재실행 비교, 102회차 지문",
+  "error": null,
+  "status_url": "/system-ai/tasks/task_sysai_cbf18984"
+}

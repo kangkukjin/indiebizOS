@@ -1,0 +1,10 @@
+[def:LS102Demand]($data){
+  $unique=[fn:중복빼고추리기]{목록:$data.requests,키:"request_id",개수:10000}
+  $dated=map($unique,($r)=>{**$r,demand_key:json([$r.library,$r.item])})
+  $earliest=[fn:중복빼고추리기]{목록:sorted($dated,"need_by"),키:"demand_key",개수:10000}
+  $dates=from_entries(map($earliest,($r)=>[$r.demand_key,$r.need_by]))
+  $demand=$unique >> [table:groupby]{by:["library","item"],agg:{requested:["sum","quantity"]}}
+  $demand=map($demand.items,($r)=>{**$r,need_by:$dates[json([$r.library,$r.item])]})
+  $joined=[table:join]{left:$demand,right:$data.stock,on:["library","item"],how:"left"}
+  return $joined.items >> [table:each]{return {**$it,available:max(0,$it.available-$it.reserved),shortage:max(0,$it.requested-max(0,$it.available-$it.reserved))}}
+}

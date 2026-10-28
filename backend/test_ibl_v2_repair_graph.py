@@ -336,3 +336,29 @@ def test_stored_conditional_revision_keeps_bodyless_upper_check_and_effect_recei
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+@pytest.mark.parametrize('preparation', [
+    '$box={**{id:"delivery"},count:len([1])};$id=$box.id;',
+    '$ids=map(["delivery"],($x)=>upper($x));$id=$ids[0];',
+])
+def test_opaque_builtin_preparation_does_not_freeze_unrelated_report(execute, preparation):
+    run, calls, _ = execute
+    code = ('[def:report]($n){return 10/$n};' + preparation +
+            '[t:send]{id:$id};return [fn:report]{n:$n}')
+    first = run(code)
+    assert not first['success'] and len(calls) == 1, first
+    out = repair(run, first, code.replace('10/$n', '10/($n+1)'))
+    assert out['success'] and out['value'] == 10 and len(calls) == 1, out
+
+
+@pytest.mark.parametrize('callback', ['[fn:target]{}', '$choose{}'])
+def test_builtin_callback_effect_dependency_remains_fixed(execute, callback):
+    run, calls, _ = execute
+    code = ('[def:target](){return "delivery"};$choose=&[fn:target];'
+            '$ids=map([0],($x)=>' + callback + ');'
+            '[t:send]{id:$ids[0]};return 1/$n')
+    first = run(code)
+    assert not first['success'] and calls == ['delivery'], first
+    changed = code.replace('return "delivery"', 'return "other"').replace('return 1/$n', 'return 1')
+    out = run(changed, check=True, repair=first['resume'])
+    assert not out.get('ok') and calls == ['delivery'], out

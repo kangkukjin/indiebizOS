@@ -1,0 +1,26 @@
+{
+  "oneshot:classify": {
+    "input": 11533,
+    "output": 3,
+    "cache_read": 3840,
+    "cache_create": 0
+  },
+  "consciousness": {
+    "input": 161269,
+    "output": 5319,
+    "cache_read": 59968,
+    "cache_create": 101295
+  },
+  "execution": {
+    "input": 2914755,
+    "output": 19814,
+    "cache_read": 2761319,
+    "cache_create": 153390
+  },
+  "oneshot:evaluate": {
+    "input": 203741,
+    "output": 2095,
+    "cache_read": 658,
+    "cache_create": 203081
+  }
+}

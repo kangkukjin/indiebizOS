@@ -1,0 +1,5 @@
+[def:LS103Recommendation]($plan){
+ $best=$plan.with_transfer.budget
+ return {scenario:"budget_with_transfer",total:$best.total_cost+$plan.transfer_cost,change_from_no_transfer:$plan.base.budget.total_cost-($best.total_cost+$plan.transfer_cost),over_budget_libraries:map(filter($best.libraries,($x)=>$x.over_budget),($x)=>$x.library),plan:$plan}
+}
+return [fn:LS103Recommendation]{plan:[fn:LS103Region]{root:$root,vendor:$vendor,previous:$previous}}

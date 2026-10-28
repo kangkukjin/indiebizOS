@@ -91,6 +91,13 @@ def _validate_changes(before, after, changed):
             progressed = True
         if not progressed:
             break
+    # A fresh name cannot change bindings in previously valid callers. Keep
+    # validation/certification of new definitions above; revisions, retirement,
+    # and reused names still need the complete consumer check below.
+    previous_names = {row['name'] for row in before['records'].values()}
+    if all(fid not in before['records']
+           and after['records'][fid]['name'] not in previous_names for fid in changed):
+        return derived
     broken = []
     for fid, old in before['records'].items():
         if fid in changed or old.get('state') != 'active':

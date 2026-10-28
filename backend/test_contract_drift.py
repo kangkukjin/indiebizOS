@@ -41,6 +41,12 @@ def _samples():
     return json.loads((ROOT / "data/ibl_contract_samples.json").read_text())
 
 
+def _sample_count():
+    samples = _samples()
+    return sum(len(cases) for group in ("scripts", "idioms")
+               for cases in samples[group].values())
+
+
 def _collect(scripts, run=None):
     registry = load_registry(str(ROOT))
     # 운영 점검은 compile_current(현행 관용구 원장)를 쓴다. 사본에는 원장이 없으므로 같은 저장 정의를 넣는다.
@@ -75,12 +81,15 @@ def test_pre_31ea17f0_contract_is_detected_as_under_declared(old_contract):
 def test_current_contracts_compare_without_alarm():
     rows = _collect(_scripts())
     compared = [r for r in rows if r["verdict"] not in ("not_comparable", "no_sample")]
-    assert {r["target"] for r in compared} == {
+    required = {
         "script:판정관용구#urls", "script:판정관용구#prepare", "script:판정관용구#match",
         "script:판정관용구#collect", "fn:본문에서찾기"}
+    assert required <= {r["target"] for r in compared}
+    assert len(compared) == _sample_count()  # every installed pure sample was run
+    assert not any(r["verdict"] == "no_sample" for r in rows)
     assert all(r["verdict"] == "ok" for r in compared), compared
     summary = summarize(rows)
-    assert healthy(summary) and summary["compared"] == 5 and summary["drift"] == []
+    assert healthy(summary) and summary["compared"] == _sample_count() and summary["drift"] == []
 
 
 def test_side_effect_and_external_scripts_are_never_run_but_counted():
@@ -98,7 +107,7 @@ def test_side_effect_and_external_scripts_are_never_run_but_counted():
     skipped = {r["target"]: r["reason"] for r in rows if r["verdict"] == "not_comparable"}
     assert set(skipped) == {f"script:{sid}" for sid in impure} and len(impure) >= 10
     assert "script:의약품허가조회" in skipped and "read_external" in skipped["script:의약품허가조회"]
-    assert all(e == "{'pure'}" for e in executed) and len(executed) == 5
+    assert all(e == "{'pure'}" for e in executed) and len(executed) == _sample_count()
     message = describe(summarize(rows))
     assert f"대조 불가 {len(impure)}" in message and "실행하지 않음" in message
 
@@ -108,7 +117,11 @@ def test_pure_script_without_sample_is_reported_not_silently_green():
     rows = collect({"scripts": {}, "idioms": {}}, scripts, lambda code: pytest.fail(code),
                    lambda plan: pytest.fail("run"))
     gap = [r for r in rows if r["verdict"] == "no_sample"]
-    assert [r["target"] for r in gap] == ["script:판정관용구"]
+    pure = {f"script:{sid}" for sid, entry in scripts.items()
+            if (contract := entry.get("callable_contract"))
+            and set(contract.get("effects") or ["unknown"]) == {"pure"}}
+    assert "script:판정관용구" in pure
+    assert {r["target"] for r in gap} == pure and len(gap) == len(pure)
     summary = summarize(rows)
     assert summary["compared"] == 0 and not healthy(summary)
 
@@ -156,7 +169,7 @@ def test_drift_reaches_ledger_and_results_projection(monkeypatch, tmp_path, brok
     found = [i for i in items if i["title"] == "__ibl_health__:contract_drift"]
     assert len(found) == 1 and found[0]["success"] is (not broken)
     assert found[0]["quality"] == ("contract_drift" if broken else "ok")
-    assert "대조 5" in found[0]["error"]
+    assert f"대조 {_sample_count()}" in found[0]["error"]
 
 
 def test_health_script_section_runs_and_reports(monkeypatch):

@@ -1,0 +1,54 @@
+#!ibl edition=2
+[def:LS102Read]($root){
+  $reader=&[self:read]
+  $req=$reader{path:$root+"/requests.csv"}
+  $stock=$reader{path:$root+"/stock.json"}
+  $alias=$reader{path:$root+"/aliases.json"}
+  $ab=$reader{path:$root+"/quotes_ab.json"}
+  $policy=$reader{path:$root+"/policy.json"}
+  $archive=false
+  [try]{$c=$reader{path:$root+"/quotes_c_latest.txt",format:"text"}}
+  [catch]{$c=$reader{path:$root+"/quotes_c_archive.txt",format:"text"};$archive=true}
+  $requests=[self:script]{id:"LS102Normalize",args:{kind:"rows",payload:$req.data.items,aliases:$alias.data}}
+  $quotes=[self:script]{id:"LS102Normalize",args:{kind:"jsonl",payload:$c.text,aliases:{}}}
+  $quotes=map($quotes,($q)=>{**$q,from_archive:$archive})
+  return {requests:$requests,stock:$stock.data.items,quotes:map($ab.data.items,($q)=>{**$q,from_archive:false})+$quotes,policy:$policy.data,sources:{requests:$root+"/requests.csv",stock:$root+"/stock.json",aliases:$root+"/aliases.json",quotes:[$root+"/quotes_ab.json",$root+"/quotes_c_archive.txt"],archive:$archive,archive_at:$policy.data.archive_at,latest_failure:$archive}}
+}
+[def:LS102Demand]($data){
+  $unique=[fn:중복빼고추리기]{목록:$data.requests,키:"request_id",개수:10000}
+  $demand=$unique >> [table:groupby]{by:["library","item","need_by"],agg:{requested:["sum","quantity"]}}
+  $joined=[table:join]{left:$demand,right:$data.stock,on:["library","item"],how:"left"}
+  return $joined.items >> [table:each]{return {**$it,available:max(0,$it.available-$it.reserved),shortage:max(0,$it.requested-max(0,$it.available-$it.reserved))}}
+}
+[def:LS102Choose]($line,$quotes,$asof,$policy){
+  [if:$line.shortage==0]{return {**$line,purchase_qty:0,cost:0,status:"stock",vendor:null,quote_id:null,from_archive:false,reasons:[]}}
+  $valid=get($quotes,$line.item,[]) >> [table:filter]{where:($q)=>$q.unit_price!=null and $q.delivery!=null and $q.delivery<=$line.need_by and $q.valid_until>=$asof and (not $q.from_archive or $q.confirmed_copy)}
+  [if:len($valid)==0]{return {**$line,purchase_qty:0,cost:0,status:"hold",vendor:null,quote_id:null,from_archive:false,reasons:["no_eligible_quote","가격·납기·사본 재확인"]}}
+  $priced=map($valid,($q)=>{**$q,purchase_qty:($line.shortage+($q.pack-$line.shortage%$q.pack)%$q.pack),cost:($line.shortage+($q.pack-$line.shortage%$q.pack)%$q.pack)*$q.unit_price})
+  $choice=$policy($priced)
+  return {**$line,purchase_qty:$choice.purchase_qty,cost:$choice.cost,status:"ready",vendor:$choice.vendor,quote_id:$choice.quote_id,from_archive:$choice.from_archive,reasons:[],quote_source:$choice.source}
+}
+[def:LS102Report]($lib,$lines,$cost,$ready,$receipt){
+  return {library:$lib.id,label:($lib.label==null ? $lib.id : $lib.label),lines:$lines,total_cost:$cost,ready:$ready,receipt:$receipt}
+}
+[def:LS102Library]($lib,$demand,$quotes,$asof,$policy,$ledger){
+  $rows=$demand >> [table:filter]{where:($r)=>$r.library==$lib.id}
+  $lines=$rows >> [table:each]{return [fn:LS102Choose]{line:$it,quotes:$quotes,asof:$asof,policy:$policy}}
+  $cost=sum(map($lines,($r)=>$r.cost))
+  $ready=len(filter($lines,($r)=>$r.status=="hold"))==0 and $cost<=$lib.budget
+  $receipt=null
+  [if:$ready]{$receipt=[self:script]{id:"LS102Append",args:{path:$ledger,request:{library:$lib.id,lines:$lines,total_cost:$cost}}}}
+  return [fn:LS102Report]{lib:$lib,lines:$lines,cost:$cost,ready:$ready,receipt:$receipt}
+}
+[def:LS102Plan]($root,$ledger){
+  $data=[fn:LS102Read]{root:$root}
+  $demand=[fn:LS102Demand]{data:$data}
+  $ordered=sorted($data.quotes,"item")
+  $groups=[table:groupby]{items:$ordered,by:"item",agg:{n:["count"]}}
+  $index=reduce($groups.items,{offset:0,pairs:[]},($a,$g)=>{offset:$a.offset+$g.n,pairs:$a.pairs+[[$g.item,$ordered[$a.offset:$a.offset+$g.n]]]})
+  $quotes=from_entries($index.pairs)
+  $policy=($qs)=>($qs >> [table:sort]{by:["cost","delivery","vendor"]})[0]
+  $results=$data.policy.libraries >> [table:each]{return [fn:LS102Library]{lib:$it,demand:$demand,quotes:$quotes,asof:$data.policy.as_of,policy:$policy,ledger:$ledger}}
+  return {libraries:$results,total_cost:sum(map($results,($r)=>$r.total_cost)),hold_count:sum(map($results,($r)=>len(filter($r.lines,($l)=>$l.status=="hold")))),sources:$data.sources}
+}
+return [fn:LS102Plan]{root:$root,ledger:$ledger}

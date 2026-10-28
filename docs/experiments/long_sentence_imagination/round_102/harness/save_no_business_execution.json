@@ -1,0 +1,24 @@
+{
+  "before": {
+    "logs": [
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Append-ba84ce633def4a0284511a5b5416726d.log",
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Append-d4be36a992024350af65eccff263fcea.log",
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Normalize-7a39fde7121e4c4f83acf7ed5df04918.log",
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Normalize-c394e873960c4c95920041070b445491.log"
+    ],
+    "ledger_sha256": "78a9534a48bec9a5a150cd69325f9bce779b107a34b47202255ee7071b07eae2",
+    "ledger_bytes": 110560
+  },
+  "after": {
+    "logs": [
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Append-ba84ce633def4a0284511a5b5416726d.log",
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Append-d4be36a992024350af65eccff263fcea.log",
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Normalize-7a39fde7121e4c4f83acf7ed5df04918.log",
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/LS102Normalize-c394e873960c4c95920041070b445491.log"
+    ],
+    "ledger_sha256": "78a9534a48bec9a5a150cd69325f9bce779b107a34b47202255ee7071b07eae2",
+    "ledger_bytes": 110560
+  },
+  "equal": true,
+  "projection": "Ledger hex replaced by hash/size; original evidence stays in outputs"
+}

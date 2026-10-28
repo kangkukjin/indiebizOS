@@ -241,6 +241,9 @@
           "!packages/installed/extensions/gmail/config.yaml",
           "!*.log",
           "!instruments/*.local.yaml",
+          "!scripts/ls102_append.py",
+          "!scripts/ls102_normalize.py",
+          "!scripts/ls103_normalize.py",
           "!__GEN_END__"
         ]
       },

@@ -1,0 +1,12 @@
+{
+  "checks": 16800,
+  "line_count": 2400,
+  "transfer_items": 40,
+  "transfer_qty": 147,
+  "transfer_cost": 1029,
+  "base_deadline": 717400,
+  "base_budget": 490646,
+  "transfer_deadline": 684329,
+  "transfer_budget": 459330,
+  "pass": true
+}

@@ -1,0 +1,214 @@
+{
+  "recall.presented": [
+    {
+      "blocks": [
+        {
+          "chars": 1410,
+          "ids": [
+            "1086",
+            "3406"
+          ],
+          "meta": {
+            "refs": 2,
+            "top_code": "#!ibl edition=2\nreturn [sense:book]{op: \"codes\", code_type: \"region\"}"
+          },
+          "ms": 916.3,
+          "source": "hippocampus",
+          "status": "ok",
+          "tag": "execution_memory"
+        },
+        {
+          "chars": 4097,
+          "ids": [
+            "script:시험",
+            "script:폴더변화",
+            "script:나레이션생성"
+          ],
+          "meta": {
+            "control_briefs": [
+              "folder_survey.md"
+            ]
+          },
+          "ms": 128.5,
+          "source": "reusable_capabilities",
+          "status": "ok",
+          "tag": "reusable_capabilities"
+        },
+        {
+          "chars": 883,
+          "ids": [],
+          "meta": {
+            "branches": 10
+          },
+          "ms": 16.2,
+          "source": "memory_map",
+          "status": "ok",
+          "tag": "memory_map"
+        },
+        {
+          "chars": 397,
+          "ids": [
+            "540"
+          ],
+          "meta": {
+            "branches": [
+              "보고서",
+              "indiebizOS/운영·수리",
+              "보고서/AI 동향",
+              "보고서/부동산 발굴"
+            ],
+            "outside_beats_inside": false
+          },
+          "ms": 129.3,
+          "source": "recalled_memory",
+          "status": "ok",
+          "tag": "recalled_memory"
+        },
+        {
+          "chars": 2268,
+          "ids": [],
+          "meta": {
+            "branches": 43
+          },
+          "ms": 70.9,
+          "source": "guide_map",
+          "status": "ok",
+          "tag": "guide_map"
+        },
+        {
+          "chars": 6268,
+          "ids": [
+            "본체",
+            "KHJoffice",
+            "삼성1",
+            "tv1",
+            "삼성0",
+            "예나폰",
+            "거실TV",
+            "맥12",
+            "맥26"
+          ],
+          "ms": 5.4,
+          "source": "connected_limbs",
+          "status": "ok",
+          "tag": "connected_limbs"
+        },
+        {
+          "chars": 1067,
+          "ids": [],
+          "ms": 2.2,
+          "source": "decision_ledger",
+          "status": "ok",
+          "tag": "decision_ledger"
+        },
+        {
+          "chars": 829,
+          "ids": [],
+          "ms": 0.0,
+          "source": "pursuit",
+          "status": "ok",
+          "tag": "pursuit"
+        }
+      ],
+      "channel": "pipeline",
+      "recall_id": "ca77e32765c94da88465e2f5689f54d2",
+      "reflex": {
+        "code": "#!ibl edition=2\nreturn [sense:book]{op: \"codes\", code_type: \"region\"}",
+        "score": 0.5821
+      },
+      "request_type": "THINK"
+    }
+  ],
+  "framing.inherit_declined": [
+    {
+      "judge_ms": 1064,
+      "mode": "followup",
+      "reason": "관계 판정 NEW"
+    }
+  ],
+  "cognition.evaluation": [
+    {
+      "path": "goal_eval",
+      "supervised": true
+    }
+  ],
+  "recall.used": [
+    {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 6,
+          "presented": [
+            "1086",
+            "3406"
+          ],
+          "recall_id": "ca77e32765c94da88465e2f5689f54d2",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:시험",
+            "script:폴더변화",
+            "script:나레이션생성"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "ca77e32765c94da88465e2f5689f54d2",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "540"
+          ],
+          "recall_id": "ca77e32765c94da88465e2f5689f54d2",
+          "source": "recalled_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  ],
+  "supervision.cost.summary": [
+    {
+      "cost": {
+        "check_rejections": 0,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000904,
+        "evaluation_model_s": 23.954,
+        "evaluation_prepare_s": 0.086269,
+        "evaluation_visual_s": 0.002737,
+        "evaluation_wait_s": 0.000955,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/6cf24cfa90564f328cfdaa550e7b1e37/events.jsonl",
+        "execution_calls": 25,
+        "execution_failures": 8,
+        "execution_tool_s": 179.65700000000004,
+        "instruction.delivered": 1,
+        "internal_tool_failures": 3,
+        "request_intent": "task",
+        "source_failures": 3,
+        "supervisor_cache_read": 59968,
+        "supervisor_calls": 2,
+        "supervisor_input": 161269,
+        "supervisor_model_s": 57.831999999999994,
+        "supervisor_output": 5319,
+        "supervisor_tool_failures": 0,
+        "supervisor_tools": 1,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 430.44
+      },
+      "kind": "cost.summary",
+      "phase": "final",
+      "role": "harness",
+      "seq": 98,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/6cf24cfa90564f328cfdaa550e7b1e37",
+      "task_id": "task_sysai_dd58d3c4",
+      "time": 1793187155.4929678
+    }
+  ]
+}

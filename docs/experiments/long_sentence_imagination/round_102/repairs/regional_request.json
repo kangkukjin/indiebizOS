@@ -1,0 +1,14 @@
+{
+  "code": "return [fn:LS103Region]{root:$root,vendor:$vendor,previous:$previous}",
+  "edition": 2,
+  "origin": "training",
+  "project_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+  "inputs": {
+    "root": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_102회차/source",
+    "vendor": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_103회차/source/new_vendor.json",
+    "previous": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-28_102회차/trainer/final_report.json"
+  },
+  "budget": {
+    "steps": 2000000
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "run_id": "25a2eeb0ab984ab5a2a86b50a54b2b0d",
+  "probe_dispatch": 2,
+  "base_dispatch": 2,
+  "safe_repair": true,
+  "unsafe_rejected": true,
+  "resume_same": true,
+  "full_lines": 600,
+  "http_live": true
+}

@@ -1,6 +1,7 @@
 # 최근 능력 조합 수리를 확인하는 긴문장 상상훈련 설계
 
-작성일: 2026-10-28. 상태: **실행 세션 인계용 설계 완료, 훈련 미실행**.
+작성일: 2026-10-28. 상태: **102·103회차 원본 훈련 실행 완료, 발견 공백 별도 수리·실사용 재검증·종합 회귀 완료**.
+실행 결과: [102회차](experiments/long_sentence_imagination/round_102/report.md) · [103회차](experiments/long_sentence_imagination/round_103/report.md) · [종료 후 수리](experiments/long_sentence_imagination/round_102/repairs.md).
 정본 저장소: `/Users/kangkukjin/Desktop/AI/indiebizOS`, main.
 수리 기준: `9c06f7abf44be9f9522fddbec5b70ef07d64da46`까지의 의미 인터페이스·수정 재개 이행.
 실행자는 시작 시 실제 HEAD와 미커밋 변경, 활성 실행 세대를 다시 기록한다. 이 문서의 기준을 맞추려고 저장소를 되돌리지 않는다.

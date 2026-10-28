@@ -52,6 +52,8 @@ class Plan:
     components: dict = field(default_factory=dict)
     node_effects: dict = field(default_factory=dict)
     semantic_functions: dict = field(default_factory=dict)
+    implementation_bindings: dict = field(default_factory=dict)
+    implementation_bound: bool = False
 
     REPORT_GUARDS_CAP = 24
 
@@ -104,6 +106,7 @@ class Compiler(CallAnalysis):
         self.function_contracts = {}
         self.used_actions = set()
         self.call_dependencies = {}
+        self.implementation_bindings = {}
         # 방문 중 만난 읽기/쓰기 자원과 미확정 의무 — 병렬 가지·each 병렬 본문이 괄호로 묶어 충돌을 본다(70회차 B70-2).
         self.access_log = set()
         self.reachable = True
@@ -511,19 +514,13 @@ class Compiler(CallAnalysis):
             env[name] = sub(d["value"])
             return NEVER if env[name] == NEVER else UNIT_T
         if kind == "assert":
-            for key in ("condition", "message", "details"):
-                self.pure(d[key])
-            self.need(node, sub(d["condition"]), BOOL)
-            failure_possible = known_condition(d['condition'], env) is not True
-            if d["message"] is not None:
-                message_type = sub(d["message"])
-                if failure_possible:
-                    self.need(node, message_type, TEXT)
-            if d["details"] is not None:
-                details_type = sub(d["details"])
-                if failure_possible:
-                    self.need(node, details_type, Type("Record"))
-            return UNIT_T
+            self.pure(d['condition'])
+            from ibl_v2_semantic import assertion_type
+            def failure():
+                for key in ('message', 'details'):
+                    self.pure(d[key])
+                return {k: sub(d[k]) for k in ('message', 'details') if d[k] is not None}
+            return assertion_type(self, node, sub(d['condition']), known_condition(d['condition'], env), failure)
         if kind == "return":
             if final:
                 self.issue(node, "FINALLY_RETURN", "finally 안에는 return을 쓸 수 없습니다.")
@@ -545,16 +542,10 @@ class Compiler(CallAnalysis):
                                       if k is None or not self.omitted(v, env)])
         if kind == "slice":
             self.container_value(node)
-            base = sub(d["base"])
-            self.need(node, base, join(TEXT, Type("List", item=UNKNOWN)))
-            for key in ("lower", "upper", "stride"):
-                if d[key] is not None:
-                    self.need(d[key], sub(d[key]), join(NUMBER, NULL))
-                    if d[key].kind == "literal":
-                        v = d[key].data["value"]
-                        if v is not None and (type(v) is not int or key == "stride" and v == 0):
-                            self.issue(d[key], "SLICE_BOUND", "슬라이스는 정수 경계와 0이 아닌 간격을 받습니다.")
-            return Type("List", item=base.item or UNKNOWN) if base.kind == "List" else base
+            from ibl_v2_semantic import slice_type
+            base = sub(d['base'])
+            bounds = {k: sub(d[k]) for k in ('lower', 'upper', 'stride') if d[k] is not None}
+            return slice_type(self, node, base, bounds, {k: d[k] for k in bounds})
         if kind in ("field", "index"):
             base = sub(d["base"])
             key = d.get("key")
@@ -993,5 +984,6 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
     if value_protocols is not None:
         from ibl_v2_requirements import require_wire
         plan = require_wire(plan, value_protocols)
+    plan.implementation_bindings = compiler.implementation_bindings
     plan.semantic_functions = compiler.semantic_functions
     return plan

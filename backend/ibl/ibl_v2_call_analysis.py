@@ -248,8 +248,11 @@ class CallAnalysis:
                     # Retain per-target metadata for dependency checks. The runtime
                     # selects by immutable target identity, never by guessed name.
                     target = contract[1]
-                    data = node.data.setdefault('applications', {}).setdefault(target, data)
-                    virtual = Node('call', node.start, node.end, data)
+                    template = data
+                    data = node.data.setdefault('applications', {}).setdefault(target, {})
+                    data.update(template)
+                    kind = node.kind if node.kind.startswith('semantic_apply_') else 'call'
+                    virtual = Node(kind, node.start, node.end, data)
                     scope = {action: contract[1]} if category == 'function' else {}
                     current = self.named_target(virtual, types, env or {}, scope, readonly, piped)
                     self.call_effects.setdefault(node.id, set()).update(

@@ -6,6 +6,7 @@ roots. Application never evaluates a business value or an implementation body.
 Unsupported control flow stays on the explicitly reported source-check boundary.
 """
 from pathlib import Path
+from functools import lru_cache
 
 from ibl_v2_ir import Node, digest, record_fields, parallel_branches, pack, unpack
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
@@ -16,10 +17,23 @@ PROTOCOL = 'ibl-semantic/1'
 
 def edition():
     root = Path(__file__).parent
-    return digest({name: (root / name).read_text() for name in (
-        'ibl_v2_semantic.py', 'ibl_v2_semantic_store.py', 'ibl_v2_types.py',
+    paths = [root / name for name in (
+        'ibl_v2_semantic.py', 'ibl_v2_semantic_store.py', 'ibl_v2_binding.py', 'ibl_v2_types.py',
         'ibl_v2_analysis.py', 'ibl_v2_call_analysis.py', 'ibl_v2_adapters.py',
-        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_case.py', 'ibl_v2_exits.py', 'ibl_v2_recovery.py', 'ibl_v2_repeat.py', 'ibl_v2_compile.py')})
+        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_case.py', 'ibl_v2_exits.py',
+        'ibl_v2_recovery.py', 'ibl_v2_repeat.py', 'ibl_v2_compile.py')]
+    # One immutable content fingerprint per filesystem edition. This caches no
+    # analysis or business values; every call still checks all file identities.
+    stamps = []
+    for path in paths:
+        stat = path.stat()
+        stamps.append((str(path), stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns))
+    return _edition(tuple(stamps))
+
+
+@lru_cache(maxsize=4)
+def _edition(stamps):
+    return digest({Path(row[0]).name: Path(row[0]).read_text() for row in stamps})
 
 
 class Unsupported(ValueError):
@@ -356,6 +370,24 @@ class Derivation:
             base = self.expr(d['base'], env)
             selector = self.expr(key, env) if isinstance(key, Node) else self.term('constant', wire=pack(key))
             return self.checked('project', base=base, selector=selector, access=kind)
+        if kind == 'assert':
+            from ibl_v2_narrow import predicate
+            condition = self.pure_expr(d['condition'], env)
+            failure = Derivation(self.budget, pure=True)
+            fields = [(key, value) for key in ('message', 'details') if (value := d[key]) is not None]
+            body = Node('record', node.start, node.end, {'entries': fields})
+            latent = failure.ability(sorted(env), body)
+            self.actions.update(failure.actions)
+            self.functions.update(failure.functions)
+            result = self.checked('assert', condition=condition, guard=predicate(d['condition']),
+                                  failure=latent, captures=dict(env))
+            self.effects.append(result)
+            return result
+        if kind == 'slice':
+            bounds = {k: self.expr(d[k], env) for k in ('lower', 'upper', 'stride') if d[k] is not None}
+            # Literal syntax is preserved for exact integer/zero validation.
+            literals = {k: pack(d[k].data['value']) for k in bounds if d[k].kind == 'literal'}
+            return self.checked('slice', base=self.expr(d['base'], env), bounds=bounds, literals=literals)
         if kind == 'format':
             parts = [self.expr(v, env) if isinstance(v, Node) else self.term('constant', wire=pack(v))
                      for v in d['parts']]
@@ -413,7 +445,8 @@ class Derivation:
                 target, args, style = self.expr(d['fn'], env), self.expr(d['params'], env), 'named'
             else:
                 target, args, style = self.expr(d['fn'], env), [self.expr(v, env) for v in d['args']], 'positional'
-            result = self.term('apply', target=target, arguments=args, style=style, piped=piped, pure=self.pure)
+            result = self.term('apply', target=target, arguments=args, style=style, piped=piped, pure=self.pure,
+                               origin=[node.kind, node.start, node.end])
             self.effects.append(result)
             return result
         raise Unsupported(kind)
@@ -441,6 +474,18 @@ def derive(source):
                                   declaration(node)['completion'])
     result.update(name=node.data['name'], source_hash=digest(source), semantics=edition(),
                   default_expressions={k: source[v.start:v.end] for k, v in node.data['params'].items() if v is not None})
+    # Coordinates bind checked applications to implementation IR; they are
+    # never used to infer suitability or execute business values.
+    def owners(value):
+        if isinstance(value, dict):
+            if value.get('protocol') == PROTOCOL:
+                value['implementation'] = result['source_hash']
+            for child in list(value.values()):
+                owners(child)
+        elif isinstance(value, list):
+            for child in value:
+                owners(child)
+    owners(result)
     return result
 
 
@@ -492,6 +537,18 @@ def apply(compiler, interface, args, site):
             projection = Node(term.get('access', 'field'), site.start, site.end, {})
             selector = value(term['selector'])
             out = access_type(compiler, projection, value(term['base']), selector.literal, selector)
+        elif op == 'assert':
+            from ibl_v2_narrow import known_predicate
+            captured = {k: value(v) for k, v in term['captures'].items()}
+            def failure():
+                return dict(apply(compiler, term['failure'], captured, site).fields)
+            out = assertion_type(compiler, site, value(term['condition']),
+                                 known_predicate(term['guard'], captured), failure)
+        elif op == 'slice':
+            bounds = {k: value(v) for k, v in term['bounds'].items()}
+            nodes = {k: Node('literal', site.start, site.end, {'value': unpack(term['literals'][k])})
+                     if k in term['literals'] else literal_node(v, site) for k, v in bounds.items()}
+            out = slice_type(compiler, site, value(term['base']), bounds, nodes)
         elif op == 'format':
             out = format_type(compiler, [(value(v), site) for v in term['parts']])
         elif op == 'builtin':
@@ -520,6 +577,8 @@ def apply(compiler, interface, args, site):
             call = Node('semantic_apply_' + digest([interface_identity, index])[:16], site.start, site.end, {})
             out = compiler.apply_callable(call, target, supplied, nodes, piped=piped,
                                           require_pure=term.get('pure', False))
+            from ibl_v2_binding import record_application
+            record_application(compiler, interface, term, call)
         elif op == 'choose':
             from ibl_v2_narrow import branch_environment
             from ibl_v2_recovery import join_exits
@@ -865,3 +924,29 @@ def scalar_type(compiler, node, op, values, operand_nodes):
     for operand, typ in zip(operand_nodes, values):
         numeric_operand(compiler, operand, typ)
     return NUMBER
+
+
+def assertion_type(compiler, node, condition, known, failure):
+    """Failure details are latent; a proven successful assertion never demands them."""
+    compiler.need(node, condition, BOOL)
+    if known is not True:
+        fields = failure()
+        for key, expected in (('message', TEXT), ('details', Type('Record'))):
+            if key in fields:
+                compiler.need(node, fields[key], expected)
+    return UNIT_T
+
+
+def slice_type(compiler, node, base, bounds, nodes):
+    compiler.need(node, base, join(TEXT, Type('List', item=UNKNOWN)))
+    for key, value in bounds.items():
+        compiler.need(nodes[key], value, join(NUMBER, NULL))
+        literal = nodes[key]
+        if literal.kind == 'literal':
+            v = literal.data['value']
+            if v is not None and (type(v) is not int or key == 'stride' and v == 0):
+                compiler.issue(literal, 'SLICE_BOUND', '슬라이스는 정수 경계와 0이 아닌 간격을 받습니다.')
+    result = NEVER
+    for choice in alternatives(base):
+        result = join(result, Type('List', item=choice.item or UNKNOWN) if choice.kind == 'List' else choice)
+    return result

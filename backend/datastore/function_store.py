@@ -238,7 +238,8 @@ def publish(changes, *, expected_generation=None, request_id=None, root=None,
             names[key] = fid
         if _validator is None:
             raise ValueError('관용구 컴파일 관문이 배선되지 않았습니다.')
-        derived = _validator(snapshot(root, index=before), {'records': records, 'generation': before['generation'] + 1}, seen)
+        derived = _validator(snapshot(root, index=before), {'records': records, 'generation': before['generation'] + 1,
+            'publication_records': {fid: record for fid, _, record in writes}}, seen)
         # Only the compiler gate may supply derived module interfaces. Hash the
         # certified data into the same immutable revision, never a second store.
         certified_writes = []

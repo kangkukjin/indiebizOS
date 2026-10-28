@@ -1,8 +1,15 @@
 """Certified interface persistence and the separate execution-body boundary."""
 import copy
+import json
 
-from ibl_v2_ir import Node, digest, unpack, Fault
+from ibl_v2_ir import Node, digest, unpack
 from ibl_v2_semantic import PROTOCOL, Unsupported, derive, edition
+
+
+def interface_digest(interface):
+    # Mapping order is not relation semantics; YAML canonicalizes mappings.
+    # Ordered record entries and application arguments remain explicit lists.
+    return digest(json.dumps(interface, ensure_ascii=False, sort_keys=True))
 
 
 def certify(row, library, registry):
@@ -14,7 +21,11 @@ def certify(row, library, registry):
             if lower is None:
                 raise Unsupported('dependency needs source checking: ' + name)
             dependencies[name] = {'source_hash': lower['source_hash'],
+                                  'interface_hash': interface_digest(lower),
                                   'function_ref': library.references.get(name)}
+        missing = set(interface['actions']) - set(registry)
+        if missing:
+            raise Unsupported('primitive contract unavailable: ' + ', '.join(sorted(missing)))
         interface['dependencies'] = dependencies
         interface['contracts'] = {name: digest(registry[name].contract) for name in interface['actions']}
         # Source bytes use the semantic digest; storage has its independent CAS digest.
@@ -33,19 +44,41 @@ def attach(library, row, view):
         library.interface_limits[row['name']] = 'semantic edition/source changed: revalidation required'
         return
     current = {r['name']: r for r in view['records'].values() if r.get('state') == 'active'}
-    for name, dependency in interface.get('dependencies', {}).items():
-        if name not in current or digest(current[name]['source']) != dependency['source_hash']:
-            library.interface_limits[row['name']] = 'dependency changed: revalidation required'
-            return
+    def valid(item, seen):
+        if item['name'] in seen:
+            return False
+        lower_interface = item.get('semantic_interface') or {}
+        if (lower_interface.get('semantics') != edition() or lower_interface.get('protocol') != PROTOCOL
+                or lower_interface.get('source_hash') != digest(item['source'])):
+            return False
+        for name, dependency in lower_interface.get('dependencies', {}).items():
+            lower = current.get(name)
+            if (lower is None or digest(lower['source']) != dependency['source_hash']
+                    or interface_digest(lower.get('semantic_interface')) != dependency.get('interface_hash')
+                    or not valid(lower, seen | {item['name']})):
+                return False
+        return True
+    if not valid(row, set()):
+        library.interface_limits[row['name']] = 'dependency changed: revalidation required'
+        return
     library.interfaces[row['name']] = copy.deepcopy(interface)
+
+
+def contracts_current(interface, library, registry, seen=frozenset()):
+    name = interface['name']
+    if name in seen or any(key not in registry or digest(registry[key].contract) != revision
+                           for key, revision in interface['contracts'].items()):
+        return False
+    return all(lower in library.interfaces and contracts_current(
+        library.interfaces[lower], library, registry, seen | {name}) for lower in interface['dependencies'])
 
 
 def resolve(compiler, name):
     interface = getattr(compiler.definitions, 'interfaces', {}).get(name)
     if interface is None:
         return None
-    if any(key not in compiler.registry or digest(compiler.registry[key].contract) != revision
-           for key, revision in interface['contracts'].items()):
+    if not contracts_current(interface, compiler.definitions, compiler.registry):
+        compiler.definitions.interface_limits[name] = 'primitive contract changed: revalidation required'
         compiler.guards.append({'source_span': {'start': 0, 'end': 0},
                                 'expected': '어휘 계약 변경: 저장 의미 인터페이스를 재검사합니다.'})
         return None
@@ -65,32 +98,22 @@ def resolve(compiler, name):
 
 
 def execution_plan(plan):
-    """Bind implementation IR only when execution is requested.
+    from ibl_v2_binding import bind
+    return bind(plan)
 
-    This transitional binder uses the existing compiler for implementation
-    lowering. Public suitability and result/effect substitution have already
-    been decided without those bodies. It neither executes tools nor grants
-    authority. The existing runtime still owns authorization and receipts.
+
+def application_view(interface, contract):
+    """A compact discovery view, derived from the very interface being applied.
+
+    This is not a replacement relation or proof for every input. Discovery uses
+    this view; check substitutes actual arguments in the complete saved relation.
     """
-    if not getattr(plan, 'semantic_functions', None):
-        return plan
-    from ibl_v2_compile import compile_program
-    if any(value is None for value in plan.definitions.values()):
-        raise Fault('IMPLEMENTATION_REQUIRED', '실행에는 검사한 판본의 구현 본문이 필요합니다.', kind='protocol')
-    library = copy.deepcopy(plan.definitions)
-    library.interfaces = {}
-    source = plan.source[:plan.dependencies['source_map'][0]['end']]
-    for interface in plan.semantic_functions.values():
-        if digest(library[interface['name']]) != interface['source_hash']:
-            raise Fault('DEFINITION_CHANGED', '검사 이후 함수 구현이 바뀌었습니다.', kind='protocol')
-    result = compile_program(source, plan.registry, definitions=library, input_types=plan.input_types,
-                             declared_inputs=set(plan.input_types) | set(plan.unspecified))
-    previous = {digest(v) for v in plan.dependencies.get('calls', {}).values()}
-    current = {digest(v) for v in result.dependencies.get('calls', {}).values()}
-    if not previous <= current:
-        raise Fault('DEFINITION_CHANGED', '검사 이후 실행 의존 판본이 바뀌었습니다.', kind='protocol')
-    result.issues = plan.issues + result.issues
-    result.unspecified = plan.unspecified
-    # Lowering coordinates are implementation detail; preserve the checked identity.
-    result.fingerprint = plan.fingerprint
-    return result
+    names = ('params', 'required', 'pipe_input', 'default_expressions', 'result',
+             'result_contract', 'effects', 'requirements', 'actions')
+    return {'protocol': 'ibl-ability-view/1', 'relation_hash': digest(interface),
+            'status': 'parameterized',
+            **{k: copy.deepcopy(contract[k]) for k in names if k in contract},
+            **{k: copy.deepcopy(interface[k]) for k in ('completion', 'failure', 'lifetime')},
+            'apply': {'edition': 2, 'check': True, 'code': '[fn:' + interface['name'] + ']{'
+                + ','.join(k + ':$' + k for k in interface['params'] if k not in interface['defaults']) + '}'},
+            'note': '결과·효과·조건은 인자와 하위 능력에 따라 달라집니다. apply에 실제 inputs를 넣어 검사하세요. 완료는 실행 증거로 확인합니다.'}

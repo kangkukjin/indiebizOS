@@ -59,7 +59,7 @@ def _validate_changes(before, after, changed):
             return [{'message': str(exc)}]
 
     derived = {}
-    for fid in changed:
+    for fid in sorted(changed):
         row = after['records'][fid]
         if row.get('state') != 'active':
             continue
@@ -68,8 +68,29 @@ def _validate_changes(before, after, changed):
         errors = issues(row['source'], following)
         if errors:
             raise ValueError('저장 전 검사 거절: ' + errors[0]['message'])
-        from ibl_v2_semantic_store import certify
-        derived[fid] = certify(row, following, registry)
+    # Certify leaves first. The resulting references are the final immutable
+    # revisions, not the pre-certification candidate hashes.
+    from ibl_v2_semantic_store import certify
+    pending = {fid for fid in changed if after['records'][fid].get('state') == 'active'}
+    while pending:
+        progressed = False
+        for fid in sorted(pending):
+            row = after['records'][fid]
+            result = certify(row, following, registry)
+            derived[fid] = result
+            if 'semantic_interface' not in result:
+                continue
+            following.interfaces[row['name']] = result['semantic_interface']
+            raw = copy.deepcopy(after.get('publication_records', {}).get(fid) or
+                                {k: v for k, v in row.items() if k not in ('revision', 'state', 'legacy_ids')})
+            raw.pop('semantic_interface', None)
+            raw.pop('semantic_limit', None)
+            raw.update(result)
+            following.references[row['name']] = store.reference({**raw, 'revision': store.digest(raw)})
+            pending.remove(fid)
+            progressed = True
+        if not progressed:
+            break
     broken = []
     for fid, old in before['records'].items():
         if fid in changed or old.get('state') != 'active':

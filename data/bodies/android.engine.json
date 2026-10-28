@@ -279,6 +279,7 @@
     "ibl/function_consumers",
     "ibl/function_install",
     "ibl/function_library",
+    "ibl/function_revalidation",
     "ibl/ibl_access",
     "ibl/ibl_callable_contract",
     "ibl/ibl_continuations",
@@ -314,6 +315,7 @@
     "ibl/ibl_v2_access",
     "ibl/ibl_v2_adapters",
     "ibl/ibl_v2_analysis",
+    "ibl/ibl_v2_binding",
     "ibl/ibl_v2_call_analysis",
     "ibl/ibl_v2_case",
     "ibl/ibl_v2_compat",
@@ -575,8 +577,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 564,
-    "engine": 532,
+    "total": 566,
+    "engine": 534,
     "blocklist": 32
   }
 }

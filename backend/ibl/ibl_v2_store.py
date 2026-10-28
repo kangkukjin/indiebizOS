@@ -195,8 +195,11 @@ def _describe(name, allowed_nodes=None):
         return {'callable_contract': adapter.contract} if adapter else {'error':'등록된 함수가 없습니다'}
     interface = sources.interfaces.get(name)
     from ibl_v2_ir import digest
-    if interface and all(k in registry and digest(registry[k].contract) == revision
-                         for k, revision in interface['contracts'].items()):
+    from ibl_v2_semantic_store import contracts_current
+    if interface and not contracts_current(interface, sources, registry):
+        sources.interface_limits[name] = 'primitive contract changed: revalidation required'
+        interface = None
+    if interface:
         from ibl_v2_compile import Compiler
         from ibl_v2_requirements import finish
         from ibl_v2_component import compiled_contracts
@@ -208,9 +211,11 @@ def _describe(name, allowed_nodes=None):
         if compiler.issues:
             return {'error': '함수 인터페이스 검사 실패', 'issues': compiler.issues}
         components = compiled_contracts(compiler)
+        from ibl_v2_semantic_store import application_view
         return {'function_ref': sources.references.get(name),
                 'function_refs': [sources.references[n] for n in compiler.external if n in sources.references],
                 'semantic_interface': interface, 'status': 'parameterized',
+                'application_view': application_view(interface, compiler.function_contracts[sid]),
                 'plan_hash': digest([interface, sources.references]), 'hash_kind': 'semantic-interface',
                 'source_hash': interface['source_hash'],
                 'callable_contract': compiler.function_contracts[sid],

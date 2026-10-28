@@ -143,6 +143,7 @@ def admit(runtime, node, branches):
         compiler = Compiler(plan.source, plan.registry, {}, plan.definitions)
         compiler.resource_runtime = True
         compiler.functions = copy.deepcopy(plan.functions)
+        compiler.semantic_functions = copy.deepcopy(plan.semantic_functions)
         compiler.function_scopes = copy.deepcopy(plan.function_scopes)
         types = {k: runtime_type(v.value, compiler) for k, v in env.items()}
         compiler.visit(copy.deepcopy(branch), types, {})

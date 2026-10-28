@@ -36,11 +36,11 @@ def test_l68_1_each_over_union_of_empty_list_and_items_envelope_is_checked_not_c
 
 
 def test_l68_1_rows_of_union_joins_element_types():
-    from ibl_v2_compile import _rows_of
+    from ibl_v2_types import rows_type
     from ibl_v2_types import Type, UNKNOWN, join
     empty = Type("List", item=UNKNOWN, positions=())
     env = Type("Record", (("items", Type("List", item=Type("Record", (("주제", Type("Text")),), open=False))),), open=False)
-    rows = _rows_of(join(empty, env))
+    rows = rows_type(join(empty, env))
     assert rows.kind == "List" and rows.item.kind == "Record" and rows.positions is None
 
 

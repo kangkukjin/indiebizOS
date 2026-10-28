@@ -7,7 +7,7 @@ Unsupported control flow stays on the explicitly reported source-check boundary.
 """
 from pathlib import Path
 
-from ibl_v2_ir import Node, digest, record_fields, pack, unpack
+from ibl_v2_ir import Node, digest, record_fields, parallel_branches, pack, unpack
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
                           infer, ordered_list, concat_lists, describe_type, alternatives, join, NEVER)
 
@@ -223,6 +223,11 @@ class Derivation:
             return self.term('reference', name=name)
         if kind == 'pipe':
             return self.expr(d['right'], env, self.expr(d['left'], env))
+        if kind == 'parallel':
+            branches = [self.nested([], branch, env) for branch in parallel_branches(node)]
+            result = self.term('parallel', branches=branches)
+            self.effects.append(result)
+            return result
         if kind == 'call' and d.get('target'):
             raise Unsupported('remote target')
         if kind == 'call' and (d['node'], d['action']) == ('table', 'each'):
@@ -234,8 +239,8 @@ class Derivation:
                     raise Unsupported('dynamic iteration option')
                 options[key] = value.data['value'] if value else default
             items = self.expr(fields['items'], env) if 'items' in fields else piped
-            if items is None or options['parallel'] != 1:
-                raise Unsupported('parallel iteration admission')
+            if items is None:
+                raise Unsupported('iteration items require a known argument binding')
             callback = self.nested(['it', 'i'], d['body'], env)
             result = self.term('map', items=items, callback=callback, **options)
             self.effects.append(result)
@@ -305,7 +310,6 @@ def literal_node(typ, site):
 def apply(compiler, interface, args, site):
     """Substitute actual values/capabilities in a finite relation DAG."""
     from ibl_v2_analysis import access_type
-    from ibl_v2_types import rows_type
     memo = {}
     interface_identity = digest(interface)
     args = {**{k: constant_type(unpack(v)) for k, v in interface['defaults'].items()}, **args}
@@ -375,20 +379,13 @@ def apply(compiler, interface, args, site):
             compiler.need(site, value(term['value']), BOOL)
             out = BOOL
         elif op == 'map':
-            rows = rows_type(value(term['items']))
-            compiler.need(site, rows, Type('List', item=UNKNOWN))
-            element = rows.item if rows.kind == 'List' else UNKNOWN
-            returned = compiler.apply_callable(site, value(term['callback']),
-                                                [element, NUMBER], [site, site])
-            if term['mode'] == 'effect':
-                out = UNIT_T
-            elif term['mode'] == 'flat_map':
-                compiler.need(site, returned, Type('List', item=UNKNOWN))
-                out = returned
-            else:
-                if term['on_error'] == 'collect':
-                    returned = Type('Result', item=returned)
-                out = Type('List', item=returned)
+            out = iteration_type(compiler, site, value(term['items']), term,
+                lambda element: compiler.apply_callable(site, value(term['callback']),
+                                                        [element, NUMBER], [site, site]))
+        elif op == 'parallel':
+            out = parallel_type(compiler, site, [
+                lambda branch=branch: compiler.apply_callable(site, value(branch), [], [])
+                for branch in term['branches']])
         elif op == 'scalar':
             operands = [value(i) for i in term['operands']]
             out = scalar_type(compiler, site, term['operator'], operands,
@@ -398,10 +395,12 @@ def apply(compiler, interface, args, site):
         memo[index] = out
         return out
 
-    for condition in interface.get('checks', []):
-        value(condition)
-    for effect in interface['effects']:
-        value(effect)
+    # Roots retain derivation order. Evaluating every check first can force a
+    # later container/parallel relation to evaluate an earlier captured call
+    # inside the wrong effect frame. Values are shared; their effects are not
+    # transferred to the frame that happens to project them later.
+    for root in sorted(set(interface.get('checks', []) + interface['effects'])):
+        value(root)
     return value(interface['result'])
 
 
@@ -473,6 +472,83 @@ def apply_primitive(compiler, node, key, spec, contract, args, fields, values, e
     if result_type.kind == "Unknown":
         compiler.need(node, UNKNOWN, UNKNOWN)
     return result_type
+
+
+def frame_summary(compiler, analyze):
+    """A branch owns returns and access/effect observations, never authority."""
+    outer = compiler.returns, compiler.access_log, compiler.effects
+    compiler.returns, compiler.access_log, compiler.effects = [], set(), set()
+    try:
+        result = analyze()
+        for returned in compiler.returns:
+            result = returned if result == UNIT_T else join(result, returned)
+        return result, set(compiler.effects), set(compiler.access_log)
+    finally:
+        compiler.returns, accesses, effects = outer
+        compiler.access_log |= accesses
+        compiler.effects |= effects
+
+
+def parallel_type(compiler, site, branches):
+    """Compose independently framed branches with the existing admission law."""
+    from ibl_v2_access import conflicts
+    types, accesses, conflict, effects = [], set(), set(), set()
+    for analyze in branches:
+        result, branch_effects, branch_accesses = frame_summary(compiler, analyze)
+        types.append(result)
+        conflict.update(conflicts(accesses, branch_accesses))
+        accesses.update(branch_accesses)
+        effects.update(branch_effects)
+    if conflict:
+        compiler.issue(site, 'PARALLEL_WRITE_CONFLICT',
+                       f'병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}')
+    if len(types) > 1 and 'unknown' in effects:
+        compiler.warn(site, 'PARALLEL_RESOURCE_UNKNOWN',
+                      '병렬 가지에 효과 미상 호출이 있어 실행 시 자원 독립성을 확정할 수 없어 거절됩니다. '
+                      '순차로 돌리거나 효과를 선언한 등록 스크립트를 쓰세요.')
+    return ordered_list(types)
+
+
+def iteration_type(compiler, site, items, options, analyze):
+    """One row/result/effect transfer for source and saved sequential/parallel each.
+
+    Static resource checks are necessary conditions. Runtime admission still
+    resolves actual rows and resources before launching any external effect.
+    """
+    from ibl_v2_types import rows_type
+    items = rows_type(items)
+    compiler.need(site, items, Type('List', item=UNKNOWN))
+    if options['mode'] not in ('map', 'flat_map', 'effect') or options['on_error'] not in ('stop', 'collect'):
+        compiler.issue(site, 'EACH_MODE', 'each mode/on_error가 잘못되었습니다.')
+    if options['on_error'] == 'collect' and options['mode'] != 'map':
+        compiler.issue(site, 'EACH_COLLECT', 'on_error:collect는 map에서만 지원합니다.')
+    parallel = options['parallel']
+    if type(parallel) is not int or not 1 <= parallel <= 8:
+        compiler.issue(site, 'CONCURRENCY', 'parallel은 1~8 정수입니다.')
+    element = (items.item or UNKNOWN) if items.kind == 'List' else UNKNOWN
+    previous = compiler.reachable
+    compiler.reachable = previous and items.positions != ()
+    try:
+        result, effects, accesses = frame_summary(compiler, lambda: analyze(element))
+    finally:
+        compiler.reachable = previous
+    single = items.positions is not None and len(items.positions) <= 1
+    if type(parallel) is int and parallel > 1 and not single:
+        if 'unknown' in effects:
+            compiler.warn(site, 'PARALLEL_RESOURCE_UNKNOWN',
+                          '병렬 반복 안에 효과 미상 호출이 있어 실행 시 가지가 둘 이상이면 자원 독립성을 '
+                          '확정할 수 없어 거절됩니다. 순차(parallel:1)로 돌리거나 효과를 선언한 등록 스크립트를 쓰세요.')
+        if any(a.mode == 'write' and a.resources for a in accesses):
+            compiler.issue(site, 'PARALLEL_WRITE_CONFLICT',
+                           f'each 병렬 반복이 모두 같은 선언 자원에 씁니다: {sorted(a.action for a in accesses if a.mode == "write")}')
+    if options['mode'] == 'effect':
+        return UNIT_T
+    if options['mode'] == 'flat_map':
+        compiler.need(site, result, Type('List', item=UNKNOWN))
+        return result
+    if options['on_error'] == 'collect':
+        result = Type('Result', item=result)
+    return Type('List', item=result)
 
 
 def record_type(compiler, entries):

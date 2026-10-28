@@ -771,5 +771,298 @@ def test_named_record_alternatives_check_every_callback_candidate(abilities):
     assert calls == []
 
 
+PARALLEL_GATHER = GATHER.replace('on_error:"collect"', 'on_error:"collect",parallel:2')
+
+
+@pytest.mark.parametrize('second_source', ['other', 'unavailable'])
+def test_parallel_collection_is_a_bodyless_reusable_ability(abilities, monkeypatch, tmp_path, second_source):
+    import threading
+    from function_library import register, definitions
+    from ibl_v2_ir import unpack
+    from ibl_v2_store import Library
+    reg, calls, scripts = abilities
+    for name, source in [('normalizer', NORMALIZE), ('gather', PARALLEL_GATHER),
+                         ('decide', DECIDE), ('recheck', RECHECK)]:
+        register(name, '#!ibl edition=2\n' + source, edition=2)
+    library = definitions()
+    assert set(library.interfaces) == {'normalizer', 'gather', 'decide', 'recheck'}, library.interface_limits
+    assert calls == []
+    # A later source keeps the old boundary but introduces a new row column.
+    fields = {'id': 'Text', 'score': 'Number', 'source': 'Text', 'bytes': 'Number', '$closed': True}
+    scripts['file_normalize'] = {**scripts['normalize'], 'callable_contract': {
+        **scripts['normalize']['callable_contract'], 'params': {'data': {'$list': fields}},
+        'result': {'$list': fields}, 'completion': []}}
+    register('file_normalizer', '#!ibl edition=2\n[def:file_normalizer]($data){'
+             'return [probe:python]{id:"file_normalize",args:{data:$data}}}', edition=2)
+    rendezvous = threading.Barrier(2)
+
+    def read(rt, args):
+        source = args['source']
+        calls.append(('file_read', source))
+        rendezvous.wait(timeout=10)  # Both independent rows really start together.
+        if source == 'unavailable':
+            raise Fault('SOURCE_OFFLINE', 'source unavailable')
+        return {'items': [{'id': 'a', 'score': 2, 'source': source, 'bytes': 4},
+                          {'id': 'b', 'score': 5, 'source': source, 'bytes': 20}], 'origin': source}
+
+    reg['files:batch_read'] = Adapter({'version': 1, 'params': {'source': 'Text'},
+        'result': {'items': {'$list': fields}, 'origin': 'Text', '$closed': True},
+        'effects': ['read_external'], 'read_resources': {'source': 'source'}}, read)
+    audit = '[def:audit]($sources,$read,$normalize,$policy){return {review:[fn:decide]{sources:$sources,read:$read,normalize:$normalize,policy:$policy}}}'
+    original = Library.__getitem__
+    with monkeypatch.context() as blocked:
+        blocked.setattr(Library, '__getitem__', lambda lib, name: pytest.fail('lower source requested')
+                        if name in lib.interfaces else original(lib, name))
+        register('audit', '#!ibl edition=2\n' + audit, edition=2)
+    library = definitions()
+    source = ('return [fn:audit]{sources:' + json.dumps(['catalog', second_source]) + ',read:&[files:batch_read],'
+              'normalize:&[fn:file_normalizer],policy:($r)=>$r.bytes>10}')
+    with monkeypatch.context() as blocked:
+        blocked.setattr(Compiler, '_function', lambda *a, **k: pytest.fail('lower body analysis'))
+        checked = compile_program(source, reg, definitions=library.interfaces_only())
+    assert not checked.issues and checked.effects - {'pure'} == {'read_external'}, checked.report()
+    collected = dict(dict(checked.result_type.fields)['review'].fields)['evidence'].item
+    assert collected.kind == 'Result'
+    assert dict(dict(collected.item.fields)['rows'].item.fields)['bytes'] == NUMBER
+    assert calls == []
+    # Direct, one stored level, and two stored levels share an independent oracle.
+    normalizer = '[def:file_normalizer]($data){return [probe:python]{id:"file_normalize",args:{data:$data}}}'
+    for prefix, lib in [(normalizer + PARALLEL_GATHER + DECIDE + audit, None),
+                        (DECIDE + audit, library), ('', library)]:
+        plan = compile_program(prefix + source, reg, definitions=lib)
+        result = Runtime(plan).run()
+        assert result['success'], result
+        values = unpack(result['value_wire']['data'])['review']['evidence']
+        assert len(values) == 2 and values[0].ok
+        assert values[1].ok == (second_source != 'unavailable')
+        assert values[0].value == {'source': 'catalog', 'rows': [
+            {'id': 'b', 'score': 5, 'source': 'catalog', 'bytes': 20}]}
+        if second_source == 'unavailable':
+            assert values[1].error['code'] == 'SOURCE_OFFLINE'
+        else:
+            assert values[1].value == {'source': second_source, 'rows': [
+                {'id': 'b', 'score': 5, 'source': second_source, 'bytes': 20}]}
+    assert calls.count(('file_read', 'catalog')) == calls.count(('file_read', second_source)) == 3
+    assert calls.count(('script', 'file_normalize')) == (3 if second_source == 'unavailable' else 6)
+    if second_source == 'unavailable':
+        from ibl_v2_entry import handle_request
+        code = source.replace('return [fn:audit]', '$records=[fn:audit]') + ';return 10/$n'
+        failed = handle_request({'edition': 2, 'code': code, 'inputs': {'n': 0}}, str(tmp_path))
+        assert not failed['success'], failed
+        before = [call for call in calls if call[0] == 'file_read']
+        fixed = {'edition': 2, 'code': code.replace('10/$n', '10/($n+1)'), 'inputs': {'n': 0},
+                 'repair': {'run_id': failed['resume']['run_id']}}
+        ready = handle_request({**fixed, 'check': True}, str(tmp_path))
+        assert ready.get('ok'), ready
+        fixed['repair']['plan_hash'] = ready['repair']['plan_hash']
+        done = handle_request(fixed, str(tmp_path))
+        assert done['success'] and done['value'] == 10, done
+        # Completed success and failure observations both replay their receipts.
+        assert [call for call in calls if call[0] == 'file_read'] == before
+
+
+def parallel_adapters(reg, calls):
+    reg['archive:write'] = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Number',
+        'effects': ['write_external'], 'write_resources': {'record': 'path'}},
+        lambda rt, a: calls.append(('write', a['path'])) or 1)
+    reg['archive:read'] = Adapter({'version': 1, 'params': {'path': 'Text'},
+        'result': {'source': 'Text', '$closed': True},
+        'effects': ['read_external'], 'read_resources': {'record': 'path'}},
+        lambda rt, a: calls.append(('read', a['path'])) or {'source': a['path']})
+    reg['archive:opaque'] = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Number',
+        'effects': ['unknown']}, lambda rt, a: calls.append(('opaque', a['path'])) or 1)
+
+
+PAIR = '[def:pair]($left,$right,$a,$b){return $left{path:$a} & $right{path:$b}}'
+FANOUT = '[def:fanout]($items,$worker){return [table:each]{items:$items,parallel:2}{return $worker{path:$it}}}'
+
+
+def test_parallel_branches_preserve_positions_resources_and_unknown_effects(abilities, monkeypatch):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    parallel_adapters(reg, calls)
+    register('pair', '#!ibl edition=2\n' + PAIR, edition=2)
+    lib = definitions()
+    code = 'return [fn:pair]{left:&[archive:write],right:&[archive:read],a:"one",b:"two"}'
+    with monkeypatch.context() as blocked:
+        blocked.setattr(Compiler, '_function', lambda *a, **k: pytest.fail('lower body analysis'))
+        good = compile_program(code, reg, definitions=lib.interfaces_only())
+        conflict = compile_program(code.replace('b:"two"', 'b:"one"'), reg, definitions=lib.interfaces_only())
+        opaque = compile_program(code.replace('archive:write', 'archive:opaque'), reg, definitions=lib.interfaces_only())
+    assert not good.issues and good.result_type.positions == (NUMBER, Type('Record', (('source', TEXT),), open=False)), good.report()
+    assert good.effects - {'pure'} == {'read_external', 'write_external'}
+    assert any(i['code'] == 'PARALLEL_WRITE_CONFLICT' for i in conflict.issues), conflict.report()
+    assert 'unknown' in opaque.effects
+    assert any(w['code'] == 'PARALLEL_RESOURCE_UNKNOWN' for w in opaque.preflight['warnings']), opaque.report()
+    assert calls == []
+    opaque.definitions = lib
+    rejected = Runtime(opaque).run()
+    assert rejected['diagnostic']['code'] == 'PARALLEL_RESOURCE_CONFLICT' and calls == [], rejected
+    good.definitions = lib
+    result = Runtime(good).run()
+    assert result['success'] and result['value'] == [1, {'source': 'two'}], result
+    assert sorted(calls) == [('read', 'two'), ('write', 'one')]
+
+
+@pytest.mark.parametrize('items,conflict', [('[]', False), ('["one"]', False), ('["one","two"]', True)])
+def test_stored_parallel_each_uses_cardinality_for_static_admission(abilities, items, conflict):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    parallel_adapters(reg, calls)
+    source = '[def:fixed]($items,$worker){return [table:each]{items:$items,parallel:2}{return $worker{path:"same"}}}'
+    register('fixed', '#!ibl edition=2\n' + source, edition=2)
+    call = 'return [fn:fixed]{items:' + items + ',worker:&[archive:write]}'
+    for prefix, lib in [(source, None), ('', definitions().interfaces_only())]:
+        plan = compile_program(prefix + call, reg, definitions=lib)
+        assert any(i['code'] == 'PARALLEL_WRITE_CONFLICT' for i in plan.issues) == conflict, plan.report()
+    assert calls == []
+
+
+def test_stored_parallel_each_checks_actual_aliases_before_any_write(abilities):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    parallel_adapters(reg, calls)
+    register('fanout', '#!ibl edition=2\n' + FANOUT, edition=2)
+    lib = definitions()
+    code = 'return [fn:fanout]{items:$paths,worker:&[archive:write]}'
+    plan = compile_program(code, reg, definitions=lib.interfaces_only(), input_types={'paths': Type('List', item=TEXT)})
+    assert not plan.issues and 'write_external' in plan.effects, plan.report()
+    assert calls == []
+    plan.definitions = lib
+    rejected = Runtime(plan, {'paths': ['same', 'same']}).run()
+    assert rejected['diagnostic']['code'] == 'PARALLEL_RESOURCE_CONFLICT' and calls == [], rejected
+    result = Runtime(plan, {'paths': ['one', 'two']}).run()
+    assert result['success'] and result['value'] == [1, 1], result
+    assert sorted(calls) == [('write', 'one'), ('write', 'two')]
+
+
+def test_parallel_completed_effects_are_reused_after_tail_repair(abilities, tmp_path):
+    from function_library import register, definitions
+    from ibl_v2_entry import handle_request
+    reg, calls, _ = abilities
+    parallel_adapters(reg, calls)
+    register('fanout', '#!ibl edition=2\n' + FANOUT, edition=2)
+    register('publish_many', '#!ibl edition=2\n[def:publish_many]($items,$worker){'
+             'return {receipts:[fn:fanout]{items:$items,worker:$worker}}}', edition=2)
+    code = '$sent=[fn:publish_many]{items:["one","two"],worker:&[archive:write]};return 10/$n'
+    checked = compile_program(code, reg, definitions=definitions().interfaces_only(), inputs={'n': 0})
+    assert not checked.issues and calls == [], checked.report()
+    failed = handle_request({'edition': 2, 'code': code, 'inputs': {'n': 0}}, str(tmp_path))
+    assert not failed['success'] and sorted(calls) == [('write', 'one'), ('write', 'two')], failed
+    fixed = {'edition': 2, 'code': code.replace('10/$n', '10/($n+1)'), 'inputs': {'n': 0},
+             'repair': {'run_id': failed['resume']['run_id']}}
+    prepared = handle_request({**fixed, 'check': True}, str(tmp_path))
+    assert prepared.get('ok'), prepared
+    fixed['repair']['plan_hash'] = prepared['repair']['plan_hash']
+    done = handle_request(fixed, str(tmp_path))
+    assert done['success'] and done['value'] == 10, done
+    assert sorted(calls) == [('write', 'one'), ('write', 'two')]
+
+
+@pytest.mark.parametrize('mode,body,kind,expected', [
+    ('map', 'return $it+1', 'List', [2, 3]),
+    ('flat_map', 'return [$it,$it+1]', 'List', [1, 2, 2, 3]),
+    ('effect', '$unused=$it+1', 'Unit', None),
+])
+def test_iteration_modes_share_source_and_saved_transfer(abilities, mode, body, kind, expected):
+    from function_library import register, definitions
+    from ibl_v2_ir import unpack, Unit
+    reg, calls, _ = abilities
+    source = '[def:rows]($items){return [table:each]{items:$items,parallel:2,mode:"' + mode + '"}{' + body + '}}'
+    register('rows', '#!ibl edition=2\n' + source, edition=2)
+    lib = definitions()
+    for prefix, library in [(source, None), ('', lib.interfaces_only())]:
+        plan = compile_program(prefix + 'return [fn:rows]{items:[1,2]}', reg, definitions=library)
+        assert not plan.issues and plan.result_type.kind == kind, plan.report()
+        if library is not None:
+            plan.definitions = lib
+        out = Runtime(plan).run()
+        assert out['success'], out
+        value = unpack(out['value_wire']['data'])
+        assert isinstance(value, Unit) if kind == 'Unit' else value == expected
+    assert calls == []
+
+
+
+def test_parallel_collect_does_not_convert_permission_fault_to_success(abilities):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    def denied(rt, args):
+        calls.append(('denied', args['path']))
+        raise Fault('ACCESS_DENIED', 'not authorized', kind='permission')
+    reg['archive:denied'] = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Number',
+                                    'effects': ['read_external']}, denied)
+    source = '[def:collect]($worker){return [table:each]{items:["one"],parallel:2,on_error:"collect"}{return $worker{path:$it}}}'
+    register('collect', '#!ibl edition=2\n' + source, edition=2)
+    lib = definitions()
+    plan = compile_program('return [fn:collect]{worker:&[archive:denied]}', reg,
+                           definitions=lib.interfaces_only())
+    assert not plan.issues and plan.result_type.item.kind == 'Result' and calls == [], plan.report()
+    plan.definitions = lib
+    result = Runtime(plan).run()
+    assert not result['success'] and result['diagnostic']['code'] == 'ACCESS_DENIED', result
+    assert result['diagnostic']['kind'] == 'permission' and calls == [('denied', 'one')]
+
+
+def test_parallel_result_keeps_foreign_ref_lifetime_boundary(abilities):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    register('pair_values', '#!ibl edition=2\n[def:pair_values]($left,$right){return $left & $right}', edition=2)
+    plan = compile_program('return [fn:pair_values]{left:$ref,right:1}', reg,
+                           definitions=definitions().interfaces_only(), input_types={'ref': Type('ForeignRef')},
+                           value_protocols=['ibl-value/1'])
+    assert any(i['code'] == 'VALUE_PROTOCOL' for i in plan.issues), plan.report()
+    assert plan.result_type.positions[0].kind == 'ForeignRef' and calls == []
+
+
+
+def test_partial_parallel_function_edit_is_rejected_without_repeating_writes(abilities, tmp_path):
+    import threading
+    from function_library import register
+    from ibl_v2_entry import handle_request
+    reg, calls, _ = abilities
+    parallel_adapters(reg, calls)
+    meet = threading.Barrier(2)
+    def write(rt, args):
+        calls.append(('write', args['path']))
+        meet.wait(timeout=10)
+        return 1
+    reg['archive:write'] = Adapter(reg['archive:write'].contract, write)
+    register('fanout', '#!ibl edition=2\n' + FANOUT, edition=2)
+    code = ('[def:step]($path,$n){[archive:write]{path:$path};return 10/($path=="two" ? $n : 1)};'
+            '$worker=($path)=>[fn:step]{path:$path,n:$n};'
+            'return [fn:fanout]{items:["one","two"],worker:$worker}')
+    failed = handle_request({'edition': 2, 'code': code, 'inputs': {'n': 0}}, str(tmp_path))
+    assert not failed['success'] and sorted(calls) == [('write', 'one'), ('write', 'two')], failed
+    fixed = {'edition': 2, 'code': code.replace('? $n : 1', '? ($n+1) : 1'), 'inputs': {'n': 0},
+             'repair': {'run_id': failed['resume']['run_id']}}
+    checked = handle_request({**fixed, 'check': True}, str(tmp_path))
+    # This is a documented limit, not a successful partial repair. The current
+    # frontier locks effect-bearing definitions, even when only their tail changes.
+    # Relaxing it without tracking result-to-effect dependencies would be unsound.
+    assert not checked.get('ok') and checked['diagnostic']['code'] == 'REPAIR_UNSUPPORTED', checked
+    assert sorted(calls) == [('write', 'one'), ('write', 'two')]
+
+
+
+def test_parallel_capture_does_not_move_an_earlier_effect_into_a_branch(abilities):
+    from function_library import register, definitions
+    reg, calls, _ = abilities
+    parallel_adapters(reg, calls)
+    definition = '[def:report]($read,$write){$earlier=$read{path:"same"};return {results:($earlier & $write{path:"same"})}}'
+    register('report', '#!ibl edition=2\n' + definition, edition=2)
+    lib = definitions()
+    source = 'return [fn:report]{read:&[archive:read],write:&[archive:write]}'
+    for prefix, library in [(definition, None), ('', lib.interfaces_only())]:
+        plan = compile_program(prefix + source, reg, definitions=library)
+        assert not plan.issues, plan.report()
+        assert plan.effects - {'pure'} == {'read_external', 'write_external'}
+        if library is not None:
+            plan.definitions = lib
+        result = Runtime(plan).run()
+        assert result['success'] and result['value'] == {'results': [{'source': 'same'}, 1]}, result
+    assert calls == [('read', 'same'), ('write', 'same')] * 2
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

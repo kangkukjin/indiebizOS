@@ -653,27 +653,9 @@ class Compiler(CallAnalysis):
                 return UNKNOWN
             return self.visit(d["right"], env, names, readonly, final, piped=left, piped_node=d["left"])
         if kind == "parallel":
-            types = []
-            writes, conflict = set(), set()
-            for branch in parallel_branches(node):
-                old_returns, self.returns = self.returns, []
-                outer_writes, self.access_log = self.access_log, set()
-                result = sub(branch, env.copy())
-                for t in self.returns:
-                    result = t if result == UNIT_T else join(result, t)
-                self.returns = old_returns
-                types.append(result)
-                branch_writes, self.access_log = self.access_log, outer_writes | self.access_log
-                from ibl_v2_access import conflicts
-                conflict.update(conflicts(writes, branch_writes))
-                writes.update(branch_writes)
-            if conflict:
-                self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
-            if len(types) > 1 and any("unknown" in self.node_effects.get(b.id, set()) for b in parallel_branches(node)):
-                self.warn(node, "PARALLEL_RESOURCE_UNKNOWN",
-                          "병렬 가지에 효과 미상 호출(파일 스크립트 등)이 있어 실행 시 자원 독립성을 확정할 수 없어 거절됩니다. "
-                          "순차(;)로 돌리거나 효과를 선언한 등록 스크립트를 쓰세요.")
-            return ordered_list(types)
+            from ibl_v2_semantic import parallel_type
+            return parallel_type(self, node, [lambda branch=branch: sub(branch, env.copy())
+                                              for branch in parallel_branches(node)])
         if kind == "fallback":
             previous = self.catch_value_faults
             self.catch_value_faults = True
@@ -953,8 +935,6 @@ class Compiler(CallAnalysis):
 
     def each(self, node, args, env, names, piped):
         self.arguments(node, args, {"items": None, "mode": UNIT, "on_error": UNIT, "parallel": UNIT}, "items", piped)
-        items = _rows_of(args.get("items", UNKNOWN))
-        self.need(node, items, Type("List", item=UNKNOWN))
         fields = record_fields(node.data["params"])
         options = {}
         for key, default in (("mode", "map"), ("on_error", "stop"), ("parallel", 1)):
@@ -964,42 +944,11 @@ class Compiler(CallAnalysis):
             if value and value.kind != "literal":
                 self.issue(value, "STATIC_OPTION", f"{key}는 컴파일 시 리터럴이어야 합니다.")
             options[key] = value.data.get("value") if value else default
-        if options["mode"] not in ("map", "flat_map", "effect") or options["on_error"] not in ("stop", "collect"):
-            self.issue(node, "EACH_MODE", "each mode/on_error가 잘못되었습니다.")
-        if options["on_error"] == "collect" and options["mode"] != "map":
-            self.issue(node, "EACH_COLLECT", "on_error:collect는 map에서만 지원합니다.")
-        if type(options["parallel"]) is not int or not 1 <= options["parallel"] <= 8:
-            self.issue(node, "CONCURRENCY", "parallel은 1~8 정수입니다.")
-        old_returns, self.returns = self.returns, []
-        outer_writes, self.access_log = self.access_log, set()
-        # Invalid unions have already been diagnosed by need(). Their tuple of
-        # alternatives is not an element type for the callback's local binding.
-        local = {**env, "it": (items.item or UNKNOWN) if items.kind == "List" else UNKNOWN, "i": NUMBER}
-        visit = self.visit_unreachable if items.positions == () else self.visit
-        result = visit(node.data["body"], local, names, frozenset(env) | RESERVED)
-        for t in self.returns:
-            result = t if result == UNIT_T else join(result, t)
-        self.returns = old_returns
-        body_writes, self.access_log = self.access_log, outer_writes | self.access_log
-        single = items.positions is not None and len(items.positions) <= 1
-        if type(options["parallel"]) is int and options["parallel"] > 1 and not single and "unknown" in self.node_effects.get(node.data["body"].id, set()):
-            # 100회차 L100-1: 효과 미상 호출(파일 스크립트 등)이 든 병렬 반복은 실행 입장(admit)에서 가지가 둘 이상이면 반드시 거절된다 —
-            # 검사가 침묵하면 작성자는 실행에서야 안다. 정책은 실행이 정하고 여기서는 미리 말한다.
-            self.warn(node, "PARALLEL_RESOURCE_UNKNOWN",
-                      "병렬 반복 안에 효과 미상 호출(파일 스크립트 등)이 있어 실행 시 가지가 둘 이상이면 자원 독립성을 확정할 수 없어 거절됩니다. "
-                      "순차(parallel:1)로 돌리거나 효과를 선언한 등록 스크립트를 쓰세요.")
-        if type(options["parallel"]) is int and options["parallel"] > 1 and any(a.mode == "write" and a.resources for a in body_writes) and not single:
-            # 반복마다 같은 자원 — 병렬 반복들이 서로 덮어쓴다. 원소에 따라 정해지는 자원은 여기 오지 않는다.
-            self.issue(node, "PARALLEL_WRITE_CONFLICT",
-                       f"each 병렬 반복이 모두 같은 선언 자원에 씁니다: {sorted(a.action for a in body_writes if a.mode == "write")}")
-        if options["mode"] == "effect":
-            return UNIT_T
-        if options["mode"] == "flat_map":
-            self.need(node, result, Type("List", item=UNKNOWN))
-            return result
-        if options["on_error"] == "collect":
-            result = Type("Result", item=result)
-        return Type("List", item=result)
+        from ibl_v2_semantic import iteration_type
+        def analyze(element):
+            local = {**env, "it": element, "i": NUMBER}
+            return self.visit(node.data["body"], local, names, frozenset(env) | RESERVED)
+        return iteration_type(self, node, args.get("items", UNKNOWN), options, analyze)
 
     @staticmethod
     def merge_env(target, a, b):
@@ -1016,11 +965,6 @@ class Compiler(CallAnalysis):
             self.merge_env(merged, merged.copy(), env)
         target.clear()
         target.update(merged)
-
-
-def _rows_of(typ):
-    """each와 표 연산은 같은 봉투·분기 해소를 사용한다. 비목록 갈래를 지우지 않는다."""
-    return rows_type(typ)
 
 
 @compilation_dependencies()

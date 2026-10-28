@@ -141,31 +141,9 @@ class Projection:
         if self.remaining < 0:
             raise ValueError('repair dependency budget exceeded')
         d, kind, own = node.data, node.kind, self.atom(node)
-        if kind == 'sequence':
-            flow = self.flow(node, env, control)
-            return self.merge([*flow.returns, *([flow.value] if flow.continues else [])])
-        if kind == 'repeat':
-            from ibl_v2_recovery import has_return
-            if has_return(node):
-                return self.opaque(node, env, control)
-            return self.flow(node, env, control).value
-        if kind == 'try':
-            from ibl_v2_recovery import has_return
-            if has_return(node):
-                return self.opaque(node, env, control)
-            return self.flow(node, env, control).value
-        if kind == 'fallback':
-            left = self.expr(d['left'], env.copy(), control | own)
-            # Any failing computation in the left operand can select the right
-            # effect. Its successful output alone is insufficient evidence.
-            failure = self.complete(left)
-            right = self.expr(d['right'], env.copy(), control | own | failure)
-            return self.merge([left, right]).with_deps(own | failure)
-        if kind in ('bind', 'return'):
-            value = self.expr(d['value'], env, control | own).with_deps(own)
-            if kind == 'bind':
-                env[d['name']] = value
-            return value
+        if kind in ('sequence', 'if', 'try', 'repeat', 'fallback', 'bind', 'return'):
+            outcome = self.flow(node, env, control)
+            return self.merge([*outcome.returns, *([outcome.value] if outcome.continues else [])])
         if kind == 'ref':
             held = env.get(d['name'], Value())
             # Reading a carried value does not execute its producer again.
@@ -250,7 +228,7 @@ class Projection:
         # implementations remain dependencies when its value is consumed.
         return Value(set().union(*(self.complete(value) for value in values)))
 
-    def flow(self, node, env, control):
+    def flow(self, node, env, control, piped=None):
         """Join continuing paths once; returned paths cannot gate later effects.
 
         Conditions and evaluation completion belong to each path. We do not
@@ -276,10 +254,47 @@ class Projection:
                 result = outcome.value.with_deps(prior)
                 prior |= outcome.value.evaluated
             return Flow(result, returned)
-        if node.kind == 'return':
-            self.exits.append(own | control)
-            value = self.expr(d['value'], env, control | own).with_deps(own)
-            return Flow(returns=[value], continues=False)
+        if node.kind in ('bind', 'return'):
+            if node.kind == 'return':
+                self.exits.append(own | control)
+            outcome = self.flow(d['value'], env, control | own)
+            if outcome.continues:
+                value = outcome.value.with_deps(own)
+                if node.kind == 'return':
+                    outcome.returns.append(value)
+                    outcome.continues = False
+                else:
+                    env[d['name']] = value
+                    outcome.value = Value(value.deps, evaluation=value.evaluated)
+            return outcome
+        if node.kind == 'pipe':
+            outcome = self.flow(d['left'], env, control | own)
+            if outcome.continues:
+                following = self.flow(d['right'], env, control | own | outcome.value.evaluated,
+                                      outcome.value)
+                outcome.returns.extend(following.returns)
+                outcome.continues = following.continues
+                outcome.value = following.value.with_deps(own)
+            return outcome
+        if node.kind == 'named_call':
+            from ibl_v2_exits import value_control
+            if value_control(d['fn']):
+                outcome = self.flow(d['fn'], env, control | own)
+                if outcome.continues:
+                    outcome.value = self.apply(node, env, control | own, piped, target=outcome.value)
+                return outcome
+        if node.kind == 'fallback':
+            from ibl_v2_analysis import assigned_names
+            left_env = env.copy()
+            left = self.flow(d['left'], left_env, control | own)
+            failure = self.flow_dependencies(left)
+            right_env = env.copy()
+            for name in assigned_names(d['left']) & env.keys():
+                right_env[name] = Value(failure | self.complete(env[name]))
+            right = self.flow(d['right'], right_env, control | own | failure)
+            right.value = right.value.with_deps(failure)
+            right.returns = [v.with_deps(failure) for v in right.returns]
+            return self.join_flows([(left, left_env), (right, right_env)], env, own)
         if node.kind == 'repeat':
             return self.repeat(node, env, control)
         if node.kind == 'try':
@@ -309,7 +324,7 @@ class Projection:
                 cleanup_deps = set().union(*(self.flow_dependencies(flow) for flow, _ in branches))
                 cleanup_env = env.copy()
                 for name in assigned_names(d['body']) | assigned_names(d['catch']):
-                    cleanup_env[name] = Value(cleanup_deps)
+                    cleanup_env[name] = Value(cleanup_deps | self.complete(env.get(name, Value())))
                 cleanup = self.flow(d['final'], cleanup_env, control | own)
                 for name in assigned_names(d['final']):
                     if name in cleanup_env:
@@ -325,7 +340,7 @@ class Projection:
                 local = env.copy()
                 branches.append((self.flow(body, local, control | guard), local))
             return self.join_flows(branches, env, guard)
-        return Flow(self.expr(node, env, control))
+        return Flow(self.expr(node, env, control, piped))
 
     def repeat(self, node, env, control):
         from ibl_v2_analysis import assigned_names
@@ -395,9 +410,11 @@ class Projection:
             for value in data:
                 yield from Projection.children(value)
 
-    def apply(self, node, env, control, piped):
+    def apply(self, node, env, control, piped, target=None):
         d, own = node.data, self.atom(node)
-        if node.kind == 'call':
+        if target is not None:
+            pass
+        elif node.kind == 'call':
             definition = self.definitions.get(self.resolved.get(node.id, node).data.get('symbol'))
             target = Value(own, (definition, {}) if definition else d['node'] + ':' + d['action'])
         else:
@@ -447,6 +464,8 @@ class Projection:
         # Primitive and unresolved calls consume their whole argument values.
         # Passing a callable to an opaque provider never certifies it as inert.
         deps = entry | self.complete(target)
+        if piped is not None:
+            deps |= self.complete(piped)
         for value in (args.fields or {}).values():
             deps |= self.complete(value)
         for value in args.members or []:
@@ -480,7 +499,7 @@ def frontier(plan):
     except (ValueError, RecursionError):
         supported = False
     address = lambda nid: repr(projection.paths[nid])
-    return {'protocol': 'ibl-repair-frontier/5', 'supported': supported,
+    return {'protocol': 'ibl-repair-frontier/6', 'supported': supported,
             'retained': {address(nid): projection.signature(projection.nodes[nid])
                          for nid in projection.retained},
             'iteration_effects': sorted([address(loop), address(call)] for loop, call in projection.iteration_effects),
@@ -491,7 +510,7 @@ def frontier(plan):
 
 
 def mapping(before, after):
-    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/5'
+    if (not before or not after or before.get('protocol') != 'ibl-repair-frontier/6'
             or after.get('protocol') != before.get('protocol')
             or not before.get('supported') or not after.get('supported')
             or before['retained'] != after['retained'] or before['effects'] != after['effects']

@@ -86,6 +86,14 @@ def known_condition(node, env):
     return known_predicate(predicate(node), env)
 
 
+def predicate_value(typ, guard, env):
+    """Carry an existing finite branch proof through an ordinary value binding."""
+    if typ.kind != 'Bool':
+        return typ
+    known = known_predicate(guard, env)
+    return Type('Bool', literal=known) if known is not None else typ
+
+
 def branch_environment(env, guard, truth):
     """A branch is impossible only with a finite proof, never from a sample."""
     known = known_predicate(guard, env)

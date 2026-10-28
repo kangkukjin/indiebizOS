@@ -322,6 +322,7 @@
     "ibl/ibl_v2_component_runtime",
     "ibl/ibl_v2_contracts",
     "ibl/ibl_v2_entry",
+    "ibl/ibl_v2_exits",
     "ibl/ibl_v2_expr",
     "ibl/ibl_v2_ir",
     "ibl/ibl_v2_learning",
@@ -573,8 +574,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 562,
-    "engine": 530,
+    "total": 563,
+    "engine": 531,
     "blocklist": 32
   }
 }

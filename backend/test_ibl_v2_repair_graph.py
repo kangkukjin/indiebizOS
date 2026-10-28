@@ -112,12 +112,12 @@ def test_sequential_iteration_rechecks_previous_tail_before_next_effect(execute)
 
 
 
-@pytest.mark.parametrize('edition', [1, 2, 3, 4])
+@pytest.mark.parametrize('edition', [1, 2, 3, 4, 5])
 def test_old_frontier_cannot_silently_gain_new_repair_authority(edition):
     from ibl_v2_repair_graph import mapping
     from ibl_v2_ir import Fault
     with pytest.raises(Fault, match='효과'):
-        mapping({'protocol': f'ibl-repair-frontier/{edition}'}, {'protocol': 'ibl-repair-frontier/5'})
+        mapping({'protocol': f'ibl-repair-frontier/{edition}'}, {'protocol': 'ibl-repair-frontier/6'})
 
 
 def test_stored_effectful_revision_repairs_inside_three_composed_abilities(

@@ -9,18 +9,6 @@ from dataclasses import dataclass, field
 from ibl_v2_types import Type, UNKNOWN, NEVER, join
 
 
-def has_return(value):
-    from ibl_v2_ir import Node
-    if isinstance(value, Node):
-        if value.kind in ('lambda', 'def', 'parallel'):
-            return False
-        if value.kind == 'call' and (value.data['node'], value.data['action']) == ('table', 'each'):
-            return has_return(value.data['params'])
-        return value.kind == 'return' or has_return(value.data)
-    children = value.values() if isinstance(value, dict) else value if isinstance(value, (tuple, list)) else ()
-    return any(has_return(v) for v in children)
-
-
 @dataclass
 class Exits:
     normal: tuple | None = None  # (value type, continuing bindings)
@@ -53,10 +41,6 @@ def guarded(compiler, analyze, *, catches=False):
     finally:
         compiler.catch_value_faults = previous
         compiler.requirement_depth -= 1
-
-
-def fallback_type(compiler, left, right):
-    return join(guarded(compiler, left, catches=True), guarded(compiler, right))
 
 
 def recovery_exits(compiler, env, analyze, *, caught, cleanup, final_mutated, mutated, catch_mutated):
@@ -105,28 +89,15 @@ def source_recovery(compiler, node, env, names, readonly, final):
     from ibl_v2_analysis import assigned_names
     d = node.data
 
+    from ibl_v2_exits import source_exits, export_source
+
     def analyze(part, local):
-        outer, compiler.returns = compiler.returns, []
-        try:
-            value = compiler.visit(d[part], local, names, readonly, final or part == 'final')
-            returned = NEVER
-            for item in compiler.returns:
-                returned = join(returned, item)
-            return Exits(None if compiler.returns_unconditionally(d[part]) else (value, local.copy()), returned, local.copy())
-        finally:
-            compiler.returns = outer
+        return source_exits(compiler, d[part], local, names, readonly, final or part == 'final')
 
     exits = recovery_exits(compiler, env, analyze, caught=d['catch'] is not None,
                            cleanup=d['final'] is not None, final_mutated=assigned_names(d['final']),
                            mutated=assigned_names(d['body']), catch_mutated=assigned_names(d['catch']))
-    if exits.returned != NEVER:
-        compiler.returns.append(exits.returned)
-    if exits.normal is not None:
-        value, local = exits.normal
-        env.clear()
-        env.update(local)
-        return join(value, exits.returned)
-    return exits.returned
+    return export_source(compiler, exits, env)
 
 
 def relation_recovery(compiler, term, captured, site, apply):

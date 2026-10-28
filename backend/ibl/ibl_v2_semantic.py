@@ -19,7 +19,7 @@ def edition():
     return digest({name: (root / name).read_text() for name in (
         'ibl_v2_semantic.py', 'ibl_v2_semantic_store.py', 'ibl_v2_types.py',
         'ibl_v2_analysis.py', 'ibl_v2_call_analysis.py', 'ibl_v2_adapters.py',
-        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_recovery.py', 'ibl_v2_repeat.py', 'ibl_v2_compile.py')})
+        'ibl_v2_requirements.py', 'ibl_v2_narrow.py', 'ibl_v2_exits.py', 'ibl_v2_recovery.py', 'ibl_v2_repeat.py', 'ibl_v2_compile.py')})
 
 
 class Unsupported(ValueError):
@@ -39,8 +39,6 @@ def lexical_inputs(node, bound=frozenset()):
                 needed.update(scan(child, names)[0])
             return needed, names, False
         d = value.data
-        if value.kind == 'semantic_continuation':
-            return set(d['interface']['params']) - names, names, True
         if value.kind == 'ref':
             return {d['name']} - names, names, False
         if value.kind == 'lambda':
@@ -63,6 +61,15 @@ def lexical_inputs(node, bound=frozenset()):
             continuing = [v[1] for v in (yes, no) if not v[2]]
             merged = set.intersection(*continuing) if continuing else names
             return scan(d['value'], names)[0] | yes[0] | no[0], merged, not continuing
+        if value.kind == 'pipe':
+            left = scan(d['left'], names)
+            right = scan(d['right'], left[1])
+            return left[0] | (right[0] if not left[2] else set()), right[1], left[2] or right[2]
+        if value.kind == 'fallback':
+            left, right = scan(d['left'], names), scan(d['right'], names)
+            continuing = [v[1] for v in (left, right) if not v[2]]
+            merged = set.intersection(*continuing) if continuing else names
+            return left[0] | right[0], merged, not continuing
         if value.kind == 'repeat':
             body = scan(d['body'], names | {'i'})
             scope = body[1] if d['mode'] == 'until' else names | ({'i'} if d['mode'] == 'while' else set())
@@ -116,7 +123,18 @@ class Derivation:
 
     def ability(self, params, body, defaults=None, completion=None):
         env = {k: self.term('input', name=k) for k in params}
-        result = self.sequence(body, env) if body.kind == 'sequence' else self.expr(body, env)
+        from ibl_v2_exits import value_control
+        if body.kind == 'sequence':
+            result = self.sequence(body, env)
+        elif self.exits:
+            result = self.outcome(body, env)
+        elif value_control(body):
+            result = self.term('frame_value', outcome=self.outcome(body, env))
+        else:
+            result = self.expr(body, env)
+        return self.interface(params, result, defaults, completion)
+
+    def interface(self, params, result, defaults=None, completion=None):
         return {'protocol': PROTOCOL, 'params': list(params), 'defaults': defaults or {},
                 'terms': self.terms, 'result': result, 'effects': self.effects, 'checks': self.checks,
                 'actions': sorted(self.actions), 'functions': sorted(self.functions),
@@ -127,55 +145,20 @@ class Derivation:
 
     def sequence(self, body, env):
         result = self.term('unit')
+        from ibl_v2_exits import value_control
         for index, statement in enumerate(body.data['statements']):
-            if statement.kind == 'semantic_continuation':
-                interface = statement.data['interface']
-                result = self.term('continue_call', interface=interface,
-                                   captures={k: env[k] for k in interface['params']})
-                self.effects.append(result)
-                return result
-            if statement.kind in ('try', 'repeat'):
-                outcome = self.recovery(statement, env) if statement.kind == 'try' else self.repeat(statement, env)
+            if value_control(statement):
+                outcome = self.outcome(statement, env)
                 tail = Node('sequence', statement.end, body.end,
                             {'statements': body.data['statements'][index + 1:]})
-                inner = Derivation(self.budget, pure=self.pure, exits=self.exits)
-                params = sorted(lexical_inputs(tail))
-                continuation = inner.ability(params, tail)
+                inner = Derivation(self.budget, pure=self.pure, exits=True)
+                continuation = inner.ability(sorted(lexical_inputs(tail)), tail)
                 self.actions.update(inner.actions)
                 self.functions.update(inner.functions)
                 result = self.term('continue', outcome=outcome, continuation=continuation,
                                    empty=not tail.data['statements'], exits=self.exits)
                 self.effects.append(result)
                 return result
-            if statement.kind == 'if':
-                d = statement.data
-                tail = body.data['statements'][index + 1:]
-                branches = [d['body'], d['otherwise']]
-                if tail:
-                    # Derive the continuation once. Branches pass their own values
-                    # to this latent ability instead of copying the remaining DAG.
-                    continuation = Node('sequence', statement.end, body.end, {'statements': tail})
-                    params = sorted(lexical_inputs(continuation))
-                    inner = Derivation(self.budget, pure=self.pure, exits=self.exits)
-                    interface = inner.ability(params, continuation)
-                    self.actions.update(inner.actions)
-                    self.functions.update(inner.functions)
-                    if self.exits:
-                        follow = Node('semantic_continuation', statement.start, statement.end,
-                                      {'interface': interface})
-                    else:
-                        name = '@after:' + str(statement.start)
-                        env = {**env, name: self.term('ability', interface=interface, captures={}, params=params)}
-                        call = Node('named_call', statement.start, statement.end, {
-                            'fn': Node('ref', statement.start, statement.end, {'name': name}),
-                            'params': Node('record', statement.start, statement.end, {'fields': {
-                                k: Node('ref', statement.start, statement.end, {'name': k}) for k in params}})})
-                        follow = Node('return', statement.start, statement.end, {'value': call})
-                    branches = [Node('sequence', statement.start, body.end, {'statements': [
-                        *(branch.data['statements'] if branch else []), follow]}) for branch in branches]
-                branches = [branch or Node('sequence', statement.start, statement.end, {'statements': []})
-                            for branch in branches]
-                return self.choice(d['value'], *branches, env)
             if statement.kind == 'bind':
                 env[statement.data['name']] = self.expr(statement.data['value'], env)
                 result = self.term('unit')
@@ -190,6 +173,59 @@ class Derivation:
         if not self.exits:
             return result
         return self.term('exit', value=result, bindings=dict(env), returned=returned)
+
+    def outcome(self, node, env, piped=None):
+        previous, self.exits = self.exits, True
+        try:
+            return self._outcome(node, env, piped)
+        finally:
+            self.exits = previous
+
+    def _outcome(self, node, env, piped=None):
+        from ibl_v2_analysis import assigned_names
+        from ibl_v2_exits import value_control
+        d, kind = node.data, node.kind
+        if kind == 'sequence':
+            return self.sequence(node, env)
+        if kind == 'if':
+            empty = Node('sequence', node.end, node.end, {'statements': []})
+            return self.choice(d['value'], d['body'], d['otherwise'] or empty, env)
+        if kind == 'try':
+            return self.recovery(node, env)
+        if kind == 'repeat':
+            return self.repeat(node, env)
+        if kind in ('bind', 'return'):
+            result = self.term('transform_exit', outcome=self.outcome(d['value'], env),
+                               binding=d.get('name'), returned=kind == 'return')
+        elif kind == 'fallback':
+            parts = {}
+            for part in ('left', 'right'):
+                inner = Derivation(self.budget, pure=self.pure, exits=True)
+                parts[part] = inner.ability(sorted(set(env) | lexical_inputs(d[part])), d[part])
+                self.actions.update(inner.actions)
+                self.functions.update(inner.functions)
+            result = self.term('fallback_exits', captures=dict(env), mutated=sorted(assigned_names(d['left'])), **parts)
+        elif kind == 'pipe' or kind == 'named_call' and value_control(d['fn']):
+            operand = d['left'] if kind == 'pipe' else d['fn']
+            outcome = self.outcome(operand, env)
+            inner = Derivation(self.budget, pure=self.pure, exits=True)
+            value_param = '@pipe' if kind == 'pipe' else '@callee'
+            target = d['right'] if kind == 'pipe' else Node('named_call', node.start, node.end,
+                {**d, 'fn': Node('ref', node.start, node.end, {'name': value_param})})
+            params = sorted(set(env) | lexical_inputs(target) | {value_param}
+                            | ({'@pipe'} if piped is not None else set()))
+            local = {k: inner.term('input', name=k) for k in params}
+            result = inner.outcome(target, local,
+                                   local['@pipe'] if kind == 'pipe' or piped is not None else None)
+            interface = inner.interface(params, result)
+            self.actions.update(inner.actions)
+            self.functions.update(inner.functions)
+            result = self.term('continue', outcome=outcome, continuation=interface,
+                               empty=False, exits=True, value_param=value_param, piped=piped)
+        else:
+            return self.finish(self.expr(node, env, piped), env)
+        self.effects.append(result)
+        return result
 
     def recovery(self, node, env):
         from ibl_v2_analysis import assigned_names
@@ -244,53 +280,38 @@ class Derivation:
         test = self.pure_expr(condition, env)
         branches = []
         for body in (yes, no):
-            inner = Derivation(self.budget, pure=pure or self.pure, exits=self.exits)
+            # Pure choice selects a value inside the current exit; it does
+            # not create another returning/continuing statement boundary.
+            inner = Derivation(self.budget, pure=pure or self.pure, exits=self.exits and not pure)
             interface = inner.ability(env, body)
             self.actions.update(inner.actions)
             self.functions.update(inner.functions)
             branches.append(interface)
         result = self.term('choose', test=test, guard=predicate(condition),
-                           captures=dict(env), yes=branches[0], no=branches[1])
+                           captures=dict(env), yes=branches[0], no=branches[1], exits=self.exits and not pure)
         self.effects.append(result)
         return result
 
     def expr(self, node, env, piped=None):
+        result = self._expr(node, env, piped)
+        if node.kind in ('binary', 'unary') and node.data['op'] in (
+                '==', '!=', '<', '>', '<=', '>=', 'in', 'and', 'or', '&&', '||', 'not', '!'):
+            from ibl_v2_narrow import predicate
+            result = self.term('predicate_value', value=result, guard=predicate(node), captures=dict(env))
+        return result
+
+    def _expr(self, node, env, piped=None):
         d, kind = node.data, node.kind
         if kind == 'sequence':
             return self.sequence(node, env)
-        if kind in ('try', 'repeat'):
-            # Returns in value blocks are nonlocal; do not reinterpret them as
-            # a block result. Statement recovery exports those exits explicitly.
-            from ibl_v2_recovery import has_return
-            if has_return(node):
-                raise Unsupported('nonlocal return in recovery value block')
-            from ibl_v2_analysis import assigned_names
-            outcome = self.recovery(node, env) if kind == 'try' else self.repeat(node, env)
-            for name in sorted(assigned_names(node)):
-                env[name] = self.term('recovery_binding', outcome=outcome, name=name)
-            result = self.term('recovery_value', outcome=outcome)
-            self.effects.append(result)
-            return result
         if kind == 'fallback':
-            from ibl_v2_recovery import has_return
-            from ibl_v2_analysis import assigned_names
-            if any(has_return(d[k]) or assigned_names(d[k]) for k in ('left', 'right')):
-                raise Unsupported('nonlocal exit or assignment in fallback operand')
-            branches = []
-            for body in (d['left'], d['right']):
-                inner = Derivation(self.budget, pure=self.pure)
-                branches.append(inner.ability(env, body))
-                self.actions.update(inner.actions)
-                self.functions.update(inner.functions)
-            result = self.term('fallback', captures=dict(env), left=branches[0], right=branches[1])
-            self.effects.append(result)
-            return result
+            return self.term('normal_value', outcome=self.outcome(node, env))
+        if kind in ('if', 'try', 'repeat'):
+            # Source validation excludes control blocks from pure/container
+            # positions. At value boundaries, outcome/continue owns their exits.
+            raise Unsupported('control value requires an exit continuation')
         if kind == 'conditional':
             return self.choice(d['condition'], d['yes'], d['no'], env, pure=True)
-        if kind == 'if':
-            # Returns inside value blocks exit the enclosing function, not only
-            # the block. Keep those forms explicit until nonlocal exits are modeled.
-            raise Unsupported('if value block: use statement branches')
         if kind == 'literal':
             return self.term('constant', wire=pack(d['value']))
         if kind == 'ref':
@@ -486,42 +507,55 @@ def apply(compiler, interface, args, site):
                     out = join_exits(out, apply(compiler, term[branch], refined, site))
             finally:
                 compiler.requirement_depth -= 1
+            if out == NEVER and term.get('exits'):
+                from ibl_v2_recovery import Exits
+                out = Exits()
         elif op == 'exit':
             from ibl_v2_recovery import Exits
             bindings = {k: value(v) for k, v in term['bindings'].items()}
             result = value(term['value'])
             out = (Exits(returned=result, state=bindings) if term['returned']
-                   else Exits((result, bindings), state=bindings))
+                   else Exits(None if result == NEVER else (result, bindings), state=bindings))
         elif op == 'repeat':
             from ibl_v2_repeat import relation_repeat
             out = relation_repeat(compiler, term, {k: value(v) for k, v in term['captures'].items()}, site, apply)
         elif op == 'recover':
             from ibl_v2_recovery import relation_recovery
             out = relation_recovery(compiler, term, {k: value(v) for k, v in term['captures'].items()}, site, apply)
-        elif op == 'continue_call':
-            out = apply(compiler, term['interface'], {k: value(v) for k, v in term['captures'].items()}, site)
-        elif op == 'continue':
-            from ibl_v2_recovery import Exits, join_exits
-            exits = value(term['outcome'])
-            out = Exits(returned=exits.returned, state=exits.state) if term['exits'] else exits.returned
-            if exits.normal is not None:
-                result, bindings = exits.normal
-                if term['empty']:
-                    following = Exits((result, bindings), state=bindings) if term['exits'] else result
-                else:
-                    following = apply(compiler, term['continuation'], bindings, site)
-                out = join_exits(out, following)
-        elif op == 'recovery_value':
+        elif op == 'transform_exit':
+            from ibl_v2_exits import transform_exit
+            out = transform_exit(value(term['outcome']), binding=term['binding'], returned=term['returned'])
+        elif op == 'normal_value':
             exits = value(term['outcome'])
             out = exits.normal[0] if exits.normal is not None else NEVER
-        elif op == 'recovery_binding':
-            exits = value(term['outcome'])
-            out = exits.normal[1].get(term['name'], UNKNOWN) if exits.normal is not None else UNKNOWN
-        elif op == 'fallback':
-            from ibl_v2_recovery import fallback_type
+        elif op == 'frame_value':
+            from ibl_v2_exits import exit_type
+            out = exit_type(value(term['outcome']))
+        elif op == 'continue':
+            from ibl_v2_exits import continue_exits, exit_type
+            def follow(result, bindings):
+                from ibl_v2_recovery import Exits
+                if term['empty']:
+                    return Exits((result, bindings), state=bindings)
+                supplied = dict(bindings)
+                if term.get('value_param'):
+                    supplied[term['value_param']] = result
+                if term.get('piped') is not None:
+                    supplied['@pipe'] = value(term['piped'])
+                return apply(compiler, term['continuation'], supplied, site)
+            out = continue_exits(value(term['outcome']), follow)
+            if not term['exits']:
+                out = exit_type(out)
+        elif op == 'fallback_exits':
+            from ibl_v2_exits import fallback_exits
             captured = {k: value(v) for k, v in term['captures'].items()}
-            out = fallback_type(compiler, lambda: apply(compiler, term['left'], captured, site),
-                                lambda: apply(compiler, term['right'], captured, site))
+            out = fallback_exits(compiler, captured,
+                lambda local: apply(compiler, term['left'], local, site),
+                lambda local: apply(compiler, term['right'], local, site), term['mutated'])
+        elif op == 'predicate_value':
+            from ibl_v2_narrow import predicate_value
+            out = predicate_value(value(term['value']), term['guard'],
+                                  {k: value(v) for k, v in term['captures'].items()})
         elif op == 'boolean':
             compiler.need(site, value(term['value']), BOOL)
             out = BOOL
@@ -628,7 +662,7 @@ def frame_summary(compiler, analyze):
     try:
         result = analyze()
         for returned in compiler.returns:
-            result = returned if result == UNIT_T else join(result, returned)
+            result = join(result, returned)
         return result, set(compiler.effects), set(compiler.access_log)
     finally:
         compiler.returns, accesses, effects = outer

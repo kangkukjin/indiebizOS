@@ -109,27 +109,15 @@ def source_repeat(compiler, node, env, names, readonly, final):
         if type(count) is not int or count < 0:
             compiler.issue(d['value'], 'REPEAT_COUNT', 'repeat 횟수는 0 이상의 정수입니다.')
 
+    from ibl_v2_exits import source_exits, export_source
+
     def body(local):
-        outer, compiler.returns = compiler.returns, []
-        try:
-            value = compiler.visit(d['body'], local, names, readonly, final)
-            returned = NEVER
-            for item in compiler.returns:
-                returned = join(returned, item)
-            normal = None if compiler.returns_unconditionally(d['body']) else (value, local.copy())
-            return Exits(normal, returned, local.copy())
-        finally:
-            compiler.returns = outer
+        return source_exits(compiler, d['body'], local, names, readonly, final)
 
     exits = repeat_exits(compiler, node, env, d['mode'],
                          lambda local: compiler.visit(d['value'], local, names, readonly, final), body,
                          unreachable=lambda local: compiler.visit_branch(d['body'], local, names, readonly, final, False))
-    if exits.returned != NEVER:
-        compiler.returns.append(exits.returned)
-    if exits.normal is not None:
-        env.clear()
-        env.update(exits.normal[1])
-    return UNIT_T
+    return export_source(compiler, exits, env)
 
 
 def relation_repeat(compiler, term, captured, site, apply):

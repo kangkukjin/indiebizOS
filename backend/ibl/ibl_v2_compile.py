@@ -269,13 +269,13 @@ class Compiler(CallAnalysis):
                 # Still diagnose invalid dead source, but it cannot supply a
                 # frame result or add return types to the reachable paths.
                 old_returns, self.returns = self.returns, []
-                self.visit_unreachable(statement, dead_env, names, readonly, final)
+                self.visit_branch(statement, dead_env, names, readonly, final, False)
                 self.returns = old_returns
             else:
                 result = self.visit(statement, env, names, readonly, final)
                 if statement.kind == "bind" and value is not UNRESOLVED:
                     self.constant_bindings[statement.data["name"]] = value
-                if self.returns_unconditionally(statement):
+                if result == NEVER:
                     terminated, dead_env = True, env.copy()
         return result
 
@@ -287,11 +287,11 @@ class Compiler(CallAnalysis):
         finally:
             self.reachable = previous
 
-    def visit_branch(self, node, env, names, readonly, final, possible, *, pure=False):
+    def visit_branch(self, node, env, names, readonly, final, possible, *, pure=False, piped=None, piped_node=None):
         if possible:
             if pure:
                 self.pure(node)
-            return self.visit(node, env, names, readonly, final)
+            return self.visit(node, env, names, readonly, final, piped=piped, piped_node=piped_node)
         # Dead source still receives syntax/name/type checks, but cannot impose
         # latent callback purity, executable effects or return types on the call.
         if node is not None:
@@ -303,7 +303,11 @@ class Compiler(CallAnalysis):
         self.pure_calls, self.call_effects = [], {}
         dead = dict.fromkeys(env, NEVER)
         try:
-            self.visit_unreachable(node, dead, names, readonly, final)
+            previous, self.reachable = self.reachable, False
+            try:
+                self.visit(node, dead, names, readonly, final, piped=piped, piped_node=piped_node)
+            finally:
+                self.reachable = previous
             env.clear()
             env.update(dict.fromkeys(dead, NEVER))
         finally:
@@ -389,7 +393,7 @@ class Compiler(CallAnalysis):
         parameter_contracts = {k: describe_type(v) for k, v in env.items()}
         result = self.sequence(node.data["body"], env, self.function_scopes[sid])
         for t in self.returns:
-            result = t if result == UNIT_T else join(result, t)
+            result = join(result, t)
         kinds = {t.kind for t in alternatives(result)}
         if self.returns and "Unit" in kinds and len(kinds) > 1 and sid not in self.unit_warned:
             # 값을 돌려주는 경로와 떨어지는 경로가 섞인 함수는 거의 늘 else/return 누락이다(70회차 F70-2).
@@ -505,7 +509,7 @@ class Compiler(CallAnalysis):
                           f"${name} 에 대입하는 블록의 모든 경로가 return 으로 끝납니다 — return 은 블록이 아니라 "
                           f"함수 전체를 끝내므로 ${name} 은 값을 받지 못하고 이 뒤의 문장은 실행되지 않습니다.", name=name)
             env[name] = sub(d["value"])
-            return UNIT_T
+            return NEVER if env[name] == NEVER else UNIT_T
         if kind == "assert":
             for key in ("condition", "message", "details"):
                 self.pure(d[key])
@@ -524,8 +528,9 @@ class Compiler(CallAnalysis):
             if final:
                 self.issue(node, "FINALLY_RETURN", "finally 안에는 return을 쓸 수 없습니다.")
             result = sub(d["value"])
-            self.returns.append(result)
-            return result
+            if result != NEVER:
+                self.returns.append(result)
+            return NEVER
         if kind == "def":
             return UNIT_T
         if kind == "list":
@@ -572,12 +577,14 @@ class Compiler(CallAnalysis):
                     self.requirement_depth -= 1
                 self.need(node, left, BOOL)
                 self.need(node, right, BOOL)
-                return BOOL
+                from ibl_v2_narrow import predicate_value
+                return predicate_value(BOOL, predicate(node), env)
             self.container_value(node)
             values = ([sub(d["value"])] if kind == "unary" else [sub(d["left"]), sub(d["right"])])
             operands = [d["value"]] if kind == "unary" else [d["left"], d["right"]]
             from ibl_v2_semantic import scalar_type
-            return scalar_type(self, node, op, values, operands)
+            from ibl_v2_narrow import predicate, predicate_value
+            return predicate_value(scalar_type(self, node, op, values, operands), predicate(node), env)
         if kind == "conditional":
             from ibl_v2_narrow import predicate, branch_environment
             self.pure(d['condition'])
@@ -602,6 +609,9 @@ class Compiler(CallAnalysis):
             return self.reference_type(node, names)
         if kind == "named_call":
             fn_type = sub(d["fn"])
+            if fn_type == NEVER:
+                self.visit_branch(d["params"], env.copy(), names, readonly, final, False)
+                return NEVER
             arg_type = sub(d["params"])
             return self.apply_callable(node, fn_type, arg_type, d["params"], env, names, readonly,
                                        piped=piped)
@@ -651,15 +661,17 @@ class Compiler(CallAnalysis):
                 self.issue(node, "PIPE_TARGET", "파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.",
                            **details)
                 return UNKNOWN
+            if left == NEVER:
+                self.visit_branch(d["right"], env.copy(), names, readonly, final, False, piped=NEVER, piped_node=d["left"])
+                return NEVER
             return self.visit(d["right"], env, names, readonly, final, piped=left, piped_node=d["left"])
         if kind == "parallel":
             from ibl_v2_semantic import parallel_type
             return parallel_type(self, node, [lambda branch=branch: sub(branch, env.copy())
                                               for branch in parallel_branches(node)])
         if kind == "fallback":
-            from ibl_v2_recovery import fallback_type
-            return fallback_type(self, lambda: sub(d['left'], env.copy()),
-                                 lambda: sub(d['right'], env.copy()))
+            from ibl_v2_exits import source_fallback
+            return source_fallback(self, node, env, names, readonly, final)
         if kind == "call":
             arg_type = sub(d["params"])
             return self.named_target(node, arg_type, env, names, readonly, piped)
@@ -715,6 +727,14 @@ class Compiler(CallAnalysis):
         recur = Compiler.returns_unconditionally
         if kind == "return":
             return True
+        if kind == "bind":
+            return recur(d["value"])
+        if kind == "pipe":
+            return recur(d["left"]) or recur(d["right"])
+        if kind == "named_call":
+            return recur(d["fn"])
+        if kind == "fallback":
+            return recur(d["left"]) and recur(d["right"])
         if kind == "sequence":
             return any(recur(s) for s in d["statements"])
         if kind == "if":
@@ -917,7 +937,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
     root = parse(source)
     result = compiler.sequence(root, compiler.inputs.copy(), {})
     for t in compiler.returns:
-        result = t if result == UNIT_T else join(result, t)
+        result = join(result, t)
     # Unused definitions must also be well formed; validate to a fixed point for
     # nested forward definitions, without inventing caller-local parameters.
     while (set(compiler.functions) - compiler.checked or

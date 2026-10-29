@@ -115,11 +115,18 @@ def _param_support_problems(support, entry):
 
 
 def check_v2_corpus(code, entry, issues, origin, session=None):
+    """각 행의 판본은 검사하되 같은 검사 묶음의 동일 컴파일 입력은 한 번만 계산한다.
+
+    자연어 intent·출처가 달라도 원문과 함수 정의 모드가 같으면 판정은 같다.
+    결과는 registry/library와 같은 session에만 보관하며 다음 검사에는 넘기지 않는다.
+    오류 문자열은 행마다 출처를 붙인다 — 중복 오류 행도 보고에서 사라지지 않는다.
+    """
     from ibl_edition import source_edition
     try:
         source_edition(code, entry.get("edition", 2))
         from ibl_v2_learning import check_source
         kwargs = {}
+        results = None
         if session is not None:
             if not session:
                 try:
@@ -130,8 +137,16 @@ def check_v2_corpus(code, entry, issues, origin, session=None):
                     session['error'] = exc
             if 'error' in session:
                 raise session['error']
-            kwargs = session
-        why = check_source(code, bool(entry.get("alias")) or entry.get("category") == "phrase", **kwargs)
+            kwargs = {key: session[key] for key in ('registry', 'library')}
+            results = session.setdefault('checked_sources', {})
+        function_body = bool(entry.get("alias")) or entry.get("category") == "phrase"
+        key = (code, function_body)
+        if results is not None and key in results:
+            why = results[key]
+        else:
+            why = check_source(code, function_body, **kwargs)
+            if results is not None:
+                results[key] = why
         if why:
             issues.append(f"{origin}: 판본 2 용례 검사 — {why}")
     except Exception as exc:

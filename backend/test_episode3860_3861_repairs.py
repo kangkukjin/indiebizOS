@@ -5,7 +5,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import boot_paths  # noqa: F401
-import pursuit_tools
 import repeat_guard
 import system_tools_ibl
 
@@ -33,16 +32,6 @@ def test_explicit_inputs_have_distinct_digests():
     assert repeat_guard.inputs_digest({"a": 1, "b": 2}) == repeat_guard.inputs_digest({"b": 2, "a": 1})
 
 
-def test_detach_on_already_detached_turn_is_idempotent(monkeypatch):
-    b = SimpleNamespace(row=None, detached=True)
-    monkeypatch.setattr(pursuit_tools, "resolve_session", lambda a, t: b)
-    out = json.loads(pursuit_tools.execute_pursuit({"op": "detach", "why": "무관"}, "agent"))
-    assert out["success"] and out["result"]["already"] is True
-    # 분리된 적 없는 무연결 턴, 그리고 detach 외의 쓰기는 여전히 거절
-    b.detached = False
-    assert not json.loads(pursuit_tools.execute_pursuit({"op": "detach"}, "agent"))["success"]
-    b.detached = True
-    assert not json.loads(pursuit_tools.execute_pursuit({"op": "note", "progress": "x"}, "agent"))["success"]
 
 
 if __name__ == "__main__":

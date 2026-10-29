@@ -212,7 +212,7 @@ def test_direct_repair_does_not_call_planning_model(monkeypatch):
     from cognitive_consciousness import CognitiveConsciousnessMixin
     import thread_context
     monkeypatch.setattr(thread_context, 'get_task_origin', lambda: 'user')
-    monkeypatch.setattr('pursuit_bind.run_consciousness', lambda *a: pytest.fail('planning model'))
+    monkeypatch.setattr('cognitive_consciousness.CognitiveConsciousnessMixin._run_consciousness', lambda *a: pytest.fail('planning model'))
     result = CognitiveConsciousnessMixin()._run_consciousness_or_reuse('#repair 영어 상태 표시 수정', [], repair=True)
     assert result['_repair_policy'] == 2
     assert result['criteria'][0]['text'] == '#repair 영어 상태 표시 수정'

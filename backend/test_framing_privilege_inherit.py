@@ -2,31 +2,21 @@
 import boot_paths  # noqa: F401
 from types import SimpleNamespace
 import pytest
-import pursuit_bind as pb
-from pursuit_ledger import PursuitLedger
 from cognitive_consciousness import CognitiveConsciousnessMixin
 
 
 @pytest.fixture
-def run(tmp_path):
-    tokens = []
+def run(monkeypatch):
+    monkeypatch.setattr("framing_inheritance.inherit", lambda *a: None)
     def check(repair_framing, fresh_repair=False):
-        ledger = PursuitLedger(tmp_path / 'test.db', 'agent')
-        old = {'task_framing': '이전 지도', 'needs_repair': repair_framing}
-        row = ledger.create('과제', '전체 완료 기준', str(len(tokens)), **pb.framing_patch(old))
         class Runner(CognitiveConsciousnessMixin):
             calls = 0
             def _run_consciousness(self, *a, **kw):
                 self.calls += 1
                 return {'task_framing': '새 지도', 'achievement_criteria': '새 기준', 'needs_repair': fresh_repair}
         runner = Runner()
-        b = pb.Binding(runner, ledger, 'agent', 'turn' + str(len(tokens)), '이어해', [])
-        tokens.append(pb._current.set(b)); b.bind(row)
-        b.review = {'action': 'keep', 'criteria': '이번 턴 기준'}
         return runner, runner._run_consciousness_or_reuse('이어해', [], '')
-    yield check
-    for token in reversed(tokens):
-        pb._current.reset(token)
+    return check
 
 
 def test_repair_framing_reawakens_and_does_not_inherit(run):

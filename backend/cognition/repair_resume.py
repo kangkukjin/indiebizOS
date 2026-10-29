@@ -28,7 +28,6 @@ def preserve_unfinished(controller, session, response, reason):
            "applied": session["status"] == "applied",
            "response": response, "reason": reason, "store": str(controller.store.directory),
            "verification_records": controller.verifications.records,
-           "pursuit": controller.original_pursuit, "done_request": controller.done_request,
            "project_id": config.get("_project_id", ""), "agent_id": config.get("id") or controller.owner,
            "system_ai": bool(config.get("_is_system_ai")), "episode_id": controller.episode_id,
            "authorized_origin": "user", "retry_at": None}
@@ -90,29 +89,6 @@ def user_resume(runner, message, history):
         yield
 
 
-def bind_pursuit():
-    from pursuit_bind import current as binding_current, connect
-    row, binding = current(), binding_current()
-    previous = (row or {}).get("pursuit") or {}
-    pid = previous.get("id") or ((row or {}).get("framing") or {}).get("pursuit_id")
-    if binding and pid:
-        target = binding.ledger.get(pid)
-        if previous.get("goal_criteria") and target["goal_criteria"] != previous["goal_criteria"]:
-            raise ValueError("재개 대기 중 전체 목표 기준이 변경됐습니다. 이전 기준으로 실행하지 않습니다")
-        connect(binding, pid, "승인된 자기수리의 저장된 진행 지점 재개", source="repair_continuation")
-        binding.output = (row or {}).get("framing") or {}
-
-
-def restore_completion(controller, request, binding):
-    """완료 의도도 구간을 넘는다. 같은 전체 기준에 연결된 현재 버전만 승인할 수 있다."""
-    if not request:
-        return
-    if (not binding or not binding.row or binding.row["id"] != request["id"]
-            or binding.row["goal_criteria"] != request["goal_criteria"]):
-        raise ValueError("재개 대기 중 전체 과제 연결 또는 완료 기준이 변경됐습니다")
-    controller.done_request = {**request, "version": binding.row["version"]}
-
-
 def restore_review(controller, row):
     """같은 응답·파일·전달 지문을 복원한다. 승인 전에는 현재 파일을 다시 대조한다."""
     from runtime_utils import get_base_path
@@ -149,8 +125,6 @@ def restore_review(controller, row):
                 and hashlib.sha256(base64.b64decode(img["base64"], validate=True)).hexdigest() == fingerprint["hash"]):
             fingerprint["mode"] = "image"
     controller._final_criteria_contract = saved["packet"]["context"]["criteria_contract"]
-    controller.done_request = saved.get("done_request")
-    controller.original_pursuit = saved.get("original_pursuit")
     controller._final_repair_counts = saved.get("repair_counts", [0, 0])
     controller._resume_evaluation = True
     controller._review_row = row
@@ -166,7 +140,6 @@ def review_stream(runner, controller, row, cancel_check=None):
     if controller is None:
         raise ValueError("평가 재개에 필요한 감독이 비활성화되어 있습니다")
     framing = inherited_framing(row["goal"])
-    bind_pursuit()
     previous = _switch_to_role(runner, "system_repair")
     key = turn_key_for(runner)
     channel = None
@@ -176,14 +149,9 @@ def review_stream(runner, controller, row, cancel_check=None):
                                          extra_role="보존된 검수 재개. 평가가 지적한 결함만 보완하세요.")
         controller.configure(framing, repair=True)
         restore_review(controller, row)
-        from pursuit_bind import current as binding_current
-        binding = binding_current()
-        restore_completion(controller, controller.done_request, binding)
         channel = open_turn(key, runner, row["goal"], [], "", framing, repair=True,
                             aliases=[controller.owner])
         response = yield from controller.finalize(controller.store.text, [], lambda event: None, cancel_check)
-        from pursuit_bind import finish
-        finish(response, interrupted=controller.cancelled())
     finally:
         if channel:
             close_turn(key, expected=channel)

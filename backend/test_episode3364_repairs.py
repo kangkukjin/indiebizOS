@@ -80,11 +80,11 @@ def test_large_supervisor_result_is_pageable_without_losing_error(supervisor):
 
 def test_prompt_catalog_does_not_advertise_forbidden_control_tools(supervisor):
     from supervisor_runtime import tool_context
-    supervisor.catalog["pursuit"] = {"name": "pursuit", "description": "control"}
+    supervisor.catalog["reframe"] = {"name": "reframe", "description": "control"}
     context = tool_context(supervisor)
     assert [t["name"] for t in context["tools"]] == ["inspect"]
     assert "tool_schemas" not in context
-    assert "pursuit" not in supervisor.state()["tools"]
+    assert "reframe" not in supervisor.state()["tools"]
 
 
 def test_distill_queue_preserves_unknown_reason_and_task():

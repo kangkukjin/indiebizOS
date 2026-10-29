@@ -214,14 +214,7 @@ class DistillQueue:
             before_tokens = read_turn_tokens()
             succeeded = False
             try:
-                if p.get("pursuit"):
-                    from pursuit_bind import distill
-                    if p.get("schema_version"):
-                        import distill_ledger as ledger
-                        ledger.create(p)
-                        ledger.once(p["job_key"], "pursuit", lambda: distill(p["pursuit"]))
-                    else:
-                        distill(p["pursuit"])
+                # 옛 패킷의 은퇴한 과제 단계는 실행하지 않는다. 일반 증류 영수증은 유지한다.
                 job.runner._after_response(
                     p.get("user_message", ""), p.get("response", ""),
                     tool_calls=p.get("tool_calls"), hippo_score=p.get("hippo_score"),

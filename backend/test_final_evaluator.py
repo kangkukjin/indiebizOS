@@ -208,16 +208,12 @@ def test_staged_body_and_notice_are_supplied_before_publication(supervisor, tmp_
     assert target.read_text() == "new reviewed bytes" and len(sent) == 1
 
 
-def test_whole_pursuit_criteria_are_included_before_done(supervisor, monkeypatch):
-    writes = []
-    supervisor.original_pursuit = {"id": "goal", "goal_criteria": "정정 전 목표"}
-    binding = SimpleNamespace(row={"id": "goal", "version": 3, "goal_criteria": "전체 보고서 세 편 완성"},
-                              write=lambda *a, **kw: writes.append((a, kw)))
-    supervisor.request_done(binding, "모두 완성")
-    monkeypatch.setattr("pursuit_bind.resolve_session", lambda *a: binding)
+def test_whole_repair_criteria_are_included_in_review(supervisor, monkeypatch):
+    supervisor._final_criteria_contract = {"criteria": [
+        {"id": "C1", "text": "전체 보고서 세 편 완성", "source": "user"}]}
 
     def evaluate(prompt, **kwargs):
-        assert "전체 보고서 세 편 완성" in prompt and not writes
+        assert "전체 보고서 세 편 완성" in prompt
         contract = json.loads(prompt.split("## 달성 기준\n", 1)[1].split("\n\n", 1)[0])
         assert any(row["text"] == "전체 보고서 세 편 완성" for row in contract["criteria"])
         assert all(row["text"] != "정정 전 목표" for row in contract["criteria"])
@@ -225,7 +221,7 @@ def test_whole_pursuit_criteria_are_included_before_done(supervisor, monkeypatch
 
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     finish(supervisor, "세 편의 결과")
-    assert writes[0][0][0] == {"status": "done"}
+    assert tc.get_goal_eval_outcome()["goal_status"] == "ACHIEVED"
 
 
 def test_changed_code_file_cannot_be_approved_with_old_snapshot(supervisor, tmp_path, monkeypatch):
@@ -556,3 +552,23 @@ def test_apply_evaluation_still_rejects_missing_documentation(supervisor, monkey
     decision = json.loads(invoke(supervisor, phase='semantic'))
     assert decision['status'] == 'REWORK'
     assert decision['defects'][0]['evidence'] == '사본 문서에 필수 설치 안내 누락'
+
+
+def test_saved_completion_review_cannot_take_receipt_shortcut(supervisor, monkeypatch):
+    from repair_continuation import resuming
+    row = {"completion_review_required": True,
+           "criteria_contract": {"criteria": [{"id": "C1", "text": "보존된 전체 기준"}]}}
+    with resuming(row):
+        supervisor.configure({"task_framing": "재개", "achievement_criteria": "보존된 전체 기준",
+                              "_framing_source": "repair_continuation"}, repair=True)
+    assert supervisor.completion_review_required
+    monkeypatch.setattr("repair_policy.enabled", lambda _: True)
+    monkeypatch.setattr("repair_policy.finalize", lambda *a: pytest.fail("전체 검수 생략"))
+    monkeypatch.setattr("repair_readiness.completion_error", lambda _: None)
+    seen = []
+    def evaluate(prompt, **kwargs):
+        seen.append(prompt)
+        return "ACHIEVED"
+    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
+    finish(supervisor, "검증한 결과")
+    assert len(seen) == 1 and "보존된 전체 기준" in seen[0]

@@ -174,14 +174,15 @@ def test_drain_idle_immediately(dq):
 
 def test_clear_conversations_preserves_pursuit(tmp_path, monkeypatch):
     import system_ai_memory as sam
-    from pursuit_ledger import PursuitLedger
     monkeypatch.setattr(sam, "MEMORY_DB_PATH", tmp_path / "system_ai_memory.db")
     monkeypatch.setattr(sam, "DATA_PATH", tmp_path)
     sam.init_memory_db()
-    ledger = PursuitLedger(sam.MEMORY_DB_PATH, "system_ai:system_ai")
-    row = ledger.create("계속할 일", "전체 기준", "turn1")
+    with sqlite3.connect(sam.MEMORY_DB_PATH) as conn:
+        conn.execute("CREATE TABLE pursuit (id TEXT, state TEXT)")
+        conn.execute("INSERT INTO pursuit VALUES ('old', 'historical data')")
     sam.clear_conversations()
-    assert ledger.get(row["id"])["goal_criteria"] == "전체 기준"
+    with sqlite3.connect(sam.MEMORY_DB_PATH) as conn:
+        assert conn.execute("SELECT state FROM pursuit").fetchone()[0] == "historical data"
 
 
 # ---------- ③ 보존정책 ----------
@@ -211,3 +212,11 @@ def test_cleanup_prunes_action_health_and_terminal_queue_rows(tmp_path, monkeypa
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+def test_retired_stage_does_not_block_normal_distillation(dq):
+    runner = _Runner()
+    q = dq.DistillQueue.get()
+    q.enqueue(runner, {"user_message": "u", "response": "a", "pursuit": {"id": "old"}}, ident=IDENT)
+    assert q.drain(timeout=5)["drained"]
+    assert len(runner.calls) == 1 and not _rows(dq)

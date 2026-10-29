@@ -64,7 +64,7 @@ EXECUTE                          [2] 과제 규정 재검토 → 유효하면 �
 - **해마**: `ko-sroberta-multitask` 기반 fine-tuning과 저장 용례 회상. 라이브 모델은 2026-10-06 세대이며 10-21 후보는 동일 평가에서 저장 용례 회상이 떨어져 미채택했다. 과거의 약 99% 측정치를 현재 과제 전체의 정확도로 일반화하지 않는다. 세대·비교 지표는 [memory.md](memory.md), 재학습 절차는 `data/guides/hippocampus_retraining.md`를 따른다.
 - **심층메모리**: 재학습하지 않는 기본 `ko-sroberta-multitask` 인코더로 검색한다. 2026-09-17 해마 인코더와 분리했으며, DB의 인코더 표식이 다르면 사용 전에 재색인한다.
 - **점수 정규화**: 모든 검색 경로(시맨틱·하이브리드·FTS5 폴백)에서 0~1 보장
-- **의식 감독 통합(2026-09-10)**: `conscious_supervisor`가 계획·재규정·중간 점검을 책임지고, `supervisor_runtime`이 공통 `AIAgent`의 의식 역할을 호출한다. 실행자의 별도 보고 없이 `supervision_bus`의 실제 도구 경계와 `supervision_watch`의 시계·로그 증분을 읽는다. `agent_id + task_id`로 턴을 격리한다. 에피소드는 시작부터 task를 가지며 HTTP·외부 채널은 시작 전에 발급한다. 공통 인지 진입은 에피소드 신원을 워커에 복원하고, 누락된 호출에는 새 ID를 부여한다. 시스템 AI와 프로젝트 에이전트 모두 의식 초안을 같은 턴 저장소에 인계한다. 최종평가는 `final_evaluator`가 도구 없는 기존 평가 축에 전체 응답·실행 원장·결과 발췌·파일 내용을 전달한다(2026-09-11 역할 분리). `supervision_store`의 버전·SHA-256으로 평가 중 응답·파일 변경을 차단하며 모델의 페이지 열람 영수증을 요구하지 않는다. 승인하면 같은 문자열을 전송하고, 보완은 변경 블록만 패치한다. `pursuit done`은 완료 요청이며 이번 턴 승인과 전체 과제 승인을 분리한다.
+- **의식 감독 통합(2026-09-10)**: `conscious_supervisor`가 계획·재규정·중간 점검을 책임지고, `supervisor_runtime`이 공통 `AIAgent`의 의식 역할을 호출한다. 실행자의 별도 보고 없이 `supervision_bus`의 실제 도구 경계와 `supervision_watch`의 시계·로그 증분을 읽는다. `agent_id + task_id`로 턴을 격리한다. 에피소드는 시작부터 task를 가지며 HTTP·외부 채널은 시작 전에 발급한다. 공통 인지 진입은 에피소드 신원을 워커에 복원하고, 누락된 호출에는 새 ID를 부여한다. 시스템 AI와 프로젝트 에이전트 모두 의식 초안을 같은 턴 저장소에 인계한다. 최종평가는 `final_evaluator`가 도구 없는 기존 평가 축에 전체 응답·실행 원장·결과 발췌·파일 내용을 전달한다(2026-09-11 역할 분리). `supervision_store`의 버전·SHA-256으로 평가 중 응답·파일 변경을 차단하며 모델의 페이지 열람 영수증을 요구하지 않는다. 승인하면 같은 문자열을 전송하고, 보완은 변경 블록만 패치한다. 자기수리는 저장된 완료 기준을 재기동 뒤에도 유지한다.
 - **비용과 호환 경로**: 정상 조회에는 의식 호출을 추가하지 않는다. 중간 검토는 기본 최대 2회·최소 240초 간격이다. 계획·중간 검토 몫과 최종 검수 여력을 나누되 소프트 배분 초과로 진행 중 판정을 폐기하지 않는다. 전체 작업의 명시적 한도는 실행·의식·내부 원샷의 공통 원장이 소유한다. 기본 IBL 입력은 짧은 능력 지도이며 상세 계약과 큰 결과는 기존 도구의 읽기 인자로 조회한다. 빈 평가 응답·오류·필수 증거 부족·지문 불일치는 `UNKNOWN`이다. 최종평가의 보완은 최대 한 번이며, 갱신된 실행 증거로 한 번 재평가한다. GoalEval 호환 경로도 의식의 명시적 기준이 있을 때만 사용한다. 기준 없는 자기반성 우회 호출은 없다. 의식 없는 EXECUTE는 실패·쓰기·반복·지연 때문에 감독·평가로 승격하지 않는다. 이 경로의 알림·스크립트 산출물은 검수 대기열 없이 전달하고, 과제 완료는 기존 실행자 원장 경로로 처리한다. 정상 에피소드가 task 누락으로 그 경로에 빠지지 않도록 공통 진입에서 보완한다. 에피소드의 `NULL`은 검수 미실행이며 실패를 뜻하지 않는다.
 - **반복과 진척의 관측(2026-10-24·26)**: 공통 감독은 직전 호출 하나가 아니라 최근 24회 안의 최대 8호출 순환을 비교해 교대 재시도도 반복으로 잡고, 세 번 반복되면 기존 검토 예산으로 넘긴다. `advise`는 입력과 실제 결과 지문을 함께 받아 한 실행 수명 안에서 같은 입력·같은 결과의 연속 횟수만 알리며, MCP의 독립 체인은 퇴장했고 직결·MCP가 백엔드의 이번 실행 상태를 공유한다. 실제 진행이나 새 결과는 반복 이슈 세대를 닫아 오래된 지시를 폐기한다. 자동 재시도·행동 변경 명령은 붙이지 않으며, 감독기에 전달하는 작업 상태의 진행량도 축약하지 않는다. 감독 원장은 대화 DB·소유자·세션별로 격리해 독립 작업이 부모 참조를 끌어오지 않는다(2026-10-23). [관측 수리 5단계](../../docs/OBSERVATION_BASED_REPAIR_DESIGN_2026_10_26.md#12-구현관측-기록).
 - 신규 증류는 최종 실행 모델·핀과 원문을 동결한 영속 작업이다. 가치가 불확실하면 저장하지 않고,
@@ -275,23 +275,23 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: scope/title/goal_criteria(과제 생성), pursuit_id/pursuit_reason(기존 과제 연결), task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
+  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 현재 지시를 해석할 때 필요한 과거만 채택한 뒤 규정한다. 명시적 빈 history_summary는
     실행 히스토리를 비우고, 비어 있지 않은 선별 요약도 CLI 세션 재개로 우회하지 않는다.
     의식 미실행·누락·잘못된 타입은 빈 결정과 구분한다. 계약: `docs/HISTORY_RELEVANCE_REPAIR_2026_09_14.md`.
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
-- **과제 선택·현재 문제 규정** — `pursuit_bind.py`, `pursuit_ledger.py`
-  - task_id는 한 턴, pursuit는 여러 턴의 일이다. 전체 goal_criteria와 이번 턴 achievement_criteria는 별개이며 과제는 대화 삭제·재시작과 독립이다.
-  - 자아별 과제 목차는 미연결 후보다. 현재 의식의 `pursuit_id/pursuit_reason` 또는 실행자의 `pursuit bind(id, why)`가 연결한다. 별도 선택·재검토 모델과 전경 요약 호출은 없고 과제 준비는 EXECUTE를 THINK로 승격하지 않는다.
-  - THINK/REPAIR는 현재 의식이 문제·기준을 새로 정한다. 무관한 과제는 연결하지 않으며 의식과 실행자가 오연결을 해제할 수 있다.
-  - `pursuit.bound`는 연결 근거·현재 모델 출처, `framing_source`는 규정 출처를 남긴다. 미정리 턴은 확인 경로와 함께 전달하고 요약은 응답 후 증류한다. 분리된 턴은 요약·재합류에서 제외한다. [구현 계약](../../docs/PURSUIT_ON_DEMAND_2026_09_20.md).
+- **현재 문제 규정과 실행 신원** — 일반 과제 원장 제거(2026-10-29)
+  - THINK/REPAIR의 현재 문제·기준과 규정 계승은 기존 의식 경로가 맡는다.
+  - `execution_turn`은 현재 task의 MCP 재진입 문맥을 유지하고 종료 때 폐기한다.
+  - `execution_identity`는 주행기록 소유자·task·episode의 명시 연결만 저장한다. 과거 과제 원문은 `pursuit_history`로 읽는다.
+  - 대화 이력·할일·연구 계획·자기수리 인계는 유지한다. [제거 기록](../../docs/PURSUIT_REMOVAL_PLAN_2026_10_29.md).
 
 - **평가 에이전트 (경량 AI)** — `final_evaluator` → `cognitive_eval._evaluate_achievement()`
   - 의식의 명시적 criteria/achievement_criteria만 판정한다. 목표·품질·멈춤선을 새로 정하지 않는다. 기준이 비면 평가도 없다.
   - 미달은 기존 기준 ID·증거·최소 보완을 연결한 DEFECTS로 전달한다. 기준 외 산문이나 연결 없는 지적은 재작업시키지 않는다. 최종 보완·재평가는 고정된 기준으로 최대 한 번이다. 수치 검사는 증거이며 별도 자동 탈락 조건이 아니다.
   - 감독 없는 GoalEval은 같은 평가 프롬프트·기준 연결 검증을 쓰는 호환 경로다.
-  - **평가 경로의 경계**(2026-09-12): 감독·평가 여부는 실행 *전에* '의식 규정이 있는가'로 확정한다(`agent_pipeline` 의 `_evaluation_enabled` = 의식 출력 있음 ∧ 강제 역할 아님). 실행 중 도구 실패·쓰기·미분류 호출·긴 작업·알림·과제 완료 요청은 `Supervisor.enabled` 를 켜지 못한다(`configure` 가 규정 유무로만 정한다). 평가 미실행은 `episode_summary.evaluation_result` NULL 이며 실패가 아니다. **기준의 주인은 의식**이다 — `supervisor_handoff.criteria_contract` 가 의식이 정한 항목에 ID 를 주고 하네스는 fallback 기준을 만들지 않으며, `final_evaluator` 는 최종평가 시작 시 기준을 고정해 보완·재평가에도 같은 계약을 준다(공통 평가 프롬프트에서 도구 적절성·노력선·'더 할 수 있었던 일'·시각 품질 심사를 걷어냈다). 정본 `docs/FINAL_EVALUATOR_SEPARATION_2026_09_11.md` · `EVALUATOR_CRITERIA_OWNERSHIP_2026_09_12.md` · `EVALUATION_ROUTE_BOUNDARY_2026_09_12.md`.
+  - **평가 경로의 경계**(2026-09-12): 감독·평가 여부는 실행 *전에* '의식 규정이 있는가'로 확정한다(`agent_pipeline` 의 `_evaluation_enabled` = 의식 출력 있음 ∧ 강제 역할 아님). 실행 중 도구 실패·쓰기·미분류 호출·긴 작업·알림은 `Supervisor.enabled` 를 켜지 못한다(`configure` 가 규정 유무로만 정한다). 평가 미실행은 `episode_summary.evaluation_result` NULL 이며 실패가 아니다. **기준의 주인은 의식**이다 — `supervisor_handoff.criteria_contract` 가 의식이 정한 항목에 ID 를 주고 하네스는 fallback 기준을 만들지 않으며, `final_evaluator` 는 최종평가 시작 시 기준을 고정해 보완·재평가에도 같은 계약을 준다(공통 평가 프롬프트에서 도구 적절성·노력선·'더 할 수 있었던 일'·시각 품질 심사를 걷어냈다). 정본 `docs/FINAL_EVALUATOR_SEPARATION_2026_09_11.md` · `EVALUATOR_CRITERIA_OWNERSHIP_2026_09_12.md` · `EVALUATION_ROUTE_BOUNDARY_2026_09_12.md`.
   - **스트림 안**에서 돈다: 평가 진행 표지와 재실행 에이전트의 이벤트가 그대로 흐른다. 블로킹 함수였던 옛 판은 재실행(실측 10분)이 통째로 화면 밖이라 WS 유휴 타임아웃(600초)을 구조적으로 넘겼다(2026-08-22 수리)
   - 프롬프트: `data/common_prompts/evaluator_prompt.md`
 
@@ -337,7 +337,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - `episode_summary` 테이블: 인지 품질 지표 영구 보존 (해마 점수, 무의식 판정, 의식 소요시간, 실행 라운드, 평가 결과)
 - 파일: `backend/base/episode_logger.py`, DB: `data/world_pulse.db`
 - API: `/xray/episodes`, `/xray/episodes/{id}`, `/xray/episode-summaries`
-- **실행 통합 조회**(2026-09-11, L0→L2 `e24e4ab4`·`ed59d00b`·`b927e2d7`): 흩어진 원장(episode/trajectory·쓰기 관문 JSONL·프로젝트/시스템 대화 DB·과제 원장·검수 작업대·런타임 관측)을 **물리 통합하지 않고** 읽기 시점에 합성한다. 각 원장의 주인이 strict 읽기 함수를 소유하고(`base/episode_trace_reader.py`·`write_ledger.read_trace_page`·`conversation_db`·`pursuit_ledger`·`supervision_store`, 공통 원시 연산 `base/trace_read.py` — SQLite `mode=ro`/`query_only`·예산·페이지), `services/execution_trace.py` 가 신원 범위(`execution_trace_scope`)·HMAC 커서·부분성(`missing`/`ambiguous`/`partial`)·비용(`model.usage` 중 `billable_usage` 만 합산)을 조합한다. ★신원 지도가 먼저였다(L0): `episode_log.owner` 는 자아가 아니라 프로세스 신원, `agent`·`delegated_to` 는 표시 이름, 메시지에는 task FK 가 없다 — 그래서 시간·이름으로 추정 조인하지 않고 `pursuit_turn.episode_id`·`pursuit.agent_key` 같은 명시 연결만 쓴다. 소비처는 조종실 주행기록의 행 펼치기(`ExecutionTraceDetail.tsx`), 원문은 명시적으로 여는 별도 페이지. 라우트·인증은 technical.md, 정본 `docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md`.
+- **실행 통합 조회**(2026-09-11, L0→L2 `e24e4ab4`·`ed59d00b`·`b927e2d7`): 흩어진 원장(episode/trajectory·쓰기 관문 JSONL·프로젝트/시스템 대화 DB·과제 원장·검수 작업대·런타임 관측)을 **물리 통합하지 않고** 읽기 시점에 합성한다. 각 원장의 주인이 strict 읽기 함수를 소유하고(`base/episode_trace_reader.py`·`write_ledger.read_trace_page`·`conversation_db`·`pursuit_history`·`supervision_store`, 공통 원시 연산 `base/trace_read.py` — SQLite `mode=ro`/`query_only`·예산·페이지), `services/execution_trace.py` 가 신원 범위(`execution_trace_scope`)·HMAC 커서·부분성(`missing`/`ambiguous`/`partial`)·비용(`model.usage` 중 `billable_usage` 만 합산)을 조합한다. ★신원 지도가 먼저였다(L0): `episode_log.owner` 는 자아가 아니라 프로세스 신원, `agent`·`delegated_to` 는 표시 이름, 메시지에는 task FK 가 없다 — 그래서 시간·이름으로 추정 조인하지 않고 `execution_identity`의 agent_key/task_id/episode_id 연결과 과거 `pursuit_turn.episode_id`·`pursuit.agent_key` 같은 명시 연결만 쓴다. 소비처는 조종실 주행기록의 행 펼치기(`ExecutionTraceDetail.tsx`), 원문은 명시적으로 여는 별도 페이지. 라우트·인증은 technical.md, 정본 `docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md`.
 
 **서버 시작 시**: 최근 1시간 내 펄스가 없으면 즉시 수집, 있으면 건너뜀
 
@@ -563,7 +563,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 172 액션** (sense 39·self 58·limbs 13·others 20·engines 19·table 23)
-- backend **.py 632개**(test 제외, git 추적 기준) — 층 디렉토리 `base 91 · datastore 91 · ibl 92 · cognition 95 · services 93 · surface 96`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **97**)
+- backend **.py 630개**(test 제외, git 추적 기준) — 층 디렉토리 `base 92 · datastore 92 · ibl 92 · cognition 92 · services 93 · surface 95`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **97**)
 - op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 24·미선언 89)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

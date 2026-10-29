@@ -81,7 +81,7 @@ def test_repeat_inherits_without_waking_consciousness(monkeypatch):
     assert out["achievement_criteria"] == "NEW 5건" and out["imagined_ibl"]   # 정기는 초안을 잇는다
     assert "history_summary" not in out
     assert "needs_repair" not in out and "_repair_policy" not in out       # 권한 미계승
-    assert out["scope"] == "turn" and out["pursuit_id"] is None and "title" not in out
+    assert not {"scope", "pursuit_id", "title"} & out.keys()
 
 
 def test_repeat_requires_previous_achieved(monkeypatch):
@@ -147,15 +147,11 @@ def test_bad_patch_declines_inheritance(monkeypatch, patch):
     assert r.calls == 1 and out["task_framing"] == "새 규정"
 
 
-def test_remember_normalizes_pursuit_row_and_keeps_bounded(monkeypatch):
-    import pursuit_bind as pb
+def test_remember_keeps_only_framing_and_is_bounded(monkeypatch):
     r = Runner()
-    binding = type("B", (), {"row": {"id": "pursuit_" + "a" * 32}})()
-    monkeypatch.setattr(pb, "current", lambda: binding)
     rec = _remember(r, "주간 보고")
-    assert rec["framing"]["scope"] == "pursuit" and rec["framing"]["pursuit_id"] == binding.row["id"]
-    assert rec["pursuit_id"] == binding.row["id"] and rec["achieved"] is True
-    monkeypatch.setattr(pb, "current", lambda: None)
+    assert not {"scope", "pursuit_id", "title", "goal_criteria"} & rec["framing"].keys()
+    assert "pursuit_id" not in rec and rec["achieved"] is True
     for i in range(fi.REPEAT_KEEP + 5):
         _remember(r, f"문장 {i}")
     assert len(fi._load("agent_t")["repeat"]) == fi.REPEAT_KEEP

@@ -25,7 +25,7 @@ def test_saved_framing_skips_new_consciousness_and_preserves_criteria(tmp_path, 
     from cognitive_consciousness import CognitiveConsciousnessMixin
     row = record(tmp_path, resume_task_id="resume")
     row["framing"]["imagined_ibl"] = "이미 실행한 계획"
-    monkeypatch.setattr("pursuit_bind.run_consciousness", lambda *a: pytest.fail("의식 재호출"))
+    monkeypatch.setattr("cognitive_consciousness.CognitiveConsciousnessMixin._run_consciousness", lambda *a: pytest.fail("의식 재호출"))
     with tc.actor_context(agent_id="agent", task_id="resume", origin="user"), journal.resuming(row):
         output = CognitiveConsciousnessMixin()._run_consciousness_or_reuse(row["goal"], [], repair=True)
         assert output["achievement_criteria"] == row["framing"]["achievement_criteria"]

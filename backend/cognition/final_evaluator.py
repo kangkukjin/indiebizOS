@@ -258,15 +258,9 @@ def prepare(controller, tool_calls=None):
     criteria = getattr(controller, "_final_criteria_contract", None)
     if criteria is None:
         criteria = criteria_contract(controller.message, controller.framing)
-        completion = controller.done_request or {}
-        text = completion.get("goal_criteria")
-        if text and not any(row["text"] == text for row in criteria["criteria"]):
-            criteria["criteria"].append({"id": "G1", "text": text, "source": "pursuit"})
-        # 이전 과제 기준은 변경 이력이다. 정정된 기준과 동시에 새 의무로 부과하지 않는다.
         controller._final_criteria_contract = copy.deepcopy(criteria)
     criteria = copy.deepcopy(criteria)
-    completion = controller.done_request or {}
-    context = {"criteria_contract": criteria, "completion_request": completion,
+    context = {"criteria_contract": criteria,
                "pending_delivery": delivery, "previous_evaluation": controller.last_decision,
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
                "evidence_index": controller.store.tool_index(),
@@ -382,7 +376,7 @@ def invoke(controller, prompt="", *, phase="final"):
     manifest = controller._evaluation_snapshot["response"]
     result = {"status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
               "reason": feedback, "severity": severity, "response_version": manifest["version"],
-              "response_hash": manifest["hash"], "instruction": "", "pursuit_status": "UNKNOWN",
+              "response_hash": manifest["hash"], "instruction": "",
               **getattr(evaluator, "goal_outcome", {"goal_status": "UNKNOWN"})}
     if phase in {"workspace", "semantic"}:
         match = re.search(r"(?m)^WORKSPACE_COVERAGE:\s*(\[.*\])\s*$", feedback)
@@ -399,9 +393,6 @@ def invoke(controller, prompt="", *, phase="final"):
         delivery = controller._evaluation_snapshot["delivery"]
         if delivery:
             result["delivery_hash"] = delivery["hash"]
-        if (result.get("goal_status") == "ACHIEVED" and controller.done_request
-                and controller.done_request.get("goal_criteria")):
-            result["pursuit_status"] = "APPROVED"
     if result["status"] == "REWORK":
         result["defects"] = parse_criterion_defects(feedback, packet["context"]["criteria_contract"])
         scope = re.search(r"(?mi)^REPAIR_SCOPE:\s*(local|research)\s*$", feedback)

@@ -216,19 +216,12 @@ def test_user_cancel_prevents_queued_execution(supervisor, tmp_path, monkeypatch
     assert settled == ["cancelled"]
 
 
-def test_completion_intent_survives_execution_without_accepting_new_goal(supervisor, tmp_path, monkeypatch):
+def test_saved_full_criteria_survive_execution_resume(supervisor, tmp_path, monkeypatch):
     authorize(supervisor, tmp_path, monkeypatch)
-    request = {"id": "pursuit", "goal_criteria": "전체 구현", "version": 1}
-    binding = SimpleNamespace(row={**request, "version": 4})
-    monkeypatch.setattr("pursuit_bind.current", lambda: binding)
-    row = {"done_request": request, "criteria_contract": {"criteria": [{"id": "G1", "text": "전체 구현"}]}}
-    framing = {"_framing_source": "repair_continuation", "achievement_criteria": "전체 구현"}
-    with journal.resuming(row):
-        supervisor.configure(framing, repair=True)
-        assert supervisor.done_request["version"] == 4 and request["version"] == 1
-        binding.row["goal_criteria"] = "사용자가 변경한 기준"
-        with pytest.raises(ValueError, match="완료 기준"):
-            supervisor.configure(framing, repair=True)
+    contract = {"criteria": [{"id": "C1", "text": "전체 구현"}]}
+    with journal.resuming({"criteria_contract": contract}):
+        supervisor.configure({"_framing_source": "repair_continuation", "achievement_criteria": "이번 단계"}, repair=True)
+        assert supervisor._final_criteria_contract == contract
 
 
 def test_image_evaluation_falls_back_to_ready_visual_provider(monkeypatch):

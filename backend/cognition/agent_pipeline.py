@@ -326,8 +326,10 @@ class CognitivePipelineMixin:
                                  hard_token_limit=resource_limits.get("hard_token_limit"),
                                  deadline_s=resource_limits.get("deadline_s")):
             # 화면·위임·스케줄러가 신원을 생략해도 감독과 MCP가 같은 턴을 찾는다.
-            from pursuit_bind import enter, leave, observe
-            _ptoken = enter(self, message, history, enabled=not kwargs.get("force_role"))
+            from execution_turn import enter, leave
+            from execution_identity import record_current
+            record_current(self)
+            _execution_token = enter(self, enabled=not kwargs.get("force_role"))
             from conscious_supervisor import open_supervisor
             _supervisor = None
             try:
@@ -355,12 +357,11 @@ class CognitivePipelineMixin:
                 from dialogue_continuation import stream
                 for event in stream(segment, message, history, agent_id, task_id, handoff,
                                     kwargs.get("cancel_check")):
-                    observe(event)
                     yield event
             finally:
                 if _supervisor:
                     _supervisor.close()
-                leave(_ptoken)
+                leave(_execution_token)
                 if task_cancel_requested(task_owner, task_id):
                     from delegation_tasks import confirm_task_cancelled
                     confirm_task_cancelled(task_owner, task_id)
@@ -444,10 +445,6 @@ class CognitivePipelineMixin:
             yield {"type": "_turn_meta", "tool_calls": [], "session_reset": True}
             return
 
-        # 후보 목차만 제공한다. 현재 의식/실행 모델이 연결하며 별도 호출·THINK 승격은 없다.
-        from pursuit_bind import prepare as _p_prepare
-        if recall:
-            recall.attach("pursuit", _p_prepare())
         context_update = request_type == "CONTEXT_UPDATE"
         if context_update:
             from turn_scope import CONTEXT_UPDATE
@@ -547,8 +544,6 @@ class CognitivePipelineMixin:
                 else:
                     print(f"[수리] 의식 needs_repair 선언이지만 출처={_origin or '자율'}"
                           f" — 그랜트 없이 THINK 로 진행")
-        from pursuit_bind import refresh_memory
-        execution_memory = refresh_memory(execution_memory)
 
         # Clarification fast-path — 의식이 정보 부족으로 확인을 요청하면 실행 스킵
         # 추론 예산은 차선에 걸린다(EXECUTE=off, THINK/REPAIR=default — 정본 model_gear.json
@@ -964,10 +959,6 @@ class CognitivePipelineMixin:
             # ★백그라운드 실행 — 증류가 스트림 종료·에피소드 END 를 붙잡지 않게
             # (ep889: 증류 꼬리 6분이 턴을 물고 있었다). 컨텍스트 동반은 래퍼가 처리.
             if not force_role:
-                from pursuit_bind import finish as _p_finish
-                _packet = _p_finish(final_content, tool_calls_log,
-                                    interrupted=not _response_completed or not bool(final_content),
-                                    clarification=bool(_clarify_text and not _capability_guard.resumes))
                 # 규정 계승 저장(2026-10-07) — 이 턴의 유효 규정(재규정됐으면 그 판)을 자아별로 적는다.
                 # 다음 턴의 후속·정기 계승 재료. 실패해도 턴을 깨지 않는다.
                 if consciousness_output:
@@ -983,7 +974,7 @@ class CognitivePipelineMixin:
                     self._after_response_async(
                         message, final_content,
                         tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
-                        turn_tokens=turn_tokens, **({"pursuit_packet": _packet} if _packet else {}),
+                        turn_tokens=turn_tokens,
                         presented=recall.usage_payload() if recall else {},
                         # 이 턴의 메시지를 누가 썼나 — 진입점이 선언한다. "owner"(주인이 직접 친 말)만
                         # 심층기억 증류의 재료다. 에이전트 위임문·보고 회수·예약 주입문·미선언은 닫힌다.

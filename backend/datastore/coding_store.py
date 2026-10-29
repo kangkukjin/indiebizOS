@@ -1,4 +1,4 @@
-"""코딩 앱 상태와 재구독 사건. 과제 의미는 기존 PursuitLedger가 소유한다."""
+"""코딩 앱의 작업 상태와 재구독 사건."""
 import hashlib
 import json
 import sqlite3

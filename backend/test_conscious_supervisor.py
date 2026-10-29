@@ -294,25 +294,8 @@ def test_mcp_bridge_restores_scope_and_supervisor_cannot_bypass_workbench(superv
     assert blocked["not_executed"]
 
 
-def test_pursuit_done_is_request_until_final_overall_approval(supervisor, monkeypatch):
-    writes = []
-    binding = SimpleNamespace(row={"id": "p1", "version": 7, "goal_criteria": "전체 영상 배포"},
-                              write=lambda *a, **kw: writes.append((a, kw)))
-    result = supervisor.request_done(binding, "영상 완성")
-    assert result["status"] == "completion_requested" and not writes
-    monkeypatch.setattr("pursuit_bind.resolve_session", lambda *a: binding)
-    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c, pursuit_status="APPROVED"))
-    finish(supervisor, "완성한 영상")
-    assert writes[0][0][0] == {"status": "done"}
 
 
-def test_turn_approval_alone_cannot_close_whole_pursuit(supervisor, monkeypatch):
-    binding = SimpleNamespace(row={"id": "p", "version": 1, "goal_criteria": "전체 목표"})
-    supervisor.request_done(binding, "이번 단계 완료")
-    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
-    assert "전체 과제의 목표 달성" in finish(supervisor, "응답")[-1]["content"]
-    assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
-    assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
 
 
 def test_stale_response_approval_is_unknown(supervisor, monkeypatch):
@@ -406,9 +389,6 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     runner.ai._provider = None
     runner.ai.process_message_stream = stream
     supervisor.runner = runner
-    monkeypatch.setattr("pursuit_bind.prepare", lambda: "")
-    monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
-    monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     if not supervised:
         monkeypatch.setattr("supervision_bus.current", lambda *a, **kw: None)
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: calls.append(1) or verdict(c))

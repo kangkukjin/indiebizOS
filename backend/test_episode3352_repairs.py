@@ -39,9 +39,8 @@ def test_system_ai_pipeline_binds_identity_and_closes_supervisor(tmp_path, monke
     from conscious_supervisor import Supervisor
     from supervision_bus import current
     monkeypatch.setattr("agent_pipeline._reload_gate_notice", lambda: "")
-    monkeypatch.setattr("pursuit_bind.enter", lambda *a, **k: None)
-    monkeypatch.setattr("pursuit_bind.leave", lambda *a: None)
-    monkeypatch.setattr("pursuit_bind.observe", lambda *a: None)
+    monkeypatch.setattr("execution_turn.enter", lambda *a, **k: None)
+    monkeypatch.setattr("execution_turn.leave", lambda *a: None)
     opened = []
 
     def open_controller(runner, message, history, cancel):

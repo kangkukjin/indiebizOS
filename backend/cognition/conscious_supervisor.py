@@ -97,12 +97,10 @@ class Supervisor:
         self.request_intent = "task"
         self.call_deadline = 0
         self.finalizing = False
-        self.done_request = None
+        self.completion_review_required = False
         self.repair_kept = False
         self.exec_revision = 0
         self.review_cursor = 0
-        self.original_pursuit = None
-        self.pursuit = None
         self.repair_granted = False
         self.apply_scheduled = None   # 적용 예약 접수증 뒤의 도구 호출은 실행하지 않는다(G3: 하네스가 턴을 닫는다)
         self.usage = {"input": 0, "output": 0}
@@ -291,19 +289,13 @@ class Supervisor:
         self.phase = "execute"
         self.executor_paused = False
         self.context = __import__("thread_context").snapshot()
-        from pursuit_bind import current as pursuit_current
-        binding = pursuit_current()
-        self.pursuit = binding
         self.repair_granted = repair
         if (framing or {}).get("_framing_source") == "repair_continuation":
             from repair_continuation import current as repair_current
             prior = repair_current() or {}
             self.verifications.records = list(prior.get("verification_records", []))
             self._final_criteria_contract = prior.get("criteria_contract")
-            from repair_resume import restore_completion
-            restore_completion(self, prior.get("done_request"), binding)
-        if binding and binding.row:
-            self.original_pursuit = {k: binding.row[k] for k in ("id", "version", "goal_criteria")}
+            self.completion_review_required = bool(prior.get("completion_review_required"))
         self.log("framing", role="consciousness" if self.enabled else "harness",
                  evaluation_enabled=self.evaluation_enabled,
                  framing_source=(framing or {}).get("_framing_source", "unobserved"),
@@ -332,7 +324,6 @@ class Supervisor:
             current_framing = {**(self.framing or {}), "request_intent": self.request_intent}
             ch = TurnChannel(self.owner, self.runner, self.message, self.history, "",
                              current_framing, self.repair_granted, self.owner)
-            ch.pursuit = self.pursuit
             env = _revise(ch, "executor", payload["broken_assumption"], payload["evidence"],
                           payload.get("progress", ""), payload.get("kind", "other"))
             if env.get("revised"):
@@ -379,11 +370,9 @@ class Supervisor:
                     "events": events,
                     "earlier_events": "evidence id=events, offset=사건 seq로 이전 원문을 읽을 수 있습니다",
                     "jobs": list(self.job_states.values()),
-                    "tools": [name for name in self.catalog if name not in {"pursuit", "reframe", "supervision"}],
+                    "tools": [name for name in self.catalog if name not in {"reframe", "supervision"}],
                     "response": self.store.manifest() if self.store.version else None,
                     "pending_delivery": self.delivery.manifest(),
-                    "pursuit_completion_request": self.done_request,
-                    "original_pursuit": self.original_pursuit,
                     "tools_remaining": self.config["max_tools_total"] - self.tools_used, "usage": dict(self.usage),
                     "cursor": self.store.sequence,
                     "execution_cost": dict(self.store.cost),
@@ -400,7 +389,7 @@ class Supervisor:
             if mark:
                 self.state_cursor = state["cursor"]
             if delta:
-                for key in ("original_goal", "framing", "conversation_evidence", "tools", "original_pursuit"):
+                for key in ("original_goal", "framing", "conversation_evidence", "tools"):
                     state.pop(key, None)  # 같은 모델 호출의 최초 snapshot에 이미 제공했다.
                 state.update(since=cursor, changed=bool(events),
                              hint="최초 snapshot 이후 변경분. 과거 원문은 evidence id=events로 읽으세요")
@@ -812,7 +801,7 @@ class Supervisor:
                     result = self.store.manifest()
             elif op == "execute":
                 name, args = payload.get("name"), payload.get("input", {})
-                if name not in self.catalog or name in {"reframe", "pursuit", "supervision"}:
+                if name not in self.catalog or name in {"reframe", "supervision"}:
                     raise ValueError("실행자에게 부여된 실제 작업 도구만 사용할 수 있습니다")
                 # 도구는 임의 코드/워크플로우를 품을 수 있다. 이름 추측으로 read-only 판정하지 않고
                 # 실행 중인 동작이 하나라도 있으면 직접 실행 전체를 막아 단일 작성자를 지킨다.
@@ -861,16 +850,6 @@ class Supervisor:
             self.log("tool.error", role="consciousness" if is_manager else "execution", operation=op, error=str(exc))
             return json.dumps({"success": False, "error": str(exc)}, ensure_ascii=False)
 
-    def request_done(self, binding, why):
-        if not self.evaluation_enabled:
-            raise ValueError("의식의 달성 기준이 없는 턴은 평가 대기 없이 과제 원장에 완료를 기록합니다")
-        self.done_request = {"id": binding.row["id"], "version": binding.row["version"],
-                             "goal_criteria": binding.row["goal_criteria"], "why": why}
-        if self.original_pursuit and self.original_pursuit["id"] == binding.row["id"]:
-            self.done_request["original_goal_criteria"] = self.original_pursuit["goal_criteria"]
-        self.log("pursuit.completion_requested", evidence=self.store.evidence(self.done_request))
-        return {"status": "completion_requested", "message": "전체 목표 달성 근거를 평가자가 검수한 뒤 완료 처리합니다"}
-
     def finalize(self, response, history, collect, cancel_check=None, tool_calls=None):
         if not self.enabled:
             return response
@@ -893,7 +872,7 @@ class Supervisor:
             return final
         from repair_policy import enabled as receipt_repair, finalize as finish_repair
         if (receipt_repair(self) and getattr(self, "_repair_completion_policy", 2) == 2
-                and not self.done_request and not self.delivery.manifest()):
+                and not self.completion_review_required and not self.delivery.manifest()):
             final = finish_repair(self, response)
             yield {"type": "text", "content": final}
             yield {"type": "final", "content": final}
@@ -965,8 +944,6 @@ class Supervisor:
                     changed = snapshot_error(self)
                     if changed:
                         decision = {"status": "UNKNOWN", "reason": changed}
-                if decision["status"] == "APPROVED" and self.done_request and decision.get("pursuit_status") != "APPROVED":
-                    decision = {"status": "UNKNOWN", "reason": "이번 턴과 별개인 전체 과제의 목표 달성이 승인되지 않았습니다"}
                 delivery = self.delivery.manifest()
                 if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
                     decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
@@ -1041,24 +1018,12 @@ class Supervisor:
                     self.log("repair.unconfirmed", role="harness", decision=decision)
                     break
         approved = decision["status"] == "APPROVED"
-        completion_binding = None
         if approved and self.repair_granted:
             from repair_readiness import completion_error
             error = completion_error(self)
             if error:
                 approved = False
                 decision = {"status": "UNKNOWN", "reason": error}
-        if approved and self.done_request:
-            try:
-                from pursuit_bind import resolve_session
-                completion_binding = resolve_session(self.owner, self.task)
-                if (completion_binding.row["id"] != self.done_request["id"]
-                        or completion_binding.row["version"] != self.done_request["version"]):
-                    raise ValueError("검수 중 과제 버전이 바뀌었습니다")
-            except Exception as exc:
-                self.log("pursuit.approval_conflict", role="harness", error=str(exc))
-                approved = False
-                decision = {"status": "UNKNOWN", "reason": "검수 중 전체 과제가 변경되어 완료 승인을 적용하지 못했습니다"}
         if approved:
             try:
                 self.delivery.deliver(decision.get("delivery_hash"), self.cancelled)
@@ -1069,14 +1034,6 @@ class Supervisor:
                 record_trajectory_event("validation.completed", {
                     "validator": "goal_eval", "status": "UNKNOWN", "achieved": False,
                     "feedback_text": decision["reason"], "stage": "delivery"})
-        if approved and self.done_request and decision.get("pursuit_status") == "APPROVED":
-            try:
-                completion_binding.write({"status": "done"}, kind="evaluator.approved",
-                                         why=decision["reason"], key=self.turn_id)
-            except Exception as exc:
-                self.log("pursuit.approval_conflict", role="harness", error=str(exc))
-                approved = False
-                decision = {"status": "UNKNOWN", "reason": "검수 중 전체 과제가 변경되어 완료 승인을 적용하지 못했습니다"}
         status = "ACHIEVED" if approved else "NOT_ACHIEVED" if decision["status"] == "REWORK" else "UNKNOWN"
         from repair_continuation import finish_review
         if finish_review(self, decision):

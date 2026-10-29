@@ -350,7 +350,6 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "mcp__indiebizos__read_guide",
         # MCP — 턴 안 재규정 브리지(reframe.py). read_guide 와 같은 이유로 MCP 로만 닿는다.
         "mcp__indiebizos__reframe",
-        "mcp__indiebizos__pursuit",
         "mcp__indiebizos__supervision",
     ]
 

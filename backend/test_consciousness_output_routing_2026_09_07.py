@@ -140,31 +140,7 @@ def _bool_probes():
 
 def test_every_prompt_key_reaches_a_consumer(tmp_path):
     keys = _prompt_schema_keys()
-    co = {**_fill(keys), "pursuit_id": None}
-    from pursuit_bind import Binding, _current, accept_output
-    from pursuit_ledger import PursuitLedger
-    ledger = PursuitLedger(tmp_path / "pursuit.db", "routing-test")
-    binding = Binding(None, ledger, "routing-test", "routing-turn", "과제", [])
-    token = _current.set(binding)
-    try:
-        accept_output({**co, "scope": "turn"})
-        assert binding.row is None
-        accept_output({**co, "scope": "pursuit"})
-        assert binding.row is not None
-        assert binding.row["title"] == _sentinel("title")
-        assert binding.row["goal_criteria"] == _sentinel("goal_criteria")
-        pid = binding.row["id"]
-        accept_output({**co, "scope": "turn", "detach_pursuit": True})
-        assert binding.row is None
-        old = ledger.create("기존", "기존 목표", "other")
-        accept_output({**co, "scope": "turn", "pursuit_id": old["id"],
-                       "pursuit_reason": _sentinel("pursuit_reason")})
-        assert binding.row["id"] == old["id"]
-        assert ledger.get(pid)["title"] == _sentinel("title")
-        assert ledger.turns(pid)[0]["state"] == "detached"
-    finally:
-        _current.reset(token)
-    keys -= {"scope", "title", "goal_criteria", "detach_pursuit", "pursuit_id", "pursuit_reason"}
+    co = _fill(keys)
     text = _assembled_text(co)
     probes = _bool_probes()
 

@@ -38,15 +38,13 @@ def trace(tmp_path):
         c.execute('INSERT INTO trajectory_event VALUES(?,?,?,?,?,?,?,?,?)',
                   (trajectory_run_id('concurrent-task'), 1, 3, 'concurrent-task', '', '', 'other.task', '{}', 'usage'))
     from conversation_db import ConversationDB
-    from pursuit_ledger import PursuitLedger
+    from execution_identity import record
     for p, eid in [('project-a', 1), ('project-b', 2)]:
         db = tmp_path / 'projects' / p / 'conversations.db'
         ConversationDB(str(db)).create_task('shared-task', 'requester', 'gui', 'raw task request', 'Display Name')
         with sqlite3.connect(db) as c:
             c.execute("UPDATE tasks SET status='completed',result='task result bytes' WHERE task_id='shared-task'")
-        ledger = PursuitLedger(db, 'agent-a')
-        row = ledger.create('title', 'criteria', 'shared-task')
-        ledger.begin_turn(row['id'], 'shared-task', 'raw original request', episode_id=eid)
+        record(db, 'agent-a', 'shared-task', eid)
     # These are observations of the same event, followed by an actual repeated write.
     write = {'episode_id': 1, 'run': trajectory_run_id('shared-task'), 'event_seq': 8,
              'task': 'shared-task', 'event': 'write', 'gate': 'fixture'}
@@ -248,16 +246,13 @@ def test_bad_cursor_and_changed_task_metadata(trace):
     assert changed['cursor_expired']
 
 
-def test_task_without_pursuit_returns_scoped_state_without_guessing_episode(trace):
+def test_task_without_recorded_owner_cannot_claim_requested_scope(trace):
     svc, root = trace
     with sqlite3.connect(root / 'projects/project-a/conversations.db') as c:
-        c.execute("DELETE FROM pursuit_turn")
-        c.execute("DELETE FROM pursuit")
+        c.execute("DELETE FROM execution_identity")
     result = svc.query(ACCESS, project='project-a', owner='agent-a', task_id='shared-task')
-    assert result['status'] == 'ok'
-    assert result['state']['task'] == 'completed'
-    assert result['identity']['episode_ids'] == []
-    assert result['partial']
+    assert result['status'] == 'partial'
+    assert 'state' not in result
 
 
 def test_episode_log_pages_detect_content_change_even_same_length(trace):
@@ -500,6 +495,31 @@ def test_multiple_generation_aliases_do_not_duplicate_store_rows(trace):
     assert len([e for e in events if e['source'] == 'supervision']) == 1
     observations = [link for e in events for link in e['links'] if link.get('relation') == 'supervision_observation']
     assert len(observations) == 3
+
+
+
+@pytest.mark.parametrize("with_new_identity", [False, True])
+def test_historical_task_evidence_is_readonly_and_scoped(trace, with_new_identity):
+    svc, root = trace
+    db = root / "projects/project-a/conversations.db"
+    with sqlite3.connect(db) as conn:
+        if not with_new_identity:
+            conn.execute("DROP TABLE execution_identity")
+        conn.executescript("""
+            CREATE TABLE pursuit(id,agent_key,version,status);
+            CREATE TABLE pursuit_turn(pursuit_id,task_id,episode_id,state,source_order,input,response);
+            CREATE TABLE pursuit_event(id INTEGER PRIMARY KEY,pursuit_id,task_id,kind,created_at);
+            INSERT INTO pursuit VALUES('old','agent-a',3,'active');
+            INSERT INTO pursuit_turn VALUES('old','shared-task','1','applied',1,'old request','old answer');
+            INSERT INTO pursuit_event VALUES(1,'old','shared-task','summary','2026-09-11');
+        """)
+    before = source_files(root)
+    result = pages(svc, episode_id=1, limit=1)
+    refs = [ref for page in result for ref in page["links"]["documents"] if ref["label"] == "pursuit response"]
+    assert refs
+    assert svc.document(ACCESS, refs[0]["source_ref"], episode_id=1)["text"] == "old answer"
+    assert svc.document(ACCESS, refs[0]["source_ref"], episode_id=2)["status"] == "forbidden"
+    assert source_files(root) == before
 
 
 if __name__ == "__main__":

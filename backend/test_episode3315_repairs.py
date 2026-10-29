@@ -9,85 +9,20 @@ from types import SimpleNamespace
 import pytest
 
 import consciousness_agent as ca
-import pursuit_bind as pb
-from pursuit_ledger import PursuitLedger
 
 
 SUMMARY = {"progress": "디지털 노마드 원고 작성", "next": "내용 검토"}
 
-def model_answers(monkeypatch, answers):
-    calls = []
-    replies = iter(answers)
-
-    def call(prompt, **kwargs):
-        calls.append((prompt, kwargs))
-        return next(replies)
-
-    monkeypatch.setattr(ca, "oneshot_ai_call", call)
-    return calls
 
 
-@pytest.mark.parametrize("raw", [
-    '{progress:"원고 작성"}', '{"progress":"원고 작성",}', '{"progress":null}',
-    '{"progress":[]}', '{"status":"done"}', '[]', '', None,
-])
-def test_invalid_summary_retries_once_with_original_request(monkeypatch, raw):
-    calls = model_answers(monkeypatch, [raw, json.dumps(SUMMARY)])
-    assert pb.ask_json("사용자의 정정을 반영하라", kind="summary") == SUMMARY
-    assert len(calls) == 2 and calls[1][0].startswith(calls[0][0])
-    assert "previous_response" in calls[1][0]
-    assert all(k["role"] == "background" for _, k in calls)
 
 
-@pytest.mark.parametrize("fenced", [False, True])
-def test_valid_json_needs_only_one_call(monkeypatch, fenced):
-    raw = json.dumps(SUMMARY, ensure_ascii=False)
-    if fenced:
-        raw = "```json\n" + raw + "\n```"
-    calls = model_answers(monkeypatch, [raw])
-    assert pb.ask_json("요약", kind="summary") == SUMMARY
-    assert len(calls) == 1
 
 
-@pytest.mark.parametrize("bad,good", [
-    ({"status": "done"}, {"progress": "확인된 결과"}),
-    ({"artifacts": [{"path": "draft.md"}]}, {"artifacts": ["draft.md"]}),
-    ({"next": "x" * 601}, {"next": "실제 산출물 확인"}),
-])
-def test_summary_validates_before_accepting(monkeypatch, bad, good):
-    model_answers(monkeypatch, [json.dumps(bad), json.dumps(good)])
-    assert pb.ask_json("판단", kind="summary") == good
 
 
-def test_exhausted_retry_retains_cause_and_masks_diagnostic(monkeypatch, capsys):
-    secret = "sk-" + "a" * 32
-    raw = '{progress:"원고", api_key:"' + secret + '"}'
-    calls = model_answers(monkeypatch, [raw, raw])
-    with pytest.raises(ValueError, match="2회 실패") as caught:
-        pb.ask_json("요약", kind="summary")
-    assert isinstance(caught.value.__cause__, json.JSONDecodeError)
-    assert len(calls) == 2
-    log = capsys.readouterr().out
-    assert "summary 2/2" in log and "응답 미리보기=" in log and secret not in log
 
 
-def test_prepare_never_calls_model_and_binding_preserves_episode(tmp_path, monkeypatch):
-    import episode_logger as el
-    ledger = PursuitLedger(tmp_path / "pursuit.db", "agent")
-    row = ledger.create("미래의 문화", "원고 완성", "origin", framing="기존 규정")
-    binding = pb.Binding(None, ledger, "agent", "turn", "디지털 노마드 글 작성", [])
-    token = pb._current.set(binding)
-    monkeypatch.setattr(el.EpisodeLogger, "current", lambda: SimpleNamespace(episode_id=3315))
-    monkeypatch.setattr(ca, "oneshot_ai_call", lambda *a, **k: pytest.fail("전경 과제 판단 금지"))
-    try:
-        assert row["id"] in pb.prepare() and binding.row is None
-        assert not ledger.turns(row["id"])
-        pb.connect(binding, row["id"], "현재 원고는 이 과제의 후속 집필")
-        assert ledger.get(row["id"])["framing"] == "기존 규정"
-        assert ledger.turns(row["id"])[0]["episode_id"] == "3315"
-    finally:
-        pb.leave(token)
-    assert ledger.turns(row["id"])[0]["state"] == "interrupted"
 
 
 @pytest.fixture

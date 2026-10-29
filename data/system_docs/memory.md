@@ -7,7 +7,7 @@ owner_code: >
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
-  final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
+  final_evaluator.py, distill_queue.py, execution_identity.py, pursuit_history.py, execution_trace.py,
   tree_recall.py, associative_recall.py, cognitive_recall.py
 last_updated: 2026-10-26
 see_also: [architecture.md, ibl.md]
@@ -34,7 +34,7 @@ see_also: [architecture.md, ibl.md]
 | # | 인간 기억 | indiebizOS 구현 | 저장소 | 무엇을 기억하나 |
 |---|---|---|---|---|
 | 1 | **의미 기억** (정적 지식) | 시스템 문서 + 시스템 메모 | `data/system_docs/*.md`, `data/system_ai_memo.txt` | 시스템 자신에 대한 변하지 않는 지식 |
-| 2 | **작업 기억** (단기·과제 영속층) | 대화 이력 + 과제 원장 | `system_ai_memory.db:conversations`, `projects/{id}/conversations.db` | 진행 중인 대화 (Masking으로 축약) |
+| 2 | **작업 기억** (단기) | 대화 이력·할일·현재 규정 | `system_ai_memory.db:conversations`, `projects/{id}/conversations.db` | 진행 중인 대화 (Masking으로 축약) |
 | 3 | **일화 기억** (경험) | 에피소드 로그/요약 | `world_pulse.db:episode_log / episode_summary` | "무슨 일이 있었나" + 인지 품질 지표 |
 | 4 | **절차 기억** (방법) = 통칭 **실행기억** | IBL 액션 + 워크플로우 + **해마** | `ibl_nodes.yaml`, `data/workflows/*.yaml`, `ibl_usage.db` | "어떻게 하는가" — 자연어→IBL 코드 |
 | 5 | **관계 기억** (사용자 사실) = 통칭 **심층기억** | **심층메모리** | 에이전트별 `memory.db` (memory 패키지) | 사용자 선호·결정·중요날짜·작업기록 |
@@ -137,38 +137,17 @@ see_also: [architecture.md, ibl.md]
 
 이는 모든 대화의 심층 기억에 자료 전문을 쌓는 경로가 아니다. 연구의 자료 모드·대화 경계와 최종 응답 후 장기 기억 선별은 각각 유지한다. [연구 프로젝트](../guides/research_project.md) · [질문 사용법](../guides/research_questions.md) · [근거 계약](../../docs/RESEARCH_QUESTION_EVIDENCE_CONTRACT_2026_10_13.md).
 
-### 과제 영속층 (2026-09-09)
+### 현재 실행과 과거 과제 기록 (2026-10-29)
 
-작업 기억의 상위 층 `pursuit`는 규정·전제·진행·다음을 여러 턴에 걸쳐 보존한다.
-시스템 AI는 `system_ai_memory.db`, 프로젝트 에이전트는 해당 `conversations.db`의 자아 키로 격리한다.
-상태=pursuit, 사건=pursuit_event, 요약 처리 상태와 원문=pursuit_turn. 전체 완료 기준(goal_criteria)은
-턴 평가 기준과 다르다. 도구 `pursuit`는 인지 이음매이며 IBL 어휘가 아니다.
+일반 대화의 이어가는 과제(pursuit)는 제거했다. 자동 생성·연결·상태 갱신·별도 요약·순찰은 실행하지 않는다.
+대화 이력·할일·규정 계승·연구 계획·자기수리의 완료 기준과 재기동 인계는 각 기존 경로가 보존한다.
+활성 MCP 재진입은 메모리의 `execution_turn`이, 주행기록 소유자 확인은 DB의 `execution_identity`가 맡는다.
+이들은 목표·진행·다음을 생성하거나 모델을 호출하지 않는다.
 
-과제 연결은 현재 의식·실행 모델의 판단에 합친다(2026-09-20). 시작 시 제목·목표 발췌의 작은
-후보 목차만 제공하며, 별도 선택·재검토 AI나 실행 전 요약 호출은 없다. 최초 숙고 OFF의 EXECUTE와
-반사는 과제 준비 때문에 THINK로 바뀌지 않는다. 의식은 기존 계획 응답에 `pursuit_id/pursuit_reason`을
-내고, 실행자는 `pursuit{op:"bind", id, why}`로 필요할 때만 연결한다. 무관하거나 대상이 모호하면
-연결 없이 답한다. 같은 분야·최신 과제라는 이유만으로 연결하거나 후보 설명으로 대명사의 대상을 만들지 않는다.
-목표가 발췌되면 표시하고 bind/read가 전체 목표·현재 상태·미정리 턴을 제공한다. 같은 목표의 후속 질문·
-실행 준비·이용 조건도 이어질 수 있으며, 옛 하위 작업으로 현재 요청의 범위를 제한하지 않는다.
-
-THINK/REPAIR의 문제 규정과 달성 기준은 현재 의식이 새로 만든다. 전체 목표 변경은 실행자의 goal/why로
-근거를 기록한다. 의식의 `detach_pursuit:true` 또는 실행자의 `pursuit{op:"detach", why}`는 현재 연결만
-회수한다. 분리된 턴은 원문을 보존하고 진행 요약·미처리 목록에서 제외하며 늦은 요약도 적용하지 않는다.
-`pursuit.bound`가 현재 모델의 연결 근거·출처를, `framing_source`가 규정 출처를 남긴다.
-미정리·중단 턴은 결과를 확인한 뒤 이어가며, 요약은 원문 영속화 후 기존 증류 큐에서 수행한다.
-버전·멱등 사건·필드별 출처 순서가 늦은 요약의 후속 정정 덮어쓰기를 막는다. 요약 실패는 다음 요청을
-가로막지 않고 원문·오류를 보존한다. [호출 절약과 검증](../../docs/PURSUIT_ON_DEMAND_2026_09_20.md).
-
-의식의 과제 생성 제안은 실제 연결 상태(`pursuit_binding`)를 기준으로 저장 전에 검증한다.
-같은 주제의 후속 논의만으로 영속 과제를 만들지 않으며, 불완전한 생성 제안은 같은 의식이 한 번
-정정한다. 제목·전체 목표의 임의 합성과 기준을 버린 폴백은 하지 않는다.
-계약과 재현 검증: [과제 원장 — 생성과 완료 기준](../../docs/PURSUIT_LEDGER_HANDOFF_2026_09_09.md#4-생성과-완료-기준).
-
-목차는 최대 10줄, 본문은 3000자 예산이고 생략된 필드는 read로 펼친다. 사건 기록은 개수 상한이 없다.
-대화 삭제와 독립이며 조종실에서 명시 삭제한다. 기존 일일 순찰이 30일 무접촉을 보류,
-120일을 보관 상태로 바꾸며 실제 삭제하지 않는다. 중단 턴의 원문과 미반영 요약은 만료하지 않는다.
-상세 계약: `docs/PURSUIT_LEDGER_HANDOFF_2026_09_09.md`.
+기존 DB의 pursuit/pursuit_turn/pursuit_event는 삭제하지 않았다. `pursuit_history`가 주행기록의
+명시적 신원으로 과거 원문만 읽으며 새 과제를 만들거나 요약하지 않는다. 미완료 자기수리에 저장됐던
+완료 요청은 기존 `criteria_contract`로 전환하여 원래 완료 기준·응답 지문·취소 상태를 보존한다.
+[조사·제거·전환 기록](../../docs/PURSUIT_REMOVAL_PLAN_2026_10_29.md).
 
 ### 모델 호출 절약에 관한 보존된 발견 (2026-09-11)
 

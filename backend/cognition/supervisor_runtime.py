@@ -131,8 +131,8 @@ def tool_context(controller, *, include_idioms=False):
     focus = ((controller.framing or {}).get("capability_focus") or {}).get("highlight_actions", [])
     context = {"available_actions": names, "focused_actions": [action_schema(n) for n in dict.fromkeys(focus) if n in names],
             "tools": [{"name": name, "description": spec.get("description", "")[:200]}
-                      for name, spec in controller.catalog.items() if name not in {"pursuit", "reframe", "supervision"}],
-            "schema_hint": "전체 스키마는 evidence id=tool:이름으로 조회. pursuit/reframe은 실행자가 직접 호출한다."}
+                      for name, spec in controller.catalog.items() if name not in {"reframe", "supervision"}],
+            "schema_hint": "전체 스키마는 evidence id=tool:이름으로 조회. reframe은 실행자가 직접 호출한다."}
     if include_idioms:
         from ibl_access import idioms_map
         context["available_idioms"] = idioms_map(set(nodes))

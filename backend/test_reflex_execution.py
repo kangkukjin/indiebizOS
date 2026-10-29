@@ -227,8 +227,6 @@ def test_pipeline_routes_reflex_without_changing_recall_or_model(binding, monkey
     r._load_role = lambda: 'role'
     r._build_system_ai_prompt_split = lambda role, c, mem, **kw: ('System structure + IBL + rules', mem)
     r._after_response_async = lambda *a, **kw: None
-    monkeypatch.setattr('pursuit_bind.prepare', lambda: '')
-    monkeypatch.setattr('pursuit_bind.refresh_memory', lambda x: x)
     monkeypatch.setattr('supervision_bus.current', lambda: None)
     monkeypatch.setattr('unified_distill.capture_model', lambda r: None)
     monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)

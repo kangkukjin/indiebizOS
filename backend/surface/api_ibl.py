@@ -8,8 +8,6 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, model_validator
 
 router = APIRouter(prefix="/ibl", tags=["ibl"])
-from api_pursuits import router as pursuits_router
-router.include_router(pursuits_router)
 from api_supervision import router as supervision_router
 router.include_router(supervision_router)
 

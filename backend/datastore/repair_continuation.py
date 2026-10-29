@@ -121,7 +121,9 @@ def defer(controller, response, base=None):
            "framing": {**controller.framing, "_repair_policy": session.get("repair_policy", 1)},
            "repair_policy": session.get("repair_policy", 1),
            "pending_delivery": bool(controller.delivery.manifest()),
-           "phase": "apply", "pursuit": controller.original_pursuit, "done_request": controller.done_request,
+           "completion_review_required": bool(previous.get("completion_review_required")
+                                               or getattr(controller, "completion_review_required", False)),
+           "phase": "apply",
            "verification_records": controller.verifications.records,
            "criteria_contract": (getattr(controller, "_final_criteria_contract", None) or previous.get("criteria_contract")
                                  or (session.get("readiness") or {}).get("criteria")),
@@ -261,8 +263,7 @@ def review_checkpoint(controller, packet, snapshot, base=None):
                                              if path.is_file() else {"mode": "missing", "hash": None})
     checkpoint = {"packet": packet, "snapshot": snapshot, "blocks": controller.store.blocks,
                   "version": controller.store.version, "sequence": controller.store.sequence,
-                  "store": str(controller.store.directory), "done_request": controller.done_request,
-                  "original_pursuit": controller.original_pursuit,
+                  "store": str(controller.store.directory),
                   "repair_counts": getattr(controller, "_final_repair_counts", [0, 0])}
     path = controller.store.directory / "repair_review.json"
     atomic_json(path, checkpoint)
@@ -272,7 +273,6 @@ def review_checkpoint(controller, packet, snapshot, base=None):
                criteria_contract=packet.get("context", {}).get("criteria_contract"),
                staging_task_id=staging_task, verification_records=controller.verifications.records,
                framing=controller.framing, store=str(controller.store.directory),
-               pursuit=controller.original_pursuit, done_request=controller.done_request,
                response=controller.store.text, retry_at=time.time() + 60)
     save(row, base)
     controller._review_row = row

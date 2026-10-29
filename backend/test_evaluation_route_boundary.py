@@ -6,7 +6,6 @@ import boot_paths  # noqa: F401
 import pytest
 import thread_context as tc
 from test_conscious_supervisor import supervisor  # noqa: F401
-from test_pursuit_ledger import ledger, row, bound  # noqa: F401
 
 
 def test_no_consciousness_cannot_be_promoted_by_failure_stall_or_milestone(supervisor, monkeypatch):
@@ -40,16 +39,6 @@ def test_notification_without_consciousness_is_delivered_without_review(supervis
     assert not supervisor.evaluation_enabled and not supervisor.delivery.manifest()
 
 
-@pytest.mark.parametrize("framing", [None, {"task_framing": "단순 확인", "achievement_criteria": ""}])
-def test_pursuit_done_without_consciousness_uses_existing_execution_path(supervisor, bound, row, monkeypatch, framing):
-    from pursuit_tools import execute_pursuit
-    bound.bind(row)
-    bound.aliases = {"agent"}
-    supervisor.configure(framing)
-    monkeypatch.setattr("supervision_bus.current", lambda *a, **kw: supervisor)
-    result = json.loads(execute_pursuit({"op": "done", "why": "전체 산출물 확인"}, "agent", bound.task))
-    assert result["success"] and result["result"]["status"] == "done"
-    assert not supervisor.evaluation_enabled and supervisor.done_request is None
 
 
 if __name__ == "__main__":

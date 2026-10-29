@@ -46,9 +46,6 @@ def test_repair_candidate_can_return_to_normal_execution(supervisor, monkeypatch
     runner.ai._provider = None
     runner.ai.process_message_stream = lambda **kw: iter([{"type": "final", "content": "완료"}])
     supervisor.runner, supervisor.enabled = runner, False
-    monkeypatch.setattr("pursuit_bind.prepare", lambda: "")
-    monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
-    monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     monkeypatch.setattr("red_grant.issue_grant", lambda **kw: grants.append(kw))
     monkeypatch.setattr("system_ai_core._switch_to_role", lambda r, role: switches.append(role))
     monkeypatch.setattr("episode_logger.record_trajectory_event", lambda k, d: traces.append((k, d)))

@@ -751,10 +751,8 @@ def run_lifecycle_bundle(save_self_check=None) -> Dict:
     호출부(world_pulse_health)가 항목마다 자라지 않게(1500줄 규칙, fixture_sweeps 선례)."""
     out: Dict = {}
     from guide_downscale import run_guide_downscale
-    from pursuit_maintenance import run_pursuit_check
     from capability_age import run_age_check
-    for key, fn, label in (("pursuit", run_pursuit_check, "과제 원장"),
-                           ("capability_age", run_age_check, "구성요소 수명 관측"),
+    for key, fn, label in (("capability_age", run_age_check, "구성요소 수명 관측"),
                            ("lifecycle", run_lifecycle_check, "생명주기"),
                            ("guide_downscale", run_guide_downscale, "가이드 하향 정규화")):
         try:

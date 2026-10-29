@@ -443,9 +443,6 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
     runner.ai = NS(_provider=None, process_message_stream=execute)
     supervisor.runner = runner
     monkeypatch.setattr("supervision_bus.current", lambda: None if route == "legacy" else supervisor)
-    monkeypatch.setattr("pursuit_bind.prepare", lambda: "")
-    monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
-    monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     monkeypatch.setattr("reframe.open_turn", lambda *a, **kw: None)
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
     monkeypatch.setattr("episode_logger.record_trajectory_event", lambda k, d: traces.append((k, d)))

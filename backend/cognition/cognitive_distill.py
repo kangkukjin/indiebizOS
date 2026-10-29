@@ -574,7 +574,7 @@ JSON 배열로만 응답.
 
     def _after_response_async(self, user_message: str, response: str, *,
                               tool_calls=None, hippo_score: float = None, top_code: str = None,
-                              turn_tokens: int = None, pursuit_packet=None,
+                              turn_tokens: int = None,
                               write_deep: bool = False, presented=None, model_descriptor=None,
                               write_experience=True, write_forage=True):
         """_after_response 를 **영속 큐**(distill_queue)에 적재 — 증류가 턴(스트림 종료·
@@ -625,7 +625,6 @@ JSON 배열로만 응답.
             "turn_tokens": turn_tokens,   # 턴 마감 시점에 읽은 값 — 증류 자체 소모는 미포함
             "goal_eval": _ge,
             "task_id": get_current_task_id(),
-            "pursuit": pursuit_packet,
             # 심층기억은 주인이 직접 한 말에서만 자란다 — 진입점이 선언한 발화자 축(fail-closed).
             "write_deep": bool(write_deep),
             "write_experience": bool(write_experience), "write_forage": bool(write_forage),

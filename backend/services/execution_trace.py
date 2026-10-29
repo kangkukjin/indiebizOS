@@ -12,7 +12,7 @@ from common.value_semantics import numeric_value
 from conversation_db import read_task_trace, read_task_result
 from episode_logger import read_trajectory_page, read_episode_text, read_trace_store_links
 from execution_trace_scope import ScopeResolver, TraceAccess, observe_runtime
-from pursuit_ledger import read_trace_events as read_pursuit_events, read_trace_text as read_pursuit_text
+from pursuit_history import read_trace_events as read_pursuit_events, read_trace_text as read_pursuit_text
 from supervision_store import (read_trace_events as read_supervision_events, read_trace_document,
                                inspect_trace_document, read_trace_response_link)
 from trace_read import ReadFault, fingerprint, guarded, result, safe_child, stamp
@@ -225,7 +225,7 @@ class ExecutionTrace:
                     event("writes", record, "side_effect." + str(row.get("event", "write")), row, row.get("ts"), links)
             diagnostics.append("writes_partial:gate_only_heartbeat_compressed_retention_limited")
 
-            if resolved["db"]:
+            if resolved["db"] and resolved["bindings"]:
                 page = read_pursuit_events(resolved["db"], ident["task_id"], ident["owner"], positions.get("pursuit_events"), limit)
                 for row in consume("pursuit_events", page):
                     event("pursuit", f"{ident['project']}:{row['pursuit_id']}:{row['id']}",

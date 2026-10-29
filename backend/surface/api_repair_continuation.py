@@ -377,7 +377,7 @@ def kick():
 
 def _receipt_completion(row, base):
     """새 정책의 정상 적용은 모델 세션을 열지 않고 기존 영수증으로 닫는다."""
-    if (row.get("repair_policy") != 2 or row.get("done_request") or row.get("pending_delivery")
+    if (row.get("repair_policy") != 2 or row.get("completion_review_required") or row.get("pending_delivery")
             or row.get("phase") != "verify_remaining"):
         return None
     from repair_continuation import key

@@ -308,14 +308,13 @@ def test_research_plan_routing_ignores_initial_toggle_but_keeps_explicit_tags(mo
 
 
 def test_research_never_uses_24_hour_framing_cache_or_silent_fallback(monkeypatch):
-    import pursuit_bind
     import framing_inheritance
     from consciousness_agent import FramingContractError
     monkeypatch.setattr(framing_inheritance, 'inherit', lambda *a: pytest.fail('단기 계승을 사용함'))
     runner = research_runner.ResearchRunner.__new__(research_runner.ResearchRunner)
-    monkeypatch.setattr(pursuit_bind, 'run_consciousness', lambda *a: {'task_framing': '계획 유지'})
+    monkeypatch.setattr(runner, '_run_consciousness', lambda *a: {'task_framing': '계획 유지'})
     assert runner._run_consciousness_or_reuse('설명', [])['task_framing'] == '계획 유지'
-    monkeypatch.setattr(pursuit_bind, 'run_consciousness', lambda *a: None)
+    monkeypatch.setattr(runner, '_run_consciousness', lambda *a: None)
     with pytest.raises(FramingContractError, match='의식 모델'):
         runner._run_consciousness_or_reuse('설명', [])
 

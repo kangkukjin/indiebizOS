@@ -45,7 +45,6 @@ def isolated(tmp_path, monkeypatch):
     monkeypatch.setattr('common.spill.spill_dir', lambda: str(tmp_path))
     monkeypatch.setattr('conscious_supervisor.TurnStore',
                         lambda directory: TurnStore(tmp_path / 'supervision' / Path(directory).name))
-    monkeypatch.setattr('pursuit_bind.owner_for', lambda runner: None)
     monkeypatch.setattr('world_pulse._load_config', lambda: {'conscious_supervisor': {'tick_s': 1000}})
     monkeypatch.setattr('agent_pipeline._reload_gate_notice', lambda: '')
     try:

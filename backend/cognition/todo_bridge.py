@@ -3,7 +3,7 @@ import json
 
 
 def execute(todos, agent_id, task_id):
-    from pursuit_bind import resolve_session
+    from execution_turn import resolve_session
     from thread_context import snapshot, restore
 
     if not agent_id or not task_id:

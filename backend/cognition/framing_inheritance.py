@@ -14,11 +14,9 @@
 
 원칙
 - 권한은 계승되지 않는다: needs_repair·_repair_policy 는 벗긴다(test_framing_privilege_inherit 와 같은 원칙).
-- 과제 연결은 계승된다: 직전 턴이 과제 행을 만들었으면 저장본은 그 id 로 정규화돼 같은 행에 이어진다
-  (scope=pursuit+title 을 그대로 두면 accept_output 이 같은 제목의 행을 하나 더 만든다).
 - history_summary 는 계승하지 않는다(판단 부재 → 원본 히스토리 유지). 후속 턴은 직전 턴의 실제 내용이 필요하다.
 - 정기 계승은 직전 실행이 ACHIEVED 였을 때만. 실패한 규정을 되풀이하지 않는다.
-- 패치 형식이 어긋나거나 과제 계약 검증에 실패하면 계승을 포기하고 의식을 깨운다(기본값으로 때우지 않는다).
+- 패치 형식이 어긋나면 계승을 포기하고 의식을 깨운다(기본값으로 때우지 않는다).
 
 저장소 = data/system_ai_state/framing_inherit/<agent>.json — 자아별 한 파일(last + 문장별 최근 REPEAT_KEEP 건).
 """
@@ -43,7 +41,7 @@ PATCHABLE_BOOL = ("needs_clarification", "deep_research")
 PATCHABLE = set(PATCHABLE_TEXT) | set(PATCHABLE_LIST) | set(PATCHABLE_DICT) | set(PATCHABLE_BOOL)
 # 저장본에서 벗기는 키 — 권한·턴 전용 표식
 STRIP_ALWAYS = ("needs_repair", "_repair_policy", "_framing_source", "_inherited_from",
-                "title", "goal_criteria", "pursuit_reason", "detach_pursuit")
+                "scope", "pursuit_id", "title", "goal_criteria", "pursuit_reason", "detach_pursuit")
 
 _RELATION_PROMPT = "framing_relation_prompt.md"
 _PATCH_PROMPT = "framing_patch_prompt.md"
@@ -125,18 +123,13 @@ def _age_s(record: dict) -> float:
         return float("inf")
 
 
-def _storable(framing: dict, pursuit_id: Optional[str]) -> dict:
-    """저장본 — 권한·표식을 벗기고 과제 연결을 행 id 로 정규화한다."""
-    out = {k: v for k, v in (framing or {}).items() if k not in STRIP_ALWAYS}
-    if pursuit_id:
-        out["scope"], out["pursuit_id"] = "pursuit", pursuit_id
-    else:
-        out["scope"], out["pursuit_id"] = "turn", None
-    return out
+def _storable(framing: dict) -> dict:
+    """권한·과거 과제 표식을 다음 실행에 전달하지 않는다."""
+    return {k: v for k, v in (framing or {}).items() if k not in STRIP_ALWAYS}
 
 
 def remember(runner, message: str, framing: dict, *, completed: bool = True) -> Optional[dict]:
-    """턴 종료에 이 턴의 유효 규정을 자아별로 적는다(last + 문장별). 평가 판정·과제 행을 함께."""
+    """턴 종료에 이 턴의 유효 규정을 자아별로 적는다(last + 문장별). 평가 판정과 함께."""
     if not isinstance(framing, dict) or not framing:
         return None
     key = agent_key(runner)
@@ -145,14 +138,6 @@ def remember(runner, message: str, framing: dict, *, completed: bool = True) -> 
     from thread_context import get_goal_eval_outcome, get_current_task_id, get_task_origin
     evaluation = get_goal_eval_outcome() or {}
     achieved = {"ACHIEVED": True, "NOT_ACHIEVED": False}.get(evaluation.get("goal_status"))
-    pursuit_id = None
-    try:
-        from pursuit_bind import current as pursuit_current
-        binding = pursuit_current()
-        if binding and binding.row:
-            pursuit_id = binding.row["id"]
-    except Exception:
-        pursuit_id = None
     episode_id = None
     try:
         from episode_logger import EpisodeLogger
@@ -162,7 +147,7 @@ def remember(runner, message: str, framing: dict, *, completed: bool = True) -> 
         pass
     record = {
         "message": (message or "")[:4000],
-        "framing": _storable(framing, pursuit_id),
+        "framing": _storable(framing),
         "at": datetime.now().isoformat(timespec="seconds"),
         "task_id": get_current_task_id() or "",
         "origin": get_task_origin() or "",
@@ -170,7 +155,6 @@ def remember(runner, message: str, framing: dict, *, completed: bool = True) -> 
         "review_status": evaluation.get("review_status", "NOT_RUN"),
         "completed": bool(completed),
         "episode_id": episode_id,
-        "pursuit_id": pursuit_id,
     }
     data = _load(key)
     data["last"] = record
@@ -380,14 +364,6 @@ def _inherit(runner, message, history, record_trajectory_event):
     framing["_framing_source"] = "inherited_" + mode
     framing["_inherited_from"] = {"episode_id": previous.get("episode_id"), "at": previous.get("at"),
                                   "task_id": previous.get("task_id")}
-    try:
-        from pursuit_bind import validate_output, accept_output
-        validate_output(framing)
-        accept_output(framing, evidence=f"규정 계승({mode})")
-    except ValueError as exc:
-        record_trajectory_event("framing.inherit_declined", {"mode": mode, "reason": f"과제 계약 검증 실패: {exc}"})
-        print(f"[규정계승] 과제 계약 검증 실패 — 의식 각성: {exc}")
-        return None
     record_trajectory_event("framing.inherited", {
         "mode": mode, "source_episode": previous.get("episode_id"), "source_at": previous.get("at"),
         "patched": sorted(patch), "judge_ms": judge_ms, "patch_ms": int((time.monotonic() - t1) * 1000),

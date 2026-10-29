@@ -24,8 +24,6 @@ def test_intervening_execute_correction_reaches_both_inheritance_calls(monkeypat
             'achievement_criteria': '분리 세척 후보', 'criteria': [{'text': '분리 세척 후보'}]})
     monkeypatch.setattr(fi, '_candidate', lambda *a: ('followup', previous))
     monkeypatch.setattr(fi, '_oneshot', answer)
-    monkeypatch.setattr('pursuit_bind.validate_output', lambda *a, **kw: None)
-    monkeypatch.setattr('pursuit_bind.accept_output', lambda *a, **kw: None)
     result = fi._inherit(SimpleNamespace(), '다른 것을 더 찾아봐.', HISTORY, lambda *a: None)
     assert result['_framing_source'] == 'inherited_followup'
     assert len(seen) == 2

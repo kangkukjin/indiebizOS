@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-import pursuit_bind as pb
+import execution_turn as pb
 import conversation_sessions as sessions
 import thread_context as tc
 from todo_bridge import execute
@@ -15,7 +15,7 @@ from todo_bridge import execute
 def active(tmp_path):
     runner = SimpleNamespace(project_path=tmp_path, config={'id': 'owner'}, ai=None)
     with tc.actor_context(agent_id='owner', task_id='todo-turn', origin='training'):
-        token = pb.enter(runner, '계획을 세워 실행해 줘', [])
+        token = pb.enter(runner)
         binding = pb.current()
         binding.aliases.add('provider-alias')
         session = sessions.Binding(str(tmp_path / 'db.sqlite'), 'conversation', 'owner')

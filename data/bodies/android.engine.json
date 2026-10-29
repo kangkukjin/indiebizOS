@@ -23,6 +23,7 @@
     "base/episode_trace_reader",
     "base/execution_capacity",
     "base/execution_commit",
+    "base/execution_turn",
     "base/execution_workers",
     "base/file_script",
     "base/generation_store",
@@ -146,9 +147,6 @@
     "cognition/model_value_preview",
     "cognition/prompt_builder",
     "cognition/prompt_composition",
-    "cognition/pursuit_bind",
-    "cognition/pursuit_maintenance",
-    "cognition/pursuit_tools",
     "cognition/reflex_execution",
     "cognition/reframe",
     "cognition/repair_check_runner",
@@ -197,6 +195,7 @@
     "datastore/decision_ledger",
     "datastore/distill_ledger",
     "datastore/document_store",
+    "datastore/execution_identity",
     "datastore/face_config",
     "datastore/file_index",
     "datastore/finance_ledger_sync",
@@ -231,7 +230,7 @@
     "datastore/peer_cards",
     "datastore/project_manager",
     "datastore/pulse_db",
-    "datastore/pursuit_ledger",
+    "datastore/pursuit_history",
     "datastore/record_admin",
     "datastore/record_assets",
     "datastore/record_commands",
@@ -489,7 +488,6 @@
     "surface/api_portal",
     "surface/api_projects",
     "surface/api_prompt_composition",
-    "surface/api_pursuits",
     "surface/api_repair_continuation",
     "surface/api_report",
     "surface/api_resident_pcs",
@@ -579,8 +577,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 568,
-    "engine": 536,
+    "total": 566,
+    "engine": 534,
     "blocklist": 32
   }
 }

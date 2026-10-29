@@ -4,8 +4,8 @@ IndieBiz OS Core
 
 agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 3단 인지의
 판단 층 — 무의식 분류(_decide_request_type/_classify_request, 태그 강제
-포함), 의식 에이전트 실행/재사용(영속 과제 선택+재검토), 의식 출력의 히스토리
-적용·되묻기. SESSION_RESET은 CLI 세션 매핑을 비운다. 영속 과제는 대화 삭제·재설정과 독립이다.
+포함), 의식 에이전트 실행/규정 계승, 의식 출력의 히스토리
+적용·되묻기. SESSION_RESET은 CLI 세션 매핑을 비운다. 대화 기록은 세션별로 보존한다.
 기존 import 경로(agent_cognitive)는 재수출로 유지된다.
 """
 
@@ -55,8 +55,6 @@ class CognitiveConsciousnessMixin:
         from repair_continuation import inherited_framing
         inherited = inherited_framing(user_message) if repair else None
         if inherited:
-            from repair_resume import bind_pursuit
-            bind_pursuit()
             return inherited
         # 명시적인 수리는 실행자가 직접 조사·검사한다. #think는 기존 의식을 유지한다.
         from thread_context import get_task_origin
@@ -72,8 +70,9 @@ class CognitiveConsciousnessMixin:
             inherited_turn = inherit(self, user_message, history)
             if inherited_turn:
                 return inherited_turn
-        from pursuit_bind import run_consciousness
-        result = run_consciousness(self, user_message, history, execution_memory, repair)
+        result = self._run_consciousness(user_message, history, execution_memory, repair=repair)
+        if result:
+            result["_framing_source"] = "fresh_consciousness"
         if repair and isinstance(result, dict) and get_task_origin() == "user":
             result["_repair_policy"] = 2
         return result
@@ -125,10 +124,7 @@ class CognitiveConsciousnessMixin:
                 available_tools = None
 
             from supervision_bus import current as _supervisor_current
-            from pursuit_bind import current as pursuit_current, validate_output
             _supervisor = _supervisor_current()
-            binding = pursuit_current()
-            row = binding.row if binding else None
             topic_loader = getattr(self, '_research_planning_context', None)
             research_topic = topic_loader() if topic_loader and not repair else None
             previous_plan = (revision or {}).get("previous_research_plan")
@@ -151,8 +147,6 @@ class CognitiveConsciousnessMixin:
                 available_tools=available_tools,
                 repair=repair,
                 revision=revision,
-                validate_framing=validate_output,
-                pursuit_state={"bound": bool(row), "id": row["id"] if row else None},
                 project_path=getattr(self, "project_path", None) or getattr(getattr(self, "ai", None), "project_path", None),
                 previous_research_plan=previous_plan,
                 **({'research_topic': research_topic} if research_topic is not None else {}),

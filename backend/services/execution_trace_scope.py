@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from episode_logger import read_episode_identity, trajectory_run_id
-from pursuit_ledger import read_trace_bindings
+from pursuit_history import read_trace_bindings
 from trace_read import ReadFault, safe_child, stamp
 
 
@@ -116,7 +116,14 @@ class ScopeResolver:
         for scope, path in catalog.items():
             if project is not None and scope != project:
                 continue
+            from execution_identity import read_bindings
+            identity_rows = read_bindings(path, episode_id=episode_id, task_id=task, owner=owner)
             binding = read_trace_bindings(path, episode_id=episode_id, task_id=task, owner=owner)
+            if identity_rows["status"] not in {"ok", "empty", "missing"}:
+                failed_scopes.append(scope)
+            for row in identity_rows["rows"]:
+                if row["task_id"] == task:
+                    candidates.append({**row, "project": scope})
             if binding["status"] not in {"ok", "empty", "missing"}:
                 failed_scopes.append(scope)
             for row in binding["rows"]:
@@ -130,14 +137,8 @@ class ScopeResolver:
             diagnostics.append("ambiguous_scope_identity")
         else:
             diagnostics.append("scope_identity_missing" if not failed_scopes else "scope_lookup_incomplete")
-        # Episode joins require a pursuit FK; a scoped task row can still report its own state.
+        # Episode joins require recorded ownership; never infer it from the requested owner.
         if episode_id is None:
-            if selected is None and not owners and project and owner and not failed_scopes:
-                from conversation_db import read_task_trace
-                task_rows = read_task_trace(catalog[project], task)
-                if any(r["task_id"] == task for r in task_rows["rows"]):
-                    selected = (project, owner)
-                    diagnostics.append("task_owner_relationship_missing")
             if selected is None:
                 raise ReadFault("partial", diagnostics[0])
             ids = {str(r["episode_id"]) for r in candidates if r["episode_id"]}
@@ -158,7 +159,7 @@ class ScopeResolver:
                     "owner_relationship": "explicit" if selected and candidates else "missing",
                     "relationship": "ambiguous" if len(runs) > 1 else "explicit" if runs else "deterministic_legacy" if task else "missing",
                     "scope_relationship": "explicit" if selected else "ambiguous" if len(owners) > 1 else "missing"}
-        return {"identity": identity, "episodes": episodes, "bindings": candidates if selected else [],
+        return {"identity": identity, "episodes": episodes, "bindings": [r for r in candidates if r.get("pursuit_id")] if selected else [],
                 "db": catalog[selected[0]] if selected else None, "diagnostics": diagnostics,
                 "scope_status": "unavailable" if failed_scopes else "ok" if selected else "missing"}
 

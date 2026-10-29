@@ -31,9 +31,10 @@ class ResearchRunner(AgentRunner):
     def _run_consciousness_or_reuse(self, user_message, history, execution_memory='', repair=False):
         if repair:
             return super()._run_consciousness_or_reuse(user_message, history, execution_memory, repair=True)
-        from pursuit_bind import run_consciousness
         from consciousness_agent import FramingContractError
-        result = run_consciousness(self, user_message, history, execution_memory)
+        result = self._run_consciousness(user_message, history, execution_memory)
+        if result:
+            result["_framing_source"] = "fresh_consciousness"
         if not result:
             raise FramingContractError('연구계획 판단에 사용할 의식 모델이 준비되지 않았거나 응답하지 않았습니다')
         return result

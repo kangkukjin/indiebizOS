@@ -298,18 +298,18 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - 해마 검색·실행기억 주입·성공/실패 귀속은 유지한다. 회상 코드는 참고이며 우선 실행 지시를 덧붙이지 않는다.
   - 프롬프트: `data/common_prompts/unconscious_prompt.md` (단일 파일, 가볍게 유지)
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
-  - 출력 필드: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
+  - 출력 필드: task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
   - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<recalled_memory>`, `<guide_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<guide_map>`, 2026-09-17)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
-- **과제 선택·규정 재사용** — `pursuit_bind.py`와 `_run_consciousness_or_reuse()`
-  - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.
-  - 진행은 원문 턴을 먼저 저장하고 비동기 갱신한다. 다음 턴은 미반영 진행을 먼저 따라잡는다. 상세: architecture.md와 memory.md.
+- **현재 실행과 규정 계승** — `execution_turn.py`·`framing_inheritance.py`
+  - 활성 task의 MCP 재진입 문맥만 유지하고 종료 때 해제한다. 규정 계승·연구 계획·자기수리 인계는 각 기존 경로가 맡는다.
+  - 일반 과제의 자동 생성·연결·요약은 제거했다. 과거 원문만 주행기록에서 읽는다. 상세: architecture.md와 memory.md.
 - **의식의 중간관리** — `conscious_supervisor.py` + `supervisor_runtime.py`
   - 계획·재규정·조건부 중간 점검은 도구를 가진 의식 역할이 맡는다. 진단 뒤 본작업은 실행자에게 인계한다.
 - **도구 없는 최종평가** — `final_evaluator.py` + `cognitive_eval.py`
   - 하네스가 사용자 목표·전체 응답·실제 호출 원장·결과 발췌·산출물을 모아 평가 축 원샷에 전달한다.
   - 평가자는 직접 조사·수정하지 않는다. 결함을 한 번에 넘기며 실행자의 보완은 최대 한 번, 재평가는 갱신된 증거로 수행한다.
-  - 응답·파일·공개 대기열 지문을 대조해 승인된 결과를 전달하고 전체 과제 기준을 확인한 완료 요청만 반영한다.
+  - 응답·파일·공개 대기열 지문을 대조해 승인된 결과를 전달하며 자기수리의 보존된 완료 기준을 확인한다.
   - 모델이 응답 페이지나 인용 영수증을 다시 읽어야 하는 조건은 없다. 감독 객체 없는 호환 경로의 GoalEval/SelfReflect 도 의식의 규정(달성 기준)이 있는 턴에만 돈다 — 의식 없는 EXECUTE 는 도구 실패·쓰기·장시간 실행에도 평가·자기반성을 부르지 않는다(`cognition.evaluation.path=none`, 판정 NULL).
 - **공통 원칙**
   - 시스템 AI와 프로젝트 에이전트 모두 동일한 AgentRunner 인지 메서드 사용 (`_is_system_ai` 플래그로 DB·도구만 분리)
@@ -317,6 +317,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 172 액션(sense 39·self 58·limbs 13·others 20·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 632(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 172 액션(sense 39·self 58·limbs 13·others 20·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 630(test 제외)**<!-- SELF_IMAGE:END -->
 
 *변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*

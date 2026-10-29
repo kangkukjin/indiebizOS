@@ -85,15 +85,6 @@ def test_cancellation_keeps_private_draft(supervisor, tmp_path, monkeypatch):
     assert target.read_text() == "old" and not sent
 
 
-def test_changed_goal_does_not_publish_approved_draft(supervisor, tmp_path, monkeypatch):
-    from types import SimpleNamespace
-    target, _, sent = prepare(supervisor, tmp_path, monkeypatch)
-    supervisor.done_request = {"id": "goal", "version": 1}
-    monkeypatch.setattr("pursuit_bind.resolve_session", lambda *a: SimpleNamespace(row={"id": "goal", "version": 2}))
-    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **k:
-                        verdict(c, delivery_hash=c.delivery.manifest()["hash"], pursuit_status="APPROVED"))
-    assert "미승인" in finish(supervisor, "draft")[-1]["content"]
-    assert target.read_text() == "old" and not sent
 
 
 def test_publication_protocol_rejects_paths_outside_owned_workbench(tmp_path, monkeypatch):

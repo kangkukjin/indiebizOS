@@ -22,7 +22,7 @@ collection = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collection)
 
 
-def execute(targets, pages, suffix="", options=""):
+def execute(targets, pages, suffix="", options="", program=None):
     seen = []
 
     def crawl(runtime, args):
@@ -42,7 +42,8 @@ def execute(targets, pages, suffix="", options=""):
     for key, fn in [("sense:crawl", crawl), ("self:script", script)]:
         registry[key] = replace(registry[key], run=fn)
     source = current_source("본문에서찾기") + "\n" + BODY.split("\n", 1)[1]
-    source += '\n$r = [fn:주소별발췌]{대상:$targets' + options + '}\n' + (suffix or '$r')
+    source += '\n' + (program if program is not None else
+                      '$r = [fn:주소별발췌]{대상:$targets' + options + '}\n' + (suffix or '$r'))
     plan = compile_program(source, registry, {"targets": targets})
     assert not plan.issues, plan.report()
     return Runtime(plan, {"targets": targets}).run(), seen
@@ -127,6 +128,25 @@ def test_source_truncation_survives_extraction():
     out, _ = execute([{"url": "a", "pattern": "price"}], {"a": source})
     assert not out["source_complete"], out
     assert "fixture truncation" in json.dumps(out, ensure_ascii=False)
+
+
+@pytest.mark.parametrize('failed', [False, True])
+def test_exposed_consumer_example_handles_success_and_source_failure(failed):
+    lessons = json.loads((ROOT / 'data/idioms/current_call_lessons.json').read_text())['idioms']
+    example = next(x['example'] for x in lessons if x['name'] == '주소별발췌')
+    url = 'https://www.python.org/doc/'
+    source = Fault('CRAWL_FAILED', 'fixture failure') if failed else page(url, ['Python documentation'])
+    out, seen = execute([], {url: source}, program=example.split('\n', 1)[1])
+    assert out['success'], out
+    assert seen == [url]
+    value = out['value']
+    assert value['ok'] is not failed
+    if failed:
+        assert value['items'] == []
+        assert not out['source_complete']
+        assert value['sources'][0]['error']['code'] == 'CRAWL_FAILED'
+    else:
+        assert value['items'] == [{'request_index': 0, 'text': 'Python documentation'}]
 
 
 if __name__ == "__main__":

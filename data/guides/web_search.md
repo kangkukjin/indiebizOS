@@ -47,9 +47,17 @@ $후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{columns:
 `ok`는 모든 요청의 처리 성공이며 전수 열람·주장 검증을 뜻하지 않는다.
 `match_info.omitted_matches`·`truncations`·`row_honesty`와 실행 봉투의 `source_complete`도 확인한다.
 부분 실패 원문은 오류의 `partial`에 보존하며 자동으로 확정 근거에 합치지 않는다.
-후속 표 처리는 실패 행을 별도 보존한 뒤 성공 행에 적용한다.
+후속 표 처리는 반환 객체 전체가 아닌 `.items`에 적용한다. 실패 행에는 `text`가 없으므로
+본문 필드를 고르기 전에 `has`로 거른다. `sources`와 `ok`를 함께 반환해 실패 근거를 보존한다.
 
-이 관용구는 필요할 때 회상·명시 호출하며 상시 소개하지 않는다. 정의·호출 용례의 등록 입력은
+```ibl
+$발췌 = [fn:주소별발췌]{대상:$대상}
+$본문 = $발췌.items >> [table:filter]{where:($행)=>has($행,"text")}
+$행 = $본문 >> [table:select]{columns:["request_index","text"]}
+return {items:$행,ok:$발췌.ok,sources:$발췌.sources}
+```
+
+정의·호출 용례의 등록 입력은
 `data/idioms/url_extract_seeds.json`, 등록 명령은
 `.venv/bin/python3 scripts/register_webapp_idioms.py --seed-file url_extract_seeds.json --apply --local-encoder`다.
 

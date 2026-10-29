@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""웹앱 관용구의 파일·프로세스 어댑터. 계획과 결과는 JSON, 명령은 argv다."""
+"""웹앱 관용구의 파일·프로세스 어댑터. 계획과 결과는 JSON, 명령은 argv다.
+
+검사는 호스트 NODE_ENV를 상속하지 않는다. build는 production으로 실행하며
+다른 검사 모드는 프로젝트 스크립트·도구가 선택한다. 호스트 환경 자체는 바꾸지 않는다.
+"""
 import sys
 from pathlib import Path
 
@@ -46,8 +50,13 @@ def read_json(path):
     return value
 
 
-def environment(project):
+def environment(project, check=None):
     env = os.environ.copy()
+    # 호스트 Electron/개발 서버의 모드는 검사 대상 프로젝트의 모드가 아니다.
+    # 빌드는 production, 다른 검사는 각 실행 도구·프로젝트 스크립트가 정한다.
+    env.pop("NODE_ENV", None)
+    if check == "build":
+        env["NODE_ENV"] = "production"
     # npm run과 동일하게 프로젝트에 설치된 Node·도구를 우선한다.
     env["PATH"] = str(project / "node_modules" / ".bin") + os.pathsep + env.get("PATH", "")
     env["CI"] = "true"
@@ -220,7 +229,7 @@ def run_check(project, name, timeout, fingerprint):
     status, exit_code = "failed", None
     with log.open("wb") as output:
         try:
-            process = subprocess.Popen(row["argv"], cwd=project, env=environment(project),
+            process = subprocess.Popen(row["argv"], cwd=project, env=environment(project, name),
                                        stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
                                        start_new_session=os.name != "nt")
             try:

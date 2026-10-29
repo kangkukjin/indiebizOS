@@ -74,7 +74,7 @@ import 그래프의 전이 소비자와, 변경 경로를 문자열로 가리키
 | v2 런타임·원장·읽기 재사용·렌더(긴문장 회차 전체 프로그램 재생) | `backend/test_long_sentence_round6_tasks.py`, `backend/test_long_sentence_round15_repairs.py::test_original_round15_full_program_recovers_without_recollecting`, `backend/test_long_sentence_round3_repairs.py::test_full_report_and_six_source_reuse` |
 | 수리 스테이징·apply 수명(실 pytest 자식 배터리) | `backend/test_repair_staging.py` |
 | async 본문·블로킹 호출·사용자 경로 효과(저장소 전수 스캔 관문) | `backend/test_event_loop_gate.py::test_repo_has_no_blocking_calls_in_async_bodies`, `backend/test_imagination_round74_residual.py::test_user_path_effects_gate_is_clean_on_live_tree` |
-| 관용구 카탈로그·제작자 예시(전수 관문) | `backend/test_idiom_exposure_levers_2026_09_09.py::test_validate_catalog_runs_every_producer_example_through_the_gate` |
+| 관용구 카탈로그·제작자 예시(현행 정의 대조) | `backend/test_corpus_current_idiom_teaching.py::test_current_call_examples_compile_against_current_definitions`, `backend/test_idiom_exposure_levers_2026_09_09.py` |
 
 예를 들어 언어 변경은 종합 회귀 뒤 `test_python_libraries.py`를 실행한다. 재기동
 장애 주입까지 같은 변경의 대기 시간에 넣지는 않는다.

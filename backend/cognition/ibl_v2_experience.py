@@ -5,7 +5,11 @@ from ibl_v2_ir import Fault, Node, digest
 
 
 def straight_calls(source, strict=False):
-    """정적으로 확실한 호출만 읽는다. 분기·정의·지연 본문을 실행으로 세지 않는다."""
+    """확실한 호출 접두부만 읽는다. 미해석 꼬리가 앞선 호출까지 지우지 않는다.
+
+    참조 용례(strict)는 전체를 해석할 수 있어야 한다. 실제 프로그램은
+    분기·지연·값 조립을 만나면 거기서 멈추며 그 내부·이후를 추정하지 않는다.
+    """
     from ibl_v2_parser import parse
     calls = []
 
@@ -32,7 +36,9 @@ def straight_calls(source, strict=False):
     try:
         visit(parse(source))
         return calls
-    except (Fault, ValueError, TypeError, KeyError):
+    except ValueError:
+        return [] if strict else calls
+    except (Fault, TypeError, KeyError):
         return []
 
 

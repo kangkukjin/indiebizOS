@@ -117,7 +117,9 @@ def run(project_path: str, analyze: bool = False) -> dict:
 
     before = _artifact_snapshot(project_path)
     results.append("프로덕션 빌드 중...")
-    env = {**os.environ, "ANALYZE": "true"} if analyze else None
+    env = {**os.environ, "NODE_ENV": "production"}
+    if analyze:
+        env["ANALYZE"] = "true"
     build_result = run_command(["npm", "run", "build"], cwd=project_path, timeout=300, env=env)
 
     if not build_result["success"]:

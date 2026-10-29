@@ -99,6 +99,40 @@ def test_health_runner_reports_admission_abort_as_incomplete_not_red(monkeypatch
     assert "접수 중단" in ev["error_message"] and "재기동" in ev["error_message"]
 
 
+def test_generation_runner_keeps_live_checks_but_audits_complete_source(monkeypatch, tmp_path):
+    import world_pulse_health as health
+    source, generation = tmp_path / "source", tmp_path / "generation"
+    (generation / "scripts").mkdir(parents=True)
+    (generation / "scripts/ibl_health_check.py").touch()
+    (source / "scripts").mkdir(parents=True)
+    (source / "scripts/red_safety_selftest.py").touch()
+    monkeypatch.setattr(health, "__file__", str(generation / "backend/cognition/world_pulse_health.py"))
+    monkeypatch.setenv("INDIEBIZ_SOURCE_ROOT", str(source))
+    monkeypatch.setenv("INDIEBIZ_CODE_ROOT", str(generation))
+    seen = {}
+
+    def run(command, **kwargs):
+        seen[command[1]] = kwargs
+        return _Done('@@HEALTH_JSON@@ {"static_ok": false, "static_error": "정본 선언 오류"}')
+
+    monkeypatch.setattr(subprocess, "run", run)
+    for name in ("_run_silent_failure_regression", "_run_import_coverage", "_run_red_drift"):
+        def probe(root, name=name):
+            seen[name] = root
+            return {"action": name, "success": True}
+        monkeypatch.setattr(health, name, probe)
+    monkeypatch.setattr(health, "_run_playwright_browsers", lambda root: {"action": "browser"})
+    events = health.run_ibl_health_check()
+    assert seen[str(generation / "scripts/ibl_health_check.py")]["cwd"] == str(generation)
+    red = seen[str(source / "scripts/red_safety_selftest.py")]
+    assert red["cwd"] == str(source) and red["env"]["INDIEBIZ_CODE_ROOT"] == str(source)
+    assert all(seen[name] == source for name in
+               ("_run_silent_failure_regression", "_run_import_coverage", "_run_red_drift"))
+    consistency = next(ev for ev in events if ev["action"] == "ibl_consistency")
+    assert consistency["success"] is False
+    assert consistency["error_message"] == "정본 선언 오류"
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))

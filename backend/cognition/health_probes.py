@@ -12,6 +12,23 @@ import time as _time
 from pathlib import Path
 from typing import Dict
 
+def source_check_context(root=None):
+    """정본 검사 입력과 자식 환경. 실행 세대에는 개발 시험·git 재고가 없다.
+
+    검사 인터프리터는 호출자의 것을 유지하지만 코드 경로는 정본 한 벌로 맞춘다.
+    실행 중 워커의 신원/제어 권한은 검사 자식에게 넘기지 않는다.
+    """
+    import os
+    from runtime_utils import get_source_root
+    root = Path(root) if root is not None else get_source_root()
+    env = dict(os.environ)
+    for key in ("INDIEBIZ_MANAGED_WORKER", "INDIEBIZ_RUNTIME_GENERATION",
+                "INDIEBIZ_RUNTIME_DIGEST", "INDIEBIZ_RUNTIME_CONTROL", "INDIEBIZ_RUNTIME_PARENT"):
+        env.pop(key, None)
+    env.update(INDIEBIZ_CODE_ROOT=str(root), INDIEBIZ_SOURCE_ROOT=str(root))
+    return root, env
+
+
 def _run_import_coverage(_root) -> Dict:
     """의존성 커버리지 순찰(§1F) — scripts/check_import_coverage.py 를 1회 실행.
 
@@ -27,8 +44,9 @@ def _run_import_coverage(_root) -> Dict:
         return {**key, "success": False, "data_quality": "error",
                 "error_message": "scripts/check_import_coverage.py 없음"}
     try:
-        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
-                              capture_output=True, text=True, timeout=600)
+        proc = subprocess.run([sys.executable, str(script), "--venv", sys.executable], cwd=str(_root),
+                              capture_output=True, text=True, timeout=600,
+                              env=source_check_context(_root)[1])
     except Exception as e:
         return {**key, "success": False, "data_quality": "error",
                 "error_message": f"실행 실패: {str(e)[:150]}"}
@@ -116,7 +134,8 @@ def _run_silent_failure_regression(_root) -> Dict:
                     "error_message": f"{rel} 없음"}
         try:
             proc = subprocess.run([sys.executable, "-m", "pytest", str(script)], cwd=str(_root),
-                                  capture_output=True, text=True, timeout=180)
+                                  capture_output=True, text=True, timeout=180,
+                                  env=source_check_context(_root)[1])
         except Exception as e:
             return {"node": "__static__", "action": "silent_failure_regression",
                     "success": False, "response_ms": int((_time.time() - t0) * 1000),
@@ -153,7 +172,8 @@ def _run_red_drift(_root) -> Dict:
     t0 = _time.time()
     try:
         proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
-                              capture_output=True, text=True, timeout=120)
+                              capture_output=True, text=True, timeout=120,
+                              env=source_check_context(_root)[1])
     except Exception as e:
         return {"node": "__static__", "action": "red_drift", "success": False,
                 "response_ms": int((_time.time() - t0) * 1000), "data_quality": "error",

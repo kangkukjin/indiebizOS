@@ -263,10 +263,12 @@ def main():
 
 def _run_static_check():
     started = time.monotonic()
-    command = [sys.executable, "scripts/build_ibl_nodes.py", "--check"]
+    from health_probes import source_check_context
+    root, env = source_check_context()
+    command = [sys.executable, str(root / "scripts/build_ibl_nodes.py"), "--check"]
     try:
         result = subprocess.run(command, capture_output=True, text=True,
-                                cwd=os.getcwd(), timeout=600)
+                                cwd=str(root), timeout=600, env=env)
     except subprocess.TimeoutExpired:
         # 다른 절의 완료 결과도 남기되 정적 검사를 결코 GREEN으로 만들지 않는다.
         result = subprocess.CompletedProcess(command, 1, "",
@@ -481,6 +483,8 @@ def _run_checks(static_future):
     _summary = {
         "elapsed_s": round(time.monotonic() - _STARTED, 1),
         "static_ok": bool(static_ok),
+        "static_error": None if static_ok else (
+            (static_result.stderr or static_result.stdout or "build --check 실패").strip()[-220:]),
         "timings": {"static_s": static_elapsed, "live_s": live_elapsed},
         "currency": {
             "green": len(buckets["GREEN"]), "yellow": len(buckets["YELLOW"]), "red": len(buckets["RED"]),

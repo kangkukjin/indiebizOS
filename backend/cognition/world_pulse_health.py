@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from health_probes import (_run_import_coverage, _run_playwright_browsers,  # noqa: E402 — 1500줄 분리
-                           _run_silent_failure_regression, _run_red_drift)
+                           _run_silent_failure_regression, _run_red_drift, source_check_context)
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,8 @@ def run_ibl_health_check() -> List[Dict]:
     out.append({"node": "__static__", "action": "ibl_consistency",
                 "success": static_ok, "response_ms": 0,
                 "data_quality": "ok" if static_ok else "consistency_failure",
-                "error_message": None if static_ok else "build --check 불일치 — src↔tool.json↔handler/fixture"})
+                "error_message": None if static_ok else (s.get("static_error") or
+                    "build --check 불일치 — src↔tool.json↔handler/fixture")[:220]})
     # §1B 통화
     cur = s.get("currency") or {}
     g, y, r = int(cur.get("green", 0)), int(cur.get("yellow", 0)), int(cur.get("red", 0))
@@ -223,11 +224,12 @@ def run_ibl_health_check() -> List[Dict]:
     # 게이트·그랜트·백업·워치독의 *기능*을 임시 저장소에서 실측(AI 0, 라이브 무접촉).
     # ★반드시 subprocess — 인프로세스로 돌리면 selftest 의 그랜트 발급/회수가
     # 라이브 프로세스의 red_grant 전역을 건드려 순간적으로 게이트가 열린다.
-    _rs_script = _root / "scripts" / "red_safety_selftest.py"
+    _source_root, _source_env = source_check_context()
+    _rs_script = _source_root / "scripts" / "red_safety_selftest.py"
     if _rs_script.exists():
         try:
-            rp = subprocess.run([sys.executable, str(_rs_script)], cwd=str(_root),
-                                capture_output=True, text=True, timeout=120)
+            rp = subprocess.run([sys.executable, str(_rs_script)], cwd=str(_source_root),
+                                capture_output=True, text=True, timeout=120, env=_source_env)
             rs_ok = rp.returncode == 0
             rs_note = None
             if not rs_ok:
@@ -246,14 +248,14 @@ def run_ibl_health_check() -> List[Dict]:
     # 현행 문법·실패 전파와 도구 통화. 부류 단위로 닫은 침묵 실패들이
     # 다시 열리면 12시간 내 여기서 깃발이 선다. subprocess=테스트가 패키지 모듈을
     # 자체 로드하므로 라이브 프로세스 무접촉(red_safety 와 같은 이유).
-    out.append(_run_silent_failure_regression(_root))
+    out.append(_run_silent_failure_regression(_source_root))
     # §1F 의존성 커버리지 (2026-08-13 — .venv 전환 잔재 감사의 상설 전환) —
     # 코드의 모든 서드파티 import 가 지금 이 .venv 에 실재하는가. 미선언 의존성은
     # 부팅이 아니라 그 코드가 도는 순간 터지므로(mcp 마운트 실패·greenlet ABI →
     # playwright 사망 부류) 부팅 성공이 증명이 못 된다 — 12시간 그물로 실 import 시험.
     # subprocess=검사 스크립트가 .venv 인터프리터를 따로 띄워 repo 밖 cwd 에서 시험
     # (라이브 프로세스 무접촉, red_safety 와 같은 이유).
-    out.append(_run_import_coverage(_root))
+    out.append(_run_import_coverage(_source_root))
     # §1G playwright 브라우저 주소 정합 (2026-08-15 — 빌드 드리프트의 상설 그물) —
     # playwright 를 올리면 브라우저 빌드 번호가 바뀌는데, 받는 곳(기본 캐시)과 보는 곳
     # (base_path/ms-playwright)이 갈리면 슬라이드·강의영상·글자얹기·browser-action 이
@@ -261,7 +263,7 @@ def run_ibl_health_check() -> List[Dict]:
     out.append(_run_playwright_browsers(_root))
     # §1H RED 드리프트 (2026-08-18) — 격리를 안 지난 backend/*.py 변경·고아 격리본.
     # 워크트리 격리가 "문 하나"에만 걸린 구조라 우회가 조용하다. 차단은 못 하니 보이게 한다.
-    out.append(_run_red_drift(_root))
+    out.append(_run_red_drift(_source_root))
     # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
     out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
                 "response_ms": 0, "data_quality": "ok", "error_message": None})

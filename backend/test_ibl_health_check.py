@@ -126,9 +126,34 @@ def test_summary_keeps_live_results_when_static_fails(health, monkeypatch, capsy
                 if line.startswith("@@HEALTH_JSON@@ "))
     summary = json.loads(line.split(" ", 1)[1])
     assert summary["static_ok"] is static_ok
+    assert summary["static_error"] == (None if static_ok else "실패")
     assert summary["currency"]["green"] == 1
     assert summary["timings"]["static_s"] == 12.5
     assert summary["timings"]["live_s"] >= 0
+
+
+def test_static_check_uses_complete_source_tree_with_matching_child_environment(health, monkeypatch, tmp_path):
+    import subprocess
+    source, generation = tmp_path / "source", tmp_path / "generation"
+    source.mkdir()
+    generation.mkdir()
+    monkeypatch.chdir(generation)
+    monkeypatch.setenv("INDIEBIZ_SOURCE_ROOT", str(source))
+    monkeypatch.setenv("INDIEBIZ_CODE_ROOT", str(generation))
+    monkeypatch.setenv("INDIEBIZ_RUNTIME_CONTROL", "private-worker-token")
+    seen = {}
+
+    def run(command, **kwargs):
+        seen.update(command=command, **kwargs)
+        return subprocess.CompletedProcess(command, 1, "", "실제 불일치")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    result, _ = health._run_static_check()
+    assert result.returncode == 1
+    assert seen["command"][1] == str(source / "scripts/build_ibl_nodes.py")
+    assert seen["cwd"] == str(source)
+    assert seen["env"]["INDIEBIZ_CODE_ROOT"] == str(source)
+    assert "INDIEBIZ_RUNTIME_CONTROL" not in seen["env"]
 
 
 def test_progress_is_flushed_without_waiting_for_completion(health, monkeypatch):

@@ -473,6 +473,31 @@ root에는 요청·기준 판본·후보/산출물 ID·현재 단계·단계 rev
 **29 통과(187.88초)**. Android 몸 번들 재생성과 backend 층 검사도 통과했다.
 운영 종료→재시작은 실측했고, 세대 삭제 경계는 격리 회귀로 검증했다. 실제 모델의 자기수리 인수는 실행하지 않았다.
 
+### 11.8 건강검사의 정본 입력과 실행 세대 분리(2026-10-29)
+
+세대 실행 뒤 건강검사가 `__file__`의 실행 사본을 전체 저장소로 간주했다. 운영 기록의 실패는
+어휘 정합·침묵 실패 회귀·의존성 커버리지 세 항목이었다. 실행 사본은 의도적으로 테스트를 제외하므로
+`test_ibl_v2_core.py`가 없었고, 개발 검사 스크립트가 import하는 `test_ibl_authoring_support`와
+`test_restart_process`는 로컬 모듈 대신 미설치 서드파티로 오인되었다. 같은 사본에서 관리 워커 환경으로
+`build --check`를 재현하면 전체 저장소를 설명하는 문서 세 개의 파생 구간이 불일치했다.
+어휘 선언이나 외부 라이브러리의 결손으로 고칠 문제가 아니었다.
+
+`health_probes.source_check_context`가 정본 검사 경로와 자식 환경을 함께 정한다. 정적 빌드,
+회귀 시험, 안전장치 스모크, 의존성 코드 스캔, Git 드리프트는 정본에서 실행한다. 자식의 코드 경로도
+같은 정본으로 맞추고 운영 워커의 신원·제어 토큰은 넘기지 않는다. 의존성 실 import는 `--venv`로
+현재 워커의 인터프리터를 명시한다. 세대에 테스트를 추가하거나 누락을 통과로 처리하지 않는다.
+
+통화·골든 파이프·연산자 검사는 실행 세대의 검사 스크립트와 실제 앱 호출을 유지한다.
+따라서 정적 검사 통과는 정본의 정합성을, 실제 호출 통과는 활성 앱의 해당 기능을 뜻한다.
+정본 변경의 배포 완료나 전체 실행 세대의 동일성을 정적 검사 하나로 주장하지 않는다.
+정적 검사의 구체적 실패 출력도 요약 마커를 통해 상태 화면까지 전달한다.
+
+회귀는 `test_health_probes`, `test_ibl_health_check`, `test_ibl_health_runner_timeout`에서
+소스/실행 경로 분리, 자식 환경 일치, 실제 인터프리터 유지, 누락·실패 전파를 검증한다.
+이 세 파일과 기존 의존성 감사 시험은 **38 통과(3.23초)**, backend 비system 전수는
+**11,279 통과·9 건너뜀(313.26초)**였다. Android 몸 번들 재생성·backend 층 검사도 통과했다.
+재기동 프로토콜·세대 저장 방식은 변경하지 않았으며, 이번 변경에서 system 장애 주입 묶음은 재실행하지 않았다.
+
 ## 조사 재현과 검증 범위
 
 읽은 주요 구현: `backend/base/{restart_protocol,repair_process,repair_test_results}.py`, `backend/services/{restart_controller,restart_helper}.py`, `backend/datastore/{restart_red,red_apply,repair_continuation}.py`, `backend/cognition/{repair_policy,repair_check_runner,repair_resume,repair_verdict_distill}.py`, `backend/surface/api_repair_continuation.py`, `data/packages/installed/tools/system_essentials/{repair_staging,repair_candidate,repair_outcomes}.py`.

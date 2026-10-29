@@ -2,6 +2,7 @@
 """IBL 건강 점검 — 매뉴얼 §1 절차를 그대로 실행(외부 도구 의존 없이 /ibl/execute + 레지스트리만)."""
 import json, time, urllib.request, urllib.error, subprocess, sys, os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 import boot_paths  # noqa: E402,F401
 from ibl_v2_ir import unpack
@@ -253,15 +254,29 @@ def main():
         sys.exit(1 if _fail else 0)
 
 
-    # ── §1A 정적 정합성 ──
-    progress("정적 검사", "build --check")
-    print("="*72); print("§1A 정적 정합성 (build --check)"); print("="*72)
+    # 정적 검사는 파일만 읽으며 HTTP fixture와 독립이다. 외부 호출은 종전대로 직렬.
+    # context가 정상 종료·예외·접수 중단 모두에서 제한시간 있는 자식을 회수한다.
+    progress("정적 검사 시작", "build --check (기능 검사와 병행)")
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="health-static") as pool:
+        _run_checks(pool.submit(_run_static_check))
+
+
+def _run_static_check():
+    started = time.monotonic()
+    command = [sys.executable, "scripts/build_ibl_nodes.py", "--check"]
     try:
-        r = subprocess.run([sys.executable, "scripts/build_ibl_nodes.py", "--check"],
-                           capture_output=True, text=True, cwd=os.getcwd(), timeout=600)
+        result = subprocess.run(command, capture_output=True, text=True,
+                                cwd=os.getcwd(), timeout=600)
     except subprocess.TimeoutExpired:
-        print("정적 검사 제한시간 초과 (600초): build --check", file=sys.stderr, flush=True)
-        sys.exit(1)
+        # 다른 절의 완료 결과도 남기되 정적 검사를 결코 GREEN으로 만들지 않는다.
+        result = subprocess.CompletedProcess(command, 1, "",
+            "정적 검사 실패: 제한시간 초과 (600초): build --check")
+    return result, round(time.monotonic() - started, 1)
+
+
+def _report_static(result):
+    print("\n" + "="*72); print("§1A 정적 정합성 (build --check)"); print("="*72)
+    r = result
     # ★판정=returncode 단일 소스. 옛 문구 스크레이핑("검증 통과" in stdout and "불일치" not in
     # stdout)은 --check 의 실패 출력이 전부 stderr 로 가므로 "불일치" 검사가 공허하게 항상 참 —
     # 게이트 1(validate 롤업)의 성공 문구 유무만 봤고, 나머지 가드(코퍼스 param·fixture 완전성·
@@ -275,6 +290,11 @@ def main():
         for line in _err[:40]: print("  " + line.strip())
     print("  → 정적:", "GREEN ✅" if static_ok else "RED ❌")
 
+    return static_ok
+
+
+def _run_checks(static_future):
+    live_started = time.monotonic()
     # ── §1B 통화 무결성 (fixture 전수 probe) ──
     # fixture('올바른 파라미터 예 하나')는 data/ibl_fixtures.json 이 단일 진실 소스.
     # build_ibl_nodes.py --check 가 items/scalar 액션의 fixture 완전성을 강제하므로(신규 액션이
@@ -437,6 +457,11 @@ def main():
     except Exception as e:
         print("  (조회 실패:", e, ") — 스키마 다를 수 있음")
 
+    live_elapsed = round(time.monotonic() - live_started, 1)
+    progress("정적 검사 결과 대기", "build --check")
+    static_result, static_elapsed = static_future.result()
+    static_ok = _report_static(static_result)
+
     # ── 종합 ──
     print("\n" + "="*72); print("종합 판정"); print("="*72)
     print(f"  §1A 정적:        {'✅' if static_ok else '❌'}")
@@ -456,6 +481,7 @@ def main():
     _summary = {
         "elapsed_s": round(time.monotonic() - _STARTED, 1),
         "static_ok": bool(static_ok),
+        "timings": {"static_s": static_elapsed, "live_s": live_elapsed},
         "currency": {
             "green": len(buckets["GREEN"]), "yellow": len(buckets["YELLOW"]), "red": len(buckets["RED"]),
             "reds": [{"name": n, "reason": r} for n, r in buckets["RED"]],

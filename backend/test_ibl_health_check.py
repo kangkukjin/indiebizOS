@@ -48,7 +48,7 @@ def test_http_probe_declares_current_edition_and_preserves_parent(health, monkey
     assert health.classify_currency(result, "items")[0] == "GREEN"
 
 
-def test_static_check_has_its_own_deadline_and_never_starts_fixtures(health, monkeypatch, capsys):
+def test_static_timeout_keeps_deadline_and_reports_failure(health, monkeypatch, capsys):
     import subprocess
 
     def timeout(*args, **kwargs):
@@ -56,15 +56,79 @@ def test_static_check_has_its_own_deadline_and_never_starts_fixtures(health, mon
         raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
 
     monkeypatch.setattr(subprocess, "run", timeout)
+    result, elapsed = health._run_static_check()
+    assert elapsed >= 0
+    assert health._report_static(result) is False
+    assert "제한시간 초과 (600초)" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("returncode", [0, 1])
+def test_static_verdict_uses_exit_code_even_with_success_text(health, returncode, capsys):
+    import subprocess
+    result = subprocess.CompletedProcess([], returncode, "검증 통과", "✗ 파생물 불일치")
+    assert health._report_static(result) is (returncode == 0)
+    if returncode:
+        assert "파생물 불일치" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("abort", [False, True])
+def test_static_overlaps_live_checks_and_is_joined_on_exit(health, monkeypatch, abort):
+    from threading import Event
+    static_started, live_started, static_finished = Event(), Event(), Event()
+
+    def static():
+        static_started.set()
+        try:
+            assert live_started.wait(5), "live checks must start before static finishes"
+            return "static-result"
+        finally:
+            static_finished.set()
+
+    def live(future):
+        assert static_started.wait(5)
+        assert not future.done()
+        live_started.set()
+        if abort:
+            raise SystemExit(0)  # same unwind path as admission closure
+        assert future.result(timeout=5) == "static-result"
+
+    monkeypatch.setattr(health, "_run_static_check", static)
+    monkeypatch.setattr(health, "_run_checks", live)
     monkeypatch.setattr(health.sys, "argv", ["ibl_health_check.py"])
-    monkeypatch.setattr(health, "execute", lambda *a, **k: pytest.fail("static check did not finish"))
-    with pytest.raises(SystemExit) as stopped:
+    if abort:
+        with pytest.raises(SystemExit):
+            health.main()
+    else:
         health.main()
-    assert stopped.value.code == 1
-    captured = capsys.readouterr()
-    assert "정적 검사 제한시간 초과 (600초)" in captured.err
-    assert "@@HEALTH_PROGRESS@@" in captured.out
-    assert "@@HEALTH_JSON@@" not in captured.out
+    assert static_finished.is_set()
+
+
+@pytest.mark.parametrize("static_ok", [False, True])
+def test_summary_keeps_live_results_when_static_fails(health, monkeypatch, capsys, static_ok):
+    import subprocess
+    from concurrent.futures import Future
+    # Keep the real aggregation path; replace effects and use one fixture.
+    monkeypatch.setattr(health.json, "load", lambda stream:
+                        {"fixtures": {"sense:search": "probe"}, "exempt": {}})
+    monkeypatch.setattr(health, "_load_safety_map", lambda: {("sense", "search"): True})
+    monkeypatch.setattr(health, "_load_op_safety_map", lambda: {})
+    monkeypatch.setattr(health, "_first_op", lambda *args: None)
+    monkeypatch.setattr(health, "_op_returns_of", lambda *args: "items")
+    monkeypatch.setattr(health, "_is_safe", lambda *args: True)
+    monkeypatch.setattr(health, "execute", lambda *args: packet({"items": [{"title": "ok"}]}))
+    monkeypatch.setattr(health, "run_contract_drift", lambda: {"compared": 1})
+    monkeypatch.setattr(health, "PIPES", [])
+    monkeypatch.setattr(health, "OPERATORS", [])
+    future = Future()
+    future.set_result((subprocess.CompletedProcess([], 0 if static_ok else 1, "", "실패"), 12.5))
+    health._run_checks(future)
+    line = next(line for line in capsys.readouterr().out.splitlines()
+                if line.startswith("@@HEALTH_JSON@@ "))
+    summary = json.loads(line.split(" ", 1)[1])
+    assert summary["static_ok"] is static_ok
+    assert summary["currency"]["green"] == 1
+    assert summary["timings"]["static_s"] == 12.5
+    assert summary["timings"]["live_s"] >= 0
 
 
 def test_progress_is_flushed_without_waiting_for_completion(health, monkeypatch):

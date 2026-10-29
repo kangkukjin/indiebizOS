@@ -48,6 +48,36 @@ def test_http_probe_declares_current_edition_and_preserves_parent(health, monkey
     assert health.classify_currency(result, "items")[0] == "GREEN"
 
 
+def test_static_check_has_its_own_deadline_and_never_starts_fixtures(health, monkeypatch, capsys):
+    import subprocess
+
+    def timeout(*args, **kwargs):
+        assert kwargs["timeout"] == 600
+        raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+
+    monkeypatch.setattr(subprocess, "run", timeout)
+    monkeypatch.setattr(health.sys, "argv", ["ibl_health_check.py"])
+    monkeypatch.setattr(health, "execute", lambda *a, **k: pytest.fail("static check did not finish"))
+    with pytest.raises(SystemExit) as stopped:
+        health.main()
+    assert stopped.value.code == 1
+    captured = capsys.readouterr()
+    assert "정적 검사 제한시간 초과 (600초)" in captured.err
+    assert "@@HEALTH_PROGRESS@@" in captured.out
+    assert "@@HEALTH_JSON@@" not in captured.out
+
+
+def test_progress_is_flushed_without_waiting_for_completion(health, monkeypatch):
+    printed = []
+    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: printed.append((args, kwargs)))
+    health.progress("fixture", "sense:search")
+    args, kwargs = printed[0]
+    assert kwargs["flush"] is True
+    point = json.loads(args[0].split(" ", 1)[1])
+    assert point["stage"] == "fixture" and point["item"] == "sense:search"
+    assert point["elapsed_s"] >= 0
+
+
 @pytest.mark.parametrize("paged", [False, True])
 def test_actual_agent_projection_is_read_losslessly_without_reexecution(health, monkeypatch, tmp_path, paged):
     import model_result_view as view

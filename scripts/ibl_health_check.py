@@ -8,6 +8,15 @@ from ibl_v2_ir import unpack
 
 BASE = "http://localhost:8765"
 PID = "하드웨어"
+_STARTED = time.monotonic()
+
+
+def progress(stage, item=""):
+    """타임아웃에도 마지막 실행 위치가 부모에게 남도록 즉시 내보낸다."""
+    print("@@HEALTH_PROGRESS@@ " + json.dumps({
+        "stage": stage, "item": item,
+        "elapsed_s": round(time.monotonic() - _STARTED, 1),
+    }, ensure_ascii=False), flush=True)
 
 def _abort_admission(detail):
     """실행 접수가 닫혀 호출이 거절됐다(재기동 drain·세대 불일치) — 거절은 어휘 결함이 아니다.
@@ -245,9 +254,14 @@ def main():
 
 
     # ── §1A 정적 정합성 ──
+    progress("정적 검사", "build --check")
     print("="*72); print("§1A 정적 정합성 (build --check)"); print("="*72)
-    r = subprocess.run([sys.executable, "scripts/build_ibl_nodes.py", "--check"],
-                       capture_output=True, text=True, cwd=os.getcwd())
+    try:
+        r = subprocess.run([sys.executable, "scripts/build_ibl_nodes.py", "--check"],
+                           capture_output=True, text=True, cwd=os.getcwd(), timeout=600)
+    except subprocess.TimeoutExpired:
+        print("정적 검사 제한시간 초과 (600초): build --check", file=sys.stderr, flush=True)
+        sys.exit(1)
     # ★판정=returncode 단일 소스. 옛 문구 스크레이핑("검증 통과" in stdout and "불일치" not in
     # stdout)은 --check 의 실패 출력이 전부 stderr 로 가므로 "불일치" 검사가 공허하게 항상 참 —
     # 게이트 1(validate 롤업)의 성공 문구 유무만 봤고, 나머지 가드(코퍼스 param·fixture 완전성·
@@ -303,6 +317,7 @@ def main():
             gated += 1
             verdict, reason = "SKIP", "부작용 op — read-only 게이트로 실행 생략(수동: --all-fixtures)"
         else:
+            progress("fixture", name)
             _d = execute(code)
             verdict, reason = classify_currency(_d, declared)
             # 봉투 규모 불변식(ibl_honesty.scope_violation): total>items 인데 truncated 침묵 = YELLOW.
@@ -340,6 +355,7 @@ def main():
     # 사람이 손으로 찾았다(31ea17f0). 표본을 검사기로 컴파일해 Plan.result_type 을 얻고, 검사기가 pure 로
     # 판정한 표본만 실행해 같은 타입 규칙으로 대조한다. 실행하지 않은 대상은 사유와 함께 세어 남긴다.
     print("\n" + "="*72); print("§1B-2 계약 대조 (선언 반환 계약 ↔ 실측)"); print("="*72)
+    progress("계약 대조")
     contract_drift = run_contract_drift()
     for row in contract_drift.get("rows", []):
         detail = row.get("reason") or ", ".join(row.get("paths") or []) or ""
@@ -352,6 +368,7 @@ def main():
     pipe_pass = 0
     pipe_fails = []
     for name, code, kind in PIPES:
+        progress("골든 파이프", name)
         fr = final_of(execute(code))
         ok = pipe_ok(fr, kind)
         if not ok:
@@ -372,6 +389,7 @@ def main():
     print("\n" + "="*72); print("§1C-2 연산자 (?? · & — 동작 단언)"); print("="*72)
     op_pass = 0
     for name, code, expected in OPERATORS:
+        progress("연산자", name)
         try:
             ok, detail = operator_result(execute(code), expected)
         except Exception as e:
@@ -385,6 +403,7 @@ def main():
     # 필터가 없던 동안 전 역사를 무기한 합산해 화석이 영원히 상위에 남았다(run_pipeline 86%
     # = 은퇴한 옛 12h sweep 의 5~6월 잔재, 6주간 호출 0건인데 계속 표시 — 2026-08-04 실측).
     print("\n" + "="*72); print("§1D 런타임 건강 (최근 7일 실사용, 실패율 상위)"); print("="*72)
+    progress("런타임 기록 조회")
     try:
         import sqlite3
         c = sqlite3.connect("data/world_pulse.db")
@@ -435,6 +454,7 @@ def main():
     # ── 기계 판독 요약 — world_pulse_health.run_ibl_health_check 가 이 한 줄을 파싱한다.
     # 사람용 로그의 문구가 바뀌어도 계약이 깨지지 않도록 구조화 출력을 병행(마커 없으면 파서가 fail 처리).
     _summary = {
+        "elapsed_s": round(time.monotonic() - _STARTED, 1),
         "static_ok": bool(static_ok),
         "currency": {
             "green": len(buckets["GREEN"]), "yellow": len(buckets["YELLOW"]), "red": len(buckets["RED"]),

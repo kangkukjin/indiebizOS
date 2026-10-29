@@ -1,9 +1,11 @@
 """IBL 건강 검사 러너의 시간 예산 회귀.
 
-전수 fixture가 실제로 약 4분 28초 걸리는데 러너가 300초에 끊어, 외부 API 지연 한 번만
-겹쳐도 조종실에 '검사기 자체 실행 실패'가 남았다. 시간 예산과 사람이 읽는 오류를 고정한다.
+정적 검사와 전수 fixture를 함께 돌릴 시간을 주고, 중단 시 실제 진행 위치를 남긴다.
 """
 import subprocess
+import json
+
+import pytest
 
 
 def test_health_runner_allows_full_fixture_sweep_and_reports_timeout(monkeypatch):
@@ -18,12 +20,36 @@ def test_health_runner_allows_full_fixture_sweep_and_reports_timeout(monkeypatch
     monkeypatch.setattr(subprocess, "run", _timeout)
     events = health.run_ibl_health_check()
 
-    assert seen["timeout"] == health.IBL_HEALTH_CHECK_TIMEOUT_S == 600
+    assert seen["timeout"] == health.IBL_HEALTH_CHECK_TIMEOUT_S == 1200
     assert len(events) == 1 and events[0]["success"] is False
     message = events[0]["error_message"]
-    assert "600초" in message
-    assert "외부 fixture 응답 지연" in message
+    assert "1200초" in message
+    assert "진행 위치 기록 없음" in message
     assert "Command '" not in message, "잘린 subprocess 원문 대신 원인·예산을 보여줘야 한다"
+
+
+@pytest.mark.parametrize("as_bytes", [False, True])
+def test_timeout_preserves_last_valid_progress_even_with_partial_line(monkeypatch, as_bytes):
+    import world_pulse_health as health
+
+    output = "\n".join([
+        '@@HEALTH_PROGRESS@@ {"stage":"정적 검사","elapsed_s":0}',
+        "@@HEALTH_PROGRESS@@ " + json.dumps({
+            "stage": "fixture", "item": "sense:search_shopping", "elapsed_s":581.5,
+        }, ensure_ascii=False),
+        '@@HEALTH_PROGRESS@@ {"stage":',
+    ])
+
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], kwargs["timeout"],
+                                        output=output.encode() if as_bytes else output)
+
+    monkeypatch.setattr(subprocess, "run", timeout)
+    event, = health.run_ibl_health_check()
+    assert event["success"] is False
+    assert "fixture sense:search_shopping" in event["error_message"]
+    assert "581.5초" in event["error_message"]
+    assert "정적 검사" not in event["error_message"]
 
 
 class _Done:

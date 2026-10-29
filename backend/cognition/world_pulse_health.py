@@ -27,7 +27,9 @@ from health_probes import (_run_import_coverage, _run_playwright_browsers,  # no
 
 logger = logging.getLogger(__name__)
 
-IBL_HEALTH_CHECK_TIMEOUT_S = 600  # 전수 probe 실측 267.52초; 주간 fixture sweep과 같은 하한
+# 정적 검사와 전수 fixture의 합산 예산. 정적 검사만 약 5분을 사용한 실행에서
+# 종전 600초는 정상 진행 중인 fixture를 잘랐다(2026-10-28).
+IBL_HEALTH_CHECK_TIMEOUT_S = 1200
 
 
 # ============================================================
@@ -131,9 +133,23 @@ def run_ibl_health_check() -> List[Dict]:
             cwd=str(_root), capture_output=True, text=True,
             timeout=IBL_HEALTH_CHECK_TIMEOUT_S, env=_env,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
+        output = exc.stdout or ""
+        if isinstance(output, bytes):
+            output = output.decode("utf-8", errors="replace")
+        location = "진행 위치 기록 없음"
+        for line in reversed(output.splitlines()):
+            if not line.startswith("@@HEALTH_PROGRESS@@ "):
+                continue
+            try:
+                point = _json.loads(line[len("@@HEALTH_PROGRESS@@ "):])
+                location = (f"마지막 진행: {point['stage']} {point.get('item') or ''} "
+                            f"(시작 후 {point['elapsed_s']}초)")
+                break
+            except (ValueError, TypeError, KeyError):
+                continue
         return _runner_fail(f"ibl_health_check 제한시간 초과 ({IBL_HEALTH_CHECK_TIMEOUT_S}초) — "
-                            "외부 fixture 응답 지연 또는 백엔드 정체 확인 필요")
+                            + location)
     except Exception as e:
         return _runner_fail(f"ibl_health_check 실행 실패: {str(e)[:150]}")
 

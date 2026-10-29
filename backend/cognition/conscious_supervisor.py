@@ -227,8 +227,10 @@ class Supervisor:
         """입장 심사와 진행 중 취소를 분리한다. 기본 배분은 소프트 한도다."""
         if self.config["budget_mode"] == "hard":
             return self.model_budget_available()
-        if phase in {"final", "receipt"}:
-            return True  # max_repairs가 재검수 횟수를 제한. 판정 없는 보완을 만들지 않는다.
+        if phase in {"final", "receipt", "plan_completion"}:
+            # 필수 종결 호출은 탐색의 soft 배분으로 막지 않는다. 최종 검수는
+            # max_repairs, 도구 없는 계획 완성은 prepare의 최대 2회로 제한한다.
+            return True
         bucket = "review" if phase == "review" else "plan"
         spent = self.phase_usage.get(bucket, {})
         for key in ("input", "output"):
@@ -264,7 +266,7 @@ class Supervisor:
                 return False
         return True
 
-    def plan(self, prompt, system_prompt, revision=None):
+    def plan(self, prompt, system_prompt, revision=None, *, completion=False):
         from supervisor_runtime import invoke, PLANNING_TOOL_PROMPT
         with self.review_lock:
             if revision:
@@ -275,6 +277,9 @@ class Supervisor:
                     raise ConsciousnessCallSkipped("review_limit", reason)
                 self.reviews += 1
             self.enabled = True
+            if completion:
+                return invoke(self, prompt, planning_prompt=system_prompt,
+                              phase="plan_completion")
             return invoke(self, prompt, planning_prompt=system_prompt + "\n\n" + PLANNING_TOOL_PROMPT,
                           phase="reframe" if revision else "plan")
 
@@ -674,7 +679,7 @@ class Supervisor:
                 self.log("recall.stalled", role="harness", stage=preparing["stage"],
                          elapsed_s=round(elapsed), waiting_for="local_preparation", model_started=False)
             return
-        if not self.enabled or self.finalizing or self.phase in {"plan", "reframe"} or self.cancelled():
+        if not self.enabled or self.finalizing or self.phase in {"plan", "reframe", "plan_completion"} or self.cancelled():
             return
         with self.lock:
             for job in self.jobs.values():

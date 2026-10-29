@@ -49,7 +49,7 @@ def test_normal_task_has_no_guide_read_call_or_file(workspace):
     root, guide, events = workspace
     guide.unlink()  # 일반 작업은 교재가 없어도 영향을 받지 않는다.
     output = {"task_framing": "수치를 비교한다.", "deep_research": False}
-    supervisor = SimpleNamespace(plan=lambda *a: pytest.fail("일반 작업의 추가 호출"))
+    supervisor = SimpleNamespace(plan=lambda *a, **kw: pytest.fail("일반 작업의 추가 호출"))
     assert rp.prepare(agent(), output, "심층연구 기능을 수리해줘", supervisor=supervisor) is output
     assert events == [] and not (root / "outputs").exists()
 
@@ -59,7 +59,7 @@ def test_consciousness_reads_guide_and_saved_bytes_reach_executor(workspace, leg
     root, guide, events = workspace
     calls = []
 
-    def plan(prompt, system):
+    def plan(prompt, system, **kwargs):
         assert guide.read_text() in prompt
         assert not (root / "outputs").exists()
         calls.append(prompt)
@@ -106,7 +106,7 @@ def test_failed_planning_never_returns_an_executable_framing(workspace, monkeypa
         response["research_plan"] = ""
     if failure == "leak":
         response["capability_focus"] = {"hint": "deep_research.md를 읽으세요"}
-    supervisor = SimpleNamespace(plan=lambda *a: json.dumps(response))
+    supervisor = SimpleNamespace(plan=lambda *a, **kw: json.dumps(response))
     with pytest.raises(FramingContractError, match="조사를 시작하지 않았습니다"):
         rp.prepare(agent(), {"deep_research": True}, "연구", supervisor=supervisor)
     assert not any(k == "research.plan_saved" for k, v in events)
@@ -119,7 +119,7 @@ def test_followup_and_evaluation_read_current_plan_without_overwriting_original(
     path.write_text(path.read_text() + "\n실행 관측: 자료 A는 차단됨. 다음 확인은 B.\n")
     seen = []
     out = rp.prepare(agent(), {"deep_research": True}, "같은 연구를 계속해", previous_plan=old,
-                     supervisor=SimpleNamespace(plan=lambda p, s: seen.append(p) or json.dumps(draft())))
+                     supervisor=SimpleNamespace(plan=lambda p, s, **kw: seen.append(p) or json.dumps(draft())))
     assert "자료 A는 차단됨" in seen[0]
     assert out["_research_plan"]["previous_path"] == str(path)
     assert out["_research_plan"]["path"] != str(path)
@@ -171,7 +171,7 @@ def test_process_classifies_then_plans_only_deep_research(workspace, deep):
     calls = []
     project = root / "project"
 
-    def plan(prompt, system, revision=None):
+    def plan(prompt, system, revision=None, **kwargs):
         calls.append(prompt)
         if len(calls) == 1:
             assert guide.read_text() not in prompt
@@ -193,7 +193,7 @@ def test_process_classifies_then_plans_only_deep_research(workspace, deep):
 def test_process_does_not_swallow_plan_failure(workspace):
     root, guide, events = workspace
     guide.unlink()
-    supervisor = SimpleNamespace(plan=lambda *a: json.dumps({"task_framing": "연구", "deep_research": True}))
+    supervisor = SimpleNamespace(plan=lambda *a, **kw: json.dumps({"task_framing": "연구", "deep_research": True}))
     with pytest.raises(FramingContractError):
         agent().process("깊이 연구해줘", [], "", supervisor=supervisor)
 
@@ -203,7 +203,7 @@ def test_missing_prior_plan_is_explicit_not_a_block_for_new_research(workspace):
     seen = []
     out = rp.prepare(agent(), {"deep_research": True}, "새 주제를 연구해", previous_plan={
         "path": str(root / "outputs/research_plans/missing/research_plan.md")},
-        supervisor=SimpleNamespace(plan=lambda p, s: seen.append(p) or json.dumps(draft())))
+        supervisor=SimpleNamespace(plan=lambda p, s, **kw: seen.append(p) or json.dumps(draft())))
     assert '"read_error"' in seen[0]
     assert out["_research_plan"]["previous_path"] is None
 
@@ -234,6 +234,114 @@ def test_final_evaluator_receives_updated_project_plan(workspace, supervisor, mo
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     finish(supervisor, "연구 결과입니다.")
     assert len(seen) == 1
+
+
+def test_initial_exploration_cannot_starve_required_plan(workspace, supervisor, monkeypatch):
+    """초기 판단이 soft 예산을 넘긴 실제 5600 경로에서도 저장 뒤 실행에 인계한다."""
+    from providers.base import ProviderMetrics
+    calls = []
+
+    class Model:
+        def __init__(self, *args, **kwargs):
+            self.kwargs = kwargs
+            self._provider = SimpleNamespace(metrics=ProviderMetrics())
+            self.model, self.provider_name = "test", "test"
+
+        def process_message_stream(self, prompt, **kwargs):
+            calls.append(self.kwargs)
+            completion = self.kwargs["role"] == "oneshot:plan_completion"
+            if completion:
+                assert self.kwargs["tools"] == [] and self._provider.no_tools
+                assert "tool_context=" not in prompt
+                assert not supervisor.model_admitted("plan")
+                assert not list(workspace[0].glob("outputs/research_plans/*/research_plan.md"))
+            self._provider.metrics.record_usage(1, {
+                "input_tokens": 17066 if not completion else 30000,
+                "cache_read_input_tokens": 218487 if not completion else 0,
+                "output_tokens": 3483 if not completion else 2000,
+            })
+            yield {"type": "final", "content": json.dumps(
+                draft() if completion else {"task_framing": "연구", "deep_research": True})}
+
+    monkeypatch.setattr("ai_agent.AIAgent", Model)
+    monkeypatch.setattr("model_resolver.resolve", lambda *a: {})
+    out = agent().process("기존 대화에서 출발해 연구해줘", [], "", supervisor=supervisor)
+    assert len(calls) == 2
+    assert Path(out["_research_plan"]["path"]).exists()
+    assert supervisor.phase_usage["plan"]["input"] == 235553
+    assert supervisor.phase_usage["plan_completion"]["input"] == 30000
+    assert supervisor.usage["input"] == 265553  # 초과량·완성 비용을 모두 보존
+    assert supervisor.reviews == 0
+
+
+@pytest.mark.parametrize("stop", ["budget", "cancelled"])
+def test_unstarted_plan_preserves_reason_without_json_retry(workspace, supervisor, monkeypatch, stop):
+    from consciousness_agent import ConsciousnessCallSkipped
+    if stop == "budget":
+        supervisor.config["budget_mode"] = "hard"
+        supervisor.usage["input"] = supervisor.config["max_input_tokens"]
+    else:
+        supervisor.cancel_check = lambda: True
+    monkeypatch.setattr("ai_agent.AIAgent", lambda *a, **kw: pytest.fail("생략된 호출 시작"))
+    with pytest.raises(ConsciousnessCallSkipped) as exc:
+        rp.prepare(agent(), {"deep_research": True}, "연구", supervisor=supervisor)
+    assert exc.value.kind == stop
+    assert "JSON" not in str(exc.value)
+    rows = [json.loads(line) for line in (supervisor.store.directory / "events.jsonl").read_text().splitlines()]
+    skipped = [row for row in rows if row["kind"] == "model.skipped"]
+    assert len(skipped) == 1 and skipped[0]["phase"] == "plan_completion"
+    assert skipped[0]["role"] == "consciousness"
+    assert workspace[2][-1][0] == "research.plan_skipped"
+    assert not (workspace[0] / "outputs").exists()
+
+
+def test_invalid_completion_is_bounded_and_never_delivered(workspace):
+    calls = []
+    def plan(*args, **kwargs):
+        calls.append(kwargs)
+        return json.dumps(draft(research_plan=""))
+    with pytest.raises(FramingContractError, match="실제 계획 본문"):
+        rp.prepare(agent(), {"deep_research": True}, "연구", supervisor=SimpleNamespace(plan=plan))
+    assert calls == [{"completion": True}, {"completion": True}]
+    assert not (workspace[0] / "outputs").exists()
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_completion_real_agent_has_no_tools_and_keeps_interruption_reason(workspace, supervisor, monkeypatch, interrupted):
+    from providers.base import ProviderMetrics
+    calls = []
+
+    class Provider:
+        is_ready = True
+
+        def __init__(self, **kwargs):
+            self.metrics, self._client = ProviderMetrics(), None
+            assert kwargs["tools"] == []
+
+        def init_client(self):
+            pass
+
+        def process_message_stream(self, message, history, images, execute_tool, cancel_check):
+            calls.append(message)
+            assert self.no_tools and self.tools == []
+            assert self.agent_role == "oneshot:plan_completion"
+            if interrupted:
+                supervisor.call_deadline = 0
+                assert cancel_check()
+                yield {"type": "error", "content": "시간 한도"}
+            else:
+                yield {"type": "final", "content": json.dumps(draft())}
+
+    monkeypatch.setattr("providers.get_provider", lambda name, **kw: Provider(**kw))
+    monkeypatch.setattr("model_resolver.resolve", lambda role: {"provider": "openai", "model": "fake"})
+    if interrupted:
+        with pytest.raises(FramingContractError, match="시간 한도"):
+            rp.prepare(agent(), {"deep_research": True}, "연구", supervisor=supervisor)
+        assert not (workspace[0] / "outputs").exists()
+    else:
+        out = rp.prepare(agent(), {"deep_research": True}, "연구", supervisor=supervisor)
+        assert Path(out["_research_plan"]["path"]).exists()
+    assert len(calls) == 1
 
 
 if __name__ == "__main__":

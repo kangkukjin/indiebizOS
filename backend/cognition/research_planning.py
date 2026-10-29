@@ -106,7 +106,7 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
         system = agent._supervisor_prompt if supervisor else agent._prompt
         for attempt in range(2):
             # 재규정의 검토 횟수는 최초 규정 호출에서 이미 센다. 계획 구체화는 같은 규정의 일부다.
-            raw = (supervisor.plan(prompt, system) if supervisor else call_oneshot_provider(
+            raw = (supervisor.plan(prompt, system, completion=True) if supervisor else call_oneshot_provider(
                 agent._provider, prompt, system_prompt=system,
                 role="research_plan", step_role="consciousness"))
             result = agent._parse_response(raw)
@@ -130,7 +130,9 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
                     raise
                 prompt += "\n계획 출력 검증 실패. 다음 오류를 고쳐 JSON 전체를 반환하세요:\n" + str(exc)
         raise ValueError("연구계획 응답 없음")
-    except ConsciousnessCallSkipped:
+    except ConsciousnessCallSkipped as exc:
+        record_trajectory_event("research.plan_skipped", {
+            "stop_kind": exc.kind, "error": str(exc), "model_called": False})
         raise
     except Exception as exc:
         record_trajectory_event("research.plan_failed", {"error": str(exc)})

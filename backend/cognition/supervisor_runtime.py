@@ -194,17 +194,21 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
     controller.call_stop = None
     controller.phase = phase
     try:
-        if not controller.model_admitted(phase):
+        if controller.cancelled() or not controller.model_admitted(phase):
             controller.call_stop = {"kind": "budget", "reason": "의식 호출 토큰 예산을 소진했습니다"}
-            controller.log("model.skipped", stop_kind=controller.call_stop["kind"], detail=controller.call_stop["reason"])
-            if phase == "reframe":
+            if controller.cancelled():
+                controller.call_stop = {"kind": "cancelled", "reason": "사용자가 취소했거나 감독 턴이 종료되었습니다"}
+            controller.log("model.skipped", role="consciousness", phase=phase,
+                           stop_kind=controller.call_stop["kind"], detail=controller.call_stop["reason"])
+            if phase in {"plan", "reframe", "plan_completion"}:
                 from consciousness_agent import ConsciousnessCallSkipped
                 raise ConsciousnessCallSkipped(controller.call_stop["kind"], controller.call_stop["reason"])
             return ""
         restore(controller.context)
         set_current_agent_id(controller.supervisor_id)
         set_step_role("consciousness")
-        if phase != "receipt":
+        completion = phase == "plan_completion"
+        if phase not in {"receipt", "plan_completion"}:
             prompt += "\ntool_context=" + json.dumps(
                 tool_context(controller, include_idioms=phase in {"plan", "reframe"}), ensure_ascii=False)
         # 별도 프로바이더 객체/세션: 실행자의 resume 기록과 singleton provider를 건드리지 않는다.
@@ -212,10 +216,13 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         role_prompt = RECEIPT_PROMPT if phase == "receipt" else planning_prompt or ROLE_PROMPT
         agent = AIAgent(config, role_prompt,
                         agent_name="의식 감독", agent_id=controller.supervisor_id,
-                        project_path=controller.project_path, tools=[TOOL_SCHEMA],
+                        project_path=controller.project_path, tools=[] if completion else [TOOL_SCHEMA],
                         execute_tool_func=lambda name, payload, **kw: controller.tool(payload),
-                        role="consciousness")
+                        role="oneshot:plan_completion" if completion else "consciousness")
         agent._provider.disable_session_persistence = True
+        if completion:
+            agent._provider.no_tools = True
+            agent._provider.tools = []
         snapshots = UsageSnapshots(controller)
         agent._provider.usage_snapshot_callback = snapshots.observe
         from model_call_context import call_scope
@@ -249,6 +256,9 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
                               "output": agent._provider.metrics.total_output_tokens,
                               "cache_read": agent._provider.metrics.total_cache_read_tokens},
                        output=controller.store.evidence(response))
+        if controller.call_stop and phase in {"plan", "reframe", "plan_completion"}:
+            from consciousness_agent import FramingContractError
+            raise FramingContractError("의식 계획 호출이 중단되었습니다: " + controller.call_stop["reason"])
         return response
     finally:
         if controller.call_metrics:

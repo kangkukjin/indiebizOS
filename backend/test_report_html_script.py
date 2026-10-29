@@ -95,6 +95,49 @@ def test_plain_pipes_and_horizontal_rule_stay_prose(renderer):
     assert counts["expected"] == 0
 
 
+@pytest.mark.parametrize("theme", ["plain", "card", "briefing"])
+def test_bare_reference_urls_become_links_without_changing_text(renderer, tmp_path, theme):
+    source = (
+        "# 보고서\n\n## 근거\n\n"
+        "출처 (https://example.com/paper_(v2)). "
+        "https://example.com/search?a=1&b=2 [본문]\n\n"
+        "| 자료 | 출처 |\n|---|---|\n| 원문 | https://example.org/table |\n\n"
+        "[기존 링크](https://example.org/existing)\n\n"
+        "<https://example.org/autolink>\n\n"
+        "`https://example.org/code`\n\n"
+        "```text\nhttps://example.org/fenced\n```\n\n"
+        '<a href="https://example.org/raw">https://example.org/raw</a>\n\n'
+        '<pre>https://example.org/pre</pre>\n'
+    )
+    (tmp_path / "source.md").write_text(source)
+    result = renderer.render({"src": "source.md", "dst": "report.html", "theme": theme})
+    soup = BeautifulSoup((tmp_path / "report.html").read_text(), "html.parser")
+    urls = [a["href"] for a in soup.select('a[href^="http"]')]
+    assert urls == [
+        "https://example.com/paper_(v2)", "https://example.com/search?a=1&b=2",
+        "https://example.org/table", "https://example.org/existing",
+        "https://example.org/autolink", "https://example.org/raw",
+    ]
+    assert "(https://example.com/paper_(v2))." in soup.get_text()
+    assert not soup.select("a a, code a, pre a")
+    assert (tmp_path / "source.md").read_text() == source
+    assert result["items"][0]["links"] == len(soup.select("a[href]"))
+
+
+def test_url_linking_preserves_html_attributes_comments_and_non_http_schemes(renderer):
+    body = ('<p title="https://example.org/attribute">https://example.org/plain</p>'
+            '<!-- https://example.org/comment -->'
+            '<code>https://example.org/code</code>'
+            '<script>"https://example.org/script"</script>'
+            '<style>/* https://example.org/style */</style>'
+            '<textarea>https://example.org/input</textarea>'
+            '<p>javascript:alert(1) file:///tmp/report ftp://example.org/file</p>')
+    soup = BeautifulSoup(renderer._link_plain_urls(body), "html.parser")
+    assert [a["href"] for a in soup.select("a")] == ["https://example.org/plain"]
+    assert soup.p["title"] == "https://example.org/attribute"
+    assert "https://example.org/comment" in str(soup)
+
+
 def test_drop_lines_runs_before_boundary_repair(renderer, tmp_path):
     (tmp_path / "report.md").write_text(
         "설명\n비공개\n| 가 | 나 |\n|---|---|\n| 1 | 2 |")

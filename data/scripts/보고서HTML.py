@@ -5,6 +5,8 @@
 공유판에서 빼야 하는 줄(개인 시스템 맥락 등)은 사람 손이 아니라 이 변환기가 보장한다.
 표 앞 빈 줄은 변환 사본에서 보정하며, 코드·HTML 예시는 제외한다. 확인된 표가 변환 중
 사라지면 저장 전에 실패한다. table_structure는 구조 보존 관측이며 시각 검수 합격이 아니다.
+본문의 일반 HTTP(S) URL은 링크로 바꾸고 기존 링크·코드 예시는 보존한다.
+links는 출처 링크와 내부 목차 링크를 합한 수다.
 
 args 예:
   {"src":"outputs/x/보고서.md", "dst":"공유창고/0/폴더/이름.html",
@@ -171,6 +173,39 @@ def _wrap_cards(body):
                      for p in parts if p.strip())
 
 
+def _link_plain_urls(body):
+    """본문의 HTTP(S) 주소만 링크로 만든다. 기존 링크·코드·속성은 보존한다."""
+    from bs4 import BeautifulSoup, Comment
+    soup = BeautifulSoup(body, "html.parser")
+    pattern = re.compile(r'https?://[^\s<>"\x27]+')
+    protected = {"a", "code", "pre", "script", "style", "textarea"}
+    for node in list(soup.find_all(string=True)):
+        if isinstance(node, Comment) or any(p.name in protected for p in node.parents):
+            continue
+        text = str(node)
+        cursor = 0
+        parts = []
+        for match in pattern.finditer(text):
+            url = match.group().rstrip(".,;:!?。，；：！？")
+            while url and url[-1] in ")]}":
+                closing = url[-1]
+                opening = {")": "(", "]": "[", "}": "{"}[closing]
+                if url.count(closing) <= url.count(opening):
+                    break
+                url = url[:-1].rstrip(".,;:!?。，；：！？")
+            if not url or url in ("http://", "https://"):
+                continue
+            parts.append(text[cursor:match.start()])
+            link = soup.new_tag("a", href=url)
+            link.string = url
+            parts.append(link)
+            cursor = match.start() + len(url)
+        if parts:
+            parts.append(text[cursor:])
+            node.replace_with(*parts)
+    return str(soup)
+
+
 def _render_markdown(text):
     """표 경계만 보정하고, 확인된 표가 사라지면 파일 쓰기 전에 멈춘다.
 
@@ -220,7 +255,7 @@ def _render_markdown(text):
     body = markdown.markdown(text, extensions=[
         "tables", "fenced_code", "sane_lists", "nl2br", ReportTables(),
     ])
-    return body, counts
+    return _link_plain_urls(body), counts
 
 
 def render(args):

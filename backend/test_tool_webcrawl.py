@@ -78,6 +78,24 @@ def playwright(crawl, frames):
     return raw, crawl._structure().project(raw, 'content')
 
 
+def test_bounded_session_storage_uses_its_own_deadline_and_reports_failure(crawl, monkeypatch):
+    monkeypatch.setattr(crawl, '_STORAGE_TIMEOUT_SECONDS', .001)
+    session = Session([Frame()])
+    session.storage_state_bounded = True
+    async def save():
+        await asyncio.sleep(.02)  # 기존 외부 1초 제한에 해당하는 짧은 시험 한도를 넘긴다.
+        return {'success': True}
+    session.save_storage_state = save
+    out = asyncio.run(crawl._crawl_playwright_async(session, URL, None))
+    assert out['success'] and out['maintenance_errors'] == []
+    async def failed():
+        return {'success': False, 'error': 'TimeoutError', 'skipped': True}
+    session.save_storage_state = failed
+    out = asyncio.run(crawl._crawl_playwright_async(session, URL, None))
+    assert out['success'] and BODY in out['text']
+    assert out['maintenance_errors'] == [{'stage': 'storage', 'error': 'TimeoutError', 'skipped': True}]
+
+
 @pytest.mark.parametrize('stage', ['storage', 'cleanup'])
 def test_session_maintenance_timeout_preserves_collected_body(crawl, monkeypatch, stage):
     session = Session([Frame()])

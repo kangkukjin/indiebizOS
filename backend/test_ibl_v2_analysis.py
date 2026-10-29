@@ -97,6 +97,19 @@ def test_other_arithmetic_type_errors_keep_their_own_advice():
     assert not Runtime(plan, {'x': []}).run()['executed']
 
 
+def test_collected_result_filter_reports_actionable_error_without_huge_type(registry):
+    prefix = '$r=[{text:"ok"}] >> [table:each]{on_error:"collect"}{return $it}\n'
+    bad = compile_program(prefix + '$r >> [table:filter]{where:($r)=>is_ok($r)}', registry)
+    issue = next(i for i in bad.issues if i['code'] == 'TYPE')
+    assert len(issue['message']) < 250 and 'flat_map' in issue['message']
+    assert issue['actual'].startswith('List<Result<')
+    assert not Runtime(bad).run()['executed']
+    fixed = compile_program(prefix + '$r >> [table:each]{mode:"flat_map"}{'
+                            '[if:is_ok($it)]{return [unwrap($it)]} return []}', registry)
+    assert not fixed.issues, fixed.issues
+    assert Runtime(fixed).run()['value'] == [{'text': 'ok'}]
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
 

@@ -7,7 +7,7 @@ from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 from research_store import ResearchStore, json_text
 from research_library import ResearchLibrary
-from research_context import install_capture
+from research_context import install_capture, install_review
 
 _locks = {}
 _guard = threading.Lock()
@@ -59,16 +59,25 @@ def capture(context, config, params, result, call):
             lib.store.event(db, 'capture.failed', {'tool': config.get('tool'), 'error': str(obj.get('error', ''))}, context['thread_id'], context['run_id'])
         return result
     obj = sanitize(obj)
+    # 등록 스크립트의 반환 봉투는 실행 영수증이다. 자료는 그 안의 value다.
+    content = (obj.get('value') if isinstance(obj, dict) and config.get('tool') == 'script_op'
+               and obj.get('script_protocol') == 'registered-json/1' else obj)
+    if _preserved_selection(lib, content):
+        return json_text(obj) if isinstance(result, str) else obj
     url = next((params[k] for k in ('url', 'path') if isinstance(params.get(k), str)), '')
-    title = str(obj.get('title') or obj.get('name') or config.get('tool') or '조사 결과') if isinstance(obj, dict) else str(config.get('tool') or '조사 결과')
+    title = str(content.get('title') or content.get('name') or config.get('tool') or '조사 결과') if isinstance(content, dict) else str(config.get('tool') or '조사 결과')
     coverage = 'partial' if isinstance(obj, dict) and (obj.get('truncated') or obj.get('partial')) else config.get('research_coverage', 'unknown')
     source = clean_url(url) if url else ''
     ctx = dict(thread=context['thread_id'], run=context['run_id'], call=call)
     paragraphs = None
     body = None
-    if isinstance(obj, dict):
+    if isinstance(content, dict):
         from notebook_store import _paragraphs_with_loc
-        body = next((obj[k] for k in ('content', 'text', 'body', 'markdown') if isinstance(obj.get(k), str) and obj[k]), None)
+        body = next((content[k] for k in ('content', 'text', 'body', 'markdown') if isinstance(content.get(k), str) and content[k]), None)
+        if body is None and isinstance(content.get('items'), list):
+            rows = content['items']
+            if rows and all(isinstance(row, dict) and isinstance(row.get('text'), str) for row in rows):
+                body = '\n\n'.join(row['text'] for row in rows)
         if body:
             paragraphs = _paragraphs_with_loc(body)
     stable = {k: v for k, v in obj.items() if k not in {'cache', '_display', 'source_ref', '_preview'}} if isinstance(obj, dict) else obj
@@ -111,6 +120,49 @@ def capture(context, config, params, result, call):
         return json_text(obj) if isinstance(result, str) else obj
     # 원래 목록/스칼라의 계약은 바꾸지 않는다. 원장은 모든 영구 참조를 보존한다.
     return result
+
+
+def _preserved_selection(lib, value):
+    """같은 대화의 불변 원문에서 나온 선택만 재사용한다. 참조 이름만 믿지 않는다."""
+    if not isinstance(value, dict) or not isinstance(value.get('research_materials'), list):
+        return False
+    rows = value.get('items')
+    if not isinstance(rows, list):
+        return False
+    originals, original_rows = [], set()
+    for ref in value['research_materials']:
+        if not isinstance(ref, dict) or ref.get('project_ref') != lib.store.uid:
+            return False
+        try:
+            version = lib.version(ref.get('version_ref'))  # 대화 범위 검사 포함
+            originals.extend(text for _, text in lib.paragraphs(version['id'])[0])
+            with lib.store.connect() as db:
+                saved = db.execute('SELECT result_blob FROM research_captures '
+                                   'WHERE version_id=? AND thread_id=? AND result_blob IS NOT NULL LIMIT 1',
+                                   (version['id'], lib.thread)).fetchone()
+            if saved:
+                acquired = json.loads(lib.store.blob(saved['result_blob']))
+                if isinstance(acquired, dict) and isinstance(acquired.get('items'), list):
+                    original_rows.update(json.dumps(row, sort_keys=True, ensure_ascii=False)
+                                         for row in acquired['items'])
+        except (ValueError, PermissionError, KeyError):
+            return False
+    if not originals:
+        return False
+    # 선택 뒤 본문을 새로 생성한 도구는 별도 자료로 보존한다.
+    for row in rows:
+        if not isinstance(row, dict):
+            return False
+        if row.get('_error'):
+            continue
+        if json.dumps(row, sort_keys=True, ensure_ascii=False) not in original_rows:
+            return False
+    body = value.get('text')
+    return not body or isinstance(body, str) and body in '\n\n'.join(originals)
+
+
+def review(context, text):
+    return library(context).citation_review(text, context['run_id'])
 
 
 def schedule_index(path):
@@ -157,3 +209,4 @@ def _executor():
 
 
 install_capture(capture)
+install_review(review)

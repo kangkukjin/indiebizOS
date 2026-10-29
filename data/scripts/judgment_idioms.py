@@ -283,7 +283,6 @@ def match_context(args):
     package = Path(__file__).resolve().parents[1] / 'packages/installed/tools/data-ops'
     context_module = load_sibling(str(package / 'handler.py'), 'dataops_filter_context')
     source = decode(args['source'])
-    envelope = dict(source) if isinstance(source, dict) else {}
     records = rows(source)
     context = integer(args.get('context', 0), '문맥')
     limit = integer(args['limit'], '개수')
@@ -292,7 +291,11 @@ def match_context(args):
     _match({'text': ''}, where)
     kept, info = context_module.select_context(records, where,
         {'before': context, 'after': context, 'by': 'url', 'limit': limit}, _match)
-    envelope.update(items=kept, count=len(kept), match_info=info)
+    # 일반 표 변환과 같은 출구를 쓴다. 선택 전 text/table을 남기면
+    # 발췌 30행 옆에 PDF 전문이 붙고 자료실에 JSON 전체가 다시 색인된다.
+    handler = load_sibling(str(package / 'handler.py'), 'handler')
+    envelope = handler._emit_items(source, kept, population=True)
+    envelope['match_info'] = info
     if info['omitted_matches']:
         envelope['truncations'] = list(envelope.get('truncations') or []) + [{
             'scope': 'selection', 'source': 'filter.context', 'unit': 'matches',

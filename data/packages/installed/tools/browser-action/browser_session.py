@@ -48,6 +48,7 @@ ACTION_TIMEOUT = 10000
 WAIT_DEFAULT_TIMEOUT = 10000
 AUTO_CLOSE_SECONDS = 180
 CLOSE_STEP_TIMEOUT_SECONDS = 5
+STORAGE_STATE_TIMEOUT_SECONDS = 3
 MAX_CONSOLE_LOGS = 1000
 MAX_NETWORK_LOGS = 500
 BLOCKED_URL_SCHEMES = {"javascript:", "data:", "file:", "vbscript:"}
@@ -111,6 +112,7 @@ class BrowserSession:
 
     _instance = None
     _sessions = WeakValueDictionary()
+    storage_state_bounded = True
 
     def __init__(self):
         self.owner = _session_owner.get()
@@ -127,6 +129,10 @@ class BrowserSession:
         self._close_generation = 0
         self._headless = True
         self._ensure_lock = asyncio.Lock()
+        self._storage_lock = asyncio.Lock()
+        self._storage_key = None
+        self._storage_outcome = None
+        self._storage_saved_at = 0.0
 
         # 탭 관리
         self._pages: Dict[str, Any] = {}
@@ -496,15 +502,28 @@ class BrowserSession:
     # ── 로그인 상태 영속 ──
 
     async def save_storage_state(self):
-        """내부 기본 세션만 자동 저장한다. 작업별 세션은 명시 cookies save/load를 쓴다."""
+        """기본 세션의 자동 저장을 직렬화하고 실패한 같은 상태를 종료 때 반복하지 않는다."""
         if not self._context or self.owner:
-            return
-        try:
-            path = get_cookies_dir() / AUTO_STATE_FILENAME
-            await self._context.storage_state(path=str(path))
-            os.chmod(path, 0o600)
-        except Exception:
-            pass
+            return {'success': True, 'skipped': True}
+        context, generation = self._context, self._close_generation
+        async with self._storage_lock:
+            key = (id(context), generation)
+            if self._context is not context:
+                return {'success': False, 'skipped': True, 'error': 'ContextChanged'}
+            if self._storage_key == key and self._storage_outcome and (
+                    not self._storage_outcome['success'] or time.monotonic() - self._storage_saved_at < 1):
+                return {**self._storage_outcome, 'skipped': True}
+            try:
+                # 호출자마다 1초/5초로 취소하지 않는다. 경로를 넘기지 않아 취소·실패가
+                # 마지막 정상 상태 파일을 훼손하지 않으며, 완료된 스냅샷만 원자 교체한다.
+                state = await asyncio.wait_for(context.storage_state(), STORAGE_STATE_TIMEOUT_SECONDS)
+                await asyncio.to_thread(_write_auto_state, get_cookies_dir() / AUTO_STATE_FILENAME, state)
+                outcome = {'success': True}
+            except Exception as exc:
+                outcome = {'success': False, 'error': type(exc).__name__}
+            self._storage_key, self._storage_outcome = key, outcome
+            self._storage_saved_at = time.monotonic()
+            return outcome
 
     # ── 종료 ──
 
@@ -514,7 +533,9 @@ class BrowserSession:
 
     async def _close_step(self, label, operation):
         try:
-            await asyncio.wait_for(operation(), CLOSE_STEP_TIMEOUT_SECONDS)
+            result = await asyncio.wait_for(operation(), CLOSE_STEP_TIMEOUT_SECONDS)
+            if isinstance(result, dict) and result.get('success') is False and not result.get('skipped'):
+                print(f"[브라우저] 종료 단계 {label}: {result.get('error', '실패')}")
         except Exception as exc:
             print(f"[브라우저] 종료 단계 {label}: {type(exc).__name__}")
 
@@ -558,7 +579,24 @@ class BrowserSession:
         self._network_logs = deque(maxlen=MAX_NETWORK_LOGS)
         self._last_dialog = None
         self._capture_network = False
+        self._storage_key = self._storage_outcome = None
         print("[브라우저] 종료 완료")
+
+
+def _write_auto_state(path, state):
+    """완료된 상태만 0600 임시 파일을 거쳐 게시한다."""
+    import tempfile
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
+                                         prefix='.auto-state-', delete=False) as stream:
+            temporary = Path(stream.name)
+            os.chmod(temporary, 0o600)
+            json.dump(state, stream, ensure_ascii=False)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 # ─────────────────────────────────────────────

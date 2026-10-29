@@ -28,7 +28,8 @@ def test_smoke_reaps_actual_spawned_tree(tmp_path, monkeypatch):
     api = tmp_path / 'backend/api.py'
     api.write_text('import subprocess,sys,time,json\nfrom pathlib import Path\n'
                    'child=subprocess.Popen([sys.executable,"-c","import time;time.sleep(30)"])\n'
-                   'Path("child.json").write_text(json.dumps(child.pid))\n'
+                   'Path("child.tmp").write_text(json.dumps(child.pid))\n'
+                   'Path("child.tmp").replace("child.json")\n'
                    'time.sleep(30)\n')
     monkeypatch.setenv('INDIEBIZ_BASE_PATH', str(tmp_path))
     monkeypatch.setattr(smoke, 'ROOT', str(tmp_path))

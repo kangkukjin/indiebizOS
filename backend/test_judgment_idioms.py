@@ -105,6 +105,21 @@ def test_every_operation_returns_its_declared_value(script, contract):
         assert isinstance(actual['items'], list)
 
 
+def test_match_discards_stale_full_text_and_preserves_selection_receipts(script):
+    source = {'text': '원문 전체 ' * 30000, 'length': 180000, 'truncated': True,
+              'items': [{'text': 'needle', 'url': 'https://one', 'paragraph_index': 27},
+                        {'text': 'other', 'url': 'https://one', 'paragraph_index': 28},
+                        {'url': 'https://two', '_error': '403'}],
+              'research_materials': [{'version_ref': 'original'}],
+              'source_ref': {'path': '/preserved/full.txt'}}
+    out = script.run({'op': 'match', 'source': source, 'pattern': 'needle', 'limit': 1})
+    assert 'text' not in out
+    assert out['items'] == [source['items'][0], source['items'][2]]
+    assert out['research_materials'] == source['research_materials']
+    assert out['source_ref'] == source['source_ref'] and out['truncated']
+    assert source['text'].startswith('원문 전체')
+
+
 @pytest.mark.parametrize('op', ['urls', 'prepare', 'select', 'finish', 'match', 'collect'])
 def test_missing_operation_inputs_rejected_before_script(registry, op):
     code = 'return [self:script]{id:"판정관용구",args:{op:"' + op + '"}}'

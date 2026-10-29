@@ -190,6 +190,7 @@ class ResearchLibrary:
 
     def prepare_index(self):
         self._upgrade_web_snapshots()
+        self._upgrade_script_selections()
         # 추출 판본·원문·과거 인용은 그대로 둔다. 옛 문단 합성 색인만 다시 만든다.
         migration = 'citation-paragraph-chunks-v1'
         with self.store.connect() as db:
@@ -217,6 +218,33 @@ class ResearchLibrary:
             body = _web_snapshot_body(self.store.blob(row['blob']))
             if body is not None:
                 self._extraction(row['id'], _paragraphs_with_loc(body))
+        with self.store.connect(True) as db:
+            self.store.check_epoch(db)
+            db.execute('INSERT OR IGNORE INTO research_migrations(name) VALUES (?)', (migration,))
+
+    def _upgrade_script_selections(self):
+        """과거 발췌 봉투의 전문·실행 메타데이터 대신 선택 문단만 새 추출 판본으로 색인한다."""
+        migration = 'script-selection-paragraphs-v1'
+        with self.store.connect() as db:
+            if db.execute('SELECT 1 FROM research_migrations WHERE name=?', (migration,)).fetchone():
+                return
+            versions = db.execute("SELECT v.id,v.blob FROM research_versions v JOIN research_sources s ON s.id=v.source_id "
+                                  "WHERE s.kind='tool:script_op:run' AND v.mime='application/json'").fetchall()
+        for row in versions:
+            try:
+                obj = json.loads(self.store.blob(row['blob']))
+            except (ValueError, UnicodeDecodeError):
+                continue
+            if not isinstance(obj, dict) or obj.get('script_protocol') != 'registered-json/1':
+                continue
+            value = obj.get('value')
+            if not isinstance(value, dict) or not value.get('research_materials'):
+                continue
+            items = value.get('items')
+            if not isinstance(items, list) or not items or not all(
+                    isinstance(item, dict) and isinstance(item.get('text'), str) for item in items):
+                continue
+            self._extraction(row['id'], [(f'¶{i}', item['text']) for i, item in enumerate(items, 1)])
         with self.store.connect(True) as db:
             self.store.check_epoch(db)
             db.execute('INSERT OR IGNORE INTO research_migrations(name) VALUES (?)', (migration,))
@@ -390,6 +418,38 @@ class ResearchLibrary:
                                  (run, version, loc)).fetchone()
                 if row:
                     result.append(dict(row))
+        return result
+
+    def citation_review(self, text, run):
+        """최종 인용과 이번 실행에서 읽은 문장을 연결한다. 읽기 기록은 새로 만들지 않는다."""
+        result = {'valid': [], 'invalid': [], 'evidence_chars': 0}
+        budget = 16000
+        with self.store.connect() as db:
+            self.store.check_epoch(db)
+            refs = dict.fromkeys(re.findall(r'\[자료:([^:\]]+):([^\]]+)\]', text))
+            for version, loc in refs:
+                marker = f'[자료:{version}:{loc}]'
+                rows = db.execute('SELECT revision,quote FROM research_access '
+                                  'WHERE run_id=? AND version_id=? AND locator=? ORDER BY rowid',
+                                  (run, version, loc)).fetchall()
+                if not rows:
+                    locations = [r[0] for r in db.execute(
+                        'SELECT DISTINCT locator FROM research_access WHERE run_id=? AND version_id=?',
+                        (run, version))]
+                    result['invalid'].append({'citation': marker, 'version_ref': version, 'locator': loc,
+                        'reason': '현재 실행에서 이 자료·위치의 읽기 증거가 없습니다',
+                        'read_locations': locations[:40],
+                        'repair': 'self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.'})
+                    continue
+                # 같은 위치를 여러 번 나눠 읽었어도 마지막 조각만 근거로 보이지 않게 한다.
+                quotes = list(dict.fromkeys(r['quote'] for r in rows))
+                full = '\n[…별도 열람 구간…]\n'.join(quotes)
+                shown = full[:min(2400, budget)]
+                budget -= len(shown)
+                result['valid'].append({'citation': marker, 'quote': shown,
+                    'extraction_revisions': sorted({r['revision'] for r in rows}),
+                    'truncated': len(shown) < len(full)})
+                result['evidence_chars'] += len(shown)
         return result
 
     def add_url(self, url, **context):

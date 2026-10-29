@@ -216,6 +216,10 @@ def finish_diagnostics(compiler):
             entry.setdefault('hint', HINTS.get(entry['code'], '해당 위치의 계약과 호출 인자를 확인하세요.'))
             if (entry['code'] == 'TYPE' and entry.get('expected') == 'List<Record>'
                     and str(entry.get('actual', '')).startswith('List<Result<')):
+                entry['message'] = ('객체 행 목록 자리에 성공·실패 Result 목록을 넘겼습니다. '
+                                    'table:each의 mode:"flat_map"에서 is_ok로 가르고 '
+                                    '성공은 [unwrap($it)], 실패는 []를 반환한 뒤 연결하세요. '
+                                    '실패 사유는 원래 결과에서 확인하세요.')
                 entry['hint'] = ('on_error:"collect"의 결과는 성공·실패를 담은 Result 목록입니다. 각 원소를 is_ok($r)로 가르고 '
                                  'unwrap($r)·error_of($r)로 풀어 레코드 목록을 만든 뒤 넘기세요. 성공만 이을 때는 '
                                  'table:each mode:"flat_map" 안에서 성공이면 [unwrap($it)], 실패면 []를 반환합니다.')

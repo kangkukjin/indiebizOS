@@ -43,6 +43,13 @@ FINAL_POLICY = """이번 호출은 도구 없는 최종 평가다.
 """
 
 
+RESEARCH_POLICY = """
+research_citations의 각 인용 표지 바로 앞의 주장을 연결된 quote와 대조한다.
+인용의 존재·읽기 기록은 의미적 지지의 증명이 아니다. 다른 주장에 같은 표지를 붙인 경우도 확인한다.
+invalid는 실제 자료실의 읽기 증거가 없는 인용이다. truncated 근거만으로 전체를 읽었다고 판단하지 않는다.
+"""
+
+
 APPLY_POLICY = """이번 호출은 코드 적용 전 검사다. 최종 사용자 답변은 아직 생성 전이며 평가 대상이 아니다.
 빈 final_response/응답이나 아직 보내지 않은 완료 보고만으로 미달 판정하지 않는다.
 설치·승인 절차 등의 안내 내용은 현재 사본의 문서·산출물과 실행 증거로 검사한다.
@@ -266,6 +273,10 @@ def prepare(controller, tool_calls=None):
                "evidence_index": controller.store.tool_index(),
                "jobs": list(controller.job_states.values())}
     context['assertion_evidence'] = assertion_evidence(controller.store, calls, criteria)
+    from research_context import citation_review
+    research_citations = citation_review(response)
+    if research_citations is not None:
+        context['research_citations'] = research_citations
     # 보완 실행자가 원문을 회수했는데 재검수 때 다시 같은 발췌에서 사라지는
     # 순환을 막는다. 작업대가 실제 반환한 증거 페이지만 별도 첨부한다.
     cursor = getattr(controller, "_repair_evidence_since", None)
@@ -370,7 +381,8 @@ def invoke(controller, prompt="", *, phase="final"):
         action_ledger=build_action_ledger(packet["calls"]), visual_artifacts=packet["images"],
         evaluation_context=json.dumps(packet["context"], ensure_ascii=False),
         evaluation_policy=POLICY + (APPLY_POLICY + WORKSPACE_POLICY if phase == "workspace" else
-                                    APPLY_POLICY + SEMANTIC_POLICY if phase == "semantic" else FINAL_POLICY),
+                                    APPLY_POLICY + SEMANTIC_POLICY if phase == "semantic" else FINAL_POLICY)
+                          + (RESEARCH_POLICY if packet['context'].get('research_citations') else ''),
         full_response=True,
     )
     manifest = controller._evaluation_snapshot["response"]
@@ -393,6 +405,14 @@ def invoke(controller, prompt="", *, phase="final"):
         delivery = controller._evaluation_snapshot["delivery"]
         if delivery:
             result["delivery_hash"] = delivery["hash"]
+    citation_issues = packet['context'].get('research_citations', {}).get('invalid', [])
+    if citation_issues and not controller.cancelled():
+        # 의미 평가는 같은 한 번의 호출에서 수행한다. 기계적으로 무효인 인용을
+        # 모델의 승인으로 통과시키거나, 저장 뒤 조용히 바꿔 승인 지문을 깨지 않는다.
+        detail = json.dumps(citation_issues, ensure_ascii=False)
+        feedback += '\n연구 자료실 인용 검사 실패: ' + detail
+        result.update(status='REWORK', reason=feedback, severity=max(1, severity or 0),
+                      goal_status='UNKNOWN', goal_reason='최종 인용의 읽기 증거 보완 필요')
     if result["status"] == "REWORK":
         result["defects"] = parse_criterion_defects(feedback, packet["context"]["criteria_contract"])
         scope = re.search(r"(?mi)^REPAIR_SCOPE:\s*(local|research)\s*$", feedback)
@@ -406,6 +426,11 @@ def invoke(controller, prompt="", *, phase="final"):
             result["repair_block_ids"] = []
         result["instruction"] = ("아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 "
                                  "전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\n" + feedback)
+        if citation_issues:
+            result['repair_scope'] = 'research'  # 누락된 읽기 기록은 실제 notebook 호출이 필요하다.
+            targets = {issue['citation'] for issue in citation_issues}
+            result['repair_block_ids'] = list(dict.fromkeys(result['repair_block_ids'] + [
+                b['id'] for b in controller.store.blocks if any(ref in b['text'] for ref in targets)]))
     elif (result["status"] == "UNKNOWN" and not controller.cancelled()
           and re.search(r"UNKNOWN_REASON:\s*evidence\b", feedback)):
         # 판정 실패/전송 예외와 증거 부족을 구별한다. 기존 실행 문맥에서 필요한

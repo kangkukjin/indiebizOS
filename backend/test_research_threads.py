@@ -142,6 +142,32 @@ def test_summary_failure_preserves_completed_answer(world, monkeypatch):
     assert store.thread(tid)['active_run'] is None
 
 
+def test_invalid_citation_at_delivery_is_not_reported_as_completed(world, monkeypatch):
+    import research_threads as service
+    import runtime_work
+    import thread_context
+    from project_manager import ProjectManager
+    from research_store import ResearchStore
+    row = ProjectManager().create_project('인용 실패 연구', project_kind='research')
+    store = ResearchStore(row['path'])
+    tid = store.create_thread('근거')['id']
+    run, _ = store.begin_run(tid, '질문', 'citation-failure')
+    original = '확정 주장 [자료:' + 'a' * 32 + ':¶1]'
+    monkeypatch.setattr(service, '_run_stream', lambda *args: iter([{'type': 'final', 'content': original}]))
+    snapshot = thread_context.snapshot()
+    try:
+        service._work(store, tid, run, '질문', threading.Event(),
+                      runtime_work.reserve('research-chat'), snapshot)
+    finally:
+        thread_context.restore(snapshot)
+    answer = store.messages(tid)['items'][-1]
+    assert answer['status'] == 'failed'
+    assert '확인되지 않은 인용' in answer['content']
+    with store.connect() as db:
+        event = db.execute("SELECT payload FROM research_events WHERE kind='citation.validation_failed'").fetchone()
+    assert json.loads(event[0])['response'] == original
+
+
 def test_foreign_principal_cannot_read_research(world, monkeypatch):
     import principal
     import research_threads as service

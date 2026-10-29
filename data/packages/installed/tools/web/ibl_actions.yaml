@@ -81,7 +81,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-23", impl: "b5e6e474133fd3d5"}  # 회원 공개 경로는 member_web 유지. 내장 브라우저는 소유자만, HUB 키는 외부 검색에 전달하지 않음.
+        path_audited: {at: "2026-10-29", impl: "d4f5e04376922444"}  # 재감사: 상태 저장 대기만 변경. 회원은 member_web·공개 URL 검증 유지, 자동 상태 파일·소유자 브라우저에 접근하지 않음.
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -166,7 +166,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-23", impl: "b5e6e474133fd3d5"}  # 회원 공개 경로는 member_web 유지. 내장 브라우저는 소유자만, HUB 키는 외부 검색에 전달하지 않음.
+        path_audited: {at: "2026-10-29", impl: "d4f5e04376922444"}  # 재감사: 상태 저장 대기만 변경. 회원은 member_web·공개 URL 검증 유지, 자동 상태 파일·소유자 브라우저에 접근하지 않음.
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

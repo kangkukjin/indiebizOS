@@ -11,6 +11,47 @@ from test_conscious_supervisor import supervisor, finish  # noqa: F401
 from test_supervision_delivery import prepare as stage
 
 
+def test_research_invalid_citation_is_repaired_before_approval(supervisor, monkeypatch, tmp_path):
+    import research_capture  # installs the service callback
+    from research_context import scope
+    from research_store import ResearchStore
+    from research_library import ResearchLibrary
+    (tmp_path / 'research-project').mkdir()
+    store = ResearchStore(tmp_path / 'research-project', 'research-test')
+    tid = store.create_thread('인용')['id']
+    lib = ResearchLibrary(store, tid)
+    vid = lib.capture('정확한 근거 788', title='원문', paragraphs=[('¶27', '정확한 근거 788')])['version_ref']
+    bad, good = f'[자료:{vid}:¶1]', f'[자료:{vid}:¶27]'
+    evaluations, repairs = [], []
+
+    def evaluate(prompt, **kwargs):
+        evaluations.append(prompt)
+        assert 'research_citations' in prompt
+        if len(evaluations) == 2:
+            assert '정확한 근거 788' in prompt
+        # 모델 승인이 무효 인용을 덮어쓰지 못한다.
+        return 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"근거 확인","evidence":["인용"],"remaining":[]}'
+
+    def repair(prompt, **kwargs):
+        repairs.append(prompt)
+        assert '인용 검사 실패' in prompt and '¶27' in prompt
+        packet = json.loads(prompt.split('작업 인계=', 1)[1])
+        block = packet['target_blocks']['blocks'][0]
+        supervisor.store.patch(packet['response']['version'], [
+            {'id': block['id'], 'hash': block['hash'], 'text': '수요 788 ' + good}])
+        yield {'type': 'final', 'content': '수정 완료'}
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    supervisor.runner.ai.process_message_stream = repair
+    with scope(dict(project_uid=store.uid, epoch=store.epoch, path=str(store.path),
+                    thread_id=tid, run_id='run', mode='research')):
+        lib.access(vid, 1, '¶27', '정확한 근거 788')
+        result = finish(supervisor, '수요 788 ' + bad)
+    assert len(evaluations) == 2 and len(repairs) == 1
+    assert result[-1]['content'] == '수요 788 ' + good
+    assert tc.get_goal_eval_outcome()['achieved']
+
+
 def test_unicode_source_text_reaches_final_evaluation(supervisor, monkeypatch):
     source = "PDF 원문 앞\u2028가운데\u2029끝\u0085다음"
     supervisor.run_tool("read", {"query": source}, lambda: source)

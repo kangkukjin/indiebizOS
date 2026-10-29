@@ -544,7 +544,8 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
     - 이미 떠 있는 브라우저(로그인 세션·headful 창 포함)가 있으면 새 탭으로 재사용 —
       기존 화면을 죽이거나 방해하지 않는다.
     - 본문이 iframe에 있는 사이트(네이버 카페/블로그)를 위해 모든 프레임의 텍스트 수집.
-    - 크롤 후 로그인 상태를 자동 저장(storage_state) — 세션 신선도 유지.
+    - 크롤 후 로그인 상태를 자동 저장(storage_state). 세션의 한도·중복 저장 억제를
+      따르며 저장 실패는 maintenance_errors로 분리하고 확보한 본문은 보존한다.
     """
     opened_tab = None
     status = None
@@ -601,7 +602,13 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
         # 로그인 상태 자동 저장 (구버전 browser_session 모듈이면 스킵)
         if hasattr(session, "save_storage_state"):
             try:
-                await asyncio.wait_for(session.save_storage_state(), _STORAGE_TIMEOUT_SECONDS)
+                if getattr(session, 'storage_state_bounded', False):
+                    saved = await session.save_storage_state()
+                else:
+                    saved = await asyncio.wait_for(session.save_storage_state(), _STORAGE_TIMEOUT_SECONDS)
+                if isinstance(saved, dict) and saved.get('success') is False:
+                    maintenance_errors.append({'stage': 'storage', 'error': saved.get('error', 'StorageFailed'),
+                                               'skipped': bool(saved.get('skipped'))})
             except Exception as exc:
                 maintenance_errors.append({"stage": "storage", "error": type(exc).__name__})
 

@@ -33,6 +33,50 @@ def browser(monkeypatch, tmp_path):
     return handler, module
 
 
+def test_auto_storage_coalesces_parallel_saves_and_publishes_atomically(browser, tmp_path):
+    _, module = browser
+    async def run():
+        session = module.BrowserSession()
+        calls = []
+        async def snapshot():
+            calls.append(True)
+            await asyncio.sleep(.02)
+            return {'cookies': [{'name': 'session', 'value': 'test'}], 'origins': []}
+        session._context = SimpleNamespace(storage_state=snapshot)
+        results = await asyncio.gather(session.save_storage_state(), session.save_storage_state())
+        assert all(r['success'] for r in results) and len(calls) == 1
+        path = tmp_path / module.AUTO_STATE_FILENAME
+        assert json.loads(path.read_text())['cookies'][0]['name'] == 'session'
+        assert path.stat().st_mode & 0o777 == 0o600
+        assert not list(tmp_path.glob('.auto-state-*'))
+    asyncio.run(run())
+
+
+def test_auto_storage_timeout_keeps_last_good_file_and_waits_for_new_activity(browser, tmp_path, monkeypatch):
+    _, module = browser
+    monkeypatch.setattr(module, 'STORAGE_STATE_TIMEOUT_SECONDS', .01)
+    path = tmp_path / module.AUTO_STATE_FILENAME
+    path.write_text('{"cookies":[],"origins":[]}')
+    async def run():
+        session = module.BrowserSession()
+        calls = []
+        async def snapshot():
+            calls.append(True)
+            if len(calls) == 1:
+                await asyncio.Event().wait()
+            return {'cookies': [], 'origins': [{'origin': 'https://example.test', 'localStorage': []}]}
+        session._context = SimpleNamespace(storage_state=snapshot)
+        failed = await session.save_storage_state()
+        assert failed == {'success': False, 'error': 'TimeoutError'}
+        assert json.loads(path.read_text()) == {'cookies': [], 'origins': []}
+        # 종료 직전의 같은 저장 호출도 재시도하지 않는다.
+        assert (await session.save_storage_state())['skipped'] and len(calls) == 1
+        session._close_generation += 1
+        assert (await session.save_storage_state())['success'] and len(calls) == 2
+        assert json.loads(path.read_text())['origins']
+    asyncio.run(run())
+
+
 def test_real_isolated_sessions_dialogs_and_frames(browser, tmp_path):
     handler, module = browser
     async def run():

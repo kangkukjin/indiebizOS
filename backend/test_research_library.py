@@ -189,6 +189,78 @@ def test_library_mode_blocks_external_dispatch(lib):
         with pytest.raises(PermissionError): before({'research_local':True}, {'op':'add'})
 
 
+def test_derived_script_selection_reuses_original_material_without_new_json_source(lib, monkeypatch):
+    import research_capture
+    monkeypatch.setattr(research_capture, 'schedule_index', lambda path: None)
+    tid = lib.store.create_thread('발췌')['id']
+    ctx = dict(project_uid=lib.store.uid, epoch=lib.store.epoch, path=str(lib.store.path),
+               thread_id=tid, run_id='run', mode='research')
+    with scope(ctx):
+        ref = lib.capture('원문의 첫 문단\n\n선택할 둘째 문단', title='원문', thread=tid,
+                          paragraphs=[('¶1', '원문의 첫 문단'), ('¶2', '선택할 둘째 문단')],
+                          acquired_result={'items': [{'text': '원문의 첫 문단', 'paragraph_index': 1},
+                                                     {'text': '선택할 둘째 문단', 'paragraph_index': 2}]})
+        selected = {'items': [{'text': '선택할 둘째 문단', 'paragraph_index': 2}],
+                    'research_materials': [ref]}
+        wrapper = {'success': True, 'script_protocol': 'registered-json/1', 'value': selected}
+        out = research_capture.capture(ctx, {'tool': 'script_op'}, {}, wrapper, 'script')
+        assert out == wrapper
+        protected = {**wrapper, 'token': 'private-token'}
+        shown = research_capture.capture(ctx, {'tool': 'script_op'}, {}, protected, 'sanitized')
+        assert shown['token'] == '[인증정보 제외]'
+        with lib.store.connect() as db:
+            assert db.execute('SELECT count(*) FROM research_versions').fetchone()[0] == 1
+            assert db.execute('SELECT count(*) FROM research_access').fetchone()[0] == 0
+        # 영수증을 붙인 새 문장은 원본으로 위장하거나 버리지 않는다.
+        selected['items'] = [{'text': '새로 생성한 판단 문장'}]
+        out = research_capture.capture(ctx, {'tool': 'script_op'}, {}, wrapper, 'changed')
+        assert out['research_materials'][0]['version_ref'] != ref['version_ref']
+        version = lib.version(out['research_materials'][0]['version_ref'])
+        assert lib.store.blob(version['blob']).decode() == '새로 생성한 판단 문장'
+
+
+def test_citation_review_binds_current_run_quotes_without_inventing_reads(lib):
+    receipt = lib.capture('원문', title='자료', paragraphs=[('¶27', '수요는 788이다.')])
+    vid = receipt['version_ref']
+    with scope({'project_uid': lib.store.uid, 'run_id': 'current'}):
+        lib.access(vid, 1, '¶27', '수요는 788이다.')
+    report = lib.citation_review(f'[자료:{vid}:¶27] [자료:{vid}:¶1] [자료:missing:¶1]', 'current')
+    assert report['valid'][0]['quote'] == '수요는 788이다.'
+    assert len(report['invalid']) == 2
+    assert report['invalid'][0]['read_locations'] == ['¶27']
+    assert lib.citation_review(f'[자료:{vid}:¶27]', 'other')['invalid']
+    with lib.store.connect() as db:
+        assert db.execute('SELECT count(*) FROM research_access').fetchone()[0] == 1
+
+
+def test_citation_review_bounds_large_composite_locations(lib):
+    vid = lib.capture('본문', title='자료')['version_ref']
+    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
+        for i in range(10):
+            lib.access(vid, 1, f'¶{i}', '긴 문장 ' * 2000)
+    report = lib.citation_review(' '.join(f'[자료:{vid}:¶{i}]' for i in range(10)), 'run')
+    assert report['evidence_chars'] == 16000
+    assert len(report['valid']) == 10 and not report['invalid']
+    assert all(row['truncated'] for row in report['valid'])
+
+
+def test_legacy_script_selection_reindexes_without_rewriting_old_citations(lib):
+    raw = json.dumps({'script_protocol': 'registered-json/1', 'log': '/execution/log',
+                      'value': {'text': '선택하지 않은 전문', 'research_materials': [{'version_ref': 'old'}],
+                                'items': [{'text': '보존한 첫 문단'}, {'text': '보존한 둘째 문단'}]}}, ensure_ascii=False)
+    vid = lib.capture(raw, title='script', kind='tool:script_op:run', mime='application/json',
+                      paragraphs=[('¶1', raw)])['version_ref']
+    with scope({'project_uid': lib.store.uid, 'run_id': 'old-run'}):
+        lib.access(vid, 1, '¶1', raw[:40])
+    lib.prepare_index()
+    assert lib.paragraphs(vid) == ([['¶1', '보존한 첫 문단'], ['¶2', '보존한 둘째 문단']], 2)
+    assert lib.paragraphs(vid, 1)[0] == [['¶1', raw]]
+    assert lib.store.blob(lib.version(vid)['blob']).decode() == raw
+    assert lib.citations(f'[자료:{vid}:¶1]', 'old-run')[0]['extraction_revision'] == 1
+    lib.prepare_index()
+    assert lib.paragraphs(vid)[1] == 2
+
+
 def test_deleted_derived_index_rebuilds_from_saved_bytes(lib):
     receipt = lib.capture('교육 자료의 원문은 색인 삭제와 별개로 남아 있어야 합니다. ' * 10, title='보존')
     lib.index_pending()

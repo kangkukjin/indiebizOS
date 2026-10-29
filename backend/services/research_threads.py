@@ -117,7 +117,16 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
             citations = lib.citations(text, run)
             valid = {(c['version_id'], c['locator']) for c in citations}
             import re
-            text = re.sub(r'\[자료:([a-f0-9]{32}):([^\]]+)\]', lambda m: m.group(0) if (m[1], m[2]) in valid else '[확인되지 않은 인용]', text)
+            invalid = lib.citation_review(text, run)['invalid']
+            if invalid:
+                # 평가가 꺼졌거나 보완을 다 쓴 경우의 마지막 방어선. 전달 변형을
+                # 성공으로 숨기지 않고 원문·위치를 사건에 남긴다.
+                with store.connect(True) as db:
+                    store.event(db, 'citation.validation_failed', {'invalid': invalid, 'response': text}, tid, run)
+                text = re.sub(r'\[자료:([^:\]]+):([^\]]+)\]', lambda m: m.group(0) if (m[1], m[2]) in valid else '[확인되지 않은 인용]', text)
+                if state == 'completed':
+                    state = 'failed'
+                    text += '\n\n인용 검증을 완료하지 못했습니다. 확인되지 않은 인용은 근거로 사용할 수 없습니다.'
             store.write_response(tid, run, text, state, citations)
             if state == 'completed' and _summarize:
                 try:

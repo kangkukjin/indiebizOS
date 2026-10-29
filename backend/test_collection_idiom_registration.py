@@ -1,4 +1,4 @@
-"""판정 관용구의 정적 계약·이름 호출·메타데이터 재등록 회귀. 외부 API는 격리한다."""
+"""수집 관용구의 정적 계약·이름 호출·메타데이터 재등록 회귀. 외부 API는 격리한다."""
 import importlib.util
 import json
 import sqlite3
@@ -11,7 +11,7 @@ import boot_paths  # noqa: F401
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 CATALOG = json.loads((ROOT / "data/idioms/curated.json").read_text())
-NAMES = ("관련자료골라읽기", "의미로본문찾기")
+NAMES = ("주소마다읽기", "본문에서찾기")
 ENTRIES = {e["name"]: e for e in CATALOG["idioms"] if e["name"] in NAMES}
 
 

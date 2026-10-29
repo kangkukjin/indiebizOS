@@ -142,15 +142,16 @@ def test_original_round15_full_program_recovers_without_recollecting(tmp_path, m
     from model_result_view import project_v2_result, resolve_input_refs
     root = Path(__file__).resolve().parents[1]
     source = root / 'docs/experiments/long_sentence_imagination/round_15/drafts'
-    code = (source / 'full_failure_v0.ibl').read_text()
+    from test_function_support import historical_decisions, historical_source
+    code = historical_source((source / 'full_failure_v0.ibl').read_text())
     render = (source / 'render_v1.py').read_text()
     registry = load_registry(str(root))
     model_calls = []
-    def judge(runtime, args):
+    def judge(args):
         model_calls.append(args)
         return {'items': [{**row, 'judgment_result_value': None, 'judgment_result_confidence': 0}
                           for row in args['items']]}
-    registry['table:judge'] = replace(registry['table:judge'], run=judge)
+    registry = historical_decisions(registry, judge)
     monkeypatch.setattr('script_workspace.storage_root', lambda: tmp_path / 'transient')
     store = TurnStore(tmp_path / 'evidence')
     monkeypatch.setattr('model_result_view.evidence_store', lambda: store)

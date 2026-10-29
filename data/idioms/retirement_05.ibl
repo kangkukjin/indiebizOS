@@ -1,12 +1,12 @@
 #!ibl edition=2
 [def:주소마다읽기]($목록,$개수) {
-  $준비 = [self:script]{id:"판정관용구",args:{op:"urls",source:$목록,limit:$개수}}
+  $준비 = [self:script]{id:"수집관용구",args:{op:"urls",source:$목록,limit:$개수}}
   $대상 = $준비.items
   $수집 = $대상 >> [table:each]{on_error:"collect"} { return [sense:crawl]{url:$it.url} }
   $값 = $수집 >> [table:each]{} {
     [if:is_ok($it)] { return {ok:true,source:$대상[$i],value:unwrap($it)} }
     return {ok:false,source:$대상[$i],error:error_of($it)}
   }
-  $결과 = [self:script]{id:"판정관용구",args:{op:"collect",results:$값,keep:["title", "url"]}}
-  return [self:script]{id:"판정관용구",args:{op:"finish",selection:$준비.collection,result:$결과}}
+  $결과 = [self:script]{id:"수집관용구",args:{op:"collect",results:$값,keep:["title", "url"]}}
+  return [self:script]{id:"수집관용구",args:{op:"finish",selection:$준비.collection,result:$결과}}
 }

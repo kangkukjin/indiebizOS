@@ -341,7 +341,7 @@ def test_retry_with_zero_or_all_failures(current, all_failed):
 
 
 # 업무 교재도 표시된 실행 예제를 같은 컴파일러에 통과시킨다. 설명용 조각은 포함하지 않는다.
-DOMAIN_GUIDES = ('goal', 'trigger', 'sheet', 'ai_words', 'judgment', 'body',
+DOMAIN_GUIDES = ('goal', 'trigger', 'sheet', 'ai_words', 'body',
                  'document_edit', 'member_start', 'web_search')
 DOMAIN_EXAMPLES = dict(pair for name in DOMAIN_GUIDES for pair in re.findall(
     r'<!-- example:(\w+) -->\s*```ibl\n(.*?)\n```',

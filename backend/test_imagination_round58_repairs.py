@@ -42,14 +42,13 @@ def test_unary_pipeline_equals_explicit_input(registry, action, args, rows, expe
     ('groupby', 'by:"id"'), ('dedup', 'by:"id"'), ('rename', 'map:{a:"b"}'),
     ('flatten', 'field:"refs"'), ('reduce', 'step:"acc+1"'),
     ('ai', 'instruction:"검사"'), ('brief', 'instruction:"검사"'),
-    ('judge', 'instruction:"관련 있는가"'),
 ])
 def test_empty_unary_input_is_success_without_model_call(registry, action, args):
     result = run(registry, f'[] >> [table:{action}]{{{args}}}')
     assert result['success'], result
 
 
-@pytest.mark.parametrize('action', ['reduce', 'judge', 'ai', 'brief', 'chunk',
+@pytest.mark.parametrize('action', ['reduce', 'ai', 'brief', 'chunk',
                                   'rename', 'flatten', 'dedup', 'since', 'groupby'])
 def test_no_pipe_can_overwrite_explicit_input(registry, action):
     plan = compile_program(f'[] >> [table:{action}]{{items:[]}}', registry)

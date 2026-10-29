@@ -7,6 +7,6 @@
     [if:is_ok($it)] { return {ok:true,source:$대상[$i],value:unwrap($it)} }
     return {ok:false,source:$대상[$i],error:error_of($it)}
   }
-  $결과 = [self:script]{id:"판정관용구",args:{op:"collect",results:$값,keep:[]}}
+  $결과 = [self:script]{id:"수집관용구",args:{op:"collect",results:$값,keep:[]}}
   return $결과
 }

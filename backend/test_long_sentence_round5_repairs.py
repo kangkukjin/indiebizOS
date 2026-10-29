@@ -19,7 +19,8 @@ FIXTURE = ROOT / 'docs/experiments/long_sentence_imagination/round_5'
 
 
 def run(code, registry, inputs=None, **kwargs):
-    plan = compile_program(code, registry, inputs)
+    from test_function_support import historical_source
+    plan = compile_program(historical_source(code), registry, inputs)
     assert not plan.issues, plan.issues
     return Runtime(plan, inputs, **kwargs).run()
 
@@ -90,66 +91,19 @@ def test_pdf_mixed_pages_and_requested_selection(registry, tmp_path):
 
 @pytest.fixture
 def judge_transport(monkeypatch):
-    import requests
-    import common.auth_manager
-    calls = []
-    monkeypatch.setattr(common.auth_manager, 'get_api_key', lambda _: 'fixture-only')
-
-    def post(*args, **kwargs):
-        payload = kwargs['json']
-        calls.append(payload)
-        answers = {key: {'type': 'noul', 'noul': 0.95} for key in payload['questions']}
-        return SimpleNamespace(status_code=200, json=lambda: {
-            'answers': answers, 'model': 'jev-latest',
-            'usage': {'input_tokens': 20, 'output_tokens': 10}})
-
-    monkeypatch.setattr(requests, 'post', post)
-    return calls
-
-
-def test_judge_keeps_read_reuse_and_records_own_call(registry, tmp_path, judge_transport):
-    inputs = {'p': str(FIXTURE / 'input/policy.json')}
-    with Journal(tmp_path, 'original') as journal:
-        first = run((FIXTURE / 'repro/judge_reuse_a.ibl').read_text(), registry, inputs, journal=journal)
-        original = journal.run_id
-    second = run((FIXTURE / 'repro/judge_reuse_b.ibl').read_text(), registry, inputs,
-                 reusable=reusable_receipts(tmp_path, original), reuse_run=original)
-    assert first['success'] and second['success']
-    assert second['reuse']['reused_calls'] == 2
-    assert second['reuse']['model_calls'] == 1
-    assert len(judge_transport) == 1
-    assert 'model' not in second['usage']
-    usage = first['usage']['model']
-    assert usage['requests'] == 1 and usage['input'] == 20
-    call = usage['calls'][0]
-    assert call['model'] == 'jev-latest' and call['source'] == 'fixed_provider'
-    assert call['tier'] is None and call['call_id'] and call['role']
-
-
-@pytest.mark.parametrize('response_kind', ['network', 'bad_json', 'unmeasured'])
-def test_judge_unmeasured_failures_have_model_identity(monkeypatch, response_kind):
-    import requests
-    from model_call_context import capture_usage
-    path = ROOT / 'data/packages/installed/tools/ai-ops/ai_ops_judge.py'
-    spec = importlib.util.spec_from_file_location('round5_judge', path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    monkeypatch.setattr(module, '_key', lambda: 'fixture-only')
-
-    def post(*a, **kw):
-        if response_kind == 'network':
-            raise requests.Timeout('fixture')
-        def body():
-            if response_kind == 'bad_json':
-                raise ValueError('fixture')
-            return {'answers': {}}
-        return SimpleNamespace(status_code=200, json=body)
-
-    monkeypatch.setattr(requests, 'post', post)
-    with capture_usage() as captured:
-        module._request({})
-    assert len(captured) == 1 and not captured[0]['measured']
-    assert captured[0]['model'] == 'jev-latest'
+    from test_function_support import historical_decisions
+    original = load_registry
+    state = {'unknown': False}
+    def decide(args):
+        rows = args['items']
+        rows = rows.get('items', []) if isinstance(rows, dict) else rows
+        def value(row):
+            return None if state['unknown'] and row.get('영수증') in ('R01', 'R03') else True
+        return {'items': [{**row, 'judgment_result_value': value(row),
+                           'judgment_result_status': 'unknown' if value(row) is None else 'decided'} for row in rows]}
+    monkeypatch.setattr(__import__(__name__), 'load_registry',
+                        lambda *a, **kw: historical_decisions(original(*a, **kw), decide))
+    return state
 
 
 @pytest.mark.parametrize('variant,unknown', [(False, False), (True, False), (False, True)])
@@ -181,17 +135,7 @@ def test_full_original_task_and_copy_variant(tmp_path, monkeypatch, judge_transp
     inputs = {'추출': p1['value'], '카드': str(folder / 'card_statement.csv'),
               '정책': str(folder / 'policy.json'), '보고서': str(tmp_path / 'report.md'),
               '목록': str(tmp_path / 'anomalies.json')}
-    if unknown:
-        import requests
-        normal_post = requests.post
-        def uncertain_post(*args, **kwargs):
-            response = normal_post(*args, **kwargs)
-            body = response.json()
-            for i, row in enumerate(kwargs['json']['state']['items']):
-                if row['영수증'] in ('R01', 'R03'):
-                    body['answers'][f'r{i}q0']['noul'] = 0.71
-            return SimpleNamespace(status_code=200, json=lambda: body)
-        monkeypatch.setattr(requests, 'post', uncertain_post)
+    judge_transport['unknown'] = unknown
     # Original successful P2, then corrected pending-judgment variant.
     for draft in (['p2_repaired'] if unknown else ['p2_v2', 'p2_repaired']):
         p2 = run((FIXTURE / f'drafts/{draft}.ibl').read_text(), reg, inputs)

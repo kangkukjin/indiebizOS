@@ -2270,7 +2270,7 @@
   },
   "table:ai": {
    "fields": {
-    "description": "e17c5e8b93dd",
+    "description": "b0982a50d550",
     "target_description": "ca04e95e9036",
     "implementation": "4aa5dfa30c86",
     "returns": "5450ffb2cf8a",
@@ -2280,12 +2280,12 @@
     "router": "ebbb1532efbc",
     "tool": "3fe40b0f97de"
    },
-   "reviewed": "2026-10-09",
-   "examples": 16
+   "reviewed": "2026-10-30",
+   "examples": 2
   },
   "table:brief": {
    "fields": {
-    "description": "8325578e572b",
+    "description": "076116907820",
     "target_description": "d1f3567205fc",
     "implementation": "dcb478915cba",
     "returns": "1cf2462dbf78",
@@ -2295,8 +2295,8 @@
     "router": "ebbb1532efbc",
     "tool": "5a71b9347b01"
    },
-   "reviewed": "2026-09-30",
-   "examples": 70
+   "reviewed": "2026-10-30",
+   "examples": 4
   },
   "table:chart": {
    "fields": {
@@ -2445,21 +2445,6 @@
    },
    "reviewed": "2026-09-29",
    "examples": 7
-  },
-  "table:judge": {
-   "fields": {
-    "description": "6e22ef8977db",
-    "target_description": "c8130e142d7f",
-    "implementation": "4b5396a02081",
-    "returns": "5450ffb2cf8a",
-    "target_key": "4ec46c9ca40f",
-    "side_effect": "fcbcf165908d",
-    "runs_on": "519dd933e8a2",
-    "router": "ebbb1532efbc",
-    "tool": "dca392ac331e"
-   },
-   "reviewed": "2026-09-30",
-   "examples": 14
   },
   "table:merge": {
    "fields": {

@@ -27,7 +27,7 @@ def native():
 
 @pytest.fixture
 def judgment():
-    return module('data/scripts/judgment_idioms.py', 'retirement_judgment')
+    return module('data/scripts/collection_idioms.py', 'retirement_judgment')
 
 
 def execute(native, judgment, name, inputs, mocks):
@@ -35,7 +35,7 @@ def execute(native, judgment, name, inputs, mocks):
     def handler(key):
         def run(rt, args, **kwargs):
             calls.append((key, args))
-            if key == 'self:script' and args['id'] == '판정관용구':
+            if key == 'self:script' and args['id'] == '수집관용구':
                 return judgment.run(args['args'])
             target = mocks[key]
             return target(args) if callable(target) else target
@@ -64,8 +64,6 @@ def test_retired_request_never_loads_tools(monkeypatch, payload, code, check):
     out = handle_request({**payload,'check':check})
     assert not out['success'] and not out['executed']
     assert code in str(out)
-
-
 
 
 def test_native_candidates_compile_without_legacy_adapters(native):
@@ -159,17 +157,6 @@ def test_all_native_functions_have_explicit_input_and_output(native,judgment):
     for name,inputs,mocks in fixtures:
         out,_=execute(native,judgment,name,inputs,mocks)
         assert out['success'], name
-
-
-@pytest.mark.parametrize('name',['의미로본문찾기','관련자료골라읽기'])
-def test_judgment_preserves_unknown_and_failure_rows(native,judgment,name):
-    def judge(args):
-        return {'items':[{**row,'judgment_result_value':True,'judgment_result_status':'decided'} for row in args['items']]}
-    source=[{'url':'u','title':'title','text':'body'},{'url':'bad','_error':'source failed'}]
-    out,_=execute(native,judgment,name,{'목록':source,'질문':'question','개수':2},
-        {'table:judge':judge,'sense:crawl':{'title':'title','url':'u','text':'body','items':[{'text':'body'}]}})
-    assert out['value']['error_count']==1
-    assert any(row.get('_error') for row in out['value']['items'])
 
 
 def test_collect_preserves_empty_and_non_record_failure(judgment):

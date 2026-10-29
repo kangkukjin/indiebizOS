@@ -10,9 +10,8 @@
       {"items": [{"item": "K", "pack": "5", "pack_price": "675", "shipping": "80"}]},
       {"items": [{"item": "K", "pack": "5", "pack_price": "677.5", "shipping": "80.5"}, {"item": "K", "pack": "5", "pack_price": "", "shipping": "80.5"}]}
     ],
-    "판정관용구": [
+    "수집관용구": [
       {"op": "urls", "source": {"items": [{"url": "https://example.test", "text": "needle", "title": "title"}]}},
-      {"op": "prepare", "mode": "body", "source": {"items": [{"url": "https://example.test", "text": "needle", "title": "title"}]}, "question": "needle", "limit": 2},
       {"op": "match", "source": {"items": [{"url": "https://example.test", "text": "needle", "title": "title"}]}, "pattern": "needle", "limit": 2},
       {"op": "collect", "results": [{"ok": true, "value": {"items": [{"url": "https://example.test", "text": "needle"}]}}]}
     ]

@@ -1,9 +1,6 @@
 # 원샷 낱말 설계 — 통화 대수 세 자리 (ONESHOT VOCAB DESIGN)
 
-> 2026-09-21 확장: 이 문서의 기어 실행 축·생성형 모델 계약은 struct/ai/brief에 적용한다.
-> 별도 typed evaluation API와 인증을 쓰는 `[table:judge]`를 ai-ops에 추가했다.
-> 기준이 정해진 참/거짓·선택·점수 판정은 judge, 산문 생성은 기존 세 원자로 구분한다.
-> [판정 설계](JEV_JUDGMENT_2026_09_21.md) · [사용 가이드](../data/guides/judgment.md).
+> 2026-10-30: TypeSafe 전용 판정 어휘를 은퇴했다. 현재 ai-ops는 기어 실행 축의 struct/ai/brief 세 낱말이다. [과거 판정 설계와 검증 기록](JEV_JUDGMENT_2026_09_21.md).
 
 **작성일**: 2026-08-19
 **상태**: ✅ 구현 완료 (2026-08-19 — 판정 4건 전부 권고안대로 확정·집행, §12 구현 기록 참조)

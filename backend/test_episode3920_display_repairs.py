@@ -34,7 +34,7 @@ def _paragraphs(url, cap=16000):
 
 
 def _collect(monkeypatch, results, parallel=1):
-    module = _load('display_judgment', ROOT/'data/scripts/judgment_idioms.py')
+    module = _load('display_judgment', ROOT/'data/scripts/collection_idioms.py')
     return module.collect_values({'results':[
         {'ok':True,'source':{'url':f'https://test/{i}'},'value':result}
         for i,result in enumerate(results)]})
@@ -82,7 +82,7 @@ def test_mixed_collection_does_not_claim_all_rows_are_paragraphs(monkeypatch, ot
 
 
 def test_partial_failure_remains_visible_with_paragraph_policy(monkeypatch):
-    module = _load('display_judgment_failure', ROOT/'data/scripts/judgment_idioms.py')
+    module = _load('display_judgment_failure', ROOT/'data/scripts/collection_idioms.py')
     out = module.collect_values({'results':[
         {'ok':False,'source':{'url':'a'},'error':'접근 제한'},
         {'ok':True,'source':{'url':'b'},'value':_paragraphs('https://test/b')}]})

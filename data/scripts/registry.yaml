@@ -1443,39 +1443,24 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-08T06:17:58'
   timeout: 300
-판정관용구:
+수집관용구:
   callable_contract:
     version: 1
     adapter: {protocol: registered-json/1}
     effects: [pure]
-    params: {op: Text, mode: Text, source: Unknown, origin: Unknown, question: Text, limit: Number, context: Number, prepared: Record, judged: Record, selection: Record, result: Record, results: 'List<Record>', keep: 'List<Text>', pattern: Text}
+    params: {op: Text, source: Unknown, limit: Number, context: Number, selection: Record, result: Record, results: 'List<Record>', keep: 'List<Text>', pattern: Text}
     required: [op]
-    enums: {op: [urls, prepare, select, finish, match, collect]}
+    enums: {op: [urls, finish, match, collect]}
     result: {items: 'List<Record>', count: Number}
     integers: [limit, context]
     minimum: {limit: 0, context: 0}
     variants:
     - {when: {op: urls}, required: [op, source]}
-    - when: {op: prepare}
-      required: [op, source, mode, question, limit]
-      enums: {mode: [search, body]}
-      nonempty: [question]
-      result: {items: 'List<Record>', count: Number, instruction: Text, plan: {items: 'List<Record>', count: Number, instruction: Text, source: {items: 'List<Record>'}}}
-    - {when: {op: select}, required: [op, prepared, judged, mode, limit], enums: {mode: [search, body]}, result: {items: 'List<Record>', count: Number, selection: {items: 'List<Record>', count: Number}}}
     - {when: {op: finish}, required: [op, selection, result]}
     - {when: {op: match}, required: [op, source, pattern, limit], result: {items: 'List<Record>', count: Number, match_info: Record}}
     - {when: {op: collect}, required: [op, results]}
-  description: '추가 op=match(source,pattern,limit,context): 출처 경계 안에서 문맥 선택. collect(results,keep): 명시 행 결과의 값·실패·원천 절단을 보존하며 펼침. 수집·Jev 관용구의 결정론적 URL 선택·입력 분할·원문 복원. 판정 호출은 IBL table:judge가 소유한다.
-    보통 주소마다읽기·관련자료골라읽기·의미로본문찾기로 호출한다. args: op(urls|prepare|select|finish), mode(search|body),
-    source(items 봉투 또는 행 목록), origin(prepare 선택: 중복 제거 전 원천 봉투), question(prepare:
-    관련성 질문), limit(prepare/select: 0 이상 선별 상한), context(prepare/select: 앞뒤 문맥 행수,
-    기본 0), prepared(select: prepare의 plan), judged(select: 판정 items와 error_count 봉투),
-    selection(finish: select의 selection), result(finish: 크롤 items와 오류·잘림 봉투). urls는
-    정상 URL 문자열의 정확한 중복만 제거하고 실패 행을 보존한다. urls에 limit을 주면 앞 개수개 정상 후보와 collection을
-    반환하며 실패 행은 finish에서 복원한다. prepare는 배치·plan, select는 선별 items·selection·판정 내역,
-    finish는 최종 items를 반환한다. 실패 행과 error_count·partial·truncated를 보존한다. 0개면 외부 호출 없이
-    실패 증거만 남긴다. 의도한 선별은 truncations.scope=selection으로 원천 절단과 구별한다.'
-  file: judgment_idioms.py
+  description: 'URL 중복 제거(urls), 수집 결과 복원(finish), 출처 경계 안에서 본문·문맥 검색(match), 행 결과 취합(collect). 주소마다읽기·본문에서찾기 등의 공용 값 연산이다. urls에 limit을 주면 앞 개수개 정상 후보와 collection을 반환하고 실패 행은 finish에서 복원한다. collect는 값·실패·원천 잘림을 보존하며 펼친다. 의도한 선별은 truncations.scope=selection으로 원천 잘림과 구별한다. 모델·외부 API를 호출하지 않는다.'
+  file: collection_idioms.py
   interpreter: python
   registered_at: '2026-09-21T21:58:24'
   timeout: 30

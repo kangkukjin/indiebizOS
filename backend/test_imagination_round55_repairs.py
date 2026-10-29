@@ -48,7 +48,7 @@ CURRENCY = {"success": True, "items": [{"date": "d1"}, {"date": "d2"}]}
 
 
 def test_collection_explicitly_preserves_business_keys_and_origins():
-    module=_load('_native_collect55', Path(__file__).resolve().parents[1]/'data/scripts/judgment_idioms.py')
+    module=_load('_native_collect55', Path(__file__).resolve().parents[1]/'data/scripts/collection_idioms.py')
     out=module.collect_values({'keep':['id','name','floors'],'results':[{'ok':True,'source':row,'value':SCALAR_REPORT} for row in PARENTS]})
     assert len(out['items'])==2
     assert out['items'][0]['coverage_ratio']==23.33

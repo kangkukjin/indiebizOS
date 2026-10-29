@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def script():
-    spec = importlib.util.spec_from_file_location('judgment_idioms_test', ROOT / 'data/scripts/judgment_idioms.py')
+    spec = importlib.util.spec_from_file_location('collection_idioms_test', ROOT / 'data/scripts/collection_idioms.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -28,7 +28,7 @@ def script():
 
 @pytest.fixture
 def contract():
-    return yaml.safe_load((ROOT / 'data/scripts/registry.yaml').read_text())['판정관용구']['callable_contract']
+    return yaml.safe_load((ROOT / 'data/scripts/registry.yaml').read_text())['수집관용구']['callable_contract']
 
 
 @pytest.fixture
@@ -86,18 +86,13 @@ def test_every_operation_returns_its_declared_value(script, contract):
     samples = [
         {'op': 'urls', 'source': source},
         {'op': 'urls', 'source': source, 'limit': 0},
-        {'op': 'prepare', 'mode': 'body', 'source': source, 'question': 'needle', 'limit': 2},
         {'op': 'match', 'source': source, 'pattern': 'needle', 'limit': 2},
         {'op': 'match', 'source': source, 'pattern': 'missing', 'limit': 2},
         {'op': 'collect', 'results': [{'ok': True, 'value': source}]},
         {'op': 'collect', 'results': [{'ok': False, 'error': {'message': 'source unavailable'}}]},
     ]
-    prepared = script.run(samples[2])
-    selection = {'op': 'select', 'prepared': prepared['plan'], 'mode': 'body', 'limit': 2,
-                 'judged': {'items': [{'rid': 0, 'judgment_result_status': 'decided',
-                                      'judgment_result_value': True}]}}
-    samples.append(selection)
-    samples.append({'op': 'finish', 'selection': script.run(selection)['selection'], 'result': source})
+    selection = script.run({"op": "urls", "source": source, "limit": 1})["collection"]
+    samples.append({"op": "finish", "selection": selection, "result": source})
     for args in samples:
         selected, values = checked_values(contract, args)
         actual = script.run(values)
@@ -120,9 +115,9 @@ def test_match_discards_stale_full_text_and_preserves_selection_receipts(script)
     assert source['text'].startswith('원문 전체')
 
 
-@pytest.mark.parametrize('op', ['urls', 'prepare', 'select', 'finish', 'match', 'collect'])
+@pytest.mark.parametrize('op', ['urls', 'finish', 'match', 'collect'])
 def test_missing_operation_inputs_rejected_before_script(registry, op):
-    code = 'return [self:script]{id:"판정관용구",args:{op:"' + op + '"}}'
+    code = 'return [self:script]{id:"수집관용구",args:{op:"' + op + '"}}'
     plan = compile_program(code, registry)
     assert plan.issues, plan.report()
     assert not Runtime(plan).run()['executed']
@@ -131,11 +126,9 @@ def test_missing_operation_inputs_rejected_before_script(registry, op):
 @pytest.mark.parametrize('args', [
     '{op:"match",source:[],pattern:"x",limit:-1}',
     '{op:"match",source:[],pattern:"x",limit:1.5}',
-    '{op:"prepare",source:[],mode:"invalid",question:"x",limit:1}',
-    '{op:"prepare",source:[],mode:"body",question:"",limit:1}',
 ])
 def test_known_invalid_options_rejected_before_script(registry, args):
-    plan = compile_program('return [self:script]{id:"판정관용구",args:' + args + '}', registry)
+    plan = compile_program('return [self:script]{id:"수집관용구",args:' + args + '}', registry)
     assert plan.issues, plan.report()
     assert not Runtime(plan).run()['executed']
 

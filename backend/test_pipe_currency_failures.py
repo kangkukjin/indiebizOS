@@ -68,41 +68,6 @@ def _run(tool_name, tool_input):
     return json.loads(out) if isinstance(out, str) else out
 
 
-def test_judge_real_loader_and_structured_criteria_pipe(monkeypatch):
-    """판정 형제 로딩·choice criteria·원 행→filter 연결은 실제 IBL 경로로 검증한다."""
-    import requests
-    from types import SimpleNamespace
-    from system_tools import _execute_ibl_unified
-
-    calls = []
-
-    def post(url, **kwargs):
-        assert url == "https://api.typesafe.ai/v1/systemone"
-        payload = kwargs["json"]
-        calls.append(payload)
-        answers = {}
-        for i in range(len(payload["state"]["items"])):
-            choice = "refund" if i == 0 else "other"
-            answers[f"r{i}q0"] = {"type": "choice", "choice": choice, "confidence": 0.99,
-                                   "probabilities": {"refund": float(i == 0), "other": float(i != 0)}}
-        return SimpleNamespace(status_code=200, json=lambda: {
-            "model": "jev-test", "answers": answers, "usage": {"input_tokens": 10, "output_tokens": 5}})
-
-    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key-not-a-secret")
-    monkeypatch.setattr(requests, "post", post)
-    code = ('$r=[table:judge]{items:[{id:1,text:"환불"},{id:2,text:"문의"}], '
-            'instruction:"요청 종류", type:"choice", criteria:{refund:"환불",other:"기타"}} '
-            '\n$r.items >> [table:filter]{where:($row)=>$row.judgment_result_value=="refund"}')
-    result = _execute_ibl_unified({"code": code,"edition":2}, "/tmp")
-    result = json.loads(result) if isinstance(result, str) else result
-    assert result["success"], result
-    final = result["value"]
-    final = json.loads(final) if isinstance(final, str) else final
-    rows = final
-    assert len(calls) == 1 and len(rows) == 1 and rows[0]["id"] == 1
-    assert rows[0]["judgment_result_value"] == "refund"
-
-
 def test_performance_date_range_contract_reaches_kopis(monkeypatch):
     """공연 날짜 범위는 액션 핸들러에서 KOPIS 요청까지 보존된다."""
     kopis = _load("_t_kopis_dates", os.path.join(_PKG, "culture", "tool_kopis.py"))
@@ -472,8 +437,6 @@ def test_p15_binary_transformers_carry_flags():
     print("P15 OK — 이항 변환자 truncated OR·total 합 승계·join 무-total·문서 꼬리 종단")
 
 
-
-
 def test_p17_script_list_preflight(tmp_path, monkeypatch):
     """P17(⑱ 실험 9): script list 가 실행 가능 여부를 안 봄 — 파일이 사라져도 ✅ 로 남았다.
 
@@ -577,8 +540,6 @@ def test_p18_sheet_semantic_silence():
     print("P18 OK — 합계 행 의심 신고·수식 덮어쓰기 기록·서식 승계·헤더 오인 힌트·오탐 없음")
 
 
-
-
 def test_p20_workflow_save_syntax_gate(tmp_path, monkeypatch):
     import workflow_store
     from workflow_engine import execute_workflow_action
@@ -593,7 +554,6 @@ def test_p20_workflow_save_syntax_gate(tmp_path, monkeypatch):
     result=save('p20',code)
     assert result['success'],result
     assert workflow_store.get_workflow('p20')['code']==code
-
 
 
 def test_p21_grep_missing_path_loud():
@@ -768,12 +728,6 @@ def test_p25_envelope_shape_uses_one_currency_judge():
     print("P25 OK — 봉투 shape 판정이 이음매(derive_items)와 같은 판정기 · 효과 오폭 없음")
 
 
-
-
-
-
-
-
 def test_p29_empty_hand_contract_is_one_rule():
     """P29(28회차 B28-1): 빈손(0행)에서 필드 부재를 주장하면 안 된다 — verb 전수 불변식.
 
@@ -897,8 +851,6 @@ def test_P31_blocks_의_변수_주입도_원형으로_읽힌다():
         assert "| [ |" not in md, "JSON 문자열이 문자 단위로 쪼개졌다 — 되읽기가 죽었다"
         assert "[유지] 산문은 그대로" in md, "산문 text 를 건드리면 안 된다"
     print("P31 OK — blocks 의 변수 주입도 원형으로(구조 필드만, 산문 불가침)")
-
-
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

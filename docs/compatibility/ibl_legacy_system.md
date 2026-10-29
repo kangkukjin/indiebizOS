@@ -46,11 +46,11 @@ IBL은 에이전트가 정보를 가져오고, 가공하고, 전달하는 과정
 
 API든 크롤링이든 안드로이드든 DB든, 에이전트는 같은 문법으로 요청한다. 프로토콜의 차이는 드라이버가 감춘다.
 
-**판정 전용 변환자(2026-09-21)**: `[table:judge]`는 ai-ops 패키지에서 Jev typed API로
+**과거 판정 전용 변환자(2026-09-21 도입, 2026-10-30 은퇴)**: `[table:judge]`는 ai-ops 패키지에서 Jev typed API로
 참/거짓·선택·점수를 일괄 판정하고 원 행에 평평한 판정 열을 추가한다. 예를 들어
 `judgment_result_value`를 filter/if에 직접 연결한다. `unknown`은 false와 구별하며,
 질문 기준은 AI가 작성한다. 규칙 비교는 filter, 산문 생성은 ai/brief를 쓴다.
-[입력·불명·배치 계약](../../data/guides/judgment.md) · [설계](../../docs/JEV_JUDGMENT_2026_09_21.md).
+[설계](../../docs/JEV_JUDGMENT_2026_09_21.md).
 
 > **주의**: 이전 `(target)` 문법은 더 이상 권장되지 않습니다. 이제 모든 매개변수(target 포함)는 `{}` 안에 키-값 형태로 전달합니다.
 

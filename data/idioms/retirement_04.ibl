@@ -1,4 +1,4 @@
 #!ibl edition=2
 [def:본문에서찾기]($목록,$패턴,$개수,$문맥=0) {
-  return [self:script]{id:"판정관용구",args:{op:"match",source:$목록,pattern:$패턴,limit:$개수,context:$문맥}}
+  return [self:script]{id:"수집관용구",args:{op:"match",source:$목록,pattern:$패턴,limit:$개수,context:$문맥}}
 }

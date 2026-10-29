@@ -17,10 +17,10 @@ NEW = {'미처리만고르기', '묶어순위내기', '주소마다읽기'}
 # 이 선정집에서 실측한 비-AI 원시의 닫힌 집합. 동적 fn/script/AI 술어는 인증하지 않는다.
 LEAVES = {'table:dedup', 'table:join', 'table:groupby', 'table:sort',
           'table:take', 'table:each', 'sense:crawl'}
-# 스크립트는 일반 인증하지 않는다. 예외는 판정관용구의 모델 없는 두 op 뿐(3ded991b):
+# 스크립트는 일반 인증하지 않는다. 예외는 수집관용구의 모델 없는 두 op 뿐(3ded991b):
 # urls(주소 문자열 그대로 중복 제거)·finish(실패·잘림 합산). 판정 op(prepare·select)는 불허.
 SCRIPT_CALL = re.compile(r'\[self:script\]\{op:"run",id:"([^"]+)",args:\{op:"([a-z_]+)"')
-PURE_SCRIPT_OPS = {('판정관용구', 'urls'), ('판정관용구', 'finish')}
+PURE_SCRIPT_OPS = {('수집관용구', 'urls'), ('수집관용구', 'finish')}
 
 
 

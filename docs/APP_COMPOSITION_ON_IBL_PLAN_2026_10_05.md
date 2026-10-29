@@ -56,7 +56,7 @@
 - 시트 파일 작업: `[self:sheet]`의 find/append/update/range/range_write/calculate — 파일 단위 능력은 유지.
 - 실행·검증: `[self:script]`(등록·run·status 유한 대기), `run_command`, 결과 참조(`$ref`·read_result).
 - 변화·반영: `[self:body]`의 changes/diff/file/writes/**commit**(임시 인덱스·pre-commit 관문).
-- AI 낱말: `[table:ai]`(행 단위 의미 변환, 기준 있음), `[table:brief]`, `[table:judge]`. 시스템 AI 위임 `[others:delegate]{scope:system, mode:sync|async}`(2026-10-05 수리로 접수증·대기·봉투가 선다).
+- AI 낱말: `[table:ai]`(행 단위 의미 변환, 기준 있음), `[table:brief]`. 시스템 AI 위임 `[others:delegate]{scope:system, mode:sync|async}`(2026-10-05 수리로 접수증·대기·봉투가 선다).
 - 관용구 층: `[def:이름](인자){…}`, 해마 관용구 회상, `data/workflows/*.yaml`(IBL 원문 보존), 가이드.
 - 표면 언어: 뷰 15종(metric·kv·card_list·form·editable_list·blocks·thread·list_action·…), 폼 11종, textarea `ai_dock`(선택 텍스트에 대한 임시 AI 제안·반영), 뷰 이벤트 4종(지도용). 선언형 계기 정본 사례 `data/instruments/report.yaml`("어휘 없는 순수 매니페스트").
 - 코드(몸): `office_sessions`·`office_store`·`office_resources`(자료 ID·세션·스냅샷·조건부 저장·복구·사건 원장), 과제 원장 `pursuit_ledger`, 엔진 I/O 경계(`api_document_engine`의 ticket·callback), RHWP·ONLYOFFICE 바인딩, OCR, 형식 변환, git worktree 운영(`coding_git`).

@@ -398,7 +398,7 @@ Delegation also has a **task-scoped** form (`[others:delegate]{scope:"task", req
 ## Under the hood (reference)
 
 <!-- IBL_STATS:START -->
-**6 nodes, 172 composable actions** — one tool (`execute_ibl`), one vocabulary, not 172 schemas:
+**6 nodes, 171 composable actions** — one tool (`execute_ibl`), one vocabulary, not 171 schemas:
 
 | Node | Actions | What lives here |
 |------|---------|-----------------|
@@ -407,7 +407,7 @@ Delegation also has a **task-scoped** form (`[others:delegate]{scope:"task", req
 | **limbs** | 13 | UI automation (browser, Android, desktop screen), phone-native actions, a guest PC reached by USB limb, media playback (YouTube, radio), window opening, maps |
 | **others** | 20 | Collaboration, delegation, **asking another body in plain language**, messaging (DM/feed/board/Nostr NIP-17), neighbor CRM (contacts are ops on a neighbor — a warehouse address is just another contact type), auto-response — and the public-web surfaces others can reach: personal portals, family newspaper, login-free bulletin boards, public file shares |
 | **engines** | 19 | Pure media generation — images (generate + vision read/critique), icons, the morning newspaper, websites, web components, TTS. Slides and video moved to `self` in the 2026-08 consolidation |
-| **table** | 23 | Currency algebra — transformers (filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten), the higher-order **`each`**, and emitters (chart/spreadsheet/document/structure). Split out of `engines` so the grammar survives even when heavy media generation is off |
+| **table** | 22 | Currency algebra — transformers (filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten), the higher-order **`each`**, and emitters (chart/spreadsheet/document/structure). Split out of `engines` so the grammar survives even when heavy media generation is off |
 
 IBL's definition lives in a single source of truth (`data/ibl_nodes_src/` plus each package’s `ibl_actions.yaml`, built to `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), and a commit-time check matches source ↔ tool schema ↔ handler three ways. Tool **packages** (51 in the held catalog, plus 5 backend core modules; activation is per body) are folders — drop one in and it's recognized, independent of the language; an AI agent can build, install, or modify them for you. Per-agent `allowed_nodes` restricts what each agent can reach.
 <!-- IBL_STATS:END -->

@@ -1,5 +1,7 @@
 # Jev 판정 어휘 (2026-09-21)
 
+> 2026-10-30 은퇴: 테스트 외 실사용이 없다는 사용자 관찰에 따라 TypeSafe 어휘와 전용 관용구를 제거했다. 아래는 당시 설계·검증의 역사 기록이며 현행 사용법이 아니다. 공용 수집 기능은 수집관용구에 남긴다.
+
 사용자 요청: Jev API 키를 .env에 저장하고 AI가 즉석 IBL 조합에 쓸 판정 어휘를 만든다.
 
 ## 계약
@@ -14,7 +16,7 @@ typed evaluation API를 쓰는 제공자 어댑터이며, 범용 모델명을 �
 원 행과 순서를 보존하고, 질문 결과만 `judgment_<질문>_<필드>` 열에 추가한다.
 기존 table:filter는 중첩 경로를 받지 않으므로 값/상태를 평평한 열로 제공한다.
 결과 열 충돌은 거절한다.
-질문 형태는 boolean/choice/score. 완전한 계약·예문은 `data/guides/judgment.md`가 소유한다.
+질문 형태는 boolean/choice/score. 당시 계약·예문은 제거 전 Git 판본의 `data/guides/judgment.md`에 있다.
 
 boolean의 중간 확률과 choice/score의 낮은 confidence는 value:null/status:unknown이다.
 통신·계약 오류는 실행 실패다. 응답 누락/추가·타입·확률분포·범위·등급표를 검증한 뒤에만

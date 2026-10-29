@@ -77,3 +77,23 @@ def register_fixture_dependencies(source):
         dependency=current_source(name)
         register_fixture_dependencies(dependency)
         register(name,dependency)
+
+
+def historical_decisions(registry, decide):
+    """Recorded decision seam for historical replay only; no provider or live vocabulary."""
+    from ibl_v2_adapters import Adapter
+    registry = dict(registry)
+    registry['fixture:decision'] = Adapter({
+        'version': 1,
+        'params': {'items': 'List|Record|Text', 'instruction': 'Text', 'threshold': 'Number',
+                   'type': 'Text', 'as': 'Text', 'criteria': 'Unknown'},
+        'open_params': False, 'required': ['instruction'], 'result': 'Record',
+        'effects': ['model'], 'model_reuse': {'role': 'execution'},
+        'pipe_input': 'items',
+    }, lambda runtime, args: decide(args), model_identity=lambda: "recorded-fixture-v1")
+    return registry
+
+
+def historical_source(source):
+    """Explicitly replace a retired leaf inside a test; archived source is unchanged."""
+    return source.replace('[table:judge]', '[fixture:decision]')

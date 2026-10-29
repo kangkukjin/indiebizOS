@@ -1,8 +1,8 @@
 """선언 반환 계약 ↔ 실측 대조(자가점검 §1B-2) — 31ea17f0 의 손 발견을 기계가 다시 찾는가.
 
-31ea17f0 이전의 판정관용구 계약은 result: Record(칸 없음)였다. 실제로는 {items, count}를 돌려주고,
+31ea17f0 이전의 수집관용구 계약은 result: Record(칸 없음)였다. 실제로는 {items, count}를 돌려주고,
 그 Record 가 본문에서찾기의 반환형이 되어 행 자리에서 정상 조합이 거절됐다. 아래 OLD_CONTRACT 는
-`git show 31ea17f0^:data/scripts/registry.yaml` 의 판정관용구.callable_contract 원문이다.
+당시 판정관용구의 계약이다. 현재 수집관용구에 적용하여 같은 일반 오류를 재현한다.
 """
 import boot_paths  # noqa: F401
 import copy
@@ -59,31 +59,31 @@ def _collect(scripts, run=None):
 def old_contract(monkeypatch):
     """검사기와 실행 경계가 읽는 등록부를 31ea17f0 이전 계약으로 바꾼다(파일은 그대로)."""
     scripts = _scripts()
-    scripts["판정관용구"] = {**scripts["판정관용구"], "callable_contract": copy.deepcopy(OLD_CONTRACT)}
+    scripts["수집관용구"] = {**scripts["수집관용구"], "callable_contract": copy.deepcopy(OLD_CONTRACT)}
     monkeypatch.setattr(ibl_dependencies, "_script_registry", lambda path: scripts)
     return scripts
 
 
 def test_pre_31ea17f0_contract_is_detected_as_under_declared(old_contract):
     rows = {r["target"]: r for r in _collect(old_contract)}
-    judged = {k: v for k, v in rows.items() if k.startswith("script:판정관용구")}
-    assert len(judged) == 4, rows
+    judged = {k: v for k, v in rows.items() if k.startswith("script:수집관용구")}
+    assert len(judged) == 3, rows
     for target, row in judged.items():
         assert row["verdict"] == "under_declared" and row["paths"] == ["$"], (target, row)
         assert row["declared"] == "Record" and "items: List<" in row["actual"], row
     # 관용구는 스크립트 계약을 물려받는다 — 사용자가 부딪힌 자리도 같은 판정으로 잡힌다.
     assert rows["fn:본문에서찾기"]["verdict"] == "under_declared", rows["fn:본문에서찾기"]
     summary = summarize(list(rows.values()))
-    assert not healthy(summary) and len(summary["drift"]) == 5
-    assert "어긋남 5" in describe(summary) and "under_declared" in describe(summary)
+    assert not healthy(summary) and len(summary["drift"]) == 4
+    assert "어긋남 4" in describe(summary) and "under_declared" in describe(summary)
 
 
 def test_current_contracts_compare_without_alarm():
     rows = _collect(_scripts())
     compared = [r for r in rows if r["verdict"] not in ("not_comparable", "no_sample")]
     required = {
-        "script:판정관용구#urls", "script:판정관용구#prepare", "script:판정관용구#match",
-        "script:판정관용구#collect", "fn:본문에서찾기"}
+        "script:수집관용구#urls", "script:수집관용구#match",
+        "script:수집관용구#collect", "fn:본문에서찾기"}
     assert required <= {r["target"] for r in compared}
     assert len(compared) == _sample_count()  # every installed pure sample was run
     assert not any(r["verdict"] == "no_sample" for r in rows)
@@ -120,7 +120,7 @@ def test_pure_script_without_sample_is_reported_not_silently_green():
     pure = {f"script:{sid}" for sid, entry in scripts.items()
             if (contract := entry.get("callable_contract"))
             and set(contract.get("effects") or ["unknown"]) == {"pure"}}
-    assert "script:판정관용구" in pure
+    assert "script:수집관용구" in pure
     assert {r["target"] for r in gap} == pure and len(gap) == len(pure)
     summary = summarize(rows)
     assert summary["compared"] == 0 and not healthy(summary)
@@ -161,7 +161,7 @@ def test_drift_reaches_ledger_and_results_projection(monkeypatch, tmp_path, brok
         if str(a[0][1]).endswith("ibl_health_check.py") else ""))
     row = {ev["action"]: ev for ev in health.run_ibl_health_check()}["contract_drift"]
     assert row["success"] is (not broken)
-    assert ("어긋남 5" in row["error_message"]) is broken and "대조 불가" in row["error_message"]
+    assert ("어긋남 4" in row["error_message"]) is broken and "대조 불가" in row["error_message"]
 
     monkeypatch.setattr(pulse_db, "CONSCIOUSNESS_DB_PATH", tmp_path / "world_pulse.db")
     health.save_self_check(row)
@@ -181,7 +181,7 @@ def test_health_script_section_runs_and_reports(monkeypatch):
     # 사본에는 관용구 원장이 없어 fn 표본은 check_failed 로 보고된다 — 숨지 않고 오류로 센다.
     assert "error" not in out, out
     verdicts = {r["target"]: r["verdict"] for r in out["rows"]}
-    assert verdicts["script:판정관용구#match"] == "ok"
+    assert verdicts["script:수집관용구#match"] == "ok"
     assert verdicts["fn:본문에서찾기"] in ("ok", "check_failed")
     assert module._drift_line(out).startswith("대조 ")
 

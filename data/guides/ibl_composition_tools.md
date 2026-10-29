@@ -270,7 +270,6 @@ legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_descripti
 객체는 같은 최상위 실행 안에서 전달하고 종료 전에 값/파일로 변환한다.
 [직접 호출과 오류 복구 예제](python_libraries.md)를 따른다.
 
-`table:judge`의 null은 미결정이다. false·짝 없음으로 바꾸지 말고 확인 목록으로 남긴다([판정 가이드](judgment.md)).
 
 ### CSV·경고·재사용 진단
 

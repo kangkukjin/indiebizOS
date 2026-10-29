@@ -1,4 +1,4 @@
-"""노출된 실제 본문을 현재 판본으로 호출한다. 웹·판정만 대역, 원장은 격리한다."""
+"""노출된 실제 본문을 현재 판본으로 호출한다. 웹만 대역, 원장은 격리한다."""
 import json
 from pathlib import Path
 
@@ -9,25 +9,18 @@ from test_ibl_v2_assets import memory  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = json.loads((ROOT / "data/idioms/curated.json").read_text())["idioms"]
-NAMES = ("주소마다읽기", "관련자료골라읽기", "의미로본문찾기", "좁혀서읽기")
+NAMES = ("주소마다읽기", "좁혀서읽기")
 
 
 @pytest.fixture
 def call(installed_functions, monkeypatch, tmp_path):
     import ibl_engine
     from ibl_v2_entry import handle_request
-    calls = {"judge": 0, "crawl": []}
+    calls = {"crawl": []}
     original = ibl_engine._execute_ibl_impl
 
     def leaf(ti, project, agent_id=None):
         node, action, params = ti.get("_node"), ti.get("action"), ti.get("params") or {}
-        if node == "table" and action == "judge":
-            calls["judge"] += 1
-            rows = params["items"]
-            rows = json.loads(rows) if isinstance(rows, str) else rows
-            rows = rows["items"] if isinstance(rows, dict) else rows
-            return {"success": True, "items": [dict(row, judgment_result_value=True,
-                    judgment_result_status="decided") for row in rows], "api_calls": 1}
         if node == "sense" and action == "crawl":
             calls["crawl"].append(params["url"])
             if params["url"].endswith("/bad"):
@@ -48,10 +41,6 @@ def call(installed_functions, monkeypatch, tmp_path):
 
 def params(name, rows, count):
     result = {"목록": rows, "개수": count}
-    if name != "주소마다읽기":
-        result["질문"] = "핵심"
-    if name == "의미로본문찾기":
-        result["문맥"] = 0
     return result
 
 
@@ -59,17 +48,17 @@ ROWS = [{"url": "https://fixture.test/A", "title": "A", "text": "핵심"},
         {"url": "https://fixture.test/a", "title": "a", "text": "핵심"}]
 
 
-@pytest.mark.parametrize("name", NAMES[:3])
+@pytest.mark.parametrize("name", NAMES[:1])
 @pytest.mark.parametrize("count", [0, 1, 2])
 def test_deliberate_selection_and_zero_pass_current_boundary(call, name, count):
     out = call(name, params(name, ROWS, count), downstream=True)
     assert out["success"] and out["source_complete"], out.get("error")
     assert len(out["value"]) == count
     if count == 0:
-        assert call.calls == {"judge": 0, "crawl": []}
+        assert call.calls == {"crawl": []}
 
 
-@pytest.mark.parametrize("name", NAMES[:2])
+@pytest.mark.parametrize("name", NAMES[:1])
 def test_distinct_url_spelling_survives_but_exact_duplicate_is_fetched_once(call, name):
     rows = ROWS + [ROWS[0], {"url": "https://fixture.test/a?x=A", "title": "query"},
                   {"url": "https://fixture.test/a?x=a", "title": "query"}]
@@ -79,7 +68,7 @@ def test_distinct_url_spelling_survives_but_exact_duplicate_is_fetched_once(call
     assert len(call.calls["crawl"]) == 4
 
 
-@pytest.mark.parametrize("name", NAMES[:3])
+@pytest.mark.parametrize("name", NAMES[:1])
 @pytest.mark.parametrize("count", [0, 1])
 def test_duplicate_and_beyond_limit_source_errors_are_retained(call, name, count):
     from ibl_v2_ir import unpack
@@ -94,7 +83,7 @@ def test_duplicate_and_beyond_limit_source_errors_are_retained(call, name, count
     assert "https://fixture.test/unread" not in call.calls["crawl"]
 
 
-@pytest.mark.parametrize("name", NAMES[:3])
+@pytest.mark.parametrize("name", NAMES[:1])
 def test_selection_cannot_hide_preexisting_source_truncation(call, name):
     source = {"items": ROWS, "truncated": True}
     out = call(name, params(name, source, 1))

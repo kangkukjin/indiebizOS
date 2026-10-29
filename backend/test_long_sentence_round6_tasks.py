@@ -23,7 +23,8 @@ FIXTURE = ROOT / 'docs/experiments/long_sentence_imagination/round_6'
 
 
 def execute(name, registry, inputs, **kwargs):
-    source = (FIXTURE / f'drafts/{name}.ibl').read_text()
+    from test_function_support import historical_source
+    source = historical_source((FIXTURE / f'drafts/{name}.ibl').read_text())
     plan = compile_program(source, registry, inputs)
     assert not plan.issues, plan.issues
     result = Runtime(plan, inputs, budget=Budget(steps=1000000, rows=100000), **kwargs).run()
@@ -34,8 +35,6 @@ def execute(name, registry, inputs, **kwargs):
 @pytest.fixture
 def model_transports(monkeypatch):
     import oneshot_facade
-    import requests
-    import common.auth_manager
     tree = ast.parse((FIXTURE / 'input/gen.py').read_text())
     categories = dict(next(ast.literal_eval(node.value) for node in tree.body
                            if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'UNCAT' for t in node.targets)))
@@ -46,20 +45,23 @@ def model_transports(monkeypatch):
         calls['ai'].append(rows)
         return ([{'_i': row['_i'], '분류': categories[row['설명']]} for row in rows], None)
 
-    def post(*args, **kwargs):
-        payload = kwargs['json']
-        calls['judge'].append(payload)
-        answers = {}
-        for i, row in enumerate(payload['state']['items']):
+    from test_function_support import historical_decisions
+    original = load_registry
+    def decide(args):
+        calls['judge'].append(args)
+        rows = args['items']
+        rows = rows.get('items', []) if isinstance(rows, dict) else rows
+        result = []
+        for row in rows:
             pair = {row['서비스1'], row['서비스2']}
-            probability = 0.95 if pair in ({'멜론', '스포티파이'}, {'넷플릭스', '왓챠'}) else 0.5 if 'APPLE.COM/BILL' in pair else 0.05
-            answers[f'r{i}q0'] = {'type': 'noul', 'noul': probability}
-        return SimpleNamespace(status_code=200, json=lambda: {'answers': answers, 'model': 'jev-latest',
-                                                               'usage': {'input_tokens': 10, 'output_tokens': 10}})
-
+            value = True if pair in ({'멜론', '스포티파이'}, {'넷플릭스', '왓챠'}) else None if 'APPLE.COM/BILL' in pair else False
+            result.append({**row, 'judgment_result_value': value,
+                           'judgment_result_probability': 0.95 if value is True else 0.05 if value is False else 0.5,
+                           'judgment_result_status': 'unknown' if value is None else 'decided'})
+        return {'items': result}
     monkeypatch.setattr(oneshot_facade, 'oneshot_json', model)
-    monkeypatch.setattr(common.auth_manager, 'get_api_key', lambda _: 'fixture-only')
-    monkeypatch.setattr(requests, 'post', post)
+    monkeypatch.setattr(__import__(__name__), 'load_registry',
+                        lambda *a, **kw: historical_decisions(original(*a, **kw), decide))
     return calls
 
 

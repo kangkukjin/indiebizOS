@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode, urlsplit, parse_qs
 
 _backend_dir = str(Path(__file__).resolve().parents[5] / "backend")
 if _backend_dir not in sys.path:
@@ -78,7 +78,11 @@ def parse_enuri(html, query, limit=5):
             invalid += 1
             continue
         parsed = urlsplit(link)
-        if parsed.scheme != "https" or parsed.hostname != "price.enuri.com" or not parsed.path.startswith("/catalog/"):
+        catalog = parsed.hostname == 'price.enuri.com' and parsed.path.startswith('/catalog/')
+        model = parse_qs(parsed.query).get('modelno', [])
+        detail = (parsed.hostname == 'www.enuri.com' and parsed.path == '/detail.jsp'
+                  and len(model) == 1 and re.fullmatch(r'[0-9]+', model[0]) and model[0].strip('0'))
+        if parsed.scheme != "https" or parsed.username or parsed.password or not (catalog or detail):
             invalid += 1
             continue
         offers = product.get("offers")

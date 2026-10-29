@@ -2261,7 +2261,7 @@ nodes:
         - shopping.md
         router: handler
         tool: search_shopping
-        implementation: tool_danawa.py는 공개 검색 HTML의 상품 카드 경계를 파싱하고 HTTP 실패 시 같은 인자·파서의 브라우저 폴백. tool_enuri.py는 검색어에 대응하는 공개 JSON-LD ItemList만 파싱. 표준 라이브러리 파서·urllib 폴백으로 폰 경로 유지. 네이버 공식 검색 API는 2026-07-31 종료.
+        implementation: tool_danawa.py는 공개 페이지의 검색어·페이지가 일치하는 productList 상태를 JSON으로 읽고 구형 상품 카드도 지원한다. HTTP·구조 확인 실패 시 같은 범위·파서의 브라우저 폴백. tool_enuri.py는 검색어에 대응하는 JSON-LD ItemList와 공식 catalog/detail 상품 링크를 검증한다. 표준 라이브러리 파서·urllib 폴백으로 폰 경로 유지. 네이버 공식 검색 API는 2026-07-31 종료.
         keywords:
         - 쇼핑
         - 상품

@@ -34,5 +34,8 @@
 - `search_shopping`은 다나와·에누리만 지원하고 정렬은 기본순뿐이다. 후기순·판매량순은 오픈마켓을 직접(search·crawl·browser) 본다.
 - 네이버 쇼핑 **검색 API**는 2026-07-31 종료됐다(`site:naver` 호출 금지). 네이버 쇼핑·스마트스토어 **웹페이지**는 search·browser로 볼 수 있는 별개 소스다.
 - `search_shopping`의 `mall`은 가격비교 서비스 이름이지 판매처가 아니고, `price`는 구매 총액이 아니다.
+- 다나와는 요청한 검색어·페이지의 상품 상태, 에누리는 검색어가 일치하는 상품 목록을 읽는다.
+  `source_changed`는 상품이 없다는 뜻이 아니다. 원천의 목록을 확인하지 못한 경우이며,
+  `empty_reason:no_results`로 확인된 정상 빈 결과와 구분한다.
 
 소스 전체 목록은 [web_landmarks.md](web_landmarks.md#한국에서-구매할-제품을-찾을-때).

@@ -117,6 +117,28 @@ def test_enuri_partial_preserves_valid_rows():
     assert len(result["items"]) == 1 and result["truncations"][0]["count"] == 1
 
 
+def test_enuri_current_detail_link_preserves_real_product_and_price():
+    current = product(165700)
+    current['item']['url'] = 'https://www.enuri.com/detail.jsp?modelno=137958691'
+    result = module('tool_enuri').parse_enuri(enuri_doc([current]), '밥솥')
+    assert result['total'] == 1 and 'truncations' not in result
+    assert result['items'][0]['link'] == current['item']['url']
+    assert result['items'][0]['price'] == '165700'
+
+
+@pytest.mark.parametrize('url', ['https://www.enuri.com.evil.test/detail.jsp?modelno=123',
+                               'https://www.enuri.com/detail.jsp',
+                               'https://www.enuri.com/detail.jsp?modelno=abc',
+                               'https://www.enuri.com/detail.jsp?modelno=1&modelno=2',
+                               'https://user@www.enuri.com/detail.jsp?modelno=123',
+                               'https://www.enuri.com/redirect?modelno=123'])
+def test_enuri_detail_url_boundary_stays_closed(url):
+    bad = product()
+    bad['item']['url'] = url
+    result = module('tool_enuri').parse_enuri(enuri_doc([bad]), '밥솥')
+    assert result['items'] == [] and result['truncations'][0]['count'] == 1
+
+
 @pytest.mark.parametrize("kwargs", [{"page": 2}, {"sort": "price_asc"}, {"limit": 41}])
 def test_enuri_unsupported_options_do_not_fetch(monkeypatch, kwargs):
     mod = module("tool_enuri")
@@ -162,7 +184,8 @@ if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
 
 
-def test_browser_fallback_preserves_page_and_closes(monkeypatch):
+@pytest.mark.parametrize('modern', [False, True])
+def test_browser_fallback_preserves_page_and_closes(monkeypatch, modern):
     import asyncio
     import sys
     handler = module("handler")
@@ -177,9 +200,15 @@ def test_browser_fallback_preserves_page_and_closes(monkeypatch):
             return SimpleNamespace(status=200)
 
         async def wait_for_selector(self, selector, **kwargs):
-            seen["waited"] = selector
+            pytest.fail('ready search data must not wait for an obsolete selector')
 
         async def content(self):
+            if modern:
+                entry = {'queryKey': ['search', 'productList', {'keyword': '밥솥', 'page': '2'}],
+                         'state': {'status': 'success', 'data': {'kind': 'fetched', 'data': {
+                             'products': [{'productName': '밥솥', 'linkUrl': 'https://prod.danawa.com/info/?pcode=1'}],
+                             'page': {'current': 2}}}}}
+                return '<script>self.__next_f.push(' + json.dumps([1, json.dumps({'queries': [entry]})]) + ')</script>'
             return card(price=None)
 
     class Browser:

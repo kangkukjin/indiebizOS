@@ -78,7 +78,7 @@ def _load_shopping_source(filename):
 
 async def search_danawa_shopping_async(query: str, display: int = 5, page: int = 1,
                                        sort: str = "default"):
-    """HTTP 실패만 브라우저로 보완한다. 두 경로의 페이지·정렬·파서는 동일하다."""
+    """HTTP·구조 확인 실패를 브라우저로 보완한다. 두 경로의 페이지·정렬·파서는 동일하다."""
     from datetime import datetime, timezone
     from urllib.parse import urlencode
     module = _load_shopping_source("tool_danawa")
@@ -100,9 +100,14 @@ async def search_danawa_shopping_async(query: str, display: int = 5, page: int =
                 response = await tab.goto(url, wait_until="domcontentloaded", timeout=25000)
                 if response is None or response.status != 200:
                     raise RuntimeError(f"브라우저 HTTP {response.status if response else '미확인'}")
-                await tab.wait_for_selector('[id^="productItem"], #nosearchArea',
-                                            state="attached", timeout=12000)
-                result = module.parse_danawa(await tab.content(), display)
+                # 서버가 이미 완성한 검색 상태는 옛 카드 셀렉터를 기다리지 않는다.
+                deadline = asyncio.get_running_loop().time() + 12
+                while True:
+                    result = module.parse_danawa(await tab.content(), display, query=query, page=page)
+                    remaining = deadline - asyncio.get_running_loop().time()
+                    if result.get('error_type') != 'source_changed' or remaining <= 0:
+                        break
+                    await asyncio.sleep(min(.25, remaining))
                 result.update(source="danawa", query=query, page=page,
                               page_size=module.PAGE_SIZE, sort=sort, source_url=url,
                               observed_at=datetime.now(timezone.utc).isoformat(),

@@ -2114,15 +2114,15 @@
    "fields": {
     "description": "b0cfdbec2703",
     "target_description": "e527ff586400",
-    "implementation": "263d341eec0e",
+    "implementation": "af698fd17e1e",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "aliases": "c51974e5ee03",
     "router": "ebbb1532efbc",
     "tool": "ec811cffd81f"
    },
-   "reviewed": "2026-10-20",
-   "examples": 16
+   "reviewed": "2026-10-29",
+   "examples": 2
   },
   "sense:see": {
    "fields": {

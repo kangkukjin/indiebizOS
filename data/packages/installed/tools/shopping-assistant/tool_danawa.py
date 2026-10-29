@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""다나와 공개 검색 HTML을 읽는다. HTTP 우선, 브라우저 폴백도 같은 파서 사용.
+"""다나와 공개 검색의 상태 데이터와 상품 카드를 읽는다. 두 전송 경로가 같은 파서를 쓴다.
 
 page는 원천의 40개 단위 페이지, limit는 해당 페이지에서 선택할 개수다.
 원천 기본 정렬만 지원한다. 표시 가격은 배송·옵션·렌탈을 확정한 구매 총액이 아니다.
 """
 import os
+import json
 import re
 import sys
 from datetime import datetime, timezone
@@ -47,6 +48,106 @@ def _first(pattern: str, text: str, group: int = 1):
 
 
 PAGE_SIZE = 40
+
+
+class _SearchData(HTMLParser):
+    """Next Flight의 문자열만 JSON으로 읽는다. 페이지 JavaScript는 실행하지 않는다."""
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.active = False
+        self.parts = []
+        self.chunks = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'script':
+            self.active = 'src' not in dict(attrs)
+            self.parts = []
+
+    def handle_data(self, data):
+        if self.active:
+            self.parts.append(data)
+
+    def handle_endtag(self, tag):
+        if tag != 'script' or not self.active:
+            return
+        self.active = False
+        match = re.fullmatch(r'\s*self\.__next_f\.push\((.*)\)\s*;?\s*', ''.join(self.parts), re.S)
+        if not match:
+            return
+        try:
+            value = json.loads(match[1])
+        except ValueError:
+            return
+        if isinstance(value, list) and len(value) == 2 and value[0] == 1 and isinstance(value[1], str):
+            self.chunks.append(value[1])
+
+
+def _state_result(html, query, page, limit):
+    parser = _SearchData()
+    parser.feed(html)
+    stream = ''.join(parser.chunks)
+    matches = []
+    for hit in re.finditer(r'"queries"\s*:\s*', stream):
+        try:
+            queries, _ = json.JSONDecoder().raw_decode(stream, hit.end())
+        except ValueError:
+            continue
+        if not isinstance(queries, list):
+            continue
+        for entry in queries:
+            if not isinstance(entry, dict):
+                continue
+            key = entry.get('queryKey')
+            if not isinstance(key, list) or len(key) != 3 or key[:2] != ['search', 'productList']:
+                continue
+            scope = key[2]
+            if not isinstance(scope, dict) or (query is not None and scope.get('keyword') != query):
+                continue
+            if str(scope.get('page')) != str(page):
+                continue
+            state = entry.get('state', {})
+            if not isinstance(state, dict) or state.get('status') != 'success':
+                continue
+            envelope = state.get('data')
+            if isinstance(envelope, dict) and envelope.get('kind') == 'fetched':
+                matches.append(envelope.get('data'))
+    if len(matches) != 1 or not isinstance(matches[0], dict):
+        return None
+    data = matches[0]
+    rows, paging = data.get('products'), data.get('page')
+    if not isinstance(rows, list) or not isinstance(paging, dict) or str(paging.get('current')) != str(page):
+        return None
+    count = data.get('count')
+    if not rows and (not isinstance(count, dict) or type(count.get('total')) is not int or count['total'] != 0):
+        return None  # 검색 건수는 있는데 아직 목록이 없는 셸을 정상 0건으로 만들지 않는다.
+    items, invalid = [], 0
+    for row in rows:
+        if not isinstance(row, dict):
+            invalid += 1
+            continue
+        name, link = row.get('productName'), row.get('linkUrl')
+        if not isinstance(name, str) or not _strip(name) or not isinstance(link, str) or not link.startswith(('https://', 'http://')):
+            invalid += 1
+            continue
+        name = unescape(_strip(name))
+        raw_price = row.get('minPrice')
+        price = str(raw_price).replace(',', '') if type(raw_price) in (int, str) else ''
+        price = price if re.fullmatch(r'[0-9]+', price) and price.strip('0') else None
+        summary = row.get('summary')
+        desc = summary.get('desc', []) if isinstance(summary, dict) else []
+        spec = ' / '.join(unescape(_strip(part)) for part in desc if isinstance(part, str)) if isinstance(desc, list) else ''
+        items.append({'name': name, 'price': price, 'mall': '다나와', 'link': unescape(link),
+                      'image': row.get('imageUrl', ''), 'category': '가격비교', 'site': 'danawa',
+                      'spec': spec, 'currency': 'KRW', 'product_id': row.get('productSeq'),
+                      'price_status': 'observed' if price is not None else 'unknown',
+                      'price_basis': 'listed', 'shipping_included': None,
+                      'rental_hint': '렌탈' in name or '렌트' in name})
+    result = {'total': len(items[:limit]), 'items': items[:limit], 'page_items': len(items)}
+    if not rows:
+        result['empty_reason'] = 'no_results'
+    if invalid:
+        result['truncations'] = [{'scope': 'source', 'reason': 'invalid_product', 'count': invalid}]
+    return result
 
 
 class _Cards(HTMLParser):
@@ -95,8 +196,11 @@ def search_params(query, page=1, sort="default"):
     return {"query": query, **({"page": page} if page != 1 else {})}
 
 
-def parse_danawa(html, limit=5):
-    """각 상품 카드 경계 안에서만 가격을 읽는다. 별도 추천 JSON-LD는 섞지 않는다."""
+def parse_danawa(html, limit=5, *, query=None, page=1):
+    """요청한 검색 상태를 우선 읽고 구형 상품 카드도 지원한다. 광고·추천 상태는 제외한다."""
+    current = _state_result(html, query, page, limit)
+    if current is not None:
+        return current
     parser = _Cards()
     parser.feed(html)
     blocks = parser.cards
@@ -151,12 +255,12 @@ def search_danawa(query: str, limit: int = 5, page: int = 1, sort: str = "defaul
                 "error": "다나와는 기본 정렬만 지원합니다. sort=default를 사용하세요."}
     query = query.strip()
     params = search_params(query, page, sort)
-    result = parse_danawa(_fetch(params), limit)
+    result = parse_danawa(_fetch(params), limit, query=query, page=page)
     # 기본 진입점과 명시적 첫 페이지의 서버 렌더링 응답이 다를 때가 있다.
     # 실패에 한해 같은 범위를 한 번 재조회한다. 다른 페이지로 대체하지 않는다.
     if result.get("error_type") == "source_changed" and page == 1:
         params = {"query": query, "page": 1}
-        result = parse_danawa(_fetch(params), limit)
+        result = parse_danawa(_fetch(params), limit, query=query, page=page)
     # 기존 정상 빈 결과의 모양을 유지한다. handler는 공통 조회 범위를 부착한다.
     if result.get("empty_reason") == "no_results":
         return result

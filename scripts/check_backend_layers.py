@@ -59,7 +59,7 @@ LAYERS = {
     "data": {
         "capability_history", "control_observations", "function_store", "ibl_example_index", "function_memory",
         "member_activity",
-        "research_store", "research_questions", "research_evidence", "notebook_store", "research_lifecycle",
+        "research_store", "research_questions", "research_evidence", "research_plans", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context", "repair_root",
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",

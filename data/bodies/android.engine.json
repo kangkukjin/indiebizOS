@@ -248,6 +248,7 @@
     "datastore/repair_root",
     "datastore/research_evidence",
     "datastore/research_lifecycle",
+    "datastore/research_plans",
     "datastore/research_questions",
     "datastore/research_store",
     "datastore/schema_migrations",
@@ -578,8 +579,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 567,
-    "engine": 535,
+    "total": 568,
+    "engine": 536,
     "blocklist": 32
   }
 }

@@ -344,6 +344,167 @@ def test_completion_real_agent_has_no_tools_and_keeps_interruption_reason(worksp
     assert len(calls) == 1
 
 
+def research_topic(workspace, mode='research'):
+    from research_store import ResearchStore
+    root = workspace[0] / 'project'
+    root.mkdir()
+    store = ResearchStore(root, 'p')
+    tid = store.create_thread('교육', mode=mode)['id']
+    run, _ = store.begin_run(tid, 'AI와 교육을 이야기해보자', 'first')
+    return store, tid, run
+
+
+def test_topic_creates_without_keyword_then_keeps_and_revises_one_plan(workspace):
+    store, tid, run = research_topic(workspace)
+    calls = []
+    action = 'revise'
+
+    def plan(prompt, system, revision=None, **kwargs):
+        calls.append(prompt)
+        if not kwargs.get('completion'):
+            assert '하나의 연구' in prompt
+            assert tid in prompt
+            return json.dumps({'task_framing': '이번 질문만 다룬다', 'deep_research': False,
+                               'research_plan_action': action})
+        return json.dumps(draft(research_plan='# 전체 연구: 교육\n교사 역할과 학생 자율성.\n'
+                               '변경 이유: 한국의 적용 조건을 확인한다.'))
+
+    def turn():
+        return agent().process('한국에서도 가능할까?', [], '',
+                               supervisor=SimpleNamespace(plan=plan), project_path=store.path,
+                               research_topic=rp.topic_context(store.path, store.uid, tid, run))
+
+    initial = turn()
+    first = initial['_research_plan']
+    assert len(calls) == 2 and first['revision'] == 1
+    assert initial['deep_research'] is False  # 계획 작성이 깊은 조사 강제가 아니다.
+    path = Path(first['path'])
+    path.write_text(path.read_text() + '\n실행 관측: 반박 근거 A, 다음 확인 B.\n')
+    store.write_response(tid, run, '응답', 'completed')
+    run, _ = store.begin_run(tid, '이 용어를 설명해줘', 'followup')
+    action = 'keep'
+    kept = turn()
+    assert len(calls) == 3  # 유지에는 교재/계획 작성 호출을 추가하지 않는다.
+    assert kept['_research_plan']['path'] == str(path)
+    assert kept['_research_plan']['revision'] == 1
+    assert '반박 근거 A' in calls[-1] and '반박 근거 A' in rp.execution_block(kept)
+    assert rp.GUIDE not in rp.execution_block(kept)
+    action = 'revise'
+    revised = turn()
+    assert len(calls) == 5
+    assert '반박 근거 A' in calls[-1]
+    assert revised['_research_plan']['revision'] == 2
+    assert revised['_research_plan']['previous_path'] == str(path)
+    assert '반박 근거 A' in path.read_text()  # 이전 판본·근거 보존
+    other = store.create_thread('경제')['id']
+    other_run, _ = store.begin_run(other, '경제', 'other')
+    assert rp.topic_context(store.path, store.uid, other, other_run)['receipt'] is None
+
+
+def test_topic_plan_failure_preserves_current_link_and_library_mode(workspace, monkeypatch):
+    from research_plans import ResearchPlans
+    store, tid, run = research_topic(workspace, 'library')
+    topic = rp.topic_context(store.path, store.uid, tid, run)
+    assert '저장 자료만' in rp.topic_prompt(topic) and '"mode": "library"' in rp.topic_prompt(topic)
+    out = rp.prepare(agent(), {'research_plan_action': 'revise'}, '최초 대화',
+                     topic=topic, project_path=store.path,
+                     supervisor=SimpleNamespace(plan=lambda *a, **k: json.dumps(draft())))
+    topic = rp.topic_context(store.path, store.uid, tid, run)
+    monkeypatch.setattr(ResearchPlans, 'bind', lambda *a: (_ for _ in ()).throw(OSError('disk full')))
+    with pytest.raises(FramingContractError, match='disk full'):
+        rp.prepare(agent(), {'research_plan_action': 'revise'}, '범위 변경',
+                   topic=topic, project_path=store.path,
+                   supervisor=SimpleNamespace(plan=lambda *a, **k: json.dumps(draft())))
+    assert rp.topic_context(store.path, store.uid, tid, run)['receipt']['path'] == out['_research_plan']['path']
+    Path(out['_research_plan']['path']).unlink()
+    with pytest.raises(FileNotFoundError):
+        rp.topic_context(store.path, store.uid, tid, run)  # 없는 계획을 초기화해 진행하지 않는다.
+
+
+def test_topic_clarification_and_repair_leave_plan_untouched(workspace):
+    store, tid, run = research_topic(workspace)
+    topic = rp.topic_context(store.path, store.uid, tid, run)
+    for framing in ({'needs_clarification': True}, {'needs_repair': True}):
+        out = rp.prepare(agent(), framing, '요청', topic=topic, project_path=store.path,
+                         supervisor=SimpleNamespace(plan=lambda *a, **k: pytest.fail('계획 작성 금지')))
+        assert '_research_plan' not in out
+    assert rp.topic_context(store.path, store.uid, tid, run)['receipt'] is None
+
+
+def test_topic_missing_choice_uses_existing_contract_correction(workspace):
+    store, tid, run = research_topic(workspace)
+    calls = []
+
+    def plan(prompt, system, revision=None, **kwargs):
+        calls.append(prompt)
+        if kwargs.get('completion'):
+            return json.dumps(draft())
+        if len(calls) == 1:
+            return json.dumps({'task_framing': '연구를 이어간다'})
+        assert 'research_plan_action' in prompt
+        return json.dumps({'task_framing': '연구를 이어간다', 'research_plan_action': 'revise'})
+
+    out = agent().process('교육에 관해', [], '', supervisor=SimpleNamespace(plan=plan),
+                          project_path=store.path,
+                          research_topic=rp.topic_context(store.path, store.uid, tid, run))
+    assert len(calls) == 3 and out['_research_plan']['revision'] == 1
+
+
+def test_research_stream_delivers_persistent_plan_through_real_consciousness_entry(workspace, monkeypatch):
+    import threading
+    import consciousness_agent as ca
+    import research_runner as rr
+    import framing_inheritance
+    import supervision_bus
+    import thread_context
+    from research_context import scope
+    store, tid, run = research_topic(workspace)
+    calls, delivered = [], []
+    action = 'revise'
+
+    def plan(prompt, system, revision=None, **kwargs):
+        calls.append(prompt)
+        if kwargs.get('completion'):
+            return json.dumps(draft(research_plan='# 하나의 교육 연구\n질문: 교사 역할과 학생 자율성'))
+        return json.dumps({'task_framing': '전체 연구에서 이번 질문을 설명한다',
+                           'deep_research': False, 'research_plan_action': action})
+
+    monkeypatch.setattr(ca, 'get_consciousness_agent', agent)
+    monkeypatch.setattr(ca, 'get_world_pulse_text', lambda: '')
+    monkeypatch.setattr(supervision_bus, 'current', lambda *a: SimpleNamespace(plan=plan))
+    monkeypatch.setattr(framing_inheritance, '_load', lambda *a: pytest.fail('단기 캐시 접근'))
+    monkeypatch.setattr(rr, '_search', None)
+    monkeypatch.setattr(rr.ResearchRunner, '_get_available_tools', lambda self: [])
+    monkeypatch.setattr(rr.ResearchRunner, '_init_ai', lambda runner: setattr(
+        runner, 'ai', SimpleNamespace(agent_id=None, system_prompt='',
+                                     _provider=SimpleNamespace(agent_id=None, system_prompt=''))))
+
+    def cognitive(runner, message, history, **kwargs):
+        assert runner._decide_request_type(message, 0, '', history)[0] == 'THINK'
+        output = runner._run_consciousness_or_reuse(message, history)
+        command = runner._refresh_execution_prompt(message, output)
+        delivered.append(runner.ai._provider.system_prompt + command)
+        assert Path(output['_research_plan']['path']).exists()
+        yield {'type': 'final', 'content': '이번 질문의 답변'}
+
+    monkeypatch.setattr(rr.ResearchRunner, 'cognitive_stream', cognitive)
+    try:
+        for n in range(2):
+            if n:
+                action = 'keep'
+                run, _ = store.begin_run(tid, '학생의 자율성은?', 'second')
+            with scope(dict(project_uid=store.uid, thread_id=tid, run_id=run,
+                            path=str(store.path), epoch=store.epoch, mode='research')):
+                list(rr.stream(store, tid, run, '학생의 자율성은?', threading.Event()))
+            store.write_response(tid, run, '답변', 'completed')
+        assert len(calls) == 3
+        assert all('하나의 교육 연구' in text for text in delivered)
+        assert all(workspace[1].read_text() not in text for text in delivered)
+        assert rp.topic_context(store.path, store.uid, tid, run)['revision'] == 1
+    finally:
+        thread_context.clear_all_context()
+
+
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

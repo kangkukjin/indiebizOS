@@ -296,5 +296,29 @@ def test_execution_refresh_keeps_research_role_sources_and_perspective(tmp_path,
         assert 'expected_revision' in delivered
         assert runner.ai.system_prompt == runner.ai._provider.system_prompt
 
+def test_research_plan_routing_ignores_initial_toggle_but_keeps_explicit_tags(monkeypatch):
+    import model_resolver
+    monkeypatch.setattr(model_resolver, 'consciousness_enabled', lambda: False)
+    runner = research_runner.ResearchRunner.__new__(research_runner.ResearchRunner)
+    assert runner._decide_request_type('한국에서도 가능할까?', 0, '') == ('THINK', None)
+    assert runner._decide_request_type('#execute 용어만 설명', 0, '') == ('EXECUTE', None)
+    assert runner._decide_request_type('#repair 고쳐줘', 0, '') == ('REPAIR', None)
+    ordinary = AgentRunner.__new__(AgentRunner)
+    assert ordinary._decide_request_type('한국에서도 가능할까?', 0, '') == ('EXECUTE', None)
+
+
+def test_research_never_uses_24_hour_framing_cache_or_silent_fallback(monkeypatch):
+    import pursuit_bind
+    import framing_inheritance
+    from consciousness_agent import FramingContractError
+    monkeypatch.setattr(framing_inheritance, 'inherit', lambda *a: pytest.fail('단기 계승을 사용함'))
+    runner = research_runner.ResearchRunner.__new__(research_runner.ResearchRunner)
+    monkeypatch.setattr(pursuit_bind, 'run_consciousness', lambda *a: {'task_framing': '계획 유지'})
+    assert runner._run_consciousness_or_reuse('설명', [])['task_framing'] == '계획 유지'
+    monkeypatch.setattr(pursuit_bind, 'run_consciousness', lambda *a: None)
+    with pytest.raises(FramingContractError, match='의식 모델'):
+        runner._run_consciousness_or_reuse('설명', [])
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

@@ -182,6 +182,7 @@ class ConsciousnessAgent:
         pursuit_state=None,
         project_path=None,
         previous_research_plan=None,
+        research_topic=None,
     ) -> Optional[Dict]:
         """의식 에이전트 실행 — 메타 판단 수행
 
@@ -235,6 +236,8 @@ class ConsciousnessAgent:
             revision=revision,
             pursuit_state=pursuit_state,
         )
+        from research_planning import topic_prompt
+        input_text += topic_prompt(research_topic)
 
         try:
             # 시스템 프롬프트 설정
@@ -276,11 +279,18 @@ class ConsciousnessAgent:
             if not result:
                 # 형식은 어겼어도 *내용*은 살린다 (아래 _salvage_framing 참조).
                 result = self._salvage_framing(response)
-            if result and validate_framing:
+            def validate_initial(value):
+                if validate_framing:
+                    validate_framing(value)
+                if research_topic is not None:
+                    from research_planning import validate_topic_choice
+                    validate_topic_choice(value)
+
+            if result and (validate_framing or research_topic is not None):
                 from episode_logger import record_trajectory_event
                 from logging_utils import mask_secrets
                 try:
-                    validate_framing(result)
+                    validate_initial(result)
                 except ValueError as exc:
                     # 문맥·과제 존재 여부를 아는 같은 의식이 정정한다. 이름/목표를
                     # 코드가 만들어 넣거나 scope를 임의로 turn으로 바꾸지 않는다.
@@ -298,7 +308,7 @@ class ConsciousnessAgent:
                             self._provider, correction, system_prompt=self._prompt,
                             role="compatibility_plan", step_role="consciousness")
                         result = self._parse_response(response)
-                        validate_framing(result)
+                        validate_initial(result)
                     except ConsciousnessCallSkipped:
                         raise
                     except Exception as retry_exc:
@@ -313,7 +323,7 @@ class ConsciousnessAgent:
                 result = prepare(self, result, input_text, supervisor=supervisor,
                                  project_path=project_path,
                                  previous_plan=previous_research_plan,
-                                 validate_framing=validate_framing)
+                                 validate_framing=validate_framing, topic=research_topic)
                 import json as _json
                 print(f"[ConsciousnessAgent] 파싱 결과:\n{_json.dumps(result, ensure_ascii=False, indent=2)}")
             else:

@@ -10,6 +10,45 @@ import thread_context
 
 
 class ResearchRunner(AgentRunner):
+    def _decide_request_type(self, message, hippocampus_score, top_code, history=None, images=None):
+        # 연구 표면은 지속 계획의 의미 판단을 소유한다. 명시 태그·자기수리 경로는 유지한다.
+        if self._tag_override(message) or self._is_repair_cue(message):
+            return super()._decide_request_type(message, hippocampus_score, top_code, history, images)
+        print('[무의식] 분류: THINK (연구 대화의 지속 계획 판단)')
+        return 'THINK', None
+
+    def _research_planning_context(self):
+        from research_planning import topic_context
+        from consciousness_agent import FramingContractError
+        identity = self.config.get('_research_identity')
+        if not identity:
+            return None
+        try:
+            return topic_context(self.config['_project_path'], **identity)
+        except Exception as exc:
+            raise FramingContractError('현재 연구계획을 회수하지 못해 실행을 중단했습니다: ' + str(exc)) from exc
+
+    def _run_consciousness_or_reuse(self, user_message, history, execution_memory='', repair=False):
+        if repair:
+            return super()._run_consciousness_or_reuse(user_message, history, execution_memory, repair=True)
+        from pursuit_bind import run_consciousness
+        from consciousness_agent import FramingContractError
+        result = run_consciousness(self, user_message, history, execution_memory)
+        if not result:
+            raise FramingContractError('연구계획 판단에 사용할 의식 모델이 준비되지 않았거나 응답하지 않았습니다')
+        return result
+
+    def _refresh_execution_prompt(self, message, consciousness_output=None, execution_memory='', **kwargs):
+        # 명시 #execute도 현재 계획을 잃지 않는다. 이 경우 새 계획 작성/수정은 수행하지 않는다.
+        if not consciousness_output:
+            from research_planning import execution_block
+            topic = self._research_planning_context()
+            if topic and topic['receipt']:
+                receipt = {**topic['receipt'], 'body': topic['current_plan']['body']}
+                execution_memory += '\n' + execution_block({
+                    '_research_plan': receipt, '_research_topic': {'mode': topic['mode']}})
+        return super()._refresh_execution_prompt(message, consciousness_output, execution_memory, **kwargs)
+
     def _resolve_execution_config(self, ai_config, agent_id):
         return super()._resolve_execution_config(ai_config, self.config.get('_selected_agent'))
 
@@ -66,7 +105,8 @@ def stream(store, tid, run, message, cancel):
     context = _context(store, thread, message)
     message = expanded
     cfg = {**agent, 'id': None, '_selected_agent': selected, '_project_id': store.path.name,
-           '_project_path': str(store.path), '_research_role': role + context}
+           '_project_path': str(store.path), '_research_role': role + context,
+           '_research_identity': {'project_uid': store.uid, 'thread_id': tid, 'run_id': run}}
     runner = ResearchRunner(cfg, (configured or {}).get('common') or {})
     # 생성자의 상주 등록은 피하되 프롬프트·기억·모델에는 동일한 독립 신원을 준다.
     runner.config['_research_base_role'] = AgentRunner._load_role(runner)

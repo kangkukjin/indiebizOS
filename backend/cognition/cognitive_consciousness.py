@@ -129,8 +129,12 @@ class CognitiveConsciousnessMixin:
             _supervisor = _supervisor_current()
             binding = pursuit_current()
             row = binding.row if binding else None
+            topic_loader = getattr(self, '_research_planning_context', None)
+            research_topic = topic_loader() if topic_loader and not repair else None
             previous_plan = (revision or {}).get("previous_research_plan")
-            if previous_plan is None and history and not repair:
+            if research_topic is not None:
+                previous_plan = research_topic['receipt']
+            elif previous_plan is None and history and not repair:
                 # 같은 대화 신원의 최근 계획은 후보 자료다. 관련성은 현재 요청을 읽는 의식이 판단한다.
                 from framing_inheritance import _load, agent_key, _age_s, FOLLOWUP_MAX_AGE_S
                 last = _load(agent_key(self)).get("last") or {}
@@ -151,6 +155,7 @@ class CognitiveConsciousnessMixin:
                 pursuit_state={"bound": bool(row), "id": row["id"] if row else None},
                 project_path=getattr(self, "project_path", None) or getattr(getattr(self, "ai", None), "project_path", None),
                 previous_research_plan=previous_plan,
+                **({'research_topic': research_topic} if research_topic is not None else {}),
                 **({"supervisor": _supervisor} if _supervisor else {}),
             )
 

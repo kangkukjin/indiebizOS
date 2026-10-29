@@ -63,6 +63,10 @@ def current_source(name):
     root = Path(__file__).resolve().parents[1]
     from ibl_v2_store import definition_name
     sources = {row['alias']:row['ibl_code'] for row in json.loads((root/'data/idioms/ibl_v2_seeds.json').read_text()) if row.get('alias')}
+    for path in (root/'data/idioms').glob('*_seeds.json'):
+        for row in json.loads(path.read_text()):
+            if isinstance(row, dict) and row.get('alias') and row.get('source_file'):
+                sources[row['alias']] = (path.parent / row['source_file']).read_text().strip()
     for path in (root/'data/idioms').glob('retirement_*.ibl'):
         source=path.read_text();sources[definition_name(source)]=source
     return sources[name]

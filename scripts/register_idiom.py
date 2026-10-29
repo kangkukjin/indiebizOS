@@ -90,18 +90,15 @@ def _corpus_example(name: str, sig, when: str):
 def cmd_list(_a):
     import function_store
     from capability_history import function_statistics
-    cards = {}
+    exposed = set()
     if os.path.isfile(_db_path()):
         with sqlite3.connect(_db_path()) as conn:
             conn.row_factory = sqlite3.Row
-            for item in conn.execute("SELECT * FROM ibl_current_examples WHERE COALESCE(alias,'') != ''"):
-                row = function_store.project_memory(dict(item))
-                if not row.get('function_problem') and row.get('function_ref'):
-                    cards[row['function_ref']['function_id']] = row
+            exposed = {r['alias'] for r in conn.execute(
+                "SELECT DISTINCT alias FROM ibl_examples WHERE always_on=1")}
     for row in sorted(function_store.snapshot()['records'].values(), key=lambda r: (r['name'], r['edition'])):
-        card = cards.get(row['function_id'], {})
         stats = function_statistics(function_store.reference(row))
-        label = '상시 소개' if card.get('always_on') else '등록'
+        label = '상시 소개 선정' if row['name'] in exposed else '등록'
         print(f"{row['name']:20} ed{row['edition']} · {row['state']} · {label} · "
               f"성공 {stats['success_count']} / 실패 {stats['fail_count']} · {row.get('description', '')[:60]}")
 
@@ -252,9 +249,10 @@ def _promote(name: str, on: bool, when: str = "") -> int:
             return 1
     conn = sqlite3.connect(_db_path(), timeout=10)
     if on and when:
-        conn.execute("UPDATE ibl_examples SET always_on=1, intent=? WHERE alias=? AND executable=1", (when, name))
+        conn.execute("UPDATE ibl_examples SET always_on=1 WHERE alias=?", (name,))
+        conn.execute("UPDATE ibl_examples SET intent=? WHERE alias=? AND executable=1", (when, name))
     else:
-        conn.execute("UPDATE ibl_examples SET always_on=? WHERE alias=? AND executable=1", (1 if on else 0, name))
+        conn.execute("UPDATE ibl_examples SET always_on=? WHERE alias=?", (1 if on else 0, name))
     conn.commit()
     conn.close()
     print(f"✓ {name} → {'상시 소개(어휘)' if on else '등록만'}")

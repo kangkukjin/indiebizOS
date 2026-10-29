@@ -686,9 +686,11 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
             _cols = {r[1] for r in conn.execute("PRAGMA table_info(ibl_examples)").fetchall()}
             _ret = "COALESCE(returns,'')" if "returns" in _cols else "''"
             _sig = "signature" if "signature" in _cols else "NULL"
+            # 소개 선택은 이름의 정책이다. 실행 원문이 역사로 이동해도 유지하고,
+            # 본문·서명·실적은 아래에서 활성 함수 카탈로그의 현재 판본으로만 읽는다.
             rows = conn.execute(
                 f"SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,''), {_ret}, {_sig} "
-                "FROM ibl_current_examples WHERE COALESCE(alias,'') != '' AND COALESCE(always_on,0) = 1 "
+                "FROM ibl_examples WHERE COALESCE(alias,'') != '' AND COALESCE(always_on,0) = 1 "
                 "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
                 (IDIOMS_MAP_ROWS,)).fetchall()
             rows = _current_idiom_rows(conn, rows, _ret, _sig)
@@ -822,9 +824,10 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
 
 
 def _current_lesson(lesson, source):
+    """등록 입구와 같은 바깥 공백 정규화로 교재의 본문 지문을 비교한다."""
     import hashlib
     if (lesson and lesson.get('source_edition') == 2
-            and lesson.get('source_sha256') == hashlib.sha256(source.encode()).hexdigest()):
+            and lesson.get('source_sha256') == hashlib.sha256(source.strip().encode()).hexdigest()):
         return lesson
     return {}
 

@@ -48,7 +48,7 @@ def seed_examples(lessons, resolved_sources):
     examples = []
     for lesson in lessons:
         source = resolved_sources.get(lesson['name'], '')
-        if (sha(source) != lesson['source_sha256']
+        if (sha(source.strip()) != lesson['source_sha256']
                 or source_edition(source) != lesson['source_edition']):
             raise ValueError(f"호출 정의가 검토 이후 바뀌었습니다: {lesson['name']}")
         examples.append({

@@ -65,6 +65,7 @@ def test_changed_definition_hides_stale_lesson():
     source = '#!ibl edition=2\n[def:f]($목록){return $목록}'
     lesson = {'source_edition': 2, 'source_sha256': hashlib.sha256(source.encode()).hexdigest()}
     assert ibl_access._current_lesson(lesson, source) == lesson
+    assert ibl_access._current_lesson(lesson, source + '\n') == lesson
     assert ibl_access._current_lesson(lesson, source + '; [self:read]{path:"x"}') == {}
 
 
@@ -82,8 +83,8 @@ def test_current_call_examples_compile_against_current_definitions(lesson):
     from ibl_v2_adapters import load_registry
     source=current_source(lesson['name'])
     assert lesson['source_edition']==2
-    assert hashlib.sha256(source.encode()).hexdigest()==lesson['source_sha256']
-    plan=compile_program(lesson['example'],load_registry(),definitions={name:current_source(name) for name in ('위치마다읽기',lesson['name'])})
+    assert hashlib.sha256(source.strip().encode()).hexdigest()==lesson['source_sha256']
+    plan=compile_program(lesson['example'],load_registry(),definitions={name:current_source(name) for name in ('위치마다읽기','본문에서찾기',lesson['name'])})
     assert not plan.issues,plan.report()
 
 

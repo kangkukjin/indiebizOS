@@ -33,6 +33,8 @@ $후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{columns:
 
 ### 주소마다 다른 조건으로 원문 발췌
 
+`주소별발췌`는 상시 관용구 지도에 호출 조건·인자·예시로 소개된다.
+
 `[fn:주소별발췌]{대상:[{url:"확인한 주소",pattern:"찾을 정규식",context:1,limit:5}],문맥:0,개수:8}`은
 주소별 `crawl → 본문에서찾기`를 최대 4개씩 병렬로 실행한다. `대상`은 첫 파이프 입력이며
 각 행의 `url`·`pattern`은 필수, `context`·`limit`은 전체 기본값을 덮어쓴다.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""검증된 관용구·호출 용례를 현재 IBL 입구로 멱등 등록한다. 상시 소개는 끈다."""
+"""검증된 관용구·호출 용례를 멱등 등록한다. 소개 선택은 명시한 시드만 바꾼다."""
 import sys
 from pathlib import Path
 
@@ -37,6 +37,8 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
     seed_path = ROOT / 'data/idioms' / seed_file
     seeds = json.loads(seed_path.read_text())
     for row in seeds:
+        if 'always_on' in row and not isinstance(row['always_on'], bool):
+            raise ValueError('상시 소개 선택은 bool이어야 합니다')
         if "source_file" in row:
             source = seed_path.parent / row.pop("source_file")
             if source.parent != seed_path.parent or source.suffix != ".ibl":
@@ -102,10 +104,13 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
     rows = []
     with db._get_connection() as conn:
         for seed in seeds:
-            row = conn.execute('SELECT id,intent,ibl_code,alias FROM ibl_examples WHERE intent=? AND ibl_code=?',
+            row = conn.execute('SELECT id,intent,ibl_code,alias,always_on FROM ibl_examples WHERE intent=? AND ibl_code=?',
                                (seed['intent'], seed['ibl_code'])).fetchone()
             rows.append(dict(row))
-        conn.executemany('UPDATE ibl_examples SET always_on=0 WHERE id=?', [(r['id'],) for r in rows])
+            if seed.get('alias') and 'always_on' in seed:
+                conn.execute('UPDATE ibl_examples SET always_on=? WHERE alias=?',
+                             (int(seed['always_on']), seed['alias']))
+                rows[-1]['always_on'] = int(seed['always_on'])
         conn.commit()
     vec = db._get_vec_connection()
     try:
@@ -122,7 +127,8 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
     finally:
         vec.close()
     return {'inserted': added, 'revised': revised, 'ids': {r['alias']: r['id'] for r in rows if r['alias']},
-            'always_on': False, 'semantic_indexed': len(rows), 'backup': str(backup)}
+            'always_on': any(r['always_on'] for r in rows),
+            'semantic_indexed': len(rows), 'backup': str(backup)}
 
 
 if __name__ == '__main__':

@@ -311,6 +311,7 @@
     "sense:realty@source=naver": "[sense:realty]{op: \"query\", source: \"naver\", region: \"평택 비전동\", limit: 5}",
     "sense:realty@source=zigbang": "[sense:realty]{op: \"query\", source: \"zigbang\", region: \"평택 죽백동\", limit: 5}",
     "sense:search@source=gnews": "[sense:search]{query: \"climate policy\", source: \"gnews\", limit: 3}",
+    "sense:search@source=google": "[sense:search]{query: \"SQLite WAL\", source: \"google\", limit: 3}",
     "sense:search@source=guardian": "[sense:search]{query: \"climate policy\", source: \"guardian\", limit: 3}",
     "sense:search@source=hn": "[sense:search]{query: \"rust\", source: \"hn\", limit: 3}",
     "sense:search@source=naver": "[sense:search]{query: \"기후 정책\", source: \"naver\", limit: 3}",

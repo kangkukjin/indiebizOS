@@ -11,7 +11,7 @@ indiebizOS는 여러 도메인에 *어휘(IBL 액션)*를 가져, 많은 검색�
 ## 2. 일반 웹검색을 쓸 때 — 키워드·소스·언어·카테고리
 - **도메인 제한**: `site:example.org 검색어`로 쓴다. `site.example.org`는 제한 연산자가 아니다. `warning`·`query_notes`가 나오면 제한 의도를 확인하고 `suggested_query`의 실제 도메인이 맞을 때 수정한다. 원 검색어·결과는 보존되며 자동 수정·재검색은 하지 않는다.
 - **키워드 (개인화의 핵심)**: 사용자의 말을 그대로 검색창에 넣지 말고 **문맥에 맞는 키워드를 골라 넣어라** — 사용자의 분야·의도·알려진 맥락·중의성 해소어를 얹어서. 검색창은 맥락을 모르지만 너는 안다 — **그게 일반 검색이 못 이기는 개인화 검색의 강점이다.** 예: 모호한 이름·용어는 분야·소속으로 좁히고, 의도(사기/알아보기/비교)에 맞는 어휘를 더한다.
-- **소스**: 한국어·국내는 `search{source: "naver"}`(국내 콘텐츠 압도적), 글로벌·영어는 `search`(기본 ddg: DDGS 메타검색의 자동 엔진 선택이며 DuckDuckGo 단일 엔진을 뜻하지 않음). 뉴스=`source: "gnews"`, 기술 동향=`source: "hn"`, 가디언 아카이브=`source: "guardian"`. 전문 사이트가 있으면 홈페이지 말고 *검색어·필터 박힌 결과 페이지*로 바로.
+- **소스**: 한국어·국내는 `search{source: "naver"}`(국내 웹·뉴스·블로그), 글로벌·영어는 `search`(기본 ddg: DDGS 메타검색의 자동 엔진 선택이며 DuckDuckGo 단일 엔진을 뜻하지 않음). Google 일반 웹=`source: "google"`, 뉴스=`source: "gnews"`, 기술 동향=`source: "hn"`, 가디언 아카이브=`source: "guardian"`. 전문 사이트가 있으면 홈페이지 말고 *검색어·필터 박힌 결과 페이지*로 바로.
 - **언어**: 대상 국가 언어로도 검색하라(일본→일본어, 글로벌→영어). 한국어만으론 현지 정보를 놓친다.
 - **카테고리**: 넓게 잡아라("약"→의약품+건강식품+한방약+영양제…). 하나에 갇히면 관련 정보를 놓친다.
 
@@ -145,3 +145,29 @@ base64를 텍스트로 다시 읽지 않는다. 원본 8MiB/2000만 픽셀 한�
 - 기존 개발자센터 키는 2027-06-30까지 지원된다. HUB 키는 별도 발급이며 기존 키를 그대로 쓸 수 없다. [공식 이관 안내](https://guide.ncloud-docs.com/docs/apihub-migration) · [기존 API 지원 기한](https://developers.naver.com/products/intro/terms/terms.md).
 - Guardian의 401/403은 인증·권한 오류다. `GUARDIAN_API_KEY`를 확인하며 요청 URL/키를 오류 문자열에 싣지 않는다. 2026-10-20 초기 점검에서는 401이었으나 최종 대표 실호출은 기사 2건을 정상 반환했다. 현재 인증 장애로 단정하거나 성공 전환의 원인을 코드 수리로 단정하지 않는다.
 - 이번 검증은 검색 기간·부분 실패·HUB 요청 계약·내장 브라우저 수집 경계의 회귀 검사와 대표 실호출이다. HUB 실인증과 모든 로그인 사이트의 호환성은 검증하지 않았다.
+
+
+## Google 일반 웹 검색
+
+`[sense:search]{source:"google",query:"TIME 울 캐시 벨티드 후드 코트",limit:5}`는
+브라우저에서 검색→결과 준비 확인→광고 제외→제목·URL·요약 추출을
+한 번에 실행한다. 중간 모델 호출이나 API 키는 없다. 기본 source는 여전히 ddg다.
+소유자 작업에서만 실행한다. 내장 브라우저 연결이 있으면 별도 작업 탭을 만들고 종료 시 닫는다.
+사용자 탭을 이동하지 않으며 내장 브라우저의 세션을 그대로 사용한다(쿠키를 밖으로 복사하지 않는다).
+연결이 없으면 같은 주체·프로젝트의 격리 Playwright 세션을 재사용하고 기존 비활성 수명에 따라 종료한다.
+드라이버는 시작할 때 결정하며 차단·실패 후 바꾸지 않는다. 내장 경로에는 최신 앱 재시작이 필요하다.
+
+첫 페이지 일반 웹 결과만 최대 10개 반환하며 `items`에는 title/url/summary/meta/rank가 있다.
+`browser_driver`, `elapsed_ms`, `session_reused`, `scope`는 실행 관측이다. Playwright는 `http_status`도 반환한다. limit 초과는
+clamped/requested로 알린다. `queries:["한국어 질의","English query"]`는 최대 10개를
+같은 세션에서 순차 실행하고 sections/errors로 성공·실패를 보존한다.
+`country`는 Google gl 국가 설정, `language:auto|ko|en`은 hl 화면 언어다.
+화면 언어는 검색 결과 언어의 제한이 아니므로 해외 원문은 영어 질의도 함께 사용한다.
+
+CAPTCHA_REQUIRED/CONSENT_REQUIRED/HTTP_ERROR/SEARCH_TIMEOUT/RESULTS_UNRECOGNIZED는
+자료가 없다는 뜻이 아니다. 확인 화면을 자동 처리하거나 다른 드라이버로 우회하지 않는다.
+확인 화면이 나오면 배치의 남은 검색도 SKIPPED_AFTER_BLOCK으로 중단한다.
+Google이 명시적으로 결과 없음으로 표시했을 때만 성공한 빈 items를 반환한다.
+날짜 필터 days는 지원하지 않으며 뉴스 날짜가 필요하면 gnews/naver(type:news)를 쓴다.
+Google이 목적지를 암호화한 `/goto` 링크를 주면 관측한 링크를 그대로 반환하고 `url_kind:google_redirect`로 표시한다.
+화면에 축약된 주소로 목적지를 추측하지 않는다. 검색 요약은 근거의 출발점이며 원문은 sense:crawl로 확인한다.

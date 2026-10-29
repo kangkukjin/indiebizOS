@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expression } from './embedded-browser-dom.js';
 
-export const capabilities = ['tab', 'navigate', 'snapshot', 'content', 'click', 'type',
+export const capabilities = ['tab', 'navigate', 'snapshot', 'content', 'google_results', 'click', 'type',
   'press_key', 'select', 'check', 'scroll', 'wait', 'iframe', 'auth', 'close'];
 export function fault(code) { return Object.assign(new Error(code), { code }); }
 export function checkedURL(value) {
@@ -191,7 +191,11 @@ export class EmbeddedTabs {
         let timer;
         try { await Promise.race([r.wc.loadURL(checkedURL(args.url)), new Promise((_, reject) => {
           timer = setTimeout(() => { r.wc.stop(); reject(fault('NAVIGATION_TIMEOUT')); }, Math.max(1, deadline - Date.now()));
-        })]); } finally { clearTimeout(timer); }
+        })]); } catch (error) {
+          // Electron may omit code when a replacement navigation aborts the old load.
+          if (error.errno === -3) throw fault('ERR_ABORTED');
+          throw error;
+        } finally { clearTimeout(timer); }
       }
     } finally { r.executing = false; }
     this.check(r, deadline);
@@ -221,7 +225,7 @@ export class EmbeddedTabs {
       this.check(r, deadline);
       if (this.authOwner && this.authOwner !== owner) throw fault('AUTH_SESSION_BUSY');
       r.executing = true;
-      r.state = ['content', 'snapshot', 'wait'].includes(op) ? 'AI가 읽는 중' : 'AI가 조작 중'; this.notice();
+      r.state = ['content', 'snapshot', 'google_results', 'wait'].includes(op) ? 'AI가 읽는 중' : 'AI가 조작 중'; this.notice();
       if (creating) data = { url: safeURL(r.wc.getURL()), created: true };
       else if (op === 'navigate') data = await this.navigate(r, args, deadline);
       else if (op === 'tab') {
@@ -258,7 +262,7 @@ export class EmbeddedTabs {
         data = { verification: 'interaction_only' };
       } else {
         if (args.selector || args.path || args.dialog || (op === 'content' && args.mode && args.mode !== 'text') || (op === 'click' && args.mode && args.mode !== 'single')) throw fault('UNSUPPORTED_OPERATION');
-        if (!['snapshot', 'content', 'scroll', 'wait'].includes(op) && !r.document) throw fault('SNAPSHOT_REQUIRED');
+        if (!['snapshot', 'content', 'google_results', 'scroll', 'wait'].includes(op) && !r.document) throw fault('SNAPSHOT_REQUIRED');
         do {
           this.check(r, deadline);
           data = await this.page(r, op, { ...args, document_id: r.document });

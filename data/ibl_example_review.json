@@ -2097,9 +2097,9 @@
   },
   "sense:search": {
    "fields": {
-    "description": "587495d4c188",
-    "target_description": "0993832f26a6",
-    "implementation": "cac1d677e598",
+    "description": "a9133fe2abaa",
+    "target_description": "1be6481b6508",
+    "implementation": "7b80ce3630e7",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "aliases": "bb6d70d17c4c",
@@ -2107,8 +2107,8 @@
     "router": "ebbb1532efbc",
     "tool": "6ad21f9d2ea1"
    },
-   "reviewed": "2026-10-21",
-   "examples": 212
+   "reviewed": "2026-10-30",
+   "examples": 12
   },
   "sense:search_shopping": {
    "fields": {

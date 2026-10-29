@@ -1006,14 +1006,14 @@ def _execute(tool_input: dict, context):
     # search_naver/search_gnews/search_hn/search_guardian) → source 축 하나. 아래 소스별
     # 갈래(ddgs_search 등)는 내부 구현 — tool.json 에는 search 하나만 노출된다.
     if tool_name == "search":
-        _SOURCE_TOOLS = {"ddg": "ddgs_search", "naver": "naver_search",
+        _SOURCE_TOOLS = {"ddg": "ddgs_search", "naver": "naver_search", "google": "google_search",
                          "gnews": "search_gnews", "hn": "search_hn",
                          "guardian": "search_guardian"}
         source = str(tool_input.get("source") or "ddg").strip().lower()
         inner = _SOURCE_TOOLS.get(source)
         if not inner:
             return format_json({"success": False,
-                                "error": f"알 수 없는 source: {source} (가능: ddg/naver/gnews/hn/guardian)"})
+                                "error": f"알 수 없는 source: {source} (가능: ddg/naver/google/gnews/hn/guardian)"})
         from types import SimpleNamespace
         # days 는 date 를 싣는 소스에서만 보장된다 — 묵살하지 말고 실행 전에 거절(2026-10-07, ep4327: gnews days:2 가 2022년 기사를 냈다).
         unsupported = _days_unsupported(tool_input, source)
@@ -1021,9 +1021,13 @@ def _execute(tool_input: dict, context):
             return format_json({"success": False, "items": [], "error": unsupported})
         # 배치 팬아웃은 소스 공통이다(2026-09-18, ep3854: naver·ddg 검색 26건을 한 건씩 호출 — queries 가 뉴스 소스에만 있었다).
         # gnews·hn 은 자기 배치가 헤드라인·편집장을 겸하므로 그대로 두고, 나머지 소스는 여기서 같은 계약으로 편다.
-        if tool_input.get("queries") and source not in ("gnews", "hn"):
+        if tool_input.get("queries") and source not in ("gnews", "hn", "google"):
             return format_json(_batch_search(tool_input, inner, source, project_path))
         return execute(tool_input, SimpleNamespace(tool_name=inner, project_path=project_path))
+
+    # Google은 검색용 격리 세션에서 배치를 순차 실행한다(탭 경합·주체 문맥 손실 방지).
+    elif tool_name == "google_search":
+        return format_json(load_module("tool_google_search").search(tool_input, project_path))
 
     # DuckDuckGo 웹 검색 (search source:ddg 내부 갈래)
     elif tool_name == "ddgs_search":

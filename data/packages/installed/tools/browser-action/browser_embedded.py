@@ -9,7 +9,7 @@ from pathlib import Path
 
 from runtime_utils import get_base_path
 
-CAPABILITIES = {"tab", "navigate", "snapshot", "content", "click", "type", "press_key",
+CAPABILITIES = {"tab", "navigate", "snapshot", "content", "google_results", "click", "type", "press_key",
                 "select", "check", "scroll", "wait", "iframe", "auth", "close"}
 _choices = {}
 
@@ -94,7 +94,7 @@ async def request(args, owner, endpoint):
             return reply["result"]
     except (TimeoutError, OSError, ValueError, KeyError, asyncio.IncompleteReadError):
         result = error("BROWSER_UNAVAILABLE", "내장 브라우저 연결이 끊겼습니다. 앱과 탭 상태를 확인하세요.")
-        result["outcome_unknown"] = sent and args.get("op") not in {"snapshot", "content", "status"}
+        result["outcome_unknown"] = sent and args.get("op") not in {"snapshot", "content", "google_results", "status"}
         return result
     finally:
         if writer:

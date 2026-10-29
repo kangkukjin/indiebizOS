@@ -56,3 +56,11 @@ test('releasing AI control detaches but preserves tab and can reattach when shar
   assert.equal(f.session.isAttached(), true); assert.equal(f.session.listenerCount('detach'), 1);
   f.wc.close();
 });
+
+
+test('native replacement navigation keeps ERR_ABORTED even with empty Electron code', async () => {
+  const tabs = new EmbeddedTabs({changed() {}, show() {}});
+  const r = {wc: {isDestroyed: () => false, loadURL: async () => {throw Object.assign(new Error('aborted'), {errno: -3, code: ''});}}};
+  await assert.rejects(tabs.navigate(r, {url: 'https://www.google.com/search?q=test'}, Date.now()+1000),
+    {code: 'ERR_ABORTED'});
+});

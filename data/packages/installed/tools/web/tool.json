@@ -2,7 +2,7 @@
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "web",
   "name": "Web Tools",
-  "description": "웹 검색 및 크롤링 도구. 통합 검색(DuckDuckGo/네이버/Google 뉴스/Hacker News/가디언 — source 분기), 웹페이지 텍스트 추출, 신문 발행, 즐겨찾기 사이트 관리 기능을 제공합니다. 정보 수집, 뉴스 모니터링, 웹 리서치에 활용.",
+  "description": "웹 검색 및 크롤링 도구. 통합 검색(DDGS/네이버/Google 웹·뉴스/Hacker News/가디언 — source 분기), 웹페이지 텍스트 추출, 신문 발행, 즐겨찾기 사이트 관리 기능을 제공합니다. 정보 수집, 뉴스 모니터링, 웹 리서치에 활용.",
   "version": "1.3.0",
   "tools": [
     {
@@ -73,7 +73,7 @@
     },
     {
       "name": "search",
-      "description": "웹·뉴스 통합 검색 — source 로 검색 엔진을 선택합니다.\n\n## source (기본 ddg)\n- ddg: DuckDuckGo 글로벌 웹 검색 (키 불요). 영어/글로벌 질의.\n- naver: 네이버 검색 API — 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/백과)에 압도적. 한국어 질의는 이쪽. type 으로 도메인 선택.\n- gnews: Google News RSS 뉴스 검색 (키 불요). 언어 자동 감지, headlines/queries/curate 지원.\n- hn: Hacker News(Algolia) 기술·스타트업 포스팅 (키 불요). points(▲)=주목도, headlines:true=프론트페이지.\n- guardian: The Guardian 아카이브 (영어, GUARDIAN_API_KEY 필요). from_date/to_date 기간 검색.\n\n## 주의사항\n- 단순 검색만 수행 — 페이지 본문을 읽으려면 crawl_website 사용\n- 실시간 데이터가 필요하면 여러 번 검색보다 한 번에 구체적으로\n\n## 다른 도구와의 관계\n- 유튜브: search_youtube / 논문: paper / 지역 업소: search_restaurants / 쇼핑: search_shopping (각 도메인 검색은 별도 액션)\n- 페이지 내용 확인: crawl_website / 복잡한 웹 작업: browser_op",
+      "description": "웹·뉴스 통합 검색 — source 로 검색 엔진을 선택합니다.\n\n## source (기본 ddg)\n- ddg: DDGS 메타검색 (키 불요, backend:auto).\n- naver: 네이버 검색 API — 웹문서/뉴스/블로그/카페/지식인/백과. type 으로 도메인 선택. 해외 원문은 원문 언어로도 검색.\n- google: Google 일반 웹 검색. 내장 브라우저 작업 탭(미연결이면 격리 Playwright), 키 불요, 소유자 전용. 첫 페이지 최대 10개; queries 최대 10개 순차 처리. CAPTCHA·동의·로딩·구조 오류는 실패로 반환.\n- gnews: Google News RSS 뉴스 검색 (키 불요). 언어 자동 감지, headlines/queries/curate 지원.\n- hn: Hacker News(Algolia) 기술·스타트업 포스팅 (키 불요). points(▲)=주목도, headlines:true=프론트페이지.\n- guardian: The Guardian 아카이브 (영어, GUARDIAN_API_KEY 필요). from_date/to_date 기간 검색.\n\n## 주의사항\n- 단순 검색만 수행 — 페이지 본문을 읽으려면 crawl_website 사용\n- 실시간 데이터가 필요하면 여러 번 검색보다 한 번에 구체적으로\n\n## 다른 도구와의 관계\n- 유튜브: search_youtube / 논문: paper / 지역 업소: search_restaurants / 쇼핑: search_shopping (각 도메인 검색은 별도 액션)\n- 페이지 내용 확인: crawl_website / 복잡한 웹 작업: browser_op",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -86,20 +86,21 @@
             "enum": [
               "ddg",
               "naver",
+              "google",
               "gnews",
               "hn",
               "guardian"
             ],
             "default": "ddg",
-            "description": "검색 엔진 (기본 ddg). 한국어 질의는 naver, 뉴스는 gnews(한국 출처는 naver+type:news), 기술 동향은 hn, 영어 아카이브는 guardian."
+            "description": "검색 엔진 (기본 ddg). 일반 웹은 ddg/naver/google, 뉴스는 gnews(한국 출처는 naver+type:news), 기술 동향은 hn, 영어 아카이브는 guardian."
           },
           "limit": {
             "type": "integer",
-            "description": "결과 수 (기본 ddg 5 · naver 5 · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)"
+            "description": "결과 수 (기본 ddg 5 · naver 5 · google 5(최대 10) · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)"
           },
           "days": {
             "type": "integer",
-            "description": "최근 N일로 제한 — 게시일(date)을 싣는 소스에서만 보장(gnews/hn/guardian·naver type:news/blog). hn 은 서버측, 나머지는 라우터가 date 로 걸러 days_filter{kept,out_of_range,undated} 로 신고하고, 게시일 미상 행은 보존하되 기간 안이라고 보장하지 않는다. ddg·naver 다른 type 은 날짜가 없어 days 를 주면 실행 전 거절(2026-10-07 ep4327 — gnews days 묵살 수리). hn 은 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측) — 최신 동향은 days 를 줄 것(예 days 7)."
+            "description": "최근 N일로 제한 — 게시일(date)을 싣는 소스에서만 보장(gnews/hn/guardian·naver type:news/blog). hn 은 서버측, 나머지는 라우터가 date 로 걸러 days_filter{kept,out_of_range,undated} 로 신고하고, 게시일 미상 행은 보존하되 기간 안이라고 보장하지 않는다. ddg·google·naver 다른 type 은 날짜가 없어 days 를 주면 실행 전 거절(2026-10-07 ep4327 — gnews days 묵살 수리). hn 은 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측) — 최신 동향은 days 를 줄 것(예 days 7)."
           },
           "type": {
             "type": "string",
@@ -115,7 +116,7 @@
           },
           "country": {
             "type": "string",
-            "description": "ddg 전용 — 국가/언어 코드 (기본: kr-kr)"
+            "description": "ddg 국가/언어 코드(기본 kr-kr). google은 국가 코드 kr/us 또는 kr-kr/us-en의 국가 부분(gl), 생략 시 강제하지 않음."
           },
           "language": {
             "type": "string",
@@ -124,7 +125,7 @@
               "ko",
               "en"
             ],
-            "description": "gnews 전용 — 언어 (기본 auto=키워드의 한글 비율로 자동 감지)"
+            "description": "gnews/google 언어(auto/ko/en). google은 검색 화면 언어(hl)이며 원문 언어 제한은 아님. auto는 검색어의 한글 유무로 선택."
           },
           "curate": {
             "type": "integer",

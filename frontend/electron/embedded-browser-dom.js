@@ -1,3 +1,4 @@
+import { captureGoogleResults } from './embedded-browser-google.js';
 // Fixed, isolated-world page program. Never execute model-provided JavaScript.
 export function pageOperation(op, args = {}) {
   const fail = (code) => { throw new Error(code); };
@@ -177,5 +178,6 @@ export function pageOperation(op, args = {}) {
 }
 
 export function expression(op, args) {
+  if (op === 'google_results') return `(${captureGoogleResults.toString()})()`;
   return `(${pageOperation.toString()})(${JSON.stringify(op)},${JSON.stringify(args)})`;
 }

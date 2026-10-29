@@ -48,6 +48,7 @@ nodes:
             source:
             - ddg
             - naver
+            - google
             - gnews
             - hn
             - guardian
@@ -76,12 +77,17 @@ nodes:
             - - query
               - queries
           - when:
+              source: google
+            required_any:
+            - - query
+              - queries
+          - when:
               source: guardian
             required_any:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-29", impl: "d4f5e04376922444"}  # 재감사: 상태 저장 대기만 변경. 회원은 member_web·공개 URL 검증 유지, 자동 상태 파일·소유자 브라우저에 접근하지 않음.
+        path_audited: {at: "2026-10-30", impl: "1638bcd6b211e871"}  # 재감사: Google 추가. 회원은 선행 member_web 분기로 DDGS만 허용, Google도 owner를 확인해 소유자 브라우저 접근 차단. crawl 공개 URL 경계 유지.
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -104,16 +110,17 @@ nodes:
         shape_axes: {queries: null}
         # 원천별 변이 축(79회차 B79-3 census — iblbuild_source_honesty). 주간 관측·정직성 스윕이 돌린다.
         shape_variants:
+          source=google: '[sense:search]{query: "SQLite WAL", source: "google", limit: 3}'
           source=naver: '[sense:search]{query: "기후 정책", source: "naver", limit: 3}'
           source=gnews: '[sense:search]{query: "climate policy", source: "gnews", limit: 3}'
           source=hn: '[sense:search]{query: "rust", source: "hn", limit: 3}'
           source=guardian: '[sense:search]{query: "climate policy", source: "guardian", limit: 3}'
-        description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, DDGS 메타검색·엔진 자동 선택)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
+        description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, DDGS 메타검색·엔진 자동 선택)/naver(네이버 웹·뉴스·블로그)/google(브라우저 일반 웹 검색, 키 불요)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
-        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. 판본 2 실패의 partial(또는 catch의 $error.partial)에 items·errors·sections 봉투가 남으므로 성공 행을 재사용하고 errors의 검색어만 재시도한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 반환 행수 count(limit 상한)와 원천이 제공한 total_estimate, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver의 total_estimate는 검색 전체 결과 추정치이며 단건은 최상위·배치는 각 sections에 보존한다(0은 실제 추정 0, 미제공은 필드 없음). 기간 필터 이후 count와 달리 전체 검색 추정이며 모집단·정확한 수요로 간주하지 않는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, Guardian 합류 실패는 errors에 남긴다. gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★최근 N일로 한정하려면 days — gnews/hn/guardian·naver(news/blog)에서 보장(기간 밖 제외·미상은 보존하고 days_filter 로 신고; 부분 실패에도 적용, gnews는 RSS 기간 필터 후 limit·curate), ddg 등 날짜 없는 소스는 거절. hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
+        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. 판본 2 실패의 partial(또는 catch의 $error.partial)에 items·errors·sections 봉투가 남으므로 성공 행을 재사용하고 errors의 검색어만 재시도한다. source 로 엔진 선택(기본 ddg — 원문 언어에 맞는 검색어로 naver/google도 선택). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — google은 검색용 세션에서 순차, 나머지는 병렬로 돌려 행마다 query 태그, sections 에 검색어별 반환 행수 count(limit 상한)와 원천이 제공한 total_estimate, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver의 total_estimate는 검색 전체 결과 추정치이며 단건은 최상위·배치는 각 sections에 보존한다(0은 실제 추정 0, 미제공은 필드 없음). 기간 필터 이후 count와 달리 전체 검색 추정이며 모집단·정확한 수요로 간주하지 않는다. google은 첫 페이지 일반 결과 최대 10개, queries 최대 10개. CAPTCHA·동의·로딩·구조 오류는 실패로 반환하며 빈 성공으로 숨기지 않는다. 소유자만 사용하고 내장 브라우저 연결 시 독립 작업 탭을 사용하고, 미연결이면 격리 Playwright 세션을 재사용한다. 확인 화면 이후 드라이버를 바꿔 재시도하지 않는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, Guardian 합류 실패는 errors에 남긴다. gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★최근 N일로 한정하려면 days — gnews/hn/guardian·naver(news/blog)에서 보장(기간 밖 제외·미상은 보존하고 days_filter 로 신고; 부분 실패에도 적용, gnews는 RSS 기간 필터 후 limit·curate), ddg 등 날짜 없는 소스는 거절. hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
         router: handler
         tool: search
-        implementation: source 분기 단일 도구 — ddg=DDGS 메타검색(키 불요, backend:auto), naver=네이버 검색 API(NAVER_HUB_CLIENT_ID/SECRET 설정 시 API HUB, 미설정 시 기존 NAVER_CLIENT_ID/SECRET), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
+        implementation: source 분기 단일 도구 — ddg=DDGS 메타검색(키 불요, backend:auto), google=내장 브라우저(미연결이면 격리 Playwright)의 Google 검색→광고 제외 DOM 추출(중간 모델 호출 없음), naver=네이버 검색 API(NAVER_HUB_CLIENT_ID/SECRET 설정 시 API HUB, 미설정 시 기존 NAVER_CLIENT_ID/SECRET), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
         target_key: query
       crawl:
         research_coverage: full
@@ -166,7 +173,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-29", impl: "d4f5e04376922444"}  # 재감사: 상태 저장 대기만 변경. 회원은 member_web·공개 URL 검증 유지, 자동 상태 파일·소유자 브라우저에 접근하지 않음.
+        path_audited: {at: "2026-10-30", impl: "1638bcd6b211e871"}  # 재감사: Google 추가. 회원은 선행 member_web 분기로 DDGS만 허용, Google도 owner를 확인해 소유자 브라우저 접근 차단. crawl 공개 URL 경계 유지.
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -360,7 +367,7 @@ tool_json:
   header:
     id: web
     name: Web Tools
-    description: 웹 검색 및 크롤링 도구. 통합 검색(DuckDuckGo/네이버/Google 뉴스/Hacker News/가디언 — source 분기), 웹페이지 텍스트 추출, 신문 발행, 즐겨찾기 사이트 관리 기능을 제공합니다. 정보 수집, 뉴스
+    description: 웹 검색 및 크롤링 도구. 통합 검색(DDGS/네이버/Google 웹·뉴스/Hacker News/가디언 — source 분기), 웹페이지 텍스트 추출, 신문 발행, 즐겨찾기 사이트 관리 기능을 제공합니다. 정보 수집, 뉴스
       모니터링, 웹 리서치에 활용.
     version: 1.3.0
   tools:
@@ -426,9 +433,11 @@ tool_json:
 
       ## source (기본 ddg)
 
-      - ddg: DuckDuckGo 글로벌 웹 검색 (키 불요). 영어/글로벌 질의.
+      - ddg: DDGS 메타검색 (키 불요, backend:auto).
 
-      - naver: 네이버 검색 API — 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/백과)에 압도적. 한국어 질의는 이쪽. type 으로 도메인 선택.
+      - naver: 네이버 검색 API — 웹문서/뉴스/블로그/카페/지식인/백과. type 으로 도메인 선택. 해외 원문은 원문 언어로도 검색.
+
+      - google: Google 일반 웹 검색. 내장 브라우저 작업 탭(미연결이면 격리 Playwright), 키 불요, 소유자 전용. 첫 페이지 최대 10개; queries 최대 10개 순차 처리. CAPTCHA·동의·로딩·구조 오류는 실패로 반환.
 
       - gnews: Google News RSS 뉴스 검색 (키 불요). 언어 자동 감지, headlines/queries/curate 지원.
 
@@ -460,17 +469,18 @@ tool_json:
           enum:
           - ddg
           - naver
+          - google
           - gnews
           - hn
           - guardian
           default: ddg
-          description: 검색 엔진 (기본 ddg). 한국어 질의는 naver, 뉴스는 gnews(한국 출처는 naver+type:news), 기술 동향은 hn, 영어 아카이브는 guardian.
+          description: 검색 엔진 (기본 ddg). 일반 웹은 ddg/naver/google, 뉴스는 gnews(한국 출처는 naver+type:news), 기술 동향은 hn, 영어 아카이브는 guardian.
         limit:
           type: integer
-          description: 결과 수 (기본 ddg 5 · naver 5 · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)
+          description: 결과 수 (기본 ddg 5 · naver 5 · google 5(최대 10) · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)
         days:
           type: integer
-          description: 최근 N일로 제한 — 게시일(date)을 싣는 소스에서만 보장(gnews/hn/guardian·naver type:news/blog). hn 은 서버측, 나머지는 라우터가 date 로 걸러 days_filter{kept,out_of_range,undated} 로 신고하고, 게시일 미상 행은 보존하되 기간 안이라고 보장하지 않는다. ddg·naver 다른 type 은 날짜가 없어 days 를 주면 실행 전 거절(2026-10-07 ep4327 — gnews days 묵살 수리). hn 은 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측) — 최신 동향은 days 를 줄 것(예 days 7).
+          description: 최근 N일로 제한 — 게시일(date)을 싣는 소스에서만 보장(gnews/hn/guardian·naver type:news/blog). hn 은 서버측, 나머지는 라우터가 date 로 걸러 days_filter{kept,out_of_range,undated} 로 신고하고, 게시일 미상 행은 보존하되 기간 안이라고 보장하지 않는다. ddg·google·naver 다른 type 은 날짜가 없어 days 를 주면 실행 전 거절(2026-10-07 ep4327 — gnews days 묵살 수리). hn 은 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측) — 최신 동향은 days 를 줄 것(예 days 7).
         type:
           type: string
           description: 'naver 전용 — 검색 도메인 (webkr/news/blog/cafe/kin/encyc, 기본 webkr). 자연어 별칭(웹/뉴스/블로그/카페/지식인/백과) 허용. ★book/doc/shop 은 2026-08 네이버 은퇴(SE05).'
@@ -482,14 +492,14 @@ tool_json:
           description: naver 전용 — sim(정확도, 기본) 또는 date(최신순)
         country:
           type: string
-          description: 'ddg 전용 — 국가/언어 코드 (기본: kr-kr)'
+          description: 'ddg 국가/언어 코드(기본 kr-kr). google은 국가 코드 kr/us 또는 kr-kr/us-en의 국가 부분(gl), 생략 시 강제하지 않음.'
         language:
           type: string
           enum:
           - auto
           - ko
           - en
-          description: gnews 전용 — 언어 (기본 auto=키워드의 한글 비율로 자동 감지)
+          description: gnews/google 언어(auto/ko/en). google은 검색 화면 언어(hl)이며 원문 언어 제한은 아님. auto는 검색어의 한글 유무로 선택.
         curate:
           type: integer
           description: gnews/hn 전용 — 지정 시 경량 AI '편집장'이 ~100개를 넓게 보고 이 개수만큼 편성(hot·delta·surface 선별, 각 기사에 role/why 부착). 안 뽑힌 나머지는 pool 필드로 반환. 신문 섹션용. 미지정 시 순수 검색.

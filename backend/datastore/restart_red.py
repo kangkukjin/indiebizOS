@@ -222,7 +222,8 @@ def verify_after_boot(base, state):
 
 
 def record_interrupted(base, snapshot, reason):
-    from episode_logger import close_cut_episodes
     ids = snapshot.get("live_episode_ids") or []
-    if ids:
-        close_cut_episodes(ids, reason, db_path=str(Path(base) / "data/world_pulse.db"))
+    if not ids:
+        return
+    from episode_logger import close_cut_episodes
+    close_cut_episodes(ids, reason, db_path=str(Path(base) / "data/world_pulse.db"))

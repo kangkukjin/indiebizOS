@@ -45,6 +45,13 @@ CONTROL_ONLY_FILES = frozenset({
 })
 LAYER_DIRS = ["base", "datastore", "ibl", "cognition", "services", "surface"]
 SELFTEST_TIMEOUT_S = 120
+# 프로세스가 사용한 지원 코드는 지연 import와 이미 로드한 모듈의 형제 import에도 필요하다.
+_support_roots = set()
+
+
+def support_roots():
+    """이 프로세스가 참조하는 코드 루트. 제어자 종료/인계 전까지 회수하지 않는다."""
+    return tuple(sorted(_support_roots))
 
 
 def store(base):
@@ -195,7 +202,8 @@ def verify(base, control_id, support_root, *, timeout=SELFTEST_TIMEOUT_S):
 
 def install_support_path(control_root, support_root):
     """기반 사본의 층을 앞에, 현역 세대(없으면 정본)의 층을 뒤에 둔다. 기반이 먼저 이긴다."""
-    control_root, support_root = Path(control_root), Path(support_root)
+    control_root, support_root = Path(control_root).resolve(), Path(support_root).resolve()
+    _support_roots.add(str(support_root))
     for root in (support_root, control_root):
         backend = root / "backend"
         entries = [str(backend / d) for d in LAYER_DIRS if (backend / d).is_dir()] + [str(backend)]

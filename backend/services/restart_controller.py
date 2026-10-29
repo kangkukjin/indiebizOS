@@ -198,6 +198,10 @@ class Controller:
         try:
             keep = {self.state.get("generation_dir"), (self.state.get("previous") or {}).get("generation_dir"),
                     (self.state.get("candidate") or {}).get("generation_dir")}
+            import control_base
+            # 워커 교체 후에도 제어자는 시작 때의 지원 모듈을 사용한다.
+            # sys.path를 새 세대로 바꾸면 이미 로드한 모듈과 새 모듈이 섞이므로 수명을 보존한다.
+            keep.update(control_base.support_roots())
             for req in self.pending():
                 keep.add((req.get("payload") or {}).get("generation_dir"))
             removed = self.candidates().prune(self.base, self.code_root, keep, log=self.log_line)
@@ -742,7 +746,9 @@ class Controller:
             adopt_legacy = (self.state["phase"] == "STOPPED" and legacy
                             and self.adapter.alive(legacy.get("worker"))
                             and self.adapter.alive(legacy.get("serving_worker")))
+            import control_base
             owner = {"controller": identity(os.getpid()), "shutdown_drain": True,
+                     "control_support_roots": list(control_base.support_roots()),
                      "control_base": self.control_base_id or self.state.get("control_base")}
             if start and self.state["phase"] in {"STOPPED", "FAILED"} and not adopt_legacy:
                 if self.adapter.alive(self.state.get("worker")):

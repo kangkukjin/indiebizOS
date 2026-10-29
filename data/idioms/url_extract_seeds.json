@@ -1,0 +1,30 @@
+[
+  {
+    "alias": "주소별발췌",
+    "source_file": "url_extract.ibl",
+    "intent": "여러 웹 주소에서 주소별로 다른 정규식·문맥·개수로 본문을 발췌할 때. 대상은 {url,pattern,context?,limit?} 목록. 출처·일치 0건·생략·실패를 보존하며 판단·요약하지 않는다.",
+    "nodes": "sense,self,table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "tags": "manual,web,extraction,episode5617",
+    "topic": "웹 검색·크롤링"
+  },
+  {
+    "intent": "여러 공식 문서에서 서로 다른 용어를 찾아 주소와 문단 위치를 함께 발췌해줘",
+    "ibl_code": "#!ibl edition=2\n[fn:주소별발췌]{대상:[{url:\"https://www.python.org/doc/\",pattern:\"Python|documentation\"},{url:\"https://www.sqlite.org/docs.html\",pattern:\"SQL|interface\",context:1,limit:3}],개수:5}",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "tags": "manual,web,extraction",
+    "topic": "웹 검색·크롤링"
+  },
+  {
+    "intent": "같은 웹페이지에서 이용 조건과 가격 대목을 각각 다른 조건으로 발췌하고 실패도 남겨줘",
+    "ibl_code": "#!ibl edition=2\n[{url:\"https://example.org/service\",pattern:\"license|commercial\",context:1},{url:\"https://example.org/service\",pattern:\"price|pricing\",limit:3}] >> [fn:주소별발췌]{개수:5}",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "tags": "manual,web,extraction",
+    "topic": "웹 검색·크롤링"
+  }
+]

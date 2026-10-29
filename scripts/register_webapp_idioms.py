@@ -65,6 +65,7 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
     label = {'android_control_seeds.json': 'Android제어관용구', 'code_read_seeds.json': '코드조사관용구',
              'housing_seeds.json': '부동산관용구',
              'ai_trend_seeds.json': 'AI동향관용구',
+             'url_extract_seeds.json': '웹발췌관용구',
              'legacy_port_seeds.json': '판본2이식관용구',
              'workspace_seeds.json': '작업공간관용구',
              'guestpc_seeds.json': '외부PC관용구',
@@ -133,6 +134,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed-file', default='webapp_seeds.json',
                         choices=['webapp_seeds.json', 'homepage_seeds.json', 'housing_seeds.json',
                                  'ai_trend_seeds.json', 'code_read_seeds.json', 'legacy_port_seeds.json',
-                                 'workspace_seeds.json', 'guestpc_seeds.json', 'phone_execution_seeds.json', 'pc_control_seeds.json', 'android_control_seeds.json'])
+                                 'workspace_seeds.json', 'guestpc_seeds.json', 'phone_execution_seeds.json', 'pc_control_seeds.json', 'android_control_seeds.json', 'url_extract_seeds.json'])
     args = parser.parse_args()
     print(json.dumps(register(args.apply, args.local_encoder, args.seed_file, args.revise_reason), ensure_ascii=False, indent=2))

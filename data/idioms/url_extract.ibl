@@ -1,0 +1,25 @@
+#!ibl edition=2
+[def:주소별발췌]($대상,$문맥=0,$개수=8) {
+  $수집 = $대상 >> [table:each]{parallel:4,on_error:"collect"} {
+    $본문 = [sense:crawl]{url:$it.url}
+    return $본문 >> [fn:본문에서찾기]{패턴:$it.pattern,문맥:get($it,"context",$문맥),개수:get($it,"limit",$개수)}
+  }
+  $값 = $수집 >> [table:each]{} {
+    $요청 = $대상[$i]
+    $출처 = {request_index:$i,requested_url:get($요청,"url",null),pattern:get($요청,"pattern",null)}
+    [if:is_ok($it)] { return {ok:true,source:$출처,value:unwrap($it)} }
+    return {ok:false,source:$출처,error:error_of($it)}
+  }
+  $모음 = [try] {
+    [self:script]{id:"수집관용구",args:{op:"collect",results:$값,keep:["request_index","requested_url","pattern"]}}
+  } [catch] {
+    assert $error.code=="PARTIAL_SOURCE" and $error.has_partial,"발췌 취합 실패",{error:$error}
+    $error.partial
+  }
+  $관측 = $값 >> [table:select]{columns:($행)=>{
+    **$행.source,ok:$행.ok,
+    match_info:get(get($행,"value",{}),"match_info",null),
+    error:get($행,"error",null)
+  }}
+  return {**$모음,ok:$모음.error_count==0,sources:$관측}
+}

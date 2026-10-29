@@ -10,7 +10,9 @@
 - 다운로드: https://www.python.org/downloads/
 - **Windows 설치 시 "Add Python to PATH" 반드시 체크!**
 
-### Node.js 18 이상
+### Node.js 22.12 이상 (소스 설치·빌드)
+
+Electron 44의 설치 도구가 요구하는 최소 버전입니다. Node.js 24 LTS를 권장합니다.
 - 다운로드: https://nodejs.org/
 - LTS 버전 권장
 

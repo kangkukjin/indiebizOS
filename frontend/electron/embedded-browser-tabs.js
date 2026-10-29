@@ -36,12 +36,14 @@ export class EmbeddedTabs {
       this.guests.delete(wc);
       for (const r of this.records.values()) if (r.wc === wc) {
         r.closed = true; r.state = '닫힘';
+        this.detach(r);
         if (r.owner && this.active.get(r.owner) === r.id) {
           const parent = this.records.get(r.parent);
           if (parent && !parent.closed) this.active.set(r.owner, parent.id);
           else this.active.delete(r.owner);
         }
         if (this.authOwner === r.owner && !this.active.has(r.owner)) this.authOwner = null;
+        this.records.delete(r.id);
       }
       this.notice();
     });
@@ -113,7 +115,7 @@ export class EmbeddedTabs {
     try { await this.navigate(r, { url }, deadline); }
     catch (error) {
       // A failed creation has no returned tab id for the caller to clean up.
-      if (!r.paused) { r.closed = true; r.wc.close(); this.active.delete(owner); this.notice(); }
+      if (!r.paused) { this.detach(r); r.closed = true; r.wc.close(); this.active.delete(owner); this.notice(); }
       throw error;
     }
     return r;
@@ -123,17 +125,34 @@ export class EmbeddedTabs {
     if (r.closed || r.wc.isDestroyed()) throw fault('TAB_CLOSED');
     if (r.paused) throw fault('USER_TAKEOVER');
   }
-  async cdp(r, method, params = {}) {
-    if (!r.wc.debugger.isAttached()) {
-      r.wc.debugger.attach('1.3');
-      if (!r.detachInstalled) {
-        r.detachInstalled = true;
-        r.wc.debugger.on('detach', () => { r.document = null; r.frame = null; });
-      }
+  detach(r) {
+    const debuggerSession = r.debuggerSession;
+    if (!debuggerSession) return;
+    // Hold the wrapper until native detachment completes. Drop its listener too:
+    // the closed record must not keep the WebContents and its session alive.
+    r.debuggerSession = null;
+    try { if (debuggerSession.isAttached()) debuggerSession.detach(); }
+    catch { /* The native target may already have closed. */ }
+    finally {
+      debuggerSession.removeListener('detach', r.onDebuggerDetach);
+      r.onDebuggerDetach = null; r.document = null; r.frame = null;
     }
+  }
+  async cdp(r, method, params = {}) {
+    if (r.closed || r.wc.isDestroyed()) throw fault('TAB_CLOSED');
+    if (!r.debuggerSession) {
+      r.debuggerSession = r.wc.debugger;
+      r.onDebuggerDetach = () => { r.document = null; r.frame = null; };
+      r.debuggerSession.on('detach', r.onDebuggerDetach);
+    }
+    const debuggerSession = r.debuggerSession;
+    if (!debuggerSession.isAttached()) debuggerSession.attach('1.3');
     let timer;
-    try { return await Promise.race([r.wc.debugger.sendCommand(method, params),
-      new Promise((_, reject) => { timer = setTimeout(() => { this.pause(r); reject(fault('BROWSER_TIMEOUT')); }, 10000); })]);
+    try { return await Promise.race([debuggerSession.sendCommand(method, params),
+      new Promise((_, reject) => { timer = setTimeout(() => {
+        if (!r.closed && !r.wc.isDestroyed()) this.pause(r);
+        reject(fault('BROWSER_TIMEOUT'));
+      }, 10000); })]);
     } finally { clearTimeout(timer); }
   }
   async frames(r) {
@@ -187,6 +206,7 @@ export class EmbeddedTabs {
     if (op === 'close') {
       for (const r of this.records.values()) if (r.owner === owner) {
         this.authenticationVisibility(r, false);
+        this.detach(r);
         r.owner = null; r.shared = false; r.state = '';
       }
       this.active.delete(owner); if (this.authOwner === owner) this.authOwner = null;
@@ -206,6 +226,7 @@ export class EmbeddedTabs {
       else if (op === 'navigate') data = await this.navigate(r, args, deadline);
       else if (op === 'tab') {
         if (args.mode === 'close') {
+          this.detach(r);
           r.wc.close();
           while (!r.wc.isDestroyed() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 40));
           if (!r.wc.isDestroyed()) throw fault('TAB_CLOSE_NOT_CONFIRMED');

@@ -22,6 +22,8 @@ class Binding:
     component_attempt: int = 0
     component_paths: set = field(default_factory=set)
     cancel_check: object = None
+    request: str = ''
+    component_restore_checked: bool = False
 
 
 def current():
@@ -40,7 +42,7 @@ def claim_followup(reason):
         return True
 
 
-def enter(runner, enabled=True, component_repair=False, cancel_check=None):
+def enter(runner, enabled=True, component_repair=False, cancel_check=None, request=''):
     from thread_context import get_current_agent_id, get_current_task_id
     config = getattr(runner, "config", {}) or {}
     agent = get_current_agent_id() or config.get("id") or getattr(runner, "agent_id", None)
@@ -49,6 +51,7 @@ def enter(runner, enabled=True, component_repair=False, cancel_check=None):
     if b:
         b.component_repair_allowed = bool(component_repair)
         b.cancel_check = cancel_check
+        b.request = request
         provider = getattr(getattr(runner, "ai", None), "_provider", None)
         b.aliases = {b.agent, str(getattr(provider, "agent_id", "") or "")} - {""}
         with _lock:

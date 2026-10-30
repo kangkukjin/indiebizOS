@@ -333,7 +333,7 @@ class CognitivePipelineMixin:
             _execution_token = enter(self, enabled=not kwargs.get("force_role"),
                                      component_repair=(get_task_origin() == "user"
                                                        and kwargs.get("utterance_author") != "agent"),
-                                     cancel_check=kwargs.get('cancel_check'))
+                                     cancel_check=kwargs.get('cancel_check'), request=message)
             from conscious_supervisor import open_supervisor
             _supervisor = None
             try:

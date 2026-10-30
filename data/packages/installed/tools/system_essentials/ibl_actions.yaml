@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-31", impl: "b4a58d844e47ce25"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "ced04fab77641489"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 재개만 허용. propose도 등록 소스만 사본에 적재. 회원 선행 분기·파일 전송 경계 유지.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +151,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-31", impl: "b4a58d844e47ce25"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "ced04fab77641489"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 재개만 허용. propose도 등록 소스만 사본에 적재. 회원 선행 분기·파일 전송 경계 유지.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -231,7 +231,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-31", impl: "b4a58d844e47ce25"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "ced04fab77641489"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 재개만 허용. propose도 등록 소스만 사본에 적재. 회원 선행 분기·파일 전송 경계 유지.
         target_key: path
       list:
         callable_contract:
@@ -977,7 +977,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-31", impl: "b4a58d844e47ce25"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "ced04fab77641489"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 재개만 허용. propose도 등록 소스만 사본에 적재. 회원 선행 분기·파일 전송 경계 유지.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -1821,7 +1821,7 @@ tool_json:
       required:
       - path
   - name: patch_op
-    description: "자기수리의 격리 사본·전체 준비 판정·정본 반영. 일반 소유자 업무에서 등록된 순수 변환 부품을 파일 도구로 고치면 한정 사본에 적재한다. 이 부품의 apply는 고정 계약 검사·정본 커밋·무재기동 활성화를 수행하며 원래 업무를 계속한다. 자기 지침·권한·검사 계약은 수정 대상이 아니다. 사용자 승인 REPAIR에서는 소스·설정·문서·검사·파생물을 모두 같은 사본에서 수정하고 격리 셸로 검사한다. 새 수리의 apply는 verification_plan으로 각 기준을 실제 검사(method:test, 단일 pytest, node --test 또는 go test 명령) 또는 의미 검토(method:semantic)에 연결한다. 같은 후보·환경의 통과 검사를 재사용하며 의미 조건만 평가한다. 이전 수리는 이전 정책을 유지한다. 동기화·생성·빌드는 apply 전에 격리 셸에서 끝내며 apply는 읽기 검사 후 고정된 바이트만 적용한다. 하위 기능 완료·구문 통과만으로 예약하지 않는다. 기준 부족이면 같은 사본에서 보완한다. status는 조회만, discard는 미적용 사본만 폐기한다. 무그랜트 propose는 사본 제안만 남기며 승인 수리의 apply도 동일한 전체 준비 관문을 따른다. 분리되지 않은 backend·패키지 변경은 기존 제어자에게 예약하므로 scheduled 뒤 현재 턴을 종료한다. 인계가 활성 확인과 수리 델타 커밋을 이어가며 예약/준비/반영은 전체 완료와 다르다. verify_cmd와 active_verify_cmd는 적용 후 읽기 전용 확인이다. 이 단계에서 구현·빌드하지 않는다. 격리 실패·예약 실패 때 정본 직접 쓰기나 즉시 적용으로 돌아가지 않는다."
+    description: "자기수리의 격리 사본·전체 준비 판정·정본 반영. 일반 소유자 업무에서 등록된 순수 변환 부품을 파일 도구로 고치면 한정 사본에 적재한다. 등록 부품은 propose도 같은 한정 사본에 적재한다. 반환 key로 같은 작업을 회수하거나 같은 대화·행위자의 후속 요청에서 status/apply/discard로 명시적으로 이어 쓴다. 원래 요청은 parent_request로 보존한다. 이 부품의 apply는 고정 계약 검사·정본 커밋·무재기동 활성화를 수행하며 원래 업무를 계속한다. 자기 지침·권한·검사 계약은 수정 대상이 아니다. 사용자 승인 REPAIR에서는 소스·설정·문서·검사·파생물을 모두 같은 사본에서 수정하고 격리 셸로 검사한다. 새 수리의 apply는 verification_plan으로 각 기준을 실제 검사(method:test, 단일 pytest, node --test 또는 go test 명령) 또는 의미 검토(method:semantic)에 연결한다. 같은 후보·환경의 통과 검사를 재사용하며 의미 조건만 평가한다. 이전 수리는 이전 정책을 유지한다. 동기화·생성·빌드는 apply 전에 격리 셸에서 끝내며 apply는 읽기 검사 후 고정된 바이트만 적용한다. 하위 기능 완료·구문 통과만으로 예약하지 않는다. 기준 부족이면 같은 사본에서 보완한다. status는 조회만, discard는 미적용 사본만 폐기한다. 무그랜트 propose는 사본 제안만 남기며 승인 수리의 apply도 동일한 전체 준비 관문을 따른다. 분리되지 않은 backend·패키지 변경은 기존 제어자에게 예약하므로 scheduled 뒤 현재 턴을 종료한다. 인계가 활성 확인과 수리 델타 커밋을 이어가며 예약/준비/반영은 전체 완료와 다르다. verify_cmd와 active_verify_cmd는 적용 후 읽기 전용 확인이다. 이 단계에서 구현·빌드하지 않는다. 격리 실패·예약 실패 때 정본 직접 쓰기나 즉시 적용으로 돌아가지 않는다."
     input_schema:
       type: object
       properties:
@@ -1845,7 +1845,7 @@ tool_json:
           description: (propose) 변경 근거 (필수). 사람이 제안을 검토할 때 읽는다.
         key:
           type: string
-          description: (status/discard) 조회·폐기할 수리 세션 키. status 생략 시 목록, discard 생략 시 현재 세션.
+          description: (status/discard) 조회·폐기할 수리 세션 키. 등록 부품 수리는 apply에도 사용하며 같은 대화·행위자의 후속 요청에서 명시적으로 재개한다. 키 생략 시 현재 작업의 부품 세션을 회수하고, 부품 세션이 없으면 status는 목록, discard는 현재 세션.
         proposal_id:
           type: string
           description: (apply/discard) propose 가 돌려준 제안 id. apply 에 주면 이 세션 대신 그 제안을 검증 후 적용한다(재작업 불필요, 수리 그랜트는 그대로 필요). discard 에 주면 그 제안을 폐기. 목록은 op:status.

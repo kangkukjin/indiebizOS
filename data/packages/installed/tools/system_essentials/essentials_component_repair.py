@@ -49,6 +49,58 @@ def require_binding():
         raise PermissionError('현재 작업 권한이 사라졌습니다')
 
 
+def identity(turn):
+    conversation = turn.conversation
+    return {'agent': turn.agent, 'task': turn.task,
+            'conversation': ({'db': str(Path(conversation.db_path).resolve()),
+                              'id': conversation.session_id} if conversation else None)}
+
+
+def restore_session(st, repo, turn, requested=None):
+    """같은 작업은 사본을 회수한다. 다른 작업은 같은 대화의 명시 key만 연결한다."""
+    who = identity(turn)
+    if requested:
+        if not isinstance(requested, str) or st.task_key(requested) != requested:
+            raise ValueError('유효한 부품 수리 키가 필요합니다')
+        session = st.read_session(str(repo), requested)
+        candidates = [session] if session and session.get('component_scope') else []
+    else:
+        folder = repo / 'data/system_ai_state/repair_sessions'
+        candidates = []
+        for path in folder.glob('component-*.json'):
+            try:
+                session = json.loads(path.read_text())
+            except (OSError, ValueError):
+                continue  # 무관한 손상 원장이 새 업무의 도구 사용을 막지 않는다.
+            if not isinstance(session, dict) or not isinstance(session.get('component_scope'), dict):
+                continue
+            scope = session['component_scope']
+            if scope.get('task') == turn.task and scope.get('agent') == turn.agent:
+                candidates.append(session)
+        candidates.sort(key=lambda s: s.get('created_at', ''), reverse=True)
+    for session in candidates:
+        scope = session['component_scope']
+        same_task = scope.get('task') == turn.task
+        same_conversation = (who['conversation'] is not None
+                             and scope.get('conversation') == who['conversation'])
+        if scope.get('agent') != turn.agent or not (same_task or requested and same_conversation):
+            raise PermissionError('부품 수리 사본의 작업·행위자·대화가 현재 실행과 다릅니다')
+        turn.component_attempt = max(turn.component_attempt, scope.get('attempt', 0))
+        if session.get('status') == 'discarded':
+            if requested:
+                raise ValueError('폐기한 부품 수리 사본은 다시 적용하지 않습니다')
+            continue
+        turn.component_session = session['key']
+        turn.component_paths.clear()
+        from runtime_utils import get_code_root
+        allowed = {s['source'] for s in runtime.registry(get_code_root()).values()}
+        for rec in session.get('files', {}).values():
+            if rec['rel'] in allowed:
+                turn.component_paths.add(str(st._candidate.target(repo / session['worktree'], rec['rel'])))
+        return session
+    return None
+
+
 def handle(handler, payload, context):
     if handler._red_grant_active():
         return None
@@ -58,6 +110,15 @@ def handle(handler, payload, context):
     repo = Path(handler._REPO_ROOT).resolve()
     st = handler._staging_mod()
     name = context.tool_name
+    if name not in {'patch_op', 'read_file', 'read_op', 'write_file', 'edit_file'}:
+        return None
+    if name == 'patch_op' and payload.get('key'):
+        restore_session(st, repo, turn, payload['key'])
+        if turn.component_session != payload['key']:
+            return None  # 광역 수리 키를 현재 부품 사본으로 바꿔 적용하지 않는다.
+    elif not turn.component_session and not turn.component_restore_checked:
+        restore_session(st, repo, turn)
+        turn.component_restore_checked = True
     if name == 'patch_op' and turn.component_session and payload.get('op') in {'apply', 'status', 'discard'}:
         with st._candidate.locked(str(repo), 'application'):
             if payload['op'] == 'apply':
@@ -65,6 +126,7 @@ def handle(handler, payload, context):
             elif payload['op'] == 'status':
                 session = st.read_session(str(repo), turn.component_session) or {}
                 result = {'success': True, 'component_repair': True,
+                          'key': session.get('key'), 'parent_request': (session.get('component_scope') or {}).get('request'),
                           'status': session.get('status'), 'worktree': session.get('worktree'),
                           'activation': session.get('component_activation'), 'commit': session.get('commit')}
             else:
@@ -72,7 +134,8 @@ def handle(handler, payload, context):
                 turn.component_session = ''
                 turn.component_paths.clear()
         return json.dumps(result, ensure_ascii=False)
-    if name not in {'read_file', 'read_op', 'write_file', 'edit_file'}:
+    proposing = name == 'patch_op' and payload.get('op', 'propose') == 'propose'
+    if not proposing and name not in {'read_file', 'read_op', 'write_file', 'edit_file'}:
         return None
     from runtime_utils import get_code_root, expand_body_path
     raw = handler._get_path(payload)
@@ -89,6 +152,18 @@ def handle(handler, payload, context):
                      (repo / session['worktree'] / s['source']).resolve()), None)
     if not spec:
         return None
+    if proposing:
+        if not payload.get('reason'):
+            raise ValueError('부품 수정의 reason(변경 근거)이 필요합니다')
+        if payload.get('content') is not None:
+            name = 'write_file'
+        elif payload.get('old_string') is not None and payload.get('new_string') is not None:
+            name = 'edit_file'
+        else:
+            raise ValueError('변경 내용이 필요합니다: content 또는 old_string+new_string')
+        from copy import copy
+        context = copy(context)
+        context.tool_name = name
     writing = name in {'write_file', 'edit_file'}
     if session and session.get('status') in {'applied', 'discarded'}:
         if not writing:
@@ -103,13 +178,19 @@ def handle(handler, payload, context):
         raise PermissionError('이 몸의 부품 수리 제한 실행은 미지원입니다')
     if not turn.component_session:
         turn.component_attempt += 1
-        turn.component_session = st.task_key(f'component-{turn.task}-{turn.component_attempt}')
+        seed = f'{turn.agent}\0{turn.task}\0{turn.component_attempt}'.encode()
+        turn.component_session = 'component-' + runtime.sha(seed)[:32]
     with st._candidate.locked(str(repo), 'application'):
         candidate = st.stage_file(str(repo), turn.component_session, str(repo / spec['source']))
         if not candidate:
             raise PermissionError('부품 수리 사본을 만들지 못했습니다')
         candidate = st._candidate.target(repo / st.read_session(str(repo), turn.component_session)['worktree'], spec['source'])
         turn.component_paths.add(str(candidate.resolve()))
+        session = st.read_session(str(repo), turn.component_session)
+        if 'component_scope' not in session:
+            session['component_scope'] = {**identity(turn), 'request': turn.request,
+                                          'attempt': turn.component_attempt}
+            st._save_session(str(repo), session)
         # 기존 파일 편집·읽기·줄 범위·불일치 진단을 재사용한다.
         mapped = {**payload, 'path': str(candidate), 'file_path': str(candidate)}
         result = handler._execute(mapped, context)
@@ -125,6 +206,7 @@ def handle(handler, payload, context):
                     obj = {'success': True}
                 if obj.get('success', True) and not obj.get('error'):
                     obj.update(staged=True, path=str(candidate), live_path=str(repo / spec['source']),
+                               key=turn.component_session,
                                component=spec['id'], message='부품 사본 수정. self:patch apply가 고정 검사·반영·무재기동 활성화를 수행합니다. 이후 원래 업무를 계속하세요.')
                     return json.dumps(obj, ensure_ascii=False)
         return result
@@ -232,5 +314,6 @@ def finish(handler, repo, session):
                                                      'phase': 'complete' if committed.get('success') else 'commit_pending'})
         versions.append({'component': spec['id'], 'version': version})
     return {'success': bool(committed.get('success')), 'applied': True,
+            'key': session['key'], 'parent_request': (session.get('component_scope') or {}).get('request'),
             'activated': True, 'restart_required': False, 'versions': versions, 'commit': committed,
             'message': '부품 판본을 활성화했습니다. 원래 업무를 이어가 결과를 확인하세요.'}

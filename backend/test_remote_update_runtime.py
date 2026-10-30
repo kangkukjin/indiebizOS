@@ -54,6 +54,46 @@ def test_actual_checkout_process_blocks_mutation_but_other_checkout_does_not(tmp
         p.wait(timeout=5)
 
 
+def test_unresolvable_argv_operand_does_not_abort_process_scan(tmp_path, monkeypatch):
+    # Windows: resolving \\.\pipe\... argv of another app raises WinError 231.
+    real_resolve = Path.resolve
+
+    def resolve(self, *a, **kw):
+        if 'pipe' in self.parts:
+            raise OSError(231, 'All pipe instances are busy')
+        return real_resolve(self, *a, **kw)
+
+    monkeypatch.setattr(Path, 'resolve', resolve)
+    assert lifecycle._arg_paths(tmp_path, ['--flag', 'pipe/x', 'api.py']) == [str(tmp_path / 'api.py')]
+
+
+def test_process_scan_ignores_pipe_operand_but_still_finds_target_backend(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    root = tmp_path.resolve()
+    real_resolve = Path.resolve
+
+    def resolve(self, *args, **kwargs):
+        if 'pipe' in self.parts:
+            raise OSError(231, 'All pipe instances are busy')
+        return real_resolve(self, *args, **kwargs)
+
+    def process(pid, argv):
+        return SimpleNamespace(pid=pid, cmdline=lambda: argv, cwd=lambda: str(root),
+                               exe=lambda: str(root / 'python.exe'))
+
+    monkeypatch.setattr(Path, 'resolve', resolve)
+    monkeypatch.setattr(lifecycle.psutil, 'process_iter', lambda: iter([
+        process(70001, ['chrome', 'pipe/chrome.nativeMessaging']),
+        process(70002, ['python', 'pipe/unrelated', 'backend/api.py']),
+        process(70003, ['python', str(root / 'other/backend/api.py')]),
+    ]))
+    monkeypatch.setattr(lifecycle, 'identity', lambda pid: {'pid': pid, 'born': 1})
+    assert lifecycle.processes(root) == [
+        {'identity': {'pid': 70002, 'born': 1}, 'desktop': False, 'launcher': False}]
+    with pytest.raises(ValueError, match='still running; no files changed: 70002'):
+        lifecycle.stopped(root)
+
+
 def test_legacy_desktop_and_controller_are_rejected_before_maintenance(tmp_path, monkeypatch):
     monkeypatch.setattr(lifecycle, 'processes', lambda root: [{'identity': {'pid': 999999, 'born': 1}, 'desktop': True}])
     with pytest.raises(ValueError, match='no update handshake'):

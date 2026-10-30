@@ -8,7 +8,10 @@ silently relaunched. Receipts contain process identities, not credentials.
 import sys
 import os
 from pathlib import Path
-sys.path.insert(0, str(Path(os.environ.get('INDIEBIZ_UPDATE_ROOT', Path(__file__).resolve().parents[1])) / 'backend'))
+_backend = Path(__file__).resolve().parents[1] / 'backend'
+if not (_backend / 'boot_paths.py').is_file() and os.environ.get('INDIEBIZ_UPDATE_ROOT'):
+    _backend = Path(os.environ['INDIEBIZ_UPDATE_ROOT']) / 'backend'
+sys.path.insert(0, str(_backend))
 import boot_paths  # noqa: F401,E402
 
 import argparse
@@ -29,6 +32,19 @@ def desktop_path(root):
     return root / 'data/runtime/electron-update.json'
 
 
+def _arg_paths(cwd, argv):
+    """Resolve argv operands; skip ones the OS cannot resolve (e.g. Windows named pipes)."""
+    paths = []
+    for a in argv:
+        if a.startswith('-'):
+            continue
+        try:
+            paths.append(str((cwd / a).resolve()))
+        except (OSError, ValueError):
+            continue
+    return paths
+
+
 def processes(root):
     """Exact checkout paths/working directories, never process-name-wide kills."""
     frontend = root / 'frontend'
@@ -40,7 +56,7 @@ def processes(root):
             argv, cwd, exe = p.cmdline(), Path(p.cwd()).resolve(), Path(p.exe()).resolve()
             if not argv:
                 continue
-            args = [str((cwd / a).resolve()) for a in argv[1:] if not a.startswith('-')]
+            args = _arg_paths(cwd, argv[1:])
             backend = str(root / 'backend/api.py') in args
             launcher = str(root / 'start.sh') in args
             desktop = (frontend / 'node_modules/electron') in exe.parents

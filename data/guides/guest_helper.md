@@ -155,11 +155,11 @@ return [fn:외부PC작업실행]{PC:$준비.limb,준비:$준비,명령:"python3 
 - 실행기 시간제한은 단계별 제한이다. guestpc의 전체 실행제한도 별도로 넉넉히 둔다.
   로그·계획에는 비밀을 넣지 않는다. 각 단계의 성공은 선언한 명령·검증에 한정된다.
 
-**IndieBiz 설치·업데이트·부팅 검증**: 기존 저장소 업데이트는 `scripts/remote_install.py`로
-계획을 만들고 `scripts/remote_steps.py`로 실행한다. 새 설치는 `scripts/bootstrap.py`를 사용한다.
-작업 종료 대기→앱 정상 종료→갱신→기존 실행 상태 복원 순서다. 구형 앱·미저장 편집은 강제 종료하지 않는다.
-상주 PC의 `self:limb list+limb`는 조종실과 같은 `helper` 판정(서명 배포본 기준)을 준다. 상세 절차는
-[원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다.
+**IndieBiz 설치·업데이트**: 새 설치는 `scripts/bootstrap.py`, 갱신은 `scripts/remote_install.py`로
+계획을 만들고 `scripts/remote_steps.py`로 실행한다. 종료 대기→정상 종료→갱신→실행 복원과
+원격용 도구의 `outputs/` 사본 준비는 [원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다.
+구형 앱·미저장 편집은 강제 종료하지 않는다. 상주 PC의 `self:limb list+limb`는 조종실과 같은
+`helper` 판정(서명 배포본 기준)을 준다. 원격용 도구 수정은 중앙 정본 대신 작업 사본에서 한다.
 
 현지 AI 위임에는 목표·절대 저장소 경로·계획·검증 조건을 전달하고 결과·로그를 확인한다.
 기존 위임 채널만 쓰며 새 에이전트 설치·인증은 가정하지 않는다.

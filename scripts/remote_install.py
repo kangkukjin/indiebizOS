@@ -8,7 +8,11 @@ import sys
 import os
 from pathlib import Path
 
-sys.path.insert(0, str(Path(os.environ.get('INDIEBIZ_UPDATE_ROOT', Path(__file__).resolve().parents[1])) / "backend"))
+_backend = Path(__file__).resolve().parents[1] / "backend"
+# Existing flat drivers still carry this root in their persisted plan.
+if not (_backend / 'boot_paths.py').is_file() and os.environ.get('INDIEBIZ_UPDATE_ROOT'):
+    _backend = Path(os.environ['INDIEBIZ_UPDATE_ROOT']) / 'backend'
+sys.path.insert(0, str(_backend))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import boot_paths  # noqa: F401,E402
 
@@ -18,6 +22,36 @@ import json
 import shutil
 import subprocess
 import uuid
+
+# A portable working copy, not a checkout or a second running IndieBiz instance.
+TOOL_FILES = (
+    'scripts/remote_install.py', 'scripts/remote_update_runtime.py',
+    'scripts/remote_boot.py', 'scripts/remote_steps.py',
+    'backend/boot_paths.py', 'backend/datastore/function_store.py',
+    'backend/base/restart_process.py', 'backend/base/restart_protocol.py',
+    'backend/base/update_maintenance.py', 'backend/common/completion_contract.py',
+)
+
+
+def copy_tools(destination):
+    """Copy the recipe and its read/control dependencies without mutable links."""
+    source = Path(__file__).resolve().parents[1]
+    destination.mkdir(parents=True, exist_ok=False)
+    for name in TOOL_FILES:
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source / name, target)
+    return destination
+
+
+def stage_tools(root, destination):
+    """Prepare editable remote tools under outputs, outside the live code inventory."""
+    destination = destination.resolve()
+    outputs = root.resolve() / 'outputs'
+    if outputs not in destination.parents:
+        raise ValueError('Tool working copies must be inside --root/outputs')
+    copy_tools(destination)
+    return {'workspace': str(destination), 'files': list(TOOL_FILES)}
 
 # Whole-file build outputs only. Translation memory and source documents can
 # contain human edits; they must never be treated as disposable build output.
@@ -154,12 +188,9 @@ def make_plan(root, run_id, python, npm):
     # The updater must survive replacement of its own source checkout. Keep the
     # driver used by this plan for resumed steps and later runtime restoration.
     driver = backup_root(root) / 'driver'
-    driver.mkdir()
-    for name in ('remote_install.py', 'remote_update_runtime.py', 'remote_boot.py'):
-        shutil.copy2(Path(__file__).parent / name, driver / name)
-    shutil.copy2(Path(__file__).resolve().parents[1] / 'backend/base/update_maintenance.py', driver / 'update_maintenance.py')
-    script = str(driver / "remote_install.py")
-    lifecycle = [python, str(driver / 'remote_update_runtime.py')]
+    copy_tools(driver)
+    script = str(driver / "scripts/remote_install.py")
+    lifecycle = [python, str(driver / 'scripts/remote_update_runtime.py')]
     vpy = str(root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python3"))
     env = {"PATH": str(Path(npm).parent) + os.pathsep + os.environ.get("PATH", ""),
            "PIP_NO_INPUT": "1", "GIT_TERMINAL_PROMPT": "0",
@@ -200,7 +231,7 @@ def make_plan(root, run_id, python, npm):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("op", choices=["plan", "preflight", "update", "packages", "verify-head", "venv"])
+    parser.add_argument("op", choices=["stage-tools", "plan", "preflight", "update", "packages", "verify-head", "venv"])
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--run-id", default="")
     parser.add_argument("--npm", default=shutil.which("npm") or "")
@@ -208,7 +239,11 @@ def main():
     args = parser.parse_args()
     root = args.root.resolve()
     try:
-        if args.op == "plan":
+        if args.op == "stage-tools":
+            if not args.output:
+                raise ValueError('--output required')
+            print(json.dumps(stage_tools(root, args.output), ensure_ascii=False))
+        elif args.op == "plan":
             if not args.output or not args.run_id or not Path(args.npm).is_absolute():
                 raise ValueError("--output, --run-id and absolute --npm required")
             plan = make_plan(root, args.run_id, sys.executable, args.npm)

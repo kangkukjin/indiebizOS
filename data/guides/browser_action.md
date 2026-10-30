@@ -183,11 +183,12 @@ Chrome MCP는 사용자의 실제 Chrome 브라우저를 WebSocket으로 원격 
 ```
 
 ### 연결 후 사용
-연결 상태에서 `driver: "auto"` 또는 `driver: "chrome"`인 액션은 모두 실제 Chrome으로 라우팅된다.
+Chrome을 사용할 때는 `driver:"chrome"`을 명시한다. `auto`는 위 드라이버 선택 표의
+내장 브라우저 우선·작업별 고정 규칙을 따르므로 Chrome 연결만으로 대상이 바뀌지 않는다.
 
 ```
 [limbs:browser]{op: "chrome", mode: "connect"}
-[limbs:browser]{op: "navigate", url: "https://..."}       # 실제 Chrome에 열림
+[limbs:browser]{op: "navigate", url: "https://...", driver: "chrome"} # 실제 Chrome에 열림
 [limbs:browser]{op: "snapshot"}                           # Chrome의 ref 트리
 [limbs:browser]{op: "click", ref: "e1"}                           # 실제 Chrome 클릭
 ```
@@ -275,36 +276,13 @@ Chrome MCP는 사용자의 실제 Chrome 브라우저를 WebSocket으로 원격 
 4. Chrome MCP면 `[limbs:browser]{op: "find", query: "..."}`로 자연어 검색 가능
 
 ### 콘텐츠 추출 실패 / 빈 페이지
-→ v5.0에서 `[limbs:browser]{op: "content"}`가 4단계 폴백 자동 시도:
+→ Playwright의 `[limbs:browser]{op: "content"}`는 4단계 폴백을 자동 시도:
 1. Playwright inner_text → 2. JS innerText → 3. JS textContent → 4. Readability (article/main 영역)
 → 모든 방법이 실패하면 진단 정보가 반환됨 (봇 차단 징후, SPA 여부 등)
 → 이 경우 `[limbs:browser]{op: "evaluate"}`로 직접 JS를 실행하거나, 브라우저를 포기하고 다른 방법 사용
 
 ### 클릭 후 새 페이지/팝업이 열렸을 때
 → `[limbs:browser]{op: "tab", mode: "list"}`로 새 탭 확인 → `[limbs:browser]{op: "tab", mode: "switch", tab_id: "..."}`로 전환
-
----
-
-## v5.0 주요 변경사항
-
-### navigate 개선
-- 동적 콘텐츠 스마트 대기: `domcontentloaded` 후 자동으로 `networkidle` + body 텍스트 안정화 폴링 (최대 3초)
-- 빈 페이지 경고: 텍스트 50자 미만이면 "JS 렌더링/봇 차단" 경고 반환
-- `content_length` 힌트 포함
-
-### browser_content 개선
-- 4단계 폴백 추출 (위 참조)
-- 모든 단계에 타임아웃 적용 (절대 무한 대기 불가)
-- 빈 페이지 진단 기능 (봇 차단 징후, SPA 여부 자동 분석)
-
-### snapshot 개선
-- CDP 전체 작업 10초 타임아웃
-- CDP 실패 시 JS 폴백 (interactive 요소 수집)
-- 개별 노드 조회 0.5초 타임아웃, 최대 100개
-
-### IBL 엔진 레벨 보호
-- 모든 async 도구 실행에 60초 타임아웃 (엔진이 멈추는 일 방지)
-- 병렬 실행 브랜치별 90초 타임아웃 (한 브랜치 hang → 해당 브랜치만 에러)
 
 ---
 
@@ -403,25 +381,6 @@ $first = [limbs:browser]{op: "navigate", url: "site-a.com/product"}
 ```
 
 ---
-
-## 통합 전 액션명 → 새 op 매핑 (참고)
-
-옛 코드·메모에서 다음 액션이 보이면 파서가 자동으로 새 형태로 정규화한다. 새 코드는 단일 액션 + op 파라미터만 쓰면 된다.
-
-| 옛 이름 | 새 형태 |
-|---|---|
-| `[limbs:browser]{op: "tab", mode: "list"}` | `[limbs:browser]{op: "tab", mode: "list"}` |
-| `[limbs:browser]{op: "tab", mode: "new", url}` | `[limbs:browser]{op: "tab", mode: "new", url}` |
-| `[limbs:browser]{op: "tab", mode: "switch", tab_id}` | `[limbs:browser]{op: "tab", mode: "switch", tab_id}` |
-| `[limbs:browser]{op: "tab", mode: "close"}` | `[limbs:browser]{op: "tab", mode: "close"}` |
-| `[limbs:browser]{op: "iframe", mode: "list"}` | `[limbs:browser]{op: "iframe", mode: "list"}` |
-| `[limbs:browser]{op: "iframe", mode: "switch", name/index/url}` | `[limbs:browser]{op: "iframe", mode: "switch", ...}` |
-| `[limbs:browser]{op: "iframe", mode: "reset"}` | `[limbs:browser]{op: "iframe", mode: "reset"}` |
-| `[limbs:browser]{op: "cookies", mode: "save", name}` | `[limbs:browser]{op: "cookies", mode: "save", name}` |
-| `[limbs:browser]{op: "cookies", mode: "load", name}` | `[limbs:browser]{op: "cookies", mode: "load", name}` |
-| `[limbs:browser]{op: "chrome", mode: "connect", url?}` | `[limbs:browser]{op: "chrome", mode: "connect", url?}` |
-| `[limbs:browser]{op: "chrome", mode: "disconnect"}` | `[limbs:browser]{op: "chrome", mode: "disconnect"}` |
-| `[limbs:browser]{op: "chrome", mode: "status"}` | `[limbs:browser]{op: "chrome", mode: "status"}` |
 
 ## 대상이 사라졌을 때
 

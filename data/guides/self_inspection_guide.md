@@ -37,7 +37,7 @@
 - "어제" → 1일
 - "지난 주" → 7일
 - "지난 N일/주" → 그대로
-- "전부" → 전체 episode_log (최대 100개)
+- "전부" → 전체 기간을 대상으로 집계하고, 상세 에피소드는 최대 100개 표본으로 조사. 표본을 전수라고 보고하지 않는다.
 
 ---
 
@@ -46,7 +46,7 @@
 원장은 **`[sense:sqlite]`(읽기 전용 SQL, 2026-09-05)** 로 문장 안에서 읽는다 — 결과가 items 라 `>> [table:filter]/[table:groupby]` 로 바로 흐르고, 셸 `sqlite3` 로 나가면 그 값이 다음 IBL 문장에 손으로 되찍히는 이음매가 생긴다. 표·열을 모르면 `op:"tables"`→`op:"schema"` 먼저. 다음이 주요 데이터 소스:
 
 ### A. episode_log (가장 중요)
-모든 사용자 요청의 실행 흐름 — 분류·의식·도구 호출·결과·평가 다 들어있음.
+사용자 요청의 실행 흐름을 조회한다. 중단·누락·잘린 로그가 있을 수 있으므로 기록 부재를 실행 부재로 해석하지 않는다.
 
 ```ibl
 [sense:sqlite]{path: "~workspace/data/world_pulse.db", query: "SELECT id, started_at, agent, substr(user_message, 1, 80) AS msg, length(log) AS log_len, total_ms FROM episode_log WHERE started_at > datetime('now', '-7 days') ORDER BY id DESC", limit: 50}
@@ -81,29 +81,28 @@ episode memory, 정확한 실행 순서는 trajectory, 세부 원문이 정말 �
 [sense:sqlite]{path: "~workspace/data/world_pulse.db", query: "SELECT node, action, success, error_message, timestamp FROM self_checks WHERE timestamp > datetime('now', '-7 days') ORDER BY id DESC", limit: 200}
 ```
 
-(또는 직접 트리거: `[sense:self_check]` IBL 액션 = `run_daily_health_check`, 혹은 `python scripts/ibl_health_check.py` 단독 실행)
-
-### D. 시스템 AI 메모리
-시스템 AI의 자체 메모리 (이전 점검 보고서 등이 여기 누적).
-
-```bash
-sqlite3 data/system_ai_memory.db "
-SELECT id, category, substr(content, 1, 100) AS content, created_at
-FROM memory
-ORDER BY id DESC LIMIT 30;
-"
+실사용 실패는 별도 원장 `action_health`다:
+```ibl
+[sense:self_check]{op:"results",source:"usage",limit:200}
 ```
+위 호출은 최근 기록 표본이다. 기간 전체의 빈도·응답시간은 `action_health`에서
+`source='usage'`를 지정해 SQL 집계한다. `self_checks` 결과와 섞지 않는다.
+점검 실행은 `sense:self_check`의 실행 경로 또는 `scripts/ibl_health_check.py`를 사용한다.
+대기만 끝났다면 접수증으로 같은 작업의 결과를 회수하고 다시 실행하지 않는다.
+
+### D. 시스템 AI 대화와 이전 보고서
+
+시스템 AI의 대화 원장은 `data/system_ai_memory.db`의 `conversations`다.
+프로젝트 대화와 경로가 다르므로 `self:recent_chats`의 빈 결과만으로 대화가 없다고 판단하지 않는다.
+직접 SQL 조회가 필요하면 `sense:sqlite`의 `tables/schema`로 현재 열을 확인하고 필요한 기간만 읽는다.
 
 ### E. 심층 메모리 (사용자에 대한 사실)
-중복·모순 검사용.
 
-기억은 주제 가지 트리(프롬프트 `<memory_map>` 목차)에 있다 — `[self:memory]{op: "recall", node: "<가지>"}` 로 가지를 열고(생략=지도), `search` 는 가지를 모를 때: `[self:memory]{op: "search", query: "키워드"}` 또는:
-```bash
-sqlite3 data/system_ai_memory.db "
-SELECT id, keywords, substr(content, 1, 100) AS content
-FROM deep_memory ORDER BY id DESC LIMIT 50;
-"
-```
+중복·모순은 `[self:memory]{op:"recall",node:"<가지>"}`로 해당 가지를 열어 확인한다.
+가지를 모르면 `op:"recall"`로 지도를 보거나 `op:"search",query:"키워드"`로 찾는다.
+시스템 AI 기억은 `data/system_ai_state/memory_system_ai.db`, 프로젝트 기억은 각 프로젝트의
+`memory_*.db`로 격리된다. 시스템 대화 DB 하나로 전체 기억을 점검하지 않는다.
+기억 구조·보존 정책의 정본은 [memory.md](../system_docs/memory.md)다.
 
 ### F. 가이드 파일들
 ```bash
@@ -115,7 +114,7 @@ ls -la data/guides/*.md
 ```bash
 ls -la data/common_prompts/*.md
 ```
-역할·의식·평가·무의식 프롬프트들.
+역할·의식·평가·무의식 프롬프트와 `data/common_prompts/fragments/`의 조각들. 실제 조립은 `backend/cognition/prompt_builder.py`에서 확인한다.
 
 ### H. IBL 노드 정의
 ```bash
@@ -144,29 +143,19 @@ wc -l data/ibl_nodes.yaml
 - IBL 코드가 syntax error로 자주 깨지는 패턴
 
 **데이터 수집:**
-```bash
-# episode_log에서 IBL_DEBUG 라인 추출 → 액션별 빈도·실패율 집계
-sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE started_at > datetime('now', '-7 days');" | \
-  grep -E "IBL_DEBUG|execute_ibl" | head -200
-
-# self_checks 테이블에서 최근 실패 액션 목록 (자동 자가점검 결과)
-sqlite3 data/world_pulse.db "
-SELECT node, action, COUNT(*) AS fail_cnt, MAX(timestamp) AS last_at,
-       substr(error_message, 1, 120) AS err
-FROM self_checks
-WHERE success = 0 AND timestamp > datetime('now', '-7 days')
-GROUP BY node, action, substr(error_message, 1, 120)
-ORDER BY fail_cnt DESC;
-"
+```ibl
+[sense:sqlite]{path:"~workspace/data/world_pulse.db",query:"SELECT node, action, COUNT(*) AS fail_cnt, MAX(timestamp) AS last_at, substr(error, 1, 120) AS err FROM action_health WHERE source = 'usage' AND success = 0 AND timestamp > datetime('now', '-7 days') GROUP BY node, action, substr(error, 1, 120) ORDER BY fail_cnt DESC",limit:200}
 ```
+호출 수·실패율의 분모도 같은 기간·출처로 집계한다. 문법·조합 실패는 해당 에피소드의
+궤적·원문을 대조하며, 로그 문자열 출현 횟수를 실제 호출 수로 곧바로 세지 않는다.
 
 **검증 절차 (실패 액션 재시도)**
 
 위 신호로 잡힌 실패 액션은 보고 전 다음 절차로 검증한다. 단순히 "N회 실패" 보고에서 끝내지 말고, **진짜 고장인지 / 쉽게 고칠 수 있는지**까지 분류해야 보고가 행동 가능한 정보가 된다.
 
 1. **idempotent 판단**
-   - 안전 (재시도 OK): `sense:*`, `self:search_*` 등 모든 read-only 조회 액션
-   - 금지 (원본 로그만 보고): `others:send_*`, `limbs:write_*`, `limbs:exec_*` 등 외부에 메시지를 보내거나 파일·DB를 쓰는 부수효과 액션
+   - 재시도 가능: 현재 계약과 인자를 확인해 읽기 전용이며 반복 비용·영향이 허용되는 조회
+   - 원본 로그만 확인: 메시지 전송·파일/DB 쓰기·명령 실행 등 부수효과가 있는 호출. 노드 이름만으로 읽기 전용을 판정하지 않는다.
    - 애매하면 재시도하지 않고 원본 로그만 인용 + `[난이도: 미상]` 표시
 
 2. **재실행 분류** (idempotent 액션만)
@@ -203,14 +192,8 @@ ORDER BY fail_cnt DESC;
 - 증류된 패턴 중 거의 retrieve 안 되는 것
 - 사용자가 같은 질문을 반복했는데 해마 점수가 일관되게 낮음 (학습 누락)
 
-**데이터 수집:**
-```bash
-# 심층메모리 중복 후보
-sqlite3 data/system_ai_memory.db "
-SELECT keywords, COUNT(*) as cnt
-FROM deep_memory GROUP BY keywords HAVING cnt > 1 ORDER BY cnt DESC;
-"
-```
+**검증:** 같은 주제의 기억을 출처·날짜·적용 범위와 함께 비교한다. 표현이 비슷해도
+다른 시점·대상의 사실일 수 있다. 참조 횟수와 회상 점수만으로 삭제를 제안하지 않는다.
 
 ---
 
@@ -218,8 +201,8 @@ FROM deep_memory GROUP BY keywords HAVING cnt > 1 ORDER BY cnt DESC;
 
 **찾을 신호:**
 - consciousness_prompt가 지시한 JSON 형식이 깨진 의식 응답 빈도
-- evaluator의 ACHIEVED/NOT_ACHIEVED 비율 (NOT_ACHIEVED가 30% 이상이면 prompt 문제 가능)
-- 의식 에이전트가 achievement_criteria를 비워둔 케이스 빈도
+- 평가 실행 건의 ACHIEVED/NOT_ACHIEVED·UNKNOWN 비율과 실패 근거. 미실행은 제외하고, 검수 승인(review_status)과 목표 달성(goal_status)을 분리해 원문 기준으로 해석
+- 의식이 필요한 요청에서 달성 기준이 누락된 사례. 의식 없는 EXECUTE의 평가 생략은 정상 동작과 구분
 - 특정 도메인 에이전트의 일관된 품질 저하
 
 **파일들:**
@@ -246,7 +229,8 @@ FROM deep_memory GROUP BY keywords HAVING cnt > 1 ORDER BY cnt DESC;
 - 가이드에 적힌 IBL 액션이 현재 ibl_nodes.yaml에 없거나 시그니처 바뀜
 - 의식 에이전트가 highlight한 적 없는 가이드 (검토 대상)
 - 1개월 이상 ConsciousnessAgent 응답에 언급 안 된 가이드
-- 가이드끼리 내용 충돌
+- 가이드끼리 또는 같은 가이드 앞뒤의 내용 충돌
+- 과거 사건·중복 경고가 현재 절차를 가리는지, 필요한 예제와 실패 조건이 빠지지 않았는지
 
 **데이터 수집:**
 ```bash
@@ -255,6 +239,10 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
   grep -oE '"guide_files":\s*\[[^]]*\]' | sort | uniq -c | sort -rn
 ```
 
+가이드는 `_load_guide_file`이 호출될 때 파일을 직접 읽는다. 수정만으로 이미 전송된
+모델 입력까지 바뀌지는 않으므로, 적용 확인은 다음 조립 본문·내용 지문과 대조한다.
+가이드 수정만을 이유로 백엔드 재기동을 요구하지 않는다.
+
 ---
 
 ### 9. 인지 프로세스
@@ -262,134 +250,38 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 **찾을 신호:**
 - 분류 EXECUTE인데 짧은 시간 안에 같은 사용자가 후속 메시지로 보완 요청 (THINK였어야 함)
 - 분류 THINK인데 의식 frame이 사실상 비어있음 (EXECUTE면 충분했음)
-- GoalEval NOT_ACHIEVED 후 재실행해도 또 NOT_ACHIEVED (3라운드 다 소진)
-- REFLEX_SCORE_THRESHOLD(0.88) 부근 점수에서 잘못된 분기 (해마 hit인데 결과 부적합)
+- 최종평가의 한 번의 보완 뒤에도 기준 미달 또는 평가 불명. 평가 기준과 보완 인계가 일치하는지 확인
+- 무의식의 REFLEX 선택이 부적절하거나 전체 문맥 인계가 실패. 해마 유사도는 현재 분류의 우회 임계값이 아님
 - 같은 사용자 의도가 매번 다른 분류로 갈림 (분류기 일관성 문제)
 
 ---
 
-## 10. 어휘 진화 후보 (점검의 핵심 산출물)
+## 10. 개선 후보와 우선순위
 
-학습 누적 섹션의 정체성 선언에 따라, indiebizOS의 핵심 가치는 **누적된 어휘(IBL + 해마 + 가이드)** 이다. 따라서 자기 점검의 **가장 가치 있는 발견은 "어휘를 키울 기회" 의 식별**이다.
+[IBL 진화 목적](../../docs/IBL_EVOLUTION_PURPOSE.md)에 따라 결과 품질·실제 완료 시간·전체
+토큰 소비와 공통 능력을 기준으로 판단한다. 새 어휘 수나 가이드 수 자체를 성과로 세지 않는다.
+우선순위는 사용자 영향·반복성·근거의 확실성으로 정하며, 어휘 추가를 버그 수리보다 자동 우대하지 않는다.
 
-모든 점검에서 다음 신호를 **능동적으로** 찾고, 발견 시 다른 발견들보다 **한 단계 위 우선순위**로 보고하라. 단순 버그 발견보다 어휘 진화 후보가 indiebizOS의 정체성에 부합하는 발견이다.
+| 후보 | 관측할 신호 | 제안 방향 |
+|---|---|---|
+| 반복 조합의 재사용 | 같은 도구 순서를 매번 다시 작성·자가 보정 | 먼저 지역 함수·기존 관용구를 검토하고, 검증된 조합은 관용구로 보관. 외부 프로그램 절차는 `self:script` 등록 검토 |
+| 절차 안내 보강 | 같은 요청의 방법론을 반복 재발견하거나 같은 후속 질문 발생 | 기존 가이드에 적용 조건·누락 절차를 반영. 별도 작업일 때 새 가이드 검토 |
+| 정형 절차의 실행화 | 가이드의 동일 절차를 자주 실행 | 입력·반환·부작용·실패를 명시한 함수/스크립트로 구현하고 가이드는 선택·호출·예외를 설명 |
+| 기존 계약 수리 | 반복 파라미터 오용, 다루기 힘든 반환, 옛 예제·서로 다른 안내 | 소유하는 선언·핸들러·교재를 함께 수정. 비슷한 액션의 명명 충돌이면 공통 계약으로 합칠 수 있는지 확인 |
 
-### A. IBL 매크로 액션 후보 (조합 패턴 → 단일 어휘)
+새 액션은 기존 부품의 호출 순서만 묶는 것인지, 독립적인 새 능력이 필요한지 구별한다.
+추가가 필요할 때는 [새 액션 체크리스트](new_action_checklist.md)를 따른다.
+같은 현상이 여러 점검에서 반복되면 이전 관측과 연결하되, 후보 개수를 채우려고 만들지 않는다.
 
-**찾을 신호**:
-- 동일한 IBL 조합 패턴이 여러 에피소드에서 반복됨
-- 의식 에이전트가 같은 hint(파이프라인 형태)를 반복 생성
-- 한 에이전트가 매번 같은 도구 시퀀스를 자가 보정해서 만듦
-- 가이드에 명시된 절차가 매번 같은 IBL 조합으로 실행됨
-
-**제안 형식 예시**:
+**제안 예시:**
+```text
+관찰: 같은 자료 수집·정리 조합을 최근 7일 12회 다시 작성했고, 그중 4회 입력을 보정했다.
+해석: 재사용 가능한 값 전달 계약이 없어 매번 연결을 복원한다.
+제안: 공통 조합을 입력·반환·실패가 명시된 함수로 만들고, 검증 후 관용구로 보관한다.
+검증: 다른 입력과 후속 소비자에서도 같은 계약을 지키는지 확인한다.
+      같은 목표의 품질·시간·전체 토큰은 측정한 범위에서 비교한다.
+위험: 작업마다 다른 조건을 숨기거나 부분 실패를 전체 성공으로 바꾸지 않는다.
 ```
-[발견] `[sense:paper]{op:"search", source:"pubmed", q:X} & [sense:search]{q:X}` 조합이
-       의료 에이전트 최근 7일 12회 반복
-[해석] 의학 정보 다각도 검색을 매번 모델이 재구성. 토큰·시간 비용 누적.
-[제안] `[engines:medical_research]{query: ...}` 등록.   ← ★가상의 이름(제안 대상이지 실재 어휘 아님)
-       내부 구현: PubMed + DDG 병렬 + 결과 정리
-[검증] 등록 후 1주 — 의료 에이전트의 직접 호출이 매크로 호출로 대체되는지
-[위험] 매크로가 너무 좁으면 어휘 비대. 본 패턴은 3개 이상 에이전트가
-       쓰는지 확인 후 등록.
-```
-
-### B. 새 가이드 후보 (반복 절차 → 절차 메모리)
-
-**찾을 신호**:
-- 같은 종류의 task가 매번 처음부터 frame됨 (의식 에이전트 출력 구조 반복)
-- 사용자가 자주 묻는 영역인데 해당 가이드가 없음
-- 여러 에피소드의 task_framing이 사실상 같은 방법론을 재발견
-
-**제안 형식 예시**:
-```
-[발견] "복약 상호작용 분석" 종류 질문이 N회, frame 구조 일관됨
-[제안] `data/guides/medication_interaction_guide.md` 생성.
-       핵심 절차: 약물 식별 → 상호작용 검색 → 부작용 검토.
-       데이터 소스: PubMed + DrugBank
-```
-
-### C. 가이드 흡수 → 액션 격상 후보 (절차 → 어휘)
-
-**찾을 신호**:
-- 특정 가이드가 자주 highlight되고 그 절차가 항상 유사하게 수행됨
-- 가이드 내용이 정형화된 IBL 파이프라인으로 환원 가능
-
-**제안 형식 예시**:
-```
-[발견] `newspaper_guide.md` 가 지난 30일 N회 highlight, 매번 동일한 5단계 절차
-[제안] 가이드 본문을 `[engines:newspaper_pipeline]` 매크로 액션으로 캡슐화.
-       가이드는 사용 예시집으로 축소.
-```
-
-> ★**이 예시는 실제로 일어났다** — 2026-07-23 에 신문 발행 레시피가 `[engines:newspaper]` 로 결정화됐습니다
-> (이름은 `newspaper_pipeline` 이 아니라 `newspaper`). 다만 뒷이야기가 교훈입니다: 그 액션은 2026-08-15 에
-> **스위치화**(`prompt_hidden`)됐습니다 — 오케스트레이션+조판은 낱말이 아니라 **문장**이고, 사전에 상주시킬
-> 값어치가 없었던 것입니다. 계기 버튼 전용으로 남았습니다. **결정화 제안을 낼 때는 "낱말이냐 문장이냐"를
-> 먼저 물으십시오**(§낱말 자격 판정: 가능성 공간에 새 차원을 더하는가, 아니면 기존 낱말의 호출 순서인가).
-> 절차라면 답은 새 액션이 아니라 `[self:script]` 등록입니다.
-
-### D. 기존 어휘 개선 후보 (액션·가이드 수정)
-
-신규 추가만이 진화가 아니다. 이미 있는 어휘를 다듬는 것도 진화. **자주 쓰이지만 매끄럽지 않은** 어휘를 찾아 다듬을 기회를 제안하라.
-
-**IBL 액션 수정 신호**:
-- 같은 액션이 같은 에러 패턴으로 자주 실패 (시그니처·검증·에러 메시지 부적정)
-- 파라미터 명명 불일치로 자가 보정 빈번 (district_code vs region_code 같은)
-- 의식 에이전트가 hint에서 액션 사용법을 매번 길게 설명 (시그니처가 직관적이지 않음)
-- 같은 결과를 얻으려고 매번 다른 파라미터 조합을 시도
-- 액션의 반환 형식이 후속 처리하기 어려움 (예: 파싱 매번 필요)
-
-**가이드 수정 신호**:
-- 가이드가 highlight되었으나 task가 자주 실패 또는 GoalEval NOT_ACHIEVED
-- 가이드 안의 IBL 액션 참조가 stale (시그니처·이름 변경됨)
-- 가이드가 다룬 시나리오 외 빈번한 변형이 episode_log에 등장 (커버리지 부족)
-- 가이드끼리 같은 주제에 다른 방법론 제시 (충돌 해소 필요)
-- 사용자가 자주 묻는 후속 질문이 가이드가 안 다룬 부분 (보강 필요)
-- 가이드의 예시가 시대에 안 맞음 (옛 모델·옛 API 사용 등)
-
-**제안 형식 예시 (액션 수정)**:
-```
-[발견] `[sense:house_rent]`이 `district_code` 잘못 쓰여 자가 보정 12회 발생
-[해석] `[sense:apt_rent]`는 `district_code`, `[sense:house_rent]`는 `region_code` —
-       명명 불일치가 매번 시간 낭비
-[제안] 두 액션 모두 `region_code`로 통일.
-       옛 명 `district_code`는 deprecation 경고와 함께 6개월 호환 유지
-[검증] 통일 후 1주 — 해당 자가 보정 빈도 감소 측정
-[위험] 외부에서 옛 명으로 호출하는 코드가 있으면 경고 발생 → 사용자가 정리
-```
-
-> ★**이 예시도 실제 사건이었고, 결말은 제안보다 나았다** — `sense:apt_rent`·`sense:house_rent` 는
-> 파라미터 이름을 통일하는 대신 **액션 자체가 `[sense:realty]{op:"query", source}` 하나로 합쳐졌습니다.**
-> 교훈: "두 액션의 파라미터 이름이 어긋난다"는 신호는 종종 *이름 문제*가 아니라 **두 액션이 사실 하나여야
-> 한다는 신호**입니다. 호환층을 6개월 끄는 제안을 내기 전에, 합칠 수 있는지부터 보십시오
-> (호환층은 전환 도구일 때만 정당하고, 그 자체가 목적이 되면 부채입니다).
-
-**제안 형식 예시 (가이드 수정)**:
-```
-[발견] `real_estate.md` 가이드 highlight 후에도 다가구 주택 영역에서 NOT_ACHIEVED 4회
-[해석] 가이드가 아파트(apt_*) 위주, 다가구 주인세대 같은 비-아파트 시나리오 미흡
-[제안] 가이드에 "다가구·단독주택 시세 조회" 섹션 추가.
-       핵심: 아파트 외 유형은 `[sense:realty]{source:"naver", type:"house"}` + search 조합.
-       시·군별 행정구역 매핑 표 포함
-[검증] 1주일 — 다가구·단독 관련 질문의 ACHIEVED 비율 측정
-[위험] 가이드가 길어짐 → 의식 에이전트의 컨텍스트 부담 약간 ↑
-```
-
----
-
-### 보고 시 표기
-
-위 네 카테고리의 발견은 보고서에서 **`[어휘진화]` 태그 + 우선순위 ★★★** 로 마킹하라:
-
-```
-## 발견 1 [어휘진화-A] (우선순위: ★★★)
-**관찰**: ...
-**해석**: ...
-**제안**: ...
-```
-
-→ 사용자가 보고서를 읽을 때 "이건 시스템 키우는 발견" 임을 즉시 인식하게 된다.
 
 ---
 
@@ -431,7 +323,7 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 
 ## 12. 절대 금지 (안전선)
 
-- **사용자 명시 승인 없이 코드·설정·DB 변경 금지** — 점검 단계에선 read-only. 단, idempotent IBL 액션(`sense:*`, `self:search_*` 등)의 1회 재시도는 관찰 행위로 허용 (섹션 4 검증 절차 참고)
+- **점검 요청만으로 코드·설정·DB를 변경하지 않는다.** 조회 재시도는 섹션 4의 계약·부수효과 판단을 따른다. 사용자가 수리를 요청한 경우 그 승인 범위에서 수리 절차로 진행한다.
 - 백업·git checkpoint 없이 변경 금지 (수정 단계에서)
 - 데이터 마이그레이션 같은 비가역 작업은 **제안만**, 직접 실행 절대 금지
 - 아키텍처 큰 결정(새 모듈, DB 스키마 변경, 새 provider 통합)은 보고만 — 사용자가 외부 Claude Code와 협의할 작업이라 명시
@@ -439,65 +331,11 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 
 ---
 
-## 13. 학습 누적 (시간이 지나며 채워짐)
+## 13. 관측의 누락과 점검 영향
 
-이전 점검에서 얻은 교훈·고정된 사실들이 여기 쌓인다. 이 가이드를 따를 때 참고한다.
-
-**누적 항목 형식**:
-```
-- [YYYY-MM-DD] [영역] 관찰·교훈 (이전 점검 보고서 ID 참조 가능)
-```
-
-**현재 누적**:
-
-- [2026-05-25] [정체성] indiebizOS의 핵심 가치는 **IBL 액션(언어) + 해마(패턴) + 가이드(절차)** 의 누적 어휘이다. 모델 파워(opus 등)는 commodity가 되어가지만 이 어휘는 사용자별로 시간이 쌓아올린 이전 불가능한 자산이다. 따라서 자기 점검의 우선순위는 **어휘의 정확성·일관성·풍부함을 보존·확장하는** 방향으로 정렬한다. 단순 버그픽스보다 어휘 건강에 영향을 주는 발견(IBL 액션 정의 명료화, 해마 학습 루프 신뢰성, 가이드의 현실 정합성 등)을 더 높은 우선순위로 보고한다.
-
-- [2026-05-25] [Read 휴리스틱] **자기가 직전 턴에 수정한 파일을 점검에서 다시 읽을 때**, 옛 범위 감각이 어긋난다 — 자기 patch로 함수가 길어졌다는 사실을 잊고 좁은 limit으로 읽어 본문이 잘림. 다음 순서로 읽어라:
-  1. `Grep` 으로 함수/클래스 시그니처 라인 찾기 (`pattern: "^def 함수명\|^class 클래스명"`, `-n: true`)
-  2. 종료 라인은 다음 같은 인덴트의 `def`/`class` 또는 파일 끝
-  3. `Read` 의 `offset`/`limit` 을 정확한 범위로 전달
-  - 대안 (빠른 휴리스틱): 자기 patch한 파일은 평소 추정 limit의 **1.5배**로 읽기. 잘리면 한 번 더 호출하는 게 토큰 손실보다 디버깅 손실이 큼.
-  - 출처: episode 206 (2026-05-25 19:21) — `agent_cognitive.py`의 `_classify_request` 검증 시 `offset=603 limit=45` 로 읽어 본문 끝부분(약 668줄)이 잘려 `offset=647 limit=25` 보충 호출 발생.
-
-- [2026-05-25] [방법론] 어휘 진화 후보 (섹션 10)는 4유형으로 구성된다:
-  - **A**: IBL 액션 신규 등록 (조합 패턴 → 매크로 어휘)
-  - **B**: 새 가이드 작성 (반복 frame → 절차 메모리)
-  - **C**: 가이드 → 액션 격상 (정형 절차의 어휘화)
-  - **D**: 기존 어휘 (액션·가이드) 수정 — 시그니처·파라미터·내용 다듬기
-
-  특히 **D는 점검 사이클이 누적되어야 드러나는 신호**다 — 한 번의 점검만으론 "이 파라미터가 매번 헷갈리는지" 판단하기 어렵고, 여러 점검에서 같은 신호가 반복돼야 명확해진다. 따라서:
-  - **첫 점검**: A·B 위주 발견. D는 적거나 0개. 정상.
-  - **시간이 지나면**: D 발견이 늘어남. 이는 시스템이 자기를 깊이 보고 있다는 신호.
-  - **D가 계속 0이면**: 신호 정의를 다듬을 시점. 13번 학습 누적의 새 항목으로 보강.
-
----
-
-## 마무리
-
-점검은 시스템이 자기 자신을 보는 행위이다. 무엇을 발견했는지보다 **무엇을 발견했다고 보고했는지** 가 중요하다. 사용자가 그 보고를 읽고 시스템을 어디로 키울지 결정한다.
-
-당신은 점검자이지 수리공이 아니다. 본 것을 정직하게 보고하라.
-
-## 실측 기록 (자동 누적)
-- 2026-09-14 실측: 에피소드 3782·3783은 호출 원문에서 관용구 사용이 확인됐지만 자동 통계에는 0회로 집계됐다.
-- 2026-09-14 실측: 통계 스크립트가 보고한 ‘문법 오류 39건’이 실제 실패 수와 일치하지 않았다. 오집계 원인은 제공된 기록에서 확정되지 않았다.
-- 2026-09-06 실측: `self_checks` 표에는 `__static__`·`__ibl_health__` 정적 점검 결과만 쌓여 있어(299행), node/action별 실패 집계를 돌려도 실사용 액션 이름은 한 건도 나오지 않는다.
-- 2026-09-06 실측: 액션별 실사용 호출수·실패·응답시간의 실제 원장은 `data/world_pulse.db` 의 `action_health` 표다(누적 53,239행). 여기서 n≥5 필터로 평균/최대 ms 집계가 바로 나온다.
-- 2026-09-01 실측: 자기수정 중 중단된 에피소드(ep2519)는 episode_log 행은 남지만 log 가 0바이트·ended_at/total_ms 가 NULL 이어서, 가이드의 주력 경로인 log 원문 grep 이 아예 대상이 없다
-- 2026-09-01 실측: 그 빈 로그 에피소드의 실제 진행은 관련 파일들의 mtime 을 에피소드 started_at 과 대조해 복원할 수 있었다(어느 파일이 그 턴에 실제로 쓰였는지 판정)
-- 2026-08-31 실측: `[sense:self_check]` 표면 호출은 120초에 먼저 종료돼도 백엔드 검사가 계속 실행될 수 있으며, 최종 결과는 회수 티켓으로 받아야 했다.
-- 2026-08-31 실측: 진단 중 잘못 작성한 필터 조건이 실패 기록 1건을 새로 남겨 점검 데이터 자체를 오염시킬 수 있었다.
-- 2026-08-28 실측: `[self:body]{op:"diff"}` 로 작업 트리 미커밋 변경(파일별 +/-)을 실측할 수 있다 — 가이드는 self:body 의 op 로 trajectory 만 적고 있어, 점검분과 기존 미커밋분을 구분할 때 이 op 를 몰라 grep 으로 돌 뻔했다.
-- 2026-08-28 실측: `[self:body]{op:"log"}` → `[table:filter]` 로 커밋을 추릴 때, 매칭 61건 중 상위 40건만 돌아오고 봉투가 `truncated: true` 를 신고한다 — 이 결과로 빈도·전수 집계를 하면 과소 계산된다(신고 플래그를 읽고 '전수 아님'을 명시해야 함).
-- 2026-08-28 실측: episode_log 원문의 tool_result 줄은 backend/providers/claude_code.py 의 _TOOLRESULT_CAP=300 으로 잘려 저장된다 — 최근 200 에피소드 4,094줄 중 2,279줄(55.7%)이 `…(+N자)` 표식을 달고 있어, 원문 grep으로 실패 원인을 캐면 증거의 절반 이상이 이미 소실된 상태다.
-- 2026-08-23 실측: `[sense:self_check]`에는 가이드가 적은 `run_daily_health_check` 트리거 외에 `{op:"results", source:"usage", limit:N}` 형태가 있고, 이쪽은 self_checks 테이블(정적·fixture·골든 결과)이 아니라 실사용 원장을 돌려준다 — 이번 턴 실패 6건/200건은 전부 이 경로에서만 보였다.
-- 2026-08-23 실측: `[self:body]{op:"diff"}` 로 미커밋 변경(13파일)을 IBL 안에서 바로 볼 수 있다 — 직전 턴에 제안만 했던 수정이 이미 라이브에 적용돼 있는지를 이걸로 분별했다.
-- 2026-08-23 실측: `pytest backend -m "not local"` 회귀 배터리가 '기존부터 실패하던 것'과 '이번에 내가 깬 것'을 가르는 기준선 역할을 했다. ★단 그때 '기존 실패'로 판정한 `test_repair_staging::test_battery_under_pytest` 1건은 **유령이었다** — 그 배터리의 S10 이 띄우는 실수행자가 진짜 몸(`/health`)에게 물어 "지금 도는 턴 있음"을 듣고 기다렸고, 그 턴은 이 pytest 가 끝나야 닫히므로 순환 대기로 180초 timeout 에 죽은 것이다. **턴 밖에서 돌리면 6.6초에 통과한다.** 수리 완료(수행자에게 닿지 않는 health URL 을 준다). ⇒ 자기 턴 안에서 돌린 배터리의 빨강은 시스템의 건강이 아니라 **관찰자 효과**일 수 있으니, '기존 실패'로 넘기기 전에 턴 밖 기준선과 대조할 것.
-- 2026-08-21 실측: MCP `mcp__indiebizos__execute_ibl` 로 `[self:read]`/`[self:grep]` 를 호출할 때 문장 안의 `project_id: "indiebizOS"` 는 해석되지 않아 '활성 프로젝트 경로를 확보할 수 없어' 에러가 났다 — 도구 인자 `project_path` 에 절대경로를 넘겨야 통했다.
-- 2026-08-21 실측: episode_log 의 `log` 컬럼에는 execute_ibl 호출 코드가 원문 그대로 남아, `>>`·`??`·블록 사용 건수를 grep 만으로 셀 수 있다 — 액션별 빈도/실패율뿐 아니라 '조합률' 통계를 같은 소스에서 바로 낼 수 있다.
-- 2026-08-20 실측: data/guides/*.md 를 고쳐도 러닝 백엔드엔 반영되지 않는다 — cognition/prompt_builder.py `_load_guide_file` 이 파일명 키로만 캐시하고 mtime 검사가 없어(줄 127-138 실측) 프로세스 재기동 전까지 옛 본문이 계속 주입된다. §8 가이드 점검에서 '고쳤다'와 '적용됐다'를 같은 것으로 보면 안 된다.
-
-> 실행 에이전트가 턴 종료 후 덧붙인다.
-- 2026-08-18 실측: data/system_ai_memory.db 의 시스템 AI 자기 대화는 `conversations` 테이블(2,540행)에 들어 있고 `messages` 테이블은 0행이다 — 자기 대화 조회는 conversations 를 봐야 한다
-- 2026-08-18 실측: 심층메모리는 단일 DB가 아니라 에이전트별 격리 DB(data/system_ai_state/memory_system_ai.db, projects/*/memory_*.db)에 흩어져 있어 한 DB 질의로는 전수 점검이 안 된다
-- 2026-08-18 실측: [self:recent_chats] 는 project_path 기반이라 시스템 AI 컨텍스트(project_path=data/)에서 data/conversations.db(0행)를 열고, 자기 대화가 든 data/system_ai_memory.db 를 못 본다
+- 자동 통계는 원문 표본과 대조한다. 잘린 로그·`truncated`·조회 limit·미관측값을 전수·0건으로 해석하지 않는다.
+- 로그가 비었거나 종료 시각이 없으면 궤적·쓰기 원장·`self:body diff`로 보완한다. 파일 mtime은 보조 단서이며 실행 주체의 증명이 아니다.
+- 함수·클래스는 현재 시그니처와 다음 같은 들여쓰기 경계를 찾아 본문 전체를 읽는다. 예전 줄 번호와 길이를 그대로 쓰지 않는다.
+- 진단 호출도 실행 기록·실패를 남길 수 있다. 실사용과 점검·훈련을 분리하고, 점검 자체가 기다리는 작업을 검사에서 다시 기다리는 순환 대기를 주의한다.
+- 코드 수리 후 검사는 [회귀 규약](../../docs/REGRESSION_TESTING.md)을 따른다. 같은 후보·환경의 통과 결과를 재사용하고, 점검 환경에서만 생긴 실패를 시스템 고장이나 기존 실패로 단정하지 않는다.
+- 새 교훈은 해당 절의 현재 지침에 통합한다. 사건별 수치·옛 상태는 [과거 관측 기록](../../docs/GUIDE_OBSERVATIONS_2026_10_30.md#자기-점검-실측)이나 해당 작업 기록에 남긴다.

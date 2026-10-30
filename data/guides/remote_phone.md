@@ -160,77 +160,16 @@ APK를 중앙 `/remote-pcs/phone-update`로 보내 **USB 설치·화면 확인 �
 근거: [Android 관리 기기 설정 조건](https://developer.android.com/work/guide#fully-managed-device),
 [PackageInstaller 관리 기기 설치 계약](https://developer.android.com/reference/android/content/pm/PackageInstaller).
 
-### 실기 검증 (2026-10-16)
+### 기기별 업데이트 확인
 
-예나폰(SM-A516N, Android 13, arm64)은 기존 등록·데이터를 유지한 USB 준비 설치 후,
-중앙 HTTPS 연결로 versionCode 4 → 5(0.5)를 전달하고 앱 자체 설치까지 완료했다.
-후속 갱신에는 ADB 전송·설치를 사용하지 않았다. 자동 재기동·인증된 재접속과 배포 APK의
-SHA-256 일치(`41813657b8f336a7b2602dd1cb62931f0295dc4b78469fadefd546814182b588`),
-`current` 상태 및 갱신 후 원격 Python 실행을 확인했다. 최초 설치 권한 준비 뒤 이 갱신은
-폰의 추가 확인 없이 진행됐다. arm32 APK는 빌드·발행만 확인했으며 삼성0에는 설치하지 않았다.
-다른 Android 버전의 실제 설치 확인 화면·무인 설치는 미검증이다.
-
-2026-10-17 후속 확인: 예나폰은 0.7에서 0.13까지 여러 차례 USB·폰의 추가 설치 확인 없이
-갱신했고, 각 인증된 재접속의 설치 해시가 발행 APK와 일치했다. 0.13 설치 해시는
-`412cfa6555469c5752f4ed6ab57b4e1383f6185b9a37162422ed6944b4dae3fc`다.
-접근성 최초 허용 뒤 반복 연결에 공유 승인이 없었고, 0.13에서 화면 깨우기·보안 패턴 입력
-영역의 3×3 배치 표시와 interactive=true/locked=true를 확인했다. PIN·패턴 인증 이후의
-일반 앱 조작은 소유자의 원격 입력 확인 전까지 미검증이다.
-
-실기에서 `ACQUIRE_CAUSES_WAKEUP`은 held=true여도 화면을 켜지 못했고, 깨우기 Activity를
-즉시 닫으면 다시 잠들었다. 따라서 정상 잠금 인증 요청이 끝날 때까지 Activity를 유지한다.
-예나폰의 보안 패턴 화면은 화면 본문만 검게 나오고 탐색 막대는 남으므로, 전체 이미지가
-완전 검정인지 검사하는 것만으로는 제한을 인식할 수 없다.
-
-삼성0(Android 16)은 0.7의 자체 업데이트에서
-`INSTALL_FAILED_ABORTED: Self update is blocked by unknown source package`로 거절됐다.
-알 수 없는 앱 설치 권한은 이미 허용됐고, 사용자가 보안 위험 자동 차단도 꺼져 있음을
-확인했다. 제조사 PackageInstaller의 별도 unknown-source 검사에서 나온 거절이다.
-후속 0.9 요청은 지연 뒤 실제 설치·재접속했고, 설치 출처가 기존 `com.android.shell`에서
-`com.indiebiz.phoneagent` 자체 설치자로 바뀐 것도 확인했다. 그러나 이어 보낸 0.13은
-같은 거절이 재현됐다. 따라서 자동 차단이나 최초 ADB 설치 출처만으로 원인을 단정하거나,
-한 번의 0.9 성공을 안정적인 무인 업데이트 완료로 보지 않는다. 시스템 설치 화면으로
-최신 APK를 교체하는 최초 준비와 그 이후 자체 업데이트 성공은 각각 확인해야 한다.
-삼성0에는 해시를 검증한 0.13 APK를 `다운로드/IndieBiz/IndieBiz-0.13.apk`에 준비했다.
-이 파일의 존재·전송 완료를 앱 설치 완료로 표시하지 않는다.
-
-### 어휘 정합 배포 확인 (2026-10-24, 0.18)
-
-중앙 정본에서 arm64·arm32 0.18을 빌드·발행했다. 두 APK의 Android 사전과 패키지
-선언·핸들러·tool.json 97개 파일이 정본과 일치하며, 어휘 빌드 검사와 관련 검사 72개가 통과했다.
-예나폰은 중앙 원격 업데이트로 0.14 → 0.18 설치·재접속·설치 해시 일치를 확인했다.
-실기 파일 97개 대조와 `[limbs:youtube]{op:"queue"}`·`[self:music]{op:"sources"}` 조회도 통과했다.
-공통 어휘의 이름·계약을 맞추되 Android 사전은 기존 몸별 필터를 적용하므로 PC 전체 사전과 같지는 않다.
-
-삼성0은 0.14에서 자체 업데이트가 `INSTALL_FAILED_ABORTED: Self update is blocked by unknown source package`로
-거절됐으나, 사용자가 USB를 연결한 뒤 동일한 arm64 배포본을 `adb install -r`로 설치했다.
-기존 등록을 유지한 0.18 재접속, 중앙 `current`·설치 해시 일치, 실기 파일 97개 일치와
-`[limbs:youtube]{op:"queue"}`·`[self:music]{op:"sources"}`의 실제 조회 성공을 확인했다.
-
-삼성1은 0.17에서 설치 전 APK 서명정보 읽기가 `apk_signer_missing`으로 실패했다.
-이는 서명 불일치 판정과 구별한다. 삼성1의 0.18 설치 완료는 아직 확인되지 않았다.
-검증된 수동 설치본은 삼성1의
-`Android/data/com.indiebiz.phoneagent/files/IndieBiz-0.18-arm32.apk`에 준비했다.
-삼성1은 공용 Download 쓰기 권한이 없어 앱 소유 외부 파일 폴더에 보관했다.
-직접 설치 후에도 중앙 `current`·설치 해시·실제 어휘를 재확인해야 한다.
-
-### Android 9 서명 조회 수리와 관리 기기 준비 (2026-10-24, 0.19–0.20)
-
-삼성1 실기에서 `GET_SIGNING_CERTIFICATES` 단독으로 APK를 읽으면 `signingInfo`가 비었지만,
-`GET_SIGNATURES`를 함께 요청하면 현재 서명이 정상 반환됨을 재현했다. API 28에만 두 옵션을
-함께 사용하도록 수정했고, 검증은 계속 `signingInfo.apkContentsSigners` 단일 서명을 사용한다.
-옛 서명 배열로 검증을 대체하거나 서명·버전·해시 검사를 생략하지 않는다. 설치된 0.19의
-실제 조회 옵션과 반환 서명 지문이 발행 서명과 일치하는 것을 삼성1에서 확인했다.
-
-삼성0·삼성1은 데이터 유지 USB 설치로 0.19의 재접속·배포 해시 일치와 각 97개 파일 일치,
-`limbs:youtube` 대기열·`self:music` 소스 조회를 확인했다. APK 두 ABI 빌드와 중앙 업데이트
-회귀 19개가 통과했다. 삼성0의 제조사 자체 설치 차단은 이 변경으로 해결된 것이 아니다.
-
-소유자는 **삼성1만** 관리 기기 전환을 선택했다. 삼성1에 선택적 관리 수신기와 본인 확인을
-거치는 권한 해제 화면을 포함한 0.20을 USB 설치했고 재접속·배포 해시 일치를 확인했다.
-Android 단위 검사 26개가 통과했다. `dpm set-device-owner`는 기존 계정이 있다는 OS 오류로
-거절됐다. 현재 계정 제거·관리 기기 설정·무인 APK 설치·재부팅 후 유지 검증은 미완료다.
-삼성0은 일반 앱 상태로 유지하며, 삼성1의 OS 설정 성공 전에는 무인 업데이트 완료로 보고하지 않는다.
+기기별 설치 성공·거절은 같은 ABI라도 다를 수 있다. `phone_update`와
+`capabilities.apk_update`에서 현재 설치 해시·권한·최근 시도를 확인한다.
+`INSTALL_FAILED_ABORTED`는 설치 거절, `apk_signer_missing`은 서명정보 조회 실패이며
+서명 불일치와 구별한다. 한 번의 성공이나 전송 완료로 안정적인 무인 설치를 단정하지 않는다.
+Device Owner 전환은 선택한 기기에만 적용하고, OS 설정·실제 업데이트·재부팅 후 유지를 각각 확인한다.
+기존 사용자 선택은 삼성1만 관리 기기 전환, 삼성0은 일반 앱 유지다. 별도 변경 지시 전까지 이 범위를 유지한다.
+과거 기기별 버전·해시·미완료 상태는 [배포 관측 기록](../../docs/GUIDE_OBSERVATIONS_2026_10_30.md#원격폰-배포와-실기-검증)에 보존한다.
+현재 상태는 그 기록의 마지막 날짜로 추정하지 말고 다시 조회한다.
 
 ## 범용 실행 계약 1 (새 APK 필요)
 

@@ -192,12 +192,8 @@ CLI는 코드·stdin 지문, 보존 기간을 확인한 뒤 동일 인터프리�
 | 실행 상태(last_run·last_error) | `data/scripts.json` | ✗ (무시) |
 | 실행 로그 | `data/script_runs/<id>-<실행 UUID>.log` (실행별 보존) | ✗ |
 
-- 옛날엔 본문이 `outputs/` 아래라 **.gitignore 에 걸려 버전 관리 밖**이었다 — 백업도 없고 다른
-  기기에 따라가지도 않았다. 어휘는 `ibl_nodes_src/*.yaml` 로 추적되는데 그 아래 칸만 방치돼 있었다.
-- **정의와 상태를 가르는 이유**: 안 가르면 실행할 때마다 원장이 바뀌어 git 이 시끄럽다.
-  어휘의 src ↔ 파생 분리와 같은 원리.
-- **경로는 저장소 상대**로 적힌다(본문=파일명, 저장소 안 인터프리터=`.venv/bin/python3`).
-  옛 절대경로(`/Users/…`)는 클론한 다른 기기에서 원리적으로 못 돌았다.
+본문·정의는 버전 관리하고 실행 상태·로그는 분리한다. 본문 경로는 저장소 상대 경로이며,
+인터프리터는 `python`·`bash`·`node` 같은 역할 이름으로 저장한다(아래 이식성 절 참고).
 
 ## 등록 id의 값 반환 계약
 
@@ -261,7 +257,7 @@ print(json.dumps({"items": [{"value": args.get("value")}]}))
 IBL의 부분 실패는 실행 증거로 보존한다. 일반 데이터에 근거 없는 success 표지를 새로 붙이지 않는다.
 기존 저장 프로그램의 input_as·자동 봉투 추출은 docs/compatibility/ibl_legacy_script.md에 기록돼 있다.
 
-## 어디서나 도는 원장 — 인터프리터는 역할 이름만 (2026-08-22)
+## 어디서나 도는 원장 — 인터프리터는 역할 이름만
 
 registry.yaml 은 **git 추적 대상**이라 3 OS 로 그대로 클론된다. 여기에 인터프리터 *경로*를
 적으면 원리적으로 부서진다 — 맥의 `.venv/bin/python3` 은 윈도우에선 `.venv\Scripts\python.exe`,
@@ -283,16 +279,8 @@ registry.yaml 은 **git 추적 대상**이라 3 OS 로 그대로 클론된다. �
   (윈도우식 `C:\Python\python.exe` 도 두 구분자 모두로 잘라 해소한다). 마이그레이션 없이 돈다.
 - 특정 파이썬이 꼭 필요하면 인터프리터를 박지 말고 **스크립트 본문이 스스로 처리**하게 한다.
 
-### 함께 고친 OS 가정 — `os.kill(pid, 0)`
-유닉스에선 "살아 있나?"라는 무해한 질문이지만 **윈도우에선 `TerminateProcess`** 다. 즉 상태를
-물을 때마다 그 프로세스가 죽는다(exit code 0 이라 정상 종료처럼 보이기까지 한다). 이 저장소에
-세 곳 잠복해 있었다: 이 러너, 강의 렌더(`deck_video`), **RED 자기수정 워치독**(죽여놓고 "생존"
-으로 판정해 자동 롤백 안전판이 조용히 사라진다 — 셋 중 최악).
-
-- 판정 단일 소스 = `common.platform_utils.pid_alive` (psutil → 윈도우 `OpenProcess`+
-  `GetExitCodeProcess` → 유닉스 `os.kill` 순). 러너 분리도 같은 모듈의 `spawn_detached`.
-- 재발 방지: `check_win_portability.py` 가 `os.kill(pid, 0)` 을 AST 로 잡아 커밋을 거절한다
-  (platform_utils 만 예외).
+프로세스 생존·분리 실행을 구현할 때는 `common.platform_utils.pid_alive`·`spawn_detached`를 사용한다.
+OS별 차이와 과거 수리는 [관측 기록](../../docs/GUIDE_OBSERVATIONS_2026_10_30.md#스크립트-프로세스-생존-확인-수리)을 참고한다.
 
 ## 스케줄에 거는 법 (라이브 실증됨)
 

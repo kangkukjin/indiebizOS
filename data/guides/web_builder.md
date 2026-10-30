@@ -53,7 +53,7 @@
 - **진실 소스와 *메시지*를 맞춘다**: 이 사이트가 설명하는 대상(제품·README·스펙)이 *지금* 무엇을 말하는지 읽고, 페이지의 메시지가 그것과 어긋나면 *페이지를 고친다.* 수치만 맞추는 게 아니라 — 강조점·포지셔닝이 바뀌었으면 그게 페이지에 올라와야 한다. (예: README의 핵심 메시지가 바뀌었는데 히어로 카피가 옛 메시지 그대로면, 그 카피를 바꾼다.)
 - **디폴트로 수렴하지 않는다**: 손대고 나면 아래 [디자인 품질 체크리스트]로 스스로 끌어올린다. 파란 버튼·가운데 히어로에서 멈추지 않는다.
 
-## 사이트는 만드는 일보다 유지하는 일이 크다 (2026-10-30 반성)
+## 기존 사이트 유지보수
 
 갱신 계기(정본 변경·미감·기능)를 가르고 기준점 커밋에서 증분 수정한다. 정본 판본 기록과
 실제 렌더 경로를 대조하고, 사용자 자료·기존 내용을 보존한다. 미리보기에서 측정한 뒤
@@ -72,16 +72,7 @@
 
 web 액션은 *출발점*이지 울타리가 아니다.
 
-## 운영 모드 매트릭스 (2026-05-27 IBL 4기준 재분류)
-
-| 영역 | 모드 | 처리 방식 |
-|---|---|---|
-| 외부 행동 (Playwright/Lighthouse/HTTP 서버/Next.js/Vercel CLI/shadcn CLI) | **M1 풀 IBL** | `web`{op: build/deploy/preview/snapshot/check} + `web_component` |
-| 어드민 CRUD (sites.json, 카탈로그 조회) | **M3 직접 편집 + 통합 진입점** | `web_site`(레지스트리)/`web_component`{op:catalog}. 빈번하지 않은 어드민 |
-| 생성 (프로젝트 디렉토리/페이지) | **M2 얇은 IBL + 가이드** | `web`{op:create} 진입점 + 이 가이드. 복잡한 경우 [self:write]로 직접 작성 |
-| 스타일 편집 (globals.css/tailwind.config.*) | **M3 직접 편집** | IBL 액션 없음. [self:edit]로 globals.css 등 직접 수정 |
-
-## 액션 빠른 참고 (2026-06-03 어휘 정리: 9개 → 3개)
+## 액션 빠른 참고
 
 | 액션 | op | 용도 |
 |---|---|---|
@@ -101,18 +92,15 @@ web 액션은 *출발점*이지 울타리가 아니다.
 
 ### A. 새 홈페이지 만들기
 
-```
-web_create(site) → web_component(add) → web_create(page) → web(styles) → web_preview → web_build → web_deploy → web_site(register)
-```
+1. `[engines:web]{op:"create",target:"site"}`로 프로젝트를 만든다.
+2. `web_component`의 `catalog/add`로 필요한 컴포넌트를 고르고 설치한다.
+3. `[engines:web]{op:"create",target:"page"}`로 섹션을 조합하고 내용을 작성한다.
+4. `web`의 `styles` 또는 파일 편집으로 스타일을 조정한다.
+5. `web`의 `preview`로 실제 화면을 확인하고 문제를 수정한다.
+6. `web`의 `build` 성공을 확인한 뒤 배포 방식에 맞게 배포하고 실제 URL을 확인한다.
+7. `web_site`의 `register`로 등록하고 아래 배포 후 시각 검증을 수행한다.
 
-1. **web_create(target=site)**: 새 Next.js + shadcn/ui 프로젝트 생성
-2. **web_component(op=add)**: shadcn/ui 컴포넌트 추가 (또는 `run_command('npx shadcn@latest add button card --yes')`로 여러 개 한꺼번에)
-3. **web_create(target=page)**: 섹션 조합으로 페이지 생성
-4. **스타일 편집**: `[self:read]`로 `{project_path}/src/app/globals.css` 읽기 → CSS 변수 직접 수정 → `[self:edit]`로 저장
-5. **web_preview(action=start)**: 로컬에서 미리보기 → 문제 시 코드 수정 → 재확인
-6. **web_build**: 프로덕션 빌드 → 빌드 실패 상태에서 배포하지 마세요
-7. **web_deploy(production=true)**: Vercel 프로덕션 배포 → 출력에서 URL 확인
-8. **web_site(op=register)**: 새 사이트를 레지스트리에 등록
+각 호출의 필수 인자는 아래 상세 예제를 따른다.
 
 ### B. 기존 홈페이지 수정
 
@@ -120,14 +108,14 @@ web_create(site) → web_component(add) → web_create(page) → web(styles) →
 
 선택한 브라우저 `driver`는 navigate부터 snapshot·click·screenshot까지 일관되게 명시한다. 재탐색·화면 변경 뒤에는 이전 요소 ref를 재사용하지 않는다. 시간 초과가 나면 연결 상태를 확인하고 다른 통로로 전환할 근거를 얻은 뒤 진행한다. 설정 후보 파일은 디렉토리 목록으로 실제 이름을 확인해 읽고, 문서·스킬은 전체 줄 수를 넘겨 조회하거나 같은 본문을 겹쳐 읽지 않는다.
 
-기존 사이트는 처음부터 만들지 않는다 — `web_create(target=site)`는 새 사이트 전용이다. 시작은 `[engines:web_site]{op: "list"}`: registry가 사이트의 *루트 경로·배포 URL·기술 스택*을 알려준다. 프로젝트 *위치*를 ls/find로 다시 찾을 필요는 없다(registry가 안다). 단, *무엇을 고칠지* 알려면 그 프로젝트 *안*(`src/app`, `src/components/sections` 등)은 `[self:list]`·`[self:read]`로 둘러봐 구조를 파악한다 — 위치 찾기와 구조 파악은 다른 일이다.
+기존 사이트는 처음부터 만들지 않는다 — `web`의 `op:create,target:site`는 새 사이트 전용이다. 시작은 `[engines:web_site]{op: "list"}`: registry가 사이트의 *루트 경로·배포 URL·기술 스택*을 알려준다. 프로젝트 *위치*를 ls/find로 다시 찾을 필요는 없다(registry가 안다). 단, *무엇을 고칠지* 알려면 그 프로젝트 *안*(`src/app`, `src/components/sections` 등)은 `[self:list]`·`[self:read]`로 둘러봐 구조를 파악한다 — 위치 찾기와 구조 파악은 다른 일이다.
 
 권장 흐름(상황에 맞게 조정):
 ```
 web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞게 수정 → 빌드 → 배포 → 시각 검증
 ```
 
-0. **기준점과 계기**: 사이트 저장소의 미커밋 변경을 먼저 커밋하고, 정본 판본 기록이 있으면 그 이후의 정본 변경부터 대조한다(위 [사이트는 만드는 일보다 유지하는 일이 크다]).
+0. **기준점과 계기**: 사이트 저장소의 미커밋 변경을 먼저 커밋하고, 정본 판본 기록이 있으면 그 이후의 정본 변경부터 대조한다(위 [기존 사이트 유지보수]).
 1. **web_site(op=list)**: 사이트의 루트 경로·배포 URL 확보. ★**registry의 `site_id`는 폴더명과 다를 수 있다** — 폴더가 `indiebiz-homepage`여도 id는 `indiebiz-os-홈페이지`다. 폴더명을 site_id로 추측해 넣지 말고 list가 준 id를 그대로 쓴다(2026-08-17 실측: 추측해서 ERR 1라운드 낭비).
 2. **현재 페이지 파악**: `[sense:crawl]{url: "배포URL"}`로 라이브 텍스트를 빠르게 읽고, `[self:read]`로 관련 컴포넌트(page.tsx·해당 섹션들)를 읽어 *지금 페이지가 무엇을·어떻게 말하는지* 본다. (전체 화면을 픽셀로 봐야 하면 `[engines:web]{op:check, checks:["screenshot"]}` 또는 `[limbs:browser]{op:screenshot}` — `op:snapshot`은 스크린샷이 아니라 파일 구조·git 등 상태 요약이다.)
 
@@ -140,7 +128,7 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 6. **시각 검증**: 아래 [배포 후 시각 검증]을 거쳐야 "완료".
 7. **기록**: 운영에 나간 커밋에 `live-날짜` 태그를 붙이고, 정본 판본 기록이 있으면 갱신해 커밋한다.
 
-`web_create(target=site)`는 기존 사이트엔 쓰지 않는다(새 사이트를 또 만들어버린다). 그 외엔 위 흐름을 상황에 맞게 줄이거나 늘린다.
+기존 사이트에는 새 프로젝트 생성을 호출하지 않는다. 위 흐름을 변경 범위에 맞게 적용한다.
 
 ## web_site 상세
 
@@ -235,7 +223,7 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 [engines:web]{op: "create", target: "page", project_path: "/path/to/project", page_name: "about", sections: ["hero-centered", "features-grid", "cta-banner"], metadata: {title: "About"}}
 ```
 
-### 자유 코드 (M2 보조)
+### 직접 코드 작성
 복잡한 구조는 [self:write]로 직접 디렉토리 골격을 만들고, package.json·Next.js 설정을 직접 작성한 뒤 `[engines:web_site]{op: "register"}`로 레지스트리에 등록하는 흐름이 더 유연합니다.
 
 ## web_component 상세
@@ -261,48 +249,14 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 run_command('cd /path && npx shadcn@latest add button card dialog tabs --yes')
 ```
 
-## shadcn/ui 컴포넌트 카테고리
+## 컴포넌트와 섹션 선택
 
-### 사용 가능한 주요 컴포넌트
-
-| 카테고리 | 컴포넌트 |
-|---|---|
-| **기본** | button, input, label, badge, separator |
-| **레이아웃** | card, dialog, sheet, tabs, accordion |
-| **폼** | form, select, checkbox, radio-group, switch |
-| **네비게이션** | navigation-menu, dropdown-menu, breadcrumb |
-
-### 카테고리별 카탈로그 조회
+지원 목록은 카탈로그에서 조회하고 반환된 이름을 사용한다.
+```ibl
+[engines:web_component]{op:"catalog",kind:"components",category:"form"}
+[engines:web_component]{op:"catalog",kind:"sections"}
 ```
-[engines:web_component]{op: "catalog", kind: "components", category: "form"}
-```
-category 옵션: `all`, `layout`, `form`, `data`, `feedback`, `navigation`, `overlay`
-
-## 섹션 카테고리
-
-### 사용 가능한 섹션 (`[engines:web_component]{op:"catalog", kind:"sections"}` 결과 일부)
-
-| 카테고리 | 섹션 타입 | 설명 |
-|---|---|---|
-| **hero** | hero-simple | 심플 히어로 |
-| | hero-centered | 중앙정렬 히어로 |
-| | hero-image | 이미지 히어로 |
-| | hero-video | 비디오 히어로 |
-| **content** | text-content | 텍스트 콘텐츠 |
-| | two-column | 2열 레이아웃 |
-| | image-text | 이미지+텍스트 |
-| **feature** | features-grid | 기능 그리드 |
-| | features-alternating | 교차 레이아웃 |
-| | features-cards | 카드 레이아웃 |
-| **social** | testimonials | 고객 후기 |
-| | logo-cloud | 파트너 로고 |
-| | stats | 통계/수치 |
-| **commerce** | pricing-cards | 가격표 |
-| | cta-banner | CTA 배너 |
-| **form** | contact-form | 문의 폼 |
-| | newsletter | 뉴스레터 구독 |
-| **navigation** | header | 헤더 |
-| | footer | 푸터 |
+컴포넌트 category는 `all`, `layout`, `form`, `data`, `feedback`, `navigation`, `overlay`다.
 
 ### 섹션 props 예시
 ```
@@ -316,9 +270,14 @@ category 옵션: `all`, `layout`, `form`, `data`, `feedback`, `navigation`, `ove
 {"title": "가격", "plans": [{"name": "Free", "price": "0원", "features": ["기능1"]}]}
 ```
 
-## 스타일 편집 (M3 직접 편집)
+## 스타일 편집
 
-IBL 액션 없음. `globals.css` / `tailwind.config.*` / `theme.json`을 `[self:edit]`로 직접 편집합니다. 이는 의도된 것 — 스타일 변경은 작업 중 한두 번이라 IBL 액션화 가치(4기준 점수)가 낮습니다.
+shadcn 테마·색상·모서리 반경은 `styles`로 편집한다.
+```ibl
+[engines:web]{op:"styles",project_path:"/path/to/project",theme:"purple",border_radius:"md"}
+```
+임의 CSS나 프로젝트별 Tailwind·theme 설정은 해당 파일을 읽고 `[self:edit]`로 직접 수정한다.
+기존 CSS 구조와 버전을 확인한 뒤 아래 변수 예시를 적용한다.
 
 ### globals.css에서 수정할 주요 CSS 변수
 ```css
@@ -329,13 +288,6 @@ IBL 액션 없음. `globals.css` / `tailwind.config.*` / `theme.json`을 `[self:
   --radius: 0.5rem;                   /* none=0, sm=0.25rem, md=0.375rem, lg=0.5rem, full=9999px */
 }
 ```
-
-### 프리셋별 대표 primary 색상
-- `blue`: 221.2 83.2% 53.3%
-- `green`: 142.1 76.2% 36.3%
-- `purple`: 262.1 83.3% 57.8%
-- `orange`: 24.6 95% 53.1%
-- `red`: 0 84.2% 60.2%
 
 ### 편집 예시
 ```
@@ -397,47 +349,6 @@ IBL 액션 없음. `globals.css` / `tailwind.config.*` / `theme.json`을 `[self:
 [engines:web]{op: "build", project_path: "/path"} >> [engines:web]{op: "deploy", project_path: "/path", production: true} >> [engines:web]{op: "check", site_id: "내-사이트"}
 ```
 
-## 전체 워크플로우 예시
-
-### 새 랜딩 페이지 만들기
-```
-1. [engines:web]{op: "create", target: "site", name: "my-landing", template: "landing"}
-2. run_command('cd {path} && npx shadcn@latest add button card --yes')
-3. [engines:web]{op: "create", target: "page", project_path: "...", page_name: "index", sections: [...]}
-4. [self:read]/{self:edit}으로 globals.css의 CSS 변수 수정
-5. [engines:web]{op: "preview", project_path: "...", action: "start"}  # 문제 발견 시 코드 수정 반복
-6. [engines:web]{op: "build", project_path: "..."}  # 빌드 성공 전까지 배포 금지
-7. [engines:web]{op: "deploy", project_path: "...", production: true}
-8. [engines:web_site]{op: "register", name: "My Landing", local_path: "..."}
-```
-
-### 기존 사이트 수정하기
-registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝트 *안*은 둘러봐 구조를 안다.
-```
-1. [engines:web_site]{op: "list"}                      # 루트 경로·배포 URL 확보
-2. [self:read]{path: ".../page.tsx"} + 관련 섹션 읽기    # 지금 페이지가 뭘 말하는지
-3. [self:edit]{...}                                    # 목적에 맞게 수정
-4. [engines:web]{op: "build", project_path: "..."}     # 빌드 성공 전 배포 금지
-5. 이 사이트의 배포 방식대로 (git push 자동배포 또는 vercel CLI 토큰)
-6. [engines:web]{op: "check", ...} + 배포 후 시각 검증(아래)
-```
-- *위치* 찾기는 registry로: ❌ `run_command('ls ~/Desktop/AI/HomePages/')` → ✅ `[engines:web_site]{op: "list"}`가 local_path를 알려줌.
-- *구조* 파악(`[self:list]`로 src/components 둘러보기)은 정상이고 필요하다 — 무엇을 고칠지 알아야 하니까.
-
-## 마이그레이션 노트 (2026-05-27)
-
-기존 16종 액션 → 9종으로 정리. 옛 액션명은 모두 alias로 자동 정규화되므로 학습 데이터/외부 호출은 그대로 동작.
-
-| 옛 액션 | 새 표기 |
-|---|---|
-| web_site_list/register/remove/update | `web_site {op}` |
-| web_list_components / web_list_sections | `web_catalog {kind}` |
-| web_create_site / web_create_page | `web_create {target}` |
-| web_fetch_component / web_add_component | `web_component {op}` |
-| web_edit_styles | `[engines:web]{op: "styles"}` (shadcn 테마/색상/반경 편집) |
-
----
-
 ## 이미지가 필요할 때 (생성 → public/ 저장 → 참조)
 
 섹션 카탈로그에 `hero-image` · `image-text` · `hero-video`가 있지만, **그 이미지를 어디서 구하는지**는 위 매뉴얼이 말해주지 않습니다. 그래서 이미지 없이 텍스트만 채우거나, `public/`에 누가 미리 넣어둔 파일만 쓰게 되기 쉽습니다. indiebizOS에는 이미지 생성·검증 액션이 이미 있으니 연결해서 씁니다 (꼭 매번 생성하라는 뜻은 아님 — 적당한 실사진/소재가 있으면 그걸 우선).
@@ -475,7 +386,7 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
 - [ ] **깊이는 토큰으로**: 그림자를 임의값으로 흩뿌리지 말고 단계로 관리한다 — lv1 버튼·카드 / lv2 드롭다운·메뉴 / lv3 툴팁·패널 / lv4 모달·긴급알림. **다크 모드에서는 그림자가 통하지 않는다** → 표면 밝기 단계로 대체(라이트 모드 그림자 값을 그대로 옮기면 깊이가 사라진다).
 - [ ] **3초 기준선**: 랜딩이라면 첫 화면(above the fold)에서 "무엇을 하는 제품/서비스인지" 3초 안에 전달되는가.
 
-### 실측으로 배운 함정 (2026-08-29 content-shop)
+### 화면에서 확인할 함정
 
 1. **텍스트 위에 텍스트를 얹지 마라.** 썸네일이 그 자체로 글자가 큰 이미지(슬라이드·포스터·유튜브 썸네일)면 스크림을 아무리 강화해도 제목이 이깁니다. 노브를 돌리지 말고 **구조를 바꿔라** — 이미지와 텍스트를 위아래로 분리하면 충돌이 0이 되고 제목이 첫 시선을 가져옵니다.
 2. **Tailwind v4 캐스케이드 레이어 함정.** `@import "tailwindcss"` 뒤에 쓴 **레이어 밖 CSS가 유틸리티 클래스를 이깁니다**(특이도와 무관 — 언레이어드 우선). `globals.css`에 `a { color: inherit }`가 그냥 있으면 `<a className="text-white">`가 무시되고, 색 클래스 없는 자식 `<h1>`이 body 색을 상속해 **검은 배경에 검은 글자**가 됩니다. 리셋류는 반드시 `@layer base { ... }`로 감쌀 것.
@@ -487,10 +398,6 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
 배포 전 옛 수치·카피를 `self:grep`으로 찾고, 배포 후 `engines:web`의 `check`로 캡처한
 `screenshot.path`를 `engines:image_read`에 명시해 실제 화면을 판독한다. 캡처만으로
 통과 처리하지 않는다. `critic`에는 `criteria:"web"`을 사용하며 판독 범위는 전체 화면
-1~2장과 변경 섹션 1장이다. **[상세 호출·오탐 확인 절차](../../docs/WEB_SITE_MAINTENANCE_2026_10_30.md#배포-후-시각-검증-필수)를 읽고 검증을 마쳐야 완료로 보고한다.**
+1~2장과 변경 섹션 1장이다. **[상세 호출·오탐 확인 절차](../../docs/WEB_SITE_MAINTENANCE_2026_10_30.md#배포-후-시각-검증-필수)를 읽고 검증을 마쳐야 완료로 보고한다.** 위 B절의 작은 변경에는 그 멈춤선을 적용하고, 이미 실제로 판독한 같은 화면을 중복 검수하지 않는다.
 
-## 실측 기록 (자동 누적)
-
-> 실행 에이전트가 턴 종료 후 덧붙인다.
-- 2026-09-16 실측: ai-era 사이트는 Next.js가 아니라 build.mjs 정적 빌드 + Cloudflare Pages(ai-era-b18.pages.dev) 배포이며, 홈 네 섹션의 카드 마크업이 build.mjs 카드 함수 한 곳에서 렌더되므로 페이지별 편집 대신 그 함수만 고치면 전 페이지에 반영됐다
-- 2026-10-30 실측: indiebiz-homepage 기준점 커밋 후 Pretendard CDN 스타일시트를 패키지 서브셋으로 번들하고 CSS 인라인을 켜자 모바일 Lighthouse 성능 55→97·98, LCP 13.0초→2.3~2.4초, 접근성 95→100. 미리보기 SEO 66은 `x-robots-tag: noindex` 때문이었고 운영은 100. 웹앱검사하기의 빌드 실패는 호스트 `NODE_ENV=development` 상속 때문이었다.
+사이트별 과거 측정은 [관측 기록](../../docs/GUIDE_OBSERVATIONS_2026_10_30.md#웹사이트별-관측)을 참고한다. 현재 빌드·배포 방식은 해당 사이트 설정에서 확인한다.

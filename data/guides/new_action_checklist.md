@@ -290,29 +290,28 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
 {"intent": "사용자가 입력할 자연어", "ibl_code": "[node:action]{params}"}
 ```
 
-### 등록 (둘 다 한다)
+### 등록
+
+시딩은 저장소 `.venv` Python에서 `add_examples_batch`를 사용한다. 이 경로가 구문·어휘 소유권을
+검사하고 DB 등록·배치 임베딩·주제 트리 갱신을 수행한다. 학습 JSON에 별도로 손으로 append하지 않는다.
+독립 스크립트는 저장소 규약대로 `import boot_paths`로 모듈 경로를 준비한다.
+
 ```python
-# (1) DB에 즉시 등록 (검색용)
+import boot_paths
 from ibl_usage_db import IBLUsageDB
+
 db = IBLUsageDB()
-db.add_examples_batch([
+added = db.add_examples_batch([
     {"intent": "...", "ibl_code": "...", "nodes": "sense", "source": "synthetic", "tags": "패키지ID"},
 ])
-
-# (2) 학습 JSON에 append (다음 재학습용) — data/training/ibl_distilled.json
+print(added)  # 거절된 용례는 제외되므로 요청 건수와 대조한다.
 ```
-**(1)은 즉시 검색, (2)는 다음 fine-tuning 반영. 둘 다 필요.**
 
----
+## 4단계: 검색 반영 확인
 
-## 4단계: 임베딩 재구축
-
-합성 데이터를 DB에 넣었어도 **벡터 임베딩이 없으면 시맨틱 검색에 안 나온다.** 서버와 동일한 Python(sentence-transformers 설치된 환경)에서:
-```bash
-cd backend
-python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_index())"
-```
-> 모델을 교체했거나 DB를 크게 바꿨으면 `rebuild_index()`로 재색인 필수. 서버 Python 경로 확인: `ps aux | grep 'python.*api.py' | grep -v grep`
+DB 등록 건수와 벡터 색인·실제 연상을 함께 확인한다. 등록만으로 검색 성공을 단정하지 않는다.
+인코더를 사용할 수 없어 색인이 빠졌거나 모델을 교체한 경우 같은 `.venv` 환경에서
+`IBLUsageDB().rebuild_index()`를 실행하고 결과를 확인한다. 정상 배치 등록 뒤 매번 전체 색인을 재구축하지 않는다.
 
 ---
 
@@ -372,30 +371,21 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 | 단계 | 작업 | 빠뜨리면? |
 |------|------|----------|
 | 0.5. 역할·통화 계약 | 생성/변환/행동 정하고 역할의 통화 계약 충족 (`ibl_health_check.py` GREEN) | 통화 끊김 = 조합 불가(섬), 자가점검도 못 잡음 |
-| 1. 패키지 도구 | handler.py(`execute(tool_input, context)`) + tool.json | 도구 자체가 없음 |
-| 2. src 정의 + 빌드 | `ibl_nodes_src/{node}.yaml` → `build_ibl_nodes.py` → `--check` | IBL 실행 불가 / 검증 실패 |
+| 1. 패키지 도구 | handler.py(`execute(tool_input, context)`) + 선언에서 파생한 tool.json | 도구 자체가 없음 |
+| 2. src 정의 + 빌드 | 패키지 `ibl_actions.yaml` 또는 코어 `ibl_nodes_src/{node}.yaml` → 빌드 → `--check` | IBL 실행 불가 / 검증 실패 |
 | 2.5. fixture | 액션에 `fixture:`/`exempt:` 필드(items/scalar) → build 가 `ibl_fixtures.json` 파생 | `--check` 실패 = 커밋 거부 / 건강검사 누락 |
-| 3. 해마 데이터 | 합성 용례 + 학습 JSON | 에이전트가 연상 못 함 |
-| 4. 임베딩 | `rebuild_index()` | 시맨틱 검색 불가 |
+| 3. 해마 데이터 | `add_examples_batch`로 합성 용례 등록 | 에이전트가 연상 못 함 |
+| 4. 임베딩 | 배치 색인·검색 확인, 누락/모델 교체 시 재색인 | 시맨틱 검색 불가 |
 | 5. 확인 | 등록 + 연상 + 실행 | 배포 후 장애 |
-| 5.5. **계약 프로브** | desc·가이드가 약속한 계약을 **하나씩 실측으로 두드린다** — 통화 승격, 절단 신고(total/truncated), 실패의 정직성(exit·에러), 파라미터 오용 거부. **파괴적 쓰기 어휘는 필수 + 반드시 사본으로.** | 침묵 실패가 출하됨 — "success:true 인데 그럴듯하게 틀림"은 사용자가 못 잡는다 (3방식 실험 12회의 교훈: 결함 20종 전부 이 부류. 실측 사례=실험 9 [self:script]·실험 10 [self:sheet]) |
+| 5.5. **계약 프로브** | desc·가이드가 약속한 계약을 **하나씩 실측으로 두드린다** — 통화 승격, 절단 신고(total/truncated), 실패의 정직성(exit·에러), 파라미터 오용 거부. **파괴적 쓰기 어휘는 필수 + 반드시 사본으로.** | 침묵 실패가 출하됨 — "success:true 인데 그럴듯하게 틀림"은 사용자가 못 잡는다 |
 | (선택) 앱 표면 | src에 `app:` 블록 | 앱 모드 계기로 안 보임 (에이전트 사용엔 무관) |
 
 **1~4(+items/scalar이면 2.5)를 모두 완료해야 에이전트가 액션을 인식하고 사용할 수 있다.**
-계약 프로브(5.5)에서 잡은 결함은 수리 후 `backend/test_pipe_currency_failures.py`에 재현 케이스로 박제할 것 — 그 파일이 12시간 자가점검(`__static__:silent_failure_regression`)의 순찰 대상이다.
+계약 프로브(5.5)에서 잡은 결함은 소유 모듈명의 `backend/test_*.py`에 재현하고 [회귀 규약](../../docs/REGRESSION_TESTING.md)에 따라 검사한다.
 
-## 실측 기록 (자동 누적)
+## 관련 계약
 
-> 실행 에이전트가 턴 종료 후 덧붙인다.
-- 2026-08-24 실측: op 분기 액션(`target_key: op`)은 액션 `params:` 에 타입을 넣어도 op 수준 파라미터(`read.path` 등)가 미선언으로 남는다 — `--check` ✗ 유지(34건).
-
-
-회원 공개 선언·격리 시험은 [회원 액션 계약](member_contract.md)을 따른다.
-
-공유 업무 확장: [별도 계약](managed_records.md).
-
-
-절단·재사용을 포함한 사전 어댑터: [ibl_v2_adapter.md](ibl_v2_adapter.md).
-
-
-op별 필수·배타: `ops.required/exclusive`.
+- op 분기 액션은 액션 공통 `params`뿐 아니라 각 op의 파라미터와 `required/exclusive`도 선언한다.
+- 회원 공개 선언·격리 시험: [회원 액션 계약](member_contract.md).
+- 공유 업무 확장: [관리되는 기록](managed_records.md).
+- 절단·재사용을 포함한 사전 어댑터: [판본 2 어댑터](ibl_v2_adapter.md).

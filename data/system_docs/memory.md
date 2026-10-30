@@ -9,7 +9,7 @@ owner_code: >
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, execution_identity.py, pursuit_history.py, execution_trace.py,
   tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-10-26
+last_updated: 2026-10-30
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -137,6 +137,11 @@ see_also: [architecture.md, ibl.md]
 
 이는 모든 대화의 심층 기억에 자료 전문을 쌓는 경로가 아니다. 연구의 자료 모드·대화 경계와 최종 응답 후 장기 기억 선별은 각각 유지한다. [연구 프로젝트](../guides/research_project.md) · [질문 사용법](../guides/research_questions.md) · [근거 계약](../../docs/RESEARCH_QUESTION_EVIDENCE_CONTRACT_2026_10_13.md).
 
+연구 대화는 현재 연구계획의 판본도 영속 연결한다. 의식이 목적·범위·방법의 유지·개정을 판단하고,
+유지할 때는 실행자가 갱신한 현재 본문을 다시 읽어 이번 수행 범위와 함께 전달한다. 이때 별도
+계획 작성 호출이나 새 판본을 만들지 않는다. 최초 작성·개정은 기존 심층연구 계획 경로를 쓰며,
+자료·질문·계획의 저장 경계는 유지한다. [계획 계승 계약](../../docs/RESEARCH_PROJECT_DESIGN_2026_10_10.md#25-지속-연구계획--같은-주제-대화의-계획-계승-2026-10-29).
+
 ### 현재 실행과 과거 과제 기록 (2026-10-29)
 
 일반 대화의 이어가는 과제(pursuit)는 제거했다. 자동 생성·연결·상태 갱신·별도 요약·순찰은 실행하지 않는다.
@@ -167,7 +172,8 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 
 자격증명은 영속 사본을 만들 때 공통 마스킹을 적용한다. 명시적인 한글 비밀번호 전달과
 `IMAP_PASSWORD` 같은 설정 키도 처리하며, 에피소드 미리보기는 자르기 전에 가린다.
-과제 원장과 감독의 증거·사건 기록도 같은 함수를 사용하고 실행 인자 원본은 변경하지 않는다.
+감독의 증거·사건 기록도 같은 함수를 사용하고 실행 인자 원본은 변경하지 않는다.
+과거 과제 원장에도 저장 시 같은 마스킹을 적용했으며, 현재는 그 기록을 읽기 전용으로 보존한다.
 기존 기록의 일괄 삭제·재작성은 수행하지 않는다.
 [4077~4080 수리](../../docs/EPISODES_4077_4080_REPAIRS_2026_09_26.md).
 

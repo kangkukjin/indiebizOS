@@ -2,7 +2,7 @@
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, 상주 PC·폰 손발, 미디어 연결, NAS 연동
 owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_surface_remote.py, launcher_react.py, nas_*.py
-last_updated: 2026-10-26
+last_updated: 2026-10-30
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 
@@ -254,8 +254,9 @@ Cloudflare 발급(`cdn_provision`)은 터널뿐 아니라 R2 캐시 Worker 까�
 - **조종실 정보**: 기존 모델 기어·주행기록·IBL 실행 아래, 맨 하단에 손발 기기/업데이트
   상태와 시스템 상태(IBL 건강·서비스·디스크)만 접이식으로 표시한다. 손발 목록은 펼칠 때
   조회하며 자동 조회는 로그인한 조종실이 보이는 동안만 수행한다. 조회 실패는 빈 기록과
-  구분한다. 액티브 프로젝트·구조 문서·시스템 로그·몸/과제 원장·기억 회상 검증·최근 실행
-  패널은 원격 런처에 표시하지 않는다. 데스크톱 조종실의 정보는 그대로 유지한다.
+  구분한다. 액티브 프로젝트·구조 문서·시스템 로그·몸 원장·기억 회상 검증·최근 실행
+  패널은 원격 런처에 표시하지 않는다. 이 정보는 데스크톱 조종실에서 확인한다.
+  일반 과제 원장의 관리 화면은 데스크톱에서도 제거됐으며 과거 기록은 주행기록에서 읽는다.
 
 ### API 엔드포인트
 

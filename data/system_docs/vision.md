@@ -1,7 +1,7 @@
 ---
 title: indiebizOS 비전 — 인지 외골격 (Cognitive Exoskeleton)
 scope: indiebizOS가 무엇을 *목표로* 삼는가. 모든 설계 결정과 개발 방향의 최상위 기준.
-last_updated: 2026-10-21
+last_updated: 2026-10-22
 ---
 
 # indiebizOS 비전 — 인지 외골격 (Cognitive Exoskeleton)

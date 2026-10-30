@@ -205,17 +205,19 @@ For documents and spreadsheets, **the engine only writes drafts; only your expli
 
 (The honest scope: the editing engines listen only inside your own PC, so original-format editing is desktop-only, and the Coding app's write boundary is currently guaranteed on macOS only. What is still unfinished — full fidelity on complex Hancom documents, for one — is written down as-is under "implementation status" in `docs/DOCUMENT_APP_DESIGN_2026_10_02.md`, `SPREADSHEET_APP_DESIGN_2026_10_02.md` and `CODING_APP_DESIGN_2026_10_02.md`.)
 
-### → Research projects — keep sources and questions with each conversation
+### → Research projects — keep sources, questions, and a plan with each conversation
 
 Create a **research project** in the launcher to give each topic conversation its own source library. Attachments and material actually read during research retain their originals and versions. The current gear's API or CLI agent retrieves them in later turns; a saved-sources-only mode is also available.
 
 Persistent questions carry provisional answers, supporting and contradicting evidence, and remaining checks. Evidence points to a source version, paragraph, and quotation actually read. Editing or closing a question preserves its earlier revisions; closure records a reasoned decision, not a certificate of truth. → [Research projects](data/guides/research_project.md) · [Questions and evidence](data/guides/research_questions.md)
 
+Each topic conversation also keeps a **research plan**. Consciousness reads the current plan and decides whether to keep it or revise its purpose, scope, or method. Keeping it reuses the current plan without another plan-writing call or a new version; the executor receives that plan together with this turn's scope. Explanation and discussion do not automatically trigger more research. → [Research plan continuity](docs/RESEARCH_PROJECT_DESIGN_2026_10_10.md#25-지속-연구계획--같은-주제-대화의-계획-계승-2026-10-29)
+
 ### → Share the embedded browser's tabs with your AI
 
 The existing `limbs:browser` action can open embedded browser tabs and read material using an existing login or a saved account. The local vault fills credentials without sending passwords to the model. Extra authentication or an unresolved account choice returns the tab to the person; human interaction also returns control. Separate Chrome MCP and Playwright drivers remain available. Site compatibility and supported operations are recorded in the [embedded browser design](docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md).
 
-AI collection closes its temporary embedded tabs when it finishes. A browser panel opened for that collection closes with the last temporary tab; existing user tabs, an already-open panel, and tabs handed back for human interaction stay available.
+AI tabs and login popups start in the background, leaving your selected tab and launcher alone. They become visible when authentication or account selection needs your input, then hide when that handoff ends or is cancelled. A panel you had already opened stays open. Hidden tabs remain available for follow-up calls; temporary collection tabs are removed when collection finishes.
 
 ### → A currency algebra
 

@@ -94,6 +94,32 @@ def get_source_root() -> Path:
     return get_code_root() if not os.environ.get("INDIEBIZ_CODE_ROOT") else get_base_path()
 
 
+def live_state_path(path) -> Path:
+    """Resolve mutable state beside generation code to the live source path.
+
+    Do not resolve symlinks before matching: a missing/new state file still
+    belongs to the source. Atomic replacement must remain visible on Windows,
+    where a file hardlink would keep reading the previous inode.
+    """
+    path = Path(os.path.abspath(path))
+    if not in_generation():
+        return path
+    try:
+        rel = path.relative_to(Path(os.path.abspath(get_code_root())))
+    except ValueError:
+        return path
+    if rel.parts and rel.parts[0] == "_code_data":
+        rel = Path("data", *rel.parts[1:])
+    return get_source_root() / rel
+
+
+def get_code_data_root(root=None) -> Path:
+    """Frozen vocabulary/packages, separate from the Windows live-data junction."""
+    root = Path(root) if root is not None else get_code_root()
+    alternate = root / "_code_data"
+    return alternate if alternate.is_dir() else root / "data"
+
+
 def in_generation() -> bool:
     return bool(os.environ.get("INDIEBIZ_CODE_ROOT"))
 
@@ -101,14 +127,14 @@ def in_generation() -> bool:
 def get_installed_packages_root() -> Path:
     """실행이 읽는 설치 패키지 root(data/packages/installed). 세대에서는 봉인 사본, 아니면 데이터 root."""
     if in_generation():
-        return get_code_root() / "data" / "packages" / "installed"
+        return get_code_data_root() / "packages" / "installed"
     return get_base_path() / "data" / "packages" / "installed"
 
 
 def get_vocabulary_path() -> Path:
     """실행이 읽는 어휘 사전(data/ibl_nodes.yaml). 쓰기(빌드)는 get_source_root() 아래로 간다."""
     if in_generation():
-        return get_code_root() / "data" / "ibl_nodes.yaml"
+        return get_code_data_root() / "ibl_nodes.yaml"
     return get_base_path() / "data" / "ibl_nodes.yaml"
 
 

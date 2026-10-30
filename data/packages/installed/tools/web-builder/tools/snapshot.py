@@ -2,13 +2,14 @@
 site_snapshot: 등록된 사이트의 현재 상태 요약
 파일 구조, git 이력, 페이지 목록, 의존성, 배포 설정을 한눈에 제공
 """
+from runtime_utils import live_state_path
 import json
 import subprocess
 from pathlib import Path
 
 
 def load_sites(package_dir: Path) -> list:
-    sites_file = package_dir / "sites.json"
+    sites_file = live_state_path(package_dir / "sites.json")
     if sites_file.exists():
         return json.loads(sites_file.read_text(encoding="utf-8"))
     return []

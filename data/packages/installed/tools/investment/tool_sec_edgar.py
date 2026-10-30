@@ -5,6 +5,7 @@ SEC EDGAR 도구
 API 문서: https://www.sec.gov/edgar/sec-api-documentation
 인증 불필요 (무료)
 """
+from runtime_utils import live_state_path
 import urllib.request
 import urllib.parse
 import json
@@ -17,7 +18,7 @@ SEC_SEARCH_URL = "https://efts.sec.gov/LATEST/search-index"
 USER_AGENT = "IndieBizOS/1.0 (contact@example.com)"  # SEC 요구사항
 
 # CIK 캐시
-CIK_CACHE_PATH = Path(__file__).parent / "cik_cache.json"
+CIK_CACHE_PATH = live_state_path(Path(__file__).parent / "cik_cache.json")
 
 
 def _load_cik_cache():

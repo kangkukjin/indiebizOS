@@ -19,10 +19,15 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+# This utility also runs directly, outside the backend's package loader.
+sys.path.insert(0, str(Path(__file__).resolve().parents[5] / "backend"))
+import boot_paths  # noqa: E402,F401
+from runtime_utils import live_state_path
+
 import requests
 
 _DIR = Path(__file__).resolve().parent
-_CACHE_FILE = _DIR / "kakao_cctv_list.json"
+_CACHE_FILE = live_state_path(_DIR / "kakao_cctv_list.json")
 _TRANSCOORD_URL = "https://dapi.kakao.com/v2/local/geo/transcoord.json"
 
 

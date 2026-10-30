@@ -345,8 +345,9 @@ def _load_handler(job: dict):
     _REPO_ROOT 는 대상 repo 로 맞춘다(가짜 저장소 테스트에서 코드 루트와 갈라진다)."""
     # 실행 코드 root(봉인 세대)의 handler 를 읽는다 — 수행자가 어느 기반에서 뜨든 검증된 판본이다.
     code_root = Path(os.environ.get("INDIEBIZ_CODE_ROOT") or CODE_ROOT)
+    from runtime_utils import get_code_data_root
     hpath = str(
-        code_root / "data" / "packages" / "installed" / "tools"
+        get_code_data_root(code_root) / "packages" / "installed" / "tools"
         / "system_essentials" / "handler.py")
     spec = importlib.util.spec_from_file_location("se_handler_deferred", hpath)
     handler = importlib.util.module_from_spec(spec)

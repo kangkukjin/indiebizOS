@@ -26,6 +26,7 @@ name: Portability (3 OS)
 on:
   push:
     paths:
+      - 'helper/**'
       - 'backend/**'
       - 'data/packages/**'
       - 'scripts/check_win_portability.py'
@@ -44,6 +45,7 @@ on:
       - '.github/workflows/portability.yml'
   pull_request:
     paths:
+      - 'helper/**'
       - 'backend/**'
       - 'data/packages/**'
       - 'scripts/check_win_portability.py'
@@ -63,6 +65,32 @@ on:
   workflow_dispatch:
 
 jobs:
+  windows-machine-helper:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Windows junction 실행 세대·라이브 데이터 보존
+        # This standalone temporary-repository fixture needs only pytest;
+        # backend-wide fixtures load unrelated application dependencies.
+        run: |
+          python -m pip install pytest
+          python -m pytest --noconftest backend/test_generation_store.py -k windows_snapshot
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: helper/go.mod
+          cache-dependency-path: helper/go.sum
+      - name: 관리 서비스 실행 파일 빌드
+        working-directory: helper
+        run: go build -o "$env:RUNNER_TEMP\indiebiz-machine-test.exe" .
+      - name: 실제 SCM 등록·무인 관리자 실행·제거와 프로세스 수명
+        working-directory: helper
+        run: |
+          $env:IB_MACHINE_INTEGRATION_BINARY = "$env:RUNNER_TEMP\indiebiz-machine-test.exe"
+          go test -v -run '^TestMachine' .
+
   static-scan:
     runs-on: ubuntu-latest
     steps:

@@ -5,6 +5,7 @@ DART OpenAPI 도구
 API 문서: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001
 필요 환경변수: DART_API_KEY
 """
+from runtime_utils import live_state_path
 import os
 import sys
 import urllib.request
@@ -30,7 +31,7 @@ DART_API_KEY = os.environ.get("DART_API_KEY", "")
 BASE_URL = "https://opendart.fss.or.kr/api"
 
 # 기업 코드 캐시 파일 경로
-CORP_CODE_CACHE_PATH = Path(__file__).parent / "corp_code_cache.json"
+CORP_CODE_CACHE_PATH = live_state_path(Path(__file__).parent / "corp_code_cache.json")
 
 
 def _check_api_key():

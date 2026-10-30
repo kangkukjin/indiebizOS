@@ -661,3 +661,23 @@ def test_mac_update_ignores_development_build_and_rejects_invalid_release(regist
     publish_test_mac_release(tmp_path, 'mac-amd64', b'signed')
     binary.write_bytes(b'tampered')
     assert pcs.helper_binary(caps) is None
+
+
+@pytest.mark.parametrize("reusable", [False, True])
+def test_protected_enrollment_cannot_reissue_key_from_public_installation_id(registry, reusable):
+    invite = limb_keys.resident_installer() if reusable else limb_keys.resident_invite('managed')
+    proof = 'a1' * 32
+    app = FastAPI()
+    app.include_router(api_resident_pcs.router)
+    client = TestClient(app)
+    body = dict(key=invite['key'], installation_id='9' * 32, alias='managed', enrollment_proof=proof)
+    first = client.post('/limb/resident/enroll', json=body)
+    assert first.status_code == 200
+    rec = first.json()
+    assert rec['registration']['enrollment_proof_hash'] == hashlib.sha256(proof.encode()).hexdigest()
+    assert client.post('/limb/resident/enroll', json=body).json()['key'] == rec['key']
+    for invalid in (None, 'b2' * 32):
+        rejected = client.post('/limb/resident/enroll', json={**body, 'enrollment_proof': invalid})
+        assert rejected.status_code == 403
+        assert rec['key'] not in rejected.text
+    assert limb_keys.resident_auth(rec['key'], body['installation_id'])['device_id'] == rec['device_id']

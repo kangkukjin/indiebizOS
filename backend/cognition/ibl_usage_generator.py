@@ -18,7 +18,6 @@ import json
 import random
 import argparse
 
-from common.value_semantics import relation_identity
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -27,6 +26,9 @@ from datetime import datetime
 _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
+import boot_paths  # noqa: E402,F401
+from runtime_utils import get_vocabulary_path
+from common.value_semantics import relation_identity
 
 
 # =============================================================================
@@ -692,7 +694,7 @@ def generate_stage3(existing_examples: List[Dict], max_per_example: int = 3) -> 
 
 def load_nodes_yaml() -> dict:
     """ibl_nodes.yaml 로드"""
-    yaml_path = Path(__file__).parent.parent.parent / "data" / "ibl_nodes.yaml"
+    yaml_path = get_vocabulary_path()
     with open(yaml_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 

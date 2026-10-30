@@ -4,6 +4,7 @@ FinanceDataReader 또는 KRX API를 통해 한국 주식 시세를 조회합니�
 
 의존성: pip install finance-datareader
 """
+from runtime_utils import live_state_path
 import os
 import re
 import sys
@@ -24,7 +25,7 @@ from common.pkg_utils import load_sibling
 _normalize_row_change = load_sibling(__file__, "investment_history").normalize_history
 
 # 종목 코드 캐시
-STOCK_CODE_CACHE_PATH = Path(__file__).parent / "stock_code_cache.json"
+STOCK_CODE_CACHE_PATH = live_state_path(Path(__file__).parent / "stock_code_cache.json")
 
 
 def _get_fallback_stocks():

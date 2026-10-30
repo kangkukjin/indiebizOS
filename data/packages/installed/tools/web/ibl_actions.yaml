@@ -87,7 +87,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-30", impl: "1638bcd6b211e871"}  # 재감사: Google 추가. 회원은 선행 member_web 분기로 DDGS만 허용, Google도 owner를 확인해 소유자 브라우저 접근 차단. crawl 공개 URL 경계 유지.
+        path_audited: {at: "2026-10-30", impl: "e932cd2891ba7d3e"}  # 재감사: 즐겨찾기 상태 경로만 live_state_path로 해소. search/crawl 회원 분기는 불변. Google 추가. 회원은 선행 member_web 분기로 DDGS만 허용, Google도 owner를 확인해 소유자 브라우저 접근 차단. crawl 공개 URL 경계 유지.
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -173,7 +173,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-30", impl: "1638bcd6b211e871"}  # 재감사: Google 추가. 회원은 선행 member_web 분기로 DDGS만 허용, Google도 owner를 확인해 소유자 브라우저 접근 차단. crawl 공개 URL 경계 유지.
+        path_audited: {at: "2026-10-30", impl: "e932cd2891ba7d3e"}  # 재감사: 즐겨찾기 상태 경로만 live_state_path로 해소. search/crawl 회원 분기는 불변. Google 추가. 회원은 선행 member_web 분기로 DDGS만 허용, Google도 owner를 확인해 소유자 브라우저 접근 차단. crawl 공개 URL 경계 유지.
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

@@ -14,6 +14,7 @@ AgentRunner의 인지 관련 메서드를 분리한 Mixin 클래스.
 (아래 재수출). 새 코드는 정의 모듈에서 직접 import 해도 된다.
 """
 
+from runtime_utils import get_installed_packages_root
 import json
 from pathlib import Path
 from typing import Optional
@@ -468,7 +469,7 @@ class AgentCognitiveMixin(
         import json as _json
 
         tools = []
-        pkg_base = Path(__file__).parent.parent.parent / "data" / "packages" / "installed" / "tools"
+        pkg_base = get_installed_packages_root() / "tools"
 
         # 1) IBL 도구 — ibl_nodes.yaml에서 description 동적 생성
         ibl_tool = self._build_execute_ibl_tool()

@@ -6,6 +6,7 @@ site_id 또는 url로 사용 가능:
 - site_id: 등록된 사이트 (URL 자동 조회, last_checked 업데이트)
 - url: 등록되지 않은 사이트도 직접 점검 가능
 """
+from runtime_utils import live_state_path
 import json
 import subprocess
 import time
@@ -20,14 +21,14 @@ OUTPUTS_DIR = Path(__file__).parent.parent.parent.parent.parent / "outputs" / "w
 
 
 def load_sites(package_dir: Path) -> list:
-    sites_file = package_dir / "sites.json"
+    sites_file = live_state_path(package_dir / "sites.json")
     if sites_file.exists():
         return json.loads(sites_file.read_text(encoding="utf-8"))
     return []
 
 
 def save_sites(sites: list, package_dir: Path):
-    sites_file = package_dir / "sites.json"
+    sites_file = live_state_path(package_dir / "sites.json")
     sites_file.write_text(
         json.dumps(sites, ensure_ascii=False, indent=2),
         encoding="utf-8"

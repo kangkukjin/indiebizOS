@@ -19,6 +19,7 @@ touch(approve_if_pending=True)) — 오배송(엉뚱한 PC 에서 명령 실행)
 수신 API: backend/api_limb.py (/limb/connect·poll·result).
 """
 import json
+import hashlib
 import os
 import secrets
 import threading
@@ -375,7 +376,7 @@ def resident_installer_revoke():
         _save()
 
 
-def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter="resident-v1"):
+def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter="resident-v1", *, enrollment_proof=None):
     """초대를 이 설치(installation_id)에 묶어 실행 자격으로 바꾼다.
 
     kind/adapter (2026-10-13): 헬퍼 PC = ("pc", "resident-v1") / IndieBiz OS 폰 손발 = ("phone", "indiebiz-v1").
@@ -385,6 +386,9 @@ def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter=
         raise ValueError("invalid_adapter")
     if not re.fullmatch(r"[a-f0-9]{32}", installation_id):
         raise ValueError("invalid_installation_id")
+    if enrollment_proof is not None and not re.fullmatch(r"[a-f0-9]{64}", enrollment_proof):
+        raise ValueError("invalid_enrollment_proof")
+    proof_hash = hashlib.sha256(enrollment_proof.encode()).hexdigest() if enrollment_proof else None
     with _lock:
         data = _load()
         rec = data["keys"].get(invitation)
@@ -400,6 +404,11 @@ def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter=
             bound = data["keys"].get(bound_key)
             if not bound or bound.get("revoked") or _expired(bound) or bound["registration"]["state"] != "active":
                 raise ValueError("registration_closed")
+            protected = bound["registration"].get("enrollment_proof_hash")
+            if protected and not secrets.compare_digest(protected, proof_hash or ""):
+                raise PermissionError("enrollment_proof_required")
+            if proof_hash and not protected:
+                raise ValueError("existing_registration_not_protected")
             return dict(bound)
         if not rec.get("installer") and _now() > rec["invite_until"]:
             raise ValueError("invitation_expired")
@@ -416,6 +425,8 @@ def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter=
         bound["registration"] = {"installation_id": installation_id, "generation": secrets.token_hex(16),
                                  "kind": kind, "adapter": adapter, "state": "active",
                                  "paused": False, "wake": None}
+        if proof_hash:
+            bound["registration"]["enrollment_proof_hash"] = proof_hash
         if rec.get("installer"):
             rec["installations"][installation_id] = issued["key"]
         else:

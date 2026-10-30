@@ -282,6 +282,12 @@ func (r *residentRuntime) selfUpdate(ctx context.Context, c Command, tid, want s
 		_ = os.Remove(staged)
 		return res
 	}
+	if r.cfg.MachineService {
+		if e := residentMachineCheckUpdate(staged); e != nil {
+			_ = os.Remove(staged)
+			return errResult("incompatible_machine_update", e.Error())
+		}
+	}
 	from, e := residentApplyUpdate(r.cfg.DataDir, staged, want, time.Now(), residentStartUpdateWatcher)
 	if e != nil {
 		_ = os.Remove(staged)

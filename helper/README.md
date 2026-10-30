@@ -226,7 +226,7 @@ Mac·Windows·Linux 모두 같은 버튼이다. 작업창·경로 선택·PC별 
 사용자 권한으로 모든 마운트된 폴더·외장 드라이브를 사용할 수 있다. 쓰기 금지 볼륨,
 잠긴 암호화 볼륨, OS 보호·개인 정보 권한은 OS의 허용·해제 과정이 필요하다.
 
-상주 `shell`의 `elevate:true`는 macOS 관리자 인증창, Windows UAC 또는 Linux pkexec를
+일반 사용자 상주 `shell`의 `elevate:true`는 macOS 관리자 인증창, Windows UAC 또는 Linux pkexec를
 통해 **이번 명령만** 관리자 권한으로 실행한다. 비밀번호를 중앙 채팅·명령·환경변수에
 넣지 않는다. 원격 PC의 OS 인증창에서 입력한다. 권한이 필요한 파일 작업도 해당 경로를
 대상으로 하는 관리자 셸 명령으로 실행한다. 인증 전에는 명령을 전달하지 않으며, 작업 취소·
@@ -291,3 +291,48 @@ Windows 설치본은 로그인 자동 실행에 더해 별도 부모 프로세�
 연결 능력의 `process_recovery:true`로 새 감시 아래 실행되는지 확인할 수 있다.
 네트워크가 느리다는 이유만으로 살아 있는 헬퍼나 진행 중 작업을 죽이지 않는다.
 절전·로그아웃·인터넷 단절은 별도이며, 이 변경만으로 항상 연결된다고 보증하지 않는다.
+
+
+## Windows 무인 관리 서비스
+
+설치·시스템 설정을 중앙에서 무인 실행하려면 등록 화면의 **무인 관리 서비스**를 선택한다.
+최초 등록만 Windows 관리자 승인이 필요하다. 이미 관리자 권한으로 배포하는 환경에서는
+`indiebiz-helper.exe --resident-machine-install <초대설정.json>`으로 등록한다.
+설정은 새 `mode:enroll` 초대이며 기존 사용자 헬퍼의 실행 키를 복사하지 않는다.
+사용자 헬퍼가 이미 `tv1`이면 관리 서비스는 `tv1 관리`처럼 별도 이름으로 등록한다.
+
+등록 후에는 SCM 자동 시작 서비스가 LocalSystem으로 실행되므로, 재부팅·로그아웃 후에도
+중앙의 인증된 명령으로 프로그램 설치·시스템 설정을 수행한다. shell의 `elevate:true`도
+추가 인증창 없이 같은 권한으로 실행한다. `info.resident`에 `service_scope:machine`,
+`execution_account:LocalSystem`, `elevation_unattended:true`가 보고된다.
+사용자 폴더에 설치할 앱과 HKCU 설정은 사용자 세션 헬퍼에서 실행한다. 서비스에서 사용자용
+설치기를 기본 옵션으로 실행하면 System 프로필에 설치할 수 있으므로 시스템 전체 설치 옵션을
+명시한다. 설치기는 `/quiet` 등 공식 무인 옵션을 사용하고 종료 코드·설치 버전·서비스 상태로 검증한다.
+
+화면·키보드·오디오·대화형 터미널은 사용자 세션의 역할이다. 관리 서비스는 이를 광고하지 않고
+해당 작업을 `requires_user_session`으로 거절한다. 일반 헬퍼를 다른 이름으로 함께 유지할 수 있다.
+관리 서비스는 자체 등록 자격으로 중앙에서 직접 작업을 받으며, 일반 사용자가 명령 파일을 써서
+관리자로 실행시키는 로컬 통로는 없다. 프로그램·설정·스풀은 Program Files의 보호 폴더에 저장하고
+SYSTEM/Administrators만 접근한다. 관리자 비밀번호를 보관하지 않는다.
+
+등록 재시도에는 보호 폴더에 저장한 별도 enrollment proof가 필요하다. 초대 파일과 공개 서비스 이름의
+installation_id만으로 서비스 실행 키를 재발급받을 수 없다. 이전 중앙은 이 증명을 지원하지 않으므로
+설치를 거절한다. 중앙을 먼저 업데이트한다. 새 어휘 없이 기존 작업·취소·로그·제거·헬퍼 업데이트
+계약을 사용한다. 서비스 호스트는 워커를 별도 프로세스로 관리해 업데이트 후 새 바이너리를 실행하고,
+중단 시 작업 트리도 종료한다. 반복 조기 종료는 5회 뒤 SCM에 실패로 보고한다.
+서비스 워커 프로토콜 표식이 없는 구형 헬퍼는 교체 전에 거절한다. 표식은 호환성 검사이며,
+배포본의 기존 전송 인증·SHA256 검증을 대체하지 않는다. 실행하지 않고 파일 바이트로 검사한다.
+
+중앙에서 등록을 해제하면 기존 제거 경로가 워커·서비스 실행 파일과 SCM 등록을 정리한다.
+작업 산출물은 보존한다. 이 구현은 Windows용이며 macOS/Linux의 무인 관리자 서비스는 아직 없다.
+기존 일반 권한 헬퍼를 중앙 명령만으로 관리 서비스로 승격시키지는 않는다. 최초 관리자 등록은
+현장 설정 또는 이미 승인된 관리자 배포 채널에서 수행해야 한다.
+
+검증: `TestMachineHostStopsOwnedWorkerAndRestartsAfterCleanExit`는 실제 Windows 자식 프로세스의
+SCM 중단·재실행을, `TestMachineInstallRequiresInitialAdministrator`는 일반 사용자 등록 거절을 검사한다.
+`test_protected_enrollment_cannot_reissue_key_from_public_installation_id`는 API를 통한 증명 없는
+실행 키 재발급 거절과 올바른 재시도를 검사한다. 실제 관리자 서비스 등록·부팅 전 연결·삭제 인수는
+관리자 권한의 Windows에서 별도로 실행해야 하며, 단순 교차 컴파일을 그 검증으로 간주하지 않는다.
+`IB_MACHINE_INTEGRATION_BINARY`에 새 헬퍼 실행 파일 경로를 지정한 관리자 Windows에서
+`go test -v -run '^TestMachine' .`를 실행하면 실제 SCM 등록 → LocalSystem 명령 → 중앙 제거
+확인까지 검사한다. Portability CI의 `windows-machine-helper` 작업이 같은 절차를 실행한다.

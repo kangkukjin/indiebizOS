@@ -19,6 +19,9 @@ const residentRunKey = `Software\Microsoft\Windows\CurrentVersion\Run`
 // can require elevation even though its action runs as the logged-in user.
 // Existing scheduled-task installations retain their restart/update contract.
 func residentWindowsAutostart(cfg *Config, exe string, remove bool) error {
+	if cfg.MachineService {
+		return residentMachineAutostart(cfg, remove)
+	}
 	name := residentServiceName(cfg)
 	current, err := residentReadRun(registry.CURRENT_USER, residentRunKey, name)
 	if err != nil {
@@ -97,6 +100,9 @@ func residentWriteRun(hive registry.Key, path, name, exe string, remove bool) er
 }
 
 func residentWindowsCanRestart(cfg *Config) bool {
+	if cfg.MachineService {
+		return residentMachineServiceExists(cfg)
+	}
 	value, err := residentReadRun(registry.CURRENT_USER, residentRunKey, residentServiceName(cfg))
 	if err != nil {
 		return false
@@ -110,6 +116,9 @@ func residentWindowsCanRestart(cfg *Config) bool {
 }
 
 func residentWindowsRestart(cfg *Config) error {
+	if cfg.MachineService {
+		return residentMachineStart(cfg)
+	}
 	value, err := residentReadRun(registry.CURRENT_USER, residentRunKey, residentServiceName(cfg))
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ web 패키지 핸들러
 웹 검색, 크롤링, 브라우저 자동화, 뉴스 검색, 신문 생성, 즐겨찾기 사이트 관리 통합
 """
 
+from runtime_utils import live_state_path
 import os
 import json
 import re
@@ -830,7 +831,7 @@ _DEFAULT_SITES = [
 
 def launch_sites(action: str = "open_ui", name: str = None, url: str = None, project_path: str = ".") -> dict:
     """자주 가는 사이트 런처 및 관리"""
-    sites_path = current_dir / "sites.json"
+    sites_path = live_state_path(current_dir / "sites.json")
 
     # sites.json = 런타임 사용자 상태(개인 북마크, .gitignore — 개인 목록은 추적 밖).
     # 파일이 없으면 공개 기본값(_DEFAULT_SITES)으로 시작하고, 쓰기(add/remove)는 항상

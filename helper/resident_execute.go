@@ -157,6 +157,9 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 	if !extra.Resident || extra.Generation != r.cfg.Generation {
 		return errResult("stale_registration", "")
 	}
+	if residentMachineActive(r.cfg) && !residentMachineOperation(extra.Op) {
+		return errResult("requires_user_session", "이 작업은 사용자 세션 헬퍼에서 실행하세요. 무인 관리 서비스는 설치·설정·파일·셸 작업용입니다.")
+	}
 	// The media envelope (contract §6) carries object-valued fields such as
 	// `content` that the generic Command shape does not share; it keeps the
 	// same resident/generation gate and parses itself.
@@ -224,7 +227,7 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 			cmd.Env = append(cmd.Env, k+"="+v)
 		}
 		cmd.Stdin = strings.NewReader(c.Stdin)
-		if extra.Elevate {
+		if extra.Elevate && !residentMachineActive(r.cfg) {
 			return r.elevated(ctx, j.ID, cmd)
 		}
 		return r.process(ctx, j.ID, cmd)

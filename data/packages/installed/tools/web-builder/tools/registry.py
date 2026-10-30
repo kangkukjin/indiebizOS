@@ -1,6 +1,7 @@
 """
 site_registry: 홈페이지 등록/조회/삭제/수정
 """
+from runtime_utils import live_state_path
 import json
 import re
 from pathlib import Path
@@ -8,14 +9,14 @@ from datetime import datetime
 
 
 def load_sites(package_dir: Path) -> list:
-    sites_file = package_dir / "sites.json"
+    sites_file = live_state_path(package_dir / "sites.json")
     if sites_file.exists():
         return json.loads(sites_file.read_text(encoding="utf-8"))
     return []
 
 
 def save_sites(sites: list, package_dir: Path):
-    sites_file = package_dir / "sites.json"
+    sites_file = live_state_path(package_dir / "sites.json")
     sites_file.write_text(
         json.dumps(sites, ensure_ascii=False, indent=2),
         encoding="utf-8"

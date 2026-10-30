@@ -189,6 +189,58 @@ def test_environment_identity_and_python_executable_fallback(tmp_path):
     assert gens.python_executable(gen) == sys.executable
 
 
+def test_windows_snapshot_without_symlink_privilege_preserves_live_state(tmp_path, monkeypatch):
+    import sys
+    import types
+    import runtime_utils as paths
+    monkeypatch.setattr(gens, "WINDOWS", True)
+    if sys.platform != "win32":
+        monkeypatch.setitem(sys.modules, "_winapi", types.SimpleNamespace(
+            CreateJunction=lambda source, dest: Path(dest).symlink_to(source, target_is_directory=True)))
+    root = _repo(tmp_path)
+    manifest = gens.snapshot(root, tmp_path / "store")
+    gen = tmp_path / "store" / manifest["generation"]
+    monkeypatch.setenv("INDIEBIZ_CODE_ROOT", str(gen))
+    monkeypatch.setenv("INDIEBIZ_SOURCE_ROOT", str(root))
+    monkeypatch.setenv("INDIEBIZ_BASE_PATH", str(root))
+    pkg = paths.get_installed_packages_root() / "tools/pkg"
+    assert pkg == gen / "_code_data/packages/installed/tools/pkg"
+    assert not (pkg / "cache.db").exists()  # never a copied DB or stale hardlink
+    state = paths.live_state_path(pkg / "cache.db")
+    assert state == root / "data/packages/installed/tools/pkg/cache.db"
+    assert state.read_bytes() == b"db"
+    fresh = state.with_name("replacement")
+    fresh.write_bytes(b"replaced")
+    os.replace(fresh, state)
+    assert paths.live_state_path(pkg / "cache.db").read_bytes() == b"replaced"
+    new = paths.live_state_path(pkg / "new-state.json")
+    new.write_text("new")
+    assert (root / "data/packages/installed/tools/pkg/new-state.json").read_text() == "new"
+    fresh = root / "data/new-world.db"
+    fresh.write_bytes(b"new-world")
+    os.replace(fresh, root / "data/world.db")
+    assert (gen / "data/world.db").read_bytes() == b"new-world"
+    assert paths.live_state_path(gen / ".env") == root / ".env"
+    assert paths.get_vocabulary_path().read_text() == "nodes: {}\n"
+    (root / "data/ibl_nodes.yaml").write_text("nodes: changed\n")
+    (root / "data/packages/installed/tools/pkg/handler.py").write_text("def h(): return 2\n")
+    assert (pkg / "handler.py").read_text() == "def h(): return 1\n"
+    assert paths.get_vocabulary_path().read_text() == "nodes: {}\n"
+    gens.verify(gen)
+    gens.syntax_check(gen)
+    extra = pkg / "extra.py"
+    extra.write_text("added = True\n")
+    assert "data/packages/installed/tools/pkg/extra.py" in gens.extra_code_files(gen)
+    extra.unlink()
+    assert gens.residue(gen) == []
+    source_mode = (root / "data/world.db").stat().st_mode
+    gens.remove(gen)
+    assert not gen.exists()
+    assert state.read_bytes() == b"replaced"
+    assert (root / "data/world.db").stat().st_mode == source_mode
+    assert (root / "backend/app.py").read_text() == "value = 1\n"
+
+
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

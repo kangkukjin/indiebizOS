@@ -6,6 +6,7 @@ IndieBiz OS Core
 - IBL 라우팅용 실행 함수: 프로젝트/에이전트 위임, 캘린더/스케줄, 스위치
 """
 
+from runtime_utils import get_installed_packages_root
 import json
 from pathlib import Path
 from typing import Dict, List
@@ -29,7 +30,7 @@ def get_all_system_ai_tools() -> List[Dict]:
         tools.append(ibl_schema)
 
     # run_command: PC shell 또는 폰의 격리된 shell/Python 서비스.
-    pkg_base = Path(__file__).parent.parent.parent / "data" / "packages" / "installed" / "tools"
+    pkg_base = get_installed_packages_root() / "tools"
     lang_tools = [
         ("system_essentials", "run_command"),
         # 에이전트 인지 도구 — IBL 경유 불가 (파라미터 구조 불일치)

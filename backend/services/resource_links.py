@@ -3,6 +3,7 @@
 All references retain immutable bytes in the shared office store. Refresh is
 explicit; neither checking a source nor delivering a lecture rewrites a report.
 """
+from runtime_utils import get_installed_packages_root
 import tempfile
 import time
 from pathlib import Path
@@ -14,7 +15,7 @@ from office_sessions import DocumentConflict, DocumentUnsupported, read_bytes
 def package_module(package, module):
     from common.pkg_utils import load_sibling
     root = Path(__file__).resolve().parents[2]
-    anchor = root / "data/packages/installed/tools" / package / "handler.py"
+    anchor = get_installed_packages_root() / "tools" / package / "handler.py"
     return load_sibling(anchor, module)
 
 

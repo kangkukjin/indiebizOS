@@ -15,6 +15,7 @@ API 호출 조건:
   - 키 기반 인증 (등록된 IP 대역에서만 동작)
 """
 
+from runtime_utils import live_state_path
 import json
 import os
 import re
@@ -29,7 +30,7 @@ from cctv_common import calculate_distance, success_response, error_response
 UTIC_API_KEY = os.environ.get("UTIC_API_KEY", "")
 UTIC_API_URL = "http://www.utic.go.kr/map/mapcctv.do"
 UTIC_STREAM_JSP = "http://www.utic.go.kr/jsp/map/openDataCctvStream.jsp"
-CACHE_FILE = Path(__file__).parent / "utic_cctv_list.json"
+CACHE_FILE = live_state_path(Path(__file__).parent / "utic_cctv_list.json")
 
 # API 결과 메모리 캐시 (TTL: 10분)
 _api_cache = None

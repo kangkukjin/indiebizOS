@@ -12,6 +12,7 @@
   gyeonggi(경기도), cheonan(천안시), kbs, suwon_beltway, icheon, 등
 """
 
+from runtime_utils import live_state_path
 import json
 import os
 import re
@@ -33,7 +34,7 @@ _HEADERS = {
 
 # ── 캐시 ──────────────────────────────────────────────
 _CACHE_DIR = os.path.dirname(os.path.abspath(__file__))
-_CACHE_FILE = os.path.join(_CACHE_DIR, "kakao_cctv_list.json")
+_CACHE_FILE = str(live_state_path(os.path.join(_CACHE_DIR, "kakao_cctv_list.json")))
 
 _cctv_list: Optional[List[Dict]] = None
 _hls_cache: Dict[str, Tuple[str, float]] = {}   # key → (url, timestamp)

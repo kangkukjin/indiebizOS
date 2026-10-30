@@ -4,6 +4,7 @@ gmail.py - Gmail API 래퍼
 """
 
 import os
+import sys
 import json
 import base64
 from email.mime.text import MIMEText
@@ -11,6 +12,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from pathlib import Path
+
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parents[5] / "backend"))
+    import boot_paths  # noqa: F401
+from runtime_utils import live_state_path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -32,10 +38,10 @@ class GmailClient:
         else:
             token_file = config.get('token_file', 'tokens/token.json')
 
-        self.token_path = Path(__file__).parent / token_file
+        self.token_path = live_state_path(Path(__file__).parent / token_file)
 
         # credentials.json은 공통 사용
-        self.credentials_path = Path(__file__).parent / "credentials.json"
+        self.credentials_path = live_state_path(Path(__file__).parent / "credentials.json")
         
         self.scopes = config.get('scopes', [
             'https://www.googleapis.com/auth/gmail.readonly',
@@ -424,7 +430,7 @@ if __name__ == "__main__":
     import yaml
     
     # 설정 로드
-    config_path = Path(__file__).parent / "config.yaml"
+    config_path = live_state_path(Path(__file__).parent / "config.yaml")
     with open(config_path) as f:
         config = yaml.safe_load(f)
     

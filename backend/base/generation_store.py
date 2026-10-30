@@ -11,6 +11,9 @@
     .env …)은 정본으로 가는 심볼릭 링크. `__file__` 기준으로 데이터를 찾는 코드가 정본 데이터를 본다.
     (.git·.worktrees 는 연결하지 않는다 — 세대는 git 저장소가 아니다.)
   - 패키지 안 `data/` 폴더와 git 이 무시하는 항목(DB·캐시·비밀)은 복사하지 않고 링크한다.
+  - Windows에서는 일반 권한의 디렉터리 junction을 쓴다. 봉인된 data 코드는 `_code_data/`,
+    라이브 data는 정본 디렉터리 junction으로 분리한다. 패키지의 낱개 상태 파일은
+    runtime_utils.live_state_path로 정본을 직접 읽는다(파일 symlink·비밀 사본 불필요).
 
 세대 ID = 파일 지문 + 의존 환경 신원 + 제어 프로토콜 판본의 sha256 앞 32자. HEAD 가 같아도 dirty 내용이
 다르면 다른 세대다. 비밀(.env)·라이브 DB 는 사본에 복사하지 않는다(링크만).
@@ -32,7 +35,8 @@ import sys
 import time
 from pathlib import Path
 
-PROTOCOL_VERSION = 2
+PROTOCOL_VERSION = 3
+WINDOWS = sys.platform == "win32"
 MANIFEST = "manifest.json"
 SEALED = "SEALED"
 
@@ -148,12 +152,14 @@ def environment_identity(source_root):
     except Exception as exc:  # 메타데이터를 못 읽는 환경 — 신원 없음을 숨기지 않는다
         identity["distributions"] = None
         identity["error"] = f"{type(exc).__name__}: {exc}"
+    identity["data_view"] = "windows-junctions" if WINDOWS else "symlinks"
     return identity
 
 
 def generation_id(inventory, environment, protocol_version=PROTOCOL_VERSION):
     return digest({"files": inventory["files"], "environment": environment.get("distributions"),
-                   "python": environment.get("python"), "protocol": protocol_version})[:32]
+                   "python": environment.get("python"), "data_view": environment.get("data_view"),
+                   "protocol": protocol_version})[:32]
 
 
 def _clonefile(src, dst):
@@ -170,6 +176,15 @@ def _clonefile(src, dst):
 
 def _link(target, link):
     link.parent.mkdir(parents=True, exist_ok=True)
+    if WINDOWS:
+        if not target.is_dir():
+            # Windows has no unprivileged, replacement-following file link.
+            # Mutable files are addressed through runtime_utils.live_state_path;
+            # neither a copied secret nor a stale hardlink is a data view.
+            return
+        import _winapi
+        _winapi.CreateJunction(str(target.resolve()), str(link))
+        return
     os.symlink(str(target), str(link), target_is_directory=target.is_dir())
 
 
@@ -181,11 +196,21 @@ def _ignored_entries(root, scope):
     return [os.fsdecode(x).rstrip("/") for x in out.split(b"\0") if x]
 
 
+def _code_path(root, rel):
+    """Windows keeps the whole live data directory behind one junction."""
+    root = Path(root)
+    if (root / "_code_data").is_dir() and rel.startswith("data/"):
+        return root / "_code_data" / rel[5:]
+    return root / rel
+
+
 def _populate(source_root, target, files):
     """코드 복사 + 상태·데이터 링크. 반환: 링크 목록(상대경로)."""
     root, links = Path(source_root), []
+    if WINDOWS:
+        (target / "_code_data").mkdir()
     for rel in files:
-        dst = target / rel
+        dst = _code_path(target, rel)
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(root / rel, dst, follow_symlinks=True)
     # 패키지 상태(패키지 안 data/)·git 무시 항목은 정본으로 링크한다.
@@ -194,7 +219,7 @@ def _populate(source_root, target, files):
         if not base.is_dir():
             continue
         for rel in _ignored_entries(root, scope):
-            src, dst = root / rel, target / rel
+            src, dst = root / rel, _code_path(target, rel)
             parts = Path(rel).parts
             if set(parts) & {"__pycache__", ".pytest_cache", ".hypothesis"} or dst.exists() or os.path.lexists(dst):
                 continue
@@ -208,12 +233,21 @@ def _populate(source_root, target, files):
             for pkg in kind.iterdir():
                 for state_dir in PACKAGE_STATE_DIRS:
                     src = pkg / state_dir
-                    dst = target / src.relative_to(root)
+                    dst = _code_path(target, src.relative_to(root).as_posix())
                     if src.is_dir() and not os.path.lexists(dst):
                         _link(src, dst)
                         links.append(src.relative_to(root).as_posix())
     # data/ 뷰: 코드 쪽이 아닌 모든 항목은 정본 링크.
     data = root / "data"
+    if WINDOWS:
+        if data.is_dir():
+            _link(data, target / "data")
+            links.append("data")
+        for entry in root.iterdir():
+            if entry.name not in CODE_TOP | NEVER_LINK_TOP | {".venv"} and entry.is_dir():
+                _link(entry, target / entry.name)
+                links.append(entry.name)
+        return links
     (target / "data").mkdir(exist_ok=True)
     if data.is_dir():
         for entry in data.iterdir():
@@ -246,7 +280,7 @@ def _isolate_environment(source_root, target):
     if _clonefile(venv, dst):
         return {"isolation": "clonefile", "path": str(dst)}
     _link(venv, dst)
-    return {"isolation": "symlink", "path": str(dst),
+    return {"isolation": "junction" if WINDOWS else "symlink", "path": str(dst),
             "note": "복제 불가 파일시스템 — 의존 환경 바이트는 정본과 공유된다. 환경 변경은 신원 드리프트로만 관측한다."}
 
 
@@ -254,14 +288,19 @@ def _seal_readonly(target, files):
     """봉인 = 파일 바이트를 읽기 전용으로. 디렉터리는 그대로 둔다(파이썬 캐시·잔류 회수·정리가 가능해야 한다).
     새 파일이 세대 안에 생기면 residue()/extra_code_files() 가 드러낸다 — 바이트 교체는 막고 관측은 남긴다."""
     for rel in files:
-        p = target / rel
+        p = _code_path(target, rel)
         mode = stat.S_IMODE(p.stat().st_mode)
         p.chmod(mode & ~0o222)
 
 
 def _unseal(target):
+    if _directory_link(Path(target)):
+        return
     for dirpath, dirnames, filenames in os.walk(target):
         d = Path(dirpath)
+        # os.walk does not treat Windows junctions as symlinks. Never enter
+        # shared data/environment trees while making a generation removable.
+        dirnames[:] = [n for n in dirnames if not _directory_link(d / n)]
         try:
             d.chmod(stat.S_IMODE(d.lstat().st_mode) | 0o700)
         except OSError:
@@ -273,6 +312,15 @@ def _unseal(target):
                     p.chmod(stat.S_IMODE(p.lstat().st_mode) | 0o600)
             except OSError:
                 pass
+
+
+def _directory_link(path):
+    if path.is_symlink():
+        return True
+    try:
+        return bool(getattr(path.lstat(), "st_file_attributes", 0) & 0x400)
+    except OSError:
+        return False
 
 
 def read_manifest(generation_dir):
@@ -308,7 +356,7 @@ def snapshot(source_root, store, *, environment=None, source_inventory=None, ext
         files = sorted(inventory["files"])
         links = _populate(root, tmp, files)
         env = _isolate_environment(root, tmp)
-        copied = {rel: _sha(tmp / rel) for rel in files}
+        copied = {rel: _sha(_code_path(tmp, rel)) for rel in files}
         if copied != inventory["files"]:
             raise CandidateChanged("복사 중 원천 파일 내용이 바뀌었습니다")
         again = execution_inventory(root)
@@ -322,6 +370,7 @@ def snapshot(source_root, store, *, environment=None, source_inventory=None, ext
             "generation": gid, "protocol": PROTOCOL_VERSION, "created_at": started,
             "source_root": str(root), "source_digest": inventory["digest"], "files": inventory["files"],
             "file_count": len(files), "links": links, "environment": {**environment, **env},
+            "data_view": "junctions-and-live-state-paths" if WINDOWS else "symlinks",
             "base_commit": head.decode().strip() if head else None,
             "dirty_inputs": sorted({os.fsdecode(e[3:]) for e in dirty.split(b"\0") if len(e) > 3}
                                    if dirty is not None else []),
@@ -353,7 +402,7 @@ def verify(generation_dir, *, files=None):
         raise GenerationCorrupt("봉인되지 않은 세대: " + str(g))
     expected = manifest["files"] if files is None else {k: manifest["files"][k] for k in files if k in manifest["files"]}
     for rel, sha in expected.items():
-        p = g / rel
+        p = _code_path(g, rel)
         if not p.is_file() or _sha(p) != sha:
             raise GenerationCorrupt("세대 바이트 불일치: " + rel)
     return manifest
@@ -385,7 +434,7 @@ def python_executable(generation_dir):
     """세대의 인터프리터 — 복제된 .venv 가 있으면 그것(의존 바이트가 세대에 고정), 없으면 현재 것."""
     g = Path(generation_dir)
     for candidate in (g / ".venv/bin/python3", g / ".venv/Scripts/python.exe"):
-        if candidate.exists() and not (g / ".venv").is_symlink():
+        if candidate.exists() and not _directory_link(g / ".venv"):
             return str(candidate)
     return sys.executable
 
@@ -397,7 +446,7 @@ def syntax_check(generation_dir, manifest=None):
     manifest = manifest or read_manifest(g) or {}
     for rel in sorted(manifest.get("files", {})):
         if rel.endswith(".py"):
-            ast.parse((g / rel).read_bytes(), filename=rel)
+            ast.parse(_code_path(g, rel).read_bytes(), filename=rel)
 
 
 def extra_code_files(generation_dir):
@@ -406,15 +455,19 @@ def extra_code_files(generation_dir):
     manifest = read_manifest(g) or {}
     known = set(manifest.get("files", {}))
     links = set(manifest.get("links", []))
+    if (g / "_code_data").is_dir():
+        links.discard("data")  # logical data/... code lives outside the live junction
     out = []
     for scope in CODE_DIRS:
-        base = g / scope
+        base = _code_path(g, scope)
         if not base.is_dir():
             continue
         for p in base.rglob("*"):
             if not p.is_file() or p.is_symlink():
                 continue
             rel = p.relative_to(g).as_posix()
+            if rel.startswith("_code_data/"):
+                rel = "data/" + rel[len("_code_data/"):]
             if rel in known or any(rel == l or rel.startswith(l + "/") for l in links):
                 continue
             if set(Path(rel).parts) & {"__pycache__", ".pytest_cache"}:
@@ -427,6 +480,8 @@ def residue(generation_dir):
     """세대 안에서 데이터처럼 새로 생긴 항목 — `__file__` 기준으로 쓴 코드가 남긴 것(정본 데이터가 아니다)."""
     g = Path(generation_dir)
     manifest = read_manifest(g) or {}
+    if manifest.get("data_view") == "junctions-and-live-state-paths":
+        return []  # data/ is the actual source directory, not generation residue.
     known = set(manifest.get("files", [])) | set(manifest.get("links", []))
     out = []
     data = g / "data"

@@ -11,6 +11,7 @@
 ★bulletin_core 수정 시 이 모듈이 캐시한 인스턴스는 백엔드 재시작으로만 갱신된다.
 """
 
+from runtime_utils import get_installed_packages_root
 import os
 import sys
 import importlib.util
@@ -22,7 +23,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 router = APIRouter(prefix="/bulletin", tags=["bulletin"])
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
-_PKG = _ROOT / "data" / "packages" / "installed" / "tools" / "bulletin"
+_PKG = get_installed_packages_root() / "tools" / "bulletin"
 
 
 def _read_env(name: str) -> str:

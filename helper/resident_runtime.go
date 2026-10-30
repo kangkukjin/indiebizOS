@@ -75,10 +75,25 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	caps["desktop_stream"] = 1
 	caps["process_recovery"] = residentWorkerInvocation(r.cfg.InstallationID, os.Args, os.Getenv(residentWorkerEnv))
 	caps["elevation"] = true
+	caps["elevation_unattended"] = residentMachineActive(r.cfg)
+	if residentMachineActive(r.cfg) {
+		caps["process_recovery"] = true
+		caps["service_scope"] = "machine"
+		caps["execution_account"] = "LocalSystem"
+		caps["interactive"] = false
+		caps["screen_observation"] = false
+		caps["desktop_stream"] = 0
+	}
 	caps["terminal"] = terminalAvailable()
 	caps["terminal_lan"] = true
 	caps["media_session"] = r.mediaSessionCapabilities()
 	caps["media_components"] = media // ffmpeg·ffplay·mpv paths, missing and how to add them
+	if residentMachineActive(r.cfg) {
+		caps["media"] = false
+		caps["media_session"] = false
+		caps["terminal"] = false
+		caps["terminal_lan"] = false
+	}
 	caps["installation_warnings"] = residentInstallWarnings(r.cfg.DataDir)
 	caps["helper_sha256"], caps["go"], caps["self_update"] = residentSelfDigest(), runtime.Version(), residentCanSelfUpdate(r.cfg)
 	if st, e := residentLoadUpdate(r.cfg.DataDir); e == nil && st.Outcome != "" {

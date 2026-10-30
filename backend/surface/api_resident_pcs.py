@@ -27,6 +27,7 @@ class DeviceMessage(BaseModel):
     capabilities: dict | None = None
     wait: float = 0
     alias: str | None = Field(default=None, max_length=80)
+    enrollment_proof: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 def checked(fn, *args, **kwargs):
@@ -40,7 +41,8 @@ def checked(fn, *args, **kwargs):
 
 @router.post('/limb/resident/enroll')
 def enroll(req: DeviceMessage):
-    rec = checked(limb_keys.resident_enroll, req.key, req.installation_id, req.alias)
+    rec = checked(limb_keys.resident_enroll, req.key, req.installation_id, req.alias,
+                  enrollment_proof=req.enrollment_proof)
     return {k: rec[k] for k in ('key', 'device_id', 'alias', 'expires_at', 'registration')}
 
 

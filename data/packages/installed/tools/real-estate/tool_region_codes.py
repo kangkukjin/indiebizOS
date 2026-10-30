@@ -2,6 +2,7 @@
 부동산 API 지역 코드 조회 모듈
 법정동 코드 앞 5자리 (시군구 코드)
 """
+from runtime_utils import live_state_path
 import json
 import re
 import os
@@ -342,7 +343,7 @@ _BUILTIN_REGION_CODES = {
 # molit 은 폐지 코드에 오류 대신 빈 목록을 주므로 '어느 코드가 살아있는지'를 스스로 말하지
 # 않는다. 반면 네이버부동산 지역 트리(/api/regions/list, 키 불요)는 **현행 행정구역만** 담고
 # cortarNo 앞 5자리가 곧 법정동 시군구 코드라, 이 트리가 카탈로그의 현행성 기준이 된다.
-_CATALOG_PATH = os.path.join(os.path.dirname(__file__), "region_codes.json")
+_CATALOG_PATH = str(live_state_path(os.path.join(os.path.dirname(__file__), "region_codes.json")))
 _CATALOG_MIN_SIDO = 15      # 17 시도에서 통합(전남광주)·수집 실패 여유
 _CATALOG_MIN_CODES = 200    # 전국 시군구 약 250
 _CATALOG_STALE_DAYS = 180

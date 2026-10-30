@@ -13,6 +13,7 @@
     등록하지 않아 터널(원격)에서는 차단, 맥 로컬에서만 열린다.
 """
 
+from runtime_utils import get_installed_packages_root
 import os
 import re
 import json
@@ -104,7 +105,7 @@ def _renderer():
     """신문 HTML 렌더러(패키지 newspaper_html.py) — 디자인 단일 소스를 공유."""
     global _RENDERER
     if _RENDERER is None:
-        p = _ROOT / "data" / "packages" / "installed" / "tools" / "family-news" / "newspaper_html.py"
+        p = get_installed_packages_root() / "tools" / "family-news" / "newspaper_html.py"
         spec = importlib.util.spec_from_file_location("_family_newspaper_html_api", str(p))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

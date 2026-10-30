@@ -227,6 +227,18 @@ func residentSetupHandler(cfg *Config, install func(*Config) (string, error), me
 			}
 			candidate := *cfg
 			candidate.Alias = alias
+			if r.FormValue("machine") == "on" {
+				if err := residentMachineSetup(&candidate); err != nil {
+					http.Error(w, err.Error(), 500)
+					return
+				}
+				fmt.Fprint(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz 무인 관리</title><p>무인 관리 서비스를 등록했습니다. 재부팅 후 로그인 전에도 중앙에서 설치·설정을 실행할 수 있습니다. 화면 공유와 사용자 계정용 앱 실행은 일반 헬퍼를 별도 이름으로 등록하세요.</p>`)
+				select {
+				case done <- nil:
+				default:
+				}
+				return
+			}
 			outcome, e := install(&candidate)
 			if e != nil {
 				http.Error(w, e.Error(), 500)
@@ -255,7 +267,11 @@ func residentSetupHandler(cfg *Config, install func(*Config) (string, error), me
 			}
 			return
 		}
-		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>AI 작업과 화면 공유를 준비하고 로그인 시 자동 시작합니다. 요청되는 화면·입력 접근 권한을 허용하세요. 관리자 작업은 필요할 때 이 PC에서 인증합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><label><input type="checkbox" name="media" style="width:auto"> 음성·영상 구성요소도 설치(ffmpeg·mpv, 나중에 관리 화면에서도 설치 가능)</label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
+		machineOption := ""
+		if runtime.GOOS == "windows" {
+			machineOption = `<label><input type="checkbox" name="machine" style="width:auto"> 무인 관리 서비스로 등록 — 처음 한 번 관리자 승인 후 중앙에서 프로그램 설치·시스템 설정을 수행합니다. 로그인하지 않아도 동작합니다. 화면 공유는 일반 헬퍼를 별도로 등록하세요.</label>`
+		}
+		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>AI 작업과 화면 공유를 준비하고 로그인 시 자동 시작합니다. 요청되는 화면·입력 접근 권한을 허용하세요. 일반 등록의 관리자 작업은 필요할 때 이 PC에서 인증합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label>%s<label><input type="checkbox" name="media" style="width:auto"> 음성·영상 구성요소도 설치(ffmpeg·mpv, 나중에 관리 화면에서도 설치 가능)</label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name), machineOption)
 	})
 	return mux
 }
@@ -488,6 +504,9 @@ func residentRemove(cfg *Config) error {
 	if e = residentAutostart(cfg, cleaner, false); e != nil {
 		return e
 	}
+	if cfg.MachineService {
+		return nil // SCM host launches/retries cleanup after this worker exits.
+	}
 	cmd := exec.Command(cleaner, "--resident-cleanup", cfg.DataDir)
 	configureResidentDetached(cmd)
 	return cmd.Start()
@@ -508,7 +527,8 @@ func residentCleanup(root string) error {
 	// Cleanup-only mode is restartable at login until logs and removal reach the hub.
 	revoked := false
 
-	for _, name := range []string{filepath.Base(residentExecutable(root)), filepath.Base(residentExecutable(root)) + ".previous", "update.json", "control.json", "paused.json", "screen-worker.py", "screen-portal-token"} {
+	ownedFiles := []string{filepath.Base(residentExecutable(root)), filepath.Base(residentExecutable(root)) + ".previous", "update.json", "control.json", "paused.json", "screen-worker.py", "screen-portal-token"}
+	for _, name := range ownedFiles {
 		for attempt := 0; attempt < 30; attempt++ {
 			e = os.Remove(filepath.Join(root, name))
 			if e == nil || os.IsNotExist(e) {
@@ -575,11 +595,13 @@ func residentCleanup(root string) error {
 	if e = os.RemoveAll(filepath.Join(root, "spool")); e != nil {
 		return e
 	}
-	if e = residentAutostart(&cfg, "", true); e != nil {
-		return e
-	}
-	if e = os.Remove(filepath.Join(root, "indiebiz-helper.json")); e != nil && !os.IsNotExist(e) {
-		return e
+	if !cfg.MachineService {
+		if e = residentAutostart(&cfg, "", true); e != nil {
+			return e
+		}
+		if e = os.Remove(filepath.Join(root, "indiebiz-helper.json")); e != nil && !os.IsNotExist(e) {
+			return e
+		}
 	}
 	// Managed executable/autostart are gone; the finalizer remains until receipt delivery.
 	for !revoked {
@@ -590,6 +612,18 @@ func residentCleanup(root string) error {
 		time.Sleep(30 * time.Second)
 	}
 	_ = os.RemoveAll(filepath.Join(root, "IndieBiz Screen.app"))
+	if cfg.MachineService {
+		if e = residentAutostart(&cfg, "", true); e != nil {
+			return e
+		}
+		if e = os.Remove(filepath.Join(root, "indiebiz-helper.json")); e != nil && !os.IsNotExist(e) {
+			return e
+		}
+		// The service host exits after the cleanup child; delete its image later.
+		if e = residentDeleteSelf(filepath.Join(root, "service.exe")); e != nil {
+			return e
+		}
+	}
 	_ = os.Remove(filepath.Join(root, "removing.json"))
 	exe, _ := os.Executable()
 	return residentDeleteSelf(exe)

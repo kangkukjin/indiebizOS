@@ -16,6 +16,7 @@ api_registry.yaml을 읽고, 도구 이름으로 API를 자동 호출합니다.
         ...
 """
 
+from runtime_utils import get_installed_packages_root
 import os
 import re
 import yaml
@@ -375,7 +376,7 @@ def _resolve_post_process_func(func_path: str):
 
     # 2. packages/installed/tools/ 하위에서 검색
     import sys
-    base = Path(__file__).parent.parent.parent / "data" / "packages" / "installed" / "tools"
+    base = get_installed_packages_root() / "tools"
     if base.exists():
         # module_path가 "tool_fmp" 형태인 경우 → 모든 패키지 폴더에서 찾기
         for pkg_dir in base.iterdir():

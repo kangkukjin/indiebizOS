@@ -4,6 +4,7 @@
 - 시스템 AI 채팅, 프로젝트 에이전트 채팅, 스위치 실행
 """
 
+from runtime_utils import get_vocabulary_path
 from fastapi import APIRouter, Request, HTTPException, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
@@ -160,7 +161,7 @@ async def check_framable(url: str):
 
 # 앱 표면 계기 — ibl_nodes.yaml 의 app: 블록에서 자동 파생 (2단계, 단일 진실 소스).
 # app: 블록을 단 액션은 빌드(--check) 시 정합성 검증을 통과해야 하며, 여기서 계기로 합성된다.
-IBL_NODES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data", "ibl_nodes.yaml")
+IBL_NODES_PATH = str(get_vocabulary_path())
 # 어휘 없는 순수 앱(상부구조): 파일 하나 = 앱 하나. app: 블록과 동일 스키마이되
 # 노드 액션에 매달리지 않는다 — 모드의 action: 은 전부 일반 어휘를 호출한다.
 # (하부구조=어휘 / 상부구조=앱 의 깨끗한 이음매 — docs/APP_AS_MANIFEST_DESIGN.md)

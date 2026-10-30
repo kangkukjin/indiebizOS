@@ -14,6 +14,7 @@ world_pulse.py에서 분리된 모듈로, 시스템 건강 점검(Self-Check)과
     from world_pulse_health import generate_guide, run_daily_health_check, get_system_health
 """
 
+from runtime_utils import get_vocabulary_path
 import json
 import logging
 import sys
@@ -478,7 +479,7 @@ def purge_zombie_health_records() -> Dict:
     import yaml
     from pulse_db import _get_pulse_db
 
-    nodes_path = Path(__file__).parent.parent.parent / "data" / "ibl_nodes.yaml"
+    nodes_path = get_vocabulary_path()
     try:
         with open(nodes_path, encoding="utf-8") as f:
             nodes = (yaml.safe_load(f) or {}).get("nodes", {})
@@ -1068,7 +1069,7 @@ DIAGNOSTIC_REPORT_PATH = Path(__file__).parent.parent.parent / "data" / "diagnos
 def _count_all_actions() -> int:
     """ibl_nodes.yaml에서 전체 액션 수 카운트"""
     import yaml as _yaml
-    nodes_path = Path(__file__).parent.parent.parent / "data" / "ibl_nodes.yaml"
+    nodes_path = get_vocabulary_path()
     if not nodes_path.exists():
         return 0
     try:

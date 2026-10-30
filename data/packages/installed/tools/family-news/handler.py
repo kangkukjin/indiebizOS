@@ -8,6 +8,7 @@ USB 로 연결된 폰의 사진(MediaStore)을 지난 발행 이후 구간으로
 전부 맥(superstructure). 웹판 사진은 EXIF/GPS 를 벗겨 내보내고 장소는 텍스트로만 싣는다.
 """
 
+from runtime_utils import get_installed_packages_root
 import os
 import re
 import io
@@ -254,7 +255,7 @@ def _reverse_geocode(lat: float, lon: float) -> str:
     place = ""
     try:
         if _LOC_HANDLER is None:
-            p = _ROOT / "data" / "packages" / "installed" / "tools" / "location-services" / "handler.py"
+            p = get_installed_packages_root() / "tools" / "location-services" / "handler.py"
             spec = importlib.util.spec_from_file_location("_family_news_loc", str(p))
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)

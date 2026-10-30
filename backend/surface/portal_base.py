@@ -10,13 +10,14 @@ api_portal.py 1903줄 분할(2026-08-05 감사 부채 ⑨)에서 갈라져 나�
 그 가드가 못 따라갈 수 있다).
 """
 
+from runtime_utils import get_installed_packages_root
 import os
 from pathlib import Path
 
 from fastapi import HTTPException, Request
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
-_PKG = _ROOT / "data" / "packages" / "installed" / "tools" / "community-portal"
+_PKG = get_installed_packages_root() / "tools" / "community-portal"
 
 _COOKIE_MAX_AGE = 365 * 24 * 3600
 

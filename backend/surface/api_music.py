@@ -10,6 +10,7 @@ music_core.path_allowed 화이트리스트 (api_photo 의 무제한 서빙보다
 로직 공유: music_core 를 sys.modules 공유 키로 로드(bulletin_core 선례 — 핸들러와 같은 인스턴스).
 """
 
+from runtime_utils import get_installed_packages_root
 import asyncio
 import hashlib
 import importlib.util
@@ -25,7 +26,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 
 router = APIRouter(prefix="/music", tags=["music"])
 
-_PKG_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "packages" / "installed" / "tools" / "music-player"
+_PKG_DIR = get_installed_packages_root() / "tools" / "music-player"
 _CORE = None
 
 AUDIO_MIME = {

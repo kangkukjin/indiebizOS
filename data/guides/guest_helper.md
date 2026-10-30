@@ -449,19 +449,16 @@ history는 화면 결과의 b64를 생략하고 image_omitted와 image_task_ref�
 
 ## 모든 폴더·외장 드라이브와 관리자 명령
 
-상주 작업의 workspace는 기본 위치다. 절대 cwd/path로 사용자 권한이 허용하는 마운트된
-모든 경로를 쓴다. Mac의 보호 폴더에는 설치된 헬퍼의 전체 디스크 접근 권한도 필요하다.
-상주 shell의 `elevate:true`는 **원격 PC의 OS 인증창**을 열고 승인된 이번 명령만 관리자
-권한으로 실행한다. 비밀번호는 채팅·cmd·stdin·env에 담지 않는다. 권한이 필요한 파일
-작업은 이 관리자 셸로 한다. 잠긴 볼륨·읽기 전용 볼륨·OS 보호를 자동 해제하지 않는다.
+workspace는 기본 위치이며 절대 cwd/path로 OS가 허용한 모든 경로를 쓴다.
+일반 헬퍼의 shell `elevate:true`는 원격 PC의 OS 인증창에서 이번 명령을 승인한다.
+비밀번호를 채팅·cmd·stdin·env로 전달하지 않는다. UAC 보안 화면은 헬퍼로 조작할 수 없다.
 
-`[limbs:guestpc]{op:"shell",limb:"사무실PC",cmd:"id",elevate:true,background:true}`
-
-관리자 인증은 사람이 원격 PC 화면에서 완료한다. Windows UAC 보안 데스크톱은 사용자
-헬퍼에서 제어할 수 없어 로컬 승인이 필요하다. 취소·시간 초과·헬퍼 종료는 관리자 명령도
-종료한다. 이전 헬퍼·휴대형·mode:observe는 elevate를 지원하지 않는다.
-
-플랫폼별 설치·권한·연결·수명 계약은 `helper/README.md`를 따른다.
+Windows **무인 관리 서비스**는 최초 관리자 등록 후 로그인 없이 설치·설정을 실행한다.
+`info.resident`의 `service_scope:machine`, `elevation_unattended:true`를 확인한다.
+이 대상의 shell은 LocalSystem이며 매번 UAC를 띄우지 않는다. 일반 사용자용 앱·화면은
+사용자 세션 헬퍼로, 시스템 설치·설정은 관리 서비스로 보낸다. 설치기는 무인 옵션을 쓴다.
+서비스가 없는 일반 헬퍼를 무인 관리 가능하다고 추정하지 않는다.
+등록·보호·해제·플랫폼 범위는 `helper/README.md`의 무인 관리 서비스를 따른다.
 
 ## 네트워크 기기 손발
 

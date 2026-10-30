@@ -32,18 +32,20 @@ import (
 
 // 옆에 놓인 설정 파일 — 발급기([self:limb]{op:issue})가 USB 에 써 넣는다.
 type Config struct {
-	Maintenance    bool     `json:"maintenance,omitempty"`
-	Desktop        bool     `json:"desktop,omitempty"`
-	PrivateKey     string   `json:"private_key,omitempty"`
-	InstallationID string   `json:"installation_id,omitempty"`
-	Generation     string   `json:"generation,omitempty"`
-	ExpiresAt      float64  `json:"expires_at,omitempty"`
-	Mode           string   `json:"mode"`
-	DataDir        string   `json:"data_dir"`
-	AutoAllow      []string `json:"auto_allow"`
-	Base           string   `json:"base"`  // 내 몸(허브)의 공개 주소, 예 https://mac.tailxxxx.ts.net
-	Key            string   `json:"key"`   // limb key (허브 비밀번호가 아니다)
-	Alias          string   `json:"alias"` // 표시용 이름
+	MachineService  bool     `json:"machine_service,omitempty"`
+	EnrollmentProof string   `json:"enrollment_proof,omitempty"`
+	Maintenance     bool     `json:"maintenance,omitempty"`
+	Desktop         bool     `json:"desktop,omitempty"`
+	PrivateKey      string   `json:"private_key,omitempty"`
+	InstallationID  string   `json:"installation_id,omitempty"`
+	Generation      string   `json:"generation,omitempty"`
+	ExpiresAt       float64  `json:"expires_at,omitempty"`
+	Mode            string   `json:"mode"`
+	DataDir         string   `json:"data_dir"`
+	AutoAllow       []string `json:"auto_allow"`
+	Base            string   `json:"base"`  // 내 몸(허브)의 공개 주소, 예 https://mac.tailxxxx.ts.net
+	Key             string   `json:"key"`   // limb key (허브 비밀번호가 아니다)
+	Alias           string   `json:"alias"` // 표시용 이름
 }
 
 // 허브가 큐(job.code)에 싣는 셸 봉투. 헬퍼가 자기 코드로 해석한다.
@@ -122,6 +124,9 @@ const (
 var client = &http.Client{Timeout: 90 * time.Second}
 
 func main() {
+	if handled, code := residentMachineCLI(os.Args); handled {
+		os.Exit(code)
+	}
 	if len(os.Args) == 4 && os.Args[1] == "--member-db-backup" {
 		if err := memberDatabaseBackup(os.Args[2], os.Args[3]); err != nil {
 			fmt.Fprintln(os.Stderr, err)

@@ -9,6 +9,8 @@
     "base/codex_rollout",
     "base/coding_process",
     "base/completion_lease",
+    "base/component_registry",
+    "base/component_runtime",
     "base/control_base",
     "base/control_conditions",
     "base/corpus_policy",
@@ -169,6 +171,7 @@
     "cognition/system_tools",
     "cognition/system_tools_delegate",
     "cognition/system_tools_ibl",
+    "cognition/task_continuation",
     "cognition/task_workers",
     "cognition/todo_bridge",
     "cognition/turn_scope",
@@ -577,8 +580,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 566,
-    "engine": 534,
+    "total": 569,
+    "engine": 537,
     "blocklist": 32
   }
 }

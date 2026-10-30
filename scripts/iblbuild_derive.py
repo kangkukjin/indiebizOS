@@ -117,18 +117,9 @@ def derive_phone_manifest(data: dict, root: Path) -> dict:
 
 
 def handler_fingerprint(pkg_dir: Path) -> str:
-    """패키지 실행 소스의 지문 — 회원 개방(`path_audited.impl`) 재검증용.
-
-    패키지 루트의 `_` 접두 아닌 *.py 전부(handler·tool_*·*_ops)를 경로순으로 이어 sha256, 앞 16자.
-    backend/ibl/member_profile.py 가 같은 계산을 런타임에 한다(시험이 두 구현의 일치를 고정).
-    """
-    import hashlib
-    h = hashlib.sha256()
-    for p in sorted(Path(pkg_dir).rglob("*.py")):
-        if "__pycache__" in p.parts or p.name.startswith("test_"):
-            continue
-        h.update(p.relative_to(pkg_dir).as_posix().encode()); h.update(b"\0"); h.update(p.read_bytes()); h.update(b"\0")
-    return h.hexdigest()[:16]
+    """런타임과 같은 권한 코드/격리 부품 계약 지문."""
+    from component_registry import handler_fingerprint as fingerprint
+    return fingerprint(pkg_dir)
 
 
 def declared_side_effect(action: dict) -> bool:

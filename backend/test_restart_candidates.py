@@ -69,3 +69,30 @@ def test_worker_changes_wait_for_control_acceptance_then_still_deploy(managed, c
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_verified_component_publication_does_not_restart_worker(managed):
+    import json
+    import component_registry as components
+    ctl, adapter, clock = managed
+    rel = 'data/packages/installed/tools/fixture/fixture_transform.py'
+    path = ctl.base / rel
+    path.parent.mkdir(parents=True)
+    path.write_text('def transform(x): return x\n')
+    spec = {'id': 'fixture.transform', 'source': rel, 'text_fields': [], 'fixtures': [], 'protocol': 'pure-json/1'}
+    path.with_name('runtime_components.json').write_text(json.dumps([spec]))
+    candidate = ctl.prepare_candidate('component-fixture')
+    ctl.save(code_digest=candidate['generation'], generation_dir=candidate['generation_dir'],
+             source_digest=candidate['source_digest'])
+    spec = components.registry(candidate['generation_dir'])['fixture.transform']
+    replacement = b'def transform(x): return list(x)\n'
+    version = components.store_object(ctl.base, replacement)
+    components.publish(ctl.base, spec, version, receipt={'session': 'verified-fixture'})
+    path.write_bytes(replacement)
+    scan(ctl, clock)
+    assert not ctl.pending() and adapter.spawns == adapter.stops == 0
+    assert ctl.state['generation_dir'] == candidate['generation_dir']
+    # 게시 영수증과 다른 바이트를 조용히 활성화된 것으로 취급하지 않는다.
+    path.write_text('def transform(x): return [x]\n')
+    scan(ctl, clock)
+    assert ctl.pending()

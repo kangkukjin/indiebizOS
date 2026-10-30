@@ -1,0 +1,72 @@
+[
+  {
+    "id": "web.naver_response",
+    "source": "data/packages/installed/tools/web/web_naver_response.py",
+    "text_fields": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+    ],
+    "fixtures": [
+      {
+        "input": {
+          "type": "news",
+          "response": {
+            "items": []
+          }
+        },
+        "expected": []
+      },
+      {
+        "input": {
+          "type": "news",
+          "response": {
+            "items": [
+              {
+                "title": "<b>소식</b> &amp; 근거",
+                "description": "첫  줄\n다음",
+                "link": "https://example.test/news",
+                "pubDate": "Thu, 27 Aug 2026 09:00:00 +0900"
+              }
+            ]
+          }
+        },
+        "expected": [
+          {
+            "title": "소식 & 근거",
+            "meta": "",
+            "summary": "첫 줄 다음",
+            "url": "https://example.test/news",
+            "date": "2026-08-27T09:00:00+09:00"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "blog",
+          "response": {
+            "items": [
+              {
+                "title": "글",
+                "description": "내용",
+                "link": "https://example.test/blog",
+                "postdate": "20260815"
+              }
+            ]
+          }
+        },
+        "expected": [
+          {
+            "title": "글",
+            "meta": "",
+            "summary": "내용",
+            "url": "https://example.test/blog",
+            "date": "2026-08-15"
+          }
+        ]
+      }
+    ],
+    "protocol": "pure-json/1"
+  }
+]

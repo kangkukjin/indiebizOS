@@ -985,7 +985,7 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
 가이드가 절차를 나르고, `--check`가 빠질 수 없는 부분을 강제한다:
 - **생성**: `data/guides/new_action_checklist.md` — 0.5단계(역할·통화 계약) + 2.5단계(fixture 한 줄 추가).
 - **가르치기**: 같은 체크리스트의 해마 단계 — `.venv`에서 `_load_model_sync()` 후 `add_examples_batch` 단일 경로로 자연어 변형·op·인자·조합 용례를 넣고, 재학습용 데이터에도 남긴다. 이어 `scripts/ibl_param_sweep.py`로 관측 인자 표면을 갱신하고 실제 연상 검색을 확인한다. **빌드 통과는 실행 가능성, 연상 프로브는 사용 가능성**을 각각 증명한다.
-- **라이브 반영**: `build_ibl_nodes.py`가 중앙 레지스트리·tool.json·문서 마커를 파생한다. `/packages/reload`는 `handler.py`만 교체하므로 `tool_*.py`·서브모듈 변경은 백엔드 재기동까지 해야 한다.
+- **라이브 반영**: `build_ibl_nodes.py`가 중앙 레지스트리·tool.json·문서 마커를 파생한다. `/packages/reload`는 `handler.py`만 교체하므로 미분리 `tool_*.py`·서브모듈 변경에는 백엔드 재기동이 필요하다. 별도 등록된 순수 변환 부품은 사본 검사·정본 반영·불변 판본 활성화를 거쳐 다음 호출에 재기동 없이 적용한다. 현재 지원과 검증은 [작업 지속·부분 수리 §9](../../docs/TASK_CONTINUOUS_REPAIR_DESIGN_2026_10_31.md#9-2026-10-31-첫-구현)를 따른다.
 - **삭제**: `data/guides/action_removal.md` — src·tool.json·handler·**fixture** 줄 + 해마·건강기록 정리.
 - 절차서·처리 플레이북: `docs/IBL_MAINTENANCE_MANUAL.md`.
 

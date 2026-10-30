@@ -16,19 +16,39 @@ class Binding:
     aliases: set = field(default_factory=set)
     context: dict = field(default_factory=lambda: __import__("thread_context").snapshot())
     conversation: object = field(default_factory=lambda: __import__("conversation_sessions").current())
+    followup_reason: str = ""
+    component_repair_allowed: bool = False
+    component_session: str = ""
+    component_attempt: int = 0
+    component_paths: set = field(default_factory=set)
+    cancel_check: object = None
 
 
 def current():
     return _current.get()
 
 
-def enter(runner, enabled=True):
+def claim_followup(reason):
+    """능력 교정·실패 후속·REFLEX 인계가 한 턴의 추가 실행 한도를 공유한다."""
+    binding = current()
+    if binding is None:
+        return True  # 독립 호출자는 자신의 한도를 소유한다.
+    with _lock:
+        if binding.followup_reason:
+            return False
+        binding.followup_reason = reason
+        return True
+
+
+def enter(runner, enabled=True, component_repair=False, cancel_check=None):
     from thread_context import get_current_agent_id, get_current_task_id
     config = getattr(runner, "config", {}) or {}
     agent = get_current_agent_id() or config.get("id") or getattr(runner, "agent_id", None)
     task = get_current_task_id()
     b = Binding(runner, str(agent), str(task)) if enabled and agent and task else None
     if b:
+        b.component_repair_allowed = bool(component_repair)
+        b.cancel_check = cancel_check
         provider = getattr(getattr(runner, "ai", None), "_provider", None)
         b.aliases = {b.agent, str(getattr(provider, "agent_id", "") or "")} - {""}
         with _lock:

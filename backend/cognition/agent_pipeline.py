@@ -329,7 +329,11 @@ class CognitivePipelineMixin:
             from execution_turn import enter, leave
             from execution_identity import record_current
             record_current(self)
-            _execution_token = enter(self, enabled=not kwargs.get("force_role"))
+            from thread_context import get_task_origin
+            _execution_token = enter(self, enabled=not kwargs.get("force_role"),
+                                     component_repair=(get_task_origin() == "user"
+                                                       and kwargs.get("utterance_author") != "agent"),
+                                     cancel_check=kwargs.get('cancel_check'))
             from conscious_supervisor import open_supervisor
             _supervisor = None
             try:
@@ -680,12 +684,13 @@ class CognitivePipelineMixin:
                 _idx = None
                 if _rid:
                     _idx = next((i for i, tc in enumerate(eval_tool_calls)
-                                 if tc.get("id") == _rid), None)
+                                 if tc.get("id") == _rid and not tc.get("_result_received")), None)
                 if _idx is None and _pair_cursor < len(eval_tool_calls):
                     _idx = _pair_cursor
                 _pair_cursor += 1
                 if _idx is not None:
                     eval_tool_calls[_idx]["result"] = _rt
+                    eval_tool_calls[_idx]["_result_received"] = True
                     # 스트리밍 프로바이더(OpenAI 계열)는 tool_start 때 인자가 아직 없어 input={} 로
                     # 시작한다 — 결과 이벤트가 실어 온 input 으로 채운다(반성 게이트의 셸 읽기 분류·
                     # 평가자가 빈 인자를 보지 않도록. 2026-09-02 실측: run_command 명령이 '' 로 보였다).
@@ -763,12 +768,23 @@ class CognitivePipelineMixin:
                 if event.get("type") == "final":
                     final_content = event.get("content", "")
                     continue  # 초안은 흘리되 최종 채택 전에는 완료를 방출하지 않는다.
+                if (event.get("type") == "text"
+                        and not (force_role or _clarify_text or context_update or _repair_granted_task)):
+                    from task_continuation import needs_followup
+                    if needs_followup(eval_tool_calls):
+                        continue  # 실패 직후의 종료 초안은 후속 실행/최종 채택까지 보류한다.
                 if _supervisor and _supervisor.enabled and event.get("type") in {"text", "final"}:
                     continue  # 저장된 후보만 검수 후 한 번 전달한다.
                 yield event
 
             if reflex_selected and not reflex_turn.active:
                 history = reflex_turn.full_history
+            from task_continuation import continue_task
+            final_content = yield from continue_task(
+                self, message, final_content, eval_tool_calls, history,
+                collect=_collect, images=images, supervisor=_supervisor,
+                cancel_check=cancel_check,
+                enabled=not (force_role or _clarify_text or context_update or _repair_granted_task))
             if final_content:
                 final_content = yield from adopt_response(
                     _capability_guard, self, message, final_content, eval_tool_calls, history,

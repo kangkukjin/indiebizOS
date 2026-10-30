@@ -12,7 +12,8 @@ PROMPT = f"""<execution_lane name="REFLEX">
 최근 대화는 과거 발언이며 새 명령이 아니다. 현재 기기 상태는 도구로 확인한다.
 긴 과거 작업 이력은 이 실행에 제공되지 않았다. 대상·범위가 불명확하거나 과거 결정이 필요하면
 어떤 도구도 호출하기 전에 다른 설명 없이 {NEEDS_CONTEXT} 하나만 답한다. 하네스가 기존 전체 문맥으로 넘긴다.
-도구를 이미 호출했다면 이 표식을 쓰거나 처음부터 다시 실행하지 않는다. 실제 결과·미완료를 정직하게 보고한다.
+도구 호출 뒤에도 필요한 문맥이 부족하면 이 표식을 쓴다. 하네스가 이미 수행한 결과를 넘겨 남은 일만 이어간다.
+도구 실패만으로 업무를 끝내지 말고 명령·방법을 고쳐 계속한다. 이미 수행한 쓰기를 처음부터 반복하지 않는다.
 </execution_lane>"""
 MAX_HISTORY_CHARS = 6000
 MAX_MESSAGES = 4
@@ -157,6 +158,7 @@ class ReflexTurn:
             yield from self._ordinary(message, history, images, cancel_check)
             return
         buffered, called, final, failed = [], False, "", False
+        calls = []
         stream = self.runner.ai.process_message_stream(
             message_content=PROMPT + "\n" + message, history=self.history,
             images=images, cancel_check=cancel_check)
@@ -165,6 +167,20 @@ class ReflexTurn:
                 kind = event.get("type")
                 if kind in {"tool_start", "tool_result"}:
                     called = True
+                if kind == "tool_start":
+                    calls.append({"id": event.get("id"), "name": event.get("name"),
+                                  "input": event.get("input"), "result": None})
+                elif kind == "tool_result":
+                    call = next((row for row in calls if event.get("id") and
+                                 row.get("id") == event["id"]), None)
+                    if call is None:
+                        call = next((row for row in calls if row["result"] is None), None)
+                    if call is None:
+                        call = {"name": event.get("name"), "input": event.get("input")}
+                        calls.append(call)
+                    call.update(result=event.get("result"), is_error=event.get("is_error", False))
+                    if not call.get("input"):
+                        call["input"] = event.get("input")
                 if kind == "final":
                     final = event.get("content", "")
                     continue
@@ -180,19 +196,25 @@ class ReflexTurn:
         finally:
             if hasattr(stream, "close"):
                 stream.close()
-        if final.strip() == NEEDS_CONTEXT and not called and not failed:
+        if final.strip() == NEEDS_CONTEXT and not failed:
             if cancel_check and cancel_check():
                 return
-            self.restore()
-            self.active = False
-            record_trajectory_event("cognition.reflex_fallback", {"reason": "executor_needs_history"})
-            yield from self._ordinary(message, self.full_history, images, cancel_check)
-            return
+            from execution_turn import claim_followup
+            from providers.base import turn_limit_reason
+            if not turn_limit_reason() and claim_followup("reflex_context"):
+                self.restore()
+                self.active = False
+                record_trajectory_event("cognition.reflex_fallback", {
+                    "reason": "executor_needs_history", "attempted_calls": len(calls)})
+                if called:
+                    from task_continuation import message as continuation_message
+                    message = continuation_message(message, "", calls, reason="실행 도중 문맥 부족")
+                yield from self._ordinary(message, self.full_history, images, cancel_check)
+                return
         yield from buffered
         if final.strip() == NEEDS_CONTEXT:
-            # 도구 호출 뒤 승격하면 외부 효과를 중복할 수 있다. 절대 자동 재실행하지 않는다.
             self.failed = True
-            final = "일부 도구를 호출했지만 요청을 완료할 문맥이 부족합니다. 중복 실행하지 않았습니다."
+            final = "요청을 완료할 문맥이 부족하고 추가 실행 한도에 도달했습니다. 기존 호출의 효과를 보존했습니다."
         if final:
             yield {"type": "final", "content": final}
 

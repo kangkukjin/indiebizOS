@@ -70,13 +70,9 @@ def entry(node: str, action: str, root: Path = None, *, op: str = None) -> Optio
 
 
 def handler_fingerprint(pkg_dir: Path) -> str:
-    """scripts/iblbuild_derive.handler_fingerprint 와 같은 계산 — 시험이 일치를 고정한다."""
-    h = hashlib.sha256()
-    for p in sorted(Path(pkg_dir).rglob("*.py")):
-        if "__pycache__" in p.parts or p.name.startswith("test_"):
-            continue
-        h.update(p.relative_to(pkg_dir).as_posix().encode()); h.update(b"\0"); h.update(p.read_bytes()); h.update(b"\0")
-    return h.hexdigest()[:16]
+    """빌드와 같은 권한 코드/격리 부품 계약 지문."""
+    from component_registry import handler_fingerprint as fingerprint
+    return fingerprint(pkg_dir)
 
 
 def _package_dir(package_id: str, root: Path = None) -> Optional[Path]:

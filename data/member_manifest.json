@@ -55,8 +55,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-10-28",
-        "impl": "bdaee0124ec9e077"
+        "at": "2026-10-31",
+        "impl": "b4a58d844e47ce25"
       }
     },
     "self:list": {
@@ -98,8 +98,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-10-28",
-        "impl": "bdaee0124ec9e077"
+        "at": "2026-10-31",
+        "impl": "b4a58d844e47ce25"
       }
     },
     "self:record": {
@@ -157,8 +157,8 @@
         "dependencies": "$dependencies"
       },
       "path_audited": {
-        "at": "2026-10-28",
-        "impl": "bdaee0124ec9e077"
+        "at": "2026-10-31",
+        "impl": "b4a58d844e47ce25"
       }
     },
     "self:write": {
@@ -172,8 +172,8 @@
         "content": "$content"
       },
       "path_audited": {
-        "at": "2026-10-28",
-        "impl": "bdaee0124ec9e077"
+        "at": "2026-10-31",
+        "impl": "b4a58d844e47ce25"
       }
     },
     "sense:crawl": {
@@ -181,8 +181,8 @@
       "package": "web",
       "side_effect": false,
       "path_audited": {
-        "at": "2026-10-30",
-        "impl": "e932cd2891ba7d3e"
+        "at": "2026-10-31",
+        "impl": "96991ae5c47d05b9"
       }
     },
     "sense:here": {
@@ -198,8 +198,8 @@
       "package": "web",
       "side_effect": false,
       "path_audited": {
-        "at": "2026-10-30",
-        "impl": "e932cd2891ba7d3e"
+        "at": "2026-10-31",
+        "impl": "96991ae5c47d05b9"
       }
     }
   }

@@ -138,7 +138,8 @@ def test_privilege_does_not_grow_mid_turn():
     r = _Runner([dict(_NEW, needs_repair=True)])
     ch = reframe.open_turn("agent_x", r, "m", [], "", _BASE, repair=False)
     out = json.loads(reframe.execute_reframe({"broken_assumption": "a", "evidence": "b"}, "agent_x"))
-    assert out["revised"] and "수리 권한이 없다" in out["content"]
+    assert out["revised"] and "전역 수리 권한을 발급하지 않는다" in out["content"]
+    assert "등록된 순수 변환 부품" in out["content"] and "다른 방법을 실행" in out["content"]
     assert ch.current["needs_repair"] is False and ch.current["_repair_declared_mid_turn"]
     # 수리 턴이면 그대로 둔다
     r2 = _Runner([dict(_NEW, needs_repair=True)])

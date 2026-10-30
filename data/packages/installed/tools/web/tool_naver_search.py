@@ -203,7 +203,19 @@ def search_naver(
         return {"success": False, "error": data["error"], "type": normalized_type}
 
     raw_items = data.get("items", []) if isinstance(data, dict) else []
-    items = [_format_item(item, normalized_type) for item in raw_items]
+    if sys.platform == 'darwin':
+        from component_runtime import call
+        try:
+            cards = call('web.naver_response', {'response': data, 'type': normalized_type})
+        except (ValueError, RuntimeError, OSError) as exc:
+            return {'success': False, 'error': str(exc), 'type': normalized_type,
+                    'error_type': 'response_transform'}
+    else:
+        # 미지원 OS에서는 기존 신뢰된 구현 유지. 수정 후보를 무제한 실행하지 않는다.
+        items = [_format_item(item, normalized_type) for item in raw_items]
+        cards = [{'title': it.get('title', ''), 'meta': '',
+                  'summary': it.get('snippet', ''), 'url': it.get('link', ''),
+                  **_item_date_iso(it)} for it in items]
 
     return {
         "success": True,
@@ -215,10 +227,8 @@ def search_naver(
         # 단일 통화 items(records-관습 카드 shape) — 과적 legacy items 제거(§7.5 함정), 카드 shape만.
         # date = 발행일 ISO8601 (gnews·hn 과 같은 계약, 2026-08-28) — news 의 pubDate(RFC 2822)·
         # blog 의 postdate(YYYYMMDD)가 통화 밖에 갇혀 신선도 술어를 못 세우던 비대칭 수리.
-        "items": [{"title": it.get("title", ""), "meta": "",
-                   "summary": it.get("snippet", ""), "url": it.get("link", ""),
-                   **_item_date_iso(it)} for it in items],
+        "items": cards,
         "source": "네이버 검색 API",
         "api_backend": "naver_api_hub" if use_hub else "naver_developers",
-        **_empty_query_note(query, items),
+        **_empty_query_note(query, cards),
     }

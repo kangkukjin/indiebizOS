@@ -62,6 +62,15 @@ class Watcher:
             if watch:
                 ctl.save(watch={})
             return None
+        active = gens.read_manifest(state.get("generation_dir")) if state.get("generation_dir") else None
+        if active:
+            from component_registry import covers_changes
+            changed = {rel for rel in active['files'].keys() | inventory['files'].keys()
+                       if active['files'].get(rel) != inventory['files'].get(rel)}
+            if covers_changes(ctl.code_root, state['generation_dir'], changed, inventory['files']):
+                if watch:
+                    ctl.save(watch={})
+                return None
         if ctl.control_base_id:
             import control_base
             accepted = control_base.manifest_of(control_base.base_dir(ctl.base, ctl.control_base_id))

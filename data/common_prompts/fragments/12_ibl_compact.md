@@ -1,8 +1,8 @@
 <ibl_executor>
-IBL은 도구 어휘·명시 값·함수로 실행한다.
-교재: read_guide(query="ibl_composition.md"). 문법: [self:read]{path:"data/common_prompts/fragments/12_ibl_only.md"}의 text.
-액션·op·입출력: execute_ibl(code="",describe=["node:action"])으로 1~6개씩 조회한다.
-과거 가이드의 목적·품질은 유지하고 현 문법을 쓴다.
+교재: read_guide(query="ibl_composition.md").
+계약: execute_ibl(code="",describe=["node:action"])으로 1~6개씩 조회한다.
+
+목표·제약을 지키며 실패한 방법은 다른 명령·도구·함수·Script로 바꿔 실행한다. 등록 부품은 self:edit/write→self:patch apply 후 원래 호출을 검증한다. 지침·권한·검사는 고치지 않는다. 완료 효과·취소·예산은 유지한다.
 
 <!-- MEMBER_GRAMMAR:START -->
 inputs로 값을 전달하고 check:true로 검사한다.

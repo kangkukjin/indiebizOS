@@ -116,16 +116,24 @@ def test_context_signal_is_buffered_and_falls_back_before_any_tool(binding):
     assert not any('reflex_needs' in e.get('content', '') for e in events)
 
 
-def test_signal_after_tool_never_repeats_action(binding):
-    r = runner([[{'type': 'tool_start', 'name': 'execute_ibl'},
-                 {'type': 'final', 'content': NEEDS_CONTEXT}]])
+def test_signal_after_tool_hands_off_receipts_without_replaying_request(binding):
+    r = runner([[{'type': 'tool_start', 'id': 'write1', 'name': 'execute_ibl',
+                  'input': {'code': 'already-written'}},
+                 {'type': 'tool_result', 'id': 'write1', 'result': {'task_ref': 'remote-1', 'success': True}},
+                 {'type': 'final', 'content': NEEDS_CONTEXT}],
+                [{'type': 'tool_start', 'name': 'execute_ibl', 'input': {'code': 'query-receipt'}},
+                 {'type': 'final', 'content': '남은 확인까지 완료'}]])
     t = ReflexTurn(r, '꺼', history()); t.prepare(True, history())
     events = list(t.stream('꺼', t.history, None, None))
-    assert len(r.ai.calls) == 1 and t.active
-    assert '중복 실행하지 않았습니다' in events[-1]['content']
+    assert len(r.ai.calls) == 2 and not t.active
+    forwarded = r.ai.calls[1][1]['message_content']
+    assert 'remote-1' in forwarded and 'already-written' in forwarded
+    assert '처음부터 재실행하지' in forwarded
+    assert r.ai.calls[1][1]['history'] == history()
+    assert events[-1]['content'] == '남은 확인까지 완료'
     t.finish(events[-1]['content'], [{'name': 'execute_ibl'}], True)
     t.restore()
-    assert pending_receipts('system_ai')[0][1]['completed'] is False
+    assert not pending_receipts('system_ai')
 
 
 def test_receipts_survive_new_controller_and_ack_only_after_delivery(binding):

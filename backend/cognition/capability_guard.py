@@ -297,7 +297,8 @@ class CapabilityGuard:
             routes = snapshot.get("native_tools") or snapshot.get("dictionary_routes")
             if routes and resume and self.resumes < self.limits["max_resumes"] and not (cancel_check and cancel_check()):
                 from providers.base import turn_limit_reason
-                if not turn_limit_reason():
+                from execution_turn import claim_followup
+                if not turn_limit_reason() and claim_followup("capability_claim"):
                     self.resumes += 1
                     log("resumed", attempt=self.resumes, response_hash=key)
                     try:

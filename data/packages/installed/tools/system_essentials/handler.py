@@ -157,6 +157,8 @@ def _red_zone_violation(abs_path: str) -> str | None:
     red_zone_family.py docstring). 남의 저장소는 가족 판정으로 걸러 종전대로 허용한다."""
     if _REPO_ROOT is None:
         return None
+    if _component_scope().permits_candidate(abs_path):
+        return None
     real = os.path.realpath(abs_path)
     # 게이트 자신(로드된 바로 그 파일)은 가족 판정 **이전에** 항상 보호 —
     # 판정자는 제 발을 지킨다(어느 루트를 집으로 알고 있든).
@@ -185,6 +187,10 @@ def _red_zone_violation(abs_path: str) -> str | None:
             "수정하려면 사용자가 수리 경로('#repair' 또는 '시스템 수리' 명시)로 명령해야 하며, "
             "적용 후 안전장치 기능 스모크(red_safety_selftest)를 통과하지 못하면 자동 롤백됩니다."
         )
+    if not _red_grant_active():
+        protected = _component_scope().protected(real, root)
+        if protected:
+            return protected
     for d in _RED_ZONE_DIRS:
         red_root = os.path.join(root, d)
         if real == red_root or real.startswith(red_root + os.sep):
@@ -203,8 +209,8 @@ def _red_zone_violation(abs_path: str) -> str | None:
                 f"(REPAIR 경로)으로만 허용됩니다(헌법 2026-08-05).\n"
                 f"→ 자율 태스크(스케줄러·자가점검 등)가 발견한 문제면 [self:patch]로 "
                 f"제안만 남기세요 — 적용은 사용자가 명령할 때 수리 경로가 수행합니다.\n"
-                f"→ 사용자 명령을 수행 중인데 이 게이트에 막혔다면, 사용자에게 '#repair' 태그나 "
-                f"'시스템 수리' 명시로 재명령해 달라고 답하세요(수리 경로로 재실행됩니다)."
+                f"→ 현재 업무는 다른 명령·도구·지역 함수·Script로 계속할 수 있습니다. "
+                f"이 미분리 기반의 수정 자체가 꼭 필요할 때만 명시적 '#repair' 경로를 사용하세요."
             )
     return None
 
@@ -412,6 +418,11 @@ def _staging_mod():
     if mod is None:
         mod = _SIBLING_MODS["repair_staging"] = _load_sibling("repair_staging")
     return mod
+
+
+def _component_scope():
+    return _SIBLING_MODS.get("essentials_component_repair") or _SIBLING_MODS.setdefault(
+        "essentials_component_repair", _load_sibling("essentials_component_repair"))
 
 
 def _vocab_gate_mod():
@@ -676,6 +687,10 @@ _ENVELOPED_FAILURE_TOOLS = ("copy_path", "move_path", "delete_path")
 @observed_tool
 def execute(tool_input: dict, context) -> str:
     try:
+        from types import SimpleNamespace
+        result = _component_scope().handle(SimpleNamespace(**globals()), tool_input, context)
+        if result is not None:
+            return result
         if _red_grant_active() and context.tool_name != "patch_op":
             with _staging_mod()._candidate.locked(str(_REPO_ROOT), "application"):
                 result = _execute(tool_input, context)

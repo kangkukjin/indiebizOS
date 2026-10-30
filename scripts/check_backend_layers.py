@@ -39,7 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
-        "update_maintenance",
+        "update_maintenance", "component_runtime", "component_registry",
         "recall_relevance",
         "output_publish", "phone_execution_contract",
         "research_context",
@@ -104,7 +104,7 @@ LAYERS = {
         "agent_lifecycle",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "unified_distill", "distill_memory_adapters",
         "associative_recall",
-        "capability_guard", "capability_guard_runtime",
+        "capability_guard", "capability_guard_runtime", "task_continuation",
         "member_local_tools", "member_runner", "member_session", "client_workflows",
         "agent_cognitive", "agent_communication", "agent_goals",
         "weekly_audits",

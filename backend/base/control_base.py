@@ -27,6 +27,7 @@ CONTROL_FILES = (
     "backend/base/restart_process.py",
     "backend/base/restart_child.py",
     "backend/base/generation_store.py",
+    "backend/base/component_registry.py",
     "backend/base/control_base.py",
     "backend/base/update_maintenance.py",
     ("backend/common/completion_contract.py", "backend/base/completion_contract.py"),

@@ -26,7 +26,7 @@ import uuid
 # A portable working copy, not a checkout or a second running IndieBiz instance.
 TOOL_FILES = (
     'scripts/remote_install.py', 'scripts/remote_update_runtime.py',
-    'scripts/remote_boot.py', 'scripts/remote_steps.py',
+    'scripts/remote_boot.py', 'scripts/remote_steps.py', 'scripts/remote_observe.py',
     'backend/boot_paths.py', 'backend/datastore/function_store.py',
     'backend/base/restart_process.py', 'backend/base/restart_protocol.py',
     'backend/base/update_maintenance.py', 'backend/common/completion_contract.py',
@@ -231,15 +231,19 @@ def make_plan(root, run_id, python, npm):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("op", choices=["stage-tools", "plan", "preflight", "update", "packages", "verify-head", "venv"])
+    parser.add_argument("op", choices=["stage-tools", "plan", "preflight", "update", "packages", "verify-head", "venv", "inspect"])
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--run-id", default="")
     parser.add_argument("--npm", default=shutil.which("npm") or "")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--path", type=Path, action="append", default=[])
     args = parser.parse_args()
     root = args.root.resolve()
     try:
-        if args.op == "stage-tools":
+        if args.op == "inspect":
+            from remote_observe import observe
+            print(json.dumps(observe(root, args.path), ensure_ascii=False))
+        elif args.op == "stage-tools":
             if not args.output:
                 raise ValueError('--output required')
             print(json.dumps(stage_tools(root, args.output), ensure_ascii=False))
@@ -251,11 +255,16 @@ def main():
             validate(plan)
             with args.output.open("x", encoding="utf-8") as stream:
                 json.dump(plan, stream, ensure_ascii=False, indent=2)
+            from remote_observe import observe
+            print(json.dumps({"plan_path": str(args.output), "observation": observe(
+                root, [root / 'frontend/release', root / 'build'])}, ensure_ascii=False))
         elif args.op == "preflight":
             if not (3, 10) <= sys.version_info[:2] < (3, 14):
                 raise ValueError("Install Python 3.10..3.13 first")
             if not (root / "scripts/bootstrap.py").is_file():
                 raise ValueError("Not an IndieBiz source checkout")
+            from remote_observe import observe
+            print(json.dumps(observe(root, [root / 'frontend/release', root / 'build']), ensure_ascii=False))
             generated = generated_changes(root)
             print(json.dumps({"preservable_generated": generated}))
             subprocess.run([args.npm, "--version"], check=True)

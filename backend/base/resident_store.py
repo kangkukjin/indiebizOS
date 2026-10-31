@@ -288,6 +288,9 @@ def history(device=None, job=None, cursor=0, limit=100, *, tail=False, include_i
                 event = db.execute("SELECT occurred FROM resident_events WHERE job=? AND kind=? "
                                    "ORDER BY cursor LIMIT 1", (task["id"], kind)).fetchone()
                 times[kind] = event[0] if event else None
+            latest = db.execute("SELECT MAX(cursor), MAX(occurred), MAX(CASE WHEN kind='log' THEN occurred END) "
+                                "FROM resident_events WHERE job=?", (task["id"],)).fetchone()
+            task["last_event_cursor"], task["last_event_at"], task["last_progress_at"] = tuple(latest)
             task["started_at"], task["ended_at"] = times["started"], times["result"]
             task["seconds"] = (times["result"] - times["started"]
                                if all(v is not None for v in times.values()) else None)

@@ -10,7 +10,9 @@
 - changes(기본): 최근 파일 단위 변화 (미커밋 작업분 포함)
 - log: 커밋 단위 이력 ("내가 뭘 했나")
 - file: 한 파일의 일생 — git --follow 로 생성·수정·이동(이름변경)을 관통 추적
-- trajectory: 한 run 의 요청·IBL·검증·부작용 핵심 사건 — 원문이 아닌 hash/ref 순번 원장
+- trajectory: view=episodes로 종료 에피소드 목록 → episode_id로 view=trace → source_ref로 view=document.
+  예: [self:body]{op:"trajectory",view:"episodes",limit:10}. query 인자는 없고 목록에서 선택한다.
+  view=events는 한 run의 요청·IBL·검증·부작용 핵심 사건(hash/ref)이다.
 - diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·한 커밋·구간(ref..HEAD). 파일별 items + 본문
   (2026-08-21 추가: 7일간 Bash git 서브커맨드 1위가 `git diff` 95회 — 회상 통로가 "무엇이"
    까지만 답하고 "어떻게"는 못 답해 셸로 떨어지던 자리)

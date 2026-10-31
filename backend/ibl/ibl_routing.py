@@ -874,14 +874,18 @@ def _task_op(params: dict) -> dict:
     if r is None:
         return {"success": False, "error": "ref 가 필요합니다 — 접수증의 task_ref 를 그대로 넣으세요. 예: [self:task]{op: \"wait\", ref: $r.task_ref}",
                 "known_kinds": T.registered()}
+    cursor = params.get("cursor")
+    if cursor is not None and (type(cursor) is not int or cursor < 0):
+        return {"success": False, "error": "cursor는 같은 작업의 history_cursor(0 이상 정수)입니다."}
+    observation = {} if cursor is None else {"cursor": cursor}
     if op == "status":
-        v = T.status(r)
+        v = T.status(r, **observation)
         # 상태를 물었으면 failed·cancelled 도 답이다(값) — 모르는 작업만 이 호출의 실패(26회차: failure 칸 분리).
         if v["state"] == T.UNKNOWN:
             return {"success": False, **v, "error": v.get("failure") or "이 몸이 모르는 작업입니다."}
         return {"success": True, **v}
     if op == "wait":
-        return T.wait(r, params.get("timeout", 0 if params.get('suspend') else 60), suspend=params.get('suspend') is True)
+        return T.wait(r, params.get("timeout", 0 if params.get('suspend') else 60), suspend=params.get('suspend') is True, **observation)
     if op == "cancel":
         return T.cancel(r)
     if op == "steer":

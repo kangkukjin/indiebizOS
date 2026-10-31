@@ -182,6 +182,8 @@ def verify(base, control_id, support_root, *, timeout=SELFTEST_TIMEOUT_S):
     code = (
         "import sys, json\n"
         f"sys.argv = ['selftest']\n"
+        # Windows embedded Python ignores PYTHONPATH (._pth isolation).
+        f"sys.path.insert(0, {str(path / 'backend/base')!r})\n"
         f"from control_base import install_support_path\n"
         f"install_support_path({str(path)!r}, {str(support_root)!r})\n"
         "import boot_paths\n"

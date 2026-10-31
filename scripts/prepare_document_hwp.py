@@ -45,6 +45,12 @@ def download(url, path, expected):
         temporary.replace(path)
     if sha(path) != expected:
         raise ValueError(f'Archive hash mismatch: {path}')
+    value = path.stat()
+    path.with_name(path.name + '.artifact.json').write_text(json.dumps({
+        'kind': 'download_archive', 'producer': 'prepare_document_hwp.py',
+        'source_url': url, 'sha256': expected, 'bytes': value.st_size,
+        'mtime_ns': value.st_mtime_ns, 'recreate': 'download source_url and verify sha256',
+        'runtime_asset': False}, ensure_ascii=False), encoding='utf-8')
 
 
 def extract(archive, destination, select, strip=0):

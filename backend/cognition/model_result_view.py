@@ -779,12 +779,32 @@ def _fold_twin_fields(value, where, notes, depth=0):
     return out
 
 
+def _compact_compile_context(out, ref, policy):
+    """Keep actionable diagnostics inline; retain declarations at exact read paths."""
+    if out.get('executed') is not False or out.get('success') is not False:
+        return
+    sections = {}
+    for key in ('functions', 'components', 'result_contract', 'dependencies', 'result_type',
+                'preflight', 'warnings', 'guards'):
+        if key not in out:
+            continue
+        value = out[key]
+        size = len(json.dumps(value, ensure_ascii=False, default=str))
+        if size <= policy['metadata_chars'] // 4:
+            continue
+        sections[key] = {'chars': size, 'read_args': {'id': ref['id'], 'path': [key]}}
+        out.pop(key)
+    if sections:
+        out['compile_context'] = sections
+
+
 def project_v2_result(result):
     """Typed values keep their meaning; verbose execution evidence stays on disk."""
     raw = json.dumps(result, ensure_ascii=False, default=str)
     ref = evidence_store().evidence(raw)
     policy = display_policy()
     out = {k: v for k, v in result.items() if k not in {"evidence", "recordings", "source_map"}}
+    _compact_compile_context(out, ref, policy)
     if "usage" in out:
         out["usage"] = model_usage(out["usage"])
     source_refs = list(dict.fromkeys(e['source_observation_ref'] for e in result.get('evidence', [])

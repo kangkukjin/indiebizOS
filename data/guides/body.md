@@ -150,3 +150,7 @@ DB 파일·스키마를 찾을 필요 없이 같은 `trajectory`에서 목록과
 - 여섯 조회의 `limit` 행 선택은 `truncations.scope: selection`과 전체 수·보존 수로 구분한다. 요청한 표본은 정상 결과이며 원천 수집 실패(`PARTIAL_SOURCE`)와 다르다. 생략된 사건·파일까지 읽었다는 뜻은 아니다.
 - 미커밋 행은 `상태: "미커밋"`, 시각·커밋 빈값 — 시각 정렬 시 유의.
 - **경계**: 시스템의 *현재 상태*(CPU·디스크)는 `[sense:host]`, 실행 기록과 파일 변화는 `[self:body]`다. trajectory의 events는 hash/ref 원장이고 trace/document는 기존 원문 저장소의 읽기 연결이다. 새 기억이나 별도 원장을 만들지 않는다. 파일 *내용*은 `[self:read]`, 파일 *찾기*는 `file_find`.
+
+에피소드 조회에는 `query` 인자가 없습니다. `view:"episodes"`의 목록에서 요청에 맞는
+에피소드를 고르고 반환된 `episode_id`로 `trace`를 읽습니다. 잘못된 인자 오류에도 이 호출
+예시가 포함됩니다. DB 파일명이나 열 이름은 이 조회를 위해 알 필요가 없습니다.

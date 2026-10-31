@@ -49,6 +49,20 @@ def run_isolated(code, *args):
     return result
 
 
+def test_verify_works_when_python_ignores_environment(tmp_path, monkeypatch):
+    control = sealed_control(tmp_path)
+    run = subprocess.run
+
+    def isolated(argv, **kwargs):
+        # Same path isolation as Windows embedded python311._pth.
+        return run([argv[0], '-I', '-B', *argv[1:]], **kwargs)
+
+    monkeypatch.setattr(control_base.subprocess, 'run', isolated)
+    ok, note = control_base.verify(tmp_path, control.name, ROOT)
+    assert ok, note
+    assert (control / 'VERIFIED').exists()
+
+
 def test_idle_shutdown_needs_no_episode_module(tmp_path):
     control = sealed_control(tmp_path)
     run_isolated('''

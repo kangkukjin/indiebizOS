@@ -224,3 +224,23 @@ def test_wire_omission_keeps_image_delivery_and_original(tmp_path, monkeypatch):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_compile_failure_folds_declarations_but_preserves_diagnostic_and_retrieval(tmp_path, monkeypatch):
+    store = TurnStore(tmp_path)
+    monkeypatch.setattr(view, 'evidence_store', lambda: store)
+    diagnostic = {'code': 'MISSING_FIELD', 'message': 'verified is optional',
+                  'source_span': {'line': 4, 'column': 2}, 'hint': 'get(value,"verified",false)'}
+    original = {'edition': 2, 'success': False, 'executed': False, 'diagnostic': diagnostic,
+                'issues': [diagnostic], 'functions': {'send': {'code': 'definition ' * 5000}},
+                'components': {}, 'source_complete': False}
+    projected = view.project_v2_result(original)
+    assert projected['diagnostic'] == diagnostic and projected['issues'] == [diagnostic]
+    assert projected['success'] is False and projected['executed'] is False
+    assert len(json.dumps(projected)) < 6000
+    args = projected['compile_context']['functions']['read_args']
+    page = view.read_result({**args, 'limit': 12000})
+    assert 'definition' in json.dumps(page)
+    # Stored original still owns the complete declarations, not the display copy.
+    stored = json.loads((tmp_path / (args['id'] + '.txt')).read_text())
+    assert stored['functions'] == original['functions']

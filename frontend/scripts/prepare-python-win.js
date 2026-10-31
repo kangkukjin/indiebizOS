@@ -7,13 +7,12 @@
  * 사용법: npm run prepare:python:win
  */
 
-import { execSync } from 'child_process';
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs';
+import { execSync, execFileSync } from 'child_process';
+import { syncDependencies } from './python-win-dependencies.mjs';
+import { createWriteStream, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
-import { createUnzip } from 'zlib';
-import { pipeline } from 'stream/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -125,38 +124,18 @@ async function installPip(pythonDir) {
  * Python 패키지 설치
  */
 function installPackages(pythonDir) {
-  const requirementsCore = join(BACKEND_DIR, 'requirements-core.txt');
-  const requirementsTools = join(BACKEND_DIR, 'requirements-tools.txt');
-  const pythonExe = join(pythonDir, 'python.exe');
-  const sitePackages = join(pythonDir, 'Lib', 'site-packages');
-
-  ensureDir(sitePackages);
-
-  if (process.platform === 'win32') {
-    // 코어 패키지 설치
-    console.log('  [Core] Python 핵심 패키지 설치 중...');
-    execSync(
-      `"${pythonExe}" -m pip install -r "${requirementsCore}" --target "${sitePackages}" --no-warn-script-location`,
-      { stdio: 'inherit' }
-    );
-
-    // 도구 패키지 의존성 설치
-    if (existsSync(requirementsTools)) {
-      console.log('  [Tools] 도구 패키지 의존성 설치 중...');
-      execSync(
-        `"${pythonExe}" -m pip install -r "${requirementsTools}" --target "${sitePackages}" --no-warn-script-location`,
-        { stdio: 'inherit' }
-      );
-    }
-  } else {
-    console.log('  [주의] Windows가 아니므로 패키지 설치를 건너뜁니다.');
-  }
+  if (process.platform === 'win32') return syncDependencies(ROOT_DIR, pythonDir);
+  if (process.argv.includes('--sync')) throw new Error('Run Windows distribution builds on Windows to verify the bundled runtime.');
+  console.log('Windows에서 prepare:python:win -- --sync로 의존성을 검증하세요.');
 }
 
 /**
  * 메인 실행
  */
 async function main() {
+  if (process.argv.includes('--sync') && process.platform !== 'win32') {
+    throw new Error('Run Windows distribution builds on Windows to verify the bundled runtime.');
+  }
   console.log('========================================');
   console.log('IndieBiz OS - Windows Python 준비');
   console.log('========================================\n');
@@ -165,10 +144,18 @@ async function main() {
   console.log('[1/5] 디렉토리 준비...');
   ensureDir(BUILD_DIR);
 
-  // 기존 python-win 삭제
-  if (existsSync(PYTHON_WIN_DIR)) {
-    console.log('  기존 python-win 삭제...');
-    rmSync(PYTHON_WIN_DIR, { recursive: true, force: true });
+  // Keep an existing runtime and its installed packages; pip resolves only missing/changed dependencies.
+  const existing = join(PYTHON_WIN_DIR, 'python.exe');
+  if (existsSync(existing)) {
+    if (process.platform === 'win32') {
+      const version = execFileSync(existing, ['-c', 'import platform; print(platform.python_version())'], { encoding: 'utf8' }).trim();
+      if (version !== PYTHON_VERSION) throw new Error(`Expected Python ${PYTHON_VERSION}, found ${version}; prepare a matching runtime separately.`);
+      configurePythonPth(PYTHON_WIN_DIR);
+      try { execFileSync(existing, ['-m', 'pip', '--version'], { stdio: 'ignore' }); }
+      catch { await installPip(PYTHON_WIN_DIR); }
+    }
+    installPackages(PYTHON_WIN_DIR);
+    return;
   }
   ensureDir(PYTHON_WIN_DIR);
 
@@ -209,4 +196,4 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,12 +1,12 @@
 #!ibl edition=2
-[def:외부PC작업확인]($작업,$대기=0) {
+[def:외부PC작업확인]($작업,$대기=0,$완료까지=false) {
   $참조 = get($작업,"task_ref",$작업)
   $빈결과 = {exit:null,progress:null,result:null,failure:null,timed_out:false}
   [if:get($참조,"kind","")!="guestpc" or len(get($참조,"task_id",""))==0 or (has($작업,"limb") and len(get($작업,"limb",""))==0) or $대기<0 or $대기>240] {
     return {**$빈결과,ok:false,status:"invalid_input",task:$작업,reason:"guestpc 접수증 또는 {kind,task_id} 참조와 0~240초 대기가 필요합니다",settled:false,command_ok:null}
   }
   $관측 = {}
-  [try] { $관측 = [self:task]{op:"wait",ref:$참조,timeout:$대기} }
+  [try] { $관측 = [self:task]{op:"wait",ref:$참조,timeout:$대기,suspend:$완료까지,cursor:get($작업,"history_cursor",0)} }
   [catch] {
     $관측 = get($error,"details",{})
     $관측 = get($관측,"task_observation",$관측)
@@ -43,6 +43,9 @@
   return {**$작업,ok:true,status:$상태,limb_name:get($작업,"limb_name",$작업.limb),
     settled:$상태 in ["succeeded","failed","cancelled","interrupted"],command_ok:$성공,exit:$종료,
     started_at:get($관측,"started_at",null),ended_at:get($관측,"ended_at",null),seconds:get($관측,"seconds",null),
+    history_cursor:get($관측,"history_cursor",0),history_has_more:get($관측,"history_has_more",false),
+    last_event_at:get($관측,"last_event_at",null),last_progress_at:get($관측,"last_progress_at",null),
+    observation:get($관측,"observation",null),
     history_args:get($관측,"history_args",null),progress_scope:get($관측,"progress_scope",null),
     outcome:get($관측,"outcome",$상태),
     timed_out:get($관측,"timed_out",false),progress:$진행,result:$결과,failure:$실패}

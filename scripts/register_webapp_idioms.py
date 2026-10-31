@@ -46,7 +46,9 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', re
             row["ibl_code"] = source.read_text().strip()
     functions = [row for row in seeds if row.get('alias')]
     calls = [row for row in seeds if not row.get('alias')]
-    library = definitions()
+    # This is a candidate source set. Stored interfaces certify the old bodies
+    # and must not shadow a dependency revised earlier in this batch.
+    library = dict(definitions())
     for row in functions:
         name = row['alias']
         if definition_name(row['ibl_code']) != name:

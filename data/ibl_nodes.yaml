@@ -3436,6 +3436,7 @@ nodes:
           owner: string
           timeout: integer
           suspend: boolean
+          cursor: integer
           message: string
           request_id: string
         callable_contract:
@@ -3448,6 +3449,7 @@ nodes:
             owner: Text
             timeout: Number
             suspend: Bool
+            cursor: Number
             message: Text
             request_id: Text
           required: []
@@ -3504,7 +3506,7 @@ nodes:
         side_effect: true
         exempt: 접수증(task_ref) 필요 — 고정 fixture 부적합
         description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청, steer=지원 작업에 부모 에이전트 조향 전달. 위임·script·guestpc·신문·강의 렌더·노트북·시트·IBL 실행이 같은 접수증.
-        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. accepted_at·elapsed_s 는 접수 기준 시계(접수부터 지금·끝났으면 종료까지의 초, 모르면 null) — wait 의 timeout 은 그 호출이 기다린 시간일 뿐이라 "접수 후 N초 안에 끝났는가"는 elapsed_s 로 센다. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 현재 IBL에서 suspend:true는 시간 초과 시 프로그램을 중단·보존하며 주인 실행은 자식 종료 뒤 같은 원장에서 자동 재개한다(기본 timeout=0). 승인 대기는 자동 승인하지 않는다. 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만 — state 로 읽는다(cancelled=멈춤 확인, cancel_requested=요청만 남음). 이미 끝난 작업은 실패가 아니라 그 종료 투영을 값으로 돌려준다(state: succeeded 면 result 도 있다). 살아 있는데 취소를 지원하지 않는 종류(렌더 등)만 거절되며 [catch] 의 $error.details.state 가 현재 상태다. script 백그라운드·개별 위임·IBL 실행은 취소 요청을 지원한다. 위임은 실행 범위가 끝난 뒤에만 cancelled이며 자식 취소는 해당 접수증으로 별도 요청한다. steer는 scope:task 자식만 지원하며 message·request_id가 필수. accepted는 접수이며 delivered·completed와 다르다. 사용자 지시로 승격하지 않는다. 봉인된 작업은 worker_ref로 새 후속을 접수한다. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
+        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. accepted_at·elapsed_s 는 접수 기준 시계(접수부터 지금·끝났으면 종료까지의 초, 모르면 null) — wait 의 timeout 은 그 호출이 기다린 시간일 뿐이라 "접수 후 N초 안에 끝났는가"는 elapsed_s 로 센다. cursor: 같은 작업의 history_cursor를 넘기면 지원 어댑터의 새 진행 사건만 조회한다. 다음 커서·미조회 사건은 get($r,"history_cursor")·get($r,"history_has_more")로 읽는다. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 현재 IBL에서 suspend:true는 시간 초과 시 프로그램을 중단·보존하며 주인 실행은 자식 종료 뒤 같은 원장에서 자동 재개한다(기본 timeout=0). 승인 대기는 자동 승인하지 않는다. 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만 — state 로 읽는다(cancelled=멈춤 확인, cancel_requested=요청만 남음). 이미 끝난 작업은 실패가 아니라 그 종료 투영을 값으로 돌려준다(state: succeeded 면 result 도 있다). 살아 있는데 취소를 지원하지 않는 종류(렌더 등)만 거절되며 [catch] 의 $error.details.state 가 현재 상태다. script 백그라운드·개별 위임·IBL 실행은 취소 요청을 지원한다. 위임은 실행 범위가 끝난 뒤에만 cancelled이며 자식 취소는 해당 접수증으로 별도 요청한다. steer는 scope:task 자식만 지원하며 message·request_id가 필수. accepted는 접수이며 delivered·completed와 다르다. 사용자 지시로 승격하지 않는다. 봉인된 작업은 worker_ref로 새 후속을 접수한다. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
         group: system
         target_key: op
         router: system
@@ -5983,7 +5985,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-31'
-          impl: e0743685d6e55c85
+          impl: b7162b30dc3eab55
         target_key: path
         aliases:
           offset:
@@ -6001,7 +6003,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-31'
-          impl: e0743685d6e55c85
+          impl: b7162b30dc3eab55
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6080,7 +6082,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-31'
-          impl: e0743685d6e55c85
+          impl: b7162b30dc3eab55
         target_key: path
       list:
         callable_contract:
@@ -6620,6 +6622,7 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[self:body]{days: 7, limit: 10}'
+        unknown_param_hint: '최근 에피소드: [self:body]{op:"trajectory",view:"episodes",limit:10}. 반환 episode_id로 view:"trace", 원문 source_ref로 view:"document"를 읽습니다. query 검색 인자는 없으며 목록을 반환한 뒤 조건에 맞는 행을 선택합니다.'
         description: 내 몸의 변화·실행 이력 회상 + 각인(commit). 최근 에피소드 분석은 trajectory의 view=episodes로 종료 목록, trace로 통합 기록, document로 로그·응답 근거를 읽는다. git 변화·런타임 쓰기와 수리 각인도 담당한다.
         group: system
         target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: view=events(기본)는 핵심 사건(hash/ref), 식별자(run_id·episode_id·task_id 중 하나) 없으면 최근 종료된 실사용 실행. view=episodes는 종료 목록(limit 기본 10·상한 100). view=trace는 episode_id의 통합 기록과 원문 source_ref(limit 기본 5·상한 100, next_cursor로 계속). view=document는 같은 episode_id와 source_ref로 로그·응답 근거 읽기(offset 기본 0, limit 문자 기본·상한 12000). 페이지/원문 재조회에는 반환된 episode_id를 고정. 종료는 달성 판정이 아니다 / diff: 실제 바뀐 줄 / commit: 각인 — message·paths 필수, 임시 인덱스로 공유 인덱스 불가침, pre-commit 관문 통과 필요. events와 git 조회 limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
@@ -6654,7 +6657,7 @@ nodes:
             log: '[self:body]{op: "log", days: 7, limit: 10}'
             file: '[self:body]{op: "file", path: "backend/api.py", limit: 10}'
             writes: '[self:body]{op: "writes", days: 7, limit: 10}'
-            trajectory: '[self:body]{op: "trajectory", limit: 10}'
+            trajectory: '[self:body]{op: "trajectory", view: "episodes", limit: 10}'
             diff: '[self:body]{op: "diff", path: "backend", lines: 40}'
           values:
             changes: 최근 파일 단위 변화 — 파일·상태·영역·시각·요지 (미커밋 포함)
@@ -6954,7 +6957,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-31'
-          impl: e0743685d6e55c85
+          impl: b7162b30dc3eab55
         pipe_in: true
         lands_on: body
         limb_op:

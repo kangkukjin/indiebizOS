@@ -47,5 +47,28 @@ def test_seed_registration_preserves_or_explicitly_changes_selection(tmp_path, m
                             (seed['alias'],)).fetchone()[0] == expected
 
 
+def test_batch_revision_checks_new_dependency_source_not_old_certified_interface(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(ROOT / 'scripts'))
+    import register_webapp_idioms as registration
+    import ibl_usage_db
+    import function_library
+    old = '#!ibl edition=2\n[def:등록하위]($값){return $값}'
+    function_library.register('등록하위', old)
+    assert '등록하위' in function_library.definitions().interfaces
+    rows = [
+        {'alias': '등록하위', 'intent': '새 인자를 가진 하위 함수',
+         'ibl_code': '#!ibl edition=2\n[def:등록하위]($값,$추가=0){return $값+$추가}'},
+        {'alias': '등록상위', 'intent': '개정한 하위 함수의 새 인자를 쓰는 상위 함수',
+         'ibl_code': '#!ibl edition=2\n[def:등록상위](){return [fn:등록하위]{값:1,추가:2}}'},
+    ]
+    folder = tmp_path / 'data/idioms'
+    folder.mkdir(parents=True)
+    (folder / 'fixture_seeds.json').write_text(json.dumps(rows, ensure_ascii=False))
+    monkeypatch.setattr(registration, 'ROOT', tmp_path)
+    monkeypatch.setattr(ibl_usage_db, 'IBLUsageDB', lambda: SimpleNamespace(find_phrase_by_alias=lambda name: None))
+    assert registration.register(seed_file='fixture_seeds.json') == {'validated': 2, 'changed': False}
+    assert function_library.definitions()['등록하위'] == old
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

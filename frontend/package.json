@@ -25,7 +25,7 @@
     "dist:filter": "node scripts/build-python.mjs ../scripts/build_core_manifest.py && node scripts/build-python.mjs ../scripts/build_dist_filter.py",
     "dist:stage": "node scripts/build-python.mjs ../scripts/build_dist_stage.py",
     "electron:build": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder",
-    "electron:build:win": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder --win",
+    "electron:build:win": "npm run prepare:python:win -- --sync && npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder --win",
     "electron:build:mac": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder --mac",
     "electron:build:linux": "npm run hwp:check && npm run dist:filter && npm run dist:stage && vite build && electron-builder --linux",
     "electron:preview": "vite build && electron . --preview",

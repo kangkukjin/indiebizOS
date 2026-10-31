@@ -92,6 +92,8 @@ def test_resume_receipt_does_not_submit_and_can_recover_target(pc):
     before = len(pc.calls)
     resumed = pc('[fn:외부PC작업실행]{PC:"시험PC",명령:"echo ok",작업폴더:"/tmp",요청ID:"shell-1",작업:$job}', job=job)
     assert resumed['task_ref'] == job['task_ref']
+    assert resumed['history_cursor'] == job['history_cursor']
+    assert resumed['observation']['progress'] == []
     assert not any(a == 'limbs:guestpc' for a, _ in pc.calls[before:])
     out = pc('[fn:외부PC작업확인]{작업:{task_ref:$ref}}', ref=job['task_ref'])
     assert out['limb'] == pc.rec['device_id'] and out['status'] == 'queued'
@@ -485,3 +487,59 @@ def test_visual_warning_survives_handler(pc, monkeypatch):
                                     'warning': 'cannot infer cause'}, pc.rec['device_id'], '시험PC', 'screen')
     assert out['success'] and out['image_observation'] == 'uniform'
     assert out['warning'] == 'cannot infer cause'
+
+
+def test_progress_cursor_is_per_consumer_and_terminal_result_is_never_hidden(pc):
+    import resident_pcs as pcs
+    import resident_store
+    job = shell(pc)
+    jid = job['task_ref']['task_id']
+    pcs.sync(pc.rec['key'], 'a' * 32)
+    for i in range(8):
+        pcs.sync(pc.rec['key'], 'a' * 32, [{'job_id': jid, 'event_id': f'log-{i}',
+                  'kind': 'log', 'payload': {'text': f'line {i}'}}])
+    first = pc('[fn:외부PC작업확인]{작업:$job}', job=job)
+    assert first['history_has_more']
+    second = pc('[fn:외부PC작업확인]{작업:$job}', job=first)
+    assert set(e['cursor'] for e in first['progress']).isdisjoint(e['cursor'] for e in second['progress'])
+    # Another consumer can independently start from the same receipt.
+    other = pc('[fn:외부PC작업확인]{작업:$job}', job=job)
+    assert other['progress'] == first['progress']
+    pc.complete(job, {'exit': 0, 'output': 'done'})
+    finished = pc('[fn:외부PC작업확인]{작업:$job}', job=second)
+    assert finished['command_ok'] and finished['result']['output'] == 'done'
+    unchanged = pc('[fn:외부PC작업확인]{작업:$job}', job=finished)
+    assert unchanged['progress'] == []
+    assert unchanged['result'] == finished['result']
+    assert unchanged['last_progress_at'] == finished['last_progress_at']
+    assert len(resident_store.history(job=jid)['tasks']) == 1
+
+
+def test_send_always_exposes_verified_without_claiming_delivery(pc):
+    out = pc('[fn:외부PC파일보내기]{PC:"",중앙경로:"x",원격경로:"x",요청ID:"x"}')
+    assert out['verified'] is False and out['status'] == 'invalid_input'
+    pc.state['connected'] = False
+    out = pc('[fn:외부PC파일보내기]{PC:"시험PC",중앙경로:"x",원격경로:"x",요청ID:"x"}')
+    assert out['verified'] is False and out['status'] == 'offline'
+
+
+def test_explicit_completion_wait_resumes_same_remote_submission(pc, monkeypatch):
+    import ibl_v2_store
+    import ibl_run_journal
+    import ibl_continuations
+    from ibl_v2_entry import handle_request
+    definitions = {ibl_v2_store.definition_name(p.read_text()): p.read_text()
+                   for p in (ROOT / 'data/idioms').glob('guestpc_*.ibl')}
+    monkeypatch.setattr(ibl_v2_store, 'definitions', lambda: {})
+    monkeypatch.setattr(ibl_run_journal, 'runs_root', lambda: pc.path / 'runs')
+    request = {'edition': 2, 'code': '\n'.join(definitions.values()) + '\n[fn:외부PC작업실행]{PC:"시험PC",명령:"echo ok",작업폴더:"/tmp",요청ID:"suspend-once",완료까지:true}'}
+    first = handle_request(request, str(pc.path))
+    assert first.get('suspended'), first
+    tasks = pc.history()
+    assert len(tasks) == 1
+    pc.complete({'task_ref': {'kind': 'guestpc', 'task_id': tasks[0]['id']}}, {'exit': 0, 'output': 'complete'})
+    ibl_continuations.sweep()
+    result = ibl_continuations.task_status(first['task_ref'])
+    assert result['state'] == 'succeeded', __import__('json').dumps(result, ensure_ascii=False)
+    assert result['result']['observation']['command_ok']
+    assert len(pc.history()) == 1

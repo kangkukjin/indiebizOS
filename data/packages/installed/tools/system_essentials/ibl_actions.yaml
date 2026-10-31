@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-31", impl: "e0743685d6e55c85"}  # 재감사: 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +151,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-31", impl: "e0743685d6e55c85"}  # 재감사: 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -231,7 +231,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-31", impl: "e0743685d6e55c85"}  # 재감사: 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
         target_key: path
       list:
         callable_contract:
@@ -695,6 +695,7 @@ nodes:
         # 낱말이 없다(push 부재 = 원격 URL 이 몸 코드에 존재할 자리 자체가 없음 — 이식성 계명).
         side_effect: true    # 각인 op 보유 — 통화(returns)와 안전은 다른 축 (others:board 선례)
         fixture: '[self:body]{days: 7, limit: 10}'
+        unknown_param_hint: '최근 에피소드: [self:body]{op:"trajectory",view:"episodes",limit:10}. 반환 episode_id로 view:"trace", 원문 source_ref로 view:"document"를 읽습니다. query 검색 인자는 없으며 목록을 반환한 뒤 조건에 맞는 행을 선택합니다.'
         description: 내 몸의 변화·실행 이력 회상 + 각인(commit). 최근 에피소드 분석은 trajectory의 view=episodes로 종료 목록, trace로 통합 기록, document로 로그·응답 근거를 읽는다. git 변화·런타임 쓰기와 수리 각인도 담당한다.
         group: system
         target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: view=events(기본)는 핵심 사건(hash/ref), 식별자(run_id·episode_id·task_id 중 하나) 없으면 최근 종료된 실사용 실행. view=episodes는 종료 목록(limit 기본 10·상한 100). view=trace는 episode_id의 통합 기록과 원문 source_ref(limit 기본 5·상한 100, next_cursor로 계속). view=document는 같은 episode_id와 source_ref로 로그·응답 근거 읽기(offset 기본 0, limit 문자 기본·상한 12000). 페이지/원문 재조회에는 반환된 episode_id를 고정. 종료는 달성 판정이 아니다 / diff: 실제 바뀐 줄 / commit: 각인 — message·paths 필수, 임시 인덱스로 공유 인덱스 불가침, pre-commit 관문 통과 필요. events와 git 조회 limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
@@ -729,7 +730,7 @@ nodes:
             log: '[self:body]{op: "log", days: 7, limit: 10}'
             file: '[self:body]{op: "file", path: "backend/api.py", limit: 10}'
             writes: '[self:body]{op: "writes", days: 7, limit: 10}'
-            trajectory: '[self:body]{op: "trajectory", limit: 10}'
+            trajectory: '[self:body]{op: "trajectory", view: "episodes", limit: 10}'
             diff: '[self:body]{op: "diff", path: "backend", lines: 40}'
             # commit 은 부작용 op 라 fixture 금지(건강검진이 실행) — 용례는 target_description·가이드에.
           values:
@@ -977,7 +978,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-31", impl: "e0743685d6e55c85"}  # 재감사: 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

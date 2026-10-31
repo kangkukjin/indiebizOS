@@ -126,6 +126,11 @@ def _observe(value):
          {key: value[key] for key in ('state', 'terminal', 'accepted', 'timed_out', 'failure') if key in value},
          source='task_receipts', observed_at=time.time(),
          source_ref={'task_ref': value['task_ref']})
+    progress = {key: value[key] for key in ('last_event_at', 'last_progress_at', 'started_at', 'ended_at')
+                if value.get(key) is not None}
+    if progress:
+        emit({'kind': 'task', 'ref': value['task_ref']}, 'progress', progress,
+             source='task_receipts', observed_at=time.time(), source_ref={'task_ref': value['task_ref']})
 
 
 def register(kind: str, status_fn: Callable[[dict], dict], cancel_fn: Optional[Callable[[dict], dict]] = None, *, steer_fn=None) -> None:
@@ -247,17 +252,18 @@ def _adapter(kind: str, table: dict):
 
 # ── 관찰·제어 ──────────────────────────────────────────────────────────────────
 
-def status(r: dict) -> dict:
+def status(r: dict, *, cursor=None) -> dict:
     """현재 투영. 모르는 kind 면 unknown(실패로 꾸미지 않는다)."""
     fn = _adapter(r["kind"], _STATUS)
     if fn is None:
         return view(r, UNKNOWN, error=f"이 몸이 모르는 작업 종류 '{r['kind']}' — 어댑터 미등록(잠든 패키지이거나 다른 몸의 작업)")
     try:
-        out = fn(r)
+        out = fn(r if cursor is None else {**r, "_history_cursor": cursor})
     except Exception as exc:  # noqa: BLE001 — 어댑터 예외는 unknown 으로 정직하게(작업이 실패한 것이 아니다)
         return view(r, UNKNOWN, error=f"상태 조회 실패({type(exc).__name__}): {exc}")
     if not isinstance(out, dict) or out.get("state") not in STATES:
         return view(r, UNKNOWN, error=f"어댑터 '{r['kind']}' 가 상태 어휘 밖의 투영을 돌려줌")
+    out["task_ref"] = dict(r)
     return _stable(r, out)
 
 
@@ -281,7 +287,7 @@ def _unfinished(v: dict) -> str:
     return v.get("failure") or f"작업이 {v['state']} 상태입니다 — 결과가 없습니다."
 
 
-def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS, *, suspend=False) -> dict:
+def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS, *, suspend=False, cursor=None) -> dict:
     """종료 상태가 되거나 timeout 이 끝날 때까지 기다린 뒤 투영.
 
     **시간 초과는 실패가 아니다(대기자의 사정)** — `success: true, timed_out: true` 와 현재 상태를 값으로 돌려준다.
@@ -297,7 +303,7 @@ def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS, *, suspend=
     limit = max(0.0, min(requested, WAIT_MAX_SECONDS))
     deadline = time.monotonic() + limit
     while True:
-        v = status(r)
+        v = status(r) if cursor is None else status(r, cursor=cursor)
         if v["state"] == SUCCEEDED:
             return {"success": True, **v}
         if v["state"] in TERMINAL or v["state"] == UNKNOWN:

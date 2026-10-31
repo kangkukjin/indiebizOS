@@ -1070,7 +1070,10 @@ def task_status(ref: dict) -> dict:
     import task_receipts as T
     jid = ref["task_id"]
     import resident_store
-    history = resident_store.history(job=jid, limit=5, tail=True, include_images=True)
+    cursor = ref.get("_history_cursor")
+    ref = {k: v for k, v in ref.items() if k != "_history_cursor"}
+    history = resident_store.history(job=jid, cursor=cursor or 0, limit=5,
+                                     tail=cursor is None, include_images=True)
     if history["tasks"]:
         task = history["tasks"][0]
         state = T.FAILED if task["state"] == "expired" else task["state"]
@@ -1087,7 +1090,14 @@ def task_status(ref: dict) -> dict:
                       limb=task["device"], helper_mode="resident",
                       op=task["summary"].get("op"), request_id=task["request_id"],
                       cwd=task["summary"].get("cwd"), shell=task["summary"].get("shell"),
-                      progress_scope="recent_5_events", history_cursor=history["cursor"],
+                      progress_scope="recent_5_events" if cursor is None else "after_cursor",
+                      history_cursor=history["cursor"],
+                      history_has_more=history["cursor"] < (task.get("last_event_cursor") or 0),
+                      last_event_at=task.get("last_event_at"), last_progress_at=task.get("last_progress_at"),
+                      observation={"observed_at": time.time(), "source": "resident_event_log",
+                                   "last_event_at": task.get("last_event_at"),
+                                   "last_progress_at": task.get("last_progress_at"),
+                                   "process_activity": "not_observed"},
                       history_args={"op": "history", "limb": task["device"], "job": jid, "cursor": 0},
                       started_at=task["started_at"], ended_at=task["ended_at"], seconds=task["seconds"],
                       outcome=task["outcome"],

@@ -60,15 +60,27 @@ def needs_followup(calls):
     return bool(last.get("is_error") or is_error_result(last.get("result")))
 
 
+def execution_available(supervisor=None):
+    """추가 실행의 소유자가 현재 턴인지 확인한다. 수리 권한 유무는 기준이 아니다."""
+    if getattr(supervisor, 'apply_scheduled', None):
+        return False
+    from task_repair import pending
+    if pending():
+        return False
+    from repair_continuation import current
+    from component_continuation import is_task
+    row = current()
+    # 평가·적용·활성 검사는 별도 소비자가 소유한다. 실행 단계에서는 같은 방법 선택을 허용한다.
+    return (not row or is_task(row) or row.get('phase') in {
+        'execution', 'repair_apply', 'repair_active', 'verify_remaining'})
+
+
 def continue_task(runner, request, response, calls, history, *, collect,
                   cancel_check=None, images=None, supervisor=None, enabled=True):
     if (not enabled or not response or not needs_followup(calls)
             or (cancel_check and cancel_check()) or turn_limit_reason()):
         return response
-    # 지연 적용 중에는 죽음을 넘는 기존 제어자가 후속을 소유한다.
-    from repair_continuation import current
-    from component_continuation import is_task
-    if current() and not is_task(current()):
+    if not execution_available(supervisor):
         return response
     if not claim_followup("observed_failure"):
         return response
@@ -78,6 +90,8 @@ def continue_task(runner, request, response, calls, history, *, collect,
     candidate = ""
     stream = runner.ai.process_message_stream(message_content=instruction, history=history,
                                               images=images, cancel_check=cancel_check)
+    from repair_readiness import execution_stream
+    stream = execution_stream(stream)
     try:
         for event in stream:
             collect(event)

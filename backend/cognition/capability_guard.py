@@ -413,6 +413,8 @@ def adopt_response(guard, runner, message, response, calls, history, *, collect,
         allowed_set = configured if allowed_set is None else configured & set(allowed_set)
 
     def resume(snapshot, claims):
+        if not execution_available(supervisor):
+            return response  # 능력 조회 동안 적용/위임 인계가 생겼으면 새 실행을 열지 않는다.
         instruction = (
             "앞 응답의 능력 부정에는 확인된 근거가 없었습니다. 아래 현재 기능 조회는 항목의 존재만 "
             "확인하며 특정 대상의 접근·실행 성공을 보장하지 않습니다. 원래 사용자 요청과 기존 권한을 "
@@ -426,18 +428,25 @@ def adopt_response(guard, runner, message, response, calls, history, *, collect,
                 "execution_evidence": packet(message, response, calls, guard.limits)["evidence"],
                 "claims": claims, "current_capabilities": snapshot}, ensure_ascii=False))
         candidate = ""
-        for event in runner.ai.process_message_stream(
-                message_content=instruction, history=history, images=images, cancel_check=cancel_check):
-            collect(event)
-            if supervisor:
-                supervisor.observe_native(event)
-            if event.get("type") == "final":
-                if (event.get("content") or "").strip():
-                    candidate = event["content"]
-            elif event.get("type") != "text" or not (supervisor and supervisor.enabled):
-                yield event
+        from repair_readiness import execution_stream
+        stream = runner.ai.process_message_stream(
+            message_content=instruction, history=history, images=images, cancel_check=cancel_check)
+        stream = execution_stream(stream)
+        try:
+            for event in stream:
+                collect(event)
+                if supervisor:
+                    supervisor.observe_native(event)
+                if event.get("type") == "final":
+                    if (event.get("content") or "").strip():
+                        candidate = event["content"]
+                elif event.get("type") != "text" or not (supervisor and supervisor.enabled):
+                    yield event
+        finally:
+            stream.close()
         return candidate
 
+    from task_continuation import execution_available
     return (yield from guard.adopt(runner, message, response, calls,
-                                  resume=resume if allow_resume else None,
+                                  resume=resume if allow_resume and execution_available(supervisor) else None,
                                   allowed_set=allowed_set, cancel_check=cancel_check))

@@ -807,7 +807,7 @@ class CognitivePipelineMixin:
                     final_content = event.get("content", "")
                     continue  # 초안은 흘리되 최종 채택 전에는 완료를 방출하지 않는다.
                 if (event.get("type") == "text"
-                        and not (force_role or _clarify_text or context_update or _repair_granted_task)):
+                        and not (force_role or _clarify_text or context_update)):
                     from task_continuation import needs_followup
                     if needs_followup(eval_tool_calls):
                         continue  # 실패 직후의 종료 초안은 후속 실행/최종 채택까지 보류한다.
@@ -824,7 +824,7 @@ class CognitivePipelineMixin:
                     self, message, final_content, eval_tool_calls, history,
                     collect=_collect, images=images, supervisor=_supervisor,
                     cancel_check=cancel_check,
-                    enabled=not (force_role or _clarify_text or context_update or _repair_granted_task))
+                    enabled=not (force_role or _clarify_text or context_update))
             if final_content and not pending():
                 final_content = yield from adopt_response(
                     _capability_guard, self, message, final_content, eval_tool_calls, history,

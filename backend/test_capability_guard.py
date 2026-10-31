@@ -622,3 +622,37 @@ def test_websocket_saves_and_sends_the_adopted_body(monkeypatch):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('phase,scheduled,allowed', [
+    ('execution', False, True), ('verify_remaining', False, True),
+    ('execution', True, False), ('apply', False, False), ('review', False, False)])
+def test_capability_recovery_respects_execution_owner(monkeypatch, phase, scheduled, allowed):
+    from repair_continuation import resuming
+    invoked = []
+    def stream(**kwargs):
+        invoked.append(kwargs)
+        yield {'type': 'final', 'content': '실행 결과 확인'}
+    install_judge(monkeypatch, [[claim(EYES)]])
+    install_lookup(monkeypatch)
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+    with resuming({'phase': phase}):
+        drain(cg.adopt_response(guard, NS(config={}, ai=NS(process_message_stream=stream)),
+            '이미지 읽어줘', EYES, [], [], collect=lambda _: None,
+            supervisor=NS(apply_scheduled={'key': 'reserved'} if scheduled else None,
+                          observe_native=lambda _: None, enabled=False)))
+    assert bool(invoked) is allowed
+
+
+def test_handoff_during_capability_lookup_prevents_late_execution(monkeypatch):
+    supervisor = NS(apply_scheduled=None)
+    install_judge(monkeypatch, [[claim(EYES)]])
+    def lookup(*args, **kwargs):
+        supervisor.apply_scheduled = {'key': 'reserved'}
+        return {'native_tools': ['read_image']}
+    monkeypatch.setattr(cg, 'body_snapshot', lookup)
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+    runner = NS(config={}, ai=NS(process_message_stream=lambda **kw: pytest.fail('인계 뒤 실행')))
+    _, result = drain(cg.adopt_response(guard, runner, '이미지 읽어줘', EYES, [], [],
+                                       collect=lambda _: None, supervisor=supervisor))
+    assert EYES not in result and '확정하지 못했습니다' in result

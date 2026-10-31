@@ -111,5 +111,27 @@ def test_verification_needs_scope_result_and_evidence(path, fields):
         h.record('action:sense:sample', 'verified', 'one:base', path=path, **fields)
 
 
+
+def test_repair_child_observations_do_not_reach_owner(tmp_path, monkeypatch):
+    import os
+    import sys
+    from pathlib import Path
+    from repair_process import run
+    owner, child = tmp_path / 'owner', tmp_path / 'candidate'
+    child.mkdir()
+    monkeypatch.delenv('INDIEBIZ_RUNTIME_STATE_DIR', raising=False)
+    monkeypatch.setattr(h, 'get_base_path', lambda: owner)
+    ref = {'function_id': 'fixture', 'revision': 'revision'}
+    h.record_function_call(ref, 'owner', '1', success=True, dependency_revision='owner')
+    code = (f'import sys; sys.path.insert(0, {str(Path(__file__).parent)!r}); import boot_paths; '
+            'import capability_history as h; '
+            f'h.record_function_call({ref!r}, "child", "1", success=True, dependency_revision="candidate"); '
+            f'assert h.function_statistics({ref!r})["success_count"]==1')
+    env = {k: v for k, v in os.environ.items() if k != 'INDIEBIZ_RUNTIME_STATE_DIR'}
+    result = run([sys.executable, '-c', code], child, env=env, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert (child / 'data/capability_history.db').is_file()
+    assert h.function_statistics(ref)['success_count'] == 1
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

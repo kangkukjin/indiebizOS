@@ -134,5 +134,26 @@ def test_member_cannot_read_owner_inventory(body, monkeypatch):
     assert not (body / 'data/capability_history.db').exists()
 
 
+def test_repair_observations_and_default_inventory_keep_process_owner(body, monkeypatch):
+    from thread_context import repair_workspace_scope
+    from ibl_v2_entry import handle_request
+    import function_store
+    monkeypatch.delenv('INDIEBIZ_RUNTIME_STATE_DIR', raising=False)
+    monkeypatch.setattr(age, 'get_base_path', lambda: body)
+    monkeypatch.setattr(history, 'get_base_path', lambda: body)
+    ref = function_store.reference(function_store.resolve('value'))
+    candidate = body / 'candidate'
+    candidate.mkdir()
+    age.operate({})
+    with repair_workspace_scope(str(candidate)):
+        result = handle_request({'edition': 2, 'code': '[fn:value]{}'})
+        assert result['success'] and result['value'] == 1
+        assert age.operate({'key': idiom_key(body)})['items'][0]['last_execution']['success'] == 1
+        assert age._locations()[0] == body
+        assert age._locations(candidate) == (candidate, history.storage_path(candidate))
+    assert history.function_statistics(ref)['success_count'] == 1
+    assert not (candidate / 'data/capability_history.db').exists()
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

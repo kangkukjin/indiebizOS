@@ -14,10 +14,6 @@ from runtime_utils import get_base_path
 def _locations(root=None):
     if root is not None:
         return Path(root), ledger.storage_path(root)
-    from thread_context import get_repair_workspace
-    repair = get_repair_workspace(create=False)
-    if repair:
-        return Path(repair), ledger.storage_path(repair)
     return get_base_path(), ledger.storage_path()
 
 

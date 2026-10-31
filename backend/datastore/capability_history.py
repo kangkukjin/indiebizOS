@@ -57,9 +57,8 @@ def storage_path(root=None):
     if root is not None:
         return Path(root) / 'data/capability_history.db'
     state = os.environ.get('INDIEBIZ_RUNTIME_STATE_DIR')
-    from thread_context import get_repair_workspace
-    workspace = get_repair_workspace(create=False)
-    return (Path(state) if state else Path(workspace or get_base_path()) / 'data') / 'capability_history.db'
+    # 관측은 프로세스 소유 원장에 남긴다. 후보 검사는 명시 root 또는 격리 자식의 BASE_PATH를 쓴다.
+    return (Path(state) if state else get_base_path() / 'data') / 'capability_history.db'
 
 
 @contextmanager

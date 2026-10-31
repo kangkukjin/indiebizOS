@@ -45,7 +45,8 @@ def wrap(execute):
                 return json.dumps({"success": False, "error": "감독 턴이 없습니다"}, ensure_ascii=False)
             return controller.tool(payload, multimedia=True)
         if not controller:
-            return execute(name, payload, *args, **kwargs)
+            from execution_situation import run_tool
+            return run_tool(name, payload, lambda: execute(name, payload, *args, **kwargs))
         return controller.run_tool(name, payload, lambda: execute(name, payload, *args, **kwargs))
     return call
 

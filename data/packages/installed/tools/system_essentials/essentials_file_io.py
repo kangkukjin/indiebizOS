@@ -58,6 +58,8 @@ def atomic_write_text(path, content):
         if mode is not None:
             os.chmod(temp, mode)
         os.replace(temp, target)
+        from situation_evidence import file_written
+        file_written(target, content.encode('utf-8'))
     finally:
         temp.unlink(missing_ok=True)
 

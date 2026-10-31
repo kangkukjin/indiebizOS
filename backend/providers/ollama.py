@@ -257,6 +257,8 @@ class OllamaProvider(BaseProvider):
 
         try:
             collected_text = ""
+            from situation_delivery import prepare, observed_stream
+            delivery = prepare(messages, self)
 
             # 재시도 로직으로 스트림 생성
             stream = None
@@ -268,6 +270,7 @@ class OllamaProvider(BaseProvider):
                         stream=True,
                         stream_options={"include_usage": True},   # 마지막 청크에 usage
                     )
+                    stream = observed_stream(stream, delivery)
                     break
                 except Exception as e:
                     if attempt < self.retry_config.max_retries and self.retry_config.is_retryable(e):
@@ -367,9 +370,12 @@ class OllamaProvider(BaseProvider):
 
             # 재시도 로직으로 스트림 생성
             stream = None
+            from situation_delivery import prepare, observed_stream
+            delivery = prepare(messages, self)
             for attempt in range(self.retry_config.max_retries + 1):
                 try:
                     stream = self._client.chat.completions.create(**create_params)
+                    stream = observed_stream(stream, delivery)
                     break
                 except Exception as e:
                     if attempt < self.retry_config.max_retries and self.retry_config.is_retryable(e):
@@ -476,11 +482,15 @@ class OllamaProvider(BaseProvider):
 
     def _final_turn_text(self, messages: List[Dict], max_tokens: int) -> str:
         """마지막 턴 1회 호출 — ★tools를 넘기지 않는다(도구 없이 보고만)."""
+        from situation_delivery import prepare
+        delivery = prepare(messages, self)
         response = self._client.chat.completions.create(
             model=self.model,
             messages=messages,
             stream=False,
         )
+        if delivery:
+            delivery.acknowledge()
         return (response.choices[0].message.content or "") if response.choices else ""
 
     def _execute_tools_and_continue(

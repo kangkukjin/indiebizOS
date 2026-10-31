@@ -302,7 +302,9 @@ class CognitivePipelineMixin:
         from uuid import uuid4
         from providers.base import turn_token_scope
         from world_pulse import _load_config
-        resource_limits = _load_config().get("agent_resource_limits", {})
+        runtime_config = _load_config()
+        resource_limits = runtime_config.get("agent_resource_limits", {})
+        situation_enabled = runtime_config.get('execution_situation', {}).get('enabled', True)
         if getattr(self, "config", {}).get("_member"):
             resource_limits = self.config["_member"]["limits"]
         agent_id = get_current_agent_id() or getattr(self.ai, "agent_id", None)
@@ -359,6 +361,9 @@ class CognitivePipelineMixin:
                         _supervisor = None
                     if not kwargs.get("force_role"):
                         _supervisor = open_supervisor(self, prompt, previous, kwargs.get("cancel_check"))
+                        from situation_evidence import attach as attach_situation
+                        if situation_enabled:
+                            attach_situation(_execution, _supervisor.store if _supervisor else None, handoff)
                     else:
                         from episode_logger import record_trajectory_event
                         record_trajectory_event("cognition.supervisor_selected", {"reason": "force_role", "enabled": False})
@@ -795,6 +800,9 @@ class CognitivePipelineMixin:
                 _collect(event)
                 if _supervisor:
                     _supervisor.observe_native(event)
+                elif _execution := __import__('execution_turn').current():
+                    if _execution.situation:
+                        _execution.situation.observe_native(event)
                 if event.get("type") == "final":
                     final_content = event.get("content", "")
                     continue  # 초안은 흘리되 최종 채택 전에는 완료를 방출하지 않는다.

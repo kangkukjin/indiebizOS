@@ -61,6 +61,7 @@ class Handoff:
         self.research = None
         self.sources = []
         self.previews = {}
+        self.situation_recovery = []
         if not self.binding:
             from research_context import current
             context = current()
@@ -140,6 +141,7 @@ class Handoff:
     def recovery(self):
         grouped, acknowledged, presented = {}, set(), {}
         self.sources, self.previews = [], {}
+        self.situation_recovery = []
         for turn, state, event in self._previous():
             group = grouped.setdefault(turn, {"turn_id": turn, "state": state, "events": []})
             group["events"].append(event)
@@ -173,6 +175,9 @@ class Handoff:
                 {**group, "events": events}, ensure_ascii=False,
                 sort_keys=True, default=str).encode()).hexdigest()
             group.update(pending_steering=pending, tools=_calls(events))
+            situations = [e for e in events if e.get('type') == 'handoff.situation']
+            if situations:
+                group['execution_situation'] = situations[-1]
             starts = [e for e in events if e.get("type") == "handoff.started"]
             if starts:
                 group["request"] = starts[-1].get("message", "")
@@ -200,6 +205,8 @@ class Handoff:
             raw = json.dumps(row, ensure_ascii=False, default=str)
             if len(raw) <= remaining:
                 rows.append(row)
+                if row.get('execution_situation', {}).get('snapshot'):
+                    self.situation_recovery.append((row['execution_situation']['snapshot'], self._source_ref(turn)))
                 self.sources.append(row["turn_id"])
                 remaining -= len(raw)
             elif not rows:

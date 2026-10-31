@@ -30,6 +30,7 @@ class Binding:
     images: list = field(default_factory=list)
     allowed_set: object = None
     on_change: object = None
+    situation: object = None
 
 
 def current():
@@ -72,10 +73,16 @@ def enter(runner, enabled=True, component_repair=False, cancel_check=None, reque
 def leave(token):
     b = current()
     if b:
-        with _lock:
-            if _sessions.get(b.task) is b:
-                del _sessions[b.task]
-    _current.reset(token)
+        try:
+            if b.situation:
+                b.situation.close()
+        finally:
+            with _lock:
+                if _sessions.get(b.task) is b:
+                    del _sessions[b.task]
+            _current.reset(token)
+    else:
+        _current.reset(token)
 
 
 def resolve_session(agent, task=None):

@@ -60,6 +60,26 @@ async def boundary(req: Request):
     return await asyncio.to_thread(dispatch, req.agent_id, req.task_id, req.payload, True)
 
 
+def situation_context(agent_id, task_id):
+    """Read only; caller principal is preserved. No supervisor or remote polling required."""
+    from thread_context import actor_context
+    from execution_situation import current
+    from situation_delivery import render
+    with actor_context(agent_id=agent_id, task_id=task_id):
+        situation = current()
+        if situation is None:
+            return {'active': False}
+        # MCP clients can compact at any time; no unobservable retained-history assumption.
+        payload = situation.prepare('mcp:' + agent_id, baseline=True)
+        return {'active': True, 'context': render(payload) if payload else '',
+                'delivery': 'prepared; client receipt not acknowledged'}
+
+
+@router.post('/situation')
+async def situation(req: Request):
+    return await asyncio.to_thread(situation_context, req.agent_id, req.task_id)
+
+
 @router.post("/repair/command")
 async def repair_command(req: Request):
     return await asyncio.to_thread(dispatch, req.agent_id, req.task_id, req.payload,

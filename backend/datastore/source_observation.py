@@ -97,6 +97,8 @@ def publish(evidence, result):
         conn.commit()
     finally:
         conn.close()
+    from situation_evidence import source_published
+    source_published(evidence, ref)
     return ref
 
 

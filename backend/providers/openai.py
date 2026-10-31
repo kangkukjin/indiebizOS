@@ -534,10 +534,11 @@ class OpenAIProvider(BaseProvider):
         Rate limit, 5xx 에러 시 exponential backoff로 재시도
         """
         last_error = None
-
+        from situation_delivery import prepare, observed_stream
+        delivery = prepare(create_params['messages'], self)
         for attempt in range(self.retry_config.max_retries + 1):
             try:
-                return self._client.chat.completions.create(**create_params)
+                return observed_stream(self._client.chat.completions.create(**create_params), delivery)
             except Exception as e:
                 last_error = e
                 self.metrics.record_error()
@@ -763,7 +764,11 @@ class OpenAIProvider(BaseProvider):
         if _off:
             params["extra_body"] = dict(_off)
 
+        from situation_delivery import prepare
+        delivery = prepare(messages, self)
         response = self._client.chat.completions.create(**params)
+        if delivery:
+            delivery.acknowledge()
         return (response.choices[0].message.content or "") if response.choices else ""
 
     def _compact_openai(self, messages: List[Dict]) -> List[Dict]:

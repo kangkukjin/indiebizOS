@@ -75,6 +75,8 @@ class DocumentWorkspace(OfficeSessions):
             document_hwp.validate(data, document["source_format"])
         else:
             document_office.validate(data, document["source_format"])
+        from situation_evidence import document_validation
+        document_validation(self.store, document, data)
 
     def _doc(self, document_id):
         return self.resources.get(document_id)

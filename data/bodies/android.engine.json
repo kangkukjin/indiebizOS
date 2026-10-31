@@ -25,6 +25,7 @@
     "base/episode_trace_reader",
     "base/execution_capacity",
     "base/execution_commit",
+    "base/execution_situation",
     "base/execution_turn",
     "base/execution_workers",
     "base/file_script",
@@ -73,6 +74,7 @@
     "base/script_workspace",
     "base/seam_metrics",
     "base/shell_shadow_gate",
+    "base/situation_delivery",
     "base/steer_inbox",
     "base/supervision_bus",
     "base/supervision_hook",
@@ -256,6 +258,7 @@
     "datastore/research_store",
     "datastore/schema_migrations",
     "datastore/service_status",
+    "datastore/situation_evidence",
     "datastore/source_observation",
     "datastore/store_waste_audit",
     "datastore/supervision_delivery",
@@ -314,6 +317,7 @@
     "ibl/ibl_scanner",
     "ibl/ibl_scheduled",
     "ibl/ibl_script_session",
+    "ibl/ibl_situation",
     "ibl/ibl_traceback",
     "ibl/ibl_translate",
     "ibl/ibl_turn_vars",
@@ -584,8 +588,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 573,
-    "engine": 541,
+    "total": 577,
+    "engine": 545,
     "blocklist": 32
   }
 }

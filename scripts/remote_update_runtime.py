@@ -132,17 +132,24 @@ def quiesce(root, run_id, timeout=600):
             own_marker(root, run_id)
             stopped(root)
         return value
-    desktop = desktop_receipt(root, rows) if any(r['desktop'] for r in rows) else None
     backend = alive(state.get('controller'))
+    desktop_present = any(r['desktop'] for r in rows)
+    # Capture before any admission rejection asks the caller to close the app.
+    # Retrying after that closure must not redefine the original state as stopped.
+    if value is None:
+        value = {'schema': 1, 'root': str(root), 'run_id': run_id, 'token': uuid.uuid4().hex,
+                 'phase': 'preparing', 'backend': backend, 'desktop': None,
+                 'desktop_unresolved': desktop_present, 'before': rows,
+                 'first_observed_at': time.time(), 'shutdown_id': uuid.uuid4().hex}
+        save(root, value)
+    desktop = desktop_receipt(root, rows) if desktop_present else None
+    if desktop and value.get('desktop_unresolved'):
+        value.update(desktop=desktop, desktop_unresolved=False)
+        save(root, value)
     if backend and not state.get('shutdown_drain'):
         raise ValueError('Running controller lacks graceful update shutdown; close the app normally, then retry')
     if rows and not desktop and not backend:
         raise ValueError('Unmanaged checkout processes remain; close them normally, then retry')
-    if value is None:
-        value = {'schema': 1, 'root': str(root), 'run_id': run_id, 'token': uuid.uuid4().hex,
-                 'phase': 'preparing', 'backend': backend, 'desktop': desktop,
-                 'before': rows, 'shutdown_id': uuid.uuid4().hex}
-        save(root, value)
     # Exclusive ownership creation: an existing journal is not an OS lock.
     path = maintenance_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -192,7 +199,11 @@ def guard(root, run_id):
 
 
 def verify(root, value, timeout=300):
+    if value.get('desktop_unresolved'):
+        raise ValueError('Original desktop was running but its launch mode is unknown; restoration is unverified')
     if not value['backend'] and not value['desktop']:
+        if value.get('before'):
+            raise ValueError('Original checkout had unmanaged processes; restoration is unverified')
         stopped(root)
         return {'status': 'succeeded', 'surface': 'stopped', 'scope': 'installation only; app was not running'}
     deadline = time.monotonic() + timeout
@@ -228,6 +239,10 @@ def verify(root, value, timeout=300):
 
 def resume(root, run_id, npm, timeout=300):
     value = load(root, run_id)
+    if value.get('desktop_unresolved'):
+        raise ValueError('Original desktop launch mode is unknown; inspect its saved before observation before restoration')
+    if value.get('before') and not value['backend'] and not value['desktop']:
+        raise ValueError('Original unmanaged checkout processes need an explicit restoration method')
     if value['phase'] == 'complete':
         return verify(root, value, timeout)
     if value['phase'] == 'stopped':

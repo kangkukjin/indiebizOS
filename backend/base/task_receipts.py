@@ -59,6 +59,7 @@ def receipt(kind: str, task_id, *, state: str = QUEUED, owner: Optional[str] = N
     if status_url:
         out["status_url"] = status_url
     out.update(extra)
+    _observe(out)
     return out
 
 
@@ -115,7 +116,16 @@ def view(r: dict, state: str, *, progress=None, result=None, error: Optional[str
     if raw is not None:
         out["raw"] = raw
     out.update(extra)
+    _observe(out)
     return out
+
+
+def _observe(value):
+    from execution_situation import emit
+    emit({'kind': 'task', 'ref': value['task_ref']}, 'receipt',
+         {key: value[key] for key in ('state', 'terminal', 'accepted', 'timed_out', 'failure') if key in value},
+         source='task_receipts', observed_at=time.time(),
+         source_ref={'task_ref': value['task_ref']})
 
 
 def register(kind: str, status_fn: Callable[[dict], dict], cancel_fn: Optional[Callable[[dict], dict]] = None, *, steer_fn=None) -> None:
@@ -263,6 +273,7 @@ def _stable(r: dict, out: dict) -> dict:
     out["failure"] = out.get("failure") or legacy or None
     if "elapsed_s" not in out:   # view() 를 거치지 않은 투영 — 시각을 실었으면 같은 시계로, 아니면 null
         out.update(_clock(out["state"], out.get("accepted_at"), out.pop("ended_at", None)))
+    _observe(out)
     return out
 
 
@@ -301,6 +312,7 @@ def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS, *, suspend=
             note = f"대기 {int(limit)}초가 끝났습니다 — 작업은 {v['state']} 상태로 계속됩니다(실패 아님). 같은 ref 로 다시 wait 하세요."
             if requested > WAIT_MAX_SECONDS:
                 note += f" (timeout 상한 {WAIT_MAX_SECONDS}초로 줄임)"
+            _observe({**v, 'timed_out': True})
             return {"success": True, **v, "timed_out": True, "note": note}
         time.sleep(min(max(poll, 0.1), left))
 

@@ -45,6 +45,10 @@ def masked_paths(original, masked):
 
 
 def current_evidence_store():
+    from execution_situation import current as current_situation
+    situation = current_situation()
+    if situation and getattr(situation, 'store', None):
+        return situation.store
     from supervision_bus import current
     controller = current()
     if controller:

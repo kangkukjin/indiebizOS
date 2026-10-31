@@ -220,6 +220,8 @@ class OfficeSessions:
             self.store.put("operation", op, conn)
             self.store.event(d["id"], {"type": "saved", "operation_id": op["id"],
                 "revision_id": op["revision_id"]}, conn)
+        from situation_evidence import file_committed
+        file_committed(op['output'], op['blob'])
         return result
 
     def export_copy(self, document_id, session_id, client_id, epoch, expected, operation_id, filename):
@@ -265,6 +267,8 @@ class OfficeSessions:
         with self.store.connect() as conn:
             self.store.put("operation", op, conn)
             self.store.event(op["document_id"], {"type": "copy_saved", "path": op["output"]}, conn)
+        from situation_evidence import file_committed
+        file_committed(op['output'], op['blob'])
         return op["result"]
 
     def recover(self, document_id):

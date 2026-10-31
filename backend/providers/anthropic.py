@@ -445,10 +445,11 @@ class AnthropicProvider(BaseProvider):
         Rate limit, 5xx 에러 시 exponential backoff로 재시도
         """
         last_error = None
-
+        from situation_delivery import prepare, observed_stream
+        delivery = prepare(create_params['messages'], self)
         for attempt in range(self.retry_config.max_retries + 1):
             try:
-                return self._client.messages.stream(**create_params)
+                return observed_stream(self._client.messages.stream(**create_params), delivery)
             except Exception as e:
                 last_error = e
                 self.metrics.record_error()
@@ -674,12 +675,16 @@ class AnthropicProvider(BaseProvider):
 
     def _final_turn_text(self, messages: List[Dict], max_tokens: int) -> str:
         """마지막 턴 1회 호출 — ★tools를 넘기지 않는다(도구 없이 보고만)."""
+        from situation_delivery import prepare
+        delivery = prepare(messages, self)
         response = self._client.messages.create(
             model=self.model,
             max_tokens=min(max_tokens or 2048, 4096),
             system=self._build_system_with_cache(),
             messages=messages,
         )
+        if delivery:
+            delivery.acknowledge()
         return "".join(b.text for b in response.content if hasattr(b, "text"))
 
     def _compact_anthropic(self, messages: List[Dict]) -> List[Dict]:

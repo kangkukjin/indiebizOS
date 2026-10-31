@@ -182,6 +182,9 @@ class Runtime(ExpressionEvaluator):
             dependencies = getattr(self.local, "dependencies", None)
             if dependencies is not None:
                 dependencies.add(eid)
+        if kind in {'tool_evidence', 'assertion'}:
+            from ibl_situation import observe_event
+            observe_event(self, eid)
         return eid
 
     def evidence(self, roots):
@@ -1315,6 +1318,8 @@ class Runtime(ExpressionEvaluator):
                                    'checks': checks,
                                    'source_snapshots': [r for e in self.trace for r in e.get('source_snapshot', [])],
                                    'scope': 'declared_assertions', 'source_complete': out['source_complete']}
+        from ibl_situation import observe_result
+        observe_result(self, result)
         if self.model_usage:
             from model_call_context import summarize_usage
             out['usage']['model'] = summarize_usage(self.model_usage)

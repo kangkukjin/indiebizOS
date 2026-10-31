@@ -409,6 +409,17 @@ async def execute_ibl(code: str, project_path: str = "",
     cleaned, images = _harvest_images_for_mcp(raw)
     text = await anyio.to_thread.run_sync(lambda: _trim_for_agent(cleaned, _count_actions(code)))
     blocks = [text]
+    if agent_id and task_id:
+        def read_situation():
+            try:
+                response = _post_backend('/ibl/situation', {'agent_id': agent_id, 'task_id': task_id}, 10)
+                response = json.loads(response) if isinstance(response, str) else response
+                return response.get('context', '') if isinstance(response, dict) else ''
+            except Exception:
+                return ''  # Context transport failure cannot turn an executed write into a failed tool.
+        situation = await anyio.to_thread.run_sync(read_situation)
+        if situation:
+            blocks.append(situation)
     if images:
         import base64 as _b64
         from mcp.server.fastmcp import Image as _McpImage
@@ -423,7 +434,7 @@ async def execute_ibl(code: str, project_path: str = "",
         return CallToolResult(isError=True, content=[
             TextContent(type="text", text=block) if isinstance(block, str)
             else block.to_image_content() for block in blocks])
-    return blocks if images else text
+    return blocks if len(blocks) > 1 else text
 
 
 @mcp.tool()

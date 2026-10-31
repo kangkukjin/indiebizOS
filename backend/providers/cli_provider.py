@@ -879,6 +879,12 @@ class CliSubprocessProvider(BaseProvider):
                 if image_paths:
                     full_prompt = self._image_prompt_prefix(image_paths) + full_prompt
 
+                from situation_delivery import prepare
+                situation_messages = []  # CLI compaction is opaque: each owned input gets a baseline.
+                situation_delivery = prepare(situation_messages, self)
+                if situation_delivery:
+                    full_prompt += '\n\n' + situation_messages[-1]['content']
+
                 cmd = self._build_command(
                     mcp_config_path=mcp_config_path,
                     stream=True,
@@ -1027,6 +1033,8 @@ class CliSubprocessProvider(BaseProvider):
                             t2 = out_event.get("type")
                             if t2 in ("text", "tool_start", "tool_result", "thinking"):
                                 committed = True
+                                if situation_delivery:
+                                    situation_delivery.acknowledge()
                             # 아직 본문이 안 왔으면(committed=False) 터미널 에러/final 은 보류.
                             # resume 실패(만료 세션)·일시 과부하(529) 둘 다 본문 도착 전에만
                             # 재시도 가능하므로, 보류해 두고 스트림 종료 후 재시도 여부를 판단한다.
@@ -1352,6 +1360,9 @@ class CliSubprocessProvider(BaseProvider):
         task_id = self._current_task_id()
         if task_id:
             env["INDIEBIZOS_TASK_ID"] = str(task_id)
+        from execution_situation import current as current_situation
+        if current_situation():
+            env['INDIEBIZOS_SITUATION'] = '1'
         from supervision_bus import current as supervisor_current
         if (getattr(self, "agent_role", "execution") != "consciousness"
                 and supervisor_current(self.agent_id, task_id)):

@@ -393,6 +393,10 @@ class Supervisor:
                     state.pop(key, None)  # 같은 모델 호출의 최초 snapshot에 이미 제공했다.
                 state.update(since=cursor, changed=bool(events),
                              hint="최초 snapshot 이후 변경분. 과거 원문은 evidence id=events로 읽으세요")
+            from execution_situation import current as current_situation
+            situation = current_situation(self.owner, self.task)
+            if situation:
+                state['execution_situation'] = situation.snapshot()
             return state
 
     def progress(self, detail):
@@ -412,6 +416,10 @@ class Supervisor:
         with self.lock:
             self.active[key] = {"name": name, "started": time.monotonic(), "input": self.store.evidence(payload), "_payload": payload}
             self.recent.append(self.log("tool.started", id=key, name=name, input=self.active[key]["input"]))
+        from execution_situation import current as current_situation, active_call_id
+        situation = current_situation()
+        if situation and not active_call_id():
+            situation.tool_started(key, name, payload)
         return key
 
     def _retire_repeat_issues(self):
@@ -426,7 +434,11 @@ class Supervisor:
         if self.trigger == "unchanged_repeat":
             self.trigger = ""
 
-    def _finish(self, key, result, error=False):
+    def _finish(self, key, result, error=False, unknown=False):
+        from execution_situation import current as current_situation, active_call_id
+        situation = current_situation()
+        if situation and not active_call_id():
+            situation.tool_finished(key, result, unknown=unknown)
         with self.lock:
             call = self.active.pop(key, {})
             ref = self.store.evidence(result)
@@ -529,9 +541,11 @@ class Supervisor:
                     return json.dumps({"success": False, "not_executed": True, "supervisor_instruction": notice}, ensure_ascii=False)
             key = self._start(name, payload)
         try:
-            result = execute()
+            from execution_situation import call_context, active_call_id
+            with call_context(active_call_id() or key):
+                result = execute()
         except BaseException as exc:
-            self._finish(key, {"error": str(exc)}, True)
+            self._finish(key, {"error": str(exc)}, True, unknown=True)
             raise
         self._finish(key, result, _failed(result))
         checkpoint = _find_checkpoint(result)

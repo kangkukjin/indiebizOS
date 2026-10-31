@@ -114,6 +114,35 @@ def test_stale_desktop_receipt_cannot_authorize_closing_a_reused_pid(tmp_path):
         lifecycle.desktop_receipt(tmp_path, [{'identity': {'pid': 77, 'born': 200}, 'desktop': True}])
 
 
+def test_rejected_controller_shutdown_preserves_original_running_state_on_retry(tmp_path, monkeypatch):
+    rows = [{'identity': {'pid': 999999, 'born': 1}, 'desktop': False}]
+    monkeypatch.setattr(lifecycle, 'processes', lambda root: rows)
+    monkeypatch.setattr(lifecycle, 'alive', lambda ident: bool(ident))
+    atomic_json(control_dir(tmp_path) / 'state.json', {'controller': {'pid': 999999, 'born': 1}})
+    with pytest.raises(ValueError, match='lacks graceful'):
+        lifecycle.quiesce(tmp_path, 'retry')
+    first = lifecycle.load(tmp_path, 'retry')
+    assert first['backend'] is True and first['before'] == rows
+    rows.clear()
+    atomic_json(control_dir(tmp_path) / 'state.json', {})
+    second = lifecycle.quiesce(tmp_path, 'retry')
+    assert second['phase'] == 'stopped' and second['backend'] is True
+    assert second['before'] == first['before']
+    assert second['first_observed_at'] == first['first_observed_at']
+
+
+def test_unknown_original_desktop_cannot_be_reported_as_stopped_installation(tmp_path, monkeypatch):
+    rows = [{'identity': {'pid': 999999, 'born': 1}, 'desktop': True}]
+    monkeypatch.setattr(lifecycle, 'processes', lambda root: rows)
+    with pytest.raises(ValueError, match='no update handshake'):
+        lifecycle.quiesce(tmp_path, 'desktop')
+    rows.clear()
+    second = lifecycle.quiesce(tmp_path, 'desktop')
+    assert second['desktop_unresolved'] and second['before']
+    with pytest.raises(ValueError, match='restoration is unverified'):
+        lifecycle.verify(tmp_path, second)
+
+
 def test_interrupted_start_is_observed_and_never_spawned_again(tmp_path, monkeypatch):
     value = lifecycle.quiesce(tmp_path, 'test')
     value.update(phase='starting', backend=True)

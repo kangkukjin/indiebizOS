@@ -39,6 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
+        "execution_situation", "situation_delivery",
         "update_maintenance", "component_runtime", "component_registry",
         "recall_relevance",
         "output_publish", "phone_execution_contract",
@@ -57,6 +58,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
+        "situation_evidence",
         "capability_history", "control_observations", "function_store", "ibl_example_index", "function_memory",
         "member_activity",
         "research_store", "research_questions", "research_evidence", "research_plans", "notebook_store", "research_lifecycle",
@@ -77,6 +79,7 @@ LAYERS = {
         "websocket_manager", "xray_stream", "media_store",
     },
     "ibl": {
+        "ibl_situation",
         "reusable_catalog", "function_library", "function_revalidation", "function_consumers", "function_install",
         "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
         "ibl_v2_case", "ibl_v2_exits", "ibl_v2_recovery", "ibl_v2_repeat", "ibl_v2_semantic", "ibl_v2_semantic_store", "ibl_v2_binding", "ibl_v2_component", "ibl_v2_component_runtime", "ibl_v2_repair_graph", "ibl_v2_repair", "ibl_v2_completion", "ibl_v2_access", "ibl_v2_requirements", "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_call_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "tool_batch", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies", "ibl_contract_drift",

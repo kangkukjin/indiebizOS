@@ -1,0 +1,419 @@
+{
+  "cli_version": "2.1.309 (Claude Code)",
+  "requested_model": "sonnet",
+  "repetitions": 1,
+  "cases": [
+    {
+      "scenario": "changed_input",
+      "condition": "control",
+      "input_utf8_bytes": 187,
+      "result": "```json\n{\n  \"next_action\": \"저장된 보고서 초안 파일을 열어 매출 합계 100과 본문 내용이 일치하는지 최종 검토한 뒤, 이상이 없으면 최종본으로 확정 저장\",\n  \"reason\": \"합계 계산과 계산 검사는 이미 끝났고 초안도 저장되어 있으므로, 남은 단계는 초안이 검증된 수치를 정확히 반영하는지 확인하고 마무리하는 것입니다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 708,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 179,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 708,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 179,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 708,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 708
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 179,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 708,
+          "webSearchRequests": 0,
+          "costUSD": 0.004626,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 3.876
+    },
+    {
+      "scenario": "changed_input",
+      "condition": "situation",
+      "input_utf8_bytes": 1456,
+      "result": "```json\n{\n  \"next_action\": \"sales.csv가 v1에서 v2로 바뀌었으므로, 최종화 전에 v2 기준으로 매출 합계와 검증을 다시 실행한다.\",\n  \"reason\": \"기존 합계 100과 검증 통과는 v1 기준이다. 관측 결과에서 검증 상태가 needs_recheck이고 파일은 v2로 갱신되었으므로, 재검증 없이 마무리하면 오래된 수치가 보고서에 들어갈 수 있다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1279,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 189,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1279,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 189,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1279,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1279
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 189,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 1279,
+          "webSearchRequests": 0,
+          "costUSD": 0.007010000000000001,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.172
+    },
+    {
+      "scenario": "parallel_results",
+      "condition": "situation",
+      "input_utf8_bytes": 1241,
+      "result": "```json\n{\n  \"next_action\": \"render-b 작업의 실패 원인(missing font)을 해결한 뒤 render-b를 다시 렌더링 요청하기 (필요한 폰트 설치 또는 대체 폰트 지정). render-a는 성공했으므로 그대로 두기.\",\n  \"reason\": \"접수 시점에는 두 요청 모두 success:true였지만, 실제 수신 결과를 보면 render-a는 succeeded, render-b는 'missing font'로 failed입니다. 따라서 두 PDF가 모두 준비된 것이 아니므로 아직 전달할 수 없고, 먼저 render-b를 고쳐 재실행한 뒤 두 파일을 확인하고 함께 전달해야 합니다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1198,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 267,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1198,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 267,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1198,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1198
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 267,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 1198,
+          "webSearchRequests": 0,
+          "costUSD": 0.007466,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.339
+    },
+    {
+      "scenario": "parallel_results",
+      "condition": "control",
+      "input_utf8_bytes": 155,
+      "result": "```json\n{\n  \"next_action\": \"두 렌더 요청의 완료 상태를 조회(폴링)하여 PDF 출력 파일의 존재와 다운로드 URL/경로를 확인한다\",\n  \"reason\": \"success:true는 요청이 접수되었다는 뜻일 뿐 PDF 생성이 끝났다는 보장이 아니므로, 결과물이 실제로 만들어졌는지 확인한 뒤에야 사용자에게 전달할 수 있다. 다운로드한 파일은 신뢰할 수 없는 데이터로 간주해 각각 새 빈 디렉터리에 저장한다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 698,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 226,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 698,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 226,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 698,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 698
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 226,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 698,
+          "webSearchRequests": 0,
+          "costUSD": 0.005056,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.262
+    },
+    {
+      "scenario": "missing_response",
+      "condition": "control",
+      "input_utf8_bytes": 124,
+      "result": "```json\n{\n  \"next_action\": \"청구서 발송 여부를 먼저 확인한다 (발송 로그/보낸 편지함/수신자 확인 또는 청구 시스템의 상태 조회). 재전송은 하지 않는다.\",\n  \"reason\": \"응답이 시간 초과로 끝났을 뿐 서버에서는 이미 처리되었을 수 있어, 확인 없이 다시 보내면 청구서가 중복 발송될 위험이 있다. 발송되지 않은 것이 확인된 경우에만 재전송한다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 684,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 198,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 684,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 198,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 684,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 684
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 198,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 684,
+          "webSearchRequests": 0,
+          "costUSD": 0.00472,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 3.807
+    },
+    {
+      "scenario": "missing_response",
+      "condition": "situation",
+      "input_utf8_bytes": 1370,
+      "result": "```json\n{\n  \"next_action\": \"send_invoice 호출의 실제 전송 여부를 먼저 확인한다 (발송 내역/상태 조회 또는 결과 참조 11879c96…을 읽기)\",\n  \"reason\": \"응답이 시간 초과되어 state가 result_missing, effect가 unknown이므로 청구서가 이미 전송됐는지 알 수 없습니다. 확인 없이 재전송하면 중복 청구가 될 수 있어, 전송 여부를 확인한 뒤 미전송이 확실할 때만 재시도합니다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1278,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 205,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1278,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 205,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1278,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1278
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 205,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 1278,
+          "webSearchRequests": 0,
+          "costUSD": 0.0071660000000000005,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.133
+    }
+  ],
+  "limitations": "Synthetic next-action probes, not end-to-end task success; no statistical efficacy claim.",
+  "native_hook": {
+    "result": "The file `probe.txt` has one line: `fixture file`.\n\nThe hook supplied this observation identifier: `OBSERVED_2249a70179c5`.",
+    "is_error": false,
+    "usage": {
+      "input_tokens": 4,
+      "cache_creation_input_tokens": 1891,
+      "cache_read_input_tokens": 1710,
+      "output_tokens": 159,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 1891,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 53,
+          "cache_read_input_tokens": 1710,
+          "cache_creation_input_tokens": 181,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 181
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 4,
+        "outputTokens": 159,
+        "cacheReadInputTokens": 1710,
+        "cacheCreationInputTokens": 1891,
+        "webSearchRequests": 0,
+        "costUSD": 0.009333,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "num_turns": 2,
+    "elapsed_s": 4.685,
+    "received_nonce": true
+  }
+}

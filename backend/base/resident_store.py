@@ -62,6 +62,7 @@ def submit(rec, command, request_id, owner=None):
         if old:
             if old["fingerprint"] != fingerprint:
                 raise ValueError("request_id_conflict")
+            _watch_situation(rec, old['id'])
             return old["id"]
         jid = uuid.uuid4().hex
         now = time.time()
@@ -75,7 +76,38 @@ def submit(rec, command, request_id, owner=None):
                     json.dumps(summary, ensure_ascii=False), now))
         _event(db, rec["device_id"], jid, "submitted:" + jid, "queued", summary)
     phone_jobs._wake()
+    _watch_situation(rec, jid)
     return jid
+
+
+def _watch_situation(rec, jid):
+    from execution_situation import current
+    situation = current()
+    if not situation:
+        return
+    device, generation = rec['device_id'], rec['registration']['generation']
+    subject = {'kind': 'resident_job', 'device': device, 'generation': generation, 'id': jid}
+    seen = [None]
+
+    def refresh():
+        with phone_jobs._db() as db:
+            row = db.execute('SELECT state,result FROM resident_tasks WHERE id=? AND device=? AND generation=?',
+                             (jid, device, generation)).fetchone()
+            event = db.execute('SELECT cursor,occurred,received FROM resident_events WHERE job=? AND device=? '
+                               'ORDER BY cursor DESC LIMIT 1', (jid, device)).fetchone()
+        signature = (tuple(row) if row else None, tuple(event) if event else None)
+        if signature == seen[0]:
+            return
+        seen[0] = signature
+        result = json.loads(row['result']) if row and row['result'] else None
+        ref = situation.evidence(result) if result is not None else {'resident_job': jid, 'device': device}
+        situation.observe(subject, 'receipt', {'state': row['state'] if row else 'unavailable',
+                          'result_observed': result is not None}, source='resident_store:' + jid,
+                          source_cursor=event['cursor'] if event else None,
+                          observed_at=event['occurred'] if event else None, source_ref=ref)
+        if result is not None and situation.on_result:
+            situation.on_result(result, ref, 'resident:' + jid)
+    situation.watch('resident:' + jid, refresh)
 
 
 def find_request(rec, request_id):

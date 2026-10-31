@@ -169,6 +169,10 @@ def collect(repo, session):
     from task_repair import check_delta
     check_delta(session, [r['rel'] for r in files.values()])
     session["files"] = files
+    from execution_situation import emit, current as current_situation
+    if current_situation():
+        emit({'kind': 'code_candidate', 'workspace': str(wt.resolve()), 'session': session.get('id')},
+             'version', {}, source='repair_check', subject_revision=digest(current))
     return current
 
 

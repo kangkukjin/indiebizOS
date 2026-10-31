@@ -44,6 +44,15 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
     if controller:
         record["evidence_ref"] = controller.store.evidence(record)
     session.setdefault("execution_checks", []).append(record)
+    from execution_situation import emit
+    subject = {'kind': 'code_candidate', 'workspace': str(wt.resolve()), 'session': session.get('id')}
+    emit(subject, 'version', {}, source='repair_check',
+         subject_revision=record['candidate_hash'])
+    emit(subject, 'validation:tests', {'status': status, 'exit_code': exit_code,
+                                     'test_report': report}, source='repair_check',
+         source_ref=record.get('evidence_ref') or {'check_id': record['id']},
+         subject_revision=record['before_hash'],
+         relation=[{'subject': subject, 'revision': record['before_hash']}])
     candidate.invalidate(session)
     return record
 

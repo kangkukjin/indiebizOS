@@ -535,9 +535,11 @@ class GeminiProvider(BaseProvider):
         # API 호출 (재시도 포함)
         _round_t0 = time.time()
         _round_usage = None   # 스트림 청크의 usage_metadata 는 이 호출의 누적 — 마지막 것이 총계
+        from situation_delivery import prepare, observed_stream
+        delivery = prepare(contents, self, shape='gemini')
         stream = self._create_stream_with_retry(contents, config)
 
-        for chunk in self._iterate_stream_with_retry(stream, contents, config):
+        for chunk in observed_stream(self._iterate_stream_with_retry(stream, contents, config), delivery):
             # 중단 체크
             if cancel_check and cancel_check():
                 raise Exception("사용자가 중단했습니다.")
@@ -864,6 +866,8 @@ class GeminiProvider(BaseProvider):
                 role="user",
                 parts=[types.Part.from_text(text=FINAL_TURN_INSTRUCTION.format(limit=limit))]
             )]
+            from situation_delivery import prepare
+            delivery = prepare(final_contents, self, shape='gemini')
             response = self._genai_client.models.generate_content(
                 model=self.model,
                 contents=final_contents,
@@ -872,6 +876,8 @@ class GeminiProvider(BaseProvider):
                     temperature=0.3,
                 ),
             )
+            if delivery:
+                delivery.acknowledge()
             text = response.text or ""
         except Exception as e:
             print(f"[Gemini] 마무리 보고 턴 실패: {str(e)[:200]}")

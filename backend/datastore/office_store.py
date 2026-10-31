@@ -105,7 +105,10 @@ class OfficeStore:
             row = conn.execute("SELECT body FROM objects WHERE kind=? AND id=?", (kind, key)).fetchone()
         if row is None:
             raise ValueError("문서 작업 항목을 찾을 수 없습니다")
-        return json.loads(row[0])
+        value = json.loads(row[0])
+        from situation_evidence import office_read
+        office_read(self, kind, value)
+        return value
 
     def list(self, kind):
         with self.connect() as conn:

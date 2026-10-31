@@ -33,13 +33,37 @@ def main():
         sys.stderr.write(instruction + "\n")
         return 2
     try:
-        output = shell_input(json.load(sys.stdin))
+        payload = json.load(sys.stdin)
+        context = situation_context()
+        output = context_output(payload, context)
     except (ValueError, TypeError) as exc:
         sys.stderr.write(f"도구 입력을 확인하지 못해 실행하지 않았습니다: {type(exc).__name__}\n")
         return 2
     if output:
         print(json.dumps(output, ensure_ascii=False))
     return 0
+
+
+def situation_context():
+    if os.environ.get('INDIEBIZOS_SITUATION') != '1':
+        return ''
+    try:
+        payload = {'agent_id': os.environ.get('INDIEBIZOS_AGENT_ID', ''),
+                   'task_id': os.environ.get('INDIEBIZOS_TASK_ID', '')}
+        req = urllib.request.Request('http://127.0.0.1:8765/ibl/situation',
+            data=json.dumps(payload).encode(), headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return json.load(response).get('context', '')
+    except Exception:
+        return ''  # Missing context is not permission to cancel or repeat an already completed tool.
+
+
+def context_output(payload, context=''):
+    output = shell_input(payload)
+    if context:
+        output = output or {'hookSpecificOutput': {'hookEventName': 'PreToolUse'}}
+        output['hookSpecificOutput']['additionalContext'] = context
+    return output
 
 
 def shell_input(payload):

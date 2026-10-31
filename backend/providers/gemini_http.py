@@ -132,6 +132,8 @@ class GeminiHTTPProvider(BaseProvider):
 
     # ── REST 호출 ───────────────────────────────────────────
     def _generate(self, contents: list, tools: Optional[list]) -> dict:
+        from situation_delivery import prepare
+        delivery = prepare(contents, self, shape='gemini_http')
         url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
         gen_config: Dict[str, Any] = {"temperature": self.temperature}
         # 원샷 계약: 2.5 flash 계열 기본 thinking 차단(ep889 부류 — gemini.py 와 대칭).
@@ -155,7 +157,10 @@ class GeminiHTTPProvider(BaseProvider):
                 self._thinking_off_unsupported = True
                 return self._generate(contents, tools)
             raise RuntimeError(f"Gemini REST {r.status_code}: {r.text[:300]}")
-        return r.json()
+        result = r.json()
+        if delivery:
+            delivery.acknowledge()
+        return result
 
     # ── compaction 요약 호출 (절차는 base._compact_gemini_http_shape) ─
     def _summarize_for_compaction(self, summary_input: str) -> str:

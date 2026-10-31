@@ -37,4 +37,7 @@ def write(tool_input, path, file_io):
     encoded = json.dumps(state, ensure_ascii=False, indent=2)
     with file_io.file_lock(path):
         file_io.atomic_write_text(path, encoded)
+    from execution_situation import emit
+    emit({'kind': 'plan', 'path': str(path)}, 'todos', todos,
+         source='todo', basis='model_interpretation', observed_at=state['updated_at'])
     return "\n".join(result_lines)

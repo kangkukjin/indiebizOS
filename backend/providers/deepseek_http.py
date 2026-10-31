@@ -84,6 +84,8 @@ class DeepSeekHTTPProvider(BaseProvider):
 
     # ── REST 호출 ───────────────────────────────────────────
     def _chat(self, messages: list, tools: Optional[list], force_thinking_off: bool = False) -> dict:
+        from situation_delivery import prepare
+        delivery = prepare(messages, self)
         url = f"{self.base_url}/chat/completions"
         body: Dict[str, Any] = {
             "model": self.model,
@@ -99,7 +101,10 @@ class DeepSeekHTTPProvider(BaseProvider):
                           headers={"Authorization": f"Bearer {self.api_key}"})
         if r.status_code != 200:
             raise RuntimeError(f"DeepSeek REST {r.status_code}: {r.text[:300]}")
-        return r.json()
+        result = r.json()
+        if delivery:
+            delivery.acknowledge()
+        return result
 
     # ── compaction 요약 호출 (절차는 base._compact_openai_shape) ─
     def _summarize_for_compaction(self, summary_input: str) -> str:

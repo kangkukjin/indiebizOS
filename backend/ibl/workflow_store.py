@@ -15,7 +15,7 @@ from typing import Dict, List, Optional
 
 
 def _get_workflows_path() -> Path:
-    """워크플로우 저장 디렉토리"""
+    """프로세스 소유 정의 원장. 코드 편집 사본과 독립하며 격리 자식은 BASE_PATH로 분리한다."""
     env_path = os.environ.get("INDIEBIZ_BASE_PATH")
     if env_path:
         base = Path(env_path)

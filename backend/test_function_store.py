@@ -209,12 +209,71 @@ def test_held_function_has_no_legacy_or_memory_escape():
     assert row['function_problem']
 
 
-def test_repair_workspace_does_not_read_owner_catalog(tmp_path):
+def test_definition_revision_uses_owner_store_even_in_code_repair(tmp_path):
     from thread_context import repair_workspace_scope
-    register('value', source())
+    first = register('value', source())
+    root = store.storage_root()
     with repair_workspace_scope(str(tmp_path / 'repair')):
-        assert store.resolve('value') is None
-    assert store.resolve('value')
+        assert store.storage_root(for_write=True) == root
+        assert store.resolve('value')['revision'] == first['revision']
+        second = register('value', source(value=2), expected_revision=first['revision'])
+        with pytest.raises(ValueError):
+            register('value', source(value=3), expected_revision=first['revision'])
+        assert run('[fn:value]{}')['value'] == 2
+    assert store.resolve('value')['revision'] == second['revision']
+    assert store.revision(first['function_id'], first['revision'])['source'] == source()
+    assert not (tmp_path / 'repair/data/workflows').exists()
+
+
+def test_definition_access_does_not_open_code_workspace():
+    from thread_context import repair_workspace_scope
+    def forbidden(**kwargs):
+        pytest.fail('정의 조회·개정만으로 코드 사본을 열었다')
+    with repair_workspace_scope(forbidden):
+        first = register('value', source())
+        second = register('value', source(value=2), expected_revision=first['revision'])
+        assert store.resolve('value')['revision'] == second['revision']
+
+
+def test_workflow_management_roundtrip_in_repair_scope(tmp_path):
+    from thread_context import repair_workspace_scope
+    first = register('value', source())
+    with repair_workspace_scope(str(tmp_path / 'candidate')):
+        detail = run('[self:workflow]{op:"detail",workflow_id:"value"}')
+        assert detail['success'], detail
+        assert detail['value']['revision'] == first['revision']
+        saved = handle_request({'edition': 2,
+            'code': '[self:workflow]{op:"save",code:$source,expected_revision:$revision}',
+            'inputs': {'source': source(value=9), 'revision': first['revision']}})
+        assert saved['success'], saved
+        assert run('[fn:value]{}')['value'] == 9
+        assert run('[self:workflow]{op:"detail",workflow_id:"value"}')['value']['revision'] == (
+            saved['value']['function_ref']['revision'])
+    assert store.resolve('value')['source'] == source(value=9)
+    assert not (tmp_path / 'candidate/data/workflows').exists()
+
+
+def test_repair_child_keeps_private_definition_store(tmp_path):
+    import os
+    import sys
+    from pathlib import Path
+    from repair_process import run as child_run
+    first = register('value', source())
+    root = store.storage_root()
+    child = tmp_path / 'child'
+    child.mkdir()
+    code = (f"import sys; sys.path.insert(0, {str(Path(__file__).parent)!r}); "
+            "import boot_paths; import function_store as store; "
+            "from function_library import register; "
+            "assert store.resolve('value') is None; "
+            f"register('value', {source(value=7)!r}); "
+            "assert store.resolve('value')['source'].endswith('return 7}')")
+    env = {**os.environ, 'INDIEBIZ_RUNTIME_STATE_DIR': str(child / 'runtime')}
+    result = child_run([sys.executable, '-c', code], child, env=env, timeout=60)
+    assert result.returncode == 0, result.stderr
+    assert (child / 'data/workflows/catalog.json').is_file()
+    assert store.storage_root() == root
+    assert store.resolve('value')['revision'] == first['revision']
 
 
 def test_stored_app_inputs_do_not_hide_breaking_function_revision(tmp_path, monkeypatch):

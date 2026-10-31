@@ -23,17 +23,49 @@ def execution_stream(stream):
         lock.close()
 
 
+def requires_code_receipts(controller):
+    """RED 권한이 아니라 실제 코드 후보/적용 인계가 코드 완료 절차를 결정한다."""
+    from repair_continuation import current, key
+    from runtime_utils import get_base_path
+    from restart_protocol import read_json
+    previous = current() or {}
+    base = get_base_path()
+    task = previous.get("staging_task_id") or previous.get("task_id") or controller.task
+    path = base / "data/system_ai_state/repair_sessions" / (key(task) + ".json")
+    try:
+        session = read_json(path)
+    except (OSError, ValueError):
+        return True
+    if not session:
+        # 평가 재개 자체는 코드 인계가 아니다. 실제 후보/적용 대상만 근거다.
+        return path.exists() or bool(previous.get("worktree") or previous.get("job_path"))
+    if not isinstance(session, dict):
+        return True
+    if session.get("status") != "staging":
+        return True
+    try:
+        from red_apply import _load_handler
+        candidate = _load_handler({"repo": str(base)})._staging_mod()._candidate
+        candidate.collect(str(base), session)  # 셸로 쓴 미수집 변경도 포함한다.
+        return bool(session["files"])
+    except (OSError, ValueError, RuntimeError, KeyError):
+        return True  # 사본을 확인하지 못했으면 코드 반영 검사를 생략하지 않는다.
+
+
 def completion_error(controller):
-    if not controller.repair_granted:
+    if not controller.repair_granted or not requires_code_receipts(controller):
         return None
     from repair_continuation import current, key
     from runtime_utils import get_base_path
     from restart_protocol import read_json
     previous = current() or {}
     session_key = key(previous.get("staging_task_id") or previous.get("task_id") or controller.task)
-    session = read_json(get_base_path() / "data/system_ai_state/repair_sessions" / (session_key + ".json"))
-    if not session:
-        return None  # 조사만 했고 수리 변경이 없는 턴
+    try:
+        session = read_json(get_base_path() / "data/system_ai_state/repair_sessions" / (session_key + ".json"))
+    except (OSError, ValueError):
+        return "수리 기록을 읽지 못해 코드 적용을 확인할 수 없습니다"
+    if not isinstance(session, dict) or not session:
+        return "코드 적용 인계의 수리 기록을 찾지 못했습니다"
     if session.get("status") != "applied":
         return "수리 사본이 아직 정본에 반영되지 않았습니다. 사본 준비와 전체 완료는 다릅니다"
     if not (session.get("commit") or {}).get("success"):

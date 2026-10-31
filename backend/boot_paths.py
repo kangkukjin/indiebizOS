@@ -82,14 +82,10 @@ def wire_function_store():
     import function_store
 
     def root(for_write=False):
-        from thread_context import get_repair_workspace
         from workflow_store import _get_workflows_path
-        pending = get_repair_workspace(resolve=False)
-        workspace = get_repair_workspace(create=for_write)
-        if workspace:
-            return Path(workspace) / "data/workflows"
-        root = _get_workflows_path()
-        return root / ".unopened-repair" if pending else root
+        # 정의는 프로세스 소유 원장이다. 코드 편집 사본과 함께 바꾸지 않는다.
+        # 격리 검사 자식은 repair_process의 INDIEBIZ_BASE_PATH로 별도 원장을 쓴다.
+        return _get_workflows_path()
 
     def validate(before, after, changed):
         from function_library import validate_changes

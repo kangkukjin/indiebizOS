@@ -286,7 +286,7 @@
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:workflow]{op: "list"}'
         description: 관용구 등록·조회·개정·은퇴·실행 — list/detail/save/delete/run. run은 판본 2 저장본(workflow_id) 또는 명시 판본 2 pipeline(저장 안 함).
-        target_description: '관용구 등록은 code:"[def:이름]($인자){return ...}". 명시 인자·기본값·값 반환을 사용하며 code로 저장하면 현재 문법으로 검사한다. run은 workflow_id/name + params Record로 호출하고 현재 저장 정의를 호출한다. 관용구의 본문은 통합 원장의 불변 revision 하나가 소유하며, 기억은 그 정의의 참조·사용 맥락·학습 기록이다. 개정 시 detail의 revision을 expected_revision에 넣으면 동시 수정 충돌을 검출한다. function_refs는 실행과 의존 관용구의 고정 판본 목록이다. 저장 호출자를 깨뜨리는 개정·삭제는 거절된다(새 이름 저장→호출자 전환→옛 정의 삭제). 새 조합은 [fn:이름]{인자:값}으로 부른다. 현재 작성법은 workflow.md. 과거 기록은 list/detail에 history:true를 지정해 열람한다. 실행 목록에는 현재 함수만 포함된다.'
+        target_description: '관용구 등록은 code:"[def:이름]($인자){return ...}". 명시 인자·기본값·값 반환을 사용하며 code로 저장하면 현재 문법으로 검사한다. run은 workflow_id/name + params Record로 호출하고 현재 저장 정의를 호출한다. 관용구의 본문은 통합 원장의 불변 revision 하나가 소유하며, 기억은 그 정의의 참조·사용 맥락·학습 기록이다. 개정 시 detail의 revision을 expected_revision에 넣으면 동시 수정 충돌을 검출한다. 정의 개정은 실행 중 관리 연산이며 코드 사본·apply·재기동 없이 같은 원장에 반영된다. 저장 영수증 function_ref를 확인하고 새 IBL 호출로 검증한다. 이미 컴파일한 프로그램은 기존 판본을 유지한다. function_refs는 실행과 의존 관용구의 고정 판본 목록이다. 저장 호출자를 깨뜨리는 개정·삭제는 거절된다(새 이름 저장→호출자 전환→옛 정의 삭제). 새 조합은 [fn:이름]{인자:값}으로 부른다. 현재 작성법은 workflow.md. 과거 기록은 list/detail에 history:true를 지정해 열람한다. 실행 목록에는 현재 함수만 포함된다.'
         group: workflow
         target_key: op
         router: workflow_engine

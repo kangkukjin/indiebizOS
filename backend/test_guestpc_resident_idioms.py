@@ -66,6 +66,7 @@ def pc(registry, monkeypatch, tmp_path):
         pcs.sync(rec['key'], 'a' * 32, [{'job_id': job['task_ref']['task_id'],
             'event_id': 'result:' + job['task_ref']['task_id'], 'kind': 'result', 'payload': payload}])
 
+    run.definitions = definitions
     run.rec, run.calls, run.state = rec, calls, state
     run.handler, run.complete, run.path = handler, complete, tmp_path
     run.history = lambda: resident_store.history(device=rec['device_id'])['tasks']
@@ -183,11 +184,12 @@ def test_prepare_distinguishes_unavailable_resident(pc, paused, state):
     assert not pc.history()
 
 
-def test_cancel_waits_for_confirmation_and_does_not_resubmit(pc):
+@pytest.mark.parametrize("bare_reference", [False, True])
+def test_cancel_waits_for_confirmation_and_does_not_resubmit(pc, bare_reference):
     import resident_pcs
     job = shell(pc)
     resident_pcs.sync(pc.rec['key'], 'a' * 32)
-    out = pc('[fn:외부PC작업중지확인]{작업:$job}', job=job)
+    out = pc('[fn:외부PC작업중지확인]{작업:$job}', job=job["task_ref"] if bare_reference else job)
     assert out['status'] == 'cancel_requested' and not out['stopped']
     pc.complete(job, {'cancelled': True, 'exit': -1})
     done = pc('[fn:외부PC작업중지확인]{작업:$job}', job=out)

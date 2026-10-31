@@ -145,7 +145,7 @@
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[def:외부PC작업중지확인]($작업,$대기=0) {\n  [if:$대기<0 or $대기>240] { return {ok:false,status:\"invalid_input\",stopped:false} }\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:0}\n  [if:$확인.ok==false or $확인.settled or $확인.status==\"unknown\"] { return {**$확인,stopped:$확인.status==\"cancelled\"} }\n  [try] { $취소 = [self:task]{op:\"cancel\",ref:$작업.task_ref} }\n  [catch] { return {**$확인,ok:false,stopped:false,cancel_error:$error.message} }\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {**$확인,stopped:$확인.status==\"cancelled\",cancel_observation:$취소}\n}",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업중지확인]($작업,$대기=0) {\n  [if:$대기<0 or $대기>240] { return {ok:false,status:\"invalid_input\",stopped:false} }\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:0}\n  [if:$확인.ok==false or $확인.settled or $확인.status==\"unknown\"] { return {**$확인,stopped:$확인.status==\"cancelled\"} }\n  [try] { $취소 = [self:task]{op:\"cancel\",ref:$확인.task_ref} }\n  [catch] { return {**$확인,ok:false,stopped:false,cancel_error:$error.message} }\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {**$확인,stopped:$확인.status==\"cancelled\",cancel_observation:$취소}\n}",
     "alias": "외부PC작업중지확인",
     "category": "phrase",
     "returns": "Record"

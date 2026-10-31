@@ -68,6 +68,55 @@ def test_live_change_stops_remaining_expensive_checks(repair, monkeypatch):
     assert calls == ['pytest first.py']
 
 
+@pytest.mark.parametrize('change', ['none', 'uncollected', 'applied', 'broken'])
+def test_code_receipts_follow_actual_candidate_not_repair_turn(setup, monkeypatch, change):
+    from types import SimpleNamespace
+    from repair_readiness import requires_code_receipts, completion_error
+    root, wt, st, session = setup
+    monkeypatch.setattr('runtime_utils.get_base_path', lambda: root)
+    controller = SimpleNamespace(task=session['key'], repair_granted=True)
+    if change == 'uncollected':
+        (wt / 'a.txt').write_text('code fix')
+        assert not session['files']
+    elif change == 'applied':
+        session['status'] = 'applied'
+        st._save_session(str(root), session)
+    elif change == 'broken':
+        (wt / 'a.txt').unlink()
+        # Without a baseline the candidate cannot be declared empty.
+        session.pop('baseline')
+        st._save_session(str(root), session)
+    assert requires_code_receipts(controller) is (change != 'none')
+    assert bool(completion_error(controller)) is (change != 'none')
+
+
+def test_unreadable_code_session_cannot_skip_receipts(supervisor, tmp_path, monkeypatch):
+    from repair_readiness import requires_code_receipts
+    from repair_continuation import key
+    monkeypatch.setattr('runtime_utils.get_base_path', lambda: tmp_path)
+    path = tmp_path / 'data/system_ai_state/repair_sessions' / (key(supervisor.task) + '.json')
+    path.parent.mkdir(parents=True)
+    path.write_text('{broken')
+    assert requires_code_receipts(supervisor)
+    from thread_context import get_goal_eval_outcome
+    policy.finalize(supervisor, '수리 결과')
+    assert get_goal_eval_outcome()['goal_status'] == 'UNKNOWN'
+
+
+def test_resume_still_requires_code_receipts_without_session(supervisor):
+    from repair_readiness import requires_code_receipts
+    from repair_continuation import resuming
+    with resuming({'task_id': 'missing-code-session', 'job_path': 'reserved.apply.json'}):
+        assert requires_code_receipts(supervisor)
+
+
+def test_review_continuation_alone_is_not_code_repair(supervisor):
+    from repair_readiness import requires_code_receipts
+    from repair_continuation import resuming
+    with resuming({'task_id': supervisor.task, 'staging_task_id': supervisor.task, 'phase': 'review'}):
+        assert not requires_code_receipts(supervisor)
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

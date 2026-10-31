@@ -658,3 +658,23 @@ def test_saved_completion_review_cannot_take_receipt_shortcut(supervisor, monkey
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     finish(supervisor, "검증한 결과")
     assert len(seen) == 1 and "보존된 전체 기준" in seen[0]
+
+
+@pytest.mark.parametrize('outcome', ['ACHIEVED', 'UNKNOWN'])
+def test_definition_only_repair_uses_goal_evaluation(supervisor, monkeypatch, outcome):
+    from function_library import register
+    from thread_context import repair_workspace_scope
+    supervisor.configure({'_repair_policy': 2, 'task_framing': '관용구 개정',
+                          'achievement_criteria': '등록된 함수가 새 결과를 반환한다'}, repair=True)
+    monkeypatch.setattr('repair_policy.finalize', lambda *a: pytest.fail('코드 없는 변경에 적용 영수증 요구'))
+    with repair_workspace_scope(str(supervisor.store.directory / 'unused-code-workspace')):
+        register('revised', '#!ibl edition=2\n[def:revised](){return 2}')
+    seen = []
+    def evaluate(prompt, **kwargs):
+        seen.append(prompt)
+        return outcome + "\nGOAL_OUTCOME: " + json.dumps({
+            "status": outcome, "reason": "실제 결과 검증", "evidence": ["함수 개정"], "remaining": []})
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    finish(supervisor, '개정 결과')
+    assert len(seen) == 1 and '등록된 함수가 새 결과를 반환한다' in seen[0]
+    assert tc.get_goal_eval_outcome()['goal_status'] == outcome

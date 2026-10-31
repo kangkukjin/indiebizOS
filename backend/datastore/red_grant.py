@@ -106,6 +106,15 @@ def issue_grant(agent_id: str, task_id: str, reason: str = "") -> dict:
         return {}   # 주체 관문 — origin 과 별개로, 주인이 아니면 RED 그랜트는 없다(2026-09-14)
     if not isinstance(task_id, str) or not task_id.strip():
         raise ValueError("수리 실행 ID(task_id)가 없습니다 — 하네스에서 실행 신원을 복원해야 합니다")
+    from repair_continuation import current
+    from task_repair import scope, parent_of, check_delta
+    row = current()
+    limit = scope(row)
+    if limit:
+        if row.get('resume_task_id') != task_id or row.get('agent_id') != agent_id:
+            raise PermissionError('업무 수리의 실행 신원이 다릅니다')
+        parent_of(row)
+        check_delta(row, limit['paths'])
     with _lock:
         _now = time.time()
         # 시체 청소는 발급이 넘칠 때만 — denial_note 의 만료 정직 신고를 위해 남겨둔다.
@@ -119,6 +128,7 @@ def issue_grant(agent_id: str, task_id: str, reason: str = "") -> dict:
             "issued_at": _now,
             "last_used_at": _now,
             "episode_ids": _issuer_episode_ids(),
+            **({'task_scope': limit} if limit else {}),
         }
         _grants[task_id] = g
         return dict(g)

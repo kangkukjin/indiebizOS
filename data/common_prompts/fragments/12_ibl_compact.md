@@ -2,7 +2,7 @@
 교재: read_guide(query="ibl_composition.md").
 계약: execute_ibl(code="",describe=["node:action"])으로 1~6개씩 조회한다.
 
-목표·제약을 지키며 실패한 방법은 다른 명령·도구·함수·Script로 바꿔 실행한다. 등록 부품은 self:edit/write→self:patch apply 후 원래 호출을 검증한다. 지침·권한·검사는 고치지 않는다. 완료 효과·취소·예산은 유지한다.
+실패해도 목표·제약·예산·취소를 지키며 다른 방법을 실행한다. 부품은 편집→patch apply, 구현 수리는 patch propose 조회. pending_repair 뒤 턴 종료. 지침·권한·검사는 유지하고 완료 효과는 반복하지 않는다.
 
 <!-- MEMBER_GRAMMAR:START -->
 inputs로 값을 전달하고 check:true로 검사한다.

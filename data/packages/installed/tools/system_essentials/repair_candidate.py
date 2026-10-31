@@ -166,6 +166,8 @@ def collect(repo, session):
                             "op": "write" if after else "delete", "existed": bool(before),
                             "base_sha": (before or {}).get("sha"), "base": before,
                             "candidate": after}
+    from task_repair import check_delta
+    check_delta(session, [r['rel'] for r in files.values()])
     session["files"] = files
     return current
 
@@ -256,6 +258,9 @@ def seal(repo, session, checks, decision, criteria):
 
 
 def validate(repo, session):
+    from task_repair import check_delta, parent_of
+    check_delta(session, (session.get('sealed') or {}).keys())
+    parent_of(session, repo)
     ready, payload = session.get("readiness") or {}, session.get("sealed") or {}
     expected_version = 2 if session.get("repair_policy") == 2 else VERSION
     if (ready.get("version") != expected_version or not payload

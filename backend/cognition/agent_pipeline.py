@@ -345,6 +345,8 @@ class CognitivePipelineMixin:
             _parent_response = None
             try:
                 parent_continuation.attach(_execution)
+                from task_repair import inherit_budget
+                inherit_budget(_execution)
                 if _execution:
                     kwargs['cancel_check'] = _execution.cancel_check
                     kwargs['allowed_set'] = _execution.allowed_set
@@ -807,17 +809,23 @@ class CognitivePipelineMixin:
 
             if reflex_selected and not reflex_turn.active:
                 history = reflex_turn.full_history
+            from task_repair import pending, pending_response
             from task_continuation import continue_task
-            final_content = yield from continue_task(
-                self, message, final_content, eval_tool_calls, history,
-                collect=_collect, images=images, supervisor=_supervisor,
-                cancel_check=cancel_check,
-                enabled=not (force_role or _clarify_text or context_update or _repair_granted_task))
-            if final_content:
+            if not pending():
+                final_content = yield from continue_task(
+                    self, message, final_content, eval_tool_calls, history,
+                    collect=_collect, images=images, supervisor=_supervisor,
+                    cancel_check=cancel_check,
+                    enabled=not (force_role or _clarify_text or context_update or _repair_granted_task))
+            if final_content and not pending():
                 final_content = yield from adopt_response(
                     _capability_guard, self, message, final_content, eval_tool_calls, history,
                     collect=_collect, images=images, supervisor=_supervisor,
                     allowed_set=allowed_set, cancel_check=cancel_check)
+
+            if notice := pending_response():
+                yield {'type': 'final', 'content': notice}
+                return
 
             # 6.5 실행 중 재규정이 있었으면 이후 단계(평가 기준·증류)는 갱신 규정을 본다
             if _reframe_key:
@@ -869,6 +877,10 @@ class CognitivePipelineMixin:
                         if evaluated and evaluated.strip() and evaluated != final_content:
                             final_content = evaluated
                             print(f"[GoalEval] 재실행 결과 채택 대기 ({len(evaluated)}자)")
+
+            if notice := pending_response():
+                yield {'type': 'final', 'content': notice}
+                return
 
             if not _eval_ran:
                 record_trajectory_event("cognition.evaluation", {"path": "none"})

@@ -15,6 +15,8 @@ def consume(row, base, generation, execute):
     owner = 'system' if row['system_ai'] else row['project_id']
 
     def stop(status, reason, response=''):
+        from api_task_repair import cancel_child
+        cancel_child(row, base)
         latest = journal.read(key, base) or row
         journal.save({**latest, 'status': status, 'reason': reason, 'response': response}, base)
 
@@ -32,8 +34,13 @@ def consume(row, base, generation, execute):
                 and saved['input'] + saved['output'] >= saved['hard_token_limit']):
             stop('blocked', '원래 업무의 시간·관측 토큰 한도가 끝났습니다.')
             return
-        if row.get('attempt', 0) >= 3:
+        if row.get('attempt', 0) >= 3 and not row.get('repair_child'):
             stop('blocked', '부품 부모 업무가 프로세스 교체 후 3회 중단됐습니다. 증거를 보존했습니다.')
+            return
+        from task_repair import advance_parent
+        from repair_policy import completion
+        row = advance_parent(row, base, completion)
+        if row is None:
             return
         b = sessions.Binding(**row['last_conversation'])
         original = sessions.Binding(**row['conversation'])
@@ -54,7 +61,7 @@ def consume(row, base, generation, execute):
                 'SELECT payload FROM conversation_events WHERE session_id=? AND turn_id=? ORDER BY id',
                 (b.session_id, b.turn_id))]
         finished = [e for e in events if e.get('type') == 'handoff.finished' and e.get('success')]
-        if finished:
+        if finished and not row.get('returning_from_repair'):
             stop('completed', '중단 전에 실행 종료 영수증이 있습니다. 도구를 재실행하지 않습니다.',
                  finished[-1].get('response', ''))
             return
@@ -64,9 +71,10 @@ def consume(row, base, generation, execute):
         resume_task = row.get('resume_task_id') or ('component-resume-' + key.removeprefix('component-parent-'))
         bound = store.begin(b.session_id)
         row.update(status='running', generation=generation, process=sessions._PROCESS, resume_task_id=resume_task,
-                   execution_task_id=resume_task, attempt=row.get('attempt', 0) + 1,
+                   execution_task_id=resume_task, attempt=row.get('attempt', 0) + (0 if row.get('returning_from_repair') else 1),
                    resume_conversation=asdict(bound), last_conversation=asdict(bound))
         row.pop('execution_error', None)
+        row.pop('returning_from_repair', None)
         journal.save(row, base)
         error = None
         try:

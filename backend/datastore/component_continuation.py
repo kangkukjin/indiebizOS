@@ -1,4 +1,4 @@
-"""등록 부품을 수리하던 일반 업무의 사망 복구. 기존 인계 원장을 쓰며 RED 권한은 없다."""
+"""부품·한정 구현 수리 중 일반 업무의 지속과 사망 복구. 기존 인계 원장을 쓰며 RED 권한은 없다."""
 import copy
 import hashlib
 import json
@@ -31,13 +31,21 @@ def attach(turn):
     row = journal.current()
     if not turn or not is_task(row):
         return
-    from providers.base import _turn_token_ledger
     from thread_context import get_task_origin
     from principal import is_owner
     if (not is_owner() or get_task_origin() != 'user' or row['agent_id'] != turn.agent
             or row['resume_task_id'] != turn.task or row['goal'] != turn.request
             or not turn.conversation or asdict(turn.conversation) != row['resume_conversation']):
         raise ValueError('부품 부모 업무의 재개 신원이 다릅니다')
+    turn.continuation_key = row['task_id']
+    restore_budget(turn, row)
+    turn.component_resume_key = row.get('component_key') or ''
+    turn.followup_reason = row.get('followup_reason', '')
+
+
+def restore_budget(turn, row):
+    """부모와 그 수리 구간이 같은 관측 한도·취소를 사용한다."""
+    from providers.base import _turn_token_ledger
     ledger = _turn_token_ledger.get()
     saved = row['budget']
     for name in ('input', 'output', 'cache_read', 'execution_calls'):
@@ -47,12 +55,9 @@ def attach(turn):
     if saved.get('deadline_at') is not None:
         deadline = time.monotonic() + saved['deadline_at'] - time.time()
         ledger['deadline'] = min(ledger.get('deadline', deadline), deadline)
-    turn.continuation_key = row['task_id']
-    turn.component_resume_key = row.get('component_key') or ''
     if row.get('allowed_set') is not None:
         allowed = set(row['allowed_set'])
         turn.allowed_set = allowed if turn.allowed_set is None else allowed.intersection(turn.allowed_set)
-    turn.followup_reason = row.get('followup_reason', '')
     from task_cancellation import requested
     previous_cancel = turn.cancel_check
     owner = 'system' if row['system_ai'] else row['project_id']
@@ -62,7 +67,7 @@ def attach(turn):
 
 
 def arm(turn):
-    """직접 소유자 업무가 부품 사본을 만들 때만 자동 복구를 준비한다. 과거 원장은 소급하지 않는다."""
+    """직접 소유자 업무가 부품·한정 구현 사본을 만들 때만 자동 복구를 준비한다. 과거 원장은 소급하지 않는다."""
     from principal import is_owner
     from thread_context import get_task_origin
     from runtime_work import registry
@@ -112,17 +117,19 @@ def _checkpoint(turn, event=None):
     if not turn or not turn.continuation_key:
         return
     row = journal.read(turn.continuation_key)
-    if not is_task(row) or row.get('status') != 'running':
+    if not is_task(row) or row.get('status') not in {'running', 'waiting_repair'}:
         return
     from supervision_bus import current
     controller = current()
-    if controller:
+    if controller and turn.task == row['execution_task_id']:
         row.update(store=str(controller.store.directory), framing=copy.deepcopy(controller.framing))
     from task_tree_budget import current as tree
     if tree():
         row['resume_blocked'] = '위임 트리가 있는 업무는 자식 효과와 공유 예산 확인이 필요합니다.'
-    row.update(budget=budget_snapshot(), component_key=turn.component_session or turn.component_resume_key,
-               followup_reason=turn.followup_reason, updated_at=time.time())
+    row.update(budget=budget_snapshot(), updated_at=time.time())
+    if turn.task == row['execution_task_id']:
+        row.update(component_key=turn.component_session or turn.component_resume_key,
+                   followup_reason=turn.followup_reason)
     if event and event.get('type') in {'error', 'cancelled'}:
         row['execution_error'] = str(event.get('content') or event.get('type'))
     journal.save(row)
@@ -166,6 +173,12 @@ def framing(message):
 
 
 def context(row):
+    if row.get('repair_result'):
+        return ('원래 업무에 필요한 구현 수리 구간이 끝났습니다. 광역 수리 권한은 없습니다. '
+                '원래 목표·명시 제약·기존 효과 영수증을 유지하고 남은 업무를 실행하세요. '
+                '수리 실패 시 다른 방법을 찾되 동일한 수정 반복은 하지 마세요. '
+                '효과가 불명확한 쓰기는 대상 상태부터 확인하세요.\n' + json.dumps(
+                    {k: row.get(k) for k in ('goal', 'repair_result', 'store', 'budget')}, ensure_ascii=False))
     return ('등록 부품을 수리하던 원래 사용자 업무가 프로세스 교체로 중단되어 이어갑니다. '
             '새 요청이나 광역 수리 승인이 아닙니다. 목적·명시 제약·권한을 유지하세요. '
             '원래 대화의 복구 관측과 아래 증거 저장소를 먼저 확인하세요. '

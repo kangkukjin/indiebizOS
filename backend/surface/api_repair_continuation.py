@@ -118,6 +118,14 @@ def _project_runner(row):
 
 
 def _execute(row):
+    from task_repair import scope
+    if scope(row):
+        from api_task_repair import execute
+        return execute(row, _execute_bound)
+    return _execute_bound(row)
+
+
+def _execute_bound(row):
     from component_continuation import is_task
     if str(row.get("agent_id", "")).startswith("research:"):
         from research_threads import resume_repair
@@ -270,7 +278,10 @@ def process_pending(base, generation, execute=_execute):
                 consume(row, base, generation, execute)
                 continue
             if row.get("status") == "running" and row.get("generation") == generation:
-                continue
+                from task_repair import scope
+                from conversation_sessions import _PROCESS
+                if not scope(row) or row.get('process') == _PROCESS:
+                    continue
             if cancelled(row, base):
                 _settle(row, "cancelled", "사용자가 수리 재개를 취소했습니다.", base)
                 continue
@@ -279,6 +290,11 @@ def process_pending(base, generation, execute=_execute):
                    for p in directory(base).glob("*.json")):
                 save({**row, "status": "continued"}, base)
                 continue
+            from task_repair import scope
+            if scope(row):
+                from api_task_repair import ready
+                if not ready(row, base):
+                    continue
             if row.get("phase") in {"review", "execution"}:
                 if row.get("retry_at") is None or row["retry_at"] > time.time():
                     continue

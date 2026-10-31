@@ -285,6 +285,7 @@ def render_for_executor(env: dict) -> str:
     if out.get("_repair_declared_mid_turn"):
         lines.append("재규정은 전역 수리 권한을 발급하지 않는다. 원래 목적을 유지하며 다른 명령·도구·지역 함수·Script로 "
                      "계속하라. 등록된 순수 변환 부품은 현재 사용자 업무의 파일 수정→self:patch apply로 한정 수리할 수 있다. "
+                     "파서·일반 패키지 구현은 self:patch propose 계약의 한정 수리도 확인하라. pending_repair 뒤 턴을 끝내면 원래 업무로 자동 복귀한다. "
                      "호스트가 범위를 거절하면 그 근거를 보존하고 가능한 다른 방법을 실행하라. 자기 지침·권한은 바꾸지 않는다.")
     return json.dumps({"revised": True, "revision_no": out.get("_revision", {}).get("revision_no", 1),
                        "content": "\n\n".join(lines)}, ensure_ascii=False, indent=2)

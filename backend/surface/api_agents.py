@@ -342,7 +342,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
         from episode_logger import record_trajectory_event
         from contextlib import nullcontext
         from component_continuation import is_task
-        turn_scope = nullcontext(sessions.current()) if is_task(continuation) and sessions.current() else sessions.owned_turn(
+        from task_repair import scope
+        turn_scope = nullcontext(sessions.current()) if (is_task(continuation) or scope(continuation)) and sessions.current() else sessions.owned_turn(
             db.db_path, "messages", owner, task_id,
             on_skip=lambda exc: record_trajectory_event("conversation.binding_skipped", {
                 "surface": "agents/command", "owner": owner,

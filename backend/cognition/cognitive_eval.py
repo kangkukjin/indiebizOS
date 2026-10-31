@@ -886,6 +886,10 @@ class CognitiveEvalMixin:
                     action_ledger = build_action_ledger(trace_source)
                     _trace_dicts = trace_source
 
+                from task_repair import pending_response
+                if notice := pending_response():
+                    return notice
+
                 # 재실행 결과가 비어있으면 (503 등) 이전 응답 유지
                 if retry_response and retry_response.strip():
                     response = retry_response

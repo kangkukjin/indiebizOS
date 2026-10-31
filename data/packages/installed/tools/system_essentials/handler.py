@@ -689,6 +689,8 @@ def execute(tool_input: dict, context) -> str:
     try:
         from types import SimpleNamespace
         result = _component_scope().handle(SimpleNamespace(**globals()), tool_input, context)
+        if result is None:
+            result = __import__('task_repair').request(SimpleNamespace(**globals()), tool_input, context, framing_factory=__import__('repair_policy').direct_framing)
         if result is not None:
             return result
         if _red_grant_active() and context.tool_name != "patch_op":

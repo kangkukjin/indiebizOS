@@ -263,6 +263,7 @@
     "datastore/switch_manager",
     "datastore/system_ai_memory",
     "datastore/system_docs",
+    "datastore/task_repair",
     "datastore/task_worker_store",
     "datastore/tree_doc",
     "datastore/tree_recall",
@@ -502,6 +503,7 @@
     "surface/api_supervision",
     "surface/api_switches",
     "surface/api_system_ai",
+    "surface/api_task_repair",
     "surface/api_tunnel",
     "surface/api_vocabulary",
     "surface/api_warehouse_feed",
@@ -582,8 +584,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 571,
-    "engine": 539,
+    "total": 573,
+    "engine": 541,
     "blocklist": 32
   }
 }

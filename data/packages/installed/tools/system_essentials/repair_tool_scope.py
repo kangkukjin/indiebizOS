@@ -16,6 +16,16 @@ def prepare(self_module, name, payload, project):
     if name not in FILE_TOOLS and name != "script_op":
         return dict(payload), project
     st, repo, key = self_module._staging_mod(), str(self_module._REPO_ROOT), self_module._staging_key()
+    from red_grant import active_grant
+    from thread_context import get_current_task_id
+    grant = active_grant(task_id=get_current_task_id()) or {}
+    if grant.get('task_scope'):
+        from task_repair import parent_of
+        parent_of(grant, repo)
+        if name == 'patch_op' and payload.get('op', 'propose') != 'status' and (
+                payload.get('op', 'propose') == 'propose' or payload.get('proposal_id')
+                or payload.get('key', key) != key):
+            raise PermissionError('한정 수리는 현재 사본만 수정·적용합니다. 다른 제안·수리 키로 바꾸지 마세요')
     from repair_context import activation_only
     if activation_only():
         if name not in {"read_file", "read_op", "list_directory", "patch_op"} or (
@@ -58,6 +68,9 @@ def prepare(self_module, name, payload, project):
                 raise PermissionError("수리 파일 도구는 같은 사본만 읽고 씁니다. 외부 의존성은 격리 셸로 읽으세요")
         else:
             rel = path.as_posix()
+        if not read_only:
+            from task_repair import check_delta
+            check_delta(sess, [rel])
         from script_workspace import current_scope, workspace, prepare_path
         candidate = (wt / rel).resolve()
         if current_scope() and candidate.is_relative_to(workspace().resolve()):

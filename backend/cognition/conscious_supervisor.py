@@ -1002,6 +1002,10 @@ class Supervisor:
                         self.observe_native(event)
                         if event.get("type") not in {"text", "final"}:
                             yield event
+                from task_repair import pending_response
+                if notice := pending_response():
+                    yield {"type": "final", "content": notice}
+                    return notice
                 self.log("ownership.handoff", role="harness", to="evaluate")
                 self.executor_paused = True
                 pending = defer(self, self.store.text)

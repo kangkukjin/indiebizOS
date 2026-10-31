@@ -117,6 +117,7 @@ def defer(controller, response, base=None):
         return None
     config = controller.runner.config
     row = {"task_id": task, "root_task_id": previous.get("root_task_id", task),
+           **({'task_scope': previous['task_scope']} if previous.get('task_scope') else {}),
            "parent_task_id": previous.get("task_id"),
            "attempt": previous.get("attempt", 0) + 1,
            "failures": previous.get("failures", []), "status": "waiting_apply",
@@ -215,7 +216,7 @@ def task_state(task, base=None):
             return "blocked"
         if result and result.get("outcome") != "healthy":
             return "blocked"
-    return {"waiting_apply": "waiting", "waiting_review": "waiting", "waiting_execution": "waiting", "running": "waiting", "continued": "waiting",
+    return {"waiting_apply": "waiting", "waiting_review": "waiting", "waiting_execution": "waiting", "waiting_repair": "waiting", "running": "waiting", "continued": "waiting",
             "blocked": "blocked", "cancelled": "cancelled", "completed": "completed"}.get(row["status"])
 
 
@@ -225,7 +226,7 @@ def resume_context(row):
         return context(row)
     # 원문은 원장에 한 벌 보존한다. 중복된 report/post_verify 전체를 매 턴 주입하지 않는다.
     result = row.get("result") or {}
-    evidence = {k: row.get(k) for k in ("task_id", "episode_id", "store", "worktree", "job_path", "phase", "response", "criteria_state", "next_instruction", "staging_task_id")}
+    evidence = {k: row.get(k) for k in ("task_id", "episode_id", "store", "worktree", "job_path", "phase", "response", "criteria_state", "next_instruction", "staging_task_id", "task_scope")}
     evidence["continuation_path"] = str(directory() / (key(row["task_id"]) + ".json"))
     evidence["result"] = {"outcome": result.get("outcome"), "controller": result.get("controller"),
                           "checks": (result.get("apply") or {}).get("checks", []),

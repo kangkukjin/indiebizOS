@@ -8,7 +8,7 @@ import re
 import socket
 import time
 import uuid
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import device_registry
 import limb_keys
@@ -387,61 +387,13 @@ def transfer_meta(tid, size, sha256):
 
 
 def transfer_write(tid, offset, data):
-    if len(data) > 1024 * 1024:
-        raise ValueError("chunk_too_large")
-    with phone_jobs._db() as db:
-        transfer_schema(db)
-        row = db.execute("SELECT * FROM resident_transfers WHERE id=?", (tid,)).fetchone()
-        if not row or row["state"] == "committed" or row["size"] is None:
-            raise ValueError("transfer_not_writable")
-        if not isinstance(offset, int) or offset < 0:
-            raise ValueError("offset_conflict")
-        if offset < row["offset"] and offset + len(data) <= row["offset"]:
-            with transfer_path(tid, True).open("rb") as previous:
-                previous.seek(offset)
-                if previous.read(len(data)) == data:
-                    return {"offset": offset + len(data)}
-            raise ValueError("offset_conflict")
-        if offset != row["offset"] or offset + len(data) > row["size"]:
-            raise ValueError("offset_conflict")
-        path = transfer_path(tid, True)
-        with path.open("r+b" if path.exists() else "w+b") as f:
-            f.seek(offset)
-            f.write(data)
-            f.truncate()
-            f.flush()
-            os.fsync(f.fileno())
-        os.chmod(path, 0o600)
-        db.execute("UPDATE resident_transfers SET offset=?,state='transferring' WHERE id=?",
-                   (offset + len(data), tid))
-    return {"offset": offset + len(data)}
+    from resident_transfer_io import write
+    return write(tid, offset, data)
 
 
 def transfer_commit(tid):
-    with phone_jobs._db() as db:
-        transfer_schema(db)
-        row = db.execute("SELECT * FROM resident_transfers WHERE id=?", (tid,)).fetchone()
-        if not row:
-            raise ValueError("transfer_not_found")
-        if row["state"] == "committed":
-            return dict(row)
-        if row["size"] != row["offset"]:
-            raise ValueError("transfer_incomplete")
-        path = transfer_path(tid, True)
-        if row["size"] == 0:
-            path.touch(mode=0o600, exist_ok=True)
-        # A crash after rename but before DB commit is recoverable.
-        source = path if path.exists() else transfer_path(tid)
-        digest = hashlib.sha256()
-        with source.open("rb") as f:
-            for chunk in iter(lambda: f.read(1024 * 1024), b""):
-                digest.update(chunk)
-        if digest.hexdigest() != row["sha256"]:
-            raise ValueError("hash_mismatch")
-        if source == path:
-            os.replace(path, transfer_path(tid))
-        db.execute("UPDATE resident_transfers SET state='committed' WHERE id=?", (tid,))
-    return transfer_info(tid)
+    from resident_transfer_io import commit
+    return commit(tid)
 
 
 def transfer_local(target, args):
@@ -507,7 +459,7 @@ def transfer_local(target, args):
                     offset = transfer_write(row['id'], offset, chunk)['offset']
             transfer_commit(row['id'])
     elif action == 'receive':
-        row = transfer_info(tid) if tid else transfer_create(target, 'from_pc', Path(args['path']).name)
+        row = transfer_info(tid) if tid else transfer_create(target, 'from_pc', (PureWindowsPath(args['path']).name if "\\" in args['path'] else Path(args['path']).name))
         if row['device'] != resolve(target)['device_id'] or row['direction'] != 'from_pc':
             raise ValueError('transfer_source_conflict')
     else:

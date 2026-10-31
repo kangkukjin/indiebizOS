@@ -273,6 +273,7 @@ class LimbClient:
                 screen_caps = json.loads(str(screen_bridge.capabilities()))
                 if isinstance(screen_caps, dict):
                     caps["screen"] = screen_caps
+                    caps["screen_reconnect"] = screen_caps.get("reconnect", 0)
             except (AttributeError, TypeError, ValueError):
                 pass  # Older APKs only expose projection capture.
         bridge = _media_bridge()

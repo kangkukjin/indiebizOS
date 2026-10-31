@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "date": "2026-10-31",
+  "device_alias": "tv1",
+  "method": "8MiB random payload, 3 samples per helper, monotonic command-submit to completed-history polling (1s interval); legacy HTTPS vs new pinned LAN, combined route+protocol effect. 100MiB is new-only. No screen pixels or input logged.",
+  "deployed": {
+    "helper_sha256": "1cd2194ff0950de954eef8a2144c1c151dca864e3b5ff45fe4419a229c1413d7",
+    "binary_transfer": 1,
+    "screen_reconnect": 1,
+    "os": "windows",
+    "arch": "amd64",
+    "connected": true
+  },
+  "before": [
+    {
+      "sample": "baseline",
+      "size": 8388608,
+      "sha256": "29d1ce4422a17da4e71995d688085e065533f0946fe8e8b1c1636f810bbb33d7",
+      "seconds": 36.44450170826167,
+      "state": "succeeded",
+      "transport": "legacy-json",
+      "route": "legacy-https",
+      "helper_seconds": null,
+      "hash_matches": true
+    },
+    {
+      "sample": "baseline2",
+      "size": 8388608,
+      "sha256": "29d1ce4422a17da4e71995d688085e065533f0946fe8e8b1c1636f810bbb33d7",
+      "seconds": 36.496275125071406,
+      "state": "succeeded",
+      "transport": "legacy-json",
+      "route": "legacy-https",
+      "helper_seconds": null,
+      "hash_matches": true
+    },
+    {
+      "sample": "baseline3",
+      "size": 8388608,
+      "sha256": "29d1ce4422a17da4e71995d688085e065533f0946fe8e8b1c1636f810bbb33d7",
+      "seconds": 35.4609730001539,
+      "state": "succeeded",
+      "transport": "legacy-json",
+      "route": "legacy-https",
+      "helper_seconds": null,
+      "hash_matches": true
+    }
+  ],
+  "after": [
+    {
+      "sample": "binary1",
+      "size": 8388608,
+      "sha256": "29d1ce4422a17da4e71995d688085e065533f0946fe8e8b1c1636f810bbb33d7",
+      "seconds": 5.1137065421789885,
+      "state": "succeeded",
+      "transport": "binary-v1",
+      "route": "lan",
+      "helper_seconds": 2.0256439,
+      "hash_matches": true
+    },
+    {
+      "sample": "binary2",
+      "size": 8388608,
+      "sha256": "29d1ce4422a17da4e71995d688085e065533f0946fe8e8b1c1636f810bbb33d7",
+      "seconds": 4.086686500348151,
+      "state": "succeeded",
+      "transport": "binary-v1",
+      "route": "lan",
+      "helper_seconds": 1.941908,
+      "hash_matches": true
+    },
+    {
+      "sample": "binary3",
+      "size": 8388608,
+      "sha256": "29d1ce4422a17da4e71995d688085e065533f0946fe8e8b1c1636f810bbb33d7",
+      "seconds": 3.0719394171610475,
+      "state": "succeeded",
+      "transport": "binary-v1",
+      "route": "lan",
+      "helper_seconds": 1.4795523,
+      "hash_matches": true
+    }
+  ],
+  "median_before_s": 36.44450170826167,
+  "median_after_s": 4.086686500348151,
+  "new_100mib": {
+    "sample": "binary100",
+    "size": 104857600,
+    "sha256": "609e0eba9bf77c39e6dc9f44ccfb882d420f38472d06c4d14dec42a4e7587aa1",
+    "seconds": 17.43103766720742,
+    "state": "succeeded",
+    "transport": "binary-v1",
+    "route": "lan",
+    "helper_seconds": 15.4327873,
+    "hash_matches": true
+  },
+  "concurrent_upload": {
+    "sample": "concurrent",
+    "size": 8388608,
+    "sha256": "29d1ce4422a17da4e71995d688085e065533f0946fe8e8b1c1636f810bbb33d7",
+    "seconds": 9.200995874591172,
+    "state": "succeeded",
+    "transport": "binary-v1",
+    "route": "lan",
+    "helper_seconds": 7.2012401,
+    "hash_matches": true
+  },
+  "concurrent_download": {
+    "sample": "download",
+    "size": 8388608,
+    "sha256": "ae0c9de38d64bb21d199f9d2effd583f29b9296a51b054b74ccfeebca9ff4f24",
+    "seconds": 21.574163707904518,
+    "state": "succeeded",
+    "transport": "binary-v1",
+    "route": "lan",
+    "helper_seconds": 18.3714959,
+    "hash_matches": true
+  },
+  "screen_owner_reconnect": {
+    "frames": 53,
+    "bytes": 6390722,
+    "recoveries": [
+      {
+        "outage_s": 1,
+        "first_frame_after_reopen_s": 1.082
+      },
+      {
+        "outage_s": 3,
+        "first_frame_after_reopen_s": 1.395
+      },
+      {
+        "outage_s": 8,
+        "first_frame_after_reopen_s": 0.436
+      }
+    ],
+    "statuses": [
+      {
+        "state": "starting",
+        "route": "",
+        "reconnects": 0,
+        "code": "",
+        "message": ""
+      },
+      {
+        "state": "starting",
+        "route": "lan",
+        "reconnects": 0,
+        "code": "",
+        "message": ""
+      },
+      {
+        "state": "running",
+        "route": "lan",
+        "reconnects": 0,
+        "code": "",
+        "message": ""
+      },
+      {
+        "state": "reconnecting",
+        "route": "lan",
+        "reconnects": 1,
+        "code": "transport_lost",
+        "message": "연결을 복구하고 있습니다…"
+      },
+      {
+        "state": "running",
+        "route": "lan",
+        "reconnects": 1,
+        "code": "transport_lost",
+        "message": ""
+      },
+      {
+        "state": "reconnecting",
+        "route": "lan",
+        "reconnects": 2,
+        "code": "transport_lost",
+        "message": "연결을 복구하고 있습니다…"
+      },
+      {
+        "state": "running",
+        "route": "lan",
+        "reconnects": 2,
+        "code": "transport_lost",
+        "message": ""
+      },
+      {
+        "state": "reconnecting",
+        "route": "lan",
+        "reconnects": 3,
+        "code": "transport_lost",
+        "message": "연결을 복구하고 있습니다…"
+      },
+      {
+        "state": "running",
+        "route": "lan",
+        "reconnects": 3,
+        "code": "transport_lost",
+        "message": ""
+      }
+    ],
+    "duration_s": 120.477,
+    "success": true
+  },
+  "limits": [
+    "Not an isolated same-route codec comparison",
+    "No original 100MiB/1GiB 3x comparison",
+    "No 30-minute interactive screen acceptance",
+    "Helper-side network loss not injected on physical device",
+    "Mac/Android device update and performance not verified"
+  ],
+  "ratio": 8.917860889294275
+}

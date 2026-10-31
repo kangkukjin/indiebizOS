@@ -98,7 +98,8 @@ def _pin_run_file(path, tid):
 
 
 def _transfer(client, command, cancelled, tid, path):
-    deadline = time.monotonic() + command.get("timeout", 3600)
+    started = time.monotonic()
+    deadline = started + command.get("timeout", 3600)
 
     def check():
         if cancelled.is_set() or client.stopped.is_set():
@@ -108,51 +109,55 @@ def _transfer(client, command, cancelled, tid, path):
             raise TimeoutError("transfer_timeout")
         return remaining
 
-    def request(action, **values):
-        remaining = check()
-        return client._post("transfers/" + tid, {**client._auth(), "action": action, **values}, min(30, remaining))
-
-    row = request("info")
-    if row["direction"] == "from_pc":
-        sha = digest(path, check)
-        size = path.stat().st_size
-        row = request("meta", size=size, sha256=sha)
-        with path.open("rb") as stream:
-            stream.seek(row["offset"])
-            offset = row["offset"]
-            for data in iter(lambda: stream.read(CHUNK), b""):
-                row = request("write", offset=offset, data=base64.b64encode(data).decode("ascii"))
-                if row["offset"] != offset + len(data):
-                    raise ValueError("invalid_transfer_offset")
+    from phone_transfer_wire import PhoneTransferWire
+    wire = PhoneTransferWire(client, tid, check)
+    request = wire.request
+    try:
+        row = request("info")
+        if row["direction"] == "from_pc":
+            sha = digest(path, check)
+            size = path.stat().st_size
+            row = request("meta", size=size, sha256=sha)
+            with path.open("rb") as stream:
+                stream.seek(row["offset"])
                 offset = row["offset"]
-        row = request("commit")
-    elif row["direction"] == "to_pc":
-        if row["state"] != "committed":
-            raise ValueError("transfer_not_committed")
-        if path.exists():
-            if path.is_file() and digest(path, check) == row["sha256"]:
-                return {"success": True, "path": str(path), "sha256": row["sha256"], "size": row["size"]}
-            raise ValueError("destination_exists")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        partial = path.parent / (".indiebiz-" + tid + ".part")
-        offset = partial.stat().st_size if partial.exists() else 0
-        if offset > row["size"]:
-            raise ValueError("partial_size_conflict")
-        with partial.open("ab") as stream:
-            while offset < row["size"]:
-                piece = request("read", offset=offset, chunk_size=CHUNK)
-                data = base64.b64decode(piece["data"], validate=True)
-                if not data or piece["offset"] != offset + len(data) or piece["offset"] > row["size"]:
-                    raise ValueError("invalid_transfer_chunk")
-                stream.write(data)
-                stream.flush()
-                offset = piece["offset"]
-            os.fsync(stream.fileno())
-        if digest(partial, check) != row["sha256"]:
-            raise ValueError("hash_mismatch")
-        check()
-        publish_download(partial, path)
-    else:
-        raise ValueError("invalid_transfer_direction")
-    return {"success": True, "path": str(path), "sha256": row["sha256"],
-            "size": row["size"], "transfer_id": tid}
+                for data in iter(lambda: stream.read(CHUNK), b""):
+                    row = request("write", offset=offset, data=data)
+                    if row["offset"] != offset + len(data):
+                        raise ValueError("invalid_transfer_offset")
+                    offset = row["offset"]
+            row = request("commit")
+        elif row["direction"] == "to_pc":
+            if row["state"] != "committed":
+                raise ValueError("transfer_not_committed")
+            if path.exists():
+                if path.is_file() and digest(path, check) == row["sha256"]:
+                    return {"success": True, "path": str(path), "sha256": row["sha256"], "size": row["size"]}
+                raise ValueError("destination_exists")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            partial = path.parent / (".indiebiz-" + tid + ".part")
+            offset = partial.stat().st_size if partial.exists() else 0
+            if offset > row["size"]:
+                raise ValueError("partial_size_conflict")
+            with partial.open("ab") as stream:
+                while offset < row["size"]:
+                    piece = request("read", offset=offset, chunk_size=CHUNK)
+                    data = piece["data"] if isinstance(piece["data"], bytes) else base64.b64decode(piece["data"], validate=True)
+                    if not data or piece["offset"] != offset + len(data) or piece["offset"] > row["size"]:
+                        raise ValueError("invalid_transfer_chunk")
+                    stream.write(data)
+                    stream.flush()
+                    offset = piece["offset"]
+                os.fsync(stream.fileno())
+            if digest(partial, check) != row["sha256"]:
+                raise ValueError("hash_mismatch")
+            check()
+            publish_download(partial, path)
+        else:
+            raise ValueError("invalid_transfer_direction")
+        return {"success": True, "path": str(path), "sha256": row["sha256"],
+                "size": row["size"], "transfer_id": tid,
+                "transport": "binary-v1" if wire.offer else "json", "route": wire.route,
+                "seconds": round(time.monotonic() - started, 3)}
+    finally:
+        wire.close()

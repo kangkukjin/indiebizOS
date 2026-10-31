@@ -51,7 +51,7 @@ type dibHeader struct {
 	ClrUsed, ClrImportant  uint32
 }
 
-func windowsFrame() ([]byte, error) {
+func windowsFrame(options screenMessage) ([]byte, error) {
 	w, h := screenMetric(78), screenMetric(79)
 	if w < 1 || h < 1 || w > 16384 || h > 16384 {
 		return nil, fmt.Errorf("no interactive desktop")
@@ -87,8 +87,12 @@ func windowsFrame() ([]byte, error) {
 	}
 	src := unsafe.Slice((*byte)(bits), w*h*4)
 	tw := w
-	if tw > 1600 {
-		tw = 1600
+	limit := options.Width
+	if limit < 640 || limit > 1600 {
+		limit = 1600
+	}
+	if tw > limit {
+		tw = limit
 	}
 	th := h * tw / w
 	if th < 1 {
@@ -106,7 +110,7 @@ func windowsFrame() ([]byte, error) {
 		}
 	}
 	var out bytes.Buffer
-	err := jpeg.Encode(&out, dst, &jpeg.Options{Quality: 65})
+	err := jpeg.Encode(&out, dst, &jpeg.Options{Quality: screenJPEGQuality(options.Quality)})
 	return out.Bytes(), err
 }
 func screenVK(code string) byte {
@@ -161,7 +165,7 @@ func nativeScreenWorkerMain() int {
 		result := map[string]interface{}{}
 		switch m.Type {
 		case "frame":
-			b, e := windowsFrame()
+			b, e := windowsFrame(m)
 			if e != nil {
 				result["error"] = "화면 공유는 로그인한 Windows 데스크톱에서 사용할 수 있습니다."
 			} else {

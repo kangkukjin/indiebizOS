@@ -431,6 +431,7 @@
     "services/phone_native_control",
     "services/phone_notifications",
     "services/phone_remote_execution",
+    "services/phone_transfer_wire",
     "services/phone_updates",
     "services/record_adapters",
     "services/record_dispatch",
@@ -444,6 +445,7 @@
     "services/resident_screen",
     "services/resident_terminal",
     "services/resident_terminal_lan",
+    "services/resident_transfer_io",
     "services/resource_links",
     "services/restart_candidates",
     "services/scheduler",
@@ -502,6 +504,7 @@
     "surface/api_report",
     "surface/api_resident_pcs",
     "surface/api_resident_screen",
+    "surface/api_resident_transfer",
     "surface/api_scheduler",
     "surface/api_spreadsheets",
     "surface/api_supervision",
@@ -588,8 +591,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 577,
-    "engine": 545,
+    "total": 580,
+    "engine": 548,
     "blocklist": 32
   }
 }

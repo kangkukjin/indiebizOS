@@ -30,7 +30,7 @@ def test_screen_share(tmp_path):
 
             def api(route):
                 requests.append((route.request.method, route.request.url))
-                route.fulfill(status=200, content_type='application/json', body='{}', headers={'Access-Control-Allow-Origin': '*'})
+                route.fulfill(status=200, content_type='application/json', body='{"reconnect_s":15}', headers={'Access-Control-Allow-Origin': '*'})
             page.route('**/remote-pcs/screens**', api)
             page.goto(f'http://127.0.0.1:{server.server_port}/#/remote-screen/guestpc-abc')
             canvas = page.get_by_label('원격 기기 화면')
@@ -49,6 +49,16 @@ def test_screen_share(tmp_path):
             assert any(m['type'] == 'key' and m['code'] == 'KeyA' and not m['down'] for m in sent)
             assert any(m['type'] == 'text' and m['text'] == '한글' for m in sent)
             assert sent[-1] == {'type': 'reset'}
+            before = page.evaluate('window.sockets.length')
+            texts_before = len([m for m in sent if m['type'] == 'text'])
+            page.evaluate("window.oldSocket=window.sockets.at(-1);window.oldSocket.close()")
+            expect(page.get_by_role('status')).to_contain_text('복구')
+            page.wait_for_function('window.sockets.length > ' + str(before))
+            expect(page.get_by_role('status')).to_have_count(0)
+            page.evaluate('window.oldSocket.onclose()')
+            page.evaluate('window.oldSocket.onerror()')
+            expect(page.get_by_role('status')).to_have_count(0)
+            assert len([m for m in page.evaluate('window.sent') if m['type'] == 'text']) == texts_before
             page.evaluate("window.sockets.at(-1).onmessage({data:JSON.stringify({type:'status',state:'closed',message:'연결 종료'})});window.sockets.at(-1).close()")
             expect(page.get_by_role('status')).to_contain_text('연결 종료')
             count = len(sent)

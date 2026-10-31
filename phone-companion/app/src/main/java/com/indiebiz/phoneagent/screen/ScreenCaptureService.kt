@@ -86,7 +86,7 @@ class ScreenCaptureService : Service() {
             val image = source.acquireLatestImage() ?: return@setOnImageAvailableListener
             try {
                 val now = SystemClock.elapsedRealtime()
-                if (source !== reader || session?.active != true || now - lastFrame < 200) return@setOnImageAvailableListener
+                if (source !== reader || session?.transmitting != true || now - lastFrame < (session?.frameInterval ?: 400L)) return@setOnImageAvailableListener
                 lastFrame = now
                 val plane = image.planes[0]
                 val padded = Bitmap.createBitmap(plane.rowStride / plane.pixelStride, image.height, Bitmap.Config.ARGB_8888)
@@ -95,7 +95,11 @@ class ScreenCaptureService : Service() {
                     val cropped = Bitmap.createBitmap(padded, 0, 0, image.width, image.height)
                     try {
                         val out = ByteArrayOutputStream()
-                        cropped.compress(Bitmap.CompressFormat.JPEG, 65, out)
+                        val limit = session?.frameWidth ?: 1280
+                        val scale = minOf(1.0, limit.toDouble() / maxOf(cropped.width, cropped.height))
+                        val scaled = Bitmap.createScaledBitmap(cropped, (cropped.width * scale).roundToInt().coerceAtLeast(1), (cropped.height * scale).roundToInt().coerceAtLeast(1), true)
+                        try { scaled.compress(Bitmap.CompressFormat.JPEG, session?.jpegQuality ?: 65, out) }
+                        finally { if (scaled !== cropped) scaled.recycle() }
                         session?.frame(out.toByteArray(), pixelsWidth, pixelsHeight)
                     } finally { if (cropped !== padded) cropped.recycle() }
                 } finally { padded.recycle() }

@@ -31,6 +31,7 @@ internal class AccessibilityScreenCapture(private val session: ScreenSession, pr
     fun start() {
         check(Build.VERSION.SDK_INT >= 30)
         if (!session.active) return
+        if (!session.transmitting) { schedule(); return }
         val service = PhoneAccessibilityService.instance
         if (service == null) { session.end("accessibility"); return }
         if (!permitted(service)) { session.end("capture_permission"); return }
@@ -56,6 +57,7 @@ internal class AccessibilityScreenCapture(private val session: ScreenSession, pr
         if (closed || !session.active) return
         if (ctx.getSystemService(PowerManager::class.java).isInteractive) screenAwake = true
         else if (screenAwake) { session.end("screen_sleep"); return }
+        if (!session.transmitting) { schedule(); return }
         val service = PhoneAccessibilityService.instance
         if (service == null) { session.end("accessibility"); return }
         try {
@@ -73,13 +75,13 @@ internal class AccessibilityScreenCapture(private val session: ScreenSession, pr
                                     software.recycle()
                                     software = controls
                                 }
-                                val scale = minOf(1.0, 1280.0 / maxOf(software.width, software.height))
+                                val scale = minOf(1.0, session.frameWidth.toDouble() / maxOf(software.width, software.height))
                                 val frame = Bitmap.createScaledBitmap(software,
                                     (software.width * scale).roundToInt().coerceAtLeast(1),
                                     (software.height * scale).roundToInt().coerceAtLeast(1), true)
                                 try {
                                     val bytes = ByteArrayOutputStream()
-                                    check(frame.compress(Bitmap.CompressFormat.JPEG, 65, bytes))
+                                    check(frame.compress(Bitmap.CompressFormat.JPEG, session.jpegQuality, bytes))
                                     if (!closed && session.active) {
                                         session.capturing = true
                                         session.frame(bytes.toByteArray(), software.width, software.height)
@@ -99,7 +101,7 @@ internal class AccessibilityScreenCapture(private val session: ScreenSession, pr
     }
 
     private fun schedule() {
-        if (!closed && session.active) handler.postDelayed(next, 400)
+        if (!closed && session.active) handler.postDelayed(next, session.frameInterval)
     }
 
     private fun failed(code: Int) {

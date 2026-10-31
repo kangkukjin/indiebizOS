@@ -11,6 +11,7 @@
 
 profiles:
   screen:
+    reconnect_s: 15
     lease_s: 20
     keepalive_s: 5
     closed_keep_s: 120

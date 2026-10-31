@@ -46,6 +46,10 @@ class Native:
 
 @pytest.fixture
 def device(release, hub, monkeypatch):
+    # The in-process HTTP adapter exercises legacy APK transport; binary sockets
+    # have their own real server/consumer contract in test_resident_transfer_io.
+    import api_resident_transfer
+    monkeypatch.setattr(api_resident_transfer, 'offer', lambda: {})
     native = Native()
     monkeypatch.setattr(updates, '_bridge_factory', lambda: native)
     rec = _enroll_phone()

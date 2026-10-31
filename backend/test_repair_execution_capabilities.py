@@ -220,8 +220,10 @@ const fs=require('fs'), path=require('path');
 app.setPath('userData', path.join(__dirname, 'profile'));
 app.whenReady().then(async()=>{
   const win=new BrowserWindow({show:false});
+  const painted=new Promise(resolve=>win.once('ready-to-show',resolve));
   await win.loadURL('data:text/html,<title>English UI</title><h1>Ready</h1>');
   const title=await win.webContents.executeJavaScript('document.title');
+  await painted; // loadURL can resolve before Viz has a frame to capture.
   const image=await win.webContents.capturePage();
   fs.writeFileSync(path.join(__dirname, 'capture.png'), image.toPNG());
   let protectedOutside=false;

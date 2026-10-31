@@ -27,7 +27,7 @@ object ScreenBridge {
         return JSONObject().put("capture", if (unattended) "accessibility" else "media_projection")
             .put("unattended", unattended).put("accessibility_enabled", service != null)
             .put("capture_ready", service != null && unattended && AccessibilityScreenCapture.permitted(service))
-            .put("session_consent_required", !unattended).toString()
+            .put("reconnect", 1).put("session_consent_required", !unattended).toString()
     }
     @JvmStatic fun run(id: String): String {
         require(Regex("[a-f0-9]{32}").matches(id))
@@ -40,7 +40,8 @@ object ScreenBridge {
             val start = SystemClock.elapsedRealtime()
             while (!session.done.await(1, TimeUnit.SECONDS)) {
                 val now = SystemClock.elapsedRealtime()
-                if (ScreenSessionPolicy.heartbeatExpired(now, session.lastMessage) || now - start > 86400000 ||
+                if (ScreenSessionPolicy.heartbeatExpired(now, session.lastMessage)) session.recover()
+                if (now - start > 86400000 ||
                     (!session.capturing && now - start > 120000)) session.end("denied")
             }
             return JSONObject().put("success", session.error == null).apply {
@@ -85,28 +86,51 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
     private var accessibilityCapture: AccessibilityScreenCapture? = null
     @Volatile private var socket: WebSocket? = null
     private lateinit var auth: JSONObject
+    @Volatile private var connected = false
+    @Volatile private var reconnectMs = 0L
+    @Volatile private var reconnectUntil = 0L
+    private var generation = 0
+    private val handler = Handler(Looper.getMainLooper())
+    @Volatile var frameWidth = 1280
+        private set
+    @Volatile var jpegQuality = 65
+        private set
+    @Volatile var frameInterval = 400L
+        private set
+    private var stable = 0
+    private var previousFrame: ByteArray? = null
+    private var lastFrameSent = 0L
+    val transmitting get() = active && connected
+
     val active get() = !ended.get()
 
-    fun connect() {
+    @Synchronized fun connect() {
+        if (!active) return
+        if (reconnectUntil != 0L && SystemClock.elapsedRealtime() >= reconnectUntil) { end("capture_failed"); return }
         // Installed trust root, never a command-supplied destination or credential.
         val cfg = JSONObject(File(ctx.filesDir, "secrets/limb_client.json").readText())
         val hub = cfg.getString("hub").trimEnd('/')
         require(hub.startsWith("https://") || hub.startsWith("http://"))
-        auth = JSONObject().put("key", cfg.getString("key")).put("installation_id", cfg.getString("installation_id"))
+        auth = JSONObject().put("key", cfg.getString("key")).put("installation_id", cfg.getString("installation_id")).put("connection", ++generation)
         val url = hub.replaceFirst("https://", "wss://").replaceFirst("http://", "ws://") + "/limb/resident/screen/$id"
         socket = client.newWebSocket(Request.Builder().url(url).build(), this)
     }
     override fun onOpen(ws: WebSocket, response: Response) {
-        if (!active) { ws.cancel(); return }
+        if (!active || ws !== socket) { ws.cancel(); return }
         ws.send(auth.toString())
     }
     override fun onMessage(ws: WebSocket, text: String) {
-        if (!active) return
+        if (!active || ws !== socket) return
         lastMessage = SystemClock.elapsedRealtime()
         try {
             val message = JSONObject(text)
             when (message.getString("type")) {
                 "ready" -> {
+                    reconnectMs = (message.optDouble("reconnect_s", 0.0) * 1000).toLong()
+                    reconnectUntil = 0L
+                    connected = true
+                    previousFrame = null
+
                     Handler(Looper.getMainLooper()).post {
                         if (!active) return@post
                         if (PhoneAccessibilityService.instance == null) { end("accessibility"); return@post }
@@ -117,6 +141,7 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
                             }
                             return@post
                         }
+                        if (capturing || permissionRequested) return@post
                         status("permission")
                         ctx.getSystemService(NotificationManager::class.java).notify(ScreenBridge.NOTICE, ScreenBridge.notification(ctx, id, false))
                         // Background activity restrictions start at Android 10. On Android 9,
@@ -130,30 +155,65 @@ class ScreenSession(val id: String, private val ctx: Context) : WebSocketListene
                 }
                 "heartbeat" -> Unit
                 "close" -> end()
-                else -> if (capturing) inputs.execute {
-                    if (active) try { input.handle(message) } catch (_: Exception) { end("input_failed") }
+                else -> if (capturing && connected) inputs.execute {
+                    if (active && connected && ws === socket) try { input.handle(message) } catch (_: Exception) { end("input_failed") }
                 }
             }
         } catch (_: Exception) { end("input_failed") }
     }
-    fun frame(jpeg: ByteArray, width: Int, height: Int) {
-        if (!active) return
+    @Synchronized fun frame(jpeg: ByteArray, width: Int, height: Int) {
+        if (!transmitting) return
         input.width = width; input.height = height
         val ws = socket ?: return
-        if (ws.queueSize() < 512 * 1024) ws.send(jpeg.toByteString())
+        val queued = ws.queueSize()
+        if (queued > 128 * 1024) {
+            stable = 0; frameWidth = 800; jpegQuality = 40; frameInterval = 800L
+        } else if (++stable >= 30) {
+            frameWidth = 1280; jpegQuality = 65; frameInterval = 400L; stable = 0
+        }
+        val now = SystemClock.elapsedRealtime()
+        if (queued >= 512 * 1024 || (previousFrame?.contentEquals(jpeg) == true && now - lastFrameSent < 2000)) return
+        if (ws.send(jpeg.toByteString())) { previousFrame = jpeg; lastFrameSent = now }
     }
     private fun status(code: String) { socket?.send(JSONObject().put("code", code).toString()) }
-    override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
-        if (!active) return // A late close-frame failure is not a failed sharing session.
-        Log.w("IndieBizScreen", "screen transport failed", t)
-        end("capture_failed")
+    @Synchronized fun recover() {
+        if (!active) return
+        val now = SystemClock.elapsedRealtime()
+        if (reconnectMs <= 0 || (reconnectUntil != 0L && now >= reconnectUntil)) { end("capture_failed"); return }
+        if (!connected && reconnectUntil != 0L) return
+        connected = false
+        reconnectUntil = now + reconnectMs
+        socket?.cancel(); socket = null
+        inputs.queue.clear()
+        try { inputs.execute { try { input.handle(JSONObject().put("type", "reset")) } catch (_: Exception) {} } } catch (_: RejectedExecutionException) {}
+        handler.postDelayed({ connect() }, 500)
     }
-    override fun onClosing(ws: WebSocket, code: Int, reason: String) { end() }
-    override fun onClosed(ws: WebSocket, code: Int, reason: String) { end() }
+    override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
+        if (!active || ws !== socket) return
+        Log.w("IndieBizScreen", "screen transport interrupted")
+        interrupted(ws)
+    }
+    @Synchronized private fun interrupted(ws: WebSocket) {
+        if (!active || ws !== socket) return
+        if (!connected && reconnectUntil != 0L) {
+            socket = null
+            ws.cancel()
+            handler.postDelayed({ connect() }, 500)
+        } else recover()
+    }
+    override fun onClosing(ws: WebSocket, code: Int, reason: String) {
+        if (!active || ws !== socket) return
+        if (code == 1008) end("denied") else interrupted(ws)
+    }
+    override fun onClosed(ws: WebSocket, code: Int, reason: String) {
+        interrupted(ws)
+    }
     fun end(code: String? = null) {
         if (!ended.compareAndSet(false, true)) return
         error = code
-        if (code != null) status(code)
+        status(code ?: "denied")
+        connected = false
+        handler.removeCallbacksAndMessages(null)
         socket?.close(1000, "screen ended")
         inputs.shutdownNow()
         Handler(Looper.getMainLooper()).post {

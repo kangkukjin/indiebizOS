@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"io"
 	"net"
 	"os"
@@ -37,6 +37,9 @@ func transferTransient(err error) bool {
 	if errors.As(err, &httpErr) {
 		return httpErr.status == 408 || httpErr.status == 429 || httpErr.status >= 500
 	}
+	if websocket.IsCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway, websocket.CloseServiceRestart, websocket.CloseTryAgainLater) {
+		return true
+	}
 	var netErr net.Error
 	return errors.As(err, &netErr) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
 }
@@ -58,6 +61,7 @@ func (r *residentRuntime) transfer(ctx context.Context, c Command, tid string) m
 	if !residentValidID(tid) {
 		return errResult("invalid_transfer_id", "")
 	}
+	started := time.Now()
 	res, e := r.transferFile(ctx, c, tid)
 	if e != nil {
 		failure := errResult("transfer_failed", e.Error())
@@ -67,13 +71,26 @@ func (r *residentRuntime) transfer(ctx context.Context, c Command, tid string) m
 		}
 		return failure
 	}
+	res["seconds"] = time.Since(started).Seconds()
 	return res
 }
-func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid string) (map[string]interface{}, error) {
-	meta, e := r.transferCall(ctx, tid, map[string]interface{}{})
+func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid string) (result map[string]interface{}, failure error) {
+	meta, e := r.transferCall(ctx, tid, map[string]interface{}{"binary_version": 1})
 	if e != nil {
 		return nil, e
 	}
+	wire := newTransferWire(r, tid, meta)
+	defer wire.close()
+	defer func() {
+		if result != nil {
+			result["transport"] = "json"
+			if wire.binary {
+				result["transport"] = "binary-v1"
+			}
+			result["route"] = wire.route
+		}
+	}()
+	call := func(body map[string]interface{}) (map[string]interface{}, error) { return wire.call(ctx, body) }
 	path := c.Path
 	if path == "" {
 		return nil, fmt.Errorf("path_required")
@@ -83,7 +100,7 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 		if e != nil {
 			return nil, e
 		}
-		meta, e = r.transferCall(ctx, tid, map[string]interface{}{"action": "meta", "size": size, "sha256": hash})
+		meta, e = call(map[string]interface{}{"action": "meta", "size": size, "sha256": hash})
 		if e != nil {
 			return nil, e
 		}
@@ -99,7 +116,7 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 		if _, e = f.Seek(offset, 0); e != nil {
 			return nil, e
 		}
-		buf := make([]byte, 128*1024)
+		buf := make([]byte, wire.batch)
 		for offset < size {
 			if e = ctx.Err(); e != nil {
 				return nil, e
@@ -108,7 +125,7 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 			if e != nil {
 				return nil, e
 			}
-			next, e := r.transferCall(ctx, tid, map[string]interface{}{"action": "write", "offset": offset, "data": base64.StdEncoding.EncodeToString(buf[:n])})
+			next, e := call(map[string]interface{}{"action": "write", "offset": offset, "data": buf[:n]})
 			if e != nil {
 				return nil, e
 			}
@@ -118,7 +135,7 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 			}
 			offset += int64(n)
 		}
-		return r.transferCall(ctx, tid, map[string]interface{}{"action": "commit"})
+		return call(map[string]interface{}{"action": "commit"})
 	}
 	if meta["state"] != "committed" {
 		return nil, fmt.Errorf("source_not_committed")
@@ -157,11 +174,11 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 		if e = ctx.Err(); e != nil {
 			return nil, e
 		}
-		chunk, e := r.transferCall(ctx, tid, map[string]interface{}{"action": "read", "offset": offset, "chunk_size": 128 * 1024})
+		chunk, e := call(map[string]interface{}{"action": "read", "offset": offset, "chunk_size": wire.batch})
 		if e != nil {
 			return nil, e
 		}
-		data, e := base64.StdEncoding.DecodeString(chunk["data"].(string))
+		data, e := transferBytes(chunk["data"])
 		if e != nil || len(data) == 0 {
 			return nil, fmt.Errorf("invalid_chunk")
 		}

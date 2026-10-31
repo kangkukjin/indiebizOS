@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 _DEFAULTS = {
-    "screen": {"lease_s": 20, "keepalive_s": 5, "closed_keep_s": 120},
+    "screen": {"reconnect_s": 15, "lease_s": 20, "keepalive_s": 5, "closed_keep_s": 120},
     "terminal": {"lease_s": 30, "keepalive_s": 5, "closed_keep_s": 120},
     "media": {"lease_s": 20, "keepalive_s": 5, "reconnect_s": 30, "invite_s": 45, "closed_keep_s": 300},
 }

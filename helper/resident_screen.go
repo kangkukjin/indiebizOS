@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -16,6 +18,8 @@ import (
 
 type screenMessage struct {
 	Type    string  `json:"type"`
+	Width   int     `json:"width,omitempty"`
+	Quality int     `json:"quality,omitempty"`
 	X       float64 `json:"x,omitempty"`
 	Y       float64 `json:"y,omitempty"`
 	Buttons int     `json:"buttons,omitempty"`
@@ -103,7 +107,7 @@ func (w *screenWorker) close() {
 	}
 }
 
-func (r *residentRuntime) desktop(ctx context.Context, j Job) map[string]interface{} {
+func (r *residentRuntime) desktopOnce(ctx context.Context, j Job, connection int) map[string]interface{} {
 	var command struct {
 		ID  string      `json:"screen_id"`
 		LAN terminalLAN `json:"lan"`
@@ -116,14 +120,16 @@ func (r *residentRuntime) desktop(ctx context.Context, j Job) map[string]interfa
 	spec := terminalSpec{Config: *r.cfg, ID: command.ID, LAN: command.LAN, Channel: "screen"}
 	conn, err := dialTerminal(ctx, spec)
 	if err != nil {
-		return errResult("screen_connect", "화면 공유 연결에 실패했습니다.")
+		return map[string]interface{}{"error": "screen_connect", "retry": true}
 	}
 	defer conn.Close()
 	conn.SetReadLimit(65536)
 	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	err = conn.WriteJSON(map[string]string{"key": r.cfg.Key, "installation_id": r.cfg.InstallationID})
+	err = conn.WriteJSON(map[string]interface{}{"key": r.cfg.Key, "installation_id": r.cfg.InstallationID, "connection": connection})
 	var ready struct {
-		Type string `json:"type"`
+		Type      string  `json:"type"`
+		Reconnect float64 `json:"reconnect_s"`
+		Lease     float64 `json:"lease_s"`
 	}
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	if err != nil || conn.ReadJSON(&ready) != nil || ready.Type != "ready" {
@@ -150,13 +156,19 @@ func (r *residentRuntime) desktop(ctx context.Context, j Job) map[string]interfa
 		case <-finished:
 		}
 	}()
-	messages := make(chan screenMessage, 128)
+	messages := make(chan screenMessage, 256)
+	var remoteClosed atomic.Bool
+	samples := make(chan time.Duration, 1)
 	go func() {
 		defer cancel()
 		for {
 			var message screenMessage
 			conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-			if conn.ReadJSON(&message) != nil || message.Type == "close" {
+			if conn.ReadJSON(&message) != nil {
+				return
+			}
+			if message.Type == "close" {
+				remoteClosed.Store(true)
 				return
 			}
 			if message.Type == "heartbeat" {
@@ -183,30 +195,53 @@ func (r *residentRuntime) desktop(ctx context.Context, j Job) map[string]interfa
 			case <-ctx.Done():
 				return
 			case frame := <-frames:
+				started := time.Now()
 				conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 				if conn.WriteMessage(websocket.BinaryMessage, frame) != nil {
 					return
+				}
+				select {
+				case samples <- time.Since(started):
+				default:
 				}
 			}
 		}
 	}()
 	defer func() { cancel(); conn.Close(); <-writerDone }()
+	quality := screenQuality{}
+	var previous []byte
+	lastFrame := time.Time{}
 	ticker := time.NewTicker(time.Second / 15)
 	defer ticker.Stop()
 	for {
 		var message screenMessage
 		select {
 		case <-ctx.Done():
-			return map[string]interface{}{"closed": true}
+			return map[string]interface{}{"closed": true, "retry": !remoteClosed.Load() && ready.Reconnect > 0, "reconnect_s": ready.Reconnect}
+		case elapsed := <-samples:
+			quality.observe(elapsed)
+			ticker.Reset(quality.interval())
+			continue
 		case message = <-messages:
 		case <-ticker.C:
-			message.Type = "frame"
+			// Drain an input first when capture and input become ready together.
+			select {
+			case message = <-messages:
+			default:
+				message.Type = "frame"
+			}
+			message.Width, message.Quality = quality.dimensions()
 		}
 		frame, e := worker.call(message)
 		if e != nil {
 			return errResult("screen_permissions", "원격 PC에서 화면 공유 권한을 허용하세요.")
 		}
 		if len(frame) > 0 {
+			if bytes.Equal(previous, frame) && time.Since(lastFrame) < 2*time.Second {
+				continue
+			}
+			previous = frame
+			lastFrame = time.Now()
 			select {
 			case frames <- frame:
 			default:
@@ -230,4 +265,29 @@ func screenPermissionMain(root string) int {
 		return 1
 	}
 	return 0
+}
+
+func (r *residentRuntime) desktop(ctx context.Context, j Job) map[string]interface{} {
+	var until time.Time
+	for connection := 1; ; connection++ {
+		started := time.Now()
+		result := r.desktopOnce(ctx, j, connection)
+		retry, _ := result["retry"].(bool)
+		seconds, _ := result["reconnect_s"].(float64)
+		delete(result, "retry")
+		if ctx.Err() != nil || !retry {
+			return result
+		}
+		if seconds > 0 && (until.IsZero() || time.Since(started) > 5*time.Second) {
+			until = time.Now().Add(time.Duration(seconds * float64(time.Second)))
+		}
+		if until.IsZero() || time.Now().After(until) {
+			return result
+		}
+		select {
+		case <-ctx.Done():
+			return result
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
 }

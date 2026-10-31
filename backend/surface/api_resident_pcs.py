@@ -18,6 +18,8 @@ from api_resident_screen import router as screen_router
 
 router = APIRouter()
 router.include_router(screen_router)
+from api_resident_transfer import router as transfer_router
+router.include_router(transfer_router)
 
 
 class DeviceMessage(BaseModel):
@@ -241,6 +243,9 @@ def transfer_action(tid, req, device=False):
         return {'data': base64.b64encode(data).decode(), 'offset': offset + len(data)}
     if action != 'info':
         raise HTTPException(400, 'invalid_transfer_action')
+    if device and req.get('binary_version') == 1:
+        from api_resident_transfer import offer
+        row = {**row, 'binary': offer()}
     return row
 
 

@@ -32,13 +32,14 @@ static NSDictionary *run(NSDictionary *m) {
   CGImageRef shot=CGWindowListCreateImage(area,kCGWindowListOptionOnScreenOnly,kCGNullWindowID,kCGWindowImageDefault);
   if(!shot)return @{@"error":@"capture unavailable"};
   size_t w=CGImageGetWidth(shot),h=CGImageGetHeight(shot);
-  double scale=fmin(1.0,1600.0/w);size_t tw=fmax(1,w*scale),th=fmax(1,h*scale);
+  double limit=[m[@"width"] doubleValue];if(limit<640||limit>1600)limit=1600;
+  double scale=fmin(1.0,limit/w);size_t tw=fmax(1,w*scale),th=fmax(1,h*scale);
   NSBitmapImageRep *rep=[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:tw pixelsHigh:th bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
   NSGraphicsContext *gc=[NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
   [NSGraphicsContext saveGraphicsState];[NSGraphicsContext setCurrentContext:gc];
   CGContextDrawImage(gc.CGContext,CGRectMake(0,0,tw,th),shot);
   [NSGraphicsContext restoreGraphicsState];CGImageRelease(shot);
-  NSData *jpg=[rep representationUsingType:NSBitmapImageFileTypeJPEG properties:@{NSImageCompressionFactor:@0.65}];
+  NSData *jpg=[rep representationUsingType:NSBitmapImageFileTypeJPEG properties:@{NSImageCompressionFactor:@(([m[@"quality"] intValue]>=35&&[m[@"quality"] intValue]<=80)?[m[@"quality"] doubleValue]/100.0:0.65)}];
   if(!jpg)return @{@"error":@"encode failed"};return @{@"image":[jpg base64EncodedStringWithOptions:0]};
  }
  if(!AXIsProcessTrusted())return @{@"error":@"accessibility permission required"};

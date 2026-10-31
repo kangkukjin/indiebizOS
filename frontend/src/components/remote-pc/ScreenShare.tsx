@@ -23,42 +23,60 @@ export function ScreenShare({ device }: { device: string }) {
   useEffect(() => {
     const sid = crypto.randomUUID().replaceAll('-', '');
     let disposed = false, ended = false, ws: WebSocket | undefined;
+    let generation = 0, reconnectMs = 0, disconnectedAt = 0;
+    let retry: ReturnType<typeof setTimeout> | undefined;
     setReady(false); setState('연결 중…');
     const closeSession = () => {
+      ended = true; clearTimeout(retry); ++frameCounter.current;
       ws?.close();
       void fetch(`${BACKEND_ORIGIN}/remote-pcs/screens/${sid}`, { method: 'DELETE', keepalive: true }).catch(() => {});
     };
-    void Promise.resolve().then(() => {
-      if (disposed) return;
-      return api.request<{ device_kind: string }>('/remote-pcs/screens', { method: 'POST', body: JSON.stringify({ target: device, id: sid }) });
-    }).then(result => {
-      setPhone(result?.device_kind === 'phone');
-      if (disposed) { closeSession(); return; }
-      ws = new WebSocket(`${WEBSOCKET_ORIGIN}/remote-pcs/screens/${sid}/stream`);
-      socket.current = ws;
-      ws.onmessage = event => {
+    const connect = () => {
+      if (disposed || ended) return;
+      const token = ++generation;
+      const current = new WebSocket(`${WEBSOCKET_ORIGIN}/remote-pcs/screens/${sid}/stream?connection=${token}`);
+      ws = current; socket.current = current;
+      current.onmessage = event => {
+        if (disposed || ended || token !== generation) return;
         if (typeof event.data === 'string') {
           const message = JSON.parse(event.data);
           if (message.type === 'status') {
-            if (message.state === 'closed') ended = true;
-            setReady(message.state === 'running');
-            setState(message.state === 'running' ? '' : message.message || '연결 중…');
+            if (message.state === 'closed') { ended = true; clearTimeout(retry); }
+            if (message.state !== 'running') {
+              ++frameCounter.current; setReady(false);
+              setState(message.message || (message.state === 'reconnecting' ? '연결을 복구하고 있습니다…' : '연결 중…'));
+            }
           }
           return;
         }
         const seq = ++frameCounter.current;
         void createImageBitmap(event.data).then(bitmap => {
-          if (!disposed && !ended && seq === frameCounter.current && canvas.current) {
+          if (!disposed && !ended && token === generation && seq === frameCounter.current && canvas.current) {
             const target = canvas.current;
             if (target.width !== bitmap.width || target.height !== bitmap.height) { target.width = bitmap.width; target.height = bitmap.height; }
             target.getContext('2d')?.drawImage(bitmap, 0, 0);
-            setReady(true); setState('');
+            disconnectedAt = 0; setReady(true); setState('');
           }
           bitmap.close();
-        }).catch(() => { if (!disposed && !ended) { setReady(false); setState('화면을 불러오지 못했습니다.'); } });
+        }).catch(() => { if (!disposed && !ended && token === generation && seq === frameCounter.current) { setReady(false); setState('화면을 불러오지 못했습니다.'); } });
       };
-      ws.onclose = () => { ended = true; if (!disposed) { setReady(false); setState(previous => previous || '연결이 종료됐습니다.'); } };
-      ws.onerror = () => { if (!disposed) setState('화면 공유에 연결하지 못했습니다.'); };
+      current.onclose = () => {
+        if (disposed || token !== generation) return;
+        ++frameCounter.current; setReady(false);
+        if (ended) return;
+        disconnectedAt ||= Date.now();
+        if (reconnectMs > 0 && Date.now() - disconnectedAt < reconnectMs) {
+          setState('연결을 복구하고 있습니다…'); retry = setTimeout(connect, 500);
+        } else { ended = true; setState('연결이 종료됐습니다. 다시 연결하세요.'); }
+      };
+      current.onerror = () => { if (!disposed && !ended && token === generation) setState('연결을 복구하고 있습니다…'); };
+    };
+    void api.request<{ device_kind: string; reconnect_s?: number }>('/remote-pcs/screens', {
+      method: 'POST', body: JSON.stringify({ target: device, id: sid, reconnect: true }),
+    }).then(result => {
+      if (disposed) { closeSession(); return; }
+      setPhone(result.device_kind === 'phone'); reconnectMs = (result.reconnect_s || 0) * 1000;
+      connect();
     }).catch(error => { if (!disposed) setState(error instanceof Error ? error.message : '화면 공유에 연결하지 못했습니다.'); });
     const blur = () => send({ type: 'reset' });
     window.addEventListener('blur', blur);

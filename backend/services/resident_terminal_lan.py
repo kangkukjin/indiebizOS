@@ -92,7 +92,7 @@ def _start(handler, channel="terminal"):
 
 def offer(handler, channel='terminal'):
     global _server, _port, _fingerprint, _retry_at
-    if channel not in {'terminal', 'screen', 'media'}:
+    if channel not in {'terminal', 'screen', 'media', 'transfer'}:
         raise ValueError('invalid_stream_channel')
     with _lock:
         _handlers[channel] = handler

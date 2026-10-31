@@ -176,3 +176,85 @@ def test_phone_capture_failure_closes_stream_and_discards_pixels_and_inputs(setu
     with pytest.raises(ValueError, match='screen_not_running'):
         screen.input_message(sid, {'type': 'navigation', 'action': 'home'})
     screen.create(rec['device_id'], uuid.uuid4().hex)
+
+
+def test_reconnect_fences_old_socket_and_never_replays_input(setup):
+    rec, sid = setup(), uuid.uuid4().hex
+    limb_keys.resident_update(rec['device_id'], capabilities={'desktop_stream': 1, 'screen_reconnect': 1})
+    assert screen.create(rec['device_id'], sid, reconnect=True)['reconnect_s'] > 0
+    screen.attach(sid, rec['device_id'], 1)
+    screen.attach(sid, None, 1)
+    screen.take(sid)
+    screen.put_frame(sid, b'\xff\xd8first')
+    screen.input_message(sid, {'type': 'text', 'text': 'must not replay'})
+    screen.detach(sid, 'owner', 1)
+    assert screen.status(sid)['state'] == 'reconnecting'
+    assert screen.take(sid) == [{'type': 'reset'}]
+    screen.attach(sid, None, 2)
+    with pytest.raises(ValueError, match='stale'):
+        screen.watch(sid, 'owner', None, None, 1)
+    screen.detach(sid, 'owner', 1)  # late finally from the previous connection
+    assert screen.current(sid, 'owner', 2).owner
+    with pytest.raises(ValueError, match='stale'):
+        screen.guarded(sid, 'owner', 1, screen.input_message, {'type': 'reset'})
+    assert screen.status(sid)['state'] == 'reconnecting'
+    screen.put_frame(sid, b'\xff\xd8fresh')
+    assert screen.status(sid)['state'] == 'running'
+    assert screen.take(sid) == [{'type': 'reset'}]
+    screen.close(sid)
+    with pytest.raises(ValueError, match='expired'):
+        screen.attach(sid, None, 3)
+
+
+def test_reconnect_deadline_and_legacy_disconnect(setup):
+    rec, sid = setup(), uuid.uuid4().hex
+    limb_keys.resident_update(rec['device_id'], capabilities={'desktop_stream': 1, 'screen_reconnect': 1})
+    screen.create(rec['device_id'], sid, reconnect=True)
+    screen.attach(sid, rec['device_id'], 1)
+    screen.detach(sid, 'helper', 1)
+    screen._sessions[sid].detached['helper'] = time.monotonic() - 1
+    with pytest.raises(ValueError, match='expired'):
+        screen.attach(sid, rec['device_id'], 2)
+    assert screen.status(sid)['code'] == 'reconnect_expired'
+    legacy = uuid.uuid4().hex
+    screen.create(rec['device_id'], legacy)
+    screen.attach(legacy)
+    screen.detach(legacy, 'owner', None)
+    assert screen.status(legacy)['state'] == 'closed'
+
+
+def test_drag_motion_coalesces_without_losing_button_edges(setup):
+    rec, sid = setup(), uuid.uuid4().hex
+    screen.create(rec['device_id'], sid)
+    screen.put_frame(sid, b'\xff\xd8frame')
+    for buttons in (0, 1, 1, 1, 0, 0, 1, 0):
+        screen.input_message(sid, {'type': 'pointer', 'buttons': buttons, 'x': .5, 'y': .5})
+    assert [m['buttons'] for m in screen.take(sid)] == [0, 1, 0, 1, 0]
+
+
+def test_websocket_owner_reconnect_keeps_helper_and_requires_new_frame(setup):
+    rec, sid = setup(), uuid.uuid4().hex
+    limb_keys.resident_update(rec['device_id'], capabilities={'desktop_stream': 1, 'screen_reconnect': 1})
+    app = FastAPI()
+    app.include_router(api_resident_screen.router)
+    with TestClient(app, base_url='http://localhost') as client:
+        response = client.post('/remote-pcs/screens', json={'target': rec['device_id'], 'id': sid, 'reconnect': True})
+        assert response.json()['reconnect_s'] > 0
+        with client.websocket_connect('/limb/resident/screen/' + sid) as helper:
+            helper.send_json({'key': rec['key'], 'installation_id': rec['registration']['installation_id'], 'connection': 1})
+            assert helper.receive_json()['reconnect_s'] > 0
+            with client.websocket_connect('/remote-pcs/screens/' + sid + '/stream?connection=1', headers={'host': 'localhost'}) as owner:
+                assert owner.receive_json()['state'] == 'starting'
+                helper.send_bytes(b'\xff\xd8one')
+                assert owner.receive_json()['state'] == 'running'
+                assert owner.receive_bytes() == b'\xff\xd8one'
+                owner.close()
+                assert owner.receive()['type'] == 'websocket.close'
+            assert screen.status(sid)['state'] == 'reconnecting'
+            with client.websocket_connect('/remote-pcs/screens/' + sid + '/stream?connection=2', headers={'host': 'localhost'}) as owner:
+                assert owner.receive_json()['state'] == 'reconnecting'
+                helper.send_bytes(b'\xff\xd8new')
+                assert owner.receive_json()['state'] == 'running'
+                assert owner.receive_bytes() == b'\xff\xd8new'
+                client.delete('/remote-pcs/screens/' + sid)
+                assert owner.receive_json()['state'] == 'closed'

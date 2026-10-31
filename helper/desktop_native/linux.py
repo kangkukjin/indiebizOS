@@ -42,7 +42,7 @@ class Desktop:
     def start_pipeline(self, source):
         width = min(1600, self.width)
         height = max(1, self.height * width // self.width)
-        self.pipeline = Gst.parse_launch(source + f' ! videorate drop-only=true ! video/x-raw,framerate=15/1 ! videoconvert ! videoscale ! video/x-raw,width={width},height={height},pixel-aspect-ratio=1/1 ! jpegenc quality=65 ! appsink name=frames drop=true max-buffers=1 sync=false')
+        self.pipeline = Gst.parse_launch(source + f' ! videorate drop-only=true ! video/x-raw,framerate=15/1 ! videoconvert ! videoscale ! video/x-raw,width={width},height={height},pixel-aspect-ratio=1/1 ! jpegenc name=encoder quality=65 ! appsink name=frames drop=true max-buffers=1 sync=false')
         self.frames = self.pipeline.get_by_name('frames')
         if self.pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
             raise RuntimeError('화면 캡처를 시작하지 못했습니다.')
@@ -134,6 +134,7 @@ class Desktop:
     def execute(self, message):
         kind = message['type']
         if kind == 'frame':
+            self.pipeline.get_by_name('encoder').set_property('quality', max(35, min(80, int(message.get('quality') or 65))))
             sample = self.frames.emit('try-pull-sample', 5 * Gst.SECOND)
             if sample is None:
                 raise RuntimeError('화면 캡처 응답이 없습니다.')

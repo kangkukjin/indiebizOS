@@ -14,7 +14,7 @@ router = APIRouter()
 @router.post('/remote-pcs/screens')
 def create(req: dict):
     try:
-        return screen.create(req.get('target'), req.get('id'), lan.offer(helper_socket, channel='screen'))
+        return screen.create(req.get('target'), req.get('id'), lan.offer(helper_socket, channel='screen'), bool(req.get('reconnect')))
     except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -25,14 +25,12 @@ def close(sid: str):
     return {'closed': True}
 
 
-async def _finish(ws, sid, side, tasks):
+async def _finish(ws, sid, side, tasks, token=None, code="transport_lost"):
     for task in tasks:
         task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
-    screen.unwatch(sid, side)
-    reason = ("원격 기기의 연결이나 화면·입력 접근 권한을 확인한 뒤 다시 연결하세요."
-              if side == "helper" else "화면 공유가 종료됐습니다.")
-    await asyncio.to_thread(screen.close, sid, reason)
+    screen.unwatch(sid, side, token)
+    await asyncio.to_thread(screen.detach, sid, side, token, code)
     try:
         await ws.close()
     except (RuntimeError, WebSocketDisconnect):
@@ -42,15 +40,16 @@ async def _finish(ws, sid, side, tasks):
 @router.websocket('/limb/resident/screen/{sid}')
 async def helper_socket(ws: WebSocket, sid: str):
     await ws.accept()
-    tasks, attached = [], False
+    tasks, attached, token, code = [], False, None, "transport_lost"
     try:
         auth = await asyncio.wait_for(ws.receive_json(), 10)
         rec = await asyncio.to_thread(limb_keys.resident_auth, auth.get('key'), auth.get('installation_id'))
-        await asyncio.to_thread(screen.attach, sid, rec['device_id'])
+        token = auth.get('connection')
+        await asyncio.to_thread(screen.attach, sid, rec['device_id'], token)
         attached = True
         wake = asyncio.Event()
-        screen.watch(sid, 'helper', asyncio.get_running_loop(), wake)
-        await ws.send_json({'type': 'ready'})
+        screen.watch(sid, 'helper', asyncio.get_running_loop(), wake, token)
+        await ws.send_json(screen.connection_policy(sid, 'lan' if ws.scope.get('terminal_lan') else 'public'))
 
         async def receive():
             while True:
@@ -58,17 +57,17 @@ async def helper_socket(ws: WebSocket, sid: str):
                 if message['type'] == 'websocket.disconnect':
                     return
                 if message.get('bytes') is not None:
-                    screen.put_frame(sid, message['bytes'])
+                    screen.guarded(sid, 'helper', token, screen.put_frame, message['bytes'])
                 elif message.get('text'):
                     # Worker diagnostics are not exposed as commands or persisted.
-                    await asyncio.to_thread(screen.device_status, sid, json.loads(message['text']))
+                    await asyncio.to_thread(screen.guarded, sid, 'helper', token, screen.device_status, json.loads(message['text']))
 
         async def send():
             while True:
                 wake.clear()
                 await asyncio.to_thread(limb_keys.resident_auth, auth.get('key'), auth.get('installation_id'))
-                await asyncio.to_thread(screen.status, sid)
-                for message in screen.take(sid):
+                await asyncio.to_thread(screen.guarded, sid, 'helper', token, screen.status)
+                for message in screen.guarded(sid, 'helper', token, screen.take):
                     await ws.send_json(message)
                     if message['type'] == 'close':
                         return
@@ -82,11 +81,18 @@ async def helper_socket(ws: WebSocket, sid: str):
         done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
             task.result()
-    except (WebSocketDisconnect, asyncio.TimeoutError, ValueError, KeyError, TypeError, RuntimeError):
+    except (WebSocketDisconnect, asyncio.TimeoutError, RuntimeError):
         pass
+    except (ValueError, KeyError, TypeError):
+        if attached:
+            try:
+                screen.current(sid, 'helper', token)
+                await asyncio.to_thread(screen.close, sid, '화면 공유 권한 또는 입력 계약을 확인하세요.')
+            except ValueError:
+                pass
     finally:
         if attached:
-            await _finish(ws, sid, 'helper', tasks)
+            await _finish(ws, sid, 'helper', tasks, token, code)
         else:
             await ws.close()
 
@@ -105,11 +111,15 @@ async def owner_socket(ws: WebSocket, sid: str):
         return
     await ws.accept()
     tasks, attached = [], False
+    token = None
+    code = "transport_lost"
     try:
-        await asyncio.to_thread(screen.attach, sid)
+        raw_token = ws.query_params.get('connection')
+        token = int(raw_token) if raw_token else None
+        await asyncio.to_thread(screen.attach, sid, None, token)
         attached = True
         wake = asyncio.Event()
-        screen.watch(sid, 'owner', asyncio.get_running_loop(), wake)
+        screen.watch(sid, 'owner', asyncio.get_running_loop(), wake, token)
 
         async def receive():
             while True:
@@ -117,7 +127,7 @@ async def owner_socket(ws: WebSocket, sid: str):
                 if not await _authorize_websocket(ws):
                     return
                 if message.get('type') != 'heartbeat':
-                    await asyncio.to_thread(screen.input_message, sid, message)
+                    await asyncio.to_thread(screen.guarded, sid, 'owner', token, screen.input_message, message)
 
         async def send():
             serial, previous = 0, None
@@ -125,13 +135,13 @@ async def owner_socket(ws: WebSocket, sid: str):
                 wake.clear()
                 if not await _authorize_websocket(ws):
                     return
-                state = await asyncio.to_thread(screen.status, sid, True)
+                state = await asyncio.to_thread(screen.guarded, sid, 'owner', token, screen.status, True)
                 if state != previous:
                     await ws.send_json(state)
                     previous = state
                 if state['state'] == 'closed':
                     return
-                serial, data = screen.frame(sid, serial)
+                serial, data = screen.guarded(sid, 'owner', token, screen.frame, serial)
                 if data:
                     await asyncio.wait_for(ws.send_bytes(data), 10)
                 try:
@@ -147,6 +157,6 @@ async def owner_socket(ws: WebSocket, sid: str):
         pass
     finally:
         if attached:
-            await _finish(ws, sid, 'owner', tasks)
+            await _finish(ws, sid, 'owner', tasks, token, code)
         else:
             await ws.close()

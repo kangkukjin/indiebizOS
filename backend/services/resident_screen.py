@@ -34,9 +34,16 @@ class Session:
     helper: bool = False
     owner: bool = False
     waiters: dict = field(default_factory=dict)
+    reconnect: bool = False
+    connections: dict = field(default_factory=dict)
+    detached: dict = field(default_factory=dict)
+    route: str = ''
+    reconnects: int = 0
+    close_code: str = ''
 
 
-def create(target, sid, lan=None):
+
+def create(target, sid, lan=None, reconnect=False):
     if not isinstance(sid, str) or not re.fullmatch(r'[a-f0-9]{32}', sid):
         raise ValueError('invalid_screen_id')
     rec = resident_pcs.resolve(target)
@@ -52,6 +59,7 @@ def create(target, sid, lan=None):
         if len(live) >= 32 or any(s.device == rec['device_id'] for s in live):
             raise ValueError('이 기기에 열린 화면 공유 창을 먼저 닫으세요.')
         s = Session(sid, rec['device_id'])
+        s.reconnect = bool(reconnect and (rec['registration'].get('capabilities') or {}).get('screen_reconnect') == 1)
         _sessions[sid] = s
         try:
             receipt = resident_pcs.submit(s.device, {'op': 'desktop', 'screen_id': sid,
@@ -60,7 +68,8 @@ def create(target, sid, lan=None):
         except Exception:
             del _sessions[sid]
             raise
-        return {'id': sid, 'device_kind': rec['registration'].get('kind', 'pc')}
+        return {'id': sid, 'device_kind': rec['registration'].get('kind', 'pc'),
+                'reconnect_s': session_lease.profile('screen').get('reconnect_s', 15) if s.reconnect else 0}
 
 
 def _get(sid):
@@ -72,33 +81,61 @@ def _get(sid):
 def _notify(s, side):
     waiter = s.waiters.get(side)
     if waiter:
-        loop, event = waiter
+        loop, event, *_ = waiter
         try:
             loop.call_soon_threadsafe(event.set)
         except RuntimeError:
             pass
 
 
-def watch(sid, side, loop, event):
+def watch(sid, side, loop, event, token=None):
     with _lock:
         s = _get(sid)
-        if side in s.waiters:
+        if s.reconnect and s.connections.get(side) != token:
+            raise ValueError('stale_screen_connection')
+        if side in s.waiters and token is None:
             raise ValueError('screen_already_attached')
-        s.waiters[side] = (loop, event)
+        s.waiters[side] = (loop, event, token)
 
 
-def unwatch(sid, side):
+def unwatch(sid, side, token=None):
     with _lock:
         if sid in _sessions:
-            _sessions[sid].waiters.pop(side, None)
+            waiter = _sessions[sid].waiters.get(side)
+            if waiter and waiter[2] == token:
+                _sessions[sid].waiters.pop(side, None)
 
 
-def attach(sid, device=None):
+def attach(sid, device=None, token=None):
     with _lock:
         s = _get(sid)
         resident_pcs.resolve(s.device)
         if s.state == 'closed' or s.lease.expired():
             raise ValueError('screen_session_expired')
+        if s.reconnect:
+            side = 'helper' if device is not None else 'owner'
+            if device is not None and device != s.device:
+                raise ValueError('screen_device_mismatch')
+            if type(token) is not int or token <= s.connections.get(side, 0):
+                raise ValueError('stale_screen_connection')
+            _expire_reconnect(s)
+            if s.state == 'closed':
+                raise ValueError('screen_session_expired')
+            if side in s.connections:
+                s.reconnects += 1
+                _notify(s, side)
+                s.state = 'reconnecting'
+                s.frame = b''
+                s.inputs.clear()
+                s.input_bytes = 0
+            s.connections[side] = token
+            s.detached.pop(side, None)
+            setattr(s, side, True)
+            s.lease.renew()
+            if s.helper and s.owner:
+                s.inputs.append({'type': 'reset'})
+                _notify(s, 'helper')
+            return
         if device is None:
             if s.owner:
                 raise ValueError('screen_owner_already_attached')
@@ -131,6 +168,7 @@ def status(sid, touch=False):
     with _lock:
         s = _get(sid)
         resident_pcs.resolve(s.device)
+        _expire_reconnect(s)
         if s.lease.expired():
             _close(s, '화면 공유 연결이 끊겼습니다.')
         if touch:
@@ -139,7 +177,9 @@ def status(sid, touch=False):
             tasks = resident_store.history(job=s.job)['tasks']
             if tasks and tasks[0]['state'] in {'failed', 'cancelled', 'unknown', 'expired', 'succeeded'}:
                 _close(s, '원격 기기의 화면 접근 권한을 확인한 뒤 다시 연결하세요.')
-        return {'type': 'status', 'state': s.state, 'message': s.reason}
+        return {'type': 'status', 'state': s.state, 'message': s.reason,
+                'route': s.route, 'reconnects': s.reconnects, 'code': s.close_code,
+                'reconnect_s': session_lease.profile('screen').get('reconnect_s', 15) if s.reconnect else 0}
 
 
 PHONE_STATUS = {
@@ -176,7 +216,8 @@ def put_frame(sid, data):
         raise ValueError('invalid_screen_frame')
     with _lock:
         s = _get(sid)
-        if s.state != 'closed':
+        if s.state != 'closed' and (not s.reconnect or (s.owner and s.helper)):
+            s.reason = ''
             s.frame, s.serial, s.state = data, s.serial + 1, 'running'
             _notify(s, 'owner')
 
@@ -232,7 +273,7 @@ def input_message(sid, value):
         if s.state != 'running':
             raise ValueError('screen_not_running')
         # Coalesce only consecutive unbuttoned moves. Press/release/key order is never dropped.
-        if message['type'] == 'pointer' and message['buttons'] == 0 and s.inputs and s.inputs[-1].get('type') == 'pointer' and s.inputs[-1].get('buttons') == 0:
+        if message['type'] == 'pointer' and s.inputs and s.inputs[-1].get('type') == 'pointer' and s.inputs[-1].get('buttons') == message['buttons']:
             s.input_bytes += len(str(message).encode()) - len(str(s.inputs[-1]).encode())
             s.inputs[-1] = message
         else:
@@ -253,3 +294,53 @@ def take(sid):
         s.inputs.clear()
         s.input_bytes = 0
         return messages
+
+
+def _expire_reconnect(s):
+    if s.detached and time.monotonic() >= min(s.detached.values()):
+        s.close_code = 'reconnect_expired'
+        _close(s, '화면 공유 복구 시간이 지났습니다. 다시 연결하세요.')
+
+
+def current(sid, side, token):
+    with _lock:
+        s = _get(sid)
+        if s.reconnect and (s.connections.get(side) != token or not getattr(s, side)):
+            raise ValueError('stale_screen_connection')
+        return s
+
+
+def detach(sid, side, token, code='transport_lost'):
+    with _lock:
+        s = _get(sid)
+        if not s.reconnect:
+            _close(s, '화면 공유 연결이 종료됐습니다.')
+            return
+        if s.connections.get(side) != token or s.state == 'closed':
+            return
+        setattr(s, side, False)
+        s.detached.setdefault(side, time.monotonic() + session_lease.profile('screen').get('reconnect_s', 15))
+        s.inputs.clear()
+        s.input_bytes = 0
+        s.frame = b''
+        s.state, s.reason, s.close_code = 'reconnecting', '연결을 복구하고 있습니다…', code
+        if s.helper:
+            s.inputs.append({'type': 'reset'})
+        _notify(s, 'helper')
+        _notify(s, 'owner')
+
+
+def guarded(sid, side, token, fn, *args):
+    with _lock:
+        current(sid, side, token)
+        return fn(sid, *args)
+
+
+def connection_policy(sid, route):
+    with _lock:
+        s = _get(sid)
+        s.route = route
+        policy = session_lease.profile('screen')
+        return {'type': 'ready', 'lease_s': policy['lease_s'],
+                'keepalive_s': policy['keepalive_s'],
+                'reconnect_s': policy.get('reconnect_s', 15) if s.reconnect else 0}

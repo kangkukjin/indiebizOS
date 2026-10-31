@@ -8,7 +8,10 @@ import phone_limb_transfer as transfer
 from test_limb_client import hub, phone_env, _client, _enroll_phone  # noqa: F401
 
 
-def test_phone_binary_roundtrip_and_no_clobber(hub, phone_env, tmp_path):
+def test_phone_binary_roundtrip_and_no_clobber(hub, phone_env, tmp_path, monkeypatch):
+    # This fixture injects HTTP rather than real sockets; retain the legacy path coverage.
+    import api_resident_transfer
+    monkeypatch.setattr(api_resident_transfer, "offer", lambda: {})
     rec = _enroll_phone()
     c = _client(hub, rec, lambda *args: {})
     data = bytes(range(256)) * 4500

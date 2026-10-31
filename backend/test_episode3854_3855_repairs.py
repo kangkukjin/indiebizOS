@@ -139,6 +139,7 @@ def test_whole_suite_is_refused_in_foreground_and_scoped_runs_still_work():
 
 def test_script_runner_tells_the_child_how_it_is_run(tmp_path, monkeypatch):
     import control_conditions
+    import function_store
     context = {"available": False, "origin": "scheduler", "delegated": False,
                "reason": "정기·배경 실행"}
     monkeypatch.setattr(control_conditions, "screen_context", lambda: dict(context))
@@ -149,6 +150,7 @@ def test_script_runner_tells_the_child_how_it_is_run(tmp_path, monkeypatch):
     monkeypatch.setattr(ops, "_review_environment", lambda: {"PATH": "/x", "STAGING": "/s"})
     assert ops._child_env("foreground") == {
         "PATH": "/x", "STAGING": "/s", "INDIEBIZ_SCRIPT_MODE": "foreground",
+        "INDIEBIZ_FUNCTION_STORE_ROOT": str(function_store.storage_root()),
         "INDIEBIZOS_SCREEN_CONTEXT": json.dumps(context, ensure_ascii=False),
     }
     for name, path in {"_RUN_DIR": tmp_path / "runs", "_JOB_DIR": tmp_path / "runs/jobs", "_STATE": tmp_path / "state.json"}.items():

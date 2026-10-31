@@ -38,7 +38,7 @@ def execute_workflow_action(action, params, project_path):
     if action == 'delete':
         from workflow_store import delete_workflow
         try:
-            return {'success': delete_workflow(workflow_id), 'workflow_id': workflow_id}
+            return {'success': delete_workflow(workflow_id, params.get('expected_revision')), 'workflow_id': workflow_id}
         except (ValueError, OSError) as exc:
             return {'success': False, 'error': str(exc),
                     **({'broken_callers': exc.broken_callers} if hasattr(exc, 'broken_callers') else {})}
@@ -53,5 +53,6 @@ def execute_workflow_action(action, params, project_path):
         source = params.get('code') or params.get('pipeline')
         return handle_request({'code': source, 'edition': params.get('edition'),
                                'inputs': params.get('inputs'),
+                               **({'resume': params['resume']} if params.get('resume') else {}),
                                'function_refs': params.get('function_refs')}, project_path)
     return {'success': False, 'error': 'op는 list|detail|save|delete|run 중 하나입니다.'}

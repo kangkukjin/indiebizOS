@@ -9,6 +9,18 @@ from ibl_v2_ir import digest
 
 
 _check_metadata = ContextVar("ibl_check_metadata", default=None)
+_script_views = ContextVar("ibl_script_views", default=None)
+
+
+@contextmanager
+def using_script_registry(path, registry):
+    """Compile a candidate registration without writing the executable namespace."""
+    token = _script_views.set({str(Path(path).resolve()): registry})
+    try:
+        with compilation_dependencies():
+            yield
+    finally:
+        _script_views.reset(token)
 
 
 @contextmanager
@@ -31,6 +43,9 @@ def _check_value(key, read):
 
 
 def _script_registry(path):
+    view = _script_views.get() or {}
+    if str(path.resolve()) in view:
+        return view[str(path.resolve())]
     return _check_value(
         ("registry", str(path)),
         lambda: (yaml.safe_load(path.read_text()) or {}) if path.is_file() else {},

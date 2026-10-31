@@ -79,6 +79,7 @@ LAYERS = {
         "websocket_manager", "xray_stream", "media_store",
     },
     "ibl": {
+        "capability_consumers", "script_mutation", "capability_changes", "capability_change_checks",
         "ibl_situation",
         "reusable_catalog", "function_library", "function_revalidation", "function_consumers", "function_install",
         "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",

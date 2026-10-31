@@ -3272,7 +3272,7 @@ nodes:
         side_effect: true
         fixture: '[self:workflow]{op: "list"}'
         description: 관용구 등록·조회·개정·은퇴·실행 — list/detail/save/delete/run. run은 판본 2 저장본(workflow_id) 또는 명시 판본 2 pipeline(저장 안 함).
-        target_description: 관용구 등록은 code:"[def:이름]($인자){return ...}". 명시 인자·기본값·값 반환을 사용하며 code로 저장하면 현재 문법으로 검사한다. run은 workflow_id/name + params Record로 호출하고 현재 저장 정의를 호출한다. 관용구의 본문은 통합 원장의 불변 revision 하나가 소유하며, 기억은 그 정의의 참조·사용 맥락·학습 기록이다. 개정 시 detail의 revision을 expected_revision에 넣으면 동시 수정 충돌을 검출한다. 정의 개정은 실행 중 관리 연산이며 코드 사본·apply·재기동 없이 같은 원장에 반영된다. 저장 영수증 function_ref를 확인하고 새 IBL 호출로 검증한다. 이미 컴파일한 프로그램은 기존 판본을 유지한다. function_refs는 실행과 의존 관용구의 고정 판본 목록이다. 저장 호출자를 깨뜨리는 개정·삭제는 거절된다(새 이름 저장→호출자 전환→옛 정의 삭제). 새 조합은 [fn:이름]{인자:값}으로 부른다. 현재 작성법은 workflow.md. 과거 기록은 list/detail에 history:true를 지정해 열람한다. 실행 목록에는 현재 함수만 포함된다.
+        target_description: 관용구 등록은 code:"[def:이름]($인자){return ...}". 명시 인자·기본값·값 반환을 사용하며 code로 저장하면 현재 문법으로 검사한다. run은 workflow_id/name + params Record로 호출하고 현재 저장 정의를 호출한다. 관용구의 본문은 통합 원장의 불변 revision 하나가 소유하며, 기억은 그 정의의 참조·사용 맥락·학습 기록이다. 개정·은퇴 시 detail의 revision을 expected_revision에 넣으면 동시 수정 충돌을 검출한다. 정의 개정은 실행 중 관리 연산이며 코드 사본·apply·재기동 없이 같은 원장에 반영된다. 저장 영수증 function_ref를 확인하고 새 IBL 호출로 검증한다. 이미 컴파일한 프로그램은 기존 판본을 유지한다. function_refs는 실행과 의존 관용구의 고정 판본 목록이다. 저장 호출자를 깨뜨리는 개정·삭제는 거절된다(새 이름 저장→호출자 전환→옛 정의 삭제). 새 조합은 [fn:이름]{인자:값}으로 부른다. 반복 변경 절차는 capability_change.md의 능력변경완료 관용구. pipeline run에는 기존 실행 영수증 resume을 전달할 수 있다. 현재 작성법은 workflow.md. 과거 기록은 list/detail에 history:true를 지정해 열람한다. 실행 목록에는 현재 함수만 포함된다.
         group: workflow
         target_key: op
         router: workflow_engine
@@ -5985,7 +5985,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-31'
-          impl: b7162b30dc3eab55
+          impl: 1be89e83c777641a
         target_key: path
         aliases:
           offset:
@@ -6003,7 +6003,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-31'
-          impl: b7162b30dc3eab55
+          impl: 1be89e83c777641a
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6082,7 +6082,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-31'
-          impl: b7162b30dc3eab55
+          impl: 1be89e83c777641a
         target_key: path
       list:
         callable_contract:
@@ -6874,6 +6874,8 @@ nodes:
         params:
           callable_contract: object
           query: string
+          expected_revision: string
+          expected_source_hash: string
         callable_contract:
           version: 1
           params:
@@ -6890,6 +6892,8 @@ nodes:
             job_id: Text
             wait: Number
             callable_contract: Record
+            expected_revision: Text
+            expected_source_hash: Text
           required: []
           pipe_input: args
           result: Unknown
@@ -6957,7 +6961,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-31'
-          impl: b7162b30dc3eab55
+          impl: 1be89e83c777641a
         pipe_in: true
         lands_on: body
         limb_op:
@@ -6975,7 +6979,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 파일 Script 실행 — 등록 id 또는 현재 턴의 Python path. 코드는 inputs Text로 write/edit하며 실행은 파일 참조만 받는다. path는 미등록 로컬 실행, 결과 파일의 값이 다음 문장으로 이어진다.
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태+callable_contract·execution, id 또는 query로 좁힘. 등록 callable_contract의 registered-json/1은 기존 stdin/stdout JSON을 보존하고 ibl-script/2는 명시 값 봉투를 사용한다. 두 계약 모두 동기·background를 지원하며 입력/반환 타입을 검사한다. 목록은 후보 계약이며 check/run이 코드·환경 의존을 다시 검증한다. 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태+callable_contract·execution, id 또는 query로 좁힘. 등록 callable_contract의 registered-json/1은 기존 stdin/stdout JSON을 보존하고 ibl-script/2는 명시 값 봉투를 사용한다. 두 계약 모두 동기·background를 지원하며 입력/반환 타입을 검사한다. 목록은 후보 계약이며 check/run이 코드·환경 의존을 다시 검증한다. 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / register·remove: expected_revision=list의 revision(빈 값은 새 등록 조건), register의 expected_source_hash=본문 SHA256. 호출자를 깨뜨리는 계약 변경·해제는 거절. remove는 id, 파일·실행 이력 보존. 반복 변경은 capability_change.md의 능력변경완료 관용구.'
         router: handler
         tool: script_op
         implementation: path는 backend/base/file_script.py와 ibl_file_script 어댑터, id는 system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).

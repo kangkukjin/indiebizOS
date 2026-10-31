@@ -64,6 +64,7 @@ _DEFAULT_TIMEOUT = 300
 
 _STATE_NAMES = ("_STATE", "_RUN_DIR", "_JOB_DIR")
 _STATE_DEFAULTS = {"_STATE": _STATE, "_RUN_DIR": _RUN_DIR, "_JOB_DIR": _JOB_DIR}
+_BODY_DEFAULTS = {'_ROOT': _ROOT, '_SCRIPT_DIR': _SCRIPT_DIR, '_REGISTRY': _REGISTRY}
 
 
 def _path(name):
@@ -78,6 +79,10 @@ def _path(name):
     state_dir = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
     if state_dir and name in _STATE_NAMES and original == _STATE_DEFAULTS[name]:
         return Path(state_dir) / original.relative_to(_ROOT / "data")
+    if (_ROOT == _BODY_DEFAULTS['_ROOT'] and name in _BODY_DEFAULTS
+            and original == _BODY_DEFAULTS[name]):
+        from runtime_utils import get_base_path
+        return get_base_path() / original.relative_to(_ROOT)
     return original
 
 
@@ -99,6 +104,10 @@ def _child_env(mode):
     전경으로 받을지는 스크립트가 제일 잘 안다 — 그래서 실행 방식을 알려 주고, 거절은 스크립트가 자기 말로 한다(시험.py)."""
     env = dict(_review_environment() or os.environ)
     env[SCRIPT_MODE_ENV] = mode
+    # Read-only definition discovery in a child keeps the management owner's
+    # scope; writes still go through the parent IBL management operation.
+    import function_store
+    env['INDIEBIZ_FUNCTION_STORE_ROOT'] = str(function_store.storage_root())
     # 화면 문맥(설계 §6 '실행 직전 경계가 검사'): needs_front 동작을 가진 부품(Android제어부품 등)이 정기·배경
     # 문맥에서 사람 화면을 쓰지 않게 한다. 규칙은 control_conditions 한 곳(긴문장 87회차 L87-2: 폰 UI 동작이
     # origin=scheduler 에서 검사 없이 전송됐다). 계산 실패는 '미상' 으로 두고 부품이 보수적으로 다룬다.
@@ -263,11 +272,13 @@ def _atomic_write(path, text):
 
 
 def _read_registry():
-    try:
-        d = yaml.safe_load(_path("_REGISTRY").read_text(encoding="utf-8"))
-        return d if isinstance(d, dict) else {}
-    except (OSError, ValueError, yaml.YAMLError):
+    path = _path('_REGISTRY')
+    if not path.exists():
         return {}
+    d = yaml.safe_load(path.read_text(encoding='utf-8'))
+    if not isinstance(d, dict) or any(not isinstance(v, dict) for v in d.values()):
+        raise ValueError('스크립트 등록부가 손상되었습니다. 빈 등록부로 덮어쓰지 않습니다.')
+    return d
 
 
 def _write_registry(d):
@@ -380,6 +391,7 @@ def _resolve_path(tool_input, raw):
 
 
 def _entry_item(sid, e, state):
+    from script_mutation import revision
     lr = (state.get(sid) or {}).get("last_run") or {}
     if lr:
         verdict = "✅ 성공" if lr.get("ok") else f"🔴 실패(exit {lr.get('exit_code')})"
@@ -403,6 +415,7 @@ def _entry_item(sid, e, state):
     # ep3855(2026-09-18): 스크립트는 `id` 로 부르는데 목록 행에 `id` 가 없어 모델이 select·filter 에서 `id` 를 두 번
     # 추측해 두 번 실패했다 — 부르는 이름과 고르는 열은 같은 낱말이어야 한다. description·path 도 같은 부류(칸으로 병기).
     return {"id": sid, "title": sid, "meta": f"{e.get('interpreter', '')} · data/scripts/{e.get('file', '')}",
+            "revision": revision(e, _path('_SCRIPT_DIR')),
             "summary": f"{e.get('description', '')} — {status}".strip(" —"),
             "description": e.get("description", ""), "path": f"data/scripts/{e.get('file', '')}",
             "interpreter": e.get("interpreter", ""),
@@ -439,6 +452,21 @@ def op_list(tool_input):
     return result
 
 
+def _mutation(function):
+    from functools import wraps
+    @wraps(function)
+    def wrapped(tool_input):
+        from script_mutation import transaction
+        import function_store
+        try:
+            with function_store.transaction(), transaction(_path('_REGISTRY')):
+                return function(tool_input)
+        except (ValueError, OSError, yaml.YAMLError) as exc:
+            return {'success': False, 'error': str(exc)}
+    return wrapped
+
+
+@_mutation
 def op_register(tool_input):
     """스크립트 등록/갱신 — 실존 파일만, 같은 id 재등록=갱신."""
     raw_path = tool_input.get("path") or tool_input.get("file_path")
@@ -484,8 +512,16 @@ def op_register(tool_input):
         return {"success": False, "error": "유효한 id 를 만들 수 없습니다 — id 파라미터로 지정."}
 
     registry = _read_registry()
+    import copy
+    before = copy.deepcopy(registry)
     updated = sid in registry
     prev = registry.get(sid) or {}
+    from script_mutation import check_expected, revision, publish, FIELDS
+    check_expected(tool_input, registry.get(sid), _path('_SCRIPT_DIR'))
+    if 'expected_source_hash' in tool_input:
+        import hashlib
+        if hashlib.sha256(p.read_bytes()).hexdigest() != tool_input['expected_source_hash']:
+            raise ValueError('등록할 스크립트 본문이 검사 이후 바뀌었습니다.')
     # timeout 미지정 = "그대로 두라" — 승계하지 않으면 재등록이 기존 값을 조용히 깎는다(silent clamp).
     raw_timeout = tool_input.get("timeout")
     try:
@@ -502,7 +538,7 @@ def op_register(tool_input):
     registry[sid] = {
         "file": rel,
         "interpreter": interpreter,
-        "description": str(tool_input.get("description") or prev.get("description") or ""),
+        "description": str(tool_input.get("description", prev.get("description", "")) or ""),
         "timeout": timeout,
         "registered_at": prev.get("registered_at") or datetime.now(timezone.utc).isoformat(),
         "created_at": prev.get("created_at") if prev else datetime.now(timezone.utc).isoformat(),
@@ -510,27 +546,43 @@ def op_register(tool_input):
     }
     if contract is not None:
         registry[sid]["callable_contract"] = contract
-    _write_registry(registry)
+    changed = any(prev.get(k) != registry[sid].get(k) for k in FIELDS)
+    if not changed:
+        return {'success': True, 'id': sid, 'updated': updated, 'changed': False,
+                'revision': revision(prev, _path('_SCRIPT_DIR')), 'path': str(p),
+                'interpreter': interpreter, 'timeout': timeout}
+    result = publish(_path('_ROOT'), _path('_REGISTRY'), _path('_SCRIPT_DIR'),
+                     _write_registry, before, registry, sid)
     return {"success": True, "id": sid, "updated": updated, "path": str(p), "interpreter": interpreter,
+            'changed': True, **result,
             "timeout": timeout,
             **({"warning": warn} if warn else {}),
             "message": f"등록 {'갱신' if updated else '완료'} — 실행: [self:script]{{op: \"run\", id: \"{sid}\"}}"}
 
 
+@_mutation
 def op_remove(tool_input):
     """등록 해제 — 파일은 지우지 않는다."""
     sid = _sanitize_id(tool_input.get("id") or "")
     registry = _read_registry()
+    from script_mutation import check_expected, publish
     if not sid or sid not in registry:
+        removed = (_read_state().get(sid) or {}).get('registration_removed')
+        if sid and removed and tool_input.get('expected_revision') == removed['revision']:
+            return {'success': True, 'id': sid, 'changed': False, 'revision': '',
+                    'previous_revision': removed['revision']}
         return {"success": False,
                 "error": f"등록되지 않은 id: {sid or '(비어 있음)'} — op:list 로 확인. 등록: {', '.join(sorted(registry)) or '없음'}"}
-    registry.pop(sid)
-    _write_registry(registry)
+    previous = check_expected(tool_input, registry[sid], _path('_SCRIPT_DIR'))
+    after = {k: v for k, v in registry.items() if k != sid}
+    result = publish(_path('_ROOT'), _path('_REGISTRY'), _path('_SCRIPT_DIR'),
+                     _write_registry, registry, after, sid)
     with _runtime.STATE_LOCK:
         state = _read_state()
-        if state.pop(sid, None) is not None:
-            _write_state(state)
-    return {"success": True, "id": sid, "message": "등록 해제 (파일은 보존)."}
+        state.setdefault(sid, {})['registration_removed'] = {'revision': previous}
+        _write_state(state)
+    return {"success": True, "id": sid, 'changed': True, 'previous_revision': previous,
+            **result, "message": "등록 해제 (파일·실행 기록은 보존)."}
 
 
 def op_run(tool_input):

@@ -39,7 +39,7 @@ def test_registry_origin_user_opts_out(tmp_path):
 def test_dist_filter_excludes_only_noncore_scripts(tmp_path, monkeypatch):
     bdf = _load("build_dist_filter")
     d = tmp_path / "data" / "scripts"; d.mkdir(parents=True)
-    for n in ("공용절차.py", "가족전용.py", "registry.yaml", ".hidden"):
+    for n in ("공용절차.py", "가족전용.py", "registry.yaml", "registry.yaml.lock", ".hidden"):
         (d / n).write_text("", encoding="utf-8")
     monkeypatch.setattr(bdf, "REPO_ROOT", tmp_path)
     assert bdf._noncore_script_excludes({"scripts": {"공용절차.py"}}) == ["!scripts/가족전용.py"]

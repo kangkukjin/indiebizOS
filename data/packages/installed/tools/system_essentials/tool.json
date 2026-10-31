@@ -1301,6 +1301,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "expected_revision": {
+            "type": "string",
+            "description": "register/remove의 조건부 변경. list의 revision, 빈 문자열이면 신규 등록만 허용."
+          },
+          "expected_source_hash": {
+            "type": "string",
+            "description": "register의 검사한 본문 SHA256. 검사 이후 바뀐 파일 등록 거절."
+          },
           "op": {
             "type": "string",
             "description": "list(기본)/register/run/status/remove",

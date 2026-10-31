@@ -82,7 +82,7 @@ def test_installed_functions_have_single_source_and_compile(monkeypatch, tmp_pat
     library = installed_definitions()
     assert set(library) == {
         'PC제어', 'PC제어확인', 'PC제어실행', 'PC조회묶음', 'Android제어', 'Android제어확인',
-        '프로젝트재조사', '프로젝트재조사확인',
+        '프로젝트재조사', '프로젝트재조사확인', '능력변경완료',
     } | {definition_name(p.read_text()) for p in (ROOT/'data/idioms').glob('retirement_*.ibl')}
     for name, source in library.items():
         assert check_source(source, True, library=library) is None

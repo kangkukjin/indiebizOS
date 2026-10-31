@@ -86,6 +86,7 @@
       "arch_render_cli.py",
       "arxiv최신피드.py",
       "capability_age.py",
+      "capability_change.py",
       "chrome_control.py",
       "collection_idioms.py",
       "drug_approval.py",
@@ -131,6 +132,7 @@
     "idioms": [
       "android_control.ibl",
       "android_control_check.ibl",
+      "capability_change.ibl",
       "installed.json",
       "pc_control.ibl",
       "pc_control_check.ibl",

@@ -1553,3 +1553,9 @@ LS103Normalize:
   registered_at: '2026-10-28T12:04:29.672778+00:00'
   registration_updated_at: '2026-10-28T12:04:29.672962+00:00'
   timeout: 300
+
+능력변경:
+  file: capability_change.py
+  interpreter: python
+  timeout: 3600
+  description: '어휘·스크립트·관용구 변경 계획·검사·조회. args.op=plan(request: kind=idiom/script/action, target, operation=add/update/remove, code/source, probes) 또는 check/status/verify(plan, probes). 반환 program을 self:workflow run으로 실행한다. 능력변경완료 관용구로 한 번에 연결. code 변경은 기존 self:patch 적용 권한을 사용. 가이드 capability_change.md.'

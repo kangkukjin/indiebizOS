@@ -1,0 +1,6 @@
+#!ibl edition=2
+[def:능력변경완료]($요청) {
+  $계획 = [self:script]{id:"능력변경",args:{op:"plan",request:$요청}}
+  $결과 = [self:workflow]{op:"run",edition:2,pipeline:$계획.program}
+  return $결과.value
+}

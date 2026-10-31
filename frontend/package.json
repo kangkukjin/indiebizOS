@@ -215,6 +215,7 @@
           "!__GEN_START__",
           "!**/.fuse_hidden*",
           "!**/.DS_Store",
+          "!**/*.lock",
           "!**/*.bak",
           "!**/*.bak.*",
           "!**/*.bak_*",

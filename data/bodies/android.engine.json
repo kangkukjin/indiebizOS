@@ -283,6 +283,9 @@
     "ibl/api_pipeline",
     "ibl/api_transforms",
     "ibl/capability_card",
+    "ibl/capability_change_checks",
+    "ibl/capability_changes",
+    "ibl/capability_consumers",
     "ibl/channel_engine",
     "ibl/event_engine",
     "ibl/function_consumers",
@@ -359,6 +362,7 @@
     "ibl/package_manager",
     "ibl/repair_execution_scope",
     "ibl/reusable_catalog",
+    "ibl/script_mutation",
     "ibl/tool_batch",
     "ibl/tool_context",
     "ibl/tool_loader",
@@ -591,8 +595,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 580,
-    "engine": 548,
+    "total": 584,
+    "engine": 552,
     "blocklist": 32
   }
 }

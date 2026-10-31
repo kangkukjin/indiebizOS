@@ -176,6 +176,10 @@ def retire(identifier, expected_revision=None):
     row = store.resolve(identifier, view=view, include_inactive=True)
     if row is None:
         row = store.resolve(function_id=identifier, view=view, include_inactive=True)
+    if row and expected_revision is not None and row['revision'] != expected_revision:
+        raise ValueError('관용구 판본 충돌: 새 정의를 읽고 다시 은퇴하세요.')
+    if row and row.get('state') == 'retired' and expected_revision == row['revision']:
+        return True
     if row is None or row.get('state') == 'retired':
         return False
     record = store.revision(row['function_id'], row['revision'])

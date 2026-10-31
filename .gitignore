@@ -482,6 +482,7 @@ data/ibl_runs/
 
 !data/idioms/homepage_seeds.json
 !data/idioms/search_then_extract_seeds.json
+!data/idioms/capability_change_seeds.json
 
 # Shared lease for managed Python installs and direct-library workers.
 data/runtime/python-environment.lock
@@ -525,3 +526,6 @@ member-desktop/display.json
 data/workflows/catalog.json
 data/workflows/revisions/
 data/workflows/install-conflicts.json
+
+# Cross-process lock for the tracked script definition owner.
+data/scripts/registry.yaml.lock

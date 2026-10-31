@@ -1,0 +1,15 @@
+[
+  {
+    "alias": "능력변경완료",
+    "source_file": "capability_change.ibl",
+    "intent": "어휘·스크립트·관용구를 추가·수정·해제하며 충돌·호출자·새 호출 검사와 필요한 각인을 연결한다. 요청에 kind, target, operation, code/source, probes를 지정한다.",
+    "ibl_code": "#!ibl edition=2\n[def:능력변경완료]($요청) {\n  $계획 = [self:script]{id:\"능력변경\",args:{op:\"plan\",request:$요청}}\n  $결과 = [self:workflow]{op:\"run\",edition:2,pipeline:$계획.program}\n  return $결과.value\n}\n",
+    "category": "phrase",
+    "source": "manual_seed",
+    "always_on": false,
+    "nodes": "self",
+    "tags": "manual,capability_change",
+    "topic": "시스템/능력 변경",
+    "returns": "Record"
+  }
+]

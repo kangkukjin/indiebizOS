@@ -50,6 +50,7 @@ GEN_END = "!__GEN_END__"
 CRUFT_PATTERNS = [
     "!**/.fuse_hidden*",      # NAS 마운트 잔재
     "!**/.DS_Store",
+    "!**/*.lock",             # 실행 잠금은 존재 여부와 무관하게 배포에서 제외
     "!**/*.bak",
     "!**/*.bak.*",
     "!**/*.bak_*",
@@ -161,7 +162,8 @@ def _noncore_script_excludes(core: dict) -> list[str]:
     d = REPO_ROOT / "data" / "scripts"
     if d.is_dir():
         for f in sorted(d.iterdir(), key=lambda x: nfc(x.name)):
-            if not f.is_file() or f.name.startswith(".") or f.name == "registry.yaml":
+            if (not f.is_file() or f.name.startswith(".") or f.name == "registry.yaml"
+                    or f.name.endswith(".lock")):
                 continue
             if nfc(f.name) not in core_scripts:
                 out.append(f"!scripts/{nfc(f.name)}")

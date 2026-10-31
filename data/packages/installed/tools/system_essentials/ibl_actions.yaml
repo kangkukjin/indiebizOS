@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "1be89e83c777641a"}  # 등록 변경은 기존 경로 범위·회원 선행 분기를 유지. 판본/본문 조건과 등록부 잠금을 추가, 자식에는 정의 조회 범위만 전달하며 쓰기는 기존 부모 관리 연산이 수행.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +151,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "1be89e83c777641a"}  # 등록 변경은 기존 경로 범위·회원 선행 분기를 유지. 판본/본문 조건과 등록부 잠금을 추가, 자식에는 정의 조회 범위만 전달하며 쓰기는 기존 부모 관리 연산이 수행.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -231,7 +231,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "1be89e83c777641a"}  # 등록 변경은 기존 경로 범위·회원 선행 분기를 유지. 판본/본문 조건과 등록부 잠금을 추가, 자식에는 정의 조회 범위만 전달하며 쓰기는 기존 부모 관리 연산이 수행.
         target_key: path
       list:
         callable_contract:
@@ -912,6 +912,8 @@ nodes:
         params:
           callable_contract: object  # 선택적 입출력 타입 계약. 기존 등록도 현재 IBL에서 호출 가능.
           query: string
+          expected_revision: string  # list의 revision. 빈 문자열은 신규 등록 조건.
+          expected_source_hash: string  # 검사한 본문의 SHA256, 신규 등록도 보호.
         callable_contract:
           version: 1
           params:
@@ -928,6 +930,8 @@ nodes:
             job_id: Text
             wait: Number
             callable_contract: Record
+            expected_revision: Text
+            expected_source_hash: Text
           required: []
           pipe_input: args
           result: Unknown
@@ -978,7 +982,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-31", impl: "b7162b30dc3eab55"}  # 재감사: body_ops 변경은 에피소드 조회 독스트링뿐이며 파일 라우팅·권한 동작 불변. 관측은 동일 principal/업무 저장소만 사용하고 추가 파일·네트워크 읽기 없음. 회원 문서 변환·기기 전송·허브 분기 경계 유지. 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 같은 작업 회수·같은 대화/행위자의 명시 키 및 보호된 부모 업무 인계 키만 재개 허용. propose도 등록 소스만 사본에 적재. 한정 구현 자식은 고정 파일 범위·동일 사본만 허용하고 적용 직전 부모 취소·한도를 대조. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-10-31", impl: "1be89e83c777641a"}  # 등록 변경은 기존 경로 범위·회원 선행 분기를 유지. 판본/본문 조건과 등록부 잠금을 추가, 자식에는 정의 조회 범위만 전달하며 쓰기는 기존 부모 관리 연산이 수행.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -989,7 +993,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 파일 Script 실행 — 등록 id 또는 현재 턴의 Python path. 코드는 inputs Text로 write/edit하며 실행은 파일 참조만 받는다. path는 미등록 로컬 실행, 결과 파일의 값이 다음 문장으로 이어진다.
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태+callable_contract·execution, id 또는 query로 좁힘. 등록 callable_contract의 registered-json/1은 기존 stdin/stdout JSON을 보존하고 ibl-script/2는 명시 값 봉투를 사용한다. 두 계약 모두 동기·background를 지원하며 입력/반환 타입을 검사한다. 목록은 후보 계약이며 check/run이 코드·환경 의존을 다시 검증한다. 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태+callable_contract·execution, id 또는 query로 좁힘. 등록 callable_contract의 registered-json/1은 기존 stdin/stdout JSON을 보존하고 ibl-script/2는 명시 값 봉투를 사용한다. 두 계약 모두 동기·background를 지원하며 입력/반환 타입을 검사한다. 목록은 후보 계약이며 check/run이 코드·환경 의존을 다시 검증한다. 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / register·remove: expected_revision=list의 revision(빈 값은 새 등록 조건), register의 expected_source_hash=본문 SHA256. 호출자를 깨뜨리는 계약 변경·해제는 거절. remove는 id, 파일·실행 이력 보존. 반복 변경은 capability_change.md의 능력변경완료 관용구.'
         router: handler
         tool: script_op
         implementation: path는 backend/base/file_script.py와 ibl_file_script 어댑터, id는 system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).
@@ -2170,6 +2174,12 @@ tool_json:
     input_schema:
       type: object
       properties:
+        expected_revision:
+          type: string
+          description: register/remove의 조건부 변경. list의 revision, 빈 문자열이면 신규 등록만 허용.
+        expected_source_hash:
+          type: string
+          description: register의 검사한 본문 SHA256. 검사 이후 바뀐 파일 등록 거절.
         op:
           type: string
           description: list(기본)/register/run/status/remove

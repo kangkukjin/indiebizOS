@@ -131,9 +131,9 @@ def save_workflow(workflow: dict) -> str:
 
 
 @serialized_mutation
-def delete_workflow(workflow_id: str) -> bool:
+def delete_workflow(workflow_id: str, expected_revision=None) -> bool:
     from function_library import retire
-    return retire(workflow_id)
+    return retire(workflow_id, expected_revision=expected_revision)
 
 
 # === 유틸리티 ===

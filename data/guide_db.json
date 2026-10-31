@@ -2259,6 +2259,21 @@
       "control_callables": [
         "script:Chrome제어"
       ]
+    },
+    {
+      "id": "capability_change",
+      "name": "어휘·스크립트·관용구 변경",
+      "description": "능력변경완료 관용구: 추가·수정·해제의 계획, 충돌·소비자 검사, 새 호출 검증, 각인과 부분 재개.",
+      "keywords": [
+        "능력변경",
+        "능력변경완료",
+        "어휘 수정",
+        "스크립트 등록",
+        "관용구 수정",
+        "등록 해제"
+      ],
+      "file": "capability_change.md",
+      "topic": "워크플로·스크립트"
     }
   ]
 }

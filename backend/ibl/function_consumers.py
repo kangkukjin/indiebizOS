@@ -5,9 +5,9 @@ from pathlib import Path
 import function_store
 
 
-def stored_programs():
+def stored_programs(root=None):
     # Runtime state and repair workspaces must not inspect the live owner's tree.
-    root = function_store.storage_root().parent.parent
+    root = Path(root) if root is not None else function_store.storage_root().parent.parent
     paths = [root / 'data' / 'calendar_events.json', root / 'data' / 'event_triggers.json']
     paths.extend((root / 'data' / 'instruments').glob('*.yaml'))
     paths.extend((root / 'projects').glob('*/schedules.json'))

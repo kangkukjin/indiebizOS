@@ -20,7 +20,8 @@ PROVIDER_INPUT = {'response': {'results': [
     {'title': '도서관 운영 변경', 'description': '주말 개방', 'link': 'https://example.test/library'},
     {'title': '시장 소식', 'description': '장터 개장', 'link': 'https://example.test/market'}]},
     'type': 'news'}
-REQUEST = '이 검색원에서 지역 소식 두 건을 찾아 제목과 링크를 outputs/report.json에 저장하고 결과를 알려줘.'
+REQUEST = ('이 검색원에서 지역 소식 두 건을 찾아 제목과 링크를 outputs/report.json에 저장하고 결과를 알려줘. '
+           '보고서 저장 뒤에도 같은 검색원이 정상 조회되는지 다시 실행해서 확인해줘.')
 
 
 def serve(repo):

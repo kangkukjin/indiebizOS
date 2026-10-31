@@ -177,8 +177,8 @@ def denial_note(task_id: str = None, agent_id: str = None) -> str:
         return "수리 실행 ID(task_id)가 없습니다 — 하네스에서 실행 신원을 복원해야 합니다."
     with _lock:
         if not _grants:
-            return ("수리 그랜트가 없습니다 — 이 턴은 REPAIR 경로로 발급된 적이 없습니다"
-                    "(사용자가 '#repair' 로 명령한 턴에서만 발급됩니다).")
+            return ("수리 그랜트가 없습니다 — 현재 턴에 발급된 수리 실행 권한이 없습니다. "
+                    "일반 업무의 등록 부품 수정과 self:patch propose의 한정 수리는 별도 경로입니다.")
         # 자기 슬롯이 있으면 그 레코드의 사정(만료)을 말한다.
         g = _grants.get(task_id)
         if g is not None and g.get("task_id") == task_id:

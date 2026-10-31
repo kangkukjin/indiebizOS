@@ -57,6 +57,17 @@ def revised(source):
         "data['items']", "data.get('items', data.get('results'))")
 
 
+def test_apply_without_candidate_explains_preparation_instead_of_new_user_approval(setup):
+    repo, source, handler, turn = setup
+    before = source.read_text()
+    result = invoke(handler, repo, 'patch_op', {'op': 'apply', 'path': str(source),
+                                             'content': revised(before)})
+    assert not result['success']
+    assert '사본이 없습니다' in result['error'] and 'propose' in result['error']
+    assert '#repair' not in result['error'] and '사용자 명령' not in result['error']
+    assert source.read_text() == before and not turn.component_session
+
+
 def test_user_task_repairs_transform_without_grant_restart_or_replay(setup):
     repo,source,h,turn=setup
     before=source.read_text();pid=os.getpid()

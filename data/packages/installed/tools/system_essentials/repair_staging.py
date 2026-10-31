@@ -882,8 +882,8 @@ def op_apply(ti):
         #   시계에 만료됐는데 "수리 경로 전용"만 읽고 '나는 수리 세션이 아니다'로 보고했다).
         _why = (ti.get("_grant_denial") or "").strip()
         return {"success": False, "error":
-                (f"{_why} apply 는 사용자 명령 수리(REPAIR) 경로 전용입니다." if _why else
-                 "수리 그랜트가 없습니다 — apply 는 사용자 명령 수리(REPAIR) 경로 전용입니다."),
+                (f"{_why} 이 적용 경로에는 수리 실행 권한이 필요합니다." if _why else
+                 "이 적용 경로에는 수리 실행 권한이 필요합니다. 일반 업무는 self:patch propose 계약을 확인하세요."),
                 "grant_denial": _why}
     # proposal_id 가 오면 그 제안 세션을, 없으면 이 수리 세션을 적용한다.
     # 제안도 세션이라 분기는 '어느 키를 여는가'뿐이다(2026-08-18 통합).

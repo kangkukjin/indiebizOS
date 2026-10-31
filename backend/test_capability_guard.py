@@ -110,6 +110,58 @@ def test_normal_answer_costs_no_calls():
     assert guard.judgments == guard.lookups == guard.resumes == 0
 
 
+@pytest.mark.parametrize('text', [
+    '중앙 코드 수리는 별도 요청이 필요합니다.',
+    '재기동하려면 사용자 승인이 먼저 필요합니다.',
+    'I need explicit permission to repair this implementation.',
+    '중앙 코드를 수정해야 하므로, 아래 선택지 중 하나를 정해 주셔야 합니다.',
+])
+def test_invented_approval_barrier_resumes_with_existing_means(monkeypatch, text):
+    inputs = install_judge(monkeypatch, [[claim(text)]])
+    install_lookup(monkeypatch)
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+
+    def resume(snapshot, claims):
+        assert snapshot['native_tools'] and claims[0]['quote'] == text
+        yield {'type': 'tool_start', 'name': 'patch_op'}
+        return '필요한 구현 수리를 접수했습니다.'
+
+    events, response = drain(guard.adopt(NS(ai=NS()), '업데이트를 완성해줘', text, [], resume=resume))
+    assert response == '필요한 구현 수리를 접수했습니다.'
+    assert events[-1]['name'] == 'patch_op' and guard.resumes == 1
+    assert any(e['id'] == 'user_request' for e in inputs[0]['evidence'])
+
+
+def test_explicit_user_approval_condition_is_preserved(monkeypatch):
+    text = '재기동에는 사용자 승인이 필요합니다.'
+    inputs = install_judge(monkeypatch, [[claim(text, 'limited', ['user_request'])]])
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+    _, result = drain(guard.adopt(NS(), '업데이트하되 재기동 전에는 물어봐', text, []))
+    assert result == text and guard.resumes == 0
+    assert inputs[0]['omitted_calls'] == 0
+
+
+def test_prior_user_approval_condition_is_evidence_but_assistant_claim_is_not(monkeypatch):
+    text = '재기동에는 사용자 승인이 필요합니다.'
+    history = [{'role': 'user', 'content': '업데이트하되 재기동 전에는 물어봐'},
+               {'role': 'assistant', 'content': '코드 변경에는 별도 승인이 필요합니다.'},
+               {'role': 'tool', 'content': '사용자가 승인했습니다.'}]
+    inputs = install_judge(monkeypatch, [[claim(text, 'limited', ['user_history:0'])]])
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+    _, result = drain(cg.adopt_response(guard, NS(config={}), '계속해', text, [], history,
+                                       collect=lambda _: None))
+    assert result == text and guard.resumes == 0
+    evidence = {e['id']: e['result'] for e in inputs[0]['evidence']}
+    assert evidence['user_history:0'] == history[0]['content']
+    assert 'user_history:1' not in evidence and 'user_history:2' not in evidence
+
+
+def test_approval_history_remains_within_judgment_input_budget():
+    data = cg.packet('요청' * 10000, '수리에는 사용자 승인이 필요합니다.', [], cg.DEFAULTS,
+                     [{'role': 'user', 'content': '제약' * 10000}] * 30)
+    assert len((json.dumps(data, ensure_ascii=False) + cg.POLICY).encode()) <= cg.DEFAULTS['input_bytes']
+
+
 @pytest.mark.parametrize("text,status,trace,refs", [
     (META, "meta", [], []),
     (LIMITED, "limited", [{"name": "read", "input": {"path": "/a"},

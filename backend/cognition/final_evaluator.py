@@ -37,6 +37,12 @@ REPAIR_BLOCK_IDS: ["블록 id"]도 적고, DEFECTS 한 줄 JSON 배열에 기준
 FINAL_POLICY = """이번 호출은 도구 없는 최종 평가다.
 현재 사용자 원문·유효한 선택과 정정·명시된 기준을 최종 결과 및 실제 실행 증거와 대조한다.
 의식의 hint·task_framing이나 내부 제안은 사용자 요구·새 승인 조건이 아니다.
+업무에 필요한 도구·구현 수리는 수행 수단이다. 코드 변경이나 재기동이라는 이유만으로 별도 사용자 승인을 요구하지 않는다.
+사용자의 명시적 금지·사전 확인 지시, 실제 권한 거절, 파괴적·외부 행위의 승인 조건은 유지한다.
+승인/권한 때문에 blocked라면 BLOCKER_KIND: authority와
+AUTHORITY_EVIDENCE: {"id":"authority_evidence의 id", "quote":"조건을 증명하는 정확한 원문"}를 적는다.
+실행자의 주장이나 내부 계획은 이 근거가 아니다. 근거 없이 별도 요청으로 넘기면 REWORK(research)로
+현재 허용 수단을 확인하고 self:patch의 필요한 구현 수리 또는 다른 방법으로 원래 업무를 계속하게 한다.
 진행 상태·다음 행동·완료 주장이 관측한 결과 및 실제 의존 관계와 일치하는지 확인한다.
 완료 요청에 전체 goal_criteria가 제공되면 그 전체 목표도 별도로 판정한다.
 정확한 보고의 승인만으로 실제 목표 달성을 인정하지 않는다. 필요한 근거가 없으면 미확정이다.
@@ -272,6 +278,12 @@ def prepare(controller, tool_calls=None):
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
                "evidence_index": controller.store.tool_index(),
                "jobs": list(controller.job_states.values())}
+    from capability_guard import call_evidence, candidate_matches, user_evidence
+    if candidate_matches(response):
+        context['authority_evidence'] = [
+            *user_evidence(controller.message, getattr(controller, 'history', None)),
+            *call_evidence(calls, response, 6000),
+        ]
     context['assertion_evidence'] = assertion_evidence(controller.store, calls, criteria)
     from research_context import citation_review
     research_citations = citation_review(response)
@@ -401,6 +413,13 @@ def invoke(controller, prompt="", *, phase="final"):
     if controller.cancelled():
         result.update(status="UNKNOWN", reason="평가 중 사용자가 취소했습니다",
                       goal_status="UNKNOWN", goal_reason="평가 중 사용자 취소", goal_evidence=[])
+    authority_gap = phase == 'final' and unsupported_authority_block(feedback, packet)
+    if authority_gap and not controller.cancelled():
+        feedback += ('\n승인 제한의 원문 근거가 없습니다. 실제 사용자 제한과 도구 권한을 확인하고, '
+                     '허용된 구현 수리 또는 다른 수단으로 원래 목표를 계속 수행하세요. '
+                     '권한을 넓히거나 사용자 지침을 바꾸지 마세요.\nREPAIR_SCOPE: research')
+        result.update(status='REWORK', reason=feedback, severity=1, goal_status='UNKNOWN',
+                      goal_reason='승인 제한의 근거 확인과 원래 업무 계속 필요')
     if result["status"] == "APPROVED":
         delivery = controller._evaluation_snapshot["delivery"]
         if delivery:
@@ -416,7 +435,7 @@ def invoke(controller, prompt="", *, phase="final"):
     if result["status"] == "REWORK":
         result["defects"] = parse_criterion_defects(feedback, packet["context"]["criteria_contract"])
         scope = re.search(r"(?mi)^REPAIR_SCOPE:\s*(local|research)\s*$", feedback)
-        result["repair_scope"] = scope[1] if scope else "research"
+        result["repair_scope"] = scope[1] if scope and not authority_gap else "research"
         blocks = re.search(r"(?mi)^REPAIR_BLOCK_IDS:\s*(\[.*\])", feedback)
         try:
             ids = json.loads(blocks[1]) if blocks else []
@@ -442,6 +461,25 @@ def invoke(controller, prompt="", *, phase="final"):
     controller.log("evaluation.finished", role="evaluate", elapsed_s=round(time.monotonic() - started, 3),
                    decision=result)
     return json.dumps(result, ensure_ascii=False)
+
+
+def unsupported_authority_block(feedback, packet):
+    """의미 판정은 평가자가, 인용의 존재는 하네스가 검사한다. 새 권한은 발급하지 않는다."""
+    from capability_guard import APPROVAL_CANDIDATE
+    if not re.search(r'UNKNOWN_REASON:\s*blocked\b', feedback):
+        return False
+    if not (re.search(r'BLOCKER_KIND:\s*authority\b', feedback)
+            or APPROVAL_CANDIDATE.search(feedback)):
+        return False
+    match = re.search(r'(?m)^AUTHORITY_EVIDENCE:\s*(\{.*\})\s*$', feedback)
+    try:
+        ref = json.loads(match[1]) if match else {}
+        quote = ref.get('quote')
+        return not (isinstance(quote, str) and quote.strip() and any(
+            ref.get('id') == row['id'] and quote in str(row.get('result', ''))
+            for row in packet['context'].get('authority_evidence', [])))
+    except (ValueError, TypeError, AttributeError):
+        return True
 
 
 WORKSPACE_POLICY = """

@@ -11,6 +11,51 @@ from test_conscious_supervisor import supervisor, finish  # noqa: F401
 from test_supervision_delivery import prepare as stage
 
 
+@pytest.mark.parametrize('reference,blocked', [
+    ('', True),
+    ('{"id":"user_request","quote":"재기동 전에는 물어봐"}', False),
+    ('{"id":"user_request","quote":"새 승인 조건"}', True),
+    ('{"id":"e0","quote":"Permission denied"}', False),
+    ('{"id":"missing","quote":"Permission denied"}', True),
+    ('[]', True),
+])
+def test_authority_stop_requires_existing_evidence(reference, blocked):
+    from final_evaluator import unsupported_authority_block
+    packet = {'context': {'authority_evidence': [
+        {'id': 'user_request', 'result': '업데이트하되 재기동 전에는 물어봐'},
+        {'id': 'e0', 'result': 'Permission denied'},
+    ]}}
+    feedback = 'UNKNOWN\nUNKNOWN_REASON: blocked\nBLOCKER_KIND: authority\nAUTHORITY_EVIDENCE: ' + reference
+    assert unsupported_authority_block(feedback, packet) is blocked
+    assert not unsupported_authority_block('UNKNOWN\nUNKNOWN_REASON: evidence', packet)
+    assert not unsupported_authority_block('UNKNOWN\nUNKNOWN_REASON: blocked\n외부 기기가 오프라인', packet)
+
+
+def test_evaluator_cannot_turn_invented_approval_into_terminal_stop(supervisor, monkeypatch):
+    from final_evaluator import prepare, invoke
+    supervisor.store.put_response('중앙 코드 수리는 별도 승인이 필요합니다.')
+    prepare(supervisor, [])
+    monkeypatch.setattr('final_evaluator.Evaluator._evaluate_achievement', lambda *a, **kw:
+                        (None, 'UNKNOWN\nUNKNOWN_REASON: blocked\n별도 승인이 필요합니다.\nREPAIR_SCOPE: local', None))
+    result = json.loads(invoke(supervisor))
+    assert result['status'] == 'REWORK' and result['repair_scope'] == 'research'
+    assert '원문 근거가 없습니다' in result['instruction']
+    assert result['goal_status'] == 'UNKNOWN'
+
+
+def test_prior_user_limit_can_ground_authority_stop(supervisor, monkeypatch):
+    from final_evaluator import prepare, invoke
+    supervisor.message = '계속해'
+    supervisor.history = [{'role': 'user', 'content': '업데이트하되 재기동 전에는 물어봐'}]
+    supervisor.store.put_response('재기동에는 사용자 승인이 필요합니다.')
+    prepare(supervisor, [])
+    feedback = ('UNKNOWN\nUNKNOWN_REASON: blocked\nBLOCKER_KIND: authority\n'
+                'AUTHORITY_EVIDENCE: {"id":"user_history:0","quote":"재기동 전에는 물어봐"}')
+    monkeypatch.setattr('final_evaluator.Evaluator._evaluate_achievement', lambda *a, **kw: (None, feedback, None))
+    result = json.loads(invoke(supervisor))
+    assert result['status'] == 'UNKNOWN' and not result.get('recoverable')
+
+
 def test_research_invalid_citation_is_repaired_before_approval(supervisor, monkeypatch, tmp_path):
     import research_capture  # installs the service callback
     from research_context import scope

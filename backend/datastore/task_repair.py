@@ -8,16 +8,45 @@ from pathlib import Path
 import component_continuation as parent_tasks
 import repair_continuation as journal
 
-# 통제 기반 전체를 열지 않는다. 명세·권한은 그대로 두고 구현을 검사하는 첫 코어 경계.
-CORE_IMPLEMENTATIONS = frozenset({'backend/ibl/ibl_v2_parser.py'})
+# 실행 구현의 소유 단위. 권한 발급·적용 승인·완료 판정은 같은 단위로 끌어오지 않는다.
+CORE_IMPLEMENTATIONS = frozenset({'backend/ibl/ibl_v2_parser.py', 'backend/ibl/ibl_scanner.py'})
+CONTROL_GOVERNANCE = frozenset({
+    'backend/boot_paths.py', 'backend/base/component_registry.py',
+    'backend/common/completion_contract.py', 'backend/datastore/repair_root.py',
+    'backend/datastore/restart_red.py',
+})
 NOTICE = '필요한 구현 수리를 같은 업무의 사본에서 진행합니다. 검사·반영 뒤 원래 업무를 자동으로 이어갑니다.'
 
 
-def eligible(relative):
+def implementation_unit(relative):
+    if not isinstance(relative, str):
+        return None
     path = Path(relative)
-    return (path.as_posix() == relative and '..' not in path.parts and not path.is_absolute()
-            and (relative in CORE_IMPLEMENTATIONS or bool(re.fullmatch(
-                r'data/packages/installed/tools/(?!system_essentials/)[A-Za-z0-9_-]+/tool_[A-Za-z0-9_]+\.py', relative))))
+    if path.as_posix() != relative or '..' in path.parts or path.is_absolute():
+        return None
+    if relative in CORE_IMPLEMENTATIONS:
+        return 'ibl-syntax'
+    from control_base import CONTROL_FILES
+    control = {entry if isinstance(entry, str) else entry[0] for entry in CONTROL_FILES}
+    if relative in control - CONTROL_GOVERNANCE:
+        return 'restart-control'
+    match = re.fullmatch(
+        r'data/packages/installed/tools/(?!system_essentials/)([A-Za-z0-9_-]+)/'
+        r'(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+\.py', relative)
+    if match and not any(p.startswith('test_') or p in {'tests', '__pycache__'} for p in path.parts):
+        return 'package:' + match[1]
+    return None
+
+
+def eligible(relative):
+    return implementation_unit(relative) is not None
+
+
+def valid_paths(paths):
+    return (isinstance(paths, list) and 1 <= len(paths) <= 8
+            and all(eligible(p) for p in paths)
+            and len({implementation_unit(p) for p in paths}) == 1
+            and len(set(paths)) == len(paths))
 
 
 def scope(row):
@@ -32,7 +61,7 @@ def check_delta(session, relatives):
     if not limit:
         return
     paths = limit.get('paths')
-    if not isinstance(paths, list) or not paths or any(not eligible(p) for p in paths):
+    if not valid_paths(paths):
         raise PermissionError('업무 수리의 구현 범위가 유효하지 않습니다')
     outside = set(relatives) - set(paths)
     if outside:
@@ -68,7 +97,7 @@ def parent_of(row, base=None, *, check=True):
 
 
 def request(handler, payload, context, *, framing_factory):
-    """기존 patch propose에서 파일 하나의 구현 수정만 접수한다. 현재 모델에 RED를 주지 않는다."""
+    """관측 결함과 명시한 같은 단위의 구현을 기존 수리 실행에 맡긴다. 완성된 패치는 선택이다."""
     if context.tool_name != 'patch_op' or payload.get('op', 'propose') != 'propose' or handler._red_grant_active():
         return None
     raw = handler._get_path(payload)
@@ -83,34 +112,43 @@ def request(handler, payload, context, *, framing_factory):
     relative = path.relative_to(repo).as_posix()
     if not eligible(relative):
         return None
+    paths = payload.get('paths', [relative])
+    if not valid_paths(paths) or relative not in paths:
+        raise ValueError('paths는 path를 포함하는 같은 구현 단위의 정규 상대 경로 1~8개여야 합니다')
     from execution_turn import current
     from supervision_bus import current as supervisor
     turn, controller = current(), supervisor()
     if not turn or not controller or controller.repair_granted:
         raise PermissionError('직접 사용자 업무의 실행 문맥이 필요합니다')
-    if not path.is_file() or path.resolve() != path or path.stat().st_nlink != 1:
-        raise PermissionError('기존 일반 구현 파일만 업무 중 수리할 수 있습니다')
+    for rel in paths:
+        file = repo / rel
+        if not file.is_file() or file.resolve() != file or file.stat().st_nlink != 1:
+            raise PermissionError('기존 일반 구현 파일만 업무 중 수리할 수 있습니다')
     reason = str(payload.get('reason') or '').strip()
     if not reason:
         raise ValueError('관측한 구현 결함과 원래 업무의 관계를 reason에 적으세요')
     before = path.read_text()
     content = payload.get('content')
-    if content is None:
+    if content is None and ('old_string' in payload or 'new_string' in payload):
         old, new = payload.get('old_string'), payload.get('new_string')
         if not isinstance(old, str) or not old or not isinstance(new, str) or before.count(old) != 1:
             raise ValueError('old_string은 현재 구현에 정확히 한 번 있어야 합니다')
         content = before.replace(old, new, 1)
-    if not isinstance(content, str) or content == before:
+    if content is not None and (not isinstance(content, str) or content == before):
         raise ValueError('실제 구현 변경이 필요합니다')
     try:
-        compile(content, relative, 'exec')
+        if content is not None:
+            compile(content, relative, 'exec')
     except (SyntaxError, ValueError) as exc:
         raise ValueError(f'수정안의 Python 구문이 유효하지 않습니다: {exc}') from exc
     parent_tasks.arm(turn)
     parent = journal.read(turn.continuation_key) if turn.continuation_key else None
     if not parent:
         raise PermissionError('원래 대화·취소·예산을 보존할 수 없는 실행은 자동 수리하지 않습니다')
-    signature = hashlib.sha256((relative + '\0' + content).encode()).hexdigest()
+    signature = hashlib.sha256(json.dumps({
+        'path': relative, 'content': content,
+        'baseline': {rel: hashlib.sha256((repo / rel).read_bytes()).hexdigest() for rel in sorted(paths)},
+    }, sort_keys=True).encode()).hexdigest()
     if parent.get('repair_child'):
         if parent.get('repair_signature') != signature:
             raise PermissionError('진행 중인 수리 뒤에 원래 업무로 복귀해야 합니다')
@@ -120,7 +158,7 @@ def request(handler, payload, context, *, framing_factory):
         raise PermissionError('같은 수정의 반복 또는 원래 업무의 수리 시도 한도입니다')
     key = 'work-repair-' + hashlib.sha256((parent['task_id'] + signature).encode()).hexdigest()[:28]
     execution = key.replace('work-repair-', 'work-exec-')
-    limit = {'parent': parent['task_id'], 'root': key, 'paths': [relative]}
+    limit = {'parent': parent['task_id'], 'root': key, 'paths': paths}
     st = handler._staging_mod()
     with st._candidate.locked(str(repo), 'application'):
         candidate = st.stage_file(str(repo), execution, str(path))
@@ -128,14 +166,16 @@ def request(handler, payload, context, *, framing_factory):
             raise RuntimeError('수리 사본을 준비하지 못했습니다')
         session = st.read_session(str(repo), execution)
         session.update(task_scope=limit, repair_policy=2, root_task_id=key)
-        st._candidate.target(repo / session['worktree'], relative).write_text(content)
+        if content is not None:
+            st._candidate.target(repo / session['worktree'], relative).write_text(content)
         st._candidate.collect(str(repo), session)
         st._save_session(str(repo), session)
     # 원래 기준을 후보 적용의 조건으로 삼지 않는다. 수리 검사 뒤 부모가 실제 업무를 마친다.
     goal = ('원래 사용자 업무를 계속하기 위해 관측된 구현 결함을 수리하세요. 기존 공개 계약·권한·지침을 유지하고 '
             '사본에서 관련 검사를 수행해 self:patch apply로 반영하세요. 파일 범위를 넓히지 마세요. '
             '수리 완료가 원래 업무 완료는 아니며 부모 실행자가 남은 일을 맡습니다.\n' + json.dumps(
-                {'original_goal': parent['goal'], 'observed_defect': reason, 'implementation': relative}, ensure_ascii=False))
+                {'original_goal': parent['goal'], 'observed_defect': reason, 'implementations': paths,
+                 'diagnose_first': content is None}, ensure_ascii=False))
     child = {'task_id': key, 'root_task_id': key, 'resume_task_id': execution, 'staging_task_id': execution,
              'task_scope': limit, 'status': 'waiting_execution', 'phase': 'execution', 'retry_at': 0,
              'authorized_origin': 'user', 'goal': goal, 'framing': framing_factory(goal), 'repair_policy': 2,

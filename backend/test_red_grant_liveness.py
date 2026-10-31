@@ -107,7 +107,7 @@ def test_g4_identity_is_bound_to_execution():
 
 def test_g5_denial_note_tells_which_refusal_it_is():
     """★거절은 fail-closed 그대로, 사유만 정직하게 — 세 사건이 한 문장으로 뭉개지지 않는다."""
-    assert "발급된 적이 없" in rg.denial_note(task_id="task_x", agent_id="system_ai")
+    assert "현재 턴에 발급된 수리 실행 권한이 없" in rg.denial_note(task_id="task_x", agent_id="system_ai")
 
     eid = _open_turn()
     rg.issue_grant(agent_id="system_ai", task_id="task_owner", reason="주인")

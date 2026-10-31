@@ -120,6 +120,11 @@ def handle(handler, payload, context):
     elif not turn.component_session and not turn.component_restore_checked:
         restore_session(st, repo, turn, turn.component_resume_key or None, automatic=True)
         turn.component_restore_checked = True
+    if name == 'patch_op' and payload.get('op') == 'apply' and not turn.component_session and not payload.get('proposal_id'):
+        return json.dumps({'success': False, 'error': '적용할 부품 사본이 없습니다. 등록 부품은 '
+            'propose(path, content 또는 old_string/new_string, reason) 또는 edit/write로 수정안을 '
+            '먼저 적재한 뒤 apply하세요. apply 인자의 수정 내용은 자동 적재되지 않습니다. '
+            '그 밖의 한정 구현 진단은 propose(path, reason) 계약을 확인하세요.'}, ensure_ascii=False)
     if name == 'patch_op' and turn.component_session and payload.get('op') in {'apply', 'status', 'discard'}:
         with st._candidate.locked(str(repo), 'application'):
             if payload['op'] == 'apply':
@@ -155,6 +160,11 @@ def handle(handler, payload, context):
     if not spec:
         return None
     if proposing:
+        # 수정안이 없는 진단 또는 여러 구현 파일의 원인 사슬은 기존 업무 수리자가 맡는다.
+        # 한 부품의 완성된 수정안은 무재기동 경로를 계속 우선한다.
+        if (payload.get('paths', [spec['source']]) != [spec['source']]
+                or not any(k in payload for k in ('content', 'old_string', 'new_string'))):
+            return None
         if not payload.get('reason'):
             raise ValueError('부품 수정의 reason(변경 근거)이 필요합니다')
         if payload.get('content') is not None:

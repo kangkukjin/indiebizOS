@@ -105,10 +105,57 @@ def test_invalid_candidate_reports_error_without_arming_parent(env):
 @pytest.mark.parametrize('path', ['backend/cognition/agent_pipeline.py', 'backend/datastore/red_grant.py',
     'data/common_prompts/consciousness_prompt.md', 'data/ibl_nodes_src/self.yaml',
     'data/packages/installed/tools/system_essentials/tool_fake.py',
-    'data/packages/installed/tools/web/handler.py', 'backend/test_ibl_v2_parser.py',
+    'data/packages/installed/tools/web/tests/test_handler.py', 'backend/test_ibl_v2_parser.py',
     'backend/ibl/../ibl/ibl_v2_parser.py'])
 def test_control_contract_and_checks_are_not_automatic_repair_targets(path):
     assert not repair.eligible(path)
+
+
+@pytest.mark.parametrize('path', [
+    'backend/services/restart_controller.py', 'backend/base/control_base.py',
+    'backend/base/restart_process.py', 'data/packages/installed/tools/web/handler.py',
+    'data/packages/installed/tools/web/parsers/news.py', 'backend/ibl/ibl_scanner.py',
+])
+def test_related_runtime_implementations_can_be_repaired(path):
+    assert repair.eligible(path)
+
+
+@pytest.mark.parametrize('path', sorted(repair.CONTROL_GOVERNANCE))
+def test_runtime_ownership_does_not_include_authority_and_completion(path):
+    assert not repair.eligible(path)
+
+
+def test_diagnostic_request_keeps_original_bytes_and_allows_declared_sibling(env):
+    sibling = env.repo / 'backend/ibl/ibl_scanner.py'
+    sibling.write_text('VALUE = 1\n')
+    paths = ['backend/ibl/ibl_v2_parser.py', 'backend/ibl/ibl_scanner.py']
+    result = invoke(env.handler, env.repo, 'patch_op', {
+        'op': 'propose', 'path': str(env.path), 'paths': paths,
+        'reason': '입력 처리가 실패하여 파서와 스캐너의 원인 진단 필요'})
+    assert result.get('pending_repair'), result
+    child = journal.read(result['key'])
+    assert child['task_scope']['paths'] == paths
+    assert '"diagnose_first": true' in child['goal']
+    st = env.handler._staging_mod()
+    session = st.read_session(str(env.repo), child['staging_task_id'])
+    assert session['files'] == {}
+    candidate = env.repo / child['worktree']
+    for rel in paths:
+        assert (candidate / rel).read_text() == 'VALUE = 1\n'
+        (candidate / rel).write_text('VALUE = 2\n')
+    st._candidate.collect(str(env.repo), session)
+    assert {r['rel'] for r in session['files'].values()} == set(paths)
+    assert env.path.read_text() == sibling.read_text() == 'VALUE = 1\n'
+
+
+@pytest.mark.parametrize('paths', [[], 'backend/ibl/ibl_v2_parser.py',
+    ['backend/ibl/ibl_scanner.py'], ['backend/ibl/ibl_v2_parser.py'] * 2,
+    ['backend/ibl/ibl_v2_parser.py', 'backend/services/restart_controller.py'],
+    ['backend/ibl/ibl_v2_parser.py', 'backend/cognition/final_evaluator.py']])
+def test_diagnostic_scope_cannot_mix_units_or_add_governance(env, paths):
+    result = invoke(env.handler, env.repo, 'patch_op', {'path': str(env.path), 'paths': paths, 'reason': '실패'})
+    assert not result['success'] and 'paths' in result['error']
+    assert not env.turn.continuation_key
 
 
 def test_child_budget_grant_and_candidate_cannot_change_parent_criteria(env, monkeypatch):
@@ -280,12 +327,27 @@ def test_supervisor_revision_suspends_before_another_evaluation(supervisor, monk
 
 
 @pytest.mark.system
-def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch):
+@pytest.mark.parametrize('diagnostic', [False, True])
+def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch, diagnostic):
     """별도 적용 프로세스가 허용 델타만 각인한다. 실제 백엔드 재기동은 기존 프로세스 배터리 담당."""
     import repair_policy
     from repair_policy import direct_framing
     from conversation_handoff import Handoff
-    parent, child = propose(env)
+    paths = ['backend/ibl/ibl_v2_parser.py']
+    if diagnostic:
+        paths.append('backend/ibl/ibl_scanner.py')
+        (env.repo / paths[1]).write_text('VALUE = 1\n')
+        with (env.repo / 'backend/test_parser_behavior.py').open('a') as f:
+            f.write('    assert runpy.run_path("backend/ibl/ibl_scanner.py")["VALUE"] == 2\n')
+        subprocess.run(['git', 'add', '.'], cwd=env.repo, check=True)
+        subprocess.run(['git', 'commit', '-qm', 'related implementation fixture'], cwd=env.repo, check=True)
+        result = invoke(env.handler, env.repo, 'patch_op', {
+            'path': str(env.path), 'paths': paths, 'reason': '입력 처리가 실패하여 관련 구현 진단 필요'})
+        assert result.get('pending_repair'), result
+        parent = journal.read(env.turn.continuation_key)
+        child = journal.read(result['key'])
+    else:
+        parent, child = propose(env)
     st = env.handler._staging_mod()
     monkeypatch.setenv('INDIEBIZ_REPAIR_NO_SPAWN', '1')
     controller = NS(repair_granted=True, cancelled=lambda: False, message=child['goal'],
@@ -303,6 +365,8 @@ def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch
     assert failed['status'] == 'failed', failed
     st._save_session(str(env.repo), session)
     candidate_path.write_text('VALUE = 2\n')
+    if diagnostic:
+        (env.repo / session['worktree'] / paths[1]).write_text('VALUE = 2\n')
     with journal.resuming(child), actor_context(agent_id='system_ai', task_id=child['resume_task_id'], origin='user'):
         red_grant.issue_grant('system_ai', child['resume_task_id'])
         result = st.op_apply({'_repo_root': str(env.repo), '_grant_key': child['resume_task_id'],
@@ -326,11 +390,15 @@ def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch
     committed = st._candidate.commit(str(env.repo), session, env.handler._load_sibling('body_ops'))
     assert committed['success'], committed
     session['commit'] = committed; st._save_session(str(env.repo), session)
-    assert set(session['sealed']) == {'backend/ibl/ibl_v2_parser.py'}
+    assert set(session['sealed']) == set(paths)
     # 수정 전 실패·후 통과를 실제 검사기가 남긴 영수증으로 완료 판정한다.
     monkeypatch.setattr('red_apply._load_handler', lambda *a: env.handler)
     passed, reason = repair_policy.completion(session, child, env.repo)
     assert passed, reason
+    journal.save({**child, 'status': 'completed', 'response': '구현 검사·반영 완료'})
+    resumed = repair.advance_parent(journal.read(parent['task_id']), env.repo, repair_policy.completion)
+    assert resumed['goal'] == env.turn.request and resumed['repair_result']['success']
+    assert resumed['framing'] == parent['framing']
 
 
 if __name__ == '__main__':

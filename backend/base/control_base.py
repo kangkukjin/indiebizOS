@@ -150,6 +150,10 @@ def snapshot(source_root, base):
         (tmp / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=1),
                                             encoding="utf-8")
         _seal(tmp)
+        # macOS 12는 읽기 전용 디렉터리 자체의 rename을 EACCES로 거절한다.
+        # 내부 바이트·하위 디렉터리는 봉인한 채, 공개할 루트만 rename 동안 쓰기 허용한다.
+        sealed_mode = stat.S_IMODE(tmp.stat().st_mode)
+        tmp.chmod(sealed_mode | stat.S_IWUSR)
         try:
             os.rename(tmp, final)
         except OSError:
@@ -158,6 +162,7 @@ def snapshot(source_root, base):
                 shutil.rmtree(tmp, ignore_errors=True)
                 return manifest_of(final)
             raise
+        final.chmod(sealed_mode)
         return manifest
     except BaseException:
         _unseal(tmp)

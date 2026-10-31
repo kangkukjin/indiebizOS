@@ -91,7 +91,7 @@ def _watch_situation(rec, jid):
 
     def refresh():
         with phone_jobs._db() as db:
-            row = db.execute('SELECT state,result FROM resident_tasks WHERE id=? AND device=? AND generation=?',
+            row = db.execute('SELECT state,result,summary,request_id FROM resident_tasks WHERE id=? AND device=? AND generation=?',
                              (jid, device, generation)).fetchone()
             event = db.execute('SELECT cursor,occurred,received FROM resident_events WHERE job=? AND device=? '
                                'ORDER BY cursor DESC LIMIT 1', (jid, device)).fetchone()
@@ -100,13 +100,21 @@ def _watch_situation(rec, jid):
             return
         seen[0] = signature
         result = json.loads(row['result']) if row and row['result'] else None
-        ref = situation.evidence(result) if result is not None else {'resident_job': jid, 'device': device}
+        summary = json.loads(row['summary']) if row else {}
+        context = {'device': device, 'generation': generation, 'job_id': jid,
+                   'request_id': row['request_id'] if row else None, 'command': summary}
+        ref = situation.evidence({**context, 'result': result})
         situation.observe(subject, 'receipt', {'state': row['state'] if row else 'unavailable',
-                          'result_observed': result is not None}, source='resident_store:' + jid,
+                          'result_observed': result is not None,
+                          'request_id': context['request_id'], 'op': summary.get('op'),
+                          'cwd': summary.get('cwd')}, source='resident_store:' + jid,
                           source_cursor=event['cursor'] if event else None,
                           observed_at=event['occurred'] if event else None, source_ref=ref)
         if result is not None and situation.on_result:
-            situation.on_result(result, ref, 'resident:' + jid)
+            situation.on_result({'device': device, 'cwd': summary.get('cwd'),
+                                 'op': summary.get('op'),
+                                 'task_ref': {'kind': 'guestpc', 'task_id': jid},
+                                 'result': result}, ref, 'resident:' + jid)
     situation.watch('resident:' + jid, refresh)
 
 

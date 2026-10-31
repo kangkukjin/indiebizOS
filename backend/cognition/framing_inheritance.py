@@ -130,6 +130,8 @@ def _storable(framing: dict) -> dict:
 
 def remember(runner, message: str, framing: dict, *, completed: bool = True) -> Optional[dict]:
     """턴 종료에 이 턴의 유효 규정을 자아별로 적는다(last + 문장별). 평가 판정과 함께."""
+    from dialogue_continuation import recall_query
+    message = recall_query(message)
     if not isinstance(framing, dict) or not framing:
         return None
     key = agent_key(runner)
@@ -315,6 +317,10 @@ def inherit(runner, message: str, history: list) -> Optional[dict]:
     """계승된 규정 또는 None(→ 호출자가 의식을 깨운다). 모든 포기 사유를 사건으로 남긴다.
     계승은 절약이지 의무가 아니다 — 어떤 예외도 턴을 깨지 않고 각성으로 돌린다."""
     from episode_logger import record_trajectory_event
+    from dialogue_continuation import recall_query
+    # 복구 문맥은 실행 근거다. 새 요청 자리에는 런타임이 따로 보존한 사용자 원문을 쓴다.
+    # 접두 문자열을 벗기지 않으므로 사용자 본문이 복구 표식을 흉내 내도 권한이 바뀌지 않는다.
+    message = recall_query(message)
     try:
         return _inherit(runner, message, history, record_trajectory_event)
     except Exception as exc:  # 경량 호출·저장소·검증 어디서 나든 각성으로

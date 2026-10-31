@@ -49,37 +49,73 @@ def attach(binding, store=None, handoff=None):
 
 
 def observe_result(situation, result, ref, call_id):
-    """Only structural envelopes, never scrape prose or turn a tool claim into a fact."""
-    try:
-        obj = json.loads(result) if isinstance(result, str) else result
-    except (ValueError, TypeError):
-        return
+    """Retain result bodies as attributed claims, independently of transport success.
+
+    Text excerpts are evidence for the model, never parsed into asserted effects.
+    Complete JSON bodies may expose structured claims through the same adapter.
+    """
+    from logging_utils import mask_secret_data
+    obj = mask_secret_data(result)
     visited = 0
 
-    def walk(value, path=()):
+    def excerpt(text, limit=900):
+        raw = text.encode('utf-8')
+        if len(raw) <= limit:
+            return {'text': text, 'truncated': False}
+        return {'text': raw[:limit // 2].decode('utf-8', errors='ignore') + '\n…\n' +
+                        raw[-limit // 2:].decode('utf-8', errors='ignore'), 'truncated': True}
+
+    def publish(subject, facets, path):
+        situation.observe(subject, 'reported_outcome', facets, source='tool_result',
+            source_ref={**ref, 'path': list(path)}, basis='tool_claim', call_id=call_id)
+
+    def walk(value, path=(), context=None):
         nonlocal visited
         visited += 1
         if visited > 100 or len(path) > 8:
             return
-        if isinstance(value, list):
+        subject = {'kind': 'call', 'id': call_id, 'path': list(path)}
+        if context:
+            subject['context'] = context
+        if isinstance(value, str):
+            if not value.strip():
+                return
+            try:
+                decoded = json.loads(value)
+            except (ValueError, TypeError):
+                decoded = None
+            if isinstance(decoded, (dict, list)):
+                walk(decoded, (*path, 'json'), context)
+            else:
+                publish(subject, {'output': excerpt(value)}, path)
+        elif isinstance(value, list):
             for i, item in enumerate(value[:40]):
-                walk(item, (*path, i))
+                walk(item, (*path, i), context)
         elif isinstance(value, dict):
             facets = {k: value[k] for k in ('success', 'ok', 'error', 'exit_code', 'returncode', 'exit',
                                            'state', 'status', 'terminal', 'timed_out', 'accepted',
-                                           'timeout', 'cancelled', 'unknown')
+                                           'timeout', 'cancelled', 'unknown', 'phase', 'readiness',
+                                           'reason', 'recovery_reason', 'exception')
                       if k in value and not isinstance(value[k], (dict, list))}
             task_ref = value.get('task_ref')
-            subject = {'kind': 'call', 'id': call_id, 'path': list(path)}
+            context = dict(context or {})
+            for key in ('limb', 'limb_name', 'device', 'cwd', 'op'):
+                if isinstance(value.get(key), str):
+                    context[key] = value[key][:240]
             if isinstance(task_ref, dict) and task_ref.get('kind') and task_ref.get('task_id'):
-                subject = {'kind': 'task', 'ref': task_ref}
+                context['task_ref'] = task_ref
+            if context:
+                subject['context'] = context
+            for key in ('output', 'stdout', 'stderr', 'text'):
+                if isinstance(value.get(key), str) and value[key].strip():
+                    facets[key] = excerpt(value[key])
             if facets:
-                situation.observe(subject, 'reported_outcome', facets, source='tool_result',
-                    source_ref={**ref, 'path': list(path)}, basis='tool_claim', call_id=call_id)
+                publish(subject, facets, path)
             # Known transport/result containers only. External source bodies are not evidence adapters.
-            for key in ('value', 'result', 'items', 'results', 'failure', 'details'):
-                if key in value and isinstance(value[key], (dict, list)):
-                    walk(value[key], (*path, key))
+            for key in ('value', 'result', 'items', 'results', 'failure', 'details',
+                        'observation', 'execution_result', 'content'):
+                if key in value and isinstance(value[key], (dict, list, str)):
+                    walk(value[key], (*path, key), context)
     walk(obj)
 
 

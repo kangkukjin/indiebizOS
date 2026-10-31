@@ -412,6 +412,71 @@ def test_update_shutdown_drains_work_before_stopping(setup):
     assert adapter.spawns == 0
 
 
+@pytest.mark.parametrize('alive', [False, True])
+def test_failed_controller_accepts_update_shutdown(setup, alive):
+    ctl, adapter, _ = setup
+    adapter.running = alive
+    ctl.save(phase='FAILED', recovery_reason='boot_failed')
+    submit(ctl, operation='shutdown', policy={'drain_before_shutdown': True, 'force': False})
+    ticks(ctl, 8)
+    assert ctl.state['phase'] == 'STOPPED'
+    assert ctl.state['last_result']['outcome'] == 'intentional_shutdown'
+    assert adapter.spawns == 0
+
+
+def test_failed_controller_does_not_kill_unobservable_worker(setup):
+    ctl, adapter, _ = setup
+    adapter.unknown = True
+    ctl.save(phase='FAILED')
+    submit(ctl, operation='shutdown', policy={'drain_before_shutdown': True, 'force': False})
+    ticks(ctl, 3)
+    assert ctl.state['phase'] == 'FAILED' and adapter.stops == 0
+    assert ctl.state['last_result']['outcome'] == 'deferred'
+
+
+def test_failed_controller_rejects_stale_shutdown(setup):
+    ctl, adapter, _ = setup
+    ctl.save(phase='FAILED')
+    submit(ctl, operation='shutdown', expected_generation='older')
+    ticks(ctl, 3)
+    assert ctl.state['phase'] == 'FAILED' and adapter.stops == 0
+    assert ctl.state['last_result']['outcome'] == 'stale_generation'
+
+
+def test_failed_shutdown_timeout_keeps_failed_state(setup):
+    ctl, adapter, clock = setup
+    adapter.busy = 1
+    ctl.save(phase='FAILED')
+    submit(ctl, operation='shutdown', policy={'drain_before_shutdown': True,
+                                            'drain_timeout_s': 1, 'force': False})
+    ticks(ctl, 2)
+    clock[0] += 2
+    ticks(ctl, 3)
+    assert ctl.state['phase'] == 'FAILED' and adapter.stops == 0
+    assert ctl.state['last_result']['outcome'] == 'deferred'
+
+
+def test_worker_exit_during_shutdown_never_restarts(setup):
+    ctl, adapter, _ = setup
+    adapter.busy = 1
+    ctl.save(phase='FAILED')
+    submit(ctl, operation='shutdown', policy={'drain_before_shutdown': True, 'force': False})
+    ticks(ctl, 2)
+    adapter.running = False
+    ticks(ctl, 5)
+    assert ctl.state['phase'] == 'STOPPED' and adapter.spawns == 0
+
+
+def test_verified_restart_moves_recovery_reason_to_history(setup):
+    ctl, _, _ = setup
+    ctl.save(phase='FAILED', recovery_reason='boot_failed')
+    ctl.start_generation(code_manifest(ctl.base))
+    ticks(ctl, 8)
+    assert ctl.state['phase'] == 'ACTIVE'
+    assert ctl.state['recovery_reason'] is None
+    assert ctl.state['last_result']['recovered_from'] == 'boot_failed'
+
+
 def test_update_shutdown_timeout_preserves_work_and_reopens_admission(setup):
     ctl, adapter, clock = setup
     adapter.busy = 1

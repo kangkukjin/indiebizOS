@@ -119,6 +119,7 @@ class Controller:
         # ACTIVE의 첫 조치는 activate 재전달이다. 이 저장 직후 죽어도 관문이 남지 않는다.
         self.save(phase=phase, request=None, red_job_path=None, last_result=result, resume_pending=False,
                   preparing_start=False,
+                  recovery_reason=None if phase == "ACTIVE" else self.state.get("recovery_reason"),
                   candidate=None if phase in {"ACTIVE", "FAILED", "STOPPED"} else self.state.get("candidate"))
         self._notify_repair_root(result, request)
 
@@ -271,6 +272,25 @@ class Controller:
     def _tick_failed(self):
         s = self.state
         for pending in self.pending():
+            if pending["operation"] == "shutdown":
+                self.save(request=pending)
+                if (pending.get("version") != STATE_VERSION or
+                        pending.get("expected_generation") != s.get("generation")):
+                    self.finish("stale_generation", phase="FAILED")
+                    return
+                policy = pending.get("policy") or {}
+                if policy.get("drain_before_shutdown") and self.adapter.alive(s.get("worker")):
+                    # 살아 있는 작업자는 실패 단계에서도 관측·배출 없이 죽이지 않는다.
+                    snap = self.observe()
+                    if snap is None:
+                        self.finish("deferred", phase="FAILED", reason="ownership_unknown")
+                        return
+                    self.save(phase="DRAINING", force=False, intentional=False, drain_return_phase="FAILED",
+                              deadline=self.clock() + float(policy.get("drain_timeout_s", 600)))
+                    return
+                atomic_json(self.base / "data/.intentional_shutdown", {"request_id": pending["request_id"]})
+                self.begin_stop(intentional=True, force=not policy.get("drain_before_shutdown"))
+                return
             if pending["operation"] != "restart":
                 continue
             if pending.get("expected_generation") != s.get("generation"):
@@ -317,6 +337,7 @@ class Controller:
         if pending:
             req = pending[0]
             self.save(request=req, phase="CHECKING", rollback_attempted=False,
+                      drain_return_phase="ACTIVE",
                       recovery_stopping=False, red_outcome=None, force=False, intentional=False,
                       recovery_reason=None, publish_attempts=0,
                       interrupted_owners=[], effect_unknown=False, previous_digest=s["code_digest"])
@@ -463,6 +484,9 @@ class Controller:
                 atomic_json(self.home / "results" / (req["request_id"] + ".json"),
                             {"outcome": "cancelled", "request_id": req["request_id"]})
         if self.state.get("resume_pending"):
+            if s.get("drain_return_phase") == "FAILED":
+                self.finish("deferred", phase="FAILED", note=self.state.get("defer_note"))
+                return
             response = self.adapter.command(self.state, "activate")
             if response.get("accepting") is True:
                 self.finish("deferred", note=self.state.get("defer_note"))
@@ -470,6 +494,10 @@ class Controller:
         if not self.red_reservation_current():
             return
         if not self.adapter.alive(s.get("worker")):
+            if s["request"]["operation"] == "shutdown":
+                atomic_json(self.base / "data/.intentional_shutdown", {"request_id": s["request"]["request_id"]})
+                self.begin_stop(intentional=True)
+                return
             self.save(phase="RECOVERING", recovery_reason="active_crash", deadline=self.clock() + 30)
             return
         try:
@@ -583,7 +611,7 @@ class Controller:
                 return
             self.adapter.command(self.state, "activate")
             outcome = "rolled_back" if self.state.get("rollback_attempted") else "restarted"
-            self.finish(outcome)
+            self.finish(outcome, recovered_from=s.get("recovery_reason"))
             self._prune_generations()
         elif self.clock() >= s["deadline"] or (snap and snap.get("readiness") == "failed"):
             self.save(phase="RECOVERING", recovery_reason="boot_failed")

@@ -36,6 +36,41 @@ def fingerprint(value):
                                      default=str).encode()).hexdigest()
 
 
+def projection_priority(record):
+    """Keep request, uncertainty and substantive evidence ahead of transport receipts.
+
+    This orders reported evidence; a failed check is not a diagnosis of its target,
+    and a successful command cannot resolve another subject's earlier failure.
+    """
+    row = record['latest']
+    value = row['value'] if isinstance(row['value'], dict) else {}
+    body = any(k in value for k in ('output', 'stdout', 'stderr', 'text'))
+    context = row['subject'].get('context') or {}
+    failed = (any(value.get(k) is False for k in ('success', 'ok')) or
+              any(value.get(k) for k in ('error', 'exception', 'timed_out', 'unknown')) or
+              any(isinstance(value.get(k), (int, float)) and value[k] != 0
+                  for k in ('exit', 'exit_code', 'returncode')) or
+              any(str(value.get(k, '')).lower() in {'failed', 'blocked', 'error', 'recovering'}
+                  for k in ('state', 'status', 'phase', 'readiness')))
+    if row['basis'] == 'user_request':
+        priority = 8
+    elif record['availability'] in {'conflict', 'needs_recheck'}:
+        priority = 7
+    elif body and any(k in context for k in ('task_ref', 'device', 'limb')):
+        priority = 6
+    elif body:
+        priority = 5
+    elif failed:
+        priority = 4
+    elif row['facet'] not in {'execution', 'reported_outcome', 'receipt'}:
+        priority = 3
+    elif row['basis'] == 'observed' and value.get('state') in {'running', 'queued', 'waiting'}:
+        priority = 2
+    else:
+        priority = 1
+    return priority, record['revision']
+
+
 def current(agent=None, task=None):
     from execution_turn import current as binding_current, resolve_session
     from thread_context import execution_key
@@ -329,9 +364,7 @@ class Situation:
                 delivery['read_result'] = {'id': self.snapshot_ref['id']}
             else:
                 delivery['evidence_availability'] = 'unavailable'
-            rows = sorted(view['observations'], key=lambda r: (
-                r['availability'] in {'conflict', 'needs_recheck'},
-                r['latest']['facet'] != 'execution', r['revision']), reverse=True)
+            rows = sorted(view['observations'], key=projection_priority, reverse=True)
             for record in rows:
                 row = {'latest': {k: v for k, v in record['latest'].items()
                                   if k not in {'signature', 'relation', 'call_id'} and v is not None},

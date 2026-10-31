@@ -17,6 +17,31 @@ def sealed_control(tmp_path):
     return control_base.base_dir(tmp_path, manifest['id'])
 
 
+def test_publish_keeps_files_sealed_with_macos12_directory_rename(tmp_path, monkeypatch):
+    import os
+    import stat
+    rename = os.rename
+    published = []
+
+    def macos12_rename(source, target):
+        source = Path(source)
+        if not source.stat().st_mode & stat.S_IWUSR:
+            raise PermissionError('macOS 12 cannot rename a read-only directory')
+        for file in source.rglob('*'):
+            if file.is_file():
+                assert not file.stat().st_mode & 0o222
+        published.append(target)
+        return rename(source, target)
+
+    monkeypatch.setattr(control_base.os, 'rename', macos12_rename)
+    control = sealed_control(tmp_path)
+    assert published == [control]
+    assert not control.stat().st_mode & 0o222
+    manifest = control_base.manifest_of(control)
+    assert manifest['files'] == control_base.inventory(ROOT)['files']
+    assert sealed_control(tmp_path) == control and len(published) == 1
+
+
 def run_isolated(code, *args):
     result = subprocess.run([sys.executable, '-I', '-B', '-c', code, *map(str, args)],
                             capture_output=True, text=True, timeout=30)

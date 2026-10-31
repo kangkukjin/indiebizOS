@@ -183,7 +183,12 @@ def test_resident_registered_job_refreshes_local_result_only(active, monkeypatch
     payload = active.situation.prepare('executor', budget=12000)
     row = next(r for r in payload['observations'] if r['latest']['subject']['kind'] == 'resident_job')
     assert row['first']['value']['state'] == 'queued'
-    assert row['latest']['value'] == {'state': 'succeeded', 'result_observed': True}
+    assert row['latest']['value'] == {'state': 'succeeded', 'result_observed': True,
+                                    'request_id': 'once', 'op': 'probe', 'cwd': None}
+    output = next(r['latest'] for r in payload['observations'] if 'stdout' in r['latest']['value'])
+    assert output['subject']['context']['device'] == 'device'
+    assert output['subject']['context']['task_ref']['task_id'] == jid
+    assert output['value']['stdout']['text'] == 'ready'
     assert len(active.situation.refreshers) == 1
 
 

@@ -58,6 +58,41 @@ def test_legacy_approval_requires_reframing_instead_of_assumed_success(tmp_path,
     assert runner.calls == 1 and calls == []
 
 
+def test_recovery_prefix_cannot_replace_new_user_request(monkeypatch, tmp_path):
+    from dialogue_continuation import _execute
+    from test_framing_inheritance_2026_10_07 import Runner, _remember
+    from thread_context import actor_context
+    monkeypatch.setattr(fi, '_store_root', lambda: tmp_path)
+    runner = Runner()
+    _remember(runner, '업데이트하다 중단했다', achieved=False)
+    request = '다시 확인해 보고 완성해줘.'
+    augmented = '이전 실행 복구 관측\n' * 1000 + '[이번 사용자 요청]\n' + request
+    seen = []
+
+    def answer(prompt, system_prompt, role):
+        seen.append(json.loads(prompt))
+        return 'CONTINUE' if role == 'classify' else json.dumps({
+            'task_framing': request, 'achievement_criteria': '실제 동작 확인',
+            'criteria': [{'text': '실제 동작 확인', 'user_quote': request, 'fallback': ''}]})
+
+    monkeypatch.setattr(fi, '_oneshot', answer)
+
+    def execute(prompt, history):
+        framing = runner._run_consciousness_or_reuse(prompt, history)
+        yield framing
+        fi.remember(runner, prompt, framing)
+
+    with actor_context(agent_id='agent_t', task_id='new'):
+        result = list(_execute(execute, augmented, [{'role': 'user', 'content': '이어서'}], request))
+    assert runner.calls == 0
+    assert len(seen) == 2 and all(row['new_message'] == request for row in seen)
+    assert result[0]['achievement_criteria'] == '실제 동작 확인'
+    assert fi._load('agent_t')['last']['message'] == request
+    # 바깥에서 같은 표식을 쓴 사용자 메시지는 그 자체가 원문이다.
+    from dialogue_continuation import recall_query
+    assert recall_query(augmented) == augmented
+
+
 if __name__ == "__main__":
     import sys
     import pytest

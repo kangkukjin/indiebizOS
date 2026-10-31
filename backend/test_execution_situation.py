@@ -144,6 +144,43 @@ def test_unknown_effect_and_masked_data(situation):
     assert 'do-not-publish' not in json.dumps(situation.snapshot())
 
 
+def test_result_body_survives_transport_success_and_projection_budget(situation):
+    from situation_evidence import observe_result
+    ref = {'id': 'full-result'}
+    # ep5641: the accepted envelope surrounded the completed shell result.
+    observe_result(situation, {'value': {'success': True, 'accepted': True, 'state': 'queued',
+        'limb': 'device-a', 'task_ref': {'kind': 'guestpc', 'task_id': 'job-a'},
+        'observation': {'result': {'exit': 0, 'output': 'STARTING boot_failed\nhealth unreachable'}}}},
+        ref, 'check-a')
+    observe_result(situation, {'value': json.dumps({'status': 'blocked',
+        'error': 'Restored backend failed verification: not_active'})}, ref, 'restore-a')
+    for i in range(100):
+        observe_result(situation, {'success': True, 'accepted': True, 'state': 'queued'}, ref, str(i))
+    payload = situation.prepare('executor', budget=4000)
+    encoded = json.dumps(payload, ensure_ascii=False)
+    assert 'boot_failed' in encoded and 'not_active' in encoded
+    assert 'device-a' in encoded and 'job-a' in encoded
+    assert payload['omitted']['count'] > 0
+    assert len(encoded.encode()) <= 4000
+    assert all(r['latest']['basis'] == 'tool_claim' for r in payload['observations'])
+    assert all(r['latest']['subject']['kind'] == 'call' for r in payload['observations'])
+
+
+def test_plain_text_is_bounded_attributed_and_masked(situation):
+    from situation_evidence import observe_result
+    observe_result(situation, {'execution_result': {'stdout': 'a' * 10000 + '\nlast diagnostic'}},
+                   {'id': 'raw-evidence'}, 'native-a')
+    row = situation.snapshot()['observations'][0]['latest']
+    assert row['value']['stdout']['truncated']
+    assert row['value']['stdout']['text'].endswith('last diagnostic')
+    assert len(row['value']['stdout']['text'].encode()) < 1000
+    assert row['source_ref'] == {'id': 'raw-evidence', 'path': ['execution_result']}
+    assert row['basis'] == 'tool_claim'
+    observe_result(situation, {'result': {'api_key': 'must-not-leak', 'output': 'diagnostic'}},
+                   {'id': 'secret-ref'}, 'secret')
+    assert 'must-not-leak' not in json.dumps(situation.snapshot())
+
+
 if __name__ == '__main__':
     import sys
     import pytest

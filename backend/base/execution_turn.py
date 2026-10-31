@@ -19,11 +19,17 @@ class Binding:
     followup_reason: str = ""
     component_repair_allowed: bool = False
     component_session: str = ""
+    component_resume_key: str = ""
     component_attempt: int = 0
     component_paths: set = field(default_factory=set)
     cancel_check: object = None
     request: str = ''
     component_restore_checked: bool = False
+    continuation_key: str = ''
+    history: list = field(default_factory=list)
+    images: list = field(default_factory=list)
+    allowed_set: object = None
+    on_change: object = None
 
 
 def current():
@@ -39,6 +45,8 @@ def claim_followup(reason):
         if binding.followup_reason:
             return False
         binding.followup_reason = reason
+        if binding.on_change:
+            binding.on_change()
         return True
 
 

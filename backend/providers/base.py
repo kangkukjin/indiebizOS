@@ -268,6 +268,8 @@ class ProviderMetrics:
                 led["cache_read"] = led.get("cache_read", 0) + int(cache_read_tokens or 0)
         from task_tree_budget import observe
         observe(int(input_tokens or 0) + int(output_tokens or 0))
+        if led is not None and led.get('checkpoint_hook'):
+            led['checkpoint_hook']()
         from model_call_context import settle_model_round
         settle_model_round()
         from member_runtime import current as member_turn

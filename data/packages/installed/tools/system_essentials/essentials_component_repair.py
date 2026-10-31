@@ -56,7 +56,7 @@ def identity(turn):
                               'id': conversation.session_id} if conversation else None)}
 
 
-def restore_session(st, repo, turn, requested=None):
+def restore_session(st, repo, turn, requested=None, *, automatic=False):
     """같은 작업은 사본을 회수한다. 다른 작업은 같은 대화의 명시 key만 연결한다."""
     who = identity(turn)
     if requested:
@@ -87,8 +87,9 @@ def restore_session(st, repo, turn, requested=None):
             raise PermissionError('부품 수리 사본의 작업·행위자·대화가 현재 실행과 다릅니다')
         turn.component_attempt = max(turn.component_attempt, scope.get('attempt', 0))
         if session.get('status') == 'discarded':
-            if requested:
+            if requested and not automatic:
                 raise ValueError('폐기한 부품 수리 사본은 다시 적용하지 않습니다')
+            turn.component_resume_key = ''
             continue
         turn.component_session = session['key']
         turn.component_paths.clear()
@@ -117,7 +118,7 @@ def handle(handler, payload, context):
         if turn.component_session != payload['key']:
             return None  # 광역 수리 키를 현재 부품 사본으로 바꿔 적용하지 않는다.
     elif not turn.component_session and not turn.component_restore_checked:
-        restore_session(st, repo, turn)
+        restore_session(st, repo, turn, turn.component_resume_key or None, automatic=True)
         turn.component_restore_checked = True
     if name == 'patch_op' and turn.component_session and payload.get('op') in {'apply', 'status', 'discard'}:
         with st._candidate.locked(str(repo), 'application'):
@@ -132,6 +133,7 @@ def handle(handler, payload, context):
             else:
                 result = st.op_discard({'_repo_root': str(repo), '_grant_key': turn.component_session})
                 turn.component_session = ''
+                turn.component_resume_key = ''
                 turn.component_paths.clear()
         return json.dumps(result, ensure_ascii=False)
     proposing = name == 'patch_op' and payload.get('op', 'propose') == 'propose'
@@ -191,6 +193,8 @@ def handle(handler, payload, context):
             session['component_scope'] = {**identity(turn), 'request': turn.request,
                                           'attempt': turn.component_attempt}
             st._save_session(str(repo), session)
+        from component_continuation import arm
+        arm(turn)
         # 기존 파일 편집·읽기·줄 범위·불일치 진단을 재사용한다.
         mapped = {**payload, 'path': str(candidate), 'file_path': str(candidate)}
         result = handler._execute(mapped, context)

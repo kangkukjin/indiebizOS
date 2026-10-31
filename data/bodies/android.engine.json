@@ -191,6 +191,7 @@
     "datastore/calendar_rules",
     "datastore/capability_history",
     "datastore/coding_store",
+    "datastore/component_continuation",
     "datastore/control_observations",
     "datastore/conversation_db",
     "datastore/conversation_handoff",
@@ -461,6 +462,7 @@
     "surface/api_business",
     "surface/api_chat_sessions",
     "surface/api_coding",
+    "surface/api_component_continuation",
     "surface/api_config_tiers",
     "surface/api_conversations",
     "surface/api_document_engine",
@@ -580,8 +582,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 569,
-    "engine": 537,
+    "total": 571,
+    "engine": 539,
     "blocklist": 32
   }
 }

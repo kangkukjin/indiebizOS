@@ -67,7 +67,8 @@ def continue_task(runner, request, response, calls, history, *, collect,
         return response
     # 지연 적용 중에는 죽음을 넘는 기존 제어자가 후속을 소유한다.
     from repair_continuation import current
-    if current():
+    from component_continuation import is_task
+    if current() and not is_task(current()):
         return response
     if not claim_followup("observed_failure"):
         return response

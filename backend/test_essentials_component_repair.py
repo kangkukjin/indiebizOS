@@ -191,6 +191,21 @@ def test_explicit_resume_requires_original_conversation_and_agent(setup):
         execution_turn._current.reset(token)
 
 
+def test_parent_continuation_attaches_trusted_candidate_key(setup):
+    repo, source, h, turn = setup
+    turn.conversation = NS(db_path=str(repo / 'conversation.db'), session_id='original')
+    staged = invoke(h, repo, 'write_file', {'path': str(source), 'content': revised(source.read_text())})
+    resumed = execution_turn.Binding(NS(), turn.agent, 'resumed-task', context={},
+                                    conversation=turn.conversation, component_repair_allowed=True,
+                                    component_resume_key=staged['key'])
+    token = execution_turn._current.set(resumed)
+    try:
+        applied = invoke(h, repo, 'patch_op', {'op': 'apply'})
+        assert applied['success'] and applied['key'] == staged['key']
+    finally:
+        execution_turn._current.reset(token)
+
+
 def test_long_task_can_repair_twice_with_distinct_sessions(setup):
     repo, source, h, turn = setup
     turn.task = 'task_sysai_' + 'a' * 40
@@ -199,6 +214,24 @@ def test_long_task_can_repair_twice_with_distinct_sessions(setup):
     second = invoke(h, repo, 'write_file', {'path': str(source), 'content': source.read_text() + '\n# second correction\n'})
     assert first['key'] != second['key']
     assert invoke(h, repo, 'patch_op', {'op': 'apply'})['success']
+
+
+def test_parent_resume_can_start_again_after_discard_receipt(setup):
+    repo, source, h, turn = setup
+    turn.conversation = NS(db_path=str(repo / 'conversation.db'), session_id='original')
+    staged = invoke(h, repo, 'write_file', {'path': str(source), 'content': revised(source.read_text())})
+    assert invoke(h, repo, 'patch_op', {'op': 'discard'})['success']
+    # discard 영수증 저장 뒤 부모 체크포인트 이전에 죽은 경우.
+    resumed = execution_turn.Binding(NS(), turn.agent, 'resumed-after-discard', context={},
+                                    conversation=turn.conversation, component_repair_allowed=True,
+                                    component_resume_key=staged['key'])
+    token = execution_turn._current.set(resumed)
+    try:
+        retry = invoke(h, repo, 'write_file', {'path': str(source), 'content': revised(source.read_text())})
+        assert retry.get('staged') and retry['key'] != staged['key'], retry
+        assert not resumed.component_resume_key
+    finally:
+        execution_turn._current.reset(token)
 
 
 def test_discarded_attempt_is_not_reused_after_context_loss(setup):

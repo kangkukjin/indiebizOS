@@ -60,7 +60,7 @@ LAYERS = {
         "capability_history", "control_observations", "function_store", "ibl_example_index", "function_memory",
         "member_activity",
         "research_store", "research_questions", "research_evidence", "research_plans", "notebook_store", "research_lifecycle",
-        "distill_ledger", "repair_continuation", "repair_context", "repair_root",
+        "distill_ledger", "repair_continuation", "component_continuation", "repair_context", "repair_root",
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",
         "tree_recall", "tree_doc", "forage_recall_store",

@@ -334,9 +334,20 @@ class CognitivePipelineMixin:
                                      component_repair=(get_task_origin() == "user"
                                                        and kwargs.get("utterance_author") != "agent"),
                                      cancel_check=kwargs.get('cancel_check'), request=message)
+            import component_continuation as parent_continuation
+            from execution_turn import current as current_execution
+            _execution = current_execution()
+            if _execution:
+                _execution.history, _execution.images = list(history or []), list(kwargs.get('images') or [])
+                _execution.allowed_set = kwargs.get('allowed_set')
             from conscious_supervisor import open_supervisor
             _supervisor = None
+            _parent_response = None
             try:
+                parent_continuation.attach(_execution)
+                if _execution:
+                    kwargs['cancel_check'] = _execution.cancel_check
+                    kwargs['allowed_set'] = _execution.allowed_set
                 first_segment = True
 
                 def segment(prompt, previous):
@@ -361,11 +372,19 @@ class CognitivePipelineMixin:
                 from dialogue_continuation import stream
                 for event in stream(segment, message, history, agent_id, task_id, handoff,
                                     kwargs.get("cancel_check")):
+                    parent_continuation.checkpoint(_execution, event)
+                    if event.get('type') == 'final':
+                        _parent_response = event.get('content')
                     yield event
             finally:
-                if _supervisor:
-                    _supervisor.close()
-                leave(_execution_token)
+                try:
+                    parent_continuation.finish(_execution, _parent_response)
+                finally:
+                    try:
+                        if _supervisor:
+                            _supervisor.close()
+                    finally:
+                        leave(_execution_token)
                 if task_cancel_requested(task_owner, task_id):
                     from delegation_tasks import confirm_task_cancelled
                     confirm_task_cancelled(task_owner, task_id)
@@ -406,6 +425,8 @@ class CognitivePipelineMixin:
         #    사용자 디스크 탐색은 도구 실행에서만. ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 필터버블 드리프트 방지.
         from repair_continuation import current as current_repair_continuation
         continuation = current_repair_continuation() if not force_role else None
+        from component_continuation import is_task as component_parent
+        parent_resume = component_parent(continuation)
         # 인계에는 이미 목표·규정·증거가 있다. 재개마다 새 연상/분류를 하지 않는다.
         recall = None if continuation else self._associate(
             message, history=history, action_hint=action_hint, deep=(force_role != "forage"))
@@ -416,7 +437,7 @@ class CognitivePipelineMixin:
 
         # 2. 분류 — 명시 태그(#think/#execute) → 무의식 분류
         if continuation:
-            request_type = "REPAIR"
+            request_type = "EXECUTE" if parent_resume else "REPAIR"
         elif force_role:
             # 표면 강제 EXECUTE(포식 등): 무의식 분류기(경량 LLM 1회)를 건너뛴다.
             request_type = "EXECUTE"
@@ -425,7 +446,7 @@ class CognitivePipelineMixin:
             request_type, _ = self._decide_request_type(
                 message, hippo_score, top_code, history, images)
         from repair_continuation import current as current_repair_continuation
-        if current_repair_continuation() and not force_role:
+        if current_repair_continuation() and not force_role and not parent_resume:
             # 사용자 출처는 영속 인계의 소비자가 복원한다. 분류기가 이미 승인된
             # 자기수리의 후반부를 단순 응답으로 낮춰 그랜트를 잃게 하지 않는다.
             request_type = "REPAIR"
@@ -462,6 +483,9 @@ class CognitivePipelineMixin:
             yield {"type": "error", "content": "작업이 취소되었습니다."}
             return
         execution_memory = recall.text() if recall else ""
+        if parent_resume:
+            from component_continuation import context
+            execution_memory = context(continuation)
 
         # 3. 의식(THINK) / force_role 모델 스왑
         from episode_logger import record_trajectory_event
@@ -475,7 +499,11 @@ class CognitivePipelineMixin:
         original_provider = None
         _reframe_channel = None
         _repair_granted_task = None  # 이 런이 발급한 RED 그랜트의 task_id (finally 회수용)
-        if force_role:
+        if parent_resume:
+            from component_continuation import framing
+            from dialogue_continuation import recall_query
+            consciousness_output = framing(recall_query(message))
+        elif force_role:
             # 표면별 전용 에이전트: 의식 건너뛰고 지정 모델(기본 경량)로 바로 실행.
             original_provider = _switch_to_role(self, force_role)
         elif request_type == "REPAIR":

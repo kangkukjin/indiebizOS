@@ -1,7 +1,8 @@
 """사용자가 맡긴 자기수리를 적용·재기동 뒤에도 잇는 영속 인계 원장.
 
-승인된 자기수리의 적용 예약·미완료 실행·검수에 연결한다. 원장 생성은 사용자 출처·실제 그랜트가 있는 실행자가
-맡고, 적용 대기는 제어자의 최종 결과 이후, 나머지 대기는 ACTIVE에서 실행한다. 옛 예약을 소급 실행하지 않는다.
+승인된 광역 자기수리의 적용 예약·미완료 실행·검수와, component_task 종류의 일반 부모 업무를 보존한다.
+광역 수리는 실제 그랜트가 필요하며 일반 부모는 component_continuation이 별도 경계로 만든다.
+적용 대기는 제어자의 최종 결과 이후, 나머지 대기는 ACTIVE에서 실행한다. 옛 예약을 소급 실행하지 않는다.
 """
 import contextvars
 import copy
@@ -63,6 +64,9 @@ def inherited_framing(message):
     row = current()
     if not row:
         return None
+    from component_continuation import is_task
+    if is_task(row):
+        raise ValueError('일반 부모 업무 재개는 수리 권한·수리 규정을 상속하지 않습니다')
     from principal import is_owner
     from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
     if (not is_owner() or get_task_origin() != "user" or row.get("authorized_origin") != "user"
@@ -191,7 +195,8 @@ def task_state(task, base=None):
     row = read(task, base)
     if not row:
         row = next((r for p in directory(base).glob("*.json") if (r := read_json(p))
-                    and (r.get("resume_task_id") == task or task in r.get("review_task_ids", []))), None)
+                    and (r.get("resume_task_id") == task or r.get('original_task_id') == task
+                         or task in r.get("review_task_ids", []))), None)
     if not row:
         return None
     try:
@@ -215,6 +220,9 @@ def task_state(task, base=None):
 
 
 def resume_context(row):
+    from component_continuation import is_task, context
+    if is_task(row):
+        return context(row)
     # 원문은 원장에 한 벌 보존한다. 중복된 report/post_verify 전체를 매 턴 주입하지 않는다.
     result = row.get("result") or {}
     evidence = {k: row.get(k) for k in ("task_id", "episode_id", "store", "worktree", "job_path", "phase", "response", "criteria_state", "next_instruction", "staging_task_id")}

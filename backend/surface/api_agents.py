@@ -340,16 +340,19 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
             owner = "rehearsal:" + owner
         # HTTP도 같은 대화의 후속 턴과 과제 실행자 소유권을 연결한다.
         from episode_logger import record_trajectory_event
-        with sessions.owned_turn(
+        from contextlib import nullcontext
+        from component_continuation import is_task
+        turn_scope = nullcontext(sessions.current()) if is_task(continuation) and sessions.current() else sessions.owned_turn(
             db.db_path, "messages", owner, task_id,
             on_skip=lambda exc: record_trajectory_event("conversation.binding_skipped", {
                 "surface": "agents/command", "owner": owner,
                 "reason": str(exc) or type(exc).__name__,
             }),
-        ):
+        )
+        with turn_scope:
             result = drain_stream(runner.cognitive_stream(
                 command, history, images=images, agent_name=agent_name,
-                extra_role=resume_context(continuation) if continuation else "",
+                extra_role=resume_context(continuation) if continuation and not is_task(continuation) else "",
                 cancel_check=(lambda: repair_cancelled(continuation)) if continuation else None,
                 utterance_author="owner"))
         response = result.get("final") or result.get("error") or ""

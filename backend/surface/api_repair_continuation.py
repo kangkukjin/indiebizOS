@@ -118,13 +118,15 @@ def _project_runner(row):
 
 
 def _execute(row):
+    from component_continuation import is_task
     if str(row.get("agent_id", "")).startswith("research:"):
         from research_threads import resume_repair
         return resume_repair(row)
     if not row["system_ai"]:
         from api_agents import _run_agent_command
         return _run_agent_command(row["project_id"], row["agent_id"], _project_runner(row),
-                                  row["goal"], continuation=row)
+                                  row["goal"], continuation=row,
+                                  images=row.get('images') if is_task(row) else None)
     from system_ai_core import process_system_ai_message
     from system_ai_memory import (create_task, get_task, complete_task, save_conversation,
                                   get_history_for_ai)
@@ -137,8 +139,10 @@ def _execute(row):
             if not get_task(task):
                 create_task(task, "user@gui", "system_ai", row["goal"], parent_task_id=row["task_id"])
             response, images = process_system_ai_message(
-                row["goal"], get_history_for_ai(limit=7),
-                extra_role=resume_context(row), utterance_author="owner", cancel_check=lambda: cancelled(row))
+                row["goal"], row.get('history', []) if is_task(row) else get_history_for_ai(limit=7),
+                images=row.get('images') if is_task(row) else None,
+                extra_role='' if is_task(row) else resume_context(row),
+                utterance_author="owner", cancel_check=lambda: cancelled(row))
             evaluation = get_goal_eval_outcome() or {}
             save_conversation("assistant", response, images=images)
             complete_task(task, response)
@@ -255,8 +259,17 @@ def process_pending(base, generation, execute=_execute):
             continue
         try:
             row = read_json(path)
-            if (not row or row.get("status") in TERMINAL or row.get("authorized_origin") != "user"
-                    or row.get("status") == "running" and row.get("generation") == generation):
+            if not row or row.get("status") in TERMINAL or row.get("authorized_origin") != "user":
+                continue
+            from component_continuation import is_task
+            if is_task(row):
+                from conversation_sessions import _PROCESS
+                if row.get('status') == 'running' and row.get('process') == _PROCESS:
+                    continue
+                from api_component_continuation import consume
+                consume(row, base, generation, execute)
+                continue
+            if row.get("status") == "running" and row.get("generation") == generation:
                 continue
             if cancelled(row, base):
                 _settle(row, "cancelled", "사용자가 수리 재개를 취소했습니다.", base)

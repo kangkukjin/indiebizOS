@@ -2,7 +2,7 @@
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, 상주 PC·폰 손발, 미디어 연결, NAS 연동
 owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_surface_remote.py, launcher_react.py, nas_*.py
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 
@@ -42,6 +42,10 @@ AI 셸은 `elevate:true`로 이번 명령의 관리자 인증을 요청할 수 �
 영상·입력은 별도 WebSocket으로 전달하고 기록하지 않는다. 연결 종료·해제 시 제어를 종료한다.
 Electron 창 연결 코드를 바꾼 경우 앱 재시작이 필요하다.
 구체적인 플랫폼 구현·제약은 `helper/README.md`의 화면 공유·관리자 명령 절을 따른다.
+
+파일 전송의 처리량과 화면 공유의 품질·일시 단절 복구를 개선하는 후속 계획은
+[원격 하드웨어 연결 수리 설계](../../docs/REMOTE_HARDWARE_TRANSPORT_REPAIR_2026_10_31.md)를 따른다.
+설계 단계이며 현재 화면 공유에 자동 재연결이나 새 파일 전송 경로가 적용됐다는 뜻은 아니다.
 
 **홈 화면 설치(2026-07-21)**: 둘 다 웹 앱 매니페스트를 실어서 "홈 화면에 추가"하면 각자 아이콘·이름을 가진
 앱이 된다(런처 / **IBFind**). 스토어도 서명도 플랫폼별 빌드도 없다. 서비스워커는 **아무것도 캐시하지 않는다** —

@@ -1,0 +1,2429 @@
+{
+  "cli_version": "2.1.309 (Claude Code)",
+  "requested_model": "sonnet",
+  "repetitions": 1,
+  "cases": [
+    {
+      "scenario": "mixed_pending_and_failure",
+      "condition": "before",
+      "input_utf8_bytes": 7758,
+      "result": "```json\n{\n  \"next_action\": \"파일 이동이 실제로 완료됐는지 대상 디스크의 산출물 존재 여부와 원본 삭제 여부를 읽기 전용으로 확인하고, 앱 상태는 health 엔드포인트를 다시 점검한다.\",\n  \"reason\": \"진단 명령은 exit:0이지만 출력이 잘려 있어 실제 상태를 보여주지 못합니다. 반면 boot 결과는 'boot_failed health unreachable'이고 이전 작업 old-0~2도 모두 failed입니다. 이동은 '접수'만 됐을 뿐 완료가 확인되지 않았으므로, 문서에 '앱 실행 중'이나 '이동 완료'라고 쓰기 전에 직접 확인이 필요합니다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 6211,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 287,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 6211,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 287,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 6211,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 6211
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 287,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 6211,
+          "webSearchRequests": 0,
+          "costUSD": 0.027718,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 5.89
+    },
+    {
+      "scenario": "mixed_pending_and_failure",
+      "condition": "after",
+      "input_utf8_bytes": 3757,
+      "result": "```json\n{\n  \"next_action\": \"이동 작업(task 'move')의 현재 상태를 읽기 전용으로 다시 확인한다 (대상 디스크의 파일 존재 여부와 이동 프로세스 진행 상태 조회)\",\n  \"reason\": \"'move'는 running 상태이고 결과가 아직 관찰되지 않았습니다. 이전 관찰은 최신 확인이 아니므로, 완료 여부를 확인하기 전에는 문서에 '이동 완료'라고 쓸 수 없습니다. 또한 boot 호출은 exit 0이지만 출력이 'boot_failed health unreachable'이어서 앱이 실행 중이라고 보기 어렵습니다. probe-6, probe-7 진단도 출력이 잘려 있어 exit 0만으로 정상이라 판단할 수 없습니다. 먼저 이동 상태와 앱 상태를 새로 확인한 뒤 문서에 사실대로 정리해야 합니다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 2530,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 351,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 2530,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 351,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 2530,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2530
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 351,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 2530,
+          "webSearchRequests": 0,
+          "costUSD": 0.013634,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 9.52
+    },
+    {
+      "scenario": "changed_input",
+      "condition": "after",
+      "input_utf8_bytes": 1473,
+      "result": "```json\n{\n  \"next_action\": \"/fixture/sales.csv를 다시 읽어 v2 기준으로 매출 합계를 재계산하고 검증한 뒤, 저장된 보고서 초안을 필요 시 갱신\",\n  \"reason\": \"합계 100 검증은 sales.csv v1 기준이었는데 파일이 v2로 바뀐 것이 관찰되어(검증 상태 needs_recheck) 현재 데이터로 유효한지 확인되지 않았기 때문입니다. 재검증 후에 보고서를 마무리해야 합니다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1300,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 206,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1300,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 206,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1300,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1300
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 206,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 1300,
+          "webSearchRequests": 0,
+          "costUSD": 0.007264,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.621
+    },
+    {
+      "scenario": "changed_input",
+      "condition": "before",
+      "input_utf8_bytes": 1513,
+      "result": "```json\n{\n  \"next_action\": \"sales.csv를 v2 기준으로 다시 읽고 매출 합계 계산과 검증을 재실행\",\n  \"reason\": \"기존 합계 100과 검증 통과는 sales.csv v1 기준인데, 파일이 v2로 바뀌어 검증이 'needs_recheck' 상태입니다. 재검증 후 결과가 같거나 갱신되면 저장된 초안을 그에 맞춰 수정하고 보고서를 마무리해야 합니다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1322,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 185,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1322,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 185,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1322,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1322
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 185,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 1322,
+          "webSearchRequests": 0,
+          "costUSD": 0.007142000000000001,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.174
+    },
+    {
+      "scenario": "missing_response",
+      "condition": "before",
+      "input_utf8_bytes": 1432,
+      "result": "```json\n{\n  \"next_action\": \"send_invoice를 다시 호출하지 않고, 먼저 읽기 전용으로 청구서의 실제 발송 여부(발송 기록/보낸 편지함/수신 확인)를 조회한다\",\n  \"reason\": \"send 호출이 시간 초과로 result_missing 상태이고 effect가 unknown이라 이미 발송되었을 수 있다. 확인 없이 재전송하면 청구서가 중복 발송될 위험이 있으므로 발송 여부를 먼저 확인한 뒤, 미발송이 확인된 경우에만 재시도한다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1314,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 219,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1314,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 219,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1314,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1314
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 219,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 1314,
+          "webSearchRequests": 0,
+          "costUSD": 0.00745,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.654
+    },
+    {
+      "scenario": "missing_response",
+      "condition": "after",
+      "input_utf8_bytes": 1411,
+      "result": "```json\n{\n  \"next_action\": \"청구서를 다시 보내지 않고, 먼저 발송 기록(보낸 편지함/청구 시스템의 전송 상태)을 조회해 이전 send_invoice 요청이 실제로 처리되었는지 확인한다.\",\n  \"reason\": \"응답이 시간 초과되어 결과가 없고 effect가 unknown이라 이미 발송되었을 수도 있다. 확인 없이 재전송하면 고객에게 청구서가 중복 발송될 위험이 있으므로, 읽기 전용 조회로 상태를 먼저 파악한 뒤 미발송이 확인될 때만 재전송한다.\"\n}\n```",
+      "is_error": false,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1305,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 238,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1305,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 238,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1305,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1305
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 2,
+          "outputTokens": 238,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 1305,
+          "webSearchRequests": 0,
+          "costUSD": 0.007604,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "num_turns": 1,
+      "elapsed_s": 4.853
+    }
+  ],
+  "limitations": "Synthetic next-action probes, not end-to-end task success; no statistical efficacy claim.",
+  "native_hook": {
+    "result": "The file `probe.txt` has one line: `fixture file`.\n\nThe hook supplied this observation identifier: `OBSERVED_8ff0078cbdde`.",
+    "is_error": false,
+    "usage": {
+      "input_tokens": 4,
+      "cache_creation_input_tokens": 1891,
+      "cache_read_input_tokens": 1709,
+      "output_tokens": 160,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 1891,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 55,
+          "cache_read_input_tokens": 1709,
+          "cache_creation_input_tokens": 182,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 182
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 4,
+        "outputTokens": 160,
+        "cacheReadInputTokens": 1709,
+        "cacheCreationInputTokens": 1891,
+        "webSearchRequests": 0,
+        "costUSD": 0.009342900000000001,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "num_turns": 2,
+    "elapsed_s": 10.347,
+    "received_nonce": true
+  },
+  "baseline_revision": "52057c2f",
+  "native_http": {
+    "result": "probe.txt에는 \"추가 관측\" 항목이 없습니다. 파일 내용은 \"작업 문서를 작성하기 전 참고 파일입니다.\" 한 줄뿐입니다. 그래서 파일 이동과 앱 기동 상태를 이 파일 기준으로 적을 수는 없습니다.\n\n다만 파일을 읽을 때 실행 환경이 별도로 붙여 준 관측값은 있습니다. 파일 내용이 아니라 그 값을 쓴다면, 작업 문서에는 아래처럼 한정해서 적는 편이 안전합니다.\n\n- **파일 이동**: \"이동 작업(move)이 실행 중으로 관측됨. 완료 결과는 아직 확인되지 않음.\" 완료나 성공이라고 쓰면 안 됩니다.\n- **앱 기동**: \"boot 호출이 `boot_failed health unreachable`을 보고함(종료 코드 0). 상태 확인(health)에 접근할 수 없어 기동 실패로 보임.\" 종료 코드는 0이지만 출력 내용이 실패라서, 정상 기동으로 적으면 안 됩니다. 이 내용은 도구가 보고한 값이고 직접 검증한 것은 아닙니다.\n- **참고**: 이전 작업 old-0, old-1, old-2는 모두 실패로 관측됐습니다. probe-6과 probe-7의 진단 출력은 잘려 있어 근거로 쓰기 어렵습니다.\n\n이 값들은 \"마지막 관측\"이지 방금 다시 확인한 결과가 아닙니다. 문서에는 관측 시점이 불확실하다는 점을 함께 적고, 필요하면 작성 전에 상태를 다시 확인하세요.",
+    "is_error": false,
+    "usage": {
+      "input_tokens": 4,
+      "cache_creation_input_tokens": 2716,
+      "cache_read_input_tokens": 2828,
+      "output_tokens": 959,
+      "output_tokens_details": {
+        "thinking_tokens": 239
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 2716,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 854,
+          "cache_read_input_tokens": 1777,
+          "cache_creation_input_tokens": 1990,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 1990
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-sonnet-5-5": {
+        "inputTokens": 4,
+        "outputTokens": 959,
+        "cacheReadInputTokens": 2828,
+        "cacheCreationInputTokens": 2716,
+        "webSearchRequests": 0,
+        "costUSD": 0.0207448,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 239,
+        "canonicalModel": "claude-sonnet-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "num_turns": 2,
+    "elapsed_s": 13.61,
+    "transport_events": [
+      {
+        "kind": "situation.prepared",
+        "consumer": "claude_hook:probe",
+        "serialized_bytes": 3755,
+        "delivery_id": "4cb175a21f5d40aba470f6d919302d8b",
+        "projection_revision": 21,
+        "base_revision": 0,
+        "mode": "baseline",
+        "source_cursors": {},
+        "observations": [
+          {
+            "latest": {
+              "id": "b7986a8865df8bd6627e6ce7e8246e2fe018ccf979df76de6fc8be1045a6395b",
+              "subject": {
+                "kind": "task",
+                "id": "move"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "running",
+                "result_observed": false
+              },
+              "source": "fixture",
+              "basis": "observed"
+            },
+            "availability": "last_observed"
+          },
+          {
+            "latest": {
+              "id": "e662890fc01061a64f43bc7282b2ee17f51d17d5827eaca39d2662a73d6a468f",
+              "subject": {
+                "kind": "task",
+                "id": "old-2"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "basis": "observed"
+            },
+            "availability": "last_observed"
+          },
+          {
+            "latest": {
+              "id": "a23333ffad69bce5d908689798b04d8d4ff40327186fb9b602d5c5647cf12a2d",
+              "subject": {
+                "kind": "task",
+                "id": "old-1"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "basis": "observed"
+            },
+            "availability": "last_observed"
+          },
+          {
+            "latest": {
+              "id": "531821726bcaaaf35f1641e92b4926d54e1838f855e6beafa07e7b7dfea6204b",
+              "subject": {
+                "kind": "task",
+                "id": "old-0"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "basis": "observed"
+            },
+            "availability": "last_observed"
+          },
+          {
+            "latest": {
+              "id": "1528749e09a8f9a198b7758fdf760133e7f7ab53afda07a94a99598b9fd788d2",
+              "subject": {
+                "kind": "call",
+                "id": "boot-call",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "boot"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "boot_failed health unreachable",
+                  "truncated": false
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "boot-result",
+                "path": [
+                  "result"
+                ]
+              },
+              "basis": "tool_claim"
+            },
+            "availability": "last_observed"
+          },
+          {
+            "latest": {
+              "id": "3af40638cb1c56cf5b9b1aeee98625289964b8f340fd7fd4f08b6f2598bb0185",
+              "subject": {
+                "kind": "call",
+                "id": "call-7",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-7"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "projection_truncated": true,
+                  "text": "diagnostic 7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-7",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "basis": "tool_claim"
+            },
+            "availability": "last_observed",
+            "also_observed": [
+              {
+                "id": "732c4ee5d21ffd64910f5611dbc5dfa8314dfa097dd48cdc5840fcb5432c1eb3",
+                "source_ref": {
+                  "id": "store-7",
+                  "path": [
+                    "result"
+                  ]
+                }
+              }
+            ],
+            "additional_sources": 1
+          },
+          {
+            "latest": {
+              "id": "574bee6fff738067775f223b98877d7b949a79767a645cbb243486f1dfe05dee",
+              "subject": {
+                "kind": "call",
+                "id": "call-6",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-6"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "projection_truncated": true,
+                  "text": "diagnostic 6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-6",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "basis": "tool_claim"
+            },
+            "availability": "last_observed",
+            "also_observed": [
+              {
+                "id": "f376643c5eedf05753283db870e5b960a284d244ce0f5ea64ff7924de9854228",
+                "source_ref": {
+                  "id": "store-6",
+                  "path": [
+                    "result"
+                  ]
+                }
+              }
+            ],
+            "additional_sources": 1
+          }
+        ],
+        "omitted": {
+          "count": 6,
+          "by_kind": {
+            "pending": 0,
+            "receipt": 0,
+            "evidence": 6
+          }
+        },
+        "projection": {
+          "state_count": 4,
+          "evidence_count": 3,
+          "history_count": 0,
+          "deduplicated": 8
+        },
+        "size_method": "utf8_bytes_limit_not_token_measurement",
+        "observed_at_note": "null means unknown; last observation is not a fresh check",
+        "read_result": {
+          "id": "55210a98a34aa1b7fec26fee779fb011e620bc2108089f6fed44ebce2c62fc76"
+        }
+      },
+      {
+        "kind": "situation.context_prepared",
+        "channel": "claude_hook",
+        "boundary_id": "toolu_0171oXStSwRuupdVhN51wJ5x",
+        "delivery_id": "4cb175a21f5d40aba470f6d919302d8b",
+        "context_utf8_bytes": 3554,
+        "receipt": "unacknowledged"
+      },
+      {
+        "kind": "situation.checkpoint",
+        "projection_revision": 21,
+        "source_cursors": {
+          "4ad563621270ac14ed7e7737edcfed32875412e8080579e2f04200007f370327": 0,
+          "3cb0e96662dec41d25b7ae8978d00325f7cbf5e53153a6e66ab57910a72a78c2": 1,
+          "9d4c64ec4b4c4b2cb102bbd3ed2e493b19458c44c64881f2307fe8f3e53aefd2": 2,
+          "c97a288ec832959abdd349586bf71a5dfebbb97cc79eb616043f262e077317c6": 2
+        },
+        "observations": [
+          {
+            "first": {
+              "id": "531821726bcaaaf35f1641e92b4926d54e1838f855e6beafa07e7b7dfea6204b",
+              "subject": {
+                "kind": "task",
+                "id": "old-0"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 0,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.915205,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "5d2c0c3f42ada25585147b44ee9b2ba80a2552da059e187b7c2b6e4ad5574ae1",
+              "evidence_key": null
+            },
+            "latest": {
+              "id": "531821726bcaaaf35f1641e92b4926d54e1838f855e6beafa07e7b7dfea6204b",
+              "subject": {
+                "kind": "task",
+                "id": "old-0"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 0,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.915205,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "5d2c0c3f42ada25585147b44ee9b2ba80a2552da059e187b7c2b6e4ad5574ae1",
+              "evidence_key": null
+            },
+            "revision": 1,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "a23333ffad69bce5d908689798b04d8d4ff40327186fb9b602d5c5647cf12a2d",
+              "subject": {
+                "kind": "task",
+                "id": "old-1"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 1,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.915301,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "4c5fb8f9dd9d39db72e26eb4d982d8e9739fe34e5b307fa080b8c712d4bb0fea",
+              "evidence_key": null
+            },
+            "latest": {
+              "id": "a23333ffad69bce5d908689798b04d8d4ff40327186fb9b602d5c5647cf12a2d",
+              "subject": {
+                "kind": "task",
+                "id": "old-1"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 1,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.915301,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "4c5fb8f9dd9d39db72e26eb4d982d8e9739fe34e5b307fa080b8c712d4bb0fea",
+              "evidence_key": null
+            },
+            "revision": 2,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "e662890fc01061a64f43bc7282b2ee17f51d17d5827eaca39d2662a73d6a468f",
+              "subject": {
+                "kind": "task",
+                "id": "old-2"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 2,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.915377,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "bd617be998aef8f7b55c0163a904f747eb3b6863829745f6b2fc25d24a574853",
+              "evidence_key": null
+            },
+            "latest": {
+              "id": "e662890fc01061a64f43bc7282b2ee17f51d17d5827eaca39d2662a73d6a468f",
+              "subject": {
+                "kind": "task",
+                "id": "old-2"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "failed"
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 2,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.915377,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "bd617be998aef8f7b55c0163a904f747eb3b6863829745f6b2fc25d24a574853",
+              "evidence_key": null
+            },
+            "revision": 3,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "0733e3095a88b7ccbcf0de33cd8b88d8a588d0579f1b2125bad8c0498ae6c93f",
+              "subject": {
+                "kind": "call",
+                "id": "resident-0",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-0"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-0",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.916405,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-0",
+              "signature": "e74d4ac04c4bdddd83299c2145824c744f5aaeafeb23d966551c0220d884ecc9",
+              "evidence_key": "2404080b517713afd2fbca16bc027848f2e35e3c638b61634275606bd0626aad"
+            },
+            "latest": {
+              "id": "0733e3095a88b7ccbcf0de33cd8b88d8a588d0579f1b2125bad8c0498ae6c93f",
+              "subject": {
+                "kind": "call",
+                "id": "resident-0",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-0"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-0",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.916405,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-0",
+              "signature": "e74d4ac04c4bdddd83299c2145824c744f5aaeafeb23d966551c0220d884ecc9",
+              "evidence_key": "2404080b517713afd2fbca16bc027848f2e35e3c638b61634275606bd0626aad"
+            },
+            "revision": 4,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "fc697ffcfb855217e1d29a7c64c9b5c7b9b5b2f656a495ed6c47b5234144396d",
+              "subject": {
+                "kind": "call",
+                "id": "call-0",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-0"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-0",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.916825,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-0",
+              "signature": "d7963fe53b365ea40addec37895d9a91b2ff9c40b44bad958795fb939bc1b22c",
+              "evidence_key": "2404080b517713afd2fbca16bc027848f2e35e3c638b61634275606bd0626aad"
+            },
+            "latest": {
+              "id": "fc697ffcfb855217e1d29a7c64c9b5c7b9b5b2f656a495ed6c47b5234144396d",
+              "subject": {
+                "kind": "call",
+                "id": "call-0",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-0"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-0",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.916825,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-0",
+              "signature": "d7963fe53b365ea40addec37895d9a91b2ff9c40b44bad958795fb939bc1b22c",
+              "evidence_key": "2404080b517713afd2fbca16bc027848f2e35e3c638b61634275606bd0626aad"
+            },
+            "revision": 5,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "17008288ca0351922978dad3fc581a51b7460dcd67d38fdc6f986ea5ed096836",
+              "subject": {
+                "kind": "call",
+                "id": "resident-1",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-1"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-1",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.91729,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-1",
+              "signature": "6a4f4cd8d1dea2085eccccf7a2d7a08314195b6f88ed09300c7eefd7509f2bd5",
+              "evidence_key": "36e7b550b83b74187d79a3dcd7fe65b6b1b478142dfe0aae9365e82fc2048111"
+            },
+            "latest": {
+              "id": "17008288ca0351922978dad3fc581a51b7460dcd67d38fdc6f986ea5ed096836",
+              "subject": {
+                "kind": "call",
+                "id": "resident-1",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-1"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-1",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.91729,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-1",
+              "signature": "6a4f4cd8d1dea2085eccccf7a2d7a08314195b6f88ed09300c7eefd7509f2bd5",
+              "evidence_key": "36e7b550b83b74187d79a3dcd7fe65b6b1b478142dfe0aae9365e82fc2048111"
+            },
+            "revision": 6,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "cebca03face2b84e6a5a4087159f73742c1196ceddb1c89b1508d62b5a48147f",
+              "subject": {
+                "kind": "call",
+                "id": "call-1",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-1"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-1",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.917686,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-1",
+              "signature": "0c42aa7401c11b7c29b216fbc439332ad86af18d6c4cdab5e5c8aafd36aeb5a8",
+              "evidence_key": "36e7b550b83b74187d79a3dcd7fe65b6b1b478142dfe0aae9365e82fc2048111"
+            },
+            "latest": {
+              "id": "cebca03face2b84e6a5a4087159f73742c1196ceddb1c89b1508d62b5a48147f",
+              "subject": {
+                "kind": "call",
+                "id": "call-1",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-1"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-1",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.917686,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-1",
+              "signature": "0c42aa7401c11b7c29b216fbc439332ad86af18d6c4cdab5e5c8aafd36aeb5a8",
+              "evidence_key": "36e7b550b83b74187d79a3dcd7fe65b6b1b478142dfe0aae9365e82fc2048111"
+            },
+            "revision": 7,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "b43482dbd5abe3ee829c574e44c2e978f77c2ae9af118251f953601273b34636",
+              "subject": {
+                "kind": "call",
+                "id": "resident-2",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-2"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-2",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.918059,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-2",
+              "signature": "280686b3f600e2022d633ad827f4edec71e7a474820e6499f20d48ccd25319a2",
+              "evidence_key": "cc2b0c54f5ef6876667afdbee216d16a85fb27b933025731c55278a249234ea4"
+            },
+            "latest": {
+              "id": "b43482dbd5abe3ee829c574e44c2e978f77c2ae9af118251f953601273b34636",
+              "subject": {
+                "kind": "call",
+                "id": "resident-2",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-2"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-2",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.918059,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-2",
+              "signature": "280686b3f600e2022d633ad827f4edec71e7a474820e6499f20d48ccd25319a2",
+              "evidence_key": "cc2b0c54f5ef6876667afdbee216d16a85fb27b933025731c55278a249234ea4"
+            },
+            "revision": 8,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "2322779b43e878d5c6e933bd2240ae6cb4a83dc148bd19be61fa7023b89f7793",
+              "subject": {
+                "kind": "call",
+                "id": "call-2",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-2"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-2",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.918464,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-2",
+              "signature": "1da9152df43c533fd7462f9a2185320df7c5d7cb4c689d9acf51e61606181dcb",
+              "evidence_key": "cc2b0c54f5ef6876667afdbee216d16a85fb27b933025731c55278a249234ea4"
+            },
+            "latest": {
+              "id": "2322779b43e878d5c6e933bd2240ae6cb4a83dc148bd19be61fa7023b89f7793",
+              "subject": {
+                "kind": "call",
+                "id": "call-2",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-2"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-2",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.918464,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-2",
+              "signature": "1da9152df43c533fd7462f9a2185320df7c5d7cb4c689d9acf51e61606181dcb",
+              "evidence_key": "cc2b0c54f5ef6876667afdbee216d16a85fb27b933025731c55278a249234ea4"
+            },
+            "revision": 9,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "926df159fdf3d323dd69b06d0a4d2fd90011c084638428f75eee5c58139360c1",
+              "subject": {
+                "kind": "call",
+                "id": "resident-3",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-3"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 3xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-3",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.919035,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-3",
+              "signature": "80182d9d3ee69f43eef361a4805b4030e8a5d3be727ec367de812ece4c4c1605",
+              "evidence_key": "a998729a6618e9caa627d216473c6bb55bf1de77ce02f664868c9ee3a4dc00fd"
+            },
+            "latest": {
+              "id": "926df159fdf3d323dd69b06d0a4d2fd90011c084638428f75eee5c58139360c1",
+              "subject": {
+                "kind": "call",
+                "id": "resident-3",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-3"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 3xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-3",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.919035,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-3",
+              "signature": "80182d9d3ee69f43eef361a4805b4030e8a5d3be727ec367de812ece4c4c1605",
+              "evidence_key": "a998729a6618e9caa627d216473c6bb55bf1de77ce02f664868c9ee3a4dc00fd"
+            },
+            "revision": 10,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "61c959b09e2d8cb032a71468108f8e32b2854fab4bcfd2fa51804ded736cb0c3",
+              "subject": {
+                "kind": "call",
+                "id": "call-3",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-3"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 3xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-3",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.9199638,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-3",
+              "signature": "304c4e3b90bf0e0615c565e861a898f2784aaa7ca6253b77f73d350f5c2e952f",
+              "evidence_key": "a998729a6618e9caa627d216473c6bb55bf1de77ce02f664868c9ee3a4dc00fd"
+            },
+            "latest": {
+              "id": "61c959b09e2d8cb032a71468108f8e32b2854fab4bcfd2fa51804ded736cb0c3",
+              "subject": {
+                "kind": "call",
+                "id": "call-3",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-3"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 3xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-3",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.9199638,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-3",
+              "signature": "304c4e3b90bf0e0615c565e861a898f2784aaa7ca6253b77f73d350f5c2e952f",
+              "evidence_key": "a998729a6618e9caa627d216473c6bb55bf1de77ce02f664868c9ee3a4dc00fd"
+            },
+            "revision": 11,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "ba1c301e9e6f64cefa575d976619dc1cda6412f05c6ef7e51ea3223bf0fbfee3",
+              "subject": {
+                "kind": "call",
+                "id": "resident-4",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-4"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-4",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.9206998,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-4",
+              "signature": "bf7610cd499f6175188a9e87a61543e6249a8836c0cfda2606d60b9f6a9254e4",
+              "evidence_key": "b681fdb94229213634c7075ed419db4378b7f18ab4b9d8a76735751ff276e5a6"
+            },
+            "latest": {
+              "id": "ba1c301e9e6f64cefa575d976619dc1cda6412f05c6ef7e51ea3223bf0fbfee3",
+              "subject": {
+                "kind": "call",
+                "id": "resident-4",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-4"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-4",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.9206998,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-4",
+              "signature": "bf7610cd499f6175188a9e87a61543e6249a8836c0cfda2606d60b9f6a9254e4",
+              "evidence_key": "b681fdb94229213634c7075ed419db4378b7f18ab4b9d8a76735751ff276e5a6"
+            },
+            "revision": 12,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "c220bb204d94ebaf5000b7d75bbad26b23fd75e14453e10414e686da05432e09",
+              "subject": {
+                "kind": "call",
+                "id": "call-4",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-4"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-4",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.921876,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-4",
+              "signature": "861d9887e1d20ef4b1ac9aead90bfccd0ae400a4923f155678851f03c3a6f665",
+              "evidence_key": "b681fdb94229213634c7075ed419db4378b7f18ab4b9d8a76735751ff276e5a6"
+            },
+            "latest": {
+              "id": "c220bb204d94ebaf5000b7d75bbad26b23fd75e14453e10414e686da05432e09",
+              "subject": {
+                "kind": "call",
+                "id": "call-4",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-4"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-4",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.921876,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-4",
+              "signature": "861d9887e1d20ef4b1ac9aead90bfccd0ae400a4923f155678851f03c3a6f665",
+              "evidence_key": "b681fdb94229213634c7075ed419db4378b7f18ab4b9d8a76735751ff276e5a6"
+            },
+            "revision": 13,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "708bc9fbbfa1e3b9794ff37238c1f5cab5e63d75505f2e652077ca71d8f1cc2d",
+              "subject": {
+                "kind": "call",
+                "id": "resident-5",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-5"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-5",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.922643,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-5",
+              "signature": "2a5cead532a4a1e71fd061b8cbd745d01e871ac6e17228376d97a25748dda663",
+              "evidence_key": "a94970b98ebd4d8c73f3230a64fae2c60ea1da63673569ebfd39747601cc890d"
+            },
+            "latest": {
+              "id": "708bc9fbbfa1e3b9794ff37238c1f5cab5e63d75505f2e652077ca71d8f1cc2d",
+              "subject": {
+                "kind": "call",
+                "id": "resident-5",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-5"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-5",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.922643,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-5",
+              "signature": "2a5cead532a4a1e71fd061b8cbd745d01e871ac6e17228376d97a25748dda663",
+              "evidence_key": "a94970b98ebd4d8c73f3230a64fae2c60ea1da63673569ebfd39747601cc890d"
+            },
+            "revision": 14,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "d4a8853529ee1299e57f578e2c0a6328fc52d15cb95b101a988b8582f0787af2",
+              "subject": {
+                "kind": "call",
+                "id": "call-5",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-5"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-5",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.923135,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-5",
+              "signature": "77141639f97b7ebb5d72f79d423143f8558d47b2f2e25b6aebb1cc119df70b42",
+              "evidence_key": "a94970b98ebd4d8c73f3230a64fae2c60ea1da63673569ebfd39747601cc890d"
+            },
+            "latest": {
+              "id": "d4a8853529ee1299e57f578e2c0a6328fc52d15cb95b101a988b8582f0787af2",
+              "subject": {
+                "kind": "call",
+                "id": "call-5",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-5"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-5",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.923135,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-5",
+              "signature": "77141639f97b7ebb5d72f79d423143f8558d47b2f2e25b6aebb1cc119df70b42",
+              "evidence_key": "a94970b98ebd4d8c73f3230a64fae2c60ea1da63673569ebfd39747601cc890d"
+            },
+            "revision": 15,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "f376643c5eedf05753283db870e5b960a284d244ce0f5ea64ff7924de9854228",
+              "subject": {
+                "kind": "call",
+                "id": "resident-6",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-6"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-6",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.923535,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-6",
+              "signature": "be8dbd66e2a82bad734fbaba20e97c41339da7714d26dc8d1a707069ce754898",
+              "evidence_key": "9588d1e7e36183e88618391a924e89293d3334a7cbf1f9751d961301430db1f2"
+            },
+            "latest": {
+              "id": "f376643c5eedf05753283db870e5b960a284d244ce0f5ea64ff7924de9854228",
+              "subject": {
+                "kind": "call",
+                "id": "resident-6",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-6"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-6",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.923535,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-6",
+              "signature": "be8dbd66e2a82bad734fbaba20e97c41339da7714d26dc8d1a707069ce754898",
+              "evidence_key": "9588d1e7e36183e88618391a924e89293d3334a7cbf1f9751d961301430db1f2"
+            },
+            "revision": 16,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "574bee6fff738067775f223b98877d7b949a79767a645cbb243486f1dfe05dee",
+              "subject": {
+                "kind": "call",
+                "id": "call-6",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-6"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-6",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.923958,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-6",
+              "signature": "fb3dcff3032cabe9b9b2f58ec5d78228763334c8a2114c1f4cf3228e0ea8d1ad",
+              "evidence_key": "9588d1e7e36183e88618391a924e89293d3334a7cbf1f9751d961301430db1f2"
+            },
+            "latest": {
+              "id": "574bee6fff738067775f223b98877d7b949a79767a645cbb243486f1dfe05dee",
+              "subject": {
+                "kind": "call",
+                "id": "call-6",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-6"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-6",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.923958,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-6",
+              "signature": "fb3dcff3032cabe9b9b2f58ec5d78228763334c8a2114c1f4cf3228e0ea8d1ad",
+              "evidence_key": "9588d1e7e36183e88618391a924e89293d3334a7cbf1f9751d961301430db1f2"
+            },
+            "revision": 17,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "732c4ee5d21ffd64910f5611dbc5dfa8314dfa097dd48cdc5840fcb5432c1eb3",
+              "subject": {
+                "kind": "call",
+                "id": "resident-7",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-7"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-7",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.92436,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-7",
+              "signature": "30fd64bc31a00b7be68bd7bb345551dd05c64234305e25d977cf952f06398aac",
+              "evidence_key": "4a2dd076cd7c0ab5d9c5d8e9ca027d3b63ffc150e924e09e8db40db82adeea08"
+            },
+            "latest": {
+              "id": "732c4ee5d21ffd64910f5611dbc5dfa8314dfa097dd48cdc5840fcb5432c1eb3",
+              "subject": {
+                "kind": "call",
+                "id": "resident-7",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-7"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "store-7",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.92436,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "resident-7",
+              "signature": "30fd64bc31a00b7be68bd7bb345551dd05c64234305e25d977cf952f06398aac",
+              "evidence_key": "4a2dd076cd7c0ab5d9c5d8e9ca027d3b63ffc150e924e09e8db40db82adeea08"
+            },
+            "revision": 18,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "3af40638cb1c56cf5b9b1aeee98625289964b8f340fd7fd4f08b6f2598bb0185",
+              "subject": {
+                "kind": "call",
+                "id": "call-7",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-7"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-7",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.92474,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-7",
+              "signature": "b42e44c413ac0481521fb393bbd07e1f8882228fafb592cf10babe188c1d4ea1",
+              "evidence_key": "4a2dd076cd7c0ab5d9c5d8e9ca027d3b63ffc150e924e09e8db40db82adeea08"
+            },
+            "latest": {
+              "id": "3af40638cb1c56cf5b9b1aeee98625289964b8f340fd7fd4f08b6f2598bb0185",
+              "subject": {
+                "kind": "call",
+                "id": "call-7",
+                "path": [
+                  "value",
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "probe-7"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "diagnostic 7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n…\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                  "truncated": true
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "wire-7",
+                "path": [
+                  "value",
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.92474,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "call-7",
+              "signature": "b42e44c413ac0481521fb393bbd07e1f8882228fafb592cf10babe188c1d4ea1",
+              "evidence_key": "4a2dd076cd7c0ab5d9c5d8e9ca027d3b63ffc150e924e09e8db40db82adeea08"
+            },
+            "revision": 19,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "1528749e09a8f9a198b7758fdf760133e7f7ab53afda07a94a99598b9fd788d2",
+              "subject": {
+                "kind": "call",
+                "id": "boot-call",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "boot"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "boot_failed health unreachable",
+                  "truncated": false
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "boot-result",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.9248462,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "boot-call",
+              "signature": "84cfb3181a375c2a4e0fe75ac25eabc89ea7dbf53d559486f4877ba80af82155",
+              "evidence_key": "d27f6280fee2d29cbc592f4acf1c33b7d0c950b2e54bcb87e69ae71716f67dab"
+            },
+            "latest": {
+              "id": "1528749e09a8f9a198b7758fdf760133e7f7ab53afda07a94a99598b9fd788d2",
+              "subject": {
+                "kind": "call",
+                "id": "boot-call",
+                "path": [
+                  "result"
+                ],
+                "context": {
+                  "device": "fixture",
+                  "task_ref": {
+                    "kind": "guestpc",
+                    "task_id": "boot"
+                  }
+                }
+              },
+              "facet": "reported_outcome",
+              "value": {
+                "exit": 0,
+                "output": {
+                  "text": "boot_failed health unreachable",
+                  "truncated": false
+                }
+              },
+              "source": "tool_result",
+              "source_ref": {
+                "id": "boot-result",
+                "path": [
+                  "result"
+                ]
+              },
+              "source_cursor": null,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.9248462,
+              "basis": "tool_claim",
+              "relation": [],
+              "call_id": "boot-call",
+              "signature": "84cfb3181a375c2a4e0fe75ac25eabc89ea7dbf53d559486f4877ba80af82155",
+              "evidence_key": "d27f6280fee2d29cbc592f4acf1c33b7d0c950b2e54bcb87e69ae71716f67dab"
+            },
+            "revision": 20,
+            "availability": "last_observed"
+          },
+          {
+            "first": {
+              "id": "b7986a8865df8bd6627e6ce7e8246e2fe018ccf979df76de6fc8be1045a6395b",
+              "subject": {
+                "kind": "task",
+                "id": "move"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "running",
+                "result_observed": false
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 2,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.924886,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "9f89ae991d4e4b5c32fe2e04a480676624b9d58db2ccd2f31ef61b9c54cdf9cc",
+              "evidence_key": null
+            },
+            "latest": {
+              "id": "b7986a8865df8bd6627e6ce7e8246e2fe018ccf979df76de6fc8be1045a6395b",
+              "subject": {
+                "kind": "task",
+                "id": "move"
+              },
+              "facet": "receipt",
+              "value": {
+                "state": "running",
+                "result_observed": false
+              },
+              "source": "fixture",
+              "source_ref": null,
+              "source_cursor": 2,
+              "subject_revision": null,
+              "observed_at": null,
+              "received_at": 1793455597.924886,
+              "basis": "observed",
+              "relation": [],
+              "call_id": "",
+              "signature": "9f89ae991d4e4b5c32fe2e04a480676624b9d58db2ccd2f31ef61b9c54cdf9cc",
+              "evidence_key": null
+            },
+            "revision": 21,
+            "availability": "last_observed"
+          }
+        ]
+      }
+    ],
+    "scope": "real HTTP endpoint and native hook; isolated port and synthetic state"
+  },
+  "source_sha256": {
+    "backend/base/execution_situation.py": "0a1c43e9b02f163feba845e5a9a0d67118ca45d6797c00dd18b86bb1b6f1bae2",
+    "backend/base/supervision_hook.py": "ec32e0dce9e245da40cffcb059165c7557ae6a4eafd39cbf15a86133db8a6c5b",
+    "backend/datastore/situation_evidence.py": "754db56094cbe1adf589d2de554ad6ebcc53f70d9def2e96ce7d80ecf9e6f115",
+    "backend/surface/api_supervision.py": "a7569340d8e469842fec082cf31fd27fb04cdc7a9297291d85892fc6a0e21898",
+    "mcp_server.py": "3d685971dff03afe4804a1e9fc05a3dbbb3201f904d026e08597c152d989b71c",
+    "scripts/probe_execution_situation.py": "f64ab32453795f65bf9880f68d61724894f778d4614497adb06d8498c05930c8"
+  }
+}

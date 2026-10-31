@@ -135,6 +135,62 @@ def test_supervisor_reads_owner_projection_without_consuming_executor_cursor(sup
         execution_turn.leave(token)
 
 
+def test_http_hook_and_mcp_share_compact_projection_not_ack(active, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from api_supervision import router
+    from supervision_hook import situation_context, context_output
+    from test_execution_situation import mixed_workload
+    import supervision_hook
+    mixed_workload(active.situation)
+    app = FastAPI()
+    app.include_router(router, prefix='/ibl')
+    monkeypatch.setenv('INDIEBIZOS_SITUATION', '1')
+    monkeypatch.setenv('INDIEBIZOS_AGENT_ID', active.agent)
+    monkeypatch.setenv('INDIEBIZOS_TASK_ID', active.task)
+    with TestClient(app) as client:
+        class Response:
+            def __init__(self, value):
+                self.data = json.dumps(value).encode()
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def read(self):
+                return self.data
+        def open_request(request, **kwargs):
+            response = client.post('/ibl/situation', json=json.loads(request.data))
+            assert response.status_code == 200
+            return Response(response.json())
+        monkeypatch.setattr(supervision_hook.urllib.request, 'urlopen', open_request)
+        context = situation_context({'tool_use_id': 'native-read'})
+        assert 'boot_failed' in context and '"id":"move"' in context
+        output = context_output({'tool_name': 'Read'}, context)
+        assert output['hookSpecificOutput']['additionalContext'] == context
+        mcp = client.post('/ibl/situation', json={'agent_id': active.agent, 'task_id': active.task,
+                                                'payload': {'channel': 'mcp'}}).json()['context']
+        assert 'boot_failed' in mcp and '"id":"move"' in mcp
+    assert not active.situation.cursors
+    assert {'mcp:' + active.agent, 'claude_hook:' + active.agent} <= active.situation.pending.keys()
+
+
+def test_acknowledged_wait_has_no_new_messages_and_compaction_restores(active):
+    from test_execution_situation import mixed_workload
+    mixed_workload(active.situation)
+    provider = SimpleNamespace(agent_role='execution')
+    messages = [{'role': 'user', 'content': 'continue'}]
+    first = prepare(messages, provider)
+    first.acknowledge()
+    # The only state is included, omitted historical details are not an automatic queue.
+    for _ in range(100):
+        assert prepare(messages, provider) is None
+    messages[:] = [{'role': 'user', 'content': 'compacted'}]
+    restored = prepare(messages, provider)
+    assert restored.payload['mode'] == 'baseline'
+    assert 'boot_failed' in messages[-1]['content']
+    assert '"id":"move"' in messages[-1]['content']
+
+
 if __name__ == '__main__':
     import sys
     import pytest

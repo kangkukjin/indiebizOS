@@ -65,9 +65,17 @@ def observe_result(situation, result, ref, call_id):
         return {'text': raw[:limit // 2].decode('utf-8', errors='ignore') + '\n…\n' +
                         raw[-limit // 2:].decode('utf-8', errors='ignore'), 'truncated': True}
 
-    def publish(subject, facets, path):
+    def publish(subject, facets, path, raw=None):
+        from execution_situation import fingerprint
+        context = subject.get('context') or {}
+        task_ref = context.get('task_ref')
+        # A full producer result + explicit task and host identity, never a clipped text hash.
+        identity = None
+        if raw is not None and task_ref and context.get('device'):
+            identity = fingerprint([task_ref, context['device'], context.get('generation'), raw])
         situation.observe(subject, 'reported_outcome', facets, source='tool_result',
-            source_ref={**ref, 'path': list(path)}, basis='tool_claim', call_id=call_id)
+            source_ref={**ref, 'path': list(path)}, basis='tool_claim', call_id=call_id,
+            evidence_key=identity)
 
     def walk(value, path=(), context=None):
         nonlocal visited
@@ -87,7 +95,7 @@ def observe_result(situation, result, ref, call_id):
             if isinstance(decoded, (dict, list)):
                 walk(decoded, (*path, 'json'), context)
             else:
-                publish(subject, {'output': excerpt(value)}, path)
+                publish(subject, {'output': excerpt(value)}, path, raw=value)
         elif isinstance(value, list):
             for i, item in enumerate(value[:40]):
                 walk(item, (*path, i), context)
@@ -99,7 +107,7 @@ def observe_result(situation, result, ref, call_id):
                       if k in value and not isinstance(value[k], (dict, list))}
             task_ref = value.get('task_ref')
             context = dict(context or {})
-            for key in ('limb', 'limb_name', 'device', 'cwd', 'op'):
+            for key in ('limb', 'limb_name', 'device', 'generation', 'cwd', 'op'):
                 if isinstance(value.get(key), str):
                     context[key] = value[key][:240]
             if isinstance(task_ref, dict) and task_ref.get('kind') and task_ref.get('task_id'):
@@ -110,7 +118,7 @@ def observe_result(situation, result, ref, call_id):
                 if isinstance(value.get(key), str) and value[key].strip():
                     facets[key] = excerpt(value[key])
             if facets:
-                publish(subject, facets, path)
+                publish(subject, facets, path, raw=value if any(k in facets for k in ('output', 'stdout', 'stderr', 'text')) else None)
             # Known transport/result containers only. External source bodies are not evidence adapters.
             for key in ('value', 'result', 'items', 'results', 'failure', 'details',
                         'observation', 'execution_result', 'content'):

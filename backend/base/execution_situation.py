@@ -36,39 +36,101 @@ def fingerprint(value):
                                      default=str).encode()).hexdigest()
 
 
-def projection_priority(record):
-    """Keep request, uncertainty and substantive evidence ahead of transport receipts.
+def projection_kind(record):
+    """Classify evidence by its contract, not by interpreting output text."""
+    row = record['latest']
+    value = row['value'] if isinstance(row['value'], dict) else {}
+    if row['basis'] == 'user_request':
+        return 'request'
+    if record['availability'] in {'conflict', 'needs_recheck'}:
+        return record['availability']
+    if row['facet'] == 'execution':
+        return 'unresolved' if value.get('state') in {'running', 'result_missing'} else 'history'
+    if row['basis'] == 'observed':
+        if row['facet'] == 'receipt':
+            from task_receipts import LIVE
+            return 'pending' if value.get('state') in LIVE or value.get('state') == 'waiting' else 'receipt'
+        return 'state'
+    return 'evidence' if row['facet'] == 'reported_outcome' else 'interpretation'
 
-    This orders reported evidence; a failed check is not a diagnosis of its target,
-    and a successful command cannot resolve another subject's earlier failure.
-    """
+
+def projection_priority(record):
+    kind = projection_kind(record)
     row = record['latest']
     value = row['value'] if isinstance(row['value'], dict) else {}
     body = any(k in value for k in ('output', 'stdout', 'stderr', 'text'))
-    context = row['subject'].get('context') or {}
     failed = (any(value.get(k) is False for k in ('success', 'ok')) or
-              any(value.get(k) for k in ('error', 'exception', 'timed_out', 'unknown')) or
-              any(isinstance(value.get(k), (int, float)) and value[k] != 0
-                  for k in ('exit', 'exit_code', 'returncode')) or
-              any(str(value.get(k, '')).lower() in {'failed', 'blocked', 'error', 'recovering'}
-                  for k in ('state', 'status', 'phase', 'readiness')))
-    if row['basis'] == 'user_request':
-        priority = 8
-    elif record['availability'] in {'conflict', 'needs_recheck'}:
-        priority = 7
-    elif body and any(k in context for k in ('task_ref', 'device', 'limb')):
-        priority = 6
-    elif body:
-        priority = 5
-    elif failed:
-        priority = 4
-    elif row['facet'] not in {'execution', 'reported_outcome', 'receipt'}:
-        priority = 3
-    elif row['basis'] == 'observed' and value.get('state') in {'running', 'queued', 'waiting'}:
-        priority = 2
-    else:
-        priority = 1
-    return priority, record['revision']
+              any(value.get(k) for k in ('error', 'exception', 'unknown')) or
+              any(value.get(k) not in (None, 0) for k in ('exit', 'exit_code', 'returncode')) or
+              value.get('state', value.get('status')) in {'failed', 'blocked', 'error'})
+    priority = {'request': 9, 'conflict': 8, 'needs_recheck': 8, 'unresolved': 7,
+                'pending': 7, 'receipt': 7, 'state': 6, 'evidence': 3,
+                'interpretation': 2, 'history': 1}[kind]
+    return priority, bool(body or failed) if kind == 'evidence' else False, record['revision']
+
+
+def projection_groups(records):
+    """Only a full result identity supplied by its adapter permits cross-call folding."""
+    groups = {}
+    for record in sorted(records, key=projection_priority, reverse=True):
+        row = record['latest']
+        identity = row.get('evidence_key')
+        # Never fold conflicting, late, or restored evidence into a fresh result.
+        if identity and not any(k in record for k in ('conflict', 'late', 'restored_from')):
+            key = 'evidence:' + identity
+            version = fingerprint([identity, record['availability']])
+        else:
+            key = fingerprint([row['subject'], row['facet'], row['source']])
+            version = fingerprint([record['revision'], record['availability']])
+        if key not in groups:
+            groups[key] = {'key': key, 'version': version, 'record': record,
+                           'kind': projection_kind(record), 'aliases': []}
+        else:
+            groups[key]['aliases'].append(row)
+    return list(groups.values())
+
+
+def short_value(value, limit):
+    """Bound excerpts only. Do not shorten resource identities or infer a verdict."""
+    if isinstance(value, dict):
+        result = {}
+        for key, item in value.items():
+            if isinstance(item, str) and key in {'text', 'output', 'stdout', 'stderr', 'error', 'reason', 'exception'}:
+                raw = item.encode('utf-8')
+                if len(raw) > limit:
+                    item = (raw[:limit // 2].decode('utf-8', errors='ignore') + '\n…\n' +
+                            raw[-limit // 2:].decode('utf-8', errors='ignore'))
+                    result['projection_truncated'] = True
+            result[key] = short_value(item, limit)
+        return result
+    if isinstance(value, list):
+        return [short_value(item, limit) for item in value]
+    return value
+
+
+def projection_row(group, compact):
+    record = group['record']
+    latest = record['latest']
+    fields = ('id', 'subject', 'facet', 'value', 'source', 'source_ref', 'subject_revision',
+              'observed_at', 'basis', 'relation')
+    row = {'latest': {k: copy.deepcopy(latest[k]) for k in fields
+                      if latest.get(k) is not None and (k != 'relation' or latest[k])},
+           'availability': record['availability']}
+    limit = 120 if compact else 320
+    row['latest']['value'] = short_value(row['latest']['value'], limit)
+    if record['first']['id'] != latest['id']:
+        row['first'] = {k: record['first'][k] for k in ('value', 'subject_revision', 'observed_at')}
+        row['first']['value'] = short_value(row['first']['value'], limit)
+    for key in ('late', 'conflict'):
+        if key in record:
+            row[key] = {k: record[key][k] for k in ('value', 'subject_revision', 'observed_at', 'source_ref')}
+            row[key]['value'] = short_value(row[key]['value'], limit)
+    if group['aliases']:
+        # Full provenance is in read_result; bound the inline references during long waits.
+        row['also_observed'] = [{'id': r['id'], 'source_ref': r['source_ref']}
+                                for r in group['aliases'][:1]]
+        row['additional_sources'] = len(group['aliases'])
+    return row
 
 
 def current(agent=None, task=None):
@@ -165,6 +227,7 @@ class Situation:
         self.refreshers = {}
         self.delivery_ids = set()
         self.snapshot_ref = None
+        self.pending_versions = {}
 
     def watch(self, key, read):
         """Producer-owned local reads only. No network adapter or permanent polling thread."""
@@ -202,7 +265,7 @@ class Situation:
 
     def observe(self, subject, facet, value, *, source, source_ref=None, source_cursor=None,
                 subject_revision=None, observed_at=None, basis='observed', relation=None,
-                event_id=None, call_id=''):
+                event_id=None, call_id='', evidence_key=None):
         from logging_utils import mask_secret_data
         with self.lock:
             if self.closed:
@@ -213,7 +276,7 @@ class Situation:
             relation = mask_secret_data(copy.deepcopy(relation))
             key = fingerprint([subject, facet, source])
             old = self.records.get(key)
-            stable = [subject, facet, value, subject_revision, relation, basis]
+            stable = [subject, facet, value, subject_revision, relation, basis, evidence_key]
             signature = fingerprint(stable)
             event_id = event_id or fingerprint([source, source_cursor, observed_at, signature])
             reobserved = bool(old and old.get('restored_from') and observed_at
@@ -229,7 +292,7 @@ class Situation:
                    'source': source, 'source_ref': source_ref, 'source_cursor': source_cursor,
                    'subject_revision': subject_revision, 'observed_at': observed_at,
                    'received_at': now, 'basis': basis, 'relation': relation or [],
-                   'call_id': call_id, 'signature': signature}
+                   'call_id': call_id, 'signature': signature, 'evidence_key': evidence_key}
             self.revision += 1
             self.snapshot_ref = None
             # Only source-owned sequence numbers establish ordering. Reception is not causality.
@@ -330,8 +393,8 @@ class Situation:
             return {'projection_revision': self.revision, 'source_cursors': dict(self.source_cursors),
                     'observations': rows}
 
-    def prepare(self, consumer, *, retained=(), baseline=False, budget=None):
-        """Bound bytes when the provider tokenizer is unavailable; never report measured tokens."""
+    def prepare(self, consumer, *, retained=(), baseline=False, budget=None, compact=False):
+        """Reserve space for state AND results; acknowledge only facts actually included."""
         self.refresh()
         with self.lock:
             if self.closed or (self.cancel_check and self.cancel_check()):
@@ -340,58 +403,86 @@ class Situation:
             chain = cursor.get('chain', [])
             baseline = baseline or not chain or not set(chain).issubset(set(retained))
             since = 0 if baseline else cursor['revision']
-            if not baseline and since == self.revision:
+            view = self.snapshot()
+            all_groups = projection_groups(view['observations'])
+            if not all_groups or all(g['kind'] == 'request' for g in all_groups):
                 return None
-            view = self.snapshot(since)
-            if not view['observations'] or all(r['latest']['basis'] == 'user_request' for r in view['observations']):
+            included = {} if baseline else cursor.get('included', {})
+            # Unsent current facts survive a cursor advance. Old detailed history does not
+            # become a drain queue: it remains accessible through the snapshot reference.
+            states = {'request', 'conflict', 'needs_recheck', 'unresolved', 'pending', 'receipt', 'state'}
+            groups = [g for g in all_groups if baseline or (
+                included.get(g['key']) != g['version'] and
+                (g['kind'] in states or g['record']['revision'] > since))]
+            if not groups:
                 return None
-            # A dependency change also needs its existing validation in a delta.
-            if not baseline:
-                all_rows = self.snapshot()['observations']
-                existing = {r['latest']['id'] for r in view['observations']}
-                view['observations'] += [r for r in all_rows if r['availability'] == 'needs_recheck'
-                                         and r['latest']['id'] not in existing]
             delivery = {'delivery_id': uuid.uuid4().hex, 'projection_revision': self.revision,
                         'base_revision': since, 'mode': 'baseline' if baseline else 'delta',
                         'source_cursors': {}, 'observations': [],
-                        'omitted': {'count': 0},
-                        'size_method': 'utf8_bytes_limit_not_token_measurement', 'observed_at_note':
-                        'null means source observation time unknown; received_at is arrival only'}
-            limit = budget or (8000 if baseline else 2400)
+                        'omitted': {'count': len(groups), 'by_kind': {}},
+                        'projection': {'state_count': 0, 'evidence_count': 0,
+                                       'history_count': 0, 'deduplicated':
+                                       sum(len(g['aliases']) for g in groups)},
+                        'size_method': 'utf8_bytes_limit_not_token_measurement',
+                        'observed_at_note': 'null means unknown; last observation is not a fresh check'}
+            limit = budget or (4000 if compact else (8000 if baseline else 2400))
             if self.snapshot_ref is None:
-                self.snapshot_ref = self.evidence(self.snapshot())
+                self.snapshot_ref = self.evidence(view)
             if self.snapshot_ref.get('id'):
                 delivery['read_result'] = {'id': self.snapshot_ref['id']}
             else:
                 delivery['evidence_availability'] = 'unavailable'
-            rows = sorted(view['observations'], key=projection_priority, reverse=True)
-            for record in rows:
-                row = {'latest': {k: v for k, v in record['latest'].items()
-                                  if k not in {'signature', 'relation', 'call_id'} and v is not None},
-                       'availability': record['availability']}
-                if record['latest']['relation']:
-                    row['latest']['relation'] = record['latest']['relation']
-                if record['first']['id'] != record['latest']['id']:
-                    row['first'] = {k: record['first'][k] for k in ('value', 'subject_revision', 'observed_at')}
-                for k in ('late', 'conflict'):
-                    if k in record:
-                        row[k] = {f: record[k][f] for f in ('value', 'subject_revision',
-                                  'observed_at', 'source_cursor', 'source_ref')}
-                candidate = {**delivery, 'observations': [*delivery['observations'], row]}
-                source_key = fingerprint([record['latest']['subject'], record['latest']['facet'],
-                                          record['latest']['source']])
-                if source_key in view['source_cursors']:
-                    candidate['source_cursors'] = {**delivery['source_cursors'],
-                                                   source_key: view['source_cursors'][source_key]}
-                if len(json.dumps(candidate, ensure_ascii=False).encode()) <= limit:
-                    delivery['observations'].append(row)
-                    delivery['source_cursors'] = candidate['source_cursors']
-                else:
-                    delivery['omitted']['count'] += 1
-            # Pending does not replace an acknowledged cursor. A failed request is retried as a baseline.
+            for g in groups:
+                kind = g['kind']
+                delivery['omitted']['by_kind'][kind] = delivery['omitted']['by_kind'].get(kind, 0) + 1
+            selected = {}
+
+            def size():
+                return len(json.dumps(delivery, ensure_ascii=False).encode())
+
+            def add(group, ceiling):
+                kind = group['kind']
+                lane = 'state' if kind in states else ('evidence' if kind == 'evidence' else 'history')
+                row = projection_row(group, compact)
+                delivery['observations'].append(row)
+                delivery['projection'][lane + '_count'] += 1
+                delivery['omitted']['count'] -= 1
+                delivery['omitted']['by_kind'][kind] -= 1
+                if size() <= ceiling:
+                    selected[group['key']] = group['version']
+                    return True
+                delivery['observations'].pop()
+                delivery['projection'][lane + '_count'] -= 1
+                delivery['omitted']['count'] += 1
+                delivery['omitted']['by_kind'][kind] += 1
+                return False
+
+            state_rows = [g for g in groups if g['kind'] in states]
+            evidence_rows = [g for g in groups if g['kind'] == 'evidence']
+            base_size = size()
+            # Each lane gets a protected share; unused space is shared afterward.
+            state_ceiling = base_size + (limit - base_size) // 2 if evidence_rows else limit
+            for g in state_rows:
+                add(g, state_ceiling)
+            evidence_ceiling = min(limit, size() + (limit - base_size) // 2) if state_rows else limit
+            for g in evidence_rows:
+                add(g, evidence_ceiling)
+            for g in state_rows + evidence_rows:
+                if g['key'] not in selected:
+                    add(g, limit)
+            if not compact:
+                for g in groups:
+                    if g['kind'] not in states | {'evidence'}:
+                        add(g, limit)
+            # A retained omission summary is sufficient when no new fact can fit.
+            if not baseline and since == self.revision and not selected:
+                return None
+            if size() > limit:
+                raise ValueError('situation budget cannot hold omission metadata')
             self.pending[consumer] = delivery
+            self.pending_versions[consumer] = selected
             self.delivery_ids.add(delivery['delivery_id'])
-            self.persist('situation.prepared', consumer=consumer, **delivery)
+            self.persist('situation.prepared', consumer=consumer, serialized_bytes=size(), **delivery)
             return copy.deepcopy(delivery)
 
     def acknowledge(self, consumer, delivery):
@@ -401,7 +492,10 @@ class Situation:
                 return
             previous = self.cursors.get(consumer, {})
             chain = [] if delivery['mode'] == 'baseline' else previous.get('chain', [])
+            included = {} if delivery['mode'] == 'baseline' else dict(previous.get('included', {}))
+            included.update(self.pending_versions.pop(consumer, {}))
             self.cursors[consumer] = {'revision': delivery['projection_revision'],
+                                     'included': included,
                                      'chain': [*chain, delivery['delivery_id']]}
             self.pending.pop(consumer, None)
             self.persist('situation.delivered', consumer=consumer, delivery_id=delivery['delivery_id'],
@@ -414,4 +508,5 @@ class Situation:
                 self.persist('situation.checkpoint', **self.snapshot())
                 self.closed = True
                 self.pending.clear()
+                self.pending_versions.clear()
                 self.refreshers.clear()

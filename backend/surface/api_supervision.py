@@ -60,7 +60,7 @@ async def boundary(req: Request):
     return await asyncio.to_thread(dispatch, req.agent_id, req.task_id, req.payload, True)
 
 
-def situation_context(agent_id, task_id):
+def situation_context(agent_id, task_id, channel='mcp', boundary_id=None):
     """Read only; caller principal is preserved. No supervisor or remote polling required."""
     from thread_context import actor_context
     from execution_situation import current
@@ -69,15 +69,24 @@ def situation_context(agent_id, task_id):
         situation = current()
         if situation is None:
             return {'active': False}
-        # MCP clients can compact at any time; no unobservable retained-history assumption.
-        payload = situation.prepare('mcp:' + agent_id, baseline=True)
-        return {'active': True, 'context': render(payload) if payload else '',
+        # Opaque clients receive a small standalone state, never a guessed delta/ack.
+        channel = channel if channel in {'mcp', 'claude_hook'} else 'mcp'
+        payload = situation.prepare(channel + ':' + agent_id, baseline=True, compact=True)
+        context = render(payload) if payload else ''
+        if payload:
+            situation.persist('situation.context_prepared', channel=channel,
+                              boundary_id=str(boundary_id)[:128] if boundary_id else None,
+                              delivery_id=payload['delivery_id'],
+                              context_utf8_bytes=len(context.encode('utf-8')),
+                              receipt='unacknowledged')
+        return {'active': True, 'context': context,
                 'delivery': 'prepared; client receipt not acknowledged'}
 
 
 @router.post('/situation')
 async def situation(req: Request):
-    return await asyncio.to_thread(situation_context, req.agent_id, req.task_id)
+    return await asyncio.to_thread(situation_context, req.agent_id, req.task_id,
+                                   req.payload.get('channel', 'mcp'), req.payload.get('boundary_id'))
 
 
 @router.post("/repair/command")

@@ -181,6 +181,96 @@ def test_plain_text_is_bounded_attributed_and_masked(situation):
     assert 'must-not-leak' not in json.dumps(situation.snapshot())
 
 
+def mixed_workload(s):
+    """Two result routes, long history, an internal failure, and an unfinished effect."""
+    from situation_evidence import observe_result
+    for i in range(3):
+        s.observe({'kind': 'resident_job', 'device': 'host-a', 'id': f'old-failure-{i}'},
+                  'receipt', {'state': 'failed', 'result_observed': True},
+                  source='resident_store', source_cursor=i, observed_at=i)
+    for i in range(8):
+        result = {'exit': 0, 'output': f'diagnostic-{i} ' + 'x' * 1600}
+        context = {'device': 'host-a', 'generation': 'g1',
+                   'task_ref': {'kind': 'guestpc', 'task_id': f'probe-{i}'}}
+        observe_result(s, {**context, 'result': result}, {'id': f'store-{i}'}, f'resident-{i}')
+        observe_result(s, {'value': {**context, 'observation': {'result': result}}},
+                       {'id': f'wire-{i}'}, f'call-{i}')
+    observe_result(s, {'device': 'host-a', 'task_ref': {'kind': 'guestpc', 'task_id': 'boot'},
+                      'result': {'exit': 0, 'output': 'STARTING boot_failed health unreachable'}},
+                   {'id': 'boot-result'}, 'boot-call')
+    s.observe({'kind': 'resident_job', 'device': 'host-a', 'generation': 'g1', 'id': 'move'},
+              'receipt', {'state': 'running', 'result_observed': False},
+              source='resident_store:move', source_cursor=2, observed_at=2)
+
+
+def test_mixed_results_cannot_evict_unfinished_effect(situation):
+    mixed_workload(situation)
+    payload = situation.prepare('executor')
+    wire = json.dumps(payload, ensure_ascii=False)
+    assert 'boot_failed' in wire
+    move = next(r for r in payload['observations'] if r['latest']['subject'].get('id') == 'move')
+    assert move['latest']['value'] == {'state': 'running', 'result_observed': False}
+    assert payload['projection']['deduplicated'] == 8
+    assert payload['omitted']['by_kind']
+    assert len(wire.encode()) <= 8000
+
+
+def test_opaque_baseline_stays_small_without_losing_waiting_state(situation):
+    mixed_workload(situation)
+    revision = situation.revision
+    for _ in range(100):
+        payload = situation.prepare('hook', baseline=True, compact=True)
+        wire = json.dumps(payload, ensure_ascii=False)
+        assert len(wire.encode()) <= 4000
+        assert 'boot_failed' in wire and '"id": "move"' in wire
+        assert 'x' * 200 not in wire
+    assert situation.revision == revision
+    assert not situation.cursors
+
+
+def test_delivery_acknowledges_selected_facts_not_omitted_revision(situation):
+    for i in range(8):
+        observe(situation, f'v{i}', i, {'kind': 'file', 'path': f'/file-{i}'})
+    first = situation.prepare('executor', budget=2000)
+    assert first['omitted']['count']
+    situation.acknowledge('executor', first)
+    second = situation.prepare('executor', retained=[first['delivery_id']], budget=2000)
+    assert second and second['mode'] == 'delta'
+    a = {r['latest']['subject']['path'] for r in first['observations']}
+    b = {r['latest']['subject']['path'] for r in second['observations']}
+    assert b and not a.intersection(b)
+
+
+def test_result_identity_requires_full_body_and_producer_scope(situation):
+    from situation_evidence import observe_result
+    for device, job, generation, middle in [('a', 'j', 'g', 'one'), ('b', 'j', 'g', 'one'),
+                                          ('a', 'k', 'g', 'one'), ('a', 'j', 'h', 'one'),
+                                          ('a', 'j', 'g', 'two')]:
+        observe_result(situation, {'device': device, 'generation': generation,
+            'task_ref': {'kind': 'guestpc', 'task_id': job},
+            'result': {'output': 'x' * 1000 + middle + 'x' * 1000}},
+            {'id': middle}, f'{device}-{job}-{generation}-{middle}')
+    payload = situation.prepare('executor', budget=12000)
+    assert payload['projection']['deduplicated'] == 0
+    assert len(payload['observations']) == 5
+
+
+def test_new_terminal_and_unknown_effect_survive_history(situation):
+    mixed_workload(situation)
+    situation.tool_started('send', 'publish', {})
+    situation.tool_finished('send', {}, unknown=True)
+    first = situation.prepare('executor')
+    situation.acknowledge('executor', first)
+    situation.observe({'kind': 'resident_job', 'device': 'host-a', 'generation': 'g1', 'id': 'move'},
+                      'receipt', {'state': 'failed', 'result_observed': True},
+                      source='resident_store:move', source_cursor=3, observed_at=3)
+    second = situation.prepare('executor', retained=[first['delivery_id']])
+    row = next(r for r in second['observations'] if r['latest']['subject'].get('id') == 'move')
+    assert row['latest']['value']['state'] == 'failed'
+    assert row['first']['value']['state'] == 'running'
+    assert 'result_missing' in json.dumps(first)
+
+
 if __name__ == '__main__':
     import sys
     import pytest

@@ -412,7 +412,8 @@ async def execute_ibl(code: str, project_path: str = "",
     if agent_id and task_id:
         def read_situation():
             try:
-                response = _post_backend('/ibl/situation', {'agent_id': agent_id, 'task_id': task_id}, 10)
+                response = _post_backend('/ibl/situation', {'agent_id': agent_id, 'task_id': task_id,
+                                         'payload': {'channel': 'mcp'}}, 10)
                 response = json.loads(response) if isinstance(response, str) else response
                 return response.get('context', '') if isinstance(response, dict) else ''
             except Exception:

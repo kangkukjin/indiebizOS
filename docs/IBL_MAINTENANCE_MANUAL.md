@@ -90,13 +90,20 @@ World Bank 차트는 조회 연도 범위를 명시해 기본 페이지 제한�
 | 과적 legacy items(raw+카드 동시 방출) | items-우선 소비자가 raw를 통화로 오독 | legacy raw items 제거, 카드/통화 shape만 items로. `grep '"items"' tool_*.py`로 점검(§7.5 photo·naver 선례) |
 | 빈 조회 / 스키마 깨짐 | 빈 items는 정상 값, 필수 모양 누락은 계약 위반 | 공통 HTTP 원형 조회 후 returns 선언과 대조 |
 | 핸들러 수정이 안 먹음(op 액션) | 동명 **레거시 도구** 분기를 고침 | 실제 `_<tool>_op` 디스패처 분기를 고쳐라 (예: collect는 `wc_query` 아니라 `_collect_op` query) |
-| 싱글턴 핸들러 reload 무시 | `tool_radio` 등 모듈 싱글턴 | `touch backend/api.py` (dev 재기동) |
+| 핸들러 reload 뒤에도 구현이 바뀌지 않음 | 하위 모듈·싱글턴 또는 봉인 세대의 기존 코드가 실행됨 | 실행 판본과 변경 대상을 확인하고 아래 대상별 활성화 절차를 따른다. |
 | bespoke 렌더러(STATIC escape) 빈 화면 | app `from:` 밖의 React/HTML이 옛 키 직독 | 그 소비자도 따로 flip(예: cctv `DirectionsInstrument.tsx` `r.cctvs`→`r.items`) |
 
 **반영 규칙**:
-- 핸들러 편집 → `POST /packages/reload` (싱글턴은 `touch backend/api.py`).
-- 어휘(src yaml) 변경 → `build_ibl_nodes.py` → `--check`.
-- 백엔드 코어(`ibl_engine.py` 등) → 백엔드 재시작. **★backend 자기 편집 = 자기-reload 자해 주의** → 동의 후 별도 세션.
+- 관리되는 관용구·정의·데이터는 소유 관리 연산의 검증·충돌 검사·저장 후 새 호출로 확인한다. 정의 개정 자체에 코드 사본·Git 커밋·재기동을 요구하지 않는다. 배포 소스도 바꾸는 요청은 그 소스 변경을 따로 검사·반영한다.
+- 어휘(src yaml) 변경은 `build_ibl_nodes.py` → `--check`로 파생물을 재생성·검사하고, 관련 계약 검사와 기존 적용·활성 확인을 거친다. 빌드 성공만으로 실행 중인 판본이 바뀌었다고 판단하지 않는다.
+- 등록 순수 부품은 지원되는 부품 게시 경로에서 같은 후보의 검사·정본 반영·활성화를 확인한다. 다른 패키지·워커 구현은 기존 세대 교체, 제어 기반은 기반 인계 계약을 따른다. 구현 변경 전체를 무재기동 교체로 취급하지 않는다.
+- `POST /packages/reload`는 로더가 읽는 `handler.py`를 다시 로드하는 범위다. 하위 모듈·싱글턴 교체나 정본 변경의 봉인 세대 반영을 대신하지 않는다. `touch backend/api.py`를 재기동 절차로 사용하지 않는다. 운영 재기동은 외부 제어자의 `.venv/bin/python3 backend/api.py restart --wait` 입구를 따르며, 자기수리의 적용 예약은 기존 제어자에게 인계한다.
+- 허용된 구현은 내부 에이전트도 업무 중 수리할 수 있다. 맡긴 목적·기본 지침·권한·완료 및 평가 기준은 임의로 변경하지 않는다. 편집·검사·활성화·프로세스 교체를 구분하고, 필요한 중단을 넘어 원래 목표·진행 상태·근거를 이어 간다. 백엔드 파일이라는 이유만으로 추가 동의나 별도 세션을 일괄 요구하지 않는다.
+
+대상별 절차는 [능력 변경 가이드](../data/guides/capability_change.md)와
+[자기수리 경계](SELF_REPAIR_BOUNDARIES_2026_10_31.md), 부분 활성화의 지원 범위는
+[작업 지속·부분 수리](TASK_CONTINUOUS_REPAIR_DESIGN_2026_10_31.md), 운영 제어는
+[기술 문서](../data/system_docs/technical.md#데스크탑-재기동-제어-r1)를 따른다.
 
 ---
 

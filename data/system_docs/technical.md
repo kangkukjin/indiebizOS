@@ -431,7 +431,7 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 - `data/ibl_param_shapes.json`: 코퍼스와 실제 실행에서 관측한 인자 키. `scripts/ibl_param_sweep.py`가 생성하며 카탈로그의 `⟨인자: …⟩`가 된다
 - `data/ibl_partners.json`: 코퍼스와 실제 실행에서 관측한 **조합 파트너**(그 낱말 뒤에 실제로 이어진 낱말). `scripts/ibl_partner_sweep.py`가 생성하며 카탈로그의 `⟨동반: …⟩`가 된다(상위 2·최소 3회, 주간 재관측). 자기 자신으로 가는 `>>`는 동반이 아니라 접힐 자리라 싣지 않는다. 관측이 없어 안 붙은 줄은 '조합 불가'가 아니며, 그 규칙(items를 내는 액션은 `>> [table:*]`)은 범례가 한 번만 말한다
 
-따라서 빌드·fixture 통과는 “실행 가능”, 카탈로그 노출은 “존재 인지”, 해마 연상 프로브는 “자연어 선택 가능”, param sweep은 “호출 모양 인지”, partner sweep은 “이웃 인지(조합 가능성)”를 각각 증명한다. `/packages/reload`는 `handler.py`만 라이브 교체하므로 `tool_*.py`·서브모듈 변경은 백엔드 재기동이 필요하다.
+따라서 빌드·fixture 통과는 “실행 가능”, 카탈로그 노출은 “존재 인지”, 해마 연상 프로브는 “자연어 선택 가능”, param sweep은 “호출 모양 인지”, partner sweep은 “이웃 인지(조합 가능성)”를 각각 증명한다. `/packages/reload`는 로더가 읽는 `handler.py`만 다시 로드하며 하위 모듈·싱글턴 교체나 정본 변경의 봉인 세대 반영을 대신하지 않는다. 등록 순수 부품은 지원되는 부분 게시 경로를, 그 밖의 패키지·워커 구현은 기존 세대 교체 경로를 따른다. 대상별 절차와 지원 범위는 [자기수리 경계](../../docs/SELF_REPAIR_BOUNDARIES_2026_10_31.md)와 [작업 지속·부분 수리](../../docs/TASK_CONTINUOUS_REPAIR_DESIGN_2026_10_31.md)를 따른다.
 
 ## 물리적 구조 (주요 경로)
 

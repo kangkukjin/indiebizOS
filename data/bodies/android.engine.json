@@ -162,6 +162,7 @@
     "cognition/routing_system",
     "cognition/supervisor_content",
     "cognition/supervisor_handoff",
+    "cognition/supervisor_interventions",
     "cognition/supervisor_review",
     "cognition/supervisor_runtime",
     "cognition/switch_runner",
@@ -595,8 +596,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 584,
-    "engine": 552,
+    "total": 585,
+    "engine": 553,
     "blocklist": 32
   }
 }

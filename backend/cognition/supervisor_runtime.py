@@ -52,10 +52,18 @@ quantity_checks는 코드가 환산한 시·분 표와 명시적 합산 오류�
 예를 들어 고용 규모(재고)는 신규 채용(유입)을 대신하지 못한다.
 잠정 목표 미달만으로 반복 보완을 요구하지 마라. REWORK에는 발견한 모든 결함을 한 번에
 묶어 instruction에 담고, 각각의 완료 증거·허용되는 대안·중단 조건을 적어라.
+중간 검토의 각 교정은 findings 배열에도 분리한다. 각 항목은 id, scope, reason,
+instruction, resolved_when, evidence_ids를 갖는다. scope="trigger"는 검토를 촉발한
+그 호출/실패/작업 조건에만 의존하여 그 조건이 해소되면 필요 없어진 교정이다.
+scope="goal"는 그 조건이 해소되어도 별도로 확인할 목표·산출물의 결함이다.
+한 항목에 두 범위를 섞지 말고, 상태 변화만으로 목표 결함이 해결됐다고 단정하지 마라.
+evidence_ids에는 제공된 실제 근거 참조만 넣고, resolved_when에는 해결 확인 방법을 적어라.
 수정 범위가 기존 파일·응답의 국소 변경이면 repair_scope="local", 새 조사면 "research"로 지정한다.
 판정은 JSON 하나: {"status":"REWORK|UNKNOWN|CONTINUE", "reason":"짧은 근거",
 "instruction":"필요할 때만 다음 실행 지시", "repair_scope":"local|research", "repair_block_ids":[],
 "evidence_ids":["직접 확인한 근거 ID"],
+"findings":[{"id":"지적 ID", "scope":"trigger|goal", "reason":"문제",
+"instruction":"교정", "resolved_when":"해결 확인 조건", "evidence_ids":[]}],
 "response_version":0,"response_hash":""}.
 진척이 정상적이면 CONTINUE, 근거 부족/오류는 UNKNOWN이다.
 CONTINUE일 때 instruction은 빈 문자열이다. 실제 행동 변경이 필요할 때만 REWORK와 최소 지시를 쓴다.

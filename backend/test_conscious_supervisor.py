@@ -47,6 +47,13 @@ def verdict(controller, status="APPROVED", **extra):
                        "response_hash": manifest["hash"], **extra})
 
 
+def trigger_verdict(controller, instruction):
+    ref = controller.store.evidence({'trigger': 'observed failure or stalled call'})['id']
+    return verdict(controller, 'REWORK', instruction=instruction, findings=[{
+        'id': 'trigger-repair', 'scope': 'trigger', 'reason': '관측한 호출/오류에 한정',
+        'instruction': instruction, 'resolved_when': '해당 호출/오류 회복', 'evidence_ids': [ref]}])
+
+
 def finish(controller, response):
     return list(controller.finalize(response, [], lambda ev: None))
 
@@ -492,7 +499,7 @@ def test_verdict_from_before_real_progress_is_not_delivered(supervisor, monkeypa
     active = supervisor._start("inspect", {"target": "stalled"})
     def invoke(c, *args, **kwargs):
         c._finish(active, "recovered")
-        return verdict(c, "REWORK", instruction="예전 작업을 다시 시작하라")
+        return trigger_verdict(c, "예전 작업을 다시 시작하라")
     monkeypatch.setattr("supervisor_runtime.invoke", invoke)
     supervisor.review("tool_stalled")
     assert supervisor.pending is None
@@ -600,12 +607,12 @@ def test_start_announcement_cannot_invalidate_intervention(supervisor, monkeypat
 
     monkeypatch.setattr("supervisor_runtime.invoke", review)
     supervisor.review("tool_stalled")
-    assert supervisor.boundary()["instruction"] == "정체 원인을 확인"
+    assert '정체 원인을 확인' in supervisor.boundary()["instruction"]
     assert "decision.stale" not in (supervisor.store.directory / "events.jsonl").read_text()
 
 
 def test_progress_after_review_before_delivery_retires_old_instruction(supervisor, monkeypatch):
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="재시도"))
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: trigger_verdict(c, "재시도"))
     key = supervisor._start("inspect", {})
     supervisor.review("tool_stalled")
     supervisor._finish(key, "recovered")

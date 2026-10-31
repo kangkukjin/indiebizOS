@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 import boot_paths  # noqa: F401
-from test_conscious_supervisor import supervisor, verdict, finish  # noqa: F401
+from test_conscious_supervisor import supervisor, verdict, finish, trigger_verdict  # noqa: F401
 from supervision_store import TurnStore, digest
 
 
@@ -53,18 +53,18 @@ def test_unrelated_crawl_does_not_discard_failure_guidance(supervisor, monkeypat
         key = c._start("inspect", {"url": "unrelated"})
         c._finish(key, "new material")
         c.progress("unrelated crawl completed")
-        return verdict(c, "REWORK", instruction="broken 주소의 대체 출처 사용")
+        return trigger_verdict(c, "broken 주소의 대체 출처 사용")
     monkeypatch.setattr("supervisor_runtime.invoke", invoke)
     supervisor.review("repeated_failure")
     notice = supervisor.boundary()
-    assert notice and notice["instruction"].startswith("broken")
+    assert notice and notice['findings'][0]['instruction'] == "broken 주소의 대체 출처 사용"
 
 
 def test_actual_recovery_invalidates_failure_guidance(supervisor, monkeypatch):
     for _ in range(2):
         key = supervisor._start("inspect", {"url": "broken"})
         supervisor._finish(key, {"error": "timeout"}, True)
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="retry"))
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: trigger_verdict(c, "retry"))
     supervisor.review("repeated_failure")
     key = supervisor._start("inspect", {"url": "broken"})
     supervisor._finish(key, "recovered")

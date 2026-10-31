@@ -1,0 +1,93 @@
+{
+  "date": "2026-11-01",
+  "scope": [
+    "review finding lifecycle and delivery",
+    "Windows controller exec argv"
+  ],
+  "excluded": [
+    "goal criteria contract",
+    "final evaluator",
+    "prompt size reduction",
+    "build compression"
+  ],
+  "baseline_commit": "ee72316c",
+  "non_system": {
+    "tests": 11553,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 9
+  },
+  "windows": {
+    "executable": "C:\\indiebiz-build\\tmp\\codex-launcher-b4bef9b5\\Python Runtime 한글\\python.exe",
+    "cases": [
+      {
+        "mode": "raw",
+        "parent_exit": 0,
+        "child_verified": false,
+        "argv": null,
+        "stderr": "C:\\indiebiz-build\\tmp\\codex-launcher-b4bef9b5\\Python: can't open file 'C:\\\\indiebiz-build\\\\Runtime': [Errno 2] No such file or directory\n"
+      },
+      {
+        "mode": "fixed",
+        "parent_exit": 0,
+        "child_verified": true,
+        "argv": [
+          "plain",
+          "",
+          "two words",
+          "한글 폴더",
+          "quote\"inside",
+          "space and slash\\",
+          "before\\\"after",
+          "\\",
+          "\""
+        ],
+        "stderr": ""
+      }
+    ]
+  },
+  "model_probe": {
+    "synthetic": true,
+    "repetitions": 1,
+    "model": [
+      "claude-sonnet-5-5"
+    ],
+    "finding_scopes": [
+      "goal"
+    ],
+    "next_action": {
+      "action": "sync_source",
+      "reason": "현재 소스가 B이므로 지금 빌드하면 A가 아닌 B가 설치된다. 기존 launch는 이미 성공했으니 retry_launch는 중복이라 필요 없다. 먼저 A에 해당하는 정확한 원격 참조(태그/브랜치/커밋)를 찾아 소스를 A로 동기화한 뒤 빌드해야 한다. A 참조를 찾지 못하면 B를 설치하지 않고 중단 후 보고한다. 설치 후에는 앱의 버전 문자열이나 커밋 해시가 A와 일치하는지 확인한다."
+    },
+    "cases": [
+      {
+        "elapsed_s": 9.488,
+        "input_including_cache": 3218,
+        "output_tokens": 1097
+      },
+      {
+        "elapsed_s": 4.128,
+        "input_including_cache": 1060,
+        "output_tokens": 232
+      }
+    ],
+    "limitations": "Synthetic review and next-action selection; no statistical improvement claim or remote redeployment."
+  },
+  "source_sha256": {
+    "backend/cognition/conscious_supervisor.py": "f41b427ad3aa24086df99f0d92a41ed986ef6b0441330c119cbb8bb62a8d561a",
+    "backend/cognition/supervisor_interventions.py": "1cb4702fa1037c7557500ee3b9adaefbe46d843ce3b4f36b902b895ada3a9f4d",
+    "backend/cognition/supervisor_runtime.py": "bffac3d880a083be3107052465fc74434d97a5ddbd4dbb15b3c7744f917d3dfc",
+    "backend/services/control_launcher.py": "0c249f4286e6972db7da10ff9f5f384075fcc8446fbc9ae102c1ec3938db15ad"
+  },
+  "system_process": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "runtime": {
+    "health": "healthy",
+    "active_generation": "d59f76524d7f77f263ef8296d9f46968",
+    "four_changed_modules_match": true
+  }
+}

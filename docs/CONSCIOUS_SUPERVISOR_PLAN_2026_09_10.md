@@ -610,6 +610,17 @@ GPU 세션, 회수·정리·반납 상태를 함께 남긴다. 감독은 자기 
 만들 수 없게 한다. 사용자 행과 타입 값 안의 동명 필드는 업무 데이터로 유지한다.
 계약 검사는 `test_supervisor_review.py`, `test_ibl_honesty.py`, `test_script_runtime.py`에 둔다.
 
+2026-11-01 후속(5651): 촉발 조건이 회복되어도 검토의 독립적인 목표 지적까지 폐기하면
+안 된다. 중간 검토의 `findings`는 id, scope(trigger/goal), reason, instruction,
+resolved_when, evidence_ids를 포함한다. trigger는 해당 촉발 조건의 회복에 따라 폐기하고,
+goal은 같은 목표 아래에서 보존한다. 상태 변경이나 근거 미확인은 재확인 표시로 전달한다.
+취소/목표 변경은 이전 지시를 무효화한다. 범위가 없는 기존 검토는 조용히 삭제하거나
+즉시 재실행하지 않고 현재도 필요한지 확인하는 통지로 전달한다. 발행과 실행 경계 양쪽에서
+같은 수명 검사를 사용하며, 전달 완료는 별도로 기록한다. 추가 검토 모델은 없다.
+실제 의미상 해결 여부는 하네스가 다른 도구의 성공으로 추정하지 않는다.
+이 수정은 최종 목표 달성 판정과 분리된다. 구현·검증은
+[5651 수리 기록](EPISODE_5651_CONFIRMED_REPAIR_PLAN_2026_11_01.md)에 있다.
+
 연구 `versions/read`의 필수 인자와 `thread_update`의 질문/메모 배타 조건은 사전의
 `ops.required/exclusive`에서 공통 계약으로 투영되어, 정적 검사와 런타임 인자 검사에 함께
 적용된다. Result 필드 오류는 is_ok/unwrap/error_of를 안내한다. 크몽 예제·앱은 명시 표본을

@@ -629,10 +629,9 @@ class Supervisor:
 
     def _take_pending(self):
         notice, self.pending = self.pending, None
-        # 생산자는 모두 조건 지문을 낸다. revision만 있는 지시는 유효성을 증명하지 못한다.
-        if notice and ("conditions" not in notice or not self.conditions_valid(notice["conditions"])):
-            self.log("decision.stale", role="harness", reviewed_revision=notice.get("revision"), current_revision=self.exec_revision)
-            return None
+        if notice:
+            from supervisor_interventions import refresh_notice
+            notice = refresh_notice(self, notice)
         if notice:
             self.log("instruction.delivered", role="harness", instruction=notice)
         return notice
@@ -745,16 +744,17 @@ class Supervisor:
                 return
             self.log("decision", role="consciousness", trigger=reason, decision=decision)
             self.review_cursor = cursor
-            if decision["status"] in {"REWORK", "UNKNOWN"} and decision.get("instruction"):
+            if decision["status"] in {"REWORK", "UNKNOWN"} and (decision.get("instruction") or decision.get("findings")):
                 with self.lock:
-                    if not self.conditions_valid(conditions):
-                        self.log("decision.stale", role="harness", reviewed_revision=revision, current_revision=self.exec_revision)
-                        return  # 관찰 중 실제로 회복한 작업에는 옛 정체 지시를 주지 않는다.
-                    self.pending = {"id": uuid.uuid4().hex, "reason": decision["reason"],
+                    from supervisor_interventions import refresh_notice, review_findings
+                    notice = {"id": uuid.uuid4().hex, "reason": decision["reason"],
                                     "source": "supervisor", "target": {"agent": self.owner, "task": self.task},
                                     "sequence": self.store.sequence, "expires_at": None,
-                                    "instruction": decision["instruction"], "review": self.reviews, "revision": revision,
+                                    "findings": review_findings(decision), "review": self.reviews, "revision": revision,
                                     "conditions": conditions}
+                    self.pending = refresh_notice(self, notice)
+                    if self.pending:
+                        self.log("instruction.queued", role="harness", instruction=self.pending)
         except Exception as exc:
             self.log("review.error", role="consciousness", error=str(exc))
         finally:

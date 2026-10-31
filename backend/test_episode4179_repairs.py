@@ -7,7 +7,7 @@ from pathlib import Path
 import boot_paths  # noqa: F401
 import pytest
 
-from test_conscious_supervisor import supervisor, verdict  # noqa: F401
+from test_conscious_supervisor import supervisor, verdict, trigger_verdict  # noqa: F401
 from test_ibl_general_capabilities import boundary, adapter  # noqa: F401
 from test_audio_listen import audio, _fake_value  # noqa: F401
 
@@ -29,7 +29,7 @@ def test_changed_program_recovery_retires_old_failure_instruction(supervisor, mo
     def review(c, *a, **kw):
         if recovery == 'during_review':
             finish(c, good)
-        return verdict(c, 'REWORK', instruction='repeat old lookup')
+        return trigger_verdict(c, 'repeat old lookup')
     monkeypatch.setattr('supervisor_runtime.invoke', review)
     supervisor.review('repeated_failure')
     if recovery == 'before_delivery':
@@ -43,11 +43,11 @@ def test_result_paging_does_not_discard_needed_failure_instruction(supervisor, m
     finish(supervisor, 'bad path', True)
     finish(supervisor, 'bad shape', True)
     monkeypatch.setattr('supervisor_runtime.invoke', lambda c, *a, **kw:
-                        verdict(c, 'REWORK', instruction='repair shape'))
+                        trigger_verdict(c, 'repair shape'))
     supervisor.review('repeated_failure')
     key = supervisor._start('execute_ibl', {'code': '', 'read_result': {'id': 'saved'}})
     supervisor._finish(key, {'text': 'diagnostic'})
-    assert supervisor.boundary()['instruction'] == 'repair shape'
+    assert supervisor.boundary()['findings'][0]['instruction'] == 'repair shape'
 
 
 @pytest.mark.parametrize('code', [
@@ -58,10 +58,10 @@ def test_unrelated_ibl_success_keeps_failure_guidance(supervisor, monkeypatch, c
     finish(supervisor, '[t:read]{path:"broken"}', True)
     finish(supervisor, '[t:read]{path:"broken"}', True)
     monkeypatch.setattr('supervisor_runtime.invoke', lambda c, *a, **kw:
-                        verdict(c, 'REWORK', instruction='repair original source'))
+                        trigger_verdict(c, 'repair original source'))
     supervisor.review('repeated_failure')
     finish(supervisor, code)
-    assert supervisor.boundary()['instruction'] == 'repair original source'
+    assert supervisor.boundary()['findings'][0]['instruction'] == 'repair original source'
 
 
 def test_tool_stall_clock_excludes_prior_model_authoring(supervisor, monkeypatch):

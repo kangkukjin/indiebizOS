@@ -7,6 +7,7 @@
 """
 import os
 import sys
+import subprocess
 from pathlib import Path
 
 
@@ -38,4 +39,12 @@ def launch(code_root, argv=None):
     args = [sys.executable, str(script), *argv]
     if "--code-root" not in argv:
         args += ["--code-root", str(code_root)]
-    os.execve(sys.executable, args, env)
+    _exec_controller(sys.executable, args, env)
+
+
+def _exec_controller(executable, args, env):
+    # Windows CRT exec는 argv를 공백으로 잇는다. subprocess용 인용을 각 인수에
+    # 적용해야 공백·빈 인수·따옴표·마지막 역슬래시가 자식 Python에 그대로 도달한다.
+    if os.name == "nt":
+        args = [subprocess.list2cmdline([arg]) for arg in args]
+    os.execve(executable, args, env)

@@ -1,0 +1,245 @@
+{
+  "B_vs_A": {
+    "cases": [
+      {
+        "case": "D1",
+        "kind": "known",
+        "removed": [],
+        "added": [
+          "suppression_omitted"
+        ],
+        "check_regression": [
+          3
+        ],
+        "improved": false
+      },
+      {
+        "case": "D2",
+        "kind": "known_followup",
+        "removed": [
+          "inherited_attributes",
+          "new_attributes"
+        ],
+        "added": [
+          "experience_absence"
+        ],
+        "check_regression": [
+          1
+        ],
+        "improved": false
+      },
+      {
+        "case": "H1",
+        "kind": "new",
+        "removed": [],
+        "added": [
+          "redefinition_attribution"
+        ],
+        "check_regression": [],
+        "improved": false
+      },
+      {
+        "case": "H2",
+        "kind": "new",
+        "removed": [],
+        "added": [],
+        "check_regression": [],
+        "improved": false
+      },
+      {
+        "case": "H3",
+        "kind": "new",
+        "removed": [],
+        "added": [
+          "experience_scope_narrowed",
+          "few_to_none",
+          "unsupported_metadata_gate"
+        ],
+        "check_regression": [
+          1,
+          4
+        ],
+        "improved": false
+      },
+      {
+        "case": "H4",
+        "kind": "control_new",
+        "removed": [
+          "unreviewed_metadata"
+        ],
+        "added": [],
+        "check_regression": [],
+        "improved": true
+      }
+    ],
+    "input_output_ratio": 1.0409069371167181,
+    "median_time_ratio": 1.2753873387508556,
+    "gates": {
+      "improved_at_least_two": false,
+      "improved_at_least_one_new": true,
+      "no_new_defect_or_check_regression": false,
+      "token_limit": true,
+      "time_limit": true
+    },
+    "decision": "reject"
+  },
+  "C_vs_B": {
+    "cases": [
+      {
+        "case": "D1",
+        "kind": "known",
+        "removed": [
+          "suppression_omitted"
+        ],
+        "added": [],
+        "check_regression": [],
+        "improved": true
+      },
+      {
+        "case": "D2",
+        "kind": "known_followup",
+        "removed": [],
+        "added": [],
+        "check_regression": [],
+        "improved": false
+      },
+      {
+        "case": "H1",
+        "kind": "new",
+        "removed": [
+          "low_exposure_bound",
+          "redefinition_attribution"
+        ],
+        "added": [],
+        "check_regression": [],
+        "improved": true
+      },
+      {
+        "case": "H2",
+        "kind": "new",
+        "removed": [],
+        "added": [
+          "denominator_assumed"
+        ],
+        "check_regression": [
+          2,
+          3
+        ],
+        "improved": false
+      },
+      {
+        "case": "H3",
+        "kind": "new",
+        "removed": [
+          "few_to_none",
+          "unsupported_metadata_gate"
+        ],
+        "added": [],
+        "check_regression": [],
+        "improved": true
+      },
+      {
+        "case": "H4",
+        "kind": "control_new",
+        "removed": [],
+        "added": [],
+        "check_regression": [],
+        "improved": false
+      }
+    ],
+    "input_output_ratio": 1.9736479846978414,
+    "median_time_ratio": 1.568997884925642,
+    "gates": {
+      "improved_at_least_two": true,
+      "improved_at_least_one_new": true,
+      "no_new_defect_or_check_regression": false,
+      "token_limit": true,
+      "time_limit": true
+    },
+    "decision": "reject"
+  },
+  "C_vs_A": {
+    "cases": [
+      {
+        "case": "D1",
+        "kind": "known",
+        "removed": [],
+        "added": [],
+        "check_regression": [],
+        "improved": false
+      },
+      {
+        "case": "D2",
+        "kind": "known_followup",
+        "removed": [
+          "inherited_attributes",
+          "new_attributes"
+        ],
+        "added": [
+          "experience_absence"
+        ],
+        "check_regression": [
+          1
+        ],
+        "improved": false
+      },
+      {
+        "case": "H1",
+        "kind": "new",
+        "removed": [
+          "low_exposure_bound"
+        ],
+        "added": [],
+        "check_regression": [],
+        "improved": true
+      },
+      {
+        "case": "H2",
+        "kind": "new",
+        "removed": [],
+        "added": [
+          "denominator_assumed"
+        ],
+        "check_regression": [
+          2,
+          3
+        ],
+        "improved": false
+      },
+      {
+        "case": "H3",
+        "kind": "new",
+        "removed": [],
+        "added": [
+          "experience_scope_narrowed"
+        ],
+        "check_regression": [
+          1
+        ],
+        "improved": false
+      },
+      {
+        "case": "H4",
+        "kind": "control_new",
+        "removed": [
+          "unreviewed_metadata"
+        ],
+        "added": [],
+        "check_regression": [],
+        "improved": true
+      }
+    ],
+    "input_output_ratio": 2.0543838786984137,
+    "median_time_ratio": 2.0010800369610355,
+    "gates": {
+      "improved_at_least_two": true,
+      "improved_at_least_one_new": true,
+      "no_new_defect_or_check_regression": false,
+      "token_limit": null,
+      "time_limit": null
+    },
+    "decision": "reject"
+  },
+  "adoption": "none",
+  "limits": "각 사례 한 번의 비맹검 수동 판정이다. 일반 성공률·통계적 우월성·달러 비용으로 환산하지 않는다. C_vs_A에는 새 비용 한도를 사후 도입하지 않았다."
+}

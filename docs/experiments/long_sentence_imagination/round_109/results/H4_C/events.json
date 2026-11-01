@@ -1,0 +1,61 @@
+[
+  {
+    "timestamp": "2026-11-01T18:34:35.925080",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 10576,
+      "cache_read": 2385,
+      "call_id": "79973be5ec41457bb6acc17ad94de5fb",
+      "event": "usage",
+      "input": 12963,
+      "latency_ms": 26066,
+      "model": "opus",
+      "output": 2522,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 1675,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:35:40.262826",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 31630,
+      "cache_read": 11658,
+      "call_id": "e91965b32d35420fb64959d56775fe58",
+      "event": "usage",
+      "input": 43290,
+      "latency_ms": 63989,
+      "model": "opus",
+      "output": 9723,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 199,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:35:40.627055",
+    "kind": "research.plan_saved",
+    "data": {
+      "author": "consciousness",
+      "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H4_C/outputs/research_plans/4f381fb4610a4bf5a7d26cfcc52f2523/research_plan.md",
+      "previous_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H4_B/outputs/research_plans/5ca66d8132254d4c9343b67fecd0b87d/research_plan.md",
+      "saved_at": "2026-11-01T09:35:40.625684+00:00",
+      "sha256": "9035e81ba2a2868dc6a0c68794789f363537fc6acd899be42b521d47c7d0c8b1",
+      "task_id": "training_ls109_H4_C"
+    }
+  }
+]

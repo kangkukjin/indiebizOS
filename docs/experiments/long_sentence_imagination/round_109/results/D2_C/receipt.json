@@ -1,0 +1,49 @@
+{
+  "case": "D2",
+  "arm": "C",
+  "started": 1793524758.0784042,
+  "status": "failed",
+  "origin": "training",
+  "runner_sha256": "16aefb4b4680366c82816977ec6d9f2ab94b046cf90f74027c1af64778a0c0ee",
+  "episode_id": 5710,
+  "model": {
+    "provider": "claude_code",
+    "model": "opus",
+    "tier": "고급",
+    "source": "gear:최대|의식→고급"
+  },
+  "error": "",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_109/run_experiment.py\", line 114, in run\n    result = action(agent, controller, directory)\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_109/run_experiment.py\", line 219, in <lambda>\n    run(case, \"C\", lambda a, c, d: review(case, a, c, d))\n                                   ~~~~~~^^^^^^^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_109/run_experiment.py\", line 186, in review\n    assert isinstance(result, dict) and isinstance(result.get(\"issues\"), list)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n",
+  "usage": {
+    "requests": 1,
+    "measured_requests": 1,
+    "unmeasured_requests": 0,
+    "input": 17426,
+    "output": 3877,
+    "cache_read": 2385,
+    "cache_create": 15039,
+    "reasoning": 2696,
+    "calls": [
+      {
+        "call_id": "1397f91d5fa34998912efaa062701d5e",
+        "parent_call_id": null,
+        "role": "consciousness",
+        "phase": "plan_completion",
+        "provider": "ClaudeCode",
+        "model": "opus",
+        "round_index": 1,
+        "tier": "고급",
+        "source": "execution_instance",
+        "measured": true,
+        "elapsed_ms": 37755,
+        "input": 17426,
+        "output": 3877,
+        "cache_read": 2385,
+        "cache_create": 15039,
+        "reasoning": 2696
+      }
+    ]
+  },
+  "ended": 1793524796.578336,
+  "seconds": 38.49993181228638
+}

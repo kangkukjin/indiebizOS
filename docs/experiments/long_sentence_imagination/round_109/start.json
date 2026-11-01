@@ -1,0 +1,22 @@
+{
+  "budget_start": "2026-11-01T18:06:00+09:00",
+  "first_clock_observed": "2026-11-01T18:09:35+09:00",
+  "budget_note": "정확한 첫 명령 시각 대신 준비 시간을 포함하도록 앞당긴 보수적 예산 시작점. 실제 경과 추정과 구별.",
+  "deadline": "2026-11-01T19:06:00+09:00",
+  "head": "fbc91fe4f20a55b064afaa441073c54781319d8f",
+  "cases_sha256": "6c7078743b52609b2b42ef9fa4332bb0d9348c24704cbca441734339da7e40c2",
+  "source_sha256": {
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "data/common_prompts/consciousness_prompt.md": "8e7a689782c6333c970370167fefb5a9124464615f99a53f63c67df1a98771ba",
+    "data/guides/deep_research.md": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e"
+  },
+  "prior_sha256": "03a6294dc2ced46cb5434adb6ec13353c59e1f67d1ebdb348f02f181e5e4614b",
+  "design": "공통 최초 의식 규정 S, A 기존 계획 호출, B 기존 호출 내 근거 대조 보완, C 동일 B 출력의 별도 검토+최대1회 정정. A/B 순서를 사례별 교대. C는 B와 동일 초안.",
+  "candidate_sha256": "026ee7b4c5e8091f63561c306c9b715a734c38340d771638c9e18b02bae3da28",
+  "frozen_files": {
+    "planning_check.txt": "b2ba1a67df68cb58e7eaca9d368719accb7bdbada339cb7c6a8fe4492576a196",
+    "review_system.txt": "cffda02a4419b7d9f5c420784b7b0857e25b0297e55f2422cb5d685cb4530f19",
+    "task.md": "6e19e3f7f114865acf3c31c88f66c05af46cc210ee74bbbb1a71adbcc34db0c3",
+    "cases.json": "6c7078743b52609b2b42ef9fa4332bb0d9348c24704cbca441734339da7e40c2"
+  }
+}

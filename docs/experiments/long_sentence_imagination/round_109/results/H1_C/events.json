@@ -1,0 +1,61 @@
+[
+  {
+    "timestamp": "2026-11-01T18:28:26.987363",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 11377,
+      "cache_read": 2385,
+      "call_id": "4906edf1e43440a9864581d1e9734509",
+      "event": "usage",
+      "input": 13764,
+      "latency_ms": 27486,
+      "model": "opus",
+      "output": 2665,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 1551,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:29:59.132258",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 32097,
+      "cache_read": 11658,
+      "call_id": "799f6c7877df4e99a245220d452472bc",
+      "event": "usage",
+      "input": 43757,
+      "latency_ms": 91807,
+      "model": "opus",
+      "output": 12996,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 1036,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:29:59.656215",
+    "kind": "research.plan_saved",
+    "data": {
+      "author": "consciousness",
+      "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H1_C/outputs/research_plans/6a0bc43f3d8f41fc9314d36fd313c437/research_plan.md",
+      "previous_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H1_B/outputs/research_plans/e20502505ff14d2e9f6de6c765adac6d/research_plan.md",
+      "saved_at": "2026-11-01T09:29:59.654932+00:00",
+      "sha256": "edd96308355dc7db10b981ee740bdd56dda788f766265847297f2cfc4f5a9f5c",
+      "task_id": "training_ls109_H1_C"
+    }
+  }
+]

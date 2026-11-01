@@ -1,0 +1,7 @@
+{
+  "command": "importlib loads candidate_research_planning.py as research_planning; pytest.main([backend/test_research_planning.py])",
+  "status": "passed",
+  "passed": 41,
+  "seconds": 0.86,
+  "live_source_modified": false
+}

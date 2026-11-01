@@ -1,0 +1,61 @@
+[
+  {
+    "timestamp": "2026-11-01T18:35:01.176289",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 10913,
+      "cache_read": 2385,
+      "call_id": "08c5528f257b44afa4f0ee331b1afd00",
+      "event": "usage",
+      "input": 13300,
+      "latency_ms": 29688,
+      "model": "opus",
+      "output": 2847,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 1929,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:36:11.334780",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 31716,
+      "cache_read": 11658,
+      "call_id": "009ffae30df641a28ba9f7838db83b5c",
+      "event": "usage",
+      "input": 43376,
+      "latency_ms": 69773,
+      "model": "opus",
+      "output": 10294,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 256,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:36:11.643697",
+    "kind": "research.plan_saved",
+    "data": {
+      "author": "consciousness",
+      "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H3_C/outputs/research_plans/64c9084947aa4af795727edfdac47a9d/research_plan.md",
+      "previous_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H3_B/outputs/research_plans/665b200900b14a9d822406bebb4c50c4/research_plan.md",
+      "saved_at": "2026-11-01T09:36:11.642520+00:00",
+      "sha256": "c5d6c5f865ef2a241ae98e50d4600b6aafd5e368524a72fd21d335da83784338",
+      "task_id": "training_ls109_H3_C"
+    }
+  }
+]

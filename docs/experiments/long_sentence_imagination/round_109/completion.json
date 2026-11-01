@@ -1,0 +1,40 @@
+{
+  "status": "training_completed_both_candidates_rejected",
+  "budget_start": "2026-11-01T18:06:00+09:00",
+  "first_clock_observed": "2026-11-01T18:09:35+09:00",
+  "deadline": "2026-11-01T19:06:00+09:00",
+  "model_calls_started": "2026-11-01T18:13:55.710315+09:00",
+  "model_calls_ended": "2026-11-01T18:36:11.642227+09:00",
+  "diagnosis_and_evidence_completed_at": "2026-11-01T18:40:42.111969+09:00",
+  "elapsed_seconds_from_conservative_start": 2082.111969,
+  "within_60_minute_budget": true,
+  "counts": {
+    "distinct_requests": 6,
+    "graded_plans": 18,
+    "preserved_attempts": 26,
+    "harness_failed_attempts": 2,
+    "measured_model_calls": 30,
+    "unmeasured_model_calls": 0,
+    "review_issues_audited": 10
+  },
+  "verification": {
+    "candidate_contract_tests_passed": 41,
+    "evidence_quotes_checked": 54,
+    "paired_inputs_checked": 6,
+    "backend_full_suite_run": false,
+    "live_source_unchanged": {
+      "backend/cognition/research_planning.py": true,
+      "data/common_prompts/consciousness_prompt.md": true,
+      "data/guides/deep_research.md": true
+    }
+  },
+  "adopted_changes": [],
+  "preserved_changes": "실험 후보·실제 출력·수동 판정·반례·기각 근거·원장/이력만 보존",
+  "limits": [
+    "비맹검 수동 판정과 검토 보조 후 판정 정정 포함",
+    "사례별 각1회 관측; 일반 성공률·통계적 우월성 미추정",
+    "연구 실행·최종 평가자 미검증",
+    "병렬/캐시/회복의 영향이 있어 운영 지연·청구액 직접 측정 아님"
+  ],
+  "commit": "완료 후 git 사건으로 확인; 자체 해시를 추정 기입하지 않음"
+}

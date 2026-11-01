@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "kind": "가상 반례 산술; 실제 센터·사이트의 관측이나 가능성 우열을 주장하지 않음",
+  "low_exposure_bound": {
+    "counts": [
+      99,
+      1
+    ],
+    "old_minutes": [
+      4,
+      804
+    ],
+    "new_minutes": [
+      4,
+      404
+    ],
+    "old_mean": 12.0,
+    "new_mean": 8.0,
+    "applied_fraction": 0.01,
+    "share_of_total_decrease": 1
+  },
+  "denominator_assumed": {
+    "visitors": [
+      100,
+      200
+    ],
+    "applications": [
+      100,
+      200
+    ],
+    "hires": [
+      20,
+      30
+    ],
+    "hires_per_visitor": [
+      0.2,
+      0.15
+    ]
+  },
+  "redefinition_attribution": {
+    "old_x": 12,
+    "new_x": 8,
+    "old_y": 4,
+    "new_y": 4,
+    "interpretation": "X는 두 해 모두 대기+상담, Y는 두 해 모두 상담. 지표를 바꿔 감소폭이 사라져도 연도 간 정의 변경은 없다."
+  },
+  "experience_absence": {
+    "observed_anecdote": false,
+    "compatible_worlds": [
+      "해당 경험이 없었다",
+      "있었으나 면담에 표현되지 않았다"
+    ],
+    "interpretation": "면담에 표현되지 않음에서 경험을 놓쳤다는 전제로 연구 방향을 닫을 수 없다. 실제 어느 경우인지는 미확인이다."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "command": ".venv/bin/python3 /Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_109/verify_evidence.py --live",
+  "exit_code": 0,
+  "result": {
+    "status": "passed",
+    "attempts": 26,
+    "calls": 30,
+    "quotes": 54,
+    "paired_inputs_differ_only_by_candidate_and_workspace": true,
+    "semantic_grading": "manual_not_automated"
+  }
+}

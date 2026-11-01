@@ -1,0 +1,13 @@
+{
+  "cause": "의식 전용 _parse_response는 task_framing 문자열이 없는 JSON에서 None을 반환한다(backend/cognition/consciousness_agent.py:555–557). 검토 전용 issues JSON을 여기에 전달한 실험 코드의 오류다. 두 원응답은 유효한 JSON 코드 블록이었다.",
+  "failed_attempts": [
+    "D1_C",
+    "D2_C"
+  ],
+  "preservation": "실패 영수증·원응답·사용량·원래 runner SHA를 유지하고 run_experiment_v0.py를 보존했다.",
+  "fix": "검토 응답만 JSON 코드 펜스를 제거해 json.loads로 읽는다. 의식 계획 응답 파서는 그대로다.",
+  "recovery": "D1_C_recovered와 D2_C_recovered에서 저장한 동일 응답을 읽고 정정 호출만 수행한다. 최초 검토 비용과 회복 정정 비용을 모두 C에 합산한다.",
+  "candidate_changes": false,
+  "cases_or_checks_changes": false,
+  "time_note": "세 작업 프로세스가 일시적으로 병행됨: 남은 새 사례 두 묶음과 기존 두 사례의 정정 회복. 사전 계획의 두 프로세스보다 많아 시간 비교의 통제 한계에 추가한다."
+}

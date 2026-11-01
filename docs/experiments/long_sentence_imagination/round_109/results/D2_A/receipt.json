@@ -1,0 +1,49 @@
+{
+  "case": "D2",
+  "arm": "A",
+  "started": 1793524628.8241348,
+  "status": "completed",
+  "origin": "training",
+  "runner_sha256": "16aefb4b4680366c82816977ec6d9f2ab94b046cf90f74027c1af64778a0c0ee",
+  "episode_id": 5708,
+  "model": {
+    "provider": "claude_code",
+    "model": "opus",
+    "tier": "고급",
+    "source": "gear:최대|의식→고급"
+  },
+  "calls": 1,
+  "has_plan": true,
+  "usage": {
+    "requests": 1,
+    "measured_requests": 1,
+    "unmeasured_requests": 0,
+    "input": 47618,
+    "output": 15452,
+    "cache_read": 11658,
+    "cache_create": 35958,
+    "reasoning": 781,
+    "calls": [
+      {
+        "call_id": "f528cef1875b4b87a805a32b02ddbdc8",
+        "parent_call_id": null,
+        "role": "consciousness",
+        "phase": "plan_completion",
+        "provider": "ClaudeCode",
+        "model": "opus",
+        "round_index": 1,
+        "tier": "고급",
+        "source": "execution_instance",
+        "measured": true,
+        "elapsed_ms": 128271,
+        "input": 47618,
+        "output": 15452,
+        "cache_read": 11658,
+        "cache_create": 35958,
+        "reasoning": 781
+      }
+    ]
+  },
+  "ended": 1793524758.073177,
+  "seconds": 129.24904227256775
+}

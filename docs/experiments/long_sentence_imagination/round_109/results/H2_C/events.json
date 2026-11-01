@@ -1,0 +1,61 @@
+[
+  {
+    "timestamp": "2026-11-01T18:27:31.934110",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 9504,
+      "cache_read": 2385,
+      "call_id": "bad10667223f47cd8691d0678eb1f930",
+      "event": "usage",
+      "input": 11891,
+      "latency_ms": 21888,
+      "model": "opus",
+      "output": 2195,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 1507,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:28:43.600691",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 29901,
+      "cache_read": 11658,
+      "call_id": "3de88abeda4b4d6ba48359e931420724",
+      "event": "usage",
+      "input": 41561,
+      "latency_ms": 71357,
+      "model": "opus",
+      "output": 9543,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 624,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:28:44.007470",
+    "kind": "research.plan_saved",
+    "data": {
+      "author": "consciousness",
+      "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H2_C/outputs/research_plans/4fd2f876f91e4041b0d8d2c3b62fdc1e/research_plan.md",
+      "previous_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/H2_B/outputs/research_plans/abd3725ea9b94d128b424ec14f848adf/research_plan.md",
+      "saved_at": "2026-11-01T09:28:44.006090+00:00",
+      "sha256": "371f338cfe063528c1e97c50791403c959803c4c08a7d768111803fc8dfec89c",
+      "task_id": "training_ls109_H2_C"
+    }
+  }
+]

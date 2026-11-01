@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "2026-11-01T18:26:33.730865",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 51782,
+      "cache_read": 11658,
+      "call_id": "24f2e8b3e36f4847a75785cf5ce01ace",
+      "event": "usage",
+      "input": 63442,
+      "latency_ms": 120321,
+      "model": "opus",
+      "output": 17506,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 2402,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T18:26:34.254030",
+    "kind": "research.plan_saved",
+    "data": {
+      "author": "consciousness",
+      "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/D2_C_recovered/outputs/research_plans/9ecef4cab3c949a7bc91b93ffed809b5/research_plan.md",
+      "previous_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_109회차/D2_B/outputs/research_plans/eba3041ff0d44a0e9a402f1636c9b3e8/research_plan.md",
+      "saved_at": "2026-11-01T09:26:34.252953+00:00",
+      "sha256": "cfd7fb877e2f9ce41f8dfa0f548956169dcdf09e50461011c5bfa77e20861810",
+      "task_id": "training_ls109_D2_C_recovered"
+    }
+  }
+]

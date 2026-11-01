@@ -1,0 +1,49 @@
+{
+  "case": "D1",
+  "arm": "C",
+  "started": 1793524703.894054,
+  "status": "failed",
+  "origin": "training",
+  "runner_sha256": "16aefb4b4680366c82816977ec6d9f2ab94b046cf90f74027c1af64778a0c0ee",
+  "episode_id": 5709,
+  "model": {
+    "provider": "claude_code",
+    "model": "opus",
+    "tier": "고급",
+    "source": "gear:최대|의식→고급"
+  },
+  "error": "",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_109/run_experiment.py\", line 114, in run\n    result = action(agent, controller, directory)\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_109/run_experiment.py\", line 219, in <lambda>\n    run(case, \"C\", lambda a, c, d: review(case, a, c, d))\n                                   ~~~~~~^^^^^^^^^^^^^^^\n  File \"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_109/run_experiment.py\", line 186, in review\n    assert isinstance(result, dict) and isinstance(result.get(\"issues\"), list)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n",
+  "usage": {
+    "requests": 1,
+    "measured_requests": 1,
+    "unmeasured_requests": 0,
+    "input": 12010,
+    "output": 2573,
+    "cache_read": 658,
+    "cache_create": 11350,
+    "reasoning": 1922,
+    "calls": [
+      {
+        "call_id": "c1f3db1dbbaf413495ce29178bb5c8fd",
+        "parent_call_id": null,
+        "role": "consciousness",
+        "phase": "plan_completion",
+        "provider": "ClaudeCode",
+        "model": "opus",
+        "round_index": 1,
+        "tier": "고급",
+        "source": "execution_instance",
+        "measured": true,
+        "elapsed_ms": 29925,
+        "input": 12010,
+        "output": 2573,
+        "cache_read": 658,
+        "cache_create": 11350,
+        "reasoning": 1922
+      }
+    ]
+  },
+  "ended": 1793524734.583023,
+  "seconds": 30.688969135284424
+}

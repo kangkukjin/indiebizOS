@@ -1,0 +1,20 @@
+[
+  {
+    "index": 0,
+    "phase": "review",
+    "started": 1793525230.039216,
+    "input_sha256": "4ca887f0a6cb06dd7f05702994eccfe136da569bfa3dadb76fa3b8df248a4292",
+    "system_sha256": "cffda02a4419b7d9f5c420784b7b0857e25b0297e55f2422cb5d685cb4530f19",
+    "ended": 1793525252.2353961,
+    "response_sha256": "f38fdf58deababfe36664914b9944e583abb0df5c96593c5d991a72129c0634a"
+  },
+  {
+    "index": 1,
+    "phase": "correction",
+    "started": 1793525252.235924,
+    "input_sha256": "861facfb1c73f40cec1efd6e34b156ff728953ed27e149878488830a35dbb9eb",
+    "system_sha256": "d8eef7c8f435aacafaa9b47c6f98c7c33a2898d0894fe35a689c01d9a0dab8c5",
+    "ended": 1793525324.005716,
+    "response_sha256": "0d5a9ba21435756b661ce6b75cef33ab774b7c8c8ef5838852bdba0631fc556e"
+  }
+]

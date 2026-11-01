@@ -1,0 +1,971 @@
+{
+  "start": {
+    "budget_start": "2026-11-01T18:06:00+09:00",
+    "first_clock_observed": "2026-11-01T18:09:35+09:00",
+    "budget_note": "정확한 첫 명령 시각 대신 준비 시간을 포함하도록 앞당긴 보수적 예산 시작점. 실제 경과 추정과 구별.",
+    "deadline": "2026-11-01T19:06:00+09:00",
+    "head": "fbc91fe4f20a55b064afaa441073c54781319d8f",
+    "cases_sha256": "6c7078743b52609b2b42ef9fa4332bb0d9348c24704cbca441734339da7e40c2",
+    "source_sha256": {
+      "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+      "data/common_prompts/consciousness_prompt.md": "8e7a689782c6333c970370167fefb5a9124464615f99a53f63c67df1a98771ba",
+      "data/guides/deep_research.md": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e"
+    },
+    "prior_sha256": "03a6294dc2ced46cb5434adb6ec13353c59e1f67d1ebdb348f02f181e5e4614b",
+    "design": "공통 최초 의식 규정 S, A 기존 계획 호출, B 기존 호출 내 근거 대조 보완, C 동일 B 출력의 별도 검토+최대1회 정정. A/B 순서를 사례별 교대. C는 B와 동일 초안.",
+    "candidate_sha256": "026ee7b4c5e8091f63561c306c9b715a734c38340d771638c9e18b02bae3da28",
+    "frozen_files": {
+      "planning_check.txt": "b2ba1a67df68cb58e7eaca9d368719accb7bdbada339cb7c6a8fe4492576a196",
+      "review_system.txt": "cffda02a4419b7d9f5c420784b7b0857e25b0297e55f2422cb5d685cb4530f19",
+      "task.md": "6e19e3f7f114865acf3c31c88f66c05af46cc210ee74bbbb1a71adbcc34db0c3",
+      "cases.json": "6c7078743b52609b2b42ef9fa4332bb0d9348c24704cbca441734339da7e40c2"
+    }
+  },
+  "attempts": [
+    {
+      "case": "D1",
+      "arm": "S",
+      "status": "completed",
+      "episode_id": 5703,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "b643ff06389a58359e14c9be14542834585d8b438bd1c5ce6e623c11e3ab6a13",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "37cecaf147ba66660c98c1fb225746a1aafd736df8c3b2eda7de735944fbb90c",
+        "call_0_response.txt": "f184f45a2973cdaaa6ea436b40dd085dd84e48f483321226cfdabb46a636a43e",
+        "framing.json": "3fe58b95ee7498bb4b39b7b6c790d441698828e126aa04384769c7b8e8d184dc",
+        "calls.json": "a015d4dc3650cd62b4306fa0eb62d247e9d7e1f73a8b526b430739d32b8c7e29",
+        "receipt.json": "b7855d17747ef3a06616f7dd0098b4476d4a22d62ec30a0dcb24587aecbed91b"
+      }
+    },
+    {
+      "case": "D1",
+      "arm": "A",
+      "status": "completed",
+      "episode_id": 5705,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "d2922572dd7d2bd8c7f76bc8426bebd9489f3d67de5204084923bbee997cef62",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "369d2c4df32619b578d4cfe8c6d83059d6e25da785d7683197b0f3c7f97212df",
+        "call_0_response.txt": "f1fcbc6906a06885b21125986dcf24eb3aa97e8e9f603679ac81f3fc6389041c",
+        "research_plan.md": "9e2e9d516dd7e5a71a60a546eda9df19e6a98a3346210e82ef6782ccd7fd442f",
+        "framing.json": "46f1c3786e9b24dfb03448dac2674cf71e30771b85c781d107b299efba5d02db",
+        "calls.json": "c786245f7fc165d112eada5ab2a89d3f415a4ad1d8fad0a0b64a7e01175cadbb",
+        "receipt.json": "932b3fc01d3f3fc0b6decc61a35d1797329138f177ad36c9db367826be99d1fd"
+      }
+    },
+    {
+      "case": "D1",
+      "arm": "B",
+      "status": "completed",
+      "episode_id": 5707,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "870730fd409629bafb0c6081524a59eabd741dda66df54eb5896f6bcd0aa6bed",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "3507dabc5c4f336155ce2fca167c786465c8a2c01113515b2d151c9c6ab9883a",
+        "call_0_response.txt": "6511c190bac91af985280c3256483ead9ecffcb3dbfdaf3097d223f7d416d34f",
+        "research_plan.md": "3dcc868be9a835f425269cd62a51109577340b7817cc556c8f5f184f1864cfa1",
+        "framing.json": "5e87e1edd145cb05513126576bf716690ea14d091636afceb8d6b6df1cc3b892",
+        "calls.json": "ab5697bec7ed478b0ddc33980212480794c08ac0428c044daf40fda23a9c36be",
+        "receipt.json": "6e9ecba9f7fe8a4bb47ef6ced1c2cabf354bc9999b318b35128e4993d50de78a"
+      }
+    },
+    {
+      "case": "D1",
+      "arm": "C",
+      "status": "failed",
+      "episode_id": 5709,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "b31c9e3c783248b9abc90c55253dd831f9de0fc81abffe285359e0805b0c05a8",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "5bc1f66ab8ff45ef31be1010989ce6fb13310d3705d9a50a5a0502333eea5f2b",
+        "call_0_response.txt": "d69faef232564b59c1a052dc9a427fb188a6ac8aa9466dfd2bca424bc2b3aaf9",
+        "review_input.json": "b93661d27d4a6ea5b9395851e58fd5a5082b78d279c6510e97bf1ac2b0307e18",
+        "calls.json": "3b2f8fdcef0923a1aa3ccddd65e97c783b826297c71b31a4d0b05a900f97d783",
+        "receipt.json": "9c7e4e8754e694f1c7dd2ff0b55a436cbebdcf65eb91f7ab747b619cbb4903a1"
+      }
+    },
+    {
+      "case": "D1",
+      "arm": "C_recovered",
+      "status": "completed",
+      "episode_id": 5711,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "f7446e532443811f376aa5b99b4d824fb7f4c795b53d4000cf0bfd2d328a9ed8",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "e32d4c85cc5704bfc7dc2b9929c8e0ee57f341277dac3ab94d29d4ca0293ae97",
+        "call_0_response.txt": "9b9b73dec495653a66bf5e39af2eaebd13472af1240bb018489dbc7b3a5d8a26",
+        "review_input.json": "b93661d27d4a6ea5b9395851e58fd5a5082b78d279c6510e97bf1ac2b0307e18",
+        "research_plan.md": "647ee6faa2de4cc91818df1f47bd9d3aa07b05bd46b1c580905c937be35a0cd2",
+        "reused_review.json": "077268d69ad7a34919d90b4c014194b10b72e10098f9d43ef8d51a2092247f59",
+        "framing.json": "68c89497cba0d6e42a375264b40f3910f4cb7cf19b30f249c4f35126c33d266d",
+        "review.json": "226d7634ccfdb5a4ef8f7ae3ab11c5eb426101d6938802cf5abe42c4e04f989f",
+        "calls.json": "bdf8fd3049a415a4bcc8eb67473db8ada229cf54896f81b9de63378c09f05310",
+        "receipt.json": "c7d0b2727b463165e549003d5b030c421835e10eb5861cceaeb3c8631b2a8e0f"
+      }
+    },
+    {
+      "case": "D2",
+      "arm": "S",
+      "status": "completed",
+      "episode_id": 5704,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "d662940f9da1cd7982b013d0c630999ac4780cced549246c9054120ac7a7ba36",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "2a400756e577c7b990be2409a932f81ca2005010e21706bac426920e99008b17",
+        "call_0_response.txt": "a605d606127e0657e2087c70d0bc4d87483f4e392ad9ea90e98be3fac5145f05",
+        "framing.json": "ec50934fc17439a5cd961cad9ede5e87c5f40b81154c7cf2c4735677a9e0f499",
+        "calls.json": "376ab6622df4f779755a23bebe4d420a6bed2bf9566d4b009bd3b0aa26e19de9",
+        "receipt.json": "2b5d87410342a72394be30626c73b4a9a351357b3108e59d9d072dae91b00582"
+      }
+    },
+    {
+      "case": "D2",
+      "arm": "A",
+      "status": "completed",
+      "episode_id": 5708,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "64c2d55fe7ae78398cd0be009ab73ae06ae69307a4f15f5ca9d534e518a2950d",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "f40601e538ca777a9199c890abb6e6c038a362a3400dece20310b67685c751eb",
+        "call_0_response.txt": "8568f58875ce495c67717f598d3f693bbc2e59784823edb598394c76fa7a445b",
+        "research_plan.md": "6d6a4f04029c6965596db3337f952a8617e2886cd18207909155f9753a89ee28",
+        "framing.json": "c87938526501803addaa5b74bf977b379d53e1f47b4948bbaab26f53135a8cde",
+        "calls.json": "b90af6a95f334f04245e6ef0c3454de150496471f561855b09400a8e26358b1c",
+        "receipt.json": "8fa8503e9d3149847da9d211cf859012aa7b138bb48434f0611eaee019878231"
+      }
+    },
+    {
+      "case": "D2",
+      "arm": "B",
+      "status": "completed",
+      "episode_id": 5706,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "554c5eaa3bc14ba679e2c9a25fe416cbaed3243bdc4cfbe967c8f575f863f447",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "cd66b2da525ec719ffe4dab77df643ce90fb376b8def55d228801a9b7720fedd",
+        "call_0_response.txt": "afaaca6658d24bd2164911fba874944addc5d332173bfdf06b9b0eeb8a1a95f1",
+        "research_plan.md": "afe3a3a1511bd7f95b92ee1b6bc7f5c4b5773b8b0a3de4bc5937c774ba00a4f9",
+        "framing.json": "e37d20e150f31914819589f5b43c4a5ebcd575b05d594ae0003236b1140268d9",
+        "calls.json": "2e8780bf0bbe536e5a1b2c2094db1e90804c4d7266c8b720539e781b8b0dad62",
+        "receipt.json": "0b4ddc71882fa69034b6d27e87b7185105dd6dc43dcbe5149634e62e2187753b"
+      }
+    },
+    {
+      "case": "D2",
+      "arm": "C",
+      "status": "failed",
+      "episode_id": 5710,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "0821a3bc8de2323a5b47518a3978c009d1051423a3869aed5030776725db9cd5",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "8ba217921ba3bdc63583ae51868685433a079534af5d2c367b4cfb1f442d8d86",
+        "call_0_response.txt": "91aed59703cebb419f02bf7b1da22eed0085d3d620e259e9e4e63ea1f1ef6141",
+        "review_input.json": "bb2813dd3196797c4091d1de1119429af45472205959bd7e60d3cb78814d5724",
+        "calls.json": "3bb981eeffd17ac85cb9ee2a5656bfb6c83d3adcaddf68eb8755da1ab13b456b",
+        "receipt.json": "4e4011c9d85e3bedf3efd030ec926e85c7bbb62d802d0c10c1e4d9a07d362061"
+      }
+    },
+    {
+      "case": "D2",
+      "arm": "C_recovered",
+      "status": "completed",
+      "episode_id": 5716,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "2482cb156ba13864db528172d5b4e22ecb3284980f9ec613206556b89db3f115",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "2368d7f93853dded21fecf54fd51a53652f8bb3371defc778a091a8ed6bf6377",
+        "call_0_response.txt": "fd93e499a3172325eb525787004a3d1d9c59b09b9e53bed3d15ee9f57ca14abc",
+        "review_input.json": "bb2813dd3196797c4091d1de1119429af45472205959bd7e60d3cb78814d5724",
+        "research_plan.md": "cfd7fb877e2f9ce41f8dfa0f548956169dcdf09e50461011c5bfa77e20861810",
+        "reused_review.json": "cb48c6bcbf9774081b5a71addafd3219939dced033a4013ac72594f2feb2bea3",
+        "framing.json": "391dafb144bed3e15746e7eebeaa96447a32dc9826ab70231f13bf72a91865b2",
+        "review.json": "43025e126f989c3fb40c5ba9fae9c0614957d7fec14b2524eacb710ad541326c",
+        "calls.json": "320af611e66b62906c33ee0ba34293e7d7bfc4ec132b6e4cc5aa3ed1842ecba8",
+        "receipt.json": "876fdd87633c4d3845c37df359e627fe0ca39bca14f0e15ca25704301b4d500b"
+      }
+    },
+    {
+      "case": "H1",
+      "arm": "S",
+      "status": "completed",
+      "episode_id": 5712,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "bc7b1ebe639b99c4bb98dac4282482a850a6caa00543f198ceced735f652db45",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "2a9ddbdad90beed9618a610add1f9d54e8a1d71b751f76194b0ca8306ca516d4",
+        "call_0_response.txt": "27419c99208d8979ef1d7ed8fdb715aa96bdf463b6bd262f3dfb82f70ce40d6c",
+        "framing.json": "5bcf17302b832a59290f42b48da9900d2a7adc5a5b9d1fbad90a4fa53b4eaa92",
+        "calls.json": "e0bfe5456279784afe3197d2615b8421bb230712c426f5fa984e06bfd71c09e1",
+        "receipt.json": "06f87819a77d99efcf860c772924439f54d45216e3a9c1e2adc459a6a8d7ad53"
+      }
+    },
+    {
+      "case": "H1",
+      "arm": "A",
+      "status": "completed",
+      "episode_id": 5714,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "a87d8f712c962af28923edb90b3bc635b842cdbb9c0be8f95ac200e92c9c4991",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "e2b9c875b29fbe54db56b8303c256fb735ce165fd5eb9d181defd10b3be1c0de",
+        "call_0_response.txt": "c100fc88675d2a10d8b839343a8f6fe0d009e60a9eea29fc6429072accec1edd",
+        "research_plan.md": "511f0c8bd6cfdd36e635de186a83e12e20dedb29f5469489dd1a44fb04f95f45",
+        "framing.json": "3fb3a84295f2c6482074e75bbdd91d3b5f8d47897a95d2122a6c79295d5b1112",
+        "calls.json": "6e86a289483702e2093efd596189326aaf27b500976f24b7fbc9ffa1a09d23ee",
+        "receipt.json": "08ff158da2a1af310adbff3db689139159a3d08942c10b961d2eb2bee23d82e6"
+      }
+    },
+    {
+      "case": "H1",
+      "arm": "B",
+      "status": "completed",
+      "episode_id": 5717,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "4b974a9952d8c51eb64bb50ab3de4fd21a5e7cdbee36a772bb3d5594c4b06d02",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "f7f28645a748450b8096f4530c2a8834b9cfe75513dd43599a132e2c453baf06",
+        "call_0_response.txt": "f494379462c6789e690f545b3d038c34a5bcb7a52c24f0b04e2c558ffc66945c",
+        "research_plan.md": "741f91c4f923c90f7d935cc65e42c666f4bd6a257873b42a5a6a31918495522f",
+        "framing.json": "0278392d4f39c2cb2cd62874d3825bbf22e68ae1c06da0297ec7e5129691156a",
+        "calls.json": "18cd10e015617aaf87e4e9d59fdb225fe7a69417906ff6f119773a67ab6083cc",
+        "receipt.json": "63f9a646f3b51c383df953512b50b9b8291e2245a9448460c1dd4aaf6c6cebe9"
+      }
+    },
+    {
+      "case": "H1",
+      "arm": "C",
+      "status": "completed",
+      "episode_id": 5720,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "00778e29c70f802ce46b9314c789d780771138ad49121ff5767bfcbcb063fc68",
+          "checks_leaked": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "fe155e66569f3d696ed56e8dd7012b1bed3ac6f54e198af4e6f7c3b1e946aff3",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "call_1_response.txt": "70aca35893fa4eca5c7dc993b214e8b6fd04804db663d4b7d83300be622224ac",
+        "events.json": "373082f1a81e0804b43beb98e9947a45b8011848a57ff1e0337d61fb481c37af",
+        "call_0_response.txt": "2f2e5485ae7dbc24bcae9ec96da405b4ba6946274d16925ef386b217f32e4919",
+        "review_input.json": "ec19e0f323d9f002cffcc5d2d35eea9d3494d269af8602e478e14851c6eb9ff0",
+        "research_plan.md": "edd96308355dc7db10b981ee740bdd56dda788f766265847297f2cfc4f5a9f5c",
+        "framing.json": "8996a0effbb0cb2949499ab0827e08a43368e54e25a5fcb606ba34c96a729000",
+        "review.json": "d177aaec29c1fae1b6f9d79d672bae78f45c2e2502f9e9cab90dcf61ad1241b0",
+        "calls.json": "9ff8a8a7594c431b880baa2023a2d26db2cd4187bdcbae5135cc38230bdf6932",
+        "receipt.json": "df3f8f83d27828a04293fcc19e6286e05be10bb839aa0dd2832a79bd35692fb6"
+      }
+    },
+    {
+      "case": "H2",
+      "arm": "S",
+      "status": "completed",
+      "episode_id": 5713,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "552b52ca36fbc461814576bf67fa91bcf63709ad72b2730109d5658e9fbe496f",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "abb9a5018392f37ee8686b073d916f95236a4da22b210b11cf21419b7315b04f",
+        "call_0_response.txt": "b6f7aadeaed5284a91f2e2e02165428d175e3388822055ef222ff2c8e8a130ad",
+        "framing.json": "5bd9191145c6f9fb319b5447a47481fbef4f9e8d6030c495222d01dd1d8b5aef",
+        "calls.json": "b478b9ce8dfe19fad054693e29cd772c46c47fd333bdcbf0428c94bea9cf16f3",
+        "receipt.json": "202002d8d5f973229ec1119d8195f67e11dc4363210ed357da719698f53a08ea"
+      }
+    },
+    {
+      "case": "H2",
+      "arm": "A",
+      "status": "completed",
+      "episode_id": 5718,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "e03444c6f9b58ba8abd7cb80d1e2f73317145e5324c4e42df957840082f0ce13",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "d66d21e2d7f75358c95496a09a6e9d1e52f7ae46b9a0edf37e4d18d31de0118d",
+        "call_0_response.txt": "5ab2e7c06b5a3ad6d68283136b822b36b85af7f8db6051aa782c470b15e5ce99",
+        "research_plan.md": "d38c528f6a174230d0aa14941f26551f35a1761af42ea181fa7aadd125c05f58",
+        "framing.json": "279e3ee3d20734921b115660c4550aa5c861abc10fd7eb0f71c1789c99e9fa05",
+        "calls.json": "992a1c2a0fa64993513a037fbfde77bac121f43273b6f74eb6aea0f4aecc9d2e",
+        "receipt.json": "e12347a570dfe84737eca3d525310d732d3287e59a59832e36565aca242363b5"
+      }
+    },
+    {
+      "case": "H2",
+      "arm": "B",
+      "status": "completed",
+      "episode_id": 5715,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "943d7565510deb3049f991990131a2144d729cc8fffafc4f536b0c8e64ae7edc",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "e7e038acab6fd86a63b872270ae897a6f1ff84bb602ea7e5577599546ed662a9",
+        "call_0_response.txt": "f7d2ee6727191e361e98f959a83169efaf88b00235658a357b9708077d57f342",
+        "research_plan.md": "4ead4a25b45c4ac83b41b3fcc48f2094ed8cc9d1867416ac5fdfa6c15d8f0dfb",
+        "framing.json": "7111e5f9c597a9403609236ffb96acec7b246301ab46cf0865a3d8c9d24a201a",
+        "calls.json": "8862a00fb77553763c2e1cb3be673eb2c7937f734a23148afa9b3253a6eefd07",
+        "receipt.json": "3f2aa3d09843994818c6d787a945b0576d1131709284266477124078d43ba148"
+      }
+    },
+    {
+      "case": "H2",
+      "arm": "C",
+      "status": "completed",
+      "episode_id": 5719,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "4ca887f0a6cb06dd7f05702994eccfe136da569bfa3dadb76fa3b8df248a4292",
+          "checks_leaked": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "861facfb1c73f40cec1efd6e34b156ff728953ed27e149878488830a35dbb9eb",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "call_1_response.txt": "0d5a9ba21435756b661ce6b75cef33ab774b7c8c8ef5838852bdba0631fc556e",
+        "events.json": "db6517e621f244e25967ac384799429ad2fe8be6ef3a0f5e5f03736d17a7beee",
+        "call_0_response.txt": "f38fdf58deababfe36664914b9944e583abb0df5c96593c5d991a72129c0634a",
+        "review_input.json": "f28b0f984eeebfb4f1aa2ffb1cf35d20ac544b7f2be61cea3cf67bb45a357b60",
+        "research_plan.md": "371f338cfe063528c1e97c50791403c959803c4c08a7d768111803fc8dfec89c",
+        "framing.json": "fc768282f4554de3167db0396d165312395b279c72a9c64453ae0ca267bfd59b",
+        "review.json": "ec6ba6dfdc89cbd3f53ac68ed6ddba00a962a9eb90f467177bed508198461e15",
+        "calls.json": "62ba640ab47b73273b9108b57db391886db6cabccc08946b1d659137c3f14843",
+        "receipt.json": "c04d327b5e43d7a10813636440b9766a1a0fb5459043e70b815e8026ec76a8c3"
+      }
+    },
+    {
+      "case": "H3",
+      "arm": "S",
+      "status": "completed",
+      "episode_id": 5723,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "d24db9a01088d491a25d0a53ce1555821d0be934ea8b5a94a00c110c3b4a6491",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "a184b32c33bff79e88a91aa839b347994d23a27670742fe40310254d26eb7e20",
+        "call_0_response.txt": "da8a38b5fb52e51698f9a4183b96f5da027eef46a56ec2eaa51c02b8e4b51906",
+        "framing.json": "6222fc35d5c2ccd9c42fc05c74c65f7b975abb7ba9b5f890081d6dcef5b4303e",
+        "calls.json": "2035c4f4837363a77633895008cd4cda33d2382ec11c812fd0ffe4a3a1192388",
+        "receipt.json": "1963d73d2e8c45c7b25896b173bf8744d89ef6b7b25268ed530d1da8cf67c4d3"
+      }
+    },
+    {
+      "case": "H3",
+      "arm": "A",
+      "status": "completed",
+      "episode_id": 5724,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "ba8bb575a338a65f238471383a50bd4418667e7ef1575a5c18877fc4d22f4842",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "044e4e9d97b82080e919b75be0307f4ecfc278ebd67d45df739d8a1bd68333cc",
+        "call_0_response.txt": "bbf5a76a7ae44a8ab9a2161894cfea8d305117d3ef54191bec7044ae7f6ede10",
+        "research_plan.md": "d130383e8e0381e8156306dcede5fa3fa62ae70d88c1822ea86483008f03f3fb",
+        "framing.json": "f1314f05688f8202bc342dfeb3a69b44b718480280f83f0eaaced1e050ff84c2",
+        "calls.json": "f0935770eb88aa631cb3ab042ea692aa3710f6a11a4732995e823a7222424397",
+        "receipt.json": "2f011bb8083b744d4e10c7695990052037358da2996f1d5f425165f6c9e3a254"
+      }
+    },
+    {
+      "case": "H3",
+      "arm": "B",
+      "status": "completed",
+      "episode_id": 5726,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "8e17669d8ae63583c6ea37d859ad1639f262b307fe7147fa97a53962bab9928d",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "0f010367bd3b35152ce494099b3cda4c719a15ca6ef5dbf390466be08f9744a1",
+        "call_0_response.txt": "95d12e04851be9b8cb556990cd90f4a9f7e2b7ea47c7245af2bed58690028ecc",
+        "research_plan.md": "c6cb9aa6d5af8413e77bd1038f080c2c7124af39504573a2a76590e9cb3c9399",
+        "framing.json": "5c2f6996c5470d9c36614be340c2946a77b8b509142d69cf48d0f6b100ad98f7",
+        "calls.json": "c4eb9304fef79d2d352b90350869dbf6f8a990598519b6a4bdc96ee31432f684",
+        "receipt.json": "1ce3675ae73e007c2c99429af944548bd7accf1abcbb5af9e56315b9ff505fe4"
+      }
+    },
+    {
+      "case": "H3",
+      "arm": "C",
+      "status": "completed",
+      "episode_id": 5728,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "f816f1b4ddcfa3aa477fd3ff32ebe6b1571b1552fe7ba2043059703a5b5d9547",
+          "checks_leaked": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "2225b5584fce2b5cde853abcfa34c9364985c5d1037dee5a4c0019bb4185d194",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "call_1_response.txt": "5669b56a9a0d89e177db0f64fb3aa8164d94db609dc9f65eda90991428b08a6f",
+        "events.json": "21c00c4aa425b2c4de8090e8534de842d2012eca3b19f42cc82eae99ac0b0c6d",
+        "call_0_response.txt": "3866bcbce40f012770b2da8ba02f59be4620dad3645a2eb3a3848f3e28760392",
+        "review_input.json": "d905c32fe8c36e04b4a59b0cdfe21204bee2672dd39ffedae26b68d626aa6d0b",
+        "research_plan.md": "c5d6c5f865ef2a241ae98e50d4600b6aafd5e368524a72fd21d335da83784338",
+        "framing.json": "670fe0b16a84047feb9836c4b9ba85cfff01eaaec49756a06d902ae487d7721f",
+        "review.json": "33b016c10aa6b662cd2f8a18f0759dc73ff83a12e0a9361f1081c3ac6b47955c",
+        "calls.json": "3c4b7ecef973638dfa3249035164474a3e9f520e4ef8abf4ba8380409fa2e9bb",
+        "receipt.json": "377d6a4333dc33b5cae8f70706737d4adbe4f1ecb1ba8d71282f8de4ada3ec5b"
+      }
+    },
+    {
+      "case": "H4",
+      "arm": "S",
+      "status": "completed",
+      "episode_id": 5721,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "0d0a3b3054d38aab7f5a7133e01869a86287538f1ade66df0185d4b2487f661e",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "b0e3f7ded63caa8b97da020f7653435d6b502e65cf8df27b0620d22c5261a7c7",
+        "call_0_response.txt": "c5366d9d70496470dbbc4ba3bae43cc5b6f167b6171db7ea152f5a4bd53b4746",
+        "framing.json": "c46d8eb5a9c932057d5a821b269d5d3629557b6ac42f9e1253aa9a10d9e1e120",
+        "calls.json": "cf5b6f165f83c718efa306c7c5a33a4ca2ec7bc2b971dedb078cd9d32d502d31",
+        "receipt.json": "c6b2273100cc252fe4a8b6b2fa46f4d879c7d6b73f6e6198c60b21bc712a4032"
+      }
+    },
+    {
+      "case": "H4",
+      "arm": "A",
+      "status": "completed",
+      "episode_id": 5725,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "7c389455f3ed0f13c46ce56804ae2c5665ad2ede924b19a2fd40bfb7aaea5802",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "fcab6095d33325b6240a02d20c6b3580c872fae98566068d7d7b5a8742535bd1",
+        "call_0_response.txt": "f8f17a67e2564c43d36cc4b6d2ca3597d82b94495d3084e4b2daca08d0daa96d",
+        "research_plan.md": "ff309531439271dcad2dc9d6c339048933bb615ebf4ff6f06febb25aadf54c2e",
+        "framing.json": "ca713140a5cd39cf86e7aef15852b320176f0c19646025f9bcecddbc5723580f",
+        "calls.json": "3a638907a00a9ce0b62d7894035bd20b886c5d7204dd9f514e4af2f372f24480",
+        "receipt.json": "e30be33df037bae05be6615de7604f890c56d40629467e8bf56f0e0def80c271"
+      }
+    },
+    {
+      "case": "H4",
+      "arm": "B",
+      "status": "completed",
+      "episode_id": 5722,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "411c9bae4a7e48670d9c7ba266c2b91001b0039e61e4438cd8454e2d7727e571",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "events.json": "3dbe28e4ab03fbc55dcc1bdd0fb2203644a316857d8e227d6e0e004e1fabedda",
+        "call_0_response.txt": "07e0db9f690a64e883c9822f3d7ff23520ebcef4efb06da7acda78867eb35e96",
+        "research_plan.md": "9a9703a9f3547f5a3f30e62024ef78cbaf3fb775e472043646944f1ed2caecd0",
+        "framing.json": "a494125b60cb72e3b505c0b4e727ff577ef63fc94fd889bb39ac253c9d235697",
+        "calls.json": "1e22cb12f6087cf50b71ec44ce0cb16a6081ccb1db931481e6c59c3b74484188",
+        "receipt.json": "63ac0e34dd716e3d5ccabb1ed9c65d4f7363b7400b106ff003f267ca129d7544"
+      }
+    },
+    {
+      "case": "H4",
+      "arm": "C",
+      "status": "completed",
+      "episode_id": 5727,
+      "episode_source": "training",
+      "inputs": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "322beb369b42f317373ce7ed1051c4a9b0b510542dbc2096802eae1d843244f2",
+          "checks_leaked": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "d89ff2f0d466b8ca08c07c829a1a67e207759d110fdcdeedee1281eb9e2fc050",
+          "checks_leaked": false
+        }
+      ],
+      "tool_events": [],
+      "artifacts": {
+        "call_1_response.txt": "7aedc270c92804a37e30d0b9cfc86c4cd441afa2609003c0ce64337b978140af",
+        "events.json": "477fd796ad7da3e13b6f7349a077cb35aa4938f0988007ed027d5c40638d5cbf",
+        "call_0_response.txt": "e2c3417b09fb1b46ae8c57fb385750855e8fa904b27d470be865826ea7074b29",
+        "review_input.json": "2cf3126d527114e7aa14cf78784ae680a5d579a5fd5a9956609411a0a423a54a",
+        "research_plan.md": "9035e81ba2a2868dc6a0c68794789f363537fc6acd899be42b521d47c7d0c8b1",
+        "framing.json": "861992757c05bdc6de19edac30884f5275878064490829f66a6b4c9d496a8884",
+        "review.json": "038411573207b942c94a3355c116f6237b4adb413637c0e476b4c94a8304e373",
+        "calls.json": "89e2ab252ac72967e7549a1c60f4d24ebfce00238c47198aa82c7c0cc992b0f2",
+        "receipt.json": "6875e6c1446fe1d26db8ce4b062d297ac0df7ac4442d766bcf509a4fadf9de66"
+      }
+    }
+  ],
+  "paths": {
+    "A": {
+      "cases": [
+        {
+          "case": "D1",
+          "seconds": 142.38092136383057,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 50633,
+            "output": 13946,
+            "cache_read": 25888,
+            "cache_create": 24741,
+            "reasoning": 1956
+          }
+        },
+        {
+          "case": "D2",
+          "seconds": 182.4221954345703,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 74968,
+            "output": 20635,
+            "cache_read": 25888,
+            "cache_create": 49076,
+            "reasoning": 1612
+          }
+        },
+        {
+          "case": "H1",
+          "seconds": 135.03609228134155,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 50102,
+            "output": 13243,
+            "cache_read": 25888,
+            "cache_create": 24210,
+            "reasoning": 2482
+          }
+        },
+        {
+          "case": "H2",
+          "seconds": 122.20665431022644,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 69075,
+            "output": 12129,
+            "cache_read": 44487,
+            "cache_create": 24582,
+            "reasoning": 979
+          }
+        },
+        {
+          "case": "H3",
+          "seconds": 126.89722490310669,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 50476,
+            "output": 13139,
+            "cache_read": 25888,
+            "cache_create": 24584,
+            "reasoning": 1848
+          }
+        },
+        {
+          "case": "H4",
+          "seconds": 187.88521099090576,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 50850,
+            "output": 19776,
+            "cache_read": 25888,
+            "cache_create": 24958,
+            "reasoning": 6803
+          }
+        }
+      ],
+      "usage": {
+        "requests": 12,
+        "measured_requests": 12,
+        "unmeasured_requests": 0,
+        "input": 346104,
+        "output": 92868,
+        "cache_read": 173927,
+        "cache_create": 172151,
+        "reasoning": 15680
+      },
+      "median_seconds": 138.70850682258606
+    },
+    "B": {
+      "cases": [
+        {
+          "case": "D1",
+          "seconds": 171.58217310905457,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 51380,
+            "output": 16669,
+            "cache_read": 25888,
+            "cache_create": 25488,
+            "reasoning": 5057
+          }
+        },
+        {
+          "case": "D2",
+          "seconds": 196.1337080001831,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 75715,
+            "output": 21754,
+            "cache_read": 25888,
+            "cache_create": 49823,
+            "reasoning": 3686
+          }
+        },
+        {
+          "case": "H1",
+          "seconds": 173.67515015602112,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 50849,
+            "output": 17190,
+            "cache_read": 25888,
+            "cache_create": 24957,
+            "reasoning": 4391
+          }
+        },
+        {
+          "case": "H2",
+          "seconds": 135.18291521072388,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 69822,
+            "output": 13156,
+            "cache_read": 44487,
+            "cache_create": 25329,
+            "reasoning": 2076
+          }
+        },
+        {
+          "case": "H3",
+          "seconds": 183.18480491638184,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 51223,
+            "output": 18592,
+            "cache_read": 25888,
+            "cache_create": 25331,
+            "reasoning": 6108
+          }
+        },
+        {
+          "case": "H4",
+          "seconds": 180.13899660110474,
+          "usage": {
+            "requests": 2,
+            "measured_requests": 2,
+            "unmeasured_requests": 0,
+            "input": 51597,
+            "output": 18982,
+            "cache_read": 25888,
+            "cache_create": 25705,
+            "reasoning": 6535
+          }
+        }
+      ],
+      "usage": {
+        "requests": 12,
+        "measured_requests": 12,
+        "unmeasured_requests": 0,
+        "input": 350586,
+        "output": 106343,
+        "cache_read": 173927,
+        "cache_create": 176633,
+        "reasoning": 27853
+      },
+      "median_seconds": 176.90707337856293
+    },
+    "C": {
+      "cases": [
+        {
+          "case": "D1",
+          "seconds": 271.0485632419586,
+          "usage": {
+            "requests": 4,
+            "measured_requests": 4,
+            "unmeasured_requests": 0,
+            "input": 105497,
+            "output": 28502,
+            "cache_read": 38204,
+            "cache_create": 67285,
+            "reasoning": 7173
+          }
+        },
+        {
+          "case": "D2",
+          "seconds": 355.9410090446472,
+          "usage": {
+            "requests": 4,
+            "measured_requests": 4,
+            "unmeasured_requests": 0,
+            "input": 156583,
+            "output": 43137,
+            "cache_read": 39931,
+            "cache_create": 116644,
+            "reasoning": 8784
+          }
+        },
+        {
+          "case": "H1",
+          "seconds": 294.27984714508057,
+          "usage": {
+            "requests": 4,
+            "measured_requests": 4,
+            "unmeasured_requests": 0,
+            "input": 108370,
+            "output": 32851,
+            "cache_read": 39931,
+            "cache_create": 68431,
+            "reasoning": 6978
+          }
+        },
+        {
+          "case": "H2",
+          "seconds": 229.5833122730255,
+          "usage": {
+            "requests": 4,
+            "measured_requests": 4,
+            "unmeasured_requests": 0,
+            "input": 123274,
+            "output": 24894,
+            "cache_read": 58530,
+            "cache_create": 64734,
+            "reasoning": 4207
+          }
+        },
+        {
+          "case": "H3",
+          "seconds": 283.7673559188843,
+          "usage": {
+            "requests": 4,
+            "measured_requests": 4,
+            "unmeasured_requests": 0,
+            "input": 107899,
+            "output": 31733,
+            "cache_read": 39931,
+            "cache_create": 67960,
+            "reasoning": 8293
+          }
+        },
+        {
+          "case": "H4",
+          "seconds": 271.3662919998169,
+          "usage": {
+            "requests": 4,
+            "measured_requests": 4,
+            "unmeasured_requests": 0,
+            "input": 107850,
+            "output": 31227,
+            "cache_read": 39931,
+            "cache_create": 67911,
+            "reasoning": 8409
+          }
+        }
+      ],
+      "usage": {
+        "requests": 24,
+        "measured_requests": 24,
+        "unmeasured_requests": 0,
+        "input": 709473,
+        "output": 192344,
+        "cache_read": 256458,
+        "cache_create": 452965,
+        "reasoning": 43844
+      },
+      "median_seconds": 277.5668239593506
+    }
+  },
+  "physical_usage": {
+    "requests": 30,
+    "measured_requests": 30,
+    "unmeasured_requests": 0,
+    "input": 916369,
+    "output": 262779,
+    "cache_read": 326406,
+    "cache_create": 589901,
+    "reasoning": 55757
+  },
+  "time_note": "비교 경로 시간은 공통 S와 해당 단계의 실제 구간 합이다. A/B 사이 대기·훈련자 검토를 제외하며 운영 사용자 지연의 직접 측정이 아니다. 병렬 전체 경과와 구별한다.",
+  "physical_started": 1793524431.5556,
+  "physical_ended": 1793525771.645536,
+  "live_source_sha256_after_experiment": {
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "data/common_prompts/consciousness_prompt.md": "8e7a689782c6333c970370167fefb5a9124464615f99a53f63c67df1a98771ba",
+    "data/guides/deep_research.md": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e"
+  }
+}

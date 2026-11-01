@@ -365,7 +365,10 @@ def _stock_common(ti: dict, op: str):
 
 
 def _stock_quote(ti: dict):
-    """[sense:stock]{op:quote} — 현재가 스냅샷 (2026-06-15 quote로 복원, 옛 price)."""
+    """현재가 스냅샷: items[0]/data.current_price·change_percent·as_of, summary=표시문.
+
+    최상위 price는 없고 52주 고저는 info의 종목 메타에서 조회한다.
+    """
     ticker, market, _refused = _stock_common(ti, "quote")
     if _refused:
         return _refused

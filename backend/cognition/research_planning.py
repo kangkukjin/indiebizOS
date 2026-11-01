@@ -150,7 +150,10 @@ def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
             "recipient": "consciousness", "sha256": hashlib.sha256(guide.encode()).hexdigest()})
         planning = """이번 호출은 심층연구로 판단한 과제의 연구계획 작성이다.
 아래 가이드는 의식인 당신만 읽는다. 가이드를 실행자에게 추천·주입하거나 읽으라고 하지 않는다.
-원래 사용자 요청·명시 조건을 유지하여 계획 JSON 전체와 research_plan 문자열을 반환한다.
+원래 사용자 요청·명시 조건을 유지하여 research_plan 문자열과 이번에 변경할 규정 필드만 JSON으로 반환한다.
+변경하지 않는 task_framing·history_summary·criteria 등은 반복 출력하지 않는다. 생략한 필드는
+하네스가 이전 판단에서 그대로 계승한다. 필드 변경은 해당 필드 전체를 대체하므로 기준을 추가할 때는
+기존 유효 기준도 포함한다. 빈 값·null은 생략이 아니며 기존 검증을 그대로 받는다.
 research_plan은 이번 주제의 목적·범위·잠정 전제·방법과 선택 이유·질문별 조사·종합 방식·
 멈춤 조건·남은 확인을 연결한 사람이 읽을 수 있는 Markdown 계획 본문이다. 형식적인 칸을 채우지 않는다.
 지금은 계획을 위한 기존 맥락만 사용한다. 자료 수집·외부 검색·실측은 저장 뒤 실행자가 맡는다.
@@ -180,20 +183,29 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
         prompt += "\n</research_planning_guide>\n이전 판단과 계획 후보(현재 사용자 요청이 우선):\n"
         prompt += json.dumps(context, ensure_ascii=False)
         system = agent._supervisor_prompt if supervisor else agent._prompt
+        system += ("\n이번 연구계획 보완 응답은 research_plan과 변경할 규정 필드만 반환한다. "
+                   "생략한 규정은 이전 판단에서 계승하며, 전체 JSON 재작성은 요구하지 않는다.")
         for attempt in range(2):
             # 재규정의 검토 횟수는 최초 규정 호출에서 이미 센다. 계획 구체화는 같은 규정의 일부다.
             raw = (supervisor.plan(prompt, system, completion=True) if supervisor else call_oneshot_provider(
                 agent._provider, prompt, system_prompt=system,
                 role="research_plan", step_role="consciousness"))
-            result = agent._parse_response(raw)
+            result = agent._parse_response(raw, partial=True)
             try:
-                if not isinstance(result, dict) or result.get("deep_research") is not True:
-                    raise ValueError("deep_research=true인 계획 JSON이 필요합니다")
+                if not isinstance(result, dict):
+                    raise ValueError("research_plan을 갖는 JSON 객체가 필요합니다")
                 body = result.get("research_plan")
                 if not isinstance(body, str) or not body.strip() or len(body) > 32000:
                     raise ValueError("research_plan에 32000자 이내의 실제 계획 본문이 필요합니다")
                 if GUIDE in json.dumps(result, ensure_ascii=False):
                     raise ValueError("의식용 가이드 이름·읽기 지시를 실행자 산출물에 넣지 마세요")
+                result = {**framing, "deep_research": True,
+                          "guide_files": [g for g in (framing.get("guide_files") or []) if g != GUIDE],
+                          **result}
+                if not isinstance(result.get("task_framing"), str):
+                    raise ValueError("계승한 규정에 task_framing 문자열이 필요합니다")
+                if result.get("deep_research") is not True:
+                    raise ValueError("deep_research=true인 계획 JSON이 필요합니다")
                 if result.get("needs_clarification"):
                     raise ValueError("계획의 미확인은 잠정 전제·첫 확인 질문으로 보존하세요")
                 if validate_framing:
@@ -217,7 +229,7 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
             except ValueError as exc:
                 if attempt:
                     raise
-                prompt += "\n계획 출력 검증 실패. 다음 오류를 고쳐 JSON 전체를 반환하세요:\n" + str(exc)
+                prompt += "\n계획 출력 검증 실패. research_plan과 변경할 필드를 반환하고 다음 오류를 고치세요:\n" + str(exc)
         raise ValueError("연구계획 응답 없음")
     except ConsciousnessCallSkipped as exc:
         record_trajectory_event("research.plan_skipped", {

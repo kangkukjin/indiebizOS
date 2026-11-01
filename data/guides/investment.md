@@ -17,6 +17,12 @@
 
 ## [sense:stock] — 주식 시세·거래 데이터
 
+`quote`의 반환 봉투는 `{success, data, summary, items}`다. 현재가는
+`$r.items[0].current_price`(또는 `$r.data.current_price`), 등락률은 `change_percent`,
+거래일은 `as_of`다. `summary`는 표시문이며 최상위 `price`·`current_price`는 없다.
+52주 고저는 `info`로 조회한다. 값이 안 보이면 저장된 결과의 구조를 확인하고 필요한
+필드를 선택한다. 필드 경로를 알아내려고 같은 시세를 다시 조회하지 않는다.
+
 | op | 설명 | 소스 | 주요 파라미터 |
 |----|------|------|--------------|
 | `quote` (기본) | 현재 시세 빠른 조회 | 한국 종목·코스피/코스닥 지수=**네이버 실시간**(폴백 Yahoo) / 그외 Yahoo(~20분 지연) | `ticker`, `period`, `interval` |

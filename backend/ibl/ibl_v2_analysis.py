@@ -32,7 +32,7 @@ HINTS = {
     "RECORD_RELATION_LIMIT": "확장할 레코드 후보를 조건으로 먼저 좁히거나 필요한 공통 필드를 선택하세요. 후보별 나머지 필드는 실행 때 확인합니다.",
     "REQUIREMENT_CONFLICT": "같은 입력의 무조건 요구를 함께 만족시킬 수 없습니다. 별개 입력으로 나누거나 조건/복구 경계를 명시하세요.",
     "CALLABLE_REQUIREMENT": "함수의 declared_requirements에 맞는 인자 방식·반환 타입·효과를 가진 콜백을 전달하세요.",
-    "FORMAT_UNINTERPOLATED": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
+    "FORMAT_UNINTERPOLATED": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요. 이미 실행했다면 원천을 다시 읽지 말고 resume.run_id를 reuse로 넘겨 표시식만 고치세요.",
     "NOT_FOUND": "요청한 파일·디렉토리가 없습니다. 경로를 확인하거나 원천을 다시 요청하세요. 선택 자료라면 catch로 부재를 명시하세요.",
     "TARGET_NODE": "@별칭 노드 지정은 [node:action]{…}@별칭 처럼 도구 호출 바로 뒤에만 씁니다. 함수 호출·each 블록은 지정하는 몸 없이 현재 몸에서 돕니다.",
     "UNSPECIFIED_INPUT": "선언됐지만 제공되지 않은 표면 입력(declared_inputs − inputs)은 호출 인자 자리(인자 생략)와 f-문자열 보간(빈 문자열)에서만 쓸 수 있습니다. 값이 필요하면 표면 입력에 default 를 선언하거나 호출 앞 문장에서 조건 값으로 정하세요.",
@@ -550,7 +550,9 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
                                      '$찾는값 in $목록으로 표현하세요.')
                 elif name == 'join':
                     issue['hint'] += (' join(구분자, 문자열목록) 순서입니다. '
-                                      '예: join(", ", ["가", "나"]).')
+                                      '예: join(", ", ["가", "나"]). '
+                                      'each 결과를 $rows에 받은 뒤 join("\\n", $rows)로 합치세요. '
+                                      '$it는 each 본문 안에서만 정의됩니다.')
         result = declared(spec[3])
         if name in ('map', 'filter') and types and types[0].kind == 'List':
             item = types[0].item or UNKNOWN

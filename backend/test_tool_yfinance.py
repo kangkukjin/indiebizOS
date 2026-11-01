@@ -6,10 +6,41 @@ import pytest
 from tool_loader import load_tool_handler
 
 
+def _quote_modules(monkeypatch):
+    handler = load_tool_handler('stock_op')
+    loader = handler.load_module
+    yf = loader('tool_yfinance')
+    # The package reloads siblings; pin the patched instance so tests never hit the network.
+    monkeypatch.setattr(handler, 'load_module', lambda name: yf if name == 'tool_yfinance' else loader(name))
+    return handler, yf
+
+
+def test_quote_declared_rows_match_single_acquisition(monkeypatch):
+    from pathlib import Path
+    import yaml
+    handler, yf = _quote_modules(monkeypatch)
+    calls = []
+
+    def chart(*args, **kwargs):
+        calls.append(1)
+        return [{'date': day, 'open': price, 'high': price, 'low': price,
+                 'close': price, 'volume': 5} for day, price in [('2026-10-19', 90), ('2026-10-20', 110)]]
+
+    monkeypatch.setattr(yf, '_yahoo_chart', chart)
+    monkeypatch.setattr(yf, '_naver_realtime', lambda *a, **k: None)
+    result = handler._stock_quote({'ticker': 'AAPL', 'period': '5d'})
+    spec = yaml.safe_load((Path(handler.__file__).parent / 'ibl_actions.yaml').read_text())
+    columns = spec['actions']['stock']['result_shape_variants']['op=quote']['cols']
+    assert result['success'] and len(result['items']) == 1 and len(calls) == 1
+    row = result['items'][0]
+    assert all(row[key] == result['data'][key] for key in columns)
+    assert row['current_price'] == 110 and row['as_of'] == '2026-10-20'
+    assert 'current_price' not in result and 'price' not in result
+
+
 @pytest.mark.parametrize('interval', ['1h', '1wk', '1mo'])
 def test_non_daily_chart_uses_daily_quote_baseline(monkeypatch, interval):
-    handler = load_tool_handler('stock_op')
-    yf = handler.load_module('tool_yfinance')
+    handler, yf = _quote_modules(monkeypatch)
     calls = []
     def fetch(url, *, params, **kwargs):
         calls.append(params['interval'])
@@ -39,8 +70,7 @@ def test_non_daily_chart_uses_daily_quote_baseline(monkeypatch, interval):
 
 
 def test_single_daily_bar_does_not_invent_zero_change(monkeypatch):
-    handler = load_tool_handler('stock_op')
-    yf = handler.load_module('tool_yfinance')
+    handler, yf = _quote_modules(monkeypatch)
     monkeypatch.setattr(yf, '_yahoo_chart', lambda *a, **k: [
         {'date': '2026-10-20', 'open': 110, 'high': 110, 'low': 110, 'close': 110, 'volume': 5}])
     monkeypatch.setattr(yf, '_naver_realtime', lambda *a, **k: None)

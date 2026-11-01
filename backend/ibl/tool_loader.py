@@ -214,6 +214,8 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                         '검색: $r=[sense:search]{query:"AI"}; return $r.items. '
                         '조건 필터: $rows >> [table:filter]{where:($r)=>$r.score>=5}. '
                         '문자열 결합은 join(구분자, 문자열목록). '
+                        '보간은 f"${$이름}"이며 f"{$이름}"은 글자 그대로다. '
+                        'each 결과는 $rows에 받아 join("\\n",$rows); $it는 each 본문 안에서만 쓴다. '
                         '변수는 한 프로그램의 값이며 외부 입력은 inputs. 반환은 value.'
                     )
                 },

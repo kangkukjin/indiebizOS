@@ -131,7 +131,9 @@ def test_masked_selection_rejected_unaffected_selection_resolves(view):
     with pytest.raises(ValueError, match=r"\*\*\*\*"):
         view.resolve_input_refs({"x": {"$ref": ref["id"]}})
     with pytest.raises(ValueError, match=r"\*\*\*\*"):
-        view.resolve_input_refs({"x": {"$ref": ref["id"], "path": ["value", "title"]}})  # wire 안 대응 불가 → 전체
+        view.resolve_input_refs({"x": {"$ref": ref["id"], "path": ["value", "note"]}})
+    resolved, _ = view.resolve_input_refs({"x": {"$ref": ref["id"], "path": ["value", "title"]}})
+    assert resolved["x"] == "공지"  # wire의 선택값·구조만 검사하고 마스킹된 형제값은 제외
     # 값과 무관한 자리(실행 기록)만 가려졌으면 값은 그대로 넘어간다
     clean = _v2({"title": "공지"}, recordings=[{"args": {"password": "hunter2hunter2"}}])
     ref2 = _store(view, clean)

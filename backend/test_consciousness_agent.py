@@ -54,6 +54,13 @@ def test_valid_plan_needs_only_one_call(agent, monkeypatch):
     assert len(calls) == 1
 
 
+def test_partial_plan_parser_is_explicit_and_preserves_invalid_overrides(agent):
+    raw = json.dumps({'research_plan': '# plan', 'criteria': None})
+    assert agent._parse_response(raw) is None
+    assert agent._parse_response(raw, partial=True) == {'research_plan': '# plan', 'criteria': None}
+    assert agent._parse_response('[]', partial=True) is None
+
+
 @pytest.mark.parametrize("key", ["capability_focus", "ibl_focus"])
 @pytest.mark.parametrize("retired", [["self:read"], "bad shape", 7, {"nested": True}])
 def test_current_projection_preserves_framing_without_retry_for_retired_field(agent, monkeypatch, key, retired):

@@ -145,6 +145,34 @@ def findings(c):
 
 
 @pytest.mark.parametrize('recovery', ['during_review', 'before_delivery'])
+def test_recovered_failure_sequence_retires_trigger_but_keeps_goal(supervisor, monkeypatch, recovery):
+    for code in ('bad join', 'bad scope'):
+        supervisor._finish(supervisor._start('execute_ibl', {'code': code}),
+                           {'success': False, 'executed': False, 'error': code}, error=True)
+    assert supervisor.failures == 2
+
+    def recover():
+        # A new corrected program has a different signature from either failure.
+        supervisor._finish(supervisor._start('execute_ibl', {'code': 'return 1'}),
+                           {'success': True, 'executed': True, 'value': 1})
+
+    def invoke(c, *a, **kw):
+        items = findings(c)
+        if recovery == 'during_review':
+            recover()
+        return verdict(c, 'REWORK', findings=items)
+
+    monkeypatch.setattr('supervisor_runtime.invoke', invoke)
+    supervisor.review('repeated_failure')
+    if recovery == 'before_delivery':
+        recover()
+    notice = supervisor.boundary()
+    assert [f['id'] for f in notice['findings']] == ['version']
+    assert notice['findings'][0]['needs_recheck']
+    assert any(issue['open'] for issue in supervisor.issues.values())  # retain diagnostic history
+
+
+@pytest.mark.parametrize('recovery', ['during_review', 'before_delivery'])
 def test_finished_wait_preserves_independent_goal_finding(supervisor, monkeypatch, recovery):
     active = supervisor._start('wait', {'job': 'existing'})
 

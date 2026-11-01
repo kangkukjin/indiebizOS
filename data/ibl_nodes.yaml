@@ -1000,6 +1000,16 @@ nodes:
         router: handler
         tool: stock_op
         result_shape_variants:
+          op=quote:
+            kind: items
+            cols:
+            - symbol
+            - current_price
+            - currency
+            - change
+            - change_percent
+            - as_of
+            closed: false
           op=history:
             kind: items
             cols:
@@ -1033,7 +1043,7 @@ nodes:
             recommendations: '[sense:stock]{op: "recommendations", ticker: "AAPL"}'
             market_news: '[sense:stock]{op: "market_news", category: "general"}'
           values:
-            quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
+            quote: 현재 시세. items[0] 또는 data의 current_price/change_percent/as_of. summary=표시문.
             history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
             info: 종목 메타 — 시총·52주·PER·배당
             search: 회사명으로 심볼 검색 (query)

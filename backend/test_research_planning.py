@@ -94,6 +94,35 @@ def test_compatibility_provider_uses_same_planning_contract(workspace, monkeypat
     assert calls[0][1]["role"] == "research_plan"
 
 
+def test_sparse_completion_inherits_unchanged_framing_and_validates_merge(workspace):
+    source = {"deep_research": True, "task_framing": "원래 목적", "history_summary": "기존 맥락",
+              "criteria": [{"text": "기존 근거 조건"}], "guide_files": [rp.GUIDE, "investment.md"]}
+    seen = []
+    response = {"research_plan": draft()["research_plan"], "expert_choice": "새 방법"}
+    out = rp.prepare(agent(), source, "요청", validate_framing=lambda v: seen.append(dict(v)),
+                     supervisor=SimpleNamespace(plan=lambda *a, **kw: json.dumps(response)))
+    assert out['task_framing'] == source['task_framing']
+    assert out['history_summary'] == source['history_summary']
+    assert out['criteria'] == source['criteria']
+    assert out['expert_choice'] == '새 방법' and out['guide_files'] == ['investment.md']
+    assert seen[0]['criteria'] == source['criteria']
+    assert 'research_plan' not in out and Path(out['_research_plan']['path']).exists()
+    assert source['guide_files'] == [rp.GUIDE, 'investment.md']
+
+
+def test_sparse_completion_explicit_invalid_override_is_not_inherited(workspace):
+    def validate(value):
+        if value['criteria'] is None:
+            raise ValueError('criteria cannot be null')
+    response = {"research_plan": draft()["research_plan"], "criteria": None}
+    with pytest.raises(FramingContractError, match='조사를 시작하지 않았습니다'):
+        rp.prepare(agent(), {"task_framing": "원래 목적", "deep_research": True,
+                             "criteria": [{"text": "keep"}]}, "요청",
+                   validate_framing=validate,
+                   supervisor=SimpleNamespace(plan=lambda *a, **kw: json.dumps(response)))
+    assert not (workspace[0] / 'outputs').exists()
+
+
 @pytest.mark.parametrize("failure", ["guide", "write", "invalid", "leak"])
 def test_failed_planning_never_returns_an_executable_framing(workspace, monkeypatch, failure):
     root, guide, events = workspace

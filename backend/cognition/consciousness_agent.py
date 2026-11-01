@@ -487,7 +487,7 @@ class ConsciousnessAgent:
             logger.warning(f"[ConsciousnessAgent] 수리 교리 적재 실패(생략): {e}")
             return ""
 
-    def _parse_response(self, response: str) -> Optional[Dict]:
+    def _parse_response(self, response: str, *, partial=False) -> Optional[Dict]:
         """AI 응답에서 JSON 추출 및 파싱.
 
         엄격 파싱 실패 시 trailing comma 같은 흔한 LLM 오류를 정리해 재시도한다.
@@ -552,7 +552,7 @@ class ConsciousnessAgent:
                 return None
 
         # 필수 필드 검증
-        if not isinstance(result, dict) or not isinstance(result.get("task_framing"), str):
+        if not isinstance(result, dict) or (not partial and not isinstance(result.get("task_framing"), str)):
             logger.warning("[ConsciousnessAgent] task_framing 누락")
             return None
         return project_framing(result)

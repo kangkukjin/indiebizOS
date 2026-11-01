@@ -82,7 +82,7 @@ def read_result(request):
         page["masked_hint"] = ("이 범위의 ****는 저장 시 비밀 후보로 가린 자리이며 원래 값과 다릅니다(69회차 B69-5). "
                                "원래 값이 필요한 계산은 원천을 읽는 같은 프로그램 안에서 하세요.")
     # 입력 연결은 참조 해석기와 같은 규칙으로 판정한다 — 판본 2 업무 값은 wire 를 읽는다.
-    input_blocked = _masked_selection(all_masked, _value_source(stored, path or []))
+    input_blocked = _input_masked(stored, all_masked, path or [])
     partial_problem = _partial_input_problem(stored, path or [])
     page["next_offset"] = offset + len(page["text"]) if offset + len(page["text"]) < page["chars"] else None
     page["next_read"] = ({"id": request.get("id"), "offset": page["next_offset"],
@@ -209,12 +209,68 @@ def _value_source(stored, selection):
 
 
 def _masked_selection(masked, source):
-    """선택한 값이 저장 시 가린 자리와 겹치는가. wire 안 위치는 값 경로로 대응하지 않으므로 한 곳이라도 가려지면 전체."""
+    """선택값 또는 경로 해석에 필요한 구조가 저장 시 가린 자리와 겹치는가."""
     return any(_overlaps(p, source) for p in masked)
 
 
+def _selected_wire(stored, selection):
+    """Map an explicit value path to wire bytes and the headers used to select it.
+
+    A masked sibling must not taint an independent field. Container tags and
+    record keys remain dependencies: masking those cannot authorize a selection.
+    """
+    source = _value_source(stored, selection)
+    partial = _partial_source(stored, selection)
+    if source == ["value_wire"]:
+        tail = selection[1:]
+    elif partial and _wire(partial[0], "partial_wire"):
+        tail = partial[2]
+    else:
+        return None
+    path = source + ["data"]
+    value = _walk_typed(stored, path, selection)
+    dependencies = [source + ["protocol"]]
+    for part in tail:
+        if not isinstance(value, list) or not value:
+            raise ValueError(f"저장된 결과에 경로 {selection!r}가 없습니다")
+        dependencies.append(path + [0])
+        if (value[0] == "result" and len(value) == 4 and type(value[1]) is bool
+                and part in ("ok", "value", "error")):
+            dependencies.append(path + [1])
+            index = {"ok": 1, "value": 2, "error": 3}[part]
+            path += [index]
+            value = ["scalar", value[index]] if part == "ok" else value[index]
+            continue
+        if len(value) != 2:
+            raise ValueError(f"저장된 결과에 경로 {selection!r}가 없습니다")
+        tag, body = value
+        if tag == "list" and isinstance(body, list) and type(part) is int and 0 <= part < len(body):
+            path += [1, part]
+            value = body[part]
+        elif tag == "record" and isinstance(body, list) and isinstance(part, str):
+            if any(not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[0], str)
+                   for pair in body) or len({pair[0] for pair in body}) != len(body):
+                raise ValueError("저장된 레코드 wire가 올바르지 않습니다")
+            dependencies.extend(path + [1, i, 0] for i in range(len(body)))
+            index = next((i for i, pair in enumerate(body) if pair[0] == part), None)
+            if index is None:
+                raise ValueError(f"저장된 결과에 경로 {selection!r}가 없습니다")
+            path += [1, index, 1]
+            value = body[index][1]
+        else:
+            raise ValueError(f"저장된 결과에 경로 {selection!r}가 없습니다")
+    return value, path, dependencies
+
+
+def _input_masked(stored, masked, selection):
+    selected = _selected_wire(stored, selection)
+    paths = [selected[1], *selected[2]] if selected else [_value_source(stored, selection)]
+    return any(_masked_selection(masked, path) for path in paths)
+
+
 _MASKED_INPUT = ("저장 사본의 원형 보존을 확인할 수 없거나 비밀 후보로 가린 자리(****)가 이 값에 있습니다. 원래 값은 영속 저장하지 않으므로 "
-                 "참조로 넘기면 가려진 문자열이 업무 값이 됩니다. 이 값이 필요한 계산은 원천을 읽는 같은 프로그램 안에서 하세요.")
+                 "참조로 넘기면 가려진 문자열이 업무 값이 됩니다. 가리지 않은 필드·행만 path로 선택할 수 있습니다. "
+                 "전체가 필요하면 원천을 읽고 가공하는 같은 프로그램을 쓰고, 이전 resume.run_id를 reuse:{run_id:…}로 넘겨 성공한 읽기를 재사용하세요.")
 
 
 def _walk_typed(value, path, full_path):
@@ -258,18 +314,15 @@ def _resolve_reference(name, value, notes, at, store=None, legacy_fingerprints=F
     else:
         selection = list(path)
     source = _value_source(stored, selection)
-    partial = _partial_source(stored, selection)
-    if _masked_selection(page.get("masked_paths", []), source):
+    if _input_masked(stored, page.get("masked_paths", []), selection):
         raise ValueError(f"{where}: {_MASKED_INPUT}")
     partial_problem = _partial_input_problem(stored, selection)
     if partial_problem:
         raise ValueError(f"{where}: {partial_problem}")
-    if source == ["value_wire"]:
+    selected_wire = _selected_wire(stored, selection)
+    if selected_wire:
         from ibl_v2_ir import unpack
-        resolved = _walk_typed(unpack(stored["value_wire"]["data"]), selection[1:], selection)
-    elif partial and _wire(partial[0], "partial_wire"):
-        from ibl_v2_ir import unpack
-        resolved = _walk_typed(unpack(partial[0]["partial_wire"]["data"]), partial[2], selection)
+        resolved = unpack(selected_wire[0])
     else:
         resolved = _walk(stored, selection)
     notes.append({"name": name, **({"at": at} if at else {}), "id": ref_id,
@@ -440,7 +493,7 @@ def _failed_partial_references(ref, result):
         problem = _partial_input_problem(result, path)
         if problem:
             entry["input_unavailable"] = problem
-        elif _masked_selection(ref.get("masked_paths") or [], _value_source(result, path)):
+        elif _input_masked(result, ref.get("masked_paths") or [], path):
             entry["input_unavailable"] = _MASKED_INPUT
         else:
             entry["input_args"] = {"입력": {"$ref": ref["id"], "path": path}}
@@ -510,8 +563,11 @@ def _read_reference(ref, result):
                             "execution_ref는 중간 실행 진단용입니다. "
                             "계산용 input_args는 전체 반환 값을 유지합니다.")
     masked = ref.get("masked_paths") or []
-    if typed_value and _masked_selection(masked, _value_source(result, ["value"])):
+    if typed_value and _input_masked(result, masked, ["value"]):
         out["input_unavailable"] = _MASKED_INPUT
+        for entry in paths:
+            if not _input_masked(result, masked, entry["path"]):
+                entry["input_args"] = {"입력": {"$ref": ref["id"], "path": entry["path"]}}
     elif typed_value:
         wire = result.get("value_wire")
         value_path = {} if isinstance(wire, dict) and "data" in wire else {"path": ["value"]}
@@ -537,7 +593,7 @@ def _read_reference(ref, result):
                 if result.get("partial_wire_error"):
                     entry.pop("input_args")
                     entry["input_unavailable"] = "원 실행의 partial_wire_error를 확인하세요. 표시 값을 실제 값으로 대체하지 마세요."
-                elif _masked_selection(masked, _value_source(result, path)):
+                elif _input_masked(result, masked, path):
                     entry.pop("input_args")
                     entry["input_unavailable"] = _MASKED_INPUT
                 if isinstance(value, dict) and isinstance(value.get("text"), str):

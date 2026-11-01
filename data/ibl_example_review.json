@@ -2205,13 +2205,13 @@
     "target_key": "0cacf69ab63c",
     "params": "ebcd612f06c5",
     "aliases": "4a18a36666e4",
-    "ops": "d3cb91761988",
+    "ops": "330b30e3e312",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "0c5575354d32"
    },
-   "reviewed": "2026-10-20",
-   "examples": 143
+   "reviewed": "2026-11-02",
+   "examples": 55
   },
   "sense:used": {
    "fields": {

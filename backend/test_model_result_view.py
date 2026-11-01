@@ -19,6 +19,75 @@ def envelope(value, *, complete=True):
             "evidence": [{"kind": "ref", "parents": [i]} for i in range(300)]}
 
 
+def test_masked_sibling_keeps_exact_selected_wire_value(tmp_path, monkeypatch):
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    secret = "sk-" + "Ab3" * 12
+    value = {"rows": [{"amount": Decimal("1.00000000000000000001"), "url": secret}],
+             "public": "readable " * 80}
+    original = envelope(value)
+    original["value"] = projection(value)
+    shown = view.project_result(original)
+    ref = shown["result_ref"]
+    assert "input_unavailable" in ref and "input_args" not in ref
+    assert secret not in store.read_evidence(ref["id"], 0, None)["text"]
+    restored, _ = view.resolve_input_refs({"amount": {"$ref": ref["id"],
+                                          "path": ["value", "rows", 0, "amount"]}}, store=store)
+    assert restored == {"amount": value["rows"][0]["amount"]}
+    safe = next(p for p in ref["paths"] if p["path"] == ["value", "public"])
+    assert view.resolve_input_refs(safe["input_args"], store=store)[0] == {"입력": value["public"]}
+    page = view.read_result({"id": ref["id"], "path": ["value", "public"]})
+    assert "input_unavailable" not in page
+    assert view.resolve_input_refs(page["input_args"], store=store)[0] == {"입력": value["public"]}
+    for path in (["value"], ["value", "rows"], ["value", "rows", 0, "url"]):
+        with pytest.raises(ValueError, match="가린 자리"):
+            view.resolve_input_refs({"x": {"$ref": ref["id"], "path": path}}, store=store)
+
+
+def test_masked_collect_branch_does_not_block_other_branch(tmp_path):
+    store = TurnStore(tmp_path / "evidence")
+    value = [ResultValue(True, {"text": "sk-" + "Ab3" * 12}, None),
+             ResultValue(True, {"text": "public"}, None)]
+    original = envelope(value)
+    original["value"] = projection(value)
+    ref = store.evidence(original)
+    selected = {"x": {"$ref": ref["id"], "path": ["value", 1, "value", "text"]}}
+    assert view.resolve_input_refs(selected, store=store)[0] == {"x": "public"}
+    selected["x"]["path"] = ["value", 1, "ok"]
+    assert view.resolve_input_refs(selected, store=store)[0] == {"x": True}
+
+
+def test_masked_wire_selector_key_is_not_trusted(tmp_path):
+    store = TurnStore(tmp_path / "evidence")
+    value = {"sk-" + "Ab3" * 12: "hidden name", "safe": 7}
+    ref = store.evidence(envelope(value))
+    with pytest.raises(ValueError, match="가린 자리"):
+        view.resolve_input_refs({"x": {"$ref": ref["id"], "path": ["value", "safe"]}}, store=store)
+
+
+@pytest.mark.parametrize("field", ["ok", "value"])
+def test_selected_result_requires_boolean_discriminator(tmp_path, field):
+    store = TurnStore(tmp_path / "evidence")
+    original = envelope(None)
+    original["value_wire"]["data"] = ["result", "true", ["scalar", 7], ["scalar", None]]
+    ref = store.evidence(original)
+    with pytest.raises(ValueError):
+        view.resolve_input_refs({"x": {"$ref": ref["id"], "path": ["value", field]}}, store=store)
+
+
+def test_failed_partial_can_reuse_unmasked_field(tmp_path, monkeypatch):
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    value = {"safe": Decimal("1.00000000000000000001"), "hidden": "sk-" + "Ab3" * 12}
+    original = {"edition": 2, "success": False, "diagnostic": {"partial": projection(value)},
+                "partial_wire": {"protocol": "ibl-value/1", "data": pack(value)}}
+    ref = store.evidence(original)
+    page = view.read_result({"id": ref["id"], "path": ["diagnostic", "partial", "safe"]})
+    assert view.resolve_input_refs(page["input_args"], store=store)[0] == {"입력": value["safe"]}
+    with pytest.raises(ValueError, match="가린 자리"):
+        view.resolve_input_refs({"x": {"$ref": ref["id"], "path": ["diagnostic", "partial"]}}, store=store)
+
+
 @pytest.mark.parametrize("success", [True, False])
 def test_execution_metadata_projection_preserves_outcomes_and_lossless_reads(tmp_path, monkeypatch, success):
     store = TurnStore(tmp_path / "evidence")

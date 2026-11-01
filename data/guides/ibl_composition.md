@@ -354,6 +354,8 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 ```
 
 `split/replace/strip/upper/lower/contains`는 Text를 받는다. `join(구분자,문자열목록)`으로 합친다.
+each 밖에선 `$it` 대신 결과 변수로 `join("\n",$rows)`를 쓴다. 파이프는 첫 인자이므로
+`$rows >> join("\n")`은 순서가 틀린다. 보간은 `f"${$it.title}"`; `f"{$it.title}"`은 문자 그대로다.
 `unique/union/intersection/difference`는 순서 보존 목록 연산이며 집합 타입을 만들지 않는다.
 `zip/enumerate`의 각 행도 목록이다. `any/all`은 Bool 목록을 받으며,
 `sorted($행,"점수",true)` 또는 `sorted($행,($r)=>$r.점수)`로 키를 지정한다.

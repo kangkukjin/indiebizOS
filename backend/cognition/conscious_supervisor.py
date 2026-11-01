@@ -241,7 +241,8 @@ class Supervisor:
         return True
 
     def review_conditions(self, reason):
-        return {"goal": digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)),
+        return {"trigger": reason,
+                "goal": digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)),
                 "issues": {k: dict(v) for k, v in self.issues.items() if v["open"] and k == self.last_signature},
                 "active": list(self.active) if reason == "tool_stalled" else [],
                 "jobs": {k: self.job_signature(v) for k, v in self.job_states.items()
@@ -253,6 +254,10 @@ class Supervisor:
 
     def conditions_valid(self, conditions):
         if conditions["goal"] != digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)):
+            return False
+        if (conditions.get("trigger") == "repeated_failure" and self.failures < 2
+                and conditions["issues"]
+                and all(v.get("pre_execution") for v in conditions["issues"].values())):
             return False
         if any(self.issues.get(k) != v for k, v in conditions["issues"].items()):
             return False
@@ -494,6 +499,8 @@ class Supervisor:
                 prior = self.issues.get(sig, {})
                 self.issues[sig] = {"open": True, "generation": prior.get("generation", 0),
                                     "kind": "failure" if error and not observation else "repeat",
+                                    "pre_execution": (str(call.get("name", "")).endswith("execute_ibl")
+                                                      and detail.get("executed") is False),
                                     "repair_key": repair_key}
             elif sig in self.issues and self.issues[sig]["open"]:
                 self.issues[sig] = {"open": False, "generation": self.issues[sig]["generation"] + 1}

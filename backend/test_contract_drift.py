@@ -87,7 +87,8 @@ def test_current_contracts_compare_without_alarm():
     assert required <= {r["target"] for r in compared}
     assert len(compared) == _sample_count()  # every installed pure sample was run
     assert not any(r["verdict"] == "no_sample" for r in rows)
-    assert all(r["verdict"] == "ok" for r in compared), compared
+    failures = [r for r in compared if r["verdict"] != "ok"]
+    assert not failures, json.dumps(failures, ensure_ascii=False, indent=2)
     summary = summarize(rows)
     assert healthy(summary) and summary["compared"] == _sample_count() and summary["drift"] == []
 

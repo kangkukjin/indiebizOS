@@ -112,5 +112,78 @@ def test_unexpected_checker_failure_is_reported_and_not_memoized(corpus_check, m
     assert len(issues) == 1 and 'temporary read failure' in issues[0]
 
 
+def test_build_index_isolated_by_consumer_root_and_build(tmp_path, monkeypatch):
+    import json
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / 'scripts'))
+    import iblbuild_derive as derive
+
+    def write(root, value):
+        path = root / 'data/packages/installed/tools/probe/tool.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({'tools': [{'name': 'probe', 'params': {'value': value}}]}))
+        return path
+
+    path = write(tmp_path, 1)
+    other = tmp_path / 'other'
+    write(other, 2)
+    original = derive._build_tool_index
+    loads = []
+
+    def build(root):
+        loads.append(root)
+        return original(root)
+
+    monkeypatch.setattr(derive, '_build_tool_index', build)
+    with derive.tool_index_session():
+        first = derive.build_tool_index(tmp_path)
+        first['probe'][1]['params']['value'] = 99
+        assert derive.build_tool_index(tmp_path)['probe'][1]['params']['value'] == 1
+        assert derive.build_tool_index(other)['probe'][1]['params']['value'] == 2
+    assert len(loads) == 2
+    write(tmp_path, 3)
+    with pytest.raises(RuntimeError), derive.tool_index_session():
+        assert derive.build_tool_index(tmp_path)['probe'][1]['params']['value'] == 3
+        raise RuntimeError('interrupted build')
+    assert derive._tool_indexes.get() is None
+    path.unlink()
+    assert derive.build_tool_index(tmp_path) == {}
+
+
+def test_template_duplicates_preserve_locations_and_next_pass_freshness(monkeypatch):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / 'scripts'))
+    import iblbuild_appview as gate
+    import ibl_v2_adapters as adapters
+    import ibl_v2_compile as compiler
+    import ibl_v2_store as store
+
+    def adapter(kind):
+        return adapters.Adapter({'version': 1, 'params': {'value': kind},
+                                 'result': 'Number', 'effects': ['pure']}, lambda *a: 1)
+
+    registry = {'probe:read': adapter('Number')}
+    calls = []
+    compile_program = compiler.compile_program
+
+    def compile_source(source, *args, **kwargs):
+        calls.append(source)
+        return compile_program(source, *args, **kwargs)
+
+    good = '[probe:read]{value:1}'
+    bad = '[probe:read]{value:"x"}'
+    rows = [('a', {'action': good}), ('b', {'action': good}),
+            ('c', {'action': bad}), ('d', {'action': bad})]
+    monkeypatch.setattr(gate, '_edition2_blocks', lambda _: rows)
+    monkeypatch.setattr(adapters, 'load_registry', lambda *a: registry.copy())
+    monkeypatch.setattr(store, 'definitions', lambda: {})
+    monkeypatch.setattr(compiler, 'compile_program', compile_source)
+    errors, warnings = gate.check_app_templates_edition2({}, Path('.'))
+    assert calls == [good, bad] and warnings == []
+    assert len(errors) == 2 and errors[0].startswith('c:') and errors[1].startswith('d:')
+    registry['probe:read'] = adapter('Text')
+    errors, warnings = gate.check_app_templates_edition2({}, Path('.'))
+    assert calls == [good, bad, good, bad] and warnings == []
+    assert len(errors) == 2 and errors[0].startswith('a:') and errors[1].startswith('b:')
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

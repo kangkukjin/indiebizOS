@@ -4,7 +4,7 @@ The registry selects a protocol, never a special script ID or library name.
 Ordinary stdin/stdout scripts keep their existing execution path.
 """
 from pathlib import Path
-import yaml
+from yaml_content import load_yaml
 from ibl_v2_ir import Fault
 
 PROTOCOL = 'ibl-script-session/1'
@@ -17,7 +17,7 @@ def registration(args):
     from thread_context import get_repair_workspace
     root = Path(get_repair_workspace() or get_base_path()) / 'data/scripts'
     registry_path = root / 'registry.yaml'
-    registry = yaml.safe_load(registry_path.read_text()) if registry_path.exists() else {}
+    registry = load_yaml(registry_path.read_text()) if registry_path.exists() else {}
     registry = registry or {}
     sid = args.get('id')
     entry = registry.get(sid) if isinstance(sid, str) else None

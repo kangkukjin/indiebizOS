@@ -120,8 +120,8 @@ def catalog(root=None):
 
 @lru_cache(maxsize=1024)
 def _revision_data(path, stamp, function_id, revision_id):
-    import yaml
-    data = yaml.safe_load(Path(path).read_text(encoding='utf-8'))
+    from yaml_content import load_yaml
+    data = load_yaml(Path(path).read_text(encoding='utf-8'))
     if not isinstance(data, dict) or digest(data) != revision_id or data.get('function_id') != function_id:
         raise ValueError('관용구 판본 지문이 일치하지 않습니다.')
     return {**data, 'revision': revision_id}

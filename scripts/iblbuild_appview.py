@@ -1024,20 +1024,24 @@ def check_app_templates_edition2(data: dict, root: Path) -> tuple[list[str], lis
     defs = definitions()
     nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
     catalog_actions = {f"{n}:{a}" for n, nd in nodes.items() if isinstance(nd, dict) for a in (nd.get("actions") or {})}
+    # Same source implies the same input types in this fixed registry/library
+    # view. Retain diagnostics only, and report every original location below.
+    checked = {}
     for label, blk in blocks:
         for t in _app_action_templates(blk):
-            names = _template_input_names(t) - {"item", "principal"}
-            types = {n: UNKNOWN for n in names}
-            if re.search(r"\$\{?item\b", t):
-                types["item"] = Type("Record", (), open=True)
-            if re.search(r"\$\{?principal\b", t):
-                types["principal"] = Type("Record", (("kind", Type("Text")), ("level", UNKNOWN), ("id", Type("Text"))), open=False)
             try:
-                plan = compile_program(t, registry, {}, defs, input_types=types)
+                if t not in checked:
+                    names = _template_input_names(t) - {"item", "principal"}
+                    types = {n: UNKNOWN for n in names}
+                    if re.search(r"\$\{?item\b", t):
+                        types["item"] = Type("Record", (), open=True)
+                    if re.search(r"\$\{?principal\b", t):
+                        types["principal"] = Type("Record", (("kind", Type("Text")), ("level", UNKNOWN), ("id", Type("Text"))), open=False)
+                    checked[t] = compile_program(t, registry, {}, defs, input_types=types).issues
             except Exception as exc:  # noqa: BLE001 — 파서 Fault 포함
                 issues.append(f"{label}: 판본 2 파싱/컴파일 실패 — {type(exc).__name__}: {str(exc)[:160]} ({t!r})")
                 continue
-            for issue in plan.issues:
+            for issue in checked[t]:
                 if issue.get("code") == "FUNCTION" and "등록된 함수가 없습니다" in issue.get("message", ""):
                     warnings.append(f"{label}: {issue['message']} — 실행 시 해마·워크플로 원장에서 해소되지 않으면 거절된다 ({t!r})")
                     continue

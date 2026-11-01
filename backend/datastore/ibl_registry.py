@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import yaml
+from yaml_content import load_yaml
 from common.ibl_language_tokens import CONTROL_NODES
 
 _nodes: Optional[Dict] = None
@@ -50,7 +50,7 @@ def _load_registry() -> Dict:
 
     try:
         with open(path, "r", encoding="utf-8") as f:
-            _registry = yaml.safe_load(f) or {"services": {}, "tools": {}}
+            _registry = load_yaml(f.read()) or {"services": {}, "tools": {}}
     except Exception as e:
         # 부재≠파손: 없는 파일은 조용히 빈 값이지만, 깨진 파일을 눙치면 node 바인딩
         # 액션이 통째로 증발한 채 몸이 돈다. ibl_access.load_nodes_raw 와 같은 방침.
@@ -155,7 +155,7 @@ def _load_nodes_installed() -> Dict:
 
     try:
         with open(path, "r", encoding="utf-8") as f:
-            nodes = yaml.safe_load(f) or {"nodes": {}}
+            nodes = load_yaml(f.read()) or {"nodes": {}}
     except Exception as e:
         # 부재≠파손 — ibl_access.load_nodes_raw 와 같은 방침. 깨진 원장을 {"nodes":{}} 로
         # 눙치면 이 몸의 설치 어휘가 통째로 0이 된 채 조용히 돈다.
@@ -301,7 +301,7 @@ def code_is_own(code: str) -> bool:
 def load_nodes_owned() -> Dict:
     """Static teaching catalog, including sleeping packages; never an execution catalog."""
     with open(_get_nodes_path(), encoding="utf-8") as stream:
-        data = yaml.safe_load(stream) or {}
+        data = load_yaml(stream.read()) or {}
     from runtime_utils import detect_body
     profile = detect_body().get("profile")
     for node, group in data.get("nodes", {}).items():

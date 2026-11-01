@@ -87,6 +87,7 @@ from iblbuild_guards import (  # noqa: E402,F401
 )
 from iblbuild_derive import (  # noqa: E402,F401
     build_tool_index,
+    tool_index_session,
     derive_phone_manifest,
     derive_member_manifest,
     derive_fixtures,
@@ -159,6 +160,7 @@ from iblbuild_validators import (  # noqa: E402,F401
 )
 
 
+@tool_index_session()
 def build(check: bool = False, validate_only: bool = False) -> int:
     root = repo_root()
     src_dir = root / "data" / "ibl_nodes_src"

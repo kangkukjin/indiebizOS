@@ -1,0 +1,163 @@
+{
+  "date": "2026-11-02",
+  "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile",
+  "workers": 12,
+  "scope": "All backend tests, including system and local",
+  "base_head": "cc8ca76dfc17baccba3498c20ffe38c94668d649",
+  "before": {
+    "passed": 11866,
+    "skipped": 24,
+    "failed": 0,
+    "seconds": 464.66,
+    "exit_code": 0
+  },
+  "after": {
+    "passed": 11888,
+    "skipped": 24,
+    "failed": 0,
+    "seconds": 402.43,
+    "exit_code": 0
+  },
+  "seconds_saved": 62.23,
+  "percent_reduction": 13.39,
+  "removed_test_cases": [],
+  "same_skipped_test_cases": true,
+  "added_test_cases": [
+    {
+      "class": "backend.test_iblbuild_v2",
+      "name": "test_build_index_isolated_by_consumer_root_and_build"
+    },
+    {
+      "class": "backend.test_iblbuild_v2",
+      "name": "test_template_duplicates_preserve_locations_and_next_pass_freshness"
+    },
+    {
+      "class": "backend.test_precommit_checks",
+      "name": "test_foreground_failure_reaps_unfinished_build"
+    },
+    {
+      "class": "backend.test_precommit_checks",
+      "name": "test_interruption_reaps_unfinished_build"
+    },
+    {
+      "class": "backend.test_precommit_checks",
+      "name": "test_overlap_waits_for_build_and_propagates_failure[0]"
+    },
+    {
+      "class": "backend.test_precommit_checks",
+      "name": "test_overlap_waits_for_build_and_propagates_failure[1]"
+    },
+    {
+      "class": "backend.test_python_environment_lock",
+      "name": "test_fingerprint_keeps_existing_digest_and_reads_metadata_once"
+    },
+    {
+      "class": "backend.test_python_environment_lock",
+      "name": "test_later_fingerprint_observes_environment_and_source_changes[editable]"
+    },
+    {
+      "class": "backend.test_python_environment_lock",
+      "name": "test_later_fingerprint_observes_environment_and_source_changes[metadata]"
+    },
+    {
+      "class": "backend.test_python_environment_lock",
+      "name": "test_later_fingerprint_observes_environment_and_source_changes[record]"
+    },
+    {
+      "class": "backend.test_python_environment_lock",
+      "name": "test_later_fingerprint_observes_environment_and_source_changes[removed]"
+    },
+    {
+      "class": "backend.test_python_environment_lock",
+      "name": "test_later_fingerprint_observes_environment_and_source_changes[source]"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_large_source_is_not_retained_and_entry_count_is_bounded"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_readers_share_parsing_but_never_mutable_values"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_rewritten_file_is_fresh_even_with_same_size_and_mtime"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_safe_loader_value_types_and_recursive_aliases_are_preserved[&self [*self]]"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_safe_loader_value_types_and_recursive_aliases_are_preserved[2026-11-02]"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_safe_loader_value_types_and_recursive_aliases_are_preserved[42]"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_safe_loader_value_types_and_recursive_aliases_are_preserved[]"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_safe_loader_value_types_and_recursive_aliases_are_preserved[null]"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_safe_loader_value_types_and_recursive_aliases_are_preserved[true]"
+    },
+    {
+      "class": "backend.test_yaml_content",
+      "name": "test_unsafe_tag_is_rejected_even_after_cached_valid_document"
+    }
+  ],
+  "file_seconds": {
+    "backend.test_pc_control_idioms": {
+      "before": 188.553,
+      "after": 63.317
+    },
+    "backend.test_android_control": {
+      "before": 136.854,
+      "after": 57.444
+    },
+    "backend.test_phone_ui": {
+      "before": 68.681,
+      "after": 29.05
+    },
+    "backend.test_contract_drift": {
+      "before": 91.97,
+      "after": 33.302
+    },
+    "backend.test_restart_process": {
+      "before": 197.483,
+      "after": 195.845
+    },
+    "backend.test_ibl_v2_runtime": {
+      "before": 221.562,
+      "after": 228.054
+    }
+  },
+  "profiled_example": {
+    "case": "backend/test_pc_control_idioms.py::test_pending_then_new_run_confirms_without_retransmit",
+    "before_seconds": 31.26,
+    "after_seconds": 16.62,
+    "note": "Both run under cProfile; not ordinary pytest wall time."
+  },
+  "followup_checks": {
+    "profile_before_additional_changes": "build-before.prof (cProfile overhead; already includes YAML/environment improvement)",
+    "tool_index_builds_per_build_before": 17,
+    "tool_index_builds_per_build_after": 1,
+    "app_template_locations": 341,
+    "unique_app_template_sources": 290,
+    "hook": "IBL check overlaps remaining gates; both paths must pass, failure/interruption reaps the builder. No cross-run success cache.",
+    "validation": "34 related checks passed, including live child lifecycle tests."
+  },
+  "raw_evidence": "outputs/regression_performance_2026_11_02",
+  "post_full_validation": "Commit portability and OS guards required the new POSIX hook test to use common.platform_utils.pid_alive and IS_WINDOWS. Test-only adjustments; all four hook lifecycle cases reran successfully after the final adjustment (2.58s).",
+  "xml_sha256": {
+    "full-before": "85a462f79b9ae9a106b5152c2f02271e74670f442e9b371040154694e7216f6e",
+    "full-final": "4dccb7ea155686f998c0418e80a593f3b8c18b9ed40c7df430f9f31e456f240f"
+  },
+  "limitations": "One full before and one final run on the same host, with background services. File times are accumulated worker time, not overall wall time. No full live HTTP health-check benchmark or before/after whole-hook timing claim. An intermediate full run failed only the new test files missing direct pytest entrypoints; fixed and final full run passed."
+}

@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 import copy
 from pathlib import Path
-import yaml
+from yaml_content import load_yaml
 from ibl_v2_ir import digest
 
 
@@ -48,7 +48,7 @@ def _script_registry(path):
         return view[str(path.resolve())]
     return _check_value(
         ("registry", str(path)),
-        lambda: (yaml.safe_load(path.read_text()) or {}) if path.is_file() else {},
+        lambda: (load_yaml(path.read_text()) or {}) if path.is_file() else {},
     )
 
 

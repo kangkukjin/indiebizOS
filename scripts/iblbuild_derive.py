@@ -8,6 +8,9 @@ import ast
 import json
 import re
 import sys
+import copy
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 from iblbuild_common import (
@@ -18,7 +21,32 @@ from iblbuild_common import (
 )
 
 
+_tool_indexes = ContextVar('iblbuild_tool_indexes', default=None)
+
+
+@contextmanager
+def tool_index_session():
+    """One build shares its source-derived index; later builds read fresh inputs."""
+    token = _tool_indexes.set({})
+    try:
+        yield
+    finally:
+        _tool_indexes.reset(token)
+
+
 def build_tool_index(root: Path) -> dict[str, tuple[Path, dict]]:
+    cache = _tool_indexes.get()
+    if cache is None:
+        return _build_tool_index(root)
+    key = Path(root).resolve()
+    if key not in cache:
+        cache[key] = _build_tool_index(root)
+    # Validators may annotate their view. Keep both later consumers and the
+    # retained source index independent of those annotations.
+    return copy.deepcopy(cache[key])
+
+
+def _build_tool_index(root: Path) -> dict[str, tuple[Path, dict]]:
     """모든 패키지 tool.json 을 스캔해 {tool_name: (pkg_dir, tool_def)} 사전 구축.
 
     이관 패키지(ibl_actions.yaml 에 tool_json 블록 보유)는 디스크의 tool.json

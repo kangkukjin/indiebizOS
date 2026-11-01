@@ -4,6 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import yaml
 
 import ibl_dependencies as dependencies
 from ibl_v2_adapters import Adapter
@@ -54,13 +55,16 @@ def scripts(tmp_path, monkeypatch):
 def test_check_reads_environment_once_but_each_invocation_rechecks(scripts, monkeypatch):
     _, registry, source, state = scripts
     reads = []
-    load = dependencies.yaml.safe_load
+    read = Path.read_text
 
-    def read_registry(text):
-        reads.append(text)
-        return load(text)
+    def read_registry(path, *args, **kwargs):
+        if path == scripts[0] / 'registry.yaml':
+            reads.append(path)
+        return read(path, *args, **kwargs)
 
-    monkeypatch.setattr(dependencies.yaml, "safe_load", read_registry)
+    # Each invocation must read current bytes even when decoding identical YAML
+    # is reused. Count observations, not parser calls.
+    monkeypatch.setattr(Path, "read_text", read_registry)
     plan = compile_program(source, registry)
     assert not plan.issues
     assert state["fingerprints"] == 1
@@ -151,7 +155,7 @@ def test_register_then_first_run_binds_new_definition_at_invocation(scripts):
     original = registry["fixture:script"]
     def run(rt, args):
         if args.get("op") == "register":
-            entries = dependencies.yaml.safe_load((root / "registry.yaml").read_text())
+            entries = yaml.safe_load((root / "registry.yaml").read_text())
             entries[args["id"]] = {"file": "one.py", "interpreter": "python"}
             (root / "registry.yaml").write_text(json.dumps(entries))
             return 0
@@ -201,7 +205,7 @@ def test_public_script_register_then_run_uses_real_runner(scripts, monkeypatch):
     assert not plan.issues, plan.report()
     result = Runtime(plan, {"path": str(script)}).run()
     assert result["success"] and result["value"] == {"answer": 14}, result
-    assert dependencies.yaml.safe_load((root / "registry.yaml").read_text())["fresh"]["file"] == "fresh.py"
+    assert yaml.safe_load((root / "registry.yaml").read_text())["fresh"]["file"] == "fresh.py"
 
 
 @pytest.mark.parametrize("changed", [False, True])

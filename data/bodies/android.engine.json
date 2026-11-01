@@ -92,6 +92,7 @@
     "base/warehouse_paths",
     "base/window_requests",
     "base/write_ledger",
+    "base/yaml_content",
     "boot_common",
     "boot_paths",
     "cognition/agent_cognitive",
@@ -599,8 +600,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 588,
-    "engine": 556,
+    "total": 589,
+    "engine": 557,
     "blocklist": 32
   }
 }

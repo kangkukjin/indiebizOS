@@ -45,8 +45,12 @@ from urllib.parse import unquote, urlparse
 
 def fingerprint(source_root, *, details=False):
     h = hashlib.sha256(sys.version.encode())
-    for dist in sorted(metadata.distributions(), key=lambda d: d.metadata.get('Name', '')):
-        h.update((dist.metadata.get('Name', '') + '=' + dist.version).encode())
+    # Distribution.metadata reparses METADATA on every access (including
+    # Distribution.version). Read it once per observation, never across calls:
+    # installs, removals and editable source changes must remain visible.
+    distributions = [(dist, dist.metadata) for dist in metadata.distributions()]
+    for dist, info in sorted(distributions, key=lambda item: item[1].get('Name', '')):
+        h.update((info.get('Name', '') + '=' + info['Version']).encode())
         base = Path(dist._path)
         for name in ('METADATA', 'RECORD', 'direct_url.json'):
             path = base / name

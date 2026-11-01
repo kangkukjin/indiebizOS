@@ -15,6 +15,24 @@
 #   chmod +x .git/hooks/pre-commit  (이미 +x 면 생략 가능)
 set -euo pipefail
 
+# 정합성 검사와 나머지 읽기 전용 관문을 겹쳐 실행한다. 성공 재사용은 하지
+# 않으며, 모든 관문과 이 자식이 끝나야 커밋이 열린다. 먼저 실패하거나 중단되면
+# 미완료 자식을 회수해 다음 커밋과 검사 프로세스가 겹치지 않게 한다.
+ibl_check_pid=''
+ibl_check_log=''
+cleanup_ibl_check() {
+  if [ -n "$ibl_check_pid" ]; then
+    kill "$ibl_check_pid" 2>/dev/null || true
+    wait "$ibl_check_pid" 2>/dev/null || true
+  fi
+  if [ -n "$ibl_check_log" ]; then
+    rm -f "$ibl_check_log"
+  fi
+}
+trap cleanup_ibl_check EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 # 스테이징된 파일 목록.
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 
@@ -46,16 +64,10 @@ if ! ibl_trigger=$(python3 "$repo_root/scripts/build_ibl_nodes.py" --inputs-rege
 fi
 
 if echo "$staged" | grep -qE "$ibl_trigger"; then
-  echo "[pre-commit] IBL 정합성 검사 실행..."
-  if ! python3 "$repo_root/scripts/build_ibl_nodes.py" --check; then
-    echo "" >&2
-    echo "[pre-commit] IBL 검증 실패 — 커밋 차단." >&2
-    echo "[pre-commit]   • src 편집 후 \`python3 scripts/build_ibl_nodes.py\` 재실행하여 ibl_nodes.yaml 갱신" >&2
-    echo "[pre-commit]   • 검증 실패 항목은 위 로그 참조" >&2
-    echo "[pre-commit]   • 정말로 우회하려면 \`git commit --no-verify\` (권장 X)" >&2
-    exit 1
-  fi
-  echo "[pre-commit] IBL 정합성 OK ✓"
+  echo "[pre-commit] IBL 정합성 검사 시작 (나머지 관문과 병행)..."
+  ibl_check_log=$(mktemp "${TMPDIR:-/tmp}/indiebiz-ibl-check.XXXXXX")
+  python3 "$repo_root/scripts/build_ibl_nodes.py" --check >"$ibl_check_log" 2>&1 &
+  ibl_check_pid=$!
 fi
 
 # 폰(제약된 몸) 엔진 번들 매니페스트가 backend 변경에 맞게 최신인지 — 드리프트 게이트.
@@ -478,6 +490,23 @@ if ! python3 "$repo_root/scripts/check_pinned_deps.py"; then
   exit 1
 fi
 echo "[pre-commit] 핀 정합 OK ✓"
+
+# 백그라운드 시작은 통과가 아니다. 실패 출력도 모두 전달하고 커밋을 막는다.
+if [ -n "$ibl_check_pid" ]; then
+  echo "[pre-commit] IBL 정합성 검사 완료 대기..."
+  if wait "$ibl_check_pid"; then
+    ibl_check_pid=''
+    cat "$ibl_check_log"
+    echo "[pre-commit] IBL 정합성 OK ✓"
+  else
+    ibl_check_pid=''
+    cat "$ibl_check_log" >&2
+    echo "[pre-commit] IBL 검증 실패 — 커밋 차단." >&2
+    echo "[pre-commit]   • 검증 실패 항목은 위 로그 참조" >&2
+    echo "[pre-commit]   • src 편집 후 \`python3 scripts/build_ibl_nodes.py\` 재실행하여 파생물을 갱신" >&2
+    exit 1
+  fi
+fi
 
 exit 0
 

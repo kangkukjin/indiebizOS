@@ -39,6 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
+        "yaml_content",
         "execution_situation", "situation_delivery",
         "update_maintenance", "component_runtime", "component_registry",
         "recall_relevance",

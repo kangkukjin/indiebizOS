@@ -253,7 +253,7 @@ class ConsciousnessAgent:
         self._reload_prompt_if_changed()
 
         # 입력 구성
-        input_text = self._build_input(
+        base_input = self._build_input(
             user_message, history, associative_memory,
             world_pulse, agent_name, agent_role, agent_notes,
             available_tools,
@@ -261,7 +261,7 @@ class ConsciousnessAgent:
             revision=revision,
         )
         from research_planning import topic_prompt
-        input_text += topic_prompt(research_topic)
+        input_text = base_input + topic_prompt(research_topic)
 
         try:
             # 시스템 프롬프트 설정
@@ -345,7 +345,7 @@ class ConsciousnessAgent:
                     record_trajectory_event("consciousness.contract_corrected", {"corrected": True})
             if result:
                 from research_planning import prepare
-                result = prepare(self, result, input_text, supervisor=supervisor,
+                result = prepare(self, result, base_input, supervisor=supervisor,
                                  project_path=project_path,
                                  previous_plan=previous_research_plan,
                                  validate_framing=validate_contract, topic=research_topic)

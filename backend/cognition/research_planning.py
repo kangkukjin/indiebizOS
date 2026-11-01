@@ -110,7 +110,11 @@ def persist(body, guide, project_path=None, previous=None):
 
 def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
             previous_plan=None, validate_framing=None, topic=None):
-    """일반 작업은 호출·파일 쓰기 없이 통과. 심층연구의 계획 실패는 실행으로 폴백하지 않는다."""
+    """주제 블록 전의 입력에서 계획 호출을 조립한다. 일반 작업은 그대로 통과한다.
+
+    주제의 현재 계획은 이 호출 직전에 다시 읽어 한 번만 싣는다.
+    심층연구의 계획 실패는 실행으로 폴백하지 않는다.
+    """
     # 모델이 만든 경로·저장 주장은 영수증이 아니다. 아래 실제 저장에서만 내부 필드를 만든다.
     framing.pop("_research_plan", None)
     if framing.get("needs_clarification") or framing.get('needs_repair'):
@@ -165,9 +169,16 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
                          "미해결 사항을 이어 쓰고 변경 이유를 남긴다. 이번 요청에 관한 조사 지시는 "
                          "task_framing/approach/achievement_criteria에 한정한다. 단순 설명·토론이면 "
                          "외부 조사를 지시하지 않는다. 계획 전체의 완수를 이번 턴 기준으로 삼지 않는다.\n")
+        context = {"framing": framing}
+        if topic is not None:
+            # 최초 판단 때의 계획 스냅샷을 반복하지 않는다. 현재 신원·모드·판본은
+            # 유지하고, 새로 읽은 본문(또는 읽기 실패)을 이 한 곳에서 전달한다.
+            input_text += topic_prompt({**topic, 'current_plan': previous})
+        else:
+            context["previous_plan"] = previous
         prompt = input_text + "\n\n" + planning + "\n<research_planning_guide>\n" + guide
         prompt += "\n</research_planning_guide>\n이전 판단과 계획 후보(현재 사용자 요청이 우선):\n"
-        prompt += json.dumps({"framing": framing, "previous_plan": previous}, ensure_ascii=False)
+        prompt += json.dumps(context, ensure_ascii=False)
         system = agent._supervisor_prompt if supervisor else agent._prompt
         for attempt in range(2):
             # 재규정의 검토 횟수는 최초 규정 호출에서 이미 센다. 계획 구체화는 같은 규정의 일부다.
@@ -252,6 +263,10 @@ def evaluation_block(framing, project_path=None):
     if receipt.get('current_sha256'):
         # 유지 턴의 body는 실행자가 갱신한 현재 본문이다. 초기 지문과 같은 바이트로 주장하지 않는다.
         initial = {k: v for k, v in receipt.items() if k not in {'body', 'current_sha256'}}
+    elif current and isinstance(receipt.get('body'), str) and receipt['body'] == current.get('body'):
+        # 초기·현재 판본의 메타데이터는 유지한다. 실제 본문이 동일할 때만 공유한다.
+        initial = {k: v for k, v in receipt.items() if k != 'body'}
+        initial['body_ref'] = 'current_plan.body'
     return ("## 의식의 사전 연구계획과 현재 진행 문서\n"
             + json.dumps({"initial_plan": initial, "current_plan": current}, ensure_ascii=False)
             + "\n하네스의 저장 시각·지문은 초기 계획의 증거다. 현재 문서의 완료 표시는 달성 증명이 아니다. "

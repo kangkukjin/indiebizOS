@@ -129,6 +129,41 @@ def test_followup_and_evaluation_read_current_plan_without_overwriting_original(
     assert "자료 A는 차단됨" in text and old["sha256"] in text
 
 
+@pytest.mark.parametrize("state", ["unchanged", "changed", "missing", "kept"])
+def test_evaluation_shares_only_identical_plan_bodies(workspace, state):
+    root, guide, events = workspace
+    receipt = rp.persist("# 초기 연구\n질문과 중단 조건을 보존한다.", guide.read_text())
+    path = Path(receipt['path'])
+    if state in {'changed', 'kept'}:
+        path.write_text(receipt['body'] + '\n관측: 기존 가설의 반박 근거.\n')
+    if state == 'missing':
+        path.unlink()
+    if state == 'kept':
+        current = rp.read_current(receipt)
+        receipt = {**receipt, 'body': current['body'], 'current_sha256': current['sha256']}
+    before = dict(receipt)
+    text = rp.evaluation_block({'_research_plan': receipt})
+    payload = json.loads(text.splitlines()[1])
+    initial, current = payload['initial_plan'], payload['current_plan']
+    assert receipt == before  # 저장 영수증·실행자 입력은 축약하지 않는다.
+    assert initial['sha256'] == receipt['sha256']
+    assert initial['saved_at'] == receipt['saved_at']
+    if state == 'unchanged':
+        assert 'body' not in initial and initial['body_ref'] == 'current_plan.body'
+        assert current['body'] == receipt['body']
+        assert text.count(json.dumps(receipt['body'], ensure_ascii=False)) == 1
+    elif state == 'changed':
+        assert initial['body'] == receipt['body']
+        assert current['body'] == path.read_text() != initial['body']
+        assert 'body_ref' not in initial
+    elif state == 'missing':
+        assert initial['body'] == receipt['body'] and current['read_error']
+        assert 'body_ref' not in initial
+    else:
+        assert 'body' not in initial and 'body_ref' not in initial
+        assert current['body'] == receipt['body']
+
+
 def test_prior_plan_cannot_cross_workspaces(workspace, tmp_path):
     root, guide, events = workspace
     foreign = tmp_path / "other.md"
@@ -352,6 +387,60 @@ def research_topic(workspace, mode='research'):
     tid = store.create_thread('교육', mode=mode)['id']
     run, _ = store.begin_run(tid, 'AI와 교육을 이야기해보자', 'first')
     return store, tid, run
+
+
+@pytest.mark.parametrize("state", ["unchanged", "changed", "missing"])
+@pytest.mark.parametrize("compatibility", [False, True])
+def test_topic_replanning_sends_current_body_once(workspace, monkeypatch, state, compatibility):
+    import consciousness_agent as ca
+    store, tid, run = research_topic(workspace, 'library')
+    topic = rp.topic_context(store.path, store.uid, tid, run)
+    out = rp.prepare(agent(), {'research_plan_action': 'revise'}, '최초 요청',
+                     topic=topic, project_path=store.path,
+                     supervisor=SimpleNamespace(plan=lambda *a, **kw: json.dumps(draft())))
+    receipt = out['_research_plan']
+    path = Path(receipt['path'])
+    topic = rp.topic_context(store.path, store.uid, tid, run)
+    snapshot = json.dumps(topic, ensure_ascii=False)
+    old_body = path.read_text()
+    fresh_body = '# 갱신된 계획\n관측: 최초 판단 중 새 근거가 도착했다.\n'
+    calls = []
+
+    def plan(prompt, *args, **kwargs):
+        calls.append(prompt)
+        if len(calls) == 1:
+            assert prompt.count(json.dumps(old_body, ensure_ascii=False)) == 1
+            if state == 'changed':
+                path.write_text(fresh_body)
+            elif state == 'missing':
+                path.unlink()
+            return json.dumps({'task_framing': '이번 요청', 'deep_research': False,
+                               'research_plan_action': 'revise'})
+        return json.dumps(draft())
+
+    if compatibility:
+        monkeypatch.setattr(ca, 'call_oneshot_provider', lambda provider, prompt, **kw: plan(prompt))
+    revised = agent().process('이번 범위로 개정해줘', [], '', project_path=store.path,
+                              research_topic=topic,
+                              supervisor=None if compatibility else SimpleNamespace(plan=plan))
+    assert len(calls) == 2
+    prompt = calls[-1]
+    data = json.loads(prompt.split('<research_topic>\n', 1)[1].split('\n</research_topic>', 1)[0])
+    for key in ('project_uid', 'thread_id', 'run_id', 'epoch', 'revision', 'mode', 'receipt'):
+        assert data[key] == topic[key]
+    assert json.dumps(topic, ensure_ascii=False) == snapshot
+    assert '저장 자료만' in prompt
+    if state == 'missing':
+        assert data['current_plan']['read_error']
+        assert json.dumps(old_body, ensure_ascii=False) not in prompt
+    else:
+        expected = fresh_body if state == 'changed' else old_body
+        assert data['current_plan']['body'] == expected
+        assert prompt.count(json.dumps(expected, ensure_ascii=False)) == 1
+        if state == 'changed':
+            assert json.dumps(old_body, ensure_ascii=False) not in prompt
+    assert revised['_research_plan']['revision'] == 2
+    assert revised['_research_plan']['previous_path'] == (None if state == 'missing' else str(path))
 
 
 def test_topic_creates_without_keyword_then_keeps_and_revises_one_plan(workspace):

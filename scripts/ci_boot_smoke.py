@@ -21,7 +21,11 @@ import subprocess
 import sys
 import tempfile
 import time
-from remote_boot import wait_for_boot
+import uuid
+
+import psutil
+
+from remote_boot import BOOT_PROBE_ENV, wait_for_boot
 from restart_process import alive, identity, signal_owned, tree
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -66,6 +70,8 @@ def main() -> int:
     env["INDIEBIZ_PRODUCTION"] = "1"   # reload/파일감시 없음 = 자식 1프로세스, terminate 로 깨끗이 죽음
     env["INDIEBIZ_API_PORT"] = str(PORT)
     env["PYTHONUTF8"] = "1"            # 윈도우 러너 cp1252 콘솔에서 한글 로그 죽지 않게
+    launch_token = uuid.uuid4().hex
+    env[BOOT_PROBE_ENV] = launch_token
     base = env.get("INDIEBIZ_BASE_PATH", ROOT)
     previous = controller_state(base)
     if any(alive(previous.get(key)) for key in ("controller", "worker")):
@@ -86,9 +92,14 @@ def main() -> int:
         launched, result = None, {}
         try:
             t0 = time.monotonic()
-            launched = identity(proc.pid)
+            try:
+                launched = identity(proc.pid)
+            except psutil.NoSuchProcess:
+                # A fast Windows exec may already have handed off. The inherited
+                # nonce still identifies our controller without trusting old state.
+                launched = None
             result = wait_for_boot(base, ROOT, launched, launcher=launched, port=PORT,
-                                   timeout=DEADLINE_S, interval=2)
+                                   timeout=DEADLINE_S, interval=2, launch_token=launch_token)
             if result["status"] != "succeeded":
                 print("[boot-smoke] FAILED — " + json.dumps(result), flush=True)
                 print(boot_diagnostics(base, log_path), flush=True)

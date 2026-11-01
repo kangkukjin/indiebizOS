@@ -126,5 +126,58 @@ def test_launcher_never_adopts_reused_or_unrelated_controller(tmp_path, other):
     assert adapter.calls == 0
 
 
+def test_exited_launcher_binds_controller_from_this_launch(tmp_path, monkeypatch):
+    state = receipt(tmp_path)
+    persist(tmp_path, state)
+    launcher = {'pid': 40, 'born': 99}
+    adapter = Adapter(tmp_path, state)
+    adapter.alive = lambda ident: bool(ident) and ident != launcher
+    adapter.tree = lambda ident: []  # Parent already exited; ancestry is gone.
+    monkeypatch.setattr(probe, '_launch_matches',
+                        lambda ident, token: ident == state['controller'] and token == 'this-launch',
+                        raising=False)
+    out = probe.wait_for_boot(tmp_path, ROOT, launcher, launcher=launcher,
+                              launch_token='this-launch', adapter=adapter,
+                              sleep=lambda _: pytest.fail('verified child was not recognized'))
+    assert out['status'] == 'succeeded' and out['controller'] == state['controller']
+
+
+@pytest.mark.parametrize('matching', [True, False])
+def test_late_handoff_never_trusts_unrelated_state(tmp_path, monkeypatch, matching):
+    state = receipt(tmp_path)
+    persist(tmp_path, {**state, 'controller': {'pid': 10, 'born': 1}, 'phase': 'FAILED'})
+    launcher = {'pid': 40, 'born': 99}
+    adapter = Adapter(tmp_path, state)
+    adapter.alive = lambda ident: bool(ident) and ident != launcher
+    adapter.tree = lambda ident: []
+    monkeypatch.setattr(probe, '_launch_matches',
+                        lambda ident, token: matching and ident == state['controller'], raising=False)
+    tick = [0]
+    observations = []
+    def sleep(_):
+        tick[0] += 1
+        persist(tmp_path, state)
+    out = probe.wait_for_boot(tmp_path, ROOT, launcher, launcher=launcher,
+                              launch_token='this-launch', adapter=adapter,
+                              timeout=2, clock=lambda: tick[0], sleep=sleep,
+                              on_observation=lambda value: observations.append(dict(value)))
+    assert out['status'] == ('succeeded' if matching else 'timeout')
+    assert adapter.calls == (1 if matching else 0)
+    assert observations and all(x['reason'] == 'launcher_handoff_unverified' for x in observations)
+    if not matching:
+        assert out['reason'] == 'launcher_handoff_unverified'
+        assert 'controller' not in out  # Cleanup must not stop an unrelated process.
+
+
+def test_bound_controller_exit_is_still_a_failure(tmp_path):
+    state = receipt(tmp_path)
+    persist(tmp_path, state)
+    adapter = Adapter(tmp_path, state)
+    adapter.alive = lambda ident: False
+    out = probe.wait_for_boot(tmp_path, ROOT, state['controller'], adapter=adapter,
+                              sleep=lambda _: pytest.fail('waited after definite exit'))
+    assert out['status'] == 'failed' and out['reason'] == 'controller_exited'
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

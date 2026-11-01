@@ -10,8 +10,30 @@ import argparse
 import json
 import time
 
+import psutil
+
 from restart_process import ProcessAdapter, identity
 from restart_protocol import control_dir, read_json
+
+BOOT_PROBE_ENV = "INDIEBIZ_BOOT_PROBE"
+
+
+def _launch_matches(controller, token):
+    """An inherited per-launch nonce survives Windows exec and lost ancestry.
+
+    The state file alone is not ownership evidence. Read the live process's
+    environment and check its birth identity on both sides of that read.
+    """
+    if not token or not controller:
+        return False
+    try:
+        pid = controller["pid"]
+        if identity(pid) != controller:
+            return False
+        environment = psutil.Process(pid).environ()
+        return environment.get(BOOT_PROBE_ENV) == token and identity(pid) == controller
+    except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
+        return False
 
 
 def classify(state, controller, generation, runtime=None, health=None, base=None):
@@ -43,22 +65,32 @@ def classify(state, controller, generation, runtime=None, health=None, base=None
 
 def wait_for_boot(base, code_root, controller, *, generation=None, port=8765, timeout=300,
                   interval=1, adapter=None, clock=time.monotonic, sleep=time.sleep,
-                  launcher=None, on_observation=None):
+                  launcher=None, launch_token=None, on_observation=None):
     base = Path(base)
     adapter = adapter or ProcessAdapter(base, code_root, port)
     start = clock()
     last = {"status": "waiting", "reason": "no_state"}
     while clock() - start < timeout:
+        state = read_json(control_dir(base) / "state.json", {})
+        # Bind before testing launcher liveness: Windows exec changes PID. A
+        # per-launch nonce proves ownership even after ancestry disappears;
+        # older callers can still prove it using the live spawned process tree.
+        if (launcher and controller == launcher) or (launch_token and controller is None):
+            candidate = state.get("controller")
+            owned = (_launch_matches(candidate, launch_token) if launch_token
+                     else candidate in adapter.tree(launcher))
+            if candidate and candidate != controller and owned:
+                controller = candidate
+            elif launch_token and not owned:
+                # Windows exec can exit before the actual controller publishes
+                # state. Neither that exit nor an old receipt proves boot failure.
+                last = {"status": "waiting", "reason": "launcher_handoff_unverified"}
+                if on_observation:
+                    on_observation(last)
+                sleep(interval)
+                continue
         if not adapter.alive(controller):
             return {"status": "failed", "reason": "controller_exited", "controller": controller}
-        state = read_json(control_dir(base) / "state.json", {})
-        # Windows venv python.exe can be a redirector. Only adopt the recorded
-        # controller when it belongs to the process tree we actually spawned.
-        # A live but unrelated controller or a reused PID remains untrusted.
-        if launcher and controller == launcher:
-            candidate = state.get("controller")
-            if candidate and candidate != controller and candidate in adapter.tree(launcher):
-                controller = candidate
         last = classify(state, controller, generation)
         if last["status"] == "failed":
             return last

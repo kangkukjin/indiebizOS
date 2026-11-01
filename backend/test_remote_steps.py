@@ -163,7 +163,7 @@ def test_cli_returns_failure_and_accepts_literal_empty_argument(tmp_path):
     assert result.returncode == 1
     state = json.loads(result.stdout.splitlines()[-1])
     assert state["steps"]["failure"]["attempts"][0]["exit"] == 9
-    assert runner.run(p, inspect=True)["process_liveness"] == "not_checked"
+    assert runner.run(p, inspect=True)["process_liveness"] == "exited"
 
 
 if __name__ == "__main__":
@@ -194,3 +194,31 @@ def test_unicode_plan_cli_uses_declared_utf8(tmp_path, monkeypatch, locale):
     monkeypatch.setattr(sys, "argv", ["remote_steps.py", str(path)])
     assert runner.main() == 0
     assert (root / "count").read_text(encoding="utf-8") == "x"
+
+
+def test_status_observes_live_step_without_waiting_or_reexecuting(tmp_path):
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    p = plan(tmp_path, [{"id": "work", "argv": command(
+        "import time; from pathlib import Path; print('working',flush=True); "
+        "\nwhile not Path('release').exists(): time.sleep(.02)"), "timeout": 8}])
+    journal = tmp_path / 'data/runtime/remote_steps/test/state.json'
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        task = pool.submit(runner.run, p)
+        try:
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                if journal.exists():
+                    status = runner.run(p, inspect=True)
+                    if status.get('live', {}).get('log', {}).get('bytes', 0):
+                        break
+                time.sleep(.02)
+            assert status['status'] == 'running'
+            assert status['process_liveness'] == 'alive'
+            assert status['live']['elapsed_s'] >= 0
+            assert status['live']['processes']
+            assert status['live']['log']['bytes'] > 0
+            assert not task.done()
+        finally:
+            (tmp_path / 'release').touch()
+        assert task.result(timeout=5)['status'] == 'succeeded'

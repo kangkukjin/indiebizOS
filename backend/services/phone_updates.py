@@ -69,18 +69,31 @@ def status(rec):
     result = {"state": "unpublished", "current_version": caps.get("version_code"),
               "current_version_name": caps.get("version_name"),
               "abi": caps.get("abi"), "can_install": caps.get("can_install", False)}
+    if release is not None:
+        result.update(latest_version=release["version_code"], latest_version_name=release.get("version_name"),
+                      sha256=release["sha256"])
+    attempt = caps.get("attempt") or {}
+    if (attempt.get("state") in {"staged", "installing", "awaiting_permission", "awaiting_confirmation"}
+            and (not attempt.get("sha256") or attempt["sha256"] != caps.get("installed_sha256"))):
+        # Withdrawal/replacement of the publication cannot hide an OS-owned install.
+        result.update(state=attempt["state"], message=attempt.get("message", ""),
+                      installing_version=(attempt.get("release") or {}).get("version_code"),
+                      target_sha256=attempt.get("sha256"), job_id=attempt.get("job_id"))
+        return result
+    import resident_store
+    pending = resident_store.pending(rec["device_id"], "phone_update", generation=reg["generation"])
+    if pending:
+        tasks = resident_store.history(device=rec["device_id"], job=pending, limit=1)["tasks"]
+        summary = (tasks[0].get("summary") or {}) if tasks else {}
+        target = summary.get("release") or {}
+        if not target.get("sha256") or target["sha256"] != caps.get("installed_sha256"):
+            result.update(state="updating", job_id=pending, target_sha256=target.get("sha256"),
+                          installing_version=target.get("version_code"))
+            return result
     if release is None:
         return result
-    result.update(latest_version=release["version_code"], latest_version_name=release.get("version_name"),
-                  sha256=release["sha256"])
-    attempt = caps.get("attempt") or {}
     if caps.get("installed_sha256") == release["sha256"]:
         result["state"] = "current"
-    elif attempt.get("state") in {"staged", "installing", "awaiting_permission", "awaiting_confirmation"}:
-        # Publishing the next release must not hide an OS installation already in progress.
-        # Its transport job may be done while Android still owns the package replacement.
-        result.update(state=attempt["state"], message=attempt.get("message", ""),
-                      installing_version=(attempt.get("release") or {}).get("version_code"))
     elif caps.get("signer_sha256") != release["signer_sha256"]:
         result.update(state="incompatible", message="설치된 앱과 APK 서명이 다릅니다")
     elif caps.get("version_code", 0) > release["version_code"]:
@@ -90,31 +103,22 @@ def status(rec):
     elif caps.get("sdk", 0) < release["min_sdk"]:
         result.update(state="incompatible", message=f"중앙 배포 APK는 Android API {release['min_sdk']} 이상이 필요합니다")
     else:
-        import resident_store
         result["state"] = "available"
-        pending = resident_store.pending(rec["device_id"], "phone_update", generation=reg["generation"])
-        if pending:
-            result.update(state="updating", job_id=pending)
-        else:
-            # Report download/validation/cancellation failures even when native installation
-            # never started. The task receipt remains distinct from installation health.
-            import phone_jobs
-            with phone_jobs._db() as db:
-                resident_store.schema(db)
-                row = db.execute("SELECT result FROM resident_tasks WHERE device=? AND generation=? "
-                                 "AND json_extract(summary,'$.op')='phone_update' "
-                                 "AND json_extract(summary,'$.release.sha256')=? ORDER BY created DESC LIMIT 1",
-                                 (rec["device_id"], reg["generation"], release["sha256"])).fetchone()
-            outcome = json.loads(row[0]) if row and row[0] else {}
-            if outcome.get("error") or outcome.get("unknown") or outcome.get("cancelled"):
-                result.update(state="failed", message=str(outcome.get("error") or "업데이트 요청 중단"))
+        # Download/validation/cancellation failures can precede native installation.
+        import phone_jobs
+        with phone_jobs._db() as db:
+            resident_store.schema(db)
+            row = db.execute("SELECT result FROM resident_tasks WHERE device=? AND generation=? "
+                             "AND json_extract(summary,'$.op')='phone_update' "
+                             "AND json_extract(summary,'$.release.sha256')=? ORDER BY created DESC LIMIT 1",
+                             (rec["device_id"], reg["generation"], release["sha256"])).fetchone()
+        outcome = json.loads(row[0]) if row and row[0] else {}
+        if outcome.get("error") or outcome.get("unknown") or outcome.get("cancelled"):
+            result.update(state="failed", message=str(outcome.get("error") or "업데이트 요청 중단"))
         if attempt.get("sha256") == release["sha256"]:
             state = attempt.get("state")
             if state == "failed":
                 result.update(state=state, message=attempt.get("message", ""))
-                # An old failure must not hide a newly queued retry.
-                if pending and attempt.get("job_id") != pending:
-                    result.update(state="updating", job_id=pending, message="")
     return result
 
 

@@ -4,6 +4,15 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
+let backendObserver;
+
+// The update receipt belongs to this Electron nonce. It exposes only process
+// outcomes, never command environments or credentials.
+export function recordUpdateBackend(state) {
+  try { backendObserver?.(state); }
+  catch (error) { console.error('[Update] backend observation failed:', error.message); }
+}
+
 export function checkUpdateAdmission(root, env = process.env) {
   const file = path.join(root, 'data/runtime/update-maintenance.json');
   if (!fs.existsSync(file)) return;
@@ -30,6 +39,7 @@ export function installUpdateControl({ app, BrowserWindow, root, mode }) {
     fs.renameSync(tmp, file);
   };
   publish();
+  backendObserver = backend => { state.backend = { ...backend, observed_at: Date.now() / 1000 }; publish(); };
   let handled;
   const poll = () => {
     try {
@@ -49,6 +59,7 @@ export function installUpdateControl({ app, BrowserWindow, root, mode }) {
   timer.unref();
   app.once('quit', () => {
     clearInterval(timer);
+    backendObserver = undefined;
     try {
       if (JSON.parse(fs.readFileSync(file, 'utf8')).nonce === state.nonce) fs.unlinkSync(file);
     } catch { /* Stale receipts are never proof of a live app. */ }

@@ -175,6 +175,83 @@ def test_retry_start_refuses_live_process_and_retains_launch_evidence(tmp_path, 
     assert lifecycle.load(tmp_path, 'test')['launch'] == value['launch']
 
 
+def test_prebuilt_preview_launch_does_not_build_again(tmp_path, monkeypatch):
+    frontend = tmp_path / 'frontend'
+    (frontend / 'dist').mkdir(parents=True)
+    (frontend / 'dist/index.html').write_text('built')
+    (frontend / 'node_modules/electron').mkdir(parents=True)
+    (frontend / 'node_modules/electron/cli.js').touch()
+    monkeypatch.setattr(lifecycle.subprocess, 'check_output', lambda *a, **k: 'head\n')
+    monkeypatch.setattr(lifecycle.shutil, 'which', lambda *a, **k: '/node')
+    value = {'desktop': {'mode': 'preview'}, 'built': lifecycle.build_identity(tmp_path)}
+    command = lifecycle.desktop_command(tmp_path, value, '/npm')
+    assert command == ['/node', str(frontend / 'node_modules/electron/cli.js'), '.', '--preview']
+    (frontend / 'dist/index.html').write_text('changed')
+    with pytest.raises(ValueError, match='changed'):
+        lifecycle.desktop_command(tmp_path, value, '/npm')
+
+
+def test_existing_plan_without_prebuilt_receipt_keeps_its_launch_mode(tmp_path):
+    assert lifecycle.desktop_command(tmp_path, {'desktop': {'mode': 'preview'}}, '/npm') == [
+        '/npm', 'run', 'electron:preview']
+    assert lifecycle.desktop_command(tmp_path, {'desktop': {'mode': 'dev'}}, '/npm') == [
+        '/npm', 'run', 'electron:dev']
+
+
+def test_only_successful_build_receipt_allows_prebuilt_resume(tmp_path, monkeypatch):
+    lifecycle.quiesce(tmp_path, 'build')
+    with pytest.raises(ValueError, match='No successful frontend-build'):
+        lifecycle.resume(tmp_path, 'build', '', prebuilt=True)
+    dist = tmp_path / 'frontend/dist'
+    dist.mkdir(parents=True)
+    (dist / 'index.html').write_text('built')
+    (dist / 'asset.js').write_text('original')
+    monkeypatch.setattr(lifecycle.subprocess, 'check_output', lambda *a, **k: 'head\n')
+    saved = lifecycle.record_build(tmp_path, 'build')
+    assert lifecycle.record_build(tmp_path, 'build') == saved
+    value = lifecycle.load(tmp_path, 'build')
+    value['phase'] = 'complete'
+    lifecycle.save(tmp_path, value)
+    maintenance_path(tmp_path).unlink()
+    assert lifecycle.record_build(tmp_path, 'build') == saved
+    (dist / 'asset.js').write_text('changed')
+    with pytest.raises(ValueError, match='Recorded build changed'):
+        lifecycle.record_build(tmp_path, 'build')
+    assert lifecycle.load(tmp_path, 'build')['built'] == saved
+
+
+def test_failed_launcher_returns_exit_code_without_waiting_for_timeout(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    value = {'run_id': 'failed', 'root': str(tmp_path), 'phase': 'starting', 'backend': True, 'desktop': None}
+    monkeypatch.setattr(lifecycle.time, 'sleep', lambda *a: pytest.fail('failure must not wait'))
+    with pytest.raises(ValueError, match='startup: 7'):
+        lifecycle.verify(tmp_path, value, 600, launch_process=SimpleNamespace(poll=lambda: 7))
+    assert lifecycle.load(tmp_path, 'failed')['observation']['exit_code'] == 7
+
+
+@pytest.mark.parametrize('related', [True, False])
+def test_backend_crash_receipt_is_bound_to_new_desktop_and_launcher(tmp_path, monkeypatch, related):
+    import restart_process
+    value = {'run_id': 'crash', 'root': str(tmp_path), 'phase': 'starting', 'backend': True,
+             'desktop': {'nonce': 'old'}, 'launch': {'pid': 1, 'born': 1}}
+    receipt = {'schema': 1, 'root': str(tmp_path), 'pid': 2, 'started_at': 2,
+               'nonce': 'new', 'mode': 'preview', 'backend': {'status': 'failed', 'exit_code': 3221225477}}
+    atomic_json(lifecycle.desktop_path(tmp_path), receipt)
+    monkeypatch.setattr(lifecycle, 'processes', lambda root: [
+        {'identity': {'pid': 2, 'born': 2}, 'desktop': True}])
+    monkeypatch.setattr(restart_process, 'tree', lambda ident: [{'pid': 2, 'born': 2}] if related else [])
+    monkeypatch.setattr(lifecycle, 'alive', lambda ident: bool(ident))
+    if related:
+        monkeypatch.setattr(lifecycle.time, 'sleep', lambda *a: pytest.fail('failure must not wait'))
+        with pytest.raises(ValueError, match='3221225477'):
+            lifecycle.verify(tmp_path, value, 600)
+    else:
+        # An unrelated window's error is not evidence that this launch failed.
+        monkeypatch.setattr(lifecycle.time, 'sleep', lambda *a: (_ for _ in ()).throw(TimeoutError('still waiting')))
+        with pytest.raises(TimeoutError, match='still waiting'):
+            lifecycle.verify(tmp_path, value, 600)
+
+
 @pytest.mark.system
 def test_live_work_drains_then_updated_backend_is_restored(request, monkeypatch):
     from concurrent.futures import ThreadPoolExecutor

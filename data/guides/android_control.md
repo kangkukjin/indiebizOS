@@ -7,29 +7,15 @@
 
 ## 빠른 호출
 
-사용자가 선택한 장치 행의 `device_id`를 `$폰`으로 둔다. 대상·목표는 AI가 결정하고,
-드라이버가 매 호출의 연결·권한·현재 상태를 확인한다. 아래 범위는 가이드/describe를 재조회하지 않고 호출한다.
-
-- 한 단계 키움: `[fn:Android제어]{대상:$폰,요청:{action:"volume_step",stream:"music",value:1}}`.
-  줄임은 `value:-1`. 이 호출이 현재 값 읽기→변경→재검증하고 `result.before/actual/max/percent`를 반환하므로
-  상대 변경 앞뒤에 별도 `volume_status`를 붙이지 않는다. 조회만 필요하면 `action:"volume_status"`.
-  절대값은 `action:"volume",value:정수단계`(퍼센트 아님).
-  크기를 정해야 하면 조회→AI가 선택한 목표 계산→변경을 한 IBL 프로그램에 묶는다. 과거 음량은 재사용하지 않는다.
-- 반환 `status:"completed",verified:true`와 실제 `result`를 확인한다. `pending/unknown`은
-  `[fn:Android제어확인]{작업:$원결과}`로 원 작업만 조회한다. 불명확한 변경을 재전송하지 않는다.
-- 유튜브 음악은 OS 드라이버 밖의 재생기다. 폰에
-  `[limbs:guestpc]{limb:$폰,op:"ibl",code:"[limbs:youtube]{op:'play',query:'검색어'}"}`로 보낸다.
-  기본 오디오, 기본 검색 5개(첫 영상 재생·나머지 대기열); 한 개만 원하면 내부 호출에 `count:1`.
-  응답의 바깥 접수 성공뿐 아니라 안쪽 `result.success`·제목·모드·오류를 확인한다.
-  정지는 같은 폰에 `stop` 후 `queue`를 순서대로 호출해 `now_playing:null,queue_length:0`을 확인한다.
-  영상 모드의 `opened:true`는 재생 증거가 아니다. 추가 미디어 조건은 `youtube_relay.md`를 읽는다.
-- 앱 실행·터치·입력은 이 요약에 없다. `android_control.md`의 `앱 실행·화면 독해·입력` 절에서
-  화면 판본·접근성 권한·검증 조건을 먼저 확인한다.
+대상은 등록된 Android의 `device_id`다. 호출은 `[fn:Android제어]{대상:$폰,요청:{action:"status"}}`, 동작·인수 계약은 `[self:script]{id:"Android제어부품",args:{op:"contract"}}`로 조회한다.
+- 음량은 `volume`의 `value`에 OS 정수 단계(퍼센트 아님)를 준다. `volume_step`의 `value:1/-1`은 한 단계 증감이며 드라이버가 읽기·변경·재검증을 수행한다. 결과는 `before/actual/max/percent`다.
+- `status:"completed"`는 처리 종료다. `verified`와 실제 `result`의 검증 범위를 함께 읽는다. `pending/unknown`은 `[fn:Android제어확인]{작업:$원결과}`로 조회하며 새 변경 요청은 별도 실행이다.
+- 터치·입력은 접근성 권한과 화면 판본을 사용한다. 상세 계약은 아래 UI 절에 있다. 유튜브 등 재생기는 OS 드라이버와 별개이며 `remote_phone.md`·`youtube_relay.md`에서 다룬다.
 
 ## 대상과 호출
 
 `[self:limb]{op:"list"}` 또는 장치 소개에서 사용자가 지정한 **device_id**를 고른다.
-같은 별칭이나 단 한 대라는 이유로 자동 선택하지 않는다. 드라이버가 활성 등록·연결·중지 여부,
+드라이버가 활성 등록·연결·중지 여부,
 Android OS·`execution_contract:1`·`runtimes.python.ready:true`를 확인하고 아니면 전송 전에 거절한다.
 권한·제조사 제한은 폰의 기존 Android API가 최종 판정한다. PC의 `__local__` 대상은 지원하지 않는다.
 
@@ -105,20 +91,18 @@ return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"ui_snapsh
 ref와 좌표는 함께 쓰지 않는다. `back`에도 snapshot_id를 전달한다.
 접근성 서비스에서 관측 판본을 다시 비교하고 다르면 `STALE_SCREEN`으로 실행 전에 거절한다.
 판본은 세션·전면 창·방향·크기·관측한 요소 내용에 묶인다. 이것은 사람·다른 앱의 동시 조작까지 잠그는 OS 트랜잭션이 아니다.
-자동으로 새 좌표를 선택하거나 재시도하지 않는다.
+드라이버는 좌표 재선택·변경 재시도를 수행하지 않는다.
 
 `tap`·`back`의 선택 인수 `expect:{package:"...",text:"..."}`는 동작 뒤 확인할 조건이다.
 지정한 조건은 모두 일치해야 하며 text는 보이는 요소 label의 **정확한 일치**다.
 조건이 없으면 호출 종료와 후속 화면만 반환하고 **verified:false**다.
-전후 화면이 다르다는 이유만으로 원하는 동작이 됐다고 판정하지 않는다.
 
 ```ibl
 #!ibl edition=2
 return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"tap",snapshot_id:"관측한 64자리 snapshot_id",ref:3,expect:{text:"다음 화면의 라벨"}}}
 ```
 
-`type_text`는 `snapshot_id,ref,text`를 받는다. 먼저 입력칸을 터치하고 **다시 화면을 읽어**
-focused:true인 editable 요소를 지정한다. 텍스트는 추가 입력이 아닌 **전체 교체**이고 빈 문자열은 비우기다.
+`type_text`는 `snapshot_id,ref,text`를 받으며 해당 화면에서 focused:true인 editable 요소가 대상이다. 텍스트는 추가 입력이 아닌 **전체 교체**이고 빈 문자열은 비우기다.
 한글·줄바꿈을 지원하며 최대 10000자다. 비밀번호 필드·비편집 요소·다른 포커스는 실행 전에 거절한다.
 실행 뒤 같은 패키지·창·요소 경로·resource_id의 실제 텍스트를 대조한다. 키보드 Enter/전송은 하지 않는다.
 
@@ -134,16 +118,13 @@ return [fn:Android제어]{대상:"선택한 device_id",요청:{action:"type_text
 ## 결과와 실패 복구
 
 PC와 같은 반환 틀: `status,target,verified,result,task_ref,verification,evidence_ref,failure`.
-- `completed`: 호출 처리 종료. `verified:false`인 진동·권한 화면·조건 없는 터치/뒤로 요청을 실제 효과 확인으로 보고하지 않는다.
+- `completed`: 호출 처리 종료. 진동·권한 화면·조건 없는 터치/뒤로 요청은 접수만 관측하여 `verified:false`다.
 - `failed`: 대상/준비 거절 또는 확인한 결과가 요청과 불일치. `failure.stage/message/next`와 원 관측을 읽는다.
 - `pending`: 실행 중. 전체 반환을 보존해 아래 확인 함수에 전달한다.
-- `unknown`: 실행 여부·원 영수증·연결이 불명확. **변경을 다시 보내지 않는다.**
+- `unknown`: 실행 여부·원 영수증·연결이 불명확. 이미 발생한 효과를 배제하지 못한다.
 
-대상·화면 문맥 거절 뒤 같은 변경을 원시 shell/python·화면 조작으로 우회하지 않는다.
-연결이 끊긴 작업은 원 영수증과 history로 상태를 확인하고 취소했다면 실제 종료까지 확인한다.
-`reuse`의 새 실행은 연결·현재 상태를 다시 관측한다. 과거 관측만 재가공하려면 원 결과 참조를
-입력으로 전달하고 관측 시점을 남긴다. 임의 원격 코드의 쓰기 범위는 미상이므로, 그 앞의
-읽기 재사용이 제외됐다는 이유로 기기 상태를 캐시하거나 코드를 읽기 전용으로 선언하지 않는다.
+원 영수증·history는 기존 작업 조회 경로다. `reuse`의 새 실행은 연결·현재 상태를 다시 관측한다.
+과거 관측은 원 결과 참조로 접근할 수 있다. 임의 원격 코드는 쓰기 범위 미상으로 등록되어 읽기 재사용이 제외될 수 있다.
 
 ```ibl
 #!ibl edition=2
@@ -153,10 +134,8 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 
 기본 대기는 60초(0~240), 기기 실행 제한은 20초다. 확인은 원래 준비·접수 영수증과
 대상·request_id·소스 지문·검증기 판본을 대조한 뒤 **같은 작업만 조회**한다. 실패·취소·시간 초과에도
-일부 변경 가능성이 있으면 unknown을 유지한다. 검증기 변경·근거 만료·영수증 손실도 성공으로 꾸미지 않는다.
-응답 자체를 잃었으면 실행 원장의 `result_ref`·resume 또는 guestpc history에서 원 요청을 회수한다.
-회수할 수 없으면 새 **읽기**(`status`/`volume_status`/`ui_snapshot`)로 현재 상태만 확인한다. 현재 값의 일치는
-이전 요청이 실행됐다는 증거가 아니며, 다른 통로로 같은 변경을 재전송하지 않는다.
+일부 변경 가능성이 있으면 unknown을 유지한다. 검증기 변경·근거 만료·영수증 손실도 unknown 사유다.
+실행 원장의 `result_ref`·resume·guestpc history는 원 요청의 기록, `status`·`volume_status`·`ui_snapshot`은 새 시점의 관측이다.
 
 데스크톱 앱은 미확인 반환을 보관하고 **기존 작업 확인** 버튼으로 조회한다(창 재시작 뒤에는 실행 원장 사용).
 원격 선언형 앱도 같은 함수를 호출하고 결과의 `control_task`에 원 반환 전체를 보존하며 처리 상태·작업 ID·복구 안내를 표시한다.
@@ -177,11 +156,11 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 새 APK의 `android_control.contract:1`과 설치된 검증기·primitive 지문이 일치하면 기존
 `guestpc`의 `control` 전송으로 요청만 보내 상주 엔진의 설치된 제어 함수를 호출한다.
 별도 Python 프로세스를 띄우지 않으며 같은 판본·화면·결과 검증을 수행한다. 구형 폰이나
-지문 불일치는 접수 전에 기존 `python` 경로를 선택한다. 접수 후 실패에 다른 경로로 재전송하지 않는다.
+지문 불일치는 접수 전에 기존 `python` 경로를 선택한다. 접수 후에는 전송 경로를 바꿔 재실행하지 않는다.
 임의 코드는 계속 일회용 프로세스에서 실행한다. 취소 요청은 이미 들어간 Android 호출을
 되돌리지 않으며, 호출 반환과 실행 자리 해제 전에는 종료됐다고 보고하지 않는다.
 통신은 연결을 재사용하고 새 허브에서는 결과를 수신 long-poll과 별도 경로로 즉시 보고한다.
-앱과 AI는 같은 판본·같은 검증을 쓴다. 새 IBL 내용어는 만들지 않는다. UI 확장은 접근성 관측·판본 검사·앱 실행 다리를 포함한 APK가 필요하다.
+앱과 AI는 같은 판본·같은 검증을 쓴다. UI 확장은 접근성 관측·판본 검사·앱 실행 다리를 포함한 APK가 필요하다.
 의미 검색 시드는 `android_control_seeds.json`, 등록은 `.venv/bin/python3 scripts/register_webapp_idioms.py --seed-file android_control_seeds.json --apply`다.
 
 아래 표의 `op`는 실행 부품 내부 계약이다. 일반 호출은 위 공개 `action`을 사용한다.
@@ -221,10 +200,10 @@ return [fn:Android제어확인]{작업:$작업,대기:60}
 
 화면·설정·손전등 변경 응답은 `verified`를 확인한다. false이면 실행 요청이 성공해도 목표 상태는 미확인이다. 설정값 확인은 물리적 화면 밝기의 측정과 다르다. 상태는 관측 시점의 값이다. 손전등은 짧게 실행되는 Python 작업자가 아닌 폰의 상주 프로세스가 소유한다. 따라서 명령 종료 뒤에도 유지되며 `enabled:false`로 끈다.
 
-`hardware_control:0`은 구버전 APK: 상태 조회만 지원하고 새 변경은 실행하지 않는다. `hardware_control:1`은 새 기본 제어 브리지다. 새 기능은 0.14 이상 APK와 개별 권한이 필요하다. 권한 없이 성공한 척하거나 셸 우회하지 않는다. 권한 설정 후 status를 다시 읽는다.
+`hardware_control:0`은 구버전 APK: 상태 조회만 지원하고 새 변경은 실행하지 않는다. `hardware_control:1`은 새 기본 제어 브리지다. 새 기능은 0.14 이상 APK와 개별 권한이 필요하다. 권한 부족은 해당 Android API의 오류로 반환된다.
 
-일반 앱에 허용되지 않는 Wi-Fi·블루투스 토글, 전원 종료·재부팅은 제공하지 않는다. 네트워크와 배터리는 관측 항목이다. 화면 켜기·끄기를 기기 부팅·종료와 혼동하지 않는다.
+일반 앱에 허용되지 않는 Wi-Fi·블루투스 토글, 전원 종료·재부팅은 제공하지 않는다. 네트워크와 배터리는 관측 항목이다. screen_on/off는 화면 상태만 변경한다.
 
-## 속도 원칙
+## 실행과 시간 관측
 
-한 변경은 원격 실행 한 번으로 적용과 확인을 끝낸다. 앱 버튼에는 별도 자동 상태 재조회가 없다. 반복적인 목록 조회·API 검색·코드 생성·스크린샷 확인은 필요한 경우에만 한다. 연결 전송과 Python 작업자 시작 시간은 남는다. UI의 소요 시간은 실제 요청 왕복 시간이며 속도 개선율을 추정해 표시하지 않는다. 복합 동작은 검증된 기본 기능을 조합하는 상위 스크립트로 만든다.
+한 변경의 적용과 확인은 같은 원격 실행에 포함된다. 앱 버튼에는 별도 자동 상태 재조회가 없다. UI의 소요 시간은 전송·작업자 기동을 포함한 실제 요청 왕복 시간이다.

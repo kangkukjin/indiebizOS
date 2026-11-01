@@ -187,6 +187,9 @@ def test_driver_ownership_shares_installation_but_separates_machine_and_phone():
     machine = guides.device_drivers('windows', 'resident-v1', 'machine')
     assert {c['id'] for c in machine['components']} == {'managed-helper'}
     assert 'pc_control' not in {d['id'] for d in machine['items']}
+    portable = guides.device_drivers('windows', 'portable')
+    assert {d['id'] for d in portable['items']} == {'remote_pc_execution', 'remote_pc_installation'}
+    assert {c['id'] for c in portable['components']} == {'portable-helper'}
     phone = guides.device_drivers('android', 'indiebiz-v1')
     assert [c['id'] for c in phone['components']] == ['phone-apk']
     assert set(phone['components'][0]['drivers']) == {'android_control', 'remote_phone'}

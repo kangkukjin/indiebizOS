@@ -15,8 +15,10 @@ sys.path.insert(0, str(_backend))
 import boot_paths  # noqa: F401,E402
 
 import argparse
+import hashlib
 import json
 import re
+import shutil
 import subprocess
 import time
 import uuid
@@ -26,6 +28,56 @@ from restart_process import alive, identity
 from restart_protocol import atomic_json, control_dir, read_json, request
 from update_maintenance import maintenance_path
 from remote_boot import wait_for_boot
+
+
+def progress(root, value, reason, **details):
+    observation = {'observed_at': time.time(), 'reason': reason, **details}
+    value['observation'] = observation
+    save(root, value)
+    print(json.dumps({'phase': value['phase'], **observation}), flush=True)
+
+
+def build_identity(root):
+    index = root / 'frontend/dist/index.html'
+    if not index.is_file():
+        raise ValueError('Built renderer missing; run frontend-build before resuming')
+    head = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'],
+                                   text=True, encoding='utf-8').strip()
+    digest = hashlib.sha256()
+    for path in sorted(index.parent.rglob('*')):
+        if path.is_file():
+            digest.update(str(path.relative_to(index.parent)).encode('utf-8') + b'\0')
+            with path.open('rb') as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                    digest.update(chunk)
+            digest.update(b'\0')
+    return {'head': head, 'renderer_sha256': digest.hexdigest()}
+
+
+def desktop_command(root, value, npm):
+    if value['desktop']['mode'] == 'preview' and value.get('built'):
+        if build_identity(root) != value['built']:
+            raise ValueError('Built renderer or HEAD changed; rebuild and inspect before retrying')
+        node = shutil.which('node', path=str(Path(npm).parent))
+        cli = root / 'frontend/node_modules/electron/cli.js'
+        if not node or not cli.is_file():
+            raise ValueError('Node or Electron missing; dependency verification required')
+        return [node, str(cli), '.', '--preview']
+    return [npm, 'run', 'electron:dev' if value['desktop']['mode'] == 'dev' else 'electron:preview']
+
+
+def record_build(root, run_id):
+    """Called only after the plan's build succeeds; rechecks cannot relabel changed bytes."""
+    value = load(root, run_id)
+    built = build_identity(root)
+    if value.get('built'):
+        if value['built'] != built:
+            raise ValueError('Recorded build changed; inspect before creating a new plan')
+        return built  # A completed update can be reverified while its app is running.
+    guard(root, run_id)
+    value['built'] = built
+    save(root, value)
+    return built
 
 
 def desktop_path(root):
@@ -158,6 +210,7 @@ def quiesce(root, run_id, timeout=600):
             json.dump({k: value[k] for k in ('run_id', 'token', 'phase')}, stream)
     own_marker(root, run_id)
     deadline = time.monotonic() + timeout
+    next_progress = 0
     if backend:
         prior = read_json(control_dir(root) / 'results' / (value['shutdown_id'] + '.json'))
         if prior and prior.get('outcome') != 'intentional_shutdown':
@@ -175,6 +228,13 @@ def quiesce(root, run_id, timeout=600):
                 if result.get('outcome') != 'intentional_shutdown' or result.get('effect_unknown'):
                     raise ValueError('Graceful shutdown not completed: ' + str(result.get('outcome')))
                 break
+            if time.monotonic() >= next_progress:
+                state_now = read_json(control_dir(root) / 'state.json', {})
+                owners = state_now.get('last_owners') or {}
+                progress(root, value, 'waiting_for_shutdown', controller_phase=state_now.get('phase'),
+                         active_roots=owners.get('active_roots'), active_children=owners.get('active_children'),
+                         pending_finalizers=owners.get('pending_finalizers'))
+                next_progress = time.monotonic() + 5
             time.sleep(.2)
         else:
             raise TimeoutError('Graceful shutdown still pending; inspect the existing request')
@@ -187,6 +247,9 @@ def quiesce(root, run_id, timeout=600):
             save(root, value)
             marker(root, value)
             return value
+        if time.monotonic() >= next_progress:
+            progress(root, value, 'waiting_for_windows_to_close')
+            next_progress = time.monotonic() + 5
         time.sleep(.2)
     raise TimeoutError('App did not close (possibly unsaved edits); no source/dependency changes allowed')
 
@@ -198,7 +261,7 @@ def guard(root, run_id):
     stopped(root)
 
 
-def verify(root, value, timeout=300):
+def verify(root, value, timeout=300, launch_process=None):
     if value.get('desktop_unresolved'):
         raise ValueError('Original desktop was running but its launch mode is unknown; restoration is unverified')
     if not value['backend'] and not value['desktop']:
@@ -207,8 +270,32 @@ def verify(root, value, timeout=300):
         stopped(root)
         return {'status': 'succeeded', 'surface': 'stopped', 'scope': 'installation only; app was not running'}
     deadline = time.monotonic() + timeout
+    next_progress = 0
+    def boot_progress(observation):
+        nonlocal next_progress
+        if time.monotonic() >= next_progress:
+            progress(root, value, observation.get('reason', 'waiting_for_backend'),
+                     controller_phase=observation.get('phase'))
+            next_progress = time.monotonic() + 5
+
     while time.monotonic() < deadline:
         state = read_json(control_dir(root) / 'state.json', {})
+        # Only this launch's fresh desktop receipt can report a terminal failure.
+        # A stale prior boot or an unrelated window must never fail a new start.
+        if value.get('desktop'):
+            receipt = read_json(desktop_path(root), {}) or {}
+            if (receipt.get('nonce') and receipt['nonce'] != value['desktop'].get('nonce')
+                    and (receipt.get('backend') or {}).get('status') == 'failed'):
+                rows = processes(root)
+                if any(r['identity']['pid'] == receipt.get('pid') and r['desktop'] for r in rows):
+                    receipt = desktop_receipt(root, rows)
+                    from restart_process import tree
+                    descendants = tree(value.get('launch'))
+                    if any(p['pid'] == receipt['pid'] for p in descendants):
+                        backend = receipt.get('backend') or {}
+                        if backend.get('status') == 'failed':
+                            progress(root, value, 'backend_launch_failed', backend=backend)
+                            raise ValueError('Backend launch failed: ' + json.dumps(backend))
         if alive(state.get('controller')):
             expected = value.get('controller')
             if expected and state['controller'] != expected:
@@ -222,8 +309,10 @@ def verify(root, value, timeout=300):
                 save(root, value)
             result = wait_for_boot(root, root, state['controller'], generation=state.get('generation'),
                                    port=int(os.environ.get('INDIEBIZ_API_PORT', '8765')),
-                                   timeout=max(1, deadline-time.monotonic()), interval=.5)
+                                   timeout=max(1, deadline-time.monotonic()), interval=.5,
+                                   on_observation=boot_progress)
             if result['status'] != 'succeeded':
+                progress(root, value, result.get('reason', result['status']), status=result['status'])
                 raise ValueError('Restored backend failed verification: ' + result.get('reason', result['status']))
             if not value['desktop']:
                 return result
@@ -233,11 +322,25 @@ def verify(root, value, timeout=300):
                 raise ValueError('Desktop did not load the updated checkout')
             if desktop.get('ready'):
                 return {**result, 'desktop': 'loaded', 'head': head, 'scope': 'backend and Electron page load; model query not tested'}
+        else:
+            code = launch_process.poll() if launch_process is not None else None
+            if code is not None and code != 0:
+                progress(root, value, 'launcher_exited', exit_code=code)
+                raise ValueError(f'Update launcher exited before backend startup: {code}')
+            if value.get('controller') and not alive(value['controller']):
+                progress(root, value, 'controller_exited')
+                raise ValueError('Restored controller exited')
+            if value.get('launch') and not alive(value['launch']) and not processes(root):
+                progress(root, value, 'launch_processes_exited')
+                raise ValueError('Update launch exited without a running app; inspect launch log')
+        if time.monotonic() >= next_progress:
+            progress(root, value, 'waiting_for_app_ready', controller_phase=state.get('phase'))
+            next_progress = time.monotonic() + 5
         time.sleep(.2)
     raise TimeoutError('Updated app has not become ready; observe the existing launch, do not relaunch')
 
 
-def resume(root, run_id, npm, timeout=300):
+def resume(root, run_id, npm, timeout=300, prebuilt=False):
     value = load(root, run_id)
     if value.get('desktop_unresolved'):
         raise ValueError('Original desktop launch mode is unknown; inspect its saved before observation before restoration')
@@ -245,17 +348,21 @@ def resume(root, run_id, npm, timeout=300):
         raise ValueError('Original unmanaged checkout processes need an explicit restoration method')
     if value['phase'] == 'complete':
         return verify(root, value, timeout)
+    process = None
     if value['phase'] == 'stopped':
         guard(root, run_id)
+        if prebuilt and not value.get('built'):
+            raise ValueError('No successful frontend-build receipt; do not launch unverified assets')
+        desktop = value['desktop']
+        # Validate before recording a pending launch; failed admission has no side effect.
+        argv = desktop_command(root, value, npm) if desktop else None
         value['phase'] = 'starting'
         save(root, value)
         marker(root, value)
         if value['backend'] or value['desktop']:
             env = dict(os.environ, INDIEBIZ_UPDATE_TOKEN=value['token'], PYTHONUTF8='1')
-            desktop = value['desktop']
             vpy = root / '.venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python3')
-            argv = ([npm, 'run', 'electron:dev' if desktop['mode'] == 'dev' else 'electron:preview'] if desktop
-                    else [str(vpy) if vpy.exists() else sys.executable, str(root / 'backend/api.py'), 'start'])
+            argv = argv or [str(vpy) if vpy.exists() else sys.executable, str(root / 'backend/api.py'), 'start']
             with (journal_path(root, run_id).with_suffix('.log')).open('ab') as log:
                 process = subprocess.Popen(argv, cwd=root / 'frontend' if desktop else root,
                                            env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
@@ -265,7 +372,7 @@ def resume(root, run_id, npm, timeout=300):
     elif value['phase'] != 'starting':
         raise ValueError('Update must finish quiescing before restart')
     own_marker(root, run_id)
-    result = verify(root, value, timeout)
+    result = verify(root, value, timeout, launch_process=process) if process is not None else verify(root, value, timeout)
     value.update(phase='complete', result=result)
     save(root, value)
     own_marker(root, run_id)
@@ -291,11 +398,12 @@ def retry_start(root, run_id, npm, timeout=300):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('op', choices=['quiesce', 'guard-run', 'resume', 'verify', 'retry-start'])
+    parser.add_argument('op', choices=['quiesce', 'guard-run', 'resume', 'verify', 'retry-start', 'record-build'])
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--run-id', required=True)
     parser.add_argument('--npm', default='')
     parser.add_argument('--timeout', type=float, default=600)
+    parser.add_argument('--prebuilt', action='store_true', help='Use the renderer built by this update plan')
     args, command = parser.parse_known_args()
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', args.run_id) or not 30 <= args.timeout <= 3600:
         parser.error('valid run-id and timeout 30..3600 required')
@@ -310,9 +418,11 @@ def main():
                 raise ValueError('guard-run requires -- argv')
             return subprocess.call(command[1:])
         elif args.op == 'resume':
-            result = resume(root, args.run_id, args.npm, args.timeout)
+            result = resume(root, args.run_id, args.npm, args.timeout, args.prebuilt)
         elif args.op == 'retry-start':
             result = retry_start(root, args.run_id, args.npm, args.timeout)
+        elif args.op == 'record-build':
+            result = record_build(root, args.run_id)
         else:
             result = verify(root, load(root, args.run_id), args.timeout)
         print(json.dumps(result, ensure_ascii=False))

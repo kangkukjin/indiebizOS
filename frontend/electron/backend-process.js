@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 
 import { initUserData } from './bootstrap.js';
 import { controllerVerdict, shouldAttemptRevive, pidAlive } from './controller-watch.js';
+import { recordUpdateBackend } from './update-control.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -185,6 +186,7 @@ function spawnController({ initial = false, reason = 'start' } = {}) {
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
+  recordUpdateBackend({ status: 'starting', pid: pythonProcess.pid });
 
   pythonProcess.stdout.on('data', (data) => {
     try {
@@ -206,7 +208,8 @@ function spawnController({ initial = false, reason = 'start' } = {}) {
     }
   });
 
-  pythonProcess.on('close', (code) => {
+  pythonProcess.on('close', (code, signal) => {
+    recordUpdateBackend({ status: code === 0 && !signal ? 'exited' : 'failed', exit_code: code, signal });
     const msg = `[Python] 프로세스 종료: ${code}`;
     console.log(msg);
     try {
@@ -233,6 +236,7 @@ function spawnController({ initial = false, reason = 'start' } = {}) {
   });
 
   pythonProcess.on('error', (err) => {
+    recordUpdateBackend({ status: 'failed', error_code: err.code || 'SPAWN_ERROR' });
     console.error(`[Python] 프로세스 에러: ${err.message}`);
     pythonProcess = null;
 

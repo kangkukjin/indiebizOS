@@ -22,6 +22,48 @@ import signal
 import subprocess
 import time
 
+import psutil
+from restart_process import alive, identity, tree
+
+
+def observe(state, root):
+    """Read live evidence beside the persisted status; never infer completion."""
+    now = time.time()
+    row = state.get('steps', {}).get(state.get('current_step'), {})
+    ident = row.get('process')
+    observation = {'observed_at': now, 'process_liveness': 'not_checked'}
+    if row.get('started_at'):
+        observation['elapsed_s'] = max(0, now - row['started_at'])
+    if ident:
+        try:
+            observation['process_liveness'] = 'alive' if alive(ident) else 'exited'
+            members = tree(ident)
+            observation['processes'] = []
+            for member in members:
+                try:
+                    p = psutil.Process(member['pid'])
+                    cpu = p.cpu_times()
+                    observation['processes'].append({**member, 'cpu_s': cpu.user + cpu.system,
+                                                     'status': p.status()})
+                except psutil.NoSuchProcess:
+                    continue
+        except psutil.Error:
+            observation['process_liveness'] = 'unknown'
+    if row.get('log'):
+        path = Path(row['log'])
+        if path.is_file():
+            stat = path.stat()
+            observation['log'] = {'path': str(path), 'bytes': stat.st_size,
+                                  'updated_at': stat.st_mtime, 'age_s': max(0, now - stat.st_mtime)}
+    lifecycle = root / 'data/runtime/remote_updates' / (state['run_id'] + '.json')
+    try:
+        value = json.loads(lifecycle.read_text(encoding='utf-8'))
+        observation['lifecycle'] = {'phase': value.get('phase'), 'observation': value.get('observation')}
+    except (OSError, ValueError):
+        pass
+    return {**state, 'observation': 'last_persisted_state_with_live_probe',
+            'process_liveness': observation['process_liveness'], 'live': observation}
+
 
 def atomic_json(path, value):
     tmp = path.with_suffix(".tmp")
@@ -98,7 +140,7 @@ def validate(plan):
     return root.resolve()
 
 
-def execute(argv, cwd, env, timeout, log):
+def execute(argv, cwd, env, timeout, log, on_started=None):
     """A command's exit code cannot be replaced by a later echo/tail result."""
     started = time.time()
     with log.open("wb") as stream:
@@ -110,6 +152,11 @@ def execute(argv, cwd, env, timeout, log):
             stream.write(str(exc).encode("utf-8"))
             return {"status": "failed", "exit": None, "error": str(exc), "log": str(log)}
         timed_out = False
+        if on_started:
+            try:
+                on_started(identity(process.pid))
+            except psutil.NoSuchProcess:
+                pass  # A fast command can exit before its birth identity is sampled.
         try:
             code = process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
@@ -143,7 +190,7 @@ def run(plan, *, retry=None, inspect=False):
         state = json.loads(journal.read_text(encoding="utf-8"))
         if state["identity"] != identity:
             raise ValueError("plan or target changed; use a new run_id")
-        return {**state, "observation": "last_persisted_state", "process_liveness": "not_checked"}
+        return observe(state, root)
     folder.mkdir(parents=True, exist_ok=True)
     # All plans against this checkout share one lock, not just one run_id.
     with exclusive(home / "execution.lock"):
@@ -186,12 +233,16 @@ def run(plan, *, retry=None, inspect=False):
                 return state
             attempt = len(old.get("attempts", [])) + 1
             row = {"status": "running", "attempts": old.get("attempts", []), "attempt": attempt,
+                   "started_at": time.time(),
                    "log": str(folder / f"{name}-{attempt}.log")}
             state["steps"][name] = row
             state.update(status="running", current_step=name)
             state.pop("blocked_step", None)
             state.pop("reason", None)
             save()  # durable before any side effect
+            def launched(ident):
+                row['process'] = ident
+                save()
             print(json.dumps({"step": name, "status": "running", "attempt": attempt}), flush=True)
             last = row["attempts"][-1] if row["attempts"] else {}
             if last.get("command_ok") and step.get("verify"):
@@ -199,13 +250,13 @@ def run(plan, *, retry=None, inspect=False):
                 result.update(status="succeeded", reused_command=True)
             else:
                 result = execute(step["argv"], step.get("cwd", str(root)), env,
-                                 step.get("timeout", 1800), Path(row["log"]))
+                                 step.get("timeout", 1800), Path(row["log"]), on_started=launched)
                 result["command_ok"] = result["status"] == "succeeded"
             if result["status"] == "succeeded" and step.get("verify"):
                 row["log"] = str(folder / f"{name}-{attempt}-verify.log")
                 save()
                 result["verification"] = execute(step["verify"], step.get("cwd", str(root)), env,
-                                                 step.get("timeout", 1800), Path(row["log"]))
+                                                 step.get("timeout", 1800), Path(row["log"]), on_started=launched)
                 if result["verification"]["status"] != "succeeded":
                     result["status"] = "failed"
             row["attempts"].append(result)

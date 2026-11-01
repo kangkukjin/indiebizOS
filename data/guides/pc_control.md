@@ -8,20 +8,19 @@ macOS·Windows PC의 출력 장치·음량·음소거·주소 열기·잠금과 
 
 ## 빠른 호출
 
-현재 장치 소개의 이름·설명·OS로 고른 device_id를 `$PC`에 넣는다. 본체는 `__local__`이다. 소개가 충분하면 목록·info·describe를 반복하지 않는다. 연결·권한·지원 OS는 드라이버가 실행 때 확인한다.
-- 상태: `[fn:PC제어]{대상:$PC,요청:{action:"status"}}`. `result.devices`에서 출력 ID와 can_set_volume·can_mute를 확인한다. 출력 ID는 PC ID와 다르며 API 지원은 실제 소리의 증거가 아니다.
-- 음량: `[fn:PC제어]{대상:$PC,요청:{action:"volume",device_id:$출력,value:50}}` (0~100 정수). 음소거는 요청에 `action:"mute",device_id,enabled:Bool`. 출력 정보가 없을 때 필요한 status와 변경은 한 IBL 프로그램에서 잇는다.
-- 완료는 `status:"completed"`와 `verified:true`, 실제 `result`의 검증 범위로 판단한다. volume·mute는 드라이버가 OS 설정을 재조회하므로 성공 뒤 별도 status를 붙이지 않는다. 물리적 소리·영상 재생까지 확인한 뜻은 아니다.
-- pending·unknown은 원 영수증을 보존해 `[fn:PC제어확인]{작업:$원결과}`로 확인한다. 변경을 새로 보내지 않는다. failed는 failure를 보고 원인을 해결한다.
-- 읽기 action은 display·power·presence·apps·network도 가능하다. 밝기·앱 종료·잠금·네트워크 변경 등 조건이 다른 쓰기는 이 가이드의 해당 절을 읽는다.
-- Windows Chrome은 같은 함수의 chrome_status·chrome_open·chrome_switch·chrome_close다. 전용 프로필만 다루고 tab은 CDP targetId다. 창·판본·인수는 아래 “Windows Chrome 창·탭”에서 확인한다. macOS 창·탭은 Safari제어·Chrome제어 스크립트다. 유튜브 영상은 아래 기존 재생 교체 계약을 사용하며 일반 open_url로 재생 성공을 판단하지 않는다.
+대상은 PC의 `device_id`, 본체는 `__local__`이다. macOS·Windows의 로컬 또는 상주 사용자 세션을 지원한다. 휴대형·관리 서비스 세션은 OS 제어 대상이 아니다.
+- 호출: `[fn:PC제어]{대상:$PC,요청:{action:"status"}}`. 동작·인수 계약은 `[self:script]{id:"PC제어부품",args:{op:"contract"}}`로 조회한다.
+- 음량은 `action:"volume",device_id:$출력,value:50`(0~100 정수), 음소거는 `action:"mute",device_id:$출력,enabled:Bool`. 출력 ID는 `status`의 `result.devices`에 있으며 PC ID와 다르다.
+- 결과는 `status`·`verified`·`result`·`failure`. `completed`는 처리 종료이며 검증 범위는 동작별로 다르다. 음량 변경의 OS 재조회는 드라이버가 수행하며 물리적 소리를 검증하지 않는다.
+- `pending/unknown`은 원 결과로 `[fn:PC제어확인]{작업:$원결과}`를 호출한다. 새 접수는 별도 실행이며 중복 효과가 생길 수 있다.
+- Windows Chrome은 `chrome_*`(전용 프로필), 유튜브는 `youtube_*` 동작이다. 화면 판본·재생 검증 조건은 아래 해당 절에 있다.
 
 ## 대상 선택
 
 `[self:limb]{op:"list"}`의 device_id·이름·설명·OS·연결 상태를 읽어 사용자가 가리킨
 PC를 고른다. 본체는 `__local__`을 명시한다 — 장치 소개 블록의 `device_id="__local__"` 행(`adapter="local"`)이
 이 가이드를 가리키며, 본체 음량·주소 열기·잠금과 아래 '본체 OS 조작면' 의 동작은 화면 조작이 아니라 이 통로다. 출력 장치 ID와 PC ID는 서로 다르다.
-PC가 한 대여도 자동 선택하지 않는다. 중지·해제·미접속·미지원 OS는 실행 전에 거절한다.
+원격 OS 제어는 상주 사용자 세션에 연결한다. 휴대형은 원격 실행·전송 가이드를 사용하며, Windows 관리 서비스는 시스템 작업용이므로 PC제어가 사용자 화면 대신 선택하지 않는다. 중지·해제·미접속·미지원 OS·관리 세션은 실행 전에 거절한다.
 OS와 실행 파일·전송 명령은 부품이 해소하며 호출자가 지정하지 않는다.
 
 다음은 자리표 골격이다. 대상 ID와 출력 ID는 조회한 실제 값으로 고쳐 쓰는 것이 정상이다.
@@ -65,7 +64,7 @@ return [fn:PC제어]{대상:"선택한 device_id",요청:{action:"volume",device
 
 원격 PC 에도 같은 OS 실행 파일(`pc_control_mac.py`·`pc_control_windows.ps1`)이 가므로 본체·원격의 동작은 같다.
 두 OS 가 같은 동작 이름·결과 모양을 쓰고, OS 가 공개 API 로 못 읽는 값은 `null` 과 `*_basis` 로 남긴다(거짓 0 없음).
-Windows 는 관리자 권한을 요구하지 않는다. 전부 배경에서 돈다 — `needs_front` 동작은 없고 어떤 동작도 앱을 앞으로 가져오지 않는다. 읽기는 OS 조회값
+이 절의 OS 동작은 사용자 세션에서 배경 API로 실행한다. Windows 관리자 권한이 필요한 조회 항목은 아래 표에 따로 표시한다. 뒤의 유튜브 UI 제어는 별도 계약이며 앞 창을 사용할 수 있다. 읽기는 OS 조회값
 그대로이고, 쓰기는 변경 뒤 같은 조회로 재확인한 것만 `verified:true` 다. 동작별 `shared_state`(사용자와 공유하는
 상태를 바꾸는 요청된 효과)·`verification_scope` 는 `[self:script]{id:"PC제어부품",args:{op:"contract"}}` 의 `conditions` 에
 있고 결과의 `condition` 칸에도 실린다.
@@ -99,11 +98,9 @@ return [fn:PC제어]{대상:"__local__",요청:{action:"presence"}}
 return [fn:PC제어]{대상:"__local__",요청:{action:"launch",app:"com.apple.TextEdit"}}
 ```
 
-쓰기 전에 읽는 순서는 이렇다. brightness 전에 display 로 `can_set_brightness` 와 display_id 를 본다. 화면을 찍거나
-사용자 입회가 필요한 일 전에 presence 로 idle_seconds·screen_locked·display_asleep 을 본다(꺼진 화면을 찍어 검은
-그림을 success 로 받는 일을 막는 자리). 밤일처럼 긴 배경 작업은 keep_awake 로 시작하고 allow_sleep 으로 끝낸다.
-shortcut 은 사용자가 단축어 앱(Windows 는 작업 스케줄러)에서 만든 흐름을 이름으로 부르는 탈출구다 — 새 동작이 필요하면 코드보다 단축어가 먼저다.
-실패는 `failure.message` 와 `result.error` 에 원인이 있고, 변경 요청을 자동 재전송하지 않는 규칙은 같다.
+`display`는 밝기 제어 지원과 display_id, `presence`는 idle_seconds·screen_locked·display_asleep을 반환한다.
+`keep_awake`/`allow_sleep`은 잠 방지 프로세스의 시작·종료다. `shortcut`은 OS에 등록된 기존 단축어·예약 작업을 호출한다.
+실패 원인은 `failure.message`와 `result.error`에 있다.
 본체 앱 자체의 창·탭 조작(Safari·Chrome 등)은 앱 드라이버(`safari_control.md`·`chrome_control.md`)가 맡고, 여기 동작은 OS 수준까지다.
 
 ## Windows Chrome 창·탭 (전용 프로필 CDP)
@@ -112,7 +109,7 @@ Windows PC 의 Chrome 창·탭은 OS 수준이 아니라 앱 조작면 `app:com.
 Windows PC 는 같은 계약을 **PC제어의 `chrome_*` 동작**으로 부른다(실행 파일 `pc_chrome_windows.ps1`). 통로는 DevTools 프로토콜이고
 Chrome 136+ 가 기본 프로필의 원격 디버깅을 거부하므로 **전용 프로필**(`%LOCALAPPDATA%\IndieBiz\ChromeProfile`)만 본다 — 사용자가
 따로 띄운 크롬은 `other_chrome_instances` 개수로만 알려 주고 그 탭은 다루지 않는다(그쪽 유튜브 탭은 `youtube_*` 가 UI Automation 으로 다룬다).
-준비할 때는 `chrome_status`를 먼저 부르지 말고 `chrome_launch`로 바로 실행 여부를 확인한다. 반환된 `result.windows`가 창·탭 관측이므로 성공 뒤에도 같은 상태를 다시 읽지 않는다. TV와 함께 쓰는 독립 준비 조합은 [TV 제어](tv_control.md#전원브라우저검색을-함께-준비하기)를 따른다.
+`chrome_launch`는 실행 여부를 확인하고 `result.windows`에 창·탭 관측을 함께 반환한다. TV와의 조합 예시는 [TV 제어](tv_control.md#전원브라우저검색을-함께-준비하기)에 있다.
 
 처음 한 번 `chrome_launch` 로 띄우고(최소화로 요청, `shortcut:true` 면 바탕화면 "IndieBiz Chrome" 바로가기 생성) 그 프로필에서 필요한 로그인을 한다.
 
@@ -125,7 +122,7 @@ Chrome 136+ 가 기본 프로필의 원격 디버깅을 거부하므로 **전용
 | chrome_close | window_id, tab, expected | targetId 로 닫고 남은 탭 집합 대조. 마지막 탭이면 창 소멸 |
 
 `expected` 는 `windows[].revision` 또는 직전 결과 `state.revision`(창 id·현재 탭·탭 id 집합). 다르면 변경 전 `STATE_CHANGED`.
-결과의 `target` 은 다음 호출 인수 `{window_id,tab,expected}` 다. `UNKNOWN`·`POSTCONDITION_FAILED` 는 재전송하지 않는다.
+결과의 `target` 은 다음 호출 인수 `{window_id,tab,expected}` 다. `UNKNOWN`·`POSTCONDITION_FAILED`는 변경 효과를 확정하지 못한 상태다.
 원격 PC 라 실행은 접수증(`PC제어확인`)으로 회수한다 — 연속 동작은 각 단계의 `result.target` 을 다음 요청에 잇는다.
 
 ```ibl
@@ -141,11 +138,11 @@ return $s
 
 ## 유튜브 영상 선택
 
-Windows의 Chrome·Edge·Brave에서 기존 재생 탭을 교체한다. **검색 결과의 한 행을 `video`에 그대로 전달**한다.
-제목을 요약·재입력하지 않는다. 검색의 `duration`(M:SS/H:MM:SS)은 부품이 초로 바꾼다.
-기존 `url`·`title`·`duration_seconds` 직접 지정도 지원하지만 `video`와 섞지 않는다.
+Windows의 Chrome·Edge·Brave에서 기존 재생 탭을 교체한다. `video`는 검색 결과의 한 행을 받는다.
+제목·길이는 로드된 영상과 대조하는 값이며 `duration`(M:SS/H:MM:SS)은 부품이 초로 바꾼다.
+기존 `url`·`title`·`duration_seconds` 직접 지정도 지원하며 `video`와는 상호 배타적이다.
 `fullscreen`은 생략하면 false다. 생방송은 지원하지 않는다. 광고가 재생 중이거나
-본영상 시간을 확인하지 못하면 검증 실패다. `open_url`로 새 유튜브 영상 플레이어를 추가하지 않는다.
+본영상 시간을 확인하지 못하면 검증 실패다. `open_url`에는 재생 교체·재생 검증 계약이 없다.
 macOS의 브라우저 교체는 지원하지 않는다. TV 자체 앱 실행은 [TV 제어](tv_control.md)의 launch다.
 다음은 첫 검색 행을 사용하는 예시다. 실제로는 검색 행의 제목·채널을 보고 고른다.
 
@@ -156,28 +153,28 @@ $영상 = $검색.items[0]
 return [fn:PC제어]{대상:"선택한 device_id",요청:{action:"youtube_replace",video:$영상,fullscreen:true}}
 ```
 
-호출 결과는 **전체를 반환**한다. 함수 안에서 `$작업.value`·`$작업.success`를 읽지 않는다.
-PC제어의 상태는 `$작업.status`, 장치 관측은 `$작업.result`, 실패 설명은 `$작업.failure`다.
+PC제어 반환의 상태는 `$작업.status`, 장치 관측은 `$작업.result`, 실패 설명은 `$작업.failure`다.
+함수 반환에는 `value`·`success` 필드가 없다.
 `execute_ibl`가 바깥에 붙이는 `value`는 프로그램 내부의 함수 반환 필드가 아니다.
 TV제어 스크립트는 `success`·`observations`를 직접 돌려주므로 PC제어와 같은 모양으로 가정하지 않는다.
 
-실패 시 `failure.code`·`failure.next`·`result.last_observation`을 먼저 읽는다.
-- `YOUTUBE_NO_TAB`: 사용할 브라우저에 유튜브 홈을 한 번 열고 기존 탭을 사용한다.
-- `YOUTUBE_FOCUS_FAILED`: 창 상태를 확인한다. 최소화 창은 교체 시 드라이버가 복원하고 초점을 확인한 뒤 입력한다.
-- `YOUTUBE_TITLE_MISMATCH`·`YOUTUBE_DURATION_MISMATCH`: 로드된 본영상의 불일치를 연속 두 번 관측하면 대기를 끝낸다. 요청과 관측을 대조하고, 잘못 줄인 제목으로 다시 보내지 않는다.
-- `YOUTUBE_PLAYER_ERROR`: 플레이어 안의 보이는 오류 문구를 즉시 돌려준다. 같은 영상 재시도·좌표 클릭을 반복하지 말고 오류와 미완료를 알린다.
-- `YOUTUBE_PLAYBACK_TIMEOUT`: 마지막 관측으로 설명할 수 없으면 화면을 한 번 읽는다. 상태 조회·동일 변경을 끝없이 반복하지 않는다.
+실패 결과에는 `failure.code`·`failure.next`·`result.last_observation`이 있다.
+- `YOUTUBE_NO_TAB`: 기존 브라우저에서 교체할 유튜브 탭이 발견되지 않음.
+- `YOUTUBE_FOCUS_FAILED`: 대상 창의 초점을 확인하지 못함. 드라이버는 최소화 창 복원과 초점 확인을 수행한다.
+- `YOUTUBE_TITLE_MISMATCH`·`YOUTUBE_DURATION_MISMATCH`: 로드된 본영상의 불일치를 연속 두 번 관측하면 대기를 끝낸다. 요청한 제목·길이와 실제 본영상이 다름.
+- `YOUTUBE_PLAYER_ERROR`: 플레이어 안의 보이는 오류 문구를 즉시 돌려준다. 오류 원문이 결과에 포함된다.
+- `YOUTUBE_PLAYBACK_TIMEOUT`: 실행 한도 안에 재생 조건을 확인하지 못함. 마지막 관측을 반환한다.
 
-결과 정리에서 필드 오류가 났어도 앞선 장치 변경은 실행됐을 수 있다. 기존 결과·영수증을
-`read_result`로 회수한다(`code`와 동시에 보내지 않는다). 결과를 다시 얻으려고 변경을 재실행하지 않는다.
+`read_result`는 기존 결과·영수증 회수이며 새 기기 호출이 아니다(`code`와 상호 배타적).
+결과 후처리 오류는 앞선 기기 변경을 취소하지 않는다.
 
 ## 완료와 후속 확인
 
 반환은 status·target·verified·result·task_ref·verification·evidence_ref·failure다.
-`completed`는 호출 처리 종료이며, `verified:false`를 목표 달성으로 보고하지 않는다.
+`completed`는 호출 처리 종료, `verified`는 동작별 사후 조건의 검증 여부다.
 OS 음량 관측은 물리 스피커에서 소리가 나는지 확인한 것이 아니다.
 
-`pending`이면 **전체 반환값**을 보존해 다음처럼 확인한다. 변경 요청은 다시 보내지 않는다.
+`pending`이면 **전체 반환값**을 보존해 다음처럼 확인한다. 새 변경 요청과 원 작업 조회는 별도 호출이다.
 
 ```ibl
 #!ibl edition=2
@@ -186,17 +183,17 @@ return [fn:PC제어확인]{작업:$작업,대기:60}
 ```
 
 대기는 기본 60초, 유튜브는 150초이고 0~240초로 조절한다. 장치 실행 제한은 별도로
-기본 30초·유튜브 120초다. pending을 failed로 바꾸거나 자동 재전송하지 않는다.
+기본 30초·유튜브 120초다. `pending`은 실행 결과가 아직 도착하지 않은 상태다.
 `unknown`은 접수·관측·원 근거가 불확실한 경우다. 실패에는 단계와 다음 확인 방법이 있다.
 
 후속 확인은 준비·접수의 원래 실행 영수증과 대상·요청 ID·OS·소스 지문을 대조한다.
 verification을 임의 수정하면 검증하지 않는다. 검증기 코드가 바뀌거나 영수증이 만료되면
-unknown으로 남긴다. 최신 코드를 다시 보내 과거 결과를 대신 만들지 않는다.
+unknown으로 남긴다.
 evidence_ref나 그 안의 plan·job이 누락·null·잘못된 자료형이어도 unknown으로 반환하며 원격 조회·변경을 전송하지 않는다.
 값을 잃었으면 execute_ibl의 기존 `result_ref.read_args`로 원 반환을 회수한다. 접수 응답 자체를
 잃은 경우 원 실행의 resume·실행 기록과 guestpc history로 확인하고 새 요청을 만들지 않는다.
 
-실패 칸에는 `code` 가 있다(2026-10-21, 긴문장 87회차 L87-3). 대상 거절은 조건별 코드 `TARGET_NOT_REGISTERED`·`TARGET_REVOKED`·`TARGET_INACTIVE`·
+실패 칸에는 `code` 가 있다(2026-10-21, 긴문장 87회차 L87-3). 대상 거절은 조건별 코드 `TARGET_NOT_REGISTERED`·`TARGET_REVOKED`·`TARGET_INACTIVE`·`TARGET_ADAPTER_UNSUPPORTED`·`TARGET_SESSION_UNSUPPORTED`·
 `SHELL_NOT_READY`·`TARGET_NOT_CONNECTED`, 묶음의 미지원 항목은 `UNSUPPORTED_ACTION`, 실행 실패는 실행 파일이 앞머리에 적은 코드(`LAUNCH_FAILED` 등)다.
 코드가 없는 실패는 `code:null` 이며 `message` 로만 판단한다. 코드를 가진 메시지는 `CODE: 설명` 모양이라 registered-json/1 통로에서도 코드가 살아남는다.
 같은 실행 안에서 같은 PC 를 여러 번 부를 때 묶음 조회의 첫 행이 `stage:"target"` 이면 그 대상의 나머지 호출은 건너뛴다 — 끊긴 PC 에 쓰기를 열일곱 번 보내도 전송은 0 이지만 호출마다 손발 조회를 반복한다(W87-3).
@@ -207,15 +204,13 @@ evidence_ref나 그 안의 plan·job이 누락·null·잘못된 자료형이어�
 증거가 아니다. 이미 접수한 변경은 원 `task_ref`·history로 상태를 확인하고, 필요하면
 그 작업의 취소와 종료를 확인한다. 끊긴 대상에 새 변경을 쌓으면 재연결 때 뒤늦게 실행될 수 있다.
 
-`reuse`로 새 실행을 시작해도 연결 목록·원격 현재 상태는 다시 읽는다. 기기 호출 0회를
-재사용의 성공 기준으로 삼지 않는다. 과거 관측만으로 보고서를 고칠 때는 원 실행의
-`result_ref.input_args`를 넘기고 관측 시점을 표시한다. `resume`은 같은 실행의 영수증 회수다.
-임의 셸·Python 전송의 쓰기 범위는 미상으로 유지하므로 앞선 읽기의 재사용을 막을 수 있다.
-셸이 실행되는 기기 이름만으로 파일·네트워크 부작용을 제한했다고 간주하지 않는다.
+`reuse`의 새 실행은 연결 목록·현재 상태를 다시 읽는다. `resume`은 같은 실행의 영수증 회수다.
+과거 관측은 원 실행의 `result_ref.input_args`로 참조할 수 있다. 임의 셸·Python 전송은
+쓰기 범위가 미상으로 등록되어 앞선 읽기의 재사용이 제외될 수 있다.
 
 ## 설치와 수리
 
-여러 상태를 점검할 때는 `PC조회묶음`으로 대상 선택과 실행 파일 읽기를 공유한다.
+`PC조회묶음`은 여러 조회 사이에서 대상 선택과 실행 파일 읽기를 공유하는 관용구다.
 기본 항목은 status·display·power·presence다. 선택 항목은 apps·clipboard·network·shortcuts까지이며,
 읽기만 받는다. OS 가 지원하지 않는 항목은 항목별 실패로 남긴다.
 반환은 `{target,items}`이고 각 행에 action과 기존 PC제어의 결과·실패·영수증이 있다.
@@ -233,8 +228,7 @@ return $점검
 배포 정의의 정본은 `data/idioms/pc_control*.ibl`·`pc_read_batch.ibl`, 구현은 `data/scripts/pc_control.py`다.
 설치 목록 `data/idioms/installed.json`이 첫 부팅에도 정의를 제공한다. 같은 이름의 다른 개인
 정의는 충돌로 신고한다. 임베딩 색인 등록은 `register_webapp_idioms.py --seed-file pc_control_seeds.json`을 사용한다.
-구현은 prepare→guestpc→task→검증을 소유한다. 정상 호출에서 이 연결을 다시 작성하지 않는다.
-`PC제어실행`은 두 공개 함수가 공유하는 내부 부품이며 직접 대상 선택을 대신하는 공개 입구로 쓰지 않는다.
+구현은 prepare→guestpc→task→검증을 연결한다. `PC제어실행`은 두 공개 함수가 공유하는 내부 부품이며 대상 선택 결과를 입력받는다.
 
 ## 범용 원격 화면·입력
 
@@ -245,12 +239,10 @@ return $점검
 [limbs:guestpc]{op:"key",limb:"사무실PC",mode:"interactive",key:"cmd+s"}
 ```
 
-좌표는 **직전 screen 이미지에서 관측한 좌표**다. 예제 숫자를 그대로 사용하지 않는다.
-헬퍼가 축소·레티나 배율을 환산한다. screen → 좌표 선택 → 입력 → 결과 화면 확인 순서다.
+좌표는 screen 이미지 기준이며 헬퍼가 축소·레티나 배율을 환산한다. 예제의 좌표는 자리표다.
 입력은 기본 재캡처(`shot:false`로 끄기), `settle_ms` 기본 700이다. type은 현재 포커스에 입력한다.
 캡처는 `max_width` 기본 1280, `format` png/jpeg/auto, `display` 다중 모니터 선택이며
 최근 20장이 `outputs/limb_screens/<별칭>/`에 남는다. move·scroll·drag도 같은 모드와 좌표 규칙이다.
-셸로 되는 작업은 셸을 쓴다. GUI의 좌표를 관용구에 고정하지 않는다.
 
 | OS | 화면·입력 조건 |
 | --- | --- |
@@ -258,7 +250,7 @@ return $점검
 | macOS | 화면 기록·손쉬운 사용 권한. cliclick 설치 시 우클릭·드래그·정밀 이동 지원 |
 | Linux | grim/scrot/ImageMagick 캡처 도구와 xdotool/ydotool 입력 도구 필요 |
 
-권한 변경 뒤 헬퍼를 재실행한다. 실제 GUI 가능 여부는 info와 작업 결과로 확인한다.
+GUI 지원 신고는 info, 실제 실행 결과는 해당 작업의 응답에 있다. OS에 따라 권한 변경 반영에 헬퍼 재시작이 필요할 수 있다.
 
 ## 사람이 직접 다루는 화면 공유
 

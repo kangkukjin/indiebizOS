@@ -22,6 +22,9 @@ MARKER = "INDIEBIZ_PC_RESULT:"
 CONTRACT = {
     "version": 1,
     "platforms": ["darwin", "windows"],
+    "targets": {"local": "__local__", "remote_adapter": "resident-v1",
+                "remote_service_scopes": ["user_login", "unknown"],
+                "unsupported": ["portable", "machine"]},
     "audio_capabilities": {
         "scope": "os_api_support",
         "meaning": "can_set_volume·can_mute는 OS가 제공하는 제어 API의 지원 여부다. "
@@ -436,6 +439,10 @@ def select_target(args):
         # 다섯 조건이 한 문장이라 어느 것이 막았는지 보고서에 남지 않았다).
         if row.get("revoked") or row.get("expired") or row.get("invitation"):
             raise ValueError("TARGET_REVOKED: 폐기·만료·초대 상태의 등록입니다. 활성 device_id 를 고르세요")
+        if not registration or (registration.get("adapter") or "resident-v1") != "resident-v1":
+            raise ValueError("TARGET_ADAPTER_UNSUPPORTED: PC제어는 상주 PC 사용자 세션을 사용합니다. 휴대형은 원격 실행 드라이버를 사용하세요")
+        if (caps.get("service_scope") or "unknown") not in CONTRACT["targets"]["remote_service_scopes"]:
+            raise ValueError("TARGET_SESSION_UNSUPPORTED: PC제어는 사용자 세션이 필요합니다. 관리 서비스 대신 사용자 세션 PC를 선택하세요")
         if registration.get("state") != "active" or registration.get("paused"):
             raise ValueError("TARGET_INACTIVE: 등록이 활성이 아니거나 일시 중지 상태입니다")
         if caps.get("shell") is not True:

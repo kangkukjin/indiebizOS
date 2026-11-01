@@ -40,6 +40,7 @@ def flow(tmp_path, monkeypatch):
             assert params['op'] == 'search'
             return {'success': True, 'items': [{'title': 'candidate', 'duration': '1:23'}]}
         if key == 'self:limb':
+            target['registration']['capabilities'].update(state.get('capabilities', {}))
             return {'success': True, 'limbs': [{**target, 'connected': state['connected']}]}
         if key == 'self:read':
             return {'success': True, 'text': 'native fixture', 'blocks': [], 'data': None}
@@ -86,6 +87,15 @@ def flow(tmp_path, monkeypatch):
         assert result['success'], result
         return result['value']
     return run, state
+
+
+def test_machine_session_rejected_before_source_read_or_transport(flow):
+    run, state = flow
+    state['capabilities'] = {'service_scope': 'machine'}
+    result = run('return [fn:PC제어]{대상:"pc-1",요청:{action:"volume",device_id:"speaker",value:30}}')
+    assert result['status'] == 'failed'
+    assert result['failure']['code'] == 'TARGET_SESSION_UNSUPPORTED'
+    assert not any(key in {'self:read', 'limbs:guestpc'} for key, _ in state['calls'])
 
 
 def test_pending_then_new_run_confirms_without_retransmit(flow):

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { execFileSync } from 'node:child_process';
-import { checkUpdateAdmission, installUpdateControl } from '../electron/update-control.js';
+import { checkUpdateAdmission, installUpdateControl, recordUpdateBackend } from '../electron/update-control.js';
 
 function fixture(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'indiebiz-update-')));
@@ -51,4 +51,11 @@ test('wrong-instance close is ignored and unsaved-window cancellation is honored
   assert.equal(closed, 1);
   assert.equal(quit, 0);
   assert.equal(JSON.parse(fs.readFileSync(file)).nonce, receipt.nonce);
+  recordUpdateBackend({ status: 'failed', exit_code: 3221225477 });
+  const failed = JSON.parse(fs.readFileSync(file));
+  assert.equal(failed.nonce, receipt.nonce);
+  assert.equal(failed.backend.exit_code, 3221225477);
+  assert.equal(failed.backend.status, 'failed');
+  recordUpdateBackend({ status: 'starting', pid: 123 });
+  assert.equal(JSON.parse(fs.readFileSync(file)).backend.status, 'starting');
 });

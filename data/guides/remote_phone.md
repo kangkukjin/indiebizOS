@@ -8,8 +8,8 @@
 
 Android 폰은 `setup_phone.sh --limb 삼성1`로 설치·등록한다. 허브가 만든 1회용 자격을
 USB 물리 접근으로 전달하며 허브 로그인 비밀번호는 요구하지 않는다. 등록 뒤에는 폰이
-허브에 원격으로 접속하므로 **USB 미연결만으로 폰을 사용할 수 없다고 판단하지 않는다.**
-먼저 `[self:limb]{op:"list"}`의 활성 등록과 연결 상태를 확인한다. `adapter:"indiebiz-v1"`이면
+허브에 원격으로 접속하므로 **등록 후 원격 실행에는 USB 연결이 필요하지 않다.**
+활성 등록·연결 상태 조회는 `[self:limb]{op:"list"}`다. `adapter:"indiebiz-v1"`이면
 폰 자체 IBL 엔진을 사용할 수 있다. 새 실행은 info의 `execution_contract:1`과 ops를 확인한다.
 여러 등록에 같은 별칭이 남아 있으면 현재 활성 등록의 device_id를 사용한다.
 
@@ -23,8 +23,7 @@ USB 물리 접근으로 전달하며 허브 로그인 비밀번호는 요구하�
 `data/instruments/phone_control.py`의 고정된 코드를 기존 Python 실행 계약으로 보내
 Android AudioManager·Vibrator API를 호출한다. 버튼 조작에는 AI 호출이나 코드 생성이 없다.
 폰마다 음량 단계 상한을 읽고 실제 적용값을 다시 확인한다. 복원 기록은 해당 폰에 남기며,
-다른 곳에서 음량이 바뀌었으면 오래된 값으로 복원하지 않는다. 통신 오류 뒤에는 상태를
-다시 조회한다. 폰 연결·Python 런타임 준비가 필요하다. 새 화면·센서 제어는 APK 0.14 이상과 개별 권한이 필요하며, 통화 음량은 제공하지 않는다.
+다른 곳에서 음량이 바뀌었으면 오래된 값으로 복원하지 않는다. 상태 조회는 별도 요청이다. 폰 연결·Python 런타임 준비가 필요하다. 새 화면·센서 제어는 APK 0.14 이상과 개별 권한이 필요하며, 통화 음량은 제공하지 않는다.
 목록의 `capabilities.python`은 버전 문자열이고 준비 여부는 `runtimes.python.ready`다.
 선언형 선택 목록은 판본 2 반환 배열을 `items`로 감싸 사용한다. `options_action`의 대입·람다 변수는
 외부 입력이 아니므로 사용자 입력을 기다리지 않는다.
@@ -36,12 +35,11 @@ Android AudioManager·Vibrator API를 호출한다. 버튼 조작에는 AI 호�
 - **하달 판본과 결과**: `code`는 별도 프로그램이다. 현재 문법은 그 문자열 안에도
   `#!ibl edition=2` 헤더를 넣는다. 바깥 프로그램의 판본이 문자열 안에 자동 적용되지는 않는다.
   동기 guestpc 응답의 `.result`는 원격 실행 봉투, **`.result.value`가 판본 2의 업무 값**이다.
-  `info` 결과에는 이 `.value` 층이 없다. 실행 실패는 `[try]…[catch]`로 받고 원문과
-  `$error.details.task_ref`를 보존한다. 존재하지 않는 `.ok` 필드로 실패를 검사하지 않는다.
+  `info` 결과에는 이 `.value` 층이 없다. 실행 실패는 `[try]…[catch]`의 오류이며 `$error.details.task_ref`에 작업 참조가 있다. `.ok` 필드는 없다.
 - **긴 일**: `background:true`로 접수하고 `[self:task]{op:"wait",ref:$ticket.task_ref}`로
   같은 작업을 회수한다. 성공한 wait의 `.result`는 폰 응답이므로 판본 2 업무 값은
   **`.result.value`**다. `timed_out:true`면 같은 ref로 계속 확인한다. 폰 IBL의 실행 중 취소는
-  지원하지 않고 전달 전 취소만 가능하다. 결과가 늦다고 재접수하지 않는다.
+  지원하지 않고 전달 전 취소만 가능하다. 새 요청 ID는 별도 작업으로 접수된다.
 - **훈련 출처**: 호출 메타데이터의 `origin:"training"`은 허브 봉투→폰 클라이언트→폰 실행기로
   전달한다. 이 경로는 출처 전달을 지원하는 새 설치본에서 적용된다. 표식은 기기 제어를
   차단하는 샌드박스가 아니므로 훈련의 별도 실행 범위는 그대로 지킨다.
@@ -49,8 +47,7 @@ Android AudioManager·Vibrator API를 호출한다. 버튼 조작에는 AI 호�
 ### 작은 텍스트·JSON 파일을 원격에서 작성하고 회수하기
 
 폰의 `op:"read"`·`op:"write"`는 PC 헬퍼 전용이다. 작은 파일은 폰의 IBL 안에서
-`self:write/read`를 조합하거나, 새 폰의 shell/Python에서 처리한다. 문자열에 JSON 원문을 직접 끼우거나 백슬래시를 손으로
-치환하지 말고 **내용을 JSON 문자열 리터럴로 한 번 더 직렬화**한다. 다음 예제의 `rows`는
+`self:write/read`를 조합하거나, 새 폰의 shell/Python에서 처리한다. 아래 예제는 JSON 파일 내용을 내장 코드 문자열로 전달하는 직렬화 형태다. 다음 예제의 `rows`는
 명시 입력 목록이며, 작업별 고유 시험 경로를 사용한다. IBL의 f문자열은 `${…}`만
 보간한다. 코드의 보통 `{…}`는 그대로 쓰며 Python식 `{{…}}`로 바꾸지 않는다.
 
@@ -79,7 +76,7 @@ return $r.result.value
 - 영상·마이크·스피커 연결은 [미디어 세션 가이드](media_session.md)의 기존 스크립트를 사용한다.
   지원 신고와 권한·대기 모드, 실제 프레임/음성 출력은 각각 확인한다.
 - 등록 해제는 `[self:limb]{op:"remove",target:"삼성1"}`, 자격 폐기는 `op:"revoke"`다.
-  단순 조회·작업 종료 때 등록을 해제하지 않는다.
+  등록 해제는 작업 종료와 별개다.
 
 
 ## 중앙 APK 업데이트 (USB 없는 후속 갱신)
@@ -116,15 +113,15 @@ APK와 키는 Git 커밋 대상이 아니다. 중앙은 `POST /remote-pcs/phone-
   높은 versionCode·ABI를 다시 확인한다. 서명이 다르거나 낮은 버전이면 설치하지 않는다.
 - 설치 요청 접수는 완료가 아니다. 새 앱의 인증된 재접속에서 설치 APK 해시가 일치해야
   `current`가 된다. APK 교체 뒤 시스템의 `MY_PACKAGE_REPLACED`가 상주 서비스를 복원한다.
-  다음 APK가 발행돼도 Android가 이전 설치를 처리 중이면 그 상태와 `installing_version`을
-  유지하고 중복 설치 요청을 막는다. 최신 배포 번호가 바뀐 것과 설치 종료는 별개다.
+  다음 APK가 발행되거나 중앙 배포가 철회돼도 Android가 설치를 처리 중이면 그 상태와
+  `installing_version`·`target_sha256`·원 `job_id`를 유지하고 중복 설치 요청을 막는다. 배포가 사라져도
+  이미 접수한 전송은 원 작업 ID로 조회한다. 최신 배포 번호가 바뀐 것과 설치 종료는 별개다.
 - Android가 확인을 요구하면 `awaiting_permission` 또는 `awaiting_confirmation`으로
-  중앙에 표시하고 폰의 알림·설치 화면을 연다. 중앙이 업데이트를 결정하는 원칙은 유지하되
-  OS의 확인을 자동 클릭하거나 우회하지 않는다. Android 12+의 무인 자기 업데이트는
+  중앙에 표시하고 폰의 알림·설치 화면을 연다. 설치 승인 처리는 대상 Android가 소유한다. Android 12+의 무인 자기 업데이트는
   설치 권한·대상 SDK 등 OS 조건을 충족할 때 적용된다.
 - 설치 중에는 새 원격 작업의 실행을 대기시킨다. 설치 콜백·시도 기록은 앱의 영속 저장소에
   남으며 재접속 때 보고된다. Android 설치 거절은 기존 앱을 유지한다. 새 앱 자체가 부팅하지
-  못하는 경우 APK 자동 다운그레이드/롤백은 보장하지 않으며 오프라인·미확인을 확인해야 한다.
+  못하는 경우 APK 자동 다운그레이드/롤백은 보장하지 않으며 중앙에는 오프라인·미확인으로 남을 수 있다.
 - 중앙보다 높은 설치 버전은 `ahead`(업데이트 불필요), 같은 버전의 다른 APK는 `different_build`로 구분한다.
   설치본 해시가 중앙 배포본과 같을 때만 `current`다. 직접 설치는 중앙 발행을 대신하지 않는다.
   검증한 APK를 USB 등으로 설치했다면 같은 파일을 위 발행기로 등록해야 배포 기준도 갱신된다.
@@ -169,11 +166,10 @@ APK를 중앙 `/remote-pcs/phone-update`로 보내 **USB 설치·화면 확인 �
 기기별 설치 성공·거절은 같은 ABI라도 다를 수 있다. `phone_update`와
 `capabilities.apk_update`에서 현재 설치 해시·권한·최근 시도를 확인한다.
 `INSTALL_FAILED_ABORTED`는 설치 거절, `apk_signer_missing`은 서명정보 조회 실패이며
-서명 불일치와 구별한다. 한 번의 성공이나 전송 완료로 안정적인 무인 설치를 단정하지 않는다.
-Device Owner 전환은 선택한 기기에만 적용하고, OS 설정·실제 업데이트·재부팅 후 유지를 각각 확인한다.
-기존 사용자 선택은 삼성1만 관리 기기 전환, 삼성0은 일반 앱 유지다. 별도 변경 지시 전까지 이 범위를 유지한다.
+서명 불일치와 구별한다. 설치 승인 방식과 재부팅 후 관리 권한 유지는 기기별 관측 항목이다.
+기존 사용자 선택은 삼성1만 관리 기기 전환, 삼성0은 일반 앱 유지다. 이것은 해당 기기의 사용자 선택 기록이다.
 과거 기기별 버전·해시·미완료 상태는 [배포 관측 기록](../../docs/GUIDE_OBSERVATIONS_2026_10_30.md#원격폰-배포와-실기-검증)에 보존한다.
-현재 상태는 그 기록의 마지막 날짜로 추정하지 말고 다시 조회한다.
+위 기록은 당시 관측이며 현재 상태 조회는 `phone_update`·`capabilities.apk_update`다.
 
 ## 범용 실행 계약 1 (새 APK 필요)
 
@@ -185,12 +181,12 @@ Device Owner 전환은 선택한 기기에만 적용하고, OS 설정·실제 �
 - `op:python,code:본문,inputs:객체`: Chaquopy 별도 프로세스. inputs를 읽고 result에 JSON 값을 넣는다.
 - timeout 기본120초·1..3600초. cwd 생략 시 userdata/remote_work, 상대 경로도 이곳 기준이다.
 - 매 작업은 새 프로세스다. mode는 background만, shell은 sh만, elevate/reset 미지원.
-  Python은 env/stdin/shell을 받지 않는다. 폰에 python3/curl 실행 파일이 있다고 가정하지 않는다.
+  Python은 env/stdin/shell을 받지 않는다. shell 도구의 설치 여부는 기기별이다. Python 실행은 별도 프로세스 API로 제공한다.
 - shell/Python은 주인만 접수할 수 있다. 앱 UID는 ADB shell UID와 다르며 권한을 추가하지 않는다.
 - `background:true,request_id:고유값`으로 접수하고 같은 task_ref로 관측한다.
   실행 timeout·취소는 worker 종료 결과를 확인한다. 이미 발생한 기기 변경은 되돌리지 않는다.
   `worker_cleanup_confirmed`/`resource_cleanup_confirmed`가 false이면 결과 불명이다.
-  자식 회수 범위는 관측된 프로세스 트리다. 탈출한 데몬까지 종료했다고 주장하지 않는다.
+  자식 회수 범위는 관측된 프로세스 트리다. 관측 트리 밖 데몬은 종료 확인 범위에 포함되지 않는다.
 - 결과는 `.result.stdout/stderr/exit_code/value`. Python 예외는 exception_type·traceback으로 보존한다.
   stdout/stderr 각각 64KiB 미리보기, 전체 로그 합계8MiB 상한, 큰 value는 value_ref로 반환한다.
   완료 파일은 7일 후 다음 실행에서 정리한다. 전송 중·실패한 회수는 핀으로 보존하며 재개 성공 때 해제한다.
@@ -301,4 +297,4 @@ PIN·패턴이 있으면 원격 창에서 소유자가 입력해야 하며 Andro
 
 ## 드라이버 설치 단위
 
-OS 제어와 원격 실행은 같은 APK를 공유한다. `self:limb list`의 `drivers.components` 또는 손발 패널에서 설치 세대·현재 APK 지문·호환 배포판·승인 대기를 읽는다. 사용자 요청의 `[self:limb]{op:"update",target:"선택한 device_id"}`는 조종실과 같은 `phone_updates.submit` 경로다. 전송 접수나 OS 설치 접수만으로 완료라고 하지 않고 인증된 재접속의 APK 지문과 필요한 동작을 확인한다.
+OS 제어와 원격 실행은 같은 APK를 공유한다. `self:limb list`의 `drivers.components` 또는 손발 패널에서 설치 세대·현재 APK 지문·호환 배포판·승인 대기를 읽는다. 사용자 요청의 `[self:limb]{op:"update",target:"선택한 device_id"}`는 조종실과 같은 `phone_updates.submit` 경로다. 전송 접수·OS 설치 접수·인증된 새 APK 지문 신고는 서로 다른 상태이며 동작 시험 결과는 별도다.

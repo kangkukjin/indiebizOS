@@ -2,9 +2,9 @@
 
 ## 빠른 호출
 
-원격 셸·파일은 선택한 PC의 device_id를 `PC`로 전달한다. 상주형은 작업마다 절대 작업폴더·환경을 명시하고 한 실행에 요청ID 하나를 사용한다. 휴대형은 환경이 유지된다.
+원격 셸·파일은 선택한 PC의 device_id를 `PC`로 전달한다. 상주형의 작업폴더·환경은 작업별로 분리되고 휴대형은 유지된다. 요청ID는 중복 접수를 식별한다.
 - 셸: `[fn:외부PC작업실행]{PC:$PC,명령:"echo HELPER_OK",요청ID:"진단-1"}`. `ok:true`는 접수이며 성공은 `observation.command_ok:true`와 결과의 종료 코드로 확인한다.
-- 이어보기: `[fn:외부PC작업확인]{작업:$원결과,대기:30}`. 원 반환값·task_ref를 보존한다. 대기 종료·통신 불명은 명령 실패가 아니며 변경을 재전송하지 않는다.
+- 이어보기: `[fn:외부PC작업확인]{작업:$원결과,대기:30}`. 원 반환값·task_ref로 같은 작업을 조회한다. 대기 종료·통신 불명은 명령 종료를 뜻하지 않는다.
 - 전송: `fn:외부PC파일보내기`·`fn:외부PC파일가져오기`의 describe로 PC·중앙경로·원격경로·요청ID 계약을 조회한다. 전송 접수와 실제 저장·지문 검증은 다르다.
 - 목록·진단·원문: `self:limb` list, `limbs:guestpc` info/history. 원격 파일은 같은 대상의 read/list 또는 transfer를 쓴다. `self:file_find`는 허브 검색이다.
 - 부족한 인자는 `execute_ibl(code="",describe=["fn:외부PC작업실행"])`. 원시 op 전체 계약은 describe의 `limbs:guestpc`, 긴 작업 상태는 `self:task`다. 화면은 `pc_control.md`, 설치·권한·교체는 `remote_pc_installation.md`를 필요한 절만 읽는다.
@@ -15,9 +15,8 @@
 
 `PC`는 별칭 또는 device_id다. 반복 대상은 준비 결과의 device_id로 고정할 수 있다.
 `대기`는 한 호출의 0~240초 대기이며 실행 제한과 다르다. 셸·재생 실행 제한은 1~86400초다.
-`요청ID`는 **한 의도적 실행에 하나**를 정한다. 응답 유실 시 같은 인자·같은 ID를 재사용하고,
-다시 실행하려는 새 의도에는 새 ID를 쓴다. 실행 관용구의 `환경초기화`는 휴대형 전용이다.
-상주형은 `환경`을 매 작업에 전달한다. 비밀 입력은 정의·예제에 저장하지 않는다.
+`요청ID`와 인자가 같으면 기존 접수증을 반환한다. 같은 ID에 다른 인자는 충돌이며 새 ID는 별도 실행이다. 실행 관용구의 `환경초기화`는 휴대형 전용이다.
+상주형의 `환경`은 해당 작업에만 적용된다.
 
 ### 준비 → 셸 실행 → 확인 → 마무리
 
@@ -35,9 +34,8 @@ $준비 = [fn:외부PC준비]{PC:"사무실PC"}
 return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업폴더:$준비.env.cwd,요청ID:"첫확인-예시-1",대기:10}
 ```
 
-반환값 전체를 보존한다. `observation.command_ok`가 true가 아니면 작업 확인으로 이어간다.
-별도 `execute_ibl` 호출에는 이전 변수가 자동으로 이어지지 않는다.
-`inputs:{작업:실제로_받은_반환값}`으로 전달한다. 예시 ID·경로는 실제 관측값으로 바꾼다.
+`외부PC작업확인`은 이전 반환값을 입력받는다. 별도 `execute_ibl` 호출에는 변수가 자동 계승되지 않으며
+`inputs:{작업:이전_반환값}`으로 전달할 수 있다. 예시 ID·경로는 자리표다.
 `작업`은 전체 접수증 또는 `{kind:"guestpc",task_id:"실제 ID"}` 참조를 받는다.
 `self:task`의 참조 인자는 `ref`다(`task_ref`는 반환 필드).
 
@@ -52,14 +50,13 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
   잘못된 참조는 `invalid_input`으로 반환하고 원격 명령을 접수하지 않는다.
 - 상주형 `succeeded/failed`는 실제 결과의 성패다. 휴대형 `succeeded`는 회신 도착이므로
   종료 코드까지 확인한다. 관용구가 두 모드의 차이를 처리한다.
-- `failed/cancelled/interrupted`는 종료된 실패·취소다. `unknown`은 결과 불명이며 재전송하지 않는다.
+- `failed/cancelled/interrupted`는 종료된 실패·취소다. `unknown`은 결과 불명이며 일부 효과가 발생했을 수 있다.
   대기의 실패 봉투도 상태·작업 참조로 복원하고, 상주형의 실패 원문은 history에서 가져온다.
 - `timed_out:true`는 이번 대기가 끝났다는 뜻이다. 원격 작업은 계속될 수 있다.
 - `observation_failed`는 조회 자체의 실패다. 원래 참조로 재확인한다.
 - 상주형 직접 상태 조회의 진행은 `progress`의 최근 5건 미리보기, 최종 셸 출력은 `result.output`이다.
   관용구의 `history_cursor`: 새 진행만 조회, 결과 보존.
   휴대형 진행은 `progress.tail`, 출력은 기존 `stdout/stderr`다. 긴 로그는 아래 history로 읽는다.
-- exit 0은 업무의 정확성을 보장하지 않는다. 파일 내용·검사 명령·화면으로 목적 달성을 확인한다.
 
 상세 계약: `docs/REMOTE_PC_SETUP_VERIFICATION.md` 「완료 대기와 진행 관측」.
 
@@ -67,6 +64,26 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 
 준비의 device_id·workspace를 다음 호출에 보존한다. 다른 PC와 조합하면 target_mismatch, 재관측에 명령·폴더·제한·요청ID를 바꾸면 resume_mismatch다. 환경·입력 변경은 기존 작업에 전달되지 않는다.
 설치·빌드 계획과 remote_steps는 [원격 설치 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다.
+
+소스 업데이트의 새 계획은 `python-deps`·`node-deps`에서 이전 **성공한 설치 영수증**을 확인한다.
+요구사항·Node 설정/빌드 스크립트·런타임과 설치 파일 목록/크기/수정 시각이 같을 때만 설치를
+재사용한다. 최초 실행·파일 누락/변경·실패 뒤에는 다시 설치한다. Python 바이트코드와 Vite·TypeScript 캐시는
+비교에서 제외한다. 외부 editable 디렉터리·추적하지 못하는 requirements 참조는 재사용하지 않는다.
+이것은 설치 재사용 관측이며 파일 무결성 보안 검사가 아니다. 강제 갱신은 **새 계획 생성 시**
+`remote_install.py plan ... --refresh-dependencies`를 준다. 진행 중인 계획의 변경은 지문 불일치로 거절된다.
+기존 venv·사용자 설정은 유지하고 `pip check`·import 검사·HEAD 검증은 계속 실행한다.
+
+화면 빌드 뒤 새 계획의 `resume-runtime --prebuilt`는 preview 화면을 다시 빌드하지 않고 Electron을
+직접 실행한다. 빌드된 dist의 지문과 HEAD를 기동 영수증에 저장하고 재시작 재시도에서도 대조한다.
+dev 실행은 기존 Vite 개발 서버 경로를 유지한다. 옛 계획에는 이 옵션이 없으므로 기존 동작을 따른다.
+새 Electron은 같은 창의 nonce에 백엔드 기동·종료 코드·spawn 오류를 기록한다. 업데이트 드라이버는
+자기가 시작한 프로세스 트리의 새 창에서 온 실패만 즉시 반환한다. 옛 앱의 실패 기록은 쓰지 않는다.
+
+`remote_steps.py <plan.json> --status`는 저장된 단계와 별도로 `live`에 단계 경과 시간,
+프로세스 생존·누적 CPU 시간·로그 크기/수정 시각, 종료·기동 대기 이유를 반환한다. 조회는 실행하지
+않으며 프로세스 종료를 성공으로 간주하지 않는다. 종료 대기는 활성 작업/자식/마무리 수를 주기적으로
+기록한다. CPU 시간은 누적값, 로그 크기·시각은 해당 조회 시점의 값이다.
+최종 완료는 여전히 설치 단계 성공과 백엔드·새 화면의 실제 기동 검증을 모두 필요로 한다.
 
 <!-- example:guestpc_finish -->
 ```ibl
@@ -76,8 +93,7 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 
 마무리는 받은 작업 목록만 검사하며 PC 전체 큐·다른 세션의 작업을 확인하지 않는다.
 `산출물`은 보고할 원격 경로 목록일 뿐 다운로드·검증하지 않으며 `artifacts_verified:false`다.
-상주형에서 `해제:true`는 `detach_not_supported`로 거절한다. 휴대형도 별도 작업이 돌고 있다면
-해제하지 않는다. 등록 해제·헬퍼 제거는 사용자가 그것을 요청했을 때 별도로 한다.
+상주형의 `해제:true`는 `detach_not_supported`다. 휴대형의 detach는 헬퍼 프로세스를 종료하며 다른 작업에도 영향을 준다. 등록 제거는 별도 API다.
 
 ### 파일 전송과 결과 회수
 
@@ -96,11 +112,11 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 두 함수는 완료 전에 `ok:false`와 현재 상태·접수증을 돌려줄 수 있다. `queued/running`은 실패가
 아니다. **같은 함수에 같은 인자와 `작업:이전_반환값`을 추가**하여 확인·collect를 이어간다.
 `collect_failed`도 이 방식으로 중앙 저장만 재시도한다. 재개 인자가 바뀌면 `resume_mismatch`다.
-셸·전송 실패는 자동 재실행하지 않는다. 원인을 고친 뒤 새 실행을 명시한다.
+관용구는 셸·전송 실패 뒤 새 작업을 자동 접수하지 않는다.
 
 바이너리 청크·SHA-256 검증을 사용하며 파일 내용을 모델 문맥에 싣지 않는다. 경로는 대상 OS의
 절대 경로다. 중앙 저장 폴더는 미리 존재해야 한다. 동일 내용의 저장 완료 파일은 재확인 가능하고,
-다른 내용의 기존 파일은 덮어쓰지 않는다. 폴더는 ZIP 등으로 묶는다. 직접 어휘를 쓰는 경우:
+다른 내용의 기존 파일은 덮어쓰지 않는다. 전송 단위는 파일이며 디렉터리 자체는 지원하지 않는다. 직접 어휘를 쓰는 경우:
 
 ```ibl
 [limbs:guestpc]{op:"transfer",limb:"사무실PC",action:"receive",path:"/remote/result.bin",request_id:"수신-예시-1"}
@@ -108,8 +124,7 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 [limbs:guestpc]{op:"transfer",action:"collect",limb:"사무실PC",transfer_id:"실제전송ID",local_path:"/central/result.bin"}
 ```
 
-전송 접수 응답을 잃으면 같은 요청ID·인자로 원래 접수증을 회수한다. 직접 바이트 전송을
-재개할 때는 같은 transfer_id를 쓰되 원래 작업이 여전히 실행 중인지 먼저 확인한다.
+전송 접수 응답을 잃으면 같은 요청ID·인자로 원래 접수증을 회수한다. 바이트 전송 재개는 같은 transfer_id의 offset 계약을 사용한다.
 `verified:true`는 전송 바이트의 검증이며 파일 내용의 업무적 정확성 판정이 아니다.
 
 ### 깨우기와 재생·중지
@@ -130,7 +145,7 @@ WOL 경로는 먼저 한 번 설정한다. relay는 **대상 LAN에 켜진 PC의
 이 함수는 먼저 목록을 확인하고, 오프라인일 때만 저장된 경로로 신호를 보낸다. info 작업을
 접수해 그 PC가 돌아와 실제 응답할 때까지 제한된 대기를 한다. 기다림이 끝나면 반환값을
 `작업`으로 다시 넣어 같은 probe를 관측한다. 깨우기 성공·부팅·로그인·재생 준비는 다른 사실이다.
-미설정 경로를 추측하거나 새로 구성하지 않는다. 기기별 WOL·동면·전원 꺼짐 지원은 실기기로 시험한다.
+WOL의 실제 부팅 가능 상태는 기기의 전원·네트워크 설정에 달려 있다.
 
 <!-- example:guestpc_media -->
 ```ibl
@@ -153,7 +168,7 @@ mpv가 필요하며 Mac의 로컬 오디오는 afplay도 쓴다. 상주 헬퍼�
 
 `cancel_requested`는 중지 요청만 접수된 상태다. `stopped:true`는 취소 종료가 확인된 경우다.
 이미 성공·실패로 끝났으면 그 사실을 보존하며 취소된 것처럼 바꾸지 않는다.
-PC 가 10분 안에 끌어가지 않은 명령(꺼짐·끊김)은 `failed` 에 `error:"expired"` 로 닫힌다 — 다시 부탁하면 된다.
+PC 가 10분 안에 끌어가지 않은 명령(꺼짐·끊김)은 `failed` 에 `error:"expired"` 로 닫힌다.
 
 ## 3. 기본 어휘·GUI·작업 기록
 
@@ -168,9 +183,9 @@ PC 가 10분 안에 끌어가지 않은 명령(꺼짐·끊김)은 `failed` 에 `
 
 셸은 Windows cmd(선택 powershell), macOS/Linux `/bin/sh`다. read는 200KB 상한이 있으므로
 바이너리·큰 파일은 transfer를 쓴다. `history`는 상주형 중앙 원장의 tasks/events이며
-`job`으로 특정 작업, `cursor`로 이벤트 다음 페이지를 읽는다. 전건 로그를 단일 응답으로 가정하지 않는다.
+`job`으로 특정 작업, `cursor`로 이벤트 다음 페이지를 읽는다. 응답은 페이지 단위다.
 일반 조회는 대기 결과를 바로 돌려주지만, 지연 가능성이 있으면 `background:true`로 접수증을 받는다.
-동기 응답 제한을 넘겨도 접수된 명령은 재전송하지 않고 응답의 task_ref를 확인한다.
+동기 응답 제한이 끝나도 접수된 명령은 계속 실행될 수 있고 task_ref로 조회된다.
 
 ## 재관측과 전송 재시도
 
@@ -199,7 +214,7 @@ return [fn:외부PC파일보내기]{PC:$실패.pc_request,중앙경로:$실패.l
   원격경로:$실패.remote_path,요청ID:"원래일감-send-retry-1",전송ID:$실패.transfer_id,대기:60}
 ```
 
-큰 텍스트도 read를 반복하지 말고 transfer receive→collect로 가져온다. 원격 read에는 offset·limit가 없다.
+원격 read에는 offset·limit가 없다. 상한보다 큰 파일의 회수 경로는 transfer receive→collect다.
 `압축`은 UTF-8 표시 없는 ZIP 이름도 유효한 UTF-8이면 같은 이름으로 목록·필터·추출한다.
 옛 코드페이지와 모호한 이름은 `name_encoding:"cp437"` 또는 `"cp949"`로 명시한다.
 info의 패키지 관리자는 OS별 후보만 확인하며 macOS의 Java apt를 Linux 패키지 관리자로 세지 않는다.
@@ -213,12 +228,10 @@ info의 패키지 관리자는 OS별 후보만 확인하며 macOS의 Java apt를
   `timed_out:true`는 이번 조회의 대기만 끝났다는 뜻이며 작업의 시간제한 종료와 다르다.
 - 셸이 0으로 끝났지만 자식이 출력 통로를 계속 잡고 있으면 수집을 2초 뒤 닫고
   `exit:0`, `output_incomplete:true`, `warning`을 반환한다. 명령 성공과 출력 수집 완료는 다르다.
-  서버가 이미 떠 있을 수 있으므로 다시 실행하지 말고 PID·응답을 확인한다. 오래 띄울 자식은
-  `nohup command >server.log 2>&1 </dev/null &`처럼 통로를 분리한다. 출력 일부는 보존되며
-  자식의 계속 실행이나 서비스 준비 완료를 이 경고만으로 보증하지 않는다.
+  출력 일부는 보존되며 자식 생존·서비스 준비 상태는 이 반환만으로 확인되지 않는다.
 - 새 헬퍼의 일반 작업 자리는 2개이고, `info/list/read/screen` 확인 자리는 별도로 1개다.
   짧은 셸 확인은 `mode:"observe",timeout:5`처럼 명시한다(1~10초만 허용). 셸 내용을
-  읽기 전용으로 강제하는 기능은 아니므로 긴 작업을 이 자리에 넣지 않는다. 이 자리도
+  읽기 전용을 강제하는 기능은 아니며 일반 작업과 별도 실행 한도를 적용한다. 이 자리도
   취소·일시정지·접수 중복 방지를 동일하게 따른다. 자리마다 접수 순서를 보존한다.
 - 관용구에서는 `외부PC작업실행`의 `모드:"observe",실행제한:5`로 지정한다.
   `registration.capabilities.observation_parallel:1`인 헬퍼부터 지원하며 기존 설치는
@@ -241,7 +254,7 @@ return [fn:외부PC작업실행]{PC:"사무실PC",명령:"ps -o pid,ppid,command
 
 캡처 성공은 이미지 획득 성공이다. image_observation:uniform과 warning은 원본 화소가
 모두 같은 색임을 나타낸다. 화면 전원 꺼짐·잠금·권한 문제·실제 단색 화면은 이 관측만으로
-구별할 수 없다. 입력이나 전원 설정 변경으로 자동 보정하지 않는다.
+구별할 수 없다.
 
 history는 화면 결과의 b64를 생략하고 image_omitted와 image_task_ref를 제공한다.
 원장의 원본 바이트는 보존하며 해당 접수증의 self:task 조회로 회수할 수 있다.

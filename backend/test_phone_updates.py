@@ -221,10 +221,6 @@ def test_publisher_keeps_immutable_apk_and_rejects_downgrade(release, tmp_path, 
         publisher.publish(source, '/sdk')
 
 
-if __name__ == '__main__':
-    raise SystemExit(pytest.main([__file__]))
-
-
 @pytest.mark.parametrize('change', ['generation', 'installed', 'release', 'manifest'])
 def test_apk_update_rechecks_binding_after_transfer(device, release, monkeypatch, change):
     rec, client, native = device
@@ -251,3 +247,58 @@ def test_apk_update_rechecks_binding_after_transfer(device, release, monkeypatch
     with pytest.raises(ValueError, match='driver_update_changed'):
         updates.submit(rec['device_id'])
     assert not resident_store.pending(rec['device_id'], 'phone_update')
+
+
+@pytest.mark.parametrize('state', ['staged', 'installing', 'awaiting_permission', 'awaiting_confirmation'])
+def test_withdrawn_release_preserves_native_install_receipt(device, release, state):
+    rec, client, native = device
+    manifest, _ = release
+    native.caps['attempt'] = {'sha256': manifest['sha256'], 'state': state,
+                              'release': {'version_code': 3}, 'job_id': 'install-1'}
+    client.step(inline=True, wait=0)
+    (updates.releases_root() / manifest['abi'] / 'current.json').unlink()
+    result = updates.submit(rec['device_id'])
+    assert result['state'] == state and result['installing_version'] == 3
+    assert result['target_sha256'] == manifest['sha256'] and result['job_id'] == 'install-1'
+    assert not resident_store.pending(rec['device_id'], 'phone_update')
+    assert not native.calls
+
+
+def test_withdrawn_release_preserves_queued_delivery_without_duplicate(device, release):
+    rec, _, native = device
+    manifest, _ = release
+    first = updates.submit(rec['device_id'])
+    (updates.releases_root() / manifest['abi'] / 'current.json').unlink()
+    assert updates.submit(rec['device_id'])['job_id'] == first['job_id']
+    assert updates.status(pcs.resolve(rec['device_id']))['state'] == 'updating'
+    assert len(resident_store.history(device=rec['device_id'])['tasks']) == 1
+    assert not native.calls
+
+
+def test_installed_current_release_cannot_hide_newer_native_attempt(device, release):
+    rec, client, native = device
+    manifest, _ = release
+    native.caps.update(installed_sha256=manifest['sha256'], version_code=3,
+                       attempt={'sha256': 'd' * 64, 'state': 'installing', 'release': {'version_code': 4}})
+    client.step(inline=True, wait=0)
+    result = updates.submit(rec['device_id'])
+    assert result['state'] == 'installing' and result['installing_version'] == 4
+    assert not native.calls
+
+
+def test_publication_revert_keeps_queued_target_and_receipt(device, release):
+    rec, _, native = device
+    manifest, data = release
+    first = updates.submit(rec['device_id'])
+    directory = updates.releases_root() / manifest['abi']
+    older = {**manifest, 'sha256': native.caps['installed_sha256'], 'version_code': 2}
+    (directory / (older['sha256'] + '.apk')).write_bytes(data)
+    (directory / 'current.json').write_text(json.dumps(older))
+    state = updates.submit(rec['device_id'])
+    assert state['state'] == 'updating' and state['job_id'] == first['job_id']
+    assert state['target_sha256'] == manifest['sha256'] and state['installing_version'] == 3
+    assert len(resident_store.history(device=rec['device_id'])['tasks']) == 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(pytest.main([__file__]))

@@ -43,7 +43,7 @@ def classify(state, controller, generation, runtime=None, health=None, base=None
 
 def wait_for_boot(base, code_root, controller, *, generation=None, port=8765, timeout=300,
                   interval=1, adapter=None, clock=time.monotonic, sleep=time.sleep,
-                  launcher=None):
+                  launcher=None, on_observation=None):
     base = Path(base)
     adapter = adapter or ProcessAdapter(base, code_root, port)
     start = clock()
@@ -76,6 +76,8 @@ def wait_for_boot(base, code_root, controller, *, generation=None, port=8765, ti
                 last = {"status": "waiting", "reason": "state_changed_during_probe"}
             elif last["status"] == "succeeded" and adapter.alive(controller) and adapter.alive(state.get("worker")):
                 return last
+        if on_observation:
+            on_observation(last)
         sleep(interval)
     return {**last, "status": "timeout", "seconds": clock() - start}
 

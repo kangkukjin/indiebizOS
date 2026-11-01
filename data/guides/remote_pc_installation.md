@@ -2,7 +2,7 @@
 
 ## 빠른 호출
 
-설치 전에도 이 가이드를 이름으로 조회한다. `[self:limb]{op:"register"}`는 공용 등록 폴더 준비, `op:"list"`는 등록·연결·드라이버 부품과 업데이트 상태 조회다. 대상 PC에서 OS 설치·권한을 승인한다. 사용자 요청의 교체는 `[self:limb]{op:"update",target:"선택한 device_id"}`이며 접수와 완료는 다르다. 설치 세대나 배포 지문이 바뀌면 재조회한다. Windows 무인관리 최초 설치의 UAC는 현지 사람이 승인한다. 일반 사용자 세션과 관리 서비스는 별도 신원이다.
+`[self:limb]{op:"register"}`는 공용 등록 폴더 준비, `op:"list"`는 등록·연결·드라이버 부품과 업데이트 상태 조회다. 대상 PC에서 OS 설치·권한을 승인한다. 사용자 요청의 교체는 `[self:limb]{op:"update",target:"선택한 device_id"}`이며 접수와 완료는 다르다. 설치 세대·배포 지문 불일치는 `driver_update_changed`로 반환된다. Windows 무인관리 최초 설치의 UAC는 현지 사람이 승인한다. 일반 사용자 세션과 관리 서비스는 별도 신원이다.
 
 ## 1. 모드 선택과 설치
 
@@ -12,12 +12,14 @@
 | 수명 | 사용자 로그인 시 자동 시작, 비정상 종료 시 OS 서비스 관리자가 재기동(macOS launchd·Linux systemd; Windows HKCU Run(기존 설치는 예약 작업)은 로그인 때만 — 헬퍼 교체 때는 감시자가 새 판을 띄움). 등록 후 USB 제거 가능 | 대상 PC에서 직접 실행한 헬퍼의 수명 |
 | 명령 환경 | 작업마다 cwd·env 분리. 절대 cwd·venv 실행파일 경로·env 명시 | 직전 cwd·환경변수 유지. 함수·별칭은 유지하지 않음. reset으로 초기화 |
 | 화면·입력 | `mode:"interactive"` 필수 | 기존 screen·입력 호출 |
-| 중복 방지 | 같은 `request_id` + 같은 명령은 기존 접수증. 내용이 다르면 충돌 | 접수증으로 관측. 같은 명령 재전송 금지 |
+| 중복 방지 | 같은 `request_id` + 같은 명령은 기존 접수증. 내용이 다르면 충돌 | 접수증으로 관측. 새 접수는 별도 실행 |
 | 작업 후 | 연결 유지. 작업 마무리와 제거는 별개 | 필요할 때 `detach`로 프로세스 종료 |
 | 제거 | 명시적인 `self:limb remove`. `removal_pending`과 `removed` 구분 | `revoke`로 키 폐기 |
 | 헬퍼 교체 | 사용자 요청 시 `[self:limb]{op:"update",target:"PC"}` — 버튼과 같은 중앙 절차. [업데이트·완료 확인](../../helper/README.md#사용자-요청의-헬퍼-업데이트) | 해당 없음 |
 
-`self:limb list`의 각 행에 `registration`이 있으면 상주형, null이면 휴대형이다.
+`self:limb list`의 PC 행에 `registration`이 있으면 상주형, null이면 휴대형이다.
+`PC제어`의 OS 조작은 본체·상주 사용자 세션용이며 휴대형·관리 서비스용 계약이 아니다.
+휴대형의 셸·화면·입력은 원격 실행 드라이버의 기존 `guestpc` 계약을 사용한다.
 상주형 `registration.state/paused`, 공통 `connected/expired/revoked`를 확인한다.
 
 상주형에서 `detach`는 거절된다. 일시적으로 새 작업만 막으려면 `pause`를 쓴다.
@@ -53,7 +55,7 @@ CPU/메모리 하드 제한이나 OS 보안 샌드박스는 아니다. 현재 �
 ```
 
 remove는 새 작업을 차단하고 `removal_pending`으로 남는다. 기기의 제거 확인 뒤 `removed`다.
-작업 폴더·USB 원본은 보존한다. 제거 접수만으로 제거 완료라고 보고하지 않는다.
+작업 폴더·USB 원본은 보존한다.
 
 휴대형 기존 사용:
 
@@ -64,11 +66,10 @@ remove는 새 작업을 차단하고 `removal_pending`으로 남는다. 기기�
 ```
 
 issue는 `outputs/limb_issue/<별칭>/`에 설정·실행파일·사용법을 만든다. ttl_days=0은 무기한이다.
-유효한 키로 접속하면 자동 승인되며 명령의 limb 이름으로 오배송을 막는다. 대상은 항상 명시한다.
+유효한 키로 접속하면 자동 승인되며 명령의 limb 이름으로 오배송을 막는다. `limb`는 필수 대상 인수다.
 같은 키로 새 헬퍼가 붙으면 최신 세션이 이긴다. 위치 변경 알림은 키 유출 여부를 확인할 단서다.
 휴대형 detach는 현재 프로세스만 종료하며 재실행하면 다시 붙는다. 영구 차단은 revoke다.
-휴대형 환경은 유지되지만 함수·별칭은 유지되지 않는다. venv는 명시 실행 경로를 권장하며,
-환경이 꼬이면 reset:true로 초기화한다. stdin으로 비대화형 입력을 줄 수 있다.
+휴대형 환경은 유지되지만 함수·별칭은 유지되지 않는다. `reset:true`는 유지된 환경을 초기화한다. stdin으로 비대화형 입력을 줄 수 있다.
 
 휴대형 전달 전 명령은 10분 뒤 만료, 완료 결과·회수 기록은 7일 보존한다. op:result는 호환
 1회 회수이므로 반복 관측에는 self:task를 쓴다. 헬퍼는 사용자 설정 폴더의 delivery 원장에
@@ -93,38 +94,37 @@ issue는 `outputs/limb_issue/<별칭>/`에 설정·실행파일·사용법을 �
 
 헬퍼는 `helper/`의 Go 소스를 `helper/build.sh`로 빌드한다. macOS 10.15~11 Intel은
 Go 1.22와 `go.legacy.mod`를 쓰는 `mac-amd64-legacy`를 사용한다. 일반 mac-amd64는 macOS 12
-이상이 필요하다. 실제 기기 호환성은 실기기 시험으로 확정한다. 발급 폴더 실행파일을 갱신할 때
-기존 `indiebiz-helper.json` 키를 재발급·교체하지 않는다.
+이상이 필요하다. 실제 기기 호환성은 실기기 시험으로 확정한다. 발급 폴더의 실행파일과 `indiebiz-helper.json` 등록 키는 별도 구성요소다.
 설치·제거 세부 사항은 `helper/README.md`, 설계는 `docs/REMOTE_PC_RESOURCE_DESIGN_2026_10_10.md`.
 
-남의 PC에서 실행할 때는 그 PC 주인의 동의가 전제다. 허브·터널 연결이 필요하고 서명 없는
-바이너리는 OS 경고가 나타날 수 있다. 손발 실행 자격은 이웃 등급 자동 부여와 별개다.
+허브·터널 연결이 필요하고 서명 없는 바이너리는 OS 경고가 나타날 수 있다. 손발 실행 자격은 이웃 등급 자동 부여와 별개다.
 
 
 ## 모든 폴더·외장 드라이브와 관리자 명령
 
 workspace는 기본 위치이며 절대 cwd/path로 OS가 허용한 모든 경로를 쓴다.
 일반 헬퍼의 shell `elevate:true`는 원격 PC의 OS 인증창에서 이번 명령을 승인한다.
-비밀번호를 채팅·cmd·stdin·env로 전달하지 않는다. UAC 보안 화면은 헬퍼로 조작할 수 없다.
+인증은 대상 OS 창에서 처리하며 UAC 보안 화면은 헬퍼로 조작할 수 없다.
 
 Windows **무인 관리 서비스**는 최초 관리자 등록 후 로그인 없이 설치·설정을 실행한다.
 `info.resident`의 `service_scope:machine`, `elevation_unattended:true`를 확인한다.
 이 대상의 shell은 LocalSystem이며 매번 UAC를 띄우지 않는다. 일반 사용자용 앱·화면은
 사용자 세션 헬퍼로, 시스템 설치·설정은 관리 서비스로 보낸다. 설치기는 무인 옵션을 쓴다.
-서비스가 없는 일반 헬퍼를 무인 관리 가능하다고 추정하지 않는다.
+일반 사용자 헬퍼에는 이 무인 관리 권한이 없다.
 등록·보호·해제·플랫폼 범위는 `helper/README.md`의 무인 관리 서비스를 따른다.
 
 
 ## 배포와 완료 확인
 
-`self:limb list`와 조종실 목록의 `drivers.components`는 실제 설치 단위마다 한 행이다. OS 제어·원격 실행이 공유하는 바이너리는 한 번만 교체한다. `update`는 기존 설치 구현의 상태이며 접수 성공을 설치 성공으로 바꾸지 않는다. 새 판본의 인증된 신고 뒤에도 필요한 OS 동작을 확인한다. 미관측 권한·호환 조건은 unknown이다.
+`self:limb list`와 조종실 목록의 `drivers.components`는 실제 설치 단위마다 한 행이다. OS 제어·원격 실행이 공유하는 바이너리는 한 번만 교체한다. `update`는 기존 설치 구현의 상태다. 판본 일치는 인증된 지문 신고에 근거하며 OS 동작 시험은 포함하지 않는다. 미관측 권한·호환 조건은 unknown이다.
 Mac은 서명 release 매니페스트, Windows·Linux는 기존 dist 실행파일을 설치 어댑터가 검증한다. Mac legacy 빌드 선택은 기존 Go 계열 관측을 유지한다. Android는 [원격폰 가이드](remote_phone.md)의 ABI·SDK·서명 검증과 OS 설치 확인을 따른다. TV는 대상에 설치하는 프로그램이 없다.
-PC 교체의 대기·인계·되돌리기는 [헬퍼 안내](../../helper/README.md#사용자-요청의-헬퍼-업데이트)를 따른다. Android 설치 실패를 PC처럼 자동 롤백할 수 있다고 가정하지 않는다.
+접수된 PC 교체는 중앙 배포본이 사라지거나 이전 판으로 돌아가도 원 작업의 `target_sha256`·`job_id`로 진행 상태가 표시된다.
+PC 교체의 대기·인계·되돌리기는 [헬퍼 안내](../../helper/README.md#사용자-요청의-헬퍼-업데이트)를 따른다. Android 설치에는 PC 헬퍼와 같은 자동 롤백 기능이 없다.
 
 ## IndieBiz OS 본체 설치
 
-원격 제어 부품 교체와 본체 앱 설치는 다른 작업이다. `bootstrap.py`·`remote_install.py`·`remote_steps.py`의 계획·로그·종료·재개는 [원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)에 있다. 클론 갱신만으로 실행 중인 설치 앱이 바뀌지 않으므로 실제 프로세스 경로와 건강 응답을 확인한다.
+원격 제어 부품 교체와 본체 앱 설치는 다른 작업이다. `bootstrap.py`·`remote_install.py`·`remote_steps.py`의 계획·로그·종료·재개는 [원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)에 있다. 클론과 설치 앱은 별도 실행 경로이며 클론 갱신은 실행 중인 설치 앱을 교체하지 않는다.
 
 ## 과거 관측의 근거
 
-이관 시점의 실측 원문·지문·UAC 설명 충돌은 [이관 기록](../../docs/experiments/hardware_driver_migration_2026_11_01.json)에 보존했다. 특정 PC의 설치 실패나 대기 시간을 일반 기기 계약으로 적용하지 않는다. 새 대상별 실측은 관측 원장, 일반 구현 문제는 가이드 피드백 제안으로 보존한다.
+이관 시점의 실측 원문·지문·UAC 설명 충돌은 [이관 기록](../../docs/experiments/hardware_driver_migration_2026_11_01.json)에 보존했다. 기기별 실측 저장소는 관측 원장, 구현 피드백 저장소는 제안 원장이다.

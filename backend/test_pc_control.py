@@ -606,6 +606,10 @@ def _pc_row():
     (lambda r: r["registration"].update(paused=True), "TARGET_INACTIVE"),
     (lambda r: r["registration"]["capabilities"].pop("shell"), "SHELL_NOT_READY"),
     (lambda r: r.update(device_id="other"), "TARGET_NOT_REGISTERED"),
+    (lambda r: r.update(registration=None), "TARGET_ADAPTER_UNSUPPORTED"),
+    (lambda r: r["registration"].update(adapter="portable"), "TARGET_ADAPTER_UNSUPPORTED"),
+    (lambda r: r["registration"]["capabilities"].update(service_scope="machine"), "TARGET_SESSION_UNSUPPORTED"),
+    (lambda r: r["registration"]["capabilities"].update(service_scope="unexpected"), "TARGET_SESSION_UNSUPPORTED"),
 ])
 def test_target_rejections_name_the_failed_condition(mutate, code):
     row = _pc_row(); mutate(row)

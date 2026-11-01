@@ -1332,16 +1332,14 @@
         ],
         "adapters": [
           "local",
-          "resident-v1",
-          "portable"
+          "resident-v1"
         ],
         "surfaces": [
           "os"
         ],
         "components": [
           "pc-os-code",
-          "resident-helper",
-          "portable-helper"
+          "resident-helper"
         ],
         "callables": [
           "fn:PC제어",
@@ -2470,8 +2468,7 @@
       "conditions": {
         "adapters": [
           "local",
-          "resident-v1",
-          "portable"
+          "resident-v1"
         ]
       }
     },

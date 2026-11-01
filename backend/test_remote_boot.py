@@ -75,12 +75,15 @@ def test_new_starting_after_old_failure_then_verified_active(tmp_path):
     old = {**state, "phase": "FAILED", "controller": {"pid": 41, "born": 1}}
     persist(tmp_path, old)
     tick = [0]
+    observations = []
     def sleep(_):
         tick[0] += 1
         persist(tmp_path, {**state, "phase": "STARTING" if tick[0] == 1 else "ACTIVE"})
     result = probe.wait_for_boot(tmp_path, ROOT, state["controller"], adapter=Adapter(tmp_path, state),
-                                 clock=lambda: tick[0], sleep=sleep, timeout=10)
+                                 clock=lambda: tick[0], sleep=sleep, timeout=10,
+                                 on_observation=lambda value: observations.append(dict(value)))
     assert result["status"] == "succeeded" and tick[0] == 2
+    assert [item['reason'] for item in observations] == ['different_controller', 'not_active']
 
 
 def test_restart_during_http_observation_invalidates_success(tmp_path):

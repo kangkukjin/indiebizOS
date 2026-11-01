@@ -82,6 +82,30 @@ def test_pending_receipt_keeps_original_release_when_new_release_is_published(up
     assert len(pc.history()) == 1
 
 
+@pytest.mark.parametrize('change', ['withdrawn', 'reverted'])
+def test_publication_change_cannot_hide_accepted_helper_update(update_pc, change):
+    import hardware_driver_status
+    pc = update_pc
+    path = pc.path / 'helper/dist/indiebiz-helper-win-resident.exe'
+    old = b'previous installation'
+    pc.caps['helper_sha256'] = hashlib.sha256(old).hexdigest()
+    resident_pcs.sync(pc.rec['key'], 'a' * 32, capabilities=pc.caps)
+    first = call_update(pc)
+    if change == 'withdrawn':
+        path.unlink()
+    else:
+        path.write_bytes(old)
+    rec = resident_pcs.resolve(pc.rec['device_id'])
+    state = resident_pcs.helper_status(rec)
+    assert state['state'] == 'updating' and state['target_sha256'] == first['sha256']
+    again = call_update(pc)
+    assert again['task_ref'] == first['task_ref'] and again['sha256'] == first['sha256']
+    unit, = [c for c in hardware_driver_status.describe(rec)['components'] if c['location'] == 'device']
+    assert unit['update']['target_sha256'] == first['sha256']
+    assert unit['update']['verification'] == 'unverified'
+    assert len(pc.history()) == 1
+
+
 @pytest.mark.parametrize('origin', [None, 'schedule', 'training', 'test', 'delegation'])
 def test_non_user_origin_cannot_submit_update(update_pc, monkeypatch, origin):
     monkeypatch.setattr(thread_context, 'get_task_origin', lambda: origin)

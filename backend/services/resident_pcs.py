@@ -129,14 +129,24 @@ def helper_status(rec):
     path = helper_binary(caps) if current else None
     latest = _digest(path) if path else None
     failed = (caps.get("helper_update") or {}).get("to") == latest and latest is not None
+    if reg["state"] == "active" and current and caps.get("self_update"):
+        job = resident_store.pending(rec["device_id"], "update", settle=120, generation=reg["generation"])
+        tasks = resident_store.history(device=rec["device_id"], job=job, limit=1)["tasks"] if job else []
+        if tasks:
+            task = tasks[0]
+            target = task["summary"].get("sha256")
+            rolled_back = ((caps.get("helper_update") or {}).get("to") == target
+                           and task["state"] not in {"queued", "running"})
+            if target != current and not rolled_back:
+                # The accepted job owns its release even if the publication changes.
+                return {"state": "updating", "current": current, "latest": latest,
+                        "rolled_back": False, "job_id": job, "target_sha256": target}
     if reg["state"] != "active" or not current or not latest:
         state = "unknown"
     elif current == latest:
         state = "current"
     elif not caps.get("self_update"):
         state = "manual"
-    elif resident_store.pending(rec["device_id"], "update", settle=0 if failed else 120, generation=reg["generation"]):
-        state = "updating"  # a reported rollback of this very build ends the wait at once
     else:
         state = "available"
     return {"state": state, "current": current, "latest": latest, "rolled_back": bool(failed and state != "current")}

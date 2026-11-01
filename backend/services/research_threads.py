@@ -30,6 +30,15 @@ def resolve(project_ref):
     from research_context import current
     if not principal.is_owner():
         raise PermissionError('연구 자료실은 프로젝트 소유자만 접근할 수 있습니다')
+    context = current()
+    if context and context.get('attached'):
+        if project_ref not in {context['project_uid'], context['project_id']}:
+            raise PermissionError('현재 연구 프로젝트 밖의 자료에는 접근할 수 없습니다')
+        store = ResearchStore(context['path'])
+        if store.uid != context['project_uid'] or store.epoch != context['epoch']:
+            raise PermissionError('현재 연구 자료실 신원이 만료됐습니다')
+        return {'id': context['project_id'], 'name': context.get('project_name', context['project_id']),
+                'project_uid': store.uid, 'project_kind': 'project'}, store
     pm = ProjectManager()
     row = next((p for p in pm.list_projects() if project_ref in {p.get('project_uid'), p.get('id')}
                 and p.get('project_kind') == 'research' and not p.get('in_trash')), None)
@@ -114,10 +123,12 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
                 if not cancel.is_set():
                     state = 'failed'
             lib = ResearchLibrary(store)
-            citations = lib.citations(text, run)
+            from research_review import documents, review_text
+            checked_text = review_text(text, documents(text, store.path))
+            citations = lib.citations(checked_text, run)
             valid = {(c['version_id'], c['locator']) for c in citations}
             import re
-            invalid = lib.citation_review(text, run)['invalid']
+            invalid = lib.citation_review(checked_text, run)['invalid']
             if invalid:
                 # 평가가 꺼졌거나 보완을 다 쓴 경우의 마지막 방어선. 전달 변형을
                 # 성공으로 숨기지 않고 원문·위치를 사건에 남긴다.

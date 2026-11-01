@@ -210,3 +210,9 @@ def _executor():
 
 install_capture(capture)
 install_review(review)
+
+
+# 일반 프로젝트는 공통 파이프라인에서 심층연구로 선택된 턴만 연결한다.
+from research_context import install_session
+from research_task_session import session
+install_session(session)

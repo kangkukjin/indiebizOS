@@ -90,7 +90,7 @@ class ResearchQuestions:
                     'next_cursor': str(cursor + limit) if len(rows) > limit else None,
                     'questions_only': True, 'question_id': question_id, 'question_history': history}
 
-    def context(self, budget=7500):
+    def context(self, budget=7500, *, query="", question_ids=()):
         """작은 목록만 전달한다. 원문/이력은 같은 도구에서 회수하고 기존 인용을 새 읽기로 승격하지 않는다."""
         items, used = [], 0
         with self.store.connect() as db:
@@ -98,17 +98,27 @@ class ResearchQuestions:
             rows = db.execute('SELECT q.* FROM research_questions q WHERE thread_id=? '
                               'AND revision=(SELECT MAX(revision) FROM research_questions h WHERE h.question_id=q.question_id) '
                               "ORDER BY (json_extract(body,'$.status')='open') DESC,rowid DESC", (self.tid,)).fetchall()
-            for row in rows:
-                q = self._decode(row, db)
+            decoded = [self._decode(row, db) for row in rows]
+            if query or question_ids:
+                from recall_relevance import lexical_evidence
+                explicit = set(question_ids) | {q['question_id'] for q in decoded if q['question_id'] in query}
+                # 명시 ID·현재 질문의 어휘 관련성을 우선한다. 오래된 열린 질문도 한 자리를 확보한다.
+                oldest = next((q['question_id'] for q in reversed(decoded) if q['status'] == 'open'), None)
+                decoded.sort(key=lambda q: (q['question_id'] not in explicit,
+                    -lexical_evidence(query, q['text'] + ' ' + q['scope']),
+                    q['question_id'] != oldest, q['status'] != 'open'))
+            for q in decoded:
                 item = {k: q[k] for k in ('question_id', 'revision', 'text', 'scope', 'status')}
                 item.update(provisional_answer=q['provisional_answer'][:600],
                             gaps=q['gaps'][:3], next_probes=q['next_probes'][:3],
                             gaps_total=len(q['gaps']), next_probes_total=len(q['next_probes']),
                             supporting_count=len(q['supporting']), contradicting_count=len(q['contradicting']),
+                            contradicting_refs=[{k: e[k] for k in ('evidence_id', 'version_ref', 'locator') if k in e}
+                                                for e in q['contradicting'][:3]],
                             detail_required=True)
                 size = len(canonical(item))
                 if used + size > budget:
-                    break
+                    continue
                 items.append(item)
                 used += size
         return {'items': items, 'total': len(rows), 'omitted': len(rows) - len(items),

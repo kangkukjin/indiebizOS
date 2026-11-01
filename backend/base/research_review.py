@@ -1,0 +1,78 @@
+"""제출 판본과 인용 위치의 공통 계약. 원문 읽기와 의미 승인은 별도로 둔다."""
+import hashlib
+import re
+from pathlib import Path
+
+MARKER = re.compile(r'\[자료:([^:\]]+):([^\]]+)\]')
+PATH = re.compile(r"(?<![\w:])((?:/|outputs/)[^\n`\"'<>]*?\.(?:md|txt|html|json|csv|tsv))(?=[\s)`\"'<>]|$)")
+
+
+def submission_paths(text, root):
+    paths = set()
+    root = Path(root).resolve()
+    for value in PATH.findall(text or ''):
+        path = Path(value)
+        path = (root / path).resolve() if not path.is_absolute() else path.resolve()
+        if path.is_relative_to(root):
+            paths.add(str(path))
+    return paths
+
+
+def documents(text, root):
+    """최종 전달문에 명시된 프로젝트 내부 텍스트만 읽는다. 링크를 재귀 추적하지 않는다."""
+    result = []
+    for name in sorted(submission_paths(text, root)):
+        try:
+            raw = Path(name).read_bytes()
+            body = raw.decode('utf-8')
+        except (OSError, UnicodeError):
+            continue
+        result.append({'path': name, 'hash': hashlib.sha256(raw).hexdigest(), 'text': body})
+    return result
+
+
+def review_text(response, artifacts):
+    return '\n\n'.join([response, *(f"<research_artifact path={a['path']!r} sha256={a['hash']!r}>\n"
+                                    + a['text'] + '\n</research_artifact>' for a in artifacts)]) if artifacts else response
+
+
+def claims(text, *, path='response', digest=None):
+    """같은 표지가 여러 주장에 쓰인 경우도 별도 위치로 보존한다. 중요도는 추정하지 않는다."""
+    return [{'citation': m[0], 'path': path, 'hash': digest, 'offset': m.start(),
+             'claim_context': text[max(0, m.start() - 350):m.end() + 100]}
+            for m in MARKER.finditer(text)]
+
+
+def allocate(lengths, budget=16000, cap=2400):
+    """등장 순서 대신 항목별 동등 몫을 먼저 확보하고 짧은 항목의 잔액을 재분배한다."""
+    result = {key: 0 for key in lengths}
+    pending = sorted(lengths)
+    while pending and budget:
+        share = max(1, budget // len(pending))
+        for key in pending:
+            n = min(share, budget, min(cap, lengths[key]) - result[key])
+            result[key] += n
+            budget -= n
+        pending = [key for key in pending if result[key] < min(cap, lengths[key])]
+    return result
+
+
+def passage(full, limit, context):
+    """동일 글자 예산 안에서 주장과 겹치는 원문 주변을 선택한다. 발췌 범위는 명시한다."""
+    if limit <= 0:
+        return '', 0
+    if len(full) <= limit:
+        return full, 0
+    from recall_relevance import terms
+    wanted = terms(context)
+    # 문단별 어휘 일치만 사용한다. 의미적 지지 또는 중요도의 판정으로 취급하지 않는다.
+    starts = [0] + [m.end() for m in re.finditer(r'\n', full)]
+    # 짧은 후보 구간을 고른 뒤 주변을 붙인다. 긴 창의 끝에 있던 핵심 문장을
+    # 앞쪽 여백을 붙이는 과정에서 잃지 않도록 후보 자체가 창 안에 남게 한다.
+    width = min(limit, 600)  # clamp-ok: 내부 검색 창; 반환 발췌의 누락은 호출자가 truncated로 신고
+    starts = sorted(set(starts) | set(range(0, len(full), max(1, width // 2))))
+    scored = [(len(wanted & terms(full[pos:pos + width])), -pos) for pos in starts]
+    start = -max(scored)[1] if limit and wanted else 0
+    margin = min(150, max(0, limit - width))  # clamp-ok: 검색 창 앞 여백; 반환 범위와 누락은 별도 신고
+    start = max(0, min(start - margin, len(full) - limit))
+    return full[start:start + limit], start

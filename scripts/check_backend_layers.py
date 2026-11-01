@@ -43,7 +43,7 @@ LAYERS = {
         "update_maintenance", "component_runtime", "component_registry",
         "recall_relevance",
         "output_publish", "phone_execution_contract",
-        "research_context",
+        "research_context", "research_review",
         "coding_process", "repair_process", "repair_runtime", "repair_test_results", "repair_live_probe",
         "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",
         "audit_lifecycle", "execution_workers", "execution_capacity", "task_tree_budget", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
@@ -127,7 +127,7 @@ LAYERS = {
     },
     "services": {
         "tv_transport",
-        "research_library", "research_capture", "research_threads", "research_view",
+        "research_library", "research_capture", "research_task_session", "research_threads", "research_view",
         "hardware_driver_status", "resident_pcs", "resident_transfer_io", "phone_transfer_wire", "resident_terminal", "resident_terminal_lan", "resident_desktop", "resident_screen",
         "phone_remote_execution", "phone_limb_transfer", "phone_updates", "phone_native_control", "limb_http_transport",
         "limb_client",   # 이 몸이 허브의 손발이 되는 클라이언트(폰 전용, 2026-10-13)

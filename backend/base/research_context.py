@@ -7,6 +7,7 @@ import thread_context
 
 _capture = None
 _review = None
+_session = None
 _executions = {}
 _lock = threading.RLock()
 
@@ -74,7 +75,7 @@ def before(config, params):
         raise PermissionError('현재 연구의 project_ref를 지정하세요. 다른 자료실은 자동으로 섞지 않습니다')
     if config.get('research_local') and params.get('thread_ref') and params['thread_ref'] != context.get('thread_id'):
         raise PermissionError('현재 대화 밖의 자료에는 접근할 수 없습니다')
-    if config.get('group') == 'delegation' or config.get('func') == 'delegate':
+    if not context.get('attached') and (config.get('group') == 'delegation' or config.get('func') == 'delegate'):
         raise PermissionError('연구 대화는 독립 실행합니다. 다른 에이전트에게 위임하지 않습니다')
     if context.get('mode') == 'library':
         # 사용자 관점·연구 질문 정리는 외부 획득이 아니다. 같은 대화의 기록만 갱신한다.
@@ -117,10 +118,13 @@ def adopt_execution(agent_id, task_id, project_path):
         yield
 
 
-def capture_stream(events):
+def capture_stream(events, *, attached_only=False):
     """IBL 밖에서 반환된 일반 도구·CLI 도구 결과도 대화 자료로 보존한다."""
     calls = {}
     for event in events:
+        if attached_only and not (current() or {}).get('attached'):
+            yield event
+            continue
         kind = event.get('type')
         if kind == 'tool_start':
             calls[event.get('id')] = event
@@ -135,3 +139,64 @@ def capture_stream(events):
                 observe({'router': 'handler', 'tool': name, 'research_coverage': 'unknown'},
                         params if isinstance(params, dict) else {}, event.get('result', ''))
         yield event
+
+
+def install_session(callback):
+    global _session
+    _session = callback
+
+
+class TurnResearch:
+    """일반 심층연구의 수명만 묶는다. 서비스는 기존 자료실을 연결하는 콜백을 제공한다."""
+    def __init__(self):
+        from contextlib import ExitStack
+        self.stack = ExitStack()
+        self.context = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *error):
+        return self.stack.__exit__(*error)
+
+    def activate(self, runner, framing, message):
+        if self.context:
+            return self.context.get('guidance', '')
+        if current() or not (framing or {}).get('_research_plan'):
+            return ''
+        if runner.config.get('_is_system_ai') or runner.config.get('_member'):
+            return ''
+        if _session is None:
+            raise RuntimeError('심층연구 자료 보존 어댑터가 준비되지 않았습니다')
+        self.context = self.stack.enter_context(_session(runner, framing, message))
+        if self.context is None:
+            return ''
+        self.stack.enter_context(scope(self.context))
+        self.stack.enter_context(bind_execution(thread_context.get_current_agent_id(),
+                                               thread_context.get_current_task_id()))
+        return self.context.get('guidance', '')
+
+    def validate(self, response):
+        """최종 전달 전에 파일 인용도 확인한다. 의미 승인은 기존 평가자가 담당한다."""
+        if not self.context:
+            return response
+        from research_review import documents, review_text
+        checked = review_text(response, documents(response, self.context['path']))
+        invalid = citation_review(checked)['invalid']
+        if not invalid:
+            return response
+        self.context['failed'] = True
+        from episode_logger import record_trajectory_event
+        record_trajectory_event('citation.validation_failed', {'invalid': invalid})
+        return response + '\n\n인용 검증을 완료하지 못했습니다. 제출 파일을 포함한 확인되지 않은 인용은 근거로 사용할 수 없습니다.'
+
+    def events(self, events):
+        # 활성화는 생성기 안에서 계획 작성 뒤 발생한다. 첫 도구 이벤트 이전에 결정된다.
+        def selected():
+            for event in events:
+                if self.context and event.get('type') == 'final':
+                    self.context['response'] = event.get('content') or ''
+                if self.context and event.get('type') == 'error':
+                    self.context['failed'] = True
+                yield event
+        yield from capture_stream(selected(), attached_only=True)

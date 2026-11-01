@@ -678,3 +678,30 @@ def test_definition_only_repair_uses_goal_evaluation(supervisor, monkeypatch, ou
     finish(supervisor, '개정 결과')
     assert len(seen) == 1 and '등록된 함수가 새 결과를 반환한다' in seen[0]
     assert tc.get_goal_eval_outcome()['goal_status'] == outcome
+
+
+def test_submitted_file_citations_are_bound_to_file_hash(supervisor, monkeypatch, tmp_path):
+    import research_capture
+    from research_context import scope
+    from research_store import ResearchStore
+    from research_library import ResearchLibrary
+    from final_evaluator import prepare
+    store = ResearchStore(tmp_path, 'file-research')
+    tid = store.create_thread('파일 근거')['id']
+    ctx = {'project_uid': store.uid, 'thread_id': tid, 'run_id': 'r', 'epoch': store.epoch, 'path': str(tmp_path)}
+    supervisor.project_path = str(tmp_path)
+    with scope(ctx):
+        lib = ResearchLibrary(store, tid)
+        rec = lib.capture('효과는 미확인이다.', title='한계', paragraphs=[('p1', '효과는 미확인이다.')])
+        lib.read(rec['version_ref'])
+        marker = f"[자료:{rec['version_ref']}:p1]"
+        report = tmp_path / 'report.md'
+        report.write_text('효과가 입증되었다. ' + marker)
+        supervisor.store.put_response(f'보고서: [파일]({report})')
+        packet = prepare(supervisor, [])
+    import hashlib
+    context = packet['context']
+    assert context['research_citations']['valid'][0]['quote'] == '효과는 미확인이다.'
+    assert context['research_claims'][0]['path'] == str(report)
+    assert context['research_claims'][0]['hash'] == hashlib.sha256(report.read_bytes()).hexdigest()
+    assert '효과가 입증' in context['research_claims'][0]['claim_context']

@@ -206,3 +206,15 @@ def test_library_mode_allows_local_questions_but_not_settings(world):
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_current_question_and_old_open_question_survive_recent_noise(world):
+    store, tid, questions = world
+    old = create(questions, text='한국 인구 감소의 원인은 무엇인가?', scope='전체 연구 목적')
+    for i in range(20):
+        create(questions, text=f'별도 기업 {i} 매출', provisional_answer='설명' * 300)
+    context = questions.context(query='한국 인구 감소 원인을 다시 확인')
+    assert context['items'][0]['question_id'] == old['question_id']
+    assert context['omitted'] > 0
+    explicit = questions.context(query='계속', question_ids=[old['question_id']])
+    assert explicit['items'][0]['question_id'] == old['question_id']

@@ -321,7 +321,8 @@ class CognitivePipelineMixin:
         from repair_resume import user_resume
         from conversation_handoff import Handoff
         handoff = Handoff()
-        with self.turn_ai_scope(), actor_context(agent_id=agent_id, task_id=task_id), \
+        from research_context import TurnResearch
+        with TurnResearch() as research_session, self.turn_ai_scope(), actor_context(agent_id=agent_id, task_id=task_id), \
                 repeat_scope(steer_agents, task_id), user_resume(self, message, history), \
                 task_scope(steer_agents, task_id, journal=handoff.record if handoff.available else None), \
                 turn_token_scope(agent_id, task_id, (getattr(self.ai, "agent_id", None),),
@@ -374,11 +375,11 @@ class CognitivePipelineMixin:
                     if continuation and continuation.get("phase") == "review":
                         yield from review_stream(self, _supervisor, continuation, kwargs.get("cancel_check"))
                     else:
-                        yield from self._cognitive_stream_body(prompt, previous, **kwargs)
+                        yield from self._cognitive_stream_body(prompt, previous, _research_session=research_session, **kwargs)
 
                 from dialogue_continuation import stream
-                for event in stream(segment, message, history, agent_id, task_id, handoff,
-                                    kwargs.get("cancel_check")):
+                for event in research_session.events(stream(segment, message, history, agent_id, task_id, handoff,
+                                    kwargs.get("cancel_check"))):
                     parent_continuation.checkpoint(_execution, event)
                     if event.get('type') == 'final':
                         _parent_response = event.get('content')
@@ -409,6 +410,7 @@ class CognitivePipelineMixin:
         cancel_check=None,
         agent_name: Optional[str] = None,
         utterance_author: Optional[str] = None,
+        _research_session=None,
     ) -> Generator[Dict[str, Any], None, None]:
         """인지 파이프라인 전체를 한 번만 수행하는 제너레이터.
 
@@ -616,6 +618,9 @@ class CognitivePipelineMixin:
             }
         except Exception as _ce:
             print(f"[인지] 작업전 공개(cognition) 생성 실패 (무시): {_ce}")
+
+        if _research_session and not (force_role or _clarify_text or request_type == "REPAIR"):
+            execution_memory += _research_session.activate(self, consciousness_output, message)
 
         # 4. 매 요청마다 현재 활성 어휘로 조립한다. 기억이 없는 EXECUTE도 예외가 아니다.
         augmented_message = self._refresh_execution_prompt(
@@ -901,6 +906,8 @@ class CognitivePipelineMixin:
                     collect=_collect, images=images, supervisor=_supervisor,
                     allowed_set=allowed_set, cancel_check=cancel_check, allow_resume=False)
                 _response_completed = not (cancel_check and cancel_check())
+                if _research_session:
+                    final_content = _research_session.validate(final_content)
                 if _eval_ran:
                     from thread_context import get_goal_eval_outcome, set_goal_eval_outcome
                     from supervision_store import digest

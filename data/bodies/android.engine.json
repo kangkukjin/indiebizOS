@@ -63,6 +63,7 @@
     "base/repair_test_results",
     "base/repeat_guard",
     "base/research_context",
+    "base/research_review",
     "base/resident_store",
     "base/restart_protocol",
     "base/result_read_contract",
@@ -444,6 +445,7 @@
     "services/report_html",
     "services/research_capture",
     "services/research_library",
+    "services/research_task_session",
     "services/research_threads",
     "services/research_view",
     "services/resident_desktop",
@@ -597,8 +599,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 586,
-    "engine": 554,
+    "total": 588,
+    "engine": 556,
     "blocklist": 32
   }
 }

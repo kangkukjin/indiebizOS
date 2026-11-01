@@ -421,3 +421,41 @@ def test_read_default_page_and_end_cursor(lib):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_citation_budget_is_order_invariant_and_no_starvation(lib):
+    vid = lib.capture('본문', title='자료')['version_ref']
+    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
+        for i in range(10):
+            lib.access(vid, 1, f'p{i}', str(i) * 2400)
+    markers = [f'[자료:{vid}:p{i}]' for i in range(10)]
+    forward = lib.citation_review('\n'.join(markers), 'run')
+    reverse = lib.citation_review('\n'.join(reversed(markers)), 'run')
+    assert forward['evidence_chars'] == 16000
+    assert {r['citation']: r['quote'] for r in forward['valid']} == {r['citation']: r['quote'] for r in reverse['valid']}
+    assert all(len(r['quote']) == 1600 and r['evidence_state'] == 'partial'
+               and r['reading_verified'] and r['semantic_status'] == 'unreviewed' for r in forward['valid'])
+    assert len(forward['unreviewed']) == 10
+
+
+def test_citation_window_retains_relevant_late_condition_and_offsets(lib):
+    vid = lib.capture('본문', title='자료')['version_ref']
+    text = '무관한 배경 정보입니다.\n' * 400 + '한국 실험은 통제집단이 없어 인과 효과를 확인하지 못했다.\n' + '다른 문단\n' * 500
+    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
+        lib.access(vid, 1, 'p1', text)
+    marker = f'[자료:{vid}:p1]'
+    row = lib.citation_review('한국 실험에서 인과 효과가 입증되었다.' + marker, 'run')['valid'][0]
+    assert '통제집단이 없어' in row['quote']
+    assert row['quote'] == text[row['quote_start']:row['quote_end']]
+    assert row['truncated'] and row['semantic_status'] == 'unreviewed'
+
+
+def test_empty_read_receipt_does_not_imply_available_review_evidence(lib):
+    vid = lib.capture('본문', title='자료')['version_ref']
+    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
+        lib.access(vid, 1, 'p1', '')
+    marker = f'[자료:{vid}:p1]'
+    review = lib.citation_review('주장 ' + marker + ' [1] https://example.org/source', 'run')
+    assert review['valid'][0]['evidence_state'] == 'missing'
+    assert review['unreviewed'] == [marker] and review['evidence_chars'] == 0
+    assert review['unresolved_references'] == ['[1]', 'https://example.org/source']

@@ -423,7 +423,9 @@ class ResearchLibrary:
     def citation_review(self, text, run):
         """최종 인용과 이번 실행에서 읽은 문장을 연결한다. 읽기 기록은 새로 만들지 않는다."""
         result = {'valid': [], 'invalid': [], 'evidence_chars': 0}
-        budget = 16000
+        from research_review import claims, allocate, passage
+        occurrences = claims(text)
+        originals = {}
         with self.store.connect() as db:
             self.store.check_epoch(db)
             refs = dict.fromkeys(re.findall(r'\[자료:([^:\]]+):([^\]]+)\]', text))
@@ -444,12 +446,28 @@ class ResearchLibrary:
                 # 같은 위치를 여러 번 나눠 읽었어도 마지막 조각만 근거로 보이지 않게 한다.
                 quotes = list(dict.fromkeys(r['quote'] for r in rows))
                 full = '\n[…별도 열람 구간…]\n'.join(quotes)
-                shown = full[:min(2400, budget)]
-                budget -= len(shown)
+                originals[marker] = full
+                shown = full
                 result['valid'].append({'citation': marker, 'quote': shown,
                     'extraction_revisions': sorted({r['revision'] for r in rows}),
                     'truncated': len(shown) < len(full)})
-                result['evidence_chars'] += len(shown)
+        quotas = allocate({key: len(value) for key, value in originals.items()})
+        for row in result['valid']:
+            marker = row['citation']
+            related = [o for o in occurrences if o['citation'] == marker]
+            full = originals[marker]
+            shown, start = passage(full, quotas[marker], '\n'.join(o['claim_context'] for o in related))
+            row.update(quote=shown, truncated=len(shown) < len(full),
+                       quote_start=start, quote_end=start + len(shown), full_chars=len(full),
+                       reading_verified=True, evidence_state='missing' if not shown else
+                       'complete' if len(shown) == len(full) else 'partial', semantic_status='unreviewed',
+                       occurrences=related)
+            result['evidence_chars'] += len(shown)
+        result['unreviewed'] = [r['citation'] for r in result['valid'] if r['truncated'] or not r['quote']]
+        # URL·일반 각주는 자료실의 읽기 영수증과 연결되지 않았다. 자동 유효 인용으로 승격하지 않는다.
+        result['unresolved_references'] = list(dict.fromkeys(re.findall(
+            r'https?://[^\s<>\)\]]+|\[(?:\^[\w-]+|[A-Z]?[0-9]+)\](?!\()', text)))
+
         return result
 
     def add_url(self, url, **context):

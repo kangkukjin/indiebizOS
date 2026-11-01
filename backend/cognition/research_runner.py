@@ -215,7 +215,7 @@ def install_search(callback):
 
 def _context(store, thread, question):
     from research_questions import ResearchQuestions
-    data = {'research_questions': ResearchQuestions(store, thread['id']).context(),
+    data = {'research_questions': ResearchQuestions(store, thread['id']).context(query=question),
             'user_perspective': {'document': thread['notes'], 'revision': thread['revision']},
             'conversation_summary': thread['summary'],
             'summary_until_message': thread['summary_until'], 'sources': []}

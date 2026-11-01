@@ -52,7 +52,13 @@ AUTHORITY_EVIDENCE: {"id":"authority_evidence의 id", "quote":"조건을 증명�
 RESEARCH_POLICY = """
 research_citations의 각 인용 표지 바로 앞의 주장을 연결된 quote와 대조한다.
 인용의 존재·읽기 기록은 의미적 지지의 증명이 아니다. 다른 주장에 같은 표지를 붙인 경우도 확인한다.
-invalid는 실제 자료실의 읽기 증거가 없는 인용이다. truncated 근거만으로 전체를 읽었다고 판단하지 않는다.
+research_claims의 파일·해시·위치별 주장을 각각 검사한다. 같은 인용도 다른 주장에 대한 승인을 공유하지 않는다.
+수치는 분모·기간·비교군, 인과는 통제·경쟁 설명, 권고는 반론·적용 조건을 원문 및 유효한 criteria와 대조한다.
+invalid는 실제 읽기 증거가 없는 인용이다. reading_verified는 의미 승인이 아니다.
+evidence_state=partial/missing과 unreviewed는 검토 입력의 미완전성이다. 핵심 조건이 빠졌으면
+UNKNOWN/evidence로 필요한 원문 위치를 지정해 보완하고, 링크만으로 열람·지지를 추정하지 않는다.
+unresolved_references는 자료실 읽기 이력과 연결되지 않은 URL·각주다. 다른 실제 도구 근거와 대조하고
+필요한 원문이 없으면 미확인으로 남긴다. 새 평가 기준·상시 추가 검토 호출을 만들지 않는다.
 """
 
 
@@ -247,10 +253,15 @@ def prepare(controller, tool_calls=None):
     artifact_response += "\n" + "\n".join(staged.values())
     controller.content_artifacts = [a for a in discover(controller, artifact_response, calls)
                                     if a["path"] not in staged]
+    from research_review import submission_paths, review_text, claims
+    submitted = submission_paths(artifact_response, controller.project_path)
+    research_documents = []
     files, snapshots = [], {}
     for artifact in controller.content_artifacts:
         path = artifact["path"]
         text = controller.store.read_evidence(artifact["evidence_id"], 0, None)["text"]
+        if path in submitted:
+            research_documents.append({'path': path, 'hash': artifact['hash'], 'text': text})
         from cognitive_eval import bounded_attachment
         files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
         # 모델엔 비밀이 가려진 증거 본문을 주되, 변경 감지 지문은 디스크 원문 기준이다.
@@ -286,9 +297,12 @@ def prepare(controller, tool_calls=None):
         ]
     context['assertion_evidence'] = assertion_evidence(controller.store, calls, criteria)
     from research_context import citation_review
-    research_citations = citation_review(response)
+    research_citations = citation_review(review_text(response, research_documents))
     if research_citations is not None:
         context['research_citations'] = research_citations
+        context['research_submissions'] = [{k: a[k] for k in ('path', 'hash')} for a in research_documents]
+        context['research_claims'] = claims(response) + [c for a in research_documents
+            for c in claims(a['text'], path=a['path'], digest=a['hash'])]
     # 보완 실행자가 원문을 회수했는데 재검수 때 다시 같은 발췌에서 사라지는
     # 순환을 막는다. 작업대가 실제 반환한 증거 페이지만 별도 첨부한다.
     cursor = getattr(controller, "_repair_evidence_since", None)

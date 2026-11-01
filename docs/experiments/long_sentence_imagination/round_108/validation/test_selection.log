@@ -1,0 +1,4 @@
+변경 2 파일, backend 모듈 0개 → 전이 시험 파일 2/837 (0%)
+  test_research_planning: 경로 참조 data/guides/deep_research.md
+  test_task_repair: 경로 참조 data/common_prompts/consciousness_prompt.md
+backend/test_research_planning.py backend/test_task_repair.py

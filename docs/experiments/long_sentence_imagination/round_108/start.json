@@ -1,0 +1,29 @@
+{
+  "start": "2026-11-01T17:20:58+09:00",
+  "deadline": "2026-11-01T18:20:58+09:00",
+  "head": "0c2ebe044a97ffe3b4ae3f8c33c40caec06384a4",
+  "before_sha256": {
+    "data/common_prompts/consciousness_prompt.md": "b5e9684316e4cb57739aceaeb319cbf1908844c1ced05cc41a8af7a8e85666e1",
+    "data/guides/deep_research.md": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+    "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+  },
+  "cases_sha256": "e4383e57a5ea76a2ed9eb3961b334ca30cf8fa147294c27e63d1ee5bb0b4a644",
+  "after_sha256": {
+    "data/common_prompts/consciousness_prompt.md": "792237801d0461e14572a8f2e1f6e26878ac82f24bdb637cb67695d1a91b7b6d",
+    "data/guides/deep_research.md": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+    "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+  },
+  "preliminary_sha256": {
+    "data/common_prompts/consciousness_prompt.md": "792237801d0461e14572a8f2e1f6e26878ac82f24bdb637cb67695d1a91b7b6d",
+    "data/guides/deep_research.md": "cb2e8eecb81eb0e01f1fc3803e375e634160d14634bc23d7ef9cf47c59dad5f5",
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+    "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+  },
+  "final_cases_sha256": "e4383e57a5ea76a2ed9eb3961b334ca30cf8fa147294c27e63d1ee5bb0b4a644",
+  "fixture_sha256": "7b78fac5540fa9db989f7fb4790a24aee32d4b4bfa9308295b77bfc5d0ec4240"
+}

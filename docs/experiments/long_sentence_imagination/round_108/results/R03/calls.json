@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "phase": "plan",
+    "started": 1793522006.022892,
+    "prompt_sha256": "4b476b1d83f1d896fa2b1b78d15938dea4072a41629d0ac82fcc35cdb9fbb073",
+    "system_sha256": "e7c5a8e5acdb29e3b9d137b3da9a3b307a587f1d6e71863f24ede8b52b2f84bb",
+    "ended": 1793522026.996705,
+    "response_sha256": "6c1254c823a6d1bce253d6d33b035a61b4877e18e6e45d6ba5e524b08ff20636"
+  },
+  {
+    "index": 1,
+    "phase": "plan_completion",
+    "started": 1793522026.9982212,
+    "prompt_sha256": "0683e52a0572ebcfe6cd21f9604fa11c2b97a4b0127f14f9b0b070a34b0fbb95",
+    "system_sha256": "e7c5a8e5acdb29e3b9d137b3da9a3b307a587f1d6e71863f24ede8b52b2f84bb",
+    "ended": 1793522111.5982919,
+    "response_sha256": "93a43a8abcc421651af1b776552d316b16c7d7b7270fbd9486cf63fbf968687e"
+  },
+  {
+    "index": 2,
+    "phase": "plan",
+    "started": 1793522111.601897,
+    "prompt_sha256": "883088b38047aaabf2d4d59fae89cb22fb8f764b05bb4828feb5acad3a3ebbd0",
+    "system_sha256": "e7c5a8e5acdb29e3b9d137b3da9a3b307a587f1d6e71863f24ede8b52b2f84bb",
+    "ended": 1793522163.607618,
+    "response_sha256": "16f5798b889ea5722efc259e04b821e80230e847787670e63a2f40bb9b50c602"
+  },
+  {
+    "index": 3,
+    "phase": "plan_completion",
+    "started": 1793522163.608875,
+    "prompt_sha256": "87c7ab121d9f99d373fb67797a1856a6d021929643ddc230c9b2cf32fb14143c",
+    "system_sha256": "e7c5a8e5acdb29e3b9d137b3da9a3b307a587f1d6e71863f24ede8b52b2f84bb",
+    "ended": 1793522298.722315,
+    "response_sha256": "ab0ebc7b3b1b33298b880a6b3489749d9341897b1e82d065e2cb90780622bd27"
+  }
+]

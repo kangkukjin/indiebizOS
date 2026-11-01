@@ -1,0 +1,35 @@
+[
+  {
+    "timestamp": "2026-11-01T17:38:20.348079",
+    "kind": "request.received",
+    "data": {
+      "agent": "상상훈련108 N05",
+      "message_chars": 52,
+      "message_sha256": "ffa0b05cae02abf2e8b820546769f55254d73a170d0a2f239dbec55a27ca01ad",
+      "task_id": "training_ls108_N05_final"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T17:38:28.006266",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 4191,
+      "cache_read": 14071,
+      "call_id": "37890030859043a480472c469e4482ae",
+      "event": "usage",
+      "input": 18264,
+      "latency_ms": 6731,
+      "model": "opus",
+      "output": 470,
+      "parent_call_id": null,
+      "phase": "plan",
+      "provider": "ClaudeCode",
+      "reasoning": 0,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  }
+]

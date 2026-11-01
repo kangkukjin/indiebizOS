@@ -1,0 +1,1029 @@
+{
+  "start": {
+    "start": "2026-11-01T17:20:58+09:00",
+    "deadline": "2026-11-01T18:20:58+09:00",
+    "head": "0c2ebe044a97ffe3b4ae3f8c33c40caec06384a4",
+    "before_sha256": {
+      "data/common_prompts/consciousness_prompt.md": "b5e9684316e4cb57739aceaeb319cbf1908844c1ced05cc41a8af7a8e85666e1",
+      "data/guides/deep_research.md": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+      "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+      "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+      "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+    },
+    "cases_sha256": "e4383e57a5ea76a2ed9eb3961b334ca30cf8fa147294c27e63d1ee5bb0b4a644",
+    "after_sha256": {
+      "data/common_prompts/consciousness_prompt.md": "792237801d0461e14572a8f2e1f6e26878ac82f24bdb637cb67695d1a91b7b6d",
+      "data/guides/deep_research.md": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+      "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+      "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+      "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+    },
+    "preliminary_sha256": {
+      "data/common_prompts/consciousness_prompt.md": "792237801d0461e14572a8f2e1f6e26878ac82f24bdb637cb67695d1a91b7b6d",
+      "data/guides/deep_research.md": "cb2e8eecb81eb0e01f1fc3803e375e634160d14634bc23d7ef9cf47c59dad5f5",
+      "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+      "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+      "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+    },
+    "final_cases_sha256": "e4383e57a5ea76a2ed9eb3961b334ca30cf8fa147294c27e63d1ee5bb0b4a644",
+    "fixture_sha256": "7b78fac5540fa9db989f7fb4790a24aee32d4b4bfa9308295b77bfc5d0ec4240"
+  },
+  "cases": [
+    {
+      "id": "R01",
+      "attempt": "R01_final",
+      "episode_id": 5687,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 151.0884780883789,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 49660,
+        "output": 14528,
+        "cache_read": 29563,
+        "cache_create": 20093,
+        "reasoning": 2465
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "c117c85e4f6ebb4f63bad7a9f67d9e82ceda3721fbe62c5725349948671087d9",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "d4a5a7c25fa6a25f57f3e1f17a66c59bda26a8b1c5449cb920e6f5e75571a012",
+          "guide_sha256": "f08f6931fbae4f1c281966277ab4a9d17936efa178e4d9d3a97ea3374efec30f",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "1c52ddf5d5a530d644ebfa1a43f88688ce76f65dbc9490f4459b2967d5148fa6",
+        "events.json": "3029cc1bd6f5c249034a48bbb81f3a722398286591e6d375618fc660b9a96291",
+        "call_0_response.txt": "9741514c563963f467597f3918910fe2c20662f26289d2fb360c512529434904",
+        "research_plan.md": "16c668c034b4f087c6d50a85a813d68dd6ab2db1ad7afd8af50816b171af9d37",
+        "framing.json": "92c3b4ce13c5d4b05d5e4472fb467ab9e6b5963ae6c240128603c4ef331c92eb",
+        "calls.json": "11a3cf4c2f1f0c95bc81f933c52f807f84d2751ce855d0d2759a74cbf6f0117a",
+        "receipt.json": "2c553de932aac4dffe69f3d7fbe908501907afcf0f78031a0a86aae1f87e9144"
+      }
+    },
+    {
+      "id": "R02",
+      "attempt": "R02_final",
+      "episode_id": 5689,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 184.54890394210815,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 50732,
+        "output": 19243,
+        "cache_read": 29629,
+        "cache_create": 21099,
+        "reasoning": 6236
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "37e0bd15083ada5f7ee432b7e0c6a993560c15690671a8120af2115024caa075",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "5fc7fbd5d580ed9b5d30c4c1037a15d3762d6a7791ac107d45b3297b0909ef37",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "6f0ed70d40d2688dc3d1022035fef966c963b9bd2d1a31ecff267c3cb3f0a07e",
+        "events.json": "b30815a27ce01799baf1dbd992760bed202611627f6bb59177f8579f3dfa3479",
+        "call_0_response.txt": "fb415382b2b690ad7d92e06f11f4169a35b856e7d1aec8ef51fb2ee9d51baa5e",
+        "research_plan.md": "858b986295da79d71f30b6c4b084b3997fb165ab9ed7d815b683c11446d322a3",
+        "framing.json": "2c175e20bb1ccc7e2e2185d41d329821926389ba38de4018a33855905ab54322",
+        "calls.json": "11f9fde8b74f47838d9d945711ba84b19c91aeccf65546148c54779a817b9c33",
+        "receipt.json": "7fd71d8a8f2c68f1afdd4958196f620b0c22faa6201ae971310e0460e88014e0"
+      }
+    },
+    {
+      "id": "R03",
+      "attempt": "R03_final",
+      "episode_id": 5691,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 4,
+      "seconds": 293.227187871933,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 4,
+        "measured_requests": 4,
+        "unmeasured_requests": 0,
+        "input": 123125,
+        "output": 30851,
+        "cache_read": 69462,
+        "cache_create": 53653,
+        "reasoning": 7558
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "4b476b1d83f1d896fa2b1b78d15938dea4072a41629d0ac82fcc35cdb9fbb073",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "0683e52a0572ebcfe6cd21f9604fa11c2b97a4b0127f14f9b0b070a34b0fbb95",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_2_input.txt",
+          "sha256": "883088b38047aaabf2d4d59fae89cb22fb8f764b05bb4828feb5acad3a3ebbd0",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_3_input.txt",
+          "sha256": "87c7ab121d9f99d373fb67797a1856a6d021929643ddc230c9b2cf32fb14143c",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "93a43a8abcc421651af1b776552d316b16c7d7b7270fbd9486cf63fbf968687e",
+        "recovery_input.json": "da4c96b2ed19f32d2011b070aa505a9f1399c116d874b43b3ff07e57dc1e45a1",
+        "events.json": "c7a845a96495525dd0ca02dd120da9578e663835b7a058a9024407a2e9f6a2b5",
+        "call_0_response.txt": "6c1254c823a6d1bce253d6d33b035a61b4877e18e6e45d6ba5e524b08ff20636",
+        "recovered_plan.md": "a38df464432663786c3cd1e27d92489aa97a11b1661e3427f22f91e683509ad6",
+        "recovery_response.json": "9ca7d7efc37d096cda28284b99727fee3b99ed26101662444725330c65fe20e9",
+        "recovered_framing.json": "3aad155b4d9ab8fc57943694c796a5e9cba4ec389495c256a11791c0a64805e1",
+        "research_plan.md": "be03b900cafff78ffe66a87c8cb347c15039d5fb6fa21a96a80f18901436be7e",
+        "framing.json": "d79c055c8c28a3b2688c19a435b2325a4dd9c83ac0c57fa34d14d7e96fd712cf",
+        "call_2_response.txt": "16f5798b889ea5722efc259e04b821e80230e847787670e63a2f40bb9b50c602",
+        "calls.json": "3202a000f1497b63b10770b60ac8bab45c91830d69010134c06d6cda9391ba5e",
+        "receipt.json": "f70601b40c4df71d4fbc79331508dc7457223f95267c7e6db82c74bf03dabe65",
+        "call_3_response.txt": "ab0ebc7b3b1b33298b880a6b3489749d9341897b1e82d065e2cb90780622bd27"
+      }
+    },
+    {
+      "id": "N01",
+      "attempt": "N01_final",
+      "episode_id": 5688,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 130.62870597839355,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 50200,
+        "output": 13181,
+        "cache_read": 25570,
+        "cache_create": 24626,
+        "reasoning": 1224
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "1ae1037e6cab49e17c66523929fec59237a0797a23ca46a6f4924692f7d1da4c",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "8ded7745ac701236910dc953310cc75d2981175ce8112c471ccbb4d6d2cd54fb",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "171a1af0afd60e87e894f39f457be49b45c139a1a3086fe21fe5f81a08d3e6bc",
+        "events.json": "804ef76e54c51268669a093a4fe7fe713e3b9e4e8550488244c4552c5fe4c2ca",
+        "call_0_response.txt": "4c52f428feea89113f9f81994779a5ba43679268509ba63c4706ef7d2784199a",
+        "research_plan.md": "fdb1d4205dfa2c198ef1a183714bfaae0a3aca3710ab7a8d0944507704a36cfa",
+        "framing.json": "c63b906e8077ba490168320e79896eaad52512ac951922ea0004f21f2781ae7d",
+        "calls.json": "31273bb641731e5acfba1f46a56ae8dd02707ee8b2f184e9528df4c7ed168219",
+        "receipt.json": "9fb4dd6fffc64de07802273fdb6ef27ad0ed56611965b5eaf7181a5806cc041a"
+      }
+    },
+    {
+      "id": "N02",
+      "attempt": "N02_final",
+      "episode_id": 5690,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 181.26752519607544,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 50192,
+        "output": 18227,
+        "cache_read": 25570,
+        "cache_create": 24618,
+        "reasoning": 4909
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "12ef9004c332a04d5a624e2eebdcd2bedd2ae866f6d313985ed30d143538f55c",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "5c2c4c8ad81d899b56de02726f408ceb8042ba16103d09dbba345158df048205",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "f94691596ab32427a4bffda98dcb663513d3ad8fa394443061bc140084bfb38a",
+        "events.json": "547100ecde70431a1da19bf4749388557658da8fa6e88d46815fe02d84bb6235",
+        "call_0_response.txt": "41650ef9ea432111aa9b24df2f3b697b44c5891b8751530cbb6944fc8dac5f02",
+        "research_plan.md": "b7d06c864b275fd1365079a5e178541a87e340cd9a30fd4c471753740eab73a2",
+        "framing.json": "9119b852b8acbbf5969f45d2ab5aa51644da31a1ce4d528df513cca9d6677527",
+        "calls.json": "5230334b4548a5e5a0912379d2b0c9e753890243ff30989674beee73f209e838",
+        "receipt.json": "99c682bf39e9571bc0923f47dc9f5566632a488a60362520f141588a4c0d3312"
+      }
+    },
+    {
+      "id": "N03",
+      "attempt": "N03_final",
+      "episode_id": 5692,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 125.82685327529907,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 68701,
+        "output": 12289,
+        "cache_read": 44039,
+        "cache_create": 24656,
+        "reasoning": 1335
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "7896229bb85971678e169819cb966d87ab2fb49164055e686d5ecb52c5caf425",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "4ef16fe4c4592d176c44b0796696e785bf5ba72c1494685f5591ef958a3d2954",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "780c161c0085a8f301c484f04884e8f0e5b55b48175daed843ecbf2f90857f4f",
+        "events.json": "2322094a144f61ae9df2326578ed0e146472807f4d2a61bd1d60acee08eead4d",
+        "call_0_response.txt": "69f1553143ca2f9db276ce3d68293d289b8c0fc2d57395550de03dbb07d78cbf",
+        "research_plan.md": "8934136d7915e459b8dd171a288815345a621156edc2f60eef7320a33c4b166a",
+        "framing.json": "03a6294dc2ced46cb5434adb6ec13353c59e1f67d1ebdb348f02f181e5e4614b",
+        "calls.json": "5508e4fd978fd5fee42dbb3c70bfc71a49f9d08948e081cc853cc791b0fd7f70",
+        "receipt.json": "10bb09f510ee71097c165da06f2dba309aeb010f54673ab70953c3a8c8bb9adc"
+      }
+    },
+    {
+      "id": "N04",
+      "attempt": "N04_final",
+      "episode_id": 5693,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 168.91523098945618,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 74382,
+        "output": 19304,
+        "cache_read": 25570,
+        "cache_create": 48808,
+        "reasoning": 1695
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "23e8c1ec6de0a93ef8f63fe593668b5481a62bb8be8bb454a7847468649bca5c",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "6f87bc819882ef941b49ee263873ea58c9c316d51e873a7b87d8f9abdc9b6c8e",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "0284a02bc841bf5874df7432e67610280068f291ea0eac91f8977a63fb9a81ed",
+        "events.json": "ce498b7651072937f27be476eb654f9d4d88f9243c56777ce0704c52543a72c9",
+        "call_0_response.txt": "e845aed74fca4224b9c495e64a87c3440a1f09999d370c7714ad54607d0a23e9",
+        "research_plan.md": "0d4ae0529dad54f8f5f6e20b41822b174c0a5a9477732f6ea572073547e257ac",
+        "framing.json": "3c9fea37974053241dd58ace447ca8521544cd4c5de8e9e70eaf0ac486315f87",
+        "calls.json": "4128dbccfe4882708b135b92c13b42db91b681ee6b766742864e31f153603724",
+        "receipt.json": "30c4e5751b57c5135f1a4583a502bd0955777ed58dfe8ec2dc0b6517b1880a90"
+      }
+    },
+    {
+      "id": "N05",
+      "attempt": "N05_final",
+      "episode_id": 5694,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 1,
+      "calls": 1,
+      "seconds": 8.337830781936646,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 18264,
+        "output": 470,
+        "cache_read": 14071,
+        "cache_create": 4191,
+        "reasoning": 0
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "b4da6f9f3b863e981ab0bd83c200b43da59dd362688d82c438e1e94d89d9b599",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "events.json": "59f53fa35210bc9ad3d28e777d23d13edfca1a34a68de52ffa83e77b2235d229",
+        "call_0_response.txt": "9e4eea05c3b7a075dbd8e3adc7535560db3e8f9b2e0b8abbe3d4533b6f6ac902",
+        "framing.json": "a1b959158fafb629b1bd8da51d257f504e193da8dcec29d4aede39d290d8ca36",
+        "calls.json": "b8ebe67f88b2f9d3b03da7f47096b98c3d6e7771605e3c5424912f6cc5083491",
+        "receipt.json": "dcf2f6e1f16320df11524dc6f31314cdcb7188033d846d6f4ab4d8e2330218a6"
+      }
+    },
+    {
+      "id": "N06",
+      "attempt": "N06_final",
+      "episode_id": 5695,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 126.75017714500427,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 73218,
+        "output": 13435,
+        "cache_read": 25570,
+        "cache_create": 47644,
+        "reasoning": 1173
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "7227a76e5932e708ac998b6ec7daa7b07c83351113c9e18b5a70fb13b5ea63b4",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "630534ca379be0aa0d27e4ca08fd43496560608ce0cdbea52c14eadf3920c241",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "b449a74faa7e234ffdea6c545feadd1acb0138c8fb45f623d67509c2f06fe89b",
+        "events.json": "d6db4a77637a2c22c996a0a29a291b23fc2341fa618f75bce4e48a10dfe2d687",
+        "call_0_response.txt": "8b00a706efe54bf73d52e166945bbb65b038ec41c9d03ba102a362396d2d9da2",
+        "research_plan.md": "f400d894d7fdd46f0a24adc95400d900f3bb7456d9fd3a5171bae6e4b27b3105",
+        "framing.json": "bd5abf32f567f7b99e9d5e95116a50f55eff7ef74551fa290b7d5e7be1925b8b",
+        "calls.json": "35c86d39ea350e4432dcd83dc7d2e2aa859e7f79d6246914e50ff2145e11a4d5",
+        "receipt.json": "9d9b871be207bddeaac180e6b56427f4749bf27dcc3848f003db9924df721a57"
+      }
+    }
+  ],
+  "preliminary": [
+    {
+      "id": "R01",
+      "attempt": "R01",
+      "episode_id": 5685,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 142.00873398780823,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 50146,
+        "output": 13299,
+        "cache_read": 3147,
+        "cache_create": 46995,
+        "reasoning": 2440
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "c117c85e4f6ebb4f63bad7a9f67d9e82ceda3721fbe62c5725349948671087d9",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "87c6dde9b2428561528c13c662a2c77bceed20f061c110393e702ba9310a9ee9",
+          "guide_sha256": "cb2e8eecb81eb0e01f1fc3803e375e634160d14634bc23d7ef9cf47c59dad5f5",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "787d8cf0d72ce4f8a1925dca9ec3299a0f6ebb6f8a75cb2a3f2521f83cedd14c",
+        "events.json": "3ac5101d05d508ad8c058faf4bf0bf4482201b7678684f018575f8b4cebc8621",
+        "call_0_response.txt": "b1bbef2dc8f140ff8abf3667d6a0a3caf47c82e8f03b6e5cfa13bd2ada7f0a24",
+        "research_plan.md": "2ddeffa271943adcffe0ce3714e4802220fda3b2fc276e38fc0cf765ef30d4b7",
+        "framing.json": "e7ba42afe13f569679a4aa79349f14e4860f1765d4a5dd2f31f376ac952d8364",
+        "calls.json": "bf3d371ab24eeb9923fcf0addf906cc3e5075480bf93cc43d359ebeb92320790",
+        "receipt.json": "24582b69c30779674518dfec3da3157335c1ca13c9e1a0ad5814fcd2c0aa6253"
+      }
+    },
+    {
+      "id": "R02",
+      "attempt": "R02",
+      "episode_id": 5686,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 154.499746799469,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 51161,
+        "output": 15876,
+        "cache_read": 25570,
+        "cache_create": 25587,
+        "reasoning": 2982
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "37e0bd15083ada5f7ee432b7e0c6a993560c15690671a8120af2115024caa075",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "e717005e8c1a8c0ab8710df22d845ed3329ae70d37422662b971203ddf0c0b08",
+          "guide_sha256": "cb2e8eecb81eb0e01f1fc3803e375e634160d14634bc23d7ef9cf47c59dad5f5",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "a508802453afa79f2e48b2b838e06a77bcd285aeb0285db1aab9185db3ab968c",
+        "events.json": "32b256eba6c72b19afaaaf3e2c4a0f400d3c1b460acc4d6a569fe1654f6a3393",
+        "call_0_response.txt": "80b41ab7c660c1ab94ec55278ad0a980615532ce835f2942c0741562bcf0f48c",
+        "research_plan.md": "84d58649f8f6146e7be90300262da1f8ff9366a601bb6c68dd1997156842c9db",
+        "framing.json": "f536984e0f65cb777c144901d52d9637d43ba06069dc47d4d74842080278d75c",
+        "calls.json": "345470a94a328f05b6d1f6b7cafa6e83eb7a459f25d8ad10a1443b21508e2bd4",
+        "receipt.json": "e618acf7f7a2493e2674b1f458a40d87bb313cbb7a715749ead87014832fe14f"
+      }
+    }
+  ],
+  "final_usage": {
+    "requests": 19,
+    "measured_requests": 19,
+    "unmeasured_requests": 0,
+    "input": 558474,
+    "output": 141528,
+    "cache_read": 289044,
+    "cache_create": 269388,
+    "reasoning": 26595
+  },
+  "total_usage": {
+    "requests": 37,
+    "measured_requests": 37,
+    "unmeasured_requests": 0,
+    "input": 1151455,
+    "output": 285727,
+    "cache_read": 561720,
+    "cache_create": 589647,
+    "reasoning": 46446
+  },
+  "source_sha256_end": {
+    "data/common_prompts/consciousness_prompt.md": "792237801d0461e14572a8f2e1f6e26878ac82f24bdb637cb67695d1a91b7b6d",
+    "data/guides/deep_research.md": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+    "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+  },
+  "cases_sha256_end": "e4383e57a5ea76a2ed9eb3961b334ca30cf8fa147294c27e63d1ee5bb0b4a644",
+  "recovery_relinked": [
+    {
+      "id": "R03",
+      "attempt": "R03_relinked",
+      "episode_id": 5696,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 0,
+      "calls": 2,
+      "seconds": 172.85278701782227,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 61528,
+        "output": 18561,
+        "cache_read": 32223,
+        "cache_create": 29301,
+        "reasoning": 1878
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "883088b38047aaabf2d4d59fae89cb22fb8f764b05bb4828feb5acad3a3ebbd0",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "2ab3a0fd2558ccccf286fc380968020376e4c2ca1c1a3a9a70e2328133e6e02d",
+          "guide_sha256": "54c94d5bd25768ef93eabb4690925e2b90902844e83ff40eab999ecbab228d55",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "9dcc0598e442e979574daff46f1869b9e528753d232507bb33f3f6a85f440f6a",
+        "recovery_input.json": "da4c96b2ed19f32d2011b070aa505a9f1399c116d874b43b3ff07e57dc1e45a1",
+        "events.json": "0035d8bae8248a1f768f52b03e7bc0e0c3fa26023c0e2f18e67d48b10eb6f724",
+        "call_0_response.txt": "2c4b90a9c83cc37cdc3a1efc02a50d76a7155e403d7b8b481318eeee20270526",
+        "recovered_plan.md": "d7d0a6ed1f792efb3a518a5399387f741e36fb54d8f914d00504c83486b9ca51",
+        "recovery_response.json": "bc8722f68d5ad38c6486e0f540307fad0dddb0e48ce2cdf93dc58759f9b8724a",
+        "recovered_framing.json": "ba0b38857358704d359857f985d9c4802f5eb38a2dd18d41edb35765be423813",
+        "research_plan.md": "be03b900cafff78ffe66a87c8cb347c15039d5fb6fa21a96a80f18901436be7e",
+        "framing.json": "d79c055c8c28a3b2688c19a435b2325a4dd9c83ac0c57fa34d14d7e96fd712cf",
+        "calls.json": "a8e9677915500cfa0f1be758e02d7d6cfbe2f8e2f4343910637aa5e796c0fd70",
+        "receipt.json": "9d54b50ac0ee6e732e6cb99d5e495f1ead0d88d57939458e095d42ed2e6eb72f"
+      }
+    }
+  ],
+  "refinement": [
+    {
+      "id": "R01",
+      "attempt": "R01_refined",
+      "episode_id": 5697,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 112.73111486434937,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 68930,
+        "output": 10648,
+        "cache_read": 21737,
+        "cache_create": 47187,
+        "reasoning": 1322
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "c117c85e4f6ebb4f63bad7a9f67d9e82ceda3721fbe62c5725349948671087d9",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "f10a33027488ae11e02727c062e57758556d705e4d25149cfd7243926f1e94bb",
+          "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "0a140167a0d6d8d44bf30c9a3450468dfbea85de7f184a7b381c9f58eb68a003",
+        "events.json": "dcf5b9def71acedc921fd9b5d7b34533f58940d95d843c31d46f3f745adca21b",
+        "call_0_response.txt": "23c70cdc35552d6a0045d74f0a4c02a763eaca256f39933c3f55f74ae843cd0e",
+        "research_plan.md": "2d0fac26080070950706db17e5c651309a70db902408a9c15ed091982e0e3c36",
+        "framing.json": "98a033354e94f7c5e13f2441f0c2ace28ec7edfb606740293dbb49224ccad59a",
+        "calls.json": "599d16b025ce05f1c48f2a42f78716dae504276aaa28ea576498d416b5b41566",
+        "receipt.json": "cdabec0d53a1f5e37e1556cfc3019f29d8f70875d4a0bc5cf8919793bc1020ad"
+      }
+    },
+    {
+      "id": "N01",
+      "attempt": "N01_refined",
+      "episode_id": 5699,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 130.928701877594,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 69237,
+        "output": 12805,
+        "cache_read": 44492,
+        "cache_create": 24739,
+        "reasoning": 1538
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "1ae1037e6cab49e17c66523929fec59237a0797a23ca46a6f4924692f7d1da4c",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "611f3626f004e1b3df549f815bcd88c57efb886f2560b46659938f1963151973",
+          "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "a2532114c3157ed790fb7cf78e999c24fa6decd35395f227cea8cdf266286967",
+        "events.json": "401199d9eeb2d83d42b2804b82e67f5fc781a943035732ef9b3cb8ed85c0c94e",
+        "call_0_response.txt": "c6fb5813dde0859b01692e9e9b5d801829925255df8ab7d71a79ef2a0f45118b",
+        "research_plan.md": "2c665001e6ce3e9598e5e0708fa24933c4554e91b7699369acbbbcddea4bf831",
+        "framing.json": "8c17e8f195daa8c83b24338b7ac91ca53e31e6059c5bc5e1c15e5b9a650d5f6a",
+        "calls.json": "2c2db66a47ffa151b23dbc72e1f846ebbafd0a245d97bea774ae14225d0f482b",
+        "receipt.json": "49dd9736daebe6e28acc973ba1150bff20abd7c8b207ca72c4e337a13a0fc44d"
+      }
+    },
+    {
+      "id": "N02",
+      "attempt": "N02_refined",
+      "episode_id": 5698,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 185.2103192806244,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 69642,
+        "output": 18359,
+        "cache_read": 21802,
+        "cache_create": 47834,
+        "reasoning": 5250
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "12ef9004c332a04d5a624e2eebdcd2bedd2ae866f6d313985ed30d143538f55c",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "3268d427b6dfc9edff20f862383f511fe2b56d45d4f45b1df82ece9bf7f7d584",
+          "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "f73af8fc37ba7185b71aaf2e2482ea9e74a8cfb63040f6120965a59298fcf9fb",
+        "events.json": "ae48f80fc67a61bf9cc133544d03ae49d4e1bee77e3c7f9040628c11db5cda26",
+        "call_0_response.txt": "be251953b17cac8f8f2286a08a34b2a009c6a40ba09b258f8af277a69acabd37",
+        "research_plan.md": "c7f25221f322a574ec9d1968ffa20300c15c78c7c5e056b557c950b922de9960",
+        "framing.json": "b803aa3f4f74f8f2c5af425dcc008c8cfba7e80be3a43340b130e273ce9447a7",
+        "calls.json": "4608eeed07855b2dabd1215401f1888dc5436cbea50b3a61800e8fb8840e1e06",
+        "receipt.json": "a2083f0ff8bf1800e4ff5853f7d78e5c9014d7ac02c0f184aa05753253db3222"
+      }
+    },
+    {
+      "id": "N03",
+      "attempt": "N03_refined",
+      "episode_id": 5700,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 169.67418599128723,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 69971,
+        "output": 17270,
+        "cache_read": 44517,
+        "cache_create": 25448,
+        "reasoning": 2099
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "7896229bb85971678e169819cb966d87ab2fb49164055e686d5ecb52c5caf425",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "96d8bf886a2d335eb1ae357ce51ededfa28d41a25f9f17a9362b481ab225053e",
+          "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "6af2fec2dbdb5ae12f8a7f437823a8d86aa4d7eda8a3581b891c0bdec74426dd",
+        "events.json": "58b804fd66c2837c30a0a3a590792cf68fafbf7e1169ff1dd2f1e514fa435122",
+        "call_0_response.txt": "a5b374d298add5f8aba8418e68dddf482c173765243e53096e99412d4b49f456",
+        "research_plan.md": "bce5e75a3c4d48c6034e1ecc814083c9d30e206b946b7fdfea45cc8760280754",
+        "framing.json": "49631f5f577f89d995e443d6ff2008f91834578d2a4e37f507e009125fe0dafa",
+        "calls.json": "70bc5b9daea6e2981187cc58709c0714fa9d1b84a51d299b36819533d2730b1e",
+        "receipt.json": "4b2ea4668386be046a4577f7f047c9fe6bb6ea90ef3f9c5bbdf566f77b5653c6"
+      }
+    },
+    {
+      "id": "N04",
+      "attempt": "N04_refined",
+      "episode_id": 5702,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 226.8171260356903,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 102150,
+        "output": 25930,
+        "cache_read": 53300,
+        "cache_create": 48844,
+        "reasoning": 1185
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "23e8c1ec6de0a93ef8f63fe593668b5481a62bb8be8bb454a7847468649bca5c",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "87fd1477e54cd2936851357ecec630973156c2e8136d45397fa93bb85714bbba",
+          "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "7246351653bb3b6fad16fd906da21587bf4c535fc04709bb4dd419c2f5753469",
+        "events.json": "4a58bdca1309e6669a41e927a06f41cd2bca17b88c6ec0d9400840cc78962724",
+        "call_0_response.txt": "86d31b820e04cd15980306affebed0c24c23ebc0a994aa170ea7d2c72c47fb8a",
+        "research_plan.md": "42305ec63bcd754fc701ccac6ff486d03eff9528ed075c1e1c03c0f58fffee32",
+        "framing.json": "658bdd15dc65e8a10e5151eab6f8e477c00ec1682dcfbd1647c4b7e3d79144e0",
+        "calls.json": "4da719a33ee07a713d5b3fddc8d1d864e4f0565af8b10621bd2cc1ab4dfa1dc6",
+        "receipt.json": "eddf4b4013eb61a2d82036d71302d30c651b700854bdd823207cae248d313ae5"
+      }
+    },
+    {
+      "id": "N07",
+      "attempt": "N07_refined",
+      "episode_id": 5701,
+      "episode_source": "training",
+      "status": "completed",
+      "initial_calls": 2,
+      "calls": 2,
+      "seconds": 113.01513600349426,
+      "model": {
+        "provider": "claude_code",
+        "model": "opus",
+        "tier": "고급",
+        "source": "gear:최대|의식→고급"
+      },
+      "usage": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 50216,
+        "output": 11451,
+        "cache_read": 25888,
+        "cache_create": 24324,
+        "reasoning": 1157
+      },
+      "input_audit": [
+        {
+          "file": "call_0_input.txt",
+          "sha256": "b846d7d83353c1fe73e9c3d1ee8d205cb3c9c894f074beaabda6200f9147de7b",
+          "guide_sha256": null,
+          "operator_check_text_present": false
+        },
+        {
+          "file": "call_1_input.txt",
+          "sha256": "5331c4fabc251f4159ffef9fa9f8088771c65bd4ce278ed97fddb5757861618c",
+          "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+          "operator_check_text_present": false
+        }
+      ],
+      "tool_events": [],
+      "artifact_sha256": {
+        "call_1_response.txt": "4c9006181b77d24d6379747dfed3ae58773ad5322fea145aee771129d69f9a09",
+        "events.json": "b74d97038e4770291beb0c055598da42e2985fd4ab588e5e528f7b56d510f8d9",
+        "call_0_response.txt": "df5ccb38cbf5c2f7c2d80e4903db201a23cd1bd6e47eb7e5b6c1df1ecc006eac",
+        "research_plan.md": "8610ef323424219eb15b5951ec022e2d945abd9e447cc0b5ce6c2fd9c7b2db71",
+        "framing.json": "586570343121a046d9850081c53b1fb10147660befd3bbf89836a48b970617e3",
+        "calls.json": "a1fea652c5c1bf107c4810df606871831e0620b63be31a96fef006177aaec38a",
+        "receipt.json": "375031d927b91cf26ec12fc613c57dbc99d5829f12c56a9748ec3acdd65bc001"
+      }
+    }
+  ],
+  "phase1_total_usage": {
+    "requests": 23,
+    "measured_requests": 23,
+    "unmeasured_requests": 0,
+    "input": 659781,
+    "output": 170703,
+    "cache_read": 317761,
+    "cache_create": 341970,
+    "reasoning": 32017
+  },
+  "phase1_usage": {
+    "requests": 19,
+    "measured_requests": 19,
+    "unmeasured_requests": 0,
+    "input": 558474,
+    "output": 141528,
+    "cache_read": 289044,
+    "cache_create": 269388,
+    "reasoning": 26595
+  },
+  "refinement_usage": {
+    "requests": 12,
+    "measured_requests": 12,
+    "unmeasured_requests": 0,
+    "input": 430146,
+    "output": 96463,
+    "cache_read": 211736,
+    "cache_create": 218376,
+    "reasoning": 12551
+  },
+  "source_sha256_final": {
+    "data/common_prompts/consciousness_prompt.md": "8e7a689782c6333c970370167fefb5a9124464615f99a53f63c67df1a98771ba",
+    "data/guides/deep_research.md": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+    "backend/cognition/reframe.py": "379d021be052a868446c98f9f26d85d10049cc9c0ed5360d59afda6bd762c04c"
+  },
+  "refinement_cases_sha256": "ab9b84919b8bd509be1e2386da4888b597bb169f90617e13a799dc8fe02feb2f",
+  "refinement_applied": {
+    "reason": "첫 수정의 R01/N01 추론 잔여, N02 기간 경계 모호, N03 익명화 속성 추가",
+    "inputs_sha256": "ab9b84919b8bd509be1e2386da4888b597bb169f90617e13a799dc8fe02feb2f",
+    "prompt_sha256": "8e7a689782c6333c970370167fefb5a9124464615f99a53f63c67df1a98771ba",
+    "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+    "guide_bytes": 35985,
+    "status": "applied",
+    "new_model_stages": 0,
+    "applied_at": "2026-11-01T17:41:28.737307+09:00"
+  }
+}

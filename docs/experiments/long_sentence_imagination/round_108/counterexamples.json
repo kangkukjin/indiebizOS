@@ -1,0 +1,98 @@
+{
+  "purpose": "원문 집계와 양립하는 분포는 복수다. 실제 원인·확률·성능 측정 아님.",
+  "N01": [
+    {
+      "previous": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        50,
+        50,
+        50,
+        50
+      ],
+      "current": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        26,
+        26,
+        26,
+        26
+      ],
+      "previous_total": 240,
+      "current_total": 144,
+      "decline": 0.4,
+      "pre_period_decline": false
+    },
+    {
+      "previous": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "current": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        10,
+        10,
+        10,
+        10
+      ],
+      "previous_total": 120,
+      "current_total": 72,
+      "decline": 0.4,
+      "pre_period_decline": true
+    }
+  ],
+  "R01_proxy": {
+    "baseline": {
+      "visits": 100,
+      "conversion": 0.5,
+      "transactions": 50,
+      "spend_per_transaction": 10,
+      "sales": 500
+    },
+    "fewer_visits": {
+      "visits": 80,
+      "conversion": 0.5,
+      "transactions": 40,
+      "spend_per_transaction": 10,
+      "sales": 400
+    },
+    "lower_conversion": {
+      "visits": 100,
+      "conversion": 0.4,
+      "transactions": 40,
+      "spend_per_transaction": 10,
+      "sales": 400
+    },
+    "implication": "같은 구매건수·매출 감소가 방문감소나 전환율 하락에서 나온다. 구매건수를 방문수로 읽으면 둘을 구별할 수 없다."
+  },
+  "N01_resolution_proxy": "재문의가 없다는 사실은 해결된 경우와 포기한 경우 모두와 양립한다. 단순 무재문의를 해결률로 명명하려면 별도 확인이 필요하다."
+}

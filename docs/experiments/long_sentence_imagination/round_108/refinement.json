@@ -1,0 +1,10 @@
+{
+  "reason": "첫 수정의 R01/N01 추론 잔여, N02 기간 경계 모호, N03 익명화 속성 추가",
+  "inputs_sha256": "ab9b84919b8bd509be1e2386da4888b597bb169f90617e13a799dc8fe02feb2f",
+  "prompt_sha256": "8e7a689782c6333c970370167fefb5a9124464615f99a53f63c67df1a98771ba",
+  "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+  "guide_bytes": 35985,
+  "status": "applied",
+  "new_model_stages": 0,
+  "applied_at": "2026-11-01T17:41:28.737307+09:00"
+}

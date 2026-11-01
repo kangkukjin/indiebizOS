@@ -1,0 +1,74 @@
+{
+  "id": "N01",
+  "started": 1793521693.682115,
+  "status": "completed",
+  "origin": "training",
+  "workspace": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_108회차/N01_final",
+  "runner_sha256": "0facf3a1fed58b83b1f77819fa1c7fd2d43bcc17209a80fc3e50ab926a4a9090",
+  "episode_id": 5688,
+  "model": {
+    "provider": "claude_code",
+    "model": "opus",
+    "tier": "고급",
+    "source": "gear:최대|의식→고급"
+  },
+  "initial_calls": 2,
+  "calls": 2,
+  "has_plan": true,
+  "deep_research": true,
+  "needs_clarification": false,
+  "controller_usage": {
+    "input": 50200,
+    "output": 13181
+  },
+  "usage": {
+    "requests": 2,
+    "measured_requests": 2,
+    "unmeasured_requests": 0,
+    "input": 50200,
+    "output": 13181,
+    "cache_read": 25570,
+    "cache_create": 24626,
+    "reasoning": 1224,
+    "calls": [
+      {
+        "call_id": "04533f4e5cc049f6bb69068dbe21b761",
+        "parent_call_id": null,
+        "role": "consciousness",
+        "phase": "plan",
+        "provider": "ClaudeCode",
+        "model": "opus",
+        "round_index": 1,
+        "tier": "고급",
+        "source": "execution_instance",
+        "measured": true,
+        "elapsed_ms": 33286,
+        "input": 18446,
+        "output": 3325,
+        "cache_read": 14071,
+        "cache_create": 4373,
+        "reasoning": 380
+      },
+      {
+        "call_id": "dbb02b125128449dbac03ce40615e24f",
+        "parent_call_id": null,
+        "role": "consciousness",
+        "phase": "plan_completion",
+        "provider": "ClaudeCode",
+        "model": "opus",
+        "round_index": 1,
+        "tier": "고급",
+        "source": "execution_instance",
+        "measured": true,
+        "elapsed_ms": 91829,
+        "input": 31754,
+        "output": 9856,
+        "cache_read": 11499,
+        "cache_create": 20253,
+        "reasoning": 844
+      }
+    ]
+  },
+  "ended": 1793521824.310821,
+  "seconds": 130.62870597839355
+}

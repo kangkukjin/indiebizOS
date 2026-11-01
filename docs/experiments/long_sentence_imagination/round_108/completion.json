@@ -1,0 +1,37 @@
+{
+  "status": "training_completed_changes_applied_quality_partial",
+  "started": "2026-11-01T17:20:58+09:00",
+  "deadline": "2026-11-01T18:20:58+09:00",
+  "model_calls_started": "2026-11-01T17:23:32.934707+09:00",
+  "model_calls_ended": "2026-11-01T17:51:11.576282+09:00",
+  "diagnosis_and_evidence_completed_at": "2026-11-01T17:53:41.751276+09:00",
+  "elapsed_seconds_through_preservation": 1963.75,
+  "within_60_minute_budget": true,
+  "counts": {
+    "distinct_requests": 10,
+    "first_phase_cases": 9,
+    "refinement_cases": 6,
+    "preserved_attempts": 18,
+    "measured_model_calls": 37,
+    "unmeasured_model_calls": 0
+  },
+  "verification": {
+    "selected_tests_passed": 83,
+    "selected_tests_seconds": 13.36,
+    "backend_full_suite_run": false,
+    "evidence_quotes_checked": 26,
+    "live_attempts_checked": 18,
+    "guide_final_bytes": 35985
+  },
+  "remaining": [
+    "집계 가정으로 실제 가능성 우열을 만드는 추론이 N01 계획에서 재발",
+    "대리 지표와 실제 목적 측정치의 혼용",
+    "익명화의 미확인 속성 추가와 이전 AI 예시의 오류 계승"
+  ],
+  "limits": [
+    "독립 평가자 없음; 운영자 정성 판정",
+    "실제 연구·실행자 자율 회수·자동 주제 결속 미검증",
+    "반복확률·비용절감 미추정"
+  ],
+  "commit": "별도 git 사건으로 확인; 자체 해시를 파일에 추정 기입하지 않음"
+}

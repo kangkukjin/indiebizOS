@@ -1,5 +1,7 @@
 """Evaluator instructions must follow the current prompt file in a live process."""
 import boot_paths  # noqa: F401 — direct execution uses the same layered imports.
+import json
+from types import SimpleNamespace
 import pytest
 
 import cognitive_eval
@@ -63,6 +65,144 @@ def test_review_and_original_goal_have_independent_evidence(monkeypatch, review,
 
 def test_legacy_approval_does_not_supply_goal_evidence():
     assert cognitive_eval.parse_goal_outcome('ACHIEVED')['goal_status'] == 'UNKNOWN'
+
+
+@pytest.fixture
+def evaluation_case(tmp_path, monkeypatch):
+    from test_goal_eval_streaming import _Runner, _drain
+    from supervision_store import TurnStore
+    import thread_context as tc
+    previous = tc.snapshot()
+    tc.clear_all_context()
+    store = TurnStore(tmp_path / 'review')
+    monkeypatch.setattr('model_result_view.evidence_store', lambda: store)
+    case = SimpleNamespace(store=store, calls=[], review='NOT_ACHIEVED', goal='NOT_ACHIEVED')
+
+    def model(prompt, **kwargs):
+        assert kwargs['role'] == 'evaluate'
+        case.calls.append(prompt)
+        return (case.review + '\nSEVERITY: 2\nDEFECTS: ' + json.dumps([
+            {'criterion_id': 'C1', 'evidence': 'PDF 파일 확인이 빠져 있습니다.',
+             'repair': 'PDF 생성 및 확인'}], ensure_ascii=False)
+            + '\nGOAL_OUTCOME: ' + json.dumps({
+                'status': case.goal, 'reason': '보존된 파일 검사 결과',
+                'evidence': ['CSV 파일 영수증'],
+                'remaining': ['PDF 생성 및 확인'] if case.goal == 'NOT_ACHIEVED' else [],
+            }, ensure_ascii=False))
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', model)
+    monkeypatch.setattr('reframe.revise_from_eval', lambda *a, **kw: None)
+    case.runner = _Runner([])
+    case.runner._evaluate_achievement = cognitive_eval.CognitiveEvalMixin._evaluate_achievement.__get__(case.runner)
+    case.draft = 'CSV와 PDF를 모두 저장했습니다.\n[CSV](outputs/report.csv)'
+
+    def run(rounds=1):
+        return _drain(case.runner._run_goal_evaluation_stream(
+            'CSV와 PDF 저장', 'CSV와 PDF 파일이 존재', case.draft, [], max_rounds=rounds))
+
+    case.run = run
+    try:
+        yield case
+    finally:
+        tc.restore(previous)
+
+
+@pytest.mark.parametrize('goal', ['NOT_ACHIEVED', 'UNKNOWN', 'ACHIEVED'])
+def test_rejected_final_preserves_draft_and_separates_review_from_goal(evaluation_case, goal):
+    from thread_context import get_goal_eval_outcome
+    from supervision_store import digest
+    case = evaluation_case
+    case.goal = goal
+    events, result = case.run()
+    assert '모두 저장했습니다' not in result
+    assert '[검수 미통과]' in result and 'PDF 생성 및 확인' in result
+    assert '보존된 파일 검사 결과' in result
+    assert len(case.calls) == 1 and case.runner.ai.stream_calls == 0
+    assert not any(e['type'] == 'final' for e in events)
+    outcome = get_goal_eval_outcome()
+    assert outcome['review_status'] == 'REWORK' and outcome['goal_status'] == goal
+    assert outcome['response_hash'] == digest(result)
+    receipt = json.loads((case.store.directory / 'review_status.json').read_text())
+    assert receipt['response']['hash'] == digest(result)
+    assert receipt['learning'] == 'deferred'
+    assert case.store.read_evidence(receipt['response']['id'])['text'] == result
+    assert case.store.read_evidence(receipt['draft_response']['id'])['text'] == case.draft
+    assert str(case.store.directory / (receipt['draft_response']['id'] + '.txt')) in result
+    if goal != 'NOT_ACHIEVED':
+        assert '목표가 미달성' not in result
+
+
+@pytest.mark.parametrize('goal', ['ACHIEVED', 'NOT_ACHIEVED', 'UNKNOWN'])
+def test_approved_response_is_preserved_even_when_reporting_incomplete_goal(evaluation_case, goal):
+    case = evaluation_case
+    case.review, case.goal = 'ACHIEVED', goal
+    case.draft = 'CSV는 저장했고 PDF는 만들지 못했습니다.'
+    _, result = case.run()
+    assert result == case.draft
+    assert len(case.calls) == 1 and case.runner.ai.stream_calls == 0
+
+
+def test_retry_failure_does_not_return_the_rejected_completion_claim(evaluation_case, monkeypatch):
+    case = evaluation_case
+
+    def fail(**kwargs):
+        raise RuntimeError('executor disconnected')
+
+    monkeypatch.setattr(case.runner.ai, 'process_message_stream', fail)
+    _, result = case.run(rounds=2)
+    assert '모두 저장했습니다' not in result and '보완 실행 중 오류' in result
+    assert 'PDF 생성 및 확인' in result
+    assert len(case.calls) == 1
+
+
+def test_last_retry_preserves_latest_draft_without_publishing_it(evaluation_case):
+    case = evaluation_case
+    _, result = case.run(rounds=2)
+    assert '[검수 미통과]' in result
+    assert len(case.calls) == 2 and case.runner.ai.stream_calls == 1
+    receipt = json.loads((case.store.directory / 'review_status.json').read_text())
+    assert case.store.read_evidence(receipt['draft_response']['id'])['text'] == '보완된 응답'
+
+
+def test_evidence_write_failure_still_reports_rejected_state(evaluation_case, monkeypatch):
+    from thread_context import get_goal_eval_outcome
+    from supervision_store import digest
+    case = evaluation_case
+
+    def fail(value):
+        raise OSError('disk unavailable')
+
+    monkeypatch.setattr(case.store, 'evidence', fail)
+    _, result = case.run()
+    assert '[검수 미통과]' in result and 'PDF 생성 및 확인' in result
+    assert '모두 저장했습니다' not in result and '응답 원문' not in result
+    assert get_goal_eval_outcome()['response_hash'] == digest(result)
+
+
+def test_failed_evaluation_reaches_pipeline_final_as_incomplete(tmp_path, monkeypatch, evaluation_case):
+    from test_episode3388_repairs import Runner
+    from thread_context import get_goal_eval_outcome
+    case = evaluation_case
+    monkeypatch.setattr('conscious_supervisor.open_supervisor', lambda *a, **kw: None)
+    monkeypatch.setattr('world_pulse._load_config', lambda: {'goal_eval': {'max_rounds': 1}})
+    monkeypatch.setattr('consciousness_agent.get_world_pulse_text', lambda: '')
+    monkeypatch.setattr('consciousness_agent.get_consciousness_agent', lambda: SimpleNamespace(
+        is_ready=True, process=lambda **kw: {'task_framing': kw['user_message'],
+                                            'achievement_criteria': 'CSV와 PDF 파일이 존재'}))
+    monkeypatch.setattr('framing_inheritance._oneshot', lambda *a, **kw: pytest.fail('예상하지 않은 모델 호출'))
+    monkeypatch.setattr('capability_guard.judge_once', lambda *a, **kw: pytest.fail('예상하지 않은 모델 호출'))
+
+    def execute(message_content, history=None, **kwargs):
+        yield {'type': 'final', 'content': case.draft}
+
+    runner = Runner(tmp_path, execute)
+    events = list(runner.cognitive_stream('CSV와 PDF 저장', []))
+    finals = [e['content'] for e in events if e['type'] == 'final']
+    assert len(finals) == 1 and '[검수 미통과]' in finals[0]
+    assert '모두 저장했습니다' not in finals[0]
+    assert not any(e['type'] == 'error' for e in events)
+    assert get_goal_eval_outcome()['goal_status'] == 'NOT_ACHIEVED'
+    assert len(case.calls) == 1
 
 
 if __name__ == '__main__':

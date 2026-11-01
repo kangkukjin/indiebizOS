@@ -623,6 +623,51 @@ class CognitiveEvalMixin:
             }, ensure_ascii=False), encoding="utf-8")
             return response + "\n\n[검수 미완료] " + reason
 
+        def rejected(reason, feedback, severity):
+            """검수에서 거절한 초안을 완료 응답으로 채택하지 않는다. 추가 모델 호출은 없다."""
+            from model_result_view import evidence_store
+            from supervision_store import digest
+            outcome = self.goal_outcome
+            goal_text = {
+                'NOT_ACHIEVED': '마지막 검수에서 사용자 목표가 미달성으로 판정됐습니다.',
+                'ACHIEVED': '목표 달성은 확인됐지만 응답에 보완이 필요합니다.',
+                'UNKNOWN': '목표 달성 여부는 확인되지 않았습니다.',
+            }[outcome['goal_status']]
+            parts = ['[검수 미통과] ' + reason, goal_text]
+            if outcome['goal_reason']:
+                parts.append('판정 근거: ' + outcome['goal_reason'])
+            if outcome['remaining']:
+                parts.append('남은 작업:\n' + '\n'.join('- ' + row for row in outcome['remaining']))
+            # 목표 상태와 별개로 응답 자체의 결함도 전달한다.
+            match = re.search(r'(?m)^DEFECTS:\s*(\[.*\])\s*$', feedback or '')
+            try:
+                defects = json.loads(match[1]) if match else []
+                details = [row['evidence'] + ' → ' + row['repair'] for row in defects]
+            except (ValueError, TypeError, KeyError):
+                details = []
+            if details:
+                parts.append('검수에서 필요한 보완:\n' + '\n'.join('- ' + row for row in details))
+            set_goal_eval_outcome(False, severity, status='NOT_ACHIEVED', reason=feedback, **outcome)
+            try:
+                store = evidence_store()
+                draft = store.evidence(response)
+                parts.append(f"[검수 미통과 응답 원문](<{store.directory / (draft['id'] + '.txt')}>)")
+                delivered = '\n\n'.join(parts)
+                set_goal_eval_outcome(False, severity, status='NOT_ACHIEVED', reason=feedback,
+                                      response_hash=digest(delivered), **outcome)
+                (store.directory / 'review_status.json').write_text(json.dumps({
+                    **get_goal_eval_outcome(), 'original_goal': user_message,
+                    'criteria': criteria, 'draft_response': draft,
+                    'response': {'hash': digest(delivered), **store.evidence(delivered)},
+                    'learning': 'deferred', 'validator': 'goal_eval', 'stop_reason': reason,
+                }, ensure_ascii=False), encoding='utf-8')
+            except OSError as exc:
+                self._log(f'[GoalEval] 검수 미통과 응답 보관 실패: {exc}')
+            delivered = '\n\n'.join(parts)
+            set_goal_eval_outcome(False, severity, status='NOT_ACHIEVED', reason=feedback,
+                                  response_hash=digest(delivered), **outcome)
+            return delivered
+
         if max_rounds < 1:
             return unreviewed("평가 라운드가 배정되지 않았습니다", status="NOT_RUN")
 
@@ -735,11 +780,10 @@ class CognitiveEvalMixin:
                 set_goal_eval_outcome(True, 0, status="ACHIEVED", reason=feedback, **self.goal_outcome)
                 return response
 
-            # 마지막 라운드면 그냥 반환 — 미달성으로 끝났음을 증류 게이트에 알린다.
+            # 판정과 전달을 일치시킨다. 거절된 초안은 근거로 보관하고 완료 주장으로 내보내지 않는다.
             if round_num >= max_rounds:
-                set_goal_eval_outcome(False, severity, status="NOT_ACHIEVED", reason=feedback, **self.goal_outcome)
-                self._log(f"[GoalEval] 라운드 소진, 현재 응답 반환 (미달성 → 증류 제외)")
-                return response
+                self._log('[GoalEval] 라운드 소진, 검수 미통과 안내 반환')
+                return rejected('응답 보완을 위한 재시도 한도에 도달했습니다.', feedback, severity)
 
             # 기계 방아쇠 — 치명(severity 3) 또는 두 번째 라운드도 미달이면 판단 없이 재규정한다
             # (reframe.py). 이룰 수 없는 기준에 재실행만 반복하던 부류(ep2386)가 이 방아쇠가 잡는 것.
@@ -900,6 +944,6 @@ class CognitiveEvalMixin:
                               f"도구 {len(_new_calls)}회는 원장에 누적)")
             except Exception as e:
                 self._log(f"[GoalEval] 재실행 실패: {e}")
-                return initial_response
+                return rejected('검수 후 보완 실행 중 오류가 발생했습니다.', feedback, severity)
 
         return response

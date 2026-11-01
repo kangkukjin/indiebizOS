@@ -237,13 +237,15 @@ def test_real_cli_subprocess_followup_uses_captured_session(monkeypatch):
 from test_episode3388_repairs import isolated  # noqa: E402,F401
 
 
-def test_pipeline_handles_steering_after_model_final_and_preserves_history(tmp_path, monkeypatch, isolated):
+@pytest.mark.parametrize('supervised', [False, True])
+def test_pipeline_handles_steering_after_model_final_and_preserves_history(tmp_path, monkeypatch, isolated, supervised):
     """실제 인지 본문/최종 판정/뒷정리를 통과해 단일 확정 응답으로 닫힌다."""
     from types import SimpleNamespace
     from test_episode3388_repairs import Runner
     import thread_context as tc
     import conversation_sessions as sessions
     import sqlite3
+    import json
 
     path = tmp_path / 'conversation.db'
     with sqlite3.connect(path) as db:
@@ -251,14 +253,37 @@ def test_pipeline_handles_steering_after_model_final_and_preserves_history(tmp_p
     store = sessions.SessionStore(path, 'conversations', 'system_ai')
     binding = store.begin(store.create()['id'])
     requests = []
+    evaluations, relations = [], []
 
-    def execute(**kwargs):
-        requests.append(kwargs)
+    def execute(message_content, history=None, **kwargs):
+        requests.append({'message_content': message_content, 'history': history, **kwargs})
         yield {'type': 'final', 'content': '수정된 답' if len(requests) > 1 else '처음 답'}
 
+    def relation(prompt, **kwargs):
+        relations.append(prompt)
+        assert kwargs['role'] == 'classify'
+        return 'NEW'
+
+    def evaluate(prompt, **kwargs):
+        evaluations.append(prompt)
+        assert kwargs['role'] == 'evaluate'
+        return 'ACHIEVED\nGOAL_OUTCOME: ' + json.dumps({
+            'status': 'ACHIEVED', 'reason': '현재 요청의 제목 반영',
+            'evidence': ['응답 본문'], 'remaining': []}, ensure_ascii=False)
+
+    def unexpected_model(*args, **kwargs):
+        pytest.fail('정정 통합 시험에서 실제 모델 경계로 진입했습니다')
+
+    # 후속 구간의 규정 계승과 최종 검수도 모델 경계다. 본문·전달·기록은 실제 경로다.
+    monkeypatch.setattr('consciousness_agent.oneshot_ai_call', relation)
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    monkeypatch.setattr('consciousness_agent._resolve_oneshot_provider', unexpected_model)
+    monkeypatch.setattr('supervisor_runtime.invoke', unexpected_model)
+    if not supervised:
+        monkeypatch.setattr('conscious_supervisor.open_supervisor', lambda *a, **kw: None)
     monkeypatch.setattr('consciousness_agent.get_consciousness_agent',
                         lambda: SimpleNamespace(is_ready=True, process=lambda **kw:
-                            {'task_framing': kw['user_message'], 'achievement_criteria': ''}))
+                            {'task_framing': kw['user_message'], 'achievement_criteria': '현재 요청의 제목 반영'}))
     monkeypatch.setattr('consciousness_agent.get_world_pulse_text', lambda: '')
     runner = Runner(tmp_path, execute)
     body = runner._cognitive_stream_body
@@ -274,6 +299,8 @@ def test_pipeline_handles_steering_after_model_final_and_preserves_history(tmp_p
     with sessions.scope(binding):
         events = list(runner.cognitive_stream('보고서 작성', []))
     assert len(requests) == 2
+    assert len(evaluations) == 2
+    assert len(relations) == 1
     assert '제목만 변경' in requests[1]['message_content']
     assert '처음 답' in requests[1]['message_content']
     assert [e['content'] for e in events if e['type'] == 'final'] == ['수정된 답']

@@ -23,7 +23,8 @@
 | `keywords` | 검색 키워드 목록 | 아래 작성 규칙 참고 |
 | `file` | 실제 파일명 | 확장자 포함 (예: `my_guide.md`) |
 | `topic` | 실행기억 가지 | 실행기억 지도에 있는 가지 이름(예: `보고서/AI 동향`) — `[self:memory]{op:"recall", store:"실행"}`(node 생략 = 실행기억 지도). 가이드가 `<guide_map>` 목차에 실리는 씨앗 — 필수 |
-| `control_platforms` | 장치 제어 가이드가 담당하는 OS 목록(선택) | 예: `["darwin", "windows"]`. 등록 장치 소개의 `control_guide`에 파일명만 노출한다. OS마다 대표 가이드 하나를 등록하고, 본문은 필요한 작업에서 읽는다. **OS 대표 가이드 전용** — 앱·사이트 가이드를 여기 넣으면 등록 순서에 따라 OS 가이드를 가린다. |
+| `driver` | 하드웨어 드라이버 소유·발견 연결(선택) | `id`, `platforms`, `adapters`, `service_scopes`, `surfaces`, `components`, `callables`, `brief_section`으로 대상 조건과 가이드·공유 설치 부품·호출을 연결한다. 장치 소개는 `drivers` ID와 공통 `driver`의 `guide` 파일·조작면만 제공하며 본문·상태는 필요한 작업에서 조회한다. |
+| `control_platforms` | 구형 OS 대표 제어 가이드 매핑(선택, 호환) | 예: `["darwin", "windows"]`. 같은 드라이버 카탈로그에서 가이드 참조로 해석하며 설치 부품은 추정하지 않는다. 겹치는 대표 매핑은 충돌로 표시한다. 앱·사이트는 `control_surfaces`를 사용한다. |
 | `control_surfaces` | 이 가이드가 드라이버인 앱·사이트 식별자 목록(선택) | 예: `["app:com.apple.Safari"]`·`["site:example.com"]`. `limbs:screen`/`limbs:browser` snapshot 이 앞 앱 bundle_id·현재 URL 도메인과 대조해 응답에 `control_guide` 를 실어 알린다. 같은 식별자를 둘이 가지면 둘 다 결속하지 않고 경고한다. |
 | `supported_platforms` | 앱·사이트 드라이버가 동작하는 OS 조건(선택) | 예: `["darwin"]`. 매핑 선택이 아니라 호출 전 검사에 쓴다. |
 
@@ -31,7 +32,8 @@
 
 호출 가능한 부품의 짧은 사용법을 발견 지점에 함께 주려면 선택 필드
 `control_callables: ["script:등록ID", "fn:함수이름", "node:action"]`와
-`control_brief_section: "정확한 절 제목"`을 쓴다. 기존 필드 이름을 유지하지만 장치 전용은 아니다.
+`control_brief_section: "정확한 절 제목"`을 쓴다. 일반 부품은 이 필드를 쓰며, 하드웨어 `driver` 안에서는 `callables`·`brief_section`으로 같은 연결을 표현한다.
+장치 소개 전체에는 요약 본문을 싣지 않고, 선택한 부품·앱/사이트 발견과 명시적 조회에서 제공한다.
 해당 절에는 실제 입력 모양·필요 조건·반환 확인·실패 후속을 적고, 소개한 범위는 다시 조회하지
 않고 쓸 수 있게 한다. 타입·효과의 정본 선언을 대체하지 않으며 현재 연결이나 권한을 보장하지 않는다.
 예산을 넘긴 절은 잘라 넣지 않고 생략한다. 후보의 `inspect`로 빠진 정보를 확인할 수 있다.

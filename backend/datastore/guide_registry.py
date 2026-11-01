@@ -155,17 +155,27 @@ def driver_catalog() -> dict:
         catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {"drivers": [], "components": {}, "conflicts": ["catalog_unavailable"]}
-    drivers, conflicts, owners = [], [], {}
+    drivers, conflicts, owners, legacy_ids = [], [], {}, set()
     components = catalog.get("driver_components", {})
     for filename, entry in _control_entries(catalog):
         driver = entry.get("driver")
-        if not isinstance(driver, dict):
-            continue
+        legacy = not isinstance(driver, dict)
+        if legacy:
+            if not isinstance(entry.get("control_platforms"), list) or not entry["control_platforms"]:
+                continue
+            # Keep the old OS-guide entry discoverable through the same catalog.
+            # It describes a guide, not an observed installation or supported updater.
+            driver = {"id": entry.get("id") or Path(filename).stem,
+                      "platforms": entry["control_platforms"], "surfaces": ["os"], "primary": True,
+                      "brief_section": entry.get("control_brief_section"),
+                      "callables": entry.get("control_callables", []), "components": []}
         driver = {**driver, "file": filename}
         identifier = driver.get("id")
         if not isinstance(identifier, str) or not identifier:
             conflicts.append(f"missing_driver_id:{filename}")
             continue
+        if legacy:
+            legacy_ids.add(identifier)
         owners.setdefault(identifier, []).append(filename)
         for old, new in (("control_platforms", "platforms"), ("control_callables", "callables"),
                          ("control_brief_section", "brief_section")):
@@ -175,9 +185,19 @@ def driver_catalog() -> dict:
             if ref not in components:
                 conflicts.append(f"missing_component:{identifier}:{ref}")
         drivers.append(driver)
+    primary_owners = {}
+    for driver in drivers:
+        if driver.get("primary"):
+            for platform in driver.get("platforms") or []:
+                if isinstance(platform, str):
+                    primary_owners.setdefault(platform.lower(), set()).add(driver["id"])
+    for platform, identifiers in primary_owners.items():
+        if len(identifiers) > 1 and identifiers & legacy_ids:
+            conflicts.extend(f"legacy_platform_conflict:{identifier}:{platform}" for identifier in sorted(identifiers))
     duplicate = {key for key, files in owners.items() if len(files) != 1}
     conflicts.extend(f"driver_conflict:{key}" for key in sorted(duplicate))
-    invalid = duplicate | {c.split(":")[1] for c in conflicts if c.startswith(("mapping_conflict:", "missing_component:"))}
+    invalid = duplicate | {c.split(":")[1] for c in conflicts if c.startswith(
+        ("mapping_conflict:", "missing_component:", "legacy_platform_conflict:"))}
     for message in conflicts:
         logger.warning("드라이버 등록 충돌: %s", message)
     return {"drivers": [d for d in drivers if d["id"] not in invalid],

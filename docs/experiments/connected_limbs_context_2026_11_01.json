@@ -1,0 +1,163 @@
+{
+  "baseline_commit": "8b3a50a6f1900aa3c16b962dc8cbaaebbdb3b7ad",
+  "method": "Same registration/live-cache snapshot, old and new introduction. Synthetic scales include local body. Explicit followups are predetermined guide section and single-target detail reads, not a measured model trajectory. Count each response once; no cumulative-token claim.",
+  "model_input_tokens": null,
+  "model_output_tokens": null,
+  "cache_tokens": null,
+  "total_completion_seconds": null,
+  "model_quality": null,
+  "postprocessing_model_cost": null,
+  "device_commands_executed": false,
+  "scales": [
+    {
+      "registered_devices": 1,
+      "before": {
+        "chars": 2616,
+        "device_rows": 2,
+        "row_chars": 541,
+        "driver_references": 0,
+        "control_briefs": 1,
+        "sha256": "a376286b20b2f441bcafc23e95529311e14fb96f7386e29596a1cdb0db405431"
+      },
+      "after": {
+        "chars": 790,
+        "device_rows": 2,
+        "row_chars": 286,
+        "driver_references": 3,
+        "control_briefs": 0,
+        "sha256": "b3352d4aa60554df7c14f4600703a1e3e86f759f81f3a5c13c65f8049828f5ab"
+      },
+      "identity_context_preserved": true
+    },
+    {
+      "registered_devices": 10,
+      "before": {
+        "chars": 8267,
+        "device_rows": 11,
+        "row_chars": 3836,
+        "driver_references": 0,
+        "control_briefs": 3,
+        "sha256": "5a61e0e398b2e019a4f72888b8409ea593292130d805c339a94c40c845277f3f"
+      },
+      "after": {
+        "chars": 2532,
+        "device_rows": 11,
+        "row_chars": 1784,
+        "driver_references": 6,
+        "control_briefs": 0,
+        "sha256": "bdca1e1b43b56bebeff98207e44a02c3aa97b2bc86208d0686bd063cd4fa0ffe"
+      },
+      "identity_context_preserved": true
+    },
+    {
+      "registered_devices": 100,
+      "before": {
+        "chars": 41903,
+        "device_rows": 101,
+        "row_chars": 37472,
+        "driver_references": 0,
+        "control_briefs": 3,
+        "sha256": "5e9ce7fe4e98183e6ec70ee30cb82ef51cbb820f9dac493a5b210395fc8af7b5"
+      },
+      "after": {
+        "chars": 17760,
+        "device_rows": 101,
+        "row_chars": 17012,
+        "driver_references": 6,
+        "control_briefs": 0,
+        "sha256": "68312c1b5b9f60b5ae47c697305aa7b97bf4d18aac2614f370b35741a1a897f7"
+      },
+      "identity_context_preserved": true
+    },
+    {
+      "registered_devices": 1000,
+      "before": {
+        "chars": 380063,
+        "device_rows": 1001,
+        "row_chars": 375632,
+        "driver_references": 0,
+        "control_briefs": 3,
+        "sha256": "05ee1edc35845a688641c797674e3d6e52a14d4c570d8a48ed47194fc94b072a"
+      },
+      "after": {
+        "chars": 170940,
+        "device_rows": 1001,
+        "row_chars": 170192,
+        "driver_references": 6,
+        "control_briefs": 0,
+        "sha256": "66379f804ed611ac3009853538cddcd06dbb0e2b131cb87da7747c53a806ad8b"
+      },
+      "identity_context_preserved": true
+    }
+  ],
+  "live_snapshot": {
+    "before": {
+      "chars": 8853,
+      "device_rows": 11,
+      "row_chars": 4412,
+      "driver_references": 0,
+      "control_briefs": 3,
+      "sha256": "96cfb83c6c838977dab1d391a8e979e60c922e76b609cf6a8c44f88f14a5bc25"
+    },
+    "after": {
+      "chars": 2841,
+      "device_rows": 11,
+      "row_chars": 2083,
+      "driver_references": 6,
+      "control_briefs": 0,
+      "sha256": "c8aa075ba1ec1c34fa44484c1ec16a87b95c191bc6c626d73fe39bf1f2f44bb5"
+    },
+    "identity_context_preserved": true
+  },
+  "explicit_followups": [
+    {
+      "case": "non_hardware",
+      "guide_reads": [],
+      "target_detail_reads": 0,
+      "target_detail_chars": 0,
+      "before_with_reads_chars": 8853,
+      "after_with_reads_chars": 2841
+    },
+    {
+      "case": "simple_pc_control",
+      "guide_reads": [
+        {
+          "file": "pc_control.md",
+          "section": "빠른 호출",
+          "chars": 1544
+        }
+      ],
+      "target_detail_reads": 0,
+      "target_detail_chars": 0,
+      "before_with_reads_chars": 8853,
+      "after_with_reads_chars": 4385
+    },
+    {
+      "case": "target_details",
+      "guide_reads": [],
+      "target_detail_reads": 1,
+      "target_detail_chars": 10877,
+      "before_with_reads_chars": 19730,
+      "after_with_reads_chars": 13718
+    },
+    {
+      "case": "mixed_devices",
+      "guide_reads": [
+        {
+          "file": "pc_control.md",
+          "section": "빠른 호출",
+          "chars": 1544
+        },
+        {
+          "file": "android_control.md",
+          "section": "빠른 호출",
+          "chars": 1597
+        }
+      ],
+      "target_detail_reads": 2,
+      "target_detail_chars": 23690,
+      "before_with_reads_chars": 32543,
+      "after_with_reads_chars": 29672
+    }
+  ]
+}

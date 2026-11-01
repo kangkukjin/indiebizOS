@@ -57,6 +57,24 @@ def test_briefs_refuse_catalog_conflicts_and_unsafe_paths(catalog):
     assert guides.control_briefs(["robot.md", "../outside.md", "missing.md"]) == []
 
 
+@pytest.mark.parametrize("modern", [False, True])
+def test_driver_catalog_preserves_legacy_guide_without_inventing_installation(catalog, modern):
+    legacy = {"file": "robot.md", "control_platforms": ["robot-os"],
+              "control_callables": ["script:robot"], "control_brief_section": "Call"}
+    catalog([legacy], {"robot.md": "## Call\nCall and verify."})
+    result = guides.device_drivers("robot-os", "any-adapter")
+    assert result["components"] == result["conflicts"] == []
+    assert result["items"][0]["id"] == "robot"
+    assert result["items"][0]["callables"] == ["script:robot"]
+    second = ({"file": "other.md", "driver": {"id": "other", "platforms": ["robot-os"], "primary": True}}
+              if modern else {"file": "other.md", "control_platforms": ["robot-os"]})
+    catalog([legacy, second], {"other.md": "## Call\nDifferent contract."})
+    result = guides.device_drivers("robot-os", "any-adapter")
+    assert result["items"] == []
+    assert set(result["conflicts"]) == {"legacy_platform_conflict:robot:robot-os",
+                                       "legacy_platform_conflict:other:robot-os"}
+
+
 def test_briefs_bound_total_without_cutting_a_contract(catalog):
     files = {f"{i}.md": "## Call\n" + "x" * 1490 for i in range(4)}
     catalog([{"file": name, "control_brief_section": "Call"} for name in files], files)

@@ -10,9 +10,10 @@ import resident_pcs
 
 
 def test_limb_list_exposes_signed_release_status_without_update(registry, tmp_path, monkeypatch):
-    import runtime_utils, device_registry
+    import runtime_utils, device_registry, limb_keys, hardware_registry, associative_recall
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
     monkeypatch.setattr(device_registry, 'live_with_capability', lambda cls: [])
+    monkeypatch.setattr(hardware_registry, 'devices', lambda: [])
     spec = importlib.util.spec_from_file_location('guest_status_handler', Path(__file__).resolve().parents[1] /
                                                  'data/packages/installed/tools/guest-helper/handler.py')
     handler = importlib.util.module_from_spec(spec)
@@ -25,12 +26,27 @@ def test_limb_list_exposes_signed_release_status_without_update(registry, tmp_pa
     sha = hashlib.sha256(binary.read_bytes()).hexdigest()
     caps = {'os': 'darwin', 'arch': 'amd64', 'go': 'go1.26.5', 'helper_sha256': sha, 'self_update': True}
     resident_pcs.sync(row['key'], 'a' * 32, capabilities=caps)
+    limb_keys.resident_update(row['device_id'], context='등록된 작업실 / 사용자 용도')
+    def introduction():
+        return associative_recall._connected_limbs(
+            associative_recall.RecallRequest(None, '작업실 장치', []), None).text
+    before = introduction()
     monkeypatch.setattr(resident_pcs, 'update_helper', lambda *a: pytest.fail('lookup submitted update'))
     found = handler._limb_list({'limb': row['device_id']})['items'][0]
     assert found['helper'] == resident_pcs.helper_status(resident_pcs.resolve(row['device_id']))
     assert found['helper']['state'] == 'current' and not found['connected']
     publish_test_mac_release(tmp_path, 'mac-amd64', b'next signed release')
     assert handler._limb_list({'limb': row['device_id']})['items'][0]['helper']['state'] == 'available'
+    limb_keys.resident_update(row['device_id'], paused=True, capabilities={**caps, 'self_update': False, 'admin': True})
+    with limb_keys._lock:
+        limb_keys._load()['keys'][row['key']]['registration']['generation'] = 'next-installation'
+        limb_keys._save()
+    latest = handler._limb_list({'limb': row['device_id']})['items'][0]
+    assert latest['registration']['paused'] and latest['registration']['capabilities']['admin']
+    unit = next(c for c in latest['drivers']['components'] if c['id'] == 'resident-helper')
+    assert unit['generation'] == unit['binding']['generation'] == 'next-installation'
+    assert unit['support'] == 'unknown' and unit['update']['state'] == 'manual'
+    assert introduction() == before  # changes are read from the driver, not copied into the introduction
 
 
 if __name__ == '__main__':

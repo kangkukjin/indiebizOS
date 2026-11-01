@@ -115,8 +115,9 @@ def test_prompt_contains_guide_even_without_heartbeat_or_description(monkeypatch
     rows = ET.fromstring(block.text).findall('limb')
     assert rows[0].attrib['device_id'] == '__local__'     # 본체 행이 맨 앞(CONTROL_DRIVER §5.1)
     item = next(r for r in rows if r.attrib['device_id'] == row['device_id'])
-    assert item.attrib['connected'] == 'unknown'
-    assert item.attrib['control_guide'] == 'tv_control.md'
+    assert 'connected' not in item.attrib
+    assert item.attrib['drivers'] == 'tv_control'
+    assert ET.fromstring(block.text).find("driver[@id='tv_control']").attrib['guide'] == 'tv_control.md'
     assert 'private-token' not in block.text and '192.0.2.10' not in block.text
     hardware.update(row['device_id'], remove=True)
     rows = ET.fromstring(recall._connected_limbs(recall.RecallRequest(None, 'TV', []), None).text).findall('limb')

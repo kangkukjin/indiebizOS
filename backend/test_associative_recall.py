@@ -1,4 +1,4 @@
-"""원격 장치 소개: 사용자 배치 정보와 접속 상태를 분리하고 등록 경계를 보존한다."""
+"""원격 장치 소개: 다섯 소개 범주만 제공하고 상태·계약 조회와 등록 경계를 보존한다."""
 import boot_paths  # noqa: F401
 from types import SimpleNamespace
 from xml.etree import ElementTree as ET
@@ -18,7 +18,7 @@ def isolated_hardware(monkeypatch):
 def test_device_context_keeps_offline_description_and_escapes_markup(monkeypatch):
     records = [
         {"device_id": "phone", "alias": '폰"<&', "registration": {
-            "state": "active", "kind": "phone", "capabilities": {"sdk": 35},
+            "state": "active", "kind": "phone", "adapter": "indiebiz-v1", "capabilities": {"sdk": 35},
             "context": '스피커 <연결> & 사용자 설명'}},
         {"device_id": "pc", "alias": "office", "registration": {
             "state": "active", "kind": "pc", "paused": True,
@@ -43,13 +43,11 @@ def test_device_context_keeps_offline_description_and_escapes_markup(monkeypatch
     assert rows[0].attrib["device_id"] == "__local__"   # 본체 행이 맨 앞(§5.1)
     assert rows[1].attrib["name"] == '폰"<&'
     assert rows[1].attrib["os"] == "android"
-    assert rows[1].attrib["control_guide"] == "android_control.md"
-    assert rows[1].attrib["connected"] == "true"
+    assert "android_control" in rows[1].attrib["drivers"].split(",")
     assert rows[1].text == '스피커 <연결> & 사용자 설명'
-    assert rows[2].attrib["connected"] == "false"
-    assert rows[2].attrib["paused"] == "true"
     assert rows[2].attrib["os"] == "windows"
-    assert rows[2].attrib["control_guide"] == "pc_control.md"
+    assert "pc_control" in rows[2].attrib["drivers"].split(",")
+    assert all(set(row.attrib) <= {"name", "device_id", "kind", "os", "adapter", "drivers"} for row in rows)
     assert "def run" not in block.text
     assert rows[2].text == "작은방 프린터"
 
@@ -60,38 +58,56 @@ def test_device_context_respects_vocabulary_gate(monkeypatch):
     assert recall._connected_limbs(req, None) is None
 
 
-def test_driver_brief_is_shared_by_devices_and_comes_from_guide(monkeypatch, tmp_path):
+def test_driver_references_are_shared_and_follow_current_catalog(monkeypatch, tmp_path):
     import guide_registry
-    from hashlib import sha256
     import json
     directory = tmp_path / "guides"
     directory.mkdir()
-    content = '# Driver\n## Short\nCall "driver"; verify <actual> & recover.\n## Long\nDetails'
+    content = '# Driver\n## Short\nCall "driver"; verify <actual> & recover.'
     (directory / "robot.md").write_text(content)
-    (tmp_path / "guide_db.json").write_text(json.dumps({"guides": [{
-        "file": "robot.md", "control_platforms": ["robot-os"], "control_brief_section": "Short"}]}))
+    catalog = {"guides": [{"file": "robot.md", "driver": {
+        "id": "robot", "platforms": ["robot-os"], "surfaces": ["os"],
+        "brief_section": "Short", "callables": ["script:robot"]}}]}
+    path = tmp_path / "guide_db.json"
+    path.write_text(json.dumps(catalog))
     monkeypatch.setattr(guide_registry, "DATA_PATH", tmp_path)
     monkeypatch.setattr(guide_registry, "GUIDES_DIR", directory)
     records = [{"device_id": name, "alias": name, "registration": {
         "state": "active", "capabilities": {"os": "robot-os"}}} for name in ("one", "two")]
     monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: records)
     monkeypatch.setattr(device_registry, "live_with_capability", lambda _: records)
-    block = recall._connected_limbs(recall.RecallRequest(None, "anything", []), None)
-    root = ET.fromstring(block.text)
-    briefs = root.findall("control_brief")
-    assert len(briefs) == 1
-    assert briefs[0].attrib == {"file": "robot.md", "section": "Short",
-                                "content_hash": sha256(content.encode()).hexdigest()}
-    assert briefs[0].text == '## Short\nCall "driver"; verify <actual> & recover.'
-    assert all(r.attrib["control_guide"] == "robot.md" for r in root.findall("limb")[1:])
-    previous = SimpleNamespace(blocks=[recall.Block('reusable_capabilities', '', '',
-                                                   meta={'control_briefs': ['robot.md']})])
-    deduped = recall._connected_limbs(recall.RecallRequest(None, 'anything', []), previous)
-    assert not ET.fromstring(deduped.text).findall('control_brief')
-    assert 'control_guide="robot.md"' in deduped.text
-    monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: [])
-    assert not ET.fromstring(recall._connected_limbs(
-        recall.RecallRequest(None, "anything", []), None).text).findall("control_brief")
+
+    def read():
+        return ET.fromstring(recall._connected_limbs(recall.RecallRequest(None, "anything", []), None).text)
+
+    root = read()
+    assert not root.findall("control_brief")
+    assert root.find("driver").attrib == {"id": "robot", "guide": "robot.md", "surfaces": "os"}
+    assert len(root.findall("driver")) == 1
+    assert all(r.attrib["drivers"] == "robot" for r in root.findall("limb")[1:])
+    assert content not in ET.tostring(root, encoding="unicode")
+    # The reference resolves through the existing guide API; edits are not cached in the introduction.
+    assert guide_registry.resolve_guide_reference("robot.md", catalog["guides"], directory)["content"] == content
+    changed = content + "\nUpdated recovery condition."
+    (directory / "robot.md").write_text(changed)
+    assert guide_registry.resolve_guide_reference("robot.md", catalog["guides"], directory)["content"] == changed
+    catalog["guides"][0]["driver"]["id"] = "robot-v2"
+    path.write_text(json.dumps(catalog))
+    assert read().find("driver").attrib["id"] == "robot-v2"
+    # Legacy control_* registrations remain resolvable without installing any component.
+    catalog["guides"] = [{"file": "robot.md", "control_platforms": ["robot-os"],
+                           "control_brief_section": "Short"}]
+    path.write_text(json.dumps(catalog))
+    assert read().find("driver").attrib == {"id": "robot", "guide": "robot.md", "surfaces": "os"}
+    assert guide_registry.device_drivers("robot-os", "resident-v1")["components"] == []
+    catalog["guides"] = [{"file": "robot.md", "driver": {
+        "id": "robot-v2", "platforms": ["robot-os"], "surfaces": ["os"]}}]
+    # Ambiguous owners are absent in the introduction but explicit in driver detail.
+    (directory / "other.md").write_text(content)
+    catalog["guides"].append({**catalog["guides"][0], "file": "other.md"})
+    path.write_text(json.dumps(catalog))
+    assert not read().findall("driver")
+    assert guide_registry.device_drivers("robot-os", "resident-v1")["conflicts"] == ["driver_conflict:robot-v2"]
 
 
 def test_reusable_discovery_adds_only_selected_briefs_within_existing_budget(monkeypatch):
@@ -145,16 +161,18 @@ def test_device_context_with_no_known_devices_still_introduces_local_body(monkey
     rows = ET.fromstring(block.text).findall("limb")
     assert [r.attrib["device_id"] for r in rows] == ["__local__"]
     local = rows[0].attrib
-    assert local["adapter"] == "local" and local["connected"] == "true" and local["name"] == "본체"
+    assert local["adapter"] == "local" and local["name"] == "본체"
     assert local["os"] == host_os()
     if host_os() in ("darwin", "windows"):
-        assert local["control_guide"] == "pc_control.md"
-    assert "__local__" in block.text and "상태 조회는 본체([sense:host])" in block.text
-    assert "[limbs:screen] 탐색으로 간다" in block.text
+        assert "pc_control" in local["drivers"].split(",")
+    assert "__local__" in block.text
+    assert "limb:이름/ID" in block.text and "target:device_id" in block.text
 
 
-def test_device_rows_expose_observation_count_only(monkeypatch):
-    """관측은 개수만 행에, 본문은 다룰 때 읽는다(§5.3)."""
+def test_device_rows_do_not_read_or_expose_observations(monkeypatch):
+    """관측 개수와 본문은 기존 상세 조회에만 남긴다."""
+    import control_observations
+    monkeypatch.setattr(control_observations, "count", lambda *a: pytest.fail("observation lookup during introduction"))
     records = [{"device_id": "pc", "alias": "office", "registration": {
         "state": "active", "kind": "pc", "capabilities": {"os": "windows"}, "context": "서재",
         "observations": [{"observation_id": "obs_1", "fact": "비밀 사실", "observed_at": "2026-10-20T10:00",
@@ -163,8 +181,76 @@ def test_device_rows_expose_observation_count_only(monkeypatch):
     monkeypatch.setattr(device_registry, "live_with_capability", lambda _: [])
     block = recall._connected_limbs(recall.RecallRequest(None, "상태", []), None)
     pc = [r for r in ET.fromstring(block.text).findall("limb") if r.attrib["device_id"] == "pc"][0]
-    assert pc.attrib["observations"] == "1"
+    assert "observations" not in pc.attrib
     assert "비밀 사실" not in block.text
+
+
+@pytest.mark.parametrize("count", [1, 10, 100, 1000])
+def test_device_introduction_scales_only_rows_without_status_or_guide_reads(monkeypatch, count):
+    import guide_registry
+    import hardware_driver_status
+    import resident_pcs
+    from unittest.mock import Mock
+    catalog = Mock(wraps=guide_registry.driver_catalog)
+    monkeypatch.setattr(guide_registry, "driver_catalog", catalog)
+    for module, name in [(guide_registry, "control_briefs"), (guide_registry, "device_drivers"),
+                         (hardware_driver_status, "describe"), (resident_pcs, "devices")]:
+        monkeypatch.setattr(module, name, lambda *a, **kw: pytest.fail("eager driver detail"))
+    context = '위치 <&> / ' + '사용자 용도 설명 ' * 250
+    records = [{"device_id": f"pc-{i}", "alias": "같은 이름", "registration": {
+        "state": "active", "adapter": "resident-v1", "kind": "pc", "context": context,
+        "paused": bool(i % 2), "generation": f"generation-{i}",
+        "capabilities": {"os": "windows", "admin": True, "helper_sha256": "private-hash",
+                         "service_scope": "user_login"}}} for i in range(count)]
+    monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: records)
+    # Cached live presence affects inclusion only; offline described targets remain discoverable.
+    monkeypatch.setattr(device_registry, "live_with_capability", lambda _: records[::2])
+    block = recall._connected_limbs(recall.RecallRequest(None, "오늘 날씨", []), None)
+    root = ET.fromstring(block.text)
+    rows = root.findall("limb")
+    assert len(rows) == count + 1 and len({r.attrib["device_id"] for r in rows}) == count + 1
+    assert all(r.text == context for r in rows[1:])  # no silent clipping
+    assert all(set(r.attrib) <= {"name", "device_id", "kind", "os", "adapter", "drivers"} for r in rows)
+    refs = {r.attrib["id"]: r.attrib for r in root.findall("driver")}
+    assert len(refs) == 3 and catalog.call_count == 1
+    assert refs["remote_pc_execution"]["guide"] == "remote_pc_execution.md"
+    assert all(set(r.attrib.get("drivers", "").split(",")) - {""} <= refs.keys() for r in rows)
+    assert not root.findall("control_brief") and "private-hash" not in block.text
+
+
+def test_device_introduction_preserves_scope_and_registration_boundaries(monkeypatch):
+    records = []
+    for identifier, os_name, scope, adapter in [
+            ("user", "windows", "user_login", "resident-v1"),
+            ("machine", "windows", "machine", "resident-v1"),
+            ("mac", "darwin", "user_login", "resident-v1"),
+            ("linux", "linux", "unknown", "resident-v1"),
+            ("portable", "windows", "unknown", None),
+            ("unknown", "unmapped-os", "unknown", "unmapped-adapter"),
+            ("numeric-os", 42, "unknown", "unmapped-adapter")]:
+        record = {"device_id": identifier, "alias": "중복 이름", "env": {"os": os_name}}
+        if adapter:
+            record["registration"] = {"state": "active", "adapter": adapter, "context": "사용자 설명",
+                                      "capabilities": {"os": os_name, "service_scope": scope}}
+        records.append(record)
+    records.extend([
+        {"device_id": "invite", "invitation": True, "registration": {"context": "초대"}},
+        {"device_id": "expired", "expired": True, "registration": {"context": "만료"}},
+        {"device_id": "removed", "registration": {"state": "removed", "context": "삭제"}},
+        {"device_id": "member", "member_id": "m", "registration": {"context": "회원"}},
+        {"device_id": "unseen", "registration": {"state": "active"}},
+    ])
+    monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: records)
+    monkeypatch.setattr(device_registry, "live_with_capability", lambda _: records[:-1])
+    root = ET.fromstring(recall._connected_limbs(recall.RecallRequest(None, "장치", []), None).text)
+    rows = {r.attrib["device_id"]: r.attrib for r in root.findall("limb")}
+    assert set(rows) == {"__local__", "user", "machine", "mac", "linux", "portable", "unknown", "numeric-os"}
+    assert "pc_control" in rows["user"]["drivers"].split(",")
+    assert "pc_control" not in rows["machine"]["drivers"].split(",")
+    assert rows["machine"]["drivers"] == rows["linux"]["drivers"] == "remote_pc_execution,remote_pc_installation"
+    assert "drivers" not in rows["unknown"] and "drivers" not in rows["numeric-os"]
+    assert rows["numeric-os"]["os"] == "42"
+    assert rows["portable"]["adapter"] == "portable"
 
 
 if __name__ == "__main__":

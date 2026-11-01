@@ -360,97 +360,65 @@ def _guide_map(req: RecallRequest, recall: Recall) -> Optional[Block]:
 
 
 def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
-    """원격 장치의 이름·환경·사용자 설명. 설명이 있는 등록 장치는 미접속 때도 소개한다.
-    limbs 노드가 이 에이전트 어휘 밖이면 생략(쓸 수 없는 길 안내=오도)."""
+    """등록 대상의 식별·환경·배치/용도·드라이버 참조. 상태와 계약은 필요할 때 조회한다."""
     def run():
         allowed = _allowed_set(req.runner)
         if allowed is not None and "limbs" not in allowed:
             return None
         import device_registry as dr
         import limb_keys
-        from guide_registry import device_control_guides, control_briefs, device_drivers
+        import hardware_registry
+        from guide_registry import driver_catalog, driver_matches
         from xml.sax.saxutils import escape, quoteattr
-        control_guides = device_control_guides()
+        # Read ownership once per recall. No guide bodies, observations or installation status.
+        catalog = driver_catalog()
         live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
         live_ids = {e.get("device_id") for e in live}
         records = {r["device_id"]: r for r in limb_keys.list_keys(include_revoked=False)
                    if not r.get("expired") and not r.get("invitation") and not limb_keys.is_member(r)
                    and (r.get("registration") or {}).get("state", "active") == "active"}
-        import hardware_registry
         hardware = [r for r in hardware_registry.devices() if not r["revoked"]]
         records.update({r["device_id"]: r for r in hardware})
         candidates = list(live) + hardware
         candidates.extend(r for did, r in records.items()
                           if did not in live_ids and (r.get("registration") or {}).get("context")
                           and (r.get("registration") or {}).get("adapter") != "network-api")
-        rows, names, introduced_guides = [], [], set()
-        # 본체 행(CONTROL_DRIVER_DESIGN_2026_10_20 §5.1) — 드라이버(`fn:PC제어` __local__)가 있는데
-        # 소개에 없어 AI 가 화면 조작으로 가던 유일한 면. 매 턴 고정 비용은 이 행 하나다.
+        rows, names, references = [], [], {}
+
+        def introduce(name, device_id, kind, platform, adapter, context="", scope="unknown"):
+            drivers = [d for d in catalog["drivers"] if driver_matches(
+                d, platform=str(platform), adapter=adapter, service_scope=scope)]
+            references.update((d["id"], d) for d in drivers)
+            attrs = {"name": name, "device_id": device_id, "kind": kind, "os": platform,
+                     "adapter": adapter, "drivers": ",".join(d["id"] for d in drivers)}
+            attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
+            rows.append(f"  <limb {attr_text}>{escape(context)}</limb>")
+            names.append(name)
+
         from common.platform_utils import host_os
-        local_platform = host_os()
-        local_attrs = {"name": "본체", "device_id": "__local__", "adapter": "local",
-                       "connected": "true", "os": local_platform}
-        if guide := control_guides.get(local_platform):
-            local_attrs["control_guide"] = guide
-            introduced_guides.add(guide)
-        try:
-            import control_observations
-            if observed := control_observations.count("device:__local__"):
-                local_attrs["observations"] = observed
-        except Exception:
-            pass
-        rows.append("  <limb " + " ".join(f"{k}={quoteattr(str(v))}" for k, v in local_attrs.items()) + "></limb>")
-        names.append("본체")
+        introduce("본체", "__local__", "pc", host_os(), "local")
+        seen = {"__local__"}
         for e in candidates:
-            rec = records.get(e.get("device_id"))
-            if rec is None:
+            device_id = e.get("device_id")
+            rec = records.get(device_id)
+            if rec is None or device_id in seen:
                 continue
-            alias = e.get("alias") or e.get("device_id") or "?"
+            seen.add(device_id)
             reg = rec.get("registration") or {}
             caps = reg.get("capabilities") or rec.get("env") or {}
-            platform = caps.get("os") or ("android" if caps.get("sdk") else "")
-            network = reg.get("adapter") == "network-api"
-            connected = ("unknown" if e.get("connected") is None else str(e["connected"]).lower()) if network else str(e.get("device_id") in live_ids).lower()
-            attrs = {"name": alias, "device_id": e.get("device_id"), "adapter": reg.get("adapter"),
-                     "connected": connected,
-                     "paused": str(bool(reg.get("paused"))).lower(),
-                     "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
-            if (guide := control_guides.get(str(platform).lower())) and caps.get("service_scope") != "machine":
-                attrs["control_guide"] = guide
-                introduced_guides.add(guide)
-            links = device_drivers(str(platform), reg.get("adapter") or ("resident-v1" if reg else "portable"),
-                                   caps.get("service_scope", "unknown"))
-            attrs["drivers"] = ",".join(d["id"] for d in links["items"])
-            attrs["driver_guides"] = ",".join(d["file"] for d in links["items"])
-            attrs["components"] = ",".join(c["id"] for c in links["components"])
-            attrs["installation_generation"] = reg.get("generation")
-            attrs["service_scope"] = caps.get("service_scope", "unknown")
-            if links["conflicts"]:
-                attrs["driver_conflicts"] = ",".join(links["conflicts"])
-            if isinstance(reg.get("observations"), list) and reg["observations"]:
-                attrs["observations"] = len(reg["observations"])   # 개수만 — 본문은 다룰 때 읽는다(§5.3)
-            attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
-            context = escape(reg.get("context") or "")
-            rows.append(f'  <limb {attr_text}>{context}</limb>')
-            names.append(alias)
-        already = {name for block in getattr(recall, "blocks", [])
-                   for name in block.meta.get("control_briefs", [])}
-        for brief in control_briefs(introduced_guides - already):
-            attrs = " ".join(f"{key}={quoteattr(brief[key])}"
-                             for key in ("file", "section", "content_hash"))
-            rows.append(f"  <control_brief {attrs}>{escape(brief['text'])}</control_brief>")
-        note = ("등록된 장치와 본체. 본문은 사용자가 알려준 배치·용도이며 현재 연결·출력·위치를 보장하지 않는다. "
-                "connected는 최근 접속 관측이며 unknown은 미확인이다. 네트워크 기기의 false는 응답 없음이며 전원 꺼짐을 뜻하지 않는다. paused=true이면 실행 중지 상태다. "
-                "이름·장소·용도로 대상을 고른다. control_brief는 가이드 정본의 현재 호출 요약이며 해당 범위는 바로 호출한다. "
-                "드라이버 내부의 연결·준비 검사와 결과 검증을 유지하며 같은 검사를 별도 info 조회로 중복하지 않는다. "
-                "요약 밖의 동작·인수·조건만 control_guide 또는 describe로 확인한다. driver_guides는 조작면별 자료이며 설치 절은 설치 작업에서만 읽는다. components가 같은 드라이버들은 실제 설치 부품을 공유한다. "
-                "adapter=network-api는 IndieBiz OS나 헬퍼 없이 제어하는 기기이며 guestpc 대신 control_guide의 스크립트를 허브에서 실행한다. "
-                "가이드와 호출 계약이 현재 문맥에 있으면 다시 읽거나 코드를 새로 작성하지 않는다. "
-                "원격 대상을 지정하지 않은 시스템 상태 조회는 본체([sense:host])다. 본체 제어(음량·주소 열기·잠금·앱 조작)는 "
-                "device_id __local__ 행의 control_guide 를 따르고, 그 가이드에 없는 동작만 [limbs:screen] 탐색으로 간다. "
-                "observations 는 그 대상의 관측 행 수이며 제어 전에 [self:limb]{op: list, target: device_id}로 읽는다.")
+            platform = caps.get("os") or ("android" if reg.get("kind") == "phone" or caps.get("sdk") else "")
+            introduce(e.get("alias") or device_id, device_id, reg.get("kind"), platform,
+                      reg.get("adapter") or ("resident-v1" if reg else "portable"),
+                      reg.get("context") or "", caps.get("service_scope", "unknown"))
+        for identifier, driver in references.items():
+            attrs = {"id": identifier, "guide": driver["file"],
+                     "surfaces": ",".join(driver.get("surfaces", []))}
+            rows.append("  <driver " + " ".join(f"{k}={quoteattr(v)}" for k, v in attrs.items() if v) + " />")
+        note = ("등록 대상 소개이며 실시간 접속·실행 가능을 보증하지 않는다. 본문은 사용자의 배치·용도 설명이다. "
+                "드라이버 자료는 read_guide(query=guide), 등록 대상 상세는 [self:limb]{op:list,limb:이름/ID}, "
+                "관측은 [self:limb]{op:list,target:device_id}로 조회한다.")
         return Block("connected_limbs", "connected_limbs",
-                     f"<connected_limbs note='{note}'>\n" + "\n".join(rows) + "\n</connected_limbs>", ids=names)
+                     f"<connected_limbs note={quoteattr(note)}>\n" + "\n".join(rows) + "\n</connected_limbs>", ids=names)
     return _step("limb_presence", run)
 
 
